@@ -17,12 +17,27 @@ from onetruth.application.services.schedule_planning_stage06 import (
     Stage06SpawnError,
     resolve_stage06_spawn_plans,
 )
+from onetruth.application.services.schedule_planning_stage07 import (
+    Stage07SpawnError,
+    build_stage07_issue_activation_key,
+    resolve_stage07_spawn_plans,
+)
+from onetruth.infrastructure.repositories.flags import (
+    create_flag,
+    get_flag,
+    list_flags_for_workflow_run,
+    list_open_flags_for_workflow_run,
+    transition_flag_state,
+)
 from onetruth.infrastructure.repositories.human_tasks import (
     claim_human_task as claim_human_task_row,
     complete_human_task as complete_human_task_row,
     create_human_task,
     get_human_task,
+    get_human_task_by_task_run_id,
     list_human_tasks_for_workflow_run,
+    list_expired_claimed_human_tasks,
+    reopen_human_task_after_lease_expiry,
 )
 from onetruth.infrastructure.repositories.approvals import (
     create_approval,
@@ -46,6 +61,7 @@ from onetruth.infrastructure.repositories.artifact_versions import (
 from onetruth.infrastructure.repositories.task_runs import (
     create_task_run,
     get_task_run,
+    get_task_run_by_activation_key,
     get_task_run_for_human_task,
     transition_task_run_state,
 )
@@ -59,6 +75,17 @@ WORKFLOW_RUN_STATES = {"OPEN", "COMPLETED"}
 TASK_RUN_STATES = {"READY", "IN_PROGRESS", "COMPLETED"}
 HUMAN_TASK_STATES = {"OPEN", "CLAIMED", "COMPLETED"}
 APPROVAL_STATES = {"PENDING", "RESPONDED"}
+FLAG_STATES = {"open", "triage", "blocked", "resolved", "closed", "waived"}
+FLAG_ACTIVE_STATES = {"open", "triage", "blocked"}
+FLAG_SEVERITIES = {"info", "low", "medium", "high", "critical"}
+FLAG_ALLOWED_TRANSITIONS = {
+    "open": {"triage", "blocked", "resolved", "closed", "waived"},
+    "triage": {"blocked", "resolved", "closed", "waived"},
+    "blocked": {"triage", "resolved", "closed", "waived"},
+    "resolved": {"closed"},
+    "closed": set(),
+    "waived": set(),
+}
 APPROVAL_RESPONSE_TO_OUTCOME = {
     "approve": "approved",
     "reject": "rejected",
@@ -253,6 +280,30 @@ def create_task_run_command(
         if create_human:
             _assert_idempotency_available(connection, human_event_idempotency)
 
+        spawned_from_flag_id = (
+            str(payload["spawned_from_flag_id"])
+            if payload.get("spawned_from_flag_id") is not None
+            else None
+        )
+        if spawned_from_flag_id is not None:
+            flag = get_flag(connection, spawned_from_flag_id)
+            if flag is None:
+                raise CommandError(
+                    code="flag_not_found",
+                    message="spawned_from_flag_id was not found",
+                    details={"flag_id": spawned_from_flag_id},
+                )
+            if str(flag["workflow_run_id"]) != workflow_run_id:
+                raise CommandError(
+                    code="cross_workflow_flag_reference",
+                    message="spawned_from_flag_id belongs to a different workflow_run",
+                    details={
+                        "flag_id": spawned_from_flag_id,
+                        "flag_workflow_run_id": str(flag["workflow_run_id"]),
+                        "workflow_run_id": workflow_run_id,
+                    },
+                )
+
         now = utc_now_iso()
         create_task_run(
             connection,
@@ -273,6 +324,7 @@ def create_task_run_command(
                 if payload.get("blocked_on_ref") is not None
                 else None
             ),
+            spawned_from_flag_id=spawned_from_flag_id,
             spawned_from_task_run_id=(
                 str(payload["spawned_from_task_run_id"])
                 if payload.get("spawned_from_task_run_id") is not None
@@ -319,6 +371,7 @@ def create_task_run_command(
                     "task_kind": str(payload["task_kind"]),
                     "activation_key": str(payload["activation_key"]),
                     "generation": int(payload.get("generation", 0)),
+                    "spawned_from_flag_id": spawned_from_flag_id,
                     "spawned_from_task_run_id": (
                         str(payload["spawned_from_task_run_id"])
                         if payload.get("spawned_from_task_run_id") is not None
@@ -708,13 +761,30 @@ def complete_human_task_command(
             ),
         )
 
+        spawn_plans: list[Any] = []
         try:
-            spawn_plans = resolve_stage06_spawn_plans(
-                parent_task_run=task_run,
-                completion_outcome=str(payload["outcome"]),
-                parent_completion_event_id=parent_completion_event_id,
+            spawn_plans.extend(
+                resolve_stage06_spawn_plans(
+                    parent_task_run=task_run,
+                    completion_outcome=str(payload["outcome"]),
+                    parent_completion_event_id=parent_completion_event_id,
+                )
             )
         except Stage06SpawnError as exc:
+            raise CommandError(
+                code=exc.code,
+                message=str(exc),
+                details=exc.details,
+            ) from exc
+        try:
+            spawn_plans.extend(
+                resolve_stage07_spawn_plans(
+                    parent_task_run=task_run,
+                    completion_outcome=str(payload["outcome"]),
+                    parent_completion_event_id=parent_completion_event_id,
+                )
+            )
+        except Stage07SpawnError as exc:
             raise CommandError(
                 code=exc.code,
                 message=str(exc),
@@ -725,6 +795,12 @@ def complete_human_task_command(
         for index, spawn_plan in enumerate(spawn_plans):
             child_task_run_id = str(payload.get("child_task_run_id") or f"tr-{uuid4()}")
             child_human_task_id = str(payload.get("child_human_task_id") or f"ht-{uuid4()}")
+            child_generation = int(task_run.get("generation") or 0) + 1 if spawn_plan.stage_id == "Stage07" else 0
+            spawned_from_flag_id = (
+                str(spawn_plan.spawned_from_flag_id)
+                if getattr(spawn_plan, "spawned_from_flag_id", None) is not None
+                else None
+            )
             child_task_event_idempotency = _event_idempotency_key(
                 payload.get("idempotency_key"),
                 f"tasks.complete.spawn.{spawn_plan.spawn_rule_id}.{index}.task.run.created",
@@ -743,10 +819,11 @@ def complete_human_task_command(
                     stage_id=spawn_plan.stage_id,
                     task_kind=spawn_plan.task_kind,
                     state="READY",
-                    generation=0,
+                    generation=child_generation,
                     activation_key=spawn_plan.activation_key,
                     blocked_on_kind=None,
                     blocked_on_ref=None,
+                    spawned_from_flag_id=spawned_from_flag_id,
                     spawned_from_task_run_id=str(completed["task_run_id"]),
                     spawn_rule_id=spawn_plan.spawn_rule_id,
                     spawn_cause_kind=spawn_plan.spawn_cause_kind,
@@ -766,7 +843,7 @@ def complete_human_task_command(
                     owner_role=spawn_plan.owner_role,
                     due_at=None,
                     escalation_at=None,
-                    generation=0,
+                    generation=child_generation,
                     created_at=now,
                 )
             except sqlite3.IntegrityError as exc:
@@ -799,7 +876,8 @@ def complete_human_task_command(
                         "stage_id": spawn_plan.stage_id,
                         "task_kind": spawn_plan.task_kind,
                         "activation_key": spawn_plan.activation_key,
-                        "generation": 0,
+                        "generation": child_generation,
+                        "spawned_from_flag_id": spawned_from_flag_id,
                         "spawned_from_task_run_id": str(completed["task_run_id"]),
                         "spawn_rule_id": spawn_plan.spawn_rule_id,
                         "spawn_cause_kind": spawn_plan.spawn_cause_kind,
@@ -840,6 +918,8 @@ def complete_human_task_command(
                     "task_kind": spawn_plan.task_kind,
                     "spawn_rule_id": spawn_plan.spawn_rule_id,
                     "activation_key": spawn_plan.activation_key,
+                    "generation": child_generation,
+                    "spawned_from_flag_id": spawned_from_flag_id,
                 }
             )
     except Exception:
@@ -908,6 +988,9 @@ def show_human_task_command(
     if task_run is not None:
         human_task["task_run_state"] = task_run["state"]
         human_task["stage_id"] = task_run["stage_id"]
+        human_task["blocked_on_kind"] = task_run["blocked_on_kind"]
+        human_task["blocked_on_ref"] = task_run["blocked_on_ref"]
+        human_task["spawned_from_flag_id"] = task_run["spawned_from_flag_id"]
     return human_task
 
 
@@ -929,8 +1012,672 @@ def list_tasks_for_workflow_run_command(
         if task_run is not None:
             item["task_run_state"] = task_run["state"]
             item["stage_id"] = task_run["stage_id"]
+            item["blocked_on_kind"] = task_run["blocked_on_kind"]
+            item["blocked_on_ref"] = task_run["blocked_on_ref"]
+            item["spawned_from_flag_id"] = task_run["spawned_from_flag_id"]
         results.append(item)
     return results
+
+
+def create_flag_command(
+    connection: sqlite3.Connection,
+    payload: dict[str, Any],
+) -> dict[str, Any]:
+    _require_fields(
+        payload,
+        ["workflow_run_id", "kind", "severity", "summary", "idempotency_key"],
+    )
+    severity = str(payload["severity"])
+    if severity not in FLAG_SEVERITIES:
+        raise CommandError(
+            code="invalid_flag_severity",
+            message=f"unsupported flag severity: {severity}",
+            details={"allowed_severities": sorted(FLAG_SEVERITIES)},
+        )
+    state = str(payload.get("state", "open"))
+    if state not in FLAG_STATES:
+        raise CommandError(
+            code="invalid_flag_state",
+            message=f"unsupported flag state: {state}",
+            details={"allowed_states": sorted(FLAG_STATES)},
+        )
+
+    details_json = payload.get("details_json") or {}
+    if not isinstance(details_json, dict):
+        raise CommandError(
+            code="invalid_flag_details",
+            message="details_json must be a JSON object",
+            details={},
+        )
+    flag_id = str(payload.get("flag_id") or f"fl-{uuid4()}")
+    event_idempotency = _required_event_idempotency_key(
+        payload.get("idempotency_key"),
+        "flags.create.flag.created",
+    )
+
+    _begin_transaction(connection)
+    try:
+        _assert_idempotency_available(connection, event_idempotency)
+        workflow_run = get_workflow_run(connection, str(payload["workflow_run_id"]))
+        if workflow_run is None:
+            raise CommandError(
+                code="workflow_run_not_found",
+                message="workflow run not found for flag creation",
+                details={"workflow_run_id": str(payload["workflow_run_id"])},
+            )
+
+        created_by = payload.get("created_by") or {}
+        created_by_actor_id = str(
+            created_by.get("id")
+            or payload.get("actor_id")
+            or payload.get("created_by_actor_id")
+            or "system:runtime"
+        )
+        created_by_actor_type = str(
+            created_by.get("type")
+            or payload.get("actor_type")
+            or payload.get("created_by_actor_type")
+            or "system"
+        )
+        _assert_actor_type(created_by_actor_type)
+        now = utc_now_iso()
+        create_flag(
+            connection,
+            flag_id=flag_id,
+            workflow_run_id=str(payload["workflow_run_id"]),
+            tenant_id=str(workflow_run["tenant_id"]),
+            domain_id=str(workflow_run["domain_id"]),
+            workflow_id=str(workflow_run["workflow_id"]),
+            partition_key=str(workflow_run["partition_key"]),
+            kind=str(payload["kind"]),
+            severity=severity,
+            state=state,
+            summary=str(payload["summary"]),
+            details_json=details_json,
+            assigned_group=(
+                str(payload["assigned_group"])
+                if payload.get("assigned_group") is not None
+                else None
+            ),
+            created_at=now,
+            closed_at=(now if state in {"closed", "waived"} else None),
+            created_by_actor_id=created_by_actor_id,
+            created_by_actor_type=created_by_actor_type,
+            source_event_id=(
+                str(payload["source_event_id"])
+                if payload.get("source_event_id") is not None
+                else None
+            ),
+            dedupe_key=(
+                str(payload["dedupe_key"])
+                if payload.get("dedupe_key") is not None
+                else str(payload["idempotency_key"])
+            ),
+        )
+        append_event(
+            connection,
+            _event_envelope(
+                event_type="flag.created",
+                tenant_id=str(workflow_run["tenant_id"]),
+                domain_id=str(workflow_run["domain_id"]),
+                actor_type=created_by_actor_type,
+                actor_id=created_by_actor_id,
+                links=[
+                    {"rel": "subject", "type": "flag", "id": flag_id},
+                    {"rel": "subject", "type": "workflow_run", "id": str(payload["workflow_run_id"])},
+                ],
+                payload={
+                    "flag_id": flag_id,
+                    "flag_type": str(payload["kind"]),
+                    "state": state,
+                    "summary": str(payload["summary"]),
+                },
+                idempotency_key=event_idempotency,
+            ),
+        )
+    except sqlite3.IntegrityError as exc:
+        connection.rollback()
+        message = str(exc)
+        if "flags.flag_id" in message:
+            raise CommandError(
+                code="duplicate_flag_id",
+                message="flag_id already exists",
+                details={"flag_id": flag_id},
+            ) from exc
+        if "uq_flags_workflow_dedupe_key" in message or "flags.workflow_run_id, flags.dedupe_key" in message:
+            raise CommandError(
+                code="duplicate_flag_dedupe",
+                message="duplicate dedupe key for workflow run",
+                details={
+                    "workflow_run_id": str(payload["workflow_run_id"]),
+                    "dedupe_key": str(payload.get("dedupe_key") or payload["idempotency_key"]),
+                },
+            ) from exc
+        raise
+    except Exception:
+        connection.rollback()
+        raise
+    connection.commit()
+
+    created = get_flag(connection, flag_id)
+    if created is None:
+        raise CommandError(
+            code="flag_not_found",
+            message="flag was not found after creation",
+            details={"flag_id": flag_id},
+        )
+    return created
+
+
+def transition_flag_state_command(
+    connection: sqlite3.Connection,
+    payload: dict[str, Any],
+) -> dict[str, Any]:
+    _require_fields(
+        payload,
+        ["flag_id", "to_state", "actor_id", "actor_type", "idempotency_key"],
+    )
+    to_state = str(payload["to_state"])
+    if to_state not in FLAG_STATES:
+        raise CommandError(
+            code="invalid_flag_state",
+            message=f"unsupported flag state: {to_state}",
+            details={"allowed_states": sorted(FLAG_STATES)},
+        )
+    actor_type = str(payload["actor_type"])
+    _assert_actor_type(actor_type)
+    event_idempotency = _required_event_idempotency_key(
+        payload.get("idempotency_key"),
+        "flags.transition.flag.state_changed",
+    )
+
+    _begin_transaction(connection)
+    try:
+        _assert_idempotency_available(connection, event_idempotency)
+        current = get_flag(connection, str(payload["flag_id"]))
+        if current is None:
+            raise CommandError(
+                code="flag_not_found",
+                message="flag not found",
+                details={"flag_id": str(payload["flag_id"])},
+            )
+        from_state = str(current["state"])
+        if from_state == to_state:
+            raise CommandError(
+                code="illegal_flag_transition",
+                message="flag already in requested state",
+                details={"flag_id": str(payload["flag_id"]), "state": from_state},
+            )
+        allowed_to_states = FLAG_ALLOWED_TRANSITIONS.get(from_state, set())
+        if to_state not in allowed_to_states:
+            raise CommandError(
+                code="illegal_flag_transition",
+                message="flag transition is not allowed",
+                details={
+                    "flag_id": str(payload["flag_id"]),
+                    "from_state": from_state,
+                    "to_state": to_state,
+                    "allowed_to_states": sorted(allowed_to_states),
+                },
+            )
+        now = utc_now_iso()
+        updated = transition_flag_state(
+            connection,
+            flag_id=str(payload["flag_id"]),
+            expected_from_state=from_state,
+            to_state=to_state,
+            updated_at=now,
+        )
+        if updated is None:
+            raise CommandError(
+                code="flag_transition_conflict",
+                message="flag transition raced and could not be applied",
+                details={"flag_id": str(payload["flag_id"])},
+            )
+
+        scope = _workflow_scope(connection, str(updated["workflow_run_id"]))
+        append_event(
+            connection,
+            _event_envelope(
+                event_type="flag.state_changed",
+                tenant_id=scope["tenant_id"],
+                domain_id=scope["domain_id"],
+                actor_type=actor_type,
+                actor_id=str(payload["actor_id"]),
+                links=[
+                    {"rel": "subject", "type": "flag", "id": str(payload["flag_id"])},
+                    {"rel": "subject", "type": "workflow_run", "id": str(updated["workflow_run_id"])},
+                ],
+                payload={
+                    "flag_id": str(payload["flag_id"]),
+                    "from_state": from_state,
+                    "to_state": to_state,
+                    "reason": (
+                        str(payload["reason"])
+                        if payload.get("reason") is not None
+                        else None
+                    ),
+                },
+                idempotency_key=event_idempotency,
+            ),
+        )
+    except Exception:
+        connection.rollback()
+        raise
+    connection.commit()
+
+    transitioned = get_flag(connection, str(payload["flag_id"]))
+    if transitioned is None:
+        raise CommandError(
+            code="flag_not_found",
+            message="flag not found after transition",
+            details={"flag_id": str(payload["flag_id"])},
+        )
+    return transitioned
+
+
+def show_flag_command(
+    connection: sqlite3.Connection,
+    flag_id: str,
+) -> dict[str, Any]:
+    flag = get_flag(connection, flag_id)
+    if flag is None:
+        raise CommandError(
+            code="flag_not_found",
+            message="flag not found",
+            details={"flag_id": flag_id},
+        )
+    return flag
+
+
+def list_flags_for_workflow_run_command(
+    connection: sqlite3.Connection,
+    workflow_run_id: str,
+) -> list[dict[str, Any]]:
+    _workflow_scope(connection, workflow_run_id)
+    return list_flags_for_workflow_run(connection, workflow_run_id)
+
+
+def activate_stage07_issue_from_flag_command(
+    connection: sqlite3.Connection,
+    payload: dict[str, Any],
+) -> dict[str, Any]:
+    _require_fields(payload, ["workflow_run_id", "flag_id"])
+    task_kind = str(payload.get("task_kind", "exception_triage"))
+    if task_kind != "exception_triage":
+        raise CommandError(
+            code="invalid_stage07_task_kind",
+            message="stage07 root issue activation only supports exception_triage",
+            details={"task_kind": task_kind},
+        )
+    generation = int(payload.get("generation", 0))
+    if generation < 0:
+        raise CommandError(
+            code="invalid_generation",
+            message="generation must be >= 0",
+            details={"generation": generation},
+        )
+    workflow_run_id = str(payload["workflow_run_id"])
+    flag_id = str(payload["flag_id"])
+    activation_key = build_stage07_issue_activation_key(
+        workflow_run_id=workflow_run_id,
+        flag_id=flag_id,
+        task_kind=task_kind,
+        generation=generation,
+    )
+    existing = get_task_run_by_activation_key(
+        connection,
+        workflow_run_id=workflow_run_id,
+        activation_key=activation_key,
+    )
+    if existing is not None:
+        return {
+            "task_run": existing,
+            "human_task": get_human_task_by_task_run_id(connection, str(existing["task_run_id"])),
+            "deduped": True,
+        }
+
+    task_event_idempotency = _event_idempotency_key(
+        payload.get("idempotency_key"),
+        "stage07.activate-issue.task.run.created",
+    )
+    human_event_idempotency = _event_idempotency_key(
+        payload.get("idempotency_key"),
+        "stage07.activate-issue.task.created",
+    )
+
+    _begin_transaction(connection)
+    try:
+        workflow_scope = _workflow_scope(connection, workflow_run_id)
+        flag = get_flag(connection, flag_id)
+        if flag is None:
+            raise CommandError(
+                code="flag_not_found",
+                message="flag not found for stage07 activation",
+                details={"flag_id": flag_id},
+            )
+        if str(flag["workflow_run_id"]) != workflow_run_id:
+            raise CommandError(
+                code="cross_workflow_flag_reference",
+                message="flag belongs to a different workflow_run",
+                details={
+                    "flag_id": flag_id,
+                    "flag_workflow_run_id": str(flag["workflow_run_id"]),
+                    "workflow_run_id": workflow_run_id,
+                },
+            )
+        if str(flag["state"]) not in FLAG_ACTIVE_STATES:
+            raise CommandError(
+                code="flag_not_active",
+                message="only active flags can activate Stage07 issue tasks",
+                details={"flag_id": flag_id, "state": str(flag["state"])},
+            )
+        _assert_idempotency_available(connection, task_event_idempotency)
+        _assert_idempotency_available(connection, human_event_idempotency)
+
+        now = utc_now_iso()
+        task_run_id = str(payload.get("task_run_id") or f"tr-{uuid4()}")
+        human_task_id = str(payload.get("human_task_id") or f"ht-{uuid4()}")
+        create_task_run(
+            connection,
+            task_run_id=task_run_id,
+            workflow_run_id=workflow_run_id,
+            stage_id="Stage07",
+            task_kind=task_kind,
+            state="READY",
+            generation=generation,
+            activation_key=activation_key,
+            blocked_on_kind=None,
+            blocked_on_ref=None,
+            spawned_from_flag_id=flag_id,
+            spawned_from_task_run_id=None,
+            spawn_rule_id="stage07_issue_activation",
+            spawn_cause_kind="flag_trigger",
+            spawn_cause_event_id=(
+                str(flag["source_event_id"])
+                if flag.get("source_event_id") is not None
+                else None
+            ),
+            spawn_depth=0,
+            spawn_budget_key=f"stage07:{workflow_run_id}:{flag_id}",
+            created_at=now,
+        )
+        create_human_task(
+            connection,
+            human_task_id=human_task_id,
+            workflow_run_id=workflow_run_id,
+            task_run_id=task_run_id,
+            task_kind=task_kind,
+            state="OPEN",
+            candidate_roles=["operations_manager"],
+            owner_role="operations_manager",
+            due_at=None,
+            escalation_at=None,
+            generation=generation,
+            created_at=now,
+        )
+        append_event(
+            connection,
+            _event_envelope(
+                event_type="task.run.created",
+                tenant_id=workflow_scope["tenant_id"],
+                domain_id=workflow_scope["domain_id"],
+                actor_type=str(payload.get("actor_type", "system")),
+                actor_id=str(payload.get("actor_id", "system:runtime")),
+                links=[
+                    {"rel": "subject", "type": "workflow_run", "id": workflow_run_id},
+                    {"rel": "subject", "type": "task_run", "id": task_run_id},
+                ],
+                payload={
+                    "task_run_id": task_run_id,
+                    "stage_id": "Stage07",
+                    "task_kind": task_kind,
+                    "activation_key": activation_key,
+                    "generation": generation,
+                    "spawned_from_flag_id": flag_id,
+                    "spawn_rule_id": "stage07_issue_activation",
+                    "spawn_cause_kind": "flag_trigger",
+                    "spawn_cause_event_id": (
+                        str(flag["source_event_id"])
+                        if flag.get("source_event_id") is not None
+                        else None
+                    ),
+                    "spawn_budget_key": f"stage07:{workflow_run_id}:{flag_id}",
+                    "spawn_depth": 0,
+                },
+                idempotency_key=task_event_idempotency,
+            ),
+        )
+        append_event(
+            connection,
+            _event_envelope(
+                event_type="task.created",
+                tenant_id=workflow_scope["tenant_id"],
+                domain_id=workflow_scope["domain_id"],
+                actor_type=str(payload.get("actor_type", "system")),
+                actor_id=str(payload.get("actor_id", "system:runtime")),
+                links=[
+                    {"rel": "subject", "type": "workflow_run", "id": workflow_run_id},
+                    {"rel": "subject", "type": "task_run", "id": task_run_id},
+                    {"rel": "subject", "type": "human_task", "id": human_task_id},
+                ],
+                payload={
+                    "human_task_id": human_task_id,
+                    "task_kind": task_kind,
+                    "state": "OPEN",
+                    "candidate_roles": ["operations_manager"],
+                },
+                idempotency_key=human_event_idempotency,
+            ),
+        )
+    except sqlite3.IntegrityError as exc:
+        connection.rollback()
+        if "task_runs.workflow_run_id, task_runs.activation_key" in str(exc):
+            existing_after_race = get_task_run_by_activation_key(
+                connection,
+                workflow_run_id=workflow_run_id,
+                activation_key=activation_key,
+            )
+            if existing_after_race is not None:
+                return {
+                    "task_run": existing_after_race,
+                    "human_task": get_human_task_by_task_run_id(
+                        connection,
+                        str(existing_after_race["task_run_id"]),
+                    ),
+                    "deduped": True,
+                }
+            raise CommandError(
+                code="duplicate_stage07_issue_activation",
+                message="stage07 issue activation key already exists",
+                details={
+                    "workflow_run_id": workflow_run_id,
+                    "flag_id": flag_id,
+                    "activation_key": activation_key,
+                },
+            ) from exc
+        raise
+    except Exception:
+        connection.rollback()
+        raise
+    connection.commit()
+
+    created_task_run = get_task_run_by_activation_key(
+        connection,
+        workflow_run_id=workflow_run_id,
+        activation_key=activation_key,
+    )
+    if created_task_run is None:
+        raise CommandError(
+            code="task_run_not_found",
+            message="stage07 activation task run not found after creation",
+            details={"activation_key": activation_key},
+        )
+    return {
+        "task_run": created_task_run,
+        "human_task": get_human_task_by_task_run_id(connection, str(created_task_run["task_run_id"])),
+        "deduped": False,
+    }
+
+
+def sweep_leases_command(
+    connection: sqlite3.Connection,
+    payload: dict[str, Any],
+) -> dict[str, Any]:
+    now = str(payload.get("now") or utc_now_iso())
+    workflow_run_id = (
+        str(payload["workflow_run_id"])
+        if payload.get("workflow_run_id") is not None
+        else None
+    )
+
+    _begin_transaction(connection)
+    try:
+        expired = list_expired_claimed_human_tasks(
+            connection,
+            now_iso=now,
+            workflow_run_id=workflow_run_id,
+        )
+        reopened_task_ids: list[str] = []
+        processed: list[dict[str, Any]] = []
+        for task in expired:
+            reopened = reopen_human_task_after_lease_expiry(
+                connection,
+                human_task_id=str(task["human_task_id"]),
+                expected_lease_version=int(task["lease_version"]),
+                updated_at=now,
+            )
+            if reopened is None:
+                continue
+            task_run = get_task_run(connection, str(task["task_run_id"]))
+            if task_run is None:
+                continue
+            scope = _workflow_scope(connection, str(task["workflow_run_id"]))
+            append_event(
+                connection,
+                _event_envelope(
+                    event_type="task.lease_expired",
+                    tenant_id=scope["tenant_id"],
+                    domain_id=scope["domain_id"],
+                    actor_type="system",
+                    actor_id="system:lease-sweeper",
+                    links=[
+                        {"rel": "subject", "type": "workflow_run", "id": str(task["workflow_run_id"])},
+                        {"rel": "subject", "type": "task_run", "id": str(task["task_run_id"])},
+                        {"rel": "subject", "type": "human_task", "id": str(task["human_task_id"])},
+                    ],
+                    payload={
+                        "human_task_id": str(task["human_task_id"]),
+                        "lease_version": int(task["lease_version"]),
+                        "expiry_kind": "claim_timeout",
+                        "reopened": True,
+                        "escalated": False,
+                    },
+                    idempotency_key=None,
+                ),
+            )
+            if str(task_run["state"]) == "IN_PROGRESS":
+                transition_task_run_state(
+                    connection,
+                    task_run_id=str(task_run["task_run_id"]),
+                    expected_from_state="IN_PROGRESS",
+                    to_state="READY",
+                    updated_at=now,
+                )
+                append_event(
+                    connection,
+                    _event_envelope(
+                        event_type="task.run.state_changed",
+                        tenant_id=scope["tenant_id"],
+                        domain_id=scope["domain_id"],
+                        actor_type="system",
+                        actor_id="system:lease-sweeper",
+                        links=[
+                            {"rel": "subject", "type": "workflow_run", "id": str(task["workflow_run_id"])},
+                            {"rel": "subject", "type": "task_run", "id": str(task["task_run_id"])},
+                        ],
+                        payload={
+                            "task_run_id": str(task["task_run_id"]),
+                            "from_state": "IN_PROGRESS",
+                            "to_state": "READY",
+                            "reason": "human_task_lease_expired",
+                        },
+                        idempotency_key=None,
+                    ),
+                )
+            reopened_task_ids.append(str(task["human_task_id"]))
+            processed.append(
+                {
+                    "human_task_id": str(task["human_task_id"]),
+                    "task_run_id": str(task["task_run_id"]),
+                    "workflow_run_id": str(task["workflow_run_id"]),
+                    "lease_version": int(task["lease_version"]),
+                }
+            )
+    except Exception:
+        connection.rollback()
+        raise
+    connection.commit()
+    return {
+        "now": now,
+        "processed_count": len(processed),
+        "reopened_human_task_ids": reopened_task_ids,
+        "processed": processed,
+    }
+
+
+def reconcile_stage07_command(
+    connection: sqlite3.Connection,
+    payload: dict[str, Any],
+) -> dict[str, Any]:
+    _require_fields(payload, ["workflow_run_id"])
+    workflow_run_id = str(payload["workflow_run_id"])
+    _workflow_scope(connection, workflow_run_id)
+    target_flag_id = str(payload["flag_id"]) if payload.get("flag_id") is not None else None
+    generation = int(payload.get("generation", 0))
+    idempotency_base = (
+        str(payload["idempotency_key"])
+        if payload.get("idempotency_key") is not None
+        else None
+    )
+
+    flags = list_open_flags_for_workflow_run(connection, workflow_run_id)
+    if target_flag_id is not None:
+        flags = [flag for flag in flags if str(flag["flag_id"]) == target_flag_id]
+    results: list[dict[str, Any]] = []
+    for index, flag in enumerate(flags):
+        activation_payload: dict[str, Any] = {
+            "workflow_run_id": workflow_run_id,
+            "flag_id": str(flag["flag_id"]),
+            "generation": generation,
+            "actor_type": "system",
+            "actor_id": "system:stage07-reconcile",
+        }
+        if idempotency_base is not None:
+            activation_payload["idempotency_key"] = (
+                f"{idempotency_base}:flag:{flag['flag_id']}:{index}"
+            )
+        activation = activate_stage07_issue_from_flag_command(
+            connection,
+            activation_payload,
+        )
+        results.append(
+            {
+                "flag_id": str(flag["flag_id"]),
+                "task_run_id": str(activation["task_run"]["task_run_id"]),
+                "human_task_id": (
+                    str(activation["human_task"]["human_task_id"])
+                    if activation.get("human_task") is not None
+                    else None
+                ),
+                "deduped": bool(activation.get("deduped", False)),
+            }
+        )
+    return {
+        "workflow_run_id": workflow_run_id,
+        "open_flag_count": len(flags),
+        "activations": results,
+    }
 
 
 def request_approval_command(
@@ -1408,16 +2155,21 @@ def promote_pointer_command(
                 },
             )
 
+        promotion_reason = (
+            str(payload["promotion_reason"])
+            if payload.get("promotion_reason") is not None
+            else None
+        )
         approved_by_approval_id = (
             str(payload["approved_by_approval_id"])
             if payload.get("approved_by_approval_id") is not None
             else None
         )
-        if str(payload.get("promotion_reason", "")) == "official_publish" and approved_by_approval_id is None:
+        if promotion_reason in {"official_publish", "official_major_replan"} and approved_by_approval_id is None:
             raise CommandError(
                 code="approval_required_for_promotion",
-                message="official_publish promotions require approved_by_approval_id",
-                details={"promotion_reason": "official_publish"},
+                message=f"{promotion_reason} promotions require approved_by_approval_id",
+                details={"promotion_reason": promotion_reason},
             )
         if approved_by_approval_id is not None:
             approval = get_approval(connection, approved_by_approval_id)
@@ -1447,6 +2199,18 @@ def promote_pointer_command(
                         "response_kind": approval.get("response_kind"),
                     },
                 )
+            if (
+                promotion_reason == "official_major_replan"
+                and str(approval.get("scope_ref")) != "Stage07"
+            ):
+                raise CommandError(
+                    code="major_replan_approval_required",
+                    message="official_major_replan requires a Stage07 approval response",
+                    details={
+                        "approved_by_approval_id": approved_by_approval_id,
+                        "scope_ref": str(approval.get("scope_ref")),
+                    },
+                )
 
         promoted_by_task_run_id = (
             str(payload["promoted_by_task_run_id"])
@@ -1469,11 +2233,7 @@ def promote_pointer_command(
             scope_ref=str(payload["scope_ref"]),
             artifact_kind=str(payload["artifact_kind"]),
             artifact_version_id=str(payload["artifact_version_id"]),
-            promotion_reason=(
-                str(payload["promotion_reason"])
-                if payload.get("promotion_reason") is not None
-                else None
-            ),
+            promotion_reason=promotion_reason,
             promoted_by_task_run_id=promoted_by_task_run_id,
             approved_by_approval_id=approved_by_approval_id,
             updated_at=now,
@@ -1499,6 +2259,15 @@ def promote_pointer_command(
             {"rel": "subject", "type": "workflow_run", "id": str(payload["workflow_run_id"])},
             {"rel": "subject", "type": "artifact_version", "id": str(payload["artifact_version_id"])},
         ]
+        reviewed_artifact_version_id = (
+            str(payload["reviewed_artifact_version_id"])
+            if payload.get("reviewed_artifact_version_id") is not None
+            else (
+                str(payload["reviewed_base_artifact_version_id"])
+                if payload.get("reviewed_base_artifact_version_id") is not None
+                else None
+            )
+        )
         append_event(
             connection,
             _event_envelope(
@@ -1512,25 +2281,55 @@ def promote_pointer_command(
                     "pointer_id": str(payload["pointer_key"]),
                     "dataset_key": str(payload["artifact_kind"]),
                     "promoted_artifact_version_id": str(payload["artifact_version_id"]),
-                    "reviewed_artifact_version_id": (
-                        str(payload["reviewed_artifact_version_id"])
-                        if payload.get("reviewed_artifact_version_id") is not None
-                        else None
-                    ),
+                    "reviewed_artifact_version_id": reviewed_artifact_version_id,
                 },
                 idempotency_key=event_idempotency,
             ),
         )
 
-        reviewed_artifact_version_id = (
-            str(payload["reviewed_artifact_version_id"])
-            if payload.get("reviewed_artifact_version_id") is not None
+        drift_detected = False
+        drift_reason = (
+            str(payload["drift_reason"])
+            if payload.get("drift_reason") is not None
             else None
         )
-        if (
+        reviewed_base_artifact_version_id = (
+            str(payload["reviewed_base_artifact_version_id"])
+            if payload.get("reviewed_base_artifact_version_id") is not None
+            else None
+        )
+        if reviewed_base_artifact_version_id is not None:
+            base_pointer_key = str(
+                payload.get("base_pointer_key") or "official:schedule.published_schedule.workbook"
+            )
+            base_pointer = get_pointer(
+                connection,
+                workflow_run_id=str(payload["workflow_run_id"]),
+                pointer_key=base_pointer_key,
+            )
+            if base_pointer is None:
+                raise CommandError(
+                    code="base_pointer_not_found",
+                    message="base pointer was not found for drift check",
+                    details={
+                        "workflow_run_id": str(payload["workflow_run_id"]),
+                        "base_pointer_key": base_pointer_key,
+                    },
+                )
+            current_base_artifact_version_id = str(base_pointer["artifact_version_id"])
+            if reviewed_base_artifact_version_id != current_base_artifact_version_id:
+                drift_detected = True
+                if drift_reason is None:
+                    drift_reason = "reviewed_base_version_stale_at_promotion"
+        elif (
             reviewed_artifact_version_id is not None
             and reviewed_artifact_version_id != str(payload["artifact_version_id"])
         ):
+            drift_detected = True
+            if drift_reason is None:
+                drift_reason = "reviewed_version_differs_from_promoted_version"
+
+        if drift_detected:
             _assert_idempotency_available(connection, drift_idempotency)
             append_event(
                 connection,
@@ -1544,13 +2343,11 @@ def promote_pointer_command(
                     payload={
                         "pointer_id": str(payload["pointer_key"]),
                         "dataset_key": str(payload["artifact_kind"]),
-                        "reviewed_artifact_version_id": reviewed_artifact_version_id,
-                        "promoted_artifact_version_id": str(payload["artifact_version_id"]),
-                        "drift_reason": (
-                            str(payload["drift_reason"])
-                            if payload.get("drift_reason") is not None
-                            else "reviewed_version_differs_from_promoted_version"
+                        "reviewed_artifact_version_id": str(
+                            reviewed_artifact_version_id or reviewed_base_artifact_version_id
                         ),
+                        "promoted_artifact_version_id": str(payload["artifact_version_id"]),
+                        "drift_reason": drift_reason,
                     },
                     idempotency_key=drift_idempotency,
                 ),

@@ -16,6 +16,7 @@ Scaffold status note:
   - CLI-driven Stage06 scenario tests in `tests/runtime/scenarios/`
   - query-contract stability tests in `tests/runtime/contracts/`
 - TASK-0044 adds scenario-backed API contract/mutation tests under `tests/runtime/api/` so frontend work can validate against a stable HTTP boundary in parallel with CLI-driven scenario execution.
+- TASK-0045 extends the same harness with Stage07 issue-loop fixtures and maintenance actions (`flags`, `stage07 activate-issue`, `maintenance sweep/reconcile`) plus Stage07 scenario and query-contract coverage.
 
 ## 1) Why this harness exists
 
@@ -60,6 +61,9 @@ Implemented command surface for first scenario slice:
 - `onetruthctl approvals respond`
 - `onetruthctl artifacts create-version`
 - `onetruthctl pointers promote`
+- `onetruthctl flags create|transition|list`
+- `onetruthctl stage07 activate-issue`
+- `onetruthctl maintenance sweep-leases|reconcile-stage07`
 - `onetruthctl events list`
 
 Equivalent HTTP APIs are acceptable, but the scenario harness should not call hidden domain internals directly.
@@ -137,8 +141,14 @@ Implemented in TASK-0043:
 - `tests/runtime/scenarios/test_schedule_stage06_retry_no_duplicate_child_tasks.py`
 - `tests/runtime/contracts/test_hitl_query_contracts_stage06.py`
 
-Still planned:
-- Stage07 issue triage scenarios and issue-scoped child-loop coverage
+Implemented in TASK-0045:
+- `tests/runtime/scenarios/test_schedule_stage07_major_replan_happy.py`
+- `tests/runtime/scenarios/test_schedule_stage07_missing_information_branch.py`
+- `tests/runtime/scenarios/test_schedule_stage07_child_issue_branch.py`
+- `tests/runtime/scenarios/test_schedule_stage07_duplicate_flag_retry.py`
+- `tests/runtime/scenarios/test_schedule_stage07_lease_expiry_recovery.py`
+- `tests/runtime/scenarios/test_schedule_stage07_drift_detected.py`
+- `tests/runtime/contracts/test_hitl_query_contracts_stage07.py`
 
 ## 8) Code/test locations once runtime work starts
 

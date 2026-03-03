@@ -1,0 +1,81 @@
+scenario_id: stage07_child_issue_branch
+workflow_id: schedule_planning.v1
+workflow_version: v1
+scope:
+  tenant_id: tenant-a
+  domain_id: domain-x
+partition_key: SD-2026-03-11
+logical_date: "2026-03-11"
+steps:
+  - id: create_flag
+    action: flags.create
+    payload:
+      workflow_run_id: "{{workflow_run_id}}"
+      kind: delay_cluster
+      severity: high
+      summary: "Delay cluster detected in east zone"
+      details_json:
+        reason_code: delay_cluster
+      created_by:
+        id: human:dispatcher-3
+        type: human
+      idempotency_key: "scenario:{{scenario_id}}:flags.create:delay"
+    save_as: create_flag
+  - id: activate_issue
+    action: stage07.activate-issue
+    payload:
+      workflow_run_id: "{{workflow_run_id}}"
+      flag_id: "{{create_flag.flag.flag_id}}"
+      generation: 0
+      idempotency_key: "scenario:{{scenario_id}}:stage07.activate-issue:delay"
+    save_as: activate_issue
+  - id: claim_issue
+    action: tasks.claim
+    payload:
+      human_task_id: "{{activate_issue.result.human_task.human_task_id}}"
+      actor_id: human:ops-manager-3
+      actor_type: human
+      lease_seconds: 300
+      idempotency_key: "scenario:{{scenario_id}}:tasks.claim:root"
+    save_as: claim_issue
+  - id: complete_issue
+    action: tasks.complete
+    payload:
+      human_task_id: "{{activate_issue.result.human_task.human_task_id}}"
+      actor_id: human:ops-manager-3
+      actor_type: human
+      outcome: resolution_creates_child_issue
+      idempotency_key: "scenario:{{scenario_id}}:tasks.complete:root"
+    save_as: complete_issue
+expected_events:
+  ordered_contains:
+    - workflow.run.created
+    - flag.created
+    - task.run.created
+    - task.created
+    - task.claimed
+    - task.completed
+    - task.run.created
+    - task.created
+expected_flag_states:
+  - kind: delay_cluster
+    state: open
+expected_task_states:
+  - stage_id: Stage07
+    task_kind: exception_triage
+    state: COMPLETED
+  - stage_id: Stage07
+    task_kind: exception_triage
+    state: OPEN
+expected_spawned_children:
+  - parent_outcome: resolution_creates_child_issue
+    stage_id: Stage07
+    task_kind: exception_triage
+    spawn_rule_id: stage07_follow_on_exception_triage
+expected_pointer_targets: []
+expected_query_rows:
+  task_rows: 2
+  open_tasks: 1
+  approval_rows: 0
+  pointer_rows: 0
+  flag_rows: 1

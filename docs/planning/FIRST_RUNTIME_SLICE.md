@@ -203,6 +203,16 @@ Status:
 - semantics behind AT-SCH-001, AT-SCH-002, and AT-SCH-004
 - dynamic loop behavior remains explicit, bounded, and idempotent
 
+Status:
+- TASK-0045 now implements the first Stage07 runtime slice:
+  - canonical `flags` table + lifecycle commands (`flags create/transition/show/list`)
+  - issue-scoped activation command (`stage07 activate-issue`) with activation-key+generation dedupe
+  - Stage07 completion outcome -> explicit child-task spawn mappings with lineage
+  - major-replan approval gate (`promotion_reason=official_major_replan`) through canonical approvals
+  - delta artifact + pointer promotion flow with drift visibility (`artifact.pointer.drift_detected`)
+  - lease-expiry reopen recovery + Stage07 reconcile commands (`maintenance sweep-leases`, `maintenance reconcile-stage07`)
+  - scenario fixtures/tests and query-contract tests under `tests/runtime/scenarios/` and `tests/runtime/contracts/`
+
 ### Tranche 5 - Execution facet + policy gate
 **Write after Stage07**
 - `execution_specs`

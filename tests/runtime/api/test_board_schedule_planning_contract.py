@@ -38,6 +38,7 @@ REQUIRED_HUMAN_CARD_KEYS = {
     "claimed_until",
     "blocked_on_kind",
     "blocked_on_ref",
+    "spawned_from_flag_id",
     "linked_approval_count",
     "linked_approval_states",
 }

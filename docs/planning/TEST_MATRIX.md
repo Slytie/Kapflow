@@ -83,7 +83,14 @@ Current implemented runtime command-boundary coverage:
 - `tests/runtime/scenarios/test_schedule_stage06_publish_steps.py`
 - `tests/runtime/scenarios/test_schedule_stage06_request_more_information_steps.py`
 - `tests/runtime/scenarios/test_schedule_stage06_retry_no_duplicate_child_tasks.py`
+- `tests/runtime/scenarios/test_schedule_stage07_major_replan_happy.py`
+- `tests/runtime/scenarios/test_schedule_stage07_missing_information_branch.py`
+- `tests/runtime/scenarios/test_schedule_stage07_child_issue_branch.py`
+- `tests/runtime/scenarios/test_schedule_stage07_duplicate_flag_retry.py`
+- `tests/runtime/scenarios/test_schedule_stage07_lease_expiry_recovery.py`
+- `tests/runtime/scenarios/test_schedule_stage07_drift_detected.py`
 - `tests/runtime/contracts/test_hitl_query_contracts_stage06.py`
+- `tests/runtime/contracts/test_hitl_query_contracts_stage07.py`
 - `tests/runtime/api/test_human_task_list_contract.py`
 - `tests/runtime/api/test_approval_list_contract.py`
 - `tests/runtime/api/test_workflow_run_detail_contract.py`
@@ -110,14 +117,22 @@ Current runtime tests assert:
 - Stage06 completion outcome -> explicit child-task spawning with lineage fields persisted on canonical `task_runs`
 - Stage06 scenario retries do not duplicate spawned children/events when parent completion idempotency key is retried
 - first implementation-backed query-contract snapshots for human-task queue, approval queue, pointer summary, and workflow-run summary rows
+- canonical Stage07 flag lifecycle/activation semantics with deduped issue-root activation keys and generation handling
+- Stage07 completion outcome -> child spawn mappings (`information_request`, child `exception_triage`, `final_review`) with persisted lineage
+- major-replan approval gate enforcement on pointer promotion (`official_major_replan`)
+- lease-expiry reopen recovery with canonical `task.lease_expired` evidence and Stage07 reconcile repair path
+- drift visibility for stale reviewed base at Stage07 promotion (`artifact.pointer.drift_detected`)
 - first implementation-backed HTTP contract/mutation coverage for board-ready read surfaces and canonical HITL actions (`claim`, `complete`, `respond`)
 - cross-scope API denial checks and retry-stability checks over repeated GET/mutation retries
 
 Minimum required runtime scenario tests:
 - `tests/runtime/scenarios/test_schedule_stage06_publish_steps.py`
-- `tests/runtime/scenarios/test_schedule_stage07_spawn_steps.py`
-- `tests/runtime/test_task_completion_spawns_follow_ons.py`
-- `tests/runtime/test_task_spawn_idempotency.py`
+- `tests/runtime/scenarios/test_schedule_stage07_major_replan_happy.py`
+- `tests/runtime/scenarios/test_schedule_stage07_missing_information_branch.py`
+- `tests/runtime/scenarios/test_schedule_stage07_child_issue_branch.py`
+- `tests/runtime/scenarios/test_schedule_stage07_duplicate_flag_retry.py`
+- `tests/runtime/scenarios/test_schedule_stage07_lease_expiry_recovery.py`
+- `tests/runtime/scenarios/test_schedule_stage07_drift_detected.py`
 
 Each scenario should:
 - seed initial artifact inputs from `fixtures/workflows/*/template_pack/*_Example_COMPLETED.*`

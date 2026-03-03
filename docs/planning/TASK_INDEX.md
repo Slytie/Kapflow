@@ -46,4 +46,4 @@
 | TASK-0042 | EPIC-040 | DONE | high | Implement approvals, artifact versions, pointers, and query-ready runtime surfaces |
 | TASK-0043 | EPIC-040 | DONE | high | Implement Schedule Planning Stage06 publish slice and CLI-driven scenario harness |
 | TASK-0044 | EPIC-080 | DONE | high | Implement thin HITL HTTP/query adapter and board contracts over canonical runtime |
-| TASK-0045 | EPIC-040 | TODO | high | Implement first Stage07 issue-scoped replan loop over canonical runtime |
+| TASK-0045 | EPIC-040 | DONE | high | Implement first Stage07 issue-scoped replan loop over canonical runtime |

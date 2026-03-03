@@ -36,6 +36,9 @@ EXPECTED_TASK_KEYS = {
     "updated_at",
     "task_run_state",
     "stage_id",
+    "blocked_on_kind",
+    "blocked_on_ref",
+    "spawned_from_flag_id",
 }
 
 EXPECTED_APPROVAL_KEYS = {
@@ -86,6 +89,7 @@ EXPECTED_WORKFLOW_KEYS = {
     "state",
     "created_at",
     "updated_at",
+    "active_issue_count",
 }
 
 

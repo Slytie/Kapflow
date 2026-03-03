@@ -75,6 +75,36 @@ def create_sqlite_substrate(connection: sqlite3.Connection) -> None:
         CREATE INDEX IF NOT EXISTS ix_workflow_runs_scope_lookup
             ON workflow_runs (tenant_id, domain_id, workflow_id, partition_key);
 
+        CREATE TABLE IF NOT EXISTS flags (
+            flag_id TEXT PRIMARY KEY,
+            workflow_run_id TEXT NOT NULL,
+            tenant_id TEXT NOT NULL,
+            domain_id TEXT NOT NULL,
+            workflow_id TEXT NOT NULL,
+            partition_key TEXT NOT NULL,
+            kind TEXT NOT NULL,
+            severity TEXT NOT NULL,
+            state TEXT NOT NULL,
+            summary TEXT NOT NULL,
+            details_json TEXT NOT NULL,
+            assigned_group TEXT,
+            created_at TEXT NOT NULL DEFAULT (datetime('now')),
+            closed_at TEXT,
+            created_by_actor_id TEXT NOT NULL,
+            created_by_actor_type TEXT NOT NULL,
+            source_event_id TEXT,
+            dedupe_key TEXT,
+            updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+            FOREIGN KEY (workflow_run_id) REFERENCES workflow_runs(workflow_run_id),
+            UNIQUE (workflow_run_id, dedupe_key)
+        );
+
+        CREATE INDEX IF NOT EXISTS ix_flags_workflow_state
+            ON flags (workflow_run_id, state);
+
+        CREATE INDEX IF NOT EXISTS ix_flags_scope_lookup
+            ON flags (tenant_id, domain_id, workflow_id, partition_key, state);
+
         CREATE TABLE IF NOT EXISTS task_runs (
             task_run_id TEXT PRIMARY KEY,
             workflow_run_id TEXT NOT NULL,
@@ -85,6 +115,7 @@ def create_sqlite_substrate(connection: sqlite3.Connection) -> None:
             activation_key TEXT NOT NULL,
             blocked_on_kind TEXT,
             blocked_on_ref TEXT,
+            spawned_from_flag_id TEXT,
             spawned_from_task_run_id TEXT,
             spawn_rule_id TEXT,
             spawn_cause_kind TEXT,
@@ -94,12 +125,15 @@ def create_sqlite_substrate(connection: sqlite3.Connection) -> None:
             created_at TEXT NOT NULL DEFAULT (datetime('now')),
             updated_at TEXT NOT NULL DEFAULT (datetime('now')),
             FOREIGN KEY (workflow_run_id) REFERENCES workflow_runs(workflow_run_id),
+            FOREIGN KEY (spawned_from_flag_id) REFERENCES flags(flag_id),
             FOREIGN KEY (spawned_from_task_run_id) REFERENCES task_runs(task_run_id),
             UNIQUE (workflow_run_id, activation_key)
         );
 
         CREATE INDEX IF NOT EXISTS ix_task_runs_workflow_run_id
             ON task_runs (workflow_run_id);
+        CREATE INDEX IF NOT EXISTS ix_task_runs_spawned_from_flag_id
+            ON task_runs (spawned_from_flag_id);
 
         CREATE TABLE IF NOT EXISTS human_tasks (
             human_task_id TEXT PRIMARY KEY,

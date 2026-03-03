@@ -32,6 +32,7 @@ EXPECTED_KEYS = {
     "stage_id",
     "blocked_on_kind",
     "blocked_on_ref",
+    "spawned_from_flag_id",
 }
 
 

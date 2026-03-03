@@ -1,0 +1,59 @@
+scenario_id: stage07_duplicate_flag_retry
+workflow_id: schedule_planning.v1
+workflow_version: v1
+scope:
+  tenant_id: tenant-a
+  domain_id: domain-x
+partition_key: SD-2026-03-12
+logical_date: "2026-03-12"
+steps:
+  - id: create_flag
+    action: flags.create
+    payload:
+      workflow_run_id: "{{workflow_run_id}}"
+      kind: no_show
+      severity: high
+      summary: "Courier C-204 absent"
+      details_json:
+        reason_code: no_show
+      created_by:
+        id: human:dispatcher-4
+        type: human
+      idempotency_key: "scenario:{{scenario_id}}:flags.create:no-show"
+    save_as: create_flag
+  - id: activate_issue_first
+    action: stage07.activate-issue
+    payload:
+      workflow_run_id: "{{workflow_run_id}}"
+      flag_id: "{{create_flag.flag.flag_id}}"
+      generation: 0
+      idempotency_key: "scenario:{{scenario_id}}:stage07.activate-issue:first"
+    save_as: activate_issue_first
+  - id: activate_issue_retry
+    action: stage07.activate-issue
+    payload:
+      workflow_run_id: "{{workflow_run_id}}"
+      flag_id: "{{create_flag.flag.flag_id}}"
+      generation: 0
+      idempotency_key: "scenario:{{scenario_id}}:stage07.activate-issue:retry"
+    save_as: activate_issue_retry
+expected_events:
+  ordered_contains:
+    - workflow.run.created
+    - flag.created
+    - task.run.created
+    - task.created
+expected_flag_states:
+  - kind: no_show
+    state: open
+expected_task_states:
+  - stage_id: Stage07
+    task_kind: exception_triage
+    state: OPEN
+expected_spawned_children: []
+expected_pointer_targets: []
+expected_query_rows:
+  task_rows: 1
+  approval_rows: 0
+  pointer_rows: 0
+  flag_rows: 1

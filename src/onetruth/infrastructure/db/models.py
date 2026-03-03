@@ -110,6 +110,12 @@ class TaskRun(Base):
     activation_key: Mapped[str] = mapped_column(String(255), nullable=False)
     blocked_on_kind: Mapped[str | None] = mapped_column(String(64), nullable=True)
     blocked_on_ref: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    spawned_from_flag_id: Mapped[str | None] = mapped_column(
+        String(128),
+        ForeignKey("flags.flag_id"),
+        nullable=True,
+        index=True,
+    )
     spawned_from_task_run_id: Mapped[str | None] = mapped_column(
         String(128),
         ForeignKey("task_runs.task_run_id"),
@@ -288,6 +294,47 @@ class ArtifactPointer(Base):
         nullable=True,
     )
     generation: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        default=utcnow,
+        onupdate=utcnow,
+    )
+
+
+class Flag(Base):
+    __tablename__ = "flags"
+    __table_args__ = (
+        UniqueConstraint(
+            "workflow_run_id",
+            "dedupe_key",
+            name="uq_flags_workflow_dedupe_key",
+        ),
+    )
+
+    flag_id: Mapped[str] = mapped_column(String(128), primary_key=True)
+    workflow_run_id: Mapped[str] = mapped_column(
+        String(128),
+        ForeignKey("workflow_runs.workflow_run_id"),
+        nullable=False,
+        index=True,
+    )
+    tenant_id: Mapped[str] = mapped_column(String(128), nullable=False)
+    domain_id: Mapped[str] = mapped_column(String(128), nullable=False)
+    workflow_id: Mapped[str] = mapped_column(String(128), nullable=False)
+    partition_key: Mapped[str] = mapped_column(String(128), nullable=False)
+    kind: Mapped[str] = mapped_column(String(128), nullable=False)
+    severity: Mapped[str] = mapped_column(String(32), nullable=False)
+    state: Mapped[str] = mapped_column(String(32), nullable=False)
+    summary: Mapped[str] = mapped_column(Text, nullable=False)
+    details_json: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False)
+    assigned_group: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=utcnow)
+    closed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_by_actor_id: Mapped[str] = mapped_column(String(128), nullable=False)
+    created_by_actor_type: Mapped[str] = mapped_column(String(32), nullable=False)
+    source_event_id: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    dedupe_key: Mapped[str | None] = mapped_column(String(255), nullable=True)
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         nullable=False,

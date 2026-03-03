@@ -48,6 +48,9 @@ Row shape (`tasks[]`):
 - `updated_at`
 - `task_run_state`
 - `stage_id`
+- `blocked_on_kind`
+- `blocked_on_ref`
+- `spawned_from_flag_id`
 
 ## 2) Approval queue rows
 Command:
@@ -75,6 +78,35 @@ Row shape (`approvals[]`):
 - `decided_by_actor_type`
 - `generation`
 - `created_at`
+- `updated_at`
+- `active_issue_count`
+
+## 6) Exception/flag queue rows
+Command:
+- `flags list --workflow-run-id <id> --json`
+
+Response envelope:
+- `{"status":"ok","command":"flags.list","flags":[...]}`
+
+Row shape (`flags[]`):
+- `flag_id`
+- `workflow_run_id`
+- `tenant_id`
+- `domain_id`
+- `workflow_id`
+- `partition_key`
+- `kind`
+- `severity`
+- `state`
+- `summary`
+- `details_json`
+- `assigned_group`
+- `created_at`
+- `closed_at`
+- `created_by_actor_id`
+- `created_by_actor_type`
+- `source_event_id`
+- `dedupe_key`
 - `updated_at`
 
 ## 3) Artifact version summary rows
@@ -147,3 +179,4 @@ Row shape (`workflow_runs[]`):
 
 Contract stability tests now exist in:
 - `tests/runtime/contracts/test_hitl_query_contracts_stage06.py`
+- `tests/runtime/contracts/test_hitl_query_contracts_stage07.py`

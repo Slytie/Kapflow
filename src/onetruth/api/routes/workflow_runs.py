@@ -7,6 +7,7 @@ from onetruth.application.handlers.workflow_task_lifecycle import (
     CommandError,
     list_approvals_for_workflow_run_command,
     list_artifacts_for_workflow_run_command,
+    list_flags_for_workflow_run_command,
     list_pointers_for_workflow_run_command,
     list_tasks_for_workflow_run_command,
     list_workflow_runs_command,
@@ -65,6 +66,7 @@ def get_workflow_run_detail_endpoint(
         approvals = list_approvals_for_workflow_run_command(connection, workflow_run_id)
         artifact_versions = list_artifacts_for_workflow_run_command(connection, workflow_run_id)
         pointers = list_pointers_for_workflow_run_command(connection, workflow_run_id)
+        flags = list_flags_for_workflow_run_command(connection, workflow_run_id)
     except CommandError as exc:
         raise api_error_from_command(exc) from exc
 
@@ -75,11 +77,14 @@ def get_workflow_run_detail_endpoint(
         "approvals": approvals,
         "artifact_versions": artifact_versions,
         "pointers": pointers,
+        "flags": flags,
         "summary": {
             "human_task_count": len(human_tasks),
             "approval_count": len(approvals),
             "artifact_version_count": len(artifact_versions),
             "pointer_count": len(pointers),
+            "flag_count": len(flags),
+            "active_issue_count": int(workflow_run.get("active_issue_count", 0)),
         },
     }
 

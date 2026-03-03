@@ -2,6 +2,18 @@
 
 Record any decisions made since the last session so a fresh Codex run can rehydrate quickly.
 
+## 2026-03-03 (Stage07 issue-scoped replan loop)
+- Added canonical `flags` substrate with runtime states `open`, `triage`, `blocked`, `resolved`, `closed`, `waived`; transitions are enforced server-side and recorded via `flag.created` / `flag.state_changed`.
+- Chosen Stage07 issue activation key and dedupe model: `(workflow_run_id, flag_id, task_kind, generation)`; duplicate wakeups/activation retries return existing canonical issue task instead of creating a second root issue task.
+- Implemented Stage07 completion outcome mappings in the authoritative `tasks complete` transaction path:
+  - `replan_requires_missing_information` -> Stage07 `information_request`
+  - `resolution_creates_child_issue` -> Stage07 `exception_triage`
+  - `major_replan_is_ready_for_review` -> Stage07 `final_review`
+- Chosen major-replan approval gate: `pointers.promote` with `promotion_reason=official_major_replan` requires a canonical approved response and Stage07 approval scope; otherwise promotion fails closed.
+- Chosen drift-detection rule for Stage07 promotion: compare `reviewed_base_artifact_version_id` against the current base pointer target (`base_pointer_key`, defaulting to `official:schedule.published_schedule.workbook`); emit `artifact.pointer.drift_detected` when stale, while allowing promotion.
+- Chosen lease-expiry recovery behavior: reopen the same claimed human-task row (clear assignee/lease, increment reopen counters/version), emit `task.lease_expired`, and move task run `IN_PROGRESS -> READY` with `task.run.state_changed` evidence.
+- Added Stage07 reconcile path to recover dropped wakeups by ensuring open flags have issue-root tasks via activation-key dedupe, without duplicating canonical root tasks.
+
 ## 2026-03-03 (HITL HTTP/query adapter + backlog reconciliation)
 - Added the first thin HTTP adapter over canonical runtime/query surfaces under `src/onetruth/api/`; API routes delegate mutation semantics to existing canonical handlers (`claim_human_task_command`, `complete_human_task_command`, `respond_approval_command`) rather than reimplementing business lifecycle logic.
 - Chosen board lane derivation rules for initial Schedule Planning board aggregate:

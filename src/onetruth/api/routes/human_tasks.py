@@ -146,7 +146,8 @@ def query_human_tasks(
             tr.state AS task_run_state,
             tr.stage_id,
             tr.blocked_on_kind,
-            tr.blocked_on_ref
+            tr.blocked_on_ref,
+            tr.spawned_from_flag_id
         FROM human_tasks ht
         JOIN task_runs tr ON tr.task_run_id = ht.task_run_id
         JOIN workflow_runs wr ON wr.workflow_run_id = ht.workflow_run_id

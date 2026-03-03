@@ -18,6 +18,11 @@ ACTION_TO_COMMAND = {
     "tasks.create": ("tasks", "create"),
     "tasks.claim": ("tasks", "claim"),
     "tasks.complete": ("tasks", "complete"),
+    "flags.create": ("flags", "create"),
+    "flags.transition": ("flags", "transition"),
+    "stage07.activate-issue": ("stage07", "activate-issue"),
+    "maintenance.sweep-leases": ("maintenance", "sweep-leases"),
+    "maintenance.reconcile-stage07": ("maintenance", "reconcile-stage07"),
     "approvals.request": ("approvals", "request"),
     "approvals.respond": ("approvals", "respond"),
     "artifacts.create-version": ("artifacts", "create-version"),
@@ -194,6 +199,18 @@ class RuntimeScenarioHarness:
             "--db-url",
             self.db_url,
             "approvals",
+            "list",
+            "--workflow-run-id",
+            self.workflow_run_id,
+            "--json",
+        )
+        return stdout_json(result)
+
+    def list_flags(self) -> dict[str, Any]:
+        result = run_cli(
+            "--db-url",
+            self.db_url,
+            "flags",
             "list",
             "--workflow-run-id",
             self.workflow_run_id,

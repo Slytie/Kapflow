@@ -37,6 +37,7 @@ def test_workflow_run_detail_contract_is_coherent(tmp_path: Path) -> None:
     approvals = payload["approvals"]
     artifact_versions = payload["artifact_versions"]
     pointers = payload["pointers"]
+    flags = payload["flags"]
     summary = payload["summary"]
 
     assert workflow_run["workflow_run_id"] == harness.workflow_run_id
@@ -46,6 +47,8 @@ def test_workflow_run_detail_contract_is_coherent(tmp_path: Path) -> None:
     assert summary["approval_count"] == len(approvals)
     assert summary["artifact_version_count"] == len(artifact_versions)
     assert summary["pointer_count"] == len(pointers)
+    assert summary["flag_count"] == len(flags)
+    assert summary["active_issue_count"] == workflow_run["active_issue_count"]
 
     assert len(human_tasks) == 2
     assert {row["task_kind"] for row in human_tasks} == {"review_packet", "final_review"}
@@ -61,3 +64,4 @@ def test_workflow_run_detail_contract_is_coherent(tmp_path: Path) -> None:
     )
     assert len(pointers) == 1
     assert pointers[0]["pointer_key"] == "official:schedule.published_schedule.workbook"
+    assert flags == []

@@ -13,7 +13,7 @@ Official claims must be derivable from:
 
 Current Stage 4 implementation/debug focus:
 - **Primary runtime/debug wedge:** Schedule Planning v1
-- **Primary first code slice:** canonical runtime substrate plus the Schedule Planning Stage06 publish path and conditional follow-on review/info loops, then Stage07 issue-scoped replans
+- **Primary first code slice:** canonical runtime substrate plus the Schedule Planning Stage06 publish path and first Stage07 issue-scoped replan loop
 - **Primary test objective:** a fully-agentive end-to-end workflow path where designated agent principals can execute every in-scope task without bypassing the canonical task, approval, event, or pointer model, including explicit spawned child-task lineage
 - **Secondary reference workflow:** Payroll v1 as the linear approval-heavy governance benchmark
 
@@ -57,6 +57,7 @@ Everything else - runbooks, dashboards, summaries, generated CompanyOS specs, pr
    - `make runtime-api`
    - `PYTHONPATH=src pytest -q tests/runtime/scenarios tests/runtime/contracts`
    - `PYTHONPATH=src pytest -q tests/runtime/api`
+   - `PYTHONPATH=src pytest -q tests/runtime/scenarios/test_schedule_stage07_*.py`
 5. Run full pytest suite:
    - `pytest -q`
 
@@ -90,6 +91,7 @@ First real Schedule Planning business slice now implemented:
 - Stage06 completion outcomes can spawn explicit child tasks transactionally from `tasks complete`
 - first Stage06 publish-path scenarios execute step-by-step through the CLI boundary
 - board/query read-surface contracts now have implementation-backed tests
+- Stage07 issue-scoped replan loop now exists with canonical `flags`, deduped issue activation, major-replan approval gating, delta promotion, drift evidence, and lease-expiry recovery/reconcile commands
 
 Stage06 scenario entrypoints:
 - fixtures: `fixtures/scenarios/schedule_planning/`
@@ -117,6 +119,12 @@ Current stable runtime command boundary:
 - `python3 -m onetruth.cli --db-url <SQLALCHEMY_DB_URL> pointers promote --json '<payload-json>'`
 - `python3 -m onetruth.cli --db-url <SQLALCHEMY_DB_URL> pointers show --pointer-key <key> --workflow-run-id <id> --json`
 - `python3 -m onetruth.cli --db-url <SQLALCHEMY_DB_URL> pointers list --workflow-run-id <id> --json`
+- `python3 -m onetruth.cli --db-url <SQLALCHEMY_DB_URL> flags create|transition --json '<payload-json>'`
+- `python3 -m onetruth.cli --db-url <SQLALCHEMY_DB_URL> flags show --flag-id <id> --json`
+- `python3 -m onetruth.cli --db-url <SQLALCHEMY_DB_URL> flags list --workflow-run-id <id> --json`
+- `python3 -m onetruth.cli --db-url <SQLALCHEMY_DB_URL> stage07 activate-issue --json '<payload-json>'`
+- `python3 -m onetruth.cli --db-url <SQLALCHEMY_DB_URL> maintenance sweep-leases --json '<payload-json>'`
+- `python3 -m onetruth.cli --db-url <SQLALCHEMY_DB_URL> maintenance reconcile-stage07 --json '<payload-json>'`
 
 Query/read contract reference for future HITL board/UI work:
 - `docs/planning/HITL_QUERY_CONTRACTS.md`
@@ -136,12 +144,14 @@ Canonical workflow/task/approval/artifact/pointer substrate now implemented:
 - `approvals`
 - `artifact_versions`
 - `artifact_pointers`
+- `flags`
 
 Minimal runtime states now in code:
 - `workflow_runs`: `OPEN`, `COMPLETED`
 - `task_runs`: `READY`, `IN_PROGRESS`, `COMPLETED`
 - `human_tasks`: `OPEN`, `CLAIMED`, `COMPLETED`
 - `approvals`: `PENDING`, `RESPONDED`
+- `flags`: `open`, `triage`, `blocked`, `resolved`, `closed`, `waived`
 
 ## What is in this repo right now?
 This scaffold contains:
@@ -167,8 +177,7 @@ This scaffold contains:
 - generated-derivative policy describing how external runbook/tool-registry packs and CompanyOS IR must be produced from repo-native source
 
 ## What this repo does not do yet
-- It now contains a narrow Stage06 business slice (review completion -> explicit child spawn + publish-path scenario coverage), but not the full Stage03->Stage07 runtime flow.
-- It does not yet implement full Stage07 issue-loop runtime logic.
+- It now contains narrow Stage06 + Stage07 business slices, but not the full Stage03->Stage07 runtime flow.
 - It does not yet implement the full conditional child-task spawn evaluator beyond the first Stage06 mapped outcomes.
 - It does not treat external runbook packs as source of truth.
 - It does not hand-author CompanyOS `WorkflowSpec` as a second workflow-definition system.

@@ -8,8 +8,9 @@ Runtime scaffold bootstrap now includes canonical workflow/task/approval/artifac
 - timeline substrate: `init-db`, `events append`, `events list`
 - workflow/task substrate: `runs create/show/list`, `tasks create/claim/complete/show/list`
 - approval/artifact/pointer substrate: `approvals request/respond/show/list`, `artifacts create-version/show/list`, `pointers promote/show/list`
+- Stage07 issue substrate: `flags create/transition/show/list`, `stage07 activate-issue`, `maintenance sweep-leases`, `maintenance reconcile-stage07`
 - thin HTTP/query adapter: `/api/v1/human-tasks`, `/api/v1/approvals`, `/api/v1/workflow-runs`, `/api/v1/pointers`, `/api/v1/board/schedule-planning`, plus API mutation delegates for claim/complete/respond
-Active coding milestone: TASK-0045 Stage07 issue-scoped replan loop on top of the now-implemented substrate + Stage06 + HTTP adapter boundary.
+Active coding milestone: TASK-0045 completed Stage07 issue-scoped replan loop on top of the now-implemented substrate + Stage06 + HTTP adapter boundary.
 
 ### Recently completed runtime-bootstrap tranche
 - TASK-0028 - Translated the runtime object model into a concrete Stage 4 runtime architecture, repo layout, persistence model, and first implementation slice
@@ -18,6 +19,7 @@ Active coding milestone: TASK-0045 Stage07 issue-scoped replan loop on top of th
 - TASK-0042 - Implemented canonical approvals/artifacts/pointers substrate tables (`approvals`, `artifact_versions`, `artifact_pointers`) with transactional event emission and query-ready CLI list/show contracts for future HITL board work
 - TASK-0043 - Implemented the first real Schedule Planning Stage06 publish slice with transactional completion-driven child task spawning, CLI-driven scenario fixtures/harness tests, and query-contract stability tests
 - TASK-0044 - Implemented the first thin HITL HTTP/query adapter with board-ready read endpoints, mutation delegates over canonical handlers, scenario-backed API contracts, and cross-scope denial tests
+- TASK-0045 - Implemented the first Schedule Planning Stage07 issue-scoped replan loop with canonical flags, deduped issue activation, major-replan approval gating, delta promotion/drift visibility, and lease-expiry recovery/reconcile scenario coverage
 - Added `docs/planning/RUNTIME_BOOTSTRAP.md` and `docs/planning/FIRST_RUNTIME_SLICE.md`
 - Added `docs/adr/ADR-003-stage4-runtime-architecture.md`
 - Refreshed stale Codex routing: EPIC-040 / EPIC-050 no longer route default runtime work through Payroll, and missing context packs now exist for EPIC-025 / EPIC-030 / EPIC-060
@@ -42,10 +44,9 @@ Active coding milestone: TASK-0045 Stage07 issue-scoped replan loop on top of th
 - Adopted a pytest-backed TDD harness with a stable AT-SCH scenario catalog and reference replay reducer
 
 ### Next tasks (priority order)
-1. TASK-0045 - Implement Stage07 issue-scoped replan loop
-2. TASK-0030 - Complete Stage07/base+delta artifact-store design details (blob adapter + reconstruction semantics)
-3. TASK-0031 - Design the projection coherence harness
-4. TASK-0032 - Prototype generator for runbook packs and CompanyOS IR
+1. TASK-0030 - Complete Stage07/base+delta artifact-store design details (blob adapter + reconstruction semantics)
+2. TASK-0031 - Design the projection coherence harness
+3. TASK-0032 - Prototype generator for runbook packs and CompanyOS IR
 
 ## Test-first working mode
 Before adding runtime services or API surfaces:

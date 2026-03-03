@@ -108,6 +108,7 @@ def schedule_planning_board_endpoint(
                 "claimed_until": task["claimed_until"],
                 "blocked_on_kind": task.get("blocked_on_kind"),
                 "blocked_on_ref": task.get("blocked_on_ref"),
+                "spawned_from_flag_id": task.get("spawned_from_flag_id"),
                 "linked_approval_count": len(related_approvals),
                 "linked_approval_states": sorted(
                     {str(approval["state"]) for approval in related_approvals}

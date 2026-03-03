@@ -10,24 +10,31 @@ from typing import Any
 
 from onetruth.application.handlers.workflow_task_lifecycle import (
     CommandError,
+    activate_stage07_issue_from_flag_command,
     create_artifact_version_command,
+    create_flag_command,
     claim_human_task_command,
     complete_human_task_command,
     create_task_run_command,
     create_workflow_run_command,
     list_approvals_for_workflow_run_command,
     list_artifacts_for_workflow_run_command,
+    list_flags_for_workflow_run_command,
     list_pointers_for_workflow_run_command,
     list_tasks_for_workflow_run_command,
     list_workflow_runs_command,
     promote_pointer_command,
+    reconcile_stage07_command,
     request_approval_command,
     respond_approval_command,
+    show_flag_command,
     show_approval_command,
     show_artifact_version_command,
     show_human_task_command,
     show_pointer_command,
     show_workflow_run_command,
+    sweep_leases_command,
+    transition_flag_state_command,
 )
 from onetruth.infrastructure.db.session import DEFAULT_DB_URL, open_sqlite_connection
 from onetruth.infrastructure.events.event_store import (
@@ -158,6 +165,44 @@ def _build_parser() -> argparse.ArgumentParser:
     pointers_list.add_argument("--workflow-run-id", required=True)
     pointers_list.add_argument("--json", dest="json_output", required=True, action="store_true")
     pointers_list.set_defaults(handler=_handle_pointers_list)
+
+    flags = subparsers.add_parser("flags", help="Flag lifecycle commands.")
+    flags_sub = flags.add_subparsers(dest="flags_command", required=True)
+    flags_create = flags_sub.add_parser("create", help="Create a flag.")
+    flags_create.add_argument("--json", dest="json_payload", required=True)
+    flags_create.set_defaults(handler=_handle_flags_create)
+    flags_transition = flags_sub.add_parser("transition", help="Transition a flag state.")
+    flags_transition.add_argument("--json", dest="json_payload", required=True)
+    flags_transition.set_defaults(handler=_handle_flags_transition)
+    flags_show = flags_sub.add_parser("show", help="Show one flag row.")
+    flags_show.add_argument("--flag-id", required=True)
+    flags_show.add_argument("--json", dest="json_output", required=True, action="store_true")
+    flags_show.set_defaults(handler=_handle_flags_show)
+    flags_list = flags_sub.add_parser("list", help="List flags for a workflow run.")
+    flags_list.add_argument("--workflow-run-id", required=True)
+    flags_list.add_argument("--json", dest="json_output", required=True, action="store_true")
+    flags_list.set_defaults(handler=_handle_flags_list)
+
+    stage07 = subparsers.add_parser("stage07", help="Stage07 issue activation commands.")
+    stage07_sub = stage07.add_subparsers(dest="stage07_command", required=True)
+    stage07_activate = stage07_sub.add_parser(
+        "activate-issue",
+        help="Ensure a Stage07 issue task exists for an open flag.",
+    )
+    stage07_activate.add_argument("--json", dest="json_payload", required=True)
+    stage07_activate.set_defaults(handler=_handle_stage07_activate_issue)
+
+    maintenance = subparsers.add_parser("maintenance", help="Maintenance/recovery commands.")
+    maintenance_sub = maintenance.add_subparsers(dest="maintenance_command", required=True)
+    maintenance_sweep = maintenance_sub.add_parser("sweep-leases", help="Sweep and reopen expired leases.")
+    maintenance_sweep.add_argument("--json", dest="json_payload", required=True)
+    maintenance_sweep.set_defaults(handler=_handle_maintenance_sweep_leases)
+    maintenance_reconcile = maintenance_sub.add_parser(
+        "reconcile-stage07",
+        help="Reconcile Stage07 issue activation for open flags.",
+    )
+    maintenance_reconcile.add_argument("--json", dest="json_payload", required=True)
+    maintenance_reconcile.set_defaults(handler=_handle_maintenance_reconcile_stage07)
 
     return parser
 
@@ -397,6 +442,143 @@ def _handle_tasks_list(args: argparse.Namespace) -> int:
     finally:
         connection.close()
     _json_print({"status": "ok", "command": "tasks.list", "tasks": tasks})
+    return 0
+
+
+def _handle_flags_create(args: argparse.Namespace) -> int:
+    payload = _parse_json_object(args.json_payload)
+    if isinstance(payload, int):
+        return payload
+    connection = _open_connection_or_emit(args.db_url)
+    if isinstance(connection, int):
+        return connection
+    try:
+        flag = create_flag_command(connection, payload)
+    except CommandError as exc:
+        return _emit_error(code=exc.code, message=exc.message, details=exc.details)
+    except DuplicateIdempotencyKeyError as exc:
+        return _emit_error(
+            code="duplicate_idempotency_key",
+            message=str(exc),
+            details={"idempotency_key": exc.idempotency_key, "existing_event_id": exc.existing_event_id},
+        )
+    finally:
+        connection.close()
+    _json_print({"status": "ok", "command": "flags.create", "flag": flag})
+    return 0
+
+
+def _handle_flags_transition(args: argparse.Namespace) -> int:
+    payload = _parse_json_object(args.json_payload)
+    if isinstance(payload, int):
+        return payload
+    connection = _open_connection_or_emit(args.db_url)
+    if isinstance(connection, int):
+        return connection
+    try:
+        flag = transition_flag_state_command(connection, payload)
+    except CommandError as exc:
+        return _emit_error(code=exc.code, message=exc.message, details=exc.details)
+    except DuplicateIdempotencyKeyError as exc:
+        return _emit_error(
+            code="duplicate_idempotency_key",
+            message=str(exc),
+            details={"idempotency_key": exc.idempotency_key, "existing_event_id": exc.existing_event_id},
+        )
+    finally:
+        connection.close()
+    _json_print({"status": "ok", "command": "flags.transition", "flag": flag})
+    return 0
+
+
+def _handle_flags_show(args: argparse.Namespace) -> int:
+    connection = _open_connection_or_emit(args.db_url)
+    if isinstance(connection, int):
+        return connection
+    try:
+        flag = show_flag_command(connection, args.flag_id)
+    except CommandError as exc:
+        return _emit_error(code=exc.code, message=exc.message, details=exc.details)
+    finally:
+        connection.close()
+    _json_print({"status": "ok", "command": "flags.show", "flag": flag})
+    return 0
+
+
+def _handle_flags_list(args: argparse.Namespace) -> int:
+    connection = _open_connection_or_emit(args.db_url)
+    if isinstance(connection, int):
+        return connection
+    try:
+        flags = list_flags_for_workflow_run_command(connection, args.workflow_run_id)
+    except CommandError as exc:
+        return _emit_error(code=exc.code, message=exc.message, details=exc.details)
+    finally:
+        connection.close()
+    _json_print({"status": "ok", "command": "flags.list", "flags": flags})
+    return 0
+
+
+def _handle_stage07_activate_issue(args: argparse.Namespace) -> int:
+    payload = _parse_json_object(args.json_payload)
+    if isinstance(payload, int):
+        return payload
+    connection = _open_connection_or_emit(args.db_url)
+    if isinstance(connection, int):
+        return connection
+    try:
+        result = activate_stage07_issue_from_flag_command(connection, payload)
+    except CommandError as exc:
+        return _emit_error(code=exc.code, message=exc.message, details=exc.details)
+    except DuplicateIdempotencyKeyError as exc:
+        return _emit_error(
+            code="duplicate_idempotency_key",
+            message=str(exc),
+            details={"idempotency_key": exc.idempotency_key, "existing_event_id": exc.existing_event_id},
+        )
+    finally:
+        connection.close()
+    _json_print({"status": "ok", "command": "stage07.activate-issue", "result": result})
+    return 0
+
+
+def _handle_maintenance_sweep_leases(args: argparse.Namespace) -> int:
+    payload = _parse_json_object(args.json_payload)
+    if isinstance(payload, int):
+        return payload
+    connection = _open_connection_or_emit(args.db_url)
+    if isinstance(connection, int):
+        return connection
+    try:
+        result = sweep_leases_command(connection, payload)
+    except CommandError as exc:
+        return _emit_error(code=exc.code, message=exc.message, details=exc.details)
+    finally:
+        connection.close()
+    _json_print({"status": "ok", "command": "maintenance.sweep-leases", "result": result})
+    return 0
+
+
+def _handle_maintenance_reconcile_stage07(args: argparse.Namespace) -> int:
+    payload = _parse_json_object(args.json_payload)
+    if isinstance(payload, int):
+        return payload
+    connection = _open_connection_or_emit(args.db_url)
+    if isinstance(connection, int):
+        return connection
+    try:
+        result = reconcile_stage07_command(connection, payload)
+    except CommandError as exc:
+        return _emit_error(code=exc.code, message=exc.message, details=exc.details)
+    except DuplicateIdempotencyKeyError as exc:
+        return _emit_error(
+            code="duplicate_idempotency_key",
+            message=str(exc),
+            details={"idempotency_key": exc.idempotency_key, "existing_event_id": exc.existing_event_id},
+        )
+    finally:
+        connection.close()
+    _json_print({"status": "ok", "command": "maintenance.reconcile-stage07", "result": result})
     return 0
 
 

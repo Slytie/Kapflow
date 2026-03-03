@@ -16,6 +16,7 @@ def create_task_run(
     activation_key: str,
     blocked_on_kind: str | None,
     blocked_on_ref: str | None,
+    spawned_from_flag_id: str | None,
     spawned_from_task_run_id: str | None,
     spawn_rule_id: str | None,
     spawn_cause_kind: str | None,
@@ -36,6 +37,7 @@ def create_task_run(
             activation_key,
             blocked_on_kind,
             blocked_on_ref,
+            spawned_from_flag_id,
             spawned_from_task_run_id,
             spawn_rule_id,
             spawn_cause_kind,
@@ -45,7 +47,7 @@ def create_task_run(
             created_at,
             updated_at
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """,
         (
             task_run_id,
@@ -57,6 +59,7 @@ def create_task_run(
             activation_key,
             blocked_on_kind,
             blocked_on_ref,
+            spawned_from_flag_id,
             spawned_from_task_run_id,
             spawn_rule_id,
             spawn_cause_kind,
@@ -69,12 +72,8 @@ def create_task_run(
     )
 
 
-def get_task_run(
-    connection: sqlite3.Connection,
-    task_run_id: str,
-) -> dict[str, Any] | None:
-    row = connection.execute(
-        """
+def _select_task_run_base() -> str:
+    return """
         SELECT
             task_run_id,
             workflow_run_id,
@@ -85,6 +84,7 @@ def get_task_run(
             activation_key,
             blocked_on_kind,
             blocked_on_ref,
+            spawned_from_flag_id,
             spawned_from_task_run_id,
             spawn_rule_id,
             spawn_cause_kind,
@@ -94,9 +94,31 @@ def get_task_run(
             created_at,
             updated_at
         FROM task_runs
-        WHERE task_run_id = ?
-        """,
+    """
+
+
+def get_task_run(
+    connection: sqlite3.Connection,
+    task_run_id: str,
+) -> dict[str, Any] | None:
+    row = connection.execute(
+        _select_task_run_base() + "\nWHERE task_run_id = ?",
         (task_run_id,),
+    ).fetchone()
+    if row is None:
+        return None
+    return dict(row)
+
+
+def get_task_run_by_activation_key(
+    connection: sqlite3.Connection,
+    *,
+    workflow_run_id: str,
+    activation_key: str,
+) -> dict[str, Any] | None:
+    row = connection.execute(
+        _select_task_run_base() + "\nWHERE workflow_run_id = ? AND activation_key = ?",
+        (workflow_run_id, activation_key),
     ).fetchone()
     if row is None:
         return None
@@ -145,4 +167,3 @@ def transition_task_run_state(
         (to_state, updated_at, task_run_id, expected_from_state),
     )
     return from_state
-

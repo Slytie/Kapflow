@@ -1,0 +1,216 @@
+scenario_id: stage07_drift_detected
+workflow_id: schedule_planning.v1
+workflow_version: v1
+scope:
+  tenant_id: tenant-a
+  domain_id: domain-x
+partition_key: SD-2026-03-14
+logical_date: "2026-03-14"
+steps:
+  - id: create_base_artifact_v1
+    action: artifacts.create-version
+    payload:
+      workflow_run_id: "{{workflow_run_id}}"
+      artifact_kind: schedule.published_schedule.workbook
+      artifact_role: official_output
+      media_type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet
+      source_path: Stage06_Supervisor_Review_Publish/Stage06_Supervisor_Review_Publish_Spreadsheet_Example_COMPLETED.xlsx
+      metadata_json:
+        branch: stage07_drift_detected
+        revision: v1
+      idempotency_key: "scenario:{{scenario_id}}:artifacts.create-version:base-v1"
+    save_as: create_base_artifact_v1
+  - id: promote_base_pointer_v1
+    action: pointers.promote
+    payload:
+      workflow_run_id: "{{workflow_run_id}}"
+      scope_kind: stage
+      scope_ref: Stage06
+      pointer_key: official:schedule.published_schedule.workbook
+      artifact_kind: schedule.published_schedule.workbook
+      artifact_version_id: "{{create_base_artifact_v1.artifact_version.artifact_version_id}}"
+      promotion_reason: seed_base
+      idempotency_key: "scenario:{{scenario_id}}:pointers.promote:base-v1"
+    save_as: promote_base_pointer_v1
+  - id: create_flag
+    action: flags.create
+    payload:
+      workflow_run_id: "{{workflow_run_id}}"
+      kind: undercoverage
+      severity: high
+      summary: "Undercoverage threshold crossed in east zone"
+      details_json:
+        reason_code: undercoverage
+      created_by:
+        id: human:dispatcher-6
+        type: human
+      idempotency_key: "scenario:{{scenario_id}}:flags.create:undercoverage"
+    save_as: create_flag
+  - id: activate_issue
+    action: stage07.activate-issue
+    payload:
+      workflow_run_id: "{{workflow_run_id}}"
+      flag_id: "{{create_flag.flag.flag_id}}"
+      generation: 0
+      idempotency_key: "scenario:{{scenario_id}}:stage07.activate-issue:undercoverage"
+    save_as: activate_issue
+  - id: claim_issue
+    action: tasks.claim
+    payload:
+      human_task_id: "{{activate_issue.result.human_task.human_task_id}}"
+      actor_id: human:ops-manager-6
+      actor_type: human
+      lease_seconds: 300
+      idempotency_key: "scenario:{{scenario_id}}:tasks.claim:root"
+    save_as: claim_issue
+  - id: complete_issue
+    action: tasks.complete
+    payload:
+      human_task_id: "{{activate_issue.result.human_task.human_task_id}}"
+      actor_id: human:ops-manager-6
+      actor_type: human
+      outcome: major_replan_is_ready_for_review
+      idempotency_key: "scenario:{{scenario_id}}:tasks.complete:root"
+    save_as: complete_issue
+  - id: claim_final_review
+    action: tasks.claim
+    payload:
+      human_task_id: "{{complete_issue.result.spawned_children.0.human_task_id}}"
+      actor_id: human:ops-manager-6
+      actor_type: human
+      lease_seconds: 300
+      idempotency_key: "scenario:{{scenario_id}}:tasks.claim:final"
+    save_as: claim_final_review
+  - id: complete_final_review
+    action: tasks.complete
+    payload:
+      human_task_id: "{{complete_issue.result.spawned_children.0.human_task_id}}"
+      actor_id: human:ops-manager-6
+      actor_type: human
+      outcome: review_complete
+      idempotency_key: "scenario:{{scenario_id}}:tasks.complete:final"
+    save_as: complete_final_review
+  - id: request_approval
+    action: approvals.request
+    payload:
+      workflow_run_id: "{{workflow_run_id}}"
+      task_run_id: "{{complete_final_review.result.task_run.task_run_id}}"
+      approval_kind: business_decision
+      scope_kind: stage
+      scope_ref: Stage07
+      action: approve_major_replan
+      candidate_roles: [operations_manager]
+      required_role: operations_manager
+      idempotency_key: "scenario:{{scenario_id}}:approvals.request:major"
+    save_as: request_approval
+  - id: respond_approval
+    action: approvals.respond
+    payload:
+      approval_id: "{{request_approval.approval.approval_id}}"
+      actor_id: human:ops-manager-6
+      actor_type: human
+      response_kind: approve
+      response_reason: "Replan approved"
+      idempotency_key: "scenario:{{scenario_id}}:approvals.respond:major"
+    save_as: respond_approval
+  - id: create_base_artifact_v2
+    action: artifacts.create-version
+    payload:
+      workflow_run_id: "{{workflow_run_id}}"
+      artifact_kind: schedule.published_schedule.workbook
+      artifact_role: official_output
+      media_type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet
+      source_path: Stage06_Supervisor_Review_Publish/Stage06_Supervisor_Review_Publish_Spreadsheet_Example_COMPLETED.xlsx
+      metadata_json:
+        branch: stage07_drift_detected
+        revision: v2
+      idempotency_key: "scenario:{{scenario_id}}:artifacts.create-version:base-v2"
+    save_as: create_base_artifact_v2
+  - id: promote_base_pointer_v2
+    action: pointers.promote
+    payload:
+      workflow_run_id: "{{workflow_run_id}}"
+      scope_kind: stage
+      scope_ref: Stage06
+      pointer_key: official:schedule.published_schedule.workbook
+      artifact_kind: schedule.published_schedule.workbook
+      artifact_version_id: "{{create_base_artifact_v2.artifact_version.artifact_version_id}}"
+      promotion_reason: seed_base_refresh
+      expected_generation: 0
+      idempotency_key: "scenario:{{scenario_id}}:pointers.promote:base-v2"
+    save_as: promote_base_pointer_v2
+  - id: create_replan_delta
+    action: artifacts.create-version
+    payload:
+      workflow_run_id: "{{workflow_run_id}}"
+      task_run_id: "{{complete_final_review.result.task_run.task_run_id}}"
+      artifact_kind: schedule.replan_delta.workbook
+      artifact_role: official_output
+      media_type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet
+      source_path: Stage07_Intraday_Exception_Control/Stage07_Intraday_Exception_Control_Spreadsheet_Example_COMPLETED.xlsx
+      supersedes_artifact_version_id: "{{create_base_artifact_v1.artifact_version.artifact_version_id}}"
+      metadata_json:
+        flag_id: "{{create_flag.flag.flag_id}}"
+        base_artifact_version_id: "{{create_base_artifact_v1.artifact_version.artifact_version_id}}"
+      idempotency_key: "scenario:{{scenario_id}}:artifacts.create-version:delta"
+    save_as: create_replan_delta
+  - id: promote_replan_delta
+    action: pointers.promote
+    payload:
+      workflow_run_id: "{{workflow_run_id}}"
+      scope_kind: stage
+      scope_ref: Stage07
+      pointer_key: official:schedule.replan_delta.workbook
+      artifact_kind: schedule.replan_delta.workbook
+      artifact_version_id: "{{create_replan_delta.artifact_version.artifact_version_id}}"
+      promotion_reason: official_major_replan
+      promoted_by_task_run_id: "{{complete_final_review.result.task_run.task_run_id}}"
+      approved_by_approval_id: "{{respond_approval.approval.approval_id}}"
+      reviewed_base_artifact_version_id: "{{create_base_artifact_v1.artifact_version.artifact_version_id}}"
+      base_pointer_key: official:schedule.published_schedule.workbook
+      idempotency_key: "scenario:{{scenario_id}}:pointers.promote:delta"
+    save_as: promote_replan_delta
+expected_events:
+  ordered_contains:
+    - workflow.run.created
+    - artifact.version.created
+    - artifact.pointer.promoted
+    - flag.created
+    - task.run.created
+    - task.created
+    - task.claimed
+    - task.completed
+    - task.run.created
+    - task.created
+    - approval.requested
+    - approval.responded
+    - artifact.version.created
+    - artifact.pointer.promoted
+    - artifact.version.created
+    - artifact.pointer.promoted
+    - artifact.pointer.drift_detected
+expected_flag_states:
+  - kind: undercoverage
+    state: open
+expected_task_states:
+  - stage_id: Stage07
+    task_kind: exception_triage
+    state: COMPLETED
+  - stage_id: Stage07
+    task_kind: final_review
+    state: COMPLETED
+expected_spawned_children:
+  - parent_outcome: major_replan_is_ready_for_review
+    stage_id: Stage07
+    task_kind: final_review
+    spawn_rule_id: stage07_final_replan_review
+expected_pointer_targets:
+  - pointer_key: official:schedule.published_schedule.workbook
+    artifact_kind: schedule.published_schedule.workbook
+  - pointer_key: official:schedule.replan_delta.workbook
+    artifact_kind: schedule.replan_delta.workbook
+expected_query_rows:
+  task_rows: 2
+  approval_rows: 1
+  pointer_rows: 2
+  flag_rows: 1

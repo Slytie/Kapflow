@@ -2,10 +2,11 @@
 
 Implementation-backed command-to-event matrix for runtime code under `src/onetruth/`.
 
-Current scope includes TASK-0041 + TASK-0042 substrate commands plus TASK-0043 Stage06 completion-driven child spawning:
+Current scope includes TASK-0041 + TASK-0042 substrate commands plus TASK-0043/TASK-0045 business-slice completion-driven child spawning:
 - workflow/task core lifecycle commands
 - approval/artifact/pointer lifecycle commands
 - Stage06 completion outcome -> child task emission mapping
+- Stage07 flag/issue lifecycle + lease recovery/reconcile mappings
 - all authoritative events emitted in the same transaction as canonical state changes
 - TASK-0044 HTTP adapter mutations now delegate to these same command handlers (no separate API-side event semantics)
 
@@ -14,6 +15,7 @@ Current scope includes TASK-0041 + TASK-0042 substrate commands plus TASK-0043 S
 - `task_runs`: `READY`, `IN_PROGRESS`, `COMPLETED`
 - `human_tasks`: `OPEN`, `CLAIMED`, `COMPLETED`
 - `approvals`: `PENDING`, `RESPONDED`
+- `flags`: `open`, `triage`, `blocked`, `resolved`, `closed`, `waived`
 
 ## create_workflow_run (`runs create`)
 - Canonical rows mutated:
@@ -170,10 +172,102 @@ Current scope includes TASK-0041 + TASK-0042 substrate commands plus TASK-0043 S
   - conflicting promotion without `expected_generation` fails closed (`pointer_conflict`)
   - repoint requires optimistic generation match; mismatch fails explicitly (`pointer_generation_mismatch`)
   - pointer scope/kind mismatch on same key fails explicitly (`pointer_definition_mismatch`)
-- Minimal policy check in this slice:
+- Minimal policy checks in this slice:
   - `promotion_reason=official_publish` requires `approved_by_approval_id` referencing a `RESPONDED` approval with `response_kind=approve`
+  - `promotion_reason=official_major_replan` requires the same approved response and a Stage07-scoped approval (`scope_ref=Stage07`)
+- Stage07 drift visibility rule:
+  - when `reviewed_base_artifact_version_id` is supplied, drift is computed against the current base pointer target (`base_pointer_key`, default `official:schedule.published_schedule.workbook`)
+  - stale reviewed base emits `artifact.pointer.drift_detected` while allowing promotion (visibility-required policy)
 - Stage06 integration note:
   - handler already supports approval-linked promotion and can be called directly from future Stage06 publish path logic
+
+## Stage07 additions (TASK-0045)
+### create_flag (`flags create`)
+- Canonical rows mutated:
+  - `flags` insert
+- Events emitted:
+  - `flag.created`
+- Transaction rule:
+  - canonical insert + event append commit atomically
+- Idempotency behavior:
+  - non-empty command `idempotency_key` required
+  - key maps to `flags.create.flag.created`
+  - duplicate idempotency key fails explicitly (`duplicate_idempotency_key`)
+  - duplicate workflow dedupe key fails explicitly (`duplicate_flag_dedupe`)
+- Race/conflict behavior:
+  - duplicate `flag_id` fails explicitly (`duplicate_flag_id`)
+
+### transition_flag_state (`flags transition`)
+- Canonical rows mutated:
+  - `flags` state transition + close timestamp updates when terminal
+- Events emitted:
+  - `flag.state_changed`
+- Transaction rule:
+  - canonical transition + event append commit atomically
+- Idempotency behavior:
+  - non-empty command `idempotency_key` required
+  - key maps to `flags.transition.flag.state_changed`
+  - duplicate idempotency key fails explicitly (`duplicate_idempotency_key`)
+- Race/conflict behavior:
+  - illegal transitions fail closed (`illegal_flag_transition`)
+  - transition races fail explicitly (`flag_transition_conflict`)
+
+### activate_stage07_issue_from_flag (`stage07 activate-issue`)
+- Canonical rows mutated:
+  - `task_runs` insert (Stage07 `exception_triage`) with `spawned_from_flag_id`
+  - `human_tasks` insert (OPEN) for claimable issue triage
+- Events emitted:
+  - `task.run.created`
+  - `task.created`
+- Transaction rule:
+  - task/human inserts + emitted events commit atomically
+- Idempotency / dedupe behavior:
+  - activation dedupe key is activation key `(workflow_run_id, flag_id, task_kind, generation)`
+  - repeated wakeups/retries return existing canonical row (`deduped=true`) and do not duplicate events
+  - optional command `idempotency_key` maps to:
+    - `stage07.activate-issue.task.run.created`
+    - `stage07.activate-issue.task.created`
+- Race/conflict behavior:
+  - activation unique constraint prevents duplicate roots for same issue generation
+  - cross-workflow flag references fail closed
+
+### complete_human_task Stage07 outcomes (`tasks complete`)
+- Canonical rows mutated:
+  - same parent completion transitions as core path
+  - optional Stage07 child task/human inserts on supported outcomes
+- Additional Stage07 outcome mapping:
+  - `replan_requires_missing_information` -> child Stage07 `information_request` (`stage07_request_issue_information`)
+  - `resolution_creates_child_issue` -> child Stage07 `exception_triage` (`stage07_follow_on_exception_triage`)
+  - `major_replan_is_ready_for_review` -> child Stage07 `final_review` (`stage07_final_replan_review`)
+- Same-transaction rule:
+  - parent completion + child creation + authoritative events commit atomically
+- Dedupe/bounds behavior:
+  - retries with same completion idempotency key fail explicit (`duplicate_idempotency_key`) with no duplicate children
+  - Stage07 spawn depth and per-issue child budget are bounded in service policy
+
+### sweep_leases (`maintenance sweep-leases`)
+- Canonical rows mutated:
+  - reopen expired claimed `human_tasks` rows
+  - optional `task_runs` `IN_PROGRESS -> READY`
+- Events emitted:
+  - `task.lease_expired`
+  - `task.run.state_changed` (when task run reopened)
+- Transaction rule:
+  - reopen transitions + event append commit atomically
+- Recovery behavior:
+  - chosen policy in this slice is reopen-same-row (no escalation child task)
+
+### reconcile_stage07 (`maintenance reconcile-stage07`)
+- Canonical rows mutated:
+  - none when deduped
+  - otherwise delegates to Stage07 activation command to create missing issue root task/human rows
+- Events emitted:
+  - none on no-op dedupe
+  - on create, same events as activation (`task.run.created`, `task.created`)
+- Transaction rule:
+  - each activation attempt uses canonical activation transaction semantics
+- Recovery behavior:
+  - dropped wakeups are repaired without duplicating root issue tasks
 
 ## HTTP adapter delegation (TASK-0044)
 - `POST /api/v1/human-tasks/{human_task_id}/claim` delegates to `claim_human_task` semantics above.
