@@ -1,0 +1,71 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ArtifactMap",
+  "type": "object",
+  "required": [
+    "artifact_sets"
+  ],
+  "properties": {
+    "artifact_sets": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "required": [
+            "key",
+            "role"
+          ],
+          "properties": {
+            "key": {
+              "type": "string"
+            },
+            "role": {
+              "type": "string",
+              "enum": [
+                "official_input",
+                "official_output",
+                "evidence"
+              ]
+            },
+            "template_source": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        }
+      }
+    },
+    "out_of_scope": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "required": [
+            "key",
+            "role"
+          ],
+          "properties": {
+            "key": {
+              "type": "string"
+            },
+            "role": {
+              "type": "string",
+              "enum": [
+                "official_input",
+                "official_output",
+                "evidence"
+              ]
+            },
+            "template_source": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        }
+      }
+    }
+  },
+  "additionalProperties": false
+}

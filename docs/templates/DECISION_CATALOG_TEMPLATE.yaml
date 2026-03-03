@@ -1,0 +1,18 @@
+catalog:
+  workflow_id: example.workflow.v1
+  version: 1
+  decisions:
+    - id: example.stageXX.some_decision
+      stage_id: StageXX
+      decision_kind: business_decision
+      requested_from_role: example_role
+      action: example_action
+      allowed_responses: [approve, reject, request_changes]
+      evidence_requirements:
+        artifact_keys: []
+        projection_id: example.approval.packet
+      sla:
+        due_in_minutes: 60
+        on_expire:
+          escalate_to_role: example_manager
+      notes: []

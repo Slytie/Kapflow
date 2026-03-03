@@ -1,0 +1,102 @@
+profile:
+  workflow_id: schedule_planning.v1
+  version: 1
+  stages:
+    - stage_id: Stage03
+      execution_pattern: linear_chain
+      allowed_tool_classes: [artifact.read, validation, spreadsheet.transform]
+      side_effect_policy: draft_only
+      required_evidence_keys:
+        - schedule.demand_forecast.doc
+        - schedule.demand_forecast.workbook
+      decision_refs: []
+      stop_rules:
+        max_tool_calls: 14
+        no_progress_ticks: 3
+        on_exhaustion: escalate
+      projections:
+        - schedule.stage03.ops_packet
+      extensions:
+        guidance:
+          - "Forecast by service date, zone, and time bucket."
+
+    - stage_id: Stage04
+      execution_pattern: linear_chain
+      allowed_tool_classes: [artifact.read, validation, spreadsheet.transform, flag.raise]
+      side_effect_policy: draft_only
+      required_evidence_keys:
+        - schedule.capacity_plan.doc
+        - schedule.capacity_plan.workbook
+      decision_refs: []
+      stop_rules:
+        max_tool_calls: 18
+        no_progress_ticks: 3
+        on_exhaustion: escalate
+      projections:
+        - schedule.stage04.ops_packet
+      extensions:
+        guidance:
+          - "Capacity risks should become explicit flags, especially undercoverage, vehicle shortfall, and skill gap."
+
+    - stage_id: Stage05
+      execution_pattern: linear_chain
+      allowed_tool_classes: [artifact.read, validation, spreadsheet.transform, flag.raise]
+      side_effect_policy: draft_only
+      required_evidence_keys:
+        - schedule.draft_schedule.doc
+        - schedule.draft_schedule.workbook
+      decision_refs: []
+      stop_rules:
+        max_tool_calls: 20
+        no_progress_ticks: 3
+        on_exhaustion: escalate
+      projections:
+        - schedule.stage05.ops_packet
+      extensions:
+        guidance:
+          - "Stability bias matters. Changes against communicated commitments need explicit reason codes."
+
+    - stage_id: Stage06
+      execution_pattern: approval_gate
+      allowed_tool_classes: [artifact.read, validation, approval.request, projection.render, artifact.publish_version]
+      side_effect_policy: commit_requires_business_decision
+      required_evidence_keys:
+        - schedule.supervisor_review.doc
+        - schedule.published_schedule.workbook
+      decision_refs:
+        - schedule.stage06.publish_base_schedule
+      stop_rules:
+        max_tool_calls: 10
+        no_progress_ticks: 2
+        on_exhaustion: wait_for_human
+      projections:
+        - schedule.stage06.publish_packet
+
+    - stage_id: Stage07
+      execution_pattern: bounded_exception_loop
+      allowed_tool_classes: [artifact.read, validation, flag.raise, artifact.publish_version, approval.request, projection.render]
+      side_effect_policy: commit_requires_conditional_business_decision
+      required_evidence_keys:
+        - schedule.exception_board.doc
+        - schedule.replan_delta.workbook
+      decision_refs:
+        - schedule.stage07.approve_major_replan
+      stop_rules:
+        max_tool_calls: 30
+        no_progress_ticks: 4
+        on_exhaustion: escalate
+      projections:
+        - schedule.stage07.replan_packet
+        - schedule.stage07.live_ops_packet
+      extensions:
+        major_replan_triggers:
+          - contractor_activation
+          - sla_waiver
+          - zone_capacity_override
+          - overtime_beyond_threshold
+        threshold_defaults:
+          changed_assignments_pct: 5
+          uncovered_zone_hours_pct: 10
+          added_average_overtime_hours: 1
+        guidance:
+          - "Base schedule remains immutable; Stage07 creates ordered delta artifacts linked to triggering issues."

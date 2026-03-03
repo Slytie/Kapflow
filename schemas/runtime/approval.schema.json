@@ -1,0 +1,171 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Approval",
+  "type": "object",
+  "required": [
+    "approval_id",
+    "approval_kind",
+    "workflow_id",
+    "workflow_run_id",
+    "tenant_id",
+    "domain_id",
+    "stage_id",
+    "action",
+    "requested_from_role",
+    "requested_by",
+    "allowed_responses",
+    "state",
+    "requested_at"
+  ],
+  "properties": {
+    "approval_id": {
+      "type": "string"
+    },
+    "approval_kind": {
+      "type": "string",
+      "enum": [
+        "business_decision",
+        "execution_gate",
+        "method_change"
+      ]
+    },
+    "workflow_id": {
+      "type": "string"
+    },
+    "workflow_run_id": {
+      "type": "string"
+    },
+    "tenant_id": {
+      "type": "string"
+    },
+    "domain_id": {
+      "type": "string"
+    },
+    "stage_id": {
+      "type": "string"
+    },
+    "action": {
+      "type": "string"
+    },
+    "requested_from_role": {
+      "type": "string"
+    },
+    "requested_by": {
+      "type": "object",
+      "required": [
+        "type",
+        "id"
+      ],
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": [
+            "human",
+            "agent",
+            "service",
+            "system"
+          ]
+        },
+        "id": {
+          "type": "string"
+        },
+        "display": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    },
+    "allowed_responses": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": [
+          "approve",
+          "reject",
+          "request_changes",
+          "cancel",
+          "expire"
+        ]
+      }
+    },
+    "state": {
+      "type": "string",
+      "enum": [
+        "PENDING",
+        "RESPONDED",
+        "EXPIRED",
+        "CANCELED"
+      ]
+    },
+    "response": {
+      "type": "string",
+      "enum": [
+        "approve",
+        "reject",
+        "request_changes",
+        "cancel",
+        "expire"
+      ]
+    },
+    "outcome": {
+      "type": "string",
+      "enum": [
+        "approved",
+        "rejected",
+        "changes_requested",
+        "canceled",
+        "expired"
+      ]
+    },
+    "decision_actor": {
+      "type": "object",
+      "required": [
+        "type",
+        "id"
+      ],
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": [
+            "human",
+            "agent",
+            "service",
+            "system"
+          ]
+        },
+        "id": {
+          "type": "string"
+        },
+        "display": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    },
+    "evidence_artifact_version_ids": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "projection_id": {
+      "type": "string"
+    },
+    "requested_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "due_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "responded_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "rationale": {
+      "type": "string"
+    }
+  },
+  "additionalProperties": false
+}

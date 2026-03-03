@@ -1,0 +1,285 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "WorkflowContract",
+  "type": "object",
+  "required": [
+    "workflow",
+    "semantics",
+    "execution_overlay",
+    "stages",
+    "event_inventory"
+  ],
+  "properties": {
+    "workflow": {
+      "type": "object",
+      "required": [
+        "id",
+        "name",
+        "partition_key",
+        "scope"
+      ],
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "partition_key": {
+          "type": "object",
+          "required": [
+            "name",
+            "format"
+          ],
+          "properties": {
+            "name": {
+              "type": "string"
+            },
+            "format": {
+              "type": "string"
+            },
+            "examples": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          "additionalProperties": false
+        },
+        "scope": {
+          "type": "object",
+          "required": [
+            "required"
+          ],
+          "properties": {
+            "required": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          "additionalProperties": false
+        },
+        "temporal_partition": {
+          "type": "object",
+          "properties": {
+            "interval_kind": {
+              "type": "string"
+            },
+            "interval_closure": {
+              "type": "string"
+            },
+            "logical_date_source": {
+              "type": "string"
+            },
+            "service_timezone": {
+              "type": "object",
+              "properties": {
+                "default": {
+                  "type": "string"
+                },
+                "source_dataset_key": {
+                  "type": "string"
+                }
+              },
+              "additionalProperties": false
+            },
+            "catchup_policy": {
+              "type": "string"
+            },
+            "backfill_policy": {
+              "type": "string"
+            },
+            "stage_rerun_policy": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    "semantics": {
+      "type": "object",
+      "required": [
+        "pinned_runs",
+        "no_inflight_migration_mvp",
+        "officialness"
+      ],
+      "properties": {
+        "pinned_runs": {
+          "type": "boolean"
+        },
+        "no_inflight_migration_mvp": {
+          "type": "boolean"
+        },
+        "officialness": {
+          "type": "object",
+          "required": [
+            "defined_by",
+            "loose_promotion_allowed",
+            "drift_visibility_required"
+          ],
+          "properties": {
+            "defined_by": {
+              "type": "string"
+            },
+            "loose_promotion_allowed": {
+              "type": "boolean"
+            },
+            "drift_visibility_required": {
+              "type": "boolean"
+            }
+          },
+          "additionalProperties": false
+        },
+        "run_shape": {
+          "type": "object",
+          "properties": {
+            "long_lived_case_per_partition": {
+              "type": "boolean"
+            },
+            "stage_rerun_policy": {
+              "type": "string"
+            },
+            "catchup_policy": {
+              "type": "string"
+            },
+            "backfill_policy": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    "execution_overlay": {
+      "type": "object",
+      "required": [
+        "decision_catalog",
+        "execution_profile"
+      ],
+      "properties": {
+        "decision_catalog": {
+          "type": "string"
+        },
+        "execution_profile": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    },
+    "stages": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "in_scope_mvp",
+          "artifacts"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "in_scope_mvp": {
+            "type": "boolean"
+          },
+          "triggers": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "approvals": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "artifacts": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "dataset_key",
+                "kind",
+                "role"
+              ],
+              "properties": {
+                "dataset_key": {
+                  "type": "string"
+                },
+                "kind": {
+                  "type": "string",
+                  "enum": [
+                    "document",
+                    "spreadsheet"
+                  ]
+                },
+                "role": {
+                  "type": "string",
+                  "enum": [
+                    "official_input",
+                    "official_output",
+                    "evidence"
+                  ]
+                }
+              },
+              "additionalProperties": false
+            }
+          },
+          "produces": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "semantics": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "notes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "out_of_scope_stages": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "event_inventory": {
+      "type": "object",
+      "required": [
+        "platform_required",
+        "workflow_required"
+      ],
+      "properties": {
+        "platform_required": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "workflow_required": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

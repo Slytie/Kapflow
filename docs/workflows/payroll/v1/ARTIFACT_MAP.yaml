@@ -1,0 +1,88 @@
+# ARTIFACT_MAP.yaml — Payroll v1 artifact map (from template pack)
+
+# This file enumerates dataset_keys and labels them.
+# - official_input: inputs to computations/workflow progression
+# - official_output: outputs published as official artifacts
+# - evidence: supporting docs; still immutable/versioned but not used as computation input
+
+artifact_sets:
+  Stage01:
+    - key: payroll.config.doc
+      role: official_input
+      template_source: Stage01_Payroll_Config/Stage01_Payroll_Config_Document_Template_EMPTY.docx
+    - key: payroll.config.workbook
+      role: official_input
+      template_source: Stage01_Payroll_Config/Stage01_Payroll_Config_Spreadsheet_Template_EMPTY.xlsx
+
+  Stage02:
+    - key: payroll.worker_master.doc
+      role: official_input
+      template_source: Stage02_Worker_Master/Stage02_Worker_Master_Document_Template_EMPTY.docx
+    - key: payroll.worker_master.workbook
+      role: official_input
+      template_source: Stage02_Worker_Master/Stage02_Worker_Master_Spreadsheet_Template_EMPTY.xlsx
+
+  Stage03:
+    - key: payroll.daily_capture_report.doc
+      role: evidence
+      template_source: Stage03_Raw_Time_Piece_Capture/Stage03_Raw_Time_Piece_Capture_Document_Template_EMPTY.docx
+    - key: payroll.raw_intake.workbook
+      role: official_input
+      template_source: Stage03_Raw_Time_Piece_Capture/Stage03_Raw_Time_Piece_Capture_Spreadsheet_Template_EMPTY.xlsx
+
+  Stage04:
+    - key: payroll.timesheet_triage.doc
+      role: evidence
+      template_source: Stage04_Timesheet_Build_Triage/Stage04_Timesheet_Build_Triage_Document_Template_EMPTY.docx
+    - key: payroll.timesheet_triage.workbook
+      role: official_input
+      template_source: Stage04_Timesheet_Build_Triage/Stage04_Timesheet_Build_Triage_Spreadsheet_Template_EMPTY.xlsx
+
+  Stage05:
+    - key: payroll.manager_approval.doc
+      role: evidence
+      template_source: Stage05_Manager_Approval/Stage05_Manager_Approval_Document_Template_EMPTY.docx
+    - key: payroll.manager_approval.workbook
+      role: evidence
+      template_source: Stage05_Manager_Approval/Stage05_Manager_Approval_Spreadsheet_Template_EMPTY.xlsx
+
+  Stage06:
+    - key: payroll.prepayroll_lock.doc
+      role: evidence
+      template_source: Stage06_PrePayroll_Recon_Lock/Stage06_PrePayroll_Recon_Lock_Document_Template_EMPTY.docx
+    - key: payroll.prepayroll_lock.workbook
+      role: official_input
+      template_source: Stage06_PrePayroll_Recon_Lock/Stage06_PrePayroll_Recon_Lock_Spreadsheet_Template_EMPTY.xlsx
+
+  Stage07:
+    - key: payroll.run_register.doc
+      role: evidence
+      template_source: Stage07_Payroll_Run_Register/Stage07_Payroll_Run_Register_Document_Template_EMPTY.docx
+    - key: payroll.run_register.workbook
+      role: official_output
+      template_source: Stage07_Payroll_Run_Register/Stage07_Payroll_Run_Register_Spreadsheet_Template_EMPTY.xlsx
+
+  Stage08:
+    - key: payroll.finance_finalize.doc
+      role: evidence
+      template_source: Stage08_Finance_Approval_Finalize/Stage08_Finance_Approval_Finalize_Document_Template_EMPTY.docx
+    - key: payroll.finance_finalize.workbook
+      role: evidence
+      template_source: Stage08_Finance_Approval_Finalize/Stage08_Finance_Approval_Finalize_Spreadsheet_Template_EMPTY.xlsx
+
+  Stage09:
+    - key: payroll.payments_payslips.doc
+      role: evidence
+      template_source: Stage09_Payments_Payslips/Stage09_Payments_Payslips_Document_Template_EMPTY.docx
+    - key: payroll.payments_payslips.workbook
+      role: official_output
+      template_source: Stage09_Payments_Payslips/Stage09_Payments_Payslips_Spreadsheet_Template_EMPTY.xlsx
+
+out_of_scope:
+  Stage10:
+    - key: payroll.postpayroll_close.doc
+      role: evidence
+  Stage11:
+    - key: payroll.offcycle_corrections.doc
+      role: evidence
+

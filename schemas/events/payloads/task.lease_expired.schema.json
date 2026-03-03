@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "task.lease_expired",
+  "type": "object",
+  "required": [
+    "human_task_id",
+    "lease_version",
+    "expiry_kind"
+  ],
+  "properties": {
+    "human_task_id": {
+      "type": "string"
+    },
+    "lease_version": {
+      "type": "integer"
+    },
+    "expiry_kind": {
+      "type": "string"
+    },
+    "reopened": {
+      "type": "boolean"
+    },
+    "escalated": {
+      "type": "boolean"
+    }
+  },
+  "additionalProperties": false
+}

@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "audit.degraded_mode.changed",
+  "type": "object",
+  "required": [
+    "component",
+    "from_state",
+    "to_state",
+    "reason"
+  ],
+  "properties": {
+    "component": {
+      "type": "string"
+    },
+    "from_state": {
+      "type": "string"
+    },
+    "to_state": {
+      "type": "string"
+    },
+    "reason": {
+      "type": "string"
+    }
+  },
+  "additionalProperties": false
+}

@@ -1,0 +1,66 @@
+# ARTIFACT_MAP.yaml — Schedule Planning v1 artifact map
+
+artifact_sets:
+  Stage01:
+    - key: schedule.config.doc
+      role: official_input
+      template_source: Stage01_Schedule_Config/Stage01_Schedule_Config_Document_Template_EMPTY.docx
+    - key: schedule.config.workbook
+      role: official_input
+      template_source: Stage01_Schedule_Config/Stage01_Schedule_Config_Spreadsheet_Template_EMPTY.xlsx
+
+  Stage02:
+    - key: schedule.worker_roster.doc
+      role: official_input
+      template_source: Stage02_Workforce_Availability/Stage02_Workforce_Availability_Document_Template_EMPTY.docx
+    - key: schedule.worker_roster.workbook
+      role: official_input
+      template_source: Stage02_Workforce_Availability/Stage02_Workforce_Availability_Spreadsheet_Template_EMPTY.xlsx
+
+  Stage03:
+    - key: schedule.demand_forecast.doc
+      role: evidence
+      template_source: Stage03_Demand_Forecast_Coverage/Stage03_Demand_Forecast_Coverage_Document_Template_EMPTY.docx
+    - key: schedule.demand_forecast.workbook
+      role: official_input
+      template_source: Stage03_Demand_Forecast_Coverage/Stage03_Demand_Forecast_Coverage_Spreadsheet_Template_EMPTY.xlsx
+
+  Stage04:
+    - key: schedule.capacity_plan.doc
+      role: evidence
+      template_source: Stage04_Capacity_Plan/Stage04_Capacity_Plan_Document_Template_EMPTY.docx
+    - key: schedule.capacity_plan.workbook
+      role: official_input
+      template_source: Stage04_Capacity_Plan/Stage04_Capacity_Plan_Spreadsheet_Template_EMPTY.xlsx
+
+  Stage05:
+    - key: schedule.draft_schedule.doc
+      role: evidence
+      template_source: Stage05_Draft_Schedule_Triage/Stage05_Draft_Schedule_Triage_Document_Template_EMPTY.docx
+    - key: schedule.draft_schedule.workbook
+      role: official_input
+      template_source: Stage05_Draft_Schedule_Triage/Stage05_Draft_Schedule_Triage_Spreadsheet_Template_EMPTY.xlsx
+
+  Stage06:
+    - key: schedule.supervisor_review.doc
+      role: evidence
+      template_source: Stage06_Supervisor_Review_Publish/Stage06_Supervisor_Review_Publish_Document_Template_EMPTY.docx
+    - key: schedule.published_schedule.workbook
+      role: official_output
+      template_source: Stage06_Supervisor_Review_Publish/Stage06_Supervisor_Review_Publish_Spreadsheet_Template_EMPTY.xlsx
+
+  Stage07:
+    - key: schedule.exception_board.doc
+      role: evidence
+      template_source: Stage07_Intraday_Exception_Control/Stage07_Intraday_Exception_Control_Document_Template_EMPTY.docx
+    - key: schedule.replan_delta.workbook
+      role: official_output
+      template_source: Stage07_Intraday_Exception_Control/Stage07_Intraday_Exception_Control_Spreadsheet_Template_EMPTY.xlsx
+
+out_of_scope:
+  Stage08:
+    - key: schedule.postday_review.doc
+      role: evidence
+  Stage09:
+    - key: schedule.pattern_optimization.doc
+      role: evidence

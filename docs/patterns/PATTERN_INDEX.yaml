@@ -1,0 +1,167 @@
+purpose: External architecture pattern library (LLM-friendly, reference-only). Read
+  cards first; open sources only when needed.
+usage:
+- In task briefs, reference pattern IDs under `patterns`.
+- 'Default: only open the card(s). Only open `sources/converted/*` when the task touches
+  the affected subsystem.'
+- Pattern cards do not override authoritative workflow, schema, or architecture documents.
+- If you use a pattern to justify a design choice, record it in an ADR and link the
+  pattern ID.
+patterns:
+- pattern_id: PATTERN-001
+  title: Netflix Conductor — Decider queue + sweeper reconciliation loops for durable
+    orchestration
+  tags:
+  - durable-orchestration
+  - queueing
+  - sweeper
+  - reconciliation
+  - idempotency
+  - worker-polling
+  applies_to_epics:
+  - EPIC-020
+  - EPIC-040
+  - EPIC-050
+  - EPIC-090
+  card_path: docs/patterns/cards/PATTERN-001.md
+  source_notes_path: docs/patterns/sources/converted/Netflix_Conductor_Architecture_Pattern_Extraction.md
+  source_original_path: docs/patterns/sources/original/Netflix_Conductor_Architecture_Pattern_Extraction.md
+- pattern_id: PATTERN-002
+  title: Flowable — BPMN/CMMN/DMN engine patterns for human tasks, jobs/timers, and
+    definition versioning
+  tags:
+  - bpmn
+  - cmmn
+  - dmn
+  - human-tasks
+  - claim
+  - timers
+  - jobs
+  - definition-versioning
+  - optimistic-locking
+  applies_to_epics:
+  - EPIC-040
+  - EPIC-050
+  - EPIC-060
+  - EPIC-090
+  card_path: docs/patterns/cards/PATTERN-002.md
+  source_notes_path: docs/patterns/sources/converted/Flowable_Engine_Architecture_Pattern_Extraction.md
+  source_original_path: docs/patterns/sources/original/Flowable_Engine_Architecture_Pattern_Extraction.md
+- pattern_id: PATTERN-003
+  title: Dagster — Partition/time-window semantics + cursor-based consumers + run-key
+    idempotency
+  tags:
+  - partitions
+  - time-windows
+  - cursors
+  - event-log
+  - idempotency
+  - run-keys
+  applies_to_epics:
+  - EPIC-020
+  - EPIC-040
+  - EPIC-090
+  card_path: docs/patterns/cards/PATTERN-003.md
+  source_notes_path: docs/patterns/sources/converted/Dagster_Architecture_Pattern_Extraction.md
+  source_original_path: docs/patterns/sources/original/Dagster_Architecture_Pattern_Extraction.md
+- pattern_id: PATTERN-004
+  title: 'Airflow — Scheduler semantics: DAG runs, retries, sensors, backfills, and
+    task-instance state'
+  tags:
+  - scheduler
+  - dag
+  - backfill
+  - retries
+  - sensors
+  - task-instance
+  - time
+  applies_to_epics:
+  - EPIC-040
+  - EPIC-050
+  - EPIC-090
+  card_path: docs/patterns/cards/PATTERN-004.md
+  source_notes_path: docs/patterns/sources/converted/Airflow_Scheduler_Semantics_Pattern_Extraction.md
+  source_original_path: docs/patterns/sources/original/Airflow_Scheduler_Semantics_Pattern_Extraction.docx
+- pattern_id: PATTERN-005
+  title: StackStorm — Automation packs, action runners, rules/trigger model for controlled
+    tool execution
+  tags:
+  - automation
+  - rules
+  - triggers
+  - actions
+  - runners
+  - packs
+  - plugins
+  - rbac
+  applies_to_epics:
+  - EPIC-060
+  - EPIC-070
+  - EPIC-090
+  card_path: docs/patterns/cards/PATTERN-005.md
+  source_notes_path: docs/patterns/sources/converted/StackStorm_st2_Architecture_Pattern_Extraction.md
+  source_original_path: docs/patterns/sources/original/StackStorm_st2_Architecture_Pattern_Extraction.md
+- pattern_id: PATTERN-006
+  title: Piston — Secure code execution service patterns (resource limits, isolation,
+    logging)
+  tags:
+  - sandbox
+  - code-execution
+  - resource-limits
+  - isolation
+  - logging
+  - multi-tenant-safety
+  applies_to_epics:
+  - EPIC-070
+  - EPIC-090
+  card_path: docs/patterns/cards/PATTERN-006.md
+  source_notes_path: docs/patterns/sources/converted/Piston_Secure_Code_Execution_Architecture_Report.md
+  source_original_path: docs/patterns/sources/original/Piston_Secure_Code_Execution_Architecture_Report.pdf
+- pattern_id: PATTERN-007
+  title: 'Kanboard — Lightweight ops-console patterns: boards, plugins, and task-centric
+    UX'
+  tags:
+  - ui
+  - ops-console
+  - boards
+  - plugins
+  - task-tracking
+  - notifications
+  applies_to_epics:
+  - EPIC-050
+  - EPIC-080
+  card_path: docs/patterns/cards/PATTERN-007.md
+  source_notes_path: docs/patterns/sources/converted/Kanboard_Lightweight_UI_Plugin_Patterns_for_Orchestration_Ops_Console.md
+  source_original_path: docs/patterns/sources/original/Kanboard_Lightweight_UI_Plugin_Patterns_for_Orchestration_Ops_Console.md
+- pattern_id: PATTERN-008
+  title: 'Taiga Back — Backend patterns: permissions, timelines, notifications, async
+    on-commit'
+  tags:
+  - backend
+  - permissions
+  - timeline
+  - notifications
+  - async
+  - webhooks
+  applies_to_epics:
+  - EPIC-010
+  - EPIC-020
+  - EPIC-050
+  card_path: docs/patterns/cards/PATTERN-008.md
+  source_notes_path: docs/patterns/sources/converted/Taiga_Back_Backend_Architecture_Pattern_Extraction.md
+  source_original_path: docs/patterns/sources/original/Taiga_Back_Backend_Architecture_Pattern_Extraction.md
+- pattern_id: PATTERN-009
+  title: 'Taiga Front — UI patterns: boards, detail pages with timelines, polling/real-time
+    strategies'
+  tags:
+  - ui
+  - ops-console
+  - state-management
+  - timelines
+  - polling
+  - permissions
+  applies_to_epics:
+  - EPIC-080
+  card_path: docs/patterns/cards/PATTERN-009.md
+  source_notes_path: docs/patterns/sources/converted/Taiga_Front_UI_Architecture_Extraction_for_Ops_Console.md
+  source_original_path: docs/patterns/sources/original/Taiga_Front_UI_Architecture_Extraction_for_Ops_Console.md

@@ -1,0 +1,180 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "WorkflowRun",
+  "type": "object",
+  "required": [
+    "workflow_run_id",
+    "workflow_id",
+    "tenant_id",
+    "domain_id",
+    "partition",
+    "state",
+    "activation_key",
+    "pinned_versions",
+    "created_at",
+    "updated_at"
+  ],
+  "properties": {
+    "workflow_run_id": {
+      "type": "string"
+    },
+    "workflow_id": {
+      "type": "string"
+    },
+    "tenant_id": {
+      "type": "string"
+    },
+    "domain_id": {
+      "type": "string"
+    },
+    "partition": {
+      "type": "object",
+      "required": [
+        "key",
+        "value"
+      ],
+      "properties": {
+        "key": {
+          "type": "string"
+        },
+        "value": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    },
+    "state": {
+      "type": "string",
+      "enum": [
+        "CREATED",
+        "ACTIVE",
+        "WAITING_HUMAN",
+        "WAITING_TIMER",
+        "STALE",
+        "SUCCEEDED",
+        "FAILED",
+        "CANCELED"
+      ]
+    },
+    "current_stage_id": {
+      "type": "string"
+    },
+    "activation_key": {
+      "type": "string"
+    },
+    "temporal_context": {
+      "type": "object",
+      "required": [
+        "logical_date"
+      ],
+      "properties": {
+        "logical_date": {
+          "type": "string"
+        },
+        "service_timezone": {
+          "type": "string"
+        },
+        "service_interval_start": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "service_interval_end": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "interval_closure": {
+          "type": "string"
+        },
+        "catchup_policy": {
+          "type": "string"
+        },
+        "backfill_policy": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    },
+    "pinned_versions": {
+      "type": "object",
+      "required": [
+        "workflow_contract_version_id",
+        "decision_catalog_version_id",
+        "execution_profile_version_id"
+      ],
+      "properties": {
+        "workflow_contract_version_id": {
+          "type": "string"
+        },
+        "decision_catalog_version_id": {
+          "type": "string"
+        },
+        "execution_profile_version_id": {
+          "type": "string"
+        },
+        "execution_spec_id": {
+          "type": "string"
+        },
+        "execution_spec_hash": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    },
+    "pinned_input_artifact_version_ids": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "blocked_on": {
+      "type": "object",
+      "required": [
+        "kind"
+      ],
+      "properties": {
+        "kind": {
+          "type": "string",
+          "enum": [
+            "none",
+            "approval",
+            "human_task",
+            "timer",
+            "flag",
+            "external_completion"
+          ]
+        },
+        "ref_id": {
+          "type": "string"
+        },
+        "entered_wait_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "deadline_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "wakeup_cause_event_id": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    },
+    "stale_reason": {
+      "type": "string"
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "updated_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "closed_at": {
+      "type": "string",
+      "format": "date-time"
+    }
+  },
+  "additionalProperties": false
+}

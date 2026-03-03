@@ -1,0 +1,81 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Pointer",
+  "type": "object",
+  "required": [
+    "pointer_id",
+    "tenant_id",
+    "domain_id",
+    "dataset_key",
+    "partition",
+    "current_artifact_version_id",
+    "promoted_at",
+    "promoted_by"
+  ],
+  "properties": {
+    "pointer_id": {
+      "type": "string"
+    },
+    "tenant_id": {
+      "type": "string"
+    },
+    "domain_id": {
+      "type": "string"
+    },
+    "dataset_key": {
+      "type": "string"
+    },
+    "partition": {
+      "type": "object",
+      "required": [
+        "key",
+        "value"
+      ],
+      "properties": {
+        "key": {
+          "type": "string"
+        },
+        "value": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    },
+    "current_artifact_version_id": {
+      "type": "string"
+    },
+    "last_reviewed_artifact_version_id": {
+      "type": "string"
+    },
+    "promoted_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "promoted_by": {
+      "type": "object",
+      "required": [
+        "type",
+        "id"
+      ],
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": [
+            "human",
+            "agent",
+            "service",
+            "system"
+          ]
+        },
+        "id": {
+          "type": "string"
+        },
+        "display": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

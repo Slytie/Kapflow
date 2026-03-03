@@ -1,0 +1,68 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ExecutionSpec",
+  "type": "object",
+  "required": [
+    "execution_spec_id",
+    "workflow_id",
+    "workflow_contract_version_id",
+    "decision_catalog_version_id",
+    "execution_profile_version_id",
+    "compiled_at",
+    "content_hash"
+  ],
+  "properties": {
+    "execution_spec_id": {
+      "type": "string"
+    },
+    "workflow_id": {
+      "type": "string"
+    },
+    "workflow_contract_version_id": {
+      "type": "string"
+    },
+    "decision_catalog_version_id": {
+      "type": "string"
+    },
+    "execution_profile_version_id": {
+      "type": "string"
+    },
+    "stage_id": {
+      "type": "string"
+    },
+    "tool_class_allowlist": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "side_effect_policy": {
+      "type": "string"
+    },
+    "stop_rules": {
+      "type": "object",
+      "properties": {
+        "max_tool_calls": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "no_progress_ticks": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "on_exhaustion": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    },
+    "compiled_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "content_hash": {
+      "type": "string"
+    }
+  },
+  "additionalProperties": false
+}

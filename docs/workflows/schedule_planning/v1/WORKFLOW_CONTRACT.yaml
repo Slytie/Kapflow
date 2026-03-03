@@ -1,0 +1,252 @@
+# WORKFLOW_CONTRACT.yaml - Schedule Planning v1 (Vertical Slice contract pack)
+
+workflow:
+  id: schedule_planning.v1
+  name: "Schedule Planning - Same-day delivery daily cycle"
+  partition_key:
+    name: ScheduleDateID
+    format: "SD-YYYY-MM-DD"
+    examples: ["SD-2026-03-04"]
+  scope:
+    required: ["tenant_id", "domain_id"]
+  temporal_partition:
+    interval_kind: service_day
+    interval_closure: "[start,end)"
+    logical_date_source: service_interval_start
+    service_timezone:
+      default: Europe/Berlin
+      source_dataset_key: schedule.config.workbook
+    catchup_policy: manual_only
+    backfill_policy: explicit_operator_request
+    stage_rerun_policy: same_workflow_run_new_task_run
+
+semantics:
+  pinned_runs: true
+  no_inflight_migration_mvp: true
+  officialness:
+    defined_by: promotion_pointer
+    loose_promotion_allowed: true
+    drift_visibility_required: true
+  run_shape:
+    long_lived_case_per_partition: true
+    stage_rerun_policy: same_workflow_run_new_task_run
+    catchup_policy: manual_only
+    backfill_policy: explicit_operator_request
+
+execution_overlay:
+  decision_catalog: DECISION_CATALOG.yaml
+  execution_profile: EXECUTION_PROFILE.yaml
+
+stages:
+  - id: Stage01
+    name: Schedule_Config
+    in_scope_mvp: true
+    artifacts:
+      - dataset_key: schedule.config.doc
+        kind: document
+        role: official_input
+      - dataset_key: schedule.config.workbook
+        kind: spreadsheet
+        role: official_input
+    semantics:
+      mvp_handling: preloaded_input
+      ingestion_automation: out_of_scope_stage4
+
+  - id: Stage02
+    name: Workforce_Availability
+    in_scope_mvp: true
+    artifacts:
+      - dataset_key: schedule.worker_roster.doc
+        kind: document
+        role: official_input
+      - dataset_key: schedule.worker_roster.workbook
+        kind: spreadsheet
+        role: official_input
+    semantics:
+      mvp_handling: preloaded_input
+      ingestion_automation: out_of_scope_stage4
+    notes:
+      - "Use coded leave/absence types only; do not store medical or disciplinary detail."
+
+  - id: Stage03
+    name: Demand_Forecast_Coverage
+    in_scope_mvp: true
+    artifacts:
+      - dataset_key: schedule.demand_forecast.doc
+        kind: document
+        role: evidence
+      - dataset_key: schedule.demand_forecast.workbook
+        kind: spreadsheet
+        role: official_input
+    semantics:
+      activation_basis: all_preloaded_inputs_present_for_interval
+      agent_debug_mode_allowed: true
+    notes:
+      - "Demand is planned by service-date, zone, and time bucket."
+
+  - id: Stage04
+    name: Capacity_Plan
+    in_scope_mvp: true
+    artifacts:
+      - dataset_key: schedule.capacity_plan.doc
+        kind: document
+        role: evidence
+      - dataset_key: schedule.capacity_plan.workbook
+        kind: spreadsheet
+        role: official_input
+    produces:
+      flags:
+        required: true
+        examples: ["undercoverage", "overtime_risk", "vehicle_shortfall", "skill_gap", "priority_window_risk"]
+    semantics:
+      activation_basis: Stage03_success
+      agent_debug_mode_allowed: true
+
+  - id: Stage05
+    name: Draft_Schedule_Triage
+    in_scope_mvp: true
+    artifacts:
+      - dataset_key: schedule.draft_schedule.doc
+        kind: document
+        role: evidence
+      - dataset_key: schedule.draft_schedule.workbook
+        kind: spreadsheet
+        role: official_input
+    semantics:
+      activation_basis: Stage04_success
+      task_spawn_policy: conditional_follow_on
+      spawn_budget:
+        per_parent_completion_max_children: 3
+        max_spawn_depth: 2
+      spawn_rules:
+        - id: stage05_request_operational_information
+          when: triage_requires_external_information
+          target_stage_id: Stage05
+          task_kind: information_request
+          candidate_roles: [fleet_coordinator, schedule_planner]
+        - id: stage05_return_for_rework
+          when: triage_requires_schedule_revision
+          target_stage_id: Stage05
+          task_kind: work_item
+          candidate_roles: [schedule_planner]
+      agent_debug_mode_allowed: true
+    notes:
+      - "Draft schedule must preserve stability bias; changes against prior commitments need explicit reason codes."
+
+  - id: Stage06
+    name: Supervisor_Review_Publish
+    in_scope_mvp: true
+    approvals:
+      required: true
+      group: dispatch_supervisor
+      action: publish_schedule
+    artifacts:
+      - dataset_key: schedule.supervisor_review.doc
+        kind: document
+        role: evidence
+      - dataset_key: schedule.published_schedule.workbook
+        kind: spreadsheet
+        role: official_output
+    semantics:
+      stable_base_schedule_required: true
+      publish_cutoff_required: true
+      approval_snapshot_required: true
+      task_spawn_policy: conditional_follow_on
+      spawn_budget:
+        per_parent_completion_max_children: 3
+        max_spawn_depth: 3
+      spawn_rules:
+        - id: stage06_request_changes_to_draft
+          when: review_requests_changes
+          target_stage_id: Stage05
+          task_kind: work_item
+          candidate_roles: [schedule_planner]
+        - id: stage06_request_missing_information
+          when: review_requires_more_information
+          target_stage_id: Stage06
+          task_kind: information_request
+          candidate_roles: [fleet_coordinator, schedule_planner]
+        - id: stage06_final_publish_review
+          when: draft_is_publish_ready
+          target_stage_id: Stage06
+          task_kind: final_review
+          candidate_roles: [dispatch_supervisor]
+      agent_debug_mode_allowed: true
+    notes:
+      - "Publishing creates the stable base schedule for the service day."
+
+  - id: Stage07
+    name: Intraday_Exception_Control
+    in_scope_mvp: true
+    approvals:
+      conditional: true
+      group: operations_manager
+      action: approve_major_replan
+    artifacts:
+      - dataset_key: schedule.exception_board.doc
+        kind: document
+        role: evidence
+      - dataset_key: schedule.replan_delta.workbook
+        kind: spreadsheet
+        role: official_output
+    semantics:
+      replan_delta_required: true
+      supersedes_without_mutation: true
+      activation_basis: flag_or_threshold_triggered
+      task_spawn_policy: issue_scoped
+      spawn_budget:
+        per_issue_max_children: 4
+        max_spawn_depth: 5
+      spawn_rules:
+        - id: stage07_request_issue_information
+          when: replan_requires_missing_information
+          target_stage_id: Stage07
+          task_kind: information_request
+          candidate_roles: [fleet_coordinator, schedule_planner]
+        - id: stage07_follow_on_exception_triage
+          when: resolution_creates_child_issue
+          target_stage_id: Stage07
+          task_kind: exception_triage
+          candidate_roles: [operations_manager]
+        - id: stage07_final_replan_review
+          when: major_replan_is_ready_for_review
+          target_stage_id: Stage07
+          task_kind: final_review
+          candidate_roles: [operations_manager]
+      activation_key_template: workflow_run_id+flag_id+task_kind+generation
+      stage_rerun_policy: same_workflow_run_new_task_run
+      agent_debug_mode_allowed: true
+    notes:
+      - "Major replan approval is required for contractor activation, overtime beyond threshold, SLA waiver, or zone-level capacity override."
+      - "Each issue-specific replan task must be attributable to a triggering flag and generation."
+
+out_of_scope_stages:
+  - Stage08
+  - Stage09
+
+event_inventory:
+  platform_required:
+    - workflow.run.created
+    - workflow.run.state_changed
+    - task.run.created
+    - task.run.state_changed
+    - task.created
+    - task.claimed
+    - task.lease_expired
+    - task.completed
+    - approval.requested
+    - approval.responded
+    - execution.session.created
+    - execution.session.state_changed
+    - tool.execution.requested
+    - tool.execution.approved
+    - tool.execution.denied
+    - tool.execution.completed
+    - audit.degraded_mode.changed
+  workflow_required:
+    - artifact.version.created
+    - artifact.pointer.promoted
+    - artifact.pointer.drift_detected
+    - flag.created
+    - flag.state_changed
+    - projection.coherence_failed

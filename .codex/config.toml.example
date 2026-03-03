@@ -1,0 +1,13 @@
+# .codex/config.toml.example
+# Convenience defaults for Codex (not an enforcement boundary).
+
+# NOTE: Codex loads project configs only when the project is trusted.
+# Do not rely on this file for security controls.
+
+[docs]
+# If you add additional instruction files beyond AGENTS.md, list fallbacks here.
+project_doc_fallback_filenames = ["AGENTS.md"]
+
+[behavior]
+# Keep instruction scanning small. Place pointers instead of long docs.
+project_doc_max_bytes = 32000

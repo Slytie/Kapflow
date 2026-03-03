@@ -1,0 +1,19 @@
+profile:
+  workflow_id: example.workflow.v1
+  version: 1
+  stages:
+    - stage_id: StageXX
+      execution_pattern: linear_chain
+      allowed_tool_classes:
+        - artifact.read
+        - validation
+      side_effect_policy: draft_only
+      required_evidence_keys: []
+      decision_refs: []
+      stop_rules:
+        max_tool_calls: 10
+        no_progress_ticks: 3
+        on_exhaustion: escalate
+      projections:
+        - example.ops.packet
+      extensions: {}

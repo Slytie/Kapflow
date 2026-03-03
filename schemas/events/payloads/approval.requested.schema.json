@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "approval.requested",
+  "type": "object",
+  "required": [
+    "approval_id",
+    "approval_kind",
+    "action",
+    "allowed_responses"
+  ],
+  "properties": {
+    "approval_id": {
+      "type": "string"
+    },
+    "approval_kind": {
+      "type": "string"
+    },
+    "action": {
+      "type": "string"
+    },
+    "allowed_responses": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "requested_from_role": {
+      "type": "string"
+    }
+  },
+  "additionalProperties": false
+}

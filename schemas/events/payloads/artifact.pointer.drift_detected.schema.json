@@ -1,0 +1,29 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "artifact.pointer.drift_detected",
+  "type": "object",
+  "required": [
+    "pointer_id",
+    "dataset_key",
+    "reviewed_artifact_version_id",
+    "promoted_artifact_version_id"
+  ],
+  "properties": {
+    "pointer_id": {
+      "type": "string"
+    },
+    "dataset_key": {
+      "type": "string"
+    },
+    "reviewed_artifact_version_id": {
+      "type": "string"
+    },
+    "promoted_artifact_version_id": {
+      "type": "string"
+    },
+    "drift_reason": {
+      "type": "string"
+    }
+  },
+  "additionalProperties": false
+}

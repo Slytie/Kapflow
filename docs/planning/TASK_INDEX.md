@@ -1,0 +1,43 @@
+# TASK_INDEX.md - Stage 4 task backlog
+
+| Task | Epic | Status | Risk | Title |
+|---|---|---|---|---|
+| TASK-0001 | EPIC-000 | DONE | medium | Freeze Payroll workflow contract v1 into YAML + acceptance criteria |
+| TASK-0002 | EPIC-010 | DONE | high | Define scope model + authz vocabulary + isolation test plan |
+| TASK-0003 | EPIC-020 | DONE | medium | Define TimelineEvent envelope schema + link model |
+| TASK-0004 | EPIC-030 | DONE | low | Define payroll dataset_key registry and sensitivity |
+| TASK-0005 | EPIC-090 | DONE | medium | Draft acceptance test matrix |
+| TASK-0006 | EPIC-020 | DONE | medium | Create event-type registry and required fields per event |
+| TASK-0007 | EPIC-020 | DONE | medium | Define degraded-mode signals, metrics, and alert thresholds |
+| TASK-0008 | EPIC-030 | DONE | medium | Add artifact metadata schema |
+| TASK-0009 | EPIC-030 | DONE | medium | Specify promotion drift detection semantics and event payload |
+| TASK-0010 | EPIC-050 | DONE | high | Define human task claim lease semantics |
+| TASK-0011 | EPIC-040 | DONE | high | Document run/task state semantics |
+| TASK-0012 | EPIC-060 | DONE | high | Specify approval object model and server-side enforcement points |
+| TASK-0013 | EPIC-070 | DONE | high | Define minimum sandbox posture for tool execution |
+| TASK-0014 | EPIC-080 | DONE | medium | Define required CI checks for Stage 4 |
+| TASK-0015 | EPIC-080 | DONE | medium | Add runbook skeletons for predictable failure modes |
+| TASK-0016 | EPIC-005 | DONE | medium | Freeze Schedule Planning workflow contract v1 |
+| TASK-0017 | EPIC-005 | DONE | medium | Extend dataset keys + permissions for Schedule Planning |
+| TASK-0018 | EPIC-005 | DONE | low | Add Schedule Planning fixture pack + operating model + traces |
+| TASK-0019 | EPIC-015 | DONE | high | Freeze authority model and source-of-truth boundaries |
+| TASK-0020 | EPIC-025 | DONE | medium | Add canonical decision catalogs for both workflows |
+| TASK-0021 | EPIC-025 | DONE | high | Add canonical execution profiles for both workflows |
+| TASK-0022 | EPIC-015 | DONE | high | Define derivation / generation policy and source-lineage requirements |
+| TASK-0023 | EPIC-040 | DONE | high | Define unified runtime object model |
+| TASK-0024 | EPIC-025 | DONE | medium | Define lowering contract to generated CompanyOS IR and pinned ExecutionSpec |
+| TASK-0025 | EPIC-025 | DONE | medium | Add refinement and generated-artifact check requirements |
+| TASK-0026 | EPIC-015 | DONE | medium | Curate philosophy, mathematics, and threat-model guidance |
+| TASK-0027 | EPIC-080 | DONE | high | Implement full authored-surface validation and drift checks |
+| TASK-0028 | EPIC-040 | DONE | high | Translate the runtime object model into an implementation plan |
+| TASK-0029 | EPIC-020 | TODO | medium | Map the typed event registry to runtime emission points and tests |
+| TASK-0030 | EPIC-030 | TODO | high | Translate promotion semantics and schedule delta rules into artifact-store design |
+| TASK-0031 | EPIC-060 | TODO | high | Design the projection coherence harness |
+| TASK-0032 | EPIC-025 | TODO | medium | Prototype generator for runbook packs and CompanyOS IR |
+| TASK-0033 | EPIC-005 | DONE | high | Specify the fully-agentive Schedule Planning debug slice |
+| TASK-0034 | EPIC-060 | DONE | high | Canonicalize governance vocabulary and actor taxonomy |
+| TASK-0035 | EPIC-050 | DONE | high | Tighten human-task semantics for end-to-end agent execution |
+| TASK-0036 | EPIC-040 | DONE | high | Add runtime object schemas for canonical run/task/approval/execution objects |
+| TASK-0037 | EPIC-020 | DONE | high | Add event payload schemas and registry bindings |
+| TASK-0038 | EPIC-090 | DONE | high | Author Schedule Planning fully-agentive golden traces and acceptance oracles |
+| TASK-0039 | EPIC-090 | TODO | high | Design the step-run scenario harness for agent-executed flows and conditional task spawning |

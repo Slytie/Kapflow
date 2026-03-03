@@ -1,0 +1,18 @@
+# CODEOWNERS (initial)
+# Update with real GitHub usernames/teams.
+
+# Critical semantics
+/schemas/             @platform-team @security-team
+/docs/architecture/   @platform-team @security-team
+/docs/workflows/      @platform-team @ops-team @qa-team
+
+# Execution plane
+/services/executor/   @security-team @sre-team
+
+# Infra and CI
+/infra/               @sre-team
+/.github/             @sre-team @security-team
+/.codex/              @platform-team
+
+# Default
+*                    @platform-team

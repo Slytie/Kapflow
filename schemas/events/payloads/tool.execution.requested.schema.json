@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "tool.execution.requested",
+  "type": "object",
+  "required": [
+    "tool_execution_id",
+    "tool_class",
+    "idempotency_key"
+  ],
+  "properties": {
+    "tool_execution_id": {
+      "type": "string"
+    },
+    "tool_class": {
+      "type": "string"
+    },
+    "idempotency_key": {
+      "type": "string"
+    },
+    "tool_name": {
+      "type": "string"
+    }
+  },
+  "additionalProperties": false
+}

@@ -1,0 +1,166 @@
+event_types:
+- id: workflow.run.created
+  class: run
+  authoritative: true
+  required_links:
+  - workflow_run
+  - workflow_contract_version
+  - decision_catalog_version
+  - execution_profile_version
+  payload_schema: schemas/events/payloads/workflow.run.created.schema.json
+- id: workflow.run.state_changed
+  class: run
+  authoritative: true
+  required_links:
+  - workflow_run
+  payload_schema: schemas/events/payloads/workflow.run.state_changed.schema.json
+- id: task.run.created
+  class: task
+  authoritative: true
+  required_links:
+  - workflow_run
+  - task_run
+  payload_schema: schemas/events/payloads/task.run.created.schema.json
+- id: task.run.state_changed
+  class: task
+  authoritative: true
+  required_links:
+  - workflow_run
+  - task_run
+  payload_schema: schemas/events/payloads/task.run.state_changed.schema.json
+- id: task.created
+  class: human_task
+  authoritative: true
+  required_links:
+  - workflow_run
+  - task_run
+  - human_task
+  payload_schema: schemas/events/payloads/task.created.schema.json
+- id: task.claimed
+  class: human_task
+  authoritative: true
+  required_links:
+  - task_run
+  - human_task
+  payload_schema: schemas/events/payloads/task.claimed.schema.json
+- id: task.lease_expired
+  class: human_task
+  authoritative: true
+  required_links:
+  - task_run
+  - human_task
+  payload_schema: schemas/events/payloads/task.lease_expired.schema.json
+- id: task.completed
+  class: human_task
+  authoritative: true
+  required_links:
+  - task_run
+  - human_task
+  payload_schema: schemas/events/payloads/task.completed.schema.json
+- id: approval.requested
+  class: approval
+  authoritative: true
+  required_links:
+  - approval
+  payload_schema: schemas/events/payloads/approval.requested.schema.json
+- id: approval.responded
+  class: approval
+  authoritative: true
+  required_links:
+  - approval
+  payload_schema: schemas/events/payloads/approval.responded.schema.json
+- id: flag.created
+  class: flag
+  authoritative: true
+  required_links:
+  - flag
+  - workflow_run
+  payload_schema: schemas/events/payloads/flag.created.schema.json
+- id: flag.state_changed
+  class: flag
+  authoritative: true
+  required_links:
+  - flag
+  - workflow_run
+  payload_schema: schemas/events/payloads/flag.state_changed.schema.json
+- id: artifact.version.created
+  class: artifact
+  authoritative: true
+  required_links:
+  - artifact_version
+  payload_schema: schemas/events/payloads/artifact.version.created.schema.json
+- id: artifact.pointer.promoted
+  class: artifact
+  authoritative: true
+  required_links:
+  - pointer
+  - artifact_version
+  payload_schema: schemas/events/payloads/artifact.pointer.promoted.schema.json
+- id: artifact.pointer.drift_detected
+  class: artifact
+  authoritative: true
+  required_links:
+  - pointer
+  - artifact_version
+  payload_schema: schemas/events/payloads/artifact.pointer.drift_detected.schema.json
+- id: execution.session.created
+  class: execution
+  authoritative: true
+  required_links:
+  - task_run
+  - execution_session
+  - execution_spec
+  payload_schema: schemas/events/payloads/execution.session.created.schema.json
+- id: execution.session.state_changed
+  class: execution
+  authoritative: true
+  required_links:
+  - execution_session
+  payload_schema: schemas/events/payloads/execution.session.state_changed.schema.json
+- id: tool.execution.requested
+  class: execution
+  authoritative: true
+  required_links:
+  - execution_session
+  - tool_execution
+  payload_schema: schemas/events/payloads/tool.execution.requested.schema.json
+- id: tool.execution.approved
+  class: execution
+  authoritative: true
+  required_links:
+  - execution_session
+  - tool_execution
+  - policy_decision
+  payload_schema: schemas/events/payloads/tool.execution.approved.schema.json
+- id: tool.execution.denied
+  class: execution
+  authoritative: true
+  required_links:
+  - execution_session
+  - tool_execution
+  - policy_decision
+  payload_schema: schemas/events/payloads/tool.execution.denied.schema.json
+- id: tool.execution.completed
+  class: execution
+  authoritative: true
+  required_links:
+  - execution_session
+  - tool_execution
+  payload_schema: schemas/events/payloads/tool.execution.completed.schema.json
+- id: projection.rendered
+  class: projection
+  authoritative: false
+  required_links:
+  - projection
+  payload_schema: schemas/events/payloads/projection.rendered.schema.json
+- id: projection.coherence_failed
+  class: projection
+  authoritative: true
+  required_links:
+  - projection
+  payload_schema: schemas/events/payloads/projection.coherence_failed.schema.json
+- id: audit.degraded_mode.changed
+  class: health
+  authoritative: true
+  required_links: []
+  payload_schema: schemas/events/payloads/audit.degraded_mode.changed.schema.json

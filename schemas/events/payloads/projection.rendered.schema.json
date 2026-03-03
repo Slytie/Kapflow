@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "projection.rendered",
+  "type": "object",
+  "required": [
+    "projection_id",
+    "projection_kind",
+    "coherence_status"
+  ],
+  "properties": {
+    "projection_id": {
+      "type": "string"
+    },
+    "projection_kind": {
+      "type": "string"
+    },
+    "coherence_status": {
+      "type": "string"
+    }
+  },
+  "additionalProperties": false
+}

@@ -1,0 +1,35 @@
+# tool_class_registry.yaml - canonical tool classes for execution profiles
+
+tool_classes:
+  - id: artifact.read
+    side_effect_class: none
+    requires_policy_decision: false
+    description: Read immutable artifact content or metadata in-scope.
+  - id: artifact.publish_version
+    side_effect_class: artifact_write
+    requires_policy_decision: true
+    description: Create a new immutable artifact version in the canonical artifact store.
+  - id: validation
+    side_effect_class: none
+    requires_policy_decision: false
+    description: Perform deterministic validation or consistency checking.
+  - id: spreadsheet.transform
+    side_effect_class: none
+    requires_policy_decision: false
+    description: Compute proposed workbook changes or derived workbook content.
+  - id: flag.raise
+    side_effect_class: workflow_write
+    requires_policy_decision: true
+    description: Create or update a first-class flag through canonical workflow commands.
+  - id: approval.request
+    side_effect_class: workflow_write
+    requires_policy_decision: true
+    description: Create a canonical approval object and request event.
+  - id: projection.render
+    side_effect_class: derived_write
+    requires_policy_decision: false
+    description: Render a projection or packet from authoritative source objects.
+  - id: notification.prepare
+    side_effect_class: none
+    requires_policy_decision: false
+    description: Prepare a non-authoritative outbound notification artifact.

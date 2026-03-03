@@ -1,0 +1,119 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ExecutionProfile",
+  "type": "object",
+  "required": [
+    "profile"
+  ],
+  "properties": {
+    "profile": {
+      "type": "object",
+      "required": [
+        "workflow_id",
+        "version",
+        "stages"
+      ],
+      "properties": {
+        "workflow_id": {
+          "type": "string"
+        },
+        "version": {
+          "type": "integer"
+        },
+        "stages": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "stage_id",
+              "execution_pattern",
+              "allowed_tool_classes",
+              "side_effect_policy",
+              "required_evidence_keys",
+              "decision_refs",
+              "stop_rules",
+              "projections"
+            ],
+            "properties": {
+              "stage_id": {
+                "type": "string"
+              },
+              "execution_pattern": {
+                "type": "string",
+                "enum": [
+                  "linear_chain",
+                  "approval_gate",
+                  "bounded_exception_loop"
+                ]
+              },
+              "allowed_tool_classes": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "side_effect_policy": {
+                "type": "string",
+                "enum": [
+                  "none",
+                  "draft_only",
+                  "commit_requires_business_decision",
+                  "commit_requires_conditional_business_decision",
+                  "commit_requires_execution_gate"
+                ]
+              },
+              "required_evidence_keys": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "decision_refs": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "stop_rules": {
+                "type": "object",
+                "required": [
+                  "max_tool_calls",
+                  "no_progress_ticks",
+                  "on_exhaustion"
+                ],
+                "properties": {
+                  "max_tool_calls": {
+                    "type": "integer"
+                  },
+                  "no_progress_ticks": {
+                    "type": "integer"
+                  },
+                  "on_exhaustion": {
+                    "type": "string",
+                    "enum": [
+                      "escalate",
+                      "wait_for_human",
+                      "terminate"
+                    ]
+                  }
+                }
+              },
+              "projections": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "extensions": {
+                "type": "object"
+              }
+            },
+            "additionalProperties": false
+          }
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

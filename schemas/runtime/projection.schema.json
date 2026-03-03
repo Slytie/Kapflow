@@ -1,0 +1,69 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Projection",
+  "type": "object",
+  "required": [
+    "projection_id",
+    "projection_kind",
+    "tenant_id",
+    "domain_id",
+    "coherence_status",
+    "rendered_at"
+  ],
+  "properties": {
+    "projection_id": {
+      "type": "string"
+    },
+    "projection_kind": {
+      "type": "string"
+    },
+    "tenant_id": {
+      "type": "string"
+    },
+    "domain_id": {
+      "type": "string"
+    },
+    "source_refs": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "type",
+          "id"
+        ],
+        "properties": {
+          "type": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "renderer_version": {
+      "type": "string"
+    },
+    "coherence_status": {
+      "type": "string",
+      "enum": [
+        "pending",
+        "passed",
+        "failed"
+      ]
+    },
+    "rendered_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "coherence_checked_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "failure_code": {
+      "type": "string"
+    }
+  },
+  "additionalProperties": false
+}

@@ -1,0 +1,124 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "DecisionCatalog",
+  "type": "object",
+  "required": [
+    "catalog"
+  ],
+  "properties": {
+    "catalog": {
+      "type": "object",
+      "required": [
+        "workflow_id",
+        "version",
+        "decisions"
+      ],
+      "properties": {
+        "workflow_id": {
+          "type": "string"
+        },
+        "version": {
+          "type": "integer"
+        },
+        "decisions": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "id",
+              "stage_id",
+              "decision_kind",
+              "requested_from_role",
+              "action",
+              "allowed_responses",
+              "evidence_requirements",
+              "sla"
+            ],
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "stage_id": {
+                "type": "string"
+              },
+              "decision_kind": {
+                "type": "string",
+                "enum": [
+                  "business_decision",
+                  "execution_gate",
+                  "method_change"
+                ]
+              },
+              "requested_from_role": {
+                "type": "string"
+              },
+              "action": {
+                "type": "string"
+              },
+              "allowed_responses": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "enum": [
+                    "approve",
+                    "reject",
+                    "request_changes",
+                    "cancel",
+                    "expire"
+                  ]
+                }
+              },
+              "evidence_requirements": {
+                "type": "object",
+                "required": [
+                  "artifact_keys",
+                  "projection_id"
+                ],
+                "properties": {
+                  "artifact_keys": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "projection_id": {
+                    "type": "string"
+                  }
+                }
+              },
+              "sla": {
+                "type": "object",
+                "required": [
+                  "due_in_minutes",
+                  "on_expire"
+                ],
+                "properties": {
+                  "due_in_minutes": {
+                    "type": "integer"
+                  },
+                  "on_expire": {
+                    "type": "object",
+                    "properties": {
+                      "escalate_to_role": {
+                        "type": "string"
+                      }
+                    }
+                  }
+                }
+              },
+              "notes": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            },
+            "additionalProperties": false
+          }
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

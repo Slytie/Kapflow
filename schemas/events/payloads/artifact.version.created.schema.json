@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "artifact.version.created",
+  "type": "object",
+  "required": [
+    "artifact_version_id",
+    "dataset_key"
+  ],
+  "properties": {
+    "artifact_version_id": {
+      "type": "string"
+    },
+    "dataset_key": {
+      "type": "string"
+    },
+    "supersedes_artifact_version_id": {
+      "type": "string"
+    }
+  },
+  "additionalProperties": false
+}

@@ -1,0 +1,36 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "workflow.run.created",
+  "type": "object",
+  "required": [
+    "workflow_id",
+    "partition_key",
+    "activation_key"
+  ],
+  "properties": {
+    "workflow_id": {
+      "type": "string"
+    },
+    "partition_key": {
+      "type": "string"
+    },
+    "activation_key": {
+      "type": "string"
+    },
+    "logical_date": {
+      "type": "string"
+    },
+    "service_timezone": {
+      "type": "string"
+    },
+    "service_interval_start": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "service_interval_end": {
+      "type": "string",
+      "format": "date-time"
+    }
+  },
+  "additionalProperties": false
+}

@@ -1,0 +1,40 @@
+# governance_vocabulary.yaml - shared approval, actor, and permission vocabulary
+
+actor_types:
+  - id: human
+    description: Interactive user principal acting through the canonical UI/API path.
+  - id: agent
+    description: Agent principal acting through the same canonical task, approval, event, and pointer path.
+  - id: service
+    description: Service or worker principal operating under explicit platform or business capability grants.
+  - id: system
+    description: Platform-owned housekeeping or migration-safe system actor.
+
+approval_response_verbs:
+  - id: approve
+    outcome: approved
+  - id: reject
+    outcome: rejected
+  - id: request_changes
+    outcome: changes_requested
+  - id: cancel
+    outcome: canceled
+  - id: expire
+    outcome: expired
+
+approval_outcomes:
+  - approved
+  - rejected
+  - changes_requested
+  - canceled
+  - expired
+
+approval_permission_actions:
+  - approval.request
+  - approval.respond
+
+task_completion_codes:
+  - completed
+  - canceled
+  - escalated
+  - stale

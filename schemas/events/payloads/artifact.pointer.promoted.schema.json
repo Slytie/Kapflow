@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "artifact.pointer.promoted",
+  "type": "object",
+  "required": [
+    "pointer_id",
+    "dataset_key",
+    "promoted_artifact_version_id"
+  ],
+  "properties": {
+    "pointer_id": {
+      "type": "string"
+    },
+    "dataset_key": {
+      "type": "string"
+    },
+    "promoted_artifact_version_id": {
+      "type": "string"
+    },
+    "reviewed_artifact_version_id": {
+      "type": "string"
+    }
+  },
+  "additionalProperties": false
+}

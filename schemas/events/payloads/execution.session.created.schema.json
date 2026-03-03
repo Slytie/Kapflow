@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "execution.session.created",
+  "type": "object",
+  "required": [
+    "execution_session_id",
+    "execution_spec_id",
+    "owner_mode"
+  ],
+  "properties": {
+    "execution_session_id": {
+      "type": "string"
+    },
+    "execution_spec_id": {
+      "type": "string"
+    },
+    "owner_mode": {
+      "type": "string"
+    },
+    "principal_actor_type": {
+      "type": "string"
+    }
+  },
+  "additionalProperties": false
+}

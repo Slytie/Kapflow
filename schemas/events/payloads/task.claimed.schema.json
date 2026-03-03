@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "task.claimed",
+  "type": "object",
+  "required": [
+    "human_task_id",
+    "lease_version",
+    "claimed_until"
+  ],
+  "properties": {
+    "human_task_id": {
+      "type": "string"
+    },
+    "lease_version": {
+      "type": "integer"
+    },
+    "claimed_until": {
+      "type": "string",
+      "format": "date-time"
+    }
+  },
+  "additionalProperties": false
+}

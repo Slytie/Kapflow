@@ -1,0 +1,116 @@
+profile:
+  workflow_id: payroll.v1
+  version: 1
+  stages:
+    - stage_id: Stage03
+      execution_pattern: linear_chain
+      allowed_tool_classes: [artifact.read, validation, spreadsheet.transform]
+      side_effect_policy: draft_only
+      required_evidence_keys:
+        - payroll.daily_capture_report.doc
+      decision_refs: []
+      stop_rules:
+        max_tool_calls: 12
+        no_progress_ticks: 3
+        on_exhaustion: escalate
+      projections:
+        - payroll.stage03.ops_packet
+      extensions:
+        guidance:
+          - "Capture and normalize raw intake without creating official outputs beyond the staged artifacts."
+
+    - stage_id: Stage04
+      execution_pattern: linear_chain
+      allowed_tool_classes: [artifact.read, validation, spreadsheet.transform, flag.raise]
+      side_effect_policy: draft_only
+      required_evidence_keys:
+        - payroll.timesheet_triage.doc
+        - payroll.timesheet_triage.workbook
+      decision_refs: []
+      stop_rules:
+        max_tool_calls: 18
+        no_progress_ticks: 3
+        on_exhaustion: escalate
+      projections:
+        - payroll.stage04.ops_packet
+      extensions:
+        guidance:
+          - "Missing punch and overtime anomalies should become explicit flags rather than hidden comments."
+
+    - stage_id: Stage05
+      execution_pattern: approval_gate
+      allowed_tool_classes: [artifact.read, validation, approval.request, projection.render]
+      side_effect_policy: commit_requires_business_decision
+      required_evidence_keys:
+        - payroll.manager_approval.doc
+        - payroll.manager_approval.workbook
+      decision_refs:
+        - payroll.stage05.promote_timesheets
+      stop_rules:
+        max_tool_calls: 8
+        no_progress_ticks: 2
+        on_exhaustion: wait_for_human
+      projections:
+        - payroll.stage05.approval_packet
+
+    - stage_id: Stage06
+      execution_pattern: approval_gate
+      allowed_tool_classes: [artifact.read, validation, approval.request, projection.render, artifact.publish_version]
+      side_effect_policy: commit_requires_business_decision
+      required_evidence_keys:
+        - payroll.prepayroll_lock.doc
+        - payroll.prepayroll_lock.workbook
+      decision_refs:
+        - payroll.stage06.lock_pay_period
+      stop_rules:
+        max_tool_calls: 10
+        no_progress_ticks: 2
+        on_exhaustion: wait_for_human
+      projections:
+        - payroll.stage06.lock_packet
+
+    - stage_id: Stage07
+      execution_pattern: linear_chain
+      allowed_tool_classes: [artifact.read, validation, spreadsheet.transform, artifact.publish_version]
+      side_effect_policy: draft_only
+      required_evidence_keys:
+        - payroll.run_register.doc
+        - payroll.run_register.workbook
+      decision_refs: []
+      stop_rules:
+        max_tool_calls: 12
+        no_progress_ticks: 3
+        on_exhaustion: escalate
+      projections:
+        - payroll.stage07.ops_packet
+
+    - stage_id: Stage08
+      execution_pattern: approval_gate
+      allowed_tool_classes: [artifact.read, validation, approval.request, projection.render]
+      side_effect_policy: commit_requires_business_decision
+      required_evidence_keys:
+        - payroll.finance_finalize.doc
+        - payroll.finance_finalize.workbook
+      decision_refs:
+        - payroll.stage08.finalize_payroll
+      stop_rules:
+        max_tool_calls: 8
+        no_progress_ticks: 2
+        on_exhaustion: wait_for_human
+      projections:
+        - payroll.stage08.finalize_packet
+
+    - stage_id: Stage09
+      execution_pattern: linear_chain
+      allowed_tool_classes: [artifact.read, validation, artifact.publish_version, notification.prepare]
+      side_effect_policy: draft_only
+      required_evidence_keys:
+        - payroll.payments_payslips.doc
+        - payroll.payments_payslips.workbook
+      decision_refs: []
+      stop_rules:
+        max_tool_calls: 10
+        no_progress_ticks: 3
+        on_exhaustion: escalate
+      projections:
+        - payroll.stage09.ops_packet

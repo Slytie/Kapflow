@@ -1,0 +1,68 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ToolExecution",
+  "type": "object",
+  "required": [
+    "tool_execution_id",
+    "execution_session_id",
+    "tool_class",
+    "state",
+    "idempotency_key",
+    "attempt_no",
+    "requested_at"
+  ],
+  "properties": {
+    "tool_execution_id": {
+      "type": "string"
+    },
+    "execution_session_id": {
+      "type": "string"
+    },
+    "tool_class": {
+      "type": "string"
+    },
+    "tool_name": {
+      "type": "string"
+    },
+    "state": {
+      "type": "string",
+      "enum": [
+        "REQUESTED",
+        "APPROVED",
+        "DENIED",
+        "RUNNING",
+        "COMPLETED",
+        "FAILED",
+        "CANCELED"
+      ]
+    },
+    "idempotency_key": {
+      "type": "string"
+    },
+    "attempt_no": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "policy_decision_id": {
+      "type": "string"
+    },
+    "output_artifact_version_ids": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "requested_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "completed_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "error_code": {
+      "type": "string"
+    }
+  },
+  "additionalProperties": false
+}

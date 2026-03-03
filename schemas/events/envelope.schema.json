@@ -1,0 +1,120 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "TimelineEventEnvelope",
+  "type": "object",
+  "required": [
+    "event_id",
+    "event_type",
+    "schema_version",
+    "occurred_at",
+    "recorded_at",
+    "tenant_id",
+    "domain_id",
+    "actor",
+    "links",
+    "payload"
+  ],
+  "properties": {
+    "event_id": {
+      "type": "string",
+      "description": "Unique event identifier (UUID/ULID)."
+    },
+    "event_type": {
+      "type": "string",
+      "description": "Namespaced type, e.g., artifact.pointer.promoted"
+    },
+    "schema_version": {
+      "type": "string",
+      "description": "Event schema version, e.g., 1.0"
+    },
+    "occurred_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "recorded_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "tenant_id": {
+      "type": "string"
+    },
+    "domain_id": {
+      "type": "string"
+    },
+    "actor": {
+      "type": "object",
+      "required": [
+        "type",
+        "id"
+      ],
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": [
+            "human",
+            "agent",
+            "service",
+            "system"
+          ]
+        },
+        "id": {
+          "type": "string"
+        },
+        "display": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    },
+    "links": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "rel",
+          "type",
+          "id"
+        ],
+        "properties": {
+          "rel": {
+            "type": "string",
+            "description": "Relationship type such as used_input, produced_output, approved, promoted, blocked_by, resolved_by."
+          },
+          "type": {
+            "type": "string",
+            "description": "Target object type such as workflow_run, task_run, human_task, execution_session, approval, artifact_version, pointer, tool_execution, projection, workflow_contract_version, decision_catalog_version, execution_profile_version, execution_spec, flag, or policy_decision."
+          },
+          "id": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "payload": {
+      "type": "object"
+    },
+    "correlation_id": {
+      "type": "string"
+    },
+    "causation_id": {
+      "type": "string"
+    },
+    "idempotency_key": {
+      "type": "string"
+    },
+    "integrity": {
+      "type": "object",
+      "properties": {
+        "payload_hash": {
+          "type": "string"
+        },
+        "prev_event_id": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

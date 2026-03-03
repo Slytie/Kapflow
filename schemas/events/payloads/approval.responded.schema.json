@@ -1,0 +1,43 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "approval.responded",
+  "type": "object",
+  "required": [
+    "approval_id",
+    "action",
+    "response",
+    "outcome"
+  ],
+  "properties": {
+    "approval_id": {
+      "type": "string"
+    },
+    "action": {
+      "type": "string"
+    },
+    "response": {
+      "type": "string",
+      "enum": [
+        "approve",
+        "reject",
+        "request_changes",
+        "cancel",
+        "expire"
+      ]
+    },
+    "outcome": {
+      "type": "string",
+      "enum": [
+        "approved",
+        "rejected",
+        "changes_requested",
+        "canceled",
+        "expired"
+      ]
+    },
+    "rationale": {
+      "type": "string"
+    }
+  },
+  "additionalProperties": false
+}

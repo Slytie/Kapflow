@@ -1,0 +1,217 @@
+datasets:
+- key: payroll.config.doc
+  description: Payroll configuration pack document
+  kind: document
+  partitioned_by:
+  - PayPeriodID
+  sensitivity: internal
+- key: payroll.config.workbook
+  description: Pay calendar and codes workbook
+  kind: spreadsheet
+  partitioned_by:
+  - PayPeriodID
+  sensitivity: internal
+- key: payroll.worker_master.doc
+  description: Worker payroll setup packet
+  kind: document
+  partitioned_by:
+  - PayPeriodID
+  sensitivity: confidential
+- key: payroll.worker_master.workbook
+  description: Worker master file workbook (masked payment method)
+  kind: spreadsheet
+  partitioned_by:
+  - PayPeriodID
+  sensitivity: confidential
+- key: payroll.daily_capture_report.doc
+  description: Daily capture report
+  kind: document
+  partitioned_by:
+  - PayPeriodID
+  sensitivity: internal
+- key: payroll.raw_intake.workbook
+  description: Raw event intake log
+  kind: spreadsheet
+  partitioned_by:
+  - PayPeriodID
+  sensitivity: internal
+- key: payroll.timesheet_triage.doc
+  description: Timesheet build & triage document
+  kind: document
+  partitioned_by:
+  - PayPeriodID
+  sensitivity: internal
+- key: payroll.timesheet_triage.workbook
+  description: Timesheet build & triage workbook
+  kind: spreadsheet
+  partitioned_by:
+  - PayPeriodID
+  sensitivity: confidential
+- key: payroll.manager_approval.doc
+  description: Manager approval record document
+  kind: document
+  partitioned_by:
+  - PayPeriodID
+  sensitivity: internal
+- key: payroll.manager_approval.workbook
+  description: Manager approval workbook
+  kind: spreadsheet
+  partitioned_by:
+  - PayPeriodID
+  sensitivity: internal
+- key: payroll.prepayroll_lock.doc
+  description: Pre-payroll reconciliation & lock record doc
+  kind: document
+  partitioned_by:
+  - PayPeriodID
+  sensitivity: internal
+- key: payroll.prepayroll_lock.workbook
+  description: Pre-payroll recon & lock workbook (contains Lock_ID)
+  kind: spreadsheet
+  partitioned_by:
+  - PayPeriodID
+  sensitivity: confidential
+- key: payroll.run_register.doc
+  description: Payroll register generation record doc
+  kind: document
+  partitioned_by:
+  - PayPeriodID
+  sensitivity: internal
+- key: payroll.run_register.workbook
+  description: Payroll register workbook (official output)
+  kind: spreadsheet
+  partitioned_by:
+  - PayPeriodID
+  sensitivity: confidential
+- key: payroll.finance_finalize.doc
+  description: Finance approval/finalization doc
+  kind: document
+  partitioned_by:
+  - PayPeriodID
+  sensitivity: internal
+- key: payroll.finance_finalize.workbook
+  description: Finance finalization workbook
+  kind: spreadsheet
+  partitioned_by:
+  - PayPeriodID
+  sensitivity: internal
+- key: payroll.payments_payslips.doc
+  description: Payment execution and payslip delivery doc
+  kind: document
+  partitioned_by:
+  - PayPeriodID
+  sensitivity: internal
+- key: payroll.payments_payslips.workbook
+  description: Payslips and payment batch workbook (official output)
+  kind: spreadsheet
+  partitioned_by:
+  - PayPeriodID
+  sensitivity: confidential
+- key: schedule.config.doc
+  description: Schedule policy and service-calendar document
+  kind: document
+  partitioned_by:
+  - ScheduleDateID
+  sensitivity: internal
+- key: schedule.config.workbook
+  description: Shift templates, service windows, and policy workbook
+  kind: spreadsheet
+  partitioned_by:
+  - ScheduleDateID
+  sensitivity: internal
+- key: schedule.worker_roster.doc
+  description: Workforce roster / availability packet
+  kind: document
+  partitioned_by:
+  - ScheduleDateID
+  sensitivity: confidential
+- key: schedule.worker_roster.workbook
+  description: Worker roster, skills, and coded availability workbook
+  kind: spreadsheet
+  partitioned_by:
+  - ScheduleDateID
+  sensitivity: confidential
+- key: schedule.demand_forecast.doc
+  description: Demand assumptions and coverage-note document
+  kind: document
+  partitioned_by:
+  - ScheduleDateID
+  sensitivity: internal
+- key: schedule.demand_forecast.workbook
+  description: Zone-by-hour demand forecast workbook
+  kind: spreadsheet
+  partitioned_by:
+  - ScheduleDateID
+  sensitivity: internal
+- key: schedule.capacity_plan.doc
+  description: Capacity-planning notes and risk commentary
+  kind: document
+  partitioned_by:
+  - ScheduleDateID
+  sensitivity: internal
+- key: schedule.capacity_plan.workbook
+  description: Required coverage vs planned staffing workbook
+  kind: spreadsheet
+  partitioned_by:
+  - ScheduleDateID
+  sensitivity: internal
+- key: schedule.draft_schedule.doc
+  description: Draft schedule review notes document
+  kind: document
+  partitioned_by:
+  - ScheduleDateID
+  sensitivity: internal
+- key: schedule.draft_schedule.workbook
+  description: Draft assignments, bundle plan, and exception triage workbook
+  kind: spreadsheet
+  partitioned_by:
+  - ScheduleDateID
+  sensitivity: confidential
+- key: schedule.supervisor_review.doc
+  description: Supervisor publication decision record
+  kind: document
+  partitioned_by:
+  - ScheduleDateID
+  sensitivity: internal
+- key: schedule.published_schedule.workbook
+  description: Official published schedule workbook
+  kind: spreadsheet
+  partitioned_by:
+  - ScheduleDateID
+  sensitivity: confidential
+- key: schedule.exception_board.doc
+  description: Live-day exception and escalation record document
+  kind: document
+  partitioned_by:
+  - ScheduleDateID
+  sensitivity: internal
+- key: schedule.replan_delta.workbook
+  description: Official replan delta workbook linked to published schedule
+  kind: spreadsheet
+  partitioned_by:
+  - ScheduleDateID
+  sensitivity: confidential
+- key: payroll.postpayroll_close.doc
+  description: Post-payroll close review document (out-of-scope reference)
+  kind: document
+  partitioned_by:
+  - PayPeriodID
+  sensitivity: internal
+- key: payroll.offcycle_corrections.doc
+  description: Off-cycle corrections document (out-of-scope reference)
+  kind: document
+  partitioned_by:
+  - PayPeriodID
+  sensitivity: internal
+- key: schedule.postday_review.doc
+  description: Post-day review document (out-of-scope reference)
+  kind: document
+  partitioned_by:
+  - ScheduleDateID
+  sensitivity: internal
+- key: schedule.pattern_optimization.doc
+  description: Pattern optimization document (out-of-scope reference)
+  kind: document
+  partitioned_by:
+  - ScheduleDateID
+  sensitivity: internal

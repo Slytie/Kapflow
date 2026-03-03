@@ -1,0 +1,64 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "task.run.created",
+  "type": "object",
+  "required": [
+    "task_run_id",
+    "stage_id",
+    "task_kind",
+    "activation_key"
+  ],
+  "properties": {
+    "task_run_id": {
+      "type": "string"
+    },
+    "stage_id": {
+      "type": "string"
+    },
+    "task_kind": {
+      "type": "string"
+    },
+    "activation_key": {
+      "type": "string"
+    },
+    "generation": {
+      "type": "integer"
+    },
+    "spawned_from_flag_id": {
+      "type": "string"
+    },
+    "spawned_from_task_run_id": {
+      "type": "string"
+    },
+    "resume_parent_task_run_id": {
+      "type": "string"
+    },
+    "spawn_rule_id": {
+      "type": "string"
+    },
+    "spawn_cause_kind": {
+      "type": "string",
+      "enum": [
+        "none",
+        "task_completion",
+        "approval_response",
+        "flag_trigger",
+        "stale_recovery",
+        "manual_operator",
+        "policy_gate",
+        "timer"
+      ]
+    },
+    "spawn_cause_event_id": {
+      "type": "string"
+    },
+    "spawn_budget_key": {
+      "type": "string"
+    },
+    "spawn_depth": {
+      "type": "integer",
+      "minimum": 0
+    }
+  },
+  "additionalProperties": false
+}

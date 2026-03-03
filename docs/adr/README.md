@@ -1,0 +1,12 @@
+# ADRs (Architecture Decision Records)
+
+Current ADRs:
+- `ADR-001-one-truth-authority-chain.md`
+- `ADR-002-generated-agentic-derivatives.md`
+- `ADR-003-stage4-runtime-architecture.md`
+
+Use ADRs when changing:
+- authority chain
+- runtime contract
+- approval model
+- derivation / generation rules

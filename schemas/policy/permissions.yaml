@@ -1,0 +1,57 @@
+# permissions.yaml - MVP permission vocabulary
+
+roles:
+  - id: payroll_manager
+    description: Manager who reviews and approves timesheets
+  - id: payroll_admin
+    description: Payroll admin who locks pay periods and manages runs
+  - id: finance_approver
+    description: Finance approver who finalizes payroll
+  - id: ops_resolver
+    description: Operations user who resolves flags and exceptions
+  - id: system_worker
+    description: Background worker or service identity
+  - id: schedule_planner
+    description: Planner who prepares demand, capacity, and draft schedule artifacts
+  - id: dispatch_supervisor
+    description: Supervisor who reviews and publishes the base schedule
+  - id: operations_manager
+    description: Manager who approves major replans and policy/cost exceptions
+  - id: fleet_coordinator
+    description: Coordinator who manages vehicle availability and related disruptions
+
+actions:
+  - id: artifact.upload
+  - id: artifact.promote
+  - id: task.create
+  - id: task.claim
+  - id: task.complete
+  - id: task.reassign
+  - id: approval.request
+  - id: approval.respond
+  - id: run.create
+  - id: run.transition
+  - id: tool.execute
+  - id: flag.raise
+  - id: flag.resolve
+  - id: projection.render
+
+default_rules:
+  - role: payroll_manager
+    allow: [task.claim, task.complete, approval.respond]
+  - role: payroll_admin
+    allow: [artifact.upload, artifact.promote, run.create, run.transition, approval.request, approval.respond]
+  - role: finance_approver
+    allow: [approval.respond]
+  - role: ops_resolver
+    allow: [task.claim, task.complete]
+  - role: system_worker
+    allow: [run.transition, task.create, projection.render, tool.execute]
+  - role: schedule_planner
+    allow: [artifact.upload, artifact.promote, run.create, run.transition, task.claim, task.complete, approval.request]
+  - role: dispatch_supervisor
+    allow: [artifact.promote, task.claim, task.complete, approval.request, approval.respond, flag.raise, flag.resolve]
+  - role: operations_manager
+    allow: [task.claim, task.complete, approval.respond, flag.raise, flag.resolve, run.transition]
+  - role: fleet_coordinator
+    allow: [artifact.upload, task.claim, task.complete, flag.raise, flag.resolve]

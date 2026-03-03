@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "flag.created",
+  "type": "object",
+  "required": [
+    "flag_id",
+    "flag_type",
+    "state"
+  ],
+  "properties": {
+    "flag_id": {
+      "type": "string"
+    },
+    "flag_type": {
+      "type": "string"
+    },
+    "state": {
+      "type": "string"
+    },
+    "summary": {
+      "type": "string"
+    }
+  },
+  "additionalProperties": false
+}

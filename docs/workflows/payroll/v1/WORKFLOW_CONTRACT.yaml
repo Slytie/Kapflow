@@ -1,0 +1,261 @@
+# WORKFLOW_CONTRACT.yaml - Payroll v1 (Vertical Slice)
+
+workflow:
+  id: payroll.v1
+  name: "Payroll - Weekly cycle (MVP slice)"
+  partition_key:
+    name: PayPeriodID
+    format: "PP-YYYY-Www"
+    examples: ["PP-2026-W09"]
+  scope:
+    required: ["tenant_id", "domain_id"]
+
+semantics:
+  pinned_runs: true
+  no_inflight_migration_mvp: true
+  officialness:
+    defined_by: promotion_pointer
+    loose_promotion_allowed: true
+    drift_visibility_required: true
+  run_shape:
+    long_lived_case_per_partition: true
+    stage_rerun_policy: same_workflow_run_new_task_run
+
+execution_overlay:
+  decision_catalog: DECISION_CATALOG.yaml
+  execution_profile: EXECUTION_PROFILE.yaml
+
+stages:
+  - id: Stage01
+    name: Payroll_Config
+    in_scope_mvp: true
+    artifacts:
+      - dataset_key: payroll.config.doc
+        kind: document
+        role: official_input
+      - dataset_key: payroll.config.workbook
+        kind: spreadsheet
+        role: official_input
+    semantics:
+      mvp_handling: preloaded_input
+      ingestion_automation: out_of_scope_stage4
+
+  - id: Stage02
+    name: Worker_Master
+    in_scope_mvp: true
+    artifacts:
+      - dataset_key: payroll.worker_master.doc
+        kind: document
+        role: official_input
+      - dataset_key: payroll.worker_master.workbook
+        kind: spreadsheet
+        role: official_input
+    semantics:
+      mvp_handling: preloaded_input
+      ingestion_automation: out_of_scope_stage4
+    notes:
+      - "Payment method must be masked; do not store raw bank details."
+
+  - id: Stage03
+    name: Raw_Time_Piece_Capture
+    in_scope_mvp: true
+    triggers:
+      - on_promotion: [payroll.raw_intake.workbook]
+    artifacts:
+      - dataset_key: payroll.daily_capture_report.doc
+        kind: document
+        role: evidence
+      - dataset_key: payroll.raw_intake.workbook
+        kind: spreadsheet
+        role: official_input
+
+  - id: Stage04
+    name: Timesheet_Build_Triage
+    in_scope_mvp: true
+    artifacts:
+      - dataset_key: payroll.timesheet_triage.doc
+        kind: document
+        role: evidence
+      - dataset_key: payroll.timesheet_triage.workbook
+        kind: spreadsheet
+        role: official_input
+    produces:
+      flags:
+        required: true
+        examples: ["missing_punch", "overtime_anomaly"]
+    semantics:
+      task_spawn_policy: conditional_follow_on
+      spawn_budget:
+        per_parent_completion_max_children: 3
+        max_spawn_depth: 2
+      spawn_rules:
+        - id: stage04_request_missing_time_evidence
+          when: triage_requires_missing_information
+          target_stage_id: Stage04
+          task_kind: information_request
+          candidate_roles: [payroll_manager, payroll_admin]
+        - id: stage04_return_for_timesheet_rework
+          when: triage_requires_rework
+          target_stage_id: Stage04
+          task_kind: work_item
+          candidate_roles: [payroll_manager]
+
+  - id: Stage05
+    name: Manager_Approval
+    in_scope_mvp: true
+    approvals:
+      required: true
+      group: payroll_manager
+      action: promote_timesheets
+    artifacts:
+      - dataset_key: payroll.manager_approval.doc
+        kind: document
+        role: evidence
+      - dataset_key: payroll.manager_approval.workbook
+        kind: spreadsheet
+        role: evidence
+    semantics:
+      task_spawn_policy: conditional_follow_on
+      spawn_budget:
+        per_parent_completion_max_children: 3
+        max_spawn_depth: 3
+      spawn_rules:
+        - id: stage05_request_timesheet_changes
+          when: manager_requests_changes
+          target_stage_id: Stage04
+          task_kind: work_item
+          candidate_roles: [payroll_manager]
+        - id: stage05_request_supporting_information
+          when: manager_requires_more_information
+          target_stage_id: Stage05
+          task_kind: information_request
+          candidate_roles: [payroll_admin]
+        - id: stage05_final_review_packet
+          when: timesheets_are_ready_for_lock_review
+          target_stage_id: Stage05
+          task_kind: final_review
+          candidate_roles: [payroll_manager]
+
+  - id: Stage06
+    name: PrePayroll_Recon_Lock
+    in_scope_mvp: true
+    approvals:
+      required: true
+      group: payroll_admin
+      action: lock_pay_period
+    artifacts:
+      - dataset_key: payroll.prepayroll_lock.doc
+        kind: document
+        role: evidence
+      - dataset_key: payroll.prepayroll_lock.workbook
+        kind: spreadsheet
+        role: official_input
+    semantics:
+      lock_id_required: true
+      approval_snapshot_required: true
+      task_spawn_policy: conditional_follow_on
+      spawn_budget:
+        per_parent_completion_max_children: 3
+        max_spawn_depth: 3
+      spawn_rules:
+        - id: stage06_request_lock_evidence
+          when: lock_review_requires_more_information
+          target_stage_id: Stage06
+          task_kind: information_request
+          candidate_roles: [payroll_admin]
+        - id: stage06_return_for_prepayroll_rework
+          when: lock_review_requests_changes
+          target_stage_id: Stage04
+          task_kind: work_item
+          candidate_roles: [payroll_manager]
+
+  - id: Stage07
+    name: Payroll_Run_Register
+    in_scope_mvp: true
+    artifacts:
+      - dataset_key: payroll.run_register.doc
+        kind: document
+        role: evidence
+      - dataset_key: payroll.run_register.workbook
+        kind: spreadsheet
+        role: official_output
+
+  - id: Stage08
+    name: Finance_Approval_Finalize
+    in_scope_mvp: true
+    approvals:
+      required: true
+      group: finance_approver
+      action: finalize_payroll
+    artifacts:
+      - dataset_key: payroll.finance_finalize.doc
+        kind: document
+        role: evidence
+      - dataset_key: payroll.finance_finalize.workbook
+        kind: spreadsheet
+        role: evidence
+    semantics:
+      task_spawn_policy: conditional_follow_on
+      spawn_budget:
+        per_parent_completion_max_children: 3
+        max_spawn_depth: 3
+      spawn_rules:
+        - id: stage08_request_finance_followup
+          when: finance_requires_more_information
+          target_stage_id: Stage08
+          task_kind: information_request
+          candidate_roles: [finance_approver, payroll_admin]
+        - id: stage08_return_for_register_rework
+          when: finance_requests_changes
+          target_stage_id: Stage07
+          task_kind: work_item
+          candidate_roles: [payroll_admin]
+        - id: stage08_final_finalize_review
+          when: register_is_ready_for_finalize
+          target_stage_id: Stage08
+          task_kind: final_review
+          candidate_roles: [finance_approver]
+
+  - id: Stage09
+    name: Payments_Payslips
+    in_scope_mvp: true
+    artifacts:
+      - dataset_key: payroll.payments_payslips.doc
+        kind: document
+        role: evidence
+      - dataset_key: payroll.payments_payslips.workbook
+        kind: spreadsheet
+        role: official_output
+    notes:
+      - "No bank integration in MVP; artifact output only."
+
+out_of_scope_stages:
+  - Stage10
+  - Stage11
+
+event_inventory:
+  platform_required:
+    - workflow.run.created
+    - workflow.run.state_changed
+    - task.run.created
+    - task.run.state_changed
+    - task.created
+    - task.claimed
+    - task.lease_expired
+    - task.completed
+    - approval.requested
+    - approval.responded
+    - execution.session.created
+    - execution.session.state_changed
+    - tool.execution.requested
+    - tool.execution.approved
+    - tool.execution.denied
+    - tool.execution.completed
+    - audit.degraded_mode.changed
+  workflow_required:
+    - artifact.version.created
+    - artifact.pointer.promoted
+    - artifact.pointer.drift_detected
+    - flag.created
+    - flag.state_changed
+    - projection.coherence_failed

@@ -1,0 +1,110 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ExecutionSession",
+  "type": "object",
+  "required": [
+    "execution_session_id",
+    "workflow_run_id",
+    "task_run_id",
+    "execution_spec_id",
+    "state",
+    "owner_mode",
+    "created_at"
+  ],
+  "properties": {
+    "execution_session_id": {
+      "type": "string"
+    },
+    "workflow_run_id": {
+      "type": "string"
+    },
+    "task_run_id": {
+      "type": "string"
+    },
+    "execution_spec_id": {
+      "type": "string"
+    },
+    "state": {
+      "type": "string",
+      "enum": [
+        "CREATED",
+        "RUNNING",
+        "WAITING_POLICY",
+        "WAITING_APPROVAL",
+        "PAUSED",
+        "SUCCEEDED",
+        "FAILED",
+        "CANCELED"
+      ]
+    },
+    "owner_mode": {
+      "type": "string",
+      "enum": [
+        "human",
+        "agent",
+        "service",
+        "mixed"
+      ]
+    },
+    "principal_actor": {
+      "type": "object",
+      "required": [
+        "type",
+        "id"
+      ],
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": [
+            "human",
+            "agent",
+            "service",
+            "system"
+          ]
+        },
+        "id": {
+          "type": "string"
+        },
+        "display": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    },
+    "budget": {
+      "type": "object",
+      "properties": {
+        "max_tool_calls": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "no_progress_ticks": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "max_wall_time_seconds": {
+          "type": "integer",
+          "minimum": 0
+        }
+      },
+      "additionalProperties": false
+    },
+    "tool_call_count": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "updated_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "closed_at": {
+      "type": "string",
+      "format": "date-time"
+    }
+  },
+  "additionalProperties": false
+}

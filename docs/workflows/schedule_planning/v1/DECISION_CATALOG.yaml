@@ -1,0 +1,39 @@
+catalog:
+  workflow_id: schedule_planning.v1
+  version: 1
+  decisions:
+    - id: schedule.stage06.publish_base_schedule
+      stage_id: Stage06
+      decision_kind: business_decision
+      requested_from_role: dispatch_supervisor
+      action: publish_schedule
+      allowed_responses: [approve, reject, request_changes]
+      evidence_requirements:
+        artifact_keys:
+          - schedule.draft_schedule.workbook
+          - schedule.supervisor_review.doc
+        projection_id: schedule.stage06.publish_packet
+      sla:
+        due_in_minutes: 120
+        on_expire:
+          escalate_to_role: operations_manager
+      notes:
+        - "Approval publishes the stable base service-day schedule."
+
+    - id: schedule.stage07.approve_major_replan
+      stage_id: Stage07
+      decision_kind: business_decision
+      requested_from_role: operations_manager
+      action: approve_major_replan
+      allowed_responses: [approve, reject, request_changes]
+      evidence_requirements:
+        artifact_keys:
+          - schedule.exception_board.doc
+          - schedule.replan_delta.workbook
+        projection_id: schedule.stage07.replan_packet
+      sla:
+        due_in_minutes: 30
+        on_expire:
+          escalate_to_role: operations_manager
+      notes:
+        - "Required when replan implies contractor activation, SLA waiver, zone-level override, or overtime beyond threshold."

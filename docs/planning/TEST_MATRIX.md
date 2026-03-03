@@ -1,0 +1,135 @@
+# TEST_MATRIX.md
+
+This matrix is the **executable-spec index** for Stage 4.
+
+It exists to make the platform's non-negotiable invariants *hard to regress* under:
+- retries and durable waits
+- multi-tenant isolation boundaries
+- long-running orchestration
+- progressive automation (assist -> suggest -> draft -> execute)
+- fully-agentive debug runs that still preserve one truth system
+
+It is intentionally written so a fresh-session Codex run can:
+1) identify which tests must exist for a change, and
+2) identify which evidence/security/ops checks a reviewer should demand.
+
+---
+
+## 1) Invariants -> required tests
+
+| Invariant | Risk we are retiring | Required test types | Suggested suites / locations (repo) |
+|---|---|---|---|
+| I1 Durable workflow semantics + safe evolution | non-determinism, unsafe version drift, retries duplicate effects | unit + replay + property | `tests/unit/*reducer*`, `tests/replay/*golden*`, `tests/property/*history*` |
+| I2 Artifact immutability + auditability | silent mutation, broken lineage, "latest file" ambiguity | unit + integration + property | `tests/unit/artifacts_*`, `tests/integration/artifact_store_*`, `tests/property/lineage_*` |
+| I3 Tenant isolation + authorization | cross-tenant leakage, mixed projections, unsafe background consumers | integration + security + acceptance negatives | `tests/security/isolation/*`, `tests/integration/*scope*`, `tests/acceptance/*cross_tenant*` |
+| I4 Automation safety (LLM/tools) | prompt/tool injection, unsafe side-effects, sandbox escape | security + contract + integration | `tests/security/agent/*`, `tests/contract/tool_plane_*`, `tests/integration/sandbox_*` |
+| I5 One truth system (authority chain) | "shadow truth" stores, summaries outrank evidence, drift in generated artifacts | schema + contract + policy tests | `tests/contract/*schema*`, CI check in `docs/ops/ci_required_checks.md` |
+| I6 Fully-agentive debug slice preserves canonical authority | agent-only state, approval bypass, invisible stage work | replay + acceptance + security | `tests/replay/*schedule_agentive*`, `tests/acceptance/*schedule_agentive*`, `tests/security/agent/*approval_bypass*` |
+| I7 Conditional task spawning stays explicit and bounded | hidden branching, duplicate child tasks on retry, runaway loops | unit + integration + runtime scenarios | `tests/unit/*spawn*`, `tests/integration/*idempotency*`, `tests/runtime/scenarios/*spawn*` |
+
+> **Rule:** If a change touches an invariant, add or update the tests listed for that invariant.
+
+---
+
+## 2) Schedule Planning workflow stage coverage (implementation wedge)
+
+Schedule Planning is the **runtime implementation wedge** for Stage 4.
+The primary acceptance objective is a **fully-agentive whole-flow debug run** that still uses the canonical task, approval, artifact, and event substrate.
+
+### Acceptance scenarios (IDs are stable)
+| Scenario ID | Stages | What it proves | Negative / red-team variant required |
+|---|---|---|---|
+| AT-SCH-001 Happy path publish + replan | Stage03->Stage07 | durable waits, approvals, pointer promotions, additive delta semantics, audit timeline reconstructability | AT-SCH-001N: replay after restart does not duplicate tool effects or double-publish the base schedule |
+| AT-SCH-002 Drift after review is visible | Stage06 / Stage07 | `artifact.pointer.drift_detected` is emitted and visible when promotion occurs after review on a stale base | AT-SCH-002N: attempt to promote an unreviewed or superseded version is blocked or explicitly flagged |
+| AT-SCH-003 Fully-agentive whole-flow | Stage03->Stage07 | every in-scope task can be executed by agent-owned work while still emitting canonical task/approval/pointer events and explicit child-task lineage when follow-on work is spawned | AT-SCH-003N: an agent attempt to bypass approval/pointer/event rules is denied and leaves audit evidence |
+| AT-SCH-004 Exception-task concurrency | Stage07 | issue-specific tasks, claim/lease rules, conditional child-task spawning, and escalations prevent silent stalls during intraday triage | AT-SCH-004N: lease expiry reopens or escalates work with visible evidence |
+| AT-SCH-005 Degraded-mode survivability | any | timeline persistence survives exporter/indexer failure | AT-SCH-005N: projections degrade, but authoritative events still record the truth |
+| AT-SCH-006 Cross-tenant negative | any | tenant/domain scoping enforced across API and background jobs | AT-SCH-006N: explicit attempt to read tenant B data returns 404/deny |
+| AT-SCH-007 Sandbox/policy gate | Stage06 / Stage07 (if tools enabled) | execute requires policy + approval + budget | AT-SCH-007N: out-of-plan execute attempt without approval must be denied with event evidence |
+
+
+### Stable oracle mapping
+Each primary Schedule Planning acceptance scenario now has a dedicated golden trace and pytest oracle:
+- `AT-SCH-001` -> `schedule_happy_path_publish_and_replan.jsonl`
+- `AT-SCH-002` -> `schedule_drift_after_review.jsonl`
+- `AT-SCH-003` -> `schedule_fully_agentive_whole_flow.jsonl`
+- `AT-SCH-004` -> `schedule_lease_expiry_recovery.jsonl`
+- `AT-SCH-005` -> `schedule_degraded_mode_survivability.jsonl`
+- `AT-SCH-006` -> `schedule_cross_scope_denial.jsonl`
+- `AT-SCH-007` -> `schedule_policy_gate_enforced.jsonl`
+
+### Required event evidence (for acceptance oracles)
+A passing acceptance run must be able to export an evidence set showing at minimum:
+- `workflow.run.created`, `workflow.run.state_changed`
+- `task.run.created`, `task.run.state_changed`
+- `task.created`, `task.claimed`, `task.lease_expired` (when relevant), `task.completed`
+- explicit child-task lineage for any spawned follow-on work
+- `approval.requested`, `approval.responded` (`payload.response` and `payload.outcome` required)
+- `artifact.version.created`, `artifact.pointer.promoted`, `artifact.pointer.drift_detected` (when drift occurs)
+- `flag.created` and `flag.state_changed` (when flags are used)
+- `execution.session.*` and `tool.execution.*` when agentive work is active
+- `audit.degraded_mode.changed` (when degraded mode toggles)
+
+---
+
+## 3) Planned runtime scenario harness coverage
+
+Once the runtime scaffold exists, add step-run tests where the agent executes each step through a stable interface and the test asserts only authoritative truth.
+
+Minimum required runtime scenario tests:
+- `tests/runtime/scenarios/test_schedule_stage06_publish_steps.py`
+- `tests/runtime/scenarios/test_schedule_stage07_spawn_steps.py`
+- `tests/runtime/test_task_completion_spawns_follow_ons.py`
+- `tests/runtime/test_task_spawn_idempotency.py`
+
+Each scenario should:
+- seed initial artifact inputs from `fixtures/workflows/*/template_pack/*_Example_COMPLETED.*`
+- execute the workflow through CLI/API commands, not by calling hidden internals
+- assert parent `task.completed` plus child `task.run.created` / `task.created` evidence when follow-on work is spawned
+- assert retrying the same parent completion does not duplicate child tasks
+
+## 4) Payroll coverage (secondary reference workflow)
+
+
+Payroll is the **secondary reference workflow** for Stage 4.
+It remains important because it validates the same substrate against:
+- linear approval-heavy progression,
+- lock/finalize governance,
+- artifact promotion under pay-period semantics.
+
+Minimum required evidence for the current phase:
+- Payroll workflow pack exposes the full authored surface, including `OPERATING_MODEL.md`
+- Payroll contract pack is internally consistent (schemas + registry)
+- Stage IDs, decision refs, artifact keys, and approval actions remain aligned across the pack
+- Payroll acceptance scenarios remain available as a secondary corpus once runtime work reaches that wedge
+
+---
+
+## 5) Epic -> test deliverables mapping (high-level)
+
+| Epic | Test deliverables it must produce or enable |
+|---|---|
+| EPIC-010 Scope/AuthZ | isolation negative tests; policy unit tests for scope checks |
+| EPIC-020 Timeline/Outbox | schema validation; payload-contract validation; outbox atomicity integration tests; degraded-mode tests |
+| EPIC-030 Artifact store | immutability + lineage property tests; drift detection tests |
+| EPIC-040 Orchestrator | reducer determinism unit tests; replay tests on golden histories |
+| EPIC-050 Human tasks | lease/concurrency tests; "claim once" negative tests; agent-owned task execution tests |
+| EPIC-060 Approvals | approval binding tests; reject/changes_requested cases; agent-principal approval-path tests |
+| EPIC-070 Sandbox | containment regression tests; tool-call schema validation tests |
+| EPIC-080 Ops | CI required checks; workflow-pack validation; smoke tests + alert rule tests |
+| EPIC-090 Acceptance | AT-SCH-001..007 acceptance suite + replay regression corpus + Payroll reference corpus |
+
+---
+
+## 6) CI gate linkage
+CI requirements live in `docs/ops/ci_required_checks.md`.
+
+**Pre-merge should block** on:
+- schema/contract validation (event envelope, event registry, workflow packs)
+- unit tests (reducers/policy validators)
+- replay smoke tests (if workflow logic changed)
+
+**Post-merge / nightly** should include:
+- integration tests with real dependencies
+- isolation suite
+- adversarial injection corpus (if tools enabled)

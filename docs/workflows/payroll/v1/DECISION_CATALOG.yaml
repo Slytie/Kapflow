@@ -1,0 +1,57 @@
+catalog:
+  workflow_id: payroll.v1
+  version: 1
+  decisions:
+    - id: payroll.stage05.promote_timesheets
+      stage_id: Stage05
+      decision_kind: business_decision
+      requested_from_role: payroll_manager
+      action: promote_timesheets
+      allowed_responses: [approve, reject, request_changes]
+      evidence_requirements:
+        artifact_keys:
+          - payroll.timesheet_triage.workbook
+          - payroll.manager_approval.doc
+        projection_id: payroll.stage05.approval_packet
+      sla:
+        due_in_minutes: 240
+        on_expire:
+          escalate_to_role: payroll_admin
+      notes:
+        - "Decision authorizes progression from Stage04 to the approved timesheet set."
+
+    - id: payroll.stage06.lock_pay_period
+      stage_id: Stage06
+      decision_kind: business_decision
+      requested_from_role: payroll_admin
+      action: lock_pay_period
+      allowed_responses: [approve, reject]
+      evidence_requirements:
+        artifact_keys:
+          - payroll.prepayroll_lock.workbook
+          - payroll.prepayroll_lock.doc
+        projection_id: payroll.stage06.lock_packet
+      sla:
+        due_in_minutes: 120
+        on_expire:
+          escalate_to_role: finance_approver
+      notes:
+        - "Approval should confirm lock metadata and Lock_ID readiness."
+
+    - id: payroll.stage08.finalize_payroll
+      stage_id: Stage08
+      decision_kind: business_decision
+      requested_from_role: finance_approver
+      action: finalize_payroll
+      allowed_responses: [approve, reject, request_changes]
+      evidence_requirements:
+        artifact_keys:
+          - payroll.run_register.workbook
+          - payroll.finance_finalize.doc
+        projection_id: payroll.stage08.finalize_packet
+      sla:
+        due_in_minutes: 180
+        on_expire:
+          escalate_to_role: payroll_admin
+      notes:
+        - "Approval authorizes final official payroll outputs."

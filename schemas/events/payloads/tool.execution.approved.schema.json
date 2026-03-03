@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "tool.execution.approved",
+  "type": "object",
+  "required": [
+    "tool_execution_id",
+    "tool_class",
+    "policy_decision_id"
+  ],
+  "properties": {
+    "tool_execution_id": {
+      "type": "string"
+    },
+    "tool_class": {
+      "type": "string"
+    },
+    "policy_decision_id": {
+      "type": "string"
+    }
+  },
+  "additionalProperties": false
+}

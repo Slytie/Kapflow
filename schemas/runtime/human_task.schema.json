@@ -1,0 +1,122 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "HumanTask",
+  "type": "object",
+  "required": [
+    "human_task_id",
+    "workflow_run_id",
+    "task_run_id",
+    "task_kind",
+    "state",
+    "candidate_roles",
+    "created_at"
+  ],
+  "properties": {
+    "human_task_id": {
+      "type": "string"
+    },
+    "workflow_run_id": {
+      "type": "string"
+    },
+    "task_run_id": {
+      "type": "string"
+    },
+    "task_kind": {
+      "type": "string"
+    },
+    "state": {
+      "type": "string",
+      "enum": [
+        "OPEN",
+        "CLAIMED",
+        "IN_PROGRESS",
+        "WAITING_APPROVAL",
+        "WAITING_EXTERNAL",
+        "ESCALATED",
+        "COMPLETED",
+        "CANCELED",
+        "STALE"
+      ]
+    },
+    "candidate_roles": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "owner_role": {
+      "type": "string"
+    },
+    "assignee_actor": {
+      "type": "object",
+      "required": [
+        "type",
+        "id"
+      ],
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": [
+            "human",
+            "agent",
+            "service",
+            "system"
+          ]
+        },
+        "id": {
+          "type": "string"
+        },
+        "display": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    },
+    "lease_version": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "claimed_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "claimed_until": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "due_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "escalation_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "linked_approval_id": {
+      "type": "string"
+    },
+    "linked_flag_ids": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "reopen_count": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "generation": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "completed_at": {
+      "type": "string",
+      "format": "date-time"
+    }
+  },
+  "additionalProperties": false
+}

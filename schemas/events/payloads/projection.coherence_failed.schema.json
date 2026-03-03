@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "projection.coherence_failed",
+  "type": "object",
+  "required": [
+    "projection_id",
+    "projection_kind",
+    "failure_code"
+  ],
+  "properties": {
+    "projection_id": {
+      "type": "string"
+    },
+    "projection_kind": {
+      "type": "string"
+    },
+    "failure_code": {
+      "type": "string"
+    }
+  },
+  "additionalProperties": false
+}

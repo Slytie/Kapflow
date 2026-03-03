@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "tool.execution.completed",
+  "type": "object",
+  "required": [
+    "tool_execution_id",
+    "tool_class",
+    "result"
+  ],
+  "properties": {
+    "tool_execution_id": {
+      "type": "string"
+    },
+    "tool_class": {
+      "type": "string"
+    },
+    "result": {
+      "type": "string"
+    },
+    "output_artifact_version_ids": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    }
+  },
+  "additionalProperties": false
+}

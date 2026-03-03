@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "task.run.state_changed",
+  "type": "object",
+  "required": [
+    "task_run_id",
+    "from_state",
+    "to_state"
+  ],
+  "properties": {
+    "task_run_id": {
+      "type": "string"
+    },
+    "from_state": {
+      "type": "string"
+    },
+    "to_state": {
+      "type": "string"
+    },
+    "reason": {
+      "type": "string"
+    }
+  },
+  "additionalProperties": false
+}

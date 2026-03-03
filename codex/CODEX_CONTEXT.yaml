@@ -1,0 +1,172 @@
+project:
+  name: Orchestration Platform - Stage 4 MVP
+  stage: Stage 4 - Vertical Slice MVP
+  principle: one truth system
+  primary_workflow: schedule_planning.v1
+  debug_objective: fully_agentive_schedule_flow
+  primary_runtime_slice: schedule_stage06_publish_then_stage07_issue_loop
+  secondary_workflows:
+    - payroll.v1
+read_order:
+  - AGENTS.md
+  - docs/status/CURRENT_FOCUS.md
+  - docs/planning/STAGE4_PLAN.md
+  - docs/planning/RUNTIME_BOOTSTRAP.md
+  - docs/planning/FIRST_RUNTIME_SLICE.md
+  - docs/planning/STEP_RUN_SCENARIO_HARNESS.md
+  - docs/planning/TDD_IMPLEMENTATION_PLAN.md
+  - docs/architecture/invariants.md
+  - docs/architecture/governance_vocabulary.md
+  - docs/workflows/schedule_planning/v1/WORKFLOW_CONTRACT.yaml
+  - docs/workflows/schedule_planning/v1/OPERATING_MODEL.md
+  - docs/workflows/schedule_planning/v1/ARTIFACT_MAP.yaml
+  - docs/workflows/schedule_planning/v1/DECISION_CATALOG.yaml
+  - docs/workflows/schedule_planning/v1/EXECUTION_PROFILE.yaml
+  - docs/workflows/schedule_planning/v1/ACCEPTANCE_CRITERIA.md
+  - schemas/events/envelope.schema.json
+  - schemas/events/event_type_registry.yaml
+  - scripts/validate_repo.py
+  - docs/planning/TEST_STRATEGY.md
+  - docs/planning/TEST_MATRIX.md
+authority:
+  model: docs/architecture/AUTHORITY_MODEL.md
+  derivation_policy: docs/architecture/DERIVATION_AND_GENERATION_POLICY.md
+  execution_overlay: docs/architecture/EXECUTION_OVERLAY_MODEL.md
+  lowering_contract: docs/architecture/LOWERING_CONTRACT.md
+  runtime_object_model: docs/architecture/RUNTIME_OBJECT_MODEL.md
+  document_status_matrix: docs/architecture/DOCUMENT_STATUS_MATRIX.md
+vision:
+  project_vision: docs/vision/PROJECT_VISION.md
+  mathematical_foundations: docs/vision/MATHEMATICAL_FOUNDATIONS.md
+  source_lineage: docs/vision/SOURCE_LINEAGE.md
+  threat_model_addendum: docs/vision/THREAT_MODEL_ADDENDUM.md
+contracts:
+  workflow_contracts:
+    - docs/workflows/schedule_planning/v1/WORKFLOW_CONTRACT.yaml
+    - docs/workflows/payroll/v1/WORKFLOW_CONTRACT.yaml
+  decision_catalogs:
+    - docs/workflows/schedule_planning/v1/DECISION_CATALOG.yaml
+    - docs/workflows/payroll/v1/DECISION_CATALOG.yaml
+  execution_profiles:
+    - docs/workflows/schedule_planning/v1/EXECUTION_PROFILE.yaml
+    - docs/workflows/payroll/v1/EXECUTION_PROFILE.yaml
+  artifact_maps:
+    - docs/workflows/schedule_planning/v1/ARTIFACT_MAP.yaml
+    - docs/workflows/payroll/v1/ARTIFACT_MAP.yaml
+  operating_models:
+    - docs/workflows/schedule_planning/v1/OPERATING_MODEL.md
+    - docs/workflows/payroll/v1/OPERATING_MODEL.md
+  event_envelope_schema: schemas/events/envelope.schema.json
+  event_type_registry: schemas/events/event_type_registry.yaml
+  dataset_key_registry: schemas/artifacts/dataset_keys.yaml
+  artifact_metadata_schema: schemas/artifacts/artifact_version_metadata.schema.json
+  permissions_vocab: schemas/policy/permissions.yaml
+  decision_catalog_schema: schemas/agentic/decision_catalog.schema.json
+  execution_profile_schema: schemas/agentic/execution_profile.schema.json
+  flag_schema: schemas/runtime/flag.schema.json
+  governance_vocabulary: schemas/policy/governance_vocabulary.yaml
+  tool_class_registry: schemas/agentic/tool_class_registry.yaml
+  workflow_contract_schema: schemas/workflows/workflow_contract.schema.json
+  artifact_map_schema: schemas/workflows/artifact_map.schema.json
+  sandbox_policy_schema: schemas/agentic/sandbox_policy.schema.json
+  runtime_schema_dir: schemas/runtime/
+  event_payload_schema_dir: schemas/events/payloads/
+planning:
+  stage4_plan: docs/planning/STAGE4_PLAN.md
+  runtime_bootstrap: docs/planning/RUNTIME_BOOTSTRAP.md
+  first_runtime_slice: docs/planning/FIRST_RUNTIME_SLICE.md
+  step_run_scenario_harness: docs/planning/STEP_RUN_SCENARIO_HARNESS.md
+  epics_index: docs/planning/EPICS.md
+  task_index: docs/planning/TASK_INDEX.md
+  merger_backlog: docs/planning/MERGER_BACKLOG.md
+  test_strategy: docs/planning/TEST_STRATEGY.md
+  test_matrix: docs/planning/TEST_MATRIX.md
+  epics_dir: docs/planning/epics/
+  tasks_dir: codex/tasks/
+  tdd_implementation_plan: docs/planning/TDD_IMPLEMENTATION_PLAN.md
+status:
+  current_focus: docs/status/CURRENT_FOCUS.md
+  decisions_since_last: docs/status/DECISIONS_SINCE_LAST.md
+  validation_script: scripts/validate_repo.py
+context_packs:
+  readme: codex/context/README.md
+  directory: codex/context/
+  load_rule: If the task maps to an epic with a context pack, read it after the epic file and before deep reference material.
+pattern_library:
+  readme: docs/patterns/README.md
+  index: docs/patterns/PATTERN_INDEX.yaml
+  cards_dir: docs/patterns/cards/
+  source_notes_dir: docs/patterns/sources/converted/
+  source_original_dir: docs/patterns/sources/original/
+  load_rule: Cards first. Open full source notes only if the task directly touches the subsystem.
+research:
+  readme: docs/research/README.md
+  digest: docs/research/AGENT_DIGEST.md
+  full_dir: docs/research/full/
+  load_rule: Digest first. Open full research notes only for deeper justification.
+generated_policy:
+  authoritative_sources:
+    - docs/workflows/*/v1/WORKFLOW_CONTRACT.yaml
+    - docs/workflows/*/v1/ARTIFACT_MAP.yaml
+    - docs/workflows/*/v1/DECISION_CATALOG.yaml
+    - docs/workflows/*/v1/EXECUTION_PROFILE.yaml
+    - docs/workflows/*/v1/ACCEPTANCE_CRITERIA.md
+    - docs/workflows/*/v1/OPERATING_MODEL.md
+  generated_derivatives_examples:
+    - external_runbook_pack
+    - tool_registry_matrix
+    - approval_decision_log
+    - companyos_ir
+    - approval_projection_packets
+sensitive_paths:
+  - schemas/
+  - docs/architecture/
+  - docs/vision/
+  - docs/workflows/
+  - docs/planning/
+  - .github/
+  - .codex/
+fixtures:
+  schedule_planning_template_pack: fixtures/workflows/schedule_planning/template_pack/
+  payroll_template_pack: fixtures/workflows/payroll/template_pack/
+  schedule_planning_event_traces: fixtures/workflows/schedule_planning/golden_event_traces/
+  payroll_event_traces: fixtures/workflows/payroll/golden_event_traces/
+  schedule_policy_gate_trace: fixtures/workflows/schedule_planning/golden_event_traces/schedule_policy_gate_enforced.jsonl
+  payroll_event_traces_note: placeholder_only_until_payroll_runtime_wedge
+gated_context:
+  payroll_contract_pack:
+    load_when: Task is explicitly tagged payroll OR change touches shared semantics that must be validated against a linear approval-heavy reference workflow.
+    files:
+      - docs/workflows/payroll/v1/WORKFLOW_CONTRACT.yaml
+      - docs/workflows/payroll/v1/OPERATING_MODEL.md
+      - docs/workflows/payroll/v1/ARTIFACT_MAP.yaml
+      - docs/workflows/payroll/v1/DECISION_CATALOG.yaml
+      - docs/workflows/payroll/v1/EXECUTION_PROFILE.yaml
+      - docs/workflows/payroll/v1/ACCEPTANCE_CRITERIA.md
+      - fixtures/workflows/payroll/golden_event_traces/
+    note: Payroll remains the secondary reference workflow for linear approvals, lock/finalize semantics, and governance-heavy review. Its golden-trace folder is still placeholder-only.
+  schedule_planning_contract_pack:
+    load_when: Load by default for runtime/debug work OR whenever a change touches shared semantics that must be validated against live-day delta handling.
+    files:
+      - docs/workflows/schedule_planning/v1/WORKFLOW_CONTRACT.yaml
+      - docs/workflows/schedule_planning/v1/OPERATING_MODEL.md
+      - docs/workflows/schedule_planning/v1/ARTIFACT_MAP.yaml
+      - docs/workflows/schedule_planning/v1/DECISION_CATALOG.yaml
+      - docs/workflows/schedule_planning/v1/EXECUTION_PROFILE.yaml
+      - docs/workflows/schedule_planning/v1/ACCEPTANCE_CRITERIA.md
+      - fixtures/workflows/schedule_planning/golden_event_traces/
+    note: Schedule Planning is the current Stage 4 primary runtime wedge and fully-agentive debug target.
+  authority_chain_changes:
+    load_when: Change modifies authoritative vs generated boundaries, lowering rules, or introduces new semantic surfaces.
+    files:
+      - docs/architecture/AUTHORITY_MODEL.md
+      - docs/architecture/DOCUMENT_STATUS_MATRIX.md
+      - docs/architecture/DERIVATION_AND_GENERATION_POLICY.md
+      - docs/architecture/LOWERING_CONTRACT.md
+  deep_reference_patterns:
+    load_when: Task touches subsystem covered by pattern card(s).
+    files:
+      - docs/patterns/README.md
+      - docs/patterns/PATTERN_INDEX.yaml
+      - docs/patterns/cards/
+      - docs/patterns/sources/converted/

@@ -1,0 +1,151 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "TaskRun",
+  "type": "object",
+  "required": [
+    "task_run_id",
+    "workflow_run_id",
+    "stage_id",
+    "state",
+    "activation_key",
+    "generation",
+    "created_at",
+    "updated_at"
+  ],
+  "properties": {
+    "task_run_id": {
+      "type": "string"
+    },
+    "workflow_run_id": {
+      "type": "string"
+    },
+    "stage_id": {
+      "type": "string"
+    },
+    "task_kind": {
+      "type": "string"
+    },
+    "owner_mode": {
+      "type": "string",
+      "enum": [
+        "human",
+        "agent",
+        "service",
+        "mixed"
+      ]
+    },
+    "state": {
+      "type": "string",
+      "enum": [
+        "READY",
+        "RUNNING",
+        "WAITING_APPROVAL",
+        "WAITING_HUMAN_TASK",
+        "WAITING_TIMER",
+        "STALE",
+        "SUCCEEDED",
+        "FAILED",
+        "CANCELED"
+      ]
+    },
+    "activation_key": {
+      "type": "string"
+    },
+    "generation": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "spawned_from_flag_id": {
+      "type": "string"
+    },
+    "spawned_from_task_run_id": {
+      "type": "string"
+    },
+    "resume_parent_task_run_id": {
+      "type": "string"
+    },
+    "spawn_rule_id": {
+      "type": "string"
+    },
+    "spawn_cause_kind": {
+      "type": "string",
+      "enum": [
+        "none",
+        "task_completion",
+        "approval_response",
+        "flag_trigger",
+        "stale_recovery",
+        "manual_operator",
+        "policy_gate",
+        "timer"
+      ]
+    },
+    "spawn_cause_event_id": {
+      "type": "string"
+    },
+    "spawn_budget_key": {
+      "type": "string"
+    },
+    "spawn_depth": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "blocked_on": {
+      "type": "object",
+      "required": [
+        "kind"
+      ],
+      "properties": {
+        "kind": {
+          "type": "string",
+          "enum": [
+            "none",
+            "approval",
+            "human_task",
+            "timer",
+            "flag",
+            "external_completion"
+          ]
+        },
+        "ref_id": {
+          "type": "string"
+        },
+        "entered_wait_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "deadline_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "wakeup_cause_event_id": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    },
+    "pinned_input_artifact_version_ids": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "attempt_no": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "updated_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "completed_at": {
+      "type": "string",
+      "format": "date-time"
+    }
+  },
+  "additionalProperties": false
+}

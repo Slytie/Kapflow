@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "task.completed",
+  "type": "object",
+  "required": [
+    "human_task_id",
+    "completion_code"
+  ],
+  "properties": {
+    "human_task_id": {
+      "type": "string"
+    },
+    "completion_code": {
+      "type": "string"
+    },
+    "notes": {
+      "type": "string"
+    }
+  },
+  "additionalProperties": false
+}
