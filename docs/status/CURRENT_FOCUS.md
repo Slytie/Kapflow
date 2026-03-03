@@ -4,14 +4,24 @@
 Stage 4 - Vertical Slice MVP (repo merged around one truth system)
 
 ## Current milestone
-Runtime bootstrap is now explicit. The repo is ready for the first code scaffold under `src/onetruth/` + `alembic/`, starting with the canonical runtime substrate and the Schedule Planning Stage06 publish path.
+Runtime scaffold bootstrap now includes canonical workflow/task/approval/artifact/pointer substrate under `src/onetruth/` + `alembic/` with a stable CLI lifecycle boundary:
+- timeline substrate: `init-db`, `events append`, `events list`
+- workflow/task substrate: `runs create/show/list`, `tasks create/claim/complete/show/list`
+- approval/artifact/pointer substrate: `approvals request/respond/show/list`, `artifacts create-version/show/list`, `pointers promote/show/list`
+- thin HTTP/query adapter: `/api/v1/human-tasks`, `/api/v1/approvals`, `/api/v1/workflow-runs`, `/api/v1/pointers`, `/api/v1/board/schedule-planning`, plus API mutation delegates for claim/complete/respond
+Active coding milestone: TASK-0045 Stage07 issue-scoped replan loop on top of the now-implemented substrate + Stage06 + HTTP adapter boundary.
 
 ### Recently completed runtime-bootstrap tranche
 - TASK-0028 - Translated the runtime object model into a concrete Stage 4 runtime architecture, repo layout, persistence model, and first implementation slice
+- TASK-0040 - Instantiated the runtime scaffold (`src/onetruth/`, `alembic/`, `tests/runtime/`) with CLI-driven smoke tests for canonical timeline append/list behavior
+- TASK-0041 - Implemented canonical workflow/task substrate tables (`workflow_runs`, `task_runs`, `human_tasks`) with transactional lifecycle event emission and runtime concurrency/idempotency coverage
+- TASK-0042 - Implemented canonical approvals/artifacts/pointers substrate tables (`approvals`, `artifact_versions`, `artifact_pointers`) with transactional event emission and query-ready CLI list/show contracts for future HITL board work
+- TASK-0043 - Implemented the first real Schedule Planning Stage06 publish slice with transactional completion-driven child task spawning, CLI-driven scenario fixtures/harness tests, and query-contract stability tests
+- TASK-0044 - Implemented the first thin HITL HTTP/query adapter with board-ready read endpoints, mutation delegates over canonical handlers, scenario-backed API contracts, and cross-scope denial tests
 - Added `docs/planning/RUNTIME_BOOTSTRAP.md` and `docs/planning/FIRST_RUNTIME_SLICE.md`
 - Added `docs/adr/ADR-003-stage4-runtime-architecture.md`
 - Refreshed stale Codex routing: EPIC-040 / EPIC-050 no longer route default runtime work through Payroll, and missing context packs now exist for EPIC-025 / EPIC-030 / EPIC-060
-- Expanded TASK-0029 .. TASK-0032 briefs so a fresh coding agent knows what to create, where it should live, and how to verify it
+- Reconciled stale backlog/task memory so TASK-0029 and TASK-0039 are now marked DONE, while TASK-0030 is narrowed to remaining Stage07/base+delta artifact-store design work
 
 ### Recently completed dynamic-loop clarification tranche
 - Locked the rule that task completion may spawn explicit follow-on task runs for information requests, re-review, final review, and issue-scoped child work
@@ -32,11 +42,10 @@ Runtime bootstrap is now explicit. The repo is ready for the first code scaffold
 - Adopted a pytest-backed TDD harness with a stable AT-SCH scenario catalog and reference replay reducer
 
 ### Next tasks (priority order)
-1. TASK-0029 - Map the typed event registry to runtime emission points and tests
-2. TASK-0039 - Design the step-run scenario harness for agent-executed flows and conditional task spawning
-3. TASK-0030 - Translate promotion semantics and schedule delta rules into artifact-store design
-4. TASK-0031 - Design the projection coherence harness
-5. TASK-0032 - Prototype generator for runbook packs and CompanyOS IR
+1. TASK-0045 - Implement Stage07 issue-scoped replan loop
+2. TASK-0030 - Complete Stage07/base+delta artifact-store design details (blob adapter + reconstruction semantics)
+3. TASK-0031 - Design the projection coherence harness
+4. TASK-0032 - Prototype generator for runbook packs and CompanyOS IR
 
 ## Test-first working mode
 Before adding runtime services or API surfaces:
@@ -68,13 +77,13 @@ Default verification loop:
 - Do not create separate agent-run or human-decision truth models outside the canonical docs.
 - Do not satisfy the fully-agentive test objective by inventing an agent-only state path that bypasses approvals, task runs, events, or pointer promotions.
 - Do not let test helpers or the reference reducer outrank the workflow packs or schemas.
-- Do not start with UI, exporters, or generalized microservices before the canonical substrate and Schedule Planning Stage06 path exist.
+- Do not introduce a second source of truth in board/frontend work; UI must stay a derived surface over canonical runtime state and events.
 
 ## Notes
 - Schedule Planning remains the first runtime implementation and debugging wedge.
 - The Stage 4 debug objective remains an end-to-end fully-agentive Schedule Planning flow.
 - First code should live under `src/onetruth/` and `alembic/` as described in `docs/planning/RUNTIME_BOOTSTRAP.md` and `docs/planning/FIRST_RUNTIME_SLICE.md`.
-- Build order after scaffold: canonical timeline + core runtime tables -> Stage06 publish path and follow-on review/info loops -> step-run scenario harness -> Stage07 issue loop -> execution sessions/policy gate -> projections/generator.
+- Build order after scaffold: canonical timeline + core runtime tables -> Stage06 publish path and follow-on review/info loops -> step-run scenario harness -> thin HTTP/query adapter -> Stage07 issue loop -> execution sessions/policy gate -> projections/generator.
 - Payroll remains the secondary linear approval-heavy reference workflow and governance benchmark.
 - Payroll golden traces remain placeholder-only; do not treat Payroll as the primary replay corpus yet.
 - AT-SCH-001 .. AT-SCH-007 have stable golden-trace mappings for replay and acceptance work.

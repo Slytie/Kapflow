@@ -2,7 +2,7 @@
 id: TASK-0039
 epic: EPIC-090
 title: Design the step-run scenario harness for agent-executed flows and conditional task spawning
-status: TODO
+status: DONE
 owners:
 - qa
 - platform
@@ -73,3 +73,9 @@ Define the runtime step-run scenario harness for Schedule Planning so:
 - task completion spawning new tasks is a first-class scenario requirement
 - example artifacts already present in the repo are the planned seed inputs
 - the design does not create a second truth path or a shadow test-only workflow model
+
+## Completion notes
+- Step-run scenario harness guidance is now implementation-backed in [STEP_RUN_SCENARIO_HARNESS.md](/Users/tylerclark/git/pythonProject/companyos/docs/planning/STEP_RUN_SCENARIO_HARNESS.md).
+- Scenario fixtures now exist under `fixtures/scenarios/schedule_planning/`.
+- CLI-driven runtime scenario harness helper exists at `tests/runtime/helpers/scenario_harness.py`.
+- Stage06 scenario tests and query-contract tests were added in TASK-0043 under `tests/runtime/scenarios/` and `tests/runtime/contracts/`.

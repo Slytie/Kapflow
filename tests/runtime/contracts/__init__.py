@@ -1,0 +1,1 @@
+# Runtime query-contract tests.

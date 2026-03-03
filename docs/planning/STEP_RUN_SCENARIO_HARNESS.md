@@ -1,11 +1,21 @@
 # STEP_RUN_SCENARIO_HARNESS.md
 
-This document defines the planned runtime scenario harness for Stage 4.
+This document defines the runtime scenario harness for Stage 4.
 
 Its purpose is simple:
 - let an agent execute each workflow step through a stable runtime interface,
 - let task completion spawn explicit follow-on tasks when needed,
 - assert only authoritative truth (events, tasks, approvals, artifacts, pointers).
+
+Scaffold status note:
+- TASK-0040 establishes the first stable CLI boundary (`init-db`, `events append`, `events list`) that runtime step-run harness work will drive and extend.
+- TASK-0041 and TASK-0042 extend that boundary with workflow/task/approval/artifact/pointer lifecycle commands and query-ready list/show surfaces so step-run and future board/query UI work can proceed in parallel against stable JSON contracts.
+- TASK-0043 implements the first Schedule Planning Stage06 scenario harness slice:
+  - scenario fixtures in `fixtures/scenarios/schedule_planning/`
+  - helper layer in `tests/runtime/helpers/scenario_harness.py`
+  - CLI-driven Stage06 scenario tests in `tests/runtime/scenarios/`
+  - query-contract stability tests in `tests/runtime/contracts/`
+- TASK-0044 adds scenario-backed API contract/mutation tests under `tests/runtime/api/` so frontend work can validate against a stable HTTP boundary in parallel with CLI-driven scenario execution.
 
 ## 1) Why this harness exists
 
@@ -40,23 +50,23 @@ This is especially important now that Stage 4 explicitly allows **conditional fo
 
 The scenario harness should drive the runtime through a stable CLI or API surface.
 
-Preferred command surface:
-- `onetruthctl workflow-run create`
-- `onetruthctl artifact import`
-- `onetruthctl task list`
-- `onetruthctl task claim`
-- `onetruthctl task complete`
-- `onetruthctl approval request`
-- `onetruthctl approval respond`
-- `onetruthctl pointer promote`
-- `onetruthctl timeline list`
-- `onetruthctl task-lineage show`
+Implemented command surface for first scenario slice:
+- `onetruthctl runs create`
+- `onetruthctl tasks create`
+- `onetruthctl tasks claim`
+- `onetruthctl tasks complete`
+- `onetruthctl tasks list`
+- `onetruthctl approvals request`
+- `onetruthctl approvals respond`
+- `onetruthctl artifacts create-version`
+- `onetruthctl pointers promote`
+- `onetruthctl events list`
 
 Equivalent HTTP APIs are acceptable, but the scenario harness should not call hidden domain internals directly.
 
 ## 4) Scenario spec shape
 
-Planned scenario-spec locations:
+Scenario-spec locations:
 - `fixtures/scenarios/schedule_planning/*.yaml`
 
 Recommended fields:
@@ -119,8 +129,16 @@ Retrying the same parent completion command must not create duplicate child task
 - Stage06 publish happy path with agent-owned execution
 - Stage06 review requires more information -> child information-request task
 - Stage06 review complete -> child final-review task before publish
-- Stage07 issue triage -> child re-review / information-request task
 - retry parent completion -> no duplicate child tasks
+
+Implemented in TASK-0043:
+- `tests/runtime/scenarios/test_schedule_stage06_publish_steps.py`
+- `tests/runtime/scenarios/test_schedule_stage06_request_more_information_steps.py`
+- `tests/runtime/scenarios/test_schedule_stage06_retry_no_duplicate_child_tasks.py`
+- `tests/runtime/contracts/test_hitl_query_contracts_stage06.py`
+
+Still planned:
+- Stage07 issue triage scenarios and issue-scoped child-loop coverage
 
 ## 8) Code/test locations once runtime work starts
 

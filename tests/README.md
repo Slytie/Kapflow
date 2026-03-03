@@ -23,6 +23,7 @@ Read first:
 - `property/` - invariant tests that range across the whole trace corpus
 - `replay/` - replay stored event histories (golden traces)
 - `acceptance/` - AT-SCH acceptance oracles backed by golden traces
+- `runtime/` - runtime CLI/API boundary tests against the real substrate scaffold
 - `runtime/scenarios/` - planned future step-run tests where the real runtime is driven one command at a time
 - `security/isolation/` - cross-tenant and cross-domain negative tests
 - `security/agent/` - agent/tool/approval-path regression tests

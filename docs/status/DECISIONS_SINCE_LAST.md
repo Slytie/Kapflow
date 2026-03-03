@@ -2,6 +2,63 @@
 
 Record any decisions made since the last session so a fresh Codex run can rehydrate quickly.
 
+## 2026-03-03 (HITL HTTP/query adapter + backlog reconciliation)
+- Added the first thin HTTP adapter over canonical runtime/query surfaces under `src/onetruth/api/`; API routes delegate mutation semantics to existing canonical handlers (`claim_human_task_command`, `complete_human_task_command`, `respond_approval_command`) rather than reimplementing business lifecycle logic.
+- Chosen board lane derivation rules for initial Schedule Planning board aggregate:
+  - human tasks: `OPEN -> human_tasks.open`, `CLAIMED -> human_tasks.claimed`, `COMPLETED -> human_tasks.completed`
+  - approvals: `PENDING -> approvals.pending`, `RESPONDED -> approvals.responded`
+- Chosen board/query pagination strategy: offset/limit (`limit` default 100, max 500; `offset` default 0) for initial stable contracts.
+- Chosen API auth-context approach for this internal/dev slice: explicit request headers `x-onetruth-tenant-id`, `x-onetruth-domain-id`, `x-onetruth-actor-id`, `x-onetruth-actor-type`, `x-onetruth-actor-roles` with mandatory server-side scope enforcement and no unscoped fallback.
+- Chosen refresh model: polling-friendly stateless GET contracts first; websocket/live-sync intentionally deferred.
+- Reconciled stale backlog status to match implemented runtime reality:
+  - TASK-0029 moved to DONE (event emission matrix now implementation-backed in runtime handlers/tests)
+  - TASK-0039 moved to DONE (scenario harness now implemented in fixtures/tests/docs)
+  - TASK-0030 narrowed to remaining Stage07/base+delta artifact-store design work and moved to IN_PROGRESS.
+
+## 2026-03-03 (Stage06 publish slice + scenario harness)
+- Implemented the first narrow Schedule Planning Stage06 runtime behavior inside canonical `tasks complete`: parent completion can now create explicit child tasks in the same transaction with persisted lineage fields (`spawned_from_task_run_id`, `spawn_rule_id`, `spawn_cause_kind`, `spawn_cause_event_id`, `spawn_depth`, `spawn_budget_key`).
+- Finalized first Stage06 completion outcome names in code:
+  - `review_requires_more_information` -> child Stage06 `information_request`
+  - `review_requests_changes` -> child Stage05 `work_item`
+  - `draft_is_publish_ready` -> child Stage06 `final_review`
+- Chosen retry behavior for parent completion replays remains explicit-failure idempotency: retrying the same completion command idempotency key fails with `duplicate_idempotency_key`, and no duplicate child task rows/events are emitted.
+- Added implementation-backed Stage06 scenario fixtures and CLI-driven scenario harness tests; harness seeds synthetic template-pack completed examples into temp storage and registers canonical artifact versions before scenario steps.
+- Query-contract stability approach is now test-backed via runtime contract tests that assert stable JSON row shapes for human task queue, approval queue, pointer summary, and workflow run summary surfaces.
+
+## 2026-03-03 (approvals + artifact versions + pointer promotions substrate)
+- Added canonical substrate tables for `approvals`, `artifact_versions`, and `artifact_pointers` with matching migration and SQLite bootstrap DDL support.
+- Chosen minimal approval state set in the first implementation:
+  - `PENDING`
+  - `RESPONDED`
+- Approval responses are single-finalization: only `PENDING -> RESPONDED` is allowed, and duplicate/conflicting second responses are rejected (`approval_not_respondable`).
+- Chosen artifact-version idempotency behavior: `artifacts create-version` requires non-empty command `idempotency_key`; duplicate keys fail explicitly (`duplicate_idempotency_key`) with no duplicate canonical row and no duplicate `artifact.version.created` event.
+- Chosen pointer conflict/race behavior:
+  - first promotion wins for an uninitialized pointer key,
+  - conflicting promotion without `expected_generation` fails closed (`pointer_conflict`),
+  - repoint requires optimistic generation match (`pointer_generation_mismatch` on mismatch).
+- Chosen minimal pointer policy gate: `promotion_reason=official_publish` requires `approved_by_approval_id` bound to a `RESPONDED` approval with `response_kind=approve`; otherwise promotion fails closed.
+- Added stable CLI list/show read surfaces (`runs/tasks/approvals/artifacts/pointers`) and documented them as HITL query contracts to unblock parallel board/UI work without introducing a second truth path.
+
+## 2026-03-03 (workflow/task core substrate + transactional lifecycle events)
+- Added canonical current-state tables for the first workflow/task substrate slice: `workflow_runs`, `task_runs`, and `human_tasks` (with lineage-ready spawn fields on `task_runs`).
+- Chosen minimal first-implementation states:
+  - `workflow_runs`: `OPEN`, `COMPLETED`
+  - `task_runs`: `READY`, `IN_PROGRESS`, `COMPLETED`
+  - `human_tasks`: `OPEN`, `CLAIMED`, `COMPLETED`
+- Lifecycle commands now commit canonical row changes and authoritative event appends in the same transaction for:
+  - `runs create`
+  - `tasks create`
+  - `tasks claim`
+  - `tasks complete`
+- Claim and complete command idempotency keys are required and duplicate keys fail explicitly (`duplicate_idempotency_key`) with no duplicate canonical effect and no duplicate emitted lifecycle events.
+- Completion flow is explicitly structured to support future same-transaction child task emission (`task.run.created`, `task.created`) without introducing a second truth path; full spawn-evaluator semantics remain out of scope for this slice.
+
+## 2026-03-03 (runtime scaffold command boundary + smoke substrate)
+- Added the first concrete runtime scaffold under `src/onetruth/`, `alembic/`, and `tests/runtime/` as TASK-0040.
+- Established the first stable runtime CLI command boundary: `init-db`, `events append --json`, and `events list --json`.
+- Chose explicit idempotency behavior for timeline append in this scaffold: duplicate `idempotency_key` fails with a machine-parseable error (`duplicate_idempotency_key`); no silent dedupe path is used.
+- Local smoke tests use SQLite by default and initialize substrate tables through Alembic when available, with a SQLite bootstrap fallback when Alembic/SQLAlchemy are unavailable in constrained environments. PostgreSQL remains the primary target architecture.
+
 ## 2026-03-03 (conditional task spawning and step-run test planning)
 - Stage 4 now explicitly allows **conditional follow-on task spawning**: completing a task may create one or more child task runs for information requests, re-review, final review, or issue-scoped child work.
 - Child-task creation must stay inside the same workflow run and remain explicit through `task.run.created` / `task.created`; no new hidden side-effect path or separate `task.spawned` truth system is introduced.

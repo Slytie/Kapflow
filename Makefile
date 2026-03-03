@@ -1,11 +1,11 @@
 PYTEST ?= pytest -q
-VALIDATOR ?= python scripts/validate_repo.py
+VALIDATOR ?= python3 scripts/validate_repo.py
 
-.PHONY: lint test schema-validate trace-validate unit contract replay acceptance security property integration generated-check
+.PHONY: lint test schema-validate trace-validate unit contract replay acceptance runtime runtime-api security property integration generated-check
 
 lint: schema-validate contract
 
-test: schema-validate contract unit replay acceptance security property integration
+test: schema-validate contract unit replay acceptance runtime security property integration
 
 schema-validate:
 	$(VALIDATOR) --schemas-only
@@ -24,6 +24,12 @@ replay:
 
 acceptance: trace-validate
 	$(PYTEST) tests/acceptance
+
+runtime:
+	PYTHONPATH=src $(PYTEST) tests/runtime
+
+runtime-api:
+	PYTHONPATH=src $(PYTEST) tests/runtime/api
 
 security:
 	$(PYTEST) tests/security

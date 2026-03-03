@@ -1,6 +1,45 @@
 # RUNTIME_BOOTSTRAP.md
 
-This document turns the contract-closed repo into a concrete runtime bootstrap plan. Its job is to remove implementation ambiguity before the first code PR.
+This document turns the contract-closed repo into a concrete runtime bootstrap plan. Its job is to remove implementation ambiguity for and after the first code PR.
+
+## Implementation status (TASK-0040 .. TASK-0042)
+The initial scaffold is now present:
+- runtime package root under `src/onetruth/` (modular-monolith layout stubs plus CLI + substrate modules),
+- migrations scaffold under `alembic/` (`alembic.ini`, `env.py`, initial substrate revision),
+- runtime smoke tests under `tests/runtime/`.
+- canonical workflow/task/approval/artifact/pointer core tables now implemented in runtime substrate:
+  - `workflow_runs`
+  - `task_runs`
+  - `human_tasks`
+  - `approvals`
+  - `artifact_versions`
+  - `artifact_pointers`
+
+Current smoke-test command boundary:
+- `python3 -m onetruth.cli --db-url <db_url> init-db`
+- `python3 -m onetruth.cli --db-url <db_url> events append --json '<envelope>'`
+- `python3 -m onetruth.cli --db-url <db_url> events list --json [--run-id <run_id>] [--since-event-id <event_id>]`
+- `python3 -m onetruth.cli --db-url <db_url> runs create --json '<payload>'`
+- `python3 -m onetruth.cli --db-url <db_url> runs show|list --json ...`
+- `python3 -m onetruth.cli --db-url <db_url> tasks create|claim|complete --json '<payload>'`
+- `python3 -m onetruth.cli --db-url <db_url> tasks show|list --json ...`
+- `python3 -m onetruth.cli --db-url <db_url> approvals request|respond --json '<payload>'`
+- `python3 -m onetruth.cli --db-url <db_url> approvals show|list --json ...`
+- `python3 -m onetruth.cli --db-url <db_url> artifacts create-version --json '<payload>'`
+- `python3 -m onetruth.cli --db-url <db_url> artifacts show|list --json ...`
+- `python3 -m onetruth.cli --db-url <db_url> pointers promote --json '<payload>'`
+- `python3 -m onetruth.cli --db-url <db_url> pointers show|list --json ...`
+
+Current thin HTTP/query boundary (TASK-0044):
+- `GET /api/v1/human-tasks`
+- `GET /api/v1/approvals`
+- `GET /api/v1/workflow-runs`
+- `GET /api/v1/workflow-runs/{workflow_run_id}`
+- `GET /api/v1/pointers`
+- `GET /api/v1/board/schedule-planning`
+- `POST /api/v1/human-tasks/{human_task_id}/claim`
+- `POST /api/v1/human-tasks/{human_task_id}/complete`
+- `POST /api/v1/approvals/{approval_id}/respond`
 
 ## 1) Hard constraints from repo truth
 
@@ -100,7 +139,7 @@ Examples: Temporal, Conductor, Flowable/Camunda-like engines.
 Stage 4 should be instantiated as:
 
 - **language/runtime:** Python
-- **API adapter:** FastAPI-style HTTP boundary (thin adapter; business logic must not live in route functions)
+- **API adapter:** ASGI-compatible thin HTTP boundary (business logic must not live in route functions)
 - **ORM / migrations:** SQLAlchemy + Alembic
 - **primary database:** PostgreSQL
 - **artifact bytes:** pluggable object-store adapter
@@ -114,7 +153,7 @@ It is the chosen Stage 4 implementation so the first coding agent does not have 
 
 ## 4) Target repo layout
 
-The first runtime scaffold should create these locations:
+The first runtime scaffold creates these locations:
 
 ```text
 src/onetruth/
@@ -177,7 +216,7 @@ These tables are the concrete indexed realization of the canonical runtime objec
 - `human_tasks`
 - `approvals`
 - `artifact_versions`
-- `pointers`
+- `artifact_pointers` (pointer registry rows)
 - `flags`
 - `execution_specs`
 - `execution_sessions`

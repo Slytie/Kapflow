@@ -15,6 +15,16 @@ The repo already provides five layers of executable memory:
 4. **Runtime bootstrap docs** under `docs/planning/RUNTIME_BOOTSTRAP.md` and `docs/planning/FIRST_RUNTIME_SLICE.md`
 5. **Synthetic example artifacts** under each workflow `template_pack/` directory (`*_Example_COMPLETED.*` and `*_Template_EMPTY.*`)
 
+Runtime implementation now also includes:
+- CLI command boundary for timeline + workflow/task lifecycle operations under `src/onetruth/cli/__main__.py`
+- canonical workflow/task current-state tables in the runtime substrate (`workflow_runs`, `task_runs`, `human_tasks`)
+- runtime lifecycle coverage in `tests/runtime/test_workflow_task_core_cli.py`
+- canonical approval/artifact/pointer tables in the runtime substrate (`approvals`, `artifact_versions`, `artifact_pointers`)
+- CLI lifecycle boundaries for approvals/artifacts/pointers plus query-ready list/show surfaces for future HITL UI work
+- runtime coverage in `tests/runtime/test_approvals_artifacts_pointers_cli.py`
+- thin HTTP/query adapter under `src/onetruth/api/` with board-ready read endpoints and mutation delegates over canonical handlers
+- scenario-backed API contracts/mutation coverage under `tests/runtime/api/`
+
 The pytest layer is intentionally small and uses a **reference reducer** only to make trace expectations executable. It must never outrank the workflow packs or schemas.
 
 Important replay nuance:
@@ -54,6 +64,8 @@ Do **not** let `tests/helpers/`, `scripts/`, or generated derivative folders bec
 - `tests/unit/` - reference reducer semantic checks
 - `tests/replay/` - trace replay and final-state oracles
 - `tests/acceptance/` - AT-SCH scenario evidence checks
+- `tests/runtime/` - implementation-backed CLI runtime tests (timeline + workflow/task core lifecycle)
+- `tests/runtime/` - implementation-backed CLI + API runtime tests (timeline + workflow/task/approval/artifact/pointer + Stage06 + board/query HTTP contracts)
 - `tests/security/` - cross-scope and policy-gate negatives
 - `tests/property/` - cross-trace invariants
 - `tests/integration/` - machine-usable repo/trace checks
@@ -100,18 +112,19 @@ Cross-scope denial, policy-gate denial, drift-after-review, lease expiry, and de
 Payroll remains an important reference workflow, but its golden-trace directory is still placeholder-only.
 Use Payroll to cross-check authored semantics and governance-heavy review, not as the default replay-first implementation wedge.
 
-### 6) Planned step-run scenario harness
-Stage 4 should also grow a runtime scenario harness where an agent executes each step through a stable interface and the test asserts only authoritative truth:
+### 6) Step-run scenario harness status
+Stage 4 now has a first implementation-backed runtime scenario harness slice where a scenario executes each step through the stable CLI interface and asserts authoritative truth:
 - emitted events
 - task lineage / spawned children
 - approval outcomes
 - pointer targets
 - artifact version linkage
 
-Planned locations:
+Implemented locations:
 - `docs/planning/STEP_RUN_SCENARIO_HARNESS.md`
 - `fixtures/scenarios/schedule_planning/*.yaml`
 - `tests/runtime/scenarios/*.py`
+- `tests/runtime/contracts/test_hitl_query_contracts_stage06.py`
 
 Use the synthetic example artifacts in `fixtures/workflows/*/template_pack/` as seed inputs for those tests.
 The runtime test should copy those files into temp storage and assign synthetic artifact version IDs rather than inventing a separate sample-data universe.

@@ -2,7 +2,7 @@
 id: TASK-0030
 epic: EPIC-030
 title: "Translate promotion semantics and schedule delta rules into artifact-store design"
-status: TODO
+status: IN_PROGRESS
 owners:
   - platform
 reviewers:
@@ -24,8 +24,13 @@ patterns:
 ## Context
 The docs define immutable artifact versions, audited pointers, drift visibility, and Schedule Planning base-plus-delta semantics, but they do not yet tell implementation code exactly how blob storage, metadata rows, pointer uniqueness, delta reconstruction, and promotion idempotency should work.
 
+Current runtime status:
+- TASK-0042 implemented canonical `artifact_versions` + `artifact_pointers` persistence and transactional event emission.
+- TASK-0043 implemented first Stage06 publish-path usage of artifact version creation and pointer promotion.
+- Remaining gap for this task is the explicit Stage07 base-plus-delta reconstruction design and blob adapter behavior.
+
 ## Objective
-Produce the concrete artifact-store design for Stage 4: metadata model, blob-store adapter contract, pointer rules, Stage06 base publication, Stage07 delta promotion, and reconstruction semantics.
+Produce the remaining concrete artifact-store design for Stage 4: blob-store adapter contract, Stage07 delta promotion ordering, and base-plus-delta reconstruction semantics on top of the already-implemented canonical metadata/pointer substrate.
 
 ## Non-goals
 - Do not build an advanced diff/merge UI.

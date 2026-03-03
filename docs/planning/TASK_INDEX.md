@@ -30,8 +30,8 @@
 | TASK-0026 | EPIC-015 | DONE | medium | Curate philosophy, mathematics, and threat-model guidance |
 | TASK-0027 | EPIC-080 | DONE | high | Implement full authored-surface validation and drift checks |
 | TASK-0028 | EPIC-040 | DONE | high | Translate the runtime object model into an implementation plan |
-| TASK-0029 | EPIC-020 | TODO | medium | Map the typed event registry to runtime emission points and tests |
-| TASK-0030 | EPIC-030 | TODO | high | Translate promotion semantics and schedule delta rules into artifact-store design |
+| TASK-0029 | EPIC-020 | DONE | medium | Map the typed event registry to runtime emission points and tests |
+| TASK-0030 | EPIC-030 | IN_PROGRESS | high | Translate promotion semantics and schedule delta rules into artifact-store design |
 | TASK-0031 | EPIC-060 | TODO | high | Design the projection coherence harness |
 | TASK-0032 | EPIC-025 | TODO | medium | Prototype generator for runbook packs and CompanyOS IR |
 | TASK-0033 | EPIC-005 | DONE | high | Specify the fully-agentive Schedule Planning debug slice |
@@ -40,4 +40,10 @@
 | TASK-0036 | EPIC-040 | DONE | high | Add runtime object schemas for canonical run/task/approval/execution objects |
 | TASK-0037 | EPIC-020 | DONE | high | Add event payload schemas and registry bindings |
 | TASK-0038 | EPIC-090 | DONE | high | Author Schedule Planning fully-agentive golden traces and acceptance oracles |
-| TASK-0039 | EPIC-090 | TODO | high | Design the step-run scenario harness for agent-executed flows and conditional task spawning |
+| TASK-0039 | EPIC-090 | DONE | high | Design the step-run scenario harness for agent-executed flows and conditional task spawning |
+| TASK-0040 | EPIC-040 | DONE | high | Instantiate runtime scaffold and smoke-tested substrate command boundary |
+| TASK-0041 | EPIC-040 | DONE | high | Implement workflow/task core substrate with transactional event emission |
+| TASK-0042 | EPIC-040 | DONE | high | Implement approvals, artifact versions, pointers, and query-ready runtime surfaces |
+| TASK-0043 | EPIC-040 | DONE | high | Implement Schedule Planning Stage06 publish slice and CLI-driven scenario harness |
+| TASK-0044 | EPIC-080 | DONE | high | Implement thin HITL HTTP/query adapter and board contracts over canonical runtime |
+| TASK-0045 | EPIC-040 | TODO | high | Implement first Stage07 issue-scoped replan loop over canonical runtime |

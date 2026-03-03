@@ -1,0 +1,85 @@
+scenario_id: stage06_retry_does_not_duplicate_children
+workflow_id: schedule_planning.v1
+workflow_version: v1
+scope:
+  tenant_id: tenant-a
+  domain_id: domain-x
+partition_key: SD-2026-03-08
+logical_date: "2026-03-08"
+seed_artifacts:
+  - artifact_kind: schedule.draft_schedule.workbook
+    artifact_role: official_input
+    media_type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet
+    source_path: Stage05_Draft_Schedule_Triage/Stage05_Draft_Schedule_Triage_Spreadsheet_Example_COMPLETED.xlsx
+  - artifact_kind: schedule.supervisor_review.doc
+    artifact_role: evidence
+    media_type: application/vnd.openxmlformats-officedocument.wordprocessingml.document
+    source_path: Stage06_Supervisor_Review_Publish/Stage06_Supervisor_Review_Publish_Document_Example_COMPLETED.docx
+steps:
+  - id: create_stage06_review
+    action: tasks.create
+    payload:
+      workflow_run_id: "{{workflow_run_id}}"
+      stage_id: Stage06
+      task_kind: review_packet
+      activation_key: stage06-review-root-retry
+      candidate_roles: [dispatch_supervisor]
+      owner_role: dispatch_supervisor
+      create_human_task: true
+      idempotency_key: "scenario:{{scenario_id}}:tasks.create:review-root"
+    save_as: create_stage06_review
+  - id: claim_stage06_review
+    action: tasks.claim
+    payload:
+      human_task_id: "{{create_stage06_review.result.human_task.human_task_id}}"
+      actor_id: human:dispatch-supervisor-3
+      actor_type: human
+      lease_seconds: 300
+      idempotency_key: "scenario:{{scenario_id}}:tasks.claim:review-root"
+    save_as: claim_stage06_review
+  - id: complete_stage06_review
+    action: tasks.complete
+    payload:
+      human_task_id: "{{create_stage06_review.result.human_task.human_task_id}}"
+      actor_id: human:dispatch-supervisor-3
+      actor_type: human
+      outcome: draft_is_publish_ready
+      idempotency_key: "scenario:{{scenario_id}}:tasks.complete:review-root"
+    save_as: complete_stage06_review
+  - id: retry_complete_stage06_review
+    action: tasks.complete
+    payload:
+      human_task_id: "{{create_stage06_review.result.human_task.human_task_id}}"
+      actor_id: human:dispatch-supervisor-3
+      actor_type: human
+      outcome: draft_is_publish_ready
+      idempotency_key: "scenario:{{scenario_id}}:tasks.complete:review-root"
+    expect_error_code: duplicate_idempotency_key
+    save_as: retry_complete_stage06_review
+expected_events:
+  ordered_contains:
+    - workflow.run.created
+    - task.run.created
+    - task.created
+    - task.claimed
+    - task.completed
+    - task.run.created
+    - task.created
+expected_task_states:
+  - stage_id: Stage06
+    task_kind: review_packet
+    state: COMPLETED
+  - stage_id: Stage06
+    task_kind: final_review
+    state: OPEN
+expected_spawned_children:
+  - parent_outcome: draft_is_publish_ready
+    stage_id: Stage06
+    task_kind: final_review
+    spawn_rule_id: stage06_final_publish_review
+expected_pointer_targets: []
+expected_query_rows:
+  task_rows: 2
+  open_tasks: 1
+  approval_rows: 0
+  pointer_rows: 0

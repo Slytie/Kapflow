@@ -2,7 +2,7 @@
 id: TASK-0029
 epic: EPIC-020
 title: Map the typed event registry to runtime emission points and tests
-status: TODO
+status: DONE
 owners:
 - platform
 reviewers:
@@ -85,3 +85,8 @@ Define the authoritative command -> event-emission matrix for Stage 4 runtime wo
 
 ## Notes / decisions
 The emission matrix should live as a planning/source doc, not as hidden logic inside the first runtime implementation.
+
+## Completion notes
+- Added implementation-backed [EVENT_EMISSION_MATRIX.md](/Users/tylerclark/git/pythonProject/companyos/docs/planning/EVENT_EMISSION_MATRIX.md) covering canonical command/event boundaries implemented in TASK-0041 .. TASK-0043.
+- Runtime command handlers now emit authoritative lifecycle events in the same transaction as canonical row mutations across workflow/task, approvals, artifacts, pointers, and Stage06 completion-driven child spawning.
+- Runtime tests and scenario coverage now validate emission correctness through CLI-driven end-to-end assertions.

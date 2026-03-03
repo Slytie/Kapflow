@@ -44,7 +44,7 @@ Why this is the right first slice:
 
 ## 2) First code scaffold to create
 
-The first runtime PR should create the code locations chosen in `RUNTIME_BOOTSTRAP.md`:
+The first runtime PR creates the code locations chosen in `RUNTIME_BOOTSTRAP.md`:
 
 ```text
 src/onetruth/
@@ -66,15 +66,24 @@ Minimum files to create in the first scaffold PR:
 - `pyproject.toml`
 - `src/onetruth/__init__.py`
 - `src/onetruth/api/main.py`
+- `src/onetruth/cli/__main__.py`
 - `src/onetruth/infrastructure/db/session.py`
 - `src/onetruth/infrastructure/db/models.py`
+- `src/onetruth/infrastructure/events/event_store.py`
 - `alembic.ini`
 - `alembic/env.py`
+- `alembic/versions/20260303_0001_runtime_substrate.py`
 - `tests/runtime/README.md`
+- `tests/runtime/test_cli_timeline_smoke.py`
 
 Goal of the scaffold PR:
 - establish the package root and migration path
 - make future PRs additive instead of re-litigating layout
+
+Scaffold status:
+- completed in TASK-0040, including CLI-driven smoke tests for `init-db`, `events append`, and `events list`.
+- TASK-0041 now adds first canonical workflow/task current-state substrate behavior (`workflow_runs`, `task_runs`, `human_tasks`) and transactional lifecycle events via CLI.
+- TASK-0042 now adds approvals + artifact versions + pointer promotion substrate behavior (`approvals`, `artifact_versions`, `artifact_pointers`) with transactional lifecycle events and query-ready CLI read surfaces.
 
 ## 3) Ordered implementation tranches
 
@@ -87,7 +96,7 @@ Goal of the scaffold PR:
 - `human_tasks`
 - `approvals`
 - `artifact_versions`
-- `pointers`
+- `artifact_pointers` (canonical pointer table)
 
 **Where**
 - `src/onetruth/infrastructure/db/models.py`
@@ -103,6 +112,9 @@ Goal of the scaffold PR:
 
 **Why first**
 - every later feature depends on these tables and their transaction rules
+
+Status:
+- `timeline_events`, `consumer_cursors`, `workflow_runs`, `task_runs`, `human_tasks`, `approvals`, `artifact_versions`, and `artifact_pointers` are now implemented in the runtime substrate (TASK-0040 .. TASK-0042).
 
 ### Tranche 2 - Command kernel and state transitions
 **Write next**
@@ -131,6 +143,10 @@ Goal of the scaffold PR:
 - `create_artifact_version`
 - `promote_pointer`
 
+Status:
+- commands through `promote_pointer` now exist at the CLI/handler substrate layer (TASK-0041 .. TASK-0042).
+- full Stage06 business decider logic and full conditional child-task evaluator remain explicitly out of scope.
+
 ### Tranche 3 - Schedule Planning Stage03 -> Stage06 happy path plus review loops
 **Write next**
 - run creation with pinned Schedule Planning temporal context
@@ -152,6 +168,17 @@ Goal of the scaffold PR:
 **Acceptance target**
 - enough real runtime behavior to satisfy the semantics behind AT-SCH-001 for the Stage06 portion
 - the runtime can show a completed review task spawning explicit follow-on work without hidden branching
+
+Status:
+- TASK-0043 now implements the first Stage06 runtime slice through CLI-driven scenario tests:
+  - completing a Stage06 review task now spawns explicit child tasks for supported outcomes
+  - Stage06 publish happy path is executable step-by-step through the canonical CLI boundary
+  - Stage06 query/read contracts now have implementation-backed stability tests for future board/query UI work
+- TASK-0044 now adds the first thin HTTP/query adapter over the same canonical runtime handlers:
+  - board-ready read endpoints for human tasks, approvals, workflow runs, pointers, and Schedule Planning board aggregate
+  - thin mutation endpoints for claim/complete/respond actions delegating to canonical command handlers
+  - scenario-backed API contract tests and cross-scope denial coverage under `tests/runtime/api/`
+- Full Stage03->Stage07 flow and Stage07 issue-scoped loop logic remain out of scope and still pending.
 
 ### Tranche 4 - Stage07 issue-scoped replan loop
 **Write next**

@@ -76,6 +76,43 @@ A passing acceptance run must be able to export an evidence set showing at minim
 
 Once the runtime scaffold exists, add step-run tests where the agent executes each step through a stable interface and the test asserts only authoritative truth.
 
+Current implemented runtime command-boundary coverage:
+- `tests/runtime/test_cli_timeline_smoke.py`
+- `tests/runtime/test_workflow_task_core_cli.py`
+- `tests/runtime/test_approvals_artifacts_pointers_cli.py`
+- `tests/runtime/scenarios/test_schedule_stage06_publish_steps.py`
+- `tests/runtime/scenarios/test_schedule_stage06_request_more_information_steps.py`
+- `tests/runtime/scenarios/test_schedule_stage06_retry_no_duplicate_child_tasks.py`
+- `tests/runtime/contracts/test_hitl_query_contracts_stage06.py`
+- `tests/runtime/api/test_human_task_list_contract.py`
+- `tests/runtime/api/test_approval_list_contract.py`
+- `tests/runtime/api/test_workflow_run_detail_contract.py`
+- `tests/runtime/api/test_board_schedule_planning_contract.py`
+- `tests/runtime/api/test_human_task_claim_via_api.py`
+- `tests/runtime/api/test_human_task_complete_via_api.py`
+- `tests/runtime/api/test_approval_respond_via_api.py`
+- `tests/runtime/api/test_cross_scope_api_denial.py`
+- `tests/runtime/api/test_board_retry_stability.py`
+
+Current runtime tests assert:
+- canonical row creation for `workflow_runs`, `task_runs`, `human_tasks`
+- lifecycle transitions for claim and completion
+- authoritative event emission for lifecycle commands
+- claim concurrency safety (single winner under race)
+- explicit idempotency failure behavior on duplicate command keys
+- negative lifecycle guards (for example unclaimed completion and duplicate run activation)
+- canonical row creation and transitions for `approvals`, `artifact_versions`, and `artifact_pointers`
+- approval response finalization guard (cannot respond twice)
+- artifact-version idempotency guard (duplicate key fails with no duplicate canonical/event effect)
+- pointer promotion conflict/race behavior (single winner, explicit loser failure)
+- coherent cross-linkage chain assertions across workflow/task/artifact/approval/pointer lifecycle
+- stable CLI list/show JSON contracts that intentionally support future parallel board/query UI work
+- Stage06 completion outcome -> explicit child-task spawning with lineage fields persisted on canonical `task_runs`
+- Stage06 scenario retries do not duplicate spawned children/events when parent completion idempotency key is retried
+- first implementation-backed query-contract snapshots for human-task queue, approval queue, pointer summary, and workflow-run summary rows
+- first implementation-backed HTTP contract/mutation coverage for board-ready read surfaces and canonical HITL actions (`claim`, `complete`, `respond`)
+- cross-scope API denial checks and retry-stability checks over repeated GET/mutation retries
+
 Minimum required runtime scenario tests:
 - `tests/runtime/scenarios/test_schedule_stage06_publish_steps.py`
 - `tests/runtime/scenarios/test_schedule_stage07_spawn_steps.py`
