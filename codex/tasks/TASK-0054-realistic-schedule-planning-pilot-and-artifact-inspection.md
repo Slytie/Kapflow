@@ -2,7 +2,7 @@
 id: TASK-0054
 epic: EPIC-040
 title: "Realistic Schedule Planning pilot and operator inspection packet"
-status: IN_PROGRESS
+status: DONE
 owners: ["platform"]
 reviewers: ["ops", "qa", "security"]
 depends_on: ["TASK-0051", "TASK-0052", "TASK-0053"]
@@ -79,3 +79,25 @@ This is an experiential/operator-inspection milestone and the first realistic pi
 - Pilot runner/idempotency behavior prevents duplicate canonical effects on repeated runs with reused pilot key.
 - Runtime tests cover pilot seeding determinism, Stage06 evidence/execution linkage, Stage07 coherence, packet completeness, and rerun idempotency.
 - README and planning/status docs are updated so pilot operations and inspection criteria are not stale.
+
+## Source Files Changed
+- `src/onetruth/application/services/realistic_schedule_planning_pilot.py`
+- `scripts/run_schedule_planning_pilot.py`
+- `tests/runtime/test_realistic_schedule_planning_pilot.py`
+- `docs/planning/REALISTIC_SCHEDULE_PLANNING_PILOT.md`
+- `README.md`
+- `docs/planning/FIRST_RUNTIME_SLICE.md`
+- `docs/planning/TEST_MATRIX.md`
+- `docs/status/DECISIONS_SINCE_LAST.md`
+- `docs/planning/TASK_INDEX.md`
+- `docs/status/CURRENT_FOCUS.md`
+
+## Verification Results
+- `make schema-validate` ✅
+- `make contract` ✅
+- `make replay` ✅
+- `make acceptance` ✅
+- `make runtime` ✅
+- `pytest -q` ✅
+- `PYTHONPATH=src pytest -q tests/runtime/test_realistic_schedule_planning_pilot.py` ✅
+- `PYTHONPATH=src pytest -q tests/integration_openai` ✅ (gated test skipped because env gate not enabled)

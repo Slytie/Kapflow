@@ -1,0 +1,39 @@
+{
+  "generated_at": "2026-03-04T12:46:23Z",
+  "generator_version": "prototype-v1",
+  "kind": "onetruth.generator.prototype.lineage",
+  "outputs": [
+    {
+      "path": "build/generated/runbooks/schedule_planning.v1/runbook.md",
+      "sha256": "sha256:0118a8ff4a1e76ecacc59f165b53eb41a2680fe42bf40338feae0facc0f261a1"
+    },
+    {
+      "path": "build/generated/companyos_ir/schedule_planning.v1.json",
+      "sha256": "sha256:66800429e8eb286df55cabb59172d51e7e8004d151db2be1744fc12a9eb84654"
+    }
+  ],
+  "sources": [
+    {
+      "path": "docs/workflows/schedule_planning/v1/WORKFLOW_CONTRACT.yaml",
+      "sha256": "sha256:28819ce8f61bdf3bfee7c8c539f9c1b7d4f0a31fe3c78bb39de89ec64c6b68cc"
+    },
+    {
+      "path": "docs/workflows/schedule_planning/v1/ARTIFACT_MAP.yaml",
+      "sha256": "sha256:40d468deded8b7f28800db33bfb983d0f1e26d8ff2058d3ed414448bc1fd846b"
+    },
+    {
+      "path": "docs/workflows/schedule_planning/v1/DECISION_CATALOG.yaml",
+      "sha256": "sha256:44e02d952e004c5f8cf90330c355cae7fbb3814c1e249d5c9b3d118dc7ff7ab4"
+    },
+    {
+      "path": "docs/workflows/schedule_planning/v1/EXECUTION_PROFILE.yaml",
+      "sha256": "sha256:b5dc949b6c2aafe0817d0373f05a4f79722241879d606c1ab1aac821efadd7be"
+    },
+    {
+      "path": "docs/workflows/schedule_planning/v1/ACCEPTANCE_CRITERIA.md",
+      "sha256": "sha256:1a2af6849dfcaaade81025a0aa039d8bad226883da38c941b79619816c08b2c6"
+    }
+  ],
+  "workflow_id": "schedule_planning.v1",
+  "workflow_version": "v1"
+}

@@ -2,6 +2,29 @@
 
 Record any decisions made since the last session so a fresh Codex run can rehydrate quickly.
 
+## 2026-03-04 (TASK-0032 generator prototype for runbook + CompanyOS IR)
+- Chosen prototype scope: generate only from repo-native Schedule Planning source (`WORKFLOW_CONTRACT`, `ARTIFACT_MAP`, `DECISION_CATALOG`, `EXECUTION_PROFILE`, `ACCEPTANCE_CRITERIA`) with no secondary authored semantics.
+- Chosen output contract under `build/generated/`:
+  - runbook markdown at `runbooks/schedule_planning.v1/runbook.md`,
+  - CompanyOS-style IR JSON at `companyos_ir/schedule_planning.v1.json`,
+  - lineage manifest at `lineage/schedule_planning.v1.lineage.json`.
+- Chosen freshness strategy: deterministic runbook/IR render plus lineage source/output hash checks via `--check`; stale or drifted generated artifacts fail closed.
+- Chosen no-invention guardrails in generator code:
+  - reject unknown stage IDs, dataset keys, decision refs, evidence refs, and spawn-rule target stage IDs,
+  - emit only authored IDs/keys into generated IR/runbook sections.
+- Chosen CI integration posture: `make generated-check` now runs full repo validation plus generator `--check` freshness enforcement.
+
+## 2026-03-04 (TASK-0030 artifact-store and schedule-delta design closure)
+- Locked artifact-store authority boundary: canonical truth for artifacts is `artifact_versions` + `artifact_pointers` + `artifact_links` + timeline events; blob/object storage bytes remain non-authoritative payload storage.
+- Locked Stage06/Stage07 schedule semantics:
+  - Stage06 publishes immutable base schedule versions,
+  - Stage07 publishes immutable ordered deltas and never mutates base artifacts in place,
+  - operative live-day reconstruction is read-only from base pointer + ordered official Stage07 deltas.
+- Locked ordered-delta lineage requirements: Stage07 deltas must carry explicit lineage (`supersedes_artifact_version_id`, `base_artifact_version_id`, `delta_sequence`) so reconstruction order/anomalies are auditable.
+- Locked idempotency posture for artifact uploads/promotions: duplicate idempotency must not duplicate canonical effects; same-target promotion remains non-duplicating; pointer repoints require generation checks.
+- Locked mismatch recovery rule: when blob bytes and canonical metadata disagree, metadata/events/pointers remain authoritative; remediation is new immutable version + explicit pointer move, never row mutation.
+- Added explicit read-only reconstruction contract and named required helper surfaces/tests in `docs/planning/ARTIFACT_STORE_DESIGN.md` and `docs/planning/TEST_MATRIX.md`.
+
 ## 2026-03-04 (realistic Schedule Planning pilot + inspection packet milestone)
 - Chosen pilot shape: three reproducible Schedule Planning scenarios (`stage06_publish_ready`, `stage06_needs_information`, `stage07_issue_replan`) executed through canonical handlers, seeded from the real corpus seed sets.
 - Chosen Stage06 pilot execution posture: Stage06 review in pilot scenarios must use the bounded Stage06 agent path (`run_stage06_openai_review_sandbox`) so execution session/tool execution/policy decision rows and events are always part of the pilot truth.

@@ -238,6 +238,7 @@ First real Schedule Planning business slice now implemented:
 - board/query read-surface contracts now have implementation-backed tests
 - Stage07 issue-scoped replan loop now exists with canonical `flags`, deduped issue activation, major-replan approval gating, delta promotion, drift evidence, and lease-expiry recovery/reconcile commands
 - backend-owned frontend contract snapshots are exported from real scenario states under `fixtures/frontend_contracts/` for parallel frontend development
+- artifact-store design closure for Stage06 base + Stage07 ordered-delta reconstruction is documented in `docs/planning/ARTIFACT_STORE_DESIGN.md`
 
 Stage06 scenario entrypoints:
 - fixtures: `fixtures/scenarios/schedule_planning/`

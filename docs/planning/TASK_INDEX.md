@@ -31,9 +31,9 @@
 | TASK-0027 | EPIC-080 | DONE | high | Implement full authored-surface validation and drift checks |
 | TASK-0028 | EPIC-040 | DONE | high | Translate the runtime object model into an implementation plan |
 | TASK-0029 | EPIC-020 | DONE | medium | Map the typed event registry to runtime emission points and tests |
-| TASK-0030 | EPIC-030 | IN_PROGRESS | high | Translate promotion semantics and schedule delta rules into artifact-store design |
+| TASK-0030 | EPIC-030 | DONE | high | Translate promotion semantics and schedule delta rules into artifact-store design |
 | TASK-0031 | EPIC-060 | TODO | high | Design the projection coherence harness |
-| TASK-0032 | EPIC-025 | TODO | medium | Prototype generator for runbook packs and CompanyOS IR |
+| TASK-0032 | EPIC-025 | DONE | medium | Prototype generator for runbook packs and CompanyOS IR |
 | TASK-0033 | EPIC-005 | DONE | high | Specify the fully-agentive Schedule Planning debug slice |
 | TASK-0034 | EPIC-060 | DONE | high | Canonicalize governance vocabulary and actor taxonomy |
 | TASK-0035 | EPIC-050 | DONE | high | Tighten human-task semantics for end-to-end agent execution |
@@ -55,4 +55,4 @@
 | TASK-0051 | EPIC-030 | DONE | high | Promote example documents into executable fixture corpus with canonical artifact ingress |
 | TASK-0052 | EPIC-070 | DONE | high | Hardening execution sessions and policy-gated sandbox runtime as canonical truth |
 | TASK-0053 | EPIC-070 | DONE | high | Minimal real OpenAI API sandbox/agent e2e spike |
-| TASK-0054 | EPIC-040 | IN_PROGRESS | high | Realistic Schedule Planning pilot and operator inspection packet |
+| TASK-0054 | EPIC-040 | DONE | high | Realistic Schedule Planning pilot and operator inspection packet |

@@ -10,7 +10,7 @@ Runtime scaffold bootstrap now includes canonical workflow/task/approval/artifac
 - approval/artifact/pointer substrate: `approvals request/respond/show/list`, `artifacts create-version/show/list`, `pointers promote/show/list`
 - Stage07 issue substrate: `flags create/transition/show/list`, `stage07 activate-issue`, `maintenance sweep-leases`, `maintenance reconcile-stage07`
 - thin HTTP/query adapter: `/api/v1/human-tasks`, `/api/v1/approvals`, `/api/v1/flags`, `/api/v1/workflow-runs`, `/api/v1/pointers`, `/api/v1/timeline-events`, `/api/v1/board/schedule-planning`, plus API mutation delegates for claim/complete/respond
-Active coding milestone: TASK-0054 realistic Schedule Planning pilot and operator inspection packet, building on TASK-0053 bounded OpenAI e2e, TASK-0052 execution-runtime substrate, and TASK-0051 corpus ingress; next active backlog item remains TASK-0030 design closure work.
+Active coding milestone: TASK-0031 projection coherence harness design is the next active backlog item; TASK-0030 and TASK-0032 design/prototype closures are complete.
 
 ### Recently completed runtime-bootstrap tranche
 - TASK-0028 - Translated the runtime object model into a concrete Stage 4 runtime architecture, repo layout, persistence model, and first implementation slice
@@ -27,10 +27,13 @@ Active coding milestone: TASK-0054 realistic Schedule Planning pilot and operato
 - TASK-0051 - Promoted template-pack completed examples into an executable document corpus with canonical artifact ingress, subject attachment linkage, API attachment surfaces, and backend-owned snapshot refresh integration
 - TASK-0052 - Converted the bounded Stage06 OpenAI spike into canonical execution runtime behavior with transactional session/tool/policy lifecycle events, explicit policy allow/deny gating, idempotent retry handling, and stale-session reconcile recovery
 - TASK-0053 - Locked the minimal OpenAI sandbox e2e spike as a bounded, canonical Stage06 path with deterministic mock coverage and opt-in real-network integration gating
+- TASK-0054 - Added the first realistic Schedule Planning pilot runner with corpus-seeded Stage06/Stage07 flows, bounded Stage06 agent execution-runtime evidence, and per-run inspection packets for operator walkthroughs
+- TASK-0030 - Closed Stage06 base + Stage07 ordered-delta artifact-store semantics with explicit reconstruction, idempotency, drift, and blob-authority boundary design in `docs/planning/ARTIFACT_STORE_DESIGN.md`
+- TASK-0032 - Implemented the first generator prototype lowering repo-native Schedule Planning source into generated runbook + CompanyOS-style IR + lineage manifests with freshness checks and no-invention tests
 - Added `docs/planning/RUNTIME_BOOTSTRAP.md` and `docs/planning/FIRST_RUNTIME_SLICE.md`
 - Added `docs/adr/ADR-003-stage4-runtime-architecture.md`
 - Refreshed stale Codex routing: EPIC-040 / EPIC-050 no longer route default runtime work through Payroll, and missing context packs now exist for EPIC-025 / EPIC-030 / EPIC-060
-- Reconciled stale backlog/task memory so TASK-0029 and TASK-0039 are now marked DONE, while TASK-0030 is narrowed to remaining Stage07/base+delta artifact-store design work
+- Reconciled stale backlog/task memory so TASK-0029, TASK-0030, TASK-0032, and TASK-0039 are now marked DONE
 
 ### Recently completed dynamic-loop clarification tranche
 - Locked the rule that task completion may spawn explicit follow-on task runs for information requests, re-review, final review, and issue-scoped child work
@@ -51,9 +54,7 @@ Active coding milestone: TASK-0054 realistic Schedule Planning pilot and operato
 - Adopted a pytest-backed TDD harness with a stable AT-SCH scenario catalog and reference replay reducer
 
 ### Next tasks (priority order)
-1. TASK-0030 - Complete Stage07/base+delta artifact-store design details (blob adapter + reconstruction semantics)
-2. TASK-0031 - Design the projection coherence harness
-3. TASK-0032 - Prototype generator for runbook packs and CompanyOS IR
+1. TASK-0031 - Design the projection coherence harness
 
 ## Test-first working mode
 Before adding runtime services or API surfaces:

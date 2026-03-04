@@ -2,7 +2,7 @@
 id: TASK-0032
 epic: EPIC-025
 title: "Prototype generator for runbook packs and CompanyOS IR from repo-native source"
-status: TODO
+status: DONE
 owners:
   - platform
 reviewers:
@@ -24,6 +24,13 @@ patterns:
 
 ## Context
 The repo defines the lowering policy and now also defines the concrete runtime architecture and output location strategy. What is still missing is a small generator prototype that proves repo-native source can become generated runbook packs and CompanyOS IR without becoming a second hand-authored truth surface.
+
+Completion scope:
+- implemented generator prototype code at `src/onetruth/infrastructure/generation/prototype.py`,
+- added CLI wrapper `scripts/generate_prototype.py`,
+- generated Schedule Planning outputs under `build/generated/`,
+- added freshness enforcement through `make generated-check`,
+- added integration tests for lineage, no-invention constraints, and staleness checks.
 
 ## Objective
 Prototype the source-to-generated path for Stage 4 using Schedule Planning as the first workflow target, including lowering of authored spawn rules and follow-on task semantics into generated runbook guidance without promoting generated output to authority.
@@ -69,11 +76,30 @@ Prototype the source-to-generated path for Stage 4 using Schedule Planning as th
 4. Verify that outputs preserve lineage and do not invent semantics.
 5. Ensure generated runbooks reflect authored follow-on task spawn rules and review loops without becoming a second workflow-definition surface.
 
+Completed deliverables:
+- `docs/planning/GENERATOR_PROTOTYPE_PLAN.md`
+- `src/onetruth/infrastructure/generation/prototype.py`
+- `scripts/generate_prototype.py`
+- generated outputs:
+  - `build/generated/runbooks/schedule_planning.v1/runbook.md`
+  - `build/generated/companyos_ir/schedule_planning.v1.json`
+  - `build/generated/lineage/schedule_planning.v1.lineage.json`
+- freshness check integration: `make generated-check`
+- tests: `tests/integration/test_generator_prototype.py`
+
 ## Verification
 - the prototype consumes repo-native source only
 - generated outputs carry source refs and hashes
 - freshness checks can tell when a generated artifact is stale
 - outputs are clearly marked non-authoritative
+- full verification loop passes:
+  - `make schema-validate`
+  - `make contract`
+  - `make replay`
+  - `make acceptance`
+  - `make runtime`
+  - `make generated-check`
+  - `pytest -q`
 
 ## Acceptance criteria
 - a concrete prototype plan exists for generated runbook packs and CompanyOS IR

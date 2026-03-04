@@ -59,6 +59,7 @@ For Stage 4, authoritative object kinds include:
 - WorkGraph
 - summarized approval views
 - "current operative schedule" views reconstructed from base + deltas
+- raw object-store/blob presence without canonical metadata rows/events/pointers
 
 ### Evidence, not state
 - transcripts
@@ -149,6 +150,7 @@ Do not:
 - let dashboard state or projection packets become the place where "what is official" is decided
 - model transcripts as the driver of state transition
 - store live-day schedule updates by mutating the published base schedule
+- treat object/blob storage as authoritative state over metadata + timeline + pointers
 
 ## 8) Practical rule
 If two files disagree, prefer the one higher in the authority chain and fix the lower one.

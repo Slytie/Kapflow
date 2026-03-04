@@ -57,3 +57,20 @@ Future CI should validate:
 - generated artifacts are fresh relative to source hashes
 - projection packets preserve canonical fields
 - no stale references remain in planning docs
+
+## 7) Prototype lineage manifest format (TASK-0032)
+The first generator prototype writes lineage manifests to:
+- `build/generated/lineage/<workflow_id>.lineage.json`
+
+Minimum required fields:
+- `workflow_id`
+- `workflow_version`
+- `generator_version`
+- `generated_at`
+- `sources[]` with `path` and `sha256`
+- `outputs[]` with `path` and `sha256`
+
+Freshness checks must fail when:
+- source file hashes differ from lineage hashes,
+- generated output bytes differ from lineage output hashes,
+- generated runbook/IR no longer matches deterministic regeneration from authoritative source.

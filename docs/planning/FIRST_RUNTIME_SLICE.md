@@ -237,6 +237,10 @@ Status:
   - CLI/API attachment upload/list/download paths backed by immutable `artifact_versions`
   - frontend inline upload/download actions wired to canonical repository/API boundaries
   - runtime/API tests for ingress determinism, linkage coherence, cross-scope denial, and snapshot refresh stability
+- TASK-0030 now closes the remaining design gap for this tranche:
+  - authoritative artifact-store boundary and blob-adapter behavior are locked in `docs/planning/ARTIFACT_STORE_DESIGN.md`
+  - Stage06 base + Stage07 ordered-delta reconstruction semantics are explicit and implementation-ready
+  - required helper surfaces/tests are named for the follow-on implementation PR
 
 ### Tranche 5 - Execution facet + policy gate
 **Write after Stage07**
@@ -280,6 +284,13 @@ Status:
 - `build/generated/`
 - `tests/runtime/test_projection_coherence.py`
 - `tests/runtime/test_generator_lineage.py`
+
+Status:
+- TASK-0032 now implements the first generator prototype:
+  - source-lowered generated runbook + CompanyOS-style IR + lineage manifest outputs under `build/generated/`
+  - deterministic freshness/staleness checks via `scripts/generate_prototype.py --check` and `make generated-check`
+  - integration coverage for lineage, no-invention constraints, stale detection, and spawn-rule rendering
+- TASK-0031 projection coherence harness remains the next open work item in this tranche.
 
 ## 4) What should explicitly wait
 

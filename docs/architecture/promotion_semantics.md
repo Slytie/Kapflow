@@ -2,60 +2,76 @@
 
 Promotion is how mutable officialness is expressed without mutating immutable artifacts.
 
-## 1) Artifact versions vs pointers
-Artifacts are immutable.
-Pointers are mutable and audited.
+## 1) Authoritative promotion boundary
 
-Promotion updates a pointer to reference a specific artifact version.
+- Immutable artifacts live in `artifact_versions`.
+- Officialness lives in audited pointer state (`artifact_pointers`) plus timeline events.
+- Blob/object bytes are required evidence payloads but never decide officialness by themselves.
 
-## 2) Approval and promotion are separate
-An approval may authorize a promotion, but the promotion itself is a separate recorded action.
+## 2) Promotion is distinct from approval
 
-This separation matters because:
-- the reviewed version may differ from the promoted version
-- drift must be visible
-- approvals remain evidence, not pointer state
+Approval evidence and pointer movement are separate canonical acts:
+- approvals record whether a decision was authorized,
+- promotion records which immutable artifact became official.
 
-## 3) Drift
-If the promoted version differs from the reviewed or expected version, emit `artifact.pointer.drift_detected` (or equivalent) with enough payload to reconstruct:
-- reviewed version
-- promoted version
-- decision ref
-- actor
-- time
+This separation is required for auditability, drift visibility, and replay.
 
-## 4) Pointer types
-Stage 4 conceptually needs at least:
-- official input pointer
-- official output pointer
+## 3) Pointer identity, uniqueness, and generation
 
-Future implementations may use one pointer model with roles rather than separate tables.
+Promotion targets one canonical pointer stream per workflow-run scope:
+- pointer key identity: `(workflow_run_id, pointer_key)`,
+- pointer definition uniqueness: `(workflow_run_id, scope_kind, scope_ref, artifact_kind)`.
 
-## 5) Schedule Planning nuance
-Schedule Planning intentionally has two official artifact streams:
-- Stage06 base publication
-- Stage07 replan deltas
+Generation semantics:
+- first promotion creates generation `0`,
+- repoint increments generation,
+- repoint requires `expected_generation`,
+- conflicting repoints fail closed (`pointer_conflict` / `pointer_generation_mismatch`),
+- same-target repromotion is treated as no-op (`pointer_already_current`) and emits no new canonical effect.
 
-The system should not mutate the published base schedule in place after publication.
-Instead:
-- Stage06 publishes the base plan
-- Stage07 promotes explicit delta artifacts that supersede assignments operationally without erasing the base artifact
+## 4) Drift semantics
 
-The operative live-day view is therefore reconstructed from base + ordered deltas.
+Drift is visibility-first:
+- if reviewed artifact/version differs from promoted target, emit `artifact.pointer.drift_detected`,
+- if reviewed Stage06 base differs from current base pointer during Stage07 promotion, emit drift event.
 
-## 6) Payroll nuance
-Payroll mostly uses straightforward input/output promotions, but the same laws apply:
-- exact version recorded
-- drift visible
-- lock and finalize stages remain explicit and attributable
+Drift does not silently mutate history and does not hide promotion; it is explicit event evidence.
 
-## 7) Minimum payload expectations
-Promotion-related events should include:
+## 5) Schedule Planning semantics
+
+Schedule Planning has two official streams:
+- Stage06 base publication (`schedule.published_schedule.workbook`),
+- Stage07 major-replan deltas (`schedule.replan_delta.workbook`).
+
+Rules:
+- Stage06 base remains immutable after publication.
+- Stage07 publishes additive immutable deltas; no in-place base edits.
+- Stage07 official major replan promotion requires approved Stage07 approval evidence.
+- Operative live-day schedule is reconstructed from base + ordered official deltas.
+
+## 6) Lineage expectations for deltas
+
+Stage07 delta artifacts must carry explicit lineage:
+- `supersedes_artifact_version_id` for semantic replacement chain,
+- metadata including `base_artifact_version_id` and `delta_sequence`.
+
+Lineage and promotion events together must be sufficient to reconstruct order and investigate anomalies.
+
+## 7) Idempotency expectations
+
+Promotion commands require idempotency keys.
+
+Required behavior:
+- duplicate command idempotency does not create duplicate canonical effects,
+- same-target retries stay non-duplicating,
+- race losers fail closed and must retry against latest generation.
+
+## 8) Minimum promotion event payloads
+
+Promotion-related events must carry enough data for reconstruction/audit:
 - pointer ID
-- promoted artifact version ID
-- prior pointer target if any
 - dataset key
-- partition key
-- workflow and stage context
-- linked approval if present
-- drift details if applicable
+- promoted artifact version ID
+- reviewed artifact/base version ID when available
+- workflow scope via envelope links
+- drift reason for drift events

@@ -45,6 +45,7 @@ integration-openai:
 
 generated-check:
 	$(VALIDATOR)
+	python3 scripts/generate_prototype.py --check
 
 frontend-snapshots:
 	PYTHONPATH=src python3 scripts/export_frontend_snapshots.py

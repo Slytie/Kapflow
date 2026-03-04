@@ -1,0 +1,726 @@
+{
+  "artifacts": {
+    "artifact_sets": {
+      "Stage01": [
+        {
+          "key": "schedule.config.doc",
+          "role": "official_input",
+          "template_source": "Stage01_Schedule_Config/Stage01_Schedule_Config_Document_Template_EMPTY.docx"
+        },
+        {
+          "key": "schedule.config.workbook",
+          "role": "official_input",
+          "template_source": "Stage01_Schedule_Config/Stage01_Schedule_Config_Spreadsheet_Template_EMPTY.xlsx"
+        }
+      ],
+      "Stage02": [
+        {
+          "key": "schedule.worker_roster.doc",
+          "role": "official_input",
+          "template_source": "Stage02_Workforce_Availability/Stage02_Workforce_Availability_Document_Template_EMPTY.docx"
+        },
+        {
+          "key": "schedule.worker_roster.workbook",
+          "role": "official_input",
+          "template_source": "Stage02_Workforce_Availability/Stage02_Workforce_Availability_Spreadsheet_Template_EMPTY.xlsx"
+        }
+      ],
+      "Stage03": [
+        {
+          "key": "schedule.demand_forecast.doc",
+          "role": "evidence",
+          "template_source": "Stage03_Demand_Forecast_Coverage/Stage03_Demand_Forecast_Coverage_Document_Template_EMPTY.docx"
+        },
+        {
+          "key": "schedule.demand_forecast.workbook",
+          "role": "official_input",
+          "template_source": "Stage03_Demand_Forecast_Coverage/Stage03_Demand_Forecast_Coverage_Spreadsheet_Template_EMPTY.xlsx"
+        }
+      ],
+      "Stage04": [
+        {
+          "key": "schedule.capacity_plan.doc",
+          "role": "evidence",
+          "template_source": "Stage04_Capacity_Plan/Stage04_Capacity_Plan_Document_Template_EMPTY.docx"
+        },
+        {
+          "key": "schedule.capacity_plan.workbook",
+          "role": "official_input",
+          "template_source": "Stage04_Capacity_Plan/Stage04_Capacity_Plan_Spreadsheet_Template_EMPTY.xlsx"
+        }
+      ],
+      "Stage05": [
+        {
+          "key": "schedule.draft_schedule.doc",
+          "role": "evidence",
+          "template_source": "Stage05_Draft_Schedule_Triage/Stage05_Draft_Schedule_Triage_Document_Template_EMPTY.docx"
+        },
+        {
+          "key": "schedule.draft_schedule.workbook",
+          "role": "official_input",
+          "template_source": "Stage05_Draft_Schedule_Triage/Stage05_Draft_Schedule_Triage_Spreadsheet_Template_EMPTY.xlsx"
+        }
+      ],
+      "Stage06": [
+        {
+          "key": "schedule.supervisor_review.doc",
+          "role": "evidence",
+          "template_source": "Stage06_Supervisor_Review_Publish/Stage06_Supervisor_Review_Publish_Document_Template_EMPTY.docx"
+        },
+        {
+          "key": "schedule.published_schedule.workbook",
+          "role": "official_output",
+          "template_source": "Stage06_Supervisor_Review_Publish/Stage06_Supervisor_Review_Publish_Spreadsheet_Template_EMPTY.xlsx"
+        }
+      ],
+      "Stage07": [
+        {
+          "key": "schedule.exception_board.doc",
+          "role": "evidence",
+          "template_source": "Stage07_Intraday_Exception_Control/Stage07_Intraday_Exception_Control_Document_Template_EMPTY.docx"
+        },
+        {
+          "key": "schedule.replan_delta.workbook",
+          "role": "official_output",
+          "template_source": "Stage07_Intraday_Exception_Control/Stage07_Intraday_Exception_Control_Spreadsheet_Template_EMPTY.xlsx"
+        }
+      ]
+    },
+    "out_of_scope": {
+      "Stage08": [
+        {
+          "key": "schedule.postday_review.doc",
+          "role": "evidence"
+        }
+      ],
+      "Stage09": [
+        {
+          "key": "schedule.pattern_optimization.doc",
+          "role": "evidence"
+        }
+      ]
+    }
+  },
+  "decisions": [
+    {
+      "action": "publish_schedule",
+      "allowed_responses": [
+        "approve",
+        "reject",
+        "request_changes"
+      ],
+      "decision_kind": "business_decision",
+      "evidence_requirements": {
+        "artifact_keys": [
+          "schedule.draft_schedule.workbook",
+          "schedule.supervisor_review.doc"
+        ],
+        "projection_id": "schedule.stage06.publish_packet"
+      },
+      "id": "schedule.stage06.publish_base_schedule",
+      "notes": [
+        "Approval publishes the stable base service-day schedule."
+      ],
+      "requested_from_role": "dispatch_supervisor",
+      "sla": {
+        "due_in_minutes": 120,
+        "on_expire": {
+          "escalate_to_role": "operations_manager"
+        }
+      },
+      "stage_id": "Stage06"
+    },
+    {
+      "action": "approve_major_replan",
+      "allowed_responses": [
+        "approve",
+        "reject",
+        "request_changes"
+      ],
+      "decision_kind": "business_decision",
+      "evidence_requirements": {
+        "artifact_keys": [
+          "schedule.exception_board.doc",
+          "schedule.replan_delta.workbook"
+        ],
+        "projection_id": "schedule.stage07.replan_packet"
+      },
+      "id": "schedule.stage07.approve_major_replan",
+      "notes": [
+        "Required when replan implies contractor activation, SLA waiver, zone-level override, or overtime beyond threshold."
+      ],
+      "requested_from_role": "operations_manager",
+      "sla": {
+        "due_in_minutes": 30,
+        "on_expire": {
+          "escalate_to_role": "operations_manager"
+        }
+      },
+      "stage_id": "Stage07"
+    }
+  ],
+  "generator_version": "prototype-v1",
+  "kind": "companyos.workflow_ir.prototype",
+  "partition_key": {
+    "examples": [
+      "SD-2026-03-04"
+    ],
+    "format": "SD-YYYY-MM-DD",
+    "name": "ScheduleDateID"
+  },
+  "required_events": {
+    "platform_required": [
+      "workflow.run.created",
+      "workflow.run.state_changed",
+      "task.run.created",
+      "task.run.state_changed",
+      "task.created",
+      "task.claimed",
+      "task.lease_expired",
+      "task.completed",
+      "approval.requested",
+      "approval.responded",
+      "execution.session.created",
+      "execution.session.state_changed",
+      "tool.execution.requested",
+      "tool.execution.approved",
+      "tool.execution.denied",
+      "tool.execution.completed",
+      "audit.degraded_mode.changed"
+    ],
+    "workflow_required": [
+      "artifact.version.created",
+      "artifact.pointer.promoted",
+      "artifact.pointer.drift_detected",
+      "flag.created",
+      "flag.state_changed",
+      "projection.coherence_failed"
+    ]
+  },
+  "scope": {
+    "required": [
+      "tenant_id",
+      "domain_id"
+    ]
+  },
+  "semantics": {
+    "no_inflight_migration_mvp": true,
+    "officialness": {
+      "defined_by": "promotion_pointer",
+      "drift_visibility_required": true,
+      "loose_promotion_allowed": true
+    },
+    "pinned_runs": true,
+    "run_shape": {
+      "backfill_policy": "explicit_operator_request",
+      "catchup_policy": "manual_only",
+      "long_lived_case_per_partition": true,
+      "stage_rerun_policy": "same_workflow_run_new_task_run"
+    }
+  },
+  "spawn_rules": [
+    {
+      "candidate_roles": [
+        "fleet_coordinator",
+        "schedule_planner"
+      ],
+      "spawn_rule_id": "stage05_request_operational_information",
+      "stage_id": "Stage05",
+      "target_stage_id": "Stage05",
+      "task_kind": "information_request",
+      "when": "triage_requires_external_information"
+    },
+    {
+      "candidate_roles": [
+        "schedule_planner"
+      ],
+      "spawn_rule_id": "stage05_return_for_rework",
+      "stage_id": "Stage05",
+      "target_stage_id": "Stage05",
+      "task_kind": "work_item",
+      "when": "triage_requires_schedule_revision"
+    },
+    {
+      "candidate_roles": [
+        "schedule_planner"
+      ],
+      "spawn_rule_id": "stage06_request_changes_to_draft",
+      "stage_id": "Stage06",
+      "target_stage_id": "Stage05",
+      "task_kind": "work_item",
+      "when": "review_requests_changes"
+    },
+    {
+      "candidate_roles": [
+        "fleet_coordinator",
+        "schedule_planner"
+      ],
+      "spawn_rule_id": "stage06_request_missing_information",
+      "stage_id": "Stage06",
+      "target_stage_id": "Stage06",
+      "task_kind": "information_request",
+      "when": "review_requires_more_information"
+    },
+    {
+      "candidate_roles": [
+        "dispatch_supervisor"
+      ],
+      "spawn_rule_id": "stage06_final_publish_review",
+      "stage_id": "Stage06",
+      "target_stage_id": "Stage06",
+      "task_kind": "final_review",
+      "when": "draft_is_publish_ready"
+    },
+    {
+      "candidate_roles": [
+        "fleet_coordinator",
+        "schedule_planner"
+      ],
+      "spawn_rule_id": "stage07_request_issue_information",
+      "stage_id": "Stage07",
+      "target_stage_id": "Stage07",
+      "task_kind": "information_request",
+      "when": "replan_requires_missing_information"
+    },
+    {
+      "candidate_roles": [
+        "operations_manager"
+      ],
+      "spawn_rule_id": "stage07_follow_on_exception_triage",
+      "stage_id": "Stage07",
+      "target_stage_id": "Stage07",
+      "task_kind": "exception_triage",
+      "when": "resolution_creates_child_issue"
+    },
+    {
+      "candidate_roles": [
+        "operations_manager"
+      ],
+      "spawn_rule_id": "stage07_final_replan_review",
+      "stage_id": "Stage07",
+      "target_stage_id": "Stage07",
+      "task_kind": "final_review",
+      "when": "major_replan_is_ready_for_review"
+    }
+  ],
+  "stages": [
+    {
+      "approvals": null,
+      "artifacts": [
+        {
+          "dataset_key": "schedule.config.doc",
+          "kind": "document",
+          "role": "official_input"
+        },
+        {
+          "dataset_key": "schedule.config.workbook",
+          "kind": "spreadsheet",
+          "role": "official_input"
+        }
+      ],
+      "execution": {
+        "allowed_tool_classes": [],
+        "decision_refs": [],
+        "execution_pattern": null,
+        "projections": [],
+        "required_evidence_keys": [],
+        "side_effect_policy": null,
+        "stop_rules": null
+      },
+      "in_scope_mvp": true,
+      "name": "Schedule_Config",
+      "semantics": {
+        "activation_basis": null,
+        "spawn_budget": null,
+        "spawn_rules": [],
+        "task_spawn_policy": null
+      },
+      "stage_id": "Stage01"
+    },
+    {
+      "approvals": null,
+      "artifacts": [
+        {
+          "dataset_key": "schedule.worker_roster.doc",
+          "kind": "document",
+          "role": "official_input"
+        },
+        {
+          "dataset_key": "schedule.worker_roster.workbook",
+          "kind": "spreadsheet",
+          "role": "official_input"
+        }
+      ],
+      "execution": {
+        "allowed_tool_classes": [],
+        "decision_refs": [],
+        "execution_pattern": null,
+        "projections": [],
+        "required_evidence_keys": [],
+        "side_effect_policy": null,
+        "stop_rules": null
+      },
+      "in_scope_mvp": true,
+      "name": "Workforce_Availability",
+      "semantics": {
+        "activation_basis": null,
+        "spawn_budget": null,
+        "spawn_rules": [],
+        "task_spawn_policy": null
+      },
+      "stage_id": "Stage02"
+    },
+    {
+      "approvals": null,
+      "artifacts": [
+        {
+          "dataset_key": "schedule.demand_forecast.doc",
+          "kind": "document",
+          "role": "evidence"
+        },
+        {
+          "dataset_key": "schedule.demand_forecast.workbook",
+          "kind": "spreadsheet",
+          "role": "official_input"
+        }
+      ],
+      "execution": {
+        "allowed_tool_classes": [
+          "artifact.read",
+          "validation",
+          "spreadsheet.transform"
+        ],
+        "decision_refs": [],
+        "execution_pattern": "linear_chain",
+        "projections": [
+          "schedule.stage03.ops_packet"
+        ],
+        "required_evidence_keys": [
+          "schedule.demand_forecast.doc",
+          "schedule.demand_forecast.workbook"
+        ],
+        "side_effect_policy": "draft_only",
+        "stop_rules": {
+          "max_tool_calls": 14,
+          "no_progress_ticks": 3,
+          "on_exhaustion": "escalate"
+        }
+      },
+      "in_scope_mvp": true,
+      "name": "Demand_Forecast_Coverage",
+      "semantics": {
+        "activation_basis": "all_preloaded_inputs_present_for_interval",
+        "spawn_budget": null,
+        "spawn_rules": [],
+        "task_spawn_policy": null
+      },
+      "stage_id": "Stage03"
+    },
+    {
+      "approvals": null,
+      "artifacts": [
+        {
+          "dataset_key": "schedule.capacity_plan.doc",
+          "kind": "document",
+          "role": "evidence"
+        },
+        {
+          "dataset_key": "schedule.capacity_plan.workbook",
+          "kind": "spreadsheet",
+          "role": "official_input"
+        }
+      ],
+      "execution": {
+        "allowed_tool_classes": [
+          "artifact.read",
+          "validation",
+          "spreadsheet.transform",
+          "flag.raise"
+        ],
+        "decision_refs": [],
+        "execution_pattern": "linear_chain",
+        "projections": [
+          "schedule.stage04.ops_packet"
+        ],
+        "required_evidence_keys": [
+          "schedule.capacity_plan.doc",
+          "schedule.capacity_plan.workbook"
+        ],
+        "side_effect_policy": "draft_only",
+        "stop_rules": {
+          "max_tool_calls": 18,
+          "no_progress_ticks": 3,
+          "on_exhaustion": "escalate"
+        }
+      },
+      "in_scope_mvp": true,
+      "name": "Capacity_Plan",
+      "semantics": {
+        "activation_basis": "Stage03_success",
+        "spawn_budget": null,
+        "spawn_rules": [],
+        "task_spawn_policy": null
+      },
+      "stage_id": "Stage04"
+    },
+    {
+      "approvals": null,
+      "artifacts": [
+        {
+          "dataset_key": "schedule.draft_schedule.doc",
+          "kind": "document",
+          "role": "evidence"
+        },
+        {
+          "dataset_key": "schedule.draft_schedule.workbook",
+          "kind": "spreadsheet",
+          "role": "official_input"
+        }
+      ],
+      "execution": {
+        "allowed_tool_classes": [
+          "artifact.read",
+          "validation",
+          "spreadsheet.transform",
+          "flag.raise"
+        ],
+        "decision_refs": [],
+        "execution_pattern": "linear_chain",
+        "projections": [
+          "schedule.stage05.ops_packet"
+        ],
+        "required_evidence_keys": [
+          "schedule.draft_schedule.doc",
+          "schedule.draft_schedule.workbook"
+        ],
+        "side_effect_policy": "draft_only",
+        "stop_rules": {
+          "max_tool_calls": 20,
+          "no_progress_ticks": 3,
+          "on_exhaustion": "escalate"
+        }
+      },
+      "in_scope_mvp": true,
+      "name": "Draft_Schedule_Triage",
+      "semantics": {
+        "activation_basis": "Stage04_success",
+        "spawn_budget": {
+          "max_spawn_depth": 2,
+          "per_parent_completion_max_children": 3
+        },
+        "spawn_rules": [
+          {
+            "candidate_roles": [
+              "fleet_coordinator",
+              "schedule_planner"
+            ],
+            "id": "stage05_request_operational_information",
+            "target_stage_id": "Stage05",
+            "task_kind": "information_request",
+            "when": "triage_requires_external_information"
+          },
+          {
+            "candidate_roles": [
+              "schedule_planner"
+            ],
+            "id": "stage05_return_for_rework",
+            "target_stage_id": "Stage05",
+            "task_kind": "work_item",
+            "when": "triage_requires_schedule_revision"
+          }
+        ],
+        "task_spawn_policy": "conditional_follow_on"
+      },
+      "stage_id": "Stage05"
+    },
+    {
+      "approvals": {
+        "action": "publish_schedule",
+        "group": "dispatch_supervisor",
+        "required": true
+      },
+      "artifacts": [
+        {
+          "dataset_key": "schedule.supervisor_review.doc",
+          "kind": "document",
+          "role": "evidence"
+        },
+        {
+          "dataset_key": "schedule.published_schedule.workbook",
+          "kind": "spreadsheet",
+          "role": "official_output"
+        }
+      ],
+      "execution": {
+        "allowed_tool_classes": [
+          "artifact.read",
+          "validation",
+          "approval.request",
+          "projection.render",
+          "artifact.publish_version"
+        ],
+        "decision_refs": [
+          "schedule.stage06.publish_base_schedule"
+        ],
+        "execution_pattern": "approval_gate",
+        "projections": [
+          "schedule.stage06.publish_packet"
+        ],
+        "required_evidence_keys": [
+          "schedule.supervisor_review.doc",
+          "schedule.published_schedule.workbook"
+        ],
+        "side_effect_policy": "commit_requires_business_decision",
+        "stop_rules": {
+          "max_tool_calls": 10,
+          "no_progress_ticks": 2,
+          "on_exhaustion": "wait_for_human"
+        }
+      },
+      "in_scope_mvp": true,
+      "name": "Supervisor_Review_Publish",
+      "semantics": {
+        "activation_basis": null,
+        "spawn_budget": {
+          "max_spawn_depth": 3,
+          "per_parent_completion_max_children": 3
+        },
+        "spawn_rules": [
+          {
+            "candidate_roles": [
+              "schedule_planner"
+            ],
+            "id": "stage06_request_changes_to_draft",
+            "target_stage_id": "Stage05",
+            "task_kind": "work_item",
+            "when": "review_requests_changes"
+          },
+          {
+            "candidate_roles": [
+              "fleet_coordinator",
+              "schedule_planner"
+            ],
+            "id": "stage06_request_missing_information",
+            "target_stage_id": "Stage06",
+            "task_kind": "information_request",
+            "when": "review_requires_more_information"
+          },
+          {
+            "candidate_roles": [
+              "dispatch_supervisor"
+            ],
+            "id": "stage06_final_publish_review",
+            "target_stage_id": "Stage06",
+            "task_kind": "final_review",
+            "when": "draft_is_publish_ready"
+          }
+        ],
+        "task_spawn_policy": "conditional_follow_on"
+      },
+      "stage_id": "Stage06"
+    },
+    {
+      "approvals": {
+        "action": "approve_major_replan",
+        "conditional": true,
+        "group": "operations_manager"
+      },
+      "artifacts": [
+        {
+          "dataset_key": "schedule.exception_board.doc",
+          "kind": "document",
+          "role": "evidence"
+        },
+        {
+          "dataset_key": "schedule.replan_delta.workbook",
+          "kind": "spreadsheet",
+          "role": "official_output"
+        }
+      ],
+      "execution": {
+        "allowed_tool_classes": [
+          "artifact.read",
+          "validation",
+          "flag.raise",
+          "artifact.publish_version",
+          "approval.request",
+          "projection.render"
+        ],
+        "decision_refs": [
+          "schedule.stage07.approve_major_replan"
+        ],
+        "execution_pattern": "bounded_exception_loop",
+        "projections": [
+          "schedule.stage07.replan_packet",
+          "schedule.stage07.live_ops_packet"
+        ],
+        "required_evidence_keys": [
+          "schedule.exception_board.doc",
+          "schedule.replan_delta.workbook"
+        ],
+        "side_effect_policy": "commit_requires_conditional_business_decision",
+        "stop_rules": {
+          "max_tool_calls": 30,
+          "no_progress_ticks": 4,
+          "on_exhaustion": "escalate"
+        }
+      },
+      "in_scope_mvp": true,
+      "name": "Intraday_Exception_Control",
+      "semantics": {
+        "activation_basis": "flag_or_threshold_triggered",
+        "spawn_budget": {
+          "max_spawn_depth": 5,
+          "per_issue_max_children": 4
+        },
+        "spawn_rules": [
+          {
+            "candidate_roles": [
+              "fleet_coordinator",
+              "schedule_planner"
+            ],
+            "id": "stage07_request_issue_information",
+            "target_stage_id": "Stage07",
+            "task_kind": "information_request",
+            "when": "replan_requires_missing_information"
+          },
+          {
+            "candidate_roles": [
+              "operations_manager"
+            ],
+            "id": "stage07_follow_on_exception_triage",
+            "target_stage_id": "Stage07",
+            "task_kind": "exception_triage",
+            "when": "resolution_creates_child_issue"
+          },
+          {
+            "candidate_roles": [
+              "operations_manager"
+            ],
+            "id": "stage07_final_replan_review",
+            "target_stage_id": "Stage07",
+            "task_kind": "final_review",
+            "when": "major_replan_is_ready_for_review"
+          }
+        ],
+        "task_spawn_policy": "issue_scoped"
+      },
+      "stage_id": "Stage07"
+    }
+  ],
+  "temporal_partition": {
+    "backfill_policy": "explicit_operator_request",
+    "catchup_policy": "manual_only",
+    "interval_closure": "[start,end)",
+    "interval_kind": "service_day",
+    "logical_date_source": "service_interval_start",
+    "service_timezone": {
+      "default": "Europe/Berlin",
+      "source_dataset_key": "schedule.config.workbook"
+    },
+    "stage_rerun_policy": "same_workflow_run_new_task_run"
+  },
+  "workflow_id": "schedule_planning.v1",
+  "workflow_name": "Schedule Planning - Same-day delivery daily cycle",
+  "workflow_version": "v1"
+}

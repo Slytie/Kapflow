@@ -169,6 +169,21 @@ Each scenario should:
 - assert parent `task.completed` plus child `task.run.created` / `task.created` evidence when follow-on work is spawned
 - assert retrying the same parent completion does not duplicate child tasks
 
+### Artifact-store and reconstruction implementation targets (TASK-0030 closure)
+The following test files are now explicitly required for the artifact-store implementation tranche:
+- `tests/runtime/test_artifact_store_base_immutability.py`
+- `tests/runtime/test_stage07_ordered_delta_reconstruction.py`
+- `tests/runtime/test_pointer_promotion_idempotency.py`
+- `tests/runtime/test_stage07_drift_visibility.py`
+- `tests/runtime/test_artifact_blob_metadata_mismatch.py`
+- `tests/runtime/test_stage07_superseded_delta_handling.py`
+- `tests/runtime/test_stage07_major_replan_approval_gate.py`
+
+Required helper surfaces these tests should exercise:
+- reconstruction service helper (planned): `src/onetruth/application/services/schedule_reconstruction.py`
+- authoritative promotion-history query helper (planned): `src/onetruth/infrastructure/repositories/artifact_promotions.py` (or equivalent)
+- read-only inspection boundary (planned CLI/API): schedule reconstruction by `workflow_run_id` and optional `as_of` cursor
+
 ## 4) Payroll coverage (secondary reference workflow)
 
 
