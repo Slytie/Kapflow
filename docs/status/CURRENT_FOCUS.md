@@ -10,7 +10,7 @@ Runtime scaffold bootstrap now includes canonical workflow/task/approval/artifac
 - approval/artifact/pointer substrate: `approvals request/respond/show/list`, `artifacts create-version/show/list`, `pointers promote/show/list`
 - Stage07 issue substrate: `flags create/transition/show/list`, `stage07 activate-issue`, `maintenance sweep-leases`, `maintenance reconcile-stage07`
 - thin HTTP/query adapter: `/api/v1/human-tasks`, `/api/v1/approvals`, `/api/v1/flags`, `/api/v1/workflow-runs`, `/api/v1/pointers`, `/api/v1/timeline-events`, `/api/v1/board/schedule-planning`, plus API mutation delegates for claim/complete/respond
-Active coding milestone: TASK-0052 completed execution-session runtime hardening (`execution_sessions` / `tool_executions` / `policy_decisions`) and policy-gated Stage06 sandbox flow; next active backlog item is TASK-0030 design closure work.
+Active coding milestone: TASK-0054 hardened policy-gated execution-session state semantics (`WAITING_POLICY -> RUNNING` on allow) and reconcile dedupe coverage, building on TASK-0053 bounded OpenAI e2e and TASK-0052 execution-runtime substrate; next active backlog item is TASK-0030 design closure work.
 
 ### Recently completed runtime-bootstrap tranche
 - TASK-0028 - Translated the runtime object model into a concrete Stage 4 runtime architecture, repo layout, persistence model, and first implementation slice
@@ -26,6 +26,8 @@ Active coding milestone: TASK-0052 completed execution-session runtime hardening
 - TASK-0050 - Added bounded Stage06 OpenAI Responses API sandbox classification with strict structured outputs, canonical evidence artifact capture, and gated real-network e2e coverage
 - TASK-0051 - Promoted template-pack completed examples into an executable document corpus with canonical artifact ingress, subject attachment linkage, API attachment surfaces, and backend-owned snapshot refresh integration
 - TASK-0052 - Converted the bounded Stage06 OpenAI spike into canonical execution runtime behavior with transactional session/tool/policy lifecycle events, explicit policy allow/deny gating, idempotent retry handling, and stale-session reconcile recovery
+- TASK-0053 - Locked the minimal OpenAI sandbox e2e spike as a bounded, canonical Stage06 path with deterministic mock coverage and opt-in real-network integration gating
+- TASK-0054 - Hardened Stage06 policy-gate runtime semantics with explicit `WAITING_POLICY -> RUNNING` transition evidence and reconcile coverage proving no duplicate completed tool/evidence effects on stale-session recovery
 - Added `docs/planning/RUNTIME_BOOTSTRAP.md` and `docs/planning/FIRST_RUNTIME_SLICE.md`
 - Added `docs/adr/ADR-003-stage4-runtime-architecture.md`
 - Refreshed stale Codex routing: EPIC-040 / EPIC-050 no longer route default runtime work through Payroll, and missing context packs now exist for EPIC-025 / EPIC-030 / EPIC-060

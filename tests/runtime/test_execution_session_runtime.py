@@ -2,6 +2,11 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from onetruth.application.handlers.workflow_task_lifecycle import (
+    complete_tool_execution_command,
+    evaluate_policy_decision_command,
+)
+from onetruth.infrastructure.db.session import open_sqlite_connection
 from onetruth.integrations.openai import (
     OpenAIResponseMetadata,
     OpenAIResponsesError,
@@ -12,6 +17,11 @@ from tests.runtime.helpers.runtime_cli import REPO_ROOT
 from tests.runtime.helpers.scenario_harness import RuntimeScenarioHarness
 
 SCENARIO_PATH = REPO_ROOT / "fixtures/scenarios/schedule_planning/stage06_publish_happy.yaml"
+SAMPLE_STAGE06_DOC = (
+    REPO_ROOT
+    / "fixtures/workflows/schedule_planning/template_pack/Stage06_Supervisor_Review_Publish/"
+    "Stage06_Supervisor_Review_Publish_Document_Example_COMPLETED.docx"
+)
 
 
 class _AllowClassifier:
@@ -121,6 +131,15 @@ def test_execution_session_happy_path_persists_canonical_rows_and_events(
     assert "tool.execution.approved" in event_types
     assert "tool.execution.completed" in event_types
     assert "execution.session.state_changed" in event_types
+    policy_allow_transitions = [
+        event
+        for event in _events_for_run(harness)
+        if event["event_type"] == "execution.session.state_changed"
+        and event["payload"].get("reason") == "policy_allow"
+    ]
+    assert len(policy_allow_transitions) == 1
+    assert policy_allow_transitions[0]["payload"]["from_state"] == "WAITING_POLICY"
+    assert policy_allow_transitions[0]["payload"]["to_state"] == "RUNNING"
 
 
 def test_execution_policy_denial_creates_auditable_truth_without_model_side_effects(
@@ -323,3 +342,122 @@ def test_reconcile_executions_fails_stale_open_sessions_without_duplication(tmp_
     event_types = [event["event_type"] for event in _events_for_run(harness)]
     assert "tool.execution.completed" in event_types
     assert "execution.session.state_changed" in event_types
+
+
+def test_reconcile_partial_session_does_not_duplicate_completed_tool_effects(tmp_path: Path) -> None:
+    harness = RuntimeScenarioHarness.from_yaml(SCENARIO_PATH, tmp_path).prepare()
+    created = harness.run_named_step("create_stage06_review")
+    task_run_id = str(created["result"]["task_run"]["task_run_id"])
+
+    created_session = harness.run_action(
+        action="execution-sessions.create",
+        payload={
+            "workflow_run_id": harness.workflow_run_id,
+            "task_run_id": task_run_id,
+            "execution_spec_id": "test.execution.spec.v1",
+            "owner_mode": "agent",
+            "state": "WAITING_POLICY",
+            "idempotency_key": f"scenario:{harness.scenario_id}:partial:execution-session",
+            "actor_id": "agent:tests",
+            "actor_type": "agent",
+            "principal_actor": {"type": "agent", "id": "agent:tests"},
+        },
+    )
+    execution_session_id = str(created_session["execution_session"]["execution_session_id"])
+
+    requested_tool = harness.run_action(
+        action="tool-executions.request",
+        payload={
+            "execution_session_id": execution_session_id,
+            "tool_class": "model.test.noop",
+            "idempotency_key": f"scenario:{harness.scenario_id}:partial:tool-request",
+            "actor_id": "agent:tests",
+            "actor_type": "agent",
+        },
+    )
+    tool_execution_id = str(requested_tool["tool_execution"]["tool_execution_id"])
+
+    evidence = harness.run_action(
+        action="artifacts.ingest",
+        payload={
+            "workflow_run_id": harness.workflow_run_id,
+            "task_run_id": task_run_id,
+            "artifact_kind": "schedule.stage06.review_ai_evidence.json",
+            "artifact_role": "agent_evidence",
+            "source_path": str(SAMPLE_STAGE06_DOC),
+            "file_name": SAMPLE_STAGE06_DOC.name,
+            "media_type": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+            "storage_root": str(tmp_path / "artifacts"),
+            "idempotency_key": f"scenario:{harness.scenario_id}:partial:evidence",
+            "actor_id": "agent:tests",
+            "actor_type": "agent",
+        },
+    )
+    evidence_artifact_version_id = str(evidence["artifact_version"]["artifact_version_id"])
+
+    connection = open_sqlite_connection(harness.db_url)
+    try:
+        policy_result = evaluate_policy_decision_command(
+            connection,
+            {
+                "tool_execution_id": tool_execution_id,
+                "decision": "allow",
+                "principal_actor": {"type": "agent", "id": "agent:tests"},
+                "idempotency_key": f"scenario:{harness.scenario_id}:partial:policy",
+            },
+        )
+        assert policy_result["execution_session"]["state"] == "RUNNING"
+
+        completed_tool = complete_tool_execution_command(
+            connection,
+            {
+                "tool_execution_id": tool_execution_id,
+                "result": "succeeded",
+                "output_artifact_version_ids": [evidence_artifact_version_id],
+                "idempotency_key": f"scenario:{harness.scenario_id}:partial:tool-complete",
+                "actor_id": "agent:tests",
+                "actor_type": "agent",
+            },
+        )
+        assert completed_tool["state"] == "COMPLETED"
+    finally:
+        connection.close()
+
+    reconcile = harness.run_action(
+        action="maintenance.reconcile-executions",
+        payload={
+            "now": "2026-12-31T23:59:59Z",
+            "stale_seconds": 0,
+        },
+    )
+    assert reconcile["result"]["processed_count"] == 1
+    assert reconcile["result"]["processed"][0]["execution_session_id"] == execution_session_id
+    assert reconcile["result"]["processed"][0]["failed_tool_execution_ids"] == []
+
+    session_rows = harness.query_rows(
+        "SELECT state FROM execution_sessions WHERE execution_session_id = ?",
+        (execution_session_id,),
+    )
+    assert session_rows[0]["state"] == "FAILED"
+
+    tool_rows = harness.query_rows(
+        "SELECT state FROM tool_executions WHERE tool_execution_id = ?",
+        (tool_execution_id,),
+    )
+    assert tool_rows[0]["state"] == "COMPLETED"
+
+    completed_events = [
+        event
+        for event in _events_for_run(harness)
+        if event["event_type"] == "tool.execution.completed"
+        and event["payload"].get("tool_execution_id") == tool_execution_id
+    ]
+    assert len(completed_events) == 1
+
+    evidence_events = [
+        event
+        for event in _events_for_run(harness)
+        if event["event_type"] == "artifact.version.created"
+        and event["payload"].get("artifact_version_id") == evidence_artifact_version_id
+    ]
+    assert len(evidence_events) == 1

@@ -262,6 +262,7 @@ Status:
   - bounded Stage06 OpenAI sandbox routed through explicit execution-session + policy-gated tool lifecycle
   - explicit allow/deny/failure/reconcile paths with authoritative timeline evidence
   - runtime tests for happy path, denial, idempotent retry, failure mapping, and reconcile recovery
+- TASK-0054 hardens the same slice by making Stage06 policy gating explicit in session state (`WAITING_POLICY -> RUNNING`) and adding reconcile coverage that proves stale-session recovery does not duplicate completed tool/evidence effects
 - broader generalized multi-agent orchestration remains intentionally out of scope.
 
 ### Tranche 6 - Projection coherence + generator prototype

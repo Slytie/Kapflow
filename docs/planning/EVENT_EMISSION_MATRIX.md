@@ -293,10 +293,12 @@ Current scope includes TASK-0041 + TASK-0042 substrate commands plus TASK-0043/T
 - Canonical rows mutated:
   - `policy_decisions` insert
   - `tool_executions.state` -> `APPROVED` or `DENIED`
-  - optional `execution_sessions.state` transition (`FAILED`/`WAITING_APPROVAL` on non-allow)
+  - `execution_sessions.state` transition on:
+    - allow: `WAITING_POLICY -> RUNNING`
+    - non-allow: `RUNNING|WAITING_POLICY|... -> FAILED|WAITING_APPROVAL`
 - Events emitted:
   - `tool.execution.approved` or `tool.execution.denied`
-  - optional `execution.session.state_changed`
+  - `execution.session.state_changed` when session state changes under policy handling
 - Transaction rule:
   - policy row + tool/session transitions + event append commit atomically
 - Idempotency behavior:
@@ -346,6 +348,7 @@ Current scope includes TASK-0041 + TASK-0042 substrate commands plus TASK-0043/T
   - replay of the same base key fails closed (`duplicate_execution_request`)
 - Policy behavior:
   - policy decision is explicit and persisted before model/tool execution
+  - Stage06 bounded path now starts session in `WAITING_POLICY` and only transitions to `RUNNING` on explicit allow
   - denied/require-approval paths emit canonical denial evidence and skip model execution
   - allowed path emits completion evidence and proceeds through canonical task completion
 
@@ -385,6 +388,7 @@ Current scope includes TASK-0041 + TASK-0042 substrate commands plus TASK-0043/T
 - Recovery behavior:
   - stale partial sessions are failed with visible evidence
   - repeated reconcile runs do not duplicate terminal effects
+  - already-completed tool/evidence effects are preserved (reconcile only fails open tool states)
 
 ## HTTP adapter delegation (TASK-0044/TASK-0049)
 - `POST /api/v1/human-tasks/{human_task_id}/claim` delegates to `claim_human_task` semantics above.

@@ -54,3 +54,5 @@
 | TASK-0050 | EPIC-070 | DONE | high | Add a narrow OpenAI Responses API sandbox path for Stage06 review classification |
 | TASK-0051 | EPIC-030 | DONE | high | Promote example documents into executable fixture corpus with canonical artifact ingress |
 | TASK-0052 | EPIC-070 | DONE | high | Hardening execution sessions and policy-gated sandbox runtime as canonical truth |
+| TASK-0053 | EPIC-070 | DONE | high | Minimal real OpenAI API sandbox/agent e2e spike |
+| TASK-0054 | EPIC-070 | DONE | high | Execution-session policy-gate state hardening and reconcile dedupe coverage |

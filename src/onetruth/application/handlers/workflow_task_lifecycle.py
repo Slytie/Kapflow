@@ -3083,7 +3083,6 @@ def evaluate_policy_decision_command(
     _begin_transaction(connection)
     try:
         _assert_idempotency_available(connection, tool_event_idempotency)
-        _assert_idempotency_available(connection, session_event_idempotency)
         tool_execution = get_tool_execution(connection, str(payload["tool_execution_id"]))
         if tool_execution is None:
             raise CommandError(
@@ -3107,6 +3106,19 @@ def evaluate_policy_decision_command(
                 message="execution session not found for tool execution",
                 details={"execution_session_id": str(tool_execution["execution_session_id"])},
             )
+        session_state = str(session["state"])
+        if session_state in {"SUCCEEDED", "FAILED", "CANCELED"}:
+            raise CommandError(
+                code="execution_session_closed",
+                message="policy decision cannot be evaluated for a closed execution session",
+                details={
+                    "execution_session_id": str(session["execution_session_id"]),
+                    "state": session_state,
+                },
+            )
+        needs_session_transition_event = decision != "allow" or session_state != "RUNNING"
+        if needs_session_transition_event:
+            _assert_idempotency_available(connection, session_event_idempotency)
         workflow_scope = _workflow_scope(connection, str(session["workflow_run_id"]))
         now = utc_now_iso()
         create_policy_decision(
@@ -3175,10 +3187,48 @@ def evaluate_policy_decision_command(
                     idempotency_key=tool_event_idempotency,
                 ),
             )
+            transitioned_session = session
+            if session_state != "RUNNING":
+                transitioned_session = transition_execution_session_state(
+                    connection,
+                    execution_session_id=str(session["execution_session_id"]),
+                    from_states=["CREATED", "WAITING_POLICY", "PAUSED"],
+                    to_state="RUNNING",
+                    updated_at=now,
+                    closed_at=None,
+                )
+                if transitioned_session is None:
+                    raise CommandError(
+                        code="execution_session_transition_conflict",
+                        message="execution session transition raced during policy allow",
+                        details={"execution_session_id": str(session["execution_session_id"])},
+                    )
+                append_event(
+                    connection,
+                    _event_envelope(
+                        event_type="execution.session.state_changed",
+                        tenant_id=workflow_scope["tenant_id"],
+                        domain_id=workflow_scope["domain_id"],
+                        actor_type=str(principal_actor["type"]),
+                        actor_id=str(principal_actor["id"]),
+                        links=[
+                            {"rel": "subject", "type": "workflow_run", "id": str(session["workflow_run_id"])},
+                            {"rel": "subject", "type": "task_run", "id": str(session["task_run_id"])},
+                            {"rel": "subject", "type": "execution_session", "id": str(session["execution_session_id"])},
+                        ],
+                        payload={
+                            "execution_session_id": str(session["execution_session_id"]),
+                            "from_state": session_state,
+                            "to_state": "RUNNING",
+                            "reason": "policy_allow",
+                        },
+                        idempotency_key=session_event_idempotency,
+                    ),
+                )
             return_payload = {
                 "tool_execution": transitioned_tool,
                 "policy_decision": get_policy_decision(connection, policy_decision_id),
-                "execution_session": session,
+                "execution_session": transitioned_session,
             }
         else:
             denial_reason = (
@@ -3256,7 +3306,7 @@ def evaluate_policy_decision_command(
                     ],
                     payload={
                         "execution_session_id": str(session["execution_session_id"]),
-                        "from_state": str(session["state"]),
+                        "from_state": session_state,
                         "to_state": target_session_state,
                         "reason": f"policy_{decision}",
                     },

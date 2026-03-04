@@ -113,6 +113,7 @@ The repo now includes a narrow real-model integration path for Stage06 review cl
 What it does:
 - reads canonical Stage06 artifact-backed input (example corpus via existing artifact ingress),
 - creates canonical execution runtime rows (`execution_sessions`, `tool_executions`, `policy_decisions`) before model execution,
+- starts bounded Stage06 sessions in `WAITING_POLICY` and transitions to `RUNNING` only after explicit policy allow,
 - evaluates and records explicit policy allow/deny before any OpenAI call,
 - calls OpenAI Responses API with strict structured output schema,
 - persists canonical evidence artifact (`schedule.stage06.review_ai_evidence.json`) with model metadata + input refs,
@@ -139,6 +140,14 @@ Run the gated real e2e test:
 Run the always-on structural coverage (no network):
 - `PYTHONPATH=src pytest -q tests/unit/test_openai_responses_adapter.py tests/runtime/api/test_stage06_openai_review_sandbox_api.py tests/runtime/test_execution_session_runtime.py`
 
+## GitHub Actions Secret Setup (`OPENAI_API_KEY`)
+- Store the key as a repository secret named `OPENAI_API_KEY` in GitHub Settings -> Secrets and variables -> Actions.
+- `agent_api.yml` runs OpenAI tests only on `workflow_dispatch` and nightly `schedule`, and only when `OPENAI_API_KEY` is present.
+- Manual run path: GitHub -> Actions -> `agent_api` -> Run workflow.
+- PRs from forks do not receive repository secrets, so OpenAI integration tests are intentionally gated and skipped in that context.
+- OpenAI key safety guidance: use environment variables/secrets and never commit keys ([OpenAI API key safety](https://help.openai.com/en/articles/5112595-best-practices-for-api-key-safety)).
+- GitHub Actions secrets docs: [Using secrets in GitHub Actions](https://docs.github.com/en/actions/security-for-github-actions/security-guides/using-secrets-in-github-actions) and [Events triggered by pull requests from forks](https://docs.github.com/en/actions/using-workflows/events-that-trigger-workflows#pull_request).
+
 ## Execution-session runtime (canonical vs derived)
 Canonical runtime truth for bounded agentive execution now lives in:
 - `execution_sessions`
@@ -153,7 +162,8 @@ Derived/non-authoritative surfaces:
 
 Retry/recovery posture:
 - duplicate execution idempotency fails closed without duplicating canonical effects,
-- stale partial sessions are reconciled via `maintenance reconcile-executions`.
+- stale partial sessions are reconciled via `maintenance reconcile-executions`,
+- reconcile does not duplicate already-completed `tool.execution.completed` or evidence artifact effects.
 
 ## Frontend quickstart (dev)
 The HITL frontend shell lives under `frontend/` as a contract-first SPA backed by the real `/api/v1` adapter.

@@ -62,7 +62,8 @@ Core fields:
 
 ### ExecutionSession
 Allowed transitions used in this slice:
-- `CREATED -> RUNNING`
+- `CREATED -> WAITING_POLICY`
+- `WAITING_POLICY -> RUNNING` (explicit policy-allow transition)
 - `RUNNING -> SUCCEEDED`
 - `RUNNING -> FAILED`
 - `RUNNING -> WAITING_APPROVAL`
@@ -104,14 +105,15 @@ No execution lifecycle truth is kept only in logs.
 - replaying the same Stage06 idempotency key therefore fails closed (`duplicate_execution_request`) instead of duplicating canonical effects
 
 ## Session activation/completion rules (Stage06 bounded path)
-1. create execution session (`RUNNING`)
+1. create execution session (`WAITING_POLICY`)
 2. request tool execution (`REQUESTED`)
 3. evaluate policy decision (`allow`/`deny`/`require_approval`)
-4. if allowed, execute bounded OpenAI classifier
-5. persist evidence artifact version
-6. complete tool execution (`COMPLETED` or `FAILED`)
-7. complete workflow task through canonical task handler
-8. transition execution session to `SUCCEEDED` (or `FAILED` on any mapped failure)
+4. on `allow`, transition session to `RUNNING`
+5. if allowed, execute bounded OpenAI classifier
+6. persist evidence artifact version
+7. complete tool execution (`COMPLETED` or `FAILED`)
+8. complete workflow task through canonical task handler
+9. transition execution session to `SUCCEEDED` (or `FAILED` on any mapped failure)
 
 ## Failure mapping
 - policy deny/require-approval:
@@ -132,6 +134,7 @@ Current behavior:
 - fail open `tool_executions` (`REQUESTED`/`APPROVED`/`RUNNING`) with timeout error
 - transition session to `FAILED`
 - emit canonical failure events without duplicating already-terminal effects
+- preserve already-completed tool/evidence effects (no duplicate `tool.execution.completed` or `artifact.version.created` on reconcile)
 
 This is bounded and intentionally minimal for TASK-0052.
 

@@ -1,0 +1,81 @@
+# CI Troubleshooting
+
+This note covers common CI issues for the two GitHub Actions workflows:
+- `main` (`.github/workflows/main.yml`)
+- `agent_api` (`.github/workflows/agent_api.yml`)
+
+## Common failures
+
+### Python dependency install failures
+Symptoms:
+- `pip install` fails before tests start.
+- missing module errors during `make`/`pytest` steps.
+
+Checks:
+- confirm `requirements.txt` exists when you expect requirements-based install.
+- if no `requirements.txt`, ensure `pyproject.toml` is present and installable.
+- confirm test/runtime dependencies are installable in a clean environment.
+
+### Make target failures
+Symptoms:
+- one of `make schema-validate`, `make contract`, `make replay`, `make acceptance`, or `make runtime` fails.
+
+Checks:
+- run the same target locally and fix the first failing assertion.
+- for trace/schema failures, start with `python3 scripts/validate_repo.py --schemas-only` or `--traces-only`.
+
+### Frontend job failures
+Symptoms:
+- `npm ci`, `npm run typecheck`, `npm run test:run`, or `npm run build` fails in `frontend`.
+
+Checks:
+- run from repo root:
+  - `cd frontend && npm ci`
+  - `cd frontend && npm run typecheck`
+  - `cd frontend && npm run test:run`
+  - `cd frontend && npm run build`
+- ensure `frontend/package-lock.json` is in sync with `frontend/package.json`.
+
+### OpenAI integration step skipped
+Symptoms:
+- `agent_api` prints that OpenAI integration tests were skipped.
+
+Expected behavior:
+- skip is expected when `OPENAI_API_KEY` secret is not configured.
+- skip is also expected if no `tests/integration_openai` directory exists.
+
+## Local reproduction
+Run the same baseline checks CI runs:
+
+```bash
+make schema-validate
+make contract
+make replay
+make acceptance
+make runtime
+pytest -q
+```
+
+Run OpenAI integration tests locally (only when key is set):
+
+```bash
+ONETRUTH_RUN_OPENAI_E2E=1 OPENAI_API_KEY=... PYTHONPATH=src pytest -q tests/integration_openai
+```
+
+## Manual `agent_api` workflow run
+1. Open GitHub -> Actions -> `agent_api`.
+2. Click **Run workflow**.
+3. Select the target branch and run.
+
+The workflow always runs baseline non-network checks first, then conditionally runs OpenAI integration tests.
+
+## Confirm secret exists (without printing it)
+In GitHub:
+1. Go to Settings -> Secrets and variables -> Actions.
+2. Confirm a secret named `OPENAI_API_KEY` exists.
+3. Do not print or echo secret values in logs.
+
+In workflow logs:
+- look for the gating message:
+  - present: OpenAI integration tests execute.
+  - missing: workflow prints skip message and exits successfully.

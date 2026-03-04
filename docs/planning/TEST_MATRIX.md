@@ -142,9 +142,10 @@ Current runtime tests assert:
 - bounded Stage06 real-model sandbox path coverage (mock/contract path always-on + gated real OpenAI e2e path)
 - canonical execution-runtime lifecycle coverage for bounded agentive work:
   - `execution_sessions` / `tool_executions` / `policy_decisions` row creation and state transitions
-  - explicit policy allow/deny gating before model/tool execution
+  - explicit policy allow/deny gating before model/tool execution (including `WAITING_POLICY -> RUNNING` on allow)
   - retry/idempotency guard for duplicate execution requests
   - stale-session reconcile recovery without duplicate terminal effects
+  - reconcile of partial sessions does not duplicate already-completed tool/evidence effects
 - cross-scope API denial checks and retry-stability checks over repeated GET/mutation retries
 
 Minimum required runtime scenario tests:

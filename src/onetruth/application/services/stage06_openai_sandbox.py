@@ -135,7 +135,7 @@ def run_stage06_openai_review_sandbox(
             "task_run_id": str(human_task["task_run_id"]),
             "execution_spec_id": EXECUTION_SPEC_ID,
             "owner_mode": "agent",
-            "state": "RUNNING",
+            "state": "WAITING_POLICY",
             "principal_actor": {"type": actor_type, "id": actor_id},
             "budget": {"max_tool_calls": 1, "max_wall_time_seconds": 120},
             "idempotency_key": f"{base_idempotency_key}:execution-session",

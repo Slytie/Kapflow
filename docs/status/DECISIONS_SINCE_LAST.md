@@ -2,6 +2,11 @@
 
 Record any decisions made since the last session so a fresh Codex run can rehydrate quickly.
 
+## 2026-03-04 (policy-gate state hardening and reconcile dedupe coverage)
+- Chosen bounded Stage06 session posture: execution sessions now start in `WAITING_POLICY` and transition to `RUNNING` only after an explicit policy allow decision is persisted and emitted as authoritative evidence.
+- Chosen policy-allow evidence rule: `evaluate_policy_decision` now emits `execution.session.state_changed` for allow transitions when session state changes (for example `WAITING_POLICY -> RUNNING`), not only for deny/require-approval branches.
+- Chosen reconcile safety expectation: stale-session reconciliation may fail stale sessions, but it must not duplicate already-completed tool/evidence effects; runtime coverage now explicitly asserts no duplicate `tool.execution.completed` or `artifact.version.created` for completed tool outputs.
+
 ## 2026-03-04 (execution-session runtime and policy-gated sandbox hardening)
 - Added canonical execution-runtime current-state tables: `execution_sessions`, `tool_executions`, and `policy_decisions`; execution truth is now persisted in runtime rows plus authoritative events, not implied by service-only side effects.
 - Chosen Stage06 bounded execution ID strategy: deterministic IDs derived from `(workflow_run_id, task_run_id, base_idempotency_key)` for `execution_session_id`, `tool_execution_id`, and `policy_decision_id` to prevent duplicate canonical effects on replay.

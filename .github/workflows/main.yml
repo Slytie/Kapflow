@@ -1,0 +1,85 @@
+name: main
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install backend dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip install --upgrade pip
+          if [ -f requirements.txt ]; then
+            python -m pip install -r requirements.txt
+          elif [ -f pyproject.toml ]; then
+            python -m pip install -e .
+          else
+            echo "No requirements.txt or pyproject.toml found; skipping project install."
+          fi
+          python -m pip install pytest pyyaml jsonschema requests
+
+      - name: Run make-based verification loop
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -f Makefile ]; then
+            make schema-validate
+            make contract
+            make replay
+            make acceptance
+            make runtime
+          else
+            echo "No Makefile found; skipping make-based checks."
+          fi
+
+      - name: Run pytest
+        run: pytest -q
+
+  frontend:
+    if: ${{ hashFiles('frontend/package.json') != '' }}
+    needs: backend
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install frontend dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Frontend typecheck
+        working-directory: frontend
+        run: npm run typecheck
+
+      - name: Frontend tests
+        working-directory: frontend
+        run: npm run test:run
+
+      - name: Frontend build
+        working-directory: frontend
+        run: npm run build
