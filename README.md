@@ -55,6 +55,8 @@ Everything else - runbooks, dashboards, summaries, generated CompanyOS specs, pr
 4. Run runtime smoke tests:
    - `make runtime`
    - `make runtime-api`
+   - `make frontend-snapshots`
+   - `PYTHONPATH=src python3 scripts/export_frontend_snapshots.py --check`
    - `PYTHONPATH=src pytest -q tests/runtime/scenarios tests/runtime/contracts`
    - `PYTHONPATH=src pytest -q tests/runtime/api`
    - `PYTHONPATH=src pytest -q tests/runtime/scenarios/test_schedule_stage07_*.py`
@@ -73,16 +75,112 @@ Required request headers (current internal/admin auth-context model):
 - `x-onetruth-actor-type`
 - `x-onetruth-actor-roles`
 
+Scope behavior:
+- API reads/mutations are always tenant/domain scoped from headers; cross-scope access fails closed and there is no global fallback.
+
 Current HTTP endpoints:
 - `GET /api/v1/human-tasks`
+- `GET /api/v1/human-tasks/{human_task_id}`
+- `GET /api/v1/human-tasks/{human_task_id}/artifacts`
 - `GET /api/v1/approvals`
+- `GET /api/v1/approvals/{approval_id}`
+- `GET /api/v1/approvals/{approval_id}/artifacts`
+- `GET /api/v1/flags`
+- `GET /api/v1/flags/{flag_id}`
+- `GET /api/v1/flags/{flag_id}/artifacts`
 - `GET /api/v1/workflow-runs`
 - `GET /api/v1/workflow-runs/{workflow_run_id}`
+- `GET /api/v1/workflow-runs/{workflow_run_id}/artifacts`
+- `GET /api/v1/timeline-events`
 - `GET /api/v1/pointers`
 - `GET /api/v1/board/schedule-planning`
+- `GET /api/v1/artifacts`
+- `GET /api/v1/artifacts/{artifact_version_id}`
+- `GET /api/v1/artifacts/{artifact_version_id}/download`
 - `POST /api/v1/human-tasks/{human_task_id}/claim`
 - `POST /api/v1/human-tasks/{human_task_id}/complete`
+- `POST /api/v1/human-tasks/{human_task_id}/artifacts/upload`
+- `POST /api/v1/human-tasks/{human_task_id}/stage06-agent-review` (bounded OpenAI sandbox path)
 - `POST /api/v1/approvals/{approval_id}/respond`
+- `POST /api/v1/approvals/{approval_id}/artifacts/upload`
+- `POST /api/v1/flags/{flag_id}/transition`
+- `POST /api/v1/flags/{flag_id}/artifacts/upload`
+- `POST /api/v1/workflow-runs/{workflow_run_id}/artifacts/upload`
+
+## OpenAI sandbox spike (Stage06, bounded)
+The repo now includes a narrow real-model integration path for Stage06 review classification.
+
+What it does:
+- reads canonical Stage06 artifact-backed input (example corpus via existing artifact ingress),
+- creates canonical execution runtime rows (`execution_sessions`, `tool_executions`, `policy_decisions`) before model execution,
+- evaluates and records explicit policy allow/deny before any OpenAI call,
+- calls OpenAI Responses API with strict structured output schema,
+- persists canonical evidence artifact (`schedule.stage06.review_ai_evidence.json`) with model metadata + input refs,
+- completes the human task through existing canonical completion/spawn handlers (no second truth path).
+
+What it does not do:
+- no generalized autonomous loop/orchestration framework,
+- no open-ended tool/web/MCP usage,
+- no non-canonical side-channel state.
+
+Environment variables for real runs:
+- `OPENAI_API_KEY` (required)
+- `ONETRUTH_OPENAI_MODEL` (optional, default `gpt-4.1-mini`)
+- `ONETRUTH_OPENAI_BASE_URL` (optional, default `https://api.openai.com/v1`)
+- `ONETRUTH_OPENAI_TIMEOUT_SECONDS` (optional, default `30`)
+- `ONETRUTH_OPENAI_MAX_RETRIES` (optional, default `2`)
+- `ONETRUTH_OPENAI_MAX_INPUT_CHARS` (optional, default `12000`)
+- `ONETRUTH_STAGE06_POLICY_DECISION` (optional policy override for bounded sandbox tests: `allow|deny|require_approval`)
+- `ONETRUTH_ARTIFACT_ROOT` (optional local path for persisted evidence blobs before canonical artifact registration)
+
+Run the gated real e2e test:
+- `ONETRUTH_RUN_OPENAI_E2E=1 OPENAI_API_KEY=<key> PYTHONPATH=src pytest -q tests/integration_openai`
+
+Run the always-on structural coverage (no network):
+- `PYTHONPATH=src pytest -q tests/unit/test_openai_responses_adapter.py tests/runtime/api/test_stage06_openai_review_sandbox_api.py tests/runtime/test_execution_session_runtime.py`
+
+## Execution-session runtime (canonical vs derived)
+Canonical runtime truth for bounded agentive execution now lives in:
+- `execution_sessions`
+- `tool_executions`
+- `policy_decisions`
+- authoritative timeline events (`execution.session.*`, `tool.execution.*`)
+- immutable evidence artifacts (`artifact_versions`)
+
+Derived/non-authoritative surfaces:
+- API/UI summaries, board lanes, and snapshots
+- logs and transient process memory
+
+Retry/recovery posture:
+- duplicate execution idempotency fails closed without duplicating canonical effects,
+- stale partial sessions are reconciled via `maintenance reconcile-executions`.
+
+## Frontend quickstart (dev)
+The HITL frontend shell lives under `frontend/` as a contract-first SPA backed by the real `/api/v1` adapter.
+
+1. Install frontend dependencies:
+   - `cd frontend`
+   - `npm install`
+2. Configure API endpoint + request-context headers (via Vite env vars):
+   - `VITE_ONETRUTH_API_BASE_URL` (default `/api/v1`)
+   - `VITE_ONETRUTH_TENANT_ID` (default `tenant-a`)
+   - `VITE_ONETRUTH_DOMAIN_ID` (default `domain-x`)
+   - `VITE_ONETRUTH_ACTOR_ID` (default `human:frontend-operator`)
+   - `VITE_ONETRUTH_ACTOR_TYPE` (default `human`)
+   - `VITE_ONETRUTH_ACTOR_ROLES` (default `dispatch_supervisor`)
+   - `VITE_ONETRUTH_POLL_INTERVAL_MS` (default `15000`)
+3. Run local frontend dev server:
+   - `npm run dev`
+4. Run frontend verification:
+   - `npm run typecheck`
+   - `npm run test:run`
+   - `npm run build`
+
+Frontend implementation status:
+- Real/API-backed now: repositories call canonical HTTP contracts via `frontend/src/lib/api/httpClient.ts` and `frontend/src/lib/api/onetruthApi.ts`.
+- Implemented: app shell, route/page structure, low-click card/row/detail components, inline claim/complete/respond actions, inline attachment upload/download actions, URL-synced filters, polling-aware loading/error/empty/freshness states.
+- Test strategy: component + route tests plus contract-aligned API integration tests using a controlled `/api/v1` MSW test layer.
+- Still future: broader UI polish and richer attachment preview affordances.
 
 ## Runtime scaffold
 Runtime scaffold now exists at `src/onetruth/` with migrations under `alembic/` and runtime smoke tests under `tests/runtime/`.
@@ -92,11 +190,18 @@ First real Schedule Planning business slice now implemented:
 - first Stage06 publish-path scenarios execute step-by-step through the CLI boundary
 - board/query read-surface contracts now have implementation-backed tests
 - Stage07 issue-scoped replan loop now exists with canonical `flags`, deduped issue activation, major-replan approval gating, delta promotion, drift evidence, and lease-expiry recovery/reconcile commands
+- backend-owned frontend contract snapshots are exported from real scenario states under `fixtures/frontend_contracts/` for parallel frontend development
 
 Stage06 scenario entrypoints:
 - fixtures: `fixtures/scenarios/schedule_planning/`
 - scenario tests: `tests/runtime/scenarios/`
 - query-contract tests: `tests/runtime/contracts/test_hitl_query_contracts_stage06.py`
+
+Example document corpus:
+- corpus manifest: `fixtures/example_document_corpus/manifest.yaml`
+- corpus note: `docs/planning/EXAMPLE_DOCUMENT_CORPUS_AND_ARTIFACT_INGRESS.md`
+- seed via CLI: `python3 -m onetruth.cli --db-url <SQLALCHEMY_DB_URL> artifacts seed-corpus --json '<payload-json>'`
+- refresh backend-owned frontend snapshots: `make frontend-snapshots`
 
 Current stable runtime command boundary:
 - `python3 -m onetruth.cli --db-url <SQLALCHEMY_DB_URL> init-db`
@@ -114,8 +219,12 @@ Current stable runtime command boundary:
 - `python3 -m onetruth.cli --db-url <SQLALCHEMY_DB_URL> approvals show --approval-id <id> --json`
 - `python3 -m onetruth.cli --db-url <SQLALCHEMY_DB_URL> approvals list --workflow-run-id <id> --json`
 - `python3 -m onetruth.cli --db-url <SQLALCHEMY_DB_URL> artifacts create-version --json '<payload-json>'`
+- `python3 -m onetruth.cli --db-url <SQLALCHEMY_DB_URL> artifacts ingest --json '<payload-json>'`
 - `python3 -m onetruth.cli --db-url <SQLALCHEMY_DB_URL> artifacts show --artifact-version-id <id> --json`
 - `python3 -m onetruth.cli --db-url <SQLALCHEMY_DB_URL> artifacts list --workflow-run-id <id> --json`
+- `python3 -m onetruth.cli --db-url <SQLALCHEMY_DB_URL> artifacts list-linked --workflow-run-id <id> --subject-kind <kind> --subject-id <id> --json`
+- `python3 -m onetruth.cli --db-url <SQLALCHEMY_DB_URL> artifacts download --artifact-version-id <id> --output-path <path> --json`
+- `python3 -m onetruth.cli --db-url <SQLALCHEMY_DB_URL> artifacts seed-corpus --json '<payload-json>'`
 - `python3 -m onetruth.cli --db-url <SQLALCHEMY_DB_URL> pointers promote --json '<payload-json>'`
 - `python3 -m onetruth.cli --db-url <SQLALCHEMY_DB_URL> pointers show --pointer-key <key> --workflow-run-id <id> --json`
 - `python3 -m onetruth.cli --db-url <SQLALCHEMY_DB_URL> pointers list --workflow-run-id <id> --json`
@@ -123,18 +232,25 @@ Current stable runtime command boundary:
 - `python3 -m onetruth.cli --db-url <SQLALCHEMY_DB_URL> flags show --flag-id <id> --json`
 - `python3 -m onetruth.cli --db-url <SQLALCHEMY_DB_URL> flags list --workflow-run-id <id> --json`
 - `python3 -m onetruth.cli --db-url <SQLALCHEMY_DB_URL> stage07 activate-issue --json '<payload-json>'`
+- `python3 -m onetruth.cli --db-url <SQLALCHEMY_DB_URL> execution-sessions create --json '<payload-json>'`
+- `python3 -m onetruth.cli --db-url <SQLALCHEMY_DB_URL> execution-sessions show --execution-session-id <id> --json`
+- `python3 -m onetruth.cli --db-url <SQLALCHEMY_DB_URL> execution-sessions list --workflow-run-id <id> --json`
+- `python3 -m onetruth.cli --db-url <SQLALCHEMY_DB_URL> tool-executions show --tool-execution-id <id> --json`
+- `python3 -m onetruth.cli --db-url <SQLALCHEMY_DB_URL> policy-decisions show --policy-decision-id <id> --json`
 - `python3 -m onetruth.cli --db-url <SQLALCHEMY_DB_URL> maintenance sweep-leases --json '<payload-json>'`
 - `python3 -m onetruth.cli --db-url <SQLALCHEMY_DB_URL> maintenance reconcile-stage07 --json '<payload-json>'`
+- `python3 -m onetruth.cli --db-url <SQLALCHEMY_DB_URL> maintenance reconcile-executions --json '<payload-json>'`
 
 Query/read contract reference for future HITL board/UI work:
 - `docs/planning/HITL_QUERY_CONTRACTS.md`
 - `docs/planning/HITL_HTTP_API_CONTRACTS.md`
 - `docs/planning/HITL_BOARD_ARCHITECTURE.md`
+- `fixtures/frontend_contracts/README.md`
 
 Runtime idempotency behavior in this scaffold:
 - duplicate `idempotency_key` at `events append` fails explicitly with JSON error `duplicate_idempotency_key`
 - duplicate command idempotency keys for `runs create`, `tasks create`, `tasks claim`, and `tasks complete` fail explicitly (`duplicate_idempotency_key`)
-- non-empty command idempotency keys are required for `approvals request`, `approvals respond`, `artifacts create-version`, and `pointers promote`; duplicates fail explicitly (`duplicate_idempotency_key`)
+- non-empty command idempotency keys are required for `approvals request`, `approvals respond`, `artifacts create-version`, `artifacts ingest`, `artifacts seed-corpus`, and `pointers promote`; duplicates fail explicitly (`duplicate_idempotency_key`)
 - no silent dedupe path is used in this PR
 
 Canonical workflow/task/approval/artifact/pointer substrate now implemented:

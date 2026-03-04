@@ -1,0 +1,170 @@
+{
+  "board": {
+    "board": {
+      "board_id": "schedule-planning",
+      "cards": [
+        {
+          "assigned_group": null,
+          "card_id": "flag:<flag_id:1>",
+          "card_type": "flag",
+          "closed_at": null,
+          "created_at": "<ts:1>",
+          "flag_id": "<flag_id:1>",
+          "kind": "delay_cluster",
+          "lane": "flags.open",
+          "linked_open_task_count": 1,
+          "linked_task_count": 2,
+          "severity": "high",
+          "state": "open",
+          "summary": "Delay cluster detected in east zone",
+          "title": "Delay cluster detected in east zone",
+          "workflow_id": "schedule_planning.v1",
+          "workflow_run_id": "<workflow_run_id:2>"
+        },
+        {
+          "assignee_actor_id": null,
+          "assignee_actor_type": null,
+          "blocked_on_kind": null,
+          "blocked_on_ref": null,
+          "card_id": "human_task:<human_task_id:3>",
+          "card_type": "human_task",
+          "claimed_at": null,
+          "claimed_until": null,
+          "due_at": null,
+          "human_task_id": "<human_task_id:3>",
+          "lane": "human_tasks.open",
+          "linked_approval_count": 0,
+          "linked_approval_states": [],
+          "owner_role": "operations_manager",
+          "spawned_from_flag_id": "<spawned_from_flag_id:4>",
+          "stage_id": "Stage07",
+          "state": "OPEN",
+          "task_kind": "exception_triage",
+          "task_run_id": "<task_run_id:5>",
+          "title": "Stage07 exception_triage",
+          "workflow_id": "schedule_planning.v1",
+          "workflow_run_id": "<workflow_run_id:2>"
+        },
+        {
+          "assignee_actor_id": "human:ops-manager-3",
+          "assignee_actor_type": "human",
+          "blocked_on_kind": null,
+          "blocked_on_ref": null,
+          "card_id": "human_task:<human_task_id:6>",
+          "card_type": "human_task",
+          "claimed_at": "<ts:2>",
+          "claimed_until": null,
+          "due_at": null,
+          "human_task_id": "<human_task_id:6>",
+          "lane": "human_tasks.completed",
+          "linked_approval_count": 0,
+          "linked_approval_states": [],
+          "owner_role": "operations_manager",
+          "spawned_from_flag_id": "<spawned_from_flag_id:4>",
+          "stage_id": "Stage07",
+          "state": "COMPLETED",
+          "task_kind": "exception_triage",
+          "task_run_id": "<task_run_id:7>",
+          "title": "Stage07 exception_triage",
+          "workflow_id": "schedule_planning.v1",
+          "workflow_run_id": "<workflow_run_id:2>"
+        }
+      ],
+      "filters": {
+        "approval_state": null,
+        "flag_state": null,
+        "stage_id": null,
+        "task_kind": null,
+        "task_state": null,
+        "workflow_id": "schedule_planning.v1",
+        "workflow_run_id": "<workflow_run_id:2>"
+      },
+      "lanes": [
+        {
+          "card_count": 1,
+          "label": "Open Exceptions",
+          "lane": "flags.open",
+          "position": 5
+        },
+        {
+          "card_count": 1,
+          "label": "Open Tasks",
+          "lane": "human_tasks.open",
+          "position": 10
+        },
+        {
+          "card_count": 0,
+          "label": "Claimed Tasks",
+          "lane": "human_tasks.claimed",
+          "position": 20
+        },
+        {
+          "card_count": 0,
+          "label": "Pending Approvals",
+          "lane": "approvals.pending",
+          "position": 30
+        },
+        {
+          "card_count": 0,
+          "label": "Responded Approvals",
+          "lane": "approvals.responded",
+          "position": 40
+        },
+        {
+          "card_count": 1,
+          "label": "Completed Tasks",
+          "lane": "human_tasks.completed",
+          "position": 50
+        },
+        {
+          "card_count": 0,
+          "label": "Resolved Exceptions",
+          "lane": "flags.resolved",
+          "position": 60
+        },
+        {
+          "card_count": 0,
+          "label": "Closed Exceptions",
+          "lane": "flags.closed",
+          "position": 70
+        }
+      ],
+      "page": {
+        "limit": 100,
+        "offset": 0
+      },
+      "pointers": [],
+      "summary": {
+        "approval_count": 0,
+        "card_count": 3,
+        "flag_count": 1,
+        "human_task_count": 2,
+        "pointer_count": 0,
+        "workflow_run_count": 1
+      },
+      "workflow_runs": [
+        {
+          "activation_key": "stage07_child_issue_branch:workflow-run",
+          "active_issue_count": 1,
+          "created_at": "<ts:3>",
+          "domain_id": "domain-x",
+          "logical_date": "2026-03-11",
+          "partition_key": "SD-2026-03-11",
+          "state": "OPEN",
+          "tenant_id": "tenant-a",
+          "updated_at": "<ts:4>",
+          "workflow_id": "schedule_planning.v1",
+          "workflow_run_id": "<workflow_run_id:2>",
+          "workflow_version": "v1"
+        }
+      ]
+    },
+    "command": "api.board.schedule_planning",
+    "status": "ok"
+  },
+  "snapshot_id": "stage07_exception_branch_state",
+  "source": {
+    "capture": "after_full_scenario",
+    "scenario_id": "stage07_child_issue_branch"
+  }
+}

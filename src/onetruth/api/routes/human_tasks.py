@@ -8,7 +8,12 @@ from onetruth.application.handlers.workflow_task_lifecycle import (
     CommandError,
     claim_human_task_command,
     complete_human_task_command,
+    show_human_task_command,
 )
+from onetruth.application.services.stage06_openai_sandbox import (
+    run_stage06_openai_review_sandbox,
+)
+from onetruth.integrations.openai import OpenAIConfigError, OpenAIResponsesError
 from onetruth.infrastructure.events.event_store import DuplicateIdempotencyKeyError
 from onetruth.infrastructure.repositories.human_tasks import get_human_task
 
@@ -42,6 +47,23 @@ def list_human_tasks_endpoint(
         "command": "api.human_tasks.list",
         "human_tasks": rows,
         "page": {"limit": page.limit, "offset": page.offset},
+    }
+
+
+def get_human_task_endpoint(
+    connection: sqlite3.Connection,
+    *,
+    context: RequestContext,
+    human_task_id: str,
+) -> dict[str, Any]:
+    _ensure_human_task_in_scope(connection, context=context, human_task_id=human_task_id)
+    try:
+        human_task = show_human_task_command(connection, human_task_id)
+    except CommandError as exc:
+        raise api_error_from_command(exc) from exc
+    return {
+        "command": "api.human_tasks.detail",
+        "human_task": human_task,
     }
 
 
@@ -102,6 +124,53 @@ def complete_human_task_endpoint(
 
     return {
         "command": "api.human_tasks.complete",
+        "human_task_id": human_task_id,
+        "result": result,
+    }
+
+
+def run_stage06_agent_review_endpoint(
+    connection: sqlite3.Connection,
+    *,
+    context: RequestContext,
+    human_task_id: str,
+    payload: dict[str, Any],
+) -> dict[str, Any]:
+    _ensure_human_task_in_scope(connection, context=context, human_task_id=human_task_id)
+    _assert_payload_human_task_id(payload, human_task_id)
+
+    command_payload = {
+        "human_task_id": human_task_id,
+        "actor_id": context.actor_id,
+        "actor_type": context.actor_type,
+        "actor_roles": context.actor_roles,
+        "idempotency_key": payload.get("idempotency_key"),
+        "policy_decision": payload.get("policy_decision"),
+    }
+    try:
+        result = run_stage06_openai_review_sandbox(connection, command_payload)
+    except CommandError as exc:
+        raise api_error_from_command(exc) from exc
+    except DuplicateIdempotencyKeyError as exc:
+        raise api_error_from_duplicate_idempotency(exc) from exc
+    except OpenAIConfigError as exc:
+        raise ApiError(
+            status_code=503,
+            code=exc.code,
+            message=str(exc),
+            details={},
+        ) from exc
+    except OpenAIResponsesError as exc:
+        status_code = 503 if exc.retryable else 502
+        raise ApiError(
+            status_code=status_code,
+            code=exc.code,
+            message=str(exc),
+            details=exc.details,
+        ) from exc
+
+    return {
+        "command": "api.human_tasks.stage06_agent_review",
         "human_task_id": human_task_id,
         "result": result,
     }

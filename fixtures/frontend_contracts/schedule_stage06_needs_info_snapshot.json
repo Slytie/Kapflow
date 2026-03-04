@@ -1,0 +1,828 @@
+{
+  "contracts": {
+    "approvals": {
+      "approvals": [],
+      "command": "api.approvals.list",
+      "page": {
+        "limit": 100,
+        "offset": 0
+      },
+      "status": "ok"
+    },
+    "artifact_versions": {
+      "artifact_versions": [
+        {
+          "artifact_kind": "schedule.draft_schedule.workbook",
+          "artifact_role": "official_input",
+          "artifact_version_id": "av-46a6f233-2c72-4ec7-8344-f600373da3fa",
+          "byte_size": 14176,
+          "content_digest": "sha256:7769bd168275a1a2cb2689833623a45574096a4d0b88ce2b730455114297946d",
+          "created_at": "2026-03-03T23:10:26.479406Z",
+          "lineage_note": null,
+          "media_type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+          "metadata_json": {
+            "scenario_id": "stage06_review_requires_more_information",
+            "seed_source_path": "Stage05_Draft_Schedule_Triage/Stage05_Draft_Schedule_Triage_Spreadsheet_Example_COMPLETED.xlsx"
+          },
+          "parent_artifact_version_id": null,
+          "storage_uri": "file:///var/folders/fv/j73294gj40xftydr1nbxjw480000gn/T/tmpyhnu3xnw/artifacts/seed/0/Stage05_Draft_Schedule_Triage/Stage05_Draft_Schedule_Triage_Spreadsheet_Example_COMPLETED.xlsx",
+          "supersedes_artifact_version_id": null,
+          "task_run_id": null,
+          "workflow_run_id": "wr-d4817761-181a-40ee-964b-07296d5e9b74"
+        },
+        {
+          "artifact_kind": "schedule.supervisor_review.doc",
+          "artifact_role": "evidence",
+          "artifact_version_id": "av-61912acd-29f7-4025-9898-0f27ce311554",
+          "byte_size": 37191,
+          "content_digest": "sha256:8f9e60666a9939f72cee9bfc794a013c0c941d939f32bd90ab9297a176240e85",
+          "created_at": "2026-03-03T23:10:26.539374Z",
+          "lineage_note": null,
+          "media_type": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+          "metadata_json": {
+            "scenario_id": "stage06_review_requires_more_information",
+            "seed_source_path": "Stage06_Supervisor_Review_Publish/Stage06_Supervisor_Review_Publish_Document_Example_COMPLETED.docx"
+          },
+          "parent_artifact_version_id": null,
+          "storage_uri": "file:///var/folders/fv/j73294gj40xftydr1nbxjw480000gn/T/tmpyhnu3xnw/artifacts/seed/1/Stage06_Supervisor_Review_Publish/Stage06_Supervisor_Review_Publish_Document_Example_COMPLETED.docx",
+          "supersedes_artifact_version_id": null,
+          "task_run_id": null,
+          "workflow_run_id": "wr-d4817761-181a-40ee-964b-07296d5e9b74"
+        }
+      ],
+      "command": "derived.artifact_versions.from_run_detail",
+      "status": "ok"
+    },
+    "board": {
+      "board": {
+        "board_id": "schedule-planning",
+        "cards": [
+          {
+            "assignee_actor_id": null,
+            "assignee_actor_type": null,
+            "blocked_on_kind": null,
+            "blocked_on_ref": null,
+            "card_id": "human_task:ht-9981bd44-6ddf-4876-9c22-3c2b96a94af7",
+            "card_type": "human_task",
+            "claimed_at": null,
+            "claimed_until": null,
+            "due_at": null,
+            "human_task_id": "ht-9981bd44-6ddf-4876-9c22-3c2b96a94af7",
+            "lane": "human_tasks.open",
+            "linked_approval_count": 0,
+            "linked_approval_states": [],
+            "owner_role": "dispatch_supervisor",
+            "spawned_from_flag_id": null,
+            "stage_id": "Stage06",
+            "state": "OPEN",
+            "task_kind": "information_request",
+            "task_run_id": "tr-119324f3-3459-4d8c-a3bc-87bd58863759",
+            "title": "Stage06 information_request",
+            "workflow_id": "schedule_planning.v1",
+            "workflow_run_id": "wr-d4817761-181a-40ee-964b-07296d5e9b74"
+          },
+          {
+            "assignee_actor_id": "human:dispatch-supervisor-2",
+            "assignee_actor_type": "human",
+            "blocked_on_kind": null,
+            "blocked_on_ref": null,
+            "card_id": "human_task:ht-aa6c3322-dfd4-4319-acdc-6a258708f080",
+            "card_type": "human_task",
+            "claimed_at": "2026-03-03T23:10:26.678052Z",
+            "claimed_until": null,
+            "due_at": null,
+            "human_task_id": "ht-aa6c3322-dfd4-4319-acdc-6a258708f080",
+            "lane": "human_tasks.completed",
+            "linked_approval_count": 0,
+            "linked_approval_states": [],
+            "owner_role": "dispatch_supervisor",
+            "spawned_from_flag_id": null,
+            "stage_id": "Stage06",
+            "state": "COMPLETED",
+            "task_kind": "review_packet",
+            "task_run_id": "tr-b7d8db38-93c8-4832-b760-b442f9aaa467",
+            "title": "Stage06 review_packet",
+            "workflow_id": "schedule_planning.v1",
+            "workflow_run_id": "wr-d4817761-181a-40ee-964b-07296d5e9b74"
+          }
+        ],
+        "filters": {
+          "approval_state": null,
+          "stage_id": null,
+          "task_kind": null,
+          "task_state": null,
+          "workflow_id": "schedule_planning.v1",
+          "workflow_run_id": "wr-d4817761-181a-40ee-964b-07296d5e9b74"
+        },
+        "lanes": [
+          {
+            "card_count": 1,
+            "label": "Open Tasks",
+            "lane": "human_tasks.open",
+            "position": 10
+          },
+          {
+            "card_count": 0,
+            "label": "Claimed Tasks",
+            "lane": "human_tasks.claimed",
+            "position": 20
+          },
+          {
+            "card_count": 0,
+            "label": "Pending Approvals",
+            "lane": "approvals.pending",
+            "position": 30
+          },
+          {
+            "card_count": 0,
+            "label": "Responded Approvals",
+            "lane": "approvals.responded",
+            "position": 40
+          },
+          {
+            "card_count": 1,
+            "label": "Completed Tasks",
+            "lane": "human_tasks.completed",
+            "position": 50
+          }
+        ],
+        "page": {
+          "limit": 100,
+          "offset": 0
+        },
+        "pointers": [],
+        "summary": {
+          "approval_count": 0,
+          "card_count": 2,
+          "human_task_count": 2,
+          "pointer_count": 0,
+          "workflow_run_count": 1
+        },
+        "workflow_runs": [
+          {
+            "activation_key": "stage06_review_requires_more_information:workflow-run",
+            "active_issue_count": 0,
+            "created_at": "2026-03-03T23:10:26.411976Z",
+            "domain_id": "domain-x",
+            "logical_date": "2026-03-07",
+            "partition_key": "SD-2026-03-07",
+            "state": "OPEN",
+            "tenant_id": "tenant-a",
+            "updated_at": "2026-03-03T23:10:26.411976Z",
+            "workflow_id": "schedule_planning.v1",
+            "workflow_run_id": "wr-d4817761-181a-40ee-964b-07296d5e9b74",
+            "workflow_version": "v1"
+          }
+        ]
+      },
+      "command": "api.board.schedule_planning",
+      "status": "ok"
+    },
+    "flags": {
+      "command": "derived.flags.from_run_detail",
+      "flags": [],
+      "status": "ok"
+    },
+    "human_tasks": {
+      "command": "api.human_tasks.list",
+      "human_tasks": [
+        {
+          "assignee_actor_id": null,
+          "assignee_actor_type": null,
+          "blocked_on_kind": null,
+          "blocked_on_ref": null,
+          "candidate_roles": [
+            "fleet_coordinator",
+            "schedule_planner"
+          ],
+          "claimed_at": null,
+          "claimed_until": null,
+          "created_at": "2026-03-03T23:10:26.737133Z",
+          "due_at": null,
+          "escalation_at": null,
+          "generation": 0,
+          "human_task_id": "ht-9981bd44-6ddf-4876-9c22-3c2b96a94af7",
+          "lease_version": 0,
+          "linked_approval_id": null,
+          "owner_role": "dispatch_supervisor",
+          "reopen_count": 0,
+          "spawned_from_flag_id": null,
+          "stage_id": "Stage06",
+          "state": "OPEN",
+          "task_kind": "information_request",
+          "task_run_id": "tr-119324f3-3459-4d8c-a3bc-87bd58863759",
+          "task_run_state": "READY",
+          "updated_at": "2026-03-03T23:10:26.737133Z",
+          "workflow_run_id": "wr-d4817761-181a-40ee-964b-07296d5e9b74"
+        },
+        {
+          "assignee_actor_id": "human:dispatch-supervisor-2",
+          "assignee_actor_type": "human",
+          "blocked_on_kind": null,
+          "blocked_on_ref": null,
+          "candidate_roles": [
+            "dispatch_supervisor"
+          ],
+          "claimed_at": "2026-03-03T23:10:26.678052Z",
+          "claimed_until": null,
+          "created_at": "2026-03-03T23:10:26.614782Z",
+          "due_at": null,
+          "escalation_at": null,
+          "generation": 0,
+          "human_task_id": "ht-aa6c3322-dfd4-4319-acdc-6a258708f080",
+          "lease_version": 1,
+          "linked_approval_id": null,
+          "owner_role": "dispatch_supervisor",
+          "reopen_count": 0,
+          "spawned_from_flag_id": null,
+          "stage_id": "Stage06",
+          "state": "COMPLETED",
+          "task_kind": "review_packet",
+          "task_run_id": "tr-b7d8db38-93c8-4832-b760-b442f9aaa467",
+          "task_run_state": "COMPLETED",
+          "updated_at": "2026-03-03T23:10:26.737133Z",
+          "workflow_run_id": "wr-d4817761-181a-40ee-964b-07296d5e9b74"
+        }
+      ],
+      "page": {
+        "limit": 100,
+        "offset": 0
+      },
+      "status": "ok"
+    },
+    "pointers": {
+      "command": "api.pointers.list",
+      "page": {
+        "limit": 100,
+        "offset": 0
+      },
+      "pointers": [],
+      "status": "ok"
+    },
+    "timeline_events": {
+      "command": "events.list",
+      "events": [
+        {
+          "actor": {
+            "id": "system:runtime",
+            "type": "system"
+          },
+          "domain_id": "domain-x",
+          "event_id": "workflow-run-created-02702f78-d34c-4c0e-b7ba-0c09ab46c1c4",
+          "event_type": "workflow.run.created",
+          "idempotency_key": "scenario:stage06_review_requires_more_information:runs.create:runs.create.workflow.run.created",
+          "links": [
+            {
+              "id": "wr-d4817761-181a-40ee-964b-07296d5e9b74",
+              "rel": "subject",
+              "type": "workflow_run"
+            },
+            {
+              "id": "schedule_planning.v1@v1",
+              "rel": "uses_definition",
+              "type": "workflow_contract_version"
+            },
+            {
+              "id": "schedule_planning.v1@v1",
+              "rel": "uses_decisions",
+              "type": "decision_catalog_version"
+            },
+            {
+              "id": "schedule_planning.v1@v1",
+              "rel": "uses_profile",
+              "type": "execution_profile_version"
+            }
+          ],
+          "occurred_at": "2026-03-03T23:10:26.414748Z",
+          "payload": {
+            "activation_key": "stage06_review_requires_more_information:workflow-run",
+            "logical_date": "2026-03-07",
+            "partition_key": "SD-2026-03-07",
+            "workflow_id": "schedule_planning.v1"
+          },
+          "recorded_at": "2026-03-03T23:10:26.414748Z",
+          "schema_version": "1.0",
+          "sequence_no": 1,
+          "tenant_id": "tenant-a"
+        },
+        {
+          "actor": {
+            "id": "system:runtime",
+            "type": "system"
+          },
+          "domain_id": "domain-x",
+          "event_id": "artifact-version-created-6d1e7752-6f63-4d7a-8c4f-cbb3bdb6536a",
+          "event_type": "artifact.version.created",
+          "idempotency_key": "scenario:stage06_review_requires_more_information:seed:0:artifact:schedule.draft_schedule.workbook:artifacts.create-version.artifact.version.created",
+          "links": [
+            {
+              "id": "av-46a6f233-2c72-4ec7-8344-f600373da3fa",
+              "rel": "subject",
+              "type": "artifact_version"
+            },
+            {
+              "id": "wr-d4817761-181a-40ee-964b-07296d5e9b74",
+              "rel": "subject",
+              "type": "workflow_run"
+            }
+          ],
+          "occurred_at": "2026-03-03T23:10:26.479653Z",
+          "payload": {
+            "artifact_version_id": "av-46a6f233-2c72-4ec7-8344-f600373da3fa",
+            "dataset_key": "schedule.draft_schedule.workbook"
+          },
+          "recorded_at": "2026-03-03T23:10:26.479653Z",
+          "schema_version": "1.0",
+          "sequence_no": 2,
+          "tenant_id": "tenant-a"
+        },
+        {
+          "actor": {
+            "id": "system:runtime",
+            "type": "system"
+          },
+          "domain_id": "domain-x",
+          "event_id": "artifact-version-created-de04a8ee-d8b6-465b-9691-7de6b9c6b6ae",
+          "event_type": "artifact.version.created",
+          "idempotency_key": "scenario:stage06_review_requires_more_information:seed:1:artifact:schedule.supervisor_review.doc:artifacts.create-version.artifact.version.created",
+          "links": [
+            {
+              "id": "av-61912acd-29f7-4025-9898-0f27ce311554",
+              "rel": "subject",
+              "type": "artifact_version"
+            },
+            {
+              "id": "wr-d4817761-181a-40ee-964b-07296d5e9b74",
+              "rel": "subject",
+              "type": "workflow_run"
+            }
+          ],
+          "occurred_at": "2026-03-03T23:10:26.539640Z",
+          "payload": {
+            "artifact_version_id": "av-61912acd-29f7-4025-9898-0f27ce311554",
+            "dataset_key": "schedule.supervisor_review.doc"
+          },
+          "recorded_at": "2026-03-03T23:10:26.539640Z",
+          "schema_version": "1.0",
+          "sequence_no": 3,
+          "tenant_id": "tenant-a"
+        },
+        {
+          "actor": {
+            "id": "system:runtime",
+            "type": "system"
+          },
+          "domain_id": "domain-x",
+          "event_id": "task-run-created-2d2eb07e-bbeb-48f6-bed2-ed16168f396d",
+          "event_type": "task.run.created",
+          "idempotency_key": "scenario:stage06_review_requires_more_information:tasks.create:review-root:tasks.create.task.run.created",
+          "links": [
+            {
+              "id": "wr-d4817761-181a-40ee-964b-07296d5e9b74",
+              "rel": "subject",
+              "type": "workflow_run"
+            },
+            {
+              "id": "tr-b7d8db38-93c8-4832-b760-b442f9aaa467",
+              "rel": "subject",
+              "type": "task_run"
+            }
+          ],
+          "occurred_at": "2026-03-03T23:10:26.616667Z",
+          "payload": {
+            "activation_key": "stage06-review-root-info-request",
+            "generation": 0,
+            "spawn_cause_kind": "none",
+            "spawn_depth": 0,
+            "stage_id": "Stage06",
+            "task_kind": "review_packet",
+            "task_run_id": "tr-b7d8db38-93c8-4832-b760-b442f9aaa467"
+          },
+          "recorded_at": "2026-03-03T23:10:26.616667Z",
+          "schema_version": "1.0",
+          "sequence_no": 4,
+          "tenant_id": "tenant-a"
+        },
+        {
+          "actor": {
+            "id": "system:runtime",
+            "type": "system"
+          },
+          "domain_id": "domain-x",
+          "event_id": "task-created-4d8b9ff8-46ae-44d1-a2ad-c128b5abbc17",
+          "event_type": "task.created",
+          "idempotency_key": "scenario:stage06_review_requires_more_information:tasks.create:review-root:tasks.create.task.created",
+          "links": [
+            {
+              "id": "wr-d4817761-181a-40ee-964b-07296d5e9b74",
+              "rel": "subject",
+              "type": "workflow_run"
+            },
+            {
+              "id": "tr-b7d8db38-93c8-4832-b760-b442f9aaa467",
+              "rel": "subject",
+              "type": "task_run"
+            },
+            {
+              "id": "ht-aa6c3322-dfd4-4319-acdc-6a258708f080",
+              "rel": "subject",
+              "type": "human_task"
+            }
+          ],
+          "occurred_at": "2026-03-03T23:10:26.617071Z",
+          "payload": {
+            "candidate_roles": [
+              "dispatch_supervisor"
+            ],
+            "human_task_id": "ht-aa6c3322-dfd4-4319-acdc-6a258708f080",
+            "state": "OPEN",
+            "task_kind": "review_packet"
+          },
+          "recorded_at": "2026-03-03T23:10:26.617071Z",
+          "schema_version": "1.0",
+          "sequence_no": 5,
+          "tenant_id": "tenant-a"
+        },
+        {
+          "actor": {
+            "id": "human:dispatch-supervisor-2",
+            "type": "human"
+          },
+          "domain_id": "domain-x",
+          "event_id": "task-claimed-f532fde5-d4fe-47df-adab-e1750b86478e",
+          "event_type": "task.claimed",
+          "idempotency_key": "scenario:stage06_review_requires_more_information:tasks.claim:review-root:tasks.claim.task.claimed",
+          "links": [
+            {
+              "id": "wr-d4817761-181a-40ee-964b-07296d5e9b74",
+              "rel": "subject",
+              "type": "workflow_run"
+            },
+            {
+              "id": "tr-b7d8db38-93c8-4832-b760-b442f9aaa467",
+              "rel": "subject",
+              "type": "task_run"
+            },
+            {
+              "id": "ht-aa6c3322-dfd4-4319-acdc-6a258708f080",
+              "rel": "subject",
+              "type": "human_task"
+            }
+          ],
+          "occurred_at": "2026-03-03T23:10:26.678476Z",
+          "payload": {
+            "claimed_until": "2026-03-03T23:15:26.678099Z",
+            "human_task_id": "ht-aa6c3322-dfd4-4319-acdc-6a258708f080",
+            "lease_version": 1
+          },
+          "recorded_at": "2026-03-03T23:10:26.678476Z",
+          "schema_version": "1.0",
+          "sequence_no": 6,
+          "tenant_id": "tenant-a"
+        },
+        {
+          "actor": {
+            "id": "human:dispatch-supervisor-2",
+            "type": "human"
+          },
+          "domain_id": "domain-x",
+          "event_id": "task-run-state_changed-f28033b5-8b2c-4664-a2cd-e8461bfad5c9",
+          "event_type": "task.run.state_changed",
+          "idempotency_key": "scenario:stage06_review_requires_more_information:tasks.claim:review-root:tasks.claim.task.run.state_changed",
+          "links": [
+            {
+              "id": "wr-d4817761-181a-40ee-964b-07296d5e9b74",
+              "rel": "subject",
+              "type": "workflow_run"
+            },
+            {
+              "id": "tr-b7d8db38-93c8-4832-b760-b442f9aaa467",
+              "rel": "subject",
+              "type": "task_run"
+            }
+          ],
+          "occurred_at": "2026-03-03T23:10:26.678693Z",
+          "payload": {
+            "from_state": "READY",
+            "reason": "human_task_claimed",
+            "task_run_id": "tr-b7d8db38-93c8-4832-b760-b442f9aaa467",
+            "to_state": "IN_PROGRESS"
+          },
+          "recorded_at": "2026-03-03T23:10:26.678693Z",
+          "schema_version": "1.0",
+          "sequence_no": 7,
+          "tenant_id": "tenant-a"
+        },
+        {
+          "actor": {
+            "id": "human:dispatch-supervisor-2",
+            "type": "human"
+          },
+          "domain_id": "domain-x",
+          "event_id": "task-completed-2b54cac8-bc3f-410a-be70-d127677e0f49",
+          "event_type": "task.completed",
+          "idempotency_key": "scenario:stage06_review_requires_more_information:tasks.complete:review-root:tasks.complete.task.completed",
+          "links": [
+            {
+              "id": "wr-d4817761-181a-40ee-964b-07296d5e9b74",
+              "rel": "subject",
+              "type": "workflow_run"
+            },
+            {
+              "id": "tr-b7d8db38-93c8-4832-b760-b442f9aaa467",
+              "rel": "subject",
+              "type": "task_run"
+            },
+            {
+              "id": "ht-aa6c3322-dfd4-4319-acdc-6a258708f080",
+              "rel": "subject",
+              "type": "human_task"
+            }
+          ],
+          "occurred_at": "2026-03-03T23:10:26.737456Z",
+          "payload": {
+            "completion_code": "review_requires_more_information",
+            "human_task_id": "ht-aa6c3322-dfd4-4319-acdc-6a258708f080"
+          },
+          "recorded_at": "2026-03-03T23:10:26.737456Z",
+          "schema_version": "1.0",
+          "sequence_no": 8,
+          "tenant_id": "tenant-a"
+        },
+        {
+          "actor": {
+            "id": "human:dispatch-supervisor-2",
+            "type": "human"
+          },
+          "domain_id": "domain-x",
+          "event_id": "task-run-state_changed-292adac2-3f90-4f71-a93f-348051718734",
+          "event_type": "task.run.state_changed",
+          "idempotency_key": "scenario:stage06_review_requires_more_information:tasks.complete:review-root:tasks.complete.task.run.state_changed",
+          "links": [
+            {
+              "id": "wr-d4817761-181a-40ee-964b-07296d5e9b74",
+              "rel": "subject",
+              "type": "workflow_run"
+            },
+            {
+              "id": "tr-b7d8db38-93c8-4832-b760-b442f9aaa467",
+              "rel": "subject",
+              "type": "task_run"
+            }
+          ],
+          "occurred_at": "2026-03-03T23:10:26.737653Z",
+          "payload": {
+            "from_state": "IN_PROGRESS",
+            "reason": "human_task_completed",
+            "task_run_id": "tr-b7d8db38-93c8-4832-b760-b442f9aaa467",
+            "to_state": "COMPLETED"
+          },
+          "recorded_at": "2026-03-03T23:10:26.737653Z",
+          "schema_version": "1.0",
+          "sequence_no": 9,
+          "tenant_id": "tenant-a"
+        },
+        {
+          "actor": {
+            "id": "human:dispatch-supervisor-2",
+            "type": "human"
+          },
+          "domain_id": "domain-x",
+          "event_id": "task-run-created-00062eed-59e5-4e9e-9057-fdf1674b6ef6",
+          "event_type": "task.run.created",
+          "idempotency_key": "scenario:stage06_review_requires_more_information:tasks.complete:review-root:tasks.complete.spawn.stage06_request_missing_information.0.task.run.created",
+          "links": [
+            {
+              "id": "wr-d4817761-181a-40ee-964b-07296d5e9b74",
+              "rel": "subject",
+              "type": "workflow_run"
+            },
+            {
+              "id": "tr-119324f3-3459-4d8c-a3bc-87bd58863759",
+              "rel": "subject",
+              "type": "task_run"
+            }
+          ],
+          "occurred_at": "2026-03-03T23:10:26.737947Z",
+          "payload": {
+            "activation_key": "spawn:tr-b7d8db38-93c8-4832-b760-b442f9aaa467:stage06_request_missing_information:review_requires_more_information",
+            "generation": 0,
+            "spawn_budget_key": "stage06:wr-d4817761-181a-40ee-964b-07296d5e9b74:tr-b7d8db38-93c8-4832-b760-b442f9aaa467",
+            "spawn_cause_event_id": "task-completed-2b54cac8-bc3f-410a-be70-d127677e0f49",
+            "spawn_cause_kind": "task_completion",
+            "spawn_depth": 1,
+            "spawn_rule_id": "stage06_request_missing_information",
+            "spawned_from_task_run_id": "tr-b7d8db38-93c8-4832-b760-b442f9aaa467",
+            "stage_id": "Stage06",
+            "task_kind": "information_request",
+            "task_run_id": "tr-119324f3-3459-4d8c-a3bc-87bd58863759"
+          },
+          "recorded_at": "2026-03-03T23:10:26.737947Z",
+          "schema_version": "1.0",
+          "sequence_no": 10,
+          "tenant_id": "tenant-a"
+        },
+        {
+          "actor": {
+            "id": "human:dispatch-supervisor-2",
+            "type": "human"
+          },
+          "domain_id": "domain-x",
+          "event_id": "task-created-639ceddf-b60a-4c46-836b-c046b2d57a59",
+          "event_type": "task.created",
+          "idempotency_key": "scenario:stage06_review_requires_more_information:tasks.complete:review-root:tasks.complete.spawn.stage06_request_missing_information.0.task.created",
+          "links": [
+            {
+              "id": "wr-d4817761-181a-40ee-964b-07296d5e9b74",
+              "rel": "subject",
+              "type": "workflow_run"
+            },
+            {
+              "id": "tr-119324f3-3459-4d8c-a3bc-87bd58863759",
+              "rel": "subject",
+              "type": "task_run"
+            },
+            {
+              "id": "ht-9981bd44-6ddf-4876-9c22-3c2b96a94af7",
+              "rel": "subject",
+              "type": "human_task"
+            }
+          ],
+          "occurred_at": "2026-03-03T23:10:26.738018Z",
+          "payload": {
+            "candidate_roles": [
+              "fleet_coordinator",
+              "schedule_planner"
+            ],
+            "human_task_id": "ht-9981bd44-6ddf-4876-9c22-3c2b96a94af7",
+            "state": "OPEN",
+            "task_kind": "information_request"
+          },
+          "recorded_at": "2026-03-03T23:10:26.738018Z",
+          "schema_version": "1.0",
+          "sequence_no": 11,
+          "tenant_id": "tenant-a"
+        }
+      ],
+      "status": "ok"
+    },
+    "workflow_run_detail": {
+      "approvals": [],
+      "artifact_versions": [
+        {
+          "artifact_kind": "schedule.draft_schedule.workbook",
+          "artifact_role": "official_input",
+          "artifact_version_id": "av-46a6f233-2c72-4ec7-8344-f600373da3fa",
+          "byte_size": 14176,
+          "content_digest": "sha256:7769bd168275a1a2cb2689833623a45574096a4d0b88ce2b730455114297946d",
+          "created_at": "2026-03-03T23:10:26.479406Z",
+          "lineage_note": null,
+          "media_type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+          "metadata_json": {
+            "scenario_id": "stage06_review_requires_more_information",
+            "seed_source_path": "Stage05_Draft_Schedule_Triage/Stage05_Draft_Schedule_Triage_Spreadsheet_Example_COMPLETED.xlsx"
+          },
+          "parent_artifact_version_id": null,
+          "storage_uri": "file:///var/folders/fv/j73294gj40xftydr1nbxjw480000gn/T/tmpyhnu3xnw/artifacts/seed/0/Stage05_Draft_Schedule_Triage/Stage05_Draft_Schedule_Triage_Spreadsheet_Example_COMPLETED.xlsx",
+          "supersedes_artifact_version_id": null,
+          "task_run_id": null,
+          "workflow_run_id": "wr-d4817761-181a-40ee-964b-07296d5e9b74"
+        },
+        {
+          "artifact_kind": "schedule.supervisor_review.doc",
+          "artifact_role": "evidence",
+          "artifact_version_id": "av-61912acd-29f7-4025-9898-0f27ce311554",
+          "byte_size": 37191,
+          "content_digest": "sha256:8f9e60666a9939f72cee9bfc794a013c0c941d939f32bd90ab9297a176240e85",
+          "created_at": "2026-03-03T23:10:26.539374Z",
+          "lineage_note": null,
+          "media_type": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+          "metadata_json": {
+            "scenario_id": "stage06_review_requires_more_information",
+            "seed_source_path": "Stage06_Supervisor_Review_Publish/Stage06_Supervisor_Review_Publish_Document_Example_COMPLETED.docx"
+          },
+          "parent_artifact_version_id": null,
+          "storage_uri": "file:///var/folders/fv/j73294gj40xftydr1nbxjw480000gn/T/tmpyhnu3xnw/artifacts/seed/1/Stage06_Supervisor_Review_Publish/Stage06_Supervisor_Review_Publish_Document_Example_COMPLETED.docx",
+          "supersedes_artifact_version_id": null,
+          "task_run_id": null,
+          "workflow_run_id": "wr-d4817761-181a-40ee-964b-07296d5e9b74"
+        }
+      ],
+      "command": "api.workflow_runs.detail",
+      "flags": [],
+      "human_tasks": [
+        {
+          "assignee_actor_id": "human:dispatch-supervisor-2",
+          "assignee_actor_type": "human",
+          "blocked_on_kind": null,
+          "blocked_on_ref": null,
+          "candidate_roles": [
+            "dispatch_supervisor"
+          ],
+          "claimed_at": "2026-03-03T23:10:26.678052Z",
+          "claimed_until": null,
+          "created_at": "2026-03-03T23:10:26.614782Z",
+          "due_at": null,
+          "escalation_at": null,
+          "generation": 0,
+          "human_task_id": "ht-aa6c3322-dfd4-4319-acdc-6a258708f080",
+          "lease_version": 1,
+          "linked_approval_id": null,
+          "owner_role": "dispatch_supervisor",
+          "reopen_count": 0,
+          "spawned_from_flag_id": null,
+          "stage_id": "Stage06",
+          "state": "COMPLETED",
+          "task_kind": "review_packet",
+          "task_run_id": "tr-b7d8db38-93c8-4832-b760-b442f9aaa467",
+          "task_run_state": "COMPLETED",
+          "updated_at": "2026-03-03T23:10:26.737133Z",
+          "workflow_run_id": "wr-d4817761-181a-40ee-964b-07296d5e9b74"
+        },
+        {
+          "assignee_actor_id": null,
+          "assignee_actor_type": null,
+          "blocked_on_kind": null,
+          "blocked_on_ref": null,
+          "candidate_roles": [
+            "fleet_coordinator",
+            "schedule_planner"
+          ],
+          "claimed_at": null,
+          "claimed_until": null,
+          "created_at": "2026-03-03T23:10:26.737133Z",
+          "due_at": null,
+          "escalation_at": null,
+          "generation": 0,
+          "human_task_id": "ht-9981bd44-6ddf-4876-9c22-3c2b96a94af7",
+          "lease_version": 0,
+          "linked_approval_id": null,
+          "owner_role": "dispatch_supervisor",
+          "reopen_count": 0,
+          "spawned_from_flag_id": null,
+          "stage_id": "Stage06",
+          "state": "OPEN",
+          "task_kind": "information_request",
+          "task_run_id": "tr-119324f3-3459-4d8c-a3bc-87bd58863759",
+          "task_run_state": "READY",
+          "updated_at": "2026-03-03T23:10:26.737133Z",
+          "workflow_run_id": "wr-d4817761-181a-40ee-964b-07296d5e9b74"
+        }
+      ],
+      "pointers": [],
+      "status": "ok",
+      "summary": {
+        "active_issue_count": 0,
+        "approval_count": 0,
+        "artifact_version_count": 2,
+        "flag_count": 0,
+        "human_task_count": 2,
+        "pointer_count": 0
+      },
+      "workflow_run": {
+        "activation_key": "stage06_review_requires_more_information:workflow-run",
+        "active_issue_count": 0,
+        "created_at": "2026-03-03T23:10:26.411976Z",
+        "domain_id": "domain-x",
+        "logical_date": "2026-03-07",
+        "partition_key": "SD-2026-03-07",
+        "state": "OPEN",
+        "tenant_id": "tenant-a",
+        "updated_at": "2026-03-03T23:10:26.411976Z",
+        "workflow_id": "schedule_planning.v1",
+        "workflow_run_id": "wr-d4817761-181a-40ee-964b-07296d5e9b74",
+        "workflow_version": "v1"
+      }
+    },
+    "workflow_runs": {
+      "command": "api.workflow_runs.list",
+      "page": {
+        "limit": 100,
+        "offset": 0
+      },
+      "status": "ok",
+      "workflow_runs": [
+        {
+          "activation_key": "stage06_review_requires_more_information:workflow-run",
+          "active_issue_count": 0,
+          "created_at": "2026-03-03T23:10:26.411976Z",
+          "domain_id": "domain-x",
+          "logical_date": "2026-03-07",
+          "partition_key": "SD-2026-03-07",
+          "state": "OPEN",
+          "tenant_id": "tenant-a",
+          "updated_at": "2026-03-03T23:10:26.411976Z",
+          "workflow_id": "schedule_planning.v1",
+          "workflow_run_id": "wr-d4817761-181a-40ee-964b-07296d5e9b74",
+          "workflow_version": "v1"
+        }
+      ]
+    }
+  },
+  "snapshot_version": "v1",
+  "source": {
+    "scenario_file": "fixtures/scenarios/schedule_planning/stage06_review_requires_more_information.yaml",
+    "workflow_id": "schedule_planning.v1",
+    "workflow_run_id": "wr-d4817761-181a-40ee-964b-07296d5e9b74"
+  }
+}

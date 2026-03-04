@@ -7,6 +7,7 @@ from typing import Any
 from onetruth.application.handlers.workflow_task_lifecycle import (
     CommandError,
     respond_approval_command,
+    show_approval_command,
 )
 from onetruth.infrastructure.events.event_store import DuplicateIdempotencyKeyError
 from onetruth.infrastructure.repositories.approvals import get_approval
@@ -39,6 +40,23 @@ def list_approvals_endpoint(
         "command": "api.approvals.list",
         "approvals": rows,
         "page": {"limit": page.limit, "offset": page.offset},
+    }
+
+
+def get_approval_endpoint(
+    connection: sqlite3.Connection,
+    *,
+    context: RequestContext,
+    approval_id: str,
+) -> dict[str, Any]:
+    try:
+        approval = show_approval_command(connection, approval_id)
+    except CommandError as exc:
+        raise api_error_from_command(exc) from exc
+    scoped_workflow_run(connection, context, str(approval["workflow_run_id"]))
+    return {
+        "command": "api.approvals.detail",
+        "approval": approval,
     }
 
 

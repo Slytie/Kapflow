@@ -1,0 +1,40 @@
+{
+  "approval_queue": {
+    "approvals": [
+      {
+        "approval_id": "<approval_id:1>",
+        "approval_kind": "business_decision",
+        "candidate_roles": [
+          "operations_manager"
+        ],
+        "created_at": "<ts:1>",
+        "decided_by_actor_id": null,
+        "decided_by_actor_type": null,
+        "generation": 0,
+        "requested_at": "<ts:2>",
+        "requested_by_task_run_id": "<requested_by_task_run_id:2>",
+        "required_role": "operations_manager",
+        "responded_at": null,
+        "response_kind": null,
+        "response_reason": null,
+        "scope_kind": "stage",
+        "scope_ref": "Stage07",
+        "state": "PENDING",
+        "task_run_id": "<task_run_id:3>",
+        "updated_at": "<ts:3>",
+        "workflow_run_id": "<workflow_run_id:4>"
+      }
+    ],
+    "command": "api.approvals.list",
+    "page": {
+      "limit": 100,
+      "offset": 0
+    },
+    "status": "ok"
+  },
+  "snapshot_id": "approval_queue_state",
+  "source": {
+    "capture": "after_request_major_replan_approval",
+    "scenario_id": "stage07_major_replan_happy"
+  }
+}

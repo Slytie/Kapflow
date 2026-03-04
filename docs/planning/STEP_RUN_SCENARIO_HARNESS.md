@@ -15,8 +15,10 @@ Scaffold status note:
   - helper layer in `tests/runtime/helpers/scenario_harness.py`
   - CLI-driven Stage06 scenario tests in `tests/runtime/scenarios/`
   - query-contract stability tests in `tests/runtime/contracts/`
-- TASK-0044 adds scenario-backed API contract/mutation tests under `tests/runtime/api/` so frontend work can validate against a stable HTTP boundary in parallel with CLI-driven scenario execution.
+- TASK-0044/TASK-0049 add scenario-backed API contract/mutation tests under `tests/runtime/api/` so frontend work can validate against a stable HTTP boundary (tasks/approvals/flags/workflow detail/timeline/board + mutation delegates) in parallel with CLI-driven scenario execution.
 - TASK-0045 extends the same harness with Stage07 issue-loop fixtures and maintenance actions (`flags`, `stage07 activate-issue`, `maintenance sweep/reconcile`) plus Stage07 scenario and query-contract coverage.
+- TASK-0047 adds backend-owned frontend snapshot fixture export from real scenario states under `fixtures/frontend_contracts/`, with deterministic refresh tooling and contract tests.
+- TASK-0051 adds canonical example-document corpus seeding and artifact ingress actions (`artifacts ingest`, `artifacts seed-corpus`, `artifacts list-linked`, `artifacts download`) plus attachment-link coverage in runtime/API tests.
 
 ## 1) Why this harness exists
 
@@ -60,6 +62,7 @@ Implemented command surface for first scenario slice:
 - `onetruthctl approvals request`
 - `onetruthctl approvals respond`
 - `onetruthctl artifacts create-version`
+- `onetruthctl artifacts ingest|seed-corpus|list-linked|download`
 - `onetruthctl pointers promote`
 - `onetruthctl flags create|transition|list`
 - `onetruthctl stage07 activate-issue`
@@ -99,9 +102,9 @@ Use the synthetic completed examples already in the repo:
 - `fixtures/workflows/payroll/template_pack/*_Example_COMPLETED.*`
 
 The runtime scenario harness should:
-1. copy those files into temp storage,
-2. register them as imported artifact versions with synthetic IDs,
-3. bind them to the workflow run under test.
+1. resolve fixture IDs/paths from the corpus manifest (`fixtures/example_document_corpus/manifest.yaml`),
+2. ingest them via canonical artifact commands (`artifacts ingest` or `artifacts seed-corpus`),
+3. bind resulting artifact versions to the workflow run and subject rows through canonical linkage.
 
 Do not create a second handwritten sample-data tree when the fixture packs already contain canonical example inputs.
 
@@ -149,6 +152,16 @@ Implemented in TASK-0045:
 - `tests/runtime/scenarios/test_schedule_stage07_lease_expiry_recovery.py`
 - `tests/runtime/scenarios/test_schedule_stage07_drift_detected.py`
 - `tests/runtime/contracts/test_hitl_query_contracts_stage07.py`
+
+Implemented in TASK-0047:
+- `scripts/export_frontend_snapshots.py`
+- `fixtures/frontend_contracts/*.json`
+- `tests/runtime/contracts/test_frontend_snapshot_fixtures.py`
+
+Implemented in TASK-0051:
+- `fixtures/example_document_corpus/manifest.yaml`
+- `tests/runtime/test_example_document_corpus_ingress.py`
+- `tests/runtime/api/test_artifact_attachment_api.py`
 
 ## 8) Code/test locations once runtime work starts
 

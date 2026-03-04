@@ -9,8 +9,8 @@ Runtime scaffold bootstrap now includes canonical workflow/task/approval/artifac
 - workflow/task substrate: `runs create/show/list`, `tasks create/claim/complete/show/list`
 - approval/artifact/pointer substrate: `approvals request/respond/show/list`, `artifacts create-version/show/list`, `pointers promote/show/list`
 - Stage07 issue substrate: `flags create/transition/show/list`, `stage07 activate-issue`, `maintenance sweep-leases`, `maintenance reconcile-stage07`
-- thin HTTP/query adapter: `/api/v1/human-tasks`, `/api/v1/approvals`, `/api/v1/workflow-runs`, `/api/v1/pointers`, `/api/v1/board/schedule-planning`, plus API mutation delegates for claim/complete/respond
-Active coding milestone: TASK-0045 completed Stage07 issue-scoped replan loop on top of the now-implemented substrate + Stage06 + HTTP adapter boundary.
+- thin HTTP/query adapter: `/api/v1/human-tasks`, `/api/v1/approvals`, `/api/v1/flags`, `/api/v1/workflow-runs`, `/api/v1/pointers`, `/api/v1/timeline-events`, `/api/v1/board/schedule-planning`, plus API mutation delegates for claim/complete/respond
+Active coding milestone: TASK-0052 completed execution-session runtime hardening (`execution_sessions` / `tool_executions` / `policy_decisions`) and policy-gated Stage06 sandbox flow; next active backlog item is TASK-0030 design closure work.
 
 ### Recently completed runtime-bootstrap tranche
 - TASK-0028 - Translated the runtime object model into a concrete Stage 4 runtime architecture, repo layout, persistence model, and first implementation slice
@@ -20,6 +20,12 @@ Active coding milestone: TASK-0045 completed Stage07 issue-scoped replan loop on
 - TASK-0043 - Implemented the first real Schedule Planning Stage06 publish slice with transactional completion-driven child task spawning, CLI-driven scenario fixtures/harness tests, and query-contract stability tests
 - TASK-0044 - Implemented the first thin HITL HTTP/query adapter with board-ready read endpoints, mutation delegates over canonical handlers, scenario-backed API contracts, and cross-scope denial tests
 - TASK-0045 - Implemented the first Schedule Planning Stage07 issue-scoped replan loop with canonical flags, deduped issue activation, major-replan approval gating, delta promotion/drift visibility, and lease-expiry recovery/reconcile scenario coverage
+- TASK-0047 - Exported backend-owned frontend contract snapshots from real runtime scenarios under `fixtures/frontend_contracts/` with deterministic drift checks and snapshot contract tests
+- TASK-0046 - Implemented frontend app shell + HITL route skeletons + low-click reusable components + mock repository boundary over backend-owned fixtures
+- TASK-0048 - Swapped frontend repositories from mock snapshots to real `/api/v1` contracts, hardened loading/error/empty/freshness behavior, and added integration tests for claim/complete/respond flows
+- TASK-0050 - Added bounded Stage06 OpenAI Responses API sandbox classification with strict structured outputs, canonical evidence artifact capture, and gated real-network e2e coverage
+- TASK-0051 - Promoted template-pack completed examples into an executable document corpus with canonical artifact ingress, subject attachment linkage, API attachment surfaces, and backend-owned snapshot refresh integration
+- TASK-0052 - Converted the bounded Stage06 OpenAI spike into canonical execution runtime behavior with transactional session/tool/policy lifecycle events, explicit policy allow/deny gating, idempotent retry handling, and stale-session reconcile recovery
 - Added `docs/planning/RUNTIME_BOOTSTRAP.md` and `docs/planning/FIRST_RUNTIME_SLICE.md`
 - Added `docs/adr/ADR-003-stage4-runtime-architecture.md`
 - Refreshed stale Codex routing: EPIC-040 / EPIC-050 no longer route default runtime work through Payroll, and missing context packs now exist for EPIC-025 / EPIC-030 / EPIC-060

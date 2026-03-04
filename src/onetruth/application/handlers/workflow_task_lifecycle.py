@@ -1,11 +1,20 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import timedelta
+from datetime import datetime, timedelta, timezone
 import sqlite3
+from pathlib import Path
 from typing import Any
 from uuid import uuid4
 
+from onetruth.infrastructure.artifacts.storage import (
+    ArtifactStorageError,
+    decode_base64_content,
+    infer_media_type,
+    read_blob,
+    read_bytes_from_file,
+    write_blob,
+)
 from onetruth.infrastructure.events.event_store import (
     DuplicateIdempotencyKeyError,
     append_event,
@@ -58,6 +67,11 @@ from onetruth.infrastructure.repositories.artifact_versions import (
     get_artifact_version,
     list_artifact_versions_for_workflow_run,
 )
+from onetruth.infrastructure.repositories.artifact_links import (
+    create_artifact_link,
+    list_artifact_links_for_artifact,
+    list_artifacts_for_subject,
+)
 from onetruth.infrastructure.repositories.task_runs import (
     create_task_run,
     get_task_run,
@@ -69,6 +83,26 @@ from onetruth.infrastructure.repositories.workflow_runs import (
     create_workflow_run,
     get_workflow_run,
     list_workflow_runs,
+)
+from onetruth.infrastructure.repositories.execution_sessions import (
+    create_execution_session,
+    get_execution_session,
+    increment_tool_call_count,
+    list_execution_sessions_for_workflow_run,
+    list_reconcilable_execution_sessions,
+    transition_execution_session_state,
+)
+from onetruth.infrastructure.repositories.tool_executions import (
+    create_tool_execution,
+    get_tool_execution,
+    get_tool_execution_by_session_idempotency,
+    list_tool_executions_for_session,
+    transition_tool_execution_state,
+)
+from onetruth.infrastructure.repositories.policy_decisions import (
+    create_policy_decision,
+    get_policy_decision,
+    get_policy_decision_for_tool_execution,
 )
 
 WORKFLOW_RUN_STATES = {"OPEN", "COMPLETED"}
@@ -94,6 +128,26 @@ APPROVAL_RESPONSE_TO_OUTCOME = {
     "expire": "expired",
 }
 VALID_ACTOR_TYPES = {"human", "agent", "service", "system"}
+EXECUTION_SESSION_STATES = {
+    "CREATED",
+    "RUNNING",
+    "WAITING_POLICY",
+    "WAITING_APPROVAL",
+    "PAUSED",
+    "SUCCEEDED",
+    "FAILED",
+    "CANCELED",
+}
+TOOL_EXECUTION_STATES = {
+    "REQUESTED",
+    "APPROVED",
+    "DENIED",
+    "RUNNING",
+    "COMPLETED",
+    "FAILED",
+    "CANCELED",
+}
+POLICY_DECISIONS = {"allow", "deny", "require_approval"}
 
 
 @dataclass
@@ -1981,6 +2035,7 @@ def create_artifact_version_command(
         )
     artifact_version_id = str(payload.get("artifact_version_id") or f"av-{uuid4()}")
     task_run_id = str(payload["task_run_id"]) if payload.get("task_run_id") is not None else None
+    artifact_links = _normalize_artifact_links(payload.get("links"))
     event_idempotency = _required_event_idempotency_key(
         payload.get("idempotency_key"),
         "artifacts.create-version.artifact.version.created",
@@ -2040,6 +2095,31 @@ def create_artifact_version_command(
         ]
         if task_run_id is not None:
             links.append({"rel": "subject", "type": "task_run", "id": task_run_id})
+        for artifact_link in artifact_links:
+            _validate_artifact_link_subject(
+                connection,
+                workflow_run_id=str(payload["workflow_run_id"]),
+                subject_kind=artifact_link["subject_kind"],
+                subject_id=artifact_link["subject_id"],
+            )
+            create_artifact_link(
+                connection,
+                artifact_version_id=artifact_version_id,
+                workflow_run_id=str(payload["workflow_run_id"]),
+                subject_kind=artifact_link["subject_kind"],
+                subject_id=artifact_link["subject_id"],
+                relation_kind=artifact_link["relation_kind"],
+                created_at=now,
+                created_by_actor_id=str(payload.get("actor_id", "system:runtime")),
+                created_by_actor_type=str(payload.get("actor_type", "system")),
+            )
+            link_payload = {
+                "rel": artifact_link["relation_kind"],
+                "type": artifact_link["subject_kind"],
+                "id": artifact_link["subject_id"],
+            }
+            if link_payload not in links:
+                links.append(link_payload)
 
         append_event(
             connection,
@@ -2070,6 +2150,12 @@ def create_artifact_version_command(
                 message="artifact_version_id already exists",
                 details={"artifact_version_id": artifact_version_id},
             ) from exc
+        if "uq_artifact_links_subject" in str(exc):
+            raise CommandError(
+                code="duplicate_artifact_link",
+                message="artifact link already exists for this artifact",
+                details={"artifact_version_id": artifact_version_id},
+            ) from exc
         raise
     except Exception:
         connection.rollback()
@@ -2083,6 +2169,10 @@ def create_artifact_version_command(
             message="artifact version was not found after creation",
             details={"artifact_version_id": artifact_version_id},
         )
+    artifact_version["links"] = list_artifact_links_for_artifact(
+        connection,
+        artifact_version_id=artifact_version_id,
+    )
     return artifact_version
 
 
@@ -2097,6 +2187,10 @@ def show_artifact_version_command(
             message="artifact version not found",
             details={"artifact_version_id": artifact_version_id},
         )
+    artifact_version["links"] = list_artifact_links_for_artifact(
+        connection,
+        artifact_version_id=artifact_version_id,
+    )
     return artifact_version
 
 
@@ -2105,7 +2199,174 @@ def list_artifacts_for_workflow_run_command(
     workflow_run_id: str,
 ) -> list[dict[str, Any]]:
     _workflow_scope(connection, workflow_run_id)
-    return list_artifact_versions_for_workflow_run(connection, workflow_run_id)
+    artifacts = list_artifact_versions_for_workflow_run(connection, workflow_run_id)
+    for artifact in artifacts:
+        artifact["links"] = list_artifact_links_for_artifact(
+            connection,
+            artifact_version_id=str(artifact["artifact_version_id"]),
+        )
+    return artifacts
+
+
+def ingest_artifact_document_command(
+    connection: sqlite3.Connection,
+    payload: dict[str, Any],
+    *,
+    storage_root: Path,
+) -> dict[str, Any]:
+    _require_fields(
+        payload,
+        [
+            "workflow_run_id",
+            "artifact_kind",
+            "idempotency_key",
+        ],
+    )
+
+    source_path = payload.get("source_path")
+    content_base64 = payload.get("content_base64")
+    if source_path is None and content_base64 is None:
+        raise CommandError(
+            code="invalid_payload",
+            message="either source_path or content_base64 is required",
+            details={},
+        )
+    if source_path is not None and content_base64 is not None:
+        raise CommandError(
+            code="invalid_payload",
+            message="source_path and content_base64 are mutually exclusive",
+            details={},
+        )
+
+    try:
+        if source_path is not None:
+            raw_content = read_bytes_from_file(str(source_path))
+            default_name = Path(str(source_path)).name
+        else:
+            raw_content = decode_base64_content(str(content_base64))
+            default_name = "uploaded_document.bin"
+    except ArtifactStorageError as exc:
+        raise CommandError(
+            code="artifact_ingress_failed",
+            message=str(exc),
+            details={},
+        ) from exc
+
+    file_name = str(payload.get("file_name") or default_name)
+    media_type = str(payload.get("media_type") or infer_media_type(file_name))
+
+    try:
+        storage_uri, content_digest, byte_size = write_blob(
+            storage_root=storage_root,
+            workflow_run_id=str(payload["workflow_run_id"]),
+            file_name=file_name,
+            content=raw_content,
+        )
+    except ArtifactStorageError as exc:
+        raise CommandError(
+            code="artifact_ingress_failed",
+            message=str(exc),
+            details={},
+        ) from exc
+
+    metadata_json = payload.get("metadata_json")
+    if metadata_json is None:
+        metadata_json = {}
+    if not isinstance(metadata_json, dict):
+        raise CommandError(
+            code="invalid_metadata_json",
+            message="metadata_json must be a JSON object",
+            details={},
+        )
+    metadata_json = {
+        **metadata_json,
+        "ingress_file_name": file_name,
+        "ingress_media_type": media_type,
+    }
+    if source_path is not None:
+        metadata_json.setdefault("ingress_source_path", str(source_path))
+
+    create_payload = {
+        "artifact_version_id": payload.get("artifact_version_id"),
+        "workflow_run_id": payload["workflow_run_id"],
+        "task_run_id": payload.get("task_run_id"),
+        "artifact_kind": payload["artifact_kind"],
+        "artifact_role": payload.get("artifact_role"),
+        "media_type": media_type,
+        "storage_uri": storage_uri,
+        "content_digest": content_digest,
+        "byte_size": byte_size,
+        "metadata_json": metadata_json,
+        "parent_artifact_version_id": payload.get("parent_artifact_version_id"),
+        "supersedes_artifact_version_id": payload.get("supersedes_artifact_version_id"),
+        "lineage_note": payload.get("lineage_note"),
+        "links": payload.get("links"),
+        "idempotency_key": payload["idempotency_key"],
+        "actor_id": payload.get("actor_id", "system:runtime"),
+        "actor_type": payload.get("actor_type", "system"),
+    }
+    artifact_version = create_artifact_version_command(connection, create_payload)
+    return {
+        "artifact_version": artifact_version,
+        "ingress": {
+            "file_name": file_name,
+            "media_type": media_type,
+            "byte_size": byte_size,
+            "content_digest": content_digest,
+            "storage_uri": storage_uri,
+        },
+    }
+
+
+def list_artifacts_for_subject_command(
+    connection: sqlite3.Connection,
+    *,
+    workflow_run_id: str,
+    subject_kind: str,
+    subject_id: str,
+) -> list[dict[str, Any]]:
+    _workflow_scope(connection, workflow_run_id)
+    _validate_artifact_link_subject(
+        connection,
+        workflow_run_id=workflow_run_id,
+        subject_kind=subject_kind,
+        subject_id=subject_id,
+    )
+    artifacts = list_artifacts_for_subject(
+        connection,
+        workflow_run_id=workflow_run_id,
+        subject_kind=subject_kind,
+        subject_id=subject_id,
+    )
+    for artifact in artifacts:
+        artifact["links"] = list_artifact_links_for_artifact(
+            connection,
+            artifact_version_id=str(artifact["artifact_version_id"]),
+        )
+    return artifacts
+
+
+def download_artifact_blob_command(
+    connection: sqlite3.Connection,
+    artifact_version_id: str,
+) -> dict[str, Any]:
+    artifact = show_artifact_version_command(connection, artifact_version_id)
+    storage_uri = str(artifact["storage_uri"])
+    try:
+        content = read_blob(storage_uri)
+    except ArtifactStorageError as exc:
+        raise CommandError(
+            code="artifact_blob_not_found",
+            message=str(exc),
+            details={
+                "artifact_version_id": artifact_version_id,
+                "storage_uri": storage_uri,
+            },
+        ) from exc
+    return {
+        "artifact_version": artifact,
+        "content_bytes": content,
+    }
 
 
 def promote_pointer_command(
@@ -2439,6 +2700,1005 @@ def list_pointers_for_workflow_run_command(
     return list_pointers_for_workflow_run(connection, workflow_run_id)
 
 
+def create_execution_session_command(
+    connection: sqlite3.Connection,
+    payload: dict[str, Any],
+) -> dict[str, Any]:
+    _require_fields(
+        payload,
+        [
+            "workflow_run_id",
+            "task_run_id",
+            "execution_spec_id",
+            "owner_mode",
+            "idempotency_key",
+        ],
+    )
+    owner_mode = str(payload["owner_mode"])
+    if owner_mode not in {"human", "agent", "service", "mixed"}:
+        raise CommandError(
+            code="invalid_owner_mode",
+            message=f"unsupported owner_mode: {owner_mode}",
+            details={"allowed_owner_modes": ["human", "agent", "service", "mixed"]},
+        )
+    initial_state = str(payload.get("state", "RUNNING"))
+    if initial_state not in EXECUTION_SESSION_STATES:
+        raise CommandError(
+            code="invalid_execution_session_state",
+            message=f"unsupported execution session state: {initial_state}",
+            details={"allowed_states": sorted(EXECUTION_SESSION_STATES)},
+        )
+    event_idempotency = _required_event_idempotency_key(
+        payload.get("idempotency_key"),
+        "execution-sessions.create.execution.session.created",
+    )
+    state_event_idempotency = _required_event_idempotency_key(
+        payload.get("idempotency_key"),
+        "execution-sessions.create.execution.session.state_changed",
+    )
+
+    execution_session_id = str(payload.get("execution_session_id") or f"xs-{uuid4()}")
+    _begin_transaction(connection)
+    try:
+        _assert_idempotency_available(connection, event_idempotency)
+        _assert_idempotency_available(connection, state_event_idempotency)
+        workflow_scope = _workflow_scope(connection, str(payload["workflow_run_id"]))
+        _validate_task_run_belongs_to_workflow(
+            connection,
+            task_run_id=str(payload["task_run_id"]),
+            workflow_run_id=str(payload["workflow_run_id"]),
+        )
+        principal_actor = payload.get("principal_actor")
+        if principal_actor is not None:
+            if not isinstance(principal_actor, dict):
+                raise CommandError(
+                    code="invalid_principal_actor",
+                    message="principal_actor must be an object",
+                    details={},
+                )
+            actor_type = principal_actor.get("type")
+            actor_id = principal_actor.get("id")
+            if actor_type is None or actor_id is None:
+                raise CommandError(
+                    code="invalid_principal_actor",
+                    message="principal_actor requires type and id",
+                    details={},
+                )
+            _assert_actor_type(str(actor_type))
+        budget = payload.get("budget")
+        if budget is not None and not isinstance(budget, dict):
+            raise CommandError(
+                code="invalid_execution_budget",
+                message="budget must be a JSON object",
+                details={},
+            )
+        now = utc_now_iso()
+        create_execution_session(
+            connection,
+            execution_session_id=execution_session_id,
+            workflow_run_id=str(payload["workflow_run_id"]),
+            task_run_id=str(payload["task_run_id"]),
+            execution_spec_id=str(payload["execution_spec_id"]),
+            state="CREATED",
+            owner_mode=owner_mode,
+            principal_actor=principal_actor if isinstance(principal_actor, dict) else None,
+            budget=budget if isinstance(budget, dict) else None,
+            tool_call_count=int(payload.get("tool_call_count", 0)),
+            created_at=now,
+        )
+        append_event(
+            connection,
+            _event_envelope(
+                event_type="execution.session.created",
+                tenant_id=workflow_scope["tenant_id"],
+                domain_id=workflow_scope["domain_id"],
+                actor_type=str(payload.get("actor_type", "system")),
+                actor_id=str(payload.get("actor_id", "system:runtime")),
+                links=[
+                    {"rel": "subject", "type": "workflow_run", "id": str(payload["workflow_run_id"])},
+                    {"rel": "subject", "type": "task_run", "id": str(payload["task_run_id"])},
+                    {"rel": "subject", "type": "execution_session", "id": execution_session_id},
+                ],
+                payload={
+                    "execution_session_id": execution_session_id,
+                    "execution_spec_id": str(payload["execution_spec_id"]),
+                    "owner_mode": owner_mode,
+                    "principal_actor_type": (
+                        str(principal_actor["type"])
+                        if isinstance(principal_actor, dict) and principal_actor.get("type") is not None
+                        else None
+                    ),
+                },
+                idempotency_key=event_idempotency,
+            ),
+        )
+
+        if initial_state != "CREATED":
+            transitioned = transition_execution_session_state(
+                connection,
+                execution_session_id=execution_session_id,
+                from_states=["CREATED"],
+                to_state=initial_state,
+                updated_at=now,
+                closed_at=(now if initial_state in {"SUCCEEDED", "FAILED", "CANCELED"} else None),
+            )
+            if transitioned is None:
+                raise CommandError(
+                    code="execution_session_transition_conflict",
+                    message="execution session transition failed during creation",
+                    details={"execution_session_id": execution_session_id},
+                )
+            append_event(
+                connection,
+                _event_envelope(
+                    event_type="execution.session.state_changed",
+                    tenant_id=workflow_scope["tenant_id"],
+                    domain_id=workflow_scope["domain_id"],
+                    actor_type=str(payload.get("actor_type", "system")),
+                    actor_id=str(payload.get("actor_id", "system:runtime")),
+                    links=[
+                        {"rel": "subject", "type": "workflow_run", "id": str(payload["workflow_run_id"])},
+                        {"rel": "subject", "type": "task_run", "id": str(payload["task_run_id"])},
+                        {"rel": "subject", "type": "execution_session", "id": execution_session_id},
+                    ],
+                    payload={
+                        "execution_session_id": execution_session_id,
+                        "from_state": "CREATED",
+                        "to_state": initial_state,
+                        "reason": "initial_state",
+                    },
+                    idempotency_key=state_event_idempotency,
+                ),
+            )
+    except sqlite3.IntegrityError as exc:
+        connection.rollback()
+        if "execution_sessions.execution_session_id" in str(exc):
+            raise CommandError(
+                code="duplicate_execution_session_id",
+                message="execution_session_id already exists",
+                details={"execution_session_id": execution_session_id},
+            ) from exc
+        raise
+    except Exception:
+        connection.rollback()
+        raise
+    connection.commit()
+
+    session = get_execution_session(connection, execution_session_id)
+    if session is None:
+        raise CommandError(
+            code="execution_session_not_found",
+            message="execution session not found after creation",
+            details={"execution_session_id": execution_session_id},
+        )
+    return session
+
+
+def show_execution_session_command(
+    connection: sqlite3.Connection,
+    execution_session_id: str,
+) -> dict[str, Any]:
+    session = get_execution_session(connection, execution_session_id)
+    if session is None:
+        raise CommandError(
+            code="execution_session_not_found",
+            message="execution session not found",
+            details={"execution_session_id": execution_session_id},
+        )
+    return session
+
+
+def list_execution_sessions_for_workflow_run_command(
+    connection: sqlite3.Connection,
+    workflow_run_id: str,
+) -> list[dict[str, Any]]:
+    _workflow_scope(connection, workflow_run_id)
+    return list_execution_sessions_for_workflow_run(connection, workflow_run_id)
+
+
+def request_tool_execution_command(
+    connection: sqlite3.Connection,
+    payload: dict[str, Any],
+) -> dict[str, Any]:
+    _require_fields(
+        payload,
+        [
+            "execution_session_id",
+            "tool_class",
+            "idempotency_key",
+        ],
+    )
+    event_idempotency = _required_event_idempotency_key(
+        payload.get("idempotency_key"),
+        "tool-executions.request.tool.execution.requested",
+    )
+    tool_execution_id = str(payload.get("tool_execution_id") or f"tx-{uuid4()}")
+    _begin_transaction(connection)
+    try:
+        _assert_idempotency_available(connection, event_idempotency)
+        session = get_execution_session(connection, str(payload["execution_session_id"]))
+        if session is None:
+            raise CommandError(
+                code="execution_session_not_found",
+                message="execution session not found for tool execution request",
+                details={"execution_session_id": str(payload["execution_session_id"])},
+            )
+        if str(session["state"]) in {"SUCCEEDED", "FAILED", "CANCELED"}:
+            raise CommandError(
+                code="execution_session_closed",
+                message="tool execution cannot be requested on a closed session",
+                details={
+                    "execution_session_id": str(payload["execution_session_id"]),
+                    "state": str(session["state"]),
+                },
+            )
+        workflow_scope = _workflow_scope(connection, str(session["workflow_run_id"]))
+        now = utc_now_iso()
+        create_tool_execution(
+            connection,
+            tool_execution_id=tool_execution_id,
+            execution_session_id=str(payload["execution_session_id"]),
+            tool_class=str(payload["tool_class"]),
+            tool_name=(
+                str(payload["tool_name"])
+                if payload.get("tool_name") is not None
+                else None
+            ),
+            state="REQUESTED",
+            idempotency_key=str(payload["idempotency_key"]),
+            attempt_no=int(payload.get("attempt_no", 0)),
+            policy_decision_id=None,
+            output_artifact_version_ids=None,
+            requested_at=now,
+            completed_at=None,
+            error_code=None,
+        )
+        incremented = increment_tool_call_count(
+            connection,
+            execution_session_id=str(payload["execution_session_id"]),
+            updated_at=now,
+        )
+        if incremented is None:
+            raise CommandError(
+                code="execution_session_not_found",
+                message="execution session not found while incrementing tool call count",
+                details={"execution_session_id": str(payload["execution_session_id"])},
+            )
+        append_event(
+            connection,
+            _event_envelope(
+                event_type="tool.execution.requested",
+                tenant_id=workflow_scope["tenant_id"],
+                domain_id=workflow_scope["domain_id"],
+                actor_type=str(payload.get("actor_type", "system")),
+                actor_id=str(payload.get("actor_id", "system:runtime")),
+                links=[
+                    {"rel": "subject", "type": "workflow_run", "id": str(session["workflow_run_id"])},
+                    {"rel": "subject", "type": "task_run", "id": str(session["task_run_id"])},
+                    {"rel": "subject", "type": "execution_session", "id": str(session["execution_session_id"])},
+                    {"rel": "subject", "type": "tool_execution", "id": tool_execution_id},
+                ],
+                payload={
+                    "tool_execution_id": tool_execution_id,
+                    "tool_class": str(payload["tool_class"]),
+                    "idempotency_key": str(payload["idempotency_key"]),
+                    "tool_name": (
+                        str(payload["tool_name"])
+                        if payload.get("tool_name") is not None
+                        else None
+                    ),
+                },
+                idempotency_key=event_idempotency,
+            ),
+        )
+    except sqlite3.IntegrityError as exc:
+        connection.rollback()
+        if "tool_executions.tool_execution_id" in str(exc):
+            raise CommandError(
+                code="duplicate_tool_execution_id",
+                message="tool_execution_id already exists",
+                details={"tool_execution_id": tool_execution_id},
+            ) from exc
+        if "uq_tool_executions_session_idempotency" in str(exc):
+            existing = get_tool_execution_by_session_idempotency(
+                connection,
+                execution_session_id=str(payload["execution_session_id"]),
+                idempotency_key=str(payload["idempotency_key"]),
+            )
+            if existing is not None:
+                return existing
+            raise CommandError(
+                code="duplicate_tool_execution_idempotency",
+                message="tool execution idempotency key already exists in session",
+                details={
+                    "execution_session_id": str(payload["execution_session_id"]),
+                    "idempotency_key": str(payload["idempotency_key"]),
+                },
+            ) from exc
+        raise
+    except Exception:
+        connection.rollback()
+        raise
+    connection.commit()
+
+    tool_execution = get_tool_execution(connection, tool_execution_id)
+    if tool_execution is None:
+        raise CommandError(
+            code="tool_execution_not_found",
+            message="tool execution not found after request",
+            details={"tool_execution_id": tool_execution_id},
+        )
+    return tool_execution
+
+
+def evaluate_policy_decision_command(
+    connection: sqlite3.Connection,
+    payload: dict[str, Any],
+) -> dict[str, Any]:
+    _require_fields(
+        payload,
+        [
+            "tool_execution_id",
+            "decision",
+            "principal_actor",
+            "idempotency_key",
+        ],
+    )
+    decision = str(payload["decision"])
+    if decision not in POLICY_DECISIONS:
+        raise CommandError(
+            code="invalid_policy_decision",
+            message=f"unsupported policy decision: {decision}",
+            details={"allowed_decisions": sorted(POLICY_DECISIONS)},
+        )
+    principal_actor = payload.get("principal_actor")
+    if not isinstance(principal_actor, dict):
+        raise CommandError(
+            code="invalid_principal_actor",
+            message="principal_actor must be a JSON object",
+            details={},
+        )
+    if principal_actor.get("id") is None or principal_actor.get("type") is None:
+        raise CommandError(
+            code="invalid_principal_actor",
+            message="principal_actor requires id and type",
+            details={},
+        )
+    _assert_actor_type(str(principal_actor["type"]))
+    policy_event_suffix = (
+        "tool-executions.evaluate.tool.execution.approved"
+        if decision == "allow"
+        else "tool-executions.evaluate.tool.execution.denied"
+    )
+    tool_event_idempotency = _required_event_idempotency_key(
+        payload.get("idempotency_key"),
+        policy_event_suffix,
+    )
+    session_event_idempotency = _required_event_idempotency_key(
+        payload.get("idempotency_key"),
+        "tool-executions.evaluate.execution.session.state_changed",
+    )
+    policy_decision_id = str(payload.get("policy_decision_id") or f"pd-{uuid4()}")
+
+    _begin_transaction(connection)
+    try:
+        _assert_idempotency_available(connection, tool_event_idempotency)
+        _assert_idempotency_available(connection, session_event_idempotency)
+        tool_execution = get_tool_execution(connection, str(payload["tool_execution_id"]))
+        if tool_execution is None:
+            raise CommandError(
+                code="tool_execution_not_found",
+                message="tool execution not found",
+                details={"tool_execution_id": str(payload["tool_execution_id"])},
+            )
+        if str(tool_execution["state"]) != "REQUESTED":
+            raise CommandError(
+                code="tool_execution_not_requestable",
+                message="policy decision can only be evaluated from REQUESTED state",
+                details={
+                    "tool_execution_id": str(payload["tool_execution_id"]),
+                    "state": str(tool_execution["state"]),
+                },
+            )
+        session = get_execution_session(connection, str(tool_execution["execution_session_id"]))
+        if session is None:
+            raise CommandError(
+                code="execution_session_not_found",
+                message="execution session not found for tool execution",
+                details={"execution_session_id": str(tool_execution["execution_session_id"])},
+            )
+        workflow_scope = _workflow_scope(connection, str(session["workflow_run_id"]))
+        now = utc_now_iso()
+        create_policy_decision(
+            connection,
+            policy_decision_id=policy_decision_id,
+            principal_actor={
+                "type": str(principal_actor["type"]),
+                "id": str(principal_actor["id"]),
+                "display": (
+                    str(principal_actor["display"])
+                    if principal_actor.get("display") is not None
+                    else None
+                ),
+            },
+            decision=decision,
+            reason_code=(
+                str(payload["reason_code"])
+                if payload.get("reason_code") is not None
+                else None
+            ),
+            required_approval_action=(
+                str(payload["required_approval_action"])
+                if payload.get("required_approval_action") is not None
+                else None
+            ),
+            tool_execution_id=str(payload["tool_execution_id"]),
+            decided_at=now,
+        )
+        if decision == "allow":
+            transitioned_tool = transition_tool_execution_state(
+                connection,
+                tool_execution_id=str(payload["tool_execution_id"]),
+                from_states=["REQUESTED"],
+                to_state="APPROVED",
+                policy_decision_id=policy_decision_id,
+                output_artifact_version_ids=None,
+                completed_at=None,
+                error_code=None,
+            )
+            if transitioned_tool is None:
+                raise CommandError(
+                    code="tool_execution_transition_conflict",
+                    message="tool execution transition raced during policy allow",
+                    details={"tool_execution_id": str(payload["tool_execution_id"])},
+                )
+            append_event(
+                connection,
+                _event_envelope(
+                    event_type="tool.execution.approved",
+                    tenant_id=workflow_scope["tenant_id"],
+                    domain_id=workflow_scope["domain_id"],
+                    actor_type=str(principal_actor["type"]),
+                    actor_id=str(principal_actor["id"]),
+                    links=[
+                        {"rel": "subject", "type": "workflow_run", "id": str(session["workflow_run_id"])},
+                        {"rel": "subject", "type": "task_run", "id": str(session["task_run_id"])},
+                        {"rel": "subject", "type": "execution_session", "id": str(session["execution_session_id"])},
+                        {"rel": "subject", "type": "tool_execution", "id": str(payload["tool_execution_id"])},
+                        {"rel": "subject", "type": "policy_decision", "id": policy_decision_id},
+                    ],
+                    payload={
+                        "tool_execution_id": str(payload["tool_execution_id"]),
+                        "tool_class": str(tool_execution["tool_class"]),
+                        "policy_decision_id": policy_decision_id,
+                    },
+                    idempotency_key=tool_event_idempotency,
+                ),
+            )
+            return_payload = {
+                "tool_execution": transitioned_tool,
+                "policy_decision": get_policy_decision(connection, policy_decision_id),
+                "execution_session": session,
+            }
+        else:
+            denial_reason = (
+                str(payload["reason_code"])
+                if payload.get("reason_code") is not None
+                else decision
+            )
+            transitioned_tool = transition_tool_execution_state(
+                connection,
+                tool_execution_id=str(payload["tool_execution_id"]),
+                from_states=["REQUESTED"],
+                to_state="DENIED",
+                policy_decision_id=policy_decision_id,
+                output_artifact_version_ids=None,
+                completed_at=now,
+                error_code=denial_reason,
+            )
+            if transitioned_tool is None:
+                raise CommandError(
+                    code="tool_execution_transition_conflict",
+                    message="tool execution transition raced during policy denial",
+                    details={"tool_execution_id": str(payload["tool_execution_id"])},
+                )
+            append_event(
+                connection,
+                _event_envelope(
+                    event_type="tool.execution.denied",
+                    tenant_id=workflow_scope["tenant_id"],
+                    domain_id=workflow_scope["domain_id"],
+                    actor_type=str(principal_actor["type"]),
+                    actor_id=str(principal_actor["id"]),
+                    links=[
+                        {"rel": "subject", "type": "workflow_run", "id": str(session["workflow_run_id"])},
+                        {"rel": "subject", "type": "task_run", "id": str(session["task_run_id"])},
+                        {"rel": "subject", "type": "execution_session", "id": str(session["execution_session_id"])},
+                        {"rel": "subject", "type": "tool_execution", "id": str(payload["tool_execution_id"])},
+                        {"rel": "subject", "type": "policy_decision", "id": policy_decision_id},
+                    ],
+                    payload={
+                        "tool_execution_id": str(payload["tool_execution_id"]),
+                        "tool_class": str(tool_execution["tool_class"]),
+                        "policy_decision_id": policy_decision_id,
+                        "denial_reason": denial_reason,
+                    },
+                    idempotency_key=tool_event_idempotency,
+                ),
+            )
+            target_session_state = "WAITING_APPROVAL" if decision == "require_approval" else "FAILED"
+            transitioned_session = transition_execution_session_state(
+                connection,
+                execution_session_id=str(session["execution_session_id"]),
+                from_states=["CREATED", "RUNNING", "WAITING_POLICY", "PAUSED"],
+                to_state=target_session_state,
+                updated_at=now,
+                closed_at=(now if target_session_state == "FAILED" else None),
+            )
+            if transitioned_session is None:
+                raise CommandError(
+                    code="execution_session_transition_conflict",
+                    message="execution session transition raced during policy denial",
+                    details={"execution_session_id": str(session["execution_session_id"])},
+                )
+            append_event(
+                connection,
+                _event_envelope(
+                    event_type="execution.session.state_changed",
+                    tenant_id=workflow_scope["tenant_id"],
+                    domain_id=workflow_scope["domain_id"],
+                    actor_type=str(principal_actor["type"]),
+                    actor_id=str(principal_actor["id"]),
+                    links=[
+                        {"rel": "subject", "type": "workflow_run", "id": str(session["workflow_run_id"])},
+                        {"rel": "subject", "type": "task_run", "id": str(session["task_run_id"])},
+                        {"rel": "subject", "type": "execution_session", "id": str(session["execution_session_id"])},
+                    ],
+                    payload={
+                        "execution_session_id": str(session["execution_session_id"]),
+                        "from_state": str(session["state"]),
+                        "to_state": target_session_state,
+                        "reason": f"policy_{decision}",
+                    },
+                    idempotency_key=session_event_idempotency,
+                ),
+            )
+            return_payload = {
+                "tool_execution": transitioned_tool,
+                "policy_decision": get_policy_decision(connection, policy_decision_id),
+                "execution_session": transitioned_session,
+            }
+    except sqlite3.IntegrityError as exc:
+        connection.rollback()
+        if "policy_decisions.policy_decision_id" in str(exc):
+            raise CommandError(
+                code="duplicate_policy_decision_id",
+                message="policy_decision_id already exists",
+                details={"policy_decision_id": policy_decision_id},
+            ) from exc
+        if "uq_policy_decisions_tool_execution_id" in str(exc):
+            existing = get_policy_decision_for_tool_execution(
+                connection,
+                tool_execution_id=str(payload["tool_execution_id"]),
+            )
+            if existing is not None:
+                existing_tool = get_tool_execution(connection, str(payload["tool_execution_id"]))
+                if existing_tool is None:
+                    raise CommandError(
+                        code="tool_execution_not_found",
+                        message="tool execution not found while resolving duplicate policy decision",
+                        details={"tool_execution_id": str(payload["tool_execution_id"])},
+                    ) from exc
+                return {
+                    "tool_execution": existing_tool,
+                    "policy_decision": existing,
+                    "execution_session": get_execution_session(
+                        connection,
+                        str(existing_tool["execution_session_id"]),
+                    ),
+                }
+            raise CommandError(
+                code="duplicate_policy_decision",
+                message="policy decision already exists for this tool execution",
+                details={"tool_execution_id": str(payload["tool_execution_id"])},
+            ) from exc
+        raise
+    except Exception:
+        connection.rollback()
+        raise
+    connection.commit()
+    return return_payload
+
+
+def complete_tool_execution_command(
+    connection: sqlite3.Connection,
+    payload: dict[str, Any],
+) -> dict[str, Any]:
+    _require_fields(
+        payload,
+        ["tool_execution_id", "result", "idempotency_key"],
+    )
+    result = str(payload["result"])
+    if result not in {"succeeded", "failed", "canceled"}:
+        raise CommandError(
+            code="invalid_tool_execution_result",
+            message=f"unsupported tool execution result: {result}",
+            details={"allowed_results": ["succeeded", "failed", "canceled"]},
+        )
+    event_idempotency = _required_event_idempotency_key(
+        payload.get("idempotency_key"),
+        "tool-executions.complete.tool.execution.completed",
+    )
+    to_state = (
+        "COMPLETED"
+        if result == "succeeded"
+        else ("CANCELED" if result == "canceled" else "FAILED")
+    )
+
+    _begin_transaction(connection)
+    try:
+        _assert_idempotency_available(connection, event_idempotency)
+        tool_execution = get_tool_execution(connection, str(payload["tool_execution_id"]))
+        if tool_execution is None:
+            raise CommandError(
+                code="tool_execution_not_found",
+                message="tool execution not found",
+                details={"tool_execution_id": str(payload["tool_execution_id"])},
+            )
+        if str(tool_execution["state"]) not in {"APPROVED", "RUNNING"}:
+            raise CommandError(
+                code="tool_execution_not_completable",
+                message="tool execution can only complete from APPROVED or RUNNING",
+                details={
+                    "tool_execution_id": str(payload["tool_execution_id"]),
+                    "state": str(tool_execution["state"]),
+                },
+            )
+        session = get_execution_session(connection, str(tool_execution["execution_session_id"]))
+        if session is None:
+            raise CommandError(
+                code="execution_session_not_found",
+                message="execution session not found for tool execution",
+                details={"execution_session_id": str(tool_execution["execution_session_id"])},
+            )
+        workflow_scope = _workflow_scope(connection, str(session["workflow_run_id"]))
+        output_artifact_version_ids = payload.get("output_artifact_version_ids")
+        if output_artifact_version_ids is not None:
+            if not isinstance(output_artifact_version_ids, list):
+                raise CommandError(
+                    code="invalid_output_artifact_version_ids",
+                    message="output_artifact_version_ids must be a list when provided",
+                    details={},
+                )
+            for artifact_version_id in output_artifact_version_ids:
+                artifact = get_artifact_version(connection, str(artifact_version_id))
+                if artifact is None:
+                    raise CommandError(
+                        code="artifact_version_not_found",
+                        message="output artifact version id was not found",
+                        details={"artifact_version_id": str(artifact_version_id)},
+                    )
+                if str(artifact["workflow_run_id"]) != str(session["workflow_run_id"]):
+                    raise CommandError(
+                        code="cross_workflow_artifact_reference",
+                        message="output artifact version belongs to a different workflow_run",
+                        details={
+                            "artifact_version_id": str(artifact_version_id),
+                            "artifact_workflow_run_id": str(artifact["workflow_run_id"]),
+                            "workflow_run_id": str(session["workflow_run_id"]),
+                        },
+                    )
+        now = utc_now_iso()
+        transitioned = transition_tool_execution_state(
+            connection,
+            tool_execution_id=str(payload["tool_execution_id"]),
+            from_states=["APPROVED", "RUNNING"],
+            to_state=to_state,
+            policy_decision_id=tool_execution.get("policy_decision_id"),
+            output_artifact_version_ids=(
+                [str(item) for item in output_artifact_version_ids]
+                if isinstance(output_artifact_version_ids, list)
+                else None
+            ),
+            completed_at=now,
+            error_code=(
+                str(payload["error_code"])
+                if payload.get("error_code") is not None
+                else None
+            ),
+        )
+        if transitioned is None:
+            raise CommandError(
+                code="tool_execution_transition_conflict",
+                message="tool execution transition failed",
+                details={"tool_execution_id": str(payload["tool_execution_id"])},
+            )
+        append_event(
+            connection,
+            _event_envelope(
+                event_type="tool.execution.completed",
+                tenant_id=workflow_scope["tenant_id"],
+                domain_id=workflow_scope["domain_id"],
+                actor_type=str(payload.get("actor_type", "system")),
+                actor_id=str(payload.get("actor_id", "system:runtime")),
+                links=[
+                    {"rel": "subject", "type": "workflow_run", "id": str(session["workflow_run_id"])},
+                    {"rel": "subject", "type": "task_run", "id": str(session["task_run_id"])},
+                    {"rel": "subject", "type": "execution_session", "id": str(session["execution_session_id"])},
+                    {"rel": "subject", "type": "tool_execution", "id": str(payload["tool_execution_id"])},
+                ],
+                payload={
+                    "tool_execution_id": str(payload["tool_execution_id"]),
+                    "tool_class": str(tool_execution["tool_class"]),
+                    "result": result,
+                    "output_artifact_version_ids": (
+                        [str(item) for item in output_artifact_version_ids]
+                        if isinstance(output_artifact_version_ids, list) and output_artifact_version_ids
+                        else None
+                    ),
+                },
+                idempotency_key=event_idempotency,
+            ),
+        )
+    except Exception:
+        connection.rollback()
+        raise
+    connection.commit()
+    completed = get_tool_execution(connection, str(payload["tool_execution_id"]))
+    if completed is None:
+        raise CommandError(
+            code="tool_execution_not_found",
+            message="tool execution not found after completion",
+            details={"tool_execution_id": str(payload["tool_execution_id"])},
+        )
+    return completed
+
+
+def transition_execution_session_state_command(
+    connection: sqlite3.Connection,
+    payload: dict[str, Any],
+) -> dict[str, Any]:
+    _require_fields(
+        payload,
+        ["execution_session_id", "to_state", "idempotency_key"],
+    )
+    to_state = str(payload["to_state"])
+    if to_state not in EXECUTION_SESSION_STATES:
+        raise CommandError(
+            code="invalid_execution_session_state",
+            message=f"unsupported execution session state: {to_state}",
+            details={"allowed_states": sorted(EXECUTION_SESSION_STATES)},
+        )
+    event_idempotency = _required_event_idempotency_key(
+        payload.get("idempotency_key"),
+        "execution-sessions.transition.execution.session.state_changed",
+    )
+    _begin_transaction(connection)
+    try:
+        _assert_idempotency_available(connection, event_idempotency)
+        session = get_execution_session(connection, str(payload["execution_session_id"]))
+        if session is None:
+            raise CommandError(
+                code="execution_session_not_found",
+                message="execution session not found",
+                details={"execution_session_id": str(payload["execution_session_id"])},
+            )
+        from_state = str(session["state"])
+        if from_state == to_state:
+            raise CommandError(
+                code="execution_session_already_in_state",
+                message="execution session already in requested state",
+                details={
+                    "execution_session_id": str(payload["execution_session_id"]),
+                    "state": from_state,
+                },
+            )
+        workflow_scope = _workflow_scope(connection, str(session["workflow_run_id"]))
+        now = utc_now_iso()
+        transitioned = transition_execution_session_state(
+            connection,
+            execution_session_id=str(payload["execution_session_id"]),
+            from_states=[from_state],
+            to_state=to_state,
+            updated_at=now,
+            closed_at=(now if to_state in {"SUCCEEDED", "FAILED", "CANCELED"} else None),
+        )
+        if transitioned is None:
+            raise CommandError(
+                code="execution_session_transition_conflict",
+                message="execution session transition raced",
+                details={"execution_session_id": str(payload["execution_session_id"])},
+            )
+        append_event(
+            connection,
+            _event_envelope(
+                event_type="execution.session.state_changed",
+                tenant_id=workflow_scope["tenant_id"],
+                domain_id=workflow_scope["domain_id"],
+                actor_type=str(payload.get("actor_type", "system")),
+                actor_id=str(payload.get("actor_id", "system:runtime")),
+                links=[
+                    {"rel": "subject", "type": "workflow_run", "id": str(session["workflow_run_id"])},
+                    {"rel": "subject", "type": "task_run", "id": str(session["task_run_id"])},
+                    {"rel": "subject", "type": "execution_session", "id": str(payload["execution_session_id"])},
+                ],
+                payload={
+                    "execution_session_id": str(payload["execution_session_id"]),
+                    "from_state": from_state,
+                    "to_state": to_state,
+                    "reason": (
+                        str(payload["reason"])
+                        if payload.get("reason") is not None
+                        else None
+                    ),
+                },
+                idempotency_key=event_idempotency,
+            ),
+        )
+    except Exception:
+        connection.rollback()
+        raise
+    connection.commit()
+    transitioned = get_execution_session(connection, str(payload["execution_session_id"]))
+    if transitioned is None:
+        raise CommandError(
+            code="execution_session_not_found",
+            message="execution session not found after transition",
+            details={"execution_session_id": str(payload["execution_session_id"])},
+        )
+    return transitioned
+
+
+def show_tool_execution_command(
+    connection: sqlite3.Connection,
+    tool_execution_id: str,
+) -> dict[str, Any]:
+    tool_execution = get_tool_execution(connection, tool_execution_id)
+    if tool_execution is None:
+        raise CommandError(
+            code="tool_execution_not_found",
+            message="tool execution not found",
+            details={"tool_execution_id": tool_execution_id},
+        )
+    return tool_execution
+
+
+def show_policy_decision_command(
+    connection: sqlite3.Connection,
+    policy_decision_id: str,
+) -> dict[str, Any]:
+    policy_decision = get_policy_decision(connection, policy_decision_id)
+    if policy_decision is None:
+        raise CommandError(
+            code="policy_decision_not_found",
+            message="policy decision not found",
+            details={"policy_decision_id": policy_decision_id},
+        )
+    return policy_decision
+
+
+def reconcile_executions_command(
+    connection: sqlite3.Connection,
+    payload: dict[str, Any],
+) -> dict[str, Any]:
+    now_iso = str(payload.get("now") or utc_now_iso())
+    stale_seconds = int(payload.get("stale_seconds", 300))
+    if stale_seconds < 0:
+        raise CommandError(
+            code="invalid_stale_seconds",
+            message="stale_seconds must be >= 0",
+            details={"stale_seconds": stale_seconds},
+        )
+    now_dt = _parse_iso_datetime(now_iso)
+    stale_before = (now_dt - timedelta(seconds=stale_seconds)).isoformat().replace("+00:00", "Z")
+
+    _begin_transaction(connection)
+    processed: list[dict[str, Any]] = []
+    try:
+        sessions = list_reconcilable_execution_sessions(
+            connection,
+            stale_before_iso=stale_before,
+        )
+        for session in sessions:
+            workflow_scope = _workflow_scope(connection, str(session["workflow_run_id"]))
+            open_tools = [
+                row
+                for row in list_tool_executions_for_session(
+                    connection,
+                    str(session["execution_session_id"]),
+                )
+                if str(row["state"]) in {"REQUESTED", "APPROVED", "RUNNING"}
+            ]
+            failed_tool_ids: list[str] = []
+            for tool in open_tools:
+                transitioned_tool = transition_tool_execution_state(
+                    connection,
+                    tool_execution_id=str(tool["tool_execution_id"]),
+                    from_states=["REQUESTED", "APPROVED", "RUNNING"],
+                    to_state="FAILED",
+                    policy_decision_id=tool.get("policy_decision_id"),
+                    output_artifact_version_ids=tool.get("output_artifact_version_ids"),
+                    completed_at=now_iso,
+                    error_code="execution_reconcile_timeout",
+                )
+                if transitioned_tool is None:
+                    continue
+                failed_tool_ids.append(str(tool["tool_execution_id"]))
+                append_event(
+                    connection,
+                    _event_envelope(
+                        event_type="tool.execution.completed",
+                        tenant_id=workflow_scope["tenant_id"],
+                        domain_id=workflow_scope["domain_id"],
+                        actor_type="system",
+                        actor_id="system:execution-reconcile",
+                        links=[
+                            {"rel": "subject", "type": "workflow_run", "id": str(session["workflow_run_id"])},
+                            {"rel": "subject", "type": "task_run", "id": str(session["task_run_id"])},
+                            {"rel": "subject", "type": "execution_session", "id": str(session["execution_session_id"])},
+                            {"rel": "subject", "type": "tool_execution", "id": str(tool["tool_execution_id"])},
+                        ],
+                        payload={
+                            "tool_execution_id": str(tool["tool_execution_id"]),
+                            "tool_class": str(tool["tool_class"]),
+                            "result": "failed",
+                            "output_artifact_version_ids": None,
+                        },
+                        idempotency_key=None,
+                    ),
+                )
+            transitioned_session = transition_execution_session_state(
+                connection,
+                execution_session_id=str(session["execution_session_id"]),
+                from_states=["CREATED", "RUNNING", "WAITING_POLICY", "WAITING_APPROVAL"],
+                to_state="FAILED",
+                updated_at=now_iso,
+                closed_at=now_iso,
+            )
+            if transitioned_session is None:
+                continue
+            append_event(
+                connection,
+                _event_envelope(
+                    event_type="execution.session.state_changed",
+                    tenant_id=workflow_scope["tenant_id"],
+                    domain_id=workflow_scope["domain_id"],
+                    actor_type="system",
+                    actor_id="system:execution-reconcile",
+                    links=[
+                        {"rel": "subject", "type": "workflow_run", "id": str(session["workflow_run_id"])},
+                        {"rel": "subject", "type": "task_run", "id": str(session["task_run_id"])},
+                        {"rel": "subject", "type": "execution_session", "id": str(session["execution_session_id"])},
+                    ],
+                    payload={
+                        "execution_session_id": str(session["execution_session_id"]),
+                        "from_state": str(session["state"]),
+                        "to_state": "FAILED",
+                        "reason": "reconcile_timeout",
+                    },
+                    idempotency_key=None,
+                ),
+            )
+            processed.append(
+                {
+                    "execution_session_id": str(session["execution_session_id"]),
+                    "workflow_run_id": str(session["workflow_run_id"]),
+                    "task_run_id": str(session["task_run_id"]),
+                    "failed_tool_execution_ids": failed_tool_ids,
+                }
+            )
+    except Exception:
+        connection.rollback()
+        raise
+    connection.commit()
+    return {
+        "now": now_iso,
+        "stale_before": stale_before,
+        "processed_count": len(processed),
+        "processed": processed,
+    }
+
+
 def _begin_transaction(connection: sqlite3.Connection) -> None:
     connection.execute("BEGIN IMMEDIATE")
 
@@ -2528,10 +3788,12 @@ def _assert_actor_type(actor_type: str) -> None:
 
 def _future_iso(lease_seconds: int) -> str:
     now = utc_now_iso()
-    from datetime import datetime, timezone
-
-    parsed = datetime.fromisoformat(now.replace("Z", "+00:00"))
+    parsed = _parse_iso_datetime(now)
     return (parsed + timedelta(seconds=lease_seconds)).astimezone(timezone.utc).isoformat().replace("+00:00", "Z")
+
+
+def _parse_iso_datetime(value: str) -> datetime:
+    return datetime.fromisoformat(value.replace("Z", "+00:00")).astimezone(timezone.utc)
 
 
 def _validate_task_run_belongs_to_workflow(
@@ -2558,6 +3820,142 @@ def _validate_task_run_belongs_to_workflow(
             },
         )
     return task_run
+
+
+def _normalize_artifact_links(raw_links: Any) -> list[dict[str, str]]:
+    if raw_links is None:
+        return []
+    if not isinstance(raw_links, list):
+        raise CommandError(
+            code="invalid_artifact_links",
+            message="links must be a list of objects",
+            details={},
+        )
+    normalized: list[dict[str, str]] = []
+    dedupe: set[tuple[str, str, str]] = set()
+    for index, raw in enumerate(raw_links):
+        if not isinstance(raw, dict):
+            raise CommandError(
+                code="invalid_artifact_links",
+                message="links entries must be objects",
+                details={"index": index},
+            )
+        subject_kind = raw.get("subject_kind")
+        subject_id = raw.get("subject_id")
+        relation_kind = raw.get("relation_kind") or "attachment"
+        if subject_kind is None or subject_id is None:
+            raise CommandError(
+                code="invalid_artifact_links",
+                message="each link requires subject_kind and subject_id",
+                details={"index": index},
+            )
+        item = {
+            "subject_kind": str(subject_kind),
+            "subject_id": str(subject_id),
+            "relation_kind": str(relation_kind),
+        }
+        key = (item["subject_kind"], item["subject_id"], item["relation_kind"])
+        if key in dedupe:
+            raise CommandError(
+                code="invalid_artifact_links",
+                message="duplicate link in links payload",
+                details={"subject_kind": item["subject_kind"], "subject_id": item["subject_id"]},
+            )
+        dedupe.add(key)
+        normalized.append(item)
+    return normalized
+
+
+def _validate_artifact_link_subject(
+    connection: sqlite3.Connection,
+    *,
+    workflow_run_id: str,
+    subject_kind: str,
+    subject_id: str,
+) -> None:
+    if subject_kind == "workflow_run":
+        if subject_id != workflow_run_id:
+            raise CommandError(
+                code="cross_workflow_link_reference",
+                message="workflow_run attachment link must target the same workflow_run_id",
+                details={"workflow_run_id": workflow_run_id, "subject_id": subject_id},
+            )
+        _workflow_scope(connection, workflow_run_id)
+        return
+
+    if subject_kind == "task_run":
+        _validate_task_run_belongs_to_workflow(
+            connection,
+            task_run_id=subject_id,
+            workflow_run_id=workflow_run_id,
+        )
+        return
+
+    if subject_kind == "human_task":
+        human_task = get_human_task(connection, subject_id)
+        if human_task is None:
+            raise CommandError(
+                code="human_task_not_found",
+                message="human task not found for artifact link",
+                details={"human_task_id": subject_id},
+            )
+        if str(human_task["workflow_run_id"]) != workflow_run_id:
+            raise CommandError(
+                code="cross_workflow_link_reference",
+                message="human task belongs to a different workflow_run",
+                details={
+                    "workflow_run_id": workflow_run_id,
+                    "human_task_id": subject_id,
+                    "subject_workflow_run_id": str(human_task["workflow_run_id"]),
+                },
+            )
+        return
+
+    if subject_kind == "approval":
+        approval = get_approval(connection, subject_id)
+        if approval is None:
+            raise CommandError(
+                code="approval_not_found",
+                message="approval not found for artifact link",
+                details={"approval_id": subject_id},
+            )
+        if str(approval["workflow_run_id"]) != workflow_run_id:
+            raise CommandError(
+                code="cross_workflow_link_reference",
+                message="approval belongs to a different workflow_run",
+                details={
+                    "workflow_run_id": workflow_run_id,
+                    "approval_id": subject_id,
+                    "subject_workflow_run_id": str(approval["workflow_run_id"]),
+                },
+            )
+        return
+
+    if subject_kind == "flag":
+        flag = get_flag(connection, subject_id)
+        if flag is None:
+            raise CommandError(
+                code="flag_not_found",
+                message="flag not found for artifact link",
+                details={"flag_id": subject_id},
+            )
+        if str(flag["workflow_run_id"]) != workflow_run_id:
+            raise CommandError(
+                code="cross_workflow_link_reference",
+                message="flag belongs to a different workflow_run",
+                details={
+                    "workflow_run_id": workflow_run_id,
+                    "flag_id": subject_id,
+                    "subject_workflow_run_id": str(flag["workflow_run_id"]),
+                },
+            )
+        return
+
+    raise CommandError(
+        code="invalid_artifact_link_subject_kind",
+        message=f"unsupported artifact link subject_kind: {subject_kind}",
+        details={"allowed_subject_kinds": ["workflow_run", "task_run", "human_task", "approval", "flag"]},
+    )
 
 
 def _workflow_scope(connection: sqlite3.Connection, workflow_run_id: str) -> dict[str, str]:

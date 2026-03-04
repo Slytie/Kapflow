@@ -1,18 +1,19 @@
 from __future__ import annotations
 
-import hashlib
 import json
 from pathlib import Path
 import re
-import shutil
 import sqlite3
 from typing import Any
 
 import yaml
 
+from onetruth.application.services.example_document_corpus import load_example_document_corpus
+
 from .runtime_cli import REPO_ROOT, run_cli, stderr_json, stdout_json
 
 SCHEDULE_TEMPLATE_PACK_ROOT = REPO_ROOT / "fixtures/workflows/schedule_planning/template_pack"
+EXAMPLE_DOCUMENT_CORPUS_PATH = REPO_ROOT / "fixtures/example_document_corpus/manifest.yaml"
 
 ACTION_TO_COMMAND = {
     "tasks.create": ("tasks", "create"),
@@ -23,8 +24,14 @@ ACTION_TO_COMMAND = {
     "stage07.activate-issue": ("stage07", "activate-issue"),
     "maintenance.sweep-leases": ("maintenance", "sweep-leases"),
     "maintenance.reconcile-stage07": ("maintenance", "reconcile-stage07"),
+    "maintenance.reconcile-executions": ("maintenance", "reconcile-executions"),
+    "execution-sessions.create": ("execution-sessions", "create"),
+    "execution-sessions.transition": ("execution-sessions", "transition"),
+    "tool-executions.request": ("tool-executions", "request"),
     "approvals.request": ("approvals", "request"),
     "approvals.respond": ("approvals", "respond"),
+    "artifacts.ingest": ("artifacts", "ingest"),
+    "artifacts.seed-corpus": ("artifacts", "seed-corpus"),
     "artifacts.create-version": ("artifacts", "create-version"),
     "pointers.promote": ("pointers", "promote"),
 }
@@ -52,6 +59,7 @@ class RuntimeScenarioHarness:
             "db_url": self.db_url,
         }
         self.step_outputs: dict[str, dict[str, Any]] = {}
+        self._corpus = None
 
     @classmethod
     def from_yaml(cls, scenario_path: Path, tmp_path: Path) -> "RuntimeScenarioHarness":
@@ -92,18 +100,21 @@ class RuntimeScenarioHarness:
         if not isinstance(payload, dict):
             raise AssertionError(f"step payload must resolve to object: {step_id}")
 
+        resolved_action = action
         if action == "artifacts.create-version":
             self._materialize_artifact_payload(step_id, payload)
+            if payload.get("source_path") is not None or payload.get("fixture_id") is not None:
+                resolved_action = "artifacts.ingest"
 
         expected_error_code = step.get("expect_error_code")
         if expected_error_code is not None:
             result = self.run_action(
-                action=action,
+                action=resolved_action,
                 payload=payload,
                 expect_error_code=str(expected_error_code),
             )
         else:
-            result = self.run_action(action=action, payload=payload)
+            result = self.run_action(action=resolved_action, payload=payload)
 
         alias = str(step.get("save_as") or step_id)
         self.step_outputs[step_id] = result
@@ -230,6 +241,18 @@ class RuntimeScenarioHarness:
         )
         return stdout_json(result)
 
+    def list_artifacts(self) -> dict[str, Any]:
+        result = run_cli(
+            "--db-url",
+            self.db_url,
+            "artifacts",
+            "list",
+            "--workflow-run-id",
+            self.workflow_run_id,
+            "--json",
+        )
+        return stdout_json(result)
+
     def list_workflow_runs(self) -> dict[str, Any]:
         result = run_cli(
             "--db-url",
@@ -288,49 +311,54 @@ class RuntimeScenarioHarness:
         for index, seed_artifact in enumerate(self.scenario.get("seed_artifacts", [])):
             if not isinstance(seed_artifact, dict):
                 raise AssertionError("seed_artifacts entries must be mappings")
-            source_path = str(seed_artifact["source_path"])
-            copied, content_digest, byte_size = self._copy_template_artifact(
-                source_path=source_path,
-                target_subdir=f"seed/{index}",
-            )
+            source_path = self._resolve_fixture_source_path(seed_artifact)
             artifact_kind = str(seed_artifact["artifact_kind"])
             payload = {
                 "workflow_run_id": self.workflow_run_id,
                 "artifact_kind": artifact_kind,
                 "artifact_role": seed_artifact.get("artifact_role"),
                 "media_type": str(seed_artifact["media_type"]),
-                "storage_uri": copied.as_uri(),
-                "content_digest": content_digest,
-                "byte_size": byte_size,
+                "source_path": str(source_path),
+                "file_name": source_path.name,
+                "storage_root": str(self.artifact_root),
                 "metadata_json": {
                     "scenario_id": self.scenario_id,
-                    "seed_source_path": source_path,
+                    "seed_source_path": str(source_path),
+                    "seed_index": index,
                     **(seed_artifact.get("metadata_json") or {}),
                 },
                 "idempotency_key": (
                     f"scenario:{self.scenario_id}:seed:{index}:artifact:{artifact_kind}"
                 ),
             }
-            result = self.run_action(action="artifacts.create-version", payload=payload)
+            links = seed_artifact.get("links")
+            if links is not None:
+                payload["links"] = links
+            result = self.run_action(action="artifacts.ingest", payload=payload)
             seeded_context[artifact_kind] = {
                 "artifact_version": result["artifact_version"],
-                "storage_uri": copied.as_uri(),
-                "source_path": source_path,
-                "content_digest": content_digest,
-                "byte_size": byte_size,
+                "storage_uri": result["ingress"]["storage_uri"],
+                "source_path": str(source_path),
+                "content_digest": result["ingress"]["content_digest"],
+                "byte_size": result["ingress"]["byte_size"],
             }
         self.context["seed_artifacts"] = seeded_context
 
     def _materialize_artifact_payload(self, step_id: str, payload: dict[str, Any]) -> None:
-        source_path_value = payload.pop("source_path", None)
-        if source_path_value is not None:
-            copied, content_digest, byte_size = self._copy_template_artifact(
-                source_path=str(source_path_value),
-                target_subdir=f"steps/{step_id}",
-            )
-            payload.setdefault("storage_uri", copied.as_uri())
-            payload.setdefault("content_digest", content_digest)
-            payload.setdefault("byte_size", byte_size)
+        source_path_value = payload.get("source_path")
+        fixture_id = payload.get("fixture_id")
+        if fixture_id is not None:
+            source_path = self._resolve_fixture_source_path({"fixture_id": fixture_id})
+            payload["source_path"] = str(source_path)
+            payload.setdefault("file_name", source_path.name)
+            payload.setdefault("media_type", _media_type_for_name(source_path.name))
+        elif source_path_value is not None:
+            source_path = self._resolve_fixture_source_path({"source_path": source_path_value})
+            payload["source_path"] = str(source_path)
+            payload.setdefault("file_name", source_path.name)
+            payload.setdefault("media_type", _media_type_for_name(source_path.name))
+        if payload.get("source_path") is not None:
+            payload.setdefault("storage_root", str(self.artifact_root))
         metadata_json = payload.get("metadata_json")
         if metadata_json is None:
             metadata_json = {}
@@ -339,22 +367,28 @@ class RuntimeScenarioHarness:
         metadata_json.setdefault("scenario_id", self.scenario_id)
         metadata_json.setdefault("step_id", step_id)
         payload["metadata_json"] = metadata_json
+        payload.pop("fixture_id", None)
 
-    def _copy_template_artifact(
-        self,
-        *,
-        source_path: str,
-        target_subdir: str,
-    ) -> tuple[Path, str, int]:
-        source = SCHEDULE_TEMPLATE_PACK_ROOT / source_path
+    def _resolve_fixture_source_path(self, raw: dict[str, Any]) -> Path:
+        fixture_id = raw.get("fixture_id")
+        if fixture_id is not None:
+            corpus = self._load_corpus()
+            document = corpus.document_by_id(str(fixture_id))
+            return document.source_path
+        source_path = raw.get("source_path")
+        if source_path is None:
+            raise AssertionError("seed artifact requires source_path or fixture_id")
+        source = Path(str(source_path))
+        if not source.is_absolute():
+            source = (SCHEDULE_TEMPLATE_PACK_ROOT / source).resolve()
         if not source.exists():
-            raise AssertionError(f"scenario artifact source does not exist: {source_path}")
-        target = self.artifact_root / target_subdir / source_path
-        target.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copy2(source, target)
-        content = target.read_bytes()
-        digest = hashlib.sha256(content).hexdigest()
-        return target, f"sha256:{digest}", len(content)
+            raise AssertionError(f"scenario artifact source does not exist: {source}")
+        return source
+
+    def _load_corpus(self):
+        if self._corpus is None:
+            self._corpus = load_example_document_corpus(EXAMPLE_DOCUMENT_CORPUS_PATH)
+        return self._corpus
 
     def _resolve(self, value: Any) -> Any:
         if isinstance(value, dict):
@@ -388,3 +422,12 @@ class RuntimeScenarioHarness:
                 raise AssertionError(f"missing placeholder key in scenario context: {key}")
             current = current[part]
         return current
+
+
+def _media_type_for_name(file_name: str) -> str:
+    lower = file_name.lower()
+    if lower.endswith(".xlsx"):
+        return "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    if lower.endswith(".docx"):
+        return "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+    return "application/octet-stream"

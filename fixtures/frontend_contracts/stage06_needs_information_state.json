@@ -1,0 +1,152 @@
+{
+  "board": {
+    "board": {
+      "board_id": "schedule-planning",
+      "cards": [
+        {
+          "assignee_actor_id": null,
+          "assignee_actor_type": null,
+          "blocked_on_kind": null,
+          "blocked_on_ref": null,
+          "card_id": "human_task:<human_task_id:1>",
+          "card_type": "human_task",
+          "claimed_at": null,
+          "claimed_until": null,
+          "due_at": null,
+          "human_task_id": "<human_task_id:1>",
+          "lane": "human_tasks.open",
+          "linked_approval_count": 0,
+          "linked_approval_states": [],
+          "owner_role": "dispatch_supervisor",
+          "spawned_from_flag_id": null,
+          "stage_id": "Stage06",
+          "state": "OPEN",
+          "task_kind": "information_request",
+          "task_run_id": "<task_run_id:2>",
+          "title": "Stage06 information_request",
+          "workflow_id": "schedule_planning.v1",
+          "workflow_run_id": "<workflow_run_id:3>"
+        },
+        {
+          "assignee_actor_id": "human:dispatch-supervisor-2",
+          "assignee_actor_type": "human",
+          "blocked_on_kind": null,
+          "blocked_on_ref": null,
+          "card_id": "human_task:<human_task_id:4>",
+          "card_type": "human_task",
+          "claimed_at": "<ts:1>",
+          "claimed_until": null,
+          "due_at": null,
+          "human_task_id": "<human_task_id:4>",
+          "lane": "human_tasks.completed",
+          "linked_approval_count": 0,
+          "linked_approval_states": [],
+          "owner_role": "dispatch_supervisor",
+          "spawned_from_flag_id": null,
+          "stage_id": "Stage06",
+          "state": "COMPLETED",
+          "task_kind": "review_packet",
+          "task_run_id": "<task_run_id:5>",
+          "title": "Stage06 review_packet",
+          "workflow_id": "schedule_planning.v1",
+          "workflow_run_id": "<workflow_run_id:3>"
+        }
+      ],
+      "filters": {
+        "approval_state": null,
+        "flag_state": null,
+        "stage_id": null,
+        "task_kind": null,
+        "task_state": null,
+        "workflow_id": "schedule_planning.v1",
+        "workflow_run_id": "<workflow_run_id:3>"
+      },
+      "lanes": [
+        {
+          "card_count": 0,
+          "label": "Open Exceptions",
+          "lane": "flags.open",
+          "position": 5
+        },
+        {
+          "card_count": 1,
+          "label": "Open Tasks",
+          "lane": "human_tasks.open",
+          "position": 10
+        },
+        {
+          "card_count": 0,
+          "label": "Claimed Tasks",
+          "lane": "human_tasks.claimed",
+          "position": 20
+        },
+        {
+          "card_count": 0,
+          "label": "Pending Approvals",
+          "lane": "approvals.pending",
+          "position": 30
+        },
+        {
+          "card_count": 0,
+          "label": "Responded Approvals",
+          "lane": "approvals.responded",
+          "position": 40
+        },
+        {
+          "card_count": 1,
+          "label": "Completed Tasks",
+          "lane": "human_tasks.completed",
+          "position": 50
+        },
+        {
+          "card_count": 0,
+          "label": "Resolved Exceptions",
+          "lane": "flags.resolved",
+          "position": 60
+        },
+        {
+          "card_count": 0,
+          "label": "Closed Exceptions",
+          "lane": "flags.closed",
+          "position": 70
+        }
+      ],
+      "page": {
+        "limit": 100,
+        "offset": 0
+      },
+      "pointers": [],
+      "summary": {
+        "approval_count": 0,
+        "card_count": 2,
+        "flag_count": 0,
+        "human_task_count": 2,
+        "pointer_count": 0,
+        "workflow_run_count": 1
+      },
+      "workflow_runs": [
+        {
+          "activation_key": "stage06_review_requires_more_information:workflow-run",
+          "active_issue_count": 0,
+          "created_at": "<ts:2>",
+          "domain_id": "domain-x",
+          "logical_date": "2026-03-07",
+          "partition_key": "SD-2026-03-07",
+          "state": "OPEN",
+          "tenant_id": "tenant-a",
+          "updated_at": "<ts:3>",
+          "workflow_id": "schedule_planning.v1",
+          "workflow_run_id": "<workflow_run_id:3>",
+          "workflow_version": "v1"
+        }
+      ]
+    },
+    "command": "api.board.schedule_planning",
+    "status": "ok"
+  },
+  "snapshot_id": "stage06_needs_information_state",
+  "source": {
+    "capture": "after_full_scenario",
+    "scenario_id": "stage06_review_requires_more_information"
+  }
+}

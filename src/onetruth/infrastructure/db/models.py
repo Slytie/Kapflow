@@ -302,6 +302,40 @@ class ArtifactPointer(Base):
     )
 
 
+class ArtifactLink(Base):
+    __tablename__ = "artifact_links"
+    __table_args__ = (
+        UniqueConstraint(
+            "artifact_version_id",
+            "subject_kind",
+            "subject_id",
+            name="uq_artifact_links_subject",
+        ),
+    )
+
+    artifact_version_id: Mapped[str] = mapped_column(
+        String(128),
+        ForeignKey("artifact_versions.artifact_version_id"),
+        primary_key=True,
+    )
+    workflow_run_id: Mapped[str] = mapped_column(
+        String(128),
+        ForeignKey("workflow_runs.workflow_run_id"),
+        nullable=False,
+        index=True,
+    )
+    subject_kind: Mapped[str] = mapped_column(String(64), primary_key=True)
+    subject_id: Mapped[str] = mapped_column(String(128), primary_key=True)
+    relation_kind: Mapped[str] = mapped_column(String(64), nullable=False, default="attachment")
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        default=utcnow,
+    )
+    created_by_actor_id: Mapped[str] = mapped_column(String(128), nullable=False)
+    created_by_actor_type: Mapped[str] = mapped_column(String(32), nullable=False)
+
+
 class Flag(Base):
     __tablename__ = "flags"
     __table_args__ = (
@@ -341,3 +375,87 @@ class Flag(Base):
         default=utcnow,
         onupdate=utcnow,
     )
+
+
+class ExecutionSession(Base):
+    __tablename__ = "execution_sessions"
+
+    execution_session_id: Mapped[str] = mapped_column(String(128), primary_key=True)
+    workflow_run_id: Mapped[str] = mapped_column(
+        String(128),
+        ForeignKey("workflow_runs.workflow_run_id"),
+        nullable=False,
+        index=True,
+    )
+    task_run_id: Mapped[str] = mapped_column(
+        String(128),
+        ForeignKey("task_runs.task_run_id"),
+        nullable=False,
+        index=True,
+    )
+    execution_spec_id: Mapped[str] = mapped_column(String(128), nullable=False)
+    state: Mapped[str] = mapped_column(String(32), nullable=False)
+    owner_mode: Mapped[str] = mapped_column(String(32), nullable=False)
+    principal_actor: Mapped[dict[str, Any] | None] = mapped_column(JSON, nullable=True)
+    budget: Mapped[dict[str, Any] | None] = mapped_column(JSON, nullable=True)
+    tool_call_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=utcnow)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        default=utcnow,
+        onupdate=utcnow,
+    )
+    closed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+
+class ToolExecution(Base):
+    __tablename__ = "tool_executions"
+    __table_args__ = (
+        UniqueConstraint(
+            "execution_session_id",
+            "idempotency_key",
+            name="uq_tool_executions_session_idempotency",
+        ),
+    )
+
+    tool_execution_id: Mapped[str] = mapped_column(String(128), primary_key=True)
+    execution_session_id: Mapped[str] = mapped_column(
+        String(128),
+        ForeignKey("execution_sessions.execution_session_id"),
+        nullable=False,
+        index=True,
+    )
+    tool_class: Mapped[str] = mapped_column(String(128), nullable=False)
+    tool_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    state: Mapped[str] = mapped_column(String(32), nullable=False)
+    idempotency_key: Mapped[str] = mapped_column(String(255), nullable=False)
+    attempt_no: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    policy_decision_id: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    output_artifact_version_ids: Mapped[list[str] | None] = mapped_column(JSON, nullable=True)
+    requested_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    error_code: Mapped[str | None] = mapped_column(String(128), nullable=True)
+
+
+class PolicyDecision(Base):
+    __tablename__ = "policy_decisions"
+    __table_args__ = (
+        UniqueConstraint(
+            "tool_execution_id",
+            name="uq_policy_decisions_tool_execution_id",
+        ),
+    )
+
+    policy_decision_id: Mapped[str] = mapped_column(String(128), primary_key=True)
+    principal_actor: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False)
+    decision: Mapped[str] = mapped_column(String(32), nullable=False)
+    reason_code: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    required_approval_action: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    tool_execution_id: Mapped[str | None] = mapped_column(
+        String(128),
+        ForeignKey("tool_executions.tool_execution_id"),
+        nullable=True,
+        index=True,
+    )
+    decided_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)

@@ -1,0 +1,246 @@
+{
+  "run_detail": {
+    "approvals": [
+      {
+        "approval_id": "<approval_id:1>",
+        "approval_kind": "business_decision",
+        "candidate_roles": [
+          "operations_manager"
+        ],
+        "created_at": "<ts:1>",
+        "decided_by_actor_id": "human:ops-manager-1",
+        "decided_by_actor_type": "human",
+        "generation": 1,
+        "requested_at": "<ts:2>",
+        "requested_by_task_run_id": "<requested_by_task_run_id:2>",
+        "required_role": "operations_manager",
+        "responded_at": "<ts:3>",
+        "response_kind": "approve",
+        "response_reason": "Major replan approved due no-show",
+        "scope_kind": "stage",
+        "scope_ref": "Stage07",
+        "state": "RESPONDED",
+        "task_run_id": "<task_run_id:3>",
+        "updated_at": "<ts:4>",
+        "workflow_run_id": "<workflow_run_id:4>"
+      }
+    ],
+    "artifact_versions": [
+      {
+        "artifact_kind": "schedule.exception_board.doc",
+        "artifact_role": "evidence",
+        "artifact_version_id": "<artifact_version_id:5>",
+        "byte_size": 37237,
+        "content_digest": "sha256:d97dc267ef3cbb0f382e0e6822a848b96c50c9f53737dc493016c9022f25a1ba",
+        "created_at": "<ts:5>",
+        "lineage_note": null,
+        "links": [],
+        "media_type": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        "metadata_json": {
+          "ingress_file_name": "Stage07_Intraday_Exception_Control_Document_Example_COMPLETED.docx",
+          "ingress_media_type": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+          "ingress_source_path": "/Users/tylerclark/git/pythonProject/companyos/fixtures/workflows/schedule_planning/template_pack/Stage07_Intraday_Exception_Control/Stage07_Intraday_Exception_Control_Document_Example_COMPLETED.docx",
+          "scenario_id": "stage07_major_replan_happy",
+          "seed_index": 0,
+          "seed_source_path": "/Users/tylerclark/git/pythonProject/companyos/fixtures/workflows/schedule_planning/template_pack/Stage07_Intraday_Exception_Control/Stage07_Intraday_Exception_Control_Document_Example_COMPLETED.docx"
+        },
+        "parent_artifact_version_id": null,
+        "storage_uri": "<storage_uri:6>",
+        "supersedes_artifact_version_id": null,
+        "task_run_id": null,
+        "workflow_run_id": "<workflow_run_id:4>"
+      },
+      {
+        "artifact_kind": "schedule.published_schedule.workbook",
+        "artifact_role": "official_output",
+        "artifact_version_id": "<artifact_version_id:7>",
+        "byte_size": 10793,
+        "content_digest": "sha256:e7ecb2a95b89f547574b7e830bac0d5628741ed7ae64a639bd8d1ced64bd14d9",
+        "created_at": "<ts:6>",
+        "lineage_note": null,
+        "links": [],
+        "media_type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        "metadata_json": {
+          "branch": "stage07_major_replan_happy",
+          "ingress_file_name": "Stage06_Supervisor_Review_Publish_Spreadsheet_Example_COMPLETED.xlsx",
+          "ingress_media_type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+          "ingress_source_path": "/Users/tylerclark/git/pythonProject/companyos/fixtures/workflows/schedule_planning/template_pack/Stage06_Supervisor_Review_Publish/Stage06_Supervisor_Review_Publish_Spreadsheet_Example_COMPLETED.xlsx",
+          "scenario_id": "stage07_major_replan_happy",
+          "step_id": "create_base_artifact"
+        },
+        "parent_artifact_version_id": null,
+        "storage_uri": "<storage_uri:8>",
+        "supersedes_artifact_version_id": null,
+        "task_run_id": null,
+        "workflow_run_id": "<workflow_run_id:4>"
+      },
+      {
+        "artifact_kind": "schedule.replan_delta.workbook",
+        "artifact_role": "official_output",
+        "artifact_version_id": "<artifact_version_id:9>",
+        "byte_size": 13927,
+        "content_digest": "sha256:4dacafa977c8b887b6a9464d0d20809cfdc76d891186c956ab8afd9bd02f330c",
+        "created_at": "<ts:7>",
+        "lineage_note": null,
+        "links": [],
+        "media_type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        "metadata_json": {
+          "base_artifact_version_id": "<artifact_version_id:7>",
+          "delta_sequence": 1,
+          "flag_id": "<flag_id:10>",
+          "ingress_file_name": "Stage07_Intraday_Exception_Control_Spreadsheet_Example_COMPLETED.xlsx",
+          "ingress_media_type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+          "ingress_source_path": "/Users/tylerclark/git/pythonProject/companyos/fixtures/workflows/schedule_planning/template_pack/Stage07_Intraday_Exception_Control/Stage07_Intraday_Exception_Control_Spreadsheet_Example_COMPLETED.xlsx",
+          "scenario_id": "stage07_major_replan_happy",
+          "step_id": "create_replan_delta"
+        },
+        "parent_artifact_version_id": null,
+        "storage_uri": "<storage_uri:11>",
+        "supersedes_artifact_version_id": "<supersedes_artifact_version_id:12>",
+        "task_run_id": "<task_run_id:3>",
+        "workflow_run_id": "<workflow_run_id:4>"
+      }
+    ],
+    "command": "api.workflow_runs.detail",
+    "flags": [
+      {
+        "assigned_group": null,
+        "closed_at": null,
+        "created_at": "<ts:8>",
+        "created_by_actor_id": "human:dispatcher-1",
+        "created_by_actor_type": "human",
+        "dedupe_key": "scenario:stage07_major_replan_happy:flags.create:no-show",
+        "details_json": {
+          "reason_code": "no_show",
+          "zone_id": "berlin-east"
+        },
+        "domain_id": "domain-x",
+        "flag_id": "<flag_id:10>",
+        "kind": "no_show",
+        "partition_key": "SD-2026-03-09",
+        "severity": "high",
+        "source_event_id": null,
+        "state": "resolved",
+        "summary": "Courier C-104 did not report for shift",
+        "tenant_id": "tenant-a",
+        "updated_at": "<ts:9>",
+        "workflow_id": "schedule_planning.v1",
+        "workflow_run_id": "<workflow_run_id:4>"
+      }
+    ],
+    "human_tasks": [
+      {
+        "assignee_actor_id": "human:ops-manager-1",
+        "assignee_actor_type": "human",
+        "blocked_on_kind": null,
+        "blocked_on_ref": null,
+        "candidate_roles": [
+          "operations_manager"
+        ],
+        "claimed_at": "<ts:10>",
+        "claimed_until": null,
+        "created_at": "<ts:11>",
+        "due_at": null,
+        "escalation_at": null,
+        "generation": 0,
+        "human_task_id": "<human_task_id:13>",
+        "lease_version": 1,
+        "linked_approval_id": null,
+        "owner_role": "operations_manager",
+        "reopen_count": 0,
+        "spawned_from_flag_id": "<spawned_from_flag_id:14>",
+        "stage_id": "Stage07",
+        "state": "COMPLETED",
+        "task_kind": "exception_triage",
+        "task_run_id": "<task_run_id:15>",
+        "task_run_state": "COMPLETED",
+        "updated_at": "<ts:12>",
+        "workflow_run_id": "<workflow_run_id:4>"
+      },
+      {
+        "assignee_actor_id": "human:ops-manager-1",
+        "assignee_actor_type": "human",
+        "blocked_on_kind": null,
+        "blocked_on_ref": null,
+        "candidate_roles": [
+          "operations_manager"
+        ],
+        "claimed_at": "<ts:13>",
+        "claimed_until": null,
+        "created_at": "<ts:14>",
+        "due_at": null,
+        "escalation_at": null,
+        "generation": 1,
+        "human_task_id": "<human_task_id:16>",
+        "lease_version": 1,
+        "linked_approval_id": null,
+        "owner_role": "operations_manager",
+        "reopen_count": 0,
+        "spawned_from_flag_id": "<spawned_from_flag_id:14>",
+        "stage_id": "Stage07",
+        "state": "COMPLETED",
+        "task_kind": "final_review",
+        "task_run_id": "<task_run_id:3>",
+        "task_run_state": "COMPLETED",
+        "updated_at": "<ts:15>",
+        "workflow_run_id": "<workflow_run_id:4>"
+      }
+    ],
+    "pointers": [
+      {
+        "approved_by_approval_id": null,
+        "artifact_kind": "schedule.published_schedule.workbook",
+        "artifact_version_id": "<artifact_version_id:7>",
+        "generation": 0,
+        "pointer_key": "official:schedule.published_schedule.workbook",
+        "promoted_by_task_run_id": null,
+        "promotion_reason": "seed_base",
+        "scope_kind": "stage",
+        "scope_ref": "Stage06",
+        "updated_at": "<ts:16>",
+        "workflow_run_id": "<workflow_run_id:4>"
+      },
+      {
+        "approved_by_approval_id": "<approved_by_approval_id:17>",
+        "artifact_kind": "schedule.replan_delta.workbook",
+        "artifact_version_id": "<artifact_version_id:9>",
+        "generation": 0,
+        "pointer_key": "official:schedule.replan_delta.workbook",
+        "promoted_by_task_run_id": "<promoted_by_task_run_id:18>",
+        "promotion_reason": "official_major_replan",
+        "scope_kind": "stage",
+        "scope_ref": "Stage07",
+        "updated_at": "<ts:17>",
+        "workflow_run_id": "<workflow_run_id:4>"
+      }
+    ],
+    "status": "ok",
+    "summary": {
+      "active_issue_count": 0,
+      "approval_count": 1,
+      "artifact_version_count": 3,
+      "flag_count": 1,
+      "human_task_count": 2,
+      "pointer_count": 2
+    },
+    "workflow_run": {
+      "activation_key": "stage07_major_replan_happy:workflow-run",
+      "active_issue_count": 0,
+      "created_at": "<ts:18>",
+      "domain_id": "domain-x",
+      "logical_date": "2026-03-09",
+      "partition_key": "SD-2026-03-09",
+      "state": "OPEN",
+      "tenant_id": "tenant-a",
+      "updated_at": "<ts:19>",
+      "workflow_id": "schedule_planning.v1",
+      "workflow_run_id": "<workflow_run_id:4>",
+      "workflow_version": "v1"
+    }
+  },
+  "snapshot_id": "run_detail_state",
+  "source": {
+    "capture": "after_full_scenario",
+    "scenario_id": "stage07_major_replan_happy"
+  }
+}

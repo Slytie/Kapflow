@@ -35,10 +35,14 @@ def api_error_from_command(exc: CommandError) -> ApiError:
         "approval_not_respondable",
         "approval_not_approved",
         "approval_required_for_promotion",
+        "major_replan_approval_required",
+        "illegal_flag_transition",
         "pointer_already_current",
         "pointer_conflict",
     }:
         status_code = 409
+    elif code in {"tool_execution_denied", "tool_execution_requires_approval"}:
+        status_code = 403
 
     return ApiError(
         status_code=status_code,

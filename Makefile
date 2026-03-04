@@ -1,7 +1,7 @@
 PYTEST ?= pytest -q
 VALIDATOR ?= python3 scripts/validate_repo.py
 
-.PHONY: lint test schema-validate trace-validate unit contract replay acceptance runtime runtime-api security property integration generated-check
+.PHONY: lint test schema-validate trace-validate unit contract replay acceptance runtime runtime-api security property integration integration-openai generated-check frontend-snapshots
 
 lint: schema-validate contract
 
@@ -40,5 +40,11 @@ property:
 integration:
 	$(PYTEST) tests/integration
 
+integration-openai:
+	PYTHONPATH=src $(PYTEST) tests/integration_openai
+
 generated-check:
 	$(VALIDATOR)
+
+frontend-snapshots:
+	PYTHONPATH=src python3 scripts/export_frontend_snapshots.py

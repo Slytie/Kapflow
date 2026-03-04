@@ -215,6 +215,24 @@ def create_sqlite_substrate(connection: sqlite3.Connection) -> None:
         CREATE INDEX IF NOT EXISTS ix_artifact_versions_workflow_kind
             ON artifact_versions (workflow_run_id, artifact_kind, created_at);
 
+        CREATE TABLE IF NOT EXISTS artifact_links (
+            artifact_version_id TEXT NOT NULL,
+            workflow_run_id TEXT NOT NULL,
+            subject_kind TEXT NOT NULL,
+            subject_id TEXT NOT NULL,
+            relation_kind TEXT NOT NULL,
+            created_at TEXT NOT NULL DEFAULT (datetime('now')),
+            created_by_actor_id TEXT NOT NULL,
+            created_by_actor_type TEXT NOT NULL,
+            PRIMARY KEY (artifact_version_id, subject_kind, subject_id),
+            UNIQUE (artifact_version_id, subject_kind, subject_id),
+            FOREIGN KEY (artifact_version_id) REFERENCES artifact_versions(artifact_version_id),
+            FOREIGN KEY (workflow_run_id) REFERENCES workflow_runs(workflow_run_id)
+        );
+
+        CREATE INDEX IF NOT EXISTS ix_artifact_links_subject
+            ON artifact_links (workflow_run_id, subject_kind, subject_id, created_at);
+
         CREATE TABLE IF NOT EXISTS artifact_pointers (
             workflow_run_id TEXT NOT NULL,
             pointer_key TEXT NOT NULL,
@@ -237,6 +255,63 @@ def create_sqlite_substrate(connection: sqlite3.Connection) -> None:
 
         CREATE INDEX IF NOT EXISTS ix_artifact_pointers_workflow_scope
             ON artifact_pointers (workflow_run_id, scope_kind, scope_ref);
+
+        CREATE TABLE IF NOT EXISTS execution_sessions (
+            execution_session_id TEXT PRIMARY KEY,
+            workflow_run_id TEXT NOT NULL,
+            task_run_id TEXT NOT NULL,
+            execution_spec_id TEXT NOT NULL,
+            state TEXT NOT NULL,
+            owner_mode TEXT NOT NULL,
+            principal_actor TEXT,
+            budget TEXT,
+            tool_call_count INTEGER NOT NULL DEFAULT 0,
+            created_at TEXT NOT NULL DEFAULT (datetime('now')),
+            updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+            closed_at TEXT,
+            FOREIGN KEY (workflow_run_id) REFERENCES workflow_runs(workflow_run_id),
+            FOREIGN KEY (task_run_id) REFERENCES task_runs(task_run_id)
+        );
+
+        CREATE INDEX IF NOT EXISTS ix_execution_sessions_workflow_state
+            ON execution_sessions (workflow_run_id, state);
+        CREATE INDEX IF NOT EXISTS ix_execution_sessions_task_run_id
+            ON execution_sessions (task_run_id);
+
+        CREATE TABLE IF NOT EXISTS tool_executions (
+            tool_execution_id TEXT PRIMARY KEY,
+            execution_session_id TEXT NOT NULL,
+            tool_class TEXT NOT NULL,
+            tool_name TEXT,
+            state TEXT NOT NULL,
+            idempotency_key TEXT NOT NULL,
+            attempt_no INTEGER NOT NULL DEFAULT 0,
+            policy_decision_id TEXT,
+            output_artifact_version_ids TEXT,
+            requested_at TEXT NOT NULL,
+            completed_at TEXT,
+            error_code TEXT,
+            FOREIGN KEY (execution_session_id) REFERENCES execution_sessions(execution_session_id),
+            UNIQUE (execution_session_id, idempotency_key)
+        );
+
+        CREATE INDEX IF NOT EXISTS ix_tool_executions_session_state
+            ON tool_executions (execution_session_id, state);
+
+        CREATE TABLE IF NOT EXISTS policy_decisions (
+            policy_decision_id TEXT PRIMARY KEY,
+            principal_actor TEXT NOT NULL,
+            decision TEXT NOT NULL,
+            reason_code TEXT,
+            required_approval_action TEXT,
+            tool_execution_id TEXT,
+            decided_at TEXT NOT NULL,
+            FOREIGN KEY (tool_execution_id) REFERENCES tool_executions(tool_execution_id),
+            UNIQUE (tool_execution_id)
+        );
+
+        CREATE INDEX IF NOT EXISTS ix_policy_decisions_tool_execution
+            ON policy_decisions (tool_execution_id);
         """
     )
     connection.commit()

@@ -1,0 +1,220 @@
+{
+  "board": {
+    "board": {
+      "board_id": "schedule-planning",
+      "cards": [
+        {
+          "approval_id": "<approval_id:1>",
+          "approval_kind": "business_decision",
+          "candidate_roles": [
+            "operations_manager"
+          ],
+          "card_id": "approval:<approval_id:1>",
+          "card_type": "approval",
+          "lane": "approvals.responded",
+          "requested_at": "<ts:1>",
+          "required_role": "operations_manager",
+          "responded_at": "<ts:2>",
+          "response_kind": "approve",
+          "scope_kind": "stage",
+          "scope_ref": "Stage07",
+          "state": "RESPONDED",
+          "task_run_id": "<task_run_id:2>",
+          "title": "business_decision Stage07",
+          "workflow_id": "schedule_planning.v1",
+          "workflow_run_id": "<workflow_run_id:3>"
+        },
+        {
+          "assignee_actor_id": "human:ops-manager-1",
+          "assignee_actor_type": "human",
+          "blocked_on_kind": null,
+          "blocked_on_ref": null,
+          "card_id": "human_task:<human_task_id:4>",
+          "card_type": "human_task",
+          "claimed_at": "<ts:3>",
+          "claimed_until": null,
+          "due_at": null,
+          "human_task_id": "<human_task_id:4>",
+          "lane": "human_tasks.completed",
+          "linked_approval_count": 0,
+          "linked_approval_states": [],
+          "owner_role": "operations_manager",
+          "spawned_from_flag_id": "<spawned_from_flag_id:5>",
+          "stage_id": "Stage07",
+          "state": "COMPLETED",
+          "task_kind": "exception_triage",
+          "task_run_id": "<task_run_id:6>",
+          "title": "Stage07 exception_triage",
+          "workflow_id": "schedule_planning.v1",
+          "workflow_run_id": "<workflow_run_id:3>"
+        },
+        {
+          "assignee_actor_id": "human:ops-manager-1",
+          "assignee_actor_type": "human",
+          "blocked_on_kind": null,
+          "blocked_on_ref": null,
+          "card_id": "human_task:<human_task_id:7>",
+          "card_type": "human_task",
+          "claimed_at": "<ts:4>",
+          "claimed_until": null,
+          "due_at": null,
+          "human_task_id": "<human_task_id:7>",
+          "lane": "human_tasks.completed",
+          "linked_approval_count": 1,
+          "linked_approval_states": [
+            "RESPONDED"
+          ],
+          "owner_role": "operations_manager",
+          "spawned_from_flag_id": "<spawned_from_flag_id:5>",
+          "stage_id": "Stage07",
+          "state": "COMPLETED",
+          "task_kind": "final_review",
+          "task_run_id": "<task_run_id:2>",
+          "title": "Stage07 final_review",
+          "workflow_id": "schedule_planning.v1",
+          "workflow_run_id": "<workflow_run_id:3>"
+        },
+        {
+          "assigned_group": null,
+          "card_id": "flag:<flag_id:8>",
+          "card_type": "flag",
+          "closed_at": null,
+          "created_at": "<ts:5>",
+          "flag_id": "<flag_id:8>",
+          "kind": "no_show",
+          "lane": "flags.resolved",
+          "linked_open_task_count": 0,
+          "linked_task_count": 2,
+          "severity": "high",
+          "state": "resolved",
+          "summary": "Courier C-104 did not report for shift",
+          "title": "Courier C-104 did not report for shift",
+          "workflow_id": "schedule_planning.v1",
+          "workflow_run_id": "<workflow_run_id:3>"
+        }
+      ],
+      "filters": {
+        "approval_state": null,
+        "flag_state": null,
+        "stage_id": null,
+        "task_kind": null,
+        "task_state": null,
+        "workflow_id": "schedule_planning.v1",
+        "workflow_run_id": "<workflow_run_id:3>"
+      },
+      "lanes": [
+        {
+          "card_count": 0,
+          "label": "Open Exceptions",
+          "lane": "flags.open",
+          "position": 5
+        },
+        {
+          "card_count": 0,
+          "label": "Open Tasks",
+          "lane": "human_tasks.open",
+          "position": 10
+        },
+        {
+          "card_count": 0,
+          "label": "Claimed Tasks",
+          "lane": "human_tasks.claimed",
+          "position": 20
+        },
+        {
+          "card_count": 0,
+          "label": "Pending Approvals",
+          "lane": "approvals.pending",
+          "position": 30
+        },
+        {
+          "card_count": 1,
+          "label": "Responded Approvals",
+          "lane": "approvals.responded",
+          "position": 40
+        },
+        {
+          "card_count": 2,
+          "label": "Completed Tasks",
+          "lane": "human_tasks.completed",
+          "position": 50
+        },
+        {
+          "card_count": 1,
+          "label": "Resolved Exceptions",
+          "lane": "flags.resolved",
+          "position": 60
+        },
+        {
+          "card_count": 0,
+          "label": "Closed Exceptions",
+          "lane": "flags.closed",
+          "position": 70
+        }
+      ],
+      "page": {
+        "limit": 100,
+        "offset": 0
+      },
+      "pointers": [
+        {
+          "approved_by_approval_id": "<approved_by_approval_id:9>",
+          "artifact_kind": "schedule.replan_delta.workbook",
+          "artifact_version_id": "<artifact_version_id:10>",
+          "generation": 0,
+          "pointer_key": "official:schedule.replan_delta.workbook",
+          "promoted_by_task_run_id": "<promoted_by_task_run_id:11>",
+          "promotion_reason": "official_major_replan",
+          "scope_kind": "stage",
+          "scope_ref": "Stage07",
+          "updated_at": "<ts:6>",
+          "workflow_run_id": "<workflow_run_id:3>"
+        },
+        {
+          "approved_by_approval_id": null,
+          "artifact_kind": "schedule.published_schedule.workbook",
+          "artifact_version_id": "<artifact_version_id:12>",
+          "generation": 0,
+          "pointer_key": "official:schedule.published_schedule.workbook",
+          "promoted_by_task_run_id": null,
+          "promotion_reason": "seed_base",
+          "scope_kind": "stage",
+          "scope_ref": "Stage06",
+          "updated_at": "<ts:7>",
+          "workflow_run_id": "<workflow_run_id:3>"
+        }
+      ],
+      "summary": {
+        "approval_count": 1,
+        "card_count": 4,
+        "flag_count": 1,
+        "human_task_count": 2,
+        "pointer_count": 2,
+        "workflow_run_count": 1
+      },
+      "workflow_runs": [
+        {
+          "activation_key": "stage07_major_replan_happy:workflow-run",
+          "active_issue_count": 0,
+          "created_at": "<ts:8>",
+          "domain_id": "domain-x",
+          "logical_date": "2026-03-09",
+          "partition_key": "SD-2026-03-09",
+          "state": "OPEN",
+          "tenant_id": "tenant-a",
+          "updated_at": "<ts:9>",
+          "workflow_id": "schedule_planning.v1",
+          "workflow_run_id": "<workflow_run_id:3>",
+          "workflow_version": "v1"
+        }
+      ]
+    },
+    "command": "api.board.schedule_planning",
+    "status": "ok"
+  },
+  "snapshot_id": "stage07_major_replan_board_state",
+  "source": {
+    "capture": "after_full_scenario",
+    "scenario_id": "stage07_major_replan_happy"
+  }
+}

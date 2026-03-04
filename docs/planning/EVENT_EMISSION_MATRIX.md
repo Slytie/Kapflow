@@ -8,7 +8,9 @@ Current scope includes TASK-0041 + TASK-0042 substrate commands plus TASK-0043/T
 - Stage06 completion outcome -> child task emission mapping
 - Stage07 flag/issue lifecycle + lease recovery/reconcile mappings
 - all authoritative events emitted in the same transaction as canonical state changes
-- TASK-0044 HTTP adapter mutations now delegate to these same command handlers (no separate API-side event semantics)
+- TASK-0044/TASK-0049 HTTP adapter mutations now delegate to these same command handlers (no separate API-side event semantics)
+- TASK-0047 frontend snapshot export is a derived read-only workflow over scenario runs and emits no additional authoritative event types
+- TASK-0051 document-corpus ingress + attachment upload paths now delegate to canonical artifact-version creation semantics (no attachment-side event fork)
 
 ## Minimal state set currently in code
 - `workflow_runs`: `OPEN`, `COMPLETED`
@@ -152,6 +154,23 @@ Current scope includes TASK-0041 + TASK-0042 substrate commands plus TASK-0043/T
 - Stage06 integration note:
   - establishes canonical immutable version rows used by publish/promotion flows
 
+## ingest_artifact_document (`artifacts ingest`, `artifacts seed-corpus`, subject upload endpoints)
+- Canonical rows mutated:
+  - `artifact_versions` immutable insert
+  - optional `artifact_links` inserts for linked subjects (`workflow_run`, `human_task`, `approval`, `flag`)
+- Events emitted:
+  - `artifact.version.created`
+- Transaction rule:
+  - blob ingress metadata, artifact insert, optional link inserts, and event append commit atomically through canonical artifact handler
+- Idempotency behavior:
+  - non-empty command `idempotency_key` required
+  - duplicate idempotency key fails explicitly (`duplicate_idempotency_key`)
+- Race/conflict behavior:
+  - duplicate `artifact_version_id` fails explicitly (`duplicate_artifact_version_id`)
+  - invalid cross-scope subject links fail closed (`cross_scope_*_mismatch`)
+- Integration note:
+  - this is the canonical path for example-document corpus seeding and inline attachment uploads; no second attachment truth model exists
+
 ## promote_pointer (`pointers promote`)
 - Canonical rows mutated:
   - `artifact_pointers` insert on first promotion for `(workflow_run_id, pointer_key)`
@@ -242,8 +261,93 @@ Current scope includes TASK-0041 + TASK-0042 substrate commands plus TASK-0043/T
 - Same-transaction rule:
   - parent completion + child creation + authoritative events commit atomically
 - Dedupe/bounds behavior:
-  - retries with same completion idempotency key fail explicit (`duplicate_idempotency_key`) with no duplicate children
-  - Stage07 spawn depth and per-issue child budget are bounded in service policy
+- retries with same completion idempotency key fail explicit (`duplicate_idempotency_key`) with no duplicate children
+- Stage07 spawn depth and per-issue child budget are bounded in service policy
+
+## Execution-session runtime hardening (TASK-0052)
+### create_execution_session (`execution-sessions create`)
+- Canonical rows mutated:
+  - `execution_sessions` insert
+- Events emitted:
+  - `execution.session.created`
+  - `execution.session.state_changed` (when initial state is not `CREATED`)
+- Transaction rule:
+  - row insert + event append commit atomically
+- Idempotency behavior:
+  - non-empty command `idempotency_key` required
+  - duplicate idempotency fails explicitly (`duplicate_idempotency_key`)
+
+### request_tool_execution (`tool-executions request`)
+- Canonical rows mutated:
+  - `tool_executions` insert (`REQUESTED`)
+  - `execution_sessions.tool_call_count` increment
+- Events emitted:
+  - `tool.execution.requested`
+- Transaction rule:
+  - request row + counter update + event append commit atomically
+- Idempotency behavior:
+  - non-empty command `idempotency_key` required
+  - per-session duplicate tool idempotency key dedupes to existing row (no duplicate event)
+
+### evaluate_policy_decision (handler-internal in Stage06 path)
+- Canonical rows mutated:
+  - `policy_decisions` insert
+  - `tool_executions.state` -> `APPROVED` or `DENIED`
+  - optional `execution_sessions.state` transition (`FAILED`/`WAITING_APPROVAL` on non-allow)
+- Events emitted:
+  - `tool.execution.approved` or `tool.execution.denied`
+  - optional `execution.session.state_changed`
+- Transaction rule:
+  - policy row + tool/session transitions + event append commit atomically
+- Idempotency behavior:
+  - non-empty idempotency key required
+  - duplicate idempotency key fails explicitly (`duplicate_idempotency_key`)
+
+### complete_tool_execution (handler-internal in Stage06/reconcile paths)
+- Canonical rows mutated:
+  - `tool_executions.state` -> `COMPLETED` / `FAILED` / `CANCELED`
+  - output artifact IDs + completion/error metadata persisted
+- Events emitted:
+  - `tool.execution.completed` (`payload.result` = `succeeded|failed|canceled`)
+- Transaction rule:
+  - tool transition + event append commit atomically
+- Idempotency behavior:
+  - non-empty idempotency key required
+  - duplicate idempotency fails explicitly
+
+### transition_execution_session_state (`execution-sessions transition`)
+- Canonical rows mutated:
+  - `execution_sessions.state` (+ `closed_at` for terminal states)
+- Events emitted:
+  - `execution.session.state_changed`
+- Transaction rule:
+  - session transition + event append commit atomically
+- Idempotency behavior:
+  - non-empty idempotency key required
+  - duplicate idempotency fails explicitly
+
+### run_stage06_openai_review_sandbox (`POST /api/v1/human-tasks/{id}/stage06-agent-review`)
+- Canonical rows mutated:
+  - `execution_sessions` create/transition
+  - `tool_executions` request/approve-or-deny/complete
+  - `policy_decisions` allow/deny record
+  - `artifact_versions` evidence insert (`schedule.stage06.review_ai_evidence.json`) when model call is allowed and succeeds
+  - standard `human_tasks` + `task_runs` completion/spawn mutations through `complete_human_task`
+- Events emitted:
+  - execution lifecycle: `execution.session.created`, `execution.session.state_changed`
+  - tool lifecycle: `tool.execution.requested`, `tool.execution.approved|denied`, `tool.execution.completed` (allowed/failure/reconcile paths)
+  - evidence + workflow lifecycle: `artifact.version.created`, then `task.completed` / `task.run.state_changed` (+ optional child spawn events)
+- Transaction rule:
+  - each canonical mutation step is committed through existing command transaction boundaries
+  - no non-canonical side channel is used
+- Idempotency / retry behavior:
+  - API base `idempotency_key` expands into bounded sub-keys for session/tool/policy/evidence/complete transitions
+  - deterministic execution IDs derived from `(workflow_run_id, task_run_id, base_idempotency_key)` prevent duplicate canonical effects on replay
+  - replay of the same base key fails closed (`duplicate_execution_request`)
+- Policy behavior:
+  - policy decision is explicit and persisted before model/tool execution
+  - denied/require-approval paths emit canonical denial evidence and skip model execution
+  - allowed path emits completion evidence and proceeds through canonical task completion
 
 ### sweep_leases (`maintenance sweep-leases`)
 - Canonical rows mutated:
@@ -269,8 +373,28 @@ Current scope includes TASK-0041 + TASK-0042 substrate commands plus TASK-0043/T
 - Recovery behavior:
   - dropped wakeups are repaired without duplicating root issue tasks
 
-## HTTP adapter delegation (TASK-0044)
+### reconcile_executions (`maintenance reconcile-executions`)
+- Canonical rows mutated:
+  - stale `tool_executions` in open states transition to `FAILED`
+  - stale `execution_sessions` in open states transition to `FAILED`
+- Events emitted:
+  - `tool.execution.completed` (`result=failed`, timeout reason)
+  - `execution.session.state_changed` (`reason=reconcile_timeout`)
+- Transaction rule:
+  - reconcile updates and emitted events for each processed session commit atomically
+- Recovery behavior:
+  - stale partial sessions are failed with visible evidence
+  - repeated reconcile runs do not duplicate terminal effects
+
+## HTTP adapter delegation (TASK-0044/TASK-0049)
 - `POST /api/v1/human-tasks/{human_task_id}/claim` delegates to `claim_human_task` semantics above.
 - `POST /api/v1/human-tasks/{human_task_id}/complete` delegates to `complete_human_task` semantics above.
+- `POST /api/v1/human-tasks/{human_task_id}/stage06-agent-review` delegates to bounded Stage06 sandbox service + canonical handlers above.
 - `POST /api/v1/approvals/{approval_id}/respond` delegates to `respond_approval` semantics above.
+- `POST /api/v1/flags/{flag_id}/transition` delegates to `transition_flag_state` semantics above.
+- `POST /api/v1/artifacts/ingest` delegates to `ingest_artifact_document` semantics above.
+- `POST /api/v1/human-tasks/{human_task_id}/artifacts/upload` delegates to `ingest_artifact_document` semantics above.
+- `POST /api/v1/approvals/{approval_id}/artifacts/upload` delegates to `ingest_artifact_document` semantics above.
+- `POST /api/v1/flags/{flag_id}/artifacts/upload` delegates to `ingest_artifact_document` semantics above.
+- `POST /api/v1/workflow-runs/{workflow_run_id}/artifacts/upload` delegates to `ingest_artifact_document` semantics above.
 - No additional event types are emitted by API routes; all authoritative events are emitted by canonical handlers within the same transaction boundary already defined in this matrix.

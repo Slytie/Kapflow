@@ -105,3 +105,14 @@ Lease-expiry behavior:
 Reconcile behavior:
 - for open Stage07 flags, ensure root issue task exists via activation-key dedupe,
 - recover dropped wakeups without creating duplicate root tasks.
+
+## Frontend snapshot fixture workflow
+Backend-owned frontend fixtures are exported from real scenario-backed runtime states:
+- exporter: `scripts/export_frontend_snapshots.py`
+- generated fixtures: `fixtures/frontend_contracts/*.json`
+- source scenarios: Stage06 and Stage07 YAML scenarios under `fixtures/scenarios/schedule_planning/`
+- refresh command: `make frontend-snapshots`
+- drift check: `PYTHONPATH=src python3 scripts/export_frontend_snapshots.py --check`
+- contract test: `tests/runtime/contracts/test_frontend_snapshot_fixtures.py`
+
+The exporter reads canonical query surfaces (CLI/API) and writes deterministic JSON snapshots so frontend branches can consume stable backend-owned fixtures without introducing a second semantics layer.

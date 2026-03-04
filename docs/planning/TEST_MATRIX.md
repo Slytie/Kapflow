@@ -22,7 +22,7 @@ It is intentionally written so a fresh-session Codex run can:
 | I1 Durable workflow semantics + safe evolution | non-determinism, unsafe version drift, retries duplicate effects | unit + replay + property | `tests/unit/*reducer*`, `tests/replay/*golden*`, `tests/property/*history*` |
 | I2 Artifact immutability + auditability | silent mutation, broken lineage, "latest file" ambiguity | unit + integration + property | `tests/unit/artifacts_*`, `tests/integration/artifact_store_*`, `tests/property/lineage_*` |
 | I3 Tenant isolation + authorization | cross-tenant leakage, mixed projections, unsafe background consumers | integration + security + acceptance negatives | `tests/security/isolation/*`, `tests/integration/*scope*`, `tests/acceptance/*cross_tenant*` |
-| I4 Automation safety (LLM/tools) | prompt/tool injection, unsafe side-effects, sandbox escape | security + contract + integration | `tests/security/agent/*`, `tests/contract/tool_plane_*`, `tests/integration/sandbox_*` |
+| I4 Automation safety (LLM/tools) | prompt/tool injection, unsafe side-effects, sandbox escape | security + contract + integration | `tests/security/agent/*`, `tests/contract/tool_plane_*`, `tests/integration/sandbox_*`, `tests/integration_openai/*` |
 | I5 One truth system (authority chain) | "shadow truth" stores, summaries outrank evidence, drift in generated artifacts | schema + contract + policy tests | `tests/contract/*schema*`, CI check in `docs/ops/ci_required_checks.md` |
 | I6 Fully-agentive debug slice preserves canonical authority | agent-only state, approval bypass, invisible stage work | replay + acceptance + security | `tests/replay/*schedule_agentive*`, `tests/acceptance/*schedule_agentive*`, `tests/security/agent/*approval_bypass*` |
 | I7 Conditional task spawning stays explicit and bounded | hidden branching, duplicate child tasks on retry, runaway loops | unit + integration + runtime scenarios | `tests/unit/*spawn*`, `tests/integration/*idempotency*`, `tests/runtime/scenarios/*spawn*` |
@@ -91,15 +91,26 @@ Current implemented runtime command-boundary coverage:
 - `tests/runtime/scenarios/test_schedule_stage07_drift_detected.py`
 - `tests/runtime/contracts/test_hitl_query_contracts_stage06.py`
 - `tests/runtime/contracts/test_hitl_query_contracts_stage07.py`
+- `tests/runtime/contracts/test_frontend_snapshot_fixtures.py`
+- `tests/runtime/test_example_document_corpus_ingress.py`
 - `tests/runtime/api/test_human_task_list_contract.py`
 - `tests/runtime/api/test_approval_list_contract.py`
+- `tests/runtime/api/test_flag_list_contract.py`
+- `tests/runtime/api/test_artifact_attachment_api.py`
 - `tests/runtime/api/test_workflow_run_detail_contract.py`
+- `tests/runtime/api/test_timeline_contract.py`
 - `tests/runtime/api/test_board_schedule_planning_contract.py`
 - `tests/runtime/api/test_human_task_claim_via_api.py`
 - `tests/runtime/api/test_human_task_complete_via_api.py`
 - `tests/runtime/api/test_approval_respond_via_api.py`
+- `tests/runtime/api/test_flag_transition_via_api.py`
+- `tests/runtime/api/test_stage06_openai_review_sandbox_api.py`
+- `tests/runtime/test_execution_session_runtime.py`
 - `tests/runtime/api/test_cross_scope_api_denial.py`
 - `tests/runtime/api/test_board_retry_stability.py`
+- `tests/runtime/api/test_api_retry_stability.py`
+- `tests/unit/test_openai_responses_adapter.py`
+- `tests/integration_openai/test_stage06_openai_real_e2e.py` (gated/opt-in)
 
 Current runtime tests assert:
 - canonical row creation for `workflow_runs`, `task_runs`, `human_tasks`
@@ -117,12 +128,23 @@ Current runtime tests assert:
 - Stage06 completion outcome -> explicit child-task spawning with lineage fields persisted on canonical `task_runs`
 - Stage06 scenario retries do not duplicate spawned children/events when parent completion idempotency key is retried
 - first implementation-backed query-contract snapshots for human-task queue, approval queue, pointer summary, and workflow-run summary rows
+- backend-owned frontend snapshot fixtures exported from real Stage06/Stage07 scenario states under `fixtures/frontend_contracts/` with deterministic refresh + drift-check coverage
+- canonical example-document corpus ingress through artifact-backed storage/versioning (`artifacts ingest`, `artifacts seed-corpus`) with deterministic manifest seeding and digest/metadata round-trip checks
+- canonical attachment linkage/query surfaces for human tasks, approvals, flags, and workflow runs via `artifact_links`
+- API upload/list/show/download attachment visibility and cross-scope denial behavior for artifact-backed documents
 - canonical Stage07 flag lifecycle/activation semantics with deduped issue-root activation keys and generation handling
 - Stage07 completion outcome -> child spawn mappings (`information_request`, child `exception_triage`, `final_review`) with persisted lineage
 - major-replan approval gate enforcement on pointer promotion (`official_major_replan`)
 - lease-expiry reopen recovery with canonical `task.lease_expired` evidence and Stage07 reconcile repair path
 - drift visibility for stale reviewed base at Stage07 promotion (`artifact.pointer.drift_detected`)
-- first implementation-backed HTTP contract/mutation coverage for board-ready read surfaces and canonical HITL actions (`claim`, `complete`, `respond`)
+- implementation-backed HTTP contract/mutation coverage for board-ready read surfaces (tasks/approvals/flags/workflow/timeline/pointers/board) and canonical HITL actions (`claim`, `complete`, `respond`, `flags.transition`)
+- frontend inline attachment controls are covered at component/repository contract level and remain delegated to canonical artifact endpoints (no client-side shadow attachment state)
+- bounded Stage06 real-model sandbox path coverage (mock/contract path always-on + gated real OpenAI e2e path)
+- canonical execution-runtime lifecycle coverage for bounded agentive work:
+  - `execution_sessions` / `tool_executions` / `policy_decisions` row creation and state transitions
+  - explicit policy allow/deny gating before model/tool execution
+  - retry/idempotency guard for duplicate execution requests
+  - stale-session reconcile recovery without duplicate terminal effects
 - cross-scope API denial checks and retry-stability checks over repeated GET/mutation retries
 
 Minimum required runtime scenario tests:
@@ -185,3 +207,4 @@ CI requirements live in `docs/ops/ci_required_checks.md`.
 - integration tests with real dependencies
 - isolation suite
 - adversarial injection corpus (if tools enabled)
+- gated real OpenAI sandbox e2e: `ONETRUTH_RUN_OPENAI_E2E=1 PYTHONPATH=src pytest -q tests/integration_openai`

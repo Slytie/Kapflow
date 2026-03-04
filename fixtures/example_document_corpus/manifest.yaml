@@ -1,0 +1,87 @@
+corpus_id: example_document_corpus.schedule_planning.v1
+version: 1
+documents:
+  - fixture_id: schedule.stage05.draft_schedule_workbook.completed
+    workflow_id: schedule_planning.v1
+    category: stage_input
+    artifact_kind: schedule.draft_schedule.workbook
+    artifact_role: official_input
+    media_type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet
+    source_path: ../workflows/schedule_planning/template_pack/Stage05_Draft_Schedule_Triage/Stage05_Draft_Schedule_Triage_Spreadsheet_Example_COMPLETED.xlsx
+    description: Stage05 draft schedule workbook used as Stage06 review input.
+  - fixture_id: schedule.stage05.draft_schedule_doc.completed
+    workflow_id: schedule_planning.v1
+    category: stage_input
+    artifact_kind: schedule.draft_schedule.doc
+    artifact_role: evidence
+    media_type: application/vnd.openxmlformats-officedocument.wordprocessingml.document
+    source_path: ../workflows/schedule_planning/template_pack/Stage05_Draft_Schedule_Triage/Stage05_Draft_Schedule_Triage_Document_Example_COMPLETED.docx
+    description: Stage05 narrative draft schedule context.
+  - fixture_id: schedule.stage06.supervisor_review_doc.completed
+    workflow_id: schedule_planning.v1
+    category: review_artifact
+    artifact_kind: schedule.supervisor_review.doc
+    artifact_role: evidence
+    media_type: application/vnd.openxmlformats-officedocument.wordprocessingml.document
+    source_path: ../workflows/schedule_planning/template_pack/Stage06_Supervisor_Review_Publish/Stage06_Supervisor_Review_Publish_Document_Example_COMPLETED.docx
+    description: Supervisor review packet evidence for Stage06 approval.
+  - fixture_id: schedule.stage06.published_schedule_workbook.completed
+    workflow_id: schedule_planning.v1
+    category: stage_output
+    artifact_kind: schedule.published_schedule.workbook
+    artifact_role: official_output
+    media_type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet
+    source_path: ../workflows/schedule_planning/template_pack/Stage06_Supervisor_Review_Publish/Stage06_Supervisor_Review_Publish_Spreadsheet_Example_COMPLETED.xlsx
+    description: Stage06 published base schedule example workbook.
+  - fixture_id: schedule.stage07.exception_board_doc.completed
+    workflow_id: schedule_planning.v1
+    category: issue_replan_example
+    artifact_kind: schedule.exception_board.doc
+    artifact_role: evidence
+    media_type: application/vnd.openxmlformats-officedocument.wordprocessingml.document
+    source_path: ../workflows/schedule_planning/template_pack/Stage07_Intraday_Exception_Control/Stage07_Intraday_Exception_Control_Document_Example_COMPLETED.docx
+    description: Stage07 issue board narrative for exception triage and approvals.
+  - fixture_id: schedule.stage07.replan_delta_workbook.completed
+    workflow_id: schedule_planning.v1
+    category: issue_replan_example
+    artifact_kind: schedule.replan_delta.workbook
+    artifact_role: official_output
+    media_type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet
+    source_path: ../workflows/schedule_planning/template_pack/Stage07_Intraday_Exception_Control/Stage07_Intraday_Exception_Control_Spreadsheet_Example_COMPLETED.xlsx
+    description: Stage07 replan delta workbook example.
+seed_sets:
+  - seed_set_id: stage06_review_ready_example_set
+    workflow_id: schedule_planning.v1
+    description: Seed documents for a Stage06 review-ready branch.
+    document_fixture_ids:
+      - schedule.stage05.draft_schedule_workbook.completed
+      - schedule.stage06.supervisor_review_doc.completed
+  - seed_set_id: stage06_needs_information_example_set
+    workflow_id: schedule_planning.v1
+    description: Seed documents for a Stage06 needs-information branch.
+    document_fixture_ids:
+      - schedule.stage05.draft_schedule_workbook.completed
+      - schedule.stage05.draft_schedule_doc.completed
+      - schedule.stage06.supervisor_review_doc.completed
+  - seed_set_id: stage07_issue_replan_example_set
+    workflow_id: schedule_planning.v1
+    description: Seed documents for Stage07 exception/replan flows.
+    document_fixture_ids:
+      - schedule.stage06.published_schedule_workbook.completed
+      - schedule.stage07.exception_board_doc.completed
+      - schedule.stage07.replan_delta_workbook.completed
+  - seed_set_id: approval_evidence_example_set
+    workflow_id: schedule_planning.v1
+    description: Canonical approval evidence examples spanning Stage06 and Stage07.
+    document_fixture_ids:
+      - schedule.stage06.supervisor_review_doc.completed
+      - schedule.stage07.exception_board_doc.completed
+  - seed_set_id: run_detail_timeline_example_set
+    workflow_id: schedule_planning.v1
+    description: Mixed corpus for run-detail and timeline-centric snapshot seeding.
+    document_fixture_ids:
+      - schedule.stage05.draft_schedule_workbook.completed
+      - schedule.stage06.supervisor_review_doc.completed
+      - schedule.stage06.published_schedule_workbook.completed
+      - schedule.stage07.exception_board_doc.completed
+      - schedule.stage07.replan_delta_workbook.completed

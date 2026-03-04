@@ -2,6 +2,62 @@
 
 Record any decisions made since the last session so a fresh Codex run can rehydrate quickly.
 
+## 2026-03-04 (execution-session runtime and policy-gated sandbox hardening)
+- Added canonical execution-runtime current-state tables: `execution_sessions`, `tool_executions`, and `policy_decisions`; execution truth is now persisted in runtime rows plus authoritative events, not implied by service-only side effects.
+- Chosen Stage06 bounded execution ID strategy: deterministic IDs derived from `(workflow_run_id, task_run_id, base_idempotency_key)` for `execution_session_id`, `tool_execution_id`, and `policy_decision_id` to prevent duplicate canonical effects on replay.
+- Chosen policy-gate rule for bounded Stage06 sandbox:
+  - explicit policy decision is required before model execution,
+  - default allows only trusted actor-role set (`dispatch_supervisor`, `operations_manager`, `system_worker`) or `system/service` actor types,
+  - optional bounded override via request payload/env for testability (`allow|deny|require_approval`),
+  - denied/require-approval paths fail closed with canonical denial evidence.
+- Chosen failure mapping:
+  - model/config/provider failures map to `tool_executions.state=FAILED` and `execution_sessions.state=FAILED` with emitted lifecycle events,
+  - workflow-transition failure after a successful model call marks session failed without erasing already-canonical tool/evidence results.
+- Chosen reconcile behavior for this slice: `maintenance reconcile-executions` marks stale open sessions and open tool requests as failed with visible timeout evidence, avoiding duplicate terminal effects on repeated runs.
+
+## 2026-03-04 (example document corpus + canonical artifact ingress)
+- Promoted template-pack completed examples into an executable corpus manifest at `fixtures/example_document_corpus/manifest.yaml`; fixture inputs are now stable by `fixture_id` and grouped by deterministic `seed_set_id`.
+- Chosen corpus authority boundary: fixture files are test inputs only; authoritative truth remains canonical `artifact_versions` + `timeline_events` + audited pointers.
+- Chosen ingress rule: example docs must enter through canonical artifact ingress (`artifacts ingest`, subject upload endpoints, or `artifacts seed-corpus`) with digest/byte-size metadata captured and `artifact.version.created` emitted in the same transaction.
+- Added canonical `artifact_links` current-state table to represent attachment/linkage to `workflow_run`, `human_task`, `approval`, and `flag` subjects; no separate attachment truth subsystem is introduced.
+- Chosen frontend inline attachment posture for v1: upload/download actions are inline on queue/board surfaces and delegate to canonical API endpoints; client stores no attachment workflow semantics.
+- Chosen snapshot/corpus coupling rule: backend-owned frontend snapshots continue to be exported from real scenario-backed states seeded through canonical artifact ingress, not hand-authored mock documents.
+
+## 2026-03-04 (bounded OpenAI Responses API Stage06 sandbox spike)
+- Added a narrow OpenAI integration boundary under `src/onetruth/integrations/openai/` using the Responses API for new model work; no raw provider calls are scattered through handlers/routes.
+- Locked the first real model-assisted use case to Stage06 `review_packet` outcome classification only, with strict structured output fields:
+  - `outcome` in `{draft_is_publish_ready, review_requires_more_information, review_requests_changes}`
+  - `rationale_summary`
+  - `evidence_refs`
+  - nullable schema-bound `suggested_follow_on_task_kind`
+- Chosen canonical persistence path for model evidence: create immutable artifact versions (`artifact_kind=schedule.stage06.review_ai_evidence.json`) containing model metadata + input artifact refs; no log-only evidence path.
+- Chosen workflow-authority rule for this spike: model output may select only existing canonical completion outcomes; follow-on truth still comes exclusively from existing `tasks.complete` completion/spawn handlers.
+- Added bounded HTTP mutation endpoint `POST /api/v1/human-tasks/{human_task_id}/stage06-agent-review` with explicit scope checks and normalized config/provider error mapping.
+- Added test strategy split:
+  - always-on structural coverage (adapter schema/failure tests + runtime API sandbox path with mocked classifier),
+  - gated real-network e2e slice under `tests/integration_openai/` requiring `ONETRUTH_RUN_OPENAI_E2E=1` and `OPENAI_API_KEY`.
+
+## 2026-03-04 (frontend real API integration and board/list/detail hardening)
+- Replaced frontend snapshot/mock repository reads with real HTTP adapters under `frontend/src/lib/api/` and repository implementations under `frontend/src/lib/repositories/`; frontend pages/components no longer read fixture files directly.
+- Kept frontend presentation-only authority boundary: filters, drawer state, local selection, and visual affordances remain client-owned while workflow semantics and transition validity remain server-authoritative.
+- Chosen frontend request-context model for dev/internal slice: Vite env-configured tenant/domain/actor headers (`VITE_ONETRUTH_*`) emitted by a centralized HTTP client.
+- Chosen polling model: TanStack Query interval polling with explicit freshness indicator and query invalidation on successful mutations; no websocket/live-sync in this slice.
+- Added thin API read routes `GET /api/v1/flags` and `GET /api/v1/timeline-events` plus runtime API contract tests so exceptions/timeline views stay API-backed rather than client-reconstructed mocks.
+- Chosen frontend integration-test approach: contract-aligned MSW test server for `/api/v1` read/mutation surfaces, including claim/complete/respond round-trips and forbidden-response handling.
+
+## 2026-03-04 (frontend snapshot fixtures for Stage06/Stage07)
+- Added backend-owned frontend snapshot fixtures under `fixtures/frontend_contracts/` and made them derived from real Stage06/Stage07 scenario-backed runtime states, not hand-authored JSON.
+- Chosen snapshot refresh workflow: `make frontend-snapshots` (runs `scripts/export_frontend_snapshots.py`) and deterministic drift check via `python3 scripts/export_frontend_snapshots.py --check`.
+- Chosen snapshot stability approach: deterministic ID/timestamp tokenization during export so fixtures remain stable while preserving server-owned contract shapes and lane/state semantics.
+- Added a contract guard (`tests/runtime/contracts/test_frontend_snapshot_fixtures.py`) that regenerates snapshots from runtime scenarios and asserts committed fixtures match.
+
+## 2026-03-04 (first frontend shell + mock repository boundary)
+- Chosen frontend stack for the first HITL UI slice: React + TypeScript + Vite + React Router + TanStack Query + Vitest/Testing Library.
+- Chosen server-authoritative client posture: the frontend may manage only presentation state (filters, drawer visibility, selection, refresh affordances) and must not own workflow/task/approval/flag/pointer semantics.
+- Chosen data-access seam: route pages consume repository interfaces (`humanTasksRepository`, `approvalsRepository`, `flagsRepository`, `workflowRunsRepository`, `pointersRepository`, `timelineRepository`, `boardRepository`) while fixture parsing remains centralized in `mockContractService`.
+- Chosen interaction model lock for v1: explicit inline actions + inline attachment affordances + hidden-by-default descriptions with drawer-first detail; no drag-to-transition semantics.
+- Chosen route surface for first operator workflows: `/board`, `/my-work`, `/approvals`, `/exceptions`, `/runs`, `/runs/:workflowRunId`, `/official-outputs`, `/timeline`.
+
 ## 2026-03-03 (Stage07 issue-scoped replan loop)
 - Added canonical `flags` substrate with runtime states `open`, `triage`, `blocked`, `resolved`, `closed`, `waived`; transitions are enforced server-side and recorded via `flag.created` / `flag.state_changed`.
 - Chosen Stage07 issue activation key and dedupe model: `(workflow_run_id, flag_id, task_kind, generation)`; duplicate wakeups/activation retries return existing canonical issue task instead of creating a second root issue task.

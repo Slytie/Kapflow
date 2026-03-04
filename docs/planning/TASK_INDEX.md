@@ -47,3 +47,10 @@
 | TASK-0043 | EPIC-040 | DONE | high | Implement Schedule Planning Stage06 publish slice and CLI-driven scenario harness |
 | TASK-0044 | EPIC-080 | DONE | high | Implement thin HITL HTTP/query adapter and board contracts over canonical runtime |
 | TASK-0045 | EPIC-040 | DONE | high | Implement first Stage07 issue-scoped replan loop over canonical runtime |
+| TASK-0046 | EPIC-080 | DONE | high | Build frontend shell, board/list HITL pages, and mock contract adapter |
+| TASK-0047 | EPIC-090 | DONE | medium | Export backend-owned frontend snapshot fixtures from real Stage06/Stage07 scenario states |
+| TASK-0048 | EPIC-080 | DONE | high | Swap frontend repositories to real HITL API contracts and harden board/list/detail UX |
+| TASK-0049 | EPIC-080 | DONE | high | Extend thin HITL HTTP/query adapter and board contracts over canonical runtime |
+| TASK-0050 | EPIC-070 | DONE | high | Add a narrow OpenAI Responses API sandbox path for Stage06 review classification |
+| TASK-0051 | EPIC-030 | DONE | high | Promote example documents into executable fixture corpus with canonical artifact ingress |
+| TASK-0052 | EPIC-070 | DONE | high | Hardening execution sessions and policy-gated sandbox runtime as canonical truth |

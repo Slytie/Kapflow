@@ -65,6 +65,12 @@ def test_approval_list_contract_filters_and_state(tmp_path: Path) -> None:
     assert set(rows[0].keys()) == EXPECTED_KEYS
     assert rows[0]["state"] == "PENDING"
 
+    detail = client.get(f"/api/v1/approvals/{rows[0]['approval_id']}")
+    assert detail.status_code == 200
+    assert detail.payload["status"] == "ok"
+    assert detail.payload["command"] == "api.approvals.detail"
+    assert set(detail.payload["approval"].keys()) == EXPECTED_KEYS
+
     filtered = client.get(
         "/api/v1/approvals",
         query={

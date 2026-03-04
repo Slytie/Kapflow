@@ -66,6 +66,12 @@ def test_human_task_list_contract_and_filters(tmp_path: Path) -> None:
     assert rows[0]["state"] == "CLAIMED"
     assert rows[0]["assignee_actor_id"] == "human:dispatch-supervisor-1"
 
+    detail = client.get(f"/api/v1/human-tasks/{rows[0]['human_task_id']}")
+    assert detail.status_code == 200
+    assert detail.payload["status"] == "ok"
+    assert detail.payload["command"] == "api.human_tasks.detail"
+    assert set(detail.payload["human_task"].keys()) == EXPECTED_KEYS
+
     filtered_claimed = client.get(
         "/api/v1/human-tasks",
         query={

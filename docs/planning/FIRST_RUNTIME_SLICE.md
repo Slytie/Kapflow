@@ -175,10 +175,13 @@ Status:
   - Stage06 publish happy path is executable step-by-step through the canonical CLI boundary
   - Stage06 query/read contracts now have implementation-backed stability tests for future board/query UI work
 - TASK-0044 now adds the first thin HTTP/query adapter over the same canonical runtime handlers:
-  - board-ready read endpoints for human tasks, approvals, workflow runs, pointers, and Schedule Planning board aggregate
-  - thin mutation endpoints for claim/complete/respond actions delegating to canonical command handlers
+  - board-ready read endpoints for human tasks/approvals/flags (list + detail), workflow runs (list + detail), run timeline, pointers, and Schedule Planning board aggregate
+  - thin mutation endpoints for claim/complete/respond/flag-transition actions delegating to canonical command handlers
   - scenario-backed API contract tests and cross-scope denial coverage under `tests/runtime/api/`
-- Full Stage03->Stage07 flow and Stage07 issue-scoped loop logic remain out of scope and still pending.
+- TASK-0049 extends API contract stability for frontend-safe integration:
+  - adds explicit detail/timeline/flag contract coverage and retry-stability tests
+  - adds board exception-card lane coverage and cross-scope denial expansion
+- Full Stage03->Stage07 flow remains out of scope for this slice; Stage07 issue-loop substrate itself is now implemented in TASK-0045.
 
 ### Tranche 4 - Stage07 issue-scoped replan loop
 **Write next**
@@ -212,6 +215,28 @@ Status:
   - delta artifact + pointer promotion flow with drift visibility (`artifact.pointer.drift_detected`)
   - lease-expiry reopen recovery + Stage07 reconcile commands (`maintenance sweep-leases`, `maintenance reconcile-stage07`)
   - scenario fixtures/tests and query-contract tests under `tests/runtime/scenarios/` and `tests/runtime/contracts/`
+- TASK-0047 now exports backend-owned frontend snapshot fixtures from real Stage06/Stage07 runtime scenario states under `fixtures/frontend_contracts/`, with deterministic refresh tooling (`make frontend-snapshots`) and contract drift checks.
+- TASK-0046 now implements the first frontend shell under `frontend/`:
+  - route-based SPA skeleton for board/my-work/approvals/exceptions/runs/run-detail/official-outputs/timeline
+  - reusable low-click components + drawer-first detail model
+  - repository-bound data-access seam and frontend unit/route/contract-safety tests (`npm run test:run`)
+- TASK-0048 now swaps frontend repositories to canonical `/api/v1` contracts:
+  - HTTP-backed repositories for board/tasks/approvals/flags/runs/pointers/timeline
+  - explicit polling/loading/error/empty/freshness behavior for board/list/detail pages
+  - inline claim/complete/respond actions wired through repository mutation paths
+  - contract-aligned frontend API integration tests with forbidden-response and reload-stability coverage
+- TASK-0050 adds a bounded real-model sandbox path for Stage06 review classification:
+  - narrow OpenAI Responses API adapter under `src/onetruth/integrations/openai/`
+  - strict structured output schema for Stage06 outcomes (`draft_is_publish_ready`, `review_requires_more_information`, `review_requests_changes`)
+  - canonical evidence artifact capture (`schedule.stage06.review_ai_evidence.json`) linked to input artifact refs
+  - follow-on workflow truth still emitted only via existing `tasks.complete` handler
+  - gated real-network e2e coverage under `tests/integration_openai/` plus always-on mock/contract tests
+- TASK-0051 promotes example template-pack documents into an executable corpus and routes them through canonical artifact ingress:
+  - manifest-driven corpus seeding under `fixtures/example_document_corpus/manifest.yaml`
+  - canonical artifact-link substrate for task/approval/flag/workflow-run attachments (`artifact_links`)
+  - CLI/API attachment upload/list/download paths backed by immutable `artifact_versions`
+  - frontend inline upload/download actions wired to canonical repository/API boundaries
+  - runtime/API tests for ingress determinism, linkage coherence, cross-scope denial, and snapshot refresh stability
 
 ### Tranche 5 - Execution facet + policy gate
 **Write after Stage07**
@@ -229,6 +254,15 @@ Status:
 
 **Acceptance target**
 - semantics behind AT-SCH-003 and AT-SCH-007
+
+Status:
+- TASK-0052 now implements the first canonical execution-runtime slice:
+  - canonical persistence for `execution_sessions`, `tool_executions`, and `policy_decisions`
+  - transactional lifecycle handlers and CLI boundary for session/tool/policy operations
+  - bounded Stage06 OpenAI sandbox routed through explicit execution-session + policy-gated tool lifecycle
+  - explicit allow/deny/failure/reconcile paths with authoritative timeline evidence
+  - runtime tests for happy path, denial, idempotent retry, failure mapping, and reconcile recovery
+- broader generalized multi-agent orchestration remains intentionally out of scope.
 
 ### Tranche 6 - Projection coherence + generator prototype
 **Write last in the Stage 4 bootstrap sequence**

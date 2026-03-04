@@ -79,9 +79,8 @@ Row shape (`approvals[]`):
 - `generation`
 - `created_at`
 - `updated_at`
-- `active_issue_count`
 
-## 6) Exception/flag queue rows
+## 3) Exception/flag queue rows
 Command:
 - `flags list --workflow-run-id <id> --json`
 
@@ -109,7 +108,7 @@ Row shape (`flags[]`):
 - `dedupe_key`
 - `updated_at`
 
-## 3) Artifact version summary rows
+## 4) Artifact version summary rows
 Command:
 - `artifacts list --workflow-run-id <id> --json`
 
@@ -131,8 +130,20 @@ Row shape (`artifact_versions[]`):
 - `supersedes_artifact_version_id`
 - `lineage_note`
 - `created_at`
+- `links[]` (subject linkage rows for `workflow_run`, `human_task`, `approval`, `flag`)
 
-## 4) Pointer/current-official summary rows
+Subject-linked artifact reads:
+- `artifacts list-linked --workflow-run-id <id> --subject-kind <kind> --subject-id <id> --json`
+- `GET /api/v1/human-tasks/{human_task_id}/artifacts`
+- `GET /api/v1/approvals/{approval_id}/artifacts`
+- `GET /api/v1/flags/{flag_id}/artifacts`
+- `GET /api/v1/workflow-runs/{workflow_run_id}/artifacts`
+
+Attachment download surfaces:
+- `artifacts download --artifact-version-id <id> --output-path <path> --json`
+- `GET /api/v1/artifacts/{artifact_version_id}/download`
+
+## 5) Pointer/current-official summary rows
 Command:
 - `pointers list --workflow-run-id <id> --json`
 
@@ -152,7 +163,7 @@ Row shape (`pointers[]`):
 - `generation`
 - `updated_at`
 
-## 5) Workflow run summary rows
+## 6) Workflow run summary rows
 Command:
 - `runs list --json [--workflow-id <id>] [--tenant-id <id>] [--domain-id <id>] [--state <state>]`
 
@@ -171,12 +182,63 @@ Row shape (`workflow_runs[]`):
 - `state`
 - `created_at`
 - `updated_at`
+- `active_issue_count`
+
+## 7) Timeline/event rows (HTTP)
+Endpoint:
+- `GET /api/v1/timeline-events`
+
+Filters:
+- `workflow_run_id`, `event_type`, `since_sequence_no`, `limit`, `offset`
+
+Response envelope:
+- `{"status":"ok","command":"api.timeline_events.list","events":[...],"page":...}`
+
+Row shape (`events[]`):
+- `sequence_no`
+- `event_id`
+- `event_type`
+- `schema_version`
+- `occurred_at`
+- `recorded_at`
+- `tenant_id`
+- `domain_id`
+- `actor`
+- `links`
+- `payload`
+- optional: `correlation_id`, `causation_id`, `idempotency_key`, `integrity`
 
 ## Notes for parallel UI work
 - UI/board work can consume these contracts through either CLI or HTTP surfaces.
 - These contracts intentionally mirror canonical table fields and avoid derived semantics that could create a second truth path.
-- HTTP adapter implementation now exists and preserves this canonical field set while adding board-specific aggregates.
+- HTTP adapter implementation now exists and preserves this canonical field set while adding board-specific aggregates and timeline feed endpoints for drawer/run-detail views.
 
 Contract stability tests now exist in:
 - `tests/runtime/contracts/test_hitl_query_contracts_stage06.py`
 - `tests/runtime/contracts/test_hitl_query_contracts_stage07.py`
+
+## Backend-owned frontend snapshots
+Snapshot fixtures for parallel frontend work are exported from real scenario-backed runtime states:
+- `fixtures/frontend_contracts/stage06_publish_ready_board_state.json`
+- `fixtures/frontend_contracts/stage06_needs_information_state.json`
+- `fixtures/frontend_contracts/stage07_major_replan_board_state.json`
+- `fixtures/frontend_contracts/stage07_exception_branch_state.json`
+- `fixtures/frontend_contracts/approval_queue_state.json`
+- `fixtures/frontend_contracts/run_detail_state.json`
+- `fixtures/frontend_contracts/timeline_state.json`
+- `fixtures/frontend_contracts/official_outputs_pointers_state.json`
+
+Refresh command:
+- `make frontend-snapshots`
+
+Drift check command:
+- `PYTHONPATH=src python3 scripts/export_frontend_snapshots.py --check`
+
+Snapshot contract test:
+- `tests/runtime/contracts/test_frontend_snapshot_fixtures.py`
+
+Example corpus seeding and ingress:
+- corpus manifest: `fixtures/example_document_corpus/manifest.yaml`
+- corpus loader/service: `src/onetruth/application/services/example_document_corpus.py`
+- canonical seed command: `artifacts seed-corpus --json`
+- canonical ingress command: `artifacts ingest --json`

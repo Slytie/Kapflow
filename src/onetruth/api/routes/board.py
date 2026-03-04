@@ -4,24 +4,31 @@ from typing import Any
 
 from onetruth.api.dependencies import Page, RequestContext
 from onetruth.api.routes.approvals import query_approvals
+from onetruth.api.routes.flags import query_flags
 from onetruth.api.routes.human_tasks import query_human_tasks
 from onetruth.api.routes.pointers import query_pointers
 from onetruth.api.routes.workflow_runs import query_workflow_runs
 
 LANE_ORDER = {
+    "flags.open": 5,
     "human_tasks.open": 10,
     "human_tasks.claimed": 20,
     "approvals.pending": 30,
     "approvals.responded": 40,
     "human_tasks.completed": 50,
+    "flags.resolved": 60,
+    "flags.closed": 70,
 }
 
 LANE_LABELS = {
+    "flags.open": "Open Exceptions",
     "human_tasks.open": "Open Tasks",
     "human_tasks.claimed": "Claimed Tasks",
     "approvals.pending": "Pending Approvals",
     "approvals.responded": "Responded Approvals",
     "human_tasks.completed": "Completed Tasks",
+    "flags.resolved": "Resolved Exceptions",
+    "flags.closed": "Closed Exceptions",
 }
 
 
@@ -65,6 +72,16 @@ def schedule_planning_board_endpoint(
         required_role=query.get("required_role"),
         page=source_page,
     )
+    flags = query_flags(
+        connection,
+        context=context,
+        workflow_run_id=workflow_run_id,
+        state=query.get("flag_state"),
+        kind=query.get("flag_kind"),
+        severity=query.get("flag_severity"),
+        assigned_group=query.get("assigned_group"),
+        page=source_page,
+    )
     pointers = query_pointers(
         connection,
         context=context,
@@ -81,6 +98,18 @@ def schedule_planning_board_endpoint(
         if task_run_id is None:
             continue
         approvals_by_task_run_id.setdefault(str(task_run_id), []).append(approval)
+
+    task_counts_by_flag_id: dict[str, dict[str, int]] = {}
+    for task in human_tasks:
+        flag_id = task.get("spawned_from_flag_id")
+        if flag_id is None:
+            continue
+        bucket = task_counts_by_flag_id.setdefault(
+            str(flag_id), {"total": 0, "open_or_claimed": 0}
+        )
+        bucket["total"] += 1
+        if str(task["state"]) in {"OPEN", "CLAIMED"}:
+            bucket["open_or_claimed"] += 1
 
     cards: list[dict[str, Any]] = []
     for task in human_tasks:
@@ -141,6 +170,31 @@ def schedule_planning_board_endpoint(
             }
         )
 
+    for flag in flags:
+        lane = _flag_lane(str(flag["state"]))
+        workflow_run = workflow_lookup.get(str(flag["workflow_run_id"]), {})
+        linked_counts = task_counts_by_flag_id.get(str(flag["flag_id"]), {})
+        cards.append(
+            {
+                "card_id": f"flag:{flag['flag_id']}",
+                "card_type": "flag",
+                "lane": lane,
+                "title": str(flag["summary"]),
+                "workflow_run_id": flag["workflow_run_id"],
+                "workflow_id": workflow_run.get("workflow_id"),
+                "flag_id": flag["flag_id"],
+                "kind": flag["kind"],
+                "severity": flag["severity"],
+                "state": flag["state"],
+                "summary": flag["summary"],
+                "assigned_group": flag["assigned_group"],
+                "created_at": flag["created_at"],
+                "closed_at": flag["closed_at"],
+                "linked_task_count": int(linked_counts.get("total", 0)),
+                "linked_open_task_count": int(linked_counts.get("open_or_claimed", 0)),
+            }
+        )
+
     cards.sort(key=_card_sort_key)
 
     lane_counts = {lane: 0 for lane in LANE_ORDER}
@@ -169,6 +223,7 @@ def schedule_planning_board_endpoint(
                 "task_kind": query.get("task_kind"),
                 "task_state": query.get("task_state"),
                 "approval_state": query.get("approval_state"),
+                "flag_state": query.get("flag_state"),
             },
             "lanes": lanes,
             "cards": paged_cards,
@@ -179,6 +234,7 @@ def schedule_planning_board_endpoint(
                 "workflow_run_count": len(workflow_runs),
                 "human_task_count": len(human_tasks),
                 "approval_count": len(approvals),
+                "flag_count": len(flags),
                 "pointer_count": len(pointers),
                 "card_count": len(cards),
             },
@@ -200,6 +256,14 @@ def _approval_lane(state: str) -> str:
     return "approvals.responded"
 
 
+def _flag_lane(state: str) -> str:
+    if state in {"open", "triage", "blocked"}:
+        return "flags.open"
+    if state == "resolved":
+        return "flags.resolved"
+    return "flags.closed"
+
+
 def _card_sort_key(card: dict[str, Any]) -> tuple[Any, ...]:
     lane = str(card["lane"])
     lane_position = LANE_ORDER.get(lane, 999)
@@ -211,6 +275,23 @@ def _card_sort_key(card: dict[str, Any]) -> tuple[Any, ...]:
             lane_position,
             due_at,
             claimed_at,
+            str(card.get("title") or ""),
+            str(card["card_id"]),
+        )
+
+    if card["card_type"] == "flag":
+        severity_rank = {
+            "critical": 0,
+            "high": 1,
+            "medium": 2,
+            "low": 3,
+            "info": 4,
+        }.get(str(card.get("severity")), 9)
+        created_at = card.get("created_at") or "9999-12-31T23:59:59Z"
+        return (
+            lane_position,
+            severity_rank,
+            created_at,
             str(card.get("title") or ""),
             str(card["card_id"]),
         )

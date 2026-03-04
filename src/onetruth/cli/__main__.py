@@ -12,6 +12,7 @@ from onetruth.application.handlers.workflow_task_lifecycle import (
     CommandError,
     activate_stage07_issue_from_flag_command,
     create_artifact_version_command,
+    create_execution_session_command,
     create_flag_command,
     claim_human_task_command,
     complete_human_task_command,
@@ -19,22 +20,40 @@ from onetruth.application.handlers.workflow_task_lifecycle import (
     create_workflow_run_command,
     list_approvals_for_workflow_run_command,
     list_artifacts_for_workflow_run_command,
+    list_artifacts_for_subject_command,
     list_flags_for_workflow_run_command,
     list_pointers_for_workflow_run_command,
     list_tasks_for_workflow_run_command,
     list_workflow_runs_command,
+    download_artifact_blob_command,
+    ingest_artifact_document_command,
     promote_pointer_command,
     reconcile_stage07_command,
+    reconcile_executions_command,
+    list_execution_sessions_for_workflow_run_command,
     request_approval_command,
+    request_tool_execution_command,
     respond_approval_command,
+    show_execution_session_command,
     show_flag_command,
+    show_policy_decision_command,
     show_approval_command,
     show_artifact_version_command,
     show_human_task_command,
+    show_tool_execution_command,
     show_pointer_command,
     show_workflow_run_command,
     sweep_leases_command,
+    transition_execution_session_state_command,
     transition_flag_state_command,
+)
+from onetruth.application.services.example_document_corpus import (
+    load_example_document_corpus,
+    seed_payloads_for_set,
+)
+from onetruth.infrastructure.artifacts.storage import (
+    default_storage_root_for_db_url,
+    encode_base64_content,
 )
 from onetruth.infrastructure.db.session import DEFAULT_DB_URL, open_sqlite_connection
 from onetruth.infrastructure.events.event_store import (
@@ -142,6 +161,12 @@ def _build_parser() -> argparse.ArgumentParser:
     artifacts_create = artifacts_sub.add_parser("create-version", help="Create an artifact version.")
     artifacts_create.add_argument("--json", dest="json_payload", required=True)
     artifacts_create.set_defaults(handler=_handle_artifacts_create_version)
+    artifacts_ingest = artifacts_sub.add_parser(
+        "ingest",
+        help="Ingest document bytes and create an artifact version through canonical ingress.",
+    )
+    artifacts_ingest.add_argument("--json", dest="json_payload", required=True)
+    artifacts_ingest.set_defaults(handler=_handle_artifacts_ingest)
     artifacts_show = artifacts_sub.add_parser("show", help="Show one artifact version.")
     artifacts_show.add_argument("--artifact-version-id", required=True)
     artifacts_show.add_argument("--json", dest="json_output", required=True, action="store_true")
@@ -150,6 +175,26 @@ def _build_parser() -> argparse.ArgumentParser:
     artifacts_list.add_argument("--workflow-run-id", required=True)
     artifacts_list.add_argument("--json", dest="json_output", required=True, action="store_true")
     artifacts_list.set_defaults(handler=_handle_artifacts_list)
+    artifacts_list_linked = artifacts_sub.add_parser(
+        "list-linked",
+        help="List artifact versions linked to a subject.",
+    )
+    artifacts_list_linked.add_argument("--workflow-run-id", required=True)
+    artifacts_list_linked.add_argument("--subject-kind", required=True)
+    artifacts_list_linked.add_argument("--subject-id", required=True)
+    artifacts_list_linked.add_argument("--json", dest="json_output", required=True, action="store_true")
+    artifacts_list_linked.set_defaults(handler=_handle_artifacts_list_linked)
+    artifacts_download = artifacts_sub.add_parser("download", help="Download artifact bytes to a local file.")
+    artifacts_download.add_argument("--artifact-version-id", required=True)
+    artifacts_download.add_argument("--output-path", required=True)
+    artifacts_download.add_argument("--json", dest="json_output", required=True, action="store_true")
+    artifacts_download.set_defaults(handler=_handle_artifacts_download)
+    artifacts_seed_corpus = artifacts_sub.add_parser(
+        "seed-corpus",
+        help="Seed a manifest-defined example document set through canonical artifact ingress.",
+    )
+    artifacts_seed_corpus.add_argument("--json", dest="json_payload", required=True)
+    artifacts_seed_corpus.set_defaults(handler=_handle_artifacts_seed_corpus)
 
     pointers = subparsers.add_parser("pointers", help="Pointer promotion commands.")
     pointers_sub = pointers.add_subparsers(dest="pointers_command", required=True)
@@ -192,6 +237,58 @@ def _build_parser() -> argparse.ArgumentParser:
     stage07_activate.add_argument("--json", dest="json_payload", required=True)
     stage07_activate.set_defaults(handler=_handle_stage07_activate_issue)
 
+    execution_sessions = subparsers.add_parser(
+        "execution-sessions",
+        help="Execution session lifecycle commands.",
+    )
+    execution_sessions_sub = execution_sessions.add_subparsers(
+        dest="execution_sessions_command",
+        required=True,
+    )
+    execution_sessions_create = execution_sessions_sub.add_parser(
+        "create",
+        help="Create an execution session row and canonical events.",
+    )
+    execution_sessions_create.add_argument("--json", dest="json_payload", required=True)
+    execution_sessions_create.set_defaults(handler=_handle_execution_sessions_create)
+    execution_sessions_show = execution_sessions_sub.add_parser("show", help="Show one execution session.")
+    execution_sessions_show.add_argument("--execution-session-id", required=True)
+    execution_sessions_show.add_argument("--json", dest="json_output", required=True, action="store_true")
+    execution_sessions_show.set_defaults(handler=_handle_execution_sessions_show)
+    execution_sessions_list = execution_sessions_sub.add_parser(
+        "list",
+        help="List execution sessions for a workflow run.",
+    )
+    execution_sessions_list.add_argument("--workflow-run-id", required=True)
+    execution_sessions_list.add_argument("--json", dest="json_output", required=True, action="store_true")
+    execution_sessions_list.set_defaults(handler=_handle_execution_sessions_list)
+    execution_sessions_transition = execution_sessions_sub.add_parser(
+        "transition",
+        help="Transition an execution session state.",
+    )
+    execution_sessions_transition.add_argument("--json", dest="json_payload", required=True)
+    execution_sessions_transition.set_defaults(handler=_handle_execution_sessions_transition)
+
+    tool_executions = subparsers.add_parser("tool-executions", help="Tool execution commands.")
+    tool_executions_sub = tool_executions.add_subparsers(dest="tool_executions_command", required=True)
+    tool_executions_request = tool_executions_sub.add_parser(
+        "request",
+        help="Request a tool execution under an execution session.",
+    )
+    tool_executions_request.add_argument("--json", dest="json_payload", required=True)
+    tool_executions_request.set_defaults(handler=_handle_tool_executions_request)
+    tool_executions_show = tool_executions_sub.add_parser("show", help="Show one tool execution row.")
+    tool_executions_show.add_argument("--tool-execution-id", required=True)
+    tool_executions_show.add_argument("--json", dest="json_output", required=True, action="store_true")
+    tool_executions_show.set_defaults(handler=_handle_tool_executions_show)
+
+    policy_decisions = subparsers.add_parser("policy-decisions", help="Policy decision read commands.")
+    policy_decisions_sub = policy_decisions.add_subparsers(dest="policy_decisions_command", required=True)
+    policy_decisions_show = policy_decisions_sub.add_parser("show", help="Show one policy decision row.")
+    policy_decisions_show.add_argument("--policy-decision-id", required=True)
+    policy_decisions_show.add_argument("--json", dest="json_output", required=True, action="store_true")
+    policy_decisions_show.set_defaults(handler=_handle_policy_decisions_show)
+
     maintenance = subparsers.add_parser("maintenance", help="Maintenance/recovery commands.")
     maintenance_sub = maintenance.add_subparsers(dest="maintenance_command", required=True)
     maintenance_sweep = maintenance_sub.add_parser("sweep-leases", help="Sweep and reopen expired leases.")
@@ -203,6 +300,12 @@ def _build_parser() -> argparse.ArgumentParser:
     )
     maintenance_reconcile.add_argument("--json", dest="json_payload", required=True)
     maintenance_reconcile.set_defaults(handler=_handle_maintenance_reconcile_stage07)
+    maintenance_reconcile_executions = maintenance_sub.add_parser(
+        "reconcile-executions",
+        help="Reconcile stale or partially completed execution sessions.",
+    )
+    maintenance_reconcile_executions.add_argument("--json", dest="json_payload", required=True)
+    maintenance_reconcile_executions.set_defaults(handler=_handle_maintenance_reconcile_executions)
 
     return parser
 
@@ -542,6 +645,131 @@ def _handle_stage07_activate_issue(args: argparse.Namespace) -> int:
     return 0
 
 
+def _handle_execution_sessions_create(args: argparse.Namespace) -> int:
+    payload = _parse_json_object(args.json_payload)
+    if isinstance(payload, int):
+        return payload
+    connection = _open_connection_or_emit(args.db_url)
+    if isinstance(connection, int):
+        return connection
+    try:
+        session = create_execution_session_command(connection, payload)
+    except CommandError as exc:
+        return _emit_error(code=exc.code, message=exc.message, details=exc.details)
+    except DuplicateIdempotencyKeyError as exc:
+        return _emit_error(
+            code="duplicate_idempotency_key",
+            message=str(exc),
+            details={"idempotency_key": exc.idempotency_key, "existing_event_id": exc.existing_event_id},
+        )
+    finally:
+        connection.close()
+    _json_print({"status": "ok", "command": "execution-sessions.create", "execution_session": session})
+    return 0
+
+
+def _handle_execution_sessions_show(args: argparse.Namespace) -> int:
+    connection = _open_connection_or_emit(args.db_url)
+    if isinstance(connection, int):
+        return connection
+    try:
+        session = show_execution_session_command(connection, args.execution_session_id)
+    except CommandError as exc:
+        return _emit_error(code=exc.code, message=exc.message, details=exc.details)
+    finally:
+        connection.close()
+    _json_print({"status": "ok", "command": "execution-sessions.show", "execution_session": session})
+    return 0
+
+
+def _handle_execution_sessions_list(args: argparse.Namespace) -> int:
+    connection = _open_connection_or_emit(args.db_url)
+    if isinstance(connection, int):
+        return connection
+    try:
+        sessions = list_execution_sessions_for_workflow_run_command(connection, args.workflow_run_id)
+    except CommandError as exc:
+        return _emit_error(code=exc.code, message=exc.message, details=exc.details)
+    finally:
+        connection.close()
+    _json_print({"status": "ok", "command": "execution-sessions.list", "execution_sessions": sessions})
+    return 0
+
+
+def _handle_execution_sessions_transition(args: argparse.Namespace) -> int:
+    payload = _parse_json_object(args.json_payload)
+    if isinstance(payload, int):
+        return payload
+    connection = _open_connection_or_emit(args.db_url)
+    if isinstance(connection, int):
+        return connection
+    try:
+        session = transition_execution_session_state_command(connection, payload)
+    except CommandError as exc:
+        return _emit_error(code=exc.code, message=exc.message, details=exc.details)
+    except DuplicateIdempotencyKeyError as exc:
+        return _emit_error(
+            code="duplicate_idempotency_key",
+            message=str(exc),
+            details={"idempotency_key": exc.idempotency_key, "existing_event_id": exc.existing_event_id},
+        )
+    finally:
+        connection.close()
+    _json_print({"status": "ok", "command": "execution-sessions.transition", "execution_session": session})
+    return 0
+
+
+def _handle_tool_executions_request(args: argparse.Namespace) -> int:
+    payload = _parse_json_object(args.json_payload)
+    if isinstance(payload, int):
+        return payload
+    connection = _open_connection_or_emit(args.db_url)
+    if isinstance(connection, int):
+        return connection
+    try:
+        tool_execution = request_tool_execution_command(connection, payload)
+    except CommandError as exc:
+        return _emit_error(code=exc.code, message=exc.message, details=exc.details)
+    except DuplicateIdempotencyKeyError as exc:
+        return _emit_error(
+            code="duplicate_idempotency_key",
+            message=str(exc),
+            details={"idempotency_key": exc.idempotency_key, "existing_event_id": exc.existing_event_id},
+        )
+    finally:
+        connection.close()
+    _json_print({"status": "ok", "command": "tool-executions.request", "tool_execution": tool_execution})
+    return 0
+
+
+def _handle_tool_executions_show(args: argparse.Namespace) -> int:
+    connection = _open_connection_or_emit(args.db_url)
+    if isinstance(connection, int):
+        return connection
+    try:
+        tool_execution = show_tool_execution_command(connection, args.tool_execution_id)
+    except CommandError as exc:
+        return _emit_error(code=exc.code, message=exc.message, details=exc.details)
+    finally:
+        connection.close()
+    _json_print({"status": "ok", "command": "tool-executions.show", "tool_execution": tool_execution})
+    return 0
+
+
+def _handle_policy_decisions_show(args: argparse.Namespace) -> int:
+    connection = _open_connection_or_emit(args.db_url)
+    if isinstance(connection, int):
+        return connection
+    try:
+        policy_decision = show_policy_decision_command(connection, args.policy_decision_id)
+    except CommandError as exc:
+        return _emit_error(code=exc.code, message=exc.message, details=exc.details)
+    finally:
+        connection.close()
+    _json_print({"status": "ok", "command": "policy-decisions.show", "policy_decision": policy_decision})
+    return 0
+
+
 def _handle_maintenance_sweep_leases(args: argparse.Namespace) -> int:
     payload = _parse_json_object(args.json_payload)
     if isinstance(payload, int):
@@ -579,6 +807,23 @@ def _handle_maintenance_reconcile_stage07(args: argparse.Namespace) -> int:
     finally:
         connection.close()
     _json_print({"status": "ok", "command": "maintenance.reconcile-stage07", "result": result})
+    return 0
+
+
+def _handle_maintenance_reconcile_executions(args: argparse.Namespace) -> int:
+    payload = _parse_json_object(args.json_payload)
+    if isinstance(payload, int):
+        return payload
+    connection = _open_connection_or_emit(args.db_url)
+    if isinstance(connection, int):
+        return connection
+    try:
+        result = reconcile_executions_command(connection, payload)
+    except CommandError as exc:
+        return _emit_error(code=exc.code, message=exc.message, details=exc.details)
+    finally:
+        connection.close()
+    _json_print({"status": "ok", "command": "maintenance.reconcile-executions", "result": result})
     return 0
 
 
@@ -685,6 +930,47 @@ def _handle_artifacts_create_version(args: argparse.Namespace) -> int:
     return 0
 
 
+def _handle_artifacts_ingest(args: argparse.Namespace) -> int:
+    payload = _parse_json_object(args.json_payload)
+    if isinstance(payload, int):
+        return payload
+    connection = _open_connection_or_emit(args.db_url)
+    if isinstance(connection, int):
+        return connection
+    storage_root = default_storage_root_for_db_url(
+        args.db_url,
+        override=(
+            str(payload.get("storage_root"))
+            if payload.get("storage_root") is not None
+            else os.environ.get("ONETRUTH_ARTIFACT_STORAGE_ROOT")
+        ),
+    )
+    try:
+        result = ingest_artifact_document_command(
+            connection,
+            payload,
+            storage_root=storage_root,
+        )
+    except CommandError as exc:
+        return _emit_error(code=exc.code, message=exc.message, details=exc.details)
+    except DuplicateIdempotencyKeyError as exc:
+        return _emit_error(
+            code="duplicate_idempotency_key",
+            message=str(exc),
+            details={"idempotency_key": exc.idempotency_key, "existing_event_id": exc.existing_event_id},
+        )
+    finally:
+        connection.close()
+    _json_print(
+        {
+            "status": "ok",
+            "command": "artifacts.ingest",
+            **result,
+        }
+    )
+    return 0
+
+
 def _handle_artifacts_show(args: argparse.Namespace) -> int:
     connection = _open_connection_or_emit(args.db_url)
     if isinstance(connection, int):
@@ -710,6 +996,147 @@ def _handle_artifacts_list(args: argparse.Namespace) -> int:
     finally:
         connection.close()
     _json_print({"status": "ok", "command": "artifacts.list", "artifact_versions": artifact_versions})
+    return 0
+
+
+def _handle_artifacts_list_linked(args: argparse.Namespace) -> int:
+    connection = _open_connection_or_emit(args.db_url)
+    if isinstance(connection, int):
+        return connection
+    try:
+        artifact_versions = list_artifacts_for_subject_command(
+            connection,
+            workflow_run_id=args.workflow_run_id,
+            subject_kind=args.subject_kind,
+            subject_id=args.subject_id,
+        )
+    except CommandError as exc:
+        return _emit_error(code=exc.code, message=exc.message, details=exc.details)
+    finally:
+        connection.close()
+    _json_print(
+        {
+            "status": "ok",
+            "command": "artifacts.list-linked",
+            "workflow_run_id": args.workflow_run_id,
+            "subject_kind": args.subject_kind,
+            "subject_id": args.subject_id,
+            "artifact_versions": artifact_versions,
+        }
+    )
+    return 0
+
+
+def _handle_artifacts_download(args: argparse.Namespace) -> int:
+    connection = _open_connection_or_emit(args.db_url)
+    if isinstance(connection, int):
+        return connection
+    try:
+        result = download_artifact_blob_command(connection, args.artifact_version_id)
+    except CommandError as exc:
+        return _emit_error(code=exc.code, message=exc.message, details=exc.details)
+    finally:
+        connection.close()
+
+    output_path = Path(args.output_path).expanduser().resolve()
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    content_bytes = result["content_bytes"]
+    output_path.write_bytes(content_bytes)
+    _json_print(
+        {
+            "status": "ok",
+            "command": "artifacts.download",
+            "artifact_version": result["artifact_version"],
+            "output_path": str(output_path),
+            "byte_size": len(content_bytes),
+            "content_digest": result["artifact_version"]["content_digest"],
+            "content_base64": encode_base64_content(content_bytes),
+        }
+    )
+    return 0
+
+
+def _handle_artifacts_seed_corpus(args: argparse.Namespace) -> int:
+    payload = _parse_json_object(args.json_payload)
+    if isinstance(payload, int):
+        return payload
+    if payload.get("workflow_run_id") is None or payload.get("seed_set_id") is None:
+        return _emit_error(
+            code="invalid_payload",
+            message="workflow_run_id and seed_set_id are required",
+            details={},
+        )
+    manifest_path = (
+        Path(str(payload["manifest_path"])).expanduser().resolve()
+        if payload.get("manifest_path") is not None
+        else None
+    )
+    try:
+        corpus = load_example_document_corpus(manifest_path)
+        seed_payloads = seed_payloads_for_set(
+            corpus=corpus,
+            seed_set_id=str(payload["seed_set_id"]),
+            workflow_run_id=str(payload["workflow_run_id"]),
+            idempotency_prefix=str(
+                payload.get("idempotency_prefix")
+                or f"seed-corpus:{payload['workflow_run_id']}"
+            ),
+        )
+    except Exception as exc:
+        return _emit_error(
+            code="invalid_example_document_corpus",
+            message=str(exc),
+            details={},
+        )
+
+    connection = _open_connection_or_emit(args.db_url)
+    if isinstance(connection, int):
+        return connection
+    storage_root = default_storage_root_for_db_url(
+        args.db_url,
+        override=(
+            str(payload.get("storage_root"))
+            if payload.get("storage_root") is not None
+            else os.environ.get("ONETRUTH_ARTIFACT_STORAGE_ROOT")
+        ),
+    )
+    seeded: list[dict[str, Any]] = []
+    try:
+        for seed_payload in seed_payloads:
+            merged = {
+                **seed_payload,
+                "actor_id": payload.get("actor_id", "system:fixture-seeder"),
+                "actor_type": payload.get("actor_type", "system"),
+                "links": payload.get("links"),
+            }
+            seeded.append(
+                ingest_artifact_document_command(
+                    connection,
+                    merged,
+                    storage_root=storage_root,
+                )["artifact_version"]
+            )
+    except CommandError as exc:
+        return _emit_error(code=exc.code, message=exc.message, details=exc.details)
+    except DuplicateIdempotencyKeyError as exc:
+        return _emit_error(
+            code="duplicate_idempotency_key",
+            message=str(exc),
+            details={"idempotency_key": exc.idempotency_key, "existing_event_id": exc.existing_event_id},
+        )
+    finally:
+        connection.close()
+
+    _json_print(
+        {
+            "status": "ok",
+            "command": "artifacts.seed-corpus",
+            "workflow_run_id": str(payload["workflow_run_id"]),
+            "seed_set_id": str(payload["seed_set_id"]),
+            "manifest_path": str(corpus.manifest_path),
+            "artifact_versions": seeded,
+        }
+    )
     return 0
 
 
