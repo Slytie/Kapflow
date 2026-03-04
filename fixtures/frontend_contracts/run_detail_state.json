@@ -39,10 +39,10 @@
         "metadata_json": {
           "ingress_file_name": "Stage07_Intraday_Exception_Control_Document_Example_COMPLETED.docx",
           "ingress_media_type": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-          "ingress_source_path": "/Users/tylerclark/git/pythonProject/companyos/fixtures/workflows/schedule_planning/template_pack/Stage07_Intraday_Exception_Control/Stage07_Intraday_Exception_Control_Document_Example_COMPLETED.docx",
+          "ingress_source_path": "fixtures/workflows/schedule_planning/template_pack/Stage07_Intraday_Exception_Control/Stage07_Intraday_Exception_Control_Document_Example_COMPLETED.docx",
           "scenario_id": "stage07_major_replan_happy",
           "seed_index": 0,
-          "seed_source_path": "/Users/tylerclark/git/pythonProject/companyos/fixtures/workflows/schedule_planning/template_pack/Stage07_Intraday_Exception_Control/Stage07_Intraday_Exception_Control_Document_Example_COMPLETED.docx"
+          "seed_source_path": "fixtures/workflows/schedule_planning/template_pack/Stage07_Intraday_Exception_Control/Stage07_Intraday_Exception_Control_Document_Example_COMPLETED.docx"
         },
         "parent_artifact_version_id": null,
         "storage_uri": "<storage_uri:6>",
@@ -64,7 +64,7 @@
           "branch": "stage07_major_replan_happy",
           "ingress_file_name": "Stage06_Supervisor_Review_Publish_Spreadsheet_Example_COMPLETED.xlsx",
           "ingress_media_type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-          "ingress_source_path": "/Users/tylerclark/git/pythonProject/companyos/fixtures/workflows/schedule_planning/template_pack/Stage06_Supervisor_Review_Publish/Stage06_Supervisor_Review_Publish_Spreadsheet_Example_COMPLETED.xlsx",
+          "ingress_source_path": "fixtures/workflows/schedule_planning/template_pack/Stage06_Supervisor_Review_Publish/Stage06_Supervisor_Review_Publish_Spreadsheet_Example_COMPLETED.xlsx",
           "scenario_id": "stage07_major_replan_happy",
           "step_id": "create_base_artifact"
         },
@@ -90,7 +90,7 @@
           "flag_id": "<flag_id:10>",
           "ingress_file_name": "Stage07_Intraday_Exception_Control_Spreadsheet_Example_COMPLETED.xlsx",
           "ingress_media_type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-          "ingress_source_path": "/Users/tylerclark/git/pythonProject/companyos/fixtures/workflows/schedule_planning/template_pack/Stage07_Intraday_Exception_Control/Stage07_Intraday_Exception_Control_Spreadsheet_Example_COMPLETED.xlsx",
+          "ingress_source_path": "fixtures/workflows/schedule_planning/template_pack/Stage07_Intraday_Exception_Control/Stage07_Intraday_Exception_Control_Spreadsheet_Example_COMPLETED.xlsx",
           "scenario_id": "stage07_major_replan_happy",
           "step_id": "create_replan_delta"
         },

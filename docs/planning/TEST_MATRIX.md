@@ -129,7 +129,7 @@ Current runtime tests assert:
 - Stage06 completion outcome -> explicit child-task spawning with lineage fields persisted on canonical `task_runs`
 - Stage06 scenario retries do not duplicate spawned children/events when parent completion idempotency key is retried
 - first implementation-backed query-contract snapshots for human-task queue, approval queue, pointer summary, and workflow-run summary rows
-- backend-owned frontend snapshot fixtures exported from real Stage06/Stage07 scenario states under `fixtures/frontend_contracts/` with deterministic refresh + drift-check coverage
+- backend-owned frontend snapshot fixtures exported from real Stage06/Stage07 scenario states under `fixtures/frontend_contracts/` with deterministic refresh + drift-check coverage (`make frontend-snapshots-check`) and source-path sanitization (no local absolute machine paths in snapshot metadata)
 - canonical example-document corpus ingress through artifact-backed storage/versioning (`artifacts ingest`, `artifacts seed-corpus`) with deterministic manifest seeding and digest/metadata round-trip checks
 - canonical attachment linkage/query surfaces for human tasks, approvals, flags, and workflow runs via `artifact_links`
 - API upload/list/show/download attachment visibility and cross-scope denial behavior for artifact-backed documents

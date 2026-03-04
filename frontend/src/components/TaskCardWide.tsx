@@ -9,7 +9,7 @@ interface TaskCardWideProps {
   onClaim?: () => void;
   onComplete?: () => void;
   onNeedInfo?: () => void;
-  onUpload?: () => void;
+  onUpload?: (file: File) => void;
   onDownload?: () => void;
   actionPending?: boolean;
 }

@@ -9,7 +9,7 @@ interface QueueRowProps {
   onDetails: () => void;
   onClaim?: () => void;
   onComplete?: () => void;
-  onUpload?: () => void;
+  onUpload?: (file: File) => void;
   onDownload?: () => void;
   actionPending?: boolean;
 }

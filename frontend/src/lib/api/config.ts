@@ -18,10 +18,20 @@ function readEnvInt(name: string, fallback: number): number {
   return parsed;
 }
 
-const pollIntervalMs =
+const pollIntervalMs: number | false =
   import.meta.env.MODE === "test" ? false : readEnvInt("VITE_ONETRUTH_POLL_INTERVAL_MS", 15000);
 
-export const apiConfig = {
+interface ApiConfig {
+  baseUrl: string;
+  tenantId: string;
+  domainId: string;
+  actorId: string;
+  actorType: string;
+  actorRoles: string;
+  pollIntervalMs: number | false;
+}
+
+export const apiConfig: ApiConfig = {
   baseUrl: readEnv("VITE_ONETRUTH_API_BASE_URL", "/api/v1"),
   tenantId: readEnv("VITE_ONETRUTH_TENANT_ID", "tenant-a"),
   domainId: readEnv("VITE_ONETRUTH_DOMAIN_ID", "domain-x"),

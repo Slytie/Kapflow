@@ -56,3 +56,5 @@
 | TASK-0052 | EPIC-070 | DONE | high | Hardening execution sessions and policy-gated sandbox runtime as canonical truth |
 | TASK-0053 | EPIC-070 | DONE | high | Minimal real OpenAI API sandbox/agent e2e spike |
 | TASK-0054 | EPIC-040 | DONE | high | Realistic Schedule Planning pilot and operator inspection packet |
+| TASK-0055 | EPIC-080 | DONE | medium | Stabilization pass 1: frontend typecheck and deterministic snapshot checks |
+| TASK-0056 | EPIC-080 | DONE | medium | Stabilization pass 2: CI hygiene, reproducibility, and status reconciliation |

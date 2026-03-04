@@ -69,7 +69,7 @@ export function isApiClientError(error: unknown): error is ApiClientError {
 interface RequestOptions {
   method?: "GET" | "POST";
   query?: Record<string, string | number | null | undefined>;
-  body?: Record<string, unknown>;
+  body?: unknown;
   headers?: Record<string, string>;
 }
 
@@ -91,7 +91,7 @@ export async function requestJson<T>(path: string, options: RequestOptions = {})
     method,
     headers
   };
-  if (options.body) {
+  if (options.body !== undefined) {
     init.body = JSON.stringify(options.body);
   }
 

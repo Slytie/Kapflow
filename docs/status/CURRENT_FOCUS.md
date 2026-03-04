@@ -10,7 +10,7 @@ Runtime scaffold bootstrap now includes canonical workflow/task/approval/artifac
 - approval/artifact/pointer substrate: `approvals request/respond/show/list`, `artifacts create-version/show/list`, `pointers promote/show/list`
 - Stage07 issue substrate: `flags create/transition/show/list`, `stage07 activate-issue`, `maintenance sweep-leases`, `maintenance reconcile-stage07`
 - thin HTTP/query adapter: `/api/v1/human-tasks`, `/api/v1/approvals`, `/api/v1/flags`, `/api/v1/workflow-runs`, `/api/v1/pointers`, `/api/v1/timeline-events`, `/api/v1/board/schedule-planning`, plus API mutation delegates for claim/complete/respond
-Active coding milestone: TASK-0031 projection coherence harness design is the next active backlog item; TASK-0030 and TASK-0032 design/prototype closures are complete.
+Active coding milestone: TASK-0031 projection coherence harness design remains the next active backlog item. It is still missing the planned authored deliverable (`docs/planning/PROJECTION_COHERENCE_HARNESS.md`) and corresponding runtime harness implementation/tests; TASK-0030 and TASK-0032 design/prototype closures are complete.
 
 ### Recently completed runtime-bootstrap tranche
 - TASK-0028 - Translated the runtime object model into a concrete Stage 4 runtime architecture, repo layout, persistence model, and first implementation slice
@@ -30,6 +30,7 @@ Active coding milestone: TASK-0031 projection coherence harness design is the ne
 - TASK-0054 - Added the first realistic Schedule Planning pilot runner with corpus-seeded Stage06/Stage07 flows, bounded Stage06 agent execution-runtime evidence, and per-run inspection packets for operator walkthroughs
 - TASK-0030 - Closed Stage06 base + Stage07 ordered-delta artifact-store semantics with explicit reconstruction, idempotency, drift, and blob-authority boundary design in `docs/planning/ARTIFACT_STORE_DESIGN.md`
 - TASK-0032 - Implemented the first generator prototype lowering repo-native Schedule Planning source into generated runbook + CompanyOS-style IR + lineage manifests with freshness checks and no-invention tests
+- TASK-0056 - Stabilized repo hygiene/CI gates by adding explicit backend+snapshot+frontend quality targets, CI wiring for snapshot checks and frontend gates, and tracked-noise index cleanup rules
 - Added `docs/planning/RUNTIME_BOOTSTRAP.md` and `docs/planning/FIRST_RUNTIME_SLICE.md`
 - Added `docs/adr/ADR-003-stage4-runtime-architecture.md`
 - Refreshed stale Codex routing: EPIC-040 / EPIC-050 no longer route default runtime work through Payroll, and missing context packs now exist for EPIC-025 / EPIC-030 / EPIC-060
@@ -54,7 +55,7 @@ Active coding milestone: TASK-0031 projection coherence harness design is the ne
 - Adopted a pytest-backed TDD harness with a stable AT-SCH scenario catalog and reference replay reducer
 
 ### Next tasks (priority order)
-1. TASK-0031 - Design the projection coherence harness
+1. TASK-0031 - Design the projection coherence harness (author `docs/planning/PROJECTION_COHERENCE_HARNESS.md` and wire first runtime coherence harness tests/implementation)
 
 ## Test-first working mode
 Before adding runtime services or API surfaces:

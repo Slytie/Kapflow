@@ -2,6 +2,16 @@
 
 Record any decisions made since the last session so a fresh Codex run can rehydrate quickly.
 
+## 2026-03-04 (TASK-0056 CI/hygiene stabilization + TASK-0031 status reconcile)
+- Chosen hygiene posture: local editor/runtime/cache/build noise (`.DS_Store`, `.idea/`, `.tmp/`, `artifacts/`, frontend `node_modules`/`dist`, env/log cache files) is ignored and removed from Git index when previously tracked.
+- Chosen CI posture: backend PR checks include `frontend-snapshots-check`; frontend PR checks run `npm ci`, typecheck, and non-watch frontend tests; OpenAI real-network tests remain gated in scheduled/dispatch workflow only.
+- Status reconciliation decision: TASK-0031 remains TODO because the planned authored deliverable (`docs/planning/PROJECTION_COHERENCE_HARNESS.md`) and first runtime projection-coherence harness implementation/tests are not present in-repo yet.
+
+## 2026-03-04 (TASK-0055 stabilization pass 1 for frontend typecheck + snapshot determinism)
+- Chosen path-sanitization rule for artifact ingress metadata: normalize separators to `/`, store repo-relative `fixtures/...` when the path includes `fixtures`, otherwise store only the file basename.
+- Applied the same sanitization rule to `seed_source_path` metadata during ingress so scenario-backed snapshot exports cannot leak machine-local absolute paths.
+- Added an explicit snapshot drift-check command target (`make frontend-snapshots-check`) and linked it into `make test` so deterministic snapshot enforcement is part of the primary CI/test gate.
+
 ## 2026-03-04 (TASK-0032 generator prototype for runbook + CompanyOS IR)
 - Chosen prototype scope: generate only from repo-native Schedule Planning source (`WORKFLOW_CONTRACT`, `ARTIFACT_MAP`, `DECISION_CATALOG`, `EXECUTION_PROFILE`, `ACCEPTANCE_CRITERIA`) with no secondary authored semantics.
 - Chosen output contract under `build/generated/`:

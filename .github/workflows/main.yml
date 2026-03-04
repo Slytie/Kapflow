@@ -36,26 +36,18 @@ jobs:
           fi
           python -m pip install pytest pyyaml jsonschema requests
 
-      - name: Run make-based verification loop
+      - name: Run backend CI checks
         shell: bash
         run: |
           set -euo pipefail
           if [ -f Makefile ]; then
-            make schema-validate
-            make contract
-            make replay
-            make acceptance
-            make runtime
+            make ci-backend
           else
             echo "No Makefile found; skipping make-based checks."
           fi
 
-      - name: Run pytest
-        run: pytest -q
-
   frontend:
     if: ${{ hashFiles('frontend/package.json') != '' }}
-    needs: backend
     runs-on: ubuntu-latest
     steps:
       - name: Checkout

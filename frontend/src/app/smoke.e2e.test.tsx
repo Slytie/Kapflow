@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 import { App } from "@/app/App";
@@ -17,7 +17,10 @@ describe("App smoke", () => {
     await user.click(screen.getAllByRole("button", { name: "Details" })[0]);
     expect(await screen.findByLabelText("Details drawer")).toBeInTheDocument();
 
-    await user.click(screen.getAllByRole("button", { name: "Claim" })[0]);
-    expect(mutationLog()).toContain("claim:ht-open-001");
+    const needsInformationLane = screen.getByLabelText("Needs Information");
+    await user.click(within(needsInformationLane).getAllByRole("button", { name: "Claim" })[0]);
+    await waitFor(() => {
+      expect(mutationLog()).toContain("claim:ht-open-001");
+    });
   });
 });

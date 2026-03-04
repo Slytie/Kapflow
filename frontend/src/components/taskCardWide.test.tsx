@@ -40,7 +40,7 @@ describe("TaskCardWide", () => {
     const onUpload = vi.fn();
     const onDownload = vi.fn();
 
-    render(
+    const view = render(
       <TaskCardWide
         task={task}
         onDetails={() => undefined}
@@ -57,6 +57,10 @@ describe("TaskCardWide", () => {
     await user.click(screen.getByRole("button", { name: "Need Info" }));
     await user.click(screen.getByRole("button", { name: "Upload" }));
     await user.click(screen.getByRole("button", { name: "Download" }));
+    const fileInput = view.container.querySelector("input[type='file']");
+    expect(fileInput).not.toBeNull();
+    const file = new File(["stub"], "attachment.txt", { type: "text/plain" });
+    await user.upload(fileInput as HTMLInputElement, file);
 
     expect(onClaim).toHaveBeenCalledTimes(1);
     expect(onComplete).toHaveBeenCalledTimes(1);

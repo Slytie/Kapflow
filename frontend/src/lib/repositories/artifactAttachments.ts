@@ -68,13 +68,15 @@ function downloadName(artifact: ArtifactVersionRow): string {
 }
 
 export async function uploadAttachmentForSubject(
-  *,
-  subjectKind: "human_task" | "approval" | "flag" | "workflow_run",
-  subjectId: string,
-  file: File,
-  artifactKind: string,
-  artifactRole: string,
+  params: {
+    subjectKind: "human_task" | "approval" | "flag" | "workflow_run";
+    subjectId: string;
+    file: File;
+    artifactKind: string;
+    artifactRole: string;
+  }
 ): Promise<ArtifactVersionRow> {
+  const { subjectKind, subjectId, file, artifactKind, artifactRole } = params;
   const payload: ArtifactUploadPayload = {
     artifact_kind: artifactKind,
     artifact_role: artifactRole,

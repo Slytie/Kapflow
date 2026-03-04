@@ -56,6 +56,7 @@ Everything else - runbooks, dashboards, summaries, generated CompanyOS specs, pr
    - `make runtime`
    - `make runtime-api`
    - `make frontend-snapshots`
+   - `make frontend-snapshots-check`
    - `PYTHONPATH=src python3 scripts/export_frontend_snapshots.py --check`
    - `PYTHONPATH=src pytest -q tests/runtime/scenarios tests/runtime/contracts`
    - `PYTHONPATH=src pytest -q tests/runtime/api`
@@ -238,6 +239,7 @@ First real Schedule Planning business slice now implemented:
 - board/query read-surface contracts now have implementation-backed tests
 - Stage07 issue-scoped replan loop now exists with canonical `flags`, deduped issue activation, major-replan approval gating, delta promotion, drift evidence, and lease-expiry recovery/reconcile commands
 - backend-owned frontend contract snapshots are exported from real scenario states under `fixtures/frontend_contracts/` for parallel frontend development
+- snapshot exports sanitize local machine source paths (`fixtures/...` when available, otherwise basename) so fixtures remain deterministic across checkouts/OSes
 - artifact-store design closure for Stage06 base + Stage07 ordered-delta reconstruction is documented in `docs/planning/ARTIFACT_STORE_DESIGN.md`
 
 Stage06 scenario entrypoints:
@@ -250,6 +252,7 @@ Example document corpus:
 - corpus note: `docs/planning/EXAMPLE_DOCUMENT_CORPUS_AND_ARTIFACT_INGRESS.md`
 - seed via CLI: `python3 -m onetruth.cli --db-url <SQLALCHEMY_DB_URL> artifacts seed-corpus --json '<payload-json>'`
 - refresh backend-owned frontend snapshots: `make frontend-snapshots`
+- verify snapshot drift: `make frontend-snapshots-check`
 
 Current stable runtime command boundary:
 - `python3 -m onetruth.cli --db-url <SQLALCHEMY_DB_URL> init-db`
@@ -368,3 +371,11 @@ The project should stay creative without becoming semantically loose:
 - `docs/architecture/RUNTIME_OBJECT_MODEL.md` defines the canonical runtime vocabulary so implementation work does not accidentally fork into a second truth model.
 - `docs/planning/TDD_IMPLEMENTATION_PLAN.md` explains how to use the schemas, golden traces, synthetic example artifacts, and pytest suites as the first development harness.
 - `docs/planning/STEP_RUN_SCENARIO_HARNESS.md` explains how future runtime scenario tests should drive the real command boundary step by step.
+
+
+cat > /Users/tylerclark/git/pythonProject/companyos/.codex.env <<'EOF'
+export OPENAI_API_KEY='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'
+export ONETRUTH_RUN_OPENAI_E2E=1
+EOF
+chmod 600 /Users/tylerclark/git/pythonProject/companyos/.codex.env
+printf "\n.codex.env\n" >> /Users/tylerclark/git/pythonProject/companyos/.git/info/exclude

@@ -1,3 +1,30 @@
 __pycache__/
 .pytest_cache/
 *.pyc
+
+# OS / editor noise
+.DS_Store
+.idea/
+
+# Local runtime/build outputs
+.tmp/
+artifacts/
+*.log
+
+# Frontend local artifacts
+frontend/node_modules/
+frontend/dist/
+frontend/.vite/
+frontend/coverage/
+
+# Local environment/config
+.env*
+.codex.env
+!.env.example
+!.env.sample
+
+# Python virtualenv/cache helpers
+.venv/
+venv/
+.mypy_cache/
+.ruff_cache/

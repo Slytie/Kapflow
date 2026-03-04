@@ -17,15 +17,21 @@ export function renderRoute(element: ReactElement, options: RenderRouteOptions) 
     }
   });
 
-  return render(
+  const renderWithProviders = (ui: ReactElement): ReactElement => (
     <QueryClientProvider client={queryClient}>
       <MemoryRouter initialEntries={[options.route]}>
         <DrawerProvider>
           <Routes>
-            <Route path={options.path} element={element} />
+            <Route path={options.path} element={ui} />
           </Routes>
         </DrawerProvider>
       </MemoryRouter>
     </QueryClientProvider>
   );
+
+  const rendered = render(renderWithProviders(element));
+  return {
+    ...rendered,
+    rerender: (nextElement: ReactElement) => rendered.rerender(renderWithProviders(nextElement))
+  };
 }

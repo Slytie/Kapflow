@@ -2284,7 +2284,21 @@ def ingest_artifact_document_command(
         "ingress_media_type": media_type,
     }
     if source_path is not None:
-        metadata_json.setdefault("ingress_source_path", str(source_path))
+        seed_source_path = metadata_json.get("seed_source_path")
+        if isinstance(seed_source_path, str):
+            metadata_json["seed_source_path"] = _stable_ingress_source_path(
+                seed_source_path
+            )
+        ingress_source_path = metadata_json.get("ingress_source_path")
+        if isinstance(ingress_source_path, str):
+            metadata_json["ingress_source_path"] = _stable_ingress_source_path(
+                ingress_source_path
+            )
+        else:
+            metadata_json.setdefault(
+                "ingress_source_path",
+                _stable_ingress_source_path(str(source_path)),
+            )
 
     create_payload = {
         "artifact_version_id": payload.get("artifact_version_id"),
@@ -3844,6 +3858,19 @@ def _future_iso(lease_seconds: int) -> str:
 
 def _parse_iso_datetime(value: str) -> datetime:
     return datetime.fromisoformat(value.replace("Z", "+00:00")).astimezone(timezone.utc)
+
+
+def _stable_ingress_source_path(raw_path: str) -> str:
+    # Keep source-path metadata deterministic across machines:
+    # /Users/.../companyos/fixtures/workflows/.../file.docx -> fixtures/workflows/.../file.docx
+    # /tmp/uploads/file.pdf -> file.pdf
+    normalized = raw_path.replace("\\", "/")
+    parts = [part for part in normalized.split("/") if part and part != "."]
+    for index, part in enumerate(parts):
+        if part.lower() == "fixtures":
+            return "/".join(["fixtures", *parts[index + 1 :]])
+    fallback = Path(normalized).name
+    return fallback or normalized
 
 
 def _validate_task_run_belongs_to_workflow(

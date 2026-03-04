@@ -4,6 +4,7 @@ import hashlib
 import json
 from pathlib import Path
 
+from onetruth.application.handlers.workflow_task_lifecycle import _stable_ingress_source_path
 from tests.runtime.helpers.runtime_cli import REPO_ROOT, run_cli, stderr_json, stdout_json
 
 SCHEDULE_TEMPLATE_PACK_ROOT = REPO_ROOT / "fixtures/workflows/schedule_planning/template_pack"
@@ -23,6 +24,13 @@ def _create_workflow_run(db_url: str, activation_key: str) -> dict[str, object]:
     }
     result = run_cli("--db-url", db_url, "runs", "create", "--json", json.dumps(payload))
     return stdout_json(result)["workflow_run"]
+
+
+def _resolve_recorded_source_path(path_value: str) -> Path:
+    candidate = Path(path_value)
+    if candidate.is_absolute():
+        return candidate
+    return (REPO_ROOT / candidate).resolve()
 
 
 def _create_task_with_human_task(db_url: str, workflow_run_id: str, activation_key: str) -> dict[str, object]:
@@ -217,8 +225,12 @@ def test_manifest_seed_is_deterministic_and_round_trips_digest_metadata(tmp_path
     # Validate digest/byte_size against source bytes.
     for artifact in seeded_a:
         fixture_id = artifact["metadata_json"]["fixture_id"]
-        source_path = artifact["metadata_json"]["ingress_source_path"]
-        content = Path(source_path).read_bytes()
+        source_path = str(artifact["metadata_json"]["ingress_source_path"])
+        assert source_path.startswith("fixtures/")
+        assert "/Users/" not in source_path
+        assert "C:/Users/" not in source_path
+        assert "C:\\Users\\" not in source_path
+        content = _resolve_recorded_source_path(source_path).read_bytes()
         expected_digest = f"sha256:{hashlib.sha256(content).hexdigest()}"
         assert artifact["content_digest"] == expected_digest
         assert artifact["byte_size"] == len(content)
@@ -236,6 +248,42 @@ def test_manifest_seed_is_deterministic_and_round_trips_digest_metadata(tmp_path
     )
     assert retry.returncode != 0
     assert stderr_json(retry)["error_code"] == "duplicate_idempotency_key"
+
+
+def test_non_fixture_ingress_source_path_uses_file_basename(tmp_path: Path) -> None:
+    db_url = f"sqlite:///{tmp_path / 'runtime.db'}"
+    run_cli("--db-url", db_url, "init-db")
+    workflow = _create_workflow_run(db_url, "non-fixture-ingress-workflow")
+    workflow_run_id = str(workflow["workflow_run_id"])
+
+    source = tmp_path / "uploads" / "manual_override.pdf"
+    source.parent.mkdir(parents=True, exist_ok=True)
+    source.write_bytes(b"pdf-bytes")
+
+    ingest_payload = {
+        "workflow_run_id": workflow_run_id,
+        "artifact_kind": "schedule.manual.override.pdf",
+        "artifact_role": "supporting_input",
+        "source_path": str(source),
+        "file_name": source.name,
+        "idempotency_key": "idem:ingest:non-fixture",
+    }
+    artifact = stdout_json(
+        run_cli("--db-url", db_url, "artifacts", "ingest", "--json", json.dumps(ingest_payload))
+    )["artifact_version"]
+
+    assert artifact["metadata_json"]["ingress_source_path"] == source.name
+
+
+def test_stable_ingress_source_path_normalizes_windows_separators() -> None:
+    fixture_path = r"C:\Users\dev\companyos\fixtures\workflows\schedule_planning\template_pack\sample.docx"
+    assert (
+        _stable_ingress_source_path(fixture_path)
+        == "fixtures/workflows/schedule_planning/template_pack/sample.docx"
+    )
+
+    temp_upload_path = r"C:\tmp\uploads\sample.pdf"
+    assert _stable_ingress_source_path(temp_upload_path) == "sample.pdf"
 
 
 def test_artifact_download_command_writes_original_bytes(tmp_path: Path) -> None:
