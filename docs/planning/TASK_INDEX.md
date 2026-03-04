@@ -58,3 +58,5 @@
 | TASK-0054 | EPIC-040 | DONE | high | Realistic Schedule Planning pilot and operator inspection packet |
 | TASK-0055 | EPIC-080 | DONE | medium | Stabilization pass 1: frontend typecheck and deterministic snapshot checks |
 | TASK-0056 | EPIC-080 | DONE | medium | Stabilization pass 2: CI hygiene, reproducibility, and status reconciliation |
+| TASK-0057 | EPIC-040 | DONE | high | Workflow workspace projection, graph actionability, demo runner, and export bundle |
+| TASK-0058 | EPIC-080 | DONE | medium | Workflow workspace page, live graph, and synchronized actionable work panel |

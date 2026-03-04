@@ -2,6 +2,7 @@ import { ActionCluster } from "@/components/ActionCluster";
 import { AttachmentActions } from "@/components/AttachmentActions";
 import { StatusBadge } from "@/components/StatusBadge";
 import type { HumanTaskRow } from "@/lib/types/contracts";
+import type { ActionItem } from "@/components/ActionCluster";
 
 interface TaskCardWideProps {
   task: HumanTaskRow;
@@ -11,6 +12,11 @@ interface TaskCardWideProps {
   onNeedInfo?: () => void;
   onUpload?: (file: File) => void;
   onDownload?: () => void;
+  claimDisabled?: boolean;
+  completeDisabled?: boolean;
+  needInfoDisabled?: boolean;
+  completeHint?: string;
+  extraActions?: ActionItem[];
   actionPending?: boolean;
 }
 
@@ -22,24 +28,36 @@ export function TaskCardWide({
   onNeedInfo,
   onUpload,
   onDownload,
+  claimDisabled = false,
+  completeDisabled = false,
+  needInfoDisabled = false,
+  completeHint,
+  extraActions = [],
   actionPending = false
 }: TaskCardWideProps): JSX.Element {
-  const actions = [
-    { key: "claim", label: "Claim", tone: "default" as const, onClick: onClaim, disabled: actionPending },
+  const actions: ActionItem[] = [
+    {
+      key: "claim",
+      label: "Claim",
+      tone: "default",
+      onClick: onClaim,
+      disabled: actionPending || claimDisabled
+    },
     {
       key: "complete",
       label: "Complete",
       tone: "positive" as const,
       onClick: onComplete,
-      disabled: actionPending
+      disabled: actionPending || completeDisabled
     },
     {
       key: "request_info",
       label: "Need Info",
       tone: "negative" as const,
       onClick: onNeedInfo,
-      disabled: actionPending
-    }
+      disabled: actionPending || needInfoDisabled
+    },
+    ...extraActions
   ];
 
   return (
@@ -55,6 +73,7 @@ export function TaskCardWide({
         <ActionCluster actions={actions} />
         <AttachmentActions onUpload={onUpload} onDownload={onDownload} disabled={actionPending} />
       </div>
+      {completeHint ? <p className="task-card-wide__hint">{completeHint}</p> : null}
       <button type="button" className="link-button" onClick={onDetails}>
         Details
       </button>

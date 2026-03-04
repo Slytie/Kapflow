@@ -89,9 +89,11 @@ Current implemented runtime command-boundary coverage:
 - `tests/runtime/scenarios/test_schedule_stage07_duplicate_flag_retry.py`
 - `tests/runtime/scenarios/test_schedule_stage07_lease_expiry_recovery.py`
 - `tests/runtime/scenarios/test_schedule_stage07_drift_detected.py`
+- `tests/runtime/scenarios/test_workspace_graph_projection.py`
 - `tests/runtime/contracts/test_hitl_query_contracts_stage06.py`
 - `tests/runtime/contracts/test_hitl_query_contracts_stage07.py`
 - `tests/runtime/contracts/test_frontend_snapshot_fixtures.py`
+- `tests/runtime/contracts/test_workspace_demo_export_bundle.py`
 - `tests/runtime/test_example_document_corpus_ingress.py`
 - `tests/runtime/api/test_human_task_list_contract.py`
 - `tests/runtime/api/test_approval_list_contract.py`
@@ -105,6 +107,8 @@ Current implemented runtime command-boundary coverage:
 - `tests/runtime/api/test_approval_respond_via_api.py`
 - `tests/runtime/api/test_flag_transition_via_api.py`
 - `tests/runtime/api/test_stage06_openai_review_sandbox_api.py`
+- `tests/runtime/api/test_workflow_run_workspace_endpoint.py`
+- `tests/runtime/api/test_workspace_actionability.py`
 - `tests/runtime/test_execution_session_runtime.py`
 - `tests/runtime/test_realistic_schedule_planning_pilot.py`
 - `tests/runtime/api/test_cross_scope_api_denial.py`
@@ -141,6 +145,11 @@ Current runtime tests assert:
 - implementation-backed HTTP contract/mutation coverage for board-ready read surfaces (tasks/approvals/flags/workflow/timeline/pointers/board) and canonical HITL actions (`claim`, `complete`, `respond`, `flags.transition`)
 - frontend inline attachment controls are covered at component/repository contract level and remain delegated to canonical artifact endpoints (no client-side shadow attachment state)
 - bounded Stage06 real-model sandbox path coverage (mock/contract path always-on + gated real OpenAI e2e path)
+- single-run workspace projection coverage:
+  - derived Schedule Planning graph node/edge/status projection over canonical run/task/approval/flag/artifact/pointer state
+  - server-computed `available_actions` + blocking requirements for tasks/approvals/flags
+  - read-only workspace endpoint envelope + cross-scope denial + freshness metadata
+  - demo workspace runner and export bundle zip content/readme integrity
 - canonical execution-runtime lifecycle coverage for bounded agentive work:
   - `execution_sessions` / `tool_executions` / `policy_decisions` row creation and state transitions
   - explicit policy allow/deny gating before model/tool execution (including `WAITING_POLICY -> RUNNING` on allow)

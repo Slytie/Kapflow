@@ -208,6 +208,34 @@ Row shape (`events[]`):
 - `payload`
 - optional: `correlation_id`, `causation_id`, `idempotency_key`, `integrity`
 
+## 8) Workflow workspace projection rows (HTTP)
+Endpoint:
+- `GET /api/v1/workflow-runs/{workflow_run_id}/workspace`
+
+Response envelope:
+- `{"status":"ok","command":"api.workflow_runs.workspace","workflow_run":{...},"graph":{...},"user_work":[...],"blocking_work":[...],"official_outputs":{...},"timeline_excerpt":{...},"freshness":{...}}`
+
+Graph projection shape (`graph`):
+- `nodes[]`
+- `edges[]`
+- `summary`
+- `latest_event_sequence`
+- `warnings[]`
+
+Workspace action item shape (`user_work[]`, `blocking_work[]`):
+- `id`
+- `subject_kind`
+- `subject_id`
+- `canonical_state`
+- `available_actions[]`
+- `blocking_requirements[]`
+- `linked_artifact_count`
+- `missing_required_inputs[]`
+- `can_complete`
+- `can_upload_attachment`
+- `can_run_stage06_agent_review`
+- `metadata`
+
 ## Notes for parallel UI work
 - UI/board work can consume these contracts through either CLI or HTTP surfaces.
 - These contracts intentionally mirror canonical table fields and avoid derived semantics that could create a second truth path.

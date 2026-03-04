@@ -73,6 +73,10 @@ interface RequestOptions {
   headers?: Record<string, string>;
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return value !== null && typeof value === "object";
+}
+
 export async function requestJson<T>(path: string, options: RequestOptions = {}): Promise<T> {
   const method = options.method ?? "GET";
   const url = `${apiConfig.baseUrl}${path}${encodeQuery(options.query)}`;
@@ -106,17 +110,46 @@ export async function requestJson<T>(path: string, options: RequestOptions = {})
   }
 
   const text = await response.text();
+  const contentType = response.headers.get("content-type") ?? "";
   let payload: unknown = {};
   if (text) {
     try {
       payload = JSON.parse(text) as unknown;
     } catch {
-      payload = {};
+      const maybeHtml =
+        contentType.toLowerCase().includes("text/html") || text.toLowerCase().includes("<!doctype html");
+      throw new ApiClientError(response.status, {
+        code: "invalid_json_response",
+        message: maybeHtml
+          ? "API returned HTML instead of JSON. Check VITE_ONETRUTH_API_BASE_URL or Vite dev proxy."
+          : "API returned a non-JSON response.",
+        details: { path, content_type: contentType }
+      });
     }
   }
 
   if (!response.ok) {
     throw new ApiClientError(response.status, normalizeErrorPayload(payload, response.status));
+  }
+
+  if (!isRecord(payload)) {
+    throw new ApiClientError(response.status, {
+      code: "invalid_api_envelope",
+      message: "API response was not a JSON object envelope.",
+      details: { path }
+    });
+  }
+
+  const status = payload.status;
+  if (status === "error") {
+    throw new ApiClientError(response.status, normalizeErrorPayload(payload, response.status));
+  }
+  if (status !== "ok") {
+    throw new ApiClientError(response.status, {
+      code: "invalid_api_envelope",
+      message: "API response missing status='ok' envelope.",
+      details: { path, observed_status: status ?? null }
+    });
   }
 
   return payload as T;

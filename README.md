@@ -91,6 +91,7 @@ Current HTTP endpoints:
 - `GET /api/v1/flags/{flag_id}/artifacts`
 - `GET /api/v1/workflow-runs`
 - `GET /api/v1/workflow-runs/{workflow_run_id}`
+- `GET /api/v1/workflow-runs/{workflow_run_id}/workspace`
 - `GET /api/v1/workflow-runs/{workflow_run_id}/artifacts`
 - `GET /api/v1/timeline-events`
 - `GET /api/v1/pointers`
@@ -210,7 +211,7 @@ The HITL frontend shell lives under `frontend/` as a contract-first SPA backed b
    - `cd frontend`
    - `npm install`
 2. Configure API endpoint + request-context headers (via Vite env vars):
-   - `VITE_ONETRUTH_API_BASE_URL` (default `/api/v1`)
+   - `VITE_ONETRUTH_API_BASE_URL` (default `/api/v1`, local backend example: `http://127.0.0.1:8080/api/v1`)
    - `VITE_ONETRUTH_TENANT_ID` (default `tenant-a`)
    - `VITE_ONETRUTH_DOMAIN_ID` (default `domain-x`)
    - `VITE_ONETRUTH_ACTOR_ID` (default `human:frontend-operator`)
@@ -224,11 +225,50 @@ The HITL frontend shell lives under `frontend/` as a contract-first SPA backed b
    - `npm run test:run`
    - `npm run build`
 
+Run frontend against local backend:
+- backend terminal: `PYTHONPATH=src onetruth-api --db-url sqlite:///./.tmp/onetruth-api.db --host 127.0.0.1 --port 8080`
+- frontend terminal: `cd frontend && VITE_ONETRUTH_API_BASE_URL=http://127.0.0.1:8080/api/v1 npm run dev`
+
+Open the workflow workspace page:
+- run list route: `/runs`
+- direct route: `/runs/<workflow_run_id>/workspace`
+
+Workspace behavior:
+- graph and actionable panel both come from `GET /api/v1/workflow-runs/{workflow_run_id}/workspace`.
+- inline claim/complete/respond/upload/download and Stage06 AI actions still go through existing repositories and canonical mutation APIs.
+- successful inline actions invalidate workspace and related queue queries; polling then keeps graph and action panel synchronized.
+
+Upload-unblocks-work behavior check:
+- run: `cd frontend && npm run test:run -- src/pages/runWorkspacePage.test.tsx -t "marks task completable after upload response unblocks missing inputs"`
+- expected result: task `Complete` starts disabled due `missing_required_inputs`, then becomes enabled after upload response refreshes workspace projection.
+
 Frontend implementation status:
 - Real/API-backed now: repositories call canonical HTTP contracts via `frontend/src/lib/api/httpClient.ts` and `frontend/src/lib/api/onetruthApi.ts`.
-- Implemented: app shell, route/page structure, low-click card/row/detail components, inline claim/complete/respond actions, inline attachment upload/download actions, URL-synced filters, polling-aware loading/error/empty/freshness states.
+- Implemented: app shell, route/page structure, low-click card/row/detail components, inline claim/complete/respond actions, inline attachment upload/download actions, URL-synced filters, polling-aware loading/error/empty/freshness states, and run workspace graph/action synchronization on `/runs/:workflowRunId/workspace`.
 - Test strategy: component + route tests plus contract-aligned API integration tests using a controlled `/api/v1` MSW test layer.
 - Still future: broader UI polish and richer attachment preview affordances.
+
+## Workflow workspace demo quickstart
+Initialize a clean runtime DB:
+- `PYTHONPATH=src python3 -m onetruth.cli --db-url sqlite:///./.tmp/workspace-demo.db init-db`
+
+Seed one realistic workflow workspace run (choose scenario):
+- `PYTHONPATH=src python3 scripts/run_schedule_workspace_demo.py --db-url sqlite:///./.tmp/workspace-demo.db --scenario stage06_publish_ready --output-json ./.tmp/workspace-demo.json`
+- other scenarios: `stage06_needs_information`, `stage07_major_replan`
+
+Start backend API:
+- `PYTHONPATH=src onetruth-api --db-url sqlite:///./.tmp/workspace-demo.db --host 127.0.0.1 --port 8080`
+
+Start frontend:
+- `cd frontend`
+- `VITE_ONETRUTH_API_BASE_URL=http://127.0.0.1:8080/api/v1 npm run dev`
+
+Open workspace page:
+- get `workflow_run_id` from `.tmp/workspace-demo.json`
+- open `/runs/<workflow_run_id>/workspace`
+
+Export workspace bundle zip for review:
+- `PYTHONPATH=src python3 scripts/export_run_workspace_bundle.py --db-url sqlite:///./.tmp/workspace-demo.db --workflow-run-id <workflow_run_id> --output ./.tmp/workspace-bundle.zip`
 
 ## Runtime scaffold
 Runtime scaffold now exists at `src/onetruth/` with migrations under `alembic/` and runtime smoke tests under `tests/runtime/`.

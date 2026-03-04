@@ -1,5 +1,9 @@
 import { onetruthApi } from "@/lib/api/onetruthApi";
-import type { WorkflowRunDetailContract, WorkflowRunRow } from "@/lib/types/contracts";
+import type {
+  WorkflowRunDetailContract,
+  WorkflowRunRow,
+  WorkflowRunWorkspaceContract
+} from "@/lib/types/contracts";
 import {
   downloadLatestAttachmentForSubject,
   listAttachmentsForSubject,
@@ -34,6 +38,10 @@ export const workflowRunsRepository = {
       throw new Error("No workflow runs available for detail lookup");
     }
     return onetruthApi.getWorkflowRunDetail(resolvedWorkflowRunId);
+  },
+
+  async workspace(workflowRunId: string): Promise<WorkflowRunWorkspaceContract> {
+    return onetruthApi.getWorkflowRunWorkspace(workflowRunId);
   },
 
   async uploadAttachment(workflowRunId: string, file: File): Promise<void> {

@@ -218,6 +218,79 @@ export interface WorkflowRunDetailContract {
   };
 }
 
+export type WorkflowWorkspaceNodeStatus =
+  | "not_started"
+  | "ready"
+  | "in_progress"
+  | "blocked"
+  | "awaiting_approval"
+  | "completed"
+  | "warning";
+
+export interface WorkflowWorkspaceGraphNode {
+  node_id: string;
+  stage_id: string;
+  label: string;
+  status: WorkflowWorkspaceNodeStatus;
+  row: number;
+  column: number;
+  is_blocking: boolean;
+}
+
+export interface WorkflowWorkspaceGraphEdge {
+  edge_id: string;
+  from_node_id: string;
+  to_node_id: string;
+  edge_kind: "linear" | "branch" | "loopback";
+  label: string | null;
+}
+
+export interface WorkflowWorkspaceFreshness {
+  status: "fresh" | "stale" | "unknown";
+  as_of: string | null;
+  note: string | null;
+}
+
+interface WorkflowWorkspaceWorkItemBase {
+  work_id: string;
+  graph_node_id: string | null;
+  available_actions: string[];
+  missing_required_inputs: string[];
+  blocking_reason: string | null;
+}
+
+export interface WorkflowWorkspaceTaskWorkItem extends WorkflowWorkspaceWorkItemBase {
+  item_kind: "human_task";
+  human_task: HumanTaskRow;
+}
+
+export interface WorkflowWorkspaceApprovalWorkItem extends WorkflowWorkspaceWorkItemBase {
+  item_kind: "approval";
+  approval: ApprovalRow;
+}
+
+export interface WorkflowWorkspaceFlagWorkItem extends WorkflowWorkspaceWorkItemBase {
+  item_kind: "flag";
+  flag: FlagRow;
+}
+
+export type WorkflowWorkspaceWorkItem =
+  | WorkflowWorkspaceTaskWorkItem
+  | WorkflowWorkspaceApprovalWorkItem
+  | WorkflowWorkspaceFlagWorkItem;
+
+export interface WorkflowRunWorkspaceContract {
+  workflow_run: WorkflowRunRow;
+  graph: {
+    nodes: WorkflowWorkspaceGraphNode[];
+    edges: WorkflowWorkspaceGraphEdge[];
+  };
+  user_work: WorkflowWorkspaceWorkItem[];
+  blocking_work: WorkflowWorkspaceWorkItem[];
+  latest_event_sequence: number | null;
+  freshness: WorkflowWorkspaceFreshness;
+}
+
 interface Envelope<T> {
   status: "ok";
   command: string;

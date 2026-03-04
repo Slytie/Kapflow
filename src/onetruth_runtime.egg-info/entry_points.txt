@@ -1,0 +1,3 @@
+[console_scripts]
+onetruth-api = onetruth.api.main:main
+onetruthctl = onetruth.cli.__main__:main

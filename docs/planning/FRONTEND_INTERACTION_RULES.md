@@ -32,3 +32,17 @@
 - Client maps canonical fields for presentation only.
 - Any semantic transition meaning belongs to backend contracts/runtime.
 - API error responses are surfaced to users; client does not reinterpret forbidden/invalid transitions.
+
+8. Workspace graph/action synchronization is mandatory.
+- `/runs/:workflowRunId/workspace` renders graph (top) and actionable work (bottom) from one server workspace projection.
+- Graph node/edge status must mirror projection fields; client does not infer true stage state.
+- Inline actions refresh the shared workspace query so graph and action panel update together.
+
+9. Workspace actionability is explicit.
+- `available_actions` controls whether action controls are enabled.
+- `missing_required_inputs` must be visible when `complete` is disabled.
+- Stage06 AI review control is visible only when `run_stage06_agent_review` is present.
+
+10. Polling remains the live-update mechanism.
+- React Query polling is the first refresh mechanism for workspace graph/action panels.
+- Push channels (websocket/SSE) remain out of scope for this slice.

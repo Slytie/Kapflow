@@ -10,7 +10,7 @@ Runtime scaffold bootstrap now includes canonical workflow/task/approval/artifac
 - approval/artifact/pointer substrate: `approvals request/respond/show/list`, `artifacts create-version/show/list`, `pointers promote/show/list`
 - Stage07 issue substrate: `flags create/transition/show/list`, `stage07 activate-issue`, `maintenance sweep-leases`, `maintenance reconcile-stage07`
 - thin HTTP/query adapter: `/api/v1/human-tasks`, `/api/v1/approvals`, `/api/v1/flags`, `/api/v1/workflow-runs`, `/api/v1/pointers`, `/api/v1/timeline-events`, `/api/v1/board/schedule-planning`, plus API mutation delegates for claim/complete/respond
-Active coding milestone: TASK-0031 projection coherence harness design remains the next active backlog item. It is still missing the planned authored deliverable (`docs/planning/PROJECTION_COHERENCE_HARNESS.md`) and corresponding runtime harness implementation/tests; TASK-0030 and TASK-0032 design/prototype closures are complete.
+Active coding milestone update: TASK-0057 workflow workspace projection + minimal schedule graph + server-computed actionability + demo/export bundle is implemented with a read-only derived projection over canonical run/task/approval/flag/artifact/pointer truth and no second workflow engine path. Next active backlog item is TASK-0031 projection coherence harness design/implementation.
 
 ### Recently completed runtime-bootstrap tranche
 - TASK-0028 - Translated the runtime object model into a concrete Stage 4 runtime architecture, repo layout, persistence model, and first implementation slice
@@ -31,6 +31,8 @@ Active coding milestone: TASK-0031 projection coherence harness design remains t
 - TASK-0030 - Closed Stage06 base + Stage07 ordered-delta artifact-store semantics with explicit reconstruction, idempotency, drift, and blob-authority boundary design in `docs/planning/ARTIFACT_STORE_DESIGN.md`
 - TASK-0032 - Implemented the first generator prototype lowering repo-native Schedule Planning source into generated runbook + CompanyOS-style IR + lineage manifests with freshness checks and no-invention tests
 - TASK-0056 - Stabilized repo hygiene/CI gates by adding explicit backend+snapshot+frontend quality targets, CI wiring for snapshot checks and frontend gates, and tracked-noise index cleanup rules
+- TASK-0057 - Implemented backend workflow workspace projection (`GET /api/v1/workflow-runs/{workflow_run_id}/workspace`), schedule-planning graph projector, server-computed actionability, workspace demo runner, workspace export bundle, and runtime tests/docs for graph/actionability/endpoint/bundle behavior
+- TASK-0058 - Implemented the frontend workflow workspace page (`/runs/:workflowRunId/workspace`) with server-projected live graph + synchronized actionable work panel, repository-backed workspace contracts/mutations, polling refresh coherence, and route/graph/action tests
 - Added `docs/planning/RUNTIME_BOOTSTRAP.md` and `docs/planning/FIRST_RUNTIME_SLICE.md`
 - Added `docs/adr/ADR-003-stage4-runtime-architecture.md`
 - Refreshed stale Codex routing: EPIC-040 / EPIC-050 no longer route default runtime work through Payroll, and missing context packs now exist for EPIC-025 / EPIC-030 / EPIC-060

@@ -39,6 +39,7 @@ EVIDENCE_ARTIFACT_KIND = "schedule.stage06.review_ai_evidence.json"
 EVIDENCE_ARTIFACT_ROLE = "agent_evidence"
 EXECUTION_SPEC_ID = "schedule_planning.stage06.openai_review.v1"
 OPENAI_TOOL_CLASS = "model.openai.responses.stage06.review"
+STAGE06_ALLOWED_ROLES = {"dispatch_supervisor", "operations_manager", "system_worker"}
 
 
 def run_stage06_openai_review_sandbox(
@@ -462,6 +463,22 @@ def _normalize_actor_roles(raw_roles: Any) -> list[str]:
     return [str(role) for role in raw_roles if str(role).strip()]
 
 
+def evaluate_stage06_policy_for_actor(
+    *,
+    actor_type: str,
+    actor_roles: list[str] | tuple[str, ...],
+    policy_decision_override: str | None = None,
+) -> tuple[str, str | None, str | None]:
+    payload: dict[str, Any] = {}
+    if policy_decision_override is not None:
+        payload["policy_decision"] = policy_decision_override
+    return _evaluate_stage06_policy(
+        actor_type=actor_type,
+        actor_roles=[str(role) for role in actor_roles],
+        payload=payload,
+    )
+
+
 def _evaluate_stage06_policy(
     *,
     actor_type: str,
@@ -497,8 +514,7 @@ def _evaluate_stage06_policy(
             return "require_approval", "env_require_approval", "stage06.review.openai_execution"
         return "deny", "env_deny", None
 
-    allowed_roles = {"dispatch_supervisor", "operations_manager", "system_worker"}
-    if actor_type in {"system", "service"} or any(role in allowed_roles for role in actor_roles):
+    if actor_type in {"system", "service"} or any(role in STAGE06_ALLOWED_ROLES for role in actor_roles):
         return "allow", "role_allow", None
     return "deny", "actor_role_not_allowed", None
 

@@ -160,7 +160,45 @@ Endpoint:
 Response:
 - `{"status":"ok","command":"api.workflow_runs.detail","workflow_run":{...},"human_tasks":[...],"approvals":[...],"artifact_versions":[...],"pointers":[...],"flags":[...],"summary":{...}}`
 
-### 3.6 Timeline feed
+### 3.6 Workflow run workspace (single-run)
+Endpoint:
+- `GET /api/v1/workflow-runs/{workflow_run_id}/workspace`
+
+Query:
+- `timeline_limit` (optional, default `25`, max `200`)
+
+Response:
+- `{"status":"ok","command":"api.workflow_runs.workspace","workflow_run":{...},"graph":{...},"user_work":[...],"blocking_work":[...],"official_outputs":{...},"timeline_excerpt":{...},"freshness":{...}}`
+
+Workspace response shape:
+- `workflow_run` (canonical run summary row)
+- `graph`
+  - `nodes[]`
+  - `edges[]`
+  - `summary`
+  - `latest_event_sequence`
+  - `warnings[]`
+- `user_work[]` (actionable items relevant to current actor)
+- `blocking_work[]` (run-blocking open tasks/approvals/flags)
+- `official_outputs` (current pointers + linked official artifact rows)
+- `timeline_excerpt` (`events[]`, `event_count`)
+- `freshness` (`latest_event_sequence`, `latest_event_recorded_at`, `workflow_run_updated_at`, `generated_at`)
+
+Workspace item shape (`user_work[]`, `blocking_work[]`):
+- `id` (stable item id)
+- `subject_kind` (`human_task|approval|flag`)
+- `subject_id`
+- `canonical_state`
+- `available_actions[]` (server-computed)
+- `blocking_requirements[]` (server-computed)
+- `linked_artifact_count`
+- `missing_required_inputs[]`
+- `can_complete`
+- `can_upload_attachment`
+- `can_run_stage06_agent_review`
+- `metadata` (subject-specific rendering keys)
+
+### 3.7 Timeline feed
 Endpoint:
 - `GET /api/v1/timeline-events`
 
@@ -182,7 +220,7 @@ Timeline row shape (`events[]`):
 - `links`
 - `payload`
 
-### 3.7 Pointer/current-official summaries
+### 3.8 Pointer/current-official summaries
 Endpoint:
 - `GET /api/v1/pointers`
 
@@ -205,7 +243,7 @@ Pointer row shape:
 - `generation`
 - `updated_at`
 
-### 3.8 Schedule-planning board aggregate
+### 3.9 Schedule-planning board aggregate
 Endpoint:
 - `GET /api/v1/board/schedule-planning`
 
@@ -229,7 +267,7 @@ Board object shape:
 - `pointers[]`
 - `summary`
 
-### 3.9 Artifact/document rows and downloads
+### 3.10 Artifact/document rows and downloads
 Endpoints:
 - `GET /api/v1/artifacts`
 - `GET /api/v1/artifacts/{artifact_version_id}`

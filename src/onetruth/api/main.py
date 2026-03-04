@@ -57,6 +57,7 @@ from onetruth.api.routes.timeline import (
 )
 from onetruth.api.routes.workflow_runs import (
     get_workflow_run_detail_endpoint,
+    get_workflow_run_workspace_endpoint,
     list_workflow_runs_endpoint,
 )
 
@@ -342,6 +343,17 @@ def _match_route(method: str, path: str) -> MatchedRoute | None:
                     name="workflow_runs.timeline",
                     params={"workflow_run_id": workflow_run_id},
                 )
+    if method == "GET" and path.endswith("/workspace"):
+        prefix = "/api/v1/workflow-runs/"
+        suffix = "/workspace"
+        if path.startswith(prefix) and len(path) > len(prefix) + len(suffix):
+            workflow_run_id = path[len(prefix) : -len(suffix)]
+            if workflow_run_id and "/" not in workflow_run_id:
+                return MatchedRoute(
+                    method=method,
+                    name="workflow_runs.workspace",
+                    params={"workflow_run_id": workflow_run_id},
+                )
     if method == "GET" and path.startswith("/api/v1/workflow-runs/"):
         workflow_run_id = path[len("/api/v1/workflow-runs/") :]
         if workflow_run_id and "/" not in workflow_run_id:
@@ -534,6 +546,13 @@ def _dispatch_route(
             workflow_run_id=matched.params["workflow_run_id"],
             query=query,
             page=page,
+        )
+    if matched.name == "workflow_runs.workspace":
+        return get_workflow_run_workspace_endpoint(
+            connection,
+            context=context,
+            workflow_run_id=matched.params["workflow_run_id"],
+            query=query,
         )
     if matched.name == "workflow_runs.artifacts.list":
         assert page is not None

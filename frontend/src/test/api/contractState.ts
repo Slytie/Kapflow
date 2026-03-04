@@ -8,6 +8,8 @@ import type {
   PointerRow,
   TimelineEvent,
   WorkflowRunDetailContract,
+  WorkflowRunWorkspaceContract,
+  WorkflowWorkspaceWorkItem,
   WorkflowRunRow
 } from "@/lib/types/contracts";
 
@@ -26,6 +28,10 @@ export interface ContractState {
   audit: {
     mutations: string[];
   };
+  uploadedTaskAttachmentIds: Set<string>;
+  uploadedApprovalAttachmentIds: Set<string>;
+  uploadedFlagAttachmentIds: Set<string>;
+  stage06ReviewedTaskIds: Set<string>;
   forceForbidden: boolean;
 }
 
@@ -179,6 +185,274 @@ export function buildWorkflowRunDetail(state: ContractState, workflowRunId: stri
       pointer_count: pointers.length,
       flag_count: flags.length,
       active_issue_count: workflowRun.active_issue_count
+    }
+  };
+}
+
+function buildWorkspaceTaskItem(
+  task: HumanTaskRow,
+  options: {
+    graphNodeId: string;
+    availableActions: string[];
+    missingRequiredInputs?: string[];
+    blockingReason?: string | null;
+  }
+): WorkflowWorkspaceWorkItem {
+  return {
+    work_id: `human_task:${task.human_task_id}`,
+    item_kind: "human_task",
+    human_task: task,
+    graph_node_id: options.graphNodeId,
+    available_actions: options.availableActions,
+    missing_required_inputs: options.missingRequiredInputs ?? [],
+    blocking_reason: options.blockingReason ?? null
+  };
+}
+
+function buildWorkspaceApprovalItem(
+  approval: ApprovalRow,
+  options: {
+    graphNodeId: string;
+    blockingReason?: string | null;
+  }
+): WorkflowWorkspaceWorkItem {
+  return {
+    work_id: `approval:${approval.approval_id}`,
+    item_kind: "approval",
+    approval,
+    graph_node_id: options.graphNodeId,
+    available_actions:
+      approval.state === "PENDING"
+        ? [
+            "respond_approval",
+            "respond_approve",
+            "respond_reject",
+            "respond_request_changes",
+            "upload_attachment",
+            "download_attachment"
+          ]
+        : ["download_attachment"],
+    missing_required_inputs: [],
+    blocking_reason: options.blockingReason ?? null
+  };
+}
+
+function buildWorkspaceFlagItem(flag: FlagRow): WorkflowWorkspaceWorkItem {
+  return {
+    work_id: `flag:${flag.flag_id}`,
+    item_kind: "flag",
+    flag,
+    graph_node_id: "stage07",
+    available_actions: ["upload_attachment", "download_attachment"],
+    missing_required_inputs: [],
+    blocking_reason: null
+  };
+}
+
+export function buildWorkflowRunWorkspace(
+  state: ContractState,
+  workflowRunId: string
+): WorkflowRunWorkspaceContract {
+  const workflowRun = state.workflowRuns.find((row) => row.workflow_run_id === workflowRunId);
+  if (!workflowRun) {
+    throw new Error(`workflow run not found: ${workflowRunId}`);
+  }
+
+  const reviewTask = state.humanTasks.find((task) => task.human_task_id === "ht-claimed-002");
+  const infoTask = state.humanTasks.find((task) => task.human_task_id === "ht-open-001");
+  const pendingApproval = state.approvals.find(
+    (approval) => approval.approval_id === "ap-pending-001" && approval.state === "PENDING"
+  );
+  const activeFlag = state.flags.find((flag) => flag.flag_id === "flag-001");
+
+  const reviewMissingInputs =
+    reviewTask && !state.uploadedTaskAttachmentIds.has(reviewTask.human_task_id)
+      ? ["Upload review evidence attachment"]
+      : [];
+
+  const reviewStatus =
+    reviewTask?.state === "COMPLETED"
+      ? "completed"
+      : reviewTask?.state === "CLAIMED"
+        ? "in_progress"
+        : "ready";
+
+  const infoStatus =
+    infoTask?.state === "COMPLETED"
+      ? "completed"
+      : infoTask?.state === "CLAIMED"
+        ? "in_progress"
+        : "blocked";
+
+  const stage07Status = pendingApproval ? "awaiting_approval" : activeFlag ? "warning" : "ready";
+
+  const graphNodes: WorkflowRunWorkspaceContract["graph"]["nodes"] = [
+    {
+      node_id: "stage03",
+      stage_id: "Stage03",
+      label: "Demand Forecast",
+      status: "completed",
+      row: 0,
+      column: 0,
+      is_blocking: false
+    },
+    {
+      node_id: "stage04",
+      stage_id: "Stage04",
+      label: "Capacity Plan",
+      status: "completed",
+      row: 0,
+      column: 1,
+      is_blocking: false
+    },
+    {
+      node_id: "stage05",
+      stage_id: "Stage05",
+      label: "Draft Schedule",
+      status: "completed",
+      row: 0,
+      column: 2,
+      is_blocking: false
+    },
+    {
+      node_id: "stage06",
+      stage_id: "Stage06",
+      label: "Supervisor Review",
+      status: reviewStatus,
+      row: 0,
+      column: 3,
+      is_blocking: reviewMissingInputs.length > 0
+    },
+    {
+      node_id: "stage06_info_loop",
+      stage_id: "Stage06",
+      label: "Information Request Loop",
+      status: infoStatus,
+      row: 1,
+      column: 3,
+      is_blocking: infoStatus === "blocked"
+    },
+    {
+      node_id: "stage07",
+      stage_id: "Stage07",
+      label: "Exception Control",
+      status: stage07Status,
+      row: 0,
+      column: 4,
+      is_blocking: Boolean(pendingApproval)
+    }
+  ];
+
+  const graphEdges: WorkflowRunWorkspaceContract["graph"]["edges"] = [
+    {
+      edge_id: "e-stage03-stage04",
+      from_node_id: "stage03",
+      to_node_id: "stage04",
+      edge_kind: "linear",
+      label: null
+    },
+    {
+      edge_id: "e-stage04-stage05",
+      from_node_id: "stage04",
+      to_node_id: "stage05",
+      edge_kind: "linear",
+      label: null
+    },
+    {
+      edge_id: "e-stage05-stage06",
+      from_node_id: "stage05",
+      to_node_id: "stage06",
+      edge_kind: "linear",
+      label: null
+    },
+    {
+      edge_id: "e-stage06-branch-info",
+      from_node_id: "stage06",
+      to_node_id: "stage06_info_loop",
+      edge_kind: "branch",
+      label: "needs information"
+    },
+    {
+      edge_id: "e-stage06-info-loopback",
+      from_node_id: "stage06_info_loop",
+      to_node_id: "stage05",
+      edge_kind: "loopback",
+      label: "rework"
+    },
+    {
+      edge_id: "e-stage06-stage07",
+      from_node_id: "stage06",
+      to_node_id: "stage07",
+      edge_kind: "linear",
+      label: null
+    }
+  ];
+
+  const userWork: WorkflowWorkspaceWorkItem[] = [];
+  if (reviewTask && reviewTask.state !== "COMPLETED") {
+    userWork.push(
+      buildWorkspaceTaskItem(reviewTask, {
+        graphNodeId: "stage06",
+        availableActions: [
+          "complete",
+          "upload_attachment",
+          "download_attachment",
+          "run_stage06_agent_review"
+        ],
+        missingRequiredInputs: reviewMissingInputs
+      })
+    );
+  }
+  if (pendingApproval) {
+    userWork.push(
+      buildWorkspaceApprovalItem(pendingApproval, {
+        graphNodeId: "stage07",
+        blockingReason: "Awaiting required approval response"
+      })
+    );
+  }
+  if (activeFlag) {
+    userWork.push(buildWorkspaceFlagItem(activeFlag));
+  }
+
+  const blockingWork: WorkflowWorkspaceWorkItem[] = [];
+  if (infoTask && infoTask.state !== "COMPLETED") {
+    blockingWork.push(
+      buildWorkspaceTaskItem(infoTask, {
+        graphNodeId: "stage06_info_loop",
+        availableActions: ["claim", "upload_attachment", "download_attachment"],
+        missingRequiredInputs: ["Attach requestor clarification document"],
+        blockingReason: "Information request must be completed before publish can continue"
+      })
+    );
+  }
+  if (pendingApproval) {
+    blockingWork.push(
+      buildWorkspaceApprovalItem(pendingApproval, {
+        graphNodeId: "stage07",
+        blockingReason: "Major replan remains blocked until approval response"
+      })
+    );
+  }
+
+  const latestEventSequence =
+    state.timelineEvents.length > 0
+      ? Math.max(...state.timelineEvents.map((event) => event.sequence_no))
+      : null;
+
+  return {
+    workflow_run: workflowRun,
+    graph: {
+      nodes: graphNodes,
+      edges: graphEdges
+    },
+    user_work: userWork,
+    blocking_work: blockingWork,
+    latest_event_sequence: latestEventSequence,
+    freshness: {
+      status: "fresh",
+      as_of: nowIso(-6),
+      note: "Polling-backed workspace projection"
     }
   };
 }
@@ -452,6 +726,10 @@ export function createContractState(): ContractState {
     audit: {
       mutations: []
     },
+    uploadedTaskAttachmentIds: new Set<string>(),
+    uploadedApprovalAttachmentIds: new Set<string>(),
+    uploadedFlagAttachmentIds: new Set<string>(),
+    stage06ReviewedTaskIds: new Set<string>(),
     forceForbidden: false
   };
 }

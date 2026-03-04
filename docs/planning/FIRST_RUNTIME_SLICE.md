@@ -290,6 +290,12 @@ Status:
   - source-lowered generated runbook + CompanyOS-style IR + lineage manifest outputs under `build/generated/`
   - deterministic freshness/staleness checks via `scripts/generate_prototype.py --check` and `make generated-check`
   - integration coverage for lineage, no-invention constraints, stale detection, and spawn-rule rendering
+- TASK-0057 implements the first workflow workspace projection slice:
+  - Schedule Planning specific derived graph projector under `src/onetruth/application/projections/workspace_graphs/`
+  - server-computed task/approval/flag actionability for workspace items
+  - read-only `GET /api/v1/workflow-runs/{workflow_run_id}/workspace` aggregate
+  - realistic workspace demo runner + workspace export bundle scripts
+  - runtime API/scenario/contract tests for graph/actionability/endpoint/bundle behavior
 - TASK-0031 projection coherence harness remains the next open work item in this tranche.
 
 ## 4) What should explicitly wait

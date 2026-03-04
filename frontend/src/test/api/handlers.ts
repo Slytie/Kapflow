@@ -1,6 +1,11 @@
 import { http, HttpResponse } from "msw";
 
-import { buildBoardContract, buildWorkflowRunDetail, createContractState } from "@/test/api/contractState";
+import {
+  buildBoardContract,
+  buildWorkflowRunDetail,
+  buildWorkflowRunWorkspace,
+  createContractState
+} from "@/test/api/contractState";
 
 const ok = (payload: Record<string, unknown>) => HttpResponse.json({ status: "ok", ...payload });
 
@@ -81,6 +86,119 @@ function mutateApprovalResponse(approvalId: string, responseKind: string): boole
   row.generation += 1;
   state.audit.mutations.push(`respond:${approvalId}:${responseKind}`);
   return true;
+}
+
+function workflowRunIdForSubject(
+  subjectKind: "human_task" | "approval" | "flag" | "workflow_run",
+  subjectId: string
+): string | null {
+  if (subjectKind === "workflow_run") {
+    return subjectId;
+  }
+  if (subjectKind === "human_task") {
+    return state.humanTasks.find((task) => task.human_task_id === subjectId)?.workflow_run_id ?? null;
+  }
+  if (subjectKind === "approval") {
+    return state.approvals.find((approval) => approval.approval_id === subjectId)?.workflow_run_id ?? null;
+  }
+  return state.flags.find((flag) => flag.flag_id === subjectId)?.workflow_run_id ?? null;
+}
+
+function taskRunIdForSubject(
+  subjectKind: "human_task" | "approval" | "flag" | "workflow_run",
+  subjectId: string
+): string | null {
+  if (subjectKind === "human_task") {
+    return state.humanTasks.find((task) => task.human_task_id === subjectId)?.task_run_id ?? null;
+  }
+  if (subjectKind === "approval") {
+    return state.approvals.find((approval) => approval.approval_id === subjectId)?.task_run_id ?? null;
+  }
+  return null;
+}
+
+function addAttachmentArtifact(
+  subjectKind: "human_task" | "approval" | "flag" | "workflow_run",
+  subjectId: string,
+  payload: Record<string, unknown>
+) {
+  const workflowRunId = workflowRunIdForSubject(subjectKind, subjectId);
+  if (!workflowRunId) {
+    return null;
+  }
+  const artifactVersionId = `av-upload-${state.artifactVersions.length + 1}`;
+  const createdAt = new Date().toISOString();
+  const fileName =
+    typeof payload.file_name === "string" && payload.file_name.length > 0
+      ? payload.file_name
+      : `${artifactVersionId}.txt`;
+
+  const artifactVersion = {
+    artifact_version_id: artifactVersionId,
+    workflow_run_id: workflowRunId,
+    task_run_id: taskRunIdForSubject(subjectKind, subjectId),
+    artifact_kind:
+      typeof payload.artifact_kind === "string" ? payload.artifact_kind : `attachment.${subjectKind}`,
+    artifact_role:
+      typeof payload.artifact_role === "string" ? payload.artifact_role : "evidence",
+    media_type:
+      typeof payload.media_type === "string" ? payload.media_type : "application/octet-stream",
+    storage_uri: `memory://attachments/${artifactVersionId}`,
+    content_digest: `sha256:${artifactVersionId}`,
+    byte_size:
+      typeof payload.content_base64 === "string" ? payload.content_base64.length : fileName.length,
+    metadata_json: {
+      file_name: fileName,
+      source: "msw"
+    },
+    parent_artifact_version_id: null,
+    supersedes_artifact_version_id: null,
+    lineage_note: null,
+    created_at: createdAt,
+    links: [
+      {
+        artifact_version_id: artifactVersionId,
+        workflow_run_id: workflowRunId,
+        subject_kind: subjectKind,
+        subject_id: subjectId,
+        relation_kind: "attachment",
+        created_at: createdAt,
+        created_by_actor_id: "human:frontend-operator",
+        created_by_actor_type: "human"
+      }
+    ]
+  };
+
+  state.artifactVersions.unshift(artifactVersion);
+
+  if (subjectKind === "human_task") {
+    state.uploadedTaskAttachmentIds.add(subjectId);
+  } else if (subjectKind === "approval") {
+    state.uploadedApprovalAttachmentIds.add(subjectId);
+  } else if (subjectKind === "flag") {
+    state.uploadedFlagAttachmentIds.add(subjectId);
+  }
+
+  state.audit.mutations.push(`upload:${subjectKind}:${subjectId}`);
+  return artifactVersion;
+}
+
+function listArtifactsForSubject(
+  subjectKind: "human_task" | "approval" | "flag" | "workflow_run",
+  subjectId: string
+) {
+  return state.artifactVersions.filter((artifact) =>
+    artifact.links?.some(
+      (link) => link.subject_kind === subjectKind && link.subject_id === subjectId
+    )
+  );
+}
+
+function downloadedContentBase64(artifactVersionId: string): string {
+  if (typeof btoa === "function") {
+    return btoa(`artifact:${artifactVersionId}`);
+  }
+  return `artifact:${artifactVersionId}`;
 }
 
 export function resetApiState(): void {
@@ -223,6 +341,63 @@ export const handlers = [
     });
   }),
 
+  http.post("*/api/v1/human-tasks/:humanTaskId/stage06-agent-review", ({ params, request }) => {
+    if (!inScope(request)) {
+      return forbiddenWorkflowRun();
+    }
+
+    const humanTaskId = String(params.humanTaskId);
+    const task = state.humanTasks.find((row) => row.human_task_id === humanTaskId);
+    if (!task) {
+      return forbiddenWorkflowRun();
+    }
+
+    state.stage06ReviewedTaskIds.add(humanTaskId);
+    state.audit.mutations.push(`stage06:${humanTaskId}`);
+    return ok({
+      command: "api.human_tasks.stage06_agent_review",
+      human_task_id: humanTaskId,
+      result: {
+        classification: {
+          outcome: "draft_is_publish_ready",
+          rationale_summary: "Mock AI review result for workspace test flow",
+          evidence_refs: []
+        },
+        completion_result: {
+          ok: true
+        }
+      }
+    });
+  }),
+
+  http.get("*/api/v1/human-tasks/:humanTaskId/artifacts", ({ params, request }) => {
+    if (!inScope(request)) {
+      return forbiddenWorkflowRun();
+    }
+
+    const humanTaskId = String(params.humanTaskId);
+    return ok({
+      command: "api.human_tasks.artifacts.list",
+      artifact_versions: listArtifactsForSubject("human_task", humanTaskId)
+    });
+  }),
+
+  http.post("*/api/v1/human-tasks/:humanTaskId/artifacts/upload", async ({ params, request }) => {
+    if (!inScope(request)) {
+      return forbiddenWorkflowRun();
+    }
+    const humanTaskId = String(params.humanTaskId);
+    const body = (await request.json()) as Record<string, unknown>;
+    const artifactVersion = addAttachmentArtifact("human_task", humanTaskId, body);
+    if (!artifactVersion) {
+      return forbiddenWorkflowRun();
+    }
+    return ok({
+      command: "api.human_tasks.artifacts.upload",
+      artifact_version: artifactVersion
+    });
+  }),
+
   http.get("*/api/v1/approvals", ({ request }) => {
     if (!inScope(request)) {
       return forbiddenWorkflowRun();
@@ -279,6 +454,34 @@ export const handlers = [
     });
   }),
 
+  http.get("*/api/v1/approvals/:approvalId/artifacts", ({ params, request }) => {
+    if (!inScope(request)) {
+      return forbiddenWorkflowRun();
+    }
+
+    const approvalId = String(params.approvalId);
+    return ok({
+      command: "api.approvals.artifacts.list",
+      artifact_versions: listArtifactsForSubject("approval", approvalId)
+    });
+  }),
+
+  http.post("*/api/v1/approvals/:approvalId/artifacts/upload", async ({ params, request }) => {
+    if (!inScope(request)) {
+      return forbiddenWorkflowRun();
+    }
+    const approvalId = String(params.approvalId);
+    const body = (await request.json()) as Record<string, unknown>;
+    const artifactVersion = addAttachmentArtifact("approval", approvalId, body);
+    if (!artifactVersion) {
+      return forbiddenWorkflowRun();
+    }
+    return ok({
+      command: "api.approvals.artifacts.upload",
+      artifact_version: artifactVersion
+    });
+  }),
+
   http.get("*/api/v1/flags", ({ request }) => {
     if (!inScope(request)) {
       return forbiddenWorkflowRun();
@@ -305,6 +508,34 @@ export const handlers = [
       command: "api.flags.list",
       flags: rows.slice(offset, offset + limit),
       page: { limit, offset }
+    });
+  }),
+
+  http.get("*/api/v1/flags/:flagId/artifacts", ({ params, request }) => {
+    if (!inScope(request)) {
+      return forbiddenWorkflowRun();
+    }
+
+    const flagId = String(params.flagId);
+    return ok({
+      command: "api.flags.artifacts.list",
+      artifact_versions: listArtifactsForSubject("flag", flagId)
+    });
+  }),
+
+  http.post("*/api/v1/flags/:flagId/artifacts/upload", async ({ params, request }) => {
+    if (!inScope(request)) {
+      return forbiddenWorkflowRun();
+    }
+    const flagId = String(params.flagId);
+    const body = (await request.json()) as Record<string, unknown>;
+    const artifactVersion = addAttachmentArtifact("flag", flagId, body);
+    if (!artifactVersion) {
+      return forbiddenWorkflowRun();
+    }
+    return ok({
+      command: "api.flags.artifacts.upload",
+      artifact_version: artifactVersion
     });
   }),
 
@@ -344,6 +575,50 @@ export const handlers = [
     return ok({
       command: "api.workflow_runs.detail",
       ...detail
+    });
+  }),
+
+  http.get("*/api/v1/workflow-runs/:workflowRunId/workspace", ({ params, request }) => {
+    if (!inScope(request)) {
+      return forbiddenWorkflowRun();
+    }
+    const workflowRunId = String(params.workflowRunId);
+    let workspace;
+    try {
+      workspace = buildWorkflowRunWorkspace(state, workflowRunId);
+    } catch {
+      return forbiddenWorkflowRun();
+    }
+    return ok({
+      command: "api.workflow_runs.workspace",
+      workspace
+    });
+  }),
+
+  http.get("*/api/v1/workflow-runs/:workflowRunId/artifacts", ({ params, request }) => {
+    if (!inScope(request)) {
+      return forbiddenWorkflowRun();
+    }
+    const workflowRunId = String(params.workflowRunId);
+    return ok({
+      command: "api.workflow_runs.artifacts.list",
+      artifact_versions: listArtifactsForSubject("workflow_run", workflowRunId)
+    });
+  }),
+
+  http.post("*/api/v1/workflow-runs/:workflowRunId/artifacts/upload", async ({ params, request }) => {
+    if (!inScope(request)) {
+      return forbiddenWorkflowRun();
+    }
+    const workflowRunId = String(params.workflowRunId);
+    const body = (await request.json()) as Record<string, unknown>;
+    const artifactVersion = addAttachmentArtifact("workflow_run", workflowRunId, body);
+    if (!artifactVersion) {
+      return forbiddenWorkflowRun();
+    }
+    return ok({
+      command: "api.workflow_runs.artifacts.upload",
+      artifact_version: artifactVersion
     });
   }),
 
@@ -392,6 +667,25 @@ export const handlers = [
       command: "api.timeline_events.list",
       events: rows.slice(offset, offset + limit),
       page: { limit, offset }
+    });
+  }),
+
+  http.get("*/api/v1/artifacts/:artifactVersionId/download", ({ params, request }) => {
+    if (!inScope(request)) {
+      return forbiddenWorkflowRun();
+    }
+    const artifactVersionId = String(params.artifactVersionId);
+    const artifactVersion = state.artifactVersions.find(
+      (artifact) => artifact.artifact_version_id === artifactVersionId
+    );
+    if (!artifactVersion) {
+      return forbiddenWorkflowRun();
+    }
+    return ok({
+      command: "api.artifacts.download",
+      artifact_version: artifactVersion,
+      content_base64: downloadedContentBase64(artifactVersionId),
+      byte_size: artifactVersion.byte_size
     });
   })
 ];

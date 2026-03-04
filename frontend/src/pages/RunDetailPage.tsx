@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { useParams } from "react-router-dom";
+import { Link, useParams } from "react-router-dom";
 
 import { apiConfig } from "@/lib/api/config";
 import { errorText } from "@/lib/api/errorText";
@@ -77,6 +77,14 @@ export function RunDetailPage(): JSX.Element {
       <header className="run-detail-header">
         <h2>{detail.workflow_run.workflow_run_id}</h2>
         <p>{detail.workflow_run.workflow_id} · {detail.workflow_run.partition_key}</p>
+        <div className="run-links">
+          <Link className="link-button" to={`/runs/${workflowRunId}/workspace`}>
+            Open workspace
+          </Link>
+          <Link className="link-button" to="/official-outputs">
+            Open official outputs
+          </Link>
+        </div>
       </header>
 
       <div className="tabs" role="tablist" aria-label="Run detail tabs">

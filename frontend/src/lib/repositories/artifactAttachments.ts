@@ -23,7 +23,11 @@ function inferMediaType(file: File): string {
 }
 
 export async function fileToBase64(file: File): Promise<string> {
-  const bytes = new Uint8Array(await file.arrayBuffer());
+  const fileArrayBuffer =
+    typeof file.arrayBuffer === "function"
+      ? await file.arrayBuffer()
+      : await new Response(file).arrayBuffer();
+  const bytes = new Uint8Array(fileArrayBuffer);
   let binary = "";
   for (let i = 0; i < bytes.length; i += 1) {
     binary += String.fromCharCode(bytes[i]);

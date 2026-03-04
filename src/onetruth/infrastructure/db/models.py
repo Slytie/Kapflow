@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
-from typing import Any
+from typing import Any, Optional
 
 from sqlalchemy import DateTime, ForeignKey, Integer, JSON, String, Text, UniqueConstraint
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
@@ -29,14 +29,14 @@ class TimelineEvent(Base):
     recorded_at: Mapped[str] = mapped_column(String(64), nullable=False)
     tenant_id: Mapped[str] = mapped_column(String(128), nullable=False)
     domain_id: Mapped[str] = mapped_column(String(128), nullable=False)
-    workflow_run_id: Mapped[str | None] = mapped_column(String(128), nullable=True, index=True)
+    workflow_run_id: Mapped[Optional[str]] = mapped_column(String(128), nullable=True, index=True)
     actor: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False)
     links: Mapped[list[dict[str, Any]]] = mapped_column(JSON, nullable=False)
     payload: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False)
-    correlation_id: Mapped[str | None] = mapped_column(String(128), nullable=True)
-    causation_id: Mapped[str | None] = mapped_column(String(128), nullable=True)
-    idempotency_key: Mapped[str | None] = mapped_column(String(255), nullable=True)
-    integrity: Mapped[dict[str, Any] | None] = mapped_column(JSON, nullable=True)
+    correlation_id: Mapped[Optional[str]] = mapped_column(String(128), nullable=True)
+    causation_id: Mapped[Optional[str]] = mapped_column(String(128), nullable=True)
+    idempotency_key: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    integrity: Mapped[Optional[dict[str, Any]]] = mapped_column(JSON, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=utcnow)
 
 
@@ -74,7 +74,7 @@ class WorkflowRun(Base):
     tenant_id: Mapped[str] = mapped_column(String(128), nullable=False)
     domain_id: Mapped[str] = mapped_column(String(128), nullable=False)
     partition_key: Mapped[str] = mapped_column(String(128), nullable=False)
-    logical_date: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    logical_date: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)
     activation_key: Mapped[str] = mapped_column(String(255), nullable=False)
     state: Mapped[str] = mapped_column(String(32), nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=utcnow)
@@ -108,24 +108,24 @@ class TaskRun(Base):
     state: Mapped[str] = mapped_column(String(32), nullable=False)
     generation: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     activation_key: Mapped[str] = mapped_column(String(255), nullable=False)
-    blocked_on_kind: Mapped[str | None] = mapped_column(String(64), nullable=True)
-    blocked_on_ref: Mapped[str | None] = mapped_column(String(255), nullable=True)
-    spawned_from_flag_id: Mapped[str | None] = mapped_column(
+    blocked_on_kind: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)
+    blocked_on_ref: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    spawned_from_flag_id: Mapped[Optional[str]] = mapped_column(
         String(128),
         ForeignKey("flags.flag_id"),
         nullable=True,
         index=True,
     )
-    spawned_from_task_run_id: Mapped[str | None] = mapped_column(
+    spawned_from_task_run_id: Mapped[Optional[str]] = mapped_column(
         String(128),
         ForeignKey("task_runs.task_run_id"),
         nullable=True,
     )
-    spawn_rule_id: Mapped[str | None] = mapped_column(String(128), nullable=True)
-    spawn_cause_kind: Mapped[str | None] = mapped_column(String(64), nullable=True)
-    spawn_cause_event_id: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    spawn_rule_id: Mapped[Optional[str]] = mapped_column(String(128), nullable=True)
+    spawn_cause_kind: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)
+    spawn_cause_event_id: Mapped[Optional[str]] = mapped_column(String(128), nullable=True)
     spawn_depth: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
-    spawn_budget_key: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    spawn_budget_key: Mapped[Optional[str]] = mapped_column(String(128), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=utcnow)
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
@@ -156,15 +156,15 @@ class HumanTask(Base):
     task_kind: Mapped[str] = mapped_column(String(128), nullable=False)
     state: Mapped[str] = mapped_column(String(32), nullable=False)
     candidate_roles: Mapped[list[str]] = mapped_column(JSON, nullable=False)
-    owner_role: Mapped[str | None] = mapped_column(String(128), nullable=True)
-    assignee_actor_id: Mapped[str | None] = mapped_column(String(128), nullable=True)
-    assignee_actor_type: Mapped[str | None] = mapped_column(String(32), nullable=True)
-    due_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
-    escalation_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    owner_role: Mapped[Optional[str]] = mapped_column(String(128), nullable=True)
+    assignee_actor_id: Mapped[Optional[str]] = mapped_column(String(128), nullable=True)
+    assignee_actor_type: Mapped[Optional[str]] = mapped_column(String(32), nullable=True)
+    due_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    escalation_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
     lease_version: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
-    claimed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
-    claimed_until: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
-    linked_approval_id: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    claimed_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    claimed_until: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    linked_approval_id: Mapped[Optional[str]] = mapped_column(String(128), nullable=True)
     reopen_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     generation: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=utcnow)
@@ -186,7 +186,7 @@ class Approval(Base):
         nullable=False,
         index=True,
     )
-    task_run_id: Mapped[str | None] = mapped_column(
+    task_run_id: Mapped[Optional[str]] = mapped_column(
         String(128),
         ForeignKey("task_runs.task_run_id"),
         nullable=True,
@@ -196,19 +196,19 @@ class Approval(Base):
     scope_kind: Mapped[str] = mapped_column(String(64), nullable=False)
     scope_ref: Mapped[str] = mapped_column(String(255), nullable=False)
     state: Mapped[str] = mapped_column(String(32), nullable=False)
-    requested_by_task_run_id: Mapped[str | None] = mapped_column(
+    requested_by_task_run_id: Mapped[Optional[str]] = mapped_column(
         String(128),
         ForeignKey("task_runs.task_run_id"),
         nullable=True,
     )
     candidate_roles: Mapped[list[str]] = mapped_column(JSON, nullable=False)
-    required_role: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    required_role: Mapped[Optional[str]] = mapped_column(String(128), nullable=True)
     requested_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
-    responded_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
-    response_kind: Mapped[str | None] = mapped_column(String(64), nullable=True)
-    response_reason: Mapped[str | None] = mapped_column(Text, nullable=True)
-    decided_by_actor_id: Mapped[str | None] = mapped_column(String(128), nullable=True)
-    decided_by_actor_type: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    responded_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    response_kind: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)
+    response_reason: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    decided_by_actor_id: Mapped[Optional[str]] = mapped_column(String(128), nullable=True)
+    decided_by_actor_type: Mapped[Optional[str]] = mapped_column(String(32), nullable=True)
     generation: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=utcnow)
     updated_at: Mapped[datetime] = mapped_column(
@@ -229,30 +229,30 @@ class ArtifactVersion(Base):
         nullable=False,
         index=True,
     )
-    task_run_id: Mapped[str | None] = mapped_column(
+    task_run_id: Mapped[Optional[str]] = mapped_column(
         String(128),
         ForeignKey("task_runs.task_run_id"),
         nullable=True,
         index=True,
     )
     artifact_kind: Mapped[str] = mapped_column(String(128), nullable=False)
-    artifact_role: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    artifact_role: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)
     media_type: Mapped[str] = mapped_column(String(128), nullable=False)
     storage_uri: Mapped[str] = mapped_column(Text, nullable=False)
     content_digest: Mapped[str] = mapped_column(String(255), nullable=False)
-    byte_size: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    byte_size: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
     metadata_json: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False)
-    parent_artifact_version_id: Mapped[str | None] = mapped_column(
+    parent_artifact_version_id: Mapped[Optional[str]] = mapped_column(
         String(128),
         ForeignKey("artifact_versions.artifact_version_id"),
         nullable=True,
     )
-    supersedes_artifact_version_id: Mapped[str | None] = mapped_column(
+    supersedes_artifact_version_id: Mapped[Optional[str]] = mapped_column(
         String(128),
         ForeignKey("artifact_versions.artifact_version_id"),
         nullable=True,
     )
-    lineage_note: Mapped[str | None] = mapped_column(Text, nullable=True)
+    lineage_note: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=utcnow)
 
 
@@ -282,13 +282,13 @@ class ArtifactPointer(Base):
         ForeignKey("artifact_versions.artifact_version_id"),
         nullable=False,
     )
-    promotion_reason: Mapped[str | None] = mapped_column(String(255), nullable=True)
-    promoted_by_task_run_id: Mapped[str | None] = mapped_column(
+    promotion_reason: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    promoted_by_task_run_id: Mapped[Optional[str]] = mapped_column(
         String(128),
         ForeignKey("task_runs.task_run_id"),
         nullable=True,
     )
-    approved_by_approval_id: Mapped[str | None] = mapped_column(
+    approved_by_approval_id: Mapped[Optional[str]] = mapped_column(
         String(128),
         ForeignKey("approvals.approval_id"),
         nullable=True,
@@ -362,13 +362,13 @@ class Flag(Base):
     state: Mapped[str] = mapped_column(String(32), nullable=False)
     summary: Mapped[str] = mapped_column(Text, nullable=False)
     details_json: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False)
-    assigned_group: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    assigned_group: Mapped[Optional[str]] = mapped_column(String(128), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=utcnow)
-    closed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    closed_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
     created_by_actor_id: Mapped[str] = mapped_column(String(128), nullable=False)
     created_by_actor_type: Mapped[str] = mapped_column(String(32), nullable=False)
-    source_event_id: Mapped[str | None] = mapped_column(String(128), nullable=True)
-    dedupe_key: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    source_event_id: Mapped[Optional[str]] = mapped_column(String(128), nullable=True)
+    dedupe_key: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         nullable=False,
@@ -396,8 +396,8 @@ class ExecutionSession(Base):
     execution_spec_id: Mapped[str] = mapped_column(String(128), nullable=False)
     state: Mapped[str] = mapped_column(String(32), nullable=False)
     owner_mode: Mapped[str] = mapped_column(String(32), nullable=False)
-    principal_actor: Mapped[dict[str, Any] | None] = mapped_column(JSON, nullable=True)
-    budget: Mapped[dict[str, Any] | None] = mapped_column(JSON, nullable=True)
+    principal_actor: Mapped[Optional[dict[str, Any]]] = mapped_column(JSON, nullable=True)
+    budget: Mapped[Optional[dict[str, Any]]] = mapped_column(JSON, nullable=True)
     tool_call_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=utcnow)
     updated_at: Mapped[datetime] = mapped_column(
@@ -406,7 +406,7 @@ class ExecutionSession(Base):
         default=utcnow,
         onupdate=utcnow,
     )
-    closed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    closed_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
 
 
 class ToolExecution(Base):
@@ -427,15 +427,15 @@ class ToolExecution(Base):
         index=True,
     )
     tool_class: Mapped[str] = mapped_column(String(128), nullable=False)
-    tool_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    tool_name: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
     state: Mapped[str] = mapped_column(String(32), nullable=False)
     idempotency_key: Mapped[str] = mapped_column(String(255), nullable=False)
     attempt_no: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
-    policy_decision_id: Mapped[str | None] = mapped_column(String(128), nullable=True)
-    output_artifact_version_ids: Mapped[list[str] | None] = mapped_column(JSON, nullable=True)
+    policy_decision_id: Mapped[Optional[str]] = mapped_column(String(128), nullable=True)
+    output_artifact_version_ids: Mapped[Optional[list[str]]] = mapped_column(JSON, nullable=True)
     requested_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
-    completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
-    error_code: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    completed_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    error_code: Mapped[Optional[str]] = mapped_column(String(128), nullable=True)
 
 
 class PolicyDecision(Base):
@@ -450,9 +450,9 @@ class PolicyDecision(Base):
     policy_decision_id: Mapped[str] = mapped_column(String(128), primary_key=True)
     principal_actor: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False)
     decision: Mapped[str] = mapped_column(String(32), nullable=False)
-    reason_code: Mapped[str | None] = mapped_column(String(128), nullable=True)
-    required_approval_action: Mapped[str | None] = mapped_column(String(128), nullable=True)
-    tool_execution_id: Mapped[str | None] = mapped_column(
+    reason_code: Mapped[Optional[str]] = mapped_column(String(128), nullable=True)
+    required_approval_action: Mapped[Optional[str]] = mapped_column(String(128), nullable=True)
+    tool_execution_id: Mapped[Optional[str]] = mapped_column(
         String(128),
         ForeignKey("tool_executions.tool_execution_id"),
         nullable=True,

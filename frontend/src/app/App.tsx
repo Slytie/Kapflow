@@ -9,6 +9,7 @@ import { ExceptionsPage } from "@/pages/ExceptionsPage";
 import { MyWorkPage } from "@/pages/MyWorkPage";
 import { OfficialOutputsPage } from "@/pages/OfficialOutputsPage";
 import { RunDetailPage } from "@/pages/RunDetailPage";
+import { RunWorkspacePage } from "@/pages/RunWorkspacePage";
 import { RunsPage } from "@/pages/RunsPage";
 import { TimelinePage } from "@/pages/TimelinePage";
 import { DrawerProvider } from "@/lib/state/drawerContext";
@@ -40,6 +41,7 @@ export function App(): JSX.Element {
               <Route path="/exceptions" element={<ExceptionsPage />} />
               <Route path="/runs" element={<RunsPage />} />
               <Route path="/runs/:workflowRunId" element={<RunDetailPage />} />
+              <Route path="/runs/:workflowRunId/workspace" element={<RunWorkspacePage />} />
               <Route path="/official-outputs" element={<OfficialOutputsPage />} />
               <Route path="/timeline" element={<TimelinePage />} />
             </Route>

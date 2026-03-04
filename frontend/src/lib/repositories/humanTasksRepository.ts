@@ -57,6 +57,12 @@ export const humanTasksRepository = {
     });
   },
 
+  async runStage06AgentReview(humanTaskId: string): Promise<void> {
+    await onetruthApi.runStage06AgentReview(humanTaskId, {
+      idempotency_key: createIdempotencyKey("stage06-agent-review", humanTaskId)
+    });
+  },
+
   async uploadAttachment(humanTaskId: string, file: File): Promise<void> {
     await uploadAttachmentForSubject({
       subjectKind: "human_task",

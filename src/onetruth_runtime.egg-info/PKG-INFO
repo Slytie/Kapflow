@@ -1,0 +1,434 @@
+Metadata-Version: 2.4
+Name: onetruth-runtime
+Version: 0.1.0
+Summary: Stage 4 runtime scaffold for the one-truth orchestration substrate.
+Requires-Python: >=3.9
+Description-Content-Type: text/markdown
+Requires-Dist: SQLAlchemy<3.0,>=2.0
+Requires-Dist: alembic<2.0,>=1.13
+Provides-Extra: postgres
+Requires-Dist: psycopg[binary]<4.0,>=3.1; extra == "postgres"
+Provides-Extra: api
+Requires-Dist: uvicorn<1.0,>=0.30; extra == "api"
+
+# Workflow Orchestration Platform - Stage 4 MVP Repo (Codex-ready)
+
+This repository is the Stage 4 contract-first scaffold for an enterprise, multi-tenant orchestration platform.
+
+The repo is designed for fresh-session Codex development and for human contributors joining mid-stream. The central rule is simple:
+
+> There is one truth system.
+
+Official claims must be derivable from:
+- immutable versioned artifacts,
+- append-only timeline events,
+- and audited mutable pointers / registries.
+
+Current Stage 4 implementation/debug focus:
+- **Primary runtime/debug wedge:** Schedule Planning v1
+- **Primary first code slice:** canonical runtime substrate plus the Schedule Planning Stage06 publish path and first Stage07 issue-scoped replan loop
+- **Primary test objective:** a fully-agentive end-to-end workflow path where designated agent principals can execute every in-scope task without bypassing the canonical task, approval, event, or pointer model, including explicit spawned child-task lineage
+- **Secondary reference workflow:** Payroll v1 as the linear approval-heavy governance benchmark
+
+Everything else - runbooks, dashboards, summaries, generated CompanyOS specs, projections, transcripts, research notes, and external pattern references - is derived, compiled, generated, or evidentiary material layered on top of that substrate.
+
+## Start here
+1. `AGENTS.md`
+2. `docs/status/CURRENT_FOCUS.md`
+3. `docs/planning/STAGE4_PLAN.md`
+4. `docs/planning/RUNTIME_BOOTSTRAP.md`
+5. `docs/planning/FIRST_RUNTIME_SLICE.md`
+6. `docs/planning/STEP_RUN_SCENARIO_HARNESS.md`
+7. `docs/planning/TDD_IMPLEMENTATION_PLAN.md`
+8. `docs/architecture/AUTHORITY_MODEL.md`
+9. `docs/architecture/governance_vocabulary.md`
+10. workflow packs:
+   - `docs/workflows/schedule_planning/v1/`
+   - `docs/workflows/payroll/v1/`
+11. validation commands:
+   - `make schema-validate`
+   - `make contract`
+   - `make replay`
+   - `make acceptance`
+   - `make runtime`
+   - `make test`
+
+## Quickstart (dev)
+1. Install dependencies:
+   - `python3 -m pip install -e .`
+   - `python3 -m pip install -e .[api]` (to run the HTTP adapter with `uvicorn`)
+   - or `uv sync`
+2. Run repo validation/tests:
+   - `make schema-validate`
+   - `make contract`
+   - `make replay`
+   - `make acceptance`
+3. Initialize a local runtime DB:
+   - `PYTHONPATH=src python3 -m onetruth.cli --db-url sqlite:///./.tmp/onetruth-smoke.db init-db`
+4. Run runtime smoke tests:
+   - `make runtime`
+   - `make runtime-api`
+   - `make frontend-snapshots`
+   - `make frontend-snapshots-check`
+   - `PYTHONPATH=src python3 scripts/export_frontend_snapshots.py --check`
+   - `PYTHONPATH=src pytest -q tests/runtime/scenarios tests/runtime/contracts`
+   - `PYTHONPATH=src pytest -q tests/runtime/api`
+   - `PYTHONPATH=src pytest -q tests/runtime/scenarios/test_schedule_stage07_*.py`
+5. Run full pytest suite:
+   - `pytest -q`
+
+## API quickstart (dev)
+Run the thin HTTP adapter locally:
+- `PYTHONPATH=src onetruth-api --db-url sqlite:///./.tmp/onetruth-api.db --host 127.0.0.1 --port 8080`
+- or `PYTHONPATH=src uvicorn onetruth.api.main:app --reload --port 8080`
+
+Required request headers (current internal/admin auth-context model):
+- `x-onetruth-tenant-id`
+- `x-onetruth-domain-id`
+- `x-onetruth-actor-id`
+- `x-onetruth-actor-type`
+- `x-onetruth-actor-roles`
+
+Scope behavior:
+- API reads/mutations are always tenant/domain scoped from headers; cross-scope access fails closed and there is no global fallback.
+
+Current HTTP endpoints:
+- `GET /api/v1/human-tasks`
+- `GET /api/v1/human-tasks/{human_task_id}`
+- `GET /api/v1/human-tasks/{human_task_id}/artifacts`
+- `GET /api/v1/approvals`
+- `GET /api/v1/approvals/{approval_id}`
+- `GET /api/v1/approvals/{approval_id}/artifacts`
+- `GET /api/v1/flags`
+- `GET /api/v1/flags/{flag_id}`
+- `GET /api/v1/flags/{flag_id}/artifacts`
+- `GET /api/v1/workflow-runs`
+- `GET /api/v1/workflow-runs/{workflow_run_id}`
+- `GET /api/v1/workflow-runs/{workflow_run_id}/workspace`
+- `GET /api/v1/workflow-runs/{workflow_run_id}/artifacts`
+- `GET /api/v1/timeline-events`
+- `GET /api/v1/pointers`
+- `GET /api/v1/board/schedule-planning`
+- `GET /api/v1/artifacts`
+- `GET /api/v1/artifacts/{artifact_version_id}`
+- `GET /api/v1/artifacts/{artifact_version_id}/download`
+- `POST /api/v1/human-tasks/{human_task_id}/claim`
+- `POST /api/v1/human-tasks/{human_task_id}/complete`
+- `POST /api/v1/human-tasks/{human_task_id}/artifacts/upload`
+- `POST /api/v1/human-tasks/{human_task_id}/stage06-agent-review` (bounded OpenAI sandbox path)
+- `POST /api/v1/approvals/{approval_id}/respond`
+- `POST /api/v1/approvals/{approval_id}/artifacts/upload`
+- `POST /api/v1/flags/{flag_id}/transition`
+- `POST /api/v1/flags/{flag_id}/artifacts/upload`
+- `POST /api/v1/workflow-runs/{workflow_run_id}/artifacts/upload`
+
+## OpenAI sandbox spike (Stage06, bounded)
+The repo now includes a narrow real-model integration path for Stage06 review classification.
+
+What it does:
+- reads canonical Stage06 artifact-backed input (example corpus via existing artifact ingress),
+- creates canonical execution runtime rows (`execution_sessions`, `tool_executions`, `policy_decisions`) before model execution,
+- starts bounded Stage06 sessions in `WAITING_POLICY` and transitions to `RUNNING` only after explicit policy allow,
+- evaluates and records explicit policy allow/deny before any OpenAI call,
+- calls OpenAI Responses API with strict structured output schema,
+- persists canonical evidence artifact (`schedule.stage06.review_ai_evidence.json`) with model metadata + input refs,
+- completes the human task through existing canonical completion/spawn handlers (no second truth path).
+
+What it does not do:
+- no generalized autonomous loop/orchestration framework,
+- no open-ended tool/web/MCP usage,
+- no non-canonical side-channel state.
+
+Environment variables for real runs:
+- `OPENAI_API_KEY` (required)
+- `ONETRUTH_OPENAI_MODEL` (optional, default `gpt-4.1-mini`)
+- `ONETRUTH_OPENAI_BASE_URL` (optional, default `https://api.openai.com/v1`)
+- `ONETRUTH_OPENAI_TIMEOUT_SECONDS` (optional, default `30`)
+- `ONETRUTH_OPENAI_MAX_RETRIES` (optional, default `2`)
+- `ONETRUTH_OPENAI_MAX_INPUT_CHARS` (optional, default `12000`)
+- `ONETRUTH_STAGE06_POLICY_DECISION` (optional policy override for bounded sandbox tests: `allow|deny|require_approval`)
+- `ONETRUTH_ARTIFACT_ROOT` (optional local path for persisted evidence blobs before canonical artifact registration)
+
+Run the gated real e2e test:
+- `ONETRUTH_RUN_OPENAI_E2E=1 OPENAI_API_KEY=<key> PYTHONPATH=src pytest -q tests/integration_openai`
+
+Run the always-on structural coverage (no network):
+- `PYTHONPATH=src pytest -q tests/unit/test_openai_responses_adapter.py tests/runtime/api/test_stage06_openai_review_sandbox_api.py tests/runtime/test_execution_session_runtime.py`
+
+## GitHub Actions Secret Setup (`OPENAI_API_KEY`)
+- Store the key as a repository secret named `OPENAI_API_KEY` in GitHub Settings -> Secrets and variables -> Actions.
+- `agent_api.yml` runs OpenAI tests only on `workflow_dispatch` and nightly `schedule`, and only when `OPENAI_API_KEY` is present.
+- Manual run path: GitHub -> Actions -> `agent_api` -> Run workflow.
+- PRs from forks do not receive repository secrets, so OpenAI integration tests are intentionally gated and skipped in that context.
+- OpenAI key safety guidance: use environment variables/secrets and never commit keys ([OpenAI API key safety](https://help.openai.com/en/articles/5112595-best-practices-for-api-key-safety)).
+- GitHub Actions secrets docs: [Using secrets in GitHub Actions](https://docs.github.com/en/actions/security-for-github-actions/security-guides/using-secrets-in-github-actions) and [Events triggered by pull requests from forks](https://docs.github.com/en/actions/using-workflows/events-that-trigger-workflows#pull_request).
+
+## Execution-session runtime (canonical vs derived)
+Canonical runtime truth for bounded agentive execution now lives in:
+- `execution_sessions`
+- `tool_executions`
+- `policy_decisions`
+- authoritative timeline events (`execution.session.*`, `tool.execution.*`)
+- immutable evidence artifacts (`artifact_versions`)
+
+Derived/non-authoritative surfaces:
+- API/UI summaries, board lanes, and snapshots
+- logs and transient process memory
+
+Retry/recovery posture:
+- duplicate execution idempotency fails closed without duplicating canonical effects,
+- stale partial sessions are reconciled via `maintenance reconcile-executions`,
+- reconcile does not duplicate already-completed `tool.execution.completed` or evidence artifact effects.
+
+## Realistic Schedule Planning pilot runner
+The repo now includes a reproducible pilot runner for operator inspection:
+- script: `scripts/run_schedule_planning_pilot.py`
+- service: `src/onetruth/application/services/realistic_schedule_planning_pilot.py`
+- design note: `docs/planning/REALISTIC_SCHEDULE_PLANNING_PILOT.md`
+
+Run all pilot scenarios (default deterministic/mock Stage06 classifier):
+- `PYTHONPATH=src python3 scripts/run_schedule_planning_pilot.py --db-url sqlite:///./.tmp/schedule-pilot.db --pilot-key local-pilot --json`
+
+Run a single scenario:
+- `PYTHONPATH=src python3 scripts/run_schedule_planning_pilot.py --db-url sqlite:///./.tmp/schedule-pilot.db --pilot-key local-pilot --pilot stage06_publish_ready --json`
+- valid `--pilot` values:
+  - `stage06_publish_ready`
+  - `stage06_needs_information`
+  - `stage07_issue_replan`
+
+Use real OpenAI for Stage06 pilot paths (gated):
+- `OPENAI_API_KEY=<key> PYTHONPATH=src python3 scripts/run_schedule_planning_pilot.py --db-url sqlite:///./.tmp/schedule-pilot.db --pilot-key openai-pilot --openai-mode real --pilot stage06_publish_ready --pilot stage06_needs_information --json`
+
+Inspection outputs:
+- suite summary:
+  - `artifacts/pilot_runs/<pilot_key>/pilot_summary.json`
+  - `artifacts/pilot_runs/<pilot_key>/pilot_summary.md`
+- per-run packet:
+  - `artifacts/pilot_runs/<pilot_key>/<pilot_id>/inspection_packet.json`
+  - `artifacts/pilot_runs/<pilot_key>/<pilot_id>/inspection_packet.md`
+
+What to inspect in each packet:
+- canonical IDs: `workflow_run_id`, artifacts, pointers, approvals, flags, execution session/tool/policy refs
+- timeline events of interest (`task.*`, `approval.*`, `artifact.*`, `flag.*`, `execution.session.*`, `tool.execution.*`)
+- derived inspection routes for board/run detail/timeline/artifacts/approvals/flags views
+
+Real vs gated in the pilot:
+- real/canonical always: workflow/task/approval/flag/artifact/pointer/runtime rows and authoritative events
+- gated external dependency: Stage06 live OpenAI call only when `--openai-mode real` and `OPENAI_API_KEY` are set
+- default path is deterministic `--openai-mode mock` so local/CI runs stay stable without network access
+
+## Frontend quickstart (dev)
+The HITL frontend shell lives under `frontend/` as a contract-first SPA backed by the real `/api/v1` adapter.
+
+1. Install frontend dependencies:
+   - `cd frontend`
+   - `npm install`
+2. Configure API endpoint + request-context headers (via Vite env vars):
+   - `VITE_ONETRUTH_API_BASE_URL` (default `/api/v1`, local backend example: `http://127.0.0.1:8080/api/v1`)
+   - `VITE_ONETRUTH_TENANT_ID` (default `tenant-a`)
+   - `VITE_ONETRUTH_DOMAIN_ID` (default `domain-x`)
+   - `VITE_ONETRUTH_ACTOR_ID` (default `human:frontend-operator`)
+   - `VITE_ONETRUTH_ACTOR_TYPE` (default `human`)
+   - `VITE_ONETRUTH_ACTOR_ROLES` (default `dispatch_supervisor`)
+   - `VITE_ONETRUTH_POLL_INTERVAL_MS` (default `15000`)
+3. Run local frontend dev server:
+   - `npm run dev`
+4. Run frontend verification:
+   - `npm run typecheck`
+   - `npm run test:run`
+   - `npm run build`
+
+Run frontend against local backend:
+- backend terminal: `PYTHONPATH=src onetruth-api --db-url sqlite:///./.tmp/onetruth-api.db --host 127.0.0.1 --port 8080`
+- frontend terminal: `cd frontend && VITE_ONETRUTH_API_BASE_URL=http://127.0.0.1:8080/api/v1 npm run dev`
+
+Open the workflow workspace page:
+- run list route: `/runs`
+- direct route: `/runs/<workflow_run_id>/workspace`
+
+Workspace behavior:
+- graph and actionable panel both come from `GET /api/v1/workflow-runs/{workflow_run_id}/workspace`.
+- inline claim/complete/respond/upload/download and Stage06 AI actions still go through existing repositories and canonical mutation APIs.
+- successful inline actions invalidate workspace and related queue queries; polling then keeps graph and action panel synchronized.
+
+Upload-unblocks-work behavior check:
+- run: `cd frontend && npm run test:run -- src/pages/runWorkspacePage.test.tsx -t "marks task completable after upload response unblocks missing inputs"`
+- expected result: task `Complete` starts disabled due `missing_required_inputs`, then becomes enabled after upload response refreshes workspace projection.
+
+Frontend implementation status:
+- Real/API-backed now: repositories call canonical HTTP contracts via `frontend/src/lib/api/httpClient.ts` and `frontend/src/lib/api/onetruthApi.ts`.
+- Implemented: app shell, route/page structure, low-click card/row/detail components, inline claim/complete/respond actions, inline attachment upload/download actions, URL-synced filters, polling-aware loading/error/empty/freshness states, and run workspace graph/action synchronization on `/runs/:workflowRunId/workspace`.
+- Test strategy: component + route tests plus contract-aligned API integration tests using a controlled `/api/v1` MSW test layer.
+- Still future: broader UI polish and richer attachment preview affordances.
+
+## Workflow workspace demo quickstart
+Initialize a clean runtime DB:
+- `PYTHONPATH=src python3 -m onetruth.cli --db-url sqlite:///./.tmp/workspace-demo.db init-db`
+
+Seed one realistic workflow workspace run (choose scenario):
+- `PYTHONPATH=src python3 scripts/run_schedule_workspace_demo.py --db-url sqlite:///./.tmp/workspace-demo.db --scenario stage06_publish_ready --output-json ./.tmp/workspace-demo.json`
+- other scenarios: `stage06_needs_information`, `stage07_major_replan`
+
+Start backend API:
+- `PYTHONPATH=src onetruth-api --db-url sqlite:///./.tmp/workspace-demo.db --host 127.0.0.1 --port 8080`
+
+Start frontend:
+- `cd frontend`
+- `VITE_ONETRUTH_API_BASE_URL=http://127.0.0.1:8080/api/v1 npm run dev`
+
+Open workspace page:
+- get `workflow_run_id` from `.tmp/workspace-demo.json`
+- open `/runs/<workflow_run_id>/workspace`
+
+Export workspace bundle zip for review:
+- `PYTHONPATH=src python3 scripts/export_run_workspace_bundle.py --db-url sqlite:///./.tmp/workspace-demo.db --workflow-run-id <workflow_run_id> --output ./.tmp/workspace-bundle.zip`
+
+## Runtime scaffold
+Runtime scaffold now exists at `src/onetruth/` with migrations under `alembic/` and runtime smoke tests under `tests/runtime/`.
+
+First real Schedule Planning business slice now implemented:
+- Stage06 completion outcomes can spawn explicit child tasks transactionally from `tasks complete`
+- first Stage06 publish-path scenarios execute step-by-step through the CLI boundary
+- board/query read-surface contracts now have implementation-backed tests
+- Stage07 issue-scoped replan loop now exists with canonical `flags`, deduped issue activation, major-replan approval gating, delta promotion, drift evidence, and lease-expiry recovery/reconcile commands
+- backend-owned frontend contract snapshots are exported from real scenario states under `fixtures/frontend_contracts/` for parallel frontend development
+- snapshot exports sanitize local machine source paths (`fixtures/...` when available, otherwise basename) so fixtures remain deterministic across checkouts/OSes
+- artifact-store design closure for Stage06 base + Stage07 ordered-delta reconstruction is documented in `docs/planning/ARTIFACT_STORE_DESIGN.md`
+
+Stage06 scenario entrypoints:
+- fixtures: `fixtures/scenarios/schedule_planning/`
+- scenario tests: `tests/runtime/scenarios/`
+- query-contract tests: `tests/runtime/contracts/test_hitl_query_contracts_stage06.py`
+
+Example document corpus:
+- corpus manifest: `fixtures/example_document_corpus/manifest.yaml`
+- corpus note: `docs/planning/EXAMPLE_DOCUMENT_CORPUS_AND_ARTIFACT_INGRESS.md`
+- seed via CLI: `python3 -m onetruth.cli --db-url <SQLALCHEMY_DB_URL> artifacts seed-corpus --json '<payload-json>'`
+- refresh backend-owned frontend snapshots: `make frontend-snapshots`
+- verify snapshot drift: `make frontend-snapshots-check`
+
+Current stable runtime command boundary:
+- `python3 -m onetruth.cli --db-url <SQLALCHEMY_DB_URL> init-db`
+- `python3 -m onetruth.cli --db-url <SQLALCHEMY_DB_URL> events append --json '<event-envelope-json>'`
+- `python3 -m onetruth.cli --db-url <SQLALCHEMY_DB_URL> events list --json [--run-id <run_id>] [--since-event-id <event_id>] [--limit <n>]`
+- `python3 -m onetruth.cli --db-url <SQLALCHEMY_DB_URL> runs create --json '<payload-json>'`
+- `python3 -m onetruth.cli --db-url <SQLALCHEMY_DB_URL> runs show --workflow-run-id <id> --json`
+- `python3 -m onetruth.cli --db-url <SQLALCHEMY_DB_URL> runs list --json [--workflow-id <id>] [--tenant-id <id>] [--domain-id <id>] [--state <state>]`
+- `python3 -m onetruth.cli --db-url <SQLALCHEMY_DB_URL> tasks create --json '<payload-json>'`
+- `python3 -m onetruth.cli --db-url <SQLALCHEMY_DB_URL> tasks claim --json '<payload-json>'`
+- `python3 -m onetruth.cli --db-url <SQLALCHEMY_DB_URL> tasks complete --json '<payload-json>'`
+- `python3 -m onetruth.cli --db-url <SQLALCHEMY_DB_URL> tasks show --human-task-id <id> --json`
+- `python3 -m onetruth.cli --db-url <SQLALCHEMY_DB_URL> tasks list --workflow-run-id <id> --json`
+- `python3 -m onetruth.cli --db-url <SQLALCHEMY_DB_URL> approvals request|respond --json '<payload-json>'`
+- `python3 -m onetruth.cli --db-url <SQLALCHEMY_DB_URL> approvals show --approval-id <id> --json`
+- `python3 -m onetruth.cli --db-url <SQLALCHEMY_DB_URL> approvals list --workflow-run-id <id> --json`
+- `python3 -m onetruth.cli --db-url <SQLALCHEMY_DB_URL> artifacts create-version --json '<payload-json>'`
+- `python3 -m onetruth.cli --db-url <SQLALCHEMY_DB_URL> artifacts ingest --json '<payload-json>'`
+- `python3 -m onetruth.cli --db-url <SQLALCHEMY_DB_URL> artifacts show --artifact-version-id <id> --json`
+- `python3 -m onetruth.cli --db-url <SQLALCHEMY_DB_URL> artifacts list --workflow-run-id <id> --json`
+- `python3 -m onetruth.cli --db-url <SQLALCHEMY_DB_URL> artifacts list-linked --workflow-run-id <id> --subject-kind <kind> --subject-id <id> --json`
+- `python3 -m onetruth.cli --db-url <SQLALCHEMY_DB_URL> artifacts download --artifact-version-id <id> --output-path <path> --json`
+- `python3 -m onetruth.cli --db-url <SQLALCHEMY_DB_URL> artifacts seed-corpus --json '<payload-json>'`
+- `python3 -m onetruth.cli --db-url <SQLALCHEMY_DB_URL> pointers promote --json '<payload-json>'`
+- `python3 -m onetruth.cli --db-url <SQLALCHEMY_DB_URL> pointers show --pointer-key <key> --workflow-run-id <id> --json`
+- `python3 -m onetruth.cli --db-url <SQLALCHEMY_DB_URL> pointers list --workflow-run-id <id> --json`
+- `python3 -m onetruth.cli --db-url <SQLALCHEMY_DB_URL> flags create|transition --json '<payload-json>'`
+- `python3 -m onetruth.cli --db-url <SQLALCHEMY_DB_URL> flags show --flag-id <id> --json`
+- `python3 -m onetruth.cli --db-url <SQLALCHEMY_DB_URL> flags list --workflow-run-id <id> --json`
+- `python3 -m onetruth.cli --db-url <SQLALCHEMY_DB_URL> stage07 activate-issue --json '<payload-json>'`
+- `python3 -m onetruth.cli --db-url <SQLALCHEMY_DB_URL> execution-sessions create --json '<payload-json>'`
+- `python3 -m onetruth.cli --db-url <SQLALCHEMY_DB_URL> execution-sessions show --execution-session-id <id> --json`
+- `python3 -m onetruth.cli --db-url <SQLALCHEMY_DB_URL> execution-sessions list --workflow-run-id <id> --json`
+- `python3 -m onetruth.cli --db-url <SQLALCHEMY_DB_URL> tool-executions show --tool-execution-id <id> --json`
+- `python3 -m onetruth.cli --db-url <SQLALCHEMY_DB_URL> policy-decisions show --policy-decision-id <id> --json`
+- `python3 -m onetruth.cli --db-url <SQLALCHEMY_DB_URL> maintenance sweep-leases --json '<payload-json>'`
+- `python3 -m onetruth.cli --db-url <SQLALCHEMY_DB_URL> maintenance reconcile-stage07 --json '<payload-json>'`
+- `python3 -m onetruth.cli --db-url <SQLALCHEMY_DB_URL> maintenance reconcile-executions --json '<payload-json>'`
+
+Query/read contract reference for future HITL board/UI work:
+- `docs/planning/HITL_QUERY_CONTRACTS.md`
+- `docs/planning/HITL_HTTP_API_CONTRACTS.md`
+- `docs/planning/HITL_BOARD_ARCHITECTURE.md`
+- `fixtures/frontend_contracts/README.md`
+
+Runtime idempotency behavior in this scaffold:
+- duplicate `idempotency_key` at `events append` fails explicitly with JSON error `duplicate_idempotency_key`
+- duplicate command idempotency keys for `runs create`, `tasks create`, `tasks claim`, and `tasks complete` fail explicitly (`duplicate_idempotency_key`)
+- non-empty command idempotency keys are required for `approvals request`, `approvals respond`, `artifacts create-version`, `artifacts ingest`, `artifacts seed-corpus`, and `pointers promote`; duplicates fail explicitly (`duplicate_idempotency_key`)
+- no silent dedupe path is used in this PR
+
+Canonical workflow/task/approval/artifact/pointer substrate now implemented:
+- `workflow_runs`
+- `task_runs`
+- `human_tasks`
+- `approvals`
+- `artifact_versions`
+- `artifact_pointers`
+- `flags`
+
+Minimal runtime states now in code:
+- `workflow_runs`: `OPEN`, `COMPLETED`
+- `task_runs`: `READY`, `IN_PROGRESS`, `COMPLETED`
+- `human_tasks`: `OPEN`, `CLAIMED`, `COMPLETED`
+- `approvals`: `PENDING`, `RESPONDED`
+- `flags`: `open`, `triage`, `blocked`, `resolved`, `closed`, `waived`
+
+## What is in this repo right now?
+This scaffold contains:
+- a Codex context plane (`codex/`)
+- epic context packs for targeted re-entry (`codex/context/`)
+- a reference pattern library (`docs/patterns/`)
+- a research digest and full research notes (`docs/research/`)
+- vision and mathematical foundations curated from the CompanyOS packet (`docs/vision/`)
+- a single-truth authority model and execution-overlay architecture (`docs/architecture/`)
+- Stage 4 planning, epics, tasks, test strategy, TDD plan, and merger backlog (`docs/planning/`)
+- a concrete runtime bootstrap, first implementation-slice plan, and step-run scenario harness plan
+- a Schedule Planning workflow pack and a Payroll workflow pack
+- canonical execution-overlay files for both workflows:
+  - `DECISION_CATALOG.yaml`
+  - `EXECUTION_PROFILE.yaml`
+- shared governance and permission vocabularies
+- workflow-pack schemas, runtime object schemas, payload schemas, and a tool-class registry
+- fixture packs for Schedule Planning and Payroll, including synthetic completed example artifacts for every templated stage
+- a repo validation harness (`scripts/validate_repo.py`)
+- a real pytest-backed test portfolio (`tests/`) with scenario catalog + replay oracles
+- runtime scaffold package roots under `src/onetruth/` and `alembic/`
+- runtime command-boundary smoke tests under `tests/runtime/`
+- generated-derivative policy describing how external runbook/tool-registry packs and CompanyOS IR must be produced from repo-native source
+
+## What this repo does not do yet
+- It now contains narrow Stage06 + Stage07 business slices, but not the full Stage03->Stage07 runtime flow.
+- It does not yet implement the full conditional child-task spawn evaluator beyond the first Stage06 mapped outcomes.
+- It does not treat external runbook packs as source of truth.
+- It does not hand-author CompanyOS `WorkflowSpec` as a second workflow-definition system.
+- It does not allow method changes or capability expansions to self-promote.
+- It does not allow an agent-only execution path to outrank the canonical workflow/task/approval/event substrate.
+- It does not yet provide Payroll golden traces beyond a placeholder README; Payroll remains the secondary semantic/governance cross-check until runtime work reaches that wedge.
+
+## Guiding idea
+The project should stay creative without becoming semantically loose:
+- business truth stays contract-first and auditable,
+- agentic method stays flexible but bounded,
+- generated artifacts stay useful but non-authoritative,
+- context aids stay small and discoverable for fresh sessions,
+- runtime work stays maintainable because the authority chain is explicit and machine-checkable.
+
+## Additional context guidance
+- `docs/architecture/DOCUMENT_STATUS_MATRIX.md` tells you which documents are authoritative, generated, historical, or deferred.
+- `codex/context/` contains short epic context packs; use them before opening long reference material.
+- `docs/patterns/` contains external architecture patterns in card form; read cards first.
+- `docs/research/AGENT_DIGEST.md` points to deeper research only when you need more justification.
+- `docs/planning/RUNTIME_BOOTSTRAP.md` locks the first concrete runtime stack, persistence model, and repo layout.
+- `docs/planning/FIRST_RUNTIME_SLICE.md` tells you what code should be written first, where it should live, and what to defer.
+- `docs/architecture/LOWERING_CONTRACT.md` explains how repo-native source lowers into generated CompanyOS-style artifacts and a compiled `ExecutionSpec`.
+- `docs/architecture/RUNTIME_OBJECT_MODEL.md` defines the canonical runtime vocabulary so implementation work does not accidentally fork into a second truth model.
+- `docs/planning/TDD_IMPLEMENTATION_PLAN.md` explains how to use the schemas, golden traces, synthetic example artifacts, and pytest suites as the first development harness.
+- `docs/planning/STEP_RUN_SCENARIO_HARNESS.md` explains how future runtime scenario tests should drive the real command boundary step by step.
+
+
+cat > /Users/tylerclark/git/pythonProject/companyos/.codex.env <<'EOF'
+export OPENAI_API_KEY='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'
+export ONETRUTH_RUN_OPENAI_E2E=1
+EOF
+chmod 600 /Users/tylerclark/git/pythonProject/companyos/.codex.env
+printf "\n.codex.env\n" >> /Users/tylerclark/git/pythonProject/companyos/.git/info/exclude

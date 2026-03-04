@@ -11,6 +11,9 @@ interface ApprovalCardProps {
   onRequestInfo?: () => void;
   onUpload?: (file: File) => void;
   onDownload?: () => void;
+  approveDisabled?: boolean;
+  rejectDisabled?: boolean;
+  requestInfoDisabled?: boolean;
   actionPending?: boolean;
 }
 
@@ -22,6 +25,9 @@ export function ApprovalCard({
   onRequestInfo,
   onUpload,
   onDownload,
+  approveDisabled = false,
+  rejectDisabled = false,
+  requestInfoDisabled = false,
   actionPending = false
 }: ApprovalCardProps): JSX.Element {
   return (
@@ -33,13 +39,25 @@ export function ApprovalCard({
       <p>{approval.approval_kind} · Required: {approval.required_role}</p>
       <ActionCluster
         actions={[
-          { key: "approve", label: "Approve", tone: "positive", onClick: onApprove, disabled: actionPending },
-          { key: "reject", label: "Reject", tone: "negative", onClick: onReject, disabled: actionPending },
+          {
+            key: "approve",
+            label: "Approve",
+            tone: "positive",
+            onClick: onApprove,
+            disabled: actionPending || approveDisabled
+          },
+          {
+            key: "reject",
+            label: "Reject",
+            tone: "negative",
+            onClick: onReject,
+            disabled: actionPending || rejectDisabled
+          },
           {
             key: "request_more",
             label: "Request Info",
             onClick: onRequestInfo,
-            disabled: actionPending
+            disabled: actionPending || requestInfoDisabled
           }
         ]}
       />

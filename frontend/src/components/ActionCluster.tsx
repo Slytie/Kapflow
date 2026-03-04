@@ -19,7 +19,7 @@ export function ActionCluster({ actions }: ActionClusterProps): JSX.Element {
           type="button"
           className={`action-btn action-btn--${action.tone ?? "default"}`}
           onClick={action.onClick}
-          disabled={action.disabled}
+          disabled={action.disabled || !action.onClick}
         >
           {action.label}
         </button>

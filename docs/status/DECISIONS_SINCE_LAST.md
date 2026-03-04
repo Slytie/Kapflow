@@ -2,6 +2,28 @@
 
 Record any decisions made since the last session so a fresh Codex run can rehydrate quickly.
 
+## 2026-03-04 (TASK-0057 workflow workspace projection + graph/actionability/demo bundle)
+- Chosen workspace authority boundary: `GET /api/v1/workflow-runs/{workflow_run_id}/workspace` is a read-only derived projection over canonical run/task/approval/flag/artifact/pointer/event state; no second workflow-engine state path is introduced.
+- Chosen graph posture for this slice: schedule-planning-specific minimal node set (Stage03 readiness through Stage07 delta publish) with explicit branch/loopback edges and canonically explainable statuses (`not_started`, `ready`, `in_progress`, `blocked`, `awaiting_approval`, `completed`, `warning`).
+- Chosen actionability posture: workspace mutation affordances are server-computed (`available_actions`, `blocking_requirements`, `missing_required_inputs`) for tasks/approvals/flags; frontend does not infer completion or policy eligibility.
+- Chosen information-request rule for workspace actionability: `information_request` tasks require at least one linked artifact before `complete` becomes available in workspace projection.
+- Chosen Stage06 actionability rule: `run_stage06_agent_review` is exposed only when task scope/assignment and policy-role gate allow it.
+- Chosen demo/export posture:
+  - demo runner seeds canonical realistic state by delegating to the existing pilot runner/service and emits `workflow_run_id` plus recommended workspace URL,
+  - export bundle is generated from canonical detail/workspace projections and includes mandatory JSON files + README summarizing scenario, graph status, first actions, upload-unblock signal, and OpenAI-path usage.
+
+## 2026-03-04 (TASK-0058 frontend workspace page + live graph)
+- Added a dedicated single-run workspace route `/runs/:workflowRunId/workspace` that keeps graph projection and actionable work in one polling query path.
+- Chosen frontend contract boundary for this slice:
+  - repository/API method `workflowRunsRepository.workspace(workflowRunId)` backed by `GET /api/v1/workflow-runs/{workflow_run_id}/workspace`,
+  - workspace item actionability is driven by server fields `available_actions` and `missing_required_inputs`.
+- Chosen graph rendering strategy: lightweight SVG + CSS components (`WorkflowGraph*`) with support for linear, branch, and loopback edges; no heavyweight graph library introduced.
+- Chosen interaction model for workspace actions:
+  - reuse existing task/approval/flag cards and attachment affordances,
+  - keep detail depth in drawer,
+  - render Stage06 AI action only when `run_stage06_agent_review` is present.
+- Chosen refresh behavior: inline mutation success invalidates workspace and related queue/run queries so graph and actionable work stay visibly synchronized under polling.
+
 ## 2026-03-04 (TASK-0056 CI/hygiene stabilization + TASK-0031 status reconcile)
 - Chosen hygiene posture: local editor/runtime/cache/build noise (`.DS_Store`, `.idea/`, `.tmp/`, `artifacts/`, frontend `node_modules`/`dist`, env/log cache files) is ignored and removed from Git index when previously tracked.
 - Chosen CI posture: backend PR checks include `frontend-snapshots-check`; frontend PR checks run `npm ci`, typecheck, and non-watch frontend tests; OpenAI real-network tests remain gated in scheduled/dispatch workflow only.
