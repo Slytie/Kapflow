@@ -262,7 +262,11 @@ Status:
   - bounded Stage06 OpenAI sandbox routed through explicit execution-session + policy-gated tool lifecycle
   - explicit allow/deny/failure/reconcile paths with authoritative timeline evidence
   - runtime tests for happy path, denial, idempotent retry, failure mapping, and reconcile recovery
-- TASK-0054 hardens the same slice by making Stage06 policy gating explicit in session state (`WAITING_POLICY -> RUNNING`) and adding reconcile coverage that proves stale-session recovery does not duplicate completed tool/evidence effects
+- TASK-0054 adds the first realistic Schedule Planning pilot/operator-inspection slice:
+  - reproducible pilot runner seeded from the canonical example corpus
+  - Stage06 publish-ready and needs-information branches executed through bounded agent runtime rows
+  - Stage07 issue/replan branch with inspectable approval/flag/pointer/artifact timeline evidence
+  - per-run inspection packets (`inspection_packet.json` + `inspection_packet.md`) for operator walkthroughs
 - broader generalized multi-agent orchestration remains intentionally out of scope.
 
 ### Tranche 6 - Projection coherence + generator prototype

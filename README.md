@@ -165,6 +165,43 @@ Retry/recovery posture:
 - stale partial sessions are reconciled via `maintenance reconcile-executions`,
 - reconcile does not duplicate already-completed `tool.execution.completed` or evidence artifact effects.
 
+## Realistic Schedule Planning pilot runner
+The repo now includes a reproducible pilot runner for operator inspection:
+- script: `scripts/run_schedule_planning_pilot.py`
+- service: `src/onetruth/application/services/realistic_schedule_planning_pilot.py`
+- design note: `docs/planning/REALISTIC_SCHEDULE_PLANNING_PILOT.md`
+
+Run all pilot scenarios (default deterministic/mock Stage06 classifier):
+- `PYTHONPATH=src python3 scripts/run_schedule_planning_pilot.py --db-url sqlite:///./.tmp/schedule-pilot.db --pilot-key local-pilot --json`
+
+Run a single scenario:
+- `PYTHONPATH=src python3 scripts/run_schedule_planning_pilot.py --db-url sqlite:///./.tmp/schedule-pilot.db --pilot-key local-pilot --pilot stage06_publish_ready --json`
+- valid `--pilot` values:
+  - `stage06_publish_ready`
+  - `stage06_needs_information`
+  - `stage07_issue_replan`
+
+Use real OpenAI for Stage06 pilot paths (gated):
+- `OPENAI_API_KEY=<key> PYTHONPATH=src python3 scripts/run_schedule_planning_pilot.py --db-url sqlite:///./.tmp/schedule-pilot.db --pilot-key openai-pilot --openai-mode real --pilot stage06_publish_ready --pilot stage06_needs_information --json`
+
+Inspection outputs:
+- suite summary:
+  - `artifacts/pilot_runs/<pilot_key>/pilot_summary.json`
+  - `artifacts/pilot_runs/<pilot_key>/pilot_summary.md`
+- per-run packet:
+  - `artifacts/pilot_runs/<pilot_key>/<pilot_id>/inspection_packet.json`
+  - `artifacts/pilot_runs/<pilot_key>/<pilot_id>/inspection_packet.md`
+
+What to inspect in each packet:
+- canonical IDs: `workflow_run_id`, artifacts, pointers, approvals, flags, execution session/tool/policy refs
+- timeline events of interest (`task.*`, `approval.*`, `artifact.*`, `flag.*`, `execution.session.*`, `tool.execution.*`)
+- derived inspection routes for board/run detail/timeline/artifacts/approvals/flags views
+
+Real vs gated in the pilot:
+- real/canonical always: workflow/task/approval/flag/artifact/pointer/runtime rows and authoritative events
+- gated external dependency: Stage06 live OpenAI call only when `--openai-mode real` and `OPENAI_API_KEY` are set
+- default path is deterministic `--openai-mode mock` so local/CI runs stay stable without network access
+
 ## Frontend quickstart (dev)
 The HITL frontend shell lives under `frontend/` as a contract-first SPA backed by the real `/api/v1` adapter.
 

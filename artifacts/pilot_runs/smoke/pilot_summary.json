@@ -1,0 +1,18 @@
+{
+  "artifact_root": "/Users/tylerclark/git/pythonProject/companyos/.tmp/artifact_store",
+  "command": "schedule-planning-pilot.run",
+  "db_url": "sqlite:///./.tmp/pilot-smoke.db",
+  "openai_mode": "mock",
+  "output_root": "/Users/tylerclark/git/pythonProject/companyos/artifacts/pilot_runs/smoke",
+  "pilot_key": "smoke",
+  "pilot_runs": [
+    {
+      "inspection_markdown_path": "/Users/tylerclark/git/pythonProject/companyos/artifacts/pilot_runs/smoke/stage06_needs_information/inspection_packet.md",
+      "inspection_packet_path": "/Users/tylerclark/git/pythonProject/companyos/artifacts/pilot_runs/smoke/stage06_needs_information/inspection_packet.json",
+      "pilot_id": "stage06_needs_information",
+      "reused_existing": false,
+      "workflow_run_id": "wr-9732ce80d1cac55f7415286c"
+    }
+  ],
+  "status": "ok"
+}

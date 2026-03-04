@@ -2,6 +2,13 @@
 
 Record any decisions made since the last session so a fresh Codex run can rehydrate quickly.
 
+## 2026-03-04 (realistic Schedule Planning pilot + inspection packet milestone)
+- Chosen pilot shape: three reproducible Schedule Planning scenarios (`stage06_publish_ready`, `stage06_needs_information`, `stage07_issue_replan`) executed through canonical handlers, seeded from the real corpus seed sets.
+- Chosen Stage06 pilot execution posture: Stage06 review in pilot scenarios must use the bounded Stage06 agent path (`run_stage06_openai_review_sandbox`) so execution session/tool execution/policy decision rows and events are always part of the pilot truth.
+- Chosen reproducibility/idempotency strategy for pilot runs: deterministic workflow/object IDs derived from `(pilot_key, pilot_id)` with run reuse on repeated pilot key invocation; repeat runs must not duplicate canonical side effects.
+- Chosen inspection artifact contract: each pilot run exports `inspection_packet.json` and `inspection_packet.md` containing canonical IDs, lifecycle states, timeline events of interest, and suggested UI/API inspection routes.
+- Chosen operator visibility rule: pilot packets are walkthrough artifacts only; authoritative truth remains canonical runtime rows/events/artifacts/pointers.
+
 ## 2026-03-04 (policy-gate state hardening and reconcile dedupe coverage)
 - Chosen bounded Stage06 session posture: execution sessions now start in `WAITING_POLICY` and transition to `RUNNING` only after an explicit policy allow decision is persisted and emitted as authoritative evidence.
 - Chosen policy-allow evidence rule: `evaluate_policy_decision` now emits `execution.session.state_changed` for allow transitions when session state changes (for example `WAITING_POLICY -> RUNNING`), not only for deny/require-approval branches.

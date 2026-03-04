@@ -106,6 +106,7 @@ Current implemented runtime command-boundary coverage:
 - `tests/runtime/api/test_flag_transition_via_api.py`
 - `tests/runtime/api/test_stage06_openai_review_sandbox_api.py`
 - `tests/runtime/test_execution_session_runtime.py`
+- `tests/runtime/test_realistic_schedule_planning_pilot.py`
 - `tests/runtime/api/test_cross_scope_api_denial.py`
 - `tests/runtime/api/test_board_retry_stability.py`
 - `tests/runtime/api/test_api_retry_stability.py`
@@ -146,6 +147,11 @@ Current runtime tests assert:
   - retry/idempotency guard for duplicate execution requests
   - stale-session reconcile recovery without duplicate terminal effects
   - reconcile of partial sessions does not duplicate already-completed tool/evidence effects
+- realistic pilot/operator-inspection coverage:
+  - reproducible Stage06/Stage07 pilot runs seeded from corpus seed sets via canonical ingress
+  - Stage06 bounded agent review path creates canonical execution/tool/policy/evidence links
+  - inspection packets include canonical references and run/board/timeline/artifact/approval/flag inspection routes
+  - repeated pilot runs with same pilot key do not duplicate canonical effects
 - cross-scope API denial checks and retry-stability checks over repeated GET/mutation retries
 
 Minimum required runtime scenario tests:
