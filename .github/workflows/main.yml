@@ -1,1 +1,65 @@
+name: Agent API (OpenAI) Integration
 
+on:
+  workflow_dispatch: {}
+  schedule:
+    # Nightly at 03:00 UTC (adjust)
+    - cron: "0 3 * * *"
+
+permissions:
+  contents: read
+
+jobs:
+  openai_integration:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+
+      - name: Install backend deps
+        run: |
+          python -m pip install --upgrade pip
+          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+          if [ -f pyproject.toml ]; then pip install -e . || pip install .; fi
+
+      # Optional: run fast non-network checks first (keeps failures obvious)
+      - name: Baseline (no network)
+        run: |
+          if [ -f Makefile ]; then
+            make schema-validate
+            make contract
+            make runtime
+          else
+            python scripts/validate_repo.py --schemas-only
+            python scripts/validate_repo.py --traces-only
+          fi
+          pytest -q
+
+      # The real OpenAI tests (gated)
+      - name: OpenAI E2E (gated)
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          # Optional; only set if your code uses them:
+          OPENAI_ORG_ID: ${{ secrets.OPENAI_ORG_ID }}
+          OPENAI_PROJECT_ID: ${{ secrets.OPENAI_PROJECT_ID }}
+        run: |
+          if [ -z "$OPENAI_API_KEY" ]; then
+            echo "OPENAI_API_KEY not set; skipping OpenAI integration tests."
+            exit 0
+          fi
+
+          # Prefer a directory if you have one:
+          if [ -d tests/integration_openai ]; then
+            pytest -q tests/integration_openai
+          else
+            # Otherwise run by marker (edit marker name if your repo uses a different one)
+            pytest -q -m integration_openai
+          fi
