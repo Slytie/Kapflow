@@ -1,0 +1,21 @@
+source_note: Dispatch-derived time rows carried into the weekly audit.
+columns:
+- service_date
+- driver_id
+- driver_name
+- actual_minutes
+- route_id
+- source
+rows:
+- - '2026-03-03'
+  - A1P1CDL949GCH7
+  - Brahamvir Singh
+  - 637
+  - CX100
+  - dispatch_actuals
+- - '2026-03-03'
+  - A34WEHEN1XXRKR
+  - Karanveer Singh
+  - 597
+  - CX89
+  - dispatch_actuals

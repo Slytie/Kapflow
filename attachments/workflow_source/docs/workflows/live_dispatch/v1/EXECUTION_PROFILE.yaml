@@ -1,0 +1,110 @@
+profile:
+  workflow_id: live_dispatch.v1
+  version: 1
+  stages:
+  - stage_id: Stage01
+    execution_pattern: linear_chain
+    allowed_tool_classes:
+    - artifact.read
+    - validation
+    - spreadsheet.transform
+    side_effect_policy: draft_only
+    required_evidence_keys:
+    - dispatch.base_schedule_seed.doc
+    - dispatch.route_delta_intake.workbook
+    - dispatch.actual_hours_snapshot.workbook
+    decision_refs: []
+    stop_rules:
+      max_tool_calls: 12
+      no_progress_ticks: 2
+      on_exhaustion: escalate
+    projections:
+    - dispatch.stage01.intake_packet
+    extensions:
+      guidance:
+      - Normalize route delta events with source message ids and received-at ordering.
+  - stage_id: Stage02
+    execution_pattern: bounded_exception_loop
+    allowed_tool_classes:
+    - artifact.read
+    - validation
+    - spreadsheet.transform
+    - flag.raise
+    - projection.render
+    side_effect_policy: commit_requires_conditional_business_decision
+    required_evidence_keys:
+    - dispatch.issue_board.doc
+    - dispatch.replan_candidate.workbook
+    decision_refs: []
+    stop_rules:
+      max_tool_calls: 28
+      no_progress_ticks: 4
+      on_exhaustion: escalate
+    projections:
+    - dispatch.stage02.issue_packet
+    extensions:
+      guidance:
+      - Filter deterministically first. Ranking may use code plus a narrow LLM rationale
+        helper, but not unconstrained branching.
+  - stage_id: Stage03
+    execution_pattern: linear_chain
+    allowed_tool_classes:
+    - artifact.read
+    - validation
+    - projection.render
+    - notification.prepare
+    side_effect_policy: draft_only
+    required_evidence_keys:
+    - dispatch.dispatcher_review.doc
+    decision_refs: []
+    stop_rules:
+      max_tool_calls: 10
+      no_progress_ticks: 2
+      on_exhaustion: wait_for_human
+    projections:
+    - dispatch.stage03.review_packet
+    extensions:
+      guidance:
+      - Review confirmation is mandatory even when a formal approval is not.
+  - stage_id: Stage04
+    execution_pattern: approval_gate
+    allowed_tool_classes:
+    - artifact.read
+    - approval.request
+    - projection.render
+    side_effect_policy: commit_requires_business_decision
+    required_evidence_keys:
+    - dispatch.major_replan_packet.doc
+    decision_refs:
+    - dispatch.stage04.approve_major_replan
+    stop_rules:
+      max_tool_calls: 8
+      no_progress_ticks: 2
+      on_exhaustion: wait_for_human
+    projections:
+    - dispatch.stage04.major_replan_packet
+    extensions:
+      guidance:
+      - Approval is conditional on blast radius, not on every small replan.
+  - stage_id: Stage05
+    execution_pattern: linear_chain
+    allowed_tool_classes:
+    - artifact.read
+    - artifact.publish_version
+    - projection.render
+    - notification.prepare
+    side_effect_policy: draft_only
+    required_evidence_keys:
+    - dispatch.official_replan_delta.workbook
+    - dispatch.change_notice.doc
+    decision_refs: []
+    stop_rules:
+      max_tool_calls: 10
+      no_progress_ticks: 2
+      on_exhaustion: escalate
+    projections:
+    - dispatch.stage05.delta_packet
+    extensions:
+      guidance:
+      - Promote deltas in order and link them back to the exact base seed version
+        plus triggering issue.

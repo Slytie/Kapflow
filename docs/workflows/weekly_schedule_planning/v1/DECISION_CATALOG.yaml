@@ -1,0 +1,24 @@
+catalog:
+  workflow_id: weekly_schedule_planning.v1
+  version: 1
+  decisions:
+  - id: planning.stage06.publish_weekly_base_schedule
+    stage_id: Stage06
+    decision_kind: business_decision
+    requested_from_role: operations_manager
+    action: publish_weekly_base_schedule
+    allowed_responses:
+    - approve
+    - reject
+    - request_changes
+    evidence_requirements:
+      artifact_keys:
+      - planning.publish_packet.doc
+      - planning.published_weekly_schedule.workbook
+      projection_id: planning.stage06.publish_packet
+    sla:
+      due_in_minutes: 180
+      on_expire:
+        escalate_to_role: operations_manager
+    notes:
+    - Required before the weekly base schedule becomes official.

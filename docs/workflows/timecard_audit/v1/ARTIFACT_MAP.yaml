@@ -1,0 +1,35 @@
+artifact_sets:
+  Stage01:
+  - key: timecard.dispatch_hours.doc
+    role: evidence
+    template_source: Stage01_Dispatch_and_Payroll_Intake/Stage01_Dispatch_and_Payroll_Intake_dispatch_hours_Document_Template_EMPTY.docx
+  - key: timecard.dispatch_hours.workbook
+    role: official_input
+    template_source: Stage01_Dispatch_and_Payroll_Intake/Stage01_Dispatch_and_Payroll_Intake_dispatch_hours_Spreadsheet_Template_EMPTY.xlsx
+  - key: timecard.payroll_export.doc
+    role: evidence
+    template_source: Stage01_Dispatch_and_Payroll_Intake/Stage01_Dispatch_and_Payroll_Intake_payroll_export_Document_Template_EMPTY.docx
+  - key: timecard.payroll_export.workbook
+    role: official_input
+    template_source: Stage01_Dispatch_and_Payroll_Intake/Stage01_Dispatch_and_Payroll_Intake_payroll_export_Spreadsheet_Template_EMPTY.xlsx
+  Stage02:
+  - key: timecard.audit_triage.doc
+    role: evidence
+    template_source: Stage02_Audit_Triage/Stage02_Audit_Triage_audit_triage_Document_Template_EMPTY.docx
+  - key: timecard.audit_triage.workbook
+    role: official_input
+    template_source: Stage02_Audit_Triage/Stage02_Audit_Triage_audit_triage_Spreadsheet_Template_EMPTY.xlsx
+  Stage03:
+  - key: timecard.correction_review.doc
+    role: evidence
+    template_source: Stage03_Correction_Review/Stage03_Correction_Review_correction_review_Document_Template_EMPTY.docx
+  - key: timecard.correction_review.workbook
+    role: evidence
+    template_source: Stage03_Correction_Review/Stage03_Correction_Review_correction_review_Spreadsheet_Template_EMPTY.xlsx
+  Stage04:
+  - key: timecard.handoff_packet.doc
+    role: evidence
+    template_source: Stage04_Final_Corrected_Register/Stage04_Final_Corrected_Register_handoff_packet_Document_Template_EMPTY.docx
+  - key: timecard.corrected_register.workbook
+    role: official_output
+    template_source: Stage04_Final_Corrected_Register/Stage04_Final_Corrected_Register_corrected_register_Spreadsheet_Template_EMPTY.xlsx

@@ -1,0 +1,17 @@
+edge:
+  edge_id: <edge-id>
+  source_module_id: <module-id>
+  source_output_ref:
+    dataset_key: <dataset-key>
+    stage_id: <stage-id>
+  target_module_id: <module-id>
+  target_input_ref:
+    dataset_key: <dataset-key>
+    stage_id: <stage-id>
+  partition_transform:
+    id: <transform-id>
+    kind: <one_to_one|one_to_many|many_to_one>
+  activation_policy: <eager|lazy|dormant>
+  idempotency_mode: <mode>
+  compensation_mode: <mode>
+  notes: []

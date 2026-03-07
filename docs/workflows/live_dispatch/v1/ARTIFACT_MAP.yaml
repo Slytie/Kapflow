@@ -1,0 +1,39 @@
+artifact_sets:
+  Stage01:
+  - key: dispatch.base_schedule_seed.doc
+    role: official_input
+    template_source: Stage01_Baseline_and_Event_Intake/Stage01_Baseline_and_Event_Intake_base_schedule_seed_Document_Template_EMPTY.docx
+  - key: dispatch.base_schedule_seed.workbook
+    role: official_input
+    template_source: Stage01_Baseline_and_Event_Intake/Stage01_Baseline_and_Event_Intake_base_schedule_seed_Spreadsheet_Template_EMPTY.xlsx
+  - key: dispatch.route_delta_intake.doc
+    role: evidence
+    template_source: Stage01_Baseline_and_Event_Intake/Stage01_Baseline_and_Event_Intake_route_delta_intake_Document_Template_EMPTY.docx
+  - key: dispatch.route_delta_intake.workbook
+    role: official_input
+    template_source: Stage01_Baseline_and_Event_Intake/Stage01_Baseline_and_Event_Intake_route_delta_intake_Spreadsheet_Template_EMPTY.xlsx
+  - key: dispatch.actual_hours_snapshot.workbook
+    role: official_input
+    template_source: Stage01_Baseline_and_Event_Intake/Stage01_Baseline_and_Event_Intake_actual_hours_snapshot_Spreadsheet_Template_EMPTY.xlsx
+  Stage02:
+  - key: dispatch.issue_board.doc
+    role: evidence
+    template_source: Stage02_Issue_Triage_and_Candidate_Generation/Stage02_Issue_Triage_and_Candidate_Generation_issue_board_Document_Template_EMPTY.docx
+  - key: dispatch.replan_candidate.workbook
+    role: official_input
+    template_source: Stage02_Issue_Triage_and_Candidate_Generation/Stage02_Issue_Triage_and_Candidate_Generation_replan_candidate_Spreadsheet_Template_EMPTY.xlsx
+  Stage03:
+  - key: dispatch.dispatcher_review.doc
+    role: evidence
+    template_source: Stage03_Dispatcher_Review/Stage03_Dispatcher_Review_dispatcher_review_Document_Template_EMPTY.docx
+  Stage04:
+  - key: dispatch.major_replan_packet.doc
+    role: evidence
+    template_source: Stage04_Major_Replan_Approval/Stage04_Major_Replan_Approval_major_replan_packet_Document_Template_EMPTY.docx
+  Stage05:
+  - key: dispatch.official_replan_delta.workbook
+    role: official_output
+    template_source: Stage05_Promote_Official_Replan_Delta/Stage05_Promote_Official_Replan_Delta_official_replan_delta_Spreadsheet_Template_EMPTY.xlsx
+  - key: dispatch.change_notice.doc
+    role: evidence
+    template_source: Stage05_Promote_Official_Replan_Delta/Stage05_Promote_Official_Replan_Delta_change_notice_Document_Template_EMPTY.docx

@@ -1,0 +1,24 @@
+catalog:
+  workflow_id: timecard_audit.v1
+  version: 1
+  decisions:
+  - id: timecard.stage03.approve_corrections
+    stage_id: Stage03
+    decision_kind: business_decision
+    requested_from_role: payroll_manager
+    action: approve_timecard_corrections
+    allowed_responses:
+    - approve
+    - reject
+    - request_changes
+    evidence_requirements:
+      artifact_keys:
+      - timecard.audit_triage.workbook
+      - timecard.correction_review.doc
+      projection_id: timecard.stage03.correction_packet
+    sla:
+      due_in_minutes: 720
+      on_expire:
+        escalate_to_role: payroll_manager
+    notes:
+    - Approval binds the reviewed corrections to the final corrected register.

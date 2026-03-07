@@ -3,6 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 import json
 
+from onetruth.domain.pointer_address import PointerId
 from tests.runtime.helpers.runtime_api import RuntimeApiClient
 from tests.runtime.helpers.runtime_cli import REPO_ROOT, run_cli, stdout_json
 from tests.runtime.helpers.scenario_harness import RuntimeScenarioHarness
@@ -233,7 +234,13 @@ def test_workspace_endpoint_resolves_official_output_artifact_from_same_scope_ot
         if row["pointer"]["pointer_key"] == "official:schedule.published_schedule.workbook"
     ]
     assert len(matching) == 1
+    pointer_row = matching[0]["pointer"]
     linked = matching[0]["artifact_version"]
     assert linked is not None
     assert linked["artifact_version_id"] == sibling_artifact["artifact_version_id"]
     assert linked["workflow_run_id"] == sibling_run["workflow_run_id"]
+    canonical_pointer_id = str(pointer_row["pointer_id"])
+    canonical_address = PointerId.parse(canonical_pointer_id).to_address()
+    assert canonical_address.dataset_key == "schedule.published_schedule.workbook"
+    assert canonical_address.partition_ref.key == "ScheduleDateID"
+    assert canonical_address.partition_ref.value == str(primary_run["partition_key"])

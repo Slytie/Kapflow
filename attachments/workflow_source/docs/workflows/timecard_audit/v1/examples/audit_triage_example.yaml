@@ -1,0 +1,24 @@
+source_note: Deterministic mismatch detection example.
+columns:
+- driver_id
+- driver_name
+- dispatch_minutes
+- payroll_minutes
+- difference_minutes
+- flag
+- recommended_action
+rows:
+- - A1P1CDL949GCH7
+  - Brahamvir Singh
+  - 637
+  - 620
+  - 17
+  - hours_mismatch
+  - review_and_correct
+- - A34WEHEN1XXRKR
+  - Karanveer Singh
+  - 597
+  - 597
+  - 0
+  - clear
+  - none

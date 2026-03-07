@@ -1,0 +1,22 @@
+source_note: Representative payroll export shape only; replace with real export when
+  available.
+columns:
+- pay_period
+- driver_id
+- driver_name
+- reported_minutes
+- break_minutes
+- source_export_id
+rows:
+- - PP-2026-W10
+  - A1P1CDL949GCH7
+  - Brahamvir Singh
+  - 620
+  - 30
+  - payroll-export-demo
+- - PP-2026-W10
+  - A34WEHEN1XXRKR
+  - Karanveer Singh
+  - 597
+  - 30
+  - payroll-export-demo

@@ -1,117 +1,82 @@
-# Strategy A Strong-Closure Report
+# STRATEGY_A_STRONG_CLOSURE_REPORT.md
 
-Date: 2026-03-07  
-Scope: Strategy A / Strategy A' strong-closure identity migration.
+Date: 2026-03-07
+Scope: Final Strategy A strong closure cleanup for canonical pointer identity semantics.
 
-## 1) Authoritative pointer identity law (old vs new)
+## 1) Remaining semantic drift before this pass
+The remaining closure seam was not structural identity ownership; it was semantic leakage in authoritative pointer events:
+- `artifact.pointer.promoted.payload.dataset_key` and `artifact.pointer.drift_detected.payload.dataset_key` could mirror caller-provided `artifact_kind` casing.
+- This allowed non-canonical dataset-key representation in authoritative event payloads even when canonical pointer identity was already resolved.
 
-Old authoritative storage law (legacy structural ownership):
+Resulting risk:
+- event consumers could observe canonical `pointer_id` but non-canonical dataset-key payload representation.
 
-\[
-\Pi_{\text{legacy}}:(workflow\_run\_id,pointer\_key)\rightharpoonup (artifact\_version,generation)
-\]
-
-New authoritative storage law (canonical officialness substrate):
-
-\[
-\Pi:(tenant,domain,dataset,partition,stream?,registry\_kind)\rightharpoonup (artifact\_version,generation)
-\]
-
-Implementation realization in runtime storage:
-- canonical row identity is `artifact_pointers.pointer_id` (primary key),
-- canonical address fields (`tenant_id`, `domain_id`, `dataset_key`, `partition_kind`, `partition_key`, `stream_key`, `registry_kind`) are persisted on the pointer row,
-- run-centric keys (`workflow_run_id`, `pointer_key`) are compatibility aliases, not structural ownership.
-
-## 2) Files changed
-
-- `alembic/versions/20260307_0008_pointer_identity_strong_closure.py`
-- `src/onetruth/infrastructure/db/models.py`
-- `src/onetruth/infrastructure/events/event_store.py`
-- `src/onetruth/infrastructure/repositories/artifact_pointers.py`
-- `src/onetruth/infrastructure/repositories/input_bindings.py`
+## 2) What changed
+Runtime changes:
 - `src/onetruth/application/handlers/workflow_task_lifecycle.py`
-- `src/onetruth/api/routes/pointers.py`
-- `tests/unit/test_artifact_pointers_repository_canonical_identity.py`
-- `tests/runtime/api/test_pointer_list_endpoint.py`
+  - promotion handler now derives pointer-event `dataset_key` from canonical pointer identity semantics (`pointer` row / canonical identity), not raw caller `artifact_kind` input.
+  - retained fail-closed guard when canonical pointer identity/dataset semantics cannot be resolved.
+
+Test changes (test-first + regressions):
+- `tests/property/test_pointer_dual_write_consistency.py`
+  - added event payload canonicality assertions (`pointer_id` + canonical `dataset_key`) under mixed legacy-casing inputs.
 - `tests/runtime/test_approvals_artifacts_pointers_cli.py`
-- `tests/runtime/api/test_workflow_run_detail_contract.py`
-- `tests/unit/test_workflow_run_input_bindings.py`
-- `tests/contract/test_runtime_db_schema_matches_models.py`
-- `tests/integration/test_migration_bootstrap_parity.py`
-- `docs/architecture/promotion_semantics.md`
-- `docs/planning/ARTIFACT_STORE_DESIGN.md`
-- `docs/planning/EVENT_EMISSION_MATRIX.md`
-- `docs/planning/HITL_HTTP_API_CONTRACTS.md`
+  - added canonical payload tests for `artifact.pointer.promoted` and `artifact.pointer.drift_detected`.
+  - added fail-closed promotion test for unresolved canonical pointer identity.
+- `tests/runtime/api/test_pointer_list_endpoint.py`
+  - added canonical pointer-id query regression (`/api/v1/pointers?pointer_id=...`).
+- `tests/runtime/api/test_workflow_run_workspace_endpoint.py`
+  - added canonical pointer-id assertions in official-output workspace projection.
+- `tests/runtime/contracts/test_workspace_demo_export_bundle.py`
+  - added canonical pointer-id assertions in export bundle official-output payload.
 
-## 3) Migration strategy used
+Docs/task/status alignment:
+- created `codex/tasks/TASK-0059-strategy-a-strong-closure.md`
+- created `docs/planning/STRATEGY_A_STRONG_CLOSURE.md`
+- updated `docs/planning/EVENT_EMISSION_MATRIX.md`
+- updated `docs/planning/TASK_INDEX.md`
+- updated `docs/status/CURRENT_FOCUS.md`
 
-- Added Alembic revision `20260307_0008` to re-key `artifact_pointers` on `pointer_id`.
-- Migration renames legacy table, creates canonical table with:
-  - primary key `pointer_id`,
-  - compatibility unique key `(workflow_run_id, pointer_key)`,
-  - retained compatibility uniqueness `(workflow_run_id, scope_kind, scope_ref, artifact_kind)`.
-- Data is copied forward (`INSERT ... SELECT ...`) without reinterpretation.
-- Migration fails closed if any existing row has missing/blank `pointer_id`.
+## 3) Physical PK replacement status
+No additional physical PK replacement was required in this pass.
 
-## 4) Compatibility adapters retained and why safe
+Status:
+- canonical pointer-PK migration already exists in `alembic/versions/20260307_0008_pointer_identity_strong_closure.py`.
+- this pass intentionally preserved legacy compatibility carriers (`workflow_run_id`, `pointer_key`) as aliases only.
 
-Retained adapters:
-- `get_pointer(workflow_run_id, pointer_key)` compatibility resolver.
-- `list_pointers_for_workflow_run(workflow_run_id)` compatibility resolver.
-- `/api/v1/pointers?workflow_run_id=...` compatibility filter.
+## 4) Verification commands and results
+Baseline suite (rerun after changes):
+- `make schema-validate` - passed
+- `python3 scripts/validate_repo.py` - passed
+- `pytest -q tests/contract` - passed
+- `pytest -q tests/security` - passed
+- `pytest -q tests/unit/test_pointer_address_resolution.py tests/unit/test_artifact_provenance_dag.py tests/unit/test_workflow_run_input_bindings.py` - passed
+- `pytest -q tests/property/test_pointer_dual_write_consistency.py tests/property/test_provenance_projection_compatibility.py` - passed
+- `pytest -q tests/runtime/test_approvals_artifacts_pointers_cli.py` - passed
+- `pytest -q tests/runtime/api/test_workflow_run_workspace_endpoint.py` - passed
+- `pytest -q tests/runtime/contracts/test_workspace_demo_export_bundle.py` - passed
+- `pytest -q tests/runtime/test_realistic_schedule_planning_pilot.py` - passed
 
-Safety rationale:
-- adapters now resolve through canonical scoped identity (`tenant/domain/partition`) and canonical pointer rows,
-- they do not create a second authoritative path,
-- canonical writes remain single-path (`pointer_id` stream + generation CAS),
-- workspace/run-detail/export surfaces stay coherent in same-scope cross-run scenarios.
+Additional targeted closure regression:
+- `pytest -q tests/runtime/api/test_pointer_list_endpoint.py` - passed
 
-## 5) Backfill / upgrade assumptions
+Demo entrypoint verification:
+- `PYTHONPATH=src python3 scripts/run_schedule_workspace_demo.py --db-url sqlite:///.tmp/strategy_a_strong_closure.db --scenario stage06_publish_ready --pilot-key strategy-a-strong-closure --output-root .tmp/strategy_a_strong_closure_artifacts --output-json .tmp/strategy_a_strong_closure_output.json` - passed
+  - `workflow_run_id=wr-8f969884a3a0bc4445559ea9`
+- `PYTHONPATH=src python3 scripts/export_run_workspace_bundle.py --db-url sqlite:///.tmp/strategy_a_strong_closure.db --workflow-run-id wr-8f969884a3a0bc4445559ea9 --output .tmp/strategy_a_strong_closure_bundle.zip` - passed
 
-- Upgrade assumes existing pointer rows already have deterministic canonical `pointer_id`.
-- If upgraded data contains null/blank `pointer_id`, migration exits with an explicit error and requires manual, deterministic backfill before retry.
-- No ambiguous historical remapping is performed automatically.
+## 5) Closure outcome vs acceptance criteria
+1. Canonical pointer identity authoritative in writes/events/public/demo reads: **met**.
+2. Legacy carriers compatibility-only: **met**.
+3. Docs/schemas/runtime behavior aligned on canonical pointer identity semantics: **met**.
+4. Demo/export from clean setup still operational: **met**.
+5. Ready for monotone next tranche without reopening identity migration: **met**.
 
-## 6) Demo/workspace commands and results
+## 6) Residual compatibility debt (safe)
+Remaining compatibility surfaces (intentional):
+- CLI pointer read commands remain run-key shaped (`pointers show`, `pointers list`).
+- `/api/v1/pointers?workflow_run_id=...` remains as compatibility alias filter.
 
-Clean setup demo command:
-
-```bash
-PYTHONPATH=src python3 scripts/run_schedule_workspace_demo.py \
-  --db-url sqlite:///.tmp/strategy_a_strong_closure_clean.db \
-  --scenario stage06_publish_ready \
-  --pilot-key strategy-a-strong-closure-clean \
-  --output-root .tmp/strategy_a_strong_closure_clean_artifacts \
-  --output-json .tmp/strategy_a_strong_closure_clean_output.json
-```
-
-Result:
-- `status=ok`
-- `workflow_run_id=wr-57126101c9dc10dd5685cae9`
-- `reused_existing_run=false`
-
-Companion export command:
-
-```bash
-PYTHONPATH=src python3 scripts/export_run_workspace_bundle.py \
-  --db-url sqlite:///.tmp/strategy_a_strong_closure_clean.db \
-  --workflow-run-id wr-57126101c9dc10dd5685cae9 \
-  --output .tmp/strategy_a_strong_closure_clean_bundle.zip
-```
-
-Result:
-- `status=ok`
-- bundle created at `.tmp/strategy_a_strong_closure_clean_bundle.zip`
-
-## 7) Remaining debt
-
-- `pointer_id` currently encodes canonical address (`tenant/domain/dataset/partition[/stream]`) while `registry_kind` remains an explicit canonical column; future format unification is optional and not required for Strategy A closure.
-- CLI pointer read commands remain run-centric in input shape by design; canonical read shape is now primary on `/api/v1/pointers` and in repositories.
-
-## 8) Strategy A closure status
-
-Strategy A is **fully closed** for strong-closure identity migration criteria in this repo:
-- authoritative pointer identity is no longer structurally run-local,
-- canonical `PointerId` is emitted in authoritative pointer events and pointer links,
-- canonical query surfaces exist and are tested,
-- run-centric compatibility views are retained and tested as adapters.
+Why safe:
+- these are read adapters over the same canonical pointer rows/events.
+- authoritative pointer writes and event payload identity no longer depend on legacy carrier semantics.

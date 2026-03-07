@@ -1,0 +1,8 @@
+partition_transform:
+  id: <transform-id>
+  source_kind: <PartitionKind>
+  target_kind: <PartitionKind>
+  shape: <one_to_one|one_to_many|many_to_one>
+  implementation_ref: <codec-or-function-id>
+  deterministic: true
+  notes: []

@@ -1,0 +1,69 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "CompiledStateRef",
+  "type": "object",
+  "required": [
+    "kind",
+    "address"
+  ],
+  "properties": {
+    "kind": {
+      "type": "string",
+      "const": "registry"
+    },
+    "address": {
+      "type": "object",
+      "required": [
+        "tenant_id",
+        "domain_id",
+        "dataset_key",
+        "partition_kind",
+        "partition_key",
+        "registry_kind"
+      ],
+      "properties": {
+        "tenant_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "domain_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "dataset_key": {
+          "type": "string",
+          "minLength": 1
+        },
+        "partition_kind": {
+          "type": "string",
+          "enum": [
+            "AvailabilityRequestID",
+            "PlanningWeekID",
+            "ServiceDateID",
+            "PayPeriodID",
+            "ScheduleDateID"
+          ]
+        },
+        "partition_key": {
+          "type": "string",
+          "minLength": 1
+        },
+        "stream_key": {
+          "type": "string",
+          "minLength": 1
+        },
+        "registry_kind": {
+          "type": "string",
+          "enum": [
+            "singleton",
+            "ordered_stream",
+            "membership_set",
+            "interval"
+          ]
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

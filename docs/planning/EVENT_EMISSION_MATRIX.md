@@ -194,6 +194,7 @@ Current scope includes TASK-0041 + TASK-0042 substrate commands plus TASK-0043/T
   - pointer scope/kind mismatch on same key fails explicitly (`pointer_definition_mismatch`)
 - Event identity shape:
   - `artifact.pointer.promoted.payload.pointer_id` and pointer `subject` link id are canonical `PointerId` values (not legacy `pointer_key`).
+  - `artifact.pointer.promoted.payload.dataset_key` and `artifact.pointer.drift_detected.payload.dataset_key` are emitted from canonical pointer identity semantics (normalized canonical dataset key), not caller-provided legacy casing.
 - Minimal policy checks in this slice:
   - `promotion_reason=official_publish` requires `approved_by_approval_id` referencing a `RESPONDED` approval with `response_kind=approve`
   - `promotion_reason=official_major_replan` requires the same approved response and a Stage07-scoped approval (`scope_ref=Stage07`)

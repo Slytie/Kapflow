@@ -1,0 +1,110 @@
+module:
+  id: live_dispatch
+  source_workflow:
+    workflow_id: live_dispatch.v1
+    version: 1
+  semantic_version: sha256:example-live-dispatch-v1
+  partition:
+    kind: ServiceDateID
+    activation_policy: lazy_on_event
+  inputs:
+    - name: base_schedule_seed
+      role: official_input
+      required: true
+      state_ref:
+        kind: registry
+        address:
+          tenant_id: "{{tenant_id}}"
+          domain_id: "{{domain_id}}"
+          dataset_key: dispatch.base_schedule_seed.workbook
+          partition_kind: ServiceDateID
+          partition_key: "{{ServiceDateID}}"
+          stream_key: seed
+          registry_kind: singleton
+    - name: route_delta_intake
+      role: official_input
+      required: true
+      state_ref:
+        kind: registry
+        address:
+          tenant_id: "{{tenant_id}}"
+          domain_id: "{{domain_id}}"
+          dataset_key: dispatch.route_delta_intake.workbook
+          partition_kind: ServiceDateID
+          partition_key: "{{ServiceDateID}}"
+          stream_key: intake
+          registry_kind: ordered_stream
+    - name: actual_hours_snapshot
+      role: official_input
+      required: true
+      state_ref:
+        kind: registry
+        address:
+          tenant_id: "{{tenant_id}}"
+          domain_id: "{{domain_id}}"
+          dataset_key: dispatch.actual_hours_snapshot.workbook
+          partition_kind: ServiceDateID
+          partition_key: "{{ServiceDateID}}"
+          stream_key: actuals
+          registry_kind: singleton
+  outputs:
+    - name: official_replan_delta
+      role: official_output
+      state_ref:
+        kind: registry
+        address:
+          tenant_id: "{{tenant_id}}"
+          domain_id: "{{domain_id}}"
+          dataset_key: dispatch.official_replan_delta.workbook
+          partition_kind: ServiceDateID
+          partition_key: "{{ServiceDateID}}"
+          stream_key: delta
+          registry_kind: ordered_stream
+    - name: change_notice
+      role: evidence
+      state_ref:
+        kind: registry
+        address:
+          tenant_id: "{{tenant_id}}"
+          domain_id: "{{domain_id}}"
+          dataset_key: dispatch.change_notice.doc
+          partition_kind: ServiceDateID
+          partition_key: "{{ServiceDateID}}"
+          stream_key: latest
+          registry_kind: singleton
+  stages:
+    - stage_id: Stage01
+      execution_pattern: linear_chain
+      method_package_ref: method.live_dispatch.stage01.intake.v1
+      decision_refs: []
+    - stage_id: Stage02
+      execution_pattern: bounded_exception_loop
+      method_package_ref: method.live_dispatch.stage02.triage.v1
+      decision_refs: []
+    - stage_id: Stage03
+      execution_pattern: linear_chain
+      method_package_ref: method.live_dispatch.stage03.review.v1
+      decision_refs: []
+    - stage_id: Stage04
+      execution_pattern: approval_gate
+      method_package_ref: method.live_dispatch.stage04.approval.v1
+      decision_refs:
+        - dispatch.stage04.approve_major_replan
+    - stage_id: Stage05
+      execution_pattern: linear_chain
+      method_package_ref: method.live_dispatch.stage05.promote_delta.v1
+      decision_refs: []
+  invariants:
+    - id: live_dispatch.base_seed_immutable
+      version: v1
+    - id: live_dispatch.delta_order_is_monotone
+      version: v1
+    - id: live_dispatch.hard_filters_are_deterministic
+      version: v1
+  governance:
+    required_roles:
+      - dispatch_supervisor
+      - operations_manager
+    approval_policies:
+      - decision_id: dispatch.stage04.approve_major_replan
+        when: major_replan_threshold_met

@@ -1,0 +1,151 @@
+profile:
+  workflow_id: weekly_schedule_planning.v1
+  version: 1
+  stages:
+  - stage_id: Stage01
+    execution_pattern: linear_chain
+    allowed_tool_classes:
+    - artifact.read
+    - validation
+    - spreadsheet.transform
+    side_effect_policy: draft_only
+    required_evidence_keys:
+    - planning.route_horizon.doc
+    - planning.route_horizon.workbook
+    decision_refs: []
+    stop_rules:
+      max_tool_calls: 12
+      no_progress_ticks: 3
+      on_exhaustion: escalate
+    projections:
+    - planning.stage01.route_packet
+    extensions:
+      guidance:
+      - Normalize weekly horizon emails and auto-accepted route-request notices into
+        canonical route rows.
+  - stage_id: Stage02
+    execution_pattern: linear_chain
+    allowed_tool_classes:
+    - artifact.read
+    - validation
+    - spreadsheet.transform
+    side_effect_policy: draft_only
+    required_evidence_keys:
+    - planning.approved_availability.doc
+    - planning.approved_availability.workbook
+    decision_refs: []
+    stop_rules:
+      max_tool_calls: 12
+      no_progress_ticks: 3
+      on_exhaustion: escalate
+    projections:
+    - planning.stage02.availability_packet
+    extensions:
+      guidance:
+      - Approved availability is the only scheduling truth; raw requests remain separate.
+  - stage_id: Stage03
+    execution_pattern: linear_chain
+    allowed_tool_classes:
+    - artifact.read
+    - validation
+    - spreadsheet.transform
+    side_effect_policy: draft_only
+    required_evidence_keys:
+    - planning.actual_hours_snapshot.doc
+    - planning.actual_hours_snapshot.workbook
+    decision_refs: []
+    stop_rules:
+      max_tool_calls: 10
+      no_progress_ticks: 3
+      on_exhaustion: escalate
+    projections:
+    - planning.stage03.hours_packet
+    extensions:
+      guidance:
+      - Use recent actual hours to forecast WHC risk before publishing the next week.
+  - stage_id: Stage04
+    execution_pattern: linear_chain
+    allowed_tool_classes:
+    - artifact.read
+    - validation
+    - spreadsheet.transform
+    - flag.raise
+    - projection.render
+    side_effect_policy: draft_only
+    required_evidence_keys:
+    - planning.draft_weekly_schedule.doc
+    - planning.draft_weekly_schedule.workbook
+    decision_refs: []
+    stop_rules:
+      max_tool_calls: 24
+      no_progress_ticks: 3
+      on_exhaustion: escalate
+    projections:
+    - planning.stage04.ops_packet
+    extensions:
+      guidance:
+      - Objective is driver-to-route assignment, not vehicle routing. Use hard filters
+        first, then rank by fairness and stability.
+  - stage_id: Stage05
+    execution_pattern: linear_chain
+    allowed_tool_classes:
+    - artifact.read
+    - validation
+    - projection.render
+    side_effect_policy: draft_only
+    required_evidence_keys:
+    - planning.manager_review.doc
+    decision_refs: []
+    stop_rules:
+      max_tool_calls: 8
+      no_progress_ticks: 2
+      on_exhaustion: wait_for_human
+    projections:
+    - planning.stage05.review_packet
+    extensions:
+      guidance:
+      - LLM output may summarize tradeoffs, but human review is authoritative.
+  - stage_id: Stage06
+    execution_pattern: approval_gate
+    allowed_tool_classes:
+    - artifact.read
+    - approval.request
+    - projection.render
+    - artifact.publish_version
+    side_effect_policy: commit_requires_business_decision
+    required_evidence_keys:
+    - planning.publish_packet.doc
+    - planning.published_weekly_schedule.workbook
+    decision_refs:
+    - planning.stage06.publish_weekly_base_schedule
+    stop_rules:
+      max_tool_calls: 10
+      no_progress_ticks: 2
+      on_exhaustion: wait_for_human
+    projections:
+    - planning.stage06.publish_packet
+    extensions:
+      guidance:
+      - Only approval plus pointer promotion makes the base schedule official.
+  - stage_id: Stage07
+    execution_pattern: linear_chain
+    allowed_tool_classes:
+    - artifact.read
+    - spreadsheet.transform
+    - artifact.publish_version
+    - projection.render
+    side_effect_policy: draft_only
+    required_evidence_keys:
+    - planning.daily_dispatch_seed.doc
+    - planning.daily_dispatch_seed.workbook
+    decision_refs: []
+    stop_rules:
+      max_tool_calls: 12
+      no_progress_ticks: 2
+      on_exhaustion: escalate
+    projections:
+    - planning.stage07.dispatch_seed_packet
+    extensions:
+      guidance:
+      - Emit one seed per service day and link each seed back to the exact published
+        weekly version.

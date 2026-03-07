@@ -1,0 +1,9 @@
+partition_transform:
+  id: planning_week_to_service_days
+  source_kind: PlanningWeekID
+  target_kind: ServiceDateID
+  shape: one_to_many
+  implementation_ref: partition_codec.planning_week_to_service_days.v1
+  deterministic: true
+  notes:
+    - Expands one planning week into the closed-open interval of service dates used by Stage07 materialization.

@@ -1,0 +1,25 @@
+catalog:
+  workflow_id: availability_request.v1
+  version: 1
+  decisions:
+  - id: availability.stage02.review_time_off_request
+    stage_id: Stage02
+    decision_kind: business_decision
+    requested_from_role: operations_manager
+    action: approve_time_off_request
+    allowed_responses:
+    - approve
+    - reject
+    - request_changes
+    evidence_requirements:
+      artifact_keys:
+      - availability.request_submission.doc
+      - availability.manager_decision.doc
+      projection_id: availability.stage02.review_packet
+    sla:
+      due_in_minutes: 1440
+      on_expire:
+        escalate_to_role: operations_manager
+    notes:
+    - The approver can approve, deny, or request changes / clarification. Partial
+      approval is recorded in the decision workbook.

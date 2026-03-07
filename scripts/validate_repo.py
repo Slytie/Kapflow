@@ -11,6 +11,14 @@ import yaml
 from jsonschema import Draft202012Validator
 
 ROOT = Path(__file__).resolve().parents[1]
+SRC_ROOT = ROOT / "src"
+if str(SRC_ROOT) not in sys.path:
+    sys.path.insert(0, str(SRC_ROOT))
+
+from onetruth.infrastructure.definitions.family_compiler import (  # noqa: E402
+    DefinitionCompileError,
+    compile_workflow_family,
+)
 
 
 def load_yaml(path: Path) -> Any:
@@ -204,6 +212,16 @@ def validate_template_pack_examples(
     collector: Collector,
 ) -> None:
     template_root = ROOT / "fixtures" / "workflows" / workflow_dir_name / "template_pack"
+    docs_examples_root = ROOT / "docs" / "workflows" / workflow_dir_name / "v1" / "examples"
+    if not template_root.exists():
+        collector.require(
+            docs_examples_root.exists(),
+            f"examples exist when template pack is absent: docs/workflows/{workflow_dir_name}/v1/examples",
+        )
+        if docs_examples_root.exists():
+            collector.ok(f"template-pack validation skipped (examples-only workflow): {workflow_dir_name}")
+        return
+
     collector.require(template_root.exists(), f"template pack exists: fixtures/workflows/{workflow_dir_name}/template_pack")
     for items in artifact_map["artifact_sets"].values():
         for artifact in items:
@@ -342,6 +360,72 @@ def validate_workflow_packs(indexes: dict[str, Any], event_map: dict[str, Any], 
         validate_template_pack_examples(wf_dir.parent.name, artifact_map, collector)
 
 
+def validate_workflow_family_surfaces(collector: Collector) -> None:
+    workflow_family_schema = ROOT / "schemas" / "workflows" / "workflow_family.schema.json"
+    partition_transform_schema = ROOT / "schemas" / "workflows" / "partition_transform_registry.schema.json"
+    compiled_module_schema = ROOT / "schemas" / "workflows" / "compiled_module_definition.schema.json"
+    compiled_edge_schema = ROOT / "schemas" / "workflows" / "compiled_family_edge.schema.json"
+    state_ref_schema = ROOT / "schemas" / "workflows" / "state_ref.schema.json"
+    for schema_path in (
+        workflow_family_schema,
+        partition_transform_schema,
+        compiled_module_schema,
+        compiled_edge_schema,
+        state_ref_schema,
+    ):
+        collector.require(schema_path.exists(), f"workflow family schema exists: {schema_path.relative_to(ROOT)}")
+        if schema_path.exists():
+            validate_schema_file(schema_path, collector)
+
+    family_dir = ROOT / "docs" / "workflows" / "logistics_ops_family" / "v1"
+    family_path = family_dir / "WORKFLOW_FAMILY.yaml"
+    transforms_path = family_dir / "PARTITION_TRANSFORMS.yaml"
+    collector.require(family_path.exists(), f"logistics family definition exists: {family_path.relative_to(ROOT)}")
+    collector.require(transforms_path.exists(), f"partition transforms exist: {transforms_path.relative_to(ROOT)}")
+    if not family_path.exists() or not transforms_path.exists():
+        return
+
+    validate_against_schema(family_path, workflow_family_schema, collector)
+    validate_against_schema(transforms_path, partition_transform_schema, collector)
+
+    try:
+        compiled_once = compile_workflow_family(
+            repo_root=ROOT,
+            family_path=family_path,
+            partition_transforms_path=transforms_path,
+        )
+        compiled_twice = compile_workflow_family(
+            repo_root=ROOT,
+            family_path=family_path,
+            partition_transforms_path=transforms_path,
+        )
+    except DefinitionCompileError as exc:
+        collector.fail(f"logistics family compilation failed: {exc}")
+        return
+
+    collector.require(
+        compiled_once == compiled_twice,
+        "workflow family compilation is deterministic for modules and edges",
+    )
+
+    module_validator = Draft202012Validator(load_json(compiled_module_schema))
+    edge_validator = Draft202012Validator(load_json(compiled_edge_schema))
+    for module in compiled_once.get("compiled_modules", []):
+        errs = sorted(module_validator.iter_errors(module), key=lambda e: list(e.path))
+        if errs:
+            for err in errs:
+                collector.fail(f"compiled module descriptor invalid: {err.message}")
+        else:
+            collector.ok(f"compiled module descriptor valid: {module['module_id']}")
+    for edge in compiled_once.get("compiled_edges", []):
+        errs = sorted(edge_validator.iter_errors(edge), key=lambda e: list(e.path))
+        if errs:
+            for err in errs:
+                collector.fail(f"compiled edge descriptor invalid: {err.message}")
+        else:
+            collector.ok(f"compiled edge descriptor valid: {edge['edge_id']}")
+
+
 def validate_task_index(collector: Collector) -> None:
     task_index_path = ROOT / "docs/planning/TASK_INDEX.md"
     content = task_index_path.read_text(encoding="utf-8").splitlines()
@@ -423,6 +507,7 @@ def main() -> int:
         validate_shared_vocab(indexes, collector)
         validate_runtime_schema_coverage(collector)
         validate_workflow_packs(indexes, event_map, collector)
+        validate_workflow_family_surfaces(collector)
         validate_schedule_template_registry(indexes, collector)
         validate_schedule_runbook_assets(collector)
         validate_task_index(collector)

@@ -1,0 +1,115 @@
+workflow:
+  id: availability_request.v1
+  name: Availability Request - Time off request to approved availability truth
+  partition_key:
+    name: AvailabilityRequestID
+    format: AR-YYYYMMDD-NNNN
+    examples:
+    - AR-20260304-0001
+  scope:
+    required:
+    - tenant_id
+    - domain_id
+semantics:
+  pinned_runs: true
+  no_inflight_migration_mvp: true
+  officialness:
+    defined_by: promotion_pointer
+    loose_promotion_allowed: true
+    drift_visibility_required: true
+  run_shape:
+    long_lived_case_per_partition: true
+    stage_rerun_policy: same_workflow_run_new_task_run
+execution_overlay:
+  decision_catalog: DECISION_CATALOG.yaml
+  execution_profile: EXECUTION_PROFILE.yaml
+stages:
+- id: Stage01
+  name: Request_Intake
+  in_scope_mvp: true
+  artifacts:
+  - dataset_key: availability.request_submission.doc
+    kind: document
+    role: official_input
+  - dataset_key: availability.request_submission.workbook
+    kind: spreadsheet
+    role: official_input
+  notes:
+  - Current MVP intake path is the existing Google Form. The canonical artifact is
+    a normalized request row plus the raw request summary.
+  - Submission is not equivalent to approved unavailability.
+- id: Stage02
+  name: Manager_Decision
+  in_scope_mvp: true
+  approvals:
+    required: true
+    group: operations_manager
+    action: approve_time_off_request
+  artifacts:
+  - dataset_key: availability.manager_decision.doc
+    kind: document
+    role: evidence
+  - dataset_key: availability.manager_decision.workbook
+    kind: spreadsheet
+    role: evidence
+  semantics:
+    task_spawn_policy: conditional_follow_on
+    spawn_budget:
+      per_parent_completion_max_children: 2
+      max_spawn_depth: 2
+    spawn_rules:
+    - id: stage02_request_clarification
+      when: request_needs_information
+      target_stage_id: Stage02
+      task_kind: information_request
+      candidate_roles:
+      - operations_manager
+    - id: stage02_record_partial_approval
+      when: request_is_partially_approved
+      target_stage_id: Stage02
+      task_kind: work_item
+      candidate_roles:
+      - operations_manager
+  notes:
+  - Weekend / blackout / short-notice rules are policy signals for the reviewer. They
+    are not silent auto-decisions.
+- id: Stage03
+  name: Approved_Availability_Update
+  in_scope_mvp: true
+  artifacts:
+  - dataset_key: availability.update_packet.doc
+    kind: document
+    role: evidence
+  - dataset_key: availability.approved_plan.workbook
+    kind: spreadsheet
+    role: official_output
+  notes:
+  - Only approved or partially-approved decisions update availability truth.
+  - If an approved change affects an already-published service day, the system should
+    emit a downstream trigger for weekly replanning or live dispatch.
+event_inventory:
+  platform_required:
+  - workflow.run.created
+  - workflow.run.state_changed
+  - task.run.created
+  - task.run.state_changed
+  - task.created
+  - task.claimed
+  - task.lease_expired
+  - task.completed
+  - approval.requested
+  - approval.responded
+  - execution.session.created
+  - execution.session.state_changed
+  - tool.execution.requested
+  - tool.execution.approved
+  - tool.execution.denied
+  - tool.execution.completed
+  - audit.degraded_mode.changed
+  workflow_required:
+  - artifact.version.created
+  - artifact.pointer.promoted
+  - artifact.pointer.drift_detected
+  - flag.created
+  - flag.state_changed
+  - projection.coherence_failed

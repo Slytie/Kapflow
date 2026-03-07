@@ -9,6 +9,7 @@ import tempfile
 import zipfile
 
 from onetruth.application.handlers.workflow_task_lifecycle import show_workflow_run_command
+from onetruth.domain.pointer_address import PointerId
 from onetruth.infrastructure.db.session import open_sqlite_connection
 from tests.runtime.helpers.runtime_cli import REPO_ROOT, SRC_ROOT, run_cli, stdout_json
 
@@ -253,7 +254,13 @@ def test_export_bundle_resolves_official_outputs_for_same_scope_cross_run_pointe
         if row["pointer"]["pointer_key"] == "official:schedule.published_schedule.workbook"
     ]
     assert len(matching) == 1
+    pointer_row = matching[0]["pointer"]
     linked = matching[0]["artifact_version"]
     assert linked is not None
     assert linked["artifact_version_id"] == sibling_artifact["artifact_version_id"]
     assert linked["workflow_run_id"] == sibling_run["workflow_run_id"]
+    canonical_pointer_id = str(pointer_row["pointer_id"])
+    canonical_address = PointerId.parse(canonical_pointer_id).to_address()
+    assert canonical_address.dataset_key == "schedule.published_schedule.workbook"
+    assert canonical_address.partition_ref.key == "ScheduleDateID"
+    assert canonical_address.partition_ref.value == str(primary_run["partition_key"])

@@ -1,0 +1,115 @@
+family:
+  id: logistics_ops_family.v1
+  version: 1
+  description: Weekly planning, day-of dispatch, reporting closeout, and downstream audit.
+  modules:
+    - module_id: availability_request
+      workflow_pack_ref:
+        workflow_id: availability_request.v1
+        version: 1
+        path: docs/workflows/availability_request/v1
+      partition:
+        kind: AvailabilityRequestID
+        activation_policy: manual_only
+      status: extension
+    - module_id: weekly_schedule_planning
+      workflow_pack_ref:
+        workflow_id: weekly_schedule_planning.v1
+        version: 1
+        path: docs/workflows/weekly_schedule_planning/v1
+      partition:
+        kind: PlanningWeekID
+        activation_policy: long_lived_case_per_partition
+      status: first_slice
+    - module_id: live_dispatch
+      workflow_pack_ref:
+        workflow_id: live_dispatch.v1
+        version: 1
+        path: docs/workflows/live_dispatch/v1
+      partition:
+        kind: ServiceDateID
+        activation_policy: lazy_on_event
+      status: first_slice
+    - module_id: dispatch_reporting
+      workflow_pack_ref:
+        workflow_id: dispatch_reporting.v1
+        version: 1
+        path: docs/workflows/dispatch_reporting/v1
+      partition:
+        kind: ServiceDateID
+        activation_policy: manual_only
+      status: extension
+    - module_id: timecard_audit
+      workflow_pack_ref:
+        workflow_id: timecard_audit.v1
+        version: 1
+        path: docs/workflows/timecard_audit/v1
+      partition:
+        kind: PayPeriodID
+        activation_policy: manual_only
+      status: deferred
+  edges:
+    - edge_id: availability_to_weekly_availability_update
+      source_module_id: availability_request
+      source_output_ref:
+        dataset_key: availability.approved_plan.workbook
+        stage_id: Stage03
+      target_module_id: weekly_schedule_planning
+      target_input_ref:
+        dataset_key: planning.approved_availability.workbook
+        stage_id: Stage02
+      partition_transform_ref: availability_dates_to_planning_weeks
+      activation_policy: lazy
+      handoff_mode: notify_only
+      idempotency_mode: source-output-version
+      writer_mode: source_only
+      compensation_mode: none
+      status: extension
+    - edge_id: weekly_seed_to_live_dispatch
+      source_module_id: weekly_schedule_planning
+      source_output_ref:
+        dataset_key: planning.daily_dispatch_seed.workbook
+        stage_id: Stage07
+      target_module_id: live_dispatch
+      target_input_ref:
+        dataset_key: dispatch.base_schedule_seed.workbook
+        stage_id: Stage01
+      partition_transform_ref: planning_week_to_service_days
+      activation_policy: lazy
+      handoff_mode: materialize_seed
+      idempotency_mode: source-output-version-plus-trigger
+      writer_mode: source_only
+      compensation_mode: mark_stale
+      status: first_slice
+    - edge_id: reporting_actuals_to_future_planning
+      source_module_id: dispatch_reporting
+      source_output_ref:
+        dataset_key: reporting.final_packet.workbook
+        stage_id: Stage05
+      target_module_id: weekly_schedule_planning
+      target_input_ref:
+        dataset_key: planning.actual_hours_snapshot.workbook
+        stage_id: Stage03
+      partition_transform_ref: service_day_to_future_planning_week
+      activation_policy: lazy
+      handoff_mode: notify_only
+      idempotency_mode: source-output-version
+      writer_mode: source_only
+      compensation_mode: none
+      status: extension
+    - edge_id: reporting_actuals_to_timecard_audit
+      source_module_id: dispatch_reporting
+      source_output_ref:
+        dataset_key: reporting.final_packet.workbook
+        stage_id: Stage05
+      target_module_id: timecard_audit
+      target_input_ref:
+        dataset_key: timecard.dispatch_hours.workbook
+        stage_id: Stage01
+      partition_transform_ref: service_day_to_pay_period
+      activation_policy: lazy
+      handoff_mode: notify_only
+      idempotency_mode: source-output-version
+      writer_mode: source_only
+      compensation_mode: none
+      status: deferred

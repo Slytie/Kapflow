@@ -1,0 +1,36 @@
+source_note: Illustrative candidate ranking using hard filters first and soft fairness
+  / on-call scoring second.
+columns:
+- issue_id
+- candidate_driver_id
+- candidate_driver_name
+- hard_filter_status
+- score_bucket
+- primary_reason
+- secondary_reason
+- recommended_action
+rows:
+- - issue-20260306-routeplus1
+  - AKF1ZEB0TWD96
+  - Rahul Mannan
+  - pass
+  - best
+  - On-call and below target shifts
+  - No WHC issue
+  - offer_added_route
+- - issue-20260306-routeplus1
+  - A52BQ5U4SHE8W
+  - Rajveer Singh
+  - pass
+  - good
+  - Lost-work credit from prior cancellation
+  - Would become 4th shift but no overtime
+  - offer_if_primary_declines
+- - issue-20260306-routeplus1
+  - A34WEHEN1XXRKR
+  - Karanveer Singh
+  - blocked
+  - n/a
+  - Rolling-7-day limit risk
+  - Previous day 597 minutes
+  - do_not_offer

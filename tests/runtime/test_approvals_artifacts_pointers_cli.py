@@ -497,6 +497,194 @@ def test_pointer_promotion_happy_path_updates_row_and_emits_event(tmp_path: Path
     assert str(PointerId.parse(canonical_pointer_id)) == canonical_pointer_id
 
 
+def test_pointer_promotion_event_payload_uses_canonical_dataset_key_and_pointer_id(
+    tmp_path: Path,
+) -> None:
+    db_url = f"sqlite:///{tmp_path / 'runtime.db'}"
+    _run_cli("--db-url", db_url, "init-db")
+
+    workflow_run = _create_workflow_run(db_url, activation_key="run-pointer-canonical-payload")
+    artifact = _create_artifact_version(
+        db_url,
+        workflow_run_id=workflow_run["workflow_run_id"],
+        task_run_id=None,
+        artifact_kind="SCHEDULE.PUBLISHED_SCHEDULE.WORKBOOK",
+        idempotency_key="idem-pointer-canonical-payload-artifact",
+    )
+
+    promoted_pointer = _stdout_json(
+        _run_cli(
+            "--db-url",
+            db_url,
+            "pointers",
+            "promote",
+            "--json",
+            json.dumps(
+                {
+                    "workflow_run_id": workflow_run["workflow_run_id"],
+                    "scope_kind": "stage",
+                    "scope_ref": "Stage06",
+                    "pointer_key": "official:schedule.published_schedule.workbook",
+                    "artifact_kind": "SCHEDULE.PUBLISHED_SCHEDULE.WORKBOOK",
+                    "artifact_version_id": artifact["artifact_version_id"],
+                    "promotion_reason": "manual_promote",
+                    "idempotency_key": "idem-pointer-canonical-payload-promote",
+                }
+            ),
+        )
+    )["pointer"]
+
+    events = _events_for_run(db_url, workflow_run["workflow_run_id"])
+    promoted_events = [event for event in events if event["event_type"] == "artifact.pointer.promoted"]
+    assert len(promoted_events) == 1
+    promoted_event = promoted_events[0]
+    canonical_pointer_id = str(promoted_pointer["pointer_id"])
+    canonical_dataset_key = PointerId.parse(canonical_pointer_id).to_address().dataset_key
+
+    assert promoted_event["payload"]["pointer_id"] == canonical_pointer_id
+    assert promoted_event["payload"]["dataset_key"] == canonical_dataset_key
+    assert promoted_event["payload"]["pointer_id"] != promoted_pointer["pointer_key"]
+
+
+def test_pointer_drift_event_payload_uses_canonical_dataset_key_and_pointer_id(
+    tmp_path: Path,
+) -> None:
+    db_url = f"sqlite:///{tmp_path / 'runtime.db'}"
+    _run_cli("--db-url", db_url, "init-db")
+
+    workflow_run = _create_workflow_run(db_url, activation_key="run-pointer-drift-canonical-payload")
+    first_artifact = _create_artifact_version(
+        db_url,
+        workflow_run_id=workflow_run["workflow_run_id"],
+        task_run_id=None,
+        artifact_kind="SCHEDULE.REPLAN_DELTA.WORKBOOK",
+        idempotency_key="idem-pointer-drift-canonical-payload-artifact-v1",
+    )
+    _stdout_json(
+        _run_cli(
+            "--db-url",
+            db_url,
+            "pointers",
+            "promote",
+            "--json",
+            json.dumps(
+                {
+                    "workflow_run_id": workflow_run["workflow_run_id"],
+                    "scope_kind": "stage",
+                    "scope_ref": "Stage07",
+                    "pointer_key": "official:schedule.replan_delta.workbook",
+                    "artifact_kind": "SCHEDULE.REPLAN_DELTA.WORKBOOK",
+                    "artifact_version_id": first_artifact["artifact_version_id"],
+                    "promotion_reason": "manual_promote",
+                    "idempotency_key": "idem-pointer-drift-canonical-payload-promote-v1",
+                }
+            ),
+        )
+    )["pointer"]
+
+    second_artifact = _create_artifact_version(
+        db_url,
+        workflow_run_id=workflow_run["workflow_run_id"],
+        task_run_id=None,
+        artifact_kind="SCHEDULE.REPLAN_DELTA.WORKBOOK",
+        idempotency_key="idem-pointer-drift-canonical-payload-artifact-v2",
+    )
+    promoted_pointer = _stdout_json(
+        _run_cli(
+            "--db-url",
+            db_url,
+            "pointers",
+            "promote",
+            "--json",
+            json.dumps(
+                {
+                    "workflow_run_id": workflow_run["workflow_run_id"],
+                    "scope_kind": "stage",
+                    "scope_ref": "Stage07",
+                    "pointer_key": "official:schedule.replan_delta.workbook",
+                    "artifact_kind": "SCHEDULE.REPLAN_DELTA.WORKBOOK",
+                    "artifact_version_id": second_artifact["artifact_version_id"],
+                    "promotion_reason": "manual_promote",
+                    "expected_generation": 0,
+                    "reviewed_artifact_version_id": first_artifact["artifact_version_id"],
+                    "idempotency_key": "idem-pointer-drift-canonical-payload-promote-v2",
+                }
+            ),
+        )
+    )["pointer"]
+
+    events = _events_for_run(db_url, workflow_run["workflow_run_id"])
+    drift_events = [event for event in events if event["event_type"] == "artifact.pointer.drift_detected"]
+    assert len(drift_events) == 1
+    drift_event = drift_events[0]
+    canonical_pointer_id = str(promoted_pointer["pointer_id"])
+    canonical_dataset_key = PointerId.parse(canonical_pointer_id).to_address().dataset_key
+
+    assert drift_event["payload"]["pointer_id"] == canonical_pointer_id
+    assert drift_event["payload"]["dataset_key"] == canonical_dataset_key
+    assert drift_event["payload"]["pointer_id"] != promoted_pointer["pointer_key"]
+
+
+def test_pointer_promotion_fails_closed_when_canonical_identity_is_unresolvable(
+    tmp_path: Path,
+) -> None:
+    db_url = f"sqlite:///{tmp_path / 'runtime.db'}"
+    _run_cli("--db-url", db_url, "init-db")
+
+    workflow_run = _create_workflow_run(
+        db_url,
+        activation_key="run-pointer-identity-fail-closed",
+        partition_key="not-a-schedule-date",
+        logical_date="2026-03-04",
+    )
+    artifact = _create_artifact_version(
+        db_url,
+        workflow_run_id=workflow_run["workflow_run_id"],
+        task_run_id=None,
+        artifact_kind="schedule.published_schedule.workbook",
+        idempotency_key="idem-pointer-identity-fail-closed-artifact",
+    )
+
+    promote = _run_cli(
+        "--db-url",
+        db_url,
+        "pointers",
+        "promote",
+        "--json",
+        json.dumps(
+            {
+                "workflow_run_id": workflow_run["workflow_run_id"],
+                "scope_kind": "stage",
+                "scope_ref": "Stage06",
+                "pointer_key": "official:schedule.published_schedule.workbook",
+                "artifact_kind": "schedule.published_schedule.workbook",
+                "artifact_version_id": artifact["artifact_version_id"],
+                "promotion_reason": "manual_promote",
+                "idempotency_key": "idem-pointer-identity-fail-closed-promote",
+            }
+        ),
+        expect_ok=False,
+    )
+    assert promote.returncode != 0
+    assert _stderr_json(promote)["error_code"] == "pointer_identity_unresolved"
+
+    pointers = _stdout_json(
+        _run_cli(
+            "--db-url",
+            db_url,
+            "pointers",
+            "list",
+            "--workflow-run-id",
+            workflow_run["workflow_run_id"],
+            "--json",
+        )
+    )["pointers"]
+    assert pointers == []
+
+    events = _events_for_run(db_url, workflow_run["workflow_run_id"])
+    assert not any(event["event_type"] == "artifact.pointer.promoted" for event in events)
+
+
 def test_pointer_promotion_allows_same_scope_cross_workflow_artifact_reference(
     tmp_path: Path,
 ) -> None:

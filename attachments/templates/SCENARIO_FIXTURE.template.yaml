@@ -1,0 +1,23 @@
+scenario:
+  id: <scenario-id>
+  family_id: <family-id>
+  tenant_id: <tenant-id>
+  domain_id: <domain-id>
+  partitions:
+    planning_week_id: <PlanningWeekID>
+    service_date_id: <ServiceDateID>
+  inputs:
+    - dataset_key: <dataset-key>
+      partition_kind: <PartitionKind>
+      partition_key: <partition-key>
+      fixture_ref: <fixture-file>
+  steps:
+    - step_id: <step-id>
+      action: <compile_definition|create_run|upload_artifact|complete_stage|approve|promote|activate_handoff>
+      args: {}
+  expected:
+    workflow_runs: []
+    approvals: []
+    handoff_executions: []
+    promoted_pointers: []
+    invariants: []

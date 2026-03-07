@@ -1,0 +1,22 @@
+artifact_sets:
+  Stage01:
+  - key: availability.request_submission.doc
+    role: official_input
+    template_source: Stage01_Request_Intake/Stage01_Request_Intake_request_submission_Document_Template_EMPTY.docx
+  - key: availability.request_submission.workbook
+    role: official_input
+    template_source: Stage01_Request_Intake/Stage01_Request_Intake_request_submission_Spreadsheet_Template_EMPTY.xlsx
+  Stage02:
+  - key: availability.manager_decision.doc
+    role: evidence
+    template_source: Stage02_Manager_Decision/Stage02_Manager_Decision_manager_decision_Document_Template_EMPTY.docx
+  - key: availability.manager_decision.workbook
+    role: evidence
+    template_source: Stage02_Manager_Decision/Stage02_Manager_Decision_manager_decision_Spreadsheet_Template_EMPTY.xlsx
+  Stage03:
+  - key: availability.update_packet.doc
+    role: evidence
+    template_source: Stage03_Approved_Availability_Update/Stage03_Approved_Availability_Update_update_packet_Document_Template_EMPTY.docx
+  - key: availability.approved_plan.workbook
+    role: official_output
+    template_source: Stage03_Approved_Availability_Update/Stage03_Approved_Availability_Update_approved_plan_Spreadsheet_Template_EMPTY.xlsx

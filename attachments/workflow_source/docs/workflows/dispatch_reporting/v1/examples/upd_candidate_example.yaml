@@ -1,0 +1,24 @@
+source_note: Example >600-minute / UPD draft rows.
+columns:
+- service_date
+- driver_name
+- route_id
+- actual_minutes
+- upd_candidate
+- reason
+- manager_note
+rows:
+- - '2026-03-03'
+  - Brahamvir Singh
+  - CX100
+  - 637
+  - 'yes'
+  - '>600 minutes actual time'
+  - ''
+- - '2026-03-03'
+  - Karanveer Singh
+  - CX89
+  - 597
+  - 'no'
+  - Below 600 minutes
+  - ''

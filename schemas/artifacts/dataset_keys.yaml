@@ -215,3 +215,297 @@ datasets:
   partitioned_by:
   - ScheduleDateID
   sensitivity: internal
+- key: availability.approved_plan.workbook
+  description: Official approved availability plan workbook
+  kind: spreadsheet
+  partitioned_by:
+  - AvailabilityRequestID
+  sensitivity: confidential
+- key: availability.manager_decision.doc
+  description: Manager decision record for time-off request
+  kind: document
+  partitioned_by:
+  - AvailabilityRequestID
+  sensitivity: internal
+- key: availability.manager_decision.workbook
+  description: Decision workbook for time-off request
+  kind: spreadsheet
+  partitioned_by:
+  - AvailabilityRequestID
+  sensitivity: confidential
+- key: availability.request_submission.doc
+  description: Time-off request intake summary document
+  kind: document
+  partitioned_by:
+  - AvailabilityRequestID
+  sensitivity: internal
+- key: availability.request_submission.workbook
+  description: Normalized time-off request workbook
+  kind: spreadsheet
+  partitioned_by:
+  - AvailabilityRequestID
+  sensitivity: confidential
+- key: availability.update_packet.doc
+  description: Availability update packet document
+  kind: document
+  partitioned_by:
+  - AvailabilityRequestID
+  sensitivity: internal
+- key: dispatch.actual_hours_snapshot.workbook
+  description: Current actual-hours eligibility snapshot workbook
+  kind: spreadsheet
+  partitioned_by:
+  - ServiceDateID
+  sensitivity: confidential
+- key: dispatch.base_schedule_seed.doc
+  description: Daily base-schedule seed summary document
+  kind: document
+  partitioned_by:
+  - ServiceDateID
+  sensitivity: internal
+- key: dispatch.base_schedule_seed.workbook
+  description: Daily base-schedule seed workbook
+  kind: spreadsheet
+  partitioned_by:
+  - ServiceDateID
+  sensitivity: confidential
+- key: dispatch.change_notice.doc
+  description: Prepared outbound change-notice document
+  kind: document
+  partitioned_by:
+  - ServiceDateID
+  sensitivity: internal
+- key: dispatch.dispatcher_review.doc
+  description: Dispatcher review document
+  kind: document
+  partitioned_by:
+  - ServiceDateID
+  sensitivity: internal
+- key: dispatch.issue_board.doc
+  description: Dispatch issue board document
+  kind: document
+  partitioned_by:
+  - ServiceDateID
+  sensitivity: internal
+- key: dispatch.major_replan_packet.doc
+  description: Major replan packet document
+  kind: document
+  partitioned_by:
+  - ServiceDateID
+  sensitivity: internal
+- key: dispatch.official_replan_delta.workbook
+  description: Official live dispatch delta workbook
+  kind: spreadsheet
+  partitioned_by:
+  - ServiceDateID
+  sensitivity: confidential
+- key: dispatch.replan_candidate.workbook
+  description: Candidate replan and rescue workbook
+  kind: spreadsheet
+  partitioned_by:
+  - ServiceDateID
+  sensitivity: confidential
+- key: dispatch.route_delta_intake.doc
+  description: Day-of route-delta intake summary document
+  kind: document
+  partitioned_by:
+  - ServiceDateID
+  sensitivity: internal
+- key: dispatch.route_delta_intake.workbook
+  description: Normalized route-delta and event workbook
+  kind: spreadsheet
+  partitioned_by:
+  - ServiceDateID
+  sensitivity: confidential
+- key: planning.actual_hours_snapshot.doc
+  description: Actual-hours carry-forward summary
+  kind: document
+  partitioned_by:
+  - PlanningWeekID
+  sensitivity: internal
+- key: planning.actual_hours_snapshot.workbook
+  description: Recent actual-hours snapshot workbook for WHC forecasting
+  kind: spreadsheet
+  partitioned_by:
+  - PlanningWeekID
+  sensitivity: confidential
+- key: planning.approved_availability.doc
+  description: Approved availability snapshot document
+  kind: document
+  partitioned_by:
+  - PlanningWeekID
+  sensitivity: internal
+- key: planning.approved_availability.workbook
+  description: Approved availability and standing-pattern workbook
+  kind: spreadsheet
+  partitioned_by:
+  - PlanningWeekID
+  sensitivity: confidential
+- key: planning.daily_dispatch_seed.doc
+  description: Per-day dispatch seed summary document
+  kind: document
+  partitioned_by:
+  - PlanningWeekID
+  sensitivity: internal
+- key: planning.daily_dispatch_seed.workbook
+  description: Per-day dispatch seed workbook linked to the weekly base schedule
+  kind: spreadsheet
+  partitioned_by:
+  - PlanningWeekID
+  sensitivity: confidential
+- key: planning.draft_weekly_schedule.doc
+  description: Weekly draft schedule ops note document
+  kind: document
+  partitioned_by:
+  - PlanningWeekID
+  sensitivity: internal
+- key: planning.draft_weekly_schedule.workbook
+  description: Weekly draft driver-to-route assignment workbook
+  kind: spreadsheet
+  partitioned_by:
+  - PlanningWeekID
+  sensitivity: confidential
+- key: planning.manager_review.doc
+  description: Manager weekly review record
+  kind: document
+  partitioned_by:
+  - PlanningWeekID
+  sensitivity: internal
+- key: planning.publish_packet.doc
+  description: Weekly publish packet document
+  kind: document
+  partitioned_by:
+  - PlanningWeekID
+  sensitivity: internal
+- key: planning.published_weekly_schedule.workbook
+  description: Official published weekly base schedule workbook
+  kind: spreadsheet
+  partitioned_by:
+  - PlanningWeekID
+  sensitivity: confidential
+- key: planning.route_horizon.doc
+  description: Amazon route-horizon intake summary
+  kind: document
+  partitioned_by:
+  - PlanningWeekID
+  sensitivity: internal
+- key: planning.route_horizon.workbook
+  description: Normalized Amazon weekly route rows workbook
+  kind: spreadsheet
+  partitioned_by:
+  - PlanningWeekID
+  sensitivity: confidential
+- key: reporting.actuals_normalized.doc
+  description: Normalized actuals summary document
+  kind: document
+  partitioned_by:
+  - ServiceDateID
+  sensitivity: internal
+- key: reporting.actuals_normalized.workbook
+  description: Normalized route actuals workbook
+  kind: spreadsheet
+  partitioned_by:
+  - ServiceDateID
+  sensitivity: confidential
+- key: reporting.eos_raw.doc
+  description: EOS upload summary document
+  kind: document
+  partitioned_by:
+  - ServiceDateID
+  sensitivity: internal
+- key: reporting.eos_raw.workbook
+  description: Raw EOS workbook copy
+  kind: spreadsheet
+  partitioned_by:
+  - ServiceDateID
+  sensitivity: confidential
+- key: reporting.final_packet.doc
+  description: Official finalized dispatch reporting document
+  kind: document
+  partitioned_by:
+  - ServiceDateID
+  sensitivity: internal
+- key: reporting.final_packet.workbook
+  description: Official finalized dispatch reporting workbook
+  kind: spreadsheet
+  partitioned_by:
+  - ServiceDateID
+  sensitivity: confidential
+- key: reporting.manager_review.doc
+  description: Manager review record for dispatch reporting
+  kind: document
+  partitioned_by:
+  - ServiceDateID
+  sensitivity: internal
+- key: reporting.upd_draft.doc
+  description: Draft dispatch reporting / UPD packet document
+  kind: document
+  partitioned_by:
+  - ServiceDateID
+  sensitivity: internal
+- key: reporting.upd_draft.workbook
+  description: Draft dispatch reporting workbook
+  kind: spreadsheet
+  partitioned_by:
+  - ServiceDateID
+  sensitivity: confidential
+- key: timecard.audit_triage.doc
+  description: Timecard audit triage summary document
+  kind: document
+  partitioned_by:
+  - PayPeriodID
+  sensitivity: internal
+- key: timecard.audit_triage.workbook
+  description: Timecard audit triage workbook
+  kind: spreadsheet
+  partitioned_by:
+  - PayPeriodID
+  sensitivity: confidential
+- key: timecard.corrected_register.workbook
+  description: Corrected timecard register workbook
+  kind: spreadsheet
+  partitioned_by:
+  - PayPeriodID
+  sensitivity: confidential
+- key: timecard.correction_review.doc
+  description: Timecard correction review document
+  kind: document
+  partitioned_by:
+  - PayPeriodID
+  sensitivity: internal
+- key: timecard.correction_review.workbook
+  description: Timecard correction review workbook
+  kind: spreadsheet
+  partitioned_by:
+  - PayPeriodID
+  sensitivity: confidential
+- key: timecard.dispatch_hours.doc
+  description: Dispatch-hours intake summary document
+  kind: document
+  partitioned_by:
+  - PayPeriodID
+  sensitivity: internal
+- key: timecard.dispatch_hours.workbook
+  description: Dispatch-hours workbook for audit
+  kind: spreadsheet
+  partitioned_by:
+  - PayPeriodID
+  sensitivity: confidential
+- key: timecard.handoff_packet.doc
+  description: Timecard audit handoff packet document
+  kind: document
+  partitioned_by:
+  - PayPeriodID
+  sensitivity: internal
+- key: timecard.payroll_export.doc
+  description: Payroll export intake summary document
+  kind: document
+  partitioned_by:
+  - PayPeriodID
+  sensitivity: internal
+- key: timecard.payroll_export.workbook
+  description: Payroll export workbook for audit
+  kind: spreadsheet
+  partitioned_by:
+  - PayPeriodID
+  sensitivity: confidential

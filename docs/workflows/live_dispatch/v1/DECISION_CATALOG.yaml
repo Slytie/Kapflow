@@ -1,0 +1,25 @@
+catalog:
+  workflow_id: live_dispatch.v1
+  version: 1
+  decisions:
+  - id: dispatch.stage04.approve_major_replan
+    stage_id: Stage04
+    decision_kind: business_decision
+    requested_from_role: operations_manager
+    action: approve_major_dispatch_replan
+    allowed_responses:
+    - approve
+    - reject
+    - request_changes
+    evidence_requirements:
+      artifact_keys:
+      - dispatch.major_replan_packet.doc
+      - dispatch.official_replan_delta.workbook
+      projection_id: dispatch.stage04.major_replan_packet
+    sla:
+      due_in_minutes: 30
+      on_expire:
+        escalate_to_role: operations_manager
+    notes:
+    - Required when the blast radius is large enough that dispatcher review alone
+      is insufficient.

@@ -1,0 +1,47 @@
+module:
+  id: <module-id>
+  source_workflow:
+    workflow_id: <workflow-id>
+    version: <int>
+  semantic_version: <semver-or-digest>
+  partition:
+    kind: <PartitionKind>
+    activation_policy: <policy>
+  inputs:
+    - name: <input-name>
+      role: <official_input|evidence|advisory>
+      required: <true|false>
+      state_ref:
+        kind: registry
+        address:
+          tenant_id: "{{tenant_id}}"
+          domain_id: "{{domain_id}}"
+          dataset_key: <dataset-key>
+          partition_kind: <PartitionKind>
+          partition_key: "{{partition_key}}"
+          stream_key: <optional-stream-key>
+          registry_kind: <singleton|ordered_stream|membership_set|interval>
+  outputs:
+    - name: <output-name>
+      role: <official_output|evidence|draft>
+      state_ref:
+        kind: registry
+        address:
+          tenant_id: "{{tenant_id}}"
+          domain_id: "{{domain_id}}"
+          dataset_key: <dataset-key>
+          partition_kind: <PartitionKind>
+          partition_key: "{{partition_key}}"
+          stream_key: <optional-stream-key>
+          registry_kind: <singleton|ordered_stream|membership_set|interval>
+  stages:
+    - stage_id: <stage-id>
+      execution_pattern: <linear_chain|approval_gate|bounded_exception_loop>
+      method_package_ref: <method-package-id>
+      decision_refs: []
+  invariants:
+    - id: <invariant-id>
+      version: <version-or-digest>
+  governance:
+    required_roles: []
+    approval_policies: []

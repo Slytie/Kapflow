@@ -1,0 +1,33 @@
+artifact_sets:
+  Stage01:
+  - key: reporting.eos_raw.doc
+    role: evidence
+    template_source: Stage01_EOS_Intake/Stage01_EOS_Intake_eos_raw_Document_Template_EMPTY.docx
+  - key: reporting.eos_raw.workbook
+    role: official_input
+    template_source: Stage01_EOS_Intake/Stage01_EOS_Intake_eos_raw_Spreadsheet_Template_EMPTY.xlsx
+  Stage02:
+  - key: reporting.actuals_normalized.doc
+    role: evidence
+    template_source: Stage02_Actuals_Normalization/Stage02_Actuals_Normalization_actuals_normalized_Document_Template_EMPTY.docx
+  - key: reporting.actuals_normalized.workbook
+    role: official_input
+    template_source: Stage02_Actuals_Normalization/Stage02_Actuals_Normalization_actuals_normalized_Spreadsheet_Template_EMPTY.xlsx
+  Stage03:
+  - key: reporting.upd_draft.doc
+    role: evidence
+    template_source: Stage03_Threshold_Detection_and_Draft_Packet/Stage03_Threshold_Detection_and_Draft_Packet_upd_draft_Document_Template_EMPTY.docx
+  - key: reporting.upd_draft.workbook
+    role: official_input
+    template_source: Stage03_Threshold_Detection_and_Draft_Packet/Stage03_Threshold_Detection_and_Draft_Packet_upd_draft_Spreadsheet_Template_EMPTY.xlsx
+  Stage04:
+  - key: reporting.manager_review.doc
+    role: evidence
+    template_source: Stage04_Manager_Review_Confirm/Stage04_Manager_Review_Confirm_manager_review_Document_Template_EMPTY.docx
+  Stage05:
+  - key: reporting.final_packet.doc
+    role: official_output
+    template_source: Stage05_Finalize_Reporting_Packet/Stage05_Finalize_Reporting_Packet_final_packet_Document_Template_EMPTY.docx
+  - key: reporting.final_packet.workbook
+    role: official_output
+    template_source: Stage05_Finalize_Reporting_Packet/Stage05_Finalize_Reporting_Packet_final_packet_Spreadsheet_Template_EMPTY.xlsx

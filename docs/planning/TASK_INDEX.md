@@ -60,3 +60,5 @@
 | TASK-0056 | EPIC-080 | DONE | medium | Stabilization pass 2: CI hygiene, reproducibility, and status reconciliation |
 | TASK-0057 | EPIC-040 | DONE | high | Workflow workspace projection, graph actionability, demo runner, and export bundle |
 | TASK-0058 | EPIC-080 | DONE | medium | Workflow workspace page, live graph, and synchronized actionable work panel |
+| TASK-0059 | EPIC-030 | DONE | high | Strategy A strong closure for canonical pointer identity |
+| TASK-0060 | EPIC-025 | DONE | high | Logistics family definitions and deterministic fail-closed compiler |

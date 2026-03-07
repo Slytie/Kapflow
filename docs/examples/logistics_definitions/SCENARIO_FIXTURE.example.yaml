@@ -1,0 +1,55 @@
+scenario:
+  id: logistics-weekly-to-live-major-replan
+  family_id: logistics_ops_family.v1
+  tenant_id: demo
+  domain_id: ops
+  partitions:
+    planning_week_id: PW-2026-W10
+    service_date_id: SD-2026-03-06
+  inputs:
+    - dataset_key: planning.route_horizon.workbook
+      partition_kind: PlanningWeekID
+      partition_key: PW-2026-W10
+      fixture_ref: docs/workflows/weekly_schedule_planning/v1/examples/amazon_route_horizon_rows_example.yaml
+    - dataset_key: planning.approved_availability.workbook
+      partition_kind: PlanningWeekID
+      partition_key: PW-2026-W10
+      fixture_ref: docs/workflows/weekly_schedule_planning/v1/examples/approved_availability_snapshot_example.yaml
+    - dataset_key: dispatch.route_delta_intake.workbook
+      partition_kind: ServiceDateID
+      partition_key: SD-2026-03-06
+      fixture_ref: docs/workflows/live_dispatch/v1/examples/route_delta_events_example.yaml
+  steps:
+    - step_id: compile_family
+      action: compile_definition
+      args:
+        family_ref: logistics_ops_family.v1
+    - step_id: create_weekly_run
+      action: create_run
+      args:
+        workflow_id: weekly_schedule_planning.v1
+        partition_key: PW-2026-W10
+    - step_id: activate_live_dispatch
+      action: activate_handoff
+      args:
+        edge_id: weekly_seed_to_live_dispatch
+        trigger_fixture_row_id: evt-delta-20260306-1600
+  expected:
+    workflow_runs:
+      - workflow_id: weekly_schedule_planning.v1
+        partition_key: PW-2026-W10
+      - workflow_id: live_dispatch.v1
+        partition_key: SD-2026-03-06
+    approvals:
+      - planning.stage06.publish_weekly_base_schedule
+      - dispatch.stage04.approve_major_replan
+    handoff_executions:
+      - edge_id: weekly_seed_to_live_dispatch
+        status: activated
+    promoted_pointers:
+      - dataset_key: planning.published_weekly_schedule.workbook
+        partition_key: PW-2026-W10
+      - dataset_key: planning.daily_dispatch_seed.workbook
+        partition_key: SD-2026-03-06
+      - dataset_key: dispatch.official_replan_delta.workbook
+        partition_key: SD-2026-03-06

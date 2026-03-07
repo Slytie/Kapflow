@@ -1,0 +1,49 @@
+source_note: Representative availability rows based on the uploaded scheduling spreadsheet
+  structure and interview descriptions.
+rows:
+- - A1P1CDL949GCH7
+  - Brahamvir Singh
+  - full_time
+  - 4
+  - Mon,Tue,Wed,Thu,Sat
+  - 'yes'
+  - 'no'
+  - ''
+  - Regular Cycle 1 plus one on-call day
+- - A2WDUOOWN1ORVL
+  - Iqbal Singh
+  - full_time
+  - 4
+  - Tue,Wed,Thu,Fri
+  - 'yes'
+  - 'no'
+  - '2026-03-02'
+  - Approved day off on Monday
+- - AKF1ZEB0TWD96
+  - Rahul Mannan
+  - part_time
+  - 3
+  - Tue,Wed,Thu,Sat
+  - 'yes'
+  - 'no'
+  - ''
+  - Often used as on-call backup
+- - A52BQ5U4SHE8W
+  - Rajveer Singh
+  - part_time
+  - 3
+  - Sun,Mon,Tue,Wed,Thu
+  - 'yes'
+  - 'no'
+  - ''
+  - Candidate for extra shift before overtime
+columns:
+- driver_id
+- driver_name
+- employment_type
+- target_shifts_per_week
+- regular_pattern
+- on_call_eligible
+- emergency_only
+- approved_unavailable_dates
+- notes

@@ -1,0 +1,245 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "CompiledModuleDefinition",
+  "type": "object",
+  "required": [
+    "module_id",
+    "source_workflow",
+    "semantic_digest",
+    "status",
+    "partition",
+    "defaults",
+    "inputs",
+    "outputs",
+    "stages"
+  ],
+  "properties": {
+    "module_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "source_workflow": {
+      "type": "object",
+      "required": [
+        "workflow_id",
+        "version",
+        "path"
+      ],
+      "properties": {
+        "workflow_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "version": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "path": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "additionalProperties": false
+    },
+    "semantic_digest": {
+      "type": "string",
+      "pattern": "^sha256:[a-f0-9]{64}$"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "first_slice",
+        "extension",
+        "deferred"
+      ]
+    },
+    "partition": {
+      "type": "object",
+      "required": [
+        "kind",
+        "activation_policy"
+      ],
+      "properties": {
+        "kind": {
+          "type": "string",
+          "enum": [
+            "AvailabilityRequestID",
+            "PlanningWeekID",
+            "ServiceDateID",
+            "PayPeriodID",
+            "ScheduleDateID"
+          ]
+        },
+        "activation_policy": {
+          "type": "string",
+          "enum": [
+            "long_lived_case_per_partition",
+            "lazy_on_event",
+            "manual_only"
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
+    "defaults": {
+      "type": "object",
+      "required": [
+        "daily_seed_shape",
+        "live_delta_semantics",
+        "connectors_mode"
+      ],
+      "properties": {
+        "daily_seed_shape": {
+          "type": "string",
+          "const": "one_logical_seed_per_service_date"
+        },
+        "live_delta_semantics": {
+          "type": "string",
+          "const": "ordered_stream"
+        },
+        "connectors_mode": {
+          "type": "string",
+          "const": "fixture_only"
+        }
+      },
+      "additionalProperties": false
+    },
+    "inputs": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/io_descriptor"
+      }
+    },
+    "outputs": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/io_descriptor"
+      }
+    },
+    "stages": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "stage_id",
+          "execution_pattern",
+          "decision_refs"
+        ],
+        "properties": {
+          "stage_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "execution_pattern": {
+            "type": "string",
+            "enum": [
+              "linear_chain",
+              "approval_gate",
+              "bounded_exception_loop"
+            ]
+          },
+          "decision_refs": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "$defs": {
+    "io_descriptor": {
+      "type": "object",
+      "required": [
+        "dataset_key",
+        "stage_id",
+        "artifact_role",
+        "state_ref"
+      ],
+      "properties": {
+        "dataset_key": {
+          "type": "string",
+          "minLength": 1
+        },
+        "stage_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "artifact_role": {
+          "type": "string",
+          "enum": [
+            "official_input",
+            "official_output",
+            "evidence"
+          ]
+        },
+        "state_ref": {
+          "type": "object",
+          "required": [
+            "kind",
+            "address"
+          ],
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "registry"
+            },
+            "address": {
+              "type": "object",
+              "required": [
+                "tenant_id",
+                "domain_id",
+                "dataset_key",
+                "partition_kind",
+                "partition_key",
+                "registry_kind"
+              ],
+              "properties": {
+                "tenant_id": {
+                  "type": "string"
+                },
+                "domain_id": {
+                  "type": "string"
+                },
+                "dataset_key": {
+                  "type": "string"
+                },
+                "partition_kind": {
+                  "type": "string",
+                  "enum": [
+                    "AvailabilityRequestID",
+                    "PlanningWeekID",
+                    "ServiceDateID",
+                    "PayPeriodID",
+                    "ScheduleDateID"
+                  ]
+                },
+                "partition_key": {
+                  "type": "string"
+                },
+                "stream_key": {
+                  "type": "string"
+                },
+                "registry_kind": {
+                  "type": "string",
+                  "enum": [
+                    "singleton",
+                    "ordered_stream",
+                    "membership_set",
+                    "interval"
+                  ]
+                }
+              },
+              "additionalProperties": false
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

@@ -1,0 +1,33 @@
+activation_request:
+  request_id: ar-live-dispatch-SD-2026-03-06-0001
+  family_id: logistics_ops_family.v1
+  target_module_id: live_dispatch
+  target_partition:
+    kind: ServiceDateID
+    key: SD-2026-03-06
+  trigger:
+    kind: handoff_plus_event
+    source_ref: av-dispatch-route-delta-20260306-1600
+  required_inputs:
+    - binding_key: base_seed
+      state_ref:
+        kind: registry
+        pointer_id: ptr/v1/tenant/demo/domain/ops/dataset/dispatch.base_schedule_seed.workbook/partition_kind/ServiceDateID/partition_key/SD-2026-03-06/stream/seed
+      expected_generation: 0
+    - binding_key: route_delta_intake
+      state_ref:
+        kind: registry
+        pointer_id: ptr/v1/tenant/demo/domain/ops/dataset/dispatch.route_delta_intake.workbook/partition_kind/ServiceDateID/partition_key/SD-2026-03-06/stream/intake
+      expected_generation: 0
+    - binding_key: actual_hours_snapshot
+      state_ref:
+        kind: registry
+        pointer_id: ptr/v1/tenant/demo/domain/ops/dataset/dispatch.actual_hours_snapshot.workbook/partition_kind/ServiceDateID/partition_key/SD-2026-03-06/stream/actuals
+      expected_generation: 0
+  governance_context:
+    tenant_id: demo
+    domain_id: ops
+    initiating_workflow_run_id: wr-weekly-PW-2026-W10
+    actor_type: system
+    actor_id: system:family-handoff
+  idempotency_key: handoff:weekly_seed_to_live_dispatch:SD-2026-03-06:amazon-2026-03-06-1600

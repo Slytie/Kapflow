@@ -1,0 +1,266 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "WorkflowFamily",
+  "type": "object",
+  "required": [
+    "family"
+  ],
+  "properties": {
+    "family": {
+      "type": "object",
+      "required": [
+        "id",
+        "version",
+        "description",
+        "defaults",
+        "modules",
+        "edges"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "version": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "description": {
+          "type": "string",
+          "minLength": 1
+        },
+        "defaults": {
+          "type": "object",
+          "required": [
+            "first_slice"
+          ],
+          "properties": {
+            "first_slice": {
+              "type": "object",
+              "required": [
+                "daily_seed_shape",
+                "live_delta_semantics",
+                "connectors_mode",
+                "partition_transform_policy"
+              ],
+              "properties": {
+                "daily_seed_shape": {
+                  "type": "string",
+                  "const": "one_logical_seed_per_service_date"
+                },
+                "live_delta_semantics": {
+                  "type": "string",
+                  "const": "ordered_stream"
+                },
+                "connectors_mode": {
+                  "type": "string",
+                  "const": "fixture_only"
+                },
+                "partition_transform_policy": {
+                  "type": "string",
+                  "const": "typed_registry_required"
+                }
+              },
+              "additionalProperties": false
+            }
+          },
+          "additionalProperties": false
+        },
+        "modules": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "required": [
+              "module_id",
+              "workflow_pack_ref",
+              "partition",
+              "status"
+            ],
+            "properties": {
+              "module_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "workflow_pack_ref": {
+                "type": "object",
+                "required": [
+                  "workflow_id",
+                  "version",
+                  "path"
+                ],
+                "properties": {
+                  "workflow_id": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "version": {
+                    "type": "integer",
+                    "minimum": 1
+                  },
+                  "path": {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                },
+                "additionalProperties": false
+              },
+              "partition": {
+                "type": "object",
+                "required": [
+                  "kind",
+                  "activation_policy"
+                ],
+                "properties": {
+                  "kind": {
+                    "type": "string",
+                    "enum": [
+                      "AvailabilityRequestID",
+                      "PlanningWeekID",
+                      "ServiceDateID",
+                      "PayPeriodID",
+                      "ScheduleDateID"
+                    ]
+                  },
+                  "activation_policy": {
+                    "type": "string",
+                    "enum": [
+                      "long_lived_case_per_partition",
+                      "lazy_on_event",
+                      "manual_only"
+                    ]
+                  }
+                },
+                "additionalProperties": false
+              },
+              "status": {
+                "type": "string",
+                "enum": [
+                  "first_slice",
+                  "extension",
+                  "deferred"
+                ]
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "edges": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "required": [
+              "edge_id",
+              "source_module_id",
+              "source_output_ref",
+              "target_module_id",
+              "target_input_ref",
+              "partition_transform_ref",
+              "activation_policy",
+              "handoff_mode",
+              "idempotency_mode",
+              "writer_mode",
+              "compensation_mode",
+              "status"
+            ],
+            "properties": {
+              "edge_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "source_module_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "source_output_ref": {
+                "$ref": "#/$defs/edge_ref"
+              },
+              "target_module_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "target_input_ref": {
+                "$ref": "#/$defs/edge_ref"
+              },
+              "partition_transform_ref": {
+                "type": "string",
+                "minLength": 1
+              },
+              "activation_policy": {
+                "type": "string",
+                "enum": [
+                  "eager",
+                  "lazy",
+                  "dormant"
+                ]
+              },
+              "handoff_mode": {
+                "type": "string",
+                "enum": [
+                  "materialize_seed",
+                  "wake_existing",
+                  "notify_only"
+                ]
+              },
+              "idempotency_mode": {
+                "type": "string",
+                "enum": [
+                  "source-output-version",
+                  "source-output-version-plus-trigger"
+                ]
+              },
+              "writer_mode": {
+                "type": "string",
+                "enum": [
+                  "single_writer",
+                  "source_only",
+                  "target_claims"
+                ]
+              },
+              "compensation_mode": {
+                "type": "string",
+                "enum": [
+                  "none",
+                  "mark_stale",
+                  "retract_before_consume"
+                ]
+              },
+              "status": {
+                "type": "string",
+                "enum": [
+                  "first_slice",
+                  "extension",
+                  "deferred"
+                ]
+              }
+            },
+            "additionalProperties": false
+          }
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "$defs": {
+    "edge_ref": {
+      "type": "object",
+      "required": [
+        "dataset_key",
+        "stage_id"
+      ],
+      "properties": {
+        "dataset_key": {
+          "type": "string",
+          "minLength": 1
+        },
+        "stage_id": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

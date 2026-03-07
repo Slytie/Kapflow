@@ -1,0 +1,19 @@
+method_package:
+  id: <method-package-id>
+  version: <int>
+  applies_to:
+    workflow_id: <workflow-id>
+    stage_id: <stage-id>
+  execution_pattern: <linear_chain|approval_gate|bounded_exception_loop>
+  context_builder_ref: <context-builder-id>
+  tool_profile_ref: <tool-profile-id>
+  output_schema_ref: <output-schema-id>
+  lowering_rule_ref: <lowering-rule-id>
+  stop_policy:
+    max_tool_calls: <int>
+    no_progress_ticks: <int>
+    on_exhaustion: <escalate|wait_for_human|fail>
+  replay_policy:
+    deterministic_fields: []
+    allow_optional_llm_rationale: <true|false>
+  notes: []

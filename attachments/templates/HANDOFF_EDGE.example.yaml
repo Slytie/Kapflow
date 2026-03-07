@@ -1,0 +1,19 @@
+edge:
+  edge_id: weekly_seed_to_live_dispatch
+  source_module_id: weekly_schedule_planning
+  source_output_ref:
+    dataset_key: planning.daily_dispatch_seed.workbook
+    stage_id: Stage07
+  target_module_id: live_dispatch
+  target_input_ref:
+    dataset_key: dispatch.base_schedule_seed.workbook
+    stage_id: Stage01
+  partition_transform:
+    id: planning_week_to_service_days
+    kind: one_to_many
+  activation_policy: lazy
+  idempotency_mode: source_output_version_plus_trigger
+  compensation_mode: mark_stale
+  notes:
+    - Seed materialization alone does not activate live dispatch.
+    - The first daily operational event for the same ServiceDateID combines with the seed to activate the target module.

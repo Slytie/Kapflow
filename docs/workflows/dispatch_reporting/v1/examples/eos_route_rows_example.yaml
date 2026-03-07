@@ -1,0 +1,47 @@
+source_note: Representative route rows from the EOS workbook.
+columns:
+- service_date
+- route_id
+- driver_name
+- packages_dispatched
+- packages_delivered
+- planned_start
+- planned_finish
+- actual_start
+- actual_finish
+- route_minutes
+- source
+rows:
+- - '2026-03-03'
+  - CX100
+  - Brahamvir Singh
+  - 305
+  - 305
+  - '11:40'
+  - '18:31'
+  - '11:33'
+  - '22:10'
+  - 637
+  - EOS 2026-03-03
+- - '2026-03-03'
+  - CX89
+  - Karanveer Singh
+  - 341
+  - 338
+  - '11:40'
+  - '17:05'
+  - '11:33'
+  - '21:30'
+  - 597
+  - EOS 2026-03-03
+- - '2026-03-03'
+  - CX86
+  - Ekjot Singh
+  - 277
+  - 272
+  - '11:40'
+  - '18:18'
+  - '11:33'
+  - '21:20'
+  - 587
+  - EOS 2026-03-03

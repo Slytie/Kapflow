@@ -69,6 +69,46 @@ def test_pointer_list_endpoint_supports_canonical_filters_without_run_filter(
     assert pointers[0]["partition_key"] == str(workflow_run["partition_key"])
 
 
+def test_pointer_list_endpoint_supports_lookup_by_canonical_pointer_id(
+    tmp_path: Path,
+) -> None:
+    harness = RuntimeScenarioHarness.from_yaml(SCENARIO_STAGE06_PUBLISH, tmp_path).prepare()
+    harness.run_steps()
+    workflow_run = stdout_json(
+        run_cli(
+            "--db-url",
+            harness.db_url,
+            "runs",
+            "show",
+            "--workflow-run-id",
+            harness.workflow_run_id,
+            "--json",
+        )
+    )["workflow_run"]
+
+    client = _client(harness)
+    by_address = client.get(
+        "/api/v1/pointers",
+        query={
+            "dataset_key": "schedule.published_schedule.workbook",
+            "partition_kind": "ScheduleDateID",
+            "partition_key": str(workflow_run["partition_key"]),
+        },
+    )
+    assert by_address.status_code == 200
+    pointer_rows = by_address.payload["pointers"]
+    assert len(pointer_rows) == 1
+    pointer_id = str(pointer_rows[0]["pointer_id"])
+    assert pointer_id
+
+    by_id = client.get("/api/v1/pointers", query={"pointer_id": pointer_id})
+    assert by_id.status_code == 200
+    by_id_rows = by_id.payload["pointers"]
+    assert len(by_id_rows) == 1
+    assert by_id_rows[0]["pointer_id"] == pointer_id
+    assert by_id_rows[0]["artifact_version_id"] == pointer_rows[0]["artifact_version_id"]
+
+
 def test_pointer_list_endpoint_keeps_workflow_run_filter_as_compatibility_shape(
     tmp_path: Path,
 ) -> None:

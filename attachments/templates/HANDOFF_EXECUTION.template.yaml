@@ -1,0 +1,20 @@
+edge_execution:
+  edge_execution_id: <edge-execution-id>
+  edge_id: <edge-id>
+  source_activation_ref:
+    workflow_run_id: <workflow-run-id>
+    stage_id: <stage-id>
+  source_output:
+    artifact_version_id: <artifact-version-id>
+    pointer_id: <canonical-pointer-id>
+  target_partition:
+    kind: <PartitionKind>
+    key: <partition-key>
+  trigger_ref: <artifact-version-id-or-event-id>
+  idempotency_key: <idempotency-key>
+  status: <prepared|activated|consumed|stale|failed>
+  cursor_state:
+    last_seen_sequence: <int-or-null>
+  compensation_state:
+    kind: <none|mark_stale|retract_before_consume>
+    status: <n/a|pending|complete>

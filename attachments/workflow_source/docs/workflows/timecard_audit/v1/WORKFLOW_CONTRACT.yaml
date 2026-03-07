@@ -1,0 +1,141 @@
+workflow:
+  id: timecard_audit.v1
+  name: Timecard Audit - Dispatch hours and payroll export reconciliation
+  partition_key:
+    name: PayPeriodID
+    format: PP-YYYY-Www
+    examples:
+    - PP-2026-W10
+  scope:
+    required:
+    - tenant_id
+    - domain_id
+semantics:
+  pinned_runs: true
+  no_inflight_migration_mvp: true
+  officialness:
+    defined_by: promotion_pointer
+    loose_promotion_allowed: true
+    drift_visibility_required: true
+  run_shape:
+    long_lived_case_per_partition: true
+    stage_rerun_policy: same_workflow_run_new_task_run
+execution_overlay:
+  decision_catalog: DECISION_CATALOG.yaml
+  execution_profile: EXECUTION_PROFILE.yaml
+stages:
+- id: Stage01
+  name: Dispatch_and_Payroll_Intake
+  in_scope_mvp: true
+  artifacts:
+  - dataset_key: timecard.dispatch_hours.doc
+    kind: document
+    role: evidence
+  - dataset_key: timecard.dispatch_hours.workbook
+    kind: spreadsheet
+    role: official_input
+  - dataset_key: timecard.payroll_export.doc
+    kind: document
+    role: evidence
+  - dataset_key: timecard.payroll_export.workbook
+    kind: spreadsheet
+    role: official_input
+  notes:
+  - Dispatch-derived hours may arrive before a full payroll export exists.
+  - Missing source files must remain visible rather than silently assumed away.
+- id: Stage02
+  name: Audit_Triage
+  in_scope_mvp: true
+  artifacts:
+  - dataset_key: timecard.audit_triage.doc
+    kind: document
+    role: evidence
+  - dataset_key: timecard.audit_triage.workbook
+    kind: spreadsheet
+    role: official_input
+  produces:
+    flags:
+      required: true
+      examples:
+      - missing_punch
+      - hours_mismatch
+      - break_mismatch
+      - unpaid_rescue
+      - needs_manager_review
+  semantics:
+    task_spawn_policy: conditional_follow_on
+    spawn_budget:
+      per_parent_completion_max_children: 3
+      max_spawn_depth: 3
+    spawn_rules:
+    - id: stage02_request_missing_time_evidence
+      when: triage_requires_missing_information
+      target_stage_id: Stage02
+      task_kind: information_request
+      candidate_roles:
+      - payroll_admin
+      - payroll_manager
+    - id: stage02_return_for_retriage
+      when: triage_requires_rework
+      target_stage_id: Stage02
+      task_kind: work_item
+      candidate_roles:
+      - payroll_admin
+  notes:
+  - Dispatch actuals, rescues, and breaks should reconcile against payroll export
+    rows before payroll finalization.
+- id: Stage03
+  name: Correction_Review
+  in_scope_mvp: true
+  approvals:
+    required: true
+    group: payroll_manager
+    action: approve_timecard_corrections
+  artifacts:
+  - dataset_key: timecard.correction_review.doc
+    kind: document
+    role: evidence
+  - dataset_key: timecard.correction_review.workbook
+    kind: spreadsheet
+    role: evidence
+  notes:
+  - The correction review approves or rejects the reconciliation result before handoff.
+- id: Stage04
+  name: Final_Corrected_Register
+  in_scope_mvp: true
+  artifacts:
+  - dataset_key: timecard.handoff_packet.doc
+    kind: document
+    role: evidence
+  - dataset_key: timecard.corrected_register.workbook
+    kind: spreadsheet
+    role: official_output
+  notes:
+  - This workflow stops at the corrected register / handoff boundary. payroll.v1 remains
+    the downstream payroll-finalization workflow.
+event_inventory:
+  platform_required:
+  - workflow.run.created
+  - workflow.run.state_changed
+  - task.run.created
+  - task.run.state_changed
+  - task.created
+  - task.claimed
+  - task.lease_expired
+  - task.completed
+  - approval.requested
+  - approval.responded
+  - execution.session.created
+  - execution.session.state_changed
+  - tool.execution.requested
+  - tool.execution.approved
+  - tool.execution.denied
+  - tool.execution.completed
+  - audit.degraded_mode.changed
+  workflow_required:
+  - artifact.version.created
+  - artifact.pointer.promoted
+  - artifact.pointer.drift_detected
+  - flag.created
+  - flag.state_changed
+  - projection.coherence_failed

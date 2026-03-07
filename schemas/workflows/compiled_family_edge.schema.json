@@ -1,0 +1,200 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "CompiledFamilyEdge",
+  "type": "object",
+  "required": [
+    "family_id",
+    "family_version",
+    "edge_id",
+    "semantic_digest",
+    "status",
+    "source_module_id",
+    "source_output_ref",
+    "target_module_id",
+    "target_input_ref",
+    "partition_transform",
+    "activation_policy",
+    "handoff_mode",
+    "idempotency_mode",
+    "writer_mode",
+    "compensation_mode",
+    "defaults"
+  ],
+  "properties": {
+    "family_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "family_version": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "edge_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "semantic_digest": {
+      "type": "string",
+      "pattern": "^sha256:[a-f0-9]{64}$"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "first_slice",
+        "extension",
+        "deferred"
+      ]
+    },
+    "source_module_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "source_output_ref": {
+      "$ref": "#/$defs/edge_ref"
+    },
+    "target_module_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "target_input_ref": {
+      "$ref": "#/$defs/edge_ref"
+    },
+    "partition_transform": {
+      "type": "object",
+      "required": [
+        "id",
+        "source_kind",
+        "target_kind",
+        "shape",
+        "implementation_ref",
+        "deterministic"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "source_kind": {
+          "type": "string",
+          "enum": [
+            "AvailabilityRequestID",
+            "PlanningWeekID",
+            "ServiceDateID",
+            "PayPeriodID",
+            "ScheduleDateID"
+          ]
+        },
+        "target_kind": {
+          "type": "string",
+          "enum": [
+            "AvailabilityRequestID",
+            "PlanningWeekID",
+            "ServiceDateID",
+            "PayPeriodID",
+            "ScheduleDateID"
+          ]
+        },
+        "shape": {
+          "type": "string",
+          "enum": [
+            "one_to_one",
+            "one_to_many",
+            "many_to_one"
+          ]
+        },
+        "implementation_ref": {
+          "type": "string",
+          "pattern": "^partition_codec\\.[a-z0-9_]+\\.v[0-9]+$"
+        },
+        "deterministic": {
+          "type": "boolean",
+          "const": true
+        }
+      },
+      "additionalProperties": false
+    },
+    "activation_policy": {
+      "type": "string",
+      "enum": [
+        "eager",
+        "lazy",
+        "dormant"
+      ]
+    },
+    "handoff_mode": {
+      "type": "string",
+      "enum": [
+        "materialize_seed",
+        "wake_existing",
+        "notify_only"
+      ]
+    },
+    "idempotency_mode": {
+      "type": "string",
+      "enum": [
+        "source-output-version",
+        "source-output-version-plus-trigger"
+      ]
+    },
+    "writer_mode": {
+      "type": "string",
+      "enum": [
+        "single_writer",
+        "source_only",
+        "target_claims"
+      ]
+    },
+    "compensation_mode": {
+      "type": "string",
+      "enum": [
+        "none",
+        "mark_stale",
+        "retract_before_consume"
+      ]
+    },
+    "defaults": {
+      "type": "object",
+      "required": [
+        "daily_seed_shape",
+        "live_delta_semantics",
+        "connectors_mode"
+      ],
+      "properties": {
+        "daily_seed_shape": {
+          "type": "string",
+          "const": "one_logical_seed_per_service_date"
+        },
+        "live_delta_semantics": {
+          "type": "string",
+          "const": "ordered_stream"
+        },
+        "connectors_mode": {
+          "type": "string",
+          "const": "fixture_only"
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "$defs": {
+    "edge_ref": {
+      "type": "object",
+      "required": [
+        "dataset_key",
+        "stage_id"
+      ],
+      "properties": {
+        "dataset_key": {
+          "type": "string",
+          "minLength": 1
+        },
+        "stage_id": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

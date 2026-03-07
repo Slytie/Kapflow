@@ -1,0 +1,17 @@
+source_note: Example decision artifact showing partial approval semantics.
+columns:
+- request_id
+- decision
+- approved_dates
+- denied_dates
+- approver
+- decision_at
+- notes
+rows:
+- - AR-20260304-0001
+  - partially_approved
+  - '2026-03-15'
+  - '2026-03-16'
+  - operations_manager:dojo
+  - '2026-03-05T09:10:00-08:00'
+  - Sunday approved; Monday denied due to coverage

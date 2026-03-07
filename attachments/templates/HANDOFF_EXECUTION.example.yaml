@@ -1,0 +1,20 @@
+edge_execution:
+  edge_execution_id: ee-weekly-to-live-SD-2026-03-06-0001
+  edge_id: weekly_seed_to_live_dispatch
+  source_activation_ref:
+    workflow_run_id: wr-weekly-PW-2026-W10
+    stage_id: Stage07
+  source_output:
+    artifact_version_id: av-seed-SD-2026-03-06-v1
+    pointer_id: ptr/v1/tenant/demo/domain/ops/dataset/dispatch.base_schedule_seed.workbook/partition_kind/ServiceDateID/partition_key/SD-2026-03-06/stream/seed
+  target_partition:
+    kind: ServiceDateID
+    key: SD-2026-03-06
+  trigger_ref: evt-delta-20260306-1600
+  idempotency_key: weekly_seed_to_live_dispatch:av-seed-SD-2026-03-06-v1:evt-delta-20260306-1600
+  status: activated
+  cursor_state:
+    last_seen_sequence: 1
+  compensation_state:
+    kind: mark_stale
+    status: n/a

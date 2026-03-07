@@ -1,0 +1,103 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "PartitionTransformRegistry",
+  "type": "object",
+  "required": [
+    "registry"
+  ],
+  "properties": {
+    "registry": {
+      "type": "object",
+      "required": [
+        "id",
+        "version",
+        "transforms"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "version": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "transforms": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "required": [
+              "id",
+              "source_kind",
+              "target_kind",
+              "shape",
+              "implementation_ref",
+              "deterministic",
+              "status"
+            ],
+            "properties": {
+              "id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "source_kind": {
+                "type": "string",
+                "enum": [
+                  "AvailabilityRequestID",
+                  "PlanningWeekID",
+                  "ServiceDateID",
+                  "PayPeriodID",
+                  "ScheduleDateID"
+                ]
+              },
+              "target_kind": {
+                "type": "string",
+                "enum": [
+                  "AvailabilityRequestID",
+                  "PlanningWeekID",
+                  "ServiceDateID",
+                  "PayPeriodID",
+                  "ScheduleDateID"
+                ]
+              },
+              "shape": {
+                "type": "string",
+                "enum": [
+                  "one_to_one",
+                  "one_to_many",
+                  "many_to_one"
+                ]
+              },
+              "implementation_ref": {
+                "type": "string",
+                "pattern": "^partition_codec\\.[a-z0-9_]+\\.v[0-9]+$"
+              },
+              "deterministic": {
+                "type": "boolean",
+                "const": true
+              },
+              "status": {
+                "type": "string",
+                "enum": [
+                  "first_slice",
+                  "extension",
+                  "deferred"
+                ]
+              },
+              "notes": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            },
+            "additionalProperties": false
+          }
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

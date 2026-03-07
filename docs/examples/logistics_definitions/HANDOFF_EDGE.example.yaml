@@ -1,0 +1,29 @@
+family_id: logistics_ops_family.v1
+family_version: 1
+edge_id: weekly_seed_to_live_dispatch
+semantic_digest: sha256:2222222222222222222222222222222222222222222222222222222222222222
+status: first_slice
+source_module_id: weekly_schedule_planning
+source_output_ref:
+  dataset_key: planning.daily_dispatch_seed.workbook
+  stage_id: Stage07
+target_module_id: live_dispatch
+target_input_ref:
+  dataset_key: dispatch.base_schedule_seed.workbook
+  stage_id: Stage01
+partition_transform:
+  id: planning_week_to_service_days
+  source_kind: PlanningWeekID
+  target_kind: ServiceDateID
+  shape: one_to_many
+  implementation_ref: partition_codec.planning_week_to_service_days.v1
+  deterministic: true
+activation_policy: lazy
+handoff_mode: materialize_seed
+idempotency_mode: source-output-version-plus-trigger
+writer_mode: source_only
+compensation_mode: mark_stale
+defaults:
+  daily_seed_shape: one_logical_seed_per_service_date
+  live_delta_semantics: ordered_stream
+  connectors_mode: fixture_only

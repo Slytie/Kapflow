@@ -1,0 +1,43 @@
+source_note: Derived from the uploaded 2026-03-03 EOS workbook route rows.
+rows:
+- - '2026-03-03'
+  - A1P1CDL949GCH7
+  - Brahamvir Singh
+  - '11:40'
+  - '18:31'
+  - '11:33'
+  - '22:10'
+  - 637
+  - CX100
+  - EOS 2026-03-03
+- - '2026-03-03'
+  - A34WEHEN1XXRKR
+  - Karanveer Singh
+  - '11:40'
+  - '17:05'
+  - '11:33'
+  - '21:30'
+  - 597
+  - CX89
+  - EOS 2026-03-03
+- - '2026-03-03'
+  - A2S2SO4XUULX7H
+  - Ekjot Singh
+  - '11:40'
+  - '18:18'
+  - '11:33'
+  - '21:20'
+  - 587
+  - CX86
+  - EOS 2026-03-03
+columns:
+- service_date
+- driver_id
+- driver_name
+- planned_start
+- planned_finish
+- actual_start
+- actual_finish
+- actual_minutes
+- route_id
+- source

@@ -1,0 +1,24 @@
+catalog:
+  workflow_id: dispatch_reporting.v1
+  version: 1
+  decisions:
+  - id: reporting.stage04.confirm_reporting_packet
+    stage_id: Stage04
+    decision_kind: business_decision
+    requested_from_role: operations_manager
+    action: confirm_dispatch_reporting_packet
+    allowed_responses:
+    - approve
+    - reject
+    - request_changes
+    evidence_requirements:
+      artifact_keys:
+      - reporting.upd_draft.doc
+      - reporting.manager_review.doc
+      projection_id: reporting.stage04.review_packet
+    sla:
+      due_in_minutes: 120
+      on_expire:
+        escalate_to_role: operations_manager
+    notes:
+    - Confirmation is required before official closeout output exists.

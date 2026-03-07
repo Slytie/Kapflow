@@ -1,0 +1,196 @@
+workflow:
+  id: weekly_schedule_planning.v1
+  name: Weekly Schedule Planning - Amazon route horizon to published base schedule
+  partition_key:
+    name: PlanningWeekID
+    format: PW-YYYY-Www
+    examples:
+    - PW-2026-W10
+  scope:
+    required:
+    - tenant_id
+    - domain_id
+  temporal_partition:
+    interval_kind: planning_week
+    interval_closure: '[start,end)'
+    logical_date_source: week_start_date
+    service_timezone:
+      default: America/Vancouver
+      source_dataset_key: planning.approved_availability.workbook
+    catchup_policy: manual_only
+    backfill_policy: explicit_operator_request
+    stage_rerun_policy: same_workflow_run_new_task_run
+semantics:
+  pinned_runs: true
+  no_inflight_migration_mvp: true
+  officialness:
+    defined_by: promotion_pointer
+    loose_promotion_allowed: true
+    drift_visibility_required: true
+  run_shape:
+    long_lived_case_per_partition: true
+    stage_rerun_policy: same_workflow_run_new_task_run
+    catchup_policy: manual_only
+    backfill_policy: explicit_operator_request
+execution_overlay:
+  decision_catalog: DECISION_CATALOG.yaml
+  execution_profile: EXECUTION_PROFILE.yaml
+stages:
+- id: Stage01
+  name: Amazon_Route_Horizon_Intake
+  in_scope_mvp: true
+  artifacts:
+  - dataset_key: planning.route_horizon.doc
+    kind: document
+    role: evidence
+  - dataset_key: planning.route_horizon.workbook
+    kind: spreadsheet
+    role: official_input
+  notes:
+  - Ingest Friday / horizon route updates and normalize them into one weekly route-row
+    table.
+  - The 1-3 week portion is scheduling truth; 4-6 weeks is staffing guidance; 7+ weeks
+    is directional only.
+- id: Stage02
+  name: Approved_Availability_Snapshot
+  in_scope_mvp: true
+  artifacts:
+  - dataset_key: planning.approved_availability.doc
+    kind: document
+    role: official_input
+  - dataset_key: planning.approved_availability.workbook
+    kind: spreadsheet
+    role: official_input
+  notes:
+  - This stage merges the standing driver pattern with approved time off and operator-side
+    roster updates.
+  - Only approved changes may affect planning truth.
+- id: Stage03
+  name: Actual_Hours_Compliance_Snapshot
+  in_scope_mvp: true
+  artifacts:
+  - dataset_key: planning.actual_hours_snapshot.doc
+    kind: document
+    role: evidence
+  - dataset_key: planning.actual_hours_snapshot.workbook
+    kind: spreadsheet
+    role: official_input
+  notes:
+  - Recent actual hours from EOS / dispatch closeout are pulled forward so WHC checks
+    use real work where possible.
+- id: Stage04
+  name: Draft_Weekly_Schedule_Build
+  in_scope_mvp: true
+  artifacts:
+  - dataset_key: planning.draft_weekly_schedule.doc
+    kind: document
+    role: evidence
+  - dataset_key: planning.draft_weekly_schedule.workbook
+    kind: spreadsheet
+    role: official_input
+  produces:
+    flags:
+      required: true
+      examples:
+      - whc_risk
+      - route_gap
+      - insufficient_on_call
+      - fairness_review
+  notes:
+  - Build the draft weekly base schedule from route counts, approved availability,
+    and recent actual hours.
+  - This stage may use deterministic code plus narrowly-scoped LLM drafting for the
+    ops packet, but not for official publication.
+- id: Stage05
+  name: Manager_Review_Edit
+  in_scope_mvp: true
+  artifacts:
+  - dataset_key: planning.manager_review.doc
+    kind: document
+    role: evidence
+  semantics:
+    task_spawn_policy: conditional_follow_on
+    spawn_budget:
+      per_parent_completion_max_children: 3
+      max_spawn_depth: 2
+    spawn_rules:
+    - id: stage05_request_schedule_changes
+      when: manager_requests_changes
+      target_stage_id: Stage04
+      task_kind: work_item
+      candidate_roles:
+      - schedule_planner
+    - id: stage05_request_missing_information
+      when: manager_requires_more_information
+      target_stage_id: Stage05
+      task_kind: information_request
+      candidate_roles:
+      - operations_manager
+      - schedule_planner
+    - id: stage05_final_publish_review
+      when: draft_is_ready_for_publish
+      target_stage_id: Stage05
+      task_kind: final_review
+      candidate_roles:
+      - operations_manager
+  notes:
+  - Human review stays in the loop. The manager may rebalance regular shifts, on-call,
+    and fairness exceptions before publish.
+- id: Stage06
+  name: Publish_Weekly_Base_Schedule
+  in_scope_mvp: true
+  approvals:
+    required: true
+    group: operations_manager
+    action: publish_weekly_base_schedule
+  artifacts:
+  - dataset_key: planning.publish_packet.doc
+    kind: document
+    role: evidence
+  - dataset_key: planning.published_weekly_schedule.workbook
+    kind: spreadsheet
+    role: official_output
+  semantics:
+    approval_snapshot_required: true
+    stable_base_schedule_required: true
+  notes:
+  - This publishes the official weekly base schedule. It does not own day-of replan.
+- id: Stage07
+  name: Materialize_Daily_Dispatch_Seeds
+  in_scope_mvp: true
+  artifacts:
+  - dataset_key: planning.daily_dispatch_seed.doc
+    kind: document
+    role: evidence
+  - dataset_key: planning.daily_dispatch_seed.workbook
+    kind: spreadsheet
+    role: official_output
+  notes:
+  - Create one per-service-day seed packet from the published weekly base schedule.
+  - These seed artifacts are the handoff point into live_dispatch.v1.
+event_inventory:
+  platform_required:
+  - workflow.run.created
+  - workflow.run.state_changed
+  - task.run.created
+  - task.run.state_changed
+  - task.created
+  - task.claimed
+  - task.lease_expired
+  - task.completed
+  - approval.requested
+  - approval.responded
+  - execution.session.created
+  - execution.session.state_changed
+  - tool.execution.requested
+  - tool.execution.approved
+  - tool.execution.denied
+  - tool.execution.completed
+  - audit.degraded_mode.changed
+  workflow_required:
+  - artifact.version.created
+  - artifact.pointer.promoted
+  - artifact.pointer.drift_detected
+  - flag.created
+  - flag.state_changed
+  - projection.coherence_failed

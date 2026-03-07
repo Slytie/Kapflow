@@ -1,0 +1,179 @@
+workflow:
+  id: live_dispatch.v1
+  name: Live Dispatch - Per-day exceptions and official replan deltas
+  partition_key:
+    name: ServiceDateID
+    format: SD-YYYY-MM-DD
+    examples:
+    - SD-2026-03-04
+  scope:
+    required:
+    - tenant_id
+    - domain_id
+  temporal_partition:
+    interval_kind: service_day
+    interval_closure: '[start,end)'
+    logical_date_source: service_date
+    service_timezone:
+      default: America/Vancouver
+      source_dataset_key: dispatch.base_schedule_seed.workbook
+    catchup_policy: manual_only
+    backfill_policy: explicit_operator_request
+    stage_rerun_policy: same_workflow_run_new_task_run
+semantics:
+  pinned_runs: true
+  no_inflight_migration_mvp: true
+  officialness:
+    defined_by: promotion_pointer
+    loose_promotion_allowed: true
+    drift_visibility_required: true
+  run_shape:
+    long_lived_case_per_partition: true
+    stage_rerun_policy: same_workflow_run_new_task_run
+    catchup_policy: manual_only
+    backfill_policy: explicit_operator_request
+execution_overlay:
+  decision_catalog: DECISION_CATALOG.yaml
+  execution_profile: EXECUTION_PROFILE.yaml
+stages:
+- id: Stage01
+  name: Baseline_and_Event_Intake
+  in_scope_mvp: true
+  artifacts:
+  - dataset_key: dispatch.base_schedule_seed.doc
+    kind: document
+    role: official_input
+  - dataset_key: dispatch.base_schedule_seed.workbook
+    kind: spreadsheet
+    role: official_input
+  - dataset_key: dispatch.route_delta_intake.doc
+    kind: document
+    role: evidence
+  - dataset_key: dispatch.route_delta_intake.workbook
+    kind: spreadsheet
+    role: official_input
+  - dataset_key: dispatch.actual_hours_snapshot.workbook
+    kind: spreadsheet
+    role: official_input
+  notes:
+  - The run starts from a daily seed created by weekly_schedule_planning.v1 plus one
+    or more day-of operational events.
+  - Supported day-of events include daily route-change emails, ERO / extra routes,
+    manual station requests, sick calls, and no-shows.
+- id: Stage02
+  name: Issue_Triage_and_Candidate_Generation
+  in_scope_mvp: true
+  artifacts:
+  - dataset_key: dispatch.issue_board.doc
+    kind: document
+    role: evidence
+  - dataset_key: dispatch.replan_candidate.workbook
+    kind: spreadsheet
+    role: official_input
+  produces:
+    flags:
+      required: true
+      examples:
+      - route_increase
+      - route_drop
+      - sick_call
+      - no_show
+      - ero
+      - station_request
+      - whc_block
+      - no_candidate
+  semantics:
+    task_spawn_policy: issue_scoped
+    spawn_budget:
+      per_issue_max_children: 4
+      max_spawn_depth: 4
+    spawn_rules:
+    - id: stage02_request_missing_information
+      when: replan_requires_missing_information
+      target_stage_id: Stage02
+      task_kind: information_request
+      candidate_roles:
+      - ops_resolver
+      - dispatch_supervisor
+    - id: stage02_follow_on_child_issue
+      when: resolution_creates_child_issue
+      target_stage_id: Stage02
+      task_kind: exception_triage
+      candidate_roles:
+      - ops_resolver
+      - dispatch_supervisor
+    - id: stage02_final_dispatch_review
+      when: candidate_set_is_ready_for_review
+      target_stage_id: Stage03
+      task_kind: final_review
+      candidate_roles:
+      - dispatch_supervisor
+    activation_key_template: workflow_run_id+flag_id+task_kind+generation
+  notes:
+  - Hard filters use approved availability, actual hours, rest, consecutive-day, and
+    rolling-7-day limits before any ranking.
+  - Soft ranking favors on-call coverage, fewer assigned shifts, and drivers who recently
+    lost work due to route cancellation.
+- id: Stage03
+  name: Dispatcher_Review
+  in_scope_mvp: true
+  artifacts:
+  - dataset_key: dispatch.dispatcher_review.doc
+    kind: document
+    role: evidence
+  notes:
+  - Small changes may complete after required review confirmation.
+  - Large changes escalate into Stage04 approval.
+- id: Stage04
+  name: Major_Replan_Approval
+  in_scope_mvp: true
+  approvals:
+    conditional: true
+    group: operations_manager
+    action: approve_major_dispatch_replan
+  artifacts:
+  - dataset_key: dispatch.major_replan_packet.doc
+    kind: document
+    role: evidence
+  notes:
+  - Provisional major-change triggers include multi-route additions, lack of a compliant
+    candidate, or changes after shift confirmation.
+- id: Stage05
+  name: Promote_Official_Replan_Delta
+  in_scope_mvp: true
+  artifacts:
+  - dataset_key: dispatch.official_replan_delta.workbook
+    kind: spreadsheet
+    role: official_output
+  - dataset_key: dispatch.change_notice.doc
+    kind: document
+    role: evidence
+  notes:
+  - The base schedule seed remains immutable. Official live operational truth changes
+    only through ordered delta promotion.
+event_inventory:
+  platform_required:
+  - workflow.run.created
+  - workflow.run.state_changed
+  - task.run.created
+  - task.run.state_changed
+  - task.created
+  - task.claimed
+  - task.lease_expired
+  - task.completed
+  - approval.requested
+  - approval.responded
+  - execution.session.created
+  - execution.session.state_changed
+  - tool.execution.requested
+  - tool.execution.approved
+  - tool.execution.denied
+  - tool.execution.completed
+  - audit.degraded_mode.changed
+  workflow_required:
+  - artifact.version.created
+  - artifact.pointer.promoted
+  - artifact.pointer.drift_detected
+  - flag.created
+  - flag.state_changed
+  - projection.coherence_failed

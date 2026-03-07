@@ -1,0 +1,52 @@
+source_note: Normalized from the forwarded Amazon daily route updates and route-request
+  notice.
+columns:
+- event_id
+- event_type
+- received_at
+- service_date
+- previous_routes
+- new_routes
+- delta
+- service_type
+- cycle
+- source_message_id
+- auto_accepted
+- notes
+rows:
+- - evt-delta-20260226
+  - daily_route_update
+  - '2026-02-26T17:07:00-08:00'
+  - '2026-02-27'
+  - 21
+  - 19
+  - -2
+  - Standard Parcel - Extra Large Van - US
+  - Cycle 1
+  - amazon-2026-02-26-1707
+  - false
+  - Daily decrease
+- - evt-delta-20260225
+  - daily_route_update
+  - '2026-02-25T17:05:00-08:00'
+  - '2026-02-26'
+  - 20
+  - 19
+  - -1
+  - Standard Parcel - Extra Large Van - US
+  - Cycle 1
+  - amazon-2026-02-25-1705
+  - false
+  - Daily decrease
+- - evt-ero-20260304
+  - route_request_notice
+  - '2026-03-04T16:00:00-08:00'
+  - null
+  - null
+  - null
+  - null
+  - Standard Parcel
+  - Cycle 1
+  - amazon-2026-03-04-1600
+  - true
+  - Weeks W14-W23 auto-accepted request

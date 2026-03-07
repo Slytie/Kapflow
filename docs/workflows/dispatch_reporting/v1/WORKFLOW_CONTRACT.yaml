@@ -1,0 +1,141 @@
+workflow:
+  id: dispatch_reporting.v1
+  name: Dispatch Reporting - EOS actuals normalization and packet finalization
+  partition_key:
+    name: ServiceDateID
+    format: SD-YYYY-MM-DD
+    examples:
+    - SD-2026-03-03
+  scope:
+    required:
+    - tenant_id
+    - domain_id
+  temporal_partition:
+    interval_kind: service_day
+    interval_closure: '[start,end)'
+    logical_date_source: service_date
+    service_timezone:
+      default: America/Vancouver
+      source_dataset_key: reporting.eos_raw.workbook
+    catchup_policy: manual_only
+    backfill_policy: explicit_operator_request
+    stage_rerun_policy: same_workflow_run_new_task_run
+semantics:
+  pinned_runs: true
+  no_inflight_migration_mvp: true
+  officialness:
+    defined_by: promotion_pointer
+    loose_promotion_allowed: true
+    drift_visibility_required: true
+  run_shape:
+    long_lived_case_per_partition: true
+    stage_rerun_policy: same_workflow_run_new_task_run
+    catchup_policy: manual_only
+    backfill_policy: explicit_operator_request
+execution_overlay:
+  decision_catalog: DECISION_CATALOG.yaml
+  execution_profile: EXECUTION_PROFILE.yaml
+stages:
+- id: Stage01
+  name: EOS_Intake
+  in_scope_mvp: true
+  artifacts:
+  - dataset_key: reporting.eos_raw.doc
+    kind: document
+    role: evidence
+  - dataset_key: reporting.eos_raw.workbook
+    kind: spreadsheet
+    role: official_input
+  notes:
+  - The uploaded EOS workbook contains route-level actuals, summaries, adherence checks,
+    break tracking, and UPD-related sections.
+- id: Stage02
+  name: Actuals_Normalization
+  in_scope_mvp: true
+  artifacts:
+  - dataset_key: reporting.actuals_normalized.doc
+    kind: document
+    role: evidence
+  - dataset_key: reporting.actuals_normalized.workbook
+    kind: spreadsheet
+    role: official_input
+  notes:
+  - Row-level operational truth outranks fragile spreadsheet summary formulas.
+  - 'This stage should recompute totals and flag formula-integrity issues such as
+    #REF! or #VALUE!.'
+- id: Stage03
+  name: Threshold_Detection_and_Draft_Packet
+  in_scope_mvp: true
+  artifacts:
+  - dataset_key: reporting.upd_draft.doc
+    kind: document
+    role: evidence
+  - dataset_key: reporting.upd_draft.workbook
+    kind: spreadsheet
+    role: official_input
+  produces:
+    flags:
+      required: true
+      examples:
+      - upd_candidate
+      - over_600_minutes
+      - route_adherence_review
+      - break_review
+      - formula_integrity_warning
+  notes:
+  - Generate the draft reporting packet and mark cases that may require UPD / >600-minute
+    follow-up.
+- id: Stage04
+  name: Manager_Review_Confirm
+  in_scope_mvp: true
+  approvals:
+    required: true
+    group: operations_manager
+    action: confirm_dispatch_reporting_packet
+  artifacts:
+  - dataset_key: reporting.manager_review.doc
+    kind: document
+    role: evidence
+  notes:
+  - Manager confirmation is required before any reporting packet becomes official.
+- id: Stage05
+  name: Finalize_Reporting_Packet
+  in_scope_mvp: true
+  artifacts:
+  - dataset_key: reporting.final_packet.doc
+    kind: document
+    role: official_output
+  - dataset_key: reporting.final_packet.workbook
+    kind: spreadsheet
+    role: official_output
+  notes:
+  - Finalized reporting output is linked back to the source EOS upload and normalized
+    row set.
+  - A downstream actual-hours snapshot from this packet should feed future planning
+    and dispatch eligibility.
+event_inventory:
+  platform_required:
+  - workflow.run.created
+  - workflow.run.state_changed
+  - task.run.created
+  - task.run.state_changed
+  - task.created
+  - task.claimed
+  - task.lease_expired
+  - task.completed
+  - approval.requested
+  - approval.responded
+  - execution.session.created
+  - execution.session.state_changed
+  - tool.execution.requested
+  - tool.execution.approved
+  - tool.execution.denied
+  - tool.execution.completed
+  - audit.degraded_mode.changed
+  workflow_required:
+  - artifact.version.created
+  - artifact.pointer.promoted
+  - artifact.pointer.drift_detected
+  - flag.created
+  - flag.state_changed
+  - projection.coherence_failed

@@ -2895,6 +2895,20 @@ def promote_pointer_command(
                     "pointer_key": pointer_key,
                 },
             )
+        canonical_dataset_key = str(
+            pointer.get("dataset_key")
+            or canonical_pointer_identity.get("dataset_key")
+            or ""
+        ).strip().lower()
+        if not canonical_dataset_key:
+            raise CommandError(
+                code="pointer_identity_unresolved",
+                message="canonical pointer dataset key missing after promotion",
+                details={
+                    "workflow_run_id": workflow_run_id,
+                    "pointer_key": pointer_key,
+                },
+            )
 
         if prior_target_pointer is not None:
             _capture_pointer_input_binding(
@@ -2940,7 +2954,7 @@ def promote_pointer_command(
                 links=links,
                 payload={
                     "pointer_id": canonical_pointer_id,
-                    "dataset_key": artifact_kind,
+                    "dataset_key": canonical_dataset_key,
                     "promoted_artifact_version_id": artifact_version_id,
                     "reviewed_artifact_version_id": reviewed_artifact_version_id,
                 },
@@ -3039,7 +3053,7 @@ def promote_pointer_command(
                     links=links,
                     payload={
                         "pointer_id": canonical_pointer_id,
-                        "dataset_key": artifact_kind,
+                        "dataset_key": canonical_dataset_key,
                         "reviewed_artifact_version_id": str(
                             reviewed_artifact_version_id or reviewed_base_artifact_version_id
                         ),

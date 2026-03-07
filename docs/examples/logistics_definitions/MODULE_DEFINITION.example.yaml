@@ -1,0 +1,72 @@
+module_id: live_dispatch
+source_workflow:
+  workflow_id: live_dispatch.v1
+  version: 1
+  path: docs/workflows/live_dispatch/v1
+semantic_digest: sha256:1111111111111111111111111111111111111111111111111111111111111111
+status: first_slice
+partition:
+  kind: ServiceDateID
+  activation_policy: lazy_on_event
+defaults:
+  daily_seed_shape: one_logical_seed_per_service_date
+  live_delta_semantics: ordered_stream
+  connectors_mode: fixture_only
+inputs:
+  - dataset_key: dispatch.base_schedule_seed.workbook
+    stage_id: Stage01
+    artifact_role: official_input
+    state_ref:
+      kind: registry
+      address:
+        tenant_id: "{{tenant_id}}"
+        domain_id: "{{domain_id}}"
+        dataset_key: dispatch.base_schedule_seed.workbook
+        partition_kind: ServiceDateID
+        partition_key: "{{ServiceDateID}}"
+        stream_key: latest
+        registry_kind: singleton
+  - dataset_key: dispatch.route_delta_intake.workbook
+    stage_id: Stage01
+    artifact_role: official_input
+    state_ref:
+      kind: registry
+      address:
+        tenant_id: "{{tenant_id}}"
+        domain_id: "{{domain_id}}"
+        dataset_key: dispatch.route_delta_intake.workbook
+        partition_kind: ServiceDateID
+        partition_key: "{{ServiceDateID}}"
+        stream_key: intake
+        registry_kind: ordered_stream
+outputs:
+  - dataset_key: dispatch.official_replan_delta.workbook
+    stage_id: Stage05
+    artifact_role: official_output
+    state_ref:
+      kind: registry
+      address:
+        tenant_id: "{{tenant_id}}"
+        domain_id: "{{domain_id}}"
+        dataset_key: dispatch.official_replan_delta.workbook
+        partition_kind: ServiceDateID
+        partition_key: "{{ServiceDateID}}"
+        stream_key: delta
+        registry_kind: ordered_stream
+stages:
+  - stage_id: Stage01
+    execution_pattern: linear_chain
+    decision_refs: []
+  - stage_id: Stage02
+    execution_pattern: bounded_exception_loop
+    decision_refs: []
+  - stage_id: Stage03
+    execution_pattern: linear_chain
+    decision_refs: []
+  - stage_id: Stage04
+    execution_pattern: approval_gate
+    decision_refs:
+      - dispatch.stage04.approve_major_replan
+  - stage_id: Stage05
+    execution_pattern: linear_chain
+    decision_refs: []

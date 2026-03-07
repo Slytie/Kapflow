@@ -1,0 +1,23 @@
+activation_request:
+  request_id: <request-id>
+  family_id: <family-id>
+  target_module_id: <module-id>
+  target_partition:
+    kind: <PartitionKind>
+    key: <partition-key>
+  trigger:
+    kind: <seed_only|event|handoff|manual>
+    source_ref: <artifact-version-id-or-pointer-id>
+  required_inputs:
+    - binding_key: <binding-key>
+      state_ref:
+        kind: registry
+        pointer_id: <canonical-pointer-id>
+      expected_generation: <int>
+  governance_context:
+    tenant_id: <tenant-id>
+    domain_id: <domain-id>
+    initiating_workflow_run_id: <optional-workflow-run-id>
+    actor_type: <actor-type>
+    actor_id: <actor-id>
+  idempotency_key: <stable-idempotency-key>

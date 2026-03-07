@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import sqlite3
 from typing import Any
 
@@ -70,7 +71,7 @@ def test_pointer_dual_write_keeps_legacy_and_canonical_identity_aligned() -> Non
                 "scope_kind": "stage",
                 "scope_ref": "Stage06",
                 "pointer_key": "official:schedule.published_schedule.workbook",
-                "artifact_kind": "schedule.published_schedule.workbook",
+                "artifact_kind": "SCHEDULE.PUBLISHED_SCHEDULE.WORKBOOK",
             },
             {
                 "suffix": "workflow-partition-shape",
@@ -149,5 +150,20 @@ def test_pointer_dual_write_keeps_legacy_and_canonical_identity_aligned() -> Non
             assert str(by_pointer_id["pointer_key"]) == str(row["pointer_key"])
             assert str(by_pointer_id["artifact_version_id"]) == str(row["artifact_version_id"])
             assert int(by_pointer_id["generation"]) == int(row["generation"])
+
+            promoted_event = connection.execute(
+                """
+                SELECT payload
+                FROM timeline_events
+                WHERE workflow_run_id = ? AND event_type = 'artifact.pointer.promoted'
+                ORDER BY sequence_no DESC
+                LIMIT 1
+                """,
+                (str(workflow_run["workflow_run_id"]),),
+            ).fetchone()
+            assert promoted_event is not None
+            promoted_payload = json.loads(str(promoted_event["payload"]))
+            assert promoted_payload["pointer_id"] == pointer_id
+            assert promoted_payload["dataset_key"] == canonical.dataset_key
     finally:
         connection.close()

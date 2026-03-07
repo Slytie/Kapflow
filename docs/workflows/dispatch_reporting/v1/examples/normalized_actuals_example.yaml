@@ -1,0 +1,35 @@
+source_note: Normalized route actuals with formula-integrity warnings.
+columns:
+- service_date
+- route_id
+- driver_name
+- actual_minutes
+- returned_packages
+- return_reasons
+- upd_candidate
+- formula_integrity_warning
+rows:
+- - '2026-03-03'
+  - CX100
+  - Brahamvir Singh
+  - 637
+  - 0
+  - ''
+  - true
+  - source workbook had broken summary formulas
+- - '2026-03-03'
+  - CX89
+  - Karanveer Singh
+  - 597
+  - 3
+  - REJ
+  - 'False'
+  - ''
+- - '2026-03-03'
+  - CX86
+  - Ekjot Singh
+  - 587
+  - 5
+  - UTA,BC,FDD
+  - 'False'
+  - ''

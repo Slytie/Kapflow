@@ -1,0 +1,25 @@
+method_package:
+  id: method.live_dispatch.stage02.triage.v1
+  version: 1
+  applies_to:
+    workflow_id: live_dispatch.v1
+    stage_id: Stage02
+  execution_pattern: bounded_exception_loop
+  context_builder_ref: context.live_dispatch.stage02.issue_packet.v1
+  tool_profile_ref: tools.live_dispatch.stage02.v1
+  output_schema_ref: schema.live_dispatch.stage02.triage_decision.v1
+  lowering_rule_ref: lowering.live_dispatch.stage02.flag_and_candidate_bundle.v1
+  stop_policy:
+    max_tool_calls: 28
+    no_progress_ticks: 4
+    on_exhaustion: escalate
+  replay_policy:
+    deterministic_fields:
+      - issue_id
+      - candidate_driver_id
+      - hard_filter_status
+      - recommended_action
+    allow_optional_llm_rationale: true
+  notes:
+    - Hard filters are deterministic code.
+    - Any LLM use is limited to short rationale or packet drafting and must not reorder deterministic candidate ranking.

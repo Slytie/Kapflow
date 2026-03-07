@@ -1,0 +1,40 @@
+registry:
+  id: logistics_partition_transforms.v1
+  version: 1
+  transforms:
+    - id: planning_week_to_service_days
+      source_kind: PlanningWeekID
+      target_kind: ServiceDateID
+      shape: one_to_many
+      implementation_ref: partition_codec.planning_week_to_service_days.v1
+      deterministic: true
+      status: first_slice
+      notes:
+        - Expand one planning week into service-day IDs used by Stage07 seed materialization.
+    - id: availability_dates_to_planning_weeks
+      source_kind: AvailabilityRequestID
+      target_kind: PlanningWeekID
+      shape: one_to_many
+      implementation_ref: partition_codec.availability_dates_to_planning_weeks.v1
+      deterministic: true
+      status: extension
+      notes:
+        - Map approved request dates to impacted planning weeks for optional downstream activation.
+    - id: service_day_to_future_planning_week
+      source_kind: ServiceDateID
+      target_kind: PlanningWeekID
+      shape: one_to_one
+      implementation_ref: partition_codec.service_day_to_future_planning_week.v1
+      deterministic: true
+      status: extension
+      notes:
+        - Carry dispatch reporting actuals toward future planning-week snapshots.
+    - id: service_day_to_pay_period
+      source_kind: ServiceDateID
+      target_kind: PayPeriodID
+      shape: many_to_one
+      implementation_ref: partition_codec.service_day_to_pay_period.v1
+      deterministic: true
+      status: deferred
+      notes:
+        - Group service-day actuals into payroll pay-period boundaries for audit handoff.

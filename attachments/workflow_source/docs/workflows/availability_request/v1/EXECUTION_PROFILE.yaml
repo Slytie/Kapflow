@@ -1,0 +1,69 @@
+profile:
+  workflow_id: availability_request.v1
+  version: 1
+  stages:
+  - stage_id: Stage01
+    execution_pattern: linear_chain
+    allowed_tool_classes:
+    - artifact.read
+    - validation
+    - spreadsheet.transform
+    side_effect_policy: draft_only
+    required_evidence_keys:
+    - availability.request_submission.doc
+    - availability.request_submission.workbook
+    decision_refs: []
+    stop_rules:
+      max_tool_calls: 8
+      no_progress_ticks: 2
+      on_exhaustion: escalate
+    projections:
+    - availability.stage01.intake_packet
+    extensions:
+      guidance:
+      - Normalize the request into explicit dates, weekday hints, reason, and signature.
+  - stage_id: Stage02
+    execution_pattern: approval_gate
+    allowed_tool_classes:
+    - artifact.read
+    - validation
+    - approval.request
+    - projection.render
+    side_effect_policy: commit_requires_business_decision
+    required_evidence_keys:
+    - availability.manager_decision.doc
+    - availability.manager_decision.workbook
+    decision_refs:
+    - availability.stage02.review_time_off_request
+    stop_rules:
+      max_tool_calls: 8
+      no_progress_ticks: 2
+      on_exhaustion: wait_for_human
+    projections:
+    - availability.stage02.review_packet
+    extensions:
+      guidance:
+      - Approval is authoritative. The raw request must not directly change availability
+        truth.
+  - stage_id: Stage03
+    execution_pattern: linear_chain
+    allowed_tool_classes:
+    - artifact.read
+    - spreadsheet.transform
+    - artifact.publish_version
+    - notification.prepare
+    side_effect_policy: draft_only
+    required_evidence_keys:
+    - availability.update_packet.doc
+    - availability.approved_plan.workbook
+    decision_refs: []
+    stop_rules:
+      max_tool_calls: 8
+      no_progress_ticks: 2
+      on_exhaustion: escalate
+    projections:
+    - availability.stage03.update_packet
+    extensions:
+      guidance:
+      - Publish the updated approved availability and prepare any downstream notifications
+        / triggers.

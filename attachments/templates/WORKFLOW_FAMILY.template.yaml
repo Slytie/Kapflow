@@ -1,0 +1,31 @@
+family:
+  id: <family-id>
+  version: <int>
+  description: <short-description>
+  modules:
+    - module_id: <module-id>
+      workflow_pack_ref:
+        workflow_id: <workflow-id>
+        version: <pack-version>
+        path: <repo-relative-path>
+      partition:
+        kind: <PartitionKind>
+        activation_policy: <long_lived_case_per_partition|lazy_on_event|manual_only>
+      status: <first_slice|extension|deferred>
+  edges:
+    - edge_id: <edge-id>
+      source_module_id: <module-id>
+      source_output_ref:
+        dataset_key: <dataset-key>
+        stage_id: <stage-id>
+      target_module_id: <module-id>
+      target_input_ref:
+        dataset_key: <dataset-key>
+        stage_id: <stage-id>
+      partition_transform_ref: <transform-id>
+      activation_policy: <eager|lazy|dormant>
+      handoff_mode: <materialize_seed|wake_existing|notify_only>
+      idempotency_mode: <source-output-version|source-output-version-plus-trigger>
+      writer_mode: <single_writer|source_only|target_claims>
+      compensation_mode: <none|mark_stale|retract_before_consume>
+      status: <first_slice|extension|deferred>

@@ -1,0 +1,88 @@
+profile:
+  workflow_id: timecard_audit.v1
+  version: 1
+  stages:
+  - stage_id: Stage01
+    execution_pattern: linear_chain
+    allowed_tool_classes:
+    - artifact.read
+    - validation
+    - spreadsheet.transform
+    side_effect_policy: draft_only
+    required_evidence_keys:
+    - timecard.dispatch_hours.workbook
+    - timecard.payroll_export.workbook
+    decision_refs: []
+    stop_rules:
+      max_tool_calls: 10
+      no_progress_ticks: 2
+      on_exhaustion: escalate
+    projections:
+    - timecard.stage01.intake_packet
+    extensions:
+      guidance:
+      - Intake may be partial. Missing payroll export should surface explicitly.
+  - stage_id: Stage02
+    execution_pattern: linear_chain
+    allowed_tool_classes:
+    - artifact.read
+    - validation
+    - spreadsheet.transform
+    - flag.raise
+    - projection.render
+    side_effect_policy: draft_only
+    required_evidence_keys:
+    - timecard.audit_triage.doc
+    - timecard.audit_triage.workbook
+    decision_refs: []
+    stop_rules:
+      max_tool_calls: 18
+      no_progress_ticks: 3
+      on_exhaustion: escalate
+    projections:
+    - timecard.stage02.audit_packet
+    extensions:
+      guidance:
+      - Detect mismatches deterministically before any human review.
+  - stage_id: Stage03
+    execution_pattern: approval_gate
+    allowed_tool_classes:
+    - artifact.read
+    - approval.request
+    - projection.render
+    side_effect_policy: commit_requires_business_decision
+    required_evidence_keys:
+    - timecard.correction_review.doc
+    - timecard.correction_review.workbook
+    decision_refs:
+    - timecard.stage03.approve_corrections
+    stop_rules:
+      max_tool_calls: 8
+      no_progress_ticks: 2
+      on_exhaustion: wait_for_human
+    projections:
+    - timecard.stage03.correction_packet
+    extensions:
+      guidance:
+      - Human approval is the boundary between draft audit findings and accepted correction
+        output.
+  - stage_id: Stage04
+    execution_pattern: linear_chain
+    allowed_tool_classes:
+    - artifact.read
+    - artifact.publish_version
+    - projection.render
+    side_effect_policy: draft_only
+    required_evidence_keys:
+    - timecard.handoff_packet.doc
+    - timecard.corrected_register.workbook
+    decision_refs: []
+    stop_rules:
+      max_tool_calls: 8
+      no_progress_ticks: 2
+      on_exhaustion: escalate
+    projections:
+    - timecard.stage04.handoff_packet
+    extensions:
+      guidance:
+      - Keep the corrected register separate from downstream payroll finalization.

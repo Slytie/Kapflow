@@ -1,0 +1,46 @@
+family:
+  id: logistics_ops_family.v1
+  version: 1
+  description: Weekly planning, day-of dispatch, reporting closeout, and downstream audit.
+  defaults:
+    first_slice:
+      daily_seed_shape: one_logical_seed_per_service_date
+      live_delta_semantics: ordered_stream
+      connectors_mode: fixture_only
+      partition_transform_policy: typed_registry_required
+  modules:
+    - module_id: weekly_schedule_planning
+      workflow_pack_ref:
+        workflow_id: weekly_schedule_planning.v1
+        version: 1
+        path: docs/workflows/weekly_schedule_planning/v1
+      partition:
+        kind: PlanningWeekID
+        activation_policy: long_lived_case_per_partition
+      status: first_slice
+    - module_id: live_dispatch
+      workflow_pack_ref:
+        workflow_id: live_dispatch.v1
+        version: 1
+        path: docs/workflows/live_dispatch/v1
+      partition:
+        kind: ServiceDateID
+        activation_policy: lazy_on_event
+      status: first_slice
+  edges:
+    - edge_id: weekly_seed_to_live_dispatch
+      source_module_id: weekly_schedule_planning
+      source_output_ref:
+        dataset_key: planning.daily_dispatch_seed.workbook
+        stage_id: Stage07
+      target_module_id: live_dispatch
+      target_input_ref:
+        dataset_key: dispatch.base_schedule_seed.workbook
+        stage_id: Stage01
+      partition_transform_ref: planning_week_to_service_days
+      activation_policy: lazy
+      handoff_mode: materialize_seed
+      idempotency_mode: source-output-version-plus-trigger
+      writer_mode: source_only
+      compensation_mode: mark_stale
+      status: first_slice

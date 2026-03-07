@@ -1,0 +1,47 @@
+artifact_sets:
+  Stage01:
+  - key: planning.route_horizon.doc
+    role: evidence
+    template_source: Stage01_Amazon_Route_Horizon_Intake/Stage01_Amazon_Route_Horizon_Intake_route_horizon_Document_Template_EMPTY.docx
+  - key: planning.route_horizon.workbook
+    role: official_input
+    template_source: Stage01_Amazon_Route_Horizon_Intake/Stage01_Amazon_Route_Horizon_Intake_route_horizon_Spreadsheet_Template_EMPTY.xlsx
+  Stage02:
+  - key: planning.approved_availability.doc
+    role: official_input
+    template_source: Stage02_Approved_Availability_Snapshot/Stage02_Approved_Availability_Snapshot_approved_availability_Document_Template_EMPTY.docx
+  - key: planning.approved_availability.workbook
+    role: official_input
+    template_source: Stage02_Approved_Availability_Snapshot/Stage02_Approved_Availability_Snapshot_approved_availability_Spreadsheet_Template_EMPTY.xlsx
+  Stage03:
+  - key: planning.actual_hours_snapshot.doc
+    role: evidence
+    template_source: Stage03_Actual_Hours_Compliance_Snapshot/Stage03_Actual_Hours_Compliance_Snapshot_actual_hours_snapshot_Document_Template_EMPTY.docx
+  - key: planning.actual_hours_snapshot.workbook
+    role: official_input
+    template_source: Stage03_Actual_Hours_Compliance_Snapshot/Stage03_Actual_Hours_Compliance_Snapshot_actual_hours_snapshot_Spreadsheet_Template_EMPTY.xlsx
+  Stage04:
+  - key: planning.draft_weekly_schedule.doc
+    role: evidence
+    template_source: Stage04_Draft_Weekly_Schedule_Build/Stage04_Draft_Weekly_Schedule_Build_draft_weekly_schedule_Document_Template_EMPTY.docx
+  - key: planning.draft_weekly_schedule.workbook
+    role: official_input
+    template_source: Stage04_Draft_Weekly_Schedule_Build/Stage04_Draft_Weekly_Schedule_Build_draft_weekly_schedule_Spreadsheet_Template_EMPTY.xlsx
+  Stage05:
+  - key: planning.manager_review.doc
+    role: evidence
+    template_source: Stage05_Manager_Review_Edit/Stage05_Manager_Review_Edit_manager_review_Document_Template_EMPTY.docx
+  Stage06:
+  - key: planning.publish_packet.doc
+    role: evidence
+    template_source: Stage06_Publish_Weekly_Base_Schedule/Stage06_Publish_Weekly_Base_Schedule_publish_packet_Document_Template_EMPTY.docx
+  - key: planning.published_weekly_schedule.workbook
+    role: official_output
+    template_source: Stage06_Publish_Weekly_Base_Schedule/Stage06_Publish_Weekly_Base_Schedule_published_weekly_schedule_Spreadsheet_Template_EMPTY.xlsx
+  Stage07:
+  - key: planning.daily_dispatch_seed.doc
+    role: evidence
+    template_source: Stage07_Materialize_Daily_Dispatch_Seeds/Stage07_Materialize_Daily_Dispatch_Seeds_daily_dispatch_seed_Document_Template_EMPTY.docx
+  - key: planning.daily_dispatch_seed.workbook
+    role: official_output
+    template_source: Stage07_Materialize_Daily_Dispatch_Seeds/Stage07_Materialize_Daily_Dispatch_Seeds_daily_dispatch_seed_Spreadsheet_Template_EMPTY.xlsx
