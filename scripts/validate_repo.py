@@ -19,6 +19,10 @@ from onetruth.infrastructure.definitions.family_compiler import (  # noqa: E402
     DefinitionCompileError,
     compile_workflow_family,
 )
+from onetruth.infrastructure.definitions.control_layer import (  # noqa: E402
+    ControlCompileError,
+    compile_control_layer,
+)
 
 
 def load_yaml(path: Path) -> Any:
@@ -366,12 +370,18 @@ def validate_workflow_family_surfaces(collector: Collector) -> None:
     compiled_module_schema = ROOT / "schemas" / "workflows" / "compiled_module_definition.schema.json"
     compiled_edge_schema = ROOT / "schemas" / "workflows" / "compiled_family_edge.schema.json"
     state_ref_schema = ROOT / "schemas" / "workflows" / "state_ref.schema.json"
+    method_package_schema = ROOT / "schemas" / "workflows" / "method_package.schema.json"
+    compiled_stage_execution_spec_schema = ROOT / "schemas" / "workflows" / "compiled_stage_execution_spec.schema.json"
+    activation_request_schema = ROOT / "schemas" / "workflows" / "activation_request.schema.json"
     for schema_path in (
         workflow_family_schema,
         partition_transform_schema,
         compiled_module_schema,
         compiled_edge_schema,
         state_ref_schema,
+        method_package_schema,
+        compiled_stage_execution_spec_schema,
+        activation_request_schema,
     ):
         collector.require(schema_path.exists(), f"workflow family schema exists: {schema_path.relative_to(ROOT)}")
         if schema_path.exists():
@@ -380,13 +390,16 @@ def validate_workflow_family_surfaces(collector: Collector) -> None:
     family_dir = ROOT / "docs" / "workflows" / "logistics_ops_family" / "v1"
     family_path = family_dir / "WORKFLOW_FAMILY.yaml"
     transforms_path = family_dir / "PARTITION_TRANSFORMS.yaml"
+    method_packages_path = family_dir / "METHOD_PACKAGES.yaml"
     collector.require(family_path.exists(), f"logistics family definition exists: {family_path.relative_to(ROOT)}")
     collector.require(transforms_path.exists(), f"partition transforms exist: {transforms_path.relative_to(ROOT)}")
-    if not family_path.exists() or not transforms_path.exists():
+    collector.require(method_packages_path.exists(), f"method package registry exists: {method_packages_path.relative_to(ROOT)}")
+    if not family_path.exists() or not transforms_path.exists() or not method_packages_path.exists():
         return
 
     validate_against_schema(family_path, workflow_family_schema, collector)
     validate_against_schema(transforms_path, partition_transform_schema, collector)
+    validate_against_schema(method_packages_path, method_package_schema, collector)
 
     try:
         compiled_once = compile_workflow_family(
@@ -424,6 +437,54 @@ def validate_workflow_family_surfaces(collector: Collector) -> None:
                 collector.fail(f"compiled edge descriptor invalid: {err.message}")
         else:
             collector.ok(f"compiled edge descriptor valid: {edge['edge_id']}")
+
+    try:
+        control_compiled_once = compile_control_layer(
+            repo_root=ROOT,
+            family_path=family_path,
+            partition_transforms_path=transforms_path,
+            method_packages_path=method_packages_path,
+        )
+        control_compiled_twice = compile_control_layer(
+            repo_root=ROOT,
+            family_path=family_path,
+            partition_transforms_path=transforms_path,
+            method_packages_path=method_packages_path,
+        )
+    except ControlCompileError as exc:
+        collector.fail(f"logistics control-layer compilation failed: {exc}")
+        return
+
+    collector.require(
+        control_compiled_once == control_compiled_twice,
+        "control-layer compilation is deterministic for stage execution specs",
+    )
+
+    stage_spec_validator = Draft202012Validator(load_json(compiled_stage_execution_spec_schema))
+    for stage_spec in control_compiled_once.get("compiled_stage_execution_specs", []):
+        errs = sorted(stage_spec_validator.iter_errors(stage_spec), key=lambda e: list(e.path))
+        if errs:
+            for err in errs:
+                collector.fail(f"compiled stage execution spec invalid: {err.message}")
+        else:
+            collector.ok(
+                "compiled stage execution spec valid: "
+                f"{stage_spec['module_id']}:{stage_spec['stage_id']}"
+            )
+
+    activation_request_example_path = (
+        ROOT / "docs" / "examples" / "logistics_definitions" / "ACTIVATION_REQUEST.example.yaml"
+    )
+    collector.require(
+        activation_request_example_path.exists(),
+        "activation request example exists: docs/examples/logistics_definitions/ACTIVATION_REQUEST.example.yaml",
+    )
+    if activation_request_example_path.exists():
+        validate_against_schema(
+            activation_request_example_path,
+            activation_request_schema,
+            collector,
+        )
 
 
 def validate_task_index(collector: Collector) -> None:

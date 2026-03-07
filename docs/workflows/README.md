@@ -14,3 +14,4 @@ Anything else - runbook packs, tool matrices, approval logs, generated CompanyOS
 For cross-workflow composition metadata, authored family surfaces live in dedicated family folders such as:
 - `docs/workflows/logistics_ops_family/v1/WORKFLOW_FAMILY.yaml`
 - `docs/workflows/logistics_ops_family/v1/PARTITION_TRANSFORMS.yaml`
+- `docs/workflows/logistics_ops_family/v1/METHOD_PACKAGES.yaml`

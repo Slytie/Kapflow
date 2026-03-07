@@ -2,6 +2,13 @@
 
 Record any decisions made since the last session so a fresh Codex run can rehydrate quickly.
 
+## 2026-03-07 (TASK-0061 logistics control layer + method packages)
+- Chosen control-layer authority boundary: compiled logistics control metadata drives only existing canonical runtime activation objects (`workflow_runs`, `task_runs`, `human_tasks`, `execution_sessions`, `tool_executions`); no second activation ontology/table set is introduced.
+- Chosen method-package pinning posture: first-slice stages require authored method packages with deterministic replay fields, explicit stop policy, and a content digest; execution-spec identities are derived from these pinned package digests.
+- Chosen fail-closed rule for first-slice control semantics: missing method package coverage for required first-slice stages, stage/pattern mismatches, or incomplete activation-input bindings are hard compile/validation failures.
+- Chosen activation-request contract: activation requests are validated from compiled stage metadata plus canonical pointer-address inputs (`ptr/v1/...`) scoped by tenant/domain/partition; no hidden activation side state is permitted.
+- Chosen bounded-stochastic rule for first-slice dispatch triage: deterministic ranking remains primary and optional LLM rationale is non-authoritative support only.
+
 ## 2026-03-04 (TASK-0057 workflow workspace projection + graph/actionability/demo bundle)
 - Chosen workspace authority boundary: `GET /api/v1/workflow-runs/{workflow_run_id}/workspace` is a read-only derived projection over canonical run/task/approval/flag/artifact/pointer/event state; no second workflow-engine state path is introduced.
 - Chosen graph posture for this slice: schedule-planning-specific minimal node set (Stage03 readiness through Stage07 delta publish) with explicit branch/loopback edges and canonically explainable statuses (`not_started`, `ready`, `in_progress`, `blocked`, `awaiting_approval`, `completed`, `warning`).

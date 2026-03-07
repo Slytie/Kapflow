@@ -5,6 +5,7 @@ This folder contains the authored workflow-family surface for the logistics doma
 Files:
 - `WORKFLOW_FAMILY.yaml` - canonical family/module/edge definition over workflow packs
 - `PARTITION_TRANSFORMS.yaml` - typed partition-transform registry for family edges
+- `METHOD_PACKAGES.yaml` - authored stage-level method package registry for control-layer compilation
 
 Design posture:
 - this is a definitions-layer extension over the fixed Strategy A substrate seam,

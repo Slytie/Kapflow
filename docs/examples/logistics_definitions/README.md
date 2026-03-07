@@ -6,8 +6,10 @@ Scope:
 - workflow family authored surface
 - compiled-style module descriptor example
 - handoff edge descriptor example
+- compiled stage execution spec example
 - typed partition-transform registry example
-- method-package placeholder example
+- method-package example
+- activation request example
 - scenario fixture skeleton
 
 Notes:

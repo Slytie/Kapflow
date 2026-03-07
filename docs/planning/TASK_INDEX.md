@@ -62,3 +62,4 @@
 | TASK-0058 | EPIC-080 | DONE | medium | Workflow workspace page, live graph, and synchronized actionable work panel |
 | TASK-0059 | EPIC-030 | DONE | high | Strategy A strong closure for canonical pointer identity |
 | TASK-0060 | EPIC-025 | DONE | high | Logistics family definitions and deterministic fail-closed compiler |
+| TASK-0061 | EPIC-025 | DONE | high | Logistics control layer and pinned method packages over canonical runtime activations |

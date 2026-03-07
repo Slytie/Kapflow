@@ -1,0 +1,63 @@
+family_id: logistics_ops_family.v1
+family_version: 1
+module_id: live_dispatch
+workflow_id: live_dispatch.v1
+stage_id: Stage02
+execution_pattern: bounded_exception_loop
+module_partition_kind: ServiceDateID
+module_activation_policy: lazy_on_event
+module_status: first_slice
+stage_control_digest: sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+required_input_dataset_keys: []
+required_evidence_keys:
+  - dispatch.issue_board.doc
+  - dispatch.replan_candidate.workbook
+decision_refs: []
+method_package_pin:
+  method_package_id: method.live_dispatch.stage02.issue_triage.v1
+  method_package_version: 1
+  method_package_digest: sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+  context_builder_ref: context.live_dispatch.stage02.issue_packet.v1
+  tool_profile_ref: tools.live_dispatch.stage02.v1
+  output_schema_ref: schema.live_dispatch.stage02.triage_decision.v1
+  lowering_rule_ref: lowering.live_dispatch.stage02.flag_and_candidate_bundle.v1
+  stop_policy:
+    max_tool_calls: 28
+    no_progress_ticks: 4
+    on_exhaustion: escalate
+  replay_policy:
+    deterministic_fields:
+      - issue_id
+      - candidate_driver_id
+      - hard_filter_status
+      - recommended_action
+    allow_optional_llm_rationale: true
+runtime_bindings:
+  workflow_run:
+    object_type: workflow_run
+    partition_kind: ServiceDateID
+    activation_policy: lazy_on_event
+  task_run:
+    object_type: task_run
+    stage_id: Stage02
+    task_kind_default: exception_triage
+    owner_mode: agent
+  human_task:
+    object_type: human_task
+    required: true
+  execution_session:
+    object_type: execution_session
+    execution_spec_id: execspec.live_dispatch_v1.stage02.method_live_dispatch_stag.5de6ee6507554d9d
+    owner_mode: agent
+    max_tool_calls: 28
+    no_progress_ticks: 4
+    on_exhaustion: escalate
+  tool_execution:
+    object_type: tool_execution
+    allowed_tool_classes:
+      - artifact.read
+      - validation
+      - spreadsheet.transform
+      - flag.raise
+      - projection.render
+    side_effect_policy: commit_requires_conditional_business_decision

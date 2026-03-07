@@ -1,0 +1,292 @@
+registry:
+  id: logistics_method_packages.v1
+  version: 1
+  packages:
+    - id: method.weekly_schedule_planning.stage01.route_horizon.v1
+      version: 1
+      applies_to:
+        workflow_id: weekly_schedule_planning.v1
+        stage_id: Stage01
+      execution_pattern: linear_chain
+      context_builder_ref: context.weekly_schedule_planning.stage01.route_horizon.v1
+      tool_profile_ref: tools.weekly_schedule_planning.stage01.v1
+      output_schema_ref: schema.weekly_schedule_planning.stage01.route_packet.v1
+      lowering_rule_ref: lowering.weekly_schedule_planning.stage01.route_packet.v1
+      stop_policy:
+        max_tool_calls: 12
+        no_progress_ticks: 3
+        on_exhaustion: escalate
+      replay_policy:
+        deterministic_fields:
+          - tenant_id
+          - domain_id
+          - planning_week_id
+          - route_horizon_row_id
+        allow_optional_llm_rationale: false
+      notes:
+        - Deterministic normalization of horizon route rows for weekly planning intake.
+
+    - id: method.weekly_schedule_planning.stage02.approved_availability.v1
+      version: 1
+      applies_to:
+        workflow_id: weekly_schedule_planning.v1
+        stage_id: Stage02
+      execution_pattern: linear_chain
+      context_builder_ref: context.weekly_schedule_planning.stage02.availability.v1
+      tool_profile_ref: tools.weekly_schedule_planning.stage02.v1
+      output_schema_ref: schema.weekly_schedule_planning.stage02.availability_packet.v1
+      lowering_rule_ref: lowering.weekly_schedule_planning.stage02.availability_packet.v1
+      stop_policy:
+        max_tool_calls: 12
+        no_progress_ticks: 3
+        on_exhaustion: escalate
+      replay_policy:
+        deterministic_fields:
+          - tenant_id
+          - domain_id
+          - planning_week_id
+          - availability_row_id
+        allow_optional_llm_rationale: false
+      notes:
+        - Only approved availability data can affect canonical planning state.
+
+    - id: method.weekly_schedule_planning.stage03.actual_hours_snapshot.v1
+      version: 1
+      applies_to:
+        workflow_id: weekly_schedule_planning.v1
+        stage_id: Stage03
+      execution_pattern: linear_chain
+      context_builder_ref: context.weekly_schedule_planning.stage03.actual_hours.v1
+      tool_profile_ref: tools.weekly_schedule_planning.stage03.v1
+      output_schema_ref: schema.weekly_schedule_planning.stage03.hours_packet.v1
+      lowering_rule_ref: lowering.weekly_schedule_planning.stage03.hours_packet.v1
+      stop_policy:
+        max_tool_calls: 10
+        no_progress_ticks: 3
+        on_exhaustion: escalate
+      replay_policy:
+        deterministic_fields:
+          - tenant_id
+          - domain_id
+          - planning_week_id
+          - hours_row_id
+        allow_optional_llm_rationale: false
+      notes:
+        - Actual-hours snapshots are deterministic inputs for WHC risk checks.
+
+    - id: method.weekly_schedule_planning.stage04.draft_schedule_build.v1
+      version: 1
+      applies_to:
+        workflow_id: weekly_schedule_planning.v1
+        stage_id: Stage04
+      execution_pattern: linear_chain
+      context_builder_ref: context.weekly_schedule_planning.stage04.draft_schedule.v1
+      tool_profile_ref: tools.weekly_schedule_planning.stage04.v1
+      output_schema_ref: schema.weekly_schedule_planning.stage04.ops_packet.v1
+      lowering_rule_ref: lowering.weekly_schedule_planning.stage04.ops_packet.v1
+      stop_policy:
+        max_tool_calls: 24
+        no_progress_ticks: 3
+        on_exhaustion: escalate
+      replay_policy:
+        deterministic_fields:
+          - tenant_id
+          - domain_id
+          - planning_week_id
+          - candidate_assignment_id
+        allow_optional_llm_rationale: false
+      notes:
+        - Draft generation keeps deterministic assignment ordering before publish review.
+
+    - id: method.weekly_schedule_planning.stage05.manager_review.v1
+      version: 1
+      applies_to:
+        workflow_id: weekly_schedule_planning.v1
+        stage_id: Stage05
+      execution_pattern: linear_chain
+      context_builder_ref: context.weekly_schedule_planning.stage05.review_packet.v1
+      tool_profile_ref: tools.weekly_schedule_planning.stage05.v1
+      output_schema_ref: schema.weekly_schedule_planning.stage05.review_packet.v1
+      lowering_rule_ref: lowering.weekly_schedule_planning.stage05.review_packet.v1
+      stop_policy:
+        max_tool_calls: 8
+        no_progress_ticks: 2
+        on_exhaustion: wait_for_human
+      replay_policy:
+        deterministic_fields:
+          - tenant_id
+          - domain_id
+          - planning_week_id
+          - review_item_id
+        allow_optional_llm_rationale: false
+      notes:
+        - Human review remains authoritative for schedule changes before publication.
+
+    - id: method.weekly_schedule_planning.stage06.publish_gate.v1
+      version: 1
+      applies_to:
+        workflow_id: weekly_schedule_planning.v1
+        stage_id: Stage06
+      execution_pattern: approval_gate
+      context_builder_ref: context.weekly_schedule_planning.stage06.publish_packet.v1
+      tool_profile_ref: tools.weekly_schedule_planning.stage06.v1
+      output_schema_ref: schema.weekly_schedule_planning.stage06.publish_packet.v1
+      lowering_rule_ref: lowering.weekly_schedule_planning.stage06.publish_packet.v1
+      stop_policy:
+        max_tool_calls: 10
+        no_progress_ticks: 2
+        on_exhaustion: wait_for_human
+      replay_policy:
+        deterministic_fields:
+          - tenant_id
+          - domain_id
+          - planning_week_id
+          - publish_packet_id
+        allow_optional_llm_rationale: false
+      notes:
+        - Publish remains gated by canonical approval and pointer promotion semantics.
+
+    - id: method.weekly_schedule_planning.stage07.seed_materialization.v1
+      version: 1
+      applies_to:
+        workflow_id: weekly_schedule_planning.v1
+        stage_id: Stage07
+      execution_pattern: linear_chain
+      context_builder_ref: context.weekly_schedule_planning.stage07.dispatch_seeds.v1
+      tool_profile_ref: tools.weekly_schedule_planning.stage07.v1
+      output_schema_ref: schema.weekly_schedule_planning.stage07.dispatch_seed_packet.v1
+      lowering_rule_ref: lowering.weekly_schedule_planning.stage07.dispatch_seed_packet.v1
+      stop_policy:
+        max_tool_calls: 12
+        no_progress_ticks: 2
+        on_exhaustion: escalate
+      replay_policy:
+        deterministic_fields:
+          - tenant_id
+          - domain_id
+          - planning_week_id
+          - service_date_id
+        allow_optional_llm_rationale: false
+      notes:
+        - Daily dispatch seeds are materialized deterministically from the published weekly base.
+
+    - id: method.live_dispatch.stage01.intake_normalization.v1
+      version: 1
+      applies_to:
+        workflow_id: live_dispatch.v1
+        stage_id: Stage01
+      execution_pattern: linear_chain
+      context_builder_ref: context.live_dispatch.stage01.intake_packet.v1
+      tool_profile_ref: tools.live_dispatch.stage01.v1
+      output_schema_ref: schema.live_dispatch.stage01.intake_packet.v1
+      lowering_rule_ref: lowering.live_dispatch.stage01.intake_packet.v1
+      stop_policy:
+        max_tool_calls: 12
+        no_progress_ticks: 2
+        on_exhaustion: escalate
+      replay_policy:
+        deterministic_fields:
+          - tenant_id
+          - domain_id
+          - service_date_id
+          - route_delta_event_id
+        allow_optional_llm_rationale: false
+      notes:
+        - Event intake normalization preserves source ordering and idempotent dedupe keys.
+
+    - id: method.live_dispatch.stage02.issue_triage.v1
+      version: 1
+      applies_to:
+        workflow_id: live_dispatch.v1
+        stage_id: Stage02
+      execution_pattern: bounded_exception_loop
+      context_builder_ref: context.live_dispatch.stage02.issue_packet.v1
+      tool_profile_ref: tools.live_dispatch.stage02.v1
+      output_schema_ref: schema.live_dispatch.stage02.triage_decision.v1
+      lowering_rule_ref: lowering.live_dispatch.stage02.flag_and_candidate_bundle.v1
+      stop_policy:
+        max_tool_calls: 28
+        no_progress_ticks: 4
+        on_exhaustion: escalate
+      replay_policy:
+        deterministic_fields:
+          - issue_id
+          - candidate_driver_id
+          - hard_filter_status
+          - recommended_action
+        allow_optional_llm_rationale: true
+      notes:
+        - Deterministic hard-filter and ranking decide ordering.
+        - Optional LLM output is bounded to rationale support and cannot reorder candidates.
+
+    - id: method.live_dispatch.stage03.dispatcher_review.v1
+      version: 1
+      applies_to:
+        workflow_id: live_dispatch.v1
+        stage_id: Stage03
+      execution_pattern: linear_chain
+      context_builder_ref: context.live_dispatch.stage03.review_packet.v1
+      tool_profile_ref: tools.live_dispatch.stage03.v1
+      output_schema_ref: schema.live_dispatch.stage03.review_packet.v1
+      lowering_rule_ref: lowering.live_dispatch.stage03.review_packet.v1
+      stop_policy:
+        max_tool_calls: 10
+        no_progress_ticks: 2
+        on_exhaustion: wait_for_human
+      replay_policy:
+        deterministic_fields:
+          - tenant_id
+          - domain_id
+          - service_date_id
+          - review_item_id
+        allow_optional_llm_rationale: false
+      notes:
+        - Dispatcher review stays human-supervised with deterministic evidence packets.
+
+    - id: method.live_dispatch.stage04.major_replan_approval_gate.v1
+      version: 1
+      applies_to:
+        workflow_id: live_dispatch.v1
+        stage_id: Stage04
+      execution_pattern: approval_gate
+      context_builder_ref: context.live_dispatch.stage04.major_replan_packet.v1
+      tool_profile_ref: tools.live_dispatch.stage04.v1
+      output_schema_ref: schema.live_dispatch.stage04.major_replan_packet.v1
+      lowering_rule_ref: lowering.live_dispatch.stage04.major_replan_packet.v1
+      stop_policy:
+        max_tool_calls: 8
+        no_progress_ticks: 2
+        on_exhaustion: wait_for_human
+      replay_policy:
+        deterministic_fields:
+          - tenant_id
+          - domain_id
+          - service_date_id
+          - major_replan_packet_id
+        allow_optional_llm_rationale: false
+      notes:
+        - Conditional approval remains on the same canonical approval model.
+
+    - id: method.live_dispatch.stage05.promote_delta.v1
+      version: 1
+      applies_to:
+        workflow_id: live_dispatch.v1
+        stage_id: Stage05
+      execution_pattern: linear_chain
+      context_builder_ref: context.live_dispatch.stage05.delta_packet.v1
+      tool_profile_ref: tools.live_dispatch.stage05.v1
+      output_schema_ref: schema.live_dispatch.stage05.delta_packet.v1
+      lowering_rule_ref: lowering.live_dispatch.stage05.delta_packet.v1
+      stop_policy:
+        max_tool_calls: 10
+        no_progress_ticks: 2
+        on_exhaustion: escalate
+      replay_policy:
+        deterministic_fields:
+          - tenant_id
+          - domain_id
+          - service_date_id
+          - delta_sequence
+        allow_optional_llm_rationale: false
+      notes:
+        - Official delta promotion remains ordered and pointer-backed for audit.
