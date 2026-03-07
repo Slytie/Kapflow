@@ -16,6 +16,7 @@ from onetruth.application.handlers.workflow_task_lifecycle import (
     create_flag_command,
     claim_human_task_command,
     complete_human_task_command,
+    confirm_human_task_review_command,
     create_task_run_command,
     create_workflow_run_command,
     list_approvals_for_workflow_run_command,
@@ -128,6 +129,13 @@ def _build_parser() -> argparse.ArgumentParser:
     tasks_complete = tasks_sub.add_parser("complete", help="Complete a claimed human task.")
     tasks_complete.add_argument("--json", dest="json_payload", required=True)
     tasks_complete.set_defaults(handler=_handle_tasks_complete)
+
+    tasks_confirm_review = tasks_sub.add_parser(
+        "confirm-review",
+        help="Create canonical review-confirmation evidence for a human task.",
+    )
+    tasks_confirm_review.add_argument("--json", dest="json_payload", required=True)
+    tasks_confirm_review.set_defaults(handler=_handle_tasks_confirm_review)
 
     tasks_show = tasks_sub.add_parser("show", help="Show one human task.")
     tasks_show.add_argument("--human-task-id", required=True)
@@ -517,6 +525,36 @@ def _handle_tasks_complete(args: argparse.Namespace) -> int:
     finally:
         connection.close()
     _json_print({"status": "ok", "command": "tasks.complete", "result": result})
+    return 0
+
+
+def _handle_tasks_confirm_review(args: argparse.Namespace) -> int:
+    payload = _parse_json_object(args.json_payload)
+    if isinstance(payload, int):
+        return payload
+    connection = _open_connection_or_emit(args.db_url)
+    if isinstance(connection, int):
+        return connection
+    try:
+        result = confirm_human_task_review_command(
+            connection,
+            payload,
+            storage_root=default_storage_root_for_db_url(
+                args.db_url,
+                override=payload.get("storage_root"),
+            ),
+        )
+    except CommandError as exc:
+        return _emit_error(code=exc.code, message=exc.message, details=exc.details)
+    except DuplicateIdempotencyKeyError as exc:
+        return _emit_error(
+            code="duplicate_idempotency_key",
+            message=str(exc),
+            details={"idempotency_key": exc.idempotency_key, "existing_event_id": exc.existing_event_id},
+        )
+    finally:
+        connection.close()
+    _json_print({"status": "ok", "command": "tasks.confirm-review", "result": result})
     return 0
 
 

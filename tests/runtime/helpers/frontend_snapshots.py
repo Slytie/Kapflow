@@ -169,6 +169,7 @@ def _run_stage07_major_until_approval_requested(
         "create_flag",
         "activate_issue",
         "claim_triage",
+        "upload_exception_board",
         "complete_triage",
         "claim_final_review",
         "complete_final_review",

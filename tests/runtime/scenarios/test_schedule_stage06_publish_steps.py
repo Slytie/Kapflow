@@ -191,6 +191,8 @@ def test_stage06_negative_cannot_promote_official_pointer_without_approval(tmp_p
             "artifact_version_id": harness.output("create_published_artifact")["artifact_version"]["artifact_version_id"],
             "promotion_reason": "official_publish",
             "promoted_by_task_run_id": harness.output("complete_final_review")["result"]["task_run"]["task_run_id"],
+            "actor_id": "human:dispatch-supervisor-1",
+            "actor_type": "human",
             "idempotency_key": f"scenario:{harness.scenario_id}:negative:pointer-without-approval",
         },
         expect_error_code="approval_required_for_promotion",

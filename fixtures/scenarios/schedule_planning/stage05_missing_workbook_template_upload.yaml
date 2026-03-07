@@ -1,0 +1,85 @@
+scenario_id: stage05_missing_workbook_template_upload
+workflow_id: schedule_planning.v1
+workflow_version: v1
+scope:
+  tenant_id: tenant-a
+  domain_id: domain-x
+partition_key: SD-2026-03-10
+logical_date: "2026-03-10"
+seed_artifacts: []
+steps:
+  - id: create_stage05_information_request
+    action: tasks.create
+    payload:
+      workflow_run_id: "{{workflow_run_id}}"
+      stage_id: Stage05
+      task_kind: information_request
+      activation_key: stage05-information-request-root
+      candidate_roles: [schedule_planner]
+      owner_role: dispatch_supervisor
+      create_human_task: true
+      idempotency_key: "scenario:{{scenario_id}}:tasks.create:stage05-info"
+    save_as: create_stage05_information_request
+  - id: claim_stage05_information_request
+    action: tasks.claim
+    payload:
+      human_task_id: "{{create_stage05_information_request.result.human_task.human_task_id}}"
+      actor_id: human:schedule-planner-1
+      actor_type: human
+      lease_seconds: 300
+      idempotency_key: "scenario:{{scenario_id}}:tasks.claim:stage05-info"
+    save_as: claim_stage05_information_request
+  - id: complete_stage05_before_upload
+    action: tasks.complete
+    payload:
+      human_task_id: "{{create_stage05_information_request.result.human_task.human_task_id}}"
+      actor_id: human:schedule-planner-1
+      actor_type: human
+      outcome: provided_information
+      idempotency_key: "scenario:{{scenario_id}}:tasks.complete:stage05-before-upload"
+    expect_error_code: task_requirements_not_satisfied
+    save_as: complete_stage05_before_upload
+  - id: upload_stage05_required_workbook
+    action: artifacts.ingest
+    payload:
+      workflow_run_id: "{{workflow_run_id}}"
+      task_run_id: "{{create_stage05_information_request.result.task_run.task_run_id}}"
+      artifact_kind: schedule.draft_schedule.workbook
+      artifact_role: evidence
+      media_type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet
+      source_path: Stage05_Draft_Schedule_Triage/Stage05_Draft_Schedule_Triage_Spreadsheet_Template_EMPTY.xlsx
+      file_name: Stage05_Draft_Schedule_Triage_Spreadsheet_Template_EMPTY.xlsx
+      links:
+        - subject_kind: human_task
+          subject_id: "{{create_stage05_information_request.result.human_task.human_task_id}}"
+          relation_kind: attachment
+      metadata_json:
+        branch: stage05_missing_workbook_template_upload
+      idempotency_key: "scenario:{{scenario_id}}:artifacts.ingest:stage05-workbook-upload"
+    save_as: upload_stage05_required_workbook
+  - id: complete_stage05_after_upload
+    action: tasks.complete
+    payload:
+      human_task_id: "{{create_stage05_information_request.result.human_task.human_task_id}}"
+      actor_id: human:schedule-planner-1
+      actor_type: human
+      outcome: provided_information
+      idempotency_key: "scenario:{{scenario_id}}:tasks.complete:stage05-after-upload"
+    save_as: complete_stage05_after_upload
+expected_events:
+  ordered_contains:
+    - workflow.run.created
+    - task.run.created
+    - task.created
+    - task.claimed
+    - artifact.version.created
+    - task.completed
+expected_task_states:
+  - stage_id: Stage05
+    task_kind: information_request
+    state: COMPLETED
+expected_pointer_targets: []
+expected_query_rows:
+  task_rows: 1
+  approval_rows: 0
+  pointer_rows: 0

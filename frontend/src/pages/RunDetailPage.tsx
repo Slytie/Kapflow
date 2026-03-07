@@ -141,6 +141,20 @@ export function RunDetailPage(): JSX.Element {
                     { label: "Task run", value: task.task_run_id },
                     { label: "State", value: task.state },
                     { label: "Assignee", value: task.assignee_actor_id ?? "unassigned" }
+                  ],
+                  artifact_sources: [
+                    {
+                      workflow_run_id: task.workflow_run_id,
+                      subject_kind: "human_task",
+                      subject_id: task.human_task_id,
+                      source_label: "Task attachment"
+                    },
+                    {
+                      workflow_run_id: task.workflow_run_id,
+                      subject_kind: "task_run",
+                      subject_id: task.task_run_id,
+                      source_label: "Step output"
+                    }
                   ]
                 })
               }

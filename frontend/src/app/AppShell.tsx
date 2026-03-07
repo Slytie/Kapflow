@@ -10,6 +10,7 @@ import { apiConfig } from "@/lib/api/config";
 import { useDrawer } from "@/lib/state/drawerContext";
 
 const NAV_LINKS = [
+  { to: "/workspace", label: "Workspace" },
   { to: "/board", label: "Board" },
   { to: "/my-work", label: "My Work" },
   { to: "/approvals", label: "Approvals" },
@@ -26,6 +27,8 @@ export function AppShell(): JSX.Element {
   const { filters, setFilters } = useShellFilters();
   const { payload, close } = useDrawer();
   const [lastRefreshedAt, setLastRefreshedAt] = useState<string | null>(null);
+  const isWorkspaceRoute = /^\/runs\/[^/]+\/workspace$/.test(location.pathname);
+  const isTimelineRoute = location.pathname === "/timeline";
 
   useEffect(() => {
     return queryClient.getQueryCache().subscribe((event) => {
@@ -45,15 +48,16 @@ export function AppShell(): JSX.Element {
   };
 
   return (
-    <div className="app-shell">
+    <div className={`app-shell ${isWorkspaceRoute ? "app-shell--workspace" : ""}`}>
       <aside className="app-shell__nav">
-        <h1>CompanyOS HITL</h1>
         <nav>
           {NAV_LINKS.map((link) => (
             <NavLink
               key={link.to}
               to={link.to}
-              className={({ isActive }) => (isActive ? "active" : "")}
+              className={({ isActive }) =>
+                isActive || (link.to === "/workspace" && isWorkspaceRoute) ? "active" : ""
+              }
             >
               {link.label}
             </NavLink>
@@ -62,20 +66,24 @@ export function AppShell(): JSX.Element {
       </aside>
 
       <section className="app-shell__main">
-        <header className="app-shell__header">
-          <div>
-            <strong>{location.pathname}</strong>
-            <p>Server-authoritative view backed by HITL HTTP query contracts</p>
-          </div>
-          <FreshnessBanner
-            lastRefreshedAt={lastRefreshedAt}
-            onRefresh={refresh}
-            isRefreshing={isFetching > 0}
-            pollIntervalMs={apiConfig.pollIntervalMs}
-          />
-        </header>
+        {isWorkspaceRoute || isTimelineRoute ? null : (
+          <>
+            <header className="app-shell__header">
+              <div>
+                <strong>{location.pathname}</strong>
+                <p>Server-authoritative view backed by HITL HTTP query contracts</p>
+              </div>
+              <FreshnessBanner
+                lastRefreshedAt={lastRefreshedAt}
+                onRefresh={refresh}
+                isRefreshing={isFetching > 0}
+                pollIntervalMs={apiConfig.pollIntervalMs}
+              />
+            </header>
 
-        <FilterBar filters={filters} onChange={setFilters} />
+            <FilterBar filters={filters} onChange={setFilters} />
+          </>
+        )}
 
         <div className="app-shell__content">
           <Outlet />

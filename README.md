@@ -19,6 +19,11 @@ Current Stage 4 implementation/debug focus:
 
 Everything else - runbooks, dashboards, summaries, generated CompanyOS specs, projections, transcripts, research notes, and external pattern references - is derived, compiled, generated, or evidentiary material layered on top of that substrate.
 
+## Canonical vs Derived Workflow Assets
+- Canonical workflow source of truth: `docs/workflows/*/v1/` (`WORKFLOW_CONTRACT.yaml`, `ARTIFACT_MAP.yaml`, `DECISION_CATALOG.yaml`, `EXECUTION_PROFILE.yaml`, `OPERATING_MODEL.md`, `ACCEPTANCE_CRITERIA.md`).
+- Derived/fixture workflow assets: `fixtures/workflows/*/` (template packs, runbooks, traces, examples, and other non-authoritative packaging artifacts).
+- Schedule planning runbooks under `fixtures/workflows/schedule_planning/runbooks/` are intentionally marked as derived outputs and must not be treated as canonical workflow definitions.
+
 ## Start here
 1. `AGENTS.md`
 2. `docs/status/CURRENT_FOCUS.md`

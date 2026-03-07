@@ -1,0 +1,259 @@
+scenario_id: stage07_major_replan_confirm_review
+workflow_id: schedule_planning.v1
+workflow_version: v1
+scope:
+  tenant_id: tenant-a
+  domain_id: domain-x
+partition_key: SD-2026-03-16
+logical_date: "2026-03-16"
+seed_artifacts: []
+steps:
+  - id: create_base_artifact
+    action: artifacts.create-version
+    payload:
+      workflow_run_id: "{{workflow_run_id}}"
+      artifact_kind: schedule.published_schedule.workbook
+      artifact_role: official_output
+      media_type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet
+      source_path: Stage06_Supervisor_Review_Publish/Stage06_Supervisor_Review_Publish_Spreadsheet_Example_COMPLETED.xlsx
+      metadata_json:
+        branch: stage07_major_replan_confirm_review
+      idempotency_key: "scenario:{{scenario_id}}:artifacts.create-version:base"
+    save_as: create_base_artifact
+  - id: promote_base_pointer
+    action: pointers.promote
+    payload:
+      workflow_run_id: "{{workflow_run_id}}"
+      scope_kind: stage
+      scope_ref: Stage06
+      pointer_key: official:schedule.published_schedule.workbook
+      artifact_kind: schedule.published_schedule.workbook
+      artifact_version_id: "{{create_base_artifact.artifact_version.artifact_version_id}}"
+      promotion_reason: seed_base
+      idempotency_key: "scenario:{{scenario_id}}:pointers.promote:base"
+    save_as: promote_base_pointer
+  - id: create_flag
+    action: flags.create
+    payload:
+      workflow_run_id: "{{workflow_run_id}}"
+      kind: no_show
+      severity: high
+      summary: "Courier did not report for shift"
+      details_json:
+        reason_code: no_show
+        zone_id: berlin-west
+      created_by:
+        id: human:dispatcher-2
+        type: human
+      idempotency_key: "scenario:{{scenario_id}}:flags.create:no-show"
+    save_as: create_flag
+  - id: activate_issue
+    action: stage07.activate-issue
+    payload:
+      workflow_run_id: "{{workflow_run_id}}"
+      flag_id: "{{create_flag.flag.flag_id}}"
+      generation: 0
+      actor_id: system:stage07-orchestrator
+      actor_type: system
+      idempotency_key: "scenario:{{scenario_id}}:stage07.activate-issue:no-show"
+    save_as: activate_issue
+  - id: claim_triage
+    action: tasks.claim
+    payload:
+      human_task_id: "{{activate_issue.result.human_task.human_task_id}}"
+      actor_id: human:ops-manager-2
+      actor_type: human
+      lease_seconds: 300
+      idempotency_key: "scenario:{{scenario_id}}:tasks.claim:triage"
+    save_as: claim_triage
+  - id: complete_triage_before_upload
+    action: tasks.complete
+    payload:
+      human_task_id: "{{activate_issue.result.human_task.human_task_id}}"
+      actor_id: human:ops-manager-2
+      actor_type: human
+      outcome: major_replan_is_ready_for_review
+      idempotency_key: "scenario:{{scenario_id}}:tasks.complete:triage-before-upload"
+    expect_error_code: task_requirements_not_satisfied
+    save_as: complete_triage_before_upload
+  - id: upload_exception_board
+    action: artifacts.ingest
+    payload:
+      workflow_run_id: "{{workflow_run_id}}"
+      task_run_id: "{{activate_issue.result.task_run.task_run_id}}"
+      artifact_kind: schedule.exception_board.doc
+      artifact_role: evidence
+      media_type: application/vnd.openxmlformats-officedocument.wordprocessingml.document
+      source_path: Stage07_Intraday_Exception_Control/Stage07_Intraday_Exception_Control_Document_Template_EMPTY.docx
+      file_name: Stage07_Intraday_Exception_Control_Document_Template_EMPTY.docx
+      links:
+        - subject_kind: human_task
+          subject_id: "{{activate_issue.result.human_task.human_task_id}}"
+          relation_kind: attachment
+      metadata_json:
+        branch: stage07_major_replan_confirm_review
+      idempotency_key: "scenario:{{scenario_id}}:artifacts.ingest:exception-board-upload"
+    save_as: upload_exception_board
+  - id: complete_triage_after_upload
+    action: tasks.complete
+    payload:
+      human_task_id: "{{activate_issue.result.human_task.human_task_id}}"
+      actor_id: human:ops-manager-2
+      actor_type: human
+      outcome: major_replan_is_ready_for_review
+      idempotency_key: "scenario:{{scenario_id}}:tasks.complete:triage-after-upload"
+    save_as: complete_triage_after_upload
+  - id: create_draft_replan_packet
+    action: artifacts.ingest
+    payload:
+      workflow_run_id: "{{workflow_run_id}}"
+      task_run_id: "{{complete_triage_after_upload.result.spawned_children.0.task_run_id}}"
+      artifact_kind: schedule.stage07.replan_packet
+      artifact_role: draft_output
+      media_type: application/json
+      content_base64: eyJraW5kIjoic3RhZ2UwN19yZXBsYW5fcGFja2V0In0=
+      file_name: stage07_replan_packet.json
+      metadata_json:
+        branch: stage07_major_replan_confirm_review
+        lifecycle: draft
+        is_draft: true
+      idempotency_key: "scenario:{{scenario_id}}:artifacts.ingest:stage07-replan-packet-draft"
+    save_as: create_draft_replan_packet
+  - id: create_draft_replan_delta
+    action: artifacts.create-version
+    payload:
+      workflow_run_id: "{{workflow_run_id}}"
+      task_run_id: "{{complete_triage_after_upload.result.spawned_children.0.task_run_id}}"
+      artifact_kind: schedule.replan_delta.workbook
+      artifact_role: draft_output
+      media_type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet
+      source_path: Stage07_Intraday_Exception_Control/Stage07_Intraday_Exception_Control_Spreadsheet_Template_EMPTY.xlsx
+      supersedes_artifact_version_id: "{{create_base_artifact.artifact_version.artifact_version_id}}"
+      metadata_json:
+        branch: stage07_major_replan_confirm_review
+        lifecycle: draft
+        is_draft: true
+      idempotency_key: "scenario:{{scenario_id}}:artifacts.create-version:stage07-replan-delta-draft"
+    save_as: create_draft_replan_delta
+  - id: claim_final_review
+    action: tasks.claim
+    payload:
+      human_task_id: "{{complete_triage_after_upload.result.spawned_children.0.human_task_id}}"
+      actor_id: human:ops-manager-2
+      actor_type: human
+      lease_seconds: 300
+      idempotency_key: "scenario:{{scenario_id}}:tasks.claim:final-review"
+    save_as: claim_final_review
+  - id: complete_final_review_before_confirm
+    action: tasks.complete
+    payload:
+      human_task_id: "{{complete_triage_after_upload.result.spawned_children.0.human_task_id}}"
+      actor_id: human:ops-manager-2
+      actor_type: human
+      outcome: review_complete
+      idempotency_key: "scenario:{{scenario_id}}:tasks.complete:final-before-confirm"
+    expect_error_code: task_requirements_not_satisfied
+    save_as: complete_final_review_before_confirm
+  - id: confirm_final_review
+    action: tasks.confirm-review
+    payload:
+      human_task_id: "{{complete_triage_after_upload.result.spawned_children.0.human_task_id}}"
+      actor_id: human:ops-manager-2
+      actor_type: human
+      reviewed_artifact_version_ids:
+        - "{{create_draft_replan_packet.artifact_version.artifact_version_id}}"
+        - "{{create_draft_replan_delta.artifact_version.artifact_version_id}}"
+      idempotency_key: "scenario:{{scenario_id}}:tasks.confirm-review:stage07-final-review"
+    save_as: confirm_final_review
+  - id: complete_final_review
+    action: tasks.complete
+    payload:
+      human_task_id: "{{complete_triage_after_upload.result.spawned_children.0.human_task_id}}"
+      actor_id: human:ops-manager-2
+      actor_type: human
+      outcome: review_complete
+      idempotency_key: "scenario:{{scenario_id}}:tasks.complete:final-review"
+    save_as: complete_final_review
+  - id: request_major_replan_approval
+    action: approvals.request
+    payload:
+      workflow_run_id: "{{workflow_run_id}}"
+      task_run_id: "{{complete_final_review.result.task_run.task_run_id}}"
+      approval_kind: business_decision
+      scope_kind: stage
+      scope_ref: Stage07
+      action: approve_major_replan
+      candidate_roles: [operations_manager]
+      required_role: operations_manager
+      idempotency_key: "scenario:{{scenario_id}}:approvals.request:major-replan"
+    save_as: request_major_replan_approval
+  - id: respond_major_replan_approval
+    action: approvals.respond
+    payload:
+      approval_id: "{{request_major_replan_approval.approval.approval_id}}"
+      actor_id: human:ops-manager-2
+      actor_type: human
+      response_kind: approve
+      response_reason: "Major replan approved due no-show"
+      idempotency_key: "scenario:{{scenario_id}}:approvals.respond:major-replan"
+    save_as: respond_major_replan_approval
+  - id: promote_replan_pointer
+    action: pointers.promote
+    payload:
+      workflow_run_id: "{{workflow_run_id}}"
+      scope_kind: stage
+      scope_ref: Stage07
+      pointer_key: official:schedule.replan_delta.workbook
+      artifact_kind: schedule.replan_delta.workbook
+      artifact_version_id: "{{create_draft_replan_delta.artifact_version.artifact_version_id}}"
+      promotion_reason: official_major_replan
+      promoted_by_task_run_id: "{{complete_final_review.result.task_run.task_run_id}}"
+      approved_by_approval_id: "{{respond_major_replan_approval.approval.approval_id}}"
+      reviewed_base_artifact_version_id: "{{create_base_artifact.artifact_version.artifact_version_id}}"
+      base_pointer_key: official:schedule.published_schedule.workbook
+      actor_id: human:ops-manager-2
+      actor_type: human
+      idempotency_key: "scenario:{{scenario_id}}:pointers.promote:delta"
+    save_as: promote_replan_pointer
+expected_events:
+  ordered_contains:
+    - workflow.run.created
+    - artifact.version.created
+    - artifact.pointer.promoted
+    - flag.created
+    - task.run.created
+    - task.created
+    - task.claimed
+    - artifact.version.created
+    - task.completed
+    - task.run.created
+    - task.created
+    - artifact.version.created
+    - artifact.version.created
+    - artifact.version.created
+    - task.completed
+    - approval.requested
+    - approval.responded
+    - artifact.pointer.promoted
+expected_task_states:
+  - stage_id: Stage07
+    task_kind: exception_triage
+    state: COMPLETED
+  - stage_id: Stage07
+    task_kind: final_review
+    state: COMPLETED
+expected_spawned_children:
+  - parent_outcome: major_replan_is_ready_for_review
+    stage_id: Stage07
+    task_kind: final_review
+    spawn_rule_id: stage07_final_replan_review
+expected_pointer_targets:
+  - pointer_key: official:schedule.published_schedule.workbook
+    artifact_kind: schedule.published_schedule.workbook
+  - pointer_key: official:schedule.replan_delta.workbook
+    artifact_kind: schedule.replan_delta.workbook
+expected_query_rows:
+  task_rows: 2
+  approval_rows: 1
+  pointer_rows: 2
+  flag_rows: 1

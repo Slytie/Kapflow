@@ -43,6 +43,24 @@ steps:
       lease_seconds: 300
       idempotency_key: "scenario:{{scenario_id}}:tasks.claim:root"
     save_as: claim_issue
+  - id: upload_exception_board
+    action: artifacts.ingest
+    payload:
+      workflow_run_id: "{{workflow_run_id}}"
+      task_run_id: "{{activate_issue.result.task_run.task_run_id}}"
+      artifact_kind: schedule.exception_board.doc
+      artifact_role: evidence
+      media_type: application/vnd.openxmlformats-officedocument.wordprocessingml.document
+      source_path: Stage07_Intraday_Exception_Control/Stage07_Intraday_Exception_Control_Document_Template_EMPTY.docx
+      file_name: Stage07_Intraday_Exception_Control_Document_Template_EMPTY.docx
+      links:
+        - subject_kind: human_task
+          subject_id: "{{activate_issue.result.human_task.human_task_id}}"
+          relation_kind: attachment
+      metadata_json:
+        branch: stage07_missing_information_branch
+      idempotency_key: "scenario:{{scenario_id}}:artifacts.ingest:exception-board-upload"
+    save_as: upload_exception_board
   - id: complete_issue
     action: tasks.complete
     payload:

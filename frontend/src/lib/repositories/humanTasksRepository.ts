@@ -1,7 +1,11 @@
 import { createIdempotencyKey } from "@/lib/api/idempotency";
 import { onetruthApi } from "@/lib/api/onetruthApi";
-import type { HumanTaskRow } from "@/lib/types/contracts";
+import type {
+  HumanTaskRow,
+  WorkflowWorkspaceRequiredUpload
+} from "@/lib/types/contracts";
 import {
+  downloadBase64ToFile,
   downloadLatestAttachmentForSubject,
   listAttachmentsForSubject,
   uploadAttachmentForSubject
@@ -60,6 +64,45 @@ export const humanTasksRepository = {
   async runStage06AgentReview(humanTaskId: string): Promise<void> {
     await onetruthApi.runStage06AgentReview(humanTaskId, {
       idempotency_key: createIdempotencyKey("stage06-agent-review", humanTaskId)
+    });
+  },
+
+  async confirmReview(humanTaskId: string, reviewedArtifactVersionIds: string[]): Promise<void> {
+    const reviewedIds = [...new Set(reviewedArtifactVersionIds.filter(Boolean))].sort();
+    if (reviewedIds.length === 0) {
+      return;
+    }
+    await onetruthApi.confirmHumanTaskReview(humanTaskId, {
+      reviewed_artifact_version_ids: reviewedIds,
+      idempotency_key: createIdempotencyKey("confirm-review", `${humanTaskId}:${reviewedIds.join(",")}`)
+    });
+  },
+
+  async openDraftArtifact(artifactVersionId: string): Promise<void> {
+    const downloaded = await onetruthApi.downloadArtifact(artifactVersionId);
+    const metadataName = downloaded.artifact_version.metadata_json?.file_name;
+    const fileName =
+      typeof metadataName === "string" && metadataName.length > 0
+        ? metadataName
+        : `${downloaded.artifact_version.artifact_version_id}`;
+    downloadBase64ToFile(
+      downloaded.content_base64,
+      fileName,
+      downloaded.artifact_version.media_type
+    );
+  },
+
+  async uploadRequiredResponse(
+    humanTaskId: string,
+    requirement: WorkflowWorkspaceRequiredUpload,
+    file: File
+  ): Promise<void> {
+    await uploadAttachmentForSubject({
+      subjectKind: "human_task",
+      subjectId: humanTaskId,
+      file,
+      artifactKind: requirement.artifact_kind || requirement.dataset_key,
+      artifactRole: "evidence"
     });
   },
 

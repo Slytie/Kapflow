@@ -1,4 +1,5 @@
 import { http, HttpResponse } from "msw";
+import type { ArtifactVersionRow } from "@/lib/types/contracts";
 
 import {
   buildBoardContract,
@@ -10,6 +11,48 @@ import {
 const ok = (payload: Record<string, unknown>) => HttpResponse.json({ status: "ok", ...payload });
 
 let state = createContractState();
+
+const TEMPLATE_FIXTURES = [
+  {
+    template_id: "schedule.stage05.draft_schedule.workbook.empty.v1",
+    workflow_id: "schedule_planning.v1",
+    stage_id: "Stage05",
+    dataset_key: "schedule.draft_schedule.workbook",
+    artifact_kind: "schedule.draft_schedule.workbook",
+    variant: "empty",
+    media_type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    file_path:
+      "fixtures/workflows/schedule_planning/template_pack/Stage05_Draft_Schedule_Triage/Stage05_Draft_Schedule_Triage_Spreadsheet_Template_EMPTY.xlsx",
+    file_name: "Stage05_Draft_Schedule_Triage_Spreadsheet_Template_EMPTY.xlsx",
+    description: "Empty Stage05 draft-schedule workbook template."
+  },
+  {
+    template_id: "schedule.stage06.supervisor_review.doc.empty.v1",
+    workflow_id: "schedule_planning.v1",
+    stage_id: "Stage06",
+    dataset_key: "schedule.supervisor_review.doc",
+    artifact_kind: "schedule.supervisor_review.doc",
+    variant: "empty",
+    media_type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    file_path:
+      "fixtures/workflows/schedule_planning/template_pack/Stage06_Supervisor_Review_Publish/Stage06_Supervisor_Review_Publish_Document_Template_EMPTY.docx",
+    file_name: "Stage06_Supervisor_Review_Publish_Document_Template_EMPTY.docx",
+    description: "Empty Stage06 supervisor-review document template."
+  },
+  {
+    template_id: "schedule.stage07.exception_board.doc.empty.v1",
+    workflow_id: "schedule_planning.v1",
+    stage_id: "Stage07",
+    dataset_key: "schedule.exception_board.doc",
+    artifact_kind: "schedule.exception_board.doc",
+    variant: "empty",
+    media_type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    file_path:
+      "fixtures/workflows/schedule_planning/template_pack/Stage07_Intraday_Exception_Control/Stage07_Intraday_Exception_Control_Document_Template_EMPTY.docx",
+    file_name: "Stage07_Intraday_Exception_Control_Document_Template_EMPTY.docx",
+    description: "Empty Stage07 exception-board document template."
+  }
+];
 
 function inScope(request: Request): boolean {
   const tenant = request.headers.get("x-onetruth-tenant-id");
@@ -43,6 +86,35 @@ function parseLimitOffset(url: URL): { limit: number; offset: number } {
   };
 }
 
+function listTemplatesFromQuery(url: URL) {
+  const workflowId = url.searchParams.get("workflow_id");
+  const stageId = url.searchParams.get("stage_id");
+  const datasetKey = url.searchParams.get("dataset_key");
+  const variant = url.searchParams.get("variant");
+  return TEMPLATE_FIXTURES.filter((template) => {
+    if (workflowId && template.workflow_id !== workflowId) {
+      return false;
+    }
+    if (stageId && template.stage_id !== stageId) {
+      return false;
+    }
+    if (datasetKey && template.dataset_key !== datasetKey) {
+      return false;
+    }
+    if (variant && template.variant !== variant) {
+      return false;
+    }
+    return true;
+  });
+}
+
+function templateContentBase64(templateId: string): string {
+  if (typeof btoa === "function") {
+    return btoa(`template:${templateId}`);
+  }
+  return `template:${templateId}`;
+}
+
 function mutateTaskToClaimed(humanTaskId: string, actorId: string): boolean {
   const row = state.humanTasks.find((task) => task.human_task_id === humanTaskId);
   if (!row || row.state !== "OPEN") {
@@ -71,6 +143,66 @@ function mutateTaskToCompleted(humanTaskId: string): boolean {
   row.updated_at = new Date().toISOString();
   state.audit.mutations.push(`complete:${humanTaskId}`);
   return true;
+}
+
+function confirmTaskReview(
+  humanTaskId: string,
+  reviewedArtifactVersionIds: string[]
+): { artifactVersion: ArtifactVersionRow; idempotentReplay: boolean } | null {
+  const row = state.humanTasks.find((task) => task.human_task_id === humanTaskId);
+  if (!row || row.state !== "CLAIMED") {
+    return null;
+  }
+
+  const existing = state.artifactVersions.find(
+    (artifact) =>
+      artifact.artifact_kind === "human_task.review_confirmation.json" &&
+      artifact.metadata_json?.human_task_id === humanTaskId
+  );
+  if (existing) {
+    state.confirmedReviewTaskIds.add(humanTaskId);
+    state.audit.mutations.push(`confirm-review:${humanTaskId}`);
+    return { artifactVersion: existing, idempotentReplay: true };
+  }
+
+  const artifactVersionId = `av-confirm-${state.artifactVersions.length + 1}`;
+  const createdAt = new Date().toISOString();
+  const artifactVersion: ArtifactVersionRow = {
+    artifact_version_id: artifactVersionId,
+    workflow_run_id: row.workflow_run_id,
+    task_run_id: row.task_run_id,
+    artifact_kind: "human_task.review_confirmation.json",
+    artifact_role: "review_evidence",
+    media_type: "application/json",
+    storage_uri: `memory://confirm-review/${artifactVersionId}.json`,
+    content_digest: `sha256:${artifactVersionId}`,
+    byte_size: 256,
+    metadata_json: {
+      human_task_id: humanTaskId,
+      reviewed_artifact_version_ids: reviewedArtifactVersionIds
+    },
+    parent_artifact_version_id: null,
+    supersedes_artifact_version_id: null,
+    lineage_note: null,
+    created_at: createdAt,
+    links: [
+      {
+        artifact_version_id: artifactVersionId,
+        workflow_run_id: row.workflow_run_id,
+        subject_kind: "human_task",
+        subject_id: humanTaskId,
+        relation_kind: "review_confirmation",
+        created_at: createdAt,
+        created_by_actor_id: "human:frontend-operator",
+        created_by_actor_type: "human"
+      }
+    ]
+  };
+
+  state.artifactVersions.unshift(artifactVersion);
+  state.confirmedReviewTaskIds.add(humanTaskId);
+  state.audit.mutations.push(`confirm-review:${humanTaskId}`);
+  return { artifactVersion, idempotentReplay: false };
 }
 
 function mutateApprovalResponse(approvalId: string, responseKind: string): boolean {
@@ -338,6 +470,40 @@ export const handlers = [
       command: "api.human_tasks.complete",
       human_task_id: humanTaskId,
       result: { ok: true }
+    });
+  }),
+
+  http.post("*/api/v1/human-tasks/:humanTaskId/confirm-review", async ({ params, request }) => {
+    if (!inScope(request)) {
+      return forbiddenWorkflowRun();
+    }
+
+    const humanTaskId = String(params.humanTaskId);
+    const body = (await request.json()) as { reviewed_artifact_version_ids?: string[] };
+    const reviewedArtifactVersionIds = Array.isArray(body.reviewed_artifact_version_ids)
+      ? body.reviewed_artifact_version_ids.filter((value): value is string => typeof value === "string")
+      : [];
+    const confirmed = confirmTaskReview(humanTaskId, reviewedArtifactVersionIds);
+    if (!confirmed) {
+      return HttpResponse.json(
+        {
+          status: "error",
+          error: {
+            code: "task_not_completable",
+            message: "review confirmation requires a claimed task",
+            details: { human_task_id: humanTaskId }
+          }
+        },
+        { status: 409 }
+      );
+    }
+    return ok({
+      command: "api.human_tasks.confirm_review",
+      human_task_id: humanTaskId,
+      result: {
+        artifact_version: confirmed.artifactVersion,
+        idempotent_replay: confirmed.idempotentReplay
+      }
     });
   }),
 
@@ -619,6 +785,53 @@ export const handlers = [
     return ok({
       command: "api.workflow_runs.artifacts.upload",
       artifact_version: artifactVersion
+    });
+  }),
+
+  http.get("*/api/v1/templates", ({ request }) => {
+    if (!inScope(request)) {
+      return forbiddenWorkflowRun();
+    }
+    const url = new URL(request.url);
+    const { limit, offset } = parseLimitOffset(url);
+    const templates = listTemplatesFromQuery(url);
+    return ok({
+      command: "api.templates.list",
+      registry: {
+        id: "schedule_planning.template_registry",
+        workflow_id: "schedule_planning.v1",
+        version: 1
+      },
+      templates: templates.slice(offset, offset + limit),
+      page: { limit, offset }
+    });
+  }),
+
+  http.get("*/api/v1/templates/:templateId/download", ({ params, request }) => {
+    if (!inScope(request)) {
+      return forbiddenWorkflowRun();
+    }
+    const templateId = String(params.templateId);
+    const template = TEMPLATE_FIXTURES.find((item) => item.template_id === templateId);
+    if (!template) {
+      return HttpResponse.json(
+        {
+          status: "error",
+          error: {
+            code: "template_not_found",
+            message: "template not found",
+            details: { template_id: templateId }
+          }
+        },
+        { status: 404 }
+      );
+    }
+    state.audit.mutations.push(`template-download:${templateId}`);
+    return ok({
+      command: "api.templates.download",
+      template,
+      content_base64: templateContentBase64(templateId),
+      byte_size: 256
     });
   }),
 

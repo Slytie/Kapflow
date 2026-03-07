@@ -112,6 +112,8 @@ steps:
       promotion_reason: official_publish
       promoted_by_task_run_id: "{{complete_final_review.result.task_run.task_run_id}}"
       approved_by_approval_id: "{{respond_publish_approval.approval.approval_id}}"
+      actor_id: human:dispatch-supervisor-1
+      actor_type: human
       idempotency_key: "scenario:{{scenario_id}}:pointers.promote:official-publish"
     save_as: promote_official_pointer
 expected_events:

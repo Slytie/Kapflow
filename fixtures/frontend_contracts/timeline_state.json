@@ -5,7 +5,7 @@
     "scenario_id": "stage07_major_replan_happy"
   },
   "timeline": {
-    "event_count": 22,
+    "event_count": 23,
     "event_type_sequence": [
       "workflow.run.created",
       "artifact.version.created",
@@ -16,6 +16,7 @@
       "task.created",
       "task.claimed",
       "task.run.state_changed",
+      "artifact.version.created",
       "task.completed",
       "task.run.state_changed",
       "task.run.created",
@@ -357,11 +358,52 @@
       },
       {
         "actor": {
+          "id": "system:runtime",
+          "type": "system"
+        },
+        "domain_id": "domain-x",
+        "event_id": "<event_id:17>",
+        "event_type": "artifact.version.created",
+        "idempotency_key": "scenario:stage07_major_replan_happy:artifacts.ingest:exception-board-upload:artifacts.create-version.artifact.version.created",
+        "links": [
+          {
+            "id": "<artifact_version_id:18>",
+            "rel": "subject",
+            "type": "artifact_version"
+          },
+          {
+            "id": "<workflow_run_id:2>",
+            "rel": "subject",
+            "type": "workflow_run"
+          },
+          {
+            "id": "<task_run_id:11>",
+            "rel": "subject",
+            "type": "task_run"
+          },
+          {
+            "id": "<human_task_id:14>",
+            "rel": "attachment",
+            "type": "human_task"
+          }
+        ],
+        "occurred_at": "<ts:20>",
+        "payload": {
+          "artifact_version_id": "<artifact_version_id:18>",
+          "dataset_key": "schedule.exception_board.doc"
+        },
+        "recorded_at": "<ts:21>",
+        "schema_version": "1.0",
+        "sequence_no": 10,
+        "tenant_id": "tenant-a"
+      },
+      {
+        "actor": {
           "id": "human:ops-manager-1",
           "type": "human"
         },
         "domain_id": "domain-x",
-        "event_id": "<event_id:17>",
+        "event_id": "<event_id:19>",
         "event_type": "task.completed",
         "idempotency_key": "scenario:stage07_major_replan_happy:tasks.complete:triage:tasks.complete.task.completed",
         "links": [
@@ -381,14 +423,14 @@
             "type": "human_task"
           }
         ],
-        "occurred_at": "<ts:20>",
+        "occurred_at": "<ts:22>",
         "payload": {
           "completion_code": "major_replan_is_ready_for_review",
           "human_task_id": "<human_task_id:14>"
         },
-        "recorded_at": "<ts:21>",
+        "recorded_at": "<ts:23>",
         "schema_version": "1.0",
-        "sequence_no": 10,
+        "sequence_no": 11,
         "tenant_id": "tenant-a"
       },
       {
@@ -397,7 +439,7 @@
           "type": "human"
         },
         "domain_id": "domain-x",
-        "event_id": "<event_id:18>",
+        "event_id": "<event_id:20>",
         "event_type": "task.run.state_changed",
         "idempotency_key": "scenario:stage07_major_replan_happy:tasks.complete:triage:tasks.complete.task.run.state_changed",
         "links": [
@@ -412,53 +454,12 @@
             "type": "task_run"
           }
         ],
-        "occurred_at": "<ts:22>",
+        "occurred_at": "<ts:24>",
         "payload": {
           "from_state": "IN_PROGRESS",
           "reason": "human_task_completed",
           "task_run_id": "<task_run_id:11>",
           "to_state": "COMPLETED"
-        },
-        "recorded_at": "<ts:23>",
-        "schema_version": "1.0",
-        "sequence_no": 11,
-        "tenant_id": "tenant-a"
-      },
-      {
-        "actor": {
-          "id": "human:ops-manager-1",
-          "type": "human"
-        },
-        "domain_id": "domain-x",
-        "event_id": "<event_id:19>",
-        "event_type": "task.run.created",
-        "idempotency_key": "scenario:stage07_major_replan_happy:tasks.complete:triage:tasks.complete.spawn.stage07_final_replan_review.0.task.run.created",
-        "links": [
-          {
-            "id": "<workflow_run_id:2>",
-            "rel": "subject",
-            "type": "workflow_run"
-          },
-          {
-            "id": "<task_run_id:20>",
-            "rel": "subject",
-            "type": "task_run"
-          }
-        ],
-        "occurred_at": "<ts:24>",
-        "payload": {
-          "activation_key": "<workflow_run_id:2>|<flag_id:9>|final_review|1",
-          "generation": 1,
-          "spawn_budget_key": "stage07:<workflow_run_id:2>:<flag_id:9>",
-          "spawn_cause_event_id": "<spawn_cause_event_id:21>",
-          "spawn_cause_kind": "task_completion",
-          "spawn_depth": 1,
-          "spawn_rule_id": "stage07_final_replan_review",
-          "spawned_from_flag_id": "<spawned_from_flag_id:12>",
-          "spawned_from_task_run_id": "<spawned_from_task_run_id:22>",
-          "stage_id": "Stage07",
-          "task_kind": "final_review",
-          "task_run_id": "<task_run_id:20>"
         },
         "recorded_at": "<ts:25>",
         "schema_version": "1.0",
@@ -471,9 +472,9 @@
           "type": "human"
         },
         "domain_id": "domain-x",
-        "event_id": "<event_id:23>",
-        "event_type": "task.created",
-        "idempotency_key": "scenario:stage07_major_replan_happy:tasks.complete:triage:tasks.complete.spawn.stage07_final_replan_review.0.task.created",
+        "event_id": "<event_id:21>",
+        "event_type": "task.run.created",
+        "idempotency_key": "scenario:stage07_major_replan_happy:tasks.complete:triage:tasks.complete.spawn.stage07_final_replan_review.0.task.run.created",
         "links": [
           {
             "id": "<workflow_run_id:2>",
@@ -481,24 +482,25 @@
             "type": "workflow_run"
           },
           {
-            "id": "<task_run_id:20>",
+            "id": "<task_run_id:22>",
             "rel": "subject",
             "type": "task_run"
-          },
-          {
-            "id": "<human_task_id:24>",
-            "rel": "subject",
-            "type": "human_task"
           }
         ],
         "occurred_at": "<ts:26>",
         "payload": {
-          "candidate_roles": [
-            "operations_manager"
-          ],
-          "human_task_id": "<human_task_id:24>",
-          "state": "OPEN",
-          "task_kind": "final_review"
+          "activation_key": "<workflow_run_id:2>|<flag_id:9>|final_review|1",
+          "generation": 1,
+          "spawn_budget_key": "stage07:<workflow_run_id:2>:<flag_id:9>",
+          "spawn_cause_event_id": "<spawn_cause_event_id:23>",
+          "spawn_cause_kind": "task_completion",
+          "spawn_depth": 1,
+          "spawn_rule_id": "stage07_final_replan_review",
+          "spawned_from_flag_id": "<spawned_from_flag_id:12>",
+          "spawned_from_task_run_id": "<spawned_from_task_run_id:24>",
+          "stage_id": "Stage07",
+          "task_kind": "final_review",
+          "task_run_id": "<task_run_id:22>"
         },
         "recorded_at": "<ts:27>",
         "schema_version": "1.0",
@@ -512,8 +514,8 @@
         },
         "domain_id": "domain-x",
         "event_id": "<event_id:25>",
-        "event_type": "task.claimed",
-        "idempotency_key": "scenario:stage07_major_replan_happy:tasks.claim:final-review:tasks.claim.task.claimed",
+        "event_type": "task.created",
+        "idempotency_key": "scenario:stage07_major_replan_happy:tasks.complete:triage:tasks.complete.spawn.stage07_final_replan_review.0.task.created",
         "links": [
           {
             "id": "<workflow_run_id:2>",
@@ -521,23 +523,26 @@
             "type": "workflow_run"
           },
           {
-            "id": "<task_run_id:20>",
+            "id": "<task_run_id:22>",
             "rel": "subject",
             "type": "task_run"
           },
           {
-            "id": "<human_task_id:24>",
+            "id": "<human_task_id:26>",
             "rel": "subject",
             "type": "human_task"
           }
         ],
         "occurred_at": "<ts:28>",
         "payload": {
-          "claimed_until": "<ts:29>",
-          "human_task_id": "<human_task_id:24>",
-          "lease_version": 1
+          "candidate_roles": [
+            "operations_manager"
+          ],
+          "human_task_id": "<human_task_id:26>",
+          "state": "OPEN",
+          "task_kind": "final_review"
         },
-        "recorded_at": "<ts:30>",
+        "recorded_at": "<ts:29>",
         "schema_version": "1.0",
         "sequence_no": 14,
         "tenant_id": "tenant-a"
@@ -548,9 +553,9 @@
           "type": "human"
         },
         "domain_id": "domain-x",
-        "event_id": "<event_id:26>",
-        "event_type": "task.run.state_changed",
-        "idempotency_key": "scenario:stage07_major_replan_happy:tasks.claim:final-review:tasks.claim.task.run.state_changed",
+        "event_id": "<event_id:27>",
+        "event_type": "task.claimed",
+        "idempotency_key": "scenario:stage07_major_replan_happy:tasks.claim:final-review:tasks.claim.task.claimed",
         "links": [
           {
             "id": "<workflow_run_id:2>",
@@ -558,17 +563,21 @@
             "type": "workflow_run"
           },
           {
-            "id": "<task_run_id:20>",
+            "id": "<task_run_id:22>",
             "rel": "subject",
             "type": "task_run"
+          },
+          {
+            "id": "<human_task_id:26>",
+            "rel": "subject",
+            "type": "human_task"
           }
         ],
-        "occurred_at": "<ts:31>",
+        "occurred_at": "<ts:30>",
         "payload": {
-          "from_state": "READY",
-          "reason": "human_task_claimed",
-          "task_run_id": "<task_run_id:20>",
-          "to_state": "IN_PROGRESS"
+          "claimed_until": "<ts:31>",
+          "human_task_id": "<human_task_id:26>",
+          "lease_version": 1
         },
         "recorded_at": "<ts:32>",
         "schema_version": "1.0",
@@ -581,9 +590,9 @@
           "type": "human"
         },
         "domain_id": "domain-x",
-        "event_id": "<event_id:27>",
-        "event_type": "task.completed",
-        "idempotency_key": "scenario:stage07_major_replan_happy:tasks.complete:final-review:tasks.complete.task.completed",
+        "event_id": "<event_id:28>",
+        "event_type": "task.run.state_changed",
+        "idempotency_key": "scenario:stage07_major_replan_happy:tasks.claim:final-review:tasks.claim.task.run.state_changed",
         "links": [
           {
             "id": "<workflow_run_id:2>",
@@ -591,20 +600,17 @@
             "type": "workflow_run"
           },
           {
-            "id": "<task_run_id:20>",
+            "id": "<task_run_id:22>",
             "rel": "subject",
             "type": "task_run"
-          },
-          {
-            "id": "<human_task_id:24>",
-            "rel": "subject",
-            "type": "human_task"
           }
         ],
         "occurred_at": "<ts:33>",
         "payload": {
-          "completion_code": "review_complete",
-          "human_task_id": "<human_task_id:24>"
+          "from_state": "READY",
+          "reason": "human_task_claimed",
+          "task_run_id": "<task_run_id:22>",
+          "to_state": "IN_PROGRESS"
         },
         "recorded_at": "<ts:34>",
         "schema_version": "1.0",
@@ -617,7 +623,43 @@
           "type": "human"
         },
         "domain_id": "domain-x",
-        "event_id": "<event_id:28>",
+        "event_id": "<event_id:29>",
+        "event_type": "task.completed",
+        "idempotency_key": "scenario:stage07_major_replan_happy:tasks.complete:final-review:tasks.complete.task.completed",
+        "links": [
+          {
+            "id": "<workflow_run_id:2>",
+            "rel": "subject",
+            "type": "workflow_run"
+          },
+          {
+            "id": "<task_run_id:22>",
+            "rel": "subject",
+            "type": "task_run"
+          },
+          {
+            "id": "<human_task_id:26>",
+            "rel": "subject",
+            "type": "human_task"
+          }
+        ],
+        "occurred_at": "<ts:35>",
+        "payload": {
+          "completion_code": "review_complete",
+          "human_task_id": "<human_task_id:26>"
+        },
+        "recorded_at": "<ts:36>",
+        "schema_version": "1.0",
+        "sequence_no": 17,
+        "tenant_id": "tenant-a"
+      },
+      {
+        "actor": {
+          "id": "human:ops-manager-1",
+          "type": "human"
+        },
+        "domain_id": "domain-x",
+        "event_id": "<event_id:30>",
         "event_type": "task.run.state_changed",
         "idempotency_key": "scenario:stage07_major_replan_happy:tasks.complete:final-review:tasks.complete.task.run.state_changed",
         "links": [
@@ -627,21 +669,21 @@
             "type": "workflow_run"
           },
           {
-            "id": "<task_run_id:20>",
+            "id": "<task_run_id:22>",
             "rel": "subject",
             "type": "task_run"
           }
         ],
-        "occurred_at": "<ts:35>",
+        "occurred_at": "<ts:37>",
         "payload": {
           "from_state": "IN_PROGRESS",
           "reason": "human_task_completed",
-          "task_run_id": "<task_run_id:20>",
+          "task_run_id": "<task_run_id:22>",
           "to_state": "COMPLETED"
         },
-        "recorded_at": "<ts:36>",
+        "recorded_at": "<ts:38>",
         "schema_version": "1.0",
-        "sequence_no": 17,
+        "sequence_no": 18,
         "tenant_id": "tenant-a"
       },
       {
@@ -650,12 +692,12 @@
           "type": "system"
         },
         "domain_id": "domain-x",
-        "event_id": "<event_id:29>",
+        "event_id": "<event_id:31>",
         "event_type": "approval.requested",
         "idempotency_key": "scenario:stage07_major_replan_happy:approvals.request:major-replan:approvals.request.approval.requested",
         "links": [
           {
-            "id": "<approval_id:30>",
+            "id": "<approval_id:32>",
             "rel": "subject",
             "type": "approval"
           },
@@ -665,12 +707,12 @@
             "type": "workflow_run"
           },
           {
-            "id": "<task_run_id:20>",
+            "id": "<task_run_id:22>",
             "rel": "subject",
             "type": "task_run"
           }
         ],
-        "occurred_at": "<ts:37>",
+        "occurred_at": "<ts:39>",
         "payload": {
           "action": "approve_major_replan",
           "allowed_responses": [
@@ -680,13 +722,13 @@
             "cancel",
             "expire"
           ],
-          "approval_id": "<approval_id:30>",
+          "approval_id": "<approval_id:32>",
           "approval_kind": "business_decision",
           "requested_from_role": "operations_manager"
         },
-        "recorded_at": "<ts:38>",
+        "recorded_at": "<ts:40>",
         "schema_version": "1.0",
-        "sequence_no": 18,
+        "sequence_no": 19,
         "tenant_id": "tenant-a"
       },
       {
@@ -695,12 +737,12 @@
           "type": "human"
         },
         "domain_id": "domain-x",
-        "event_id": "<event_id:31>",
+        "event_id": "<event_id:33>",
         "event_type": "approval.responded",
         "idempotency_key": "scenario:stage07_major_replan_happy:approvals.respond:major-replan:approvals.respond.approval.responded",
         "links": [
           {
-            "id": "<approval_id:30>",
+            "id": "<approval_id:32>",
             "rel": "subject",
             "type": "approval"
           },
@@ -710,55 +752,18 @@
             "type": "workflow_run"
           },
           {
-            "id": "<task_run_id:20>",
-            "rel": "subject",
-            "type": "task_run"
-          }
-        ],
-        "occurred_at": "<ts:39>",
-        "payload": {
-          "action": "stage:Stage07",
-          "approval_id": "<approval_id:30>",
-          "outcome": "approved",
-          "rationale": "Major replan approved due no-show",
-          "response": "approve"
-        },
-        "recorded_at": "<ts:40>",
-        "schema_version": "1.0",
-        "sequence_no": 19,
-        "tenant_id": "tenant-a"
-      },
-      {
-        "actor": {
-          "id": "system:runtime",
-          "type": "system"
-        },
-        "domain_id": "domain-x",
-        "event_id": "<event_id:32>",
-        "event_type": "artifact.version.created",
-        "idempotency_key": "scenario:stage07_major_replan_happy:artifacts.create-version:delta:artifacts.create-version.artifact.version.created",
-        "links": [
-          {
-            "id": "<artifact_version_id:33>",
-            "rel": "subject",
-            "type": "artifact_version"
-          },
-          {
-            "id": "<workflow_run_id:2>",
-            "rel": "subject",
-            "type": "workflow_run"
-          },
-          {
-            "id": "<task_run_id:20>",
+            "id": "<task_run_id:22>",
             "rel": "subject",
             "type": "task_run"
           }
         ],
         "occurred_at": "<ts:41>",
         "payload": {
-          "artifact_version_id": "<artifact_version_id:33>",
-          "dataset_key": "schedule.replan_delta.workbook",
-          "supersedes_artifact_version_id": "<supersedes_artifact_version_id:34>"
+          "action": "stage:Stage07",
+          "approval_id": "<approval_id:32>",
+          "outcome": "approved",
+          "rationale": "Major replan approved due no-show",
+          "response": "approve"
         },
         "recorded_at": "<ts:42>",
         "schema_version": "1.0",
@@ -771,7 +776,44 @@
           "type": "system"
         },
         "domain_id": "domain-x",
-        "event_id": "<event_id:35>",
+        "event_id": "<event_id:34>",
+        "event_type": "artifact.version.created",
+        "idempotency_key": "scenario:stage07_major_replan_happy:artifacts.create-version:delta:artifacts.create-version.artifact.version.created",
+        "links": [
+          {
+            "id": "<artifact_version_id:35>",
+            "rel": "subject",
+            "type": "artifact_version"
+          },
+          {
+            "id": "<workflow_run_id:2>",
+            "rel": "subject",
+            "type": "workflow_run"
+          },
+          {
+            "id": "<task_run_id:22>",
+            "rel": "subject",
+            "type": "task_run"
+          }
+        ],
+        "occurred_at": "<ts:43>",
+        "payload": {
+          "artifact_version_id": "<artifact_version_id:35>",
+          "dataset_key": "schedule.replan_delta.workbook",
+          "supersedes_artifact_version_id": "<supersedes_artifact_version_id:36>"
+        },
+        "recorded_at": "<ts:44>",
+        "schema_version": "1.0",
+        "sequence_no": 21,
+        "tenant_id": "tenant-a"
+      },
+      {
+        "actor": {
+          "id": "human:ops-manager-1",
+          "type": "human"
+        },
+        "domain_id": "domain-x",
+        "event_id": "<event_id:37>",
         "event_type": "artifact.pointer.promoted",
         "idempotency_key": "scenario:stage07_major_replan_happy:pointers.promote:delta:pointers.promote.artifact.pointer.promoted",
         "links": [
@@ -786,21 +828,21 @@
             "type": "workflow_run"
           },
           {
-            "id": "<artifact_version_id:33>",
+            "id": "<artifact_version_id:35>",
             "rel": "subject",
             "type": "artifact_version"
           }
         ],
-        "occurred_at": "<ts:43>",
+        "occurred_at": "<ts:45>",
         "payload": {
           "dataset_key": "schedule.replan_delta.workbook",
           "pointer_id": "official:schedule.replan_delta.workbook",
-          "promoted_artifact_version_id": "<artifact_version_id:33>",
+          "promoted_artifact_version_id": "<artifact_version_id:35>",
           "reviewed_artifact_version_id": "<artifact_version_id:6>"
         },
-        "recorded_at": "<ts:44>",
+        "recorded_at": "<ts:46>",
         "schema_version": "1.0",
-        "sequence_no": 21,
+        "sequence_no": 22,
         "tenant_id": "tenant-a"
       },
       {
@@ -809,7 +851,7 @@
           "type": "human"
         },
         "domain_id": "domain-x",
-        "event_id": "<event_id:36>",
+        "event_id": "<event_id:38>",
         "event_type": "flag.state_changed",
         "idempotency_key": "scenario:stage07_major_replan_happy:flags.transition:resolved:flags.transition.flag.state_changed",
         "links": [
@@ -824,16 +866,16 @@
             "type": "workflow_run"
           }
         ],
-        "occurred_at": "<ts:45>",
+        "occurred_at": "<ts:47>",
         "payload": {
           "flag_id": "<flag_id:9>",
           "from_state": "open",
           "reason": "Replan published",
           "to_state": "resolved"
         },
-        "recorded_at": "<ts:46>",
+        "recorded_at": "<ts:48>",
         "schema_version": "1.0",
-        "sequence_no": 22,
+        "sequence_no": 23,
         "tenant_id": "tenant-a"
       }
     ]

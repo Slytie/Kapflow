@@ -22,6 +22,9 @@ from onetruth.application.services.task_actionability import (
     compute_flag_actionability,
     compute_human_task_actionability,
 )
+from onetruth.application.services.task_requirements import (
+    build_human_task_requirement_index,
+)
 from onetruth.infrastructure.events.event_store import utc_now_iso
 
 from onetruth.api.dependencies import (
@@ -146,6 +149,12 @@ def get_workflow_run_workspace_endpoint(
         connection,
         workflow_run_id=workflow_run_id,
     )
+    requirement_index = build_human_task_requirement_index(
+        connection,
+        workflow_run_id=workflow_run_id,
+        human_tasks=human_tasks,
+        artifact_versions=artifact_versions,
+    )
     graph = project_workspace_graph(
         workflow_id=str(workflow_run.get("workflow_id")),
         workflow_run=workflow_run,
@@ -170,6 +179,7 @@ def get_workflow_run_workspace_endpoint(
                 subject_kind="human_task",
                 subject_id=str(task["human_task_id"]),
             ),
+            requirement_state=requirement_index.get(str(task["human_task_id"])),
         )
         if _is_user_relevant_task(task=task, context=context):
             user_work.append(item)
@@ -362,6 +372,7 @@ def _workspace_human_task_item(
     task: dict[str, Any],
     context: RequestContext,
     linked_artifact_count: int,
+    requirement_state: dict[str, Any] | None,
 ) -> dict[str, Any]:
     actionability = compute_human_task_actionability(
         task=task,
@@ -369,6 +380,7 @@ def _workspace_human_task_item(
         actor_type=context.actor_type,
         actor_roles=context.actor_roles,
         linked_artifact_count=linked_artifact_count,
+        requirement_state=requirement_state,
     )
     return {
         "id": f"human_task:{task['human_task_id']}",
@@ -524,4 +536,3 @@ def _build_official_outputs(
         "pointers": pointers,
         "outputs": outputs,
     }
-

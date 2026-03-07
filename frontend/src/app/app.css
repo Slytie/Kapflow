@@ -1,37 +1,61 @@
 .app-shell {
   min-height: 100vh;
   display: grid;
-  grid-template-columns: 240px 1fr 360px;
+  grid-template-columns: 1fr 360px;
+  grid-template-rows: auto 1fr;
+  background: #f3f2f0;
 }
 
 .app-shell__nav {
-  background: linear-gradient(180deg, #0f1f3b 0%, #172e59 100%);
-  color: white;
-  padding: 20px;
+  grid-column: 1 / -1;
+  grid-row: 1;
+  background: #f3f2f0;
+  color: #5f636a;
+  border-right: 0;
+  border-bottom: 1px solid #ddd9d4;
+  padding: 14px 22px 12px;
   display: flex;
-  flex-direction: column;
-  gap: 20px;
+  flex-direction: row;
+  align-items: center;
+  gap: 18px;
 }
 
 .app-shell__nav nav {
   display: flex;
-  flex-direction: column;
-  gap: 8px;
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: 6px;
 }
 
 .app-shell__nav a {
+  color: #6f747c;
+  border: 1px solid transparent;
+  border-radius: 12px;
   padding: 8px 10px;
-  border-radius: 10px;
-  color: #d7e2f4;
+  font-size: 13px;
+  line-height: 1.2;
+  transition: all 140ms ease;
+}
+
+.app-shell__nav a:hover {
+  background: #edeae5;
+  border-color: #ddd8d1;
+  color: #51565f;
 }
 
 .app-shell__nav a.active {
-  background: rgba(255, 255, 255, 0.18);
-  color: white;
+  background: #ece8df;
+  border-color: #d8d0c1;
+  color: #41464e;
+  box-shadow: none;
+  font-weight: 500;
 }
 
 .app-shell__main {
-  padding: 20px;
+  grid-column: 1;
+  grid-row: 2;
+  padding: 24px 28px;
+  background: #f3f2f0;
   display: flex;
   flex-direction: column;
   gap: 14px;
@@ -48,8 +72,8 @@
   display: flex;
   align-items: center;
   gap: 10px;
-  background: var(--panel);
-  border: 1px solid var(--ink-100);
+  background: #f9f8f6;
+  border: 1px solid #e1dfdd;
   border-radius: 12px;
   padding: 8px 12px;
 }
@@ -63,8 +87,8 @@
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 10px;
-  background: var(--panel);
-  border: 1px solid var(--ink-100);
+  background: #f8f7f5;
+  border: 1px solid #e1dfdd;
   border-radius: 12px;
   padding: 10px;
 }
@@ -81,8 +105,8 @@
 .filter-bar select {
   padding: 8px 10px;
   border-radius: 8px;
-  border: 1px solid var(--ink-300);
-  background: white;
+  border: 1px solid #d9d6d2;
+  background: #fdfdfc;
 }
 
 .app-shell__content {
@@ -121,7 +145,6 @@
 .approval-card,
 .flag-card,
 .pointer-card,
-.timeline-row,
 .queue-row,
 .review-workspace {
   border: 1px solid var(--ink-100);
@@ -174,6 +197,13 @@
   margin: 0;
   color: var(--ink-700);
   font-size: 13px;
+}
+
+.queue-row__hint {
+  grid-column: 1 / -1;
+  margin: 2px 0 0;
+  color: var(--warn);
+  font-size: 12px;
 }
 
 .stack-list {
@@ -270,6 +300,8 @@
 }
 
 .detail-drawer {
+  grid-column: 2;
+  grid-row: 2;
   background: #f0f4fb;
   border-left: 1px solid var(--ink-100);
   padding: 18px;
@@ -300,6 +332,67 @@
   margin: 0;
 }
 
+.detail-drawer__artifacts {
+  margin-top: 14px;
+  border-top: 1px dashed var(--ink-300);
+  padding-top: 10px;
+}
+
+.detail-drawer__artifacts h3 {
+  margin: 0 0 8px;
+  font-size: 13px;
+  color: var(--ink-700);
+}
+
+.detail-drawer__artifact-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.detail-drawer__artifact-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  align-items: flex-start;
+  border: 1px solid var(--ink-100);
+  border-radius: 8px;
+  background: #f8fbff;
+  padding: 8px;
+}
+
+.detail-drawer__artifact-meta {
+  min-width: 0;
+}
+
+.detail-drawer__artifact-name {
+  margin: 0 0 2px;
+  font-size: 13px;
+  color: var(--ink-950);
+  overflow-wrap: anywhere;
+}
+
+.detail-drawer__artifact-details {
+  margin: 0;
+  color: var(--ink-700);
+  font-size: 12px;
+}
+
+.detail-drawer__error {
+  margin: 10px 0 0;
+  color: var(--danger);
+  font-size: 12px;
+}
+
+.detail-drawer__hint {
+  margin: 8px 0 0;
+  color: var(--ink-700);
+  font-size: 12px;
+}
+
 .split-layout {
   display: grid;
   grid-template-columns: 1.1fr 1fr;
@@ -322,21 +415,26 @@
 
 .tabs {
   display: flex;
-  gap: 8px;
+  gap: 14px;
   margin-bottom: 12px;
+  border-bottom: 1px solid #d9d6d2;
 }
 
 .tabs button {
-  border: 1px solid var(--ink-300);
-  border-radius: 8px;
-  background: white;
-  padding: 6px 10px;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  border-radius: 0;
+  background: transparent;
+  padding: 4px 0 8px;
   text-transform: capitalize;
+  color: #72767d;
+  font-weight: 400;
 }
 
 .tabs button.active {
-  border-color: var(--accent);
-  color: var(--accent);
+  border-bottom-color: #bfa35c;
+  color: #3d434b;
+  font-weight: 500;
 }
 
 .run-detail-header {
@@ -347,6 +445,155 @@
   display: flex;
   gap: 10px;
   margin-top: 6px;
+}
+
+.timeline-page {
+  border: 1px solid #e1dfdd;
+  border-radius: 16px;
+  background: #f8f7f5;
+  box-shadow: 0 10px 30px rgba(18, 29, 47, 0.05);
+  padding: 16px 16px 8px;
+}
+
+.timeline-page__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 14px;
+  margin-bottom: 14px;
+  border-bottom: 1px solid #ddd9d4;
+  padding-bottom: 10px;
+}
+
+.timeline-page__header h2 {
+  margin: 0;
+  font-size: 28px;
+  font-weight: 400;
+  color: #3e434b;
+}
+
+.timeline-page__eyebrow {
+  margin: 0 0 4px;
+  color: #878b92;
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.timeline-page__summary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.timeline-page__summary span {
+  border: 1px solid #ddd9d4;
+  border-radius: 999px;
+  background: #efede8;
+  color: #646a72;
+  font-size: 12px;
+  padding: 4px 10px;
+}
+
+.timeline-page__rail {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  position: relative;
+}
+
+.timeline-page__rail::before {
+  content: "";
+  position: absolute;
+  top: 8px;
+  bottom: 8px;
+  left: 14px;
+  width: 1px;
+  background: #dedad5;
+}
+
+.timeline-row {
+  position: relative;
+  display: grid;
+  grid-template-columns: 20px 1fr;
+  gap: 10px;
+  align-items: start;
+}
+
+.timeline-row__marker {
+  margin-top: 14px;
+  width: 9px;
+  height: 9px;
+  border-radius: 999px;
+  background: #bca86f;
+  border: 1px solid #f8f7f5;
+  box-shadow: 0 0 0 3px rgba(188, 168, 111, 0.12);
+  z-index: 1;
+}
+
+.timeline-row__surface {
+  border: 1px solid #e1dfdd;
+  border-radius: 12px;
+  background: #fcfbf9;
+  box-shadow: 0 6px 16px rgba(19, 31, 49, 0.04);
+  padding: 11px 12px;
+}
+
+.timeline-row__header {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+
+.timeline-row__header h4 {
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.2;
+  color: #3e434b;
+  font-weight: 500;
+  flex: 1;
+}
+
+.timeline-row__header time {
+  color: #81858c;
+  font-size: 12px;
+}
+
+.timeline-row__sequence {
+  border: 1px solid #d8d4cf;
+  border-radius: 999px;
+  background: #efede8;
+  color: #61666e;
+  font-size: 12px;
+  padding: 2px 8px;
+}
+
+.timeline-row__details {
+  margin: 8px 0;
+  color: #5a6068;
+  font-size: 13px;
+}
+
+.timeline-row__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.timeline-row__meta span {
+  border-radius: 999px;
+  border: 1px solid #dfdbd6;
+  background: #f2f0eb;
+  color: #6a7077;
+  padding: 2px 8px;
+  font-size: 11px;
+}
+
+.timeline-row .link-button {
+  color: #656c75;
+  font-size: 12px;
 }
 
 .workspace-page {
@@ -646,11 +893,13 @@
 
 @media (max-width: 1200px) {
   .app-shell {
-    grid-template-columns: 220px 1fr;
+    grid-template-columns: 1fr;
+    grid-template-rows: auto 1fr auto;
   }
 
   .detail-drawer {
-    grid-column: 1 / -1;
+    grid-column: 1;
+    grid-row: 3;
     border-left: 0;
     border-top: 1px solid var(--ink-100);
   }
@@ -659,10 +908,16 @@
 @media (max-width: 960px) {
   .app-shell {
     grid-template-columns: 1fr;
+    grid-template-rows: auto 1fr auto;
   }
 
   .app-shell__nav {
-    padding: 14px;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 12px;
+    border-right: 0;
+    border-bottom: 1px solid #ddd9d4;
   }
 
   .board-grid {
@@ -684,7 +939,8 @@
 
   .workspace-page__header,
   .workspace-summary-bar,
-  .workflow-graph > header {
+  .workflow-graph > header,
+  .timeline-page__header {
     flex-direction: column;
     align-items: flex-start;
   }

@@ -26,6 +26,11 @@ export interface HumanTaskRow {
   blocked_on_kind: string | null;
   blocked_on_ref: string | null;
   spawned_from_flag_id: string | null;
+  available_actions?: string[];
+  missing_required_inputs?: string[];
+  blocking_reason_codes?: string[];
+  can_complete?: boolean;
+  can_confirm_review?: boolean;
 }
 
 export interface ApprovalRow {
@@ -251,11 +256,32 @@ export interface WorkflowWorkspaceFreshness {
   note: string | null;
 }
 
+export interface WorkflowWorkspaceRequiredUpload {
+  dataset_key: string;
+  template_id: string | null;
+  artifact_kind: string;
+  required_count: number;
+  current_count: number;
+  status: string;
+}
+
+export interface WorkflowWorkspaceRequiredReview {
+  dataset_key: string;
+  artifact_kind: string;
+  required_count: number;
+  reviewed_artifact_version_id: string | null;
+  review_confirmation_artifact_version_id: string | null;
+  status: string;
+}
+
 interface WorkflowWorkspaceWorkItemBase {
   work_id: string;
   graph_node_id: string | null;
   available_actions: string[];
   missing_required_inputs: string[];
+  required_uploads: WorkflowWorkspaceRequiredUpload[];
+  required_reviews: WorkflowWorkspaceRequiredReview[];
+  blocking_reason_codes: string[];
   blocking_reason: string | null;
 }
 
@@ -289,6 +315,25 @@ export interface WorkflowRunWorkspaceContract {
   blocking_work: WorkflowWorkspaceWorkItem[];
   latest_event_sequence: number | null;
   freshness: WorkflowWorkspaceFreshness;
+}
+
+export interface TemplateRegistryMetadata {
+  id: string;
+  workflow_id: string;
+  version: number;
+}
+
+export interface TemplateRecord {
+  template_id: string;
+  workflow_id: string;
+  stage_id: string;
+  dataset_key: string;
+  artifact_kind: string;
+  variant: string;
+  media_type: string;
+  file_path: string;
+  file_name: string;
+  description: string;
 }
 
 interface Envelope<T> {

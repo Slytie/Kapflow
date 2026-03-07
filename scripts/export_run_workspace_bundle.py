@@ -16,6 +16,9 @@ from onetruth.application.handlers.workflow_task_lifecycle import (
     list_execution_sessions_for_workflow_run_command,
     show_workflow_run_command,
 )
+from onetruth.application.services.task_requirements import (
+    build_human_task_requirement_index,
+)
 from onetruth.infrastructure.db.session import DEFAULT_DB_URL, open_sqlite_connection
 from onetruth.infrastructure.repositories.policy_decisions import (
     get_policy_decision,
@@ -37,7 +40,11 @@ REQUIRED_BUNDLE_FILES = (
     "policy_decisions.json",
     "timeline_excerpt.json",
     "artifact_manifest.json",
+    "requirements_state.json",
+    "review_confirmations.json",
+    "draft_artifacts.json",
     "official_outputs.json",
+    "official_pointers.json",
     "graph_nodes.json",
     "graph_edges.json",
 )
@@ -118,6 +125,12 @@ def main(argv: list[str] | None = None) -> int:
             context=context,
             workflow_run_id=str(args.workflow_run_id),
         )
+        requirement_index = build_human_task_requirement_index(
+            connection,
+            workflow_run_id=str(args.workflow_run_id),
+            human_tasks=run_detail["human_tasks"],
+            artifact_versions=run_detail["artifact_versions"],
+        )
         execution_sessions = list_execution_sessions_for_workflow_run_command(
             connection,
             str(args.workflow_run_id),
@@ -154,6 +167,25 @@ def main(argv: list[str] | None = None) -> int:
         "summary": run_detail["summary"],
         "freshness": workspace_projection["freshness"],
     }
+    requirements_state = [
+        {
+            "human_task_id": str(task["human_task_id"]),
+            "task_run_id": str(task["task_run_id"]),
+            "stage_id": str(task.get("stage_id")),
+            "task_kind": str(task.get("task_kind")),
+            **requirement_index.get(str(task["human_task_id"]), {}),
+        }
+        for task in run_detail["human_tasks"]
+    ]
+    review_confirmations = [
+        artifact
+        for artifact in run_detail["artifact_versions"]
+        if str(artifact.get("artifact_kind")) == "human_task.review_confirmation.json"
+    ]
+    draft_artifacts = [
+        artifact for artifact in run_detail["artifact_versions"] if _is_draft_artifact(artifact)
+    ]
+    official_pointers = run_detail["pointers"]
     scenario_name = _infer_scenario_name(run_detail["artifact_versions"])
     openai_path_used, openai_real_used = _infer_openai_usage(run_detail["artifact_versions"])
     readme_text = _build_bundle_readme(
@@ -178,7 +210,11 @@ def main(argv: list[str] | None = None) -> int:
         "policy_decisions.json": policy_decisions,
         "timeline_excerpt.json": workspace_projection["timeline_excerpt"],
         "artifact_manifest.json": run_detail["artifact_versions"],
+        "requirements_state.json": requirements_state,
+        "review_confirmations.json": review_confirmations,
+        "draft_artifacts.json": draft_artifacts,
         "official_outputs.json": workspace_projection["official_outputs"],
+        "official_pointers.json": official_pointers,
         "graph_nodes.json": workspace_projection["graph"]["nodes"],
         "graph_edges.json": workspace_projection["graph"]["edges"],
     }
@@ -243,6 +279,19 @@ def _infer_openai_usage(artifact_versions: list[dict[str, object]]) -> tuple[boo
         if model_name and model_name != "pilot-mock-openai":
             return True, True
     return True, False
+
+
+def _is_draft_artifact(artifact: dict[str, object]) -> bool:
+    artifact_role = str(artifact.get("artifact_role") or "").strip().lower()
+    if artifact_role in {"draft", "draft_output", "agent_draft"}:
+        return True
+    metadata_json = artifact.get("metadata_json")
+    if not isinstance(metadata_json, dict):
+        return False
+    lifecycle = str(metadata_json.get("lifecycle") or "").strip().lower()
+    if lifecycle == "draft":
+        return True
+    return bool(metadata_json.get("is_draft") is True)
 
 
 def _build_bundle_readme(
@@ -313,7 +362,9 @@ def _build_bundle_readme(
             "- `workspace_projection.json` for user_work/blocking_work/actionability",
             "- `graph_nodes.json` and `graph_edges.json` for derived graph status",
             "- `timeline_excerpt.json` for freshness/progress evidence",
-            "- `official_outputs.json` and `artifact_manifest.json` for canonical output lineage",
+            "- `requirements_state.json` and `review_confirmations.json` for task requirement evidence",
+            "- `draft_artifacts.json`, `official_pointers.json`, and `official_outputs.json` for draft-vs-official lineage",
+            "- `artifact_manifest.json` for complete canonical artifact inventory",
         ]
     )
     return "\n".join(lines) + "\n"
@@ -357,4 +408,3 @@ def _first_action_lines(
 
 if __name__ == "__main__":
     raise SystemExit(main())
-

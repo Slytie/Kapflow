@@ -1,0 +1,163 @@
+scenario_id: stage06_publish_ready_confirm_review
+workflow_id: schedule_planning.v1
+workflow_version: v1
+scope:
+  tenant_id: tenant-a
+  domain_id: domain-x
+partition_key: SD-2026-03-15
+logical_date: "2026-03-15"
+seed_artifacts:
+  - artifact_kind: schedule.draft_schedule.workbook
+    artifact_role: official_input
+    media_type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet
+    source_path: Stage05_Draft_Schedule_Triage/Stage05_Draft_Schedule_Triage_Spreadsheet_Example_COMPLETED.xlsx
+  - artifact_kind: schedule.supervisor_review.doc
+    artifact_role: evidence
+    media_type: application/vnd.openxmlformats-officedocument.wordprocessingml.document
+    source_path: Stage06_Supervisor_Review_Publish/Stage06_Supervisor_Review_Publish_Document_Example_COMPLETED.docx
+steps:
+  - id: create_stage06_final_review
+    action: tasks.create
+    payload:
+      workflow_run_id: "{{workflow_run_id}}"
+      stage_id: Stage06
+      task_kind: final_review
+      activation_key: stage06-final-review-root
+      candidate_roles: [dispatch_supervisor]
+      owner_role: dispatch_supervisor
+      create_human_task: true
+      idempotency_key: "scenario:{{scenario_id}}:tasks.create:stage06-final-review"
+    save_as: create_stage06_final_review
+  - id: claim_stage06_final_review
+    action: tasks.claim
+    payload:
+      human_task_id: "{{create_stage06_final_review.result.human_task.human_task_id}}"
+      actor_id: human:dispatch-supervisor-6
+      actor_type: human
+      lease_seconds: 300
+      idempotency_key: "scenario:{{scenario_id}}:tasks.claim:stage06-final-review"
+    save_as: claim_stage06_final_review
+  - id: create_draft_publish_packet
+    action: artifacts.ingest
+    payload:
+      workflow_run_id: "{{workflow_run_id}}"
+      task_run_id: "{{create_stage06_final_review.result.task_run.task_run_id}}"
+      artifact_kind: schedule.stage06.publish_packet
+      artifact_role: draft_output
+      media_type: application/json
+      content_base64: eyJraW5kIjoic3RhZ2UwNl9wdWJsaXNoX3BhY2tldCJ9
+      file_name: stage06_publish_packet.json
+      metadata_json:
+        branch: stage06_publish_ready_confirm_review
+        lifecycle: draft
+        is_draft: true
+      idempotency_key: "scenario:{{scenario_id}}:artifacts.ingest:stage06-publish-packet-draft"
+    save_as: create_draft_publish_packet
+  - id: create_draft_published_schedule
+    action: artifacts.create-version
+    payload:
+      workflow_run_id: "{{workflow_run_id}}"
+      task_run_id: "{{create_stage06_final_review.result.task_run.task_run_id}}"
+      artifact_kind: schedule.published_schedule.workbook
+      artifact_role: draft_output
+      media_type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet
+      source_path: Stage06_Supervisor_Review_Publish/Stage06_Supervisor_Review_Publish_Spreadsheet_Example_COMPLETED.xlsx
+      metadata_json:
+        branch: stage06_publish_ready_confirm_review
+        lifecycle: draft
+        is_draft: true
+      idempotency_key: "scenario:{{scenario_id}}:artifacts.create-version:stage06-published-schedule-draft"
+    save_as: create_draft_published_schedule
+  - id: complete_stage06_before_confirm_review
+    action: tasks.complete
+    payload:
+      human_task_id: "{{create_stage06_final_review.result.human_task.human_task_id}}"
+      actor_id: human:dispatch-supervisor-6
+      actor_type: human
+      outcome: review_complete
+      idempotency_key: "scenario:{{scenario_id}}:tasks.complete:stage06-before-confirm-review"
+    expect_error_code: task_requirements_not_satisfied
+    save_as: complete_stage06_before_confirm_review
+  - id: confirm_stage06_review
+    action: tasks.confirm-review
+    payload:
+      human_task_id: "{{create_stage06_final_review.result.human_task.human_task_id}}"
+      actor_id: human:dispatch-supervisor-6
+      actor_type: human
+      reviewed_artifact_version_ids:
+        - "{{create_draft_publish_packet.artifact_version.artifact_version_id}}"
+        - "{{create_draft_published_schedule.artifact_version.artifact_version_id}}"
+      idempotency_key: "scenario:{{scenario_id}}:tasks.confirm-review:stage06-final-review"
+    save_as: confirm_stage06_review
+  - id: complete_stage06_final_review
+    action: tasks.complete
+    payload:
+      human_task_id: "{{create_stage06_final_review.result.human_task.human_task_id}}"
+      actor_id: human:dispatch-supervisor-6
+      actor_type: human
+      outcome: review_complete
+      idempotency_key: "scenario:{{scenario_id}}:tasks.complete:stage06-final-review"
+    save_as: complete_stage06_final_review
+  - id: request_publish_approval
+    action: approvals.request
+    payload:
+      workflow_run_id: "{{workflow_run_id}}"
+      task_run_id: "{{complete_stage06_final_review.result.task_run.task_run_id}}"
+      approval_kind: business_decision
+      scope_kind: stage
+      scope_ref: Stage06
+      action: publish_schedule
+      candidate_roles: [dispatch_supervisor]
+      required_role: dispatch_supervisor
+      idempotency_key: "scenario:{{scenario_id}}:approvals.request:publish"
+    save_as: request_publish_approval
+  - id: respond_publish_approval
+    action: approvals.respond
+    payload:
+      approval_id: "{{request_publish_approval.approval.approval_id}}"
+      actor_id: human:dispatch-supervisor-6
+      actor_type: human
+      response_kind: approve
+      response_reason: schedule ready for publication
+      idempotency_key: "scenario:{{scenario_id}}:approvals.respond:publish"
+    save_as: respond_publish_approval
+  - id: promote_official_pointer
+    action: pointers.promote
+    payload:
+      workflow_run_id: "{{workflow_run_id}}"
+      scope_kind: stage
+      scope_ref: Stage06
+      pointer_key: official:schedule.published_schedule.workbook
+      artifact_kind: schedule.published_schedule.workbook
+      artifact_version_id: "{{create_draft_published_schedule.artifact_version.artifact_version_id}}"
+      promotion_reason: official_publish
+      promoted_by_task_run_id: "{{complete_stage06_final_review.result.task_run.task_run_id}}"
+      approved_by_approval_id: "{{respond_publish_approval.approval.approval_id}}"
+      actor_id: human:dispatch-supervisor-6
+      actor_type: human
+      idempotency_key: "scenario:{{scenario_id}}:pointers.promote:official-publish"
+    save_as: promote_official_pointer
+expected_events:
+  ordered_contains:
+    - workflow.run.created
+    - task.run.created
+    - task.created
+    - task.claimed
+    - artifact.version.created
+    - artifact.version.created
+    - artifact.version.created
+    - task.completed
+    - approval.requested
+    - approval.responded
+    - artifact.pointer.promoted
+expected_task_states:
+  - stage_id: Stage06
+    task_kind: final_review
+    state: COMPLETED
+expected_pointer_targets:
+  - pointer_key: official:schedule.published_schedule.workbook
+    artifact_kind: schedule.published_schedule.workbook
+expected_query_rows:
+  task_rows: 1
+  approval_rows: 1
+  pointer_rows: 1

@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
+import hashlib
+import json
 import sqlite3
 from pathlib import Path
 from typing import Any
@@ -10,6 +12,7 @@ from uuid import uuid4
 from onetruth.infrastructure.artifacts.storage import (
     ArtifactStorageError,
     decode_base64_content,
+    encode_base64_content,
     infer_media_type,
     read_blob,
     read_bytes_from_file,
@@ -30,6 +33,10 @@ from onetruth.application.services.schedule_planning_stage07 import (
     Stage07SpawnError,
     build_stage07_issue_activation_key,
     resolve_stage07_spawn_plans,
+)
+from onetruth.application.services.task_requirements import (
+    build_human_task_requirement_index,
+    task_has_unsatisfied_requirements,
 )
 from onetruth.infrastructure.repositories.flags import (
     create_flag,
@@ -128,6 +135,7 @@ APPROVAL_RESPONSE_TO_OUTCOME = {
     "expire": "expired",
 }
 VALID_ACTOR_TYPES = {"human", "agent", "service", "system"}
+REVIEW_CONFIRMATION_ARTIFACT_KIND = "human_task.review_confirmation.json"
 EXECUTION_SESSION_STATES = {
     "CREATED",
     "RUNNING",
@@ -763,6 +771,36 @@ def complete_human_task_command(
                 },
             )
 
+        requirement_state = build_human_task_requirement_index(
+            connection,
+            workflow_run_id=str(completed["workflow_run_id"]),
+            human_tasks=[
+                {
+                    **before,
+                    "stage_id": task_run.get("stage_id"),
+                    "task_kind": task_run.get("task_kind"),
+                }
+            ],
+        ).get(str(completed["human_task_id"]), {})
+        if task_has_unsatisfied_requirements(requirement_state):
+            raise CommandError(
+                code="task_requirements_not_satisfied",
+                message="task cannot be completed until required uploads/reviews are satisfied",
+                details={
+                    "human_task_id": str(completed["human_task_id"]),
+                    "workflow_run_id": str(completed["workflow_run_id"]),
+                    "blocking_reason_codes": list(
+                        requirement_state.get("blocking_reason_codes") or []
+                    ),
+                    "required_uploads": list(
+                        requirement_state.get("required_uploads") or []
+                    ),
+                    "required_reviews": list(
+                        requirement_state.get("required_reviews") or []
+                    ),
+                },
+            )
+
         transition_task_run_state(
             connection,
             task_run_id=str(task_run["task_run_id"]),
@@ -988,6 +1026,221 @@ def complete_human_task_command(
         "task_run": run_now,
         "spawned_children": spawned_children,
     }
+
+
+def confirm_human_task_review_command(
+    connection: sqlite3.Connection,
+    payload: dict[str, Any],
+    *,
+    storage_root: Path,
+) -> dict[str, Any]:
+    _require_fields(
+        payload,
+        [
+            "human_task_id",
+            "actor_id",
+            "actor_type",
+            "reviewed_artifact_version_ids",
+            "idempotency_key",
+        ],
+    )
+    actor_type = str(payload["actor_type"])
+    if actor_type not in VALID_ACTOR_TYPES:
+        raise CommandError(
+            code="invalid_actor_type",
+            message=f"unsupported actor_type: {actor_type}",
+            details={"allowed_actor_types": sorted(VALID_ACTOR_TYPES)},
+        )
+
+    reviewed_ids_raw = payload.get("reviewed_artifact_version_ids")
+    if not isinstance(reviewed_ids_raw, list) or not reviewed_ids_raw:
+        raise CommandError(
+            code="invalid_payload",
+            message="reviewed_artifact_version_ids must be a non-empty list",
+            details={},
+        )
+    reviewed_artifact_version_ids = [
+        str(item).strip() for item in reviewed_ids_raw if str(item).strip()
+    ]
+    if not reviewed_artifact_version_ids:
+        raise CommandError(
+            code="invalid_payload",
+            message="reviewed_artifact_version_ids must contain at least one value",
+            details={},
+        )
+    reviewed_artifact_version_ids = sorted(set(reviewed_artifact_version_ids))
+
+    human_task_id = str(payload["human_task_id"])
+    human_task = get_human_task(connection, human_task_id)
+    if human_task is None:
+        raise CommandError(
+            code="human_task_not_found",
+            message="human task not found",
+            details={"human_task_id": human_task_id},
+        )
+    if str(human_task.get("state")) != "CLAIMED":
+        raise CommandError(
+            code="task_not_completable",
+            message="review confirmation requires a claimed human task",
+            details={"human_task_id": human_task_id, "state": str(human_task.get("state"))},
+        )
+    if (
+        str(human_task.get("assignee_actor_id") or "") != str(payload["actor_id"])
+        or str(human_task.get("assignee_actor_type") or "") != actor_type
+    ):
+        raise CommandError(
+            code="task_not_completable",
+            message="review confirmation requires the claiming actor",
+            details={
+                "human_task_id": human_task_id,
+                "assignee_actor_id": human_task.get("assignee_actor_id"),
+                "assignee_actor_type": human_task.get("assignee_actor_type"),
+                "actor_id": str(payload["actor_id"]),
+                "actor_type": actor_type,
+            },
+        )
+
+    workflow_run_id = str(human_task["workflow_run_id"])
+    task_run_id = str(human_task["task_run_id"])
+    task_run = get_task_run(connection, task_run_id)
+    if task_run is None:
+        raise CommandError(
+            code="task_run_not_found",
+            message="task run not found for review confirmation",
+            details={"task_run_id": task_run_id},
+        )
+
+    requirement_state = build_human_task_requirement_index(
+        connection,
+        workflow_run_id=workflow_run_id,
+        human_tasks=[
+            {
+                **human_task,
+                "stage_id": task_run.get("stage_id"),
+                "task_kind": task_run.get("task_kind"),
+            }
+        ],
+    ).get(human_task_id, {})
+    required_review_ids = {
+        str(item["reviewed_artifact_version_id"])
+        for item in requirement_state.get("required_reviews") or []
+        if isinstance(item, dict) and item.get("reviewed_artifact_version_id") is not None
+    }
+    missing_required_reviewed_ids = sorted(
+        required_review_ids.difference(set(reviewed_artifact_version_ids))
+    )
+    if missing_required_reviewed_ids:
+        raise CommandError(
+            code="missing_required_review_artifacts",
+            message="review confirmation must include all required draft artifacts",
+            details={
+                "human_task_id": human_task_id,
+                "missing_reviewed_artifact_version_ids": missing_required_reviewed_ids,
+            },
+        )
+
+    for artifact_version_id in reviewed_artifact_version_ids:
+        artifact = get_artifact_version(connection, artifact_version_id)
+        if artifact is None:
+            raise CommandError(
+                code="artifact_version_not_found",
+                message="reviewed artifact version was not found",
+                details={"artifact_version_id": artifact_version_id},
+            )
+        if str(artifact["workflow_run_id"]) != workflow_run_id:
+            raise CommandError(
+                code="cross_workflow_artifact_reference",
+                message="reviewed artifact belongs to a different workflow_run",
+                details={
+                    "artifact_version_id": artifact_version_id,
+                    "artifact_workflow_run_id": str(artifact["workflow_run_id"]),
+                    "workflow_run_id": workflow_run_id,
+                },
+            )
+
+    idempotency_key = str(payload["idempotency_key"])
+    artifact_version_id = _stable_review_confirmation_artifact_id(
+        workflow_run_id=workflow_run_id,
+        human_task_id=human_task_id,
+        idempotency_key=idempotency_key,
+    )
+    confirmed_at = utc_now_iso()
+    evidence_payload = {
+        "schema_version": "1.0",
+        "kind": "human_task_review_confirmation",
+        "human_task_id": human_task_id,
+        "task_run_id": task_run_id,
+        "workflow_run_id": workflow_run_id,
+        "reviewed_artifact_version_ids": reviewed_artifact_version_ids,
+        "reviewer": {
+            "id": str(payload["actor_id"]),
+            "type": actor_type,
+        },
+        "confirmed_at": confirmed_at,
+        "confirmation_idempotency_key": idempotency_key,
+    }
+
+    ingest_payload = {
+        "artifact_version_id": artifact_version_id,
+        "workflow_run_id": workflow_run_id,
+        "task_run_id": task_run_id,
+        "artifact_kind": REVIEW_CONFIRMATION_ARTIFACT_KIND,
+        "artifact_role": "review_evidence",
+        "media_type": "application/json",
+        "content_base64": encode_base64_content(
+            json.dumps(evidence_payload, separators=(",", ":"), sort_keys=True).encode("utf-8")
+        ),
+        "file_name": f"human-task-review-confirmation-{human_task_id}.json",
+        "metadata_json": evidence_payload,
+        "links": [
+            {
+                "subject_kind": "human_task",
+                "subject_id": human_task_id,
+                "relation_kind": "review_confirmation",
+            },
+            {
+                "subject_kind": "task_run",
+                "subject_id": task_run_id,
+                "relation_kind": "review_confirmation",
+            },
+            *[
+                {
+                    "subject_kind": "artifact_version",
+                    "subject_id": artifact_version_id,
+                    "relation_kind": "reviewed_artifact",
+                }
+                for artifact_version_id in reviewed_artifact_version_ids
+            ],
+        ],
+        "idempotency_key": idempotency_key,
+        "actor_id": str(payload["actor_id"]),
+        "actor_type": actor_type,
+    }
+
+    try:
+        result = ingest_artifact_document_command(
+            connection,
+            ingest_payload,
+            storage_root=storage_root,
+        )
+        return {
+            "artifact_version": result["artifact_version"],
+            "ingress": result["ingress"],
+            "idempotent_replay": False,
+        }
+    except DuplicateIdempotencyKeyError:
+        existing = get_artifact_version(connection, artifact_version_id)
+        if existing is None:
+            raise
+        existing["links"] = list_artifact_links_for_artifact(
+            connection,
+            artifact_version_id=artifact_version_id,
+        )
+        return {
+            "artifact_version": existing,
+            "ingress": None,
+            "idempotent_replay": True,
+        }
 
 
 def show_workflow_run_command(
@@ -2435,6 +2688,13 @@ def promote_pointer_command(
             if payload.get("promotion_reason") is not None
             else None
         )
+        actor_type = str(payload.get("actor_type", "system"))
+        if promotion_reason in {"official_publish", "official_major_replan"} and actor_type != "human":
+            raise CommandError(
+                code="official_promotion_requires_human_actor",
+                message="official pointer promotion must be performed by a human actor",
+                details={"promotion_reason": promotion_reason, "actor_type": actor_type},
+            )
         approved_by_approval_id = (
             str(payload["approved_by_approval_id"])
             if payload.get("approved_by_approval_id") is not None
@@ -2549,7 +2809,7 @@ def promote_pointer_command(
                 event_type="artifact.pointer.promoted",
                 tenant_id=workflow_scope["tenant_id"],
                 domain_id=workflow_scope["domain_id"],
-                actor_type=str(payload.get("actor_type", "system")),
+                actor_type=actor_type,
                 actor_id=str(payload.get("actor_id", "system:runtime")),
                 links=links,
                 payload={
@@ -2612,7 +2872,7 @@ def promote_pointer_command(
                     event_type="artifact.pointer.drift_detected",
                     tenant_id=workflow_scope["tenant_id"],
                     domain_id=workflow_scope["domain_id"],
-                    actor_type=str(payload.get("actor_type", "system")),
+                    actor_type=actor_type,
                     actor_id=str(payload.get("actor_id", "system:runtime")),
                     links=links,
                     payload={
@@ -3856,6 +4116,18 @@ def _future_iso(lease_seconds: int) -> str:
     return (parsed + timedelta(seconds=lease_seconds)).astimezone(timezone.utc).isoformat().replace("+00:00", "Z")
 
 
+def _stable_review_confirmation_artifact_id(
+    *,
+    workflow_run_id: str,
+    human_task_id: str,
+    idempotency_key: str,
+) -> str:
+    digest = hashlib.sha256(
+        f"{workflow_run_id}|{human_task_id}|{idempotency_key}".encode("utf-8")
+    ).hexdigest()[:24]
+    return f"av-{digest}"
+
+
 def _parse_iso_datetime(value: str) -> datetime:
     return datetime.fromisoformat(value.replace("Z", "+00:00")).astimezone(timezone.utc)
 
@@ -4028,10 +4300,30 @@ def _validate_artifact_link_subject(
             )
         return
 
+    if subject_kind == "artifact_version":
+        artifact = get_artifact_version(connection, subject_id)
+        if artifact is None:
+            raise CommandError(
+                code="artifact_version_not_found",
+                message="artifact version not found for artifact link",
+                details={"artifact_version_id": subject_id},
+            )
+        if str(artifact["workflow_run_id"]) != workflow_run_id:
+            raise CommandError(
+                code="cross_workflow_link_reference",
+                message="artifact version belongs to a different workflow_run",
+                details={
+                    "workflow_run_id": workflow_run_id,
+                    "artifact_version_id": subject_id,
+                    "subject_workflow_run_id": str(artifact["workflow_run_id"]),
+                },
+            )
+        return
+
     raise CommandError(
         code="invalid_artifact_link_subject_kind",
         message=f"unsupported artifact link subject_kind: {subject_kind}",
-        details={"allowed_subject_kinds": ["workflow_run", "task_run", "human_task", "approval", "flag"]},
+        details={"allowed_subject_kinds": ["workflow_run", "task_run", "human_task", "approval", "flag", "artifact_version"]},
     )
 
 

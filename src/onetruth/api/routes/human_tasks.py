@@ -8,14 +8,23 @@ from onetruth.application.handlers.workflow_task_lifecycle import (
     CommandError,
     claim_human_task_command,
     complete_human_task_command,
+    confirm_human_task_review_command,
     show_human_task_command,
+)
+from onetruth.application.services.task_actionability import (
+    build_artifact_link_count_index,
+    compute_human_task_actionability,
 )
 from onetruth.application.services.stage06_openai_sandbox import (
     run_stage06_openai_review_sandbox,
 )
+from onetruth.application.services.task_requirements import (
+    build_human_task_requirement_index,
+)
 from onetruth.integrations.openai import OpenAIConfigError, OpenAIResponsesError
 from onetruth.infrastructure.events.event_store import DuplicateIdempotencyKeyError
 from onetruth.infrastructure.repositories.human_tasks import get_human_task
+from onetruth.infrastructure.artifacts.storage import default_storage_root_for_db_url
 
 from onetruth.api.dependencies import Page, RequestContext, scoped_workflow_run
 from onetruth.api.errors import (
@@ -43,6 +52,11 @@ def list_human_tasks_endpoint(
         owner_role=query.get("owner_role"),
         page=page,
     )
+    rows = _enrich_human_tasks_with_actionability(
+        connection,
+        context=context,
+        human_tasks=rows,
+    )
     return {
         "command": "api.human_tasks.list",
         "human_tasks": rows,
@@ -61,9 +75,14 @@ def get_human_task_endpoint(
         human_task = show_human_task_command(connection, human_task_id)
     except CommandError as exc:
         raise api_error_from_command(exc) from exc
+    enriched = _enrich_human_tasks_with_actionability(
+        connection,
+        context=context,
+        human_tasks=[human_task],
+    )
     return {
         "command": "api.human_tasks.detail",
-        "human_task": human_task,
+        "human_task": enriched[0],
     }
 
 
@@ -176,6 +195,43 @@ def run_stage06_agent_review_endpoint(
     }
 
 
+def confirm_human_task_review_endpoint(
+    connection: sqlite3.Connection,
+    *,
+    context: RequestContext,
+    db_url: str,
+    human_task_id: str,
+    payload: dict[str, Any],
+) -> dict[str, Any]:
+    _ensure_human_task_in_scope(connection, context=context, human_task_id=human_task_id)
+    _assert_payload_human_task_id(payload, human_task_id)
+    command_payload = {
+        "human_task_id": human_task_id,
+        "actor_id": context.actor_id,
+        "actor_type": context.actor_type,
+        "reviewed_artifact_version_ids": payload.get("reviewed_artifact_version_ids"),
+        "idempotency_key": payload.get("idempotency_key"),
+    }
+    try:
+        result = confirm_human_task_review_command(
+            connection,
+            command_payload,
+            storage_root=default_storage_root_for_db_url(
+                db_url,
+                override=payload.get("storage_root"),
+            ),
+        )
+    except CommandError as exc:
+        raise api_error_from_command(exc) from exc
+    except DuplicateIdempotencyKeyError as exc:
+        raise api_error_from_duplicate_idempotency(exc) from exc
+    return {
+        "command": "api.human_tasks.confirm_review",
+        "human_task_id": human_task_id,
+        "result": result,
+    }
+
+
 def query_human_tasks(
     connection: sqlite3.Connection,
     *,
@@ -264,6 +320,50 @@ def query_human_tasks(
         item["candidate_roles"] = json.loads(item["candidate_roles"])
         results.append(item)
     return results
+
+
+def _enrich_human_tasks_with_actionability(
+    connection: sqlite3.Connection,
+    *,
+    context: RequestContext,
+    human_tasks: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    if not human_tasks:
+        return []
+    grouped: dict[str, list[dict[str, Any]]] = {}
+    for task in human_tasks:
+        grouped.setdefault(str(task["workflow_run_id"]), []).append(task)
+
+    link_counts_by_run: dict[str, dict[tuple[str, str], int]] = {}
+    requirements_by_run: dict[str, dict[str, dict[str, Any]]] = {}
+    for workflow_run_id, tasks in grouped.items():
+        link_counts_by_run[workflow_run_id] = build_artifact_link_count_index(
+            connection,
+            workflow_run_id=workflow_run_id,
+        )
+        requirements_by_run[workflow_run_id] = build_human_task_requirement_index(
+            connection,
+            workflow_run_id=workflow_run_id,
+            human_tasks=tasks,
+        )
+
+    enriched: list[dict[str, Any]] = []
+    for task in human_tasks:
+        workflow_run_id = str(task["workflow_run_id"])
+        human_task_id = str(task["human_task_id"])
+        linked_artifact_count = int(
+            link_counts_by_run.get(workflow_run_id, {}).get(("human_task", human_task_id), 0)
+        )
+        actionability = compute_human_task_actionability(
+            task=task,
+            actor_id=context.actor_id,
+            actor_type=context.actor_type,
+            actor_roles=context.actor_roles,
+            linked_artifact_count=linked_artifact_count,
+            requirement_state=requirements_by_run.get(workflow_run_id, {}).get(human_task_id),
+        )
+        enriched.append({**task, **actionability})
+    return enriched
 
 
 def _ensure_human_task_in_scope(

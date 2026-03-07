@@ -1,0 +1,88 @@
+registry:
+  workflow_id: schedule_planning.v1
+  version: 1
+  templates:
+    - template_id: schedule.stage05.draft_schedule.doc.empty.v1
+      stage_id: Stage05
+      dataset_key: schedule.draft_schedule.doc
+      variant: empty
+      media_type: application/vnd.openxmlformats-officedocument.wordprocessingml.document
+      source_path: fixtures/workflows/schedule_planning/template_pack/Stage05_Draft_Schedule_Triage/Stage05_Draft_Schedule_Triage_Document_Template_EMPTY.docx
+      description: Empty Stage05 draft-schedule review document template.
+    - template_id: schedule.stage05.draft_schedule.doc.example.v1
+      stage_id: Stage05
+      dataset_key: schedule.draft_schedule.doc
+      variant: completed_example
+      media_type: application/vnd.openxmlformats-officedocument.wordprocessingml.document
+      source_path: fixtures/workflows/schedule_planning/template_pack/Stage05_Draft_Schedule_Triage/Stage05_Draft_Schedule_Triage_Document_Example_COMPLETED.docx
+      description: Completed Stage05 draft-schedule review document example.
+    - template_id: schedule.stage05.draft_schedule.workbook.empty.v1
+      stage_id: Stage05
+      dataset_key: schedule.draft_schedule.workbook
+      variant: empty
+      media_type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet
+      source_path: fixtures/workflows/schedule_planning/template_pack/Stage05_Draft_Schedule_Triage/Stage05_Draft_Schedule_Triage_Spreadsheet_Template_EMPTY.xlsx
+      description: Empty Stage05 draft-schedule workbook template.
+    - template_id: schedule.stage05.draft_schedule.workbook.example.v1
+      stage_id: Stage05
+      dataset_key: schedule.draft_schedule.workbook
+      variant: completed_example
+      media_type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet
+      source_path: fixtures/workflows/schedule_planning/template_pack/Stage05_Draft_Schedule_Triage/Stage05_Draft_Schedule_Triage_Spreadsheet_Example_COMPLETED.xlsx
+      description: Completed Stage05 draft-schedule workbook example.
+    - template_id: schedule.stage06.supervisor_review.doc.empty.v1
+      stage_id: Stage06
+      dataset_key: schedule.supervisor_review.doc
+      variant: empty
+      media_type: application/vnd.openxmlformats-officedocument.wordprocessingml.document
+      source_path: fixtures/workflows/schedule_planning/template_pack/Stage06_Supervisor_Review_Publish/Stage06_Supervisor_Review_Publish_Document_Template_EMPTY.docx
+      description: Empty Stage06 supervisor-review document template.
+    - template_id: schedule.stage06.supervisor_review.doc.example.v1
+      stage_id: Stage06
+      dataset_key: schedule.supervisor_review.doc
+      variant: completed_example
+      media_type: application/vnd.openxmlformats-officedocument.wordprocessingml.document
+      source_path: fixtures/workflows/schedule_planning/template_pack/Stage06_Supervisor_Review_Publish/Stage06_Supervisor_Review_Publish_Document_Example_COMPLETED.docx
+      description: Completed Stage06 supervisor-review document example.
+    - template_id: schedule.stage06.published_schedule.workbook.empty.v1
+      stage_id: Stage06
+      dataset_key: schedule.published_schedule.workbook
+      variant: empty
+      media_type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet
+      source_path: fixtures/workflows/schedule_planning/template_pack/Stage06_Supervisor_Review_Publish/Stage06_Supervisor_Review_Publish_Spreadsheet_Template_EMPTY.xlsx
+      description: Empty Stage06 published-schedule workbook template.
+    - template_id: schedule.stage06.published_schedule.workbook.example.v1
+      stage_id: Stage06
+      dataset_key: schedule.published_schedule.workbook
+      variant: completed_example
+      media_type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet
+      source_path: fixtures/workflows/schedule_planning/template_pack/Stage06_Supervisor_Review_Publish/Stage06_Supervisor_Review_Publish_Spreadsheet_Example_COMPLETED.xlsx
+      description: Completed Stage06 published-schedule workbook example.
+    - template_id: schedule.stage07.exception_board.doc.empty.v1
+      stage_id: Stage07
+      dataset_key: schedule.exception_board.doc
+      variant: empty
+      media_type: application/vnd.openxmlformats-officedocument.wordprocessingml.document
+      source_path: fixtures/workflows/schedule_planning/template_pack/Stage07_Intraday_Exception_Control/Stage07_Intraday_Exception_Control_Document_Template_EMPTY.docx
+      description: Empty Stage07 exception-board document template.
+    - template_id: schedule.stage07.exception_board.doc.example.v1
+      stage_id: Stage07
+      dataset_key: schedule.exception_board.doc
+      variant: completed_example
+      media_type: application/vnd.openxmlformats-officedocument.wordprocessingml.document
+      source_path: fixtures/workflows/schedule_planning/template_pack/Stage07_Intraday_Exception_Control/Stage07_Intraday_Exception_Control_Document_Example_COMPLETED.docx
+      description: Completed Stage07 exception-board document example.
+    - template_id: schedule.stage07.replan_delta.workbook.empty.v1
+      stage_id: Stage07
+      dataset_key: schedule.replan_delta.workbook
+      variant: empty
+      media_type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet
+      source_path: fixtures/workflows/schedule_planning/template_pack/Stage07_Intraday_Exception_Control/Stage07_Intraday_Exception_Control_Spreadsheet_Template_EMPTY.xlsx
+      description: Empty Stage07 replan-delta workbook template.
+    - template_id: schedule.stage07.replan_delta.workbook.example.v1
+      stage_id: Stage07
+      dataset_key: schedule.replan_delta.workbook
+      variant: completed_example
+      media_type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet
+      source_path: fixtures/workflows/schedule_planning/template_pack/Stage07_Intraday_Exception_Control/Stage07_Intraday_Exception_Control_Spreadsheet_Example_COMPLETED.xlsx
+      description: Completed Stage07 replan-delta workbook example.

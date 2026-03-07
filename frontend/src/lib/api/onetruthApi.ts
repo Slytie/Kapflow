@@ -5,12 +5,16 @@ import type {
   FlagRow,
   HumanTaskRow,
   PointerRow,
+  TemplateRecord,
+  TemplateRegistryMetadata,
   TimelineEvent,
   WorkflowRunDetailContract,
   WorkflowRunWorkspaceContract,
   WorkflowWorkspaceFreshness,
   WorkflowWorkspaceGraphEdge,
   WorkflowWorkspaceGraphNode,
+  WorkflowWorkspaceRequiredReview,
+  WorkflowWorkspaceRequiredUpload,
   WorkflowWorkspaceWorkItem,
   WorkflowRunRow
 } from "@/lib/types/contracts";
@@ -97,6 +101,21 @@ interface ClaimCompleteResultEnvelope extends ListEnvelope {
 
 interface ApprovalRespondEnvelope extends ListEnvelope {
   approval: ApprovalRow;
+}
+
+interface ConfirmReviewResultEnvelope extends ListEnvelope {
+  result: Record<string, unknown>;
+}
+
+interface TemplateListEnvelope extends ListEnvelope {
+  registry: TemplateRegistryMetadata;
+  templates: TemplateRecord[];
+}
+
+interface TemplateDownloadEnvelope extends ListEnvelope {
+  template: TemplateRecord;
+  content_base64: string;
+  byte_size: number;
 }
 
 const GRAPH_LAYOUT: Record<string, { row: number; column: number }> = {
@@ -191,12 +210,38 @@ function graphNodeIdForStage(stageId: string | null, nodes: WorkflowWorkspaceGra
 }
 
 function firstBlockingReason(item: Record<string, unknown>): string | null {
+  const blockingReasonCodes = asArray<string>(item.blocking_reason_codes);
+  if (blockingReasonCodes.length > 0) {
+    return blockingReasonCodes[0];
+  }
   const requirements = asArray<Record<string, unknown>>(item.blocking_requirements);
   if (requirements.length === 0) {
     return null;
   }
   const requirement = asString(requirements[0].requirement);
   return requirement || "blocked";
+}
+
+function normalizeRequiredUploads(value: unknown): WorkflowWorkspaceRequiredUpload[] {
+  return asArray<Record<string, unknown>>(value).map((item) => ({
+    dataset_key: asString(item.dataset_key),
+    template_id: asStringOrNull(item.template_id),
+    artifact_kind: asString(item.artifact_kind),
+    required_count: asNumber(item.required_count, 1),
+    current_count: asNumber(item.current_count, 0),
+    status: asString(item.status, "missing")
+  }));
+}
+
+function normalizeRequiredReviews(value: unknown): WorkflowWorkspaceRequiredReview[] {
+  return asArray<Record<string, unknown>>(value).map((item) => ({
+    dataset_key: asString(item.dataset_key),
+    artifact_kind: asString(item.artifact_kind),
+    required_count: asNumber(item.required_count, 1),
+    reviewed_artifact_version_id: asStringOrNull(item.reviewed_artifact_version_id),
+    review_confirmation_artifact_version_id: asStringOrNull(item.review_confirmation_artifact_version_id),
+    status: asString(item.status, "pending_confirmation")
+  }));
 }
 
 function normalizeWorkspaceTaskItem(
@@ -239,6 +284,9 @@ function normalizeWorkspaceTaskItem(
     graph_node_id: graphNodeIdForStage(task.stage_id, graphNodes),
     available_actions: asArray<string>(item.available_actions),
     missing_required_inputs: asArray<string>(item.missing_required_inputs),
+    required_uploads: normalizeRequiredUploads(item.required_uploads),
+    required_reviews: normalizeRequiredReviews(item.required_reviews),
+    blocking_reason_codes: asArray<string>(item.blocking_reason_codes),
     blocking_reason: firstBlockingReason(item)
   };
 }
@@ -278,6 +326,9 @@ function normalizeWorkspaceApprovalItem(
     graph_node_id: graphNodeIdForStage(approval.scope_ref, graphNodes),
     available_actions: asArray<string>(item.available_actions),
     missing_required_inputs: asArray<string>(item.missing_required_inputs),
+    required_uploads: [],
+    required_reviews: [],
+    blocking_reason_codes: asArray<string>(item.blocking_reason_codes),
     blocking_reason: firstBlockingReason(item)
   };
 }
@@ -316,6 +367,9 @@ function normalizeWorkspaceFlagItem(
     graph_node_id: graphNodeIdForStage("Stage07", graphNodes),
     available_actions: asArray<string>(item.available_actions),
     missing_required_inputs: asArray<string>(item.missing_required_inputs),
+    required_uploads: [],
+    required_reviews: [],
+    blocking_reason_codes: asArray<string>(item.blocking_reason_codes),
     blocking_reason: firstBlockingReason(item)
   };
 }
@@ -449,6 +503,23 @@ export const onetruthApi = {
     return result.result;
   },
 
+  async confirmHumanTaskReview(
+    humanTaskId: string,
+    payload: {
+      reviewed_artifact_version_ids: string[];
+      idempotency_key: string;
+    }
+  ): Promise<Record<string, unknown>> {
+    const result = await requestJson<ConfirmReviewResultEnvelope>(
+      `/human-tasks/${humanTaskId}/confirm-review`,
+      {
+        method: "POST",
+        body: payload
+      }
+    );
+    return result.result;
+  },
+
   async runStage06AgentReview(
     humanTaskId: string,
     payload: { idempotency_key: string }
@@ -556,6 +627,34 @@ export const onetruthApi = {
     return payload.board;
   },
 
+  async listTemplates(query: {
+    workflow_id?: string;
+    stage_id?: string;
+    dataset_key?: string;
+    variant?: string;
+    limit?: number;
+    offset?: number;
+  }): Promise<{ registry: TemplateRegistryMetadata; templates: TemplateRecord[] }> {
+    const payload = await requestJson<TemplateListEnvelope>("/templates", { query });
+    return {
+      registry: payload.registry,
+      templates: requiredArray<TemplateRecord>(payload.templates, "templates")
+    };
+  },
+
+  async downloadTemplate(templateId: string): Promise<{
+    template: TemplateRecord;
+    content_base64: string;
+    byte_size: number;
+  }> {
+    const payload = await requestJson<TemplateDownloadEnvelope>(`/templates/${templateId}/download`);
+    return {
+      template: payload.template,
+      content_base64: payload.content_base64,
+      byte_size: payload.byte_size
+    };
+  },
+
   async listTimelineEvents(query: {
     workflow_run_id?: string;
     event_type?: string;
@@ -569,6 +668,15 @@ export const onetruthApi = {
 
   async listHumanTaskArtifacts(humanTaskId: string): Promise<WorkflowRunDetailContract["artifact_versions"]> {
     const payload = await requestJson<ArtifactVersionListEnvelope>(`/human-tasks/${humanTaskId}/artifacts`);
+    return payload.artifact_versions;
+  },
+
+  async listArtifactsForSubject(query: {
+    workflow_run_id: string;
+    subject_kind: "workflow_run" | "task_run" | "human_task" | "approval" | "flag";
+    subject_id: string;
+  }): Promise<WorkflowRunDetailContract["artifact_versions"]> {
+    const payload = await requestJson<ArtifactVersionListEnvelope>("/artifacts", { query });
     return payload.artifact_versions;
   },
 

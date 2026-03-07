@@ -96,7 +96,6 @@ def test_workspace_endpoint_returns_expected_envelope(tmp_path: Path) -> None:
 
 def test_workspace_endpoint_cross_scope_access_fails_closed(tmp_path: Path) -> None:
     harness = RuntimeScenarioHarness.from_yaml(SCENARIO_STAGE06_PUBLISH, tmp_path).prepare()
-    harness.run_steps()
 
     wrong_scope_client = _client(
         harness,
@@ -113,7 +112,6 @@ def test_workspace_endpoint_cross_scope_access_fails_closed(tmp_path: Path) -> N
 
 def test_workspace_endpoint_exposes_latest_event_sequence_and_freshness(tmp_path: Path) -> None:
     harness = RuntimeScenarioHarness.from_yaml(SCENARIO_STAGE07_MAJOR, tmp_path).prepare()
-    harness.run_steps()
 
     client = _client(
         harness,
@@ -136,4 +134,3 @@ def test_workspace_endpoint_exposes_latest_event_sequence_and_freshness(tmp_path
     assert freshness["latest_event_recorded_at"]
     assert freshness["generated_at"]
     assert response.payload["timeline_excerpt"]["events"]
-

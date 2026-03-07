@@ -23,7 +23,11 @@ REQUIRED_BUNDLE_FILES = {
     "policy_decisions.json",
     "timeline_excerpt.json",
     "artifact_manifest.json",
+    "requirements_state.json",
+    "review_confirmations.json",
+    "draft_artifacts.json",
     "official_outputs.json",
+    "official_pointers.json",
     "graph_nodes.json",
     "graph_edges.json",
 }

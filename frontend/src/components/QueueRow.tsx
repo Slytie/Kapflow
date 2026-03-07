@@ -6,6 +6,7 @@ interface QueueRowProps {
   title: string;
   subtitle: string;
   status: string;
+  hint?: string;
   onDetails: () => void;
   onClaim?: () => void;
   onComplete?: () => void;
@@ -18,6 +19,7 @@ export function QueueRow({
   title,
   subtitle,
   status,
+  hint,
   onDetails,
   onClaim,
   onComplete,
@@ -48,6 +50,7 @@ export function QueueRow({
       <button type="button" className="link-button" onClick={onDetails}>
         Details
       </button>
+      {hint ? <p className="queue-row__hint">{hint}</p> : null}
     </article>
   );
 }

@@ -51,19 +51,54 @@
           "workflow_run_id": "<workflow_run_id:3>"
         },
         {
+          "artifact_kind": "schedule.exception_board.doc",
+          "artifact_role": "evidence",
+          "artifact_version_id": "<artifact_version_id:6>",
+          "byte_size": 37167,
+          "content_digest": "sha256:0d86c8e5247b6398d5e80c4485d6ee1aa3bed26432f6db3c32ba8edd72134d63",
+          "created_at": "<ts:3>",
+          "lineage_note": null,
+          "links": [
+            {
+              "artifact_version_id": "<artifact_version_id:6>",
+              "created_at": "<ts:3>",
+              "created_by_actor_id": "system:runtime",
+              "created_by_actor_type": "system",
+              "relation_kind": "attachment",
+              "subject_id": "<human_task_id:7>",
+              "subject_kind": "human_task",
+              "workflow_run_id": "<workflow_run_id:3>"
+            }
+          ],
+          "media_type": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+          "metadata_json": {
+            "branch": "stage07_major_replan_happy",
+            "ingress_file_name": "Stage07_Intraday_Exception_Control_Document_Template_EMPTY.docx",
+            "ingress_media_type": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+            "ingress_source_path": "fixtures/workflows/schedule_planning/template_pack/Stage07_Intraday_Exception_Control/Stage07_Intraday_Exception_Control_Document_Template_EMPTY.docx",
+            "scenario_id": "stage07_major_replan_happy",
+            "step_id": "upload_exception_board"
+          },
+          "parent_artifact_version_id": null,
+          "storage_uri": "<storage_uri:8>",
+          "supersedes_artifact_version_id": null,
+          "task_run_id": "<task_run_id:9>",
+          "workflow_run_id": "<workflow_run_id:3>"
+        },
+        {
           "artifact_kind": "schedule.replan_delta.workbook",
           "artifact_role": "official_output",
-          "artifact_version_id": "<artifact_version_id:6>",
+          "artifact_version_id": "<artifact_version_id:10>",
           "byte_size": 13927,
           "content_digest": "sha256:4dacafa977c8b887b6a9464d0d20809cfdc76d891186c956ab8afd9bd02f330c",
-          "created_at": "<ts:3>",
+          "created_at": "<ts:4>",
           "lineage_note": null,
           "links": [],
           "media_type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
           "metadata_json": {
             "base_artifact_version_id": "<artifact_version_id:4>",
             "delta_sequence": 1,
-            "flag_id": "<flag_id:7>",
+            "flag_id": "<flag_id:11>",
             "ingress_file_name": "Stage07_Intraday_Exception_Control_Spreadsheet_Example_COMPLETED.xlsx",
             "ingress_media_type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
             "ingress_source_path": "fixtures/workflows/schedule_planning/template_pack/Stage07_Intraday_Exception_Control/Stage07_Intraday_Exception_Control_Spreadsheet_Example_COMPLETED.xlsx",
@@ -71,9 +106,9 @@
             "step_id": "create_replan_delta"
           },
           "parent_artifact_version_id": null,
-          "storage_uri": "<storage_uri:8>",
-          "supersedes_artifact_version_id": "<supersedes_artifact_version_id:9>",
-          "task_run_id": "<task_run_id:10>",
+          "storage_uri": "<storage_uri:12>",
+          "supersedes_artifact_version_id": "<supersedes_artifact_version_id:13>",
+          "task_run_id": "<task_run_id:14>",
           "workflow_run_id": "<workflow_run_id:3>"
         }
       ],
@@ -93,20 +128,20 @@
           "promotion_reason": "seed_base",
           "scope_kind": "stage",
           "scope_ref": "Stage06",
-          "updated_at": "<ts:4>",
+          "updated_at": "<ts:5>",
           "workflow_run_id": "<workflow_run_id:3>"
         },
         {
-          "approved_by_approval_id": "<approved_by_approval_id:11>",
+          "approved_by_approval_id": "<approved_by_approval_id:15>",
           "artifact_kind": "schedule.replan_delta.workbook",
-          "artifact_version_id": "<artifact_version_id:6>",
+          "artifact_version_id": "<artifact_version_id:10>",
           "generation": 0,
           "pointer_key": "official:schedule.replan_delta.workbook",
-          "promoted_by_task_run_id": "<promoted_by_task_run_id:12>",
+          "promoted_by_task_run_id": "<promoted_by_task_run_id:16>",
           "promotion_reason": "official_major_replan",
           "scope_kind": "stage",
           "scope_ref": "Stage07",
-          "updated_at": "<ts:5>",
+          "updated_at": "<ts:6>",
           "workflow_run_id": "<workflow_run_id:3>"
         }
       ],

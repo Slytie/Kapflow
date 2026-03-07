@@ -89,7 +89,8 @@ def project_schedule_planning_workspace_graph(
 
     stage05_state = _stage_task_status(stage05_tasks)
     stage06_review_completed = any(
-        str(item.get("task_kind")) == "review_packet" and str(item.get("state")) == "COMPLETED"
+        str(item.get("task_kind")) in {"final_review", "review_packet"}
+        and str(item.get("state")) == "COMPLETED"
         for item in stage06_tasks
     )
     if stage05_state == "open_or_claimed" and stage06_review_completed:
@@ -475,4 +476,3 @@ def _artifact_subject_id(artifact_versions: list[dict[str, Any]]) -> str | None:
         return None
     first = artifact_versions[0]
     return _subject_id("artifact_version", first.get("artifact_version_id"))
-

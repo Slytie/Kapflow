@@ -38,9 +38,8 @@ def resolve_stage06_spawn_plans(
     if stage_id != "Stage06":
         return []
 
-    # Final-review and information-request children are terminal in this slice.
     parent_task_kind = str(parent_task_run.get("task_kind") or "")
-    if parent_task_kind in {"final_review", "information_request"}:
+    if parent_task_kind == "information_request":
         return []
 
     outcome_map: dict[str, dict[str, Any]] = {
@@ -58,14 +57,19 @@ def resolve_stage06_spawn_plans(
             "candidate_roles": ["schedule_planner"],
             "owner_role": "dispatch_supervisor",
         },
-        "draft_is_publish_ready": {
+    }
+    if parent_task_kind == "review_packet":
+        outcome_map["draft_is_publish_ready"] = {
             "spawn_rule_id": "stage06_final_publish_review",
             "stage_id": "Stage06",
             "task_kind": "final_review",
             "candidate_roles": ["dispatch_supervisor"],
             "owner_role": "dispatch_supervisor",
-        },
-    }
+        }
+
+    if parent_task_kind == "final_review" and completion_outcome == "draft_is_publish_ready":
+        # final_review is already the canonical Stage06 review task kind.
+        return []
 
     if completion_outcome not in outcome_map:
         return []

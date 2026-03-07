@@ -599,6 +599,8 @@ def test_cross_linkage_workflow_task_artifact_approval_pointer_chain(tmp_path: P
         "promotion_reason": "official_publish",
         "promoted_by_task_run_id": task_run["task_run_id"],
         "approved_by_approval_id": approval["approval_id"],
+        "actor_id": "human:dispatch-supervisor",
+        "actor_type": "human",
         "idempotency_key": "idem-chain-pointer-promote-001",
     }
     _run_cli(

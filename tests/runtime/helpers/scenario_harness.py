@@ -19,6 +19,7 @@ ACTION_TO_COMMAND = {
     "tasks.create": ("tasks", "create"),
     "tasks.claim": ("tasks", "claim"),
     "tasks.complete": ("tasks", "complete"),
+    "tasks.confirm-review": ("tasks", "confirm-review"),
     "flags.create": ("flags", "create"),
     "flags.transition": ("flags", "transition"),
     "stage07.activate-issue": ("stage07", "activate-issue"),
@@ -101,10 +102,11 @@ class RuntimeScenarioHarness:
             raise AssertionError(f"step payload must resolve to object: {step_id}")
 
         resolved_action = action
-        if action == "artifacts.create-version":
-            self._materialize_artifact_payload(step_id, payload)
+        if action in {"artifacts.create-version", "artifacts.ingest"}:
             if payload.get("source_path") is not None or payload.get("fixture_id") is not None:
-                resolved_action = "artifacts.ingest"
+                self._materialize_artifact_payload(step_id, payload)
+                if action == "artifacts.create-version":
+                    resolved_action = "artifacts.ingest"
 
         expected_error_code = step.get("expect_error_code")
         if expected_error_code is not None:

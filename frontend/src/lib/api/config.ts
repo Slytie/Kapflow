@@ -37,6 +37,9 @@ export const apiConfig: ApiConfig = {
   domainId: readEnv("VITE_ONETRUTH_DOMAIN_ID", "domain-x"),
   actorId: readEnv("VITE_ONETRUTH_ACTOR_ID", "human:frontend-operator"),
   actorType: readEnv("VITE_ONETRUTH_ACTOR_TYPE", "human"),
-  actorRoles: readEnv("VITE_ONETRUTH_ACTOR_ROLES", "dispatch_supervisor"),
+  actorRoles: readEnv(
+    "VITE_ONETRUTH_ACTOR_ROLES",
+    "dispatch_supervisor,schedule_planner,fleet_coordinator,operations_manager"
+  ),
   pollIntervalMs
 };

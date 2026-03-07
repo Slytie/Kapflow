@@ -13,7 +13,13 @@ SCENARIO_PATH = (
 
 def test_stage07_child_issue_branch_and_retry_no_duplicate_child(tmp_path: Path) -> None:
     harness = RuntimeScenarioHarness.from_yaml(SCENARIO_PATH, tmp_path).prepare()
-    for step_id in ["create_flag", "activate_issue", "claim_issue", "complete_issue"]:
+    for step_id in [
+        "create_flag",
+        "activate_issue",
+        "claim_issue",
+        "upload_exception_board",
+        "complete_issue",
+    ]:
         harness.run_named_step(step_id)
 
     complete = harness.output("complete_issue")["result"]

@@ -1,6 +1,5 @@
 import { useMemo } from "react";
 
-import { WorkflowGraphLegend } from "@/components/WorkflowGraphLegend";
 import { WorkflowGraphNode } from "@/components/WorkflowGraphNode";
 import type {
   WorkflowWorkspaceFreshness,
@@ -13,6 +12,7 @@ interface WorkflowGraphProps {
   edges: WorkflowWorkspaceGraphEdge[];
   freshness: WorkflowWorkspaceFreshness;
   latestEventSequence: number | null;
+  selectedWorkflowTab?: string;
   onNodeSelect?: (node: WorkflowWorkspaceGraphNode) => void;
 }
 
@@ -22,12 +22,18 @@ interface PositionedNode {
   y: number;
 }
 
-const NODE_WIDTH = 190;
-const NODE_HEIGHT = 78;
-const HORIZONTAL_SPACING = 250;
-const VERTICAL_SPACING = 138;
-const PADDING_X = 36;
-const PADDING_Y = 28;
+const NODE_WIDTH = 188;
+const NODE_HEIGHT = 56;
+const HORIZONTAL_SPACING = 230;
+const VERTICAL_SPACING = 100;
+const PADDING_X = 34;
+const PADDING_Y = 12;
+const WORKFLOW_TABS = [
+  "Payroll Processing",
+  "Employee Onboarding",
+  "Scheduling Coordination",
+  "Expense Reporting"
+];
 
 function freshnessLine(
   freshness: WorkflowWorkspaceFreshness,
@@ -46,6 +52,23 @@ function freshnessLine(
   return parts.join(" · ");
 }
 
+function edgeStatusClass(
+  edge: WorkflowWorkspaceGraphEdge,
+  positions: Map<string, PositionedNode>
+): "completed" | "warning" | "active" | "muted" {
+  const target = positions.get(edge.to_node_id)?.node.status;
+  if (target === "completed") {
+    return "completed";
+  }
+  if (target === "warning" || target === "blocked") {
+    return "warning";
+  }
+  if (target === "in_progress" || target === "awaiting_approval") {
+    return "active";
+  }
+  return "muted";
+}
+
 function pathForEdge(
   edge: WorkflowWorkspaceGraphEdge,
   positions: Map<string, PositionedNode>
@@ -62,18 +85,20 @@ function pathForEdge(
   const toY = to.y + NODE_HEIGHT / 2;
 
   if (edge.edge_kind === "loopback") {
-    const rise = Math.max(66, Math.abs(fromY - toY) + 44);
+    const rise = Math.max(70, Math.abs(fromY - toY) + 52);
     const midX = (fromX + toX) / 2;
-    return `M ${fromX} ${fromY} C ${fromX + 40} ${fromY - rise}, ${midX} ${toY - rise}, ${toX} ${toY}`;
+    return `M ${fromX} ${fromY} C ${fromX + 44} ${fromY - rise}, ${midX} ${toY - rise}, ${toX} ${toY}`;
   }
 
   if (edge.edge_kind === "branch") {
-    const curveX = (fromX + toX) / 2;
-    const curveY = Math.min(fromY, toY) - 26;
+    const curveX = fromX + (toX - fromX) / 2;
+    const curveY = Math.min(fromY, toY) - 34;
     return `M ${fromX} ${fromY} Q ${curveX} ${curveY}, ${toX} ${toY}`;
   }
 
-  return `M ${fromX} ${fromY} L ${toX} ${toY}`;
+  const delta = toX - fromX;
+  const control = Math.max(20, delta * 0.45);
+  return `M ${fromX} ${fromY} C ${fromX + control} ${fromY}, ${toX - control} ${toY}, ${toX} ${toY}`;
 }
 
 export function WorkflowGraph({
@@ -81,6 +106,7 @@ export function WorkflowGraph({
   edges,
   freshness,
   latestEventSequence,
+  selectedWorkflowTab = "Scheduling Coordination",
   onNodeSelect
 }: WorkflowGraphProps): JSX.Element {
   const positionedNodes = useMemo(() => {
@@ -101,26 +127,40 @@ export function WorkflowGraph({
     8;
   const maxY =
     Math.max(...positionedNodes.map((entry) => entry.y + NODE_HEIGHT), NODE_HEIGHT + PADDING_Y * 2) +
-    8;
+    22;
 
   return (
-    <section className="workflow-graph" data-testid="workflow-graph">
-      <header>
-        <h3>Live Workflow Graph</h3>
-        <WorkflowGraphLegend />
-      </header>
-      <div className="workflow-graph__viewport">
-        <svg width={maxX} height={maxY} role="img" aria-label="Workflow run graph">
+    <section className="workspace-graph" data-testid="workflow-graph">
+      <div className="workspace-graph__tabs" role="tablist" aria-label="Workflows">
+        {WORKFLOW_TABS.map((tab) => (
+          <button
+            key={tab}
+            type="button"
+            role="tab"
+            aria-selected={tab === selectedWorkflowTab}
+            className={tab === selectedWorkflowTab ? "is-active" : ""}
+          >
+            {tab}
+          </button>
+        ))}
+        <button type="button" className="workspace-graph__tab-step">
+          Step 4
+          <span aria-hidden="true">✓</span>
+        </button>
+      </div>
+
+      <div className="workspace-graph__viewport">
+        <svg width={maxX} height={maxY} role="img" aria-label="Workflow progression graph">
           <defs>
             <marker
               id="workflow-graph-arrow"
-              markerWidth="10"
-              markerHeight="10"
-              refX="8"
-              refY="5"
+              markerWidth="8"
+              markerHeight="8"
+              refX="6.5"
+              refY="4"
               orient="auto"
             >
-              <path d="M 0 0 L 10 5 L 0 10 z" className="workflow-graph__arrow" />
+              <path d="M 0 0 L 8 4 L 0 8 z" className="workspace-graph__arrow" />
             </marker>
           </defs>
           {edges.map((edge) => (
@@ -128,8 +168,9 @@ export function WorkflowGraph({
               <path
                 d={pathForEdge(edge, positionMap)}
                 className={[
-                  "workflow-graph__edge",
-                  `workflow-graph__edge--${edge.edge_kind}`
+                  "workspace-graph__edge",
+                  `workspace-graph__edge--${edge.edge_kind}`,
+                  `workspace-graph__edge--${edgeStatusClass(edge, positionMap)}`
                 ].join(" ")}
                 markerEnd="url(#workflow-graph-arrow)"
                 data-testid={`workflow-graph-edge-${edge.edge_id}`}
@@ -138,7 +179,7 @@ export function WorkflowGraph({
                 <text
                   x={((positionMap.get(edge.from_node_id)?.x ?? 0) + (positionMap.get(edge.to_node_id)?.x ?? 0)) / 2 + 20}
                   y={((positionMap.get(edge.from_node_id)?.y ?? 0) + (positionMap.get(edge.to_node_id)?.y ?? 0)) / 2 + 8}
-                  className="workflow-graph__edge-label"
+                  className="workspace-graph__edge-label"
                 >
                   {edge.label}
                 </text>
@@ -158,7 +199,7 @@ export function WorkflowGraph({
           ))}
         </svg>
       </div>
-      <p className="workflow-graph__freshness" data-testid="workspace-freshness-line">
+      <p className="workspace-graph__freshness" data-testid="workspace-freshness-line">
         {freshnessLine(freshness, latestEventSequence)}
       </p>
     </section>

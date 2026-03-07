@@ -8,7 +8,7 @@ from tests.runtime.helpers.scenario_harness import RuntimeScenarioHarness
 
 SCENARIO_PATH = REPO_ROOT / "fixtures/scenarios/schedule_planning/stage06_publish_happy.yaml"
 
-EXPECTED_KEYS = {
+EXPECTED_BASE_KEYS = {
     "human_task_id",
     "workflow_run_id",
     "task_run_id",
@@ -33,6 +33,20 @@ EXPECTED_KEYS = {
     "blocked_on_kind",
     "blocked_on_ref",
     "spawned_from_flag_id",
+}
+
+EXPECTED_ACTIONABILITY_KEYS = {
+    "available_actions",
+    "blocking_requirements",
+    "required_uploads",
+    "required_reviews",
+    "blocking_reason_codes",
+    "linked_artifact_count",
+    "missing_required_inputs",
+    "can_complete",
+    "can_confirm_review",
+    "can_upload_attachment",
+    "can_run_stage06_agent_review",
 }
 
 
@@ -62,7 +76,8 @@ def test_human_task_list_contract_and_filters(tmp_path: Path) -> None:
     assert listed.payload["status"] == "ok"
     rows = listed.payload["human_tasks"]
     assert len(rows) == 1
-    assert set(rows[0].keys()) == EXPECTED_KEYS
+    assert EXPECTED_BASE_KEYS.issubset(set(rows[0].keys()))
+    assert EXPECTED_ACTIONABILITY_KEYS.issubset(set(rows[0].keys()))
     assert rows[0]["state"] == "CLAIMED"
     assert rows[0]["assignee_actor_id"] == "human:dispatch-supervisor-1"
 
@@ -70,7 +85,8 @@ def test_human_task_list_contract_and_filters(tmp_path: Path) -> None:
     assert detail.status_code == 200
     assert detail.payload["status"] == "ok"
     assert detail.payload["command"] == "api.human_tasks.detail"
-    assert set(detail.payload["human_task"].keys()) == EXPECTED_KEYS
+    assert EXPECTED_BASE_KEYS.issubset(set(detail.payload["human_task"].keys()))
+    assert EXPECTED_ACTIONABILITY_KEYS.issubset(set(detail.payload["human_task"].keys()))
 
     filtered_claimed = client.get(
         "/api/v1/human-tasks",

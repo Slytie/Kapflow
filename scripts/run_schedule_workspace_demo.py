@@ -8,6 +8,7 @@ from pathlib import Path
 import sys
 
 from onetruth.application.services.realistic_schedule_planning_pilot import (
+    PILOT_STAGE05_MISSING_WORKBOOK,
     PILOT_STAGE06_NEEDS_INFORMATION,
     PILOT_STAGE06_PUBLISH_READY,
     PILOT_STAGE07_ISSUE_REPLAN,
@@ -17,6 +18,7 @@ from onetruth.infrastructure.db.session import DEFAULT_DB_URL, open_sqlite_conne
 from onetruth.infrastructure.events.event_store import create_sqlite_substrate
 
 SCENARIO_TO_PILOT = {
+    "stage05_missing_workbook": PILOT_STAGE05_MISSING_WORKBOOK,
     "stage06_publish_ready": PILOT_STAGE06_PUBLISH_READY,
     "stage06_needs_information": PILOT_STAGE06_NEEDS_INFORMATION,
     "stage07_major_replan": PILOT_STAGE07_ISSUE_REPLAN,

@@ -12,8 +12,10 @@ import { RunDetailPage } from "@/pages/RunDetailPage";
 import { RunWorkspacePage } from "@/pages/RunWorkspacePage";
 import { RunsPage } from "@/pages/RunsPage";
 import { TimelinePage } from "@/pages/TimelinePage";
+import { WorkspaceHomePage } from "@/pages/WorkspaceHomePage";
 import { DrawerProvider } from "@/lib/state/drawerContext";
 import "@/app/app.css";
+import "../styles/workspace.css";
 
 export function App(): JSX.Element {
   const [queryClient] = useState(
@@ -33,8 +35,9 @@ export function App(): JSX.Element {
       <Router>
         <DrawerProvider>
           <Routes>
-            <Route path="/" element={<Navigate to="/board" replace />} />
+            <Route path="/" element={<Navigate to="/workspace" replace />} />
             <Route element={<AppShell />}>
+              <Route path="/workspace" element={<WorkspaceHomePage />} />
               <Route path="/board" element={<BoardPage />} />
               <Route path="/my-work" element={<MyWorkPage />} />
               <Route path="/approvals" element={<ApprovalsPage />} />

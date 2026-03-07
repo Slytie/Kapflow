@@ -218,6 +218,78 @@ def validate_template_pack_examples(
                 collector.require(example_path.exists(), f"completed example exists: {workflow_dir_name} -> {example_path.relative_to(template_root)}")
 
 
+def validate_schedule_template_registry(indexes: dict[str, Any], collector: Collector) -> None:
+    registry_path = ROOT / "fixtures" / "workflows" / "schedule_planning" / "template_registry.v1.yaml"
+    if not registry_path.exists():
+        collector.fail("schedule template registry is missing: fixtures/workflows/schedule_planning/template_registry.v1.yaml")
+        return
+    loaded = load_yaml(registry_path)
+    if not isinstance(loaded, dict):
+        collector.fail("schedule template registry must parse as an object")
+        return
+    registry = loaded.get("registry")
+    collector.require(isinstance(registry, dict), "template registry has registry metadata object")
+    if not isinstance(registry, dict):
+        return
+    templates = registry.get("templates")
+    collector.require(isinstance(templates, list), "template registry has templates list")
+    if not isinstance(templates, list):
+        return
+
+    collector.require(registry.get("workflow_id") == "schedule_planning.v1", "template registry workflow_id is schedule_planning.v1")
+    collector.require(int(registry.get("version") or 0) >= 1, "template registry version is positive")
+
+    seen_ids: set[str] = set()
+    seen_variants: set[str] = set()
+    for index, item in enumerate(templates):
+        if not isinstance(item, dict):
+            collector.fail(f"template registry entry must be object: index={index}")
+            continue
+        required = ["template_id", "stage_id", "dataset_key", "variant", "media_type", "source_path"]
+        for field in required:
+            collector.require(item.get(field) is not None, f"template registry field present: index={index} field={field}")
+        template_id = str(item.get("template_id") or "")
+        if template_id:
+            collector.require(template_id not in seen_ids, f"template registry template_id unique: {template_id}")
+            seen_ids.add(template_id)
+        dataset_key = str(item.get("dataset_key") or "")
+        if dataset_key:
+            collector.require(dataset_key in indexes["dataset_keys"], f"template registry dataset key registered: {dataset_key}")
+        variant = str(item.get("variant") or "")
+        if variant:
+            seen_variants.add(variant)
+        source_path = str(item.get("source_path") or "")
+        if source_path:
+            collector.require((ROOT / source_path).exists(), f"template registry file exists: {source_path}")
+
+    collector.require("empty" in seen_variants, "template registry includes empty variants")
+    collector.require("completed_example" in seen_variants, "template registry includes completed_example variants")
+
+
+def validate_schedule_runbook_assets(collector: Collector) -> None:
+    runbook_root = ROOT / "fixtures" / "workflows" / "schedule_planning" / "runbooks"
+    collector.require(
+        runbook_root.exists(),
+        "derived schedule runbook pack exists: fixtures/workflows/schedule_planning/runbooks",
+    )
+    required_files = [
+        "00_DERIVED_Schedule_Agent_Runbook_Template.docx",
+        "01_DERIVED_Schedule_Planning_Agentic_Workflow_Runbook_Example.docx",
+        "02_DERIVED_Schedule_Tool_Registry_and_Policy_Matrix.xlsx",
+        "03_DERIVED_Schedule_Approval_and_Decision_Log.xlsx",
+        "README.md",
+    ]
+    for filename in required_files:
+        collector.require(
+            (runbook_root / filename).exists(),
+            f"derived runbook asset exists: fixtures/workflows/schedule_planning/runbooks/{filename}",
+        )
+    readme_path = runbook_root / "README.md"
+    if readme_path.exists():
+        readme = readme_path.read_text(encoding="utf-8").lower()
+        collector.require("derived output" in readme or "derived outputs" in readme, "runbook README marks assets as derived outputs")
+
+
 def validate_workflow_packs(indexes: dict[str, Any], event_map: dict[str, Any], collector: Collector) -> None:
     contract_schema = ROOT / "schemas/workflows/workflow_contract.schema.json"
     artifact_map_schema = ROOT / "schemas/workflows/artifact_map.schema.json"
@@ -351,6 +423,8 @@ def main() -> int:
         validate_shared_vocab(indexes, collector)
         validate_runtime_schema_coverage(collector)
         validate_workflow_packs(indexes, event_map, collector)
+        validate_schedule_template_registry(indexes, collector)
+        validate_schedule_runbook_assets(collector)
         validate_task_index(collector)
         validate_current_focus(collector)
     if not args.schemas_only:

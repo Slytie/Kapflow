@@ -14,9 +14,11 @@ from onetruth.application.handlers.workflow_task_lifecycle import (
     activate_stage07_issue_from_flag_command,
     claim_human_task_command,
     complete_human_task_command,
+    confirm_human_task_review_command,
     create_flag_command,
     create_task_run_command,
     create_workflow_run_command,
+    create_artifact_version_command,
     ingest_artifact_document_command,
     list_approvals_for_workflow_run_command,
     list_artifacts_for_workflow_run_command,
@@ -39,7 +41,10 @@ from onetruth.application.services.example_document_corpus import (
 from onetruth.application.services.stage06_openai_sandbox import (
     run_stage06_openai_review_sandbox,
 )
-from onetruth.infrastructure.artifacts.storage import default_storage_root_for_db_url
+from onetruth.infrastructure.artifacts.storage import (
+    default_storage_root_for_db_url,
+    encode_base64_content,
+)
 from onetruth.infrastructure.events.event_store import (
     DuplicateIdempotencyKeyError,
     list_events,
@@ -66,8 +71,10 @@ DOMAIN_ID = "domain-x"
 PILOT_STAGE06_PUBLISH_READY = "stage06_publish_ready"
 PILOT_STAGE06_NEEDS_INFORMATION = "stage06_needs_information"
 PILOT_STAGE07_ISSUE_REPLAN = "stage07_issue_replan"
+PILOT_STAGE05_MISSING_WORKBOOK = "stage05_missing_workbook"
 
 ALL_PILOT_IDS: tuple[str, ...] = (
+    PILOT_STAGE05_MISSING_WORKBOOK,
     PILOT_STAGE06_PUBLISH_READY,
     PILOT_STAGE06_NEEDS_INFORMATION,
     PILOT_STAGE07_ISSUE_REPLAN,
@@ -106,6 +113,14 @@ class PilotDefinition:
 
 
 PILOT_DEFINITIONS: dict[str, PilotDefinition] = {
+    PILOT_STAGE05_MISSING_WORKBOOK: PilotDefinition(
+        pilot_id=PILOT_STAGE05_MISSING_WORKBOOK,
+        partition_key="SD-2026-03-11",
+        logical_date="2026-03-11",
+        seed_set_id="",
+        stage_focus="Stage05",
+        description="Stage05 missing-workbook information-request branch with template-required upload blocking.",
+    ),
     PILOT_STAGE06_PUBLISH_READY: PilotDefinition(
         pilot_id=PILOT_STAGE06_PUBLISH_READY,
         partition_key="SD-2026-03-12",
@@ -212,7 +227,14 @@ def run_realistic_schedule_planning_pilot_suite(
             pilot_key=pilot_key,
         )
         if created:
-            if pilot_id == PILOT_STAGE06_PUBLISH_READY:
+            if pilot_id == PILOT_STAGE05_MISSING_WORKBOOK:
+                _run_stage05_missing_workbook(
+                    connection,
+                    definition=definition,
+                    workflow_run_id=workflow_run_id,
+                    pilot_key=pilot_key,
+                )
+            elif pilot_id == PILOT_STAGE06_PUBLISH_READY:
                 _run_stage06_publish_ready(
                     connection,
                     corpus=corpus,
@@ -427,6 +449,39 @@ def _ensure_workflow_run(
     return True
 
 
+def _run_stage05_missing_workbook(
+    connection: sqlite3.Connection,
+    *,
+    definition: PilotDefinition,
+    workflow_run_id: str,
+    pilot_key: str,
+) -> None:
+    stage05 = create_task_run_command(
+        connection,
+        {
+            "task_run_id": _deterministic_id("tr", pilot_key, definition.pilot_id, "stage05-information"),
+            "human_task_id": _deterministic_id("ht", pilot_key, definition.pilot_id, "stage05-information"),
+            "workflow_run_id": workflow_run_id,
+            "stage_id": "Stage05",
+            "task_kind": "information_request",
+            "activation_key": f"pilot:{pilot_key}:{definition.pilot_id}:stage05:information_request",
+            "candidate_roles": ["schedule_planner"],
+            "owner_role": "dispatch_supervisor",
+            "create_human_task": True,
+            "idempotency_key": f"pilot:{pilot_key}:{definition.pilot_id}:tasks.create:stage05-information",
+            "actor_id": "system:pilot-runner",
+            "actor_type": "system",
+        },
+    )
+    _claim_if_open(
+        connection,
+        human_task_id=str(stage05["human_task"]["human_task_id"]),
+        actor_id="human:schedule-planner-pilot",
+        actor_type="human",
+        idempotency_key=f"pilot:{pilot_key}:{definition.pilot_id}:tasks.claim:stage05-information",
+    )
+
+
 def _run_stage06_publish_ready(
     connection: sqlite3.Connection,
     *,
@@ -505,12 +560,60 @@ def _run_stage06_publish_ready(
     final_review_human_task_id = str(spawned[0]["human_task_id"])
     final_review_task_run_id = str(spawned[0]["task_run_id"])
 
+    stage06_publish_packet = _create_json_draft_artifact(
+        connection,
+        workflow_run_id=workflow_run_id,
+        task_run_id=final_review_task_run_id,
+        artifact_kind="schedule.stage06.publish_packet",
+        artifact_suffix="stage06-publish-packet",
+        pilot_key=pilot_key,
+        pilot_id=definition.pilot_id,
+        storage_root=storage_root,
+        payload={
+            "pilot_scenario": definition.pilot_id,
+            "branch": "publish_ready",
+            "kind": "stage06_publish_packet",
+        },
+    )
+    draft_published_workbook = _ingest_fixture(
+        connection,
+        corpus=corpus,
+        workflow_run_id=workflow_run_id,
+        fixture_id="schedule.stage06.published_schedule_workbook.completed",
+        pilot_key=pilot_key,
+        pilot_id=definition.pilot_id,
+        artifact_suffix="stage06-published-draft",
+        storage_root=storage_root,
+        task_run_id=final_review_task_run_id,
+        artifact_role="draft_output",
+        metadata_json={
+            "pilot_scenario": definition.pilot_id,
+            "pilot_branch": "publish_ready",
+            "lifecycle": "draft",
+            "is_draft": True,
+        },
+    )
+
     _claim_if_open(
         connection,
         human_task_id=final_review_human_task_id,
         actor_id="human:dispatch-supervisor-pilot",
         actor_type="human",
         idempotency_key=f"pilot:{pilot_key}:{definition.pilot_id}:tasks.claim:stage06-final-review",
+    )
+    confirm_human_task_review_command(
+        connection,
+        {
+            "human_task_id": final_review_human_task_id,
+            "actor_id": "human:dispatch-supervisor-pilot",
+            "actor_type": "human",
+            "reviewed_artifact_version_ids": [
+                str(stage06_publish_packet["artifact_version_id"]),
+                str(draft_published_workbook["artifact_version_id"]),
+            ],
+            "idempotency_key": f"pilot:{pilot_key}:{definition.pilot_id}:tasks.confirm-review:stage06-final-review",
+        },
+        storage_root=storage_root,
     )
     complete_human_task_command(
         connection,
@@ -554,23 +657,6 @@ def _run_stage06_publish_ready(
         },
     )
 
-    published_artifact = _ingest_fixture(
-        connection,
-        corpus=corpus,
-        workflow_run_id=workflow_run_id,
-        fixture_id="schedule.stage06.published_schedule_workbook.completed",
-        pilot_key=pilot_key,
-        pilot_id=definition.pilot_id,
-        artifact_suffix="stage06-published-output",
-        storage_root=storage_root,
-        task_run_id=final_review_task_run_id,
-        artifact_role="official_output",
-        metadata_json={
-            "pilot_scenario": definition.pilot_id,
-            "pilot_branch": "publish_ready",
-        },
-    )
-
     promote_pointer_command(
         connection,
         {
@@ -579,7 +665,7 @@ def _run_stage06_publish_ready(
             "scope_ref": "Stage06",
             "pointer_key": "official:schedule.published_schedule.workbook",
             "artifact_kind": "schedule.published_schedule.workbook",
-            "artifact_version_id": str(published_artifact["artifact_version_id"]),
+            "artifact_version_id": str(draft_published_workbook["artifact_version_id"]),
             "promotion_reason": "official_publish",
             "promoted_by_task_run_id": final_review_task_run_id,
             "approved_by_approval_id": approval_id,
@@ -748,6 +834,23 @@ def _run_stage07_issue_replan(
         actor_type="human",
         idempotency_key=f"pilot:{pilot_key}:{definition.pilot_id}:tasks.claim:stage07-triage",
     )
+    _ingest_fixture(
+        connection,
+        corpus=corpus,
+        workflow_run_id=workflow_run_id,
+        fixture_id="schedule.stage07.exception_board_doc.completed",
+        pilot_key=pilot_key,
+        pilot_id=definition.pilot_id,
+        artifact_suffix="stage07-exception-board-upload",
+        storage_root=storage_root,
+        task_run_id=str(activated["task_run"]["task_run_id"]),
+        human_task_id=triage_human_task_id,
+        artifact_role="evidence",
+        metadata_json={
+            "pilot_scenario": definition.pilot_id,
+            "uploaded_for_task_kind": "exception_triage",
+        },
+    )
 
     triage_complete = complete_human_task_command(
         connection,
@@ -769,12 +872,65 @@ def _run_stage07_issue_replan(
     final_review_human_task_id = str(spawned[0]["human_task_id"])
     final_review_task_run_id = str(spawned[0]["task_run_id"])
 
+    stage07_replan_packet = _create_json_draft_artifact(
+        connection,
+        workflow_run_id=workflow_run_id,
+        task_run_id=final_review_task_run_id,
+        artifact_kind="schedule.stage07.replan_packet",
+        artifact_suffix="stage07-replan-packet",
+        pilot_key=pilot_key,
+        pilot_id=definition.pilot_id,
+        storage_root=storage_root,
+        payload={
+            "pilot_scenario": definition.pilot_id,
+            "flag_id": flag_id,
+            "kind": "stage07_replan_packet",
+            "lifecycle": "draft",
+            "is_draft": True,
+        },
+    )
+    draft_replan_delta = _ingest_fixture(
+        connection,
+        corpus=corpus,
+        workflow_run_id=workflow_run_id,
+        fixture_id="schedule.stage07.replan_delta_workbook.completed",
+        pilot_key=pilot_key,
+        pilot_id=definition.pilot_id,
+        artifact_suffix="stage07-replan-delta-draft",
+        storage_root=storage_root,
+        task_run_id=final_review_task_run_id,
+        artifact_role="draft_output",
+        supersedes_artifact_version_id=str(base_artifact["artifact_version_id"]),
+        metadata_json={
+            "pilot_scenario": definition.pilot_id,
+            "flag_id": flag_id,
+            "base_artifact_version_id": str(base_artifact["artifact_version_id"]),
+            "delta_sequence": 1,
+            "lifecycle": "draft",
+            "is_draft": True,
+        },
+    )
+
     _claim_if_open(
         connection,
         human_task_id=final_review_human_task_id,
         actor_id="human:ops-manager-pilot",
         actor_type="human",
         idempotency_key=f"pilot:{pilot_key}:{definition.pilot_id}:tasks.claim:stage07-final-review",
+    )
+    confirm_human_task_review_command(
+        connection,
+        {
+            "human_task_id": final_review_human_task_id,
+            "actor_id": "human:ops-manager-pilot",
+            "actor_type": "human",
+            "reviewed_artifact_version_ids": [
+                str(stage07_replan_packet["artifact_version_id"]),
+                str(draft_replan_delta["artifact_version_id"]),
+            ],
+            "idempotency_key": f"pilot:{pilot_key}:{definition.pilot_id}:tasks.confirm-review:stage07-final-review",
+        },
+        storage_root=storage_root,
     )
     complete_human_task_command(
         connection,
@@ -818,26 +974,6 @@ def _run_stage07_issue_replan(
         },
     )
 
-    replan_delta = _ingest_fixture(
-        connection,
-        corpus=corpus,
-        workflow_run_id=workflow_run_id,
-        fixture_id="schedule.stage07.replan_delta_workbook.completed",
-        pilot_key=pilot_key,
-        pilot_id=definition.pilot_id,
-        artifact_suffix="stage07-replan-delta",
-        storage_root=storage_root,
-        task_run_id=final_review_task_run_id,
-        artifact_role="official_output",
-        supersedes_artifact_version_id=str(base_artifact["artifact_version_id"]),
-        metadata_json={
-            "pilot_scenario": definition.pilot_id,
-            "flag_id": flag_id,
-            "base_artifact_version_id": str(base_artifact["artifact_version_id"]),
-            "delta_sequence": 1,
-        },
-    )
-
     promote_pointer_command(
         connection,
         {
@@ -846,7 +982,7 @@ def _run_stage07_issue_replan(
             "scope_ref": "Stage07",
             "pointer_key": "official:schedule.replan_delta.workbook",
             "artifact_kind": "schedule.replan_delta.workbook",
-            "artifact_version_id": str(replan_delta["artifact_version_id"]),
+            "artifact_version_id": str(draft_replan_delta["artifact_version_id"]),
             "promotion_reason": "official_major_replan",
             "promoted_by_task_run_id": final_review_task_run_id,
             "approved_by_approval_id": approval_id,
@@ -928,6 +1064,7 @@ def _ingest_fixture(
     artifact_suffix: str,
     storage_root: Path,
     task_run_id: str | None = None,
+    human_task_id: str | None = None,
     artifact_role: str | None = None,
     metadata_json: dict[str, Any] | None = None,
     supersedes_artifact_version_id: str | None = None,
@@ -963,9 +1100,62 @@ def _ingest_fixture(
             "file_name": document.source_path.name,
             "metadata_json": metadata,
             "supersedes_artifact_version_id": supersedes_artifact_version_id,
+            "links": (
+                [
+                    {
+                        "subject_kind": "human_task",
+                        "subject_id": human_task_id,
+                        "relation_kind": "attachment",
+                    }
+                ]
+                if human_task_id is not None
+                else None
+            ),
             "idempotency_key": f"pilot:{pilot_key}:{pilot_id}:artifacts.ingest:{artifact_suffix}",
             "actor_id": "system:pilot-runner",
             "actor_type": "system",
+        },
+        storage_root=storage_root,
+    )
+    return result["artifact_version"]
+
+
+def _create_json_draft_artifact(
+    connection: sqlite3.Connection,
+    *,
+    workflow_run_id: str,
+    task_run_id: str,
+    artifact_kind: str,
+    artifact_suffix: str,
+    pilot_key: str,
+    pilot_id: str,
+    storage_root: Path,
+    payload: dict[str, Any],
+) -> dict[str, Any]:
+    metadata = {
+        "pilot_key": pilot_key,
+        "pilot_id": pilot_id,
+        "lifecycle": "draft",
+        "is_draft": True,
+        **payload,
+    }
+    result = ingest_artifact_document_command(
+        connection,
+        {
+            "artifact_version_id": _deterministic_id("av", pilot_key, pilot_id, artifact_suffix),
+            "workflow_run_id": workflow_run_id,
+            "task_run_id": task_run_id,
+            "artifact_kind": artifact_kind,
+            "artifact_role": "draft_output",
+            "content_base64": encode_base64_content(
+                json.dumps(payload, separators=(",", ":"), sort_keys=True).encode("utf-8")
+            ),
+            "file_name": f"{artifact_suffix}.json",
+            "media_type": "application/json",
+            "metadata_json": metadata,
+            "idempotency_key": f"pilot:{pilot_key}:{pilot_id}:artifacts.ingest:{artifact_suffix}",
+            "actor_id": "agent:pilot-draft-generator",
+            "actor_type": "agent",
         },
         storage_root=storage_root,
     )

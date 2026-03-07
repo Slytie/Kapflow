@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useState } from "react";
 
@@ -45,7 +45,19 @@ function Harness(): JSX.Element {
           setPayload({
             title: "Task details",
             description: "This description is only visible in the drawer.",
-            fields: [{ label: "State", value: "OPEN" }]
+            fields: [{ label: "State", value: "OPEN" }],
+            artifacts: [
+              {
+                artifact_version_id: "av-1",
+                artifact_kind: "schedule.draft_schedule.workbook",
+                artifact_role: "evidence",
+                media_type:
+                  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                created_at: "2026-03-04T12:00:00Z",
+                file_name: "stage05.xlsx",
+                source_label: "Step output"
+              }
+            ]
           })
         }
       />
@@ -64,6 +76,10 @@ describe("Detail drawer flow", () => {
     await user.click(screen.getByRole("button", { name: "Details" }));
 
     expect(screen.getByText("This description is only visible in the drawer.")).toBeInTheDocument();
+    expect(await screen.findByText("Task Artifacts (1)")).toBeInTheDocument();
+    expect(screen.getByText("stage05.xlsx")).toBeInTheDocument();
+    const artifactsSection = screen.getByLabelText("Task artifacts");
+    expect(within(artifactsSection).getByRole("button", { name: "Download" })).toBeInTheDocument();
     expect(screen.getByTestId("task-card-wide")).toBeInTheDocument();
   });
 });

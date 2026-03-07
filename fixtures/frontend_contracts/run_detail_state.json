@@ -75,19 +75,54 @@
         "workflow_run_id": "<workflow_run_id:4>"
       },
       {
+        "artifact_kind": "schedule.exception_board.doc",
+        "artifact_role": "evidence",
+        "artifact_version_id": "<artifact_version_id:9>",
+        "byte_size": 37167,
+        "content_digest": "sha256:0d86c8e5247b6398d5e80c4485d6ee1aa3bed26432f6db3c32ba8edd72134d63",
+        "created_at": "<ts:7>",
+        "lineage_note": null,
+        "links": [
+          {
+            "artifact_version_id": "<artifact_version_id:9>",
+            "created_at": "<ts:7>",
+            "created_by_actor_id": "system:runtime",
+            "created_by_actor_type": "system",
+            "relation_kind": "attachment",
+            "subject_id": "<human_task_id:10>",
+            "subject_kind": "human_task",
+            "workflow_run_id": "<workflow_run_id:4>"
+          }
+        ],
+        "media_type": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        "metadata_json": {
+          "branch": "stage07_major_replan_happy",
+          "ingress_file_name": "Stage07_Intraday_Exception_Control_Document_Template_EMPTY.docx",
+          "ingress_media_type": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+          "ingress_source_path": "fixtures/workflows/schedule_planning/template_pack/Stage07_Intraday_Exception_Control/Stage07_Intraday_Exception_Control_Document_Template_EMPTY.docx",
+          "scenario_id": "stage07_major_replan_happy",
+          "step_id": "upload_exception_board"
+        },
+        "parent_artifact_version_id": null,
+        "storage_uri": "<storage_uri:11>",
+        "supersedes_artifact_version_id": null,
+        "task_run_id": "<task_run_id:12>",
+        "workflow_run_id": "<workflow_run_id:4>"
+      },
+      {
         "artifact_kind": "schedule.replan_delta.workbook",
         "artifact_role": "official_output",
-        "artifact_version_id": "<artifact_version_id:9>",
+        "artifact_version_id": "<artifact_version_id:13>",
         "byte_size": 13927,
         "content_digest": "sha256:4dacafa977c8b887b6a9464d0d20809cfdc76d891186c956ab8afd9bd02f330c",
-        "created_at": "<ts:7>",
+        "created_at": "<ts:8>",
         "lineage_note": null,
         "links": [],
         "media_type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         "metadata_json": {
           "base_artifact_version_id": "<artifact_version_id:7>",
           "delta_sequence": 1,
-          "flag_id": "<flag_id:10>",
+          "flag_id": "<flag_id:14>",
           "ingress_file_name": "Stage07_Intraday_Exception_Control_Spreadsheet_Example_COMPLETED.xlsx",
           "ingress_media_type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
           "ingress_source_path": "fixtures/workflows/schedule_planning/template_pack/Stage07_Intraday_Exception_Control/Stage07_Intraday_Exception_Control_Spreadsheet_Example_COMPLETED.xlsx",
@@ -95,8 +130,8 @@
           "step_id": "create_replan_delta"
         },
         "parent_artifact_version_id": null,
-        "storage_uri": "<storage_uri:11>",
-        "supersedes_artifact_version_id": "<supersedes_artifact_version_id:12>",
+        "storage_uri": "<storage_uri:15>",
+        "supersedes_artifact_version_id": "<supersedes_artifact_version_id:16>",
         "task_run_id": "<task_run_id:3>",
         "workflow_run_id": "<workflow_run_id:4>"
       }
@@ -106,7 +141,7 @@
       {
         "assigned_group": null,
         "closed_at": null,
-        "created_at": "<ts:8>",
+        "created_at": "<ts:9>",
         "created_by_actor_id": "human:dispatcher-1",
         "created_by_actor_type": "human",
         "dedupe_key": "scenario:stage07_major_replan_happy:flags.create:no-show",
@@ -115,7 +150,7 @@
           "zone_id": "berlin-east"
         },
         "domain_id": "domain-x",
-        "flag_id": "<flag_id:10>",
+        "flag_id": "<flag_id:14>",
         "kind": "no_show",
         "partition_key": "SD-2026-03-09",
         "severity": "high",
@@ -123,7 +158,7 @@
         "state": "resolved",
         "summary": "Courier C-104 did not report for shift",
         "tenant_id": "tenant-a",
-        "updated_at": "<ts:9>",
+        "updated_at": "<ts:10>",
         "workflow_id": "schedule_planning.v1",
         "workflow_run_id": "<workflow_run_id:4>"
       }
@@ -137,24 +172,24 @@
         "candidate_roles": [
           "operations_manager"
         ],
-        "claimed_at": "<ts:10>",
+        "claimed_at": "<ts:11>",
         "claimed_until": null,
-        "created_at": "<ts:11>",
+        "created_at": "<ts:12>",
         "due_at": null,
         "escalation_at": null,
         "generation": 0,
-        "human_task_id": "<human_task_id:13>",
+        "human_task_id": "<human_task_id:10>",
         "lease_version": 1,
         "linked_approval_id": null,
         "owner_role": "operations_manager",
         "reopen_count": 0,
-        "spawned_from_flag_id": "<spawned_from_flag_id:14>",
+        "spawned_from_flag_id": "<spawned_from_flag_id:17>",
         "stage_id": "Stage07",
         "state": "COMPLETED",
         "task_kind": "exception_triage",
-        "task_run_id": "<task_run_id:15>",
+        "task_run_id": "<task_run_id:12>",
         "task_run_state": "COMPLETED",
-        "updated_at": "<ts:12>",
+        "updated_at": "<ts:13>",
         "workflow_run_id": "<workflow_run_id:4>"
       },
       {
@@ -165,24 +200,24 @@
         "candidate_roles": [
           "operations_manager"
         ],
-        "claimed_at": "<ts:13>",
+        "claimed_at": "<ts:14>",
         "claimed_until": null,
-        "created_at": "<ts:14>",
+        "created_at": "<ts:15>",
         "due_at": null,
         "escalation_at": null,
         "generation": 1,
-        "human_task_id": "<human_task_id:16>",
+        "human_task_id": "<human_task_id:18>",
         "lease_version": 1,
         "linked_approval_id": null,
         "owner_role": "operations_manager",
         "reopen_count": 0,
-        "spawned_from_flag_id": "<spawned_from_flag_id:14>",
+        "spawned_from_flag_id": "<spawned_from_flag_id:17>",
         "stage_id": "Stage07",
         "state": "COMPLETED",
         "task_kind": "final_review",
         "task_run_id": "<task_run_id:3>",
         "task_run_state": "COMPLETED",
-        "updated_at": "<ts:15>",
+        "updated_at": "<ts:16>",
         "workflow_run_id": "<workflow_run_id:4>"
       }
     ],
@@ -197,20 +232,20 @@
         "promotion_reason": "seed_base",
         "scope_kind": "stage",
         "scope_ref": "Stage06",
-        "updated_at": "<ts:16>",
+        "updated_at": "<ts:17>",
         "workflow_run_id": "<workflow_run_id:4>"
       },
       {
-        "approved_by_approval_id": "<approved_by_approval_id:17>",
+        "approved_by_approval_id": "<approved_by_approval_id:19>",
         "artifact_kind": "schedule.replan_delta.workbook",
-        "artifact_version_id": "<artifact_version_id:9>",
+        "artifact_version_id": "<artifact_version_id:13>",
         "generation": 0,
         "pointer_key": "official:schedule.replan_delta.workbook",
-        "promoted_by_task_run_id": "<promoted_by_task_run_id:18>",
+        "promoted_by_task_run_id": "<promoted_by_task_run_id:20>",
         "promotion_reason": "official_major_replan",
         "scope_kind": "stage",
         "scope_ref": "Stage07",
-        "updated_at": "<ts:17>",
+        "updated_at": "<ts:18>",
         "workflow_run_id": "<workflow_run_id:4>"
       }
     ],
@@ -218,7 +253,7 @@
     "summary": {
       "active_issue_count": 0,
       "approval_count": 1,
-      "artifact_version_count": 3,
+      "artifact_version_count": 4,
       "flag_count": 1,
       "human_task_count": 2,
       "pointer_count": 2
@@ -226,13 +261,13 @@
     "workflow_run": {
       "activation_key": "stage07_major_replan_happy:workflow-run",
       "active_issue_count": 0,
-      "created_at": "<ts:18>",
+      "created_at": "<ts:19>",
       "domain_id": "domain-x",
       "logical_date": "2026-03-09",
       "partition_key": "SD-2026-03-09",
       "state": "OPEN",
       "tenant_id": "tenant-a",
-      "updated_at": "<ts:19>",
+      "updated_at": "<ts:20>",
       "workflow_id": "schedule_planning.v1",
       "workflow_run_id": "<workflow_run_id:4>",
       "workflow_version": "v1"

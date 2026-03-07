@@ -31,6 +31,7 @@ export interface ContractState {
   uploadedTaskAttachmentIds: Set<string>;
   uploadedApprovalAttachmentIds: Set<string>;
   uploadedFlagAttachmentIds: Set<string>;
+  confirmedReviewTaskIds: Set<string>;
   stage06ReviewedTaskIds: Set<string>;
   forceForbidden: boolean;
 }
@@ -195,6 +196,9 @@ function buildWorkspaceTaskItem(
     graphNodeId: string;
     availableActions: string[];
     missingRequiredInputs?: string[];
+    requiredUploads?: WorkflowWorkspaceWorkItem["required_uploads"];
+    requiredReviews?: WorkflowWorkspaceWorkItem["required_reviews"];
+    blockingReasonCodes?: string[];
     blockingReason?: string | null;
   }
 ): WorkflowWorkspaceWorkItem {
@@ -205,6 +209,9 @@ function buildWorkspaceTaskItem(
     graph_node_id: options.graphNodeId,
     available_actions: options.availableActions,
     missing_required_inputs: options.missingRequiredInputs ?? [],
+    required_uploads: options.requiredUploads ?? [],
+    required_reviews: options.requiredReviews ?? [],
+    blocking_reason_codes: options.blockingReasonCodes ?? [],
     blocking_reason: options.blockingReason ?? null
   };
 }
@@ -233,6 +240,9 @@ function buildWorkspaceApprovalItem(
           ]
         : ["download_attachment"],
     missing_required_inputs: [],
+    required_uploads: [],
+    required_reviews: [],
+    blocking_reason_codes: [],
     blocking_reason: options.blockingReason ?? null
   };
 }
@@ -245,6 +255,9 @@ function buildWorkspaceFlagItem(flag: FlagRow): WorkflowWorkspaceWorkItem {
     graph_node_id: "stage07",
     available_actions: ["upload_attachment", "download_attachment"],
     missing_required_inputs: [],
+    required_uploads: [],
+    required_reviews: [],
+    blocking_reason_codes: [],
     blocking_reason: null
   };
 }
@@ -265,10 +278,74 @@ export function buildWorkflowRunWorkspace(
   );
   const activeFlag = state.flags.find((flag) => flag.flag_id === "flag-001");
 
-  const reviewMissingInputs =
-    reviewTask && !state.uploadedTaskAttachmentIds.has(reviewTask.human_task_id)
-      ? ["Upload review evidence attachment"]
+  const reviewUploadSatisfied = reviewTask
+    ? state.uploadedTaskAttachmentIds.has(reviewTask.human_task_id)
+    : false;
+  const reviewConfirmed = reviewTask
+    ? state.confirmedReviewTaskIds.has(reviewTask.human_task_id)
+    : false;
+  const publishPacketDraft = state.artifactVersions.find(
+    (artifact) => artifact.artifact_kind === "schedule.stage06.publish_packet"
+  );
+  const publishedScheduleDraft = state.artifactVersions.find(
+    (artifact) =>
+      artifact.artifact_kind === "schedule.published_schedule.workbook" &&
+      artifact.artifact_role === "draft_output"
+  );
+
+  const reviewRequiredUploads =
+    reviewTask && reviewTask.state !== "COMPLETED"
+      ? [
+          {
+            dataset_key: "schedule.supervisor_review.doc",
+            template_id: "schedule.stage06.supervisor_review.doc.empty.v1",
+            artifact_kind: "schedule.supervisor_review.doc",
+            required_count: 1,
+            current_count: reviewUploadSatisfied ? 1 : 0,
+            status: reviewUploadSatisfied ? "satisfied" : "missing"
+          }
+        ]
       : [];
+
+  const reviewRequiredReviews =
+    reviewTask && reviewTask.state !== "COMPLETED" && publishPacketDraft && publishedScheduleDraft
+      ? [
+          {
+            dataset_key: "schedule.stage06.publish_packet",
+            artifact_kind: "schedule.stage06.publish_packet",
+            required_count: 1,
+            reviewed_artifact_version_id: publishPacketDraft.artifact_version_id,
+            review_confirmation_artifact_version_id: reviewConfirmed ? "av-confirm-review-001" : null,
+            status: reviewConfirmed ? "confirmed" : "pending_confirmation"
+          },
+          {
+            dataset_key: "schedule.published_schedule.workbook",
+            artifact_kind: "schedule.published_schedule.workbook",
+            required_count: 1,
+            reviewed_artifact_version_id: publishedScheduleDraft.artifact_version_id,
+            review_confirmation_artifact_version_id: reviewConfirmed ? "av-confirm-review-001" : null,
+            status: reviewConfirmed ? "confirmed" : "pending_confirmation"
+          }
+        ]
+      : [];
+
+  const reviewBlockingReasonCodes: string[] = [];
+  if (!reviewUploadSatisfied && reviewRequiredUploads.length > 0) {
+    reviewBlockingReasonCodes.push("required_upload_missing:schedule.supervisor_review.doc");
+  }
+  if (reviewRequiredReviews.some((review) => review.status === "pending_confirmation")) {
+    reviewBlockingReasonCodes.push(
+      "required_review_confirmation_missing:schedule.stage06.publish_packet"
+    );
+  }
+  const reviewMissingInputs = [
+    ...reviewRequiredUploads
+      .filter((requirement) => requirement.status !== "satisfied")
+      .map((requirement) => requirement.dataset_key),
+    ...reviewRequiredReviews
+      .filter((review) => review.status !== "confirmed")
+      .map((review) => review.artifact_kind)
+  ];
 
   const reviewStatus =
     reviewTask?.state === "COMPLETED"
@@ -390,16 +467,24 @@ export function buildWorkflowRunWorkspace(
 
   const userWork: WorkflowWorkspaceWorkItem[] = [];
   if (reviewTask && reviewTask.state !== "COMPLETED") {
+    const reviewActions = ["upload_attachment", "run_stage06_agent_review"];
+    if (reviewUploadSatisfied) {
+      reviewActions.push("download_attachments");
+    }
+    if (reviewRequiredReviews.some((review) => review.status === "pending_confirmation")) {
+      reviewActions.push("confirm_review");
+    }
+    if (reviewMissingInputs.length === 0) {
+      reviewActions.push("complete");
+    }
     userWork.push(
       buildWorkspaceTaskItem(reviewTask, {
         graphNodeId: "stage06",
-        availableActions: [
-          "complete",
-          "upload_attachment",
-          "download_attachment",
-          "run_stage06_agent_review"
-        ],
-        missingRequiredInputs: reviewMissingInputs
+        availableActions: reviewActions,
+        missingRequiredInputs: reviewMissingInputs,
+        requiredUploads: reviewRequiredUploads,
+        requiredReviews: reviewRequiredReviews,
+        blockingReasonCodes: reviewBlockingReasonCodes
       })
     );
   }
@@ -512,7 +597,7 @@ export function createContractState(): ContractState {
         state: "CLAIMED",
         candidate_roles: ["dispatch_supervisor"],
         owner_role: "dispatch_supervisor",
-        assignee_actor_id: "human:dispatch-supervisor-1",
+        assignee_actor_id: "human:frontend-operator",
         assignee_actor_type: "human",
         due_at: null,
         escalation_at: null,
@@ -594,7 +679,7 @@ export function createContractState(): ContractState {
         responded_at: nowIso(-320),
         response_kind: "approve",
         response_reason: "approved",
-        decided_by_actor_id: "human:dispatch-supervisor-1",
+        decided_by_actor_id: "human:frontend-operator",
         decided_by_actor_type: "human",
         generation: 1,
         created_at: nowIso(-350),
@@ -640,6 +725,42 @@ export function createContractState(): ContractState {
       }
     ],
     artifactVersions: [
+      {
+        artifact_version_id: "av-draft-001",
+        workflow_run_id: WORKFLOW_RUN_ID,
+        task_run_id: "tr-claimed-002",
+        artifact_kind: "schedule.stage06.publish_packet",
+        artifact_role: "draft_output",
+        media_type: "application/json",
+        storage_uri: "s3://artifacts/av-draft-001.json",
+        content_digest: "sha256:draft001",
+        byte_size: 420,
+        metadata_json: { source: "stage06", lifecycle: "draft", file_name: "stage06_publish_packet.json" },
+        parent_artifact_version_id: null,
+        supersedes_artifact_version_id: null,
+        lineage_note: null,
+        created_at: nowIso(-160)
+      },
+      {
+        artifact_version_id: "av-draft-002",
+        workflow_run_id: WORKFLOW_RUN_ID,
+        task_run_id: "tr-claimed-002",
+        artifact_kind: "schedule.published_schedule.workbook",
+        artifact_role: "draft_output",
+        media_type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        storage_uri: "s3://artifacts/av-draft-002.xlsx",
+        content_digest: "sha256:draft002",
+        byte_size: 1100,
+        metadata_json: {
+          source: "stage06",
+          lifecycle: "draft",
+          file_name: "stage06_published_schedule_draft.xlsx"
+        },
+        parent_artifact_version_id: null,
+        supersedes_artifact_version_id: null,
+        lineage_note: null,
+        created_at: nowIso(-140)
+      },
       {
         artifact_version_id: "av-001",
         workflow_run_id: WORKFLOW_RUN_ID,
@@ -729,6 +850,7 @@ export function createContractState(): ContractState {
     uploadedTaskAttachmentIds: new Set<string>(),
     uploadedApprovalAttachmentIds: new Set<string>(),
     uploadedFlagAttachmentIds: new Set<string>(),
+    confirmedReviewTaskIds: new Set<string>(),
     stage06ReviewedTaskIds: new Set<string>(),
     forceForbidden: false
   };

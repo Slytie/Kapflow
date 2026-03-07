@@ -42,10 +42,24 @@ export function TimelinePage(): JSX.Element {
     return <StatePanel kind="empty" title="No timeline events in scope" detail="Try widening run filters." />;
   }
 
+  const newest = rows[0];
+  const oldest = rows[rows.length - 1];
+
   return (
-    <section data-testid="timeline-page">
-      <h2>Timeline Explorer</h2>
-      <div className="stack-list">
+    <section className="timeline-page" data-testid="timeline-page">
+      <header className="timeline-page__header">
+        <div>
+          <p className="timeline-page__eyebrow">Canonical Event Stream</p>
+          <h2>Timeline</h2>
+        </div>
+        <div className="timeline-page__summary">
+          <span>{rows.length} events</span>
+          <span>Latest #{newest.sequenceNo}</span>
+          <span>Earliest #{oldest.sequenceNo}</span>
+        </div>
+      </header>
+
+      <div className="timeline-page__rail">
         {rows.map((row) => (
           <TimelineRow
             key={row.eventId}

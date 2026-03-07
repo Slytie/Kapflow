@@ -12,6 +12,9 @@ SCENARIO_STAGE06_INFO = (
 SCENARIO_STAGE06_PUBLISH = (
     REPO_ROOT / "fixtures/scenarios/schedule_planning/stage06_publish_happy.yaml"
 )
+SCENARIO_STAGE07_INFO = (
+    REPO_ROOT / "fixtures/scenarios/schedule_planning/stage07_missing_information_branch.yaml"
+)
 STAGE06_DOC = (
     REPO_ROOT
     / "fixtures/workflows/schedule_planning/template_pack/Stage06_Supervisor_Review_Publish/Stage06_Supervisor_Review_Publish_Document_Example_COMPLETED.docx"
@@ -71,7 +74,7 @@ def _prepare_claimed_information_request(
     return harness, planner_client, information_task_id
 
 
-def test_information_request_not_completable_before_upload(tmp_path: Path) -> None:
+def test_stage06_information_request_requires_upload_before_completion(tmp_path: Path) -> None:
     harness, planner_client, information_task_id = _prepare_claimed_information_request(tmp_path)
 
     workspace = planner_client.get(f"/api/v1/workflow-runs/{harness.workflow_run_id}/workspace")
@@ -82,8 +85,8 @@ def test_information_request_not_completable_before_upload(tmp_path: Path) -> No
         subject_id=information_task_id,
     )
     assert info_item["linked_artifact_count"] == 0
+    assert info_item["missing_required_inputs"] == ["schedule.supervisor_review.doc"]
     assert info_item["can_complete"] is False
-    assert "linked_artifact" in info_item["missing_required_inputs"]
     assert "complete" not in info_item["available_actions"]
 
 
@@ -113,6 +116,39 @@ def test_information_request_becomes_completable_after_upload(tmp_path: Path) ->
     assert info_item["missing_required_inputs"] == []
     assert info_item["can_complete"] is True
     assert "complete" in info_item["available_actions"]
+
+
+def test_stage07_information_request_still_requires_upload(tmp_path: Path) -> None:
+    harness = RuntimeScenarioHarness.from_yaml(SCENARIO_STAGE07_INFO, tmp_path).prepare()
+    harness.run_steps()
+    information_task_id = str(
+        harness.output("complete_issue")["result"]["spawned_children"][0]["human_task_id"]
+    )
+    planner_client = _client(
+        harness,
+        actor_id="human:schedule-planner-7",
+        actor_roles=["schedule_planner"],
+    )
+    claimed = planner_client.post(
+        f"/api/v1/human-tasks/{information_task_id}/claim",
+        payload={
+            "lease_seconds": 300,
+            "idempotency_key": f"api:{harness.scenario_id}:workspace-actionability:claim-stage07-information",
+        },
+    )
+    assert claimed.status_code == 200
+
+    workspace = planner_client.get(f"/api/v1/workflow-runs/{harness.workflow_run_id}/workspace")
+    assert workspace.status_code == 200
+    info_item = _workspace_item(
+        workspace.payload,
+        subject_kind="human_task",
+        subject_id=information_task_id,
+    )
+    assert info_item["linked_artifact_count"] == 0
+    assert info_item["can_complete"] is False
+    assert "schedule.exception_board.doc" in info_item["missing_required_inputs"]
+    assert "complete" not in info_item["available_actions"]
 
 
 def test_stage06_run_agent_review_action_is_policy_gated(tmp_path: Path) -> None:
@@ -171,4 +207,3 @@ def test_stage06_run_agent_review_action_is_policy_gated(tmp_path: Path) -> None
     )
     assert denied_item["can_run_stage06_agent_review"] is False
     assert "run_stage06_agent_review" not in denied_item["available_actions"]
-

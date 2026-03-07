@@ -57,6 +57,20 @@ function taskDetailPayload(item: WorkflowWorkspaceTaskWorkItem): DrawerPayload {
         label: "Missing required inputs",
         value: item.missing_required_inputs.join(", ") || "none"
       }
+    ],
+    artifact_sources: [
+      {
+        workflow_run_id: task.workflow_run_id,
+        subject_kind: "human_task",
+        subject_id: task.human_task_id,
+        source_label: "Task attachment"
+      },
+      {
+        workflow_run_id: task.workflow_run_id,
+        subject_kind: "task_run",
+        subject_id: task.task_run_id,
+        source_label: "Step output"
+      }
     ]
   };
 }
@@ -229,7 +243,11 @@ export function WorkspaceActionPanel({
               const canClaim = hasAction(item, ["claim", "claim_human_task"]);
               const canComplete = hasAction(item, ["complete", "complete_human_task"]);
               const canUpload = hasAction(item, ["upload_attachment", "upload_artifact"]);
-              const canDownload = hasAction(item, ["download_attachment", "download_artifact"]);
+              const canDownload = hasAction(item, [
+                "download_attachment",
+                "download_artifact",
+                "download_attachments"
+              ]);
               const canRunStage06Review = hasAction(item, [
                 "run_stage06_agent_review",
                 "stage06_agent_review"
@@ -300,7 +318,11 @@ export function WorkspaceActionPanel({
                 "respond_approval"
               ]);
               const canUpload = hasAction(item, ["upload_attachment", "upload_artifact"]);
-              const canDownload = hasAction(item, ["download_attachment", "download_artifact"]);
+              const canDownload = hasAction(item, [
+                "download_attachment",
+                "download_artifact",
+                "download_attachments"
+              ]);
 
               return (
                 <ApprovalCard
@@ -363,7 +385,11 @@ export function WorkspaceActionPanel({
               (downloadFlagAttachmentMutation.isPending &&
                 downloadFlagAttachmentMutation.variables === flag.flag_id);
             const canUpload = hasAction(item, ["upload_attachment", "upload_artifact"]);
-            const canDownload = hasAction(item, ["download_attachment", "download_artifact"]);
+            const canDownload = hasAction(item, [
+              "download_attachment",
+              "download_artifact",
+              "download_attachments"
+            ]);
 
             return (
               <FlagCard

@@ -46,6 +46,7 @@ from onetruth.api.routes.flags import (
 from onetruth.api.routes.human_tasks import (
     claim_human_task_endpoint,
     complete_human_task_endpoint,
+    confirm_human_task_review_endpoint,
     get_human_task_endpoint,
     list_human_tasks_endpoint,
     run_stage06_agent_review_endpoint,
@@ -54,6 +55,11 @@ from onetruth.api.routes.pointers import list_pointers_endpoint
 from onetruth.api.routes.timeline import (
     list_timeline_events_endpoint,
     list_workflow_run_timeline_endpoint,
+)
+from onetruth.api.routes.templates import (
+    download_template_endpoint,
+    get_template_endpoint,
+    list_templates_endpoint,
 )
 from onetruth.api.routes.workflow_runs import (
     get_workflow_run_detail_endpoint,
@@ -69,6 +75,19 @@ class MatchedRoute:
     method: str
     name: str
     params: dict[str, str]
+
+
+_CORS_ALLOW_METHODS = "GET,POST,PUT,PATCH,DELETE,OPTIONS"
+_CORS_DEFAULT_ALLOW_HEADERS = ",".join(
+    [
+        "content-type",
+        TENANT_HEADER,
+        DOMAIN_HEADER,
+        ACTOR_ID_HEADER,
+        ACTOR_TYPE_HEADER,
+        ACTOR_ROLES_HEADER,
+    ]
+)
 
 
 def create_app(*, db_url: str | None = None) -> ASGIApp:
@@ -96,6 +115,10 @@ def create_app(*, db_url: str | None = None) -> ASGIApp:
         headers = _decode_headers(raw_headers)
         query = _decode_query(scope.get("query_string", b""))
 
+        if method == "OPTIONS" and path.startswith("/api/v1/"):
+            await _send_no_content(send, status_code=204, request_headers=headers)
+            return
+
         matched = _match_route(method, path)
         if matched is None:
             await _send_json(
@@ -109,6 +132,7 @@ def create_app(*, db_url: str | None = None) -> ASGIApp:
                         "details": {"method": method, "path": path},
                     },
                 },
+                request_headers=headers,
             )
             return
 
@@ -131,9 +155,19 @@ def create_app(*, db_url: str | None = None) -> ASGIApp:
             finally:
                 connection.close()
 
-            await _send_json(send, status_code=200, payload={"status": "ok", **response_payload})
+            await _send_json(
+                send,
+                status_code=200,
+                payload={"status": "ok", **response_payload},
+                request_headers=headers,
+            )
         except ApiError as exc:
-            await _send_json(send, status_code=exc.status_code, payload=error_payload(exc))
+            await _send_json(
+                send,
+                status_code=exc.status_code,
+                payload=error_payload(exc),
+                request_headers=headers,
+            )
         except Exception as exc:
             await _send_json(
                 send,
@@ -146,6 +180,7 @@ def create_app(*, db_url: str | None = None) -> ASGIApp:
                         "details": {"exception": exc.__class__.__name__},
                     },
                 },
+                request_headers=headers,
             )
 
     return app
@@ -205,6 +240,17 @@ def _match_route(method: str, path: str) -> MatchedRoute | None:
                 return MatchedRoute(
                     method=method,
                     name="human_tasks.complete",
+                    params={"human_task_id": human_task_id},
+                )
+    if method == "POST" and path.endswith("/confirm-review"):
+        prefix = "/api/v1/human-tasks/"
+        suffix = "/confirm-review"
+        if path.startswith(prefix) and len(path) > len(prefix) + len(suffix):
+            human_task_id = path[len(prefix) : -len(suffix)]
+            if human_task_id:
+                return MatchedRoute(
+                    method=method,
+                    name="human_tasks.confirm_review",
                     params={"human_task_id": human_task_id},
                 )
     if method == "POST" and path.endswith("/stage06-agent-review"):
@@ -364,6 +410,28 @@ def _match_route(method: str, path: str) -> MatchedRoute | None:
             )
     if method == "GET" and path == "/api/v1/pointers":
         return MatchedRoute(method=method, name="pointers.list", params={})
+    if method == "GET" and path == "/api/v1/templates":
+        return MatchedRoute(method=method, name="templates.list", params={})
+    if method == "GET" and path.endswith("/download"):
+        prefix = "/api/v1/templates/"
+        suffix = "/download"
+        if path.startswith(prefix) and len(path) > len(prefix) + len(suffix):
+            template_id = path[len(prefix) : -len(suffix)]
+            if template_id and "/" not in template_id:
+                return MatchedRoute(
+                    method=method,
+                    name="templates.download",
+                    params={"template_id": template_id},
+                )
+    if method == "GET" and path.startswith("/api/v1/templates/"):
+        prefix = "/api/v1/templates/"
+        template_id = path[len(prefix) :]
+        if template_id and "/" not in template_id:
+            return MatchedRoute(
+                method=method,
+                name="templates.detail",
+                params={"template_id": template_id},
+            )
     if method == "POST" and path == "/api/v1/artifacts/ingest":
         return MatchedRoute(method=method, name="artifacts.ingest", params={})
     if method == "GET" and path == "/api/v1/artifacts":
@@ -446,6 +514,14 @@ def _dispatch_route(
         return complete_human_task_endpoint(
             connection,
             context=context,
+            human_task_id=matched.params["human_task_id"],
+            payload=_require_payload(payload),
+        )
+    if matched.name == "human_tasks.confirm_review":
+        return confirm_human_task_review_endpoint(
+            connection,
+            context=context,
+            db_url=db_url,
             human_task_id=matched.params["human_task_id"],
             payload=_require_payload(payload),
         )
@@ -584,6 +660,26 @@ def _dispatch_route(
             query=query,
             page=page,
         )
+    if matched.name == "templates.list":
+        assert page is not None
+        return list_templates_endpoint(
+            connection,
+            context=context,
+            query=query,
+            page=page,
+        )
+    if matched.name == "templates.detail":
+        return get_template_endpoint(
+            connection,
+            context=context,
+            template_id=matched.params["template_id"],
+        )
+    if matched.name == "templates.download":
+        return download_template_endpoint(
+            connection,
+            context=context,
+            template_id=matched.params["template_id"],
+        )
     if matched.name == "artifacts.ingest":
         return ingest_artifact_endpoint(
             connection,
@@ -700,19 +796,66 @@ async def _read_json_body(method: str, receive) -> dict[str, Any] | None:
     return parsed
 
 
-async def _send_json(send, *, status_code: int, payload: dict[str, Any]) -> None:
+def _cors_headers(
+    request_headers: dict[str, str] | None,
+) -> list[tuple[bytes, bytes]]:
+    origin = "*"
+    allow_headers = _CORS_DEFAULT_ALLOW_HEADERS
+    if request_headers is not None:
+        requested_origin = request_headers.get("origin")
+        if requested_origin:
+            origin = requested_origin
+        requested_headers = request_headers.get("access-control-request-headers")
+        if requested_headers:
+            allow_headers = requested_headers
+    return [
+        (b"access-control-allow-origin", origin.encode("latin-1")),
+        (b"access-control-allow-methods", _CORS_ALLOW_METHODS.encode("latin-1")),
+        (b"access-control-allow-headers", allow_headers.encode("latin-1")),
+        (b"access-control-max-age", b"600"),
+        (b"vary", b"origin, access-control-request-headers"),
+    ]
+
+
+async def _send_json(
+    send,
+    *,
+    status_code: int,
+    payload: dict[str, Any],
+    request_headers: dict[str, str] | None = None,
+) -> None:
     body = json.dumps(payload, separators=(",", ":"), sort_keys=True).encode("utf-8")
+    response_headers = [
+        (b"content-type", b"application/json"),
+        (b"content-length", str(len(body)).encode("ascii")),
+    ]
+    response_headers.extend(_cors_headers(request_headers))
     await send(
         {
             "type": "http.response.start",
             "status": status_code,
-            "headers": [
-                (b"content-type", b"application/json"),
-                (b"content-length", str(len(body)).encode("ascii")),
-            ],
+            "headers": response_headers,
         }
     )
     await send({"type": "http.response.body", "body": body, "more_body": False})
+
+
+async def _send_no_content(
+    send,
+    *,
+    status_code: int,
+    request_headers: dict[str, str] | None = None,
+) -> None:
+    response_headers = [(b"content-length", b"0")]
+    response_headers.extend(_cors_headers(request_headers))
+    await send(
+        {
+            "type": "http.response.start",
+            "status": status_code,
+            "headers": response_headers,
+        }
+    )
+    await send({"type": "http.response.body", "body": b"", "more_body": False})
 
 
 def _build_server_parser() -> argparse.ArgumentParser:

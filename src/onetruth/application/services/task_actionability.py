@@ -48,6 +48,7 @@ def compute_human_task_actionability(
     actor_type: str,
     actor_roles: tuple[str, ...],
     linked_artifact_count: int,
+    requirement_state: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     state = str(task.get("state") or "")
     candidate_roles = tuple(str(role) for role in task.get("candidate_roles") or [])
@@ -56,21 +57,41 @@ def compute_human_task_actionability(
     assignee_actor_type = str(task.get("assignee_actor_type") or "")
     is_assignee = state == "CLAIMED" and assignee_actor_id == actor_id and assignee_actor_type == actor_type
 
-    blocking_requirements: list[dict[str, Any]] = []
-    missing_required_inputs: list[str] = []
+    required_uploads = list((requirement_state or {}).get("required_uploads") or [])
+    required_reviews = list((requirement_state or {}).get("required_reviews") or [])
+    blocking_reason_codes = list((requirement_state or {}).get("blocking_reason_codes") or [])
+    missing_required_inputs = list((requirement_state or {}).get("missing_required_inputs") or [])
 
-    if str(task.get("task_kind")) == "information_request":
-        requirement = {
-            "requirement": "linked_artifact_minimum",
-            "minimum_count": 1,
-            "current_count": linked_artifact_count,
-            "status": "satisfied" if linked_artifact_count >= 1 else "missing",
-        }
-        blocking_requirements.append(requirement)
-        if linked_artifact_count < 1:
-            missing_required_inputs.append("linked_artifact")
+    blocking_requirements: list[dict[str, Any]] = []
+    for upload in required_uploads:
+        if not isinstance(upload, dict):
+            continue
+        blocking_requirements.append(
+            {
+                "requirement": "required_upload",
+                "dataset_key": upload.get("dataset_key"),
+                "template_id": upload.get("template_id"),
+                "artifact_kind": upload.get("artifact_kind"),
+                "required_count": upload.get("required_count"),
+                "current_count": upload.get("current_count"),
+                "status": upload.get("status"),
+            }
+        )
+    for review in required_reviews:
+        if not isinstance(review, dict):
+            continue
+        blocking_requirements.append(
+            {
+                "requirement": "required_review",
+                "artifact_kind": review.get("artifact_kind"),
+                "reviewed_artifact_version_id": review.get("reviewed_artifact_version_id"),
+                "review_confirmation_artifact_version_id": review.get("review_confirmation_artifact_version_id"),
+                "status": review.get("status"),
+            }
+        )
 
     if state == "CLAIMED" and not is_assignee:
+        blocking_reason_codes.append("claimed_by_other_actor")
         blocking_requirements.append(
             {
                 "requirement": "claimed_by_other_actor",
@@ -81,7 +102,12 @@ def compute_human_task_actionability(
         )
 
     can_claim = state == "OPEN" and not assignee_actor_id and role_match
-    can_complete = is_assignee and not missing_required_inputs
+    has_pending_review_confirmation = any(
+        isinstance(review, dict) and str(review.get("status") or "") == "pending_confirmation"
+        for review in required_reviews
+    )
+    can_complete = is_assignee and not blocking_reason_codes
+    can_confirm_review = is_assignee and has_pending_review_confirmation
     can_upload_attachment = True
     can_run_stage06_agent_review = _can_run_stage06_agent_review(
         stage_id=str(task.get("stage_id") or ""),
@@ -92,6 +118,7 @@ def compute_human_task_actionability(
     )
 
     if state == "OPEN" and not role_match:
+        blocking_reason_codes.append("candidate_role_mismatch")
         blocking_requirements.append(
             {
                 "requirement": "candidate_role_match",
@@ -104,6 +131,8 @@ def compute_human_task_actionability(
     available_actions: list[str] = []
     if can_claim:
         available_actions.append("claim")
+    if can_confirm_review:
+        available_actions.append("confirm_review")
     if can_complete:
         available_actions.append("complete")
     if can_run_stage06_agent_review:
@@ -116,9 +145,13 @@ def compute_human_task_actionability(
     return {
         "available_actions": available_actions,
         "blocking_requirements": blocking_requirements,
+        "required_uploads": required_uploads,
+        "required_reviews": required_reviews,
+        "blocking_reason_codes": blocking_reason_codes,
         "linked_artifact_count": linked_artifact_count,
         "missing_required_inputs": missing_required_inputs,
         "can_complete": can_complete,
+        "can_confirm_review": can_confirm_review,
         "can_upload_attachment": can_upload_attachment,
         "can_run_stage06_agent_review": can_run_stage06_agent_review,
     }
@@ -164,9 +197,13 @@ def compute_approval_actionability(
     return {
         "available_actions": available_actions,
         "blocking_requirements": blocking_requirements,
+        "required_uploads": [],
+        "required_reviews": [],
+        "blocking_reason_codes": [],
         "linked_artifact_count": linked_artifact_count,
         "missing_required_inputs": [],
         "can_complete": False,
+        "can_confirm_review": False,
         "can_upload_attachment": can_upload_attachment,
         "can_run_stage06_agent_review": False,
     }
@@ -196,9 +233,13 @@ def compute_flag_actionability(
     return {
         "available_actions": available_actions,
         "blocking_requirements": [],
+        "required_uploads": [],
+        "required_reviews": [],
+        "blocking_reason_codes": [],
         "linked_artifact_count": linked_artifact_count,
         "missing_required_inputs": [],
         "can_complete": False,
+        "can_confirm_review": False,
         "can_upload_attachment": can_upload_attachment,
         "can_run_stage06_agent_review": False,
     }
@@ -229,4 +270,3 @@ def _can_run_stage06_agent_review(
         # Misconfigured policy override should fail closed in read projections.
         return False
     return decision == "allow"
-

@@ -12,15 +12,34 @@ interface WorkflowGraphNodeProps {
   onSelect?: (node: WorkflowWorkspaceGraphNode) => void;
 }
 
-const STATUS_LABELS: Record<WorkflowWorkspaceNodeStatus, string> = {
-  not_started: "Not Started",
-  ready: "Ready",
-  in_progress: "In Progress",
-  blocked: "Blocked",
-  awaiting_approval: "Awaiting Approval",
-  completed: "Completed",
-  warning: "Warning"
-};
+type VisualStatus = "completed" | "warning" | "active" | "muted";
+
+function visualStatus(status: WorkflowWorkspaceNodeStatus): VisualStatus {
+  if (status === "completed") {
+    return "completed";
+  }
+  if (status === "warning" || status === "blocked") {
+    return "warning";
+  }
+  if (status === "in_progress" || status === "awaiting_approval") {
+    return "active";
+  }
+  return "muted";
+}
+
+function iconKind(status: WorkflowWorkspaceNodeStatus): "check" | "warning" | "dot" {
+  if (status === "completed") {
+    return "check";
+  }
+  if (status === "warning" || status === "blocked") {
+    return "warning";
+  }
+  return "dot";
+}
+
+function stripStagePrefix(label: string): string {
+  return label.replace(/^Stage\d+\s+/i, "");
+}
 
 export function WorkflowGraphNode({
   node,
@@ -34,39 +53,52 @@ export function WorkflowGraphNode({
     onSelect?.(node);
   };
 
+  const statusClass = visualStatus(node.status);
+  const nodeIcon = iconKind(node.status);
+
   return (
     <g
       className={[
-        "workflow-graph-node",
-        `workflow-graph-node--${node.status}`,
+        "workflow-graph-pill",
+        `workflow-graph-pill--${statusClass}`,
         node.is_blocking ? "is-blocking" : ""
       ].join(" ")}
       transform={`translate(${x}, ${y})`}
+      data-status={node.status}
       data-testid={`workflow-graph-node-${node.node_id}`}
+      role="button"
+      tabIndex={0}
+      aria-label={`Open details for ${stripStagePrefix(node.label)}`}
+      onClick={handleSelect}
+      onKeyDown={(event) => {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          handleSelect();
+        }
+      }}
     >
-      <rect
-        width={width}
-        height={height}
-        rx={10}
-        ry={10}
-        role="button"
-        tabIndex={0}
-        onClick={handleSelect}
-        onKeyDown={(event) => {
-          if (event.key === "Enter" || event.key === " ") {
-            event.preventDefault();
-            handleSelect();
-          }
-        }}
-      />
-      <text x={12} y={22} className="workflow-graph-node__stage">
+      <rect width={width} height={height} rx={height / 2} ry={height / 2} />
+
+      <g className="workflow-graph-pill__icon" transform="translate(14, 12)">
+        <circle cx="12" cy="12" r="12" />
+        {nodeIcon === "check" ? (
+          <path d="M 7 12.5 L 10.5 16 L 17 8.8" />
+        ) : null}
+        {nodeIcon === "warning" ? (
+          <>
+            <path d="M 12 5 L 19 18 H 5 Z" />
+            <path d="M 12 9.5 V 13" />
+            <circle cx="12" cy="15.8" r="1" />
+          </>
+        ) : null}
+        {nodeIcon === "dot" ? <circle cx="12" cy="12" r="4" className="workflow-graph-pill__dot" /> : null}
+      </g>
+
+      <text x={46} y={28} className="workflow-graph-pill__label">
+        {stripStagePrefix(node.label)}
+      </text>
+      <text x={46} y={43} className="workflow-graph-pill__stage">
         {node.stage_id}
-      </text>
-      <text x={12} y={42} className="workflow-graph-node__label">
-        {node.label}
-      </text>
-      <text x={12} y={62} className="workflow-graph-node__status">
-        {STATUS_LABELS[node.status]}
       </text>
     </g>
   );

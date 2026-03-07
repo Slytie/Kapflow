@@ -42,6 +42,8 @@
 - `available_actions` controls whether action controls are enabled.
 - `missing_required_inputs` must be visible when `complete` is disabled.
 - Stage06 AI review control is visible only when `run_stage06_agent_review` is present.
+- Stage06 `information_request` tasks are completable without requiring a linked artifact.
+- Non-Stage06 `information_request` tasks continue to follow backend-required input rules.
 
 10. Polling remains the live-update mechanism.
 - React Query polling is the first refresh mechanism for workspace graph/action panels.

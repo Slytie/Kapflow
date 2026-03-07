@@ -23,11 +23,30 @@ export interface DrawerField {
   value: string;
 }
 
+export interface DrawerArtifact {
+  artifact_version_id: string;
+  artifact_kind: string;
+  artifact_role: string | null;
+  media_type: string;
+  created_at: string;
+  file_name: string | null;
+  source_label: string;
+}
+
+export interface DrawerArtifactSource {
+  workflow_run_id: string;
+  subject_kind: "workflow_run" | "task_run" | "human_task" | "approval" | "flag";
+  subject_id: string;
+  source_label: string;
+}
+
 export interface DrawerPayload {
   title: string;
   subtitle?: string;
   description?: string;
   fields: DrawerField[];
+  artifacts?: DrawerArtifact[];
+  artifact_sources?: DrawerArtifactSource[];
 }
 
 export type BoardLaneId =
