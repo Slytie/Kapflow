@@ -103,6 +103,14 @@ def promote_pointer(
     approved_by_approval_id: str | None,
     updated_at: str,
     expected_generation: int | None,
+    pointer_id: str | None = None,
+    tenant_id: str | None = None,
+    domain_id: str | None = None,
+    dataset_key: str | None = None,
+    partition_kind: str | None = None,
+    partition_key: str | None = None,
+    stream_key: str | None = None,
+    registry_kind: str | None = None,
 ) -> tuple[dict[str, Any], bool]:
     existing = get_pointer(
         connection,
@@ -115,6 +123,14 @@ def promote_pointer(
             INSERT INTO artifact_pointers (
                 workflow_run_id,
                 pointer_key,
+                pointer_id,
+                tenant_id,
+                domain_id,
+                dataset_key,
+                partition_kind,
+                partition_key,
+                stream_key,
+                registry_kind,
                 scope_kind,
                 scope_ref,
                 artifact_kind,
@@ -125,11 +141,19 @@ def promote_pointer(
                 generation,
                 updated_at
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 workflow_run_id,
                 pointer_key,
+                pointer_id,
+                tenant_id,
+                domain_id,
+                dataset_key,
+                partition_kind,
+                partition_key,
+                stream_key,
+                registry_kind,
                 scope_kind,
                 scope_ref,
                 artifact_kind,
@@ -178,6 +202,14 @@ def promote_pointer(
         """
         UPDATE artifact_pointers
         SET
+            pointer_id = COALESCE(?, pointer_id),
+            tenant_id = COALESCE(?, tenant_id),
+            domain_id = COALESCE(?, domain_id),
+            dataset_key = COALESCE(?, dataset_key),
+            partition_kind = COALESCE(?, partition_kind),
+            partition_key = COALESCE(?, partition_key),
+            stream_key = COALESCE(?, stream_key),
+            registry_kind = COALESCE(?, registry_kind),
             artifact_version_id = ?,
             promotion_reason = ?,
             promoted_by_task_run_id = ?,
@@ -187,6 +219,14 @@ def promote_pointer(
         WHERE workflow_run_id = ? AND pointer_key = ? AND generation = ?
         """,
         (
+            pointer_id,
+            tenant_id,
+            domain_id,
+            dataset_key,
+            partition_kind,
+            partition_key,
+            stream_key,
+            registry_kind,
             artifact_version_id,
             promotion_reason,
             promoted_by_task_run_id,

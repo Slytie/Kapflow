@@ -22,12 +22,22 @@ def create_artifact_version(
     supersedes_artifact_version_id: str | None,
     lineage_note: str | None,
     created_at: str,
+    tenant_id: str | None = None,
+    domain_id: str | None = None,
+    dataset_key: str | None = None,
+    partition_kind: str | None = None,
+    partition_key: str | None = None,
 ) -> None:
     connection.execute(
         """
         INSERT INTO artifact_versions (
             artifact_version_id,
             workflow_run_id,
+            tenant_id,
+            domain_id,
+            dataset_key,
+            partition_kind,
+            partition_key,
             task_run_id,
             artifact_kind,
             artifact_role,
@@ -41,11 +51,16 @@ def create_artifact_version(
             lineage_note,
             created_at
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """,
         (
             artifact_version_id,
             workflow_run_id,
+            tenant_id,
+            domain_id,
+            dataset_key,
+            partition_kind,
+            partition_key,
             task_run_id,
             artifact_kind,
             artifact_role,

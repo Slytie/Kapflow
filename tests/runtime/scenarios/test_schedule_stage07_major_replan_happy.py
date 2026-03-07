@@ -79,6 +79,76 @@ def test_stage07_major_replan_happy_path(tmp_path: Path) -> None:
     assert delta_pointer["promotion_reason"] == "official_major_replan"
     assert delta_pointer["approved_by_approval_id"] == harness.output("respond_major_replan_approval")["approval"]["approval_id"]
 
+    delta_artifact_id = harness.output("create_replan_delta")["artifact_version"]["artifact_version_id"]
+    delta_artifact_rows = harness.query_rows(
+        """
+        SELECT
+            tenant_id,
+            domain_id,
+            dataset_key,
+            partition_kind,
+            partition_key
+        FROM artifact_versions
+        WHERE artifact_version_id = ?
+        """,
+        (delta_artifact_id,),
+    )
+    assert len(delta_artifact_rows) == 1
+    delta_artifact_row = delta_artifact_rows[0]
+    assert delta_artifact_row["tenant_id"] == "tenant-a"
+    assert delta_artifact_row["domain_id"] == "domain-x"
+    assert delta_artifact_row["dataset_key"] == "schedule.replan_delta.workbook"
+    assert delta_artifact_row["partition_kind"] == "ScheduleDateID"
+    assert delta_artifact_row["partition_key"] == "SD-2026-03-09"
+
+    delta_pointer_rows = harness.query_rows(
+        """
+        SELECT
+            pointer_id,
+            tenant_id,
+            domain_id,
+            dataset_key,
+            partition_kind,
+            partition_key,
+            registry_kind
+        FROM artifact_pointers
+        WHERE workflow_run_id = ? AND pointer_key = 'official:schedule.replan_delta.workbook'
+        """,
+        (harness.workflow_run_id,),
+    )
+    assert len(delta_pointer_rows) == 1
+    delta_pointer_row = delta_pointer_rows[0]
+    assert delta_pointer_row["pointer_id"]
+    assert delta_pointer_row["tenant_id"] == "tenant-a"
+    assert delta_pointer_row["domain_id"] == "domain-x"
+    assert delta_pointer_row["dataset_key"] == "schedule.replan_delta.workbook"
+    assert delta_pointer_row["partition_kind"] == "ScheduleDateID"
+    assert delta_pointer_row["partition_key"] == "SD-2026-03-09"
+    assert delta_pointer_row["registry_kind"] == "singleton"
+
+    task_input_binding_rows = harness.query_rows(
+        """
+        SELECT
+            source_kind,
+            source_ref,
+            pointer_key,
+            pointer_generation,
+            pointer_artifact_version_id
+        FROM task_input_bindings
+        WHERE task_run_id = ?
+        ORDER BY binding_key ASC
+        """,
+        (harness.output("complete_final_review")["result"]["task_run"]["task_run_id"],),
+    )
+    assert any(
+        row["source_kind"] == "pointer"
+        and row["source_ref"] == "official:schedule.published_schedule.workbook"
+        and row["pointer_key"] == "official:schedule.published_schedule.workbook"
+        and int(row["pointer_generation"]) == 0
+        and row["pointer_artifact_version_id"] == harness.output("create_base_artifact")["artifact_version"]["artifact_version_id"]
+        for row in task_input_binding_rows
+    )
+
     approvals = harness.list_approvals()["approvals"]
     assert len(approvals) == 1
     assert approvals[0]["state"] == "RESPONDED"

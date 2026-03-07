@@ -4,6 +4,7 @@ from concurrent.futures import ThreadPoolExecutor
 import json
 import os
 from pathlib import Path
+import sqlite3
 import subprocess
 import sys
 from typing import Any
@@ -45,6 +46,22 @@ def _stdout_json(result: subprocess.CompletedProcess[str]) -> Any:
 def _stderr_json(result: subprocess.CompletedProcess[str]) -> Any:
     assert result.stderr
     return json.loads(result.stderr)
+
+
+def _query_rows(
+    db_url: str,
+    sql: str,
+    params: tuple[Any, ...] = (),
+) -> list[dict[str, Any]]:
+    assert db_url.startswith("sqlite:///")
+    db_path = db_url.removeprefix("sqlite:///")
+    connection = sqlite3.connect(db_path)
+    connection.row_factory = sqlite3.Row
+    try:
+        rows = connection.execute(sql, params).fetchall()
+        return [dict(row) for row in rows]
+    finally:
+        connection.close()
 
 
 def _events_for_run(db_url: str, workflow_run_id: str) -> list[dict[str, Any]]:
@@ -459,6 +476,196 @@ def test_pointer_promotion_happy_path_updates_row_and_emits_event(tmp_path: Path
     promoted_events = [event for event in events if event["event_type"] == "artifact.pointer.promoted"]
     assert len(promoted_events) == 1
     assert promoted_events[0]["payload"]["pointer_id"] == promote_payload["pointer_key"]
+
+
+def test_dual_write_authoritative_paths_capture_canonical_scope_provenance_and_inputs(
+    tmp_path: Path,
+) -> None:
+    db_url = f"sqlite:///{tmp_path / 'runtime.db'}"
+    _run_cli("--db-url", db_url, "init-db")
+
+    workflow_run = _create_workflow_run(db_url, activation_key="run-act-dual-write-001")
+    task_run = _create_task_run(
+        db_url,
+        workflow_run_id=workflow_run["workflow_run_id"],
+        activation_key="task-act-dual-write-001",
+    )["task_run"]
+
+    base_artifact = _create_artifact_version(
+        db_url,
+        workflow_run_id=workflow_run["workflow_run_id"],
+        task_run_id=task_run["task_run_id"],
+        artifact_kind="schedule.published_schedule.workbook",
+        idempotency_key="idem-dual-write-base-001",
+    )
+
+    _run_cli(
+        "--db-url",
+        db_url,
+        "pointers",
+        "promote",
+        "--json",
+        json.dumps(
+            {
+                "workflow_run_id": workflow_run["workflow_run_id"],
+                "scope_kind": "stage",
+                "scope_ref": "Stage06",
+                "pointer_key": "official:schedule.published_schedule.workbook",
+                "artifact_kind": "schedule.published_schedule.workbook",
+                "artifact_version_id": base_artifact["artifact_version_id"],
+                "promotion_reason": "seed_base",
+                "idempotency_key": "idem-dual-write-promote-base-001",
+            }
+        ),
+    )
+
+    delta_payload = {
+        "workflow_run_id": workflow_run["workflow_run_id"],
+        "task_run_id": task_run["task_run_id"],
+        "artifact_kind": "schedule.replan_delta.workbook",
+        "artifact_role": "official_output",
+        "media_type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        "storage_uri": "s3://runtime/schedule.replan_delta.workbook/idem-dual-write-delta-001.xlsx",
+        "content_digest": "sha256:idem-dual-write-delta-001",
+        "byte_size": 2048,
+        "metadata_json": {"source": "runtime-test", "scenario": "dual-write"},
+        "parent_artifact_version_id": base_artifact["artifact_version_id"],
+        "supersedes_artifact_version_id": base_artifact["artifact_version_id"],
+        "idempotency_key": "idem-dual-write-delta-001",
+    }
+    delta_artifact = _stdout_json(
+        _run_cli(
+            "--db-url",
+            db_url,
+            "artifacts",
+            "create-version",
+            "--json",
+            json.dumps(delta_payload),
+        )
+    )["artifact_version"]
+
+    promoted_replan = _stdout_json(
+        _run_cli(
+            "--db-url",
+            db_url,
+            "pointers",
+            "promote",
+            "--json",
+            json.dumps(
+                {
+                    "workflow_run_id": workflow_run["workflow_run_id"],
+                    "scope_kind": "stage",
+                    "scope_ref": "Stage07",
+                    "pointer_key": "official:schedule.replan_delta.workbook",
+                    "artifact_kind": "schedule.replan_delta.workbook",
+                    "artifact_version_id": delta_artifact["artifact_version_id"],
+                    "promotion_reason": "manual_promote",
+                    "promoted_by_task_run_id": task_run["task_run_id"],
+                    "reviewed_base_artifact_version_id": base_artifact["artifact_version_id"],
+                    "base_pointer_key": "official:schedule.published_schedule.workbook",
+                    "idempotency_key": "idem-dual-write-promote-delta-001",
+                }
+            ),
+        )
+    )["pointer"]
+
+    artifact_rows = _query_rows(
+        db_url,
+        """
+        SELECT
+            tenant_id,
+            domain_id,
+            dataset_key,
+            partition_kind,
+            partition_key
+        FROM artifact_versions
+        WHERE artifact_version_id = ?
+        """,
+        (delta_artifact["artifact_version_id"],),
+    )
+    assert len(artifact_rows) == 1
+    artifact_row = artifact_rows[0]
+    assert artifact_row["tenant_id"] == "tenant-a"
+    assert artifact_row["domain_id"] == "domain-x"
+    assert artifact_row["dataset_key"] == "schedule.replan_delta.workbook"
+    assert artifact_row["partition_kind"] == "ScheduleDateID"
+    assert artifact_row["partition_key"] == "SD-2026-03-04"
+
+    pointer_rows = _query_rows(
+        db_url,
+        """
+        SELECT
+            pointer_id,
+            tenant_id,
+            domain_id,
+            dataset_key,
+            partition_kind,
+            partition_key,
+            stream_key,
+            registry_kind,
+            artifact_version_id
+        FROM artifact_pointers
+        WHERE workflow_run_id = ? AND pointer_key = ?
+        """,
+        (
+            workflow_run["workflow_run_id"],
+            "official:schedule.replan_delta.workbook",
+        ),
+    )
+    assert len(pointer_rows) == 1
+    pointer_row = pointer_rows[0]
+    assert pointer_row["pointer_id"]
+    assert pointer_row["tenant_id"] == "tenant-a"
+    assert pointer_row["domain_id"] == "domain-x"
+    assert pointer_row["dataset_key"] == "schedule.replan_delta.workbook"
+    assert pointer_row["partition_kind"] == "ScheduleDateID"
+    assert pointer_row["partition_key"] == "SD-2026-03-04"
+    assert pointer_row["stream_key"] is None
+    assert pointer_row["registry_kind"] == "singleton"
+    assert pointer_row["artifact_version_id"] == delta_artifact["artifact_version_id"]
+    assert promoted_replan["artifact_version_id"] == delta_artifact["artifact_version_id"]
+
+    provenance_rows = _query_rows(
+        db_url,
+        """
+        SELECT edge_type, input_artifact_version_id
+        FROM artifact_provenance_edges
+        WHERE output_artifact_version_id = ?
+        ORDER BY edge_type ASC
+        """,
+        (delta_artifact["artifact_version_id"],),
+    )
+    assert ({"edge_type": "derives_from", "input_artifact_version_id": base_artifact["artifact_version_id"]}) in provenance_rows
+    assert ({"edge_type": "supersedes", "input_artifact_version_id": base_artifact["artifact_version_id"]}) in provenance_rows
+
+    input_binding_rows = _query_rows(
+        db_url,
+        """
+        SELECT
+            source_kind,
+            source_ref,
+            artifact_version_id,
+            pointer_key,
+            pointer_generation,
+            pointer_artifact_version_id
+        FROM task_input_bindings
+        WHERE task_run_id = ?
+        """,
+        (task_run["task_run_id"],),
+    )
+    assert any(
+        row["source_kind"] == "pointer"
+        and row["source_ref"] == "official:schedule.published_schedule.workbook"
+        and row["pointer_generation"] == 0
+        and row["pointer_artifact_version_id"] == base_artifact["artifact_version_id"]
+        for row in input_binding_rows
+    )
+    assert any(
+        row["source_kind"] == "artifact_version"
+        and row["source_ref"] == base_artifact["artifact_version_id"]
+        and row["artifact_version_id"] == base_artifact["artifact_version_id"]
+        for row in input_binding_rows
+    )
 
 
 def test_pointer_promotion_conflict_race_allows_single_winner(tmp_path: Path) -> None:

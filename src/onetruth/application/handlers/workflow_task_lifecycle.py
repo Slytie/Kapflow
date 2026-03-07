@@ -9,6 +9,15 @@ from pathlib import Path
 from typing import Any
 from uuid import uuid4
 
+from onetruth.domain.pointer_address import (
+    PartitionRef,
+    PointerAddress,
+    PointerId,
+    PointerAddressError,
+    RegistryKind,
+    load_dataset_partition_index,
+    resolve_legacy_pointer_address,
+)
 from onetruth.infrastructure.artifacts.storage import (
     ArtifactStorageError,
     decode_base64_content,
@@ -78,6 +87,13 @@ from onetruth.infrastructure.repositories.artifact_links import (
     create_artifact_link,
     list_artifact_links_for_artifact,
     list_artifacts_for_subject,
+)
+from onetruth.infrastructure.repositories.artifact_provenance import (
+    create_artifact_provenance_edge,
+)
+from onetruth.infrastructure.repositories.input_bindings import (
+    create_task_input_binding,
+    create_workflow_run_input,
 )
 from onetruth.infrastructure.repositories.task_runs import (
     create_task_run,
@@ -2287,7 +2303,24 @@ def create_artifact_version_command(
             details={},
         )
     artifact_version_id = str(payload.get("artifact_version_id") or f"av-{uuid4()}")
+    workflow_run_id = str(payload["workflow_run_id"])
     task_run_id = str(payload["task_run_id"]) if payload.get("task_run_id") is not None else None
+    artifact_kind = str(payload["artifact_kind"])
+    parent_artifact_version_id = (
+        str(payload["parent_artifact_version_id"])
+        if payload.get("parent_artifact_version_id") is not None
+        else None
+    )
+    supersedes_artifact_version_id = (
+        str(payload["supersedes_artifact_version_id"])
+        if payload.get("supersedes_artifact_version_id") is not None
+        else None
+    )
+    lineage_note = (
+        str(payload["lineage_note"])
+        if payload.get("lineage_note") is not None
+        else None
+    )
     artifact_links = _normalize_artifact_links(payload.get("links"))
     event_idempotency = _required_event_idempotency_key(
         payload.get("idempotency_key"),
@@ -2297,20 +2330,31 @@ def create_artifact_version_command(
     _begin_transaction(connection)
     try:
         _assert_idempotency_available(connection, event_idempotency)
-        workflow_scope = _workflow_scope(connection, str(payload["workflow_run_id"]))
+        workflow_scope = _workflow_scope(connection, workflow_run_id)
         if task_run_id is not None:
             _validate_task_run_belongs_to_workflow(
                 connection,
                 task_run_id=task_run_id,
-                workflow_run_id=str(payload["workflow_run_id"]),
+                workflow_run_id=workflow_run_id,
             )
         now = utc_now_iso()
+        canonical_scope = _canonical_artifact_scope_fields(
+            tenant_id=workflow_scope["tenant_id"],
+            domain_id=workflow_scope["domain_id"],
+            workflow_partition_key=workflow_scope["partition_key"],
+            artifact_kind=artifact_kind,
+        )
         create_artifact_version(
             connection,
             artifact_version_id=artifact_version_id,
-            workflow_run_id=str(payload["workflow_run_id"]),
+            workflow_run_id=workflow_run_id,
+            tenant_id=canonical_scope["tenant_id"],
+            domain_id=canonical_scope["domain_id"],
+            dataset_key=canonical_scope["dataset_key"],
+            partition_kind=canonical_scope["partition_kind"],
+            partition_key=canonical_scope["partition_key"],
             task_run_id=task_run_id,
-            artifact_kind=str(payload["artifact_kind"]),
+            artifact_kind=artifact_kind,
             artifact_role=(
                 str(payload["artifact_role"])
                 if payload.get("artifact_role") is not None
@@ -2325,40 +2369,46 @@ def create_artifact_version_command(
                 else None
             ),
             metadata_json=metadata_json,
-            parent_artifact_version_id=(
-                str(payload["parent_artifact_version_id"])
-                if payload.get("parent_artifact_version_id") is not None
-                else None
-            ),
-            supersedes_artifact_version_id=(
-                str(payload["supersedes_artifact_version_id"])
-                if payload.get("supersedes_artifact_version_id") is not None
-                else None
-            ),
-            lineage_note=(
-                str(payload["lineage_note"])
-                if payload.get("lineage_note") is not None
-                else None
-            ),
+            parent_artifact_version_id=parent_artifact_version_id,
+            supersedes_artifact_version_id=supersedes_artifact_version_id,
+            lineage_note=lineage_note,
             created_at=now,
+        )
+        _write_artifact_provenance_compatibility_edges(
+            connection,
+            workflow_run_id=workflow_run_id,
+            artifact_version_id=artifact_version_id,
+            parent_artifact_version_id=parent_artifact_version_id,
+            supersedes_artifact_version_id=supersedes_artifact_version_id,
+            created_at=now,
+        )
+        _capture_artifact_lineage_input_bindings(
+            connection,
+            workflow_run_id=workflow_run_id,
+            task_run_id=task_run_id,
+            artifact_version_id=artifact_version_id,
+            parent_artifact_version_id=parent_artifact_version_id,
+            supersedes_artifact_version_id=supersedes_artifact_version_id,
+            captured_at=now,
+            event_idempotency=event_idempotency,
         )
         links = [
             {"rel": "subject", "type": "artifact_version", "id": artifact_version_id},
-            {"rel": "subject", "type": "workflow_run", "id": str(payload["workflow_run_id"])},
+            {"rel": "subject", "type": "workflow_run", "id": workflow_run_id},
         ]
         if task_run_id is not None:
             links.append({"rel": "subject", "type": "task_run", "id": task_run_id})
         for artifact_link in artifact_links:
             _validate_artifact_link_subject(
                 connection,
-                workflow_run_id=str(payload["workflow_run_id"]),
+                workflow_run_id=workflow_run_id,
                 subject_kind=artifact_link["subject_kind"],
                 subject_id=artifact_link["subject_id"],
             )
             create_artifact_link(
                 connection,
                 artifact_version_id=artifact_version_id,
-                workflow_run_id=str(payload["workflow_run_id"]),
+                workflow_run_id=workflow_run_id,
                 subject_kind=artifact_link["subject_kind"],
                 subject_id=artifact_link["subject_id"],
                 relation_kind=artifact_link["relation_kind"],
@@ -2385,12 +2435,8 @@ def create_artifact_version_command(
                 links=links,
                 payload={
                     "artifact_version_id": artifact_version_id,
-                    "dataset_key": str(payload["artifact_kind"]),
-                    "supersedes_artifact_version_id": (
-                        str(payload["supersedes_artifact_version_id"])
-                        if payload.get("supersedes_artifact_version_id") is not None
-                        else None
-                    ),
+                    "dataset_key": artifact_kind,
+                    "supersedes_artifact_version_id": supersedes_artifact_version_id,
                 },
                 idempotency_key=event_idempotency,
             ),
@@ -2652,6 +2698,12 @@ def promote_pointer_command(
             "idempotency_key",
         ],
     )
+    workflow_run_id = str(payload["workflow_run_id"])
+    scope_kind = str(payload["scope_kind"])
+    scope_ref = str(payload["scope_ref"])
+    pointer_key = str(payload["pointer_key"])
+    artifact_kind = str(payload["artifact_kind"])
+    artifact_version_id = str(payload["artifact_version_id"])
     event_idempotency = _required_event_idempotency_key(
         payload.get("idempotency_key"),
         "pointers.promote.artifact.pointer.promoted",
@@ -2664,22 +2716,22 @@ def promote_pointer_command(
     _begin_transaction(connection)
     try:
         _assert_idempotency_available(connection, event_idempotency)
-        workflow_scope = _workflow_scope(connection, str(payload["workflow_run_id"]))
-        artifact_version = get_artifact_version(connection, str(payload["artifact_version_id"]))
+        workflow_scope = _workflow_scope(connection, workflow_run_id)
+        artifact_version = get_artifact_version(connection, artifact_version_id)
         if artifact_version is None:
             raise CommandError(
                 code="artifact_version_not_found",
                 message="artifact version not found for pointer promotion",
-                details={"artifact_version_id": str(payload["artifact_version_id"])},
+                details={"artifact_version_id": artifact_version_id},
             )
-        if str(artifact_version["workflow_run_id"]) != str(payload["workflow_run_id"]):
+        if str(artifact_version["workflow_run_id"]) != workflow_run_id:
             raise CommandError(
                 code="cross_workflow_artifact_reference",
                 message="artifact version belongs to a different workflow_run",
                 details={
-                    "artifact_version_id": str(payload["artifact_version_id"]),
+                    "artifact_version_id": artifact_version_id,
                     "artifact_workflow_run_id": str(artifact_version["workflow_run_id"]),
-                    "workflow_run_id": str(payload["workflow_run_id"]),
+                    "workflow_run_id": workflow_run_id,
                 },
             )
 
@@ -2714,14 +2766,14 @@ def promote_pointer_command(
                     message="approved_by_approval_id was not found",
                     details={"approved_by_approval_id": approved_by_approval_id},
                 )
-            if str(approval["workflow_run_id"]) != str(payload["workflow_run_id"]):
+            if str(approval["workflow_run_id"]) != workflow_run_id:
                 raise CommandError(
                     code="cross_workflow_approval_reference",
                     message="approval belongs to a different workflow_run",
                     details={
                         "approved_by_approval_id": approved_by_approval_id,
                         "approval_workflow_run_id": str(approval["workflow_run_id"]),
-                        "workflow_run_id": str(payload["workflow_run_id"]),
+                        "workflow_run_id": workflow_run_id,
                     },
                 )
             if str(approval["state"]) != "RESPONDED" or str(approval.get("response_kind")) != "approve":
@@ -2756,18 +2808,39 @@ def promote_pointer_command(
             _validate_task_run_belongs_to_workflow(
                 connection,
                 task_run_id=promoted_by_task_run_id,
-                workflow_run_id=str(payload["workflow_run_id"]),
+                workflow_run_id=workflow_run_id,
             )
 
+        canonical_pointer_identity = _canonical_pointer_identity_fields(
+            tenant_id=workflow_scope["tenant_id"],
+            domain_id=workflow_scope["domain_id"],
+            workflow_partition_key=workflow_scope["partition_key"],
+            workflow_run_id=workflow_run_id,
+            pointer_key=pointer_key,
+            scope_kind=scope_kind,
+            scope_ref=scope_ref,
+            artifact_kind=artifact_kind,
+            stream_key=(
+                str(payload["stream_key"])
+                if payload.get("stream_key") is not None
+                else None
+            ),
+            registry_kind=payload.get("registry_kind"),
+        )
+        prior_target_pointer = get_pointer(
+            connection,
+            workflow_run_id=workflow_run_id,
+            pointer_key=pointer_key,
+        )
         now = utc_now_iso()
         pointer, changed = promote_pointer(
             connection,
-            workflow_run_id=str(payload["workflow_run_id"]),
-            pointer_key=str(payload["pointer_key"]),
-            scope_kind=str(payload["scope_kind"]),
-            scope_ref=str(payload["scope_ref"]),
-            artifact_kind=str(payload["artifact_kind"]),
-            artifact_version_id=str(payload["artifact_version_id"]),
+            workflow_run_id=workflow_run_id,
+            pointer_key=pointer_key,
+            scope_kind=scope_kind,
+            scope_ref=scope_ref,
+            artifact_kind=artifact_kind,
+            artifact_version_id=artifact_version_id,
             promotion_reason=promotion_reason,
             promoted_by_task_run_id=promoted_by_task_run_id,
             approved_by_approval_id=approved_by_approval_id,
@@ -2777,22 +2850,49 @@ def promote_pointer_command(
                 if payload.get("expected_generation") is not None
                 else None
             ),
+            pointer_id=canonical_pointer_identity["pointer_id"],
+            tenant_id=canonical_pointer_identity["tenant_id"],
+            domain_id=canonical_pointer_identity["domain_id"],
+            dataset_key=canonical_pointer_identity["dataset_key"],
+            partition_kind=canonical_pointer_identity["partition_kind"],
+            partition_key=canonical_pointer_identity["partition_key"],
+            stream_key=canonical_pointer_identity["stream_key"],
+            registry_kind=canonical_pointer_identity["registry_kind"],
         )
         if not changed:
             raise CommandError(
                 code="pointer_already_current",
                 message="pointer already targets requested artifact_version_id",
                 details={
-                    "workflow_run_id": str(payload["workflow_run_id"]),
-                    "pointer_key": str(payload["pointer_key"]),
-                    "artifact_version_id": str(payload["artifact_version_id"]),
+                    "workflow_run_id": workflow_run_id,
+                    "pointer_key": pointer_key,
+                    "artifact_version_id": artifact_version_id,
+                },
+            )
+
+        if prior_target_pointer is not None:
+            _capture_pointer_input_binding(
+                connection,
+                workflow_run_id=workflow_run_id,
+                task_run_id=promoted_by_task_run_id,
+                binding_key=_input_binding_key(
+                    prefix="pointer.promote.target_before",
+                    event_idempotency=event_idempotency,
+                    discriminator=pointer_key,
+                ),
+                pointer_key=pointer_key,
+                pointer=prior_target_pointer,
+                captured_at=now,
+                metadata_json={
+                    "capture_reason": "pointer_promotion_target_before_update",
+                    "promotion_pointer_key": pointer_key,
                 },
             )
 
         links = [
-            {"rel": "subject", "type": "pointer", "id": str(payload["pointer_key"])},
-            {"rel": "subject", "type": "workflow_run", "id": str(payload["workflow_run_id"])},
-            {"rel": "subject", "type": "artifact_version", "id": str(payload["artifact_version_id"])},
+            {"rel": "subject", "type": "pointer", "id": pointer_key},
+            {"rel": "subject", "type": "workflow_run", "id": workflow_run_id},
+            {"rel": "subject", "type": "artifact_version", "id": artifact_version_id},
         ]
         reviewed_artifact_version_id = (
             str(payload["reviewed_artifact_version_id"])
@@ -2813,14 +2913,33 @@ def promote_pointer_command(
                 actor_id=str(payload.get("actor_id", "system:runtime")),
                 links=links,
                 payload={
-                    "pointer_id": str(payload["pointer_key"]),
-                    "dataset_key": str(payload["artifact_kind"]),
-                    "promoted_artifact_version_id": str(payload["artifact_version_id"]),
+                    "pointer_id": pointer_key,
+                    "dataset_key": artifact_kind,
+                    "promoted_artifact_version_id": artifact_version_id,
                     "reviewed_artifact_version_id": reviewed_artifact_version_id,
                 },
                 idempotency_key=event_idempotency,
             ),
         )
+
+        if reviewed_artifact_version_id is not None:
+            _capture_artifact_input_binding(
+                connection,
+                workflow_run_id=workflow_run_id,
+                task_run_id=promoted_by_task_run_id,
+                binding_key=_input_binding_key(
+                    prefix="pointer.promote.reviewed_artifact",
+                    event_idempotency=event_idempotency,
+                    discriminator=reviewed_artifact_version_id,
+                ),
+                source_ref=reviewed_artifact_version_id,
+                artifact_version_id=reviewed_artifact_version_id,
+                captured_at=now,
+                metadata_json={
+                    "capture_reason": "pointer_promotion_reviewed_artifact",
+                    "promotion_pointer_key": pointer_key,
+                },
+            )
 
         drift_detected = False
         drift_reason = (
@@ -2839,7 +2958,7 @@ def promote_pointer_command(
             )
             base_pointer = get_pointer(
                 connection,
-                workflow_run_id=str(payload["workflow_run_id"]),
+                workflow_run_id=workflow_run_id,
                 pointer_key=base_pointer_key,
             )
             if base_pointer is None:
@@ -2847,10 +2966,27 @@ def promote_pointer_command(
                     code="base_pointer_not_found",
                     message="base pointer was not found for drift check",
                     details={
-                        "workflow_run_id": str(payload["workflow_run_id"]),
+                        "workflow_run_id": workflow_run_id,
                         "base_pointer_key": base_pointer_key,
                     },
                 )
+            _capture_pointer_input_binding(
+                connection,
+                workflow_run_id=workflow_run_id,
+                task_run_id=promoted_by_task_run_id,
+                binding_key=_input_binding_key(
+                    prefix="pointer.promote.reviewed_base_pointer",
+                    event_idempotency=event_idempotency,
+                    discriminator=base_pointer_key,
+                ),
+                pointer_key=base_pointer_key,
+                pointer=base_pointer,
+                captured_at=now,
+                metadata_json={
+                    "capture_reason": "pointer_promotion_reviewed_base_pointer",
+                    "promotion_pointer_key": pointer_key,
+                },
+            )
             current_base_artifact_version_id = str(base_pointer["artifact_version_id"])
             if reviewed_base_artifact_version_id != current_base_artifact_version_id:
                 drift_detected = True
@@ -2858,7 +2994,7 @@ def promote_pointer_command(
                     drift_reason = "reviewed_base_version_stale_at_promotion"
         elif (
             reviewed_artifact_version_id is not None
-            and reviewed_artifact_version_id != str(payload["artifact_version_id"])
+            and reviewed_artifact_version_id != artifact_version_id
         ):
             drift_detected = True
             if drift_reason is None:
@@ -2876,12 +3012,12 @@ def promote_pointer_command(
                     actor_id=str(payload.get("actor_id", "system:runtime")),
                     links=links,
                     payload={
-                        "pointer_id": str(payload["pointer_key"]),
-                        "dataset_key": str(payload["artifact_kind"]),
+                        "pointer_id": pointer_key,
+                        "dataset_key": artifact_kind,
                         "reviewed_artifact_version_id": str(
                             reviewed_artifact_version_id or reviewed_base_artifact_version_id
                         ),
-                        "promoted_artifact_version_id": str(payload["artifact_version_id"]),
+                        "promoted_artifact_version_id": artifact_version_id,
                         "drift_reason": drift_reason,
                     },
                     idempotency_key=drift_idempotency,
@@ -2920,8 +3056,8 @@ def promote_pointer_command(
             code="pointer_conflict",
             message="pointer promotion violated uniqueness constraints",
             details={
-                "workflow_run_id": str(payload["workflow_run_id"]),
-                "pointer_key": str(payload["pointer_key"]),
+                "workflow_run_id": workflow_run_id,
+                "pointer_key": pointer_key,
             },
         ) from exc
     except Exception:
@@ -2931,16 +3067,16 @@ def promote_pointer_command(
 
     promoted_pointer = get_pointer(
         connection,
-        workflow_run_id=str(payload["workflow_run_id"]),
-        pointer_key=str(payload["pointer_key"]),
+        workflow_run_id=workflow_run_id,
+        pointer_key=pointer_key,
     )
     if promoted_pointer is None:
         raise CommandError(
             code="pointer_not_found",
             message="pointer not found after promotion",
             details={
-                "workflow_run_id": str(payload["workflow_run_id"]),
-                "pointer_key": str(payload["pointer_key"]),
+                "workflow_run_id": workflow_run_id,
+                "pointer_key": pointer_key,
             },
         )
     return promoted_pointer
@@ -4327,6 +4463,323 @@ def _validate_artifact_link_subject(
     )
 
 
+def _canonical_artifact_scope_fields(
+    *,
+    tenant_id: str,
+    domain_id: str,
+    workflow_partition_key: str,
+    artifact_kind: str,
+) -> dict[str, str | None]:
+    dataset_key = str(artifact_kind).strip().lower()
+    partition_kind: str | None = None
+    partition_value: str | None = None
+
+    try:
+        partition_index = load_dataset_partition_index()
+    except Exception:
+        partition_index = {}
+    partition_hint = partition_index.get(dataset_key)
+    if partition_hint is not None:
+        try:
+            partition_ref = PartitionRef(
+                key=str(partition_hint),
+                value=workflow_partition_key,
+            )
+            partition_kind = partition_ref.key
+            partition_value = partition_ref.value
+        except PointerAddressError:
+            partition_kind = str(partition_hint)
+            partition_value = str(workflow_partition_key)
+
+    return {
+        "tenant_id": str(tenant_id),
+        "domain_id": str(domain_id),
+        "dataset_key": dataset_key,
+        "partition_kind": partition_kind,
+        "partition_key": partition_value,
+    }
+
+
+def _canonical_pointer_identity_fields(
+    *,
+    tenant_id: str,
+    domain_id: str,
+    workflow_partition_key: str,
+    workflow_run_id: str,
+    pointer_key: str,
+    scope_kind: str,
+    scope_ref: str,
+    artifact_kind: str,
+    stream_key: str | None,
+    registry_kind: Any,
+) -> dict[str, str | None]:
+    canonical_scope = _canonical_artifact_scope_fields(
+        tenant_id=tenant_id,
+        domain_id=domain_id,
+        workflow_partition_key=workflow_partition_key,
+        artifact_kind=artifact_kind,
+    )
+    normalized_stream_key = str(stream_key) if stream_key is not None else None
+    try:
+        normalized_registry_kind = RegistryKind.parse(registry_kind).value
+    except PointerAddressError:
+        normalized_registry_kind = RegistryKind.SINGLETON.value
+
+    try:
+        resolved = resolve_legacy_pointer_address(
+            workflow_run_id=workflow_run_id,
+            pointer_key=pointer_key,
+            scope_kind=scope_kind,
+            scope_ref=scope_ref,
+            artifact_kind=artifact_kind,
+            tenant_id=tenant_id,
+            domain_id=domain_id,
+            workflow_partition_key=workflow_partition_key,
+            stream_key=normalized_stream_key,
+            registry_kind=normalized_registry_kind,
+        )
+        return {
+            "pointer_id": str(resolved.pointer_id),
+            "tenant_id": resolved.address.tenant_id,
+            "domain_id": resolved.address.domain_id,
+            "dataset_key": resolved.address.dataset_key,
+            "partition_kind": resolved.address.partition_ref.key,
+            "partition_key": resolved.address.partition_ref.value,
+            "stream_key": resolved.address.stream_key,
+            "registry_kind": resolved.registry_kind.value,
+        }
+    except PointerAddressError:
+        fallback_pointer_id: str | None = None
+        if canonical_scope["partition_kind"] is not None and canonical_scope["partition_key"] is not None:
+            try:
+                fallback_address = PointerAddress(
+                    tenant_id=str(canonical_scope["tenant_id"]),
+                    domain_id=str(canonical_scope["domain_id"]),
+                    dataset_key=str(canonical_scope["dataset_key"]),
+                    partition_ref=PartitionRef(
+                        key=str(canonical_scope["partition_kind"]),
+                        value=str(canonical_scope["partition_key"]),
+                    ),
+                    stream_key=normalized_stream_key,
+                )
+                fallback_pointer_id = str(PointerId.from_address(fallback_address))
+            except PointerAddressError:
+                fallback_pointer_id = None
+        return {
+            "pointer_id": fallback_pointer_id,
+            "tenant_id": canonical_scope["tenant_id"],
+            "domain_id": canonical_scope["domain_id"],
+            "dataset_key": canonical_scope["dataset_key"],
+            "partition_kind": canonical_scope["partition_kind"],
+            "partition_key": canonical_scope["partition_key"],
+            "stream_key": normalized_stream_key,
+            "registry_kind": normalized_registry_kind,
+        }
+
+
+def _write_artifact_provenance_compatibility_edges(
+    connection: sqlite3.Connection,
+    *,
+    workflow_run_id: str,
+    artifact_version_id: str,
+    parent_artifact_version_id: str | None,
+    supersedes_artifact_version_id: str | None,
+    created_at: str,
+) -> None:
+    if (
+        parent_artifact_version_id is not None
+        and parent_artifact_version_id != artifact_version_id
+    ):
+        create_artifact_provenance_edge(
+            connection,
+            output_artifact_version_id=artifact_version_id,
+            input_artifact_version_id=parent_artifact_version_id,
+            edge_type="derives_from",
+            workflow_run_id=workflow_run_id,
+            edge_order=1,
+            created_at=created_at,
+            metadata_json={"compatibility_source": "parent_artifact_version_id"},
+        )
+    if (
+        supersedes_artifact_version_id is not None
+        and supersedes_artifact_version_id != artifact_version_id
+    ):
+        create_artifact_provenance_edge(
+            connection,
+            output_artifact_version_id=artifact_version_id,
+            input_artifact_version_id=supersedes_artifact_version_id,
+            edge_type="supersedes",
+            workflow_run_id=workflow_run_id,
+            edge_order=1,
+            created_at=created_at,
+            metadata_json={"compatibility_source": "supersedes_artifact_version_id"},
+        )
+
+
+def _capture_artifact_lineage_input_bindings(
+    connection: sqlite3.Connection,
+    *,
+    workflow_run_id: str,
+    task_run_id: str | None,
+    artifact_version_id: str,
+    parent_artifact_version_id: str | None,
+    supersedes_artifact_version_id: str | None,
+    captured_at: str,
+    event_idempotency: str,
+) -> None:
+    if parent_artifact_version_id is not None:
+        _capture_artifact_input_binding(
+            connection,
+            workflow_run_id=workflow_run_id,
+            task_run_id=task_run_id,
+            binding_key=_input_binding_key(
+                prefix="artifact.version.parent",
+                event_idempotency=event_idempotency,
+                discriminator=f"{artifact_version_id}:{parent_artifact_version_id}",
+            ),
+            source_ref=parent_artifact_version_id,
+            artifact_version_id=parent_artifact_version_id,
+            captured_at=captured_at,
+            metadata_json={
+                "capture_reason": "artifact_version_create_parent",
+                "output_artifact_version_id": artifact_version_id,
+            },
+        )
+    if supersedes_artifact_version_id is not None:
+        _capture_artifact_input_binding(
+            connection,
+            workflow_run_id=workflow_run_id,
+            task_run_id=task_run_id,
+            binding_key=_input_binding_key(
+                prefix="artifact.version.supersedes",
+                event_idempotency=event_idempotency,
+                discriminator=f"{artifact_version_id}:{supersedes_artifact_version_id}",
+            ),
+            source_ref=supersedes_artifact_version_id,
+            artifact_version_id=supersedes_artifact_version_id,
+            captured_at=captured_at,
+            metadata_json={
+                "capture_reason": "artifact_version_create_supersedes",
+                "output_artifact_version_id": artifact_version_id,
+            },
+        )
+
+
+def _capture_artifact_input_binding(
+    connection: sqlite3.Connection,
+    *,
+    workflow_run_id: str,
+    task_run_id: str | None,
+    binding_key: str,
+    source_ref: str,
+    artifact_version_id: str,
+    captured_at: str,
+    metadata_json: dict[str, Any],
+) -> None:
+    _capture_input_binding(
+        connection,
+        workflow_run_id=workflow_run_id,
+        task_run_id=task_run_id,
+        binding_key=binding_key,
+        source_kind="artifact_version",
+        source_ref=source_ref,
+        artifact_version_id=artifact_version_id,
+        pointer_key=None,
+        pointer_generation=None,
+        pointer_artifact_version_id=None,
+        captured_at=captured_at,
+        metadata_json=metadata_json,
+    )
+
+
+def _capture_pointer_input_binding(
+    connection: sqlite3.Connection,
+    *,
+    workflow_run_id: str,
+    task_run_id: str | None,
+    binding_key: str,
+    pointer_key: str,
+    pointer: dict[str, Any],
+    captured_at: str,
+    metadata_json: dict[str, Any],
+) -> None:
+    pointer_artifact_version_id = str(pointer["artifact_version_id"])
+    _capture_input_binding(
+        connection,
+        workflow_run_id=workflow_run_id,
+        task_run_id=task_run_id,
+        binding_key=binding_key,
+        source_kind="pointer",
+        source_ref=pointer_key,
+        artifact_version_id=pointer_artifact_version_id,
+        pointer_key=pointer_key,
+        pointer_generation=int(pointer["generation"]),
+        pointer_artifact_version_id=pointer_artifact_version_id,
+        captured_at=captured_at,
+        metadata_json=metadata_json,
+    )
+
+
+def _capture_input_binding(
+    connection: sqlite3.Connection,
+    *,
+    workflow_run_id: str,
+    task_run_id: str | None,
+    binding_key: str,
+    source_kind: str,
+    source_ref: str,
+    artifact_version_id: str | None,
+    pointer_key: str | None,
+    pointer_generation: int | None,
+    pointer_artifact_version_id: str | None,
+    captured_at: str,
+    metadata_json: dict[str, Any],
+) -> None:
+    if task_run_id is not None:
+        create_task_input_binding(
+            connection,
+            task_run_id=task_run_id,
+            workflow_run_id=workflow_run_id,
+            binding_key=binding_key,
+            source_kind=source_kind,
+            source_ref=source_ref,
+            artifact_version_id=artifact_version_id,
+            pointer_key=pointer_key,
+            pointer_generation=pointer_generation,
+            pointer_artifact_version_id=pointer_artifact_version_id,
+            captured_at=captured_at,
+            metadata_json=metadata_json,
+        )
+        return
+
+    create_workflow_run_input(
+        connection,
+        workflow_run_id=workflow_run_id,
+        binding_key=binding_key,
+        source_kind=source_kind,
+        source_ref=source_ref,
+        artifact_version_id=artifact_version_id,
+        pointer_key=pointer_key,
+        pointer_generation=pointer_generation,
+        pointer_artifact_version_id=pointer_artifact_version_id,
+        captured_by_task_run_id=None,
+        captured_at=captured_at,
+        metadata_json=metadata_json,
+    )
+
+
+def _input_binding_key(
+    *,
+    prefix: str,
+    event_idempotency: str,
+    discriminator: str,
+) -> str:
+    digest = hashlib.sha256(
+        f"{event_idempotency}|{discriminator}".encode("utf-8")
+    ).hexdigest()[:20]
+    return f"{prefix}:{digest}"
+
+
 def _workflow_scope(connection: sqlite3.Connection, workflow_run_id: str) -> dict[str, str]:
     workflow_run = get_workflow_run(connection, workflow_run_id)
     if workflow_run is None:
@@ -4338,4 +4791,5 @@ def _workflow_scope(connection: sqlite3.Connection, workflow_run_id: str) -> dic
     return {
         "tenant_id": str(workflow_run["tenant_id"]),
         "domain_id": str(workflow_run["domain_id"]),
+        "partition_key": str(workflow_run["partition_key"]),
     }
