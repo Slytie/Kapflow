@@ -1,0 +1,128 @@
+from __future__ import annotations
+
+import sqlite3
+
+from onetruth.infrastructure.db.models import Base
+from onetruth.infrastructure.events.event_store import create_sqlite_substrate
+
+
+REQUIRED_POINTER_COLUMNS = {
+    "pointer_id",
+    "tenant_id",
+    "domain_id",
+    "dataset_key",
+    "partition_kind",
+    "partition_key",
+    "stream_key",
+    "registry_kind",
+}
+
+REQUIRED_VERSION_COLUMNS = {
+    "tenant_id",
+    "domain_id",
+    "dataset_key",
+    "partition_kind",
+    "partition_key",
+}
+
+REQUIRED_NEW_TABLES = {
+    "artifact_provenance_edges",
+    "workflow_run_inputs",
+    "task_input_bindings",
+}
+
+REQUIRED_INDEXES_BY_TABLE = {
+    "artifact_versions": {
+        "ix_artifact_versions_canonical_address",
+    },
+    "artifact_pointers": {
+        "ix_artifact_pointers_pointer_id",
+        "ix_artifact_pointers_canonical_lookup",
+    },
+    "artifact_provenance_edges": {
+        "ix_artifact_provenance_edges_output",
+        "ix_artifact_provenance_edges_input",
+    },
+    "workflow_run_inputs": {
+        "ix_workflow_run_inputs_workflow_run_id",
+    },
+    "task_input_bindings": {
+        "ix_task_input_bindings_task_run_id",
+    },
+}
+
+
+def _model_columns(table_name: str) -> set[str]:
+    return {column.name for column in Base.metadata.tables[table_name].columns}
+
+
+def _model_index_names(table_name: str) -> set[str]:
+    return {
+        index.name
+        for index in Base.metadata.tables[table_name].indexes
+        if index.name is not None
+    }
+
+
+def _sqlite_connection() -> sqlite3.Connection:
+    connection = sqlite3.connect(":memory:")
+    connection.row_factory = sqlite3.Row
+    connection.execute("PRAGMA foreign_keys = ON;")
+    create_sqlite_substrate(connection)
+    return connection
+
+
+def _sqlite_table_names(connection: sqlite3.Connection) -> set[str]:
+    rows = connection.execute(
+        """
+        SELECT name
+        FROM sqlite_master
+        WHERE type = 'table' AND name NOT LIKE 'sqlite_%'
+        """
+    ).fetchall()
+    return {str(row["name"]) for row in rows}
+
+
+def _sqlite_columns(connection: sqlite3.Connection, table_name: str) -> set[str]:
+    rows = connection.execute(f"PRAGMA table_info('{table_name}')").fetchall()
+    return {str(row["name"]) for row in rows}
+
+
+def _sqlite_indexes(connection: sqlite3.Connection, table_name: str) -> set[str]:
+    rows = connection.execute(
+        """
+        SELECT name
+        FROM sqlite_master
+        WHERE type = 'index' AND tbl_name = ?
+        """,
+        (table_name,),
+    ).fetchall()
+    return {
+        str(row["name"])
+        for row in rows
+        if not str(row["name"]).startswith("sqlite_autoindex")
+    }
+
+
+def test_models_include_strategy_a_expand_schema_surfaces() -> None:
+    table_names = set(Base.metadata.tables)
+    assert REQUIRED_NEW_TABLES <= table_names
+
+    assert REQUIRED_POINTER_COLUMNS <= _model_columns("artifact_pointers")
+    assert REQUIRED_VERSION_COLUMNS <= _model_columns("artifact_versions")
+
+    for table_name, expected_indexes in REQUIRED_INDEXES_BY_TABLE.items():
+        assert expected_indexes <= _model_index_names(table_name)
+
+
+def test_bootstrap_schema_matches_strategy_a_expand_schema_surfaces() -> None:
+    connection = _sqlite_connection()
+    try:
+        assert REQUIRED_NEW_TABLES <= _sqlite_table_names(connection)
+        assert REQUIRED_POINTER_COLUMNS <= _sqlite_columns(connection, "artifact_pointers")
+        assert REQUIRED_VERSION_COLUMNS <= _sqlite_columns(connection, "artifact_versions")
+        for table_name, expected_indexes in REQUIRED_INDEXES_BY_TABLE.items():
+            assert expected_indexes <= _sqlite_indexes(connection, table_name)
+    finally:
+        connection.close()
+

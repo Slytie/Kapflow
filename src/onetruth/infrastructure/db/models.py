@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from typing import Any, Optional
 
-from sqlalchemy import DateTime, ForeignKey, Integer, JSON, String, Text, UniqueConstraint
+from sqlalchemy import DateTime, ForeignKey, Index, Integer, JSON, String, Text, UniqueConstraint
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 
@@ -221,6 +221,16 @@ class Approval(Base):
 
 class ArtifactVersion(Base):
     __tablename__ = "artifact_versions"
+    __table_args__ = (
+        Index(
+            "ix_artifact_versions_canonical_address",
+            "tenant_id",
+            "domain_id",
+            "dataset_key",
+            "partition_kind",
+            "partition_key",
+        ),
+    )
 
     artifact_version_id: Mapped[str] = mapped_column(String(128), primary_key=True)
     workflow_run_id: Mapped[str] = mapped_column(
@@ -229,6 +239,11 @@ class ArtifactVersion(Base):
         nullable=False,
         index=True,
     )
+    tenant_id: Mapped[Optional[str]] = mapped_column(String(128), nullable=True)
+    domain_id: Mapped[Optional[str]] = mapped_column(String(128), nullable=True)
+    dataset_key: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    partition_kind: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)
+    partition_key: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
     task_run_id: Mapped[Optional[str]] = mapped_column(
         String(128),
         ForeignKey("task_runs.task_run_id"),
@@ -266,6 +281,16 @@ class ArtifactPointer(Base):
             "artifact_kind",
             name="uq_artifact_pointers_scope",
         ),
+        Index("ix_artifact_pointers_pointer_id", "pointer_id", unique=True),
+        Index(
+            "ix_artifact_pointers_canonical_lookup",
+            "tenant_id",
+            "domain_id",
+            "dataset_key",
+            "partition_kind",
+            "partition_key",
+            "stream_key",
+        ),
     )
 
     workflow_run_id: Mapped[str] = mapped_column(
@@ -274,6 +299,14 @@ class ArtifactPointer(Base):
         primary_key=True,
     )
     pointer_key: Mapped[str] = mapped_column(String(255), primary_key=True)
+    pointer_id: Mapped[Optional[str]] = mapped_column(String(512), nullable=True)
+    tenant_id: Mapped[Optional[str]] = mapped_column(String(128), nullable=True)
+    domain_id: Mapped[Optional[str]] = mapped_column(String(128), nullable=True)
+    dataset_key: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    partition_kind: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)
+    partition_key: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    stream_key: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    registry_kind: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)
     scope_kind: Mapped[str] = mapped_column(String(64), nullable=False)
     scope_ref: Mapped[str] = mapped_column(String(255), nullable=False)
     artifact_kind: Mapped[str] = mapped_column(String(128), nullable=False)
@@ -300,6 +333,135 @@ class ArtifactPointer(Base):
         default=utcnow,
         onupdate=utcnow,
     )
+
+
+class ArtifactProvenanceEdge(Base):
+    __tablename__ = "artifact_provenance_edges"
+    __table_args__ = (
+        UniqueConstraint(
+            "output_artifact_version_id",
+            "input_artifact_version_id",
+            "edge_type",
+            "edge_order",
+            name="uq_artifact_provenance_edges_dedup",
+        ),
+        Index(
+            "ix_artifact_provenance_edges_output",
+            "output_artifact_version_id",
+            "edge_type",
+            "edge_order",
+        ),
+        Index(
+            "ix_artifact_provenance_edges_input",
+            "input_artifact_version_id",
+            "edge_type",
+        ),
+    )
+
+    edge_id: Mapped[str] = mapped_column(String(128), primary_key=True)
+    workflow_run_id: Mapped[Optional[str]] = mapped_column(
+        String(128),
+        ForeignKey("workflow_runs.workflow_run_id"),
+        nullable=True,
+    )
+    output_artifact_version_id: Mapped[str] = mapped_column(
+        String(128),
+        ForeignKey("artifact_versions.artifact_version_id"),
+        nullable=False,
+    )
+    input_artifact_version_id: Mapped[str] = mapped_column(
+        String(128),
+        ForeignKey("artifact_versions.artifact_version_id"),
+        nullable=False,
+    )
+    edge_type: Mapped[str] = mapped_column(String(64), nullable=False)
+    edge_order: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    metadata_json: Mapped[Optional[dict[str, Any]]] = mapped_column(JSON, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=utcnow)
+
+
+class WorkflowRunInput(Base):
+    __tablename__ = "workflow_run_inputs"
+    __table_args__ = (
+        UniqueConstraint(
+            "workflow_run_id",
+            "binding_key",
+            name="uq_workflow_run_inputs_binding",
+        ),
+        Index("ix_workflow_run_inputs_workflow_run_id", "workflow_run_id"),
+    )
+
+    workflow_run_input_id: Mapped[str] = mapped_column(String(128), primary_key=True)
+    workflow_run_id: Mapped[str] = mapped_column(
+        String(128),
+        ForeignKey("workflow_runs.workflow_run_id"),
+        nullable=False,
+    )
+    binding_key: Mapped[str] = mapped_column(String(255), nullable=False)
+    source_kind: Mapped[str] = mapped_column(String(64), nullable=False)
+    source_ref: Mapped[str] = mapped_column(String(255), nullable=False)
+    artifact_version_id: Mapped[Optional[str]] = mapped_column(
+        String(128),
+        ForeignKey("artifact_versions.artifact_version_id"),
+        nullable=True,
+    )
+    pointer_key: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    pointer_generation: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    pointer_artifact_version_id: Mapped[Optional[str]] = mapped_column(
+        String(128),
+        ForeignKey("artifact_versions.artifact_version_id"),
+        nullable=True,
+    )
+    captured_by_task_run_id: Mapped[Optional[str]] = mapped_column(
+        String(128),
+        ForeignKey("task_runs.task_run_id"),
+        nullable=True,
+    )
+    captured_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    metadata_json: Mapped[Optional[dict[str, Any]]] = mapped_column(JSON, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=utcnow)
+
+
+class TaskInputBinding(Base):
+    __tablename__ = "task_input_bindings"
+    __table_args__ = (
+        UniqueConstraint(
+            "task_run_id",
+            "binding_key",
+            name="uq_task_input_bindings_binding",
+        ),
+        Index("ix_task_input_bindings_task_run_id", "task_run_id"),
+    )
+
+    task_input_binding_id: Mapped[str] = mapped_column(String(128), primary_key=True)
+    task_run_id: Mapped[str] = mapped_column(
+        String(128),
+        ForeignKey("task_runs.task_run_id"),
+        nullable=False,
+    )
+    workflow_run_id: Mapped[str] = mapped_column(
+        String(128),
+        ForeignKey("workflow_runs.workflow_run_id"),
+        nullable=False,
+    )
+    binding_key: Mapped[str] = mapped_column(String(255), nullable=False)
+    source_kind: Mapped[str] = mapped_column(String(64), nullable=False)
+    source_ref: Mapped[str] = mapped_column(String(255), nullable=False)
+    artifact_version_id: Mapped[Optional[str]] = mapped_column(
+        String(128),
+        ForeignKey("artifact_versions.artifact_version_id"),
+        nullable=True,
+    )
+    pointer_key: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    pointer_generation: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    pointer_artifact_version_id: Mapped[Optional[str]] = mapped_column(
+        String(128),
+        ForeignKey("artifact_versions.artifact_version_id"),
+        nullable=True,
+    )
+    captured_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    metadata_json: Mapped[Optional[dict[str, Any]]] = mapped_column(JSON, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=utcnow)
 
 
 class ArtifactLink(Base):

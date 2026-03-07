@@ -194,6 +194,11 @@ def create_sqlite_substrate(connection: sqlite3.Connection) -> None:
         CREATE TABLE IF NOT EXISTS artifact_versions (
             artifact_version_id TEXT PRIMARY KEY,
             workflow_run_id TEXT NOT NULL,
+            tenant_id TEXT,
+            domain_id TEXT,
+            dataset_key TEXT,
+            partition_kind TEXT,
+            partition_key TEXT,
             task_run_id TEXT,
             artifact_kind TEXT NOT NULL,
             artifact_role TEXT,
@@ -214,6 +219,8 @@ def create_sqlite_substrate(connection: sqlite3.Connection) -> None:
 
         CREATE INDEX IF NOT EXISTS ix_artifact_versions_workflow_kind
             ON artifact_versions (workflow_run_id, artifact_kind, created_at);
+        CREATE INDEX IF NOT EXISTS ix_artifact_versions_canonical_address
+            ON artifact_versions (tenant_id, domain_id, dataset_key, partition_kind, partition_key);
 
         CREATE TABLE IF NOT EXISTS artifact_links (
             artifact_version_id TEXT NOT NULL,
@@ -236,6 +243,14 @@ def create_sqlite_substrate(connection: sqlite3.Connection) -> None:
         CREATE TABLE IF NOT EXISTS artifact_pointers (
             workflow_run_id TEXT NOT NULL,
             pointer_key TEXT NOT NULL,
+            pointer_id TEXT,
+            tenant_id TEXT,
+            domain_id TEXT,
+            dataset_key TEXT,
+            partition_kind TEXT,
+            partition_key TEXT,
+            stream_key TEXT,
+            registry_kind TEXT,
             scope_kind TEXT NOT NULL,
             scope_ref TEXT NOT NULL,
             artifact_kind TEXT NOT NULL,
@@ -255,6 +270,85 @@ def create_sqlite_substrate(connection: sqlite3.Connection) -> None:
 
         CREATE INDEX IF NOT EXISTS ix_artifact_pointers_workflow_scope
             ON artifact_pointers (workflow_run_id, scope_kind, scope_ref);
+        CREATE UNIQUE INDEX IF NOT EXISTS ix_artifact_pointers_pointer_id
+            ON artifact_pointers (pointer_id);
+        CREATE INDEX IF NOT EXISTS ix_artifact_pointers_canonical_lookup
+            ON artifact_pointers (
+                tenant_id,
+                domain_id,
+                dataset_key,
+                partition_kind,
+                partition_key,
+                stream_key
+            );
+
+        CREATE TABLE IF NOT EXISTS artifact_provenance_edges (
+            edge_id TEXT PRIMARY KEY,
+            workflow_run_id TEXT,
+            output_artifact_version_id TEXT NOT NULL,
+            input_artifact_version_id TEXT NOT NULL,
+            edge_type TEXT NOT NULL,
+            edge_order INTEGER,
+            metadata_json TEXT,
+            created_at TEXT NOT NULL DEFAULT (datetime('now')),
+            FOREIGN KEY (workflow_run_id) REFERENCES workflow_runs(workflow_run_id),
+            FOREIGN KEY (output_artifact_version_id) REFERENCES artifact_versions(artifact_version_id),
+            FOREIGN KEY (input_artifact_version_id) REFERENCES artifact_versions(artifact_version_id),
+            UNIQUE (output_artifact_version_id, input_artifact_version_id, edge_type, edge_order)
+        );
+
+        CREATE INDEX IF NOT EXISTS ix_artifact_provenance_edges_output
+            ON artifact_provenance_edges (output_artifact_version_id, edge_type, edge_order);
+        CREATE INDEX IF NOT EXISTS ix_artifact_provenance_edges_input
+            ON artifact_provenance_edges (input_artifact_version_id, edge_type);
+
+        CREATE TABLE IF NOT EXISTS workflow_run_inputs (
+            workflow_run_input_id TEXT PRIMARY KEY,
+            workflow_run_id TEXT NOT NULL,
+            binding_key TEXT NOT NULL,
+            source_kind TEXT NOT NULL,
+            source_ref TEXT NOT NULL,
+            artifact_version_id TEXT,
+            pointer_key TEXT,
+            pointer_generation INTEGER,
+            pointer_artifact_version_id TEXT,
+            captured_by_task_run_id TEXT,
+            captured_at TEXT NOT NULL,
+            metadata_json TEXT,
+            created_at TEXT NOT NULL DEFAULT (datetime('now')),
+            FOREIGN KEY (workflow_run_id) REFERENCES workflow_runs(workflow_run_id),
+            FOREIGN KEY (artifact_version_id) REFERENCES artifact_versions(artifact_version_id),
+            FOREIGN KEY (pointer_artifact_version_id) REFERENCES artifact_versions(artifact_version_id),
+            FOREIGN KEY (captured_by_task_run_id) REFERENCES task_runs(task_run_id),
+            UNIQUE (workflow_run_id, binding_key)
+        );
+
+        CREATE INDEX IF NOT EXISTS ix_workflow_run_inputs_workflow_run_id
+            ON workflow_run_inputs (workflow_run_id);
+
+        CREATE TABLE IF NOT EXISTS task_input_bindings (
+            task_input_binding_id TEXT PRIMARY KEY,
+            task_run_id TEXT NOT NULL,
+            workflow_run_id TEXT NOT NULL,
+            binding_key TEXT NOT NULL,
+            source_kind TEXT NOT NULL,
+            source_ref TEXT NOT NULL,
+            artifact_version_id TEXT,
+            pointer_key TEXT,
+            pointer_generation INTEGER,
+            pointer_artifact_version_id TEXT,
+            captured_at TEXT NOT NULL,
+            metadata_json TEXT,
+            created_at TEXT NOT NULL DEFAULT (datetime('now')),
+            FOREIGN KEY (task_run_id) REFERENCES task_runs(task_run_id),
+            FOREIGN KEY (workflow_run_id) REFERENCES workflow_runs(workflow_run_id),
+            FOREIGN KEY (artifact_version_id) REFERENCES artifact_versions(artifact_version_id),
+            FOREIGN KEY (pointer_artifact_version_id) REFERENCES artifact_versions(artifact_version_id),
+            UNIQUE (task_run_id, binding_key)
+        );
+
+        CREATE INDEX IF NOT EXISTS ix_task_input_bindings_task_run_id
+            ON task_input_bindings (task_run_id);
 
         CREATE TABLE IF NOT EXISTS execution_sessions (
             execution_session_id TEXT PRIMARY KEY,
