@@ -35,6 +35,8 @@ ACTION_TO_COMMAND = {
     "artifacts.seed-corpus": ("artifacts", "seed-corpus"),
     "artifacts.create-version": ("artifacts", "create-version"),
     "pointers.promote": ("pointers", "promote"),
+    "handoffs.materialize-weekly-seeds": ("handoffs", "materialize-weekly-seeds"),
+    "handoffs.activate-live-dispatch": ("handoffs", "activate-live-dispatch"),
 }
 
 _PLACEHOLDER_PATTERN = re.compile(r"\{\{\s*([A-Za-z0-9_.-]+)\s*\}\}")

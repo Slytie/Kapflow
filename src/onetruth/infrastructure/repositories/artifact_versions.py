@@ -86,6 +86,11 @@ def get_artifact_version(
         SELECT
             artifact_version_id,
             workflow_run_id,
+            tenant_id,
+            domain_id,
+            dataset_key,
+            partition_kind,
+            partition_key,
             task_run_id,
             artifact_kind,
             artifact_role,
@@ -119,6 +124,11 @@ def list_artifact_versions_for_workflow_run(
         SELECT
             artifact_version_id,
             workflow_run_id,
+            tenant_id,
+            domain_id,
+            dataset_key,
+            partition_kind,
+            partition_key,
             task_run_id,
             artifact_kind,
             artifact_role,

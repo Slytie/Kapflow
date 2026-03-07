@@ -1,0 +1,52 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://companyos.dev/schemas/runtime/edge_execution.schema.json",
+  "title": "EdgeExecution",
+  "type": "object",
+  "required": [
+    "edge_execution_id",
+    "edge_id",
+    "source_workflow_run_id",
+    "source_stage_id",
+    "source_artifact_version_id",
+    "target_workflow_id",
+    "target_stage_id",
+    "target_partition_kind",
+    "target_partition_key",
+    "correlation_key",
+    "materialize_idempotency_key",
+    "status",
+    "created_at",
+    "updated_at"
+  ],
+  "properties": {
+    "edge_execution_id": {"type": "string", "minLength": 1},
+    "edge_id": {"type": "string", "minLength": 1},
+    "source_workflow_run_id": {"type": "string", "minLength": 1},
+    "source_stage_id": {"type": "string", "minLength": 1},
+    "source_artifact_version_id": {"type": "string", "minLength": 1},
+    "source_activation_key": {"type": ["string", "null"]},
+    "target_workflow_id": {"type": "string", "minLength": 1},
+    "target_workflow_run_id": {"type": ["string", "null"]},
+    "target_stage_id": {"type": "string", "minLength": 1},
+    "target_partition_kind": {"type": "string", "minLength": 1},
+    "target_partition_key": {"type": "string", "minLength": 1},
+    "target_activation_key": {"type": ["string", "null"]},
+    "correlation_key": {"type": "string", "minLength": 1},
+    "materialize_idempotency_key": {"type": "string", "minLength": 1},
+    "activation_idempotency_key": {"type": ["string", "null"]},
+    "status": {
+      "type": "string",
+      "enum": ["prepared", "activated", "consumed", "stale", "failed"]
+    },
+    "cursor_state": {"type": ["object", "null"]},
+    "compensation_state": {"type": ["object", "null"]},
+    "input_bindings": {"type": ["object", "null"]},
+    "trigger_ref": {"type": ["string", "null"]},
+    "seed_artifact_version_id": {"type": ["string", "null"]},
+    "created_at": {"type": "string", "minLength": 1},
+    "updated_at": {"type": "string", "minLength": 1},
+    "activated_at": {"type": ["string", "null"]}
+  },
+  "additionalProperties": false
+}

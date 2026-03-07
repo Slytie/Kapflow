@@ -476,6 +476,82 @@ class TaskInputBinding(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=utcnow)
 
 
+class EdgeExecution(Base):
+    __tablename__ = "edge_executions"
+    __table_args__ = (
+        UniqueConstraint(
+            "edge_id",
+            "source_workflow_run_id",
+            "source_artifact_version_id",
+            "target_partition_key",
+            name="uq_edge_executions_scope",
+        ),
+        UniqueConstraint(
+            "edge_id",
+            "correlation_key",
+            name="uq_edge_executions_correlation",
+        ),
+        Index(
+            "ix_edge_executions_source_scope",
+            "source_workflow_run_id",
+            "edge_id",
+            "status",
+        ),
+        Index(
+            "ix_edge_executions_target_scope",
+            "target_workflow_run_id",
+            "edge_id",
+            "status",
+        ),
+    )
+
+    edge_execution_id: Mapped[str] = mapped_column(String(128), primary_key=True)
+    edge_id: Mapped[str] = mapped_column(String(128), nullable=False)
+    source_workflow_run_id: Mapped[str] = mapped_column(
+        String(128),
+        ForeignKey("workflow_runs.workflow_run_id"),
+        nullable=False,
+    )
+    source_stage_id: Mapped[str] = mapped_column(String(128), nullable=False)
+    source_artifact_version_id: Mapped[str] = mapped_column(
+        String(128),
+        ForeignKey("artifact_versions.artifact_version_id"),
+        nullable=False,
+    )
+    source_activation_key: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    target_workflow_id: Mapped[str] = mapped_column(String(128), nullable=False)
+    target_workflow_run_id: Mapped[Optional[str]] = mapped_column(
+        String(128),
+        ForeignKey("workflow_runs.workflow_run_id"),
+        nullable=True,
+    )
+    target_stage_id: Mapped[str] = mapped_column(String(128), nullable=False)
+    target_partition_kind: Mapped[str] = mapped_column(String(64), nullable=False)
+    target_partition_key: Mapped[str] = mapped_column(String(255), nullable=False)
+    target_activation_key: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    correlation_key: Mapped[str] = mapped_column(String(255), nullable=False)
+    materialize_idempotency_key: Mapped[str] = mapped_column(String(255), nullable=False)
+    activation_idempotency_key: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    status: Mapped[str] = mapped_column(String(32), nullable=False)
+    cursor_state_json: Mapped[Optional[dict[str, Any]]] = mapped_column(JSON, nullable=True)
+    compensation_state_json: Mapped[Optional[dict[str, Any]]] = mapped_column(JSON, nullable=True)
+    input_bindings_json: Mapped[Optional[dict[str, Any]]] = mapped_column(JSON, nullable=True)
+    trigger_ref: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    seed_artifact_version_id: Mapped[Optional[str]] = mapped_column(
+        String(128),
+        ForeignKey("artifact_versions.artifact_version_id"),
+        nullable=True,
+    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=utcnow)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        default=utcnow,
+        onupdate=utcnow,
+    )
+    activated_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+
+
 class ArtifactLink(Base):
     __tablename__ = "artifact_links"
     __table_args__ = (

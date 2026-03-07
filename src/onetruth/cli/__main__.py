@@ -48,6 +48,12 @@ from onetruth.application.handlers.workflow_task_lifecycle import (
     transition_execution_session_state_command,
     transition_flag_state_command,
 )
+from onetruth.application.handlers.logistics_handoff import (
+    activate_live_dispatch_command,
+    list_edge_executions_command,
+    materialize_weekly_seeds_command,
+    show_edge_execution_command,
+)
 from onetruth.application.services.example_document_corpus import (
     load_example_document_corpus,
     seed_payloads_for_set,
@@ -218,6 +224,32 @@ def _build_parser() -> argparse.ArgumentParser:
     pointers_list.add_argument("--workflow-run-id", required=True)
     pointers_list.add_argument("--json", dest="json_output", required=True, action="store_true")
     pointers_list.set_defaults(handler=_handle_pointers_list)
+
+    handoffs = subparsers.add_parser("handoffs", help="Logistics weekly-to-live handoff commands.")
+    handoffs_sub = handoffs.add_subparsers(dest="handoffs_command", required=True)
+    handoffs_materialize = handoffs_sub.add_parser(
+        "materialize-weekly-seeds",
+        help="Materialize Stage07 daily seeds and edge execution rows for weekly->live handoff.",
+    )
+    handoffs_materialize.add_argument("--json", dest="json_payload", required=True)
+    handoffs_materialize.set_defaults(handler=_handle_handoffs_materialize_weekly_seeds)
+    handoffs_activate = handoffs_sub.add_parser(
+        "activate-live-dispatch",
+        help="Lazily activate live_dispatch.v1 from a prepared handoff edge execution.",
+    )
+    handoffs_activate.add_argument("--json", dest="json_payload", required=True)
+    handoffs_activate.set_defaults(handler=_handle_handoffs_activate_live_dispatch)
+    handoffs_show = handoffs_sub.add_parser("show", help="Show one edge execution row.")
+    handoffs_show.add_argument("--edge-execution-id", required=True)
+    handoffs_show.add_argument("--json", dest="json_output", required=True, action="store_true")
+    handoffs_show.set_defaults(handler=_handle_handoffs_show)
+    handoffs_list = handoffs_sub.add_parser("list", help="List edge execution rows.")
+    handoffs_list.add_argument("--edge-id", default=None)
+    handoffs_list.add_argument("--source-workflow-run-id", default=None)
+    handoffs_list.add_argument("--target-workflow-run-id", default=None)
+    handoffs_list.add_argument("--status", default=None)
+    handoffs_list.add_argument("--json", dest="json_output", required=True, action="store_true")
+    handoffs_list.set_defaults(handler=_handle_handoffs_list)
 
     flags = subparsers.add_parser("flags", help="Flag lifecycle commands.")
     flags_sub = flags.add_subparsers(dest="flags_command", required=True)
@@ -1230,6 +1262,74 @@ def _handle_pointers_list(args: argparse.Namespace) -> int:
     finally:
         connection.close()
     _json_print({"status": "ok", "command": "pointers.list", "pointers": pointers})
+    return 0
+
+
+def _handle_handoffs_materialize_weekly_seeds(args: argparse.Namespace) -> int:
+    payload = _parse_json_object(args.json_payload)
+    if isinstance(payload, int):
+        return payload
+    connection = _open_connection_or_emit(args.db_url)
+    if isinstance(connection, int):
+        return connection
+    try:
+        result = materialize_weekly_seeds_command(connection, payload)
+    except CommandError as exc:
+        return _emit_error(code=exc.code, message=exc.message, details=exc.details)
+    finally:
+        connection.close()
+    _json_print({"status": "ok", "command": "handoffs.materialize-weekly-seeds", "result": result})
+    return 0
+
+
+def _handle_handoffs_activate_live_dispatch(args: argparse.Namespace) -> int:
+    payload = _parse_json_object(args.json_payload)
+    if isinstance(payload, int):
+        return payload
+    connection = _open_connection_or_emit(args.db_url)
+    if isinstance(connection, int):
+        return connection
+    try:
+        result = activate_live_dispatch_command(connection, payload)
+    except CommandError as exc:
+        return _emit_error(code=exc.code, message=exc.message, details=exc.details)
+    finally:
+        connection.close()
+    _json_print({"status": "ok", "command": "handoffs.activate-live-dispatch", "result": result})
+    return 0
+
+
+def _handle_handoffs_show(args: argparse.Namespace) -> int:
+    connection = _open_connection_or_emit(args.db_url)
+    if isinstance(connection, int):
+        return connection
+    try:
+        edge_execution = show_edge_execution_command(connection, args.edge_execution_id)
+    except CommandError as exc:
+        return _emit_error(code=exc.code, message=exc.message, details=exc.details)
+    finally:
+        connection.close()
+    _json_print({"status": "ok", "command": "handoffs.show", "edge_execution": edge_execution})
+    return 0
+
+
+def _handle_handoffs_list(args: argparse.Namespace) -> int:
+    connection = _open_connection_or_emit(args.db_url)
+    if isinstance(connection, int):
+        return connection
+    try:
+        edge_executions = list_edge_executions_command(
+            connection,
+            edge_id=args.edge_id,
+            source_workflow_run_id=args.source_workflow_run_id,
+            status=args.status,
+            target_workflow_run_id=args.target_workflow_run_id,
+        )
+    except CommandError as exc:
+        return _emit_error(code=exc.code, message=exc.message, details=exc.details)
+    finally:
+        connection.close()
+    _json_print({"status": "ok", "command": "handoffs.list", "edge_executions": edge_executions})
     return 0
 
 

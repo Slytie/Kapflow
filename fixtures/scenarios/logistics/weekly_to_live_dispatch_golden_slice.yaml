@@ -1,0 +1,112 @@
+scenario_id: logistics_weekly_to_live_dispatch_golden_slice
+workflow_id: weekly_schedule_planning.v1
+workflow_version: v1
+partition_key: PW-2026-W10
+logical_date: "2026-03-02"
+scope:
+  tenant_id: tenant-logistics
+  domain_id: domain-hub
+seed_artifacts:
+  - fixture_id: schedule.stage05.draft_schedule_workbook.completed
+    artifact_kind: planning.route_horizon.workbook
+    artifact_role: official_input
+    media_type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet
+  - fixture_id: schedule.stage05.draft_schedule_workbook.completed
+    artifact_kind: planning.approved_availability.workbook
+    artifact_role: official_input
+    media_type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet
+  - fixture_id: schedule.stage05.draft_schedule_workbook.completed
+    artifact_kind: planning.actual_hours_snapshot.workbook
+    artifact_role: official_input
+    media_type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet
+steps:
+  - id: create_weekly_publish_artifact
+    action: artifacts.create-version
+    payload:
+      workflow_run_id: "{{workflow_run.workflow_run_id}}"
+      artifact_kind: planning.published_weekly_schedule.workbook
+      artifact_role: official_output
+      media_type: application/octet-stream
+      storage_uri: inmem://scenario/logistics/published-weekly
+      content_digest: sha256:logistics-published-weekly
+      metadata_json:
+        scenario_id: logistics_weekly_to_live_dispatch_golden_slice
+      idempotency_key: scenario:logistics_weekly_to_live_dispatch_golden_slice:published
+    save_as: weekly_publish
+  - id: request_publish_approval
+    action: approvals.request
+    payload:
+      workflow_run_id: "{{workflow_run.workflow_run_id}}"
+      approval_kind: business_decision
+      scope_kind: stage
+      scope_ref: Stage06
+      candidate_roles:
+        - operations_manager
+      required_role: operations_manager
+      idempotency_key: scenario:logistics_weekly_to_live_dispatch_golden_slice:approval:publish:request
+    save_as: publish_approval
+  - id: respond_publish_approval
+    action: approvals.respond
+    payload:
+      approval_id: "{{publish_approval.approval.approval_id}}"
+      actor_id: human:ops-manager-1
+      actor_type: human
+      response_kind: approve
+      idempotency_key: scenario:logistics_weekly_to_live_dispatch_golden_slice:approval:publish:respond
+  - id: promote_weekly_pointer
+    action: pointers.promote
+    payload:
+      workflow_run_id: "{{workflow_run.workflow_run_id}}"
+      scope_kind: stage
+      scope_ref: Stage06
+      pointer_key: official:planning.published_weekly_schedule.workbook
+      artifact_kind: planning.published_weekly_schedule.workbook
+      artifact_version_id: "{{weekly_publish.artifact_version.artifact_version_id}}"
+      promotion_reason: official_publish
+      approved_by_approval_id: "{{publish_approval.approval.approval_id}}"
+      actor_id: human:ops-manager-1
+      actor_type: human
+      idempotency_key: scenario:logistics_weekly_to_live_dispatch_golden_slice:pointer:publish
+  - id: materialize_daily_seed
+    action: handoffs.materialize-weekly-seeds
+    payload:
+      workflow_run_id: "{{workflow_run.workflow_run_id}}"
+      published_artifact_version_id: "{{weekly_publish.artifact_version.artifact_version_id}}"
+      service_date_id: SD-2026-03-06
+      idempotency_key: scenario:logistics_weekly_to_live_dispatch_golden_slice:handoff:materialize
+    save_as: handoff_materialized
+  - id: create_route_delta_event_artifact
+    action: artifacts.create-version
+    payload:
+      workflow_run_id: "{{workflow_run.workflow_run_id}}"
+      artifact_kind: dispatch.route_delta_intake.workbook
+      artifact_role: official_input
+      media_type: application/octet-stream
+      storage_uri: inmem://scenario/logistics/route-delta
+      content_digest: sha256:logistics-route-delta
+      canonical_partition_kind: ServiceDateID
+      canonical_partition_key: SD-2026-03-06
+      metadata_json:
+        service_date_id: SD-2026-03-06
+      idempotency_key: scenario:logistics_weekly_to_live_dispatch_golden_slice:route-delta
+    save_as: route_delta
+  - id: create_actual_hours_source_artifact
+    action: artifacts.create-version
+    payload:
+      workflow_run_id: "{{workflow_run.workflow_run_id}}"
+      artifact_kind: planning.actual_hours_snapshot.workbook
+      artifact_role: official_input
+      media_type: application/octet-stream
+      storage_uri: inmem://scenario/logistics/actual-hours
+      content_digest: sha256:logistics-actual-hours
+      metadata_json:
+        service_date_id: SD-2026-03-06
+      idempotency_key: scenario:logistics_weekly_to_live_dispatch_golden_slice:actual-hours-source
+    save_as: actual_hours_source
+  - id: activate_live_dispatch
+    action: handoffs.activate-live-dispatch
+    payload:
+      edge_execution_id: "{{handoff_materialized.result.edge_executions.0.edge_execution_id}}"
+      route_delta_source_artifact_version_id: "{{route_delta.artifact_version.artifact_version_id}}"
+      actual_hours_source_artifact_version_id: "{{actual_hours_source.artifact_version.artifact_version_id}}"
+      idempotency_key: scenario:logistics_weekly_to_live_dispatch_golden_slice:handoff:activate

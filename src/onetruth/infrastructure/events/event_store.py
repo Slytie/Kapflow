@@ -350,6 +350,44 @@ def create_sqlite_substrate(connection: sqlite3.Connection) -> None:
         CREATE INDEX IF NOT EXISTS ix_task_input_bindings_task_run_id
             ON task_input_bindings (task_run_id);
 
+        CREATE TABLE IF NOT EXISTS edge_executions (
+            edge_execution_id TEXT PRIMARY KEY,
+            edge_id TEXT NOT NULL,
+            source_workflow_run_id TEXT NOT NULL,
+            source_stage_id TEXT NOT NULL,
+            source_artifact_version_id TEXT NOT NULL,
+            source_activation_key TEXT,
+            target_workflow_id TEXT NOT NULL,
+            target_workflow_run_id TEXT,
+            target_stage_id TEXT NOT NULL,
+            target_partition_kind TEXT NOT NULL,
+            target_partition_key TEXT NOT NULL,
+            target_activation_key TEXT,
+            correlation_key TEXT NOT NULL,
+            materialize_idempotency_key TEXT NOT NULL,
+            activation_idempotency_key TEXT,
+            status TEXT NOT NULL,
+            cursor_state_json TEXT,
+            compensation_state_json TEXT,
+            input_bindings_json TEXT,
+            trigger_ref TEXT,
+            seed_artifact_version_id TEXT,
+            created_at TEXT NOT NULL DEFAULT (datetime('now')),
+            updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+            activated_at TEXT,
+            FOREIGN KEY (source_workflow_run_id) REFERENCES workflow_runs(workflow_run_id),
+            FOREIGN KEY (source_artifact_version_id) REFERENCES artifact_versions(artifact_version_id),
+            FOREIGN KEY (target_workflow_run_id) REFERENCES workflow_runs(workflow_run_id),
+            FOREIGN KEY (seed_artifact_version_id) REFERENCES artifact_versions(artifact_version_id),
+            UNIQUE (edge_id, source_workflow_run_id, source_artifact_version_id, target_partition_key),
+            UNIQUE (edge_id, correlation_key)
+        );
+
+        CREATE INDEX IF NOT EXISTS ix_edge_executions_source_scope
+            ON edge_executions (source_workflow_run_id, edge_id, status);
+        CREATE INDEX IF NOT EXISTS ix_edge_executions_target_scope
+            ON edge_executions (target_workflow_run_id, edge_id, status);
+
         CREATE TABLE IF NOT EXISTS execution_sessions (
             execution_session_id TEXT PRIMARY KEY,
             workflow_run_id TEXT NOT NULL,

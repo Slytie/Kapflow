@@ -2344,6 +2344,17 @@ def create_artifact_version_command(
             workflow_partition_key=workflow_scope["partition_key"],
             artifact_kind=artifact_kind,
         )
+        has_partition_kind_override = payload.get("canonical_partition_kind") is not None
+        has_partition_key_override = payload.get("canonical_partition_key") is not None
+        if has_partition_kind_override != has_partition_key_override:
+            raise CommandError(
+                code="invalid_payload",
+                message="canonical_partition_kind and canonical_partition_key must be provided together",
+                details={},
+            )
+        if has_partition_kind_override and has_partition_key_override:
+            canonical_scope["partition_kind"] = str(payload["canonical_partition_kind"])
+            canonical_scope["partition_key"] = str(payload["canonical_partition_key"])
         create_artifact_version(
             connection,
             artifact_version_id=artifact_version_id,

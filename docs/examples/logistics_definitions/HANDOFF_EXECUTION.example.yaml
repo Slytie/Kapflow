@@ -1,0 +1,33 @@
+edge_execution:
+  edge_execution_id: ee-8cc6e5c4-4eeb-4f0e-a90f-682a9f6796d5
+  edge_id: weekly_seed_to_live_dispatch
+  source_workflow_run_id: wr-weekly-PW-2026-W10
+  source_stage_id: Stage07
+  source_artifact_version_id: av-seed-SD-2026-03-06
+  source_activation_key: weekly_schedule_planning.v1:PW-2026-W10
+  target_workflow_id: live_dispatch.v1
+  target_workflow_run_id: wr-live-SD-2026-03-06
+  target_stage_id: Stage01
+  target_partition_kind: ServiceDateID
+  target_partition_key: SD-2026-03-06
+  target_activation_key: live_dispatch.v1:SD-2026-03-06
+  correlation_key: 5a8d05aa4f7f7af4ac9de672d4c0f3d5
+  materialize_idempotency_key: idem:handoff:materialize:PW-2026-W10:SD-2026-03-06
+  activation_idempotency_key: idem:handoff:activate:SD-2026-03-06:evt-1600
+  status: activated
+  cursor_state:
+    phase: activated
+    service_date_id: SD-2026-03-06
+    trigger_ref: av-route-delta-evt-1600
+  compensation_state:
+    mode: mark_stale
+    state: none
+  input_bindings:
+    base_seed_source_artifact_version_id: av-seed-SD-2026-03-06
+    route_delta_source_artifact_version_id: av-route-delta-evt-1600
+    actual_hours_source_artifact_version_id: av-weekly-actual-hours-2026-W10
+  trigger_ref: av-route-delta-evt-1600
+  seed_artifact_version_id: av-seed-SD-2026-03-06
+  created_at: 2026-03-07T12:00:00Z
+  updated_at: 2026-03-07T12:03:10Z
+  activated_at: 2026-03-07T12:03:10Z
