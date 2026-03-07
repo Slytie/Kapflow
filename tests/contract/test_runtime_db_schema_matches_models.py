@@ -7,6 +7,8 @@ from onetruth.infrastructure.events.event_store import create_sqlite_substrate
 
 
 REQUIRED_POINTER_COLUMNS = {
+    "workflow_run_id",
+    "pointer_key",
     "pointer_id",
     "tenant_id",
     "domain_id",
@@ -38,6 +40,7 @@ REQUIRED_INDEXES_BY_TABLE = {
     "artifact_pointers": {
         "ix_artifact_pointers_pointer_id",
         "ix_artifact_pointers_canonical_lookup",
+        "ix_artifact_pointers_workflow_scope",
     },
     "artifact_provenance_edges": {
         "ix_artifact_provenance_edges_output",
@@ -50,6 +53,8 @@ REQUIRED_INDEXES_BY_TABLE = {
         "ix_task_input_bindings_task_run_id",
     },
 }
+
+EXPECTED_POINTER_PK_COLUMNS = {"pointer_id"}
 
 
 def _model_columns(table_name: str) -> set[str]:
@@ -104,12 +109,30 @@ def _sqlite_indexes(connection: sqlite3.Connection, table_name: str) -> set[str]
     }
 
 
+def _model_primary_key_columns(table_name: str) -> set[str]:
+    return {
+        column.name
+        for column in Base.metadata.tables[table_name].columns
+        if column.primary_key
+    }
+
+
+def _sqlite_primary_key_columns(connection: sqlite3.Connection, table_name: str) -> set[str]:
+    rows = connection.execute(f"PRAGMA table_info('{table_name}')").fetchall()
+    return {
+        str(row["name"])
+        for row in rows
+        if int(row["pk"]) > 0
+    }
+
+
 def test_models_include_strategy_a_expand_schema_surfaces() -> None:
     table_names = set(Base.metadata.tables)
     assert REQUIRED_NEW_TABLES <= table_names
 
     assert REQUIRED_POINTER_COLUMNS <= _model_columns("artifact_pointers")
     assert REQUIRED_VERSION_COLUMNS <= _model_columns("artifact_versions")
+    assert _model_primary_key_columns("artifact_pointers") == EXPECTED_POINTER_PK_COLUMNS
 
     for table_name, expected_indexes in REQUIRED_INDEXES_BY_TABLE.items():
         assert expected_indexes <= _model_index_names(table_name)
@@ -121,8 +144,8 @@ def test_bootstrap_schema_matches_strategy_a_expand_schema_surfaces() -> None:
         assert REQUIRED_NEW_TABLES <= _sqlite_table_names(connection)
         assert REQUIRED_POINTER_COLUMNS <= _sqlite_columns(connection, "artifact_pointers")
         assert REQUIRED_VERSION_COLUMNS <= _sqlite_columns(connection, "artifact_versions")
+        assert _sqlite_primary_key_columns(connection, "artifact_pointers") == EXPECTED_POINTER_PK_COLUMNS
         for table_name, expected_indexes in REQUIRED_INDEXES_BY_TABLE.items():
             assert expected_indexes <= _sqlite_indexes(connection, table_name)
     finally:
         connection.close()
-

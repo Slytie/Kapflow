@@ -4,6 +4,7 @@ import sqlite3
 
 import pytest
 
+from onetruth.domain.pointer_address import PartitionRef, PointerAddress, PointerId
 from onetruth.infrastructure.events.event_store import create_sqlite_substrate
 from onetruth.infrastructure.repositories.artifact_pointers import promote_pointer
 from onetruth.infrastructure.repositories.input_bindings import (
@@ -123,6 +124,29 @@ def _seed_artifact(connection: sqlite3.Connection, artifact_version_id: str) -> 
     )
 
 
+def _pointer_identity(pointer_key: str) -> dict[str, str]:
+    pointer_id = str(
+        PointerId.from_address(
+            PointerAddress(
+                tenant_id="tenant-a",
+                domain_id="domain-ops",
+                dataset_key="schedule.published_schedule.workbook",
+                partition_ref=PartitionRef(key="ScheduleDateID", value="SD-2026-03-04"),
+            )
+        )
+    )
+    return {
+        "pointer_key": pointer_key,
+        "pointer_id": pointer_id,
+        "tenant_id": "tenant-a",
+        "domain_id": "domain-ops",
+        "dataset_key": "schedule.published_schedule.workbook",
+        "partition_kind": "ScheduleDateID",
+        "partition_key": "SD-2026-03-04",
+        "registry_kind": "singleton",
+    }
+
+
 def test_workflow_run_inputs_are_immutable_per_binding_key() -> None:
     connection = _connection()
     try:
@@ -160,10 +184,11 @@ def test_task_binding_captures_pointer_generation_and_detects_stale_baseline() -
         _seed_artifact(connection, "av-002")
 
         pointer_key = "official:schedule.published_schedule.workbook"
+        pointer_identity = _pointer_identity(pointer_key)
         promote_pointer(
             connection,
             workflow_run_id="wr-001",
-            pointer_key=pointer_key,
+            pointer_key=pointer_identity["pointer_key"],
             scope_kind="stage",
             scope_ref="Stage06",
             artifact_kind="schedule.published_schedule.workbook",
@@ -173,6 +198,14 @@ def test_task_binding_captures_pointer_generation_and_detects_stale_baseline() -
             approved_by_approval_id=None,
             updated_at="2026-03-07T10:10:00Z",
             expected_generation=None,
+            pointer_id=pointer_identity["pointer_id"],
+            tenant_id=pointer_identity["tenant_id"],
+            domain_id=pointer_identity["domain_id"],
+            dataset_key=pointer_identity["dataset_key"],
+            partition_kind=pointer_identity["partition_kind"],
+            partition_key=pointer_identity["partition_key"],
+            stream_key=None,
+            registry_kind=pointer_identity["registry_kind"],
         )
 
         capture_task_pointer_input(
@@ -192,7 +225,7 @@ def test_task_binding_captures_pointer_generation_and_detects_stale_baseline() -
         promote_pointer(
             connection,
             workflow_run_id="wr-001",
-            pointer_key=pointer_key,
+            pointer_key=pointer_identity["pointer_key"],
             scope_kind="stage",
             scope_ref="Stage06",
             artifact_kind="schedule.published_schedule.workbook",
@@ -202,6 +235,14 @@ def test_task_binding_captures_pointer_generation_and_detects_stale_baseline() -
             approved_by_approval_id=None,
             updated_at="2026-03-07T10:12:00Z",
             expected_generation=0,
+            pointer_id=pointer_identity["pointer_id"],
+            tenant_id=pointer_identity["tenant_id"],
+            domain_id=pointer_identity["domain_id"],
+            dataset_key=pointer_identity["dataset_key"],
+            partition_kind=pointer_identity["partition_kind"],
+            partition_key=pointer_identity["partition_key"],
+            stream_key=None,
+            registry_kind=pointer_identity["registry_kind"],
         )
         assert is_task_input_binding_stale(
             connection,
@@ -210,4 +251,3 @@ def test_task_binding_captures_pointer_generation_and_detects_stale_baseline() -
         )
     finally:
         connection.close()
-

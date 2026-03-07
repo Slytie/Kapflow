@@ -241,9 +241,9 @@ def create_sqlite_substrate(connection: sqlite3.Connection) -> None:
             ON artifact_links (workflow_run_id, subject_kind, subject_id, created_at);
 
         CREATE TABLE IF NOT EXISTS artifact_pointers (
+            pointer_id TEXT NOT NULL PRIMARY KEY,
             workflow_run_id TEXT NOT NULL,
             pointer_key TEXT NOT NULL,
-            pointer_id TEXT,
             tenant_id TEXT,
             domain_id TEXT,
             dataset_key TEXT,
@@ -260,7 +260,7 @@ def create_sqlite_substrate(connection: sqlite3.Connection) -> None:
             approved_by_approval_id TEXT,
             generation INTEGER NOT NULL DEFAULT 0,
             updated_at TEXT NOT NULL DEFAULT (datetime('now')),
-            PRIMARY KEY (workflow_run_id, pointer_key),
+            UNIQUE (workflow_run_id, pointer_key),
             UNIQUE (workflow_run_id, scope_kind, scope_ref, artifact_kind),
             FOREIGN KEY (workflow_run_id) REFERENCES workflow_runs(workflow_run_id),
             FOREIGN KEY (artifact_version_id) REFERENCES artifact_versions(artifact_version_id),

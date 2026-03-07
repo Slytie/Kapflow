@@ -173,8 +173,9 @@ Current scope includes TASK-0041 + TASK-0042 substrate commands plus TASK-0043/T
 
 ## promote_pointer (`pointers promote`)
 - Canonical rows mutated:
-  - `artifact_pointers` insert on first promotion for `(workflow_run_id, pointer_key)`
+  - `artifact_pointers` insert on first promotion for canonical `pointer_id`
   - optional update on repoint when `expected_generation` is supplied and matches
+  - compatibility alias fields (`workflow_run_id`, `pointer_key`) are updated to keep run-centric read paths stable
 - Events emitted:
   - `artifact.pointer.promoted`
   - `artifact.pointer.drift_detected` when `reviewed_artifact_version_id` differs from promoted version
@@ -187,10 +188,12 @@ Current scope includes TASK-0041 + TASK-0042 substrate commands plus TASK-0043/T
     - `pointers.promote.artifact.pointer.drift_detected` (when drift event is emitted)
   - duplicate idempotency key fails explicitly (`duplicate_idempotency_key`)
 - Race/conflict behavior:
-  - first promotion wins for an uninitialized pointer key
+  - first promotion wins for an uninitialized canonical `pointer_id`
   - conflicting promotion without `expected_generation` fails closed (`pointer_conflict`)
   - repoint requires optimistic generation match; mismatch fails explicitly (`pointer_generation_mismatch`)
   - pointer scope/kind mismatch on same key fails explicitly (`pointer_definition_mismatch`)
+- Event identity shape:
+  - `artifact.pointer.promoted.payload.pointer_id` and pointer `subject` link id are canonical `PointerId` values (not legacy `pointer_key`).
 - Minimal policy checks in this slice:
   - `promotion_reason=official_publish` requires `approved_by_approval_id` referencing a `RESPONDED` approval with `response_kind=approve`
   - `promotion_reason=official_major_replan` requires the same approved response and a Stage07-scoped approval (`scope_ref=Stage07`)

@@ -74,6 +74,15 @@ def _index_names(connection: sqlite3.Connection, table_name: str) -> set[str]:
     }
 
 
+def _primary_key_columns(connection: sqlite3.Connection, table_name: str) -> set[str]:
+    rows = connection.execute(f"PRAGMA table_info('{table_name}')").fetchall()
+    return {
+        str(row["name"])
+        for row in rows
+        if int(row["pk"]) > 0
+    }
+
+
 def test_bootstrap_and_migration_schema_parity_for_strategy_a_tables(tmp_path: Path) -> None:
     bootstrap_path = tmp_path / "bootstrap.db"
     migrated_path = tmp_path / "migrated.db"
@@ -88,6 +97,7 @@ def test_bootstrap_and_migration_schema_parity_for_strategy_a_tables(tmp_path: P
             assert _table_exists(migrated, table_name), table_name
             assert _column_names(bootstrap, table_name) == _column_names(migrated, table_name)
             assert _index_names(bootstrap, table_name) == _index_names(migrated, table_name)
+            assert _primary_key_columns(bootstrap, table_name) == _primary_key_columns(migrated, table_name)
     finally:
         bootstrap.close()
         migrated.close()

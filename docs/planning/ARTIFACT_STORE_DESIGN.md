@@ -44,12 +44,14 @@ Stage07 delta metadata requirements (implementation target):
 ## 3) Pointer uniqueness and generation semantics
 
 Current canonical constraints:
-- primary key `(workflow_run_id, pointer_key)`,
-- uniqueness of pointer definition `(workflow_run_id, scope_kind, scope_ref, artifact_kind)`.
+- primary key `pointer_id` (canonical pointer identity),
+- compatibility uniqueness `(workflow_run_id, pointer_key)`,
+- compatibility definition uniqueness `(workflow_run_id, scope_kind, scope_ref, artifact_kind)`.
 
 Meaning:
-- one pointer key has one mutable target and one definition,
-- one scope/kind stream cannot have two competing pointer keys.
+- one canonical pointer stream (`pointer_id`) has one mutable target and one generation cursor,
+- run-centric keys remain compatibility aliases over the same canonical stream,
+- one run-local scope/kind compatibility stream cannot have two competing pointer keys.
 
 Generation rules:
 - first promotion inserts generation `0`,
@@ -93,7 +95,7 @@ Promotion gate:
 - approval must be Stage07-scoped (`scope_ref=Stage07`).
 
 Ordering rule:
-- authoritative delta order comes from pointer-promotion event order for `official:schedule.replan_delta.workbook`,
+- authoritative delta order comes from pointer-promotion event order for the canonical delta pointer stream (`pointer_id` for `official:schedule.replan_delta.workbook`),
 - `delta_sequence` in metadata is required for deterministic replay/inspection and must be monotonic,
 - mismatches between event order and `delta_sequence` are reconstruction anomalies, not silent behavior.
 

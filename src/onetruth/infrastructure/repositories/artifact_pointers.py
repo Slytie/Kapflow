@@ -32,59 +32,247 @@ class PointerDefinitionMismatchError(ValueError):
         self.pointer_key = pointer_key
 
 
-def get_pointer(
+_DEFAULT_REGISTRY_KIND = "singleton"
+_UNSET = object()
+
+
+def _pointer_columns() -> str:
+    return """
+        pointer_id,
+        workflow_run_id,
+        pointer_key,
+        tenant_id,
+        domain_id,
+        dataset_key,
+        partition_kind,
+        partition_key,
+        stream_key,
+        registry_kind,
+        scope_kind,
+        scope_ref,
+        artifact_kind,
+        artifact_version_id,
+        promotion_reason,
+        promoted_by_task_run_id,
+        approved_by_approval_id,
+        generation,
+        updated_at
+    """
+
+
+def _workflow_scope(
     connection: sqlite3.Connection,
-    *,
     workflow_run_id: str,
-    pointer_key: str,
-) -> dict[str, Any] | None:
+) -> dict[str, str] | None:
     row = connection.execute(
         """
-        SELECT
-            workflow_run_id,
-            pointer_key,
-            scope_kind,
-            scope_ref,
-            artifact_kind,
-            artifact_version_id,
-            promotion_reason,
-            promoted_by_task_run_id,
-            approved_by_approval_id,
-            generation,
-            updated_at
-        FROM artifact_pointers
-        WHERE workflow_run_id = ? AND pointer_key = ?
+        SELECT tenant_id, domain_id, partition_key
+        FROM workflow_runs
+        WHERE workflow_run_id = ?
         """,
-        (workflow_run_id, pointer_key),
+        (workflow_run_id,),
+    ).fetchone()
+    if row is None:
+        return None
+    return {
+        "tenant_id": str(row["tenant_id"]),
+        "domain_id": str(row["domain_id"]),
+        "partition_key": str(row["partition_key"]),
+    }
+
+
+def get_pointer_by_id(
+    connection: sqlite3.Connection,
+    *,
+    pointer_id: str,
+) -> dict[str, Any] | None:
+    row = connection.execute(
+        f"""
+        SELECT {_pointer_columns()}
+        FROM artifact_pointers
+        WHERE pointer_id = ?
+        """,
+        (pointer_id,),
     ).fetchone()
     if row is None:
         return None
     return dict(row)
 
 
+def get_pointer_by_address(
+    connection: sqlite3.Connection,
+    *,
+    tenant_id: str,
+    domain_id: str,
+    dataset_key: str,
+    partition_kind: str,
+    partition_key: str,
+    stream_key: str | None,
+    registry_kind: str | None = None,
+) -> dict[str, Any] | None:
+    normalized_registry_kind = str(registry_kind or _DEFAULT_REGISTRY_KIND)
+    row = connection.execute(
+        f"""
+        SELECT {_pointer_columns()}
+        FROM artifact_pointers
+        WHERE tenant_id = ?
+          AND domain_id = ?
+          AND dataset_key = ?
+          AND partition_kind = ?
+          AND partition_key = ?
+          AND registry_kind = ?
+          AND (
+            (stream_key IS NULL AND ? IS NULL)
+            OR stream_key = ?
+          )
+        ORDER BY updated_at DESC, pointer_id ASC
+        LIMIT 1
+        """,
+        (
+            tenant_id,
+            domain_id,
+            dataset_key,
+            partition_kind,
+            partition_key,
+            normalized_registry_kind,
+            stream_key,
+            stream_key,
+        ),
+    ).fetchone()
+    if row is None:
+        return None
+    return dict(row)
+
+
+def list_pointers_by_canonical_scope(
+    connection: sqlite3.Connection,
+    *,
+    tenant_id: str,
+    domain_id: str,
+    dataset_key: str | None = None,
+    partition_kind: str | None = None,
+    partition_key: str | None = None,
+    stream_key: object = _UNSET,
+    registry_kind: str | object = _UNSET,
+    pointer_key: str | None = None,
+    scope_kind: str | None = None,
+    scope_ref: str | None = None,
+    artifact_kind: str | None = None,
+) -> list[dict[str, Any]]:
+    query = f"""
+        SELECT {_pointer_columns()}
+        FROM artifact_pointers
+        WHERE tenant_id = ? AND domain_id = ?
+    """
+    params: list[Any] = [tenant_id, domain_id]
+
+    if dataset_key is not None:
+        query += " AND dataset_key = ?"
+        params.append(dataset_key)
+    if partition_kind is not None:
+        query += " AND partition_kind = ?"
+        params.append(partition_kind)
+    if partition_key is not None:
+        query += " AND partition_key = ?"
+        params.append(partition_key)
+    if pointer_key is not None:
+        query += " AND pointer_key = ?"
+        params.append(pointer_key)
+    if scope_kind is not None:
+        query += " AND scope_kind = ?"
+        params.append(scope_kind)
+    if scope_ref is not None:
+        query += " AND scope_ref = ?"
+        params.append(scope_ref)
+    if artifact_kind is not None:
+        query += " AND artifact_kind = ?"
+        params.append(artifact_kind)
+    if stream_key is not _UNSET:
+        if stream_key is None:
+            query += " AND stream_key IS NULL"
+        else:
+            query += " AND stream_key = ?"
+            params.append(str(stream_key))
+    if registry_kind is not _UNSET:
+        if registry_kind is None:
+            query += " AND registry_kind IS NULL"
+        else:
+            query += " AND registry_kind = ?"
+            params.append(str(registry_kind))
+
+    query += " ORDER BY updated_at DESC, pointer_id ASC"
+    rows = connection.execute(query, params).fetchall()
+    return [dict(row) for row in rows]
+
+
+def get_pointer(
+    connection: sqlite3.Connection,
+    *,
+    workflow_run_id: str,
+    pointer_key: str,
+) -> dict[str, Any] | None:
+    direct = connection.execute(
+        f"""
+        SELECT {_pointer_columns()}
+        FROM artifact_pointers
+        WHERE workflow_run_id = ? AND pointer_key = ?
+        ORDER BY updated_at DESC, pointer_id ASC
+        LIMIT 1
+        """,
+        (workflow_run_id, pointer_key),
+    ).fetchone()
+    if direct is not None:
+        return dict(direct)
+
+    scope = _workflow_scope(connection, workflow_run_id)
+    if scope is None:
+        return None
+
+    fallback = connection.execute(
+        f"""
+        SELECT {_pointer_columns()}
+        FROM artifact_pointers
+        WHERE tenant_id = ?
+          AND domain_id = ?
+          AND partition_key = ?
+          AND pointer_key = ?
+        ORDER BY updated_at DESC, pointer_id ASC
+        LIMIT 1
+        """,
+        (
+            scope["tenant_id"],
+            scope["domain_id"],
+            scope["partition_key"],
+            pointer_key,
+        ),
+    ).fetchone()
+    if fallback is None:
+        return None
+    return dict(fallback)
+
+
 def list_pointers_for_workflow_run(
     connection: sqlite3.Connection,
     workflow_run_id: str,
 ) -> list[dict[str, Any]]:
+    scope = _workflow_scope(connection, workflow_run_id)
+    if scope is None:
+        return []
+
     rows = connection.execute(
-        """
-        SELECT
-            workflow_run_id,
-            pointer_key,
-            scope_kind,
-            scope_ref,
-            artifact_kind,
-            artifact_version_id,
-            promotion_reason,
-            promoted_by_task_run_id,
-            approved_by_approval_id,
-            generation,
-            updated_at
+        f"""
+        SELECT {_pointer_columns()}
         FROM artifact_pointers
-        WHERE workflow_run_id = ?
-        ORDER BY pointer_key ASC
+        WHERE tenant_id = ?
+          AND domain_id = ?
+          AND partition_key = ?
+        ORDER BY pointer_key ASC, updated_at DESC, pointer_id ASC
         """,
-        (workflow_run_id,),
+        (
+            scope["tenant_id"],
+            scope["domain_id"],
+            scope["partition_key"],
+        ),
     ).fetchall()
     return [dict(row) for row in rows]
 
@@ -112,18 +300,18 @@ def promote_pointer(
     stream_key: str | None = None,
     registry_kind: str | None = None,
 ) -> tuple[dict[str, Any], bool]:
-    existing = get_pointer(
-        connection,
-        workflow_run_id=workflow_run_id,
-        pointer_key=pointer_key,
-    )
+    resolved_pointer_id = str(pointer_id or "").strip()
+    if not resolved_pointer_id:
+        raise ValueError("pointer_id is required for canonical pointer promotion")
+
+    existing = get_pointer_by_id(connection, pointer_id=resolved_pointer_id)
     if existing is None:
         connection.execute(
             """
             INSERT INTO artifact_pointers (
+                pointer_id,
                 workflow_run_id,
                 pointer_key,
-                pointer_id,
                 tenant_id,
                 domain_id,
                 dataset_key,
@@ -144,9 +332,9 @@ def promote_pointer(
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
+                resolved_pointer_id,
                 workflow_run_id,
                 pointer_key,
-                pointer_id,
                 tenant_id,
                 domain_id,
                 dataset_key,
@@ -165,11 +353,7 @@ def promote_pointer(
                 updated_at,
             ),
         )
-        created = get_pointer(
-            connection,
-            workflow_run_id=workflow_run_id,
-            pointer_key=pointer_key,
-        )
+        created = get_pointer_by_id(connection, pointer_id=resolved_pointer_id)
         if created is None:
             raise RuntimeError("pointer not found after insert")
         return created, True
@@ -202,7 +386,8 @@ def promote_pointer(
         """
         UPDATE artifact_pointers
         SET
-            pointer_id = COALESCE(?, pointer_id),
+            workflow_run_id = ?,
+            pointer_key = ?,
             tenant_id = COALESCE(?, tenant_id),
             domain_id = COALESCE(?, domain_id),
             dataset_key = COALESCE(?, dataset_key),
@@ -216,10 +401,11 @@ def promote_pointer(
             approved_by_approval_id = ?,
             generation = generation + 1,
             updated_at = ?
-        WHERE workflow_run_id = ? AND pointer_key = ? AND generation = ?
+        WHERE pointer_id = ? AND generation = ?
         """,
         (
-            pointer_id,
+            workflow_run_id,
+            pointer_key,
             tenant_id,
             domain_id,
             dataset_key,
@@ -232,17 +418,12 @@ def promote_pointer(
             promoted_by_task_run_id,
             approved_by_approval_id,
             updated_at,
-            workflow_run_id,
-            pointer_key,
+            resolved_pointer_id,
             expected_generation,
         ),
     )
 
-    updated = get_pointer(
-        connection,
-        workflow_run_id=workflow_run_id,
-        pointer_key=pointer_key,
-    )
+    updated = get_pointer_by_id(connection, pointer_id=resolved_pointer_id)
     if updated is None:
         raise RuntimeError("pointer not found after update")
     return updated, True

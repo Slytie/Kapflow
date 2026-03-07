@@ -225,14 +225,25 @@ Endpoint:
 - `GET /api/v1/pointers`
 
 Filters:
-- `workflow_run_id`, `scope_kind`, `scope_ref`, `artifact_kind`, `limit`, `offset`
+- canonical-first: `pointer_id`, `dataset_key`, `partition_kind`, `partition_key`, `stream_key`, `registry_kind`
+- compatibility: `workflow_run_id`
+- additional narrowing: `pointer_key`, `scope_kind`, `scope_ref`, `artifact_kind`
+- pagination: `limit`, `offset`
 
 Response:
 - `{"status":"ok","command":"api.pointers.list","pointers":[...],"page":...}`
 
 Pointer row shape:
+- `pointer_id`
 - `workflow_run_id`
 - `pointer_key`
+- `tenant_id`
+- `domain_id`
+- `dataset_key`
+- `partition_kind`
+- `partition_key`
+- `stream_key`
+- `registry_kind`
 - `scope_kind`
 - `scope_ref`
 - `artifact_kind`

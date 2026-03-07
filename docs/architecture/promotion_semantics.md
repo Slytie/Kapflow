@@ -18,9 +18,10 @@ This separation is required for auditability, drift visibility, and replay.
 
 ## 3) Pointer identity, uniqueness, and generation
 
-Promotion targets one canonical pointer stream per workflow-run scope:
-- pointer key identity: `(workflow_run_id, pointer_key)`,
-- pointer definition uniqueness: `(workflow_run_id, scope_kind, scope_ref, artifact_kind)`.
+Promotion targets one canonical pointer stream per canonical address:
+- canonical identity is `pointer_id` (derived from tenant/domain/dataset/partition[/stream]),
+- compatibility keys (`workflow_run_id`, `pointer_key`) are retained for run-centric reads/writes but are not the authoritative identity substrate,
+- one canonical stream is mutable at a time for each `pointer_id`.
 
 Generation semantics:
 - first promotion creates generation `0`,
@@ -69,7 +70,7 @@ Required behavior:
 ## 8) Minimum promotion event payloads
 
 Promotion-related events must carry enough data for reconstruction/audit:
-- pointer ID
+- canonical pointer ID (`PointerId`)
 - dataset key
 - promoted artifact version ID
 - reviewed artifact/base version ID when available

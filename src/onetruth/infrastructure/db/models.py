@@ -276,12 +276,23 @@ class ArtifactPointer(Base):
     __table_args__ = (
         UniqueConstraint(
             "workflow_run_id",
+            "pointer_key",
+            name="uq_artifact_pointers_workflow_pointer",
+        ),
+        UniqueConstraint(
+            "workflow_run_id",
             "scope_kind",
             "scope_ref",
             "artifact_kind",
             name="uq_artifact_pointers_scope",
         ),
         Index("ix_artifact_pointers_pointer_id", "pointer_id", unique=True),
+        Index(
+            "ix_artifact_pointers_workflow_scope",
+            "workflow_run_id",
+            "scope_kind",
+            "scope_ref",
+        ),
         Index(
             "ix_artifact_pointers_canonical_lookup",
             "tenant_id",
@@ -293,13 +304,14 @@ class ArtifactPointer(Base):
         ),
     )
 
+    pointer_id: Mapped[str] = mapped_column(String(512), primary_key=True)
     workflow_run_id: Mapped[str] = mapped_column(
         String(128),
         ForeignKey("workflow_runs.workflow_run_id"),
-        primary_key=True,
+        nullable=False,
+        index=True,
     )
-    pointer_key: Mapped[str] = mapped_column(String(255), primary_key=True)
-    pointer_id: Mapped[Optional[str]] = mapped_column(String(512), nullable=True)
+    pointer_key: Mapped[str] = mapped_column(String(255), nullable=False)
     tenant_id: Mapped[Optional[str]] = mapped_column(String(128), nullable=True)
     domain_id: Mapped[Optional[str]] = mapped_column(String(128), nullable=True)
     dataset_key: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)

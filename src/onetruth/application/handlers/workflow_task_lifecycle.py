@@ -2885,6 +2885,16 @@ def promote_pointer_command(
                     "artifact_version_id": artifact_version_id,
                 },
             )
+        canonical_pointer_id = str(pointer.get("pointer_id") or "").strip()
+        if not canonical_pointer_id:
+            raise CommandError(
+                code="pointer_identity_unresolved",
+                message="canonical pointer identity missing after promotion",
+                details={
+                    "workflow_run_id": workflow_run_id,
+                    "pointer_key": pointer_key,
+                },
+            )
 
         if prior_target_pointer is not None:
             _capture_pointer_input_binding(
@@ -2906,7 +2916,7 @@ def promote_pointer_command(
             )
 
         links = [
-            {"rel": "subject", "type": "pointer", "id": pointer_key},
+            {"rel": "subject", "type": "pointer", "id": canonical_pointer_id},
             {"rel": "subject", "type": "workflow_run", "id": workflow_run_id},
             {"rel": "subject", "type": "artifact_version", "id": artifact_version_id},
         ]
@@ -2929,7 +2939,7 @@ def promote_pointer_command(
                 actor_id=str(payload.get("actor_id", "system:runtime")),
                 links=links,
                 payload={
-                    "pointer_id": pointer_key,
+                    "pointer_id": canonical_pointer_id,
                     "dataset_key": artifact_kind,
                     "promoted_artifact_version_id": artifact_version_id,
                     "reviewed_artifact_version_id": reviewed_artifact_version_id,
@@ -3028,7 +3038,7 @@ def promote_pointer_command(
                     actor_id=str(payload.get("actor_id", "system:runtime")),
                     links=links,
                     payload={
-                        "pointer_id": pointer_key,
+                        "pointer_id": canonical_pointer_id,
                         "dataset_key": artifact_kind,
                         "reviewed_artifact_version_id": str(
                             reviewed_artifact_version_id or reviewed_base_artifact_version_id

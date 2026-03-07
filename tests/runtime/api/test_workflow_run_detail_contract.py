@@ -63,5 +63,6 @@ def test_workflow_run_detail_contract_is_coherent(tmp_path: Path) -> None:
         for row in artifact_versions
     )
     assert len(pointers) == 1
+    assert pointers[0]["pointer_id"]
     assert pointers[0]["pointer_key"] == "official:schedule.published_schedule.workbook"
     assert flags == []

@@ -5,6 +5,8 @@ import sqlite3
 from typing import Any
 from uuid import uuid4
 
+from onetruth.infrastructure.repositories.artifact_pointers import get_pointer
+
 
 class InputBindingConflictError(ValueError):
     def __init__(self, scope_kind: str, scope_ref: str, binding_key: str) -> None:
@@ -188,14 +190,11 @@ def capture_task_pointer_input(
     metadata_json: dict[str, Any] | None = None,
     task_input_binding_id: str | None = None,
 ) -> str:
-    pointer = connection.execute(
-        """
-        SELECT artifact_version_id, generation
-        FROM artifact_pointers
-        WHERE workflow_run_id = ? AND pointer_key = ?
-        """,
-        (workflow_run_id, pointer_key),
-    ).fetchone()
+    pointer = get_pointer(
+        connection,
+        workflow_run_id=workflow_run_id,
+        pointer_key=pointer_key,
+    )
     if pointer is None:
         raise ValueError(
             "pointer not found for binding capture "
@@ -288,14 +287,11 @@ def is_task_input_binding_stale(
         if binding["pointer_key"] is not None
         else str(binding["source_ref"])
     )
-    current = connection.execute(
-        """
-        SELECT generation, artifact_version_id
-        FROM artifact_pointers
-        WHERE workflow_run_id = ? AND pointer_key = ?
-        """,
-        (str(binding["workflow_run_id"]), resolved_pointer_key),
-    ).fetchone()
+    current = get_pointer(
+        connection,
+        workflow_run_id=str(binding["workflow_run_id"]),
+        pointer_key=resolved_pointer_key,
+    )
     if current is None:
         return True
 

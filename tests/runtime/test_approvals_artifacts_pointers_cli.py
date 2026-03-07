@@ -10,6 +10,7 @@ import sys
 from typing import Any
 
 import pytest
+from onetruth.domain.pointer_address import PointerId
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 SRC_ROOT = REPO_ROOT / "src"
@@ -483,7 +484,17 @@ def test_pointer_promotion_happy_path_updates_row_and_emits_event(tmp_path: Path
     events = _events_for_run(db_url, workflow_run["workflow_run_id"])
     promoted_events = [event for event in events if event["event_type"] == "artifact.pointer.promoted"]
     assert len(promoted_events) == 1
-    assert promoted_events[0]["payload"]["pointer_id"] == promote_payload["pointer_key"]
+    canonical_pointer_id = pointer["pointer_id"]
+    assert canonical_pointer_id
+    assert promoted_events[0]["payload"]["pointer_id"] == canonical_pointer_id
+    pointer_links = [
+        link
+        for link in promoted_events[0]["links"]
+        if link["type"] == "pointer" and link["rel"] == "subject"
+    ]
+    assert len(pointer_links) == 1
+    assert pointer_links[0]["id"] == canonical_pointer_id
+    assert str(PointerId.parse(canonical_pointer_id)) == canonical_pointer_id
 
 
 def test_pointer_promotion_allows_same_scope_cross_workflow_artifact_reference(
@@ -544,6 +555,107 @@ def test_pointer_promotion_allows_same_scope_cross_workflow_artifact_reference(
     promoted_events = [event for event in events if event["event_type"] == "artifact.pointer.promoted"]
     assert len(promoted_events) == 1
     assert promoted_events[0]["payload"]["promoted_artifact_version_id"] == source_artifact["artifact_version_id"]
+
+
+def test_pointer_promotion_same_scope_cross_run_repoint_uses_single_canonical_stream(
+    tmp_path: Path,
+) -> None:
+    db_url = f"sqlite:///{tmp_path / 'runtime.db'}"
+    _run_cli("--db-url", db_url, "init-db")
+
+    first_run = _create_workflow_run(db_url, activation_key="run-first-pointer-stream")
+    second_run = _create_workflow_run(db_url, activation_key="run-second-pointer-stream")
+
+    first_artifact = _create_artifact_version(
+        db_url,
+        workflow_run_id=first_run["workflow_run_id"],
+        task_run_id=None,
+        artifact_kind="schedule.published_schedule.workbook",
+        idempotency_key="idem-pointer-stream-av-first",
+    )
+    first_pointer = _stdout_json(
+        _run_cli(
+            "--db-url",
+            db_url,
+            "pointers",
+            "promote",
+            "--json",
+            json.dumps(
+                {
+                    "workflow_run_id": first_run["workflow_run_id"],
+                    "scope_kind": "stage",
+                    "scope_ref": "Stage06",
+                    "pointer_key": "official:schedule.published_schedule.workbook",
+                    "artifact_kind": "schedule.published_schedule.workbook",
+                    "artifact_version_id": first_artifact["artifact_version_id"],
+                    "promotion_reason": "manual_promote",
+                    "idempotency_key": "idem-pointer-stream-promote-first",
+                }
+            ),
+        )
+    )["pointer"]
+
+    second_artifact = _create_artifact_version(
+        db_url,
+        workflow_run_id=second_run["workflow_run_id"],
+        task_run_id=None,
+        artifact_kind="schedule.published_schedule.workbook",
+        idempotency_key="idem-pointer-stream-av-second",
+    )
+    second_pointer = _stdout_json(
+        _run_cli(
+            "--db-url",
+            db_url,
+            "pointers",
+            "promote",
+            "--json",
+            json.dumps(
+                {
+                    "workflow_run_id": second_run["workflow_run_id"],
+                    "scope_kind": "stage",
+                    "scope_ref": "Stage06",
+                    "pointer_key": "official:schedule.published_schedule.workbook",
+                    "artifact_kind": "schedule.published_schedule.workbook",
+                    "artifact_version_id": second_artifact["artifact_version_id"],
+                    "promotion_reason": "manual_promote",
+                    "expected_generation": 0,
+                    "idempotency_key": "idem-pointer-stream-promote-second",
+                }
+            ),
+        )
+    )["pointer"]
+
+    assert second_pointer["pointer_id"] == first_pointer["pointer_id"]
+    assert second_pointer["artifact_version_id"] == second_artifact["artifact_version_id"]
+    assert int(second_pointer["generation"]) == 1
+
+    shown_for_first_run = _stdout_json(
+        _run_cli(
+            "--db-url",
+            db_url,
+            "pointers",
+            "show",
+            "--pointer-key",
+            "official:schedule.published_schedule.workbook",
+            "--workflow-run-id",
+            first_run["workflow_run_id"],
+            "--json",
+        )
+    )["pointer"]
+    assert shown_for_first_run["pointer_id"] == first_pointer["pointer_id"]
+    assert shown_for_first_run["artifact_version_id"] == second_artifact["artifact_version_id"]
+
+    all_rows = _query_rows(
+        db_url,
+        """
+        SELECT pointer_id, COUNT(*) AS row_count
+        FROM artifact_pointers
+        GROUP BY pointer_id
+        """,
+    )
+    matching = [row for row in all_rows if row["pointer_id"] == first_pointer["pointer_id"]]
+    assert len(matching) == 1
+    assert int(matching[0]["row_count"]) == 1
 
 
 def test_pointer_promotion_rejects_out_of_scope_cross_workflow_artifact_reference(
