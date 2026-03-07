@@ -70,6 +70,7 @@ DOMAIN_ID = "domain-x"
 
 PILOT_STAGE06_PUBLISH_READY = "stage06_publish_ready"
 PILOT_STAGE06_NEEDS_INFORMATION = "stage06_needs_information"
+PILOT_STAGE03_06_HUMAN_GATED = "stage03_06_human_gated"
 PILOT_STAGE07_ISSUE_REPLAN = "stage07_issue_replan"
 PILOT_STAGE05_MISSING_WORKBOOK = "stage05_missing_workbook"
 
@@ -136,6 +137,14 @@ PILOT_DEFINITIONS: dict[str, PilotDefinition] = {
         seed_set_id="stage06_needs_information_example_set",
         stage_focus="Stage06",
         description="Stage06 needs-information branch via bounded agent review and spawned information request task.",
+    ),
+    PILOT_STAGE03_06_HUMAN_GATED: PilotDefinition(
+        pilot_id=PILOT_STAGE03_06_HUMAN_GATED,
+        partition_key="SD-2026-03-15",
+        logical_date="2026-03-15",
+        seed_set_id="stage06_review_ready_example_set",
+        stage_focus="Stage06",
+        description="Stage03-Stage06 closure demo with explicit human document input + pending human sign-off gates.",
     ),
     PILOT_STAGE07_ISSUE_REPLAN: PilotDefinition(
         pilot_id=PILOT_STAGE07_ISSUE_REPLAN,
@@ -253,6 +262,15 @@ def run_realistic_schedule_planning_pilot_suite(
                     pilot_key=pilot_key,
                     storage_root=resolved_artifact_root,
                     openai_mode=openai_mode,
+                )
+            elif pilot_id == PILOT_STAGE03_06_HUMAN_GATED:
+                _run_stage03_06_human_gated(
+                    connection,
+                    corpus=corpus,
+                    definition=definition,
+                    workflow_run_id=workflow_run_id,
+                    pilot_key=pilot_key,
+                    storage_root=resolved_artifact_root,
                 )
             elif pilot_id == PILOT_STAGE07_ISSUE_REPLAN:
                 _run_stage07_issue_replan(
@@ -745,6 +763,223 @@ def _run_stage06_needs_information(
         )
 
 
+def _run_stage03_06_human_gated(
+    connection: sqlite3.Connection,
+    *,
+    corpus: ExampleDocumentCorpus,
+    definition: PilotDefinition,
+    workflow_run_id: str,
+    pilot_key: str,
+    storage_root: Path,
+) -> None:
+    _seed_from_set(
+        connection,
+        corpus=corpus,
+        workflow_run_id=workflow_run_id,
+        seed_set_id=definition.seed_set_id,
+        pilot_key=pilot_key,
+        pilot_id=definition.pilot_id,
+        storage_root=storage_root,
+    )
+
+    stage04 = create_task_run_command(
+        connection,
+        {
+            "task_run_id": _deterministic_id("tr", pilot_key, definition.pilot_id, "stage04-capacity-signoff"),
+            "human_task_id": _deterministic_id("ht", pilot_key, definition.pilot_id, "stage04-capacity-signoff"),
+            "workflow_run_id": workflow_run_id,
+            "stage_id": "Stage04",
+            "task_kind": "capacity_signoff",
+            "activation_key": f"pilot:{pilot_key}:{definition.pilot_id}:stage04:capacity_signoff",
+            "candidate_roles": ["operations_manager"],
+            "owner_role": "operations_manager",
+            "create_human_task": True,
+            "idempotency_key": f"pilot:{pilot_key}:{definition.pilot_id}:tasks.create:stage04-capacity-signoff",
+            "actor_id": "system:pilot-runner",
+            "actor_type": "system",
+        },
+    )
+    stage04_human_task_id = str(stage04["human_task"]["human_task_id"])
+    stage04_task_run_id = str(stage04["task_run"]["task_run_id"])
+    _claim_if_open(
+        connection,
+        human_task_id=stage04_human_task_id,
+        actor_id="human:ops-manager-pilot",
+        actor_type="human",
+        idempotency_key=f"pilot:{pilot_key}:{definition.pilot_id}:tasks.claim:stage04-capacity-signoff",
+    )
+    complete_human_task_command(
+        connection,
+        {
+            "human_task_id": stage04_human_task_id,
+            "actor_id": "human:ops-manager-pilot",
+            "actor_type": "human",
+            "outcome": "capacity_ready",
+            "idempotency_key": f"pilot:{pilot_key}:{definition.pilot_id}:tasks.complete:stage04-capacity-signoff",
+        },
+    )
+
+    stage04_approval = request_approval_command(
+        connection,
+        {
+            "approval_id": _deterministic_id("ap", pilot_key, definition.pilot_id, "stage04-capacity-approval"),
+            "workflow_run_id": workflow_run_id,
+            "task_run_id": stage04_task_run_id,
+            "approval_kind": "business_decision",
+            "scope_kind": "stage",
+            "scope_ref": "Stage04",
+            "action": "approve_capacity_plan",
+            "candidate_roles": ["operations_manager"],
+            "required_role": "operations_manager",
+            "idempotency_key": f"pilot:{pilot_key}:{definition.pilot_id}:approvals.request:stage04-capacity-signoff",
+            "actor_id": "human:ops-manager-pilot",
+            "actor_type": "human",
+        },
+    )
+    respond_approval_command(
+        connection,
+        {
+            "approval_id": str(stage04_approval["approval_id"]),
+            "actor_id": "human:ops-manager-pilot",
+            "actor_type": "human",
+            "response_kind": "approve",
+            "response_reason": "Stage04 capacity plan is signed off.",
+            "idempotency_key": f"pilot:{pilot_key}:{definition.pilot_id}:approvals.respond:stage04-capacity-signoff",
+        },
+    )
+
+    stage05 = create_task_run_command(
+        connection,
+        {
+            "task_run_id": _deterministic_id("tr", pilot_key, definition.pilot_id, "stage05-information-request"),
+            "human_task_id": _deterministic_id("ht", pilot_key, definition.pilot_id, "stage05-information-request"),
+            "workflow_run_id": workflow_run_id,
+            "stage_id": "Stage05",
+            "task_kind": "information_request",
+            "activation_key": f"pilot:{pilot_key}:{definition.pilot_id}:stage05:information_request",
+            "candidate_roles": ["schedule_planner"],
+            "owner_role": "schedule_planner",
+            "create_human_task": True,
+            "idempotency_key": f"pilot:{pilot_key}:{definition.pilot_id}:tasks.create:stage05-information-request",
+            "actor_id": "system:pilot-runner",
+            "actor_type": "system",
+        },
+    )
+    _claim_if_open(
+        connection,
+        human_task_id=str(stage05["human_task"]["human_task_id"]),
+        actor_id="human:schedule-planner-pilot",
+        actor_type="human",
+        idempotency_key=f"pilot:{pilot_key}:{definition.pilot_id}:tasks.claim:stage05-information-request",
+    )
+
+    stage06 = create_task_run_command(
+        connection,
+        {
+            "task_run_id": _deterministic_id("tr", pilot_key, definition.pilot_id, "stage06-review"),
+            "human_task_id": _deterministic_id("ht", pilot_key, definition.pilot_id, "stage06-review"),
+            "workflow_run_id": workflow_run_id,
+            "stage_id": "Stage06",
+            "task_kind": "review_packet",
+            "activation_key": f"pilot:{pilot_key}:{definition.pilot_id}:stage06:review_packet",
+            "candidate_roles": ["dispatch_supervisor"],
+            "owner_role": "dispatch_supervisor",
+            "create_human_task": True,
+            "idempotency_key": f"pilot:{pilot_key}:{definition.pilot_id}:tasks.create:stage06-review",
+            "actor_id": "system:pilot-runner",
+            "actor_type": "system",
+        },
+    )
+    stage06_human_task_id = str(stage06["human_task"]["human_task_id"])
+    _claim_if_open(
+        connection,
+        human_task_id=stage06_human_task_id,
+        actor_id="human:dispatch-supervisor-pilot",
+        actor_type="human",
+        idempotency_key=f"pilot:{pilot_key}:{definition.pilot_id}:tasks.claim:stage06-review",
+    )
+    stage06_result = complete_human_task_command(
+        connection,
+        {
+            "human_task_id": stage06_human_task_id,
+            "actor_id": "human:dispatch-supervisor-pilot",
+            "actor_type": "human",
+            "outcome": "draft_is_publish_ready",
+            "idempotency_key": f"pilot:{pilot_key}:{definition.pilot_id}:tasks.complete:stage06-review",
+        },
+    )
+
+    spawned = stage06_result["spawned_children"]
+    if not spawned:
+        raise CommandError(
+            code="pilot_stage06_missing_spawned_child",
+            message="stage03_06_human_gated pilot expected a spawned final_review child task",
+            details={"workflow_run_id": workflow_run_id},
+        )
+
+    final_review_human_task_id = str(spawned[0]["human_task_id"])
+    final_review_task_run_id = str(spawned[0]["task_run_id"])
+    _create_json_draft_artifact(
+        connection,
+        workflow_run_id=workflow_run_id,
+        task_run_id=final_review_task_run_id,
+        artifact_kind="schedule.stage06.publish_packet",
+        artifact_suffix="stage06-publish-packet-human-gated",
+        pilot_key=pilot_key,
+        pilot_id=definition.pilot_id,
+        storage_root=storage_root,
+        payload={
+            "pilot_scenario": definition.pilot_id,
+            "kind": "stage06_publish_packet",
+            "lifecycle": "draft",
+            "is_draft": True,
+        },
+    )
+    _ingest_fixture(
+        connection,
+        corpus=corpus,
+        workflow_run_id=workflow_run_id,
+        fixture_id="schedule.stage06.published_schedule_workbook.completed",
+        pilot_key=pilot_key,
+        pilot_id=definition.pilot_id,
+        artifact_suffix="stage06-published-draft-human-gated",
+        storage_root=storage_root,
+        task_run_id=final_review_task_run_id,
+        artifact_role="draft_output",
+        metadata_json={
+            "pilot_scenario": definition.pilot_id,
+            "pilot_branch": "human_gated",
+            "lifecycle": "draft",
+            "is_draft": True,
+        },
+    )
+    _claim_if_open(
+        connection,
+        human_task_id=final_review_human_task_id,
+        actor_id="human:dispatch-supervisor-pilot",
+        actor_type="human",
+        idempotency_key=f"pilot:{pilot_key}:{definition.pilot_id}:tasks.claim:stage06-final-review",
+    )
+
+    request_approval_command(
+        connection,
+        {
+            "approval_id": _deterministic_id("ap", pilot_key, definition.pilot_id, "stage06-publish-signoff"),
+            "workflow_run_id": workflow_run_id,
+            "task_run_id": final_review_task_run_id,
+            "approval_kind": "business_decision",
+            "scope_kind": "stage",
+            "scope_ref": "Stage06",
+            "action": "publish_schedule",
+            "candidate_roles": ["dispatch_supervisor"],
+            "required_role": "dispatch_supervisor",
+            "idempotency_key": f"pilot:{pilot_key}:{definition.pilot_id}:approvals.request:stage06-publish-signoff",
+            "actor_id": "human:dispatch-supervisor-pilot",
+            "actor_type": "human",
+        },
+    )
+
+
 def _run_stage07_issue_replan(
     connection: sqlite3.Connection,
     *,
@@ -1228,6 +1463,19 @@ def _quality_signals(
             for item in _artifacts_from_timeline(timeline_of_interest)
         )
     if pilot_id == PILOT_STAGE06_PUBLISH_READY:
+        signals["stage06_publish_pointer_present"] = any(
+            str(item.get("pointer_key")) == "official:schedule.published_schedule.workbook"
+            for item in pointers
+        )
+    if pilot_id == PILOT_STAGE03_06_HUMAN_GATED:
+        signals["stage06_pending_signoff_present"] = any(
+            str(item.get("scope_ref")) == "Stage06" and str(item.get("state")) == "PENDING"
+            for item in approvals
+        )
+        signals["stage04_signoff_recorded"] = any(
+            str(item.get("scope_ref")) == "Stage04" and str(item.get("state")) == "RESPONDED"
+            for item in approvals
+        )
         signals["stage06_publish_pointer_present"] = any(
             str(item.get("pointer_key")) == "official:schedule.published_schedule.workbook"
             for item in pointers

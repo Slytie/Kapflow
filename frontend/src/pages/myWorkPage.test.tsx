@@ -1,4 +1,4 @@
-import { screen, within } from "@testing-library/react";
+import { screen } from "@testing-library/react";
 import { http, HttpResponse } from "msw";
 
 import { MyWorkPage } from "@/pages/MyWorkPage";
@@ -16,7 +16,7 @@ describe("MyWorkPage", () => {
     expect(screen.queryByText(/exception_triage/i)).not.toBeInTheDocument();
   });
 
-  it("shows why task actions are unavailable", async () => {
+  it("hides tasks that the current actor cannot claim or complete", async () => {
     server.use(
       http.get("*/api/v1/human-tasks", () =>
         HttpResponse.json({
@@ -63,9 +63,9 @@ describe("MyWorkPage", () => {
       path: "/my-work"
     });
 
-    const row = await screen.findByTestId("queue-row");
-    expect(within(row).getByRole("button", { name: "Claim" })).toBeDisabled();
-    expect(within(row).getByRole("button", { name: "Complete" })).toBeDisabled();
-    expect(within(row).getByText(/Cannot complete: claimed by human:someone-else/i)).toBeInTheDocument();
+    expect(
+      await screen.findByText(/No actionable tasks for current user/i)
+    ).toBeInTheDocument();
+    expect(screen.queryByTestId("queue-row")).not.toBeInTheDocument();
   });
 });

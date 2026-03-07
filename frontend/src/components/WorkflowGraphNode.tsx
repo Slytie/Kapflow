@@ -100,6 +100,16 @@ export function WorkflowGraphNode({
       <text x={46} y={43} className="workflow-graph-pill__stage">
         {node.stage_id}
       </text>
+      {node.responsibility_summary ? (
+        <text x={46} y={58} className="workflow-graph-pill__responsibility">
+          {node.responsibility_summary}
+        </text>
+      ) : null}
+      {node.responsibility_detail ? (
+        <text x={46} y={70} className="workflow-graph-pill__task-detail">
+          {node.responsibility_detail}
+        </text>
+      ) : null}
     </g>
   );
 }

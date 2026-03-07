@@ -22,10 +22,10 @@ interface PositionedNode {
   y: number;
 }
 
-const NODE_WIDTH = 188;
-const NODE_HEIGHT = 56;
-const HORIZONTAL_SPACING = 230;
-const VERTICAL_SPACING = 100;
+const NODE_WIDTH = 244;
+const NODE_HEIGHT = 82;
+const HORIZONTAL_SPACING = 292;
+const VERTICAL_SPACING = 116;
 const PADDING_X = 34;
 const PADDING_Y = 12;
 const WORKFLOW_TABS = [

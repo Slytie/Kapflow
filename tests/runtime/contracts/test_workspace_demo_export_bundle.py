@@ -5,11 +5,12 @@ import os
 from pathlib import Path
 import subprocess
 import sys
+import tempfile
 import zipfile
 
 from onetruth.application.handlers.workflow_task_lifecycle import show_workflow_run_command
 from onetruth.infrastructure.db.session import open_sqlite_connection
-from tests.runtime.helpers.runtime_cli import REPO_ROOT, SRC_ROOT
+from tests.runtime.helpers.runtime_cli import REPO_ROOT, SRC_ROOT, run_cli, stdout_json
 
 REQUIRED_BUNDLE_FILES = {
     "README.md",
@@ -151,3 +152,108 @@ def test_export_bundle_readme_references_workflow_run_id(tmp_path: Path) -> None
     with zipfile.ZipFile(bundle_path, "r") as archive:
         readme = archive.read("README.md").decode("utf-8")
     assert workflow_run_id in readme
+
+
+def test_export_bundle_resolves_official_outputs_for_same_scope_cross_run_pointer_target(
+    tmp_path: Path,
+) -> None:
+    db_url, demo_payload = _run_demo(tmp_path, scenario="stage06_publish_ready")
+    workflow_run_id = str(demo_payload["workflow_run_id"])
+    primary_run = stdout_json(
+        run_cli(
+            "--db-url",
+            db_url,
+            "runs",
+            "show",
+            "--workflow-run-id",
+            workflow_run_id,
+            "--json",
+        )
+    )["workflow_run"]
+    sibling_run = stdout_json(
+        run_cli(
+            "--db-url",
+            db_url,
+            "runs",
+            "create",
+            "--json",
+            json.dumps(
+                {
+                    "workflow_id": "schedule_planning.v1",
+                    "workflow_version": "v1",
+                    "tenant_id": primary_run["tenant_id"],
+                    "domain_id": primary_run["domain_id"],
+                    "partition_key": primary_run["partition_key"],
+                    "logical_date": primary_run.get("logical_date"),
+                    "activation_key": "bundle-cross-run-sibling",
+                    "idempotency_key": "bundle-cross-run-sibling-run",
+                }
+            ),
+        )
+    )["workflow_run"]
+    sibling_artifact = stdout_json(
+        run_cli(
+            "--db-url",
+            db_url,
+            "artifacts",
+            "create-version",
+            "--json",
+            json.dumps(
+                {
+                    "workflow_run_id": sibling_run["workflow_run_id"],
+                    "artifact_kind": "schedule.published_schedule.workbook",
+                    "artifact_role": "official_output",
+                    "media_type": "application/json",
+                    "storage_uri": "s3://runtime/bundle-cross-run-sibling.json",
+                    "content_digest": "sha256:bundle-cross-run-sibling",
+                    "byte_size": 256,
+                    "metadata_json": {"source": "bundle-contract-test"},
+                    "idempotency_key": "bundle-cross-run-sibling-artifact",
+                }
+            ),
+        )
+    )["artifact_version"]
+    run_cli(
+        "--db-url",
+        db_url,
+        "pointers",
+        "promote",
+        "--json",
+        json.dumps(
+            {
+                "workflow_run_id": workflow_run_id,
+                "scope_kind": "stage",
+                "scope_ref": "Stage06",
+                "pointer_key": "official:schedule.published_schedule.workbook",
+                "artifact_kind": "schedule.published_schedule.workbook",
+                "artifact_version_id": sibling_artifact["artifact_version_id"],
+                "promotion_reason": "manual_promote",
+                "expected_generation": 0,
+                "idempotency_key": "bundle-cross-run-promote",
+            }
+        ),
+    )
+    bundle_path, _ = _run_export(
+        tmp_path,
+        db_url=db_url,
+        workflow_run_id=workflow_run_id,
+    )
+
+    with tempfile.TemporaryDirectory() as extract_root:
+        with zipfile.ZipFile(bundle_path, "r") as archive:
+            archive.extract("official_outputs.json", path=extract_root)
+        official_outputs = json.loads(
+            Path(extract_root, "official_outputs.json").read_text(encoding="utf-8")
+        )
+
+    output_rows = official_outputs["outputs"]
+    matching = [
+        row
+        for row in output_rows
+        if row["pointer"]["pointer_key"] == "official:schedule.published_schedule.workbook"
+    ]
+    assert len(matching) == 1
+    linked = matching[0]["artifact_version"]
+    assert linked is not None
+    assert linked["artifact_version_id"] == sibling_artifact["artifact_version_id"]
+    assert linked["workflow_run_id"] == sibling_run["workflow_run_id"]

@@ -47,6 +47,19 @@ describe("RunWorkspacePage", () => {
     expect(blockingNode).toHaveClass("is-blocking");
   });
 
+  it("shows who claimed or can claim the latest task on graph nodes", async () => {
+    renderRoute(<RunWorkspacePage />, {
+      route: "/runs/wr-test-001/workspace",
+      path: "/runs/:workflowRunId/workspace"
+    });
+
+    const claimedNode = await screen.findByTestId("workflow-graph-node-stage06");
+    const claimableNode = await screen.findByTestId("workflow-graph-node-stage06_info_loop");
+
+    expect(within(claimedNode).getByText(/Claimed by Frontend Operator/i)).toBeInTheDocument();
+    expect(within(claimableNode).getByText(/Can claim: Dispatch Supervisor/i)).toBeInTheDocument();
+  });
+
   it("opens the information sidebar when a workflow graph task is clicked", async () => {
     const user = userEvent.setup();
     window.history.pushState({}, "", "/runs/wr-test-001/workspace");
@@ -84,7 +97,7 @@ describe("RunWorkspacePage", () => {
 
     const drawer = await screen.findByLabelText("Details drawer");
     expect(within(drawer).getByText(/Task Artifacts/i)).toBeInTheDocument();
-    expect(within(drawer).getByText("Stage official output")).toBeInTheDocument();
+    expect(within(drawer).getByText(/Stage official output/i)).toBeInTheDocument();
   });
 
   it("renders swimlane headers and expected counts", async () => {
@@ -114,7 +127,11 @@ describe("RunWorkspacePage", () => {
     const taskCard = taskHeading.closest("article");
     expect(taskCard).not.toBeNull();
 
-    expect(within(taskCard as HTMLElement).getByRole("button", { name: "Complete" })).toBeDisabled();
+    expect(
+      within(taskCard as HTMLElement)
+        .getAllByRole("button", { name: "Complete" })
+        .every((button) => (button as HTMLButtonElement).disabled)
+    ).toBe(true);
     expect(within(taskCard as HTMLElement).getByText(/Missing required inputs/i)).toBeInTheDocument();
   });
 
@@ -174,7 +191,11 @@ describe("RunWorkspacePage", () => {
       expect(
         within(card as HTMLElement).getByText(/schedule\.supervisor_review\.doc \(satisfied\)/i)
       ).toBeInTheDocument();
-      expect(within(card as HTMLElement).getByRole("button", { name: "Complete" })).toBeDisabled();
+      expect(
+        within(card as HTMLElement)
+          .getAllByRole("button", { name: "Complete" })
+          .every((button) => (button as HTMLButtonElement).disabled)
+      ).toBe(true);
     }, { timeout: 2500 });
   });
 
@@ -232,7 +253,11 @@ describe("RunWorkspacePage", () => {
     await waitFor(() => {
       const card = screen.getByRole("heading", { name: "Review Packet" }).closest("article");
       expect(card).not.toBeNull();
-      expect(within(card as HTMLElement).getByRole("button", { name: "Complete" })).toBeEnabled();
+      expect(
+        within(card as HTMLElement)
+          .getAllByRole("button", { name: "Complete" })
+          .some((button) => !(button as HTMLButtonElement).disabled)
+      ).toBe(true);
     });
   });
 

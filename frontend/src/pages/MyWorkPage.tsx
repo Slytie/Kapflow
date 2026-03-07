@@ -50,6 +50,20 @@ function canCompleteTask(task: HumanTaskRow): boolean {
   );
 }
 
+function isAssignedToCurrentActor(task: HumanTaskRow): boolean {
+  return (
+    task.assignee_actor_id === apiConfig.actorId &&
+    task.assignee_actor_type === apiConfig.actorType
+  );
+}
+
+function isTaskActionableForCurrentActor(task: HumanTaskRow): boolean {
+  if (canClaimTask(task) || canCompleteTask(task)) {
+    return true;
+  }
+  return task.state === "CLAIMED" && isAssignedToCurrentActor(task);
+}
+
 function taskActionHint(task: HumanTaskRow, canClaim: boolean, canComplete: boolean): string | undefined {
   const hints: string[] = [];
   const blockingCodes = task.blocking_reason_codes ?? [];
@@ -161,9 +175,15 @@ export function MyWorkPage(): JSX.Element {
     );
   }
 
-  const data = query.data ?? [];
+  const data = (query.data ?? []).filter((task) => isTaskActionableForCurrentActor(task));
   if (data.length === 0) {
-    return <StatePanel kind="empty" title="No tasks match current filters" detail="Try state or assignee changes." />;
+    return (
+      <StatePanel
+        kind="empty"
+        title="No actionable tasks for current user"
+        detail="Switch active user or adjust filters to view claimable/owned work."
+      />
+    );
   }
 
   return (

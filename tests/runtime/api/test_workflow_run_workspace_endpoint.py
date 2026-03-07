@@ -1,9 +1,10 @@
 from __future__ import annotations
 
 from pathlib import Path
+import json
 
 from tests.runtime.helpers.runtime_api import RuntimeApiClient
-from tests.runtime.helpers.runtime_cli import REPO_ROOT
+from tests.runtime.helpers.runtime_cli import REPO_ROOT, run_cli, stdout_json
 from tests.runtime.helpers.scenario_harness import RuntimeScenarioHarness
 
 SCENARIO_STAGE06_PUBLISH = (
@@ -134,3 +135,105 @@ def test_workspace_endpoint_exposes_latest_event_sequence_and_freshness(tmp_path
     assert freshness["latest_event_recorded_at"]
     assert freshness["generated_at"]
     assert response.payload["timeline_excerpt"]["events"]
+
+
+def test_workspace_endpoint_resolves_official_output_artifact_from_same_scope_other_run(
+    tmp_path: Path,
+) -> None:
+    harness = RuntimeScenarioHarness.from_yaml(SCENARIO_STAGE06_PUBLISH, tmp_path).prepare()
+    primary_run = stdout_json(
+        run_cli(
+            "--db-url",
+            harness.db_url,
+            "runs",
+            "show",
+            "--workflow-run-id",
+            harness.workflow_run_id,
+            "--json",
+        )
+    )["workflow_run"]
+
+    sibling_run = stdout_json(
+        run_cli(
+            "--db-url",
+            harness.db_url,
+            "runs",
+            "create",
+            "--json",
+            json.dumps(
+                {
+                    "workflow_id": "schedule_planning.v1",
+                    "workflow_version": "v1",
+                    "tenant_id": "tenant-a",
+                    "domain_id": "domain-x",
+                    "partition_key": primary_run["partition_key"],
+                    "logical_date": primary_run.get("logical_date"),
+                    "activation_key": "workspace-cross-run-sibling",
+                    "idempotency_key": "workspace-cross-run-sibling-run",
+                }
+            ),
+        )
+    )["workflow_run"]
+    sibling_artifact = stdout_json(
+        run_cli(
+            "--db-url",
+            harness.db_url,
+            "artifacts",
+            "create-version",
+            "--json",
+            json.dumps(
+                {
+                    "workflow_run_id": sibling_run["workflow_run_id"],
+                    "artifact_kind": "schedule.published_schedule.workbook",
+                    "artifact_role": "official_output",
+                    "media_type": "application/json",
+                    "storage_uri": "s3://runtime/workspace-cross-run-sibling.json",
+                    "content_digest": "sha256:workspace-cross-run-sibling",
+                    "byte_size": 256,
+                    "metadata_json": {"source": "workspace-api-test"},
+                    "idempotency_key": "workspace-cross-run-sibling-artifact",
+                }
+            ),
+        )
+    )["artifact_version"]
+    run_cli(
+        "--db-url",
+        harness.db_url,
+        "pointers",
+        "promote",
+        "--json",
+        json.dumps(
+            {
+                "workflow_run_id": harness.workflow_run_id,
+                "scope_kind": "stage",
+                "scope_ref": "Stage06",
+                "pointer_key": "official:schedule.published_schedule.workbook",
+                "artifact_kind": "schedule.published_schedule.workbook",
+                "artifact_version_id": sibling_artifact["artifact_version_id"],
+                "promotion_reason": "manual_promote",
+                "idempotency_key": "workspace-cross-run-promote",
+            }
+        ),
+    )
+
+    client = _client(
+        harness,
+        tenant_id="tenant-a",
+        domain_id="domain-x",
+        actor_id="human:dispatch-supervisor-1",
+        actor_roles=["dispatch_supervisor"],
+    )
+    response = client.get(f"/api/v1/workflow-runs/{harness.workflow_run_id}/workspace")
+    assert response.status_code == 200
+
+    output_rows = response.payload["official_outputs"]["outputs"]
+    matching = [
+        row
+        for row in output_rows
+        if row["pointer"]["pointer_key"] == "official:schedule.published_schedule.workbook"
+    ]
+    assert len(matching) == 1
+    linked = matching[0]["artifact_version"]
+    assert linked is not None
+    assert linked["artifact_version_id"] == sibling_artifact["artifact_version_id"]
+    assert linked["workflow_run_id"] == sibling_run["workflow_run_id"]

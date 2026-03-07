@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useParams } from "react-router-dom";
 
@@ -6,16 +7,115 @@ import { WorkspaceTaskBoard } from "@/components/WorkspaceTaskBoard";
 import { StatePanel } from "@/components/StatePanel";
 import { apiConfig } from "@/lib/api/config";
 import { errorText } from "@/lib/api/errorText";
+import { actorLabelForActorId, candidateActorLabelsForRoles } from "@/lib/actors";
 import { workflowRunsRepository } from "@/lib/repositories";
 import { useDrawer } from "@/lib/state/drawerContext";
 import type { DrawerArtifact, DrawerArtifactSource } from "@/lib/types/ui";
-import type { WorkflowRunDetailContract, WorkflowWorkspaceGraphNode } from "@/lib/types/contracts";
+import type {
+  HumanTaskRow,
+  WorkflowRunDetailContract,
+  WorkflowWorkspaceGraphNode
+} from "@/lib/types/contracts";
 
 function workflowTab(workflowId: string): string {
   if (workflowId === "schedule_planning.v1") {
     return "Scheduling Coordination";
   }
   return "Scheduling Coordination";
+}
+
+function titleCaseWords(value: string): string {
+  return value
+    .replace(/[_-]+/g, " ")
+    .trim()
+    .replace(/\s+/g, " ")
+    .replace(/\b\w/g, (char) => char.toUpperCase());
+}
+
+function compactLabels(labels: string[], maxItems = 2): string {
+  if (labels.length <= maxItems) {
+    return labels.join(", ");
+  }
+  const shown = labels.slice(0, maxItems).join(", ");
+  return `${shown} +${labels.length - maxItems}`;
+}
+
+function chooseLatestStageTask(tasks: HumanTaskRow[]): HumanTaskRow | null {
+  if (tasks.length === 0) {
+    return null;
+  }
+  const active = tasks.filter((task) => task.state === "OPEN" || task.state === "CLAIMED");
+  const pool = active.length > 0 ? active : tasks;
+  return [...pool].sort((left, right) => {
+    const leftTime = Date.parse(left.updated_at);
+    const rightTime = Date.parse(right.updated_at);
+    if (Number.isFinite(leftTime) && Number.isFinite(rightTime) && leftTime !== rightTime) {
+      return rightTime - leftTime;
+    }
+    return right.human_task_id.localeCompare(left.human_task_id);
+  })[0];
+}
+
+function preferredTaskKindForNode(node: WorkflowWorkspaceGraphNode): string | null {
+  const label = node.label.toLowerCase();
+  if (label.includes("information")) {
+    return "information_request";
+  }
+  if (label.includes("approval")) {
+    return "final_review";
+  }
+  return null;
+}
+
+function graphNodesWithResponsibility(
+  nodes: WorkflowWorkspaceGraphNode[],
+  tasks: HumanTaskRow[]
+): WorkflowWorkspaceGraphNode[] {
+  return nodes.map((node) => {
+    const stageTasks = tasks.filter((task) => task.stage_id === node.stage_id);
+    const preferredTaskKind = preferredTaskKindForNode(node);
+    const preferredStageTasks =
+      preferredTaskKind === null
+        ? stageTasks
+        : stageTasks.filter((task) => task.task_kind === preferredTaskKind);
+    const latestTask =
+      chooseLatestStageTask(preferredStageTasks) ?? chooseLatestStageTask(stageTasks);
+    if (!latestTask) {
+      return {
+        ...node,
+        responsibility_summary: null,
+        responsibility_detail: null
+      };
+    }
+
+    const detail = `Latest task: ${titleCaseWords(latestTask.task_kind)}`;
+    if (latestTask.assignee_actor_id) {
+      return {
+        ...node,
+        responsibility_summary: `Claimed by ${actorLabelForActorId(latestTask.assignee_actor_id)}`,
+        responsibility_detail: detail
+      };
+    }
+
+    if (latestTask.state === "OPEN") {
+      const candidates = candidateActorLabelsForRoles(latestTask.candidate_roles ?? []);
+      const summary =
+        candidates.length > 0
+          ? `Can claim: ${compactLabels(candidates)}`
+          : `Can claim: ${compactLabels((latestTask.candidate_roles ?? []).map(titleCaseWords))}`;
+      return {
+        ...node,
+        responsibility_summary: summary,
+        responsibility_detail: detail
+      };
+    }
+
+    return {
+      ...node,
+      responsibility_summary: "No active claimant",
+      responsibility_detail: detail
+    };
+  });
 }
 
 function stageArtifactSources(
@@ -223,6 +323,15 @@ export function RunWorkspacePage(): JSX.Element {
     refetchInterval: apiConfig.pollIntervalMs
   });
 
+  const workspace = workspaceQuery.data;
+  const runDetail = runDetailQuery.data;
+  const graphNodes = useMemo(() => {
+    if (!workspace || !runDetail) {
+      return [];
+    }
+    return graphNodesWithResponsibility(workspace.graph.nodes, runDetail.human_tasks);
+  }, [workspace, runDetail]);
+
   if (!workflowRunId) {
     return (
       <StatePanel kind="empty" title="No workflow run id" detail="Open a run first to load workspace." />
@@ -254,8 +363,6 @@ export function RunWorkspacePage(): JSX.Element {
     );
   }
 
-  const workspace = workspaceQuery.data;
-  const runDetail = runDetailQuery.data;
   if (!workspace || !runDetail) {
     return <StatePanel kind="empty" title="No workspace projection available" />;
   }
@@ -278,7 +385,7 @@ export function RunWorkspacePage(): JSX.Element {
   return (
     <section className="workspace-page" data-testid="run-workspace-page">
       <WorkflowGraph
-        nodes={workspace.graph.nodes}
+        nodes={graphNodes}
         edges={workspace.graph.edges}
         freshness={workspace.freshness}
         latestEventSequence={workspace.latest_event_sequence}

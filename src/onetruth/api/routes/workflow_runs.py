@@ -26,6 +26,9 @@ from onetruth.application.services.task_requirements import (
     build_human_task_requirement_index,
 )
 from onetruth.infrastructure.events.event_store import utc_now_iso
+from onetruth.infrastructure.repositories.artifact_links import (
+    list_artifact_links_for_artifact,
+)
 
 from onetruth.api.dependencies import (
     Page,
@@ -217,6 +220,8 @@ def get_workflow_run_workspace_endpoint(
             blocking_work.append(item)
 
     official_outputs = _build_official_outputs(
+        connection=connection,
+        context=context,
         pointers=pointers,
         artifact_versions=artifact_versions,
     )
@@ -516,12 +521,30 @@ def _linked_count(
 
 def _build_official_outputs(
     *,
+    connection: sqlite3.Connection,
+    context: RequestContext,
     pointers: list[dict[str, Any]],
     artifact_versions: list[dict[str, Any]],
 ) -> dict[str, Any]:
-    artifacts_by_id = {
+    artifacts_by_id: dict[str, dict[str, Any]] = {
         str(item.get("artifact_version_id")): item for item in artifact_versions
     }
+    missing_ids = sorted(
+        {
+            str(pointer.get("artifact_version_id"))
+            for pointer in pointers
+            if str(pointer.get("artifact_version_id")) not in artifacts_by_id
+        }
+    )
+    if missing_ids:
+        artifacts_by_id.update(
+            _load_scoped_artifact_versions_by_id(
+                connection,
+                tenant_id=context.tenant_id,
+                domain_id=context.domain_id,
+                artifact_version_ids=missing_ids,
+            )
+        )
     outputs: list[dict[str, Any]] = []
     for pointer in pointers:
         artifact_version_id = str(pointer.get("artifact_version_id"))
@@ -536,3 +559,50 @@ def _build_official_outputs(
         "pointers": pointers,
         "outputs": outputs,
     }
+
+
+def _load_scoped_artifact_versions_by_id(
+    connection: sqlite3.Connection,
+    *,
+    tenant_id: str,
+    domain_id: str,
+    artifact_version_ids: list[str],
+) -> dict[str, dict[str, Any]]:
+    if not artifact_version_ids:
+        return {}
+    placeholders = ",".join("?" for _ in artifact_version_ids)
+    rows = connection.execute(
+        f"""
+        SELECT
+            artifact_version_id,
+            workflow_run_id,
+            task_run_id,
+            artifact_kind,
+            artifact_role,
+            media_type,
+            storage_uri,
+            content_digest,
+            byte_size,
+            metadata_json,
+            parent_artifact_version_id,
+            supersedes_artifact_version_id,
+            lineage_note,
+            created_at
+        FROM artifact_versions
+        WHERE artifact_version_id IN ({placeholders})
+          AND tenant_id = ?
+          AND domain_id = ?
+        """,
+        (*artifact_version_ids, tenant_id, domain_id),
+    ).fetchall()
+
+    loaded: dict[str, dict[str, Any]] = {}
+    for row in rows:
+        item = dict(row)
+        item["metadata_json"] = json.loads(item["metadata_json"])
+        item["links"] = list_artifact_links_for_artifact(
+            connection,
+            artifact_version_id=str(item["artifact_version_id"]),
+        )
+        loaded[str(item["artifact_version_id"])] = item
+    return loaded

@@ -2724,16 +2724,22 @@ def promote_pointer_command(
                 message="artifact version not found for pointer promotion",
                 details={"artifact_version_id": artifact_version_id},
             )
-        if str(artifact_version["workflow_run_id"]) != workflow_run_id:
-            raise CommandError(
-                code="cross_workflow_artifact_reference",
-                message="artifact version belongs to a different workflow_run",
-                details={
-                    "artifact_version_id": artifact_version_id,
-                    "artifact_workflow_run_id": str(artifact_version["workflow_run_id"]),
-                    "workflow_run_id": workflow_run_id,
-                },
-            )
+        expected_artifact_scope = _canonical_artifact_scope_fields(
+            tenant_id=workflow_scope["tenant_id"],
+            domain_id=workflow_scope["domain_id"],
+            workflow_partition_key=workflow_scope["partition_key"],
+            artifact_kind=artifact_kind,
+        )
+        artifact_scope = _load_artifact_canonical_scope(
+            connection,
+            artifact_version_id=artifact_version_id,
+        )
+        _assert_artifact_matches_expected_scope(
+            artifact_version_id=artifact_version_id,
+            expected_scope=expected_artifact_scope,
+            artifact_scope=artifact_scope,
+            context="promotion_target",
+        )
 
         promotion_reason = (
             str(payload["promotion_reason"])
@@ -2827,6 +2833,16 @@ def promote_pointer_command(
             ),
             registry_kind=payload.get("registry_kind"),
         )
+        if canonical_pointer_identity["pointer_id"] is None:
+            raise CommandError(
+                code="pointer_identity_unresolved",
+                message="canonical pointer identity could not be resolved safely",
+                details={
+                    "workflow_run_id": workflow_run_id,
+                    "pointer_key": pointer_key,
+                    "artifact_kind": artifact_kind,
+                },
+            )
         prior_target_pointer = get_pointer(
             connection,
             workflow_run_id=workflow_run_id,
@@ -4575,6 +4591,101 @@ def _canonical_pointer_identity_fields(
             "stream_key": normalized_stream_key,
             "registry_kind": normalized_registry_kind,
         }
+
+
+def _load_artifact_canonical_scope(
+    connection: sqlite3.Connection,
+    *,
+    artifact_version_id: str,
+) -> dict[str, str | None]:
+    row = connection.execute(
+        """
+        SELECT tenant_id, domain_id, dataset_key, partition_kind, partition_key
+        FROM artifact_versions
+        WHERE artifact_version_id = ?
+        """,
+        (artifact_version_id,),
+    ).fetchone()
+    if row is None:
+        raise CommandError(
+            code="artifact_version_not_found",
+            message="artifact version not found for scope validation",
+            details={"artifact_version_id": artifact_version_id},
+        )
+    return {
+        "tenant_id": (
+            str(row["tenant_id"]).strip() if row["tenant_id"] is not None else None
+        ),
+        "domain_id": (
+            str(row["domain_id"]).strip() if row["domain_id"] is not None else None
+        ),
+        "dataset_key": (
+            str(row["dataset_key"]).strip() if row["dataset_key"] is not None else None
+        ),
+        "partition_kind": (
+            str(row["partition_kind"]).strip()
+            if row["partition_kind"] is not None
+            else None
+        ),
+        "partition_key": (
+            str(row["partition_key"]).strip()
+            if row["partition_key"] is not None
+            else None
+        ),
+    }
+
+
+def _assert_artifact_matches_expected_scope(
+    *,
+    artifact_version_id: str,
+    expected_scope: dict[str, str | None],
+    artifact_scope: dict[str, str | None],
+    context: str,
+) -> None:
+    required = ("tenant_id", "domain_id", "dataset_key", "partition_kind", "partition_key")
+    missing_expected = [field for field in required if expected_scope.get(field) is None]
+    if missing_expected:
+        raise CommandError(
+            code="artifact_scope_unresolved",
+            message="expected canonical scope could not be resolved for artifact validation",
+            details={
+                "artifact_version_id": artifact_version_id,
+                "context": context,
+                "missing_expected_fields": missing_expected,
+            },
+        )
+
+    missing_actual = [field for field in required if artifact_scope.get(field) is None]
+    if missing_actual:
+        raise CommandError(
+            code="artifact_scope_unresolved",
+            message="artifact canonical scope is not fully populated",
+            details={
+                "artifact_version_id": artifact_version_id,
+                "context": context,
+                "missing_artifact_fields": missing_actual,
+            },
+        )
+
+    mismatches: dict[str, dict[str, str]] = {}
+    for field in required:
+        expected_value = str(expected_scope[field])
+        actual_value = str(artifact_scope[field])
+        if actual_value != expected_value:
+            mismatches[field] = {
+                "expected": expected_value,
+                "actual": actual_value,
+            }
+    if mismatches:
+        raise CommandError(
+            code="artifact_scope_mismatch",
+            message="artifact canonical scope does not match expected workflow scope",
+            details={
+                "artifact_version_id": artifact_version_id,
+                "context": context,
+                "mismatches": mismatches,
+            },
+        )
 
 
 def _write_artifact_provenance_compatibility_edges(

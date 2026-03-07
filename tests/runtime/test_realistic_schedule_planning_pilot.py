@@ -4,6 +4,7 @@ import json
 from pathlib import Path
 
 from onetruth.application.services.realistic_schedule_planning_pilot import (
+    PILOT_STAGE03_06_HUMAN_GATED,
     PILOT_STAGE06_NEEDS_INFORMATION,
     PILOT_STAGE06_PUBLISH_READY,
     PILOT_STAGE07_ISSUE_REPLAN,
@@ -183,6 +184,96 @@ def test_stage06_pilot_persists_canonical_evidence_artifact(tmp_path: Path) -> N
         ).fetchone()
         assert row is not None
         assert int(row[0]) == 1
+    finally:
+        connection.close()
+
+
+def test_stage03_to_stage06_human_gated_pilot_leaves_document_and_signoff_gates_open(
+    tmp_path: Path,
+) -> None:
+    db_url, _, packets = _run_pilot(
+        tmp_path,
+        pilot_ids=[PILOT_STAGE03_06_HUMAN_GATED],
+        pilot_key="stage03-06-human-gated",
+    )
+    packet = packets[0]
+    workflow_run_id = str(packet["workflow_run"]["workflow_run_id"])
+
+    connection = open_sqlite_connection(db_url)
+    try:
+        stage05 = connection.execute(
+            """
+            SELECT ht.human_task_id, ht.state, ht.assignee_actor_id
+            FROM human_tasks ht
+            JOIN task_runs tr
+              ON tr.task_run_id = ht.task_run_id
+            WHERE ht.workflow_run_id = ?
+              AND tr.stage_id = 'Stage05'
+              AND tr.task_kind = 'information_request'
+            """,
+            (workflow_run_id,),
+        ).fetchone()
+        assert stage05 is not None
+        assert str(stage05["state"]) == "CLAIMED"
+        assert str(stage05["assignee_actor_id"]) == "human:schedule-planner-pilot"
+
+        stage05_upload = connection.execute(
+            """
+            SELECT COUNT(*)
+            FROM artifact_links al
+            JOIN artifact_versions av
+              ON av.artifact_version_id = al.artifact_version_id
+            WHERE al.workflow_run_id = ?
+              AND al.subject_kind = 'human_task'
+              AND al.subject_id = ?
+              AND av.artifact_kind = 'schedule.draft_schedule.workbook'
+            """,
+            (workflow_run_id, str(stage05["human_task_id"])),
+        ).fetchone()
+        assert stage05_upload is not None
+        assert int(stage05_upload[0]) == 0
+
+        stage06_final_review = connection.execute(
+            """
+            SELECT ht.state, ht.assignee_actor_id
+            FROM human_tasks ht
+            JOIN task_runs tr
+              ON tr.task_run_id = ht.task_run_id
+            WHERE ht.workflow_run_id = ?
+              AND tr.stage_id = 'Stage06'
+              AND tr.task_kind = 'final_review'
+            """,
+            (workflow_run_id,),
+        ).fetchone()
+        assert stage06_final_review is not None
+        assert str(stage06_final_review["state"]) == "CLAIMED"
+        assert str(stage06_final_review["assignee_actor_id"]) == "human:dispatch-supervisor-pilot"
+
+        stage06_pending_approval = connection.execute(
+            """
+            SELECT COUNT(*)
+            FROM approvals
+            WHERE workflow_run_id = ?
+              AND scope_ref = 'Stage06'
+              AND state = 'PENDING'
+            """,
+            (workflow_run_id,),
+        ).fetchone()
+        assert stage06_pending_approval is not None
+        assert int(stage06_pending_approval[0]) == 1
+
+        stage04_responded_approval = connection.execute(
+            """
+            SELECT COUNT(*)
+            FROM approvals
+            WHERE workflow_run_id = ?
+              AND scope_ref = 'Stage04'
+              AND state = 'RESPONDED'
+            """,
+            (workflow_run_id,),
+        ).fetchone()
+        assert stage04_responded_approval is not None
+        assert int(stage04_responded_approval[0]) == 1
     finally:
         connection.close()
 

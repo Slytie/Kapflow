@@ -6,7 +6,8 @@ import { DetailDrawer } from "@/components/DetailDrawer";
 import { FilterBar } from "@/components/FilterBar";
 import { FreshnessBanner } from "@/components/FreshnessBanner";
 import { useShellFilters } from "@/app/useShellFilters";
-import { apiConfig } from "@/lib/api/config";
+import { apiConfig, getApiRequestContextHeaders, setApiRequestContextHeaders } from "@/lib/api/config";
+import { ACTOR_PROFILES } from "@/lib/actors";
 import { useDrawer } from "@/lib/state/drawerContext";
 
 const NAV_LINKS = [
@@ -26,9 +27,21 @@ export function AppShell(): JSX.Element {
   const isFetching = useIsFetching();
   const { filters, setFilters } = useShellFilters();
   const { payload, close } = useDrawer();
+  const [activeActorKey, setActiveActorKey] = useState(() => {
+    const current = getApiRequestContextHeaders();
+    return (
+      ACTOR_PROFILES.find(
+        (profile) =>
+          profile.actorId === current.actorId &&
+          profile.actorType === current.actorType &&
+          profile.actorRoles === current.actorRoles
+      )?.key ?? ACTOR_PROFILES[0].key
+    );
+  });
   const [lastRefreshedAt, setLastRefreshedAt] = useState<string | null>(null);
   const isWorkspaceRoute = /^\/runs\/[^/]+\/workspace$/.test(location.pathname);
   const isTimelineRoute = location.pathname === "/timeline";
+  const activeActor = ACTOR_PROFILES.find((profile) => profile.key === activeActorKey) ?? ACTOR_PROFILES[0];
 
   useEffect(() => {
     return queryClient.getQueryCache().subscribe((event) => {
@@ -43,6 +56,17 @@ export function AppShell(): JSX.Element {
     });
   }, [queryClient]);
 
+  useEffect(() => {
+    const current = getApiRequestContextHeaders();
+    setApiRequestContextHeaders({
+      ...current,
+      actorId: activeActor.actorId,
+      actorType: activeActor.actorType,
+      actorRoles: activeActor.actorRoles
+    });
+    void queryClient.invalidateQueries();
+  }, [activeActor, queryClient]);
+
   const refresh = (): void => {
     void queryClient.invalidateQueries();
   };
@@ -50,6 +74,21 @@ export function AppShell(): JSX.Element {
   return (
     <div className={`app-shell ${isWorkspaceRoute ? "app-shell--workspace" : ""}`}>
       <aside className="app-shell__nav">
+        <div className="app-shell__actor-switcher" data-testid="actor-switcher">
+          <label htmlFor="actor-switcher">Active user</label>
+          <select
+            id="actor-switcher"
+            value={activeActorKey}
+            onChange={(event) => setActiveActorKey(event.currentTarget.value)}
+          >
+            {ACTOR_PROFILES.map((profile) => (
+              <option key={profile.key} value={profile.key}>
+                {profile.label}
+              </option>
+            ))}
+          </select>
+          <p>{activeActor.actorId}</p>
+        </div>
         <nav>
           {NAV_LINKS.map((link) => (
             <NavLink

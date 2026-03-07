@@ -225,7 +225,7 @@
 
 .workflow-graph-pill__label {
   fill: #3e4147;
-  font-size: 16px;
+  font-size: 15px;
   font-weight: 500;
 }
 
@@ -234,6 +234,17 @@
   font-size: 11px;
   text-transform: uppercase;
   letter-spacing: 0.05em;
+}
+
+.workflow-graph-pill__responsibility {
+  fill: #5f646d;
+  font-size: 10px;
+  letter-spacing: 0.02em;
+}
+
+.workflow-graph-pill__task-detail {
+  fill: #7a7f88;
+  font-size: 9.5px;
 }
 
 .workflow-graph-pill--completed rect {

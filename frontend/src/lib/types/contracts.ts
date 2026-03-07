@@ -240,6 +240,8 @@ export interface WorkflowWorkspaceGraphNode {
   row: number;
   column: number;
   is_blocking: boolean;
+  responsibility_summary?: string | null;
+  responsibility_detail?: string | null;
 }
 
 export interface WorkflowWorkspaceGraphEdge {

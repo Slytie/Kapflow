@@ -79,16 +79,24 @@ def _events_for_run(db_url: str, workflow_run_id: str) -> list[dict[str, Any]]:
     return payload
 
 
-def _create_workflow_run(db_url: str, *, activation_key: str = "run-act-001") -> dict[str, Any]:
+def _create_workflow_run(
+    db_url: str,
+    *,
+    activation_key: str = "run-act-001",
+    tenant_id: str = "tenant-a",
+    domain_id: str = "domain-x",
+    partition_key: str = "SD-2026-03-04",
+    logical_date: str = "2026-03-04",
+) -> dict[str, Any]:
     payload = {
         "workflow_id": "schedule_planning.v1",
         "workflow_version": "v1",
-        "tenant_id": "tenant-a",
-        "domain_id": "domain-x",
-        "partition_key": "SD-2026-03-04",
-        "logical_date": "2026-03-04",
+        "tenant_id": tenant_id,
+        "domain_id": domain_id,
+        "partition_key": partition_key,
+        "logical_date": logical_date,
         "activation_key": activation_key,
-        "idempotency_key": f"idem-run-{activation_key}",
+        "idempotency_key": f"idem-run-{tenant_id}-{domain_id}-{activation_key}",
     }
     result = _run_cli("--db-url", db_url, "runs", "create", "--json", json.dumps(payload))
     parsed = _stdout_json(result)
@@ -476,6 +484,203 @@ def test_pointer_promotion_happy_path_updates_row_and_emits_event(tmp_path: Path
     promoted_events = [event for event in events if event["event_type"] == "artifact.pointer.promoted"]
     assert len(promoted_events) == 1
     assert promoted_events[0]["payload"]["pointer_id"] == promote_payload["pointer_key"]
+
+
+def test_pointer_promotion_allows_same_scope_cross_workflow_artifact_reference(
+    tmp_path: Path,
+) -> None:
+    db_url = f"sqlite:///{tmp_path / 'runtime.db'}"
+    _run_cli("--db-url", db_url, "init-db")
+
+    source_run = _create_workflow_run(db_url, activation_key="run-source-same-scope")
+    target_run = _create_workflow_run(db_url, activation_key="run-target-same-scope")
+    source_artifact = _create_artifact_version(
+        db_url,
+        workflow_run_id=source_run["workflow_run_id"],
+        task_run_id=None,
+        artifact_kind="schedule.published_schedule.workbook",
+        idempotency_key="idem-cross-run-same-scope-av-001",
+    )
+
+    promote = _run_cli(
+        "--db-url",
+        db_url,
+        "pointers",
+        "promote",
+        "--json",
+        json.dumps(
+            {
+                "workflow_run_id": target_run["workflow_run_id"],
+                "scope_kind": "stage",
+                "scope_ref": "Stage06",
+                "pointer_key": "official:schedule.published_schedule.workbook",
+                "artifact_kind": "schedule.published_schedule.workbook",
+                "artifact_version_id": source_artifact["artifact_version_id"],
+                "promotion_reason": "manual_promote",
+                "idempotency_key": "idem-cross-run-same-scope-promote-001",
+            }
+        ),
+    )
+    promoted_pointer = _stdout_json(promote)["pointer"]
+    assert promoted_pointer["workflow_run_id"] == target_run["workflow_run_id"]
+    assert promoted_pointer["artifact_version_id"] == source_artifact["artifact_version_id"]
+
+    shown = _stdout_json(
+        _run_cli(
+            "--db-url",
+            db_url,
+            "pointers",
+            "show",
+            "--pointer-key",
+            "official:schedule.published_schedule.workbook",
+            "--workflow-run-id",
+            target_run["workflow_run_id"],
+            "--json",
+        )
+    )["pointer"]
+    assert shown["artifact_version_id"] == source_artifact["artifact_version_id"]
+
+    events = _events_for_run(db_url, target_run["workflow_run_id"])
+    promoted_events = [event for event in events if event["event_type"] == "artifact.pointer.promoted"]
+    assert len(promoted_events) == 1
+    assert promoted_events[0]["payload"]["promoted_artifact_version_id"] == source_artifact["artifact_version_id"]
+
+
+def test_pointer_promotion_rejects_out_of_scope_cross_workflow_artifact_reference(
+    tmp_path: Path,
+) -> None:
+    db_url = f"sqlite:///{tmp_path / 'runtime.db'}"
+    _run_cli("--db-url", db_url, "init-db")
+
+    source_run = _create_workflow_run(
+        db_url,
+        activation_key="run-source-other-partition",
+        partition_key="SD-2026-03-04",
+        logical_date="2026-03-04",
+    )
+    target_run = _create_workflow_run(
+        db_url,
+        activation_key="run-target-other-partition",
+        partition_key="SD-2026-03-05",
+        logical_date="2026-03-05",
+    )
+    source_artifact = _create_artifact_version(
+        db_url,
+        workflow_run_id=source_run["workflow_run_id"],
+        task_run_id=None,
+        artifact_kind="schedule.published_schedule.workbook",
+        idempotency_key="idem-cross-run-out-of-scope-av-001",
+    )
+
+    promote = _run_cli(
+        "--db-url",
+        db_url,
+        "pointers",
+        "promote",
+        "--json",
+        json.dumps(
+            {
+                "workflow_run_id": target_run["workflow_run_id"],
+                "scope_kind": "stage",
+                "scope_ref": "Stage06",
+                "pointer_key": "official:schedule.published_schedule.workbook",
+                "artifact_kind": "schedule.published_schedule.workbook",
+                "artifact_version_id": source_artifact["artifact_version_id"],
+                "promotion_reason": "manual_promote",
+                "idempotency_key": "idem-cross-run-out-of-scope-promote-001",
+            }
+        ),
+        expect_ok=False,
+    )
+    assert promote.returncode != 0
+    assert _stderr_json(promote)["error_code"] == "artifact_scope_mismatch"
+
+    pointers = _stdout_json(
+        _run_cli(
+            "--db-url",
+            db_url,
+            "pointers",
+            "list",
+            "--workflow-run-id",
+            target_run["workflow_run_id"],
+            "--json",
+        )
+    )["pointers"]
+    assert pointers == []
+
+    events = _events_for_run(db_url, target_run["workflow_run_id"])
+    assert not any(event["event_type"] == "artifact.pointer.promoted" for event in events)
+
+
+def test_pointer_promotion_keeps_governance_local_approval_checks(
+    tmp_path: Path,
+) -> None:
+    db_url = f"sqlite:///{tmp_path / 'runtime.db'}"
+    _run_cli("--db-url", db_url, "init-db")
+
+    approval_run = _create_workflow_run(db_url, activation_key="run-approval-scope")
+    target_run = _create_workflow_run(db_url, activation_key="run-target-scope")
+    task_run = _create_task_run(
+        db_url,
+        workflow_run_id=approval_run["workflow_run_id"],
+        activation_key="task-approval-scope",
+    )["task_run"]
+    approval = _request_approval(
+        db_url,
+        workflow_run_id=approval_run["workflow_run_id"],
+        task_run_id=task_run["task_run_id"],
+        idempotency_key="idem-governance-local-approval-request-001",
+    )
+    _run_cli(
+        "--db-url",
+        db_url,
+        "approvals",
+        "respond",
+        "--json",
+        json.dumps(
+            {
+                "approval_id": approval["approval_id"],
+                "actor_id": "human:dispatch-supervisor-1",
+                "actor_type": "human",
+                "response_kind": "approve",
+                "response_reason": "approved",
+                "idempotency_key": "idem-governance-local-approval-respond-001",
+            }
+        ),
+    )
+    target_artifact = _create_artifact_version(
+        db_url,
+        workflow_run_id=target_run["workflow_run_id"],
+        task_run_id=None,
+        artifact_kind="schedule.published_schedule.workbook",
+        idempotency_key="idem-governance-local-av-001",
+    )
+
+    promote = _run_cli(
+        "--db-url",
+        db_url,
+        "pointers",
+        "promote",
+        "--json",
+        json.dumps(
+            {
+                "workflow_run_id": target_run["workflow_run_id"],
+                "scope_kind": "stage",
+                "scope_ref": "Stage06",
+                "pointer_key": "official:schedule.published_schedule.workbook",
+                "artifact_kind": "schedule.published_schedule.workbook",
+                "artifact_version_id": target_artifact["artifact_version_id"],
+                "promotion_reason": "official_publish",
+                "approved_by_approval_id": approval["approval_id"],
+                "actor_id": "human:dispatch-supervisor-1",
+                "actor_type": "human",
+                "idempotency_key": "idem-governance-local-promote-001",
+            }
+        ),
+        expect_ok=False,
+    )
+    assert promote.returncode != 0
+    assert _stderr_json(promote)["error_code"] == "cross_workflow_approval_reference"
 
 
 def test_dual_write_authoritative_paths_capture_canonical_scope_provenance_and_inputs(

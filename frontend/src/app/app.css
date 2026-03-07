@@ -20,6 +20,36 @@
   gap: 18px;
 }
 
+.app-shell__actor-switcher {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 260px;
+}
+
+.app-shell__actor-switcher label {
+  font-size: 11px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: #7c828c;
+  font-weight: 600;
+}
+
+.app-shell__actor-switcher select {
+  border: 1px solid #d3cfc8;
+  border-radius: 10px;
+  background: #fdfcf9;
+  color: #41464e;
+  padding: 7px 10px;
+  font-size: 13px;
+}
+
+.app-shell__actor-switcher p {
+  margin: 0;
+  font-size: 12px;
+  color: #6b717a;
+}
+
 .app-shell__nav nav {
   display: flex;
   flex-direction: row;
@@ -918,6 +948,11 @@
     padding: 12px;
     border-right: 0;
     border-bottom: 1px solid #ddd9d4;
+  }
+
+  .app-shell__actor-switcher {
+    min-width: 0;
+    width: 100%;
   }
 
   .board-grid {
