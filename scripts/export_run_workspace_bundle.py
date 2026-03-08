@@ -12,6 +12,12 @@ from onetruth.api.routes.workflow_runs import (
     get_workflow_run_detail_endpoint,
     get_workflow_run_workspace_endpoint,
 )
+from onetruth.application.projections.coherence_harness import (
+    COHERENCE_POLICY_BLOCK,
+    COHERENCE_STATUS_FAILED,
+    evaluate_official_outputs_coherence,
+    maybe_emit_projection_coherence_failed,
+)
 from onetruth.application.handlers.workflow_task_lifecycle import (
     list_execution_sessions_for_workflow_run_command,
     show_workflow_run_command,
@@ -102,6 +108,7 @@ def main(argv: list[str] | None = None) -> int:
     connection = open_sqlite_connection(str(args.db_url))
     try:
         workflow_run = show_workflow_run_command(connection, str(args.workflow_run_id))
+        workflow_run_id = str(workflow_run["workflow_run_id"])
         actor_roles = tuple(
             role.strip()
             for role in str(args.actor_roles).split(",")
@@ -117,23 +124,50 @@ def main(argv: list[str] | None = None) -> int:
         workspace_projection = get_workflow_run_workspace_endpoint(
             connection,
             context=context,
-            workflow_run_id=str(args.workflow_run_id),
+            workflow_run_id=workflow_run_id,
             query={"timeline_limit": str(int(args.timeline_limit))},
         )
+        export_coherence = evaluate_official_outputs_coherence(
+            projection_id=f"workspace_export_bundle:{workflow_run_id}",
+            projection_kind="workspace_export_bundle",
+            outputs=list(workspace_projection.get("official_outputs", {}).get("outputs") or []),
+            policy_on_drift=COHERENCE_POLICY_BLOCK,
+        )
+        workspace_projection["export_coherence"] = export_coherence
+        if export_coherence.get("coherence_status") == COHERENCE_STATUS_FAILED:
+            maybe_emit_projection_coherence_failed(
+                connection,
+                tenant_id=str(workflow_run["tenant_id"]),
+                domain_id=str(workflow_run["domain_id"]),
+                workflow_run_id=workflow_run_id,
+                coherence=export_coherence,
+            )
+            return _emit_error(
+                code="projection_coherence_failed",
+                message="workspace export bundle is approval-critical and blocked due to projection coherence failure",
+                details={
+                    "workflow_run_id": workflow_run_id,
+                    "projection_kind": export_coherence["projection_kind"],
+                    "projection_id": export_coherence["projection_id"],
+                    "failure_code": export_coherence["failure_code"],
+                    "policy": export_coherence["policy"],
+                    "issues": export_coherence.get("issues", []),
+                },
+            )
         run_detail = get_workflow_run_detail_endpoint(
             connection,
             context=context,
-            workflow_run_id=str(args.workflow_run_id),
+            workflow_run_id=workflow_run_id,
         )
         requirement_index = build_human_task_requirement_index(
             connection,
-            workflow_run_id=str(args.workflow_run_id),
+            workflow_run_id=workflow_run_id,
             human_tasks=run_detail["human_tasks"],
             artifact_versions=run_detail["artifact_versions"],
         )
         execution_sessions = list_execution_sessions_for_workflow_run_command(
             connection,
-            str(args.workflow_run_id),
+            workflow_run_id,
         )
         tool_executions: list[dict[str, object]] = []
         policy_decisions_by_id: dict[str, dict[str, object]] = {}
@@ -404,6 +438,17 @@ def _first_action_lines(
         if len(lines) >= 5:
             break
     return lines
+
+
+def _emit_error(*, code: str, message: str, details: dict[str, object]) -> int:
+    payload = {
+        "status": "error",
+        "error_code": code,
+        "message": message,
+        "details": details,
+    }
+    sys.stderr.write(json.dumps(payload, sort_keys=True) + "\n")
+    return 1
 
 
 if __name__ == "__main__":

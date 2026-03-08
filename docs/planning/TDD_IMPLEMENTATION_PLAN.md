@@ -24,6 +24,7 @@ Runtime implementation now also includes:
 - runtime coverage in `tests/runtime/test_approvals_artifacts_pointers_cli.py`
 - thin HTTP/query adapter under `src/onetruth/api/` with board-ready read endpoints and mutation delegates over canonical handlers
 - scenario-backed API contracts/mutation coverage under `tests/runtime/api/`
+- first projection coherence harness coverage for workspace/export/handoff derived views (`tests/runtime/test_projection_coherence.py`) with explicit block-vs-warn policy behavior and `projection.coherence_failed` evidence
 
 The pytest layer is intentionally small and uses a **reference reducer** only to make trace expectations executable. It must never outrank the workflow packs or schemas.
 
@@ -66,6 +67,7 @@ Do **not** let `tests/helpers/`, `scripts/`, or generated derivative folders bec
 - `tests/acceptance/` - AT-SCH scenario evidence checks
 - `tests/runtime/` - implementation-backed CLI runtime tests (timeline + workflow/task core lifecycle)
 - `tests/runtime/` - implementation-backed CLI + API runtime tests (timeline + workflow/task/approval/artifact/pointer + Stage06 + board/query HTTP contracts)
+- `tests/runtime/test_projection_coherence.py` - coherence drift tests for derived projection packets (workspace/export/handoff) with visible failure behavior
 - `tests/security/` - cross-scope and policy-gate negatives
 - `tests/property/` - cross-trace invariants
 - `tests/integration/` - machine-usable repo/trace checks

@@ -13,6 +13,12 @@ from onetruth.application.handlers.workflow_task_lifecycle import (
     list_tasks_for_workflow_run_command,
     list_workflow_runs_command,
 )
+from onetruth.application.projections.coherence_harness import (
+    COHERENCE_POLICY_WARN_VISIBLE,
+    COHERENCE_STATUS_FAILED,
+    evaluate_official_outputs_coherence,
+    maybe_emit_projection_coherence_failed,
+)
 from onetruth.application.projections.workspace_graphs.registry import (
     project_workspace_graph,
 )
@@ -225,6 +231,33 @@ def get_workflow_run_workspace_endpoint(
         pointers=pointers,
         artifact_versions=artifact_versions,
     )
+    outputs_coherence = evaluate_official_outputs_coherence(
+        projection_id=f"workspace_official_outputs:{workflow_run_id}",
+        projection_kind="workspace_official_outputs",
+        outputs=list(official_outputs.get("outputs") or []),
+        policy_on_drift=COHERENCE_POLICY_WARN_VISIBLE,
+    )
+    official_outputs["coherence"] = outputs_coherence
+    if outputs_coherence.get("coherence_status") == COHERENCE_STATUS_FAILED:
+        maybe_emit_projection_coherence_failed(
+            connection,
+            tenant_id=context.tenant_id,
+            domain_id=context.domain_id,
+            workflow_run_id=workflow_run_id,
+            coherence=outputs_coherence,
+        )
+        warnings = graph.get("warnings")
+        if not isinstance(warnings, list):
+            warnings = []
+        warnings.append(
+            {
+                "code": "projection_coherence_failed",
+                "projection_kind": outputs_coherence["projection_kind"],
+                "failure_code": outputs_coherence["failure_code"],
+                "policy": outputs_coherence["policy"],
+            }
+        )
+        graph["warnings"] = warnings
     freshness = {
         "latest_event_sequence": latest_event_sequence,
         "latest_event_recorded_at": latest_event_recorded_at,
@@ -239,6 +272,7 @@ def get_workflow_run_workspace_endpoint(
         "user_work": user_work,
         "blocking_work": blocking_work,
         "official_outputs": official_outputs,
+        "projection_coherence": [outputs_coherence],
         "timeline_excerpt": {
             "events": timeline_excerpt,
             "event_count": len(timeline_excerpt),
@@ -577,6 +611,9 @@ def _load_scoped_artifact_versions_by_id(
             artifact_version_id,
             workflow_run_id,
             task_run_id,
+            dataset_key,
+            partition_kind,
+            partition_key,
             artifact_kind,
             artifact_role,
             media_type,

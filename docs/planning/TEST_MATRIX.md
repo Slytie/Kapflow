@@ -94,6 +94,7 @@ Current implemented runtime command-boundary coverage:
 - `tests/runtime/contracts/test_hitl_query_contracts_stage07.py`
 - `tests/runtime/contracts/test_frontend_snapshot_fixtures.py`
 - `tests/runtime/contracts/test_workspace_demo_export_bundle.py`
+- `tests/runtime/test_projection_coherence.py`
 - `tests/runtime/test_example_document_corpus_ingress.py`
 - `tests/runtime/api/test_human_task_list_contract.py`
 - `tests/runtime/api/test_approval_list_contract.py`
@@ -150,6 +151,10 @@ Current runtime tests assert:
   - server-computed `available_actions` + blocking requirements for tasks/approvals/flags
   - read-only workspace endpoint envelope + cross-scope denial + freshness metadata
   - demo workspace runner and export bundle zip content/readme integrity
+- first projection coherence harness coverage:
+  - workspace official-output drift is visible (`warn_visible`) and emits `projection.coherence_failed`
+  - approval-critical export packet drift is blocked (`block`) and emits `projection.coherence_failed`
+  - handoff operator-view drift is visible (`warn_visible`) and emits `projection.coherence_failed`
 - canonical execution-runtime lifecycle coverage for bounded agentive work:
   - `execution_sessions` / `tool_executions` / `policy_decisions` row creation and state transitions
   - explicit policy allow/deny gating before model/tool execution (including `WAITING_POLICY -> RUNNING` on allow)

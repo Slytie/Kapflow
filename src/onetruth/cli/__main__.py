@@ -54,6 +54,12 @@ from onetruth.application.handlers.logistics_handoff import (
     materialize_weekly_seeds_command,
     show_edge_execution_command,
 )
+from onetruth.application.projections.coherence_harness import (
+    COHERENCE_POLICY_WARN_VISIBLE,
+    COHERENCE_STATUS_FAILED,
+    evaluate_handoff_operator_view_coherence,
+    maybe_emit_projection_coherence_failed,
+)
 from onetruth.application.services.example_document_corpus import (
     load_example_document_corpus,
     seed_payloads_for_set,
@@ -1305,11 +1311,29 @@ def _handle_handoffs_show(args: argparse.Namespace) -> int:
         return connection
     try:
         edge_execution = show_edge_execution_command(connection, args.edge_execution_id)
+        coherence = evaluate_handoff_operator_view_coherence(
+            connection,
+            projection_id=f"handoff_operator_view:{edge_execution['edge_execution_id']}",
+            edge_execution=edge_execution,
+            policy_on_drift=COHERENCE_POLICY_WARN_VISIBLE,
+        )
+        _emit_handoff_coherence_event_if_needed(
+            connection,
+            edge_execution=edge_execution,
+            coherence=coherence,
+        )
     except CommandError as exc:
         return _emit_error(code=exc.code, message=exc.message, details=exc.details)
     finally:
         connection.close()
-    _json_print({"status": "ok", "command": "handoffs.show", "edge_execution": edge_execution})
+    _json_print(
+        {
+            "status": "ok",
+            "command": "handoffs.show",
+            "edge_execution": edge_execution,
+            "coherence": coherence,
+        }
+    )
     return 0
 
 
@@ -1325,12 +1349,65 @@ def _handle_handoffs_list(args: argparse.Namespace) -> int:
             status=args.status,
             target_workflow_run_id=args.target_workflow_run_id,
         )
+        coherence_failures: list[dict[str, Any]] = []
+        for edge_execution in edge_executions:
+            coherence = evaluate_handoff_operator_view_coherence(
+                connection,
+                projection_id=f"handoff_operator_view:{edge_execution['edge_execution_id']}",
+                edge_execution=edge_execution,
+                policy_on_drift=COHERENCE_POLICY_WARN_VISIBLE,
+            )
+            edge_execution["coherence"] = coherence
+            if coherence.get("coherence_status") == COHERENCE_STATUS_FAILED:
+                coherence_failures.append(coherence)
+            _emit_handoff_coherence_event_if_needed(
+                connection,
+                edge_execution=edge_execution,
+                coherence=coherence,
+            )
     except CommandError as exc:
         return _emit_error(code=exc.code, message=exc.message, details=exc.details)
     finally:
         connection.close()
-    _json_print({"status": "ok", "command": "handoffs.list", "edge_executions": edge_executions})
+    _json_print(
+        {
+            "status": "ok",
+            "command": "handoffs.list",
+            "edge_executions": edge_executions,
+            "coherence_failures": coherence_failures,
+        }
+    )
     return 0
+
+
+def _emit_handoff_coherence_event_if_needed(
+    connection: sqlite3.Connection,
+    *,
+    edge_execution: dict[str, Any],
+    coherence: dict[str, Any],
+) -> None:
+    if coherence.get("coherence_status") != COHERENCE_STATUS_FAILED:
+        return
+    source_workflow_run_id = str(edge_execution.get("source_workflow_run_id") or "")
+    if not source_workflow_run_id:
+        return
+    row = connection.execute(
+        """
+        SELECT tenant_id, domain_id
+        FROM workflow_runs
+        WHERE workflow_run_id = ?
+        """,
+        (source_workflow_run_id,),
+    ).fetchone()
+    if row is None:
+        return
+    maybe_emit_projection_coherence_failed(
+        connection,
+        tenant_id=str(row["tenant_id"]),
+        domain_id=str(row["domain_id"]),
+        workflow_run_id=source_workflow_run_id,
+        coherence=coherence,
+    )
 
 
 def _parse_json_object(raw_payload: str) -> dict[str, Any] | int:
