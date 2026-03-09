@@ -55,6 +55,29 @@ This must validate at least:
 - artifact lineage acyclicity
 - replay determinism over the trace corpus
 
+## Release-confidence gate (current hardening slices)
+This gate is intentionally narrow and should stay focused on currently implemented hardening slices.
+
+Run locally before opening the next tranche:
+- `make release-confidence`
+
+CI runs the same gate as five attributable checks:
+- `make release-confidence-validation`
+  - `python3 scripts/validate_repo.py`
+  - `pytest -q tests/contract`
+- `make release-confidence-demo-export`
+  - `pytest -q tests/runtime/contracts/test_workspace_demo_export_bundle.py`
+- `make release-confidence-projection-coherence`
+  - `pytest -q tests/runtime/test_projection_coherence.py`
+- `make release-confidence-logistics-weekly-live`
+  - `pytest -q tests/runtime/scenarios/test_logistics_weekly_to_live_golden_slice.py`
+  - `pytest -q tests/runtime/test_logistics_handoff_runtime.py::test_weekly_to_live_dispatch_first_golden_slice_end_to_end`
+- `make release-confidence-certification-manifest`
+  - `pytest -q tests/runtime/contracts/test_current_capability_certification_harness.py`
+  - `PYTHONPATH=src python3 scripts/run_current_capability_certification.py --openai-mode mock ...`
+
+The release-confidence gate is a targeted regression tripwire, not a deployment pipeline and not a replacement for broader Stage 4 suites.
+
 ## Repo hygiene checks
 - docs index points at existing files
 - task index matches task files

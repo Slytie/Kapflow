@@ -46,6 +46,59 @@ jobs:
             echo "No Makefile found; skipping make-based checks."
           fi
 
+  release-confidence:
+    name: release-confidence / ${{ matrix.check }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - check: validation
+            make_target: release-confidence-validation
+          - check: demo-export
+            make_target: release-confidence-demo-export
+          - check: projection-coherence
+            make_target: release-confidence-projection-coherence
+          - check: logistics-handoff
+            make_target: release-confidence-logistics-weekly-live
+          - check: certification-manifest
+            make_target: release-confidence-certification-manifest
+    env:
+      RELEASE_CONFIDENCE_DB_PATH: ${{ runner.temp }}/release-confidence-${{ matrix.check }}-${{ github.run_id }}-${{ github.run_attempt }}.db
+      RELEASE_CONFIDENCE_DB_URL: sqlite:///${{ runner.temp }}/release-confidence-${{ matrix.check }}-${{ github.run_id }}-${{ github.run_attempt }}.db
+      RELEASE_CONFIDENCE_OUTPUT_ROOT: ${{ runner.temp }}/release-confidence/${{ matrix.check }}-${{ github.run_id }}-${{ github.run_attempt }}
+      RELEASE_CONFIDENCE_KEY: ci-${{ matrix.check }}-${{ github.run_id }}-${{ github.run_attempt }}
+      RELEASE_CONFIDENCE_OPENAI_MODE: mock
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install backend dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip install --upgrade pip
+          if [ -f requirements.txt ]; then
+            python -m pip install -r requirements.txt
+          elif [ -f pyproject.toml ]; then
+            python -m pip install -e .
+          else
+            echo "No requirements.txt or pyproject.toml found; skipping project install."
+          fi
+          python -m pip install pytest pyyaml jsonschema requests
+
+      - name: Run release-confidence gate slice
+        shell: bash
+        run: |
+          set -euo pipefail
+          make ${{ matrix.make_target }}
+
   frontend:
     if: ${{ hashFiles('frontend/package.json') != '' }}
     runs-on: ubuntu-latest

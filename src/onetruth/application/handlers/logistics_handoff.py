@@ -274,8 +274,37 @@ def activate_live_dispatch_command(
         "domain_id": str(source_workflow_run["domain_id"]),
     }
 
-    if str(edge["status"]) == "activated" and edge.get("target_workflow_run_id"):
-        target_workflow_run = _require_workflow_run(connection, str(edge["target_workflow_run_id"]))
+    edge_status = str(edge.get("status") or "")
+    if edge_status not in {"prepared", "activated"}:
+        raise CommandError(
+            code="edge_execution_status_transition_invalid",
+            message="edge execution status cannot transition to activated from the current state",
+            details={
+                "edge_execution_id": edge_execution_id,
+                "status": edge_status,
+                "allowed_statuses": ["prepared", "activated"],
+            },
+        )
+
+    if edge_status == "activated":
+        target_workflow_run_id = str(edge.get("target_workflow_run_id") or "")
+        if not target_workflow_run_id:
+            raise CommandError(
+                code="edge_execution_status_transition_invalid",
+                message="activated edge execution is missing target_workflow_run_id",
+                details={
+                    "edge_execution_id": edge_execution_id,
+                    "status": edge_status,
+                },
+            )
+        _assert_activation_replay_input_matches(
+            connection,
+            edge=edge,
+            target_workflow_run_id=target_workflow_run_id,
+            route_delta_source_artifact_version_id=route_delta_source_artifact_version_id,
+            actual_hours_source_artifact_version_id=actual_hours_source_artifact_version_id,
+        )
+        target_workflow_run = _require_workflow_run(connection, target_workflow_run_id)
         return {
             "edge_execution": edge,
             "target_workflow_run": target_workflow_run,
@@ -301,6 +330,12 @@ def activate_live_dispatch_command(
                 "artifact_kind": str(route_delta_source["artifact_kind"]),
             },
         )
+    _assert_handoff_source_not_superseded(
+        connection,
+        edge_execution_id=edge_execution_id,
+        artifact_version_id=route_delta_source_artifact_version_id,
+        artifact_kind=str(route_delta_source["artifact_kind"]),
+    )
     actual_hours_source = _assert_same_scope_artifact(
         connection,
         artifact_version_id=actual_hours_source_artifact_version_id,
@@ -318,6 +353,12 @@ def activate_live_dispatch_command(
                 "artifact_kind": str(actual_hours_source["artifact_kind"]),
             },
         )
+    _assert_handoff_source_not_superseded(
+        connection,
+        edge_execution_id=edge_execution_id,
+        artifact_version_id=actual_hours_source_artifact_version_id,
+        artifact_kind=str(actual_hours_source["artifact_kind"]),
+    )
 
     service_date_id = str(edge["target_partition_key"])
     route_delta_partition = route_delta_source.get("partition_key")
@@ -1145,7 +1186,152 @@ def _create_or_ignore_workflow_input_binding(
             metadata_json=metadata_json,
         )
     except InputBindingConflictError:
+        existing = _get_workflow_run_input_binding(
+            connection,
+            workflow_run_id=workflow_run_id,
+            binding_key=binding_key,
+        )
+        if (
+            existing is not None
+            and str(existing.get("source_ref") or "") == source_ref
+            and str(existing.get("artifact_version_id") or "") == artifact_version_id
+        ):
+            return
+        raise CommandError(
+            code="handoff_input_binding_conflict",
+            message="existing workflow input binding conflicts with handoff replay inputs",
+            details={
+                "workflow_run_id": workflow_run_id,
+                "binding_key": binding_key,
+                "expected_source_ref": source_ref,
+                "expected_artifact_version_id": artifact_version_id,
+                "existing_source_ref": (
+                    str(existing.get("source_ref"))
+                    if existing is not None and existing.get("source_ref") is not None
+                    else None
+                ),
+                "existing_artifact_version_id": (
+                    str(existing.get("artifact_version_id"))
+                    if existing is not None and existing.get("artifact_version_id") is not None
+                    else None
+                ),
+            },
+        )
+
+
+def _get_workflow_run_input_binding(
+    connection: sqlite3.Connection,
+    *,
+    workflow_run_id: str,
+    binding_key: str,
+) -> dict[str, Any] | None:
+    row = connection.execute(
+        """
+        SELECT
+            workflow_run_id,
+            binding_key,
+            source_kind,
+            source_ref,
+            artifact_version_id
+        FROM workflow_run_inputs
+        WHERE workflow_run_id = ? AND binding_key = ?
+        LIMIT 1
+        """,
+        (workflow_run_id, binding_key),
+    ).fetchone()
+    if row is None:
+        return None
+    return dict(row)
+
+
+def _assert_activation_replay_input_matches(
+    connection: sqlite3.Connection,
+    *,
+    edge: dict[str, Any],
+    target_workflow_run_id: str,
+    route_delta_source_artifact_version_id: str,
+    actual_hours_source_artifact_version_id: str,
+) -> None:
+    bindings = edge.get("input_bindings")
+    if not isinstance(bindings, dict):
+        raise CommandError(
+            code="handoff_activation_input_mismatch",
+            message="activated edge execution is missing canonical input bindings",
+            details={"edge_execution_id": str(edge.get("edge_execution_id") or "")},
+        )
+
+    expected_route = str(bindings.get("route_delta_source_artifact_version_id") or "")
+    expected_actual_hours = str(bindings.get("actual_hours_source_artifact_version_id") or "")
+    if not expected_route:
+        route_binding = _get_workflow_run_input_binding(
+            connection,
+            workflow_run_id=target_workflow_run_id,
+            binding_key="stage01.route_delta_intake",
+        )
+        expected_route = str(route_binding.get("source_ref") or "") if route_binding is not None else ""
+    if not expected_actual_hours:
+        hours_binding = _get_workflow_run_input_binding(
+            connection,
+            workflow_run_id=target_workflow_run_id,
+            binding_key="stage01.actual_hours_snapshot",
+        )
+        expected_actual_hours = (
+            str(hours_binding.get("source_ref") or "")
+            if hours_binding is not None
+            else ""
+        )
+
+    route_matches = expected_route and expected_route == route_delta_source_artifact_version_id
+    hours_matches = (
+        expected_actual_hours
+        and expected_actual_hours == actual_hours_source_artifact_version_id
+    )
+    if route_matches and hours_matches:
         return
+
+    raise CommandError(
+        code="handoff_activation_input_mismatch",
+        message="activation retry must reuse the same canonical route-delta and actual-hours source bindings",
+        details={
+            "edge_execution_id": str(edge.get("edge_execution_id") or ""),
+            "target_workflow_run_id": target_workflow_run_id,
+            "expected_route_delta_source_artifact_version_id": expected_route or None,
+            "provided_route_delta_source_artifact_version_id": route_delta_source_artifact_version_id,
+            "expected_actual_hours_source_artifact_version_id": expected_actual_hours or None,
+            "provided_actual_hours_source_artifact_version_id": actual_hours_source_artifact_version_id,
+        },
+    )
+
+
+def _assert_handoff_source_not_superseded(
+    connection: sqlite3.Connection,
+    *,
+    edge_execution_id: str,
+    artifact_version_id: str,
+    artifact_kind: str,
+) -> None:
+    superseding = connection.execute(
+        """
+        SELECT artifact_version_id
+        FROM artifact_versions
+        WHERE supersedes_artifact_version_id = ?
+        ORDER BY created_at DESC, artifact_version_id DESC
+        LIMIT 1
+        """,
+        (artifact_version_id,),
+    ).fetchone()
+    if superseding is None:
+        return
+    raise CommandError(
+        code="handoff_source_artifact_superseded",
+        message="handoff activation input references a superseded source artifact version",
+        details={
+            "edge_execution_id": edge_execution_id,
+            "artifact_version_id": artifact_version_id,
+            "artifact_kind": artifact_kind,
+            "superseding_artifact_version_id": str(superseding["artifact_version_id"]),
+        },
+    )
 
 
 def _assert_same_scope_artifact(

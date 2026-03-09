@@ -1,6 +1,6 @@
 # CI Troubleshooting
 
-This note covers common CI issues for the two GitHub Actions workflows:
+This note covers common CI issues for the GitHub Actions workflows:
 - `main` (`.github/workflows/main.yml`)
 - `agent_api` (`.github/workflows/agent_api.yml`)
 
@@ -18,11 +18,24 @@ Checks:
 
 ### Make target failures
 Symptoms:
-- one of `make schema-validate`, `make contract`, `make replay`, `make acceptance`, or `make runtime` fails.
+- one of `make schema-validate`, `make contract`, `make replay`, `make acceptance`, `make runtime`, or a `make release-confidence-*` target fails.
 
 Checks:
 - run the same target locally and fix the first failing assertion.
 - for trace/schema failures, start with `python3 scripts/validate_repo.py --schemas-only` or `--traces-only`.
+
+### Release-confidence slice failures
+Symptoms:
+- one `release-confidence / <slice>` matrix check fails in `main`.
+
+Checks:
+- rerun just that slice locally:
+  - `make release-confidence-validation`
+  - `make release-confidence-demo-export`
+  - `make release-confidence-projection-coherence`
+  - `make release-confidence-logistics-weekly-live`
+  - `make release-confidence-certification-manifest`
+- if `certification-manifest` fails, inspect the emitted `certification_manifest.json` referenced in command output.
 
 ### Frontend job failures
 Symptoms:
@@ -54,6 +67,12 @@ make replay
 make acceptance
 make runtime
 pytest -q
+```
+
+Run the release-confidence gate locally:
+
+```bash
+make release-confidence
 ```
 
 Run OpenAI integration tests locally (only when key is set):

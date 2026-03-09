@@ -34,6 +34,21 @@ PYTHONPATH=src python3 scripts/run_current_capability_certification.py \
   --scenario stage07_major_replan
 ```
 
+## Release-confidence gate wiring
+CI release-confidence gate includes this harness in the `certification-manifest` slice:
+- `pytest -q tests/runtime/contracts/test_current_capability_certification_harness.py`
+- `PYTHONPATH=src python3 scripts/run_current_capability_certification.py --openai-mode mock ...`
+
+Recommended local pre-PR command (next tranche):
+```bash
+make release-confidence
+```
+
+Targeted local rerun for this slice only:
+```bash
+make release-confidence-certification-manifest
+```
+
 ## Outputs
 For a key `K`, output is written under:
 - `artifacts/certification/current_capability/K/`

@@ -189,6 +189,15 @@ def _query_rows(db_path: Path, sql: str, params: tuple[Any, ...] = ()) -> list[d
         connection.close()
 
 
+def _execute_sql(db_path: Path, sql: str, params: tuple[Any, ...] = ()) -> None:
+    connection = sqlite3.connect(db_path)
+    try:
+        connection.execute(sql, params)
+        connection.commit()
+    finally:
+        connection.close()
+
+
 def _setup_weekly_with_publish(tmp_path: Path) -> tuple[str, Path, dict[str, Any], dict[str, Any]]:
     db_url, db_path = _init_db(tmp_path)
     weekly_run = _create_workflow_run(
@@ -257,6 +266,85 @@ def test_handoff_record_creation_is_explicit_and_idempotent(tmp_path: Path) -> N
     )
     assert len(edge_rows) == 1
     assert edge_rows[0]["status"] == "prepared"
+
+
+def test_duplicate_logical_materialize_request_reuses_same_edge_with_new_idempotency(
+    tmp_path: Path,
+) -> None:
+    db_url, db_path, weekly_run, published = _setup_weekly_with_publish(tmp_path)
+    first = _materialize_handoff(
+        db_url,
+        workflow_run_id=str(weekly_run["workflow_run_id"]),
+        published_artifact_version_id=str(published["artifact_version_id"]),
+        service_date_id=SERVICE_DATE_ID,
+        idempotency_key="idem:handoff:materialize:logical:first",
+    )
+    second = _materialize_handoff(
+        db_url,
+        workflow_run_id=str(weekly_run["workflow_run_id"]),
+        published_artifact_version_id=str(published["artifact_version_id"]),
+        service_date_id=SERVICE_DATE_ID,
+        idempotency_key="idem:handoff:materialize:logical:retry",
+    )
+
+    assert first["edge_executions"][0]["edge_execution_id"] == second["edge_executions"][0]["edge_execution_id"]
+    assert first["seed_artifacts"][0]["artifact_version_id"] == second["seed_artifacts"][0]["artifact_version_id"]
+
+    rows = _query_rows(
+        db_path,
+        """
+        SELECT edge_execution_id, materialize_idempotency_key
+        FROM edge_executions
+        WHERE edge_id = 'weekly_seed_to_live_dispatch'
+        """,
+    )
+    assert len(rows) == 1
+    assert rows[0]["materialize_idempotency_key"] == "idem:handoff:materialize:logical:first"
+
+
+def test_retry_after_daily_seed_exists_reuses_seed_without_duplication(tmp_path: Path) -> None:
+    db_url, db_path, weekly_run, published = _setup_weekly_with_publish(tmp_path)
+    first = _materialize_handoff(
+        db_url,
+        workflow_run_id=str(weekly_run["workflow_run_id"]),
+        published_artifact_version_id=str(published["artifact_version_id"]),
+        service_date_id=SERVICE_DATE_ID,
+        idempotency_key="idem:handoff:materialize:seed-exists:first",
+    )
+    original_edge_id = str(first["edge_executions"][0]["edge_execution_id"])
+    seed_artifact_id = str(first["seed_artifacts"][0]["artifact_version_id"])
+
+    _execute_sql(
+        db_path,
+        "DELETE FROM edge_executions WHERE edge_execution_id = ?",
+        (original_edge_id,),
+    )
+
+    replay = _materialize_handoff(
+        db_url,
+        workflow_run_id=str(weekly_run["workflow_run_id"]),
+        published_artifact_version_id=str(published["artifact_version_id"]),
+        service_date_id=SERVICE_DATE_ID,
+        idempotency_key="idem:handoff:materialize:seed-exists:retry",
+    )
+
+    assert str(replay["seed_artifacts"][0]["artifact_version_id"]) == seed_artifact_id
+    assert str(replay["edge_executions"][0]["edge_execution_id"]) != original_edge_id
+
+    seed_rows = _query_rows(
+        db_path,
+        """
+        SELECT artifact_version_id
+        FROM artifact_versions
+        WHERE artifact_kind = 'planning.daily_dispatch_seed.workbook'
+        """,
+    )
+    edge_rows = _query_rows(
+        db_path,
+        "SELECT edge_execution_id FROM edge_executions WHERE edge_id = 'weekly_seed_to_live_dispatch'",
+    )
+    assert len(seed_rows) == 1
+    assert len(edge_rows) == 1
 
 
 def test_stage07_seed_materialization_is_one_logical_seed_per_service_day(tmp_path: Path) -> None:
@@ -404,6 +492,387 @@ def test_lazy_live_activation_captures_exact_input_bindings_and_replay_is_safe(t
     assert len(edge_rows) == 1
     assert edge_rows[0]["status"] == "activated"
     assert str(edge_rows[0]["target_workflow_run_id"]) == str(live_run["workflow_run_id"])
+
+
+def test_retry_activation_reuses_existing_target_run_when_already_present(tmp_path: Path) -> None:
+    db_url, db_path, weekly_run, published = _setup_weekly_with_publish(tmp_path)
+    materialized = _materialize_handoff(
+        db_url,
+        workflow_run_id=str(weekly_run["workflow_run_id"]),
+        published_artifact_version_id=str(published["artifact_version_id"]),
+        service_date_id=SERVICE_DATE_ID,
+        idempotency_key="idem:handoff:materialize:target-preexists",
+    )
+    edge_execution = materialized["edge_executions"][0]
+
+    preexisting_live_run = _create_workflow_run(
+        db_url,
+        workflow_id="live_dispatch.v1",
+        partition_key=SERVICE_DATE_ID,
+        logical_date="2026-03-06",
+        activation_key=f"live_dispatch.v1:{SERVICE_DATE_ID}",
+        idempotency_key="idem:runs.create:live-preexisting",
+    )
+    route_delta = _create_artifact_version(
+        db_url,
+        workflow_run_id=str(weekly_run["workflow_run_id"]),
+        artifact_kind="dispatch.route_delta_intake.workbook",
+        idempotency_key="idem:artifact:target-preexists:route-delta",
+        canonical_partition_kind="ServiceDateID",
+        canonical_partition_key=SERVICE_DATE_ID,
+    )
+    actual_hours = _create_artifact_version(
+        db_url,
+        workflow_run_id=str(weekly_run["workflow_run_id"]),
+        artifact_kind="planning.actual_hours_snapshot.workbook",
+        idempotency_key="idem:artifact:target-preexists:actual-hours",
+    )
+    activated = _activate_handoff(
+        db_url,
+        edge_execution_id=str(edge_execution["edge_execution_id"]),
+        route_delta_source_artifact_version_id=str(route_delta["artifact_version_id"]),
+        actual_hours_source_artifact_version_id=str(actual_hours["artifact_version_id"]),
+        idempotency_key="idem:handoff:activate:target-preexists",
+    )
+
+    assert str(activated["target_workflow_run"]["workflow_run_id"]) == str(
+        preexisting_live_run["workflow_run_id"]
+    )
+
+    run_rows = _query_rows(
+        db_path,
+        """
+        SELECT workflow_run_id
+        FROM workflow_runs
+        WHERE workflow_id = 'live_dispatch.v1'
+          AND tenant_id = 'tenant-logistics'
+          AND domain_id = 'domain-hub'
+          AND partition_key = ?
+        """,
+        (SERVICE_DATE_ID,),
+    )
+    assert len(run_rows) == 1
+
+
+def test_activation_restart_recovery_from_prepared_edge_reuses_existing_live_artifacts(
+    tmp_path: Path,
+) -> None:
+    db_url, db_path, weekly_run, published = _setup_weekly_with_publish(tmp_path)
+    materialized = _materialize_handoff(
+        db_url,
+        workflow_run_id=str(weekly_run["workflow_run_id"]),
+        published_artifact_version_id=str(published["artifact_version_id"]),
+        service_date_id=SERVICE_DATE_ID,
+        idempotency_key="idem:handoff:materialize:restart-recovery",
+    )
+    edge_execution = materialized["edge_executions"][0]
+    route_delta = _create_artifact_version(
+        db_url,
+        workflow_run_id=str(weekly_run["workflow_run_id"]),
+        artifact_kind="dispatch.route_delta_intake.workbook",
+        idempotency_key="idem:artifact:restart-recovery:route-delta",
+        canonical_partition_kind="ServiceDateID",
+        canonical_partition_key=SERVICE_DATE_ID,
+    )
+    actual_hours = _create_artifact_version(
+        db_url,
+        workflow_run_id=str(weekly_run["workflow_run_id"]),
+        artifact_kind="planning.actual_hours_snapshot.workbook",
+        idempotency_key="idem:artifact:restart-recovery:actual-hours",
+    )
+    first = _activate_handoff(
+        db_url,
+        edge_execution_id=str(edge_execution["edge_execution_id"]),
+        route_delta_source_artifact_version_id=str(route_delta["artifact_version_id"]),
+        actual_hours_source_artifact_version_id=str(actual_hours["artifact_version_id"]),
+        idempotency_key="idem:handoff:activate:restart-recovery:first",
+    )
+    live_run_id = str(first["target_workflow_run"]["workflow_run_id"])
+
+    _execute_sql(
+        db_path,
+        """
+        UPDATE edge_executions
+        SET
+            status = 'prepared',
+            target_workflow_run_id = NULL,
+            trigger_ref = NULL,
+            activation_idempotency_key = NULL,
+            activated_at = NULL
+        WHERE edge_execution_id = ?
+        """,
+        (str(edge_execution["edge_execution_id"]),),
+    )
+
+    recovered = _activate_handoff(
+        db_url,
+        edge_execution_id=str(edge_execution["edge_execution_id"]),
+        route_delta_source_artifact_version_id=str(route_delta["artifact_version_id"]),
+        actual_hours_source_artifact_version_id=str(actual_hours["artifact_version_id"]),
+        idempotency_key="idem:handoff:activate:restart-recovery:retry",
+    )
+
+    assert str(recovered["target_workflow_run"]["workflow_run_id"]) == live_run_id
+    assert recovered["edge_execution"]["status"] == "activated"
+
+    live_input_rows = _query_rows(
+        db_path,
+        """
+        SELECT artifact_kind
+        FROM artifact_versions
+        WHERE workflow_run_id = ?
+          AND artifact_kind IN (
+              'dispatch.base_schedule_seed.workbook',
+              'dispatch.route_delta_intake.workbook',
+              'dispatch.actual_hours_snapshot.workbook'
+          )
+        """,
+        (live_run_id,),
+    )
+    binding_rows = _query_rows(
+        db_path,
+        "SELECT binding_key FROM workflow_run_inputs WHERE workflow_run_id = ?",
+        (live_run_id,),
+    )
+    assert len(live_input_rows) == 3
+    assert len(binding_rows) == 3
+
+
+def test_activation_replay_requires_exact_canonical_input_bindings(tmp_path: Path) -> None:
+    db_url, db_path, weekly_run, published = _setup_weekly_with_publish(tmp_path)
+    materialized = _materialize_handoff(
+        db_url,
+        workflow_run_id=str(weekly_run["workflow_run_id"]),
+        published_artifact_version_id=str(published["artifact_version_id"]),
+        service_date_id=SERVICE_DATE_ID,
+        idempotency_key="idem:handoff:materialize:exact-inputs",
+    )
+    edge_execution = materialized["edge_executions"][0]
+    route_delta = _create_artifact_version(
+        db_url,
+        workflow_run_id=str(weekly_run["workflow_run_id"]),
+        artifact_kind="dispatch.route_delta_intake.workbook",
+        idempotency_key="idem:artifact:exact-inputs:route-delta",
+        canonical_partition_kind="ServiceDateID",
+        canonical_partition_key=SERVICE_DATE_ID,
+    )
+    actual_hours = _create_artifact_version(
+        db_url,
+        workflow_run_id=str(weekly_run["workflow_run_id"]),
+        artifact_kind="planning.actual_hours_snapshot.workbook",
+        idempotency_key="idem:artifact:exact-inputs:actual-hours",
+    )
+    activated = _activate_handoff(
+        db_url,
+        edge_execution_id=str(edge_execution["edge_execution_id"]),
+        route_delta_source_artifact_version_id=str(route_delta["artifact_version_id"]),
+        actual_hours_source_artifact_version_id=str(actual_hours["artifact_version_id"]),
+        idempotency_key="idem:handoff:activate:exact-inputs:first",
+    )
+    live_run_id = str(activated["target_workflow_run"]["workflow_run_id"])
+
+    replay_ok = _activate_handoff(
+        db_url,
+        edge_execution_id=str(edge_execution["edge_execution_id"]),
+        route_delta_source_artifact_version_id=str(route_delta["artifact_version_id"]),
+        actual_hours_source_artifact_version_id=str(actual_hours["artifact_version_id"]),
+        idempotency_key="idem:handoff:activate:exact-inputs:retry",
+    )
+    assert str(replay_ok["target_workflow_run"]["workflow_run_id"]) == live_run_id
+
+    route_delta_retry = _create_artifact_version(
+        db_url,
+        workflow_run_id=str(weekly_run["workflow_run_id"]),
+        artifact_kind="dispatch.route_delta_intake.workbook",
+        idempotency_key="idem:artifact:exact-inputs:route-delta:changed",
+        canonical_partition_kind="ServiceDateID",
+        canonical_partition_key=SERVICE_DATE_ID,
+    )
+    failed = run_cli(
+        "--db-url",
+        db_url,
+        "handoffs",
+        "activate-live-dispatch",
+        "--json",
+        json.dumps(
+            {
+                "edge_execution_id": str(edge_execution["edge_execution_id"]),
+                "route_delta_source_artifact_version_id": str(route_delta_retry["artifact_version_id"]),
+                "actual_hours_source_artifact_version_id": str(actual_hours["artifact_version_id"]),
+                "idempotency_key": "idem:handoff:activate:exact-inputs:mismatch",
+            },
+            separators=(",", ":"),
+        ),
+        expect_ok=False,
+    )
+    error = stderr_json(failed)
+    assert error["error_code"] == "handoff_activation_input_mismatch"
+
+    binding_rows = _query_rows(
+        db_path,
+        "SELECT binding_key FROM workflow_run_inputs WHERE workflow_run_id = ?",
+        (live_run_id,),
+    )
+    assert len(binding_rows) == 3
+
+
+def test_activation_rejects_superseded_route_delta_source(tmp_path: Path) -> None:
+    db_url, _, weekly_run, published = _setup_weekly_with_publish(tmp_path)
+    materialized = _materialize_handoff(
+        db_url,
+        workflow_run_id=str(weekly_run["workflow_run_id"]),
+        published_artifact_version_id=str(published["artifact_version_id"]),
+        service_date_id=SERVICE_DATE_ID,
+        idempotency_key="idem:handoff:materialize:superseded-route",
+    )
+    edge_execution = materialized["edge_executions"][0]
+    route_delta_stale = _create_artifact_version(
+        db_url,
+        workflow_run_id=str(weekly_run["workflow_run_id"]),
+        artifact_kind="dispatch.route_delta_intake.workbook",
+        idempotency_key="idem:artifact:superseded-route:stale",
+        canonical_partition_kind="ServiceDateID",
+        canonical_partition_key=SERVICE_DATE_ID,
+    )
+    _create_artifact_version(
+        db_url,
+        workflow_run_id=str(weekly_run["workflow_run_id"]),
+        artifact_kind="dispatch.route_delta_intake.workbook",
+        idempotency_key="idem:artifact:superseded-route:new",
+        canonical_partition_kind="ServiceDateID",
+        canonical_partition_key=SERVICE_DATE_ID,
+        supersedes_artifact_version_id=str(route_delta_stale["artifact_version_id"]),
+    )
+    actual_hours = _create_artifact_version(
+        db_url,
+        workflow_run_id=str(weekly_run["workflow_run_id"]),
+        artifact_kind="planning.actual_hours_snapshot.workbook",
+        idempotency_key="idem:artifact:superseded-route:actual-hours",
+    )
+
+    failed = run_cli(
+        "--db-url",
+        db_url,
+        "handoffs",
+        "activate-live-dispatch",
+        "--json",
+        json.dumps(
+            {
+                "edge_execution_id": str(edge_execution["edge_execution_id"]),
+                "route_delta_source_artifact_version_id": str(route_delta_stale["artifact_version_id"]),
+                "actual_hours_source_artifact_version_id": str(actual_hours["artifact_version_id"]),
+                "idempotency_key": "idem:handoff:activate:superseded-route",
+            },
+            separators=(",", ":"),
+        ),
+        expect_ok=False,
+    )
+    error = stderr_json(failed)
+    assert error["error_code"] == "handoff_source_artifact_superseded"
+
+
+def test_activation_rejects_superseded_actual_hours_source(tmp_path: Path) -> None:
+    db_url, _, weekly_run, published = _setup_weekly_with_publish(tmp_path)
+    materialized = _materialize_handoff(
+        db_url,
+        workflow_run_id=str(weekly_run["workflow_run_id"]),
+        published_artifact_version_id=str(published["artifact_version_id"]),
+        service_date_id=SERVICE_DATE_ID,
+        idempotency_key="idem:handoff:materialize:superseded-hours",
+    )
+    edge_execution = materialized["edge_executions"][0]
+    route_delta = _create_artifact_version(
+        db_url,
+        workflow_run_id=str(weekly_run["workflow_run_id"]),
+        artifact_kind="dispatch.route_delta_intake.workbook",
+        idempotency_key="idem:artifact:superseded-hours:route-delta",
+        canonical_partition_kind="ServiceDateID",
+        canonical_partition_key=SERVICE_DATE_ID,
+    )
+    actual_hours_stale = _create_artifact_version(
+        db_url,
+        workflow_run_id=str(weekly_run["workflow_run_id"]),
+        artifact_kind="planning.actual_hours_snapshot.workbook",
+        idempotency_key="idem:artifact:superseded-hours:stale",
+    )
+    _create_artifact_version(
+        db_url,
+        workflow_run_id=str(weekly_run["workflow_run_id"]),
+        artifact_kind="planning.actual_hours_snapshot.workbook",
+        idempotency_key="idem:artifact:superseded-hours:new",
+        supersedes_artifact_version_id=str(actual_hours_stale["artifact_version_id"]),
+    )
+
+    failed = run_cli(
+        "--db-url",
+        db_url,
+        "handoffs",
+        "activate-live-dispatch",
+        "--json",
+        json.dumps(
+            {
+                "edge_execution_id": str(edge_execution["edge_execution_id"]),
+                "route_delta_source_artifact_version_id": str(route_delta["artifact_version_id"]),
+                "actual_hours_source_artifact_version_id": str(actual_hours_stale["artifact_version_id"]),
+                "idempotency_key": "idem:handoff:activate:superseded-hours",
+            },
+            separators=(",", ":"),
+        ),
+        expect_ok=False,
+    )
+    error = stderr_json(failed)
+    assert error["error_code"] == "handoff_source_artifact_superseded"
+
+
+def test_activation_rejects_invalid_status_transition(tmp_path: Path) -> None:
+    db_url, db_path, weekly_run, published = _setup_weekly_with_publish(tmp_path)
+    materialized = _materialize_handoff(
+        db_url,
+        workflow_run_id=str(weekly_run["workflow_run_id"]),
+        published_artifact_version_id=str(published["artifact_version_id"]),
+        service_date_id=SERVICE_DATE_ID,
+        idempotency_key="idem:handoff:materialize:invalid-status",
+    )
+    edge_execution = materialized["edge_executions"][0]
+    _execute_sql(
+        db_path,
+        "UPDATE edge_executions SET status = 'stale' WHERE edge_execution_id = ?",
+        (str(edge_execution["edge_execution_id"]),),
+    )
+
+    route_delta = _create_artifact_version(
+        db_url,
+        workflow_run_id=str(weekly_run["workflow_run_id"]),
+        artifact_kind="dispatch.route_delta_intake.workbook",
+        idempotency_key="idem:artifact:invalid-status:route-delta",
+        canonical_partition_kind="ServiceDateID",
+        canonical_partition_key=SERVICE_DATE_ID,
+    )
+    actual_hours = _create_artifact_version(
+        db_url,
+        workflow_run_id=str(weekly_run["workflow_run_id"]),
+        artifact_kind="planning.actual_hours_snapshot.workbook",
+        idempotency_key="idem:artifact:invalid-status:actual-hours",
+    )
+    failed = run_cli(
+        "--db-url",
+        db_url,
+        "handoffs",
+        "activate-live-dispatch",
+        "--json",
+        json.dumps(
+            {
+                "edge_execution_id": str(edge_execution["edge_execution_id"]),
+                "route_delta_source_artifact_version_id": str(route_delta["artifact_version_id"]),
+                "actual_hours_source_artifact_version_id": str(actual_hours["artifact_version_id"]),
+                "idempotency_key": "idem:handoff:activate:invalid-status",
+            },
+            separators=(",", ":"),
+        ),
+        expect_ok=False,
+    )
+    error = stderr_json(failed)
+    assert error["error_code"] == "edge_execution_status_transition_invalid"
 
 
 def test_handoff_rejects_cross_scope_input_bindings(tmp_path: Path) -> None:
