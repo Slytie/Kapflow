@@ -1,0 +1,40 @@
+scenario_id: logistics_reporting_to_planning_notify_only_golden_slice
+workflow_id: dispatch_reporting.v1
+workflow_version: v1
+partition_key: SD-2026-03-06
+logical_date: "2026-03-06"
+scope:
+  tenant_id: tenant-logistics
+  domain_id: domain-hub
+steps:
+  - id: create_reporting_final_packet
+    action: artifacts.create-version
+    payload:
+      workflow_run_id: "{{workflow_run.workflow_run_id}}"
+      artifact_kind: reporting.final_packet.workbook
+      artifact_role: official_output
+      media_type: application/octet-stream
+      storage_uri: inmem://scenario/logistics/reporting-final-packet
+      content_digest: sha256:logistics-reporting-final-packet
+      canonical_partition_kind: ServiceDateID
+      canonical_partition_key: SD-2026-03-06
+      metadata_json:
+        scenario_id: logistics_reporting_to_planning_notify_only_golden_slice
+      idempotency_key: scenario:logistics_reporting_to_planning_notify_only_golden_slice:final-packet
+    save_as: final_packet
+  - id: notify_planning_feedback
+    action: handoffs.notify-only
+    payload:
+      edge_id: reporting_actuals_to_future_planning
+      source_workflow_run_id: "{{workflow_run.workflow_run_id}}"
+      source_artifact_version_id: "{{final_packet.artifact_version.artifact_version_id}}"
+      idempotency_key: scenario:logistics_reporting_to_planning_notify_only_golden_slice:notify
+    save_as: notify_result
+  - id: notify_planning_feedback_retry
+    action: handoffs.notify-only
+    payload:
+      edge_id: reporting_actuals_to_future_planning
+      source_workflow_run_id: "{{workflow_run.workflow_run_id}}"
+      source_artifact_version_id: "{{final_packet.artifact_version.artifact_version_id}}"
+      idempotency_key: scenario:logistics_reporting_to_planning_notify_only_golden_slice:notify-retry
+    save_as: notify_retry

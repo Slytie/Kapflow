@@ -2,6 +2,11 @@
 
 Record any decisions made since the last session so a fresh Codex run can rehydrate quickly.
 
+## 2026-03-08 (TASK-0063 notify_only reporting->planning + TASK-0031 status closure)
+- Status authority decision: TASK-0031 is DONE. Projection coherence authored/runtime surfaces now exist in-repo (`docs/planning/PROJECTION_COHERENCE_HARNESS.md`, `tests/runtime/test_projection_coherence.py`, and runtime `projection.coherence_failed` behavior over derived projection views).
+- Composition runtime decision: TASK-0063 is DONE as a bounded first `notify_only` slice over existing `edge_executions` + compiled family edges; landed scope is `dispatch_reporting.Stage05 -> weekly_schedule_planning.Stage03` with deterministic typed transform usage, target run resolve/create, canonical target input materialization, exact input binding capture, and duplicate-notification idempotency.
+- Scope-boundary decision: keep later logistics composition work (observability/query surfaces, additional edges) as future tranche work; do not represent TASK-0063 as a fully general finished composition engine.
+
 ## 2026-03-07 (TASK-0061 logistics control layer + method packages)
 - Chosen control-layer authority boundary: compiled logistics control metadata drives only existing canonical runtime activation objects (`workflow_runs`, `task_runs`, `human_tasks`, `execution_sessions`, `tool_executions`); no second activation ontology/table set is introduced.
 - Chosen method-package pinning posture: first-slice stages require authored method packages with deterministic replay fields, explicit stop policy, and a content digest; execution-spec identities are derived from these pinned package digests.
@@ -34,7 +39,7 @@ Record any decisions made since the last session so a fresh Codex run can rehydr
 ## 2026-03-04 (TASK-0056 CI/hygiene stabilization + TASK-0031 status reconcile)
 - Chosen hygiene posture: local editor/runtime/cache/build noise (`.DS_Store`, `.idea/`, `.tmp/`, `artifacts/`, frontend `node_modules`/`dist`, env/log cache files) is ignored and removed from Git index when previously tracked.
 - Chosen CI posture: backend PR checks include `frontend-snapshots-check`; frontend PR checks run `npm ci`, typecheck, and non-watch frontend tests; OpenAI real-network tests remain gated in scheduled/dispatch workflow only.
-- Status reconciliation decision: TASK-0031 remains TODO because the planned authored deliverable (`docs/planning/PROJECTION_COHERENCE_HARNESS.md`) and first runtime projection-coherence harness implementation/tests are not present in-repo yet.
+- Historical note (superseded by 2026-03-08): at this date TASK-0031 was still tracked as TODO pending authored/runtime coherence harness delivery.
 
 ## 2026-03-04 (TASK-0055 stabilization pass 1 for frontend typecheck + snapshot determinism)
 - Chosen path-sanitization rule for artifact ingress metadata: normalize separators to `/`, store repo-relative `fixtures/...` when the path includes `fixtures`, otherwise store only the file basename.

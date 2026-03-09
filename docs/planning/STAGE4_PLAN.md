@@ -91,11 +91,11 @@ Important constraint:
 - `timeline_events` is the canonical event substrate and also the relay surface for derived consumers
 - do **not** add an external workflow engine or second durable workflow history for Stage 4
 
-## Remaining build order
+## Historical build order (milestones now landed through TASK-0032)
 1. Map the typed event registry to runtime emission points and tests (`TASK-0029`)
 2. Design the step-run scenario harness for agent-executed flows and conditional task spawning (`TASK-0039`)
 3. Translate promotion semantics and schedule delta rules into artifact-store design (`TASK-0030`)
-4. Design the projection coherence harness (`TASK-0031`)
+4. Design and land the projection coherence harness (`TASK-0031`) - completed
 5. Prototype generator for runbook packs and CompanyOS IR (`TASK-0032`)
 6. Then proceed with runtime implementation work in this order:
    - repo scaffold under `src/onetruth/`, `tests/runtime/`, and `alembic/`

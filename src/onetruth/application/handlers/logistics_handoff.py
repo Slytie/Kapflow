@@ -1,6 +1,9 @@
 from __future__ import annotations
 
+from datetime import date
+from functools import lru_cache
 import hashlib
+from pathlib import Path
 import sqlite3
 from typing import Any
 from uuid import uuid4
@@ -8,6 +11,10 @@ from uuid import uuid4
 from onetruth.application.handlers.workflow_task_lifecycle import CommandError
 from onetruth.application.services.logistics_handoff_runtime import apply_partition_transform_by_id
 from onetruth.domain.partition_codec import validate_partition_key
+from onetruth.infrastructure.definitions.family_compiler import (
+    DefinitionCompileError,
+    compile_workflow_family,
+)
 from onetruth.infrastructure.events.event_store import utc_now_iso
 from onetruth.infrastructure.repositories.artifact_provenance import create_artifact_provenance_edge
 from onetruth.infrastructure.repositories.artifact_versions import (
@@ -40,6 +47,16 @@ WEEKLY_DAILY_SEED_KIND = "planning.daily_dispatch_seed.workbook"
 LIVE_SEED_KIND = "dispatch.base_schedule_seed.workbook"
 LIVE_ROUTE_DELTA_KIND = "dispatch.route_delta_intake.workbook"
 LIVE_ACTUAL_HOURS_KIND = "dispatch.actual_hours_snapshot.workbook"
+NOTIFY_ONLY_MODE = "notify_only"
+WRITER_MODE_SOURCE_ONLY = "source_only"
+
+_REPO_ROOT = Path(__file__).resolve().parents[4]
+_LOGISTICS_FAMILY_PATH = (
+    _REPO_ROOT / "docs" / "workflows" / "logistics_ops_family" / "v1" / "WORKFLOW_FAMILY.yaml"
+)
+_LOGISTICS_TRANSFORMS_PATH = (
+    _REPO_ROOT / "docs" / "workflows" / "logistics_ops_family" / "v1" / "PARTITION_TRANSFORMS.yaml"
+)
 
 
 def materialize_weekly_seeds_command(
@@ -119,9 +136,9 @@ def materialize_weekly_seeds_command(
         for service_date_id in sorted(service_dates):
             correlation_key = _correlation_key(
                 edge_id=EDGE_ID_WEEKLY_TO_LIVE,
-                workflow_run_id=workflow_run_id,
-                published_artifact_version_id=published_artifact_version_id,
-                service_date_id=service_date_id,
+                source_workflow_run_id=workflow_run_id,
+                source_artifact_version_id=published_artifact_version_id,
+                target_partition_key=service_date_id,
             )
             existing = get_edge_execution_by_correlation(
                 connection,
@@ -516,6 +533,272 @@ def activate_live_dispatch_command(
     }
 
 
+def notify_only_handoff_command(
+    connection: sqlite3.Connection,
+    payload: dict[str, Any],
+) -> dict[str, Any]:
+    _require_fields(
+        payload,
+        [
+            "edge_id",
+            "source_workflow_run_id",
+            "source_artifact_version_id",
+            "idempotency_key",
+        ],
+    )
+
+    edge_id = str(payload["edge_id"])
+    source_workflow_run_id = str(payload["source_workflow_run_id"])
+    source_artifact_version_id = str(payload["source_artifact_version_id"])
+    idempotency_key = str(payload["idempotency_key"])
+
+    edge_descriptor = _require_notify_only_edge_descriptor(edge_id)
+    source_workflow_run = _require_workflow_run(connection, source_workflow_run_id)
+    if str(source_workflow_run["workflow_id"]) != edge_descriptor["source_workflow_id"]:
+        raise CommandError(
+            code="invalid_source_workflow",
+            message="source workflow does not match compiled notify_only edge source module",
+            details={
+                "edge_id": edge_id,
+                "expected_source_workflow_id": edge_descriptor["source_workflow_id"],
+                "actual_source_workflow_id": str(source_workflow_run["workflow_id"]),
+            },
+        )
+
+    source_artifact = _require_artifact(connection, source_artifact_version_id)
+    if str(source_artifact["workflow_run_id"]) != source_workflow_run_id:
+        raise CommandError(
+            code="cross_workflow_artifact_reference",
+            message="source artifact belongs to a different workflow_run",
+            details={
+                "edge_id": edge_id,
+                "workflow_run_id": source_workflow_run_id,
+                "artifact_workflow_run_id": str(source_artifact["workflow_run_id"]),
+                "artifact_version_id": source_artifact_version_id,
+            },
+        )
+    if str(source_artifact["artifact_kind"]) != edge_descriptor["source_dataset_key"]:
+        raise CommandError(
+            code="invalid_source_artifact_kind",
+            message="source artifact kind does not match compiled edge source output dataset",
+            details={
+                "edge_id": edge_id,
+                "artifact_version_id": source_artifact_version_id,
+                "expected_artifact_kind": edge_descriptor["source_dataset_key"],
+                "actual_artifact_kind": str(source_artifact["artifact_kind"]),
+            },
+        )
+
+    source_partition_key = str(source_workflow_run["partition_key"])
+    try:
+        target_partition_keys = sorted(
+            set(
+                apply_partition_transform_by_id(
+                    transform_id=edge_descriptor["partition_transform_id"],
+                    source_partition_key=source_partition_key,
+                )
+            )
+        )
+    except ValueError as exc:
+        raise CommandError(
+            code="partition_transform_unsupported",
+            message="notify_only partition transform is unsupported by runtime",
+            details={
+                "edge_id": edge_id,
+                "transform_id": edge_descriptor["partition_transform_id"],
+                "source_partition_key": source_partition_key,
+                "error": str(exc),
+            },
+        ) from exc
+    if not target_partition_keys:
+        raise CommandError(
+            code="partition_transform_empty",
+            message="notify_only partition transform returned no target partitions",
+            details={
+                "edge_id": edge_id,
+                "transform_id": edge_descriptor["partition_transform_id"],
+                "source_partition_key": source_partition_key,
+            },
+        )
+
+    target_workflow_runs: list[dict[str, Any]] = []
+    target_input_artifacts: list[dict[str, Any]] = []
+    edge_rows: list[dict[str, Any]] = []
+    source_scope = {
+        "tenant_id": str(source_workflow_run["tenant_id"]),
+        "domain_id": str(source_workflow_run["domain_id"]),
+    }
+    target_binding_key = _workflow_input_binding_key(
+        stage_id=edge_descriptor["target_stage_id"],
+        dataset_key=edge_descriptor["target_dataset_key"],
+    )
+
+    _begin_transaction(connection)
+    try:
+        for target_partition_key in target_partition_keys:
+            validate_partition_key(edge_descriptor["target_partition_kind"], target_partition_key)
+            correlation_key = _correlation_key(
+                edge_id=edge_id,
+                source_workflow_run_id=source_workflow_run_id,
+                source_artifact_version_id=source_artifact_version_id,
+                target_partition_key=target_partition_key,
+            )
+            existing = get_edge_execution_by_correlation(
+                connection,
+                edge_id=edge_id,
+                correlation_key=correlation_key,
+            )
+            if existing is not None:
+                edge_rows.append(existing)
+                existing_target_run_id = str(existing.get("target_workflow_run_id") or "")
+                if existing_target_run_id:
+                    target_run = _require_workflow_run(connection, existing_target_run_id)
+                    target_workflow_runs.append(target_run)
+                existing_target_input_artifact_id = _target_input_artifact_id_from_edge(existing)
+                if existing_target_input_artifact_id is not None:
+                    target_input_artifacts.append(
+                        _require_artifact(connection, existing_target_input_artifact_id)
+                    )
+                continue
+
+            now = utc_now_iso()
+            target_workflow_run = _resolve_or_create_workflow_run(
+                connection,
+                workflow_id=edge_descriptor["target_workflow_id"],
+                tenant_id=source_scope["tenant_id"],
+                domain_id=source_scope["domain_id"],
+                partition_kind=edge_descriptor["target_partition_kind"],
+                partition_key=target_partition_key,
+                activation_key=f"{edge_descriptor['target_workflow_id']}:{target_partition_key}",
+                created_at=now,
+            )
+            target_workflow_run_id = str(target_workflow_run["workflow_run_id"])
+
+            target_input_artifact = _create_or_load_artifact_version(
+                connection,
+                artifact_version_id=_stable_notify_input_artifact_id(
+                    edge_id=edge_id,
+                    source_artifact_version_id=source_artifact_version_id,
+                    target_partition_key=target_partition_key,
+                    target_dataset_key=edge_descriptor["target_dataset_key"],
+                ),
+                workflow_run_id=target_workflow_run_id,
+                tenant_id=source_scope["tenant_id"],
+                domain_id=source_scope["domain_id"],
+                dataset_key=edge_descriptor["target_dataset_key"],
+                partition_kind=edge_descriptor["target_partition_kind"],
+                partition_key=target_partition_key,
+                artifact_kind=edge_descriptor["target_dataset_key"],
+                artifact_role="official_input",
+                media_type=str(source_artifact.get("media_type") or "application/octet-stream"),
+                storage_uri=(
+                    "inmem://handoff/"
+                    f"{target_workflow_run_id}/{edge_descriptor['target_dataset_key']}/{source_artifact_version_id}"
+                ),
+                content_digest=f"sha256:{_digest('notify-input', edge_id, source_artifact_version_id, target_partition_key)}",
+                metadata_json={
+                    "handoff_edge_id": edge_id,
+                    "handoff_mode": NOTIFY_ONLY_MODE,
+                    "source_workflow_run_id": source_workflow_run_id,
+                    "source_artifact_version_id": source_artifact_version_id,
+                    "source_partition_key": source_partition_key,
+                    "target_partition_key": target_partition_key,
+                    "target_input_dataset_key": edge_descriptor["target_dataset_key"],
+                    "materialize_idempotency_key": idempotency_key,
+                },
+                parent_artifact_version_id=source_artifact_version_id,
+                supersedes_artifact_version_id=None,
+                lineage_note="notify_only_handoff_input",
+                created_at=now,
+            )
+            _create_or_ignore_provenance_edge(
+                connection,
+                output_artifact_version_id=str(target_input_artifact["artifact_version_id"]),
+                input_artifact_version_id=source_artifact_version_id,
+                edge_type="derives_from",
+                workflow_run_id=target_workflow_run_id,
+                edge_order=0,
+                created_at=now,
+                edge_id=(
+                    "ape-"
+                    f"{_digest('notify-provenance', edge_id, str(target_input_artifact['artifact_version_id']), source_artifact_version_id)}"
+                ),
+                metadata_json={
+                    "edge_id": edge_id,
+                    "handoff_mode": NOTIFY_ONLY_MODE,
+                    "target_partition_key": target_partition_key,
+                },
+            )
+            _create_or_ignore_workflow_input_binding(
+                connection,
+                workflow_run_id=target_workflow_run_id,
+                binding_key=target_binding_key,
+                source_ref=source_artifact_version_id,
+                artifact_version_id=str(target_input_artifact["artifact_version_id"]),
+                metadata_json={
+                    "edge_id": edge_id,
+                    "handoff_mode": NOTIFY_ONLY_MODE,
+                    "target_dataset_key": edge_descriptor["target_dataset_key"],
+                },
+                captured_at=now,
+            )
+
+            edge_execution_id = f"ee-{uuid4()}"
+            create_edge_execution(
+                connection,
+                edge_execution_id=edge_execution_id,
+                edge_id=edge_id,
+                source_workflow_run_id=source_workflow_run_id,
+                source_stage_id=edge_descriptor["source_stage_id"],
+                source_artifact_version_id=source_artifact_version_id,
+                source_activation_key=str(source_workflow_run["activation_key"]),
+                target_workflow_id=edge_descriptor["target_workflow_id"],
+                target_stage_id=edge_descriptor["target_stage_id"],
+                target_partition_kind=edge_descriptor["target_partition_kind"],
+                target_partition_key=target_partition_key,
+                target_activation_key=f"{edge_descriptor['target_workflow_id']}:{target_partition_key}",
+                correlation_key=correlation_key,
+                materialize_idempotency_key=idempotency_key,
+                status="prepared",
+                cursor_state={
+                    "phase": "notified",
+                    "handoff_mode": NOTIFY_ONLY_MODE,
+                    "source_partition_key": source_partition_key,
+                    "target_partition_key": target_partition_key,
+                },
+                compensation_state={
+                    "mode": edge_descriptor["compensation_mode"],
+                    "state": "none",
+                },
+                input_bindings={
+                    "source_artifact_version_id": source_artifact_version_id,
+                    "target_dataset_key": edge_descriptor["target_dataset_key"],
+                    "target_input_artifact_version_id": str(
+                        target_input_artifact["artifact_version_id"]
+                    ),
+                    "target_binding_key": target_binding_key,
+                },
+                trigger_ref=source_artifact_version_id,
+                seed_artifact_version_id=None,
+                target_workflow_run_id=target_workflow_run_id,
+                activated_at=None,
+                created_at=now,
+            )
+            edge_rows.append(_require_edge_execution(connection, edge_execution_id))
+            target_workflow_runs.append(target_workflow_run)
+            target_input_artifacts.append(target_input_artifact)
+    except Exception:
+        connection.rollback()
+        raise
+    connection.commit()
+
+    return {
+        "edge_executions": edge_rows,
+        "target_workflow_runs": target_workflow_runs,
+        "target_input_artifacts": target_input_artifacts,
+    }
+
+
 def show_edge_execution_command(
     connection: sqlite3.Connection,
     edge_execution_id: str,
@@ -540,6 +823,177 @@ def list_edge_executions_command(
     )
 
 
+@lru_cache(maxsize=1)
+def _compiled_notify_only_edge_descriptors() -> dict[str, dict[str, str]]:
+    try:
+        compiled = compile_workflow_family(
+            repo_root=_REPO_ROOT,
+            family_path=_LOGISTICS_FAMILY_PATH,
+            partition_transforms_path=_LOGISTICS_TRANSFORMS_PATH,
+        )
+    except DefinitionCompileError as exc:
+        raise CommandError(
+            code="family_compilation_failed",
+            message="failed to compile logistics workflow family for notify_only dispatch",
+            details={"error": str(exc)},
+        ) from exc
+
+    modules_raw = compiled.get("compiled_modules")
+    edges_raw = compiled.get("compiled_edges")
+    if not isinstance(modules_raw, list) or not isinstance(edges_raw, list):
+        raise CommandError(
+            code="family_compilation_invalid",
+            message="compiled logistics family is missing compiled_modules/compiled_edges",
+            details={},
+        )
+
+    modules: dict[str, dict[str, str]] = {}
+    for module in modules_raw:
+        if not isinstance(module, dict):
+            continue
+        module_id = str(module.get("module_id") or "").strip()
+        source_workflow = module.get("source_workflow")
+        partition = module.get("partition")
+        if not isinstance(source_workflow, dict) or not isinstance(partition, dict):
+            continue
+        workflow_id = str(source_workflow.get("workflow_id") or "").strip()
+        partition_kind = str(partition.get("kind") or "").strip()
+        if module_id and workflow_id and partition_kind:
+            modules[module_id] = {
+                "workflow_id": workflow_id,
+                "partition_kind": partition_kind,
+            }
+
+    descriptors: dict[str, dict[str, str]] = {}
+    for edge in edges_raw:
+        if not isinstance(edge, dict):
+            continue
+        edge_id = str(edge.get("edge_id") or "").strip()
+        source_module_id = str(edge.get("source_module_id") or "").strip()
+        target_module_id = str(edge.get("target_module_id") or "").strip()
+        partition_transform = edge.get("partition_transform") or {}
+        source_ref = edge.get("source_output_ref") or {}
+        target_ref = edge.get("target_input_ref") or {}
+        source_module = modules.get(source_module_id)
+        target_module = modules.get(target_module_id)
+        if (
+            not edge_id
+            or source_module is None
+            or target_module is None
+            or not isinstance(partition_transform, dict)
+            or not isinstance(source_ref, dict)
+            or not isinstance(target_ref, dict)
+        ):
+            continue
+        descriptors[edge_id] = {
+            "edge_id": edge_id,
+            "handoff_mode": str(edge.get("handoff_mode") or ""),
+            "writer_mode": str(edge.get("writer_mode") or ""),
+            "compensation_mode": str(edge.get("compensation_mode") or ""),
+            "source_workflow_id": source_module["workflow_id"],
+            "source_partition_kind": source_module["partition_kind"],
+            "source_stage_id": str(source_ref.get("stage_id") or ""),
+            "source_dataset_key": str(source_ref.get("dataset_key") or ""),
+            "target_workflow_id": target_module["workflow_id"],
+            "target_partition_kind": target_module["partition_kind"],
+            "target_stage_id": str(target_ref.get("stage_id") or ""),
+            "target_dataset_key": str(target_ref.get("dataset_key") or ""),
+            "partition_transform_id": str(partition_transform.get("id") or ""),
+        }
+    return descriptors
+
+
+def _require_notify_only_edge_descriptor(edge_id: str) -> dict[str, str]:
+    descriptor = _compiled_notify_only_edge_descriptors().get(edge_id)
+    if descriptor is None:
+        raise CommandError(
+            code="edge_not_found",
+            message="edge_id not found in compiled logistics workflow family",
+            details={"edge_id": edge_id},
+        )
+    if descriptor["handoff_mode"] != NOTIFY_ONLY_MODE:
+        raise CommandError(
+            code="handoff_mode_mismatch",
+            message="edge does not use handoff_mode=notify_only",
+            details={
+                "edge_id": edge_id,
+                "handoff_mode": descriptor["handoff_mode"],
+            },
+        )
+    if descriptor["writer_mode"] != WRITER_MODE_SOURCE_ONLY:
+        raise CommandError(
+            code="writer_mode_mismatch",
+            message="notify_only runtime requires writer_mode=source_only",
+            details={
+                "edge_id": edge_id,
+                "writer_mode": descriptor["writer_mode"],
+            },
+        )
+    return descriptor
+
+
+def _resolve_or_create_workflow_run(
+    connection: sqlite3.Connection,
+    *,
+    workflow_id: str,
+    tenant_id: str,
+    domain_id: str,
+    partition_kind: str,
+    partition_key: str,
+    activation_key: str,
+    created_at: str,
+) -> dict[str, Any]:
+    existing_runs = list_workflow_runs(
+        connection,
+        workflow_id=workflow_id,
+        tenant_id=tenant_id,
+        domain_id=domain_id,
+        state=None,
+    )
+    for run in existing_runs:
+        if str(run["partition_key"]) == partition_key:
+            return run
+
+    workflow_run_id = f"wr-{uuid4()}"
+    try:
+        create_workflow_run(
+            connection,
+            workflow_run_id=workflow_run_id,
+            workflow_id=workflow_id,
+            workflow_version="v1",
+            tenant_id=tenant_id,
+            domain_id=domain_id,
+            partition_key=partition_key,
+            logical_date=_logical_date_from_partition_key(
+                partition_kind=partition_kind,
+                partition_key=partition_key,
+            ),
+            activation_key=activation_key,
+            state="OPEN",
+            created_at=created_at,
+        )
+    except sqlite3.IntegrityError:
+        refreshed = list_workflow_runs(
+            connection,
+            workflow_id=workflow_id,
+            tenant_id=tenant_id,
+            domain_id=domain_id,
+            state=None,
+        )
+        for run in refreshed:
+            if str(run["partition_key"]) == partition_key:
+                return run
+        raise
+    created = get_workflow_run(connection, workflow_run_id)
+    if created is None:
+        raise CommandError(
+            code="workflow_run_not_found",
+            message="workflow run not found after creation",
+            details={"workflow_run_id": workflow_run_id},
+        )
+    return created
+
+
 def _resolve_or_create_live_dispatch_run(
     connection: sqlite3.Connection,
     *,
@@ -549,59 +1003,36 @@ def _resolve_or_create_live_dispatch_run(
     activation_key: str,
     created_at: str,
 ) -> dict[str, Any]:
-    existing_runs = list_workflow_runs(
+    return _resolve_or_create_workflow_run(
         connection,
         workflow_id=LIVE_WORKFLOW_ID,
         tenant_id=tenant_id,
         domain_id=domain_id,
-        state=None,
+        partition_kind="ServiceDateID",
+        partition_key=service_date_id,
+        activation_key=activation_key,
+        created_at=created_at,
     )
-    for run in existing_runs:
-        if str(run["partition_key"]) == service_date_id:
-            return run
-
-    workflow_run_id = f"wr-{uuid4()}"
-    logical_date = _logical_date_from_service_date_id(service_date_id)
-    try:
-        create_workflow_run(
-            connection,
-            workflow_run_id=workflow_run_id,
-            workflow_id=LIVE_WORKFLOW_ID,
-            workflow_version="v1",
-            tenant_id=tenant_id,
-            domain_id=domain_id,
-            partition_key=service_date_id,
-            logical_date=logical_date,
-            activation_key=activation_key,
-            state="OPEN",
-            created_at=created_at,
-        )
-    except sqlite3.IntegrityError:
-        # Another replay may have inserted the run concurrently.
-        refreshed = list_workflow_runs(
-            connection,
-            workflow_id=LIVE_WORKFLOW_ID,
-            tenant_id=tenant_id,
-            domain_id=domain_id,
-            state=None,
-        )
-        for run in refreshed:
-            if str(run["partition_key"]) == service_date_id:
-                return run
-        raise
-    created = get_workflow_run(connection, workflow_run_id)
-    if created is None:
-        raise CommandError(
-            code="workflow_run_not_found",
-            message="live dispatch run not found after creation",
-            details={"workflow_run_id": workflow_run_id},
-        )
-    return created
 
 
 def _logical_date_from_service_date_id(service_date_id: str) -> str:
     validate_partition_key("ServiceDateID", service_date_id)
     return service_date_id.removeprefix("SD-")
+
+
+def _logical_date_from_partition_key(*, partition_kind: str, partition_key: str) -> str:
+    validate_partition_key(partition_kind, partition_key)
+    if partition_kind == "ServiceDateID":
+        return _logical_date_from_service_date_id(partition_key)
+    if partition_kind in {"PlanningWeekID", "PayPeriodID"}:
+        if partition_kind == "PlanningWeekID":
+            token = partition_key.removeprefix("PW-")
+        else:
+            token = partition_key.removeprefix("PP-")
+        year_text, week_text = token.split("-W", maxsplit=1)
+        week_start = date.fromisocalendar(int(year_text), int(week_text), 1)
+        return week_start.isoformat()
+    return partition_key
 
 
 def _create_or_load_artifact_version(
@@ -756,14 +1187,47 @@ def _stable_live_input_artifact_id(edge_execution_id: str, artifact_kind: str) -
     return f"av-{_digest('live-input-id', edge_execution_id, artifact_kind)}"
 
 
+def _stable_notify_input_artifact_id(
+    *,
+    edge_id: str,
+    source_artifact_version_id: str,
+    target_partition_key: str,
+    target_dataset_key: str,
+) -> str:
+    return (
+        "av-"
+        f"{_digest('notify-input-id', edge_id, source_artifact_version_id, target_partition_key, target_dataset_key)}"
+    )
+
+
+def _workflow_input_binding_key(*, stage_id: str, dataset_key: str) -> str:
+    stage_token = stage_id.strip().lower()
+    dataset_tail = dataset_key.strip().split(".", maxsplit=1)[-1]
+    if dataset_tail.endswith(".workbook"):
+        dataset_tail = dataset_tail[: -len(".workbook")]
+    if dataset_tail.endswith(".doc"):
+        dataset_tail = dataset_tail[: -len(".doc")]
+    return f"{stage_token}.{dataset_tail}"
+
+
+def _target_input_artifact_id_from_edge(edge_execution: dict[str, Any]) -> str | None:
+    bindings = edge_execution.get("input_bindings")
+    if not isinstance(bindings, dict):
+        return None
+    target_input_artifact_id = bindings.get("target_input_artifact_version_id")
+    if target_input_artifact_id is None:
+        return None
+    return str(target_input_artifact_id)
+
+
 def _correlation_key(
     *,
     edge_id: str,
-    workflow_run_id: str,
-    published_artifact_version_id: str,
-    service_date_id: str,
+    source_workflow_run_id: str,
+    source_artifact_version_id: str,
+    target_partition_key: str,
 ) -> str:
-    return _digest(edge_id, workflow_run_id, published_artifact_version_id, service_date_id)
+    return _digest(edge_id, source_workflow_run_id, source_artifact_version_id, target_partition_key)
 
 
 def _digest(*parts: str) -> str:

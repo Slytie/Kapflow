@@ -52,6 +52,7 @@ from onetruth.application.handlers.logistics_handoff import (
     activate_live_dispatch_command,
     list_edge_executions_command,
     materialize_weekly_seeds_command,
+    notify_only_handoff_command,
     show_edge_execution_command,
 )
 from onetruth.application.projections.coherence_harness import (
@@ -245,6 +246,12 @@ def _build_parser() -> argparse.ArgumentParser:
     )
     handoffs_activate.add_argument("--json", dest="json_payload", required=True)
     handoffs_activate.set_defaults(handler=_handle_handoffs_activate_live_dispatch)
+    handoffs_notify = handoffs_sub.add_parser(
+        "notify-only",
+        help="Dispatch a generic notify_only logistics handoff edge using compiled family metadata.",
+    )
+    handoffs_notify.add_argument("--json", dest="json_payload", required=True)
+    handoffs_notify.set_defaults(handler=_handle_handoffs_notify_only)
     handoffs_show = handoffs_sub.add_parser("show", help="Show one edge execution row.")
     handoffs_show.add_argument("--edge-execution-id", required=True)
     handoffs_show.add_argument("--json", dest="json_output", required=True, action="store_true")
@@ -1302,6 +1309,23 @@ def _handle_handoffs_activate_live_dispatch(args: argparse.Namespace) -> int:
     finally:
         connection.close()
     _json_print({"status": "ok", "command": "handoffs.activate-live-dispatch", "result": result})
+    return 0
+
+
+def _handle_handoffs_notify_only(args: argparse.Namespace) -> int:
+    payload = _parse_json_object(args.json_payload)
+    if isinstance(payload, int):
+        return payload
+    connection = _open_connection_or_emit(args.db_url)
+    if isinstance(connection, int):
+        return connection
+    try:
+        result = notify_only_handoff_command(connection, payload)
+    except CommandError as exc:
+        return _emit_error(code=exc.code, message=exc.message, details=exc.details)
+    finally:
+        connection.close()
+    _json_print({"status": "ok", "command": "handoffs.notify-only", "result": result})
     return 0
 
 

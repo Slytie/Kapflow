@@ -3,11 +3,15 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
-from onetruth.domain.partition_codec import planning_week_to_service_days
+from onetruth.domain.partition_codec import (
+    planning_week_to_service_days,
+    service_day_to_future_planning_week,
+)
 
 
 _PARTITION_TRANSFORMS: dict[str, Any] = {
     "planning_week_to_service_days": planning_week_to_service_days,
+    "service_day_to_future_planning_week": service_day_to_future_planning_week,
 }
 
 _SCORE_BUCKET_ORDER = {
@@ -41,7 +45,13 @@ def apply_partition_transform_by_id(
     transform = _PARTITION_TRANSFORMS.get(transform_id)
     if transform is None:
         raise ValueError(f"unsupported partition transform: {transform_id}")
-    values = transform(str(source_partition_key))
+    transformed = transform(str(source_partition_key))
+    if isinstance(transformed, str):
+        values = [transformed]
+    elif transformed is None:
+        values = []
+    else:
+        values = list(transformed)
     return [str(value) for value in values]
 
 

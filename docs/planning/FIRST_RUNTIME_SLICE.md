@@ -296,7 +296,7 @@ Status:
   - read-only `GET /api/v1/workflow-runs/{workflow_run_id}/workspace` aggregate
   - realistic workspace demo runner + workspace export bundle scripts
   - runtime API/scenario/contract tests for graph/actionability/endpoint/bundle behavior
-- TASK-0031 projection coherence harness remains the next open work item in this tranche.
+- TASK-0031 projection coherence harness is implemented in this tranche (`docs/planning/PROJECTION_COHERENCE_HARNESS.md`, `tests/runtime/test_projection_coherence.py`).
 
 ## 4) What should explicitly wait
 

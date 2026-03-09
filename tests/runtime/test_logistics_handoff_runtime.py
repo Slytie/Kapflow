@@ -62,6 +62,7 @@ def _create_artifact_version(
     workflow_run_id: str,
     artifact_kind: str,
     idempotency_key: str,
+    artifact_role: str = "official_input",
     media_type: str = "application/octet-stream",
     task_run_id: str | None = None,
     metadata_json: dict[str, Any] | None = None,
@@ -73,7 +74,7 @@ def _create_artifact_version(
     payload: dict[str, Any] = {
         "workflow_run_id": workflow_run_id,
         "artifact_kind": artifact_kind,
-        "artifact_role": "official_input",
+        "artifact_role": artifact_role,
         "media_type": media_type,
         "storage_uri": f"inmem://{workflow_run_id}/{artifact_kind}/{idempotency_key}",
         "content_digest": f"sha256:{idempotency_key[-32:]:0>32}",
@@ -153,6 +154,31 @@ def _activate_handoff(
     return stdout_json(result)["result"]
 
 
+def _notify_only_handoff(
+    db_url: str,
+    *,
+    edge_id: str,
+    source_workflow_run_id: str,
+    source_artifact_version_id: str,
+    idempotency_key: str,
+) -> dict[str, Any]:
+    payload = {
+        "edge_id": edge_id,
+        "source_workflow_run_id": source_workflow_run_id,
+        "source_artifact_version_id": source_artifact_version_id,
+        "idempotency_key": idempotency_key,
+    }
+    result = run_cli(
+        "--db-url",
+        db_url,
+        "handoffs",
+        "notify-only",
+        "--json",
+        json.dumps(payload, separators=(",", ":")),
+    )
+    return stdout_json(result)["result"]
+
+
 def _query_rows(db_path: Path, sql: str, params: tuple[Any, ...] = ()) -> list[dict[str, Any]]:
     connection = sqlite3.connect(db_path)
     connection.row_factory = sqlite3.Row
@@ -178,6 +204,29 @@ def _setup_weekly_with_publish(tmp_path: Path) -> tuple[str, Path, dict[str, Any
         idempotency_key="idem:artifact:weekly-publish",
     )
     return db_url, db_path, weekly_run, published
+
+
+def _setup_reporting_with_final_packet(
+    tmp_path: Path,
+) -> tuple[str, Path, dict[str, Any], dict[str, Any]]:
+    db_url, db_path = _init_db(tmp_path)
+    reporting_run = _create_workflow_run(
+        db_url,
+        workflow_id="dispatch_reporting.v1",
+        partition_key=SERVICE_DATE_ID,
+        logical_date="2026-03-06",
+    )
+    final_packet = _create_artifact_version(
+        db_url,
+        workflow_run_id=str(reporting_run["workflow_run_id"]),
+        artifact_kind="reporting.final_packet.workbook",
+        idempotency_key="idem:artifact:reporting-final-packet",
+        artifact_role="official_output",
+        media_type="application/octet-stream",
+        canonical_partition_kind="ServiceDateID",
+        canonical_partition_key=SERVICE_DATE_ID,
+    )
+    return db_url, db_path, reporting_run, final_packet
 
 
 def test_handoff_record_creation_is_explicit_and_idempotent(tmp_path: Path) -> None:
@@ -856,3 +905,150 @@ def test_weekly_to_live_dispatch_first_golden_slice_end_to_end(tmp_path: Path) -
         str(route_delta["artifact_version_id"]),
         str(actual_hours["artifact_version_id"]),
     }
+
+
+def test_notify_only_handoff_dispatches_over_compiled_reporting_edge_and_materializes_target_input(
+    tmp_path: Path,
+) -> None:
+    db_url, db_path, reporting_run, final_packet = _setup_reporting_with_final_packet(tmp_path)
+    notified = _notify_only_handoff(
+        db_url,
+        edge_id="reporting_actuals_to_future_planning",
+        source_workflow_run_id=str(reporting_run["workflow_run_id"]),
+        source_artifact_version_id=str(final_packet["artifact_version_id"]),
+        idempotency_key="idem:handoff:notify:reporting:one",
+    )
+
+    assert len(notified["edge_executions"]) == 1
+    assert len(notified["target_workflow_runs"]) == 1
+    assert len(notified["target_input_artifacts"]) == 1
+
+    edge = notified["edge_executions"][0]
+    target_run = notified["target_workflow_runs"][0]
+    target_input = notified["target_input_artifacts"][0]
+    assert edge["edge_id"] == "reporting_actuals_to_future_planning"
+    assert edge["target_workflow_id"] == "weekly_schedule_planning.v1"
+    assert edge["target_partition_kind"] == "PlanningWeekID"
+    assert edge["target_partition_key"] == "PW-2026-W10"
+    assert str(edge["target_workflow_run_id"]) == str(target_run["workflow_run_id"])
+    assert target_run["partition_key"] == "PW-2026-W10"
+    assert target_input["artifact_kind"] == "planning.actual_hours_snapshot.workbook"
+    assert str(target_input["parent_artifact_version_id"]) == str(final_packet["artifact_version_id"])
+
+    input_rows = _query_rows(
+        db_path,
+        """
+        SELECT binding_key, source_ref, artifact_version_id
+        FROM workflow_run_inputs
+        WHERE workflow_run_id = ?
+        ORDER BY binding_key ASC
+        """,
+        (str(target_run["workflow_run_id"]),),
+    )
+    assert input_rows == [
+        {
+            "binding_key": "stage03.actual_hours_snapshot",
+            "source_ref": str(final_packet["artifact_version_id"]),
+            "artifact_version_id": str(target_input["artifact_version_id"]),
+        }
+    ]
+
+    pointer_rows = _query_rows(
+        db_path,
+        "SELECT pointer_key FROM artifact_pointers WHERE workflow_run_id = ?",
+        (str(target_run["workflow_run_id"]),),
+    )
+    assert pointer_rows == []
+
+    official_output_rows = _query_rows(
+        db_path,
+        """
+        SELECT artifact_version_id
+        FROM artifact_versions
+        WHERE workflow_run_id = ? AND artifact_role = 'official_output'
+        """,
+        (str(target_run["workflow_run_id"]),),
+    )
+    assert official_output_rows == []
+
+
+def test_notify_only_handoff_is_idempotent_for_target_run_resolution_and_edge_reuse(tmp_path: Path) -> None:
+    db_url, db_path, reporting_run, final_packet = _setup_reporting_with_final_packet(tmp_path)
+    first = _notify_only_handoff(
+        db_url,
+        edge_id="reporting_actuals_to_future_planning",
+        source_workflow_run_id=str(reporting_run["workflow_run_id"]),
+        source_artifact_version_id=str(final_packet["artifact_version_id"]),
+        idempotency_key="idem:handoff:notify:reporting:first",
+    )
+    second = _notify_only_handoff(
+        db_url,
+        edge_id="reporting_actuals_to_future_planning",
+        source_workflow_run_id=str(reporting_run["workflow_run_id"]),
+        source_artifact_version_id=str(final_packet["artifact_version_id"]),
+        idempotency_key="idem:handoff:notify:reporting:second",
+    )
+
+    assert first["edge_executions"][0]["edge_execution_id"] == second["edge_executions"][0]["edge_execution_id"]
+    assert (
+        first["target_workflow_runs"][0]["workflow_run_id"]
+        == second["target_workflow_runs"][0]["workflow_run_id"]
+    )
+
+    run_rows = _query_rows(
+        db_path,
+        """
+        SELECT workflow_run_id
+        FROM workflow_runs
+        WHERE workflow_id = 'weekly_schedule_planning.v1'
+          AND partition_key = 'PW-2026-W10'
+        """,
+    )
+    assert len(run_rows) == 1
+
+    edge_rows = _query_rows(
+        db_path,
+        """
+        SELECT edge_execution_id, materialize_idempotency_key
+        FROM edge_executions
+        WHERE edge_id = 'reporting_actuals_to_future_planning'
+        """,
+    )
+    assert len(edge_rows) == 1
+    assert edge_rows[0]["materialize_idempotency_key"] == "idem:handoff:notify:reporting:first"
+
+    binding_rows = _query_rows(
+        db_path,
+        """
+        SELECT binding_key, source_ref
+        FROM workflow_run_inputs
+        WHERE workflow_run_id = ?
+        """,
+        (str(first["target_workflow_runs"][0]["workflow_run_id"]),),
+    )
+    assert len(binding_rows) == 1
+    assert binding_rows[0]["binding_key"] == "stage03.actual_hours_snapshot"
+    assert binding_rows[0]["source_ref"] == str(final_packet["artifact_version_id"])
+
+
+def test_notify_only_handoff_rejects_non_notify_only_edge_ids(tmp_path: Path) -> None:
+    db_url, _, weekly_run, published = _setup_weekly_with_publish(tmp_path)
+    failed = run_cli(
+        "--db-url",
+        db_url,
+        "handoffs",
+        "notify-only",
+        "--json",
+        json.dumps(
+            {
+                "edge_id": "weekly_seed_to_live_dispatch",
+                "source_workflow_run_id": str(weekly_run["workflow_run_id"]),
+                "source_artifact_version_id": str(published["artifact_version_id"]),
+                "idempotency_key": "idem:handoff:notify:mismatch",
+            },
+            separators=(",", ":"),
+        ),
+        expect_ok=False,
+    )
+    error = stderr_json(failed)
+    assert error["error_code"] == "handoff_mode_mismatch"

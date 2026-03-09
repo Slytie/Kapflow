@@ -2,7 +2,7 @@
 id: TASK-0031
 epic: EPIC-060
 title: Design the projection coherence harness for approval-critical packets
-status: TODO
+status: DONE
 owners:
 - platform
 - security
@@ -82,3 +82,11 @@ Define the projection coherence harness for Stage 4 approval-critical packets an
 
 ## Notes / decisions
 The harness should make it obvious when a packet is stale or incoherent, not merely “best effort.”
+
+## Completion Notes (2026-03-08)
+- Authored `docs/planning/PROJECTION_COHERENCE_HARNESS.md` with canonical field checklists, block-vs-warn policy, and required `projection.coherence_failed` evidence behavior.
+- Implemented runtime coherence behavior and coverage in `tests/runtime/test_projection_coherence.py`.
+- Landed visible coherence handling for:
+  - `workspace_official_outputs`
+  - `workspace_export_bundle`
+  - `handoff_operator_view`

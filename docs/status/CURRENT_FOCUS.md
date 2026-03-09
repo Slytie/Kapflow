@@ -10,7 +10,7 @@ Runtime scaffold bootstrap now includes canonical workflow/task/approval/artifac
 - approval/artifact/pointer substrate: `approvals request/respond/show/list`, `artifacts create-version/show/list`, `pointers promote/show/list`
 - Stage07 issue substrate: `flags create/transition/show/list`, `stage07 activate-issue`, `maintenance sweep-leases`, `maintenance reconcile-stage07`
 - thin HTTP/query adapter: `/api/v1/human-tasks`, `/api/v1/approvals`, `/api/v1/flags`, `/api/v1/workflow-runs`, `/api/v1/pointers`, `/api/v1/timeline-events`, `/api/v1/board/schedule-planning`, plus API mutation delegates for claim/complete/respond
-Active coding milestone update: TASK-0062 is complete. The first explicit logistics composition/handoff runtime slice (`weekly_schedule_planning.v1 -> live_dispatch.v1`) now lands with idempotent `edge_executions`, one-logical-seed-per-service-day Stage07 materialization, lazy live activation, deterministic first-slice candidate ranking/threshold policy helpers, and an end-to-end weekly->live golden slice plus fixture-backed scenario coverage over the canonical runtime substrate.
+Active coding milestone update: TASK-0063 and TASK-0031 are complete. Logistics composition runtime now covers both the first `materialize_seed` weekly->live slice and a first-class `notify_only` reporting->planning slice (`dispatch_reporting.Stage05 -> weekly_schedule_planning.Stage03`) with typed partition transforms, idempotent `edge_executions`, deterministic target-run resolution/creation, canonical target input materialization/bindings, and deterministic scenario coverage. Projection coherence harness behavior is now implemented with explicit block-vs-warn policy handling and visible `projection.coherence_failed` evidence for derived views.
 
 ### Recently completed runtime-bootstrap tranche
 - TASK-0028 - Translated the runtime object model into a concrete Stage 4 runtime architecture, repo layout, persistence model, and first implementation slice
@@ -36,6 +36,9 @@ Active coding milestone update: TASK-0062 is complete. The first explicit logist
 - TASK-0059 - Completed Strategy A strong closure by pinning canonical pointer identity semantics in pointer promotion/drift event payloads, fail-closed unresolved identity behavior, canonical `/api/v1/pointers` identity queries, and workspace/export official-output pointer identity assertions
 - TASK-0060 - Added logistics authored workflow packs (`weekly_schedule_planning`, `live_dispatch`, `availability_request`, `dispatch_reporting`, `timecard_audit`), authored logistics workflow-family + typed partition-transform surfaces, deterministic fail-closed family compilation to compiled module/edge descriptors, and logistics definitions examples while keeping runtime composition execution out of scope
 - TASK-0061 - Added logistics control-layer authored method packages, deterministic compiled stage execution metadata, activation-request validation, and execution-session payload derivation over existing canonical runtime activation objects without adding a second activation runtime model
+- TASK-0062 - Added the first explicit logistics handoff runtime slice (`weekly_schedule_planning.Stage07 -> live_dispatch.Stage01`) with idempotent `edge_executions`, one-logical-seed-per-service-day materialization, lazy live activation, and weekly->live golden slice coverage
+- TASK-0063 - Added generic `notify_only` runtime semantics over compiled family edges and landed the first reporting->planning feedback slice (`dispatch_reporting.Stage05 -> weekly_schedule_planning.Stage03`) with deterministic `ServiceDateID -> PlanningWeekID` transforms, target-run resolve/create, canonical target input materialization, exact input bindings, and duplicate-notification idempotency
+- TASK-0031 - Implemented the first projection coherence harness (`docs/planning/PROJECTION_COHERENCE_HARNESS.md`) with runtime checks and tests for workspace/export/handoff derived views plus visible `projection.coherence_failed` emission behavior
 - Added `docs/planning/RUNTIME_BOOTSTRAP.md` and `docs/planning/FIRST_RUNTIME_SLICE.md`
 - Added `docs/adr/ADR-003-stage4-runtime-architecture.md`
 - Refreshed stale Codex routing: EPIC-040 / EPIC-050 no longer route default runtime work through Payroll, and missing context packs now exist for EPIC-025 / EPIC-030 / EPIC-060
@@ -60,7 +63,7 @@ Active coding milestone update: TASK-0062 is complete. The first explicit logist
 - Adopted a pytest-backed TDD harness with a stable AT-SCH scenario catalog and reference replay reducer
 
 ### Next tasks (priority order)
-1. TASK-0031 - Design the projection coherence harness (author `docs/planning/PROJECTION_COHERENCE_HARNESS.md` and wire first runtime coherence harness tests/implementation)
+1. Land the next logistics composition tranche: family-edge observability and query-surface hardening over existing `edge_executions` + compiled-family metadata (chosen next step because no `TASK-0064` is currently indexed in repo-native planning surfaces; no new truth path, no new activation ontology).
 
 ## Test-first working mode
 Before adding runtime services or API surfaces:

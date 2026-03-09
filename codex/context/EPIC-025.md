@@ -36,3 +36,10 @@
 - “Could two source versions compile to an ambiguous execution spec?”
 - “Can a generated output drift silently from its source hashes?”
 - “Does the generated artifact accidentally become the place where people edit truth?”
+
+## Current Repo Status (2026-03-08)
+- `TASK-0060`, `TASK-0061`, `TASK-0062`, and `TASK-0063` are implemented.
+- Composition runtime now includes:
+  - first weekly->live `materialize_seed` handoff slice,
+  - first bounded `notify_only` reporting->planning slice.
+- Keep framing bounded: this is not yet a universal finished composition engine; follow-on observability/query expansion remains future work.

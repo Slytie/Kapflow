@@ -34,6 +34,14 @@ def test_unknown_partition_transform_id_fails_closed() -> None:
         )
 
 
+def test_typed_partition_transform_registry_maps_service_day_to_future_planning_week() -> None:
+    planning_weeks = apply_partition_transform_by_id(
+        transform_id="service_day_to_future_planning_week",
+        source_partition_key="SD-2026-03-06",
+    )
+    assert planning_weeks == ["PW-2026-W10"]
+
+
 def test_deterministic_candidate_ranking_is_stable_and_tie_broken() -> None:
     ranked = deterministic_rank_candidates(
         [

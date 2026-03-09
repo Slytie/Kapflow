@@ -50,9 +50,20 @@ Also see `docs/patterns/PATTERN_INDEX.yaml` for the full tagged library.
 - generated-derivative policy is explicit
 - generated artifacts can be defined as downstream of repo-native source
 
+## Current Repo Status (2026-03-08)
+- Completed in this epic: `TASK-0020`, `TASK-0021`, `TASK-0024`, `TASK-0025`, `TASK-0032`, `TASK-0060`, `TASK-0061`, `TASK-0062`, `TASK-0063`.
+- First logistics composition runtime coverage now includes:
+  - `materialize_seed` weekly->live handoff (`TASK-0062`)
+  - bounded first `notify_only` reporting->planning slice (`TASK-0063`)
+- Later composition/observability expansions remain future tranche work.
+
 ## Tasks
 - TASK-0020
 - TASK-0021
 - TASK-0024
 - TASK-0025
 - TASK-0032
+- TASK-0060
+- TASK-0061
+- TASK-0062
+- TASK-0063

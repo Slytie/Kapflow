@@ -37,6 +37,7 @@ ACTION_TO_COMMAND = {
     "pointers.promote": ("pointers", "promote"),
     "handoffs.materialize-weekly-seeds": ("handoffs", "materialize-weekly-seeds"),
     "handoffs.activate-live-dispatch": ("handoffs", "activate-live-dispatch"),
+    "handoffs.notify-only": ("handoffs", "notify-only"),
 }
 
 _PLACEHOLDER_PATTERN = re.compile(r"\{\{\s*([A-Za-z0-9_.-]+)\s*\}\}")

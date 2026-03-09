@@ -32,7 +32,7 @@
 | TASK-0028 | EPIC-040 | DONE | high | Translate the runtime object model into an implementation plan |
 | TASK-0029 | EPIC-020 | DONE | medium | Map the typed event registry to runtime emission points and tests |
 | TASK-0030 | EPIC-030 | DONE | high | Translate promotion semantics and schedule delta rules into artifact-store design |
-| TASK-0031 | EPIC-060 | TODO | high | Design the projection coherence harness |
+| TASK-0031 | EPIC-060 | DONE | high | Design the projection coherence harness |
 | TASK-0032 | EPIC-025 | DONE | medium | Prototype generator for runbook packs and CompanyOS IR |
 | TASK-0033 | EPIC-005 | DONE | high | Specify the fully-agentive Schedule Planning debug slice |
 | TASK-0034 | EPIC-060 | DONE | high | Canonicalize governance vocabulary and actor taxonomy |
@@ -64,3 +64,4 @@
 | TASK-0060 | EPIC-025 | DONE | high | Logistics family definitions and deterministic fail-closed compiler |
 | TASK-0061 | EPIC-025 | DONE | high | Logistics control layer and pinned method packages over canonical runtime activations |
 | TASK-0062 | EPIC-025 | DONE | high | Weekly to live handoff runtime and first logistics golden slice |
+| TASK-0063 | EPIC-025 | DONE | high | Generic `notify_only` handoff semantics and reporting-to-planning slice |

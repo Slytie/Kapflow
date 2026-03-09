@@ -51,4 +51,4 @@ Hygiene + CI + staleness reconciliation only.
 - any currently tracked ignored-noise paths are removed from the Git index.
 - Makefile has explicit frontend/install/typecheck/test/build targets and a `ci` target for combined backend+snapshot+frontend gating.
 - PR CI workflow includes backend snapshot check + frontend typecheck/tests, while OpenAI real-network tests remain gated/scheduled.
-- TASK-0031 status remains TODO unless concrete projection-coherence deliverables exist; status docs are aligned to actual repo artifacts.
+- TASK-0031 status remains aligned to concrete projection-coherence deliverables in-repo; status docs reflect actual repo artifacts.

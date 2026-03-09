@@ -37,3 +37,7 @@
 - “Can a projection drift from evidence without being detected?”
 - “Does an agent-only path accidentally bypass the approval object model?”
 - “Are response verbs, recorded outcomes, and permission actions being mixed together?”
+
+## Current Repo Status (2026-03-08)
+- `TASK-0031` is implemented: projection coherence harness authored doc + runtime tests are present.
+- Derived-view drift now has explicit visible/blocking behavior and emits canonical `projection.coherence_failed` evidence.
