@@ -24,5 +24,7 @@ describe("BoardPage", () => {
           element.textContent?.includes("information_request") === true
       )
     ).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Claim" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Complete" })).not.toBeInTheDocument();
   });
 });

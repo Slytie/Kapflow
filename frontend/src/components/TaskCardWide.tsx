@@ -39,7 +39,7 @@ export function TaskCardWide({
     {
       key: "claim",
       label: "Claim",
-      tone: "default",
+      tone: "default" as const,
       onClick: onClaim,
       disabled: actionPending || claimDisabled
     },
@@ -58,7 +58,7 @@ export function TaskCardWide({
       disabled: actionPending || needInfoDisabled
     },
     ...extraActions
-  ];
+  ].filter((action) => Boolean(action.onClick));
 
   return (
     <article className="task-card-wide" data-testid="task-card-wide">
@@ -70,7 +70,7 @@ export function TaskCardWide({
         Owner: {task.owner_role ?? "n/a"} · Assignee: {task.assignee_actor_id ?? "unassigned"}
       </p>
       <div className="task-card-wide__actions">
-        <ActionCluster actions={actions} />
+        {actions.length > 0 ? <ActionCluster actions={actions} /> : null}
         <AttachmentActions onUpload={onUpload} onDownload={onDownload} disabled={actionPending} />
       </div>
       {completeHint ? <p className="task-card-wide__hint">{completeHint}</p> : null}

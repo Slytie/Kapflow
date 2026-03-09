@@ -2,10 +2,24 @@
 
 Record any decisions made since the last session so a fresh Codex run can rehydrate quickly.
 
+## 2026-03-09 (TASK-0064 logistics demo shell + legacy schedule demotion)
+- Frontend primary-demo decision: `/demo/logistics` is now the preferred operator/demo entrypoint for the three-workflow logistics walkthrough; app root (`/`) redirects to this route.
+- Composition decision: the logistics shell is backend-authored and story-driven only (`GET /api/v1/stories/logistics-three-workflow`); family graph, unified board lanes/items, linked runs, official-output summary, and handoff activity are rendered directly from canonical story payload sections.
+- Task-interaction decision: task transitions are drawer-first for this demo slice; task cards/rows in logistics story and supporting queue surfaces open `DetailDrawer`, and canonical `claim`/`complete` actions execute from the drawer against authoritative task APIs.
+- Supersession note: this drawer-first task-transition decision supersedes the earlier 2026-03-04 inline-task-action posture for `/board` and `/my-work`; inline attachment affordances remain unchanged.
+- Legacy-surface decision: schedule-only board/workspace/runs/timeline views remain available for regression/internal use but are removed from primary navigation and treated as secondary/legacy surfaces via page-level notices.
+- Scope-boundary decision: this frontend slice intentionally stays bounded to the canonical three-workflow story contract and does not introduce a generalized client-side family graph/query engine or a second UI truth store.
+
 ## 2026-03-09 (repo-truth alignment + capability certification matrix)
 - Added `docs/planning/CURRENT_CAPABILITY_AND_CERTIFICATION_MATRIX.md` as the snapshot-backed authority for current capability status (`implemented` / `partial` / `missing`) across schedule demo paths, logistics handoff slices, workspace/export surfaces, and projection coherence.
 - Hardening decision: capability claims are considered certified only when matrix rows include all of: canonical command/entrypoint, authoritative tests, human-inspectable artifacts, and invariants.
 - Scope-boundary decision: this alignment pass introduces no new runtime semantics; bounded slices and unresolved ambiguities are recorded explicitly instead of being promoted to DONE claims.
+
+## 2026-03-09 (TASK-0063 three-workflow story seam closure)
+- Added canonical three-workflow demo story contract source at `docs/planning/THREE_WORKFLOW_DEMO_STORY.yaml` plus aligned template/example artifacts under `templates/`.
+- Added first backend-authored logistics story query seam `GET /api/v1/stories/logistics-three-workflow`; payload is derived from canonical runtime state only (compiled family graph + `edge_executions` summaries + linked runs + board-ready work + official outputs + freshness/coherence metadata).
+- Demo-entrypoint decision: for logistics three-workflow walkthroughs the new story endpoint is primary; `/api/v1/board/schedule-planning` remains legacy/internal regression surface.
+- Scope-boundary decision: this closure remains intentionally narrow to the first story slice (`weekly_schedule_planning`, `live_dispatch`, `dispatch_reporting` with `reporting_actuals_to_future_planning` `notify_only`), and does not claim a universal logistics composition engine.
 
 ## 2026-03-08 (TASK-0063 notify_only reporting->planning + TASK-0031 status closure)
 - Status authority decision: TASK-0031 is DONE. Projection coherence authored/runtime surfaces now exist in-repo (`docs/planning/PROJECTION_COHERENCE_HARNESS.md`, `tests/runtime/test_projection_coherence.py`, and runtime `projection.coherence_failed` behavior over derived projection views).

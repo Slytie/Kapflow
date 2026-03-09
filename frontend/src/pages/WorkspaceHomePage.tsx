@@ -17,8 +17,8 @@ export function WorkspaceHomePage(): JSX.Element {
     return (
       <StatePanel
         kind="loading"
-        title="Loading workspace"
-        detail="Resolving the latest run workspace."
+        title="Loading legacy workspace"
+        detail="Resolving the latest schedule-planning run workspace."
       />
     );
   }
@@ -27,8 +27,8 @@ export function WorkspaceHomePage(): JSX.Element {
     return (
       <StatePanel
         kind="error"
-        title="Workspace failed to load"
-        detail={errorText(query.error, "Unable to resolve latest workspace")}
+        title="Legacy workspace failed to load"
+        detail={errorText(query.error, "Unable to resolve latest schedule workspace")}
         onRetry={() => void query.refetch()}
       />
     );
@@ -39,8 +39,8 @@ export function WorkspaceHomePage(): JSX.Element {
     return (
       <StatePanel
         kind="empty"
-        title="No runs available"
-        detail="Create a run first to open the workspace."
+        title="No schedule runs available"
+        detail="Primary demo entrypoint is /demo/logistics; this workspace route is legacy."
       />
     );
   }

@@ -92,6 +92,7 @@ Current implemented runtime command-boundary coverage:
 - `tests/runtime/test_logistics_handoff_runtime.py`
 - `tests/runtime/scenarios/test_logistics_weekly_to_live_golden_slice.py`
 - `tests/runtime/scenarios/test_logistics_reporting_to_planning_notify_only_golden_slice.py`
+- `tests/runtime/scenarios/test_logistics_three_workflow_demo_story_seed.py`
 - `tests/runtime/scenarios/test_workspace_graph_projection.py`
 - `tests/runtime/contracts/test_hitl_query_contracts_stage06.py`
 - `tests/runtime/contracts/test_hitl_query_contracts_stage07.py`
@@ -106,6 +107,7 @@ Current implemented runtime command-boundary coverage:
 - `tests/runtime/api/test_workflow_run_detail_contract.py`
 - `tests/runtime/api/test_timeline_contract.py`
 - `tests/runtime/api/test_board_schedule_planning_contract.py`
+- `tests/runtime/api/test_logistics_three_workflow_story_endpoint.py`
 - `tests/runtime/api/test_human_task_claim_via_api.py`
 - `tests/runtime/api/test_human_task_complete_via_api.py`
 - `tests/runtime/api/test_approval_respond_via_api.py`
@@ -154,6 +156,9 @@ Current runtime tests assert:
   - compiled-edge gate (`handoff_mode=notify_only`, `writer_mode=source_only`)
   - deterministic target-run resolve/create and target input materialization
   - duplicate notification idempotency without target-side official output mutation
+- canonical three-workflow story seam semantics:
+  - seeded scenario composition links reporting, weekly, and live runs through both canonical edges in one lineage
+  - backend story endpoint returns one authoritative payload (graph + handoffs + linked runs + board-ready work + official outputs + freshness/coherence)
 - implementation-backed HTTP contract/mutation coverage for board-ready read surfaces (tasks/approvals/flags/workflow/timeline/pointers/board) and canonical HITL actions (`claim`, `complete`, `respond`, `flags.transition`)
 - frontend inline attachment controls are covered at component/repository contract level and remain delegated to canonical artifact endpoints (no client-side shadow attachment state)
 - bounded Stage06 real-model sandbox path coverage (mock/contract path always-on + gated real OpenAI e2e path)
@@ -191,6 +196,7 @@ Minimum required runtime scenario tests:
 Additional implemented logistics runtime scenarios (bounded composition slices):
 - `tests/runtime/scenarios/test_logistics_weekly_to_live_golden_slice.py`
 - `tests/runtime/scenarios/test_logistics_reporting_to_planning_notify_only_golden_slice.py`
+- `tests/runtime/scenarios/test_logistics_three_workflow_demo_story_seed.py`
 
 Each scenario should:
 - seed initial artifact inputs from `fixtures/workflows/*/template_pack/*_Example_COMPLETED.*`

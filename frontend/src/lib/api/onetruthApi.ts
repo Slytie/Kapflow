@@ -4,6 +4,7 @@ import type {
   BoardContract,
   FlagRow,
   HumanTaskRow,
+  LogisticsThreeWorkflowStoryContract,
   PointerRow,
   TemplateRecord,
   TemplateRegistryMetadata,
@@ -32,6 +33,10 @@ interface ListEnvelope {
 
 interface HumanTasksEnvelope extends ListEnvelope {
   human_tasks: HumanTaskRow[];
+}
+
+interface HumanTaskDetailEnvelope extends ListEnvelope {
+  human_task: HumanTaskRow;
 }
 
 interface ApprovalsEnvelope extends ListEnvelope {
@@ -75,6 +80,10 @@ interface PointersEnvelope extends ListEnvelope {
 
 interface BoardEnvelope extends ListEnvelope {
   board: BoardContract;
+}
+
+interface LogisticsStoryEnvelope extends ListEnvelope {
+  story: LogisticsThreeWorkflowStoryContract;
 }
 
 interface TimelineEnvelope extends ListEnvelope {
@@ -475,6 +484,11 @@ export const onetruthApi = {
     return requiredArray<HumanTaskRow>(payload.human_tasks, "human_tasks");
   },
 
+  async getHumanTask(humanTaskId: string): Promise<HumanTaskRow> {
+    const payload = await requestJson<HumanTaskDetailEnvelope>(`/human-tasks/${humanTaskId}`);
+    return payload.human_task;
+  },
+
   async claimHumanTask(
     humanTaskId: string,
     payload: { lease_seconds: number; idempotency_key: string }
@@ -625,6 +639,19 @@ export const onetruthApi = {
   }): Promise<BoardContract> {
     const payload = await requestJson<BoardEnvelope>("/board/schedule-planning", { query });
     return payload.board;
+  },
+
+  async getLogisticsThreeWorkflowStory(query: {
+    planning_week_id: string;
+    service_date_id?: string;
+  }): Promise<LogisticsThreeWorkflowStoryContract> {
+    const payload = await requestJson<LogisticsStoryEnvelope>("/stories/logistics-three-workflow", {
+      query
+    });
+    if (!payload.story || typeof payload.story !== "object") {
+      throw new Error("Invalid API response: missing story payload");
+    }
+    return payload.story;
   },
 
   async listTemplates(query: {

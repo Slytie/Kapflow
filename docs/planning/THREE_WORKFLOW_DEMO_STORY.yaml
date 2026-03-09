@@ -1,0 +1,58 @@
+story:
+  id: logistics_three_workflow_demo.v1
+  version: 1
+  family_id: logistics_ops_family.v1
+  status: canonical_first_demo
+  workflow_ids:
+    weekly_schedule_planning: weekly_schedule_planning.v1
+    live_dispatch: live_dispatch.v1
+    dispatch_reporting: dispatch_reporting.v1
+  module_ids:
+    - weekly_schedule_planning
+    - live_dispatch
+    - dispatch_reporting
+  edge_ids:
+    - weekly_seed_to_live_dispatch
+    - reporting_actuals_to_future_planning
+  partition_contract:
+    planning_week_kind: PlanningWeekID
+    service_date_kind: ServiceDateID
+    reporting_feedback_transform: service_day_to_future_planning_week
+    handoff_modes:
+      weekly_to_live: materialize_seed
+      reporting_to_planning: notify_only
+  query_contract:
+    endpoint: /api/v1/stories/logistics-three-workflow
+    required_query:
+      - planning_week_id
+    optional_query:
+      - service_date_id
+    expected_sections:
+      - family_graph
+      - handoff_activity
+      - linked_workflow_runs
+      - board
+      - official_outputs
+      - freshness
+      - coherence
+  expected_story_artifacts:
+    weekly:
+      - planning.published_weekly_schedule.workbook
+      - planning.daily_dispatch_seed.workbook
+    live_dispatch_inputs:
+      - dispatch.base_schedule_seed.workbook
+      - dispatch.route_delta_intake.workbook
+      - dispatch.actual_hours_snapshot.workbook
+    reporting:
+      - reporting.final_packet.workbook
+    planning_feedback_input:
+      - planning.actual_hours_snapshot.workbook
+  acceptance_walkthrough:
+    - step: open_logistics_story_route
+      expected: endpoint returns one payload with graph, links, handoffs, board, and official-output summary
+    - step: inspect_weekly_to_live_edge
+      expected: weekly_seed_to_live_dispatch execution status and live run linkage are visible
+    - step: inspect_reporting_feedback_edge
+      expected: reporting_actuals_to_future_planning execution and Stage03 input binding lineage are visible
+    - step: inspect_board
+      expected: actionable human task, approval, and flag work appears across weekly, live, and reporting runs

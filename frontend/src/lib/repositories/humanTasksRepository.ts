@@ -47,6 +47,10 @@ export const humanTasksRepository = {
     });
   },
 
+  async get(humanTaskId: string): Promise<HumanTaskRow> {
+    return onetruthApi.getHumanTask(humanTaskId);
+  },
+
   async claim(humanTaskId: string, leaseSeconds = 300): Promise<void> {
     await onetruthApi.claimHumanTask(humanTaskId, {
       lease_seconds: leaseSeconds,

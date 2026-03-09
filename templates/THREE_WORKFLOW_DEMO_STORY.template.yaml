@@ -1,0 +1,52 @@
+story:
+  id: logistics_three_workflow_demo.v1
+  version: 1
+  family_id: logistics_ops_family.v1
+  status: draft
+  workflow_ids:
+    weekly_schedule_planning: weekly_schedule_planning.v1
+    live_dispatch: live_dispatch.v1
+    dispatch_reporting: dispatch_reporting.v1
+  module_ids:
+    - weekly_schedule_planning
+    - live_dispatch
+    - dispatch_reporting
+  edge_ids:
+    - weekly_seed_to_live_dispatch
+    - reporting_actuals_to_future_planning
+  partitions:
+    planning_week_id: PW-YYYY-Www
+    service_date_ids: []
+  source_runs:
+    weekly_schedule_planning_run_id: null
+    live_dispatch_run_ids: []
+    dispatch_reporting_run_ids: []
+  expected_handoff_statuses:
+    weekly_seed_to_live_dispatch: []
+    reporting_actuals_to_future_planning: []
+  expected_story_artifacts:
+    weekly:
+      - planning.published_weekly_schedule.workbook
+      - planning.daily_dispatch_seed.workbook
+    live_dispatch_inputs:
+      - dispatch.base_schedule_seed.workbook
+      - dispatch.route_delta_intake.workbook
+      - dispatch.actual_hours_snapshot.workbook
+    reporting:
+      - reporting.final_packet.workbook
+    planning_feedback_input:
+      - planning.actual_hours_snapshot.workbook
+  query_contract:
+    endpoint: /api/v1/stories/logistics-three-workflow
+    required_query:
+      - planning_week_id
+    optional_query:
+      - service_date_id
+    expected_sections:
+      - family_graph
+      - handoff_activity
+      - linked_workflow_runs
+      - board
+      - official_outputs
+      - freshness
+      - coherence

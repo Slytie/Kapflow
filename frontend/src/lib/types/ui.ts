@@ -40,6 +40,21 @@ export interface DrawerArtifactSource {
   source_label: string;
 }
 
+export interface DrawerTaskContext {
+  human_task_id: string;
+  workflow_run_id: string;
+  task_run_id: string;
+  stage_id: string;
+  task_kind: string;
+  state: string;
+  assignee_actor_id: string | null;
+  assignee_actor_type: string | null;
+  owner_role: string | null;
+  available_actions: string[];
+  blocking_reason_codes: string[];
+  missing_required_inputs: string[];
+}
+
 export interface DrawerPayload {
   title: string;
   subtitle?: string;
@@ -47,6 +62,7 @@ export interface DrawerPayload {
   fields: DrawerField[];
   artifacts?: DrawerArtifact[];
   artifact_sources?: DrawerArtifactSource[];
+  task?: DrawerTaskContext;
 }
 
 export type BoardLaneId =

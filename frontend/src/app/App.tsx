@@ -12,6 +12,7 @@ import { RunDetailPage } from "@/pages/RunDetailPage";
 import { RunWorkspacePage } from "@/pages/RunWorkspacePage";
 import { RunsPage } from "@/pages/RunsPage";
 import { TimelinePage } from "@/pages/TimelinePage";
+import { LogisticsDemoPage } from "@/pages/LogisticsDemoPage";
 import { WorkspaceHomePage } from "@/pages/WorkspaceHomePage";
 import { DrawerProvider } from "@/lib/state/drawerContext";
 import "@/app/app.css";
@@ -35,8 +36,9 @@ export function App(): JSX.Element {
       <Router>
         <DrawerProvider>
           <Routes>
-            <Route path="/" element={<Navigate to="/workspace" replace />} />
+            <Route path="/" element={<Navigate to="/demo/logistics" replace />} />
             <Route element={<AppShell />}>
+              <Route path="/demo/logistics" element={<LogisticsDemoPage />} />
               <Route path="/workspace" element={<WorkspaceHomePage />} />
               <Route path="/board" element={<BoardPage />} />
               <Route path="/my-work" element={<MyWorkPage />} />

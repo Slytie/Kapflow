@@ -2,6 +2,7 @@ import { useMemo } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useParams } from "react-router-dom";
 
+import { LegacyScheduleNotice } from "@/components/LegacyScheduleNotice";
 import { WorkflowGraph } from "@/components/WorkflowGraph";
 import { WorkspaceTaskBoard } from "@/components/WorkspaceTaskBoard";
 import { StatePanel } from "@/components/StatePanel";
@@ -18,10 +19,19 @@ import type {
 } from "@/lib/types/contracts";
 
 function workflowTab(workflowId: string): string {
-  if (workflowId === "schedule_planning.v1") {
-    return "Scheduling Coordination";
+  if (workflowId === "weekly_schedule_planning.v1") {
+    return "Weekly Schedule Planning";
   }
-  return "Scheduling Coordination";
+  if (workflowId === "live_dispatch.v1") {
+    return "Live Dispatch";
+  }
+  if (workflowId === "dispatch_reporting.v1") {
+    return "Dispatch Reporting";
+  }
+  if (workflowId === "schedule_planning.v1") {
+    return "Schedule Planning";
+  }
+  return "Workflow Workspace";
 }
 
 function titleCaseWords(value: string): string {
@@ -384,6 +394,7 @@ export function RunWorkspacePage(): JSX.Element {
 
   return (
     <section className="workspace-page" data-testid="run-workspace-page">
+      <LegacyScheduleNotice surface="Run workspace" />
       <WorkflowGraph
         nodes={graphNodes}
         edges={workspace.graph.edges}

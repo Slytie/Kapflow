@@ -234,14 +234,16 @@ Run frontend against local backend:
 - backend terminal: `PYTHONPATH=src onetruth-api --db-url sqlite:///./.tmp/onetruth-api.db --host 127.0.0.1 --port 8080`
 - frontend terminal: `cd frontend && VITE_ONETRUTH_API_BASE_URL=http://127.0.0.1:8080/api/v1 npm run dev`
 
-Open the workflow workspace page:
-- run list route: `/runs`
-- direct route: `/runs/<workflow_run_id>/workspace`
+Open the primary logistics demo flow:
+- default route: `/demo/logistics` (app root redirects here)
+- supporting drill-down route: `/runs/<workflow_run_id>`
+- supporting regression routes (secondary): `/board`, `/my-work`, `/runs`, `/timeline`, `/workspace`
 
 Workspace behavior:
 - graph and actionable panel both come from `GET /api/v1/workflow-runs/{workflow_run_id}/workspace`.
-- inline claim/complete/respond/upload/download and Stage06 AI actions still go through existing repositories and canonical mutation APIs.
-- successful inline actions invalidate workspace and related queue queries; polling then keeps graph and action panel synchronized.
+- task claim/complete actions are drawer-first in the demo shell and supporting queue views (`/demo/logistics`, `/board`, `/my-work`) and still go through canonical task mutation APIs.
+- approval/flag/attachment actions continue to delegate through existing repositories and canonical mutation APIs.
+- successful drawer task actions invalidate story/queue/run queries; polling keeps graph, board, and queue views synchronized.
 
 Upload-unblocks-work behavior check:
 - run: `cd frontend && npm run test:run -- src/pages/runWorkspacePage.test.tsx -t "marks task completable after upload response unblocks missing inputs"`
@@ -249,7 +251,7 @@ Upload-unblocks-work behavior check:
 
 Frontend implementation status:
 - Real/API-backed now: repositories call canonical HTTP contracts via `frontend/src/lib/api/httpClient.ts` and `frontend/src/lib/api/onetruthApi.ts`.
-- Implemented: app shell, route/page structure, low-click card/row/detail components, inline claim/complete/respond actions, inline attachment upload/download actions, URL-synced filters, polling-aware loading/error/empty/freshness states, and run workspace graph/action synchronization on `/runs/:workflowRunId/workspace`.
+- Implemented: app shell, route/page structure, logistics-primary demo route (`/demo/logistics`), drawer-first task transitions (`claim`/`complete`) for logistics + board + my-work, inline attachment upload/download actions, URL-synced filters, polling-aware loading/error/empty/freshness states, and run workspace graph/action synchronization on `/runs/:workflowRunId/workspace`.
 - Test strategy: component + route tests plus contract-aligned API integration tests using a controlled `/api/v1` MSW test layer.
 - Still future: broader UI polish and richer attachment preview affordances.
 

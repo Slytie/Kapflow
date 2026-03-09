@@ -5,6 +5,7 @@ import { errorText } from "@/lib/api/errorText";
 import { ApprovalCard } from "@/components/ApprovalCard";
 import { FlagCard } from "@/components/FlagCard";
 import { LaneColumn } from "@/components/LaneColumn";
+import { LegacyScheduleNotice } from "@/components/LegacyScheduleNotice";
 import { StatePanel } from "@/components/StatePanel";
 import { TaskCardWide } from "@/components/TaskCardWide";
 import { useShellFilters } from "@/app/useShellFilters";
@@ -26,65 +27,13 @@ function hasAction(task: HumanTaskRow, candidates: string[]): boolean {
   return candidates.some((candidate) => actionSet.has(candidate.toLowerCase()));
 }
 
-function roleMatch(task: HumanTaskRow): boolean {
-  const candidateRoles = task.candidate_roles ?? [];
-  if (candidateRoles.length === 0) {
-    return true;
-  }
-  const actorRoles = new Set(
-    apiConfig.actorRoles
-      .split(",")
-      .map((role) => role.trim())
-      .filter(Boolean)
-  );
-  return candidateRoles.some((role) => actorRoles.has(role));
-}
-
-function canClaimTask(task: HumanTaskRow): boolean {
-  if (task.available_actions && task.available_actions.length > 0) {
-    return hasAction(task, ["claim", "claim_human_task"]);
-  }
-  return task.state === "OPEN" && !task.assignee_actor_id && roleMatch(task);
-}
-
-function canCompleteTask(task: HumanTaskRow): boolean {
-  if (task.available_actions && task.available_actions.length > 0) {
-    return hasAction(task, ["complete", "complete_human_task"]);
-  }
-  return (
-    task.state === "CLAIMED" &&
-    task.assignee_actor_id === apiConfig.actorId &&
-    task.assignee_actor_type === apiConfig.actorType
-  );
-}
-
-function taskActionHint(
-  task: HumanTaskRow,
-  options: { canClaim: boolean; canComplete: boolean }
-): string | undefined {
-  const { canClaim, canComplete } = options;
+function taskActionHint(task: HumanTaskRow): string | undefined {
   const hints: string[] = [];
   const blockingCodes = task.blocking_reason_codes ?? [];
   const missingRequiredInputs = task.missing_required_inputs ?? [];
 
-  if (!canClaim && task.state === "OPEN") {
-    if (blockingCodes.includes("candidate_role_mismatch")) {
-      hints.push(`Cannot claim: requires role ${task.candidate_roles.join(", ")}`);
-    } else if (blockingCodes.includes("claimed_by_other_actor") || task.assignee_actor_id) {
-      hints.push(`Cannot claim: already claimed by ${task.assignee_actor_id ?? "another actor"}`);
-    } else {
-      hints.push("Cannot claim with current actor");
-    }
-  }
-
-  if (!canComplete && task.state === "OPEN") {
-    hints.push("Cannot complete: claim task first");
-  } else if (!canComplete && task.state === "CLAIMED") {
-    if (task.assignee_actor_id && task.assignee_actor_id !== apiConfig.actorId) {
-      hints.push(`Cannot complete: claimed by ${task.assignee_actor_id}`);
-    } else {
-      hints.push("Cannot complete with current actor");
-    }
+  if (hasAction(task, ["claim", "claim_human_task", "complete", "complete_human_task"])) {
+    hints.push("Open task pane to run claim/complete actions");
   }
 
   if (missingRequiredInputs.length > 0) {
@@ -122,16 +71,6 @@ export function BoardPage(): JSX.Element {
       queryClient.invalidateQueries({ queryKey: ["runs"] })
     ]);
   };
-
-  const claimMutation = useMutation({
-    mutationFn: (humanTaskId: string) => humanTasksRepository.claim(humanTaskId),
-    onSuccess: refreshBoardViews
-  });
-
-  const completeMutation = useMutation({
-    mutationFn: (humanTaskId: string) => humanTasksRepository.complete(humanTaskId),
-    onSuccess: refreshBoardViews
-  });
 
   const approvalMutation = useMutation({
     mutationFn: (payload: { approvalId: string; responseKind: "approve" | "reject" | "request_changes" }) =>
@@ -181,8 +120,6 @@ export function BoardPage(): JSX.Element {
   });
 
   const mutationError =
-    claimMutation.error ??
-    completeMutation.error ??
     approvalMutation.error ??
     uploadTaskAttachmentMutation.error ??
     downloadTaskAttachmentMutation.error ??
@@ -212,167 +149,176 @@ export function BoardPage(): JSX.Element {
   }
 
   return (
-    <div className="board-grid" data-testid="board-page">
+    <div className="board-page" data-testid="board-page">
+      <LegacyScheduleNotice surface="Board" />
       {mutationError ? (
         <StatePanel
           kind="error"
-          title="Inline action failed"
+          title="Action failed"
           detail={errorText(mutationError, "Unable to apply action")}
         />
       ) : null}
 
-      {data.lanes.map((lane) => (
-        <LaneColumn key={lane.id} title={lane.title} count={lane.items.length}>
-          {lane.items.map((item) => {
-            if (item.kind === "task") {
-              const taskIsBusy =
-                (claimMutation.isPending && claimMutation.variables === item.task.human_task_id) ||
-                (completeMutation.isPending && completeMutation.variables === item.task.human_task_id) ||
-                (uploadTaskAttachmentMutation.isPending &&
-                  uploadTaskAttachmentMutation.variables?.humanTaskId === item.task.human_task_id) ||
-                (downloadTaskAttachmentMutation.isPending &&
-                  downloadTaskAttachmentMutation.variables === item.task.human_task_id);
-              const canClaim = canClaimTask(item.task);
-              const canComplete = canCompleteTask(item.task);
+      <div className="board-grid">
+        {data.lanes.map((lane) => (
+          <LaneColumn key={lane.id} title={lane.title} count={lane.items.length}>
+            {lane.items.map((item) => {
+              if (item.kind === "task") {
+                const taskIsBusy =
+                  (uploadTaskAttachmentMutation.isPending &&
+                    uploadTaskAttachmentMutation.variables?.humanTaskId === item.task.human_task_id) ||
+                  (downloadTaskAttachmentMutation.isPending &&
+                    downloadTaskAttachmentMutation.variables === item.task.human_task_id);
 
-              return (
-                <TaskCardWide
-                  key={item.task.human_task_id}
-                  task={item.task}
-                  onClaim={() => claimMutation.mutate(item.task.human_task_id)}
-                  onComplete={() => completeMutation.mutate(item.task.human_task_id)}
-                  claimDisabled={!canClaim}
-                  completeDisabled={!canComplete}
-                  completeHint={taskActionHint(item.task, { canClaim, canComplete })}
-                  onUpload={(file) =>
-                    uploadTaskAttachmentMutation.mutate({
-                      humanTaskId: item.task.human_task_id,
-                      file
-                    })
-                  }
-                  onDownload={() => downloadTaskAttachmentMutation.mutate(item.task.human_task_id)}
-                  actionPending={taskIsBusy}
-                  onDetails={() =>
-                    open({
-                      title: `${item.task.stage_id} ${item.task.task_kind}`,
-                      subtitle: item.task.human_task_id,
-                      description: "Extended task description stays in drawer to keep board cards dense.",
-                      fields: [
-                        { label: "State", value: item.task.state },
-                        { label: "Assignee", value: item.task.assignee_actor_id ?? "unassigned" },
-                        { label: "Workflow run", value: item.task.workflow_run_id }
-                      ],
-                      artifact_sources: [
-                        {
+                return (
+                  <TaskCardWide
+                    key={item.task.human_task_id}
+                    task={item.task}
+                    completeHint={taskActionHint(item.task)}
+                    onUpload={(file) =>
+                      uploadTaskAttachmentMutation.mutate({
+                        humanTaskId: item.task.human_task_id,
+                        file
+                      })
+                    }
+                    onDownload={() => downloadTaskAttachmentMutation.mutate(item.task.human_task_id)}
+                    actionPending={taskIsBusy}
+                    onDetails={() =>
+                      open({
+                        title: `${item.task.stage_id} ${item.task.task_kind}`,
+                        subtitle: item.task.human_task_id,
+                        description: "Extended task description stays in drawer to keep board cards dense.",
+                        fields: [
+                          { label: "State", value: item.task.state },
+                          { label: "Assignee", value: item.task.assignee_actor_id ?? "unassigned" },
+                          { label: "Workflow run", value: item.task.workflow_run_id }
+                        ],
+                        task: {
+                          human_task_id: item.task.human_task_id,
                           workflow_run_id: item.task.workflow_run_id,
-                          subject_kind: "human_task",
-                          subject_id: item.task.human_task_id,
-                          source_label: "Task attachment"
+                          task_run_id: item.task.task_run_id,
+                          stage_id: item.task.stage_id,
+                          task_kind: item.task.task_kind,
+                          state: item.task.state,
+                          assignee_actor_id: item.task.assignee_actor_id,
+                          assignee_actor_type: item.task.assignee_actor_type,
+                          owner_role: item.task.owner_role,
+                          available_actions: item.task.available_actions ?? [],
+                          blocking_reason_codes: item.task.blocking_reason_codes ?? [],
+                          missing_required_inputs: item.task.missing_required_inputs ?? []
                         },
-                        {
-                          workflow_run_id: item.task.workflow_run_id,
-                          subject_kind: "task_run",
-                          subject_id: item.task.task_run_id,
-                          source_label: "Step output"
-                        }
-                      ]
-                    })
-                  }
-                />
-              );
-            }
-            if (item.kind === "approval") {
-              const approvalIsBusy =
-                (approvalMutation.isPending &&
-                  approvalMutation.variables?.approvalId === item.approval.approval_id) ||
-                (uploadApprovalAttachmentMutation.isPending &&
-                  uploadApprovalAttachmentMutation.variables?.approvalId === item.approval.approval_id) ||
-                (downloadApprovalAttachmentMutation.isPending &&
-                  downloadApprovalAttachmentMutation.variables === item.approval.approval_id);
+                        artifact_sources: [
+                          {
+                            workflow_run_id: item.task.workflow_run_id,
+                            subject_kind: "human_task",
+                            subject_id: item.task.human_task_id,
+                            source_label: "Task attachment"
+                          },
+                          {
+                            workflow_run_id: item.task.workflow_run_id,
+                            subject_kind: "task_run",
+                            subject_id: item.task.task_run_id,
+                            source_label: "Step output"
+                          }
+                        ]
+                      })
+                    }
+                  />
+                );
+              }
+              if (item.kind === "approval") {
+                const approvalIsBusy =
+                  (approvalMutation.isPending &&
+                    approvalMutation.variables?.approvalId === item.approval.approval_id) ||
+                  (uploadApprovalAttachmentMutation.isPending &&
+                    uploadApprovalAttachmentMutation.variables?.approvalId === item.approval.approval_id) ||
+                  (downloadApprovalAttachmentMutation.isPending &&
+                    downloadApprovalAttachmentMutation.variables === item.approval.approval_id);
+
+                return (
+                  <ApprovalCard
+                    key={item.approval.approval_id}
+                    approval={item.approval}
+                    onApprove={() =>
+                      approvalMutation.mutate({
+                        approvalId: item.approval.approval_id,
+                        responseKind: "approve"
+                      })
+                    }
+                    onReject={() =>
+                      approvalMutation.mutate({
+                        approvalId: item.approval.approval_id,
+                        responseKind: "reject"
+                      })
+                    }
+                    onRequestInfo={() =>
+                      approvalMutation.mutate({
+                        approvalId: item.approval.approval_id,
+                        responseKind: "request_changes"
+                      })
+                    }
+                    actionPending={approvalIsBusy}
+                    onUpload={(file) =>
+                      uploadApprovalAttachmentMutation.mutate({
+                        approvalId: item.approval.approval_id,
+                        file
+                      })
+                    }
+                    onDownload={() =>
+                      downloadApprovalAttachmentMutation.mutate(item.approval.approval_id)
+                    }
+                    onDetails={() =>
+                      open({
+                        title: `${item.approval.approval_kind} ${item.approval.scope_ref}`,
+                        subtitle: item.approval.approval_id,
+                        description: "Approval evidence and rationale are reviewed in drawer context.",
+                        fields: [
+                          { label: "State", value: item.approval.state },
+                          { label: "Required role", value: item.approval.required_role },
+                          { label: "Response", value: item.approval.response_kind ?? "pending" }
+                        ]
+                      })
+                    }
+                  />
+                );
+              }
+
+              const flagIsBusy =
+                (uploadFlagAttachmentMutation.isPending &&
+                  uploadFlagAttachmentMutation.variables?.flagId === item.flag.flag_id) ||
+                (downloadFlagAttachmentMutation.isPending &&
+                  downloadFlagAttachmentMutation.variables === item.flag.flag_id);
 
               return (
-                <ApprovalCard
-                  key={item.approval.approval_id}
-                  approval={item.approval}
-                  onApprove={() =>
-                    approvalMutation.mutate({
-                      approvalId: item.approval.approval_id,
-                      responseKind: "approve"
-                    })
-                  }
-                  onReject={() =>
-                    approvalMutation.mutate({
-                      approvalId: item.approval.approval_id,
-                      responseKind: "reject"
-                    })
-                  }
-                  onRequestInfo={() =>
-                    approvalMutation.mutate({
-                      approvalId: item.approval.approval_id,
-                      responseKind: "request_changes"
-                    })
-                  }
-                  actionPending={approvalIsBusy}
+                <FlagCard
+                  key={item.flag.flag_id}
+                  flag={item.flag}
+                  actionPending={flagIsBusy}
                   onUpload={(file) =>
-                    uploadApprovalAttachmentMutation.mutate({
-                      approvalId: item.approval.approval_id,
+                    uploadFlagAttachmentMutation.mutate({
+                      flagId: item.flag.flag_id,
                       file
                     })
                   }
-                  onDownload={() =>
-                    downloadApprovalAttachmentMutation.mutate(item.approval.approval_id)
-                  }
+                  onDownload={() => downloadFlagAttachmentMutation.mutate(item.flag.flag_id)}
                   onDetails={() =>
                     open({
-                      title: `${item.approval.approval_kind} ${item.approval.scope_ref}`,
-                      subtitle: item.approval.approval_id,
-                      description: "Approval evidence and rationale are reviewed in drawer context.",
+                      title: item.flag.summary,
+                      subtitle: item.flag.flag_id,
+                      description: "Flag details and related run pointers are shown here.",
                       fields: [
-                        { label: "State", value: item.approval.state },
-                        { label: "Required role", value: item.approval.required_role },
-                        { label: "Response", value: item.approval.response_kind ?? "pending" }
+                        { label: "State", value: item.flag.state },
+                        { label: "Severity", value: item.flag.severity },
+                        { label: "Run", value: item.flag.workflow_run_id }
                       ]
                     })
                   }
                 />
               );
-            }
-
-            const flagIsBusy =
-              (uploadFlagAttachmentMutation.isPending &&
-                uploadFlagAttachmentMutation.variables?.flagId === item.flag.flag_id) ||
-              (downloadFlagAttachmentMutation.isPending &&
-                downloadFlagAttachmentMutation.variables === item.flag.flag_id);
-
-            return (
-              <FlagCard
-                key={item.flag.flag_id}
-                flag={item.flag}
-                actionPending={flagIsBusy}
-                onUpload={(file) =>
-                  uploadFlagAttachmentMutation.mutate({
-                    flagId: item.flag.flag_id,
-                    file
-                  })
-                }
-                onDownload={() => downloadFlagAttachmentMutation.mutate(item.flag.flag_id)}
-                onDetails={() =>
-                  open({
-                    title: item.flag.summary,
-                    subtitle: item.flag.flag_id,
-                    description: "Flag details and related run pointers are shown here.",
-                    fields: [
-                      { label: "State", value: item.flag.state },
-                      { label: "Severity", value: item.flag.severity },
-                      { label: "Run", value: item.flag.workflow_run_id }
-                    ]
-                  })
-                }
-              />
-            );
-          })}
-        </LaneColumn>
-      ))}
+            })}
+          </LaneColumn>
+        ))}
+      </div>
     </div>
   );
 }

@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 
 import { apiConfig } from "@/lib/api/config";
 import { errorText } from "@/lib/api/errorText";
+import { LegacyScheduleNotice } from "@/components/LegacyScheduleNotice";
 import { QueueRow } from "@/components/QueueRow";
 import { StatePanel } from "@/components/StatePanel";
 import { useShellFilters } from "@/app/useShellFilters";
@@ -41,7 +42,8 @@ export function RunsPage(): JSX.Element {
 
   return (
     <section>
-      <h2>Workflow Runs</h2>
+      <LegacyScheduleNotice surface="Runs list" />
+      <h2>Workflow Runs (Legacy Detail Views)</h2>
       <div className="stack-list">
         {data.map((run) => (
           <div key={run.workflow_run_id}>

@@ -11,14 +11,11 @@ import { ACTOR_PROFILES } from "@/lib/actors";
 import { useDrawer } from "@/lib/state/drawerContext";
 
 const NAV_LINKS = [
-  { to: "/workspace", label: "Workspace" },
-  { to: "/board", label: "Board" },
+  { to: "/demo/logistics", label: "Logistics Demo" },
   { to: "/my-work", label: "My Work" },
   { to: "/approvals", label: "Approvals" },
   { to: "/exceptions", label: "Exceptions" },
-  { to: "/runs", label: "Runs" },
-  { to: "/official-outputs", label: "Official Outputs" },
-  { to: "/timeline", label: "Timeline" }
+  { to: "/official-outputs", label: "Official Outputs" }
 ];
 
 export function AppShell(): JSX.Element {
@@ -41,6 +38,7 @@ export function AppShell(): JSX.Element {
   const [lastRefreshedAt, setLastRefreshedAt] = useState<string | null>(null);
   const isWorkspaceRoute = /^\/runs\/[^/]+\/workspace$/.test(location.pathname);
   const isTimelineRoute = location.pathname === "/timeline";
+  const isLogisticsDemoRoute = location.pathname === "/demo/logistics";
   const activeActor = ACTOR_PROFILES.find((profile) => profile.key === activeActorKey) ?? ACTOR_PROFILES[0];
 
   useEffect(() => {
@@ -94,9 +92,7 @@ export function AppShell(): JSX.Element {
             <NavLink
               key={link.to}
               to={link.to}
-              className={({ isActive }) =>
-                isActive || (link.to === "/workspace" && isWorkspaceRoute) ? "active" : ""
-              }
+              className={({ isActive }) => (isActive ? "active" : "")}
             >
               {link.label}
             </NavLink>
@@ -105,7 +101,7 @@ export function AppShell(): JSX.Element {
       </aside>
 
       <section className="app-shell__main">
-        {isWorkspaceRoute || isTimelineRoute ? null : (
+        {isWorkspaceRoute || isTimelineRoute || isLogisticsDemoRoute ? null : (
           <>
             <header className="app-shell__header">
               <div>

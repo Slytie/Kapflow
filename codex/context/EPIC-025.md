@@ -37,9 +37,11 @@
 - “Can a generated output drift silently from its source hashes?”
 - “Does the generated artifact accidentally become the place where people edit truth?”
 
-## Current Repo Status (2026-03-08)
+## Current Repo Status (2026-03-09)
 - `TASK-0060`, `TASK-0061`, `TASK-0062`, and `TASK-0063` are implemented.
 - Composition runtime now includes:
   - first weekly->live `materialize_seed` handoff slice,
-  - first bounded `notify_only` reporting->planning slice.
-- Keep framing bounded: this is not yet a universal finished composition engine; follow-on observability/query expansion remains future work.
+  - first bounded `notify_only` reporting->planning slice,
+  - canonical three-workflow demo story contract + backend story endpoint (`GET /api/v1/stories/logistics-three-workflow`).
+- Integration note: frontend TASK-0064 (EPIC-080) now treats this story seam as primary demo route (`/demo/logistics`) while keeping schedule-only FE views explicitly legacy/regression-only.
+- Keep framing bounded: this is not yet a universal finished composition engine; follow-on logistics composition slices remain future work.

@@ -38,6 +38,9 @@ from onetruth.api.routes.artifacts import (
     upload_workflow_run_artifact_endpoint,
 )
 from onetruth.api.routes.board import schedule_planning_board_endpoint
+from onetruth.api.routes.logistics_story import (
+    logistics_three_workflow_story_endpoint,
+)
 from onetruth.api.routes.flags import (
     get_flag_endpoint,
     list_flags_endpoint,
@@ -460,6 +463,8 @@ def _match_route(method: str, path: str) -> MatchedRoute | None:
         return MatchedRoute(method=method, name="timeline_events.list", params={})
     if method == "GET" and path == "/api/v1/board/schedule-planning":
         return MatchedRoute(method=method, name="board.schedule_planning", params={})
+    if method == "GET" and path == "/api/v1/stories/logistics-three-workflow":
+        return MatchedRoute(method=method, name="stories.logistics_three_workflow", params={})
     return None
 
 
@@ -718,6 +723,14 @@ def _dispatch_route(
     if matched.name == "board.schedule_planning":
         assert page is not None
         return schedule_planning_board_endpoint(
+            connection,
+            context=context,
+            query=query,
+            page=page,
+        )
+    if matched.name == "stories.logistics_three_workflow":
+        assert page is not None
+        return logistics_three_workflow_story_endpoint(
             connection,
             context=context,
             query=query,

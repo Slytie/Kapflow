@@ -13,6 +13,9 @@ interface WorkflowGraphProps {
   freshness: WorkflowWorkspaceFreshness;
   latestEventSequence: number | null;
   selectedWorkflowTab?: string;
+  tabs?: string[];
+  showStepBadge?: boolean;
+  stepBadgeLabel?: string;
   onNodeSelect?: (node: WorkflowWorkspaceGraphNode) => void;
 }
 
@@ -107,6 +110,9 @@ export function WorkflowGraph({
   freshness,
   latestEventSequence,
   selectedWorkflowTab = "Scheduling Coordination",
+  tabs = WORKFLOW_TABS,
+  showStepBadge = true,
+  stepBadgeLabel = "Step 4",
   onNodeSelect
 }: WorkflowGraphProps): JSX.Element {
   const positionedNodes = useMemo(() => {
@@ -132,7 +138,7 @@ export function WorkflowGraph({
   return (
     <section className="workspace-graph" data-testid="workflow-graph">
       <div className="workspace-graph__tabs" role="tablist" aria-label="Workflows">
-        {WORKFLOW_TABS.map((tab) => (
+        {tabs.map((tab) => (
           <button
             key={tab}
             type="button"
@@ -143,10 +149,12 @@ export function WorkflowGraph({
             {tab}
           </button>
         ))}
-        <button type="button" className="workspace-graph__tab-step">
-          Step 4
-          <span aria-hidden="true">✓</span>
-        </button>
+        {showStepBadge ? (
+          <button type="button" className="workspace-graph__tab-step">
+            {stepBadgeLabel}
+            <span aria-hidden="true">✓</span>
+          </button>
+        ) : null}
       </div>
 
       <div className="workspace-graph__viewport">

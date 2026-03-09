@@ -10,7 +10,7 @@ describe("RunsPage", () => {
       path: "/runs"
     });
 
-    expect(await screen.findByText("Workflow Runs")).toBeInTheDocument();
+    expect(await screen.findByText("Workflow Runs (Legacy Detail Views)")).toBeInTheDocument();
     const workspaceLink = screen.getByRole("link", { name: "Open workspace" });
     const detailLink = screen.getByRole("link", { name: "View run detail" });
 

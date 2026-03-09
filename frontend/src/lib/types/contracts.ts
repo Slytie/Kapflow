@@ -319,6 +319,174 @@ export interface WorkflowRunWorkspaceContract {
   freshness: WorkflowWorkspaceFreshness;
 }
 
+export interface LogisticsStoryFamilyModule {
+  module_id: string;
+  workflow_id: string;
+  partition_kind: string;
+  activation_policy: string;
+  status: string;
+}
+
+export interface LogisticsStoryFamilyEdge {
+  edge_id: string;
+  source_module_id: string;
+  target_module_id: string;
+  source_stage_id: string;
+  source_dataset_key: string;
+  target_stage_id: string;
+  target_dataset_key: string;
+  partition_transform_id: string;
+  handoff_mode: string;
+  writer_mode: string;
+  status: string;
+}
+
+export interface LogisticsStoryFamilyGraph {
+  family_id: string;
+  family_version: number;
+  modules: LogisticsStoryFamilyModule[];
+  edges: LogisticsStoryFamilyEdge[];
+}
+
+export interface LogisticsStoryLinkedWorkflowRuns {
+  weekly_schedule_planning: WorkflowRunRow[];
+  live_dispatch: WorkflowRunRow[];
+  dispatch_reporting: WorkflowRunRow[];
+  summary: {
+    weekly_schedule_planning_count: number;
+    live_dispatch_count: number;
+    dispatch_reporting_count: number;
+  };
+}
+
+export interface LogisticsStoryHandoffExecution {
+  edge_execution_id: string;
+  edge_id: string;
+  source_workflow_run_id: string;
+  source_stage_id: string;
+  source_artifact_version_id: string | null;
+  target_workflow_id: string;
+  target_workflow_run_id: string | null;
+  target_stage_id: string;
+  target_partition_key: string;
+  status: string;
+  created_at: string;
+  updated_at: string;
+  activated_at: string | null;
+  source_workflow_run: WorkflowRunRow | null;
+  target_workflow_run: WorkflowRunRow | null;
+  coherence: Record<string, unknown>;
+}
+
+export interface LogisticsStoryHandoffEdgeSummary {
+  edge_id: string;
+  execution_count: number;
+  status_counts: Record<string, number>;
+  coherence_failed_count: number;
+  executions: LogisticsStoryHandoffExecution[];
+}
+
+export interface LogisticsStoryBoardLane {
+  lane: string;
+  label: string;
+  position: number;
+  item_count: number;
+}
+
+export interface LogisticsStoryBoardWorkItem {
+  item_id: string;
+  item_type: "human_task" | "approval" | "flag";
+  lane: string;
+  title: string;
+  workflow_run_id: string;
+  workflow_id: string;
+  subject_id: string;
+  stage_id?: string;
+  task_kind?: string;
+  state: string;
+  owner_role?: string | null;
+  approval_kind?: string;
+  scope_kind?: string;
+  scope_ref?: string;
+  required_role?: string | null;
+  kind?: string;
+  severity?: string;
+  available_actions: string[];
+  blocking_reason_codes: string[];
+  missing_required_inputs: string[];
+  linked_artifact_count: number;
+}
+
+export interface LogisticsStoryBoard {
+  lanes: LogisticsStoryBoardLane[];
+  work_items: LogisticsStoryBoardWorkItem[];
+  page: {
+    limit: number;
+    offset: number;
+  };
+  summary: {
+    work_item_count: number;
+    human_task_count: number;
+    approval_count: number;
+    flag_count: number;
+    primary_actionable_count: number;
+    workflow_item_counts: Record<string, number>;
+  };
+}
+
+export interface LogisticsStoryOfficialOutputs {
+  pointers: PointerRow[];
+  pointer_outputs: Array<{
+    pointer: PointerRow;
+    artifact_version: ArtifactVersionRow | null;
+  }>;
+  official_output_artifacts: ArtifactVersionRow[];
+  coherence: Record<string, unknown>;
+  summary: {
+    pointer_count: number;
+    pointer_output_count: number;
+    official_output_artifact_count: number;
+    artifact_kind_counts: Record<string, number>;
+  };
+}
+
+export interface LogisticsThreeWorkflowStoryContract {
+  story_id: string;
+  family: {
+    family_id: string;
+    family_version: number;
+    contract_version: number;
+  };
+  partitions: {
+    planning_week_id: string;
+    service_date_ids: string[];
+  };
+  family_graph: LogisticsStoryFamilyGraph;
+  linked_workflow_runs: LogisticsStoryLinkedWorkflowRuns;
+  handoff_activity: {
+    edges: LogisticsStoryHandoffEdgeSummary[];
+    summary: {
+      edge_execution_count: number;
+      coherence_failed_count: number;
+    };
+  };
+  board: LogisticsStoryBoard;
+  official_outputs: LogisticsStoryOfficialOutputs;
+  freshness: {
+    latest_event_sequence: number | null;
+    latest_event_recorded_at: string | null;
+    max_workflow_run_updated_at: string | null;
+    generated_at: string;
+  };
+  coherence: {
+    official_outputs: Record<string, unknown>;
+    handoff_edges: Array<{
+      edge_id: string;
+      coherence_failed_count: number;
+    }>;
+  };
+}
+
 export interface TemplateRegistryMetadata {
   id: string;
   workflow_id: string;

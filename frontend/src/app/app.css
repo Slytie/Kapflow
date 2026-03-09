@@ -143,11 +143,34 @@
   min-height: 0;
 }
 
+.legacy-surface-notice {
+  margin: 0 0 10px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  border: 1px solid #e1d9c9;
+  background: #faf4e8;
+  color: #5d4f2f;
+  font-size: 13px;
+}
+
+.board-page {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
 .board-grid {
   display: grid;
   grid-template-columns: repeat(5, minmax(240px, 1fr));
   gap: 12px;
   overflow-x: auto;
+}
+
+.board-grid--story {
+  grid-template-columns: unset;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(260px, 1fr);
+  align-items: start;
 }
 
 .lane-column {
@@ -320,6 +343,133 @@
   font-size: 13px;
 }
 
+.logistics-demo-page {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.logistics-demo-page__header {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: flex-start;
+  border: 1px solid #ddd9d4;
+  border-radius: 12px;
+  background: #f8f6f2;
+  padding: 12px 14px;
+}
+
+.logistics-demo-page__header h2 {
+  margin: 0 0 4px;
+}
+
+.logistics-demo-page__header p {
+  margin: 0;
+  color: #666b73;
+}
+
+.logistics-demo-page__header-links {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+}
+
+.logistics-demo-page__panel {
+  border: 1px solid #ddd9d4;
+  border-radius: 12px;
+  background: #f8f7f5;
+  padding: 12px;
+}
+
+.logistics-demo-page__panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.logistics-demo-page__panel-header h3 {
+  margin: 0;
+}
+
+.logistics-demo-page__panel-header p {
+  margin: 0;
+  color: #6f747c;
+  font-size: 13px;
+}
+
+.logistics-demo-page__run-groups {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 10px;
+}
+
+.logistics-demo-page__run-group {
+  border: 1px solid #e1ddd8;
+  border-radius: 10px;
+  background: #fff;
+  padding: 10px;
+}
+
+.logistics-demo-page__run-group h4 {
+  margin: 0 0 6px;
+}
+
+.logistics-demo-page__run-group ul {
+  margin: 0;
+  padding-left: 16px;
+}
+
+.logistics-demo-page__board-item {
+  border: 1px solid #e4e0da;
+  border-radius: 10px;
+  background: #fff;
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.logistics-demo-page__board-item header {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  align-items: flex-start;
+}
+
+.logistics-demo-page__board-item h4 {
+  margin: 0;
+}
+
+.logistics-demo-page__board-item p {
+  margin: 0;
+  color: #616770;
+  font-size: 12px;
+}
+
+.logistics-demo-page__empty-lane {
+  margin: 0;
+  color: #7b8089;
+  font-size: 12px;
+}
+
+.logistics-demo-page__insights {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 12px;
+}
+
+.logistics-demo-page__compact-list {
+  margin: 0 0 8px;
+  padding-left: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
 .attachment-actions {
   display: flex;
   gap: 8px;
@@ -345,6 +495,25 @@
 
 .detail-drawer__description {
   color: var(--ink-700);
+}
+
+.detail-drawer__task {
+  margin-top: 14px;
+  border-top: 1px dashed var(--ink-300);
+  padding-top: 10px;
+}
+
+.detail-drawer__task h3 {
+  margin: 0 0 6px;
+  font-size: 13px;
+  color: var(--ink-700);
+}
+
+.detail-drawer__task-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
 }
 
 .detail-drawer__field {

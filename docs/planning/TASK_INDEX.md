@@ -64,4 +64,5 @@
 | TASK-0060 | EPIC-025 | DONE | high | Logistics family definitions and deterministic fail-closed compiler |
 | TASK-0061 | EPIC-025 | DONE | high | Logistics control layer and pinned method packages over canonical runtime activations |
 | TASK-0062 | EPIC-025 | DONE | high | Weekly to live handoff runtime and first logistics golden slice |
-| TASK-0063 | EPIC-025 | DONE | high | Generic `notify_only` handoff semantics and reporting-to-planning slice |
+| TASK-0063 | EPIC-025 | DONE | high | Reporting→planning feedback slice, canonical three-workflow story contract, and backend story query seam |
+| TASK-0064 | EPIC-080 | DONE | high | Three-workflow logistics demo shell, primary route switch, and schedule-only legacy demotion |

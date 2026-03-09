@@ -122,16 +122,6 @@ export function MyWorkPage(): JSX.Element {
     ]);
   };
 
-  const claimMutation = useMutation({
-    mutationFn: (humanTaskId: string) => humanTasksRepository.claim(humanTaskId),
-    onSuccess: refreshQueues
-  });
-
-  const completeMutation = useMutation({
-    mutationFn: (humanTaskId: string) => humanTasksRepository.complete(humanTaskId),
-    onSuccess: refreshQueues
-  });
-
   const uploadAttachmentMutation = useMutation({
     mutationFn: (payload: { humanTaskId: string; file: File }) =>
       humanTasksRepository.uploadAttachment(payload.humanTaskId, payload.file),
@@ -155,10 +145,7 @@ export function MyWorkPage(): JSX.Element {
   });
 
   const mutationError =
-    claimMutation.error ??
-    completeMutation.error ??
-    uploadAttachmentMutation.error ??
-    downloadAttachmentMutation.error;
+    uploadAttachmentMutation.error ?? downloadAttachmentMutation.error;
 
   if (query.isLoading) {
     return <StatePanel kind="loading" title="Loading my work" detail="Fetching task queue from API." />;
@@ -199,8 +186,6 @@ export function MyWorkPage(): JSX.Element {
       <div className="stack-list">
         {data.map((task) => {
           const taskIsBusy =
-            (claimMutation.isPending && claimMutation.variables === task.human_task_id) ||
-            (completeMutation.isPending && completeMutation.variables === task.human_task_id) ||
             (uploadAttachmentMutation.isPending &&
               uploadAttachmentMutation.variables?.humanTaskId === task.human_task_id) ||
             (downloadAttachmentMutation.isPending &&
@@ -215,8 +200,6 @@ export function MyWorkPage(): JSX.Element {
               subtitle={`${task.owner_role ?? "unknown"} · ${task.workflow_run_id}`}
               status={task.state}
               hint={taskActionHint(task, canClaim, canComplete)}
-              onClaim={canClaim ? () => claimMutation.mutate(task.human_task_id) : undefined}
-              onComplete={canComplete ? () => completeMutation.mutate(task.human_task_id) : undefined}
               onUpload={(file) =>
                 uploadAttachmentMutation.mutate({ humanTaskId: task.human_task_id, file })
               }
@@ -232,6 +215,20 @@ export function MyWorkPage(): JSX.Element {
                     { label: "Blocked on", value: task.blocked_on_kind ?? "none" },
                     { label: "Task run", value: task.task_run_id }
                   ],
+                  task: {
+                    human_task_id: task.human_task_id,
+                    workflow_run_id: task.workflow_run_id,
+                    task_run_id: task.task_run_id,
+                    stage_id: task.stage_id,
+                    task_kind: task.task_kind,
+                    state: task.state,
+                    assignee_actor_id: task.assignee_actor_id,
+                    assignee_actor_type: task.assignee_actor_type,
+                    owner_role: task.owner_role,
+                    available_actions: task.available_actions ?? [],
+                    blocking_reason_codes: task.blocking_reason_codes ?? [],
+                    missing_required_inputs: task.missing_required_inputs ?? []
+                  },
                   artifact_sources: [
                     {
                       workflow_run_id: task.workflow_run_id,

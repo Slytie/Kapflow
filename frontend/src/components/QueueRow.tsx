@@ -27,6 +27,17 @@ export function QueueRow({
   onDownload,
   actionPending = false
 }: QueueRowProps): JSX.Element {
+  const actions = [
+    { key: "claim", label: "Claim", onClick: onClaim, disabled: actionPending },
+    {
+      key: "complete",
+      label: "Complete",
+      tone: "positive" as const,
+      onClick: onComplete,
+      disabled: actionPending
+    }
+  ].filter((action) => Boolean(action.onClick));
+
   return (
     <article className="queue-row" data-testid="queue-row">
       <div className="queue-row__main">
@@ -35,18 +46,7 @@ export function QueueRow({
       </div>
       <StatusBadge status={status} />
       <AttachmentActions compact onUpload={onUpload} onDownload={onDownload} disabled={actionPending} />
-      <ActionCluster
-        actions={[
-          { key: "claim", label: "Claim", onClick: onClaim, disabled: actionPending },
-          {
-            key: "complete",
-            label: "Complete",
-            tone: "positive",
-            onClick: onComplete,
-            disabled: actionPending
-          }
-        ]}
-      />
+      {actions.length > 0 ? <ActionCluster actions={actions} /> : null}
       <button type="button" className="link-button" onClick={onDetails}>
         Details
       </button>

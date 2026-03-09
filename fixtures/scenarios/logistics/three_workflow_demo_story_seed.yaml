@@ -1,0 +1,155 @@
+scenario_id: logistics_three_workflow_demo_story_seed
+workflow_id: dispatch_reporting.v1
+workflow_version: v1
+partition_key: SD-2026-03-06
+logical_date: "2026-03-06"
+scope:
+  tenant_id: tenant-logistics
+  domain_id: domain-hub
+steps:
+  - id: create_reporting_final_packet
+    action: artifacts.create-version
+    payload:
+      workflow_run_id: "{{workflow_run.workflow_run_id}}"
+      artifact_kind: reporting.final_packet.workbook
+      artifact_role: official_output
+      media_type: application/octet-stream
+      storage_uri: inmem://scenario/logistics/three-workflow/reporting-final-packet
+      content_digest: sha256:logistics-three-workflow-reporting-final-packet
+      canonical_partition_kind: ServiceDateID
+      canonical_partition_key: SD-2026-03-06
+      metadata_json:
+        scenario_id: logistics_three_workflow_demo_story_seed
+      idempotency_key: scenario:logistics_three_workflow_demo_story_seed:reporting-final-packet
+    save_as: reporting_final_packet
+  - id: notify_planning_feedback
+    action: handoffs.notify-only
+    payload:
+      edge_id: reporting_actuals_to_future_planning
+      source_workflow_run_id: "{{workflow_run.workflow_run_id}}"
+      source_artifact_version_id: "{{reporting_final_packet.artifact_version.artifact_version_id}}"
+      idempotency_key: scenario:logistics_three_workflow_demo_story_seed:notify-planning-feedback
+    save_as: notify_result
+  - id: create_weekly_publish_artifact
+    action: artifacts.create-version
+    payload:
+      workflow_run_id: "{{notify_result.result.target_workflow_runs.0.workflow_run_id}}"
+      artifact_kind: planning.published_weekly_schedule.workbook
+      artifact_role: official_output
+      media_type: application/octet-stream
+      storage_uri: inmem://scenario/logistics/three-workflow/weekly-published
+      content_digest: sha256:logistics-three-workflow-weekly-published
+      metadata_json:
+        scenario_id: logistics_three_workflow_demo_story_seed
+      idempotency_key: scenario:logistics_three_workflow_demo_story_seed:weekly-publish
+    save_as: weekly_publish
+  - id: materialize_live_seed
+    action: handoffs.materialize-weekly-seeds
+    payload:
+      workflow_run_id: "{{notify_result.result.target_workflow_runs.0.workflow_run_id}}"
+      published_artifact_version_id: "{{weekly_publish.artifact_version.artifact_version_id}}"
+      service_date_id: SD-2026-03-06
+      idempotency_key: scenario:logistics_three_workflow_demo_story_seed:materialize-live-seed
+    save_as: weekly_to_live_materialized
+  - id: create_route_delta_source
+    action: artifacts.create-version
+    payload:
+      workflow_run_id: "{{notify_result.result.target_workflow_runs.0.workflow_run_id}}"
+      artifact_kind: dispatch.route_delta_intake.workbook
+      artifact_role: official_input
+      media_type: application/octet-stream
+      storage_uri: inmem://scenario/logistics/three-workflow/route-delta
+      content_digest: sha256:logistics-three-workflow-route-delta
+      canonical_partition_kind: ServiceDateID
+      canonical_partition_key: SD-2026-03-06
+      metadata_json:
+        scenario_id: logistics_three_workflow_demo_story_seed
+      idempotency_key: scenario:logistics_three_workflow_demo_story_seed:route-delta
+    save_as: route_delta_source
+  - id: create_actual_hours_source
+    action: artifacts.create-version
+    payload:
+      workflow_run_id: "{{notify_result.result.target_workflow_runs.0.workflow_run_id}}"
+      artifact_kind: planning.actual_hours_snapshot.workbook
+      artifact_role: official_input
+      media_type: application/octet-stream
+      storage_uri: inmem://scenario/logistics/three-workflow/actual-hours
+      content_digest: sha256:logistics-three-workflow-actual-hours
+      metadata_json:
+        scenario_id: logistics_three_workflow_demo_story_seed
+      idempotency_key: scenario:logistics_three_workflow_demo_story_seed:actual-hours
+    save_as: actual_hours_source
+  - id: activate_live_dispatch
+    action: handoffs.activate-live-dispatch
+    payload:
+      edge_execution_id: "{{weekly_to_live_materialized.result.edge_executions.0.edge_execution_id}}"
+      route_delta_source_artifact_version_id: "{{route_delta_source.artifact_version.artifact_version_id}}"
+      actual_hours_source_artifact_version_id: "{{actual_hours_source.artifact_version.artifact_version_id}}"
+      idempotency_key: scenario:logistics_three_workflow_demo_story_seed:activate-live-dispatch
+    save_as: live_activation
+  - id: create_weekly_review_task
+    action: tasks.create
+    payload:
+      workflow_run_id: "{{notify_result.result.target_workflow_runs.0.workflow_run_id}}"
+      stage_id: Stage03
+      task_kind: actual_hours_review
+      activation_key: scenario:logistics_three_workflow_demo_story_seed:task:weekly:stage03
+      candidate_roles:
+        - schedule_planner
+      owner_role: operations_manager
+      create_human_task: true
+      idempotency_key: scenario:logistics_three_workflow_demo_story_seed:task:weekly:stage03
+    save_as: weekly_task
+  - id: create_live_dispatch_task
+    action: tasks.create
+    payload:
+      workflow_run_id: "{{live_activation.result.target_workflow_run.workflow_run_id}}"
+      stage_id: Stage03
+      task_kind: dispatcher_review
+      activation_key: scenario:logistics_three_workflow_demo_story_seed:task:live:stage03
+      candidate_roles:
+        - dispatch_supervisor
+      owner_role: dispatch_supervisor
+      create_human_task: true
+      idempotency_key: scenario:logistics_three_workflow_demo_story_seed:task:live:stage03
+    save_as: live_task
+  - id: request_live_major_replan_approval
+    action: approvals.request
+    payload:
+      workflow_run_id: "{{live_activation.result.target_workflow_run.workflow_run_id}}"
+      task_run_id: "{{live_task.result.task_run.task_run_id}}"
+      approval_kind: business_decision
+      scope_kind: stage
+      scope_ref: Stage04
+      candidate_roles:
+        - operations_manager
+      required_role: operations_manager
+      idempotency_key: scenario:logistics_three_workflow_demo_story_seed:approval:live:stage04
+    save_as: live_approval
+  - id: create_reporting_quality_flag
+    action: flags.create
+    payload:
+      workflow_run_id: "{{workflow_run.workflow_run_id}}"
+      kind: reporting_data_gap
+      severity: medium
+      summary: "Reporting closeout has unresolved variance notes"
+      details_json:
+        source: three_workflow_demo_story_seed
+      created_by:
+        id: human:reporting-analyst-1
+        type: human
+      idempotency_key: scenario:logistics_three_workflow_demo_story_seed:flag:reporting-gap
+    save_as: reporting_flag
+  - id: create_reporting_review_task
+    action: tasks.create
+    payload:
+      workflow_run_id: "{{workflow_run.workflow_run_id}}"
+      stage_id: Stage05
+      task_kind: final_packet_review
+      activation_key: scenario:logistics_three_workflow_demo_story_seed:task:reporting:stage05
+      candidate_roles:
+        - operations_analyst
+      owner_role: operations_manager
+      create_human_task: true
+      idempotency_key: scenario:logistics_three_workflow_demo_story_seed:task:reporting:stage05
+    save_as: reporting_task

@@ -4,6 +4,7 @@ import { Link, useParams } from "react-router-dom";
 
 import { apiConfig } from "@/lib/api/config";
 import { errorText } from "@/lib/api/errorText";
+import { LegacyScheduleNotice } from "@/components/LegacyScheduleNotice";
 import { QueueRow } from "@/components/QueueRow";
 import { StatePanel } from "@/components/StatePanel";
 import { TimelineRow } from "@/components/TimelineRow";
@@ -74,10 +75,14 @@ export function RunDetailPage(): JSX.Element {
 
   return (
     <section data-testid="run-detail-page">
+      <LegacyScheduleNotice surface="Run detail" />
       <header className="run-detail-header">
         <h2>{detail.workflow_run.workflow_run_id}</h2>
         <p>{detail.workflow_run.workflow_id} · {detail.workflow_run.partition_key}</p>
         <div className="run-links">
+          <Link className="link-button" to="/demo/logistics">
+            Open logistics demo
+          </Link>
           <Link className="link-button" to={`/runs/${workflowRunId}/workspace`}>
             Open workspace
           </Link>

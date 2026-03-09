@@ -1,9 +1,12 @@
-import { render, screen, within } from "@testing-library/react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useState } from "react";
 
 import { DetailDrawer } from "@/components/DetailDrawer";
 import { TaskCardWide } from "@/components/TaskCardWide";
+import { onetruthApi } from "@/lib/api/onetruthApi";
+import { humanTasksRepository } from "@/lib/repositories";
 import type { DrawerPayload } from "@/lib/types/ui";
 import type { HumanTaskRow } from "@/lib/types/contracts";
 
@@ -66,10 +69,22 @@ function Harness(): JSX.Element {
   );
 }
 
+function renderWithQueryClient(element: JSX.Element) {
+  const queryClient = new QueryClient({
+    defaultOptions: {
+      queries: { retry: false }
+    }
+  });
+  return {
+    queryClient,
+    ...render(<QueryClientProvider client={queryClient}>{element}</QueryClientProvider>)
+  };
+}
+
 describe("Detail drawer flow", () => {
   it("keeps card compact and shows description in drawer", async () => {
     const user = userEvent.setup();
-    render(<Harness />);
+    renderWithQueryClient(<Harness />);
 
     expect(screen.queryByText("This description is only visible in the drawer.")).not.toBeInTheDocument();
 
@@ -81,5 +96,59 @@ describe("Detail drawer flow", () => {
     const artifactsSection = screen.getByLabelText("Task artifacts");
     expect(within(artifactsSection).getByRole("button", { name: "Download" })).toBeInTheDocument();
     expect(screen.getByTestId("task-card-wide")).toBeInTheDocument();
+  });
+
+  it("executes task actions from drawer and refreshes relevant query views", async () => {
+    const user = userEvent.setup();
+    const claimSpy = vi.spyOn(humanTasksRepository, "claim").mockResolvedValue();
+    const getSpy = vi.spyOn(humanTasksRepository, "get").mockResolvedValue({
+      ...task,
+      available_actions: ["claim"],
+      missing_required_inputs: [],
+      blocking_reason_codes: []
+    });
+    vi.spyOn(onetruthApi, "listArtifactsForSubject").mockResolvedValue([]);
+    const { queryClient } = renderWithQueryClient(
+      <DetailDrawer
+        payload={{
+          title: "Stage06 review_packet",
+          subtitle: "ht-2",
+          fields: [],
+          task: {
+            human_task_id: "ht-2",
+            workflow_run_id: "wr-2",
+            task_run_id: "tr-2",
+            stage_id: "Stage06",
+            task_kind: "review_packet",
+            state: "OPEN",
+            assignee_actor_id: null,
+            assignee_actor_type: null,
+            owner_role: "dispatch_supervisor",
+            available_actions: ["claim"],
+            blocking_reason_codes: [],
+            missing_required_inputs: []
+          }
+        }}
+        onClose={() => undefined}
+      />
+    );
+    const invalidateSpy = vi.spyOn(queryClient, "invalidateQueries");
+
+    expect(await screen.findByRole("heading", { name: "Stage06 review_packet" })).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Claim" }));
+
+    await waitFor(() => {
+      expect(claimSpy).toHaveBeenCalledWith("ht-2");
+    });
+    await waitFor(() => {
+      expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ["logistics-demo-story"] });
+      expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ["board-view"] });
+      expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ["my-work"] });
+      expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ["run-detail", "wr-2"] });
+      expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ["run-workspace", "wr-2"] });
+    });
+
+    claimSpy.mockRestore();
+    getSpy.mockRestore();
   });
 });

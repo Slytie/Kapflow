@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 
 import { apiConfig } from "@/lib/api/config";
 import { errorText } from "@/lib/api/errorText";
+import { LegacyScheduleNotice } from "@/components/LegacyScheduleNotice";
 import { PointerCard } from "@/components/PointerCard";
 import { StatePanel } from "@/components/StatePanel";
 import { useShellFilters } from "@/app/useShellFilters";
@@ -40,7 +41,8 @@ export function OfficialOutputsPage(): JSX.Element {
 
   return (
     <section>
-      <h2>Official Outputs</h2>
+      <LegacyScheduleNotice surface="Official outputs" />
+      <h2>Official Outputs (Legacy Pointer List)</h2>
       <div className="stack-list">
         {data.map((pointer) => (
           <PointerCard

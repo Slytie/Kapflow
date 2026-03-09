@@ -14,6 +14,8 @@ describe("MyWorkPage", () => {
 
     expect(await screen.findByText(/information_request/i)).toBeInTheDocument();
     expect(screen.queryByText(/exception_triage/i)).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Claim" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Complete" })).not.toBeInTheDocument();
   });
 
   it("hides tasks that the current actor cannot claim or complete", async () => {

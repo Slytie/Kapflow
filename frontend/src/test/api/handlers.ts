@@ -1,5 +1,5 @@
 import { http, HttpResponse } from "msw";
-import type { ArtifactVersionRow } from "@/lib/types/contracts";
+import type { ArtifactVersionRow, HumanTaskRow } from "@/lib/types/contracts";
 
 import {
   buildBoardContract,
@@ -83,6 +83,58 @@ function parseLimitOffset(url: URL): { limit: number; offset: number } {
   return {
     limit: Number.isNaN(limit) ? 100 : limit,
     offset: Number.isNaN(offset) ? 0 : offset
+  };
+}
+
+function actorRolesFromRequest(request: Request): Set<string> {
+  const rawRoles = request.headers.get("x-onetruth-actor-roles") ?? "";
+  return new Set(
+    rawRoles
+      .split(",")
+      .map((role) => role.trim())
+      .filter(Boolean)
+  );
+}
+
+function taskActionability(task: HumanTaskRow, request: Request) {
+  const actorId = request.headers.get("x-onetruth-actor-id") ?? "human:frontend-operator";
+  const actorType = request.headers.get("x-onetruth-actor-type") ?? "human";
+  const actorRoles = actorRolesFromRequest(request);
+  const roleMatch =
+    task.candidate_roles.length === 0 ||
+    task.candidate_roles.some((role) => actorRoles.has(role));
+  const isAssignee =
+    task.assignee_actor_id === actorId && task.assignee_actor_type === actorType;
+  const availableActions: string[] = [];
+  const blockingReasonCodes = [...(task.blocking_reason_codes ?? [])];
+
+  if (task.state === "OPEN" && !task.assignee_actor_id && roleMatch) {
+    availableActions.push("claim");
+  } else if (task.state === "OPEN" && !roleMatch) {
+    blockingReasonCodes.push("candidate_role_mismatch");
+  }
+
+  if (task.state === "CLAIMED" && isAssignee) {
+    availableActions.push("complete");
+  } else if (task.state === "CLAIMED" && !isAssignee) {
+    blockingReasonCodes.push("claimed_by_other_actor");
+  }
+
+  if (task.state !== "COMPLETED") {
+    availableActions.push("upload_attachment");
+  }
+
+  return {
+    available_actions: [...new Set(availableActions)],
+    missing_required_inputs: task.missing_required_inputs ?? [],
+    blocking_reason_codes: [...new Set(blockingReasonCodes)]
+  };
+}
+
+function enrichHumanTaskForResponse(task: HumanTaskRow, request: Request): HumanTaskRow {
+  return {
+    ...task,
+    ...taskActionability(task, request)
   };
 }
 
@@ -333,6 +385,441 @@ function downloadedContentBase64(artifactVersionId: string): string {
   return `artifact:${artifactVersionId}`;
 }
 
+function buildStoryRun(
+  input: {
+    workflowRunId: string;
+    workflowId: string;
+    partitionKey: string;
+    state: string;
+    activeIssueCount: number;
+  }
+) {
+  const now = new Date().toISOString();
+  return {
+    workflow_run_id: input.workflowRunId,
+    workflow_id: input.workflowId,
+    workflow_version: "v1",
+    tenant_id: "tenant-a",
+    domain_id: "domain-x",
+    partition_key: input.partitionKey,
+    logical_date: input.partitionKey,
+    activation_key: `${input.workflowId}:${input.partitionKey}`,
+    state: input.state,
+    active_issue_count: input.activeIssueCount,
+    created_at: now,
+    updated_at: now
+  };
+}
+
+function buildLogisticsStoryPayload(planningWeekId: string, request: Request, serviceDateId?: string) {
+  const now = new Date().toISOString();
+  const reportingRun = buildStoryRun({
+    workflowRunId: "wr-report-001",
+    workflowId: "dispatch_reporting.v1",
+    partitionKey: serviceDateId ?? "SD-2026-03-06",
+    state: "COMPLETED",
+    activeIssueCount: 0
+  });
+  const weeklyRun = buildStoryRun({
+    workflowRunId: "wr-weekly-001",
+    workflowId: "weekly_schedule_planning.v1",
+    partitionKey: planningWeekId,
+    state: "OPEN",
+    activeIssueCount: 1
+  });
+  const liveRun = buildStoryRun({
+    workflowRunId: "wr-live-001",
+    workflowId: "live_dispatch.v1",
+    partitionKey: serviceDateId ?? "SD-2026-03-06",
+    state: "OPEN",
+    activeIssueCount: 1
+  });
+  const storyTasks = {
+    weekly: state.humanTasks.find((task) => task.human_task_id === "ht-weekly-001"),
+    live: state.humanTasks.find((task) => task.human_task_id === "ht-live-001"),
+    reporting: state.humanTasks.find((task) => task.human_task_id === "ht-reporting-001")
+  };
+  const weeklyTask = storyTasks.weekly
+    ? enrichHumanTaskForResponse(storyTasks.weekly, request)
+    : null;
+  const liveTask = storyTasks.live ? enrichHumanTaskForResponse(storyTasks.live, request) : null;
+  const reportingTask = storyTasks.reporting
+    ? enrichHumanTaskForResponse(storyTasks.reporting, request)
+    : null;
+
+  const pointers = [
+    {
+      workflow_run_id: weeklyRun.workflow_run_id,
+      pointer_key: "official:planning.published_weekly_schedule.workbook",
+      scope_kind: "stage",
+      scope_ref: "Stage06",
+      artifact_kind: "planning.published_weekly_schedule.workbook",
+      artifact_version_id: "av-weekly-001",
+      promotion_reason: "official_publish",
+      promoted_by_task_run_id: "tr-weekly-stage06",
+      approved_by_approval_id: "ap-weekly-stage06",
+      generation: 1,
+      updated_at: now
+    },
+    {
+      workflow_run_id: reportingRun.workflow_run_id,
+      pointer_key: "official:reporting.final_packet.workbook",
+      scope_kind: "stage",
+      scope_ref: "Stage05",
+      artifact_kind: "reporting.final_packet.workbook",
+      artifact_version_id: "av-reporting-001",
+      promotion_reason: "official_publish",
+      promoted_by_task_run_id: "tr-report-stage05",
+      approved_by_approval_id: "ap-report-stage05",
+      generation: 1,
+      updated_at: now
+    }
+  ];
+
+  const officialOutputArtifacts = [
+    {
+      artifact_version_id: "av-weekly-001",
+      workflow_run_id: weeklyRun.workflow_run_id,
+      task_run_id: "tr-weekly-stage06",
+      artifact_kind: "planning.published_weekly_schedule.workbook",
+      artifact_role: "official_output",
+      media_type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      storage_uri: "memory://story/av-weekly-001.xlsx",
+      content_digest: "sha256:weekly001",
+      byte_size: 1024,
+      metadata_json: {
+        file_name: "weekly_schedule.xlsx"
+      },
+      parent_artifact_version_id: null,
+      supersedes_artifact_version_id: null,
+      lineage_note: null,
+      created_at: now
+    },
+    {
+      artifact_version_id: "av-reporting-001",
+      workflow_run_id: reportingRun.workflow_run_id,
+      task_run_id: "tr-report-stage05",
+      artifact_kind: "reporting.final_packet.workbook",
+      artifact_role: "official_output",
+      media_type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      storage_uri: "memory://story/av-reporting-001.xlsx",
+      content_digest: "sha256:reporting001",
+      byte_size: 960,
+      metadata_json: {
+        file_name: "dispatch_reporting_packet.xlsx"
+      },
+      parent_artifact_version_id: null,
+      supersedes_artifact_version_id: null,
+      lineage_note: null,
+      created_at: now
+    }
+  ];
+
+  return {
+    story_id: "logistics_three_workflow_demo.v1",
+    family: {
+      family_id: "logistics_ops_family.v1",
+      family_version: 1,
+      contract_version: 1
+    },
+    partitions: {
+      planning_week_id: planningWeekId,
+      service_date_ids: [serviceDateId ?? "SD-2026-03-06"]
+    },
+    family_graph: {
+      family_id: "logistics_ops_family.v1",
+      family_version: 1,
+      modules: [
+        {
+          module_id: "dispatch_reporting",
+          workflow_id: "dispatch_reporting.v1",
+          partition_kind: "ServiceDateID",
+          activation_policy: "manual_or_event",
+          status: "active"
+        },
+        {
+          module_id: "weekly_schedule_planning",
+          workflow_id: "weekly_schedule_planning.v1",
+          partition_kind: "PlanningWeekID",
+          activation_policy: "manual_or_event",
+          status: "active"
+        },
+        {
+          module_id: "live_dispatch",
+          workflow_id: "live_dispatch.v1",
+          partition_kind: "ServiceDateID",
+          activation_policy: "event_driven",
+          status: "active"
+        }
+      ],
+      edges: [
+        {
+          edge_id: "reporting_actuals_to_future_planning",
+          source_module_id: "dispatch_reporting",
+          target_module_id: "weekly_schedule_planning",
+          source_stage_id: "Stage05",
+          source_dataset_key: "reporting.final_packet.workbook",
+          target_stage_id: "Stage03",
+          target_dataset_key: "planning.actual_hours_snapshot.workbook",
+          partition_transform_id: "service_day_to_future_planning_week",
+          handoff_mode: "notify_only",
+          writer_mode: "source_only",
+          status: "active"
+        },
+        {
+          edge_id: "weekly_seed_to_live_dispatch",
+          source_module_id: "weekly_schedule_planning",
+          target_module_id: "live_dispatch",
+          source_stage_id: "Stage07",
+          source_dataset_key: "planning.daily_dispatch_seed.workbook",
+          target_stage_id: "Stage01",
+          target_dataset_key: "dispatch.base_schedule_seed.workbook",
+          partition_transform_id: "planning_week_to_service_date",
+          handoff_mode: "materialize_seed",
+          writer_mode: "target_materialize",
+          status: "active"
+        }
+      ]
+    },
+    linked_workflow_runs: {
+      weekly_schedule_planning: [weeklyRun],
+      live_dispatch: [liveRun],
+      dispatch_reporting: [reportingRun],
+      summary: {
+        weekly_schedule_planning_count: 1,
+        live_dispatch_count: 1,
+        dispatch_reporting_count: 1
+      }
+    },
+    handoff_activity: {
+      edges: [
+        {
+          edge_id: "weekly_seed_to_live_dispatch",
+          execution_count: 1,
+          status_counts: { activated: 1 },
+          coherence_failed_count: 0,
+          executions: [
+            {
+              edge_execution_id: "edge-weekly-live-001",
+              edge_id: "weekly_seed_to_live_dispatch",
+              source_workflow_run_id: weeklyRun.workflow_run_id,
+              source_stage_id: "Stage07",
+              source_artifact_version_id: "av-weekly-seed-001",
+              target_workflow_id: liveRun.workflow_id,
+              target_workflow_run_id: liveRun.workflow_run_id,
+              target_stage_id: "Stage01",
+              target_partition_key: liveRun.partition_key,
+              status: "activated",
+              created_at: now,
+              updated_at: now,
+              activated_at: now,
+              source_workflow_run: weeklyRun,
+              target_workflow_run: liveRun,
+              coherence: {
+                coherence_status: "passed"
+              }
+            }
+          ]
+        },
+        {
+          edge_id: "reporting_actuals_to_future_planning",
+          execution_count: 1,
+          status_counts: { prepared: 1 },
+          coherence_failed_count: 0,
+          executions: [
+            {
+              edge_execution_id: "edge-reporting-weekly-001",
+              edge_id: "reporting_actuals_to_future_planning",
+              source_workflow_run_id: reportingRun.workflow_run_id,
+              source_stage_id: "Stage05",
+              source_artifact_version_id: "av-reporting-actuals-001",
+              target_workflow_id: weeklyRun.workflow_id,
+              target_workflow_run_id: weeklyRun.workflow_run_id,
+              target_stage_id: "Stage03",
+              target_partition_key: planningWeekId,
+              status: "prepared",
+              created_at: now,
+              updated_at: now,
+              activated_at: null,
+              source_workflow_run: reportingRun,
+              target_workflow_run: weeklyRun,
+              coherence: {
+                coherence_status: "passed"
+              }
+            }
+          ]
+        }
+      ],
+      summary: {
+        edge_execution_count: 2,
+        coherence_failed_count: 0
+      }
+    },
+    board: {
+      lanes: [
+        { lane: "flags.open", label: "Open Exceptions", position: 5, item_count: 1 },
+        { lane: "human_tasks.open", label: "Open Tasks", position: 10, item_count: 1 },
+        { lane: "human_tasks.claimed", label: "Claimed Tasks", position: 20, item_count: 1 },
+        { lane: "approvals.pending", label: "Pending Approvals", position: 30, item_count: 1 },
+        { lane: "approvals.responded", label: "Responded Approvals", position: 40, item_count: 0 },
+        { lane: "human_tasks.completed", label: "Completed Tasks", position: 50, item_count: 1 },
+        { lane: "flags.resolved", label: "Resolved Exceptions", position: 60, item_count: 0 },
+        { lane: "flags.closed", label: "Closed Exceptions", position: 70, item_count: 0 }
+      ],
+      work_items: [
+        {
+          item_id: "flag:flag-live-001",
+          item_type: "flag",
+          lane: "flags.open",
+          title: "Live dispatch route conflict",
+          workflow_run_id: liveRun.workflow_run_id,
+          workflow_id: liveRun.workflow_id,
+          subject_id: "flag-live-001",
+          kind: "route_conflict",
+          severity: "high",
+          state: "open",
+          available_actions: ["upload_attachment", "download_attachment"],
+          blocking_reason_codes: [],
+          missing_required_inputs: [],
+          linked_artifact_count: 1
+        },
+        {
+          item_id: "human_task:ht-weekly-001",
+          item_type: "human_task",
+          lane:
+            weeklyTask?.state === "CLAIMED"
+              ? "human_tasks.claimed"
+              : weeklyTask?.state === "COMPLETED"
+                ? "human_tasks.completed"
+                : "human_tasks.open",
+          title: "Stage03 planning_feedback_review",
+          workflow_run_id: weeklyRun.workflow_run_id,
+          workflow_id: weeklyRun.workflow_id,
+          subject_id: "ht-weekly-001",
+          stage_id: weeklyTask?.stage_id ?? "Stage03",
+          task_kind: weeklyTask?.task_kind ?? "planning_feedback_review",
+          state: weeklyTask?.state ?? "OPEN",
+          owner_role: weeklyTask?.owner_role ?? "schedule_planner",
+          available_actions: weeklyTask?.available_actions ?? ["claim"],
+          blocking_reason_codes: weeklyTask?.blocking_reason_codes ?? [],
+          missing_required_inputs: weeklyTask?.missing_required_inputs ?? [],
+          linked_artifact_count: 0
+        },
+        {
+          item_id: "human_task:ht-live-001",
+          item_type: "human_task",
+          lane:
+            liveTask?.state === "OPEN"
+              ? "human_tasks.open"
+              : liveTask?.state === "COMPLETED"
+                ? "human_tasks.completed"
+                : "human_tasks.claimed",
+          title: "Stage01 dispatch_seed_intake",
+          workflow_run_id: liveRun.workflow_run_id,
+          workflow_id: liveRun.workflow_id,
+          subject_id: "ht-live-001",
+          stage_id: liveTask?.stage_id ?? "Stage01",
+          task_kind: liveTask?.task_kind ?? "dispatch_seed_intake",
+          state: liveTask?.state ?? "CLAIMED",
+          owner_role: liveTask?.owner_role ?? "dispatch_supervisor",
+          available_actions: liveTask?.available_actions ?? ["complete"],
+          blocking_reason_codes: liveTask?.blocking_reason_codes ?? [],
+          missing_required_inputs: liveTask?.missing_required_inputs ?? [],
+          linked_artifact_count: 1
+        },
+        {
+          item_id: "approval:ap-weekly-001",
+          item_type: "approval",
+          lane: "approvals.pending",
+          title: "business_decision Stage07",
+          workflow_run_id: weeklyRun.workflow_run_id,
+          workflow_id: weeklyRun.workflow_id,
+          subject_id: "ap-weekly-001",
+          approval_kind: "business_decision",
+          scope_kind: "stage",
+          scope_ref: "Stage07",
+          required_role: "operations_manager",
+          state: "PENDING",
+          available_actions: ["respond_approve", "respond_reject"],
+          blocking_reason_codes: [],
+          missing_required_inputs: [],
+          linked_artifact_count: 1
+        },
+        {
+          item_id: "human_task:ht-reporting-001",
+          item_type: "human_task",
+          lane:
+            reportingTask?.state === "OPEN"
+              ? "human_tasks.open"
+              : reportingTask?.state === "CLAIMED"
+                ? "human_tasks.claimed"
+                : "human_tasks.completed",
+          title: "Stage05 finalize_reporting_packet",
+          workflow_run_id: reportingRun.workflow_run_id,
+          workflow_id: reportingRun.workflow_id,
+          subject_id: "ht-reporting-001",
+          stage_id: reportingTask?.stage_id ?? "Stage05",
+          task_kind: reportingTask?.task_kind ?? "finalize_reporting_packet",
+          state: reportingTask?.state ?? "COMPLETED",
+          owner_role: reportingTask?.owner_role ?? "operations_manager",
+          available_actions: reportingTask?.available_actions ?? [],
+          blocking_reason_codes: reportingTask?.blocking_reason_codes ?? [],
+          missing_required_inputs: reportingTask?.missing_required_inputs ?? [],
+          linked_artifact_count: 2
+        }
+      ],
+      page: { limit: 100, offset: 0 },
+      summary: {
+        work_item_count: 5,
+        human_task_count: 3,
+        approval_count: 1,
+        flag_count: 1,
+        primary_actionable_count: 3,
+        workflow_item_counts: {
+          "weekly_schedule_planning.v1": 2,
+          "live_dispatch.v1": 2,
+          "dispatch_reporting.v1": 1
+        }
+      }
+    },
+    official_outputs: {
+      pointers,
+      pointer_outputs: pointers.map((pointer, index) => ({
+        pointer,
+        artifact_version: officialOutputArtifacts[index] ?? null
+      })),
+      official_output_artifacts: officialOutputArtifacts,
+      coherence: {
+        coherence_status: "passed"
+      },
+      summary: {
+        pointer_count: 2,
+        pointer_output_count: 2,
+        official_output_artifact_count: 2,
+        artifact_kind_counts: {
+          "planning.published_weekly_schedule.workbook": 1,
+          "reporting.final_packet.workbook": 1
+        }
+      }
+    },
+    freshness: {
+      latest_event_sequence: 44,
+      latest_event_recorded_at: now,
+      max_workflow_run_updated_at: now,
+      generated_at: now
+    },
+    coherence: {
+      official_outputs: {
+        coherence_status: "passed"
+      },
+      handoff_edges: [
+        { edge_id: "weekly_seed_to_live_dispatch", coherence_failed_count: 0 },
+        { edge_id: "reporting_actuals_to_future_planning", coherence_failed_count: 0 }
+      ]
+    }
+  };
+}
+
 export function resetApiState(): void {
   state = createContractState();
 }
@@ -387,6 +874,32 @@ export const handlers = [
     });
   }),
 
+  http.get("*/api/v1/stories/logistics-three-workflow", ({ request }) => {
+    if (!inScope(request)) {
+      return forbiddenWorkflowRun();
+    }
+    const url = new URL(request.url);
+    const planningWeekId = url.searchParams.get("planning_week_id");
+    if (!planningWeekId) {
+      return HttpResponse.json(
+        {
+          status: "error",
+          error: {
+            code: "invalid_query_parameter",
+            message: "planning_week_id is required",
+            details: { parameter: "planning_week_id" }
+          }
+        },
+        { status: 400 }
+      );
+    }
+    const serviceDateId = url.searchParams.get("service_date_id") ?? undefined;
+    return ok({
+      command: "api.stories.logistics_three_workflow",
+      story: buildLogisticsStoryPayload(planningWeekId, request, serviceDateId)
+    });
+  }),
+
   http.get("*/api/v1/human-tasks", ({ request }) => {
     if (!inScope(request)) {
       return forbiddenWorkflowRun();
@@ -411,8 +924,33 @@ export const handlers = [
 
     return ok({
       command: "api.human_tasks.list",
-      human_tasks: rows.slice(offset, offset + limit),
+      human_tasks: rows.slice(offset, offset + limit).map((row) => enrichHumanTaskForResponse(row, request)),
       page: { limit, offset }
+    });
+  }),
+
+  http.get("*/api/v1/human-tasks/:humanTaskId", ({ params, request }) => {
+    if (!inScope(request)) {
+      return forbiddenWorkflowRun();
+    }
+    const humanTaskId = String(params.humanTaskId);
+    const row = state.humanTasks.find((task) => task.human_task_id === humanTaskId);
+    if (!row) {
+      return HttpResponse.json(
+        {
+          status: "error",
+          error: {
+            code: "human_task_not_found",
+            message: "human task not found",
+            details: { human_task_id: humanTaskId }
+          }
+        },
+        { status: 404 }
+      );
+    }
+    return ok({
+      command: "api.human_tasks.detail",
+      human_task: enrichHumanTaskForResponse(row, request)
     });
   }),
 
@@ -879,6 +1417,35 @@ export const handlers = [
     return ok({
       command: "api.timeline_events.list",
       events: rows.slice(offset, offset + limit),
+      page: { limit, offset }
+    });
+  }),
+
+  http.get("*/api/v1/artifacts", ({ request }) => {
+    if (!inScope(request)) {
+      return forbiddenWorkflowRun();
+    }
+    const url = new URL(request.url);
+    const { limit, offset } = parseLimitOffset(url);
+    const workflowRunId = url.searchParams.get("workflow_run_id");
+    const subjectKind = url.searchParams.get("subject_kind");
+    const subjectId = url.searchParams.get("subject_id");
+
+    let rows = state.artifactVersions.slice();
+    if (workflowRunId) {
+      rows = rows.filter((artifact) => artifact.workflow_run_id === workflowRunId);
+    }
+    if (subjectKind && subjectId) {
+      rows = rows.filter((artifact) =>
+        artifact.links?.some(
+          (link) => link.subject_kind === subjectKind && link.subject_id === subjectId
+        )
+      );
+    }
+
+    return ok({
+      command: "api.artifacts.list",
+      artifact_versions: rows.slice(offset, offset + limit),
       page: { limit, offset }
     });
   }),

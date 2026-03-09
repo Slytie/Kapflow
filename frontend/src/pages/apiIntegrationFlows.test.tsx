@@ -1,38 +1,37 @@
 import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { render } from "@testing-library/react";
 
+import { App } from "@/app/App";
 import { forceForbiddenResponses, mutationLog } from "@/test/api/handlers";
 import { ApprovalsPage } from "@/pages/ApprovalsPage";
 import { BoardPage } from "@/pages/BoardPage";
-import { MyWorkPage } from "@/pages/MyWorkPage";
 import { renderRoute } from "@/test/renderRoute";
 
 describe("Frontend API integration flows", () => {
-  it("claiming a task hits mutation path and updates filtered queue", async () => {
+  it("claiming a task from drawer hits mutation path and updates filtered queue", async () => {
     const user = userEvent.setup();
-    renderRoute(<MyWorkPage />, {
-      route: "/my-work?run=wr-test-001&state=OPEN",
-      path: "/my-work"
-    });
+    window.history.pushState({}, "", "/my-work?run=wr-test-001&state=OPEN");
+    render(<App />);
 
     expect(await screen.findByText(/information_request/i)).toBeInTheDocument();
-    await user.click(screen.getByRole("button", { name: "Claim" }));
+    await user.click(screen.getByRole("button", { name: "Details" }));
+    await user.click(await screen.findByRole("button", { name: "Claim" }));
 
-    expect(await screen.findByText(/No tasks match current filters/i)).toBeInTheDocument();
+    expect(await screen.findByText(/No actionable tasks for current user/i)).toBeInTheDocument();
     expect(mutationLog()).toContain("claim:ht-open-001");
   });
 
-  it("completing a claimed task hits mutation path and updates filtered queue", async () => {
+  it("completing a claimed task from drawer hits mutation path and updates filtered queue", async () => {
     const user = userEvent.setup();
-    renderRoute(<MyWorkPage />, {
-      route: "/my-work?run=wr-test-001&state=CLAIMED",
-      path: "/my-work"
-    });
+    window.history.pushState({}, "", "/my-work?run=wr-test-001&state=CLAIMED");
+    render(<App />);
 
     expect(await screen.findByText(/review_packet/i)).toBeInTheDocument();
-    await user.click(screen.getByRole("button", { name: "Complete" }));
+    await user.click(screen.getByRole("button", { name: "Details" }));
+    await user.click(await screen.findByRole("button", { name: "Complete" }));
 
-    expect(await screen.findByText(/No tasks match current filters/i)).toBeInTheDocument();
+    expect(await screen.findByText(/No actionable tasks for current user/i)).toBeInTheDocument();
     expect(mutationLog()).toContain("complete:ht-claimed-002");
   });
 

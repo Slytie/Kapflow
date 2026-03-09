@@ -50,12 +50,14 @@ Also see `docs/patterns/PATTERN_INDEX.yaml` for the full tagged library.
 - generated-derivative policy is explicit
 - generated artifacts can be defined as downstream of repo-native source
 
-## Current Repo Status (2026-03-08)
+## Current Repo Status (2026-03-09)
 - Completed in this epic: `TASK-0020`, `TASK-0021`, `TASK-0024`, `TASK-0025`, `TASK-0032`, `TASK-0060`, `TASK-0061`, `TASK-0062`, `TASK-0063`.
 - First logistics composition runtime coverage now includes:
   - `materialize_seed` weekly->live handoff (`TASK-0062`)
   - bounded first `notify_only` reporting->planning slice (`TASK-0063`)
-- Later composition/observability expansions remain future tranche work.
+  - canonical three-workflow story contract + backend story endpoint (`GET /api/v1/stories/logistics-three-workflow`)
+- Frontend consumption note: TASK-0064 (EPIC-080) now uses this seam as the primary demo route (`/demo/logistics`) while keeping schedule-only FE routes as legacy/regression surfaces.
+- Later composition/observability expansions remain future tranche work; this does not claim a universal logistics composition engine.
 
 ## Tasks
 - TASK-0020

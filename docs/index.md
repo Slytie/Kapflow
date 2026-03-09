@@ -18,6 +18,7 @@
 ## Status
 - `docs/status/CURRENT_FOCUS.md`
 - `docs/status/DECISIONS_SINCE_LAST.md`
+- Primary logistics demo UI entrypoint: frontend route `/demo/logistics` (backed by backend story endpoint `/api/v1/stories/logistics-three-workflow`)
 
 ## Planning
 - `docs/planning/README.md`

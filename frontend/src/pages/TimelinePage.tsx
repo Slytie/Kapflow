@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 
 import { apiConfig } from "@/lib/api/config";
 import { errorText } from "@/lib/api/errorText";
+import { LegacyScheduleNotice } from "@/components/LegacyScheduleNotice";
 import { StatePanel } from "@/components/StatePanel";
 import { TimelineRow } from "@/components/TimelineRow";
 import { useShellFilters } from "@/app/useShellFilters";
@@ -47,10 +48,11 @@ export function TimelinePage(): JSX.Element {
 
   return (
     <section className="timeline-page" data-testid="timeline-page">
+      <LegacyScheduleNotice surface="Timeline" />
       <header className="timeline-page__header">
         <div>
           <p className="timeline-page__eyebrow">Canonical Event Stream</p>
-          <h2>Timeline</h2>
+          <h2>Timeline (Legacy View)</h2>
         </div>
         <div className="timeline-page__summary">
           <span>{rows.length} events</span>
