@@ -89,6 +89,9 @@ Current implemented runtime command-boundary coverage:
 - `tests/runtime/scenarios/test_schedule_stage07_duplicate_flag_retry.py`
 - `tests/runtime/scenarios/test_schedule_stage07_lease_expiry_recovery.py`
 - `tests/runtime/scenarios/test_schedule_stage07_drift_detected.py`
+- `tests/runtime/test_logistics_handoff_runtime.py`
+- `tests/runtime/scenarios/test_logistics_weekly_to_live_golden_slice.py`
+- `tests/runtime/scenarios/test_logistics_reporting_to_planning_notify_only_golden_slice.py`
 - `tests/runtime/scenarios/test_workspace_graph_projection.py`
 - `tests/runtime/contracts/test_hitl_query_contracts_stage06.py`
 - `tests/runtime/contracts/test_hitl_query_contracts_stage07.py`
@@ -143,6 +146,14 @@ Current runtime tests assert:
 - major-replan approval gate enforcement on pointer promotion (`official_major_replan`)
 - lease-expiry reopen recovery with canonical `task.lease_expired` evidence and Stage07 reconcile repair path
 - drift visibility for stale reviewed base at Stage07 promotion (`artifact.pointer.drift_detected`)
+- first logistics weekly->live handoff runtime semantics:
+  - explicit idempotent `edge_executions` state (`prepared -> activated`)
+  - one logical Stage07 seed per transformed `ServiceDateID`
+  - lazy `live_dispatch.v1` activation with exact canonical input bindings
+- bounded logistics `notify_only` reporting->planning semantics:
+  - compiled-edge gate (`handoff_mode=notify_only`, `writer_mode=source_only`)
+  - deterministic target-run resolve/create and target input materialization
+  - duplicate notification idempotency without target-side official output mutation
 - implementation-backed HTTP contract/mutation coverage for board-ready read surfaces (tasks/approvals/flags/workflow/timeline/pointers/board) and canonical HITL actions (`claim`, `complete`, `respond`, `flags.transition`)
 - frontend inline attachment controls are covered at component/repository contract level and remain delegated to canonical artifact endpoints (no client-side shadow attachment state)
 - bounded Stage06 real-model sandbox path coverage (mock/contract path always-on + gated real OpenAI e2e path)
@@ -176,6 +187,10 @@ Minimum required runtime scenario tests:
 - `tests/runtime/scenarios/test_schedule_stage07_duplicate_flag_retry.py`
 - `tests/runtime/scenarios/test_schedule_stage07_lease_expiry_recovery.py`
 - `tests/runtime/scenarios/test_schedule_stage07_drift_detected.py`
+
+Additional implemented logistics runtime scenarios (bounded composition slices):
+- `tests/runtime/scenarios/test_logistics_weekly_to_live_golden_slice.py`
+- `tests/runtime/scenarios/test_logistics_reporting_to_planning_notify_only_golden_slice.py`
 
 Each scenario should:
 - seed initial artifact inputs from `fixtures/workflows/*/template_pack/*_Example_COMPLETED.*`

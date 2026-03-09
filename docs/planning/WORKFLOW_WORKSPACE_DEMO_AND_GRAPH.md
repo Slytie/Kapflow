@@ -49,9 +49,11 @@ Initial branch semantics:
 
 ## E. Demo runner + export bundle
 - Demo runner seeds realistic canonical runs for:
+  - `stage03_06_human_gated`
+  - `stage05_missing_workbook`
   - `stage06_publish_ready`
   - `stage06_needs_information`
-  - `stage07_major_replan`
+  - `stage07_major_replan` (maps to pilot `stage07_issue_replan`)
 - Seeding uses existing canonical handlers and the example corpus ingress path.
 - Export bundle packages a human-reviewable snapshot of one run:
   - workspace projection payload,

@@ -119,6 +119,29 @@ def _set_artifact_kind(db_path: Path, *, artifact_version_id: str, artifact_kind
         connection.close()
 
 
+def _set_pointer_dataset_key(
+    db_path: Path,
+    *,
+    pointer_key: str,
+    dataset_key: str | None,
+) -> None:
+    connection = sqlite3.connect(db_path)
+    try:
+        cursor = connection.execute(
+            """
+            UPDATE artifact_pointers
+            SET dataset_key = ?
+            WHERE pointer_key = ?
+            """,
+            (dataset_key, pointer_key),
+        )
+        if int(cursor.rowcount) <= 0:
+            raise AssertionError(f"no artifact pointer rows updated for pointer_key={pointer_key}")
+        connection.commit()
+    finally:
+        connection.close()
+
+
 def _projection_failure_events(db_url: str, *, workflow_run_id: str) -> list[dict[str, object]]:
     payload = stdout_json(
         run_cli(
@@ -302,6 +325,35 @@ def test_export_bundle_blocks_on_official_output_drift_and_emits_event(tmp_path:
     assert any(
         event["payload"]["projection_kind"] == "workspace_export_bundle"
         and event["payload"]["failure_code"] == "official_output_kind_mismatch"
+        for event in failures
+    )
+
+
+def test_export_bundle_blocks_on_missing_source_lineage_and_emits_event(tmp_path: Path) -> None:
+    harness = RuntimeScenarioHarness.from_yaml(SCENARIO_STAGE06_PUBLISH, tmp_path).prepare()
+    _promote_cross_run_pointer_target(harness)
+    _set_pointer_dataset_key(
+        harness.db_path,
+        pointer_key="official:schedule.published_schedule.workbook",
+        dataset_key=None,
+    )
+
+    result = _run_workspace_export(
+        tmp_path,
+        db_url=harness.db_url,
+        workflow_run_id=harness.workflow_run_id,
+    )
+    assert result.returncode != 0
+    error = json.loads(result.stderr)
+    assert error["error_code"] == "projection_coherence_failed"
+    assert error["details"]["projection_kind"] == "workspace_export_bundle"
+    assert error["details"]["failure_code"] == "official_output_pointer_lineage_missing"
+    assert error["details"]["issues"]
+
+    failures = _projection_failure_events(harness.db_url, workflow_run_id=harness.workflow_run_id)
+    assert any(
+        event["payload"]["projection_kind"] == "workspace_export_bundle"
+        and event["payload"]["failure_code"] == "official_output_pointer_lineage_missing"
         for event in failures
     )
 

@@ -11,6 +11,7 @@ Runtime scaffold bootstrap now includes canonical workflow/task/approval/artifac
 - Stage07 issue substrate: `flags create/transition/show/list`, `stage07 activate-issue`, `maintenance sweep-leases`, `maintenance reconcile-stage07`
 - thin HTTP/query adapter: `/api/v1/human-tasks`, `/api/v1/approvals`, `/api/v1/flags`, `/api/v1/workflow-runs`, `/api/v1/pointers`, `/api/v1/timeline-events`, `/api/v1/board/schedule-planning`, plus API mutation delegates for claim/complete/respond
 Active coding milestone update: TASK-0063 and TASK-0031 are complete. Logistics composition runtime now covers both the first `materialize_seed` weekly->live slice and a first-class `notify_only` reporting->planning slice (`dispatch_reporting.Stage05 -> weekly_schedule_planning.Stage03`) with typed partition transforms, idempotent `edge_executions`, deterministic target-run resolution/creation, canonical target input materialization/bindings, and deterministic scenario coverage. Projection coherence harness behavior is now implemented with explicit block-vs-warn policy handling and visible `projection.coherence_failed` evidence for derived views.
+Repo-truth certification snapshot: current capability status and command/test evidence are documented in `docs/planning/CURRENT_CAPABILITY_AND_CERTIFICATION_MATRIX.md` (2026-03-09).
 
 ### Recently completed runtime-bootstrap tranche
 - TASK-0028 - Translated the runtime object model into a concrete Stage 4 runtime architecture, repo layout, persistence model, and first implementation slice

@@ -13,6 +13,10 @@ This note lands only the first `H` execution surface:
 - deterministic first-slice behavior
 - no second officialness path.
 
+Status note (2026-03-09):
+- this document remains scoped to the TASK-0062 weekly->live `materialize_seed` slice.
+- a separate bounded TASK-0063 `notify_only` reporting->planning slice now exists (`dispatch_reporting.Stage05 -> weekly_schedule_planning.Stage03`) and should not be inferred from this note alone.
+
 ## Runtime object: edge execution
 The first handoff state object is an explicit runtime row (not cursor-only state):
 
@@ -93,6 +97,6 @@ Input-binding rule:
 
 ## Non-goals
 - no availability-request automation handoff,
-- no reporting handoff edges,
+- no reporting handoff edges in this TASK-0062 slice,
 - no timecard-audit runtime,
 - no live external integrations.

@@ -14,6 +14,7 @@ from onetruth.infrastructure.events.event_store import (
 
 COHERENCE_POLICY_WARN_VISIBLE = "warn_visible"
 COHERENCE_POLICY_DEGRADE_VISIBLE = "degrade_visible"
+COHERENCE_POLICY_ALLOW = "allow"
 COHERENCE_POLICY_BLOCK = "block"
 COHERENCE_STATUS_PASSED = "passed"
 COHERENCE_STATUS_FAILED = "failed"
@@ -29,12 +30,26 @@ def evaluate_official_outputs_coherence(
     issues: list[dict[str, Any]] = []
     source_refs: list[dict[str, str]] = []
 
-    for row in outputs:
+    for row_index, row in enumerate(outputs):
         if not isinstance(row, dict):
+            issues.append(
+                {
+                    "code": "official_output_row_invalid",
+                    "message": "official outputs projection row must be an object",
+                    "refs": {"row_index": str(row_index)},
+                }
+            )
             continue
         pointer = row.get("pointer")
         linked_artifact = row.get("artifact_version")
         if not isinstance(pointer, dict):
+            issues.append(
+                {
+                    "code": "official_output_pointer_missing",
+                    "message": "official output row is missing canonical pointer lineage",
+                    "refs": {"row_index": str(row_index)},
+                }
+            )
             continue
 
         pointer_id = _optional_string(pointer.get("pointer_id"))
@@ -46,6 +61,31 @@ def evaluate_official_outputs_coherence(
 
         if pointer_id is not None:
             source_refs.append({"type": "pointer", "id": pointer_id})
+        if pointer_artifact_version_id is not None:
+            source_refs.append({"type": "artifact_version", "id": pointer_artifact_version_id})
+
+        missing_pointer_fields = _missing_required_fields(
+            {
+                "pointer_id": pointer_id,
+                "artifact_version_id": pointer_artifact_version_id,
+                "artifact_kind": pointer_artifact_kind,
+                "dataset_key": pointer_dataset_key,
+                "partition_kind": pointer_partition_kind,
+                "partition_key": pointer_partition_key,
+            }
+        )
+        if missing_pointer_fields:
+            issues.append(
+                {
+                    "code": "official_output_pointer_lineage_missing",
+                    "message": "official output pointer is missing required canonical lineage fields",
+                    "refs": {
+                        "row_index": str(row_index),
+                        "pointer_id": pointer_id,
+                        "missing_fields": ",".join(missing_pointer_fields),
+                    },
+                }
+            )
 
         if not isinstance(linked_artifact, dict):
             issues.append(
@@ -65,6 +105,29 @@ def evaluate_official_outputs_coherence(
         linked_dataset_key = _optional_string(linked_artifact.get("dataset_key"))
         linked_partition_kind = _optional_string(linked_artifact.get("partition_kind"))
         linked_partition_key = _optional_string(linked_artifact.get("partition_key"))
+
+        missing_artifact_fields = _missing_required_fields(
+            {
+                "artifact_version_id": linked_artifact_version_id,
+                "artifact_kind": linked_artifact_kind,
+                "dataset_key": linked_dataset_key,
+                "partition_kind": linked_partition_kind,
+                "partition_key": linked_partition_key,
+            }
+        )
+        if missing_artifact_fields:
+            issues.append(
+                {
+                    "code": "official_output_artifact_lineage_missing",
+                    "message": "official output artifact is missing required canonical lineage fields",
+                    "refs": {
+                        "row_index": str(row_index),
+                        "pointer_id": pointer_id,
+                        "artifact_version_id": linked_artifact_version_id,
+                        "missing_fields": ",".join(missing_artifact_fields),
+                    },
+                }
+            )
 
         if linked_artifact_version_id is not None:
             source_refs.append({"type": "artifact_version", "id": linked_artifact_version_id})
@@ -159,7 +222,7 @@ def evaluate_official_outputs_coherence(
         projection_kind=projection_kind,
         policy_on_drift=policy_on_drift,
         issues=issues,
-        source_refs=source_refs,
+        source_refs=_dedupe_source_refs(source_refs),
     )
 
 
@@ -438,6 +501,26 @@ def _normalize_issue(issue: dict[str, Any]) -> dict[str, Any]:
         "message": str(issue.get("message") or "projection coherence failure"),
         "refs": normalized_refs,
     }
+
+
+def _missing_required_fields(values: dict[str, str | None]) -> list[str]:
+    return sorted(key for key, value in values.items() if value is None)
+
+
+def _dedupe_source_refs(source_refs: list[dict[str, str]]) -> list[dict[str, str]]:
+    deduped: list[dict[str, str]] = []
+    seen: set[tuple[str, str]] = set()
+    for source_ref in source_refs:
+        ref_type = _optional_string(source_ref.get("type"))
+        ref_id = _optional_string(source_ref.get("id"))
+        if ref_type is None or ref_id is None:
+            continue
+        key = (ref_type, ref_id)
+        if key in seen:
+            continue
+        seen.add(key)
+        deduped.append({"type": ref_type, "id": ref_id})
+    return deduped
 
 
 def _optional_string(value: Any) -> str | None:

@@ -2,6 +2,11 @@
 
 Record any decisions made since the last session so a fresh Codex run can rehydrate quickly.
 
+## 2026-03-09 (repo-truth alignment + capability certification matrix)
+- Added `docs/planning/CURRENT_CAPABILITY_AND_CERTIFICATION_MATRIX.md` as the snapshot-backed authority for current capability status (`implemented` / `partial` / `missing`) across schedule demo paths, logistics handoff slices, workspace/export surfaces, and projection coherence.
+- Hardening decision: capability claims are considered certified only when matrix rows include all of: canonical command/entrypoint, authoritative tests, human-inspectable artifacts, and invariants.
+- Scope-boundary decision: this alignment pass introduces no new runtime semantics; bounded slices and unresolved ambiguities are recorded explicitly instead of being promoted to DONE claims.
+
 ## 2026-03-08 (TASK-0063 notify_only reporting->planning + TASK-0031 status closure)
 - Status authority decision: TASK-0031 is DONE. Projection coherence authored/runtime surfaces now exist in-repo (`docs/planning/PROJECTION_COHERENCE_HARNESS.md`, `tests/runtime/test_projection_coherence.py`, and runtime `projection.coherence_failed` behavior over derived projection views).
 - Composition runtime decision: TASK-0063 is DONE as a bounded first `notify_only` slice over existing `edge_executions` + compiled family edges; landed scope is `dispatch_reporting.Stage05 -> weekly_schedule_planning.Stage03` with deterministic typed transform usage, target run resolve/create, canonical target input materialization, exact input binding capture, and duplicate-notification idempotency.

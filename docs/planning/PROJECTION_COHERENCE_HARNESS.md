@@ -17,6 +17,7 @@ This slice covers three projection kinds that are already used in runtime/operat
 | `workspace_official_outputs` | `warn_visible` | Return payload with explicit failed coherence metadata + warning entry |
 | `workspace_export_bundle` | `block` | Export is rejected with `projection_coherence_failed` error payload |
 | `handoff_operator_view` | `warn_visible` | Return payload with explicit failed coherence metadata |
+| `non_critical_projection/*` (future default class) | `allow` | Render payload and annotate coherence status without blocking |
 
 Rule:
 - `block` is used for approval-critical packet surfaces.
@@ -34,7 +35,10 @@ Each output row is derived from canonical pointer + artifact rows and must prese
 - `partition_key`
 
 Drift classes:
+- `official_output_pointer_missing`
+- `official_output_pointer_lineage_missing`
 - `official_output_artifact_missing`
+- `official_output_artifact_lineage_missing`
 - `official_output_artifact_version_mismatch`
 - `official_output_kind_mismatch`
 - `official_output_dataset_mismatch`
@@ -73,6 +77,10 @@ Projection responses include:
 - `issues[]` (all detected issues)
 - `source_refs[]` (canonical refs used)
 
+Required source-lineage posture for this slice:
+- a failed result is emitted when required pointer lineage fields are missing (`pointer_id`, `artifact_version_id`, `artifact_kind`, `dataset_key`, `partition_kind`, `partition_key`)
+- a failed result is emitted when required linked artifact lineage fields are missing (`artifact_version_id`, `artifact_kind`, `dataset_key`, `partition_kind`, `partition_key`)
+
 ### Event emission
 On failed coherence, runtime emits:
 - `projection.coherence_failed`
@@ -90,5 +98,6 @@ Coherence checks may gate or warn projection rendering, but they do not change c
 - `tests/runtime/test_projection_coherence.py`
   - drifted workspace official-output view -> warn + event
   - drifted export official-output view -> block + event
+  - missing source lineage on export official-output summary -> block + event
   - drifted handoff operator view -> warn + event
   - explicit block-vs-warn policy assertion
