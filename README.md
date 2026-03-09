@@ -236,12 +236,13 @@ Run frontend against local backend:
 
 Open the primary logistics demo flow:
 - default route: `/demo/logistics` (app root redirects here)
+- unified board behavior: clicking a human-task card opens `DetailDrawer` on `/demo/logistics` (no primary navigation to run detail)
 - supporting drill-down route: `/runs/<workflow_run_id>`
 - supporting regression routes (secondary): `/board`, `/my-work`, `/runs`, `/timeline`, `/workspace`
 
 Workspace behavior:
 - graph and actionable panel both come from `GET /api/v1/workflow-runs/{workflow_run_id}/workspace`.
-- task claim/complete actions are drawer-first in the demo shell and supporting queue views (`/demo/logistics`, `/board`, `/my-work`) and still go through canonical task mutation APIs.
+- task actions are drawer-first in the demo shell and supporting queue views (`/demo/logistics`, `/board`, `/my-work`) and still go through canonical task mutation APIs.
 - approval/flag/attachment actions continue to delegate through existing repositories and canonical mutation APIs.
 - successful drawer task actions invalidate story/queue/run queries; polling keeps graph, board, and queue views synchronized.
 
@@ -251,7 +252,7 @@ Upload-unblocks-work behavior check:
 
 Frontend implementation status:
 - Real/API-backed now: repositories call canonical HTTP contracts via `frontend/src/lib/api/httpClient.ts` and `frontend/src/lib/api/onetruthApi.ts`.
-- Implemented: app shell, route/page structure, logistics-primary demo route (`/demo/logistics`), drawer-first task transitions (`claim`/`complete`) for logistics + board + my-work, inline attachment upload/download actions, URL-synced filters, polling-aware loading/error/empty/freshness states, and run workspace graph/action synchronization on `/runs/:workflowRunId/workspace`.
+- Implemented: app shell, route/page structure, logistics-primary demo route (`/demo/logistics`), board-task primary click -> drawer interaction, drawer-first authoritative task actions (`claim`, `complete`, `run_stage06_agent_review`, `confirm_review`, `upload_attachment`, artifact download when linked) for logistics + board + my-work, inline attachment upload/download actions, URL-synced filters, polling-aware loading/error/empty/freshness states, and run workspace graph/action synchronization on `/runs/:workflowRunId/workspace`.
 - Test strategy: component + route tests plus contract-aligned API integration tests using a controlled `/api/v1` MSW test layer.
 - Still future: broader UI polish and richer attachment preview affordances.
 

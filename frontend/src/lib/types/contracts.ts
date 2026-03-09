@@ -319,12 +319,32 @@ export interface WorkflowRunWorkspaceContract {
   freshness: WorkflowWorkspaceFreshness;
 }
 
+export type LogisticsStoryFamilyNodeKind = "module";
+export type LogisticsStoryModuleDrilldownKind = "none" | "workflow_run" | "run_group";
+
+export interface LogisticsStoryModuleDrilldownRef {
+  workflow_run_id: string;
+  workflow_id: string;
+  partition_key: string;
+}
+
+export interface LogisticsStoryModuleArtifactRef {
+  artifact_version_id: string;
+  label: string;
+  source_label: string;
+}
+
 export interface LogisticsStoryFamilyModule {
   module_id: string;
   workflow_id: string;
   partition_kind: string;
   activation_policy: string;
   status: string;
+  node_kind: LogisticsStoryFamilyNodeKind;
+  drilldown_kind: LogisticsStoryModuleDrilldownKind;
+  drilldown_refs: LogisticsStoryModuleDrilldownRef[];
+  artifact_refs: LogisticsStoryModuleArtifactRef[];
+  selection_summary: string;
 }
 
 export interface LogisticsStoryFamilyEdge {

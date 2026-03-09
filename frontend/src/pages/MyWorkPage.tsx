@@ -225,6 +225,10 @@ export function MyWorkPage(): JSX.Element {
                     assignee_actor_id: task.assignee_actor_id,
                     assignee_actor_type: task.assignee_actor_type,
                     owner_role: task.owner_role,
+                    candidate_roles: task.candidate_roles ?? [],
+                    linked_approval_id: task.linked_approval_id,
+                    blocked_on_kind: task.blocked_on_kind,
+                    blocked_on_ref: task.blocked_on_ref,
                     available_actions: task.available_actions ?? [],
                     blocking_reason_codes: task.blocking_reason_codes ?? [],
                     missing_required_inputs: task.missing_required_inputs ?? []

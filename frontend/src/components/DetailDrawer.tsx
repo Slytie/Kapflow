@@ -1,5 +1,6 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
+import { Link } from "react-router-dom";
 
 import { onetruthApi } from "@/lib/api/onetruthApi";
 import { errorText } from "@/lib/api/errorText";
@@ -18,6 +19,13 @@ interface DetailDrawerProps {
   onClose: () => void;
 }
 
+type TaskAction =
+  | "claim"
+  | "complete"
+  | "run_stage06_agent_review"
+  | "confirm_review"
+  | "upload_attachment";
+
 export function DetailDrawer({ payload, onClose }: DetailDrawerProps): JSX.Element {
   const queryClient = useQueryClient();
   const [downloadError, setDownloadError] = useState<unknown>(null);
@@ -29,7 +37,8 @@ export function DetailDrawer({ payload, onClose }: DetailDrawerProps): JSX.Eleme
   const [taskLoading, setTaskLoading] = useState(false);
   const [taskLoadError, setTaskLoadError] = useState<unknown>(null);
   const [taskActionError, setTaskActionError] = useState<unknown>(null);
-  const [pendingTaskAction, setPendingTaskAction] = useState<"claim" | "complete" | null>(null);
+  const [pendingTaskAction, setPendingTaskAction] = useState<TaskAction | null>(null);
+  const uploadInputRef = useRef<HTMLInputElement | null>(null);
 
   const taskFromPayload = payload?.task ?? null;
 
@@ -190,7 +199,25 @@ export function DetailDrawer({ payload, onClose }: DetailDrawerProps): JSX.Eleme
     return candidates.some((candidate) => actionSet.has(candidate.toLowerCase()));
   };
 
-  const handleTaskAction = async (action: "claim" | "complete"): Promise<void> => {
+  const refreshTaskContext = async (humanTaskId: string): Promise<void> => {
+    const refreshed = await humanTasksRepository.get(humanTaskId);
+    setTaskDetails(drawerTaskContext(refreshed));
+  };
+
+  const invalidateTaskViews = async (workflowRunId: string): Promise<void> => {
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: ["logistics-demo-story"] }),
+      queryClient.invalidateQueries({ queryKey: ["board-view"] }),
+      queryClient.invalidateQueries({ queryKey: ["my-work"] }),
+      queryClient.invalidateQueries({ queryKey: ["approvals"] }),
+      queryClient.invalidateQueries({ queryKey: ["exceptions"] }),
+      queryClient.invalidateQueries({ queryKey: ["runs"] }),
+      queryClient.invalidateQueries({ queryKey: ["run-detail", workflowRunId] }),
+      queryClient.invalidateQueries({ queryKey: ["run-workspace", workflowRunId] })
+    ]);
+  };
+
+  const handleTaskAction = async (action: TaskAction): Promise<void> => {
     if (!activeTask) {
       return;
     }
@@ -199,26 +226,48 @@ export function DetailDrawer({ payload, onClose }: DetailDrawerProps): JSX.Eleme
     try {
       if (action === "claim") {
         await humanTasksRepository.claim(activeTask.human_task_id);
-      } else {
+      } else if (action === "complete") {
         await humanTasksRepository.complete(activeTask.human_task_id);
+      } else if (action === "run_stage06_agent_review") {
+        await humanTasksRepository.runStage06AgentReview(activeTask.human_task_id);
+      } else if (action === "confirm_review") {
+        const reviewedArtifactVersionIds = artifacts.map((artifact) => artifact.artifact_version_id);
+        if (reviewedArtifactVersionIds.length === 0) {
+          throw new Error("No linked artifacts are available to confirm review.");
+        }
+        await humanTasksRepository.confirmReview(activeTask.human_task_id, reviewedArtifactVersionIds);
       }
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ["logistics-demo-story"] }),
-        queryClient.invalidateQueries({ queryKey: ["board-view"] }),
-        queryClient.invalidateQueries({ queryKey: ["my-work"] }),
-        queryClient.invalidateQueries({ queryKey: ["approvals"] }),
-        queryClient.invalidateQueries({ queryKey: ["exceptions"] }),
-        queryClient.invalidateQueries({ queryKey: ["runs"] }),
-        queryClient.invalidateQueries({ queryKey: ["run-detail", activeTask.workflow_run_id] }),
-        queryClient.invalidateQueries({ queryKey: ["run-workspace", activeTask.workflow_run_id] })
-      ]);
-      const refreshed = await humanTasksRepository.get(activeTask.human_task_id);
-      setTaskDetails(drawerTaskContext(refreshed));
+      await invalidateTaskViews(activeTask.workflow_run_id);
+      await refreshTaskContext(activeTask.human_task_id);
     } catch (error) {
       setTaskActionError(error);
     } finally {
       setPendingTaskAction(null);
     }
+  };
+
+  const handleUploadAttachment = async (file: File): Promise<void> => {
+    if (!activeTask) {
+      return;
+    }
+    setTaskActionError(null);
+    setPendingTaskAction("upload_attachment");
+    try {
+      await humanTasksRepository.uploadAttachment(activeTask.human_task_id, file);
+      await invalidateTaskViews(activeTask.workflow_run_id);
+      await refreshTaskContext(activeTask.human_task_id);
+    } catch (error) {
+      setTaskActionError(error);
+    } finally {
+      setPendingTaskAction(null);
+    }
+  };
+
+  const openUploadPicker = (): void => {
+    if (pendingTaskAction !== null) {
+      return;
+    }
+    uploadInputRef.current?.click();
   };
 
   return (
@@ -239,10 +288,32 @@ export function DetailDrawer({ payload, onClose }: DetailDrawerProps): JSX.Eleme
           </div>
         ))}
       </dl>
+      {payload.links && payload.links.length > 0 ? (
+        <div className="detail-drawer__links" aria-label="Drawer links">
+          {payload.links.map((link) => (
+            <Link key={`${link.label}:${link.to}`} className="link-button" to={link.to}>
+              {link.label}
+            </Link>
+          ))}
+        </div>
+      ) : null}
 
       {activeTask ? (
         <section className="detail-drawer__task" aria-label="Task context">
           <h3>Task Context</h3>
+          <input
+            ref={uploadInputRef}
+            type="file"
+            style={{ display: "none" }}
+            tabIndex={-1}
+            onChange={(event) => {
+              const file = event.currentTarget.files?.[0];
+              if (file) {
+                void handleUploadAttachment(file);
+              }
+              event.currentTarget.value = "";
+            }}
+          />
           <dl>
             <div className="detail-drawer__field">
               <dt>Task id</dt>
@@ -261,6 +332,14 @@ export function DetailDrawer({ payload, onClose }: DetailDrawerProps): JSX.Eleme
               <dd>{activeTask.owner_role ?? "unknown"}</dd>
             </div>
             <div className="detail-drawer__field">
+              <dt>Candidate roles</dt>
+              <dd>
+                {activeTask.candidate_roles && activeTask.candidate_roles.length > 0
+                  ? activeTask.candidate_roles.join(", ")
+                  : "none"}
+              </dd>
+            </div>
+            <div className="detail-drawer__field">
               <dt>Workflow run</dt>
               <dd>{activeTask.workflow_run_id}</dd>
             </div>
@@ -272,6 +351,18 @@ export function DetailDrawer({ payload, onClose }: DetailDrawerProps): JSX.Eleme
               <dt>Stage / kind</dt>
               <dd>
                 {activeTask.stage_id} · {activeTask.task_kind}
+              </dd>
+            </div>
+            <div className="detail-drawer__field">
+              <dt>Linked approval</dt>
+              <dd>{activeTask.linked_approval_id ?? "none"}</dd>
+            </div>
+            <div className="detail-drawer__field">
+              <dt>Blocked on</dt>
+              <dd>
+                {activeTask.blocked_on_kind
+                  ? `${activeTask.blocked_on_kind}${activeTask.blocked_on_ref ? `:${activeTask.blocked_on_ref}` : ""}`
+                  : "none"}
               </dd>
             </div>
             <div className="detail-drawer__field">
@@ -318,6 +409,36 @@ export function DetailDrawer({ payload, onClose }: DetailDrawerProps): JSX.Eleme
                 onClick={() => void handleTaskAction("complete")}
               >
                 Complete
+              </button>
+            ) : null}
+            {hasAction(["run_stage06_agent_review"]) ? (
+              <button
+                type="button"
+                className="action-btn"
+                disabled={pendingTaskAction !== null}
+                onClick={() => void handleTaskAction("run_stage06_agent_review")}
+              >
+                Run Stage06 Review
+              </button>
+            ) : null}
+            {hasAction(["confirm_review"]) ? (
+              <button
+                type="button"
+                className="action-btn"
+                disabled={pendingTaskAction !== null}
+                onClick={() => void handleTaskAction("confirm_review")}
+              >
+                Confirm Review
+              </button>
+            ) : null}
+            {hasAction(["upload_attachment"]) ? (
+              <button
+                type="button"
+                className="action-btn"
+                disabled={pendingTaskAction !== null}
+                onClick={openUploadPicker}
+              >
+                Upload attachment
               </button>
             ) : null}
           </div>
@@ -401,6 +522,10 @@ function drawerTaskContext(task: HumanTaskRow): DrawerTaskContext {
     assignee_actor_id: task.assignee_actor_id,
     assignee_actor_type: task.assignee_actor_type,
     owner_role: task.owner_role,
+    candidate_roles: task.candidate_roles ?? [],
+    linked_approval_id: task.linked_approval_id,
+    blocked_on_kind: task.blocked_on_kind,
+    blocked_on_ref: task.blocked_on_ref,
     available_actions: task.available_actions ?? [],
     blocking_reason_codes: task.blocking_reason_codes ?? [],
     missing_required_inputs: task.missing_required_inputs ?? []

@@ -135,6 +135,8 @@ describe("Detail drawer flow", () => {
     const invalidateSpy = vi.spyOn(queryClient, "invalidateQueries");
 
     expect(await screen.findByRole("heading", { name: "Stage06 review_packet" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Claim" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Complete" })).not.toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Claim" }));
 
     await waitFor(() => {
@@ -149,6 +151,55 @@ describe("Detail drawer flow", () => {
     });
 
     claimSpy.mockRestore();
+    getSpy.mockRestore();
+  });
+
+  it("renders only available task actions and calls Stage06 review when offered", async () => {
+    const user = userEvent.setup();
+    const runStage06Spy = vi.spyOn(humanTasksRepository, "runStage06AgentReview").mockResolvedValue();
+    const getSpy = vi.spyOn(humanTasksRepository, "get").mockResolvedValue({
+      ...task,
+      available_actions: ["run_stage06_agent_review", "upload_attachment"],
+      missing_required_inputs: [],
+      blocking_reason_codes: []
+    });
+    vi.spyOn(onetruthApi, "listArtifactsForSubject").mockResolvedValue([]);
+    renderWithQueryClient(
+      <DetailDrawer
+        payload={{
+          title: "Stage06 review_packet",
+          subtitle: "ht-2",
+          fields: [],
+          task: {
+            human_task_id: "ht-2",
+            workflow_run_id: "wr-2",
+            task_run_id: "tr-2",
+            stage_id: "Stage06",
+            task_kind: "review_packet",
+            state: "OPEN",
+            assignee_actor_id: null,
+            assignee_actor_type: null,
+            owner_role: "dispatch_supervisor",
+            available_actions: ["run_stage06_agent_review", "upload_attachment"],
+            blocking_reason_codes: [],
+            missing_required_inputs: []
+          }
+        }}
+        onClose={() => undefined}
+      />
+    );
+
+    expect(await screen.findByRole("button", { name: "Run Stage06 Review" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Upload attachment" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Claim" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Complete" })).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Run Stage06 Review" }));
+    await waitFor(() => {
+      expect(runStage06Spy).toHaveBeenCalledWith("ht-2");
+    });
+
+    runStage06Spy.mockRestore();
     getSpy.mockRestore();
   });
 });

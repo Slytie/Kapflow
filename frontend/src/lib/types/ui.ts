@@ -50,9 +50,18 @@ export interface DrawerTaskContext {
   assignee_actor_id: string | null;
   assignee_actor_type: string | null;
   owner_role: string | null;
+  candidate_roles?: string[];
+  linked_approval_id?: string | null;
+  blocked_on_kind?: string | null;
+  blocked_on_ref?: string | null;
   available_actions: string[];
   blocking_reason_codes: string[];
   missing_required_inputs: string[];
+}
+
+export interface DrawerLink {
+  label: string;
+  to: string;
 }
 
 export interface DrawerPayload {
@@ -60,6 +69,7 @@ export interface DrawerPayload {
   subtitle?: string;
   description?: string;
   fields: DrawerField[];
+  links?: DrawerLink[];
   artifacts?: DrawerArtifact[];
   artifact_sources?: DrawerArtifactSource[];
   task?: DrawerTaskContext;

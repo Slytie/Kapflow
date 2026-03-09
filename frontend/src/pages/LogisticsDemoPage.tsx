@@ -194,6 +194,46 @@ export function LogisticsDemoPage(): JSX.Element {
     () => (story ? [...story.board.lanes].sort((left, right) => left.position - right.position) : []),
     [story]
   );
+  const openTaskDrawer = (item: LogisticsStoryBoardWorkItem): void => {
+    open({
+      title: item.title,
+      subtitle: item.subject_id,
+      description: "Inspect context and run authoritative task actions without leaving the logistics demo shell.",
+      fields: [
+        { label: "Workflow", value: item.workflow_id },
+        { label: "Workflow run", value: item.workflow_run_id },
+        { label: "State", value: item.state },
+        { label: "Board lane", value: item.lane },
+        { label: "Actions", value: boardItemActions(item) }
+      ],
+      links: [{ label: "Open run details", to: `/runs/${item.workflow_run_id}` }],
+      task: {
+        human_task_id: item.subject_id,
+        workflow_run_id: item.workflow_run_id,
+        task_run_id: "loading",
+        stage_id: item.stage_id ?? "unknown",
+        task_kind: item.task_kind ?? "unknown",
+        state: item.state,
+        assignee_actor_id: null,
+        assignee_actor_type: null,
+        owner_role: item.owner_role ?? null,
+        linked_approval_id: null,
+        blocked_on_kind: null,
+        blocked_on_ref: null,
+        available_actions: item.available_actions,
+        blocking_reason_codes: item.blocking_reason_codes,
+        missing_required_inputs: item.missing_required_inputs
+      },
+      artifact_sources: [
+        {
+          workflow_run_id: item.workflow_run_id,
+          subject_kind: "human_task",
+          subject_id: item.subject_id,
+          source_label: "Task attachment"
+        }
+      ]
+    });
+  };
 
   if (query.isLoading) {
     return (
@@ -284,57 +324,31 @@ export function LogisticsDemoPage(): JSX.Element {
                 {items.length === 0 ? <p className="logistics-demo-page__empty-lane">No work in lane.</p> : null}
                 {items.map((item) => (
                   <article key={item.item_id} className="logistics-demo-page__board-item">
-                    <header>
-                      <h4>{item.title}</h4>
-                      <span className={stateBadgeClass(item.state)}>{item.state}</span>
-                    </header>
-                    <p>{boardItemMeta(item)}</p>
-                    <p>{item.workflow_id}</p>
-                    <p>Actions: {boardItemActions(item)}</p>
                     {item.item_type === "human_task" ? (
                       <button
                         type="button"
-                        className="link-button"
-                        onClick={() =>
-                          open({
-                            title: item.title,
-                            subtitle: item.subject_id,
-                            description: "Inspect and run task actions in the drawer.",
-                            fields: [
-                              { label: "Workflow", value: item.workflow_id },
-                              { label: "Workflow run", value: item.workflow_run_id }
-                            ],
-                            task: {
-                              human_task_id: item.subject_id,
-                              workflow_run_id: item.workflow_run_id,
-                              task_run_id: "loading",
-                              stage_id: item.stage_id ?? "unknown",
-                              task_kind: item.task_kind ?? "unknown",
-                              state: item.state,
-                              assignee_actor_id: null,
-                              assignee_actor_type: null,
-                              owner_role: item.owner_role ?? null,
-                              available_actions: item.available_actions,
-                              blocking_reason_codes: item.blocking_reason_codes,
-                              missing_required_inputs: item.missing_required_inputs
-                            },
-                            artifact_sources: [
-                              {
-                                workflow_run_id: item.workflow_run_id,
-                                subject_kind: "human_task",
-                                subject_id: item.subject_id,
-                                source_label: "Task attachment"
-                              }
-                            ]
-                          })
-                        }
+                        className="logistics-demo-page__board-item-trigger"
+                        onClick={() => openTaskDrawer(item)}
                       >
-                        Open task pane
+                        <header>
+                          <h4>{item.title}</h4>
+                          <span className={stateBadgeClass(item.state)}>{item.state}</span>
+                        </header>
+                        <p>{boardItemMeta(item)}</p>
+                        <p>{item.workflow_id}</p>
+                        <p>Actions: {boardItemActions(item)}</p>
                       </button>
-                    ) : null}
-                    <Link className="link-button" to={`/runs/${item.workflow_run_id}`}>
-                      Open run details
-                    </Link>
+                    ) : (
+                      <>
+                        <header>
+                          <h4>{item.title}</h4>
+                          <span className={stateBadgeClass(item.state)}>{item.state}</span>
+                        </header>
+                        <p>{boardItemMeta(item)}</p>
+                        <p>{item.workflow_id}</p>
+                        <p>Actions: {boardItemActions(item)}</p>
+                      </>
+                    )}
                   </article>
                 ))}
               </LaneColumn>

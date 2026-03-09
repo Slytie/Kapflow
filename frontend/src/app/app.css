@@ -433,6 +433,24 @@
   gap: 6px;
 }
 
+.logistics-demo-page__board-item-trigger {
+  border: 0;
+  background: transparent;
+  padding: 0;
+  width: 100%;
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  cursor: pointer;
+}
+
+.logistics-demo-page__board-item-trigger:focus-visible {
+  outline: 2px solid #4a6fa1;
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
 .logistics-demo-page__board-item header {
   display: flex;
   justify-content: space-between;
@@ -495,6 +513,12 @@
 
 .detail-drawer__description {
   color: var(--ink-700);
+}
+
+.detail-drawer__links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
 }
 
 .detail-drawer__task {

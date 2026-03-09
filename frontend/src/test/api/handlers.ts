@@ -535,21 +535,66 @@ function buildLogisticsStoryPayload(planningWeekId: string, request: Request, se
           workflow_id: "dispatch_reporting.v1",
           partition_kind: "ServiceDateID",
           activation_policy: "manual_or_event",
-          status: "active"
+          status: "active",
+          node_kind: "module",
+          drilldown_kind: "workflow_run",
+          drilldown_refs: [
+            {
+              workflow_run_id: reportingRun.workflow_run_id,
+              workflow_id: reportingRun.workflow_id,
+              partition_key: reportingRun.partition_key
+            }
+          ],
+          artifact_refs: [
+            {
+              artifact_version_id: "av-reporting-001",
+              label: "dispatch_reporting_packet.xlsx",
+              source_label: "Official output"
+            }
+          ],
+          selection_summary: "1 linked run, 1 downloadable artifact"
         },
         {
           module_id: "weekly_schedule_planning",
           workflow_id: "weekly_schedule_planning.v1",
           partition_kind: "PlanningWeekID",
           activation_policy: "manual_or_event",
-          status: "active"
+          status: "active",
+          node_kind: "module",
+          drilldown_kind: "workflow_run",
+          drilldown_refs: [
+            {
+              workflow_run_id: weeklyRun.workflow_run_id,
+              workflow_id: weeklyRun.workflow_id,
+              partition_key: weeklyRun.partition_key
+            }
+          ],
+          artifact_refs: [
+            {
+              artifact_version_id: "av-weekly-001",
+              label: "weekly_schedule.xlsx",
+              source_label: "Official output"
+            }
+          ],
+          selection_summary: "1 linked run, 1 downloadable artifact"
         },
         {
           module_id: "live_dispatch",
           workflow_id: "live_dispatch.v1",
           partition_kind: "ServiceDateID",
           activation_policy: "event_driven",
-          status: "active"
+          status: "active",
+          node_kind: "module",
+          drilldown_kind: "workflow_run",
+          drilldown_refs: [
+            {
+              workflow_run_id: liveRun.workflow_run_id,
+              workflow_id: liveRun.workflow_id,
+              partition_key: liveRun.partition_key
+            }
+          ],
+          artifact_refs: [],
+          selection_summary: "1 linked run, 0 downloadable artifacts"
         }
       ],
       edges: [

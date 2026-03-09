@@ -36,6 +36,19 @@ describe("Repository contract compatibility", () => {
     expect(runs[0]?.workflow_run_id).toBe("wr-test-001");
     expect(workspace.graph.nodes.length).toBeGreaterThan(0);
     expect(logisticsStory.family_graph.modules.length).toBe(3);
+    expect(logisticsStory.family_graph.modules.every((module) => module.node_kind === "module")).toBe(
+      true
+    );
+    expect(
+      logisticsStory.family_graph.modules.every((module) =>
+        ["none", "workflow_run", "run_group"].includes(module.drilldown_kind)
+      )
+    ).toBe(true);
+    expect(
+      logisticsStory.family_graph.modules.every((module) =>
+        module.drilldown_refs.every((ref) => ref.workflow_run_id.length > 0)
+      )
+    ).toBe(true);
     expect(logisticsStory.board.work_items.length).toBeGreaterThan(0);
   });
 });

@@ -128,7 +128,7 @@ def logistics_three_workflow_story_endpoint(
             ) from exc
 
     contract = _load_story_contract()
-    family_graph = _compiled_family_graph()
+    compiled_family_graph = _compiled_family_graph()
     workflow_ids = _workflow_ids(contract)
     edge_ids = tuple(str(item) for item in contract["edge_ids"])
 
@@ -168,6 +168,11 @@ def logistics_three_workflow_story_endpoint(
         runs_by_id=runs_by_id,
         page=page,
     )
+    family_graph = _enrich_family_graph_modules(
+        family_graph=compiled_family_graph,
+        runs_by_workflow=runs_by_workflow,
+        artifacts_by_run_id=artifacts_by_run_id,
+    )
     official_outputs = _build_official_outputs_summary(
         connection,
         context=context,
@@ -195,7 +200,7 @@ def logistics_three_workflow_story_endpoint(
             "story_id": contract["story_id"],
             "family": {
                 "family_id": contract["family_id"],
-                "family_version": family_graph["family_version"],
+                "family_version": compiled_family_graph["family_version"],
                 "contract_version": contract["contract_version"],
             },
             "partitions": {
@@ -646,6 +651,140 @@ def _build_story_board(
         },
     }
     return board, artifacts_by_run_id
+
+
+def _enrich_family_graph_modules(
+    *,
+    family_graph: dict[str, Any],
+    runs_by_workflow: dict[str, list[dict[str, Any]]],
+    artifacts_by_run_id: dict[str, list[dict[str, Any]]],
+) -> dict[str, Any]:
+    runs_by_workflow_id = _index_runs_by_workflow_id(runs_by_workflow=runs_by_workflow)
+    enriched_modules: list[dict[str, Any]] = []
+    for module in family_graph.get("modules") or []:
+        if not isinstance(module, dict):
+            continue
+        workflow_id = str(module.get("workflow_id") or "")
+        linked_runs = runs_by_workflow_id.get(workflow_id, [])
+        drilldown_refs = [
+            {
+                "workflow_run_id": str(run.get("workflow_run_id") or ""),
+                "workflow_id": str(run.get("workflow_id") or ""),
+                "partition_key": str(run.get("partition_key") or ""),
+            }
+            for run in linked_runs
+            if str(run.get("workflow_run_id") or "")
+        ]
+        artifact_refs = _module_artifact_refs(
+            linked_runs=linked_runs,
+            artifacts_by_run_id=artifacts_by_run_id,
+        )
+        if len(drilldown_refs) == 0:
+            drilldown_kind = "none"
+        elif len(drilldown_refs) == 1:
+            drilldown_kind = "workflow_run"
+        else:
+            drilldown_kind = "run_group"
+        enriched_modules.append(
+            {
+                **module,
+                "node_kind": "module",
+                "drilldown_kind": drilldown_kind,
+                "drilldown_refs": drilldown_refs,
+                "artifact_refs": artifact_refs,
+                "selection_summary": _module_selection_summary(
+                    linked_run_count=len(drilldown_refs),
+                    artifact_ref_count=len(artifact_refs),
+                ),
+            }
+        )
+
+    return {
+        **family_graph,
+        "modules": enriched_modules,
+        "edges": list(family_graph.get("edges") or []),
+    }
+
+
+def _index_runs_by_workflow_id(
+    *,
+    runs_by_workflow: dict[str, list[dict[str, Any]]],
+) -> dict[str, list[dict[str, Any]]]:
+    by_workflow_id: dict[str, list[dict[str, Any]]] = {}
+    for rows in runs_by_workflow.values():
+        for row in rows:
+            workflow_id = str(row.get("workflow_id") or "")
+            if not workflow_id:
+                continue
+            by_workflow_id.setdefault(workflow_id, []).append(row)
+    return {
+        workflow_id: _stable_run_sort(rows)
+        for workflow_id, rows in by_workflow_id.items()
+    }
+
+
+def _module_artifact_refs(
+    *,
+    linked_runs: list[dict[str, Any]],
+    artifacts_by_run_id: dict[str, list[dict[str, Any]]],
+) -> list[dict[str, str]]:
+    refs_by_id: dict[str, dict[str, str]] = {}
+    for run in linked_runs:
+        workflow_run_id = str(run.get("workflow_run_id") or "")
+        if not workflow_run_id:
+            continue
+        for artifact in artifacts_by_run_id.get(workflow_run_id, []):
+            artifact_version_id = str(artifact.get("artifact_version_id") or "")
+            if not artifact_version_id or artifact_version_id in refs_by_id:
+                continue
+            refs_by_id[artifact_version_id] = {
+                "artifact_version_id": artifact_version_id,
+                "label": _artifact_ref_label(artifact),
+                "source_label": _artifact_ref_source_label(artifact),
+            }
+    return sorted(
+        refs_by_id.values(),
+        key=lambda item: (
+            item["source_label"],
+            item["label"],
+            item["artifact_version_id"],
+        ),
+    )
+
+
+def _artifact_ref_label(artifact: dict[str, Any]) -> str:
+    metadata = artifact.get("metadata_json")
+    if isinstance(metadata, dict):
+        for key in ("file_name", "ingress_file_name"):
+            value = metadata.get(key)
+            if isinstance(value, str) and value.strip():
+                return value.strip()
+    artifact_kind = str(artifact.get("artifact_kind") or "")
+    if artifact_kind:
+        return artifact_kind
+    return str(artifact.get("artifact_version_id") or "artifact")
+
+
+def _artifact_ref_source_label(artifact: dict[str, Any]) -> str:
+    artifact_role = str(artifact.get("artifact_role") or "").strip().lower()
+    if artifact_role == "official_output":
+        return "Official output"
+    if artifact_role == "official_input":
+        return "Official input"
+    if artifact_role == "evidence":
+        return "Evidence"
+    if artifact_role:
+        return artifact_role.replace("_", " ").replace("-", " ").title()
+    return "Artifact"
+
+
+def _module_selection_summary(*, linked_run_count: int, artifact_ref_count: int) -> str:
+    run_word = "run" if linked_run_count == 1 else "runs"
+    artifact_word = "artifact" if artifact_ref_count == 1 else "artifacts"
+    return (
+        f"{linked_run_count} linked {run_word}, "
+        f"{artifact_ref_count} downloadable {artifact_word}"
+    )
 
 
 def _build_official_outputs_summary(

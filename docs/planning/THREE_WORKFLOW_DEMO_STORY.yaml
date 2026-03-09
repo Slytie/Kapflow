@@ -35,6 +35,17 @@ story:
       - official_outputs
       - freshness
       - coherence
+    family_graph_module_required_fields:
+      - module_id
+      - workflow_id
+      - partition_kind
+      - activation_policy
+      - status
+      - node_kind
+      - drilldown_kind
+      - drilldown_refs
+      - artifact_refs
+      - selection_summary
   expected_story_artifacts:
     weekly:
       - planning.published_weekly_schedule.workbook

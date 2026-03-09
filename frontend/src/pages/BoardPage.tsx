@@ -203,6 +203,10 @@ export function BoardPage(): JSX.Element {
                           assignee_actor_id: item.task.assignee_actor_id,
                           assignee_actor_type: item.task.assignee_actor_type,
                           owner_role: item.task.owner_role,
+                          candidate_roles: item.task.candidate_roles ?? [],
+                          linked_approval_id: item.task.linked_approval_id,
+                          blocked_on_kind: item.task.blocked_on_kind,
+                          blocked_on_ref: item.task.blocked_on_ref,
                           available_actions: item.task.available_actions ?? [],
                           blocking_reason_codes: item.task.blocking_reason_codes ?? [],
                           missing_required_inputs: item.task.missing_required_inputs ?? []

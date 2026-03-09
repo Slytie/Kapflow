@@ -4,7 +4,7 @@
 
 | Page | Purpose | Primary user action | Primary data source | Cards/Rows | Detail model |
 |---|---|---|---|---|---|
-| `/demo/logistics` | Primary three-workflow operator demo shell | Open task pane from story board item, then claim/complete in drawer | `GET /api/v1/stories/logistics-three-workflow` + task detail/mutation routes via repositories | Story board items + workflow graph + linked run list | Drawer-first task actions |
+| `/demo/logistics` | Primary three-workflow operator demo shell | Click human-task card to open drawer; execute authoritative task/artifact actions in drawer; optional run drill-down from drawer link | `GET /api/v1/stories/logistics-three-workflow` + task detail/mutation routes via repositories | Story board items + workflow graph + linked run list | Drawer-first task actions |
 | `/board` | Legacy schedule-only triage/regression view | Open task pane for task transitions; run approval/flag actions in-lane | `GET /api/v1/board/schedule-planning` + `GET /api/v1/flags` via `boardRepository` | Board cards (`TaskCardWide`, `ApprovalCard`, `FlagCard`) | Drawer |
 | `/my-work` | Secondary assigned queue for operator execution | Open task pane for claim/complete; keep attachment actions inline | `GET /api/v1/human-tasks` via `humanTasksRepository` | Rows (`QueueRow`) | Drawer |
 | `/approvals` | Approval queue with review workspace | Approve/reject/request changes | `GET /api/v1/approvals` + `POST /api/v1/approvals/{id}/respond` + run detail artifacts | Cards + split review pane | Split-pane + drawer |

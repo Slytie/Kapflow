@@ -2,6 +2,16 @@
 
 Record any decisions made since the last session so a fresh Codex run can rehydrate quickly.
 
+## 2026-03-09 (TASK-0066 family-graph drilldown contract closure)
+- Logistics story contract decision: `GET /api/v1/stories/logistics-three-workflow` now emits server-authored family-module drilldown metadata (`node_kind`, `drilldown_kind`, `drilldown_refs`, `artifact_refs`, `selection_summary`) so frontend drilldown does not guess run/artifact targets.
+- Multiple-run disambiguation decision: when a module maps to more than one linked run in story scope, `drilldown_kind=run_group` and all candidate runs are returned in `drilldown_refs`; the backend does not silently choose one run.
+- Artifact-reference decision: family-node artifact metadata stays reference-only (`artifact_version_id`, label, source label) and download bytes remain behind canonical artifact download APIs.
+
+## 2026-03-09 (logistics drawer-first interaction hardening)
+- Logistics-board interaction decision: in `/demo/logistics`, human-task board cards are now primary-click drawer surfaces; task inspection/action no longer uses `/runs/:workflowRunId` navigation as the primary path.
+- Drawer action-surface decision: `DetailDrawer` now executes backend-authoritative human-task actions when present in `available_actions` (`claim`, `complete`, `run_stage06_agent_review`, `confirm_review`, `upload_attachment`) and keeps artifact download in-drawer.
+- Secondary navigation decision: run-detail drill-down is retained only as a secondary drawer link from selected tasks; stale per-card run-detail links were removed from the unified board to reduce legacy-route confusion.
+
 ## 2026-03-09 (TASK-0064 logistics demo shell + legacy schedule demotion)
 - Frontend primary-demo decision: `/demo/logistics` is now the preferred operator/demo entrypoint for the three-workflow logistics walkthrough; app root (`/`) redirects to this route.
 - Composition decision: the logistics shell is backend-authored and story-driven only (`GET /api/v1/stories/logistics-three-workflow`); family graph, unified board lanes/items, linked runs, official-output summary, and handoff activity are rendered directly from canonical story payload sections.

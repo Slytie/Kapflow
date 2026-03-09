@@ -4,6 +4,8 @@ import type {
   BoardContract,
   FlagRow,
   HumanTaskRow,
+  LogisticsStoryFamilyEdge,
+  LogisticsStoryFamilyModule,
   LogisticsThreeWorkflowStoryContract,
   PointerRow,
   TemplateRecord,
@@ -148,6 +150,9 @@ const GRAPH_STATUSES = new Set([
   "completed",
   "warning"
 ]);
+
+const LOGISTICS_MODULE_NODE_KINDS = new Set(["module"]);
+const LOGISTICS_MODULE_DRILLDOWN_KINDS = new Set(["none", "workflow_run", "run_group"]);
 
 function asRecord(value: unknown): Record<string, unknown> {
   return value && typeof value === "object" ? (value as Record<string, unknown>) : {};
@@ -449,6 +454,104 @@ function normalizeWorkspaceContract(payload: WorkflowRunWorkspaceEnvelope): Work
   };
 }
 
+function defaultModuleSelectionSummary(runCount: number, artifactCount: number): string {
+  const runWord = runCount === 1 ? "run" : "runs";
+  const artifactWord = artifactCount === 1 ? "artifact" : "artifacts";
+  return `${runCount} linked ${runWord}, ${artifactCount} downloadable ${artifactWord}`;
+}
+
+function normalizeLogisticsStoryModule(
+  moduleValue: Record<string, unknown>,
+  index: number
+): LogisticsStoryFamilyModule {
+  const drilldownRefs = asArray<Record<string, unknown>>(moduleValue.drilldown_refs)
+    .map((ref) => ({
+      workflow_run_id: asString(ref.workflow_run_id),
+      workflow_id: asString(ref.workflow_id),
+      partition_key: asString(ref.partition_key)
+    }))
+    .filter((ref) => ref.workflow_run_id.length > 0);
+  const artifactRefs = asArray<Record<string, unknown>>(moduleValue.artifact_refs)
+    .map((ref) => ({
+      artifact_version_id: asString(ref.artifact_version_id),
+      label: asString(ref.label, asString(ref.artifact_version_id, "artifact")),
+      source_label: asString(ref.source_label, "Artifact")
+    }))
+    .filter((ref) => ref.artifact_version_id.length > 0);
+
+  const rawNodeKind = asString(moduleValue.node_kind, "module");
+  const nodeKind: LogisticsStoryFamilyModule["node_kind"] = LOGISTICS_MODULE_NODE_KINDS.has(rawNodeKind)
+    ? "module"
+    : "module";
+
+  const rawDrilldownKind = asString(moduleValue.drilldown_kind);
+  let drilldownKind: LogisticsStoryFamilyModule["drilldown_kind"];
+  if (LOGISTICS_MODULE_DRILLDOWN_KINDS.has(rawDrilldownKind)) {
+    drilldownKind = rawDrilldownKind as LogisticsStoryFamilyModule["drilldown_kind"];
+  } else if (drilldownRefs.length === 0) {
+    drilldownKind = "none";
+  } else if (drilldownRefs.length === 1) {
+    drilldownKind = "workflow_run";
+  } else {
+    drilldownKind = "run_group";
+  }
+
+  const selectionSummary = asString(
+    moduleValue.selection_summary,
+    defaultModuleSelectionSummary(drilldownRefs.length, artifactRefs.length)
+  );
+
+  return {
+    module_id: asString(moduleValue.module_id, `module_${index}`),
+    workflow_id: asString(moduleValue.workflow_id),
+    partition_kind: asString(moduleValue.partition_kind),
+    activation_policy: asString(moduleValue.activation_policy),
+    status: asString(moduleValue.status),
+    node_kind: nodeKind,
+    drilldown_kind: drilldownKind,
+    drilldown_refs: drilldownRefs,
+    artifact_refs: artifactRefs,
+    selection_summary: selectionSummary
+  };
+}
+
+function normalizeLogisticsStoryEdge(edgeValue: Record<string, unknown>): LogisticsStoryFamilyEdge {
+  return {
+    edge_id: asString(edgeValue.edge_id),
+    source_module_id: asString(edgeValue.source_module_id),
+    target_module_id: asString(edgeValue.target_module_id),
+    source_stage_id: asString(edgeValue.source_stage_id),
+    source_dataset_key: asString(edgeValue.source_dataset_key),
+    target_stage_id: asString(edgeValue.target_stage_id),
+    target_dataset_key: asString(edgeValue.target_dataset_key),
+    partition_transform_id: asString(edgeValue.partition_transform_id),
+    handoff_mode: asString(edgeValue.handoff_mode),
+    writer_mode: asString(edgeValue.writer_mode),
+    status: asString(edgeValue.status)
+  };
+}
+
+function normalizeLogisticsStoryContract(story: unknown): LogisticsThreeWorkflowStoryContract {
+  const storyRecord = asRecord(story);
+  const familyGraphRecord = asRecord(storyRecord.family_graph);
+  const modules = asArray<Record<string, unknown>>(familyGraphRecord.modules).map(
+    normalizeLogisticsStoryModule
+  );
+  const edges = asArray<Record<string, unknown>>(familyGraphRecord.edges).map(
+    normalizeLogisticsStoryEdge
+  );
+  return {
+    ...(storyRecord as unknown as LogisticsThreeWorkflowStoryContract),
+    family_graph: {
+      ...(familyGraphRecord as unknown as LogisticsThreeWorkflowStoryContract["family_graph"]),
+      family_id: asString(familyGraphRecord.family_id),
+      family_version: asNumber(familyGraphRecord.family_version, 1),
+      modules,
+      edges
+    }
+  };
+}
+
 export interface ArtifactUploadPayload {
   artifact_kind: string;
   artifact_role?: string;
@@ -651,7 +754,7 @@ export const onetruthApi = {
     if (!payload.story || typeof payload.story !== "object") {
       throw new Error("Invalid API response: missing story payload");
     }
-    return payload.story;
+    return normalizeLogisticsStoryContract(payload.story);
   },
 
   async listTemplates(query: {

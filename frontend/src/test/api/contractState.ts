@@ -870,6 +870,47 @@ export function createContractState(): ContractState {
         supersedes_artifact_version_id: "av-001",
         lineage_note: null,
         created_at: nowIso(-90)
+      },
+      {
+        artifact_version_id: "av-live-001",
+        workflow_run_id: "wr-live-001",
+        task_run_id: "tr-live-stage01-001",
+        artifact_kind: "dispatch.base_schedule_seed.workbook",
+        artifact_role: "input",
+        media_type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        storage_uri: "s3://artifacts/av-live-001.xlsx",
+        content_digest: "sha256:live001",
+        byte_size: 860,
+        metadata_json: {
+          source: "seed",
+          file_name: "dispatch_seed_intake.xlsx"
+        },
+        parent_artifact_version_id: null,
+        supersedes_artifact_version_id: null,
+        lineage_note: null,
+        created_at: nowIso(-205),
+        links: [
+          {
+            artifact_version_id: "av-live-001",
+            workflow_run_id: "wr-live-001",
+            subject_kind: "human_task",
+            subject_id: "ht-live-001",
+            relation_kind: "attachment",
+            created_at: nowIso(-205),
+            created_by_actor_id: "system:runtime",
+            created_by_actor_type: "system"
+          },
+          {
+            artifact_version_id: "av-live-001",
+            workflow_run_id: "wr-live-001",
+            subject_kind: "task_run",
+            subject_id: "tr-live-stage01-001",
+            relation_kind: "step_output",
+            created_at: nowIso(-205),
+            created_by_actor_id: "system:runtime",
+            created_by_actor_type: "system"
+          }
+        ]
       }
     ],
     timelineEvents: [
