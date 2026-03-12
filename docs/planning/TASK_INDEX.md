@@ -69,3 +69,4 @@
 | TASK-0065 | EPIC-070 | DONE | high | Logistics-first Codex routing, tracked-secret hygiene, and weekly-agent env-gate posture |
 | TASK-0066 | EPIC-070 | DONE | high | Execution-runtime hardening for compiled agent control, pinned semantics evidence, and execution-facet trace linkage |
 | TASK-0067 | EPIC-025 | DONE | high | Authored schedule-control semantics and canonical bridge artifacts for weekly/live logistics |
+| TASK-0068 | EPIC-025 | DONE | high | Deterministic weekly schedule-control services and Stage04 runtime build slice |

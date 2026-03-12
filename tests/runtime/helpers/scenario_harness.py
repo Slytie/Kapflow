@@ -38,6 +38,7 @@ ACTION_TO_COMMAND = {
     "handoffs.materialize-weekly-seeds": ("handoffs", "materialize-weekly-seeds"),
     "handoffs.activate-live-dispatch": ("handoffs", "activate-live-dispatch"),
     "handoffs.notify-only": ("handoffs", "notify-only"),
+    "schedule-control.build-weekly": ("schedule-control", "build-weekly"),
 }
 
 _PLACEHOLDER_PATTERN = re.compile(r"\{\{\s*([A-Za-z0-9_.-]+)\s*\}\}")

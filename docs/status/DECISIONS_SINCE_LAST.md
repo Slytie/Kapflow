@@ -2,6 +2,11 @@
 
 Record any decisions made since the last session so a fresh Codex run can rehydrate quickly.
 
+## 2026-03-12 (TASK-0068 deterministic weekly schedule-control services)
+- Deterministic feasibility decision: Stage04 weekly schedule-control feasibility (route-slot expansion, candidate generation, hard-rule validation, and soft scoring) now lives in dedicated deterministic services under `src/onetruth/application/services/schedule_control/`; it is not owned by `workflow_task_lifecycle.py` and is not delegated to LLM output.
+- Runtime execution decision: added bounded runtime command `schedule-control build-weekly` that resolves canonical Stage04 bridge artifacts, executes deterministic weekly build logic, and lowers machine-checkable Stage04 artifacts (`planning.input_bundle.doc`, `planning.candidate_schedule_delta.workbook`, `planning.validation_summary.doc`, `planning.draft_weekly_schedule.*`) idempotently.
+- Replay-safety decision: Stage04 deterministic lowering now uses stable artifact identity/content derivation and provenance edges so retries return the same canonical output identities without duplicate truth rows.
+
 ## 2026-03-12 (TASK-0067 schedule-control authored semantics + canonical bridge artifacts)
 - Artifact-authority decision: added canonical bridge artifact semantics for weekly/live schedule-control (`route_slot_requirements`, `driver_capabilities`, `input_bundle`, `candidate_schedule_delta`) and bounded Stage04/Stage02 validation evidence artifacts without introducing a second schedule truth path.
 - Derived-view decision: current operative schedule remains a derived materialization from canonical base seed + ordered promoted deltas; it is explicitly non-authoritative.

@@ -3,6 +3,9 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
+from onetruth.application.services.schedule_control.scoring import (
+    deterministic_rank_candidates,
+)
 from onetruth.domain.partition_codec import (
     planning_week_to_service_days,
     service_day_to_future_planning_week,
@@ -13,22 +16,6 @@ _PARTITION_TRANSFORMS: dict[str, Any] = {
     "planning_week_to_service_days": planning_week_to_service_days,
     "service_day_to_future_planning_week": service_day_to_future_planning_week,
 }
-
-_SCORE_BUCKET_ORDER = {
-    "best": 0,
-    "good": 1,
-    "fair": 2,
-    "ok": 3,
-    "poor": 4,
-    "blocked": 5,
-}
-
-_HARD_FILTER_ORDER = {
-    "pass": 0,
-    "blocked": 1,
-    "fail": 2,
-}
-
 
 @dataclass(frozen=True)
 class MajorReplanPolicy:
@@ -53,20 +40,6 @@ def apply_partition_transform_by_id(
     else:
         values = list(transformed)
     return [str(value) for value in values]
-
-
-def deterministic_rank_candidates(candidates: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    def sort_key(item: dict[str, Any]) -> tuple[int, int, str]:
-        hard_filter_status = str(item.get("hard_filter_status", "blocked")).strip().lower()
-        score_bucket = str(item.get("score_bucket", "blocked")).strip().lower()
-        candidate_driver_id = str(item.get("candidate_driver_id", ""))
-        return (
-            _HARD_FILTER_ORDER.get(hard_filter_status, 99),
-            _SCORE_BUCKET_ORDER.get(score_bucket, 99),
-            candidate_driver_id,
-        )
-
-    return sorted(candidates, key=sort_key)
 
 
 def should_escalate_major_replan(

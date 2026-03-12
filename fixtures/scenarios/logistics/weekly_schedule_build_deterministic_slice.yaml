@@ -1,0 +1,116 @@
+scenario_id: weekly_schedule_build_deterministic_slice
+workflow_id: weekly_schedule_planning.v1
+workflow_version: v1
+partition_key: PW-2026-W10
+logical_date: "2026-03-02"
+scope:
+  tenant_id: tenant-logistics
+  domain_id: domain-hub
+steps:
+  - id: create_route_slot_requirements
+    action: artifacts.create-version
+    payload:
+      workflow_run_id: "{{workflow_run.workflow_run_id}}"
+      artifact_kind: planning.route_slot_requirements.workbook
+      artifact_role: official_input
+      media_type: application/json
+      storage_uri: inmem://scenario/logistics/stage04/route-slot-requirements
+      content_digest: sha256:scenario-weekly-stage04-route-slots
+      metadata_json:
+        columns:
+          - service_date
+          - route_slot_id
+          - route_slot_class
+          - required_skill
+          - vehicle_type
+          - shift_start
+          - shift_end
+          - estimated_hours
+          - source_snapshot_row_ref
+        rows:
+          - ["2026-03-02", "slot-20260302-cx100", "cycle1_standard", "parcel_delivery", "XL_van", "11:40", "20:10", 8.5, "amazon:row-001"]
+          - ["2026-03-03", "slot-20260303-cx086", "cycle1_rescue", "rescue_support", "XL_van", "11:45", "21:00", 8.8, "amazon:row-002"]
+      idempotency_key: scenario:weekly_schedule_build_deterministic_slice:route-slots
+    save_as: route_slots
+  - id: create_driver_capabilities
+    action: artifacts.create-version
+    payload:
+      workflow_run_id: "{{workflow_run.workflow_run_id}}"
+      artifact_kind: planning.driver_capabilities.workbook
+      artifact_role: official_input
+      media_type: application/json
+      storage_uri: inmem://scenario/logistics/stage04/driver-capabilities
+      content_digest: sha256:scenario-weekly-stage04-driver-capabilities
+      metadata_json:
+        columns:
+          - driver_id
+          - skills
+          - vehicle_certifications
+          - eligible_route_slot_classes
+          - approved_restrictions
+          - notes
+        rows:
+          - ["DRV-01", "parcel_delivery,rescue_support", "XL_van", "cycle1_standard,cycle1_rescue", "", "Anchor"]
+          - ["DRV-02", "parcel_delivery", "XL_van", "cycle1_standard", "no_shift_after_21_30", "On-call"]
+      idempotency_key: scenario:weekly_schedule_build_deterministic_slice:driver-capabilities
+    save_as: driver_caps
+  - id: create_approved_availability
+    action: artifacts.create-version
+    payload:
+      workflow_run_id: "{{workflow_run.workflow_run_id}}"
+      artifact_kind: planning.approved_availability.workbook
+      artifact_role: official_input
+      media_type: application/json
+      storage_uri: inmem://scenario/logistics/stage04/approved-availability
+      content_digest: sha256:scenario-weekly-stage04-approved-availability
+      metadata_json:
+        columns:
+          - driver_id
+          - target_shifts_per_week
+          - on_call_eligible
+          - approved_unavailable_dates
+          - regular_pattern
+        rows:
+          - ["DRV-01", 4, "no", "", "Mon,Tue,Wed,Thu"]
+          - ["DRV-02", 4, "yes", "", "Mon,Tue,Wed,Thu"]
+      idempotency_key: scenario:weekly_schedule_build_deterministic_slice:approved-availability
+    save_as: availability
+  - id: create_actual_hours
+    action: artifacts.create-version
+    payload:
+      workflow_run_id: "{{workflow_run.workflow_run_id}}"
+      artifact_kind: planning.actual_hours_snapshot.workbook
+      artifact_role: official_input
+      media_type: application/json
+      storage_uri: inmem://scenario/logistics/stage04/actual-hours
+      content_digest: sha256:scenario-weekly-stage04-actual-hours
+      metadata_json:
+        columns:
+          - service_date
+          - driver_id
+          - actual_minutes
+        rows:
+          - ["2026-02-26", "DRV-01", 800]
+          - ["2026-02-26", "DRV-02", 3000]
+      idempotency_key: scenario:weekly_schedule_build_deterministic_slice:actual-hours
+    save_as: actual_hours
+  - id: build_weekly_deterministic
+    action: schedule-control.build-weekly
+    payload:
+      workflow_run_id: "{{workflow_run.workflow_run_id}}"
+      route_slot_requirements_artifact_version_id: "{{route_slots.artifact_version.artifact_version_id}}"
+      driver_capabilities_artifact_version_id: "{{driver_caps.artifact_version.artifact_version_id}}"
+      approved_availability_artifact_version_id: "{{availability.artifact_version.artifact_version_id}}"
+      actual_hours_artifact_version_id: "{{actual_hours.artifact_version.artifact_version_id}}"
+      idempotency_key: scenario:weekly_schedule_build_deterministic_slice:build
+    save_as: build_result
+  - id: build_weekly_deterministic_retry
+    action: schedule-control.build-weekly
+    payload:
+      workflow_run_id: "{{workflow_run.workflow_run_id}}"
+      route_slot_requirements_artifact_version_id: "{{route_slots.artifact_version.artifact_version_id}}"
+      driver_capabilities_artifact_version_id: "{{driver_caps.artifact_version.artifact_version_id}}"
+      approved_availability_artifact_version_id: "{{availability.artifact_version.artifact_version_id}}"
+      actual_hours_artifact_version_id: "{{actual_hours.artifact_version.artifact_version_id}}"
+      idempotency_key: scenario:weekly_schedule_build_deterministic_slice:build-retry
+    save_as: build_retry

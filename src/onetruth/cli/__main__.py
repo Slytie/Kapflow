@@ -55,6 +55,9 @@ from onetruth.application.handlers.logistics_handoff import (
     notify_only_handoff_command,
     show_edge_execution_command,
 )
+from onetruth.application.handlers.schedule_control import (
+    build_weekly_schedule_control_command,
+)
 from onetruth.application.projections.coherence_harness import (
     COHERENCE_POLICY_WARN_VISIBLE,
     COHERENCE_STATUS_FAILED,
@@ -263,6 +266,21 @@ def _build_parser() -> argparse.ArgumentParser:
     handoffs_list.add_argument("--status", default=None)
     handoffs_list.add_argument("--json", dest="json_output", required=True, action="store_true")
     handoffs_list.set_defaults(handler=_handle_handoffs_list)
+
+    schedule_control = subparsers.add_parser(
+        "schedule-control",
+        help="Deterministic weekly/live schedule-control service commands.",
+    )
+    schedule_control_sub = schedule_control.add_subparsers(
+        dest="schedule_control_command",
+        required=True,
+    )
+    schedule_control_build_weekly = schedule_control_sub.add_parser(
+        "build-weekly",
+        help="Run deterministic Stage04 weekly schedule-control build and lower canonical artifacts.",
+    )
+    schedule_control_build_weekly.add_argument("--json", dest="json_payload", required=True)
+    schedule_control_build_weekly.set_defaults(handler=_handle_schedule_control_build_weekly)
 
     flags = subparsers.add_parser("flags", help="Flag lifecycle commands.")
     flags_sub = flags.add_subparsers(dest="flags_command", required=True)
@@ -1326,6 +1344,23 @@ def _handle_handoffs_notify_only(args: argparse.Namespace) -> int:
     finally:
         connection.close()
     _json_print({"status": "ok", "command": "handoffs.notify-only", "result": result})
+    return 0
+
+
+def _handle_schedule_control_build_weekly(args: argparse.Namespace) -> int:
+    payload = _parse_json_object(args.json_payload)
+    if isinstance(payload, int):
+        return payload
+    connection = _open_connection_or_emit(args.db_url)
+    if isinstance(connection, int):
+        return connection
+    try:
+        result = build_weekly_schedule_control_command(connection, payload)
+    except CommandError as exc:
+        return _emit_error(code=exc.code, message=exc.message, details=exc.details)
+    finally:
+        connection.close()
+    _json_print({"status": "ok", "command": "schedule-control.build-weekly", "result": result})
     return 0
 
 
