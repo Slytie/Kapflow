@@ -21,6 +21,11 @@ from onetruth.application.handlers.workflow_task_lifecycle import (
     request_tool_execution_command,
     transition_execution_session_state_command,
 )
+from onetruth.application.services.execution_evidence import (
+    PreparedExecutionEvidenceArtifact,
+    build_execution_evidence_links,
+    prepare_pinned_execution_semantics_artifacts,
+)
 from onetruth.infrastructure.artifacts.storage import read_blob, write_blob
 from onetruth.infrastructure.repositories.artifact_versions import (
     list_artifact_versions_for_workflow_run,
@@ -178,6 +183,27 @@ def run_stage06_openai_review_sandbox(
     policy_decision = policy_result["policy_decision"]
     tool_execution = policy_result["tool_execution"]
     execution_session = policy_result["execution_session"]
+    execution_semantics_evidence = _persist_prepared_execution_evidence_artifacts(
+        connection=connection,
+        workflow_run_id=str(human_task["workflow_run_id"]),
+        task_run_id=str(human_task["task_run_id"]),
+        actor_id=actor_id,
+        actor_type=actor_type,
+        idempotency_prefix=f"{base_idempotency_key}:execution-semantics",
+        artifacts=prepare_pinned_execution_semantics_artifacts(
+            workflow_run_id=str(human_task["workflow_run_id"]),
+            task_run_id=str(human_task["task_run_id"]),
+            execution_session=execution_session,
+            tool_execution=tool_execution,
+            policy_decision=policy_decision,
+            execution_semantics=(
+                payload["execution_semantics"]
+                if isinstance(payload.get("execution_semantics"), dict)
+                else None
+            ),
+        ),
+        storage_root=_artifact_root(),
+    )
     if decision != "allow":
         code = "tool_execution_requires_approval" if decision == "require_approval" else "tool_execution_denied"
         raise CommandError(
@@ -190,6 +216,9 @@ def run_stage06_openai_review_sandbox(
                 "decision": decision,
                 "reason_code": reason_code,
                 "required_approval_action": required_approval_action,
+                "execution_semantics_evidence_artifact_ids": [
+                    str(item["artifact_version_id"]) for item in execution_semantics_evidence
+                ],
             },
         )
 
@@ -297,6 +326,24 @@ def run_stage06_openai_review_sandbox(
                 "tool_execution_id": tool_execution_id,
                 "policy_decision_id": policy_decision_id,
             },
+            "links": build_execution_evidence_links(
+                execution_session_id=execution_session_id,
+                tool_execution_id=tool_execution_id,
+                policy_decision_id=policy_decision_id,
+                relation_kind="agent_review_evidence",
+                extra_links=[
+                    {
+                        "subject_kind": "human_task",
+                        "subject_id": human_task_id,
+                        "relation_kind": "review_evidence",
+                    },
+                    {
+                        "subject_kind": "task_run",
+                        "subject_id": str(human_task["task_run_id"]),
+                        "relation_kind": "review_evidence",
+                    },
+                ],
+            ),
             "idempotency_key": f"{base_idempotency_key}:stage06.openai.evidence",
             "actor_id": actor_id,
             "actor_type": actor_type,
@@ -359,6 +406,7 @@ def run_stage06_openai_review_sandbox(
         "execution_session": execution_session,
         "tool_execution": tool_execution,
         "policy_decision": policy_decision,
+        "execution_semantics_evidence": execution_semantics_evidence,
         "evidence_artifact": evidence_create,
         "completion_result": completion_result,
     }
@@ -557,3 +605,44 @@ def _record_tool_and_session_failure(
         )
     except Exception:
         pass
+
+
+def _persist_prepared_execution_evidence_artifacts(
+    *,
+    connection: sqlite3.Connection,
+    workflow_run_id: str,
+    task_run_id: str,
+    actor_id: str,
+    actor_type: str,
+    idempotency_prefix: str,
+    artifacts: list[PreparedExecutionEvidenceArtifact],
+    storage_root: Path,
+) -> list[dict[str, Any]]:
+    created: list[dict[str, Any]] = []
+    for artifact in artifacts:
+        storage_uri, content_digest, byte_size = write_blob(
+            storage_root=storage_root,
+            workflow_run_id=workflow_run_id,
+            file_name=artifact.file_name,
+            content=artifact.payload_bytes(),
+        )
+        created_artifact = create_artifact_version_command(
+            connection,
+            {
+                "workflow_run_id": workflow_run_id,
+                "task_run_id": task_run_id,
+                "artifact_kind": artifact.artifact_kind,
+                "artifact_role": artifact.artifact_role,
+                "media_type": artifact.media_type,
+                "storage_uri": storage_uri,
+                "content_digest": content_digest,
+                "byte_size": byte_size,
+                "metadata_json": artifact.metadata_json,
+                "links": artifact.links,
+                "idempotency_key": f"{idempotency_prefix}:{artifact.idempotency_suffix}",
+                "actor_id": actor_id,
+                "actor_type": actor_type,
+            },
+        )
+        created.append(created_artifact)
+    return created

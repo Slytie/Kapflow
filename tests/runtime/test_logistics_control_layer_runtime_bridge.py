@@ -89,6 +89,20 @@ def test_compiled_control_metadata_drives_existing_execution_session_runtime(tmp
         idempotency_key="idem:control-layer:execution-session",
         state="WAITING_POLICY",
     )
+    semantics = payload["execution_semantics"]
+    compiled_spec = semantics["compiled_execution_spec"]
+    source_manifest = semantics["compile_source_manifest"]
+    assert compiled_spec["execution_spec_id"] == payload["execution_spec_id"]
+    assert compiled_spec["module_id"] == "live_dispatch"
+    assert compiled_spec["stage_id"] == "Stage02"
+    assert str(compiled_spec["stage_control_digest"]).startswith("sha256:")
+    assert str(compiled_spec["method_package_pin"]["method_package_digest"]).startswith("sha256:")
+    assert source_manifest["source_chain"]["execution_spec_id"] == payload["execution_spec_id"]
+    assert source_manifest["pins"]["stage_control_digest"] == compiled_spec["stage_control_digest"]
+    assert (
+        source_manifest["pins"]["method_package_digest"]
+        == compiled_spec["method_package_pin"]["method_package_digest"]
+    )
 
     created = run_cli(
         "--db-url",

@@ -3,6 +3,10 @@ from __future__ import annotations
 from pathlib import Path
 from urllib.parse import urlparse
 
+from onetruth.application.services.execution_evidence import (
+    EXECUTION_COMPILED_SPEC_ARTIFACT_KIND,
+    EXECUTION_COMPILE_SOURCE_MANIFEST_ARTIFACT_KIND,
+)
 from onetruth.integrations.openai import (
     OpenAIResponsesError,
     OpenAIResponseMetadata,
@@ -89,6 +93,10 @@ def test_stage06_openai_sandbox_endpoint_persists_evidence_and_uses_canonical_co
     assert result["execution_session"]["state"] == "SUCCEEDED"
     assert result["tool_execution"]["state"] == "COMPLETED"
     assert result["policy_decision"]["decision"] == "allow"
+    assert {item["artifact_kind"] for item in result["execution_semantics_evidence"]} == {
+        EXECUTION_COMPILED_SPEC_ARTIFACT_KIND,
+        EXECUTION_COMPILE_SOURCE_MANIFEST_ARTIFACT_KIND,
+    }
     assert result["completion_result"]["human_task"]["state"] == "COMPLETED"
     assert len(result["completion_result"]["spawned_children"]) == 1
     assert result["completion_result"]["spawned_children"][0]["task_kind"] == "final_review"
@@ -100,6 +108,21 @@ def test_stage06_openai_sandbox_endpoint_persists_evidence_and_uses_canonical_co
     assert any(item["artifact_kind"] == "schedule.supervisor_review.doc" for item in artifact_context)
 
     artifacts = harness.list_artifacts()["artifact_versions"]
+    semantics_artifacts = [
+        item
+        for item in artifacts
+        if item["artifact_kind"] in {EXECUTION_COMPILED_SPEC_ARTIFACT_KIND, EXECUTION_COMPILE_SOURCE_MANIFEST_ARTIFACT_KIND}
+    ]
+    assert len(semantics_artifacts) == 2
+    for artifact in semantics_artifacts:
+        linked_subjects = {
+            (str(link["subject_kind"]), str(link["subject_id"]))
+            for link in artifact["links"]
+        }
+        assert ("execution_session", str(result["execution_session"]["execution_session_id"])) in linked_subjects
+        assert ("tool_execution", str(result["tool_execution"]["tool_execution_id"])) in linked_subjects
+        assert ("policy_decision", str(result["policy_decision"]["policy_decision_id"])) in linked_subjects
+
     evidence = [item for item in artifacts if item["artifact_kind"] == "schedule.stage06.review_ai_evidence.json"]
     assert len(evidence) == 1
     parsed_uri = urlparse(evidence[0]["storage_uri"])

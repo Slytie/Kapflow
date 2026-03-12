@@ -285,19 +285,113 @@ def derive_execution_session_payload(
     )
     runtime_bindings = _require_mapping(stage_spec.get("runtime_bindings"), "stage_spec.runtime_bindings")
     execution_binding = _require_mapping(runtime_bindings.get("execution_session"), "stage_spec.runtime_bindings.execution_session")
+    execution_spec_id = _require_nonempty_string(
+        execution_binding.get("execution_spec_id"),
+        "execution_spec_id",
+    )
+    stage_control_digest = _require_nonempty_string(
+        stage_spec.get("stage_control_digest"),
+        "stage_spec.stage_control_digest",
+    )
+    method_pin = _require_mapping(stage_spec.get("method_package_pin"), "stage_spec.method_package_pin")
+    method_package_id = _require_nonempty_string(
+        method_pin.get("method_package_id"),
+        "stage_spec.method_package_pin.method_package_id",
+    )
+    method_package_version = int(method_pin.get("method_package_version"))
+    method_package_digest = _require_nonempty_string(
+        method_pin.get("method_package_digest"),
+        "stage_spec.method_package_pin.method_package_digest",
+    )
 
     budget = {
         "max_tool_calls": int(execution_binding["max_tool_calls"]),
         "no_progress_ticks": int(execution_binding["no_progress_ticks"]),
     }
+    execution_semantics = {
+        "compiled_execution_spec": {
+            "schema_version": "1.0",
+            "kind": "compiled_stage_execution_spec",
+            "family_id": _require_nonempty_string(stage_spec.get("family_id"), "stage_spec.family_id"),
+            "family_version": int(stage_spec.get("family_version")),
+            "module_id": _require_nonempty_string(stage_spec.get("module_id"), "stage_spec.module_id"),
+            "workflow_id": _require_nonempty_string(stage_spec.get("workflow_id"), "stage_spec.workflow_id"),
+            "stage_id": _require_nonempty_string(stage_spec.get("stage_id"), "stage_spec.stage_id"),
+            "execution_pattern": _require_nonempty_string(
+                stage_spec.get("execution_pattern"),
+                "stage_spec.execution_pattern",
+            ),
+            "module_partition_kind": _require_nonempty_string(
+                stage_spec.get("module_partition_kind"),
+                "stage_spec.module_partition_kind",
+            ),
+            "module_activation_policy": _require_nonempty_string(
+                stage_spec.get("module_activation_policy"),
+                "stage_spec.module_activation_policy",
+            ),
+            "module_status": _require_nonempty_string(stage_spec.get("module_status"), "stage_spec.module_status"),
+            "execution_spec_id": execution_spec_id,
+            "stage_control_digest": stage_control_digest,
+            "method_package_pin": method_pin,
+            "required_input_dataset_keys": [
+                _require_nonempty_string(
+                    key,
+                    "stage_spec.required_input_dataset_keys[]",
+                )
+                for key in _require_sequence(
+                    stage_spec.get("required_input_dataset_keys"),
+                    "stage_spec.required_input_dataset_keys",
+                )
+            ],
+            "required_evidence_keys": [
+                _require_nonempty_string(
+                    key,
+                    "stage_spec.required_evidence_keys[]",
+                )
+                for key in _require_sequence(
+                    stage_spec.get("required_evidence_keys"),
+                    "stage_spec.required_evidence_keys",
+                )
+            ],
+            "decision_refs": [
+                _require_nonempty_string(ref, "stage_spec.decision_refs[]")
+                for ref in _require_sequence(stage_spec.get("decision_refs"), "stage_spec.decision_refs")
+            ],
+            "runtime_bindings": runtime_bindings,
+        },
+        "compile_source_manifest": {
+            "schema_version": "1.0",
+            "kind": "execution_compile_source_manifest",
+            "source_chain": {
+                "authority_model": "one_truth_substrate",
+                "activation_model": _require_nonempty_string(
+                    compiled_control.get("activation_model"),
+                    "compiled_control.activation_model",
+                ),
+                "family_id": _require_nonempty_string(stage_spec.get("family_id"), "stage_spec.family_id"),
+                "family_version": int(stage_spec.get("family_version")),
+                "module_id": _require_nonempty_string(stage_spec.get("module_id"), "stage_spec.module_id"),
+                "workflow_id": _require_nonempty_string(stage_spec.get("workflow_id"), "stage_spec.workflow_id"),
+                "stage_id": _require_nonempty_string(stage_spec.get("stage_id"), "stage_spec.stage_id"),
+                "execution_spec_id": execution_spec_id,
+            },
+            "pins": {
+                "stage_control_digest": stage_control_digest,
+                "method_package_id": method_package_id,
+                "method_package_version": method_package_version,
+                "method_package_digest": method_package_digest,
+            },
+        },
+    }
     payload: dict[str, Any] = {
         "workflow_run_id": _require_nonempty_string(workflow_run_id, "workflow_run_id"),
         "task_run_id": _require_nonempty_string(task_run_id, "task_run_id"),
-        "execution_spec_id": _require_nonempty_string(execution_binding.get("execution_spec_id"), "execution_spec_id"),
+        "execution_spec_id": execution_spec_id,
         "owner_mode": _require_nonempty_string(execution_binding.get("owner_mode"), "owner_mode"),
         "state": _require_nonempty_string(state, "state"),
         "principal_actor": _require_mapping(principal_actor, "principal_actor"),
         "budget": budget,
+        "execution_semantics": execution_semantics,
         "idempotency_key": _require_nonempty_string(idempotency_key, "idempotency_key"),
         "actor_type": _require_nonempty_string(actor_type, "actor_type"),
         "actor_id": _require_nonempty_string(actor_id, "actor_id"),

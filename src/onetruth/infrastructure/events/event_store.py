@@ -2,9 +2,12 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 import json
+from pathlib import Path
 import sqlite3
 from typing import Any
 from uuid import uuid4
+
+import yaml
 
 
 class DuplicateEventIdError(ValueError):
@@ -20,6 +23,9 @@ class DuplicateIdempotencyKeyError(ValueError):
         )
         self.idempotency_key = idempotency_key
         self.existing_event_id = existing_event_id
+
+
+_REQUIRED_LINK_TYPES_BY_EVENT: dict[str, set[str]] | None = None
 
 
 def create_sqlite_substrate(connection: sqlite3.Connection) -> None:
@@ -451,6 +457,7 @@ def create_sqlite_substrate(connection: sqlite3.Connection) -> None:
 
 def append_event(connection: sqlite3.Connection, envelope: dict[str, Any]) -> str:
     _require_required_fields(envelope)
+    _require_required_links_for_event(envelope)
     event_id = str(envelope["event_id"])
 
     duplicate = connection.execute(
@@ -647,6 +654,80 @@ def _require_required_fields(envelope: dict[str, Any]) -> None:
     missing = [name for name in required_fields if name not in envelope]
     if missing:
         raise ValueError(f"missing required envelope fields: {', '.join(missing)}")
+
+
+def _require_required_links_for_event(envelope: dict[str, Any]) -> None:
+    event_type = str(envelope["event_type"])
+    required_links = _required_link_types_by_event().get(event_type)
+    if not required_links:
+        return
+
+    links = envelope.get("links")
+    if not isinstance(links, list):
+        raise ValueError(f"event_type {event_type} links must be a list")
+
+    actual_link_types: set[str] = set()
+    for link in links:
+        if not isinstance(link, dict):
+            continue
+        link_type = link.get("type")
+        if isinstance(link_type, str) and link_type.strip():
+            actual_link_types.add(link_type.strip())
+
+    missing = sorted(required_links - actual_link_types)
+    if missing:
+        missing_tokens = ", ".join(missing)
+        raise ValueError(
+            f"event_type {event_type} missing required link types: {missing_tokens}"
+        )
+
+
+def _required_link_types_by_event() -> dict[str, set[str]]:
+    global _REQUIRED_LINK_TYPES_BY_EVENT
+    if _REQUIRED_LINK_TYPES_BY_EVENT is not None:
+        return _REQUIRED_LINK_TYPES_BY_EVENT
+
+    registry_path = _resolve_event_registry_path()
+    loaded = yaml.safe_load(registry_path.read_text(encoding="utf-8"))
+    if not isinstance(loaded, dict):
+        raise ValueError(f"event registry must be an object: {registry_path}")
+
+    event_types = loaded.get("event_types")
+    if not isinstance(event_types, list):
+        raise ValueError(f"event registry event_types must be a list: {registry_path}")
+
+    resolved: dict[str, set[str]] = {}
+    for raw in event_types:
+        if not isinstance(raw, dict):
+            continue
+        event_type = str(raw.get("id") or "").strip()
+        if not event_type:
+            continue
+        required_links = raw.get("required_links")
+        if required_links is None:
+            resolved[event_type] = set()
+            continue
+        if not isinstance(required_links, list):
+            raise ValueError(
+                f"event registry required_links must be a list for event type {event_type}"
+            )
+        resolved[event_type] = {
+            str(link_type).strip()
+            for link_type in required_links
+            if str(link_type).strip()
+        }
+
+    _REQUIRED_LINK_TYPES_BY_EVENT = resolved
+    return resolved
+
+
+def _resolve_event_registry_path() -> Path:
+    current = Path(__file__).resolve()
+    for parent in current.parents:
+        candidate = parent / "schemas" / "events" / "event_type_registry.yaml"
+        if candidate.exists():
+            return candidate
+    raise FileNotFoundError("unable to resolve schemas/events/event_type_registry.yaml")
 
 
 def _row_to_envelope(row: sqlite3.Row) -> dict[str, Any]:

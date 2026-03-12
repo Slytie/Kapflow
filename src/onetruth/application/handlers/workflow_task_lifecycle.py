@@ -3259,6 +3259,7 @@ def create_execution_session_command(
                     {"rel": "subject", "type": "workflow_run", "id": str(payload["workflow_run_id"])},
                     {"rel": "subject", "type": "task_run", "id": str(payload["task_run_id"])},
                     {"rel": "subject", "type": "execution_session", "id": execution_session_id},
+                    {"rel": "uses_execution_spec", "type": "execution_spec", "id": str(payload["execution_spec_id"])},
                 ],
                 payload={
                     "execution_session_id": execution_session_id,
@@ -4447,6 +4448,109 @@ def _validate_artifact_link_subject(
             )
         return
 
+    if subject_kind == "execution_session":
+        session = get_execution_session(connection, subject_id)
+        if session is None:
+            raise CommandError(
+                code="execution_session_not_found",
+                message="execution session not found for artifact link",
+                details={"execution_session_id": subject_id},
+            )
+        if str(session["workflow_run_id"]) != workflow_run_id:
+            raise CommandError(
+                code="cross_workflow_link_reference",
+                message="execution session belongs to a different workflow_run",
+                details={
+                    "workflow_run_id": workflow_run_id,
+                    "execution_session_id": subject_id,
+                    "subject_workflow_run_id": str(session["workflow_run_id"]),
+                },
+            )
+        return
+
+    if subject_kind == "tool_execution":
+        tool_execution = get_tool_execution(connection, subject_id)
+        if tool_execution is None:
+            raise CommandError(
+                code="tool_execution_not_found",
+                message="tool execution not found for artifact link",
+                details={"tool_execution_id": subject_id},
+            )
+        session = get_execution_session(
+            connection,
+            str(tool_execution["execution_session_id"]),
+        )
+        if session is None:
+            raise CommandError(
+                code="execution_session_not_found",
+                message="execution session was not found while validating tool execution link",
+                details={
+                    "tool_execution_id": subject_id,
+                    "execution_session_id": str(tool_execution["execution_session_id"]),
+                },
+            )
+        if str(session["workflow_run_id"]) != workflow_run_id:
+            raise CommandError(
+                code="cross_workflow_link_reference",
+                message="tool execution belongs to a different workflow_run",
+                details={
+                    "workflow_run_id": workflow_run_id,
+                    "tool_execution_id": subject_id,
+                    "subject_workflow_run_id": str(session["workflow_run_id"]),
+                },
+            )
+        return
+
+    if subject_kind == "policy_decision":
+        policy_decision = get_policy_decision(connection, subject_id)
+        if policy_decision is None:
+            raise CommandError(
+                code="policy_decision_not_found",
+                message="policy decision not found for artifact link",
+                details={"policy_decision_id": subject_id},
+            )
+        linked_tool_execution_id = policy_decision.get("tool_execution_id")
+        if linked_tool_execution_id is None:
+            raise CommandError(
+                code="policy_decision_scope_unresolved",
+                message="policy decision is not linked to a tool execution",
+                details={"policy_decision_id": subject_id},
+            )
+        tool_execution = get_tool_execution(connection, str(linked_tool_execution_id))
+        if tool_execution is None:
+            raise CommandError(
+                code="tool_execution_not_found",
+                message="policy decision tool execution was not found for artifact link",
+                details={
+                    "policy_decision_id": subject_id,
+                    "tool_execution_id": str(linked_tool_execution_id),
+                },
+            )
+        session = get_execution_session(
+            connection,
+            str(tool_execution["execution_session_id"]),
+        )
+        if session is None:
+            raise CommandError(
+                code="execution_session_not_found",
+                message="execution session was not found while validating policy decision link",
+                details={
+                    "policy_decision_id": subject_id,
+                    "execution_session_id": str(tool_execution["execution_session_id"]),
+                },
+            )
+        if str(session["workflow_run_id"]) != workflow_run_id:
+            raise CommandError(
+                code="cross_workflow_link_reference",
+                message="policy decision belongs to a different workflow_run",
+                details={
+                    "workflow_run_id": workflow_run_id,
+                    "policy_decision_id": subject_id,
+                    "subject_workflow_run_id": str(session["workflow_run_id"]),
+                },
+            )
+        return
+
     if subject_kind == "approval":
         approval = get_approval(connection, subject_id)
         if approval is None:
@@ -4510,7 +4614,19 @@ def _validate_artifact_link_subject(
     raise CommandError(
         code="invalid_artifact_link_subject_kind",
         message=f"unsupported artifact link subject_kind: {subject_kind}",
-        details={"allowed_subject_kinds": ["workflow_run", "task_run", "human_task", "approval", "flag", "artifact_version"]},
+        details={
+            "allowed_subject_kinds": [
+                "workflow_run",
+                "task_run",
+                "human_task",
+                "execution_session",
+                "tool_execution",
+                "policy_decision",
+                "approval",
+                "flag",
+                "artifact_version",
+            ]
+        },
     )
 
 

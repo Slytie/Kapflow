@@ -55,6 +55,7 @@ Core fields:
 - one `execution_session` belongs to exactly one `workflow_run` and `task_run`
 - one `execution_session` may have many `tool_executions`
 - one `tool_execution` has at most one `policy_decision`
+- execution evidence may link directly to `execution_session`, `tool_execution`, and `policy_decision` via canonical `artifact_links`
 - model evidence remains canonical artifact truth via immutable `artifact_versions`
 - workflow truth remains canonical task/workflow rows and events (no side state in API/frontend/helpers)
 
@@ -92,6 +93,11 @@ Canonical row changes emit authoritative timeline events in the same transaction
   - `tool.execution.approved`
   - `tool.execution.denied`
   - `tool.execution.completed`
+
+Runtime enforcement now validates event-type required-link semantics at append time using `schemas/events/event_type_registry.yaml`.
+For execution events this means:
+- `execution.session.created` must include `execution_spec` links,
+- execution tool/policy events must include all required execution-facet links defined by registry.
 
 No execution lifecycle truth is kept only in logs.
 
@@ -141,10 +147,14 @@ This is bounded and intentionally minimal for TASK-0052.
 ## Audit and evidence linkage
 - policy decisions are persisted as canonical rows and linked to tool executions
 - tool executions store output artifact IDs for evidence traceability
-- evidence artifacts include execution IDs in metadata:
+- evidence artifacts include execution IDs in metadata and can attach directly to execution facets:
   - `execution_session_id`
   - `tool_execution_id`
   - `policy_decision_id`
+- pinned execution-semantics evidence is persisted as immutable artifacts:
+  - `execution.compiled_spec.json`
+  - `execution.compile_source_manifest.json`
+- reusable helper surface for future agent traces lives in `src/onetruth/application/services/execution_evidence.py`
 - authoritative reconstruction uses runtime rows + timeline events + artifact versions
 
 ## Bounded OpenAI fit and explicit out-of-scope

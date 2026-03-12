@@ -2,6 +2,12 @@
 
 Record any decisions made since the last session so a fresh Codex run can rehydrate quickly.
 
+## 2026-03-12 (TASK-0066 execution-runtime hardening for compiled agent control traceability)
+- Execution semantics evidence decision: Stage06 bounded execution now persists pinned immutable semantics artifacts (`execution.compiled_spec.json`, `execution.compile_source_manifest.json`) linked to canonical execution runtime objects; no second execution truth subsystem was introduced.
+- Artifact-link subject decision: canonical artifact linkage validation now supports `execution_session`, `tool_execution`, and `policy_decision` subjects with workflow-scope checks resolved through existing execution/session relationships.
+- Event safety decision: runtime event append now enforces registry-defined `required_links` semantics at write time (not only offline validation), and execution-session creation now emits an explicit `execution_spec` link required by the registry.
+- Reuse decision: added a shared execution-evidence helper surface (`src/onetruth/application/services/execution_evidence.py`) that prepares pinned semantics artifacts and reusable execution-facet evidence links for future agent-trace slices.
+
 ## 2026-03-12 (TASK-0065 logistics-first Codex routing + secret hygiene)
 - Routing decision: new agentic scheduling task intake now defaults to logistics weekly/live (`weekly_schedule_planning.v1 -> live_dispatch.v1`) across Codex/LLM routing docs; legacy `schedule_planning.v1` remains regression/reference-only.
 - Secret hygiene decision: committed real OpenAI key material is removed from tracked repo content, and local `.codex.env` posture is documented as local-only placeholders with real-network gates defaulted off.

@@ -2,11 +2,22 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import pytest
+
 from onetruth.application.handlers.workflow_task_lifecycle import (
     complete_tool_execution_command,
     evaluate_policy_decision_command,
 )
+from onetruth.application.services.execution_evidence import (
+    EXECUTION_COMPILED_SPEC_ARTIFACT_KIND,
+    EXECUTION_COMPILE_SOURCE_MANIFEST_ARTIFACT_KIND,
+)
 from onetruth.infrastructure.db.session import open_sqlite_connection
+from onetruth.infrastructure.events.event_store import (
+    append_event,
+    event_id_for_type,
+    utc_now_iso,
+)
 from onetruth.integrations.openai import (
     OpenAIResponseMetadata,
     OpenAIResponsesError,
@@ -111,6 +122,12 @@ def test_execution_session_happy_path_persists_canonical_rows_and_events(
     assert result["execution_session"]["state"] == "SUCCEEDED"
     assert result["tool_execution"]["state"] == "COMPLETED"
     assert result["policy_decision"]["decision"] == "allow"
+    semantics_artifacts = result["execution_semantics_evidence"]
+    assert len(semantics_artifacts) == 2
+    assert {item["artifact_kind"] for item in semantics_artifacts} == {
+        EXECUTION_COMPILED_SPEC_ARTIFACT_KIND,
+        EXECUTION_COMPILE_SOURCE_MANIFEST_ARTIFACT_KIND,
+    }
 
     sessions = harness.query_rows("SELECT execution_session_id, state, tool_call_count FROM execution_sessions")
     assert len(sessions) == 1
@@ -124,6 +141,22 @@ def test_execution_session_happy_path_persists_canonical_rows_and_events(
     policies = harness.query_rows("SELECT policy_decision_id, decision FROM policy_decisions")
     assert len(policies) == 1
     assert policies[0]["decision"] == "allow"
+
+    artifact_rows = harness.list_artifacts()["artifact_versions"]
+    pinned_semantics_rows = [
+        row
+        for row in artifact_rows
+        if row["artifact_kind"] in {EXECUTION_COMPILED_SPEC_ARTIFACT_KIND, EXECUTION_COMPILE_SOURCE_MANIFEST_ARTIFACT_KIND}
+    ]
+    assert len(pinned_semantics_rows) == 2
+    for row in pinned_semantics_rows:
+        linked_subjects = {
+            (str(link["subject_kind"]), str(link["subject_id"]))
+            for link in row["links"]
+        }
+        assert (("execution_session", str(result["execution_session"]["execution_session_id"]))) in linked_subjects
+        assert (("tool_execution", str(result["tool_execution"]["tool_execution_id"]))) in linked_subjects
+        assert (("policy_decision", str(result["policy_decision"]["policy_decision_id"]))) in linked_subjects
 
     event_types = [event["event_type"] for event in _events_for_run(harness)]
     assert "execution.session.created" in event_types
@@ -193,6 +226,14 @@ def test_execution_policy_denial_creates_auditable_truth_without_model_side_effe
         ("schedule.stage06.review_ai_evidence.json",),
     )
     assert int(evidence_count[0]["count"]) == 0
+    semantics_count = harness.query_rows(
+        "SELECT COUNT(*) AS count FROM artifact_versions WHERE artifact_kind IN (?, ?)",
+        (
+            EXECUTION_COMPILED_SPEC_ARTIFACT_KIND,
+            EXECUTION_COMPILE_SOURCE_MANIFEST_ARTIFACT_KIND,
+        ),
+    )
+    assert int(semantics_count[0]["count"]) == 2
 
     event_types = [event["event_type"] for event in _events_for_run(harness)]
     assert "tool.execution.denied" in event_types
@@ -461,3 +502,49 @@ def test_reconcile_partial_session_does_not_duplicate_completed_tool_effects(tmp
         and event["payload"].get("artifact_version_id") == evidence_artifact_version_id
     ]
     assert len(evidence_events) == 1
+
+
+def test_execution_event_required_links_are_enforced_at_runtime(tmp_path: Path) -> None:
+    harness = RuntimeScenarioHarness.from_yaml(SCENARIO_PATH, tmp_path).prepare()
+    created = harness.run_named_step("create_stage06_review")
+    task_run_id = str(created["result"]["task_run"]["task_run_id"])
+
+    connection = open_sqlite_connection(harness.db_url)
+    try:
+        now = utc_now_iso()
+        missing_execution_spec = {
+            "event_id": event_id_for_type("execution.session.created"),
+            "event_type": "execution.session.created",
+            "schema_version": "1.0",
+            "occurred_at": now,
+            "recorded_at": now,
+            "tenant_id": "tenant-a",
+            "domain_id": "domain-x",
+            "actor": {"type": "system", "id": "system:test"},
+            "links": [
+                {"rel": "subject", "type": "task_run", "id": task_run_id},
+                {"rel": "subject", "type": "execution_session", "id": "xs-missing-link"},
+            ],
+            "payload": {
+                "execution_session_id": "xs-missing-link",
+                "execution_spec_id": "execspec.test.v1",
+                "owner_mode": "service",
+            },
+            "idempotency_key": f"runtime-required-links:{harness.scenario_id}:missing",
+        }
+        with pytest.raises(ValueError, match="missing required link types"):
+            append_event(connection, missing_execution_spec)
+
+        with_execution_spec = {
+            **missing_execution_spec,
+            "event_id": event_id_for_type("execution.session.created"),
+            "idempotency_key": f"runtime-required-links:{harness.scenario_id}:present",
+            "links": [
+                *missing_execution_spec["links"],
+                {"rel": "uses_execution_spec", "type": "execution_spec", "id": "execspec.test.v1"},
+            ],
+        }
+        append_event(connection, with_execution_spec)
+        connection.commit()
+    finally:
+        connection.close()
