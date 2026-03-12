@@ -12,9 +12,10 @@ Official claims must be derivable from:
 - and audited mutable pointers / registries.
 
 Current Stage 4 implementation/debug focus:
-- **Primary runtime/debug wedge:** Schedule Planning v1
-- **Primary first code slice:** canonical runtime substrate plus the Schedule Planning Stage06 publish path and first Stage07 issue-scoped replan loop
-- **Primary test objective:** a fully-agentive end-to-end workflow path where designated agent principals can execute every in-scope task without bypassing the canonical task, approval, event, or pointer model, including explicit spawned child-task lineage
+- **Primary runtime/debug wedge for new scheduling work:** logistics weekly/live (`weekly_schedule_planning.v1 -> live_dispatch.v1`)
+- **Primary first code slice posture:** canonical runtime substrate plus bounded weekly->live logistics handoff hardening over existing workflow/task/approval/event/pointer truth
+- **Primary test objective for new scheduling work:** a fully-agentive end-to-end weekly/live logistics path where designated agent principals can execute every in-scope task without bypassing the canonical task, approval, event, or pointer model
+- **Legacy regression/reference workflow:** `schedule_planning.v1`
 - **Secondary reference workflow:** Payroll v1 as the linear approval-heavy governance benchmark
 
 Everything else - runbooks, dashboards, summaries, generated CompanyOS specs, projections, transcripts, research notes, and external pattern references - is derived, compiled, generated, or evidentiary material layered on top of that substrate.
@@ -35,8 +36,11 @@ Everything else - runbooks, dashboards, summaries, generated CompanyOS specs, pr
 8. `docs/architecture/AUTHORITY_MODEL.md`
 9. `docs/architecture/governance_vocabulary.md`
 10. workflow packs:
-   - `docs/workflows/schedule_planning/v1/`
-   - `docs/workflows/payroll/v1/`
+   - `docs/workflows/logistics_ops_family/v1/`
+   - `docs/workflows/weekly_schedule_planning/v1/`
+   - `docs/workflows/live_dispatch/v1/`
+   - `docs/workflows/schedule_planning/v1/` (legacy regression/reference)
+   - `docs/workflows/payroll/v1/` (secondary reference)
 11. validation commands:
    - `make schema-validate`
    - `make contract`
@@ -147,9 +151,10 @@ Run the gated real e2e test:
 Run the always-on structural coverage (no network):
 - `PYTHONPATH=src pytest -q tests/unit/test_openai_responses_adapter.py tests/runtime/api/test_stage06_openai_review_sandbox_api.py tests/runtime/test_execution_session_runtime.py`
 
-## GitHub Actions Secret Setup (`OPENAI_API_KEY`)
+## GitHub Actions Secret Setup (`OPENAI_API_KEY` + weekly-agent env gate)
 - Store the key as a repository secret named `OPENAI_API_KEY` in GitHub Settings -> Secrets and variables -> Actions.
-- `agent_api.yml` runs OpenAI tests only on `workflow_dispatch` and nightly `schedule`, and only when `OPENAI_API_KEY` is present.
+- Define repository variable `ONETRUTH_RUN_WEEKLY_AGENT_E2E` (default `0`); switch to `1` only when weekly-agent real-network suites are ready to run.
+- `agent_api.yml` runs OpenAI tests only when `OPENAI_API_KEY` is present, and runs future weekly-agent real-network tests only when both `OPENAI_API_KEY` and `ONETRUTH_RUN_WEEKLY_AGENT_E2E=1` are set.
 - Manual run path: GitHub -> Actions -> `agent_api` -> Run workflow.
 - PRs from forks do not receive repository secrets, so OpenAI integration tests are intentionally gated and skipped in that context.
 - OpenAI key safety guidance: use environment variables/secrets and never commit keys ([OpenAI API key safety](https://help.openai.com/en/articles/5112595-best-practices-for-api-key-safety)).
@@ -378,8 +383,9 @@ This scaffold contains:
 - a single-truth authority model and execution-overlay architecture (`docs/architecture/`)
 - Stage 4 planning, epics, tasks, test strategy, TDD plan, and merger backlog (`docs/planning/`)
 - a concrete runtime bootstrap, first implementation-slice plan, and step-run scenario harness plan
-- a Schedule Planning workflow pack and a Payroll workflow pack
-- canonical execution-overlay files for both workflows:
+- a logistics workflow-family pack (`docs/workflows/logistics_ops_family/v1/`) plus weekly/live authored workflow packs
+- legacy Schedule Planning + Payroll workflow packs retained for regression/reference semantics
+- canonical execution-overlay files for authored workflows:
   - `DECISION_CATALOG.yaml`
   - `EXECUTION_PROFILE.yaml`
 - shared governance and permission vocabularies
@@ -419,11 +425,3 @@ The project should stay creative without becoming semantically loose:
 - `docs/architecture/RUNTIME_OBJECT_MODEL.md` defines the canonical runtime vocabulary so implementation work does not accidentally fork into a second truth model.
 - `docs/planning/TDD_IMPLEMENTATION_PLAN.md` explains how to use the schemas, golden traces, synthetic example artifacts, and pytest suites as the first development harness.
 - `docs/planning/STEP_RUN_SCENARIO_HARNESS.md` explains how future runtime scenario tests should drive the real command boundary step by step.
-
-
-cat > /Users/tylerclark/git/pythonProject/companyos/.codex.env <<'EOF'
-export OPENAI_API_KEY='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'
-export ONETRUTH_RUN_OPENAI_E2E=1
-EOF
-chmod 600 /Users/tylerclark/git/pythonProject/companyos/.codex.env
-printf "\n.codex.env\n" >> /Users/tylerclark/git/pythonProject/companyos/.git/info/exclude

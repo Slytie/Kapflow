@@ -24,7 +24,7 @@ Baseline reads (always):
 - `scripts/validate_repo.py`
 - the task file you are executing (`codex/tasks/TASK-*.md`)
 - the relevant epic file (`docs/planning/epics/EPIC-*.md`) if applicable
-- the relevant workflow pack (default: Schedule Planning)
+- the relevant workflow pack (default for new agentic scheduling work: logistics weekly/live via `docs/workflows/logistics_ops_family/v1/`, `docs/workflows/weekly_schedule_planning/v1/`, and `docs/workflows/live_dispatch/v1/`; treat `schedule_planning.v1` as regression/reference-only unless explicitly needed)
 
 Only when needed:
 - Authority chain / source-of-truth changes:
@@ -82,7 +82,7 @@ For runtime work specifically:
 - do not invent stage IDs, dataset keys, approval IDs, or official outputs in downstream materials
 - if a generated artifact needs a change, update the source and regeneration rule, not just the generated file
 - do not let pattern cards or research notes override authoritative docs
-- if you touch the fully-agentive Schedule Planning objective, preserve the same canonical task/approval/event/pointer path
+- if you touch the fully-agentive logistics weekly/live objective, preserve the same canonical task/approval/event/pointer path
 - if you touch behavior, update the matching trace + scenario catalog + pytest oracle before runtime code
 - if you touch runtime step tests, use the existing `template_pack/*_Example_COMPLETED.*` files as seed artifacts instead of inventing a second sample-data tree
 - keep real runtime code under `src/onetruth/` once the scaffold exists; do not let `tests/helpers/` become a shadow runtime
@@ -124,9 +124,9 @@ Include:
 - risk notes
 
 ## Stage 4 reminder
-- Schedule Planning is the current runtime/debug wedge.
-- The priority slice is a fully-agentive end-to-end debug flow.
-- The first concrete code milestone is the Schedule Planning substrate + Stage06 publish path.
+- For new agentic scheduling tasks, logistics weekly/live (`weekly_schedule_planning.v1 -> live_dispatch.v1`) is the default runtime/debug wedge.
+- The priority slice is a fully-agentive end-to-end weekly/live logistics flow over the canonical substrate.
+- Legacy `schedule_planning.v1` remains regression/reference-only for this routing posture.
 - Payroll remains a reference workflow used to validate shared semantics against a linear approval-heavy path.
 
 ## Default safe commands

@@ -66,3 +66,4 @@
 | TASK-0062 | EPIC-025 | DONE | high | Weekly to live handoff runtime and first logistics golden slice |
 | TASK-0063 | EPIC-025 | DONE | high | Reporting→planning feedback slice, canonical three-workflow story contract, and backend story query seam |
 | TASK-0064 | EPIC-080 | DONE | high | Three-workflow logistics demo shell, primary route switch, and schedule-only legacy demotion |
+| TASK-0065 | EPIC-070 | DONE | high | Logistics-first Codex routing, tracked-secret hygiene, and weekly-agent env-gate posture |

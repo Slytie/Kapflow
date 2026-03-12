@@ -2,6 +2,12 @@
 
 Record any decisions made since the last session so a fresh Codex run can rehydrate quickly.
 
+## 2026-03-12 (TASK-0065 logistics-first Codex routing + secret hygiene)
+- Routing decision: new agentic scheduling task intake now defaults to logistics weekly/live (`weekly_schedule_planning.v1 -> live_dispatch.v1`) across Codex/LLM routing docs; legacy `schedule_planning.v1` remains regression/reference-only.
+- Secret hygiene decision: committed real OpenAI key material is removed from tracked repo content, and local `.codex.env` posture is documented as local-only placeholders with real-network gates defaulted off.
+- Validation decision: `scripts/validate_repo.py` now scans tracked UTF-8 files for real OpenAI key patterns (`sk-proj-...` / `sk-...`) and fails validation on detection.
+- CI gate posture decision: `.github/workflows/agent_api.yml` keeps current OpenAI gating and adds an explicit future weekly-agent real-network gate controlled by repository variable `ONETRUTH_RUN_WEEKLY_AGENT_E2E=1` plus `OPENAI_API_KEY` presence.
+
 ## 2026-03-09 (TASK-0068 composite-task subgraphs + drawer hardening)
 - Human-task drill-down contract decision: keep `GET /api/v1/human-tasks/{id}` as the canonical detail seam and extend it with optional composite metadata (`is_composite`, `expansion_kind`, `subgraph_ref`) while keeping non-composite tasks unchanged.
 - Task-subgraph endpoint decision: add `GET /api/v1/human-tasks/{id}/subgraph` for lazy, server-authored composite task process graphs; frontend loads this only when the operator chooses `Expand process`.

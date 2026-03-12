@@ -18,13 +18,14 @@ Keep the default context small. Only load deeper docs when the task actually tou
 10. `scripts/validate_repo.py`
 
 ### Workflow pack (task-dependent)
-- Default workflow (runtime/debug wedge): `docs/workflows/schedule_planning/v1/`
-  - `WORKFLOW_CONTRACT.yaml`
-  - `OPERATING_MODEL.md`
-  - `ARTIFACT_MAP.yaml`
-  - `DECISION_CATALOG.yaml`
-  - `EXECUTION_PROFILE.yaml`
-  - `ACCEPTANCE_CRITERIA.md`
+- Default workflow (new agentic scheduling/runtime wedge): logistics family weekly/live surface
+  - `docs/workflows/logistics_ops_family/v1/README.md`
+  - `docs/workflows/weekly_schedule_planning/v1/WORKFLOW_CONTRACT.yaml`
+  - `docs/workflows/live_dispatch/v1/WORKFLOW_CONTRACT.yaml`
+
+- Load `docs/workflows/schedule_planning/v1/` only for regression/reference coverage:
+  - when validating legacy schedule-only behavior against existing traces,
+  - or when a shared semantic change must be cross-checked against the legacy authored surface.
 
 - Load `docs/workflows/payroll/v1/` only if:
   - the task is explicitly tagged `payroll`, or
@@ -81,12 +82,12 @@ If the task changes tests, retry/idempotency logic, or acceptance criteria:
 - read `docs/planning/TEST_MATRIX.md`
 - read `docs/planning/TDD_IMPLEMENTATION_PLAN.md`
 - read `docs/planning/STEP_RUN_SCENARIO_HARNESS.md` if runtime step tests are in scope
-- inspect the relevant scenario trace under `fixtures/workflows/schedule_planning/golden_event_traces/`
+- inspect the relevant scenario trace under `fixtures/workflows/schedule_planning/golden_event_traces/` when legacy regression behavior is in scope
 
 ## Stage 4 runtime/debug posture
-- The current implementation/debug wedge is **Schedule Planning**.
-- The current acceptance objective is a **fully-agentive** Schedule Planning run where designated agent principals execute every in-scope stage.
-- The first concrete coding target is the canonical runtime substrate plus the Stage06 publish path and its follow-on review/info loops, then the Stage07 issue loop.
+- For new agentic scheduling work, the implementation/debug wedge is the logistics weekly/live path (`weekly_schedule_planning.v1 -> live_dispatch.v1`).
+- The current acceptance objective for new scheduling work is a **fully-agentive** weekly/live logistics slice where designated agent principals execute every in-scope stage without bypassing canonical runtime truth.
+- Legacy `schedule_planning.v1` remains regression/reference-only in this posture.
 - This objective does **not** authorize a second agent-only truth path. Agents must still operate through the same workflow/task/approval/event/pointer substrate.
 - Payroll remains a secondary reference workflow used to validate the same shared semantics against a linear approval-heavy flow.
 

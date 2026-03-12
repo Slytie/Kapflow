@@ -2,10 +2,12 @@ project:
   name: Orchestration Platform - Stage 4 MVP
   stage: Stage 4 - Vertical Slice MVP
   principle: one truth system
-  primary_workflow: schedule_planning.v1
-  debug_objective: fully_agentive_schedule_flow
-  primary_runtime_slice: schedule_stage06_publish_then_stage07_issue_loop
+  primary_workflow: weekly_schedule_planning.v1
+  debug_objective: fully_agentive_logistics_weekly_live_flow
+  primary_runtime_slice: weekly_stage07_materialize_seed_then_live_stage01_dispatch
   secondary_workflows:
+    - live_dispatch.v1
+    - schedule_planning.v1
     - payroll.v1
 read_order:
   - AGENTS.md
@@ -17,12 +19,9 @@ read_order:
   - docs/planning/TDD_IMPLEMENTATION_PLAN.md
   - docs/architecture/invariants.md
   - docs/architecture/governance_vocabulary.md
-  - docs/workflows/schedule_planning/v1/WORKFLOW_CONTRACT.yaml
-  - docs/workflows/schedule_planning/v1/OPERATING_MODEL.md
-  - docs/workflows/schedule_planning/v1/ARTIFACT_MAP.yaml
-  - docs/workflows/schedule_planning/v1/DECISION_CATALOG.yaml
-  - docs/workflows/schedule_planning/v1/EXECUTION_PROFILE.yaml
-  - docs/workflows/schedule_planning/v1/ACCEPTANCE_CRITERIA.md
+  - docs/workflows/logistics_ops_family/v1/README.md
+  - docs/workflows/weekly_schedule_planning/v1/WORKFLOW_CONTRACT.yaml
+  - docs/workflows/live_dispatch/v1/WORKFLOW_CONTRACT.yaml
   - schemas/events/envelope.schema.json
   - schemas/events/event_type_registry.yaml
   - scripts/validate_repo.py
@@ -42,18 +41,28 @@ vision:
   threat_model_addendum: docs/vision/THREAT_MODEL_ADDENDUM.md
 contracts:
   workflow_contracts:
+    - docs/workflows/weekly_schedule_planning/v1/WORKFLOW_CONTRACT.yaml
+    - docs/workflows/live_dispatch/v1/WORKFLOW_CONTRACT.yaml
     - docs/workflows/schedule_planning/v1/WORKFLOW_CONTRACT.yaml
     - docs/workflows/payroll/v1/WORKFLOW_CONTRACT.yaml
   decision_catalogs:
+    - docs/workflows/weekly_schedule_planning/v1/DECISION_CATALOG.yaml
+    - docs/workflows/live_dispatch/v1/DECISION_CATALOG.yaml
     - docs/workflows/schedule_planning/v1/DECISION_CATALOG.yaml
     - docs/workflows/payroll/v1/DECISION_CATALOG.yaml
   execution_profiles:
+    - docs/workflows/weekly_schedule_planning/v1/EXECUTION_PROFILE.yaml
+    - docs/workflows/live_dispatch/v1/EXECUTION_PROFILE.yaml
     - docs/workflows/schedule_planning/v1/EXECUTION_PROFILE.yaml
     - docs/workflows/payroll/v1/EXECUTION_PROFILE.yaml
   artifact_maps:
+    - docs/workflows/weekly_schedule_planning/v1/ARTIFACT_MAP.yaml
+    - docs/workflows/live_dispatch/v1/ARTIFACT_MAP.yaml
     - docs/workflows/schedule_planning/v1/ARTIFACT_MAP.yaml
     - docs/workflows/payroll/v1/ARTIFACT_MAP.yaml
   operating_models:
+    - docs/workflows/weekly_schedule_planning/v1/OPERATING_MODEL.md
+    - docs/workflows/live_dispatch/v1/OPERATING_MODEL.md
     - docs/workflows/schedule_planning/v1/OPERATING_MODEL.md
     - docs/workflows/payroll/v1/OPERATING_MODEL.md
   event_envelope_schema: schemas/events/envelope.schema.json
@@ -134,6 +143,23 @@ fixtures:
   schedule_policy_gate_trace: fixtures/workflows/schedule_planning/golden_event_traces/schedule_policy_gate_enforced.jsonl
   payroll_event_traces_note: placeholder_only_until_payroll_runtime_wedge
 gated_context:
+  logistics_weekly_live_contract_pack:
+    load_when: Load by default for new agentic scheduling/runtime work.
+    files:
+      - docs/workflows/logistics_ops_family/v1/README.md
+      - docs/workflows/weekly_schedule_planning/v1/WORKFLOW_CONTRACT.yaml
+      - docs/workflows/weekly_schedule_planning/v1/OPERATING_MODEL.md
+      - docs/workflows/weekly_schedule_planning/v1/ARTIFACT_MAP.yaml
+      - docs/workflows/weekly_schedule_planning/v1/DECISION_CATALOG.yaml
+      - docs/workflows/weekly_schedule_planning/v1/EXECUTION_PROFILE.yaml
+      - docs/workflows/weekly_schedule_planning/v1/ACCEPTANCE_CRITERIA.md
+      - docs/workflows/live_dispatch/v1/WORKFLOW_CONTRACT.yaml
+      - docs/workflows/live_dispatch/v1/OPERATING_MODEL.md
+      - docs/workflows/live_dispatch/v1/ARTIFACT_MAP.yaml
+      - docs/workflows/live_dispatch/v1/DECISION_CATALOG.yaml
+      - docs/workflows/live_dispatch/v1/EXECUTION_PROFILE.yaml
+      - docs/workflows/live_dispatch/v1/ACCEPTANCE_CRITERIA.md
+    note: Logistics weekly/live is the primary routing wedge for new agentic scheduling tasks.
   payroll_contract_pack:
     load_when: Task is explicitly tagged payroll OR change touches shared semantics that must be validated against a linear approval-heavy reference workflow.
     files:
@@ -146,7 +172,7 @@ gated_context:
       - fixtures/workflows/payroll/golden_event_traces/
     note: Payroll remains the secondary reference workflow for linear approvals, lock/finalize semantics, and governance-heavy review. Its golden-trace folder is still placeholder-only.
   schedule_planning_contract_pack:
-    load_when: Load by default for runtime/debug work OR whenever a change touches shared semantics that must be validated against live-day delta handling.
+    load_when: Load for legacy regression/reference checks, or when shared semantics must be cross-checked against the legacy schedule-only authored surface.
     files:
       - docs/workflows/schedule_planning/v1/WORKFLOW_CONTRACT.yaml
       - docs/workflows/schedule_planning/v1/OPERATING_MODEL.md
@@ -155,7 +181,7 @@ gated_context:
       - docs/workflows/schedule_planning/v1/EXECUTION_PROFILE.yaml
       - docs/workflows/schedule_planning/v1/ACCEPTANCE_CRITERIA.md
       - fixtures/workflows/schedule_planning/golden_event_traces/
-    note: Schedule Planning is the current Stage 4 primary runtime wedge and fully-agentive debug target.
+    note: Schedule Planning remains a regression/reference workflow in the logistics-first routing posture.
   authority_chain_changes:
     load_when: Change modifies authoritative vs generated boundaries, lowering rules, or introduces new semantic surfaces.
     files:

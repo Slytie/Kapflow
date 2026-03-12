@@ -3,6 +3,8 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
+import subprocess
 import sys
 from pathlib import Path
 from typing import Any
@@ -37,6 +39,12 @@ def load_json(path: Path) -> Any:
 
 class ValidationError(Exception):
     pass
+
+
+OPENAI_KEY_PATTERNS: tuple[tuple[str, re.Pattern[str]], ...] = (
+    ("OpenAI project API key", re.compile(r"sk-proj-[A-Za-z0-9_-]{20,}")),
+    ("OpenAI API key", re.compile(r"\bsk-[A-Za-z0-9]{20,}\b")),
+)
 
 
 class Collector:
@@ -514,6 +522,48 @@ def validate_current_focus(collector: Collector) -> None:
             collector.require(task_id in task_files, f"current focus references task file: {task_id}")
 
 
+def iter_tracked_files(collector: Collector) -> list[Path]:
+    try:
+        completed = subprocess.run(
+            ["git", "ls-files", "-z"],
+            cwd=ROOT,
+            check=True,
+            capture_output=True,
+            text=False,
+        )
+    except Exception as exc:
+        collector.fail(f"unable to enumerate tracked files for secret scan: {exc}")
+        return []
+
+    tracked: list[Path] = []
+    for raw in completed.stdout.split(b"\x00"):
+        if not raw:
+            continue
+        rel = Path(raw.decode("utf-8", errors="strict"))
+        path = ROOT / rel
+        if path.is_file():
+            tracked.append(path)
+    return tracked
+
+
+def validate_secret_hygiene(collector: Collector) -> None:
+    text_files_scanned = 0
+    for path in iter_tracked_files(collector):
+        relative = path.relative_to(ROOT)
+        try:
+            contents = path.read_text(encoding="utf-8")
+        except UnicodeDecodeError:
+            continue
+        text_files_scanned += 1
+        for label, pattern in OPENAI_KEY_PATTERNS:
+            for match in pattern.finditer(contents):
+                line_number = contents.count("\n", 0, match.start()) + 1
+                collector.fail(
+                    f"possible {label} detected in tracked file {relative}:{line_number}"
+                )
+    collector.ok(f"secret hygiene scan passed across {text_files_scanned} tracked text files")
+
+
 def validate_traces(event_map: dict[str, Any], collector: Collector) -> None:
     envelope_schema = load_json(ROOT / "schemas/events/envelope.schema.json")
     envelope_validator = Draft202012Validator(envelope_schema)
@@ -573,6 +623,7 @@ def main() -> int:
         validate_schedule_runbook_assets(collector)
         validate_task_index(collector)
         validate_current_focus(collector)
+        validate_secret_hygiene(collector)
     if not args.schemas_only:
         validate_traces(event_map, collector)
     return collector.report()
