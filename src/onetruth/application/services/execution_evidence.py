@@ -9,6 +9,9 @@ EXECUTION_SEMANTICS_ARTIFACT_ROLE = "execution_semantics_evidence"
 EXECUTION_COMPILED_SPEC_ARTIFACT_KIND = "execution.compiled_spec.json"
 EXECUTION_COMPILE_SOURCE_MANIFEST_ARTIFACT_KIND = "execution.compile_source_manifest.json"
 EXECUTION_TRACE_ARTIFACT_KIND = "execution.trace.json"
+RUNTIME_CONTEXT_PACK_ARTIFACT_KIND = "runtime.context_pack.json"
+RUNTIME_TOOL_REQUEST_ARTIFACT_KIND = "runtime.tool_request.json"
+RUNTIME_TOOL_RESULT_ARTIFACT_KIND = "runtime.tool_result.json"
 
 
 @dataclass(frozen=True)
@@ -212,6 +215,8 @@ def prepare_execution_trace_artifact(
     execution_session_id: str,
     trace_payload: Mapping[str, Any],
     file_name: str = "execution-trace.json",
+    artifact_kind: str = EXECUTION_TRACE_ARTIFACT_KIND,
+    artifact_role: str = "execution_trace_evidence",
     tool_execution_id: str | None = None,
     policy_decision_id: str | None = None,
 ) -> PreparedExecutionEvidenceArtifact:
@@ -223,8 +228,8 @@ def prepare_execution_trace_artifact(
     }
     digest = _sha256_json(payload_json)
     return PreparedExecutionEvidenceArtifact(
-        artifact_kind=EXECUTION_TRACE_ARTIFACT_KIND,
-        artifact_role="execution_trace_evidence",
+        artifact_kind=artifact_kind,
+        artifact_role=artifact_role,
         file_name=file_name,
         media_type="application/json",
         payload_json=payload_json,
@@ -240,6 +245,45 @@ def prepare_execution_trace_artifact(
             relation_kind="execution_trace",
         ),
         idempotency_suffix="execution-trace",
+    )
+
+
+def prepare_runtime_json_evidence_artifact(
+    *,
+    artifact_kind: str,
+    file_name: str,
+    execution_session_id: str,
+    payload_json: Mapping[str, Any],
+    idempotency_suffix: str,
+    relation_kind: str,
+    tool_execution_id: str | None = None,
+    policy_decision_id: str | None = None,
+    extra_metadata: Mapping[str, Any] | None = None,
+) -> PreparedExecutionEvidenceArtifact:
+    payload = dict(payload_json)
+    digest = _sha256_json(payload)
+    metadata: dict[str, Any] = {
+        "execution_session_id": str(execution_session_id),
+        "evidence_kind": str(artifact_kind),
+        "document_digest": digest,
+    }
+    if isinstance(extra_metadata, dict):
+        metadata.update(dict(extra_metadata))
+
+    return PreparedExecutionEvidenceArtifact(
+        artifact_kind=str(artifact_kind),
+        artifact_role="execution_trace_evidence",
+        file_name=file_name,
+        media_type="application/json",
+        payload_json=payload,
+        metadata_json=metadata,
+        links=build_execution_evidence_links(
+            execution_session_id=str(execution_session_id),
+            tool_execution_id=tool_execution_id,
+            policy_decision_id=policy_decision_id,
+            relation_kind=relation_kind,
+        ),
+        idempotency_suffix=idempotency_suffix,
     )
 
 

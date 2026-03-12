@@ -7,6 +7,9 @@ from onetruth.application.handlers.workflow_task_lifecycle import CommandError
 from onetruth.application.services.stage06_openai_sandbox import (
     evaluate_stage06_policy_for_actor,
 )
+from onetruth.application.services.weekly_stage04_openai_agent import (
+    evaluate_weekly_stage04_policy_for_actor,
+)
 
 ACTIVE_FLAG_STATES = {"open", "triage", "blocked"}
 FLAG_TRANSITION_ROLES = {
@@ -116,6 +119,13 @@ def compute_human_task_actionability(
         actor_type=actor_type,
         actor_roles=actor_roles,
     )
+    can_run_weekly_stage04_openai_agent = _can_run_weekly_stage04_openai_agent(
+        stage_id=str(task.get("stage_id") or ""),
+        task_kind=str(task.get("task_kind") or ""),
+        is_assignee=is_assignee,
+        actor_type=actor_type,
+        actor_roles=actor_roles,
+    )
 
     if state == "OPEN" and not role_match:
         blocking_reason_codes.append("candidate_role_mismatch")
@@ -137,6 +147,8 @@ def compute_human_task_actionability(
         available_actions.append("complete")
     if can_run_stage06_agent_review:
         available_actions.append("run_stage06_agent_review")
+    if can_run_weekly_stage04_openai_agent:
+        available_actions.append("run_weekly_stage04_openai_agent")
     if can_upload_attachment:
         available_actions.append("upload_attachment")
     if linked_artifact_count > 0:
@@ -154,6 +166,7 @@ def compute_human_task_actionability(
         "can_confirm_review": can_confirm_review,
         "can_upload_attachment": can_upload_attachment,
         "can_run_stage06_agent_review": can_run_stage06_agent_review,
+        "can_run_weekly_stage04_openai_agent": can_run_weekly_stage04_openai_agent,
     }
 
 
@@ -206,6 +219,7 @@ def compute_approval_actionability(
         "can_confirm_review": False,
         "can_upload_attachment": can_upload_attachment,
         "can_run_stage06_agent_review": False,
+        "can_run_weekly_stage04_openai_agent": False,
     }
 
 
@@ -242,6 +256,7 @@ def compute_flag_actionability(
         "can_confirm_review": False,
         "can_upload_attachment": can_upload_attachment,
         "can_run_stage06_agent_review": False,
+        "can_run_weekly_stage04_openai_agent": False,
     }
 
 
@@ -268,5 +283,27 @@ def _can_run_stage06_agent_review(
         )
     except CommandError:
         # Misconfigured policy override should fail closed in read projections.
+        return False
+    return decision == "allow"
+
+
+def _can_run_weekly_stage04_openai_agent(
+    *,
+    stage_id: str,
+    task_kind: str,
+    is_assignee: bool,
+    actor_type: str,
+    actor_roles: tuple[str, ...],
+) -> bool:
+    if not is_assignee:
+        return False
+    if stage_id != "Stage04" or task_kind != "work_item":
+        return False
+    try:
+        decision, _, _ = evaluate_weekly_stage04_policy_for_actor(
+            actor_type=actor_type,
+            actor_roles=actor_roles,
+        )
+    except CommandError:
         return False
     return decision == "allow"

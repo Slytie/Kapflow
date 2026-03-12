@@ -112,6 +112,7 @@ Current HTTP endpoints:
 - `POST /api/v1/human-tasks/{human_task_id}/complete`
 - `POST /api/v1/human-tasks/{human_task_id}/artifacts/upload`
 - `POST /api/v1/human-tasks/{human_task_id}/stage06-agent-review` (bounded OpenAI sandbox path)
+- `POST /api/v1/human-tasks/{human_task_id}/weekly-stage04-openai-agent` (bounded Stage04 weekly agent path)
 - `POST /api/v1/approvals/{approval_id}/respond`
 - `POST /api/v1/approvals/{approval_id}/artifacts/upload`
 - `POST /api/v1/flags/{flag_id}/transition`
@@ -150,6 +151,24 @@ Run the gated real e2e test:
 
 Run the always-on structural coverage (no network):
 - `PYTHONPATH=src pytest -q tests/unit/test_openai_responses_adapter.py tests/runtime/api/test_stage06_openai_review_sandbox_api.py tests/runtime/test_execution_session_runtime.py`
+
+## Weekly Stage04 OpenAI agent (bounded function-calling slice)
+The repo now includes a bounded Stage04 weekly agent runtime path using Responses API function calling.
+
+What it does:
+- resolves Stage04 execution semantics from compiled control metadata,
+- runs a synchronous bounded Responses function-calling loop (no background mode),
+- exposes only deterministic Stage04 schedule-control tools,
+- persists canonical runtime evidence (`runtime.context_pack.json`, `runtime.tool_request.json`, `runtime.tool_result.json`, `execution.trace.json`),
+- materializes draft Stage04 outputs only (no Stage06 publish semantics).
+
+What it does not do:
+- no deprecated Assistants API usage,
+- no publish/pointer promotion authority,
+- no Stage05/Stage06 bypass.
+
+Deterministic coverage:
+- `PYTHONPATH=src pytest -q tests/unit/test_responses_agent_runner.py tests/runtime/test_weekly_stage04_execution_runtime.py tests/runtime/api/test_weekly_stage04_openai_agent_api.py tests/runtime/scenarios/test_weekly_stage04_openai_agent_mocked_slice.py`
 
 ## GitHub Actions Secret Setup (`OPENAI_API_KEY` + weekly-agent env gate)
 - Store the key as a repository secret named `OPENAI_API_KEY` in GitHub Settings -> Secrets and variables -> Actions.

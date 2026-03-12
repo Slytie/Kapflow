@@ -54,6 +54,7 @@ from onetruth.api.routes.human_tasks import (
     get_human_task_subgraph_endpoint,
     list_human_tasks_endpoint,
     run_stage06_agent_review_endpoint,
+    run_weekly_stage04_openai_agent_endpoint,
 )
 from onetruth.api.routes.pointers import list_pointers_endpoint
 from onetruth.api.routes.timeline import (
@@ -277,6 +278,17 @@ def _match_route(method: str, path: str) -> MatchedRoute | None:
                 return MatchedRoute(
                     method=method,
                     name="human_tasks.stage06_agent_review",
+                    params={"human_task_id": human_task_id},
+                )
+    if method == "POST" and path.endswith("/weekly-stage04-openai-agent"):
+        prefix = "/api/v1/human-tasks/"
+        suffix = "/weekly-stage04-openai-agent"
+        if path.startswith(prefix) and len(path) > len(prefix) + len(suffix):
+            human_task_id = path[len(prefix) : -len(suffix)]
+            if human_task_id:
+                return MatchedRoute(
+                    method=method,
+                    name="human_tasks.weekly_stage04_openai_agent",
                     params={"human_task_id": human_task_id},
                 )
     if method == "GET" and path == "/api/v1/approvals":
@@ -550,6 +562,13 @@ def _dispatch_route(
         )
     if matched.name == "human_tasks.stage06_agent_review":
         return run_stage06_agent_review_endpoint(
+            connection,
+            context=context,
+            human_task_id=matched.params["human_task_id"],
+            payload=_require_payload(payload),
+        )
+    if matched.name == "human_tasks.weekly_stage04_openai_agent":
+        return run_weekly_stage04_openai_agent_endpoint(
             connection,
             context=context,
             human_task_id=matched.params["human_task_id"],

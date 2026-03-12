@@ -47,6 +47,7 @@ EXPECTED_ACTIONABILITY_KEYS = {
     "can_confirm_review",
     "can_upload_attachment",
     "can_run_stage06_agent_review",
+    "can_run_weekly_stage04_openai_agent",
 }
 
 EXPECTED_EXPANSION_KEYS = {

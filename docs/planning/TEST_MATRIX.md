@@ -114,14 +114,18 @@ Current implemented runtime command-boundary coverage:
 - `tests/runtime/api/test_approval_respond_via_api.py`
 - `tests/runtime/api/test_flag_transition_via_api.py`
 - `tests/runtime/api/test_stage06_openai_review_sandbox_api.py`
+- `tests/runtime/api/test_weekly_stage04_openai_agent_api.py`
 - `tests/runtime/api/test_workflow_run_workspace_endpoint.py`
 - `tests/runtime/api/test_workspace_actionability.py`
 - `tests/runtime/test_execution_session_runtime.py`
+- `tests/runtime/test_weekly_stage04_execution_runtime.py`
 - `tests/runtime/test_realistic_schedule_planning_pilot.py`
 - `tests/runtime/api/test_cross_scope_api_denial.py`
 - `tests/runtime/api/test_board_retry_stability.py`
 - `tests/runtime/api/test_api_retry_stability.py`
 - `tests/unit/test_openai_responses_adapter.py`
+- `tests/unit/test_responses_agent_runner.py`
+- `tests/runtime/scenarios/test_weekly_stage04_openai_agent_mocked_slice.py`
 - `tests/integration_openai/test_stage06_openai_real_e2e.py` (gated/opt-in)
 
 Current runtime tests assert:
@@ -181,6 +185,11 @@ Current runtime tests assert:
   - retry/idempotency guard for duplicate execution requests
   - stale-session reconcile recovery without duplicate terminal effects
   - reconcile of partial sessions does not duplicate already-completed tool/evidence effects
+- bounded Stage04 weekly agent function-calling coverage:
+  - Responses API function-calling loop supports multiple function calls per turn with `call_id`-bound `function_call_output` continuation
+  - Stage04 execution session semantics are pinned from compiled control metadata
+  - only deterministic Stage04 tools are exposed; outputs remain draft-only
+  - context packs, request/result turns, and execution traces are persisted as canonical evidence artifacts linked to execution runtime objects
 - realistic pilot/operator-inspection coverage:
   - reproducible Stage06/Stage07 pilot runs seeded from corpus seed sets via canonical ingress
   - Stage06 bounded agent review path creates canonical execution/tool/policy/evidence links

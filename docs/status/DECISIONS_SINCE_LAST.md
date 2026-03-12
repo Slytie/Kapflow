@@ -2,6 +2,13 @@
 
 Record any decisions made since the last session so a fresh Codex run can rehydrate quickly.
 
+## 2026-03-12 (TASK-0069 weekly Stage04 OpenAI agent runtime)
+- Bounded Stage04 agent-loop decision: weekly Stage04 now runs a synchronous OpenAI Responses function-calling loop (`weekly_schedule_planning.v1`, `Stage04`) with multi-call-per-turn support and `call_id`-bound `function_call_output` continuation semantics; no Assistants API and no background mode were introduced.
+- Compiled-control pinning decision: Stage04 execution session semantics now resolve from compiled logistics control metadata (`compile_control_layer` + `derive_execution_session_payload`) rather than hardcoded execution-spec constants.
+- Deterministic-tool boundary decision: the model can call only deterministic Stage04 tools (`get_stage04_context`, `materialize_weekly_stage04_draft_outputs`, `get_stage04_validation_summary`, `render_stage04_ops_packet`); no publish/pointer-promotion tool is exposed.
+- Evidence traceability decision: context packs, turn-level request/response metadata, function calls, function-call outputs, usage totals, and execution traces are persisted as canonical artifact evidence linked to `execution_session`/`tool_execution`/`policy_decision`.
+- API/actionability boundary decision: added one bounded human-task API mutation (`POST /api/v1/human-tasks/{id}/weekly-stage04-openai-agent`) and corresponding actionability affordance for claimed Stage04 work-item tasks without introducing a generalized public agent framework.
+
 ## 2026-03-12 (TASK-0068 deterministic weekly schedule-control services)
 - Deterministic feasibility decision: Stage04 weekly schedule-control feasibility (route-slot expansion, candidate generation, hard-rule validation, and soft scoring) now lives in dedicated deterministic services under `src/onetruth/application/services/schedule_control/`; it is not owned by `workflow_task_lifecycle.py` and is not delegated to LLM output.
 - Runtime execution decision: added bounded runtime command `schedule-control build-weekly` that resolves canonical Stage04 bridge artifacts, executes deterministic weekly build logic, and lowers machine-checkable Stage04 artifacts (`planning.input_bundle.doc`, `planning.candidate_schedule_delta.workbook`, `planning.validation_summary.doc`, `planning.draft_weekly_schedule.*`) idempotently.

@@ -115,6 +115,24 @@ class OpenAIResponseMetadata:
         }
 
 
+@dataclass(frozen=True)
+class OpenAIResponsesRuntimeConfig:
+    api_key: str
+    model: str
+    base_url: str
+    timeout_seconds: float
+    max_retries: int
+
+    def as_dict(self) -> dict[str, Any]:
+        return {
+            "api_key": self.api_key,
+            "model": self.model,
+            "base_url": self.base_url,
+            "timeout_seconds": self.timeout_seconds,
+            "max_retries": self.max_retries,
+        }
+
+
 class Stage06ReviewClassifier(Protocol):
     def classify_stage06_review(
         self,
@@ -380,15 +398,39 @@ def build_stage06_review_classifier_from_env(
     *,
     transport: ResponseTransport | None = None,
 ) -> OpenAIResponsesStage06Classifier:
+    runtime = build_openai_responses_runtime_config_from_env()
+    max_input_chars_raw = os.environ.get("ONETRUTH_OPENAI_MAX_INPUT_CHARS", "12000")
+    try:
+        max_input_chars = int(max_input_chars_raw)
+    except ValueError as exc:
+        raise OpenAIConfigError("ONETRUTH_OPENAI_MAX_INPUT_CHARS must be an integer") from exc
+
+    if max_input_chars <= 0:
+        raise OpenAIConfigError("ONETRUTH_OPENAI_MAX_INPUT_CHARS must be > 0")
+
+    return OpenAIResponsesStage06Classifier(
+        api_key=runtime.api_key,
+        model=runtime.model,
+        base_url=runtime.base_url,
+        timeout_seconds=runtime.timeout_seconds,
+        max_retries=runtime.max_retries,
+        max_input_chars=max_input_chars,
+        transport=transport,
+    )
+
+
+def build_openai_responses_runtime_config_from_env(
+    *,
+    default_model: str = "gpt-4.1-mini",
+) -> OpenAIResponsesRuntimeConfig:
     api_key = os.environ.get("OPENAI_API_KEY", "").strip()
     if not api_key:
         raise OpenAIConfigError("OPENAI_API_KEY is required for Stage06 OpenAI sandbox classification")
 
-    model = os.environ.get("ONETRUTH_OPENAI_MODEL", "gpt-4.1-mini").strip() or "gpt-4.1-mini"
+    model = os.environ.get("ONETRUTH_OPENAI_MODEL", default_model).strip() or default_model
     base_url = os.environ.get("ONETRUTH_OPENAI_BASE_URL", "https://api.openai.com/v1").strip() or "https://api.openai.com/v1"
     timeout_raw = os.environ.get("ONETRUTH_OPENAI_TIMEOUT_SECONDS", "30")
     retries_raw = os.environ.get("ONETRUTH_OPENAI_MAX_RETRIES", "2")
-    max_input_chars_raw = os.environ.get("ONETRUTH_OPENAI_MAX_INPUT_CHARS", "12000")
 
     try:
         timeout_seconds = float(timeout_raw)
@@ -398,26 +440,18 @@ def build_stage06_review_classifier_from_env(
         max_retries = int(retries_raw)
     except ValueError as exc:
         raise OpenAIConfigError("ONETRUTH_OPENAI_MAX_RETRIES must be an integer") from exc
-    try:
-        max_input_chars = int(max_input_chars_raw)
-    except ValueError as exc:
-        raise OpenAIConfigError("ONETRUTH_OPENAI_MAX_INPUT_CHARS must be an integer") from exc
 
     if timeout_seconds <= 0:
         raise OpenAIConfigError("ONETRUTH_OPENAI_TIMEOUT_SECONDS must be > 0")
     if max_retries < 0:
         raise OpenAIConfigError("ONETRUTH_OPENAI_MAX_RETRIES must be >= 0")
-    if max_input_chars <= 0:
-        raise OpenAIConfigError("ONETRUTH_OPENAI_MAX_INPUT_CHARS must be > 0")
 
-    return OpenAIResponsesStage06Classifier(
+    return OpenAIResponsesRuntimeConfig(
         api_key=api_key,
         model=model,
         base_url=base_url,
         timeout_seconds=timeout_seconds,
         max_retries=max_retries,
-        max_input_chars=max_input_chars,
-        transport=transport,
     )
 
 
