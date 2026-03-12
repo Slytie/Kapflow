@@ -21,6 +21,16 @@ artifact_sets:
     role: official_input
     template_source: Stage03_Actual_Hours_Compliance_Snapshot/Stage03_Actual_Hours_Compliance_Snapshot_actual_hours_snapshot_Spreadsheet_Template_EMPTY.xlsx
   Stage04:
+  - key: planning.route_slot_requirements.workbook
+    role: official_input
+  - key: planning.driver_capabilities.workbook
+    role: official_input
+  - key: planning.input_bundle.doc
+    role: official_input
+  - key: planning.candidate_schedule_delta.workbook
+    role: official_input
+  - key: planning.validation_summary.doc
+    role: evidence
   - key: planning.draft_weekly_schedule.doc
     role: evidence
     template_source: Stage04_Draft_Weekly_Schedule_Build/Stage04_Draft_Weekly_Schedule_Build_draft_weekly_schedule_Document_Template_EMPTY.docx

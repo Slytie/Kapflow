@@ -1,0 +1,27 @@
+source_note: Canonical driver capability matrix used by hard-rule validation.
+columns:
+- driver_id
+- skills
+- vehicle_certifications
+- eligible_route_slot_classes
+- approved_restrictions
+- notes
+rows:
+- - A1P1CDL949GCH7
+  - parcel_delivery,rescue_support
+  - XL_van,step_van
+  - cycle1_standard,cycle1_rescue
+  - ''
+  - Full-time anchor driver
+- - AKF1ZEB0TWD96
+  - parcel_delivery,on_call
+  - XL_van
+  - cycle1_standard
+  - no_shift_after_21_30
+  - Preferred for on-call cover
+- - A52BQ5U4SHE8W
+  - parcel_delivery
+  - XL_van
+  - cycle1_standard,cycle1_overflow
+  - max_4_shifts_per_week
+  - Lost-work credit candidate

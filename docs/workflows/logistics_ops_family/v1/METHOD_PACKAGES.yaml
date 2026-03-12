@@ -74,29 +74,35 @@ registry:
       notes:
         - Actual-hours snapshots are deterministic inputs for WHC risk checks.
 
-    - id: method.weekly_schedule_planning.stage04.draft_schedule_build.v1
+    - id: method.schedule_control.weekly_base_build.v1
       version: 1
       applies_to:
         workflow_id: weekly_schedule_planning.v1
         stage_id: Stage04
       execution_pattern: linear_chain
-      context_builder_ref: context.weekly_schedule_planning.stage04.draft_schedule.v1
-      tool_profile_ref: tools.weekly_schedule_planning.stage04.v1
-      output_schema_ref: schema.weekly_schedule_planning.stage04.ops_packet.v1
-      lowering_rule_ref: lowering.weekly_schedule_planning.stage04.ops_packet.v1
+      context_builder_ref: context.schedule_control.weekly_base_build.v1
+      tool_profile_ref: tools.schedule_control.weekly_base_build.v1
+      output_schema_ref: schema.schedule_control.weekly_base_build_outputs.v1
+      lowering_rule_ref: lowering.schedule_control.weekly_base_build_outputs.v1
       stop_policy:
         max_tool_calls: 24
         no_progress_ticks: 3
         on_exhaustion: escalate
       replay_policy:
         deterministic_fields:
+          - bundle_id
+          - route_slot_id
+          - candidate_delta_id
           - tenant_id
           - domain_id
           - planning_week_id
-          - candidate_assignment_id
-        allow_optional_llm_rationale: false
+          - candidate_assignment_ref
+        allow_optional_llm_rationale: true
       notes:
-        - Draft generation keeps deterministic assignment ordering before publish review.
+        - Shared schedule-control weekly mode; candidate and validation outputs stay
+          machine-checkable for Stage05/Stage06 review.
+        - Optional LLM rationale is evidence-only support and cannot override deterministic
+          hard/soft rule outcomes.
 
     - id: method.weekly_schedule_planning.stage05.manager_review.v1
       version: 1
@@ -194,16 +200,16 @@ registry:
       notes:
         - Event intake normalization preserves source ordering and idempotent dedupe keys.
 
-    - id: method.live_dispatch.stage02.issue_triage.v1
+    - id: method.schedule_control.daily_replan.v1
       version: 1
       applies_to:
         workflow_id: live_dispatch.v1
         stage_id: Stage02
       execution_pattern: bounded_exception_loop
-      context_builder_ref: context.live_dispatch.stage02.issue_packet.v1
-      tool_profile_ref: tools.live_dispatch.stage02.v1
-      output_schema_ref: schema.live_dispatch.stage02.triage_decision.v1
-      lowering_rule_ref: lowering.live_dispatch.stage02.flag_and_candidate_bundle.v1
+      context_builder_ref: context.schedule_control.daily_replan.v1
+      tool_profile_ref: tools.schedule_control.daily_replan.v1
+      output_schema_ref: schema.schedule_control.daily_replan_outputs.v1
+      lowering_rule_ref: lowering.schedule_control.daily_replan_outputs.v1
       stop_policy:
         max_tool_calls: 28
         no_progress_ticks: 4
@@ -211,11 +217,15 @@ registry:
       replay_policy:
         deterministic_fields:
           - issue_id
+          - bundle_id
+          - candidate_delta_id
           - candidate_driver_id
           - hard_filter_status
           - recommended_action
         allow_optional_llm_rationale: true
       notes:
+        - Shared schedule-control live mode for bounded issue-scoped repair and candidate-delta
+          emission.
         - Deterministic hard-filter and ranking decide ordering.
         - Optional LLM output is bounded to rationale support and cannot reorder candidates.
 

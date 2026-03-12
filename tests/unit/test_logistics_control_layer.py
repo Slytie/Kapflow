@@ -123,6 +123,8 @@ def test_activation_requests_validate_against_compiled_definitions() -> None:
     assert set(validated["required_input_dataset_keys"]) == {
         "dispatch.actual_hours_snapshot.workbook",
         "dispatch.base_schedule_seed.workbook",
+        "dispatch.driver_capabilities.workbook",
+        "dispatch.route_slot_requirements.workbook",
         "dispatch.route_delta_intake.workbook",
     }
 

@@ -2,6 +2,12 @@
 
 Record any decisions made since the last session so a fresh Codex run can rehydrate quickly.
 
+## 2026-03-12 (TASK-0067 schedule-control authored semantics + canonical bridge artifacts)
+- Artifact-authority decision: added canonical bridge artifact semantics for weekly/live schedule-control (`route_slot_requirements`, `driver_capabilities`, `input_bundle`, `candidate_schedule_delta`) and bounded Stage04/Stage02 validation evidence artifacts without introducing a second schedule truth path.
+- Derived-view decision: current operative schedule remains a derived materialization from canonical base seed + ordered promoted deltas; it is explicitly non-authoritative.
+- Exception-authority decision: open-exception packets remain derived from canonical `flags` and timeline state; no peer `planning.open_exceptions` store is authorized.
+- Method-package decision: Stage04 weekly build and Stage02 live replan packages now reference shared schedule-control family refs while keeping deterministic hard/soft rule posture and bounded optional LLM rationale.
+
 ## 2026-03-12 (TASK-0066 execution-runtime hardening for compiled agent control traceability)
 - Execution semantics evidence decision: Stage06 bounded execution now persists pinned immutable semantics artifacts (`execution.compiled_spec.json`, `execution.compile_source_manifest.json`) linked to canonical execution runtime objects; no second execution truth subsystem was introduced.
 - Artifact-link subject decision: canonical artifact linkage validation now supports `execution_session`, `tool_execution`, and `policy_decision` subjects with workflow-scope checks resolved through existing execution/session relationships.

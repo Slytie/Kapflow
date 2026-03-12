@@ -1,0 +1,18 @@
+summary:
+  summary_id: valsum-pw-2026-w10-a
+  bundle_id: bundle-pw-2026-w10-stage04-v1
+  candidate_delta_id: cand-pw-2026-w10-a
+  hard_rule_result: pass
+  hard_rule_checks:
+  - whc_limit
+  - rest_window
+  - skill_compatibility
+  - route_slot_coverage
+  soft_score_totals:
+    fairness_balance: 0.82
+    on_call_coverage: 0.91
+    lost_work_credit: 0.74
+  violations: []
+  warnings:
+  - driver AKF1ZEB0TWD96 reaches target shift ceiling by Thursday
+  recommended_action: forward_to_stage05_manager_review

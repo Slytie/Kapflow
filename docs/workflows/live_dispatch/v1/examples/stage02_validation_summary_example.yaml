@@ -1,0 +1,15 @@
+summary:
+  summary_id: valsum-sd-2026-03-06-a
+  bundle_id: bundle-sd-2026-03-06-stage02-v1
+  candidate_delta_id: cand-sd-2026-03-06-a
+  hard_rule_result: pass_with_blocked_alternates
+  hard_rule_checks:
+  - whc_limit
+  - rest_window
+  - skill_compatibility
+  - confirmed_shift_protection
+  violations: []
+  warnings:
+  - Candidate A34WEHEN1XXRKR blocked by rolling-7-day limit.
+  recommendation: forward_to_stage03_dispatcher_review
+  open_exceptions_source: canonical_flags

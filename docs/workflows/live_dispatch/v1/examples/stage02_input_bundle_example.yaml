@@ -1,0 +1,24 @@
+bundle:
+  bundle_id: bundle-sd-2026-03-06-stage02-v1
+  trigger_type: route_delta_intake
+  service_date_id: SD-2026-03-06
+  publish_intent: promote_official_replan_delta
+  referenced_artifacts:
+  - dataset_key: dispatch.base_schedule_seed.workbook
+    artifact_version_id: av-seed-sd-2026-03-06-v1
+  - dataset_key: dispatch.route_delta_intake.workbook
+    artifact_version_id: av-route-deltas-sd-2026-03-06-v3
+  - dataset_key: dispatch.actual_hours_snapshot.workbook
+    artifact_version_id: av-actuals-sd-2026-03-06-v2
+  - dataset_key: dispatch.route_slot_requirements.workbook
+    artifact_version_id: av-route-slots-sd-2026-03-06-v2
+  - dataset_key: dispatch.driver_capabilities.workbook
+    artifact_version_id: av-capabilities-sd-2026-03-06-v2
+  flags_scope:
+    source: canonical_flags
+    states:
+    - open
+    - triage
+    - blocked
+  operator_notes:
+  - Prioritize stable reassignment for already-confirmed drivers.

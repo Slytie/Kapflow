@@ -1,0 +1,23 @@
+bundle:
+  bundle_id: bundle-pw-2026-w10-stage04-v1
+  trigger_type: weekly_build
+  planning_week_id: PW-2026-W10
+  scope_dates:
+    start: '2026-03-02'
+    end_exclusive: '2026-03-09'
+  publish_intent: publish_weekly_base_schedule
+  referenced_artifacts:
+  - dataset_key: planning.route_horizon.workbook
+    artifact_version_id: av-route-horizon-pw-2026-w10-v3
+  - dataset_key: planning.approved_availability.workbook
+    artifact_version_id: av-approved-availability-pw-2026-w10-v2
+  - dataset_key: planning.actual_hours_snapshot.workbook
+    artifact_version_id: av-actual-hours-pw-2026-w10-v1
+  - dataset_key: planning.route_slot_requirements.workbook
+    artifact_version_id: av-route-slots-pw-2026-w10-v1
+  - dataset_key: planning.driver_capabilities.workbook
+    artifact_version_id: av-driver-capabilities-pw-2026-w10-v1
+  external_evidence_refs:
+  - eos-upload-2026-03-03
+  planner_notes:
+  - Keep on-call coverage above two drivers per day.

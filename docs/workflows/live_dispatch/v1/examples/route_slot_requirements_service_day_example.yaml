@@ -1,0 +1,39 @@
+source_note: Service-day slot requirements after applying weekly seed and day-of deltas.
+columns:
+- service_date
+- route_slot_id
+- route_slot_class
+- required_skill
+- vehicle_type
+- shift_start
+- shift_end
+- estimated_hours
+- source_ref
+rows:
+- - '2026-03-06'
+  - slot-20260306-cx120
+  - cycle1_standard
+  - parcel_delivery
+  - XL_van
+  - '11:45'
+  - '20:10'
+  - 8.4
+  - seed:sd-2026-03-06:slot-019
+- - '2026-03-06'
+  - slot-20260306-cx121
+  - cycle1_overflow
+  - parcel_delivery
+  - XL_van
+  - '12:10'
+  - '20:25'
+  - 8.1
+  - delta:evt-delta-20260306-1705
+- - '2026-03-06'
+  - slot-20260306-cx122
+  - cycle1_rescue
+  - rescue_support
+  - XL_van
+  - '12:15'
+  - '21:00'
+  - 8.8
+  - delta:evt-ero-20260304

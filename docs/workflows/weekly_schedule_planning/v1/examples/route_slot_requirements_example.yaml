@@ -1,0 +1,39 @@
+source_note: Expanded from normalized route-horizon rows to slot-level assignment demand.
+columns:
+- service_date
+- route_slot_id
+- route_slot_class
+- required_skill
+- vehicle_type
+- shift_start
+- shift_end
+- estimated_hours
+- source_snapshot_row_ref
+rows:
+- - '2026-03-02'
+  - slot-20260302-cx100
+  - cycle1_standard
+  - parcel_delivery
+  - XL_van
+  - '11:40'
+  - '20:10'
+  - 8.5
+  - amazon-2026-02-27-1518:row-001
+- - '2026-03-02'
+  - slot-20260302-cx101
+  - cycle1_standard
+  - parcel_delivery
+  - XL_van
+  - '11:50'
+  - '20:00'
+  - 8.2
+  - amazon-2026-02-27-1518:row-002
+- - '2026-03-03'
+  - slot-20260303-cx086
+  - cycle1_rescue
+  - rescue_support
+  - XL_van
+  - '11:45'
+  - '20:30'
+  - 8.8
+  - amazon-2026-02-27-1518:row-003

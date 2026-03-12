@@ -1,0 +1,35 @@
+source_note: Service-day capability matrix after availability, rest, and WHC eligibility filtering.
+columns:
+- service_date
+- driver_id
+- skills
+- vehicle_certifications
+- eligible_route_slot_classes
+- hard_restrictions
+- eligibility_status
+- source_ref
+rows:
+- - '2026-03-06'
+  - AKF1ZEB0TWD96
+  - parcel_delivery,on_call
+  - XL_van
+  - cycle1_standard,cycle1_overflow
+  - max_minutes_rolling7=3300
+  - eligible
+  - availability:pw-2026-w10
+- - '2026-03-06'
+  - A52BQ5U4SHE8W
+  - parcel_delivery
+  - XL_van
+  - cycle1_standard,cycle1_rescue
+  - no_shift_after_21_30
+  - eligible_with_warning
+  - actuals:sd-2026-03-05
+- - '2026-03-06'
+  - A34WEHEN1XXRKR
+  - parcel_delivery
+  - XL_van
+  - cycle1_standard
+  - rolling_7_day_limit
+  - blocked
+  - actuals:sd-2026-03-05

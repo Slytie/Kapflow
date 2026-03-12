@@ -25,6 +25,16 @@ activation_request:
         kind: registry
         pointer_id: ptr/v1/demo/ops/dispatch.actual_hours_snapshot.workbook/ServiceDateID/SD-2026-03-06/stream/actuals
       expected_generation: 0
+    - binding_key: route_slot_requirements
+      state_ref:
+        kind: registry
+        pointer_id: ptr/v1/demo/ops/dispatch.route_slot_requirements.workbook/ServiceDateID/SD-2026-03-06/stream/latest
+      expected_generation: 0
+    - binding_key: driver_capabilities
+      state_ref:
+        kind: registry
+        pointer_id: ptr/v1/demo/ops/dispatch.driver_capabilities.workbook/ServiceDateID/SD-2026-03-06/stream/latest
+      expected_generation: 0
   governance_context:
     tenant_id: demo
     domain_id: ops

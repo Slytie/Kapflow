@@ -1,0 +1,39 @@
+source_note: Machine-checkable dispatch candidate delta for bounded issue repair.
+columns:
+- candidate_delta_id
+- issue_id
+- route_slot_id
+- route_id
+- proposed_driver_id
+- action
+- hard_filter_status
+- score_bucket
+- source_bundle_id
+rows:
+- - cand-sd-2026-03-06-a
+  - issue-20260306-routeplus1
+  - slot-20260306-cx121
+  - CX121
+  - AKF1ZEB0TWD96
+  - offer_added_route
+  - pass
+  - best
+  - bundle-sd-2026-03-06-stage02-v1
+- - cand-sd-2026-03-06-a
+  - issue-20260306-routeplus1
+  - slot-20260306-cx121
+  - CX121
+  - A52BQ5U4SHE8W
+  - offer_if_primary_declines
+  - pass
+  - good
+  - bundle-sd-2026-03-06-stage02-v1
+- - cand-sd-2026-03-06-a
+  - issue-20260306-routeplus1
+  - slot-20260306-cx121
+  - CX121
+  - A34WEHEN1XXRKR
+  - do_not_offer
+  - blocked
+  - n/a
+  - bundle-sd-2026-03-06-stage02-v1

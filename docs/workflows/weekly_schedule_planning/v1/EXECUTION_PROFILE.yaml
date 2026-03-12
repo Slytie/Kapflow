@@ -73,6 +73,11 @@ profile:
     - projection.render
     side_effect_policy: draft_only
     required_evidence_keys:
+    - planning.route_slot_requirements.workbook
+    - planning.driver_capabilities.workbook
+    - planning.input_bundle.doc
+    - planning.candidate_schedule_delta.workbook
+    - planning.validation_summary.doc
     - planning.draft_weekly_schedule.doc
     - planning.draft_weekly_schedule.workbook
     decision_refs: []
@@ -84,8 +89,12 @@ profile:
     - planning.stage04.ops_packet
     extensions:
       guidance:
+      - Resolve the canonical schedule-control input bundle before candidate generation;
+        do not infer missing bridge inputs from prose.
       - Objective is driver-to-route assignment, not vehicle routing. Use hard filters
         first, then rank by fairness and stability.
+      - Candidate and validation outputs must stay machine-checkable and reviewable;
+        official weekly truth is still produced only at Stage06 pointer promotion.
   - stage_id: Stage05
     execution_pattern: linear_chain
     allowed_tool_classes:

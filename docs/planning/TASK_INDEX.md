@@ -68,3 +68,4 @@
 | TASK-0064 | EPIC-080 | DONE | high | Three-workflow logistics demo shell, primary route switch, and schedule-only legacy demotion |
 | TASK-0065 | EPIC-070 | DONE | high | Logistics-first Codex routing, tracked-secret hygiene, and weekly-agent env-gate posture |
 | TASK-0066 | EPIC-070 | DONE | high | Execution-runtime hardening for compiled agent control, pinned semantics evidence, and execution-facet trace linkage |
+| TASK-0067 | EPIC-025 | DONE | high | Authored schedule-control semantics and canonical bridge artifacts for weekly/live logistics |

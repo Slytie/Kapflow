@@ -15,13 +15,23 @@ artifact_sets:
   - key: dispatch.actual_hours_snapshot.workbook
     role: official_input
     template_source: Stage01_Baseline_and_Event_Intake/Stage01_Baseline_and_Event_Intake_actual_hours_snapshot_Spreadsheet_Template_EMPTY.xlsx
+  - key: dispatch.route_slot_requirements.workbook
+    role: official_input
+  - key: dispatch.driver_capabilities.workbook
+    role: official_input
   Stage02:
+  - key: dispatch.input_bundle.doc
+    role: official_input
   - key: dispatch.issue_board.doc
     role: evidence
     template_source: Stage02_Issue_Triage_and_Candidate_Generation/Stage02_Issue_Triage_and_Candidate_Generation_issue_board_Document_Template_EMPTY.docx
   - key: dispatch.replan_candidate.workbook
     role: official_input
     template_source: Stage02_Issue_Triage_and_Candidate_Generation/Stage02_Issue_Triage_and_Candidate_Generation_replan_candidate_Spreadsheet_Template_EMPTY.xlsx
+  - key: dispatch.candidate_schedule_delta.workbook
+    role: official_input
+  - key: dispatch.validation_summary.doc
+    role: evidence
   Stage03:
   - key: dispatch.dispatcher_review.doc
     role: evidence

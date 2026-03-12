@@ -13,6 +13,8 @@ profile:
     - dispatch.base_schedule_seed.doc
     - dispatch.route_delta_intake.workbook
     - dispatch.actual_hours_snapshot.workbook
+    - dispatch.route_slot_requirements.workbook
+    - dispatch.driver_capabilities.workbook
     decision_refs: []
     stop_rules:
       max_tool_calls: 12
@@ -33,8 +35,11 @@ profile:
     - projection.render
     side_effect_policy: commit_requires_conditional_business_decision
     required_evidence_keys:
+    - dispatch.input_bundle.doc
     - dispatch.issue_board.doc
     - dispatch.replan_candidate.workbook
+    - dispatch.candidate_schedule_delta.workbook
+    - dispatch.validation_summary.doc
     decision_refs: []
     stop_rules:
       max_tool_calls: 28
@@ -46,6 +51,10 @@ profile:
       guidance:
       - Filter deterministically first. Ranking may use code plus a narrow LLM rationale
         helper, but not unconstrained branching.
+      - Open-exception views must resolve from canonical flags; do not introduce a
+        peer exception authority packet.
+      - Candidate deltas are review artifacts for ordered promotion, not a new full-schedule
+        truth object.
   - stage_id: Stage03
     execution_pattern: linear_chain
     allowed_tool_classes:

@@ -275,8 +275,26 @@ datasets:
   partitioned_by:
   - ServiceDateID
   sensitivity: internal
+- key: dispatch.candidate_schedule_delta.workbook
+  description: Candidate schedule-delta workbook for dispatcher review
+  kind: spreadsheet
+  partitioned_by:
+  - ServiceDateID
+  sensitivity: confidential
+- key: dispatch.driver_capabilities.workbook
+  description: Service-day driver capability matrix workbook for hard-rule validation
+  kind: spreadsheet
+  partitioned_by:
+  - ServiceDateID
+  sensitivity: confidential
 - key: dispatch.dispatcher_review.doc
   description: Dispatcher review document
+  kind: document
+  partitioned_by:
+  - ServiceDateID
+  sensitivity: internal
+- key: dispatch.input_bundle.doc
+  description: Canonical dispatch schedule-control input bundle document
   kind: document
   partitioned_by:
   - ServiceDateID
@@ -317,6 +335,18 @@ datasets:
   partitioned_by:
   - ServiceDateID
   sensitivity: confidential
+- key: dispatch.route_slot_requirements.workbook
+  description: Service-day route-slot requirement workbook derived from weekly route demand
+  kind: spreadsheet
+  partitioned_by:
+  - ServiceDateID
+  sensitivity: confidential
+- key: dispatch.validation_summary.doc
+  description: Validation summary document for dispatch candidate deltas
+  kind: document
+  partitioned_by:
+  - ServiceDateID
+  sensitivity: internal
 - key: planning.actual_hours_snapshot.doc
   description: Actual-hours carry-forward summary
   kind: document
@@ -337,6 +367,12 @@ datasets:
   sensitivity: internal
 - key: planning.approved_availability.workbook
   description: Approved availability and standing-pattern workbook
+  kind: spreadsheet
+  partitioned_by:
+  - PlanningWeekID
+  sensitivity: confidential
+- key: planning.candidate_schedule_delta.workbook
+  description: Candidate weekly schedule-delta workbook for review before publication
   kind: spreadsheet
   partitioned_by:
   - PlanningWeekID
@@ -365,6 +401,18 @@ datasets:
   partitioned_by:
   - PlanningWeekID
   sensitivity: confidential
+- key: planning.driver_capabilities.workbook
+  description: Weekly driver capability matrix workbook for route-slot hard-rule checks
+  kind: spreadsheet
+  partitioned_by:
+  - PlanningWeekID
+  sensitivity: confidential
+- key: planning.input_bundle.doc
+  description: Canonical weekly schedule-control input bundle document
+  kind: document
+  partitioned_by:
+  - PlanningWeekID
+  sensitivity: internal
 - key: planning.manager_review.doc
   description: Manager weekly review record
   kind: document
@@ -395,6 +443,18 @@ datasets:
   partitioned_by:
   - PlanningWeekID
   sensitivity: confidential
+- key: planning.route_slot_requirements.workbook
+  description: Weekly route-slot requirement workbook expanded for assignment-level planning
+  kind: spreadsheet
+  partitioned_by:
+  - PlanningWeekID
+  sensitivity: confidential
+- key: planning.validation_summary.doc
+  description: Validation summary document for weekly candidate schedule deltas
+  kind: document
+  partitioned_by:
+  - PlanningWeekID
+  sensitivity: internal
 - key: reporting.actuals_normalized.doc
   description: Normalized actuals summary document
   kind: document

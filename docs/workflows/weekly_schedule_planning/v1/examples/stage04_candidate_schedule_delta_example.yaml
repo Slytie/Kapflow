@@ -1,0 +1,39 @@
+source_note: Machine-checkable weekly candidate delta output from Stage04 schedule-control run.
+columns:
+- candidate_delta_id
+- route_slot_id
+- service_date
+- route_id
+- assigned_driver_id
+- assignment_action
+- rationale_code
+- projected_minutes
+- source_bundle_id
+rows:
+- - cand-pw-2026-w10-a
+  - slot-20260302-cx100
+  - '2026-03-02'
+  - CX100
+  - A1P1CDL949GCH7
+  - assign
+  - hard_rules_pass_soft_rank_best
+  - 510
+  - bundle-pw-2026-w10-stage04-v1
+- - cand-pw-2026-w10-a
+  - slot-20260302-cx101
+  - '2026-03-02'
+  - CX101
+  - AKF1ZEB0TWD96
+  - assign
+  - on_call_balance_target
+  - 495
+  - bundle-pw-2026-w10-stage04-v1
+- - cand-pw-2026-w10-a
+  - slot-20260303-cx086
+  - '2026-03-03'
+  - CX86
+  - A52BQ5U4SHE8W
+  - assign
+  - lost_work_credit_no_whc_block
+  - 505
+  - bundle-pw-2026-w10-stage04-v1
