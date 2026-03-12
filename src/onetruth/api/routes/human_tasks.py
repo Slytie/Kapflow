@@ -9,6 +9,7 @@ from onetruth.application.handlers.workflow_task_lifecycle import (
     claim_human_task_command,
     complete_human_task_command,
     confirm_human_task_review_command,
+    list_artifacts_for_subject_command,
     show_human_task_command,
 )
 from onetruth.application.services.task_actionability import (
@@ -32,6 +33,70 @@ from onetruth.api.errors import (
     api_error_from_command,
     api_error_from_duplicate_idempotency,
 )
+
+
+TASK_SUBGRAPH_TEMPLATES: dict[str, dict[str, Any]] = {
+    "actual_hours_review": {
+        "template_id": "schedule_planning.feedback_review.v1",
+        "title": "Planning feedback review",
+        "nodes": [
+            {"node_id": "ingest_actual_hours", "label": "Ingest actual-hours snapshot"},
+            {"node_id": "reconcile_plan_variance", "label": "Reconcile plan variance"},
+            {"node_id": "draft_feedback_packet", "label": "Draft planning feedback packet"},
+            {"node_id": "publish_feedback_handoff", "label": "Publish feedback handoff"},
+        ],
+    },
+    "planning_feedback_review": {
+        "template_id": "schedule_planning.feedback_review.v1",
+        "title": "Planning feedback review",
+        "nodes": [
+            {"node_id": "ingest_actual_hours", "label": "Ingest actual-hours snapshot"},
+            {"node_id": "reconcile_plan_variance", "label": "Reconcile plan variance"},
+            {"node_id": "draft_feedback_packet", "label": "Draft planning feedback packet"},
+            {"node_id": "publish_feedback_handoff", "label": "Publish feedback handoff"},
+        ],
+    },
+    "dispatcher_review": {
+        "template_id": "live_dispatch.seed_intake.v1",
+        "title": "Live dispatch seed intake",
+        "nodes": [
+            {"node_id": "ingest_weekly_seed", "label": "Ingest weekly seed package"},
+            {"node_id": "verify_route_delta", "label": "Verify route delta inputs"},
+            {"node_id": "resolve_capacity_conflicts", "label": "Resolve capacity conflicts"},
+            {"node_id": "dispatch_ready_confirmation", "label": "Confirm dispatch readiness"},
+        ],
+    },
+    "dispatch_seed_intake": {
+        "template_id": "live_dispatch.seed_intake.v1",
+        "title": "Live dispatch seed intake",
+        "nodes": [
+            {"node_id": "ingest_weekly_seed", "label": "Ingest weekly seed package"},
+            {"node_id": "verify_route_delta", "label": "Verify route delta inputs"},
+            {"node_id": "resolve_capacity_conflicts", "label": "Resolve capacity conflicts"},
+            {"node_id": "dispatch_ready_confirmation", "label": "Confirm dispatch readiness"},
+        ],
+    },
+    "final_packet_review": {
+        "template_id": "dispatch_reporting.final_packet.v1",
+        "title": "Reporting packet closeout",
+        "nodes": [
+            {"node_id": "collect_route_metrics", "label": "Collect route metrics"},
+            {"node_id": "reconcile_variance_notes", "label": "Reconcile variance notes"},
+            {"node_id": "finalize_reporting_packet", "label": "Finalize reporting packet"},
+            {"node_id": "notify_planning_feedback", "label": "Notify planning feedback"},
+        ],
+    },
+    "finalize_reporting_packet": {
+        "template_id": "dispatch_reporting.final_packet.v1",
+        "title": "Reporting packet closeout",
+        "nodes": [
+            {"node_id": "collect_route_metrics", "label": "Collect route metrics"},
+            {"node_id": "reconcile_variance_notes", "label": "Reconcile variance notes"},
+            {"node_id": "finalize_reporting_packet", "label": "Finalize reporting packet"},
+            {"node_id": "notify_planning_feedback", "label": "Notify planning feedback"},
+        ],
+    },
+}
 
 
 def list_human_tasks_endpoint(
@@ -83,6 +148,39 @@ def get_human_task_endpoint(
     return {
         "command": "api.human_tasks.detail",
         "human_task": enriched[0],
+    }
+
+
+def get_human_task_subgraph_endpoint(
+    connection: sqlite3.Connection,
+    *,
+    context: RequestContext,
+    human_task_id: str,
+) -> dict[str, Any]:
+    _ensure_human_task_in_scope(connection, context=context, human_task_id=human_task_id)
+    try:
+        human_task = show_human_task_command(connection, human_task_id)
+    except CommandError as exc:
+        raise api_error_from_command(exc) from exc
+
+    metadata = _composite_task_metadata(human_task)
+    if not bool(metadata["is_composite"]):
+        raise ApiError(
+            status_code=409,
+            code="task_subgraph_not_available",
+            message="task does not expose a composite subgraph",
+            details={
+                "human_task_id": human_task_id,
+                "task_kind": str(human_task.get("task_kind") or ""),
+            },
+        )
+
+    return {
+        "command": "api.human_tasks.subgraph",
+        "human_task_id": human_task_id,
+        "is_composite": True,
+        "expansion_kind": "task_subgraph",
+        "subgraph": _build_task_subgraph(connection, human_task=human_task),
     }
 
 
@@ -362,8 +460,166 @@ def _enrich_human_tasks_with_actionability(
             linked_artifact_count=linked_artifact_count,
             requirement_state=requirements_by_run.get(workflow_run_id, {}).get(human_task_id),
         )
-        enriched.append({**task, **actionability})
+        enriched.append({**task, **actionability, **_composite_task_metadata(task)})
     return enriched
+
+
+def _composite_task_metadata(task: dict[str, Any]) -> dict[str, Any]:
+    task_kind = str(task.get("task_kind") or "").strip()
+    human_task_id = str(task.get("human_task_id") or "").strip()
+    if task_kind not in TASK_SUBGRAPH_TEMPLATES:
+        return {
+            "is_composite": False,
+            "expansion_kind": "none",
+            "subgraph_ref": None,
+        }
+    return {
+        "is_composite": True,
+        "expansion_kind": "task_subgraph",
+        "subgraph_ref": {
+            "human_task_id": human_task_id,
+            "endpoint": f"/api/v1/human-tasks/{human_task_id}/subgraph",
+        },
+    }
+
+
+def _build_task_subgraph(
+    connection: sqlite3.Connection,
+    *,
+    human_task: dict[str, Any],
+) -> dict[str, Any]:
+    task_kind = str(human_task.get("task_kind") or "").strip()
+    template = TASK_SUBGRAPH_TEMPLATES.get(task_kind)
+    if template is None:
+        raise ApiError(
+            status_code=409,
+            code="task_subgraph_not_available",
+            message="task does not expose a composite subgraph",
+            details={"task_kind": task_kind},
+        )
+
+    template_nodes = list(template.get("nodes") or [])
+    status_for_index = _task_subgraph_status_by_index(
+        task_state=str(human_task.get("state") or "OPEN"),
+        node_count=len(template_nodes),
+    )
+    nodes: list[dict[str, Any]] = []
+    for index, template_node in enumerate(template_nodes):
+        nodes.append(
+            {
+                "node_id": str(template_node["node_id"]),
+                "label": str(template_node["label"]),
+                "node_kind": "step",
+                "status": status_for_index[index],
+                "row": 0,
+                "column": index,
+                "is_blocking": False,
+            }
+        )
+
+    edges: list[dict[str, Any]] = []
+    for index in range(max(len(nodes) - 1, 0)):
+        left = nodes[index]
+        right = nodes[index + 1]
+        edges.append(
+            {
+                "edge_id": f"{left['node_id']}->{right['node_id']}",
+                "from_node_id": str(left["node_id"]),
+                "to_node_id": str(right["node_id"]),
+                "edge_kind": "linear",
+                "label": None,
+            }
+        )
+
+    task_run_artifact_refs = _artifact_refs_for_subject(
+        connection,
+        workflow_run_id=str(human_task["workflow_run_id"]),
+        subject_kind="task_run",
+        subject_id=str(human_task["task_run_id"]),
+        source_label="Task step output",
+    )
+    human_task_artifact_refs = _artifact_refs_for_subject(
+        connection,
+        workflow_run_id=str(human_task["workflow_run_id"]),
+        subject_kind="human_task",
+        subject_id=str(human_task["human_task_id"]),
+        source_label="Task attachment",
+    )
+    artifact_refs_by_id = {
+        str(item["artifact_version_id"]): item
+        for item in [*task_run_artifact_refs, *human_task_artifact_refs]
+    }
+    artifact_refs = sorted(
+        artifact_refs_by_id.values(),
+        key=lambda item: str(item["label"]).lower(),
+    )
+
+    updated_at = str(human_task.get("updated_at") or "")
+    return {
+        "graph_id": f"task_subgraph:{human_task['human_task_id']}",
+        "template_id": str(template.get("template_id") or ""),
+        "title": str(template.get("title") or "Task subgraph"),
+        "nodes": nodes,
+        "edges": edges,
+        "freshness": {
+            "status": "fresh" if updated_at else "unknown",
+            "as_of": updated_at or None,
+            "note": "Derived from canonical human-task/task-run state",
+        },
+        "artifact_refs": artifact_refs,
+    }
+
+
+def _artifact_refs_for_subject(
+    connection: sqlite3.Connection,
+    *,
+    workflow_run_id: str,
+    subject_kind: str,
+    subject_id: str,
+    source_label: str,
+) -> list[dict[str, str]]:
+    artifacts = list_artifacts_for_subject_command(
+        connection,
+        workflow_run_id=workflow_run_id,
+        subject_kind=subject_kind,
+        subject_id=subject_id,
+    )
+    refs: list[dict[str, str]] = []
+    for artifact in artifacts:
+        metadata = artifact.get("metadata_json")
+        file_name = metadata.get("file_name") if isinstance(metadata, dict) else None
+        label = str(file_name).strip() if isinstance(file_name, str) else ""
+        if not label:
+            label = str(artifact.get("artifact_kind") or artifact.get("artifact_version_id") or "artifact")
+        refs.append(
+            {
+                "artifact_version_id": str(artifact["artifact_version_id"]),
+                "label": label,
+                "source_label": source_label,
+            }
+        )
+    return refs
+
+
+def _task_subgraph_status_by_index(*, task_state: str, node_count: int) -> list[str]:
+    if node_count <= 0:
+        return []
+
+    normalized = task_state.strip().upper()
+    if normalized == "COMPLETED":
+        return ["completed" for _ in range(node_count)]
+    if normalized == "CLAIMED":
+        statuses = ["not_started" for _ in range(node_count)]
+        statuses[0] = "completed"
+        if node_count > 1:
+            statuses[1] = "in_progress"
+        if node_count > 2:
+            statuses[2] = "ready"
+        return statuses
+
+    statuses = ["not_started" for _ in range(node_count)]
+    statuses[0] = "in_progress"
+    return statuses
 
 
 def _ensure_human_task_in_scope(

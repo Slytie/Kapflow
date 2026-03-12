@@ -1,5 +1,45 @@
 export type HumanTaskState = "OPEN" | "CLAIMED" | "COMPLETED";
 export type ApprovalState = "PENDING" | "RESPONDED";
+export type HumanTaskExpansionKind = "none" | "task_subgraph";
+
+export interface HumanTaskSubgraphRef {
+  human_task_id: string;
+  endpoint: string;
+}
+
+export interface HumanTaskSubgraphNode {
+  node_id: string;
+  label: string;
+  node_kind: "step" | "gate";
+  status: WorkflowWorkspaceNodeStatus;
+  row: number;
+  column: number;
+  is_blocking: boolean;
+}
+
+export interface HumanTaskSubgraphEdge {
+  edge_id: string;
+  from_node_id: string;
+  to_node_id: string;
+  edge_kind: "linear" | "branch" | "loopback";
+  label: string | null;
+}
+
+export interface HumanTaskSubgraphArtifactRef {
+  artifact_version_id: string;
+  label: string;
+  source_label: string;
+}
+
+export interface HumanTaskSubgraph {
+  graph_id: string;
+  template_id: string;
+  title: string;
+  nodes: HumanTaskSubgraphNode[];
+  edges: HumanTaskSubgraphEdge[];
+  freshness: WorkflowWorkspaceFreshness;
+  artifact_refs: HumanTaskSubgraphArtifactRef[];
+}
 
 export interface HumanTaskRow {
   human_task_id: string;
@@ -31,6 +71,9 @@ export interface HumanTaskRow {
   blocking_reason_codes?: string[];
   can_complete?: boolean;
   can_confirm_review?: boolean;
+  is_composite?: boolean;
+  expansion_kind?: HumanTaskExpansionKind;
+  subgraph_ref?: HumanTaskSubgraphRef | null;
 }
 
 export interface ApprovalRow {

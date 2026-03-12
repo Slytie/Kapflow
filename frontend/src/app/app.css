@@ -81,6 +81,19 @@
   font-weight: 500;
 }
 
+.app-shell__secondary-nav {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.app-shell__secondary-nav p {
+  margin: 0;
+  color: #848992;
+  font-size: 12px;
+}
+
 .app-shell__main {
   grid-column: 1;
   grid-row: 2;
@@ -423,6 +436,126 @@
   padding-left: 16px;
 }
 
+.logistics-demo-page__selection-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 10px;
+}
+
+.logistics-demo-page__selection-card {
+  border: 1px solid #e1ddd8;
+  border-radius: 10px;
+  background: #fff;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.logistics-demo-page__selection-card h4 {
+  margin: 0;
+}
+
+.logistics-demo-page__selection-card h5 {
+  margin: 0;
+  color: #4d525a;
+}
+
+.logistics-demo-page__selection-card p {
+  margin: 0;
+  color: #616770;
+  font-size: 13px;
+}
+
+.logistics-demo-page__selection-fields {
+  margin: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 8px;
+}
+
+.logistics-demo-page__selection-fields div {
+  border-top: 1px dashed #e1ddd8;
+  padding-top: 6px;
+}
+
+.logistics-demo-page__selection-fields dt {
+  font-size: 11px;
+  text-transform: uppercase;
+  color: #7d838b;
+}
+
+.logistics-demo-page__selection-fields dd {
+  margin: 0;
+  font-size: 13px;
+  color: #4a4f57;
+}
+
+.logistics-demo-page__artifact-actions ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.logistics-demo-page__artifact-actions li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.logistics-demo-page__artifact-actions span {
+  color: #6c727a;
+  font-size: 12px;
+}
+
+.logistics-demo-page__run-chooser {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.logistics-demo-page__run-option {
+  border: 1px solid #d6d1ca;
+  border-radius: 8px;
+  background: #fbfaf8;
+  color: #474d56;
+  padding: 8px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.logistics-demo-page__run-option:focus-visible {
+  outline: 2px solid #4a6fa1;
+  outline-offset: 2px;
+}
+
+.logistics-demo-page__run-option.is-selected {
+  border-color: #4a6fa1;
+  background: #eff3fb;
+}
+
+.logistics-demo-page__secondary-links {
+  border-top: 1px dashed #e1ddd8;
+  margin-top: 6px;
+  padding-top: 8px;
+}
+
+.logistics-demo-page__secondary-links p {
+  margin: 0 0 6px;
+  color: #6c727a;
+  font-size: 12px;
+}
+
+.logistics-demo-page__secondary-links div {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
 .logistics-demo-page__board-item {
   border: 1px solid #e4e0da;
   border-radius: 10px;
@@ -538,6 +671,108 @@
   flex-wrap: wrap;
   gap: 8px;
   margin-top: 8px;
+}
+
+.detail-drawer__subgraph {
+  margin-top: 12px;
+  border: 1px solid var(--ink-200);
+  border-radius: 10px;
+  background: #f8fbff;
+  padding: 10px;
+}
+
+.detail-drawer__subgraph h4 {
+  margin: 0 0 8px;
+  font-size: 13px;
+  color: var(--ink-800);
+}
+
+.detail-drawer__subgraph-contents {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.detail-drawer__subgraph-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
+  gap: 8px;
+}
+
+.detail-drawer__subgraph-node-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.detail-drawer__subgraph-node-btn {
+  width: 100%;
+  border: 1px solid var(--ink-200);
+  border-radius: 8px;
+  background: white;
+  color: var(--ink-900);
+  padding: 7px 8px;
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+  text-align: left;
+}
+
+.detail-drawer__subgraph-node-btn.is-selected {
+  border-color: var(--accent);
+  box-shadow: inset 0 0 0 1px var(--accent);
+}
+
+.detail-drawer__subgraph-node-btn:focus-visible {
+  outline: 2px solid #4a6fa1;
+  outline-offset: 2px;
+}
+
+.detail-drawer__subgraph-node-status {
+  text-transform: capitalize;
+  font-size: 11px;
+  color: var(--ink-600);
+  white-space: nowrap;
+}
+
+.detail-drawer__subgraph-node-detail {
+  border: 1px dashed var(--ink-200);
+  border-radius: 8px;
+  background: white;
+  padding: 8px;
+}
+
+.detail-drawer__subgraph-node-title {
+  margin: 0;
+  font-weight: 600;
+}
+
+.detail-drawer__subgraph-node-meta {
+  margin: 2px 0 0;
+  color: var(--ink-700);
+  font-size: 12px;
+  text-transform: capitalize;
+}
+
+.detail-drawer__subgraph-edge-list {
+  margin: 8px 0 0;
+  padding-left: 16px;
+  color: var(--ink-700);
+  font-size: 12px;
+}
+
+.detail-drawer__subgraph-freshness {
+  margin: 0;
+  color: var(--ink-700);
+  font-size: 12px;
+}
+
+.detail-drawer__artifact-row--subgraph {
+  align-items: center;
 }
 
 .detail-drawer__field {
@@ -1148,6 +1383,12 @@
     width: 100%;
   }
 
+  .app-shell__secondary-nav {
+    margin-left: 0;
+    width: 100%;
+    flex-wrap: wrap;
+  }
+
   .board-grid {
     grid-template-columns: repeat(2, minmax(220px, 1fr));
   }
@@ -1157,6 +1398,10 @@
   }
 
   .split-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .detail-drawer__subgraph-layout {
     grid-template-columns: 1fr;
   }
 

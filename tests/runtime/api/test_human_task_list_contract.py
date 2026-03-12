@@ -49,6 +49,12 @@ EXPECTED_ACTIONABILITY_KEYS = {
     "can_run_stage06_agent_review",
 }
 
+EXPECTED_EXPANSION_KEYS = {
+    "is_composite",
+    "expansion_kind",
+    "subgraph_ref",
+}
+
 
 def _api_client(harness: RuntimeScenarioHarness) -> RuntimeApiClient:
     return RuntimeApiClient(
@@ -78,6 +84,7 @@ def test_human_task_list_contract_and_filters(tmp_path: Path) -> None:
     assert len(rows) == 1
     assert EXPECTED_BASE_KEYS.issubset(set(rows[0].keys()))
     assert EXPECTED_ACTIONABILITY_KEYS.issubset(set(rows[0].keys()))
+    assert EXPECTED_EXPANSION_KEYS.issubset(set(rows[0].keys()))
     assert rows[0]["state"] == "CLAIMED"
     assert rows[0]["assignee_actor_id"] == "human:dispatch-supervisor-1"
 
@@ -87,6 +94,7 @@ def test_human_task_list_contract_and_filters(tmp_path: Path) -> None:
     assert detail.payload["command"] == "api.human_tasks.detail"
     assert EXPECTED_BASE_KEYS.issubset(set(detail.payload["human_task"].keys()))
     assert EXPECTED_ACTIONABILITY_KEYS.issubset(set(detail.payload["human_task"].keys()))
+    assert EXPECTED_EXPANSION_KEYS.issubset(set(detail.payload["human_task"].keys()))
 
     filtered_claimed = client.get(
         "/api/v1/human-tasks",

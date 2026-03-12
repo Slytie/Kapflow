@@ -11,10 +11,12 @@ describe("RunsPage", () => {
     });
 
     expect(await screen.findByText("Workflow Runs (Legacy Detail Views)")).toBeInTheDocument();
-    const workspaceLink = screen.getByRole("link", { name: "Open workspace" });
-    const detailLink = screen.getByRole("link", { name: "View run detail" });
+    const workspaceLinks = screen.getAllByRole("link", { name: "Open workspace" });
+    const detailLinks = screen.getAllByRole("link", { name: "View run detail" });
 
-    expect(workspaceLink).toHaveAttribute("href", "/runs/wr-test-001/workspace");
-    expect(detailLink).toHaveAttribute("href", "/runs/wr-test-001");
+    expect(workspaceLinks[0]).toHaveAttribute("href", "/runs/wr-test-001/workspace");
+    expect(detailLinks[0]).toHaveAttribute("href", "/runs/wr-test-001");
+    expect(workspaceLinks.length).toBeGreaterThan(1);
+    expect(detailLinks.length).toBeGreaterThan(1);
   });
 });

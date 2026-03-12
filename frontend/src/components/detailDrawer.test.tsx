@@ -202,4 +202,120 @@ describe("Detail drawer flow", () => {
     runStage06Spy.mockRestore();
     getSpy.mockRestore();
   });
+
+  it("lazy-loads composite task subgraph and collapses with Escape", async () => {
+    const user = userEvent.setup();
+    const getSpy = vi.spyOn(humanTasksRepository, "get").mockResolvedValue({
+      ...task,
+      task_kind: "planning_feedback_review",
+      available_actions: ["claim"],
+      missing_required_inputs: [],
+      blocking_reason_codes: [],
+      is_composite: true,
+      expansion_kind: "task_subgraph",
+      subgraph_ref: {
+        human_task_id: "ht-2",
+        endpoint: "/api/v1/human-tasks/ht-2/subgraph"
+      }
+    });
+    const getSubgraphSpy = vi.spyOn(humanTasksRepository, "getSubgraph").mockResolvedValue({
+      graph_id: "task_subgraph:ht-2",
+      template_id: "schedule_planning.feedback_review.v1",
+      title: "Planning feedback review",
+      nodes: [
+        {
+          node_id: "ingest_actual_hours",
+          label: "Ingest actual-hours snapshot",
+          node_kind: "step",
+          status: "in_progress",
+          row: 0,
+          column: 0,
+          is_blocking: false
+        },
+        {
+          node_id: "reconcile_plan_variance",
+          label: "Reconcile plan variance",
+          node_kind: "step",
+          status: "not_started",
+          row: 0,
+          column: 1,
+          is_blocking: false
+        }
+      ],
+      edges: [
+        {
+          edge_id: "ingest_actual_hours->reconcile_plan_variance",
+          from_node_id: "ingest_actual_hours",
+          to_node_id: "reconcile_plan_variance",
+          edge_kind: "linear",
+          label: null
+        }
+      ],
+      freshness: {
+        status: "fresh",
+        as_of: "2026-03-09T10:00:00Z",
+        note: "Mock freshness"
+      },
+      artifact_refs: [
+        {
+          artifact_version_id: "av-subgraph-1",
+          label: "actual-hours.xlsx",
+          source_label: "Task step output"
+        }
+      ]
+    });
+    vi.spyOn(onetruthApi, "listArtifactsForSubject").mockResolvedValue([]);
+    renderWithQueryClient(
+      <DetailDrawer
+        payload={{
+          title: "Stage03 planning_feedback_review",
+          subtitle: "ht-2",
+          fields: [],
+          task: {
+            human_task_id: "ht-2",
+            workflow_run_id: "wr-2",
+            task_run_id: "tr-2",
+            stage_id: "Stage03",
+            task_kind: "planning_feedback_review",
+            state: "OPEN",
+            assignee_actor_id: null,
+            assignee_actor_type: null,
+            owner_role: "dispatch_supervisor",
+            available_actions: ["claim"],
+            blocking_reason_codes: [],
+            missing_required_inputs: [],
+            is_composite: true,
+            expansion_kind: "task_subgraph",
+            subgraph_ref: {
+              human_task_id: "ht-2",
+              endpoint: "/api/v1/human-tasks/ht-2/subgraph"
+            }
+          }
+        }}
+        onClose={() => undefined}
+      />
+    );
+
+    const expandButton = await screen.findByRole("button", { name: "Expand process" });
+    await user.click(expandButton);
+
+    await waitFor(() => {
+      expect(getSubgraphSpy).toHaveBeenCalledWith("ht-2");
+    });
+    expect(await screen.findByRole("heading", { name: "Task process" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Ingest actual-hours snapshot/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Download" })).toBeInTheDocument();
+
+    await user.keyboard("{Escape}");
+    expect(screen.queryByRole("heading", { name: "Task process" })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Expand process" })).toHaveFocus();
+
+    await user.click(screen.getByRole("button", { name: "Expand process" }));
+    await waitFor(() => {
+      expect(getSubgraphSpy).toHaveBeenCalledTimes(1);
+    });
+
+    getSpy.mockRestore();
+    getSubgraphSpy.mockRestore();
+  });
 });

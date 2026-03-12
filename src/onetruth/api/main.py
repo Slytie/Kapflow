@@ -51,6 +51,7 @@ from onetruth.api.routes.human_tasks import (
     complete_human_task_endpoint,
     confirm_human_task_review_endpoint,
     get_human_task_endpoint,
+    get_human_task_subgraph_endpoint,
     list_human_tasks_endpoint,
     run_stage06_agent_review_endpoint,
 )
@@ -201,6 +202,17 @@ def _match_route(method: str, path: str) -> MatchedRoute | None:
                 name="human_tasks.detail",
                 params={"human_task_id": human_task_id},
             )
+    if method == "GET" and path.endswith("/subgraph"):
+        prefix = "/api/v1/human-tasks/"
+        suffix = "/subgraph"
+        if path.startswith(prefix) and len(path) > len(prefix) + len(suffix):
+            human_task_id = path[len(prefix) : -len(suffix)]
+            if human_task_id and "/" not in human_task_id:
+                return MatchedRoute(
+                    method=method,
+                    name="human_tasks.subgraph",
+                    params={"human_task_id": human_task_id},
+                )
     if method == "GET" and path.endswith("/artifacts"):
         prefix = "/api/v1/human-tasks/"
         suffix = "/artifacts"
@@ -488,6 +500,12 @@ def _dispatch_route(
         )
     if matched.name == "human_tasks.detail":
         return get_human_task_endpoint(
+            connection,
+            context=context,
+            human_task_id=matched.params["human_task_id"],
+        )
+    if matched.name == "human_tasks.subgraph":
+        return get_human_task_subgraph_endpoint(
             connection,
             context=context,
             human_task_id=matched.params["human_task_id"],

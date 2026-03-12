@@ -2,6 +2,12 @@
 
 Record any decisions made since the last session so a fresh Codex run can rehydrate quickly.
 
+## 2026-03-09 (TASK-0068 composite-task subgraphs + drawer hardening)
+- Human-task drill-down contract decision: keep `GET /api/v1/human-tasks/{id}` as the canonical detail seam and extend it with optional composite metadata (`is_composite`, `expansion_kind`, `subgraph_ref`) while keeping non-composite tasks unchanged.
+- Task-subgraph endpoint decision: add `GET /api/v1/human-tasks/{id}/subgraph` for lazy, server-authored composite task process graphs; frontend loads this only when the operator chooses `Expand process`.
+- Bounded rollout decision: composite expansion is enabled only for known logistics demo task kinds in this slice (`actual_hours_review`/`planning_feedback_review`, `dispatcher_review`/`dispatch_seed_intake`, `final_packet_review`/`finalize_reporting_packet`).
+- Artifact boundary decision: task subgraph payloads remain reference-only (`artifact_version_id`, label, source label) and all bytes are still downloaded exclusively through canonical artifact download APIs.
+
 ## 2026-03-09 (TASK-0066 family-graph drilldown contract closure)
 - Logistics story contract decision: `GET /api/v1/stories/logistics-three-workflow` now emits server-authored family-module drilldown metadata (`node_kind`, `drilldown_kind`, `drilldown_refs`, `artifact_refs`, `selection_summary`) so frontend drilldown does not guess run/artifact targets.
 - Multiple-run disambiguation decision: when a module maps to more than one linked run in story scope, `drilldown_kind=run_group` and all candidate runs are returned in `drilldown_refs`; the backend does not silently choose one run.

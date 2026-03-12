@@ -10,6 +10,7 @@ interface WorkflowGraphNodeProps {
   width: number;
   height: number;
   onSelect?: (node: WorkflowWorkspaceGraphNode) => void;
+  isSelected?: boolean;
 }
 
 type VisualStatus = "completed" | "warning" | "active" | "muted";
@@ -47,7 +48,8 @@ export function WorkflowGraphNode({
   y,
   width,
   height,
-  onSelect
+  onSelect,
+  isSelected = false
 }: WorkflowGraphNodeProps): JSX.Element {
   const handleSelect = (): void => {
     onSelect?.(node);
@@ -61,13 +63,15 @@ export function WorkflowGraphNode({
       className={[
         "workflow-graph-pill",
         `workflow-graph-pill--${statusClass}`,
-        node.is_blocking ? "is-blocking" : ""
+        node.is_blocking ? "is-blocking" : "",
+        isSelected ? "is-selected" : ""
       ].join(" ")}
       transform={`translate(${x}, ${y})`}
       data-status={node.status}
       data-testid={`workflow-graph-node-${node.node_id}`}
       role="button"
       tabIndex={0}
+      aria-pressed={isSelected}
       aria-label={`Open details for ${stripStagePrefix(node.label)}`}
       onClick={handleSelect}
       onKeyDown={(event) => {

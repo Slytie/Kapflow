@@ -1,6 +1,7 @@
 import { createIdempotencyKey } from "@/lib/api/idempotency";
 import { onetruthApi } from "@/lib/api/onetruthApi";
 import type {
+  HumanTaskSubgraph,
   HumanTaskRow,
   WorkflowWorkspaceRequiredUpload
 } from "@/lib/types/contracts";
@@ -49,6 +50,10 @@ export const humanTasksRepository = {
 
   async get(humanTaskId: string): Promise<HumanTaskRow> {
     return onetruthApi.getHumanTask(humanTaskId);
+  },
+
+  async getSubgraph(humanTaskId: string): Promise<HumanTaskSubgraph> {
+    return onetruthApi.getHumanTaskSubgraph(humanTaskId);
   },
 
   async claim(humanTaskId: string, leaseSeconds = 300): Promise<void> {

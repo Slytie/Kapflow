@@ -1,6 +1,8 @@
 import type {
   ApprovalRow,
   FlagRow,
+  HumanTaskExpansionKind,
+  HumanTaskSubgraphRef,
   HumanTaskRow,
   PointerRow,
   TimelineEvent,
@@ -57,6 +59,9 @@ export interface DrawerTaskContext {
   available_actions: string[];
   blocking_reason_codes: string[];
   missing_required_inputs: string[];
+  is_composite?: boolean;
+  expansion_kind?: HumanTaskExpansionKind;
+  subgraph_ref?: HumanTaskSubgraphRef | null;
 }
 
 export interface DrawerLink {

@@ -1,5 +1,9 @@
 import { http, HttpResponse } from "msw";
-import type { ArtifactVersionRow, HumanTaskRow } from "@/lib/types/contracts";
+import type {
+  ArtifactVersionRow,
+  HumanTaskRow,
+  HumanTaskSubgraph
+} from "@/lib/types/contracts";
 
 import {
   buildBoardContract,
@@ -131,10 +135,176 @@ function taskActionability(task: HumanTaskRow, request: Request) {
   };
 }
 
+const COMPOSITE_TASK_SUBGRAPH_KINDS = new Set([
+  "actual_hours_review",
+  "planning_feedback_review",
+  "dispatcher_review",
+  "dispatch_seed_intake",
+  "final_packet_review",
+  "finalize_reporting_packet"
+]);
+
+function taskSubgraphMetadata(task: HumanTaskRow): {
+  is_composite: boolean;
+  expansion_kind: "none" | "task_subgraph";
+  subgraph_ref: { human_task_id: string; endpoint: string } | null;
+} {
+  if (!COMPOSITE_TASK_SUBGRAPH_KINDS.has(task.task_kind)) {
+    return {
+      is_composite: false,
+      expansion_kind: "none",
+      subgraph_ref: null
+    };
+  }
+  return {
+    is_composite: true,
+    expansion_kind: "task_subgraph",
+    subgraph_ref: {
+      human_task_id: task.human_task_id,
+      endpoint: `/api/v1/human-tasks/${task.human_task_id}/subgraph`
+    }
+  };
+}
+
 function enrichHumanTaskForResponse(task: HumanTaskRow, request: Request): HumanTaskRow {
   return {
     ...task,
-    ...taskActionability(task, request)
+    ...taskActionability(task, request),
+    ...taskSubgraphMetadata(task)
+  };
+}
+
+function taskSubgraphTemplate(taskKind: string): {
+  template_id: string;
+  title: string;
+  nodes: Array<{ node_id: string; label: string }>;
+} | null {
+  if (taskKind === "actual_hours_review" || taskKind === "planning_feedback_review") {
+    return {
+      template_id: "schedule_planning.feedback_review.v1",
+      title: "Planning feedback review",
+      nodes: [
+        { node_id: "ingest_actual_hours", label: "Ingest actual-hours snapshot" },
+        { node_id: "reconcile_plan_variance", label: "Reconcile plan variance" },
+        { node_id: "draft_feedback_packet", label: "Draft planning feedback packet" },
+        { node_id: "publish_feedback_handoff", label: "Publish feedback handoff" }
+      ]
+    };
+  }
+  if (taskKind === "dispatcher_review" || taskKind === "dispatch_seed_intake") {
+    return {
+      template_id: "live_dispatch.seed_intake.v1",
+      title: "Live dispatch seed intake",
+      nodes: [
+        { node_id: "ingest_weekly_seed", label: "Ingest weekly seed package" },
+        { node_id: "verify_route_delta", label: "Verify route delta inputs" },
+        { node_id: "resolve_capacity_conflicts", label: "Resolve capacity conflicts" },
+        { node_id: "dispatch_ready_confirmation", label: "Confirm dispatch readiness" }
+      ]
+    };
+  }
+  if (taskKind === "final_packet_review" || taskKind === "finalize_reporting_packet") {
+    return {
+      template_id: "dispatch_reporting.final_packet.v1",
+      title: "Reporting packet closeout",
+      nodes: [
+        { node_id: "collect_route_metrics", label: "Collect route metrics" },
+        { node_id: "reconcile_variance_notes", label: "Reconcile variance notes" },
+        { node_id: "finalize_reporting_packet", label: "Finalize reporting packet" },
+        { node_id: "notify_planning_feedback", label: "Notify planning feedback" }
+      ]
+    };
+  }
+  return null;
+}
+
+function taskSubgraphNodeStatuses(taskState: HumanTaskRow["state"], nodeCount: number): string[] {
+  if (nodeCount <= 0) {
+    return [];
+  }
+  if (taskState === "COMPLETED") {
+    return Array.from({ length: nodeCount }, () => "completed");
+  }
+  if (taskState === "CLAIMED") {
+    return Array.from({ length: nodeCount }, (_, index) => {
+      if (index === 0) {
+        return "completed";
+      }
+      if (index === 1) {
+        return "in_progress";
+      }
+      if (index === 2) {
+        return "ready";
+      }
+      return "not_started";
+    });
+  }
+  return Array.from({ length: nodeCount }, (_, index) =>
+    index === 0 ? "in_progress" : "not_started"
+  );
+}
+
+function taskSubgraphArtifactRefs(task: HumanTaskRow) {
+  const refsByArtifactId = new Map<
+    string,
+    { artifact_version_id: string; label: string; source_label: string }
+  >();
+  for (const artifact of state.artifactVersions) {
+    const links = artifact.links ?? [];
+    const hasTaskAttachment = links.some(
+      (link) => link.subject_kind === "human_task" && link.subject_id === task.human_task_id
+    );
+    const hasTaskOutput = links.some(
+      (link) => link.subject_kind === "task_run" && link.subject_id === task.task_run_id
+    );
+    if (!hasTaskAttachment && !hasTaskOutput) {
+      continue;
+    }
+    const metadataName = artifact.metadata_json?.file_name;
+    refsByArtifactId.set(artifact.artifact_version_id, {
+      artifact_version_id: artifact.artifact_version_id,
+      label:
+        typeof metadataName === "string" && metadataName.length > 0
+          ? metadataName
+          : artifact.artifact_kind,
+      source_label: hasTaskOutput ? "Task step output" : "Task attachment"
+    });
+  }
+  return Array.from(refsByArtifactId.values());
+}
+
+function buildTaskSubgraph(task: HumanTaskRow): HumanTaskSubgraph | null {
+  const template = taskSubgraphTemplate(task.task_kind);
+  if (!template) {
+    return null;
+  }
+  const statuses = taskSubgraphNodeStatuses(task.state, template.nodes.length);
+  return {
+    graph_id: `task_subgraph:${task.human_task_id}`,
+    template_id: template.template_id,
+    title: template.title,
+    nodes: template.nodes.map((node, index) => ({
+      node_id: node.node_id,
+      label: node.label,
+      node_kind: "step",
+      status: statuses[index] as HumanTaskSubgraph["nodes"][number]["status"],
+      row: 0,
+      column: index,
+      is_blocking: false
+    })),
+    edges: template.nodes.slice(0, -1).map((node, index) => ({
+      edge_id: `${node.node_id}->${template.nodes[index + 1].node_id}`,
+      from_node_id: node.node_id,
+      to_node_id: template.nodes[index + 1].node_id,
+      edge_kind: "linear",
+      label: null
+    })),
+    freshness: {
+      status: "fresh",
+      as_of: task.updated_at,
+      note: "Mock task subgraph freshness"
+    },
+    artifact_refs: taskSubgraphArtifactRefs(task)
   };
 }
 
@@ -996,6 +1166,62 @@ export const handlers = [
     return ok({
       command: "api.human_tasks.detail",
       human_task: enrichHumanTaskForResponse(row, request)
+    });
+  }),
+
+  http.get("*/api/v1/human-tasks/:humanTaskId/subgraph", ({ params, request }) => {
+    if (!inScope(request)) {
+      return forbiddenWorkflowRun();
+    }
+    const humanTaskId = String(params.humanTaskId);
+    const row = state.humanTasks.find((task) => task.human_task_id === humanTaskId);
+    if (!row) {
+      return HttpResponse.json(
+        {
+          status: "error",
+          error: {
+            code: "human_task_not_found",
+            message: "human task not found",
+            details: { human_task_id: humanTaskId }
+          }
+        },
+        { status: 404 }
+      );
+    }
+    const metadata = taskSubgraphMetadata(row);
+    if (!metadata.is_composite) {
+      return HttpResponse.json(
+        {
+          status: "error",
+          error: {
+            code: "task_subgraph_not_available",
+            message: "task does not expose a composite subgraph",
+            details: { human_task_id: humanTaskId, task_kind: row.task_kind }
+          }
+        },
+        { status: 409 }
+      );
+    }
+    const subgraph = buildTaskSubgraph(row);
+    if (!subgraph) {
+      return HttpResponse.json(
+        {
+          status: "error",
+          error: {
+            code: "task_subgraph_not_available",
+            message: "task does not expose a composite subgraph",
+            details: { human_task_id: humanTaskId, task_kind: row.task_kind }
+          }
+        },
+        { status: 409 }
+      );
+    }
+    return ok({
+      command: "api.human_tasks.subgraph",
+      human_task_id: humanTaskId,
+      is_composite: true,
+      expansion_kind: "task_subgraph",
+      subgraph
     });
   }),
 

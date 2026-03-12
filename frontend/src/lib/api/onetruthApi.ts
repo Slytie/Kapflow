@@ -4,6 +4,10 @@ import type {
   BoardContract,
   FlagRow,
   HumanTaskRow,
+  HumanTaskSubgraph,
+  HumanTaskSubgraphArtifactRef,
+  HumanTaskSubgraphEdge,
+  HumanTaskSubgraphNode,
   LogisticsStoryFamilyEdge,
   LogisticsStoryFamilyModule,
   LogisticsThreeWorkflowStoryContract,
@@ -39,6 +43,13 @@ interface HumanTasksEnvelope extends ListEnvelope {
 
 interface HumanTaskDetailEnvelope extends ListEnvelope {
   human_task: HumanTaskRow;
+}
+
+interface HumanTaskSubgraphEnvelope extends ListEnvelope {
+  human_task_id: string;
+  is_composite: boolean;
+  expansion_kind: "task_subgraph";
+  subgraph: Record<string, unknown>;
 }
 
 interface ApprovalsEnvelope extends ListEnvelope {
@@ -153,6 +164,7 @@ const GRAPH_STATUSES = new Set([
 
 const LOGISTICS_MODULE_NODE_KINDS = new Set(["module"]);
 const LOGISTICS_MODULE_DRILLDOWN_KINDS = new Set(["none", "workflow_run", "run_group"]);
+const HUMAN_TASK_SUBGRAPH_NODE_KINDS = new Set(["step", "gate"]);
 
 function asRecord(value: unknown): Record<string, unknown> {
   return value && typeof value === "object" ? (value as Record<string, unknown>) : {};
@@ -212,6 +224,81 @@ function normalizeGraphEdge(edge: Record<string, unknown>, index: number): Workf
     to_node_id: toNodeId,
     edge_kind: kind === "branch" ? "branch" : kind === "loopback" ? "loopback" : "linear",
     label: asStringOrNull(edge.label)
+  };
+}
+
+function normalizeHumanTaskSubgraphNode(
+  node: Record<string, unknown>,
+  index: number
+): HumanTaskSubgraphNode {
+  const rawStatus = asString(node.status, "not_started");
+  const status = GRAPH_STATUSES.has(rawStatus) ? rawStatus : "not_started";
+  const rawNodeKind = asString(node.node_kind, "step");
+  const nodeKind: HumanTaskSubgraphNode["node_kind"] = HUMAN_TASK_SUBGRAPH_NODE_KINDS.has(
+    rawNodeKind
+  )
+    ? (rawNodeKind as HumanTaskSubgraphNode["node_kind"])
+    : "step";
+  return {
+    node_id: asString(node.node_id, `subgraph_node_${index}`),
+    label: asString(node.label, `Step ${index + 1}`),
+    node_kind: nodeKind,
+    status: status as HumanTaskSubgraphNode["status"],
+    row: asNumber(node.row, 0),
+    column: asNumber(node.column, index),
+    is_blocking: Boolean(node.is_blocking)
+  };
+}
+
+function normalizeHumanTaskSubgraphEdge(
+  edge: Record<string, unknown>,
+  index: number
+): HumanTaskSubgraphEdge {
+  const kind = asString(edge.edge_kind, "linear");
+  return {
+    edge_id: asString(edge.edge_id, `subgraph_edge_${index}`),
+    from_node_id: asString(edge.from_node_id),
+    to_node_id: asString(edge.to_node_id),
+    edge_kind: kind === "branch" ? "branch" : kind === "loopback" ? "loopback" : "linear",
+    label: asStringOrNull(edge.label)
+  };
+}
+
+function normalizeHumanTaskSubgraphArtifactRef(
+  artifactRef: Record<string, unknown>
+): HumanTaskSubgraphArtifactRef {
+  return {
+    artifact_version_id: asString(artifactRef.artifact_version_id),
+    label: asString(artifactRef.label, asString(artifactRef.artifact_version_id, "artifact")),
+    source_label: asString(artifactRef.source_label, "Artifact")
+  };
+}
+
+function normalizeHumanTaskSubgraph(
+  humanTaskId: string,
+  subgraph: Record<string, unknown>
+): HumanTaskSubgraph {
+  const freshnessRecord = asRecord(subgraph.freshness);
+  return {
+    graph_id: asString(subgraph.graph_id, `task_subgraph:${humanTaskId}`),
+    template_id: asString(subgraph.template_id),
+    title: asString(subgraph.title, "Task process"),
+    nodes: asArray<Record<string, unknown>>(subgraph.nodes).map(
+      normalizeHumanTaskSubgraphNode
+    ),
+    edges: asArray<Record<string, unknown>>(subgraph.edges).map(
+      normalizeHumanTaskSubgraphEdge
+    ),
+    freshness: {
+      status: ["fresh", "stale", "unknown"].includes(asString(freshnessRecord.status))
+        ? (asString(freshnessRecord.status) as WorkflowWorkspaceFreshness["status"])
+        : "unknown",
+      as_of: asStringOrNull(freshnessRecord.as_of),
+      note: asStringOrNull(freshnessRecord.note)
+    },
+    artifact_refs: asArray<Record<string, unknown>>(subgraph.artifact_refs).map(
+      normalizeHumanTaskSubgraphArtifactRef
+    )
   };
 }
 
@@ -590,6 +677,16 @@ export const onetruthApi = {
   async getHumanTask(humanTaskId: string): Promise<HumanTaskRow> {
     const payload = await requestJson<HumanTaskDetailEnvelope>(`/human-tasks/${humanTaskId}`);
     return payload.human_task;
+  },
+
+  async getHumanTaskSubgraph(humanTaskId: string): Promise<HumanTaskSubgraph> {
+    const payload = await requestJson<HumanTaskSubgraphEnvelope>(
+      `/human-tasks/${humanTaskId}/subgraph`
+    );
+    if (!payload.is_composite || payload.expansion_kind !== "task_subgraph") {
+      throw new Error("Invalid API response: task subgraph is unavailable.");
+    }
+    return normalizeHumanTaskSubgraph(humanTaskId, asRecord(payload.subgraph));
   },
 
   async claimHumanTask(

@@ -1,5 +1,5 @@
-import { useMemo } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useEffect, useMemo, useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useSearchParams } from "react-router-dom";
 
 import { LaneColumn } from "@/components/LaneColumn";
@@ -7,48 +7,45 @@ import { StatePanel } from "@/components/StatePanel";
 import { WorkflowGraph } from "@/components/WorkflowGraph";
 import { apiConfig } from "@/lib/api/config";
 import { errorText } from "@/lib/api/errorText";
-import { logisticsStoryRepository } from "@/lib/repositories";
+import { onetruthApi } from "@/lib/api/onetruthApi";
+import { logisticsStoryRepository, workflowRunsRepository } from "@/lib/repositories";
+import { downloadBase64ToFile } from "@/lib/repositories/artifactAttachments";
 import { useDrawer } from "@/lib/state/drawerContext";
 import type {
   LogisticsStoryBoardWorkItem,
+  LogisticsStoryFamilyModule,
+  LogisticsStoryModuleArtifactRef,
+  LogisticsStoryModuleDrilldownRef,
   LogisticsThreeWorkflowStoryContract,
+  WorkflowRunRow,
   WorkflowWorkspaceFreshness,
   WorkflowWorkspaceGraphEdge,
   WorkflowWorkspaceGraphNode
 } from "@/lib/types/contracts";
+import {
+  buildStageNodeDrawerPayload,
+  graphNodesWithResponsibility,
+  workspaceTab
+} from "@/lib/workspace/runWorkspaceGraph";
 
 const DEMO_TABS = ["Logistics Family Process"];
-const MODULE_LAYOUT: Record<string, { row: number; column: number; label: string; runGroup: StoryRunGroupKey }> = {
+const MODULE_LAYOUT: Record<string, { row: number; column: number; label: string }> = {
   dispatch_reporting: {
     row: 0,
     column: 0,
-    label: "Dispatch Reporting",
-    runGroup: "dispatch_reporting"
+    label: "Dispatch Reporting"
   },
   weekly_schedule_planning: {
     row: 0,
     column: 1,
-    label: "Weekly Schedule Planning",
-    runGroup: "weekly_schedule_planning"
+    label: "Weekly Schedule Planning"
   },
   live_dispatch: {
     row: 0,
     column: 2,
-    label: "Live Dispatch",
-    runGroup: "live_dispatch"
+    label: "Live Dispatch"
   }
 };
-
-const RUN_GROUPS: Array<{ key: StoryRunGroupKey; label: string }> = [
-  { key: "dispatch_reporting", label: "Dispatch Reporting" },
-  { key: "weekly_schedule_planning", label: "Weekly Schedule Planning" },
-  { key: "live_dispatch", label: "Live Dispatch" }
-];
-
-type StoryRunGroupKey =
-  | "weekly_schedule_planning"
-  | "live_dispatch"
-  | "dispatch_reporting";
 
 function normalizeStatus(input: string): string {
   return input.trim().toLowerCase();
@@ -82,26 +79,62 @@ function graphStatusForModule(
   return "not_started";
 }
 
+function moduleDisplayLabel(module: LogisticsStoryFamilyModule): string {
+  return MODULE_LAYOUT[module.module_id]?.label ?? module.module_id;
+}
+
+function runRowsForStory(story: LogisticsThreeWorkflowStoryContract): WorkflowRunRow[] {
+  return [
+    ...story.linked_workflow_runs.dispatch_reporting,
+    ...story.linked_workflow_runs.weekly_schedule_planning,
+    ...story.linked_workflow_runs.live_dispatch
+  ];
+}
+
+function moduleRunRefs(module: LogisticsStoryFamilyModule): LogisticsStoryModuleDrilldownRef[] {
+  const deduped = new Map<string, LogisticsStoryModuleDrilldownRef>();
+  for (const ref of module.drilldown_refs) {
+    if (!deduped.has(ref.workflow_run_id)) {
+      deduped.set(ref.workflow_run_id, ref);
+    }
+  }
+  return Array.from(deduped.values());
+}
+
 function graphNodes(story: LogisticsThreeWorkflowStoryContract): WorkflowWorkspaceGraphNode[] {
+  const storyRuns = runRowsForStory(story);
+  const runById = new Map(storyRuns.map((run) => [run.workflow_run_id, run]));
   return story.family_graph.modules.map((module, index) => {
     const moduleLayout = MODULE_LAYOUT[module.module_id] ?? {
       row: 0,
       column: index,
-      label: module.module_id,
-      runGroup: "weekly_schedule_planning" as StoryRunGroupKey
+      label: module.module_id
     };
-    const runStates = story.linked_workflow_runs[moduleLayout.runGroup].map((run) => run.state);
+    const refs = moduleRunRefs(module);
+    const refRunStates = refs
+      .map((ref) => runById.get(ref.workflow_run_id)?.state ?? "")
+      .filter((state) => state.length > 0);
+    const workflowRunStates =
+      refRunStates.length > 0
+        ? refRunStates
+        : storyRuns
+            .filter((run) => run.workflow_id === module.workflow_id)
+            .map((run) => run.state);
+    const runCount = refs.length > 0 ? refs.length : workflowRunStates.length;
+
     return {
       node_id: module.module_id,
       stage_id: module.workflow_id,
       label: moduleLayout.label,
-      status: graphStatusForModule(module.status, runStates),
+      status: graphStatusForModule(module.status, workflowRunStates),
       row: moduleLayout.row,
       column: moduleLayout.column,
       is_blocking: false,
       responsibility_summary:
-        runStates.length > 0 ? `${runStates.length} linked run${runStates.length === 1 ? "" : "s"}` : "No linked runs",
-      responsibility_detail: module.activation_policy
+        runCount > 0
+          ? `${runCount} linked run${runCount === 1 ? "" : "s"}`
+          : "No linked runs",
+      responsibility_detail: module.selection_summary || module.activation_policy
     };
   });
 }
@@ -162,11 +195,31 @@ function boardItemActions(item: LogisticsStoryBoardWorkItem): string {
   return item.available_actions.join(", ");
 }
 
+function artifactLabel(artifactRef: LogisticsStoryModuleArtifactRef): string {
+  return artifactRef.label.trim().length > 0 ? artifactRef.label : artifactRef.artifact_version_id;
+}
+
+function runRefSummary(
+  ref: LogisticsStoryModuleDrilldownRef,
+  run: WorkflowRunRow | null
+): string {
+  if (run) {
+    return `${run.workflow_run_id} · ${run.state} · ${run.partition_key}`;
+  }
+  return `${ref.workflow_run_id} · ${ref.partition_key}`;
+}
+
 export function LogisticsDemoPage(): JSX.Element {
   const { open } = useDrawer();
+  const queryClient = useQueryClient();
   const [searchParams] = useSearchParams();
   const planningWeekId = searchParams.get("planning_week_id")?.trim() || "PW-2026-W10";
   const serviceDateId = searchParams.get("service_date_id")?.trim() || undefined;
+  const [selectedModuleId, setSelectedModuleId] = useState<string | null>(null);
+  const [selectedDrilldownRunId, setSelectedDrilldownRunId] = useState<string | null>(null);
+  const [selectedDrilldownNodeId, setSelectedDrilldownNodeId] = useState<string | null>(null);
+  const [downloadingArtifactVersionId, setDownloadingArtifactVersionId] = useState<string | null>(null);
+  const [familyArtifactError, setFamilyArtifactError] = useState<unknown>(null);
 
   const query = useQuery({
     queryKey: ["logistics-demo-story", planningWeekId, serviceDateId],
@@ -179,6 +232,12 @@ export function LogisticsDemoPage(): JSX.Element {
   });
 
   const story = query.data;
+  const runById = useMemo(() => {
+    if (!story) {
+      return new Map<string, WorkflowRunRow>();
+    }
+    return new Map(runRowsForStory(story).map((run) => [run.workflow_run_id, run]));
+  }, [story]);
   const graph = useMemo(
     () =>
       story
@@ -189,11 +248,109 @@ export function LogisticsDemoPage(): JSX.Element {
         : { nodes: [], edges: [] },
     [story]
   );
+
+  useEffect(() => {
+    if (!story) {
+      setSelectedModuleId(null);
+      return;
+    }
+    const moduleIds = new Set(story.family_graph.modules.map((module) => module.module_id));
+    if (selectedModuleId && moduleIds.has(selectedModuleId)) {
+      return;
+    }
+    setSelectedModuleId(story.family_graph.modules[0]?.module_id ?? null);
+  }, [selectedModuleId, story]);
+
+  const selectedModule = useMemo(() => {
+    if (!story) {
+      return null;
+    }
+    if (selectedModuleId) {
+      return story.family_graph.modules.find((module) => module.module_id === selectedModuleId) ?? null;
+    }
+    return story.family_graph.modules[0] ?? null;
+  }, [selectedModuleId, story]);
+
+  const selectedModuleRefs = useMemo(
+    () => (selectedModule ? moduleRunRefs(selectedModule) : []),
+    [selectedModule]
+  );
+
+  const selectedModuleRuns = useMemo(
+    () =>
+      selectedModuleRefs.map((ref) => ({
+        ref,
+        run: runById.get(ref.workflow_run_id) ?? null
+      })),
+    [runById, selectedModuleRefs]
+  );
+
+  const selectedModuleRunIdsKey = useMemo(
+    () => selectedModuleRefs.map((ref) => ref.workflow_run_id).join("|"),
+    [selectedModuleRefs]
+  );
+
+  useEffect(() => {
+    const runIds =
+      selectedModuleRunIdsKey.trim().length > 0
+        ? selectedModuleRunIdsKey.split("|").filter((id) => id.length > 0)
+        : [];
+    setSelectedDrilldownRunId((current) => {
+      if (runIds.length === 0) {
+        return null;
+      }
+      if (runIds.length === 1) {
+        return runIds[0];
+      }
+      if (current && runIds.includes(current)) {
+        return current;
+      }
+      return null;
+    });
+    setSelectedDrilldownNodeId(null);
+    setFamilyArtifactError(null);
+  }, [selectedModule?.module_id, selectedModuleRunIdsKey]);
+
+  const drilldownWorkspaceQuery = useQuery({
+    queryKey: ["logistics-drilldown-workspace", selectedDrilldownRunId],
+    queryFn: () => workflowRunsRepository.workspace(selectedDrilldownRunId as string),
+    enabled: Boolean(selectedDrilldownRunId),
+    refetchInterval: apiConfig.pollIntervalMs
+  });
+
+  const drilldownDetailQuery = useQuery({
+    queryKey: ["logistics-drilldown-detail", selectedDrilldownRunId],
+    queryFn: () => workflowRunsRepository.detail(selectedDrilldownRunId as string),
+    enabled: Boolean(selectedDrilldownRunId),
+    refetchInterval: apiConfig.pollIntervalMs
+  });
+
+  const drilldownWorkspace = drilldownWorkspaceQuery.data;
+  const drilldownDetail = drilldownDetailQuery.data;
+  const drilldownGraphNodes = useMemo(() => {
+    if (!drilldownWorkspace || !drilldownDetail) {
+      return [];
+    }
+    return graphNodesWithResponsibility(drilldownWorkspace.graph.nodes, drilldownDetail.human_tasks);
+  }, [drilldownWorkspace, drilldownDetail]);
+
   const boardItemsByLane = useMemo(() => (story ? groupedBoardItems(story) : new Map()), [story]);
   const sortedBoardLanes = useMemo(
     () => (story ? [...story.board.lanes].sort((left, right) => left.position - right.position) : []),
     [story]
   );
+
+  const prefetchDrilldown = (workflowRunId: string): void => {
+    void queryClient.prefetchQuery({
+      queryKey: ["logistics-drilldown-workspace", workflowRunId],
+      queryFn: () => workflowRunsRepository.workspace(workflowRunId)
+    });
+    void queryClient.prefetchQuery({
+      queryKey: ["logistics-drilldown-detail", workflowRunId],
+      queryFn: () => workflowRunsRepository.detail(workflowRunId)
+    });
+  };
+
   const openTaskDrawer = (item: LogisticsStoryBoardWorkItem): void => {
     open({
       title: item.title,
@@ -206,7 +363,10 @@ export function LogisticsDemoPage(): JSX.Element {
         { label: "Board lane", value: item.lane },
         { label: "Actions", value: boardItemActions(item) }
       ],
-      links: [{ label: "Open run details", to: `/runs/${item.workflow_run_id}` }],
+      links: [
+        { label: "Open run workspace", to: `/runs/${item.workflow_run_id}/workspace` },
+        { label: "Open run detail (secondary)", to: `/runs/${item.workflow_run_id}` }
+      ],
       task: {
         human_task_id: item.subject_id,
         workflow_run_id: item.workflow_run_id,
@@ -233,6 +393,31 @@ export function LogisticsDemoPage(): JSX.Element {
         }
       ]
     });
+  };
+
+  const handleDownloadFamilyArtifact = async (
+    artifactRef: LogisticsStoryModuleArtifactRef
+  ): Promise<void> => {
+    setFamilyArtifactError(null);
+    setDownloadingArtifactVersionId(artifactRef.artifact_version_id);
+    try {
+      const downloaded = await onetruthApi.downloadArtifact(artifactRef.artifact_version_id);
+      const metadataName = downloaded.artifact_version.metadata_json?.file_name;
+      const fileName =
+        artifactRef.label ||
+        (typeof metadataName === "string" && metadataName.length > 0
+          ? metadataName
+          : downloaded.artifact_version.artifact_version_id);
+      downloadBase64ToFile(
+        downloaded.content_base64,
+        fileName,
+        downloaded.artifact_version.media_type
+      );
+    } catch (error) {
+      setFamilyArtifactError(error);
+    } finally {
+      setDownloadingArtifactVersionId(null);
+    }
   };
 
   if (query.isLoading) {
@@ -280,36 +465,175 @@ export function LogisticsDemoPage(): JSX.Element {
         selectedWorkflowTab={DEMO_TABS[0]}
         tabs={DEMO_TABS}
         showStepBadge={false}
+        selectedNodeId={selectedModule?.module_id ?? null}
+        onNodeSelect={(node) => {
+          setSelectedModuleId(node.node_id);
+        }}
       />
 
-      <section className="logistics-demo-page__panel">
+      <section className="logistics-demo-page__panel" data-testid="logistics-module-detail-panel">
         <header className="logistics-demo-page__panel-header">
-          <h3>Linked Workflow Runs</h3>
-          <p>{story.linked_workflow_runs.summary.weekly_schedule_planning_count + story.linked_workflow_runs.summary.live_dispatch_count + story.linked_workflow_runs.summary.dispatch_reporting_count} runs in story scope</p>
+          <h3>Family Node Detail</h3>
+          <p>Select a family module to inspect drill-down scope and artifacts</p>
         </header>
-        <div className="logistics-demo-page__run-groups">
-          {RUN_GROUPS.map((group) => {
-            const runs = story.linked_workflow_runs[group.key];
-            return (
-              <article key={group.key} className="logistics-demo-page__run-group">
-                <h4>{group.label}</h4>
-                {runs.length === 0 ? <p>No runs linked.</p> : null}
-                <ul>
-                  {runs.map((run) => (
-                    <li key={run.workflow_run_id}>
-                      <Link className="link-button" to={`/runs/${run.workflow_run_id}`}>
-                        {run.workflow_run_id}
-                      </Link>
-                      {" "}
-                      · {run.state} · {run.partition_key}
-                    </li>
+        {selectedModule ? (
+          <div className="logistics-demo-page__selection-grid">
+            <article className="logistics-demo-page__selection-card">
+              <h4>{moduleDisplayLabel(selectedModule)}</h4>
+              <p>{selectedModule.selection_summary}</p>
+              <dl className="logistics-demo-page__selection-fields">
+                <div>
+                  <dt>Workflow</dt>
+                  <dd>{selectedModule.workflow_id}</dd>
+                </div>
+                <div>
+                  <dt>Partition kind</dt>
+                  <dd>{selectedModule.partition_kind}</dd>
+                </div>
+                <div>
+                  <dt>Activation policy</dt>
+                  <dd>{selectedModule.activation_policy}</dd>
+                </div>
+                <div>
+                  <dt>Status</dt>
+                  <dd>{selectedModule.status}</dd>
+                </div>
+                <div>
+                  <dt>Drill-down mode</dt>
+                  <dd>{selectedModule.drilldown_kind}</dd>
+                </div>
+              </dl>
+              <div className="logistics-demo-page__artifact-actions">
+                <h5>Family Node Artifacts</h5>
+                {selectedModule.artifact_refs.length === 0 ? (
+                  <p>No downloadable artifacts linked.</p>
+                ) : (
+                  <ul>
+                    {selectedModule.artifact_refs.map((artifactRef) => (
+                      <li key={artifactRef.artifact_version_id}>
+                        <button
+                          type="button"
+                          className="action-btn"
+                          onClick={() => void handleDownloadFamilyArtifact(artifactRef)}
+                          disabled={downloadingArtifactVersionId === artifactRef.artifact_version_id}
+                        >
+                          Download {artifactLabel(artifactRef)}
+                        </button>
+                        <span>{artifactRef.source_label}</span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+              {familyArtifactError ? (
+                <p className="detail-drawer__error">
+                  {errorText(familyArtifactError, "Family artifact download failed")}
+                </p>
+              ) : null}
+            </article>
+
+            <article className="logistics-demo-page__selection-card">
+              <h4>Workflow Run Drill-Down</h4>
+              {selectedModuleRuns.length === 0 ? <p>No drill-down runs available.</p> : null}
+              {selectedModuleRuns.length === 1 ? (
+                <div>
+                  <p>{runRefSummary(selectedModuleRuns[0].ref, selectedModuleRuns[0].run)}</p>
+                  <p>Single linked run selected automatically.</p>
+                </div>
+              ) : null}
+              {selectedModuleRuns.length > 1 ? (
+                <div className="logistics-demo-page__run-chooser" aria-label="Run chooser">
+                  <p>Choose a workflow run to open drill-down.</p>
+                  {selectedModuleRuns.map(({ ref, run }) => (
+                    <button
+                      key={ref.workflow_run_id}
+                      type="button"
+                      className={`logistics-demo-page__run-option${selectedDrilldownRunId === ref.workflow_run_id ? " is-selected" : ""}`}
+                      aria-pressed={selectedDrilldownRunId === ref.workflow_run_id}
+                      onMouseEnter={() => prefetchDrilldown(ref.workflow_run_id)}
+                      onFocus={() => prefetchDrilldown(ref.workflow_run_id)}
+                      onClick={() => {
+                        prefetchDrilldown(ref.workflow_run_id);
+                        setSelectedDrilldownRunId(ref.workflow_run_id);
+                      }}
+                    >
+                      {runRefSummary(ref, run)}
+                    </button>
                   ))}
-                </ul>
-              </article>
-            );
-          })}
-        </div>
+                </div>
+              ) : null}
+              {selectedDrilldownRunId ? (
+                <div className="logistics-demo-page__secondary-links">
+                  <p>Secondary detail routes</p>
+                  <div>
+                    <Link className="link-button" to={`/runs/${selectedDrilldownRunId}/workspace`}>
+                      Open full workspace
+                    </Link>
+                    <Link className="link-button" to={`/runs/${selectedDrilldownRunId}`}>
+                      Open run detail (secondary)
+                    </Link>
+                  </div>
+                </div>
+              ) : null}
+            </article>
+          </div>
+        ) : (
+          <p>Select a family node to inspect metadata.</p>
+        )}
       </section>
+
+      {selectedDrilldownRunId ? (
+        <section className="logistics-demo-page__panel" data-testid="logistics-drilldown-panel">
+          <header className="logistics-demo-page__panel-header">
+            <h3>Workflow Run Graph Drill-Down</h3>
+            <p>{selectedDrilldownRunId}</p>
+          </header>
+          {drilldownWorkspaceQuery.isLoading || drilldownDetailQuery.isLoading ? (
+            <StatePanel
+              kind="loading"
+              title="Loading workflow drill-down"
+              detail="Fetching workflow-run workspace graph projection."
+            />
+          ) : null}
+          {drilldownWorkspaceQuery.isError || drilldownDetailQuery.isError ? (
+            <StatePanel
+              kind="error"
+              title="Workflow drill-down failed to load"
+              detail={errorText(
+                drilldownWorkspaceQuery.error ?? drilldownDetailQuery.error,
+                "Unable to load workflow run workspace"
+              )}
+              onRetry={() => {
+                void drilldownWorkspaceQuery.refetch();
+                void drilldownDetailQuery.refetch();
+              }}
+            />
+          ) : null}
+          {!drilldownWorkspaceQuery.isLoading &&
+          !drilldownDetailQuery.isLoading &&
+          !drilldownWorkspaceQuery.isError &&
+          !drilldownDetailQuery.isError &&
+          drilldownWorkspace &&
+          drilldownDetail ? (
+            <div data-testid="logistics-demo-drilldown-graph">
+              <WorkflowGraph
+                nodes={drilldownGraphNodes}
+                edges={drilldownWorkspace.graph.edges}
+                freshness={drilldownWorkspace.freshness}
+                latestEventSequence={drilldownWorkspace.latest_event_sequence}
+                selectedWorkflowTab={workspaceTab(drilldownWorkspace.workflow_run.workflow_id)}
+                tabs={[workspaceTab(drilldownWorkspace.workflow_run.workflow_id)]}
+                showStepBadge={false}
+                selectedNodeId={selectedDrilldownNodeId}
+                onNodeSelect={(node) => {
+                  setSelectedDrilldownNodeId(node.node_id);
+                  open(buildStageNodeDrawerPayload(node, drilldownDetail));
+                }}
+              />
+            </div>
+          ) : null}
+        </section>
+      ) : null}
 
       <section className="logistics-demo-page__panel">
         <header className="logistics-demo-page__panel-header">

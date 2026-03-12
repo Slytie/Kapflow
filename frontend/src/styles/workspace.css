@@ -203,6 +203,16 @@
   cursor: pointer;
 }
 
+.workflow-graph-pill:focus-visible rect {
+  stroke: #4a6fa1;
+  stroke-width: 2;
+}
+
+.workflow-graph-pill.is-selected rect {
+  stroke: #4a6fa1;
+  stroke-width: 2;
+}
+
 .workflow-graph-pill rect {
   stroke-width: 1;
 }

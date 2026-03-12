@@ -560,6 +560,48 @@ export function createContractState(): ContractState {
         active_issue_count: 1,
         created_at: nowIso(-600),
         updated_at: nowIso(-60)
+      },
+      {
+        workflow_run_id: "wr-weekly-001",
+        workflow_id: "weekly_schedule_planning.v1",
+        workflow_version: "v1",
+        tenant_id: "tenant-a",
+        domain_id: "domain-x",
+        partition_key: "PW-2026-W10",
+        logical_date: "PW-2026-W10",
+        activation_key: "weekly_schedule_planning.v1:PW-2026-W10",
+        state: "OPEN",
+        active_issue_count: 1,
+        created_at: nowIso(-260),
+        updated_at: nowIso(-220)
+      },
+      {
+        workflow_run_id: "wr-live-001",
+        workflow_id: "live_dispatch.v1",
+        workflow_version: "v1",
+        tenant_id: "tenant-a",
+        domain_id: "domain-x",
+        partition_key: "SD-2026-03-06",
+        logical_date: "SD-2026-03-06",
+        activation_key: "live_dispatch.v1:SD-2026-03-06",
+        state: "OPEN",
+        active_issue_count: 1,
+        created_at: nowIso(-240),
+        updated_at: nowIso(-200)
+      },
+      {
+        workflow_run_id: "wr-report-001",
+        workflow_id: "dispatch_reporting.v1",
+        workflow_version: "v1",
+        tenant_id: "tenant-a",
+        domain_id: "domain-x",
+        partition_key: "SD-2026-03-06",
+        logical_date: "SD-2026-03-06",
+        activation_key: "dispatch_reporting.v1:SD-2026-03-06",
+        state: "COMPLETED",
+        active_issue_count: 0,
+        created_at: nowIso(-320),
+        updated_at: nowIso(-260)
       }
     ],
     humanTasks: [
@@ -907,6 +949,90 @@ export function createContractState(): ContractState {
             subject_id: "tr-live-stage01-001",
             relation_kind: "step_output",
             created_at: nowIso(-205),
+            created_by_actor_id: "system:runtime",
+            created_by_actor_type: "system"
+          }
+        ]
+      },
+      {
+        artifact_version_id: "av-weekly-001",
+        workflow_run_id: "wr-weekly-001",
+        task_run_id: "tr-weekly-stage03-001",
+        artifact_kind: "planning.published_weekly_schedule.workbook",
+        artifact_role: "official_output",
+        media_type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        storage_uri: "s3://artifacts/av-weekly-001.xlsx",
+        content_digest: "sha256:weekly001",
+        byte_size: 1024,
+        metadata_json: {
+          source: "weekly",
+          stage_id: "Stage03",
+          file_name: "weekly_schedule.xlsx"
+        },
+        parent_artifact_version_id: null,
+        supersedes_artifact_version_id: null,
+        lineage_note: null,
+        created_at: nowIso(-218),
+        links: [
+          {
+            artifact_version_id: "av-weekly-001",
+            workflow_run_id: "wr-weekly-001",
+            subject_kind: "human_task",
+            subject_id: "ht-weekly-001",
+            relation_kind: "attachment",
+            created_at: nowIso(-218),
+            created_by_actor_id: "system:runtime",
+            created_by_actor_type: "system"
+          },
+          {
+            artifact_version_id: "av-weekly-001",
+            workflow_run_id: "wr-weekly-001",
+            subject_kind: "task_run",
+            subject_id: "tr-weekly-stage03-001",
+            relation_kind: "step_output",
+            created_at: nowIso(-218),
+            created_by_actor_id: "system:runtime",
+            created_by_actor_type: "system"
+          }
+        ]
+      },
+      {
+        artifact_version_id: "av-reporting-001",
+        workflow_run_id: "wr-report-001",
+        task_run_id: "tr-report-stage05-001",
+        artifact_kind: "reporting.final_packet.workbook",
+        artifact_role: "official_output",
+        media_type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        storage_uri: "s3://artifacts/av-reporting-001.xlsx",
+        content_digest: "sha256:reporting001",
+        byte_size: 960,
+        metadata_json: {
+          source: "reporting",
+          stage_id: "Stage05",
+          file_name: "dispatch_reporting_packet.xlsx"
+        },
+        parent_artifact_version_id: null,
+        supersedes_artifact_version_id: null,
+        lineage_note: null,
+        created_at: nowIso(-255),
+        links: [
+          {
+            artifact_version_id: "av-reporting-001",
+            workflow_run_id: "wr-report-001",
+            subject_kind: "human_task",
+            subject_id: "ht-reporting-001",
+            relation_kind: "attachment",
+            created_at: nowIso(-255),
+            created_by_actor_id: "system:runtime",
+            created_by_actor_type: "system"
+          },
+          {
+            artifact_version_id: "av-reporting-001",
+            workflow_run_id: "wr-report-001",
+            subject_kind: "task_run",
+            subject_id: "tr-report-stage05-001",
+            relation_kind: "step_output",
+            created_at: nowIso(-255),
             created_by_actor_id: "system:runtime",
             created_by_actor_type: "system"
           }

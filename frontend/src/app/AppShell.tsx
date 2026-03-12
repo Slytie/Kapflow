@@ -18,6 +18,8 @@ const NAV_LINKS = [
   { to: "/official-outputs", label: "Official Outputs" }
 ];
 
+const SECONDARY_LINKS = [{ to: "/runs", label: "Run Details" }];
+
 export function AppShell(): JSX.Element {
   const location = useLocation();
   const queryClient = useQueryClient();
@@ -98,6 +100,20 @@ export function AppShell(): JSX.Element {
             </NavLink>
           ))}
         </nav>
+        {isLogisticsDemoRoute ? (
+          <div className="app-shell__secondary-nav" aria-label="Secondary detail routes">
+            <p>Secondary detail routes</p>
+            {SECONDARY_LINKS.map((link) => (
+              <NavLink
+                key={link.to}
+                to={link.to}
+                className={({ isActive }) => (isActive ? "active" : "")}
+              >
+                {link.label}
+              </NavLink>
+            ))}
+          </div>
+        ) : null}
       </aside>
 
       <section className="app-shell__main">

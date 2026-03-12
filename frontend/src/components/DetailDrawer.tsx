@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 
@@ -6,7 +6,12 @@ import { onetruthApi } from "@/lib/api/onetruthApi";
 import { errorText } from "@/lib/api/errorText";
 import { downloadBase64ToFile } from "@/lib/repositories/artifactAttachments";
 import { humanTasksRepository } from "@/lib/repositories";
-import type { HumanTaskRow } from "@/lib/types/contracts";
+import type {
+  HumanTaskRow,
+  HumanTaskSubgraph,
+  HumanTaskSubgraphArtifactRef,
+  HumanTaskSubgraphNode
+} from "@/lib/types/contracts";
 import type {
   DrawerArtifact,
   DrawerArtifactSource,
@@ -26,6 +31,154 @@ type TaskAction =
   | "confirm_review"
   | "upload_attachment";
 
+interface TaskSubgraphViewProps {
+  subgraph: HumanTaskSubgraph;
+  onDownloadArtifact: (artifactRef: HumanTaskSubgraphArtifactRef) => Promise<void>;
+  downloadingArtifactVersionId: string | null;
+}
+
+function humanReadableNodeStatus(status: string): string {
+  if (status === "in_progress") {
+    return "In progress";
+  }
+  if (status === "not_started") {
+    return "Not started";
+  }
+  if (status === "awaiting_approval") {
+    return "Awaiting approval";
+  }
+  return status.replace(/_/g, " ");
+}
+
+const TaskSubgraphView = memo(function TaskSubgraphView({
+  subgraph,
+  onDownloadArtifact,
+  downloadingArtifactVersionId
+}: TaskSubgraphViewProps): JSX.Element {
+  const [selectedNodeId, setSelectedNodeId] = useState<string | null>(
+    subgraph.nodes[0]?.node_id ?? null
+  );
+  const nodeButtonRefs = useRef<Array<HTMLButtonElement | null>>([]);
+
+  useEffect(() => {
+    setSelectedNodeId(subgraph.nodes[0]?.node_id ?? null);
+    nodeButtonRefs.current = [];
+  }, [subgraph.graph_id, subgraph.nodes]);
+
+  const selectedNode = useMemo<HumanTaskSubgraphNode | null>(() => {
+    if (!selectedNodeId) {
+      return subgraph.nodes[0] ?? null;
+    }
+    return subgraph.nodes.find((node) => node.node_id === selectedNodeId) ?? subgraph.nodes[0] ?? null;
+  }, [selectedNodeId, subgraph.nodes]);
+
+  const selectedNodeEdges = useMemo(
+    () =>
+      selectedNode
+        ? subgraph.edges.filter(
+            (edge) =>
+              edge.from_node_id === selectedNode.node_id || edge.to_node_id === selectedNode.node_id
+          )
+        : [],
+    [selectedNode, subgraph.edges]
+  );
+
+  return (
+    <div className="detail-drawer__subgraph-contents">
+      <div className="detail-drawer__subgraph-layout">
+        <ul className="detail-drawer__subgraph-node-list" aria-label="Process steps">
+          {subgraph.nodes.map((node, index) => {
+            const isSelected = selectedNode?.node_id === node.node_id;
+            return (
+              <li key={node.node_id}>
+                <button
+                  ref={(element) => {
+                    nodeButtonRefs.current[index] = element;
+                  }}
+                  type="button"
+                  className={`detail-drawer__subgraph-node-btn${isSelected ? " is-selected" : ""}`}
+                  aria-pressed={isSelected}
+                  onClick={() => setSelectedNodeId(node.node_id)}
+                  onKeyDown={(event) => {
+                    if (event.key !== "ArrowDown" && event.key !== "ArrowUp") {
+                      return;
+                    }
+                    event.preventDefault();
+                    const delta = event.key === "ArrowDown" ? 1 : -1;
+                    const nextIndex = (index + delta + subgraph.nodes.length) % subgraph.nodes.length;
+                    nodeButtonRefs.current[nextIndex]?.focus();
+                    setSelectedNodeId(subgraph.nodes[nextIndex]?.node_id ?? null);
+                  }}
+                >
+                  <span>{node.label}</span>
+                  <span className="detail-drawer__subgraph-node-status">
+                    {humanReadableNodeStatus(node.status)}
+                  </span>
+                </button>
+              </li>
+            );
+          })}
+        </ul>
+
+        <div className="detail-drawer__subgraph-node-detail" aria-live="polite">
+          {selectedNode ? (
+            <>
+              <p className="detail-drawer__subgraph-node-title">{selectedNode.label}</p>
+              <p className="detail-drawer__subgraph-node-meta">
+                {humanReadableNodeStatus(selectedNode.status)} · {selectedNode.node_kind}
+              </p>
+              {selectedNodeEdges.length > 0 ? (
+                <ul className="detail-drawer__subgraph-edge-list" aria-label="Connected transitions">
+                  {selectedNodeEdges.map((edge) => (
+                    <li key={edge.edge_id}>
+                      {edge.from_node_id} → {edge.to_node_id}
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="detail-drawer__hint">No linked transitions for this step.</p>
+              )}
+            </>
+          ) : (
+            <p className="detail-drawer__hint">No process step selected.</p>
+          )}
+        </div>
+      </div>
+
+      <p className="detail-drawer__subgraph-freshness">
+        Freshness: {subgraph.freshness.status}
+        {subgraph.freshness.as_of ? ` · as of ${new Date(subgraph.freshness.as_of).toLocaleString()}` : ""}
+      </p>
+
+      {subgraph.artifact_refs.length > 0 ? (
+        <ul className="detail-drawer__artifact-list">
+          {subgraph.artifact_refs.map((artifactRef) => (
+            <li
+              key={artifactRef.artifact_version_id}
+              className="detail-drawer__artifact-row detail-drawer__artifact-row--subgraph"
+            >
+              <div className="detail-drawer__artifact-meta">
+                <p className="detail-drawer__artifact-name">{artifactRef.label}</p>
+                <p className="detail-drawer__artifact-details">{artifactRef.source_label}</p>
+              </div>
+              <button
+                type="button"
+                className="action-btn"
+                onClick={() => void onDownloadArtifact(artifactRef)}
+                disabled={downloadingArtifactVersionId === artifactRef.artifact_version_id}
+              >
+                Download
+              </button>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p className="detail-drawer__hint">No process artifacts are currently linked.</p>
+      )}
+    </div>
+  );
+});
+
 export function DetailDrawer({ payload, onClose }: DetailDrawerProps): JSX.Element {
   const queryClient = useQueryClient();
   const [downloadError, setDownloadError] = useState<unknown>(null);
@@ -39,6 +192,13 @@ export function DetailDrawer({ payload, onClose }: DetailDrawerProps): JSX.Eleme
   const [taskActionError, setTaskActionError] = useState<unknown>(null);
   const [pendingTaskAction, setPendingTaskAction] = useState<TaskAction | null>(null);
   const uploadInputRef = useRef<HTMLInputElement | null>(null);
+  const expandProcessButtonRef = useRef<HTMLButtonElement | null>(null);
+  const subgraphHeadingRef = useRef<HTMLHeadingElement | null>(null);
+  const [subgraphExpanded, setSubgraphExpanded] = useState(false);
+  const [subgraphLoading, setSubgraphLoading] = useState(false);
+  const [subgraphError, setSubgraphError] = useState<unknown>(null);
+  const [subgraph, setSubgraph] = useState<HumanTaskSubgraph | null>(null);
+  const activeTaskIdRef = useRef<string | null>(null);
 
   const taskFromPayload = payload?.task ?? null;
 
@@ -47,6 +207,13 @@ export function DetailDrawer({ payload, onClose }: DetailDrawerProps): JSX.Eleme
     setDownloadingArtifactVersionId(null);
     setTaskActionError(null);
   }, [payload]);
+
+  useEffect(() => {
+    setSubgraphExpanded(false);
+    setSubgraphLoading(false);
+    setSubgraphError(null);
+    setSubgraph(null);
+  }, [payload?.task?.human_task_id]);
 
   useEffect(() => {
     if (!taskFromPayload) {
@@ -85,6 +252,27 @@ export function DetailDrawer({ payload, onClose }: DetailDrawerProps): JSX.Eleme
   }, [taskFromPayload]);
 
   const activeTask = taskDetails ?? taskFromPayload;
+  useEffect(() => {
+    activeTaskIdRef.current = activeTask?.human_task_id ?? null;
+  }, [activeTask?.human_task_id]);
+
+  const isCompositeTask =
+    Boolean(activeTask?.is_composite) && activeTask?.expansion_kind === "task_subgraph";
+
+  useEffect(() => {
+    if (isCompositeTask) {
+      return;
+    }
+    setSubgraphExpanded(false);
+  }, [isCompositeTask]);
+
+  useEffect(() => {
+    if (!subgraphExpanded) {
+      return;
+    }
+    subgraphHeadingRef.current?.focus();
+  }, [subgraphExpanded, subgraphLoading, subgraphError, subgraph]);
+
   const artifactSources = useMemo(
     () => mergeArtifactSources(payload?.artifact_sources ?? [], activeTask),
     [activeTask, payload?.artifact_sources]
@@ -164,32 +352,76 @@ export function DetailDrawer({ payload, onClose }: DetailDrawerProps): JSX.Eleme
     };
   }, [artifactSources, payload]);
 
-  if (!payload) {
-    return <aside className="detail-drawer" aria-hidden="true" />;
-  }
+  const downloadArtifactVersion = useCallback(
+    async ({
+      artifactVersionId,
+      preferredFileName
+    }: {
+      artifactVersionId: string;
+      preferredFileName: string | null;
+    }): Promise<void> => {
+      setDownloadError(null);
+      setDownloadingArtifactVersionId(artifactVersionId);
+      try {
+        const downloaded = await onetruthApi.downloadArtifact(artifactVersionId);
+        const metadataName = downloaded.artifact_version.metadata_json?.file_name;
+        const fileName =
+          preferredFileName ??
+          (typeof metadataName === "string" && metadataName.length > 0
+            ? metadataName
+            : downloaded.artifact_version.artifact_version_id);
+        downloadBase64ToFile(
+          downloaded.content_base64,
+          fileName,
+          downloaded.artifact_version.media_type
+        );
+      } catch (error) {
+        setDownloadError(error);
+      } finally {
+        setDownloadingArtifactVersionId(null);
+      }
+    },
+    []
+  );
 
   const handleDownloadArtifact = async (artifact: DrawerArtifact): Promise<void> => {
-    setDownloadError(null);
-    setDownloadingArtifactVersionId(artifact.artifact_version_id);
-    try {
-      const downloaded = await onetruthApi.downloadArtifact(artifact.artifact_version_id);
-      const metadataName = downloaded.artifact_version.metadata_json?.file_name;
-      const fileName =
-        artifact.file_name ??
-        (typeof metadataName === "string" && metadataName.length > 0
-          ? metadataName
-          : downloaded.artifact_version.artifact_version_id);
-      downloadBase64ToFile(
-        downloaded.content_base64,
-        fileName,
-        downloaded.artifact_version.media_type
-      );
-    } catch (error) {
-      setDownloadError(error);
-    } finally {
-      setDownloadingArtifactVersionId(null);
-    }
+    await downloadArtifactVersion({
+      artifactVersionId: artifact.artifact_version_id,
+      preferredFileName: artifact.file_name
+    });
   };
+
+  const handleDownloadSubgraphArtifact = async (
+    artifactRef: HumanTaskSubgraphArtifactRef
+  ): Promise<void> => {
+    await downloadArtifactVersion({
+      artifactVersionId: artifactRef.artifact_version_id,
+      preferredFileName: artifactRef.label || null
+    });
+  };
+
+  const loadTaskSubgraph = useCallback(async (humanTaskId: string): Promise<void> => {
+    setSubgraphLoading(true);
+    setSubgraphError(null);
+    try {
+      const loaded = await humanTasksRepository.getSubgraph(humanTaskId);
+      if (activeTaskIdRef.current !== humanTaskId) {
+        return;
+      }
+      setSubgraph(loaded);
+      setSubgraphError(null);
+    } catch (error) {
+      if (activeTaskIdRef.current !== humanTaskId) {
+        return;
+      }
+      setSubgraphError(error);
+    } finally {
+      if (activeTaskIdRef.current !== humanTaskId) {
+        return;
+      }
+      setSubgraphLoading(false);
+    }
+  }, []);
 
   const hasAction = (candidates: string[]): boolean => {
     if (!activeTask) {
@@ -197,6 +429,21 @@ export function DetailDrawer({ payload, onClose }: DetailDrawerProps): JSX.Eleme
     }
     const actionSet = new Set((activeTask.available_actions ?? []).map((action) => action.toLowerCase()));
     return candidates.some((candidate) => actionSet.has(candidate.toLowerCase()));
+  };
+
+  const toggleTaskSubgraph = (): void => {
+    if (!activeTask || !isCompositeTask) {
+      return;
+    }
+    if (subgraphExpanded) {
+      setSubgraphExpanded(false);
+      expandProcessButtonRef.current?.focus();
+      return;
+    }
+    setSubgraphExpanded(true);
+    if (!subgraph && !subgraphLoading) {
+      void loadTaskSubgraph(activeTask.human_task_id);
+    }
   };
 
   const refreshTaskContext = async (humanTaskId: string): Promise<void> => {
@@ -269,6 +516,10 @@ export function DetailDrawer({ payload, onClose }: DetailDrawerProps): JSX.Eleme
     }
     uploadInputRef.current?.click();
   };
+
+  if (!payload) {
+    return <aside className="detail-drawer" aria-hidden="true" />;
+  }
 
   return (
     <aside className="detail-drawer detail-drawer--open" aria-label="Details drawer">
@@ -441,7 +692,72 @@ export function DetailDrawer({ payload, onClose }: DetailDrawerProps): JSX.Eleme
                 Upload attachment
               </button>
             ) : null}
+            {isCompositeTask ? (
+              <button
+                ref={expandProcessButtonRef}
+                type="button"
+                className="action-btn"
+                aria-expanded={subgraphExpanded}
+                aria-controls="task-subgraph-panel"
+                disabled={subgraphLoading}
+                onClick={toggleTaskSubgraph}
+              >
+                {subgraphExpanded ? "Collapse process" : "Expand process"}
+              </button>
+            ) : null}
           </div>
+
+          {isCompositeTask && subgraphExpanded ? (
+            <section
+              id="task-subgraph-panel"
+              className="detail-drawer__subgraph"
+              aria-label="Task process"
+              onKeyDown={(event) => {
+                if (event.key !== "Escape") {
+                  return;
+                }
+                event.preventDefault();
+                setSubgraphExpanded(false);
+                expandProcessButtonRef.current?.focus();
+              }}
+            >
+              <h4 ref={subgraphHeadingRef} tabIndex={-1}>
+                Task process
+              </h4>
+              {subgraphLoading ? (
+                <p className="detail-drawer__hint">Loading task process...</p>
+              ) : null}
+              {!subgraphLoading && subgraphError ? (
+                <div>
+                  <p className="detail-drawer__error">
+                    {errorText(subgraphError, "Task process failed to load")}
+                  </p>
+                  <button
+                    type="button"
+                    className="action-btn"
+                    onClick={() => {
+                      if (!activeTask) {
+                        return;
+                      }
+                      void loadTaskSubgraph(activeTask.human_task_id);
+                    }}
+                  >
+                    Retry process load
+                  </button>
+                </div>
+              ) : null}
+              {!subgraphLoading && !subgraphError && subgraph ? (
+                <TaskSubgraphView
+                  subgraph={subgraph}
+                  onDownloadArtifact={handleDownloadSubgraphArtifact}
+                  downloadingArtifactVersionId={downloadingArtifactVersionId}
+                />
+              ) : null}
+              {!subgraphLoading && !subgraphError && !subgraph ? (
+                <p className="detail-drawer__hint">No process graph is currently available.</p>
+              ) : null}
+            </section>
+          ) : null}
         </section>
       ) : null}
 
@@ -528,7 +844,10 @@ function drawerTaskContext(task: HumanTaskRow): DrawerTaskContext {
     blocked_on_ref: task.blocked_on_ref,
     available_actions: task.available_actions ?? [],
     blocking_reason_codes: task.blocking_reason_codes ?? [],
-    missing_required_inputs: task.missing_required_inputs ?? []
+    missing_required_inputs: task.missing_required_inputs ?? [],
+    is_composite: task.is_composite ?? false,
+    expansion_kind: task.expansion_kind ?? "none",
+    subgraph_ref: task.subgraph_ref ?? null
   };
 }
 

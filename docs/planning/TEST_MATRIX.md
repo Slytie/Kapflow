@@ -110,6 +110,7 @@ Current implemented runtime command-boundary coverage:
 - `tests/runtime/api/test_logistics_three_workflow_story_endpoint.py`
 - `tests/runtime/api/test_human_task_claim_via_api.py`
 - `tests/runtime/api/test_human_task_complete_via_api.py`
+- `tests/runtime/api/test_human_task_subgraph_contract.py`
 - `tests/runtime/api/test_approval_respond_via_api.py`
 - `tests/runtime/api/test_flag_transition_via_api.py`
 - `tests/runtime/api/test_stage06_openai_review_sandbox_api.py`
@@ -160,6 +161,9 @@ Current runtime tests assert:
   - seeded scenario composition links reporting, weekly, and live runs through both canonical edges in one lineage
   - backend story endpoint returns one authoritative payload (graph + handoffs + linked runs + board-ready work + official outputs + freshness/coherence)
 - implementation-backed HTTP contract/mutation coverage for board-ready read surfaces (tasks/approvals/flags/workflow/timeline/pointers/board) and canonical HITL actions (`claim`, `complete`, `respond`, `flags.transition`)
+- human-task composite expansion contracts:
+  - detail payload always includes optional expansion metadata (`is_composite`, `expansion_kind`, `subgraph_ref`)
+  - composite task kinds return lazy subgraph payloads via `GET /api/v1/human-tasks/{id}/subgraph` with reference-only artifact refs (no artifact bytes)
 - frontend inline attachment controls are covered at component/repository contract level and remain delegated to canonical artifact endpoints (no client-side shadow attachment state)
 - bounded Stage06 real-model sandbox path coverage (mock/contract path always-on + gated real OpenAI e2e path)
 - single-run workspace projection coverage:

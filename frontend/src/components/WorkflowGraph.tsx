@@ -17,6 +17,7 @@ interface WorkflowGraphProps {
   showStepBadge?: boolean;
   stepBadgeLabel?: string;
   onNodeSelect?: (node: WorkflowWorkspaceGraphNode) => void;
+  selectedNodeId?: string | null;
 }
 
 interface PositionedNode {
@@ -113,7 +114,8 @@ export function WorkflowGraph({
   tabs = WORKFLOW_TABS,
   showStepBadge = true,
   stepBadgeLabel = "Step 4",
-  onNodeSelect
+  onNodeSelect,
+  selectedNodeId = null
 }: WorkflowGraphProps): JSX.Element {
   const positionedNodes = useMemo(() => {
     return nodes.map((node, index) => ({
@@ -203,6 +205,7 @@ export function WorkflowGraph({
               width={NODE_WIDTH}
               height={NODE_HEIGHT}
               onSelect={onNodeSelect}
+              isSelected={selectedNodeId === entry.node.node_id}
             />
           ))}
         </svg>
