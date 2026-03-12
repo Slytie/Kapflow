@@ -169,11 +169,35 @@ What it does not do:
 
 Deterministic coverage:
 - `PYTHONPATH=src pytest -q tests/unit/test_responses_agent_runner.py tests/runtime/test_weekly_stage04_execution_runtime.py tests/runtime/api/test_weekly_stage04_openai_agent_api.py tests/runtime/scenarios/test_weekly_stage04_openai_agent_mocked_slice.py`
+- `PYTHONPATH=src pytest -q tests/runtime/test_logistics_weekly_agent_pilot.py`
+
+Real-network weekly Stage04 e2e (dual gated):
+- `ONETRUTH_RUN_OPENAI_E2E=1 ONETRUTH_RUN_OPENAI_WEEKLY_AGENT_E2E=1 OPENAI_API_KEY=<key> PYTHONPATH=src pytest -q tests/integration_openai/test_weekly_stage04_openai_real_e2e.py`
+
+## Logistics weekly Stage04 pilot runner
+The repo now includes a reproducible weekly Stage04 pilot runner with mock and real OpenAI modes:
+- script: `scripts/run_logistics_weekly_agent_pilot.py`
+- service: `src/onetruth/application/services/logistics_weekly_agent_pilot.py`
+
+Run mock mode (default):
+- `PYTHONPATH=src python3 scripts/run_logistics_weekly_agent_pilot.py --db-url sqlite:///./.tmp/logistics-weekly-stage04-pilot.db --pilot-key local-weekly-stage04 --openai-mode mock --json`
+
+Run real mode (gated):
+- `OPENAI_API_KEY=<key> PYTHONPATH=src python3 scripts/run_logistics_weekly_agent_pilot.py --db-url sqlite:///./.tmp/logistics-weekly-stage04-pilot.db --pilot-key openai-weekly-stage04 --openai-mode real --json`
+
+Inspection outputs:
+- suite summary:
+  - `artifacts/pilot_runs/logistics_weekly_stage04_agent/<pilot_key>/pilot_summary.json`
+  - `artifacts/pilot_runs/logistics_weekly_stage04_agent/<pilot_key>/pilot_summary.md`
+- per-run packet:
+  - `artifacts/pilot_runs/logistics_weekly_stage04_agent/<pilot_key>/<pilot_id>/inspection_packet.json`
+  - `artifacts/pilot_runs/logistics_weekly_stage04_agent/<pilot_key>/<pilot_id>/inspection_packet.md`
 
 ## GitHub Actions Secret Setup (`OPENAI_API_KEY` + weekly-agent env gate)
 - Store the key as a repository secret named `OPENAI_API_KEY` in GitHub Settings -> Secrets and variables -> Actions.
-- Define repository variable `ONETRUTH_RUN_WEEKLY_AGENT_E2E` (default `0`); switch to `1` only when weekly-agent real-network suites are ready to run.
-- `agent_api.yml` runs OpenAI tests only when `OPENAI_API_KEY` is present, and runs future weekly-agent real-network tests only when both `OPENAI_API_KEY` and `ONETRUTH_RUN_WEEKLY_AGENT_E2E=1` are set.
+- Define repository variable `ONETRUTH_RUN_OPENAI_WEEKLY_AGENT_E2E` (default `0`); switch to `1` only when weekly Stage04 real-network suites are ready to run.
+- `agent_api.yml` runs OpenAI integration tests only when `OPENAI_API_KEY` is present.
+- Weekly Stage04 real-network tests inside `tests/integration_openai` require both `ONETRUTH_RUN_OPENAI_E2E=1` and `ONETRUTH_RUN_OPENAI_WEEKLY_AGENT_E2E=1`, so they stay deliberate/opt-in.
 - Manual run path: GitHub -> Actions -> `agent_api` -> Run workflow.
 - PRs from forks do not receive repository secrets, so OpenAI integration tests are intentionally gated and skipped in that context.
 - OpenAI key safety guidance: use environment variables/secrets and never commit keys ([OpenAI API key safety](https://help.openai.com/en/articles/5112595-best-practices-for-api-key-safety)).

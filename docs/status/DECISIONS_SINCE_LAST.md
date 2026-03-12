@@ -2,6 +2,13 @@
 
 Record any decisions made since the last session so a fresh Codex run can rehydrate quickly.
 
+## 2026-03-12 (TASK-0070 weekly Stage04 pilot + real-network gate hardening)
+- Pilot reproducibility decision: added a dedicated logistics weekly Stage04 pilot service/runner (`run_logistics_weekly_agent_pilot_suite`, `scripts/run_logistics_weekly_agent_pilot.py`) with deterministic IDs keyed by `(pilot_key, pilot_id)`, canonical workflow/task/artifact execution, and no ad hoc side-channel state.
+- Weekly Stage04 pilot execution posture decision: pilot runs support `--openai-mode mock|real`; mock mode uses a deterministic bounded Responses function-calling runner, and real mode is explicitly key-gated without introducing a second runtime path.
+- Inspection packet authority decision: weekly pilot outputs now include canonical-reference-heavy inspection packets (`inspection_packet.json` + `.md`) that center workflow/task/execution/tool/policy/artifact IDs, evidence-by-kind coverage, timeline events of interest, and canonical CLI query commands for debugging.
+- Real-network gate decision: weekly Stage04 real e2e coverage now lives in `tests/integration_openai/test_weekly_stage04_openai_real_e2e.py` and requires both `ONETRUTH_RUN_OPENAI_E2E=1` and `ONETRUTH_RUN_OPENAI_WEEKLY_AGENT_E2E=1` (plus `OPENAI_API_KEY`), preserving existing Stage06 real-network coverage.
+- CI posture decision: `agent_api.yml` now runs `tests/integration_openai` under one gated step, with weekly Stage04 e2e controlled by the additional weekly env gate rather than a permanently-empty future test directory path.
+
 ## 2026-03-12 (TASK-0069 weekly Stage04 OpenAI agent runtime)
 - Bounded Stage04 agent-loop decision: weekly Stage04 now runs a synchronous OpenAI Responses function-calling loop (`weekly_schedule_planning.v1`, `Stage04`) with multi-call-per-turn support and `call_id`-bound `function_call_output` continuation semantics; no Assistants API and no background mode were introduced.
 - Compiled-control pinning decision: Stage04 execution session semantics now resolve from compiled logistics control metadata (`compile_control_layer` + `derive_execution_session_payload`) rather than hardcoded execution-spec constants.
@@ -30,7 +37,7 @@ Record any decisions made since the last session so a fresh Codex run can rehydr
 - Routing decision: new agentic scheduling task intake now defaults to logistics weekly/live (`weekly_schedule_planning.v1 -> live_dispatch.v1`) across Codex/LLM routing docs; legacy `schedule_planning.v1` remains regression/reference-only.
 - Secret hygiene decision: committed real OpenAI key material is removed from tracked repo content, and local `.codex.env` posture is documented as local-only placeholders with real-network gates defaulted off.
 - Validation decision: `scripts/validate_repo.py` now scans tracked UTF-8 files for real OpenAI key patterns (`sk-proj-...` / `sk-...`) and fails validation on detection.
-- CI gate posture decision: `.github/workflows/agent_api.yml` keeps current OpenAI gating and adds an explicit future weekly-agent real-network gate controlled by repository variable `ONETRUTH_RUN_WEEKLY_AGENT_E2E=1` plus `OPENAI_API_KEY` presence.
+- CI gate posture decision: `.github/workflows/agent_api.yml` keeps current OpenAI gating and adds an explicit future weekly-agent real-network gate controlled by repository variable `ONETRUTH_RUN_WEEKLY_AGENT_E2E=1` plus `OPENAI_API_KEY` presence (later superseded in TASK-0070 by `ONETRUTH_RUN_OPENAI_WEEKLY_AGENT_E2E` dual-gate posture).
 
 ## 2026-03-09 (TASK-0068 composite-task subgraphs + drawer hardening)
 - Human-task drill-down contract decision: keep `GET /api/v1/human-tasks/{id}` as the canonical detail seam and extend it with optional composite metadata (`is_composite`, `expansion_kind`, `subgraph_ref`) while keeping non-composite tasks unchanged.

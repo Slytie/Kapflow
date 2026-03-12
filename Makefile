@@ -6,7 +6,7 @@ RELEASE_CONFIDENCE_OUTPUT_ROOT ?= $(CURDIR)/.tmp/release-confidence-gate
 RELEASE_CONFIDENCE_KEY ?= release-confidence-gate
 RELEASE_CONFIDENCE_OPENAI_MODE ?= mock
 
-.PHONY: lint test schema-validate trace-validate unit contract replay acceptance runtime runtime-api security property integration integration-openai generated-check frontend-snapshots frontend-snapshots-check frontend-install frontend-typecheck frontend-test frontend-build ci-backend ci release-confidence release-confidence-validation release-confidence-demo-export release-confidence-projection-coherence release-confidence-logistics-weekly-live release-confidence-certification-manifest
+.PHONY: lint test schema-validate trace-validate unit contract replay acceptance runtime runtime-api security property integration integration-openai integration-openai-weekly-stage04 logistics-weekly-stage04-pilot generated-check frontend-snapshots frontend-snapshots-check frontend-install frontend-typecheck frontend-test frontend-build ci-backend ci release-confidence release-confidence-validation release-confidence-demo-export release-confidence-projection-coherence release-confidence-logistics-weekly-live release-confidence-certification-manifest
 
 lint: schema-validate contract
 
@@ -47,6 +47,16 @@ integration:
 
 integration-openai:
 	PYTHONPATH=src $(PYTEST) tests/integration_openai
+
+integration-openai-weekly-stage04:
+	@if [ "$${ONETRUTH_RUN_OPENAI_E2E:-0}" != "1" ] || [ "$${ONETRUTH_RUN_OPENAI_WEEKLY_AGENT_E2E:-0}" != "1" ]; then \
+		echo "Set ONETRUTH_RUN_OPENAI_E2E=1 and ONETRUTH_RUN_OPENAI_WEEKLY_AGENT_E2E=1 before running weekly Stage04 real-network tests."; \
+		exit 1; \
+	fi
+	PYTHONPATH=src $(PYTEST) tests/integration_openai/test_weekly_stage04_openai_real_e2e.py
+
+logistics-weekly-stage04-pilot:
+	PYTHONPATH=src python3 scripts/run_logistics_weekly_agent_pilot.py --db-url sqlite:///./.tmp/logistics-weekly-stage04-pilot.db --pilot-key local-weekly-stage04 --openai-mode mock --json
 
 generated-check:
 	$(VALIDATOR)

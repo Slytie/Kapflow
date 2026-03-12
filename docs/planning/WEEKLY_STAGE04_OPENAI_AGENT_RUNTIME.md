@@ -87,4 +87,30 @@ Policy-gated before model execution:
 - `tests/runtime/test_weekly_stage04_execution_runtime.py`
 - `tests/runtime/api/test_weekly_stage04_openai_agent_api.py`
 - `tests/runtime/scenarios/test_weekly_stage04_openai_agent_mocked_slice.py`
+- `tests/runtime/test_logistics_weekly_agent_pilot.py`
 
+## Weekly Stage04 pilot runner
+Reproducible pilot runner:
+- script: `scripts/run_logistics_weekly_agent_pilot.py`
+- service: `src/onetruth/application/services/logistics_weekly_agent_pilot.py`
+
+Pilot behavior:
+- seeds canonical Stage04 input artifacts (`route_slot_requirements`, `driver_capabilities`, `approved_availability`, `actual_hours`),
+- creates and claims a Stage04 `work_item` human task,
+- executes the bounded weekly Stage04 agent in `mock` or `real` mode,
+- emits inspection packet artifacts (`inspection_packet.json` and `.md`) plus suite summary artifacts (`pilot_summary.json` and `.md`).
+
+Inspection packets are canonical-reference-heavy and include:
+- workflow/task/execution/tool/policy/artifact IDs,
+- evidence coverage by artifact kind (`execution.*`, `runtime.*`, Stage04 output kinds),
+- timeline events of interest and derived inspection routes,
+- canonical CLI query commands for debugging.
+
+## Real-network e2e gate
+Weekly Stage04 real-network tests remain deliberately gated:
+- required env gate 1: `ONETRUTH_RUN_OPENAI_E2E=1`
+- required env gate 2: `ONETRUTH_RUN_OPENAI_WEEKLY_AGENT_E2E=1`
+- required secret: `OPENAI_API_KEY`
+
+Coverage file:
+- `tests/integration_openai/test_weekly_stage04_openai_real_e2e.py`

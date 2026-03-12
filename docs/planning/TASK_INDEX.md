@@ -71,3 +71,4 @@
 | TASK-0067 | EPIC-025 | DONE | high | Authored schedule-control semantics and canonical bridge artifacts for weekly/live logistics |
 | TASK-0068 | EPIC-025 | DONE | high | Deterministic weekly schedule-control services and Stage04 runtime build slice |
 | TASK-0069 | EPIC-070 | DONE | high | Weekly Stage04 OpenAI agent runtime over compiled control and Responses API function calling |
+| TASK-0070 | EPIC-070 | DONE | high | Real-network weekly Stage04 pilot runner, canonical inspection packets, and dual-gated e2e coverage |

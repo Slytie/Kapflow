@@ -44,10 +44,11 @@ jobs:
           fi
           pytest -q
 
-      - name: Run OpenAI integration tests (gated)
+      - name: Run OpenAI integration tests (gated + weekly dual gate)
         shell: bash
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          ONETRUTH_RUN_OPENAI_WEEKLY_AGENT_E2E: ${{ vars.ONETRUTH_RUN_OPENAI_WEEKLY_AGENT_E2E }}
         run: |
           set -euo pipefail
           if [ -z "${OPENAI_API_KEY}" ]; then
@@ -55,35 +56,14 @@ jobs:
             exit 0
           fi
 
+          if [ "${ONETRUTH_RUN_OPENAI_WEEKLY_AGENT_E2E:-0}" != "1" ]; then
+            echo "ONETRUTH_RUN_OPENAI_WEEKLY_AGENT_E2E is not 1. Weekly Stage04 real-network e2e remains skipped."
+          fi
+
           if [ -d tests/integration_openai ]; then
-            ONETRUTH_RUN_OPENAI_E2E=1 PYTHONPATH=src pytest -q tests/integration_openai
+            ONETRUTH_RUN_OPENAI_E2E=1 ONETRUTH_RUN_OPENAI_WEEKLY_AGENT_E2E="${ONETRUTH_RUN_OPENAI_WEEKLY_AGENT_E2E:-0}" PYTHONPATH=src pytest -q tests/integration_openai
             exit 0
           fi
 
           echo "No tests/integration_openai directory found. Skipping OpenAI integration tests."
-          exit 0
-
-      - name: Run weekly-agent real-network tests (future env-gated)
-        shell: bash
-        env:
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-          ONETRUTH_RUN_WEEKLY_AGENT_E2E: ${{ vars.ONETRUTH_RUN_WEEKLY_AGENT_E2E }}
-        run: |
-          set -euo pipefail
-          if [ "${ONETRUTH_RUN_WEEKLY_AGENT_E2E:-0}" != "1" ]; then
-            echo "ONETRUTH_RUN_WEEKLY_AGENT_E2E is not 1. Skipping weekly-agent real-network tests."
-            exit 0
-          fi
-
-          if [ -z "${OPENAI_API_KEY}" ]; then
-            echo "OPENAI_API_KEY is not set in repository secrets. Skipping weekly-agent real-network tests."
-            exit 0
-          fi
-
-          if [ -d tests/integration_weekly_agent ]; then
-            ONETRUTH_RUN_WEEKLY_AGENT_E2E=1 PYTHONPATH=src pytest -q tests/integration_weekly_agent
-            exit 0
-          fi
-
-          echo "No tests/integration_weekly_agent directory found yet. Skipping."
           exit 0
