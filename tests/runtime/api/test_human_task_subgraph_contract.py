@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import base64
 from pathlib import Path
 
 from tests.runtime.helpers.runtime_api import RuntimeApiClient
@@ -78,6 +79,59 @@ def test_human_task_subgraph_contract_for_composite_logistics_task(tmp_path: Pat
         for ref in graph_payload["artifact_refs"]
     )
     assert all("content_base64" not in ref for ref in graph_payload["artifact_refs"])
+
+
+def test_human_task_subgraph_contract_uses_request_bytes_ingress_file_name_for_labels(
+    tmp_path: Path,
+) -> None:
+    harness = RuntimeScenarioHarness.from_yaml(LOGISTICS_SCENARIO_PATH, tmp_path).prepare()
+    harness.run_steps()
+
+    notify_result = harness.output("notify_result")["result"]
+    weekly_run_id = str(notify_result["target_workflow_runs"][0]["workflow_run_id"])
+
+    client = _logistics_client(harness)
+    listed = client.get("/api/v1/human-tasks", query={"workflow_run_id": weekly_run_id})
+    assert listed.status_code == 200
+    weekly_review = next(
+        row
+        for row in listed.payload["human_tasks"]
+        if row["task_kind"] in {"actual_hours_review", "planning_feedback_review"}
+    )
+    human_task_id = str(weekly_review["human_task_id"])
+    uploaded_file_name = "planning_feedback_attachment_label.txt"
+
+    uploaded = client.post(
+        f"/api/v1/human-tasks/{human_task_id}/artifacts/upload",
+        payload={
+            "artifact_kind": "reporting.actuals_normalized.doc",
+            "artifact_role": "evidence",
+            "content_base64": base64.b64encode(
+                b"subgraph label cleanup request-bytes attachment"
+            ).decode("ascii"),
+            "file_name": uploaded_file_name,
+            "media_type": "text/plain",
+            "idempotency_key": (
+                f"api:{harness.scenario_id}:human-task-subgraph-upload-label"
+            ),
+        },
+    )
+
+    assert uploaded.status_code == 200
+    uploaded_artifact_id = str(uploaded.payload["artifact_version"]["artifact_version_id"])
+    assert (
+        uploaded.payload["artifact_version"]["metadata_json"]["ingress_file_name"]
+        == uploaded_file_name
+    )
+
+    subgraph = client.get(f"/api/v1/human-tasks/{human_task_id}/subgraph")
+    assert subgraph.status_code == 200
+    graph_payload = subgraph.payload["subgraph"]
+    assert any(
+        ref["artifact_version_id"] == uploaded_artifact_id
+        and ref["label"] == uploaded_file_name
+        for ref in graph_payload["artifact_refs"]
+    )
 
 
 def test_human_task_subgraph_contract_rejects_non_composite_tasks(tmp_path: Path) -> None:

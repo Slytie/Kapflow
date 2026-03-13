@@ -556,8 +556,13 @@ def _artifact_refs_for_subject(
     refs: list[dict[str, str]] = []
     for artifact in artifacts:
         metadata = artifact.get("metadata_json")
-        file_name = metadata.get("file_name") if isinstance(metadata, dict) else None
-        label = str(file_name).strip() if isinstance(file_name, str) else ""
+        label = ""
+        if isinstance(metadata, dict):
+            for key in ("file_name", "ingress_file_name"):
+                value = metadata.get(key)
+                if isinstance(value, str) and value.strip():
+                    label = value.strip()
+                    break
         if not label:
             label = str(artifact.get("artifact_kind") or artifact.get("artifact_version_id") or "artifact")
         refs.append(

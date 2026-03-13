@@ -40,7 +40,7 @@ jobs:
         run: |
           set -euo pipefail
           if [ -f Makefile ]; then
-            make ci-backend
+            make PYTHON=python ci-backend
           else
             echo "No Makefile found; skipping make-based checks."
           fi
@@ -95,7 +95,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          make ${{ matrix.make_target }}
+          make PYTHON=python ${{ matrix.make_target }}
 
   frontend:
     if: ${{ hashFiles('frontend/package.json') != '' }}

@@ -39,7 +39,7 @@ jobs:
         run: |
           set -euo pipefail
           if [ -f Makefile ]; then
-            make ci-backend
+            make PYTHON=python ci-backend
           else
             echo "No Makefile found; skipping make-based checks."
           fi

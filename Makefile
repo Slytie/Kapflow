@@ -1,5 +1,6 @@
-PYTEST ?= pytest -q
-VALIDATOR ?= python3 scripts/validate_repo.py
+PYTHON ?= python3.11
+PYTEST ?= $(PYTHON) -m pytest -q
+VALIDATOR ?= $(PYTHON) scripts/validate_repo.py
 RELEASE_CONFIDENCE_DB_PATH ?= $(CURDIR)/.tmp/release-confidence-gate.db
 RELEASE_CONFIDENCE_DB_URL ?= sqlite:///$(RELEASE_CONFIDENCE_DB_PATH)
 RELEASE_CONFIDENCE_OUTPUT_ROOT ?= $(CURDIR)/.tmp/release-confidence-gate
@@ -11,10 +12,10 @@ CLEAN_SOURCE_BUNDLE_OUTPUT ?= $(CURDIR)/.tmp/companyos-clean-source-bundle.zip
 .PHONY: doctor backend-lint python-lint frontend-ci
 
 doctor:
-	python3 scripts/doctor.py --check
+	$(PYTHON) scripts/doctor.py --check
 
 python-lint:
-	python3 -m ruff check --select F,E9 src tests scripts
+	$(PYTHON) -m ruff check --select F,E9 src tests scripts
 
 backend-lint: schema-validate python-lint
 
@@ -66,20 +67,20 @@ integration-openai-weekly-stage04:
 	PYTHONPATH=src $(PYTEST) tests/integration_openai/test_weekly_stage04_openai_real_e2e.py
 
 logistics-weekly-stage04-pilot:
-	PYTHONPATH=src python3 scripts/run_logistics_weekly_agent_pilot.py --db-url sqlite:///./.tmp/logistics-weekly-stage04-pilot.db --pilot-key local-weekly-stage04 --openai-mode mock --json
+	PYTHONPATH=src $(PYTHON) scripts/run_logistics_weekly_agent_pilot.py --db-url sqlite:///./.tmp/logistics-weekly-stage04-pilot.db --pilot-key local-weekly-stage04 --openai-mode mock --json
 
 clean-source-bundle:
-	python3 scripts/export_clean_source_bundle.py --output "$(CLEAN_SOURCE_BUNDLE_OUTPUT)"
+	$(PYTHON) scripts/export_clean_source_bundle.py --output "$(CLEAN_SOURCE_BUNDLE_OUTPUT)"
 
 generated-check:
 	$(VALIDATOR)
-	python3 scripts/generate_prototype.py --check
+	$(PYTHON) scripts/generate_prototype.py --check
 
 frontend-snapshots:
-	PYTHONPATH=src python3 scripts/export_frontend_snapshots.py
+	PYTHONPATH=src $(PYTHON) scripts/export_frontend_snapshots.py
 
 frontend-snapshots-check:
-	PYTHONPATH=src python3 scripts/export_frontend_snapshots.py --check
+	PYTHONPATH=src $(PYTHON) scripts/export_frontend_snapshots.py --check
 
 frontend-install:
 	cd frontend && npm ci
@@ -120,4 +121,4 @@ release-confidence-certification-manifest:
 	rm -f "$(RELEASE_CONFIDENCE_DB_PATH)"
 	rm -rf "$(RELEASE_CONFIDENCE_OUTPUT_ROOT)/$(RELEASE_CONFIDENCE_KEY)"
 	$(PYTEST) tests/runtime/contracts/test_current_capability_certification_harness.py
-	PYTHONPATH=src python3 scripts/run_current_capability_certification.py --db-url "$(RELEASE_CONFIDENCE_DB_URL)" --certification-key "$(RELEASE_CONFIDENCE_KEY)" --output-root "$(RELEASE_CONFIDENCE_OUTPUT_ROOT)" --openai-mode "$(RELEASE_CONFIDENCE_OPENAI_MODE)"
+	PYTHONPATH=src $(PYTHON) scripts/run_current_capability_certification.py --db-url "$(RELEASE_CONFIDENCE_DB_URL)" --certification-key "$(RELEASE_CONFIDENCE_KEY)" --output-root "$(RELEASE_CONFIDENCE_OUTPUT_ROOT)" --openai-mode "$(RELEASE_CONFIDENCE_OPENAI_MODE)"
