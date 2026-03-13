@@ -32,8 +32,12 @@ class RuntimeApiClient:
         actor_id: str,
         actor_type: str,
         actor_roles: list[str],
+        boundary_profile: str = "ci_test",
     ) -> None:
-        self.app = create_app(db_url=db_url)
+        self.app = create_app(
+            db_url=db_url,
+            boundary_profile=boundary_profile,
+        )
         self.default_headers = {
             "x-onetruth-tenant-id": tenant_id,
             "x-onetruth-domain-id": domain_id,

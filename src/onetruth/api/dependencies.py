@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 import os
 import sqlite3
-from typing import Any, Mapping
+from typing import Any, Callable, Literal, Mapping
 
 from onetruth.application.handlers.workflow_task_lifecycle import (
     CommandError,
@@ -20,6 +20,12 @@ ACTOR_TYPE_HEADER = "x-onetruth-actor-type"
 ACTOR_ROLES_HEADER = "x-onetruth-actor-roles"
 
 VALID_ACTOR_TYPES = {"human", "agent", "service", "system"}
+BOUNDARY_PROFILES = ("local_dev", "ci_test", "shared_env")
+DEFAULT_API_BOUNDARY_PROFILE = "shared_env"
+PRINCIPAL_RESOLVER_UNAVAILABLE_CODE = "principal_resolver_unavailable"
+
+BoundaryProfile = Literal["local_dev", "ci_test", "shared_env"]
+PrincipalResolver = Callable[[Mapping[str, str]], "RequestContext"]
 
 
 @dataclass(frozen=True)
@@ -47,7 +53,7 @@ def open_connection(db_url: str) -> sqlite3.Connection:
     return open_sqlite_connection(db_url)
 
 
-def request_context_from_headers(headers: Mapping[str, str]) -> RequestContext:
+def trusted_header_principal_resolver(headers: Mapping[str, str]) -> RequestContext:
     def _required(name: str) -> str:
         value = headers.get(name)
         if value is None or not value.strip():
@@ -85,6 +91,19 @@ def request_context_from_headers(headers: Mapping[str, str]) -> RequestContext:
         actor_type=actor_type,
         actor_roles=actor_roles,
     )
+
+
+def unavailable_principal_resolver(headers: Mapping[str, str]) -> RequestContext:
+    raise ApiError(
+        status_code=503,
+        code=PRINCIPAL_RESOLVER_UNAVAILABLE_CODE,
+        message="principal resolver is not configured for the shared_env boundary profile",
+        details={"boundary_profile": DEFAULT_API_BOUNDARY_PROFILE},
+    )
+
+
+def request_context_from_headers(headers: Mapping[str, str]) -> RequestContext:
+    return trusted_header_principal_resolver(headers)
 
 
 def scoped_workflow_run(

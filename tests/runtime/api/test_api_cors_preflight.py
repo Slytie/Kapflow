@@ -64,7 +64,10 @@ def _invoke(
 
 
 def test_options_preflight_returns_cors_headers() -> None:
-    app = create_app(db_url="sqlite:///:memory:")
+    app = create_app(
+        db_url="sqlite:///:memory:",
+        boundary_profile="local_dev",
+    )
     status, headers, body = _invoke(
         app,
         method="OPTIONS",
@@ -87,7 +90,10 @@ def test_options_preflight_returns_cors_headers() -> None:
 
 
 def test_error_responses_include_cors_headers() -> None:
-    app = create_app(db_url="sqlite:///:memory:")
+    app = create_app(
+        db_url="sqlite:///:memory:",
+        boundary_profile="local_dev",
+    )
     status, headers, body = _invoke(
         app,
         method="GET",
@@ -100,4 +106,3 @@ def test_error_responses_include_cors_headers() -> None:
     assert parsed["status"] == "error"
     assert parsed["error"]["code"] == "invalid_request_context"
     assert headers["access-control-allow-origin"] == "http://localhost:5173"
-

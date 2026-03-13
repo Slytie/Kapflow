@@ -56,13 +56,31 @@ If a task is claimable, it must use a lease.
 
 ### Expiry rules
 - On expiry, emit `task.lease_expired`.
-- The system must either reopen the task or escalate it; silent indefinite ownership is forbidden.
+- The current Stage 4 slice chooses reopen-same-row recovery with visible evidence; silent indefinite ownership remains forbidden.
 
 ## 5) Candidate roles, owner, assignee
 Keep these distinctions explicit:
 - `candidate_roles`: who may claim the task
 - `owner_role`: who is accountable for outcome if the task stalls or must be escalated
 - `assignee_actor`: who currently owns the active lease
+
+### Capability lattice freeze
+This repo freezes one capability lattice before any write-path hardening lands.
+
+| Capability | Canonical fields / surfaces | Frozen semantics | Deferred drift |
+|---|---|---|---|
+| Routing | `candidate_roles`, `owner_role`, `required_role` | Routing metadata decides candidate pools and accountability. `candidate_roles` gate human-task claim and act as approval fallback responder eligibility when `required_role` is absent. `owner_role` is accountability/escalation metadata only. `required_role` is the authoritative approval responder role when present. | Write handlers do not yet enforce the full lattice at mutation time. |
+| Claim | human task `OPEN` state, `candidate_roles`, lease fields | Claim requires an in-scope actor, an open unassigned human task, and a candidate-role match when candidate roles are present. Successful claim creates the assignee and active lease. | `claim_human_task_command` still enforces state/lease without actor-role checks. |
+| Complete / act | claimed human task, assignee, task requirements | Completion is assignee-based. Once a valid claim exists, completion depends on the current assignee and satisfied requirements, not on re-checking `candidate_roles`. | `task.complete` is not yet hardened against the frozen lattice at the write boundary. |
+| Execute | specialized Stage06 / Stage04 actions, policy decisions, assignee, `stage_id`, `task_kind` | Execute is distinct from claim and complete. It requires the current assignee, the correct stage/task kind, and policy allow or approval-mediated progression through the canonical execution path. | No generic `task.execute` action is introduced in this task; boundary hardening is deferred to `TASK-0078` and `TASK-0080`. |
+| Collaborate / upload | subject upload endpoints, `artifact.upload` | Upload is collaboration/evidence ingress, not claim, completion, approval response, flag transition, or officialization. | Shared HTTP/runtime upload behavior remains intentionally broad until `TASK-0081` splits public upload from local seeding. |
+| Approval respond | approval `required_role`, approval `candidate_roles`, `approval.respond` | `required_role` governs who may respond when present; otherwise approval `candidate_roles` are the fallback responder pool. | `respond_approval_command` still ignores the frozen role lattice. |
+| Flag transition / override | flag state machine, `flag.resolve`, explicit approvals, `task.lease_expired` | Flag transition is separate from task claim/respond semantics. Override and escalation must travel through explicit approvals or visible lease-expiry evidence, not through routing hints alone. | `transition_flag_state_command` still ignores role semantics, and generic override action IDs remain deferred. |
+
+- `candidate_roles` do not by themselves authorize completion, specialized execute actions, uploads, or overrides.
+- `assignee_actor` anchors completion and any specialized execute attempt that operates through the same task row.
+- The current Stage 4 lease-expiry policy is reopen-same-row with canonical `task.lease_expired` evidence rather than an implicit escalation child task.
+- Write-boundary capability enforcement remains deferred to `TASK-0080`, and upload-boundary cleanup remains deferred to `TASK-0081`.
 
 ## 6) Reopen, reassign, escalate, or spawn a new task
 ### Reopen

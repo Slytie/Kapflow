@@ -79,10 +79,15 @@ Local runtime-output note:
 
 ## API quickstart (dev)
 Run the thin HTTP adapter locally:
-- `PYTHONPATH=src onetruth-api --db-url sqlite:///./.tmp/onetruth-api.db --host 127.0.0.1 --port 8080`
-- or `PYTHONPATH=src uvicorn onetruth.api.main:app --reload --port 8080`
+- `PYTHONPATH=src onetruth-api --db-url sqlite:///./.tmp/onetruth-api.db --host 127.0.0.1 --port 8080 --api-boundary-profile local_dev`
+- or `ONETRUTH_API_BOUNDARY_PROFILE=local_dev PYTHONPATH=src uvicorn onetruth.api.main:app --reload --port 8080`
 
-Required request headers (current internal/admin auth-context model):
+Boundary profile posture:
+- default profile is `shared_env`; without an injected non-header principal resolver, requests fail closed with `503 principal_resolver_unavailable`
+- trusted request headers are allowed only in `local_dev` and `ci_test`
+- trusted-header CORS is loopback-only and local-dev-only
+
+Trusted request headers (allowed only in `local_dev` and `ci_test`):
 - `x-onetruth-tenant-id`
 - `x-onetruth-domain-id`
 - `x-onetruth-actor-id`
@@ -283,7 +288,7 @@ The HITL frontend shell lives under `frontend/` as a contract-first SPA backed b
    - `npm run build`
 
 Run frontend against local backend:
-- backend terminal: `PYTHONPATH=src onetruth-api --db-url sqlite:///./.tmp/onetruth-api.db --host 127.0.0.1 --port 8080`
+- backend terminal: `PYTHONPATH=src onetruth-api --db-url sqlite:///./.tmp/onetruth-api.db --host 127.0.0.1 --port 8080 --api-boundary-profile local_dev`
 - frontend terminal: `cd frontend && VITE_ONETRUTH_API_BASE_URL=http://127.0.0.1:8080/api/v1 npm run dev`
 
 Open the primary logistics demo flow:
@@ -317,7 +322,7 @@ Seed one realistic workflow workspace run (choose scenario):
 - other scenarios: `stage06_needs_information`, `stage07_major_replan`
 
 Start backend API:
-- `PYTHONPATH=src onetruth-api --db-url sqlite:///./.tmp/workspace-demo.db --host 127.0.0.1 --port 8080`
+- `PYTHONPATH=src onetruth-api --db-url sqlite:///./.tmp/workspace-demo.db --host 127.0.0.1 --port 8080 --api-boundary-profile local_dev`
 
 Start frontend:
 - `cd frontend`

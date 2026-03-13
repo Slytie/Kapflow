@@ -1,3 +1,8 @@
+"""Legacy schedule-only board regression coverage.
+
+Keep this surface stable while `/demo/logistics` remains the primary demo path.
+"""
+
 from __future__ import annotations
 
 from pathlib import Path

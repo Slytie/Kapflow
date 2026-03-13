@@ -29,6 +29,11 @@ It is intentionally written so a fresh-session Codex run can:
 
 > **Rule:** If a change touches an invariant, add or update the tests listed for that invariant.
 
+### Capability-semantics freeze coverage
+- `tests/contract/test_capability_matrix.py`
+- Freezes routing vs claim vs complete vs specialized execute vs upload vs approval respond vs flag transition semantics before `TASK-0080` hardens write paths.
+- Treats current write-boundary role gaps as deferred drift, not as the desired final enforcement posture.
+
 ---
 
 ## 2) Schedule Planning workflow stage coverage (implementation wedge)

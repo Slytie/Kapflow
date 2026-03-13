@@ -2,20 +2,26 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 from dataclasses import dataclass
-from typing import Any, Awaitable, Callable
-from urllib.parse import parse_qs
+from typing import Any, Awaitable, Callable, cast
+from urllib.parse import parse_qs, urlparse
 
 from onetruth.api.dependencies import (
     ACTOR_ID_HEADER,
     ACTOR_ROLES_HEADER,
     ACTOR_TYPE_HEADER,
+    BOUNDARY_PROFILES,
+    DEFAULT_API_BOUNDARY_PROFILE,
     DOMAIN_HEADER,
+    BoundaryProfile,
+    PrincipalResolver,
     TENANT_HEADER,
+    unavailable_principal_resolver,
     parse_page,
-    request_context_from_headers,
-    resolve_db_url,
     open_connection,
+    resolve_db_url,
+    trusted_header_principal_resolver,
 )
 from onetruth.api.errors import ApiError, error_payload
 from onetruth.api.routes.approvals import (
@@ -93,10 +99,26 @@ _CORS_DEFAULT_ALLOW_HEADERS = ",".join(
         ACTOR_ROLES_HEADER,
     ]
 )
+_API_BOUNDARY_PROFILE_ENV = "ONETRUTH_API_BOUNDARY_PROFILE"
 
 
-def create_app(*, db_url: str | None = None) -> ASGIApp:
+@dataclass(frozen=True)
+class ApiBoundaryConfig:
+    profile: BoundaryProfile
+    principal_resolver: PrincipalResolver
+
+
+def create_app(
+    *,
+    db_url: str | None = None,
+    boundary_profile: BoundaryProfile | str | None = None,
+    principal_resolver: PrincipalResolver | None = None,
+) -> ASGIApp:
     resolved_db_url = resolve_db_url(db_url)
+    boundary = _resolve_boundary_config(
+        boundary_profile=boundary_profile,
+        principal_resolver=principal_resolver,
+    )
 
     async def app(scope: dict[str, Any], receive, send) -> None:
         if scope.get("type") != "http":
@@ -111,6 +133,7 @@ def create_app(*, db_url: str | None = None) -> ASGIApp:
                         "details": {},
                     },
                 },
+                boundary_profile=boundary.profile,
             )
             return
 
@@ -121,7 +144,12 @@ def create_app(*, db_url: str | None = None) -> ASGIApp:
         query = _decode_query(scope.get("query_string", b""))
 
         if method == "OPTIONS" and path.startswith("/api/v1/"):
-            await _send_no_content(send, status_code=204, request_headers=headers)
+            await _send_no_content(
+                send,
+                status_code=204,
+                boundary_profile=boundary.profile,
+                request_headers=headers,
+            )
             return
 
         matched = _match_route(method, path)
@@ -137,12 +165,13 @@ def create_app(*, db_url: str | None = None) -> ASGIApp:
                         "details": {"method": method, "path": path},
                     },
                 },
+                boundary_profile=boundary.profile,
                 request_headers=headers,
             )
             return
 
         try:
-            context = request_context_from_headers(headers)
+            context = boundary.principal_resolver(headers)
             body_payload = await _read_json_body(method, receive)
             page = parse_page(query) if method == "GET" else None
 
@@ -164,6 +193,7 @@ def create_app(*, db_url: str | None = None) -> ASGIApp:
                 send,
                 status_code=200,
                 payload={"status": "ok", **response_payload},
+                boundary_profile=boundary.profile,
                 request_headers=headers,
             )
         except ApiError as exc:
@@ -171,6 +201,7 @@ def create_app(*, db_url: str | None = None) -> ASGIApp:
                 send,
                 status_code=exc.status_code,
                 payload=error_payload(exc),
+                boundary_profile=boundary.profile,
                 request_headers=headers,
             )
         except Exception as exc:
@@ -185,10 +216,50 @@ def create_app(*, db_url: str | None = None) -> ASGIApp:
                         "details": {"exception": exc.__class__.__name__},
                     },
                 },
+                boundary_profile=boundary.profile,
                 request_headers=headers,
             )
 
     return app
+
+
+def _resolve_boundary_config(
+    *,
+    boundary_profile: BoundaryProfile | str | None,
+    principal_resolver: PrincipalResolver | None,
+) -> ApiBoundaryConfig:
+    resolved_profile = _resolve_boundary_profile(boundary_profile)
+    if principal_resolver is not None:
+        return ApiBoundaryConfig(
+            profile=resolved_profile,
+            principal_resolver=principal_resolver,
+        )
+    if resolved_profile in {"local_dev", "ci_test"}:
+        return ApiBoundaryConfig(
+            profile=resolved_profile,
+            principal_resolver=trusted_header_principal_resolver,
+        )
+    return ApiBoundaryConfig(
+        profile=resolved_profile,
+        principal_resolver=unavailable_principal_resolver,
+    )
+
+
+def _resolve_boundary_profile(
+    configured_profile: BoundaryProfile | str | None,
+) -> BoundaryProfile:
+    raw_profile = configured_profile
+    if raw_profile is None:
+        raw_profile = os.environ.get(_API_BOUNDARY_PROFILE_ENV)
+    if raw_profile is None:
+        return DEFAULT_API_BOUNDARY_PROFILE
+    normalized = raw_profile.strip().lower()
+    if normalized not in BOUNDARY_PROFILES:
+        raise ValueError(
+            "invalid API boundary profile "
+            f"{raw_profile!r}; expected one of {', '.join(BOUNDARY_PROFILES)}"
+        )
+    return cast(BoundaryProfile, normalized)
 
 
 def _match_route(method: str, path: str) -> MatchedRoute | None:
@@ -847,19 +918,24 @@ async def _read_json_body(method: str, receive) -> dict[str, Any] | None:
 
 
 def _cors_headers(
+    *,
+    boundary_profile: BoundaryProfile,
     request_headers: dict[str, str] | None,
 ) -> list[tuple[bytes, bytes]]:
-    origin = "*"
-    allow_headers = _CORS_DEFAULT_ALLOW_HEADERS
-    if request_headers is not None:
-        requested_origin = request_headers.get("origin")
-        if requested_origin:
-            origin = requested_origin
-        requested_headers = request_headers.get("access-control-request-headers")
-        if requested_headers:
-            allow_headers = requested_headers
+    if boundary_profile != "local_dev" or request_headers is None:
+        return []
+    requested_origin = request_headers.get("origin")
+    if not requested_origin or not _is_loopback_origin(requested_origin):
+        return []
+    allow_headers = (
+        request_headers.get("access-control-request-headers")
+        or _CORS_DEFAULT_ALLOW_HEADERS
+    )
     return [
-        (b"access-control-allow-origin", origin.encode("latin-1")),
+        (
+            b"access-control-allow-origin",
+            requested_origin.encode("latin-1"),
+        ),
         (b"access-control-allow-methods", _CORS_ALLOW_METHODS.encode("latin-1")),
         (b"access-control-allow-headers", allow_headers.encode("latin-1")),
         (b"access-control-max-age", b"600"),
@@ -867,11 +943,19 @@ def _cors_headers(
     ]
 
 
+def _is_loopback_origin(origin: str) -> bool:
+    parsed = urlparse(origin)
+    if parsed.scheme not in {"http", "https"}:
+        return False
+    return parsed.hostname in {"localhost", "127.0.0.1", "::1"}
+
+
 async def _send_json(
     send,
     *,
     status_code: int,
     payload: dict[str, Any],
+    boundary_profile: BoundaryProfile,
     request_headers: dict[str, str] | None = None,
 ) -> None:
     body = json.dumps(payload, separators=(",", ":"), sort_keys=True).encode("utf-8")
@@ -879,7 +963,12 @@ async def _send_json(
         (b"content-type", b"application/json"),
         (b"content-length", str(len(body)).encode("ascii")),
     ]
-    response_headers.extend(_cors_headers(request_headers))
+    response_headers.extend(
+        _cors_headers(
+            boundary_profile=boundary_profile,
+            request_headers=request_headers,
+        )
+    )
     await send(
         {
             "type": "http.response.start",
@@ -894,10 +983,16 @@ async def _send_no_content(
     send,
     *,
     status_code: int,
+    boundary_profile: BoundaryProfile,
     request_headers: dict[str, str] | None = None,
 ) -> None:
     response_headers = [(b"content-length", b"0")]
-    response_headers.extend(_cors_headers(request_headers))
+    response_headers.extend(
+        _cors_headers(
+            boundary_profile=boundary_profile,
+            request_headers=request_headers,
+        )
+    )
     await send(
         {
             "type": "http.response.start",
@@ -913,9 +1008,21 @@ def _build_server_parser() -> argparse.ArgumentParser:
     parser.add_argument("--host", default="127.0.0.1")
     parser.add_argument("--port", type=int, default=8080)
     parser.add_argument("--db-url", default=None)
+    parser.add_argument(
+        "--api-boundary-profile",
+        choices=BOUNDARY_PROFILES,
+        default=None,
+        help=(
+            "API trust boundary profile. Defaults to env "
+            f"{_API_BOUNDARY_PROFILE_ENV} or {DEFAULT_API_BOUNDARY_PROFILE}."
+        ),
+    )
     parser.description = (
         "Run the thin onetruth runtime HTTP adapter. "
-        f"Required request headers: {TENANT_HEADER}, {DOMAIN_HEADER}, {ACTOR_ID_HEADER}, {ACTOR_TYPE_HEADER}, {ACTOR_ROLES_HEADER}."
+        "Trusted request headers "
+        f"({TENANT_HEADER}, {DOMAIN_HEADER}, {ACTOR_ID_HEADER}, {ACTOR_TYPE_HEADER}, {ACTOR_ROLES_HEADER}) "
+        "are allowed only in local_dev and ci_test. "
+        f"Default profile: {DEFAULT_API_BOUNDARY_PROFILE}."
     )
     return parser
 
@@ -929,7 +1036,14 @@ def main(argv: list[str] | None = None) -> int:
             "uvicorn is required to run the API server. Install with `python3 -m pip install -e .[api]`."
         )
 
-    uvicorn.run(create_app(db_url=args.db_url), host=args.host, port=args.port)
+    uvicorn.run(
+        create_app(
+            db_url=args.db_url,
+            boundary_profile=args.api_boundary_profile,
+        ),
+        host=args.host,
+        port=args.port,
+    )
     return 0
 
 

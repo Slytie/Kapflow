@@ -1,5 +1,5 @@
 ---
-id: TASK-0071
+id: TASK-0087
 epic: EPIC-070
 title: "Repo hygiene cleanup for local state, tracked runtime outputs, and workstation clutter"
 status: DONE
@@ -27,7 +27,7 @@ Remove tracked local/runtime byproducts from the repo boundary, tighten ignore c
 - `docs/status/DECISIONS_SINCE_LAST.md`
 - `docs/planning/TASK_INDEX.md`
 - `src/onetruth/integrations/openai/responses_agent_runner.py`
-- `codex/tasks/TASK-0071-repo-hygiene-local-state-and-tracked-output-cleanup.md`
+- `codex/tasks/TASK-0087-repo-hygiene-local-state-and-tracked-output-cleanup.md`
 - tracked `.onetruth_artifacts/**` runtime evidence files removed from version control
 - tracked `.DS_Store` files under `docs/`, `fixtures/`, and `src/` removed from version control
 - tracked `onetruth.db` removed from version control
@@ -49,3 +49,4 @@ Remove tracked local/runtime byproducts from the repo boundary, tighten ignore c
 - Audit confirmed the tracked `.onetruth_artifacts/` content was live execution evidence only; no fixture migration was required for this cleanup.
 - The tracked handoff zip and `.DS_Store` files were treated as workstation/handoff clutter and removed from version control.
 - `src/onetruth/integrations/openai/responses_agent_runner.py` received a formatting-only cleanup so the bounded hygiene diff stays `git diff --check` clean.
+- Backlog sync note: this task was formerly duplicated as `TASK-0071` before the truth-alignment planning sync. The Stage04 weekly artifact task keeps canonical ownership of `TASK-0071`.

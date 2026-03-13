@@ -258,6 +258,10 @@ Pointer row shape:
 Endpoint:
 - `GET /api/v1/board/schedule-planning`
 
+Surface classification:
+- legacy/internal regression surface for schedule-only flows
+- primary logistics demo/product surface remains `GET /api/v1/stories/logistics-three-workflow` and frontend route `/demo/logistics`
+
 Common filters:
 - `workflow_run_id`, `workflow_id`, `workflow_state`
 - task filters: `stage_id`, `task_kind`, `task_state`, `assignee_actor_id`, `owner_role`

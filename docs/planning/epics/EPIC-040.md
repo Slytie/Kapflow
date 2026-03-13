@@ -51,3 +51,5 @@ Also see `docs/patterns/PATTERN_INDEX.yaml` for the full tagged library.
 - TASK-0023
 - TASK-0028
 - TASK-0036
+- TASK-0082
+- TASK-0086

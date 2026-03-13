@@ -23,5 +23,10 @@ A one-truth system still fails if scope leaks through projections, caches, or ge
 - permissions vocabulary updates
 - negative-test guidance
 
+## Status
+- `TASK-0002` and `TASK-0078` are complete.
+- The API trust boundary now has explicit `local_dev`, `ci_test`, and `shared_env` profiles; `shared_env` fails closed by default, and trusted-header CORS is limited to loopback local-dev origins.
+
 ## Tasks
 - TASK-0002
+- TASK-0078

@@ -2,6 +2,28 @@
 
 Record any decisions made since the last session so a fresh Codex run can rehydrate quickly.
 
+## 2026-03-13 (truth-alignment backlog sync)
+- Numbering-source decision: the external truth-alignment prompt pack is canonical for the new tranche, so `TASK-0076` is board/query-surface stability and `TASK-0077` is the capability-lattice freeze task.
+- Backlog-hygiene decision: the duplicate historical cleanup trio was renumbered to `TASK-0087` / `TASK-0088` / `TASK-0089`, while `TASK-0071` / `TASK-0072` / `TASK-0073` now refer only to the Stage04 progression.
+- Alias decision: renumbered historical task briefs keep short deprecated-alias notes so future sessions can map old references without reopening the duplicate-ID ambiguity.
+- Validation decision: backlog validation now needs to fail on duplicate task-file IDs and duplicate task-index rows so this class of drift cannot hide behind prefix collisions.
+
+## 2026-03-13 (TASK-0076 board stability and query-surface classification)
+- Compatibility decision: `GET /api/v1/board/schedule-planning` now uses the current pointer-query contract and returns the documented board payload without redesigning that endpoint.
+- Surface-classification decision: `GET /api/v1/stories/logistics-three-workflow` and frontend route `/demo/logistics` remain the primary logistics surfaces; the schedule-only board stays legacy/internal regression coverage.
+- Layering decision: the route-to-route import seam remains a known smell and is explicitly deferred to `TASK-0083` rather than being broadened inside this board-stability patch.
+
+## 2026-03-13 (TASK-0077 capability lattice freeze)
+- Lattice decision: routing, claim, complete, specialized execute, collaborate/upload, approval response, and flag transition are now frozen as distinct capability axes, with one authoritative matrix in `docs/architecture/human_task_semantics.md`.
+- Role-semantics decision: `candidate_roles` gate human-task claim and act as fallback approval routing only; `required_role` wins for approval response when present; assignee state anchors completion and specialized execute attempts.
+- Drift decision: current write handlers and some role lists are still less strict than the frozen lattice, and that mismatch remains intentionally deferred to `TASK-0078`, `TASK-0080`, and `TASK-0081` rather than being hardened in this semantics-only tranche.
+
+## 2026-03-13 (TASK-0078 API boundary profiles and principal resolver seam)
+- Boundary-profile decision: the thin HTTP adapter now has explicit `local_dev`, `ci_test`, and `shared_env` trust profiles, with `shared_env` as the default when nothing is configured.
+- Fail-closed decision: `shared_env` no longer falls back to ambient trusted headers; it returns `503 principal_resolver_unavailable` unless a non-header principal resolver is injected at app creation.
+- Local-affordance decision: trusted `x-onetruth-*` headers remain available only in `local_dev` and `ci_test`, and trusted-header CORS is reflected only for loopback local-dev origins.
+- Test-harness decision: runtime API helpers now opt into `ci_test` explicitly so existing ASGI tests preserve their current semantics while the production/default API posture becomes fail closed.
+
 ## 2026-03-13 (TASK-0073 weekly Stage04 live TPM compaction and bounded 429 recovery)
 - Model-surface decision: the Stage04 runtime now keeps the same deterministic tool set and canonical artifact/evidence chain, but the model sees compact Stage04 context summaries and compact tool-output deltas instead of repeated full context packs, route allocations, coverage lists, or finalize candidate payloads.
 - Evidence decision: full deterministic tool outputs remain persisted verbatim in `runtime.tool_result.json` and execution traces, while the Responses continuation loop records a separate compact `model_output_json` for the `function_call_output` payload actually sent back to the model.
@@ -33,7 +55,7 @@ Record any decisions made since the last session so a fresh Codex run can rehydr
 - Stop-policy decision: authored Stage04 `no_progress_ticks` from compiled control metadata is now enforced at runtime, so repeated context/inspection-only turns fail closed with visible evidence instead of silently spinning.
 - Inspection-packet decision: realistic weekly pilot packets now surface iteration-level route allocations, uncovered-route carryover, repair moves, runtime turn summaries, and fallback tradeoff notes derived from canonical artifacts/evidence rather than only listing IDs.
 
-## 2026-03-13 (TASK-0073 Stage06 compiled-control alignment and tool-class vocabulary cleanup)
+## 2026-03-13 (TASK-0089 Stage06 compiled-control alignment and tool-class vocabulary cleanup)
 - Control-alignment decision: the bounded Stage06 sandbox now derives its pinned execution semantics from the authored `schedule_planning.v1` Stage06 execution profile plus a registry-backed runtime tool binding instead of a hardcoded `execution_spec_id`.
 - Vocabulary decision: authored `allowed_tool_classes` remain capability-level execution-profile vocabulary, while `tool_execution.tool_class` remains the concrete engine/runtime identifier for the bounded executor; these are related through explicit runtime tool bindings, not by reusing the same string set.
 - Safety decision: the Stage06 OpenAI runtime binding is validated to use only authored capability classes already allowed by the Stage06 execution profile and fails closed if the binding drifts outside that authored allowlist.
@@ -45,7 +67,7 @@ Record any decisions made since the last session so a fresh Codex run can rehydr
 - Control-spec safety decision: compiled Stage04 metadata now rejects missing required bridge bindings and alias-equivalent conflicting keys (for example mixed `planning.*` and `dispatch.*` bridge keys for the same slot) instead of silently picking one by suffix.
 - Runtime safety decision: the bounded weekly Stage04 agent still resolves the latest matching artifact version per exact dataset key, but now returns explicit `stage04_input_artifact_missing` errors when required bridge artifacts are absent.
 
-## 2026-03-13 (TASK-0071 repo hygiene cleanup for local state and tracked outputs)
+## 2026-03-13 (TASK-0087 repo hygiene cleanup for local state and tracked outputs)
 - Repo-boundary decision: the default runtime evidence root (`.onetruth_artifacts/`), local SQLite DBs, `.DS_Store`, and Codex handoff zips are local machine outputs and must not be tracked as repo source.
 - Fixture-boundary decision: the tracked `.onetruth_artifacts/` contents audited in this cleanup were live execution evidence only, not golden fixtures; any future reusable evidence must move into an explicit `fixtures/` path.
 - Ignore-rule decision: Git ignore coverage now explicitly blocks `.onetruth_artifacts/`, local DB files/journals, and `codex_handoff_packet_*.zip` so local runs stop re-polluting the repo.

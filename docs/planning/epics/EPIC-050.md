@@ -34,3 +34,7 @@ Also see `docs/patterns/PATTERN_INDEX.yaml` for the full tagged library.
 ## Tasks
 - TASK-0010
 - TASK-0035
+- TASK-0077
+
+## Current Repo Status (2026-03-13)
+- `TASK-0077` freezes the capability lattice in architecture docs and contract coverage, separating routing, claim, completion, specialized execute, upload, approval response, and flag-transition semantics before later write-boundary hardening.

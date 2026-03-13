@@ -1,5 +1,5 @@
 ---
-id: TASK-0073
+id: TASK-0089
 epic: EPIC-070
 title: "Stage06 compiled-control alignment and tool-class vocabulary cleanup"
 status: DONE
@@ -31,7 +31,7 @@ Align the bounded Stage06 OpenAI sandbox with the compiled-control execution-met
 - `docs/status/CURRENT_FOCUS.md`
 - `docs/status/DECISIONS_SINCE_LAST.md`
 - `docs/planning/TASK_INDEX.md`
-- `codex/tasks/TASK-0073-stage06-compiled-control-alignment-and-tool-class-vocabulary-cleanup.md`
+- `codex/tasks/TASK-0089-stage06-compiled-control-alignment-and-tool-class-vocabulary-cleanup.md`
 
 ## Verification Run
 - `PYTHONPATH=src pytest -q tests/unit/test_reference_stage_runtime_alignment.py` - passed (`.. [100%]`)
@@ -51,3 +51,4 @@ Align the bounded Stage06 OpenAI sandbox with the compiled-control execution-met
 - Kept the Stage06 sandbox's actual bounded runtime budget (`max_tool_calls=1`) while explicitly recording the underlying authored Stage06 execution profile and runtime tool binding relationship in pinned execution evidence.
 - Added focused unit/runtime/api coverage for the authored-vs-runtime tool-class split and Stage06 compiled-control alignment.
 - `git diff --check` passed after the cleanup/doc updates.
+- Backlog sync note: this task was formerly duplicated as `TASK-0073` before the truth-alignment planning sync. The Stage04 iterative agent-loop task keeps canonical ownership of `TASK-0073`.

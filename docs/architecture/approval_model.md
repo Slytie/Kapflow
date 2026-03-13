@@ -100,6 +100,13 @@ Approvals must emit through the canonical timeline:
 - `outcome` (past-tense canonical result)
 - optional `rationale`
 
+### Capability-lattice freeze
+- The authoritative capability lattice is defined in `docs/architecture/human_task_semantics.md`.
+- `required_role` is the authoritative responder role when present.
+- Approval `candidate_roles` remain routing and fallback responder eligibility only when `required_role` is absent; they do not create a second approval capability layer.
+- Override semantics must be represented as explicit approvals, usually `execution_gate` or `business_decision`, not inferred from routing hints or queue presentation.
+- Current write-path role enforcement for approval response remains deferred to `TASK-0080`.
+
 ## 5) Approval packets
 Approval packets are projections, not truth.
 They must:

@@ -72,11 +72,24 @@
 | TASK-0068 | EPIC-025 | DONE | high | Deterministic weekly schedule-control services and Stage04 runtime build slice |
 | TASK-0069 | EPIC-070 | DONE | high | Weekly Stage04 OpenAI agent runtime over compiled control and Responses API function calling |
 | TASK-0070 | EPIC-070 | DONE | high | Real-network weekly Stage04 pilot runner, canonical inspection packets, and dual-gated e2e coverage |
-| TASK-0071 | EPIC-070 | DONE | medium | Repo hygiene cleanup for local state, tracked runtime outputs, and workstation clutter |
 | TASK-0071 | EPIC-025 | DONE | high | Realistic Stage04 weekly artifacts, deterministic 40-driver fixture ingestion, and hard-case pilot seeds |
 | TASK-0072 | EPIC-025 | DONE | high | Iterative deterministic Stage04 route allocation, bounded repair moves, and stability-aware validation |
-| TASK-0072 | EPIC-070 | DONE | medium | Shared execution-evidence helpers and artifact-root policy cleanup |
 | TASK-0073 | EPIC-070 | DONE | high | Iterative Stage04 Responses tool loop, per-iteration evidence, and realistic pilot analysis packet |
-| TASK-0073 | EPIC-070 | DONE | medium | Stage06 compiled-control alignment and tool-class vocabulary cleanup |
 | TASK-0074 | EPIC-070 | DONE | medium | Weekly Stage04 input-resolution hardening over authored dataset-key bindings |
 | TASK-0075 | EPIC-080 | DONE | low | Clean source-bundle export and handoff packaging |
+| TASK-0076 | EPIC-080 | DONE | medium | Restore board stability and classify primary vs legacy query surfaces |
+| TASK-0077 | EPIC-050 | DONE | high | Freeze the capability lattice and policy semantics |
+| TASK-0078 | EPIC-010 | DONE | high | Add explicit API boundary profiles and a principal-resolver seam |
+| TASK-0079 | EPIC-060 | TODO | high | Introduce capability-decision primitives for read-side actionability |
+| TASK-0080 | EPIC-060 | TODO | high | Enforce capability decisions at the write boundary |
+| TASK-0081 | EPIC-030 | TODO | high | Split public artifact upload from local seeding via ingress descriptors |
+| TASK-0082 | EPIC-040 | TODO | high | Move command idempotency to scoped command receipts |
+| TASK-0083 | EPIC-080 | TODO | medium | Extract the shared read-model seam and forbid route-to-route imports |
+| TASK-0084 | EPIC-080 | TODO | medium | Make bundle kinds explicit and validate the exported payload |
+| TASK-0085 | EPIC-080 | TODO | medium | Bootstrap truth, CI honesty, and governance cleanup |
+| TASK-0086 | EPIC-040 | TODO | high | First controlled hotspot extraction after invariants are stable |
+| TASK-0087 | EPIC-070 | DONE | medium | Repo hygiene cleanup for local state, tracked runtime outputs, and workstation clutter |
+| TASK-0088 | EPIC-070 | DONE | medium | Shared execution-evidence helpers and artifact-root policy cleanup |
+| TASK-0089 | EPIC-070 | DONE | medium | Stage06 compiled-control alignment and tool-class vocabulary cleanup |
+
+Note: `TASK-0087` / `TASK-0088` / `TASK-0089` were formerly duplicated as `TASK-0071` / `TASK-0072` / `TASK-0073` before the 2026-03-13 truth-alignment backlog sync. `TASK-0071` / `TASK-0072` / `TASK-0073` now refer only to the Stage04 progression.

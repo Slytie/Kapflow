@@ -14,6 +14,7 @@ Do not overload a single `domain_id` with multiple orthogonal axes without expli
 - Background consumers, exporters, indexers, projections, and generated artifacts must enforce scope on read and write.
 - Cross-tenant access is forbidden.
 - Cross-domain access is forbidden unless explicitly modeled as a tenant-global object.
+- Scope is necessary but not sufficient; being in scope does not itself grant claim, respond, transition, execute, or upload authority.
 
 ## Derived-store consequence
 WorkGraph, dashboards, approval packets, generated IR caches, and search indices are not exempt from the scope model. Derived material can leak just as easily as canonical storage.

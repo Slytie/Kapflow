@@ -5,7 +5,7 @@ title: "Clean source-bundle export and handoff packaging"
 status: DONE
 owners: ["platform"]
 reviewers: ["qa"]
-depends_on: ["TASK-0071"]
+depends_on: ["TASK-0087"]
 risk: low
 context_packs: ["EPIC-080"]
 patterns: ["PATTERN-009", "PATTERN-003"]

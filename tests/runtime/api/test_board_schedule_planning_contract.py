@@ -1,3 +1,9 @@
+"""Legacy schedule-only board contract coverage.
+
+This suite preserves the secondary regression surface without re-centering product posture
+away from `/demo/logistics`.
+"""
+
 from __future__ import annotations
 
 from pathlib import Path

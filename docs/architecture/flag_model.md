@@ -59,6 +59,13 @@ Flags do not replace tasks or approvals:
   - `flag.state_changed` emitted on the timeline
 - Some flag closures may require an approval (e.g., “waive SLA window”), but that is an `approval.requested` / `approval.responded` pair linked to the flag.
 
+### Capability-lattice freeze
+- The authoritative capability lattice is defined in `docs/architecture/human_task_semantics.md`.
+- Flag transition is a separate capability axis from task claim, task completion, approval response, and artifact upload.
+- The read-side action name `transition` maps to the permission dimension currently represented as `flag.resolve`; allowed state edges still come from the flag lifecycle.
+- Flag attachments remain collaboration/evidence ingress and do not themselves grant transition authority.
+- Current write-path role enforcement for flag transitions remains deferred to `TASK-0080`.
+
 ## 4) Stable vs variable parts
 Stable (platform-level):
 - object fields and lifecycle rules
@@ -69,4 +76,3 @@ Variable (tenant/customer/domain):
 - the vocabulary for `kind` values (e.g., `missing_punch`, `undercoverage`)
 - which flag kinds require approvals to close/waive
 - severity mapping thresholds and escalation rules
-

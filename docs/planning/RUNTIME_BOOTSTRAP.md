@@ -41,6 +41,11 @@ Current thin HTTP/query boundary (TASK-0044):
 - `POST /api/v1/human-tasks/{human_task_id}/complete`
 - `POST /api/v1/approvals/{approval_id}/respond`
 
+Current API trust-boundary profiles (TASK-0078):
+- `shared_env` (default): trusted `x-onetruth-*` headers are not accepted; the API fails closed with `503 principal_resolver_unavailable` unless a non-header principal resolver is injected at app creation.
+- `local_dev`: trusted `x-onetruth-*` headers are allowed explicitly for local development, and trusted-header CORS is reflected only for loopback origins (`localhost`, `127.0.0.1`, `::1`).
+- `ci_test`: trusted `x-onetruth-*` headers are allowed explicitly for direct ASGI/runtime tests, but there is no reflective browser-oriented CORS posture in this profile.
+
 ## 1) Hard constraints from repo truth
 
 Stage 4 runtime work must preserve the authoritative substrate:

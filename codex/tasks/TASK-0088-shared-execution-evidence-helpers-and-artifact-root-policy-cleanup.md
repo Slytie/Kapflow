@@ -1,11 +1,11 @@
 ---
-id: TASK-0072
+id: TASK-0088
 epic: EPIC-070
 title: "Shared execution-evidence helpers and artifact-root policy cleanup"
 status: DONE
 owners: ["platform"]
 reviewers: ["qa"]
-depends_on: ["TASK-0066", "TASK-0069", "TASK-0071"]
+depends_on: ["TASK-0066", "TASK-0069", "TASK-0087"]
 risk: medium
 context_packs: ["EPIC-070"]
 patterns: ["PATTERN-005", "PATTERN-003"]
@@ -31,7 +31,7 @@ Consolidate shared execution-evidence helpers into one repo-native service and c
 - `docs/planning/EXECUTION_SESSION_RUNTIME_MODEL.md`
 - `docs/planning/WEEKLY_STAGE04_OPENAI_AGENT_RUNTIME.md`
 - `docs/planning/TASK_INDEX.md`
-- `codex/tasks/TASK-0072-shared-execution-evidence-helpers-and-artifact-root-policy-cleanup.md`
+- `codex/tasks/TASK-0088-shared-execution-evidence-helpers-and-artifact-root-policy-cleanup.md`
 
 ## Verification Run
 - `PYTHONPATH=src pytest -q tests/runtime/test_execution_session_runtime.py`
@@ -50,3 +50,4 @@ Consolidate shared execution-evidence helpers into one repo-native service and c
 - Kept the helper surface intentionally small: shared ID generation, artifact-root resolution, and persistence moved into `execution_evidence.py`; task-specific policy and payload logic stayed in Stage06/Stage04 services.
 - Preserved canonical evidence kinds, metadata, links, and lifecycle behavior; this task only removed duplication and aligned the local evidence-root posture.
 - Weekly Stage04 and Stage06 now prove the configured artifact root through API-level evidence path assertions, reducing the chance of future drift.
+- Backlog sync note: this task was formerly duplicated as `TASK-0072` before the truth-alignment planning sync. The Stage04 iterative-allocation task keeps canonical ownership of `TASK-0072`.

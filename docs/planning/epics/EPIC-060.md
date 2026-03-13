@@ -44,3 +44,5 @@ Context pack: `codex/context/EPIC-060.md`
 - TASK-0012
 - TASK-0031
 - TASK-0034
+- TASK-0079
+- TASK-0080
