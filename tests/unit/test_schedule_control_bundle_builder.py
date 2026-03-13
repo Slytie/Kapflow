@@ -174,7 +174,7 @@ def test_expand_route_slot_requirements_expands_multiplier_suffix() -> None:
 def test_build_weekly_schedule_control_bundle_parses_realistic_day_resolution_fixture() -> None:
     workflow_run = {
         "workflow_run_id": "wr-weekly-realistic-001",
-        "partition_key": "PW-2026-W10",
+        "partition_key": "PW-2026-W12",
     }
     fixture = build_realistic_weekly_stage04_fixture_payloads()
 
@@ -207,14 +207,79 @@ def test_build_weekly_schedule_control_bundle_parses_realistic_day_resolution_fi
     )
 
     assert len(bundle.drivers) == 40
-    assert sum(item.planned_route_count for item in bundle.daily_demand_by_service_date.values()) == 112
+    assert sum(item.planned_route_count for item in bundle.daily_demand_by_service_date.values()) == 139
     assert sum(item.planned_route_count for item in bundle.daily_demand_by_service_date.values()) < (40 * 4)
-    assert bundle.drivers[0].driver_name.startswith("Brahamvir Singh")
+    assert bundle.drivers[0].driver_name.startswith("Brahmvir Singh")
     assert bundle.drivers[0].home_station == "DVC4"
-    assert bundle.availability_by_driver["RDRV-01"].daily_states[0].state == "approved_unavailable"
-    assert len(bundle.availability_by_driver["RDRV-01"].daily_states) == 7
-    assert len(bundle.availability_by_driver["RDRV-01"].previous_week_states) == 7
-    assert bundle.availability_by_driver["RDRV-01"].previous_week_states[1].actual_minutes > 0
-    assert bundle.rolling_7_compliance_by_driver["RDRV-02"].limit_minutes == 1800
-    assert bundle.policy_signals_by_driver["RDRV-03"].max_shifts_per_week == 4
-    assert bundle.daily_demand_by_service_date["2026-03-06"].overflow_slot_count == 2
+    assert bundle.drivers[0].seniority_rank > 0
+    assert bundle.drivers[0].attendance_reliability_index > 0.0
+    assert bundle.availability_by_driver["ODRV-01"].daily_states[0].state == "PREFERRED"
+    assert bundle.availability_by_driver["ODRV-01"].daily_states[0].normalized_state == "available"
+    assert len(bundle.availability_by_driver["ODRV-01"].daily_states) == 7
+    assert len(bundle.availability_by_driver["ODRV-01"].previous_week_states) == 7
+    assert bundle.availability_by_driver["ODRV-01"].previous_week_states[-1].state == "NA"
+    assert bundle.rolling_7_compliance_by_driver["ODRV-05"].limit_minutes == 1800
+    assert bundle.policy_signals_by_driver["ODRV-03"].max_shifts_per_week == 4
+    assert bundle.daily_demand_by_service_date["2026-03-16"].standard_slot_count == 17
+    assert bundle.daily_demand_by_service_date["2026-03-16"].standard_early_slot_count == 11
+    assert bundle.daily_demand_by_service_date["2026-03-16"].standard_late_slot_count == 6
+
+
+def test_realistic_weekly_stage04_fixture_payloads_lock_overcapacity_contract() -> None:
+    fixture = build_realistic_weekly_stage04_fixture_payloads()
+
+    route_slots = fixture["route_slot_requirements"]
+    driver_caps = fixture["driver_capabilities"]
+    availability = fixture["approved_availability"]
+    actual_hours = fixture["actual_hours"]
+
+    assert sum(int(item[1]) for item in route_slots["daily_demand_rows"]) == 139
+    assert "route_family" in route_slots["columns"]
+    assert "preferred_shift_band" in route_slots["columns"]
+    assert "projected_minutes" in route_slots["columns"]
+
+    assert len(driver_caps["rows"]) == 40
+    assert "seniority_rank" in driver_caps["columns"]
+    assert "attendance_reliability_index" in driver_caps["columns"]
+    assert "recent_sick_calls_14d" in driver_caps["columns"]
+    assert "recent_cancellations_14d" in driver_caps["columns"]
+    assert "preferred_route_slot_classes" in driver_caps["columns"]
+    assert "preferred_shift_band" in driver_caps["columns"]
+
+    assert len(availability["rows"]) == 280
+    assert "availability_state" in availability["columns"]
+    assert "previous_week_state" in availability["columns"]
+    availability_rows = [
+        dict(zip(availability["columns"], row))
+        for row in availability["rows"]
+    ]
+    assert {row["availability_state"] for row in availability_rows} == {
+        "AVAILABLE",
+        "AVOID_IF_POSSIBLE",
+        "CANNOT",
+        "ON_CALL_ONLY",
+        "PREFERRED",
+    }
+    assert {row["previous_week_state"] for row in availability_rows} == {
+        "CANCELLED",
+        "DISPATCH",
+        "NA",
+        "ON_CALL",
+        "SICK_CALL",
+        "WORKED",
+    }
+
+    assert len(actual_hours["rows"]) == 280
+    assert "historical_state" in actual_hours["columns"]
+    assert "rolling_7_total_minutes" in actual_hours["columns"]
+    assert "rolling_7_limit_minutes" in actual_hours["columns"]
+    assert "rolling_7_remaining_minutes" in actual_hours["columns"]
+    actual_rows = [dict(zip(actual_hours["columns"], row)) for row in actual_hours["rows"]]
+    assert {row["historical_state"] for row in actual_rows} == {
+        "CANCELLED",
+        "DISPATCH",
+        "NA",
+        "ON_CALL",
+        "SICK_CALL",
+        "WORKED",
+    }

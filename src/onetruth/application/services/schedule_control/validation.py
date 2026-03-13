@@ -16,6 +16,7 @@ class HardValidationResult:
     status: str
     reasons: tuple[str, ...]
     driver_day_state: str = ""
+    driver_day_availability_state: str = ""
     current_week_shift_count: int = 0
     projected_rolling7_minutes: int = 0
     remaining_rolling7_minutes: int = 0
@@ -45,7 +46,12 @@ def evaluate_hard_constraints(
         blocked_reasons.append("route_slot_class_not_eligible")
 
     availability = bundle.availability_by_driver.get(driver.driver_id)
+    driver_day_record = _driver_day_record(availability, route_slot.service_date)
     driver_day_state = _driver_day_state(availability, route_slot.service_date)
+    driver_day_availability_state = _driver_day_availability_state(
+        driver_day_record=driver_day_record,
+        normalized_state=driver_day_state,
+    )
     if driver_day_state == "approved_unavailable":
         blocked_reasons.append("driver_unavailable")
     elif driver_day_state == "pattern_off":
@@ -150,6 +156,7 @@ def evaluate_hard_constraints(
             status="fail",
             reasons=tuple(sorted(dict.fromkeys(failed_reasons))),
             driver_day_state=driver_day_state,
+            driver_day_availability_state=driver_day_availability_state,
             current_week_shift_count=current_week_shift_count,
             projected_rolling7_minutes=projected_rolling7_minutes,
             remaining_rolling7_minutes=remaining_rolling7_minutes,
@@ -159,6 +166,7 @@ def evaluate_hard_constraints(
             status="blocked",
             reasons=tuple(sorted(dict.fromkeys(blocked_reasons))),
             driver_day_state=driver_day_state,
+            driver_day_availability_state=driver_day_availability_state,
             current_week_shift_count=current_week_shift_count,
             projected_rolling7_minutes=projected_rolling7_minutes,
             remaining_rolling7_minutes=remaining_rolling7_minutes,
@@ -167,6 +175,7 @@ def evaluate_hard_constraints(
         status="pass",
         reasons=(),
         driver_day_state=driver_day_state,
+        driver_day_availability_state=driver_day_availability_state,
         current_week_shift_count=current_week_shift_count,
         projected_rolling7_minutes=projected_rolling7_minutes,
         remaining_rolling7_minutes=remaining_rolling7_minutes,
@@ -205,6 +214,11 @@ def build_stage04_validation_summary(
             warnings.append(
                 f"{driver_id} selected for {route_slot_id} with {candidate.get('score_bucket')} soft score"
             )
+        availability_state = str(candidate.get("availability_state") or "")
+        if availability_state in {"AVOID_IF_POSSIBLE", "ON_CALL_ONLY"}:
+            warnings.append(
+                f"{driver_id} selected for {route_slot_id} using {availability_state} availability state"
+            )
         if float(candidate.get("previous_week_stability") or 0.0) < 0.4:
             warnings.append(
                 f"{driver_id} selected for {route_slot_id} with weak previous-week stability"
@@ -212,6 +226,10 @@ def build_stage04_validation_summary(
         if str(candidate.get("delta_kind") or "") == "repair":
             tradeoffs.append(
                 f"{route_slot_id} re-assigned in iteration {candidate.get('iteration_index')} to preserve local coverage."
+            )
+        if str(candidate.get("delta_kind") or "") == "improvement":
+            tradeoffs.append(
+                f"{route_slot_id} re-assigned in iteration {candidate.get('iteration_index')} to improve preference fit while keeping hard rules satisfied."
             )
 
     hard_rule_result = "pass" if not violations else "fail"
@@ -257,6 +275,7 @@ def build_stage04_validation_summary(
         },
         "churn_summary": {
             "repair_move_count": len(repairs),
+            "reallocation_move_count": len(repairs),
             "repaired_route_slot_count": len(
                 {
                     route_slot_id
@@ -267,12 +286,13 @@ def build_stage04_validation_summary(
                     )
                 }
             ),
-            "local_repair_posture": "bounded_local_repair",
+            "local_repair_posture": "bounded_local_reallocation",
         },
         "violations": violations,
         "warnings": warnings,
         "tradeoffs": tradeoffs,
         "repair_moves": [item.to_payload() for item in repairs],
+        "reallocation_moves": [item.to_payload() for item in repairs],
         "recommended_action": recommendation,
     }
 
@@ -312,10 +332,41 @@ def _driver_day_state(availability: Any, service_date: str) -> str:
         return "unknown"
     for state in getattr(availability, "daily_states", ()):
         if state.service_date == service_date:
+            normalized = str(getattr(state, "normalized_state", "") or "").strip()
+            if normalized:
+                return normalized
             return str(state.state or "unknown")
     if service_date in set(getattr(availability, "approved_unavailable_dates", ())):
         return "approved_unavailable"
     return "unknown"
+
+
+def _driver_day_record(availability: Any, service_date: str) -> Any | None:
+    if availability is None:
+        return None
+    for state in getattr(availability, "daily_states", ()):
+        if state.service_date == service_date:
+            return state
+    return None
+
+
+def _driver_day_availability_state(*, driver_day_record: Any | None, normalized_state: str) -> str:
+    if driver_day_record is not None:
+        raw_state = str(getattr(driver_day_record, "state", "") or "").strip().upper()
+        if raw_state:
+            return raw_state
+    token = str(normalized_state or "").strip().lower()
+    if token == "approved_unavailable":
+        return "CANNOT"
+    if token == "pattern_off":
+        return "PATTERN_OFF"
+    if token == "emergency_only":
+        return "ON_CALL_ONLY"
+    if token == "available":
+        return "AVAILABLE"
+    if token:
+        return token.upper()
+    return "UNKNOWN"
 
 
 def _is_emergency_eligible_slot(route_slot: RouteSlotRequirement) -> bool:

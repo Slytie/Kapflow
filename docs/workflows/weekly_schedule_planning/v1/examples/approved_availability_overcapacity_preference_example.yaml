@@ -1,0 +1,3385 @@
+artifact_kind: planning.approved_availability.workbook
+example_id: weekly_stage04_overcapacity_preference_v1
+schema_version: '1.0'
+planning_week_id: PW-2026-W12
+shape: normalized_driver_day_rows
+columns:
+- driver_id
+- driver_name
+- service_date
+- availability_state
+- preferred_route_slot_classes
+- avoid_route_slot_classes
+- target_shifts_per_week
+- on_call_eligible
+- preferred_shift_band
+- previous_week_same_day_state
+- locked_by_manager
+- notes
+rows:
+- - ODRV-01
+  - Brahmvir Singh
+  - '2026-03-16'
+  - PREFERRED
+  - cycle1_rescue,cycle1_overflow,cycle1_standard_late
+  - cycle1_standard_early
+  - 4
+  - 'yes'
+  - late
+  - WORKED
+  - 'no'
+  - Derived from current-week same-day roster state WORKED.
+- - ODRV-02
+  - Harmanpreet Singh
+  - '2026-03-16'
+  - PREFERRED
+  - cycle1_standard_early,cycle1_standard_late,cycle1_rescue
+  - cycle1_overflow
+  - 4
+  - 'yes'
+  - early
+  - WORKED
+  - 'no'
+  - Derived from current-week same-day roster state WORKED.
+- - ODRV-03
+  - Tarandeep Singh
+  - '2026-03-16'
+  - PREFERRED
+  - cycle1_rescue,cycle1_overflow,cycle1_standard_late
+  - cycle1_standard_early
+  - 4
+  - 'yes'
+  - late
+  - WORKED
+  - 'no'
+  - Derived from current-week same-day roster state WORKED.
+- - ODRV-04
+  - Vishal Chaudhary
+  - '2026-03-16'
+  - PREFERRED
+  - cycle1_rescue,cycle1_overflow,cycle1_standard_late
+  - cycle1_standard_early
+  - 4
+  - 'yes'
+  - late
+  - WORKED
+  - 'no'
+  - Derived from current-week same-day roster state WORKED.
+- - ODRV-05
+  - Iqbal Singh
+  - '2026-03-16'
+  - AVOID_IF_POSSIBLE
+  - cycle1_standard_late,cycle1_overflow
+  - cycle1_standard_early
+  - 4
+  - 'yes'
+  - late
+  - SICK_CALL
+  - 'no'
+  - Derived from current-week same-day roster state SICK_CALL.
+- - ODRV-06
+  - Lovepreet Singh
+  - '2026-03-16'
+  - AVOID_IF_POSSIBLE
+  - cycle1_rescue,cycle1_overflow,cycle1_standard_late
+  - cycle1_standard_early
+  - 4
+  - 'yes'
+  - late
+  - SICK_CALL
+  - 'no'
+  - Derived from current-week same-day roster state SICK_CALL.
+- - ODRV-07
+  - Rahul mannan
+  - '2026-03-16'
+  - AVAILABLE
+  - cycle1_rescue,cycle1_overflow,cycle1_standard_late
+  - cycle1_standard_early
+  - 4
+  - 'yes'
+  - late
+  - BLANK
+  - 'no'
+  - Derived from current-week same-day roster state BLANK.
+- - ODRV-08
+  - Gagandeep Singh Singh
+  - '2026-03-16'
+  - AVAILABLE
+  - cycle1_standard_late,cycle1_standard_early
+  - cycle1_standard_early
+  - 4
+  - 'no'
+  - late
+  - BLANK
+  - 'no'
+  - Derived from current-week same-day roster state BLANK.
+- - ODRV-09
+  - Abhiraj Singh
+  - '2026-03-16'
+  - PREFERRED
+  - cycle1_rescue,cycle1_overflow,cycle1_standard_late
+  - cycle1_standard_early
+  - 4
+  - 'yes'
+  - late
+  - WORKED
+  - 'no'
+  - Derived from current-week same-day roster state WORKED.
+- - ODRV-10
+  - Akash
+  - '2026-03-16'
+  - AVAILABLE
+  - cycle1_rescue,cycle1_overflow,cycle1_standard_late
+  - cycle1_standard_early
+  - 4
+  - 'yes'
+  - late
+  - BLANK
+  - 'no'
+  - Derived from current-week same-day roster state BLANK.
+- - ODRV-11
+  - Khushdeep Singh Cheema
+  - '2026-03-16'
+  - AVAILABLE
+  - cycle1_rescue,cycle1_overflow,cycle1_standard_late
+  - cycle1_standard_early
+  - 4
+  - 'yes'
+  - late
+  - BLANK
+  - 'no'
+  - Derived from current-week same-day roster state BLANK.
+- - ODRV-12
+  - Jagraj Singh
+  - '2026-03-16'
+  - AVAILABLE
+  - cycle1_standard_late,cycle1_overflow
+  - cycle1_standard_early
+  - 4
+  - 'yes'
+  - late
+  - BLANK
+  - 'no'
+  - Derived from current-week same-day roster state BLANK.
+- - ODRV-13
+  - Chanpreet Singh Rai
+  - '2026-03-16'
+  - PREFERRED
+  - cycle1_rescue,cycle1_overflow,cycle1_standard_late
+  - cycle1_standard_early
+  - 4
+  - 'yes'
+  - late
+  - WORKED
+  - 'no'
+  - Derived from current-week same-day roster state WORKED.
+- - ODRV-14
+  - Jiwanpreet Singh
+  - '2026-03-16'
+  - PREFERRED
+  - cycle1_standard_late,cycle1_standard_early
+  - cycle1_standard_early
+  - 4
+  - 'no'
+  - late
+  - WORKED
+  - 'no'
+  - Derived from current-week same-day roster state WORKED.
+- - ODRV-15
+  - Rajveer Singh
+  - '2026-03-16'
+  - PREFERRED
+  - cycle1_standard_late,cycle1_overflow
+  - cycle1_standard_early
+  - 4
+  - 'yes'
+  - late
+  - WORKED
+  - 'no'
+  - Derived from current-week same-day roster state WORKED.
+- - ODRV-16
+  - Manpreet
+  - '2026-03-16'
+  - PREFERRED
+  - cycle1_rescue,cycle1_overflow,cycle1_standard_late
+  - cycle1_standard_early
+  - 4
+  - 'yes'
+  - late
+  - WORKED
+  - 'no'
+  - Derived from current-week same-day roster state WORKED.
+- - ODRV-17
+  - Ekjot Singh
+  - '2026-03-16'
+  - PREFERRED
+  - cycle1_standard_late,cycle1_standard_early
+  - cycle1_standard_early
+  - 4
+  - 'no'
+  - late
+  - WORKED
+  - 'no'
+  - Derived from current-week same-day roster state WORKED.
+- - ODRV-18
+  - Karanveer Singh
+  - '2026-03-16'
+  - PREFERRED
+  - cycle1_rescue,cycle1_overflow,cycle1_standard_late
+  - cycle1_standard_early
+  - 4
+  - 'yes'
+  - late
+  - WORKED
+  - 'no'
+  - Derived from current-week same-day roster state WORKED.
+- - ODRV-19
+  - Sukhmanpreet Singh
+  - '2026-03-16'
+  - PREFERRED
+  - cycle1_rescue,cycle1_overflow,cycle1_standard_late
+  - cycle1_standard_early
+  - 4
+  - 'yes'
+  - late
+  - WORKED
+  - 'no'
+  - Derived from current-week same-day roster state WORKED.
+- - ODRV-20
+  - Syed Kamran Shah
+  - '2026-03-16'
+  - AVAILABLE
+  - cycle1_standard_late,cycle1_overflow
+  - cycle1_standard_early
+  - 4
+  - 'yes'
+  - late
+  - BLANK
+  - 'no'
+  - Derived from current-week same-day roster state BLANK.
+- - ODRV-21
+  - Vishal Bhagat
+  - '2026-03-16'
+  - PREFERRED
+  - cycle1_standard_early,cycle1_standard_late,cycle1_rescue
+  - cycle1_overflow
+  - 4
+  - 'yes'
+  - early
+  - WORKED
+  - 'no'
+  - Derived from current-week same-day roster state WORKED.
+- - ODRV-22
+  - Lovepreet Bassi
+  - '2026-03-16'
+  - ON_CALL_ONLY
+  - cycle1_rescue,cycle1_overflow
+  - cycle1_standard_early
+  - 4
+  - 'yes'
+  - late
+  - ON_CALL
+  - 'no'
+  - Derived from current-week same-day roster state ON_CALL.
+- - ODRV-23
+  - Sukhwinder Singh
+  - '2026-03-16'
+  - PREFERRED
+  - cycle1_rescue,cycle1_overflow,cycle1_standard_late
+  - cycle1_standard_early
+  - 4
+  - 'yes'
+  - late
+  - WORKED
+  - 'no'
+  - Derived from current-week same-day roster state WORKED.
+- - ODRV-24
+  - Gaganpreet Singh Dhindsa
+  - '2026-03-16'
+  - CANNOT
+  - cycle1_rescue,cycle1_overflow,cycle1_standard_late
+  - cycle1_standard_early
+  - 4
+  - 'yes'
+  - late
+  - DISPATCH
+  - 'no'
+  - Derived from current-week same-day roster state DISPATCH.
+- - ODRV-25
+  - Sikander Singh
+  - '2026-03-16'
+  - AVAILABLE
+  - cycle1_standard_late,cycle1_standard_early
+  - cycle1_standard_early
+  - 4
+  - 'no'
+  - late
+  - BLANK
+  - 'no'
+  - Derived from current-week same-day roster state BLANK.
+- - ODRV-26
+  - Paramjit Gherha
+  - '2026-03-16'
+  - AVOID_IF_POSSIBLE
+  - cycle1_rescue,cycle1_overflow,cycle1_standard_late
+  - cycle1_standard_early
+  - 4
+  - 'yes'
+  - late
+  - SICK_CALL
+  - 'no'
+  - Derived from current-week same-day roster state SICK_CALL.
+- - ODRV-27
+  - Amritpal Singh
+  - '2026-03-16'
+  - AVAILABLE
+  - cycle1_rescue,cycle1_overflow,cycle1_standard_late
+  - cycle1_standard_early
+  - 4
+  - 'yes'
+  - late
+  - BLANK
+  - 'no'
+  - Derived from current-week same-day roster state BLANK.
+- - ODRV-28
+  - Sachin Goyal
+  - '2026-03-16'
+  - AVOID_IF_POSSIBLE
+  - cycle1_rescue,cycle1_overflow,cycle1_standard_late
+  - cycle1_standard_early
+  - 4
+  - 'yes'
+  - late
+  - SICK_CALL
+  - 'no'
+  - Derived from current-week same-day roster state SICK_CALL.
+- - ODRV-29
+  - Harnamanpreet Singh
+  - '2026-03-16'
+  - PREFERRED
+  - cycle1_standard_late,cycle1_overflow
+  - cycle1_standard_early
+  - 4
+  - 'yes'
+  - late
+  - WORKED
+  - 'no'
+  - Derived from current-week same-day roster state WORKED.
+- - ODRV-30
+  - Gurdas Singh Sidhu
+  - '2026-03-16'
+  - AVAILABLE
+  - cycle1_rescue,cycle1_overflow,cycle1_standard_late
+  - cycle1_standard_early
+  - 4
+  - 'yes'
+  - late
+  - BLANK
+  - 'no'
+  - Derived from current-week same-day roster state BLANK.
+- - ODRV-31
+  - Shafahad Ali Shah
+  - '2026-03-16'
+  - AVAILABLE
+  - cycle1_standard_late,cycle1_standard_early
+  - cycle1_standard_early
+  - 4
+  - 'no'
+  - late
+  - BLANK
+  - 'no'
+  - Derived from current-week same-day roster state BLANK.
+- - ODRV-32
+  - Yong-Kyoon Kim
+  - '2026-03-16'
+  - PREFERRED
+  - cycle1_standard_late,cycle1_overflow
+  - cycle1_standard_early
+  - 4
+  - 'yes'
+  - late
+  - WORKED
+  - 'no'
+  - Derived from current-week same-day roster state WORKED.
+- - ODRV-33
+  - Rompal Singh Hayer
+  - '2026-03-16'
+  - PREFERRED
+  - cycle1_standard_early,cycle1_standard_late,cycle1_rescue
+  - cycle1_overflow
+  - 4
+  - 'yes'
+  - early
+  - WORKED
+  - 'no'
+  - Derived from current-week same-day roster state WORKED.
+- - ODRV-34
+  - Mehakpreet Singh
+  - '2026-03-16'
+  - PREFERRED
+  - cycle1_standard_early,cycle1_standard_late,cycle1_rescue
+  - cycle1_overflow
+  - 4
+  - 'yes'
+  - early
+  - WORKED
+  - 'no'
+  - Derived from current-week same-day roster state WORKED.
+- - ODRV-35
+  - Charanjit Singh
+  - '2026-03-16'
+  - ON_CALL_ONLY
+  - cycle1_rescue,cycle1_overflow
+  - cycle1_standard_early
+  - 4
+  - 'yes'
+  - late
+  - ON_CALL
+  - 'no'
+  - Derived from current-week same-day roster state ON_CALL.
+- - ODRV-36
+  - Pardeep Singh
+  - '2026-03-16'
+  - PREFERRED
+  - cycle1_rescue,cycle1_overflow,cycle1_standard_late
+  - cycle1_standard_early
+  - 4
+  - 'yes'
+  - late
+  - WORKED
+  - 'no'
+  - Derived from current-week same-day roster state WORKED.
+- - ODRV-37
+  - Hamant Kumar
+  - '2026-03-16'
+  - AVAILABLE
+  - cycle1_standard_late,cycle1_overflow
+  - cycle1_standard_early
+  - 4
+  - 'yes'
+  - late
+  - BLANK
+  - 'no'
+  - Derived from current-week same-day roster state BLANK.
+- - ODRV-38
+  - Parampreet Singh
+  - '2026-03-16'
+  - PREFERRED
+  - cycle1_rescue,cycle1_overflow,cycle1_standard_late
+  - cycle1_standard_early
+  - 4
+  - 'yes'
+  - late
+  - WORKED
+  - 'no'
+  - Derived from current-week same-day roster state WORKED.
+- - ODRV-39
+  - Suraj Pratap Singh
+  - '2026-03-16'
+  - PREFERRED
+  - cycle1_rescue,cycle1_overflow,cycle1_standard_late
+  - cycle1_standard_early
+  - 4
+  - 'yes'
+  - late
+  - WORKED
+  - 'no'
+  - Derived from current-week same-day roster state WORKED.
+- - ODRV-40
+  - Ravdeep Singh
+  - '2026-03-16'
+  - ON_CALL_ONLY
+  - cycle1_rescue,cycle1_overflow
+  - cycle1_standard_early
+  - 4
+  - 'yes'
+  - late
+  - ON_CALL
+  - 'no'
+  - Derived from current-week same-day roster state ON_CALL.
+- - ODRV-01
+  - Brahmvir Singh
+  - '2026-03-17'
+  - PREFERRED
+  - cycle1_rescue,cycle1_overflow,cycle1_standard_late
+  - cycle1_standard_early
+  - 4
+  - 'yes'
+  - late
+  - WORKED
+  - 'no'
+  - Derived from current-week same-day roster state WORKED.
+- - ODRV-02
+  - Harmanpreet Singh
+  - '2026-03-17'
+  - PREFERRED
+  - cycle1_standard_early,cycle1_standard_late,cycle1_rescue
+  - cycle1_overflow
+  - 4
+  - 'yes'
+  - early
+  - WORKED
+  - 'no'
+  - Derived from current-week same-day roster state WORKED.
+- - ODRV-03
+  - Tarandeep Singh
+  - '2026-03-17'
+  - PREFERRED
+  - cycle1_rescue,cycle1_overflow,cycle1_standard_late
+  - cycle1_standard_early
+  - 4
+  - 'yes'
+  - late
+  - WORKED
+  - 'no'
+  - Derived from current-week same-day roster state WORKED.
+- - ODRV-04
+  - Vishal Chaudhary
+  - '2026-03-17'
+  - PREFERRED
+  - cycle1_rescue,cycle1_overflow,cycle1_standard_late
+  - cycle1_standard_early
+  - 4
+  - 'yes'
+  - late
+  - WORKED
+  - 'no'
+  - Derived from current-week same-day roster state WORKED.
+- - ODRV-05
+  - Iqbal Singh
+  - '2026-03-17'
+  - PREFERRED
+  - cycle1_standard_late,cycle1_overflow
+  - cycle1_standard_early
+  - 4
+  - 'yes'
+  - late
+  - WORKED
+  - 'no'
+  - Derived from current-week same-day roster state WORKED.
+- - ODRV-06
+  - Lovepreet Singh
+  - '2026-03-17'
+  - PREFERRED
+  - cycle1_rescue,cycle1_overflow,cycle1_standard_late
+  - cycle1_standard_early
+  - 4
+  - 'yes'
+  - late
+  - WORKED
+  - 'no'
+  - Derived from current-week same-day roster state WORKED.
+- - ODRV-07
+  - Rahul mannan
+  - '2026-03-17'
+  - PREFERRED
+  - cycle1_rescue,cycle1_overflow,cycle1_standard_late
+  - cycle1_standard_early
+  - 4
+  - 'yes'
+  - late
+  - WORKED
+  - 'no'
+  - Derived from current-week same-day roster state WORKED.
+- - ODRV-08
+  - Gagandeep Singh Singh
+  - '2026-03-17'
+  - CANNOT
+  - cycle1_standard_late,cycle1_standard_early
+  - cycle1_standard_early
+  - 4
+  - 'no'
+  - late
+  - NA
+  - 'no'
+  - Derived from current-week same-day roster state NA.
+- - ODRV-09
+  - Abhiraj Singh
+  - '2026-03-17'
+  - AVAILABLE
+  - cycle1_rescue,cycle1_overflow,cycle1_standard_late
+  - cycle1_standard_early
+  - 4
+  - 'yes'
+  - late
+  - BLANK
+  - 'no'
+  - Derived from current-week same-day roster state BLANK.
+- - ODRV-10
+  - Akash
+  - '2026-03-17'
+  - AVAILABLE
+  - cycle1_rescue,cycle1_overflow,cycle1_standard_late
+  - cycle1_standard_early
+  - 4
+  - 'yes'
+  - late
+  - BLANK
+  - 'no'
+  - Derived from current-week same-day roster state BLANK.
+- - ODRV-11
+  - Khushdeep Singh Cheema
+  - '2026-03-17'
+  - AVAILABLE
+  - cycle1_rescue,cycle1_overflow,cycle1_standard_late
+  - cycle1_standard_early
+  - 4
+  - 'yes'
+  - late
+  - BLANK
+  - 'no'
+  - Derived from current-week same-day roster state BLANK.
+- - ODRV-12
+  - Jagraj Singh
+  - '2026-03-17'
+  - AVAILABLE
+  - cycle1_standard_late,cycle1_overflow
+  - cycle1_standard_early
+  - 4
+  - 'yes'
+  - late
+  - BLANK
+  - 'no'
+  - Derived from current-week same-day roster state BLANK.
+- - ODRV-13
+  - Chanpreet Singh Rai
+  - '2026-03-17'
+  - PREFERRED
+  - cycle1_rescue,cycle1_overflow,cycle1_standard_late
+  - cycle1_standard_early
+  - 4
+  - 'yes'
+  - late
+  - WORKED
+  - 'no'
+  - Derived from current-week same-day roster state WORKED.
+- - ODRV-14
+  - Jiwanpreet Singh
+  - '2026-03-17'
+  - PREFERRED
+  - cycle1_standard_late,cycle1_standard_early
+  - cycle1_standard_early
+  - 4
+  - 'no'
+  - late
+  - WORKED
+  - 'no'
+  - Derived from current-week same-day roster state WORKED.
+- - ODRV-15
+  - Rajveer Singh
+  - '2026-03-17'
+  - PREFERRED
+  - cycle1_standard_late,cycle1_overflow
+  - cycle1_standard_early
+  - 4
+  - 'yes'
+  - late
+  - WORKED
+  - 'no'
+  - Derived from current-week same-day roster state WORKED.
+- - ODRV-16
+  - Manpreet
+  - '2026-03-17'
+  - PREFERRED
+  - cycle1_rescue,cycle1_overflow,cycle1_standard_late
+  - cycle1_standard_early
+  - 4
+  - 'yes'
+  - late
+  - WORKED
+  - 'no'
+  - Derived from current-week same-day roster state WORKED.
+- - ODRV-17
+  - Ekjot Singh
+  - '2026-03-17'
+  - PREFERRED
+  - cycle1_standard_late,cycle1_standard_early
+  - cycle1_standard_early
+  - 4
+  - 'no'
+  - late
+  - WORKED
+  - 'no'
+  - Derived from current-week same-day roster state WORKED.
+- - ODRV-18
+  - Karanveer Singh
+  - '2026-03-17'
+  - PREFERRED
+  - cycle1_rescue,cycle1_overflow,cycle1_standard_late
+  - cycle1_standard_early
+  - 4
+  - 'yes'
+  - late
+  - WORKED
+  - 'no'
+  - Derived from current-week same-day roster state WORKED.
+- - ODRV-19
+  - Sukhmanpreet Singh
+  - '2026-03-17'
+  - PREFERRED
+  - cycle1_rescue,cycle1_overflow,cycle1_standard_late
+  - cycle1_standard_early
+  - 4
+  - 'yes'
+  - late
+  - WORKED
+  - 'no'
+  - Derived from current-week same-day roster state WORKED.
+- - ODRV-20
+  - Syed Kamran Shah
+  - '2026-03-17'
+  - PREFERRED
+  - cycle1_standard_late,cycle1_overflow
+  - cycle1_standard_early
+  - 4
+  - 'yes'
+  - late
+  - WORKED
+  - 'no'
+  - Derived from current-week same-day roster state WORKED.
+- - ODRV-21
+  - Vishal Bhagat
+  - '2026-03-17'
+  - PREFERRED
+  - cycle1_standard_early,cycle1_standard_late,cycle1_rescue
+  - cycle1_overflow
+  - 4
+  - 'yes'
+  - early
+  - WORKED
+  - 'no'
+  - Derived from current-week same-day roster state WORKED.
+- - ODRV-22
+  - Lovepreet Bassi
+  - '2026-03-17'
+  - AVAILABLE
+  - cycle1_rescue,cycle1_overflow,cycle1_standard_late
+  - cycle1_standard_early
+  - 4
+  - 'yes'
+  - late
+  - BLANK
+  - 'no'
+  - Derived from current-week same-day roster state BLANK.
+- - ODRV-23
+  - Sukhwinder Singh
+  - '2026-03-17'
+  - CANNOT
+  - cycle1_rescue,cycle1_overflow,cycle1_standard_late
+  - cycle1_standard_early
+  - 4
+  - 'yes'
+  - late
+  - NA
+  - 'no'
+  - Derived from current-week same-day roster state NA.
+- - ODRV-24
+  - Gaganpreet Singh Dhindsa
+  - '2026-03-17'
+  - AVAILABLE
+  - cycle1_rescue,cycle1_overflow,cycle1_standard_late
+  - cycle1_standard_early
+  - 4
+  - 'yes'
+  - late
+  - BLANK
+  - 'no'
+  - Derived from current-week same-day roster state BLANK.
+- - ODRV-25
+  - Sikander Singh
+  - '2026-03-17'
+  - PREFERRED
+  - cycle1_standard_late,cycle1_standard_early
+  - cycle1_standard_early
+  - 4
+  - 'no'
+  - late
+  - WORKED
+  - 'no'
+  - Derived from current-week same-day roster state WORKED.
+- - ODRV-26
+  - Paramjit Gherha
+  - '2026-03-17'
+  - ON_CALL_ONLY
+  - cycle1_rescue,cycle1_overflow
+  - cycle1_standard_early
+  - 4
+  - 'yes'
+  - late
+  - ON_CALL
+  - 'no'
+  - Derived from current-week same-day roster state ON_CALL.
+- - ODRV-27
+  - Amritpal Singh
+  - '2026-03-17'
+  - ON_CALL_ONLY
+  - cycle1_rescue,cycle1_overflow
+  - cycle1_standard_early
+  - 4
+  - 'yes'
+  - late
+  - ON_CALL
+  - 'no'
+  - Derived from current-week same-day roster state ON_CALL.
+- - ODRV-28
+  - Sachin Goyal
+  - '2026-03-17'
+  - PREFERRED
+  - cycle1_rescue,cycle1_overflow,cycle1_standard_late
+  - cycle1_standard_early
+  - 4
+  - 'yes'
+  - late
+  - WORKED
+  - 'no'
+  - Derived from current-week same-day roster state WORKED.
+- - ODRV-29
+  - Harnamanpreet Singh
+  - '2026-03-17'
+  - ON_CALL_ONLY
+  - cycle1_rescue,cycle1_overflow
+  - cycle1_standard_early
+  - 4
+  - 'yes'
+  - late
+  - ON_CALL
+  - 'no'
+  - Derived from current-week same-day roster state ON_CALL.
+- - ODRV-30
+  - Gurdas Singh Sidhu
+  - '2026-03-17'
+  - AVAILABLE
+  - cycle1_rescue,cycle1_overflow,cycle1_standard_late
+  - cycle1_standard_early
+  - 4
+  - 'yes'
+  - late
+  - BLANK
+  - 'no'
+  - Derived from current-week same-day roster state BLANK.
+- - ODRV-31
+  - Shafahad Ali Shah
+  - '2026-03-17'
+  - PREFERRED
+  - cycle1_standard_late,cycle1_standard_early
+  - cycle1_standard_early
+  - 4
+  - 'no'
+  - late
+  - WORKED
+  - 'no'
+  - Derived from current-week same-day roster state WORKED.
+- - ODRV-32
+  - Yong-Kyoon Kim
+  - '2026-03-17'
+  - PREFERRED
+  - cycle1_standard_late,cycle1_overflow
+  - cycle1_standard_early
+  - 4
+  - 'yes'
+  - late
+  - WORKED
+  - 'no'
+  - Derived from current-week same-day roster state WORKED.
+- - ODRV-33
+  - Rompal Singh Hayer
+  - '2026-03-17'
+  - PREFERRED
+  - cycle1_standard_early,cycle1_standard_late,cycle1_rescue
+  - cycle1_overflow
+  - 4
+  - 'yes'
+  - early
+  - WORKED
+  - 'no'
+  - Derived from current-week same-day roster state WORKED.
+- - ODRV-34
+  - Mehakpreet Singh
+  - '2026-03-17'
+  - AVAILABLE
+  - cycle1_standard_early,cycle1_standard_late,cycle1_rescue
+  - cycle1_overflow
+  - 4
+  - 'yes'
+  - early
+  - BLANK
+  - 'no'
+  - Derived from current-week same-day roster state BLANK.
+- - ODRV-35
+  - Charanjit Singh
+  - '2026-03-17'
+  - AVAILABLE
+  - cycle1_rescue,cycle1_overflow,cycle1_standard_late
+  - cycle1_standard_early
+  - 4
+  - 'yes'
+  - late
+  - BLANK
+  - 'no'
+  - Derived from current-week same-day roster state BLANK.
+- - ODRV-36
+  - Pardeep Singh
+  - '2026-03-17'
+  - AVAILABLE
+  - cycle1_rescue,cycle1_overflow,cycle1_standard_late
+  - cycle1_standard_early
+  - 4
+  - 'yes'
+  - late
+  - BLANK
+  - 'no'
+  - Derived from current-week same-day roster state BLANK.
+- - ODRV-37
+  - Hamant Kumar
+  - '2026-03-17'
+  - AVAILABLE
+  - cycle1_standard_late,cycle1_overflow
+  - cycle1_standard_early
+  - 4
+  - 'yes'
+  - late
+  - BLANK
+  - 'no'
+  - Derived from current-week same-day roster state BLANK.
+- - ODRV-38
+  - Parampreet Singh
+  - '2026-03-17'
+  - ON_CALL_ONLY
+  - cycle1_rescue,cycle1_overflow
+  - cycle1_standard_early
+  - 4
+  - 'yes'
+  - late
+  - ON_CALL
+  - 'no'
+  - Derived from current-week same-day roster state ON_CALL.
+- - ODRV-39
+  - Suraj Pratap Singh
+  - '2026-03-17'
+  - ON_CALL_ONLY
+  - cycle1_rescue,cycle1_overflow
+  - cycle1_standard_early
+  - 4
+  - 'yes'
+  - late
+  - ON_CALL
+  - 'no'
+  - Derived from current-week same-day roster state ON_CALL.
+- - ODRV-40
+  - Ravdeep Singh
+  - '2026-03-17'
+  - AVOID_IF_POSSIBLE
+  - cycle1_rescue,cycle1_overflow,cycle1_standard_late
+  - cycle1_standard_early
+  - 4
+  - 'yes'
+  - late
+  - SICK_CALL
+  - 'no'
+  - Derived from current-week same-day roster state SICK_CALL.
+- - ODRV-01
+  - Brahmvir Singh
+  - '2026-03-18'
+  - PREFERRED
+  - cycle1_rescue,cycle1_overflow,cycle1_standard_late
+  - cycle1_standard_early
+  - 4
+  - 'yes'
+  - late
+  - WORKED
+  - 'no'
+  - Derived from current-week same-day roster state WORKED.
+- - ODRV-02
+  - Harmanpreet Singh
+  - '2026-03-18'
+  - PREFERRED
+  - cycle1_standard_early,cycle1_standard_late,cycle1_rescue
+  - cycle1_overflow
+  - 4
+  - 'yes'
+  - early
+  - WORKED
+  - 'no'
+  - Derived from current-week same-day roster state WORKED.
+- - ODRV-03
+  - Tarandeep Singh
+  - '2026-03-18'
+  - PREFERRED
+  - cycle1_rescue,cycle1_overflow,cycle1_standard_late
+  - cycle1_standard_early
+  - 4
+  - 'yes'
+  - late
+  - WORKED
+  - 'no'
+  - Derived from current-week same-day roster state WORKED.
+- - ODRV-04
+  - Vishal Chaudhary
+  - '2026-03-18'
+  - PREFERRED
+  - cycle1_rescue,cycle1_overflow,cycle1_standard_late
+  - cycle1_standard_early
+  - 4
+  - 'yes'
+  - late
+  - WORKED
+  - 'no'
+  - Derived from current-week same-day roster state WORKED.
+- - ODRV-05
+  - Iqbal Singh
+  - '2026-03-18'
+  - PREFERRED
+  - cycle1_standard_late,cycle1_overflow
+  - cycle1_standard_early
+  - 4
+  - 'yes'
+  - late
+  - WORKED
+  - 'no'
+  - Derived from current-week same-day roster state WORKED.
+- - ODRV-06
+  - Lovepreet Singh
+  - '2026-03-18'
+  - PREFERRED
+  - cycle1_rescue,cycle1_overflow,cycle1_standard_late
+  - cycle1_standard_early
+  - 4
+  - 'yes'
+  - late
+  - WORKED
+  - 'no'
+  - Derived from current-week same-day roster state WORKED.
+- - ODRV-07
+  - Rahul mannan
+  - '2026-03-18'
+  - PREFERRED
+  - cycle1_rescue,cycle1_overflow,cycle1_standard_late
+  - cycle1_standard_early
+  - 4
+  - 'yes'
+  - late
+  - WORKED
+  - 'no'
+  - Derived from current-week same-day roster state WORKED.
+- - ODRV-08
+  - Gagandeep Singh Singh
+  - '2026-03-18'
+  - PREFERRED
+  - cycle1_standard_late,cycle1_standard_early
+  - cycle1_standard_early
+  - 4
+  - 'no'
+  - late
+  - WORKED
+  - 'no'
+  - Derived from current-week same-day roster state WORKED.
+- - ODRV-09
+  - Abhiraj Singh
+  - '2026-03-18'
+  - PREFERRED
+  - cycle1_rescue,cycle1_overflow,cycle1_standard_late
+  - cycle1_standard_early
+  - 4
+  - 'yes'
+  - late
+  - WORKED
+  - 'no'
+  - Derived from current-week same-day roster state WORKED.
+- - ODRV-10
+  - Akash
+  - '2026-03-18'
+  - PREFERRED
+  - cycle1_rescue,cycle1_overflow,cycle1_standard_late
+  - cycle1_standard_early
+  - 4
+  - 'yes'
+  - late
+  - WORKED
+  - 'no'
+  - Derived from current-week same-day roster state WORKED.
+- - ODRV-11
+  - Khushdeep Singh Cheema
+  - '2026-03-18'
+  - PREFERRED
+  - cycle1_rescue,cycle1_overflow,cycle1_standard_late
+  - cycle1_standard_early
+  - 4
+  - 'yes'
+  - late
+  - WORKED
+  - 'no'
+  - Derived from current-week same-day roster state WORKED.
+- - ODRV-12
+  - Jagraj Singh
+  - '2026-03-18'
+  - PREFERRED
+  - cycle1_standard_late,cycle1_overflow
+  - cycle1_standard_early
+  - 4
+  - 'yes'
+  - late
+  - WORKED
+  - 'no'
+  - Derived from current-week same-day roster state WORKED.
+- - ODRV-13
+  - Chanpreet Singh Rai
+  - '2026-03-18'
+  - PREFERRED
+  - cycle1_rescue,cycle1_overflow,cycle1_standard_late
+  - cycle1_standard_early
+  - 4
+  - 'yes'
+  - late
+  - WORKED
+  - 'no'
+  - Derived from current-week same-day roster state WORKED.
+- - ODRV-14
+  - Jiwanpreet Singh
+  - '2026-03-18'
+  - PREFERRED
+  - cycle1_standard_late,cycle1_standard_early
+  - cycle1_standard_early
+  - 4
+  - 'no'
+  - late
+  - WORKED
+  - 'no'
+  - Derived from current-week same-day roster state WORKED.
+- - ODRV-15
+  - Rajveer Singh
+  - '2026-03-18'
+  - PREFERRED
+  - cycle1_standard_late,cycle1_overflow
+  - cycle1_standard_early
+  - 4
+  - 'yes'
+  - late
+  - WORKED
+  - 'no'
+  - Derived from current-week same-day roster state WORKED.
+- - ODRV-16
+  - Manpreet
+  - '2026-03-18'
+  - PREFERRED
+  - cycle1_rescue,cycle1_overflow,cycle1_standard_late
+  - cycle1_standard_early
+  - 4
+  - 'yes'
+  - late
+  - WORKED
+  - 'no'
+  - Derived from current-week same-day roster state WORKED.
+- - ODRV-17
+  - Ekjot Singh
+  - '2026-03-18'
+  - PREFERRED
+  - cycle1_standard_late,cycle1_standard_early
+  - cycle1_standard_early
+  - 4
+  - 'no'
+  - late
+  - WORKED
+  - 'no'
+  - Derived from current-week same-day roster state WORKED.
+- - ODRV-18
+  - Karanveer Singh
+  - '2026-03-18'
+  - PREFERRED
+  - cycle1_rescue,cycle1_overflow,cycle1_standard_late
+  - cycle1_standard_early
+  - 4
+  - 'yes'
+  - late
+  - WORKED
+  - 'no'
+  - Derived from current-week same-day roster state WORKED.
+- - ODRV-19
+  - Sukhmanpreet Singh
+  - '2026-03-18'
+  - PREFERRED
+  - cycle1_rescue,cycle1_overflow,cycle1_standard_late
+  - cycle1_standard_early
+  - 4
+  - 'yes'
+  - late
+  - WORKED
+  - 'no'
+  - Derived from current-week same-day roster state WORKED.
+- - ODRV-20
+  - Syed Kamran Shah
+  - '2026-03-18'
+  - PREFERRED
+  - cycle1_standard_late,cycle1_overflow
+  - cycle1_standard_early
+  - 4
+  - 'yes'
+  - late
+  - WORKED
+  - 'no'
+  - Derived from current-week same-day roster state WORKED.
+- - ODRV-21
+  - Vishal Bhagat
+  - '2026-03-18'
+  - PREFERRED
+  - cycle1_standard_early,cycle1_standard_late,cycle1_rescue
+  - cycle1_overflow
+  - 4
+  - 'yes'
+  - early
+  - WORKED
+  - 'no'
+  - Derived from current-week same-day roster state WORKED.
+- - ODRV-22
+  - Lovepreet Bassi
+  - '2026-03-18'
+  - AVOID_IF_POSSIBLE
+  - cycle1_rescue,cycle1_overflow,cycle1_standard_late
+  - cycle1_standard_early
+  - 4
+  - 'yes'
+  - late
+  - CANCELLED
+  - 'no'
+  - Derived from current-week same-day roster state CANCELLED.
+- - ODRV-23
+  - Sukhwinder Singh
+  - '2026-03-18'
+  - CANNOT
+  - cycle1_rescue,cycle1_overflow,cycle1_standard_late
+  - cycle1_standard_early
+  - 4
+  - 'yes'
+  - late
+  - NA
+  - 'no'
+  - Derived from current-week same-day roster state NA.
+- - ODRV-24
+  - Gaganpreet Singh Dhindsa
+  - '2026-03-18'
+  - ON_CALL_ONLY
+  - cycle1_rescue,cycle1_overflow
+  - cycle1_standard_early
+  - 4
+  - 'yes'
+  - late
+  - ON_CALL
+  - 'no'
+  - Derived from current-week same-day roster state ON_CALL.
+- - ODRV-25
+  - Sikander Singh
+  - '2026-03-18'
+  - ON_CALL_ONLY
+  - cycle1_rescue,cycle1_overflow
+  - cycle1_standard_early
+  - 4
+  - 'yes'
+  - late
+  - ON_CALL
+  - 'no'
+  - Derived from current-week same-day roster state ON_CALL.
+- - ODRV-26
+  - Paramjit Gherha
+  - '2026-03-18'
+  - ON_CALL_ONLY
+  - cycle1_rescue,cycle1_overflow
+  - cycle1_standard_early
+  - 4
+  - 'yes'
+  - late
+  - ON_CALL
+  - 'no'
+  - Derived from current-week same-day roster state ON_CALL.
+- - ODRV-27
+  - Amritpal Singh
+  - '2026-03-18'
+  - ON_CALL_ONLY
+  - cycle1_rescue,cycle1_overflow
+  - cycle1_standard_early
+  - 4
+  - 'yes'
+  - late
+  - ON_CALL
+  - 'no'
+  - Derived from current-week same-day roster state ON_CALL.
+- - ODRV-28
+  - Sachin Goyal
+  - '2026-03-18'
+  - AVAILABLE
+  - cycle1_rescue,cycle1_overflow,cycle1_standard_late
+  - cycle1_standard_early
+  - 4
+  - 'yes'
+  - late
+  - BLANK
+  - 'no'
+  - Derived from current-week same-day roster state BLANK.
+- - ODRV-29
+  - Harnamanpreet Singh
+  - '2026-03-18'
+  - AVAILABLE
+  - cycle1_standard_late,cycle1_overflow
+  - cycle1_standard_early
+  - 4
+  - 'yes'
+  - late
+  - BLANK
+  - 'no'
+  - Derived from current-week same-day roster state BLANK.
+- - ODRV-30
+  - Gurdas Singh Sidhu
+  - '2026-03-18'
+  - AVAILABLE
+  - cycle1_rescue,cycle1_overflow,cycle1_standard_late
+  - cycle1_standard_early
+  - 4
+  - 'yes'
+  - late
+  - BLANK
+  - 'no'
+  - Derived from current-week same-day roster state BLANK.
+- - ODRV-31
+  - Shafahad Ali Shah
+  - '2026-03-18'
+  - AVAILABLE
+  - cycle1_standard_late,cycle1_standard_early
+  - cycle1_standard_early
+  - 4
+  - 'no'
+  - late
+  - BLANK
+  - 'no'
+  - Derived from current-week same-day roster state BLANK.
+- - ODRV-32
+  - Yong-Kyoon Kim
+  - '2026-03-18'
+  - AVAILABLE
+  - cycle1_standard_late,cycle1_overflow
+  - cycle1_standard_early
+  - 4
+  - 'yes'
+  - late
+  - BLANK
+  - 'no'
+  - Derived from current-week same-day roster state BLANK.
+- - ODRV-33
+  - Rompal Singh Hayer
+  - '2026-03-18'
+  - AVAILABLE
+  - cycle1_standard_early,cycle1_standard_late,cycle1_rescue
+  - cycle1_overflow
+  - 4
+  - 'yes'
+  - early
+  - BLANK
+  - 'no'
+  - Derived from current-week same-day roster state BLANK.
+- - ODRV-34
+  - Mehakpreet Singh
+  - '2026-03-18'
+  - AVAILABLE
+  - cycle1_standard_early,cycle1_standard_late,cycle1_rescue
+  - cycle1_overflow
+  - 4
+  - 'yes'
+  - early
+  - BLANK
+  - 'no'
+  - Derived from current-week same-day roster state BLANK.
+- - ODRV-35
+  - Charanjit Singh
+  - '2026-03-18'
+  - AVAILABLE
+  - cycle1_rescue,cycle1_overflow,cycle1_standard_late
+  - cycle1_standard_early
+  - 4
+  - 'yes'
+  - late
+  - BLANK
+  - 'no'
+  - Derived from current-week same-day roster state BLANK.
+- - ODRV-36
+  - Pardeep Singh
+  - '2026-03-18'
+  - AVAILABLE
+  - cycle1_rescue,cycle1_overflow,cycle1_standard_late
+  - cycle1_standard_early
+  - 4
+  - 'yes'
+  - late
+  - BLANK
+  - 'no'
+  - Derived from current-week same-day roster state BLANK.
+- - ODRV-37
+  - Hamant Kumar
+  - '2026-03-18'
+  - AVAILABLE
+  - cycle1_standard_late,cycle1_overflow
+  - cycle1_standard_early
+  - 4
+  - 'yes'
+  - late
+  - BLANK
+  - 'no'
+  - Derived from current-week same-day roster state BLANK.
+- - ODRV-38
+  - Parampreet Singh
+  - '2026-03-18'
+  - AVAILABLE
+  - cycle1_rescue,cycle1_overflow,cycle1_standard_late
+  - cycle1_standard_early
+  - 4
+  - 'yes'
+  - late
+  - BLANK
+  - 'no'
+  - Derived from current-week same-day roster state BLANK.
+- - ODRV-39
+  - Suraj Pratap Singh
+  - '2026-03-18'
+  - AVAILABLE
+  - cycle1_rescue,cycle1_overflow,cycle1_standard_late
+  - cycle1_standard_early
+  - 4
+  - 'yes'
+  - late
+  - BLANK
+  - 'no'
+  - Derived from current-week same-day roster state BLANK.
+- - ODRV-40
+  - Ravdeep Singh
+  - '2026-03-18'
+  - AVAILABLE
+  - cycle1_rescue,cycle1_overflow,cycle1_standard_late
+  - cycle1_standard_early
+  - 4
+  - 'yes'
+  - late
+  - BLANK
+  - 'no'
+  - Derived from current-week same-day roster state BLANK.
+- - ODRV-01
+  - Brahmvir Singh
+  - '2026-03-19'
+  - AVAILABLE
+  - cycle1_rescue,cycle1_overflow,cycle1_standard_late
+  - cycle1_standard_early
+  - 4
+  - 'yes'
+  - late
+  - BLANK
+  - 'no'
+  - Derived from current-week same-day roster state BLANK.
+- - ODRV-02
+  - Harmanpreet Singh
+  - '2026-03-19'
+  - PREFERRED
+  - cycle1_standard_early,cycle1_standard_late,cycle1_rescue
+  - cycle1_overflow
+  - 4
+  - 'yes'
+  - early
+  - WORKED
+  - 'no'
+  - Derived from current-week same-day roster state WORKED.
+- - ODRV-03
+  - Tarandeep Singh
+  - '2026-03-19'
+  - PREFERRED
+  - cycle1_rescue,cycle1_overflow,cycle1_standard_late
+  - cycle1_standard_early
+  - 4
+  - 'yes'
+  - late
+  - WORKED
+  - 'no'
+  - Derived from current-week same-day roster state WORKED.
+- - ODRV-04
+  - Vishal Chaudhary
+  - '2026-03-19'
+  - PREFERRED
+  - cycle1_rescue,cycle1_overflow,cycle1_standard_late
+  - cycle1_standard_early
+  - 4
+  - 'yes'
+  - late
+  - WORKED
+  - 'no'
+  - Derived from current-week same-day roster state WORKED.
+- - ODRV-05
+  - Iqbal Singh
+  - '2026-03-19'
+  - PREFERRED
+  - cycle1_standard_late,cycle1_overflow
+  - cycle1_standard_early
+  - 4
+  - 'yes'
+  - late
+  - WORKED
+  - 'no'
+  - Derived from current-week same-day roster state WORKED.
+- - ODRV-06
+  - Lovepreet Singh
+  - '2026-03-19'
+  - PREFERRED
+  - cycle1_rescue,cycle1_overflow,cycle1_standard_late
+  - cycle1_standard_early
+  - 4
+  - 'yes'
+  - late
+  - WORKED
+  - 'no'
+  - Derived from current-week same-day roster state WORKED.
+- - ODRV-07
+  - Rahul mannan
+  - '2026-03-19'
+  - PREFERRED
+  - cycle1_rescue,cycle1_overflow,cycle1_standard_late
+  - cycle1_standard_early
+  - 4
+  - 'yes'
+  - late
+  - WORKED
+  - 'no'
+  - Derived from current-week same-day roster state WORKED.
+- - ODRV-08
+  - Gagandeep Singh Singh
+  - '2026-03-19'
+  - PREFERRED
+  - cycle1_standard_late,cycle1_standard_early
+  - cycle1_standard_early
+  - 4
+  - 'no'
+  - late
+  - WORKED
+  - 'no'
+  - Derived from current-week same-day roster state WORKED.
+- - ODRV-09
+  - Abhiraj Singh
+  - '2026-03-19'
+  - PREFERRED
+  - cycle1_rescue,cycle1_overflow,cycle1_standard_late
+  - cycle1_standard_early
+  - 4
+  - 'yes'
+  - late
+  - WORKED
+  - 'no'
+  - Derived from current-week same-day roster state WORKED.
+- - ODRV-10
+  - Akash
+  - '2026-03-19'
+  - PREFERRED
+  - cycle1_rescue,cycle1_overflow,cycle1_standard_late
+  - cycle1_standard_early
+  - 4
+  - 'yes'
+  - late
+  - WORKED
+  - 'no'
+  - Derived from current-week same-day roster state WORKED.
+- - ODRV-11
+  - Khushdeep Singh Cheema
+  - '2026-03-19'
+  - PREFERRED
+  - cycle1_rescue,cycle1_overflow,cycle1_standard_late
+  - cycle1_standard_early
+  - 4
+  - 'yes'
+  - late
+  - WORKED
+  - 'no'
+  - Derived from current-week same-day roster state WORKED.
+- - ODRV-12
+  - Jagraj Singh
+  - '2026-03-19'
+  - PREFERRED
+  - cycle1_standard_late,cycle1_overflow
+  - cycle1_standard_early
+  - 4
+  - 'yes'
+  - late
+  - WORKED
+  - 'no'
+  - Derived from current-week same-day roster state WORKED.
+- - ODRV-13
+  - Chanpreet Singh Rai
+  - '2026-03-19'
+  - ON_CALL_ONLY
+  - cycle1_rescue,cycle1_overflow
+  - cycle1_standard_early
+  - 4
+  - 'yes'
+  - late
+  - ON_CALL
+  - 'no'
+  - Derived from current-week same-day roster state ON_CALL.
+- - ODRV-14
+  - Jiwanpreet Singh
+  - '2026-03-19'
+  - ON_CALL_ONLY
+  - cycle1_rescue,cycle1_overflow
+  - cycle1_standard_early
+  - 4
+  - 'yes'
+  - late
+  - ON_CALL
+  - 'no'
+  - Derived from current-week same-day roster state ON_CALL.
+- - ODRV-15
+  - Rajveer Singh
+  - '2026-03-19'
+  - ON_CALL_ONLY
+  - cycle1_rescue,cycle1_overflow
+  - cycle1_standard_early
+  - 4
+  - 'yes'
+  - late
+  - ON_CALL
+  - 'no'
+  - Derived from current-week same-day roster state ON_CALL.
+- - ODRV-16
+  - Manpreet
+  - '2026-03-19'
+  - ON_CALL_ONLY
+  - cycle1_rescue,cycle1_overflow
+  - cycle1_standard_early
+  - 4
+  - 'yes'
+  - late
+  - ON_CALL
+  - 'no'
+  - Derived from current-week same-day roster state ON_CALL.
+- - ODRV-17
+  - Ekjot Singh
+  - '2026-03-19'
+  - AVAILABLE
+  - cycle1_standard_late,cycle1_standard_early
+  - cycle1_standard_early
+  - 4
+  - 'no'
+  - late
+  - BLANK
+  - 'no'
+  - Derived from current-week same-day roster state BLANK.
+- - ODRV-18
+  - Karanveer Singh
+  - '2026-03-19'
+  - AVAILABLE
+  - cycle1_rescue,cycle1_overflow,cycle1_standard_late
+  - cycle1_standard_early
+  - 4
+  - 'yes'
+  - late
+  - BLANK
+  - 'no'
+  - Derived from current-week same-day roster state BLANK.
+- - ODRV-19
+  - Sukhmanpreet Singh
+  - '2026-03-19'
+  - AVAILABLE
+  - cycle1_rescue,cycle1_overflow,cycle1_standard_late
+  - cycle1_standard_early
+  - 4
+  - 'yes'
+  - late
+  - BLANK
+  - 'no'
+  - Derived from current-week same-day roster state BLANK.
+- - ODRV-20
+  - Syed Kamran Shah
+  - '2026-03-19'
+  - AVAILABLE
+  - cycle1_standard_late,cycle1_overflow
+  - cycle1_standard_early
+  - 4
+  - 'yes'
+  - late
+  - BLANK
+  - 'no'
+  - Derived from current-week same-day roster state BLANK.
+- - ODRV-21
+  - Vishal Bhagat
+  - '2026-03-19'
+  - AVAILABLE
+  - cycle1_standard_early,cycle1_standard_late,cycle1_rescue
+  - cycle1_overflow
+  - 4
+  - 'yes'
+  - early
+  - BLANK
+  - 'no'
+  - Derived from current-week same-day roster state BLANK.
+- - ODRV-22
+  - Lovepreet Bassi
+  - '2026-03-19'
+  - PREFERRED
+  - cycle1_rescue,cycle1_overflow,cycle1_standard_late
+  - cycle1_standard_early
+  - 4
+  - 'yes'
+  - late
+  - WORKED
+  - 'no'
+  - Derived from current-week same-day roster state WORKED.
+- - ODRV-23
+  - Sukhwinder Singh
+  - '2026-03-19'
+  - PREFERRED
+  - cycle1_rescue,cycle1_overflow,cycle1_standard_late
+  - cycle1_standard_early
+  - 4
+  - 'yes'
+  - late
+  - WORKED
+  - 'no'
+  - Derived from current-week same-day roster state WORKED.
+- - ODRV-24
+  - Gaganpreet Singh Dhindsa
+  - '2026-03-19'
+  - AVAILABLE
+  - cycle1_rescue,cycle1_overflow,cycle1_standard_late
+  - cycle1_standard_early
+  - 4
+  - 'yes'
+  - late
+  - BLANK
+  - 'no'
+  - Derived from current-week same-day roster state BLANK.
+- - ODRV-25
+  - Sikander Singh
+  - '2026-03-19'
+  - PREFERRED
+  - cycle1_standard_late,cycle1_standard_early
+  - cycle1_standard_early
+  - 4
+  - 'no'
+  - late
+  - WORKED
+  - 'no'
+  - Derived from current-week same-day roster state WORKED.
+- - ODRV-26
+  - Paramjit Gherha
+  - '2026-03-19'
+  - PREFERRED
+  - cycle1_rescue,cycle1_overflow,cycle1_standard_late
+  - cycle1_standard_early
+  - 4
+  - 'yes'
+  - late
+  - WORKED
+  - 'no'
+  - Derived from current-week same-day roster state WORKED.
+- - ODRV-27
+  - Amritpal Singh
+  - '2026-03-19'
+  - PREFERRED
+  - cycle1_rescue,cycle1_overflow,cycle1_standard_late
+  - cycle1_standard_early
+  - 4
+  - 'yes'
+  - late
+  - WORKED
+  - 'no'
+  - Derived from current-week same-day roster state WORKED.
+- - ODRV-28
+  - Sachin Goyal
+  - '2026-03-19'
+  - AVAILABLE
+  - cycle1_rescue,cycle1_overflow,cycle1_standard_late
+  - cycle1_standard_early
+  - 4
+  - 'yes'
+  - late
+  - BLANK
+  - 'no'
+  - Derived from current-week same-day roster state BLANK.
+- - ODRV-29
+  - Harnamanpreet Singh
+  - '2026-03-19'
+  - AVAILABLE
+  - cycle1_standard_late,cycle1_overflow
+  - cycle1_standard_early
+  - 4
+  - 'yes'
+  - late
+  - BLANK
+  - 'no'
+  - Derived from current-week same-day roster state BLANK.
+- - ODRV-30
+  - Gurdas Singh Sidhu
+  - '2026-03-19'
+  - AVAILABLE
+  - cycle1_rescue,cycle1_overflow,cycle1_standard_late
+  - cycle1_standard_early
+  - 4
+  - 'yes'
+  - late
+  - BLANK
+  - 'no'
+  - Derived from current-week same-day roster state BLANK.
+- - ODRV-31
+  - Shafahad Ali Shah
+  - '2026-03-19'
+  - PREFERRED
+  - cycle1_standard_late,cycle1_standard_early
+  - cycle1_standard_early
+  - 4
+  - 'no'
+  - late
+  - WORKED
+  - 'no'
+  - Derived from current-week same-day roster state WORKED.
+- - ODRV-32
+  - Yong-Kyoon Kim
+  - '2026-03-19'
+  - PREFERRED
+  - cycle1_standard_late,cycle1_overflow
+  - cycle1_standard_early
+  - 4
+  - 'yes'
+  - late
+  - WORKED
+  - 'no'
+  - Derived from current-week same-day roster state WORKED.
+- - ODRV-33
+  - Rompal Singh Hayer
+  - '2026-03-19'
+  - PREFERRED
+  - cycle1_standard_early,cycle1_standard_late,cycle1_rescue
+  - cycle1_overflow
+  - 4
+  - 'yes'
+  - early
+  - WORKED
+  - 'no'
+  - Derived from current-week same-day roster state WORKED.
+- - ODRV-34
+  - Mehakpreet Singh
+  - '2026-03-19'
+  - PREFERRED
+  - cycle1_standard_early,cycle1_standard_late,cycle1_rescue
+  - cycle1_overflow
+  - 4
+  - 'yes'
+  - early
+  - WORKED
+  - 'no'
+  - Derived from current-week same-day roster state WORKED.
+- - ODRV-35
+  - Charanjit Singh
+  - '2026-03-19'
+  - PREFERRED
+  - cycle1_rescue,cycle1_overflow,cycle1_standard_late
+  - cycle1_standard_early
+  - 4
+  - 'yes'
+  - late
+  - WORKED
+  - 'no'
+  - Derived from current-week same-day roster state WORKED.
+- - ODRV-36
+  - Pardeep Singh
+  - '2026-03-19'
+  - ON_CALL_ONLY
+  - cycle1_rescue,cycle1_overflow
+  - cycle1_standard_early
+  - 4
+  - 'yes'
+  - late
+  - ON_CALL
+  - 'no'
+  - Derived from current-week same-day roster state ON_CALL.
+- - ODRV-37
+  - Hamant Kumar
+  - '2026-03-19'
+  - AVOID_IF_POSSIBLE
+  - cycle1_standard_late,cycle1_overflow
+  - cycle1_standard_early
+  - 4
+  - 'yes'
+  - late
+  - SICK_CALL
+  - 'no'
+  - Derived from current-week same-day roster state SICK_CALL.
+- - ODRV-38
+  - Parampreet Singh
+  - '2026-03-19'
+  - AVAILABLE
+  - cycle1_rescue,cycle1_overflow,cycle1_standard_late
+  - cycle1_standard_early
+  - 4
+  - 'yes'
+  - late
+  - BLANK
+  - 'no'
+  - Derived from current-week same-day roster state BLANK.
+- - ODRV-39
+  - Suraj Pratap Singh
+  - '2026-03-19'
+  - AVAILABLE
+  - cycle1_rescue,cycle1_overflow,cycle1_standard_late
+  - cycle1_standard_early
+  - 4
+  - 'yes'
+  - late
+  - BLANK
+  - 'no'
+  - Derived from current-week same-day roster state BLANK.
+- - ODRV-40
+  - Ravdeep Singh
+  - '2026-03-19'
+  - AVAILABLE
+  - cycle1_rescue,cycle1_overflow,cycle1_standard_late
+  - cycle1_standard_early
+  - 4
+  - 'yes'
+  - late
+  - BLANK
+  - 'no'
+  - Derived from current-week same-day roster state BLANK.
+- - ODRV-01
+  - Brahmvir Singh
+  - '2026-03-20'
+  - ON_CALL_ONLY
+  - cycle1_rescue,cycle1_overflow
+  - cycle1_standard_early
+  - 4
+  - 'yes'
+  - late
+  - ON_CALL
+  - 'no'
+  - Derived from current-week same-day roster state ON_CALL.
+- - ODRV-02
+  - Harmanpreet Singh
+  - '2026-03-20'
+  - AVAILABLE
+  - cycle1_standard_early,cycle1_standard_late,cycle1_rescue
+  - cycle1_overflow
+  - 4
+  - 'yes'
+  - early
+  - BLANK
+  - 'no'
+  - Derived from current-week same-day roster state BLANK.
+- - ODRV-03
+  - Tarandeep Singh
+  - '2026-03-20'
+  - ON_CALL_ONLY
+  - cycle1_rescue,cycle1_overflow
+  - cycle1_standard_early
+  - 4
+  - 'yes'
+  - late
+  - ON_CALL
+  - 'no'
+  - Derived from current-week same-day roster state ON_CALL.
+- - ODRV-04
+  - Vishal Chaudhary
+  - '2026-03-20'
+  - ON_CALL_ONLY
+  - cycle1_rescue,cycle1_overflow
+  - cycle1_standard_early
+  - 4
+  - 'yes'
+  - late
+  - ON_CALL
+  - 'no'
+  - Derived from current-week same-day roster state ON_CALL.
+- - ODRV-05
+  - Iqbal Singh
+  - '2026-03-20'
+  - ON_CALL_ONLY
+  - cycle1_rescue,cycle1_overflow
+  - cycle1_standard_early
+  - 4
+  - 'yes'
+  - late
+  - ON_CALL
+  - 'no'
+  - Derived from current-week same-day roster state ON_CALL.
+- - ODRV-06
+  - Lovepreet Singh
+  - '2026-03-20'
+  - AVAILABLE
+  - cycle1_rescue,cycle1_overflow,cycle1_standard_late
+  - cycle1_standard_early
+  - 4
+  - 'yes'
+  - late
+  - BLANK
+  - 'no'
+  - Derived from current-week same-day roster state BLANK.
+- - ODRV-07
+  - Rahul mannan
+  - '2026-03-20'
+  - ON_CALL_ONLY
+  - cycle1_rescue,cycle1_overflow
+  - cycle1_standard_early
+  - 4
+  - 'yes'
+  - late
+  - ON_CALL
+  - 'no'
+  - Derived from current-week same-day roster state ON_CALL.
+- - ODRV-08
+  - Gagandeep Singh Singh
+  - '2026-03-20'
+  - PREFERRED
+  - cycle1_standard_late,cycle1_standard_early
+  - cycle1_standard_early
+  - 4
+  - 'no'
+  - late
+  - WORKED
+  - 'no'
+  - Derived from current-week same-day roster state WORKED.
+- - ODRV-09
+  - Abhiraj Singh
+  - '2026-03-20'
+  - AVAILABLE
+  - cycle1_rescue,cycle1_overflow,cycle1_standard_late
+  - cycle1_standard_early
+  - 4
+  - 'yes'
+  - late
+  - BLANK
+  - 'no'
+  - Derived from current-week same-day roster state BLANK.
+- - ODRV-10
+  - Akash
+  - '2026-03-20'
+  - PREFERRED
+  - cycle1_rescue,cycle1_overflow,cycle1_standard_late
+  - cycle1_standard_early
+  - 4
+  - 'yes'
+  - late
+  - WORKED
+  - 'no'
+  - Derived from current-week same-day roster state WORKED.
+- - ODRV-11
+  - Khushdeep Singh Cheema
+  - '2026-03-20'
+  - PREFERRED
+  - cycle1_rescue,cycle1_overflow,cycle1_standard_late
+  - cycle1_standard_early
+  - 4
+  - 'yes'
+  - late
+  - WORKED
+  - 'no'
+  - Derived from current-week same-day roster state WORKED.
+- - ODRV-12
+  - Jagraj Singh
+  - '2026-03-20'
+  - PREFERRED
+  - cycle1_standard_late,cycle1_overflow
+  - cycle1_standard_early
+  - 4
+  - 'yes'
+  - late
+  - WORKED
+  - 'no'
+  - Derived from current-week same-day roster state WORKED.
+- - ODRV-13
+  - Chanpreet Singh Rai
+  - '2026-03-20'
+  - AVAILABLE
+  - cycle1_rescue,cycle1_overflow,cycle1_standard_late
+  - cycle1_standard_early
+  - 4
+  - 'yes'
+  - late
+  - BLANK
+  - 'no'
+  - Derived from current-week same-day roster state BLANK.
+- - ODRV-14
+  - Jiwanpreet Singh
+  - '2026-03-20'
+  - AVAILABLE
+  - cycle1_standard_late,cycle1_standard_early
+  - cycle1_standard_early
+  - 4
+  - 'no'
+  - late
+  - BLANK
+  - 'no'
+  - Derived from current-week same-day roster state BLANK.
+- - ODRV-15
+  - Rajveer Singh
+  - '2026-03-20'
+  - AVAILABLE
+  - cycle1_standard_late,cycle1_overflow
+  - cycle1_standard_early
+  - 4
+  - 'yes'
+  - late
+  - BLANK
+  - 'no'
+  - Derived from current-week same-day roster state BLANK.
+- - ODRV-16
+  - Manpreet
+  - '2026-03-20'
+  - AVAILABLE
+  - cycle1_rescue,cycle1_overflow,cycle1_standard_late
+  - cycle1_standard_early
+  - 4
+  - 'yes'
+  - late
+  - BLANK
+  - 'no'
+  - Derived from current-week same-day roster state BLANK.
+- - ODRV-17
+  - Ekjot Singh
+  - '2026-03-20'
+  - AVAILABLE
+  - cycle1_standard_late,cycle1_standard_early
+  - cycle1_standard_early
+  - 4
+  - 'no'
+  - late
+  - BLANK
+  - 'no'
+  - Derived from current-week same-day roster state BLANK.
+- - ODRV-18
+  - Karanveer Singh
+  - '2026-03-20'
+  - AVAILABLE
+  - cycle1_rescue,cycle1_overflow,cycle1_standard_late
+  - cycle1_standard_early
+  - 4
+  - 'yes'
+  - late
+  - BLANK
+  - 'no'
+  - Derived from current-week same-day roster state BLANK.
+- - ODRV-19
+  - Sukhmanpreet Singh
+  - '2026-03-20'
+  - ON_CALL_ONLY
+  - cycle1_rescue,cycle1_overflow
+  - cycle1_standard_early
+  - 4
+  - 'yes'
+  - late
+  - ON_CALL
+  - 'no'
+  - Derived from current-week same-day roster state ON_CALL.
+- - ODRV-20
+  - Syed Kamran Shah
+  - '2026-03-20'
+  - AVAILABLE
+  - cycle1_standard_late,cycle1_overflow
+  - cycle1_standard_early
+  - 4
+  - 'yes'
+  - late
+  - BLANK
+  - 'no'
+  - Derived from current-week same-day roster state BLANK.
+- - ODRV-21
+  - Vishal Bhagat
+  - '2026-03-20'
+  - AVAILABLE
+  - cycle1_standard_early,cycle1_standard_late,cycle1_rescue
+  - cycle1_overflow
+  - 4
+  - 'yes'
+  - early
+  - BLANK
+  - 'no'
+  - Derived from current-week same-day roster state BLANK.
+- - ODRV-22
+  - Lovepreet Bassi
+  - '2026-03-20'
+  - PREFERRED
+  - cycle1_rescue,cycle1_overflow,cycle1_standard_late
+  - cycle1_standard_early
+  - 4
+  - 'yes'
+  - late
+  - WORKED
+  - 'no'
+  - Derived from current-week same-day roster state WORKED.
+- - ODRV-23
+  - Sukhwinder Singh
+  - '2026-03-20'
+  - PREFERRED
+  - cycle1_rescue,cycle1_overflow,cycle1_standard_late
+  - cycle1_standard_early
+  - 4
+  - 'yes'
+  - late
+  - WORKED
+  - 'no'
+  - Derived from current-week same-day roster state WORKED.
+- - ODRV-24
+  - Gaganpreet Singh Dhindsa
+  - '2026-03-20'
+  - PREFERRED
+  - cycle1_rescue,cycle1_overflow,cycle1_standard_late
+  - cycle1_standard_early
+  - 4
+  - 'yes'
+  - late
+  - WORKED
+  - 'no'
+  - Derived from current-week same-day roster state WORKED.
+- - ODRV-25
+  - Sikander Singh
+  - '2026-03-20'
+  - PREFERRED
+  - cycle1_standard_late,cycle1_standard_early
+  - cycle1_standard_early
+  - 4
+  - 'no'
+  - late
+  - WORKED
+  - 'no'
+  - Derived from current-week same-day roster state WORKED.
+- - ODRV-26
+  - Paramjit Gherha
+  - '2026-03-20'
+  - PREFERRED
+  - cycle1_rescue,cycle1_overflow,cycle1_standard_late
+  - cycle1_standard_early
+  - 4
+  - 'yes'
+  - late
+  - WORKED
+  - 'no'
+  - Derived from current-week same-day roster state WORKED.
+- - ODRV-27
+  - Amritpal Singh
+  - '2026-03-20'
+  - PREFERRED
+  - cycle1_rescue,cycle1_overflow,cycle1_standard_late
+  - cycle1_standard_early
+  - 4
+  - 'yes'
+  - late
+  - WORKED
+  - 'no'
+  - Derived from current-week same-day roster state WORKED.
+- - ODRV-28
+  - Sachin Goyal
+  - '2026-03-20'
+  - AVAILABLE
+  - cycle1_rescue,cycle1_overflow,cycle1_standard_late
+  - cycle1_standard_early
+  - 4
+  - 'yes'
+  - late
+  - BLANK
+  - 'no'
+  - Derived from current-week same-day roster state BLANK.
+- - ODRV-29
+  - Harnamanpreet Singh
+  - '2026-03-20'
+  - PREFERRED
+  - cycle1_standard_late,cycle1_overflow
+  - cycle1_standard_early
+  - 4
+  - 'yes'
+  - late
+  - WORKED
+  - 'no'
+  - Derived from current-week same-day roster state WORKED.
+- - ODRV-30
+  - Gurdas Singh Sidhu
+  - '2026-03-20'
+  - PREFERRED
+  - cycle1_rescue,cycle1_overflow,cycle1_standard_late
+  - cycle1_standard_early
+  - 4
+  - 'yes'
+  - late
+  - WORKED
+  - 'no'
+  - Derived from current-week same-day roster state WORKED.
+- - ODRV-31
+  - Shafahad Ali Shah
+  - '2026-03-20'
+  - PREFERRED
+  - cycle1_standard_late,cycle1_standard_early
+  - cycle1_standard_early
+  - 4
+  - 'no'
+  - late
+  - WORKED
+  - 'no'
+  - Derived from current-week same-day roster state WORKED.
+- - ODRV-32
+  - Yong-Kyoon Kim
+  - '2026-03-20'
+  - PREFERRED
+  - cycle1_standard_late,cycle1_overflow
+  - cycle1_standard_early
+  - 4
+  - 'yes'
+  - late
+  - WORKED
+  - 'no'
+  - Derived from current-week same-day roster state WORKED.
+- - ODRV-33
+  - Rompal Singh Hayer
+  - '2026-03-20'
+  - PREFERRED
+  - cycle1_standard_early,cycle1_standard_late,cycle1_rescue
+  - cycle1_overflow
+  - 4
+  - 'yes'
+  - early
+  - WORKED
+  - 'no'
+  - Derived from current-week same-day roster state WORKED.
+- - ODRV-34
+  - Mehakpreet Singh
+  - '2026-03-20'
+  - PREFERRED
+  - cycle1_standard_early,cycle1_standard_late,cycle1_rescue
+  - cycle1_overflow
+  - 4
+  - 'yes'
+  - early
+  - WORKED
+  - 'no'
+  - Derived from current-week same-day roster state WORKED.
+- - ODRV-35
+  - Charanjit Singh
+  - '2026-03-20'
+  - PREFERRED
+  - cycle1_rescue,cycle1_overflow,cycle1_standard_late
+  - cycle1_standard_early
+  - 4
+  - 'yes'
+  - late
+  - WORKED
+  - 'no'
+  - Derived from current-week same-day roster state WORKED.
+- - ODRV-36
+  - Pardeep Singh
+  - '2026-03-20'
+  - PREFERRED
+  - cycle1_rescue,cycle1_overflow,cycle1_standard_late
+  - cycle1_standard_early
+  - 4
+  - 'yes'
+  - late
+  - WORKED
+  - 'no'
+  - Derived from current-week same-day roster state WORKED.
+- - ODRV-37
+  - Hamant Kumar
+  - '2026-03-20'
+  - AVOID_IF_POSSIBLE
+  - cycle1_standard_late,cycle1_overflow
+  - cycle1_standard_early
+  - 4
+  - 'yes'
+  - late
+  - SICK_CALL
+  - 'no'
+  - Derived from current-week same-day roster state SICK_CALL.
+- - ODRV-38
+  - Parampreet Singh
+  - '2026-03-20'
+  - PREFERRED
+  - cycle1_rescue,cycle1_overflow,cycle1_standard_late
+  - cycle1_standard_early
+  - 4
+  - 'yes'
+  - late
+  - WORKED
+  - 'no'
+  - Derived from current-week same-day roster state WORKED.
+- - ODRV-39
+  - Suraj Pratap Singh
+  - '2026-03-20'
+  - PREFERRED
+  - cycle1_rescue,cycle1_overflow,cycle1_standard_late
+  - cycle1_standard_early
+  - 4
+  - 'yes'
+  - late
+  - WORKED
+  - 'no'
+  - Derived from current-week same-day roster state WORKED.
+- - ODRV-40
+  - Ravdeep Singh
+  - '2026-03-20'
+  - PREFERRED
+  - cycle1_rescue,cycle1_overflow,cycle1_standard_late
+  - cycle1_standard_early
+  - 4
+  - 'yes'
+  - late
+  - WORKED
+  - 'no'
+  - Derived from current-week same-day roster state WORKED.
+- - ODRV-01
+  - Brahmvir Singh
+  - '2026-03-21'
+  - PREFERRED
+  - cycle1_rescue,cycle1_overflow,cycle1_standard_late
+  - cycle1_standard_early
+  - 4
+  - 'yes'
+  - late
+  - WORKED
+  - 'no'
+  - Derived from current-week same-day roster state WORKED.
+- - ODRV-02
+  - Harmanpreet Singh
+  - '2026-03-21'
+  - AVAILABLE
+  - cycle1_standard_early,cycle1_standard_late,cycle1_rescue
+  - cycle1_overflow
+  - 4
+  - 'yes'
+  - early
+  - BLANK
+  - 'no'
+  - Derived from current-week same-day roster state BLANK.
+- - ODRV-03
+  - Tarandeep Singh
+  - '2026-03-21'
+  - AVAILABLE
+  - cycle1_rescue,cycle1_overflow,cycle1_standard_late
+  - cycle1_standard_early
+  - 4
+  - 'yes'
+  - late
+  - BLANK
+  - 'no'
+  - Derived from current-week same-day roster state BLANK.
+- - ODRV-04
+  - Vishal Chaudhary
+  - '2026-03-21'
+  - AVAILABLE
+  - cycle1_rescue,cycle1_overflow,cycle1_standard_late
+  - cycle1_standard_early
+  - 4
+  - 'yes'
+  - late
+  - BLANK
+  - 'no'
+  - Derived from current-week same-day roster state BLANK.
+- - ODRV-05
+  - Iqbal Singh
+  - '2026-03-21'
+  - AVAILABLE
+  - cycle1_standard_late,cycle1_overflow
+  - cycle1_standard_early
+  - 4
+  - 'yes'
+  - late
+  - BLANK
+  - 'no'
+  - Derived from current-week same-day roster state BLANK.
+- - ODRV-06
+  - Lovepreet Singh
+  - '2026-03-21'
+  - AVAILABLE
+  - cycle1_rescue,cycle1_overflow,cycle1_standard_late
+  - cycle1_standard_early
+  - 4
+  - 'yes'
+  - late
+  - BLANK
+  - 'no'
+  - Derived from current-week same-day roster state BLANK.
+- - ODRV-07
+  - Rahul mannan
+  - '2026-03-21'
+  - PREFERRED
+  - cycle1_rescue,cycle1_overflow,cycle1_standard_late
+  - cycle1_standard_early
+  - 4
+  - 'yes'
+  - late
+  - WORKED
+  - 'no'
+  - Derived from current-week same-day roster state WORKED.
+- - ODRV-08
+  - Gagandeep Singh Singh
+  - '2026-03-21'
+  - PREFERRED
+  - cycle1_standard_late,cycle1_standard_early
+  - cycle1_standard_early
+  - 4
+  - 'no'
+  - late
+  - WORKED
+  - 'no'
+  - Derived from current-week same-day roster state WORKED.
+- - ODRV-09
+  - Abhiraj Singh
+  - '2026-03-21'
+  - ON_CALL_ONLY
+  - cycle1_rescue,cycle1_overflow
+  - cycle1_standard_early
+  - 4
+  - 'yes'
+  - late
+  - ON_CALL
+  - 'no'
+  - Derived from current-week same-day roster state ON_CALL.
+- - ODRV-10
+  - Akash
+  - '2026-03-21'
+  - PREFERRED
+  - cycle1_rescue,cycle1_overflow,cycle1_standard_late
+  - cycle1_standard_early
+  - 4
+  - 'yes'
+  - late
+  - WORKED
+  - 'no'
+  - Derived from current-week same-day roster state WORKED.
+- - ODRV-11
+  - Khushdeep Singh Cheema
+  - '2026-03-21'
+  - PREFERRED
+  - cycle1_rescue,cycle1_overflow,cycle1_standard_late
+  - cycle1_standard_early
+  - 4
+  - 'yes'
+  - late
+  - WORKED
+  - 'no'
+  - Derived from current-week same-day roster state WORKED.
+- - ODRV-12
+  - Jagraj Singh
+  - '2026-03-21'
+  - PREFERRED
+  - cycle1_standard_late,cycle1_overflow
+  - cycle1_standard_early
+  - 4
+  - 'yes'
+  - late
+  - WORKED
+  - 'no'
+  - Derived from current-week same-day roster state WORKED.
+- - ODRV-13
+  - Chanpreet Singh Rai
+  - '2026-03-21'
+  - AVAILABLE
+  - cycle1_rescue,cycle1_overflow,cycle1_standard_late
+  - cycle1_standard_early
+  - 4
+  - 'yes'
+  - late
+  - BLANK
+  - 'no'
+  - Derived from current-week same-day roster state BLANK.
+- - ODRV-14
+  - Jiwanpreet Singh
+  - '2026-03-21'
+  - AVAILABLE
+  - cycle1_standard_late,cycle1_standard_early
+  - cycle1_standard_early
+  - 4
+  - 'no'
+  - late
+  - BLANK
+  - 'no'
+  - Derived from current-week same-day roster state BLANK.
+- - ODRV-15
+  - Rajveer Singh
+  - '2026-03-21'
+  - AVAILABLE
+  - cycle1_standard_late,cycle1_overflow
+  - cycle1_standard_early
+  - 4
+  - 'yes'
+  - late
+  - BLANK
+  - 'no'
+  - Derived from current-week same-day roster state BLANK.
+- - ODRV-16
+  - Manpreet
+  - '2026-03-21'
+  - AVAILABLE
+  - cycle1_rescue,cycle1_overflow,cycle1_standard_late
+  - cycle1_standard_early
+  - 4
+  - 'yes'
+  - late
+  - BLANK
+  - 'no'
+  - Derived from current-week same-day roster state BLANK.
+- - ODRV-17
+  - Ekjot Singh
+  - '2026-03-21'
+  - ON_CALL_ONLY
+  - cycle1_rescue,cycle1_overflow
+  - cycle1_standard_early
+  - 4
+  - 'yes'
+  - late
+  - ON_CALL
+  - 'no'
+  - Derived from current-week same-day roster state ON_CALL.
+- - ODRV-18
+  - Karanveer Singh
+  - '2026-03-21'
+  - ON_CALL_ONLY
+  - cycle1_rescue,cycle1_overflow
+  - cycle1_standard_early
+  - 4
+  - 'yes'
+  - late
+  - ON_CALL
+  - 'no'
+  - Derived from current-week same-day roster state ON_CALL.
+- - ODRV-19
+  - Sukhmanpreet Singh
+  - '2026-03-21'
+  - PREFERRED
+  - cycle1_rescue,cycle1_overflow,cycle1_standard_late
+  - cycle1_standard_early
+  - 4
+  - 'yes'
+  - late
+  - WORKED
+  - 'no'
+  - Derived from current-week same-day roster state WORKED.
+- - ODRV-20
+  - Syed Kamran Shah
+  - '2026-03-21'
+  - AVAILABLE
+  - cycle1_standard_late,cycle1_overflow
+  - cycle1_standard_early
+  - 4
+  - 'yes'
+  - late
+  - BLANK
+  - 'no'
+  - Derived from current-week same-day roster state BLANK.
+- - ODRV-21
+  - Vishal Bhagat
+  - '2026-03-21'
+  - ON_CALL_ONLY
+  - cycle1_rescue,cycle1_overflow
+  - cycle1_standard_early
+  - 4
+  - 'yes'
+  - early
+  - ON_CALL
+  - 'no'
+  - Derived from current-week same-day roster state ON_CALL.
+- - ODRV-22
+  - Lovepreet Bassi
+  - '2026-03-21'
+  - AVAILABLE
+  - cycle1_rescue,cycle1_overflow,cycle1_standard_late
+  - cycle1_standard_early
+  - 4
+  - 'yes'
+  - late
+  - BLANK
+  - 'no'
+  - Derived from current-week same-day roster state BLANK.
+- - ODRV-23
+  - Sukhwinder Singh
+  - '2026-03-21'
+  - PREFERRED
+  - cycle1_rescue,cycle1_overflow,cycle1_standard_late
+  - cycle1_standard_early
+  - 4
+  - 'yes'
+  - late
+  - WORKED
+  - 'no'
+  - Derived from current-week same-day roster state WORKED.
+- - ODRV-24
+  - Gaganpreet Singh Dhindsa
+  - '2026-03-21'
+  - PREFERRED
+  - cycle1_rescue,cycle1_overflow,cycle1_standard_late
+  - cycle1_standard_early
+  - 4
+  - 'yes'
+  - late
+  - WORKED
+  - 'no'
+  - Derived from current-week same-day roster state WORKED.
+- - ODRV-25
+  - Sikander Singh
+  - '2026-03-21'
+  - PREFERRED
+  - cycle1_standard_late,cycle1_standard_early
+  - cycle1_standard_early
+  - 4
+  - 'no'
+  - late
+  - WORKED
+  - 'no'
+  - Derived from current-week same-day roster state WORKED.
+- - ODRV-26
+  - Paramjit Gherha
+  - '2026-03-21'
+  - AVAILABLE
+  - cycle1_rescue,cycle1_overflow,cycle1_standard_late
+  - cycle1_standard_early
+  - 4
+  - 'yes'
+  - late
+  - BLANK
+  - 'no'
+  - Derived from current-week same-day roster state BLANK.
+- - ODRV-27
+  - Amritpal Singh
+  - '2026-03-21'
+  - PREFERRED
+  - cycle1_rescue,cycle1_overflow,cycle1_standard_late
+  - cycle1_standard_early
+  - 4
+  - 'yes'
+  - late
+  - WORKED
+  - 'no'
+  - Derived from current-week same-day roster state WORKED.
+- - ODRV-28
+  - Sachin Goyal
+  - '2026-03-21'
+  - PREFERRED
+  - cycle1_rescue,cycle1_overflow,cycle1_standard_late
+  - cycle1_standard_early
+  - 4
+  - 'yes'
+  - late
+  - WORKED
+  - 'no'
+  - Derived from current-week same-day roster state WORKED.
+- - ODRV-29
+  - Harnamanpreet Singh
+  - '2026-03-21'
+  - PREFERRED
+  - cycle1_standard_late,cycle1_overflow
+  - cycle1_standard_early
+  - 4
+  - 'yes'
+  - late
+  - WORKED
+  - 'no'
+  - Derived from current-week same-day roster state WORKED.
+- - ODRV-30
+  - Gurdas Singh Sidhu
+  - '2026-03-21'
+  - PREFERRED
+  - cycle1_rescue,cycle1_overflow,cycle1_standard_late
+  - cycle1_standard_early
+  - 4
+  - 'yes'
+  - late
+  - WORKED
+  - 'no'
+  - Derived from current-week same-day roster state WORKED.
+- - ODRV-31
+  - Shafahad Ali Shah
+  - '2026-03-21'
+  - PREFERRED
+  - cycle1_standard_late,cycle1_standard_early
+  - cycle1_standard_early
+  - 4
+  - 'no'
+  - late
+  - WORKED
+  - 'no'
+  - Derived from current-week same-day roster state WORKED.
+- - ODRV-32
+  - Yong-Kyoon Kim
+  - '2026-03-21'
+  - AVAILABLE
+  - cycle1_standard_late,cycle1_overflow
+  - cycle1_standard_early
+  - 4
+  - 'yes'
+  - late
+  - BLANK
+  - 'no'
+  - Derived from current-week same-day roster state BLANK.
+- - ODRV-33
+  - Rompal Singh Hayer
+  - '2026-03-21'
+  - AVAILABLE
+  - cycle1_standard_early,cycle1_standard_late,cycle1_rescue
+  - cycle1_overflow
+  - 4
+  - 'yes'
+  - early
+  - BLANK
+  - 'no'
+  - Derived from current-week same-day roster state BLANK.
+- - ODRV-34
+  - Mehakpreet Singh
+  - '2026-03-21'
+  - AVAILABLE
+  - cycle1_standard_early,cycle1_standard_late,cycle1_rescue
+  - cycle1_overflow
+  - 4
+  - 'yes'
+  - early
+  - BLANK
+  - 'no'
+  - Derived from current-week same-day roster state BLANK.
+- - ODRV-35
+  - Charanjit Singh
+  - '2026-03-21'
+  - PREFERRED
+  - cycle1_rescue,cycle1_overflow,cycle1_standard_late
+  - cycle1_standard_early
+  - 4
+  - 'yes'
+  - late
+  - WORKED
+  - 'no'
+  - Derived from current-week same-day roster state WORKED.
+- - ODRV-36
+  - Pardeep Singh
+  - '2026-03-21'
+  - PREFERRED
+  - cycle1_rescue,cycle1_overflow,cycle1_standard_late
+  - cycle1_standard_early
+  - 4
+  - 'yes'
+  - late
+  - WORKED
+  - 'no'
+  - Derived from current-week same-day roster state WORKED.
+- - ODRV-37
+  - Hamant Kumar
+  - '2026-03-21'
+  - AVOID_IF_POSSIBLE
+  - cycle1_standard_late,cycle1_overflow
+  - cycle1_standard_early
+  - 4
+  - 'yes'
+  - late
+  - SICK_CALL
+  - 'no'
+  - Derived from current-week same-day roster state SICK_CALL.
+- - ODRV-38
+  - Parampreet Singh
+  - '2026-03-21'
+  - PREFERRED
+  - cycle1_rescue,cycle1_overflow,cycle1_standard_late
+  - cycle1_standard_early
+  - 4
+  - 'yes'
+  - late
+  - WORKED
+  - 'no'
+  - Derived from current-week same-day roster state WORKED.
+- - ODRV-39
+  - Suraj Pratap Singh
+  - '2026-03-21'
+  - PREFERRED
+  - cycle1_rescue,cycle1_overflow,cycle1_standard_late
+  - cycle1_standard_early
+  - 4
+  - 'yes'
+  - late
+  - WORKED
+  - 'no'
+  - Derived from current-week same-day roster state WORKED.
+- - ODRV-40
+  - Ravdeep Singh
+  - '2026-03-21'
+  - PREFERRED
+  - cycle1_rescue,cycle1_overflow,cycle1_standard_late
+  - cycle1_standard_early
+  - 4
+  - 'yes'
+  - late
+  - WORKED
+  - 'no'
+  - Derived from current-week same-day roster state WORKED.
+- - ODRV-01
+  - Brahmvir Singh
+  - '2026-03-22'
+  - AVAILABLE
+  - cycle1_rescue,cycle1_overflow,cycle1_standard_late
+  - cycle1_standard_early
+  - 4
+  - 'yes'
+  - late
+  - BLANK
+  - 'no'
+  - Derived from current-week same-day roster state BLANK.
+- - ODRV-02
+  - Harmanpreet Singh
+  - '2026-03-22'
+  - AVAILABLE
+  - cycle1_standard_early,cycle1_standard_late,cycle1_rescue
+  - cycle1_overflow
+  - 4
+  - 'yes'
+  - early
+  - BLANK
+  - 'no'
+  - Derived from current-week same-day roster state BLANK.
+- - ODRV-03
+  - Tarandeep Singh
+  - '2026-03-22'
+  - AVAILABLE
+  - cycle1_rescue,cycle1_overflow,cycle1_standard_late
+  - cycle1_standard_early
+  - 4
+  - 'yes'
+  - late
+  - BLANK
+  - 'no'
+  - Derived from current-week same-day roster state BLANK.
+- - ODRV-04
+  - Vishal Chaudhary
+  - '2026-03-22'
+  - AVAILABLE
+  - cycle1_rescue,cycle1_overflow,cycle1_standard_late
+  - cycle1_standard_early
+  - 4
+  - 'yes'
+  - late
+  - BLANK
+  - 'no'
+  - Derived from current-week same-day roster state BLANK.
+- - ODRV-05
+  - Iqbal Singh
+  - '2026-03-22'
+  - AVAILABLE
+  - cycle1_standard_late,cycle1_overflow
+  - cycle1_standard_early
+  - 4
+  - 'yes'
+  - late
+  - BLANK
+  - 'no'
+  - Derived from current-week same-day roster state BLANK.
+- - ODRV-06
+  - Lovepreet Singh
+  - '2026-03-22'
+  - ON_CALL_ONLY
+  - cycle1_rescue,cycle1_overflow
+  - cycle1_standard_early
+  - 4
+  - 'yes'
+  - late
+  - ON_CALL
+  - 'no'
+  - Derived from current-week same-day roster state ON_CALL.
+- - ODRV-07
+  - Rahul mannan
+  - '2026-03-22'
+  - AVAILABLE
+  - cycle1_rescue,cycle1_overflow,cycle1_standard_late
+  - cycle1_standard_early
+  - 4
+  - 'yes'
+  - late
+  - BLANK
+  - 'no'
+  - Derived from current-week same-day roster state BLANK.
+- - ODRV-08
+  - Gagandeep Singh Singh
+  - '2026-03-22'
+  - AVAILABLE
+  - cycle1_standard_late,cycle1_standard_early
+  - cycle1_standard_early
+  - 4
+  - 'no'
+  - late
+  - BLANK
+  - 'no'
+  - Derived from current-week same-day roster state BLANK.
+- - ODRV-09
+  - Abhiraj Singh
+  - '2026-03-22'
+  - PREFERRED
+  - cycle1_rescue,cycle1_overflow,cycle1_standard_late
+  - cycle1_standard_early
+  - 4
+  - 'yes'
+  - late
+  - WORKED
+  - 'no'
+  - Derived from current-week same-day roster state WORKED.
+- - ODRV-10
+  - Akash
+  - '2026-03-22'
+  - ON_CALL_ONLY
+  - cycle1_rescue,cycle1_overflow
+  - cycle1_standard_early
+  - 4
+  - 'yes'
+  - late
+  - ON_CALL
+  - 'no'
+  - Derived from current-week same-day roster state ON_CALL.
+- - ODRV-11
+  - Khushdeep Singh Cheema
+  - '2026-03-22'
+  - ON_CALL_ONLY
+  - cycle1_rescue,cycle1_overflow
+  - cycle1_standard_early
+  - 4
+  - 'yes'
+  - late
+  - ON_CALL
+  - 'no'
+  - Derived from current-week same-day roster state ON_CALL.
+- - ODRV-12
+  - Jagraj Singh
+  - '2026-03-22'
+  - AVAILABLE
+  - cycle1_standard_late,cycle1_overflow
+  - cycle1_standard_early
+  - 4
+  - 'yes'
+  - late
+  - BLANK
+  - 'no'
+  - Derived from current-week same-day roster state BLANK.
+- - ODRV-13
+  - Chanpreet Singh Rai
+  - '2026-03-22'
+  - PREFERRED
+  - cycle1_rescue,cycle1_overflow,cycle1_standard_late
+  - cycle1_standard_early
+  - 4
+  - 'yes'
+  - late
+  - WORKED
+  - 'no'
+  - Derived from current-week same-day roster state WORKED.
+- - ODRV-14
+  - Jiwanpreet Singh
+  - '2026-03-22'
+  - PREFERRED
+  - cycle1_standard_late,cycle1_standard_early
+  - cycle1_standard_early
+  - 4
+  - 'no'
+  - late
+  - WORKED
+  - 'no'
+  - Derived from current-week same-day roster state WORKED.
+- - ODRV-15
+  - Rajveer Singh
+  - '2026-03-22'
+  - PREFERRED
+  - cycle1_standard_late,cycle1_overflow
+  - cycle1_standard_early
+  - 4
+  - 'yes'
+  - late
+  - WORKED
+  - 'no'
+  - Derived from current-week same-day roster state WORKED.
+- - ODRV-16
+  - Manpreet
+  - '2026-03-22'
+  - AVOID_IF_POSSIBLE
+  - cycle1_rescue,cycle1_overflow,cycle1_standard_late
+  - cycle1_standard_early
+  - 4
+  - 'yes'
+  - late
+  - SICK_CALL
+  - 'no'
+  - Derived from current-week same-day roster state SICK_CALL.
+- - ODRV-17
+  - Ekjot Singh
+  - '2026-03-22'
+  - PREFERRED
+  - cycle1_standard_late,cycle1_standard_early
+  - cycle1_standard_early
+  - 4
+  - 'no'
+  - late
+  - WORKED
+  - 'no'
+  - Derived from current-week same-day roster state WORKED.
+- - ODRV-18
+  - Karanveer Singh
+  - '2026-03-22'
+  - PREFERRED
+  - cycle1_rescue,cycle1_overflow,cycle1_standard_late
+  - cycle1_standard_early
+  - 4
+  - 'yes'
+  - late
+  - WORKED
+  - 'no'
+  - Derived from current-week same-day roster state WORKED.
+- - ODRV-19
+  - Sukhmanpreet Singh
+  - '2026-03-22'
+  - AVAILABLE
+  - cycle1_rescue,cycle1_overflow,cycle1_standard_late
+  - cycle1_standard_early
+  - 4
+  - 'yes'
+  - late
+  - BLANK
+  - 'no'
+  - Derived from current-week same-day roster state BLANK.
+- - ODRV-20
+  - Syed Kamran Shah
+  - '2026-03-22'
+  - AVAILABLE
+  - cycle1_standard_late,cycle1_overflow
+  - cycle1_standard_early
+  - 4
+  - 'yes'
+  - late
+  - BLANK
+  - 'no'
+  - Derived from current-week same-day roster state BLANK.
+- - ODRV-21
+  - Vishal Bhagat
+  - '2026-03-22'
+  - PREFERRED
+  - cycle1_standard_early,cycle1_standard_late,cycle1_rescue
+  - cycle1_overflow
+  - 4
+  - 'yes'
+  - early
+  - WORKED
+  - 'no'
+  - Derived from current-week same-day roster state WORKED.
+- - ODRV-22
+  - Lovepreet Bassi
+  - '2026-03-22'
+  - PREFERRED
+  - cycle1_rescue,cycle1_overflow,cycle1_standard_late
+  - cycle1_standard_early
+  - 4
+  - 'yes'
+  - late
+  - WORKED
+  - 'no'
+  - Derived from current-week same-day roster state WORKED.
+- - ODRV-23
+  - Sukhwinder Singh
+  - '2026-03-22'
+  - ON_CALL_ONLY
+  - cycle1_rescue,cycle1_overflow
+  - cycle1_standard_early
+  - 4
+  - 'yes'
+  - late
+  - ON_CALL
+  - 'no'
+  - Derived from current-week same-day roster state ON_CALL.
+- - ODRV-24
+  - Gaganpreet Singh Dhindsa
+  - '2026-03-22'
+  - CANNOT
+  - cycle1_rescue,cycle1_overflow,cycle1_standard_late
+  - cycle1_standard_early
+  - 4
+  - 'yes'
+  - late
+  - DISPATCH
+  - 'no'
+  - Derived from current-week same-day roster state DISPATCH.
+- - ODRV-25
+  - Sikander Singh
+  - '2026-03-22'
+  - AVAILABLE
+  - cycle1_standard_late,cycle1_standard_early
+  - cycle1_standard_early
+  - 4
+  - 'no'
+  - late
+  - BLANK
+  - 'no'
+  - Derived from current-week same-day roster state BLANK.
+- - ODRV-26
+  - Paramjit Gherha
+  - '2026-03-22'
+  - PREFERRED
+  - cycle1_rescue,cycle1_overflow,cycle1_standard_late
+  - cycle1_standard_early
+  - 4
+  - 'yes'
+  - late
+  - WORKED
+  - 'no'
+  - Derived from current-week same-day roster state WORKED.
+- - ODRV-27
+  - Amritpal Singh
+  - '2026-03-22'
+  - AVOID_IF_POSSIBLE
+  - cycle1_rescue,cycle1_overflow,cycle1_standard_late
+  - cycle1_standard_early
+  - 4
+  - 'yes'
+  - late
+  - SICK_CALL
+  - 'no'
+  - Derived from current-week same-day roster state SICK_CALL.
+- - ODRV-28
+  - Sachin Goyal
+  - '2026-03-22'
+  - PREFERRED
+  - cycle1_rescue,cycle1_overflow,cycle1_standard_late
+  - cycle1_standard_early
+  - 4
+  - 'yes'
+  - late
+  - WORKED
+  - 'no'
+  - Derived from current-week same-day roster state WORKED.
+- - ODRV-29
+  - Harnamanpreet Singh
+  - '2026-03-22'
+  - PREFERRED
+  - cycle1_standard_late,cycle1_overflow
+  - cycle1_standard_early
+  - 4
+  - 'yes'
+  - late
+  - WORKED
+  - 'no'
+  - Derived from current-week same-day roster state WORKED.
+- - ODRV-30
+  - Gurdas Singh Sidhu
+  - '2026-03-22'
+  - AVAILABLE
+  - cycle1_rescue,cycle1_overflow,cycle1_standard_late
+  - cycle1_standard_early
+  - 4
+  - 'yes'
+  - late
+  - BLANK
+  - 'no'
+  - Derived from current-week same-day roster state BLANK.
+- - ODRV-31
+  - Shafahad Ali Shah
+  - '2026-03-22'
+  - AVAILABLE
+  - cycle1_standard_late,cycle1_standard_early
+  - cycle1_standard_early
+  - 4
+  - 'no'
+  - late
+  - BLANK
+  - 'no'
+  - Derived from current-week same-day roster state BLANK.
+- - ODRV-32
+  - Yong-Kyoon Kim
+  - '2026-03-22'
+  - AVAILABLE
+  - cycle1_standard_late,cycle1_overflow
+  - cycle1_standard_early
+  - 4
+  - 'yes'
+  - late
+  - BLANK
+  - 'no'
+  - Derived from current-week same-day roster state BLANK.
+- - ODRV-33
+  - Rompal Singh Hayer
+  - '2026-03-22'
+  - AVAILABLE
+  - cycle1_standard_early,cycle1_standard_late,cycle1_rescue
+  - cycle1_overflow
+  - 4
+  - 'yes'
+  - early
+  - BLANK
+  - 'no'
+  - Derived from current-week same-day roster state BLANK.
+- - ODRV-34
+  - Mehakpreet Singh
+  - '2026-03-22'
+  - PREFERRED
+  - cycle1_standard_early,cycle1_standard_late,cycle1_rescue
+  - cycle1_overflow
+  - 4
+  - 'yes'
+  - early
+  - WORKED
+  - 'no'
+  - Derived from current-week same-day roster state WORKED.
+- - ODRV-35
+  - Charanjit Singh
+  - '2026-03-22'
+  - PREFERRED
+  - cycle1_rescue,cycle1_overflow,cycle1_standard_late
+  - cycle1_standard_early
+  - 4
+  - 'yes'
+  - late
+  - WORKED
+  - 'no'
+  - Derived from current-week same-day roster state WORKED.
+- - ODRV-36
+  - Pardeep Singh
+  - '2026-03-22'
+  - PREFERRED
+  - cycle1_rescue,cycle1_overflow,cycle1_standard_late
+  - cycle1_standard_early
+  - 4
+  - 'yes'
+  - late
+  - WORKED
+  - 'no'
+  - Derived from current-week same-day roster state WORKED.
+- - ODRV-37
+  - Hamant Kumar
+  - '2026-03-22'
+  - AVOID_IF_POSSIBLE
+  - cycle1_standard_late,cycle1_overflow
+  - cycle1_standard_early
+  - 4
+  - 'yes'
+  - late
+  - SICK_CALL
+  - 'no'
+  - Derived from current-week same-day roster state SICK_CALL.
+- - ODRV-38
+  - Parampreet Singh
+  - '2026-03-22'
+  - PREFERRED
+  - cycle1_rescue,cycle1_overflow,cycle1_standard_late
+  - cycle1_standard_early
+  - 4
+  - 'yes'
+  - late
+  - WORKED
+  - 'no'
+  - Derived from current-week same-day roster state WORKED.
+- - ODRV-39
+  - Suraj Pratap Singh
+  - '2026-03-22'
+  - PREFERRED
+  - cycle1_rescue,cycle1_overflow,cycle1_standard_late
+  - cycle1_standard_early
+  - 4
+  - 'yes'
+  - late
+  - WORKED
+  - 'no'
+  - Derived from current-week same-day roster state WORKED.
+- - ODRV-40
+  - Ravdeep Singh
+  - '2026-03-22'
+  - PREFERRED
+  - cycle1_rescue,cycle1_overflow,cycle1_standard_late
+  - cycle1_standard_early
+  - 4
+  - 'yes'
+  - late
+  - WORKED
+  - 'no'
+  - Derived from current-week same-day roster state WORKED.
+planner_notes:
+- 'availability_state is explicit and preference-rich: PREFERRED, AVAILABLE, AVOID_IF_POSSIBLE,
+  ON_CALL_ONLY, CANNOT.'
+- 'This fixture is intentionally over-capacity: feasible driver-day supply exceeds
+  route demand every day so optimization pressure comes from preference, seniority,
+  continuity, and compliance rather than raw coverage shortages.'

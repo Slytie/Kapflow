@@ -1,0 +1,708 @@
+artifact_kind: planning.driver_capabilities.workbook
+example_id: weekly_stage04_overcapacity_preference_v1
+schema_version: '1.0'
+planning_week_id: PW-2026-W12
+columns:
+- driver_id
+- driver_name
+- employment_type
+- home_station
+- skills
+- vehicle_certifications
+- eligible_route_slot_classes
+- approved_restrictions
+- policy_tags
+- seniority_rank
+- attendance_reliability_index
+- recent_sick_calls_14d
+- recent_cancellations_14d
+- preferred_route_slot_classes
+- preferred_shift_band
+- notes
+- external_driver_ref
+rows:
+- - ODRV-01
+  - Brahmvir Singh
+  - full_time
+  - DVC4
+  - parcel_delivery,rescue_support
+  - XL_van
+  - cycle1_standard_late,cycle1_rescue,cycle1_overflow,cycle1_standard_early
+  - max_minutes_rolling7=2400,prefer_rescue_or_overflow=yes
+  - on_call_priority,stable_recent_history
+  - 17
+  - 0.91
+  - 1
+  - 0
+  - cycle1_rescue,cycle1_overflow,cycle1_standard_late
+  - late
+  - Derived from roster workbook; Amazon id A1P1CDL949GCH7.
+  - A1P1CDL949GCH7
+- - ODRV-02
+  - Harmanpreet Singh
+  - full_time
+  - DVC4
+  - parcel_delivery,rescue_support
+  - XL_van
+  - cycle1_standard_early,cycle1_standard_late,cycle1_rescue
+  - max_minutes_rolling7=2400,avoid_shift_after=20:30
+  - anchor,stability_preferred,stable_recent_history,attendance_clean
+  - 4
+  - 0.98
+  - 0
+  - 0
+  - cycle1_standard_early,cycle1_standard_late,cycle1_rescue
+  - early
+  - Derived from roster workbook; Amazon id AHJWCXI2ORDJY.
+  - AHJWCXI2ORDJY
+- - ODRV-03
+  - Tarandeep Singh
+  - full_time
+  - DVC4
+  - parcel_delivery,rescue_support
+  - XL_van
+  - cycle1_standard_late,cycle1_rescue,cycle1_overflow,cycle1_standard_early
+  - max_minutes_rolling7=2400,prefer_rescue_or_overflow=yes
+  - on_call_priority,stable_recent_history,attendance_clean
+  - 5
+  - 0.98
+  - 0
+  - 0
+  - cycle1_rescue,cycle1_overflow,cycle1_standard_late
+  - late
+  - Derived from roster workbook; Amazon id A33HB7XV71IC7T.
+  - A33HB7XV71IC7T
+- - ODRV-04
+  - Vishal Chaudhary
+  - full_time
+  - DVC4
+  - parcel_delivery,rescue_support
+  - XL_van
+  - cycle1_standard_late,cycle1_rescue,cycle1_overflow,cycle1_standard_early
+  - max_minutes_rolling7=2400,prefer_rescue_or_overflow=yes
+  - on_call_priority,stable_recent_history,attendance_clean
+  - 6
+  - 0.98
+  - 0
+  - 0
+  - cycle1_rescue,cycle1_overflow,cycle1_standard_late
+  - late
+  - Derived from roster workbook; Amazon id A7FWBKAGXA5LK.
+  - A7FWBKAGXA5LK
+- - ODRV-05
+  - Iqbal Singh
+  - part_time
+  - DVC4
+  - parcel_delivery,on_call
+  - XL_van
+  - cycle1_standard_early,cycle1_standard_late,cycle1_overflow
+  - max_minutes_rolling7=1800
+  - lost_work_credit,stable_recent_history
+  - 28
+  - 0.83
+  - 2
+  - 0
+  - cycle1_standard_late,cycle1_overflow
+  - late
+  - Derived from roster workbook; Amazon id A2WDUOOWN1ORVL.
+  - A2WDUOOWN1ORVL
+- - ODRV-06
+  - Lovepreet Singh
+  - full_time
+  - DVC4
+  - parcel_delivery,rescue_support
+  - XL_van
+  - cycle1_standard_late,cycle1_rescue,cycle1_overflow,cycle1_standard_early
+  - max_minutes_rolling7=2400,prefer_rescue_or_overflow=yes
+  - on_call_priority,stable_recent_history
+  - 18
+  - 0.91
+  - 1
+  - 0
+  - cycle1_rescue,cycle1_overflow,cycle1_standard_late
+  - late
+  - Derived from roster workbook; Amazon id AZULSLRV35N5I.
+  - AZULSLRV35N5I
+- - ODRV-07
+  - Rahul mannan
+  - part_time
+  - DVC4
+  - parcel_delivery,rescue_support
+  - XL_van
+  - cycle1_standard_late,cycle1_rescue,cycle1_overflow,cycle1_standard_early
+  - max_minutes_rolling7=1800,prefer_rescue_or_overflow=yes
+  - on_call_priority,stable_recent_history
+  - 30
+  - 0.85
+  - 1
+  - 1
+  - cycle1_rescue,cycle1_overflow,cycle1_standard_late
+  - late
+  - Derived from roster workbook; Amazon id AKF1ZEB0TWD96.
+  - AKF1ZEB0TWD96
+- - ODRV-08
+  - Gagandeep Singh Singh
+  - full_time
+  - DVC4
+  - parcel_delivery,rescue_support
+  - XL_van
+  - cycle1_standard_early,cycle1_standard_late,cycle1_rescue
+  - max_minutes_rolling7=2400
+  - stability_preferred,stable_recent_history,attendance_clean
+  - 15
+  - 0.98
+  - 0
+  - 0
+  - cycle1_standard_late,cycle1_standard_early
+  - late
+  - Derived from roster workbook; Amazon id A3959UPAEK7B1W.
+  - A3959UPAEK7B1W
+- - ODRV-09
+  - Abhiraj Singh
+  - full_time
+  - DVC4
+  - parcel_delivery,rescue_support
+  - XL_van
+  - cycle1_standard_late,cycle1_rescue,cycle1_overflow,cycle1_standard_early
+  - max_minutes_rolling7=2400,prefer_rescue_or_overflow=yes
+  - on_call_priority,stable_recent_history
+  - 19
+  - 0.91
+  - 1
+  - 0
+  - cycle1_rescue,cycle1_overflow,cycle1_standard_late
+  - late
+  - Derived from roster workbook; Amazon id A2TU4ZRI65E1H8.
+  - A2TU4ZRI65E1H8
+- - ODRV-10
+  - Akash
+  - full_time
+  - DVC4
+  - parcel_delivery,rescue_support
+  - XL_van
+  - cycle1_standard_late,cycle1_rescue,cycle1_overflow,cycle1_standard_early
+  - max_minutes_rolling7=2400,prefer_rescue_or_overflow=yes
+  - on_call_priority,stable_recent_history,attendance_clean
+  - 7
+  - 0.98
+  - 0
+  - 0
+  - cycle1_rescue,cycle1_overflow,cycle1_standard_late
+  - late
+  - Derived from roster workbook; Amazon id A3M38Z4NGI9OR3.
+  - A3M38Z4NGI9OR3
+- - ODRV-11
+  - Khushdeep Singh Cheema
+  - full_time
+  - DVC4
+  - parcel_delivery,rescue_support
+  - XL_van
+  - cycle1_standard_late,cycle1_rescue,cycle1_overflow,cycle1_standard_early
+  - max_minutes_rolling7=2400,prefer_rescue_or_overflow=yes
+  - on_call_priority,stable_recent_history
+  - 20
+  - 0.91
+  - 1
+  - 0
+  - cycle1_rescue,cycle1_overflow,cycle1_standard_late
+  - late
+  - Derived from roster workbook; Amazon id A2KXEYK2UAQ1SX.
+  - A2KXEYK2UAQ1SX
+- - ODRV-12
+  - Jagraj Singh
+  - part_time
+  - DVC4
+  - parcel_delivery,on_call
+  - XL_van
+  - cycle1_standard_early,cycle1_standard_late,cycle1_overflow
+  - max_minutes_rolling7=1800
+  - lost_work_credit,stable_recent_history
+  - 31
+  - 0.82
+  - 2
+  - 0
+  - cycle1_standard_late,cycle1_overflow
+  - late
+  - Derived from roster workbook; Amazon id A3NLLQPB0L46N9.
+  - A3NLLQPB0L46N9
+- - ODRV-13
+  - Chanpreet Singh Rai
+  - full_time
+  - DVC4
+  - parcel_delivery,rescue_support
+  - XL_van
+  - cycle1_standard_late,cycle1_rescue,cycle1_overflow,cycle1_standard_early
+  - max_minutes_rolling7=2400,prefer_rescue_or_overflow=yes
+  - on_call_priority,stable_recent_history,attendance_clean
+  - 8
+  - 0.98
+  - 0
+  - 0
+  - cycle1_rescue,cycle1_overflow,cycle1_standard_late
+  - late
+  - Derived from roster workbook; Amazon id ATBR9WDPPKXCM.
+  - ATBR9WDPPKXCM
+- - ODRV-14
+  - Jiwanpreet Singh
+  - full_time
+  - DVC4
+  - parcel_delivery,rescue_support
+  - XL_van
+  - cycle1_standard_early,cycle1_standard_late,cycle1_rescue
+  - max_minutes_rolling7=2400
+  - stability_preferred,stable_recent_history
+  - 14
+  - 0.95
+  - 0
+  - 1
+  - cycle1_standard_late,cycle1_standard_early
+  - late
+  - Derived from roster workbook; Amazon id AXBXED50KRZYC.
+  - AXBXED50KRZYC
+- - ODRV-15
+  - Rajveer Singh
+  - part_time
+  - DVC4
+  - parcel_delivery,on_call
+  - XL_van
+  - cycle1_standard_early,cycle1_standard_late,cycle1_overflow
+  - max_minutes_rolling7=1800
+  - lost_work_credit,attendance_clean
+  - 37
+  - 0.96
+  - 0
+  - 0
+  - cycle1_standard_late,cycle1_overflow
+  - late
+  - Derived from roster workbook; Amazon id A52BQ5U4SHE8W.
+  - A52BQ5U4SHE8W
+- - ODRV-16
+  - Manpreet
+  - part_time
+  - DVC4
+  - parcel_delivery,rescue_support
+  - XL_van
+  - cycle1_standard_late,cycle1_rescue,cycle1_overflow,cycle1_standard_early
+  - max_minutes_rolling7=1800,prefer_rescue_or_overflow=yes
+  - on_call_priority,stable_recent_history
+  - 21
+  - 0.91
+  - 1
+  - 0
+  - cycle1_rescue,cycle1_overflow,cycle1_standard_late
+  - late
+  - Derived from roster workbook; Amazon id A2VHAFSZ54XXA8.
+  - A2VHAFSZ54XXA8
+- - ODRV-17
+  - Ekjot Singh
+  - part_time
+  - DVC4
+  - parcel_delivery,rescue_support
+  - XL_van
+  - cycle1_standard_early,cycle1_standard_late,cycle1_rescue
+  - max_minutes_rolling7=1800
+  - stability_preferred,stable_recent_history
+  - 22
+  - 0.94
+  - 0
+  - 1
+  - cycle1_standard_late,cycle1_standard_early
+  - late
+  - Derived from roster workbook; Amazon id A2S2SO4XUULX7H.
+  - A2S2SO4XUULX7H
+- - ODRV-18
+  - Karanveer Singh
+  - part_time
+  - DVC4
+  - parcel_delivery,rescue_support
+  - XL_van
+  - cycle1_standard_late,cycle1_rescue,cycle1_overflow,cycle1_standard_early
+  - max_minutes_rolling7=1800,prefer_rescue_or_overflow=yes
+  - on_call_priority,stable_recent_history
+  - 32
+  - 0.82
+  - 2
+  - 0
+  - cycle1_rescue,cycle1_overflow,cycle1_standard_late
+  - late
+  - Derived from roster workbook; Amazon id A34WEHEN1XXRKR.
+  - A34WEHEN1XXRKR
+- - ODRV-19
+  - Sukhmanpreet Singh
+  - full_time
+  - DVC4
+  - parcel_delivery,rescue_support
+  - XL_van
+  - cycle1_standard_late,cycle1_rescue,cycle1_overflow,cycle1_standard_early
+  - max_minutes_rolling7=2400,prefer_rescue_or_overflow=yes
+  - on_call_priority,stable_recent_history,attendance_clean
+  - 9
+  - 0.98
+  - 0
+  - 0
+  - cycle1_rescue,cycle1_overflow,cycle1_standard_late
+  - late
+  - Derived from roster workbook; Amazon id AIFFWKTFS3ZPS.
+  - AIFFWKTFS3ZPS
+- - ODRV-20
+  - Syed Kamran Shah
+  - part_time
+  - DVC4
+  - parcel_delivery,on_call
+  - XL_van
+  - cycle1_standard_early,cycle1_standard_late,cycle1_overflow
+  - max_minutes_rolling7=1800
+  - lost_work_credit
+  - 39
+  - 0.8
+  - 2
+  - 0
+  - cycle1_standard_late,cycle1_overflow
+  - late
+  - Derived from roster workbook; Amazon id A5DRVS25INNWR.
+  - A5DRVS25INNWR
+- - ODRV-21
+  - Vishal Bhagat
+  - full_time
+  - DVC4
+  - parcel_delivery,rescue_support
+  - XL_van
+  - cycle1_standard_early,cycle1_standard_late,cycle1_rescue
+  - max_minutes_rolling7=2400,avoid_shift_after=20:30
+  - anchor,stability_preferred,stable_recent_history,attendance_clean
+  - 1
+  - 0.98
+  - 0
+  - 0
+  - cycle1_standard_early,cycle1_standard_late,cycle1_rescue
+  - early
+  - Derived from roster workbook; Amazon id A2YLZCTDXK95J.
+  - A2YLZCTDXK95J
+- - ODRV-22
+  - Lovepreet Bassi
+  - part_time
+  - DVC4
+  - parcel_delivery,rescue_support
+  - XL_van
+  - cycle1_standard_late,cycle1_rescue,cycle1_overflow,cycle1_standard_early
+  - max_minutes_rolling7=1800,prefer_rescue_or_overflow=yes
+  - on_call_priority
+  - 36
+  - 0.79
+  - 1
+  - 2
+  - cycle1_rescue,cycle1_overflow,cycle1_standard_late
+  - late
+  - Derived from roster workbook; Amazon id A2SCS728PUCGTE.
+  - A2SCS728PUCGTE
+- - ODRV-23
+  - Sukhwinder Singh
+  - full_time
+  - DVC4
+  - parcel_delivery,rescue_support
+  - XL_van
+  - cycle1_standard_late,cycle1_rescue,cycle1_overflow,cycle1_standard_early
+  - max_minutes_rolling7=2400,prefer_rescue_or_overflow=yes
+  - on_call_priority,stable_recent_history,attendance_clean
+  - 10
+  - 0.98
+  - 0
+  - 0
+  - cycle1_rescue,cycle1_overflow,cycle1_standard_late
+  - late
+  - Derived from roster workbook; Amazon id AYLV43T35EAIN.
+  - AYLV43T35EAIN
+- - ODRV-24
+  - Gaganpreet Singh Dhindsa
+  - part_time
+  - DVC4
+  - parcel_delivery,rescue_support
+  - XL_van
+  - cycle1_standard_late,cycle1_rescue,cycle1_overflow,cycle1_standard_early
+  - max_minutes_rolling7=1800,prefer_rescue_or_overflow=yes
+  - on_call_priority,attendance_clean
+  - 35
+  - 0.97
+  - 0
+  - 0
+  - cycle1_rescue,cycle1_overflow,cycle1_standard_late
+  - late
+  - Derived from roster workbook; Amazon id A3OYGBYE20UA2R.
+  - A3OYGBYE20UA2R
+- - ODRV-25
+  - Sikander Singh
+  - full_time
+  - DVC4
+  - parcel_delivery,rescue_support
+  - XL_van
+  - cycle1_standard_early,cycle1_standard_late,cycle1_rescue
+  - max_minutes_rolling7=2400
+  - stability_preferred,stable_recent_history,attendance_clean
+  - 16
+  - 0.98
+  - 0
+  - 0
+  - cycle1_standard_late,cycle1_standard_early
+  - late
+  - Derived from roster workbook; Amazon id A4KU9LEU82OTF.
+  - A4KU9LEU82OTF
+- - ODRV-26
+  - Paramjit Gherha
+  - part_time
+  - DVC4
+  - parcel_delivery,rescue_support
+  - XL_van
+  - cycle1_standard_late,cycle1_rescue,cycle1_overflow,cycle1_standard_early
+  - max_minutes_rolling7=1800,prefer_rescue_or_overflow=yes
+  - on_call_priority,stable_recent_history
+  - 23
+  - 0.91
+  - 1
+  - 0
+  - cycle1_rescue,cycle1_overflow,cycle1_standard_late
+  - late
+  - Derived from roster workbook; Amazon id A1NJLYPMMEKHLK.
+  - A1NJLYPMMEKHLK
+- - ODRV-27
+  - Amritpal Singh
+  - part_time
+  - DVC4
+  - parcel_delivery,rescue_support
+  - XL_van
+  - cycle1_standard_late,cycle1_rescue,cycle1_overflow,cycle1_standard_early
+  - max_minutes_rolling7=1800,prefer_rescue_or_overflow=yes
+  - on_call_priority,stable_recent_history
+  - 24
+  - 0.91
+  - 1
+  - 0
+  - cycle1_rescue,cycle1_overflow,cycle1_standard_late
+  - late
+  - Derived from roster workbook; Amazon id A1JSQIK4OD79DV.
+  - A1JSQIK4OD79DV
+- - ODRV-28
+  - Sachin Goyal
+  - part_time
+  - DVC4
+  - parcel_delivery,rescue_support
+  - XL_van
+  - cycle1_standard_late,cycle1_rescue,cycle1_overflow,cycle1_standard_early
+  - max_minutes_rolling7=1800,prefer_rescue_or_overflow=yes
+  - on_call_priority,stable_recent_history
+  - 25
+  - 0.91
+  - 1
+  - 0
+  - cycle1_rescue,cycle1_overflow,cycle1_standard_late
+  - late
+  - Derived from roster workbook; Amazon id A2FC17ONJKWXTE.
+  - A2FC17ONJKWXTE
+- - ODRV-29
+  - Harnamanpreet Singh
+  - part_time
+  - DVC4
+  - parcel_delivery,on_call
+  - XL_van
+  - cycle1_standard_early,cycle1_standard_late,cycle1_overflow
+  - max_minutes_rolling7=1800
+  - lost_work_credit,attendance_clean
+  - 38
+  - 0.96
+  - 0
+  - 0
+  - cycle1_standard_late,cycle1_overflow
+  - late
+  - Derived from roster workbook; Amazon id A3M45AZWH3K5F3.
+  - A3M45AZWH3K5F3
+- - ODRV-30
+  - Gurdas Singh Sidhu
+  - part_time
+  - DVC4
+  - parcel_delivery,rescue_support
+  - XL_van
+  - cycle1_standard_late,cycle1_rescue,cycle1_overflow,cycle1_standard_early
+  - max_minutes_rolling7=1800,prefer_rescue_or_overflow=yes
+  - on_call_priority,stable_recent_history,attendance_clean
+  - 29
+  - 0.98
+  - 0
+  - 0
+  - cycle1_rescue,cycle1_overflow,cycle1_standard_late
+  - late
+  - Derived from roster workbook; Amazon id AGOU3M5WUIHWC.
+  - AGOU3M5WUIHWC
+- - ODRV-31
+  - Shafahad Ali Shah
+  - full_time
+  - DVC4
+  - parcel_delivery,rescue_support
+  - XL_van
+  - cycle1_standard_early,cycle1_standard_late,cycle1_rescue
+  - max_minutes_rolling7=2400
+  - stability_preferred,stable_recent_history,attendance_clean
+  - 11
+  - 0.98
+  - 0
+  - 0
+  - cycle1_standard_late,cycle1_standard_early
+  - late
+  - Derived from roster workbook; Amazon id A3E56T6T8L9V8J.
+  - A3E56T6T8L9V8J
+- - ODRV-32
+  - Yong-Kyoon Kim
+  - part_time
+  - DVC4
+  - parcel_delivery,on_call
+  - XL_van
+  - cycle1_standard_early,cycle1_standard_late,cycle1_overflow
+  - max_minutes_rolling7=1800
+  - lost_work_credit,stable_recent_history
+  - 33
+  - 0.85
+  - 1
+  - 1
+  - cycle1_standard_late,cycle1_overflow
+  - late
+  - Derived from roster workbook; Amazon id A1A7SAPA6J2ZJJ.
+  - A1A7SAPA6J2ZJJ
+- - ODRV-33
+  - Rompal Singh Hayer
+  - full_time
+  - DVC4
+  - parcel_delivery,rescue_support
+  - XL_van
+  - cycle1_standard_early,cycle1_standard_late,cycle1_rescue
+  - max_minutes_rolling7=2400,avoid_shift_after=20:30
+  - anchor,stability_preferred,stable_recent_history,attendance_clean
+  - 2
+  - 0.98
+  - 0
+  - 0
+  - cycle1_standard_early,cycle1_standard_late,cycle1_rescue
+  - early
+  - Derived from roster workbook; Amazon id A3QZGAMB5M5IK0.
+  - A3QZGAMB5M5IK0
+- - ODRV-34
+  - Mehakpreet Singh
+  - full_time
+  - DVC4
+  - parcel_delivery,rescue_support
+  - XL_van
+  - cycle1_standard_early,cycle1_standard_late,cycle1_rescue
+  - max_minutes_rolling7=2400,avoid_shift_after=20:30
+  - anchor,stability_preferred,stable_recent_history,attendance_clean
+  - 3
+  - 0.98
+  - 0
+  - 0
+  - cycle1_standard_early,cycle1_standard_late,cycle1_rescue
+  - early
+  - Derived from roster workbook; Amazon id A3RO6BBCA3NOYM.
+  - A3RO6BBCA3NOYM
+- - ODRV-35
+  - Charanjit Singh
+  - part_time
+  - DVC4
+  - parcel_delivery,rescue_support
+  - XL_van
+  - cycle1_standard_late,cycle1_rescue,cycle1_overflow,cycle1_standard_early
+  - max_minutes_rolling7=1800,prefer_rescue_or_overflow=yes
+  - on_call_priority,stable_recent_history
+  - 34
+  - 0.85
+  - 1
+  - 1
+  - cycle1_rescue,cycle1_overflow,cycle1_standard_late
+  - late
+  - Derived from roster workbook; Amazon id A1S1XUJABAWLGR.
+  - A1S1XUJABAWLGR
+- - ODRV-36
+  - Pardeep Singh
+  - part_time
+  - DVC4
+  - parcel_delivery,rescue_support
+  - XL_van
+  - cycle1_standard_late,cycle1_rescue,cycle1_overflow,cycle1_standard_early
+  - max_minutes_rolling7=1800,prefer_rescue_or_overflow=yes
+  - on_call_priority,stable_recent_history
+  - 26
+  - 0.91
+  - 1
+  - 0
+  - cycle1_rescue,cycle1_overflow,cycle1_standard_late
+  - late
+  - Derived from roster workbook; Amazon id AU6YIGC7GXQGA.
+  - AU6YIGC7GXQGA
+- - ODRV-37
+  - Hamant Kumar
+  - part_time
+  - DVC4
+  - parcel_delivery,on_call
+  - XL_van
+  - cycle1_standard_early,cycle1_standard_late,cycle1_overflow
+  - max_minutes_rolling7=1800
+  - lost_work_credit
+  - 40
+  - 0.46
+  - 6
+  - 0
+  - cycle1_standard_late,cycle1_overflow
+  - late
+  - Derived from roster workbook; Amazon id AHRF1Y9PK4GXB.
+  - AHRF1Y9PK4GXB
+- - ODRV-38
+  - Parampreet Singh
+  - full_time
+  - DVC4
+  - parcel_delivery,rescue_support
+  - XL_van
+  - cycle1_standard_late,cycle1_rescue,cycle1_overflow,cycle1_standard_early
+  - max_minutes_rolling7=2400,prefer_rescue_or_overflow=yes
+  - on_call_priority,stable_recent_history,attendance_clean
+  - 12
+  - 0.98
+  - 0
+  - 0
+  - cycle1_rescue,cycle1_overflow,cycle1_standard_late
+  - late
+  - Derived from roster workbook; Amazon id A11X1NH2FPH5RV.
+  - A11X1NH2FPH5RV
+- - ODRV-39
+  - Suraj Pratap Singh
+  - full_time
+  - DVC4
+  - parcel_delivery,rescue_support
+  - XL_van
+  - cycle1_standard_late,cycle1_rescue,cycle1_overflow,cycle1_standard_early
+  - max_minutes_rolling7=2400,prefer_rescue_or_overflow=yes
+  - on_call_priority,stable_recent_history,attendance_clean
+  - 13
+  - 0.98
+  - 0
+  - 0
+  - cycle1_rescue,cycle1_overflow,cycle1_standard_late
+  - late
+  - Derived from roster workbook; Amazon id A1NQEGRS26IBJA.
+  - A1NQEGRS26IBJA
+- - ODRV-40
+  - Ravdeep Singh
+  - part_time
+  - DVC4
+  - parcel_delivery,rescue_support
+  - XL_van
+  - cycle1_standard_late,cycle1_rescue,cycle1_overflow,cycle1_standard_early
+  - max_minutes_rolling7=1800,prefer_rescue_or_overflow=yes
+  - on_call_priority,stable_recent_history
+  - 27
+  - 0.91
+  - 1
+  - 0
+  - cycle1_rescue,cycle1_overflow,cycle1_standard_late
+  - late
+  - Derived from roster workbook; Amazon id A3QZ9AS16464VX.
+  - A3QZ9AS16464VX
+planner_notes:
+- seniority_rank is a deterministic pilot enrichment from 14-day worked volume, sickness/cancellation
+  burden, and roster order.
+- attendance_reliability_index is derived from the real workbook history and is intended
+  as a soft policy signal only.

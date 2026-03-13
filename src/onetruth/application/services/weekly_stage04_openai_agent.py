@@ -804,7 +804,7 @@ class _Stage04DeterministicTooling:
         )
 
     def planner_complete(self) -> bool:
-        return not self.schedule_state.remaining_route_slots()
+        return self._preview_iteration_result() is None
 
     def remaining_route_slot_ids(self) -> list[str]:
         return [item.route_slot_id for item in self.schedule_state.remaining_route_slots()]
@@ -824,22 +824,11 @@ class _Stage04DeterministicTooling:
         }
 
     def preview_next_iteration(self) -> dict[str, Any]:
-        if self.planner_complete():
-            return {
-                "planner_complete": True,
-                "message": "No remaining route slots; finalize is available.",
-            }
-        preview_state = deepcopy(self.schedule_state)
-        preview_candidates = list(self.candidate_matrix)
-        preview = execute_next_weekly_allocation_iteration(
-            bundle=self.bundle,
-            schedule_state=preview_state,
-            candidate_matrix=preview_candidates,
-        )
+        preview = self._preview_iteration_result()
         if preview is None:
             return {
                 "planner_complete": True,
-                "message": "No remaining route slots; finalize is available.",
+                "message": "No further deterministic baseline or improvement moves remain; finalize is available.",
             }
         return self._iteration_payload(preview, preview_only=True)
 
@@ -854,7 +843,7 @@ class _Stage04DeterministicTooling:
                 "progress_made": False,
                 "planner_complete": True,
                 "planner_state": self.planner_state_snapshot(),
-                "message": "No remaining route slots; finalize is available.",
+                "message": "No further deterministic baseline or improvement moves remain; finalize is available.",
             }
         iteration_payload = self._iteration_payload(result, preview_only=False)
         self._applied_iterations.append(iteration_payload)
@@ -1025,8 +1014,19 @@ class _Stage04DeterministicTooling:
             "batch_size_min": min(batch_sizes) if batch_sizes else 0,
             "batch_size_max": max(batch_sizes) if batch_sizes else 0,
             "repair_move_count": len(self.schedule_state.repair_moves),
+            "reallocation_move_count": len(self.schedule_state.repair_moves),
             "repaired_route_slot_count": len(repaired_route_slot_ids),
-            "local_repair_posture": "bounded_local_repair",
+            "local_repair_posture": "bounded_local_reallocation",
+            "phase_counts": {
+                "baseline": sum(
+                    1 for item in self.schedule_state.iteration_summaries if item.phase == "baseline"
+                ),
+                "improvement": sum(
+                    1
+                    for item in self.schedule_state.iteration_summaries
+                    if item.phase == "improvement"
+                ),
+            },
         }
 
     def _iteration_payload(self, result: Any, *, preview_only: bool) -> dict[str, Any]:
@@ -1044,6 +1044,7 @@ class _Stage04DeterministicTooling:
         )
         return {
             "iteration_index": int(result.iteration_index),
+            "phase": str(result.phase),
             "batch_id": str(result.batch_id),
             "pressure_group_id": str(result.pressure_group_id),
             "pressure_service_date": str(result.pressure_service_date),
@@ -1054,8 +1055,15 @@ class _Stage04DeterministicTooling:
             "route_allocations": route_allocations,
             "assigned_route_slot_ids": list(result.summary.assigned_route_slot_ids),
             "uncovered_route_slot_ids": list(result.summary.uncovered_route_slot_ids),
+            "moved_route_slot_ids": list(result.summary.moved_route_slot_ids),
             "repair_moves": [item.to_payload() for item in result.repair_moves],
             "coverage_summary_after_iteration": dict(result.coverage_summary),
+            "soft_objective_delta": float(result.summary.soft_objective_delta),
+            "stability_delta": float(result.summary.stability_delta),
+            "target_shift_gap_delta": float(result.summary.target_shift_gap_delta),
+            "preference_fit_delta": float(result.summary.preference_fit_delta),
+            "accepted_move_reasons": list(result.summary.accepted_move_reasons),
+            "rejected_move_reasons": list(result.rejected_move_reasons),
             "tradeoffs": tradeoffs,
         }
 
@@ -1074,6 +1082,15 @@ class _Stage04DeterministicTooling:
                 for key, value in build_result["artifacts"].items()
             },
         }
+
+    def _preview_iteration_result(self) -> Any | None:
+        preview_state = deepcopy(self.schedule_state)
+        preview_candidates = list(self.candidate_matrix)
+        return execute_next_weekly_allocation_iteration(
+            bundle=self.bundle,
+            schedule_state=preview_state,
+            candidate_matrix=preview_candidates,
+        )
 
 
 def _build_turn_request_payload(

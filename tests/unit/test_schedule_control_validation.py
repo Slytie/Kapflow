@@ -69,6 +69,109 @@ def test_evaluate_hard_constraints_blocks_for_driver_day_unavailable() -> None:
     assert "driver_unavailable" in result.reasons
 
 
+def test_evaluate_hard_constraints_keeps_on_call_only_as_soft_state() -> None:
+    workflow_run = {
+        "workflow_run_id": "wr-weekly-on-call-soft",
+        "partition_key": "PW-2026-W10",
+    }
+    bundle = build_weekly_schedule_control_bundle(
+        workflow_run=workflow_run,
+        route_slot_requirements_artifact={
+            "artifact_version_id": "av-routes-on-call-soft",
+            "artifact_kind": "planning.route_slot_requirements.workbook",
+            "dataset_key": "planning.route_slot_requirements.workbook",
+            "metadata_json": {
+                "columns": [
+                    "service_date",
+                    "route_slot_id",
+                    "route_slot_class",
+                    "required_skill",
+                    "vehicle_type",
+                    "shift_start",
+                    "shift_end",
+                    "estimated_hours",
+                    "source_snapshot_row_ref",
+                ],
+                "rows": [
+                    [
+                        "2026-03-02",
+                        "slot-20260302-cx200",
+                        "cycle1_standard_late",
+                        "parcel_delivery",
+                        "XL_van",
+                        "11:30",
+                        "20:00",
+                        8.0,
+                        "amazon:row-100",
+                    ],
+                ],
+            },
+        },
+        driver_capabilities_artifact={
+            "artifact_version_id": "av-driver-on-call-soft",
+            "artifact_kind": "planning.driver_capabilities.workbook",
+            "dataset_key": "planning.driver_capabilities.workbook",
+            "metadata_json": {
+                "columns": [
+                    "driver_id",
+                    "skills",
+                    "vehicle_certifications",
+                    "eligible_route_slot_classes",
+                    "approved_restrictions",
+                    "notes",
+                ],
+                "rows": [["DRV-01", "parcel_delivery", "XL_van", "cycle1_standard_late", "", ""]],
+            },
+        },
+        approved_availability_artifact={
+            "artifact_version_id": "av-availability-on-call-soft",
+            "artifact_kind": "planning.approved_availability.workbook",
+            "dataset_key": "planning.approved_availability.workbook",
+            "metadata_json": {
+                "columns": [
+                    "driver_id",
+                    "driver_name",
+                    "service_date",
+                    "availability_state",
+                    "preferred_route_slot_classes",
+                    "avoid_route_slot_classes",
+                    "target_shifts_per_week",
+                    "on_call_eligible",
+                    "preferred_shift_band",
+                    "previous_week_same_day_state",
+                    "locked_by_manager",
+                    "notes",
+                ],
+                "rows": [
+                    [
+                        "DRV-01",
+                        "On Call Only",
+                        "2026-03-02",
+                        "ON_CALL_ONLY",
+                        "",
+                        "",
+                        1,
+                        "yes",
+                        "late",
+                        "NA",
+                        "no",
+                        "",
+                    ],
+                ],
+            },
+        },
+    )
+
+    result = evaluate_hard_constraints(
+        bundle=bundle,
+        route_slot=bundle.route_slots[0],
+        driver=bundle.drivers[0],
+    )
+
+    assert result.status == "pass"
+    assert result.driver_day_availability_state == "ON_CALL_ONLY"
+
+
 def test_evaluate_hard_constraints_blocks_for_same_day_overlap_when_state_is_present() -> None:
     workflow_run = {
         "workflow_run_id": "wr-weekly-overlap",
@@ -168,10 +271,18 @@ def test_evaluate_hard_constraints_blocks_for_same_day_overlap_when_state_is_pre
             lost_work_credit=0.8,
             coverage_pressure=0.8,
             availability_fit=1.0,
+            availability_state="AVAILABLE",
+            availability_state_fit=1.0,
+            preferred_shift_band_fit=0.8,
+            preferred_route_slot_class_fit=0.8,
+            preference_fit=0.8667,
             previous_week_stability=0.7,
+            continuity_score=0.7,
             target_shift_gap=1.0,
             seniority_score=0.8,
+            seniority_preference_fit=0.8,
             reliability_score=0.8,
+            avoidable_assignment_score=0.9,
             current_week_shift_count=1,
             projected_rolling7_minutes=900,
             remaining_rolling7_minutes=1500,

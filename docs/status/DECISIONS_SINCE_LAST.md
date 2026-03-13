@@ -9,6 +9,11 @@ Record any decisions made since the last session so a fresh Codex run can rehydr
 - Stability decision: previous-week continuity is now a first-class scored term carried through candidate evaluation, final selections, validation summaries, and draft schedule artifacts so week-to-week churn is explicit and reviewable.
 - Artifact-shape decision: Stage04 keeps the same final artifact keys (`planning.input_bundle.doc`, `planning.candidate_schedule_delta.workbook`, `planning.validation_summary.doc`, `planning.draft_weekly_schedule.*`), but their payloads now expose per-iteration deltas, coverage gaps, churn/repair counts, and score tradeoffs.
 
+## 2026-03-13 (TASK-0071 weekly Stage04 over-capacity realistic handoff refresh)
+- Fixture-contract decision: the default realistic weekly Stage04 pilot now uses the over-capacity `PW-2026-W12` hard case (40 active drivers, 139 route slots, positive daily feasible surplus) instead of the prior `PW-2026-W10` shortage-style fixture.
+- Adapter decision: the realistic Stage04 source-material path is now grounded in repo-authored over-capacity example YAMLs and may add deterministic helper fields for bridge/runtime use without changing workflow IDs, stage IDs, or final Stage04 artifact keys.
+- Compatibility decision: the tiny two-driver smoke fixture remains unchanged for lightweight deterministic/runtime regression coverage while the realistic contract moves to explicit day-level availability/history semantics.
+
 ## 2026-03-13 (TASK-0071 weekly Stage04 realistic artifacts and fixtures bundle)
 - Bridge-payload decision: weekly Stage04 keeps the same canonical artifact kinds, but the payloads now support richer day-resolution planning context including per-driver planning-week states, prior-week state, rolling-7 snapshots, daily demand summaries, and policy signals.
 - Backward-compatibility decision: the existing tiny two-driver Stage04 scenario and pilot remain the smoke/regression baseline; richer payload parsing is additive and defaults cleanly when those new fields are absent.

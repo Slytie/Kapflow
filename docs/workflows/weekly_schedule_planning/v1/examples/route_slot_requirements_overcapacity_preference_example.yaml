@@ -1,0 +1,523 @@
+artifact_kind: planning.route_slot_requirements.workbook
+example_id: weekly_stage04_overcapacity_preference_v1
+schema_version: '1.0'
+planning_week_id: PW-2026-W12
+scope_start: '2026-03-16'
+scope_end_exclusive: '2026-03-23'
+columns:
+- service_date
+- route_slot_id
+- route_slot_class
+- required_skill
+- vehicle_type
+- shift_start
+- shift_end
+- estimated_hours
+- required_count
+- route_id
+- source_message_id
+- station_code
+- service_area
+- source_snapshot_row_ref
+- slot_band
+rows:
+- - '2026-03-16'
+  - slot-20260316-std-early
+  - cycle1_standard_early
+  - parcel_delivery
+  - XL_van
+  - '10:15'
+  - '18:45'
+  - 8.5
+  - 11
+  - CXE0316
+  - amazon-2026-02-27-1518
+  - DVC4
+  - Pitt Meadows
+  - amazon:weekly-update:2026-03-16:std-early
+  - early
+- - '2026-03-16'
+  - slot-20260316-std-late
+  - cycle1_standard_late
+  - parcel_delivery
+  - XL_van
+  - '11:30'
+  - '20:00'
+  - 8.5
+  - 6
+  - CXL0316
+  - amazon-2026-02-27-1518
+  - DVC4
+  - Pitt Meadows
+  - amazon:weekly-update:2026-03-16:std-late
+  - late
+- - '2026-03-16'
+  - slot-20260316-rsc
+  - cycle1_rescue
+  - rescue_support
+  - XL_van
+  - '11:45'
+  - '20:35'
+  - 8.8
+  - 3
+  - RS0316
+  - amazon-2026-02-27-1518
+  - DVC4
+  - Pitt Meadows
+  - amazon:weekly-update:2026-03-16:rsc
+  - rescue
+- - '2026-03-16'
+  - slot-20260316-ovf
+  - cycle1_overflow
+  - parcel_delivery
+  - XL_van
+  - '12:10'
+  - '21:00'
+  - 8.7
+  - 3
+  - OV0316
+  - amazon-2026-02-27-1518
+  - DVC4
+  - Pitt Meadows
+  - amazon:weekly-update:2026-03-16:ovf
+  - overflow
+- - '2026-03-17'
+  - slot-20260317-std-early
+  - cycle1_standard_early
+  - parcel_delivery
+  - XL_van
+  - '10:15'
+  - '18:45'
+  - 8.5
+  - 10
+  - CXE0317
+  - amazon-2026-02-27-1518
+  - DVC4
+  - Pitt Meadows
+  - amazon:weekly-update:2026-03-17:std-early
+  - early
+- - '2026-03-17'
+  - slot-20260317-std-late
+  - cycle1_standard_late
+  - parcel_delivery
+  - XL_van
+  - '11:30'
+  - '20:00'
+  - 8.5
+  - 5
+  - CXL0317
+  - amazon-2026-02-27-1518
+  - DVC4
+  - Pitt Meadows
+  - amazon:weekly-update:2026-03-17:std-late
+  - late
+- - '2026-03-17'
+  - slot-20260317-rsc
+  - cycle1_rescue
+  - rescue_support
+  - XL_van
+  - '11:45'
+  - '20:35'
+  - 8.8
+  - 3
+  - RS0317
+  - amazon-2026-02-27-1518
+  - DVC4
+  - Pitt Meadows
+  - amazon:weekly-update:2026-03-17:rsc
+  - rescue
+- - '2026-03-17'
+  - slot-20260317-ovf
+  - cycle1_overflow
+  - parcel_delivery
+  - XL_van
+  - '12:10'
+  - '21:00'
+  - 8.7
+  - 2
+  - OV0317
+  - amazon-2026-02-27-1518
+  - DVC4
+  - Pitt Meadows
+  - amazon:weekly-update:2026-03-17:ovf
+  - overflow
+- - '2026-03-18'
+  - slot-20260318-std-early
+  - cycle1_standard_early
+  - parcel_delivery
+  - XL_van
+  - '10:15'
+  - '18:45'
+  - 8.5
+  - 10
+  - CXE0318
+  - amazon-2026-02-27-1518
+  - DVC4
+  - Pitt Meadows
+  - amazon:weekly-update:2026-03-18:std-early
+  - early
+- - '2026-03-18'
+  - slot-20260318-std-late
+  - cycle1_standard_late
+  - parcel_delivery
+  - XL_van
+  - '11:30'
+  - '20:00'
+  - 8.5
+  - 5
+  - CXL0318
+  - amazon-2026-02-27-1518
+  - DVC4
+  - Pitt Meadows
+  - amazon:weekly-update:2026-03-18:std-late
+  - late
+- - '2026-03-18'
+  - slot-20260318-rsc
+  - cycle1_rescue
+  - rescue_support
+  - XL_van
+  - '11:45'
+  - '20:35'
+  - 8.8
+  - 3
+  - RS0318
+  - amazon-2026-02-27-1518
+  - DVC4
+  - Pitt Meadows
+  - amazon:weekly-update:2026-03-18:rsc
+  - rescue
+- - '2026-03-18'
+  - slot-20260318-ovf
+  - cycle1_overflow
+  - parcel_delivery
+  - XL_van
+  - '12:10'
+  - '21:00'
+  - 8.7
+  - 2
+  - OV0318
+  - amazon-2026-02-27-1518
+  - DVC4
+  - Pitt Meadows
+  - amazon:weekly-update:2026-03-18:ovf
+  - overflow
+- - '2026-03-19'
+  - slot-20260319-std-early
+  - cycle1_standard_early
+  - parcel_delivery
+  - XL_van
+  - '10:15'
+  - '18:45'
+  - 8.5
+  - 10
+  - CXE0319
+  - amazon-2026-02-27-1518
+  - DVC4
+  - Pitt Meadows
+  - amazon:weekly-update:2026-03-19:std-early
+  - early
+- - '2026-03-19'
+  - slot-20260319-std-late
+  - cycle1_standard_late
+  - parcel_delivery
+  - XL_van
+  - '11:30'
+  - '20:00'
+  - 8.5
+  - 5
+  - CXL0319
+  - amazon-2026-02-27-1518
+  - DVC4
+  - Pitt Meadows
+  - amazon:weekly-update:2026-03-19:std-late
+  - late
+- - '2026-03-19'
+  - slot-20260319-rsc
+  - cycle1_rescue
+  - rescue_support
+  - XL_van
+  - '11:45'
+  - '20:35'
+  - 8.8
+  - 3
+  - RS0319
+  - amazon-2026-02-27-1518
+  - DVC4
+  - Pitt Meadows
+  - amazon:weekly-update:2026-03-19:rsc
+  - rescue
+- - '2026-03-19'
+  - slot-20260319-ovf
+  - cycle1_overflow
+  - parcel_delivery
+  - XL_van
+  - '12:10'
+  - '21:00'
+  - 8.7
+  - 2
+  - OV0319
+  - amazon-2026-02-27-1518
+  - DVC4
+  - Pitt Meadows
+  - amazon:weekly-update:2026-03-19:ovf
+  - overflow
+- - '2026-03-20'
+  - slot-20260320-std-early
+  - cycle1_standard_early
+  - parcel_delivery
+  - XL_van
+  - '10:15'
+  - '18:45'
+  - 8.5
+  - 10
+  - CXE0320
+  - amazon-2026-02-27-1518
+  - DVC4
+  - Pitt Meadows
+  - amazon:weekly-update:2026-03-20:std-early
+  - early
+- - '2026-03-20'
+  - slot-20260320-std-late
+  - cycle1_standard_late
+  - parcel_delivery
+  - XL_van
+  - '11:30'
+  - '20:00'
+  - 8.5
+  - 5
+  - CXL0320
+  - amazon-2026-02-27-1518
+  - DVC4
+  - Pitt Meadows
+  - amazon:weekly-update:2026-03-20:std-late
+  - late
+- - '2026-03-20'
+  - slot-20260320-rsc
+  - cycle1_rescue
+  - rescue_support
+  - XL_van
+  - '11:45'
+  - '20:35'
+  - 8.8
+  - 3
+  - RS0320
+  - amazon-2026-02-27-1518
+  - DVC4
+  - Pitt Meadows
+  - amazon:weekly-update:2026-03-20:rsc
+  - rescue
+- - '2026-03-20'
+  - slot-20260320-ovf
+  - cycle1_overflow
+  - parcel_delivery
+  - XL_van
+  - '12:10'
+  - '21:00'
+  - 8.7
+  - 2
+  - OV0320
+  - amazon-2026-02-27-1518
+  - DVC4
+  - Pitt Meadows
+  - amazon:weekly-update:2026-03-20:ovf
+  - overflow
+- - '2026-03-21'
+  - slot-20260321-std-early
+  - cycle1_standard_early
+  - parcel_delivery
+  - XL_van
+  - '10:15'
+  - '18:45'
+  - 8.5
+  - 9
+  - CXE0321
+  - amazon-2026-02-27-1518
+  - DVC4
+  - Pitt Meadows
+  - amazon:weekly-update:2026-03-21:std-early
+  - early
+- - '2026-03-21'
+  - slot-20260321-std-late
+  - cycle1_standard_late
+  - parcel_delivery
+  - XL_van
+  - '11:30'
+  - '20:00'
+  - 8.5
+  - 5
+  - CXL0321
+  - amazon-2026-02-27-1518
+  - DVC4
+  - Pitt Meadows
+  - amazon:weekly-update:2026-03-21:std-late
+  - late
+- - '2026-03-21'
+  - slot-20260321-rsc
+  - cycle1_rescue
+  - rescue_support
+  - XL_van
+  - '11:45'
+  - '20:35'
+  - 8.8
+  - 2
+  - RS0321
+  - amazon-2026-02-27-1518
+  - DVC4
+  - Pitt Meadows
+  - amazon:weekly-update:2026-03-21:rsc
+  - rescue
+- - '2026-03-21'
+  - slot-20260321-ovf
+  - cycle1_overflow
+  - parcel_delivery
+  - XL_van
+  - '12:10'
+  - '21:00'
+  - 8.7
+  - 2
+  - OV0321
+  - amazon-2026-02-27-1518
+  - DVC4
+  - Pitt Meadows
+  - amazon:weekly-update:2026-03-21:ovf
+  - overflow
+- - '2026-03-22'
+  - slot-20260322-std-early
+  - cycle1_standard_early
+  - parcel_delivery
+  - XL_van
+  - '10:15'
+  - '18:45'
+  - 8.5
+  - 9
+  - CXE0322
+  - amazon-2026-02-27-1518
+  - DVC4
+  - Pitt Meadows
+  - amazon:weekly-update:2026-03-22:std-early
+  - early
+- - '2026-03-22'
+  - slot-20260322-std-late
+  - cycle1_standard_late
+  - parcel_delivery
+  - XL_van
+  - '11:30'
+  - '20:00'
+  - 8.5
+  - 5
+  - CXL0322
+  - amazon-2026-02-27-1518
+  - DVC4
+  - Pitt Meadows
+  - amazon:weekly-update:2026-03-22:std-late
+  - late
+- - '2026-03-22'
+  - slot-20260322-rsc
+  - cycle1_rescue
+  - rescue_support
+  - XL_van
+  - '11:45'
+  - '20:35'
+  - 8.8
+  - 2
+  - RS0322
+  - amazon-2026-02-27-1518
+  - DVC4
+  - Pitt Meadows
+  - amazon:weekly-update:2026-03-22:rsc
+  - rescue
+- - '2026-03-22'
+  - slot-20260322-ovf
+  - cycle1_overflow
+  - parcel_delivery
+  - XL_van
+  - '12:10'
+  - '21:00'
+  - 8.7
+  - 2
+  - OV0322
+  - amazon-2026-02-27-1518
+  - DVC4
+  - Pitt Meadows
+  - amazon:weekly-update:2026-03-22:ovf
+  - overflow
+daily_demand_columns:
+- service_date
+- planned_route_count
+- standard_early_slot_count
+- standard_late_slot_count
+- rescue_slot_count
+- overflow_slot_count
+- source_message_id
+- source_kind
+- change_kind
+daily_demand_rows:
+- - '2026-03-16'
+  - 23
+  - 11
+  - 6
+  - 3
+  - 3
+  - amazon-2026-02-27-1518
+  - weekly_route_update
+  - next_week_overcapacity_fixture
+- - '2026-03-17'
+  - 20
+  - 10
+  - 5
+  - 3
+  - 2
+  - amazon-2026-02-27-1518
+  - weekly_route_update
+  - next_week_overcapacity_fixture
+- - '2026-03-18'
+  - 20
+  - 10
+  - 5
+  - 3
+  - 2
+  - amazon-2026-02-27-1518
+  - weekly_route_update
+  - next_week_overcapacity_fixture
+- - '2026-03-19'
+  - 20
+  - 10
+  - 5
+  - 3
+  - 2
+  - amazon-2026-02-27-1518
+  - weekly_route_update
+  - next_week_overcapacity_fixture
+- - '2026-03-20'
+  - 20
+  - 10
+  - 5
+  - 3
+  - 2
+  - amazon-2026-02-27-1518
+  - weekly_route_update
+  - next_week_overcapacity_fixture
+- - '2026-03-21'
+  - 18
+  - 9
+  - 5
+  - 2
+  - 2
+  - amazon-2026-02-27-1518
+  - weekly_route_update
+  - next_week_overcapacity_fixture
+- - '2026-03-22'
+  - 18
+  - 9
+  - 5
+  - 2
+  - 2
+  - amazon-2026-02-27-1518
+  - weekly_route_update
+  - next_week_overcapacity_fixture
+planner_notes:
+- 'Over-capacity weekly test: feasible driver-day supply exceeds daily demand on every
+  day.'
+- Demand is still realistic and grounded in the uploaded Amazon route update; Sunday
+  2026-03-22 is carried forward to complete the repo-native Monday-Sunday planning
+  week.

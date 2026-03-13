@@ -25,10 +25,18 @@ class ScheduledAssignment:
     lost_work_credit: float
     coverage_pressure: float
     availability_fit: float
+    availability_state: str
+    availability_state_fit: float
+    preferred_shift_band_fit: float
+    preferred_route_slot_class_fit: float
+    preference_fit: float
     previous_week_stability: float
+    continuity_score: float
     target_shift_gap: float
     seniority_score: float
+    seniority_preference_fit: float
     reliability_score: float
+    avoidable_assignment_score: float
     current_week_shift_count: int
     projected_rolling7_minutes: int
     remaining_rolling7_minutes: int
@@ -40,6 +48,7 @@ class ScheduledAssignment:
     route_slot_class: str = ""
     station_code: str = ""
     service_area: str = ""
+    planning_phase: str = "baseline"
     repair_depth: int = 0
     previous_assignment_driver_id: str = ""
     displaced_route_slot_id: str = ""
@@ -63,10 +72,18 @@ class ScheduledAssignment:
             "lost_work_credit": self.lost_work_credit,
             "coverage_pressure": self.coverage_pressure,
             "availability_fit": self.availability_fit,
+            "availability_state": self.availability_state,
+            "availability_state_fit": self.availability_state_fit,
+            "preferred_shift_band_fit": self.preferred_shift_band_fit,
+            "preferred_route_slot_class_fit": self.preferred_route_slot_class_fit,
+            "preference_fit": self.preference_fit,
             "previous_week_stability": self.previous_week_stability,
+            "continuity_score": self.continuity_score,
             "target_shift_gap": self.target_shift_gap,
             "seniority_score": self.seniority_score,
+            "seniority_preference_fit": self.seniority_preference_fit,
             "reliability_score": self.reliability_score,
+            "avoidable_assignment_score": self.avoidable_assignment_score,
             "current_week_shift_count": self.current_week_shift_count,
             "projected_rolling7_minutes": self.projected_rolling7_minutes,
             "remaining_rolling7_minutes": self.remaining_rolling7_minutes,
@@ -78,6 +95,7 @@ class ScheduledAssignment:
             "route_slot_class": self.route_slot_class,
             "station_code": self.station_code,
             "service_area": self.service_area,
+            "planning_phase": self.planning_phase,
             "repair_depth": self.repair_depth,
             "previous_assignment_driver_id": self.previous_assignment_driver_id,
             "displaced_route_slot_id": self.displaced_route_slot_id,
@@ -98,6 +116,14 @@ class RepairMove:
     replacement_driver_id: str
     score_gain: float
     repair_reason: str
+    move_kind: str = "repair"
+    affected_route_slot_ids: tuple[str, ...] = ()
+    soft_objective_delta: float = 0.0
+    stability_delta: float = 0.0
+    target_shift_gap_delta: float = 0.0
+    preference_fit_delta: float = 0.0
+    coverage_delta: int = 0
+    accepted_reason: str = ""
 
     def to_payload(self) -> dict[str, Any]:
         return {
@@ -111,12 +137,21 @@ class RepairMove:
             "replacement_driver_id": self.replacement_driver_id,
             "score_gain": round(self.score_gain, 6),
             "repair_reason": self.repair_reason,
+            "move_kind": self.move_kind,
+            "affected_route_slot_ids": list(self.affected_route_slot_ids),
+            "soft_objective_delta": round(self.soft_objective_delta, 6),
+            "stability_delta": round(self.stability_delta, 6),
+            "target_shift_gap_delta": round(self.target_shift_gap_delta, 6),
+            "preference_fit_delta": round(self.preference_fit_delta, 6),
+            "coverage_delta": int(self.coverage_delta),
+            "accepted_reason": self.accepted_reason,
         }
 
 
 @dataclass(frozen=True)
 class IterationSummary:
     iteration_index: int
+    phase: str
     batch_id: str
     pressure_group_id: str
     pressure_service_date: str
@@ -130,10 +165,22 @@ class IterationSummary:
     covered_route_slot_count_after_iteration: int
     uncovered_route_slot_count_after_iteration: int
     candidate_evaluation_count: int
+    moved_route_slot_ids: tuple[str, ...] = ()
+    coverage_before: dict[str, Any] = field(default_factory=dict)
+    coverage_after: dict[str, Any] = field(default_factory=dict)
+    soft_objective_before: float = 0.0
+    soft_objective_after: float = 0.0
+    soft_objective_delta: float = 0.0
+    stability_delta: float = 0.0
+    target_shift_gap_delta: float = 0.0
+    preference_fit_delta: float = 0.0
+    accepted_move_reasons: tuple[str, ...] = ()
+    rejected_move_reasons: tuple[str, ...] = ()
 
     def to_payload(self) -> dict[str, Any]:
         return {
             "iteration_index": self.iteration_index,
+            "phase": self.phase,
             "batch_id": self.batch_id,
             "pressure_group_id": self.pressure_group_id,
             "pressure_service_date": self.pressure_service_date,
@@ -143,7 +190,18 @@ class IterationSummary:
             "route_slot_ids": list(self.route_slot_ids),
             "assigned_route_slot_ids": list(self.assigned_route_slot_ids),
             "uncovered_route_slot_ids": list(self.uncovered_route_slot_ids),
+            "moved_route_slot_ids": list(self.moved_route_slot_ids),
             "repair_move_count": self.repair_move_count,
+            "coverage_before": dict(self.coverage_before),
+            "coverage_after": dict(self.coverage_after),
+            "soft_objective_before": round(self.soft_objective_before, 6),
+            "soft_objective_after": round(self.soft_objective_after, 6),
+            "soft_objective_delta": round(self.soft_objective_delta, 6),
+            "stability_delta": round(self.stability_delta, 6),
+            "target_shift_gap_delta": round(self.target_shift_gap_delta, 6),
+            "preference_fit_delta": round(self.preference_fit_delta, 6),
+            "accepted_move_reasons": list(self.accepted_move_reasons),
+            "rejected_move_reasons": list(self.rejected_move_reasons),
             "covered_route_slot_count_after_iteration": self.covered_route_slot_count_after_iteration,
             "uncovered_route_slot_count_after_iteration": self.uncovered_route_slot_count_after_iteration,
             "candidate_evaluation_count": self.candidate_evaluation_count,
@@ -207,6 +265,16 @@ class PartialWeeklyScheduleState:
 
     def record_repair_move(self, move: RepairMove) -> None:
         self.repair_moves.append(move)
+
+    def clone(self) -> PartialWeeklyScheduleState:
+        return PartialWeeklyScheduleState(
+            ordered_route_slot_ids=self.ordered_route_slot_ids,
+            route_slots_by_id=self.route_slots_by_id,
+            decisions_by_slot=dict(self.decisions_by_slot),
+            assignments_by_slot=dict(self.assignments_by_slot),
+            iteration_summaries=list(self.iteration_summaries),
+            repair_moves=list(self.repair_moves),
+        )
 
     def driver_assignments(
         self,

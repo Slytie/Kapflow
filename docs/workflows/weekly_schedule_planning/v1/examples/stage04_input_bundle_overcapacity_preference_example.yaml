@@ -1,0 +1,29 @@
+kind: weekly_stage04_input_bundle_example
+schema_version: '1.0'
+example_id: weekly_stage04_overcapacity_preference_v1
+planning_week_id: PW-2026-W12
+scope_start: '2026-03-16'
+scope_end_exclusive: '2026-03-23'
+expected_task_shape: overcapacity_preference_and_continuity_optimization
+inputs:
+- slot_key: route_slot_requirements
+  dataset_key: planning.route_slot_requirements.workbook
+  path: docs/workflows/weekly_schedule_planning/v1/examples/route_slot_requirements_overcapacity_preference_example.yaml
+- slot_key: driver_capabilities
+  dataset_key: planning.driver_capabilities.workbook
+  path: docs/workflows/weekly_schedule_planning/v1/examples/driver_capabilities_overcapacity_preference_example.yaml
+- slot_key: approved_availability
+  dataset_key: planning.approved_availability.workbook
+  path: docs/workflows/weekly_schedule_planning/v1/examples/approved_availability_overcapacity_preference_example.yaml
+- slot_key: actual_hours
+  dataset_key: planning.actual_hours_snapshot.workbook
+  path: docs/workflows/weekly_schedule_planning/v1/examples/actual_hours_snapshot_overcapacity_preference_example.yaml
+expected_planner_posture:
+  coverage_should_be_feasible: true
+  primary_tradeoffs:
+  - preferred_vs_unpreferred slot allocation
+  - seniority-weighted allocation under compliance
+  - week-to-week continuity
+  - rolling_7_day compliance
+  - bounded improvement moves after baseline coverage
+  anti_goal: Do not frame this fixture as raw under-capacity route coverage.

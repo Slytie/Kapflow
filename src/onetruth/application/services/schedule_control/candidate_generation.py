@@ -29,10 +29,18 @@ class CandidateEvaluation:
     lost_work_credit: float
     coverage_pressure: float
     availability_fit: float
+    availability_state: str
+    availability_state_fit: float
+    preferred_shift_band_fit: float
+    preferred_route_slot_class_fit: float
+    preference_fit: float
     previous_week_stability: float
+    continuity_score: float
     target_shift_gap: float
     seniority_score: float
+    seniority_preference_fit: float
     reliability_score: float
+    avoidable_assignment_score: float
     current_week_shift_count: int
     projected_rolling7_minutes: int
     remaining_rolling7_minutes: int
@@ -58,10 +66,18 @@ class CandidateEvaluation:
             "lost_work_credit": self.lost_work_credit,
             "coverage_pressure": self.coverage_pressure,
             "availability_fit": self.availability_fit,
+            "availability_state": self.availability_state,
+            "availability_state_fit": self.availability_state_fit,
+            "preferred_shift_band_fit": self.preferred_shift_band_fit,
+            "preferred_route_slot_class_fit": self.preferred_route_slot_class_fit,
+            "preference_fit": self.preference_fit,
             "previous_week_stability": self.previous_week_stability,
+            "continuity_score": self.continuity_score,
             "target_shift_gap": self.target_shift_gap,
             "seniority_score": self.seniority_score,
+            "seniority_preference_fit": self.seniority_preference_fit,
             "reliability_score": self.reliability_score,
+            "avoidable_assignment_score": self.avoidable_assignment_score,
             "current_week_shift_count": self.current_week_shift_count,
             "projected_rolling7_minutes": self.projected_rolling7_minutes,
             "remaining_rolling7_minutes": self.remaining_rolling7_minutes,
@@ -120,10 +136,18 @@ def generate_weekly_candidate_matrix(
                     lost_work_credit=soft_score.lost_work_credit,
                     coverage_pressure=soft_score.coverage_pressure,
                     availability_fit=soft_score.availability_fit,
+                    availability_state=soft_score.availability_state,
+                    availability_state_fit=soft_score.availability_state_fit,
+                    preferred_shift_band_fit=soft_score.preferred_shift_band_fit,
+                    preferred_route_slot_class_fit=soft_score.preferred_route_slot_class_fit,
+                    preference_fit=soft_score.preference_fit,
                     previous_week_stability=soft_score.previous_week_stability,
+                    continuity_score=soft_score.continuity_score,
                     target_shift_gap=soft_score.target_shift_gap,
                     seniority_score=soft_score.seniority_score,
+                    seniority_preference_fit=soft_score.seniority_preference_fit,
                     reliability_score=soft_score.reliability_score,
+                    avoidable_assignment_score=soft_score.avoidable_assignment_score,
                     current_week_shift_count=soft_score.current_week_shift_count,
                     projected_rolling7_minutes=soft_score.projected_rolling7_minutes,
                     remaining_rolling7_minutes=soft_score.remaining_rolling7_minutes,
@@ -169,12 +193,28 @@ def select_weekly_candidates(candidate_matrix: list[CandidateEvaluation]) -> lis
                 "lost_work_credit": float(selected.get("lost_work_credit") or 0.0),
                 "coverage_pressure": float(selected.get("coverage_pressure") or 0.0),
                 "availability_fit": float(selected.get("availability_fit") or 0.0),
+                "availability_state": str(selected.get("availability_state") or ""),
+                "availability_state_fit": float(selected.get("availability_state_fit") or 0.0),
+                "preferred_shift_band_fit": float(
+                    selected.get("preferred_shift_band_fit") or 0.0
+                ),
+                "preferred_route_slot_class_fit": float(
+                    selected.get("preferred_route_slot_class_fit") or 0.0
+                ),
+                "preference_fit": float(selected.get("preference_fit") or 0.0),
                 "previous_week_stability": float(
                     selected.get("previous_week_stability") or 0.0
                 ),
+                "continuity_score": float(selected.get("continuity_score") or 0.0),
                 "target_shift_gap": float(selected.get("target_shift_gap") or 0.0),
                 "seniority_score": float(selected.get("seniority_score") or 0.0),
+                "seniority_preference_fit": float(
+                    selected.get("seniority_preference_fit") or 0.0
+                ),
                 "reliability_score": float(selected.get("reliability_score") or 0.0),
+                "avoidable_assignment_score": float(
+                    selected.get("avoidable_assignment_score") or 0.0
+                ),
                 "current_week_shift_count": int(selected.get("current_week_shift_count") or 0),
                 "projected_rolling7_minutes": int(
                     selected.get("projected_rolling7_minutes") or 0

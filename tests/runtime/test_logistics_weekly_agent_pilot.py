@@ -160,6 +160,7 @@ def test_realistic_weekly_stage04_pilot_seeds_shared_realistic_fixture_shape(tmp
     assert summary["openai_mode"] == "mock"
     assert packet["stage_focus"] == "Stage04"
     assert packet["quality_signals"]["stage04_output_artifacts_present"] is True
+    assert packet["workflow_run"]["partition_key"] == "PW-2026-W12"
 
     connection = open_sqlite_connection(db_url)
     try:
@@ -203,21 +204,38 @@ def test_realistic_weekly_stage04_pilot_seeds_shared_realistic_fixture_shape(tmp
         for row in output_rows
     }
     route_slots = metadata_by_kind["planning.route_slot_requirements.workbook"]
+    driver_capabilities = metadata_by_kind["planning.driver_capabilities.workbook"]
     availability = metadata_by_kind["planning.approved_availability.workbook"]
     actual_hours = metadata_by_kind["planning.actual_hours_snapshot.workbook"]
     candidate_delta = output_metadata_by_kind["planning.candidate_schedule_delta.workbook"]
     validation_summary = output_metadata_by_kind["planning.validation_summary.doc"]["summary"]
 
-    assert len(availability["rows"]) == 40
-    assert sum(int(item[1]) for item in route_slots["daily_demand_rows"]) == 112
+    assert len(driver_capabilities["rows"]) == 40
+    assert len(availability["rows"]) == 280
+    assert sum(int(item[1]) for item in route_slots["daily_demand_rows"]) == 139
     assert sum(int(item[1]) for item in route_slots["daily_demand_rows"]) < (40 * 4)
-    assert len(actual_hours["rows"]) >= 80
+    assert len(actual_hours["rows"]) == 280
+    assert "route_family" in route_slots["columns"]
+    assert "seniority_rank" in driver_capabilities["columns"]
+    assert "attendance_reliability_index" in driver_capabilities["columns"]
+    assert "previous_week_state" in availability["columns"]
+    assert "rolling_7_total_minutes" in actual_hours["columns"]
     assert len(candidate_delta["iteration_deltas"]) >= 10
-    assert validation_summary["coverage_summary"]["uncovered_route_slots"] > 0
+    assert candidate_delta["coverage_summary"]["phase_counts"]["improvement"] >= 1
+    assert candidate_delta["coverage_summary"]["reallocation_move_count"] >= 1
+    assert validation_summary["coverage_summary"]["assigned_route_slots"] == 135
+    assert validation_summary["coverage_summary"]["uncovered_route_slots"] == 4
+    assert validation_summary["coverage_summary"]["reallocation_move_count"] >= 1
+    assert validation_summary["hard_rule_result"] == "fail"
     assert validation_summary["soft_score_totals"]["previous_week_stability"] > 0.0
     stage04_analysis = packet["stage04_analysis"]
     assert len(stage04_analysis["iterations"]) >= 10
     assert stage04_analysis["runtime_turns"]
     assert stage04_analysis["tradeoffs"]
+    assert stage04_analysis["phase_counts"]["improvement"] >= 1
+    assert any(item["phase"] == "improvement" for item in stage04_analysis["iterations"])
     final_iteration = stage04_analysis["iterations"][-1]
     assert final_iteration["route_allocations"]
+    assert final_iteration["phase"] == "improvement"
+    assert final_iteration["moved_route_slot_ids"]
+    assert final_iteration["soft_objective_delta"] > 0.0

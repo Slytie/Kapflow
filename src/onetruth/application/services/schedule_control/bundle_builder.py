@@ -20,6 +20,13 @@ class DriverCapability:
     employment_type: str = ""
     home_station: str = ""
     policy_tags: tuple[str, ...] = ()
+    seniority_rank: int = 0
+    attendance_reliability_index: float = 0.0
+    recent_sick_calls_14d: int = 0
+    recent_cancellations_14d: int = 0
+    preferred_route_slot_classes: tuple[str, ...] = ()
+    preferred_shift_band: str = ""
+    external_driver_ref: str = ""
 
 
 @dataclass(frozen=True)
@@ -30,6 +37,16 @@ class DriverServiceDayState:
     actual_minutes: int
     route_id: str
     source_ref: str
+    normalized_state: str = ""
+    route_slot_class: str = ""
+    preferred_route_slot_classes: tuple[str, ...] = ()
+    avoid_route_slot_classes: tuple[str, ...] = ()
+    preferred_shift_band: str = ""
+    previous_week_state: str = ""
+    locked_by_manager: bool = False
+    call_in_sick_flag: bool = False
+    cancellation_flag: bool = False
+    non_working_day_flag: bool = False
 
 
 @dataclass(frozen=True)
@@ -56,6 +73,12 @@ class ActualHoursEntry:
     route_id: str
     driver_name: str
     source_ref: str
+    historical_state: str = ""
+    normalized_state: str = ""
+    route_slot_class: str = ""
+    call_in_sick_flag: bool = False
+    cancellation_flag: bool = False
+    non_working_day_flag: bool = False
 
 
 @dataclass(frozen=True)
@@ -86,6 +109,8 @@ class DailyDemandSummary:
     service_date: str
     planned_route_count: int
     standard_slot_count: int
+    standard_early_slot_count: int
+    standard_late_slot_count: int
     rescue_slot_count: int
     overflow_slot_count: int
     source_message_ids: tuple[str, ...]
@@ -246,6 +271,19 @@ def _parse_driver_capabilities(artifact: Mapping[str, Any]) -> tuple[DriverCapab
                 employment_type=str(row.get("employment_type") or "").strip(),
                 home_station=str(row.get("home_station") or "").strip(),
                 policy_tags=_csv_tokens(row.get("policy_tags")),
+                seniority_rank=_coerce_int(row.get("seniority_rank"), default=0),
+                attendance_reliability_index=_coerce_float(
+                    row.get("attendance_reliability_index"),
+                    default=0.0,
+                ),
+                recent_sick_calls_14d=_coerce_int(row.get("recent_sick_calls_14d"), default=0),
+                recent_cancellations_14d=_coerce_int(
+                    row.get("recent_cancellations_14d"),
+                    default=0,
+                ),
+                preferred_route_slot_classes=_csv_tokens(row.get("preferred_route_slot_classes")),
+                preferred_shift_band=str(row.get("preferred_shift_band") or "").strip(),
+                external_driver_ref=str(row.get("external_driver_ref") or "").strip(),
             )
         )
 
@@ -264,8 +302,17 @@ def _parse_approved_availability(
 
     metadata = _metadata_json(artifact)
     columns, rows = _extract_table(columns_key="columns", rows_key="rows", metadata=metadata)
+    row_dicts = _rows_to_dicts(columns=columns, rows=rows)
+    if "service_date" in set(columns) and "availability_state" in set(columns):
+        return _parse_explicit_driver_day_availability(
+            rows=row_dicts,
+            planning_week_start=planning_week_start,
+            planning_week_end_exclusive=planning_week_end_exclusive,
+            actual_entries_by_driver=actual_entries_by_driver,
+        )
+
     parsed: dict[str, DriverAvailability] = {}
-    for row in _rows_to_dicts(columns=columns, rows=rows):
+    for row in row_dicts:
         driver_id = str(row.get("driver_id") or "").strip()
         if not driver_id:
             continue
@@ -307,6 +354,104 @@ def _parse_approved_availability(
     return parsed
 
 
+def _parse_explicit_driver_day_availability(
+    *,
+    rows: list[dict[str, Any]],
+    planning_week_start: date,
+    planning_week_end_exclusive: date,
+    actual_entries_by_driver: Mapping[str, tuple[ActualHoursEntry, ...]],
+) -> dict[str, DriverAvailability]:
+    grouped: dict[str, dict[str, Any]] = {}
+    for row in rows:
+        driver_id = str(row.get("driver_id") or "").strip()
+        service_date = str(row.get("service_date") or "").strip()
+        if not driver_id or not service_date:
+            continue
+        raw_state = str(row.get("availability_state") or "").strip().upper()
+        normalized_state = _normalized_availability_state(raw_state)
+        record = grouped.setdefault(
+            driver_id,
+            {
+                "driver_id": driver_id,
+                "driver_name": str(row.get("driver_name") or "").strip(),
+                "employment_type": str(row.get("employment_type") or "").strip(),
+                "target_shifts_per_week": _coerce_int(row.get("target_shifts_per_week"), default=4),
+                "on_call_eligible": _coerce_bool(row.get("on_call_eligible")),
+                "approved_unavailable_dates": [],
+                "regular_pattern": [],
+                "emergency_only": False,
+                "policy_tags": [],
+                "notes": str(row.get("notes") or "").strip(),
+                "daily_states": [],
+            },
+        )
+
+        if normalized_state == "approved_unavailable":
+            record["approved_unavailable_dates"].append(service_date)
+        elif normalized_state != "pattern_off":
+            record["regular_pattern"].append(_weekday_token(date.fromisoformat(service_date)))
+        if normalized_state == "emergency_only":
+            record["emergency_only"] = True
+
+        if not record["driver_name"] and str(row.get("driver_name") or "").strip():
+            record["driver_name"] = str(row.get("driver_name") or "").strip()
+        if not record["employment_type"] and str(row.get("employment_type") or "").strip():
+            record["employment_type"] = str(row.get("employment_type") or "").strip()
+        if str(row.get("notes") or "").strip():
+            record["notes"] = str(row.get("notes") or "").strip()
+
+        record["daily_states"].append(
+            DriverServiceDayState(
+                service_date=service_date,
+                state=raw_state,
+                normalized_state=normalized_state,
+                blocked_reasons=_blocked_reasons_for_normalized_state(normalized_state),
+                actual_minutes=0,
+                route_id="",
+                source_ref=f"availability:{driver_id}:{service_date}",
+                preferred_route_slot_classes=_csv_tokens(row.get("preferred_route_slot_classes")),
+                avoid_route_slot_classes=_csv_tokens(row.get("avoid_route_slot_classes")),
+                preferred_shift_band=str(row.get("preferred_shift_band") or "").strip(),
+                previous_week_state=_normalized_previous_week_state_label(
+                    row.get("previous_week_state") or row.get("previous_week_same_day_state")
+                ),
+                locked_by_manager=_coerce_bool(row.get("locked_by_manager")),
+            )
+        )
+
+    parsed: dict[str, DriverAvailability] = {}
+    for driver_id, record in grouped.items():
+        daily_states = tuple(
+            sorted(
+                record["daily_states"],
+                key=lambda item: item.service_date,
+            )
+        )
+        parsed[driver_id] = DriverAvailability(
+            driver_id=driver_id,
+            target_shifts_per_week=max(int(record["target_shifts_per_week"]), 1),
+            on_call_eligible=bool(record["on_call_eligible"]),
+            approved_unavailable_dates=tuple(sorted(dict.fromkeys(record["approved_unavailable_dates"]))),
+            regular_pattern=tuple(dict.fromkeys(record["regular_pattern"])),
+            driver_name=str(record["driver_name"]),
+            employment_type=str(record["employment_type"]),
+            emergency_only=bool(record["emergency_only"]),
+            policy_tags=tuple(dict.fromkeys(record["policy_tags"])),
+            notes=str(record["notes"]),
+            daily_states=daily_states,
+            previous_week_states=_derive_previous_week_states(
+                driver_id=driver_id,
+                planning_week_start=planning_week_start,
+                regular_pattern=tuple(dict.fromkeys(record["regular_pattern"])),
+                previous_week_blocked_dates=(),
+                actual_entries=actual_entries_by_driver.get(driver_id, ()),
+                planning_week_daily_states=daily_states,
+            ),
+        )
+
+    return parsed
+
+
 def _parse_actual_hours(
     artifact: Mapping[str, Any] | None,
 ) -> tuple[dict[str, tuple[ActualHoursEntry, ...]], dict[str, int]]:
@@ -324,6 +469,7 @@ def _parse_actual_hours(
             continue
 
         actual_minutes = max(_coerce_int(row.get("actual_minutes"), default=0), 0)
+        historical_state = _normalized_previous_week_state_label(row.get("historical_state"))
         entry = ActualHoursEntry(
             service_date=service_date,
             driver_id=driver_id,
@@ -335,6 +481,18 @@ def _parse_actual_hours(
                 or row.get("source")
                 or f"actual-hours:{driver_id}:{service_date}"
             ).strip(),
+            historical_state=historical_state,
+            normalized_state=_normalized_previous_week_state(
+                raw_state=historical_state,
+                actual_minutes=actual_minutes,
+                call_in_sick_flag=_coerce_bool(row.get("call_in_sick_flag")),
+                cancellation_flag=_coerce_bool(row.get("cancellation_flag")),
+                non_working_day_flag=_coerce_bool(row.get("non_working_day_flag")),
+            ),
+            route_slot_class=str(row.get("route_slot_class") or "").strip(),
+            call_in_sick_flag=_coerce_bool(row.get("call_in_sick_flag")),
+            cancellation_flag=_coerce_bool(row.get("cancellation_flag")),
+            non_working_day_flag=_coerce_bool(row.get("non_working_day_flag")),
         )
         parsed.setdefault(driver_id, []).append(entry)
         totals[driver_id] = totals.get(driver_id, 0) + actual_minutes
@@ -381,6 +539,7 @@ def _derive_planning_week_states(
                 actual_minutes=0,
                 route_id="",
                 source_ref=f"availability:{driver_id}:{current_text}",
+                normalized_state=state,
             )
         )
     return tuple(states)
@@ -393,49 +552,128 @@ def _derive_previous_week_states(
     regular_pattern: tuple[str, ...],
     previous_week_blocked_dates: tuple[str, ...],
     actual_entries: tuple[ActualHoursEntry, ...],
+    planning_week_daily_states: tuple[DriverServiceDayState, ...] = (),
 ) -> tuple[DriverServiceDayState, ...]:
     previous_week_start = planning_week_start - timedelta(days=7)
     blocked_dates = set(previous_week_blocked_dates)
     regular_days = set(regular_pattern)
     entries_by_date = {entry.service_date: entry for entry in actual_entries}
+    explicit_state_by_service_date = {
+        (
+            date.fromisoformat(item.service_date) - timedelta(days=7)
+        ).isoformat(): item.previous_week_state
+        for item in planning_week_daily_states
+        if item.previous_week_state
+    }
     states: list[DriverServiceDayState] = []
     for current in _date_span(previous_week_start, planning_week_start):
         current_text = current.isoformat()
         entry = entries_by_date.get(current_text)
         weekday = _weekday_token(current)
-        if entry is not None:
+        explicit_source_state = explicit_state_by_service_date.get(current_text)
+        if entry is not None and (
+            entry.historical_state
+            or entry.route_slot_class
+            or entry.call_in_sick_flag
+            or entry.cancellation_flag
+            or entry.non_working_day_flag
+        ):
+            historical_state = entry.historical_state
+            if historical_state == "NA" and entry.actual_minutes > 0:
+                historical_state = "WORKED"
+            state = historical_state or explicit_source_state or (
+                "WORKED" if entry.actual_minutes > 0 else "NA"
+            )
+            normalized_state = entry.normalized_state or _normalized_previous_week_state(
+                raw_state=state,
+                actual_minutes=entry.actual_minutes,
+                call_in_sick_flag=entry.call_in_sick_flag,
+                cancellation_flag=entry.cancellation_flag,
+                non_working_day_flag=entry.non_working_day_flag,
+            )
+            blocked_reasons = _blocked_reasons_for_normalized_state(normalized_state)
+            actual_minutes = entry.actual_minutes
+            route_id = entry.route_id
+            source_ref = entry.source_ref
+            route_slot_class = entry.route_slot_class
+            call_in_sick_flag = entry.call_in_sick_flag
+            cancellation_flag = entry.cancellation_flag
+            non_working_day_flag = entry.non_working_day_flag
+        elif explicit_source_state:
+            state = explicit_source_state
+            normalized_state = _normalized_previous_week_state(
+                raw_state=state,
+                actual_minutes=0,
+                call_in_sick_flag=False,
+                cancellation_flag=False,
+                non_working_day_flag=state == "NA",
+            )
+            blocked_reasons = _blocked_reasons_for_normalized_state(normalized_state)
+            actual_minutes = 0
+            route_id = ""
+            source_ref = f"previous-week:{driver_id}:{current_text}"
+            route_slot_class = ""
+            call_in_sick_flag = False
+            cancellation_flag = False
+            non_working_day_flag = state == "NA"
+        elif entry is not None:
             state = "worked"
+            normalized_state = "worked"
             blocked_reasons = ()
             actual_minutes = entry.actual_minutes
             route_id = entry.route_id
             source_ref = entry.source_ref
+            route_slot_class = ""
+            call_in_sick_flag = False
+            cancellation_flag = False
+            non_working_day_flag = False
         elif current_text in blocked_dates:
             state = "blocked_previous_week"
+            normalized_state = state
             blocked_reasons = ("previous_week_blocked",)
             actual_minutes = 0
             route_id = ""
             source_ref = f"previous-week:{driver_id}:{current_text}"
+            route_slot_class = ""
+            call_in_sick_flag = False
+            cancellation_flag = False
+            non_working_day_flag = False
         elif weekday in regular_days:
             state = "available_not_assigned"
+            normalized_state = state
             blocked_reasons = ()
             actual_minutes = 0
             route_id = ""
             source_ref = f"previous-week:{driver_id}:{current_text}"
+            route_slot_class = ""
+            call_in_sick_flag = False
+            cancellation_flag = False
+            non_working_day_flag = False
         else:
             state = "pattern_off"
+            normalized_state = state
             blocked_reasons = ("pattern_off",)
             actual_minutes = 0
             route_id = ""
             source_ref = f"previous-week:{driver_id}:{current_text}"
+            route_slot_class = ""
+            call_in_sick_flag = False
+            cancellation_flag = False
+            non_working_day_flag = True
 
         states.append(
             DriverServiceDayState(
                 service_date=current_text,
                 state=state,
+                normalized_state=normalized_state,
                 blocked_reasons=blocked_reasons,
                 actual_minutes=actual_minutes,
                 route_id=route_id,
                 source_ref=source_ref,
+                route_slot_class=route_slot_class,
+                call_in_sick_flag=call_in_sick_flag,
+                cancellation_flag=cancellation_flag,
+                non_working_day_flag=non_working_day_flag,
             )
         )
     return tuple(states)
@@ -463,7 +701,24 @@ def _parse_daily_demand_summary(
         parsed[service_date] = DailyDemandSummary(
             service_date=service_date,
             planned_route_count=max(_coerce_int(row.get("planned_route_count"), default=0), 0),
-            standard_slot_count=max(_coerce_int(row.get("standard_slot_count"), default=0), 0),
+            standard_slot_count=max(
+                _coerce_int(
+                    row.get("standard_slot_count"),
+                    default=(
+                        _coerce_int(row.get("standard_early_slot_count"), default=0)
+                        + _coerce_int(row.get("standard_late_slot_count"), default=0)
+                    ),
+                ),
+                0,
+            ),
+            standard_early_slot_count=max(
+                _coerce_int(row.get("standard_early_slot_count"), default=0),
+                0,
+            ),
+            standard_late_slot_count=max(
+                _coerce_int(row.get("standard_late_slot_count"), default=0),
+                0,
+            ),
             rescue_slot_count=max(_coerce_int(row.get("rescue_slot_count"), default=0), 0),
             overflow_slot_count=max(_coerce_int(row.get("overflow_slot_count"), default=0), 0),
             source_message_ids=source_message_ids,
@@ -482,6 +737,8 @@ def _parse_daily_demand_summary(
                 "service_date": slot.service_date,
                 "planned_route_count": 0,
                 "standard_slot_count": 0,
+                "standard_early_slot_count": 0,
+                "standard_late_slot_count": 0,
                 "rescue_slot_count": 0,
                 "overflow_slot_count": 0,
                 "source_message_ids": [],
@@ -497,6 +754,10 @@ def _parse_daily_demand_summary(
             entry["overflow_slot_count"] += max(int(slot.required_count), 1)
         else:
             entry["standard_slot_count"] += max(int(slot.required_count), 1)
+            if str(slot.preferred_shift_band or "").lower() == "early":
+                entry["standard_early_slot_count"] += max(int(slot.required_count), 1)
+            elif str(slot.preferred_shift_band or "").lower() == "late":
+                entry["standard_late_slot_count"] += max(int(slot.required_count), 1)
         if slot.source_message_id:
             entry["source_message_ids"].append(slot.source_message_id)
 
@@ -505,6 +766,8 @@ def _parse_daily_demand_summary(
             service_date=service_date,
             planned_route_count=int(values["planned_route_count"]),
             standard_slot_count=int(values["standard_slot_count"]),
+            standard_early_slot_count=int(values["standard_early_slot_count"]),
+            standard_late_slot_count=int(values["standard_late_slot_count"]),
             rescue_slot_count=int(values["rescue_slot_count"]),
             overflow_slot_count=int(values["overflow_slot_count"]),
             source_message_ids=tuple(dict.fromkeys(values["source_message_ids"])),
@@ -769,8 +1032,73 @@ def _coerce_int(value: Any, *, default: int) -> int:
         return int(default)
 
 
+def _coerce_float(value: Any, *, default: float) -> float:
+    if value is None:
+        return float(default)
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return float(default)
+
+
 def _coerce_bool(value: Any) -> bool:
     return str(value or "").strip().lower() in {"1", "true", "yes", "y"}
+
+
+def _normalized_previous_week_state_label(value: Any) -> str:
+    token = str(value or "").strip().upper()
+    if not token or token == "BLANK":
+        return "NA"
+    return token
+
+
+def _normalized_availability_state(value: str) -> str:
+    token = str(value or "").strip().upper()
+    if token == "PREFERRED":
+        return "available"
+    if token == "AVAILABLE":
+        return "available"
+    if token == "AVOID_IF_POSSIBLE":
+        return "available"
+    if token == "ON_CALL_ONLY":
+        return "available"
+    if token == "CANNOT":
+        return "approved_unavailable"
+    return token.lower() if token else "unknown"
+
+
+def _normalized_previous_week_state(
+    *,
+    raw_state: str,
+    actual_minutes: int,
+    call_in_sick_flag: bool,
+    cancellation_flag: bool,
+    non_working_day_flag: bool,
+) -> str:
+    token = _normalized_previous_week_state_label(raw_state)
+    if token == "WORKED":
+        return "worked"
+    if token in {"ON_CALL", "DISPATCH"}:
+        return "worked" if actual_minutes > 0 else "available_not_assigned"
+    if token in {"SICK_CALL", "CANCELLED"} or call_in_sick_flag or cancellation_flag:
+        return "blocked_previous_week"
+    if actual_minutes > 0:
+        return "worked"
+    if token == "NA" or non_working_day_flag:
+        return "pattern_off"
+    return "available_not_assigned"
+
+
+def _blocked_reasons_for_normalized_state(normalized_state: str) -> tuple[str, ...]:
+    if normalized_state == "approved_unavailable":
+        return ("approved_unavailable",)
+    if normalized_state == "pattern_off":
+        return ("pattern_off",)
+    if normalized_state == "emergency_only":
+        return ("emergency_only",)
+    if normalized_state == "blocked_previous_week":
+        return ("previous_week_blocked",)
+    return ()
 
 
 def _restriction_prefixed_int(restrictions: set[str], *, prefix: str) -> int | None:

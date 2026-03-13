@@ -52,6 +52,14 @@ WEEKLY_STAGE04_EXAMPLES = {
     "stage04_validation_summary_example.yaml",
 }
 
+WEEKLY_STAGE04_REALISTIC_INPUT_EXAMPLES = {
+    "route_slot_requirements_overcapacity_preference_example.yaml",
+    "driver_capabilities_overcapacity_preference_example.yaml",
+    "approved_availability_overcapacity_preference_example.yaml",
+    "actual_hours_snapshot_overcapacity_preference_example.yaml",
+    "stage04_input_bundle_overcapacity_preference_example.yaml",
+}
+
 LIVE_STAGE02_EXAMPLES = {
     "route_slot_requirements_service_day_example.yaml",
     "driver_capabilities_service_day_example.yaml",
@@ -153,6 +161,8 @@ def test_logistics_workflow_packs_validate_under_repo_contracts() -> None:
             examples_dir = workflow_dir / "examples"
             for name in WEEKLY_STAGE04_EXAMPLES:
                 assert (examples_dir / name).exists(), f"missing weekly schedule-control example: {name}"
+            for name in WEEKLY_STAGE04_REALISTIC_INPUT_EXAMPLES:
+                assert (examples_dir / name).exists(), f"missing realistic weekly Stage04 example: {name}"
 
         if workflow_id == "live_dispatch.v1":
             stage01 = _stage_by_id(workflow_contract, "Stage01")

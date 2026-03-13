@@ -21,6 +21,8 @@ class RouteSlotRequirement:
     station_code: str = ""
     service_area: str = ""
     source_kind: str = ""
+    route_family: str = ""
+    preferred_shift_band: str = ""
 
     @property
     def projected_minutes(self) -> int:
@@ -52,6 +54,8 @@ def parse_route_slot_requirements(*, columns: list[str], rows: Iterable[Any]) ->
                 station_code=str(raw.get("station_code") or "").strip(),
                 service_area=str(raw.get("service_area") or "").strip(),
                 source_kind=str(raw.get("source_kind") or "").strip(),
+                route_family=_route_family_from_row(raw),
+                preferred_shift_band=_preferred_shift_band_from_row(raw),
             )
         )
 
@@ -104,6 +108,8 @@ def expand_route_slot_requirements(
                     station_code=slot.station_code,
                     service_area=slot.service_area,
                     source_kind=slot.source_kind,
+                    route_family=slot.route_family,
+                    preferred_shift_band=slot.preferred_shift_band,
                 )
             )
     return tuple(expanded)
@@ -138,6 +144,32 @@ def _route_id_from_row(raw: dict[str, Any], *, route_slot_id: str) -> str:
     compact = route_slot_id.split("*", maxsplit=1)[0]
     token = compact.rsplit("-", maxsplit=1)[-1]
     return token.upper()
+
+
+def _route_family_from_row(raw: dict[str, Any]) -> str:
+    explicit = str(raw.get("route_family") or "").strip()
+    if explicit:
+        return explicit
+    route_slot_class = str(raw.get("route_slot_class") or "").strip()
+    if "_" in route_slot_class:
+        return route_slot_class.split("_", maxsplit=1)[0]
+    return route_slot_class
+
+
+def _preferred_shift_band_from_row(raw: dict[str, Any]) -> str:
+    explicit = str(raw.get("preferred_shift_band") or raw.get("slot_band") or "").strip()
+    if explicit:
+        return explicit
+    route_slot_class = str(raw.get("route_slot_class") or "").strip().lower()
+    if route_slot_class.endswith("_early"):
+        return "early"
+    if route_slot_class.endswith("_late"):
+        return "late"
+    if "rescue" in route_slot_class:
+        return "rescue"
+    if "overflow" in route_slot_class:
+        return "overflow"
+    return ""
 
 
 def _rows_to_dicts(*, columns: list[str], rows: Iterable[Any]) -> list[dict[str, Any]]:

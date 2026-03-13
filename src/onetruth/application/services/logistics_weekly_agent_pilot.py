@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import copy
 from contextlib import contextmanager
 from dataclasses import dataclass
 from datetime import date, timedelta
@@ -283,12 +284,12 @@ PILOT_DEFINITIONS: dict[str, WeeklyPilotDefinition] = {
     ),
     PILOT_WEEKLY_STAGE04_REALISTIC_ARTIFACTS: WeeklyPilotDefinition(
         pilot_id=PILOT_WEEKLY_STAGE04_REALISTIC_ARTIFACTS,
-        partition_key="PW-2026-W10",
-        logical_date="2026-03-02",
+        partition_key="PW-2026-W12",
+        logical_date="2026-03-16",
         stage_focus="Stage04",
         description=(
             "Weekly Stage04 bounded OpenAI agent run over realistic day-resolution planning "
-            "artifacts derived from real roster and route-email patterns."
+            "artifacts derived from the over-capacity weekly hard-case handoff."
         ),
     ),
 }
@@ -711,233 +712,208 @@ def _stage04_source_material_for_pilot(pilot_id: str) -> dict[str, dict[str, Any
 
 def build_realistic_weekly_stage04_fixture_payloads() -> dict[str, dict[str, Any]]:
     source = _load_realistic_weekly_stage04_source_material()
-    route_demand_rows = source["route_demand_rows"]
-    route_demand_columns = source["route_demand_columns"]
-    roster_pattern_rows = source["roster_pattern_rows"]
-    roster_pattern_columns = source["roster_pattern_columns"]
-    capability_pattern_rows = source["capability_pattern_rows"]
-    capability_pattern_columns = source["capability_pattern_columns"]
-    active_driver_count = int(source["active_driver_count"])
-    planning_week_start = date.fromisoformat(str(source["logical_date"]))
+    source_artifacts = source.get("source_artifacts")
+    if not isinstance(source_artifacts, dict):
+        raise ValueError("realistic Stage04 source material must declare source_artifacts")
 
-    roster_patterns = _rows_to_dicts(roster_pattern_columns, roster_pattern_rows)
-    capability_patterns = _rows_to_dicts(capability_pattern_columns, capability_pattern_rows)
-
-    route_slot_rows: list[list[Any]] = []
-    for row in _rows_to_dicts(route_demand_columns, route_demand_rows):
-        service_date = str(row["service_date"])
-        demand_mix = [
-            (
-                "std",
-                "cycle1_standard",
-                "parcel_delivery",
-                "11:40",
-                "20:10",
-                8.5,
-                _coerce_int(row.get("standard_slot_count"), default=0),
-                f"CX{100 + len(route_slot_rows):03d}",
-            ),
-            (
-                "rsc",
-                "cycle1_rescue",
-                "rescue_support",
-                "11:45",
-                "20:35",
-                8.8,
-                _coerce_int(row.get("rescue_slot_count"), default=0),
-                f"RS{80 + len(route_slot_rows):03d}",
-            ),
-            (
-                "ovf",
-                "cycle1_overflow",
-                "parcel_delivery",
-                "12:05",
-                "21:45",
-                8.7,
-                _coerce_int(row.get("overflow_slot_count"), default=0),
-                f"OV{60 + len(route_slot_rows):03d}",
-            ),
-        ]
-        for slot_suffix, slot_class, skill, shift_start, shift_end, estimated_hours, required_count, route_id in demand_mix:
-            if required_count <= 0:
-                continue
-            service_day_token = service_date.replace("-", "")
-            route_slot_rows.append(
-                [
-                    service_date,
-                    f"slot-{service_day_token}-{slot_suffix}",
-                    slot_class,
-                    skill,
-                    "XL_van",
-                    shift_start,
-                    shift_end,
-                    estimated_hours,
-                    required_count,
-                    route_id,
-                    str(row.get("source_message_id") or ""),
-                    "DVC4",
-                    "Pitt Meadows",
-                    f"{row.get('source_message_id') or 'source'}:{service_date}:slot-{service_day_token}-{slot_suffix}",
-                ]
-            )
-
-    capability_rows: list[list[Any]] = []
-    availability_rows: list[list[Any]] = []
-    actual_hours_rows: list[list[Any]] = []
-    previous_week_dates = [planning_week_start - timedelta(days=7 - offset) for offset in range(7)]
-    planning_week_dates = [planning_week_start + timedelta(days=offset) for offset in range(7)]
-
-    for index in range(active_driver_count):
-        roster = roster_patterns[index % len(roster_patterns)]
-        capability = capability_patterns[index % len(capability_patterns)]
-        driver_id = f"RDRV-{index + 1:02d}"
-        driver_name = f"{roster['driver_name']} {index // len(roster_patterns) + 1:02d}"
-        regular_pattern = _csv_tokens(roster.get("regular_pattern"))
-        approved_unavailable_dates = [
-            current.isoformat()
-            for offset, current in enumerate(planning_week_dates)
-            if _weekday_token(current) in regular_pattern
-            and ((index + offset) % 11 == 0 or (index % 9 == 0 and _weekday_token(current) == "Wed"))
-        ]
-        previous_week_blocked_dates = [
-            current.isoformat()
-            for offset, current in enumerate(previous_week_dates)
-            if _weekday_token(current) in regular_pattern and (index + offset) % 13 == 0
-        ]
-
-        capability_rows.append(
-            [
-                driver_id,
-                driver_name,
-                str(roster.get("employment_type") or ""),
-                str(roster.get("home_station") or ""),
-                str(capability.get("skills") or ""),
-                str(capability.get("vehicle_certifications") or ""),
-                str(capability.get("eligible_route_slot_classes") or ""),
-                str(capability.get("approved_restrictions") or ""),
-                ",".join(
-                    dict.fromkeys(
-                        [
-                            *_csv_tokens(roster.get("policy_tags")),
-                            *_csv_tokens(capability.get("policy_tags")),
-                        ]
-                    )
-                ),
-                str(capability.get("notes") or ""),
-            ]
-        )
-        availability_rows.append(
-            [
-                driver_id,
-                driver_name,
-                str(roster.get("employment_type") or ""),
-                _coerce_int(roster.get("target_shifts_per_week"), default=4),
-                str(roster.get("regular_pattern") or ""),
-                str(roster.get("on_call_eligible") or ""),
-                "yes" if index % 14 == 0 else str(roster.get("emergency_only") or ""),
-                ",".join(approved_unavailable_dates),
-                ",".join(previous_week_blocked_dates),
-                str(roster.get("policy_tags") or ""),
-                f"Deterministic realistic roster row {index + 1:02d}",
-            ]
-        )
-
-        worked_days = 0
-        for offset, current in enumerate(previous_week_dates):
-            weekday = _weekday_token(current)
-            if current.isoformat() in previous_week_blocked_dates:
-                continue
-            if weekday in regular_pattern and (index + offset) % 3 != 0:
-                actual_minutes = 510 + ((index * 37 + offset * 13) % 120)
-                route_id = f"CX{80 + ((index + offset) % 40):03d}"
-                actual_hours_rows.append(
-                    [
-                        current.isoformat(),
-                        driver_id,
-                        driver_name,
-                        actual_minutes,
-                        route_id,
-                        f"EOS {current.isoformat()}",
-                        f"eos:{current.isoformat()}:{driver_id}:{route_id}",
-                    ]
-                )
-                worked_days += 1
-            if worked_days >= (3 if index % 10 == 0 else 2):
-                break
+    route_slots = _load_realistic_stage04_example(
+        source_artifacts["route_slot_requirements"]
+    )
+    driver_capabilities = _load_realistic_stage04_example(
+        source_artifacts["driver_capabilities"]
+    )
+    approved_availability = _load_realistic_stage04_example(
+        source_artifacts["approved_availability"]
+    )
+    actual_hours = _load_realistic_stage04_example(source_artifacts["actual_hours"])
 
     return {
-        "route_slot_requirements": {
-            "columns": [
-                "service_date",
-                "route_slot_id",
-                "route_slot_class",
-                "required_skill",
-                "vehicle_type",
-                "shift_start",
-                "shift_end",
-                "estimated_hours",
-                "required_count",
-                "route_id",
-                "source_message_id",
-                "station_code",
-                "service_area",
-                "source_snapshot_row_ref",
-            ],
-            "rows": route_slot_rows,
-            "daily_demand_columns": route_demand_columns,
-            "daily_demand_rows": route_demand_rows,
-            "planner_notes": [
-                "Demand remains below four weekly shifts per active driver across the 40-driver realistic pilot.",
-            ],
-        },
-        "driver_capabilities": {
-            "columns": [
-                "driver_id",
-                "driver_name",
-                "employment_type",
-                "home_station",
-                "skills",
-                "vehicle_certifications",
-                "eligible_route_slot_classes",
-                "approved_restrictions",
-                "policy_tags",
-                "notes",
-            ],
-            "rows": capability_rows,
-        },
-        "approved_availability": {
-            "columns": [
-                "driver_id",
-                "driver_name",
-                "employment_type",
-                "target_shifts_per_week",
-                "regular_pattern",
-                "on_call_eligible",
-                "emergency_only",
-                "approved_unavailable_dates",
-                "previous_week_blocked_dates",
-                "policy_tags",
-                "notes",
-            ],
-            "rows": availability_rows,
-            "planner_notes": [
-                "Planning-week daily state is derived from regular-pattern coverage plus explicit blocked dates.",
-            ],
-        },
-        "actual_hours": {
-            "columns": [
-                "service_date",
-                "driver_id",
-                "driver_name",
-                "actual_minutes",
-                "route_id",
-                "source",
-                "source_snapshot_row_ref",
-            ],
-            "rows": actual_hours_rows,
-            "external_evidence_refs": ["eos-upload-2026-03-03"],
-        },
+        "route_slot_requirements": _enrich_realistic_route_slot_requirements(
+            route_slots,
+            planning_week_id=str(source.get("planning_week_id") or ""),
+        ),
+        "driver_capabilities": _enrich_realistic_driver_capabilities(
+            driver_capabilities,
+            planning_week_id=str(source.get("planning_week_id") or ""),
+        ),
+        "approved_availability": _enrich_realistic_approved_availability(
+            approved_availability,
+            planning_week_id=str(source.get("planning_week_id") or ""),
+        ),
+        "actual_hours": _enrich_realistic_actual_hours(
+            actual_hours,
+            driver_capabilities=driver_capabilities,
+            planning_week_id=str(source.get("planning_week_id") or ""),
+        ),
     }
+
+
+def _load_realistic_stage04_example(path_text: Any) -> dict[str, Any]:
+    path = REPO_ROOT / str(path_text)
+    loaded = yaml.safe_load(path.read_text(encoding="utf-8"))
+    if not isinstance(loaded, dict):
+        raise ValueError(f"realistic Stage04 example must decode to an object: {path}")
+    return copy.deepcopy(loaded)
+
+
+def _enrich_realistic_route_slot_requirements(
+    example: dict[str, Any],
+    *,
+    planning_week_id: str,
+) -> dict[str, Any]:
+    columns = [str(column) for column in example.get("columns") or []]
+    extra_columns = [
+        column
+        for column in ("route_family", "preferred_shift_band", "projected_minutes")
+        if column not in columns
+    ]
+    rows = []
+    for row in _rows_to_dicts(columns, list(example.get("rows") or [])):
+        enriched = dict(row)
+        enriched["route_family"] = str(
+            row.get("route_family") or _route_family_token(str(row.get("route_slot_class") or ""))
+        ).strip()
+        enriched["preferred_shift_band"] = str(
+            row.get("preferred_shift_band")
+            or row.get("slot_band")
+            or _preferred_shift_band_token(str(row.get("route_slot_class") or ""))
+        ).strip()
+        enriched["projected_minutes"] = _coerce_int(
+            row.get("projected_minutes"),
+            default=int(round(_coerce_float(row.get("estimated_hours"), default=0.0) * 60.0)),
+        )
+        rows.append([enriched.get(column, "") for column in columns + extra_columns])
+
+    daily_demand_columns = [str(column) for column in example.get("daily_demand_columns") or []]
+    daily_demand_extra_columns = (
+        ["standard_slot_count"] if "standard_slot_count" not in daily_demand_columns else []
+    )
+    daily_demand_rows = []
+    for row in _rows_to_dicts(daily_demand_columns, list(example.get("daily_demand_rows") or [])):
+        enriched = dict(row)
+        enriched["standard_slot_count"] = _coerce_int(
+            row.get("standard_slot_count"),
+            default=(
+                _coerce_int(row.get("standard_early_slot_count"), default=0)
+                + _coerce_int(row.get("standard_late_slot_count"), default=0)
+            ),
+        )
+        daily_demand_rows.append(
+            [enriched.get(column, "") for column in daily_demand_columns + daily_demand_extra_columns]
+        )
+
+    notes = [str(item) for item in example.get("planner_notes") or [] if str(item).strip()]
+    notes.append(
+        "Deterministic realistic adapter adds route_family, preferred_shift_band, and projected_minutes helper fields for Stage04 bridge/runtime use."
+    )
+
+    example["planning_week_id"] = planning_week_id
+    example["columns"] = columns + extra_columns
+    example["rows"] = rows
+    example["daily_demand_columns"] = daily_demand_columns + daily_demand_extra_columns
+    example["daily_demand_rows"] = daily_demand_rows
+    example["planner_notes"] = list(dict.fromkeys(notes))
+    return example
+
+
+def _enrich_realistic_driver_capabilities(
+    example: dict[str, Any],
+    *,
+    planning_week_id: str,
+) -> dict[str, Any]:
+    example["planning_week_id"] = planning_week_id
+    example["planner_notes"] = list(
+        dict.fromkeys(str(item) for item in example.get("planner_notes") or [] if str(item).strip())
+    )
+    return example
+
+
+def _enrich_realistic_approved_availability(
+    example: dict[str, Any],
+    *,
+    planning_week_id: str,
+) -> dict[str, Any]:
+    columns = [str(column) for column in example.get("columns") or []]
+    extra_columns = [
+        column
+        for column in ("previous_week_state", "normalized_availability_state")
+        if column not in columns
+    ]
+    rows = []
+    for row in _rows_to_dicts(columns, list(example.get("rows") or [])):
+        enriched = dict(row)
+        enriched["previous_week_state"] = _normalized_previous_week_state_label(
+            row.get("previous_week_state") or row.get("previous_week_same_day_state")
+        )
+        enriched["normalized_availability_state"] = _normalized_availability_state_label(
+            row.get("availability_state")
+        )
+        rows.append([enriched.get(column, "") for column in columns + extra_columns])
+
+    notes = [str(item) for item in example.get("planner_notes") or [] if str(item).strip()]
+    notes.append(
+        "Deterministic realistic adapter adds previous_week_state and normalized_availability_state helper fields while preserving one row per driver per day."
+    )
+
+    example["planning_week_id"] = planning_week_id
+    example["columns"] = columns + extra_columns
+    example["rows"] = rows
+    example["planner_notes"] = list(dict.fromkeys(notes))
+    return example
+
+
+def _enrich_realistic_actual_hours(
+    example: dict[str, Any],
+    *,
+    driver_capabilities: dict[str, Any],
+    planning_week_id: str,
+) -> dict[str, Any]:
+    columns = [str(column) for column in example.get("columns") or []]
+    extra_columns = [
+        column
+        for column in (
+            "normalized_historical_state",
+            "rolling_7_total_minutes",
+            "rolling_7_limit_minutes",
+            "rolling_7_remaining_minutes",
+        )
+        if column not in columns
+    ]
+    limits_by_driver = _rolling_7_limits_by_driver(driver_capabilities)
+    total_minutes_by_driver = _actual_minutes_by_driver(example)
+
+    rows = []
+    for row in _rows_to_dicts(columns, list(example.get("rows") or [])):
+        enriched = dict(row)
+        historical_state = _normalized_previous_week_state_label(row.get("historical_state"))
+        total_minutes = total_minutes_by_driver.get(str(row.get("driver_id") or "").strip(), 0)
+        limit_minutes = limits_by_driver.get(
+            str(row.get("driver_id") or "").strip(),
+            max(total_minutes, 2400),
+        )
+        enriched["historical_state"] = historical_state
+        enriched["normalized_historical_state"] = _normalized_previous_week_state_category(
+            raw_state=historical_state,
+            actual_minutes=_coerce_int(row.get("actual_minutes"), default=0),
+            call_in_sick_flag=_coerce_bool(row.get("call_in_sick_flag")),
+            cancellation_flag=_coerce_bool(row.get("cancellation_flag")),
+            non_working_day_flag=_coerce_bool(row.get("non_working_day_flag")),
+        )
+        enriched["rolling_7_total_minutes"] = total_minutes
+        enriched["rolling_7_limit_minutes"] = limit_minutes
+        enriched["rolling_7_remaining_minutes"] = max(limit_minutes - total_minutes, 0)
+        rows.append([enriched.get(column, "") for column in columns + extra_columns])
+
+    notes = [str(item) for item in example.get("planner_notes") or [] if str(item).strip()]
+    notes.append(
+        "Deterministic realistic adapter normalizes BLANK history rows to NA and adds rolling_7_* helper fields for Stage04 bridge/runtime use."
+    )
+
+    example["planning_week_id"] = planning_week_id
+    example["columns"] = columns + extra_columns
+    example["rows"] = rows
+    example["planner_notes"] = list(dict.fromkeys(notes))
+    return example
 
 
 def _load_realistic_weekly_stage04_source_material() -> dict[str, Any]:
@@ -947,6 +923,95 @@ def _load_realistic_weekly_stage04_source_material() -> dict[str, Any]:
     if not isinstance(loaded, dict):
         raise ValueError("realistic Stage04 source material must decode to an object")
     return loaded
+
+
+def _rolling_7_limits_by_driver(driver_capabilities: dict[str, Any]) -> dict[str, int]:
+    columns = [str(column) for column in driver_capabilities.get("columns") or []]
+    limits: dict[str, int] = {}
+    for row in _rows_to_dicts(columns, list(driver_capabilities.get("rows") or [])):
+        driver_id = str(row.get("driver_id") or "").strip()
+        if not driver_id:
+            continue
+        restrictions = _csv_tokens(row.get("approved_restrictions"))
+        limits[driver_id] = _restriction_prefixed_int(
+            restrictions,
+            prefix="max_minutes_rolling7=",
+        ) or 2400
+    return limits
+
+
+def _actual_minutes_by_driver(actual_hours: dict[str, Any]) -> dict[str, int]:
+    columns = [str(column) for column in actual_hours.get("columns") or []]
+    totals: dict[str, int] = {}
+    for row in _rows_to_dicts(columns, list(actual_hours.get("rows") or [])):
+        driver_id = str(row.get("driver_id") or "").strip()
+        if not driver_id:
+            continue
+        totals[driver_id] = totals.get(driver_id, 0) + _coerce_int(
+            row.get("actual_minutes"),
+            default=0,
+        )
+    return totals
+
+
+def _normalized_previous_week_state_label(value: Any) -> str:
+    token = str(value or "").strip().upper()
+    if not token or token == "BLANK":
+        return "NA"
+    return token
+
+
+def _normalized_availability_state_label(value: Any) -> str:
+    token = str(value or "").strip().upper()
+    if token in {"PREFERRED", "AVAILABLE", "AVOID_IF_POSSIBLE"}:
+        return "available"
+    if token == "ON_CALL_ONLY":
+        return "emergency_only"
+    if token == "CANNOT":
+        return "approved_unavailable"
+    return token.lower() if token else "unknown"
+
+
+def _normalized_previous_week_state_category(
+    *,
+    raw_state: str,
+    actual_minutes: int,
+    call_in_sick_flag: bool,
+    cancellation_flag: bool,
+    non_working_day_flag: bool,
+) -> str:
+    token = _normalized_previous_week_state_label(raw_state)
+    if token == "WORKED":
+        return "worked"
+    if token in {"ON_CALL", "DISPATCH"}:
+        return "worked" if actual_minutes > 0 else "available_not_assigned"
+    if token in {"SICK_CALL", "CANCELLED"} or call_in_sick_flag or cancellation_flag:
+        return "blocked_previous_week"
+    if token == "NA" or non_working_day_flag:
+        return "pattern_off"
+    if actual_minutes > 0:
+        return "worked"
+    return "available_not_assigned"
+
+
+def _route_family_token(route_slot_class: str) -> str:
+    token = str(route_slot_class or "").strip()
+    if "_" in token:
+        return token.split("_", maxsplit=1)[0]
+    return token
+
+
+def _preferred_shift_band_token(route_slot_class: str) -> str:
+    token = str(route_slot_class or "").strip().lower()
+    if token.endswith("_early"):
+        return "early"
+    if token.endswith("_late"):
+        return "late"
+    if "rescue" in token:
+        return "rescue"
+    if "overflow" in token:
+        return "overflow"
+    return ""
 
 
 def _rows_to_dicts(columns: list[str], rows: list[Any]) -> list[dict[str, Any]]:
@@ -982,6 +1047,30 @@ def _coerce_int(value: Any, *, default: int) -> int:
         return int(value)
     except (TypeError, ValueError):
         return int(default)
+
+
+def _coerce_float(value: Any, *, default: float) -> float:
+    if value is None:
+        return float(default)
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return float(default)
+
+
+def _coerce_bool(value: Any) -> bool:
+    return str(value or "").strip().lower() in {"1", "true", "yes", "y"}
+
+
+def _restriction_prefixed_int(restrictions: tuple[str, ...], *, prefix: str) -> int | None:
+    for restriction in restrictions:
+        if not restriction.startswith(prefix):
+            continue
+        try:
+            return int(restriction.removeprefix(prefix))
+        except ValueError:
+            return None
+    return None
 
 
 def _weekday_token(current: date) -> str:
@@ -1341,7 +1430,8 @@ def _stage04_analysis(
     ]
     tradeoffs = [str(item) for item in summary.get("tradeoffs") or []]
     warnings = [str(item) for item in summary.get("warnings") or []]
-    coverage_summary = summary.get("coverage_summary") or candidate_delta.get("coverage_summary") or {}
+    coverage_summary = dict(candidate_delta.get("coverage_summary") or {})
+    coverage_summary.update(summary.get("coverage_summary") or {})
     if not tradeoffs:
         uncovered_count = int(coverage_summary.get("uncovered_route_slots") or 0)
         pending_count = int(coverage_summary.get("pending_route_slots") or 0)
@@ -1377,6 +1467,7 @@ def _stage04_analysis(
         iterations.append(
             {
                 "iteration_index": iteration_index,
+                "phase": str(item.get("phase") or "baseline"),
                 "pressure_group_id": str(item.get("pressure_group_id") or ""),
                 "pressure_service_date": str(item.get("pressure_service_date") or ""),
                 "pressure_station_code": str(item.get("pressure_station_code") or ""),
@@ -1384,8 +1475,15 @@ def _stage04_analysis(
                 "batch_size": int(item.get("batch_size") or 0),
                 "assigned_route_slot_ids": list(item.get("assigned_route_slot_ids") or []),
                 "uncovered_route_slot_ids": list(item.get("uncovered_route_slot_ids") or []),
+                "moved_route_slot_ids": list(item.get("moved_route_slot_ids") or []),
                 "repair_move_count": int(item.get("repair_move_count") or 0),
                 "candidate_evaluation_count": int(item.get("candidate_evaluation_count") or 0),
+                "soft_objective_delta": float(item.get("soft_objective_delta") or 0.0),
+                "stability_delta": float(item.get("stability_delta") or 0.0),
+                "target_shift_gap_delta": float(item.get("target_shift_gap_delta") or 0.0),
+                "preference_fit_delta": float(item.get("preference_fit_delta") or 0.0),
+                "accepted_move_reasons": list(item.get("accepted_move_reasons") or []),
+                "rejected_move_reasons": list(item.get("rejected_move_reasons") or []),
                 "route_allocations": route_allocations,
                 "repair_moves": iteration_repairs,
                 "tradeoffs": [
@@ -1396,6 +1494,7 @@ def _stage04_analysis(
 
     return {
         "coverage_summary": coverage_summary,
+        "phase_counts": dict(coverage_summary.get("phase_counts") or {}),
         "soft_score_totals": summary.get("soft_score_totals") or {},
         "tradeoffs": tradeoffs,
         "warnings": warnings,

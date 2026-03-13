@@ -113,6 +113,63 @@ def test_score_candidate_makes_previous_week_stability_a_first_class_term() -> N
     assert matched.total > non_matched.total
 
 
+def test_score_candidate_exposes_explicit_preference_fit_terms() -> None:
+    bundle = _build_preference_bundle()
+    route_slot = bundle.route_slots[0]
+    preferred_driver = bundle.drivers[0]
+    avoid_driver = bundle.drivers[1]
+    on_call_driver = bundle.drivers[2]
+
+    preferred = score_candidate(
+        bundle=bundle,
+        route_slot=route_slot,
+        driver=preferred_driver,
+        hard_validation=HardValidationResult(status="pass", reasons=()),
+    )
+    avoid = score_candidate(
+        bundle=bundle,
+        route_slot=route_slot,
+        driver=avoid_driver,
+        hard_validation=HardValidationResult(status="pass", reasons=()),
+    )
+    on_call = score_candidate(
+        bundle=bundle,
+        route_slot=route_slot,
+        driver=on_call_driver,
+        hard_validation=HardValidationResult(status="pass", reasons=()),
+    )
+
+    assert preferred.availability_state_fit > avoid.availability_state_fit > on_call.availability_state_fit
+    assert preferred.preferred_shift_band_fit > avoid.preferred_shift_band_fit
+    assert preferred.preferred_route_slot_class_fit > avoid.preferred_route_slot_class_fit
+    assert preferred.preference_fit > avoid.preference_fit
+    assert preferred.preference_fit > on_call.preference_fit
+
+
+def test_score_candidate_uses_explicit_seniority_and_reliability_signals() -> None:
+    bundle = _build_signal_bundle()
+    route_slot = bundle.route_slots[0]
+    senior_driver = bundle.drivers[0]
+    junior_driver = bundle.drivers[1]
+
+    senior = score_candidate(
+        bundle=bundle,
+        route_slot=route_slot,
+        driver=senior_driver,
+        hard_validation=HardValidationResult(status="pass", reasons=()),
+    )
+    junior = score_candidate(
+        bundle=bundle,
+        route_slot=route_slot,
+        driver=junior_driver,
+        hard_validation=HardValidationResult(status="pass", reasons=()),
+    )
+
+    assert senior.seniority_preference_fit > junior.seniority_preference_fit
+    assert senior.reliability_score > junior.reliability_score
+    assert senior.total > junior.total
+
+
 def _build_bundle(*, actual_minutes: int):
     workflow_run = {
         "workflow_run_id": "wr-weekly-score",
@@ -294,4 +351,314 @@ def _build_stability_bundle():
         driver_capabilities_artifact=driver_caps_artifact,
         approved_availability_artifact=availability_artifact,
         actual_hours_artifact=actual_hours_artifact,
+    )
+
+
+def _build_preference_bundle():
+    workflow_run = {
+        "workflow_run_id": "wr-weekly-preference",
+        "partition_key": "PW-2026-W10",
+    }
+    return build_weekly_schedule_control_bundle(
+        workflow_run=workflow_run,
+        route_slot_requirements_artifact={
+            "artifact_version_id": "av-routes-preference",
+            "artifact_kind": "planning.route_slot_requirements.workbook",
+            "dataset_key": "planning.route_slot_requirements.workbook",
+            "metadata_json": {
+                "columns": [
+                    "service_date",
+                    "route_slot_id",
+                    "route_slot_class",
+                    "required_skill",
+                    "vehicle_type",
+                    "shift_start",
+                    "shift_end",
+                    "estimated_hours",
+                    "source_snapshot_row_ref",
+                    "preferred_shift_band",
+                ],
+                "rows": [
+                    [
+                        "2026-03-02",
+                        "slot-20260302-early",
+                        "cycle1_standard_early",
+                        "parcel_delivery",
+                        "XL_van",
+                        "10:00",
+                        "18:00",
+                        8.0,
+                        "amazon:row-preference",
+                        "early",
+                    ],
+                ],
+            },
+        },
+        driver_capabilities_artifact={
+            "artifact_version_id": "av-driver-preference",
+            "artifact_kind": "planning.driver_capabilities.workbook",
+            "dataset_key": "planning.driver_capabilities.workbook",
+            "metadata_json": {
+                "columns": [
+                    "driver_id",
+                    "skills",
+                    "vehicle_certifications",
+                    "eligible_route_slot_classes",
+                    "approved_restrictions",
+                    "seniority_rank",
+                    "attendance_reliability_index",
+                    "preferred_route_slot_classes",
+                    "preferred_shift_band",
+                    "notes",
+                ],
+                "rows": [
+                    [
+                        "DRV-01",
+                        "parcel_delivery",
+                        "XL_van",
+                        "cycle1_standard_early",
+                        "",
+                        4,
+                        0.98,
+                        "cycle1_standard_early",
+                        "early",
+                        "",
+                    ],
+                    [
+                        "DRV-02",
+                        "parcel_delivery",
+                        "XL_van",
+                        "cycle1_standard_early",
+                        "",
+                        8,
+                        0.9,
+                        "",
+                        "late",
+                        "",
+                    ],
+                    [
+                        "DRV-03",
+                        "parcel_delivery",
+                        "XL_van",
+                        "cycle1_standard_early",
+                        "",
+                        10,
+                        0.92,
+                        "",
+                        "late",
+                        "",
+                    ],
+                ],
+            },
+        },
+        approved_availability_artifact={
+            "artifact_version_id": "av-availability-preference",
+            "artifact_kind": "planning.approved_availability.workbook",
+            "dataset_key": "planning.approved_availability.workbook",
+            "metadata_json": {
+                "columns": [
+                    "driver_id",
+                    "driver_name",
+                    "service_date",
+                    "availability_state",
+                    "preferred_route_slot_classes",
+                    "avoid_route_slot_classes",
+                    "target_shifts_per_week",
+                    "on_call_eligible",
+                    "preferred_shift_band",
+                    "previous_week_same_day_state",
+                    "locked_by_manager",
+                    "notes",
+                ],
+                "rows": [
+                    [
+                        "DRV-01",
+                        "Preferred",
+                        "2026-03-02",
+                        "PREFERRED",
+                        "cycle1_standard_early",
+                        "",
+                        1,
+                        "no",
+                        "early",
+                        "WORKED",
+                        "no",
+                        "",
+                    ],
+                    [
+                        "DRV-02",
+                        "Avoid",
+                        "2026-03-02",
+                        "AVOID_IF_POSSIBLE",
+                        "",
+                        "cycle1_standard_early",
+                        1,
+                        "no",
+                        "late",
+                        "NA",
+                        "no",
+                        "",
+                    ],
+                    [
+                        "DRV-03",
+                        "On Call",
+                        "2026-03-02",
+                        "ON_CALL_ONLY",
+                        "",
+                        "",
+                        1,
+                        "yes",
+                        "late",
+                        "NA",
+                        "no",
+                        "",
+                    ],
+                ],
+            },
+        },
+    )
+
+
+def _build_signal_bundle():
+    workflow_run = {
+        "workflow_run_id": "wr-weekly-signals",
+        "partition_key": "PW-2026-W10",
+    }
+    return build_weekly_schedule_control_bundle(
+        workflow_run=workflow_run,
+        route_slot_requirements_artifact={
+            "artifact_version_id": "av-routes-signals",
+            "artifact_kind": "planning.route_slot_requirements.workbook",
+            "dataset_key": "planning.route_slot_requirements.workbook",
+            "metadata_json": {
+                "columns": [
+                    "service_date",
+                    "route_slot_id",
+                    "route_slot_class",
+                    "required_skill",
+                    "vehicle_type",
+                    "shift_start",
+                    "shift_end",
+                    "estimated_hours",
+                    "source_snapshot_row_ref",
+                    "preferred_shift_band",
+                ],
+                "rows": [
+                    [
+                        "2026-03-02",
+                        "slot-20260302-late",
+                        "cycle1_standard_late",
+                        "parcel_delivery",
+                        "XL_van",
+                        "11:30",
+                        "20:00",
+                        8.0,
+                        "amazon:row-signal",
+                        "late",
+                    ],
+                ],
+            },
+        },
+        driver_capabilities_artifact={
+            "artifact_version_id": "av-driver-signals",
+            "artifact_kind": "planning.driver_capabilities.workbook",
+            "dataset_key": "planning.driver_capabilities.workbook",
+            "metadata_json": {
+                "columns": [
+                    "driver_id",
+                    "skills",
+                    "vehicle_certifications",
+                    "eligible_route_slot_classes",
+                    "approved_restrictions",
+                    "seniority_rank",
+                    "attendance_reliability_index",
+                    "recent_sick_calls_14d",
+                    "recent_cancellations_14d",
+                    "preferred_route_slot_classes",
+                    "preferred_shift_band",
+                    "notes",
+                ],
+                "rows": [
+                    [
+                        "DRV-01",
+                        "parcel_delivery",
+                        "XL_van",
+                        "cycle1_standard_late",
+                        "",
+                        1,
+                        0.99,
+                        0,
+                        0,
+                        "cycle1_standard_late",
+                        "late",
+                        "",
+                    ],
+                    [
+                        "DRV-02",
+                        "parcel_delivery",
+                        "XL_van",
+                        "cycle1_standard_late",
+                        "",
+                        20,
+                        0.78,
+                        2,
+                        1,
+                        "cycle1_standard_late",
+                        "late",
+                        "",
+                    ],
+                ],
+            },
+        },
+        approved_availability_artifact={
+            "artifact_version_id": "av-availability-signals",
+            "artifact_kind": "planning.approved_availability.workbook",
+            "dataset_key": "planning.approved_availability.workbook",
+            "metadata_json": {
+                "columns": [
+                    "driver_id",
+                    "driver_name",
+                    "service_date",
+                    "availability_state",
+                    "preferred_route_slot_classes",
+                    "avoid_route_slot_classes",
+                    "target_shifts_per_week",
+                    "on_call_eligible",
+                    "preferred_shift_band",
+                    "previous_week_same_day_state",
+                    "locked_by_manager",
+                    "notes",
+                ],
+                "rows": [
+                    [
+                        "DRV-01",
+                        "Senior",
+                        "2026-03-02",
+                        "PREFERRED",
+                        "cycle1_standard_late",
+                        "",
+                        1,
+                        "no",
+                        "late",
+                        "WORKED",
+                        "no",
+                        "",
+                    ],
+                    [
+                        "DRV-02",
+                        "Junior",
+                        "2026-03-02",
+                        "PREFERRED",
+                        "cycle1_standard_late",
+                        "",
+                        1,
+                        "no",
+                        "late",
+                        "WORKED",
+                        "no",
+                        "",
+                    ],
+                ],
+            },
+        },
     )
