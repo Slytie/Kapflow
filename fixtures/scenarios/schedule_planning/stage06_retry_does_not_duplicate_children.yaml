@@ -34,6 +34,7 @@ steps:
       human_task_id: "{{create_stage06_review.result.human_task.human_task_id}}"
       actor_id: human:dispatch-supervisor-3
       actor_type: human
+      actor_roles: [dispatch_supervisor]
       lease_seconds: 300
       idempotency_key: "scenario:{{scenario_id}}:tasks.claim:review-root"
     save_as: claim_stage06_review
@@ -54,7 +55,6 @@ steps:
       actor_type: human
       outcome: draft_is_publish_ready
       idempotency_key: "scenario:{{scenario_id}}:tasks.complete:review-root"
-    expect_error_code: duplicate_idempotency_key
     save_as: retry_complete_stage06_review
 expected_events:
   ordered_contains:

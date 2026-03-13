@@ -63,6 +63,7 @@ steps:
       human_task_id: "{{activate_issue.result.human_task.human_task_id}}"
       actor_id: human:ops-manager-2
       actor_type: human
+      actor_roles: [operations_manager]
       lease_seconds: 300
       idempotency_key: "scenario:{{scenario_id}}:tasks.claim:triage"
     save_as: claim_triage
@@ -141,6 +142,7 @@ steps:
       human_task_id: "{{complete_triage_after_upload.result.spawned_children.0.human_task_id}}"
       actor_id: human:ops-manager-2
       actor_type: human
+      actor_roles: [operations_manager]
       lease_seconds: 300
       idempotency_key: "scenario:{{scenario_id}}:tasks.claim:final-review"
     save_as: claim_final_review
@@ -193,6 +195,7 @@ steps:
       approval_id: "{{request_major_replan_approval.approval.approval_id}}"
       actor_id: human:ops-manager-2
       actor_type: human
+      actor_roles: [operations_manager]
       response_kind: approve
       response_reason: "Major replan approved due no-show"
       idempotency_key: "scenario:{{scenario_id}}:approvals.respond:major-replan"

@@ -60,6 +60,7 @@ steps:
       human_task_id: "{{activate_issue.result.human_task.human_task_id}}"
       actor_id: human:ops-manager-6
       actor_type: human
+      actor_roles: [operations_manager]
       lease_seconds: 300
       idempotency_key: "scenario:{{scenario_id}}:tasks.claim:root"
     save_as: claim_issue
@@ -96,6 +97,7 @@ steps:
       human_task_id: "{{complete_issue.result.spawned_children.0.human_task_id}}"
       actor_id: human:ops-manager-6
       actor_type: human
+      actor_roles: [operations_manager]
       lease_seconds: 300
       idempotency_key: "scenario:{{scenario_id}}:tasks.claim:final"
     save_as: claim_final_review
@@ -127,6 +129,7 @@ steps:
       approval_id: "{{request_approval.approval.approval_id}}"
       actor_id: human:ops-manager-6
       actor_type: human
+      actor_roles: [operations_manager]
       response_kind: approve
       response_reason: "Replan approved"
       idempotency_key: "scenario:{{scenario_id}}:approvals.respond:major"

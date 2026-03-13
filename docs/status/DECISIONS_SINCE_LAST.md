@@ -8,10 +8,22 @@ Record any decisions made since the last session so a fresh Codex run can rehydr
 - Alias decision: renumbered historical task briefs keep short deprecated-alias notes so future sessions can map old references without reopening the duplicate-ID ambiguity.
 - Validation decision: backlog validation now needs to fail on duplicate task-file IDs and duplicate task-index rows so this class of drift cannot hide behind prefix collisions.
 
+## 2026-03-13 (TASK-0082 scoped command receipts and replay)
+- Retry-contract decision: canonical CLI/API command-boundary retries now resolve through scoped `command_receipts`, so same-scope retries with the same normalized request replay committed success with `idempotent_replay=true` and stable `receipt` metadata instead of surfacing `duplicate_idempotency_key`.
+- Mismatch decision: reusing the same `(command_name, scope_key, idempotency_key)` tuple with a different normalized request now fails closed as `command_receipt_mismatch` (`409`) rather than replaying or mutating again.
+- Scope decision: the same client `idempotency_key` may be reused safely across different command scopes; receipt uniqueness is `(command_name, scope_key, idempotency_key)` rather than a single global key.
+- Boundary decision: raw `events append` keeps explicit event-store duplicate failure semantics (`duplicate_idempotency_key`), so receipt replay changes only the public mutation boundary and not low-level event append behavior.
+
 ## 2026-03-13 (TASK-0081 shared HTTP artifact ingress split)
 - Boundary decision: shared HTTP artifact ingress (`/api/v1/artifacts/ingest` and subject upload endpoints) now accepts request bytes only and rejects caller-controlled `source_path` and `storage_root`.
 - Provenance decision: shared HTTP ingress records `metadata_json.ingress_kind=request_bytes` and strips caller-supplied `seed_source_path` / `ingress_source_path`, while CLI/scenario/internal local seeding keeps normalized source-path metadata with `ingress_kind=local_source_path`.
 - Compatibility decision: CLI `artifacts ingest`, `artifacts seed-corpus`, and scenario-backed local seeding remain on the same canonical artifact path and were not removed or redesigned in this task.
+
+## 2026-03-13 (TASK-0080 write-boundary capability enforcement)
+- Enforcement decision: claim, complete, confirm-review, approval respond, and flag transition now consume the frozen shared capability decisions at the canonical write boundary before mutating rows or appending events.
+- Error-honesty decision: capability/principal denials now return explicit forbidden codes (`task_claim_forbidden`, `task_complete_forbidden`, `task_confirm_review_forbidden`, `approval_respond_forbidden`, `flag_transition_forbidden`) with structured `capability_id` / `reason_codes` / `reasons`, while state-machine conflicts remain on the existing conflict codes.
+- Caller-contract decision: role-gated non-HTTP callers (CLI/scenario/pilot/certification paths) must now pass explicit `actor_roles`; the runtime no longer relies on implicit role inference for `tasks.claim`, `approvals.respond`, or `flags.transition`.
+- Collaboration decision: artifact upload remains an intentionally broader collaboration/evidence surface; this task hardens other writes without introducing a new `artifact_upload_forbidden` path.
 
 ## 2026-03-13 (TASK-0076 board stability and query-surface classification)
 - Compatibility decision: `GET /api/v1/board/schedule-planning` now uses the current pointer-query contract and returns the documented board payload without redesigning that endpoint.

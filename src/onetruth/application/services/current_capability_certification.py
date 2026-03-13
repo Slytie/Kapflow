@@ -403,6 +403,7 @@ def _run_logistics_weekly_to_live_scenario(
         "approval_id": approval_id,
         "actor_id": "human:ops-manager-1",
         "actor_type": "human",
+        "actor_roles": ["operations_manager"],
         "response_kind": "approve",
         "idempotency_key": f"cert:{context.certification_key}:{context.scenario_id}:approval:respond",
     }

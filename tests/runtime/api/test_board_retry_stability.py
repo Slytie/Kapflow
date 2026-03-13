@@ -14,7 +14,7 @@ from tests.runtime.helpers.scenario_harness import RuntimeScenarioHarness
 SCENARIO_PATH = REPO_ROOT / "fixtures/scenarios/schedule_planning/stage06_publish_happy.yaml"
 
 
-def test_board_get_is_stable_and_claim_retry_does_not_duplicate_effects(tmp_path: Path) -> None:
+def test_board_get_is_stable_and_claim_retry_replays_without_duplicate_effects(tmp_path: Path) -> None:
     harness = RuntimeScenarioHarness.from_yaml(SCENARIO_PATH, tmp_path).prepare()
     created = harness.run_named_step("create_stage06_review")
     human_task_id = created["result"]["human_task"]["human_task_id"]
@@ -51,8 +51,10 @@ def test_board_get_is_stable_and_claim_retry_does_not_duplicate_effects(tmp_path
     )
 
     assert first_claim.status_code == 200
-    assert second_claim.status_code == 409
-    assert second_claim.payload["error"]["code"] == "duplicate_idempotency_key"
+    assert second_claim.status_code == 200
+    assert first_claim.payload["idempotent_replay"] is False
+    assert second_claim.payload["idempotent_replay"] is True
+    assert first_claim.payload["receipt"] == second_claim.payload["receipt"]
 
     events = harness.list_events()
     claimed_events = [

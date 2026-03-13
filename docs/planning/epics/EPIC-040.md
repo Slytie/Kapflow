@@ -28,6 +28,7 @@ Without a clear runtime model, the merger risks separate business-run and agent-
 - transcripts are evidence, not state
 - Schedule Planning Stage07 is a bounded exception loop inside the same workflow-run context
 - runtime work should instantiate the chosen package layout and persistence model rather than re-deciding them ad hoc
+- public mutation retries belong to the canonical command boundary via scoped receipts, while raw event append idempotency remains an internal event-store concern
 
 ## Recommended pattern cards (read cards first)
 - `PATTERN-001`

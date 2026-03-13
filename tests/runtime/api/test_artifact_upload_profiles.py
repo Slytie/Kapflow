@@ -120,6 +120,34 @@ def test_subject_upload_accepts_request_bytes(tmp_path: Path) -> None:
     assert base64.b64decode(downloaded.payload["content_base64"]) == STAGE06_DOC.read_bytes()
 
 
+def test_subject_upload_remains_broad_for_in_scope_non_candidate_actor(tmp_path: Path) -> None:
+    harness = RuntimeScenarioHarness.from_yaml(ATTACHMENT_SCENARIO_PATH, tmp_path).prepare()
+    created = harness.run_named_step("create_stage06_review")
+    human_task_id = str(created["result"]["human_task"]["human_task_id"])
+    client = RuntimeApiClient(
+        db_url=harness.db_url,
+        tenant_id="tenant-a",
+        domain_id="domain-x",
+        actor_id="human:auditor-2",
+        actor_type="human",
+        actor_roles=["auditor"],
+    )
+
+    uploaded = client.post(
+        f"/api/v1/human-tasks/{human_task_id}/artifacts/upload",
+        payload={
+            "artifact_kind": "schedule.supervisor_review.doc",
+            "artifact_role": "evidence",
+            "content_base64": _encoded_file(STAGE06_DOC),
+            "file_name": STAGE06_DOC.name,
+            "idempotency_key": f"api:{harness.scenario_id}:human-task-upload:broad-collaboration",
+        },
+    )
+
+    assert uploaded.status_code == 200
+    assert uploaded.payload["artifact_version"]["metadata_json"]["ingress_kind"] == "request_bytes"
+
+
 def test_shared_http_rejects_source_path_without_side_effects(tmp_path: Path) -> None:
     harness = RuntimeScenarioHarness.from_yaml(ATTACHMENT_SCENARIO_PATH, tmp_path).prepare()
     client = _api_client(harness)

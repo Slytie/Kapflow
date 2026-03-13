@@ -5,7 +5,7 @@ import json
 from pathlib import Path
 
 from onetruth.application.handlers.workflow_task_lifecycle import _stable_ingress_source_path
-from tests.runtime.helpers.runtime_cli import REPO_ROOT, run_cli, stderr_json, stdout_json
+from tests.runtime.helpers.runtime_cli import REPO_ROOT, run_cli, stdout_json
 
 SCHEDULE_TEMPLATE_PACK_ROOT = REPO_ROOT / "fixtures/workflows/schedule_planning/template_pack"
 EXAMPLE_CORPUS_MANIFEST = REPO_ROOT / "fixtures/example_document_corpus/manifest.yaml"
@@ -239,7 +239,7 @@ def test_manifest_seed_is_deterministic_and_round_trips_digest_metadata(tmp_path
         assert artifact["byte_size"] == len(content)
         assert fixture_id.startswith("schedule.")
 
-    # Seed retry with identical idempotency prefix fails closed.
+    # Seed retry with identical scoped inputs replays the committed success.
     retry = run_cli(
         "--db-url",
         db_url,
@@ -247,10 +247,12 @@ def test_manifest_seed_is_deterministic_and_round_trips_digest_metadata(tmp_path
         "seed-corpus",
         "--json",
         json.dumps(seed_payload_a),
-        expect_ok=False,
     )
-    assert retry.returncode != 0
-    assert stderr_json(retry)["error_code"] == "duplicate_idempotency_key"
+    retry_payload = stdout_json(retry)
+    assert retry_payload["status"] == "ok"
+    assert retry_payload["idempotent_replay"] is True
+    assert retry_payload["receipt"]["command_name"] == "artifacts.seed-corpus"
+    assert retry_payload["artifact_versions"] == seeded_a
 
 
 def test_non_fixture_ingress_source_path_uses_file_basename(tmp_path: Path) -> None:

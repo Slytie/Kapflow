@@ -259,6 +259,7 @@ def test_approval_respond_happy_path_transitions_state_and_emits_event(tmp_path:
         "approval_id": approval["approval_id"],
         "actor_id": "human:supervisor-1",
         "actor_type": "human",
+        "actor_roles": ["dispatch_supervisor"],
         "response_kind": "approve",
         "response_reason": "review complete",
         "idempotency_key": "idem-approval-respond-001",
@@ -306,6 +307,7 @@ def test_approval_negative_cannot_respond_twice(tmp_path: Path) -> None:
                 "approval_id": approval["approval_id"],
                 "actor_id": "human:supervisor-1",
                 "actor_type": "human",
+                "actor_roles": ["dispatch_supervisor"],
                 "response_kind": "approve",
                 "response_reason": "ok",
                 "idempotency_key": "idem-approval-respond-neg-001",
@@ -324,6 +326,7 @@ def test_approval_negative_cannot_respond_twice(tmp_path: Path) -> None:
                 "approval_id": approval["approval_id"],
                 "actor_id": "human:supervisor-2",
                 "actor_type": "human",
+                "actor_roles": ["dispatch_supervisor"],
                 "response_kind": "reject",
                 "response_reason": "late conflict",
                 "idempotency_key": "idem-approval-respond-neg-002",
@@ -375,7 +378,7 @@ def test_artifact_version_creation_round_trip_and_event(tmp_path: Path) -> None:
     assert created_events[0]["payload"]["dataset_key"] == "schedule.published_schedule.workbook"
 
 
-def test_artifact_version_idempotency_duplicate_key_fails_without_duplicate_effect(tmp_path: Path) -> None:
+def test_artifact_version_idempotency_replays_without_duplicate_effect(tmp_path: Path) -> None:
     db_url = f"sqlite:///{tmp_path / 'runtime.db'}"
     _run_cli("--db-url", db_url, "init-db")
 
@@ -400,7 +403,9 @@ def test_artifact_version_idempotency_duplicate_key_fails_without_duplicate_effe
         "--json",
         json.dumps(payload),
     )
-    assert _stdout_json(first)["status"] == "ok"
+    first_payload = _stdout_json(first)
+    assert first_payload["status"] == "ok"
+    assert first_payload["idempotent_replay"] is False
 
     second = _run_cli(
         "--db-url",
@@ -409,10 +414,15 @@ def test_artifact_version_idempotency_duplicate_key_fails_without_duplicate_effe
         "create-version",
         "--json",
         json.dumps(payload),
-        expect_ok=False,
     )
-    assert second.returncode != 0
-    assert _stderr_json(second)["error_code"] == "duplicate_idempotency_key"
+    second_payload = _stdout_json(second)
+    assert second_payload["status"] == "ok"
+    assert second_payload["idempotent_replay"] is True
+    assert second_payload["receipt"] == first_payload["receipt"]
+    assert (
+        second_payload["artifact_version"]["artifact_version_id"]
+        == first_payload["artifact_version"]["artifact_version_id"]
+    )
 
     listed = _stdout_json(
         _run_cli(
@@ -942,6 +952,7 @@ def test_pointer_promotion_keeps_governance_local_approval_checks(
                 "approval_id": approval["approval_id"],
                 "actor_id": "human:dispatch-supervisor-1",
                 "actor_type": "human",
+                "actor_roles": ["dispatch_supervisor"],
                 "response_kind": "approve",
                 "response_reason": "approved",
                 "idempotency_key": "idem-governance-local-approval-respond-001",
@@ -1294,6 +1305,7 @@ def test_cross_linkage_workflow_task_artifact_approval_pointer_chain(tmp_path: P
                 "approval_id": approval["approval_id"],
                 "actor_id": "human:dispatch-supervisor",
                 "actor_type": "human",
+                "actor_roles": ["dispatch_supervisor"],
                 "response_kind": "approve",
                 "response_reason": "publish approved",
                 "idempotency_key": "idem-chain-approval-respond-001",

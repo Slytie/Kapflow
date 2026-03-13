@@ -496,6 +496,7 @@ def _run_stage05_missing_workbook(
         human_task_id=str(stage05["human_task"]["human_task_id"]),
         actor_id="human:schedule-planner-pilot",
         actor_type="human",
+        actor_roles=["schedule_planner"],
         idempotency_key=f"pilot:{pilot_key}:{definition.pilot_id}:tasks.claim:stage05-information",
     )
 
@@ -544,6 +545,7 @@ def _run_stage06_publish_ready(
         human_task_id=stage06_human_task_id,
         actor_id="agent:pilot-stage06",
         actor_type="agent",
+        actor_roles=["dispatch_supervisor"],
         idempotency_key=f"pilot:{pilot_key}:{definition.pilot_id}:tasks.claim:stage06-review",
     )
 
@@ -617,6 +619,7 @@ def _run_stage06_publish_ready(
         human_task_id=final_review_human_task_id,
         actor_id="human:dispatch-supervisor-pilot",
         actor_type="human",
+        actor_roles=["dispatch_supervisor"],
         idempotency_key=f"pilot:{pilot_key}:{definition.pilot_id}:tasks.claim:stage06-final-review",
     )
     confirm_human_task_review_command(
@@ -669,6 +672,7 @@ def _run_stage06_publish_ready(
             "approval_id": approval_id,
             "actor_id": "human:dispatch-supervisor-pilot",
             "actor_type": "human",
+            "actor_roles": ["dispatch_supervisor"],
             "response_kind": "approve",
             "response_reason": "Pilot publish-ready branch approved.",
             "idempotency_key": f"pilot:{pilot_key}:{definition.pilot_id}:approvals.respond:stage06-publish",
@@ -738,6 +742,7 @@ def _run_stage06_needs_information(
         human_task_id=stage06_human_task_id,
         actor_id="agent:pilot-stage06",
         actor_type="agent",
+        actor_roles=["dispatch_supervisor"],
         idempotency_key=f"pilot:{pilot_key}:{definition.pilot_id}:tasks.claim:stage06-review",
     )
 
@@ -806,6 +811,7 @@ def _run_stage03_06_human_gated(
         human_task_id=stage04_human_task_id,
         actor_id="human:ops-manager-pilot",
         actor_type="human",
+        actor_roles=["operations_manager"],
         idempotency_key=f"pilot:{pilot_key}:{definition.pilot_id}:tasks.claim:stage04-capacity-signoff",
     )
     complete_human_task_command(
@@ -842,6 +848,7 @@ def _run_stage03_06_human_gated(
             "approval_id": str(stage04_approval["approval_id"]),
             "actor_id": "human:ops-manager-pilot",
             "actor_type": "human",
+            "actor_roles": ["operations_manager"],
             "response_kind": "approve",
             "response_reason": "Stage04 capacity plan is signed off.",
             "idempotency_key": f"pilot:{pilot_key}:{definition.pilot_id}:approvals.respond:stage04-capacity-signoff",
@@ -870,6 +877,7 @@ def _run_stage03_06_human_gated(
         human_task_id=str(stage05["human_task"]["human_task_id"]),
         actor_id="human:schedule-planner-pilot",
         actor_type="human",
+        actor_roles=["schedule_planner"],
         idempotency_key=f"pilot:{pilot_key}:{definition.pilot_id}:tasks.claim:stage05-information-request",
     )
 
@@ -896,6 +904,7 @@ def _run_stage03_06_human_gated(
         human_task_id=stage06_human_task_id,
         actor_id="human:dispatch-supervisor-pilot",
         actor_type="human",
+        actor_roles=["dispatch_supervisor"],
         idempotency_key=f"pilot:{pilot_key}:{definition.pilot_id}:tasks.claim:stage06-review",
     )
     stage06_result = complete_human_task_command(
@@ -958,6 +967,7 @@ def _run_stage03_06_human_gated(
         human_task_id=final_review_human_task_id,
         actor_id="human:dispatch-supervisor-pilot",
         actor_type="human",
+        actor_roles=["dispatch_supervisor"],
         idempotency_key=f"pilot:{pilot_key}:{definition.pilot_id}:tasks.claim:stage06-final-review",
     )
 
@@ -1067,6 +1077,7 @@ def _run_stage07_issue_replan(
         human_task_id=triage_human_task_id,
         actor_id="human:ops-manager-pilot",
         actor_type="human",
+        actor_roles=["operations_manager"],
         idempotency_key=f"pilot:{pilot_key}:{definition.pilot_id}:tasks.claim:stage07-triage",
     )
     _ingest_fixture(
@@ -1151,6 +1162,7 @@ def _run_stage07_issue_replan(
         human_task_id=final_review_human_task_id,
         actor_id="human:ops-manager-pilot",
         actor_type="human",
+        actor_roles=["operations_manager"],
         idempotency_key=f"pilot:{pilot_key}:{definition.pilot_id}:tasks.claim:stage07-final-review",
     )
     confirm_human_task_review_command(
@@ -1203,6 +1215,7 @@ def _run_stage07_issue_replan(
             "approval_id": approval_id,
             "actor_id": "human:ops-manager-pilot",
             "actor_type": "human",
+            "actor_roles": ["operations_manager"],
             "response_kind": "approve",
             "response_reason": "Pilot Stage07 major replan approved.",
             "idempotency_key": f"pilot:{pilot_key}:{definition.pilot_id}:approvals.respond:stage07-major-replan",
@@ -1237,6 +1250,7 @@ def _run_stage07_issue_replan(
             "reason": "Pilot Stage07 replan published.",
             "actor_id": "human:ops-manager-pilot",
             "actor_type": "human",
+            "actor_roles": ["operations_manager"],
             "idempotency_key": f"pilot:{pilot_key}:{definition.pilot_id}:flags.transition:resolved",
         },
     )
@@ -1403,6 +1417,7 @@ def _claim_if_open(
     human_task_id: str,
     actor_id: str,
     actor_type: str,
+    actor_roles: list[str],
     idempotency_key: str,
 ) -> dict[str, Any]:
     current = show_human_task_command(connection, human_task_id)
@@ -1414,6 +1429,7 @@ def _claim_if_open(
                 "human_task_id": human_task_id,
                 "actor_id": actor_id,
                 "actor_type": actor_type,
+                "actor_roles": actor_roles,
                 "lease_seconds": 300,
                 "idempotency_key": idempotency_key,
             },

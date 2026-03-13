@@ -80,10 +80,11 @@ def transition_flag_endpoint(
         "reason": payload.get("reason"),
         "actor_id": context.actor_id,
         "actor_type": context.actor_type,
+        "actor_roles": context.actor_roles,
         "idempotency_key": payload.get("idempotency_key"),
     }
     try:
-        transitioned = transition_flag_state_command(connection, command_payload)
+        transitioned = transition_flag_state_command(connection, command_payload, include_receipt=True)
     except CommandError as exc:
         raise api_error_from_command(exc) from exc
     except DuplicateIdempotencyKeyError as exc:
@@ -92,7 +93,9 @@ def transition_flag_endpoint(
     return {
         "command": "api.flags.transition",
         "flag_id": flag_id,
-        "flag": transitioned,
+        "flag": transitioned["result"],
+        "idempotent_replay": transitioned["idempotent_replay"],
+        "receipt": transitioned["receipt"],
     }
 
 

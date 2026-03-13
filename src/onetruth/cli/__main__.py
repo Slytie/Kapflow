@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import Any
 
 from onetruth.application.handlers.workflow_task_lifecycle import (
+    _prepare_command_receipt,
     CommandError,
     activate_stage07_issue_from_flag_command,
     create_artifact_version_command,
@@ -77,7 +78,9 @@ from onetruth.infrastructure.events.event_store import (
     DuplicateEventIdError,
     DuplicateIdempotencyKeyError,
     append_event,
+    create_command_receipt,
     create_sqlite_substrate,
+    get_command_receipt,
     list_events,
 )
 
@@ -88,6 +91,32 @@ def _repo_root() -> Path:
 
 def _json_print(payload: Any, stream: Any = sys.stdout) -> None:
     stream.write(json.dumps(payload, separators=(",", ":")) + "\n")
+
+
+def _public_command_success_payload(
+    *,
+    command: str,
+    command_result: dict[str, Any],
+    result_key: str | None = None,
+    flatten_result: bool = False,
+) -> dict[str, Any]:
+    payload: dict[str, Any] = {
+        "status": "ok",
+        "command": command,
+        "idempotent_replay": bool(command_result["idempotent_replay"]),
+        "receipt": command_result["receipt"],
+    }
+    raw_result = command_result["result"]
+    if flatten_result:
+        if not isinstance(raw_result, dict):
+            raise TypeError(f"{command} expected a dict result for flatten_result")
+        payload.update(raw_result)
+        return payload
+    if result_key is None:
+        payload["result"] = raw_result
+    else:
+        payload[result_key] = raw_result
+    return payload
 
 
 def _build_parser() -> argparse.ArgumentParser:
@@ -473,7 +502,7 @@ def _handle_runs_create(args: argparse.Namespace) -> int:
     if isinstance(connection, int):
         return connection
     try:
-        result = create_workflow_run_command(connection, payload)
+        result = create_workflow_run_command(connection, payload, include_receipt=True)
     except CommandError as exc:
         return _emit_error(code=exc.code, message=exc.message, details=exc.details)
     except DuplicateIdempotencyKeyError as exc:
@@ -484,7 +513,13 @@ def _handle_runs_create(args: argparse.Namespace) -> int:
         )
     finally:
         connection.close()
-    _json_print({"status": "ok", "command": "runs.create", "workflow_run": result})
+    _json_print(
+        _public_command_success_payload(
+            command="runs.create",
+            command_result=result,
+            result_key="workflow_run",
+        )
+    )
     return 0
 
 
@@ -530,7 +565,7 @@ def _handle_tasks_create(args: argparse.Namespace) -> int:
     if isinstance(connection, int):
         return connection
     try:
-        result = create_task_run_command(connection, payload)
+        result = create_task_run_command(connection, payload, include_receipt=True)
     except CommandError as exc:
         return _emit_error(code=exc.code, message=exc.message, details=exc.details)
     except DuplicateIdempotencyKeyError as exc:
@@ -541,7 +576,12 @@ def _handle_tasks_create(args: argparse.Namespace) -> int:
         )
     finally:
         connection.close()
-    _json_print({"status": "ok", "command": "tasks.create", "result": result})
+    _json_print(
+        _public_command_success_payload(
+            command="tasks.create",
+            command_result=result,
+        )
+    )
     return 0
 
 
@@ -553,7 +593,7 @@ def _handle_tasks_claim(args: argparse.Namespace) -> int:
     if isinstance(connection, int):
         return connection
     try:
-        result = claim_human_task_command(connection, payload)
+        result = claim_human_task_command(connection, payload, include_receipt=True)
     except CommandError as exc:
         return _emit_error(code=exc.code, message=exc.message, details=exc.details)
     except DuplicateIdempotencyKeyError as exc:
@@ -564,7 +604,12 @@ def _handle_tasks_claim(args: argparse.Namespace) -> int:
         )
     finally:
         connection.close()
-    _json_print({"status": "ok", "command": "tasks.claim", "result": result})
+    _json_print(
+        _public_command_success_payload(
+            command="tasks.claim",
+            command_result=result,
+        )
+    )
     return 0
 
 
@@ -576,7 +621,7 @@ def _handle_tasks_complete(args: argparse.Namespace) -> int:
     if isinstance(connection, int):
         return connection
     try:
-        result = complete_human_task_command(connection, payload)
+        result = complete_human_task_command(connection, payload, include_receipt=True)
     except CommandError as exc:
         return _emit_error(code=exc.code, message=exc.message, details=exc.details)
     except DuplicateIdempotencyKeyError as exc:
@@ -587,7 +632,12 @@ def _handle_tasks_complete(args: argparse.Namespace) -> int:
         )
     finally:
         connection.close()
-    _json_print({"status": "ok", "command": "tasks.complete", "result": result})
+    _json_print(
+        _public_command_success_payload(
+            command="tasks.complete",
+            command_result=result,
+        )
+    )
     return 0
 
 
@@ -606,6 +656,7 @@ def _handle_tasks_confirm_review(args: argparse.Namespace) -> int:
                 args.db_url,
                 override=payload.get("storage_root"),
             ),
+            include_receipt=True,
         )
     except CommandError as exc:
         return _emit_error(code=exc.code, message=exc.message, details=exc.details)
@@ -617,7 +668,12 @@ def _handle_tasks_confirm_review(args: argparse.Namespace) -> int:
         )
     finally:
         connection.close()
-    _json_print({"status": "ok", "command": "tasks.confirm-review", "result": result})
+    _json_print(
+        _public_command_success_payload(
+            command="tasks.confirm-review",
+            command_result=result,
+        )
+    )
     return 0
 
 
@@ -657,7 +713,7 @@ def _handle_flags_create(args: argparse.Namespace) -> int:
     if isinstance(connection, int):
         return connection
     try:
-        flag = create_flag_command(connection, payload)
+        flag = create_flag_command(connection, payload, include_receipt=True)
     except CommandError as exc:
         return _emit_error(code=exc.code, message=exc.message, details=exc.details)
     except DuplicateIdempotencyKeyError as exc:
@@ -668,7 +724,13 @@ def _handle_flags_create(args: argparse.Namespace) -> int:
         )
     finally:
         connection.close()
-    _json_print({"status": "ok", "command": "flags.create", "flag": flag})
+    _json_print(
+        _public_command_success_payload(
+            command="flags.create",
+            command_result=flag,
+            result_key="flag",
+        )
+    )
     return 0
 
 
@@ -680,7 +742,7 @@ def _handle_flags_transition(args: argparse.Namespace) -> int:
     if isinstance(connection, int):
         return connection
     try:
-        flag = transition_flag_state_command(connection, payload)
+        flag = transition_flag_state_command(connection, payload, include_receipt=True)
     except CommandError as exc:
         return _emit_error(code=exc.code, message=exc.message, details=exc.details)
     except DuplicateIdempotencyKeyError as exc:
@@ -691,7 +753,13 @@ def _handle_flags_transition(args: argparse.Namespace) -> int:
         )
     finally:
         connection.close()
-    _json_print({"status": "ok", "command": "flags.transition", "flag": flag})
+    _json_print(
+        _public_command_success_payload(
+            command="flags.transition",
+            command_result=flag,
+            result_key="flag",
+        )
+    )
     return 0
 
 
@@ -754,7 +822,7 @@ def _handle_execution_sessions_create(args: argparse.Namespace) -> int:
     if isinstance(connection, int):
         return connection
     try:
-        session = create_execution_session_command(connection, payload)
+        session = create_execution_session_command(connection, payload, include_receipt=True)
     except CommandError as exc:
         return _emit_error(code=exc.code, message=exc.message, details=exc.details)
     except DuplicateIdempotencyKeyError as exc:
@@ -765,7 +833,13 @@ def _handle_execution_sessions_create(args: argparse.Namespace) -> int:
         )
     finally:
         connection.close()
-    _json_print({"status": "ok", "command": "execution-sessions.create", "execution_session": session})
+    _json_print(
+        _public_command_success_payload(
+            command="execution-sessions.create",
+            command_result=session,
+            result_key="execution_session",
+        )
+    )
     return 0
 
 
@@ -805,7 +879,7 @@ def _handle_execution_sessions_transition(args: argparse.Namespace) -> int:
     if isinstance(connection, int):
         return connection
     try:
-        session = transition_execution_session_state_command(connection, payload)
+        session = transition_execution_session_state_command(connection, payload, include_receipt=True)
     except CommandError as exc:
         return _emit_error(code=exc.code, message=exc.message, details=exc.details)
     except DuplicateIdempotencyKeyError as exc:
@@ -816,7 +890,13 @@ def _handle_execution_sessions_transition(args: argparse.Namespace) -> int:
         )
     finally:
         connection.close()
-    _json_print({"status": "ok", "command": "execution-sessions.transition", "execution_session": session})
+    _json_print(
+        _public_command_success_payload(
+            command="execution-sessions.transition",
+            command_result=session,
+            result_key="execution_session",
+        )
+    )
     return 0
 
 
@@ -828,7 +908,7 @@ def _handle_tool_executions_request(args: argparse.Namespace) -> int:
     if isinstance(connection, int):
         return connection
     try:
-        tool_execution = request_tool_execution_command(connection, payload)
+        tool_execution = request_tool_execution_command(connection, payload, include_receipt=True)
     except CommandError as exc:
         return _emit_error(code=exc.code, message=exc.message, details=exc.details)
     except DuplicateIdempotencyKeyError as exc:
@@ -839,7 +919,13 @@ def _handle_tool_executions_request(args: argparse.Namespace) -> int:
         )
     finally:
         connection.close()
-    _json_print({"status": "ok", "command": "tool-executions.request", "tool_execution": tool_execution})
+    _json_print(
+        _public_command_success_payload(
+            command="tool-executions.request",
+            command_result=tool_execution,
+            result_key="tool_execution",
+        )
+    )
     return 0
 
 
@@ -936,7 +1022,7 @@ def _handle_approvals_request(args: argparse.Namespace) -> int:
     if isinstance(connection, int):
         return connection
     try:
-        approval = request_approval_command(connection, payload)
+        approval = request_approval_command(connection, payload, include_receipt=True)
     except CommandError as exc:
         return _emit_error(code=exc.code, message=exc.message, details=exc.details)
     except DuplicateIdempotencyKeyError as exc:
@@ -947,7 +1033,13 @@ def _handle_approvals_request(args: argparse.Namespace) -> int:
         )
     finally:
         connection.close()
-    _json_print({"status": "ok", "command": "approvals.request", "approval": approval})
+    _json_print(
+        _public_command_success_payload(
+            command="approvals.request",
+            command_result=approval,
+            result_key="approval",
+        )
+    )
     return 0
 
 
@@ -959,7 +1051,7 @@ def _handle_approvals_respond(args: argparse.Namespace) -> int:
     if isinstance(connection, int):
         return connection
     try:
-        approval = respond_approval_command(connection, payload)
+        approval = respond_approval_command(connection, payload, include_receipt=True)
     except CommandError as exc:
         return _emit_error(code=exc.code, message=exc.message, details=exc.details)
     except DuplicateIdempotencyKeyError as exc:
@@ -970,7 +1062,13 @@ def _handle_approvals_respond(args: argparse.Namespace) -> int:
         )
     finally:
         connection.close()
-    _json_print({"status": "ok", "command": "approvals.respond", "approval": approval})
+    _json_print(
+        _public_command_success_payload(
+            command="approvals.respond",
+            command_result=approval,
+            result_key="approval",
+        )
+    )
     return 0
 
 
@@ -1010,7 +1108,7 @@ def _handle_artifacts_create_version(args: argparse.Namespace) -> int:
     if isinstance(connection, int):
         return connection
     try:
-        artifact_version = create_artifact_version_command(connection, payload)
+        artifact_version = create_artifact_version_command(connection, payload, include_receipt=True)
     except CommandError as exc:
         return _emit_error(code=exc.code, message=exc.message, details=exc.details)
     except DuplicateIdempotencyKeyError as exc:
@@ -1022,11 +1120,11 @@ def _handle_artifacts_create_version(args: argparse.Namespace) -> int:
     finally:
         connection.close()
     _json_print(
-        {
-            "status": "ok",
-            "command": "artifacts.create-version",
-            "artifact_version": artifact_version,
-        }
+        _public_command_success_payload(
+            command="artifacts.create-version",
+            command_result=artifact_version,
+            result_key="artifact_version",
+        )
     )
     return 0
 
@@ -1051,6 +1149,7 @@ def _handle_artifacts_ingest(args: argparse.Namespace) -> int:
             connection,
             payload,
             storage_root=storage_root,
+            include_receipt=True,
         )
     except CommandError as exc:
         return _emit_error(code=exc.code, message=exc.message, details=exc.details)
@@ -1063,11 +1162,11 @@ def _handle_artifacts_ingest(args: argparse.Namespace) -> int:
     finally:
         connection.close()
     _json_print(
-        {
-            "status": "ok",
-            "command": "artifacts.ingest",
-            **result,
-        }
+        _public_command_success_payload(
+            command="artifacts.ingest",
+            command_result=result,
+            flatten_result=True,
+        )
     )
     return 0
 
@@ -1201,8 +1300,78 @@ def _handle_artifacts_seed_corpus(args: argparse.Namespace) -> int:
             else os.environ.get("ONETRUTH_ARTIFACT_STORAGE_ROOT")
         ),
     )
+    command_idempotency_key = str(
+        payload.get("idempotency_key")
+        or payload.get("idempotency_prefix")
+        or f"seed-corpus:{payload['workflow_run_id']}"
+    )
+    receipt = _prepare_command_receipt(
+        command_name="artifacts.seed-corpus",
+        payload={
+            **payload,
+            "idempotency_key": command_idempotency_key,
+            "manifest_path": str(corpus.manifest_path),
+        },
+        fingerprint_payload={
+            "workflow_run_id": str(payload["workflow_run_id"]),
+            "seed_set_id": str(payload["seed_set_id"]),
+            "manifest_path": str(corpus.manifest_path),
+            "idempotency_prefix": str(
+                payload.get("idempotency_prefix")
+                or f"seed-corpus:{payload['workflow_run_id']}"
+            ),
+            "storage_root": str(storage_root),
+            "actor_id": payload.get("actor_id", "system:fixture-seeder"),
+            "actor_type": payload.get("actor_type", "system"),
+            "links": payload.get("links"),
+            "seed_payloads": seed_payloads,
+        },
+        tenant_id=None,
+        domain_id=None,
+        workflow_run_id=str(payload["workflow_run_id"]),
+        idempotency_required=True,
+    )
     seeded: list[dict[str, Any]] = []
     try:
+        existing = get_command_receipt(
+            connection,
+            command_name=receipt.command_name,
+            scope_key=receipt.scope_key,
+            idempotency_key=receipt.idempotency_key,
+        )
+        if existing is not None:
+            if existing["request_fingerprint"] != receipt.request_fingerprint:
+                return _emit_error(
+                    code="command_receipt_mismatch",
+                    message="idempotency key was already used for a different request in this command scope",
+                    details={
+                        "command_name": receipt.command_name,
+                        "scope_key": receipt.scope_key,
+                        "idempotency_key": receipt.idempotency_key,
+                    },
+                )
+            replay_payload = {
+                "workflow_run_id": existing["result_json"]["workflow_run_id"],
+                "seed_set_id": existing["result_json"]["seed_set_id"],
+                "manifest_path": existing["result_json"]["manifest_path"],
+                "artifact_versions": existing["result_json"]["artifact_versions"],
+            }
+            _json_print(
+                _public_command_success_payload(
+                    command="artifacts.seed-corpus",
+                    command_result={
+                        "result": replay_payload,
+                        "idempotent_replay": True,
+                        "receipt": {
+                            "command_name": receipt.command_name,
+                            "scope_key": receipt.scope_key,
+                            "idempotency_key": receipt.idempotency_key,
+                        },
+                    },
+                    flatten_result=True,
+                )
+            )
+            return 0
         for seed_payload in seed_payloads:
             merged = {
                 **seed_payload,
@@ -1225,18 +1394,46 @@ def _handle_artifacts_seed_corpus(args: argparse.Namespace) -> int:
             message=str(exc),
             details={"idempotency_key": exc.idempotency_key, "existing_event_id": exc.existing_event_id},
         )
-    finally:
-        connection.close()
-
-    _json_print(
-        {
-            "status": "ok",
-            "command": "artifacts.seed-corpus",
+    try:
+        result_payload = {
             "workflow_run_id": str(payload["workflow_run_id"]),
             "seed_set_id": str(payload["seed_set_id"]),
             "manifest_path": str(corpus.manifest_path),
             "artifact_versions": seeded,
         }
+        connection.execute("BEGIN IMMEDIATE")
+        create_command_receipt(
+            connection,
+            command_name=receipt.command_name,
+            scope_key=receipt.scope_key,
+            idempotency_key=receipt.idempotency_key,
+            request_fingerprint=receipt.request_fingerprint,
+            result_json=result_payload,
+            tenant_id=receipt.tenant_id,
+            domain_id=receipt.domain_id,
+            workflow_run_id=receipt.workflow_run_id,
+        )
+        connection.commit()
+    except Exception:
+        connection.rollback()
+        raise
+    finally:
+        connection.close()
+
+    _json_print(
+        _public_command_success_payload(
+            command="artifacts.seed-corpus",
+            command_result={
+                "result": result_payload,
+                "idempotent_replay": False,
+                "receipt": {
+                    "command_name": receipt.command_name,
+                    "scope_key": receipt.scope_key,
+                    "idempotency_key": receipt.idempotency_key,
+                },
+            },
+            flatten_result=True,
+        )
     )
     return 0
 
@@ -1249,7 +1446,7 @@ def _handle_pointers_promote(args: argparse.Namespace) -> int:
     if isinstance(connection, int):
         return connection
     try:
-        pointer = promote_pointer_command(connection, payload)
+        pointer = promote_pointer_command(connection, payload, include_receipt=True)
     except CommandError as exc:
         return _emit_error(code=exc.code, message=exc.message, details=exc.details)
     except DuplicateIdempotencyKeyError as exc:
@@ -1260,7 +1457,13 @@ def _handle_pointers_promote(args: argparse.Namespace) -> int:
         )
     finally:
         connection.close()
-    _json_print({"status": "ok", "command": "pointers.promote", "pointer": pointer})
+    _json_print(
+        _public_command_success_payload(
+            command="pointers.promote",
+            command_result=pointer,
+            result_key="pointer",
+        )
+    )
     return 0
 
 

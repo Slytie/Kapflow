@@ -2,7 +2,7 @@
 id: TASK-0080
 epic: EPIC-060
 title: "Enforce capability decisions at the write boundary"
-status: TODO
+status: DONE
 owners: ["platform"]
 reviewers: ["qa", "security"]
 depends_on: ["TASK-0079"]
@@ -85,3 +85,4 @@ Apply the shared capability decisions at the write boundary for claim/complete/r
 
 ## Notes / decisions
 - This task hardens enforcement only after `TASK-0077` and `TASK-0079` freeze semantics and shared decision primitives.
+- Implemented 2026-03-13: canonical write handlers now consume shared capability decisions before mutation, API mutation routes pass explicit `actor_roles` for role-gated writes, and denied claim/complete/confirm-review/respond/flag requests are side-effect free with structured forbidden details.

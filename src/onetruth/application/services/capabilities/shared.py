@@ -83,3 +83,29 @@ def legacy_reason_codes(reasons: Iterable[DecisionReason]) -> list[str]:
         seen.add(code)
         codes.append(code)
     return codes
+
+
+def decision_reason_payloads(
+    reasons: Iterable[DecisionReason],
+) -> list[dict[str, Any]]:
+    payloads: list[dict[str, Any]] = []
+    for reason_item in reasons:
+        payloads.append(
+            {
+                "code": reason_item.code,
+                "details": dict(reason_item.details),
+            }
+        )
+    return payloads
+
+
+def decision_denial_details(
+    decision: CapabilityDecision,
+    **details: Any,
+) -> dict[str, Any]:
+    return {
+        **details,
+        "capability_id": decision.capability_id,
+        "reason_codes": legacy_reason_codes(decision.reasons),
+        "reasons": decision_reason_payloads(decision.reasons),
+    }

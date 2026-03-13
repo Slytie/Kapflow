@@ -11,15 +11,15 @@ SCENARIO_PATH = (
 )
 
 
-def test_stage06_retry_with_same_idempotency_key_does_not_duplicate_child_tasks(
+def test_stage06_retry_with_same_idempotency_key_replays_without_duplicate_child_tasks(
     tmp_path: Path,
 ) -> None:
     harness = RuntimeScenarioHarness.from_yaml(SCENARIO_PATH, tmp_path).prepare()
     harness.run_steps()
 
     retry_output = harness.output("retry_complete_stage06_review")
-    assert retry_output["status"] == "error"
-    assert retry_output["error"]["error_code"] == "duplicate_idempotency_key"
+    assert retry_output["status"] == "ok"
+    assert retry_output["idempotent_replay"] is True
 
     complete_output = harness.output("complete_stage06_review")
     spawned_children = complete_output["result"]["spawned_children"]

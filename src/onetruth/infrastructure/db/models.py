@@ -55,6 +55,44 @@ class ConsumerCursor(Base):
     )
 
 
+class CommandReceipt(Base):
+    __tablename__ = "command_receipts"
+    __table_args__ = (
+        UniqueConstraint(
+            "command_name",
+            "scope_key",
+            "idempotency_key",
+            name="uq_command_receipts_scope_idempotency",
+        ),
+        Index(
+            "ix_command_receipts_workflow_run_id",
+            "workflow_run_id",
+        ),
+        Index(
+            "ix_command_receipts_scope_lookup",
+            "tenant_id",
+            "domain_id",
+            "command_name",
+            "scope_key",
+        ),
+    )
+
+    command_receipt_id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    command_name: Mapped[str] = mapped_column(String(128), nullable=False)
+    scope_key: Mapped[str] = mapped_column(Text, nullable=False)
+    idempotency_key: Mapped[str] = mapped_column(String(255), nullable=False)
+    request_fingerprint: Mapped[str] = mapped_column(String(64), nullable=False)
+    result_json: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False)
+    tenant_id: Mapped[Optional[str]] = mapped_column(String(128), nullable=True)
+    domain_id: Mapped[Optional[str]] = mapped_column(String(128), nullable=True)
+    workflow_run_id: Mapped[Optional[str]] = mapped_column(
+        String(128),
+        ForeignKey("workflow_runs.workflow_run_id"),
+        nullable=True,
+    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=utcnow)
+
+
 class WorkflowRun(Base):
     __tablename__ = "workflow_runs"
     __table_args__ = (

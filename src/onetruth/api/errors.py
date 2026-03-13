@@ -25,6 +25,8 @@ def api_error_from_command(exc: CommandError) -> ApiError:
         status_code = 400
     elif code.startswith("duplicate_"):
         status_code = 409
+    elif code.endswith("_forbidden"):
+        status_code = 403
     elif code.endswith("_conflict") or code.endswith("_mismatch"):
         status_code = 409
     elif code in {

@@ -118,3 +118,17 @@ If an indexer, exporter, cache, or renderer is degraded:
 
 ## 11) Registry
 See `schemas/events/event_type_registry.yaml` for the authoritative event-type registry.
+
+## 12) Command receipts vs event idempotency
+Canonical command-boundary retries are command-scoped, not raw-event-scoped.
+
+- canonical CLI/API mutation commands persist a scoped `command_receipt`
+- a same-scope retry with the same request replays the committed success and sets `idempotent_replay=true`
+- a same-scope retry with a different request fails closed as `command_receipt_mismatch`
+- reusing the same client `idempotency_key` across different command scopes is allowed
+
+`timeline_events.idempotency_key` remains an internal append guard.
+
+- it still protects raw event writes from duplicate append
+- it still backs `events append`, which continues to fail explicitly with `duplicate_idempotency_key`
+- public mutation handlers should normally satisfy retries at the receipt layer before a second event append is attempted

@@ -40,6 +40,7 @@ steps:
       human_task_id: "{{activate_issue.result.human_task.human_task_id}}"
       actor_id: human:ops-manager-3
       actor_type: human
+      actor_roles: [operations_manager]
       lease_seconds: 300
       idempotency_key: "scenario:{{scenario_id}}:tasks.claim:root"
     save_as: claim_issue

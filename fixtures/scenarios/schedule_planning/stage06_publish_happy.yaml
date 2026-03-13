@@ -34,6 +34,7 @@ steps:
       human_task_id: "{{create_stage06_review.result.human_task.human_task_id}}"
       actor_id: human:dispatch-supervisor-1
       actor_type: human
+      actor_roles: [dispatch_supervisor]
       lease_seconds: 300
       idempotency_key: "scenario:{{scenario_id}}:tasks.claim:review-root"
     save_as: claim_stage06_review
@@ -52,6 +53,7 @@ steps:
       human_task_id: "{{complete_stage06_review.result.spawned_children.0.human_task_id}}"
       actor_id: human:dispatch-supervisor-1
       actor_type: human
+      actor_roles: [dispatch_supervisor]
       lease_seconds: 300
       idempotency_key: "scenario:{{scenario_id}}:tasks.claim:final-review"
     save_as: claim_final_review
@@ -83,6 +85,7 @@ steps:
       approval_id: "{{request_publish_approval.approval.approval_id}}"
       actor_id: human:dispatch-supervisor-1
       actor_type: human
+      actor_roles: [dispatch_supervisor]
       response_kind: approve
       response_reason: schedule ready for publication
       idempotency_key: "scenario:{{scenario_id}}:approvals.respond:publish"

@@ -51,6 +51,7 @@ steps:
       approval_id: "{{publish_approval.approval.approval_id}}"
       actor_id: human:ops-manager-1
       actor_type: human
+      actor_roles: [operations_manager]
       response_kind: approve
       idempotency_key: scenario:logistics_weekly_to_live_dispatch_golden_slice:approval:publish:respond
   - id: promote_weekly_pointer

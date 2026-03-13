@@ -201,11 +201,12 @@ def claim_human_task_endpoint(
         "human_task_id": human_task_id,
         "actor_id": context.actor_id,
         "actor_type": context.actor_type,
+        "actor_roles": context.actor_roles,
         "lease_seconds": payload.get("lease_seconds"),
         "idempotency_key": payload.get("idempotency_key"),
     }
     try:
-        result = claim_human_task_command(connection, command_payload)
+        result = claim_human_task_command(connection, command_payload, include_receipt=True)
     except CommandError as exc:
         raise api_error_from_command(exc) from exc
     except DuplicateIdempotencyKeyError as exc:
@@ -214,7 +215,9 @@ def claim_human_task_endpoint(
     return {
         "command": "api.human_tasks.claim",
         "human_task_id": human_task_id,
-        "result": result,
+        "result": result["result"],
+        "idempotent_replay": result["idempotent_replay"],
+        "receipt": result["receipt"],
     }
 
 
@@ -236,7 +239,7 @@ def complete_human_task_endpoint(
         "idempotency_key": payload.get("idempotency_key"),
     }
     try:
-        result = complete_human_task_command(connection, command_payload)
+        result = complete_human_task_command(connection, command_payload, include_receipt=True)
     except CommandError as exc:
         raise api_error_from_command(exc) from exc
     except DuplicateIdempotencyKeyError as exc:
@@ -245,7 +248,9 @@ def complete_human_task_endpoint(
     return {
         "command": "api.human_tasks.complete",
         "human_task_id": human_task_id,
-        "result": result,
+        "result": result["result"],
+        "idempotent_replay": result["idempotent_replay"],
+        "receipt": result["receipt"],
     }
 
 
@@ -369,6 +374,7 @@ def confirm_human_task_review_endpoint(
             connection,
             command_payload,
             storage_root=default_storage_root_for_db_url(db_url),
+            include_receipt=True,
         )
     except CommandError as exc:
         raise api_error_from_command(exc) from exc
@@ -377,7 +383,9 @@ def confirm_human_task_review_endpoint(
     return {
         "command": "api.human_tasks.confirm_review",
         "human_task_id": human_task_id,
-        "result": result,
+        "result": result["result"],
+        "idempotent_replay": result["idempotent_replay"],
+        "receipt": result["receipt"],
     }
 
 

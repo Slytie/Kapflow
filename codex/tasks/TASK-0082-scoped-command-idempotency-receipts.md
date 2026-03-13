@@ -2,7 +2,7 @@
 id: TASK-0082
 epic: EPIC-040
 title: "Move command idempotency to scoped command receipts"
-status: TODO
+status: DONE
 owners: ["platform"]
 reviewers: ["qa"]
 depends_on: ["TASK-0076"]
@@ -78,3 +78,4 @@ Move idempotency to scoped command receipts with a precise scope key, while keep
 
 ## Notes / decisions
 - Keep the scope explicit in docs and tests so it does not drift into ad hoc concatenation logic.
+- Implemented on 2026-03-13 with a canonical `command_receipts` table/model/migration, scoped receipt helpers in `workflow_task_lifecycle.py`, replay-aware CLI/API success envelopes (`idempotent_replay` + `receipt`), and updated runtime coverage for replay, mismatch, and cross-scope key reuse.

@@ -11,7 +11,7 @@ SCENARIO_PATH = (
 )
 
 
-def test_api_reads_are_stable_and_flag_transition_retry_is_idempotent(tmp_path: Path) -> None:
+def test_api_reads_are_stable_and_flag_transition_retry_replays_successfully(tmp_path: Path) -> None:
     harness = RuntimeScenarioHarness.from_yaml(SCENARIO_PATH, tmp_path).prepare()
     created_flag = harness.run_named_step("create_flag")
     flag_id = created_flag["flag"]["flag_id"]
@@ -74,8 +74,10 @@ def test_api_reads_are_stable_and_flag_transition_retry_is_idempotent(tmp_path: 
         },
     )
     assert first_transition.status_code == 200
-    assert second_transition.status_code == 409
-    assert second_transition.payload["error"]["code"] == "duplicate_idempotency_key"
+    assert second_transition.status_code == 200
+    assert first_transition.payload["idempotent_replay"] is False
+    assert second_transition.payload["idempotent_replay"] is True
+    assert first_transition.payload["receipt"] == second_transition.payload["receipt"]
 
     events = harness.list_events()
     changed_events = [

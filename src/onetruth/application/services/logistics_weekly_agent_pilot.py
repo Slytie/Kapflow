@@ -667,6 +667,7 @@ def _run_weekly_stage04_agent_pilot(
         human_task_id=human_task_id,
         actor_id="human:schedule-planner-pilot",
         actor_type="human",
+        actor_roles=["schedule_planner"],
         idempotency_key=f"pilot:{pilot_key}:{definition.pilot_id}:tasks.claim:stage04-work-item",
     )
 
@@ -1324,6 +1325,7 @@ def _claim_if_open(
     human_task_id: str,
     actor_id: str,
     actor_type: str,
+    actor_roles: list[str],
     idempotency_key: str,
 ) -> dict[str, Any]:
     current = show_human_task_command(connection, human_task_id)
@@ -1335,6 +1337,7 @@ def _claim_if_open(
                 "human_task_id": human_task_id,
                 "actor_id": actor_id,
                 "actor_type": actor_type,
+                "actor_roles": actor_roles,
                 "lease_seconds": 300,
                 "idempotency_key": idempotency_key,
             },

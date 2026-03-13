@@ -39,9 +39,9 @@ def test_stage07_child_issue_branch_and_retry_no_duplicate_child(tmp_path: Path)
             "outcome": "resolution_creates_child_issue",
             "idempotency_key": f"scenario:{harness.scenario_id}:tasks.complete:root",
         },
-        expect_error_code="duplicate_idempotency_key",
     )
-    assert retry["status"] == "error"
+    assert retry["status"] == "ok"
+    assert retry["idempotent_replay"] is True
 
     child_rows = harness.query_rows(
         """

@@ -123,6 +123,7 @@ def ingest_artifact_endpoint(
             ingest_payload,
             storage_root=default_storage_root_for_db_url(db_url),
             ingress_descriptor=ingress_descriptor,
+            include_receipt=True,
         )
     except CommandError as exc:
         raise api_error_from_command(exc) from exc
@@ -131,7 +132,10 @@ def ingest_artifact_endpoint(
 
     return {
         "command": "api.artifacts.ingest",
-        **result,
+        "artifact_version": result["result"]["artifact_version"],
+        "ingress": result["result"]["ingress"],
+        "idempotent_replay": result["idempotent_replay"],
+        "receipt": result["receipt"],
     }
 
 
@@ -484,6 +488,7 @@ def _upload_for_subject(
             ingest_payload,
             storage_root=default_storage_root_for_db_url(db_url),
             ingress_descriptor=ingress_descriptor,
+            include_receipt=True,
         )
     except CommandError as exc:
         raise api_error_from_command(exc) from exc
@@ -494,8 +499,10 @@ def _upload_for_subject(
         "command": f"api.{subject_kind}.artifacts.upload",
         "subject_kind": subject_kind,
         "subject_id": subject_id,
-        "artifact_version": result["artifact_version"],
-        "ingress": result["ingress"],
+        "artifact_version": result["result"]["artifact_version"],
+        "ingress": result["result"]["ingress"],
+        "idempotent_replay": result["idempotent_replay"],
+        "receipt": result["receipt"],
     }
 
 

@@ -34,6 +34,7 @@ steps:
       human_task_id: "{{create_stage06_final_review.result.human_task.human_task_id}}"
       actor_id: human:dispatch-supervisor-6
       actor_type: human
+      actor_roles: [dispatch_supervisor]
       lease_seconds: 300
       idempotency_key: "scenario:{{scenario_id}}:tasks.claim:stage06-final-review"
     save_as: claim_stage06_final_review
@@ -117,6 +118,7 @@ steps:
       approval_id: "{{request_publish_approval.approval.approval_id}}"
       actor_id: human:dispatch-supervisor-6
       actor_type: human
+      actor_roles: [dispatch_supervisor]
       response_kind: approve
       response_reason: schedule ready for publication
       idempotency_key: "scenario:{{scenario_id}}:approvals.respond:publish"

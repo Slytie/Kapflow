@@ -105,7 +105,7 @@ Approvals must emit through the canonical timeline:
 - `required_role` is the authoritative responder role when present.
 - Approval `candidate_roles` remain routing and fallback responder eligibility only when `required_role` is absent; they do not create a second approval capability layer.
 - Override semantics must be represented as explicit approvals, usually `execution_gate` or `business_decision`, not inferred from routing hints or queue presentation.
-- Current write-path role enforcement for approval response remains deferred to `TASK-0080`.
+- Approval response now enforces the same frozen role lattice at the canonical write boundary, with explicit forbidden vs conflict semantics (`approval_respond_forbidden` vs `approval_not_respondable`).
 
 ## 5) Approval packets
 Approval packets are projections, not truth.

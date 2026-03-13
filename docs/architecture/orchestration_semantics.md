@@ -212,9 +212,14 @@ Policy: at-least-once processing with exactly-once effects via idempotency.
 
 Rules:
 - Every authoritative event write must have a stable `event_id`.
+- Canonical CLI/API mutation retries resolve through scoped command receipts keyed by `(command_name, scope_key, idempotency_key)`.
+- A same-scope retry with the same normalized request must replay the committed success rather than surfacing a duplicate-event error.
+- A same-scope retry with a different normalized request must fail closed as `command_receipt_mismatch`.
+- Reusing the same client `idempotency_key` across different command scopes is allowed.
+- Raw `events append` remains a lower-level event-store operation and still fails explicitly on duplicate `timeline_events.idempotency_key`.
 - Every tool execution request must include an `idempotency_key`.
-- Artifact version creation must be idempotent by request key or stable content hash.
-- Pointer promotion must be idempotent by `(pointer_id, promoted_to_version_id, promotion_reason_id)`.
+- Artifact version creation must be idempotent by scoped request receipt plus stable event append keys underneath.
+- Pointer promotion must be idempotent by scoped command receipt plus canonical pointer-generation checks underneath.
 - Child task creation must be idempotent by a parent-cause key such as `(spawn_cause_event_id, spawn_rule_id, activation_key, ordinal)`.
 
 Automated work attempts should track:
@@ -255,7 +260,7 @@ Operator actions for staleness:
 ## 10) Replay, stage rerun, and backfill
 These are distinct operations.
 
-- **Retry**: same logical attempt, same idempotency key.
+- **Retry**: same logical command attempt, same scoped idempotency key, same observable success payload when replayed.
 - **Stage rerun**: a new `task_run` inside the same `workflow_run`.
 - **Replay**: read-only reconstruction from authoritative history.
 - **Historical backfill**: explicit creation of historical workflow runs under separate concurrency controls.

@@ -64,3 +64,46 @@ def test_complete_human_task_via_api_uses_canonical_completion_path(tmp_path: Pa
     assert len(completed_events) == 1
     assert len(child_task_events) == 1
     assert len(child_human_events) == 1
+
+
+def test_complete_human_task_via_api_rejects_non_assignee_without_side_effects(
+    tmp_path: Path,
+) -> None:
+    harness = RuntimeScenarioHarness.from_yaml(SCENARIO_PATH, tmp_path).prepare()
+    created = harness.run_named_step("create_stage06_review")
+    harness.run_named_step("claim_stage06_review")
+    human_task_id = created["result"]["human_task"]["human_task_id"]
+
+    client = RuntimeApiClient(
+        db_url=harness.db_url,
+        tenant_id="tenant-a",
+        domain_id="domain-x",
+        actor_id="human:dispatch-supervisor-2",
+        actor_type="human",
+        actor_roles=["dispatch_supervisor"],
+    )
+
+    denied = client.post(
+        f"/api/v1/human-tasks/{human_task_id}/complete",
+        payload={
+            "outcome": "draft_is_publish_ready",
+            "idempotency_key": f"api:{harness.scenario_id}:tasks.complete:forbidden",
+        },
+    )
+    assert denied.status_code == 403
+    error = denied.payload["error"]
+    assert error["code"] == "task_complete_forbidden"
+    assert error["details"]["capability_id"] == "task.complete"
+    assert "claimed_by_other_actor" in error["details"]["reason_codes"]
+
+    persisted = harness.show_task(human_task_id)["human_task"]
+    assert persisted["state"] == "CLAIMED"
+    assert persisted["assignee_actor_id"] == "human:dispatch-supervisor-1"
+    assert persisted["task_run_state"] == "IN_PROGRESS"
+
+    events = harness.list_events()
+    assert not any(
+        event["event_type"] == "task.completed"
+        and event["payload"]["human_task_id"] == human_task_id
+        for event in events
+    )

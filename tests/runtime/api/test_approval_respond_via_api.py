@@ -56,3 +56,50 @@ def test_approval_respond_via_api_updates_canonical_rows_and_events(tmp_path: Pa
         and event["payload"]["approval_id"] == approval_id
     ]
     assert len(responded_events) == 1
+
+
+def test_approval_respond_via_api_rejects_wrong_role_without_side_effects(tmp_path: Path) -> None:
+    harness = RuntimeScenarioHarness.from_yaml(SCENARIO_PATH, tmp_path).prepare()
+    for step_id in [
+        "create_stage06_review",
+        "claim_stage06_review",
+        "complete_stage06_review",
+        "claim_final_review",
+        "complete_final_review",
+        "request_publish_approval",
+    ]:
+        harness.run_named_step(step_id)
+
+    approval_id = harness.output("request_publish_approval")["approval"]["approval_id"]
+    client = RuntimeApiClient(
+        db_url=harness.db_url,
+        tenant_id="tenant-a",
+        domain_id="domain-x",
+        actor_id="human:schedule-planner-3",
+        actor_type="human",
+        actor_roles=["schedule_planner"],
+    )
+
+    denied = client.post(
+        f"/api/v1/approvals/{approval_id}/respond",
+        payload={
+            "response_kind": "approve",
+            "response_reason": "attempted with wrong role",
+            "idempotency_key": f"api:{harness.scenario_id}:approvals.respond:forbidden",
+        },
+    )
+    assert denied.status_code == 403
+    error = denied.payload["error"]
+    assert error["code"] == "approval_respond_forbidden"
+    assert error["details"]["capability_id"] == "approval.respond"
+    assert "approval_role_mismatch" in error["details"]["reason_codes"]
+
+    approvals_rows = harness.list_approvals()["approvals"]
+    assert approvals_rows[0]["state"] == "PENDING"
+    assert approvals_rows[0]["response_kind"] is None
+    events = harness.list_events()
+    assert not any(
+        event["event_type"] == "approval.responded"
+        and event["payload"]["approval_id"] == approval_id
+        for event in events
+    )

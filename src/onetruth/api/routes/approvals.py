@@ -82,12 +82,13 @@ def respond_approval_endpoint(
         "approval_id": approval_id,
         "actor_id": context.actor_id,
         "actor_type": context.actor_type,
+        "actor_roles": context.actor_roles,
         "response_kind": payload.get("response_kind"),
         "response_reason": payload.get("response_reason"),
         "idempotency_key": payload.get("idempotency_key"),
     }
     try:
-        updated = respond_approval_command(connection, command_payload)
+        updated = respond_approval_command(connection, command_payload, include_receipt=True)
     except CommandError as exc:
         raise api_error_from_command(exc) from exc
     except DuplicateIdempotencyKeyError as exc:
@@ -96,7 +97,9 @@ def respond_approval_endpoint(
     return {
         "command": "api.approvals.respond",
         "approval_id": approval_id,
-        "approval": updated,
+        "approval": updated["result"],
+        "idempotent_replay": updated["idempotent_replay"],
+        "receipt": updated["receipt"],
     }
 
 

@@ -26,6 +26,7 @@ steps:
       human_task_id: "{{create_stage05_information_request.result.human_task.human_task_id}}"
       actor_id: human:schedule-planner-1
       actor_type: human
+      actor_roles: [schedule_planner]
       lease_seconds: 300
       idempotency_key: "scenario:{{scenario_id}}:tasks.claim:stage05-info"
     save_as: claim_stage05_information_request

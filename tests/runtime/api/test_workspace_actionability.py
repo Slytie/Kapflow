@@ -191,19 +191,24 @@ def test_stage06_run_agent_review_action_is_policy_gated(tmp_path: Path) -> None
     denied_harness = RuntimeScenarioHarness.from_yaml(SCENARIO_STAGE06_PUBLISH, tmp_path / "denied").prepare()
     denied_created = denied_harness.run_named_step("create_stage06_review")
     denied_task_id = str(denied_created["result"]["human_task"]["human_task_id"])
+    denied_dispatch_client = _client(
+        denied_harness,
+        actor_id="human:dispatch-supervisor-1",
+        actor_roles=["dispatch_supervisor"],
+    )
+    denied_claimed = denied_dispatch_client.post(
+        f"/api/v1/human-tasks/{denied_task_id}/claim",
+        payload={
+            "lease_seconds": 300,
+            "idempotency_key": f"api:{denied_harness.scenario_id}:workspace-actionability:claim-stage06-owner",
+        },
+    )
+    assert denied_claimed.status_code == 200
     planner_client = _client(
         denied_harness,
         actor_id="human:schedule-planner-9",
         actor_roles=["schedule_planner"],
     )
-    denied_claimed = planner_client.post(
-        f"/api/v1/human-tasks/{denied_task_id}/claim",
-        payload={
-            "lease_seconds": 300,
-            "idempotency_key": f"api:{denied_harness.scenario_id}:workspace-actionability:claim-stage06-planner",
-        },
-    )
-    assert denied_claimed.status_code == 200
     denied_workspace = planner_client.get(
         f"/api/v1/workflow-runs/{denied_harness.workflow_run_id}/workspace"
     )

@@ -63,6 +63,26 @@ def create_sqlite_substrate(connection: sqlite3.Connection) -> None:
             PRIMARY KEY (consumer_name, tenant_id, domain_id)
         );
 
+        CREATE TABLE IF NOT EXISTS command_receipts (
+            command_receipt_id INTEGER PRIMARY KEY AUTOINCREMENT,
+            command_name TEXT NOT NULL,
+            scope_key TEXT NOT NULL,
+            idempotency_key TEXT NOT NULL,
+            request_fingerprint TEXT NOT NULL,
+            result_json TEXT NOT NULL,
+            tenant_id TEXT,
+            domain_id TEXT,
+            workflow_run_id TEXT,
+            created_at TEXT NOT NULL DEFAULT (datetime('now')),
+            UNIQUE (command_name, scope_key, idempotency_key),
+            FOREIGN KEY (workflow_run_id) REFERENCES workflow_runs(workflow_run_id)
+        );
+
+        CREATE INDEX IF NOT EXISTS ix_command_receipts_workflow_run_id
+            ON command_receipts (workflow_run_id);
+        CREATE INDEX IF NOT EXISTS ix_command_receipts_scope_lookup
+            ON command_receipts (tenant_id, domain_id, command_name, scope_key);
+
         CREATE TABLE IF NOT EXISTS workflow_runs (
             workflow_run_id TEXT PRIMARY KEY,
             workflow_id TEXT NOT NULL,
@@ -623,6 +643,87 @@ def get_event_by_idempotency_key(
         "event_type": row["event_type"],
         "idempotency_key": row["idempotency_key"],
     }
+
+
+def get_command_receipt(
+    connection: sqlite3.Connection,
+    *,
+    command_name: str,
+    scope_key: str,
+    idempotency_key: str,
+) -> dict[str, Any] | None:
+    row = connection.execute(
+        """
+        SELECT
+            command_name,
+            scope_key,
+            idempotency_key,
+            request_fingerprint,
+            result_json,
+            tenant_id,
+            domain_id,
+            workflow_run_id,
+            created_at
+        FROM command_receipts
+        WHERE command_name = ? AND scope_key = ? AND idempotency_key = ?
+        """,
+        (command_name, scope_key, idempotency_key),
+    ).fetchone()
+    if row is None:
+        return None
+    return {
+        "command_name": row["command_name"],
+        "scope_key": row["scope_key"],
+        "idempotency_key": row["idempotency_key"],
+        "request_fingerprint": row["request_fingerprint"],
+        "result_json": json.loads(row["result_json"]),
+        "tenant_id": row["tenant_id"],
+        "domain_id": row["domain_id"],
+        "workflow_run_id": row["workflow_run_id"],
+        "created_at": row["created_at"],
+    }
+
+
+def create_command_receipt(
+    connection: sqlite3.Connection,
+    *,
+    command_name: str,
+    scope_key: str,
+    idempotency_key: str,
+    request_fingerprint: str,
+    result_json: dict[str, Any],
+    tenant_id: str | None,
+    domain_id: str | None,
+    workflow_run_id: str | None,
+    created_at: str | None = None,
+) -> None:
+    connection.execute(
+        """
+        INSERT INTO command_receipts (
+            command_name,
+            scope_key,
+            idempotency_key,
+            request_fingerprint,
+            result_json,
+            tenant_id,
+            domain_id,
+            workflow_run_id,
+            created_at
+        )
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, COALESCE(?, datetime('now')))
+        """,
+        (
+            command_name,
+            scope_key,
+            idempotency_key,
+            request_fingerprint,
+            json.dumps(result_json, separators=(",", ":"), sort_keys=True),
+            tenant_id,
+            domain_id,
+            workflow_run_id,
+            created_at,
+        ),
+    )
 
 
 def _extract_workflow_run_id(links: Any) -> str | None:

@@ -64,7 +64,7 @@ Flags do not replace tasks or approvals:
 - Flag transition is a separate capability axis from task claim, task completion, approval response, and artifact upload.
 - The read-side action name `transition` maps to the permission dimension currently represented as `flag.resolve`; allowed state edges still come from the flag lifecycle.
 - Flag attachments remain collaboration/evidence ingress and do not themselves grant transition authority.
-- Current write-path role enforcement for flag transitions remains deferred to `TASK-0080`.
+- Flag transition now enforces the frozen role lattice at the canonical write boundary, with explicit forbidden vs lifecycle-conflict semantics (`flag_transition_forbidden` vs illegal/conflict transitions).
 
 ## 4) Stable vs variable parts
 Stable (platform-level):
