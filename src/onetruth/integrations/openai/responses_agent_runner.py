@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 import json
+import re
 import time
 from typing import Any, Callable, Optional
 from urllib import error as urllib_error
@@ -14,9 +15,9 @@ from onetruth.integrations.openai.responses_adapter import (
     build_openai_responses_runtime_config_from_env,
 )
 
-
-ResponseTransport = Callable[[dict[str, Any], float], tuple[int, dict[str, Any], Optional[str]]]
+ResponseTransport = Callable[[dict[str, Any], float], Any]
 FunctionExecutor = Callable[[str, dict[str, Any]], Any]
+ModelOutputSerializer = Callable[[str, dict[str, Any], Any], Any]
 TurnObserver = Callable[["ResponsesTurnRecord"], None]
 ProgressEvaluator = Callable[[str, dict[str, Any], Any], bool]
 
@@ -43,8 +44,13 @@ class ResponsesFunctionCallRecord:
     name: str
     arguments_json: str
     arguments: dict[str, Any]
-    output_json: str
+    model_output_json: str
+    evidence_output_json: str
     progress_made: bool = False
+
+    @property
+    def output_json(self) -> str:
+        return self.evidence_output_json
 
     def as_dict(self) -> dict[str, Any]:
         return {
@@ -52,7 +58,9 @@ class ResponsesFunctionCallRecord:
             "name": self.name,
             "arguments_json": self.arguments_json,
             "arguments": self.arguments,
-            "output_json": self.output_json,
+            "model_output_json": self.model_output_json,
+            "evidence_output_json": self.evidence_output_json,
+            "output_json": self.evidence_output_json,
             "progress_made": self.progress_made,
         }
 
@@ -69,6 +77,8 @@ class ResponsesTurnRecord:
     function_calls: tuple[ResponsesFunctionCallRecord, ...]
     progress_made: bool = False
     no_progress_streak: int = 0
+    request_attempts: int = 1
+    retry_history: tuple[dict[str, Any], ...] = ()
 
     def as_dict(self) -> dict[str, Any]:
         return {
@@ -82,6 +92,8 @@ class ResponsesTurnRecord:
             "function_calls": [item.as_dict() for item in self.function_calls],
             "progress_made": self.progress_made,
             "no_progress_streak": self.no_progress_streak,
+            "request_attempts": self.request_attempts,
+            "retry_history": list(self.retry_history),
         }
 
 
@@ -108,6 +120,15 @@ class _ParsedFunctionCall:
     call_id: str
     name: str
     arguments_json: str
+
+
+@dataclass(frozen=True)
+class _RequestOutcome:
+    status_code: int
+    payload: dict[str, Any]
+    request_id: str | None
+    attempts: int
+    retry_history: tuple[dict[str, Any], ...]
 
 
 class OpenAIResponsesFunctionCallingRunner:
@@ -137,6 +158,7 @@ class OpenAIResponsesFunctionCallingRunner:
         max_turns: int,
         no_progress_limit: int | None = None,
         progress_evaluator: ProgressEvaluator | None = None,
+        model_output_serializer: ModelOutputSerializer | None = None,
         on_turn_complete: TurnObserver | None = None,
     ) -> ResponsesFunctionCallingResult:
         if max_turns <= 0:
@@ -171,7 +193,8 @@ class OpenAIResponsesFunctionCallingRunner:
             if previous_response_id is not None:
                 request_payload["previous_response_id"] = previous_response_id
 
-            status_code, response_payload, request_id = self._request_with_retries(request_payload)
+            request_outcome = self._request_with_retries(request_payload)
+            response_payload = request_outcome.payload
             response_id = _as_optional_str(response_payload.get("id"))
             model = _as_optional_str(response_payload.get("model"))
             usage = response_payload.get("usage") if isinstance(response_payload.get("usage"), dict) else {}
@@ -185,13 +208,15 @@ class OpenAIResponsesFunctionCallingRunner:
                     turn_index=turn_index,
                     request_payload=request_payload,
                     response_id=response_id,
-                    request_id=request_id,
+                    request_id=request_outcome.request_id,
                     model=model,
                     usage=usage,
                     output_text=output_text,
                     function_calls=(),
                     progress_made=False,
                     no_progress_streak=no_progress_streak,
+                    request_attempts=request_outcome.attempts,
+                    retry_history=request_outcome.retry_history,
                 )
                 turns.append(turn_record)
                 if on_turn_complete is not None:
@@ -199,7 +224,7 @@ class OpenAIResponsesFunctionCallingRunner:
                 return ResponsesFunctionCallingResult(
                     turns=tuple(turns),
                     final_response_id=response_id,
-                    final_request_id=request_id,
+                    final_request_id=request_outcome.request_id,
                     final_output_text=output_text,
                     total_usage=usage_totals,
                 )
@@ -216,7 +241,14 @@ class OpenAIResponsesFunctionCallingRunner:
                     )
                 arguments = _load_function_arguments(parsed_call.arguments_json)
                 output_payload = execute_function(parsed_call.name, arguments)
-                output_json = _serialize_function_output(output_payload)
+                model_output_payload = _serialize_model_output(
+                    model_output_serializer,
+                    parsed_call.name,
+                    arguments,
+                    output_payload,
+                )
+                evidence_output_json = _serialize_function_output(output_payload)
+                model_output_json = _serialize_function_output(model_output_payload)
                 call_progress_made = _evaluate_progress(
                     progress_evaluator,
                     parsed_call.name,
@@ -228,7 +260,7 @@ class OpenAIResponsesFunctionCallingRunner:
                     {
                         "type": "function_call_output",
                         "call_id": parsed_call.call_id,
-                        "output": output_json,
+                        "output": model_output_json,
                     }
                 )
                 executed_calls.append(
@@ -237,7 +269,8 @@ class OpenAIResponsesFunctionCallingRunner:
                         name=parsed_call.name,
                         arguments_json=parsed_call.arguments_json,
                         arguments=arguments,
-                        output_json=output_json,
+                        model_output_json=model_output_json,
+                        evidence_output_json=evidence_output_json,
                         progress_made=call_progress_made,
                     )
                 )
@@ -247,13 +280,15 @@ class OpenAIResponsesFunctionCallingRunner:
                 turn_index=turn_index,
                 request_payload=request_payload,
                 response_id=response_id,
-                request_id=request_id,
+                request_id=request_outcome.request_id,
                 model=model,
                 usage=usage,
                 output_text=output_text,
                 function_calls=tuple(executed_calls),
                 progress_made=turn_progress_made,
                 no_progress_streak=no_progress_streak,
+                request_attempts=request_outcome.attempts,
+                retry_history=request_outcome.retry_history,
             )
             turns.append(turn_record)
             if on_turn_complete is not None:
@@ -287,44 +322,84 @@ class OpenAIResponsesFunctionCallingRunner:
     def _request_with_retries(
         self,
         request_payload: dict[str, Any],
-    ) -> tuple[int, dict[str, Any], str | None]:
+    ) -> _RequestOutcome:
         attempts = 0
+        retry_history: list[dict[str, Any]] = []
         while attempts <= self.max_retries:
             attempts += 1
             try:
-                status_code, payload, request_id = self._transport(
-                    request_payload,
-                    self.timeout_seconds,
+                status_code, payload, request_id, response_headers = _normalize_transport_result(
+                    self._transport(
+                        request_payload,
+                        self.timeout_seconds,
+                    )
                 )
             except OpenAIResponsesError as exc:
                 if exc.retryable and attempts <= self.max_retries:
-                    time.sleep(min(0.2 * attempts, 1.0))
+                    retry_delay = _retry_delay_seconds(exc, attempts=attempts)
+                    retry_history.append(
+                        _build_retry_history_entry(
+                            attempt=attempts,
+                            error=exc,
+                            retry_after_seconds=retry_delay,
+                            request_id=_as_optional_str(exc.details.get("request_id")),
+                        )
+                    )
+                    time.sleep(retry_delay)
                     continue
-                raise
+                raise _augment_openai_error(
+                    exc,
+                    attempts=attempts,
+                    retry_history=retry_history,
+                )
 
             if status_code >= 400:
                 error = _openai_error_from_response(
                     status_code=status_code,
                     response_payload=payload,
                     request_id=request_id,
+                    response_headers=response_headers,
                 )
                 if error.retryable and attempts <= self.max_retries:
-                    time.sleep(min(0.2 * attempts, 1.0))
+                    retry_delay = _retry_delay_seconds(error, attempts=attempts)
+                    retry_history.append(
+                        _build_retry_history_entry(
+                            attempt=attempts,
+                            error=error,
+                            retry_after_seconds=retry_delay,
+                            request_id=request_id,
+                        )
+                    )
+                    time.sleep(retry_delay)
                     continue
-                raise error
-            return status_code, payload, request_id
+                raise _augment_openai_error(
+                    error,
+                    attempts=attempts,
+                    retry_history=retry_history,
+                )
+            return _RequestOutcome(
+                status_code=status_code,
+                payload=payload,
+                request_id=request_id,
+                attempts=attempts,
+                retry_history=tuple(retry_history),
+            )
 
         raise OpenAIResponsesError(
             code="openai_no_response",
             message="OpenAI response was unavailable after retry attempts",
             retryable=True,
+            details={
+                "attempts": attempts,
+                "retry_history": retry_history,
+            },
         )
 
     def _default_transport(
         self,
         request_payload: dict[str, Any],
         timeout_seconds: float,
-    ) -> tuple[int, dict[str, Any], str | None]:
+    ) -> ResponseTransportResult:
         body = json.dumps(request_payload, separators=(",", ":")).encode("utf-8")
         request = urllib_request.Request(
             url=f"{self.base_url}/responses",
@@ -342,14 +417,24 @@ class OpenAIResponsesFunctionCallingRunner:
                 response_body = response.read().decode("utf-8")
                 parsed = json.loads(response_body) if response_body else {}
                 request_id = _as_optional_str(response.headers.get("x-request-id"))
-                return int(response.status), parsed, request_id
+                return (
+                    int(response.status),
+                    parsed,
+                    request_id,
+                    _response_headers_dict(response.headers),
+                )
         except urllib_error.HTTPError as exc:
             body_text = exc.read().decode("utf-8", errors="replace")
             parsed = _safe_json_parse(body_text)
             request_id = _as_optional_str(
                 exc.headers.get("x-request-id") if exc.headers else None
             )
-            return int(exc.code), parsed, request_id
+            return (
+                int(exc.code),
+                parsed,
+                request_id,
+                _response_headers_dict(exc.headers),
+            )
         except urllib_error.URLError as exc:
             raise OpenAIResponsesError(
                 code="openai_transport_error",
@@ -400,6 +485,17 @@ def _load_function_arguments(arguments_json: str) -> dict[str, Any]:
             details={"arguments": arguments_json},
         )
     return decoded
+
+
+def _serialize_model_output(
+    model_output_serializer: ModelOutputSerializer | None,
+    function_name: str,
+    arguments: dict[str, Any],
+    output_payload: Any,
+) -> Any:
+    if model_output_serializer is None:
+        return output_payload
+    return model_output_serializer(function_name, arguments, output_payload)
 
 
 def _serialize_function_output(value: Any) -> str:
@@ -470,6 +566,7 @@ def _openai_error_from_response(
     status_code: int,
     response_payload: dict[str, Any],
     request_id: str | None,
+    response_headers: dict[str, str] | None = None,
 ) -> OpenAIResponsesError:
     error_obj = response_payload.get("error") if isinstance(response_payload, dict) else None
     if not isinstance(error_obj, dict):
@@ -478,13 +575,21 @@ def _openai_error_from_response(
     code = _as_optional_str(error_obj.get("code")) or f"openai_http_{status_code}"
     message = _as_optional_str(error_obj.get("message")) or "OpenAI request failed"
     retryable = status_code in {429, 500, 502, 503, 504}
+    retry_after_seconds = _retry_after_seconds(
+        headers=response_headers,
+        message=message,
+    )
 
     return OpenAIResponsesError(
         code=code,
         message=message,
         status_code=status_code,
         retryable=retryable,
-        details={"request_id": request_id, "status_code": status_code},
+        details={
+            "request_id": request_id,
+            "status_code": status_code,
+            "retry_after_seconds": retry_after_seconds,
+        },
     )
 
 
@@ -523,3 +628,107 @@ def _as_optional_str(value: Any) -> str | None:
         return None
     text = str(value).strip()
     return text or None
+
+
+def _normalize_transport_result(
+    result: Any,
+) -> tuple[int, dict[str, Any], str | None, dict[str, str]]:
+    if len(result) == 3:
+        status_code, payload, request_id = result
+        return status_code, payload, request_id, {}
+    status_code, payload, request_id, response_headers = result
+    return status_code, payload, request_id, {
+        str(key).lower(): str(value)
+        for key, value in dict(response_headers or {}).items()
+        if str(key).strip()
+    }
+
+
+def _response_headers_dict(headers: Any) -> dict[str, str]:
+    if headers is None:
+        return {}
+    items = getattr(headers, "items", None)
+    if callable(items):
+        return {
+            str(key).lower(): str(value)
+            for key, value in items()
+            if str(key).strip()
+        }
+    return {}
+
+
+def _retry_after_seconds(
+    *,
+    headers: dict[str, str] | None,
+    message: str | None,
+) -> float | None:
+    if isinstance(headers, dict):
+        raw_retry_after = headers.get("retry-after")
+        if raw_retry_after is not None:
+            parsed_header = _parse_retry_after_value(raw_retry_after)
+            if parsed_header is not None:
+                return parsed_header
+    if isinstance(message, str):
+        match = re.search(r"retry after\s+([0-9]+(?:\.[0-9]+)?)s", message, flags=re.IGNORECASE)
+        if match:
+            try:
+                return float(match.group(1))
+            except ValueError:
+                return None
+    return None
+
+
+def _parse_retry_after_value(raw_retry_after: Any) -> float | None:
+    try:
+        seconds = float(str(raw_retry_after).strip())
+    except (TypeError, ValueError):
+        return None
+    if seconds < 0:
+        return None
+    return seconds
+
+
+def _retry_delay_seconds(error: OpenAIResponsesError, *, attempts: int) -> float:
+    retry_after = error.details.get("retry_after_seconds")
+    try:
+        retry_after_seconds = float(retry_after)
+    except (TypeError, ValueError):
+        retry_after_seconds = None
+    if retry_after_seconds is not None and retry_after_seconds >= 0:
+        return min(retry_after_seconds, 15.0)
+    return min(float(2 ** max(attempts - 1, 0)), 15.0)
+
+
+def _build_retry_history_entry(
+    *,
+    attempt: int,
+    error: OpenAIResponsesError,
+    retry_after_seconds: float,
+    request_id: str | None,
+) -> dict[str, Any]:
+    return {
+        "attempt": int(attempt),
+        "error_code": error.code,
+        "error_message": str(error),
+        "status_code": error.status_code,
+        "request_id": request_id,
+        "retry_after_seconds": float(retry_after_seconds),
+    }
+
+
+def _augment_openai_error(
+    error: OpenAIResponsesError,
+    *,
+    attempts: int,
+    retry_history: list[dict[str, Any]],
+) -> OpenAIResponsesError:
+    details = dict(error.details)
+    details["attempts"] = int(attempts)
+    details["retry_history"] = [dict(item) for item in retry_history]
+    return OpenAIResponsesError(
+        code=error.code,
+        message=str(error),
+        status_code=error.status_code,
+        retryable=error.retryable,
+        details=details,
+    )

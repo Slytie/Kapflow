@@ -40,12 +40,15 @@ Runner:
 
 Behavior:
 - submits an initial Responses request with bounded Stage04 prompts + function tool specs,
+- sends a compact model-facing Stage04 context summary instead of embedding the full context-pack artifact in the initial prompt,
 - accepts zero/one/many `function_call` items per model turn,
 - executes deterministic tools,
 - appends matching `function_call_output` items using model-returned `call_id`,
+- sends compact model-facing tool outputs back to the model while preserving full deterministic tool outputs in runtime evidence artifacts,
 - persists per-turn request/result evidence as the loop advances,
 - enforces authored `no_progress_ticks` from compiled Stage04 control metadata,
 - requires an explicit deterministic finalize tool call before any Stage04 draft artifacts are materialized,
+- retries `rate_limit_exceeded` Responses calls inside the same turn with bounded `Retry-After`/message-derived backoff before failing the execution,
 - continues until a turn returns no function calls or the authored stop budget is exhausted.
 
 Budget source:
@@ -88,11 +91,12 @@ Shared helper posture:
 - default fallback `.onetruth_artifacts/` remains local-only live evidence and is not a fixture source.
 
 Evidence captures:
-- context pack payload,
+- full context pack payload plus the compact model-facing initial context summary,
 - per-turn request/response metadata,
-- function calls, parsed `function_call_output` payloads, and progress accounting,
+- function calls, parsed compact `function_call_output` payloads, full evidence tool outputs, and progress accounting,
 - response/request ids and usage,
-- execution trace summary including turn evidence refs and finalize state.
+- request retry attempts/history when rate limiting occurs,
+- execution trace summary including turn evidence refs, finalize state, and exhausted retry details.
 
 ## Policy posture
 Policy-gated before model execution:
@@ -118,6 +122,12 @@ Pilot behavior:
 - executes the bounded weekly Stage04 agent in `mock` or `real` mode,
 - emits inspection packet artifacts (`inspection_packet.json` and `.md`) plus suite summary artifacts (`pilot_summary.json` and `.md`).
 
+Pilot selection posture:
+- `weekly_stage04_realistic_artifacts` is the default real-network Stage04 pilot and is pinned to the over-capacity `PW-2026-W12` source-material contract under `fixtures/logistics/weekly_stage04_realistic_source_material.yaml`,
+- `weekly_stage04_agent_baseline` remains available as the tiny `PW-2026-W10` smoke/regression pilot for local/mock coverage,
+- when `scripts/run_logistics_weekly_agent_pilot.py` is invoked with `--openai-mode real` and no explicit `--pilot`, it now runs only the realistic over-capacity pilot by default.
+- that realistic real-network pilot applies a pilot-scoped `ONETRUTH_OPENAI_MODEL=gpt-5-mini` override only for the live Stage04 call; shared repo defaults remain unchanged and effective TPM limits still depend on the active project/org tier instead of hardcoded assumptions.
+
 Inspection packets are canonical-reference-heavy and include:
 - workflow/task/execution/tool/policy/artifact IDs,
 - evidence coverage by artifact kind (`execution.*`, `runtime.*`, Stage04 output kinds),
@@ -134,3 +144,10 @@ Weekly Stage04 real-network tests remain deliberately gated:
 
 Coverage file:
 - `tests/integration_openai/test_weekly_stage04_openai_real_e2e.py`
+
+That dual-gated real-network Stage04 e2e now exercises the realistic over-capacity weekly pilot rather than the tiny two-route smoke scenario.
+
+Current live-token posture:
+- the dominant TPM driver is cumulative repeated `function_call_output` context, not the initial prompt,
+- Stage04 therefore keeps full `runtime.context_pack.json` and `runtime.tool_result.json` evidence artifacts for reviewability while sending compact model-facing summaries/deltas across live turns,
+- the realistic mock/runtime regression suite guards this compact surface by checking request-size ceilings, omission of oversized repeated fields, preserved full evidence payloads, and bounded 429 retry behavior.

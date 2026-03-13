@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import copy
-from contextlib import contextmanager
+from contextlib import ExitStack, contextmanager
 from dataclasses import dataclass
 from datetime import date, timedelta
 import hashlib
@@ -32,6 +32,10 @@ from onetruth.application.handlers.workflow_task_lifecycle import (
 from onetruth.application.services.weekly_stage04_openai_agent import (
     run_weekly_stage04_openai_agent,
 )
+from onetruth.application.services.schedule_control.route_slot_requirements import (
+    expand_route_slot_requirements,
+    parse_route_slot_requirements,
+)
 from onetruth.infrastructure.artifacts.storage import default_storage_root_for_db_url
 from onetruth.infrastructure.events.event_store import (
     DuplicateIdempotencyKeyError,
@@ -60,6 +64,9 @@ PILOT_WEEKLY_STAGE04_AGENT = "weekly_stage04_agent_baseline"
 PILOT_WEEKLY_STAGE04_REALISTIC_ARTIFACTS = "weekly_stage04_realistic_artifacts"
 ALL_PILOT_IDS: tuple[str, ...] = (
     PILOT_WEEKLY_STAGE04_AGENT,
+    PILOT_WEEKLY_STAGE04_REALISTIC_ARTIFACTS,
+)
+DEFAULT_REAL_OPENAI_PILOT_IDS: tuple[str, ...] = (
     PILOT_WEEKLY_STAGE04_REALISTIC_ARTIFACTS,
 )
 
@@ -272,6 +279,7 @@ class WeeklyPilotDefinition:
     logical_date: str
     stage_focus: str
     description: str
+    real_openai_model: str | None = None
 
 
 PILOT_DEFINITIONS: dict[str, WeeklyPilotDefinition] = {
@@ -291,8 +299,87 @@ PILOT_DEFINITIONS: dict[str, WeeklyPilotDefinition] = {
             "Weekly Stage04 bounded OpenAI agent run over realistic day-resolution planning "
             "artifacts derived from the over-capacity weekly hard-case handoff."
         ),
+        real_openai_model="gpt-5-mini",
     ),
 }
+
+
+def resolve_weekly_stage04_pilot_ids(
+    pilot_ids: Sequence[str] | None,
+    *,
+    openai_mode: str,
+) -> tuple[str, ...]:
+    if openai_mode not in {"mock", "real"}:
+        raise ValueError("openai_mode must be 'mock' or 'real'")
+
+    if not pilot_ids:
+        return DEFAULT_REAL_OPENAI_PILOT_IDS if openai_mode == "real" else ALL_PILOT_IDS
+
+    normalized = tuple(
+        str(pilot_id).strip()
+        for pilot_id in pilot_ids
+        if str(pilot_id).strip()
+    )
+    if not normalized:
+        return DEFAULT_REAL_OPENAI_PILOT_IDS if openai_mode == "real" else ALL_PILOT_IDS
+    if "all" in normalized:
+        return ALL_PILOT_IDS
+
+    selected = tuple(_dedupe_preserving_order(normalized))
+    _validate_selected_pilots(selected)
+    return selected
+
+
+def describe_weekly_stage04_pilot_fixture_profile(pilot_id: str) -> dict[str, Any]:
+    _validate_selected_pilots((pilot_id,))
+    payloads = _stage04_source_material_for_pilot(pilot_id)
+    route_slot_requirements = payloads["route_slot_requirements"]
+    driver_capabilities = payloads["driver_capabilities"]
+    approved_availability = payloads["approved_availability"]
+    actual_hours = payloads["actual_hours"]
+
+    parsed_route_slots = parse_route_slot_requirements(
+        columns=[str(column) for column in route_slot_requirements.get("columns") or []],
+        rows=list(route_slot_requirements.get("rows") or []),
+    )
+    availability_columns = {
+        str(column).strip()
+        for column in approved_availability.get("columns") or []
+        if str(column).strip()
+    }
+    actual_hours_columns = {
+        str(column).strip()
+        for column in actual_hours.get("columns") or []
+        if str(column).strip()
+    }
+
+    source_contract = "weekly_stage04_tiny_smoke_regression"
+    source_material_path = None
+    if pilot_id == PILOT_WEEKLY_STAGE04_REALISTIC_ARTIFACTS:
+        source_material = _load_realistic_weekly_stage04_source_material()
+        source_contract = str(source_material.get("fixture_contract") or source_contract)
+        source_material_path = str(REALISTIC_WEEKLY_STAGE04_SOURCE_MATERIAL_PATH)
+
+    return {
+        "pilot_id": pilot_id,
+        "planning_week_id": str(
+            route_slot_requirements.get("planning_week_id")
+            or PILOT_DEFINITIONS[pilot_id].partition_key
+        ),
+        "route_slot_count": len(expand_route_slot_requirements(parsed_route_slots)),
+        "driver_count": len(list(driver_capabilities.get("rows") or [])),
+        "availability_row_count": len(list(approved_availability.get("rows") or [])),
+        "actual_hours_row_count": len(list(actual_hours.get("rows") or [])),
+        "has_daily_availability_states": bool(
+            {"availability_state", "normalized_availability_state"} & availability_columns
+        ),
+        "has_previous_week_history": bool(
+            {"previous_week_same_day_state", "previous_week_state"} & availability_columns
+            or {"historical_state", "normalized_historical_state"} & actual_hours_columns
+        ),
+        "fixture_contract": source_contract,
+        "source_material_path": source_material_path,
+    }
 
 
 def run_logistics_weekly_agent_pilot_suite(
@@ -310,8 +397,7 @@ def run_logistics_weekly_agent_pilot_suite(
     if openai_mode == "real" and not os.environ.get("OPENAI_API_KEY", "").strip():
         raise ValueError("OPENAI_API_KEY is required when openai_mode='real'")
 
-    selected = tuple(pilot_ids) if pilot_ids else ALL_PILOT_IDS
-    _validate_selected_pilots(selected)
+    selected = resolve_weekly_stage04_pilot_ids(pilot_ids, openai_mode=openai_mode)
 
     resolved_output_root = output_root.expanduser().resolve() / pilot_key
     resolved_output_root.mkdir(parents=True, exist_ok=True)
@@ -585,7 +671,10 @@ def _run_weekly_stage04_agent_pilot(
     )
 
     selected_runner = _mock_stage04_runner() if openai_mode == "mock" else None
-    with _temporary_env("ONETRUTH_ARTIFACT_ROOT", str(storage_root)):
+    with ExitStack() as stack:
+        stack.enter_context(_temporary_env("ONETRUTH_ARTIFACT_ROOT", str(storage_root)))
+        if openai_mode == "real" and definition.real_openai_model:
+            stack.enter_context(_temporary_env("ONETRUTH_OPENAI_MODEL", definition.real_openai_model))
         result = run_weekly_stage04_openai_agent(
             connection,
             {

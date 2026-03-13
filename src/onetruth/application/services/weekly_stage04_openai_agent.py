@@ -374,6 +374,7 @@ def run_weekly_stage04_openai_agent(
                 "turn_index": int(turn.turn_index),
                 "progress_made": bool(turn.progress_made),
                 "no_progress_streak": int(turn.no_progress_streak),
+                "request_attempts": int(getattr(turn, "request_attempts", 1) or 1),
                 "request_artifact_version_id": str(request_artifact["artifact_version_id"]),
                 "result_artifact_version_id": str(result_artifact["artifact_version_id"]),
             }
@@ -382,14 +383,21 @@ def run_weekly_stage04_openai_agent(
     try:
         selected_runner = runner or build_weekly_stage04_openai_agent_runner_from_env()
         agent_result = selected_runner.run_function_calling_loop(
-            initial_input=_initial_model_input(context_pack=context_pack, stage_spec=stage_spec),
+            initial_input=_initial_model_input(
+                context_pack=context_pack,
+                stage_spec=stage_spec,
+                initial_planner_state=tooling.planner_state_snapshot(),
+            ),
             tools=tool_specs,
             execute_function=tooling.execute,
             max_turns=int(stop_policy["max_tool_calls"]),
             no_progress_limit=int(stop_policy["no_progress_ticks"]),
+            model_output_serializer=tooling.model_output_payload,
             on_turn_complete=_persist_turn_evidence,
         )
-        stage04_build_result = tooling.finalized_build_result()
+        stage04_build_result = tooling.finalized_build_result() or _extract_finalized_build_result_from_turns(
+            agent_result
+        )
         if stage04_build_result is None:
             raise CommandError(
                 code="stage04_finalize_required",
@@ -440,6 +448,11 @@ def run_weekly_stage04_openai_agent(
                 stage04_build_result=stage04_build_result,
                 execution_outcome="failed",
                 error_code=str(getattr(exc, "code", exc.__class__.__name__)),
+                error_details=(
+                    dict(getattr(exc, "details"))
+                    if isinstance(getattr(exc, "details", None), dict)
+                    else None
+                ),
             )
             runtime_evidence_artifacts.append(trace_artifact)
         except Exception:
@@ -535,7 +548,7 @@ def _stage04_tool_specs(stage_spec: dict[str, Any]) -> list[ResponsesFunctionToo
         (
             "get_stage04_context",
             "artifact.read",
-            "Return compiled Stage04 context, planner progress, and deterministic guardrails.",
+            "Return the Stage04 context summary.",
             {
                 "type": "object",
                 "additionalProperties": False,
@@ -546,7 +559,7 @@ def _stage04_tool_specs(stage_spec: dict[str, Any]) -> list[ResponsesFunctionToo
         (
             "preview_stage04_next_iteration",
             "spreadsheet.transform",
-            "Preview the next deterministic Stage04 allocation iteration without mutating planner state.",
+            "Preview the next deterministic iteration.",
             {
                 "type": "object",
                 "additionalProperties": False,
@@ -557,7 +570,7 @@ def _stage04_tool_specs(stage_spec: dict[str, Any]) -> list[ResponsesFunctionToo
         (
             "apply_stage04_next_iteration",
             "spreadsheet.transform",
-            "Apply exactly one deterministic Stage04 allocation iteration, including bounded local repair when applicable.",
+            "Apply one deterministic iteration.",
             {
                 "type": "object",
                 "additionalProperties": False,
@@ -568,7 +581,7 @@ def _stage04_tool_specs(stage_spec: dict[str, Any]) -> list[ResponsesFunctionToo
         (
             "get_stage04_validation_summary",
             "validation",
-            "Return the current deterministic Stage04 validation snapshot and finalize readiness.",
+            "Return finalize-readiness summary.",
             {
                 "type": "object",
                 "additionalProperties": False,
@@ -579,23 +592,30 @@ def _stage04_tool_specs(stage_spec: dict[str, Any]) -> list[ResponsesFunctionToo
         (
             "get_stage04_iteration_analysis",
             "projection.render",
-            "Return deterministic iteration-level route allocation, repair, and tradeoff analysis.",
+            "Return one iteration summary.",
             {
                 "type": "object",
                 "additionalProperties": False,
                 "properties": {
                     "iteration_index": {
-                        "type": "integer",
-                        "minimum": 1,
+                        "anyOf": [
+                            {
+                                "type": "integer",
+                                "minimum": 1,
+                            },
+                            {
+                                "type": "null",
+                            },
+                        ]
                     }
                 },
-                "required": [],
+                "required": ["iteration_index"],
             },
         ),
         (
             "finalize_weekly_stage04_draft_outputs",
             "spreadsheet.transform",
-            "Persist Stage04 draft artifacts from the current deterministic planner state after all iterations are complete.",
+            "Persist draft Stage04 outputs.",
             {
                 "type": "object",
                 "additionalProperties": False,
@@ -703,14 +723,18 @@ def _initial_model_input(
     *,
     context_pack: dict[str, Any],
     stage_spec: dict[str, Any],
+    initial_planner_state: dict[str, Any],
 ) -> list[dict[str, Any]]:
     stop_policy = _stage04_stop_policy_from_stage_spec(stage_spec)
     system_prompt = (
         "You are a bounded Stage04 weekly scheduling agent for weekly_schedule_planning.v1. "
         "You may only use provided deterministic function tools. "
         "Never publish schedules, never perform Stage05/Stage06 actions, and never invent data. "
-        "Preview or apply deterministic iterations, review validation/iteration analysis, "
-        "and explicitly call finalize_weekly_stage04_draft_outputs before returning a final answer. "
+        "Prefer apply_stage04_next_iteration while the planner is incomplete. "
+        "Avoid get_stage04_context unless context is missing. "
+        "Avoid repeated preview_stage04_next_iteration turns when apply can advance the planner. "
+        "Use validation or iteration-analysis only near finalize, and explicitly call "
+        "finalize_weekly_stage04_draft_outputs before returning a final answer. "
         "A non-progress streak of "
         f"{int(stop_policy['no_progress_ticks'])} "
         "tool turns exhausts the run. "
@@ -719,8 +743,16 @@ def _initial_model_input(
     )
     user_payload = {
         "task": "Orchestrate deterministic Stage04 iterations, then explicitly finalize draft outputs and return a review-ready summary.",
-        "stage_control_digest": stage_spec.get("stage_control_digest"),
-        "context_pack": context_pack,
+        "stage_control": _model_stage04_context_summary(
+            context_pack=context_pack,
+            stage_spec=stage_spec,
+            initial_planner_state=initial_planner_state,
+        ),
+        "default_loop_hint": {
+            "start_with": "apply_stage04_next_iteration",
+            "when_context_is_unclear": "get_stage04_context",
+            "when_planner_complete": "get_stage04_validation_summary_then_finalize_weekly_stage04_draft_outputs",
+        },
     }
     return [
         {
@@ -802,6 +834,89 @@ class _Stage04DeterministicTooling:
             message="tool is not supported in weekly Stage04 deterministic toolset",
             details={"function_name": function_name},
         )
+
+    def model_output_payload(
+        self,
+        function_name: str,
+        _arguments: dict[str, Any],
+        output_payload: dict[str, Any],
+    ) -> dict[str, Any]:
+        compact_planner_state = _compact_stage04_planner_state(
+            output_payload.get("planner_state")
+        )
+        if function_name == "get_stage04_context":
+            return {
+                "progress_made": bool(output_payload.get("progress_made")),
+                "planner_complete": bool(output_payload.get("planner_complete")),
+                "bundle_summary": _compact_bundle_summary(output_payload.get("bundle_summary")),
+                "input_artifacts": _compact_input_artifacts(output_payload.get("input_artifacts")),
+                "deterministic_guardrails": _compact_guardrails(
+                    output_payload.get("deterministic_guardrails")
+                ),
+                "planner_state": compact_planner_state,
+                "recommended_next_action": _recommended_stage04_next_action(
+                    planner_complete=bool(output_payload.get("planner_complete")),
+                ),
+            }
+        if function_name in {"preview_stage04_next_iteration", "apply_stage04_next_iteration"}:
+            iteration_key = (
+                "iteration_preview"
+                if function_name == "preview_stage04_next_iteration"
+                else "iteration_result"
+            )
+            return {
+                "progress_made": bool(output_payload.get("progress_made")),
+                "planner_complete": bool(output_payload.get("planner_complete")),
+                "planner_state": compact_planner_state,
+                "message": output_payload.get("message"),
+                "recommended_next_action": _recommended_stage04_next_action(
+                    planner_complete=bool(output_payload.get("planner_complete")),
+                ),
+                iteration_key: _compact_iteration_payload(output_payload.get(iteration_key)),
+            }
+        if function_name == "get_stage04_validation_summary":
+            return {
+                "progress_made": bool(output_payload.get("progress_made")),
+                "planner_complete": bool(output_payload.get("planner_complete")),
+                "planner_state": compact_planner_state,
+                "validation_summary": _compact_validation_summary(
+                    output_payload.get("validation_summary")
+                ),
+                "recommended_next_action": _recommended_stage04_next_action(
+                    planner_complete=bool(output_payload.get("planner_complete")),
+                ),
+            }
+        if function_name == "get_stage04_iteration_analysis":
+            return {
+                "progress_made": bool(output_payload.get("progress_made")),
+                "planner_complete": bool(output_payload.get("planner_complete")),
+                "planner_state": compact_planner_state,
+                "iteration_analysis": _compact_iteration_analysis(
+                    output_payload.get("iteration_analysis")
+                ),
+                "recommended_next_action": _recommended_stage04_next_action(
+                    planner_complete=bool(output_payload.get("planner_complete")),
+                ),
+            }
+        if function_name == "finalize_weekly_stage04_draft_outputs":
+            return {
+                "progress_made": bool(output_payload.get("progress_made")),
+                "planner_complete": bool(output_payload.get("planner_complete")),
+                "planner_state": compact_planner_state,
+                "finalize_blocked_reason": output_payload.get("finalize_blocked_reason"),
+                "remaining_route_slot_count": len(output_payload.get("remaining_route_slot_ids") or []),
+                "stage04_build_result": _compact_stage04_build_result(
+                    output_payload.get("stage04_build_result")
+                ),
+                "recommended_next_action": (
+                    "return_final_json_summary"
+                    if output_payload.get("stage04_build_result")
+                    else _recommended_stage04_next_action(
+                        planner_complete=bool(output_payload.get("planner_complete")),
+                    )
+                ),
+            }
+        return output_payload
 
     def planner_complete(self) -> bool:
         return self._preview_iteration_result() is None
@@ -1108,6 +1223,8 @@ def _build_turn_request_payload(
         "response_id": turn.response_id,
         "model": turn.model,
         "usage": turn.usage,
+        "request_attempts": int(getattr(turn, "request_attempts", 1) or 1),
+        "retry_history": list(getattr(turn, "retry_history", ()) or ()),
         "requested_function_names": [item.name for item in turn.function_calls],
     }
 
@@ -1125,12 +1242,15 @@ def _build_turn_result_payload(
         "turn_index": int(turn.turn_index),
         "progress_made": bool(turn.progress_made),
         "no_progress_streak": int(turn.no_progress_streak),
+        "request_attempts": int(getattr(turn, "request_attempts", 1) or 1),
+        "retry_history": list(getattr(turn, "retry_history", ()) or ()),
         "output_text": turn.output_text,
         "planner_state": tooling.planner_state_snapshot(),
         "function_calls": [
             {
                 **item.as_dict(),
-                "output": _parse_runtime_output_json(item.output_json),
+                "output": _parse_runtime_output_json(item.evidence_output_json),
+                "model_output": _parse_runtime_output_json(item.model_output_json),
             }
             for item in turn.function_calls
         ],
@@ -1156,6 +1276,7 @@ def _persist_stage04_execution_trace(
     stage04_build_result: dict[str, Any] | None,
     execution_outcome: str,
     error_code: str | None = None,
+    error_details: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     summarized_build_result = None
     if isinstance(stage04_build_result, dict):
@@ -1188,6 +1309,7 @@ def _persist_stage04_execution_trace(
                 trace_payload={
                     "execution_outcome": execution_outcome,
                     "error_code": error_code,
+                    "error_details": error_details,
                     "context_pack_artifact_version_id": str(
                         context_pack_artifact.get("artifact_version_id") or ""
                     ),
@@ -1207,6 +1329,24 @@ def _parse_runtime_output_json(value: str) -> Any:
         return json.loads(value)
     except (TypeError, ValueError, json.JSONDecodeError):
         return value
+
+
+def _extract_finalized_build_result_from_turns(agent_result: Any) -> dict[str, Any] | None:
+    turns = getattr(agent_result, "turns", ())
+    for turn in reversed(tuple(turns or ())):
+        function_calls = getattr(turn, "function_calls", ())
+        for function_call in reversed(tuple(function_calls or ())):
+            if str(getattr(function_call, "name", "") or "") != "finalize_weekly_stage04_draft_outputs":
+                continue
+            parsed_output = _parse_runtime_output_json(
+                getattr(function_call, "evidence_output_json", getattr(function_call, "output_json", ""))
+            )
+            if not isinstance(parsed_output, dict):
+                continue
+            stage04_build_result = parsed_output.get("stage04_build_result")
+            if isinstance(stage04_build_result, dict):
+                return stage04_build_result
+    return None
 
 
 def _build_context_pack(
@@ -1277,6 +1417,209 @@ def _build_context_pack(
             ],
         },
     }
+
+
+def _model_stage04_context_summary(
+    *,
+    context_pack: dict[str, Any],
+    stage_spec: dict[str, Any],
+    initial_planner_state: dict[str, Any],
+) -> dict[str, Any]:
+    stage_control = context_pack.get("stage_control") if isinstance(context_pack, dict) else {}
+    return {
+        "workflow_run_id": context_pack.get("workflow_run_id"),
+        "task_run_id": context_pack.get("task_run_id"),
+        "human_task_id": context_pack.get("human_task_id"),
+        "partition_key": context_pack.get("partition_key"),
+        "stage_control": {
+            "module_id": stage_control.get("module_id"),
+            "stage_id": stage_control.get("stage_id"),
+            "stage_control_digest": stage_spec.get("stage_control_digest"),
+            "execution_pattern": stage_control.get("execution_pattern"),
+            "required_evidence_keys": list(stage_control.get("required_evidence_keys") or []),
+        },
+        "bundle_summary": _compact_bundle_summary(context_pack.get("bundle_summary")),
+        "input_artifacts": _compact_input_artifacts(context_pack.get("input_artifacts")),
+        "deterministic_guardrails": _compact_guardrails(context_pack.get("deterministic_guardrails")),
+        "initial_planner_state": _compact_stage04_planner_state(initial_planner_state),
+    }
+
+
+def _compact_bundle_summary(bundle_summary: Any) -> dict[str, Any] | None:
+    if not isinstance(bundle_summary, dict):
+        return None
+    return {
+        "bundle_id": bundle_summary.get("bundle_id"),
+        "planning_week_id": bundle_summary.get("planning_week_id"),
+        "route_slot_count": bundle_summary.get("route_slot_count"),
+        "expanded_route_slot_count": bundle_summary.get("expanded_route_slot_count"),
+        "driver_count": bundle_summary.get("driver_count"),
+        "availability_driver_count": bundle_summary.get("availability_driver_count"),
+        "actual_hours_driver_count": bundle_summary.get("actual_hours_driver_count"),
+        "referenced_artifact_count": len(bundle_summary.get("referenced_artifacts") or []),
+    }
+
+
+def _compact_input_artifacts(input_artifacts: Any) -> dict[str, Any] | None:
+    if not isinstance(input_artifacts, dict):
+        return None
+    compact: dict[str, Any] = {}
+    for key, value in input_artifacts.items():
+        if not isinstance(value, dict):
+            compact[str(key)] = None
+            continue
+        compact[str(key)] = {
+            "artifact_version_id": value.get("artifact_version_id"),
+            "artifact_kind": value.get("artifact_kind"),
+            "content_digest": value.get("content_digest"),
+        }
+    return compact
+
+
+def _compact_guardrails(guardrails: Any) -> dict[str, Any] | None:
+    if not isinstance(guardrails, dict):
+        return None
+    return {
+        "draft_only": bool(guardrails.get("draft_only")),
+        "publish_blocked": bool(guardrails.get("publish_blocked")),
+        "stage05_stage06_bypass_blocked": bool(guardrails.get("stage05_stage06_bypass_blocked")),
+        "explicit_finalize_required": bool(guardrails.get("explicit_finalize_required")),
+        "stop_policy": dict(guardrails.get("stop_policy") or {}),
+        "allowed_functions": list(guardrails.get("allowed_functions") or []),
+    }
+
+
+def _compact_stage04_planner_state(planner_state: Any) -> dict[str, Any] | None:
+    if not isinstance(planner_state, dict):
+        return None
+    return {
+        "bundle_id": planner_state.get("bundle_id"),
+        "iteration_count": planner_state.get("iteration_count"),
+        "candidate_evaluation_count": planner_state.get("candidate_evaluation_count"),
+        "planner_complete": bool(planner_state.get("planner_complete")),
+        "finalized": bool(planner_state.get("finalized")),
+        "assigned_route_slots": planner_state.get("assigned_route_slots"),
+        "pending_route_slots": planner_state.get("pending_route_slots"),
+        "uncovered_route_slots": planner_state.get("uncovered_route_slots"),
+        "remaining_route_slot_count": len(planner_state.get("remaining_route_slot_ids") or []),
+    }
+
+
+def _compact_coverage_summary(coverage_summary: Any) -> dict[str, Any] | None:
+    if not isinstance(coverage_summary, dict):
+        return None
+    return {
+        "total_route_slots": coverage_summary.get("total_route_slots"),
+        "decided_route_slots": coverage_summary.get("decided_route_slots"),
+        "pending_route_slots": coverage_summary.get("pending_route_slots"),
+        "assigned_route_slots": coverage_summary.get("assigned_route_slots"),
+        "uncovered_route_slots": coverage_summary.get("uncovered_route_slots"),
+        "batch_size_min": coverage_summary.get("batch_size_min"),
+        "batch_size_max": coverage_summary.get("batch_size_max"),
+        "repair_move_count": coverage_summary.get("repair_move_count"),
+        "reallocation_move_count": coverage_summary.get("reallocation_move_count"),
+        "repaired_route_slot_count": coverage_summary.get("repaired_route_slot_count"),
+        "phase_counts": dict(coverage_summary.get("phase_counts") or {}),
+    }
+
+
+def _compact_iteration_payload(iteration_payload: Any) -> dict[str, Any] | None:
+    if not isinstance(iteration_payload, dict):
+        return None
+    return {
+        "iteration_index": iteration_payload.get("iteration_index"),
+        "phase": iteration_payload.get("phase"),
+        "batch_id": iteration_payload.get("batch_id"),
+        "pressure_group_id": iteration_payload.get("pressure_group_id"),
+        "pressure_service_date": iteration_payload.get("pressure_service_date"),
+        "pressure_station_code": iteration_payload.get("pressure_station_code"),
+        "pressure_service_area": iteration_payload.get("pressure_service_area"),
+        "preview_only": bool(iteration_payload.get("preview_only")),
+        "candidate_evaluation_count": iteration_payload.get("candidate_evaluation_count"),
+        "route_allocation_count": len(iteration_payload.get("route_allocations") or []),
+        "assigned_route_slot_count": len(iteration_payload.get("assigned_route_slot_ids") or []),
+        "uncovered_route_slot_count": len(iteration_payload.get("uncovered_route_slot_ids") or []),
+        "moved_route_slot_count": len(iteration_payload.get("moved_route_slot_ids") or []),
+        "repair_move_count": len(iteration_payload.get("repair_moves") or []),
+        "coverage_summary_after_iteration": _compact_coverage_summary(
+            iteration_payload.get("coverage_summary_after_iteration")
+        ),
+        "soft_objective_delta": iteration_payload.get("soft_objective_delta"),
+        "stability_delta": iteration_payload.get("stability_delta"),
+        "target_shift_gap_delta": iteration_payload.get("target_shift_gap_delta"),
+        "preference_fit_delta": iteration_payload.get("preference_fit_delta"),
+        "accepted_move_reasons": list(iteration_payload.get("accepted_move_reasons") or [])[:3],
+        "rejected_move_reason_count": len(iteration_payload.get("rejected_move_reasons") or []),
+        "tradeoffs": list(iteration_payload.get("tradeoffs") or [])[:3],
+    }
+
+
+def _compact_validation_summary(validation_summary: Any) -> dict[str, Any] | None:
+    if not isinstance(validation_summary, dict):
+        return None
+    summary = validation_summary.get("summary") if isinstance(validation_summary, dict) else {}
+    summary = dict(summary) if isinstance(summary, dict) else {}
+    coverage_summary = summary.get("coverage_summary") or validation_summary.get("coverage_summary")
+    soft_score_totals = summary.get("soft_score_totals")
+    return {
+        "summary": {
+            "hard_rule_result": summary.get("hard_rule_result"),
+            "recommended_action": summary.get("recommended_action"),
+            "planner_complete": summary.get("planner_complete"),
+            "finalize_available": summary.get("finalize_available"),
+            "warnings": list(summary.get("warnings") or [])[:3],
+            "tradeoffs": list(summary.get("tradeoffs") or [])[:3],
+            "coverage_summary": _compact_coverage_summary(coverage_summary),
+            "soft_score_totals": (
+                dict(soft_score_totals) if isinstance(soft_score_totals, dict) else None
+            ),
+        },
+        "planner_state": _compact_stage04_planner_state(validation_summary.get("planner_state")),
+        "latest_iteration_index": validation_summary.get("latest_iteration_index"),
+    }
+
+
+def _compact_iteration_analysis(iteration_analysis: Any) -> dict[str, Any] | None:
+    if not isinstance(iteration_analysis, dict):
+        return None
+    if iteration_analysis.get("iteration_index") is None:
+        return {
+            "available_iteration_indices": list(
+                iteration_analysis.get("available_iteration_indices") or []
+            ),
+            "message": iteration_analysis.get("message"),
+        }
+    return _compact_iteration_payload(iteration_analysis)
+
+
+def _compact_stage04_build_result(stage04_build_result: Any) -> dict[str, Any] | None:
+    if not isinstance(stage04_build_result, dict):
+        return None
+    artifacts = stage04_build_result.get("artifacts")
+    return {
+        "bundle_id": stage04_build_result.get("bundle_id"),
+        "candidate_count": stage04_build_result.get("candidate_count"),
+        "selected_candidate_count": stage04_build_result.get("selected_candidate_count"),
+        "coverage_summary": _compact_coverage_summary(stage04_build_result.get("coverage_summary")),
+        "artifacts": (
+            {
+                key: {
+                    "artifact_version_id": value.get("artifact_version_id"),
+                    "artifact_kind": value.get("artifact_kind"),
+                }
+                for key, value in artifacts.items()
+                if isinstance(value, dict)
+            }
+            if isinstance(artifacts, dict)
+            else None
+        ),
+    }
+
+
+def _recommended_stage04_next_action(*, planner_complete: bool) -> str:
+    if planner_complete:
+        return "finalize_weekly_stage04_draft_outputs"
+    return "apply_stage04_next_iteration"
 
 
 def _resolve_stage04_input_artifacts(

@@ -1,11 +1,17 @@
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
 
 from onetruth.application.services.logistics_weekly_agent_pilot import (
+    PILOT_DEFINITIONS,
     PILOT_WEEKLY_STAGE04_AGENT,
     PILOT_WEEKLY_STAGE04_REALISTIC_ARTIFACTS,
+    _ensure_workflow_run,
+    _run_weekly_stage04_agent_pilot,
+    describe_weekly_stage04_pilot_fixture_profile,
+    resolve_weekly_stage04_pilot_ids,
     run_logistics_weekly_agent_pilot_suite,
 )
 from onetruth.infrastructure.db.session import open_sqlite_connection
@@ -80,6 +86,48 @@ def _count_by_workflow_run_id(db_url: str, workflow_run_id: str) -> dict[str, in
         connection.close()
 
 
+def _artifact_rows_for_kind(
+    db_url: str,
+    workflow_run_id: str,
+    artifact_kind: str,
+) -> list[dict[str, object]]:
+    connection = open_sqlite_connection(db_url)
+    try:
+        rows = connection.execute(
+            """
+            SELECT artifact_kind, metadata_json, storage_uri
+            FROM artifact_versions
+            WHERE workflow_run_id = ?
+              AND artifact_kind = ?
+            ORDER BY created_at ASC, artifact_version_id ASC
+            """,
+            (workflow_run_id, artifact_kind),
+        ).fetchall()
+        return [dict(row) for row in rows]
+    finally:
+        connection.close()
+
+
+def _load_artifact_payload(row: dict[str, object]) -> dict[str, object]:
+    storage_uri = str(row["storage_uri"])
+    payload_path = Path(storage_uri.removeprefix("file://"))
+    return json.loads(payload_path.read_text(encoding="utf-8"))
+
+
+def _payload_size_bytes(payload: dict[str, object]) -> int:
+    return len(json.dumps(payload, sort_keys=True, separators=(",", ":")).encode("utf-8"))
+
+
+def _contains_key(value: object, target_key: str) -> bool:
+    if isinstance(value, dict):
+        if target_key in value:
+            return True
+        return any(_contains_key(item, target_key) for item in value.values())
+    if isinstance(value, list):
+        return any(_contains_key(item, target_key) for item in value)
+    return False
+
+
 def test_weekly_stage04_pilot_mock_emits_canonical_execution_and_evidence_packet(
     tmp_path: Path,
 ) -> None:
@@ -124,6 +172,186 @@ def test_weekly_stage04_pilot_mock_emits_canonical_execution_and_evidence_packet
     assert packet["stage04_analysis"]["iterations"]
     assert packet["stage04_analysis"]["runtime_turns"]
     assert packet["stage04_analysis"]["tradeoffs"] == []
+
+
+def test_weekly_stage04_pilot_selection_defaults_real_to_realistic() -> None:
+    assert resolve_weekly_stage04_pilot_ids(None, openai_mode="mock") == (
+        PILOT_WEEKLY_STAGE04_AGENT,
+        PILOT_WEEKLY_STAGE04_REALISTIC_ARTIFACTS,
+    )
+    assert resolve_weekly_stage04_pilot_ids(None, openai_mode="real") == (
+        PILOT_WEEKLY_STAGE04_REALISTIC_ARTIFACTS,
+    )
+    assert resolve_weekly_stage04_pilot_ids(["all"], openai_mode="real") == (
+        PILOT_WEEKLY_STAGE04_AGENT,
+        PILOT_WEEKLY_STAGE04_REALISTIC_ARTIFACTS,
+    )
+    assert resolve_weekly_stage04_pilot_ids(
+        [PILOT_WEEKLY_STAGE04_AGENT],
+        openai_mode="real",
+    ) == (PILOT_WEEKLY_STAGE04_AGENT,)
+
+
+def test_weekly_stage04_fixture_profiles_distinguish_realistic_from_tiny() -> None:
+    realistic = describe_weekly_stage04_pilot_fixture_profile(
+        PILOT_WEEKLY_STAGE04_REALISTIC_ARTIFACTS
+    )
+    tiny = describe_weekly_stage04_pilot_fixture_profile(PILOT_WEEKLY_STAGE04_AGENT)
+
+    assert realistic["planning_week_id"] == "PW-2026-W12"
+    assert realistic["route_slot_count"] == 139
+    assert realistic["driver_count"] == 40
+    assert realistic["has_daily_availability_states"] is True
+    assert realistic["has_previous_week_history"] is True
+
+    assert tiny["planning_week_id"] == "PW-2026-W10"
+    assert tiny["route_slot_count"] == 2
+    assert tiny["driver_count"] == 2
+    assert tiny["has_daily_availability_states"] is False
+    assert tiny["has_previous_week_history"] is False
+
+
+def test_realistic_live_stage04_pilot_scopes_gpt5mini_override(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    observed_calls: list[dict[str, object]] = []
+
+    def _fake_run_weekly_stage04_openai_agent(_connection, _payload, *, runner=None):
+        observed_calls.append(
+            {
+                "model": os.environ.get("ONETRUTH_OPENAI_MODEL"),
+                "uses_mock_runner": runner is not None,
+            }
+        )
+        return {
+            "execution_session": {"execution_session_id": f"xs-{len(observed_calls)}"},
+            "tool_execution": {"tool_execution_id": f"tx-{len(observed_calls)}"},
+            "policy_decision": {"policy_decision_id": f"pd-{len(observed_calls)}"},
+        }
+
+    monkeypatch.setattr(
+        "onetruth.application.services.logistics_weekly_agent_pilot.run_weekly_stage04_openai_agent",
+        _fake_run_weekly_stage04_openai_agent,
+    )
+    monkeypatch.setenv("ONETRUTH_OPENAI_MODEL", "gpt-4.1-mini")
+
+    db_path = tmp_path / "runtime.db"
+    db_url = f"sqlite:///{db_path}"
+    storage_root = tmp_path / "artifacts"
+    connection = open_sqlite_connection(db_url)
+    try:
+        create_sqlite_substrate(connection)
+
+        def _invoke(pilot_id: str, *, pilot_key: str, openai_mode: str) -> None:
+            definition = PILOT_DEFINITIONS[pilot_id]
+            workflow_run_id = f"wr-{pilot_key}"
+            _ensure_workflow_run(
+                connection,
+                definition=definition,
+                workflow_run_id=workflow_run_id,
+                pilot_key=pilot_key,
+            )
+            _run_weekly_stage04_agent_pilot(
+                connection,
+                definition=definition,
+                workflow_run_id=workflow_run_id,
+                pilot_key=pilot_key,
+                openai_mode=openai_mode,
+                storage_root=storage_root,
+            )
+
+        _invoke(
+            PILOT_WEEKLY_STAGE04_REALISTIC_ARTIFACTS,
+            pilot_key="stage04-realistic-live-model",
+            openai_mode="real",
+        )
+        _invoke(
+            PILOT_WEEKLY_STAGE04_AGENT,
+            pilot_key="stage04-baseline-live-model",
+            openai_mode="real",
+        )
+        _invoke(
+            PILOT_WEEKLY_STAGE04_REALISTIC_ARTIFACTS,
+            pilot_key="stage04-realistic-mock-model",
+            openai_mode="mock",
+        )
+    finally:
+        connection.close()
+
+    assert observed_calls == [
+        {"model": "gpt-5-mini", "uses_mock_runner": False},
+        {"model": "gpt-4.1-mini", "uses_mock_runner": False},
+        {"model": "gpt-4.1-mini", "uses_mock_runner": True},
+    ]
+    assert os.environ["ONETRUTH_OPENAI_MODEL"] == "gpt-4.1-mini"
+
+
+def test_realistic_weekly_stage04_pilot_compacts_model_payloads_and_keeps_full_evidence(
+    tmp_path: Path,
+) -> None:
+    db_url, summary, packets = _run_pilot(
+        tmp_path,
+        pilot_ids=[PILOT_WEEKLY_STAGE04_REALISTIC_ARTIFACTS],
+        pilot_key="weekly-stage04-realistic-compact-payloads",
+    )
+    workflow_run_id = str(packets[0]["workflow_run"]["workflow_run_id"])
+    assert summary["openai_mode"] == "mock"
+
+    request_rows = _artifact_rows_for_kind(
+        db_url,
+        workflow_run_id,
+        "runtime.tool_request.json",
+    )
+    result_rows = _artifact_rows_for_kind(
+        db_url,
+        workflow_run_id,
+        "runtime.tool_result.json",
+    )
+    assert len(request_rows) == len(result_rows)
+    assert len(request_rows) >= 10
+
+    parsed_requests = [_load_artifact_payload(row) for row in request_rows]
+    parsed_results = [_load_artifact_payload(row) for row in result_rows]
+
+    post_turn_one_requests = [
+        payload for payload in parsed_requests if int(payload.get("turn_index") or 0) > 1
+    ]
+    assert post_turn_one_requests
+    assert max(_payload_size_bytes(payload["request_payload"]) for payload in post_turn_one_requests) < 10_000
+
+    for payload in post_turn_one_requests:
+        for item in payload["request_payload"]["input"]:
+            if str(item.get("type") or "") != "function_call_output":
+                continue
+            output_payload = json.loads(str(item.get("output") or "{}"))
+            assert not _contains_key(output_payload, "route_allocations")
+            assert not _contains_key(output_payload, "remaining_route_slot_ids")
+            assert not _contains_key(output_payload, "selected_candidates")
+
+    apply_result = next(
+        payload
+        for payload in parsed_results
+        if any(call["name"] == "apply_stage04_next_iteration" for call in payload["function_calls"])
+    )
+    apply_call = next(call for call in apply_result["function_calls"] if call["name"] == "apply_stage04_next_iteration")
+    assert _contains_key(apply_call["output"], "route_allocations")
+    assert not _contains_key(apply_call["model_output"], "route_allocations")
+    assert _contains_key(apply_call["output"], "remaining_route_slot_ids")
+    assert not _contains_key(apply_call["model_output"], "remaining_route_slot_ids")
+
+    finalize_result = next(
+        payload
+        for payload in parsed_results
+        if any(call["name"] == "finalize_weekly_stage04_draft_outputs" for call in payload["function_calls"])
+    )
+    finalize_call = next(
+        call
+        for call in finalize_result["function_calls"]
+        if call["name"] == "finalize_weekly_stage04_draft_outputs"
+    )
+    assert _contains_key(finalize_call["output"], "selected_candidates")
+    assert not _contains_key(finalize_call["model_output"], "selected_candidates")
 
 
 def test_repeat_pilot_run_with_same_key_does_not_duplicate_canonical_effects(tmp_path: Path) -> None:

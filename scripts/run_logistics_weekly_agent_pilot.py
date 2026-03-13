@@ -8,6 +8,7 @@ import sys
 
 from onetruth.application.services.logistics_weekly_agent_pilot import (
     ALL_PILOT_IDS,
+    resolve_weekly_stage04_pilot_ids,
     run_logistics_weekly_agent_pilot_suite,
 )
 from onetruth.infrastructure.db.session import DEFAULT_DB_URL, open_sqlite_connection
@@ -42,14 +43,21 @@ def _build_parser() -> argparse.ArgumentParser:
         "--openai-mode",
         default="mock",
         choices=["mock", "real"],
-        help="Use deterministic mock runner or real OpenAI runner for Stage04 pilot steps.",
+        help=(
+            "Use deterministic mock runner or real OpenAI runner for Stage04 pilot steps. "
+            "When --pilot is omitted, mock runs all pilots and real runs only the realistic "
+            "over-capacity pilot."
+        ),
     )
     parser.add_argument(
         "--pilot",
         dest="pilots",
         action="append",
         choices=[*ALL_PILOT_IDS, "all"],
-        help="Pilot scenario to run. Can be repeated. Defaults to all scenarios.",
+        help=(
+            "Pilot scenario to run. Can be repeated. With --openai-mode real, omitting --pilot "
+            "defaults to the realistic over-capacity pilot; use --pilot all to opt into both pilots."
+        ),
     )
     parser.add_argument(
         "--json",
@@ -60,18 +68,14 @@ def _build_parser() -> argparse.ArgumentParser:
     return parser
 
 
-def _selected_pilots(raw: list[str] | None) -> tuple[str, ...]:
-    if raw is None or not raw:
-        return ALL_PILOT_IDS
-    if "all" in raw:
-        return ALL_PILOT_IDS
-    return tuple(raw)
+def _selected_pilots(raw: list[str] | None, *, openai_mode: str) -> tuple[str, ...]:
+    return resolve_weekly_stage04_pilot_ids(raw, openai_mode=openai_mode)
 
 
 def main(argv: list[str] | None = None) -> int:
     args = _build_parser().parse_args(argv)
 
-    pilots = _selected_pilots(args.pilots)
+    pilots = _selected_pilots(args.pilots, openai_mode=str(args.openai_mode))
     output_root = Path(args.output_root).expanduser()
     artifact_root = Path(args.artifact_root).expanduser() if args.artifact_root else None
 

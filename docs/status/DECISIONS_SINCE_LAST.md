@@ -2,6 +2,12 @@
 
 Record any decisions made since the last session so a fresh Codex run can rehydrate quickly.
 
+## 2026-03-13 (TASK-0073 weekly Stage04 live TPM compaction and bounded 429 recovery)
+- Model-surface decision: the Stage04 runtime now keeps the same deterministic tool set and canonical artifact/evidence chain, but the model sees compact Stage04 context summaries and compact tool-output deltas instead of repeated full context packs, route allocations, coverage lists, or finalize candidate payloads.
+- Evidence decision: full deterministic tool outputs remain persisted verbatim in `runtime.tool_result.json` and execution traces, while the Responses continuation loop records a separate compact `model_output_json` for the `function_call_output` payload actually sent back to the model.
+- Retry-safety decision: `rate_limit_exceeded` handling is now narrowly retried inside the same Responses turn with bounded `Retry-After`/message-derived backoff, preserving idempotency by not executing deterministic tools until a model response succeeds.
+- Traceability decision: per-turn request evidence and failed execution traces now record retry attempts/history plus the last failed request details so fresh-live 429 failures stay reviewable and distinguishable from deterministic Stage04 failures.
+
 ## 2026-03-13 (TASK-0072 weekly Stage04 iterative deterministic allocation)
 - Planner-ownership decision: Stage04 weekly allocation remains deterministic-code-owned truth, but now advances through an explicit partial-schedule loop with adaptive 5-10 route batches instead of a single global top-pick pass.
 - Repair-boundary decision: bounded local repair moves are allowed inside the deterministic allocator to free capacity or preserve continuity, but repairs stay narrowly scoped to already-selected local assignments rather than broad weekly rewrites.

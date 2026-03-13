@@ -218,6 +218,57 @@ def _mock_stage04_runner() -> OpenAIResponsesFunctionCallingRunner:
     )
 
 
+def _retry_then_success_stage04_runner() -> OpenAIResponsesFunctionCallingRunner:
+    base_runner = _mock_stage04_runner()
+    first_attempt = {"pending": True}
+
+    def transport(payload, timeout):
+        if first_attempt["pending"]:
+            first_attempt["pending"] = False
+            return (
+                429,
+                {"error": {"code": "rate_limit_exceeded", "message": "Too many requests"}},
+                "req_runtime_retry_1",
+                {"retry-after": "0"},
+            )
+        return base_runner._transport(payload, timeout)  # type: ignore[attr-defined]
+
+    return OpenAIResponsesFunctionCallingRunner(
+        api_key="sk-test",
+        model="gpt-4.1-mini",
+        base_url="https://api.openai.test/v1",
+        timeout_seconds=5.0,
+        max_retries=1,
+        transport=transport,
+    )
+
+
+def _rate_limited_stage04_runner() -> OpenAIResponsesFunctionCallingRunner:
+    attempts = {"count": 0}
+
+    def transport(_payload, _timeout):
+        attempts["count"] += 1
+        return (
+            429,
+            {
+                "error": {
+                    "code": "rate_limit_exceeded",
+                    "message": "Limit 500000, Used 451054, Requested 110432, retry after 0.1s",
+                }
+            },
+            f"req_runtime_limit_{attempts['count']}",
+        )
+
+    return OpenAIResponsesFunctionCallingRunner(
+        api_key="sk-test",
+        model="gpt-4.1-mini",
+        base_url="https://api.openai.test/v1",
+        timeout_seconds=5.0,
+        max_retries=1,
+        transport=transport,
+    )
+
+
 def _stalled_stage04_runner() -> OpenAIResponsesFunctionCallingRunner:
     calls = {"count": 0}
 
@@ -341,6 +392,90 @@ def test_weekly_stage04_execution_runtime_persists_rows_events_and_trace_evidenc
     assert "execution.session.state_changed" in event_types
 
 
+def test_weekly_stage04_execution_runtime_records_retry_history_without_duplicate_turn_artifacts(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    harness, client, human_task_id = _prepare_claimed_stage04_task(tmp_path)
+    monkeypatch.setattr(
+        "onetruth.application.services.weekly_stage04_openai_agent.build_weekly_stage04_openai_agent_runner_from_env",
+        lambda: _retry_then_success_stage04_runner(),
+    )
+    monkeypatch.setattr("time.sleep", lambda _seconds: None)
+    monkeypatch.setenv("ONETRUTH_ARTIFACT_ROOT", str(tmp_path / "artifacts"))
+
+    response = client.post(
+        f"/api/v1/human-tasks/{human_task_id}/weekly-stage04-openai-agent",
+        payload={"idempotency_key": f"api:{harness.scenario_id}:stage04-runtime-retry-success"},
+    )
+    assert response.status_code == 200, response.payload
+    result = response.payload["result"]
+
+    sessions = harness.query_rows("SELECT state FROM execution_sessions")
+    assert [row["state"] for row in sessions] == ["SUCCEEDED"]
+
+    artifacts = harness.list_artifacts()["artifact_versions"]
+    request_rows = [
+        row for row in artifacts if row["artifact_kind"] == "runtime.tool_request.json"
+    ]
+    result_rows = [
+        row for row in artifacts if row["artifact_kind"] == "runtime.tool_result.json"
+    ]
+    assert len(request_rows) == 4
+    assert len(result_rows) == 4
+    assert result["runtime_turn_evidence"][0]["request_attempts"] == 2
+
+    first_request_row = sorted(
+        request_rows,
+        key=lambda item: int(
+            ((item.get("metadata_json") or {}).get("turn_index") or 0)
+            if isinstance(item.get("metadata_json"), dict)
+            else 0
+        ),
+    )[0]
+    request_payload = json.loads(Path(urlparse(first_request_row["storage_uri"]).path).read_text(encoding="utf-8"))
+    assert request_payload["request_attempts"] == 2
+    assert request_payload["retry_history"] == [
+        {
+            "attempt": 1,
+            "error_code": "rate_limit_exceeded",
+            "error_message": "Too many requests",
+            "status_code": 429,
+            "request_id": "req_runtime_retry_1",
+            "retry_after_seconds": 0.0,
+        }
+    ]
+
+
+def test_weekly_stage04_execution_runtime_uses_finalize_tool_output_when_cache_lookup_is_missing(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    harness, client, human_task_id = _prepare_claimed_stage04_task(tmp_path)
+    monkeypatch.setattr(
+        "onetruth.application.services.weekly_stage04_openai_agent.build_weekly_stage04_openai_agent_runner_from_env",
+        lambda: _mock_stage04_runner(),
+    )
+    monkeypatch.setattr(
+        "onetruth.application.services.weekly_stage04_openai_agent._Stage04DeterministicTooling.finalized_build_result",
+        lambda self: None,
+    )
+    monkeypatch.setenv("ONETRUTH_ARTIFACT_ROOT", str(tmp_path / "artifacts"))
+
+    response = client.post(
+        f"/api/v1/human-tasks/{human_task_id}/weekly-stage04-openai-agent",
+        payload={"idempotency_key": f"api:{harness.scenario_id}:stage04-runtime-finalize-fallback"},
+    )
+    assert response.status_code == 200, response.payload
+    result = response.payload["result"]
+
+    assert result["execution_session"]["state"] == "SUCCEEDED"
+    assert result["tool_execution"]["state"] == "COMPLETED"
+    assert result["stage04_build_result"]["candidate_count"] == 4
+    assert result["stage04_build_result"]["selected_candidate_count"] == 2
+    assert result["stage04_build_result"]["artifacts"]["draft_workbook"]["artifact_version_id"]
+
+
 def test_weekly_stage04_execution_runtime_enforces_authored_no_progress_limit(
     tmp_path: Path,
     monkeypatch,
@@ -372,6 +507,58 @@ def test_weekly_stage04_execution_runtime_enforces_authored_no_progress_limit(
     assert len(request_rows) == 3
     assert len(result_rows) == 3
     assert any(row["artifact_kind"] == "execution.trace.json" for row in artifacts)
+
+
+def test_weekly_stage04_execution_runtime_persists_retry_history_on_exhausted_429(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    harness, client, human_task_id = _prepare_claimed_stage04_task(tmp_path)
+    monkeypatch.setattr(
+        "onetruth.application.services.weekly_stage04_openai_agent.build_weekly_stage04_openai_agent_runner_from_env",
+        lambda: _rate_limited_stage04_runner(),
+    )
+    monkeypatch.setattr("time.sleep", lambda _seconds: None)
+    monkeypatch.setenv("ONETRUTH_ARTIFACT_ROOT", str(tmp_path / "artifacts"))
+
+    response = client.post(
+        f"/api/v1/human-tasks/{human_task_id}/weekly-stage04-openai-agent",
+        payload={"idempotency_key": f"api:{harness.scenario_id}:stage04-runtime-rate-limited"},
+    )
+    assert response.status_code == 503
+    assert response.payload["error"]["code"] == "rate_limit_exceeded"
+
+    sessions = harness.query_rows("SELECT state FROM execution_sessions")
+    assert [row["state"] for row in sessions] == ["FAILED"]
+
+    tools = harness.query_rows("SELECT state FROM tool_executions")
+    assert [row["state"] for row in tools] == ["FAILED"]
+
+    artifacts = harness.list_artifacts()["artifact_versions"]
+    request_rows = [
+        row for row in artifacts if row["artifact_kind"] == "runtime.tool_request.json"
+    ]
+    result_rows = [
+        row for row in artifacts if row["artifact_kind"] == "runtime.tool_result.json"
+    ]
+    assert request_rows == []
+    assert result_rows == []
+
+    trace_row = next(row for row in artifacts if row["artifact_kind"] == "execution.trace.json")
+    trace_payload = json.loads(Path(urlparse(trace_row["storage_uri"]).path).read_text(encoding="utf-8"))
+    error_details = trace_payload["trace"]["error_details"]
+    assert error_details["attempts"] == 2
+    assert error_details["request_id"] == "req_runtime_limit_2"
+    assert error_details["retry_history"] == [
+        {
+            "attempt": 1,
+            "error_code": "rate_limit_exceeded",
+            "error_message": "Limit 500000, Used 451054, Requested 110432, retry after 0.1s",
+            "status_code": 429,
+            "request_id": "req_runtime_limit_1",
+            "retry_after_seconds": 0.1,
+        }
+    ]
 
 
 def test_weekly_stage04_policy_denial_skips_runner_and_records_denial(tmp_path: Path, monkeypatch) -> None:
