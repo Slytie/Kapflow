@@ -15,6 +15,12 @@ class RouteSlotRequirement:
     shift_end: str
     estimated_hours: float
     source_snapshot_row_ref: str
+    required_count: int = 1
+    route_id: str = ""
+    source_message_id: str = ""
+    station_code: str = ""
+    service_area: str = ""
+    source_kind: str = ""
 
     @property
     def projected_minutes(self) -> int:
@@ -28,6 +34,7 @@ def parse_route_slot_requirements(*, columns: list[str], rows: Iterable[Any]) ->
         service_date = str(raw.get("service_date") or "").strip()
         if not route_slot_id or not service_date:
             continue
+        required_count = _required_count_from_row(raw)
         parsed.append(
             RouteSlotRequirement(
                 service_date=service_date,
@@ -39,6 +46,12 @@ def parse_route_slot_requirements(*, columns: list[str], rows: Iterable[Any]) ->
                 shift_end=str(raw.get("shift_end") or "").strip(),
                 estimated_hours=_coerce_float(raw.get("estimated_hours"), default=0.0),
                 source_snapshot_row_ref=str(raw.get("source_snapshot_row_ref") or "").strip(),
+                required_count=required_count,
+                route_id=_route_id_from_row(raw, route_slot_id=route_slot_id),
+                source_message_id=str(raw.get("source_message_id") or "").strip(),
+                station_code=str(raw.get("station_code") or "").strip(),
+                service_area=str(raw.get("service_area") or "").strip(),
+                source_kind=str(raw.get("source_kind") or "").strip(),
             )
         )
 
@@ -85,18 +98,46 @@ def expand_route_slot_requirements(
                     shift_end=slot.shift_end,
                     estimated_hours=slot.estimated_hours,
                     source_snapshot_row_ref=slot.source_snapshot_row_ref,
+                    required_count=1,
+                    route_id=slot.route_id,
+                    source_message_id=slot.source_message_id,
+                    station_code=slot.station_code,
+                    service_area=slot.service_area,
+                    source_kind=slot.source_kind,
                 )
             )
     return tuple(expanded)
 
 
 def _required_count_for_slot(slot: RouteSlotRequirement, *, default_required_count: int) -> int:
+    if slot.required_count > 1:
+        return int(slot.required_count)
     # Allow count suffixes such as route-slot-id*3 while keeping the base id deterministic.
     if "*" not in slot.route_slot_id:
         return max(default_required_count, 1)
     _, count_text = slot.route_slot_id.rsplit("*", maxsplit=1)
     parsed = _coerce_int(count_text, default=default_required_count)
     return max(parsed, 1)
+
+
+def _required_count_from_row(raw: dict[str, Any]) -> int:
+    explicit = _coerce_int(raw.get("required_count"), default=0)
+    if explicit > 0:
+        return explicit
+    route_slot_id = str(raw.get("route_slot_id") or "").strip()
+    if "*" not in route_slot_id:
+        return 1
+    _, count_text = route_slot_id.rsplit("*", maxsplit=1)
+    return max(_coerce_int(count_text, default=1), 1)
+
+
+def _route_id_from_row(raw: dict[str, Any], *, route_slot_id: str) -> str:
+    explicit = str(raw.get("route_id") or "").strip()
+    if explicit:
+        return explicit
+    compact = route_slot_id.split("*", maxsplit=1)[0]
+    token = compact.rsplit("-", maxsplit=1)[-1]
+    return token.upper()
 
 
 def _rows_to_dicts(*, columns: list[str], rows: Iterable[Any]) -> list[dict[str, Any]]:

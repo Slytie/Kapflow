@@ -3,6 +3,10 @@ workflow_id: weekly_schedule_planning.v1
 workflow_version: v1
 partition_key: PW-2026-W10
 logical_date: "2026-03-02"
+fixture_variant: tiny_smoke_regression
+notes:
+  - This scenario intentionally remains the tiny two-driver Stage04 smoke fixture.
+  - The realistic hard-case Stage04 source material now lives in fixtures/logistics/weekly_stage04_realistic_source_material.yaml.
 scope:
   tenant_id: tenant-logistics
   domain_id: domain-hub

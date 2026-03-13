@@ -121,6 +121,10 @@ stages:
     and recent actual hours.
   - Route-slot requirements and driver capabilities are canonical bridge inputs for
     deterministic Stage04 schedule-control candidate generation.
+  - Those same Stage04 bridge artifact kinds now carry richer day-resolution planning
+    payloads, including daily demand summaries, driver-day availability states, prior-week
+    day state, rolling-7 compliance inputs, and policy signals without introducing
+    new artifact kinds or a second truth path.
   - Candidate deltas and validation summaries are machine-checkable planning artifacts
     for review; they are not official published schedule truth.
   - This stage may use deterministic code plus narrowly-scoped LLM drafting for the

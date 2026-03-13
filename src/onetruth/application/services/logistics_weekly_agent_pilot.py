@@ -2,12 +2,15 @@ from __future__ import annotations
 
 from contextlib import contextmanager
 from dataclasses import dataclass
+from datetime import date, timedelta
 import hashlib
 import json
 import os
 from pathlib import Path
 import sqlite3
 from typing import Any, Iterable, Sequence
+
+import yaml
 
 from onetruth.application.handlers.workflow_task_lifecycle import (
     CommandError,
@@ -46,9 +49,17 @@ WORKFLOW_ID = "weekly_schedule_planning.v1"
 WORKFLOW_VERSION = "v1"
 TENANT_ID = "tenant-logistics"
 DOMAIN_ID = "domain-hub"
+REPO_ROOT = Path(__file__).resolve().parents[4]
+REALISTIC_WEEKLY_STAGE04_SOURCE_MATERIAL_PATH = (
+    REPO_ROOT / "fixtures" / "logistics" / "weekly_stage04_realistic_source_material.yaml"
+)
 
 PILOT_WEEKLY_STAGE04_AGENT = "weekly_stage04_agent_baseline"
-ALL_PILOT_IDS: tuple[str, ...] = (PILOT_WEEKLY_STAGE04_AGENT,)
+PILOT_WEEKLY_STAGE04_REALISTIC_ARTIFACTS = "weekly_stage04_realistic_artifacts"
+ALL_PILOT_IDS: tuple[str, ...] = (
+    PILOT_WEEKLY_STAGE04_AGENT,
+    PILOT_WEEKLY_STAGE04_REALISTIC_ARTIFACTS,
+)
 
 EVENT_TYPES_OF_INTEREST = {
     "workflow.run.created",
@@ -92,40 +103,145 @@ _ROUTE_SLOT_REQUIREMENTS_METADATA = {
         "shift_start",
         "shift_end",
         "estimated_hours",
+        "required_count",
+        "route_id",
+        "source_message_id",
+        "station_code",
+        "service_area",
         "source_snapshot_row_ref",
     ],
     "rows": [
-        ["2026-03-02", "slot-20260302-cx100", "cycle1_standard", "parcel_delivery", "XL_van", "11:40", "20:10", 8.5, "amazon:row-001"],
-        ["2026-03-03", "slot-20260303-cx086", "cycle1_rescue", "rescue_support", "XL_van", "11:45", "21:00", 8.8, "amazon:row-002"],
+        [
+            "2026-03-02",
+            "slot-20260302-cx100",
+            "cycle1_standard",
+            "parcel_delivery",
+            "XL_van",
+            "11:40",
+            "20:10",
+            8.5,
+            1,
+            "CX100",
+            "amazon-2026-02-27-1518",
+            "DVC4",
+            "Pitt Meadows",
+            "amazon:row-001",
+        ],
+        [
+            "2026-03-03",
+            "slot-20260303-cx086",
+            "cycle1_rescue",
+            "rescue_support",
+            "XL_van",
+            "11:45",
+            "21:00",
+            8.8,
+            1,
+            "CX086",
+            "amazon-2026-02-27-1518",
+            "DVC4",
+            "Pitt Meadows",
+            "amazon:row-002",
+        ],
+    ],
+    "daily_demand_columns": [
+        "service_date",
+        "planned_route_count",
+        "standard_slot_count",
+        "rescue_slot_count",
+        "overflow_slot_count",
+        "source_message_id",
+        "source_kind",
+        "change_kind",
+    ],
+    "daily_demand_rows": [
+        ["2026-03-02", 1, 1, 0, 0, "amazon-2026-02-27-1518", "weekly_route_update", "decrease"],
+        ["2026-03-03", 1, 0, 1, 0, "amazon-2026-02-27-1518", "weekly_route_update", "increase"],
     ],
 }
 
 _DRIVER_CAPABILITIES_METADATA = {
     "columns": [
         "driver_id",
+        "driver_name",
+        "employment_type",
+        "home_station",
         "skills",
         "vehicle_certifications",
         "eligible_route_slot_classes",
         "approved_restrictions",
+        "policy_tags",
         "notes",
     ],
     "rows": [
-        ["DRV-01", "parcel_delivery,rescue_support", "XL_van", "cycle1_standard,cycle1_rescue", "", "Anchor"],
-        ["DRV-02", "parcel_delivery", "XL_van", "cycle1_standard", "no_shift_after_21_30", "On-call"],
+        [
+            "DRV-01",
+            "Brahamvir Singh",
+            "full_time",
+            "DVC4",
+            "parcel_delivery,rescue_support",
+            "XL_van",
+            "cycle1_standard,cycle1_rescue",
+            "max_minutes_rolling7=2400",
+            "anchor,can_rescue",
+            "Anchor",
+        ],
+        [
+            "DRV-02",
+            "Iqbal Singh",
+            "full_time",
+            "DVC4",
+            "parcel_delivery",
+            "XL_van",
+            "cycle1_standard",
+            "no_shift_after_21_30,max_minutes_rolling7=1800",
+            "on_call,restricted_close",
+            "On-call",
+        ],
     ],
 }
 
 _APPROVED_AVAILABILITY_METADATA = {
     "columns": [
         "driver_id",
+        "driver_name",
+        "employment_type",
         "target_shifts_per_week",
         "on_call_eligible",
         "approved_unavailable_dates",
         "regular_pattern",
+        "emergency_only",
+        "previous_week_blocked_dates",
+        "policy_tags",
+        "notes",
     ],
     "rows": [
-        ["DRV-01", 4, "no", "", "Mon,Tue,Wed,Thu"],
-        ["DRV-02", 4, "yes", "", "Mon,Tue,Wed,Thu"],
+        [
+            "DRV-01",
+            "Brahamvir Singh",
+            "full_time",
+            4,
+            "no",
+            "",
+            "Mon,Tue,Wed,Thu",
+            "no",
+            "",
+            "anchor,cycle1",
+            "Tiny smoke availability row",
+        ],
+        [
+            "DRV-02",
+            "Iqbal Singh",
+            "full_time",
+            4,
+            "yes",
+            "",
+            "Mon,Tue,Wed,Thu",
+            "no",
+            "",
+            "on_call,restricted_close",
+            "Tiny smoke availability row",
+        ],
     ],
 }
 
@@ -133,11 +249,16 @@ _ACTUAL_HOURS_METADATA = {
     "columns": [
         "service_date",
         "driver_id",
+        "driver_name",
         "actual_minutes",
+        "route_id",
+        "source",
+        "source_snapshot_row_ref",
     ],
     "rows": [
-        ["2026-02-26", "DRV-01", 800],
-        ["2026-02-26", "DRV-02", 3000],
+        ["2026-02-26", "DRV-01", "Brahamvir Singh", 800, "CX100", "EOS 2026-02-26", "eos:2026-02-26:DRV-01:CX100"],
+        ["2026-02-26", "DRV-02", "Iqbal Singh", 1200, "CX086", "EOS 2026-02-26", "eos:2026-02-26:DRV-02:CX086"],
+        ["2026-02-27", "DRV-02", "Iqbal Singh", 1800, "CX092", "EOS 2026-02-27", "eos:2026-02-27:DRV-02:CX092"],
     ],
 }
 
@@ -158,7 +279,17 @@ PILOT_DEFINITIONS: dict[str, WeeklyPilotDefinition] = {
         logical_date="2026-03-02",
         stage_focus="Stage04",
         description="Weekly Stage04 bounded OpenAI agent run over deterministic schedule-control inputs.",
-    )
+    ),
+    PILOT_WEEKLY_STAGE04_REALISTIC_ARTIFACTS: WeeklyPilotDefinition(
+        pilot_id=PILOT_WEEKLY_STAGE04_REALISTIC_ARTIFACTS,
+        partition_key="PW-2026-W10",
+        logical_date="2026-03-02",
+        stage_focus="Stage04",
+        description=(
+            "Weekly Stage04 bounded OpenAI agent run over realistic day-resolution planning "
+            "artifacts derived from real roster and route-email patterns."
+        ),
+    ),
 }
 
 
@@ -483,6 +614,7 @@ def _seed_stage04_inputs(
     pilot_key: str,
     pilot_id: str,
 ) -> dict[str, dict[str, Any]]:
+    source_material = _stage04_source_material_for_pilot(pilot_id)
     route_slots = _create_stage04_input_artifact(
         connection,
         workflow_run_id=workflow_run_id,
@@ -490,7 +622,7 @@ def _seed_stage04_inputs(
         pilot_id=pilot_id,
         suffix="route-slot-requirements",
         artifact_kind="planning.route_slot_requirements.workbook",
-        metadata_json=_ROUTE_SLOT_REQUIREMENTS_METADATA,
+        metadata_json=source_material["route_slot_requirements"],
     )
     driver_caps = _create_stage04_input_artifact(
         connection,
@@ -499,7 +631,7 @@ def _seed_stage04_inputs(
         pilot_id=pilot_id,
         suffix="driver-capabilities",
         artifact_kind="planning.driver_capabilities.workbook",
-        metadata_json=_DRIVER_CAPABILITIES_METADATA,
+        metadata_json=source_material["driver_capabilities"],
     )
     availability = _create_stage04_input_artifact(
         connection,
@@ -508,7 +640,7 @@ def _seed_stage04_inputs(
         pilot_id=pilot_id,
         suffix="approved-availability",
         artifact_kind="planning.approved_availability.workbook",
-        metadata_json=_APPROVED_AVAILABILITY_METADATA,
+        metadata_json=source_material["approved_availability"],
     )
     actual_hours = _create_stage04_input_artifact(
         connection,
@@ -517,7 +649,7 @@ def _seed_stage04_inputs(
         pilot_id=pilot_id,
         suffix="actual-hours",
         artifact_kind="planning.actual_hours_snapshot.workbook",
-        metadata_json=_ACTUAL_HOURS_METADATA,
+        metadata_json=source_material["actual_hours"],
     )
     return {
         "route_slot_requirements": route_slots,
@@ -561,6 +693,296 @@ def _create_stage04_input_artifact(
         },
     )
     return result
+
+
+def _stage04_source_material_for_pilot(pilot_id: str) -> dict[str, dict[str, Any]]:
+    if pilot_id == PILOT_WEEKLY_STAGE04_REALISTIC_ARTIFACTS:
+        return build_realistic_weekly_stage04_fixture_payloads()
+    return {
+        "route_slot_requirements": _ROUTE_SLOT_REQUIREMENTS_METADATA,
+        "driver_capabilities": _DRIVER_CAPABILITIES_METADATA,
+        "approved_availability": _APPROVED_AVAILABILITY_METADATA,
+        "actual_hours": _ACTUAL_HOURS_METADATA,
+    }
+
+
+def build_realistic_weekly_stage04_fixture_payloads() -> dict[str, dict[str, Any]]:
+    source = _load_realistic_weekly_stage04_source_material()
+    route_demand_rows = source["route_demand_rows"]
+    route_demand_columns = source["route_demand_columns"]
+    roster_pattern_rows = source["roster_pattern_rows"]
+    roster_pattern_columns = source["roster_pattern_columns"]
+    capability_pattern_rows = source["capability_pattern_rows"]
+    capability_pattern_columns = source["capability_pattern_columns"]
+    active_driver_count = int(source["active_driver_count"])
+    planning_week_start = date.fromisoformat(str(source["logical_date"]))
+
+    roster_patterns = _rows_to_dicts(roster_pattern_columns, roster_pattern_rows)
+    capability_patterns = _rows_to_dicts(capability_pattern_columns, capability_pattern_rows)
+
+    route_slot_rows: list[list[Any]] = []
+    for row in _rows_to_dicts(route_demand_columns, route_demand_rows):
+        service_date = str(row["service_date"])
+        demand_mix = [
+            (
+                "std",
+                "cycle1_standard",
+                "parcel_delivery",
+                "11:40",
+                "20:10",
+                8.5,
+                _coerce_int(row.get("standard_slot_count"), default=0),
+                f"CX{100 + len(route_slot_rows):03d}",
+            ),
+            (
+                "rsc",
+                "cycle1_rescue",
+                "rescue_support",
+                "11:45",
+                "20:35",
+                8.8,
+                _coerce_int(row.get("rescue_slot_count"), default=0),
+                f"RS{80 + len(route_slot_rows):03d}",
+            ),
+            (
+                "ovf",
+                "cycle1_overflow",
+                "parcel_delivery",
+                "12:05",
+                "21:45",
+                8.7,
+                _coerce_int(row.get("overflow_slot_count"), default=0),
+                f"OV{60 + len(route_slot_rows):03d}",
+            ),
+        ]
+        for slot_suffix, slot_class, skill, shift_start, shift_end, estimated_hours, required_count, route_id in demand_mix:
+            if required_count <= 0:
+                continue
+            service_day_token = service_date.replace("-", "")
+            route_slot_rows.append(
+                [
+                    service_date,
+                    f"slot-{service_day_token}-{slot_suffix}",
+                    slot_class,
+                    skill,
+                    "XL_van",
+                    shift_start,
+                    shift_end,
+                    estimated_hours,
+                    required_count,
+                    route_id,
+                    str(row.get("source_message_id") or ""),
+                    "DVC4",
+                    "Pitt Meadows",
+                    f"{row.get('source_message_id') or 'source'}:{service_date}:slot-{service_day_token}-{slot_suffix}",
+                ]
+            )
+
+    capability_rows: list[list[Any]] = []
+    availability_rows: list[list[Any]] = []
+    actual_hours_rows: list[list[Any]] = []
+    previous_week_dates = [planning_week_start - timedelta(days=7 - offset) for offset in range(7)]
+    planning_week_dates = [planning_week_start + timedelta(days=offset) for offset in range(7)]
+
+    for index in range(active_driver_count):
+        roster = roster_patterns[index % len(roster_patterns)]
+        capability = capability_patterns[index % len(capability_patterns)]
+        driver_id = f"RDRV-{index + 1:02d}"
+        driver_name = f"{roster['driver_name']} {index // len(roster_patterns) + 1:02d}"
+        regular_pattern = _csv_tokens(roster.get("regular_pattern"))
+        approved_unavailable_dates = [
+            current.isoformat()
+            for offset, current in enumerate(planning_week_dates)
+            if _weekday_token(current) in regular_pattern
+            and ((index + offset) % 11 == 0 or (index % 9 == 0 and _weekday_token(current) == "Wed"))
+        ]
+        previous_week_blocked_dates = [
+            current.isoformat()
+            for offset, current in enumerate(previous_week_dates)
+            if _weekday_token(current) in regular_pattern and (index + offset) % 13 == 0
+        ]
+
+        capability_rows.append(
+            [
+                driver_id,
+                driver_name,
+                str(roster.get("employment_type") or ""),
+                str(roster.get("home_station") or ""),
+                str(capability.get("skills") or ""),
+                str(capability.get("vehicle_certifications") or ""),
+                str(capability.get("eligible_route_slot_classes") or ""),
+                str(capability.get("approved_restrictions") or ""),
+                ",".join(
+                    dict.fromkeys(
+                        [
+                            *_csv_tokens(roster.get("policy_tags")),
+                            *_csv_tokens(capability.get("policy_tags")),
+                        ]
+                    )
+                ),
+                str(capability.get("notes") or ""),
+            ]
+        )
+        availability_rows.append(
+            [
+                driver_id,
+                driver_name,
+                str(roster.get("employment_type") or ""),
+                _coerce_int(roster.get("target_shifts_per_week"), default=4),
+                str(roster.get("regular_pattern") or ""),
+                str(roster.get("on_call_eligible") or ""),
+                "yes" if index % 14 == 0 else str(roster.get("emergency_only") or ""),
+                ",".join(approved_unavailable_dates),
+                ",".join(previous_week_blocked_dates),
+                str(roster.get("policy_tags") or ""),
+                f"Deterministic realistic roster row {index + 1:02d}",
+            ]
+        )
+
+        worked_days = 0
+        for offset, current in enumerate(previous_week_dates):
+            weekday = _weekday_token(current)
+            if current.isoformat() in previous_week_blocked_dates:
+                continue
+            if weekday in regular_pattern and (index + offset) % 3 != 0:
+                actual_minutes = 510 + ((index * 37 + offset * 13) % 120)
+                route_id = f"CX{80 + ((index + offset) % 40):03d}"
+                actual_hours_rows.append(
+                    [
+                        current.isoformat(),
+                        driver_id,
+                        driver_name,
+                        actual_minutes,
+                        route_id,
+                        f"EOS {current.isoformat()}",
+                        f"eos:{current.isoformat()}:{driver_id}:{route_id}",
+                    ]
+                )
+                worked_days += 1
+            if worked_days >= (3 if index % 10 == 0 else 2):
+                break
+
+    return {
+        "route_slot_requirements": {
+            "columns": [
+                "service_date",
+                "route_slot_id",
+                "route_slot_class",
+                "required_skill",
+                "vehicle_type",
+                "shift_start",
+                "shift_end",
+                "estimated_hours",
+                "required_count",
+                "route_id",
+                "source_message_id",
+                "station_code",
+                "service_area",
+                "source_snapshot_row_ref",
+            ],
+            "rows": route_slot_rows,
+            "daily_demand_columns": route_demand_columns,
+            "daily_demand_rows": route_demand_rows,
+            "planner_notes": [
+                "Demand remains below four weekly shifts per active driver across the 40-driver realistic pilot.",
+            ],
+        },
+        "driver_capabilities": {
+            "columns": [
+                "driver_id",
+                "driver_name",
+                "employment_type",
+                "home_station",
+                "skills",
+                "vehicle_certifications",
+                "eligible_route_slot_classes",
+                "approved_restrictions",
+                "policy_tags",
+                "notes",
+            ],
+            "rows": capability_rows,
+        },
+        "approved_availability": {
+            "columns": [
+                "driver_id",
+                "driver_name",
+                "employment_type",
+                "target_shifts_per_week",
+                "regular_pattern",
+                "on_call_eligible",
+                "emergency_only",
+                "approved_unavailable_dates",
+                "previous_week_blocked_dates",
+                "policy_tags",
+                "notes",
+            ],
+            "rows": availability_rows,
+            "planner_notes": [
+                "Planning-week daily state is derived from regular-pattern coverage plus explicit blocked dates.",
+            ],
+        },
+        "actual_hours": {
+            "columns": [
+                "service_date",
+                "driver_id",
+                "driver_name",
+                "actual_minutes",
+                "route_id",
+                "source",
+                "source_snapshot_row_ref",
+            ],
+            "rows": actual_hours_rows,
+            "external_evidence_refs": ["eos-upload-2026-03-03"],
+        },
+    }
+
+
+def _load_realistic_weekly_stage04_source_material() -> dict[str, Any]:
+    loaded = yaml.safe_load(
+        REALISTIC_WEEKLY_STAGE04_SOURCE_MATERIAL_PATH.read_text(encoding="utf-8")
+    )
+    if not isinstance(loaded, dict):
+        raise ValueError("realistic Stage04 source material must decode to an object")
+    return loaded
+
+
+def _rows_to_dicts(columns: list[str], rows: list[Any]) -> list[dict[str, Any]]:
+    normalized_columns = [str(column).strip() for column in columns]
+    values: list[dict[str, Any]] = []
+    for row in rows:
+        if isinstance(row, dict):
+            values.append({str(key).strip(): value for key, value in row.items()})
+            continue
+        if isinstance(row, (list, tuple)):
+            values.append(
+                {
+                    normalized_columns[index]: value
+                    for index, value in enumerate(row)
+                    if index < len(normalized_columns)
+                }
+            )
+    return values
+
+
+def _csv_tokens(value: Any) -> tuple[str, ...]:
+    if value is None:
+        return ()
+    if isinstance(value, list):
+        return tuple(str(item).strip() for item in value if str(item).strip())
+    return tuple(part.strip() for part in str(value).split(",") if part.strip())
+
+
+def _coerce_int(value: Any, *, default: int) -> int:
+    if value is None:
+        return int(default)
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return int(default)
+
+
+def _weekday_token(current: date) -> str:
+    return current.strftime("%a")
 
 
 def _mock_stage04_runner() -> OpenAIResponsesFunctionCallingRunner:

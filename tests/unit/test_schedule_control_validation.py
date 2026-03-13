@@ -1,6 +1,10 @@
 from __future__ import annotations
 
 from onetruth.application.services.schedule_control import build_weekly_schedule_control_bundle
+from onetruth.application.services.schedule_control.planning_state import (
+    PartialWeeklyScheduleState,
+    ScheduledAssignment,
+)
 from onetruth.application.services.schedule_control.validation import evaluate_hard_constraints
 
 
@@ -11,6 +15,7 @@ def test_evaluate_hard_constraints_fails_for_missing_skill() -> None:
         driver_restrictions="",
         shift_end="20:10",
         actual_minutes=1000,
+        approved_unavailable_dates="",
     )
 
     result = evaluate_hard_constraints(
@@ -30,6 +35,7 @@ def test_evaluate_hard_constraints_blocks_for_restrictions_and_rolling_limit() -
         driver_restrictions="no_shift_after_21_30,max_minutes_rolling7=3300",
         shift_end="21:45",
         actual_minutes=3200,
+        approved_unavailable_dates="",
     )
 
     result = evaluate_hard_constraints(
@@ -43,6 +49,151 @@ def test_evaluate_hard_constraints_blocks_for_restrictions_and_rolling_limit() -
     assert "rolling_7_day_limit" in result.reasons
 
 
+def test_evaluate_hard_constraints_blocks_for_driver_day_unavailable() -> None:
+    bundle = _build_bundle(
+        route_required_skill="parcel_delivery",
+        driver_skills="parcel_delivery",
+        driver_restrictions="",
+        shift_end="20:10",
+        actual_minutes=800,
+        approved_unavailable_dates="2026-03-02",
+    )
+
+    result = evaluate_hard_constraints(
+        bundle=bundle,
+        route_slot=bundle.route_slots[0],
+        driver=bundle.drivers[0],
+    )
+
+    assert result.status == "blocked"
+    assert "driver_unavailable" in result.reasons
+
+
+def test_evaluate_hard_constraints_blocks_for_same_day_overlap_when_state_is_present() -> None:
+    workflow_run = {
+        "workflow_run_id": "wr-weekly-overlap",
+        "partition_key": "PW-2026-W10",
+    }
+    bundle = build_weekly_schedule_control_bundle(
+        workflow_run=workflow_run,
+        route_slot_requirements_artifact={
+            "artifact_version_id": "av-routes-overlap",
+            "artifact_kind": "planning.route_slot_requirements.workbook",
+            "dataset_key": "planning.route_slot_requirements.workbook",
+            "metadata_json": {
+                "columns": [
+                    "service_date",
+                    "route_slot_id",
+                    "route_slot_class",
+                    "required_skill",
+                    "vehicle_type",
+                    "shift_start",
+                    "shift_end",
+                    "estimated_hours",
+                    "source_snapshot_row_ref",
+                ],
+                "rows": [
+                    [
+                        "2026-03-02",
+                        "slot-20260302-cx100",
+                        "cycle1_standard",
+                        "parcel_delivery",
+                        "XL_van",
+                        "10:00",
+                        "18:00",
+                        8.0,
+                        "amazon:row-001",
+                    ],
+                    [
+                        "2026-03-02",
+                        "slot-20260302-cx101",
+                        "cycle1_standard",
+                        "parcel_delivery",
+                        "XL_van",
+                        "13:00",
+                        "21:00",
+                        8.0,
+                        "amazon:row-002",
+                    ],
+                ],
+            },
+        },
+        driver_capabilities_artifact={
+            "artifact_version_id": "av-driver-overlap",
+            "artifact_kind": "planning.driver_capabilities.workbook",
+            "dataset_key": "planning.driver_capabilities.workbook",
+            "metadata_json": {
+                "columns": [
+                    "driver_id",
+                    "skills",
+                    "vehicle_certifications",
+                    "eligible_route_slot_classes",
+                    "approved_restrictions",
+                    "notes",
+                ],
+                "rows": [["DRV-01", "parcel_delivery", "XL_van", "cycle1_standard", "", ""]],
+            },
+        },
+        approved_availability_artifact={
+            "artifact_version_id": "av-availability-overlap",
+            "artifact_kind": "planning.approved_availability.workbook",
+            "dataset_key": "planning.approved_availability.workbook",
+            "metadata_json": {
+                "columns": [
+                    "driver_id",
+                    "target_shifts_per_week",
+                    "on_call_eligible",
+                    "approved_unavailable_dates",
+                    "regular_pattern",
+                ],
+                "rows": [["DRV-01", 4, "yes", "", "Mon,Tue,Wed,Thu"]],
+            },
+        },
+    )
+    schedule_state = PartialWeeklyScheduleState.from_route_slots(bundle.route_slots)
+    schedule_state.record_assignment(
+        ScheduledAssignment(
+            route_slot_id=bundle.route_slots[0].route_slot_id,
+            route_id=bundle.route_slots[0].route_id,
+            service_date=bundle.route_slots[0].service_date,
+            candidate_driver_id="DRV-01",
+            assignment_action="assign",
+            hard_filter_status="pass",
+            hard_filter_reasons=(),
+            score_bucket="best",
+            soft_score_total=0.9,
+            projected_minutes=bundle.route_slots[0].projected_minutes,
+            fairness_balance=0.8,
+            on_call_coverage=0.8,
+            lost_work_credit=0.8,
+            coverage_pressure=0.8,
+            availability_fit=1.0,
+            previous_week_stability=0.7,
+            target_shift_gap=1.0,
+            seniority_score=0.8,
+            reliability_score=0.8,
+            current_week_shift_count=1,
+            projected_rolling7_minutes=900,
+            remaining_rolling7_minutes=1500,
+            iteration_index=1,
+            batch_id="iter-01",
+            pressure_group_id="2026-03-02|DVC4|Pitt Meadows",
+            delta_kind="allocation",
+            rationale_code="seed",
+        )
+    )
+
+    result = evaluate_hard_constraints(
+        bundle=bundle,
+        route_slot=bundle.route_slots[1],
+        driver=bundle.drivers[0],
+        schedule_state=schedule_state,
+    )
+
+    assert result.status == "blocked"
+    assert "shift_overlap" in result.reasons
+
+
 def _build_bundle(
     *,
     route_required_skill: str,
@@ -50,6 +201,7 @@ def _build_bundle(
     driver_restrictions: str,
     shift_end: str,
     actual_minutes: int,
+    approved_unavailable_dates: str,
 ):
     workflow_run = {
         "workflow_run_id": "wr-weekly-validate",
@@ -123,7 +275,7 @@ def _build_bundle(
                 "approved_unavailable_dates",
                 "regular_pattern",
             ],
-            "rows": [["DRV-01", 4, "yes", "", "Mon,Tue,Wed,Thu"]],
+            "rows": [["DRV-01", 4, "yes", approved_unavailable_dates, "Mon,Tue,Wed,Thu"]],
         },
     }
     actual_hours_artifact = {

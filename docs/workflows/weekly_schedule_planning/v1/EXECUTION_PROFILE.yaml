@@ -91,6 +91,9 @@ profile:
       guidance:
       - Resolve the canonical schedule-control input bundle before candidate generation;
         do not infer missing bridge inputs from prose.
+      - Stage04 bridge payloads may include driver-by-day availability, prior-week
+        operating state, rolling-7 compliance snapshots, and policy metadata; treat
+        those as canonical planning inputs when present.
       - Objective is driver-to-route assignment, not vehicle routing. Use hard filters
         first, then rank by fairness and stability.
       - Candidate and validation outputs must stay machine-checkable and reviewable;

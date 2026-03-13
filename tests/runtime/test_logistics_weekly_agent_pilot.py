@@ -5,6 +5,7 @@ from pathlib import Path
 
 from onetruth.application.services.logistics_weekly_agent_pilot import (
     PILOT_WEEKLY_STAGE04_AGENT,
+    PILOT_WEEKLY_STAGE04_REALISTIC_ARTIFACTS,
     run_logistics_weekly_agent_pilot_suite,
 )
 from onetruth.infrastructure.db.session import open_sqlite_connection
@@ -142,3 +143,72 @@ def test_repeat_pilot_run_with_same_key_does_not_duplicate_canonical_effects(tmp
     assert first_summary["pilot_runs"][0]["workflow_run_id"] == workflow_run_id
     assert second_summary["pilot_runs"][0]["reused_existing"] is True
     assert str(second_packets[0]["workflow_run"]["workflow_run_id"]) == workflow_run_id
+
+
+def test_realistic_weekly_stage04_pilot_seeds_shared_realistic_fixture_shape(tmp_path: Path) -> None:
+    db_url, summary, packets = _run_pilot(
+        tmp_path,
+        pilot_ids=[PILOT_WEEKLY_STAGE04_REALISTIC_ARTIFACTS],
+        pilot_key="weekly-stage04-realistic",
+    )
+    packet = packets[0]
+    workflow_run_id = str(packet["workflow_run"]["workflow_run_id"])
+
+    assert summary["openai_mode"] == "mock"
+    assert packet["stage_focus"] == "Stage04"
+    assert packet["quality_signals"]["stage04_output_artifacts_present"] is True
+
+    connection = open_sqlite_connection(db_url)
+    try:
+        rows = connection.execute(
+            """
+            SELECT artifact_kind, metadata_json
+            FROM artifact_versions
+            WHERE workflow_run_id = ?
+              AND artifact_kind IN (
+                'planning.route_slot_requirements.workbook',
+                'planning.driver_capabilities.workbook',
+                'planning.approved_availability.workbook',
+                'planning.actual_hours_snapshot.workbook'
+              )
+            ORDER BY artifact_kind ASC
+            """,
+            (workflow_run_id,),
+        ).fetchall()
+        output_rows = connection.execute(
+            """
+            SELECT artifact_kind, metadata_json
+            FROM artifact_versions
+            WHERE workflow_run_id = ?
+              AND artifact_kind IN (
+                'planning.candidate_schedule_delta.workbook',
+                'planning.validation_summary.doc'
+              )
+            ORDER BY artifact_kind ASC
+            """,
+            (workflow_run_id,),
+        ).fetchall()
+    finally:
+        connection.close()
+
+    metadata_by_kind = {
+        str(row["artifact_kind"]): json.loads(str(row["metadata_json"]))
+        for row in rows
+    }
+    output_metadata_by_kind = {
+        str(row["artifact_kind"]): json.loads(str(row["metadata_json"]))
+        for row in output_rows
+    }
+    route_slots = metadata_by_kind["planning.route_slot_requirements.workbook"]
+    availability = metadata_by_kind["planning.approved_availability.workbook"]
+    actual_hours = metadata_by_kind["planning.actual_hours_snapshot.workbook"]
+    candidate_delta = output_metadata_by_kind["planning.candidate_schedule_delta.workbook"]
+    validation_summary = output_metadata_by_kind["planning.validation_summary.doc"]["summary"]
+
+    assert len(availability["rows"]) == 40
+    assert sum(int(item[1]) for item in route_slots["daily_demand_rows"]) == 112
+    assert sum(int(item[1]) for item in route_slots["daily_demand_rows"]) < (40 * 4)
+    assert len(actual_hours["rows"]) >= 80
+    assert len(candidate_delta["iteration_deltas"]) >= 10
+    assert validation_summary["coverage_summary"]["uncovered_route_slots"] > 0
+    assert validation_summary["soft_score_totals"]["previous_week_stability"] > 0.0

@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+from onetruth.application.services.logistics_weekly_agent_pilot import (
+    build_realistic_weekly_stage04_fixture_payloads,
+)
 from onetruth.application.services.schedule_control import build_weekly_schedule_control_bundle
 from onetruth.application.services.schedule_control.route_slot_requirements import (
     RouteSlotRequirement,
@@ -166,3 +169,52 @@ def test_expand_route_slot_requirements_expands_multiplier_suffix() -> None:
         "slot-20260302-cx100#01",
         "slot-20260302-cx100#02",
     ]
+
+
+def test_build_weekly_schedule_control_bundle_parses_realistic_day_resolution_fixture() -> None:
+    workflow_run = {
+        "workflow_run_id": "wr-weekly-realistic-001",
+        "partition_key": "PW-2026-W10",
+    }
+    fixture = build_realistic_weekly_stage04_fixture_payloads()
+
+    bundle = build_weekly_schedule_control_bundle(
+        workflow_run=workflow_run,
+        route_slot_requirements_artifact={
+            "artifact_version_id": "av-route-realistic-001",
+            "artifact_kind": "planning.route_slot_requirements.workbook",
+            "dataset_key": "planning.route_slot_requirements.workbook",
+            "metadata_json": fixture["route_slot_requirements"],
+        },
+        driver_capabilities_artifact={
+            "artifact_version_id": "av-driver-realistic-001",
+            "artifact_kind": "planning.driver_capabilities.workbook",
+            "dataset_key": "planning.driver_capabilities.workbook",
+            "metadata_json": fixture["driver_capabilities"],
+        },
+        approved_availability_artifact={
+            "artifact_version_id": "av-availability-realistic-001",
+            "artifact_kind": "planning.approved_availability.workbook",
+            "dataset_key": "planning.approved_availability.workbook",
+            "metadata_json": fixture["approved_availability"],
+        },
+        actual_hours_artifact={
+            "artifact_version_id": "av-hours-realistic-001",
+            "artifact_kind": "planning.actual_hours_snapshot.workbook",
+            "dataset_key": "planning.actual_hours_snapshot.workbook",
+            "metadata_json": fixture["actual_hours"],
+        },
+    )
+
+    assert len(bundle.drivers) == 40
+    assert sum(item.planned_route_count for item in bundle.daily_demand_by_service_date.values()) == 112
+    assert sum(item.planned_route_count for item in bundle.daily_demand_by_service_date.values()) < (40 * 4)
+    assert bundle.drivers[0].driver_name.startswith("Brahamvir Singh")
+    assert bundle.drivers[0].home_station == "DVC4"
+    assert bundle.availability_by_driver["RDRV-01"].daily_states[0].state == "approved_unavailable"
+    assert len(bundle.availability_by_driver["RDRV-01"].daily_states) == 7
+    assert len(bundle.availability_by_driver["RDRV-01"].previous_week_states) == 7
+    assert bundle.availability_by_driver["RDRV-01"].previous_week_states[1].actual_minutes > 0
+    assert bundle.rolling_7_compliance_by_driver["RDRV-02"].limit_minutes == 1800
+    assert bundle.policy_signals_by_driver["RDRV-03"].max_shifts_per_week == 4
+    assert bundle.daily_demand_by_service_date["2026-03-06"].overflow_slot_count == 2

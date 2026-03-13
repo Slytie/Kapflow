@@ -202,6 +202,9 @@ def build_weekly_schedule_control_command(
         "candidate_count": len(deterministic_build.candidate_matrix),
         "selected_candidate_count": len(deterministic_build.selected_candidates),
         "selected_candidates": deterministic_build.selected_candidates,
+        "iteration_summaries": deterministic_build.iteration_summaries,
+        "repair_moves": deterministic_build.repair_moves,
+        "coverage_summary": deterministic_build.coverage_summary,
         "artifacts": {
             "input_bundle": created_outputs["planning.input_bundle.doc"],
             "candidate_delta": created_outputs["planning.candidate_schedule_delta.workbook"],

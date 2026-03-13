@@ -2,6 +2,19 @@
 
 Record any decisions made since the last session so a fresh Codex run can rehydrate quickly.
 
+## 2026-03-13 (TASK-0072 weekly Stage04 iterative deterministic allocation)
+- Planner-ownership decision: Stage04 weekly allocation remains deterministic-code-owned truth, but now advances through an explicit partial-schedule loop with adaptive 5-10 route batches instead of a single global top-pick pass.
+- Repair-boundary decision: bounded local repair moves are allowed inside the deterministic allocator to free capacity or preserve continuity, but repairs stay narrowly scoped to already-selected local assignments rather than broad weekly rewrites.
+- Hard-rule decision: driver-day availability state, overlap/rest protection, max shifts, and rolling-7 limits are now evaluated against the evolving partial schedule, not only against static source artifacts.
+- Stability decision: previous-week continuity is now a first-class scored term carried through candidate evaluation, final selections, validation summaries, and draft schedule artifacts so week-to-week churn is explicit and reviewable.
+- Artifact-shape decision: Stage04 keeps the same final artifact keys (`planning.input_bundle.doc`, `planning.candidate_schedule_delta.workbook`, `planning.validation_summary.doc`, `planning.draft_weekly_schedule.*`), but their payloads now expose per-iteration deltas, coverage gaps, churn/repair counts, and score tradeoffs.
+
+## 2026-03-13 (TASK-0071 weekly Stage04 realistic artifacts and fixtures bundle)
+- Bridge-payload decision: weekly Stage04 keeps the same canonical artifact kinds, but the payloads now support richer day-resolution planning context including per-driver planning-week states, prior-week state, rolling-7 snapshots, daily demand summaries, and policy signals.
+- Backward-compatibility decision: the existing tiny two-driver Stage04 scenario and pilot remain the smoke/regression baseline; richer payload parsing is additive and defaults cleanly when those new fields are absent.
+- Shared-fixture decision: one deterministic realistic source-material fixture under `fixtures/logistics/weekly_stage04_realistic_source_material.yaml` now drives both the new hard-case pilot seed path and richer test coverage so the 40-driver day-resolution input shape stays reproducible.
+- Scope decision: the realistic slice still uses the same Stage04 deterministic build/runtime architecture, draft-only artifact path, and bounded Responses tool loop; no new workflow IDs, stage IDs, truth paths, or iterative planner behavior were introduced.
+
 ## 2026-03-13 (TASK-0073 Stage06 compiled-control alignment and tool-class vocabulary cleanup)
 - Control-alignment decision: the bounded Stage06 sandbox now derives its pinned execution semantics from the authored `schedule_planning.v1` Stage06 execution profile plus a registry-backed runtime tool binding instead of a hardcoded `execution_spec_id`.
 - Vocabulary decision: authored `allowed_tool_classes` remain capability-level execution-profile vocabulary, while `tool_execution.tool_class` remains the concrete engine/runtime identifier for the bounded executor; these are related through explicit runtime tool bindings, not by reusing the same string set.

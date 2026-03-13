@@ -90,6 +90,29 @@ def test_summarize_soft_scores_averages_pass_candidates_only() -> None:
     assert round(summary["lost_work_credit"], 4) == 0.6
 
 
+def test_score_candidate_makes_previous_week_stability_a_first_class_term() -> None:
+    bundle = _build_stability_bundle()
+    route_slot = bundle.route_slots[0]
+    driver_match = bundle.drivers[0]
+    driver_non_match = bundle.drivers[1]
+
+    matched = score_candidate(
+        bundle=bundle,
+        route_slot=route_slot,
+        driver=driver_match,
+        hard_validation=HardValidationResult(status="pass", reasons=()),
+    )
+    non_matched = score_candidate(
+        bundle=bundle,
+        route_slot=route_slot,
+        driver=driver_non_match,
+        hard_validation=HardValidationResult(status="pass", reasons=()),
+    )
+
+    assert matched.previous_week_stability > non_matched.previous_week_stability
+    assert matched.total > non_matched.total
+
+
 def _build_bundle(*, actual_minutes: int):
     workflow_run = {
         "workflow_run_id": "wr-weekly-score",
@@ -164,6 +187,104 @@ def _build_bundle(*, actual_minutes: int):
         "metadata_json": {
             "columns": ["service_date", "driver_id", "actual_minutes"],
             "rows": [["2026-02-26", "DRV-01", actual_minutes]],
+        },
+    }
+
+    return build_weekly_schedule_control_bundle(
+        workflow_run=workflow_run,
+        route_slot_requirements_artifact=route_slots_artifact,
+        driver_capabilities_artifact=driver_caps_artifact,
+        approved_availability_artifact=availability_artifact,
+        actual_hours_artifact=actual_hours_artifact,
+    )
+
+
+def _build_stability_bundle():
+    workflow_run = {
+        "workflow_run_id": "wr-weekly-stability",
+        "partition_key": "PW-2026-W10",
+    }
+    route_slots_artifact = {
+        "artifact_version_id": "av-routes-stability",
+        "artifact_kind": "planning.route_slot_requirements.workbook",
+        "dataset_key": "planning.route_slot_requirements.workbook",
+        "metadata_json": {
+            "columns": [
+                "service_date",
+                "route_slot_id",
+                "route_slot_class",
+                "required_skill",
+                "vehicle_type",
+                "shift_start",
+                "shift_end",
+                "estimated_hours",
+                "source_snapshot_row_ref",
+                "route_id",
+            ],
+            "rows": [
+                [
+                    "2026-03-02",
+                    "slot-20260302-cx100",
+                    "cycle1_standard",
+                    "parcel_delivery",
+                    "XL_van",
+                    "11:40",
+                    "20:10",
+                    8.0,
+                    "amazon:row-001",
+                    "CX100",
+                ],
+            ],
+        },
+    }
+    driver_caps_artifact = {
+        "artifact_version_id": "av-driver-stability",
+        "artifact_kind": "planning.driver_capabilities.workbook",
+        "dataset_key": "planning.driver_capabilities.workbook",
+        "metadata_json": {
+            "columns": [
+                "driver_id",
+                "skills",
+                "vehicle_certifications",
+                "eligible_route_slot_classes",
+                "approved_restrictions",
+                "policy_tags",
+                "notes",
+            ],
+            "rows": [
+                ["DRV-01", "parcel_delivery", "XL_van", "cycle1_standard", "", "anchor", ""],
+                ["DRV-02", "parcel_delivery", "XL_van", "cycle1_standard", "", "", ""],
+            ],
+        },
+    }
+    availability_artifact = {
+        "artifact_version_id": "av-availability-stability",
+        "artifact_kind": "planning.approved_availability.workbook",
+        "dataset_key": "planning.approved_availability.workbook",
+        "metadata_json": {
+            "columns": [
+                "driver_id",
+                "target_shifts_per_week",
+                "on_call_eligible",
+                "approved_unavailable_dates",
+                "regular_pattern",
+            ],
+            "rows": [
+                ["DRV-01", 4, "yes", "", "Mon,Tue,Wed,Thu"],
+                ["DRV-02", 4, "yes", "", "Mon,Tue,Wed,Thu"],
+            ],
+        },
+    }
+    actual_hours_artifact = {
+        "artifact_version_id": "av-hours-stability",
+        "artifact_kind": "planning.actual_hours_snapshot.workbook",
+        "dataset_key": "planning.actual_hours_snapshot.workbook",
+        "metadata_json": {
+            "columns": ["service_date", "driver_id", "actual_minutes", "route_id"],
+            "rows": [
+                ["2026-02-23", "DRV-01", 480, "CX100"],
+                ["2026-02-23", "DRV-02", 480, "CX999"],
+            ],
         },
     }
 

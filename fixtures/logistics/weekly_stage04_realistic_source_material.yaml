@@ -1,0 +1,50 @@
+source_note: Deterministic realistic Stage04 source material derived from the real
+  weekly roster and route-email patterns documented in
+  docs/workflows/weekly_schedule_planning/v1/examples/.
+planning_week_id: PW-2026-W10
+logical_date: '2026-03-02'
+active_driver_count: 40
+route_demand_columns:
+  - service_date
+  - planned_route_count
+  - standard_slot_count
+  - rescue_slot_count
+  - overflow_slot_count
+  - source_message_id
+  - source_kind
+  - change_kind
+route_demand_rows:
+  - ['2026-03-02', 21, 17, 3, 1, amazon-2026-02-27-1518, weekly_route_update, decrease]
+  - ['2026-03-03', 19, 15, 3, 1, amazon-2026-02-27-1518, weekly_route_update, interpolated_from_real_pattern]
+  - ['2026-03-04', 18, 14, 3, 1, amazon-2026-02-27-1518, weekly_route_update, interpolated_from_real_pattern]
+  - ['2026-03-05', 18, 14, 3, 1, amazon-2026-02-27-1518, weekly_route_update, interpolated_from_real_pattern]
+  - ['2026-03-06', 20, 16, 2, 2, amazon-2026-02-27-1518, weekly_route_update, increase]
+  - ['2026-03-07', 16, 12, 2, 2, amazon-2026-02-27-1518, weekly_route_update, interpolated_from_real_pattern]
+  - ['2026-03-08', 0, 0, 0, 0, amazon-2026-03-04-1600, route_request_notice, auto_accepted_request]
+roster_pattern_columns:
+  - pattern_id
+  - driver_name
+  - employment_type
+  - target_shifts_per_week
+  - regular_pattern
+  - on_call_eligible
+  - emergency_only
+  - policy_tags
+  - home_station
+roster_pattern_rows:
+  - [roster_anchor, Brahamvir Singh, full_time, 4, 'Mon,Tue,Wed,Thu,Sat', 'yes', 'no', 'anchor,cycle1,weekend_ok', DVC4]
+  - [roster_close_guard, Iqbal Singh, full_time, 4, 'Tue,Wed,Thu,Fri', 'yes', 'no', 'restricted_close,cycle1,on_call_priority', DVC4]
+  - [roster_overflow_pool, Rahul Mannan, part_time, 3, 'Tue,Wed,Thu,Sat', 'yes', 'no', 'overflow_pool,lost_work_credit', DVC4]
+  - [roster_weekend_pool, Rajveer Singh, part_time, 3, 'Sun,Mon,Tue,Wed,Thu', 'yes', 'no', 'weekend_pool,stability_preferred', DVC4]
+capability_pattern_columns:
+  - pattern_id
+  - skills
+  - vehicle_certifications
+  - eligible_route_slot_classes
+  - approved_restrictions
+  - policy_tags
+  - notes
+capability_pattern_rows:
+  - [cap_anchor, 'parcel_delivery,rescue_support', 'XL_van,step_van', 'cycle1_standard,cycle1_rescue', 'max_minutes_rolling7=2400', 'anchor,can_rescue', Full-time anchor driver]
+  - [cap_on_call, 'parcel_delivery,on_call', XL_van, cycle1_standard, 'no_shift_after_21_30,max_minutes_rolling7=1800', 'on_call,restricted_close', Preferred for on-call cover]
+  - [cap_overflow, parcel_delivery, XL_van, 'cycle1_standard,cycle1_overflow', 'max_shifts_per_week=4,max_minutes_rolling7=2100', 'overflow_pool,lost_work_credit', Lost-work credit candidate]

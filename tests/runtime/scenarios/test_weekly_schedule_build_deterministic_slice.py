@@ -2,6 +2,9 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from onetruth.application.services.logistics_weekly_agent_pilot import (
+    build_realistic_weekly_stage04_fixture_payloads,
+)
 from tests.runtime.helpers.runtime_cli import REPO_ROOT
 from tests.runtime.helpers.scenario_harness import RuntimeScenarioHarness
 
@@ -23,6 +26,10 @@ def test_weekly_schedule_build_deterministic_slice_materializes_stage04_artifact
     assert build_result["bundle_id"].startswith("bundle-pw-2026-w10-stage04-")
     assert build_result["candidate_count"] == 4
     assert build_result["selected_candidate_count"] == 2
+    assert build_result["coverage_summary"]["assigned_route_slots"] == 2
+    assert build_result["coverage_summary"]["uncovered_route_slots"] == 0
+    assert len(build_result["iteration_summaries"]) == 1
+    assert build_result["iteration_summaries"][0]["batch_size"] == 2
 
     selected = build_result["selected_candidates"]
     assert [
@@ -38,12 +45,14 @@ def test_weekly_schedule_build_deterministic_slice_materializes_stage04_artifact
     ]
     assert len(candidate_payload["rows"]) == 2
     assert candidate_payload["rows"][0][4] == "DRV-01"
+    assert len(candidate_payload["iteration_deltas"]) == 1
 
     validation_summary = build_result["artifact_payloads"]["planning.validation_summary.doc"][
         "summary"
     ]
     assert validation_summary["hard_rule_result"] == "pass"
     assert validation_summary["violations"] == []
+    assert validation_summary["iteration_summary"]["iteration_count"] == 1
 
     assert (
         build_retry["artifacts"]["input_bundle"]["artifact_version_id"]
@@ -82,3 +91,100 @@ def test_weekly_schedule_build_deterministic_slice_materializes_stage04_artifact
         (harness.workflow_run_id,),
     )
     assert len(provenance_rows) >= 9
+
+
+def test_weekly_schedule_build_realistic_source_material_emits_richer_stage04_inputs(
+    tmp_path: Path,
+) -> None:
+    harness = RuntimeScenarioHarness.from_yaml(SCENARIO_PATH, tmp_path).prepare()
+    fixture = build_realistic_weekly_stage04_fixture_payloads()
+
+    route_slots = _create_stage04_input_artifact(
+        harness=harness,
+        step_key="realistic-route-slots",
+        artifact_kind="planning.route_slot_requirements.workbook",
+        metadata_json=fixture["route_slot_requirements"],
+    )
+    driver_caps = _create_stage04_input_artifact(
+        harness=harness,
+        step_key="realistic-driver-caps",
+        artifact_kind="planning.driver_capabilities.workbook",
+        metadata_json=fixture["driver_capabilities"],
+    )
+    availability = _create_stage04_input_artifact(
+        harness=harness,
+        step_key="realistic-availability",
+        artifact_kind="planning.approved_availability.workbook",
+        metadata_json=fixture["approved_availability"],
+    )
+    actual_hours = _create_stage04_input_artifact(
+        harness=harness,
+        step_key="realistic-actual-hours",
+        artifact_kind="planning.actual_hours_snapshot.workbook",
+        metadata_json=fixture["actual_hours"],
+    )
+
+    build_result = harness.run_action(
+        action="schedule-control.build-weekly",
+        payload={
+            "workflow_run_id": harness.workflow_run_id,
+            "route_slot_requirements_artifact_version_id": route_slots["artifact_version"]["artifact_version_id"],
+            "driver_capabilities_artifact_version_id": driver_caps["artifact_version"]["artifact_version_id"],
+            "approved_availability_artifact_version_id": availability["artifact_version"]["artifact_version_id"],
+            "actual_hours_artifact_version_id": actual_hours["artifact_version"]["artifact_version_id"],
+            "idempotency_key": "scenario:weekly_schedule_build_realistic_source_material:build",
+        },
+    )["result"]
+
+    assert build_result["selected_candidate_count"] == 112
+    assert build_result["candidate_count"] > 112 * 40
+    assert build_result["coverage_summary"]["assigned_route_slots"] < 112
+    assert build_result["coverage_summary"]["uncovered_route_slots"] > 0
+    assert build_result["coverage_summary"]["batch_size_min"] >= 5
+    assert build_result["coverage_summary"]["batch_size_max"] <= 10
+    assert len(build_result["iteration_summaries"]) >= 10
+
+    input_bundle = build_result["artifact_payloads"]["planning.input_bundle.doc"]["bundle"]
+    assert len(input_bundle["driver_profiles"]) == 40
+    assert sum(item["planned_route_count"] for item in input_bundle["demand_by_service_date"]) == 112
+    assert sum(item["planned_route_count"] for item in input_bundle["demand_by_service_date"]) < (40 * 4)
+    assert input_bundle["demand_by_service_date"][0]["service_date"] == "2026-03-02"
+    assert input_bundle["demand_by_service_date"][-1]["service_date"] == "2026-03-08"
+    assert input_bundle["deterministic_iteration_model"]["batch_size_range"] == {"min": 5, "max": 10}
+
+    profile = next(item for item in input_bundle["driver_profiles"] if item["driver_id"] == "RDRV-01")
+    assert len(profile["daily_states"]) == 7
+    assert len(profile["previous_week_states"]) == 7
+    assert profile["daily_states"][0]["state"] == "approved_unavailable"
+    assert profile["rolling_7_compliance"]["limit_minutes"] == 2400
+    assert profile["policy_signal"]["target_shifts_per_week"] == 4
+
+    candidate_delta = build_result["artifact_payloads"]["planning.candidate_schedule_delta.workbook"]
+    assert len(candidate_delta["iteration_deltas"]) == len(build_result["iteration_summaries"])
+
+    validation_summary = build_result["artifact_payloads"]["planning.validation_summary.doc"]["summary"]
+    assert validation_summary["hard_rule_result"] == "fail"
+    assert validation_summary["recommended_action"] == "request_stage04_route_gap_review"
+    assert validation_summary["soft_score_totals"]["previous_week_stability"] > 0.0
+
+
+def _create_stage04_input_artifact(
+    *,
+    harness: RuntimeScenarioHarness,
+    step_key: str,
+    artifact_kind: str,
+    metadata_json: dict[str, object],
+) -> dict[str, object]:
+    return harness.run_action(
+        action="artifacts.create-version",
+        payload={
+            "workflow_run_id": harness.workflow_run_id,
+            "artifact_kind": artifact_kind,
+            "artifact_role": "official_input",
+            "media_type": "application/json",
+            "storage_uri": f"inmem://scenario/logistics/stage04/{step_key}",
+            "content_digest": f"sha256:{step_key}",
+            "metadata_json": metadata_json,
+            "idempotency_key": f"scenario:weekly_schedule_build_realistic_source_material:{step_key}",
+        },
+    )

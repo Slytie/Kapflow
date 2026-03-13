@@ -21,6 +21,8 @@ artifact_sets:
     role: official_input
     template_source: Stage03_Actual_Hours_Compliance_Snapshot/Stage03_Actual_Hours_Compliance_Snapshot_actual_hours_snapshot_Spreadsheet_Template_EMPTY.xlsx
   Stage04:
+  # Stage04 keeps these same bridge artifact keys while allowing richer day-resolution
+  # payload content inside the artifacts themselves.
   - key: planning.route_slot_requirements.workbook
     role: official_input
   - key: planning.driver_capabilities.workbook

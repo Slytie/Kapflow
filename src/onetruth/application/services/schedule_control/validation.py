@@ -1,17 +1,24 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import time
+from datetime import datetime, time, timedelta
 from typing import Any
 
 from .bundle_builder import DriverCapability, WeeklyScheduleControlBundle
+from .planning_state import IterationSummary, PartialWeeklyScheduleState, RepairMove
 from .route_slot_requirements import RouteSlotRequirement
+
+MIN_REST_HOURS_BETWEEN_SHIFTS = 10
 
 
 @dataclass(frozen=True)
 class HardValidationResult:
     status: str
     reasons: tuple[str, ...]
+    driver_day_state: str = ""
+    current_week_shift_count: int = 0
+    projected_rolling7_minutes: int = 0
+    remaining_rolling7_minutes: int = 0
 
 
 def evaluate_hard_constraints(
@@ -19,9 +26,12 @@ def evaluate_hard_constraints(
     bundle: WeeklyScheduleControlBundle,
     route_slot: RouteSlotRequirement,
     driver: DriverCapability,
+    schedule_state: PartialWeeklyScheduleState | None = None,
+    exclude_route_slot_ids: set[str] | None = None,
 ) -> HardValidationResult:
     failed_reasons: list[str] = []
     blocked_reasons: list[str] = []
+    exclude = exclude_route_slot_ids or set()
 
     if route_slot.required_skill and route_slot.required_skill not in set(driver.skills):
         failed_reasons.append("missing_required_skill")
@@ -35,8 +45,13 @@ def evaluate_hard_constraints(
         blocked_reasons.append("route_slot_class_not_eligible")
 
     availability = bundle.availability_by_driver.get(driver.driver_id)
-    if availability is not None and route_slot.service_date in set(availability.approved_unavailable_dates):
+    driver_day_state = _driver_day_state(availability, route_slot.service_date)
+    if driver_day_state == "approved_unavailable":
         blocked_reasons.append("driver_unavailable")
+    elif driver_day_state == "pattern_off":
+        blocked_reasons.append("driver_day_pattern_off")
+    elif driver_day_state == "emergency_only" and not _is_emergency_eligible_slot(route_slot):
+        blocked_reasons.append("driver_day_emergency_only")
 
     restriction_set = set(driver.approved_restrictions)
     if "no_shift_after_21_30" in restriction_set:
@@ -44,23 +59,118 @@ def evaluate_hard_constraints(
         if parsed_end is not None and parsed_end > time(hour=21, minute=30):
             blocked_reasons.append("restriction_no_shift_after_21_30")
 
-    rolling_minutes_limit = _restriction_prefixed_int(
+    locked_route_id = _restriction_prefixed_value(restriction_set, prefix="locked_route_id=")
+    if locked_route_id and route_slot.route_id and route_slot.route_id != locked_route_id:
+        blocked_reasons.append("locked_route_mismatch")
+    locked_service_date = _restriction_prefixed_value(
         restriction_set,
-        prefix="max_minutes_rolling7=",
+        prefix="locked_service_date=",
     )
-    if rolling_minutes_limit is not None:
-        observed_minutes = int(bundle.actual_minutes_by_driver.get(driver.driver_id, 0))
-        if observed_minutes + route_slot.projected_minutes > rolling_minutes_limit:
-            blocked_reasons.append("rolling_7_day_limit")
+    if locked_service_date and route_slot.service_date != locked_service_date:
+        blocked_reasons.append("locked_service_date_mismatch")
+
+    policy_signal = bundle.policy_signals_by_driver.get(driver.driver_id)
+    current_week_shift_count = (
+        schedule_state.current_week_shift_count(
+            driver.driver_id,
+            exclude_route_slot_ids=exclude,
+        )
+        if schedule_state is not None
+        else 0
+    )
+    max_shifts_per_week = (
+        int(policy_signal.max_shifts_per_week)
+        if policy_signal is not None
+        else max(int(getattr(availability, "target_shifts_per_week", 4)), 1)
+    )
+    if current_week_shift_count + 1 > max_shifts_per_week:
+        blocked_reasons.append("max_shifts_per_week")
+
+    rolling_minutes_limit = (
+        int(policy_signal.max_minutes_rolling7)
+        if policy_signal is not None
+        else (
+            _restriction_prefixed_int(
+                restriction_set,
+                prefix="max_minutes_rolling7=",
+            )
+            or 0
+        )
+    )
+    if schedule_state is not None:
+        projected_rolling7_minutes, _ = schedule_state.projected_rolling7_state(
+            bundle=bundle,
+            driver_id=driver.driver_id,
+            service_date=route_slot.service_date,
+            candidate_minutes=route_slot.projected_minutes,
+            exclude_route_slot_ids=exclude,
+        )
+    else:
+        projected_rolling7_minutes = int(bundle.actual_minutes_by_driver.get(driver.driver_id, 0))
+        projected_rolling7_minutes += route_slot.projected_minutes
+    remaining_rolling7_minutes = max(rolling_minutes_limit - projected_rolling7_minutes, 0)
+    if rolling_minutes_limit > 0 and projected_rolling7_minutes > rolling_minutes_limit:
+        blocked_reasons.append("rolling_7_day_limit")
+
+    if schedule_state is not None:
+        same_day_assignments = schedule_state.driver_assignments_on_date(
+            driver.driver_id,
+            route_slot.service_date,
+            exclude_route_slot_ids=exclude,
+        )
+        if any(
+            _shift_windows_overlap(
+                route_slot,
+                schedule_state.route_slot(assignment.route_slot_id),
+            )
+            for assignment in same_day_assignments
+        ):
+            blocked_reasons.append("shift_overlap")
+
+        min_rest_hours = max(
+            _restriction_prefixed_int(restriction_set, prefix="min_rest_hours=")
+            or MIN_REST_HOURS_BETWEEN_SHIFTS,
+            MIN_REST_HOURS_BETWEEN_SHIFTS,
+        )
+        if any(
+            _rest_window_violated(
+                route_slot,
+                schedule_state.route_slot(assignment.route_slot_id),
+                min_rest_hours=min_rest_hours,
+            )
+            for assignment in schedule_state.driver_assignments(
+                driver.driver_id,
+                exclude_route_slot_ids=exclude,
+            )
+        ):
+            blocked_reasons.append("rest_window")
 
     if failed_reasons:
-        return HardValidationResult(status="fail", reasons=tuple(sorted(dict.fromkeys(failed_reasons))))
+        return HardValidationResult(
+            status="fail",
+            reasons=tuple(sorted(dict.fromkeys(failed_reasons))),
+            driver_day_state=driver_day_state,
+            current_week_shift_count=current_week_shift_count,
+            projected_rolling7_minutes=projected_rolling7_minutes,
+            remaining_rolling7_minutes=remaining_rolling7_minutes,
+        )
     if blocked_reasons:
         return HardValidationResult(
             status="blocked",
             reasons=tuple(sorted(dict.fromkeys(blocked_reasons))),
+            driver_day_state=driver_day_state,
+            current_week_shift_count=current_week_shift_count,
+            projected_rolling7_minutes=projected_rolling7_minutes,
+            remaining_rolling7_minutes=remaining_rolling7_minutes,
         )
-    return HardValidationResult(status="pass", reasons=())
+    return HardValidationResult(
+        status="pass",
+        reasons=(),
+        driver_day_state=driver_day_state,
+        current_week_shift_count=current_week_shift_count,
+        projected_rolling7_minutes=projected_rolling7_minutes,
+        remaining_rolling7_minutes=remaining_rolling7_minutes,
+    )
 
 
 def build_stage04_validation_summary(
@@ -68,16 +178,24 @@ def build_stage04_validation_summary(
     bundle: WeeklyScheduleControlBundle,
     selected_candidates: list[dict[str, Any]],
     soft_score_totals: dict[str, float],
+    iteration_summaries: list[IterationSummary] | None = None,
+    repair_moves: list[RepairMove] | None = None,
 ) -> dict[str, Any]:
     violations: list[str] = []
     warnings: list[str] = []
+    tradeoffs: list[str] = []
+    uncovered_route_slot_ids: list[str] = []
+    iterations = iteration_summaries or []
+    repairs = repair_moves or []
 
     for candidate in selected_candidates:
         route_slot_id = str(candidate.get("route_slot_id") or "")
         status = str(candidate.get("hard_filter_status") or "blocked")
         driver_id = str(candidate.get("candidate_driver_id") or "unassigned")
-        if status != "pass":
+        assignment_action = str(candidate.get("assignment_action") or "assign")
+        if assignment_action == "unassigned" or status != "pass":
             reason_text = ",".join(str(item) for item in candidate.get("hard_filter_reasons") or [])
+            uncovered_route_slot_ids.append(route_slot_id)
             violations.append(
                 f"{route_slot_id} unresolved ({driver_id})"
                 + (f" [{reason_text}]" if reason_text else "")
@@ -86,6 +204,14 @@ def build_stage04_validation_summary(
         if str(candidate.get("score_bucket") or "") in {"poor", "ok"}:
             warnings.append(
                 f"{driver_id} selected for {route_slot_id} with {candidate.get('score_bucket')} soft score"
+            )
+        if float(candidate.get("previous_week_stability") or 0.0) < 0.4:
+            warnings.append(
+                f"{driver_id} selected for {route_slot_id} with weak previous-week stability"
+            )
+        if str(candidate.get("delta_kind") or "") == "repair":
+            tradeoffs.append(
+                f"{route_slot_id} re-assigned in iteration {candidate.get('iteration_index')} to preserve local coverage."
             )
 
     hard_rule_result = "pass" if not violations else "fail"
@@ -104,15 +230,49 @@ def build_stage04_validation_summary(
             "whc_limit",
             "rest_window",
             "skill_compatibility",
+            "driver_day_availability",
+            "rolling_7_day_limit",
+            "max_shifts_per_week",
+            "shift_overlap",
+            "route_slot_class_eligibility",
             "route_slot_coverage",
         ],
         "soft_score_totals": {
-            "fairness_balance": round(float(soft_score_totals.get("fairness_balance", 0.0)), 4),
-            "on_call_coverage": round(float(soft_score_totals.get("on_call_coverage", 0.0)), 4),
-            "lost_work_credit": round(float(soft_score_totals.get("lost_work_credit", 0.0)), 4),
+            key: round(float(value), 4)
+            for key, value in sorted(soft_score_totals.items())
+        },
+        "coverage_summary": {
+            "total_route_slots": len(selected_candidates),
+            "assigned_route_slots": len(selected_candidates) - len(uncovered_route_slot_ids),
+            "uncovered_route_slots": len(uncovered_route_slot_ids),
+            "uncovered_route_slot_ids": uncovered_route_slot_ids,
+        },
+        "iteration_summary": {
+            "iteration_count": len(iterations),
+            "batch_size_min": min((item.batch_size for item in iterations), default=0),
+            "batch_size_max": max((item.batch_size for item in iterations), default=0),
+            "candidate_evaluation_count": sum(
+                item.candidate_evaluation_count for item in iterations
+            ),
+        },
+        "churn_summary": {
+            "repair_move_count": len(repairs),
+            "repaired_route_slot_count": len(
+                {
+                    route_slot_id
+                    for item in repairs
+                    for route_slot_id in (
+                        item.filled_route_slot_id,
+                        item.reassigned_route_slot_id,
+                    )
+                }
+            ),
+            "local_repair_posture": "bounded_local_repair",
         },
         "violations": violations,
         "warnings": warnings,
+        "tradeoffs": tradeoffs,
+        "repair_moves": [item.to_payload() for item in repairs],
         "recommended_action": recommendation,
     }
 
@@ -138,6 +298,62 @@ def _restriction_prefixed_int(restrictions: set[str], *, prefix: str) -> int | N
         except ValueError:
             return None
     return None
+
+
+def _restriction_prefixed_value(restrictions: set[str], *, prefix: str) -> str:
+    for restriction in restrictions:
+        if restriction.startswith(prefix):
+            return restriction.removeprefix(prefix).strip()
+    return ""
+
+
+def _driver_day_state(availability: Any, service_date: str) -> str:
+    if availability is None:
+        return "unknown"
+    for state in getattr(availability, "daily_states", ()):
+        if state.service_date == service_date:
+            return str(state.state or "unknown")
+    if service_date in set(getattr(availability, "approved_unavailable_dates", ())):
+        return "approved_unavailable"
+    return "unknown"
+
+
+def _is_emergency_eligible_slot(route_slot: RouteSlotRequirement) -> bool:
+    route_slot_class = str(route_slot.route_slot_class or "")
+    return "rescue" in route_slot_class or "overflow" in route_slot_class
+
+
+def _shift_windows_overlap(left: RouteSlotRequirement, right: RouteSlotRequirement) -> bool:
+    left_start, left_end = _slot_window(left)
+    right_start, right_end = _slot_window(right)
+    return left_start < right_end and right_start < left_end
+
+
+def _rest_window_violated(
+    candidate_slot: RouteSlotRequirement,
+    existing_slot: RouteSlotRequirement,
+    *,
+    min_rest_hours: int,
+) -> bool:
+    candidate_start, candidate_end = _slot_window(candidate_slot)
+    existing_start, existing_end = _slot_window(existing_slot)
+    minimum_gap = timedelta(hours=max(min_rest_hours, 0))
+    if candidate_start >= existing_end:
+        return candidate_start - existing_end < minimum_gap
+    if existing_start >= candidate_end:
+        return existing_start - candidate_end < minimum_gap
+    return False
+
+
+def _slot_window(route_slot: RouteSlotRequirement) -> tuple[datetime, datetime]:
+    start_time = _parse_hhmm(route_slot.shift_start) or time(hour=0, minute=0)
+    end_time = _parse_hhmm(route_slot.shift_end) or start_time
+    service_day = datetime.fromisoformat(route_slot.service_date)
+    start = service_day.replace(hour=start_time.hour, minute=start_time.minute)
+    end = service_day.replace(hour=end_time.hour, minute=end_time.minute)
+    if end <= start:
+        end = end + timedelta(days=1)
+    return start, end
 
 
 def _validation_summary_id(bundle_id: str) -> str:

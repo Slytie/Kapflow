@@ -101,6 +101,9 @@ registry:
       notes:
         - Shared schedule-control weekly mode; candidate and validation outputs stay
           machine-checkable for Stage05/Stage06 review.
+        - Weekly Stage04 bridge payloads may be richer than the tiny smoke fixture,
+          but must remain the same canonical artifact kinds while carrying daily availability,
+          prior-week state, rolling-7 inputs, and policy metadata.
         - Optional LLM rationale is evidence-only support and cannot override deterministic
           hard/soft rule outcomes.
 
