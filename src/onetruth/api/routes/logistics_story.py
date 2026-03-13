@@ -37,11 +37,13 @@ from onetruth.infrastructure.events.event_store import utc_now_iso
 
 from onetruth.api.dependencies import Page, RequestContext
 from onetruth.api.errors import ApiError, api_error_from_command
-from onetruth.api.routes.approvals import query_approvals
-from onetruth.api.routes.flags import query_flags
-from onetruth.api.routes.human_tasks import query_human_tasks
-from onetruth.api.routes.pointers import query_pointers
-from onetruth.api.routes.workflow_runs import query_workflow_runs
+from onetruth.api.queries import (
+    query_approvals,
+    query_flags,
+    query_human_tasks,
+    query_pointers,
+    query_workflow_runs,
+)
 
 _REPO_ROOT = Path(__file__).resolve().parents[4]
 _STORY_CONTRACT_PATH = (

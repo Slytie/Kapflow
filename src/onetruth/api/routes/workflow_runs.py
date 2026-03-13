@@ -11,7 +11,6 @@ from onetruth.application.handlers.workflow_task_lifecycle import (
     list_flags_for_workflow_run_command,
     list_pointers_for_workflow_run_command,
     list_tasks_for_workflow_run_command,
-    list_workflow_runs_command,
 )
 from onetruth.application.projections.coherence_harness import (
     COHERENCE_POLICY_WARN_VISIBLE,
@@ -43,6 +42,7 @@ from onetruth.api.dependencies import (
     parse_int,
     scoped_workflow_run,
 )
+from onetruth.api.queries import query_workflow_runs
 from onetruth.api.errors import api_error_from_command
 
 ACTIVE_FLAG_STATES = {"open", "triage", "blocked"}
@@ -279,27 +279,6 @@ def get_workflow_run_workspace_endpoint(
         },
         "freshness": freshness,
     }
-
-
-def query_workflow_runs(
-    connection: sqlite3.Connection,
-    *,
-    context: RequestContext,
-    workflow_id: str | None,
-    state: str | None,
-    page: Page,
-) -> list[dict[str, Any]]:
-    try:
-        rows = list_workflow_runs_command(
-            connection,
-            workflow_id=workflow_id,
-            tenant_id=context.tenant_id,
-            domain_id=context.domain_id,
-            state=state,
-        )
-    except CommandError as exc:
-        raise api_error_from_command(exc) from exc
-    return rows[page.offset : page.offset + page.limit]
 
 
 def _query_task_runs_for_workflow_run(

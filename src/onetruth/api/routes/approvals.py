@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import json
 import sqlite3
 from typing import Any
 
@@ -13,6 +12,7 @@ from onetruth.infrastructure.events.event_store import DuplicateIdempotencyKeyEr
 from onetruth.infrastructure.repositories.approvals import get_approval
 
 from onetruth.api.dependencies import Page, RequestContext, scoped_workflow_run
+from onetruth.api.queries import query_approvals
 from onetruth.api.errors import (
     ApiError,
     api_error_from_command,
@@ -101,77 +101,6 @@ def respond_approval_endpoint(
         "idempotent_replay": updated["idempotent_replay"],
         "receipt": updated["receipt"],
     }
-
-
-def query_approvals(
-    connection: sqlite3.Connection,
-    *,
-    context: RequestContext,
-    workflow_run_id: str | None,
-    state: str | None,
-    approval_kind: str | None,
-    required_role: str | None,
-    page: Page,
-) -> list[dict[str, Any]]:
-    if workflow_run_id is not None:
-        scoped_workflow_run(connection, context, workflow_run_id)
-
-    query = """
-        SELECT
-            ap.approval_id,
-            ap.workflow_run_id,
-            ap.task_run_id,
-            ap.approval_kind,
-            ap.scope_kind,
-            ap.scope_ref,
-            ap.state,
-            ap.requested_by_task_run_id,
-            ap.candidate_roles,
-            ap.required_role,
-            ap.requested_at,
-            ap.responded_at,
-            ap.response_kind,
-            ap.response_reason,
-            ap.decided_by_actor_id,
-            ap.decided_by_actor_type,
-            ap.generation,
-            ap.created_at,
-            ap.updated_at
-        FROM approvals ap
-        JOIN workflow_runs wr ON wr.workflow_run_id = ap.workflow_run_id
-        WHERE wr.tenant_id = ? AND wr.domain_id = ?
-    """
-    params: list[Any] = [context.tenant_id, context.domain_id]
-
-    if workflow_run_id is not None:
-        query += " AND ap.workflow_run_id = ?"
-        params.append(workflow_run_id)
-    if state is not None:
-        query += " AND ap.state = ?"
-        params.append(state)
-    if approval_kind is not None:
-        query += " AND ap.approval_kind = ?"
-        params.append(approval_kind)
-    if required_role is not None:
-        query += " AND ap.required_role = ?"
-        params.append(required_role)
-
-    query += """
-        ORDER BY
-            CASE ap.state WHEN 'PENDING' THEN 0 ELSE 1 END ASC,
-            ap.requested_at ASC,
-            ap.approval_id ASC
-        LIMIT ? OFFSET ?
-    """
-    params.extend([page.limit, page.offset])
-
-    rows = connection.execute(query, params).fetchall()
-    results: list[dict[str, Any]] = []
-    for row in rows:
-        item = dict(row)
-        item["candidate_roles"] = json.loads(item["candidate_roles"])
-        results.append(item)
-    return results
 
 
 def _assert_payload_approval_id(payload: dict[str, Any], path_approval_id: str) -> None:

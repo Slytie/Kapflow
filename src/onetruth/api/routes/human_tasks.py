@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import json
 import sqlite3
 from typing import Any
 
@@ -31,6 +30,7 @@ from onetruth.infrastructure.repositories.human_tasks import get_human_task
 from onetruth.infrastructure.artifacts.storage import default_storage_root_for_db_url
 
 from onetruth.api.dependencies import Page, RequestContext, scoped_workflow_run
+from onetruth.api.queries import query_human_tasks
 from onetruth.api.errors import (
     ApiError,
     api_error_from_command,
@@ -387,96 +387,6 @@ def confirm_human_task_review_endpoint(
         "idempotent_replay": result["idempotent_replay"],
         "receipt": result["receipt"],
     }
-
-
-def query_human_tasks(
-    connection: sqlite3.Connection,
-    *,
-    context: RequestContext,
-    workflow_run_id: str | None,
-    state: str | None,
-    stage_id: str | None,
-    task_kind: str | None,
-    assignee_actor_id: str | None,
-    owner_role: str | None,
-    page: Page,
-) -> list[dict[str, Any]]:
-    if workflow_run_id is not None:
-        scoped_workflow_run(connection, context, workflow_run_id)
-
-    query = """
-        SELECT
-            ht.human_task_id,
-            ht.workflow_run_id,
-            ht.task_run_id,
-            ht.task_kind,
-            ht.state,
-            ht.candidate_roles,
-            ht.owner_role,
-            ht.assignee_actor_id,
-            ht.assignee_actor_type,
-            ht.due_at,
-            ht.escalation_at,
-            ht.lease_version,
-            ht.claimed_at,
-            ht.claimed_until,
-            ht.linked_approval_id,
-            ht.reopen_count,
-            ht.generation,
-            ht.created_at,
-            ht.updated_at,
-            tr.state AS task_run_state,
-            tr.stage_id,
-            tr.blocked_on_kind,
-            tr.blocked_on_ref,
-            tr.spawned_from_flag_id
-        FROM human_tasks ht
-        JOIN task_runs tr ON tr.task_run_id = ht.task_run_id
-        JOIN workflow_runs wr ON wr.workflow_run_id = ht.workflow_run_id
-        WHERE wr.tenant_id = ? AND wr.domain_id = ?
-    """
-    params: list[Any] = [context.tenant_id, context.domain_id]
-
-    if workflow_run_id is not None:
-        query += " AND ht.workflow_run_id = ?"
-        params.append(workflow_run_id)
-    if state is not None:
-        query += " AND ht.state = ?"
-        params.append(state)
-    if stage_id is not None:
-        query += " AND tr.stage_id = ?"
-        params.append(stage_id)
-    if task_kind is not None:
-        query += " AND ht.task_kind = ?"
-        params.append(task_kind)
-    if assignee_actor_id is not None:
-        query += " AND ht.assignee_actor_id = ?"
-        params.append(assignee_actor_id)
-    if owner_role is not None:
-        query += " AND ht.owner_role = ?"
-        params.append(owner_role)
-
-    query += """
-        ORDER BY
-            CASE ht.state
-                WHEN 'OPEN' THEN 0
-                WHEN 'CLAIMED' THEN 1
-                ELSE 2
-            END ASC,
-            COALESCE(ht.due_at, '9999-12-31T23:59:59Z') ASC,
-            ht.created_at ASC,
-            ht.human_task_id ASC
-        LIMIT ? OFFSET ?
-    """
-    params.extend([page.limit, page.offset])
-
-    rows = connection.execute(query, params).fetchall()
-    results: list[dict[str, Any]] = []
-    for row in rows:
-        item = dict(row)
-        item["candidate_roles"] = json.loads(item["candidate_roles"])
-        results.append(item)
-    return results
 
 
 def _enrich_human_tasks_with_actionability(

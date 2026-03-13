@@ -3,11 +3,13 @@ from __future__ import annotations
 from typing import Any
 
 from onetruth.api.dependencies import Page, RequestContext
-from onetruth.api.routes.approvals import query_approvals
-from onetruth.api.routes.flags import query_flags
-from onetruth.api.routes.human_tasks import query_human_tasks
-from onetruth.api.routes.pointers import query_pointers
-from onetruth.api.routes.workflow_runs import query_workflow_runs
+from onetruth.api.queries import (
+    query_approvals,
+    query_flags,
+    query_human_tasks,
+    query_pointers,
+    query_workflow_runs,
+)
 
 LANE_ORDER = {
     "flags.open": 5,
