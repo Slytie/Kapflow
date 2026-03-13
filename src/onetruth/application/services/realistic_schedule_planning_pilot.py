@@ -18,7 +18,6 @@ from onetruth.application.handlers.workflow_task_lifecycle import (
     create_flag_command,
     create_task_run_command,
     create_workflow_run_command,
-    create_artifact_version_command,
     ingest_artifact_document_command,
     list_approvals_for_workflow_run_command,
     list_artifacts_for_workflow_run_command,
@@ -60,7 +59,6 @@ from onetruth.infrastructure.repositories.tool_executions import (
 from onetruth.integrations.openai import (
     OpenAIResponseMetadata,
     Stage06ReviewClassification,
-    Stage06ReviewClassifier,
 )
 
 WORKFLOW_ID = "schedule_planning.v1"

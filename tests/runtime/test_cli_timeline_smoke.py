@@ -25,6 +25,8 @@ def _event(
     payload: dict[str, object],
     idempotency_key: str | None = None,
 ) -> dict[str, object]:
+    task_run_id = f"tr-{run_id}-{event_type.replace('.', '-')}"
+    human_task_id = f"ht-{run_id}-{event_type.replace('.', '-')}"
     envelope: dict[str, object] = {
         "event_id": f"evt-{uuid4()}",
         "event_type": event_type,
@@ -34,14 +36,56 @@ def _event(
         "tenant_id": "tenant-a",
         "domain_id": "domain-x",
         "actor": {"type": "agent", "id": "agent:runtime-smoke"},
-        "links": [
-            {"rel": "caused_by", "type": "workflow_run", "id": run_id},
-        ],
+        "links": _links_for_event(
+            event_type=event_type,
+            run_id=run_id,
+            task_run_id=task_run_id,
+            human_task_id=human_task_id,
+        ),
         "payload": payload,
     }
     if idempotency_key:
         envelope["idempotency_key"] = idempotency_key
     return envelope
+
+
+def _links_for_event(
+    *,
+    event_type: str,
+    run_id: str,
+    task_run_id: str,
+    human_task_id: str,
+) -> list[dict[str, str]]:
+    if event_type == "workflow.run.created":
+        return [
+            {"rel": "run", "type": "workflow_run", "id": run_id},
+            {
+                "rel": "workflow_contract_version",
+                "type": "workflow_contract_version",
+                "id": "test.workflow_contract@1",
+            },
+            {
+                "rel": "decision_catalog_version",
+                "type": "decision_catalog_version",
+                "id": "test.decision_catalog@1",
+            },
+            {
+                "rel": "execution_profile_version",
+                "type": "execution_profile_version",
+                "id": "test.execution_profile@1",
+            },
+        ]
+    if event_type == "task.run.created":
+        return [
+            {"rel": "run", "type": "workflow_run", "id": run_id},
+            {"rel": "task_run", "type": "task_run", "id": task_run_id},
+        ]
+    if event_type == "task.completed":
+        return [
+            {"rel": "task_run", "type": "task_run", "id": task_run_id},
+            {"rel": "human_task", "type": "human_task", "id": human_task_id},
+        ]
+    return [{"rel": "run", "type": "workflow_run", "id": run_id}]
 
 
 def _run_cli(*args: str, expect_ok: bool = True) -> subprocess.CompletedProcess[str]:
@@ -198,4 +242,3 @@ def test_cli_duplicate_idempotency_key_fails_explicitly(tmp_path: Path) -> None:
     listed = _stdout_json(listed_result)
     assert isinstance(listed, list)
     assert [item["event_id"] for item in listed] == [first_event["event_id"]]
-

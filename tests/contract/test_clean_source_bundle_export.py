@@ -16,14 +16,19 @@ def test_clean_source_bundle_exports_source_and_excludes_clutter(tmp_path: Path)
 
     payload = _run_export(repo_root, bundle_path)
     archive_root = str(payload["archive_root"])
+    manifest = _read_archive_json(bundle_path, f"{archive_root}/bundle_manifest.json")
 
     assert payload["status"] == "ok"
+    assert payload["bundle_kind"] == "handoff_source_bundle"
     assert payload["tracked_only"] is False
+    assert payload["git_commit"] is None
+    assert payload["tracked_worktree_clean"] is False
     assert bundle_path.exists()
 
     with zipfile.ZipFile(bundle_path, "r") as archive:
         names = set(archive.namelist())
 
+    assert f"{archive_root}/bundle_manifest.json" in names
     assert f"{archive_root}/README.md" in names
     assert f"{archive_root}/src/app.py" in names
     assert f"{archive_root}/docs/notes.md" in names
@@ -46,6 +51,14 @@ def test_clean_source_bundle_exports_source_and_excludes_clutter(tmp_path: Path)
     assert f"{archive_root}/runtime.sqlite3" not in names
     assert f"{archive_root}/.git/config" not in names
     assert f"{archive_root}/.tmp/clean-source-bundle.zip" not in names
+    assert manifest == {
+        "manifest_version": 1,
+        "bundle_kind": "handoff_source_bundle",
+        "archive_root": archive_root,
+        "tracked_only": False,
+        "git_commit": None,
+        "tracked_worktree_clean": False,
+    }
 
 
 def test_clean_source_bundle_tracked_only_skips_untracked_source(tmp_path: Path) -> None:
@@ -54,13 +67,17 @@ def test_clean_source_bundle_tracked_only_skips_untracked_source(tmp_path: Path)
 
     payload = _run_export(repo_root, bundle_path, tracked_only=True)
     archive_root = str(payload["archive_root"])
+    manifest = _read_archive_json(bundle_path, f"{archive_root}/bundle_manifest.json")
 
     with zipfile.ZipFile(bundle_path, "r") as archive:
         names = set(archive.namelist())
 
+    assert payload["bundle_kind"] == "handoff_source_bundle"
     assert payload["tracked_only"] is True
     assert f"{archive_root}/README.md" in names
     assert f"{archive_root}/codex/tasks/TASK-9999.md" not in names
+    assert manifest["bundle_kind"] == "handoff_source_bundle"
+    assert manifest["tracked_only"] is True
 
 
 def _build_fixture_repo(repo_root: Path) -> Path:
@@ -139,6 +156,11 @@ def _run_export(repo_root: Path, bundle_path: Path, *, tracked_only: bool = Fals
             f"STDERR:\n{result.stderr}"
         )
     return json.loads(result.stdout)
+
+
+def _read_archive_json(bundle_path: Path, archive_name: str) -> dict[str, object]:
+    with zipfile.ZipFile(bundle_path, "r") as archive:
+        return json.loads(archive.read(archive_name).decode("utf-8"))
 
 
 def _git(repo_root: Path, *args: str) -> None:

@@ -8,6 +8,18 @@ Record any decisions made since the last session so a fresh Codex run can rehydr
 - Alias decision: renumbered historical task briefs keep short deprecated-alias notes so future sessions can map old references without reopening the duplicate-ID ambiguity.
 - Validation decision: backlog validation now needs to fail on duplicate task-file IDs and duplicate task-index rows so this class of drift cannot hide behind prefix collisions.
 
+## 2026-03-13 (TASK-0085 bootstrap truth, CI honesty, and governance cleanup)
+- Bootstrap decision: `scripts/doctor.py` is now the single blessed local entrypoint for lightweight deterministic environment checks; there is no parallel shell bootstrap path in this tranche.
+- Python-baseline decision: the validated dev/CI baseline is Python `3.11`, but the task does not change the broader package metadata support floor; doctor verifies that a Python 3.11 interpreter is available even when the invoking `python3` is older.
+- CI-honesty decision: `make lint`, `make ci-backend`, `make frontend-ci`, and `make ci` now describe distinct real check slices instead of overloading lint with contract tests or rerunning blanket `pytest -q` in scheduled OpenAI CI.
+- Governance decision: CODEOWNERS now uses only existing root-anchored paths with a real temporary owner target (`@tylerclark`), and the repo now carries explicit MIT and Node 20 declarations via `LICENSE` and `.nvmrc`.
+
+## 2026-03-13 (TASK-0084 explicit bundle kinds and exported-payload validation)
+- Bundle-classification decision: source/export packaging now uses three explicit bundle kinds: `handoff_source_bundle` for working-tree-sensitive review/handoff snapshots, `release_source_bundle` for clean tracked commit snapshots, and `runtime_workspace_bundle` for run inspection/evidence exports over canonical runtime truth.
+- Release-contract decision: `release_source_bundle` always exports tracked files only, requires `HEAD`, and fails closed unless the tracked worktree is clean under `git status --untracked-files=no` semantics.
+- Manifest decision: both source bundles and runtime workspace bundles now write a `bundle_manifest.json` so downstream consumers can classify the archive without inferring semantics from the script name alone.
+- Validation decision: `scripts/validate_repo.py` now inspects a real exported `release_source_bundle` payload from a temporary clean clone of `HEAD`, so full-repo validation can verify the actual archive contents without being blocked by a dirty development worktree.
+
 ## 2026-03-13 (TASK-0082 scoped command receipts and replay)
 - Retry-contract decision: canonical CLI/API command-boundary retries now resolve through scoped `command_receipts`, so same-scope retries with the same normalized request replay committed success with `idempotent_replay=true` and stable `receipt` metadata instead of surfacing `duplicate_idempotency_key`.
 - Mismatch decision: reusing the same `(command_name, scope_key, idempotency_key)` tuple with a different normalized request now fails closed as `command_receipt_mismatch` (`409`) rather than replaying or mutating again.

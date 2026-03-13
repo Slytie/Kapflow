@@ -35,6 +35,7 @@ from onetruth.infrastructure.repositories.tool_executions import (
 )
 
 REQUIRED_BUNDLE_FILES = (
+    "bundle_manifest.json",
     "README.md",
     "workspace_projection.json",
     "workflow_summary.json",
@@ -233,6 +234,13 @@ def main(argv: list[str] | None = None) -> int:
     )
 
     files_payload = {
+        "bundle_manifest.json": {
+            "manifest_version": 1,
+            "bundle_kind": "runtime_workspace_bundle",
+            "workflow_run_id": workflow_run_id,
+            "tenant_id": str(workflow_run["tenant_id"]),
+            "domain_id": str(workflow_run["domain_id"]),
+        },
         "README.md": readme_text,
         "workspace_projection.json": workspace_projection,
         "workflow_summary.json": workflow_summary,
@@ -267,6 +275,7 @@ def main(argv: list[str] | None = None) -> int:
     result = {
         "status": "ok",
         "command": "workspace-bundle.export",
+        "bundle_kind": "runtime_workspace_bundle",
         "workflow_run_id": str(args.workflow_run_id),
         "scenario_name": scenario_name,
         "output": str(output_path),

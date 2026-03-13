@@ -202,7 +202,7 @@ def test_execution_policy_denial_creates_auditable_truth_without_model_side_effe
         domain_id="domain-x",
         actor_id="agent:stage06-reviewer-denied",
         actor_type="agent",
-        actor_roles=["schedule_planner"],
+        actor_roles=["dispatch_supervisor"],
     )
     _claim_task(harness, client, human_task_id, "execution-denied")
 

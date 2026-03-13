@@ -82,6 +82,7 @@ EMBEDDED_ID_PATTERNS = {
     "approval_id": re.compile(r"ap-[0-9a-fA-F-]{8,}"),
     "artifact_version_id": re.compile(r"av-[0-9a-fA-F-]{8,}"),
     "flag_id": re.compile(r"fl-[0-9a-fA-F-]{8,}"),
+    "command_receipt_key": re.compile(r"command-receipt:[0-9a-f]{64}"),
 }
 
 

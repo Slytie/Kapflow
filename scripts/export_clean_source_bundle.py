@@ -8,7 +8,13 @@ import subprocess
 import sys
 import zipfile
 
-DEFAULT_ARCHIVE_ROOT_SUFFIX = "-clean-source-bundle"
+HANDOFF_SOURCE_BUNDLE = "handoff_source_bundle"
+RELEASE_SOURCE_BUNDLE = "release_source_bundle"
+BUNDLE_MANIFEST_VERSION = 1
+DEFAULT_ARCHIVE_ROOT_SUFFIX_BY_KIND = {
+    HANDOFF_SOURCE_BUNDLE: "-clean-source-bundle",
+    RELEASE_SOURCE_BUNDLE: "-release-source-bundle",
+}
 DEFAULT_EXCLUDED_DIR_NAMES = frozenset(
     {
         ".git",
@@ -65,9 +71,21 @@ def _build_parser() -> argparse.ArgumentParser:
         help="Output ZIP path.",
     )
     parser.add_argument(
+        "--bundle-kind",
+        default=HANDOFF_SOURCE_BUNDLE,
+        choices=[HANDOFF_SOURCE_BUNDLE, RELEASE_SOURCE_BUNDLE],
+        help=(
+            "Bundle contract to export. Defaults to handoff_source_bundle; "
+            "release_source_bundle requires a clean tracked worktree."
+        ),
+    )
+    parser.add_argument(
         "--archive-root",
         default=None,
-        help="Top-level directory name inside the ZIP. Defaults to <repo>-clean-source-bundle.",
+        help=(
+            "Top-level directory name inside the ZIP. Defaults to a bundle-kind-specific "
+            "name such as <repo>-clean-source-bundle or <repo>-release-source-bundle."
+        ),
     )
     parser.add_argument(
         "--tracked-only",
@@ -81,8 +99,18 @@ def main(argv: list[str] | None = None) -> int:
     args = _build_parser().parse_args(argv)
     repo_root = _resolve_repo_root(Path(args.repo_root).expanduser())
     output_path = Path(args.output).expanduser().resolve()
+    bundle_kind = str(args.bundle_kind)
+    tracked_only = bool(args.tracked_only or bundle_kind == RELEASE_SOURCE_BUNDLE)
+    git_commit = _resolve_git_commit(repo_root)
+    tracked_worktree_clean = _tracked_worktree_is_clean(repo_root)
+    if bundle_kind == RELEASE_SOURCE_BUNDLE:
+        if git_commit is None:
+            raise SystemExit("release_source_bundle requires a committed HEAD")
+        if not tracked_worktree_clean:
+            raise SystemExit("release_source_bundle requires a clean tracked worktree")
     archive_root = _normalize_archive_root(
-        args.archive_root or f"{repo_root.name}{DEFAULT_ARCHIVE_ROOT_SUFFIX}"
+        args.archive_root
+        or f"{repo_root.name}{DEFAULT_ARCHIVE_ROOT_SUFFIX_BY_KIND[bundle_kind]}"
     )
 
     output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -92,7 +120,7 @@ def main(argv: list[str] | None = None) -> int:
         output_path.unlink()
 
     output_rel_path = _relative_to_repo(output_path, repo_root)
-    candidates = _list_git_candidates(repo_root, tracked_only=bool(args.tracked_only))
+    candidates = _list_git_candidates(repo_root, tracked_only=tracked_only)
     files_to_write: list[Path] = []
     skipped_missing_paths: list[str] = []
 
@@ -109,19 +137,35 @@ def main(argv: list[str] | None = None) -> int:
             continue
         files_to_write.append(absolute_path)
 
+    bundle_manifest = {
+        "manifest_version": BUNDLE_MANIFEST_VERSION,
+        "bundle_kind": bundle_kind,
+        "archive_root": archive_root,
+        "tracked_only": tracked_only,
+        "git_commit": git_commit,
+        "tracked_worktree_clean": tracked_worktree_clean,
+    }
+
     with zipfile.ZipFile(output_path, "w", compression=zipfile.ZIP_DEFLATED) as archive:
         for absolute_path in files_to_write:
             relative_path = absolute_path.relative_to(repo_root).as_posix()
             archive.write(absolute_path, arcname=f"{archive_root}/{relative_path}")
+        archive.writestr(
+            f"{archive_root}/bundle_manifest.json",
+            json.dumps(bundle_manifest, indent=2, sort_keys=True) + "\n",
+        )
 
     payload = {
         "status": "ok",
         "command": "clean-source-bundle.export",
+        "bundle_kind": bundle_kind,
         "repo_root": str(repo_root),
         "output": str(output_path),
         "archive_root": archive_root,
-        "tracked_only": bool(args.tracked_only),
-        "file_count": len(files_to_write),
+        "tracked_only": tracked_only,
+        "git_commit": git_commit,
+        "tracked_worktree_clean": tracked_worktree_clean,
+        "file_count": len(files_to_write) + 1,
         "skipped_missing_paths": skipped_missing_paths,
     }
     sys.stdout.write(json.dumps(payload, indent=2, sort_keys=True) + "\n")
@@ -154,6 +198,36 @@ def _normalize_archive_root(raw_value: str) -> str:
     if not archive_root:
         raise SystemExit("archive root must not be empty")
     return archive_root
+
+
+def _resolve_git_commit(repo_root: Path) -> str | None:
+    result = subprocess.run(
+        ["git", "rev-parse", "--verify", "HEAD"],
+        cwd=repo_root,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    if result.returncode != 0:
+        return None
+    commit = result.stdout.strip()
+    if not commit:
+        return None
+    return commit
+
+
+def _tracked_worktree_is_clean(repo_root: Path) -> bool:
+    result = subprocess.run(
+        ["git", "status", "--porcelain", "--untracked-files=no"],
+        cwd=repo_root,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    if result.returncode != 0:
+        stderr = result.stderr.strip()
+        raise SystemExit(f"failed to inspect git worktree status: {stderr}")
+    return result.stdout.strip() == ""
 
 
 def _list_git_candidates(repo_root: Path, *, tracked_only: bool) -> list[str]:

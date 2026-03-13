@@ -14,6 +14,7 @@ from onetruth.infrastructure.db.session import open_sqlite_connection
 from tests.runtime.helpers.runtime_cli import REPO_ROOT, SRC_ROOT, run_cli, stdout_json
 
 REQUIRED_BUNDLE_FILES = {
+    "bundle_manifest.json",
     "README.md",
     "workspace_projection.json",
     "workflow_summary.json",
@@ -124,6 +125,7 @@ def test_export_bundle_zip_is_created(tmp_path: Path) -> None:
     )
     assert bundle_path.exists()
     assert export_payload["status"] == "ok"
+    assert export_payload["bundle_kind"] == "runtime_workspace_bundle"
     assert export_payload["workflow_run_id"] == workflow_run_id
 
 
@@ -153,6 +155,27 @@ def test_export_bundle_readme_references_workflow_run_id(tmp_path: Path) -> None
     with zipfile.ZipFile(bundle_path, "r") as archive:
         readme = archive.read("README.md").decode("utf-8")
     assert workflow_run_id in readme
+
+
+def test_export_bundle_manifest_classifies_runtime_workspace_bundle(tmp_path: Path) -> None:
+    db_url, demo_payload = _run_demo(tmp_path, scenario="stage06_publish_ready")
+    workflow_run_id = str(demo_payload["workflow_run_id"])
+    bundle_path, _ = _run_export(
+        tmp_path,
+        db_url=db_url,
+        workflow_run_id=workflow_run_id,
+    )
+
+    with zipfile.ZipFile(bundle_path, "r") as archive:
+        manifest = json.loads(archive.read("bundle_manifest.json").decode("utf-8"))
+
+    assert manifest == {
+        "manifest_version": 1,
+        "bundle_kind": "runtime_workspace_bundle",
+        "workflow_run_id": workflow_run_id,
+        "tenant_id": "tenant-a",
+        "domain_id": "domain-x",
+    }
 
 
 def test_export_bundle_resolves_official_outputs_for_same_scope_cross_run_pointer_target(

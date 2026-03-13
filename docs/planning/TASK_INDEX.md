@@ -85,8 +85,8 @@
 | TASK-0081 | EPIC-030 | DONE | high | Split public artifact upload from local seeding via ingress descriptors |
 | TASK-0082 | EPIC-040 | DONE | high | Move command idempotency to scoped command receipts |
 | TASK-0083 | EPIC-080 | DONE | medium | Extract the shared read-model seam and forbid route-to-route imports |
-| TASK-0084 | EPIC-080 | TODO | medium | Make bundle kinds explicit and validate the exported payload |
-| TASK-0085 | EPIC-080 | TODO | medium | Bootstrap truth, CI honesty, and governance cleanup |
+| TASK-0084 | EPIC-080 | DONE | medium | Make bundle kinds explicit and validate the exported payload |
+| TASK-0085 | EPIC-080 | DONE | medium | Bootstrap truth, CI honesty, and governance cleanup |
 | TASK-0086 | EPIC-040 | TODO | high | First controlled hotspot extraction after invariants are stable |
 | TASK-0087 | EPIC-070 | DONE | medium | Repo hygiene cleanup for local state, tracked runtime outputs, and workstation clutter |
 | TASK-0088 | EPIC-070 | DONE | medium | Shared execution-evidence helpers and artifact-root policy cleanup |

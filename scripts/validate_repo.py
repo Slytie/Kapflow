@@ -7,8 +7,11 @@ import json
 import re
 import subprocess
 import sys
+import tempfile
 from pathlib import Path
+from pathlib import PurePosixPath
 from typing import Any
+import zipfile
 
 import yaml
 from jsonschema import Draft202012Validator
@@ -48,6 +51,42 @@ OPENAI_KEY_PATTERNS: tuple[tuple[str, re.Pattern[str]], ...] = (
 )
 TASK_FRONTMATTER_PATTERN = re.compile(r"(?s)\A---\n(.*?)\n---(?:\n|$)")
 TASK_ID_PATTERN = re.compile(r"TASK-\d{4}")
+RELEASE_SOURCE_BUNDLE = "release_source_bundle"
+SOURCE_BUNDLE_EXCLUDED_ROOT_PREFIXES = (
+    "artifacts/",
+    ".onetruth_artifacts/",
+    "frontend/node_modules/",
+    "frontend/dist/",
+    "frontend/.vite/",
+    "frontend/coverage/",
+    ".git/",
+    ".tmp/",
+)
+SOURCE_BUNDLE_EXCLUDED_DIR_NAMES = frozenset(
+    {
+        ".git",
+        ".venv",
+        "venv",
+        ".tmp",
+        ".pytest_cache",
+        ".idea",
+        ".mypy_cache",
+        ".ruff_cache",
+        "__pycache__",
+    }
+)
+SOURCE_BUNDLE_EXCLUDED_FILE_PATTERNS = (
+    ".DS_Store",
+    "*.pyc",
+    "*.pyo",
+    "*.log",
+    "*.db",
+    "*.db-*",
+    "*.sqlite",
+    "*.sqlite-*",
+    "*.sqlite3",
+    "*.sqlite3-*",
+)
 
 
 class Collector:
@@ -618,6 +657,140 @@ def validate_secret_hygiene(collector: Collector) -> None:
     collector.ok(f"secret hygiene scan passed across {text_files_scanned} tracked text files")
 
 
+def validate_release_source_bundle_export_payload(collector: Collector) -> None:
+    script_path = ROOT / "scripts" / "export_clean_source_bundle.py"
+    with tempfile.TemporaryDirectory(prefix="validate-release-source-bundle-") as temp_dir:
+        temp_root = Path(temp_dir)
+        clone_root = temp_root / "repo"
+        bundle_path = temp_root / "release-source-bundle.zip"
+
+        clone_result = subprocess.run(
+            ["git", "clone", "--quiet", str(ROOT), str(clone_root)],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        if clone_result.returncode != 0:
+            collector.fail(
+                "failed to create temporary clean clone for release bundle validation: "
+                f"{clone_result.stderr.strip()}"
+            )
+            return
+
+        export_result = subprocess.run(
+            [
+                sys.executable,
+                str(script_path),
+                "--repo-root",
+                str(clone_root),
+                "--output",
+                str(bundle_path),
+                "--bundle-kind",
+                RELEASE_SOURCE_BUNDLE,
+            ],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        if export_result.returncode != 0:
+            collector.fail(
+                "release source bundle export failed during validation: "
+                f"{export_result.stderr.strip() or export_result.stdout.strip()}"
+            )
+            return
+
+        try:
+            payload = json.loads(export_result.stdout)
+        except json.JSONDecodeError as exc:
+            collector.fail(f"release source bundle export emitted invalid JSON: {exc}")
+            return
+
+        collector.require(bundle_path.exists(), "release source bundle archive is created")
+        collector.require(
+            payload.get("bundle_kind") == RELEASE_SOURCE_BUNDLE,
+            "release source bundle payload records explicit bundle kind",
+        )
+        collector.require(
+            payload.get("tracked_only") is True,
+            "release source bundle payload is tracked-only",
+        )
+        collector.require(
+            isinstance(payload.get("git_commit"), str) and bool(str(payload["git_commit"]).strip()),
+            "release source bundle payload records git commit",
+        )
+        collector.require(
+            payload.get("tracked_worktree_clean") is True,
+            "release source bundle payload records clean tracked worktree",
+        )
+
+        archive_root = payload.get("archive_root")
+        if not isinstance(archive_root, str) or not archive_root.strip():
+            collector.fail("release source bundle payload missing archive_root")
+            return
+
+        try:
+            with zipfile.ZipFile(bundle_path, "r") as archive:
+                archive_names = set(archive.namelist())
+                manifest_name = f"{archive_root}/bundle_manifest.json"
+                collector.require(
+                    manifest_name in archive_names,
+                    "release source bundle archive includes bundle manifest",
+                )
+                if manifest_name not in archive_names:
+                    return
+                manifest = json.loads(archive.read(manifest_name).decode("utf-8"))
+        except (OSError, zipfile.BadZipFile, KeyError, json.JSONDecodeError) as exc:
+            collector.fail(f"release source bundle archive could not be inspected: {exc}")
+            return
+
+        collector.require(
+            manifest.get("bundle_kind") == RELEASE_SOURCE_BUNDLE,
+            "release source bundle manifest records explicit bundle kind",
+        )
+        collector.require(
+            manifest.get("archive_root") == archive_root,
+            "release source bundle manifest matches payload archive_root",
+        )
+        collector.require(
+            manifest.get("tracked_only") is True and manifest.get("tracked_only") == payload.get("tracked_only"),
+            "release source bundle manifest matches tracked-only payload",
+        )
+        collector.require(
+            manifest.get("git_commit") == payload.get("git_commit"),
+            "release source bundle manifest matches payload git commit",
+        )
+        collector.require(
+            manifest.get("tracked_worktree_clean") is True
+            and manifest.get("tracked_worktree_clean") == payload.get("tracked_worktree_clean"),
+            "release source bundle manifest matches clean-worktree payload",
+        )
+
+        inner_paths: list[str] = []
+        for name in sorted(archive_names):
+            prefix = f"{archive_root}/"
+            if not name.startswith(prefix):
+                collector.fail(
+                    f"release source bundle archive member escapes archive root: {name}"
+                )
+                continue
+            inner_paths.append(name.removeprefix(prefix))
+
+        collector.require(
+            len(archive_names) == int(payload.get("file_count") or 0),
+            "release source bundle payload file_count matches actual archive entries",
+        )
+
+        clutter_paths = [
+            path for path in inner_paths if path != "bundle_manifest.json" and _source_bundle_path_is_excluded(path)
+        ]
+        collector.require(
+            not clutter_paths,
+            "release source bundle archive excludes workstation and runtime clutter",
+        )
+        for path in clutter_paths:
+            collector.fail(f"release source bundle unexpectedly includes excluded path: {path}")
+
+
 def validate_traces(event_map: dict[str, Any], collector: Collector) -> None:
     envelope_schema = load_json(ROOT / "schemas/events/envelope.schema.json")
     envelope_validator = Draft202012Validator(envelope_schema)
@@ -678,9 +851,25 @@ def main() -> int:
         validate_task_index(collector)
         validate_current_focus(collector)
         validate_secret_hygiene(collector)
+        validate_release_source_bundle_export_payload(collector)
     if not args.schemas_only:
         validate_traces(event_map, collector)
     return collector.report()
+
+
+def _source_bundle_path_is_excluded(relative_path: str) -> bool:
+    posix_path = PurePosixPath(relative_path)
+    file_name = posix_path.name
+    if any(part in SOURCE_BUNDLE_EXCLUDED_DIR_NAMES for part in posix_path.parts):
+        return True
+    if any(
+        relative_path == prefix[:-1] or relative_path.startswith(prefix)
+        for prefix in SOURCE_BUNDLE_EXCLUDED_ROOT_PREFIXES
+    ):
+        return True
+    if file_name == ".env" or file_name.startswith(".env."):
+        return True
+    return any(posix_path.match(pattern) for pattern in SOURCE_BUNDLE_EXCLUDED_FILE_PATTERNS)
 
 
 if __name__ == "__main__":

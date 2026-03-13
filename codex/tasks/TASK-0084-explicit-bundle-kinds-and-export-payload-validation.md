@@ -2,7 +2,7 @@
 id: TASK-0084
 epic: EPIC-080
 title: "Make bundle kinds explicit and validate the exported payload"
-status: TODO
+status: DONE
 owners: ["platform"]
 reviewers: ["qa"]
 depends_on: ["TASK-0075"]
@@ -43,12 +43,15 @@ Define explicit bundle kinds and validate the actual archive payload for each, w
 
 ## Source files to change
 - `scripts/export_clean_source_bundle.py`
+- `scripts/export_run_workspace_bundle.py`
 - `scripts/validate_repo.py`
 - `tests/contract/test_clean_source_bundle_export.py`
 - `tests/contract/test_release_source_bundle_export.py`
+- `tests/runtime/contracts/test_workspace_demo_export_bundle.py`
 - `README.md`
 - `docs/planning/REPO_HYGIENE.md`
 - `docs/status/CURRENT_FOCUS.md`
+- `docs/status/DECISIONS_SINCE_LAST.md`
 - `docs/planning/TASK_INDEX.md`
 - `docs/planning/epics/EPIC-080.md`
 - `codex/tasks/TASK-0084-explicit-bundle-kinds-and-export-payload-validation.md`
@@ -65,6 +68,7 @@ Define explicit bundle kinds and validate the actual archive payload for each, w
 ## Verification
 - `pytest tests/contract/test_clean_source_bundle_export.py -q`
 - `pytest tests/contract/test_release_source_bundle_export.py -q`
+- `PYTHONPATH=src pytest tests/runtime/contracts/test_workspace_demo_export_bundle.py -q`
 - `python3 scripts/validate_repo.py`
 
 ## Acceptance criteria
@@ -75,3 +79,4 @@ Define explicit bundle kinds and validate the actual archive payload for each, w
 
 ## Notes / decisions
 - The exported payload must be the thing that gets validated.
+- `scripts/validate_repo.py` validates a real `release_source_bundle` payload by exporting from a temporary clean clone of `HEAD`, so repo-wide validation remains runnable even when the developer's current worktree is intentionally dirty.

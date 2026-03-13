@@ -1,18 +1,13 @@
-# CODEOWNERS (initial)
-# Update with real GitHub usernames/teams.
+# CODEOWNERS
+# Keep entries root-anchored and literal so contract validation stays deterministic.
 
-# Critical semantics
-/schemas/             @platform-team @security-team
-/docs/architecture/   @platform-team @security-team
-/docs/workflows/      @platform-team @ops-team @qa-team
+/.github/             @tylerclark
+/schemas/             @tylerclark
+/docs/architecture/   @tylerclark
+/docs/workflows/      @tylerclark
+/src/                 @tylerclark
+/scripts/             @tylerclark
+/tests/               @tylerclark
+/frontend/            @tylerclark
 
-# Execution plane
-/services/executor/   @security-team @sre-team
-
-# Infra and CI
-/infra/               @sre-team
-/.github/             @sre-team @security-team
-/.codex/              @platform-team
-
-# Default
-*                    @platform-team
+*                     @tylerclark

@@ -14,7 +14,7 @@ This repo keeps source-of-truth artifacts in Git and excludes local machine/runt
 - `*.db`, `*.db-*`, `*.sqlite*`, `*.sqlite3*`
   - local SQLite runtime/test databases and journal/WAL sidecars.
 - `codex_handoff_packet_*.zip`
-  - local handoff/export bundles; regenerate outside Git when needed.
+  - local handoff/export bundles; regenerate outside Git when needed. These are review/handoff snapshots, not release artifacts.
 - `frontend/node_modules/`, `frontend/dist/`, `frontend/.vite/`, `frontend/coverage/`
   - dependency installs and generated frontend build/test outputs.
 - `*.log`
@@ -34,3 +34,11 @@ git rm -r --cached <path>
 This keeps local files on disk while stopping future commits of non-source noise.
 
 If runtime evidence should become a reusable golden artifact, move it into an explicit `fixtures/` path rather than leaving it under `.onetruth_artifacts/`.
+
+## Bundle classes
+- `handoff_source_bundle`
+  - working-tree-sensitive review/handoff snapshot exported by `scripts/export_clean_source_bundle.py` (and `make clean-source-bundle` by alias); may include non-ignored untracked source.
+- `release_source_bundle`
+  - clean tracked commit snapshot exported by `scripts/export_clean_source_bundle.py --bundle-kind release_source_bundle`; it requires `HEAD` plus a clean tracked worktree and is the lightweight provenance-oriented source package.
+- `runtime_workspace_bundle`
+  - run inspection/evidence bundle exported by `scripts/export_run_workspace_bundle.py`; it is derived from canonical runtime projections and is not source/release packaging.

@@ -2,7 +2,7 @@
 id: TASK-0085
 epic: EPIC-080
 title: "Bootstrap truth, CI honesty, and governance cleanup"
-status: TODO
+status: DONE
 owners: ["platform"]
 reviewers: ["qa"]
 depends_on: ["TASK-0075"]
@@ -42,15 +42,17 @@ Make the repo’s day-to-day developer posture truthful: real lint, one obvious 
 
 ## Source files to change
 - `Makefile`
+- `pyproject.toml`
 - `.github/workflows/main.yml`
+- `.github/workflows/agent_api.yml`
 - `.github/CODEOWNERS`
-- `frontend/package.json`
 - `.nvmrc`
-- `scripts/bootstrap_dev.sh` or `scripts/doctor.py`
+- `scripts/doctor.py`
 - `LICENSE`
 - `tests/contract/test_codeowners_paths.py`
 - `README.md`
 - `docs/status/CURRENT_FOCUS.md`
+- `docs/status/DECISIONS_SINCE_LAST.md`
 - `docs/planning/TASK_INDEX.md`
 - `docs/planning/epics/EPIC-080.md`
 - `codex/tasks/TASK-0085-bootstrap-truth-and-governance-cleanup.md`
@@ -68,7 +70,7 @@ Make the repo’s day-to-day developer posture truthful: real lint, one obvious 
 - `make lint`
 - `make ci`
 - `pytest tests/contract/test_codeowners_paths.py -q`
-- `./scripts/bootstrap_dev.sh --check` or equivalent
+- `python3 scripts/doctor.py --check`
 
 ## Acceptance criteria
 - `make lint` reflects real lint/validation behavior.
@@ -78,3 +80,4 @@ Make the repo’s day-to-day developer posture truthful: real lint, one obvious 
 
 ## Notes / decisions
 - Repo claims should map to executable checks after this task.
+- The validated dev/CI baseline is Python `3.11` plus Node `20`, while `scripts/doctor.py` still allows invocation from an older `python3` so long as a Python 3.11 interpreter is available locally.

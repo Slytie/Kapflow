@@ -8,8 +8,17 @@ RELEASE_CONFIDENCE_OPENAI_MODE ?= mock
 CLEAN_SOURCE_BUNDLE_OUTPUT ?= $(CURDIR)/.tmp/companyos-clean-source-bundle.zip
 
 .PHONY: lint test schema-validate trace-validate unit contract replay acceptance runtime runtime-api security property integration integration-openai integration-openai-weekly-stage04 logistics-weekly-stage04-pilot clean-source-bundle generated-check frontend-snapshots frontend-snapshots-check frontend-install frontend-typecheck frontend-test frontend-build ci-backend ci release-confidence release-confidence-validation release-confidence-demo-export release-confidence-projection-coherence release-confidence-logistics-weekly-live release-confidence-certification-manifest
+.PHONY: doctor backend-lint python-lint frontend-ci
 
-lint: schema-validate contract
+doctor:
+	python3 scripts/doctor.py --check
+
+python-lint:
+	python3 -m ruff check --select F,E9 src tests scripts
+
+backend-lint: schema-validate python-lint
+
+lint: backend-lint frontend-typecheck
 
 test: schema-validate contract frontend-snapshots-check unit replay acceptance runtime security property integration
 
@@ -84,9 +93,11 @@ frontend-test:
 frontend-build:
 	cd frontend && npm run build
 
-ci-backend: schema-validate contract replay acceptance runtime frontend-snapshots-check
+frontend-ci: frontend-typecheck frontend-test frontend-build
 
-ci: ci-backend frontend-typecheck frontend-test
+ci-backend: backend-lint contract replay acceptance runtime frontend-snapshots-check
+
+ci: ci-backend frontend-ci
 
 release-confidence: release-confidence-validation release-confidence-demo-export release-confidence-projection-coherence release-confidence-logistics-weekly-live release-confidence-certification-manifest
 

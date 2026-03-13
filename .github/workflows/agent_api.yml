@@ -29,11 +29,10 @@ jobs:
           if [ -f requirements.txt ]; then
             python -m pip install -r requirements.txt
           elif [ -f pyproject.toml ]; then
-            python -m pip install -e .
+            python -m pip install -e ".[dev]"
           else
             echo "No requirements.txt or pyproject.toml found; skipping project install."
           fi
-          python -m pip install pytest pyyaml jsonschema requests
 
       - name: Run baseline checks (non-network)
         shell: bash
@@ -41,8 +40,9 @@ jobs:
           set -euo pipefail
           if [ -f Makefile ]; then
             make ci-backend
+          else
+            echo "No Makefile found; skipping make-based checks."
           fi
-          pytest -q
 
       - name: Run OpenAI integration tests (gated + weekly dual gate)
         shell: bash

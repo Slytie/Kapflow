@@ -30,11 +30,10 @@ jobs:
           if [ -f requirements.txt ]; then
             python -m pip install -r requirements.txt
           elif [ -f pyproject.toml ]; then
-            python -m pip install -e .
+            python -m pip install -e ".[dev]"
           else
             echo "No requirements.txt or pyproject.toml found; skipping project install."
           fi
-          python -m pip install pytest pyyaml jsonschema requests
 
       - name: Run backend CI checks
         shell: bash
@@ -87,11 +86,10 @@ jobs:
           if [ -f requirements.txt ]; then
             python -m pip install -r requirements.txt
           elif [ -f pyproject.toml ]; then
-            python -m pip install -e .
+            python -m pip install -e ".[dev]"
           else
             echo "No requirements.txt or pyproject.toml found; skipping project install."
           fi
-          python -m pip install pytest pyyaml jsonschema requests
 
       - name: Run release-confidence gate slice
         shell: bash
@@ -117,14 +115,5 @@ jobs:
         working-directory: frontend
         run: npm ci
 
-      - name: Frontend typecheck
-        working-directory: frontend
-        run: npm run typecheck
-
-      - name: Frontend tests
-        working-directory: frontend
-        run: npm run test:run
-
-      - name: Frontend build
-        working-directory: frontend
-        run: npm run build
+      - name: Run frontend CI checks
+        run: make frontend-ci

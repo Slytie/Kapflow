@@ -21,7 +21,6 @@ from onetruth.domain.pointer_address import (
 from onetruth.infrastructure.artifacts.storage import (
     ArtifactIngressDescriptor,
     ArtifactStorageError,
-    decode_base64_content,
     encode_base64_content,
     infer_media_type,
     read_blob,

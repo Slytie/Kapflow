@@ -3,8 +3,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
-from onetruth.application.services.schedule_control.scoring import (
-    deterministic_rank_candidates,
+from onetruth.application.services.schedule_control import (
+    deterministic_rank_candidates as deterministic_rank_candidates,
 )
 from onetruth.domain.partition_codec import (
     planning_week_to_service_days,
@@ -16,6 +16,13 @@ _PARTITION_TRANSFORMS: dict[str, Any] = {
     "planning_week_to_service_days": planning_week_to_service_days,
     "service_day_to_future_planning_week": service_day_to_future_planning_week,
 }
+
+__all__ = [
+    "MajorReplanPolicy",
+    "apply_partition_transform_by_id",
+    "deterministic_rank_candidates",
+    "should_escalate_major_replan",
+]
 
 @dataclass(frozen=True)
 class MajorReplanPolicy:

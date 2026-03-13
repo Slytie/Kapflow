@@ -42,6 +42,9 @@ Everything else - runbooks, dashboards, summaries, generated CompanyOS specs, pr
    - `docs/workflows/schedule_planning/v1/` (legacy regression/reference)
    - `docs/workflows/payroll/v1/` (secondary reference)
 11. validation commands:
+   - `make doctor`
+   - `make lint`
+   - `make ci`
    - `make schema-validate`
    - `make contract`
    - `make replay`
@@ -51,17 +54,21 @@ Everything else - runbooks, dashboards, summaries, generated CompanyOS specs, pr
 
 ## Quickstart (dev)
 1. Install dependencies:
-   - `python3 -m pip install -e .`
-   - `python3 -m pip install -e .[api]` (to run the HTTP adapter with `uvicorn`)
+   - `python3.11 -m pip install -e ".[dev]"`
+   - `python3.11 -m pip install -e ".[api,dev]"` (to run the HTTP adapter with `uvicorn`)
+   - `cd frontend && npm ci`
    - or `uv sync`
-2. Run repo validation/tests:
+2. Check the validated local toolchain:
+   - `make doctor`
+   - validated dev/CI baseline is Python `3.11` plus Node `20` (`.nvmrc`)
+3. Run repo validation/tests:
+   - `make lint`
+   - `make ci`
    - `make schema-validate`
    - `make contract`
-   - `make replay`
-   - `make acceptance`
-3. Initialize a local runtime DB:
+4. Initialize a local runtime DB:
    - `PYTHONPATH=src python3 -m onetruth.cli --db-url sqlite:///./.tmp/onetruth-smoke.db init-db`
-4. Run runtime smoke tests:
+5. Run runtime smoke tests:
    - `make runtime`
    - `make runtime-api`
    - `make frontend-snapshots`
@@ -70,11 +77,12 @@ Everything else - runbooks, dashboards, summaries, generated CompanyOS specs, pr
    - `PYTHONPATH=src pytest -q tests/runtime/scenarios tests/runtime/contracts`
    - `PYTHONPATH=src pytest -q tests/runtime/api`
    - `PYTHONPATH=src pytest -q tests/runtime/scenarios/test_schedule_stage07_*.py`
-5. Run full pytest suite:
+6. Run full pytest suite:
    - `pytest -q`
 
 Local runtime-output note:
 - `.tmp/`, `.onetruth_artifacts/`, repo-root/local `*.db`, `artifacts/`, and `codex_handoff_packet_*.zip` are local execution or handoff byproducts and are ignored by Git.
+- Handoff source bundles are review/handoff snapshots, not release artifacts. Runtime workspace bundles are inspection/evidence exports over canonical runtime truth, not source packaging.
 - If runtime evidence needs to become a reusable golden fixture, move it into an explicit `fixtures/` path instead of leaving it under the live `.onetruth_artifacts/` root.
 
 ## API quickstart (dev)
@@ -334,14 +342,18 @@ Open workspace page:
 
 Export workspace bundle zip for review:
 - `PYTHONPATH=src python3 scripts/export_run_workspace_bundle.py --db-url sqlite:///./.tmp/workspace-demo.db --workflow-run-id <workflow_run_id> --output ./.tmp/workspace-bundle.zip`
+- the ZIP now includes `bundle_manifest.json` with `bundle_kind: "runtime_workspace_bundle"` and canonical run scope identifiers
+- treat this as a runtime inspection/evidence bundle, not a source or release package
 
 Export a clean repo source bundle for Codex/human handoff:
 - `make clean-source-bundle`
 - or `python3 scripts/export_clean_source_bundle.py --output ./.tmp/companyos-clean-source-bundle.zip`
-- default behavior exports the current working-tree source snapshot (tracked files plus non-ignored untracked source files)
+- default behavior exports a `handoff_source_bundle` from the current working-tree source snapshot (tracked files plus non-ignored untracked source files)
 - default exclusions include `.git`, `.venv`, `node_modules`, `frontend/dist`, `.tmp`, `.pytest_cache`, `.idea`, local `.env*` files, local DBs, and runtime evidence roots like `artifacts/` and `.onetruth_artifacts/`
 - use `--tracked-only` if you want a strictly git-tracked source bundle
-- use the clean source bundle for repo handoffs; keep `export_run_workspace_bundle.py` for runtime workspace inspection bundles only
+- export a provenance-oriented release snapshot with `python3 scripts/export_clean_source_bundle.py --bundle-kind release_source_bundle --output ./.tmp/companyos-release-source-bundle.zip`
+- `release_source_bundle` always exports tracked files only, requires `HEAD`, and fails closed unless the tracked worktree is clean
+- `make clean-source-bundle` remains the handoff alias; use the handoff bundle for repo review/transfer and keep `export_run_workspace_bundle.py` for runtime workspace inspection bundles only
 
 ## Runtime scaffold
 Runtime scaffold now exists at `src/onetruth/` with migrations under `alembic/` and runtime smoke tests under `tests/runtime/`.

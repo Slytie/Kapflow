@@ -9,7 +9,7 @@ import shlex
 import sqlite3
 import subprocess
 import sys
-from typing import Any, Callable, Mapping, Sequence
+from typing import Callable, Mapping, Sequence
 import zipfile
 
 from onetruth.infrastructure.events.event_store import utc_now_iso

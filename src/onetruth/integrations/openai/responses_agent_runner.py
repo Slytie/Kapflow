@@ -15,7 +15,8 @@ from onetruth.integrations.openai.responses_adapter import (
     build_openai_responses_runtime_config_from_env,
 )
 
-ResponseTransport = Callable[[dict[str, Any], float], Any]
+ResponseTransportResult = tuple[int, dict[str, Any], Optional[str], dict[str, str]]
+ResponseTransport = Callable[[dict[str, Any], float], ResponseTransportResult]
 FunctionExecutor = Callable[[str, dict[str, Any]], Any]
 ModelOutputSerializer = Callable[[str, dict[str, Any], Any], Any]
 TurnObserver = Callable[["ResponsesTurnRecord"], None]

@@ -97,7 +97,6 @@ def build_weekly_schedule_control_command(
     )
     deterministic_build = run_weekly_stage04_deterministic_build(bundle=bundle)
 
-    planning_week_id = str(workflow_run.get("partition_key") or "")
     output_payloads = {
         "planning.input_bundle.doc": deterministic_build.input_bundle_payload,
         "planning.candidate_schedule_delta.workbook": deterministic_build.candidate_delta_payload,

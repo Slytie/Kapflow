@@ -65,8 +65,16 @@ EXPECTED_APPROVAL_KEYS = {
 }
 
 EXPECTED_POINTER_KEYS = {
+    "pointer_id",
     "workflow_run_id",
     "pointer_key",
+    "tenant_id",
+    "domain_id",
+    "dataset_key",
+    "partition_kind",
+    "partition_key",
+    "stream_key",
+    "registry_kind",
     "scope_kind",
     "scope_ref",
     "artifact_kind",
