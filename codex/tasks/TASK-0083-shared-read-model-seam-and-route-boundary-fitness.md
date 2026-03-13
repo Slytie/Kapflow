@@ -2,7 +2,7 @@
 id: TASK-0083
 epic: EPIC-080
 title: "Extract the shared read-model seam and forbid route-to-route imports"
-status: TODO
+status: DONE
 owners: ["platform"]
 reviewers: ["qa"]
 depends_on: ["TASK-0076", "TASK-0081"]
@@ -68,7 +68,9 @@ Create the smallest honest shared read-model seam and add a fitness rule that fo
 ## Verification
 - `pytest tests/contract/test_route_layer_boundaries.py -q`
 - `PYTHONPATH=src pytest tests/runtime/api/test_board_retry_stability.py -q`
+- `PYTHONPATH=src pytest tests/runtime/api/test_board_schedule_planning_contract.py -q`
 - `PYTHONPATH=src pytest tests/runtime/api/test_logistics_three_workflow_story_endpoint.py -q`
+- `python3 scripts/validate_repo.py --schemas-only`
 
 ## Acceptance criteria
 - No route module imports another route module after this task.
@@ -78,3 +80,4 @@ Create the smallest honest shared read-model seam and add a fitness rule that fo
 
 ## Notes / decisions
 - Use the smallest shared home that prevents signature drift without creating a new framework.
+- Implemented with `src/onetruth/api/queries/hitl_read_models.py` plus `tests/contract/test_route_layer_boundaries.py`; broader route/business-logic extraction remains out of scope.

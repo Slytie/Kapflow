@@ -14,6 +14,11 @@ Record any decisions made since the last session so a fresh Codex run can rehydr
 - Scope decision: the same client `idempotency_key` may be reused safely across different command scopes; receipt uniqueness is `(command_name, scope_key, idempotency_key)` rather than a single global key.
 - Boundary decision: raw `events append` keeps explicit event-store duplicate failure semantics (`duplicate_idempotency_key`), so receipt replay changes only the public mutation boundary and not low-level event append behavior.
 
+## 2026-03-13 (TASK-0083 shared read-model seam and route-boundary fitness)
+- Layering decision: the five shared HITL list/query helpers (`workflow_runs`, `human_tasks`, `approvals`, `flags`, `pointers`) now live under `src/onetruth/api/queries/` instead of being borrowed from sibling route modules.
+- Fitness decision: contract coverage now fails if any module under `src/onetruth/api/routes/` imports another route module directly, closing the specific layering smell without introducing a broader API framework.
+- Scope decision: this task moved only the shared read-helper seam; board card assembly, logistics story composition, workspace/detail shaping, and public payload contracts remain unchanged, with the logistics story still primary and the schedule-only board still legacy/internal.
+
 ## 2026-03-13 (TASK-0081 shared HTTP artifact ingress split)
 - Boundary decision: shared HTTP artifact ingress (`/api/v1/artifacts/ingest` and subject upload endpoints) now accepts request bytes only and rejects caller-controlled `source_path` and `storage_root`.
 - Provenance decision: shared HTTP ingress records `metadata_json.ingress_kind=request_bytes` and strips caller-supplied `seed_source_path` / `ingress_source_path`, while CLI/scenario/internal local seeding keeps normalized source-path metadata with `ingress_kind=local_source_path`.

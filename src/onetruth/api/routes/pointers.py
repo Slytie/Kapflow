@@ -3,7 +3,7 @@ from __future__ import annotations
 import sqlite3
 from typing import Any
 
-from onetruth.api.dependencies import Page, RequestContext, scoped_workflow_run
+from onetruth.api.dependencies import Page, RequestContext
 from onetruth.api.queries import query_pointers
 
 
@@ -35,4 +35,3 @@ def list_pointers_endpoint(
         "pointers": rows,
         "page": {"limit": page.limit, "offset": page.offset},
     }
-
