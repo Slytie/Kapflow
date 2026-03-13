@@ -8,6 +8,11 @@ Record any decisions made since the last session so a fresh Codex run can rehydr
 - Alias decision: renumbered historical task briefs keep short deprecated-alias notes so future sessions can map old references without reopening the duplicate-ID ambiguity.
 - Validation decision: backlog validation now needs to fail on duplicate task-file IDs and duplicate task-index rows so this class of drift cannot hide behind prefix collisions.
 
+## 2026-03-13 (TASK-0086 approvals-first hotspot extraction)
+- Extraction decision: the first controlled hotspot move pulls only the approvals family out of `src/onetruth/application/handlers/workflow_task_lifecycle.py` into `src/onetruth/application/handlers/approvals.py`; task, flag, artifact, and execution families stay in place for later tranches.
+- Compatibility decision: existing callers keep importing approval commands from `workflow_task_lifecycle.py`, which now re-exports the moved behavior through thin lazy wrappers so the physical extraction proves out without caller churn.
+- Characterization decision: direct unit coverage now compares the legacy wrapper surface and the new module surface against the same in-memory runtime substrate, freezing approval request/respond row shapes, event payloads, and forbidden-error semantics before any later helper or import cleanup.
+
 ## 2026-03-13 (TASK-0085 bootstrap truth, CI honesty, and governance cleanup)
 - Bootstrap decision: `scripts/doctor.py` is now the single blessed local entrypoint for lightweight deterministic environment checks; there is no parallel shell bootstrap path in this tranche.
 - Python-baseline decision: the validated dev/CI baseline is Python `3.11`, but the task does not change the broader package metadata support floor; doctor verifies that a Python 3.11 interpreter is available even when the invoking `python3` is older.

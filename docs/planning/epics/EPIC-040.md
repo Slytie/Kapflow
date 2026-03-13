@@ -54,3 +54,5 @@ Also see `docs/patterns/PATTERN_INDEX.yaml` for the full tagged library.
 - TASK-0036
 - TASK-0082
 - TASK-0086
+
+Current repo status: `TASK-0086` is complete via a first bounded hotspot extraction that moved the approvals command family into `src/onetruth/application/handlers/approvals.py` behind compatibility wrappers in `workflow_task_lifecycle.py`.

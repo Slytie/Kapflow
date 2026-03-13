@@ -2,7 +2,7 @@
 id: TASK-0086
 epic: EPIC-040
 title: "First controlled hotspot extraction after invariants are stable"
-status: TODO
+status: DONE
 owners: ["platform"]
 reviewers: ["qa"]
 depends_on: ["TASK-0080", "TASK-0081", "TASK-0082", "TASK-0083"]
@@ -77,3 +77,7 @@ Perform the first controlled extraction from `workflow_task_lifecycle.py` only a
 
 ## Notes / decisions
 - The first extraction should optimize for risk reduction, not for LOC moved.
+- Completed 2026-03-13 with an approvals-first seam:
+  - added `src/onetruth/application/handlers/approvals.py` for `request/respond/show/list`
+  - kept `workflow_task_lifecycle.py` import-compatible through thin lazy wrappers
+  - added `tests/unit/test_approval_handler_compatibility.py` to freeze legacy-vs-new handler behavior
