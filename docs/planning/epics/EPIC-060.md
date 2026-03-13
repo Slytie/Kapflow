@@ -36,9 +36,10 @@ Prevents separate business-approval and agent-decision truth systems from emergi
 
 Context pack: `codex/context/EPIC-060.md`
 
-## Current Repo Status (2026-03-08)
-- Completed in this epic: `TASK-0012`, `TASK-0031`, `TASK-0034`.
+## Current Repo Status (2026-03-13)
+- Completed in this epic: `TASK-0012`, `TASK-0031`, `TASK-0034`, and `TASK-0079`.
 - Projection coherence harness (`TASK-0031`) is implemented with authored policy docs and runtime/test coverage (`projection.coherence_failed` visibility over derived views).
+- Read-side actionability now projects shared per-aggregate capability decisions with structured internal reasons while preserving the existing public actionability envelope; write-boundary parity remains `TASK-0080`.
 
 ## Tasks
 - TASK-0012

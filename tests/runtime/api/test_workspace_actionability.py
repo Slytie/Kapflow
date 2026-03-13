@@ -85,6 +85,9 @@ def test_stage06_information_request_requires_upload_before_completion(tmp_path:
         subject_id=information_task_id,
     )
     assert info_item["linked_artifact_count"] == 0
+    assert "required_upload_missing:schedule.supervisor_review.doc" in info_item[
+        "blocking_reason_codes"
+    ]
     assert info_item["missing_required_inputs"] == ["schedule.supervisor_review.doc"]
     assert info_item["can_complete"] is False
     assert "complete" not in info_item["available_actions"]

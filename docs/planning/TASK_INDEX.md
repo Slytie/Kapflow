@@ -80,7 +80,7 @@
 | TASK-0076 | EPIC-080 | DONE | medium | Restore board stability and classify primary vs legacy query surfaces |
 | TASK-0077 | EPIC-050 | DONE | high | Freeze the capability lattice and policy semantics |
 | TASK-0078 | EPIC-010 | DONE | high | Add explicit API boundary profiles and a principal-resolver seam |
-| TASK-0079 | EPIC-060 | TODO | high | Introduce capability-decision primitives for read-side actionability |
+| TASK-0079 | EPIC-060 | DONE | high | Introduce capability-decision primitives for read-side actionability |
 | TASK-0080 | EPIC-060 | TODO | high | Enforce capability decisions at the write boundary |
 | TASK-0081 | EPIC-030 | TODO | high | Split public artifact upload from local seeding via ingress descriptors |
 | TASK-0082 | EPIC-040 | TODO | high | Move command idempotency to scoped command receipts |

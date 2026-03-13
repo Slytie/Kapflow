@@ -2,7 +2,7 @@
 id: TASK-0079
 epic: EPIC-060
 title: "Introduce capability-decision primitives for read-side actionability"
-status: TODO
+status: DONE
 owners: ["platform"]
 reviewers: ["qa", "security"]
 depends_on: ["TASK-0077", "TASK-0078"]
@@ -75,3 +75,31 @@ Introduce small shared capability-decision primitives on the read side so action
 
 ## Notes / decisions
 - Keep the new seam intentionally small so it does not become the next god module.
+
+## Source Files Changed
+- `src/onetruth/application/services/task_actionability.py`
+- `src/onetruth/application/services/task_requirements.py`
+- `src/onetruth/application/services/capabilities/__init__.py`
+- `src/onetruth/application/services/capabilities/shared.py`
+- `src/onetruth/application/services/capabilities/tasks.py`
+- `src/onetruth/application/services/capabilities/approvals.py`
+- `src/onetruth/application/services/capabilities/flags.py`
+- `src/onetruth/application/services/capabilities/artifacts.py`
+- `tests/unit/test_capability_decisions.py`
+- `tests/runtime/api/test_workspace_actionability.py`
+- `docs/status/CURRENT_FOCUS.md`
+- `docs/planning/TASK_INDEX.md`
+- `docs/planning/epics/EPIC-060.md`
+- `codex/tasks/TASK-0079-capability-decision-primitives-for-read-side-actionability.md`
+
+## Verification Run
+- `PYTHONPATH=src pytest tests/unit/test_capability_decisions.py -q`
+- `PYTHONPATH=src pytest tests/contract/test_capability_matrix.py -q`
+- `PYTHONPATH=src pytest tests/runtime/api/test_workspace_actionability.py -q`
+- `PYTHONPATH=src pytest tests/runtime/api/test_logistics_three_workflow_story_endpoint.py -q`
+- `python3 scripts/validate_repo.py --schemas-only`
+
+## Completion Notes
+- Read-side actionability now projects shared per-aggregate capability decisions instead of embedding all role, assignee, policy, and upload logic in one stringly adapter.
+- `task_requirements.py` now emits structured blocker entries alongside the legacy `blocking_reason_codes`, and `task_actionability.py` preserves the existing HTTP payload shape by projecting those structured reasons back to the legacy codes.
+- Write-path enforcement is still intentionally deferred to `TASK-0080`, upload-boundary cleanup remains in `TASK-0081`, and broader read-model cleanup remains in `TASK-0083`.

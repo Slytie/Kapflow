@@ -93,6 +93,7 @@ def build_human_task_requirement_index(
         task_kind = str(task.get("task_kind") or "")
         required_uploads: list[dict[str, Any]] = []
         required_reviews: list[dict[str, Any]] = []
+        blocking_reasons: list[dict[str, Any]] = []
         blocking_reason_codes: list[str] = []
         missing_required_inputs: list[str] = []
 
@@ -110,6 +111,12 @@ def build_human_task_requirement_index(
             current_count = linked_count
             status = "satisfied" if current_count >= 1 else "missing"
             if status == "missing":
+                blocking_reasons.append(
+                    {
+                        "code": "required_upload_missing",
+                        "details": {"dataset_key": dataset_key},
+                    }
+                )
                 blocking_reason_codes.append(f"required_upload_missing:{dataset_key}")
                 missing_required_inputs.append(dataset_key)
             required_uploads.append(
@@ -141,6 +148,12 @@ def build_human_task_requirement_index(
                 status = "confirmed"
             else:
                 status = "pending_confirmation"
+                blocking_reasons.append(
+                    {
+                        "code": "required_review_confirmation_missing",
+                        "details": {"artifact_kind": artifact_kind},
+                    }
+                )
                 blocking_reason_codes.append(
                     f"required_review_confirmation_missing:{artifact_kind}"
                 )
@@ -159,6 +172,7 @@ def build_human_task_requirement_index(
         requirements[human_task_id] = {
             "required_uploads": required_uploads,
             "required_reviews": required_reviews,
+            "blocking_reasons": blocking_reasons,
             "blocking_reason_codes": blocking_reason_codes,
             "missing_required_inputs": missing_required_inputs,
         }

@@ -1,23 +1,23 @@
 from __future__ import annotations
 
 import sqlite3
-from typing import Any
+from typing import Any, Iterable
 
-from onetruth.application.handlers.workflow_task_lifecycle import CommandError
-from onetruth.application.services.stage06_openai_sandbox import (
-    evaluate_stage06_policy_for_actor,
+from onetruth.application.services.capabilities import (
+    DecisionReason,
+    Principal,
+    claim_decision,
+    complete_decision,
+    confirm_review_decision,
+    download_decision,
+    execute_stage06_agent_review_decision,
+    execute_weekly_stage04_openai_agent_decision,
+    legacy_reason_codes,
+    project_available_actions,
+    respond_decision,
+    transition_decision,
+    upload_decision,
 )
-from onetruth.application.services.weekly_stage04_openai_agent import (
-    evaluate_weekly_stage04_policy_for_actor,
-)
-
-ACTIVE_FLAG_STATES = {"open", "triage", "blocked"}
-FLAG_TRANSITION_ROLES = {
-    "dispatch_supervisor",
-    "operations_manager",
-    "fleet_coordinator",
-    "schedule_planner",
-}
 
 
 def build_artifact_link_count_index(
@@ -53,18 +53,188 @@ def compute_human_task_actionability(
     linked_artifact_count: int,
     requirement_state: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
+    principal = Principal(
+        actor_id=actor_id,
+        actor_type=actor_type,
+        actor_roles=actor_roles,
+    )
     state = str(task.get("state") or "")
-    candidate_roles = tuple(str(role) for role in task.get("candidate_roles") or [])
-    role_match = _roles_intersect(candidate_roles, actor_roles) if candidate_roles else True
-    assignee_actor_id = str(task.get("assignee_actor_id") or "")
-    assignee_actor_type = str(task.get("assignee_actor_type") or "")
-    is_assignee = state == "CLAIMED" and assignee_actor_id == actor_id and assignee_actor_type == actor_type
-
     required_uploads = list((requirement_state or {}).get("required_uploads") or [])
     required_reviews = list((requirement_state or {}).get("required_reviews") or [])
-    blocking_reason_codes = list((requirement_state or {}).get("blocking_reason_codes") or [])
+    requirement_reasons = _requirement_reasons(requirement_state)
     missing_required_inputs = list((requirement_state or {}).get("missing_required_inputs") or [])
+    has_pending_review_confirmation = any(
+        isinstance(review, dict) and str(review.get("status") or "") == "pending_confirmation"
+        for review in required_reviews
+    )
 
+    claim = claim_decision(task=task, principal=principal)
+    complete = complete_decision(
+        task=task,
+        principal=principal,
+        requirement_reasons=requirement_reasons,
+    )
+    confirm_review = confirm_review_decision(
+        task=task,
+        principal=principal,
+        has_pending_review_confirmation=has_pending_review_confirmation,
+    )
+    stage06_execute = execute_stage06_agent_review_decision(
+        task=task,
+        principal=principal,
+    )
+    weekly_stage04_execute = execute_weekly_stage04_openai_agent_decision(
+        task=task,
+        principal=principal,
+    )
+    upload = upload_decision()
+    download = download_decision(linked_artifact_count=linked_artifact_count)
+
+    blocking_requirements = _task_blocking_requirements(
+        required_uploads=required_uploads,
+        required_reviews=required_reviews,
+        claim=claim,
+        complete=complete,
+    )
+    blocking_reason_codes = legacy_reason_codes(requirement_reasons)
+    if state == "OPEN":
+        candidate_role_mismatch = _find_reason(claim.reasons, "candidate_role_mismatch")
+        if candidate_role_mismatch is not None:
+            blocking_reason_codes.extend(
+                _dedup_codes(legacy_reason_codes([candidate_role_mismatch]), blocking_reason_codes)
+            )
+    claimed_by_other_actor = _find_reason(complete.reasons, "claimed_by_other_actor")
+    if claimed_by_other_actor is not None:
+        blocking_reason_codes.extend(
+            _dedup_codes(legacy_reason_codes([claimed_by_other_actor]), blocking_reason_codes)
+        )
+
+    available_actions = project_available_actions(
+        [
+            ("claim", claim),
+            ("confirm_review", confirm_review),
+            ("complete", complete),
+            ("run_stage06_agent_review", stage06_execute),
+            ("run_weekly_stage04_openai_agent", weekly_stage04_execute),
+            ("upload_attachment", upload),
+            ("download_attachments", download),
+        ]
+    )
+
+    return {
+        "available_actions": available_actions,
+        "blocking_requirements": blocking_requirements,
+        "required_uploads": required_uploads,
+        "required_reviews": required_reviews,
+        "blocking_reason_codes": blocking_reason_codes,
+        "linked_artifact_count": linked_artifact_count,
+        "missing_required_inputs": missing_required_inputs,
+        "can_complete": complete.allowed,
+        "can_confirm_review": confirm_review.allowed,
+        "can_upload_attachment": upload.allowed,
+        "can_run_stage06_agent_review": stage06_execute.allowed,
+        "can_run_weekly_stage04_openai_agent": weekly_stage04_execute.allowed,
+    }
+
+
+def compute_approval_actionability(
+    *,
+    approval: dict[str, Any],
+    actor_roles: tuple[str, ...],
+    linked_artifact_count: int,
+) -> dict[str, Any]:
+    principal = Principal(
+        actor_id="",
+        actor_type="human",
+        actor_roles=actor_roles,
+    )
+    respond = respond_decision(approval=approval, principal=principal)
+    upload = upload_decision()
+    download = download_decision(linked_artifact_count=linked_artifact_count)
+
+    blocking_requirements: list[dict[str, Any]] = []
+    role_mismatch = _find_reason(respond.reasons, "approval_role_mismatch")
+    if role_mismatch is not None:
+        blocking_requirements.append(
+            {
+                "requirement": "approval_role_match",
+                "required_role": role_mismatch.details.get("required_role"),
+                "candidate_roles": list(role_mismatch.details.get("candidate_roles") or []),
+                "actor_roles": list(role_mismatch.details.get("actor_roles") or []),
+                "status": "missing",
+            }
+        )
+
+    available_actions = project_available_actions(
+        [
+            ("respond", respond),
+            ("upload_attachment", upload),
+            ("download_attachments", download),
+        ]
+    )
+
+    return {
+        "available_actions": available_actions,
+        "blocking_requirements": blocking_requirements,
+        "required_uploads": [],
+        "required_reviews": [],
+        "blocking_reason_codes": [],
+        "linked_artifact_count": linked_artifact_count,
+        "missing_required_inputs": [],
+        "can_complete": False,
+        "can_confirm_review": False,
+        "can_upload_attachment": upload.allowed,
+        "can_run_stage06_agent_review": False,
+        "can_run_weekly_stage04_openai_agent": False,
+    }
+
+
+def compute_flag_actionability(
+    *,
+    flag: dict[str, Any],
+    actor_roles: tuple[str, ...],
+    linked_artifact_count: int,
+) -> dict[str, Any]:
+    principal = Principal(
+        actor_id="",
+        actor_type="human",
+        actor_roles=actor_roles,
+    )
+    transition = transition_decision(flag=flag, principal=principal)
+    upload = upload_decision()
+    download = download_decision(linked_artifact_count=linked_artifact_count)
+
+    available_actions = project_available_actions(
+        [
+            ("transition", transition),
+            ("upload_attachment", upload),
+            ("download_attachments", download),
+        ]
+    )
+
+    return {
+        "available_actions": available_actions,
+        "blocking_requirements": [],
+        "required_uploads": [],
+        "required_reviews": [],
+        "blocking_reason_codes": [],
+        "linked_artifact_count": linked_artifact_count,
+        "missing_required_inputs": [],
+        "can_complete": False,
+        "can_confirm_review": False,
+        "can_upload_attachment": upload.allowed,
+        "can_run_stage06_agent_review": False,
+        "can_run_weekly_stage04_openai_agent": False,
+    }
+
+
+def _task_blocking_requirements(
+    *,
+    required_uploads: list[dict[str, Any]],
+    required_reviews: list[dict[str, Any]],
+    claim,
+    complete,
+) -> list[dict[str, Any]]:
     blocking_requirements: list[dict[str, Any]] = []
     for upload in required_uploads:
         if not isinstance(upload, dict):
@@ -93,217 +263,94 @@ def compute_human_task_actionability(
             }
         )
 
-    if state == "CLAIMED" and not is_assignee:
-        blocking_reason_codes.append("claimed_by_other_actor")
-        blocking_requirements.append(
-            {
-                "requirement": "claimed_by_other_actor",
-                "assignee_actor_id": assignee_actor_id or None,
-                "assignee_actor_type": assignee_actor_type or None,
-                "status": "missing",
-            }
-        )
-
-    can_claim = state == "OPEN" and not assignee_actor_id and role_match
-    has_pending_review_confirmation = any(
-        isinstance(review, dict) and str(review.get("status") or "") == "pending_confirmation"
-        for review in required_reviews
-    )
-    can_complete = is_assignee and not blocking_reason_codes
-    can_confirm_review = is_assignee and has_pending_review_confirmation
-    can_upload_attachment = True
-    can_run_stage06_agent_review = _can_run_stage06_agent_review(
-        stage_id=str(task.get("stage_id") or ""),
-        task_kind=str(task.get("task_kind") or ""),
-        is_assignee=is_assignee,
-        actor_type=actor_type,
-        actor_roles=actor_roles,
-    )
-    can_run_weekly_stage04_openai_agent = _can_run_weekly_stage04_openai_agent(
-        stage_id=str(task.get("stage_id") or ""),
-        task_kind=str(task.get("task_kind") or ""),
-        is_assignee=is_assignee,
-        actor_type=actor_type,
-        actor_roles=actor_roles,
-    )
-
-    if state == "OPEN" and not role_match:
-        blocking_reason_codes.append("candidate_role_mismatch")
+    candidate_role_mismatch = _find_reason(claim.reasons, "candidate_role_mismatch")
+    if candidate_role_mismatch is not None:
         blocking_requirements.append(
             {
                 "requirement": "candidate_role_match",
-                "candidate_roles": list(candidate_roles),
-                "actor_roles": list(actor_roles),
+                "candidate_roles": list(candidate_role_mismatch.details.get("candidate_roles") or []),
+                "actor_roles": list(candidate_role_mismatch.details.get("actor_roles") or []),
                 "status": "missing",
             }
         )
 
-    available_actions: list[str] = []
-    if can_claim:
-        available_actions.append("claim")
-    if can_confirm_review:
-        available_actions.append("confirm_review")
-    if can_complete:
-        available_actions.append("complete")
-    if can_run_stage06_agent_review:
-        available_actions.append("run_stage06_agent_review")
-    if can_run_weekly_stage04_openai_agent:
-        available_actions.append("run_weekly_stage04_openai_agent")
-    if can_upload_attachment:
-        available_actions.append("upload_attachment")
-    if linked_artifact_count > 0:
-        available_actions.append("download_attachments")
-
-    return {
-        "available_actions": available_actions,
-        "blocking_requirements": blocking_requirements,
-        "required_uploads": required_uploads,
-        "required_reviews": required_reviews,
-        "blocking_reason_codes": blocking_reason_codes,
-        "linked_artifact_count": linked_artifact_count,
-        "missing_required_inputs": missing_required_inputs,
-        "can_complete": can_complete,
-        "can_confirm_review": can_confirm_review,
-        "can_upload_attachment": can_upload_attachment,
-        "can_run_stage06_agent_review": can_run_stage06_agent_review,
-        "can_run_weekly_stage04_openai_agent": can_run_weekly_stage04_openai_agent,
-    }
-
-
-def compute_approval_actionability(
-    *,
-    approval: dict[str, Any],
-    actor_roles: tuple[str, ...],
-    linked_artifact_count: int,
-) -> dict[str, Any]:
-    state = str(approval.get("state") or "")
-    required_role = str(approval.get("required_role") or "")
-    candidate_roles = tuple(str(role) for role in approval.get("candidate_roles") or [])
-    role_match = (
-        required_role in actor_roles
-        if required_role
-        else (_roles_intersect(candidate_roles, actor_roles) if candidate_roles else False)
-    )
-    can_respond = state == "PENDING" and role_match
-    can_upload_attachment = True
-
-    blocking_requirements: list[dict[str, Any]] = []
-    if state == "PENDING" and not role_match:
+    claimed_by_other_actor = _find_reason(complete.reasons, "claimed_by_other_actor")
+    if claimed_by_other_actor is not None:
         blocking_requirements.append(
             {
-                "requirement": "approval_role_match",
-                "required_role": required_role or None,
-                "candidate_roles": list(candidate_roles),
-                "actor_roles": list(actor_roles),
+                "requirement": "claimed_by_other_actor",
+                "assignee_actor_id": claimed_by_other_actor.details.get("assignee_actor_id"),
+                "assignee_actor_type": claimed_by_other_actor.details.get("assignee_actor_type"),
                 "status": "missing",
             }
         )
 
-    available_actions: list[str] = []
-    if can_respond:
-        available_actions.append("respond")
-    if can_upload_attachment:
-        available_actions.append("upload_attachment")
-    if linked_artifact_count > 0:
-        available_actions.append("download_attachments")
-
-    return {
-        "available_actions": available_actions,
-        "blocking_requirements": blocking_requirements,
-        "required_uploads": [],
-        "required_reviews": [],
-        "blocking_reason_codes": [],
-        "linked_artifact_count": linked_artifact_count,
-        "missing_required_inputs": [],
-        "can_complete": False,
-        "can_confirm_review": False,
-        "can_upload_attachment": can_upload_attachment,
-        "can_run_stage06_agent_review": False,
-        "can_run_weekly_stage04_openai_agent": False,
-    }
+    return blocking_requirements
 
 
-def compute_flag_actionability(
-    *,
-    flag: dict[str, Any],
-    actor_roles: tuple[str, ...],
-    linked_artifact_count: int,
-) -> dict[str, Any]:
-    state = str(flag.get("state") or "")
-    can_transition = state in ACTIVE_FLAG_STATES and _roles_intersect(
-        tuple(FLAG_TRANSITION_ROLES),
-        actor_roles,
-    )
-    can_upload_attachment = True
+def _requirement_reasons(
+    requirement_state: dict[str, Any] | None,
+) -> tuple[DecisionReason, ...]:
+    if not requirement_state:
+        return ()
+    structured = requirement_state.get("blocking_reasons")
+    if isinstance(structured, list):
+        reasons: list[DecisionReason] = []
+        for item in structured:
+            if not isinstance(item, dict):
+                continue
+            code = str(item.get("code") or "").strip()
+            if not code:
+                continue
+            details = item.get("details")
+            reasons.append(
+                DecisionReason(
+                    code=code,
+                    details=details if isinstance(details, dict) else {},
+                )
+            )
+        if reasons:
+            return tuple(reasons)
 
-    available_actions: list[str] = []
-    if can_transition:
-        available_actions.append("transition")
-    if can_upload_attachment:
-        available_actions.append("upload_attachment")
-    if linked_artifact_count > 0:
-        available_actions.append("download_attachments")
-
-    return {
-        "available_actions": available_actions,
-        "blocking_requirements": [],
-        "required_uploads": [],
-        "required_reviews": [],
-        "blocking_reason_codes": [],
-        "linked_artifact_count": linked_artifact_count,
-        "missing_required_inputs": [],
-        "can_complete": False,
-        "can_confirm_review": False,
-        "can_upload_attachment": can_upload_attachment,
-        "can_run_stage06_agent_review": False,
-        "can_run_weekly_stage04_openai_agent": False,
-    }
+    legacy_codes = requirement_state.get("blocking_reason_codes")
+    if not isinstance(legacy_codes, list):
+        return ()
+    parsed: list[DecisionReason] = []
+    for raw_code in legacy_codes:
+        parsed_reason = _parse_legacy_reason(str(raw_code))
+        if parsed_reason is not None:
+            parsed.append(parsed_reason)
+    return tuple(parsed)
 
 
-def _roles_intersect(left: tuple[str, ...], right: tuple[str, ...]) -> bool:
-    return bool(set(left).intersection(right))
-
-
-def _can_run_stage06_agent_review(
-    *,
-    stage_id: str,
-    task_kind: str,
-    is_assignee: bool,
-    actor_type: str,
-    actor_roles: tuple[str, ...],
-) -> bool:
-    if not is_assignee:
-        return False
-    if stage_id != "Stage06" or task_kind != "review_packet":
-        return False
-    try:
-        decision, _, _ = evaluate_stage06_policy_for_actor(
-            actor_type=actor_type,
-            actor_roles=actor_roles,
+def _parse_legacy_reason(raw_code: str) -> DecisionReason | None:
+    if not raw_code:
+        return None
+    if raw_code.startswith("required_upload_missing:"):
+        dataset_key = raw_code.split(":", 1)[1]
+        return DecisionReason(
+            code="required_upload_missing",
+            details={"dataset_key": dataset_key},
         )
-    except CommandError:
-        # Misconfigured policy override should fail closed in read projections.
-        return False
-    return decision == "allow"
-
-
-def _can_run_weekly_stage04_openai_agent(
-    *,
-    stage_id: str,
-    task_kind: str,
-    is_assignee: bool,
-    actor_type: str,
-    actor_roles: tuple[str, ...],
-) -> bool:
-    if not is_assignee:
-        return False
-    if stage_id != "Stage04" or task_kind != "work_item":
-        return False
-    try:
-        decision, _, _ = evaluate_weekly_stage04_policy_for_actor(
-            actor_type=actor_type,
-            actor_roles=actor_roles,
+    if raw_code.startswith("required_review_confirmation_missing:"):
+        artifact_kind = raw_code.split(":", 1)[1]
+        return DecisionReason(
+            code="required_review_confirmation_missing",
+            details={"artifact_kind": artifact_kind},
         )
-    except CommandError:
-        return False
-    return decision == "allow"
+    return DecisionReason(code=raw_code, details={})
+
+
+def _find_reason(
+    reasons: Iterable[DecisionReason],
+    code: str,
+) -> DecisionReason | None:
+    for reason_item in reasons:
+        if reason_item.code == code:
+            return reason_item
+    return None
+
+
+def _dedup_codes(new_codes: Iterable[str], existing_codes: list[str]) -> list[str]:
+    seen = set(existing_codes)
+    return [code for code in new_codes if code not in seen]
