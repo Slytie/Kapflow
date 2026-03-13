@@ -15,6 +15,7 @@ from onetruth.application.handlers.workflow_task_lifecycle import (
     show_human_task_command,
 )
 from onetruth.infrastructure.artifacts.storage import (
+    ArtifactIngressDescriptor,
     default_storage_root_for_db_url,
     encode_base64_content,
 )
@@ -96,9 +97,23 @@ def ingest_artifact_endpoint(
             )
         )
     scoped_workflow_run(connection, context, workflow_run_id)
+    ingress_descriptor = _shared_http_request_bytes_descriptor(
+        payload,
+        endpoint="api.artifacts.ingest",
+    )
     ingest_payload = {
-        **payload,
         "workflow_run_id": workflow_run_id,
+        "task_run_id": payload.get("task_run_id"),
+        "artifact_kind": payload.get("artifact_kind"),
+        "artifact_role": payload.get("artifact_role"),
+        "file_name": payload.get("file_name"),
+        "media_type": payload.get("media_type"),
+        "metadata_json": payload.get("metadata_json"),
+        "parent_artifact_version_id": payload.get("parent_artifact_version_id"),
+        "supersedes_artifact_version_id": payload.get("supersedes_artifact_version_id"),
+        "lineage_note": payload.get("lineage_note"),
+        "links": payload.get("links"),
+        "idempotency_key": payload.get("idempotency_key"),
         "actor_id": context.actor_id,
         "actor_type": context.actor_type,
     }
@@ -106,10 +121,8 @@ def ingest_artifact_endpoint(
         result = ingest_artifact_document_command(
             connection,
             ingest_payload,
-            storage_root=default_storage_root_for_db_url(
-                db_url,
-                override=payload.get("storage_root"),
-            ),
+            storage_root=default_storage_root_for_db_url(db_url),
+            ingress_descriptor=ingress_descriptor,
         )
     except CommandError as exc:
         raise api_error_from_command(exc) from exc
@@ -439,13 +452,15 @@ def _upload_for_subject(
     subject_id: str,
     task_run_id: str | None,
 ) -> dict[str, Any]:
+    ingress_descriptor = _shared_http_request_bytes_descriptor(
+        payload,
+        endpoint=f"api.{subject_kind}.artifacts.upload",
+    )
     ingest_payload = {
         "workflow_run_id": workflow_run_id,
         "task_run_id": task_run_id,
         "artifact_kind": payload.get("artifact_kind"),
         "artifact_role": payload.get("artifact_role"),
-        "source_path": payload.get("source_path"),
-        "content_base64": payload.get("content_base64"),
         "file_name": payload.get("file_name"),
         "media_type": payload.get("media_type"),
         "metadata_json": payload.get("metadata_json") or {},
@@ -467,10 +482,8 @@ def _upload_for_subject(
         result = ingest_artifact_document_command(
             connection,
             ingest_payload,
-            storage_root=default_storage_root_for_db_url(
-                db_url,
-                override=payload.get("storage_root"),
-            ),
+            storage_root=default_storage_root_for_db_url(db_url),
+            ingress_descriptor=ingress_descriptor,
         )
     except CommandError as exc:
         raise api_error_from_command(exc) from exc
@@ -492,3 +505,37 @@ def json_loads(raw: Any) -> Any:
     if isinstance(raw, str):
         return json.loads(raw)
     return raw
+
+
+def _shared_http_request_bytes_descriptor(
+    payload: dict[str, Any],
+    *,
+    endpoint: str,
+) -> ArtifactIngressDescriptor:
+    forbidden_fields = [
+        field
+        for field in ("source_path", "storage_root")
+        if payload.get(field) is not None
+    ]
+    if forbidden_fields:
+        raise api_error_from_command(
+            CommandError(
+                code="invalid_artifact_ingress",
+                message="shared HTTP artifact ingress accepts request bytes only",
+                details={"endpoint": endpoint, "forbidden_fields": forbidden_fields},
+            )
+        )
+
+    content_base64 = payload.get("content_base64")
+    if content_base64 is None:
+        raise api_error_from_command(
+            CommandError(
+                code="invalid_artifact_ingress",
+                message="content_base64 is required for shared HTTP artifact ingress",
+                details={"endpoint": endpoint, "required_field": "content_base64"},
+            )
+        )
+
+    return ArtifactIngressDescriptor.request_bytes(
+        content_base64=str(content_base64)
+    )

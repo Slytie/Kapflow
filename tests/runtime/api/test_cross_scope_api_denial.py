@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import base64
 from pathlib import Path
 
 from tests.runtime.helpers.runtime_api import RuntimeApiClient
@@ -11,6 +12,10 @@ STAGE06_DOC = (
     REPO_ROOT
     / "fixtures/workflows/schedule_planning/template_pack/Stage06_Supervisor_Review_Publish/Stage06_Supervisor_Review_Publish_Document_Example_COMPLETED.docx"
 )
+
+
+def _encoded_file(path: Path) -> str:
+    return base64.b64encode(path.read_bytes()).decode("ascii")
 
 
 def test_cross_scope_requests_are_denied_and_do_not_leak_rows(tmp_path: Path) -> None:
@@ -29,7 +34,7 @@ def test_cross_scope_requests_are_denied_and_do_not_leak_rows(tmp_path: Path) ->
         payload={
             "artifact_kind": "schedule.supervisor_review.doc",
             "artifact_role": "evidence",
-            "source_path": str(STAGE06_DOC),
+            "content_base64": _encoded_file(STAGE06_DOC),
             "file_name": STAGE06_DOC.name,
             "idempotency_key": f"api:{harness.scenario_id}:cross-scope-artifact-seed",
         },

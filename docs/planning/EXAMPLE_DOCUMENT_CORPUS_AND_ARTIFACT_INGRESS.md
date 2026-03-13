@@ -47,6 +47,14 @@ Ingress behavior:
 - records linkage through `artifact_links`
 - emits authoritative `artifact.version.created` in the same transaction
 
+Shared/public HTTP posture:
+- `POST /api/v1/artifacts/ingest` and subject upload endpoints accept request bytes (`content_base64`) only.
+- Shared HTTP does not accept caller-controlled `source_path` or `storage_root`.
+
+Internal/local posture:
+- CLI `artifacts ingest` / `artifacts seed-corpus`, runtime scenarios, and other internal adapters may continue to use local file-backed seeding through canonical ingress.
+- Local/source-backed ingress records normalized `ingress_source_path`; request-byte ingress does not.
+
 No fixture bypass path is allowed.
 
 ## 4) Manifest/version strategy

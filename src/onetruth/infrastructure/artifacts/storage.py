@@ -1,18 +1,51 @@
 from __future__ import annotations
 
 import base64
+from dataclasses import dataclass
 import hashlib
 import mimetypes
 from pathlib import Path
+from typing import Literal
 from urllib.parse import urlparse
 
 from onetruth.infrastructure.db.session import sqlite_path_from_url
 
 DEFAULT_STORAGE_DIRNAME = "artifact_store"
+ArtifactIngressKind = Literal["request_bytes", "local_source_path"]
 
 
 class ArtifactStorageError(ValueError):
     pass
+
+
+@dataclass(frozen=True)
+class ArtifactIngressDescriptor:
+    ingress_kind: ArtifactIngressKind
+    content_base64: str | None = None
+    source_path: str | None = None
+
+    def __post_init__(self) -> None:
+        if self.ingress_kind == "request_bytes":
+            if self.content_base64 is None or self.source_path is not None:
+                raise ArtifactStorageError(
+                    "request_bytes ingress requires content_base64 only"
+                )
+            return
+        if self.ingress_kind == "local_source_path":
+            if self.source_path is None or self.content_base64 is not None:
+                raise ArtifactStorageError(
+                    "local_source_path ingress requires source_path only"
+                )
+            return
+        raise ArtifactStorageError(f"unsupported artifact ingress kind: {self.ingress_kind}")
+
+    @classmethod
+    def request_bytes(cls, *, content_base64: str) -> ArtifactIngressDescriptor:
+        return cls(ingress_kind="request_bytes", content_base64=content_base64)
+
+    @classmethod
+    def local_source_path(cls, *, source_path: str) -> ArtifactIngressDescriptor:
+        return cls(ingress_kind="local_source_path", source_path=source_path)
 
 
 def default_storage_root_for_db_url(
@@ -57,6 +90,20 @@ def encode_base64_content(content: bytes) -> str:
     return base64.b64encode(content).decode("ascii")
 
 
+def resolve_artifact_ingress(
+    descriptor: ArtifactIngressDescriptor,
+) -> tuple[bytes, str]:
+    if descriptor.ingress_kind == "local_source_path":
+        assert descriptor.source_path is not None
+        raw_content = read_bytes_from_file(descriptor.source_path)
+        default_name = Path(str(descriptor.source_path)).name
+        return raw_content, default_name
+
+    assert descriptor.content_base64 is not None
+    raw_content = decode_base64_content(descriptor.content_base64)
+    return raw_content, "uploaded_document.bin"
+
+
 def write_blob(
     *,
     storage_root: Path,
@@ -99,4 +146,3 @@ def _sanitize_file_name(file_name: str) -> str:
 
 def _is_safe(char: str) -> bool:
     return char.isalnum() or char in {".", "-", "_"}
-

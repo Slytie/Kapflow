@@ -28,6 +28,11 @@ Artifact semantics are the practical expression of one truth. Without them, ever
 
 Context pack: `codex/context/EPIC-030.md`
 
+## Current Repo Status (2026-03-13)
+- Completed in this epic: `TASK-0008`, `TASK-0009`, `TASK-0030`, and `TASK-0081`.
+- Shared/public HTTP artifact ingress now accepts request bytes only, while CLI/scenario/internal seeding remains available through canonical local-source-path ingress.
+- Scope boundary remains unchanged: no object-store migration and no alternate attachment truth path were introduced in this tranche.
+
 ## Deliverables
 - `schemas/artifacts/artifact_version_metadata.schema.json`
 - `docs/architecture/promotion_semantics.md`

@@ -369,7 +369,7 @@ Body (subject upload):
 - `artifact_role`
 - `file_name`
 - `media_type` (optional)
-- `content_base64` or `source_path` (dev/local)
+- `content_base64`
 - `metadata_json` (optional)
 - `relation_kind` (optional, default `attachment`)
 - `idempotency_key`
@@ -380,6 +380,8 @@ Response:
 Rules:
 - upload creates canonical immutable artifact versions and emits authoritative events,
 - no mutable/secondary attachment store is allowed,
+- shared HTTP ingress accepts request bytes only; `source_path` and caller-selected `storage_root` are invalid on these endpoints,
+- storage-root selection is server-owned on shared HTTP,
 - scope checks apply to subject and workflow ownership before upload.
 
 ### 4.5 Run bounded Stage06 OpenAI review sandbox

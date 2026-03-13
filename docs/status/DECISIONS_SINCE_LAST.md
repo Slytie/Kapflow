@@ -8,6 +8,11 @@ Record any decisions made since the last session so a fresh Codex run can rehydr
 - Alias decision: renumbered historical task briefs keep short deprecated-alias notes so future sessions can map old references without reopening the duplicate-ID ambiguity.
 - Validation decision: backlog validation now needs to fail on duplicate task-file IDs and duplicate task-index rows so this class of drift cannot hide behind prefix collisions.
 
+## 2026-03-13 (TASK-0081 shared HTTP artifact ingress split)
+- Boundary decision: shared HTTP artifact ingress (`/api/v1/artifacts/ingest` and subject upload endpoints) now accepts request bytes only and rejects caller-controlled `source_path` and `storage_root`.
+- Provenance decision: shared HTTP ingress records `metadata_json.ingress_kind=request_bytes` and strips caller-supplied `seed_source_path` / `ingress_source_path`, while CLI/scenario/internal local seeding keeps normalized source-path metadata with `ingress_kind=local_source_path`.
+- Compatibility decision: CLI `artifacts ingest`, `artifacts seed-corpus`, and scenario-backed local seeding remain on the same canonical artifact path and were not removed or redesigned in this task.
+
 ## 2026-03-13 (TASK-0076 board stability and query-surface classification)
 - Compatibility decision: `GET /api/v1/board/schedule-planning` now uses the current pointer-query contract and returns the documented board payload without redesigning that endpoint.
 - Surface-classification decision: `GET /api/v1/stories/logistics-three-workflow` and frontend route `/demo/logistics` remain the primary logistics surfaces; the schedule-only board stays legacy/internal regression coverage.

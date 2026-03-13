@@ -116,6 +116,8 @@ def test_example_doc_ingress_creates_canonical_artifact_and_links(tmp_path: Path
     parsed_ingest = stdout_json(ingest)
     artifact = parsed_ingest["artifact_version"]
     artifact_version_id = artifact["artifact_version_id"]
+    assert artifact["metadata_json"]["ingress_kind"] == "local_source_path"
+    assert artifact["metadata_json"]["ingress_source_path"].startswith("fixtures/")
 
     task_linked = stdout_json(
         run_cli(
@@ -225,6 +227,7 @@ def test_manifest_seed_is_deterministic_and_round_trips_digest_metadata(tmp_path
     # Validate digest/byte_size against source bytes.
     for artifact in seeded_a:
         fixture_id = artifact["metadata_json"]["fixture_id"]
+        assert artifact["metadata_json"]["ingress_kind"] == "local_source_path"
         source_path = str(artifact["metadata_json"]["ingress_source_path"])
         assert source_path.startswith("fixtures/")
         assert "/Users/" not in source_path
@@ -272,6 +275,7 @@ def test_non_fixture_ingress_source_path_uses_file_basename(tmp_path: Path) -> N
         run_cli("--db-url", db_url, "artifacts", "ingest", "--json", json.dumps(ingest_payload))
     )["artifact_version"]
 
+    assert artifact["metadata_json"]["ingress_kind"] == "local_source_path"
     assert artifact["metadata_json"]["ingress_source_path"] == source.name
 
 

@@ -19,12 +19,13 @@ from onetruth.domain.pointer_address import (
     resolve_legacy_pointer_address,
 )
 from onetruth.infrastructure.artifacts.storage import (
+    ArtifactIngressDescriptor,
     ArtifactStorageError,
     decode_base64_content,
     encode_base64_content,
     infer_media_type,
     read_blob,
-    read_bytes_from_file,
+    resolve_artifact_ingress,
     write_blob,
 )
 from onetruth.infrastructure.events.event_store import (
@@ -1203,9 +1204,6 @@ def confirm_human_task_review_command(
         "artifact_kind": REVIEW_CONFIRMATION_ARTIFACT_KIND,
         "artifact_role": "review_evidence",
         "media_type": "application/json",
-        "content_base64": encode_base64_content(
-            json.dumps(evidence_payload, separators=(",", ":"), sort_keys=True).encode("utf-8")
-        ),
         "file_name": f"human-task-review-confirmation-{human_task_id}.json",
         "metadata_json": evidence_payload,
         "links": [
@@ -1238,6 +1236,15 @@ def confirm_human_task_review_command(
             connection,
             ingest_payload,
             storage_root=storage_root,
+            ingress_descriptor=ArtifactIngressDescriptor.request_bytes(
+                content_base64=encode_base64_content(
+                    json.dumps(
+                        evidence_payload,
+                        separators=(",", ":"),
+                        sort_keys=True,
+                    ).encode("utf-8")
+                )
+            ),
         )
         return {
             "artifact_version": result["artifact_version"],
@@ -2523,6 +2530,7 @@ def ingest_artifact_document_command(
     payload: dict[str, Any],
     *,
     storage_root: Path,
+    ingress_descriptor: ArtifactIngressDescriptor | None = None,
 ) -> dict[str, Any]:
     _require_fields(
         payload,
@@ -2533,28 +2541,39 @@ def ingest_artifact_document_command(
         ],
     )
 
-    source_path = payload.get("source_path")
-    content_base64 = payload.get("content_base64")
-    if source_path is None and content_base64 is None:
-        raise CommandError(
-            code="invalid_payload",
-            message="either source_path or content_base64 is required",
-            details={},
-        )
-    if source_path is not None and content_base64 is not None:
-        raise CommandError(
-            code="invalid_payload",
-            message="source_path and content_base64 are mutually exclusive",
-            details={},
-        )
+    if ingress_descriptor is None:
+        source_path = payload.get("source_path")
+        content_base64 = payload.get("content_base64")
+        if source_path is None and content_base64 is None:
+            raise CommandError(
+                code="invalid_payload",
+                message="either source_path or content_base64 is required",
+                details={},
+            )
+        if source_path is not None and content_base64 is not None:
+            raise CommandError(
+                code="invalid_payload",
+                message="source_path and content_base64 are mutually exclusive",
+                details={},
+            )
+        try:
+            if source_path is not None:
+                ingress_descriptor = ArtifactIngressDescriptor.local_source_path(
+                    source_path=str(source_path)
+                )
+            else:
+                ingress_descriptor = ArtifactIngressDescriptor.request_bytes(
+                    content_base64=str(content_base64)
+                )
+        except ArtifactStorageError as exc:
+            raise CommandError(
+                code="invalid_payload",
+                message=str(exc),
+                details={},
+            ) from exc
 
     try:
-        if source_path is not None:
-            raw_content = read_bytes_from_file(str(source_path))
-            default_name = Path(str(source_path)).name
-        else:
-            raw_content = decode_base64_content(str(content_base64))
-            default_name = "uploaded_document.bin"
+        raw_content, default_name = resolve_artifact_ingress(ingress_descriptor)
     except ArtifactStorageError as exc:
         raise CommandError(
             code="artifact_ingress_failed",
@@ -2592,8 +2611,10 @@ def ingest_artifact_document_command(
         **metadata_json,
         "ingress_file_name": file_name,
         "ingress_media_type": media_type,
+        "ingress_kind": ingress_descriptor.ingress_kind,
     }
-    if source_path is not None:
+    if ingress_descriptor.ingress_kind == "local_source_path":
+        assert ingress_descriptor.source_path is not None
         seed_source_path = metadata_json.get("seed_source_path")
         if isinstance(seed_source_path, str):
             metadata_json["seed_source_path"] = _stable_ingress_source_path(
@@ -2607,8 +2628,11 @@ def ingest_artifact_document_command(
         else:
             metadata_json.setdefault(
                 "ingress_source_path",
-                _stable_ingress_source_path(str(source_path)),
+                _stable_ingress_source_path(str(ingress_descriptor.source_path)),
             )
+    else:
+        metadata_json.pop("seed_source_path", None)
+        metadata_json.pop("ingress_source_path", None)
 
     create_payload = {
         "artifact_version_id": payload.get("artifact_version_id"),

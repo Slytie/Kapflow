@@ -82,7 +82,7 @@
 | TASK-0078 | EPIC-010 | DONE | high | Add explicit API boundary profiles and a principal-resolver seam |
 | TASK-0079 | EPIC-060 | DONE | high | Introduce capability-decision primitives for read-side actionability |
 | TASK-0080 | EPIC-060 | TODO | high | Enforce capability decisions at the write boundary |
-| TASK-0081 | EPIC-030 | TODO | high | Split public artifact upload from local seeding via ingress descriptors |
+| TASK-0081 | EPIC-030 | DONE | high | Split public artifact upload from local seeding via ingress descriptors |
 | TASK-0082 | EPIC-040 | TODO | high | Move command idempotency to scoped command receipts |
 | TASK-0083 | EPIC-080 | TODO | medium | Extract the shared read-model seam and forbid route-to-route imports |
 | TASK-0084 | EPIC-080 | TODO | medium | Make bundle kinds explicit and validate the exported payload |

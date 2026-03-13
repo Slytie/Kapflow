@@ -73,14 +73,14 @@ This repo freezes one capability lattice before any write-path hardening lands.
 | Claim | human task `OPEN` state, `candidate_roles`, lease fields | Claim requires an in-scope actor, an open unassigned human task, and a candidate-role match when candidate roles are present. Successful claim creates the assignee and active lease. | `claim_human_task_command` still enforces state/lease without actor-role checks. |
 | Complete / act | claimed human task, assignee, task requirements | Completion is assignee-based. Once a valid claim exists, completion depends on the current assignee and satisfied requirements, not on re-checking `candidate_roles`. | `task.complete` is not yet hardened against the frozen lattice at the write boundary. |
 | Execute | specialized Stage06 / Stage04 actions, policy decisions, assignee, `stage_id`, `task_kind` | Execute is distinct from claim and complete. It requires the current assignee, the correct stage/task kind, and policy allow or approval-mediated progression through the canonical execution path. | No generic `task.execute` action is introduced in this task; boundary hardening is deferred to `TASK-0078` and `TASK-0080`. |
-| Collaborate / upload | subject upload endpoints, `artifact.upload` | Upload is collaboration/evidence ingress, not claim, completion, approval response, flag transition, or officialization. | Shared HTTP/runtime upload behavior remains intentionally broad until `TASK-0081` splits public upload from local seeding. |
+| Collaborate / upload | subject upload endpoints, `artifact.upload` | Upload is collaboration/evidence ingress, not claim, completion, approval response, flag transition, or officialization. | Shared HTTP upload now accepts request bytes only; CLI/scenario/internal seeding remains separate and may still use local source paths. |
 | Approval respond | approval `required_role`, approval `candidate_roles`, `approval.respond` | `required_role` governs who may respond when present; otherwise approval `candidate_roles` are the fallback responder pool. | `respond_approval_command` still ignores the frozen role lattice. |
 | Flag transition / override | flag state machine, `flag.resolve`, explicit approvals, `task.lease_expired` | Flag transition is separate from task claim/respond semantics. Override and escalation must travel through explicit approvals or visible lease-expiry evidence, not through routing hints alone. | `transition_flag_state_command` still ignores role semantics, and generic override action IDs remain deferred. |
 
 - `candidate_roles` do not by themselves authorize completion, specialized execute actions, uploads, or overrides.
 - `assignee_actor` anchors completion and any specialized execute attempt that operates through the same task row.
 - The current Stage 4 lease-expiry policy is reopen-same-row with canonical `task.lease_expired` evidence rather than an implicit escalation child task.
-- Write-boundary capability enforcement remains deferred to `TASK-0080`, and upload-boundary cleanup remains deferred to `TASK-0081`.
+- Write-boundary capability enforcement remains deferred to `TASK-0080`; upload-boundary cleanup is now implemented by `TASK-0081`.
 
 ## 6) Reopen, reassign, escalate, or spawn a new task
 ### Reopen

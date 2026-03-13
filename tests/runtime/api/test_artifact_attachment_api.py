@@ -34,6 +34,10 @@ def _api_client(harness: RuntimeScenarioHarness) -> RuntimeApiClient:
     )
 
 
+def _encoded_file(path: Path) -> str:
+    return base64.b64encode(path.read_bytes()).decode("ascii")
+
+
 def test_human_task_artifact_upload_list_show_download(tmp_path: Path) -> None:
     harness = RuntimeScenarioHarness.from_yaml(SCENARIO_PATH, tmp_path).prepare()
     created = harness.run_named_step("create_stage06_review")
@@ -45,7 +49,7 @@ def test_human_task_artifact_upload_list_show_download(tmp_path: Path) -> None:
         payload={
             "artifact_kind": "schedule.supervisor_review.doc",
             "artifact_role": "evidence",
-            "source_path": str(STAGE06_DOC),
+            "content_base64": _encoded_file(STAGE06_DOC),
             "file_name": STAGE06_DOC.name,
             "idempotency_key": f"api:{harness.scenario_id}:human-task-artifact-upload",
         },
@@ -135,7 +139,7 @@ def test_approval_and_flag_artifact_endpoints_are_coherent(tmp_path: Path) -> No
         payload={
             "artifact_kind": "schedule.supervisor_review.doc",
             "artifact_role": "evidence",
-            "source_path": str(STAGE07_DOC),
+            "content_base64": _encoded_file(STAGE07_DOC),
             "file_name": STAGE07_DOC.name,
             "idempotency_key": f"api:{harness.scenario_id}:approval-artifact-upload",
         },
@@ -148,7 +152,7 @@ def test_approval_and_flag_artifact_endpoints_are_coherent(tmp_path: Path) -> No
         payload={
             "artifact_kind": "schedule.replan_delta.workbook",
             "artifact_role": "evidence",
-            "source_path": str(STAGE07_WORKBOOK),
+            "content_base64": _encoded_file(STAGE07_WORKBOOK),
             "file_name": STAGE07_WORKBOOK.name,
             "idempotency_key": f"api:{harness.scenario_id}:flag-artifact-upload",
         },

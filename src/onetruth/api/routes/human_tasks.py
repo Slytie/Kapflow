@@ -353,6 +353,10 @@ def confirm_human_task_review_endpoint(
 ) -> dict[str, Any]:
     _ensure_human_task_in_scope(connection, context=context, human_task_id=human_task_id)
     _assert_payload_human_task_id(payload, human_task_id)
+    _assert_no_shared_http_storage_override(
+        payload,
+        endpoint="api.human_tasks.confirm_review",
+    )
     command_payload = {
         "human_task_id": human_task_id,
         "actor_id": context.actor_id,
@@ -364,10 +368,7 @@ def confirm_human_task_review_endpoint(
         result = confirm_human_task_review_command(
             connection,
             command_payload,
-            storage_root=default_storage_root_for_db_url(
-                db_url,
-                override=payload.get("storage_root"),
-            ),
+            storage_root=default_storage_root_for_db_url(db_url),
         )
     except CommandError as exc:
         raise api_error_from_command(exc) from exc
@@ -704,3 +705,19 @@ def _assert_payload_human_task_id(payload: dict[str, Any], path_human_task_id: s
                 "payload_human_task_id": str(payload_human_task_id),
             },
         )
+
+
+def _assert_no_shared_http_storage_override(
+    payload: dict[str, Any],
+    *,
+    endpoint: str,
+) -> None:
+    if payload.get("storage_root") is None:
+        return
+    raise api_error_from_command(
+        CommandError(
+            code="invalid_artifact_ingress",
+            message="shared HTTP artifact-producing endpoints do not accept storage_root",
+            details={"endpoint": endpoint, "forbidden_fields": ["storage_root"]},
+        )
+    )
