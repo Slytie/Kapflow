@@ -3,7 +3,7 @@ from __future__ import annotations
 import hashlib
 import json
 from pathlib import Path
-from typing import Any
+from typing import Any, Mapping
 
 import yaml
 
@@ -36,6 +36,7 @@ OWNER_MODE_BY_PATTERN = {
     "approval_gate": "mixed",
     "bounded_exception_loop": "agent",
 }
+REFERENCE_MODULE_STATUS = "reference_only"
 
 
 def compile_control_layer(
@@ -404,6 +405,251 @@ def derive_execution_session_payload(
     return payload
 
 
+def compile_reference_stage_runtime(
+    *,
+    repo_root: Path,
+    execution_profile_path: Path,
+    workflow_id: str,
+    module_id: str,
+    stage_id: str,
+    runtime_tool_binding_id: str,
+    workflow_run_id: str,
+    task_run_id: str,
+    principal_actor: dict[str, Any],
+    idempotency_key: str,
+    state: str = "WAITING_POLICY",
+    execution_session_id: str | None = None,
+    actor_type: str = "system",
+    actor_id: str = "system:control-layer",
+    budget_override: Mapping[str, Any] | None = None,
+    tool_class_registry_path: Path | None = None,
+) -> dict[str, Any]:
+    execution_profile_doc = _load_yaml_object(execution_profile_path)
+    profile = _require_mapping(
+        execution_profile_doc.get("profile"),
+        f"execution_profile[{execution_profile_path}].profile",
+    )
+    profile_workflow_id = _require_nonempty_string(
+        profile.get("workflow_id"),
+        f"execution_profile[{execution_profile_path}].profile.workflow_id",
+    )
+    if profile_workflow_id != workflow_id:
+        raise ControlCompileError(
+            "execution profile workflow_id mismatch: "
+            f"{profile_workflow_id} != {workflow_id}"
+        )
+    profile_stage = _load_execution_profile_stage_index(execution_profile_path).get(stage_id)
+    if profile_stage is None:
+        raise ControlCompileError(
+            f"missing execution profile stage for reference runtime compilation: {workflow_id}:{stage_id}"
+        )
+
+    registry_path = tool_class_registry_path or (
+        repo_root / "schemas" / "agentic" / "tool_class_registry.yaml"
+    )
+    runtime_tool_binding = _resolve_runtime_tool_binding(
+        registry_path=registry_path,
+        workflow_id=workflow_id,
+        stage_id=stage_id,
+        runtime_tool_binding_id=runtime_tool_binding_id,
+        allowed_tool_classes=_stage_allowed_tool_classes(profile_stage, workflow_id=workflow_id, stage_id=stage_id),
+    )
+
+    execution_pattern = _require_nonempty_string(
+        profile_stage.get("execution_pattern"),
+        f"execution_profile[{workflow_id}:{stage_id}].execution_pattern",
+    )
+    side_effect_policy = _require_nonempty_string(
+        profile_stage.get("side_effect_policy"),
+        f"execution_profile[{workflow_id}:{stage_id}].side_effect_policy",
+    )
+    stop_rules = _validated_stop_rules(
+        profile_stage.get("stop_rules"),
+        workflow_id=workflow_id,
+        stage_id=stage_id,
+    )
+    required_evidence_keys = [
+        _require_nonempty_string(
+            key,
+            f"execution_profile[{workflow_id}:{stage_id}].required_evidence_keys[]",
+        )
+        for key in _require_sequence(
+            profile_stage.get("required_evidence_keys"),
+            f"execution_profile[{workflow_id}:{stage_id}].required_evidence_keys",
+        )
+    ]
+    decision_refs = [
+        _require_nonempty_string(
+            ref,
+            f"execution_profile[{workflow_id}:{stage_id}].decision_refs[]",
+        )
+        for ref in _require_sequence(
+            profile_stage.get("decision_refs"),
+            f"execution_profile[{workflow_id}:{stage_id}].decision_refs",
+        )
+    ]
+    projections = [
+        _require_nonempty_string(
+            projection,
+            f"execution_profile[{workflow_id}:{stage_id}].projections[]",
+        )
+        for projection in _require_sequence(
+            profile_stage.get("projections"),
+            f"execution_profile[{workflow_id}:{stage_id}].projections",
+        )
+    ]
+
+    runtime_budget = _build_runtime_budget(
+        stop_rules=stop_rules,
+        budget_override=budget_override,
+        workflow_id=workflow_id,
+        stage_id=stage_id,
+    )
+    execution_binding = {
+        "object_type": "execution_session",
+        "execution_spec_id": "",
+        "owner_mode": OWNER_MODE_BY_PATTERN.get(execution_pattern, "agent"),
+        "max_tool_calls": int(runtime_budget["max_tool_calls"]),
+        "no_progress_ticks": int(runtime_budget.get("no_progress_ticks", stop_rules["no_progress_ticks"])),
+        "on_exhaustion": str(stop_rules["on_exhaustion"]),
+    }
+    tool_execution_binding = {
+        "object_type": "tool_execution",
+        "allowed_tool_classes": _stage_allowed_tool_classes(
+            profile_stage,
+            workflow_id=workflow_id,
+            stage_id=stage_id,
+        ),
+        "side_effect_policy": side_effect_policy,
+        "runtime_tool_binding_id": runtime_tool_binding_id,
+        "runtime_tool_class": _require_nonempty_string(
+            runtime_tool_binding.get("runtime_tool_class"),
+            f"runtime_tool_binding[{runtime_tool_binding_id}].runtime_tool_class",
+        ),
+        "runtime_tool_name": _require_nonempty_string(
+            runtime_tool_binding.get("runtime_tool_name"),
+            f"runtime_tool_binding[{runtime_tool_binding_id}].runtime_tool_name",
+        ),
+    }
+    stage_runtime = {
+        "control_source": "execution_profile_reference",
+        "module_id": _require_nonempty_string(module_id, "module_id"),
+        "workflow_id": workflow_id,
+        "stage_id": stage_id,
+        "execution_pattern": execution_pattern,
+        "module_status": REFERENCE_MODULE_STATUS,
+        "required_input_dataset_keys": [],
+        "required_evidence_keys": required_evidence_keys,
+        "decision_refs": decision_refs,
+        "projections": projections,
+        "side_effect_policy": side_effect_policy,
+        "authored_stop_rules": stop_rules,
+        "runtime_budget": runtime_budget,
+        "runtime_tool_binding": runtime_tool_binding,
+        "runtime_bindings": {
+            "execution_session": execution_binding,
+            "tool_execution": tool_execution_binding,
+        },
+    }
+    stage_control_digest = _sha256_json(stage_runtime)
+    execution_spec_id = _build_reference_execution_spec_id(
+        workflow_id=workflow_id,
+        stage_id=stage_id,
+        stage_control_digest=stage_control_digest,
+    )
+    execution_binding["execution_spec_id"] = execution_spec_id
+
+    execution_profile_rel = _path_relative_to_repo(
+        repo_root=repo_root,
+        path=execution_profile_path,
+    )
+    registry_rel = _path_relative_to_repo(repo_root=repo_root, path=registry_path)
+    execution_semantics = {
+        "compiled_execution_spec": {
+            "schema_version": "1.0",
+            "kind": "compiled_execution_spec",
+            "control_source": "execution_profile_reference",
+            "module_id": _require_nonempty_string(module_id, "module_id"),
+            "workflow_id": workflow_id,
+            "stage_id": stage_id,
+            "execution_pattern": execution_pattern,
+            "module_status": REFERENCE_MODULE_STATUS,
+            "execution_spec_id": execution_spec_id,
+            "stage_control_digest": stage_control_digest,
+            "required_input_dataset_keys": [],
+            "required_evidence_keys": required_evidence_keys,
+            "decision_refs": decision_refs,
+            "projections": projections,
+            "side_effect_policy": side_effect_policy,
+            "authored_stop_rules": stop_rules,
+            "runtime_budget": runtime_budget,
+            "runtime_tool_binding": runtime_tool_binding,
+            "runtime_bindings": {
+                "execution_session": dict(execution_binding),
+                "tool_execution": dict(tool_execution_binding),
+            },
+        },
+        "compile_source_manifest": {
+            "schema_version": "1.0",
+            "kind": "execution_compile_source_manifest",
+            "source_chain": {
+                "authority_model": "one_truth_substrate",
+                "control_source": "execution_profile_reference",
+                "module_id": _require_nonempty_string(module_id, "module_id"),
+                "workflow_id": workflow_id,
+                "stage_id": stage_id,
+                "execution_spec_id": execution_spec_id,
+            },
+            "source_refs": [
+                {
+                    "source_kind": "execution_profile",
+                    "path": execution_profile_rel,
+                },
+                {
+                    "source_kind": "tool_class_registry",
+                    "path": registry_rel,
+                    "runtime_tool_binding_id": runtime_tool_binding_id,
+                },
+            ],
+            "pins": {
+                "stage_control_digest": stage_control_digest,
+                "runtime_tool_binding_id": runtime_tool_binding_id,
+                "runtime_tool_class": tool_execution_binding["runtime_tool_class"],
+            },
+        },
+    }
+    payload: dict[str, Any] = {
+        "workflow_run_id": _require_nonempty_string(workflow_run_id, "workflow_run_id"),
+        "task_run_id": _require_nonempty_string(task_run_id, "task_run_id"),
+        "execution_spec_id": execution_spec_id,
+        "owner_mode": _require_nonempty_string(
+            execution_binding.get("owner_mode"),
+            "execution_binding.owner_mode",
+        ),
+        "state": _require_nonempty_string(state, "state"),
+        "principal_actor": _require_mapping(principal_actor, "principal_actor"),
+        "budget": runtime_budget,
+        "execution_semantics": execution_semantics,
+        "idempotency_key": _require_nonempty_string(idempotency_key, "idempotency_key"),
+        "actor_type": _require_nonempty_string(actor_type, "actor_type"),
+        "actor_id": _require_nonempty_string(actor_id, "actor_id"),
+    }
+    if execution_session_id is not None:
+        payload["execution_session_id"] = _require_nonempty_string(
+            execution_session_id,
+            "execution_session_id",
+        )
+    return {
+        "execution_session_payload": payload,
+        "runtime_tool_binding": runtime_tool_binding,
+        "stage_runtime": {
+            **stage_runtime,
+            "execution_spec_id": execution_spec_id,
+            "stage_control_digest": stage_control_digest,
+        },
+    }
+
+
 def validate_activation_request(
     *,
     compiled_control: dict[str, Any],
@@ -539,6 +785,117 @@ def _load_execution_profile_stage_index(path: Path) -> dict[str, dict[str, Any]]
     return index
 
 
+def _resolve_runtime_tool_binding(
+    *,
+    registry_path: Path,
+    workflow_id: str,
+    stage_id: str,
+    runtime_tool_binding_id: str,
+    allowed_tool_classes: list[str],
+) -> dict[str, Any]:
+    registry = _load_yaml_object(registry_path)
+    authored_tool_class_ids = {
+        _require_nonempty_string(item.get("id"), f"tool_class_registry[{registry_path}].tool_classes[].id")
+        for item in _require_sequence(
+            registry.get("tool_classes"),
+            f"tool_class_registry[{registry_path}].tool_classes",
+        )
+    }
+    bindings = _require_sequence(
+        registry.get("runtime_tool_bindings"),
+        f"tool_class_registry[{registry_path}].runtime_tool_bindings",
+    )
+    for item in bindings:
+        binding = _require_mapping(item, f"tool_class_registry[{registry_path}].runtime_tool_bindings[]")
+        if _require_nonempty_string(
+            binding.get("id"),
+            f"tool_class_registry[{registry_path}].runtime_tool_bindings[].id",
+        ) != runtime_tool_binding_id:
+            continue
+        applies_to = _require_mapping(
+            binding.get("applies_to"),
+            f"runtime_tool_binding[{runtime_tool_binding_id}].applies_to",
+        )
+        bound_workflow_id = _require_nonempty_string(
+            applies_to.get("workflow_id"),
+            f"runtime_tool_binding[{runtime_tool_binding_id}].applies_to.workflow_id",
+        )
+        bound_stage_id = _require_nonempty_string(
+            applies_to.get("stage_id"),
+            f"runtime_tool_binding[{runtime_tool_binding_id}].applies_to.stage_id",
+        )
+        if bound_workflow_id != workflow_id or bound_stage_id != stage_id:
+            raise ControlCompileError(
+                "runtime tool binding applies_to mismatch: "
+                f"{bound_workflow_id}:{bound_stage_id} != {workflow_id}:{stage_id}"
+            )
+        runtime_tool_class = _require_nonempty_string(
+            binding.get("runtime_tool_class"),
+            f"runtime_tool_binding[{runtime_tool_binding_id}].runtime_tool_class",
+        )
+        if runtime_tool_class in authored_tool_class_ids:
+            raise ControlCompileError(
+                "runtime tool class must not reuse authored allowed_tool_classes vocabulary: "
+                f"{runtime_tool_class}"
+            )
+        relationship = _require_mapping(
+            binding.get("authored_tool_class_relationship"),
+            f"runtime_tool_binding[{runtime_tool_binding_id}].authored_tool_class_relationship",
+        )
+        used_authored_classes = [
+            _require_nonempty_string(
+                item,
+                f"runtime_tool_binding[{runtime_tool_binding_id}].authored_tool_class_relationship.uses_allowed_tool_classes[]",
+            )
+            for item in _require_sequence(
+                relationship.get("uses_allowed_tool_classes"),
+                (
+                    "runtime_tool_binding["
+                    f"{runtime_tool_binding_id}"
+                    "].authored_tool_class_relationship.uses_allowed_tool_classes"
+                ),
+            )
+        ]
+        invalid_authored_classes = sorted(
+            set(used_authored_classes) - set(allowed_tool_classes)
+        )
+        if invalid_authored_classes:
+            raise ControlCompileError(
+                "runtime tool binding references authored tool classes not allowed by the stage profile: "
+                + ", ".join(invalid_authored_classes)
+            )
+        return {
+            "id": runtime_tool_binding_id,
+            "runtime_tool_class": runtime_tool_class,
+            "runtime_tool_name": _require_nonempty_string(
+                binding.get("runtime_tool_name"),
+                f"runtime_tool_binding[{runtime_tool_binding_id}].runtime_tool_name",
+            ),
+            "engine_family": _require_nonempty_string(
+                binding.get("engine_family"),
+                f"runtime_tool_binding[{runtime_tool_binding_id}].engine_family",
+            ),
+            "applies_to": {
+                "workflow_id": bound_workflow_id,
+                "stage_id": bound_stage_id,
+            },
+            "authored_tool_class_relationship": {
+                "relationship": _require_nonempty_string(
+                    relationship.get("relationship"),
+                    f"runtime_tool_binding[{runtime_tool_binding_id}].authored_tool_class_relationship.relationship",
+                ),
+                "uses_allowed_tool_classes": used_authored_classes,
+                "note": _require_nonempty_string(
+                    relationship.get("note"),
+                    f"runtime_tool_binding[{runtime_tool_binding_id}].authored_tool_class_relationship.note",
+                ),
+            },
+        }
+    raise ControlCompileError(
+        f"missing runtime tool binding: {runtime_tool_binding_id}"
+    )
+
+
 def _load_method_package_registry(path: Path) -> dict[str, Any]:
     loaded = _load_yaml_object(path)
     registry = _require_mapping(loaded.get("registry"), f"method_packages[{path}].registry")
@@ -657,6 +1014,98 @@ def _require_nonempty_string(value: Any, field: str) -> str:
     if not text:
         raise ControlCompileError(f"{field} must be a non-empty string")
     return text
+
+
+def _validated_stop_rules(
+    value: Any,
+    *,
+    workflow_id: str,
+    stage_id: str,
+) -> dict[str, Any]:
+    stop_rules = _require_mapping(
+        value,
+        f"execution_profile[{workflow_id}:{stage_id}].stop_rules",
+    )
+    max_tool_calls = stop_rules.get("max_tool_calls")
+    no_progress_ticks = stop_rules.get("no_progress_ticks")
+    if not isinstance(max_tool_calls, int) or max_tool_calls < 0:
+        raise ControlCompileError(
+            f"execution_profile[{workflow_id}:{stage_id}].stop_rules.max_tool_calls must be a non-negative integer"
+        )
+    if not isinstance(no_progress_ticks, int) or no_progress_ticks < 0:
+        raise ControlCompileError(
+            f"execution_profile[{workflow_id}:{stage_id}].stop_rules.no_progress_ticks must be a non-negative integer"
+        )
+    return {
+        "max_tool_calls": max_tool_calls,
+        "no_progress_ticks": no_progress_ticks,
+        "on_exhaustion": _require_nonempty_string(
+            stop_rules.get("on_exhaustion"),
+            f"execution_profile[{workflow_id}:{stage_id}].stop_rules.on_exhaustion",
+        ),
+    }
+
+
+def _stage_allowed_tool_classes(
+    profile_stage: Mapping[str, Any],
+    *,
+    workflow_id: str,
+    stage_id: str,
+) -> list[str]:
+    return [
+        _require_nonempty_string(
+            item,
+            f"execution_profile[{workflow_id}:{stage_id}].allowed_tool_classes[]",
+        )
+        for item in _require_sequence(
+            profile_stage.get("allowed_tool_classes"),
+            f"execution_profile[{workflow_id}:{stage_id}].allowed_tool_classes",
+        )
+    ]
+
+
+def _build_runtime_budget(
+    *,
+    stop_rules: Mapping[str, Any],
+    budget_override: Mapping[str, Any] | None,
+    workflow_id: str,
+    stage_id: str,
+) -> dict[str, Any]:
+    runtime_budget = {
+        "max_tool_calls": int(stop_rules["max_tool_calls"]),
+        "no_progress_ticks": int(stop_rules["no_progress_ticks"]),
+    }
+    if budget_override is None:
+        return runtime_budget
+    for key in ("max_tool_calls", "no_progress_ticks", "max_wall_time_seconds"):
+        if key not in budget_override:
+            continue
+        value = budget_override[key]
+        if not isinstance(value, int) or value < 0:
+            raise ControlCompileError(
+                f"runtime budget override {workflow_id}:{stage_id}:{key} must be a non-negative integer"
+            )
+        runtime_budget[key] = value
+    return runtime_budget
+
+
+def _build_reference_execution_spec_id(
+    *,
+    workflow_id: str,
+    stage_id: str,
+    stage_control_digest: str,
+) -> str:
+    workflow_token = workflow_id.replace(".", "_")
+    stage_token = stage_id.lower()
+    digest_suffix = stage_control_digest.split(":", 1)[-1][:16]
+    return f"execspec.{workflow_token}.{stage_token}.reference.{digest_suffix}"
+
+
+def _path_relative_to_repo(*, repo_root: Path, path: Path) -> str:
+    try:
+        return str(path.resolve().relative_to(repo_root.resolve()))
+    except ValueError:
+        return str(path.resolve())
 
 
 def _sha256_json(value: Any) -> str:

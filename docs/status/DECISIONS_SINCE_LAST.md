@@ -2,6 +2,24 @@
 
 Record any decisions made since the last session so a fresh Codex run can rehydrate quickly.
 
+## 2026-03-13 (TASK-0073 Stage06 compiled-control alignment and tool-class vocabulary cleanup)
+- Control-alignment decision: the bounded Stage06 sandbox now derives its pinned execution semantics from the authored `schedule_planning.v1` Stage06 execution profile plus a registry-backed runtime tool binding instead of a hardcoded `execution_spec_id`.
+- Vocabulary decision: authored `allowed_tool_classes` remain capability-level execution-profile vocabulary, while `tool_execution.tool_class` remains the concrete engine/runtime identifier for the bounded executor; these are related through explicit runtime tool bindings, not by reusing the same string set.
+- Safety decision: the Stage06 OpenAI runtime binding is validated to use only authored capability classes already allowed by the Stage06 execution profile and fails closed if the binding drifts outside that authored allowlist.
+- Scope decision: the legacy Stage06 sandbox remains a regression/reference-only bounded single-call review path; this cleanup aligns metadata and audit shape without broadening Stage06 autonomy or re-promoting `schedule_planning.v1` as the primary agent surface.
+
+## 2026-03-13 (TASK-0074 weekly Stage04 input-resolution hardening)
+- Binding-resolution decision: weekly Stage04 bridge inputs are now resolved through an explicit typed dataset-key registry (`route_slot_requirements`, `driver_capabilities`, `approved_availability`, `actual_hours`, `route_horizon`) rather than suffix-scanning `required_evidence_keys`.
+- Authored-source decision: the Stage04 input registry is validated against repo-native weekly workflow source (`WORKFLOW_CONTRACT.yaml`, `ARTIFACT_MAP.yaml`, `EXECUTION_PROFILE.yaml`) so control/runtime drift fails closed.
+- Control-spec safety decision: compiled Stage04 metadata now rejects missing required bridge bindings and alias-equivalent conflicting keys (for example mixed `planning.*` and `dispatch.*` bridge keys for the same slot) instead of silently picking one by suffix.
+- Runtime safety decision: the bounded weekly Stage04 agent still resolves the latest matching artifact version per exact dataset key, but now returns explicit `stage04_input_artifact_missing` errors when required bridge artifacts are absent.
+
+## 2026-03-13 (TASK-0071 repo hygiene cleanup for local state and tracked outputs)
+- Repo-boundary decision: the default runtime evidence root (`.onetruth_artifacts/`), local SQLite DBs, `.DS_Store`, and Codex handoff zips are local machine outputs and must not be tracked as repo source.
+- Fixture-boundary decision: the tracked `.onetruth_artifacts/` contents audited in this cleanup were live execution evidence only, not golden fixtures; any future reusable evidence must move into an explicit `fixtures/` path.
+- Ignore-rule decision: Git ignore coverage now explicitly blocks `.onetruth_artifacts/`, local DB files/journals, and `codex_handoff_packet_*.zip` so local runs stop re-polluting the repo.
+- Diff-hygiene decision: normalized the small formatting-only noise spot in `src/onetruth/integrations/openai/responses_agent_runner.py` so the cleanup diff stays `git diff --check` clean.
+
 ## 2026-03-12 (TASK-0070 weekly Stage04 pilot + real-network gate hardening)
 - Pilot reproducibility decision: added a dedicated logistics weekly Stage04 pilot service/runner (`run_logistics_weekly_agent_pilot_suite`, `scripts/run_logistics_weekly_agent_pilot.py`) with deterministic IDs keyed by `(pilot_key, pilot_id)`, canonical workflow/task/artifact execution, and no ad hoc side-channel state.
 - Weekly Stage04 pilot execution posture decision: pilot runs support `--openai-mode mock|real`; mock mode uses a deterministic bounded Responses function-calling runner, and real mode is explicitly key-gated without introducing a second runtime path.

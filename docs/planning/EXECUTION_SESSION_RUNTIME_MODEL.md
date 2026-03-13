@@ -39,6 +39,8 @@ Lifecycle and audit fields:
 - `requested_at`, `completed_at`
 - `error_code`
 
+`tool_class` on `tool_executions` is the concrete runtime/executor identifier for the bounded attempt (for example an engine-specific OpenAI Responses runtime string). It is not the same vocabulary as authored `allowed_tool_classes` in `EXECUTION_PROFILE.yaml`, which remain capability-level control metadata. The mapping between the two belongs in the tool-class registry/runtime binding source, not in workflow authored allowlists.
+
 ### PolicyDecision
 A canonical runtime row representing the explicit policy verdict for a guarded tool request.
 
@@ -155,6 +157,12 @@ This is bounded and intentionally minimal for TASK-0052.
   - `execution.compiled_spec.json`
   - `execution.compile_source_manifest.json`
 - reusable helper surface for future agent traces lives in `src/onetruth/application/services/execution_evidence.py`
+- Stage06 and weekly Stage04 now share the same helper surface for stable execution IDs, evidence-artifact persistence, and artifact-root resolution.
+- Stage06 compiled execution semantics are now derived from the authored Stage06 execution profile plus a registry-backed runtime tool binding, while preserving the same bounded single-call sandbox behavior.
+- local/dev/test artifact-root policy:
+  - `ONETRUTH_ARTIFACT_ROOT` should point at a temp/output-specific local path when a run needs isolated evidence bytes,
+  - default fallback `.onetruth_artifacts/` is local live evidence only and must never be treated as fixture/source authority,
+  - if evidence should become a reusable fixture, copy/promote it explicitly into `fixtures/` instead of reading it back from the live artifact root.
 - authoritative reconstruction uses runtime rows + timeline events + artifact versions
 
 ## Bounded OpenAI fit and explicit out-of-scope

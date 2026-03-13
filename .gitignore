@@ -8,7 +8,15 @@ __pycache__/
 
 # Local runtime/build outputs
 .tmp/
+.onetruth_artifacts/
 artifacts/
+*.db
+*.db-*
+*.sqlite
+*.sqlite-*
+*.sqlite3
+*.sqlite3-*
+codex_handoff_packet_*.zip
 *.log
 
 # Frontend local artifacts

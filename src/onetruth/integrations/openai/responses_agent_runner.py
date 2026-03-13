@@ -297,11 +297,15 @@ class OpenAIResponsesFunctionCallingRunner:
             with urllib_request.urlopen(request, timeout=timeout_seconds) as response:
                 response_body = response.read().decode("utf-8")
                 parsed = json.loads(response_body) if response_body else {}
-                return int(response.status), parsed, _as_optional_str(response.headers.get("x-request-id"))
+                request_id = _as_optional_str(response.headers.get("x-request-id"))
+                return int(response.status), parsed, request_id
         except urllib_error.HTTPError as exc:
             body_text = exc.read().decode("utf-8", errors="replace")
             parsed = _safe_json_parse(body_text)
-            return int(exc.code), parsed, _as_optional_str(exc.headers.get("x-request-id") if exc.headers else None)
+            request_id = _as_optional_str(
+                exc.headers.get("x-request-id") if exc.headers else None
+            )
+            return int(exc.code), parsed, request_id
         except urllib_error.URLError as exc:
             raise OpenAIResponsesError(
                 code="openai_transport_error",
@@ -462,4 +466,3 @@ def _as_optional_str(value: Any) -> str | None:
         return None
     text = str(value).strip()
     return text or None
-

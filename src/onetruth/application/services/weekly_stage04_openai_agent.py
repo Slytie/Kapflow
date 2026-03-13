@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import hashlib
 import json
 import os
 from pathlib import Path
@@ -11,7 +10,6 @@ from onetruth.application.handlers.schedule_control import build_weekly_schedule
 from onetruth.application.handlers.workflow_task_lifecycle import (
     CommandError,
     complete_tool_execution_command,
-    create_artifact_version_command,
     create_execution_session_command,
     evaluate_policy_decision_command,
     request_tool_execution_command,
@@ -22,13 +20,17 @@ from onetruth.application.services.execution_evidence import (
     RUNTIME_CONTEXT_PACK_ARTIFACT_KIND,
     RUNTIME_TOOL_REQUEST_ARTIFACT_KIND,
     RUNTIME_TOOL_RESULT_ARTIFACT_KIND,
-    PreparedExecutionEvidenceArtifact,
+    persist_prepared_execution_evidence_artifacts,
     prepare_execution_trace_artifact,
     prepare_pinned_execution_semantics_artifacts,
     prepare_runtime_json_evidence_artifact,
+    resolve_execution_artifact_root,
+    stable_execution_id,
 )
 from onetruth.application.services.schedule_control import build_weekly_schedule_control_bundle
-from onetruth.infrastructure.artifacts.storage import write_blob
+from onetruth.application.services.schedule_control.stage04_input_registry import (
+    resolve_weekly_stage04_input_artifacts,
+)
 from onetruth.infrastructure.definitions.control_layer import (
     compile_control_layer,
     derive_execution_session_payload,
@@ -54,12 +56,6 @@ WEEKLY_STAGE04_STAGE_ID = "Stage04"
 WEEKLY_STAGE04_TASK_KIND = "work_item"
 OPENAI_TOOL_CLASS = "model.openai.responses.weekly.stage04.agent_runtime"
 STAGE04_ALLOWED_ROLES = {"schedule_planner", "operations_manager", "system_worker"}
-
-ROUTE_SLOT_REQUIREMENTS_SUFFIX = "route_slot_requirements.workbook"
-DRIVER_CAPABILITIES_SUFFIX = "driver_capabilities.workbook"
-APPROVED_AVAILABILITY_KIND = "planning.approved_availability.workbook"
-ACTUAL_HOURS_KIND = "planning.actual_hours_snapshot.workbook"
-ROUTE_HORIZON_KIND = "planning.route_horizon.workbook"
 
 _REPO_ROOT = Path(__file__).resolve().parents[4]
 _FAMILY_PATH = _REPO_ROOT / "docs/workflows/logistics_ops_family/v1/WORKFLOW_FAMILY.yaml"
@@ -143,12 +139,18 @@ def run_weekly_stage04_openai_agent(
             },
         )
 
-    execution_session_id = _stable_id(
-        "xs",
-        f"{human_task['workflow_run_id']}:{human_task['task_run_id']}:{base_idempotency_key}",
+    execution_session_id = stable_execution_id(
+        prefix="xs",
+        raw=f"{human_task['workflow_run_id']}:{human_task['task_run_id']}:{base_idempotency_key}",
     )
-    tool_execution_id = _stable_id("tx", f"{execution_session_id}:{OPENAI_TOOL_CLASS}:{base_idempotency_key}")
-    policy_decision_id = _stable_id("pd", f"{tool_execution_id}:{base_idempotency_key}")
+    tool_execution_id = stable_execution_id(
+        prefix="tx",
+        raw=f"{execution_session_id}:{OPENAI_TOOL_CLASS}:{base_idempotency_key}",
+    )
+    policy_decision_id = stable_execution_id(
+        prefix="pd",
+        raw=f"{tool_execution_id}:{base_idempotency_key}",
+    )
     existing_session = get_execution_session(connection, execution_session_id)
     if existing_session is not None:
         raise CommandError(
@@ -213,7 +215,8 @@ def run_weekly_stage04_openai_agent(
     policy_decision = policy_result["policy_decision"]
     tool_execution = policy_result["tool_execution"]
     execution_session = policy_result["execution_session"]
-    execution_semantics_evidence = _persist_prepared_execution_evidence_artifacts(
+    artifact_root = resolve_execution_artifact_root()
+    execution_semantics_evidence = persist_prepared_execution_evidence_artifacts(
         connection=connection,
         workflow_run_id=str(human_task["workflow_run_id"]),
         task_run_id=str(human_task["task_run_id"]),
@@ -228,7 +231,7 @@ def run_weekly_stage04_openai_agent(
             policy_decision=policy_decision,
             execution_semantics=execution_session_payload.get("execution_semantics"),
         ),
-        storage_root=_artifact_root(),
+        storage_root=artifact_root,
     )
     if decision != "allow":
         code = "tool_execution_requires_approval" if decision == "require_approval" else "tool_execution_denied"
@@ -277,7 +280,7 @@ def run_weekly_stage04_openai_agent(
         idempotency_prefix=f"{base_idempotency_key}:deterministic",
     )
 
-    context_pack_artifact = _persist_prepared_execution_evidence_artifacts(
+    context_pack_artifact = persist_prepared_execution_evidence_artifacts(
         connection=connection,
         workflow_run_id=str(human_task["workflow_run_id"]),
         task_run_id=str(human_task["task_run_id"]),
@@ -296,7 +299,7 @@ def run_weekly_stage04_openai_agent(
                 idempotency_suffix="context-pack",
             )
         ],
-        storage_root=_artifact_root(),
+        storage_root=artifact_root,
     )[0]
 
     max_turns = _max_turns_from_stage_spec(stage_spec)
@@ -341,7 +344,7 @@ def run_weekly_stage04_openai_agent(
                 "artifacts": stage04_build_result["artifacts"],
             },
         }
-        runtime_evidence_artifacts = _persist_prepared_execution_evidence_artifacts(
+        runtime_evidence_artifacts = persist_prepared_execution_evidence_artifacts(
             connection=connection,
             workflow_run_id=str(human_task["workflow_run_id"]),
             task_run_id=str(human_task["task_run_id"]),
@@ -390,7 +393,7 @@ def run_weekly_stage04_openai_agent(
                     },
                 ),
             ],
-            storage_root=_artifact_root(),
+            storage_root=artifact_root,
         )
     except Exception as exc:
         _record_tool_and_session_failure(
@@ -781,67 +784,10 @@ def _resolve_stage04_input_artifacts(
     artifacts: list[dict[str, Any]],
     stage_spec: dict[str, Any],
 ) -> dict[str, dict[str, Any] | None]:
-    latest_by_kind: dict[str, dict[str, Any]] = {}
-    for artifact in sorted(
-        artifacts,
-        key=lambda item: (
-            str(item.get("created_at") or ""),
-            str(item.get("artifact_version_id") or ""),
-        ),
-    ):
-        artifact_kind = str(artifact.get("artifact_kind") or "")
-        if not artifact_kind:
-            continue
-        latest_by_kind[artifact_kind] = artifact
-
-    required_evidence_keys = {
-        str(item)
-        for item in stage_spec.get("required_evidence_keys") or []
-        if str(item).strip()
-    }
-    route_slot_kind = _match_required_key(required_evidence_keys, ROUTE_SLOT_REQUIREMENTS_SUFFIX)
-    driver_cap_kind = _match_required_key(required_evidence_keys, DRIVER_CAPABILITIES_SUFFIX)
-
-    route_slot_artifact = latest_by_kind.get(route_slot_kind)
-    if route_slot_artifact is None:
-        raise CommandError(
-            code="stage04_input_artifact_missing",
-            message="route-slot requirements artifact is required for weekly Stage04 agent execution",
-            details={"artifact_kind": route_slot_kind},
-        )
-    driver_caps_artifact = latest_by_kind.get(driver_cap_kind)
-    if driver_caps_artifact is None:
-        raise CommandError(
-            code="stage04_input_artifact_missing",
-            message="driver capabilities artifact is required for weekly Stage04 agent execution",
-            details={"artifact_kind": driver_cap_kind},
-        )
-
-    return {
-        "route_slot_requirements": route_slot_artifact,
-        "driver_capabilities": driver_caps_artifact,
-        "approved_availability": latest_by_kind.get(APPROVED_AVAILABILITY_KIND),
-        "actual_hours": latest_by_kind.get(ACTUAL_HOURS_KIND),
-        "route_horizon": latest_by_kind.get(ROUTE_HORIZON_KIND),
-    }
-
-
-def _match_required_key(required_keys: set[str], suffix: str) -> str:
-    for candidate in sorted(required_keys):
-        if candidate.endswith(suffix):
-            return candidate
-    raise CommandError(
-        code="invalid_weekly_stage04_control_spec",
-        message="compiled Stage04 metadata is missing required artifact key",
-        details={"required_suffix": suffix, "required_keys": sorted(required_keys)},
+    return resolve_weekly_stage04_input_artifacts(
+        artifacts=artifacts,
+        stage_spec=stage_spec,
     )
-
-
-def _artifact_root() -> Path:
-    raw = os.environ.get("ONETRUTH_ARTIFACT_ROOT", ".onetruth_artifacts").strip()
-    path = Path(raw).expanduser().resolve()
-    path.mkdir(parents=True, exist_ok=True)
-    return path
 
 
 def _normalize_actor_roles(raw_roles: Any) -> list[str]:
@@ -938,49 +884,3 @@ def _record_tool_and_session_failure(
         )
     except Exception:
         pass
-
-
-def _persist_prepared_execution_evidence_artifacts(
-    *,
-    connection: sqlite3.Connection,
-    workflow_run_id: str,
-    task_run_id: str,
-    actor_id: str,
-    actor_type: str,
-    idempotency_prefix: str,
-    artifacts: list[PreparedExecutionEvidenceArtifact],
-    storage_root: Path,
-) -> list[dict[str, Any]]:
-    created: list[dict[str, Any]] = []
-    for artifact in artifacts:
-        storage_uri, content_digest, byte_size = write_blob(
-            storage_root=storage_root,
-            workflow_run_id=workflow_run_id,
-            file_name=artifact.file_name,
-            content=artifact.payload_bytes(),
-        )
-        created_artifact = create_artifact_version_command(
-            connection,
-            {
-                "workflow_run_id": workflow_run_id,
-                "task_run_id": task_run_id,
-                "artifact_kind": artifact.artifact_kind,
-                "artifact_role": artifact.artifact_role,
-                "media_type": artifact.media_type,
-                "storage_uri": storage_uri,
-                "content_digest": content_digest,
-                "byte_size": byte_size,
-                "metadata_json": artifact.metadata_json,
-                "links": artifact.links,
-                "idempotency_key": f"{idempotency_prefix}:{artifact.idempotency_suffix}",
-                "actor_id": actor_id,
-                "actor_type": actor_type,
-            },
-        )
-        created.append(created_artifact)
-    return created
-
-
-def _stable_id(prefix: str, raw: str) -> str:
-    digest = hashlib.sha256(raw.encode("utf-8")).hexdigest()[:24]
-    return f"{prefix}-{digest}"

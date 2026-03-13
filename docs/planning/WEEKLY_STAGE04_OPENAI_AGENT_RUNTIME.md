@@ -29,6 +29,11 @@ This provides:
 - pinned method package digest and stage-control digest,
 - runtime bindings and stop policy from compiled metadata.
 
+Stage04 input resolution is fail-closed and typed:
+- the runtime resolves Stage04 bridge/input slots from an explicit weekly authored dataset-key registry,
+- that registry is validated against repo-native workflow source (`WORKFLOW_CONTRACT.yaml`, `ARTIFACT_MAP.yaml`, `EXECUTION_PROFILE.yaml`),
+- compiled `required_evidence_keys` must contain the exact authored Stage04 bridge keys with no conflicting alias-equivalent keys.
+
 ## Responses function-calling loop
 Runner:
 - `OpenAIResponsesFunctionCallingRunner`
@@ -68,6 +73,11 @@ Evidence artifacts linked to execution runtime objects:
 - `runtime.tool_request.json`
 - `runtime.tool_result.json`
 - `execution.trace.json`
+
+Shared helper posture:
+- weekly Stage04 uses the same `execution_evidence.py` helper surface as Stage06 for stable execution IDs, artifact-root resolution, and prepared evidence persistence,
+- local/dev/test runs should set `ONETRUTH_ARTIFACT_ROOT` to a temp or output-specific directory when isolation matters,
+- default fallback `.onetruth_artifacts/` remains local-only live evidence and is not a fixture source.
 
 Evidence captures:
 - context pack payload,

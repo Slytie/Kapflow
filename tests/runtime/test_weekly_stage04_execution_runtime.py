@@ -4,9 +4,15 @@ import json
 from pathlib import Path
 from urllib.parse import urlparse
 
+import pytest
+
+from onetruth.application.handlers.workflow_task_lifecycle import CommandError
 from onetruth.application.services.execution_evidence import (
     EXECUTION_COMPILED_SPEC_ARTIFACT_KIND,
     EXECUTION_COMPILE_SOURCE_MANIFEST_ARTIFACT_KIND,
+)
+from onetruth.application.services.schedule_control.stage04_input_registry import (
+    resolve_weekly_stage04_input_artifacts,
 )
 from onetruth.integrations.openai import OpenAIResponsesFunctionCallingRunner
 from tests.runtime.helpers.runtime_api import RuntimeApiClient
@@ -16,6 +22,39 @@ from tests.runtime.helpers.scenario_harness import RuntimeScenarioHarness
 SCENARIO_PATH = (
     REPO_ROOT / "fixtures/scenarios/logistics/weekly_schedule_build_deterministic_slice.yaml"
 )
+
+_STAGE04_REQUIRED_KEYS = [
+    "planning.route_slot_requirements.workbook",
+    "planning.driver_capabilities.workbook",
+    "planning.input_bundle.doc",
+    "planning.candidate_schedule_delta.workbook",
+    "planning.validation_summary.doc",
+    "planning.draft_weekly_schedule.doc",
+    "planning.draft_weekly_schedule.workbook",
+]
+
+
+def _artifact_record(
+    dataset_key: str,
+    *,
+    artifact_version_id: str,
+    created_at: str,
+) -> dict[str, object]:
+    return {
+        "artifact_version_id": artifact_version_id,
+        "dataset_key": dataset_key,
+        "artifact_kind": dataset_key,
+        "created_at": created_at,
+        "metadata_json": {},
+    }
+
+
+def _stage04_stage_spec(required_evidence_keys: list[str]) -> dict[str, object]:
+    return {
+        "workflow_id": "weekly_schedule_planning.v1",
+        "stage_id": "Stage04",
+        "required_evidence_keys": required_evidence_keys,
+    }
 
 
 def _prepare_claimed_stage04_task(
@@ -240,3 +279,72 @@ def test_weekly_stage04_policy_denial_skips_runner_and_records_denial(tmp_path: 
 
     policies = harness.query_rows("SELECT decision FROM policy_decisions")
     assert [row["decision"] for row in policies] == ["deny"]
+
+
+def test_stage04_input_resolution_rejects_missing_authored_required_binding() -> None:
+    artifacts = [
+        _artifact_record(
+            "planning.route_slot_requirements.workbook",
+            artifact_version_id="av-route-001",
+            created_at="2026-03-10T10:00:00Z",
+        ),
+        _artifact_record(
+            "planning.driver_capabilities.workbook",
+            artifact_version_id="av-driver-001",
+            created_at="2026-03-10T10:05:00Z",
+        ),
+    ]
+    stage_spec = _stage04_stage_spec(
+        [
+            "planning.driver_capabilities.workbook",
+            "planning.input_bundle.doc",
+            "planning.candidate_schedule_delta.workbook",
+            "planning.validation_summary.doc",
+            "planning.draft_weekly_schedule.doc",
+            "planning.draft_weekly_schedule.workbook",
+        ]
+    )
+
+    with pytest.raises(CommandError) as exc_info:
+        resolve_weekly_stage04_input_artifacts(
+            artifacts=artifacts,
+            stage_spec=stage_spec,
+        )
+
+    assert exc_info.value.code == "invalid_weekly_stage04_control_spec"
+    assert exc_info.value.details["missing_required_evidence_keys"] == [
+        "planning.route_slot_requirements.workbook"
+    ]
+
+
+def test_stage04_input_resolution_rejects_ambiguous_required_binding_alias() -> None:
+    artifacts = [
+        _artifact_record(
+            "planning.route_slot_requirements.workbook",
+            artifact_version_id="av-route-001",
+            created_at="2026-03-10T10:00:00Z",
+        ),
+        _artifact_record(
+            "planning.driver_capabilities.workbook",
+            artifact_version_id="av-driver-001",
+            created_at="2026-03-10T10:05:00Z",
+        ),
+    ]
+    stage_spec = _stage04_stage_spec(
+        [*_STAGE04_REQUIRED_KEYS, "dispatch.route_slot_requirements.workbook"]
+    )
+
+    with pytest.raises(CommandError) as exc_info:
+        resolve_weekly_stage04_input_artifacts(
+            artifacts=artifacts,
+            stage_spec=stage_spec,
+        )
+
+    assert exc_info.value.code == "invalid_weekly_stage04_control_spec"
+    assert exc_info.value.details["ambiguous_required_evidence_keys"] == [
+        {
+            "slot_key": "route_slot_requirements",
+            "expected_dataset_key": "planning.route_slot_requirements.workbook",
+            "conflicting_dataset_keys": ["dispatch.route_slot_requirements.workbook"],
+        }
+    ]

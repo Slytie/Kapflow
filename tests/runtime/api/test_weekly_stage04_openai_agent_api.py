@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+from urllib.parse import urlparse
 
 from onetruth.integrations.openai import OpenAIResponsesFunctionCallingRunner
 from tests.runtime.helpers.runtime_api import RuntimeApiClient
@@ -166,6 +167,14 @@ def test_weekly_stage04_openai_agent_endpoint_happy_path(tmp_path: Path, monkeyp
     }
     assert result["stage04_build_result"]["candidate_count"] == 4
     assert result["stage04_build_result"]["selected_candidate_count"] == 2
+    expected_root = (tmp_path / "artifacts").resolve()
+    for artifact in [
+        *result["execution_semantics_evidence"],
+        result["context_pack_artifact"],
+        *result["runtime_evidence_artifacts"],
+    ]:
+        evidence_path = Path(urlparse(artifact["storage_uri"]).path)
+        assert str(evidence_path).startswith(str(expected_root))
 
     task_state = harness.query_rows(
         "SELECT state FROM human_tasks WHERE human_task_id = ?",

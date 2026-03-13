@@ -129,13 +129,17 @@ def test_execution_session_happy_path_persists_canonical_rows_and_events(
         EXECUTION_COMPILE_SOURCE_MANIFEST_ARTIFACT_KIND,
     }
 
-    sessions = harness.query_rows("SELECT execution_session_id, state, tool_call_count FROM execution_sessions")
+    sessions = harness.query_rows(
+        "SELECT execution_session_id, execution_spec_id, state, tool_call_count FROM execution_sessions"
+    )
     assert len(sessions) == 1
+    assert str(sessions[0]["execution_spec_id"]).startswith("execspec.schedule_planning_v1.stage06.reference.")
     assert sessions[0]["state"] == "SUCCEEDED"
     assert int(sessions[0]["tool_call_count"]) == 1
 
-    tools = harness.query_rows("SELECT tool_execution_id, state FROM tool_executions")
+    tools = harness.query_rows("SELECT tool_execution_id, tool_class, state FROM tool_executions")
     assert len(tools) == 1
+    assert tools[0]["tool_class"] == "model.openai.responses.stage06.review"
     assert tools[0]["state"] == "COMPLETED"
 
     policies = harness.query_rows("SELECT policy_decision_id, decision FROM policy_decisions")

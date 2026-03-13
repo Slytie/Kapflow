@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import hashlib
 import html
 import io
 import json
@@ -22,9 +21,11 @@ from onetruth.application.handlers.workflow_task_lifecycle import (
     transition_execution_session_state_command,
 )
 from onetruth.application.services.execution_evidence import (
-    PreparedExecutionEvidenceArtifact,
     build_execution_evidence_links,
+    persist_prepared_execution_evidence_artifacts,
     prepare_pinned_execution_semantics_artifacts,
+    resolve_execution_artifact_root,
+    stable_execution_id,
 )
 from onetruth.infrastructure.artifacts.storage import read_blob, write_blob
 from onetruth.infrastructure.repositories.artifact_versions import (
@@ -33,6 +34,11 @@ from onetruth.infrastructure.repositories.artifact_versions import (
 from onetruth.infrastructure.repositories.human_tasks import get_human_task
 from onetruth.infrastructure.repositories.task_runs import get_task_run
 from onetruth.infrastructure.repositories.execution_sessions import get_execution_session
+from onetruth.infrastructure.repositories.workflow_runs import get_workflow_run
+from onetruth.infrastructure.definitions.control_layer import (
+    ControlCompileError,
+    compile_reference_stage_runtime,
+)
 from onetruth.integrations.openai import (
     OpenAIResponseMetadata,
     Stage06ReviewClassification,
@@ -42,9 +48,18 @@ from onetruth.integrations.openai import (
 
 EVIDENCE_ARTIFACT_KIND = "schedule.stage06.review_ai_evidence.json"
 EVIDENCE_ARTIFACT_ROLE = "agent_evidence"
-EXECUTION_SPEC_ID = "schedule_planning.stage06.openai_review.v1"
-OPENAI_TOOL_CLASS = "model.openai.responses.stage06.review"
+STAGE06_WORKFLOW_ID = "schedule_planning.v1"
+STAGE06_MODULE_ID = "schedule_planning"
+STAGE06_STAGE_ID = "Stage06"
+STAGE06_TASK_KIND = "review_packet"
+STAGE06_RUNTIME_TOOL_BINDING_ID = "runtime.schedule_planning.stage06.openai_review.responses.v1"
 STAGE06_ALLOWED_ROLES = {"dispatch_supervisor", "operations_manager", "system_worker"}
+STAGE06_RUNTIME_BUDGET = {"max_tool_calls": 1, "max_wall_time_seconds": 120}
+
+_REPO_ROOT = Path(__file__).resolve().parents[4]
+_STAGE06_EXECUTION_PROFILE_PATH = (
+    _REPO_ROOT / "docs/workflows/schedule_planning/v1/EXECUTION_PROFILE.yaml"
+)
 
 
 def run_stage06_openai_review_sandbox(
@@ -79,8 +94,28 @@ def run_stage06_openai_review_sandbox(
             message="task run not found for human task",
             details={"human_task_id": human_task_id, "task_run_id": str(human_task["task_run_id"])},
         )
+    workflow_run = get_workflow_run(connection, str(human_task["workflow_run_id"]))
+    if workflow_run is None:
+        raise CommandError(
+            code="workflow_run_not_found",
+            message="workflow run not found for human task",
+            details={"human_task_id": human_task_id, "workflow_run_id": str(human_task["workflow_run_id"])},
+        )
+    if str(workflow_run.get("workflow_id") or "") != STAGE06_WORKFLOW_ID:
+        raise CommandError(
+            code="invalid_stage06_sandbox_workflow",
+            message="stage06 sandbox is only supported for schedule_planning.v1",
+            details={
+                "human_task_id": human_task_id,
+                "workflow_run_id": str(human_task["workflow_run_id"]),
+                "workflow_id": str(workflow_run.get("workflow_id") or ""),
+            },
+        )
 
-    if str(task_run.get("stage_id")) != "Stage06" or str(task_run.get("task_kind")) != "review_packet":
+    if (
+        str(task_run.get("stage_id")) != STAGE06_STAGE_ID
+        or str(task_run.get("task_kind")) != STAGE06_TASK_KIND
+    ):
         raise CommandError(
             code="invalid_stage06_sandbox_task",
             message="stage06 sandbox is only allowed for Stage06 review_packet tasks",
@@ -91,17 +126,35 @@ def run_stage06_openai_review_sandbox(
             },
         )
 
-    execution_session_id = _stable_id(
-        "xs",
-        f"{human_task['workflow_run_id']}:{human_task['task_run_id']}:{base_idempotency_key}",
+    execution_session_id = stable_execution_id(
+        prefix="xs",
+        raw=f"{human_task['workflow_run_id']}:{human_task['task_run_id']}:{base_idempotency_key}",
     )
-    tool_execution_id = _stable_id(
-        "tx",
-        f"{execution_session_id}:{OPENAI_TOOL_CLASS}:{base_idempotency_key}",
+    stage06_runtime = _compile_stage06_runtime(
+        workflow_run_id=str(human_task["workflow_run_id"]),
+        task_run_id=str(human_task["task_run_id"]),
+        actor_id=actor_id,
+        actor_type=actor_type,
+        base_idempotency_key=base_idempotency_key,
+        execution_session_id=execution_session_id,
     )
-    policy_decision_id = _stable_id(
-        "pd",
-        f"{tool_execution_id}:{base_idempotency_key}",
+    execution_session_payload = stage06_runtime["execution_session_payload"]
+    runtime_tool_binding = stage06_runtime["runtime_tool_binding"]
+    tool_class = str(runtime_tool_binding["runtime_tool_class"])
+    tool_name = str(runtime_tool_binding["runtime_tool_name"])
+    required_evidence_keys = list(stage06_runtime["stage_runtime"]["required_evidence_keys"])
+    required_primary_artifact_kind = (
+        str(required_evidence_keys[0])
+        if required_evidence_keys
+        else "schedule.supervisor_review.doc"
+    )
+    tool_execution_id = stable_execution_id(
+        prefix="tx",
+        raw=f"{execution_session_id}:{tool_class}:{base_idempotency_key}",
+    )
+    policy_decision_id = stable_execution_id(
+        prefix="pd",
+        raw=f"{tool_execution_id}:{base_idempotency_key}",
     )
 
     existing_session = get_execution_session(connection, execution_session_id)
@@ -133,30 +186,15 @@ def run_stage06_openai_review_sandbox(
             },
         )
 
-    execution_session = create_execution_session_command(
-        connection,
-        {
-            "execution_session_id": execution_session_id,
-            "workflow_run_id": str(human_task["workflow_run_id"]),
-            "task_run_id": str(human_task["task_run_id"]),
-            "execution_spec_id": EXECUTION_SPEC_ID,
-            "owner_mode": "agent",
-            "state": "WAITING_POLICY",
-            "principal_actor": {"type": actor_type, "id": actor_id},
-            "budget": {"max_tool_calls": 1, "max_wall_time_seconds": 120},
-            "idempotency_key": f"{base_idempotency_key}:execution-session",
-            "actor_id": actor_id,
-            "actor_type": actor_type,
-        },
-    )
+    execution_session = create_execution_session_command(connection, execution_session_payload)
 
     tool_execution = request_tool_execution_command(
         connection,
         {
             "tool_execution_id": tool_execution_id,
             "execution_session_id": execution_session_id,
-            "tool_class": OPENAI_TOOL_CLASS,
-            "tool_name": "stage06_review_classifier",
+            "tool_class": tool_class,
+            "tool_name": tool_name,
             "idempotency_key": f"{base_idempotency_key}:tool-request",
             "actor_id": actor_id,
             "actor_type": actor_type,
@@ -183,7 +221,8 @@ def run_stage06_openai_review_sandbox(
     policy_decision = policy_result["policy_decision"]
     tool_execution = policy_result["tool_execution"]
     execution_session = policy_result["execution_session"]
-    execution_semantics_evidence = _persist_prepared_execution_evidence_artifacts(
+    artifact_root = resolve_execution_artifact_root()
+    execution_semantics_evidence = persist_prepared_execution_evidence_artifacts(
         connection=connection,
         workflow_run_id=str(human_task["workflow_run_id"]),
         task_run_id=str(human_task["task_run_id"]),
@@ -196,13 +235,9 @@ def run_stage06_openai_review_sandbox(
             execution_session=execution_session,
             tool_execution=tool_execution,
             policy_decision=policy_decision,
-            execution_semantics=(
-                payload["execution_semantics"]
-                if isinstance(payload.get("execution_semantics"), dict)
-                else None
-            ),
+            execution_semantics=execution_session_payload.get("execution_semantics"),
         ),
-        storage_root=_artifact_root(),
+        storage_root=artifact_root,
     )
     if decision != "allow":
         code = "tool_execution_requires_approval" if decision == "require_approval" else "tool_execution_denied"
@@ -226,14 +261,17 @@ def run_stage06_openai_review_sandbox(
         connection,
         str(human_task["workflow_run_id"]),
     )
-    input_artifacts = _resolve_input_artifacts(artifacts)
+    input_artifacts = _resolve_input_artifacts(
+        artifacts,
+        required_primary_artifact_kind=required_primary_artifact_kind,
+    )
     if not input_artifacts:
         raise CommandError(
             code="stage06_sandbox_input_artifact_missing",
             message="no Stage06 input artifacts were available for sandbox classification",
             details={
                 "workflow_run_id": str(human_task["workflow_run_id"]),
-                "required_artifact_kind": "schedule.supervisor_review.doc",
+                "required_artifact_kind": required_primary_artifact_kind,
             },
         )
 
@@ -294,9 +332,8 @@ def run_stage06_openai_review_sandbox(
         input_excerpt_char_count=len(document_text),
     )
 
-    storage_root = _artifact_root()
     evidence_storage_uri, evidence_digest, evidence_size = write_blob(
-        storage_root=storage_root,
+        storage_root=artifact_root,
         workflow_run_id=str(human_task["workflow_run_id"]),
         file_name=f"stage06-review-openai-{human_task_id}.json",
         content=json.dumps(evidence_payload, separators=(",", ":"), sort_keys=True).encode("utf-8"),
@@ -422,16 +459,52 @@ def _require_fields(payload: dict[str, Any], fields: list[str]) -> None:
         )
 
 
-def _artifact_root() -> Path:
-    raw = os.environ.get("ONETRUTH_ARTIFACT_ROOT", ".onetruth_artifacts").strip()
-    path = Path(raw).expanduser().resolve()
-    path.mkdir(parents=True, exist_ok=True)
-    return path
+def _compile_stage06_runtime(
+    *,
+    workflow_run_id: str,
+    task_run_id: str,
+    actor_id: str,
+    actor_type: str,
+    base_idempotency_key: str,
+    execution_session_id: str,
+) -> dict[str, Any]:
+    try:
+        return compile_reference_stage_runtime(
+            repo_root=_REPO_ROOT,
+            execution_profile_path=_STAGE06_EXECUTION_PROFILE_PATH,
+            workflow_id=STAGE06_WORKFLOW_ID,
+            module_id=STAGE06_MODULE_ID,
+            stage_id=STAGE06_STAGE_ID,
+            runtime_tool_binding_id=STAGE06_RUNTIME_TOOL_BINDING_ID,
+            workflow_run_id=workflow_run_id,
+            task_run_id=task_run_id,
+            principal_actor={"type": actor_type, "id": actor_id},
+            idempotency_key=f"{base_idempotency_key}:execution-session",
+            state="WAITING_POLICY",
+            execution_session_id=execution_session_id,
+            actor_type=actor_type,
+            actor_id=actor_id,
+            budget_override=STAGE06_RUNTIME_BUDGET,
+        )
+    except ControlCompileError as exc:
+        raise CommandError(
+            code="invalid_stage06_control_spec",
+            message=str(exc),
+            details={
+                "workflow_id": STAGE06_WORKFLOW_ID,
+                "stage_id": STAGE06_STAGE_ID,
+                "runtime_tool_binding_id": STAGE06_RUNTIME_TOOL_BINDING_ID,
+            },
+        ) from exc
 
 
-def _resolve_input_artifacts(artifacts: list[dict[str, Any]]) -> list[dict[str, Any]]:
+def _resolve_input_artifacts(
+    artifacts: list[dict[str, Any]],
+    *,
+    required_primary_artifact_kind: str,
+) -> list[dict[str, Any]]:
     preferred_order = [
-        "schedule.supervisor_review.doc",
+        required_primary_artifact_kind,
         "schedule.draft_schedule.doc",
         "schedule.draft_schedule.workbook",
     ]
@@ -498,11 +571,6 @@ def _build_evidence_payload(
         "classification": classification.as_dict(),
         "model_metadata": model_metadata.as_dict(),
     }
-
-
-def _stable_id(prefix: str, raw: str) -> str:
-    digest = hashlib.sha256(raw.encode("utf-8")).hexdigest()[:24]
-    return f"{prefix}-{digest}"
 
 
 def _normalize_actor_roles(raw_roles: Any) -> list[str]:
@@ -605,44 +673,3 @@ def _record_tool_and_session_failure(
         )
     except Exception:
         pass
-
-
-def _persist_prepared_execution_evidence_artifacts(
-    *,
-    connection: sqlite3.Connection,
-    workflow_run_id: str,
-    task_run_id: str,
-    actor_id: str,
-    actor_type: str,
-    idempotency_prefix: str,
-    artifacts: list[PreparedExecutionEvidenceArtifact],
-    storage_root: Path,
-) -> list[dict[str, Any]]:
-    created: list[dict[str, Any]] = []
-    for artifact in artifacts:
-        storage_uri, content_digest, byte_size = write_blob(
-            storage_root=storage_root,
-            workflow_run_id=workflow_run_id,
-            file_name=artifact.file_name,
-            content=artifact.payload_bytes(),
-        )
-        created_artifact = create_artifact_version_command(
-            connection,
-            {
-                "workflow_run_id": workflow_run_id,
-                "task_run_id": task_run_id,
-                "artifact_kind": artifact.artifact_kind,
-                "artifact_role": artifact.artifact_role,
-                "media_type": artifact.media_type,
-                "storage_uri": storage_uri,
-                "content_digest": content_digest,
-                "byte_size": byte_size,
-                "metadata_json": artifact.metadata_json,
-                "links": artifact.links,
-                "idempotency_key": f"{idempotency_prefix}:{artifact.idempotency_suffix}",
-                "actor_id": actor_id,
-                "actor_type": actor_type,
-            },
-        )
-        created.append(created_artifact)
-    return created

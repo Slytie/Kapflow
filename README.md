@@ -73,6 +73,10 @@ Everything else - runbooks, dashboards, summaries, generated CompanyOS specs, pr
 5. Run full pytest suite:
    - `pytest -q`
 
+Local runtime-output note:
+- `.tmp/`, `.onetruth_artifacts/`, repo-root/local `*.db`, `artifacts/`, and `codex_handoff_packet_*.zip` are local execution or handoff byproducts and are ignored by Git.
+- If runtime evidence needs to become a reusable golden fixture, move it into an explicit `fixtures/` path instead of leaving it under the live `.onetruth_artifacts/` root.
+
 ## API quickstart (dev)
 Run the thin HTTP adapter locally:
 - `PYTHONPATH=src onetruth-api --db-url sqlite:///./.tmp/onetruth-api.db --host 127.0.0.1 --port 8080`
@@ -325,6 +329,14 @@ Open workspace page:
 
 Export workspace bundle zip for review:
 - `PYTHONPATH=src python3 scripts/export_run_workspace_bundle.py --db-url sqlite:///./.tmp/workspace-demo.db --workflow-run-id <workflow_run_id> --output ./.tmp/workspace-bundle.zip`
+
+Export a clean repo source bundle for Codex/human handoff:
+- `make clean-source-bundle`
+- or `python3 scripts/export_clean_source_bundle.py --output ./.tmp/companyos-clean-source-bundle.zip`
+- default behavior exports the current working-tree source snapshot (tracked files plus non-ignored untracked source files)
+- default exclusions include `.git`, `.venv`, `node_modules`, `frontend/dist`, `.tmp`, `.pytest_cache`, `.idea`, local `.env*` files, local DBs, and runtime evidence roots like `artifacts/` and `.onetruth_artifacts/`
+- use `--tracked-only` if you want a strictly git-tracked source bundle
+- use the clean source bundle for repo handoffs; keep `export_run_workspace_bundle.py` for runtime workspace inspection bundles only
 
 ## Runtime scaffold
 Runtime scaffold now exists at `src/onetruth/` with migrations under `alembic/` and runtime smoke tests under `tests/runtime/`.

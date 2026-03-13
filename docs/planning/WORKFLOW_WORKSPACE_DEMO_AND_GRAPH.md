@@ -61,3 +61,4 @@ Initial branch semantics:
   - official outputs and graph node/edge extracts,
   - README with scenario/run context and first actions to take.
 - The bundle is inspection evidence only; canonical runtime tables/events/pointers remain authority.
+- Repo source handoffs are a different artifact class: use `make clean-source-bundle` / `scripts/export_clean_source_bundle.py` instead of zipping an entire working tree.

@@ -12,14 +12,18 @@ SCENARIO_PATH = (
 )
 
 
-def _prepare_claimed_stage04_task(tmp_path: Path) -> tuple[RuntimeScenarioHarness, RuntimeApiClient, str]:
-    harness = RuntimeScenarioHarness.from_yaml(SCENARIO_PATH, tmp_path).prepare()
-    for step_id in (
+def _prepare_claimed_stage04_task(
+    tmp_path: Path,
+    *,
+    seed_steps: tuple[str, ...] = (
         "create_route_slot_requirements",
         "create_driver_capabilities",
         "create_approved_availability",
         "create_actual_hours",
-    ):
+    ),
+) -> tuple[RuntimeScenarioHarness, RuntimeApiClient, str]:
+    harness = RuntimeScenarioHarness.from_yaml(SCENARIO_PATH, tmp_path).prepare()
+    for step_id in seed_steps:
         harness.run_named_step(step_id)
 
     created = harness.run_action(
@@ -163,3 +167,33 @@ def test_weekly_stage04_openai_agent_mocked_slice_is_idempotent_and_draft_only(
     )
     # Stage04 slice remains draft-only and should not promote official pointers.
     assert int(pointer_count[0]["count"]) == 0
+
+
+def test_weekly_stage04_openai_agent_mocked_slice_fails_closed_when_bridge_input_missing(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    harness, client, human_task_id = _prepare_claimed_stage04_task(
+        tmp_path,
+        seed_steps=(
+            "create_driver_capabilities",
+            "create_approved_availability",
+            "create_actual_hours",
+        ),
+    )
+
+    class _MustNotRun:
+        def run_function_calling_loop(self, **_kwargs):
+            raise AssertionError("runner should not execute when Stage04 bridge input is missing")
+
+    monkeypatch.setattr(
+        "onetruth.application.services.weekly_stage04_openai_agent.build_weekly_stage04_openai_agent_runner_from_env",
+        lambda: _MustNotRun(),
+    )
+
+    response = client.post(
+        f"/api/v1/human-tasks/{human_task_id}/weekly-stage04-openai-agent",
+        payload={"idempotency_key": f"api:{harness.scenario_id}:stage04-missing-bridge-input"},
+    )
+    assert response.status_code == 400
+    assert response.payload["error"]["code"] == "stage04_input_artifact_missing"

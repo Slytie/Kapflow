@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from pathlib import Path
 from urllib.parse import urlparse
 
@@ -114,6 +115,7 @@ def test_stage06_openai_sandbox_endpoint_persists_evidence_and_uses_canonical_co
         if item["artifact_kind"] in {EXECUTION_COMPILED_SPEC_ARTIFACT_KIND, EXECUTION_COMPILE_SOURCE_MANIFEST_ARTIFACT_KIND}
     ]
     assert len(semantics_artifacts) == 2
+    expected_root = (tmp_path / "sandbox_artifacts").resolve()
     for artifact in semantics_artifacts:
         linked_subjects = {
             (str(link["subject_kind"]), str(link["subject_id"]))
@@ -122,6 +124,58 @@ def test_stage06_openai_sandbox_endpoint_persists_evidence_and_uses_canonical_co
         assert ("execution_session", str(result["execution_session"]["execution_session_id"])) in linked_subjects
         assert ("tool_execution", str(result["tool_execution"]["tool_execution_id"])) in linked_subjects
         assert ("policy_decision", str(result["policy_decision"]["policy_decision_id"])) in linked_subjects
+        semantics_path = Path(urlparse(artifact["storage_uri"]).path)
+        assert str(semantics_path).startswith(str(expected_root))
+
+    compiled_spec_row = next(
+        item
+        for item in semantics_artifacts
+        if item["artifact_kind"] == EXECUTION_COMPILED_SPEC_ARTIFACT_KIND
+    )
+    compiled_spec = json.loads(
+        Path(urlparse(compiled_spec_row["storage_uri"]).path).read_text(encoding="utf-8")
+    )
+    assert compiled_spec["control_source"] == "execution_profile_reference"
+    assert compiled_spec["runtime_tool_binding"]["runtime_tool_class"] == "model.openai.responses.stage06.review"
+    assert compiled_spec["runtime_tool_binding"]["authored_tool_class_relationship"] == {
+        "relationship": "bounded_runtime_alias",
+        "uses_allowed_tool_classes": ["artifact.read", "validation"],
+        "note": (
+            "Engine-specific runtime tool-class strings identify the bounded executor "
+            "surface and remain distinct from authored `allowed_tool_classes` capability vocabulary."
+        ),
+    }
+    assert compiled_spec["runtime_bindings"]["tool_execution"]["allowed_tool_classes"] == [
+        "artifact.read",
+        "validation",
+        "approval.request",
+        "projection.render",
+        "artifact.publish_version",
+    ]
+    assert (
+        compiled_spec["runtime_tool_binding"]["runtime_tool_class"]
+        not in compiled_spec["runtime_bindings"]["tool_execution"]["allowed_tool_classes"]
+    )
+
+    compile_source_manifest_row = next(
+        item
+        for item in semantics_artifacts
+        if item["artifact_kind"] == EXECUTION_COMPILE_SOURCE_MANIFEST_ARTIFACT_KIND
+    )
+    compile_source_manifest = json.loads(
+        Path(urlparse(compile_source_manifest_row["storage_uri"]).path).read_text(encoding="utf-8")
+    )
+    assert compile_source_manifest["source_refs"] == [
+        {
+            "source_kind": "execution_profile",
+            "path": "docs/workflows/schedule_planning/v1/EXECUTION_PROFILE.yaml",
+        },
+        {
+            "source_kind": "tool_class_registry",
+            "path": "schemas/agentic/tool_class_registry.yaml",
+            "runtime_tool_binding_id": "runtime.schedule_planning.stage06.openai_review.responses.v1",
+        },
+    ]
 
     evidence = [item for item in artifacts if item["artifact_kind"] == "schedule.stage06.review_ai_evidence.json"]
     assert len(evidence) == 1
@@ -129,6 +183,7 @@ def test_stage06_openai_sandbox_endpoint_persists_evidence_and_uses_canonical_co
     assert parsed_uri.scheme == "file"
     evidence_path = Path(parsed_uri.path)
     assert evidence_path.exists()
+    assert str(evidence_path).startswith(str(expected_root))
 
     events = harness.list_events()
     assert any(

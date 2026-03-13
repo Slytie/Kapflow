@@ -3,8 +3,18 @@ from __future__ import annotations
 from dataclasses import dataclass
 import hashlib
 import json
+import os
+from pathlib import Path
+import sqlite3
 from typing import Any, Mapping
 
+from onetruth.application.handlers.workflow_task_lifecycle import (
+    create_artifact_version_command,
+)
+from onetruth.infrastructure.artifacts.storage import write_blob
+
+EXECUTION_ARTIFACT_ROOT_ENV_VAR = "ONETRUTH_ARTIFACT_ROOT"
+DEFAULT_LOCAL_EXECUTION_ARTIFACT_ROOT = ".onetruth_artifacts"
 EXECUTION_SEMANTICS_ARTIFACT_ROLE = "execution_semantics_evidence"
 EXECUTION_COMPILED_SPEC_ARTIFACT_KIND = "execution.compiled_spec.json"
 EXECUTION_COMPILE_SOURCE_MANIFEST_ARTIFACT_KIND = "execution.compile_source_manifest.json"
@@ -285,6 +295,67 @@ def prepare_runtime_json_evidence_artifact(
         ),
         idempotency_suffix=idempotency_suffix,
     )
+
+
+def stable_execution_id(*, prefix: str, raw: str) -> str:
+    digest = hashlib.sha256(raw.encode("utf-8")).hexdigest()[:24]
+    return f"{prefix}-{digest}"
+
+
+def resolve_execution_artifact_root(
+    *,
+    env_var: str = EXECUTION_ARTIFACT_ROOT_ENV_VAR,
+    default_root: str = DEFAULT_LOCAL_EXECUTION_ARTIFACT_ROOT,
+) -> Path:
+    raw_value = os.environ.get(env_var)
+    raw_root = raw_value.strip() if isinstance(raw_value, str) else ""
+    if not raw_root:
+        raw_root = default_root
+    root = Path(raw_root).expanduser().resolve()
+    root.mkdir(parents=True, exist_ok=True)
+    return root
+
+
+def persist_prepared_execution_evidence_artifacts(
+    *,
+    connection: sqlite3.Connection,
+    workflow_run_id: str,
+    task_run_id: str,
+    actor_id: str,
+    actor_type: str,
+    idempotency_prefix: str,
+    artifacts: list[PreparedExecutionEvidenceArtifact],
+    storage_root: Path | None = None,
+) -> list[dict[str, Any]]:
+    resolved_storage_root = storage_root or resolve_execution_artifact_root()
+    created: list[dict[str, Any]] = []
+    for artifact in artifacts:
+        storage_uri, content_digest, byte_size = write_blob(
+            storage_root=resolved_storage_root,
+            workflow_run_id=workflow_run_id,
+            file_name=artifact.file_name,
+            content=artifact.payload_bytes(),
+        )
+        created_artifact = create_artifact_version_command(
+            connection,
+            {
+                "workflow_run_id": workflow_run_id,
+                "task_run_id": task_run_id,
+                "artifact_kind": artifact.artifact_kind,
+                "artifact_role": artifact.artifact_role,
+                "media_type": artifact.media_type,
+                "storage_uri": storage_uri,
+                "content_digest": content_digest,
+                "byte_size": byte_size,
+                "metadata_json": artifact.metadata_json,
+                "links": artifact.links,
+                "idempotency_key": f"{idempotency_prefix}:{artifact.idempotency_suffix}",
+                "actor_id": actor_id,
+                "actor_type": actor_type,
+            },
+        )
+        created.append(created_artifact)
+    return created
 
 
 def _mapping_or_empty(value: Any) -> dict[str, Any]:

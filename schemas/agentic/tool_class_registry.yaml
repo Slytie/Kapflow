@@ -1,4 +1,7 @@
 # tool_class_registry.yaml - canonical tool classes for execution profiles
+# `tool_classes` are authored capability classes used in EXECUTION_PROFILE.yaml.
+# `runtime_tool_bindings` are engine/runtime identifiers used on ToolExecution rows and
+# must not be copied into workflow authored allowlists as if they were the same vocabulary.
 
 tool_classes:
   - id: artifact.read
@@ -33,3 +36,18 @@ tool_classes:
     side_effect_class: none
     requires_policy_decision: false
     description: Prepare a non-authoritative outbound notification artifact.
+
+runtime_tool_bindings:
+  - id: runtime.schedule_planning.stage06.openai_review.responses.v1
+    runtime_tool_class: model.openai.responses.stage06.review
+    runtime_tool_name: stage06_review_classifier
+    engine_family: openai.responses
+    applies_to:
+      workflow_id: schedule_planning.v1
+      stage_id: Stage06
+    authored_tool_class_relationship:
+      relationship: bounded_runtime_alias
+      uses_allowed_tool_classes:
+        - artifact.read
+        - validation
+      note: Engine-specific runtime tool-class strings identify the bounded executor surface and remain distinct from authored `allowed_tool_classes` capability vocabulary.
