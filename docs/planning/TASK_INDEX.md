@@ -76,6 +76,7 @@
 | TASK-0071 | EPIC-025 | DONE | high | Realistic Stage04 weekly artifacts, deterministic 40-driver fixture ingestion, and hard-case pilot seeds |
 | TASK-0072 | EPIC-025 | DONE | high | Iterative deterministic Stage04 route allocation, bounded repair moves, and stability-aware validation |
 | TASK-0072 | EPIC-070 | DONE | medium | Shared execution-evidence helpers and artifact-root policy cleanup |
+| TASK-0073 | EPIC-070 | DONE | high | Iterative Stage04 Responses tool loop, per-iteration evidence, and realistic pilot analysis packet |
 | TASK-0073 | EPIC-070 | DONE | medium | Stage06 compiled-control alignment and tool-class vocabulary cleanup |
 | TASK-0074 | EPIC-070 | DONE | medium | Weekly Stage04 input-resolution hardening over authored dataset-key bindings |
 | TASK-0075 | EPIC-080 | DONE | low | Clean source-bundle export and handoff packaging |

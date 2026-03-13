@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from pathlib import Path
 from urllib.parse import urlparse
 
@@ -80,20 +81,46 @@ def _mock_stage04_runner() -> OpenAIResponsesFunctionCallingRunner:
                         },
                         {
                             "type": "function_call",
-                            "call_id": "call_build",
-                            "name": "materialize_weekly_stage04_draft_outputs",
+                            "call_id": "call_preview",
+                            "name": "preview_stage04_next_iteration",
                             "arguments": "{}",
                         },
                     ],
                 },
                 "req_stage04_1",
             )
-        if call_count["value"] == 2:
-            assert payload.get("previous_response_id") == "resp_stage04_1"
+        assert payload.get("previous_response_id") == f"resp_stage04_{call_count['value'] - 1}"
+        outputs = [
+            json.loads(str(item.get("output") or "{}"))
+            for item in payload.get("input", [])
+            if isinstance(item, dict) and str(item.get("type") or "") == "function_call_output"
+        ]
+        if any(isinstance(item, dict) and item.get("stage04_build_result") for item in outputs):
             return (
                 200,
                 {
-                    "id": "resp_stage04_2",
+                    "id": f"resp_stage04_{call_count['value']}",
+                    "model": "gpt-4.1-mini",
+                    "usage": {"input_tokens": 15, "output_tokens": 10},
+                    "output_text": (
+                        '{"summary":"Draft weekly schedule prepared.",'
+                        '"selected_candidate_count":2,'
+                        '"recommended_action":"forward_to_stage05_manager_review",'
+                        '"warnings":[]}'
+                    ),
+                },
+                f"req_stage04_{call_count['value']}",
+            )
+        if any(
+            isinstance(item, dict)
+            and item.get("planner_complete") is True
+            and item.get("iteration_result")
+            for item in outputs
+        ):
+            return (
+                200,
+                {
+                    "id": f"resp_stage04_{call_count['value']}",
                     "model": "gpt-4.1-mini",
                     "usage": {"input_tokens": 40, "output_tokens": 15},
                     "output": [
@@ -105,29 +132,36 @@ def _mock_stage04_runner() -> OpenAIResponsesFunctionCallingRunner:
                         },
                         {
                             "type": "function_call",
-                            "call_id": "call_ops_packet",
-                            "name": "render_stage04_ops_packet",
+                            "call_id": "call_iteration",
+                            "name": "get_stage04_iteration_analysis",
+                            "arguments": "{\"iteration_index\":1}",
+                        },
+                        {
+                            "type": "function_call",
+                            "call_id": "call_finalize",
+                            "name": "finalize_weekly_stage04_draft_outputs",
                             "arguments": "{}",
                         },
                     ],
                 },
-                "req_stage04_2",
+                f"req_stage04_{call_count['value']}",
             )
-        assert payload.get("previous_response_id") == "resp_stage04_2"
         return (
             200,
             {
-                "id": "resp_stage04_3",
+                "id": f"resp_stage04_{call_count['value']}",
                 "model": "gpt-4.1-mini",
-                "usage": {"input_tokens": 15, "output_tokens": 10},
-                "output_text": (
-                    '{"summary":"Draft weekly schedule prepared.",'
-                    '"selected_candidate_count":2,'
-                    '"recommended_action":"forward_to_stage05_manager_review",'
-                    '"warnings":[]}'
-                ),
+                "usage": {"input_tokens": 17, "output_tokens": 8},
+                "output": [
+                    {
+                        "type": "function_call",
+                        "call_id": "call_apply",
+                        "name": "apply_stage04_next_iteration",
+                        "arguments": "{}",
+                    }
+                ],
             },
-            "req_stage04_3",
+            f"req_stage04_{call_count['value']}",
         )
 
     return OpenAIResponsesFunctionCallingRunner(
@@ -165,6 +199,7 @@ def test_weekly_stage04_openai_agent_endpoint_happy_path(tmp_path: Path, monkeyp
         "runtime.tool_result.json",
         "execution.trace.json",
     }
+    assert len(result["runtime_turn_evidence"]) == 4
     assert result["stage04_build_result"]["candidate_count"] == 4
     assert result["stage04_build_result"]["selected_candidate_count"] == 2
     expected_root = (tmp_path / "artifacts").resolve()

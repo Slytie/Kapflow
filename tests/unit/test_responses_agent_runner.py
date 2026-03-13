@@ -176,3 +176,57 @@ def test_function_calling_loop_raises_when_max_turns_exhausted() -> None:
             execute_function=lambda _name, _arguments: {"ok": True},
             max_turns=1,
         )
+
+
+def test_function_calling_loop_enforces_no_progress_limit_and_notifies_turn_observer() -> None:
+    observed_turns: list[dict[str, Any]] = []
+    attempts = {"count": 0}
+
+    def transport(_: dict[str, Any], __: float) -> tuple[int, dict[str, Any], str | None]:
+        attempts["count"] += 1
+        return (
+            200,
+            {
+                "id": f"resp_{attempts['count']}",
+                "model": "gpt-4.1-mini",
+                "usage": {"input_tokens": 1, "output_tokens": 1},
+                "output": [
+                    {
+                        "type": "function_call",
+                        "call_id": f"call_{attempts['count']}",
+                        "name": "inspect_only",
+                        "arguments": "{}",
+                    }
+                ],
+            },
+            f"req_{attempts['count']}",
+        )
+
+    runner = OpenAIResponsesFunctionCallingRunner(
+        api_key="sk-test",
+        model="gpt-4.1-mini",
+        base_url="https://api.openai.test/v1",
+        timeout_seconds=5.0,
+        max_retries=0,
+        transport=transport,
+    )
+
+    with pytest.raises(OpenAIResponsesError, match="no-progress budget"):
+        runner.run_function_calling_loop(
+            initial_input=[{"role": "user", "content": [{"type": "input_text", "text": "run"}]}],
+            tools=[
+                ResponsesFunctionToolSpec(
+                    name="inspect_only",
+                    description="inspect",
+                    parameters_schema={"type": "object", "additionalProperties": False, "properties": {}, "required": []},
+                )
+            ],
+            execute_function=lambda _name, _arguments: {"progress_made": False, "snapshot": "still reviewing"},
+            max_turns=5,
+            no_progress_limit=2,
+            on_turn_complete=lambda turn: observed_turns.append(turn.as_dict()),
+        )
+
+    assert [turn["turn_index"] for turn in observed_turns] == [1, 2]
+    assert [turn["progress_made"] for turn in observed_turns] == [False, False]
+    assert [turn["no_progress_streak"] for turn in observed_turns] == [1, 2]

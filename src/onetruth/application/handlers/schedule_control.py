@@ -119,6 +119,50 @@ def build_weekly_schedule_control_command(
         if item is not None and str(item.get("artifact_version_id") or "").strip()
     ]
 
+    created_outputs = persist_weekly_stage04_output_payloads(
+        connection,
+        workflow_run=workflow_run,
+        bundle_id=bundle.bundle_id,
+        output_payloads=output_payloads,
+        source_input_ids=source_input_ids,
+    )
+
+    return {
+        "bundle_id": bundle.bundle_id,
+        "workflow_run_id": workflow_run_id,
+        "candidate_count": len(deterministic_build.candidate_matrix),
+        "selected_candidate_count": len(deterministic_build.selected_candidates),
+        "selected_candidates": deterministic_build.selected_candidates,
+        "iteration_summaries": deterministic_build.iteration_summaries,
+        "repair_moves": deterministic_build.repair_moves,
+        "coverage_summary": deterministic_build.coverage_summary,
+        "artifacts": {
+            "input_bundle": created_outputs["planning.input_bundle.doc"],
+            "candidate_delta": created_outputs["planning.candidate_schedule_delta.workbook"],
+            "validation_summary": created_outputs["planning.validation_summary.doc"],
+            "draft_workbook": created_outputs["planning.draft_weekly_schedule.workbook"],
+            "draft_doc": created_outputs["planning.draft_weekly_schedule.doc"],
+        },
+        "artifact_payloads": output_payloads,
+    }
+
+
+def persist_weekly_stage04_output_payloads(
+    connection: sqlite3.Connection,
+    *,
+    workflow_run: dict[str, Any],
+    bundle_id: str,
+    output_payloads: dict[str, dict[str, Any]],
+    source_input_ids: list[str],
+) -> dict[str, dict[str, Any]]:
+    workflow_run_id = str(workflow_run.get("workflow_run_id") or "")
+    planning_week_id = str(workflow_run.get("partition_key") or "")
+    candidate_delta_id = str(
+        (output_payloads.get("planning.candidate_schedule_delta.workbook") or {}).get(
+            "candidate_delta_id"
+        )
+        or ""
+    )
     created_outputs: dict[str, dict[str, Any]] = {}
     _begin_transaction(connection)
     try:
@@ -126,10 +170,8 @@ def build_weekly_schedule_control_command(
             artifact_id = _stable_output_artifact_id(
                 workflow_run_id=workflow_run_id,
                 artifact_kind=artifact_kind,
-                bundle_id=bundle.bundle_id,
-                candidate_delta_id=str(
-                    deterministic_build.candidate_delta_payload.get("candidate_delta_id") or ""
-                ),
+                bundle_id=bundle_id,
+                candidate_delta_id=candidate_delta_id,
             )
             created = _create_or_load_artifact_version(
                 connection,
@@ -195,25 +237,7 @@ def build_weekly_schedule_control_command(
         connection.rollback()
         raise
     connection.commit()
-
-    return {
-        "bundle_id": bundle.bundle_id,
-        "workflow_run_id": workflow_run_id,
-        "candidate_count": len(deterministic_build.candidate_matrix),
-        "selected_candidate_count": len(deterministic_build.selected_candidates),
-        "selected_candidates": deterministic_build.selected_candidates,
-        "iteration_summaries": deterministic_build.iteration_summaries,
-        "repair_moves": deterministic_build.repair_moves,
-        "coverage_summary": deterministic_build.coverage_summary,
-        "artifacts": {
-            "input_bundle": created_outputs["planning.input_bundle.doc"],
-            "candidate_delta": created_outputs["planning.candidate_schedule_delta.workbook"],
-            "validation_summary": created_outputs["planning.validation_summary.doc"],
-            "draft_workbook": created_outputs["planning.draft_weekly_schedule.workbook"],
-            "draft_doc": created_outputs["planning.draft_weekly_schedule.doc"],
-        },
-        "artifact_payloads": output_payloads,
-    }
+    return created_outputs
 
 
 def _require_fields(payload: dict[str, Any], fields: list[str]) -> None:

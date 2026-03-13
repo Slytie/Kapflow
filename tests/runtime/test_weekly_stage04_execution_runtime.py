@@ -124,20 +124,47 @@ def _mock_stage04_runner() -> OpenAIResponsesFunctionCallingRunner:
                         },
                         {
                             "type": "function_call",
-                            "call_id": "call_build",
-                            "name": "materialize_weekly_stage04_draft_outputs",
+                            "call_id": "call_preview",
+                            "name": "preview_stage04_next_iteration",
                             "arguments": "{}",
                         },
                     ],
                 },
                 "req_runtime_1",
             )
-        if calls["count"] == 2:
-            assert payload.get("previous_response_id") == "resp_runtime_1"
+        assert payload.get("previous_response_id") == f"resp_runtime_{calls['count'] - 1}"
+        outputs = [
+            json.loads(str(item.get("output") or "{}"))
+            for item in payload.get("input", [])
+            if isinstance(item, dict) and str(item.get("type") or "") == "function_call_output"
+        ]
+        if any(
+            isinstance(item, dict) and item.get("stage04_build_result")
+            for item in outputs
+        ):
             return (
                 200,
                 {
-                    "id": "resp_runtime_2",
+                    "id": f"resp_runtime_{calls['count']}",
+                    "model": "gpt-4.1-mini",
+                    "usage": {"input_tokens": 10, "output_tokens": 6},
+                    "output_text": (
+                        '{"summary":"runtime ok","selected_candidate_count":2,'
+                        '"recommended_action":"forward_to_stage05_manager_review","warnings":[]}'
+                    ),
+                },
+                f"req_runtime_{calls['count']}",
+            )
+        if any(
+            isinstance(item, dict)
+            and item.get("planner_complete") is True
+            and item.get("iteration_result")
+            for item in outputs
+        ):
+            return (
+                200,
+                {
+                    "id": f"resp_runtime_{calls['count']}",
                     "model": "gpt-4.1-mini",
                     "usage": {"input_tokens": 22, "output_tokens": 8},
                     "output": [
@@ -146,23 +173,72 @@ def _mock_stage04_runner() -> OpenAIResponsesFunctionCallingRunner:
                             "call_id": "call_val",
                             "name": "get_stage04_validation_summary",
                             "arguments": "{}",
-                        }
+                        },
+                        {
+                            "type": "function_call",
+                            "call_id": "call_iter",
+                            "name": "get_stage04_iteration_analysis",
+                            "arguments": "{\"iteration_index\":1}",
+                        },
+                        {
+                            "type": "function_call",
+                            "call_id": "call_finalize",
+                            "name": "finalize_weekly_stage04_draft_outputs",
+                            "arguments": "{}",
+                        },
                     ],
                 },
-                "req_runtime_2",
+                f"req_runtime_{calls['count']}",
             )
         return (
             200,
             {
-                "id": "resp_runtime_3",
+                "id": f"resp_runtime_{calls['count']}",
                 "model": "gpt-4.1-mini",
-                "usage": {"input_tokens": 10, "output_tokens": 6},
-                "output_text": (
-                    '{"summary":"runtime ok","selected_candidate_count":2,'
-                    '"recommended_action":"forward_to_stage05_manager_review","warnings":[]}'
-                ),
+                "usage": {"input_tokens": 18, "output_tokens": 7},
+                "output": [
+                    {
+                        "type": "function_call",
+                        "call_id": "call_apply",
+                        "name": "apply_stage04_next_iteration",
+                        "arguments": "{}",
+                    }
+                ],
             },
-            "req_runtime_3",
+            f"req_runtime_{calls['count']}",
+        )
+
+    return OpenAIResponsesFunctionCallingRunner(
+        api_key="sk-test",
+        model="gpt-4.1-mini",
+        base_url="https://api.openai.test/v1",
+        timeout_seconds=5.0,
+        max_retries=0,
+        transport=transport,
+    )
+
+
+def _stalled_stage04_runner() -> OpenAIResponsesFunctionCallingRunner:
+    calls = {"count": 0}
+
+    def transport(_payload, _timeout):
+        calls["count"] += 1
+        return (
+            200,
+            {
+                "id": f"resp_stalled_{calls['count']}",
+                "model": "gpt-4.1-mini",
+                "usage": {"input_tokens": 9, "output_tokens": 4},
+                "output": [
+                    {
+                        "type": "function_call",
+                        "call_id": f"call_ctx_{calls['count']}",
+                        "name": "get_stage04_context",
+                        "arguments": "{}",
+                    }
+                ],
+            },
+            f"req_stalled_{calls['count']}",
         )
 
     return OpenAIResponsesFunctionCallingRunner(
@@ -213,6 +289,15 @@ def test_weekly_stage04_execution_runtime_persists_rows_events_and_trace_evidenc
     assert "runtime.tool_request.json" in evidence_kinds
     assert "runtime.tool_result.json" in evidence_kinds
     assert "execution.trace.json" in evidence_kinds
+    request_rows = [
+        row for row in artifacts if row["artifact_kind"] == "runtime.tool_request.json"
+    ]
+    result_rows = [
+        row for row in artifacts if row["artifact_kind"] == "runtime.tool_result.json"
+    ]
+    assert len(result["runtime_turn_evidence"]) == 4
+    assert len(request_rows) == 4
+    assert len(result_rows) == 4
 
     execution_subject = (
         "execution_session",
@@ -231,13 +316,20 @@ def test_weekly_stage04_execution_runtime_persists_rows_events_and_trace_evidenc
         assert tool_subject in linked_subjects
         assert policy_subject in linked_subjects
 
-    tool_result_row = next(item for item in artifacts if item["artifact_kind"] == "runtime.tool_result.json")
+    tool_result_row = sorted(
+        result_rows,
+        key=lambda item: int(
+            ((item.get("metadata_json") or {}).get("turn_index") or 0)
+            if isinstance(item.get("metadata_json"), dict)
+            else 0
+        ),
+    )[0]
     parsed_uri = urlparse(tool_result_row["storage_uri"])
     payload = json.loads(Path(parsed_uri.path).read_text(encoding="utf-8"))
-    turn_one_calls = payload["turns"][0]["function_calls"]
+    turn_one_calls = payload["function_calls"]
     assert [item["name"] for item in turn_one_calls] == [
         "get_stage04_context",
-        "materialize_weekly_stage04_draft_outputs",
+        "preview_stage04_next_iteration",
     ]
 
     events = harness.list_events()
@@ -247,6 +339,39 @@ def test_weekly_stage04_execution_runtime_persists_rows_events_and_trace_evidenc
     assert "tool.execution.approved" in event_types
     assert "tool.execution.completed" in event_types
     assert "execution.session.state_changed" in event_types
+
+
+def test_weekly_stage04_execution_runtime_enforces_authored_no_progress_limit(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    harness, client, human_task_id = _prepare_claimed_stage04_task(tmp_path)
+    monkeypatch.setattr(
+        "onetruth.application.services.weekly_stage04_openai_agent.build_weekly_stage04_openai_agent_runner_from_env",
+        lambda: _stalled_stage04_runner(),
+    )
+    monkeypatch.setenv("ONETRUTH_ARTIFACT_ROOT", str(tmp_path / "artifacts"))
+
+    response = client.post(
+        f"/api/v1/human-tasks/{human_task_id}/weekly-stage04-openai-agent",
+        payload={"idempotency_key": f"api:{harness.scenario_id}:stage04-runtime-stalled"},
+    )
+    assert response.status_code == 502
+    assert response.payload["error"]["code"] == "openai_tool_no_progress"
+
+    sessions = harness.query_rows("SELECT state FROM execution_sessions")
+    assert [row["state"] for row in sessions] == ["FAILED"]
+
+    artifacts = harness.list_artifacts()["artifact_versions"]
+    request_rows = [
+        row for row in artifacts if row["artifact_kind"] == "runtime.tool_request.json"
+    ]
+    result_rows = [
+        row for row in artifacts if row["artifact_kind"] == "runtime.tool_result.json"
+    ]
+    assert len(request_rows) == 3
+    assert len(result_rows) == 3
+    assert any(row["artifact_kind"] == "execution.trace.json" for row in artifacts)
 
 
 def test_weekly_stage04_policy_denial_skips_runner_and_records_denial(tmp_path: Path, monkeypatch) -> None:

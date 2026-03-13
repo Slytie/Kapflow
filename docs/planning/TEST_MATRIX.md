@@ -188,14 +188,15 @@ Current runtime tests assert:
 - bounded Stage04 weekly agent function-calling coverage:
   - Responses API function-calling loop supports multiple function calls per turn with `call_id`-bound `function_call_output` continuation
   - Stage04 execution session semantics are pinned from compiled control metadata
-  - only deterministic Stage04 tools are exposed; outputs remain draft-only
-  - context packs, request/result turns, and execution traces are persisted as canonical evidence artifacts linked to execution runtime objects
+  - only deterministic iterative Stage04 tools are exposed; outputs remain draft-only until explicit finalize
+  - authored `no_progress_ticks` is enforced from compiled Stage04 control metadata
+  - context packs, per-turn request/result artifacts, and execution traces are persisted as canonical evidence artifacts linked to execution runtime objects
   - real-network weekly Stage04 e2e remains deliberate and dual-gated (`ONETRUTH_RUN_OPENAI_E2E=1` + `ONETRUTH_RUN_OPENAI_WEEKLY_AGENT_E2E=1`)
 - realistic pilot/operator-inspection coverage:
   - reproducible Stage06/Stage07 pilot runs seeded from corpus seed sets via canonical ingress
   - reproducible weekly Stage04 logistics pilot runs with mock/real modes over canonical task/execution flows
   - Stage06 bounded agent review path creates canonical execution/tool/policy/evidence links
-  - weekly Stage04 pilot inspection packets include canonical evidence-by-kind IDs and canonical query commands for debug/review
+  - weekly Stage04 pilot inspection packets include canonical evidence-by-kind IDs, iteration-level route allocation/tradeoff analysis, and canonical query commands for debug/review
   - inspection packets include canonical references and run/board/timeline/artifact/approval/flag inspection routes
   - repeated pilot runs with same pilot key do not duplicate canonical effects
 - cross-scope API denial checks and retry-stability checks over repeated GET/mutation retries

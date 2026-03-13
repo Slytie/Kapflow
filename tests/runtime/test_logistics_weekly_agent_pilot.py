@@ -121,6 +121,9 @@ def test_weekly_stage04_pilot_mock_emits_canonical_execution_and_evidence_packet
     assert "tool.execution.requested" in event_types
     assert "tool.execution.approved" in event_types
     assert "tool.execution.completed" in event_types
+    assert packet["stage04_analysis"]["iterations"]
+    assert packet["stage04_analysis"]["runtime_turns"]
+    assert packet["stage04_analysis"]["tradeoffs"] == []
 
 
 def test_repeat_pilot_run_with_same_key_does_not_duplicate_canonical_effects(tmp_path: Path) -> None:
@@ -212,3 +215,9 @@ def test_realistic_weekly_stage04_pilot_seeds_shared_realistic_fixture_shape(tmp
     assert len(candidate_delta["iteration_deltas"]) >= 10
     assert validation_summary["coverage_summary"]["uncovered_route_slots"] > 0
     assert validation_summary["soft_score_totals"]["previous_week_stability"] > 0.0
+    stage04_analysis = packet["stage04_analysis"]
+    assert len(stage04_analysis["iterations"]) >= 10
+    assert stage04_analysis["runtime_turns"]
+    assert stage04_analysis["tradeoffs"]
+    final_iteration = stage04_analysis["iterations"][-1]
+    assert final_iteration["route_allocations"]

@@ -30,6 +30,21 @@ class IterativeAllocationResult:
     coverage_summary: dict[str, Any]
 
 
+@dataclass(frozen=True)
+class IterationExecutionResult:
+    iteration_index: int
+    batch_id: str
+    pressure_group_id: str
+    pressure_service_date: str
+    pressure_station_code: str
+    pressure_service_area: str
+    candidate_evaluations: tuple[CandidateEvaluation, ...]
+    applied_decisions: tuple[ScheduledAssignment, ...]
+    repair_moves: tuple[RepairMove, ...]
+    summary: IterationSummary
+    coverage_summary: dict[str, Any]
+
+
 def run_iterative_weekly_allocation(
     *,
     bundle: WeeklyScheduleControlBundle,
@@ -37,76 +52,13 @@ def run_iterative_weekly_allocation(
     expanded_slots = expand_route_slot_requirements(bundle.route_slots)
     schedule_state = PartialWeeklyScheduleState.from_route_slots(expanded_slots)
     candidate_matrix: list[CandidateEvaluation] = []
-    iteration_index = 0
 
-    while schedule_state.remaining_route_slots():
-        iteration_index += 1
-        batch_slots, pressure_group = _select_batch(bundle=bundle, schedule_state=schedule_state)
-        batch_id = f"{bundle.bundle_id}:iter-{iteration_index:02d}"
-        candidate_start = len(candidate_matrix)
-
-        uncovered_slots = _allocate_batch(
-            bundle=bundle,
-            batch_slots=batch_slots,
-            schedule_state=schedule_state,
-            candidate_matrix=candidate_matrix,
-            iteration_index=iteration_index,
-            batch_id=batch_id,
-            pressure_group_id=pressure_group["pressure_group_id"],
-        )
-        repair_count_before = len(schedule_state.repair_moves)
-        if uncovered_slots:
-            _attempt_repairs(
-                bundle=bundle,
-                uncovered_slots=uncovered_slots,
-                schedule_state=schedule_state,
-                candidate_matrix=candidate_matrix,
-                iteration_index=iteration_index,
-                batch_id=batch_id,
-                pressure_group_id=pressure_group["pressure_group_id"],
-            )
-
-        for slot in batch_slots:
-            if schedule_state.has_decision(slot.route_slot_id):
-                continue
-            schedule_state.record_unassigned(
-                _unassigned_decision(
-                    route_slot=slot,
-                    iteration_index=iteration_index,
-                    batch_id=batch_id,
-                    pressure_group_id=pressure_group["pressure_group_id"],
-                )
-            )
-
-        batch_route_slot_ids = tuple(slot.route_slot_id for slot in batch_slots)
-        assigned_route_slot_ids = tuple(
-            route_slot_id
-            for route_slot_id in batch_route_slot_ids
-            if schedule_state.decisions_by_slot[route_slot_id].assignment_action != "unassigned"
-        )
-        uncovered_route_slot_ids = tuple(
-            route_slot_id
-            for route_slot_id in batch_route_slot_ids
-            if schedule_state.decisions_by_slot[route_slot_id].assignment_action == "unassigned"
-        )
-        schedule_state.record_iteration(
-            IterationSummary(
-                iteration_index=iteration_index,
-                batch_id=batch_id,
-                pressure_group_id=pressure_group["pressure_group_id"],
-                pressure_service_date=pressure_group["service_date"],
-                pressure_station_code=pressure_group["station_code"],
-                pressure_service_area=pressure_group["service_area"],
-                batch_size=len(batch_slots),
-                route_slot_ids=batch_route_slot_ids,
-                assigned_route_slot_ids=assigned_route_slot_ids,
-                uncovered_route_slot_ids=uncovered_route_slot_ids,
-                repair_move_count=len(schedule_state.repair_moves) - repair_count_before,
-                covered_route_slot_count_after_iteration=schedule_state.assigned_count(),
-                uncovered_route_slot_count_after_iteration=len(schedule_state.uncovered_route_slot_ids()),
-                candidate_evaluation_count=len(candidate_matrix) - candidate_start,
-            )
-        )
+    while execute_next_weekly_allocation_iteration(
+        bundle=bundle,
+        schedule_state=schedule_state,
+        candidate_matrix=candidate_matrix,
+    ) is not None:
+        pass
 
     coverage_summary = _coverage_summary(schedule_state)
     return IterativeAllocationResult(
@@ -114,6 +66,100 @@ def run_iterative_weekly_allocation(
         selected_candidates=[item.to_row() for item in schedule_state.final_decisions()],
         iteration_summaries=list(schedule_state.iteration_summaries),
         repair_moves=list(schedule_state.repair_moves),
+        coverage_summary=coverage_summary,
+    )
+
+
+def execute_next_weekly_allocation_iteration(
+    *,
+    bundle: WeeklyScheduleControlBundle,
+    schedule_state: PartialWeeklyScheduleState,
+    candidate_matrix: list[CandidateEvaluation],
+) -> IterationExecutionResult | None:
+    if not schedule_state.remaining_route_slots():
+        return None
+
+    iteration_index = len(schedule_state.iteration_summaries) + 1
+    batch_slots, pressure_group = _select_batch(bundle=bundle, schedule_state=schedule_state)
+    batch_id = f"{bundle.bundle_id}:iter-{iteration_index:02d}"
+    candidate_start = len(candidate_matrix)
+
+    uncovered_slots = _allocate_batch(
+        bundle=bundle,
+        batch_slots=batch_slots,
+        schedule_state=schedule_state,
+        candidate_matrix=candidate_matrix,
+        iteration_index=iteration_index,
+        batch_id=batch_id,
+        pressure_group_id=pressure_group["pressure_group_id"],
+    )
+    repair_count_before = len(schedule_state.repair_moves)
+    if uncovered_slots:
+        _attempt_repairs(
+            bundle=bundle,
+            uncovered_slots=uncovered_slots,
+            schedule_state=schedule_state,
+            candidate_matrix=candidate_matrix,
+            iteration_index=iteration_index,
+            batch_id=batch_id,
+            pressure_group_id=pressure_group["pressure_group_id"],
+        )
+
+    for slot in batch_slots:
+        if schedule_state.has_decision(slot.route_slot_id):
+            continue
+        schedule_state.record_unassigned(
+            _unassigned_decision(
+                route_slot=slot,
+                iteration_index=iteration_index,
+                batch_id=batch_id,
+                pressure_group_id=pressure_group["pressure_group_id"],
+            )
+        )
+
+    batch_route_slot_ids = tuple(slot.route_slot_id for slot in batch_slots)
+    assigned_route_slot_ids = tuple(
+        route_slot_id
+        for route_slot_id in batch_route_slot_ids
+        if schedule_state.decisions_by_slot[route_slot_id].assignment_action != "unassigned"
+    )
+    uncovered_route_slot_ids = tuple(
+        route_slot_id
+        for route_slot_id in batch_route_slot_ids
+        if schedule_state.decisions_by_slot[route_slot_id].assignment_action == "unassigned"
+    )
+    summary = IterationSummary(
+        iteration_index=iteration_index,
+        batch_id=batch_id,
+        pressure_group_id=pressure_group["pressure_group_id"],
+        pressure_service_date=pressure_group["service_date"],
+        pressure_station_code=pressure_group["station_code"],
+        pressure_service_area=pressure_group["service_area"],
+        batch_size=len(batch_slots),
+        route_slot_ids=batch_route_slot_ids,
+        assigned_route_slot_ids=assigned_route_slot_ids,
+        uncovered_route_slot_ids=uncovered_route_slot_ids,
+        repair_move_count=len(schedule_state.repair_moves) - repair_count_before,
+        covered_route_slot_count_after_iteration=schedule_state.assigned_count(),
+        uncovered_route_slot_count_after_iteration=len(schedule_state.uncovered_route_slot_ids()),
+        candidate_evaluation_count=len(candidate_matrix) - candidate_start,
+    )
+    schedule_state.record_iteration(summary)
+
+    coverage_summary = _coverage_summary(schedule_state)
+    return IterationExecutionResult(
+        iteration_index=iteration_index,
+        batch_id=batch_id,
+        pressure_group_id=pressure_group["pressure_group_id"],
+        pressure_service_date=pressure_group["service_date"],
+        pressure_station_code=pressure_group["station_code"],
+        pressure_service_area=pressure_group["service_area"],
+        candidate_evaluations=tuple(candidate_matrix[candidate_start:]),
+        applied_decisions=tuple(
+            item for item in schedule_state.final_decisions() if item.iteration_index == iteration_index
+        ),
+        repair_moves=tuple(schedule_state.repair_moves[repair_count_before:]),
+        summary=summary,
         coverage_summary=coverage_summary,
     )
 
@@ -580,7 +626,13 @@ def _unassigned_decision(
 
 def _coverage_summary(schedule_state: PartialWeeklyScheduleState) -> dict[str, Any]:
     final_decisions = schedule_state.final_decisions()
-    uncovered_route_slot_ids = schedule_state.uncovered_route_slot_ids()
+    pending_route_slot_ids = [
+        item.route_slot_id for item in schedule_state.remaining_route_slots()
+    ]
+    uncovered_route_slot_ids = [
+        *schedule_state.uncovered_route_slot_ids(),
+        *pending_route_slot_ids,
+    ]
     batch_sizes = [item.batch_size for item in schedule_state.iteration_summaries]
     repaired_route_slot_ids = {
         route_slot_id
@@ -588,8 +640,11 @@ def _coverage_summary(schedule_state: PartialWeeklyScheduleState) -> dict[str, A
         for route_slot_id in (move.filled_route_slot_id, move.reassigned_route_slot_id)
     }
     return {
-        "total_route_slots": len(final_decisions),
-        "assigned_route_slots": len(final_decisions) - len(uncovered_route_slot_ids),
+        "total_route_slots": len(schedule_state.ordered_route_slot_ids),
+        "decided_route_slots": len(final_decisions),
+        "pending_route_slots": len(pending_route_slot_ids),
+        "pending_route_slot_ids": pending_route_slot_ids,
+        "assigned_route_slots": schedule_state.assigned_count(),
         "uncovered_route_slots": len(uncovered_route_slot_ids),
         "uncovered_route_slot_ids": uncovered_route_slot_ids,
         "iteration_count": len(schedule_state.iteration_summaries),

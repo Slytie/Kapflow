@@ -1,12 +1,13 @@
 from __future__ import annotations
 
+from copy import deepcopy
 import json
 import os
 from pathlib import Path
 import sqlite3
 from typing import Any
 
-from onetruth.application.handlers.schedule_control import build_weekly_schedule_control_command
+from onetruth.application.handlers.schedule_control import persist_weekly_stage04_output_payloads
 from onetruth.application.handlers.workflow_task_lifecycle import (
     CommandError,
     complete_tool_execution_command,
@@ -24,10 +25,17 @@ from onetruth.application.services.execution_evidence import (
     prepare_execution_trace_artifact,
     prepare_pinned_execution_semantics_artifacts,
     prepare_runtime_json_evidence_artifact,
+    prepare_runtime_turn_evidence_artifact,
     resolve_execution_artifact_root,
     stable_execution_id,
 )
-from onetruth.application.services.schedule_control import build_weekly_schedule_control_bundle
+from onetruth.application.services.schedule_control import (
+    PartialWeeklyScheduleState,
+    build_stage04_deterministic_outputs,
+    build_weekly_schedule_control_bundle,
+    execute_next_weekly_allocation_iteration,
+    expand_route_slot_requirements,
+)
 from onetruth.application.services.schedule_control.stage04_input_registry import (
     resolve_weekly_stage04_input_artifacts,
 )
@@ -274,7 +282,9 @@ def run_weekly_stage04_openai_agent(
     tool_specs = _stage04_tool_specs(stage_spec)
     tooling = _Stage04DeterministicTooling(
         connection=connection,
+        workflow_run=workflow_run,
         workflow_run_id=str(human_task["workflow_run_id"]),
+        bundle=bundle,
         stage04_inputs=stage04_inputs,
         context_pack=context_pack,
         idempotency_prefix=f"{base_idempotency_key}:deterministic",
@@ -302,49 +312,14 @@ def run_weekly_stage04_openai_agent(
         storage_root=artifact_root,
     )[0]
 
-    max_turns = _max_turns_from_stage_spec(stage_spec)
+    stop_policy = _stage04_stop_policy_from_stage_spec(stage_spec)
+    runtime_evidence_artifacts: list[dict[str, Any]] = []
+    runtime_turn_evidence: list[dict[str, Any]] = []
+    agent_result: Any | None = None
+    stage04_build_result: dict[str, Any] | None = None
 
-    try:
-        selected_runner = runner or build_weekly_stage04_openai_agent_runner_from_env()
-        agent_result = selected_runner.run_function_calling_loop(
-            initial_input=_initial_model_input(context_pack=context_pack, stage_spec=stage_spec),
-            tools=tool_specs,
-            execute_function=tooling.execute,
-            max_turns=max_turns,
-        )
-        stage04_build_result = tooling.materialize_outputs()
-        tool_request_payload = {
-            "schema_version": "1.0",
-            "kind": "runtime_tool_requests",
-            "execution_session_id": execution_session_id,
-            "request_turns": [
-                {
-                    "turn_index": turn.turn_index,
-                    "request_payload": turn.request_payload,
-                    "request_id": turn.request_id,
-                    "response_id": turn.response_id,
-                    "model": turn.model,
-                    "usage": turn.usage,
-                }
-                for turn in agent_result.turns
-            ],
-        }
-        tool_result_payload = {
-            "schema_version": "1.0",
-            "kind": "runtime_tool_results",
-            "execution_session_id": execution_session_id,
-            "turns": [turn.as_dict() for turn in agent_result.turns],
-            "final_output_text": agent_result.final_output_text,
-            "total_usage": agent_result.total_usage,
-            "stage04_build_result": {
-                "bundle_id": stage04_build_result["bundle_id"],
-                "candidate_count": stage04_build_result["candidate_count"],
-                "selected_candidate_count": stage04_build_result["selected_candidate_count"],
-                "selected_candidates": stage04_build_result["selected_candidates"],
-                "artifacts": stage04_build_result["artifacts"],
-            },
-        }
-        runtime_evidence_artifacts = persist_prepared_execution_evidence_artifacts(
+    def _persist_turn_evidence(turn: Any) -> None:
+        request_artifact, result_artifact = persist_prepared_execution_evidence_artifacts(
             connection=connection,
             workflow_run_id=str(human_task["workflow_run_id"]),
             task_run_id=str(human_task["task_run_id"]),
@@ -352,50 +327,123 @@ def run_weekly_stage04_openai_agent(
             actor_type=actor_type,
             idempotency_prefix=f"{base_idempotency_key}:runtime-evidence",
             artifacts=[
-                prepare_runtime_json_evidence_artifact(
+                prepare_runtime_turn_evidence_artifact(
                     artifact_kind=RUNTIME_TOOL_REQUEST_ARTIFACT_KIND,
-                    file_name=f"runtime-tool-request-{execution_session_id}.json",
                     execution_session_id=execution_session_id,
+                    turn_index=int(turn.turn_index),
+                    payload_json=_build_turn_request_payload(
+                        execution_session_id=execution_session_id,
+                        turn=turn,
+                    ),
+                    idempotency_suffix_prefix="tool-request",
+                    relation_kind="stage04_tool_request_turn",
+                    file_stem="runtime-tool-request",
                     tool_execution_id=tool_execution_id,
                     policy_decision_id=policy_decision_id,
-                    relation_kind="stage04_tool_request",
-                    payload_json=tool_request_payload,
-                    idempotency_suffix="tool-request",
+                    extra_metadata={
+                        "progress_made": bool(turn.progress_made),
+                        "no_progress_streak": int(turn.no_progress_streak),
+                    },
                 ),
-                prepare_runtime_json_evidence_artifact(
+                prepare_runtime_turn_evidence_artifact(
                     artifact_kind=RUNTIME_TOOL_RESULT_ARTIFACT_KIND,
-                    file_name=f"runtime-tool-result-{execution_session_id}.json",
                     execution_session_id=execution_session_id,
+                    turn_index=int(turn.turn_index),
+                    payload_json=_build_turn_result_payload(
+                        execution_session_id=execution_session_id,
+                        turn=turn,
+                        tooling=tooling,
+                    ),
+                    idempotency_suffix_prefix="tool-result",
+                    relation_kind="stage04_tool_result_turn",
+                    file_stem="runtime-tool-result",
                     tool_execution_id=tool_execution_id,
                     policy_decision_id=policy_decision_id,
-                    relation_kind="stage04_tool_result",
-                    payload_json=tool_result_payload,
-                    idempotency_suffix="tool-result",
-                ),
-                prepare_execution_trace_artifact(
-                    execution_session_id=execution_session_id,
-                    tool_execution_id=tool_execution_id,
-                    policy_decision_id=policy_decision_id,
-                    artifact_kind=EXECUTION_TRACE_ARTIFACT_KIND,
-                    file_name=f"execution-trace-stage04-{execution_session_id}.json",
-                    trace_payload={
-                        "context_pack_artifact_version_id": str(context_pack_artifact["artifact_version_id"]),
-                        "agent_result": agent_result.as_dict(),
-                        "stage04_build_result": {
-                            "bundle_id": stage04_build_result["bundle_id"],
-                            "candidate_count": stage04_build_result["candidate_count"],
-                            "selected_candidate_count": stage04_build_result["selected_candidate_count"],
-                            "artifact_ids": {
-                                key: str(value.get("artifact_version_id") or "")
-                                for key, value in stage04_build_result["artifacts"].items()
-                            },
-                        },
+                    extra_metadata={
+                        "progress_made": bool(turn.progress_made),
+                        "no_progress_streak": int(turn.no_progress_streak),
+                        "planner_complete": bool(tooling.planner_complete()),
                     },
                 ),
             ],
             storage_root=artifact_root,
         )
+        runtime_evidence_artifacts.extend([request_artifact, result_artifact])
+        runtime_turn_evidence.append(
+            {
+                "turn_index": int(turn.turn_index),
+                "progress_made": bool(turn.progress_made),
+                "no_progress_streak": int(turn.no_progress_streak),
+                "request_artifact_version_id": str(request_artifact["artifact_version_id"]),
+                "result_artifact_version_id": str(result_artifact["artifact_version_id"]),
+            }
+        )
+
+    try:
+        selected_runner = runner or build_weekly_stage04_openai_agent_runner_from_env()
+        agent_result = selected_runner.run_function_calling_loop(
+            initial_input=_initial_model_input(context_pack=context_pack, stage_spec=stage_spec),
+            tools=tool_specs,
+            execute_function=tooling.execute,
+            max_turns=int(stop_policy["max_tool_calls"]),
+            no_progress_limit=int(stop_policy["no_progress_ticks"]),
+            on_turn_complete=_persist_turn_evidence,
+        )
+        stage04_build_result = tooling.finalized_build_result()
+        if stage04_build_result is None:
+            raise CommandError(
+                code="stage04_finalize_required",
+                message="weekly Stage04 run must explicitly call finalize_weekly_stage04_draft_outputs before completion",
+                details={
+                    "execution_session_id": execution_session_id,
+                    "remaining_route_slots": tooling.remaining_route_slot_ids(),
+                    "planner_complete": tooling.planner_complete(),
+                },
+            )
+
+        trace_artifact = _persist_stage04_execution_trace(
+            connection=connection,
+            workflow_run_id=str(human_task["workflow_run_id"]),
+            task_run_id=str(human_task["task_run_id"]),
+            actor_id=actor_id,
+            actor_type=actor_type,
+            idempotency_prefix=f"{base_idempotency_key}:runtime-evidence",
+            storage_root=artifact_root,
+            execution_session_id=execution_session_id,
+            tool_execution_id=tool_execution_id,
+            policy_decision_id=policy_decision_id,
+            context_pack_artifact=context_pack_artifact,
+            runtime_turn_evidence=runtime_turn_evidence,
+            planner_state=tooling.planner_state_snapshot(),
+            agent_result=agent_result.as_dict(),
+            stage04_build_result=stage04_build_result,
+            execution_outcome="succeeded",
+        )
+        runtime_evidence_artifacts.append(trace_artifact)
     except Exception as exc:
+        try:
+            trace_artifact = _persist_stage04_execution_trace(
+                connection=connection,
+                workflow_run_id=str(human_task["workflow_run_id"]),
+                task_run_id=str(human_task["task_run_id"]),
+                actor_id=actor_id,
+                actor_type=actor_type,
+                idempotency_prefix=f"{base_idempotency_key}:runtime-evidence",
+                storage_root=artifact_root,
+                execution_session_id=execution_session_id,
+                tool_execution_id=tool_execution_id,
+                policy_decision_id=policy_decision_id,
+                context_pack_artifact=context_pack_artifact,
+                runtime_turn_evidence=runtime_turn_evidence,
+                planner_state=tooling.planner_state_snapshot(),
+                agent_result=agent_result.as_dict() if agent_result is not None else None,
+                stage04_build_result=stage04_build_result,
+                execution_outcome="failed",
+                error_code=str(getattr(exc, "code", exc.__class__.__name__)),
+            )
+            runtime_evidence_artifacts.append(trace_artifact)
+        except Exception:
+            pass
         _record_tool_and_session_failure(
             connection=connection,
             tool_execution_id=tool_execution_id,
@@ -411,6 +459,7 @@ def run_weekly_stage04_openai_agent(
     runtime_evidence_ids.extend(
         str(item["artifact_version_id"]) for item in runtime_evidence_artifacts
     )
+    assert stage04_build_result is not None
     stage04_output_artifact_ids = [
         str(artifact.get("artifact_version_id") or "")
         for artifact in stage04_build_result["artifacts"].values()
@@ -445,6 +494,7 @@ def run_weekly_stage04_openai_agent(
         "execution_semantics_evidence": execution_semantics_evidence,
         "context_pack_artifact": context_pack_artifact,
         "runtime_evidence_artifacts": runtime_evidence_artifacts,
+        "runtime_turn_evidence": runtime_turn_evidence,
         "agent_result": agent_result.as_dict(),
         "stage04_build_result": stage04_build_result,
     }
@@ -485,7 +535,7 @@ def _stage04_tool_specs(stage_spec: dict[str, Any]) -> list[ResponsesFunctionToo
         (
             "get_stage04_context",
             "artifact.read",
-            "Return compiled Stage04 context, bundle summary, and deterministic guardrails.",
+            "Return compiled Stage04 context, planner progress, and deterministic guardrails.",
             {
                 "type": "object",
                 "additionalProperties": False,
@@ -494,9 +544,20 @@ def _stage04_tool_specs(stage_spec: dict[str, Any]) -> list[ResponsesFunctionToo
             },
         ),
         (
-            "materialize_weekly_stage04_draft_outputs",
+            "preview_stage04_next_iteration",
             "spreadsheet.transform",
-            "Execute deterministic Stage04 weekly build and materialize draft output artifacts.",
+            "Preview the next deterministic Stage04 allocation iteration without mutating planner state.",
+            {
+                "type": "object",
+                "additionalProperties": False,
+                "properties": {},
+                "required": [],
+            },
+        ),
+        (
+            "apply_stage04_next_iteration",
+            "spreadsheet.transform",
+            "Apply exactly one deterministic Stage04 allocation iteration, including bounded local repair when applicable.",
             {
                 "type": "object",
                 "additionalProperties": False,
@@ -507,7 +568,7 @@ def _stage04_tool_specs(stage_spec: dict[str, Any]) -> list[ResponsesFunctionToo
         (
             "get_stage04_validation_summary",
             "validation",
-            "Return deterministic validation summary and selected candidate highlights.",
+            "Return the current deterministic Stage04 validation snapshot and finalize readiness.",
             {
                 "type": "object",
                 "additionalProperties": False,
@@ -516,9 +577,25 @@ def _stage04_tool_specs(stage_spec: dict[str, Any]) -> list[ResponsesFunctionToo
             },
         ),
         (
-            "render_stage04_ops_packet",
+            "get_stage04_iteration_analysis",
             "projection.render",
-            "Return a deterministic ops packet summary for Stage04 draft review.",
+            "Return deterministic iteration-level route allocation, repair, and tradeoff analysis.",
+            {
+                "type": "object",
+                "additionalProperties": False,
+                "properties": {
+                    "iteration_index": {
+                        "type": "integer",
+                        "minimum": 1,
+                    }
+                },
+                "required": [],
+            },
+        ),
+        (
+            "finalize_weekly_stage04_draft_outputs",
+            "spreadsheet.transform",
+            "Persist Stage04 draft artifacts from the current deterministic planner state after all iterations are complete.",
             {
                 "type": "object",
                 "additionalProperties": False,
@@ -538,9 +615,11 @@ def _stage04_tool_specs(stage_spec: dict[str, Any]) -> list[ResponsesFunctionToo
     ]
     required_names = {
         "get_stage04_context",
-        "materialize_weekly_stage04_draft_outputs",
+        "preview_stage04_next_iteration",
+        "apply_stage04_next_iteration",
         "get_stage04_validation_summary",
-        "render_stage04_ops_packet",
+        "get_stage04_iteration_analysis",
+        "finalize_weekly_stage04_draft_outputs",
     }
     present_names = {spec.name for spec in specs}
     if not required_names.issubset(present_names):
@@ -581,17 +660,43 @@ def _allowed_tool_classes(stage_spec: dict[str, Any]) -> set[str]:
     return {str(item) for item in allowed if str(item).strip()}
 
 
-def _max_turns_from_stage_spec(stage_spec: dict[str, Any]) -> int:
+def _stage04_stop_policy_from_stage_spec(stage_spec: dict[str, Any]) -> dict[str, int | str]:
+    runtime_bindings = stage_spec.get("runtime_bindings")
+    execution_session = (
+        runtime_bindings.get("execution_session")
+        if isinstance(runtime_bindings, dict)
+        else None
+    )
+    if isinstance(execution_session, dict):
+        max_tool_calls = execution_session.get("max_tool_calls")
+        no_progress_ticks = execution_session.get("no_progress_ticks")
+        on_exhaustion = execution_session.get("on_exhaustion")
+        if (
+            isinstance(max_tool_calls, int)
+            and max_tool_calls > 0
+            and isinstance(no_progress_ticks, int)
+            and no_progress_ticks >= 0
+            and isinstance(on_exhaustion, str)
+            and on_exhaustion.strip()
+        ):
+            return {
+                "max_tool_calls": max_tool_calls,
+                "no_progress_ticks": no_progress_ticks,
+                "on_exhaustion": on_exhaustion,
+            }
+
     method_pin = stage_spec.get("method_package_pin")
-    if not isinstance(method_pin, dict):
-        return 4
-    stop_policy = method_pin.get("stop_policy")
+    stop_policy = method_pin.get("stop_policy") if isinstance(method_pin, dict) else None
     if not isinstance(stop_policy, dict):
-        return 4
+        return {"max_tool_calls": 4, "no_progress_ticks": 2, "on_exhaustion": "escalate"}
     max_tool_calls = stop_policy.get("max_tool_calls")
-    if not isinstance(max_tool_calls, int) or max_tool_calls <= 0:
-        return 4
-    return max_tool_calls
+    no_progress_ticks = stop_policy.get("no_progress_ticks")
+    on_exhaustion = stop_policy.get("on_exhaustion")
+    return {
+        "max_tool_calls": max_tool_calls if isinstance(max_tool_calls, int) and max_tool_calls > 0 else 4,
+        "no_progress_ticks": no_progress_ticks if isinstance(no_progress_ticks, int) and no_progress_ticks >= 0 else 2,
+        "on_exhaustion": str(on_exhaustion or "escalate"),
+    }
 
 
 def _initial_model_input(
@@ -599,15 +704,21 @@ def _initial_model_input(
     context_pack: dict[str, Any],
     stage_spec: dict[str, Any],
 ) -> list[dict[str, Any]]:
+    stop_policy = _stage04_stop_policy_from_stage_spec(stage_spec)
     system_prompt = (
         "You are a bounded Stage04 weekly scheduling agent for weekly_schedule_planning.v1. "
         "You may only use provided deterministic function tools. "
         "Never publish schedules, never perform Stage05/Stage06 actions, and never invent data. "
+        "Preview or apply deterministic iterations, review validation/iteration analysis, "
+        "and explicitly call finalize_weekly_stage04_draft_outputs before returning a final answer. "
+        "A non-progress streak of "
+        f"{int(stop_policy['no_progress_ticks'])} "
+        "tool turns exhausts the run. "
         "When finished, return a concise JSON object with keys: "
         "summary, selected_candidate_count, recommended_action, warnings."
     )
     user_payload = {
-        "task": "Produce Stage04 draft outputs and a review-ready summary using deterministic tools.",
+        "task": "Orchestrate deterministic Stage04 iterations, then explicitly finalize draft outputs and return a review-ready summary.",
         "stage_control_digest": stage_spec.get("stage_control_digest"),
         "context_pack": context_pack,
     }
@@ -628,91 +739,457 @@ class _Stage04DeterministicTooling:
         self,
         *,
         connection: sqlite3.Connection,
+        workflow_run: dict[str, Any],
         workflow_run_id: str,
+        bundle: Any,
         stage04_inputs: dict[str, dict[str, Any] | None],
         context_pack: dict[str, Any],
         idempotency_prefix: str,
     ) -> None:
         self.connection = connection
+        self.workflow_run = workflow_run
         self.workflow_run_id = workflow_run_id
+        self.bundle = bundle
         self.stage04_inputs = stage04_inputs
         self.context_pack = context_pack
         self.idempotency_prefix = idempotency_prefix
-        self._cached_build_result: dict[str, Any] | None = None
+        self.schedule_state = PartialWeeklyScheduleState.from_route_slots(
+            expand_route_slot_requirements(bundle.route_slots)
+        )
+        self.candidate_matrix: list[Any] = []
+        self._applied_iterations: list[dict[str, Any]] = []
+        self._cached_finalized_build_result: dict[str, Any] | None = None
 
     def execute(self, function_name: str, arguments: dict[str, Any]) -> dict[str, Any]:
-        _ = arguments
         if function_name == "get_stage04_context":
             return {
+                "progress_made": False,
+                "planner_complete": self.planner_complete(),
                 "bundle_summary": self.context_pack["bundle_summary"],
                 "input_artifacts": self.context_pack["input_artifacts"],
                 "deterministic_guardrails": self.context_pack["deterministic_guardrails"],
+                "planner_state": self.planner_state_snapshot(),
             }
-        if function_name == "materialize_weekly_stage04_draft_outputs":
-            build_result = self.materialize_outputs()
+        if function_name == "preview_stage04_next_iteration":
+            preview = self.preview_next_iteration()
             return {
-                "bundle_id": build_result["bundle_id"],
-                "candidate_count": build_result["candidate_count"],
-                "selected_candidate_count": build_result["selected_candidate_count"],
-                "selected_candidates": build_result["selected_candidates"],
-                "artifacts": {
-                    key: {
-                        "artifact_version_id": value["artifact_version_id"],
-                        "artifact_kind": value["artifact_kind"],
-                    }
-                    for key, value in build_result["artifacts"].items()
-                },
+                "progress_made": False,
+                "planner_complete": self.planner_complete(),
+                "planner_state": self.planner_state_snapshot(),
+                "iteration_preview": preview,
             }
+        if function_name == "apply_stage04_next_iteration":
+            return self.apply_next_iteration()
         if function_name == "get_stage04_validation_summary":
-            build_result = self.materialize_outputs()
-            validation = build_result["artifact_payloads"]["planning.validation_summary.doc"]
             return {
-                "bundle_id": build_result["bundle_id"],
-                "validation_summary": validation,
-                "selected_candidate_count": build_result["selected_candidate_count"],
+                "progress_made": False,
+                "planner_complete": self.planner_complete(),
+                "planner_state": self.planner_state_snapshot(),
+                "validation_summary": self.validation_snapshot(),
             }
-        if function_name == "render_stage04_ops_packet":
-            build_result = self.materialize_outputs()
-            validation = build_result["artifact_payloads"]["planning.validation_summary.doc"]
-            draft_doc = build_result["artifact_payloads"]["planning.draft_weekly_schedule.doc"]
+        if function_name == "get_stage04_iteration_analysis":
+            requested_iteration = arguments.get("iteration_index")
             return {
-                "bundle_id": build_result["bundle_id"],
-                "ops_packet": {
-                    "summary": draft_doc.get("summary"),
-                    "validation_summary": validation.get("summary"),
-                    "selected_candidates": build_result["selected_candidates"],
-                },
+                "progress_made": False,
+                "planner_complete": self.planner_complete(),
+                "planner_state": self.planner_state_snapshot(),
+                "iteration_analysis": self.iteration_analysis(requested_iteration),
             }
+        if function_name == "finalize_weekly_stage04_draft_outputs":
+            return self.finalize_outputs()
         raise CommandError(
             code="unsupported_weekly_stage04_tool",
             message="tool is not supported in weekly Stage04 deterministic toolset",
             details={"function_name": function_name},
         )
 
-    def materialize_outputs(self) -> dict[str, Any]:
-        if self._cached_build_result is not None:
-            return self._cached_build_result
-        command_payload: dict[str, Any] = {
-            "workflow_run_id": self.workflow_run_id,
-            "route_slot_requirements_artifact_version_id": str(
-                self.stage04_inputs["route_slot_requirements"]["artifact_version_id"]  # type: ignore[index]
-            ),
-            "driver_capabilities_artifact_version_id": str(
-                self.stage04_inputs["driver_capabilities"]["artifact_version_id"]  # type: ignore[index]
-            ),
-            "idempotency_key": f"{self.idempotency_prefix}:build-weekly",
+    def planner_complete(self) -> bool:
+        return not self.schedule_state.remaining_route_slots()
+
+    def remaining_route_slot_ids(self) -> list[str]:
+        return [item.route_slot_id for item in self.schedule_state.remaining_route_slots()]
+
+    def planner_state_snapshot(self) -> dict[str, Any]:
+        coverage_summary = self._coverage_summary()
+        return {
+            "bundle_id": getattr(self.bundle, "bundle_id"),
+            "iteration_count": len(self.schedule_state.iteration_summaries),
+            "candidate_evaluation_count": len(self.candidate_matrix),
+            "planner_complete": self.planner_complete(),
+            "finalized": self._cached_finalized_build_result is not None,
+            "assigned_route_slots": int(coverage_summary.get("assigned_route_slots") or 0),
+            "uncovered_route_slots": int(coverage_summary.get("uncovered_route_slots") or 0),
+            "pending_route_slots": int(coverage_summary.get("pending_route_slots") or 0),
+            "remaining_route_slot_ids": coverage_summary.get("pending_route_slot_ids") or [],
         }
-        optional_pairs = [
-            ("approved_availability", "approved_availability_artifact_version_id"),
-            ("actual_hours", "actual_hours_artifact_version_id"),
-            ("route_horizon", "route_horizon_artifact_version_id"),
+
+    def preview_next_iteration(self) -> dict[str, Any]:
+        if self.planner_complete():
+            return {
+                "planner_complete": True,
+                "message": "No remaining route slots; finalize is available.",
+            }
+        preview_state = deepcopy(self.schedule_state)
+        preview_candidates = list(self.candidate_matrix)
+        preview = execute_next_weekly_allocation_iteration(
+            bundle=self.bundle,
+            schedule_state=preview_state,
+            candidate_matrix=preview_candidates,
+        )
+        if preview is None:
+            return {
+                "planner_complete": True,
+                "message": "No remaining route slots; finalize is available.",
+            }
+        return self._iteration_payload(preview, preview_only=True)
+
+    def apply_next_iteration(self) -> dict[str, Any]:
+        result = execute_next_weekly_allocation_iteration(
+            bundle=self.bundle,
+            schedule_state=self.schedule_state,
+            candidate_matrix=self.candidate_matrix,
+        )
+        if result is None:
+            return {
+                "progress_made": False,
+                "planner_complete": True,
+                "planner_state": self.planner_state_snapshot(),
+                "message": "No remaining route slots; finalize is available.",
+            }
+        iteration_payload = self._iteration_payload(result, preview_only=False)
+        self._applied_iterations.append(iteration_payload)
+        return {
+            "progress_made": True,
+            "planner_complete": self.planner_complete(),
+            "planner_state": self.planner_state_snapshot(),
+            "iteration_result": iteration_payload,
+        }
+
+    def validation_snapshot(self) -> dict[str, Any]:
+        build_result = self._render_current_outputs()
+        validation = dict(build_result["artifact_payloads"]["planning.validation_summary.doc"])
+        summary = (
+            dict(validation.get("summary"))
+            if isinstance(validation.get("summary"), dict)
+            else {}
+        )
+        if not self.planner_complete():
+            summary["hard_rule_result"] = "in_progress"
+            summary["recommended_action"] = "continue_stage04_iteration"
+            warnings = list(summary.get("warnings") or [])
+            warnings.append(
+                f"{len(self.remaining_route_slot_ids())} route slots remain unresolved in the deterministic planner."
+            )
+            summary["warnings"] = warnings
+        summary["planner_complete"] = self.planner_complete()
+        summary["finalize_available"] = self.planner_complete()
+        validation["summary"] = summary
+        validation["planner_state"] = self.planner_state_snapshot()
+        validation["latest_iteration_index"] = len(self.schedule_state.iteration_summaries)
+        return validation
+
+    def iteration_analysis(self, requested_iteration: Any) -> dict[str, Any]:
+        if not self._applied_iterations:
+            return {
+                "available_iteration_indices": [],
+                "message": "No Stage04 iterations have been applied yet.",
+            }
+        if requested_iteration is None:
+            return self._applied_iterations[-1]
+        try:
+            iteration_index = int(requested_iteration)
+        except (TypeError, ValueError) as exc:
+            raise CommandError(
+                code="invalid_stage04_iteration_request",
+                message="iteration_index must be an integer",
+                details={"iteration_index": requested_iteration},
+            ) from exc
+        for payload in self._applied_iterations:
+            if int(payload["iteration_index"]) == iteration_index:
+                return payload
+        raise CommandError(
+            code="stage04_iteration_not_found",
+            message="requested Stage04 iteration analysis is not available",
+            details={
+                "iteration_index": iteration_index,
+                "available_iteration_indices": [
+                    int(item["iteration_index"]) for item in self._applied_iterations
+                ],
+            },
+        )
+
+    def finalize_outputs(self) -> dict[str, Any]:
+        if self._cached_finalized_build_result is not None:
+            return {
+                "progress_made": False,
+                "planner_complete": True,
+                "planner_state": self.planner_state_snapshot(),
+                "stage04_build_result": self._build_result_summary(self._cached_finalized_build_result),
+            }
+        if not self.planner_complete():
+            return {
+                "progress_made": False,
+                "planner_complete": False,
+                "planner_state": self.planner_state_snapshot(),
+                "finalize_blocked_reason": "planner_incomplete",
+                "remaining_route_slot_ids": self.remaining_route_slot_ids(),
+            }
+        build_result = self._render_current_outputs()
+        self._cached_finalized_build_result = self._persist_outputs(build_result)
+        return {
+            "progress_made": True,
+            "planner_complete": True,
+            "planner_state": self.planner_state_snapshot(),
+            "stage04_build_result": self._build_result_summary(self._cached_finalized_build_result),
+        }
+
+    def finalized_build_result(self) -> dict[str, Any] | None:
+        return self._cached_finalized_build_result
+
+    def _render_current_outputs(self) -> dict[str, Any]:
+        rendered = build_stage04_deterministic_outputs(
+            bundle=self.bundle,
+            candidate_matrix=list(self.candidate_matrix),
+            selected_candidates=[item.to_row() for item in self.schedule_state.final_decisions()],
+            iteration_summaries=list(self.schedule_state.iteration_summaries),
+            repair_moves=list(self.schedule_state.repair_moves),
+            coverage_summary=self._coverage_summary(),
+        )
+        return {
+            "bundle_id": rendered.bundle.bundle_id,
+            "candidate_count": len(rendered.candidate_matrix),
+            "selected_candidate_count": len(rendered.selected_candidates),
+            "selected_candidates": rendered.selected_candidates,
+            "iteration_summaries": rendered.iteration_summaries,
+            "repair_moves": rendered.repair_moves,
+            "coverage_summary": rendered.coverage_summary,
+            "artifact_payloads": {
+                "planning.input_bundle.doc": rendered.input_bundle_payload,
+                "planning.candidate_schedule_delta.workbook": rendered.candidate_delta_payload,
+                "planning.validation_summary.doc": rendered.validation_summary_payload,
+                "planning.draft_weekly_schedule.workbook": rendered.draft_workbook_payload,
+                "planning.draft_weekly_schedule.doc": rendered.draft_doc_payload,
+            },
+        }
+
+    def _persist_outputs(self, build_result: dict[str, Any]) -> dict[str, Any]:
+        artifacts = persist_weekly_stage04_output_payloads(
+            self.connection,
+            workflow_run=self.workflow_run,
+            bundle_id=str(build_result["bundle_id"]),
+            output_payloads=dict(build_result["artifact_payloads"]),
+            source_input_ids=self._source_input_artifact_ids(),
+        )
+        return {
+            **build_result,
+            "artifacts": {
+                "input_bundle": artifacts["planning.input_bundle.doc"],
+                "candidate_delta": artifacts["planning.candidate_schedule_delta.workbook"],
+                "validation_summary": artifacts["planning.validation_summary.doc"],
+                "draft_workbook": artifacts["planning.draft_weekly_schedule.workbook"],
+                "draft_doc": artifacts["planning.draft_weekly_schedule.doc"],
+            },
+        }
+
+    def _source_input_artifact_ids(self) -> list[str]:
+        artifact_ids: list[str] = []
+        for artifact in self.stage04_inputs.values():
+            if not isinstance(artifact, dict):
+                continue
+            artifact_id = str(artifact.get("artifact_version_id") or "")
+            if artifact_id:
+                artifact_ids.append(artifact_id)
+        return artifact_ids
+
+    def _coverage_summary(self) -> dict[str, Any]:
+        pending_route_slot_ids = self.remaining_route_slot_ids()
+        uncovered_route_slot_ids = [
+            *self.schedule_state.uncovered_route_slot_ids(),
+            *pending_route_slot_ids,
         ]
-        for input_key, payload_key in optional_pairs:
-            artifact = self.stage04_inputs.get(input_key)
-            if isinstance(artifact, dict):
-                command_payload[payload_key] = str(artifact["artifact_version_id"])
-        self._cached_build_result = build_weekly_schedule_control_command(self.connection, command_payload)
-        return self._cached_build_result
+        batch_sizes = [item.batch_size for item in self.schedule_state.iteration_summaries]
+        repaired_route_slot_ids = {
+            route_slot_id
+            for move in self.schedule_state.repair_moves
+            for route_slot_id in (move.filled_route_slot_id, move.reassigned_route_slot_id)
+        }
+        return {
+            "total_route_slots": len(self.schedule_state.ordered_route_slot_ids),
+            "decided_route_slots": len(self.schedule_state.final_decisions()),
+            "pending_route_slots": len(pending_route_slot_ids),
+            "pending_route_slot_ids": pending_route_slot_ids,
+            "assigned_route_slots": self.schedule_state.assigned_count(),
+            "uncovered_route_slots": len(uncovered_route_slot_ids),
+            "uncovered_route_slot_ids": uncovered_route_slot_ids,
+            "iteration_count": len(self.schedule_state.iteration_summaries),
+            "batch_size_min": min(batch_sizes) if batch_sizes else 0,
+            "batch_size_max": max(batch_sizes) if batch_sizes else 0,
+            "repair_move_count": len(self.schedule_state.repair_moves),
+            "repaired_route_slot_count": len(repaired_route_slot_ids),
+            "local_repair_posture": "bounded_local_repair",
+        }
+
+    def _iteration_payload(self, result: Any, *, preview_only: bool) -> dict[str, Any]:
+        route_allocations = [
+            item.to_row() for item in sorted(result.applied_decisions, key=lambda row: row.route_slot_id)
+        ]
+        tradeoffs = [
+            f"{row['route_slot_id']} -> {row['candidate_driver_id'] or 'unassigned'} ({row['rationale_code']})"
+            for row in route_allocations
+            if row["assignment_action"] != "unassigned"
+        ]
+        tradeoffs.extend(
+            f"{move.filled_route_slot_id} repaired via {move.replacement_driver_id} ({move.repair_reason})"
+            for move in result.repair_moves
+        )
+        return {
+            "iteration_index": int(result.iteration_index),
+            "batch_id": str(result.batch_id),
+            "pressure_group_id": str(result.pressure_group_id),
+            "pressure_service_date": str(result.pressure_service_date),
+            "pressure_station_code": str(result.pressure_station_code),
+            "pressure_service_area": str(result.pressure_service_area),
+            "preview_only": preview_only,
+            "candidate_evaluation_count": len(result.candidate_evaluations),
+            "route_allocations": route_allocations,
+            "assigned_route_slot_ids": list(result.summary.assigned_route_slot_ids),
+            "uncovered_route_slot_ids": list(result.summary.uncovered_route_slot_ids),
+            "repair_moves": [item.to_payload() for item in result.repair_moves],
+            "coverage_summary_after_iteration": dict(result.coverage_summary),
+            "tradeoffs": tradeoffs,
+        }
+
+    def _build_result_summary(self, build_result: dict[str, Any]) -> dict[str, Any]:
+        return {
+            "bundle_id": build_result["bundle_id"],
+            "candidate_count": build_result["candidate_count"],
+            "selected_candidate_count": build_result["selected_candidate_count"],
+            "coverage_summary": build_result["coverage_summary"],
+            "selected_candidates": build_result["selected_candidates"],
+            "artifacts": {
+                key: {
+                    "artifact_version_id": value["artifact_version_id"],
+                    "artifact_kind": value["artifact_kind"],
+                }
+                for key, value in build_result["artifacts"].items()
+            },
+        }
+
+
+def _build_turn_request_payload(
+    *,
+    execution_session_id: str,
+    turn: Any,
+) -> dict[str, Any]:
+    return {
+        "schema_version": "1.0",
+        "kind": "runtime_tool_request_turn",
+        "execution_session_id": execution_session_id,
+        "turn_index": int(turn.turn_index),
+        "request_payload": turn.request_payload,
+        "request_id": turn.request_id,
+        "response_id": turn.response_id,
+        "model": turn.model,
+        "usage": turn.usage,
+        "requested_function_names": [item.name for item in turn.function_calls],
+    }
+
+
+def _build_turn_result_payload(
+    *,
+    execution_session_id: str,
+    turn: Any,
+    tooling: _Stage04DeterministicTooling,
+) -> dict[str, Any]:
+    return {
+        "schema_version": "1.0",
+        "kind": "runtime_tool_result_turn",
+        "execution_session_id": execution_session_id,
+        "turn_index": int(turn.turn_index),
+        "progress_made": bool(turn.progress_made),
+        "no_progress_streak": int(turn.no_progress_streak),
+        "output_text": turn.output_text,
+        "planner_state": tooling.planner_state_snapshot(),
+        "function_calls": [
+            {
+                **item.as_dict(),
+                "output": _parse_runtime_output_json(item.output_json),
+            }
+            for item in turn.function_calls
+        ],
+    }
+
+
+def _persist_stage04_execution_trace(
+    *,
+    connection: sqlite3.Connection,
+    workflow_run_id: str,
+    task_run_id: str,
+    actor_id: str,
+    actor_type: str,
+    idempotency_prefix: str,
+    storage_root: Path,
+    execution_session_id: str,
+    tool_execution_id: str,
+    policy_decision_id: str,
+    context_pack_artifact: dict[str, Any],
+    runtime_turn_evidence: list[dict[str, Any]],
+    planner_state: dict[str, Any],
+    agent_result: dict[str, Any] | None,
+    stage04_build_result: dict[str, Any] | None,
+    execution_outcome: str,
+    error_code: str | None = None,
+) -> dict[str, Any]:
+    summarized_build_result = None
+    if isinstance(stage04_build_result, dict):
+        summarized_build_result = {
+            "bundle_id": stage04_build_result.get("bundle_id"),
+            "candidate_count": stage04_build_result.get("candidate_count"),
+            "selected_candidate_count": stage04_build_result.get("selected_candidate_count"),
+            "coverage_summary": stage04_build_result.get("coverage_summary"),
+            "artifact_ids": {
+                key: str(value.get("artifact_version_id") or "")
+                for key, value in dict(stage04_build_result.get("artifacts") or {}).items()
+                if isinstance(value, dict)
+            },
+        }
+
+    return persist_prepared_execution_evidence_artifacts(
+        connection=connection,
+        workflow_run_id=workflow_run_id,
+        task_run_id=task_run_id,
+        actor_id=actor_id,
+        actor_type=actor_type,
+        idempotency_prefix=idempotency_prefix,
+        artifacts=[
+            prepare_execution_trace_artifact(
+                execution_session_id=execution_session_id,
+                tool_execution_id=tool_execution_id,
+                policy_decision_id=policy_decision_id,
+                artifact_kind=EXECUTION_TRACE_ARTIFACT_KIND,
+                file_name=f"execution-trace-stage04-{execution_session_id}.json",
+                trace_payload={
+                    "execution_outcome": execution_outcome,
+                    "error_code": error_code,
+                    "context_pack_artifact_version_id": str(
+                        context_pack_artifact.get("artifact_version_id") or ""
+                    ),
+                    "runtime_turn_evidence": runtime_turn_evidence,
+                    "planner_state": planner_state,
+                    "agent_result": agent_result,
+                    "stage04_build_result": summarized_build_result,
+                },
+            )
+        ],
+        storage_root=storage_root,
+    )[0]
+
+
+def _parse_runtime_output_json(value: str) -> Any:
+    try:
+        return json.loads(value)
+    except (TypeError, ValueError, json.JSONDecodeError):
+        return value
 
 
 def _build_context_pack(
@@ -726,6 +1203,7 @@ def _build_context_pack(
 ) -> dict[str, Any]:
     execution_bindings = stage_spec.get("runtime_bindings")
     method_pin = stage_spec.get("method_package_pin")
+    stop_policy = _stage04_stop_policy_from_stage_spec(stage_spec)
     return {
         "schema_version": "1.0",
         "kind": "weekly_stage04_openai_context_pack",
@@ -747,6 +1225,7 @@ def _build_context_pack(
             "bundle_id": getattr(bundle, "bundle_id"),
             "planning_week_id": getattr(bundle, "planning_week_id"),
             "route_slot_count": len(getattr(bundle, "route_slots")),
+            "expanded_route_slot_count": len(expand_route_slot_requirements(getattr(bundle, "route_slots"))),
             "driver_count": len(getattr(bundle, "drivers")),
             "availability_driver_count": len(getattr(bundle, "availability_by_driver")),
             "actual_hours_driver_count": len(getattr(bundle, "actual_minutes_by_driver")),
@@ -769,11 +1248,15 @@ def _build_context_pack(
             "draft_only": True,
             "publish_blocked": True,
             "stage05_stage06_bypass_blocked": True,
+            "explicit_finalize_required": True,
+            "stop_policy": stop_policy,
             "allowed_functions": [
                 "get_stage04_context",
-                "materialize_weekly_stage04_draft_outputs",
+                "preview_stage04_next_iteration",
+                "apply_stage04_next_iteration",
                 "get_stage04_validation_summary",
-                "render_stage04_ops_packet",
+                "get_stage04_iteration_analysis",
+                "finalize_weekly_stage04_draft_outputs",
             ],
         },
     }

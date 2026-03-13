@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 from onetruth.integrations.openai import OpenAIResponsesFunctionCallingRunner
@@ -81,20 +82,25 @@ def _mock_stage04_runner() -> OpenAIResponsesFunctionCallingRunner:
                         },
                         {
                             "type": "function_call",
-                            "call_id": "call_build",
-                            "name": "materialize_weekly_stage04_draft_outputs",
+                            "call_id": "call_preview",
+                            "name": "preview_stage04_next_iteration",
                             "arguments": "{}",
                         },
                     ],
                 },
                 "req_slice_1",
             )
-        if calls["count"] == 2:
-            assert payload.get("previous_response_id") == "resp_slice_1"
+        assert payload.get("previous_response_id") == f"resp_slice_{calls['count'] - 1}"
+        outputs = [
+            json.loads(str(item.get("output") or "{}"))
+            for item in payload.get("input", [])
+            if isinstance(item, dict) and str(item.get("type") or "") == "function_call_output"
+        ]
+        if any(isinstance(item, dict) and item.get("stage04_build_result") for item in outputs):
             return (
                 200,
                 {
-                    "id": "resp_slice_2",
+                    "id": f"resp_slice_{calls['count']}",
                     "model": "gpt-4.1-mini",
                     "usage": {"input_tokens": 12, "output_tokens": 5},
                     "output_text": (
@@ -102,9 +108,60 @@ def _mock_stage04_runner() -> OpenAIResponsesFunctionCallingRunner:
                         '"recommended_action":"forward_to_stage05_manager_review","warnings":[]}'
                     ),
                 },
-                "req_slice_2",
+                f"req_slice_{calls['count']}",
             )
-        raise AssertionError("runner transport called more than expected")
+        if any(
+            isinstance(item, dict)
+            and item.get("planner_complete") is True
+            and item.get("iteration_result")
+            for item in outputs
+        ):
+            return (
+                200,
+                {
+                    "id": f"resp_slice_{calls['count']}",
+                    "model": "gpt-4.1-mini",
+                    "usage": {"input_tokens": 14, "output_tokens": 6},
+                    "output": [
+                        {
+                            "type": "function_call",
+                            "call_id": "call_validation",
+                            "name": "get_stage04_validation_summary",
+                            "arguments": "{}",
+                        },
+                        {
+                            "type": "function_call",
+                            "call_id": "call_iteration",
+                            "name": "get_stage04_iteration_analysis",
+                            "arguments": "{\"iteration_index\":1}",
+                        },
+                        {
+                            "type": "function_call",
+                            "call_id": "call_finalize",
+                            "name": "finalize_weekly_stage04_draft_outputs",
+                            "arguments": "{}",
+                        },
+                    ],
+                },
+                f"req_slice_{calls['count']}",
+            )
+        return (
+            200,
+            {
+                "id": f"resp_slice_{calls['count']}",
+                "model": "gpt-4.1-mini",
+                "usage": {"input_tokens": 16, "output_tokens": 7},
+                "output": [
+                    {
+                        "type": "function_call",
+                        "call_id": "call_apply",
+                        "name": "apply_stage04_next_iteration",
+                        "arguments": "{}",
+                    }
+                ],
+            },
+            f"req_slice_{calls['count']}",
+        )
 
     return OpenAIResponsesFunctionCallingRunner(
         api_key="sk-test",

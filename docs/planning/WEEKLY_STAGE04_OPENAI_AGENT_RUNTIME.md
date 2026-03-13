@@ -43,7 +43,10 @@ Behavior:
 - accepts zero/one/many `function_call` items per model turn,
 - executes deterministic tools,
 - appends matching `function_call_output` items using model-returned `call_id`,
-- continues until a turn returns no function calls or turn budget is exhausted.
+- persists per-turn request/result evidence as the loop advances,
+- enforces authored `no_progress_ticks` from compiled Stage04 control metadata,
+- requires an explicit deterministic finalize tool call before any Stage04 draft artifacts are materialized,
+- continues until a turn returns no function calls or the authored stop budget is exhausted.
 
 Budget source:
 - Stage04 method-package stop policy (`max_tool_calls`) from compiled control metadata.
@@ -51,11 +54,16 @@ Budget source:
 ## Deterministic tools exposed
 Only deterministic Stage04 tools are exposed:
 - `get_stage04_context`
-- `materialize_weekly_stage04_draft_outputs`
+- `preview_stage04_next_iteration`
+- `apply_stage04_next_iteration`
 - `get_stage04_validation_summary`
-- `render_stage04_ops_packet`
+- `get_stage04_iteration_analysis`
+- `finalize_weekly_stage04_draft_outputs`
 
-These tools map to deterministic schedule-control behavior and draft artifact materialization only.
+These tools map to deterministic schedule-control behavior only:
+- preview/apply execute bounded deterministic allocation rounds,
+- validation/iteration analysis are read-only review helpers,
+- finalize persists the existing draft-only Stage04 artifact keys from the already-executed deterministic state.
 
 No publish/pointer-promotion actions are exposed.
 
@@ -82,9 +90,9 @@ Shared helper posture:
 Evidence captures:
 - context pack payload,
 - per-turn request/response metadata,
-- function calls and `function_call_output` payloads,
+- function calls, parsed `function_call_output` payloads, and progress accounting,
 - response/request ids and usage,
-- execution trace summary.
+- execution trace summary including turn evidence refs and finalize state.
 
 ## Policy posture
 Policy-gated before model execution:
@@ -113,6 +121,8 @@ Pilot behavior:
 Inspection packets are canonical-reference-heavy and include:
 - workflow/task/execution/tool/policy/artifact IDs,
 - evidence coverage by artifact kind (`execution.*`, `runtime.*`, Stage04 output kinds),
+- iteration-level route allocation, repair, uncovered-route, and tradeoff analysis derived from canonical Stage04 artifacts,
+- runtime turn-by-turn function/progress summaries derived from canonical evidence artifacts,
 - timeline events of interest and derived inspection routes,
 - canonical CLI query commands for debugging.
 

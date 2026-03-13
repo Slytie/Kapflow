@@ -15,6 +15,13 @@ Record any decisions made since the last session so a fresh Codex run can rehydr
 - Shared-fixture decision: one deterministic realistic source-material fixture under `fixtures/logistics/weekly_stage04_realistic_source_material.yaml` now drives both the new hard-case pilot seed path and richer test coverage so the 40-driver day-resolution input shape stays reproducible.
 - Scope decision: the realistic slice still uses the same Stage04 deterministic build/runtime architecture, draft-only artifact path, and bounded Responses tool loop; no new workflow IDs, stage IDs, truth paths, or iterative planner behavior were introduced.
 
+## 2026-03-13 (TASK-0073 weekly Stage04 iterative agent loop and analysis)
+- Tool-boundary decision: weekly Stage04 now exposes iterative deterministic tools (`context`, `preview`, `apply`, `validation`, `iteration_analysis`, `finalize`) instead of a one-shot build tool, and the model remains an orchestration/search controller rather than a schedule allocator.
+- Finalization decision: Stage04 draft artifacts are materialized only through an explicit deterministic finalize tool call; the runtime no longer performs unconditional post-loop build/finalization after the model stops requesting tools.
+- Evidence decision: canonical runtime evidence now persists per turn/iteration via repeated `runtime.tool_request.json` and `runtime.tool_result.json` artifacts plus an execution trace that links turn evidence refs, progress state, and finalize outcome.
+- Stop-policy decision: authored Stage04 `no_progress_ticks` from compiled control metadata is now enforced at runtime, so repeated context/inspection-only turns fail closed with visible evidence instead of silently spinning.
+- Inspection-packet decision: realistic weekly pilot packets now surface iteration-level route allocations, uncovered-route carryover, repair moves, runtime turn summaries, and fallback tradeoff notes derived from canonical artifacts/evidence rather than only listing IDs.
+
 ## 2026-03-13 (TASK-0073 Stage06 compiled-control alignment and tool-class vocabulary cleanup)
 - Control-alignment decision: the bounded Stage06 sandbox now derives its pinned execution semantics from the authored `schedule_planning.v1` Stage06 execution profile plus a registry-backed runtime tool binding instead of a hardcoded `execution_spec_id`.
 - Vocabulary decision: authored `allowed_tool_classes` remain capability-level execution-profile vocabulary, while `tool_execution.tool_class` remains the concrete engine/runtime identifier for the bounded executor; these are related through explicit runtime tool bindings, not by reusing the same string set.

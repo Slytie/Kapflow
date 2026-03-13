@@ -9,6 +9,7 @@ import os
 from pathlib import Path
 import sqlite3
 from typing import Any, Iterable, Sequence
+from urllib.parse import urlparse
 
 import yaml
 
@@ -495,6 +496,7 @@ def build_weekly_stage04_inspection_packet(
         tasks=tasks,
         artifacts=artifacts,
     )
+    stage04_analysis = _stage04_analysis(artifacts=artifacts)
 
     return {
         "packet_version": 1,
@@ -518,6 +520,7 @@ def build_weekly_stage04_inspection_packet(
             "tool_executions": tool_executions,
             "policy_decisions": policy_decisions,
         },
+        "stage04_analysis": stage04_analysis,
         "timeline": {
             "event_count": len(timeline_events),
             "events_of_interest": timeline_of_interest,
@@ -1006,21 +1009,50 @@ def _mock_stage04_runner() -> OpenAIResponsesFunctionCallingRunner:
                         },
                         {
                             "type": "function_call",
-                            "call_id": "call_build",
-                            "name": "materialize_weekly_stage04_draft_outputs",
+                            "call_id": "call_preview",
+                            "name": "preview_stage04_next_iteration",
                             "arguments": "{}",
                         },
                     ],
                 },
                 "req_pilot_1",
             )
-        if calls["count"] == 2:
-            if payload.get("previous_response_id") != "resp_pilot_1":
-                raise AssertionError("expected previous_response_id from first pilot turn")
+        if payload.get("previous_response_id") != f"resp_pilot_{calls['count'] - 1}":
+            raise AssertionError("expected previous_response_id from prior pilot turn")
+        outputs = [
+            json.loads(str(item.get("output") or "{}"))
+            for item in payload.get("input", [])
+            if isinstance(item, dict) and str(item.get("type") or "") == "function_call_output"
+        ]
+        if any(isinstance(item, dict) and item.get("stage04_build_result") for item in outputs):
             return (
                 200,
                 {
-                    "id": "resp_pilot_2",
+                    "id": f"resp_pilot_{calls['count']}",
+                    "model": "gpt-4.1-mini",
+                    "usage": {"input_tokens": 13, "output_tokens": 8},
+                    "output_text": (
+                        '{"summary":"pilot run complete","selected_candidate_count":2,'
+                        '"recommended_action":"forward_to_stage05_manager_review","warnings":[]}'
+                    ),
+                },
+                f"req_pilot_{calls['count']}",
+            )
+        if any(
+            isinstance(item, dict)
+            and item.get("planner_complete") is True
+            and item.get("iteration_result")
+            for item in outputs
+        ):
+            latest_iteration = max(
+                int((item.get("iteration_result") or {}).get("iteration_index") or 1)
+                for item in outputs
+                if isinstance(item, dict) and item.get("iteration_result")
+            )
+            return (
+                200,
+                {
+                    "id": f"resp_pilot_{calls['count']}",
                     "model": "gpt-4.1-mini",
                     "usage": {"input_tokens": 21, "output_tokens": 10},
                     "output": [
@@ -1032,28 +1064,36 @@ def _mock_stage04_runner() -> OpenAIResponsesFunctionCallingRunner:
                         },
                         {
                             "type": "function_call",
-                            "call_id": "call_ops_packet",
-                            "name": "render_stage04_ops_packet",
+                            "call_id": "call_iteration",
+                            "name": "get_stage04_iteration_analysis",
+                            "arguments": json.dumps({"iteration_index": latest_iteration}),
+                        },
+                        {
+                            "type": "function_call",
+                            "call_id": "call_finalize",
+                            "name": "finalize_weekly_stage04_draft_outputs",
                             "arguments": "{}",
                         },
                     ],
                 },
-                "req_pilot_2",
+                f"req_pilot_{calls['count']}",
             )
-        if payload.get("previous_response_id") != "resp_pilot_2":
-            raise AssertionError("expected previous_response_id from second pilot turn")
         return (
             200,
             {
-                "id": "resp_pilot_3",
+                "id": f"resp_pilot_{calls['count']}",
                 "model": "gpt-4.1-mini",
-                "usage": {"input_tokens": 13, "output_tokens": 8},
-                "output_text": (
-                    '{"summary":"pilot run complete","selected_candidate_count":2,'
-                    '"recommended_action":"forward_to_stage05_manager_review","warnings":[]}'
-                ),
+                "usage": {"input_tokens": 17, "output_tokens": 7},
+                "output": [
+                    {
+                        "type": "function_call",
+                        "call_id": "call_apply",
+                        "name": "apply_stage04_next_iteration",
+                        "arguments": "{}",
+                    }
+                ],
             },
-            "req_pilot_3",
+            f"req_pilot_{calls['count']}",
         )
 
     return OpenAIResponsesFunctionCallingRunner(
@@ -1209,6 +1249,166 @@ def _artifact_ids_by_kind(
     return rows
 
 
+def _artifact_metadata_by_kind(
+    *,
+    artifacts: list[dict[str, Any]],
+    artifact_kind: str,
+) -> dict[str, Any]:
+    for artifact in artifacts:
+        if str(artifact.get("artifact_kind") or "") != artifact_kind:
+            continue
+        metadata = artifact.get("metadata_json")
+        if isinstance(metadata, dict):
+            return dict(metadata)
+        if isinstance(metadata, str):
+            try:
+                parsed = json.loads(metadata)
+            except json.JSONDecodeError:
+                return {}
+            return dict(parsed) if isinstance(parsed, dict) else {}
+    return {}
+
+
+def _runtime_turn_analysis(artifacts: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    turn_rows = [
+        artifact
+        for artifact in artifacts
+        if str(artifact.get("artifact_kind") or "") == "runtime.tool_result.json"
+    ]
+    parsed_turns: list[dict[str, Any]] = []
+    for artifact in turn_rows:
+        parsed_uri = urlparse(str(artifact.get("storage_uri") or ""))
+        if not parsed_uri.path:
+            continue
+        payload_path = Path(parsed_uri.path)
+        if not payload_path.exists():
+            continue
+        try:
+            payload = json.loads(payload_path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            continue
+        metadata = artifact.get("metadata_json") if isinstance(artifact.get("metadata_json"), dict) else {}
+        parsed_turns.append(
+            {
+                "turn_index": int(payload.get("turn_index") or metadata.get("turn_index") or 0),
+                "progress_made": bool(payload.get("progress_made")),
+                "no_progress_streak": int(payload.get("no_progress_streak") or 0),
+                "planner_state": payload.get("planner_state") or {},
+                "function_names": [
+                    str(item.get("name") or "")
+                    for item in payload.get("function_calls") or []
+                    if isinstance(item, dict)
+                ],
+            }
+        )
+    return sorted(parsed_turns, key=lambda item: int(item["turn_index"]))
+
+
+def _stage04_analysis(
+    *,
+    artifacts: list[dict[str, Any]],
+) -> dict[str, Any]:
+    candidate_delta = _artifact_metadata_by_kind(
+        artifacts=artifacts,
+        artifact_kind="planning.candidate_schedule_delta.workbook",
+    )
+    validation_summary = _artifact_metadata_by_kind(
+        artifacts=artifacts,
+        artifact_kind="planning.validation_summary.doc",
+    )
+    draft_doc = _artifact_metadata_by_kind(
+        artifacts=artifacts,
+        artifact_kind="planning.draft_weekly_schedule.doc",
+    )
+    if not candidate_delta or not validation_summary:
+        return {}
+
+    summary = validation_summary.get("summary") if isinstance(validation_summary, dict) else {}
+    summary = dict(summary) if isinstance(summary, dict) else {}
+    iteration_rows = _rows_to_dicts(
+        list(candidate_delta.get("columns") or []),
+        list(candidate_delta.get("rows") or []),
+    )
+    iteration_summaries = [
+        dict(item)
+        for item in candidate_delta.get("iteration_deltas") or []
+        if isinstance(item, dict)
+    ]
+    repair_moves = [
+        dict(item)
+        for item in candidate_delta.get("repair_moves") or []
+        if isinstance(item, dict)
+    ]
+    tradeoffs = [str(item) for item in summary.get("tradeoffs") or []]
+    warnings = [str(item) for item in summary.get("warnings") or []]
+    coverage_summary = summary.get("coverage_summary") or candidate_delta.get("coverage_summary") or {}
+    if not tradeoffs:
+        uncovered_count = int(coverage_summary.get("uncovered_route_slots") or 0)
+        pending_count = int(coverage_summary.get("pending_route_slots") or 0)
+        previous_week_stability = float(
+            (summary.get("soft_score_totals") or {}).get("previous_week_stability") or 0.0
+        )
+        if uncovered_count > 0:
+            tradeoffs.append(
+                f"{uncovered_count} route slots remain uncovered because deterministic hard rules and bounded repair preserved compliance over artificial fill-ins."
+            )
+        if pending_count > 0:
+            tradeoffs.append(
+                f"{pending_count} route slots were still pending before explicit finalize, so the packet highlights iteration progress instead of pretending the weekly draft was complete early."
+            )
+        if previous_week_stability > 0.0 and (uncovered_count > 0 or pending_count > 0):
+            tradeoffs.append(
+                "Previous-week stability contributed positively, but coverage and policy constraints still forced visible weekly tradeoffs."
+            )
+
+    iterations: list[dict[str, Any]] = []
+    for item in iteration_summaries:
+        iteration_index = int(item.get("iteration_index") or 0)
+        route_allocations = [
+            row
+            for row in iteration_rows
+            if int(row.get("iteration_index") or 0) == iteration_index
+        ]
+        iteration_repairs = [
+            move
+            for move in repair_moves
+            if int(move.get("iteration_index") or 0) == iteration_index
+        ]
+        iterations.append(
+            {
+                "iteration_index": iteration_index,
+                "pressure_group_id": str(item.get("pressure_group_id") or ""),
+                "pressure_service_date": str(item.get("pressure_service_date") or ""),
+                "pressure_station_code": str(item.get("pressure_station_code") or ""),
+                "pressure_service_area": str(item.get("pressure_service_area") or ""),
+                "batch_size": int(item.get("batch_size") or 0),
+                "assigned_route_slot_ids": list(item.get("assigned_route_slot_ids") or []),
+                "uncovered_route_slot_ids": list(item.get("uncovered_route_slot_ids") or []),
+                "repair_move_count": int(item.get("repair_move_count") or 0),
+                "candidate_evaluation_count": int(item.get("candidate_evaluation_count") or 0),
+                "route_allocations": route_allocations,
+                "repair_moves": iteration_repairs,
+                "tradeoffs": [
+                    tradeoff for tradeoff in tradeoffs if f"iteration {iteration_index}" in tradeoff
+                ],
+            }
+        )
+
+    return {
+        "coverage_summary": coverage_summary,
+        "soft_score_totals": summary.get("soft_score_totals") or {},
+        "tradeoffs": tradeoffs,
+        "warnings": warnings,
+        "draft_summary": (
+            dict(draft_doc.get("summary"))
+            if isinstance(draft_doc, dict) and isinstance(draft_doc.get("summary"), dict)
+            else {}
+        ),
+        "iterations": iterations,
+        "runtime_turns": _runtime_turn_analysis(artifacts),
+    }
+
+
 def _quality_signals(
     *,
     tasks: list[dict[str, Any]],
@@ -1301,6 +1501,7 @@ def _compact_event(event: dict[str, Any]) -> dict[str, Any]:
 def _packet_to_markdown(packet: dict[str, Any]) -> str:
     workflow_run = packet["workflow_run"]
     linked = packet["linked_ids"]
+    stage04_analysis = packet.get("stage04_analysis") or {}
     lines = [
         f"# Logistics Weekly Stage04 Inspection Packet: {packet['pilot_id']}",
         "",
@@ -1328,7 +1529,54 @@ def _packet_to_markdown(packet: dict[str, Any]) -> str:
     lines.extend(
         [
             "",
-            "## Timeline",
+            "## Stage04 analysis",
+        ]
+    )
+    if stage04_analysis:
+        coverage_summary = stage04_analysis.get("coverage_summary") or {}
+        lines.extend(
+            [
+                f"- Iterations: {len(stage04_analysis.get('iterations') or [])}",
+                f"- Assigned route slots: {coverage_summary.get('assigned_route_slots', 0)}",
+                f"- Uncovered route slots: {coverage_summary.get('uncovered_route_slots', 0)}",
+                f"- Pending route slots: {coverage_summary.get('pending_route_slots', 0)}",
+            ]
+        )
+        for tradeoff in stage04_analysis.get("tradeoffs") or []:
+            lines.append(f"- Tradeoff: {tradeoff}")
+        for iteration in stage04_analysis.get("iterations") or []:
+            lines.append(
+                "- Iteration {iteration_index}: batch={batch_size}, assigned={assigned}, uncovered={uncovered}, repairs={repairs}".format(
+                    iteration_index=iteration["iteration_index"],
+                    batch_size=iteration["batch_size"],
+                    assigned=len(iteration.get("assigned_route_slot_ids") or []),
+                    uncovered=len(iteration.get("uncovered_route_slot_ids") or []),
+                    repairs=len(iteration.get("repair_moves") or []),
+                )
+            )
+        lines.append("")
+        lines.append("## Runtime turns")
+        for turn in stage04_analysis.get("runtime_turns") or []:
+            lines.append(
+                "- Turn {turn_index}: progress={progress}, streak={streak}, functions={functions}".format(
+                    turn_index=turn["turn_index"],
+                    progress=turn["progress_made"],
+                    streak=turn["no_progress_streak"],
+                    functions=",".join(turn.get("function_names") or []),
+                )
+            )
+        lines.append("")
+        lines.append("## Timeline")
+    else:
+        lines.extend(
+            [
+                "- Stage04 analysis artifacts not available.",
+                "",
+                "## Timeline",
+            ]
+        )
+    lines.extend(
+        [
             f"- Total events: {packet['timeline']['event_count']}",
             f"- Events of interest: {len(packet['timeline']['events_of_interest'])}",
             "",

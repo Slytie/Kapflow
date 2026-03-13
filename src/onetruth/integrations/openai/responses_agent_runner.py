@@ -17,6 +17,8 @@ from onetruth.integrations.openai.responses_adapter import (
 
 ResponseTransport = Callable[[dict[str, Any], float], tuple[int, dict[str, Any], Optional[str]]]
 FunctionExecutor = Callable[[str, dict[str, Any]], Any]
+TurnObserver = Callable[["ResponsesTurnRecord"], None]
+ProgressEvaluator = Callable[[str, dict[str, Any], Any], bool]
 
 
 @dataclass(frozen=True)
@@ -42,6 +44,7 @@ class ResponsesFunctionCallRecord:
     arguments_json: str
     arguments: dict[str, Any]
     output_json: str
+    progress_made: bool = False
 
     def as_dict(self) -> dict[str, Any]:
         return {
@@ -50,6 +53,7 @@ class ResponsesFunctionCallRecord:
             "arguments_json": self.arguments_json,
             "arguments": self.arguments,
             "output_json": self.output_json,
+            "progress_made": self.progress_made,
         }
 
 
@@ -63,6 +67,8 @@ class ResponsesTurnRecord:
     usage: dict[str, Any]
     output_text: str | None
     function_calls: tuple[ResponsesFunctionCallRecord, ...]
+    progress_made: bool = False
+    no_progress_streak: int = 0
 
     def as_dict(self) -> dict[str, Any]:
         return {
@@ -74,6 +80,8 @@ class ResponsesTurnRecord:
             "usage": self.usage,
             "output_text": self.output_text,
             "function_calls": [item.as_dict() for item in self.function_calls],
+            "progress_made": self.progress_made,
+            "no_progress_streak": self.no_progress_streak,
         }
 
 
@@ -127,11 +135,19 @@ class OpenAIResponsesFunctionCallingRunner:
         tools: list[ResponsesFunctionToolSpec],
         execute_function: FunctionExecutor,
         max_turns: int,
+        no_progress_limit: int | None = None,
+        progress_evaluator: ProgressEvaluator | None = None,
+        on_turn_complete: TurnObserver | None = None,
     ) -> ResponsesFunctionCallingResult:
         if max_turns <= 0:
             raise OpenAIResponsesError(
                 code="openai_invalid_request",
                 message="max_turns must be > 0",
+            )
+        if no_progress_limit is not None and no_progress_limit < 0:
+            raise OpenAIResponsesError(
+                code="openai_invalid_request",
+                message="no_progress_limit must be >= 0 when provided",
             )
         tool_names = [tool.name for tool in tools]
         if len(tool_names) != len(set(tool_names)):
@@ -144,6 +160,7 @@ class OpenAIResponsesFunctionCallingRunner:
         previous_response_id: str | None = None
         turns: list[ResponsesTurnRecord] = []
         usage_totals: dict[str, int] = {}
+        no_progress_streak = 0
 
         for turn_index in range(1, max_turns + 1):
             request_payload: dict[str, Any] = {
@@ -164,18 +181,21 @@ class OpenAIResponsesFunctionCallingRunner:
             output_text = _extract_output_text(response_payload)
 
             if not parsed_calls:
-                turns.append(
-                    ResponsesTurnRecord(
-                        turn_index=turn_index,
-                        request_payload=request_payload,
-                        response_id=response_id,
-                        request_id=request_id,
-                        model=model,
-                        usage=usage,
-                        output_text=output_text,
-                        function_calls=(),
-                    )
+                turn_record = ResponsesTurnRecord(
+                    turn_index=turn_index,
+                    request_payload=request_payload,
+                    response_id=response_id,
+                    request_id=request_id,
+                    model=model,
+                    usage=usage,
+                    output_text=output_text,
+                    function_calls=(),
+                    progress_made=False,
+                    no_progress_streak=no_progress_streak,
                 )
+                turns.append(turn_record)
+                if on_turn_complete is not None:
+                    on_turn_complete(turn_record)
                 return ResponsesFunctionCallingResult(
                     turns=tuple(turns),
                     final_response_id=response_id,
@@ -186,6 +206,7 @@ class OpenAIResponsesFunctionCallingRunner:
 
             executed_calls: list[ResponsesFunctionCallRecord] = []
             next_input: list[dict[str, Any]] = []
+            turn_progress_made = False
             for parsed_call in parsed_calls:
                 if parsed_call.name not in tool_map:
                     raise OpenAIResponsesError(
@@ -196,6 +217,13 @@ class OpenAIResponsesFunctionCallingRunner:
                 arguments = _load_function_arguments(parsed_call.arguments_json)
                 output_payload = execute_function(parsed_call.name, arguments)
                 output_json = _serialize_function_output(output_payload)
+                call_progress_made = _evaluate_progress(
+                    progress_evaluator,
+                    parsed_call.name,
+                    arguments,
+                    output_payload,
+                )
+                turn_progress_made = turn_progress_made or call_progress_made
                 next_input.append(
                     {
                         "type": "function_call_output",
@@ -210,21 +238,37 @@ class OpenAIResponsesFunctionCallingRunner:
                         arguments_json=parsed_call.arguments_json,
                         arguments=arguments,
                         output_json=output_json,
+                        progress_made=call_progress_made,
                     )
                 )
 
-            turns.append(
-                ResponsesTurnRecord(
-                    turn_index=turn_index,
-                    request_payload=request_payload,
-                    response_id=response_id,
-                    request_id=request_id,
-                    model=model,
-                    usage=usage,
-                    output_text=output_text,
-                    function_calls=tuple(executed_calls),
-                )
+            no_progress_streak = 0 if turn_progress_made else no_progress_streak + 1
+            turn_record = ResponsesTurnRecord(
+                turn_index=turn_index,
+                request_payload=request_payload,
+                response_id=response_id,
+                request_id=request_id,
+                model=model,
+                usage=usage,
+                output_text=output_text,
+                function_calls=tuple(executed_calls),
+                progress_made=turn_progress_made,
+                no_progress_streak=no_progress_streak,
             )
+            turns.append(turn_record)
+            if on_turn_complete is not None:
+                on_turn_complete(turn_record)
+            if no_progress_limit is not None and no_progress_streak >= no_progress_limit:
+                raise OpenAIResponsesError(
+                    code="openai_tool_no_progress",
+                    message="function-calling loop exhausted no-progress budget",
+                    retryable=False,
+                    details={
+                        "turn_index": turn_index,
+                        "no_progress_limit": no_progress_limit,
+                        "no_progress_streak": no_progress_streak,
+                    },
+                )
             if response_id is None:
                 raise OpenAIResponsesError(
                     code="openai_invalid_output",
@@ -459,6 +503,19 @@ def _accumulate_usage(accumulator: dict[str, int], usage: dict[str, Any]) -> Non
         if not isinstance(value, int):
             continue
         accumulator[key] = int(accumulator.get(key, 0)) + value
+
+
+def _evaluate_progress(
+    progress_evaluator: ProgressEvaluator | None,
+    function_name: str,
+    arguments: dict[str, Any],
+    output_payload: Any,
+) -> bool:
+    if progress_evaluator is not None:
+        return bool(progress_evaluator(function_name, arguments, output_payload))
+    if isinstance(output_payload, dict):
+        return bool(output_payload.get("progress_made"))
+    return False
 
 
 def _as_optional_str(value: Any) -> str | None:

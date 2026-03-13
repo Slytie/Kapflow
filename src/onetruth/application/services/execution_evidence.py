@@ -297,6 +297,36 @@ def prepare_runtime_json_evidence_artifact(
     )
 
 
+def prepare_runtime_turn_evidence_artifact(
+    *,
+    artifact_kind: str,
+    execution_session_id: str,
+    turn_index: int,
+    payload_json: Mapping[str, Any],
+    idempotency_suffix_prefix: str,
+    relation_kind: str,
+    file_stem: str,
+    tool_execution_id: str | None = None,
+    policy_decision_id: str | None = None,
+    extra_metadata: Mapping[str, Any] | None = None,
+) -> PreparedExecutionEvidenceArtifact:
+    turn_suffix = f"turn-{int(turn_index):02d}"
+    metadata: dict[str, Any] = {"turn_index": int(turn_index)}
+    if isinstance(extra_metadata, Mapping):
+        metadata.update(dict(extra_metadata))
+    return prepare_runtime_json_evidence_artifact(
+        artifact_kind=artifact_kind,
+        file_name=f"{file_stem}-{execution_session_id}-{turn_suffix}.json",
+        execution_session_id=execution_session_id,
+        payload_json=payload_json,
+        idempotency_suffix=f"{idempotency_suffix_prefix}-{turn_suffix}",
+        relation_kind=relation_kind,
+        tool_execution_id=tool_execution_id,
+        policy_decision_id=policy_decision_id,
+        extra_metadata=metadata,
+    )
+
+
 def stable_execution_id(*, prefix: str, raw: str) -> str:
     digest = hashlib.sha256(raw.encode("utf-8")).hexdigest()[:24]
     return f"{prefix}-{digest}"
