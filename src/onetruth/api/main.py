@@ -3,7 +3,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from typing import Any, Awaitable, Callable, cast
 from urllib.parse import parse_qs, urlparse
 
@@ -24,6 +24,11 @@ from onetruth.api.dependencies import (
     trusted_header_principal_resolver,
 )
 from onetruth.api.errors import ApiError, error_payload
+from onetruth.api.request_correlation import (
+    REQUEST_ID_HEADER,
+    request_id_header,
+    resolve_request_id,
+)
 from onetruth.api.routes.approvals import (
     get_approval_endpoint,
     list_approvals_endpoint,
@@ -122,6 +127,7 @@ def create_app(
 
     async def app(scope: dict[str, Any], receive, send) -> None:
         if scope.get("type") != "http":
+            request_id = resolve_request_id(None)
             await _send_json(
                 send,
                 status_code=500,
@@ -133,6 +139,7 @@ def create_app(
                         "details": {},
                     },
                 },
+                request_id=request_id,
                 boundary_profile=boundary.profile,
             )
             return
@@ -141,12 +148,14 @@ def create_app(
         path = str(scope.get("path", ""))
         raw_headers = scope.get("headers", [])
         headers = _decode_headers(raw_headers)
+        request_id = resolve_request_id(headers)
         query = _decode_query(scope.get("query_string", b""))
 
         if method == "OPTIONS" and path.startswith("/api/v1/"):
             await _send_no_content(
                 send,
                 status_code=204,
+                request_id=request_id,
                 boundary_profile=boundary.profile,
                 request_headers=headers,
             )
@@ -165,13 +174,14 @@ def create_app(
                         "details": {"method": method, "path": path},
                     },
                 },
+                request_id=request_id,
                 boundary_profile=boundary.profile,
                 request_headers=headers,
             )
             return
 
         try:
-            context = boundary.principal_resolver(headers)
+            context = replace(boundary.principal_resolver(headers), request_id=request_id)
             body_payload = await _read_json_body(method, receive)
             page = parse_page(query) if method == "GET" else None
 
@@ -193,6 +203,7 @@ def create_app(
                 send,
                 status_code=200,
                 payload={"status": "ok", **response_payload},
+                request_id=request_id,
                 boundary_profile=boundary.profile,
                 request_headers=headers,
             )
@@ -201,6 +212,7 @@ def create_app(
                 send,
                 status_code=exc.status_code,
                 payload=error_payload(exc),
+                request_id=request_id,
                 boundary_profile=boundary.profile,
                 request_headers=headers,
             )
@@ -216,6 +228,7 @@ def create_app(
                         "details": {"exception": exc.__class__.__name__},
                     },
                 },
+                request_id=request_id,
                 boundary_profile=boundary.profile,
                 request_headers=headers,
             )
@@ -938,6 +951,10 @@ def _cors_headers(
         ),
         (b"access-control-allow-methods", _CORS_ALLOW_METHODS.encode("latin-1")),
         (b"access-control-allow-headers", allow_headers.encode("latin-1")),
+        (
+            b"access-control-expose-headers",
+            REQUEST_ID_HEADER.encode("latin-1"),
+        ),
         (b"access-control-max-age", b"600"),
         (b"vary", b"origin, access-control-request-headers"),
     ]
@@ -955,6 +972,7 @@ async def _send_json(
     *,
     status_code: int,
     payload: dict[str, Any],
+    request_id: str,
     boundary_profile: BoundaryProfile,
     request_headers: dict[str, str] | None = None,
 ) -> None:
@@ -962,6 +980,7 @@ async def _send_json(
     response_headers = [
         (b"content-type", b"application/json"),
         (b"content-length", str(len(body)).encode("ascii")),
+        request_id_header(request_id),
     ]
     response_headers.extend(
         _cors_headers(
@@ -983,10 +1002,14 @@ async def _send_no_content(
     send,
     *,
     status_code: int,
+    request_id: str,
     boundary_profile: BoundaryProfile,
     request_headers: dict[str, str] | None = None,
 ) -> None:
-    response_headers = [(b"content-length", b"0")]
+    response_headers = [
+        (b"content-length", b"0"),
+        request_id_header(request_id),
+    ]
     response_headers.extend(
         _cors_headers(
             boundary_profile=boundary_profile,

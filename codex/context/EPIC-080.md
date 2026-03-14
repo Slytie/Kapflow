@@ -53,4 +53,8 @@
   - Dependabot covers Python, frontend, and GitHub Actions metadata,
   - a dedicated `secret_hygiene` workflow runs `python scripts/validate_repo.py --secrets-only`,
   - revocation/history rewrite follow-ups are recorded as operator-only rather than code-task work.
+- `TASK-0094` is complete:
+  - the hand-rolled API shell is characterized by focused runtime tests before any refactor,
+  - every API response now emits a header-only `x-request-id`,
+  - request ids are not yet added to JSON bodies or timeline-event correlation.
 - Scope remains intentionally bounded to the authored three-workflow logistics story shell.

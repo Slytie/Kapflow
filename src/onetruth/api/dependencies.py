@@ -35,6 +35,7 @@ class RequestContext:
     actor_id: str
     actor_type: str
     actor_roles: tuple[str, ...]
+    request_id: str | None = None
 
 
 @dataclass(frozen=True)

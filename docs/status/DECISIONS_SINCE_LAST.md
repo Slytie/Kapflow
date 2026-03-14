@@ -2,6 +2,11 @@
 
 Record any decisions made since the last session so a fresh Codex run can rehydrate quickly.
 
+## 2026-03-14 (TASK-0094 API shell characterization and request-id seam)
+- Shell decision: the current hand-rolled API shell now has focused characterization coverage for route misses, malformed JSON, unsupported scopes, and internal-error fallback before any route-registry refactor.
+- Correlation decision: every API response now emits a header-only `x-request-id` seam, with safe incoming values echoed and missing/unusable values replaced by generated `httpreq_<hex>` ids.
+- Scope-boundary decision: this tranche does not add request ids to JSON payloads, does not propagate them into timeline-event `correlation_id`, and does not change the frozen `shared_env` trust posture.
+
 ## 2026-03-14 (TASK-0093 human-task mutation family extraction)
 - Extraction decision: `claim_human_task_command`, `complete_human_task_command`, and `confirm_human_task_review_command` now live in `src/onetruth/application/handlers/human_tasks.py` behind lazy compatibility wrappers in `workflow_task_lifecycle.py`.
 - Helper-seam decision: the extracted family depends on the neutral command-boundary seam plus a private `src/onetruth/application/handlers/_shared/artifact_effects.py` helper closure for confirm-review support, so no extracted module needs to re-import the legacy hotspot.

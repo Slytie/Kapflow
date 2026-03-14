@@ -95,5 +95,6 @@
 | TASK-0091 | EPIC-080 | DONE | medium | Add dependency automation, secret scanning, and explicit operator-only history follow-ups |
 | TASK-0092 | EPIC-040 | DONE | high | Break the handler compatibility cycle with neutral command-boundary helpers |
 | TASK-0093 | EPIC-040 | DONE | high | Extract the human-task mutation family through the neutral handler seam |
+| TASK-0094 | EPIC-080 | DONE | medium | Characterize the API shell and add a request-correlation seam |
 
 Note: `TASK-0087` / `TASK-0088` / `TASK-0089` were formerly duplicated as `TASK-0071` / `TASK-0072` / `TASK-0073` before the 2026-03-13 truth-alignment backlog sync. `TASK-0071` / `TASK-0072` / `TASK-0073` now refer only to the Stage04 progression.

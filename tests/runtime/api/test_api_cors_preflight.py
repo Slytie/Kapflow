@@ -84,9 +84,11 @@ def test_options_preflight_returns_cors_headers() -> None:
 
     assert status == 204
     assert body == b""
+    assert headers["x-request-id"].startswith("httpreq_")
     assert headers["access-control-allow-origin"] == "http://localhost:5173"
     assert "OPTIONS" in headers["access-control-allow-methods"]
     assert "x-onetruth-actor-roles" in headers["access-control-allow-headers"]
+    assert "x-request-id" in headers["access-control-expose-headers"]
 
 
 def test_error_responses_include_cors_headers() -> None:
@@ -105,4 +107,6 @@ def test_error_responses_include_cors_headers() -> None:
     assert status == 400
     assert parsed["status"] == "error"
     assert parsed["error"]["code"] == "invalid_request_context"
+    assert headers["x-request-id"].startswith("httpreq_")
     assert headers["access-control-allow-origin"] == "http://localhost:5173"
+    assert "x-request-id" in headers["access-control-expose-headers"]

@@ -103,6 +103,7 @@ def test_shared_env_default_fails_closed_without_principal_resolver() -> None:
     assert status == 503
     assert parsed["status"] == "error"
     assert parsed["error"]["code"] == "principal_resolver_unavailable"
+    assert headers["x-request-id"].startswith("httpreq_")
     assert "access-control-allow-origin" not in headers
 
 
@@ -129,6 +130,7 @@ def test_shared_env_accepts_injected_principal_resolver(tmp_path: Path) -> None:
     assert status == 200
     assert parsed["status"] == "ok"
     assert parsed["workflow_runs"] == []
+    assert headers["x-request-id"].startswith("httpreq_")
     assert "access-control-allow-origin" not in headers
 
 
@@ -139,7 +141,7 @@ def test_local_dev_profile_accepts_trusted_headers(tmp_path: Path) -> None:
         boundary_profile="local_dev",
     )
 
-    status, _headers, body = _invoke(
+    status, headers, body = _invoke(
         app,
         method="GET",
         path="/api/v1/workflow-runs",
@@ -150,6 +152,7 @@ def test_local_dev_profile_accepts_trusted_headers(tmp_path: Path) -> None:
     assert status == 200
     assert parsed["status"] == "ok"
     assert parsed["workflow_runs"] == []
+    assert headers["x-request-id"].startswith("httpreq_")
 
 
 def test_ci_test_profile_accepts_trusted_headers(tmp_path: Path) -> None:
@@ -170,6 +173,7 @@ def test_ci_test_profile_accepts_trusted_headers(tmp_path: Path) -> None:
     assert status == 200
     assert parsed["status"] == "ok"
     assert parsed["workflow_runs"] == []
+    assert headers["x-request-id"].startswith("httpreq_")
     assert "access-control-allow-origin" not in headers
 
 
@@ -207,13 +211,16 @@ def test_local_dev_cors_reflects_only_loopback_origins() -> None:
 
     assert allowed_status == 204
     assert allowed_body == b""
+    assert allowed_headers["x-request-id"].startswith("httpreq_")
     assert (
         allowed_headers["access-control-allow-origin"] == "http://localhost:5173"
     )
     assert "x-onetruth-actor-roles" in allowed_headers["access-control-allow-headers"]
+    assert "x-request-id" in allowed_headers["access-control-expose-headers"]
 
     assert denied_status == 204
     assert denied_body == b""
+    assert denied_headers["x-request-id"].startswith("httpreq_")
     assert "access-control-allow-origin" not in denied_headers
     assert "access-control-allow-headers" not in denied_headers
 
@@ -237,5 +244,7 @@ def test_shared_env_does_not_advertise_trusted_header_cors() -> None:
 
     assert status == 204
     assert body == b""
+    assert headers["x-request-id"].startswith("httpreq_")
     assert "access-control-allow-origin" not in headers
     assert "access-control-allow-headers" not in headers
+    assert "access-control-expose-headers" not in headers
