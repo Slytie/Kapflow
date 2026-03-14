@@ -73,4 +73,8 @@
   - the main CI workflow now exposes parallel fast required lanes for `lint`, `contract`, `unit`, and `security` plus a separate `runtime-required` lane and standalone `frontend` lane,
   - `release-confidence` is now post-merge/manual only instead of adding pull-request lane count,
   - `secret_hygiene` remains a separate PR-capable guardrail workflow and `agent_api` now reuses `ci-fast-backend` before gated OpenAI integration tests.
+- `TASK-0100` is complete:
+  - `release_source_bundle` is now the only documented/operator-default shareable source artifact,
+  - release exports now include a deterministic repo-owned `release_provenance.json` sidecar in addition to `bundle_manifest.json`,
+  - internal handoff bundles and runtime workspace bundles remain valid but are explicitly non-release distribution paths.
 - Scope remains intentionally bounded to the authored three-workflow logistics story shell.

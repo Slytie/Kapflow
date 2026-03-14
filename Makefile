@@ -7,8 +7,10 @@ RELEASE_CONFIDENCE_OUTPUT_ROOT ?= $(CURDIR)/.tmp/release-confidence-gate
 RELEASE_CONFIDENCE_KEY ?= release-confidence-gate
 RELEASE_CONFIDENCE_OPENAI_MODE ?= mock
 CLEAN_SOURCE_BUNDLE_OUTPUT ?= $(CURDIR)/.tmp/companyos-clean-source-bundle.zip
+RELEASE_SOURCE_BUNDLE_OUTPUT ?= $(CURDIR)/.tmp/companyos-release-source-bundle.zip
+HANDOFF_SOURCE_BUNDLE_OUTPUT ?= $(CURDIR)/.tmp/companyos-handoff-source-bundle.zip
 
-.PHONY: lint test schema-validate trace-validate unit contract replay acceptance runtime runtime-api security property integration integration-openai integration-openai-weekly-stage04 logistics-weekly-stage04-pilot clean-source-bundle generated-check frontend-snapshots frontend-snapshots-check frontend-install frontend-typecheck frontend-test frontend-build ci-fast-backend ci-runtime-required ci-backend ci release-confidence release-confidence-validation release-confidence-demo-export release-confidence-projection-coherence release-confidence-logistics-weekly-live release-confidence-certification-manifest
+.PHONY: lint test schema-validate trace-validate unit contract replay acceptance runtime runtime-api security property integration integration-openai integration-openai-weekly-stage04 logistics-weekly-stage04-pilot clean-source-bundle release-source-bundle handoff-source-bundle generated-check frontend-snapshots frontend-snapshots-check frontend-install frontend-typecheck frontend-test frontend-build ci-fast-backend ci-runtime-required ci-backend ci release-confidence release-confidence-validation release-confidence-demo-export release-confidence-projection-coherence release-confidence-logistics-weekly-live release-confidence-certification-manifest
 .PHONY: doctor backend-lint python-lint frontend-ci
 
 doctor:
@@ -69,8 +71,13 @@ integration-openai-weekly-stage04:
 logistics-weekly-stage04-pilot:
 	PYTHONPATH=src $(PYTHON) scripts/run_logistics_weekly_agent_pilot.py --db-url sqlite:///./.tmp/logistics-weekly-stage04-pilot.db --pilot-key local-weekly-stage04 --openai-mode mock --json
 
-clean-source-bundle:
-	$(PYTHON) scripts/export_clean_source_bundle.py --output "$(CLEAN_SOURCE_BUNDLE_OUTPUT)"
+release-source-bundle:
+	$(PYTHON) scripts/export_clean_source_bundle.py --bundle-kind release_source_bundle --output "$(RELEASE_SOURCE_BUNDLE_OUTPUT)"
+
+handoff-source-bundle:
+	$(PYTHON) scripts/export_clean_source_bundle.py --output "$(HANDOFF_SOURCE_BUNDLE_OUTPUT)"
+
+clean-source-bundle: release-source-bundle
 
 generated-check:
 	$(VALIDATOR)

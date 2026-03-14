@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import argparse
 from collections import Counter, defaultdict
+import hashlib
 import json
 import re
 import subprocess
@@ -29,6 +30,10 @@ from onetruth.infrastructure.definitions.control_layer import (  # noqa: E402
     ControlCompileError,
     compile_control_layer,
 )
+from release_bundle_provenance import (  # noqa: E402
+    RELEASE_PROVENANCE_PATH,
+    SOURCE_MANIFEST_CANDIDATES,
+)
 
 
 def load_yaml(path: Path) -> Any:
@@ -52,6 +57,7 @@ OPENAI_KEY_PATTERNS: tuple[tuple[str, re.Pattern[str]], ...] = (
 TASK_FRONTMATTER_PATTERN = re.compile(r"(?s)\A---\n(.*?)\n---(?:\n|$)")
 TASK_ID_PATTERN = re.compile(r"TASK-\d{4}")
 RELEASE_SOURCE_BUNDLE = "release_source_bundle"
+RELEASE_DISTRIBUTION_CLASS = "operator_release"
 SOURCE_BUNDLE_EXCLUDED_ROOT_PREFIXES = (
     "artifacts/",
     ".onetruth_artifacts/",
@@ -727,6 +733,14 @@ def validate_release_source_bundle_export_payload(collector: Collector) -> None:
             "release source bundle payload records explicit bundle kind",
         )
         collector.require(
+            payload.get("distribution_class") == RELEASE_DISTRIBUTION_CLASS,
+            "release source bundle payload records operator release distribution class",
+        )
+        collector.require(
+            payload.get("provenance_path") == RELEASE_PROVENANCE_PATH,
+            "release source bundle payload records provenance sidecar path",
+        )
+        collector.require(
             payload.get("tracked_only") is True,
             "release source bundle payload is tracked-only",
         )
@@ -748,13 +762,19 @@ def validate_release_source_bundle_export_payload(collector: Collector) -> None:
             with zipfile.ZipFile(bundle_path, "r") as archive:
                 archive_names = set(archive.namelist())
                 manifest_name = f"{archive_root}/bundle_manifest.json"
+                provenance_name = f"{archive_root}/{RELEASE_PROVENANCE_PATH}"
                 collector.require(
                     manifest_name in archive_names,
                     "release source bundle archive includes bundle manifest",
                 )
-                if manifest_name not in archive_names:
+                collector.require(
+                    provenance_name in archive_names,
+                    "release source bundle archive includes provenance sidecar",
+                )
+                if manifest_name not in archive_names or provenance_name not in archive_names:
                     return
                 manifest = json.loads(archive.read(manifest_name).decode("utf-8"))
+                provenance = json.loads(archive.read(provenance_name).decode("utf-8"))
         except (OSError, zipfile.BadZipFile, KeyError, json.JSONDecodeError) as exc:
             collector.fail(f"release source bundle archive could not be inspected: {exc}")
             return
@@ -764,8 +784,16 @@ def validate_release_source_bundle_export_payload(collector: Collector) -> None:
             "release source bundle manifest records explicit bundle kind",
         )
         collector.require(
+            manifest.get("distribution_class") == RELEASE_DISTRIBUTION_CLASS,
+            "release source bundle manifest records operator release distribution class",
+        )
+        collector.require(
             manifest.get("archive_root") == archive_root,
             "release source bundle manifest matches payload archive_root",
+        )
+        collector.require(
+            manifest.get("provenance_path") == RELEASE_PROVENANCE_PATH,
+            "release source bundle manifest points at provenance sidecar",
         )
         collector.require(
             manifest.get("tracked_only") is True and manifest.get("tracked_only") == payload.get("tracked_only"),
@@ -779,6 +807,22 @@ def validate_release_source_bundle_export_payload(collector: Collector) -> None:
             manifest.get("tracked_worktree_clean") is True
             and manifest.get("tracked_worktree_clean") == payload.get("tracked_worktree_clean"),
             "release source bundle manifest matches clean-worktree payload",
+        )
+        collector.require(
+            provenance.get("bundle_kind") == RELEASE_SOURCE_BUNDLE,
+            "release provenance records explicit bundle kind",
+        )
+        collector.require(
+            provenance.get("archive_root") == archive_root,
+            "release provenance matches payload archive_root",
+        )
+        collector.require(
+            provenance.get("git_commit") == payload.get("git_commit"),
+            "release provenance matches payload git commit",
+        )
+        collector.require(
+            provenance.get("tracked_only") is True and provenance.get("tracked_only") == payload.get("tracked_only"),
+            "release provenance matches tracked-only payload",
         )
 
         inner_paths: list[str] = []
@@ -797,7 +841,10 @@ def validate_release_source_bundle_export_payload(collector: Collector) -> None:
         )
 
         clutter_paths = [
-            path for path in inner_paths if path != "bundle_manifest.json" and _source_bundle_path_is_excluded(path)
+            path
+            for path in inner_paths
+            if path not in {"bundle_manifest.json", RELEASE_PROVENANCE_PATH}
+            and _source_bundle_path_is_excluded(path)
         ]
         collector.require(
             not clutter_paths,
@@ -805,6 +852,86 @@ def validate_release_source_bundle_export_payload(collector: Collector) -> None:
         )
         for path in clutter_paths:
             collector.fail(f"release source bundle unexpectedly includes excluded path: {path}")
+
+        file_inventory = provenance.get("files")
+        collector.require(
+            isinstance(file_inventory, list),
+            "release provenance includes bundled file inventory",
+        )
+        if not isinstance(file_inventory, list):
+            return
+
+        inventory_by_path: dict[str, dict[str, Any]] = {}
+        for entry in file_inventory:
+            if not isinstance(entry, dict):
+                collector.fail("release provenance file inventory entries must be objects")
+                continue
+            path = entry.get("path")
+            if not isinstance(path, str) or not path:
+                collector.fail("release provenance file inventory entry missing path")
+                continue
+            inventory_by_path[path] = entry
+
+        release_data_paths = sorted(
+            path
+            for path in inner_paths
+            if path not in {"bundle_manifest.json", RELEASE_PROVENANCE_PATH}
+        )
+        missing_inventory_paths = [
+            path for path in release_data_paths if path not in inventory_by_path
+        ]
+        collector.require(
+            not missing_inventory_paths,
+            "release provenance inventories every bundled non-manifest file",
+        )
+        for path in missing_inventory_paths:
+            collector.fail(f"release provenance missing bundled file entry: {path}")
+
+        source_manifest_entries = provenance.get("source_manifests")
+        collector.require(
+            isinstance(source_manifest_entries, list),
+            "release provenance includes curated source manifest list",
+        )
+        source_manifest_paths: set[str] = set()
+        if isinstance(source_manifest_entries, list):
+            for entry in source_manifest_entries:
+                if not isinstance(entry, dict):
+                    collector.fail("release provenance source_manifests entries must be objects")
+                    continue
+                path = entry.get("path")
+                if not isinstance(path, str) or not path:
+                    collector.fail("release provenance source_manifests entry missing path")
+                    continue
+                source_manifest_paths.add(path)
+                collector.require(
+                    inventory_by_path.get(path) == entry,
+                    f"release provenance source manifest matches bundled file inventory: {path}",
+                )
+
+        for candidate in SOURCE_MANIFEST_CANDIDATES:
+            if candidate in release_data_paths:
+                collector.require(
+                    candidate in source_manifest_paths,
+                    f"release provenance records curated source manifest when present: {candidate}",
+                )
+
+        try:
+            with zipfile.ZipFile(bundle_path, "r") as archive:
+                for path in release_data_paths:
+                    content = archive.read(f"{archive_root}/{path}")
+                    entry = inventory_by_path.get(path)
+                    if entry is None:
+                        continue
+                    collector.require(
+                        entry.get("size_bytes") == len(content),
+                        f"release provenance size matches archive entry: {path}",
+                    )
+                    collector.require(
+                        entry.get("sha256") == hashlib.sha256(content).hexdigest(),
+                        f"release provenance digest matches archive entry: {path}",
+                    )
+        except (OSError, zipfile.BadZipFile, KeyError) as exc:
+            collector.fail(f"release source bundle archive could not verify provenance digests: {exc}")
 
 
 def validate_traces(event_map: dict[str, Any], collector: Collector) -> None:

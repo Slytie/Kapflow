@@ -8,6 +8,11 @@ import subprocess
 import sys
 import zipfile
 
+from release_bundle_provenance import (
+    RELEASE_PROVENANCE_PATH,
+    build_release_provenance,
+)
+
 HANDOFF_SOURCE_BUNDLE = "handoff_source_bundle"
 RELEASE_SOURCE_BUNDLE = "release_source_bundle"
 BUNDLE_MANIFEST_VERSION = 1
@@ -51,6 +56,10 @@ DEFAULT_EXCLUDED_FILE_PATTERNS = (
     "*.sqlite3-*",
 )
 DEFAULT_ALLOWED_FILE_NAMES = frozenset({".env.example", ".env.sample"})
+DISTRIBUTION_CLASS_BY_KIND = {
+    HANDOFF_SOURCE_BUNDLE: "internal_handoff",
+    RELEASE_SOURCE_BUNDLE: "operator_release",
+}
 
 
 def _build_parser() -> argparse.ArgumentParser:
@@ -141,10 +150,22 @@ def main(argv: list[str] | None = None) -> int:
         "manifest_version": BUNDLE_MANIFEST_VERSION,
         "bundle_kind": bundle_kind,
         "archive_root": archive_root,
+        "distribution_class": DISTRIBUTION_CLASS_BY_KIND[bundle_kind],
         "tracked_only": tracked_only,
         "git_commit": git_commit,
         "tracked_worktree_clean": tracked_worktree_clean,
     }
+    release_provenance: dict[str, object] | None = None
+    if bundle_kind == RELEASE_SOURCE_BUNDLE:
+        release_provenance = build_release_provenance(
+            repo_root=repo_root,
+            archive_root=archive_root,
+            bundle_kind=bundle_kind,
+            git_commit=str(git_commit),
+            tracked_only=tracked_only,
+            files_to_write=files_to_write,
+        )
+        bundle_manifest["provenance_path"] = RELEASE_PROVENANCE_PATH
 
     with zipfile.ZipFile(output_path, "w", compression=zipfile.ZIP_DEFLATED) as archive:
         for absolute_path in files_to_write:
@@ -154,6 +175,11 @@ def main(argv: list[str] | None = None) -> int:
             f"{archive_root}/bundle_manifest.json",
             json.dumps(bundle_manifest, indent=2, sort_keys=True) + "\n",
         )
+        if release_provenance is not None:
+            archive.writestr(
+                f"{archive_root}/{RELEASE_PROVENANCE_PATH}",
+                json.dumps(release_provenance, indent=2, sort_keys=True) + "\n",
+            )
 
     payload = {
         "status": "ok",
@@ -162,12 +188,15 @@ def main(argv: list[str] | None = None) -> int:
         "repo_root": str(repo_root),
         "output": str(output_path),
         "archive_root": archive_root,
+        "distribution_class": DISTRIBUTION_CLASS_BY_KIND[bundle_kind],
         "tracked_only": tracked_only,
         "git_commit": git_commit,
         "tracked_worktree_clean": tracked_worktree_clean,
-        "file_count": len(files_to_write) + 1,
+        "file_count": len(files_to_write) + 1 + (1 if release_provenance is not None else 0),
         "skipped_missing_paths": skipped_missing_paths,
     }
+    if release_provenance is not None:
+        payload["provenance_path"] = RELEASE_PROVENANCE_PATH
     sys.stdout.write(json.dumps(payload, indent=2, sort_keys=True) + "\n")
     return 0
 

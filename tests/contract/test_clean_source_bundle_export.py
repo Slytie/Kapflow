@@ -6,6 +6,8 @@ import subprocess
 import sys
 import zipfile
 
+from scripts.release_bundle_provenance import RELEASE_PROVENANCE_PATH
+
 REPO_ROOT = Path(__file__).resolve().parents[2]
 SCRIPT_PATH = REPO_ROOT / "scripts" / "export_clean_source_bundle.py"
 
@@ -34,6 +36,7 @@ def test_clean_source_bundle_exports_source_and_excludes_clutter(tmp_path: Path)
     assert f"{archive_root}/docs/notes.md" in names
     assert f"{archive_root}/.env.example" in names
     assert f"{archive_root}/codex/tasks/TASK-9999.md" in names
+    assert f"{archive_root}/{RELEASE_PROVENANCE_PATH}" not in names
 
     assert f"{archive_root}/.env" not in names
     assert f"{archive_root}/.env.local" not in names
@@ -55,6 +58,7 @@ def test_clean_source_bundle_exports_source_and_excludes_clutter(tmp_path: Path)
         "manifest_version": 1,
         "bundle_kind": "handoff_source_bundle",
         "archive_root": archive_root,
+        "distribution_class": "internal_handoff",
         "tracked_only": False,
         "git_commit": None,
         "tracked_worktree_clean": False,
@@ -77,6 +81,7 @@ def test_clean_source_bundle_tracked_only_skips_untracked_source(tmp_path: Path)
     assert f"{archive_root}/README.md" in names
     assert f"{archive_root}/codex/tasks/TASK-9999.md" not in names
     assert manifest["bundle_kind"] == "handoff_source_bundle"
+    assert manifest["distribution_class"] == "internal_handoff"
     assert manifest["tracked_only"] is True
 
 

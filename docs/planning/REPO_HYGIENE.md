@@ -37,11 +37,13 @@ If runtime evidence should become a reusable golden artifact, move it into an ex
 
 ## Bundle classes
 - `handoff_source_bundle`
-  - working-tree-sensitive review/handoff snapshot exported by `scripts/export_clean_source_bundle.py` (and `make clean-source-bundle` by alias); may include non-ignored untracked source.
+  - working-tree-sensitive internal review/handoff snapshot exported by `scripts/export_clean_source_bundle.py` or `make handoff-source-bundle`; it may include non-ignored untracked source and is not an operator-facing release artifact.
 - `release_source_bundle`
-  - clean tracked commit snapshot exported by `scripts/export_clean_source_bundle.py --bundle-kind release_source_bundle`; it requires `HEAD` plus a clean tracked worktree and is the lightweight provenance-oriented source package.
+  - clean tracked commit snapshot exported by `scripts/export_clean_source_bundle.py --bundle-kind release_source_bundle`, `make release-source-bundle`, or the operator-default alias `make clean-source-bundle`; it requires `HEAD` plus a clean tracked worktree, is the only endorsed share/release source package, and carries `release_provenance.json` alongside `bundle_manifest.json`.
 - `runtime_workspace_bundle`
   - run inspection/evidence bundle exported by `scripts/export_run_workspace_bundle.py`; it is derived from canonical runtime projections and is not source/release packaging.
+- raw workspace archives or manual ad hoc zips
+  - non-release/internal only; they do not carry endorsed provenance and must not be presented as operator distribution artifacts.
 
 ## Secret Hygiene Follow-Ups
 - Repo-enforceable actions:

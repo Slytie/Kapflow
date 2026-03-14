@@ -379,15 +379,19 @@ Export workspace bundle zip for review:
 - the ZIP now includes `bundle_manifest.json` with `bundle_kind: "runtime_workspace_bundle"` and canonical run scope identifiers
 - treat this as a runtime inspection/evidence bundle, not a source or release package
 
-Export a clean repo source bundle for Codex/human handoff:
+Export an operator-facing release source bundle:
 - `make clean-source-bundle`
-- or `python3 scripts/export_clean_source_bundle.py --output ./.tmp/companyos-clean-source-bundle.zip`
-- default behavior exports a `handoff_source_bundle` from the current working-tree source snapshot (tracked files plus non-ignored untracked source files)
-- default exclusions include `.git`, `.venv`, `node_modules`, `frontend/dist`, `.tmp`, `.pytest_cache`, `.idea`, local `.env*` files, local DBs, and runtime evidence roots like `artifacts/` and `.onetruth_artifacts/`
-- use `--tracked-only` if you want a strictly git-tracked source bundle
-- export a provenance-oriented release snapshot with `python3 scripts/export_clean_source_bundle.py --bundle-kind release_source_bundle --output ./.tmp/companyos-release-source-bundle.zip`
-- `release_source_bundle` always exports tracked files only, requires `HEAD`, and fails closed unless the tracked worktree is clean
-- `make clean-source-bundle` remains the handoff alias; use the handoff bundle for repo review/transfer and keep `export_run_workspace_bundle.py` for runtime workspace inspection bundles only
+- or `make release-source-bundle`
+- or `python3 scripts/export_clean_source_bundle.py --bundle-kind release_source_bundle --output ./.tmp/companyos-release-source-bundle.zip`
+- `release_source_bundle` is the only endorsed shareable/release source package; it always exports tracked files only, requires `HEAD`, and fails closed unless the tracked worktree is clean
+- the release ZIP includes both `bundle_manifest.json` and `release_provenance.json`; together they classify the archive as `operator_release` and record deterministic file digests for the bundled source snapshot
+- default exclusions still include `.git`, `.venv`, `node_modules`, `frontend/dist`, `.tmp`, `.pytest_cache`, `.idea`, local `.env*` files, local DBs, and runtime evidence roots like `artifacts/` and `.onetruth_artifacts/`
+
+Export an internal handoff bundle for Codex/review only:
+- `make handoff-source-bundle`
+- or `python3 scripts/export_clean_source_bundle.py --output ./.tmp/companyos-handoff-source-bundle.zip`
+- `handoff_source_bundle` remains a working-tree-sensitive internal review snapshot; it is not a release artifact and does not carry release provenance
+- raw workspace archives or ad hoc manual zips are likewise non-release and should not be treated as operator-facing distribution artifacts
 
 ## Runtime scaffold
 Runtime scaffold now exists at `src/onetruth/` with migrations under `alembic/` and runtime smoke tests under `tests/runtime/`.

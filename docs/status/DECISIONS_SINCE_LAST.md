@@ -2,6 +2,11 @@
 
 Record any decisions made since the last session so a fresh Codex run can rehydrate quickly.
 
+## 2026-03-14 (TASK-0100 release bundle only distribution path)
+- Distribution-path decision: `release_source_bundle` is now the only endorsed operator/share source artifact; `handoff_source_bundle` remains internal review/Codex-only and raw workspace/manual zips are explicitly non-release.
+- Provenance decision: release exports now include a deterministic repo-owned `release_provenance.json` sidecar with bundled-file digests, curated manifest/lockfile entries, and archive/commit metadata instead of escalating to a full SPDX/CycloneDX rollout.
+- Operator-path decision: `make clean-source-bundle` now points at the release export path, while `make handoff-source-bundle` preserves the internal working-tree-sensitive review snapshot.
+
 ## 2026-03-14 (TASK-0099 CI topology split and security required gates)
 - CI-lane decision: pull-request feedback now splits into parallel fast required backend lanes (`lint`, `contract`, `unit`, `security`), one separate `runtime-required` lane, and the standalone `frontend` lane instead of one monolithic backend job.
 - Guardrail-workflow decision: `secret_hygiene` remains a separate PR-capable workflow boundary rather than being folded into the main workflow's `security` job, while `release-confidence` is reserved for `push` to `main` and `workflow_dispatch`.
