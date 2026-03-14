@@ -120,9 +120,14 @@ Current HTTP endpoints:
 - `GET /api/v1/timeline-events`
 - `GET /api/v1/pointers`
 - `GET /api/v1/board/schedule-planning`
+- `GET /api/v1/templates`
+- `GET /api/v1/templates/{template_id}`
+- `GET /api/v1/templates/{template_id}/download`
+- `GET /api/v1/templates/{template_id}/download.bin`
 - `GET /api/v1/artifacts`
 - `GET /api/v1/artifacts/{artifact_version_id}`
 - `GET /api/v1/artifacts/{artifact_version_id}/download`
+- `GET /api/v1/artifacts/{artifact_version_id}/download.bin`
 - `POST /api/v1/human-tasks/{human_task_id}/claim`
 - `POST /api/v1/human-tasks/{human_task_id}/complete`
 - `POST /api/v1/human-tasks/{human_task_id}/artifacts/upload`
@@ -138,6 +143,10 @@ Boundary payload contract:
 - non-empty `POST /api/v1/*` JSON mutation requests must send `Content-Type: application/json`
 - normal command routes use a bounded `256 KiB` JSON envelope and artifact-ingress routes use a bounded `2 MiB` JSON envelope
 - wrong or missing media type now returns deterministic `415 unsupported_media_type`, and oversize JSON envelopes return deterministic `413 payload_too_large`
+
+Download transport note:
+- `/download.bin` is the primary binary attachment path for artifacts and templates, returning bytes with attachment headers
+- existing `/download` routes remain available as JSON+base64 compatibility surfaces for now
 
 ## OpenAI sandbox spike (Stage06, bounded)
 The repo now includes a narrow real-model integration path for Stage06 review classification.
@@ -291,7 +300,8 @@ The HITL frontend shell lives under `frontend/` as a contract-first SPA backed b
 
 1. Install frontend dependencies:
    - `cd frontend`
-   - `npm install`
+   - `npm ci`
+   - clean install from `package-lock.json` is the supported frontend baseline; vendored `node_modules` is not treated as runnable source truth
 2. Configure API endpoint + request-context headers (via Vite env vars):
    - `VITE_ONETRUTH_API_BASE_URL` (default `/api/v1`, local backend example: `http://127.0.0.1:8080/api/v1`)
    - `VITE_ONETRUTH_TENANT_ID` (default `tenant-a`)
@@ -310,6 +320,10 @@ The HITL frontend shell lives under `frontend/` as a contract-first SPA backed b
 Run frontend against local backend:
 - backend terminal: `PYTHONPATH=src onetruth-api --db-url sqlite:///./.tmp/onetruth-api.db --host 127.0.0.1 --port 8080 --api-boundary-profile local_dev`
 - frontend terminal: `cd frontend && VITE_ONETRUTH_API_BASE_URL=http://127.0.0.1:8080/api/v1 npm run dev`
+
+Frontend download transport note:
+- the frontend now uses `/download.bin` for artifact/template downloads and relies on attachment headers for filename/media-type handling
+- backend JSON `/download` routes remain compatibility-only surfaces for non-frontend callers
 
 Open the primary logistics demo flow:
 - default route: `/demo/logistics` (app root redirects here)

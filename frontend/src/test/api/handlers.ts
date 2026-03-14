@@ -330,10 +330,7 @@ function listTemplatesFromQuery(url: URL) {
   });
 }
 
-function templateContentBase64(templateId: string): string {
-  if (typeof btoa === "function") {
-    return btoa(`template:${templateId}`);
-  }
+function templateDownloadBody(templateId: string): string {
   return `template:${templateId}`;
 }
 
@@ -548,11 +545,27 @@ function listArtifactsForSubject(
   );
 }
 
-function downloadedContentBase64(artifactVersionId: string): string {
-  if (typeof btoa === "function") {
-    return btoa(`artifact:${artifactVersionId}`);
-  }
+function artifactDownloadBody(artifactVersionId: string): string {
   return `artifact:${artifactVersionId}`;
+}
+
+function binaryDownloadResponse(
+  body: string,
+  options: {
+    fileName: string;
+    mediaType: string;
+    requestId: string;
+  }
+) {
+  return new HttpResponse(body, {
+    status: 200,
+    headers: {
+      "content-type": options.mediaType,
+      "content-length": String(body.length),
+      "content-disposition": `attachment; filename="${options.fileName}"`,
+      "x-request-id": options.requestId
+    }
+  });
 }
 
 function buildStoryRun(
@@ -1616,7 +1629,7 @@ export const handlers = [
     });
   }),
 
-  http.get("*/api/v1/templates/:templateId/download", ({ params, request }) => {
+  http.get("*/api/v1/templates/:templateId/download.bin", ({ params, request }) => {
     if (!inScope(request)) {
       return forbiddenWorkflowRun();
     }
@@ -1635,12 +1648,11 @@ export const handlers = [
         { status: 404 }
       );
     }
-    state.audit.mutations.push(`template-download:${templateId}`);
-    return ok({
-      command: "api.templates.download",
-      template,
-      content_base64: templateContentBase64(templateId),
-      byte_size: 256
+    state.audit.mutations.push(`template-download-bin:${templateId}`);
+    return binaryDownloadResponse(templateDownloadBody(templateId), {
+      fileName: template.file_name,
+      mediaType: template.media_type,
+      requestId: `httpreq_template_${templateId}`
     });
   }),
 
@@ -1721,7 +1733,7 @@ export const handlers = [
     });
   }),
 
-  http.get("*/api/v1/artifacts/:artifactVersionId/download", ({ params, request }) => {
+  http.get("*/api/v1/artifacts/:artifactVersionId/download.bin", ({ params, request }) => {
     if (!inScope(request)) {
       return forbiddenWorkflowRun();
     }
@@ -1732,11 +1744,15 @@ export const handlers = [
     if (!artifactVersion) {
       return forbiddenWorkflowRun();
     }
-    return ok({
-      command: "api.artifacts.download",
-      artifact_version: artifactVersion,
-      content_base64: downloadedContentBase64(artifactVersionId),
-      byte_size: artifactVersion.byte_size
+    state.audit.mutations.push(`artifact-download-bin:${artifactVersionId}`);
+    return binaryDownloadResponse(artifactDownloadBody(artifactVersionId), {
+      fileName:
+        (typeof artifactVersion.metadata_json?.file_name === "string" &&
+        artifactVersion.metadata_json.file_name.length > 0
+          ? artifactVersion.metadata_json.file_name
+          : `${artifactVersionId}`),
+      mediaType: artifactVersion.media_type || "application/octet-stream",
+      requestId: `httpreq_artifact_${artifactVersionId}`
     });
   })
 ];

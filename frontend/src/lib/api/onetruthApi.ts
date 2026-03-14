@@ -1,4 +1,4 @@
-import { requestJson } from "@/lib/api/httpClient";
+import { requestBinary, requestJson } from "@/lib/api/httpClient";
 import type {
   ApprovalRow,
   BoardContract,
@@ -111,12 +111,6 @@ interface ArtifactVersionListEnvelope extends ListEnvelope {
   artifact_versions: WorkflowRunDetailContract["artifact_versions"];
 }
 
-interface ArtifactDownloadEnvelope extends ListEnvelope {
-  artifact_version: WorkflowRunDetailContract["artifact_versions"][number];
-  content_base64: string;
-  byte_size: number;
-}
-
 interface ClaimCompleteResultEnvelope extends ListEnvelope {
   result: Record<string, unknown>;
 }
@@ -132,12 +126,6 @@ interface ConfirmReviewResultEnvelope extends ListEnvelope {
 interface TemplateListEnvelope extends ListEnvelope {
   registry: TemplateRegistryMetadata;
   templates: TemplateRecord[];
-}
-
-interface TemplateDownloadEnvelope extends ListEnvelope {
-  template: TemplateRecord;
-  content_base64: string;
-  byte_size: number;
 }
 
 const GRAPH_LAYOUT: Record<string, { row: number; column: number }> = {
@@ -654,9 +642,11 @@ export interface ArtifactUploadPayload {
 }
 
 export interface ArtifactDownloadResult {
-  artifact_version: WorkflowRunDetailContract["artifact_versions"][number];
-  content_base64: string;
-  byte_size: number;
+  body: Blob;
+  fileName: string | null;
+  mediaType: string;
+  contentLength: number | null;
+  requestId: string | null;
 }
 
 export const onetruthApi = {
@@ -870,16 +860,13 @@ export const onetruthApi = {
   },
 
   async downloadTemplate(templateId: string): Promise<{
-    template: TemplateRecord;
-    content_base64: string;
-    byte_size: number;
+    body: Blob;
+    fileName: string | null;
+    mediaType: string;
+    contentLength: number | null;
+    requestId: string | null;
   }> {
-    const payload = await requestJson<TemplateDownloadEnvelope>(`/templates/${templateId}/download`);
-    return {
-      template: payload.template,
-      content_base64: payload.content_base64,
-      byte_size: payload.byte_size
-    };
+    return requestBinary(`/templates/${templateId}/download.bin`);
   },
 
   async listTimelineEvents(query: {
@@ -969,11 +956,6 @@ export const onetruthApi = {
   },
 
   async downloadArtifact(artifactVersionId: string): Promise<ArtifactDownloadResult> {
-    const payload = await requestJson<ArtifactDownloadEnvelope>(`/artifacts/${artifactVersionId}/download`);
-    return {
-      artifact_version: payload.artifact_version,
-      content_base64: payload.content_base64,
-      byte_size: payload.byte_size
-    };
+    return requestBinary(`/artifacts/${artifactVersionId}/download.bin`);
   }
 };

@@ -202,9 +202,14 @@ describe("LogisticsDemoPage", () => {
     await user.click(within(page).getByTestId("workflow-graph-node-weekly_schedule_planning"));
 
     const detailPanel = within(page).getByTestId("logistics-module-detail-panel");
-    expect(
-      within(detailPanel).getByRole("button", { name: "Download weekly_schedule.xlsx" })
-    ).toBeInTheDocument();
+    const downloadButton = within(detailPanel).getByRole("button", {
+      name: "Download weekly_schedule.xlsx"
+    });
+    expect(downloadButton).toBeInTheDocument();
+    await user.click(downloadButton);
+    await waitFor(() => {
+      expect(mutationLog()).toContain("artifact-download-bin:av-weekly-001");
+    });
   });
 
   it("opens a task drawer from the unified board without leaving the logistics demo route", async () => {

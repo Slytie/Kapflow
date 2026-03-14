@@ -24,6 +24,7 @@ from onetruth.infrastructure.repositories.artifact_links import list_artifact_li
 
 from onetruth.api.dependencies import Page, RequestContext, scoped_workflow_run
 from onetruth.api.errors import api_error_from_command, api_error_from_duplicate_idempotency
+from onetruth.api.responses import BinaryResponse, sanitize_download_filename
 
 
 def list_artifacts_endpoint(
@@ -162,13 +163,12 @@ def download_artifact_endpoint(
     context: RequestContext,
     artifact_version_id: str,
 ) -> dict[str, Any]:
-    try:
-        downloaded = download_artifact_blob_command(connection, artifact_version_id)
-    except CommandError as exc:
-        raise api_error_from_command(exc) from exc
-
+    downloaded = _download_artifact_for_context(
+        connection,
+        context=context,
+        artifact_version_id=artifact_version_id,
+    )
     artifact = downloaded["artifact_version"]
-    scoped_workflow_run(connection, context, str(artifact["workflow_run_id"]))
     content_bytes = downloaded["content_bytes"]
     return {
         "command": "api.artifacts.download",
@@ -176,6 +176,50 @@ def download_artifact_endpoint(
         "content_base64": encode_base64_content(content_bytes),
         "byte_size": len(content_bytes),
     }
+
+
+def download_artifact_binary_endpoint(
+    connection: sqlite3.Connection,
+    *,
+    context: RequestContext,
+    artifact_version_id: str,
+) -> BinaryResponse:
+    downloaded = _download_artifact_for_context(
+        connection,
+        context=context,
+        artifact_version_id=artifact_version_id,
+    )
+    artifact = downloaded["artifact_version"]
+    metadata = artifact.get("metadata_json") or {}
+    file_name = (
+        str(metadata.get("file_name"))
+        if isinstance(metadata, dict) and metadata.get("file_name") is not None
+        else None
+    )
+    return BinaryResponse(
+        body=downloaded["content_bytes"],
+        media_type=str(artifact.get("media_type") or "application/octet-stream"),
+        file_name=sanitize_download_filename(
+            file_name,
+            fallback=str(artifact["artifact_version_id"]),
+        ),
+    )
+
+
+def _download_artifact_for_context(
+    connection: sqlite3.Connection,
+    *,
+    context: RequestContext,
+    artifact_version_id: str,
+) -> dict[str, Any]:
+    try:
+        downloaded = download_artifact_blob_command(connection, artifact_version_id)
+    except CommandError as exc:
+        raise api_error_from_command(exc) from exc
+
+    artifact = downloaded["artifact_version"]
+    scoped_workflow_run(connection, context, str(artifact["workflow_run_id"]))
+    return downloaded
 
 
 def upload_workflow_run_artifact_endpoint(

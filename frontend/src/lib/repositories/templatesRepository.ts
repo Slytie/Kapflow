@@ -1,6 +1,6 @@
 import { onetruthApi } from "@/lib/api/onetruthApi";
 import type { TemplateRecord } from "@/lib/types/contracts";
-import { downloadBase64ToFile } from "@/lib/repositories/artifactAttachments";
+import { downloadBinaryToFile } from "@/lib/repositories/artifactAttachments";
 
 export interface TemplateQuery {
   workflowId?: string;
@@ -24,10 +24,6 @@ export const templatesRepository = {
 
   async download(templateId: string): Promise<void> {
     const downloaded = await onetruthApi.downloadTemplate(templateId);
-    downloadBase64ToFile(
-      downloaded.content_base64,
-      downloaded.template.file_name,
-      downloaded.template.media_type
-    );
+    downloadBinaryToFile(downloaded, templateId);
   }
 };

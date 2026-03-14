@@ -6,7 +6,7 @@ import type {
   WorkflowWorkspaceRequiredUpload
 } from "@/lib/types/contracts";
 import {
-  downloadBase64ToFile,
+  downloadBinaryToFile,
   downloadLatestAttachmentForSubject,
   listAttachmentsForSubject,
   uploadAttachmentForSubject
@@ -89,16 +89,7 @@ export const humanTasksRepository = {
 
   async openDraftArtifact(artifactVersionId: string): Promise<void> {
     const downloaded = await onetruthApi.downloadArtifact(artifactVersionId);
-    const metadataName = downloaded.artifact_version.metadata_json?.file_name;
-    const fileName =
-      typeof metadataName === "string" && metadataName.length > 0
-        ? metadataName
-        : `${downloaded.artifact_version.artifact_version_id}`;
-    downloadBase64ToFile(
-      downloaded.content_base64,
-      fileName,
-      downloaded.artifact_version.media_type
-    );
+    downloadBinaryToFile(downloaded, artifactVersionId);
   },
 
   async uploadRequiredResponse(

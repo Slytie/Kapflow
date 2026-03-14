@@ -4,7 +4,7 @@ import { Link } from "react-router-dom";
 
 import { onetruthApi } from "@/lib/api/onetruthApi";
 import { errorText } from "@/lib/api/errorText";
-import { downloadBase64ToFile } from "@/lib/repositories/artifactAttachments";
+import { downloadBinaryToFile } from "@/lib/repositories/artifactAttachments";
 import { humanTasksRepository } from "@/lib/repositories";
 import type {
   HumanTaskRow,
@@ -364,17 +364,9 @@ export function DetailDrawer({ payload, onClose }: DetailDrawerProps): JSX.Eleme
       setDownloadingArtifactVersionId(artifactVersionId);
       try {
         const downloaded = await onetruthApi.downloadArtifact(artifactVersionId);
-        const metadataName = downloaded.artifact_version.metadata_json?.file_name;
         const fileName =
-          preferredFileName ??
-          (typeof metadataName === "string" && metadataName.length > 0
-            ? metadataName
-            : downloaded.artifact_version.artifact_version_id);
-        downloadBase64ToFile(
-          downloaded.content_base64,
-          fileName,
-          downloaded.artifact_version.media_type
-        );
+          preferredFileName && preferredFileName.length > 0 ? preferredFileName : artifactVersionId;
+        downloadBinaryToFile(downloaded, fileName);
       } catch (error) {
         setDownloadError(error);
       } finally {

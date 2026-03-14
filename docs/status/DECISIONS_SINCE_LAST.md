@@ -2,6 +2,16 @@
 
 Record any decisions made since the last session so a fresh Codex run can rehydrate quickly.
 
+## 2026-03-14 (TASK-0098 frontend transport v2 cutover and clean-install truth)
+- Frontend transport decision: frontend/client download flows now call sibling `.bin` routes directly and do not keep a silent client-side fallback to the legacy JSON `/download` endpoints.
+- Client-boundary decision: binary download handling now relies on attachment headers (`content-disposition`, `content-type`, `content-length`, `x-request-id`) through a narrow `requestBinary()` seam, while backend error behavior remains the existing JSON `ApiError` envelope.
+- Install-truth decision: clean `npm ci` from `frontend/package-lock.json` is the only documented/supported frontend install baseline; vendored `node_modules` is not treated as runnable source truth.
+
+## 2026-03-14 (TASK-0097 binary artifact/template download transport v2)
+- Transport-shape decision: binary download v2 ships as sibling `.bin` routes for artifacts and templates, while the existing `/download` JSON+base64 routes remain explicit compatibility surfaces in this tranche.
+- Boundary decision: binary success responses now return raw bytes with attachment headers, but failure behavior remains the existing JSON error envelope so scope/cross-tenant denial and not-found contracts stay stable.
+- Scope-boundary decision: this tranche improves download transport only; it does not redesign uploads, migrate frontend callers, or reopen artifact metadata, pointer, provenance, or trust semantics.
+
 ## 2026-03-14 (TASK-0096 deterministic API payload hardening)
 - Boundary-contract decision: JSON POST routes now enforce deterministic media-type and size contracts at the shell boundary, so non-empty wrong/missing media type returns `415 unsupported_media_type`, oversize envelopes return `413 payload_too_large`, and existing empty-body/malformed-body `400` contracts remain intact once those checks pass.
 - Route-policy decision: the declarative API route registry now carries explicit request body policies instead of a loose `body_mode`, with a bounded `256 KiB` ceiling for ordinary JSON command routes and a bounded `2 MiB` ceiling for JSON artifact-ingress routes.

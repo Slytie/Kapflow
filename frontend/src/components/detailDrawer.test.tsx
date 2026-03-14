@@ -9,6 +9,7 @@ import { onetruthApi } from "@/lib/api/onetruthApi";
 import { humanTasksRepository } from "@/lib/repositories";
 import type { DrawerPayload } from "@/lib/types/ui";
 import type { HumanTaskRow } from "@/lib/types/contracts";
+import { mutationLog } from "@/test/api/handlers";
 
 const task: HumanTaskRow = {
   human_task_id: "ht-2",
@@ -51,7 +52,7 @@ function Harness(): JSX.Element {
             fields: [{ label: "State", value: "OPEN" }],
             artifacts: [
               {
-                artifact_version_id: "av-1",
+                artifact_version_id: "av-weekly-001",
                 artifact_kind: "schedule.draft_schedule.workbook",
                 artifact_role: "evidence",
                 media_type:
@@ -94,7 +95,12 @@ describe("Detail drawer flow", () => {
     expect(await screen.findByText("Task Artifacts (1)")).toBeInTheDocument();
     expect(screen.getByText("stage05.xlsx")).toBeInTheDocument();
     const artifactsSection = screen.getByLabelText("Task artifacts");
-    expect(within(artifactsSection).getByRole("button", { name: "Download" })).toBeInTheDocument();
+    const downloadButton = within(artifactsSection).getByRole("button", { name: "Download" });
+    expect(downloadButton).toBeInTheDocument();
+    await user.click(downloadButton);
+    await waitFor(() => {
+      expect(mutationLog()).toContain("artifact-download-bin:av-weekly-001");
+    });
     expect(screen.getByTestId("task-card-wide")).toBeInTheDocument();
   });
 

@@ -25,7 +25,7 @@ Also see `docs/patterns/PATTERN_INDEX.yaml` for the full tagged library.
 Context pack: `codex/context/EPIC-080.md`
 
 ## Current Repo Status (2026-03-14)
-- Completed in this epic: `TASK-0014`, `TASK-0015`, `TASK-0027`, `TASK-0044`, `TASK-0046`, `TASK-0047`, `TASK-0048`, `TASK-0049`, `TASK-0055`, `TASK-0056`, `TASK-0058`, `TASK-0064`, `TASK-0076`, `TASK-0083`, `TASK-0084`, `TASK-0085`, `TASK-0090`, `TASK-0091`, `TASK-0094`, `TASK-0095`, `TASK-0096`.
+- Completed in this epic: `TASK-0014`, `TASK-0015`, `TASK-0027`, `TASK-0044`, `TASK-0046`, `TASK-0047`, `TASK-0048`, `TASK-0049`, `TASK-0055`, `TASK-0056`, `TASK-0058`, `TASK-0064`, `TASK-0076`, `TASK-0083`, `TASK-0084`, `TASK-0085`, `TASK-0090`, `TASK-0091`, `TASK-0094`, `TASK-0095`, `TASK-0096`, `TASK-0098`.
 - Primary operator/demo FE entrypoint is now `/demo/logistics`, powered by canonical backend story seam `GET /api/v1/stories/logistics-three-workflow`.
 - Schedule-only board/workspace/runs/timeline surfaces remain available as legacy/internal regression paths and are explicitly labeled as legacy in navigation/UI copy.
 - `TASK-0076` restored the legacy schedule-only board's compatibility with the current pointer-query contract without changing its board payload shape or promoting it back to a primary product surface.
@@ -37,6 +37,7 @@ Context pack: `codex/context/EPIC-080.md`
 - `TASK-0094` characterized the hand-rolled API shell and added a header-only `x-request-id` seam for future boundary telemetry, while keeping JSON payloads, route architecture, and event-correlation semantics unchanged.
 - `TASK-0095` replaced the duplicated handwritten route matcher/dispatcher with a single declarative route registry, keeping the lightweight ASGI shell but centralizing route metadata, match order, and dispatch truth without changing payload or trust behavior.
 - `TASK-0096` hardened the API boundary's JSON parsing contract with explicit route-aware body policies, deterministic `415`/`413` errors for wrong-media-type or oversize non-empty requests, and bounded larger envelopes for artifact-ingress routes without changing artifact semantics or trust behavior.
+- `TASK-0098` migrated frontend/client download surfaces to the binary `.bin` transport, removed frontend dependence on JSON/base64 download envelopes, and made clean `npm ci` from the frontend lockfile the explicit install truth.
 - Scope boundary remains unchanged: no second FE truth model and no generalized workflow-family UI framework was introduced in this tranche.
 
 ## Tasks
@@ -61,3 +62,4 @@ Context pack: `codex/context/EPIC-080.md`
 - TASK-0094
 - TASK-0095
 - TASK-0096
+- TASK-0098

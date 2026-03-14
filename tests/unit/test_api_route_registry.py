@@ -54,6 +54,20 @@ def test_route_registry_preserves_suffix_precedence_over_detail_routes() -> None
     assert human_task_claim is not None
     assert human_task_claim.route.name == "human_tasks.claim"
 
+    template_binary_download = match_route(
+        "GET",
+        "/api/v1/templates/schedule.stage05.draft_schedule.workbook.empty.v1/download.bin",
+    )
+    assert template_binary_download is not None
+    assert template_binary_download.route.name == "templates.download.binary"
+
+    artifact_binary_download = match_route(
+        "GET",
+        "/api/v1/artifacts/art-001/download.bin",
+    )
+    assert artifact_binary_download is not None
+    assert artifact_binary_download.route.name == "artifacts.download.binary"
+
 
 def test_route_registry_exposes_representative_metadata() -> None:
     routes_by_name = {route.name: route for route in ROUTES}

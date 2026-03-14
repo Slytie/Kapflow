@@ -11,6 +11,7 @@ from onetruth.infrastructure.artifacts.storage import encode_base64_content
 
 from onetruth.api.dependencies import Page, RequestContext
 from onetruth.api.errors import ApiError
+from onetruth.api.responses import BinaryResponse, sanitize_download_filename
 
 
 def list_templates_endpoint(
@@ -55,9 +56,33 @@ def download_template_endpoint(
     context: RequestContext,
     template_id: str,
 ) -> dict[str, Any]:
-    del connection
-    del context
+    template, content = _load_template_bytes(template_id)
+    return {
+        "command": "api.templates.download",
+        "template": template.as_public_dict(),
+        "content_base64": encode_base64_content(content),
+        "byte_size": len(content),
+    }
 
+
+def download_template_binary_endpoint(
+    connection: sqlite3.Connection,
+    *,
+    context: RequestContext,
+    template_id: str,
+) -> BinaryResponse:
+    template, content = _load_template_bytes(template_id)
+    return BinaryResponse(
+        body=content,
+        media_type=template.media_type or "application/octet-stream",
+        file_name=sanitize_download_filename(
+            template.source_path.name,
+            fallback=template_id,
+        ),
+    )
+
+
+def _load_template_bytes(template_id: str):
     registry = _load_registry()
     try:
         template = registry.template_by_id(template_id)
@@ -70,12 +95,7 @@ def download_template_endpoint(
         ) from exc
 
     content = template.source_path.read_bytes()
-    return {
-        "command": "api.templates.download",
-        "template": template.as_public_dict(),
-        "content_base64": encode_base64_content(content),
-        "byte_size": len(content),
-    }
+    return template, content
 
 
 def get_template_endpoint(

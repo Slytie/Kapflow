@@ -6,6 +6,14 @@ export interface ApiErrorPayload {
   details?: Record<string, unknown>;
 }
 
+export interface BinaryResponsePayload {
+  body: Blob;
+  fileName: string | null;
+  mediaType: string;
+  contentLength: number | null;
+  requestId: string | null;
+}
+
 export class ApiClientError extends Error {
   readonly status: number;
   readonly code: string;
@@ -77,12 +85,9 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === "object";
 }
 
-export async function requestJson<T>(path: string, options: RequestOptions = {}): Promise<T> {
-  const method = options.method ?? "GET";
-  const url = `${apiConfig.baseUrl}${path}${encodeQuery(options.query)}`;
-
-  const headers: HeadersInit = {
-    "content-type": "application/json",
+function buildHeaders(options: RequestOptions, contentType?: string): HeadersInit {
+  return {
+    ...(contentType ? { "content-type": contentType } : {}),
     "x-onetruth-tenant-id": apiConfig.tenantId,
     "x-onetruth-domain-id": apiConfig.domainId,
     "x-onetruth-actor-id": apiConfig.actorId,
@@ -90,42 +95,113 @@ export async function requestJson<T>(path: string, options: RequestOptions = {})
     "x-onetruth-actor-roles": apiConfig.actorRoles,
     ...(options.headers ?? {})
   };
+}
 
+async function performRequest(path: string, options: RequestOptions, contentType?: string): Promise<Response> {
+  const method = options.method ?? "GET";
+  const url = `${apiConfig.baseUrl}${path}${encodeQuery(options.query)}`;
   const init: RequestInit = {
     method,
-    headers
+    headers: buildHeaders(options, contentType)
   };
+
   if (options.body !== undefined) {
     init.body = JSON.stringify(options.body);
   }
 
-  let response: Response;
   try {
-    response = await fetch(url, init);
+    return await fetch(url, init);
   } catch {
     throw new ApiClientError(0, {
       code: "network_error",
       message: "Unable to reach the API endpoint"
     });
   }
+}
+
+function invalidJsonPayload(path: string, contentType: string): ApiErrorPayload {
+  const maybeHtml =
+    contentType.toLowerCase().includes("text/html") || contentType.toLowerCase().includes("<!doctype html>");
+  return {
+    code: "invalid_json_response",
+    message: maybeHtml
+      ? "API returned HTML instead of JSON. Check VITE_ONETRUTH_API_BASE_URL or Vite dev proxy."
+      : "API returned a non-JSON response.",
+    details: { path, content_type: contentType }
+  };
+}
+
+function parseJsonText(text: string, status: number, path: string, contentType: string): unknown {
+  try {
+    return JSON.parse(text) as unknown;
+  } catch {
+    throw new ApiClientError(status, invalidJsonPayload(path, contentType));
+  }
+}
+
+function normalizeErrorResponse(
+  text: string,
+  status: number,
+  path: string,
+  contentType: string
+): ApiErrorPayload {
+  if (!text) {
+    return {
+      code: "http_error",
+      message: `Request failed with status ${status}`
+    };
+  }
+
+  try {
+    return normalizeErrorPayload(JSON.parse(text) as unknown, status);
+  } catch {
+    return invalidJsonPayload(path, contentType);
+  }
+}
+
+function parseContentDispositionFilename(contentDisposition: string | null): string | null {
+  if (!contentDisposition) {
+    return null;
+  }
+
+  const utf8Match = /filename\*\s*=\s*UTF-8''([^;]+)/i.exec(contentDisposition);
+  if (utf8Match) {
+    const encoded = utf8Match[1]?.trim();
+    if (!encoded) {
+      return null;
+    }
+    try {
+      return decodeURIComponent(encoded);
+    } catch {
+      return encoded;
+    }
+  }
+
+  const quotedMatch = /filename\s*=\s*"([^"]+)"/i.exec(contentDisposition);
+  if (quotedMatch?.[1]) {
+    return quotedMatch[1];
+  }
+
+  const bareMatch = /filename\s*=\s*([^;]+)/i.exec(contentDisposition);
+  return bareMatch?.[1]?.trim() || null;
+}
+
+function parseContentLength(value: string | null): number | null {
+  if (!value) {
+    return null;
+  }
+  const parsed = Number.parseInt(value, 10);
+  return Number.isFinite(parsed) && parsed >= 0 ? parsed : null;
+}
+
+export async function requestJson<T>(path: string, options: RequestOptions = {}): Promise<T> {
+  const response = await performRequest(path, options, "application/json");
 
   const text = await response.text();
   const contentType = response.headers.get("content-type") ?? "";
   let payload: unknown = {};
   if (text) {
-    try {
-      payload = JSON.parse(text) as unknown;
-    } catch {
-      const maybeHtml =
-        contentType.toLowerCase().includes("text/html") || text.toLowerCase().includes("<!doctype html");
-      throw new ApiClientError(response.status, {
-        code: "invalid_json_response",
-        message: maybeHtml
-          ? "API returned HTML instead of JSON. Check VITE_ONETRUTH_API_BASE_URL or Vite dev proxy."
-          : "API returned a non-JSON response.",
-        details: { path, content_type: contentType }
-      });
-    }
+    payload = parseJsonText(text, response.status, path, contentType);
   }
 
   if (!response.ok) {
@@ -153,4 +229,26 @@ export async function requestJson<T>(path: string, options: RequestOptions = {})
   }
 
   return payload as T;
+}
+
+export async function requestBinary(
+  path: string,
+  options: RequestOptions = {}
+): Promise<BinaryResponsePayload> {
+  const response = await performRequest(path, options);
+
+  if (!response.ok) {
+    const text = await response.text();
+    const contentType = response.headers.get("content-type") ?? "";
+    throw new ApiClientError(response.status, normalizeErrorResponse(text, response.status, path, contentType));
+  }
+
+  const mediaType = response.headers.get("content-type") ?? "application/octet-stream";
+  return {
+    body: await response.blob(),
+    fileName: parseContentDispositionFilename(response.headers.get("content-disposition")),
+    mediaType,
+    contentLength: parseContentLength(response.headers.get("content-length")),
+    requestId: response.headers.get("x-request-id")
+  };
 }

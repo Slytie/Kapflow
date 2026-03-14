@@ -22,6 +22,13 @@ class ApiResult:
     payload: dict[str, Any]
 
 
+@dataclass(frozen=True)
+class RawApiResult:
+    status_code: int
+    headers: dict[str, str]
+    body: bytes
+
+
 class RuntimeApiClient:
     def __init__(
         self,
@@ -74,6 +81,34 @@ class RuntimeApiClient:
         query: dict[str, Any] | None = None,
         headers: dict[str, str] | None = None,
     ) -> ApiResult:
+        raw = self.request_raw(
+            method,
+            path,
+            payload=payload,
+            query=query,
+            headers=headers,
+        )
+        parsed = json.loads(raw.body.decode("utf-8")) if raw.body else {}
+        return ApiResult(status_code=raw.status_code, payload=parsed)
+
+    def get_raw(
+        self,
+        path: str,
+        *,
+        query: dict[str, Any] | None = None,
+        headers: dict[str, str] | None = None,
+    ) -> RawApiResult:
+        return self.request_raw("GET", path, query=query, headers=headers)
+
+    def request_raw(
+        self,
+        method: str,
+        path: str,
+        *,
+        payload: dict[str, Any] | None = None,
+        query: dict[str, Any] | None = None,
+        headers: dict[str, str] | None = None,
+    ) -> RawApiResult:
         all_headers = dict(self.default_headers)
         if headers:
             all_headers.update({key.lower(): value for key, value in headers.items()})
@@ -121,7 +156,16 @@ class RuntimeApiClient:
 
         messages = asyncio.run(_invoke())
         start = next(message for message in messages if message["type"] == "http.response.start")
-        body_messages = [message for message in messages if message["type"] == "http.response.body"]
+        start_headers = {
+            key.decode("latin-1").lower(): value.decode("latin-1")
+            for key, value in start.get("headers", [])
+        }
+        body_messages = [
+            message for message in messages if message["type"] == "http.response.body"
+        ]
         body_bytes = b"".join(message.get("body", b"") for message in body_messages)
-        parsed = json.loads(body_bytes.decode("utf-8")) if body_bytes else {}
-        return ApiResult(status_code=int(start["status"]), payload=parsed)
+        return RawApiResult(
+            status_code=int(start["status"]),
+            headers=start_headers,
+            body=body_bytes,
+        )

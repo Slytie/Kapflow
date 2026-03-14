@@ -34,3 +34,13 @@
 - “Does the pointer move without enough evidence to reconstruct prior officialness?”
 - “Can a delta become authoritative without a clear ordering and scope?”
 - “Could orphaned blob storage become mistaken for official state?”
+
+## Current Repo Status (2026-03-14)
+- `TASK-0081` is complete:
+  - shared/public HTTP artifact ingress accepts request bytes only,
+  - CLI/scenario/internal local-source-path seeding remains on the same canonical artifact path,
+  - no alternate attachment truth path was introduced.
+- `TASK-0097` is complete:
+  - artifact and template downloads now have sibling binary `.bin` routes that return bytes with attachment headers,
+  - the existing `/download` JSON+base64 routes remain available as compatibility surfaces,
+  - transport changed without reopening artifact metadata, pointer, provenance, or trust semantics.

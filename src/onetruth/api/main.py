@@ -29,6 +29,7 @@ from onetruth.api.request_correlation import (
     request_id_header,
     resolve_request_id,
 )
+from onetruth.api.responses import BinaryResponse
 from onetruth.api.route_registry import RequestBodyPolicy, RouteExecutionContext, match_route
 
 ASGIApp = Callable[[dict[str, Any], Callable[[], Awaitable[dict[str, Any]]], Callable[[dict[str, Any]], Awaitable[None]]], Awaitable[None]]
@@ -145,14 +146,24 @@ def create_app(
             finally:
                 connection.close()
 
-            await _send_json(
-                send,
-                status_code=200,
-                payload={"status": "ok", **response_payload},
-                request_id=request_id,
-                boundary_profile=boundary.profile,
-                request_headers=headers,
-            )
+            if isinstance(response_payload, BinaryResponse):
+                await _send_binary(
+                    send,
+                    status_code=200,
+                    payload=response_payload,
+                    request_id=request_id,
+                    boundary_profile=boundary.profile,
+                    request_headers=headers,
+                )
+            else:
+                await _send_json(
+                    send,
+                    status_code=200,
+                    payload={"status": "ok", **response_payload},
+                    request_id=request_id,
+                    boundary_profile=boundary.profile,
+                    request_headers=headers,
+                )
         except ApiError as exc:
             await _send_json(
                 send,
@@ -415,6 +426,43 @@ async def _send_no_content(
         }
     )
     await send({"type": "http.response.body", "body": b"", "more_body": False})
+
+
+async def _send_binary(
+    send,
+    *,
+    status_code: int,
+    payload: BinaryResponse,
+    request_id: str,
+    boundary_profile: BoundaryProfile,
+    request_headers: dict[str, str] | None = None,
+) -> None:
+    response_headers = [
+        (
+            b"content-type",
+            (payload.media_type or "application/octet-stream").encode("latin-1"),
+        ),
+        (b"content-length", str(len(payload.body)).encode("ascii")),
+        (
+            b"content-disposition",
+            f'attachment; filename="{payload.file_name}"'.encode("latin-1"),
+        ),
+        request_id_header(request_id),
+    ]
+    response_headers.extend(
+        _cors_headers(
+            boundary_profile=boundary_profile,
+            request_headers=request_headers,
+        )
+    )
+    await send(
+        {
+            "type": "http.response.start",
+            "status": status_code,
+            "headers": response_headers,
+        }
+    )
+    await send({"type": "http.response.body", "body": payload.body, "more_body": False})
 
 
 def _build_server_parser() -> argparse.ArgumentParser:

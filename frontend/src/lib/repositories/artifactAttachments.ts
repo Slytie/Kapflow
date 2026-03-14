@@ -35,10 +35,9 @@ export async function fileToBase64(file: File): Promise<string> {
   return btoa(binary);
 }
 
-export function downloadBase64ToFile(
-  base64Payload: string,
-  fileName: string,
-  mediaType: string
+export function downloadBinaryToFile(
+  downloaded: ArtifactDownloadResult,
+  fallbackFileName: string
 ): void {
   if (typeof window === "undefined" || typeof document === "undefined") {
     return;
@@ -46,20 +45,20 @@ export function downloadBase64ToFile(
   if (typeof URL === "undefined" || typeof URL.createObjectURL !== "function") {
     return;
   }
-  const binary = atob(base64Payload);
-  const bytes = new Uint8Array(binary.length);
-  for (let i = 0; i < binary.length; i += 1) {
-    bytes[i] = binary.charCodeAt(i);
-  }
-  const blob = new Blob([bytes], { type: mediaType || "application/octet-stream" });
+  const blob =
+    downloaded.body.type === downloaded.mediaType
+      ? downloaded.body
+      : new Blob([downloaded.body], { type: downloaded.mediaType || "application/octet-stream" });
   const downloadUrl = URL.createObjectURL(blob);
   const anchor = document.createElement("a");
   anchor.href = downloadUrl;
-  anchor.download = fileName;
+  anchor.download = downloaded.fileName || fallbackFileName;
   document.body.appendChild(anchor);
   anchor.click();
   document.body.removeChild(anchor);
-  URL.revokeObjectURL(downloadUrl);
+  if (typeof URL.revokeObjectURL === "function") {
+    URL.revokeObjectURL(downloadUrl);
+  }
 }
 
 function downloadName(artifact: ArtifactVersionRow): string {
@@ -139,10 +138,6 @@ export async function downloadLatestAttachmentForSubject(
 
   const latest = attachments[0];
   const downloaded = await downloadArtifact(latest.artifact_version_id);
-  downloadBase64ToFile(
-    downloaded.content_base64,
-    downloadName(downloaded.artifact_version),
-    downloaded.artifact_version.media_type
-  );
+  downloadBinaryToFile(downloaded, downloadName(latest));
   return latest;
 }

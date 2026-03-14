@@ -9,7 +9,7 @@ import { apiConfig } from "@/lib/api/config";
 import { errorText } from "@/lib/api/errorText";
 import { onetruthApi } from "@/lib/api/onetruthApi";
 import { logisticsStoryRepository, workflowRunsRepository } from "@/lib/repositories";
-import { downloadBase64ToFile } from "@/lib/repositories/artifactAttachments";
+import { downloadBinaryToFile } from "@/lib/repositories/artifactAttachments";
 import { useDrawer } from "@/lib/state/drawerContext";
 import type {
   LogisticsStoryBoardWorkItem,
@@ -402,17 +402,11 @@ export function LogisticsDemoPage(): JSX.Element {
     setDownloadingArtifactVersionId(artifactRef.artifact_version_id);
     try {
       const downloaded = await onetruthApi.downloadArtifact(artifactRef.artifact_version_id);
-      const metadataName = downloaded.artifact_version.metadata_json?.file_name;
       const fileName =
-        artifactRef.label ||
-        (typeof metadataName === "string" && metadataName.length > 0
-          ? metadataName
-          : downloaded.artifact_version.artifact_version_id);
-      downloadBase64ToFile(
-        downloaded.content_base64,
-        fileName,
-        downloaded.artifact_version.media_type
-      );
+        artifactRef.label && artifactRef.label.length > 0
+          ? artifactRef.label
+          : artifactRef.artifact_version_id;
+      downloadBinaryToFile(downloaded, fileName);
     } catch (error) {
       setFamilyArtifactError(error);
     } finally {

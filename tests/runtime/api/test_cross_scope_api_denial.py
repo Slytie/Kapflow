@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import base64
+import json
 from pathlib import Path
 
 from tests.runtime.helpers.runtime_api import RuntimeApiClient
@@ -133,6 +134,16 @@ def test_cross_scope_requests_are_denied_and_do_not_leak_rows(tmp_path: Path) ->
     )
     assert artifact_download_denied.status_code == 404
     assert artifact_download_denied.payload["error"]["code"] == "workflow_run_not_found"
+
+    artifact_binary_download_denied = wrong_scope_client.get_raw(
+        f"/api/v1/artifacts/{artifact_version_id}/download.bin"
+    )
+    assert artifact_binary_download_denied.status_code == 404
+    assert artifact_binary_download_denied.headers["content-type"] == "application/json"
+    assert (
+        json.loads(artifact_binary_download_denied.body.decode("utf-8"))["error"]["code"]
+        == "workflow_run_not_found"
+    )
 
     artifact_subject_list_denied = wrong_scope_client.get(
         f"/api/v1/human-tasks/{human_task_id}/artifacts",

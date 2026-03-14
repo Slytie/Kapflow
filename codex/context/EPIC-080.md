@@ -65,4 +65,8 @@
   - JSON POST routes now use explicit route-aware request body policies instead of a loose `body_mode`,
   - the API shell deterministically returns `415 unsupported_media_type` for non-empty wrong/missing JSON media type and `413 payload_too_large` for oversize envelopes,
   - artifact-ingress routes intentionally keep a larger bounded JSON envelope than ordinary command routes without changing artifact ingress semantics.
+- `TASK-0098` is complete:
+  - frontend/client download flows now call `/download.bin` directly and no longer depend on JSON/base64 download envelopes,
+  - the frontend download seam now derives file names/media types from attachment headers through a narrow binary client helper,
+  - clean `npm ci` from `frontend/package-lock.json` is the explicit frontend install truth.
 - Scope remains intentionally bounded to the authored three-workflow logistics story shell.

@@ -152,7 +152,7 @@ describe("RunWorkspacePage", () => {
     await user.click(downloadTemplate);
     await waitFor(() => {
       expect(mutationLog()).toContain(
-        "template-download:schedule.stage06.supervisor_review.doc.empty.v1"
+        "template-download-bin:schedule.stage06.supervisor_review.doc.empty.v1"
       );
     });
   });

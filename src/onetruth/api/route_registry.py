@@ -6,12 +6,14 @@ from typing import Any, Callable, Literal
 
 from onetruth.api.dependencies import Page, RequestContext
 from onetruth.api.errors import ApiError
+from onetruth.api.responses import BinaryResponse
 from onetruth.api.routes.approvals import (
     get_approval_endpoint,
     list_approvals_endpoint,
     respond_approval_endpoint,
 )
 from onetruth.api.routes.artifacts import (
+    download_artifact_binary_endpoint,
     download_artifact_endpoint,
     get_artifact_endpoint,
     ingest_artifact_endpoint,
@@ -46,6 +48,7 @@ from onetruth.api.routes.logistics_story import (
 )
 from onetruth.api.routes.pointers import list_pointers_endpoint
 from onetruth.api.routes.templates import (
+    download_template_binary_endpoint,
     download_template_endpoint,
     get_template_endpoint,
     list_templates_endpoint,
@@ -61,7 +64,8 @@ from onetruth.api.routes.workflow_runs import (
 )
 
 RequestBodyKind = Literal["none", "json"]
-RouteDispatcher = Callable[["RouteExecutionContext", dict[str, str]], dict[str, Any]]
+RouteResult = dict[str, Any] | BinaryResponse
+RouteDispatcher = Callable[["RouteExecutionContext", dict[str, str]], RouteResult]
 
 
 @dataclass(frozen=True)
@@ -136,7 +140,7 @@ class RouteMatch:
     route: RouteSpec
     params: dict[str, str]
 
-    def dispatch(self, execution: "RouteExecutionContext") -> dict[str, Any]:
+    def dispatch(self, execution: "RouteExecutionContext") -> RouteResult:
         return self.route.dispatch(execution, self.params)
 
 
@@ -644,6 +648,22 @@ ROUTES: tuple[RouteSpec, ...] = (
         ),
     ),
     RouteSpec(
+        name="templates.download.binary",
+        method="GET",
+        pattern=_param(
+            "/api/v1/templates/",
+            param_name="template_id",
+            suffix="/download.bin",
+        ),
+        body_policy=NO_BODY,
+        needs_page=False,
+        dispatch=lambda execution, params: download_template_binary_endpoint(
+            execution.connection,
+            context=execution.context,
+            template_id=params["template_id"],
+        ),
+    ),
+    RouteSpec(
         name="templates.download",
         method="GET",
         pattern=_param(
@@ -698,6 +718,22 @@ ROUTES: tuple[RouteSpec, ...] = (
             context=execution.context,
             query=execution.query,
             page=_require_page(execution.page),
+        ),
+    ),
+    RouteSpec(
+        name="artifacts.download.binary",
+        method="GET",
+        pattern=_param(
+            "/api/v1/artifacts/",
+            param_name="artifact_version_id",
+            suffix="/download.bin",
+        ),
+        body_policy=NO_BODY,
+        needs_page=False,
+        dispatch=lambda execution, params: download_artifact_binary_endpoint(
+            execution.connection,
+            context=execution.context,
+            artifact_version_id=params["artifact_version_id"],
         ),
     ),
     RouteSpec(
