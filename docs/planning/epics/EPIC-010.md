@@ -24,9 +24,10 @@ A one-truth system still fails if scope leaks through projections, caches, or ge
 - negative-test guidance
 
 ## Status
-- `TASK-0002` and `TASK-0078` are complete.
-- The API trust boundary now has explicit `local_dev`, `ci_test`, and `shared_env` profiles; `shared_env` fails closed by default, and trusted-header CORS is limited to loopback local-dev origins.
+- `TASK-0002`, `TASK-0078`, and `TASK-0101` are complete.
+- The API trust boundary now has explicit `local_dev`, `ci_test`, and `shared_env` profiles; `shared_env` fails closed by default, trusted-header CORS is limited to loopback local-dev origins, and a configured bearer-JWT resolver can now provide attested principals in `shared_env` without trusting `x-onetruth-*` headers.
 
 ## Tasks
 - TASK-0002
 - TASK-0078
+- TASK-0101

@@ -2,11 +2,20 @@ from __future__ import annotations
 
 import asyncio
 import json
+import time
 from pathlib import Path
+from typing import Any
+
+import jwt
+import pytest
 
 from onetruth.api.dependencies import RequestContext
 from onetruth.api.main import create_app
 from tests.runtime.helpers.runtime_cli import run_cli
+
+pytestmark = pytest.mark.filterwarnings(
+    "ignore:The RSA key is 1024 bits long*:jwt.warnings.InsecureKeyLengthWarning"
+)
 
 
 def _invoke(
@@ -82,6 +91,73 @@ def _trusted_headers() -> dict[str, str]:
     }
 
 
+_JWT_ISSUER = "https://issuer.onetruth.test"
+_JWT_AUDIENCE = "onetruth-shared-env"
+_JWT_PRIVATE_KEY = """-----BEGIN PRIVATE KEY-----
+MIICdwIBADANBgkqhkiG9w0BAQEFAASCAmEwggJdAgEAAoGBAL50ZaBOaoQfcoqO
++JHukgf+eRHeaNGl8UVgKLHtiGAmdGaOlfI//bKA61yHSvOxA6bOmBljdjFA8LbZ
+chrYayydB8mYJWD4yleY/+sL8OEtaGB0kclg3Jff8vpouHPoy1Tsuxl0npxfbwKJ
+jU7k9xejjQenpvcnyJy2994LFSIlAgMBAAECgYBMyjGPiQ55ZxSPuUWP0Vkf0AKQ
+qdQpc3bsOfEujE9INTkJgMQEgLiRmFlNXV9jEiQexX2d/vRQt5ZWoyXWnRvYlwiO
+u3t7aW+QC4I188hQUyqTIArFFwDse2QWYHpYGzp4uA/ElsxqWidjD9FBYE01Fztg
+3olUjC84dZMd7FJrAQJBAN1t/wi1zglU88VFuWI3C+CdDbK/sSSY3aZua+tBYSkF
+RF1+ZYh2bruakgw9z/QyQyzygoPtu2Q9CDiCduBNAo0CQQDcMGfbXpxrv4xVI6og
+K7noKg0hyuoaQkxvdLp4CGPX2lU0ZWzxB7FCAFWaVUwU+kGgEHtuzg1wk/uvQJaH
+PgP5AkB8cpKwcYVvxzgOOkabhXZ+caY+PPAxMlz4afzrRl518IjgxuYHkRBhDdlh
+WegjRZBtlYp23UjBaG/TWre3DnENAkEA15btmXTBYx5hoNsSr/0gQZkq0nODU8Km
+ZFq+WNieKbK0ymCkkjsd66m4JyxtGf0OVFLPCGbn8dpzC90JhdHKwQJBAKeiGx4F
+Vpm0Ehd7HE0dorIrH5hqz6tabDRHekqc/q4614d8cqUxRepHgMz4Eql1ORf/L4u6
+UvE2PJSAIQ0bt9w=
+-----END PRIVATE KEY-----"""
+_JWT_PUBLIC_KEY = """-----BEGIN PUBLIC KEY-----
+MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQC+dGWgTmqEH3KKjviR7pIH/nkR
+3mjRpfFFYCix7YhgJnRmjpXyP/2ygOtch0rzsQOmzpgZY3YxQPC22XIa2GssnQfJ
+mCVg+MpXmP/rC/DhLWhgdJHJYNyX3/L6aLhz6MtU7LsZdJ6cX28CiY1O5PcXo40H
+p6b3J8ictvfeCxUiJQIDAQAB
+-----END PUBLIC KEY-----"""
+_WRONG_JWT_PUBLIC_KEY = """-----BEGIN PUBLIC KEY-----
+MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQC/W8cGREfIVmLNbMZuYrBdeAEa
+1aY/ZUudttLs4ea7KPOq8abdcasphlYcL52uKZbPf+6TOvFwCbV79njIIzdxx8q1
+yfAFjQ6Gj7xQzu4WoDjLTunVUZ4Np3UwYqm+A+I//GQgcxlIU5aFKPbigLpEJNYf
+wFucH890LCXoCJQDMQIDAQAB
+-----END PUBLIC KEY-----"""
+
+
+def _configure_shared_env_jwt(monkeypatch, *, public_key: str = _JWT_PUBLIC_KEY) -> None:
+    monkeypatch.setenv("ONETRUTH_SHARED_ENV_JWT_ISSUER", _JWT_ISSUER)
+    monkeypatch.setenv("ONETRUTH_SHARED_ENV_JWT_AUDIENCE", _JWT_AUDIENCE)
+    monkeypatch.setenv("ONETRUTH_SHARED_ENV_JWT_PUBLIC_KEY_PEM", public_key)
+
+
+def _jwt_token(
+    *,
+    issuer: str = _JWT_ISSUER,
+    audience: str = _JWT_AUDIENCE,
+    exp: int | None = None,
+    extra_claims: dict[str, Any] | None = None,
+) -> str:
+    claims: dict[str, Any] = {
+        "iss": issuer,
+        "aud": audience,
+        "sub": "service:shared-gateway",
+        "tenant_id": "tenant-a",
+        "domain_id": "domain-x",
+        "actor_type": "service",
+        "actor_roles": ["dispatch_supervisor"],
+        "exp": exp if exp is not None else int(time.time()) + 300,
+    }
+    if extra_claims:
+        claims.update(extra_claims)
+    return jwt.encode(claims, _JWT_PRIVATE_KEY, algorithm="RS256")
+
+
+def _authorization_headers(token: str | None) -> dict[str, str]:
+    headers = dict(_trusted_headers())
+    if token is not None:
+        headers["authorization"] = f"Bearer {token}"
+    return headers
+
+
 def _initialized_db_url(tmp_path: Path, name: str) -> str:
     db_path = tmp_path / f"{name}.db"
     db_url = f"sqlite:///{db_path}"
@@ -132,6 +208,80 @@ def test_shared_env_accepts_injected_principal_resolver(tmp_path: Path) -> None:
     assert parsed["workflow_runs"] == []
     assert headers["x-request-id"].startswith("httpreq_")
     assert "access-control-allow-origin" not in headers
+
+
+def test_shared_env_accepts_configured_bearer_jwt(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    _configure_shared_env_jwt(monkeypatch)
+    db_url = _initialized_db_url(tmp_path, "shared-env-jwt-resolver")
+    app = create_app(db_url=db_url)
+
+    status, headers, body = _invoke(
+        app,
+        method="GET",
+        path="/api/v1/workflow-runs",
+        headers=_authorization_headers(_jwt_token()),
+    )
+
+    parsed = _parsed_json(body)
+    assert status == 200
+    assert parsed["status"] == "ok"
+    assert parsed["workflow_runs"] == []
+    assert headers["x-request-id"].startswith("httpreq_")
+    assert "access-control-allow-origin" not in headers
+
+
+def test_shared_env_configured_jwt_requires_bearer_token(
+    monkeypatch,
+) -> None:
+    _configure_shared_env_jwt(monkeypatch)
+    app = create_app(db_url="sqlite:///:memory:")
+
+    status, headers, body = _invoke(
+        app,
+        method="GET",
+        path="/api/v1/workflow-runs",
+        headers=_trusted_headers(),
+    )
+
+    parsed = _parsed_json(body)
+    assert status == 401
+    assert parsed["status"] == "error"
+    assert parsed["error"]["code"] == "missing_bearer_token"
+    assert headers["x-request-id"].startswith("httpreq_")
+    assert "access-control-allow-origin" not in headers
+
+
+def test_shared_env_configured_jwt_rejects_invalid_tokens(
+    monkeypatch,
+) -> None:
+    cases = (
+        ("invalid_signature", _WRONG_JWT_PUBLIC_KEY, _jwt_token()),
+        ("invalid_issuer", _JWT_PUBLIC_KEY, _jwt_token(issuer="https://wrong-issuer.test")),
+        ("invalid_audience", _JWT_PUBLIC_KEY, _jwt_token(audience="wrong-audience")),
+        ("expired", _JWT_PUBLIC_KEY, _jwt_token(exp=int(time.time()) - 60)),
+        ("missing_claims", _JWT_PUBLIC_KEY, _jwt_token(extra_claims={"actor_roles": None})),
+    )
+
+    for _, public_key, token in cases:
+        _configure_shared_env_jwt(monkeypatch, public_key=public_key)
+        app = create_app(db_url="sqlite:///:memory:")
+
+        status, headers, body = _invoke(
+            app,
+            method="GET",
+            path="/api/v1/workflow-runs",
+            headers=_authorization_headers(token),
+        )
+
+        parsed = _parsed_json(body)
+        assert status == 401
+        assert parsed["status"] == "error"
+        assert parsed["error"]["code"] == "invalid_attested_identity"
+        assert parsed["error"]["details"]["boundary_profile"] == "shared_env"
+        assert headers["x-request-id"].startswith("httpreq_")
 
 
 def test_local_dev_profile_accepts_trusted_headers(tmp_path: Path) -> None:

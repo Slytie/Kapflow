@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 import os
 import sqlite3
-from typing import Any, Callable, Literal, Mapping
+from typing import Any, Callable, Literal, Mapping, Sequence
 
 from onetruth.application.handlers.workflow_task_lifecycle import (
     CommandError,
@@ -66,24 +66,18 @@ def trusted_header_principal_resolver(headers: Mapping[str, str]) -> RequestCont
             )
         return value.strip()
 
-    actor_type = _required(ACTOR_TYPE_HEADER)
-    if actor_type not in VALID_ACTOR_TYPES:
-        raise ApiError(
-            status_code=400,
-            code="invalid_request_context",
-            message=f"unsupported actor_type in header {ACTOR_TYPE_HEADER}: {actor_type}",
-            details={"allowed_actor_types": sorted(VALID_ACTOR_TYPES)},
-        )
-
-    raw_roles = _required(ACTOR_ROLES_HEADER)
-    actor_roles = tuple(role.strip() for role in raw_roles.split(",") if role.strip())
-    if not actor_roles:
-        raise ApiError(
-            status_code=400,
-            code="invalid_request_context",
-            message=f"{ACTOR_ROLES_HEADER} must contain at least one role",
-            details={},
-        )
+    actor_type = normalize_actor_type(
+        _required(ACTOR_TYPE_HEADER),
+        status_code=400,
+        code="invalid_request_context",
+        source=ACTOR_TYPE_HEADER,
+    )
+    actor_roles = normalize_actor_roles(
+        _required(ACTOR_ROLES_HEADER),
+        status_code=400,
+        code="invalid_request_context",
+        source=ACTOR_ROLES_HEADER,
+    )
 
     return RequestContext(
         tenant_id=_required(TENANT_HEADER),
@@ -105,6 +99,95 @@ def unavailable_principal_resolver(headers: Mapping[str, str]) -> RequestContext
 
 def request_context_from_headers(headers: Mapping[str, str]) -> RequestContext:
     return trusted_header_principal_resolver(headers)
+
+
+def normalize_actor_type(
+    raw_actor_type: object,
+    *,
+    status_code: int,
+    code: str,
+    source: str,
+) -> str:
+    actor_type = _required_non_empty_string(
+        raw_actor_type,
+        status_code=status_code,
+        code=code,
+        source=source,
+        field_name="actor_type",
+    )
+    if actor_type not in VALID_ACTOR_TYPES:
+        raise ApiError(
+            status_code=status_code,
+            code=code,
+            message=f"unsupported actor_type from {source}: {actor_type}",
+            details={
+                "source": source,
+                "field": "actor_type",
+                "allowed_actor_types": sorted(VALID_ACTOR_TYPES),
+            },
+        )
+    return actor_type
+
+
+def normalize_actor_roles(
+    raw_actor_roles: object,
+    *,
+    status_code: int,
+    code: str,
+    source: str,
+) -> tuple[str, ...]:
+    roles: tuple[str, ...]
+    if isinstance(raw_actor_roles, str):
+        roles = tuple(role.strip() for role in raw_actor_roles.split(",") if role.strip())
+    elif isinstance(raw_actor_roles, Sequence) and not isinstance(
+        raw_actor_roles,
+        (bytes, bytearray, str),
+    ):
+        normalized: list[str] = []
+        for role in raw_actor_roles:
+            if not isinstance(role, str) or not role.strip():
+                raise ApiError(
+                    status_code=status_code,
+                    code=code,
+                    message=f"actor_roles from {source} must contain only non-empty strings",
+                    details={"source": source, "field": "actor_roles"},
+                )
+            normalized.append(role.strip())
+        roles = tuple(normalized)
+    else:
+        raise ApiError(
+            status_code=status_code,
+            code=code,
+            message=f"actor_roles from {source} must be a comma-delimited string or string list",
+            details={"source": source, "field": "actor_roles"},
+        )
+
+    if not roles:
+        raise ApiError(
+            status_code=status_code,
+            code=code,
+            message=f"actor_roles from {source} must contain at least one role",
+            details={"source": source, "field": "actor_roles"},
+        )
+    return roles
+
+
+def _required_non_empty_string(
+    raw_value: object,
+    *,
+    status_code: int,
+    code: str,
+    source: str,
+    field_name: str,
+) -> str:
+    if not isinstance(raw_value, str) or not raw_value.strip():
+        raise ApiError(
+            status_code=status_code,
+            code=code,
+            message=f"{field_name} from {source} must be a non-empty string",
+            details={"source": source, "field": field_name},
+        )
+    return raw_value.strip()
 
 
 def scoped_workflow_run(

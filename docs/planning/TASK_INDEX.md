@@ -102,5 +102,6 @@
 | TASK-0098 | EPIC-080 | DONE | medium | Migrate frontend/client surfaces to transport v2 and clean-install truth |
 | TASK-0099 | EPIC-080 | DONE | medium | Split CI into fast required checks and runtime required checks, and add security gates |
 | TASK-0100 | EPIC-080 | DONE | medium | Make the release bundle the only operator-facing distribution path and harden provenance |
+| TASK-0101 | EPIC-010 | DONE | high | Conditional shared_env principal resolver and attested identity integration |
 
 Note: `TASK-0087` / `TASK-0088` / `TASK-0089` were formerly duplicated as `TASK-0071` / `TASK-0072` / `TASK-0073` before the 2026-03-13 truth-alignment backlog sync. `TASK-0071` / `TASK-0072` / `TASK-0073` now refer only to the Stage04 progression.

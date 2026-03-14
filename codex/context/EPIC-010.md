@@ -11,10 +11,12 @@
 - Shared environments must fail closed rather than silently trusting ambient headers.
 - Capability enforcement should consume canonical principal/scope data, not ad hoc request metadata.
 
-## Current frozen posture after TASK-0078
-- `shared_env` is the default API boundary profile and fails closed with `principal_resolver_unavailable` unless a non-header principal resolver is injected.
+## Current frozen posture after TASK-0078 / TASK-0101
+- `shared_env` is the default API boundary profile and still fails closed with `principal_resolver_unavailable` unless either a non-header principal resolver is injected or the shared-env bearer-JWT configuration is fully present.
+- When `ONETRUTH_SHARED_ENV_JWT_ISSUER`, `ONETRUTH_SHARED_ENV_JWT_AUDIENCE`, and `ONETRUTH_SHARED_ENV_JWT_PUBLIC_KEY_PEM` are all configured, `shared_env` resolves attested principals from `Authorization: Bearer <JWT>` using fixed `RS256` validation and fixed claim mapping (`sub`, `tenant_id`, `domain_id`, `actor_type`, `actor_roles`).
 - Trusted `x-onetruth-*` headers are allowed only in `local_dev` and `ci_test`.
 - Trusted-header CORS exists only in `local_dev`, and only for loopback browser origins.
+- Conflicting trusted headers are ignored in `shared_env`; scope/capability decisions must derive from the attested request context instead.
 
 ## Contracts / schemas to treat as authoritative
 - `docs/architecture/scope_model.md`

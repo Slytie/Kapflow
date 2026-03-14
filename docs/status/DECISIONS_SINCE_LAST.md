@@ -2,6 +2,11 @@
 
 Record any decisions made since the last session so a fresh Codex run can rehydrate quickly.
 
+## 2026-03-14 (TASK-0101 shared_env JWT principal resolver)
+- Shared-env identity decision: when `ONETRUTH_SHARED_ENV_JWT_ISSUER`, `ONETRUTH_SHARED_ENV_JWT_AUDIENCE`, and `ONETRUTH_SHARED_ENV_JWT_PUBLIC_KEY_PEM` are all configured and no explicit resolver is injected, `shared_env` now resolves request context from `Authorization: Bearer <JWT>` using offline `RS256` verification.
+- Boundary decision: `local_dev` and `ci_test` keep the existing trusted-header path unchanged, trusted-header CORS remains local-dev-only, and conflicting `x-onetruth-*` headers are ignored in `shared_env`.
+- Scope decision: the shared-env attested resolver uses one fixed claim mapping (`sub`, `tenant_id`, `domain_id`, `actor_type`, `actor_roles`) and intentionally does not add JWKS fetch, token introspection, or broader authz changes in this tranche.
+
 ## 2026-03-14 (TASK-0100 release bundle only distribution path)
 - Distribution-path decision: `release_source_bundle` is now the only endorsed operator/share source artifact; `handoff_source_bundle` remains internal review/Codex-only and raw workspace/manual zips are explicitly non-release.
 - Provenance decision: release exports now include a deterministic repo-owned `release_provenance.json` sidecar with bundled-file digests, curated manifest/lockfile entries, and archive/commit metadata instead of escalating to a full SPDX/CycloneDX rollout.

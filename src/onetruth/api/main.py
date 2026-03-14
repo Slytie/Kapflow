@@ -31,6 +31,9 @@ from onetruth.api.request_correlation import (
 )
 from onetruth.api.responses import BinaryResponse
 from onetruth.api.route_registry import RequestBodyPolicy, RouteExecutionContext, match_route
+from onetruth.api.shared_env_principal_resolver import (
+    shared_env_jwt_principal_resolver_from_env,
+)
 
 ASGIApp = Callable[[dict[str, Any], Callable[[], Awaitable[dict[str, Any]]], Callable[[dict[str, Any]], Awaitable[None]]], Awaitable[None]]
 
@@ -208,6 +211,12 @@ def _resolve_boundary_config(
         return ApiBoundaryConfig(
             profile=resolved_profile,
             principal_resolver=trusted_header_principal_resolver,
+        )
+    shared_env_resolver = shared_env_jwt_principal_resolver_from_env()
+    if shared_env_resolver is not None:
+        return ApiBoundaryConfig(
+            profile=resolved_profile,
+            principal_resolver=shared_env_resolver,
         )
     return ApiBoundaryConfig(
         profile=resolved_profile,
