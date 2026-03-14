@@ -54,10 +54,8 @@ Everything else - runbooks, dashboards, summaries, generated CompanyOS specs, pr
 
 ## Quickstart (dev)
 1. Install dependencies:
-   - `python3.11 -m pip install -e ".[dev]"`
-   - `python3.11 -m pip install -e ".[api,dev]"` (to run the HTTP adapter with `uvicorn`)
+   - `python3.11 -m pip install -e ".[api,dev]"`
    - `cd frontend && npm ci`
-   - or `uv sync`
 2. Check the validated local toolchain:
    - `make doctor`
    - validated dev/CI baseline is Python `3.11` plus Node `20` (`.nvmrc`)

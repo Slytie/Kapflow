@@ -27,13 +27,7 @@ jobs:
         run: |
           set -euo pipefail
           python -m pip install --upgrade pip
-          if [ -f requirements.txt ]; then
-            python -m pip install -r requirements.txt
-          elif [ -f pyproject.toml ]; then
-            python -m pip install -e ".[dev]"
-          else
-            echo "No requirements.txt or pyproject.toml found; skipping project install."
-          fi
+          python -m pip install -e ".[api,dev]"
 
       - name: Run backend CI checks
         shell: bash
@@ -83,13 +77,7 @@ jobs:
         run: |
           set -euo pipefail
           python -m pip install --upgrade pip
-          if [ -f requirements.txt ]; then
-            python -m pip install -r requirements.txt
-          elif [ -f pyproject.toml ]; then
-            python -m pip install -e ".[dev]"
-          else
-            echo "No requirements.txt or pyproject.toml found; skipping project install."
-          fi
+          python -m pip install -e ".[api,dev]"
 
       - name: Run release-confidence gate slice
         shell: bash

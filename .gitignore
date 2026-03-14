@@ -36,3 +36,4 @@ frontend/coverage/
 venv/
 .mypy_cache/
 .ruff_cache/
+*.egg-info/

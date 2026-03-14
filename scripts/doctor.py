@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import argparse
 from dataclasses import dataclass
+import json
 from pathlib import Path
 import shutil
 import subprocess
@@ -11,10 +12,12 @@ import sys
 
 EXPECTED_PYTHON = (3, 11)
 EXPECTED_NODE_MAJOR = 20
+EXPECTED_NODE_ENGINE = ">=20 <21"
 REQUIRED_FILES = (
     ".nvmrc",
     "LICENSE",
     ".github/CODEOWNERS",
+    ".editorconfig",
 )
 
 
@@ -80,6 +83,19 @@ def _load_expected_node_major(repo_root: Path) -> int | None:
         return int(raw.split(".", 1)[0])
     except ValueError:
         return None
+
+
+def _load_frontend_package(repo_root: Path) -> tuple[dict[str, object] | None, str | None]:
+    package_path = repo_root / "frontend/package.json"
+    if not package_path.exists():
+        return None, None
+    try:
+        loaded = json.loads(package_path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError:
+        return None, "frontend/package.json is not valid JSON"
+    if not isinstance(loaded, dict):
+        return None, "frontend/package.json must parse to an object"
+    return loaded, None
 
 
 def _check_python_baseline() -> CheckResult:
@@ -180,6 +196,24 @@ def _check_required_files(repo_root: Path) -> list[CheckResult]:
         )
     frontend_package = repo_root / "frontend/package.json"
     if frontend_package.exists():
+        package_data, package_error = _load_frontend_package(repo_root)
+        if package_error is not None:
+            results.append(CheckResult("frontend/package.json", False, package_error))
+        else:
+            assert package_data is not None
+            engines = package_data.get("engines")
+            node_engine = engines.get("node") if isinstance(engines, dict) else None
+            results.append(
+                CheckResult(
+                    "frontend/package.json engines",
+                    node_engine == EXPECTED_NODE_ENGINE,
+                    (
+                        f'node engine is "{node_engine}"'
+                        if node_engine == EXPECTED_NODE_ENGINE
+                        else f'expected node engine "{EXPECTED_NODE_ENGINE}"'
+                    ),
+                )
+            )
         package_lock = repo_root / "frontend/package-lock.json"
         results.append(
             CheckResult(
@@ -200,7 +234,6 @@ def _print_results(results: list[CheckResult]) -> None:
 def _print_guidance() -> None:
     print("")
     print("Suggested local setup:")
-    print('  python3.11 -m pip install -e ".[dev]"')
     print('  python3.11 -m pip install -e ".[api,dev]"')
     print("  cd frontend && npm ci")
     print("  make doctor")

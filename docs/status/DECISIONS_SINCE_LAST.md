@@ -2,6 +2,11 @@
 
 Record any decisions made since the last session so a fresh Codex run can rehydrate quickly.
 
+## 2026-03-14 (TASK-0090 bootstrap/install truth closure and tracked build-artifact ban)
+- Baseline decision: the repo’s validated package metadata now matches the established dev/CI baseline exactly, so `pyproject.toml` requires Python `>=3.11,<3.12` instead of claiming a broader support floor.
+- Install-path decision: local bootstrap guidance, CI workflows, and the compatibility `requirements.txt` shim now all converge on one authoritative backend install path: `python3.11 -m pip install -e ".[api,dev]"`.
+- Source-boundary decision: tracked `*.egg-info` content is now explicitly forbidden by repo validation and excluded from release source bundles, while intentionally tracked generated outputs under `build/generated/` remain unchanged.
+
 ## 2026-03-13 (truth-alignment backlog sync)
 - Numbering-source decision: the external truth-alignment prompt pack is canonical for the new tranche, so `TASK-0076` is board/query-surface stability and `TASK-0077` is the capability-lattice freeze task.
 - Backlog-hygiene decision: the duplicate historical cleanup trio was renumbered to `TASK-0087` / `TASK-0088` / `TASK-0089`, while `TASK-0071` / `TASK-0072` / `TASK-0073` now refer only to the Stage04 progression.

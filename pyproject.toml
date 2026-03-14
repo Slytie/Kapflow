@@ -7,7 +7,7 @@ name = "onetruth-runtime"
 version = "0.1.0"
 description = "Stage 4 runtime scaffold for the one-truth orchestration substrate."
 readme = "README.md"
-requires-python = ">=3.9"
+requires-python = ">=3.11,<3.12"
 dependencies = [
   "SQLAlchemy>=2.0,<3.0",
   "alembic>=1.13,<2.0",

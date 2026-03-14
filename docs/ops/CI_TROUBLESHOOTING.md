@@ -12,9 +12,9 @@ Symptoms:
 - missing module errors during `make`/`pytest` steps.
 
 Checks:
-- confirm `requirements.txt` exists when you expect requirements-based install.
-- if no `requirements.txt`, ensure `pyproject.toml` is present and installable.
-- confirm test/runtime dependencies are installable in a clean environment.
+- `requirements.txt` is only a compatibility shim; local and CI installs should use `python3.11 -m pip install -e ".[api,dev]"`.
+- confirm `pyproject.toml` editable extras install cleanly in a fresh Python `3.11` environment.
+- confirm test/runtime dependencies are available under the same interpreter that `make` uses.
 
 ### Make target failures
 Symptoms:

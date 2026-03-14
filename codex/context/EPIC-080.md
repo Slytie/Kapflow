@@ -4,6 +4,7 @@
 
 - You are changing frontend operator/demo routing, HITL board/workspace/read-model UX, or CI/quality gates tied to those surfaces.
 - You need to keep navigation/copy/docs truthful when the primary demo posture changes.
+- You are tightening repo bootstrap/install truth or lightweight operational guardrails without reopening runtime semantics.
 
 ## Non-negotiable invariants to keep in mind
 - UI is a derived surface over canonical backend/runtime state; no second client truth model.
@@ -16,6 +17,9 @@
 - `docs/planning/TASK_INDEX.md`
 - `docs/planning/TEST_STRATEGY.md`
 - `docs/planning/TEST_MATRIX.md`
+- `pyproject.toml`
+- `scripts/doctor.py`
+- `scripts/validate_repo.py`
 - `docs/planning/THREE_WORKFLOW_DEMO_STORY.yaml`
 - `src/onetruth/api/routes/logistics_story.py`
 - `frontend/src/app/App.tsx`
@@ -30,10 +34,15 @@
 - Route/integration tests proving the primary app entrypoint and nav labels.
 - Component/integration tests proving story graph + unified board + linked runs render from canonical story payload.
 - Regression tests proving schedule-only routes remain reachable as legacy/internal surfaces.
+- Contract/validation tests proving the repo has one install path and excludes tracked build artifacts from source truth.
 
-## Current Repo Status (2026-03-09)
+## Current Repo Status (2026-03-14)
 - `TASK-0064` is complete:
   - primary frontend route: `/demo/logistics`,
   - canonical story source: `GET /api/v1/stories/logistics-three-workflow`,
   - schedule-only board/workspace/runs/timeline views remain legacy/internal regression surfaces.
+- `TASK-0090` is complete:
+  - validated Python baseline is explicit in package metadata (`>=3.11,<3.12`),
+  - local and CI installs use the same editable extras path,
+  - tracked `*.egg-info` build artifacts are excluded from source truth by validation.
 - Scope remains intentionally bounded to the authored three-workflow logistics story shell.

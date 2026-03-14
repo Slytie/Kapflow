@@ -89,6 +89,10 @@ SOURCE_BUNDLE_EXCLUDED_FILE_PATTERNS = (
 )
 
 
+def _has_egg_info_segment(parts: tuple[str, ...]) -> bool:
+    return any(part.endswith(".egg-info") for part in parts)
+
+
 class Collector:
     def __init__(self) -> None:
         self.errors: list[str] = []
@@ -657,6 +661,18 @@ def validate_secret_hygiene(collector: Collector) -> None:
     collector.ok(f"secret hygiene scan passed across {text_files_scanned} tracked text files")
 
 
+def validate_tracked_build_artifacts(collector: Collector) -> None:
+    tracked_files = iter_tracked_files(collector)
+    violations = 0
+    for path in tracked_files:
+        relative = path.relative_to(ROOT)
+        if _has_egg_info_segment(relative.parts):
+            collector.fail(f"tracked build artifact detected: {relative}")
+            violations += 1
+    if violations == 0:
+        collector.ok(f"tracked build artifact scan passed across {len(tracked_files)} tracked files")
+
+
 def validate_release_source_bundle_export_payload(collector: Collector) -> None:
     script_path = ROOT / "scripts" / "export_clean_source_bundle.py"
     with tempfile.TemporaryDirectory(prefix="validate-release-source-bundle-") as temp_dir:
@@ -850,6 +866,7 @@ def main() -> int:
         validate_schedule_runbook_assets(collector)
         validate_task_index(collector)
         validate_current_focus(collector)
+        validate_tracked_build_artifacts(collector)
         validate_secret_hygiene(collector)
         validate_release_source_bundle_export_payload(collector)
     if not args.schemas_only:
@@ -860,6 +877,8 @@ def main() -> int:
 def _source_bundle_path_is_excluded(relative_path: str) -> bool:
     posix_path = PurePosixPath(relative_path)
     file_name = posix_path.name
+    if _has_egg_info_segment(posix_path.parts):
+        return True
     if any(part in SOURCE_BUNDLE_EXCLUDED_DIR_NAMES for part in posix_path.parts):
         return True
     if any(

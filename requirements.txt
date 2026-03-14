@@ -1,13 +1,4 @@
-# Local demo/runtime dependencies for terminal use.
-# Create + activate a virtual environment, then:
-#   python -m pip install -r requirements.txt
-
-# Install this repo (editable) with API server extra.
--e .[api]
-
-# Used by corpus/contract tooling scripts invoked during demo workflows.
-PyYAML>=6.0,<7.0
-jsonschema>=4.22,<5.0
-
-# Optional (uncomment if using PostgreSQL instead of SQLite):
-# psycopg[binary]>=3.1,<4.0
+# Compatibility shim only.
+# Authoritative local/CI dependencies come from `pyproject.toml` extras via:
+#   python3.11 -m pip install -e ".[api,dev]"
+-e .[api,dev]
