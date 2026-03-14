@@ -100,5 +100,6 @@
 | TASK-0096 | EPIC-080 | DONE | medium | Harden boundary payload parsing with deterministic 400/413/415 contracts |
 | TASK-0097 | EPIC-030 | DONE | medium | Add binary artifact and template download transport v2 |
 | TASK-0098 | EPIC-080 | DONE | medium | Migrate frontend/client surfaces to transport v2 and clean-install truth |
+| TASK-0099 | EPIC-080 | DONE | medium | Split CI into fast required checks and runtime required checks, and add security gates |
 
 Note: `TASK-0087` / `TASK-0088` / `TASK-0089` were formerly duplicated as `TASK-0071` / `TASK-0072` / `TASK-0073` before the 2026-03-13 truth-alignment backlog sync. `TASK-0071` / `TASK-0072` / `TASK-0073` now refer only to the Stage04 progression.

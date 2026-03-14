@@ -5,12 +5,56 @@ on:
     branches:
       - main
   pull_request:
+  workflow_dispatch:
 
 permissions:
   contents: read
 
 jobs:
-  backend:
+  required-fast:
+    name: required-fast / ${{ matrix.check }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - check: lint
+            make_target: backend-lint
+          - check: contract
+            make_target: contract
+          - check: unit
+            make_target: unit
+          - check: security
+            make_target: security
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install backend dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip install --upgrade pip
+          python -m pip install -e ".[api,dev]"
+
+      - name: Run fast required backend check
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -f Makefile ]; then
+            make PYTHON=python ${{ matrix.make_target }}
+          else
+            echo "No Makefile found; skipping make-based checks."
+          fi
+
+  runtime-required:
+    name: runtime-required
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -29,17 +73,36 @@ jobs:
           python -m pip install --upgrade pip
           python -m pip install -e ".[api,dev]"
 
-      - name: Run backend CI checks
+      - name: Run runtime-required CI lane
         shell: bash
         run: |
           set -euo pipefail
-          if [ -f Makefile ]; then
-            make PYTHON=python ci-backend
-          else
-            echo "No Makefile found; skipping make-based checks."
-          fi
+          make PYTHON=python ci-runtime-required
+
+  frontend:
+    name: frontend
+    if: ${{ hashFiles('frontend/package.json') != '' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install frontend dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Run frontend CI checks
+        run: make frontend-ci
 
   release-confidence:
+    if: ${{ github.event_name == 'push' || github.event_name == 'workflow_dispatch' }}
     name: release-confidence / ${{ matrix.check }}
     runs-on: ubuntu-latest
     strategy:
@@ -84,24 +147,3 @@ jobs:
         run: |
           set -euo pipefail
           make PYTHON=python ${{ matrix.make_target }}
-
-  frontend:
-    if: ${{ hashFiles('frontend/package.json') != '' }}
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: "20"
-          cache: npm
-          cache-dependency-path: frontend/package-lock.json
-
-      - name: Install frontend dependencies
-        working-directory: frontend
-        run: npm ci
-
-      - name: Run frontend CI checks
-        run: make frontend-ci

@@ -2,6 +2,11 @@
 
 Record any decisions made since the last session so a fresh Codex run can rehydrate quickly.
 
+## 2026-03-14 (TASK-0099 CI topology split and security required gates)
+- CI-lane decision: pull-request feedback now splits into parallel fast required backend lanes (`lint`, `contract`, `unit`, `security`), one separate `runtime-required` lane, and the standalone `frontend` lane instead of one monolithic backend job.
+- Guardrail-workflow decision: `secret_hygiene` remains a separate PR-capable workflow boundary rather than being folded into the main workflow's `security` job, while `release-confidence` is reserved for `push` to `main` and `workflow_dispatch`.
+- Aggregate-target decision: local/CI Make truth now uses `ci-fast-backend` and `ci-runtime-required`, `ci-backend` remains the aggregate alias over both, and `agent_api.yml` now reuses only the fast backend aggregate before the existing gated OpenAI tests.
+
 ## 2026-03-14 (TASK-0098 frontend transport v2 cutover and clean-install truth)
 - Frontend transport decision: frontend/client download flows now call sibling `.bin` routes directly and do not keep a silent client-side fallback to the legacy JSON `/download` endpoints.
 - Client-boundary decision: binary download handling now relies on attachment headers (`content-disposition`, `content-type`, `content-length`, `x-request-id`) through a narrow `requestBinary()` seam, while backend error behavior remains the existing JSON `ApiError` envelope.

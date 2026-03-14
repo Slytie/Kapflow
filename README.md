@@ -241,6 +241,14 @@ Inspection outputs:
   - enable hosted GitHub features such as secret scanning push protection when the repository plan/org settings support them.
 - Do not treat revocation confirmation or history rewrite as complete just because the repo-side detectors and workflows are in place.
 
+## CI topology
+- `main.yml` now exposes separate PR-oriented lanes: `required-fast / lint`, `required-fast / contract`, `required-fast / unit`, `required-fast / security`, `runtime-required`, and `frontend`.
+- `secret_hygiene / secret-hygiene` remains a separate PR-capable workflow that runs `python scripts/validate_repo.py --secrets-only` rather than being folded into the main workflow's `security` job.
+- `release-confidence` remains available for post-merge/manual confidence on `push` to `main` and `workflow_dispatch`; it is no longer part of the pull-request lane count.
+- Local equivalents are `make ci-fast-backend`, `make ci-runtime-required`, and `make ci-backend` (aggregate alias).
+- `agent_api.yml` now reuses `ci-fast-backend` before its existing gated OpenAI integration step.
+- Marking specific workflow/job names as required in branch protection remains a hosted GitHub operator setting rather than something the repo can enforce from source code.
+
 ## Execution-session runtime (canonical vs derived)
 Canonical runtime truth for bounded agentive execution now lives in:
 - `execution_sessions`

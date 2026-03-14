@@ -69,4 +69,8 @@
   - frontend/client download flows now call `/download.bin` directly and no longer depend on JSON/base64 download envelopes,
   - the frontend download seam now derives file names/media types from attachment headers through a narrow binary client helper,
   - clean `npm ci` from `frontend/package-lock.json` is the explicit frontend install truth.
+- `TASK-0099` is complete:
+  - the main CI workflow now exposes parallel fast required lanes for `lint`, `contract`, `unit`, and `security` plus a separate `runtime-required` lane and standalone `frontend` lane,
+  - `release-confidence` is now post-merge/manual only instead of adding pull-request lane count,
+  - `secret_hygiene` remains a separate PR-capable guardrail workflow and `agent_api` now reuses `ci-fast-backend` before gated OpenAI integration tests.
 - Scope remains intentionally bounded to the authored three-workflow logistics story shell.
