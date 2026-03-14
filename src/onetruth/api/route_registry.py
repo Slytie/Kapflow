@@ -60,8 +60,28 @@ from onetruth.api.routes.workflow_runs import (
     list_workflow_runs_endpoint,
 )
 
-BodyMode = Literal["none", "json"]
+RequestBodyKind = Literal["none", "json"]
 RouteDispatcher = Callable[["RouteExecutionContext", dict[str, str]], dict[str, Any]]
+
+
+@dataclass(frozen=True)
+class RequestBodyPolicy:
+    kind: RequestBodyKind
+    required_content_type: str | None = None
+    max_bytes: int | None = None
+
+
+NO_BODY = RequestBodyPolicy(kind="none")
+JSON_COMMAND_BODY = RequestBodyPolicy(
+    kind="json",
+    required_content_type="application/json",
+    max_bytes=256 * 1024,
+)
+JSON_ARTIFACT_BODY = RequestBodyPolicy(
+    kind="json",
+    required_content_type="application/json",
+    max_bytes=2 * 1024 * 1024,
+)
 
 
 @dataclass(frozen=True)
@@ -106,7 +126,7 @@ class RouteSpec:
     name: str
     method: str
     pattern: RoutePattern
-    body_mode: BodyMode
+    body_policy: RequestBodyPolicy
     needs_page: bool
     dispatch: RouteDispatcher
 
@@ -170,7 +190,7 @@ ROUTES: tuple[RouteSpec, ...] = (
         name="human_tasks.list",
         method="GET",
         pattern=_exact("/api/v1/human-tasks"),
-        body_mode="none",
+        body_policy=NO_BODY,
         needs_page=True,
         dispatch=lambda execution, _params: list_human_tasks_endpoint(
             execution.connection,
@@ -186,7 +206,7 @@ ROUTES: tuple[RouteSpec, ...] = (
             "/api/v1/human-tasks/",
             param_name="human_task_id",
         ),
-        body_mode="none",
+        body_policy=NO_BODY,
         needs_page=False,
         dispatch=lambda execution, params: get_human_task_endpoint(
             execution.connection,
@@ -202,7 +222,7 @@ ROUTES: tuple[RouteSpec, ...] = (
             param_name="human_task_id",
             suffix="/subgraph",
         ),
-        body_mode="none",
+        body_policy=NO_BODY,
         needs_page=False,
         dispatch=lambda execution, params: get_human_task_subgraph_endpoint(
             execution.connection,
@@ -218,7 +238,7 @@ ROUTES: tuple[RouteSpec, ...] = (
             param_name="human_task_id",
             suffix="/artifacts",
         ),
-        body_mode="none",
+        body_policy=NO_BODY,
         needs_page=True,
         dispatch=lambda execution, params: list_human_task_artifacts_endpoint(
             execution.connection,
@@ -235,7 +255,7 @@ ROUTES: tuple[RouteSpec, ...] = (
             param_name="human_task_id",
             suffix="/artifacts/upload",
         ),
-        body_mode="json",
+        body_policy=JSON_ARTIFACT_BODY,
         needs_page=False,
         dispatch=lambda execution, params: upload_human_task_artifact_endpoint(
             execution.connection,
@@ -254,7 +274,7 @@ ROUTES: tuple[RouteSpec, ...] = (
             suffix="/claim",
             allow_slash=True,
         ),
-        body_mode="json",
+        body_policy=JSON_COMMAND_BODY,
         needs_page=False,
         dispatch=lambda execution, params: claim_human_task_endpoint(
             execution.connection,
@@ -272,7 +292,7 @@ ROUTES: tuple[RouteSpec, ...] = (
             suffix="/complete",
             allow_slash=True,
         ),
-        body_mode="json",
+        body_policy=JSON_COMMAND_BODY,
         needs_page=False,
         dispatch=lambda execution, params: complete_human_task_endpoint(
             execution.connection,
@@ -290,7 +310,7 @@ ROUTES: tuple[RouteSpec, ...] = (
             suffix="/confirm-review",
             allow_slash=True,
         ),
-        body_mode="json",
+        body_policy=JSON_COMMAND_BODY,
         needs_page=False,
         dispatch=lambda execution, params: confirm_human_task_review_endpoint(
             execution.connection,
@@ -309,7 +329,7 @@ ROUTES: tuple[RouteSpec, ...] = (
             suffix="/stage06-agent-review",
             allow_slash=True,
         ),
-        body_mode="json",
+        body_policy=JSON_COMMAND_BODY,
         needs_page=False,
         dispatch=lambda execution, params: run_stage06_agent_review_endpoint(
             execution.connection,
@@ -327,7 +347,7 @@ ROUTES: tuple[RouteSpec, ...] = (
             suffix="/weekly-stage04-openai-agent",
             allow_slash=True,
         ),
-        body_mode="json",
+        body_policy=JSON_COMMAND_BODY,
         needs_page=False,
         dispatch=lambda execution, params: run_weekly_stage04_openai_agent_endpoint(
             execution.connection,
@@ -340,7 +360,7 @@ ROUTES: tuple[RouteSpec, ...] = (
         name="approvals.list",
         method="GET",
         pattern=_exact("/api/v1/approvals"),
-        body_mode="none",
+        body_policy=NO_BODY,
         needs_page=True,
         dispatch=lambda execution, _params: list_approvals_endpoint(
             execution.connection,
@@ -356,7 +376,7 @@ ROUTES: tuple[RouteSpec, ...] = (
             "/api/v1/approvals/",
             param_name="approval_id",
         ),
-        body_mode="none",
+        body_policy=NO_BODY,
         needs_page=False,
         dispatch=lambda execution, params: get_approval_endpoint(
             execution.connection,
@@ -372,7 +392,7 @@ ROUTES: tuple[RouteSpec, ...] = (
             param_name="approval_id",
             suffix="/artifacts",
         ),
-        body_mode="none",
+        body_policy=NO_BODY,
         needs_page=True,
         dispatch=lambda execution, params: list_approval_artifacts_endpoint(
             execution.connection,
@@ -389,7 +409,7 @@ ROUTES: tuple[RouteSpec, ...] = (
             param_name="approval_id",
             suffix="/artifacts/upload",
         ),
-        body_mode="json",
+        body_policy=JSON_ARTIFACT_BODY,
         needs_page=False,
         dispatch=lambda execution, params: upload_approval_artifact_endpoint(
             execution.connection,
@@ -408,7 +428,7 @@ ROUTES: tuple[RouteSpec, ...] = (
             suffix="/respond",
             allow_slash=True,
         ),
-        body_mode="json",
+        body_policy=JSON_COMMAND_BODY,
         needs_page=False,
         dispatch=lambda execution, params: respond_approval_endpoint(
             execution.connection,
@@ -421,7 +441,7 @@ ROUTES: tuple[RouteSpec, ...] = (
         name="flags.list",
         method="GET",
         pattern=_exact("/api/v1/flags"),
-        body_mode="none",
+        body_policy=NO_BODY,
         needs_page=True,
         dispatch=lambda execution, _params: list_flags_endpoint(
             execution.connection,
@@ -437,7 +457,7 @@ ROUTES: tuple[RouteSpec, ...] = (
             "/api/v1/flags/",
             param_name="flag_id",
         ),
-        body_mode="none",
+        body_policy=NO_BODY,
         needs_page=False,
         dispatch=lambda execution, params: get_flag_endpoint(
             execution.connection,
@@ -453,7 +473,7 @@ ROUTES: tuple[RouteSpec, ...] = (
             param_name="flag_id",
             suffix="/artifacts",
         ),
-        body_mode="none",
+        body_policy=NO_BODY,
         needs_page=True,
         dispatch=lambda execution, params: list_flag_artifacts_endpoint(
             execution.connection,
@@ -470,7 +490,7 @@ ROUTES: tuple[RouteSpec, ...] = (
             param_name="flag_id",
             suffix="/artifacts/upload",
         ),
-        body_mode="json",
+        body_policy=JSON_ARTIFACT_BODY,
         needs_page=False,
         dispatch=lambda execution, params: upload_flag_artifact_endpoint(
             execution.connection,
@@ -489,7 +509,7 @@ ROUTES: tuple[RouteSpec, ...] = (
             suffix="/transition",
             allow_slash=True,
         ),
-        body_mode="json",
+        body_policy=JSON_COMMAND_BODY,
         needs_page=False,
         dispatch=lambda execution, params: transition_flag_endpoint(
             execution.connection,
@@ -502,7 +522,7 @@ ROUTES: tuple[RouteSpec, ...] = (
         name="workflow_runs.list",
         method="GET",
         pattern=_exact("/api/v1/workflow-runs"),
-        body_mode="none",
+        body_policy=NO_BODY,
         needs_page=True,
         dispatch=lambda execution, _params: list_workflow_runs_endpoint(
             execution.connection,
@@ -519,7 +539,7 @@ ROUTES: tuple[RouteSpec, ...] = (
             param_name="workflow_run_id",
             suffix="/artifacts",
         ),
-        body_mode="none",
+        body_policy=NO_BODY,
         needs_page=True,
         dispatch=lambda execution, params: list_workflow_run_artifacts_endpoint(
             execution.connection,
@@ -536,7 +556,7 @@ ROUTES: tuple[RouteSpec, ...] = (
             param_name="workflow_run_id",
             suffix="/artifacts/upload",
         ),
-        body_mode="json",
+        body_policy=JSON_ARTIFACT_BODY,
         needs_page=False,
         dispatch=lambda execution, params: upload_workflow_run_artifact_endpoint(
             execution.connection,
@@ -555,7 +575,7 @@ ROUTES: tuple[RouteSpec, ...] = (
             suffix="/timeline",
             allow_slash=True,
         ),
-        body_mode="none",
+        body_policy=NO_BODY,
         needs_page=True,
         dispatch=lambda execution, params: list_workflow_run_timeline_endpoint(
             execution.connection,
@@ -573,7 +593,7 @@ ROUTES: tuple[RouteSpec, ...] = (
             param_name="workflow_run_id",
             suffix="/workspace",
         ),
-        body_mode="none",
+        body_policy=NO_BODY,
         needs_page=False,
         dispatch=lambda execution, params: get_workflow_run_workspace_endpoint(
             execution.connection,
@@ -589,7 +609,7 @@ ROUTES: tuple[RouteSpec, ...] = (
             "/api/v1/workflow-runs/",
             param_name="workflow_run_id",
         ),
-        body_mode="none",
+        body_policy=NO_BODY,
         needs_page=False,
         dispatch=lambda execution, params: get_workflow_run_detail_endpoint(
             execution.connection,
@@ -601,7 +621,7 @@ ROUTES: tuple[RouteSpec, ...] = (
         name="pointers.list",
         method="GET",
         pattern=_exact("/api/v1/pointers"),
-        body_mode="none",
+        body_policy=NO_BODY,
         needs_page=True,
         dispatch=lambda execution, _params: list_pointers_endpoint(
             execution.connection,
@@ -614,7 +634,7 @@ ROUTES: tuple[RouteSpec, ...] = (
         name="templates.list",
         method="GET",
         pattern=_exact("/api/v1/templates"),
-        body_mode="none",
+        body_policy=NO_BODY,
         needs_page=True,
         dispatch=lambda execution, _params: list_templates_endpoint(
             execution.connection,
@@ -631,7 +651,7 @@ ROUTES: tuple[RouteSpec, ...] = (
             param_name="template_id",
             suffix="/download",
         ),
-        body_mode="none",
+        body_policy=NO_BODY,
         needs_page=False,
         dispatch=lambda execution, params: download_template_endpoint(
             execution.connection,
@@ -646,7 +666,7 @@ ROUTES: tuple[RouteSpec, ...] = (
             "/api/v1/templates/",
             param_name="template_id",
         ),
-        body_mode="none",
+        body_policy=NO_BODY,
         needs_page=False,
         dispatch=lambda execution, params: get_template_endpoint(
             execution.connection,
@@ -658,7 +678,7 @@ ROUTES: tuple[RouteSpec, ...] = (
         name="artifacts.ingest",
         method="POST",
         pattern=_exact("/api/v1/artifacts/ingest"),
-        body_mode="json",
+        body_policy=JSON_ARTIFACT_BODY,
         needs_page=False,
         dispatch=lambda execution, _params: ingest_artifact_endpoint(
             execution.connection,
@@ -671,7 +691,7 @@ ROUTES: tuple[RouteSpec, ...] = (
         name="artifacts.list",
         method="GET",
         pattern=_exact("/api/v1/artifacts"),
-        body_mode="none",
+        body_policy=NO_BODY,
         needs_page=True,
         dispatch=lambda execution, _params: list_artifacts_endpoint(
             execution.connection,
@@ -688,7 +708,7 @@ ROUTES: tuple[RouteSpec, ...] = (
             param_name="artifact_version_id",
             suffix="/download",
         ),
-        body_mode="none",
+        body_policy=NO_BODY,
         needs_page=False,
         dispatch=lambda execution, params: download_artifact_endpoint(
             execution.connection,
@@ -703,7 +723,7 @@ ROUTES: tuple[RouteSpec, ...] = (
             "/api/v1/artifacts/",
             param_name="artifact_version_id",
         ),
-        body_mode="none",
+        body_policy=NO_BODY,
         needs_page=False,
         dispatch=lambda execution, params: get_artifact_endpoint(
             execution.connection,
@@ -715,7 +735,7 @@ ROUTES: tuple[RouteSpec, ...] = (
         name="timeline_events.list",
         method="GET",
         pattern=_exact("/api/v1/timeline-events"),
-        body_mode="none",
+        body_policy=NO_BODY,
         needs_page=True,
         dispatch=lambda execution, _params: list_timeline_events_endpoint(
             execution.connection,
@@ -728,7 +748,7 @@ ROUTES: tuple[RouteSpec, ...] = (
         name="board.schedule_planning",
         method="GET",
         pattern=_exact("/api/v1/board/schedule-planning"),
-        body_mode="none",
+        body_policy=NO_BODY,
         needs_page=True,
         dispatch=lambda execution, _params: schedule_planning_board_endpoint(
             execution.connection,
@@ -741,7 +761,7 @@ ROUTES: tuple[RouteSpec, ...] = (
         name="stories.logistics_three_workflow",
         method="GET",
         pattern=_exact("/api/v1/stories/logistics-three-workflow"),
-        body_mode="none",
+        body_policy=NO_BODY,
         needs_page=True,
         dispatch=lambda execution, _params: logistics_three_workflow_story_endpoint(
             execution.connection,

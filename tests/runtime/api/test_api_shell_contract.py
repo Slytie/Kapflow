@@ -6,6 +6,7 @@ import re
 from typing import Any
 
 from onetruth.api.main import create_app
+from onetruth.api.route_registry import JSON_COMMAND_BODY
 
 REQUEST_ID_PATTERN = re.compile(r"^httpreq_[0-9a-f]{32}$")
 
@@ -87,6 +88,16 @@ def _parsed_json(body: bytes) -> dict[str, object]:
 
 def _assert_generated_request_id(request_id: str) -> None:
     assert REQUEST_ID_PATTERN.fullmatch(request_id), request_id
+
+
+def _command_route_body(padding_size: int = 0) -> bytes:
+    payload = {
+        "lease_seconds": 300,
+        "idempotency_key": "api:shell-contract:claim",
+    }
+    if padding_size:
+        payload["padding"] = "x" * padding_size
+    return json.dumps(payload, separators=(",", ":")).encode("utf-8")
 
 
 def test_api_shell_unknown_path_and_method_mismatch_return_not_found_with_request_id() -> None:
@@ -200,4 +211,134 @@ def test_api_shell_unhandled_exceptions_return_internal_error_without_leaking_me
     assert parsed["error"]["code"] == "internal_error"
     assert parsed["error"]["details"] == {"exception": "RuntimeError"}
     assert "do not leak me" not in body.decode("utf-8")
+    _assert_generated_request_id(headers["x-request-id"])
+
+
+def test_api_shell_rejects_non_empty_json_route_without_content_type() -> None:
+    app = create_app(
+        db_url="sqlite:///:memory:",
+        boundary_profile="ci_test",
+    )
+
+    status, headers, body = _invoke(
+        app,
+        method="POST",
+        path="/api/v1/human-tasks/ht-stage06-review/claim",
+        headers=_trusted_headers(),
+        body=_command_route_body(),
+    )
+
+    parsed = _parsed_json(body)
+    assert status == 415
+    assert parsed["status"] == "error"
+    assert parsed["error"]["code"] == "unsupported_media_type"
+    assert parsed["error"]["message"] == "expected Content-Type application/json"
+    assert parsed["error"]["details"] == {
+        "expected_content_type": "application/json",
+        "received_content_type": None,
+    }
+    _assert_generated_request_id(headers["x-request-id"])
+
+
+def test_api_shell_rejects_non_empty_json_route_with_wrong_content_type() -> None:
+    app = create_app(
+        db_url="sqlite:///:memory:",
+        boundary_profile="ci_test",
+    )
+
+    status, headers, body = _invoke(
+        app,
+        method="POST",
+        path="/api/v1/human-tasks/ht-stage06-review/claim",
+        headers={
+            **_trusted_headers(),
+            "content-type": "text/plain",
+            "x-request-id": "client-request-415",
+        },
+        body=_command_route_body(),
+    )
+
+    parsed = _parsed_json(body)
+    assert status == 415
+    assert parsed["status"] == "error"
+    assert parsed["error"]["code"] == "unsupported_media_type"
+    assert parsed["error"]["details"] == {
+        "expected_content_type": "application/json",
+        "received_content_type": "text/plain",
+    }
+    assert headers["x-request-id"] == "client-request-415"
+
+
+def test_api_shell_accepts_json_content_type_with_parameters_before_json_validation() -> None:
+    app = create_app(
+        db_url="sqlite:///:memory:",
+        boundary_profile="ci_test",
+    )
+
+    status, headers, body = _invoke(
+        app,
+        method="POST",
+        path="/api/v1/human-tasks/ht-stage06-review/claim",
+        headers={
+            **_trusted_headers(),
+            "content-type": "application/json; charset=utf-8",
+        },
+        body=b"{",
+    )
+
+    parsed = _parsed_json(body)
+    assert status == 400
+    assert parsed["error"]["code"] == "invalid_json"
+    _assert_generated_request_id(headers["x-request-id"])
+
+
+def test_api_shell_rejects_oversize_command_route_bodies() -> None:
+    app = create_app(
+        db_url="sqlite:///:memory:",
+        boundary_profile="ci_test",
+    )
+    oversize_body = _command_route_body(JSON_COMMAND_BODY.max_bytes or 0)
+    assert len(oversize_body) > (JSON_COMMAND_BODY.max_bytes or 0)
+
+    status, headers, body = _invoke(
+        app,
+        method="POST",
+        path="/api/v1/human-tasks/ht-stage06-review/claim",
+        headers={
+            **_trusted_headers(),
+            "content-type": "application/json",
+        },
+        body=oversize_body,
+    )
+
+    parsed = _parsed_json(body)
+    assert status == 413
+    assert parsed["status"] == "error"
+    assert parsed["error"]["code"] == "payload_too_large"
+    assert parsed["error"]["message"] == "request body exceeds maximum size"
+    assert parsed["error"]["details"] == {
+        "max_bytes": JSON_COMMAND_BODY.max_bytes,
+    }
+    _assert_generated_request_id(headers["x-request-id"])
+
+
+def test_api_shell_empty_body_json_route_still_returns_invalid_payload() -> None:
+    app = create_app(
+        db_url="sqlite:///:memory:",
+        boundary_profile="ci_test",
+    )
+
+    status, headers, body = _invoke(
+        app,
+        method="POST",
+        path="/api/v1/human-tasks/ht-stage06-review/claim",
+        headers=_trusted_headers(),
+        body=b"",
+    )
+
+    parsed = _parsed_json(body)
+    assert status == 400
+    assert parsed["status"] == "error"
+    assert parsed["error"]["code"] == "invalid_payload"
+    assert parsed["error"]["message"] == "request body is required"
     _assert_generated_request_id(headers["x-request-id"])

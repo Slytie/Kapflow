@@ -134,6 +134,11 @@ Current HTTP endpoints:
 - `POST /api/v1/flags/{flag_id}/artifacts/upload`
 - `POST /api/v1/workflow-runs/{workflow_run_id}/artifacts/upload`
 
+Boundary payload contract:
+- non-empty `POST /api/v1/*` JSON mutation requests must send `Content-Type: application/json`
+- normal command routes use a bounded `256 KiB` JSON envelope and artifact-ingress routes use a bounded `2 MiB` JSON envelope
+- wrong or missing media type now returns deterministic `415 unsupported_media_type`, and oversize JSON envelopes return deterministic `413 payload_too_large`
+
 ## OpenAI sandbox spike (Stage06, bounded)
 The repo now includes a narrow real-model integration path for Stage06 review classification.
 

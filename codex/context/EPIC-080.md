@@ -61,4 +61,8 @@
   - the duplicated handwritten matcher/dispatcher in `src/onetruth/api/main.py` has been replaced by a single declarative route registry,
   - route precedence, current permissive slash behavior, and endpoint payload semantics were preserved,
   - the shell remains lightweight and framework-free while route metadata now lives in one place.
+- `TASK-0096` is complete:
+  - JSON POST routes now use explicit route-aware request body policies instead of a loose `body_mode`,
+  - the API shell deterministically returns `415 unsupported_media_type` for non-empty wrong/missing JSON media type and `413 payload_too_large` for oversize envelopes,
+  - artifact-ingress routes intentionally keep a larger bounded JSON envelope than ordinary command routes without changing artifact ingress semantics.
 - Scope remains intentionally bounded to the authored three-workflow logistics story shell.

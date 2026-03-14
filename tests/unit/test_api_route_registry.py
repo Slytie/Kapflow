@@ -1,6 +1,12 @@
 from __future__ import annotations
 
-from onetruth.api.route_registry import ROUTES, match_route
+from onetruth.api.route_registry import (
+    JSON_ARTIFACT_BODY,
+    JSON_COMMAND_BODY,
+    NO_BODY,
+    ROUTES,
+    match_route,
+)
 
 
 def test_route_registry_route_names_are_unique() -> None:
@@ -53,13 +59,15 @@ def test_route_registry_exposes_representative_metadata() -> None:
     routes_by_name = {route.name: route for route in ROUTES}
 
     assert routes_by_name["workflow_runs.list"].needs_page is True
-    assert routes_by_name["workflow_runs.list"].body_mode == "none"
+    assert routes_by_name["workflow_runs.list"].body_policy == NO_BODY
 
     assert routes_by_name["human_tasks.claim"].needs_page is False
-    assert routes_by_name["human_tasks.claim"].body_mode == "json"
+    assert routes_by_name["human_tasks.claim"].body_policy == JSON_COMMAND_BODY
 
     assert routes_by_name["workflow_runs.workspace"].needs_page is False
-    assert routes_by_name["workflow_runs.workspace"].body_mode == "none"
+    assert routes_by_name["workflow_runs.workspace"].body_policy == NO_BODY
+
+    assert routes_by_name["artifacts.ingest"].body_policy == JSON_ARTIFACT_BODY
 
 
 def test_route_registry_preserves_current_permissive_vs_strict_slash_behavior() -> None:

@@ -2,6 +2,11 @@
 
 Record any decisions made since the last session so a fresh Codex run can rehydrate quickly.
 
+## 2026-03-14 (TASK-0096 deterministic API payload hardening)
+- Boundary-contract decision: JSON POST routes now enforce deterministic media-type and size contracts at the shell boundary, so non-empty wrong/missing media type returns `415 unsupported_media_type`, oversize envelopes return `413 payload_too_large`, and existing empty-body/malformed-body `400` contracts remain intact once those checks pass.
+- Route-policy decision: the declarative API route registry now carries explicit request body policies instead of a loose `body_mode`, with a bounded `256 KiB` ceiling for ordinary JSON command routes and a bounded `2 MiB` ceiling for JSON artifact-ingress routes.
+- Scope-boundary decision: this tranche hardens JSON boundary parsing only; it does not redesign artifact transport, add multipart/binary upload support, or change trust/profile semantics.
+
 ## 2026-03-14 (TASK-0095 declarative route registry)
 - Shell-structure decision: API route metadata, match order, body expectations, and dispatch targets now live in one ordered declarative registry instead of parallel handwritten `_match_route()` and `_dispatch_route()` switches.
 - Parity decision: the registry preserves current route precedence and the existing permissive-vs-strict slash behavior for selected suffix routes such as `/claim`, `/respond`, `/transition`, and `/timeline`; this tranche does not tighten path semantics.

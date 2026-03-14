@@ -29,7 +29,7 @@ from onetruth.api.request_correlation import (
     request_id_header,
     resolve_request_id,
 )
-from onetruth.api.route_registry import RouteExecutionContext, match_route
+from onetruth.api.route_registry import RequestBodyPolicy, RouteExecutionContext, match_route
 
 ASGIApp = Callable[[dict[str, Any], Callable[[], Awaitable[dict[str, Any]]], Callable[[dict[str, Any]], Awaitable[None]]], Awaitable[None]]
 
@@ -123,7 +123,11 @@ def create_app(
 
         try:
             context = replace(boundary.principal_resolver(headers), request_id=request_id)
-            body_payload = await _read_json_body(matched.route.body_mode, receive)
+            body_payload = await _read_json_body(
+                matched.route.body_policy,
+                headers,
+                receive,
+            )
             page = parse_page(query) if matched.route.needs_page else None
 
             connection = open_connection(resolved_db_url)
@@ -229,11 +233,44 @@ def _decode_query(raw_query: bytes) -> dict[str, str]:
     return {key: values[-1] for key, values in parsed.items() if values}
 
 
-async def _read_json_body(body_mode: str, receive) -> dict[str, Any] | None:
-    if body_mode == "none":
+def _normalized_content_type(raw_content_type: str | None) -> str | None:
+    if raw_content_type is None:
+        return None
+    media_type = raw_content_type.split(";", 1)[0].strip().lower()
+    return media_type or None
+
+
+def _validate_request_content_type(
+    body_policy: RequestBodyPolicy,
+    request_headers: dict[str, str],
+) -> None:
+    assert body_policy.required_content_type is not None
+    raw_content_type = request_headers.get("content-type")
+    normalized = _normalized_content_type(raw_content_type)
+    if normalized == body_policy.required_content_type:
+        return
+    raise ApiError(
+        status_code=415,
+        code="unsupported_media_type",
+        message="expected Content-Type application/json",
+        details={
+            "expected_content_type": body_policy.required_content_type,
+            "received_content_type": raw_content_type,
+        },
+    )
+
+
+async def _read_json_body(
+    body_policy: RequestBodyPolicy,
+    request_headers: dict[str, str],
+    receive,
+) -> dict[str, Any] | None:
+    if body_policy.kind == "none":
         return None
 
     chunks: list[bytes] = []
+    body_started = False
+    total_bytes = 0
     more = True
     while more:
         message = await receive()
@@ -244,6 +281,20 @@ async def _read_json_body(body_mode: str, receive) -> dict[str, Any] | None:
             continue
         body_chunk = message.get("body", b"")
         if body_chunk:
+            if not body_started:
+                body_started = True
+                _validate_request_content_type(body_policy, request_headers)
+            total_bytes += len(body_chunk)
+            if (
+                body_policy.max_bytes is not None
+                and total_bytes > body_policy.max_bytes
+            ):
+                raise ApiError(
+                    status_code=413,
+                    code="payload_too_large",
+                    message="request body exceeds maximum size",
+                    details={"max_bytes": body_policy.max_bytes},
+                )
             chunks.append(body_chunk)
         more = bool(message.get("more_body", False))
 
