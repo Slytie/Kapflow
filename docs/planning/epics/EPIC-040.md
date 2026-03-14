@@ -54,5 +54,7 @@ Also see `docs/patterns/PATTERN_INDEX.yaml` for the full tagged library.
 - TASK-0036
 - TASK-0082
 - TASK-0086
+- TASK-0092
+- TASK-0093
 
-Current repo status: `TASK-0086` is complete via a first bounded hotspot extraction that moved the approvals command family into `src/onetruth/application/handlers/approvals.py` behind compatibility wrappers in `workflow_task_lifecycle.py`.
+Current repo status: `TASK-0086` is complete via a first bounded hotspot extraction that moved the approvals command family into `src/onetruth/application/handlers/approvals.py` behind compatibility wrappers in `workflow_task_lifecycle.py`. `TASK-0092` is now also complete: the extracted approvals family depends on a neutral `src/onetruth/application/handlers/_shared/command_boundary.py` seam for shared command-boundary helpers, so the compatibility cycle back into `workflow_task_lifecycle.py` is retired without changing approval behavior. `TASK-0093` is now also complete: the human-task mutation family lives in `src/onetruth/application/handlers/human_tasks.py`, confirm-review support helpers no longer live only in the legacy hotspot, and existing callers still route through thin `workflow_task_lifecycle.py` wrappers.

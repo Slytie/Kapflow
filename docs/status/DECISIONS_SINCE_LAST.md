@@ -2,6 +2,21 @@
 
 Record any decisions made since the last session so a fresh Codex run can rehydrate quickly.
 
+## 2026-03-14 (TASK-0093 human-task mutation family extraction)
+- Extraction decision: `claim_human_task_command`, `complete_human_task_command`, and `confirm_human_task_review_command` now live in `src/onetruth/application/handlers/human_tasks.py` behind lazy compatibility wrappers in `workflow_task_lifecycle.py`.
+- Helper-seam decision: the extracted family depends on the neutral command-boundary seam plus a private `src/onetruth/application/handlers/_shared/artifact_effects.py` helper closure for confirm-review support, so no extracted module needs to re-import the legacy hotspot.
+- Scope-boundary decision: this tranche moved only the human-task mutation family and its private confirm-review support helpers; read-side task queries, public artifact commands, caller modules, and capability semantics remain unchanged.
+
+## 2026-03-14 (TASK-0092 neutral command-boundary helper seam)
+- Helper-seam decision: the extracted approvals family now depends on `src/onetruth/application/handlers/_shared/command_boundary.py` for shared command-boundary primitives instead of importing them from `workflow_task_lifecycle.py`.
+- Compatibility decision: `workflow_task_lifecycle.py` remains import-compatible through helper re-exports and lazy approval wrappers, but extracted handlers and `_shared/` modules must not re-import the legacy hotspot directly.
+- Scope-boundary decision: only the receipt/error/scope/event-envelope helper cluster moved in this tranche; no additional handler family extraction and no approval/capability semantics changed.
+
+## 2026-03-14 (TASK-0091 dependency automation, secret scanning, and operator-only follow-ups)
+- Automation decision: repo-native update automation now exists for the actual mutable dependency surfaces in this repo: Python (`pip` at `/`), frontend (`npm` at `/frontend`), and GitHub Actions metadata.
+- Secret-scan decision: tracked-file secret hygiene now has a dedicated workflow boundary via `python scripts/validate_repo.py --secrets-only`, so secret scanning is explicit beyond full validator or manual local runs.
+- Operator-boundary decision: secret revocation confirmation, Git history rewrite, and hosted GitHub push-protection/settings changes remain operator/admin follow-ups and must not be treated as Codex code-task completion.
+
 ## 2026-03-14 (TASK-0090 bootstrap/install truth closure and tracked build-artifact ban)
 - Baseline decision: the repo’s validated package metadata now matches the established dev/CI baseline exactly, so `pyproject.toml` requires Python `>=3.11,<3.12` instead of claiming a broader support floor.
 - Install-path decision: local bootstrap guidance, CI workflows, and the compatibility `requirements.txt` shim now all converge on one authoritative backend install path: `python3.11 -m pip install -e ".[api,dev]"`.

@@ -42,3 +42,14 @@ If runtime evidence should become a reusable golden artifact, move it into an ex
   - clean tracked commit snapshot exported by `scripts/export_clean_source_bundle.py --bundle-kind release_source_bundle`; it requires `HEAD` plus a clean tracked worktree and is the lightweight provenance-oriented source package.
 - `runtime_workspace_bundle`
   - run inspection/evidence bundle exported by `scripts/export_run_workspace_bundle.py`; it is derived from canonical runtime projections and is not source/release packaging.
+
+## Secret Hygiene Follow-Ups
+- Repo-enforceable actions:
+  - keep tracked-file secret detection green,
+  - run the dedicated `secret_hygiene` workflow,
+  - remove tracked secret-bearing files from the Git index immediately.
+- Operator-only actions:
+  - confirm leaked credentials are revoked,
+  - decide whether Git history rewrite is justified,
+  - enable hosted GitHub secret scanning push protection or related org/repo settings when available.
+- These operator-only actions are not routine Codex code tasks and should be tracked/documented explicitly rather than silently implied by repo changes.

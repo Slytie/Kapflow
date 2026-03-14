@@ -851,7 +851,13 @@ def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--traces-only", action="store_true")
     parser.add_argument("--schemas-only", action="store_true")
+    parser.add_argument("--secrets-only", action="store_true")
     args = parser.parse_args()
+
+    if args.secrets_only:
+        collector = Collector()
+        validate_secret_hygiene(collector)
+        return collector.report()
 
     collector = Collector()
     indexes = build_indexes(collector)

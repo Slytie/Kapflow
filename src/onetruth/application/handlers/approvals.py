@@ -4,7 +4,7 @@ import sqlite3
 from typing import Any
 from uuid import uuid4
 
-from onetruth.application.handlers.workflow_task_lifecycle import (
+from onetruth.application.handlers._shared.command_boundary import (
     CommandError,
     _assert_actor_type,
     _command_receipt_payload,

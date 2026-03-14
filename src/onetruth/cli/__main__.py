@@ -8,8 +8,8 @@ import sys
 from pathlib import Path
 from typing import Any
 
+from onetruth.application.handlers._shared.command_boundary import _prepare_command_receipt
 from onetruth.application.handlers.workflow_task_lifecycle import (
-    _prepare_command_receipt,
     CommandError,
     activate_stage07_issue_from_flag_command,
     create_artifact_version_command,

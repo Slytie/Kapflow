@@ -218,6 +218,15 @@ Inspection outputs:
 - OpenAI key safety guidance: use environment variables/secrets and never commit keys ([OpenAI API key safety](https://help.openai.com/en/articles/5112595-best-practices-for-api-key-safety)).
 - GitHub Actions secrets docs: [Using secrets in GitHub Actions](https://docs.github.com/en/actions/security-for-github-actions/security-guides/using-secrets-in-github-actions) and [Events triggered by pull requests from forks](https://docs.github.com/en/actions/using-workflows/events-that-trigger-workflows#pull_request).
 
+## Repo Automation And Operator-Only Follow-Ups
+- Repo-enforceable automation now includes Dependabot updates for Python, frontend, and GitHub Actions metadata plus the `secret_hygiene` workflow, which runs `python scripts/validate_repo.py --secrets-only`.
+- Repo-enforceable cleanup also includes removing tracked copies of secrets or generated artifacts from Git and keeping validator checks green.
+- Operator-only follow-ups stay outside normal Codex coding scope:
+  - confirm any previously leaked credential is revoked,
+  - decide whether a full Git history rewrite is warranted,
+  - enable hosted GitHub features such as secret scanning push protection when the repository plan/org settings support them.
+- Do not treat revocation confirmation or history rewrite as complete just because the repo-side detectors and workflows are in place.
+
 ## Execution-session runtime (canonical vs derived)
 Canonical runtime truth for bounded agentive execution now lives in:
 - `execution_sessions`

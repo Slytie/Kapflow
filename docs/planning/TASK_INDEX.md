@@ -92,5 +92,8 @@
 | TASK-0088 | EPIC-070 | DONE | medium | Shared execution-evidence helpers and artifact-root policy cleanup |
 | TASK-0089 | EPIC-070 | DONE | medium | Stage06 compiled-control alignment and tool-class vocabulary cleanup |
 | TASK-0090 | EPIC-080 | DONE | medium | Close the remaining bootstrap/install truth gap and ban tracked build artifacts |
+| TASK-0091 | EPIC-080 | DONE | medium | Add dependency automation, secret scanning, and explicit operator-only history follow-ups |
+| TASK-0092 | EPIC-040 | DONE | high | Break the handler compatibility cycle with neutral command-boundary helpers |
+| TASK-0093 | EPIC-040 | DONE | high | Extract the human-task mutation family through the neutral handler seam |
 
 Note: `TASK-0087` / `TASK-0088` / `TASK-0089` were formerly duplicated as `TASK-0071` / `TASK-0072` / `TASK-0073` before the 2026-03-13 truth-alignment backlog sync. `TASK-0071` / `TASK-0072` / `TASK-0073` now refer only to the Stage04 progression.

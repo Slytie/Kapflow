@@ -18,6 +18,7 @@
 - `docs/architecture/orchestration_semantics.md`
 - `docs/planning/RUNTIME_BOOTSTRAP.md`
 - `docs/planning/FIRST_RUNTIME_SLICE.md`
+- `src/onetruth/application/handlers/_shared/command_boundary.py`
 - `docs/workflows/schedule_planning/v1/WORKFLOW_CONTRACT.yaml`
 - `schemas/runtime/*.schema.json`
 - `schemas/events/envelope.schema.json`
@@ -39,3 +40,8 @@
 - “Can the same request run twice?”
 - “Could this leak across tenants/domains?”
 - “Does the audit timeline still reconstruct what happened?”
+
+## Current Repo Status (2026-03-14)
+- `TASK-0086` is complete: the approvals command family lives in `src/onetruth/application/handlers/approvals.py` behind compatibility wrappers in `workflow_task_lifecycle.py`.
+- `TASK-0092` is complete: shared command-boundary helpers now live in `src/onetruth/application/handlers/_shared/command_boundary.py`, the extracted approvals family no longer imports `workflow_task_lifecycle.py`, and a contract test forbids that compatibility cycle from reappearing.
+- `TASK-0093` is complete: the human-task mutation family now lives in `src/onetruth/application/handlers/human_tasks.py`, confirm-review support helpers moved behind `_shared/artifact_effects.py`, and legacy callers still import through thin wrappers in `workflow_task_lifecycle.py`.

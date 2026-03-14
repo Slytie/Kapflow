@@ -23,6 +23,11 @@ def test_schema_validation_harness_passes() -> None:
     assert result.returncode == 0, result.stdout + result.stderr
 
 
+def test_secret_validation_harness_passes() -> None:
+    result = _run_validator("--secrets-only")
+    assert result.returncode == 0, result.stdout + result.stderr
+
+
 def test_trace_validation_harness_passes() -> None:
     result = _run_validator("--traces-only")
     assert result.returncode == 0, result.stdout + result.stderr

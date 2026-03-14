@@ -5,11 +5,13 @@ import sqlite3
 
 import pytest
 
-from onetruth.application.handlers.workflow_task_lifecycle import (
-    CommandError,
+from onetruth.application.handlers._shared.command_boundary import (
     _execute_with_command_receipt,
     _prepare_command_receipt,
     _public_command_scope_key,
+)
+from onetruth.application.handlers.workflow_task_lifecycle import (
+    CommandError,
     create_workflow_run_command,
 )
 from onetruth.infrastructure.events.event_store import create_sqlite_substrate
