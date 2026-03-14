@@ -57,4 +57,8 @@
   - the hand-rolled API shell is characterized by focused runtime tests before any refactor,
   - every API response now emits a header-only `x-request-id`,
   - request ids are not yet added to JSON bodies or timeline-event correlation.
+- `TASK-0095` is complete:
+  - the duplicated handwritten matcher/dispatcher in `src/onetruth/api/main.py` has been replaced by a single declarative route registry,
+  - route precedence, current permissive slash behavior, and endpoint payload semantics were preserved,
+  - the shell remains lightweight and framework-free while route metadata now lives in one place.
 - Scope remains intentionally bounded to the authored three-workflow logistics story shell.

@@ -2,6 +2,11 @@
 
 Record any decisions made since the last session so a fresh Codex run can rehydrate quickly.
 
+## 2026-03-14 (TASK-0095 declarative route registry)
+- Shell-structure decision: API route metadata, match order, body expectations, and dispatch targets now live in one ordered declarative registry instead of parallel handwritten `_match_route()` and `_dispatch_route()` switches.
+- Parity decision: the registry preserves current route precedence and the existing permissive-vs-strict slash behavior for selected suffix routes such as `/claim`, `/respond`, `/transition`, and `/timeline`; this tranche does not tighten path semantics.
+- Scope-boundary decision: the refactor stays framework-free and shell-only, with no endpoint-module rewrites, no JSON payload changes, no trust-boundary changes, and no request-id/event-correlation expansion.
+
 ## 2026-03-14 (TASK-0094 API shell characterization and request-id seam)
 - Shell decision: the current hand-rolled API shell now has focused characterization coverage for route misses, malformed JSON, unsupported scopes, and internal-error fallback before any route-registry refactor.
 - Correlation decision: every API response now emits a header-only `x-request-id` seam, with safe incoming values echoed and missing/unusable values replaced by generated `httpreq_<hex>` ids.
