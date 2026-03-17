@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pytest
 
-from onetruth.application.handlers.workflow_task_lifecycle import (
+from onetruth.application.handlers.execution_runtime import (
     complete_tool_execution_command,
     evaluate_policy_decision_command,
 )

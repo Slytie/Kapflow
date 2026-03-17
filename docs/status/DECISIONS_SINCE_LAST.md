@@ -523,3 +523,13 @@ Record any decisions made since the last session so a fresh Codex run can rehydr
 - Extraction decision: `create_flag_command`, `transition_flag_state_command`, `activate_stage07_issue_from_flag_command`, and `reconcile_stage07_command` now live in `src/onetruth/application/handlers/flags.py` behind thin compatibility wrappers in `workflow_task_lifecycle.py`.
 - Caller decision: API flag routes, the realistic scheduling pilot, and the CLI now import the extracted flag family directly instead of routing those mutations through the legacy hotspot.
 - Helper-seam decision: shared event-idempotency availability checks now live on `src/onetruth/application/handlers/_shared/command_boundary.py` so the extracted flag family can stay free of legacy imports without broadening semantics.
+
+## 2026-03-17 (TASK-0104 artifact and pointer extraction)
+- Extraction decision: artifact-version creation/ingress/download now live in `src/onetruth/application/handlers/artifacts.py`, and pointer promotion now lives in `src/onetruth/application/handlers/pointers.py`, behind thin compatibility wrappers in `workflow_task_lifecycle.py`.
+- Helper-seam decision: shared artifact support remains explicit in `src/onetruth/application/handlers/_shared/artifact_effects.py` instead of leaving artifact lineage concerns embedded in the hotspot.
+- Scope decision: the extraction stayed structural only; artifact officialness, pointer promotion semantics, release-bundle truth, and binary transport behavior were not reopened.
+
+## 2026-03-17 (TASK-0105 execution runtime extraction)
+- Extraction decision: `create_execution_session_command`, `request_tool_execution_command`, `evaluate_policy_decision_command`, `complete_tool_execution_command`, `transition_execution_session_state_command`, and `reconcile_executions_command` now live in `src/onetruth/application/handlers/execution_runtime.py` behind thin compatibility wrappers in `workflow_task_lifecycle.py`.
+- Caller decision: `stage06_openai_sandbox.py`, `weekly_stage04_openai_agent.py`, CLI execution commands, and the direct execution runtime tests now import the extracted execution seam directly instead of routing those mutations through the legacy hotspot.
+- Guardrail decision: contract coverage now forbids extracted handlers plus API/service/CLI layers from drifting back to legacy execution mutation imports, while execution read surfaces remain on `read_commands`.

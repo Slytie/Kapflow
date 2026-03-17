@@ -2,7 +2,7 @@
 id: TASK-0105
 epic: EPIC-070
 title: "Extract execution, tool, and policy command family"
-status: TODO
+status: DONE
 owners: ["platform"]
 reviewers: ["qa"]
 depends_on: ["TASK-0102"]
@@ -68,3 +68,10 @@ Extract the execution/tool/policy command family into a dedicated handler module
 
 ## Notes / decisions
 This is still a single-node bounded-execution system. Do not use this extraction to smuggle in distributed runtime assumptions.
+
+## Implementation notes (2026-03-17)
+- Added `src/onetruth/application/handlers/execution_runtime.py` as the owner of `create_execution_session_command`, `request_tool_execution_command`, `evaluate_policy_decision_command`, `complete_tool_execution_command`, `transition_execution_session_state_command`, and `reconcile_executions_command`.
+- Shrunk `src/onetruth/application/handlers/workflow_task_lifecycle.py` to thin lazy wrappers for that execution/runtime family while leaving execution read commands on `read_commands`.
+- Rewired `src/onetruth/application/services/stage06_openai_sandbox.py`, `src/onetruth/application/services/weekly_stage04_openai_agent.py`, `src/onetruth/cli/__main__.py`, and `tests/runtime/test_execution_session_runtime.py` to consume the extracted execution seam directly.
+- Extended `tests/contract/test_handler_import_boundaries.py` so extracted handlers and API/service/CLI layers cannot drift back to legacy execution imports.
+- Added `tests/unit/test_execution_runtime_handler_compatibility.py` to lock the legacy-vs-extracted happy path in place.

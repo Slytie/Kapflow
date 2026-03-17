@@ -36,7 +36,7 @@
 - “Could this leak across tenants/domains?”
 - “Does the audit timeline still reconstruct what happened?”
 
-## Planned next tranche
-- `TASK-0105` should treat execution/tool/policy code as a bounded runtime facet with its own handler surface.
-- Do not use the extraction to broaden OpenAI/runtime semantics or add distributed-systems assumptions.
-- Red-team question: “Did we reduce dependency on the orchestration hotspot, or just create another wrapper around it?”
+## Latest completed tranche
+- `TASK-0105` treated execution/tool/policy code as a bounded runtime facet with its own handler surface in `src/onetruth/application/handlers/execution_runtime.py`.
+- Stage06 sandbox, weekly Stage04 agent flows, CLI execution commands, and targeted runtime tests now import that seam directly.
+- The semantic guardrail remains the same: do not use this extraction to broaden OpenAI/runtime semantics or add distributed-systems assumptions.

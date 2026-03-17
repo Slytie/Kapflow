@@ -13,8 +13,11 @@ CLI_MAIN = REPO_ROOT / "src" / "onetruth" / "cli" / "__main__.py"
 
 _BANNED_LEGACY_SURFACES = {
     "CommandError",
+    "complete_tool_execution_command",
     "create_artifact_version_command",
+    "create_execution_session_command",
     "download_artifact_blob_command",
+    "evaluate_policy_decision_command",
     "ingest_artifact_document_command",
     "list_approvals_for_workflow_run_command",
     "list_artifacts_for_subject_command",
@@ -24,6 +27,8 @@ _BANNED_LEGACY_SURFACES = {
     "list_pointers_for_workflow_run_command",
     "list_tasks_for_workflow_run_command",
     "list_workflow_runs_command",
+    "reconcile_executions_command",
+    "request_tool_execution_command",
     "show_approval_command",
     "show_artifact_version_command",
     "show_execution_session_command",
@@ -33,6 +38,7 @@ _BANNED_LEGACY_SURFACES = {
     "show_policy_decision_command",
     "show_tool_execution_command",
     "show_workflow_run_command",
+    "transition_execution_session_state_command",
     "promote_pointer_command",
 }
 
@@ -41,6 +47,7 @@ def test_approvals_and_shared_handler_modules_do_not_import_legacy_hotspot() -> 
     target_files = [
         HANDLERS_DIR / "approvals.py",
         HANDLERS_DIR / "artifacts.py",
+        HANDLERS_DIR / "execution_runtime.py",
         HANDLERS_DIR / "flags.py",
         HANDLERS_DIR / "human_tasks.py",
         HANDLERS_DIR / "pointers.py",

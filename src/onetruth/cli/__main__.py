@@ -30,6 +30,12 @@ from onetruth.application.handlers.flags import (
     transition_flag_state_command,
 )
 from onetruth.application.handlers.pointers import promote_pointer_command
+from onetruth.application.handlers.execution_runtime import (
+    create_execution_session_command,
+    reconcile_executions_command,
+    request_tool_execution_command,
+    transition_execution_session_state_command,
+)
 from onetruth.application.read_commands import (
     list_artifacts_for_subject_command,
     list_artifacts_for_workflow_run_command,
@@ -48,16 +54,12 @@ from onetruth.application.read_commands import (
     show_workflow_run_command,
 )
 from onetruth.application.handlers.workflow_task_lifecycle import (
-    create_execution_session_command,
     claim_human_task_command,
     complete_human_task_command,
     confirm_human_task_review_command,
     create_task_run_command,
     create_workflow_run_command,
-    reconcile_executions_command,
-    request_tool_execution_command,
     sweep_leases_command,
-    transition_execution_session_state_command,
 )
 from onetruth.application.handlers.logistics_handoff import (
     activate_live_dispatch_command,

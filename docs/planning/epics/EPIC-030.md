@@ -28,10 +28,11 @@ Artifact semantics are the practical expression of one truth. Without them, ever
 
 Context pack: `codex/context/EPIC-030.md`
 
-## Current Repo Status (2026-03-14)
-- Completed in this epic: `TASK-0008`, `TASK-0009`, `TASK-0030`, `TASK-0081`, and `TASK-0097`.
+## Current Repo Status (2026-03-17)
+- Completed in this epic: `TASK-0008`, `TASK-0009`, `TASK-0030`, `TASK-0081`, `TASK-0097`, and `TASK-0104`.
 - Shared/public HTTP artifact ingress now accepts request bytes only, while CLI/scenario/internal seeding remains available through canonical local-source-path ingress.
 - Artifact and template download transport now also has sibling binary `.bin` routes with attachment headers, while the original JSON+base64 `/download` routes remain compatibility surfaces for current clients.
+- Artifact-version and pointer-promotion mutations now live behind `src/onetruth/application/handlers/artifacts.py` and `src/onetruth/application/handlers/pointers.py`, with the legacy hotspot preserved only as a compatibility wrapper surface.
 - Scope boundary remains unchanged: no object-store migration and no alternate attachment truth path were introduced in this tranche.
 
 ## Deliverables
@@ -45,9 +46,9 @@ Context pack: `codex/context/EPIC-030.md`
 - TASK-0081
 - TASK-0097
 
-Planned next tranche in this epic:
-- `TASK-0104` continues the artifact/pointer line by extracting artifact-version and pointer-promotion mutation families behind a narrower lineage/canonical-scope seam.
-- This is explicitly structural; no object-store or transport-v3 work is queued in the same task.
+Latest completed tranche in this epic:
+- `TASK-0104` extracted the artifact-version and pointer-promotion mutation families behind a narrower lineage/canonical-scope seam.
+- This remained structural work only; no object-store or transport-v3 expansion was bundled in.
 
 ## Queued Tasks
-- TASK-0104
+- None currently queued in this epic

@@ -2,7 +2,7 @@
 id: TASK-0104
 epic: EPIC-030
 title: "Extract artifact-version and pointer-promotion mutation families"
-status: TODO
+status: DONE
 owners: ["platform"]
 reviewers: ["qa"]
 depends_on: ["TASK-0102"]
@@ -76,3 +76,9 @@ Extract artifact-version and pointer-promotion mutation families into dedicated 
 
 ## Notes / decisions
 Keep the current transport model stable unless a helper move absolutely requires a small compatibility shim.
+
+## Implementation notes (reconciled 2026-03-17)
+- Repo memory was stale after the code landed.
+- `src/onetruth/application/handlers/artifacts.py` owns artifact-version creation, ingress, and download mutation helpers.
+- `src/onetruth/application/handlers/pointers.py` owns pointer promotion, with shared artifact support isolated behind `_shared/artifact_effects.py`.
+- `src/onetruth/application/handlers/workflow_task_lifecycle.py` remains import-compatible through thin wrappers while direct callers and contract guardrails use the extracted seams.

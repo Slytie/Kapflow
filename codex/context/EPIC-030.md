@@ -45,7 +45,7 @@
   - the existing `/download` JSON+base64 routes remain available as compatibility surfaces,
   - transport changed without reopening artifact metadata, pointer, provenance, or trust semantics.
 
-## Planned next tranche
-- `TASK-0104` is structural artifact work, not semantic artifact work.
-- Keep one-truth artifact officialness exactly as-is; the task is to move artifact/pointer mutation code and lineage helpers behind a cleaner seam.
-- Red-team question: “Did we accidentally mix transport concerns into a lineage/pointer extraction task?”
+## Latest completed tranche
+- `TASK-0104` stayed structural artifact work, not semantic artifact work.
+- Artifact/pointer mutation code now lives behind `src/onetruth/application/handlers/artifacts.py` and `src/onetruth/application/handlers/pointers.py`, with shared artifact support isolated behind `_shared/artifact_effects.py`.
+- The red-team guardrail still applies: do not mix transport concerns back into lineage/pointer extraction follow-ons.
