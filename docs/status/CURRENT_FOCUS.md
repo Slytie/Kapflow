@@ -12,7 +12,7 @@ The next package is now intentionally split into two coordinated lanes:
 
 Promotion remains release-mediated by default: `lab -> review/certification/release -> prod`, not direct runtime mutation from lab into production.
 
-Package update: `TASK-0112` is now complete. The supported `onetruth-api` `local_dev` startup path now enforces loopback-only binds by default, non-loopback binds require `ONETRUTH_UNSAFE_ALLOW_LOCAL_DEV_NON_LOOPBACK_BIND=1` for controlled test scenarios, and the next queued productization step is `TASK-0113`.
+Package update: `TASK-0113` is now complete. Production and lab are now defined as separate single-node environments deployed only from `release_source_bundle`, the current first-user substrate is explicitly `SQLite + local filesystem artifacts`, and the next queued productization step is `TASK-0114`.
 
 Runtime scaffold bootstrap now includes canonical workflow/task/approval/artifact/pointer substrate under `src/onetruth/` + `alembic/` with a stable CLI lifecycle boundary:
 - timeline substrate: `init-db`, `events append`, `events list`

@@ -8,6 +8,10 @@ This folder contains operational guidance for Stage 4:
 These docs assume one truth system:
 operational views may degrade, but authoritative timeline and pointer writes may not silently disappear.
 
+Topology and deploy reference:
+- first-user production/lab topology: `docs/ops/production_lab_topology.md`
+- release-bundle deploy and rollback: `docs/ops/runbooks/rollback_and_deploy.md`
+
 Shared-env operator note:
 - frontend viewer/bootstrap identity is server-derived via `GET /api/v1/viewer`
 - browser actor switching is local-dev/demo only and is not a production/shared-env authority surface

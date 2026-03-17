@@ -3,6 +3,8 @@
 ## Status
 Accepted
 
+Superseded in part by ADR-004 for the first-user production/lab deploy substrate and topology reference.
+
 ## Decision
 Stage 4 runtime will be instantiated as a **Python modular monolith** with:
 - runtime code under `src/onetruth/`

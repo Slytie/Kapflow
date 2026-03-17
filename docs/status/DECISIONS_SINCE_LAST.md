@@ -22,6 +22,11 @@ Record any decisions made since the last session so a fresh Codex run can rehydr
 - Scope decision: this task hardens the blessed CLI seam only; it does not redefine request-context trust semantics or claim to normalize every ad hoc raw `uvicorn onetruth.api.main:app` invocation style.
 - Operator-guidance decision: repo docs now treat non-loopback `local_dev` binds as a controlled unsafe test escape hatch rather than a normal development or shared-environment posture.
 
+## 2026-03-17 (TASK-0113 production/lab topology ADR and single-node deploy reference)
+- Topology decision: first-user production and lab are now defined as separate single-node environments over the current implemented substrate (`SQLite + local filesystem artifacts`), not as one runtime with tenant/domain separation.
+- Deploy-input decision: `release_source_bundle` is the only operator deploy artifact; `handoff_source_bundle`, `runtime_workspace_bundle`, and raw workspace archives remain non-deploy surfaces.
+- Promotion-gate decision: the lab-to-prod connection remains a reviewed release process, not a third runtime/control-plane service, and Workflow Lab remains internal-only/non-authoritative in this tranche.
+
 ## 2026-03-17 (TASK-0108 structured API boundary logging)
 - Boundary-observability decision: the API shell now emits compact JSON-line records through logger `onetruth.api.boundary` with three fixed event names: `request_started`, `request_finished`, and `request_failed`.
 - Safety decision: boundary logs keep a strict allowlist of request-context and mutation-correlation fields only, and intentionally do not log bodies, bearer tokens, raw headers, actor roles, large payload fields, `actor_id`, or exception text.

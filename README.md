@@ -390,6 +390,8 @@ Export an operator-facing release source bundle:
 - `release_source_bundle` is the only endorsed shareable/release source package; it always exports tracked files only, requires `HEAD`, and fails closed unless the tracked worktree is clean
 - the release ZIP includes both `bundle_manifest.json` and `release_provenance.json`; together they classify the archive as `operator_release` and record deterministic file digests for the bundled source snapshot
 - default exclusions still include `.git`, `.venv`, `node_modules`, `frontend/dist`, `.tmp`, `.pytest_cache`, `.idea`, local `.env*` files, local DBs, and runtime evidence roots like `artifacts/` and `.onetruth_artifacts/`
+- first-user topology/deploy reference: [docs/ops/production_lab_topology.md](docs/ops/production_lab_topology.md)
+- release-bundle deploy/rollback runbook: [docs/ops/runbooks/rollback_and_deploy.md](docs/ops/runbooks/rollback_and_deploy.md)
 
 Export an internal handoff bundle for Codex/review only:
 - `make handoff-source-bundle`

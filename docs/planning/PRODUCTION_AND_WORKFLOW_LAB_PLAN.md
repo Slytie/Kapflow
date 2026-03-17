@@ -28,8 +28,8 @@ not direct mutation from lab into production.
 - Authoritative workflow semantics still live in `docs/workflows/*/v1/*`.
 - Compiled control still lives in `src/onetruth/infrastructure/definitions/control_layer.py`.
 - Runtime rows/events/artifacts/pointers remain canonical.
-- Shared-env identity is credible on the backend, but the frontend still carries browser-set identity assumptions.
-- The runtime substrate is still single-node by default (`SQLite` + local filesystem artifacts).
+- Shared-env identity is now credible end to end: the frontend bootstraps from server-derived viewer state and no longer acts like the production identity surface.
+- The first-user production/lab reference is now explicit as separate single-node environments over `SQLite + local filesystem artifacts`, deployed from `release_source_bundle`.
 - Workflow Lab does not yet exist as a package or doc tree, which is good: it can start thin and clean.
 
 ## Lane A — productization

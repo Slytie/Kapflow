@@ -2,7 +2,7 @@
 id: TASK-0113
 epic: EPIC-100
 title: "Define the production/lab topology ADR and a single-node deploy reference"
-status: TODO
+status: DONE
 owners: ["platform"]
 reviewers: ["qa"]
 depends_on: ["TASK-0111", "TASK-0112"]
@@ -62,3 +62,12 @@ Define the first-user reference topology for prod and lab as separate environmen
 
 ## Notes / decisions
 This task should optimize for clarity and operational truth, not for maximal platform sophistication.
+
+## Implementation notes
+- Added ADR-004 to define production and lab as separate single-node environments over the current implemented substrate and to supersede ADR-003's first-user deploy-substrate assumption.
+- Added an operator-facing topology/deploy reference that ties `release_source_bundle`, `ONETRUTH_DB_URL`, `ONETRUTH_ARTIFACT_ROOT`, `shared_env`, and lab separation rules into one deploy story.
+- Upgraded the deploy/rollback runbook from skeleton to a concrete release-bundle-based procedure without pulling backup/restore rehearsal into this task.
+
+## Completion notes
+- `release_source_bundle` remains the only operator deploy artifact; `handoff_source_bundle` and `runtime_workspace_bundle` remain non-deploy surfaces.
+- This task intentionally leaves backup/restore rehearsal, health/readiness/metrics, and GitHub perimeter hardening to later bounded tasks.
