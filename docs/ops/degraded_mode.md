@@ -24,6 +24,15 @@ If a derived surface is degraded:
 - make the degraded state visible and alertable
 - provide rebuild or catch-up steps in runbooks
 
+## Readiness rule
+- degraded derived surfaces are warnings, not core readiness failures
+- missing or unusable core substrate state (the SQLite DB file or artifact root) is what makes the first-user node `not_ready`
+
+## Repo-native visibility surface
+- `GET /api/v1/ops/health` answers pure liveness
+- `GET /api/v1/ops/readiness` reports core substrate readiness and degraded-mode warnings
+- `GET /api/v1/ops/metrics` exposes safe process-local route counters plus degraded/coherence visibility without leaking tenant, domain, actor, path, or payload data
+
 ## Stage 4 minimum signals
 Track at least:
 - outbox backlog age / size

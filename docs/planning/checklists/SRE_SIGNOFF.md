@@ -1,5 +1,10 @@
 # SRE_SIGNOFF.md - SRE gate checklist (Stage 4)
 
+## Baseline endpoints
+- [ ] health endpoint exists
+- [ ] readiness endpoint exists
+- [ ] safe metrics surface exists
+
 ## Dashboards
 - [ ] event persistence health
 - [ ] outbox backlog / degraded-mode signals

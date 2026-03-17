@@ -16,6 +16,10 @@ def test_route_registry_route_names_are_unique() -> None:
 
 def test_route_registry_preserves_exact_global_route_order() -> None:
     assert [route.name for route in ROUTES] == [
+        "ops.health",
+        "ops.readiness",
+        "ops.metrics",
+        "viewer.bootstrap",
         "human_tasks.list",
         "human_tasks.detail",
         "human_tasks.subgraph",
@@ -59,6 +63,11 @@ def test_route_registry_preserves_exact_global_route_order() -> None:
 
 
 def test_route_registry_matches_representative_exact_and_parameterized_routes() -> None:
+    ops_match = match_route("GET", "/api/v1/ops/readiness")
+    assert ops_match is not None
+    assert ops_match.route.name == "ops.readiness"
+    assert ops_match.params == {}
+
     exact_match = match_route("GET", "/api/v1/workflow-runs")
     assert exact_match is not None
     assert exact_match.route.name == "workflow_runs.list"
@@ -115,6 +124,11 @@ def test_route_registry_preserves_suffix_precedence_over_detail_routes() -> None
 
 def test_route_registry_exposes_representative_metadata() -> None:
     routes_by_name = {route.name: route for route in ROUTES}
+
+    assert routes_by_name["ops.health"].needs_page is False
+    assert routes_by_name["ops.health"].body_policy == NO_BODY
+    assert routes_by_name["ops.health"].requires_request_context is False
+    assert routes_by_name["ops.health"].needs_db_connection is False
 
     assert routes_by_name["workflow_runs.list"].needs_page is True
     assert routes_by_name["workflow_runs.list"].body_policy == NO_BODY

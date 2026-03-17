@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import logging
+from threading import Lock
 from typing import Any, Mapping
 
 from onetruth.api.dependencies import BoundaryProfile, RequestContext
@@ -21,6 +22,8 @@ _RECEIPT_FIELD_NAMES = {
     "scope_key": "receipt_scope_key",
     "idempotency_key": "receipt_idempotency_key",
 }
+_REQUEST_METRICS_LOCK = Lock()
+_REQUEST_METRICS: dict[tuple[str, str, str], dict[str, int]] = {}
 
 
 def log_request_started(
@@ -77,6 +80,12 @@ def log_request_finished(
     if error_code is not None:
         payload["error_code"] = error_code
     payload.update(extract_mutation_log_fields(response_payload))
+    _record_request_metric(
+        route_name=route_name,
+        method=method,
+        status_code=status_code,
+        latency_ms=latency_ms,
+    )
     _emit(logging.INFO, payload)
 
 
@@ -161,6 +170,27 @@ def extract_mutation_log_fields(payload: Mapping[str, Any] | None) -> dict[str, 
     return fields
 
 
+def snapshot_request_metrics() -> list[dict[str, Any]]:
+    with _REQUEST_METRICS_LOCK:
+        return [
+            {
+                "route_name": route_name,
+                "method": method,
+                "status_family": status_family,
+                "count": values["count"],
+                "latency_ms_total": values["latency_ms_total"],
+            }
+            for (route_name, method, status_family), values in sorted(
+                _REQUEST_METRICS.items()
+            )
+        ]
+
+
+def reset_request_metrics() -> None:
+    with _REQUEST_METRICS_LOCK:
+        _REQUEST_METRICS.clear()
+
+
 def _request_context_fields(
     request_context: RequestContext | None,
 ) -> dict[str, Any]:
@@ -171,6 +201,33 @@ def _request_context_fields(
         "domain_id": request_context.domain_id,
         "actor_type": request_context.actor_type,
     }
+
+
+def _record_request_metric(
+    *,
+    route_name: str | None,
+    method: str,
+    status_code: int,
+    latency_ms: int,
+) -> None:
+    key = (
+        route_name or "unmatched",
+        method.upper() or "UNKNOWN",
+        _status_family(status_code),
+    )
+    with _REQUEST_METRICS_LOCK:
+        bucket = _REQUEST_METRICS.setdefault(
+            key,
+            {"count": 0, "latency_ms_total": 0},
+        )
+        bucket["count"] += 1
+        bucket["latency_ms_total"] += max(0, int(latency_ms))
+
+
+def _status_family(status_code: int) -> str:
+    if 100 <= status_code <= 599:
+        return f"{status_code // 100}xx"
+    return "other"
 
 
 def _emit(level: int, payload: dict[str, Any]) -> None:

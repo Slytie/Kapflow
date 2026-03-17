@@ -46,7 +46,7 @@ The repo's internal runtime/control semantics are stronger than its outer produc
 - The supported `onetruth-api` `local_dev` startup path now enforces loopback-only binds by default and requires an explicit unsafe override for controlled non-loopback test scenarios.
 - Production and lab topology are now explicit as separate single-node environments over the current `SQLite + local filesystem artifacts` substrate, deployed from `release_source_bundle`.
 - Backup/restore/rollback docs and rehearsal basis now exist, but actual rehearsal evidence is still required before claiming G1 item 5 is satisfied.
-- Structured boundary logs exist, but metrics/health/readiness and GitHub perimeter hardening remain the next operator-facing gaps.
+- Structured boundary logs plus internal JSON health/readiness/metrics now exist for the first-user lane, but dashboards/alerts/time-series remain out of scope and GitHub perimeter hardening is the next operator-facing gap.
 
 ## Tasks
 - TASK-0110

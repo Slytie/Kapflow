@@ -4,6 +4,7 @@ import base64
 from dataclasses import dataclass
 import hashlib
 import mimetypes
+import os
 from pathlib import Path
 from typing import Literal
 from urllib.parse import urlparse
@@ -11,6 +12,7 @@ from urllib.parse import urlparse
 from onetruth.infrastructure.db.session import sqlite_path_from_url
 
 DEFAULT_STORAGE_DIRNAME = "artifact_store"
+ARTIFACT_ROOT_ENV_VAR = "ONETRUTH_ARTIFACT_ROOT"
 ArtifactIngressKind = Literal["request_bytes", "local_source_path"]
 
 
@@ -48,20 +50,82 @@ class ArtifactIngressDescriptor:
         return cls(ingress_kind="local_source_path", source_path=source_path)
 
 
-def default_storage_root_for_db_url(
+@dataclass(frozen=True)
+class StorageRootProbe:
+    ready: bool
+    exists: bool
+    is_directory: bool
+    writable: bool
+    error_code: str | None = None
+
+
+def storage_root_for_db_url(
     db_url: str,
     *,
     override: str | None = None,
 ) -> Path:
     if override is not None and override.strip():
-        root = Path(override).expanduser().resolve()
-        root.mkdir(parents=True, exist_ok=True)
-        return root
+        return Path(override).expanduser().resolve()
 
     db_path = sqlite_path_from_url(db_url).resolve()
-    root = db_path.parent / DEFAULT_STORAGE_DIRNAME
+    return db_path.parent / DEFAULT_STORAGE_DIRNAME
+
+
+def default_storage_root_for_db_url(
+    db_url: str,
+    *,
+    override: str | None = None,
+) -> Path:
+    root = storage_root_for_db_url(db_url, override=override)
     root.mkdir(parents=True, exist_ok=True)
     return root
+
+
+def probe_storage_root(
+    db_url: str,
+    *,
+    override: str | None = None,
+    env_var: str = ARTIFACT_ROOT_ENV_VAR,
+) -> StorageRootProbe:
+    configured_override = override
+    if configured_override is None:
+        configured_override = os.environ.get(env_var)
+    root = storage_root_for_db_url(db_url, override=configured_override)
+    exists = root.exists()
+    is_directory = root.is_dir() if exists else False
+    writable = os.access(root, os.W_OK) if exists and is_directory else False
+
+    if not exists:
+        return StorageRootProbe(
+            ready=False,
+            exists=False,
+            is_directory=False,
+            writable=False,
+            error_code="missing_storage_root",
+        )
+    if not is_directory:
+        return StorageRootProbe(
+            ready=False,
+            exists=True,
+            is_directory=False,
+            writable=False,
+            error_code="storage_root_not_directory",
+        )
+    if not writable:
+        return StorageRootProbe(
+            ready=False,
+            exists=True,
+            is_directory=True,
+            writable=False,
+            error_code="storage_root_not_writable",
+        )
+    return StorageRootProbe(
+        ready=True,
+        exists=True,
+        is_directory=True,
+        writable=True,
+        error_code=None,
+    )
 
 
 def infer_media_type(filename: str | None, fallback: str = "application/octet-stream") -> str:

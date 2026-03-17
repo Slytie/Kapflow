@@ -7,6 +7,8 @@ import re
 from pathlib import Path
 from typing import Any
 
+from onetruth.api.boundary_logging import reset_request_metrics, snapshot_request_metrics
+from onetruth.api.dependencies import unavailable_principal_resolver
 from onetruth.api.main import create_app
 from tests.runtime.helpers.runtime_api import RuntimeApiClient
 from tests.runtime.helpers.runtime_cli import REPO_ROOT
@@ -162,6 +164,35 @@ def test_boundary_logging_records_internal_error_without_leaking_exception_messa
     assert finished["status_code"] == 500
     assert finished["error_code"] == "internal_error"
     assert "do not leak me" not in joined_messages
+
+
+def test_boundary_logging_request_metrics_store_keeps_only_safe_route_buckets() -> None:
+    reset_request_metrics()
+    app = create_app(
+        db_url="sqlite:///:memory:",
+        boundary_profile="shared_env",
+        principal_resolver=unavailable_principal_resolver,
+    )
+
+    status, _headers, _body = _invoke(
+        app,
+        method="GET",
+        path="/api/v1/not-a-route/secret-tenant-a",
+        headers={"authorization": "Bearer secret-token-should-not-leak"},
+    )
+
+    assert status == 404
+    metrics = snapshot_request_metrics()
+    assert len(metrics) == 1
+    assert metrics[0]["route_name"] == "unmatched"
+    assert metrics[0]["method"] == "GET"
+    assert metrics[0]["status_family"] == "4xx"
+    assert metrics[0]["count"] == 1
+    serialized = json.dumps(metrics, sort_keys=True)
+    assert "secret-tenant-a" not in serialized
+    assert "secret-token-should-not-leak" not in serialized
+
+    reset_request_metrics()
 
 
 def _boundary_events(caplog) -> list[dict[str, Any]]:

@@ -31,6 +31,7 @@ not direct mutation from lab into production.
 - Shared-env identity is now credible end to end: the frontend bootstraps from server-derived viewer state and no longer acts like the production identity surface.
 - The first-user production/lab reference is now explicit as separate single-node environments over `SQLite + local filesystem artifacts`, deployed from `release_source_bundle`.
 - Backup/restore/rollback docs and rehearsal basis now exist, but `G1` still requires actual restore rehearsal evidence rather than docs alone.
+- A basic observability baseline now exists through internal JSON ops endpoints for health/readiness/metrics over safe process-local counters and non-mutating substrate probes.
 - Workflow Lab does not yet exist as a package or doc tree, which is good: it can start thin and clean.
 
 ## Lane A — productization

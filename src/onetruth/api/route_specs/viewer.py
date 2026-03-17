@@ -1,7 +1,12 @@
 from __future__ import annotations
 
 from onetruth.api.routes.viewer import get_viewer_session_endpoint
-from onetruth.api.route_specs._core import NO_BODY, RouteSpec, _exact
+from onetruth.api.route_specs._core import (
+    NO_BODY,
+    RouteSpec,
+    _exact,
+    require_request_context,
+)
 
 VIEWER_ROUTE_SPECS: tuple[RouteSpec, ...] = (
     RouteSpec(
@@ -11,7 +16,7 @@ VIEWER_ROUTE_SPECS: tuple[RouteSpec, ...] = (
         body_policy=NO_BODY,
         needs_page=False,
         dispatch=lambda execution, _params: get_viewer_session_endpoint(
-            context=execution.context,
+            context=require_request_context(execution.context),
             boundary_profile=execution.boundary_profile,
         ),
     ),

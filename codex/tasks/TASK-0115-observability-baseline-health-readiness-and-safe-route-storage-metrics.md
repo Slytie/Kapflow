@@ -2,7 +2,7 @@
 id: TASK-0115
 epic: EPIC-100
 title: "Establish an operability baseline with health/readiness and safe route/storage metrics"
-status: TODO
+status: DONE
 owners: ["platform"]
 reviewers: ["qa"]
 depends_on: ["TASK-0113"]
@@ -61,3 +61,12 @@ Add the next observability layer needed for a stable first-user deployment witho
 
 ## Notes / decisions
 If a richer telemetry stack is needed later, it should build on this baseline rather than replace it blindly.
+
+## Implementation notes
+- Added internal JSON operator endpoints at `/api/v1/ops/health`, `/api/v1/ops/readiness`, and `/api/v1/ops/metrics` with explicit no-request-context / no-shell-DB-route handling in the thin API shell.
+- Added a safe process-local request-metrics store plus non-mutating SQLite/artifact-root probes so readiness reflects actual operator-prepared substrate state instead of create-on-touch helpers.
+- Tied degraded-mode visibility into readiness and metrics as warnings only, preserving the rule that derived-surface degradation does not redefine core substrate availability.
+
+## Completion notes
+- The repo now has a thin, repo-native operability baseline for first-user production without committing to Prometheus/OpenTelemetry, dashboards, alerts, or durable time-series storage.
+- GitHub perimeter hardening remains the next bounded operator-facing gap in EPIC-100.

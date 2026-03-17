@@ -3,7 +3,15 @@ from __future__ import annotations
 from onetruth.api.boundary_logging import (
     _serialize_log_payload,
     extract_mutation_log_fields,
+    log_request_finished,
+    reset_request_metrics,
+    snapshot_request_metrics,
 )
+from onetruth.api.dependencies import RequestContext
+
+
+def setup_function() -> None:
+    reset_request_metrics()
 
 
 def test_extract_mutation_log_fields_keeps_allowlisted_values_only() -> None:
@@ -83,3 +91,79 @@ def test_serialize_log_payload_does_not_contain_ignored_values() -> None:
     assert "Bearer should-not-log" not in serialized
     assert "/tmp/should-not-log" not in serialized
     assert "ht-too-deep" not in serialized
+
+
+def test_snapshot_request_metrics_aggregates_only_safe_route_buckets() -> None:
+    context = RequestContext(
+        tenant_id="tenant-a",
+        domain_id="domain-x",
+        actor_id="human:dispatch-supervisor-1",
+        actor_type="human",
+        actor_roles=("dispatch_supervisor",),
+    )
+
+    log_request_finished(
+        request_id="httpreq_001",
+        boundary_profile="ci_test",
+        method="get",
+        path="/api/v1/flags/flag-001",
+        route_name="flags.detail",
+        route_params={"flag_id": "flag-001"},
+        request_context=context,
+        status_code=200,
+        latency_ms=12,
+        response_kind="json",
+        response_payload={"command": "api.flags.detail", "flag_id": "flag-001"},
+    )
+    log_request_finished(
+        request_id="httpreq_002",
+        boundary_profile="ci_test",
+        method="GET",
+        path="/api/v1/flags/flag-001",
+        route_name="flags.detail",
+        route_params={"flag_id": "flag-001"},
+        request_context=context,
+        status_code=200,
+        latency_ms=18,
+        response_kind="json",
+        response_payload={"command": "api.flags.detail", "flag_id": "flag-001"},
+    )
+
+    assert snapshot_request_metrics() == [
+        {
+            "route_name": "flags.detail",
+            "method": "GET",
+            "status_family": "2xx",
+            "count": 2,
+            "latency_ms_total": 30,
+        }
+    ]
+
+
+def test_snapshot_request_metrics_normalizes_missing_route_name_to_unmatched() -> None:
+    log_request_finished(
+        request_id="httpreq_003",
+        boundary_profile="shared_env",
+        method="GET",
+        path="/api/v1/not-a-route/tenant-a",
+        route_name=None,
+        route_params=None,
+        request_context=None,
+        status_code=404,
+        latency_ms=7,
+        response_kind="json",
+        response_payload={
+            "status": "error",
+            "error": {"code": "not_found", "message": "missing", "details": {}},
+        },
+    )
+
+    assert snapshot_request_metrics() == [
+        {
+            "route_name": "unmatched",
+            "method": "GET",
+            "status_family": "4xx",
+            "count": 1,
+            "latency_ms_total": 7,
+        }
+    ]

@@ -38,6 +38,7 @@ from onetruth.api.request_correlation import (
     resolve_request_id,
 )
 from onetruth.api.responses import BinaryResponse
+from onetruth.api.responses import JsonResponse
 from onetruth.api.route_registry import RequestBodyPolicy, RouteExecutionContext, match_route
 
 ASGIApp = Callable[[dict[str, Any], Callable[[], Awaitable[dict[str, Any]]], Callable[[dict[str, Any]], Awaitable[None]]], Awaitable[None]]
@@ -215,10 +216,6 @@ def create_app(
             return
 
         try:
-            resolved_context = replace(
-                boundary.principal_resolver(headers),
-                request_id=request_id,
-            )
             body_payload = await _read_json_body(
                 matched.route.body_policy,
                 headers,
@@ -226,7 +223,17 @@ def create_app(
             )
             page = parse_page(query) if matched.route.needs_page else None
 
-            connection = open_connection(resolved_db_url)
+            if matched.route.requires_request_context:
+                resolved_context = replace(
+                    boundary.principal_resolver(headers),
+                    request_id=request_id,
+                )
+
+            connection = (
+                open_connection(resolved_db_url)
+                if matched.route.needs_db_connection
+                else None
+            )
             try:
                 response_payload = matched.dispatch(
                     RouteExecutionContext(
@@ -240,12 +247,18 @@ def create_app(
                     )
                 )
             finally:
-                connection.close()
+                if connection is not None:
+                    connection.close()
 
             if isinstance(response_payload, BinaryResponse):
                 await _send_logged_binary(
                     status_code=200,
                     payload=response_payload,
+                )
+            elif isinstance(response_payload, JsonResponse):
+                await _send_logged_json(
+                    status_code=response_payload.status_code,
+                    payload=response_payload.payload,
                 )
             else:
                 await _send_logged_json(

@@ -6,10 +6,10 @@ from typing import Any, Callable, Literal
 
 from onetruth.api.dependencies import BoundaryProfile, Page, RequestContext
 from onetruth.api.errors import ApiError
-from onetruth.api.responses import BinaryResponse
+from onetruth.api.responses import BinaryResponse, JsonResponse
 
 RequestBodyKind = Literal["none", "json"]
-RouteResult = dict[str, Any] | BinaryResponse
+RouteResult = dict[str, Any] | BinaryResponse | JsonResponse
 RouteDispatcher = Callable[["RouteExecutionContext", dict[str, str]], RouteResult]
 
 
@@ -78,6 +78,8 @@ class RouteSpec:
     body_policy: RequestBodyPolicy
     needs_page: bool
     dispatch: RouteDispatcher
+    requires_request_context: bool = True
+    needs_db_connection: bool = True
 
 
 @dataclass(frozen=True)
@@ -91,8 +93,8 @@ class RouteMatch:
 
 @dataclass(frozen=True)
 class RouteExecutionContext:
-    connection: sqlite3.Connection
-    context: RequestContext
+    connection: sqlite3.Connection | None
+    context: RequestContext | None
     boundary_profile: BoundaryProfile
     query: dict[str, str]
     page: Page | None
@@ -133,3 +135,15 @@ def _require_payload(payload: dict[str, Any] | None) -> dict[str, Any]:
 def _require_page(page: Page | None) -> Page:
     assert page is not None
     return page
+
+
+def require_connection(connection: sqlite3.Connection | None) -> sqlite3.Connection:
+    assert connection is not None
+    return connection
+
+
+def require_request_context(
+    context: RequestContext | None,
+) -> RequestContext:
+    assert context is not None
+    return context

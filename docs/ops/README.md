@@ -12,6 +12,11 @@ Topology and deploy reference:
 - first-user production/lab topology: `docs/ops/production_lab_topology.md`
 - release-bundle deploy and rollback: `docs/ops/runbooks/rollback_and_deploy.md`
 - backup/restore and rehearsal basis: `docs/ops/runbooks/backup_and_restore.md`
+- internal ops visibility surface: `GET /api/v1/ops/health`, `GET /api/v1/ops/readiness`, `GET /api/v1/ops/metrics`
+
+Internal ops endpoint note:
+- `/api/v1/ops/health`, `/api/v1/ops/readiness`, and `/api/v1/ops/metrics` are safe-by-shape operator endpoints, not UI/public product features
+- these routes intentionally do not rely on browser identity headers or shared-env principal derivation
 
 Shared-env operator note:
 - frontend viewer/bootstrap identity is server-derived via `GET /api/v1/viewer`
