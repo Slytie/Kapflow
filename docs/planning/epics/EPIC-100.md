@@ -45,7 +45,7 @@ The repo's internal runtime/control semantics are stronger than its outer produc
 - Backend `shared_env` principal resolution is credible and the frontend now boots through a server-derived viewer session contract instead of treating browser headers as production identity.
 - The supported `onetruth-api` `local_dev` startup path now enforces loopback-only binds by default and requires an explicit unsafe override for controlled non-loopback test scenarios.
 - Production and lab topology are now explicit as separate single-node environments over the current `SQLite + local filesystem artifacts` substrate, deployed from `release_source_bundle`.
-- Release-bundle discipline is strong, but backup/restore/rollback rehearsal and proof are still the next operator-facing gap.
+- Backup/restore/rollback docs and rehearsal basis now exist, but actual rehearsal evidence is still required before claiming G1 item 5 is satisfied.
 - Structured boundary logs exist, but metrics/health/readiness and GitHub perimeter hardening remain the next operator-facing gaps.
 
 ## Tasks

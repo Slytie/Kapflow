@@ -41,7 +41,7 @@
 ## Current Repo Status (2026-03-17 implementation pass)
 - Backend `shared_env` is credible, the frontend now bootstraps viewer identity from server-derived `GET /api/v1/viewer`, and the supported `onetruth-api` `local_dev` startup path now enforces loopback-only binds by default with one explicit unsafe override for controlled test scenarios.
 - Production and lab topology are now explicit: separate single-node environments over the current `SQLite + local filesystem artifacts` substrate, deployed from `release_source_bundle`.
-- Release-bundle truth is strong, but backup/restore/rollback rehearsal and proof are still the next operator-facing gap.
+- Backup/restore/rollback docs and rehearsal basis now exist for the first-user substrate, but G1 still requires actual recorded rehearsal evidence.
 - Structured boundary logs exist; health/readiness/metrics and GitHub perimeter hardening are the next obvious operator-facing gaps.
 
 ## Planned task order inside this epic

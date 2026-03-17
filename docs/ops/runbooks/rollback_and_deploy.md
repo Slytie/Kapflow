@@ -2,6 +2,10 @@
 
 This runbook applies to the first-user production/lab topology in [docs/ops/production_lab_topology.md](../production_lab_topology.md) and the substrate decision in [docs/adr/ADR-004-first-user-production-lab-topology.md](../../adr/ADR-004-first-user-production-lab-topology.md).
 
+## Use rollback vs restore
+- Use rollback when a release introduced a code/config regression but the current environment-specific DB file and artifact root are still trustworthy.
+- Use restore when the DB file, artifact root, or both are missing, corrupt, or no longer trustworthy. In that case, follow [docs/ops/runbooks/backup_and_restore.md](./backup_and_restore.md) instead of treating the incident as an ordinary rollback.
+
 ## Before deploy
 1. Confirm the deploy input is `release_source_bundle`, not `handoff_source_bundle`, `runtime_workspace_bundle`, or a raw workspace ZIP.
 2. Confirm the release archive includes both `bundle_manifest.json` and `release_provenance.json`.
@@ -30,4 +34,4 @@ This runbook applies to the first-user production/lab topology in [docs/ops/prod
 
 ## Special caution
 A rollback must not reinterpret historical pinned execution artifacts under a new meaning without an explicit compatibility decision.
-This runbook does not replace backup/restore rehearsal; that remains the next bounded task.
+This runbook does not replace backup/restore. Use the backup/restore runbook when state recovery is needed.

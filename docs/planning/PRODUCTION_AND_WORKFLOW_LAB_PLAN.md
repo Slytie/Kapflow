@@ -30,6 +30,7 @@ not direct mutation from lab into production.
 - Runtime rows/events/artifacts/pointers remain canonical.
 - Shared-env identity is now credible end to end: the frontend bootstraps from server-derived viewer state and no longer acts like the production identity surface.
 - The first-user production/lab reference is now explicit as separate single-node environments over `SQLite + local filesystem artifacts`, deployed from `release_source_bundle`.
+- Backup/restore/rollback docs and rehearsal basis now exist, but `G1` still requires actual restore rehearsal evidence rather than docs alone.
 - Workflow Lab does not yet exist as a package or doc tree, which is good: it can start thin and clean.
 
 ## Lane A — productization
@@ -98,6 +99,7 @@ Do not start the first true lab execution layer until:
 3. `local_dev` non-loopback bind is blocked
 4. prod and lab are separate environments with separate state
 5. backup/restore/rollback have been rehearsed
+   - runbooks and rehearsal basis alone do not satisfy this gate; actual restore rehearsal evidence must exist
 6. basic observability exists
 
 ### G2 — before B3

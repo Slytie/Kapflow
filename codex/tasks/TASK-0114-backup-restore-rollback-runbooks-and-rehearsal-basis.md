@@ -2,7 +2,7 @@
 id: TASK-0114
 epic: EPIC-100
 title: "Add backup/restore/rollback runbooks and rehearsal basis for the first-user production lane"
-status: TODO
+status: DONE
 owners: ["platform"]
 reviewers: ["qa"]
 depends_on: ["TASK-0113"]
@@ -52,6 +52,9 @@ Produce concrete backup/restore/rollback runbooks and the minimum rehearsal basi
 - runbook consistency review
 - any rehearsal check added by the task
 - `python3 scripts/validate_repo.py --schemas-only`
+- `python3.11 -m pytest -q tests/contract/test_backup_restore_runbook_docs.py`
+- `python3.11 -m pytest -q tests/contract/test_production_topology_reference_docs.py`
+- `python3.11 -m pytest -q tests/contract/test_source_bundle_distribution_truth.py`
 
 ## Acceptance criteria
 - Operators have a documented path for backup, restore, and rollback.
@@ -60,3 +63,12 @@ Produce concrete backup/restore/rollback runbooks and the minimum rehearsal basi
 
 ## Notes / decisions
 This task is about operational trust, not platform glamour. Keep it concrete and specific to the actual current substrate.
+
+## Implementation notes
+- Added `docs/ops/runbooks/backup_and_restore.md` as the dedicated recovery runbook for the current single-node `SQLite + local filesystem artifacts` substrate.
+- Tightened `docs/ops/runbooks/rollback_and_deploy.md` so rollback is explicitly for code/version regression against preserved state, while missing/corrupt state routes to restore.
+- Surfaced backup/restore guidance in the ops index and SRE signoff checklist, including an explicit reminder that rehearsal evidence is still required.
+
+## Completion notes
+- The recoverable unit is now frozen as environment-specific DB state + artifact root + matching `release_source_bundle` + provenance sidecars + secret/config references.
+- The repo now carries a rehearsal basis, but it does not claim that `G1` restore rehearsal has already been completed in practice.

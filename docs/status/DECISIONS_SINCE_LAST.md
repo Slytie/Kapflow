@@ -27,6 +27,11 @@ Record any decisions made since the last session so a fresh Codex run can rehydr
 - Deploy-input decision: `release_source_bundle` is the only operator deploy artifact; `handoff_source_bundle`, `runtime_workspace_bundle`, and raw workspace archives remain non-deploy surfaces.
 - Promotion-gate decision: the lab-to-prod connection remains a reviewed release process, not a third runtime/control-plane service, and Workflow Lab remains internal-only/non-authoritative in this tranche.
 
+## 2026-03-17 (TASK-0114 backup/restore/rollback runbooks and rehearsal basis)
+- Recovery-unit decision: the first-user recoverable unit is now frozen as the environment-specific SQLite DB file, the environment-specific artifact root, the matching `release_source_bundle` plus `bundle_manifest.json` / `release_provenance.json`, and secret/config references needed to rehydrate that environment.
+- Operator-flow decision: rollback and restore are now explicitly separate operations, where rollback means redeploying a previous release against preserved current state, and restore means recovering DB/artifact state from a known backup set before reattaching it to the matching release bundle.
+- Gate-honesty decision: the repo now documents a restore rehearsal basis, but it does not claim G1 is satisfied until real rehearsal evidence exists.
+
 ## 2026-03-17 (TASK-0108 structured API boundary logging)
 - Boundary-observability decision: the API shell now emits compact JSON-line records through logger `onetruth.api.boundary` with three fixed event names: `request_started`, `request_finished`, and `request_failed`.
 - Safety decision: boundary logs keep a strict allowlist of request-context and mutation-correlation fields only, and intentionally do not log bodies, bearer tokens, raw headers, actor roles, large payload fields, `actor_id`, or exception text.

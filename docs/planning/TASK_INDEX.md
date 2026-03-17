@@ -118,7 +118,7 @@ Note: `TASK-0087` / `TASK-0088` / `TASK-0089` were formerly duplicated as `TASK-
 | TASK-0111 | EPIC-100 | DONE | high | Add a server-derived viewer/bootstrap/session contract and migrate frontend shared-env identity |
 | TASK-0112 | EPIC-100 | DONE | high | Enforce local_dev loopback-only startup with an explicit unsafe override contract |
 | TASK-0113 | EPIC-100 | DONE | high | Define the production/lab topology ADR and a single-node deploy reference |
-| TASK-0114 | EPIC-100 | TODO | high | Add backup/restore/rollback runbooks and rehearsal basis for the first-user production lane |
+| TASK-0114 | EPIC-100 | DONE | high | Add backup/restore/rollback runbooks and rehearsal basis for the first-user production lane |
 | TASK-0115 | EPIC-100 | TODO | medium | Establish an operability baseline with health/readiness and safe route/storage metrics |
 | TASK-0116 | EPIC-100 | TODO | medium | Harden the GitHub perimeter and split scheduled mock vs manual live OpenAI workflows |
 | TASK-0117 | EPIC-110 | TODO | medium | Create Workflow Lab Phase 0 docs, authority boundary, and phased plan |

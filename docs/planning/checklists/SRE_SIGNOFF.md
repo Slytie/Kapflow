@@ -16,5 +16,7 @@
 ## Runbooks
 - [ ] audit export or projection degraded runbook exists
 - [ ] stuck workflow or task runbook exists
+- [ ] backup / restore runbook exists
+- [ ] backup / restore rehearsal evidence exists
 - [ ] rollback / deploy runbook exists
 - [ ] generated artifact drift runbook exists
