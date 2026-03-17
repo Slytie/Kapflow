@@ -45,7 +45,8 @@ Everything else - runbooks, dashboards, summaries, generated CompanyOS specs, pr
    - `make doctor`
    - `make lint`
    - `make ci`
-   - `make schema-validate`
+   - `make assurance-fast`
+   - `make schema-validate` (compatibility alias)
    - `make contract`
    - `make replay`
    - `make acceptance`
@@ -62,7 +63,7 @@ Everything else - runbooks, dashboards, summaries, generated CompanyOS specs, pr
 3. Run repo validation/tests:
    - `make lint`
    - `make ci`
-   - `make schema-validate`
+   - `make assurance-fast`
    - `make contract`
 4. Initialize a local runtime DB:
    - `PYTHONPATH=src python3 -m onetruth.cli --db-url sqlite:///./.tmp/onetruth-smoke.db init-db`
@@ -233,7 +234,7 @@ Inspection outputs:
 - GitHub Actions secrets docs: [Using secrets in GitHub Actions](https://docs.github.com/en/actions/security-for-github-actions/security-guides/using-secrets-in-github-actions) and [Events triggered by pull requests from forks](https://docs.github.com/en/actions/using-workflows/events-that-trigger-workflows#pull_request).
 
 ## Repo Automation And Operator-Only Follow-Ups
-- Repo-enforceable automation now includes Dependabot updates for Python, frontend, and GitHub Actions metadata plus the `secret_hygiene` workflow, which runs `python scripts/validate_repo.py --secrets-only`.
+- Repo-enforceable automation now includes Dependabot updates for Python, frontend, and GitHub Actions metadata plus the `secret_hygiene` workflow, which now runs `python scripts/validate_repo.py --domain secrets` (`--secrets-only` remains a compatibility alias).
 - Repo-enforceable cleanup also includes removing tracked copies of secrets or generated artifacts from Git and keeping validator checks green.
 - Operator-only follow-ups stay outside normal Codex coding scope:
   - confirm any previously leaked credential is revoked,
@@ -243,7 +244,7 @@ Inspection outputs:
 
 ## CI topology
 - `main.yml` now exposes separate PR-oriented lanes: `required-fast / lint`, `required-fast / contract`, `required-fast / unit`, `required-fast / security`, `runtime-required`, and `frontend`.
-- `secret_hygiene / secret-hygiene` remains a separate PR-capable workflow that runs `python scripts/validate_repo.py --secrets-only` rather than being folded into the main workflow's `security` job.
+- `secret_hygiene / secret-hygiene` remains a separate PR-capable workflow that runs `python scripts/validate_repo.py --domain secrets` rather than being folded into the main workflow's `security` job.
 - `release-confidence` remains available for post-merge/manual confidence on `push` to `main` and `workflow_dispatch`; it is no longer part of the pull-request lane count.
 - Local equivalents are `make ci-fast-backend`, `make ci-runtime-required`, and `make ci-backend` (aggregate alias).
 - `agent_api.yml` now reuses `ci-fast-backend` before its existing gated OpenAI integration step.

@@ -7,6 +7,11 @@ Record any decisions made since the last session so a fresh Codex run can rehydr
 - Safety decision: boundary logs keep a strict allowlist of request-context and mutation-correlation fields only, and intentionally do not log bodies, bearer tokens, raw headers, actor roles, large payload fields, `actor_id`, or exception text.
 - Correlation decision: finish logs reuse existing route metadata plus existing receipt-backed mutation ids when those ids are already present in API responses, while `x-request-id` remains a header-only seam and is not propagated into JSON payloads or timeline-event correlation.
 
+## 2026-03-17 (TASK-0109 assurance-domain split and truthful validator entrypoints)
+- Assurance-structure decision: `scripts/validate_repo.py` remains the one umbrella entrypoint, but the implementation now lives under `scripts/repo_assurance/` with explicit `schema_governance`, `repo_metadata`, `release`, `secrets`, and `traces` modules plus a small shared `core`.
+- CLI-truth decision: repo assurance now exposes a repeatable `--domain` selector for exactly `schema`, `governance`, `metadata`, `release`, `secrets`, and `traces`; `--schemas-only`, `--traces-only`, and `--secrets-only` remain compatibility aliases, `make assurance-fast` is the preferred non-trace aggregate, and `make schema-validate` remains an alias for that fast path.
+- Release-portability decision: release validation now preflights for a live git checkout, a resolvable git toplevel, and a committed `HEAD`, and reports stable `release validation unavailable: ...` failures instead of surfacing raw clone/git mechanics; this does not relax `release_source_bundle` policy or add support for arbitrary unpacked trees as full release inputs.
+
 ## 2026-03-17 (TASK-0107 route-registry modularization)
 - Control-plane structure decision: route metadata now lives in resource-scoped `src/onetruth/api/route_specs/*.py` modules plus a tiny shared `_core.py`, while `src/onetruth/api/route_registry.py` remains the single public assembly point for `ROUTES` and `match_route`.
 - Parity decision: the assembled registry preserves the exact global route order, suffix precedence, request-body policy metadata, and the current permissive-vs-strict path quirks; no handler, payload, or trust-boundary semantics changed in this tranche.
@@ -64,7 +69,7 @@ Record any decisions made since the last session so a fresh Codex run can rehydr
 
 ## 2026-03-14 (TASK-0091 dependency automation, secret scanning, and operator-only follow-ups)
 - Automation decision: repo-native update automation now exists for the actual mutable dependency surfaces in this repo: Python (`pip` at `/`), frontend (`npm` at `/frontend`), and GitHub Actions metadata.
-- Secret-scan decision: tracked-file secret hygiene now has a dedicated workflow boundary via `python scripts/validate_repo.py --secrets-only`, so secret scanning is explicit beyond full validator or manual local runs.
+- Secret-scan decision: tracked-file secret hygiene now has a dedicated workflow boundary via the repo validator's secret-only mode; the current preferred invocation is `python scripts/validate_repo.py --domain secrets`, with `--secrets-only` retained as a compatibility alias.
 - Operator-boundary decision: secret revocation confirmation, Git history rewrite, and hosted GitHub push-protection/settings changes remain operator/admin follow-ups and must not be treated as Codex code-task completion.
 
 ## 2026-03-14 (TASK-0090 bootstrap/install truth closure and tracked build-artifact ban)
@@ -478,7 +483,7 @@ Record any decisions made since the last session so a fresh Codex run can rehydr
 - Added `docs/planning/TDD_IMPLEMENTATION_PLAN.md` so fresh-session Codex runs can start from a stable test-first workflow.
 - Added a non-authoritative reference replay reducer and stable `AT-SCH-001` .. `AT-SCH-007` scenario catalog under `tests/helpers/` to make the existing traces executable.
 - Added a dedicated `schedule_policy_gate_enforced.jsonl` trace so AT-SCH-007 (sandbox/policy gate) now has first-class trace coverage.
-- Default verification flow for runtime work is now `make schema-validate`, `make contract`, `make replay`, `make acceptance`, then implementation-specific suites.
+- Default verification flow for runtime work is now `make assurance-fast`, `make contract`, `make replay`, `make acceptance`, then implementation-specific suites (`make schema-validate` remains a compatibility alias).
 
 ## 2026-03-02 (semantic closure before runtime planning)
 - Added a shared governance vocabulary and machine-readable registry for actor taxonomy, approval response verbs, approval outcomes, and approval permission actions.

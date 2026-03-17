@@ -10,7 +10,7 @@ CLEAN_SOURCE_BUNDLE_OUTPUT ?= $(CURDIR)/.tmp/companyos-clean-source-bundle.zip
 RELEASE_SOURCE_BUNDLE_OUTPUT ?= $(CURDIR)/.tmp/companyos-release-source-bundle.zip
 HANDOFF_SOURCE_BUNDLE_OUTPUT ?= $(CURDIR)/.tmp/companyos-handoff-source-bundle.zip
 
-.PHONY: lint test schema-validate trace-validate unit contract replay acceptance runtime runtime-api security property integration integration-openai integration-openai-weekly-stage04 logistics-weekly-stage04-pilot clean-source-bundle release-source-bundle handoff-source-bundle generated-check frontend-snapshots frontend-snapshots-check frontend-install frontend-typecheck frontend-test frontend-build ci-fast-backend ci-runtime-required ci-backend ci release-confidence release-confidence-validation release-confidence-demo-export release-confidence-projection-coherence release-confidence-logistics-weekly-live release-confidence-certification-manifest
+.PHONY: lint test assurance-fast schema-validate trace-validate unit contract replay acceptance runtime runtime-api security property integration integration-openai integration-openai-weekly-stage04 logistics-weekly-stage04-pilot clean-source-bundle release-source-bundle handoff-source-bundle generated-check frontend-snapshots frontend-snapshots-check frontend-install frontend-typecheck frontend-test frontend-build ci-fast-backend ci-runtime-required ci-backend ci release-confidence release-confidence-validation release-confidence-demo-export release-confidence-projection-coherence release-confidence-logistics-weekly-live release-confidence-certification-manifest
 .PHONY: doctor backend-lint python-lint frontend-ci
 
 doctor:
@@ -19,17 +19,19 @@ doctor:
 python-lint:
 	$(PYTHON) -m ruff check --select F,E9 src tests scripts
 
-backend-lint: schema-validate python-lint
+backend-lint: assurance-fast python-lint
 
 lint: backend-lint frontend-typecheck
 
-test: schema-validate contract frontend-snapshots-check unit replay acceptance runtime security property integration
+test: assurance-fast contract frontend-snapshots-check unit replay acceptance runtime security property integration
 
-schema-validate:
-	$(VALIDATOR) --schemas-only
+assurance-fast:
+	$(VALIDATOR) --domain schema --domain governance --domain metadata --domain release --domain secrets
+
+schema-validate: assurance-fast
 
 trace-validate:
-	$(VALIDATOR) --traces-only
+	$(VALIDATOR) --domain traces
 
 unit:
 	$(PYTEST) tests/unit

@@ -43,7 +43,8 @@ The authoritative source of truth still lives in:
 - synthetic example artifacts under `fixtures/workflows/*/template_pack/` for runtime scenario seeding
 
 ## Default commands
-- `make schema-validate`
+- `make assurance-fast`
+- `make schema-validate` (compatibility alias)
 - `make contract`
 - `make unit`
 - `make replay`

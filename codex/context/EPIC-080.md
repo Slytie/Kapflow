@@ -51,7 +51,7 @@
   - tracked `*.egg-info` build artifacts are excluded from source truth by validation.
 - `TASK-0091` is complete:
   - Dependabot covers Python, frontend, and GitHub Actions metadata,
-  - a dedicated `secret_hygiene` workflow runs `python scripts/validate_repo.py --secrets-only`,
+  - a dedicated `secret_hygiene` workflow runs `python scripts/validate_repo.py --domain secrets`,
   - revocation/history rewrite follow-ups are recorded as operator-only rather than code-task work.
 - `TASK-0094` is complete:
   - the hand-rolled API shell is characterized by focused runtime tests before any refactor,
@@ -87,7 +87,10 @@
 - `TASK-0108` added a repo-local structured boundary logging seam in `src/onetruth/api/boundary_logging.py`.
 - The API shell now emits compact JSON-line `request_started`, `request_finished`, and `request_failed` records with request id, route metadata, latency, safe request-context fields, and receipt-backed mutation correlation where existing responses already expose those ids.
 - Logging stays deliberately narrow: no bodies, bearer tokens, raw headers, actor roles, `actor_id`, or exception messages are emitted.
+- `TASK-0109` split repo assurance into explicit domains under `scripts/repo_assurance/` while keeping `scripts/validate_repo.py` as the one wrapper entrypoint.
+- The validator now exposes truthful repeatable `--domain` selectors for `schema`, `governance`, `metadata`, `release`, `secrets`, and `traces`; `make assurance-fast` is the preferred non-trace aggregate, and the old `--schemas-only` / `--traces-only` / `--secrets-only` flags remain compatibility aliases.
+- Release validation now fails portably with stable `release validation unavailable: ...` reasons when a live git checkout, resolvable git toplevel, or committed `HEAD` is unavailable.
 
 ## Remaining tranche
-- `TASK-0109` should split assurance domains without making the operator story harder to understand.
-- Red-team question: “Are we turning the control-plane or assurance layer into a platform bigger than the repo actually needs?”
+- The centrality + operability tranche is complete through `TASK-0109`.
+- Red-team question for future follow-ons: “Are we turning the control-plane or assurance layer into a platform bigger than the repo actually needs?”

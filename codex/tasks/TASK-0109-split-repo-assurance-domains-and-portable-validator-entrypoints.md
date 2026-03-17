@@ -2,7 +2,7 @@
 id: TASK-0109
 epic: EPIC-080
 title: "Split repo assurance domains and make validator entrypoints portable"
-status: TODO
+status: DONE
 owners: ["platform"]
 reviewers: ["qa"]
 depends_on: ["TASK-0100"]
@@ -67,7 +67,8 @@ Refactor repo assurance into clearer domains while preserving the current one-co
 
 ## Verification
 - targeted tests around validator entrypoints
-- `python3 scripts/validate_repo.py --schemas-only`
+- `python3 scripts/validate_repo.py --domain schema --domain governance --domain metadata --domain release --domain secrets`
+- `python3 scripts/validate_repo.py --domain traces`
 - `python3 scripts/validate_repo.py --secrets-only`
 - representative release validation path
 - `make lint`
@@ -79,3 +80,9 @@ Refactor repo assurance into clearer domains while preserving the current one-co
 
 ## Notes / decisions
 This task is about maintainability of the assurance layer itself. Treat it as platform work, not product work.
+
+## Implementation notes
+- `scripts/validate_repo.py` now stays as a thin wrapper over `scripts.repo_assurance.cli.main()`, while the implementation is split into `core.py`, `schema_governance.py`, `repo_metadata.py`, `release.py`, `secrets.py`, and `traces.py`.
+- Repo assurance now has truthful repeatable `--domain` selectors for `schema`, `governance`, `metadata`, `release`, `secrets`, and `traces`. Legacy `--schemas-only`, `--traces-only`, and `--secrets-only` remain compatibility aliases, and mixing them with `--domain` is now a hard usage error.
+- `make assurance-fast` is now the preferred non-trace validator target, `make schema-validate` remains an alias, `trace-validate` uses `--domain traces`, and the dedicated `secret_hygiene` workflow now uses `--domain secrets`.
+- Release validation now preflights git availability, git toplevel resolution, and committed `HEAD`, surfacing stable `release validation unavailable: ...` failures without changing `release_source_bundle` policy.

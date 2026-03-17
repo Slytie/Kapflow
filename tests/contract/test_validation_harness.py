@@ -18,19 +18,51 @@ def _run_validator(*args: str) -> subprocess.CompletedProcess[str]:
     )
 
 
-def test_schema_validation_harness_passes() -> None:
+def test_domain_validation_harness_passes() -> None:
+    result = _run_validator(
+        "--domain",
+        "schema",
+        "--domain",
+        "governance",
+        "--domain",
+        "metadata",
+        "--domain",
+        "release",
+        "--domain",
+        "secrets",
+    )
+    assert result.returncode == 0, result.stdout + result.stderr
+
+
+def test_trace_domain_validation_harness_passes() -> None:
+    result = _run_validator("--domain", "traces")
+    assert result.returncode == 0, result.stdout + result.stderr
+
+
+def test_secret_domain_validation_harness_passes() -> None:
+    result = _run_validator("--domain", "secrets")
+    assert result.returncode == 0, result.stdout + result.stderr
+
+
+def test_legacy_schema_validation_alias_passes() -> None:
     result = _run_validator("--schemas-only")
     assert result.returncode == 0, result.stdout + result.stderr
 
 
-def test_secret_validation_harness_passes() -> None:
+def test_legacy_secret_validation_alias_passes() -> None:
     result = _run_validator("--secrets-only")
     assert result.returncode == 0, result.stdout + result.stderr
 
 
-def test_trace_validation_harness_passes() -> None:
+def test_legacy_trace_validation_alias_passes() -> None:
     result = _run_validator("--traces-only")
     assert result.returncode == 0, result.stdout + result.stderr
+
+
+def test_legacy_alias_cannot_be_combined_with_domain_selector() -> None:
+    result = _run_validator("--schemas-only", "--domain", "schema")
+    assert result.returncode != 0
+    assert "cannot combine legacy validation mode flags with --domain" in result.stderr
 
 
 def test_acceptance_scenario_catalog_is_complete() -> None:

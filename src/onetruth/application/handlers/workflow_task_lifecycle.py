@@ -5,33 +5,24 @@ import hashlib
 import json
 import sqlite3
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any
 from uuid import uuid4
 
 from onetruth.application.handlers._shared.command_boundary import (
     VALID_ACTOR_TYPES,
     CommandError,
-    CommandReceiptContext,
-    _assert_actor_type,
     _begin_transaction,
-    _canonical_json,
     _command_receipt_payload,
-    _command_request_fingerprint,
-    _command_scope_key,
     _decision_has_reason,
     _event_idempotency_key,
     _event_envelope,
     _execute_with_command_receipt,
     _forbidden_command_error,
-    _normalize_actor_roles,
-    _normalize_command_idempotency_key,
     _parse_iso_datetime,
     _prepare_command_receipt,
     _principal_from_payload,
-    _public_command_scope_key,
     _receipt_event_idempotency_key,
     _require_fields,
-    _scoped_event_idempotency_base,
     _validate_task_run_belongs_to_workflow,
     _workflow_scope,
 )
@@ -48,9 +39,6 @@ from onetruth.infrastructure.artifacts.storage import (
     ArtifactIngressDescriptor,
     ArtifactStorageError,
     encode_base64_content,
-    infer_media_type,
-    read_blob,
-    resolve_artifact_ingress,
     write_blob,
 )
 from onetruth.infrastructure.events.event_store import (
@@ -63,48 +51,29 @@ from onetruth.application.services.schedule_planning_stage06 import (
 )
 from onetruth.application.services.schedule_planning_stage07 import (
     Stage07SpawnError,
-    build_stage07_issue_activation_key,
     resolve_stage07_spawn_plans,
 )
 from onetruth.application.services.task_requirements import (
     build_human_task_requirement_index,
     task_has_unsatisfied_requirements,
 )
-from onetruth.infrastructure.repositories.flags import (
-    create_flag,
-    get_flag,
-    list_flags_for_workflow_run,
-    list_open_flags_for_workflow_run,
-    transition_flag_state,
-)
+from onetruth.infrastructure.repositories.flags import get_flag
 from onetruth.infrastructure.repositories.human_tasks import (
     claim_human_task as claim_human_task_row,
     complete_human_task as complete_human_task_row,
     create_human_task,
     get_human_task,
-    get_human_task_by_task_run_id,
-    list_human_tasks_for_workflow_run,
     list_expired_claimed_human_tasks,
     reopen_human_task_after_lease_expiry,
 )
 from onetruth.infrastructure.repositories.approvals import get_approval
-from onetruth.infrastructure.repositories.artifact_pointers import (
-    PointerConflictError,
-    PointerDefinitionMismatchError,
-    PointerGenerationMismatchError,
-    get_pointer,
-    list_pointers_for_workflow_run,
-    promote_pointer,
-)
 from onetruth.infrastructure.repositories.artifact_versions import (
     create_artifact_version,
     get_artifact_version,
-    list_artifact_versions_for_workflow_run,
 )
 from onetruth.infrastructure.repositories.artifact_links import (
     create_artifact_link,
     list_artifact_links_for_artifact,
-    list_artifacts_for_subject,
 )
 from onetruth.infrastructure.repositories.artifact_provenance import (
     create_artifact_provenance_edge,
@@ -116,14 +85,12 @@ from onetruth.infrastructure.repositories.input_bindings import (
 from onetruth.infrastructure.repositories.task_runs import (
     create_task_run,
     get_task_run,
-    get_task_run_by_activation_key,
     get_task_run_for_human_task,
     transition_task_run_state,
 )
 from onetruth.infrastructure.repositories.workflow_runs import (
     create_workflow_run,
     get_workflow_run,
-    list_workflow_runs,
 )
 from onetruth.infrastructure.repositories.execution_sessions import (
     get_execution_session,

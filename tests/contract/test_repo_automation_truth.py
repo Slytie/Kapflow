@@ -66,7 +66,7 @@ def test_secret_hygiene_workflow_runs_validator_secret_mode() -> None:
     assert isinstance(jobs, dict)
     workflow_text = SECRET_HYGIENE_WORKFLOW_PATH.read_text(encoding="utf-8")
     assert 'python -m pip install -e ".[api,dev]"' in workflow_text
-    assert "python scripts/validate_repo.py --secrets-only" in workflow_text
+    assert "python scripts/validate_repo.py --domain secrets" in workflow_text
 
 
 def test_main_workflow_splits_fast_required_lanes_and_runtime_required() -> None:
@@ -138,6 +138,14 @@ def test_agent_api_workflow_uses_fast_backend_baseline() -> None:
 
 def test_makefile_exposes_fast_and_runtime_ci_slices() -> None:
     makefile_text = MAKEFILE_PATH.read_text(encoding="utf-8")
+    assert "assurance-fast:" in makefile_text
+    assert (
+        "$(VALIDATOR) --domain schema --domain governance --domain metadata --domain release --domain secrets"
+        in makefile_text
+    )
+    assert "schema-validate: assurance-fast" in makefile_text
+    assert "$(VALIDATOR) --domain traces" in makefile_text
+    assert "backend-lint: assurance-fast python-lint" in makefile_text
     assert "ci-fast-backend: backend-lint contract unit security" in makefile_text
     assert (
         "ci-runtime-required: replay acceptance runtime frontend-snapshots-check"

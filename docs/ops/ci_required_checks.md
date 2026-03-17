@@ -4,7 +4,7 @@ Minimum CI checks for Stage 4 should include:
 
 ## Source contract checks
 Run:
-- `make schema-validate`
+- `make assurance-fast`
 - `make contract`
 
 This must validate at least:
@@ -83,3 +83,6 @@ The release-confidence gate is a targeted regression tripwire, not a deployment 
 - task index matches task files
 - current focus references existing task files
 - no stale approval vocabulary or actor taxonomy remains (`approval.grant`, `user` actor type, etc.)
+
+Compatibility note:
+- `make schema-validate` remains available as an alias to `make assurance-fast` in this tranche.

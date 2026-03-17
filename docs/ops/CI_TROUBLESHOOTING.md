@@ -18,11 +18,12 @@ Checks:
 
 ### Make target failures
 Symptoms:
-- one of `make schema-validate`, `make contract`, `make replay`, `make acceptance`, `make runtime`, or a `make release-confidence-*` target fails.
+- one of `make assurance-fast`, `make contract`, `make replay`, `make acceptance`, `make runtime`, or a `make release-confidence-*` target fails.
 
 Checks:
 - run the same target locally and fix the first failing assertion.
-- for trace/schema failures, start with `python3 scripts/validate_repo.py --schemas-only` or `--traces-only`.
+- for assurance failures, start with `python3.11 scripts/validate_repo.py --domain schema --domain governance --domain metadata --domain release --domain secrets`.
+- for trace-only failures, use `python3.11 scripts/validate_repo.py --domain traces`.
 
 ### Release-confidence slice failures
 Symptoms:
@@ -61,7 +62,7 @@ Expected behavior:
 Run the same baseline checks CI runs:
 
 ```bash
-make schema-validate
+make assurance-fast
 make contract
 make replay
 make acceptance
