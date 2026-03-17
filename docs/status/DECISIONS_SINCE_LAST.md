@@ -17,6 +17,11 @@ Record any decisions made since the last session so a fresh Codex run can rehydr
 - Frontend-identity decision: browser-set `x-onetruth-*` identity headers remain available only for `local_dev` and `ci_test`; after shared-env viewer bootstrap, ordinary frontend API requests no longer send browser-owned identity/scope headers.
 - UI-surface decision: the AppShell active-user switcher is now explicitly local-dev/demo-only, while shared environments render the server-derived viewer identity instead of implying browser-owned production identity.
 
+## 2026-03-17 (TASK-0112 local_dev loopback guard and unsafe override contract)
+- Startup-posture decision: the supported `onetruth-api` startup path now enforces `local_dev` loopback-only binds and refuses non-loopback hosts unless `ONETRUTH_UNSAFE_ALLOW_LOCAL_DEV_NON_LOOPBACK_BIND=1` is set.
+- Scope decision: this task hardens the blessed CLI seam only; it does not redefine request-context trust semantics or claim to normalize every ad hoc raw `uvicorn onetruth.api.main:app` invocation style.
+- Operator-guidance decision: repo docs now treat non-loopback `local_dev` binds as a controlled unsafe test escape hatch rather than a normal development or shared-environment posture.
+
 ## 2026-03-17 (TASK-0108 structured API boundary logging)
 - Boundary-observability decision: the API shell now emits compact JSON-line records through logger `onetruth.api.boundary` with three fixed event names: `request_started`, `request_finished`, and `request_failed`.
 - Safety decision: boundary logs keep a strict allowlist of request-context and mutation-correlation fields only, and intentionally do not log bodies, bearer tokens, raw headers, actor roles, large payload fields, `actor_id`, or exception text.

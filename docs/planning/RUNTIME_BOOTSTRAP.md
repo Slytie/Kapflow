@@ -43,7 +43,7 @@ Current thin HTTP/query boundary (TASK-0044):
 
 Current API trust-boundary profiles (TASK-0078):
 - `shared_env` (default): trusted `x-onetruth-*` headers are not accepted; the API fails closed with `503 principal_resolver_unavailable` unless a non-header principal resolver is injected at app creation.
-- `local_dev`: trusted `x-onetruth-*` headers are allowed explicitly for local development, and trusted-header CORS is reflected only for loopback origins (`localhost`, `127.0.0.1`, `::1`).
+- `local_dev`: trusted `x-onetruth-*` headers are allowed explicitly for local development, trusted-header CORS is reflected only for loopback origins (`localhost`, `127.0.0.1`, `::1`), and the supported `onetruth-api` startup path now refuses non-loopback bind hosts unless `ONETRUTH_UNSAFE_ALLOW_LOCAL_DEV_NON_LOOPBACK_BIND=1` is set for a controlled test scenario.
 - `ci_test`: trusted `x-onetruth-*` headers are allowed explicitly for direct ASGI/runtime tests, but there is no reflective browser-oriented CORS posture in this profile.
 
 ## 1) Hard constraints from repo truth

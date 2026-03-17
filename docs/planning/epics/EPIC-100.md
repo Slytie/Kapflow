@@ -43,7 +43,7 @@ The repo's internal runtime/control semantics are stronger than its outer produc
 
 ## Current Repo Status (2026-03-17 implementation pass)
 - Backend `shared_env` principal resolution is credible and the frontend now boots through a server-derived viewer session contract instead of treating browser headers as production identity.
-- `local_dev` is documented as loopback-only, but startup enforcement is not yet treated as an executable invariant.
+- The supported `onetruth-api` `local_dev` startup path now enforces loopback-only binds by default and requires an explicit unsafe override for controlled non-loopback test scenarios.
 - The runtime substrate is still single-node by default (`SQLite` + local filesystem artifacts).
 - Release-bundle discipline is strong, but deploy topology and rollback/restore proof are not yet explicit enough.
 - Structured boundary logs exist, but metrics/health/readiness and GitHub perimeter hardening remain the next operator-facing gaps.

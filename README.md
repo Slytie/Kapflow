@@ -87,12 +87,14 @@ Local runtime-output note:
 ## API quickstart (dev)
 Run the thin HTTP adapter locally:
 - `PYTHONPATH=src onetruth-api --db-url sqlite:///./.tmp/onetruth-api.db --host 127.0.0.1 --port 8080 --api-boundary-profile local_dev`
-- or `ONETRUTH_API_BOUNDARY_PROFILE=local_dev PYTHONPATH=src uvicorn onetruth.api.main:app --reload --port 8080`
+- `local_dev` is loopback-only by default; non-loopback binds require `ONETRUTH_UNSAFE_ALLOW_LOCAL_DEV_NON_LOOPBACK_BIND=1` and are intended only for controlled test scenarios.
+- `onetruth-api` is the supported local-dev startup path. Raw `uvicorn onetruth.api.main:app ...` launches are not the normal guarded local-dev contract.
 
 Boundary profile posture:
 - default profile is `shared_env`; without an injected non-header principal resolver, requests fail closed with `503 principal_resolver_unavailable`
 - trusted request headers are allowed only in `local_dev` and `ci_test`
 - trusted-header CORS is loopback-only and local-dev-only
+- `local_dev` startup binds are loopback-only by default (`127.0.0.1`, `localhost`, `::1`)
 
 Trusted request headers (allowed only in `local_dev` and `ci_test`):
 - `x-onetruth-tenant-id`

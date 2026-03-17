@@ -12,7 +12,7 @@ The next package is now intentionally split into two coordinated lanes:
 
 Promotion remains release-mediated by default: `lab -> review/certification/release -> prod`, not direct runtime mutation from lab into production.
 
-Package update: `TASK-0111` is now complete. Shared-env/frontend identity now bootstraps from server-derived `GET /api/v1/viewer`, browser-set actor switching is local-dev/demo only, and the next queued productization step is `TASK-0112`.
+Package update: `TASK-0112` is now complete. The supported `onetruth-api` `local_dev` startup path now enforces loopback-only binds by default, non-loopback binds require `ONETRUTH_UNSAFE_ALLOW_LOCAL_DEV_NON_LOOPBACK_BIND=1` for controlled test scenarios, and the next queued productization step is `TASK-0113`.
 
 Runtime scaffold bootstrap now includes canonical workflow/task/approval/artifact/pointer substrate under `src/onetruth/` + `alembic/` with a stable CLI lifecycle boundary:
 - timeline substrate: `init-db`, `events append`, `events list`

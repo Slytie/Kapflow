@@ -2,7 +2,7 @@
 id: TASK-0112
 epic: EPIC-100
 title: "Enforce local_dev loopback-only startup with an explicit unsafe override contract"
-status: TODO
+status: DONE
 owners: ["platform"]
 reviewers: ["qa"]
 depends_on: ["TASK-0111"]
@@ -56,3 +56,12 @@ Make `local_dev` loopback-only by executable invariant, with any non-loopback st
 
 ## Notes / decisions
 This task should stay small and profile-specific. It is about executable startup truth, not broader deployment architecture.
+
+## Implementation notes
+- `src/onetruth/api/main.py` now enforces loopback-only `local_dev` startup in the supported `onetruth-api` entrypoint and advertises the explicit unsafe override in CLI help text.
+- Added `tests/runtime/api/test_api_startup_host_guard.py` to freeze loopback allows, fail-closed non-loopback binds, the explicit override, and unaffected `shared_env` / `ci_test` behavior.
+- README, ops guidance, and runtime-bootstrap docs now treat `onetruth-api` as the guarded local-dev startup contract and document non-loopback bind only as a controlled test escape hatch.
+
+## Completion notes
+- The request-context trust model and `shared_env` posture were left unchanged.
+- This task intentionally did not attempt to guard every ad hoc raw `uvicorn onetruth.api.main:app` invocation style; that broader entrypoint unification remains a separate concern.

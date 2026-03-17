@@ -55,6 +55,10 @@ _CORS_DEFAULT_ALLOW_HEADERS = ",".join(
     ]
 )
 _API_BOUNDARY_PROFILE_ENV = "ONETRUTH_API_BOUNDARY_PROFILE"
+_UNSAFE_LOCAL_DEV_NON_LOOPBACK_BIND_ENV = (
+    "ONETRUTH_UNSAFE_ALLOW_LOCAL_DEV_NON_LOOPBACK_BIND"
+)
+_LOCAL_DEV_LOOPBACK_HOSTS = frozenset({"127.0.0.1", "localhost", "::1"})
 _default_app_cache: ASGIApp | None = None
 
 
@@ -571,7 +575,15 @@ async def _send_binary(
 
 def _build_server_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="onetruth-api")
-    parser.add_argument("--host", default="127.0.0.1")
+    parser.add_argument(
+        "--host",
+        default="127.0.0.1",
+        help=(
+            "Bind host. In local_dev this must stay loopback-only "
+            "(127.0.0.1, localhost, ::1) unless the deliberate unsafe override "
+            f"{_UNSAFE_LOCAL_DEV_NON_LOOPBACK_BIND_ENV}=1 is set."
+        ),
+    )
     parser.add_argument("--port", type=int, default=8080)
     parser.add_argument("--db-url", default=None)
     parser.add_argument(
@@ -588,13 +600,41 @@ def _build_server_parser() -> argparse.ArgumentParser:
         "Trusted request headers "
         f"({TENANT_HEADER}, {DOMAIN_HEADER}, {ACTOR_ID_HEADER}, {ACTOR_TYPE_HEADER}, {ACTOR_ROLES_HEADER}) "
         "are allowed only in local_dev and ci_test. "
+        "local_dev startup is loopback-only by default. "
         f"Default profile: {DEFAULT_API_BOUNDARY_PROFILE}."
     )
     return parser
 
 
+def _enforce_startup_host_policy(
+    *,
+    boundary_profile: BoundaryProfile,
+    host: str,
+) -> None:
+    if boundary_profile != "local_dev":
+        return
+    if host.casefold() in _LOCAL_DEV_LOOPBACK_HOSTS:
+        return
+    if os.environ.get(_UNSAFE_LOCAL_DEV_NON_LOOPBACK_BIND_ENV) == "1":
+        return
+    raise SystemExit(
+        "local_dev must bind only to loopback hosts (127.0.0.1, localhost, ::1). "
+        f"Refusing non-loopback host {host!r}. "
+        f"Set {_UNSAFE_LOCAL_DEV_NON_LOOPBACK_BIND_ENV}=1 only for controlled test scenarios."
+    )
+
+
 def main(argv: list[str] | None = None) -> int:
     args = _build_server_parser().parse_args(argv)
+    resolved_boundary_profile = cast(
+        BoundaryProfile,
+        args.api_boundary_profile
+        or os.environ.get(_API_BOUNDARY_PROFILE_ENV, DEFAULT_API_BOUNDARY_PROFILE),
+    )
+    _enforce_startup_host_policy(
+        boundary_profile=resolved_boundary_profile,
+        host=args.host,
+    )
     try:
         import uvicorn
     except ImportError:
@@ -605,7 +645,7 @@ def main(argv: list[str] | None = None) -> int:
     uvicorn.run(
         create_app(
             db_url=args.db_url,
-            boundary_profile=args.api_boundary_profile,
+            boundary_profile=resolved_boundary_profile,
         ),
         host=args.host,
         port=args.port,
