@@ -4,7 +4,7 @@ import sqlite3
 from dataclasses import dataclass
 from typing import Any, Callable, Literal
 
-from onetruth.api.dependencies import Page, RequestContext
+from onetruth.api.dependencies import BoundaryProfile, Page, RequestContext
 from onetruth.api.errors import ApiError
 from onetruth.api.responses import BinaryResponse
 
@@ -93,6 +93,7 @@ class RouteMatch:
 class RouteExecutionContext:
     connection: sqlite3.Connection
     context: RequestContext
+    boundary_profile: BoundaryProfile
     query: dict[str, str]
     page: Page | None
     payload: dict[str, Any] | None

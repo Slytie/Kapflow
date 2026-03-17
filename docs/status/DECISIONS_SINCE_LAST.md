@@ -12,6 +12,11 @@ Record any decisions made since the last session so a fresh Codex run can rehydr
 - Package-boundary decision: bare imports of `onetruth.infrastructure.definitions`, `onetruth.infrastructure.generation`, and `onetruth.integrations.openai` now stay lazy and load their heavy YAML-backed submodules only when exported symbols are actually accessed.
 - Workflow Lab prerequisite decision: future thin lab/runtime surfaces should inherit this honest baseline rather than relying on transitive hidden dependencies from package-root imports.
 
+## 2026-03-17 (TASK-0111 server-derived viewer bootstrap and shared-env frontend identity migration)
+- Viewer-bootstrap decision: `GET /api/v1/viewer` is now the one read-only backend contract for frontend viewer/bootstrap state, derived directly from the resolved request context plus the frozen API boundary profile.
+- Frontend-identity decision: browser-set `x-onetruth-*` identity headers remain available only for `local_dev` and `ci_test`; after shared-env viewer bootstrap, ordinary frontend API requests no longer send browser-owned identity/scope headers.
+- UI-surface decision: the AppShell active-user switcher is now explicitly local-dev/demo-only, while shared environments render the server-derived viewer identity instead of implying browser-owned production identity.
+
 ## 2026-03-17 (TASK-0108 structured API boundary logging)
 - Boundary-observability decision: the API shell now emits compact JSON-line records through logger `onetruth.api.boundary` with three fixed event names: `request_started`, `request_finished`, and `request_failed`.
 - Safety decision: boundary logs keep a strict allowlist of request-context and mutation-correlation fields only, and intentionally do not log bodies, bearer tokens, raw headers, actor roles, large payload fields, `actor_id`, or exception text.

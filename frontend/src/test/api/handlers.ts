@@ -58,6 +58,32 @@ const TEMPLATE_FIXTURES = [
   }
 ];
 
+function defaultViewerActorRoles(request: Request): string[] {
+  const actorRoles = Array.from(actorRolesFromRequest(request));
+  if (actorRoles.length > 0) {
+    return actorRoles;
+  }
+  return [
+    "dispatch_supervisor",
+    "schedule_planner",
+    "fleet_coordinator",
+    "operations_manager"
+  ];
+}
+
+function viewerSessionFromRequest(request: Request): Record<string, unknown> {
+  return {
+    tenant_id: request.headers.get("x-onetruth-tenant-id") ?? state.tenantId,
+    domain_id: request.headers.get("x-onetruth-domain-id") ?? state.domainId,
+    actor_id: request.headers.get("x-onetruth-actor-id") ?? "human:frontend-operator",
+    actor_type: request.headers.get("x-onetruth-actor-type") ?? "human",
+    actor_roles: defaultViewerActorRoles(request),
+    boundary_profile: "local_dev",
+    request_context_mode: "trusted_headers",
+    actor_switching_allowed: true
+  };
+}
+
 function inScope(request: Request): boolean {
   const tenant = request.headers.get("x-onetruth-tenant-id");
   const domain = request.headers.get("x-onetruth-domain-id");
@@ -1061,6 +1087,13 @@ export function mutationLog(): string[] {
 }
 
 export const handlers = [
+  http.get("*/api/v1/viewer", ({ request }) =>
+    ok({
+      command: "api.viewer.bootstrap",
+      viewer_session: viewerSessionFromRequest(request)
+    })
+  ),
+
   http.get("*/api/v1/board/schedule-planning", ({ request }) => {
     if (!inScope(request)) {
       return forbiddenWorkflowRun();

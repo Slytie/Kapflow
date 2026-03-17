@@ -1,3 +1,5 @@
+import type { RequestContextMode, ViewerSession } from "@/lib/types/contracts";
+
 function readEnv(name: string, fallback: string): string {
   const value = (import.meta.env as Record<string, string | undefined>)[name];
   if (!value || !value.trim()) {
@@ -26,7 +28,7 @@ export interface ApiRequestContext {
   pollIntervalMs: number | false;
 }
 
-interface ApiConfig extends ApiRequestContext {
+export interface ApiConfig extends ApiRequestContext {
   readonly tenantId: string;
   readonly domainId: string;
   readonly actorId: string;
@@ -54,6 +56,7 @@ const defaultHeaders: ApiRequestContextHeaders = {
 };
 
 let currentHeaders: ApiRequestContextHeaders = { ...defaultHeaders };
+let currentViewerSession: ViewerSession | null = null;
 const listeners = new Set<() => void>();
 
 function normalizeHeaders(headers: ApiRequestContextHeaders): ApiRequestContextHeaders {
@@ -74,6 +77,21 @@ function notifyListeners(): void {
   listeners.forEach((listener) => listener());
 }
 
+function normalizeViewerSession(session: ViewerSession): ViewerSession {
+  return {
+    tenant_id: session.tenant_id.trim(),
+    domain_id: session.domain_id.trim(),
+    actor_id: session.actor_id.trim(),
+    actor_type: session.actor_type.trim(),
+    actor_roles: session.actor_roles
+      .map((role) => role.trim())
+      .filter(Boolean),
+    boundary_profile: session.boundary_profile,
+    request_context_mode: session.request_context_mode,
+    actor_switching_allowed: session.actor_switching_allowed
+  };
+}
+
 function headersEqual(left: ApiRequestContextHeaders, right: ApiRequestContextHeaders): boolean {
   return (
     left.tenantId === right.tenantId &&
@@ -82,6 +100,54 @@ function headersEqual(left: ApiRequestContextHeaders, right: ApiRequestContextHe
     left.actorType === right.actorType &&
     left.actorRoles === right.actorRoles
   );
+}
+
+function viewerSessionsEqual(left: ViewerSession | null, right: ViewerSession | null): boolean {
+  if (left === right) {
+    return true;
+  }
+  if (!left || !right) {
+    return false;
+  }
+  return (
+    left.tenant_id === right.tenant_id &&
+    left.domain_id === right.domain_id &&
+    left.actor_id === right.actor_id &&
+    left.actor_type === right.actor_type &&
+    left.boundary_profile === right.boundary_profile &&
+    left.request_context_mode === right.request_context_mode &&
+    left.actor_switching_allowed === right.actor_switching_allowed &&
+    left.actor_roles.join(",") === right.actor_roles.join(",")
+  );
+}
+
+function currentIdentitySource(): ViewerSession | ApiRequestContextHeaders {
+  return currentViewerSession ?? currentHeaders;
+}
+
+function currentTenantId(): string {
+  const source = currentIdentitySource();
+  return "tenant_id" in source ? source.tenant_id : source.tenantId;
+}
+
+function currentDomainId(): string {
+  const source = currentIdentitySource();
+  return "domain_id" in source ? source.domain_id : source.domainId;
+}
+
+function currentActorId(): string {
+  const source = currentIdentitySource();
+  return "actor_id" in source ? source.actor_id : source.actorId;
+}
+
+function currentActorType(): string {
+  const source = currentIdentitySource();
+  return "actor_type" in source ? source.actor_type : source.actorType;
+}
+
+function currentActorRoles(): string {
+  const source = currentIdentitySource();
+  return "actor_roles" in source ? source.actor_roles.join(",") : source.actorRoles;
 }
 
 export function getApiRequestContextHeaders(): ApiRequestContextHeaders {
@@ -97,6 +163,25 @@ export function setApiRequestContextHeaders(next: ApiRequestContextHeaders): voi
   notifyListeners();
 }
 
+export function getApiViewerSession(): ViewerSession | null {
+  if (!currentViewerSession) {
+    return null;
+  }
+  return {
+    ...currentViewerSession,
+    actor_roles: [...currentViewerSession.actor_roles]
+  };
+}
+
+export function setApiViewerSession(next: ViewerSession | null): void {
+  const normalized = next ? normalizeViewerSession(next) : null;
+  if (viewerSessionsEqual(currentViewerSession, normalized)) {
+    return;
+  }
+  currentViewerSession = normalized;
+  notifyListeners();
+}
+
 export function subscribeApiRequestContextHeaders(listener: () => void): () => void {
   listeners.add(listener);
   return () => {
@@ -109,22 +194,48 @@ export function resetApiRequestContextHeaders(): void {
   notifyListeners();
 }
 
+export function resetApiViewerSession(): void {
+  currentViewerSession = null;
+  notifyListeners();
+}
+
+export function requestContextMode(): RequestContextMode | null {
+  return currentViewerSession?.request_context_mode ?? null;
+}
+
+export function requestContextHeadersForPath(path: string): Record<string, string> {
+  const shouldSendTrustedHeaders =
+    path === "/viewer" ||
+    currentViewerSession === null ||
+    currentViewerSession.request_context_mode === "trusted_headers";
+  if (!shouldSendTrustedHeaders) {
+    return {};
+  }
+  return {
+    "x-onetruth-tenant-id": currentHeaders.tenantId,
+    "x-onetruth-domain-id": currentHeaders.domainId,
+    "x-onetruth-actor-id": currentHeaders.actorId,
+    "x-onetruth-actor-type": currentHeaders.actorType,
+    "x-onetruth-actor-roles": currentHeaders.actorRoles
+  };
+}
+
 export const apiConfig: ApiConfig = {
   baseUrl: readEnv("VITE_ONETRUTH_API_BASE_URL", "/api/v1"),
   pollIntervalMs,
   get tenantId() {
-    return currentHeaders.tenantId;
+    return currentTenantId();
   },
   get domainId() {
-    return currentHeaders.domainId;
+    return currentDomainId();
   },
   get actorId() {
-    return currentHeaders.actorId;
+    return currentActorId();
   },
   get actorType() {
-    return currentHeaders.actorType;
+    return currentActorType();
   },
   get actorRoles() {
-    return currentHeaders.actorRoles;
+    return currentActorRoles();
   }
 };

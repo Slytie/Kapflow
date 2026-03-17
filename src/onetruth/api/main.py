@@ -228,6 +228,7 @@ def create_app(
                     RouteExecutionContext(
                         connection=connection,
                         context=resolved_context,
+                        boundary_profile=boundary.profile,
                         query=query,
                         page=page,
                         payload=body_payload,

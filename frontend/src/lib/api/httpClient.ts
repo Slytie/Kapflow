@@ -1,4 +1,4 @@
-import { apiConfig } from "@/lib/api/config";
+import { apiConfig, requestContextHeadersForPath } from "@/lib/api/config";
 
 export interface ApiErrorPayload {
   code: string;
@@ -85,14 +85,10 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === "object";
 }
 
-function buildHeaders(options: RequestOptions, contentType?: string): HeadersInit {
+function buildHeaders(path: string, options: RequestOptions, contentType?: string): HeadersInit {
   return {
     ...(contentType ? { "content-type": contentType } : {}),
-    "x-onetruth-tenant-id": apiConfig.tenantId,
-    "x-onetruth-domain-id": apiConfig.domainId,
-    "x-onetruth-actor-id": apiConfig.actorId,
-    "x-onetruth-actor-type": apiConfig.actorType,
-    "x-onetruth-actor-roles": apiConfig.actorRoles,
+    ...requestContextHeadersForPath(path),
     ...(options.headers ?? {})
   };
 }
@@ -102,7 +98,7 @@ async function performRequest(path: string, options: RequestOptions, contentType
   const url = `${apiConfig.baseUrl}${path}${encodeQuery(options.query)}`;
   const init: RequestInit = {
     method,
-    headers: buildHeaders(options, contentType)
+    headers: buildHeaders(path, options, contentType)
   };
 
   if (options.body !== undefined) {

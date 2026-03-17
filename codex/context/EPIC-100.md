@@ -38,8 +38,8 @@
 - frontend tests proving viewer/bootstrap-derived identity in shared environments
 - observability and perimeter regression tests where applicable
 
-## Current Repo Status (2026-03-17 planning pass)
-- Backend `shared_env` is credible; frontend identity/bootstrap is still the main perimeter gap.
+## Current Repo Status (2026-03-17 implementation pass)
+- Backend `shared_env` is credible and the frontend now bootstraps viewer identity from server-derived `GET /api/v1/viewer`; the next perimeter gap is executable local-dev loopback enforcement.
 - The runtime substrate is still single-node by default (`SQLite` + local filesystem artifacts).
 - Release-bundle truth is strong, but deploy/reference topology and rollback/restore proof are not yet explicit enough.
 - Structured boundary logs exist; health/readiness/metrics and GitHub perimeter hardening are the next obvious operator-facing gaps.

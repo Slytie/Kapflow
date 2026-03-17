@@ -168,7 +168,7 @@ export function MyWorkPage(): JSX.Element {
       <StatePanel
         kind="empty"
         title="No actionable tasks for current user"
-        detail="Switch active user or adjust filters to view claimable/owned work."
+        detail="Adjust filters to view claimable or owned work. In local-dev/demo only, you can also switch the active user."
       />
     );
   }

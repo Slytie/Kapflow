@@ -1,6 +1,19 @@
 export type HumanTaskState = "OPEN" | "CLAIMED" | "COMPLETED";
 export type ApprovalState = "PENDING" | "RESPONDED";
 export type HumanTaskExpansionKind = "none" | "task_subgraph";
+export type BoundaryProfile = "local_dev" | "ci_test" | "shared_env";
+export type RequestContextMode = "trusted_headers" | "server_derived";
+
+export interface ViewerSession {
+  tenant_id: string;
+  domain_id: string;
+  actor_id: string;
+  actor_type: string;
+  actor_roles: string[];
+  boundary_profile: BoundaryProfile;
+  request_context_mode: RequestContextMode;
+  actor_switching_allowed: boolean;
+}
 
 export interface HumanTaskSubgraphRef {
   human_task_id: string;

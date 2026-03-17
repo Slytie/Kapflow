@@ -311,14 +311,15 @@ The HITL frontend shell lives under `frontend/` as a contract-first SPA backed b
    - `cd frontend`
    - `npm ci`
    - clean install from `package-lock.json` is the supported frontend baseline; vendored `node_modules` is not treated as runnable source truth
-2. Configure API endpoint + request-context headers (via Vite env vars):
+2. Configure the API endpoint and, for local-dev/demo only, optional trusted-header request context (via Vite env vars):
    - `VITE_ONETRUTH_API_BASE_URL` (default `/api/v1`, local backend example: `http://127.0.0.1:8080/api/v1`)
-   - `VITE_ONETRUTH_TENANT_ID` (default `tenant-a`)
-   - `VITE_ONETRUTH_DOMAIN_ID` (default `domain-x`)
-   - `VITE_ONETRUTH_ACTOR_ID` (default `human:frontend-operator`)
-   - `VITE_ONETRUTH_ACTOR_TYPE` (default `human`)
-   - `VITE_ONETRUTH_ACTOR_ROLES` (default `dispatch_supervisor`)
+   - `VITE_ONETRUTH_TENANT_ID` (default `tenant-a`, local-dev/demo only)
+   - `VITE_ONETRUTH_DOMAIN_ID` (default `domain-x`, local-dev/demo only)
+   - `VITE_ONETRUTH_ACTOR_ID` (default `human:frontend-operator`, local-dev/demo only)
+   - `VITE_ONETRUTH_ACTOR_TYPE` (default `human`, local-dev/demo only)
+   - `VITE_ONETRUTH_ACTOR_ROLES` (default `dispatch_supervisor`, local-dev/demo only)
    - `VITE_ONETRUTH_POLL_INTERVAL_MS` (default `15000`)
+   - In `shared_env`, the frontend bootstraps viewer identity from `GET /api/v1/viewer`; browser-set `VITE_ONETRUTH_*` actor headers are not the production/shared-env identity surface.
 3. Run local frontend dev server:
    - `npm run dev`
 4. Run frontend verification:

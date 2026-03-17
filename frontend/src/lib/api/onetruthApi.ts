@@ -23,7 +23,8 @@ import type {
   WorkflowWorkspaceRequiredReview,
   WorkflowWorkspaceRequiredUpload,
   WorkflowWorkspaceWorkItem,
-  WorkflowRunRow
+  WorkflowRunRow,
+  ViewerSession
 } from "@/lib/types/contracts";
 
 interface PageEnvelope {
@@ -126,6 +127,10 @@ interface ConfirmReviewResultEnvelope extends ListEnvelope {
 interface TemplateListEnvelope extends ListEnvelope {
   registry: TemplateRegistryMetadata;
   templates: TemplateRecord[];
+}
+
+interface ViewerSessionEnvelope extends ListEnvelope {
+  viewer_session: Record<string, unknown>;
 }
 
 const GRAPH_LAYOUT: Record<string, { row: number; column: number }> = {
@@ -627,6 +632,28 @@ function normalizeLogisticsStoryContract(story: unknown): LogisticsThreeWorkflow
   };
 }
 
+function normalizeViewerSession(session: unknown): ViewerSession {
+  const record = asRecord(session);
+  const boundaryProfile = asString(record.boundary_profile, "shared_env");
+  const requestContextMode = asString(record.request_context_mode, "server_derived");
+  return {
+    tenant_id: asString(record.tenant_id),
+    domain_id: asString(record.domain_id),
+    actor_id: asString(record.actor_id),
+    actor_type: asString(record.actor_type),
+    actor_roles: asArray(record.actor_roles)
+      .map((role) => asString(role))
+      .filter(Boolean),
+    boundary_profile:
+      boundaryProfile === "local_dev" || boundaryProfile === "ci_test"
+        ? boundaryProfile
+        : "shared_env",
+    request_context_mode:
+      requestContextMode === "trusted_headers" ? "trusted_headers" : "server_derived",
+    actor_switching_allowed: Boolean(record.actor_switching_allowed)
+  };
+}
+
 export interface ArtifactUploadPayload {
   artifact_kind: string;
   artifact_role?: string;
@@ -650,6 +677,11 @@ export interface ArtifactDownloadResult {
 }
 
 export const onetruthApi = {
+  async getViewerSession(): Promise<ViewerSession> {
+    const payload = await requestJson<ViewerSessionEnvelope>("/viewer");
+    return normalizeViewerSession(payload.viewer_session);
+  },
+
   async listHumanTasks(query: {
     workflow_run_id?: string;
     state?: string;

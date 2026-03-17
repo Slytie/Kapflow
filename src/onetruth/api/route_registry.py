@@ -22,9 +22,11 @@ from onetruth.api.route_specs.logistics_story import LOGISTICS_STORY_ROUTE_SPECS
 from onetruth.api.route_specs.pointers import POINTER_ROUTE_SPECS
 from onetruth.api.route_specs.templates import TEMPLATE_ROUTE_SPECS
 from onetruth.api.route_specs.timeline import TIMELINE_ROUTE_SPECS
+from onetruth.api.route_specs.viewer import VIEWER_ROUTE_SPECS
 from onetruth.api.route_specs.workflow_runs import WORKFLOW_RUN_ROUTE_SPECS
 
 ROUTES: tuple[RouteSpec, ...] = (
+    *VIEWER_ROUTE_SPECS,
     *HUMAN_TASK_ROUTE_SPECS,
     *APPROVAL_ROUTE_SPECS,
     *FLAG_ROUTE_SPECS,

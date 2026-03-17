@@ -2,7 +2,7 @@
 id: TASK-0111
 epic: EPIC-100
 title: "Add a server-derived viewer/bootstrap/session contract and migrate frontend shared-env identity"
-status: TODO
+status: DONE
 owners: ["platform"]
 reviewers: ["qa"]
 depends_on: ["TASK-0110"]
@@ -63,3 +63,13 @@ Introduce a backend-derived viewer/bootstrap/session contract and migrate the fr
 
 ## Notes / decisions
 This is the highest-leverage productization task because it closes the last major mismatch between backend trust posture and frontend behavior.
+
+## Implementation notes
+- Added read-only `GET /api/v1/viewer` as the server-derived viewer/bootstrap contract over the already-resolved request context and boundary profile.
+- Frontend bootstrap now resolves `viewer_session` first, keeps trusted-header actor switching local-dev/ci-only, and omits browser-set `x-onetruth-*` identity headers after shared-env bootstrap.
+- README and ops guidance now treat browser-set actor env vars as local-dev/demo only, not as shared-env production identity.
+
+## Completion notes
+- `frontend/src/lib/api/config.ts` now separates local debug headers from the active viewer session.
+- `frontend/src/app/AppShell.tsx` blocks shell rendering on viewer bootstrap and hides the actor switcher in shared environments.
+- Existing shared-env backend trust semantics, Stage04/Stage06 runtime behavior, and release-mediated promotion rules were left unchanged.

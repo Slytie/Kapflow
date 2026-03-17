@@ -1,7 +1,7 @@
 import "@testing-library/jest-dom/vitest";
 import { afterAll, afterEach, beforeAll, vi } from "vitest";
 
-import { resetApiRequestContextHeaders } from "@/lib/api/config";
+import { resetApiRequestContextHeaders, resetApiViewerSession } from "@/lib/api/config";
 import { resetApiState } from "@/test/api/handlers";
 import { server } from "@/test/api/server";
 
@@ -13,6 +13,7 @@ afterEach(() => {
   server.resetHandlers();
   resetApiState();
   resetApiRequestContextHeaders();
+  resetApiViewerSession();
   (URL.createObjectURL as unknown as { mockClear?: () => void }).mockClear?.();
   (URL.revokeObjectURL as unknown as { mockClear?: () => void }).mockClear?.();
 });

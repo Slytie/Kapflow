@@ -115,7 +115,7 @@ Note: `TASK-0087` / `TASK-0088` / `TASK-0089` were formerly duplicated as `TASK-
 | TASK-0109 | EPIC-080 | DONE | medium | Split repo assurance domains and make validator entrypoints portable |
 
 | TASK-0110 | EPIC-100 | DONE | medium | Restore runtime dependency honesty and lazy package boundaries for productization and future lab surfaces |
-| TASK-0111 | EPIC-100 | TODO | high | Add a server-derived viewer/bootstrap/session contract and migrate frontend shared-env identity |
+| TASK-0111 | EPIC-100 | DONE | high | Add a server-derived viewer/bootstrap/session contract and migrate frontend shared-env identity |
 | TASK-0112 | EPIC-100 | TODO | high | Enforce local_dev loopback-only startup with an explicit unsafe override contract |
 | TASK-0113 | EPIC-100 | TODO | high | Define the production/lab topology ADR and a single-node deploy reference |
 | TASK-0114 | EPIC-100 | TODO | high | Add backup/restore/rollback runbooks and rehearsal basis for the first-user production lane |

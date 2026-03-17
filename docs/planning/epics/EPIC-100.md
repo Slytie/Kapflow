@@ -41,8 +41,8 @@ The repo's internal runtime/control semantics are stronger than its outer produc
 ## Definition of Done
 - a fresh operator can explain what production is, what lab is, how a release reaches prod, and how identity/bootstrap work in shared environments without relying on browser configuration or raw workspace sharing.
 
-## Current Repo Status (2026-03-17 planning pass)
-- Backend `shared_env` principal resolution is credible, but the frontend still carries browser-set identity assumptions.
+## Current Repo Status (2026-03-17 implementation pass)
+- Backend `shared_env` principal resolution is credible and the frontend now boots through a server-derived viewer session contract instead of treating browser headers as production identity.
 - `local_dev` is documented as loopback-only, but startup enforcement is not yet treated as an executable invariant.
 - The runtime substrate is still single-node by default (`SQLite` + local filesystem artifacts).
 - Release-bundle discipline is strong, but deploy topology and rollback/restore proof are not yet explicit enough.
