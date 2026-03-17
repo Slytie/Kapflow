@@ -2,6 +2,11 @@
 
 Record any decisions made since the last session so a fresh Codex run can rehydrate quickly.
 
+## 2026-03-17 (TASK-0108 structured API boundary logging)
+- Boundary-observability decision: the API shell now emits compact JSON-line records through logger `onetruth.api.boundary` with three fixed event names: `request_started`, `request_finished`, and `request_failed`.
+- Safety decision: boundary logs keep a strict allowlist of request-context and mutation-correlation fields only, and intentionally do not log bodies, bearer tokens, raw headers, actor roles, large payload fields, `actor_id`, or exception text.
+- Correlation decision: finish logs reuse existing route metadata plus existing receipt-backed mutation ids when those ids are already present in API responses, while `x-request-id` remains a header-only seam and is not propagated into JSON payloads or timeline-event correlation.
+
 ## 2026-03-17 (TASK-0107 route-registry modularization)
 - Control-plane structure decision: route metadata now lives in resource-scoped `src/onetruth/api/route_specs/*.py` modules plus a tiny shared `_core.py`, while `src/onetruth/api/route_registry.py` remains the single public assembly point for `ROUTES` and `match_route`.
 - Parity decision: the assembled registry preserves the exact global route order, suffix precedence, request-body policy metadata, and the current permissive-vs-strict path quirks; no handler, payload, or trust-boundary semantics changed in this tranche.

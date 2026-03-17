@@ -111,5 +111,5 @@ Note: `TASK-0087` / `TASK-0088` / `TASK-0089` were formerly duplicated as `TASK-
 | TASK-0105 | EPIC-070 | DONE | high | Extract execution, tool, and policy command family |
 | TASK-0106 | EPIC-080 | DONE | medium | Restore optional-extra honesty for onetruth.api with lazy import boundaries |
 | TASK-0107 | EPIC-080 | DONE | medium | Modularize the route registry and add control-plane framework fitness checks |
-| TASK-0108 | EPIC-080 | TODO | medium | Add structured API boundary logging and mutation-audit correlation |
+| TASK-0108 | EPIC-080 | DONE | medium | Add structured API boundary logging and mutation-audit correlation |
 | TASK-0109 | EPIC-080 | TODO | medium | Split repo assurance domains and make validator entrypoints portable |

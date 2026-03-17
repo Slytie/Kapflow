@@ -4,9 +4,16 @@ import argparse
 import json
 import os
 from dataclasses import dataclass, replace
+from time import monotonic
 from typing import Any, Awaitable, Callable, cast
 from urllib.parse import parse_qs, urlparse
 
+from onetruth.api.boundary_logging import (
+    extract_error_code,
+    log_request_failed,
+    log_request_finished,
+    log_request_started,
+)
 from onetruth.api.dependencies import (
     ACTOR_ID_HEADER,
     ACTOR_ROLES_HEADER,
@@ -15,6 +22,7 @@ from onetruth.api.dependencies import (
     DEFAULT_API_BOUNDARY_PROFILE,
     DOMAIN_HEADER,
     BoundaryProfile,
+    RequestContext,
     PrincipalResolver,
     TENANT_HEADER,
     unavailable_principal_resolver,
@@ -69,10 +77,107 @@ def create_app(
     )
 
     async def app(scope: dict[str, Any], receive, send) -> None:
-        if scope.get("type") != "http":
-            request_id = resolve_request_id(None)
+        started_at = monotonic()
+        scope_type = str(scope.get("type", ""))
+        method = str(scope.get("method", "")).upper()
+        path = str(scope.get("path", ""))
+        raw_headers = scope.get("headers", [])
+        headers = _decode_headers(raw_headers)
+        request_id = resolve_request_id(headers if headers else None)
+        matched = match_route(method, path) if scope_type == "http" else None
+        route_name = matched.route.name if matched is not None else None
+        route_params = matched.params if matched is not None else None
+        resolved_context: RequestContext | None = None
+
+        log_request_started(
+            request_id=request_id,
+            boundary_profile=boundary.profile,
+            method=method,
+            path=path,
+            route_name=route_name,
+            route_params=route_params,
+        )
+
+        async def _send_logged_json(
+            *,
+            status_code: int,
+            payload: dict[str, Any],
+        ) -> None:
             await _send_json(
                 send,
+                status_code=status_code,
+                payload=payload,
+                request_id=request_id,
+                boundary_profile=boundary.profile,
+                request_headers=headers if scope_type == "http" else None,
+            )
+            log_request_finished(
+                request_id=request_id,
+                boundary_profile=boundary.profile,
+                method=method,
+                path=path,
+                route_name=route_name,
+                route_params=route_params,
+                request_context=resolved_context,
+                status_code=status_code,
+                latency_ms=_latency_ms(started_at),
+                response_kind="json",
+                error_code=extract_error_code(payload),
+                response_payload=payload,
+            )
+
+        async def _send_logged_no_content(
+            *,
+            status_code: int,
+        ) -> None:
+            await _send_no_content(
+                send,
+                status_code=status_code,
+                request_id=request_id,
+                boundary_profile=boundary.profile,
+                request_headers=headers if scope_type == "http" else None,
+            )
+            log_request_finished(
+                request_id=request_id,
+                boundary_profile=boundary.profile,
+                method=method,
+                path=path,
+                route_name=route_name,
+                route_params=route_params,
+                request_context=resolved_context,
+                status_code=status_code,
+                latency_ms=_latency_ms(started_at),
+                response_kind="empty",
+            )
+
+        async def _send_logged_binary(
+            *,
+            status_code: int,
+            payload: BinaryResponse,
+        ) -> None:
+            await _send_binary(
+                send,
+                status_code=status_code,
+                payload=payload,
+                request_id=request_id,
+                boundary_profile=boundary.profile,
+                request_headers=headers if scope_type == "http" else None,
+            )
+            log_request_finished(
+                request_id=request_id,
+                boundary_profile=boundary.profile,
+                method=method,
+                path=path,
+                route_name=route_name,
+                route_params=route_params,
+                request_context=resolved_context,
+                status_code=status_code,
+                latency_ms=_latency_ms(started_at),
+                response_kind="binary",
+            )
+
+        if scope_type != "http":
+            await _send_logged_json(
                 status_code=500,
                 payload={
                     "status": "error",
@@ -82,32 +187,17 @@ def create_app(
                         "details": {},
                     },
                 },
-                request_id=request_id,
-                boundary_profile=boundary.profile,
             )
             return
 
-        method = str(scope.get("method", "")).upper()
-        path = str(scope.get("path", ""))
-        raw_headers = scope.get("headers", [])
-        headers = _decode_headers(raw_headers)
-        request_id = resolve_request_id(headers)
         query = _decode_query(scope.get("query_string", b""))
 
         if method == "OPTIONS" and path.startswith("/api/v1/"):
-            await _send_no_content(
-                send,
-                status_code=204,
-                request_id=request_id,
-                boundary_profile=boundary.profile,
-                request_headers=headers,
-            )
+            await _send_logged_no_content(status_code=204)
             return
 
-        matched = match_route(method, path)
         if matched is None:
-            await _send_json(
-                send,
+            await _send_logged_json(
                 status_code=404,
                 payload={
                     "status": "error",
@@ -117,14 +207,14 @@ def create_app(
                         "details": {"method": method, "path": path},
                     },
                 },
-                request_id=request_id,
-                boundary_profile=boundary.profile,
-                request_headers=headers,
             )
             return
 
         try:
-            context = replace(boundary.principal_resolver(headers), request_id=request_id)
+            resolved_context = replace(
+                boundary.principal_resolver(headers),
+                request_id=request_id,
+            )
             body_payload = await _read_json_body(
                 matched.route.body_policy,
                 headers,
@@ -137,7 +227,7 @@ def create_app(
                 response_payload = matched.dispatch(
                     RouteExecutionContext(
                         connection=connection,
-                        context=context,
+                        context=resolved_context,
                         query=query,
                         page=page,
                         payload=body_payload,
@@ -148,35 +238,36 @@ def create_app(
                 connection.close()
 
             if isinstance(response_payload, BinaryResponse):
-                await _send_binary(
-                    send,
+                await _send_logged_binary(
                     status_code=200,
                     payload=response_payload,
-                    request_id=request_id,
-                    boundary_profile=boundary.profile,
-                    request_headers=headers,
                 )
             else:
-                await _send_json(
-                    send,
+                await _send_logged_json(
                     status_code=200,
                     payload={"status": "ok", **response_payload},
-                    request_id=request_id,
-                    boundary_profile=boundary.profile,
-                    request_headers=headers,
                 )
         except ApiError as exc:
-            await _send_json(
-                send,
+            await _send_logged_json(
                 status_code=exc.status_code,
                 payload=error_payload(exc),
-                request_id=request_id,
-                boundary_profile=boundary.profile,
-                request_headers=headers,
             )
         except Exception as exc:
-            await _send_json(
-                send,
+            log_request_failed(
+                request_id=request_id,
+                boundary_profile=boundary.profile,
+                method=method,
+                path=path,
+                route_name=route_name,
+                route_params=route_params,
+                request_context=resolved_context,
+                status_code=500,
+                latency_ms=_latency_ms(started_at),
+                response_kind="json",
+                error_code="internal_error",
+                exception=exc,
+            )
+            await _send_logged_json(
                 status_code=500,
                 payload={
                     "status": "error",
@@ -186,9 +277,6 @@ def create_app(
                         "details": {"exception": exc.__class__.__name__},
                     },
                 },
-                request_id=request_id,
-                boundary_profile=boundary.profile,
-                request_headers=headers,
             )
 
     return app
@@ -378,6 +466,10 @@ def _is_loopback_origin(origin: str) -> bool:
     if parsed.scheme not in {"http", "https"}:
         return False
     return parsed.hostname in {"localhost", "127.0.0.1", "::1"}
+
+
+def _latency_ms(started_at: float) -> int:
+    return max(0, int((monotonic() - started_at) * 1000))
 
 
 async def _send_json(

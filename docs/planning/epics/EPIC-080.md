@@ -25,7 +25,7 @@ Also see `docs/patterns/PATTERN_INDEX.yaml` for the full tagged library.
 Context pack: `codex/context/EPIC-080.md`
 
 ## Current Repo Status (2026-03-17)
-- Completed in this epic: `TASK-0014`, `TASK-0015`, `TASK-0027`, `TASK-0044`, `TASK-0046`, `TASK-0047`, `TASK-0048`, `TASK-0049`, `TASK-0055`, `TASK-0056`, `TASK-0058`, `TASK-0064`, `TASK-0076`, `TASK-0083`, `TASK-0084`, `TASK-0085`, `TASK-0090`, `TASK-0091`, `TASK-0094`, `TASK-0095`, `TASK-0096`, `TASK-0098`, `TASK-0099`, `TASK-0100`, `TASK-0106`, and `TASK-0107`.
+- Completed in this epic: `TASK-0014`, `TASK-0015`, `TASK-0027`, `TASK-0044`, `TASK-0046`, `TASK-0047`, `TASK-0048`, `TASK-0049`, `TASK-0055`, `TASK-0056`, `TASK-0058`, `TASK-0064`, `TASK-0076`, `TASK-0083`, `TASK-0084`, `TASK-0085`, `TASK-0090`, `TASK-0091`, `TASK-0094`, `TASK-0095`, `TASK-0096`, `TASK-0098`, `TASK-0099`, `TASK-0100`, `TASK-0106`, `TASK-0107`, and `TASK-0108`.
 - Primary operator/demo FE entrypoint is now `/demo/logistics`, powered by canonical backend story seam `GET /api/v1/stories/logistics-three-workflow`.
 - Schedule-only board/workspace/runs/timeline surfaces remain available as legacy/internal regression paths and are explicitly labeled as legacy in navigation/UI copy.
 - `TASK-0076` restored the legacy schedule-only board's compatibility with the current pointer-query contract without changing its board payload shape or promoting it back to a primary product surface.
@@ -49,6 +49,10 @@ Context pack: `codex/context/EPIC-080.md`
   - route metadata now lives in resource-scoped `src/onetruth/api/route_specs/` modules plus a tiny shared `_core.py`,
   - `src/onetruth/api/route_registry.py` remains the single public `ROUTES` / `match_route` assembly surface,
   - and framework-fitness tests now keep `main.py`, route modules, and route-spec modules from growing into a broader internal framework.
+- `TASK-0108` added the first repo-local structured API boundary logging seam:
+  - `src/onetruth/api/boundary_logging.py` now emits compact JSON-line `request_started`, `request_finished`, and `request_failed` records through logger `onetruth.api.boundary`,
+  - `src/onetruth/api/main.py` logs route name, latency, response kind, safe request-context fields, and narrow receipt-backed mutation correlation without changing payloads or trust semantics,
+  - and focused unit/runtime tests now freeze the no-secret allowlist behavior for success, forbidden, and internal-error paths.
 - Scope boundary remains unchanged: no second FE truth model and no generalized workflow-family UI framework was introduced in this tranche.
 
 ## Tasks
@@ -78,9 +82,7 @@ Context pack: `codex/context/EPIC-080.md`
 - TASK-0100
 
 Planned next tranche in this epic:
-- `TASK-0108` adds structured request/mutation observability now that request ids and route metadata are in place.
 - `TASK-0109` keeps the assurance layer from becoming the next monolith by splitting validator domains and improving portability.
 
 ## Queued Tasks
-- TASK-0108
 - TASK-0109
