@@ -12,7 +12,7 @@ The next package is now intentionally split into two coordinated lanes:
 
 Promotion remains release-mediated by default: `lab -> review/certification/release -> prod`, not direct runtime mutation from lab into production.
 
-Package update: `TASK-0117` is now complete. The repo now has a thin `docs/workflow_lab/` Phase 0 doc tree, explicit Workflow Lab authority-boundary language, and a frozen non-authoritative/gated lab posture; the next queued step is schema-first `TASK-0118`.
+Package update: `TASK-0118` is now complete. Workflow Lab now has a thin core schema pack under `schemas/workflow_lab/` plus a matching schema-pack doc, while preserving the non-authoritative/gated lab posture; the next queued step is `TASK-0119` normalization over existing outputs.
 
 Runtime scaffold bootstrap now includes canonical workflow/task/approval/artifact/pointer substrate under `src/onetruth/` + `alembic/` with a stable CLI lifecycle boundary:
 - timeline substrate: `init-db`, `events append`, `events list`

@@ -16,8 +16,9 @@ Normalize evidence the repo already knows how to produce:
 - current capability certification outputs
 - selected runtime workspace/export bundles when sanitized-world inputs are useful later
 
-The next queued Workflow Lab tasks are:
-- `TASK-0118`
+The first B1 step, `TASK-0118`, now defines the thin core schema pack under `schemas/workflow_lab/` and [SCHEMA_PACK.md](/Users/tylerclark/git/pythonProject/companyos/docs/workflow_lab/SCHEMA_PACK.md).
+
+The next queued Workflow Lab task is:
 - `TASK-0119`
 
 ## Later gated phases

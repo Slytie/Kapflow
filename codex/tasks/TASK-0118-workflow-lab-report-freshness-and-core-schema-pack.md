@@ -2,7 +2,7 @@
 id: TASK-0118
 epic: EPIC-110
 title: "Add Workflow Lab report/freshness and core schema pack"
-status: TODO
+status: DONE
 owners: ["platform"]
 reviewers: ["qa"]
 depends_on: ["TASK-0110", "TASK-0117"]
@@ -60,3 +60,8 @@ Create the core Workflow Lab schema pack for normalized reports and freshness se
 
 ## Notes / decisions
 Distinguish clearly between execution variants and semantic/version changes in the schema docs.
+
+## Implementation notes
+- Added a thin `schemas/workflow_lab/` pack for `freshness`, `variant_spec`, `run_profile`, `world_instance`, `run_report_core`, and `compare_report`.
+- Documented the schema pack in `docs/workflow_lab/SCHEMA_PACK.md` and cross-linked it from the existing Phase 0 Workflow Lab docs without adding runtime machinery.
+- Extended schema governance coverage and added a contract test so the lab schema family stays evidence-only, thin, and pre-gated for later tasks.

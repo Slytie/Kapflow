@@ -1,0 +1,36 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "WorkflowLabVariantSpec",
+  "type": "object",
+  "required": [
+    "variant_id",
+    "workflow_family",
+    "workflow_version",
+    "execution_axes"
+  ],
+  "properties": {
+    "variant_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "workflow_family": {
+      "type": "string",
+      "minLength": 1
+    },
+    "workflow_version": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "execution_axes": {
+      "type": "object",
+      "additionalProperties": {
+        "type": [
+          "string",
+          "number",
+          "boolean"
+        ]
+      }
+    }
+  },
+  "additionalProperties": false
+}

@@ -1,0 +1,103 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "WorkflowLabRunReportCore",
+  "type": "object",
+  "required": [
+    "report_id",
+    "source_kind",
+    "workflow_family",
+    "workflow_version",
+    "variant",
+    "run_profile",
+    "world_instance",
+    "freshness",
+    "summary",
+    "evidence_refs"
+  ],
+  "properties": {
+    "report_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "source_kind": {
+      "type": "string",
+      "minLength": 1
+    },
+    "workflow_family": {
+      "type": "string",
+      "minLength": 1
+    },
+    "workflow_version": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "variant": {
+      "$ref": "variant_spec.schema.json"
+    },
+    "run_profile": {
+      "$ref": "run_profile.schema.json"
+    },
+    "world_instance": {
+      "$ref": "world_instance.schema.json"
+    },
+    "freshness": {
+      "$ref": "freshness.schema.json"
+    },
+    "summary": {
+      "type": "object",
+      "required": [
+        "status"
+      ],
+      "properties": {
+        "status": {
+          "type": "string",
+          "minLength": 1
+        },
+        "headline": {
+          "type": "string"
+        },
+        "metrics": {
+          "type": "object",
+          "additionalProperties": {
+            "type": [
+              "string",
+              "number",
+              "boolean"
+            ]
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "evidence_refs": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/evidence_ref"
+      }
+    }
+  },
+  "$defs": {
+    "evidence_ref": {
+      "type": "object",
+      "required": [
+        "kind",
+        "ref"
+      ],
+      "properties": {
+        "kind": {
+          "type": "string",
+          "minLength": 1
+        },
+        "ref": {
+          "type": "string",
+          "minLength": 1
+        },
+        "label": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

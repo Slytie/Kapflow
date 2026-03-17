@@ -29,6 +29,7 @@ def run_schema_domain(state: AssuranceState) -> None:
     validate_runtime_schema_coverage(state)
     validate_workflow_pack_documents(state)
     validate_workflow_family_schema_surfaces(state)
+    validate_workflow_lab_schema_surfaces(state)
 
 
 def run_governance_domain(state: AssuranceState) -> None:
@@ -214,6 +215,25 @@ def validate_workflow_family_schema_surfaces(state: AssuranceState) -> None:
             ROOT / "schemas" / "workflows" / "activation_request.schema.json",
             collector,
         )
+
+
+def validate_workflow_lab_schema_surfaces(state: AssuranceState) -> None:
+    collector = state.collector
+    schema_paths = (
+        ROOT / "schemas" / "workflow_lab" / "freshness.schema.json",
+        ROOT / "schemas" / "workflow_lab" / "variant_spec.schema.json",
+        ROOT / "schemas" / "workflow_lab" / "run_profile.schema.json",
+        ROOT / "schemas" / "workflow_lab" / "world_instance.schema.json",
+        ROOT / "schemas" / "workflow_lab" / "run_report_core.schema.json",
+        ROOT / "schemas" / "workflow_lab" / "compare_report.schema.json",
+    )
+    for schema_path in schema_paths:
+        collector.require(
+            schema_path.exists(),
+            f"workflow lab schema exists: {schema_path.relative_to(ROOT)}",
+        )
+        if schema_path.exists():
+            validate_schema_file(schema_path, collector)
 
 
 def validate_shared_vocab(indexes: dict[str, Any], state: AssuranceState) -> None:

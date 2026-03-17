@@ -1,0 +1,62 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "WorkflowLabWorldInstance",
+  "type": "object",
+  "required": [
+    "world_id",
+    "world_kind",
+    "environment_class",
+    "isolation_class"
+  ],
+  "properties": {
+    "world_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "world_kind": {
+      "type": "string",
+      "minLength": 1
+    },
+    "environment_class": {
+      "type": "string",
+      "minLength": 1
+    },
+    "isolation_class": {
+      "type": "string",
+      "minLength": 1
+    },
+    "provenance_refs": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/provenance_ref"
+      }
+    },
+    "notes": {
+      "type": "string"
+    }
+  },
+  "$defs": {
+    "provenance_ref": {
+      "type": "object",
+      "required": [
+        "kind",
+        "ref"
+      ],
+      "properties": {
+        "kind": {
+          "type": "string",
+          "minLength": 1
+        },
+        "ref": {
+          "type": "string",
+          "minLength": 1
+        },
+        "label": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

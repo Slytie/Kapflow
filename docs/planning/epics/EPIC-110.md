@@ -43,9 +43,10 @@ We want to keep developing candidate tasks, processes, and workflows in a lab wh
 
 ## Current Repo Status (2026-03-18 implementation pass)
 - Phase 0 docs now exist under `docs/workflow_lab/README.md`, `docs/workflow_lab/AUTHORITY_BOUNDARY.md`, and `docs/workflow_lab/PHASED_PLAN.md`.
+- The thin core schema pack now exists under `schemas/workflow_lab/` and `docs/workflow_lab/SCHEMA_PACK.md`.
 - There is still no `src/onetruth/workflow_lab/` package, which is the intended thin starting posture.
 - The repo already emits strong raw materials for Phase 1: Stage04 inspection packets and pilot summaries, realistic scheduling pilot outputs, current capability certification outputs, and runtime workspace/export bundles.
-- The next gap is schema-first TASK-0118, not runtime machinery.
+- The next gap is TASK-0119 normalization over those existing outputs, not runtime machinery.
 
 ## Tasks
 - TASK-0117

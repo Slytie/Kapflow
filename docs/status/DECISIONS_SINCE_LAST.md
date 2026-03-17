@@ -42,6 +42,11 @@ Record any decisions made since the last session so a fresh Codex run can rehydr
 - Authority decision: Workflow Lab outputs may exist as evidence or derived material, but they must not become workflow-defining semantics, promotion truth, direct production state, or a second semantics compiler.
 - Gating decision: the repo now states more plainly that schema-first TASK-0118 is next, while TASK-0121 and TASK-0122 remain gated on `G1` and `G2`.
 
+## 2026-03-18 (TASK-0118 Workflow Lab report/freshness and core schema pack)
+- Schema-pack decision: Workflow Lab now has a thin machine-readable schema family for `freshness`, `variant_spec`, `run_profile`, `world_instance`, `run_report_core`, and `compare_report`, giving future normalization work a stable evidence contract without creating a lab runtime platform.
+- Boundary decision: `VariantSpec` is now explicitly reserved for execution variation under fixed semantics, while `RunProfile`, `WorldInstance`, and `CompareReport` stay metadata-only shells rather than submission policy, world-materialization, or semantic-version engines.
+- Validation decision: repo schema validation now covers `schemas/workflow_lab/*`, and the next non-gated Workflow Lab step is TASK-0119 normalization over existing Stage04/scheduling/certification outputs.
+
 ## 2026-03-18 (TASK-0116 GitHub perimeter hardening and mock-vs-live OpenAI split)
 - Workflow-provenance decision: repo-managed GitHub Actions workflows now pin external actions to verified full commit SHAs instead of floating major tags.
 - Perimeter-workflow decision: pull requests now have an explicit `dependency_review` workflow, and Python plus JavaScript/TypeScript code scanning now lives in a dedicated `codeql` workflow for pull_request / push-to-main / schedule.

@@ -1,0 +1,41 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "WorkflowLabFreshness",
+  "type": "object",
+  "required": [
+    "generated_at",
+    "basis_kind",
+    "source_as_of"
+  ],
+  "properties": {
+    "generated_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "basis_kind": {
+      "type": "string",
+      "minLength": 1
+    },
+    "source_as_of": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "window_start": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "window_end": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "latest_event_sequence": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "latest_event_recorded_at": {
+      "type": "string",
+      "format": "date-time"
+    }
+  },
+  "additionalProperties": false
+}

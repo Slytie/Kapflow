@@ -1,0 +1,94 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "WorkflowLabCompareReport",
+  "type": "object",
+  "required": [
+    "compare_report_id",
+    "comparison_target_kind",
+    "left_report_id",
+    "right_report_id",
+    "freshness",
+    "summary",
+    "evidence_refs"
+  ],
+  "properties": {
+    "compare_report_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "comparison_target_kind": {
+      "type": "string",
+      "minLength": 1
+    },
+    "left_report_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "right_report_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "freshness": {
+      "$ref": "freshness.schema.json"
+    },
+    "summary": {
+      "type": "object",
+      "required": [
+        "status"
+      ],
+      "properties": {
+        "status": {
+          "type": "string",
+          "minLength": 1
+        },
+        "headline": {
+          "type": "string"
+        },
+        "metrics": {
+          "type": "object",
+          "additionalProperties": {
+            "type": [
+              "string",
+              "number",
+              "boolean"
+            ]
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "evidence_refs": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/evidence_ref"
+      }
+    },
+    "notes": {
+      "type": "string"
+    }
+  },
+  "$defs": {
+    "evidence_ref": {
+      "type": "object",
+      "required": [
+        "kind",
+        "ref"
+      ],
+      "properties": {
+        "kind": {
+          "type": "string",
+          "minLength": 1
+        },
+        "ref": {
+          "type": "string",
+          "minLength": 1
+        },
+        "label": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}
