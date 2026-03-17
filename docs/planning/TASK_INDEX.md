@@ -113,3 +113,17 @@ Note: `TASK-0087` / `TASK-0088` / `TASK-0089` were formerly duplicated as `TASK-
 | TASK-0107 | EPIC-080 | DONE | medium | Modularize the route registry and add control-plane framework fitness checks |
 | TASK-0108 | EPIC-080 | DONE | medium | Add structured API boundary logging and mutation-audit correlation |
 | TASK-0109 | EPIC-080 | DONE | medium | Split repo assurance domains and make validator entrypoints portable |
+
+| TASK-0110 | EPIC-100 | DONE | medium | Restore runtime dependency honesty and lazy package boundaries for productization and future lab surfaces |
+| TASK-0111 | EPIC-100 | TODO | high | Add a server-derived viewer/bootstrap/session contract and migrate frontend shared-env identity |
+| TASK-0112 | EPIC-100 | TODO | high | Enforce local_dev loopback-only startup with an explicit unsafe override contract |
+| TASK-0113 | EPIC-100 | TODO | high | Define the production/lab topology ADR and a single-node deploy reference |
+| TASK-0114 | EPIC-100 | TODO | high | Add backup/restore/rollback runbooks and rehearsal basis for the first-user production lane |
+| TASK-0115 | EPIC-100 | TODO | medium | Establish an operability baseline with health/readiness and safe route/storage metrics |
+| TASK-0116 | EPIC-100 | TODO | medium | Harden the GitHub perimeter and split scheduled mock vs manual live OpenAI workflows |
+| TASK-0117 | EPIC-110 | TODO | medium | Create Workflow Lab Phase 0 docs, authority boundary, and phased plan |
+| TASK-0118 | EPIC-110 | TODO | medium | Add Workflow Lab report/freshness and core schema pack |
+| TASK-0119 | EPIC-110 | TODO | high | Normalize Stage04, realistic scheduling, and capability outputs into Workflow Lab reports |
+| TASK-0120 | EPIC-110 | TODO | medium | Define the release-mediated promotion gate and explicit readiness gates G1/G2 |
+| TASK-0121 | EPIC-110 | BLOCKED | high | Add VariantSpec/RunProfile, freshness guards, and the first Stage04 lab adapter after G1 |
+| TASK-0122 | EPIC-110 | BLOCKED | high | Plan world materialization, comparison, and semantic-version coexistence after G2 |

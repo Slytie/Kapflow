@@ -2,6 +2,16 @@
 
 Record any decisions made since the last session so a fresh Codex run can rehydrate quickly.
 
+## 2026-03-17 (next package planning: productization lane + Workflow Lab lane)
+- Planning decision: the next package is split into a leading **production lane** (`EPIC-100`) and a thinner **Workflow Lab lane** (`EPIC-110`) instead of treating productionization and experimentation as one blended platform task.
+- Promotion decision: until explicit multi-version coexistence is proven, the default promotion model remains `lab evidence + review + tagged release -> production deploy`, not direct runtime transfer of candidate workflows into production.
+- Lab-boundary decision: Workflow Lab Phase 0/1 may start now as docs/schemas/normalization over existing outputs, but heavier execution/comparison work is gated on explicit readiness checks (`G1`, `G2`) recorded in `docs/planning/PRODUCTION_AND_WORKFLOW_LAB_PLAN.md`.
+
+## 2026-03-17 (TASK-0110 runtime dependency honesty and lazy package boundaries)
+- Dependency-honesty decision: `PyYAML` is a core runtime dependency because repo-authoritative YAML is read by runtime modules under `src/onetruth/`; it must not be hidden behind the `dev` extra.
+- Package-boundary decision: bare imports of `onetruth.infrastructure.definitions`, `onetruth.infrastructure.generation`, and `onetruth.integrations.openai` now stay lazy and load their heavy YAML-backed submodules only when exported symbols are actually accessed.
+- Workflow Lab prerequisite decision: future thin lab/runtime surfaces should inherit this honest baseline rather than relying on transitive hidden dependencies from package-root imports.
+
 ## 2026-03-17 (TASK-0108 structured API boundary logging)
 - Boundary-observability decision: the API shell now emits compact JSON-line records through logger `onetruth.api.boundary` with three fixed event names: `request_started`, `request_finished`, and `request_failed`.
 - Safety decision: boundary logs keep a strict allowlist of request-context and mutation-correlation fields only, and intentionally do not log bodies, bearer tokens, raw headers, actor roles, large payload fields, `actor_id`, or exception text.

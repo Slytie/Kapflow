@@ -53,6 +53,12 @@ Only when needed:
   - `docs/planning/TDD_IMPLEMENTATION_PLAN.md`
   - `tests/README.md`
   - `tests/helpers/scenario_catalog.py`
+- Productization / Workflow Lab planning:
+  - `docs/planning/PRODUCTION_AND_WORKFLOW_LAB_PLAN.md`
+  - `docs/planning/epics/EPIC-100.md`
+  - `docs/planning/epics/EPIC-110.md`
+  - `codex/context/EPIC-100.md`
+  - `codex/context/EPIC-110.md`
 - Deep reference:
   - epic context pack under `codex/context/`
   - pattern cards under `docs/patterns/cards/`
@@ -83,6 +89,8 @@ For runtime work specifically:
 - if a generated artifact needs a change, update the source and regeneration rule, not just the generated file
 - do not let pattern cards or research notes override authoritative docs
 - if you touch the fully-agentive logistics weekly/live objective, preserve the same canonical task/approval/event/pointer path
+- if you touch productization or Workflow Lab, keep the default promotion model as reviewed release promotion, not direct lab-to-prod runtime mutation
+- if you touch Workflow Lab, keep it non-authoritative: normalize and compare kernel behavior, do not create a second semantics compiler
 - if you touch behavior, update the matching trace + scenario catalog + pytest oracle before runtime code
 - if you touch runtime step tests, use the existing `template_pack/*_Example_COMPLETED.*` files as seed artifacts instead of inventing a second sample-data tree
 - keep real runtime code under `src/onetruth/` once the scaffold exists; do not let `tests/helpers/` become a shadow runtime
@@ -122,6 +130,11 @@ Include:
 - generated-derivative impacts
 - tests and checks run
 - risk notes
+
+## Production + Workflow Lab reminder
+- Productization now leads, but Workflow Lab Phase 0/1 can proceed in parallel as long as it stays thin, report-first, and non-authoritative.
+- Treat production and lab as separate environments with the same kernel and release discipline but different state.
+- `TASK-0121` and later Workflow Lab execution/comparison work are gated on the readiness checks in `docs/planning/PRODUCTION_AND_WORKFLOW_LAB_PLAN.md`.
 
 ## Stage 4 reminder
 - For new agentic scheduling tasks, logistics weekly/live (`weekly_schedule_planning.v1 -> live_dispatch.v1`) is the default runtime/debug wedge.

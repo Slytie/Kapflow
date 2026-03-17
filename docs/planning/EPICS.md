@@ -19,6 +19,8 @@ Current runtime/debug priority: **Schedule Planning**. Payroll remains the secon
 | EPIC-070 | Automation sandbox baseline (tool execution gating) | S4-A01 | EPIC-060, EPIC-025 |
 | EPIC-080 | Ops readiness (CI/CD, dashboards, runbooks, generated checks) | S4-A05, S4-A06 | EPIC-020, EPIC-025 |
 | EPIC-090 | Acceptance suite + golden traces (happy path + negatives) | S4-A07 | EPIC-000..080 |
+| EPIC-100 | Production perimeter + substrate + release-mediated promotion discipline | viewer/bootstrap, deploy/runbook reference, production/lab topology | EPIC-010, EPIC-080 |
+| EPIC-110 | Workflow Lab (thin, non-authoritative candidate-evaluation lane) | docs/schemas/normalizers for lab evidence and gated later execution adapters | EPIC-025, EPIC-080, EPIC-100 |
 
 ## Update rules
 - Keep epic files in `docs/planning/epics/`

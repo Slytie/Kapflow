@@ -60,6 +60,12 @@ Keep the default context small. Only load deeper docs when the task actually tou
   - `docs/planning/TDD_IMPLEMENTATION_PLAN.md`
   - `tests/README.md`
   - `tests/helpers/scenario_catalog.py`
+- Production lane / Workflow Lab planning:
+  - `docs/planning/PRODUCTION_AND_WORKFLOW_LAB_PLAN.md`
+  - `docs/planning/epics/EPIC-100.md`
+  - `docs/planning/epics/EPIC-110.md`
+  - `codex/context/EPIC-100.md`
+  - `codex/context/EPIC-110.md`
 
 ## Task-specific context loading
 If the task maps to an epic with a context pack:
@@ -76,6 +82,12 @@ If you need implementation architecture or file-placement guidance:
 If you need deeper background or design justification:
 - read `docs/research/AGENT_DIGEST.md` first
 - open a full research note only as needed
+
+If the task is about productization or Workflow Lab:
+- read `docs/planning/PRODUCTION_AND_WORKFLOW_LAB_PLAN.md`
+- read the relevant epic file under `docs/planning/epics/`
+- read the matching context pack under `codex/context/`
+- keep the default promotion model as `lab -> review/certification/release -> prod`, not direct runtime mutation
 
 If the task changes tests, retry/idempotency logic, or acceptance criteria:
 - read `docs/planning/TEST_STRATEGY.md`
@@ -100,6 +112,9 @@ If the task changes tests, retry/idempotency logic, or acceptance criteria:
 - **Generated artifacts are not source**: do not hand-edit generated runbooks, tool matrices, approval logs, or generated CompanyOS IR as if they were authoritative workflow definitions.
 - **Automation safety**: no side-effecting tool execution without policy, budget, and approval controls. LLM outputs are untrusted.
 - **No agent-only state authority**: a fully-agentive test slice is allowed only if it preserves the canonical workflow/task/approval/event model.
+- **Workflow Lab is non-authoritative**: lab outputs may evaluate kernel behavior, but may not become a peer workflow-definition or promotion-truth system.
+- **Prod and lab do not share live state**: separate DBs, artifact roots, and secrets; tenant/domain separation inside one environment is not an acceptable replacement for prod-vs-lab separation.
+- **Promotion is release-mediated by default**: until explicit parallel-version support is proven, promote lab candidates by reviewed release rather than live runtime mutation of production workflow truth.
 
 If you change any of the above, you MUST:
 - update `docs/architecture/AUTHORITY_MODEL.md`
