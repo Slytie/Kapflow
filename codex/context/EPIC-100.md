@@ -38,11 +38,12 @@
 - frontend tests proving viewer/bootstrap-derived identity in shared environments
 - observability and perimeter regression tests where applicable
 
-## Current Repo Status (2026-03-17 implementation pass)
+## Current Repo Status (2026-03-18 implementation pass)
 - Backend `shared_env` is credible, the frontend now bootstraps viewer identity from server-derived `GET /api/v1/viewer`, and the supported `onetruth-api` `local_dev` startup path now enforces loopback-only binds by default with one explicit unsafe override for controlled test scenarios.
 - Production and lab topology are now explicit: separate single-node environments over the current `SQLite + local filesystem artifacts` substrate, deployed from `release_source_bundle`.
 - Backup/restore/rollback docs and rehearsal basis now exist for the first-user substrate, but G1 still requires actual recorded rehearsal evidence.
-- Structured boundary logs plus internal JSON health/readiness/metrics now exist for the first-user lane; dashboards/alerts/time-series remain separate follow-on work, and GitHub perimeter hardening is the next obvious operator-facing gap.
+- Structured boundary logs plus internal JSON health/readiness/metrics now exist for the first-user lane, and the GitHub perimeter now also has full-SHA action pinning, dependency review, CodeQL, and a mock-vs-live OpenAI workflow split.
+- Hosted GitHub settings verification remains operator-owned, and Workflow Lab Phase 0 is now the next obvious gap.
 
 ## Planned task order inside this epic
 1. `TASK-0110`

@@ -16,6 +16,9 @@
 ## Contracts / docs to treat as authoritative
 - `docs/planning/PRODUCTION_AND_WORKFLOW_LAB_PLAN.md`
 - `docs/planning/epics/EPIC-110.md`
+- `docs/workflow_lab/README.md`
+- `docs/workflow_lab/AUTHORITY_BOUNDARY.md`
+- `docs/workflow_lab/PHASED_PLAN.md`
 - `docs/architecture/AUTHORITY_MODEL.md`
 - `docs/architecture/DERIVATION_AND_GENERATION_POLICY.md`
 - `docs/workflows/logistics_ops_family/v1/README.md`
@@ -32,19 +35,21 @@
 - `docs/patterns/cards/PATTERN-005.md`
 
 ## Required test coverage (tests-as-spec)
+- doc contract coverage for Workflow Lab Phase 0 boundary language
 - schema validation for Workflow Lab report/freshness contracts
 - normalization tests over existing Stage04 / scheduling / certification outputs
 - readiness-gate checks and release-mediated promotion docs/tests where applicable
 - later, freshness-guard and adapter tests only after G1 is met
 
-## Current Repo Status (2026-03-17 planning pass)
-- There is no `docs/workflow_lab/` tree and no `src/onetruth/workflow_lab/` package yet.
+## Current Repo Status (2026-03-18 implementation pass)
+- `docs/workflow_lab/` now exists as a thin Phase 0 doc tree.
+- There is still no `src/onetruth/workflow_lab/` package, which keeps Workflow Lab off the runtime surface for now.
 - The repo already emits rich raw material for Phase 1 normalization:
   - Stage04 inspection packets and pilot summaries
   - realistic scheduling pilot outputs
   - current capability certification outputs
   - runtime workspace/export bundles
-- Production perimeter/substrate work is still the leading priority; heavy Workflow Lab execution/comparison work is gated on G1/G2.
+- The next queued gap is schema-first TASK-0118; heavy Workflow Lab execution/comparison work remains gated on G1/G2.
 
 ## Planned task order inside this epic
 1. `TASK-0117`

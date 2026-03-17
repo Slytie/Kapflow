@@ -9,8 +9,8 @@ This doc defines how source files, compiled artifacts, generated artifacts, evid
 | Authored source | workflow contract pack, decision catalog, execution profile, schemas | hand-edited in repo | authoritative |
 | Compiled | per-run `ExecutionSpec`, source-hash manifest | produced by compiler from source + policy | authoritative once pinned |
 | Generated | runbook DOCX, tool matrix XLSX, approval log XLSX, generated CompanyOS IR | never the first place to edit semantics | non-authoritative |
-| Evidence | logs, transcripts, sandbox outputs, generated reports explicitly linked from events | created by execution | evidentiary |
-| Derived | dashboards, approval packets, WorkGraph, operative schedule views | regenerated from substrate | non-authoritative |
+| Evidence | logs, transcripts, sandbox outputs, generated reports explicitly linked from events, Workflow Lab reports and compare packets | created by execution | evidentiary |
+| Derived | dashboards, approval packets, WorkGraph, operative schedule views, Workflow Lab freshness summaries | regenerated from substrate | non-authoritative |
 
 ## 2) Generated artifacts must carry lineage
 Every generated or compiled artifact should carry at least:
@@ -49,6 +49,8 @@ This means:
 Only actions that write authoritative events, objects, or pointers through the platform may change official state.
 
 Generated packets, dashboards, and transcripts may inform decisions but do not themselves become official state.
+
+Workflow Lab reports, freshness summaries, compare packets, and candidate evaluations may inform review, certification, and release, but they do not themselves change official state or authorize promotion. Semantic changes still land through authoritative workflow/version/release surfaces.
 
 ## 6) CI implications
 Future CI should validate:

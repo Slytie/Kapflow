@@ -2,7 +2,7 @@
 id: TASK-0116
 epic: EPIC-100
 title: "Harden the GitHub perimeter and split scheduled mock vs manual live OpenAI workflows"
-status: TODO
+status: DONE
 owners: ["platform"]
 reviewers: ["qa"]
 depends_on: ["TASK-0099"]
@@ -57,3 +57,9 @@ Tighten the GitHub/CI perimeter so the production lane has stronger provenance a
 
 ## Notes / decisions
 Treat this as perimeter hardening, not as an excuse to redesign the whole CI system again.
+
+## Implementation notes
+- Repo-managed GitHub Actions workflows are now pinned to verified full commit SHAs.
+- `agent_api.yml` is now the scheduled/manual mock lane over `ci-fast-backend`, while `agent_api_live.yml` is the manual gated real OpenAI lane.
+- Added `dependency_review.yml` for pull requests and `codeql.yml` for push/pull_request/schedule perimeter scanning.
+- Hosted GitHub settings verification remains a documented operator responsibility rather than a source-controlled automation layer.

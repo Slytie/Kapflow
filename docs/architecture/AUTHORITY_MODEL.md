@@ -52,6 +52,7 @@ For Stage 4, authoritative object kinds include:
 - approval / decision log spreadsheets
 - generated CompanyOS spec IR
 - UI packets / render outputs
+- Workflow Lab compare packets or candidate-evaluation summaries
 
 ### Derived and non-authoritative
 - dashboards
@@ -60,12 +61,18 @@ For Stage 4, authoritative object kinds include:
 - summarized approval views
 - "current operative schedule" views reconstructed from base + deltas
 - raw object-store/blob presence without canonical metadata rows/events/pointers
+- Workflow Lab freshness dashboards or comparison summaries
 
 ### Evidence, not state
 - transcripts
 - sandbox logs
 - model reasoning summaries
 - scratch reports unless explicitly versioned and linked as artifacts
+
+### Workflow Lab note
+Workflow Lab outputs may exist as derived material or as explicitly linked evidence artifacts.
+
+Even then, they remain non-authoritative about workflow semantics, promotion truth, and direct production state. They may inform review/certification/release, but they must not become a second authority chain.
 
 ## 3) Single authority chain
 
@@ -151,6 +158,7 @@ Do not:
 - model transcripts as the driver of state transition
 - store live-day schedule updates by mutating the published base schedule
 - treat object/blob storage as authoritative state over metadata + timeline + pointers
+- treat Workflow Lab reports, freshness summaries, or compare packets as production truth or as a second semantics compiler
 
 ## 8) Practical rule
 If two files disagree, prefer the one higher in the authority chain and fix the lower one.

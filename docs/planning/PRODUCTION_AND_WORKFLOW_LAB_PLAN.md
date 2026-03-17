@@ -32,7 +32,8 @@ not direct mutation from lab into production.
 - The first-user production/lab reference is now explicit as separate single-node environments over `SQLite + local filesystem artifacts`, deployed from `release_source_bundle`.
 - Backup/restore/rollback docs and rehearsal basis now exist, but `G1` still requires actual restore rehearsal evidence rather than docs alone.
 - A basic observability baseline now exists through internal JSON ops endpoints for health/readiness/metrics over safe process-local counters and non-mutating substrate probes.
-- Workflow Lab does not yet exist as a package or doc tree, which is good: it can start thin and clean.
+- The GitHub perimeter now has full-SHA action pinning, explicit dependency-review and CodeQL workflows, and a routine-mock vs manual-live OpenAI workflow split; hosted settings verification remains manual.
+- Workflow Lab Phase 0 docs now exist under `docs/workflow_lab/`, but there is still no runtime package and that remains the correct posture for now.
 
 ## Lane A — productization
 This lane leads.
@@ -68,6 +69,11 @@ This lane starts now, but only in a thin form.
 - concepts and anti-patterns
 - phased plan and readiness gates
 - no runtime package required yet unless it stays dependency-light
+
+Phase 0 docs:
+- `docs/workflow_lab/README.md`
+- `docs/workflow_lab/AUTHORITY_BOUNDARY.md`
+- `docs/workflow_lab/PHASED_PLAN.md`
 
 ### B1 — normalized evidence over current outputs (next)
 Normalize what the repo already knows how to produce:

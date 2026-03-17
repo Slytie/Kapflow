@@ -14,7 +14,13 @@
 - [ ] no side-effecting tool execution without policy / budget / approval controls
 - [ ] out-of-plan execution path is deny-by-default
 - [ ] capability expansion remains governed and deferred where tooling is absent
+- [ ] repo-managed GitHub Actions pin external actions to full commit SHAs
+- [ ] scheduled/manual routine OpenAI CI remains mock-only
+- [ ] live OpenAI CI is manual and explicitly gated
 
 ## Secrets
 - [ ] no secrets in repo
 - [ ] CI uses short-lived credentials or equivalent controls
+- [ ] dependency review runs on pull requests
+- [ ] CodeQL scanning runs on push/pull_request/schedule
+- [ ] hosted GitHub branch protection and required-check settings are verified manually

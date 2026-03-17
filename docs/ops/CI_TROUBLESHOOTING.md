@@ -3,6 +3,9 @@
 This note covers common CI issues for the GitHub Actions workflows:
 - `main` (`.github/workflows/main.yml`)
 - `agent_api` (`.github/workflows/agent_api.yml`)
+- `agent_api_live` (`.github/workflows/agent_api_live.yml`)
+- `dependency_review` (`.github/workflows/dependency_review.yml`)
+- `codeql` (`.github/workflows/codeql.yml`)
 
 ## Common failures
 
@@ -52,11 +55,41 @@ Checks:
 
 ### OpenAI integration step skipped
 Symptoms:
-- `agent_api` prints that OpenAI integration tests were skipped.
+- `agent_api` never runs live OpenAI tests.
+- `agent_api_live` prints that weekly Stage04 real-network coverage remains skipped.
 
 Expected behavior:
-- skip is expected when `OPENAI_API_KEY` secret is not configured.
-- skip is also expected if no `tests/integration_openai` directory exists.
+- `agent_api` is now mock-only by design; it should run `make PYTHON=python ci-fast-backend` and stop there.
+- `agent_api_live` always runs the fast backend baseline first, then runs `tests/integration_openai` with `ONETRUTH_RUN_OPENAI_E2E=1`.
+- weekly Stage04 real-network coverage still stays opt-in until `ONETRUTH_RUN_OPENAI_WEEKLY_AGENT_E2E=1`.
+
+### Live OpenAI secret/gate failures
+Symptoms:
+- `agent_api_live` fails before or during the real OpenAI step.
+
+Checks:
+- confirm repository secret `OPENAI_API_KEY` exists; `agent_api_live` now fails closed instead of silently succeeding without it.
+- confirm repository variable `ONETRUTH_RUN_OPENAI_WEEKLY_AGENT_E2E` is set to `1` only when weekly Stage04 real-network coverage is intended.
+- rerun locally with:
+  - `ONETRUTH_RUN_OPENAI_E2E=1 OPENAI_API_KEY=... PYTHONPATH=src pytest -q tests/integration_openai`
+
+### Dependency review failures
+Symptoms:
+- `dependency_review` fails on a pull request.
+
+Checks:
+- inspect the dependency delta in the PR and the dependency-review job summary.
+- confirm the PR is not introducing vulnerabilities above the configured threshold.
+- if a dependency update is intentional, land the safer version or document the hosted GitHub review decision outside repo source.
+
+### CodeQL failures
+Symptoms:
+- `codeql` fails on `pull_request`, `push`, or schedule.
+
+Checks:
+- inspect the CodeQL SARIF summary and job annotations in GitHub Actions.
+- confirm the failure is not caused by a transient workflow bootstrap problem by rerunning the workflow once.
+- if a real finding is present, treat it as a code/security follow-up rather than downgrading the workflow.
 
 ## Local reproduction
 Run the same baseline checks CI runs:
@@ -82,12 +115,20 @@ Run OpenAI integration tests locally (only when key is set):
 ONETRUTH_RUN_OPENAI_E2E=1 OPENAI_API_KEY=... PYTHONPATH=src pytest -q tests/integration_openai
 ```
 
-## Manual `agent_api` workflow run
+## Manual workflow runs
+### `agent_api` (mock lane)
 1. Open GitHub -> Actions -> `agent_api`.
 2. Click **Run workflow**.
 3. Select the target branch and run.
 
-The workflow always runs baseline non-network checks first, then conditionally runs OpenAI integration tests.
+The workflow runs baseline non-network checks only.
+
+### `agent_api_live` (manual live lane)
+1. Open GitHub -> Actions -> `agent_api_live`.
+2. Click **Run workflow**.
+3. Select the target branch and run.
+
+The workflow runs the same fast backend baseline first, then the gated real OpenAI integration tests.
 
 ## Confirm secret exists (without printing it)
 In GitHub:
@@ -96,6 +137,5 @@ In GitHub:
 3. Do not print or echo secret values in logs.
 
 In workflow logs:
-- look for the gating message:
-  - present: OpenAI integration tests execute.
-  - missing: workflow prints skip message and exits successfully.
+- `agent_api` should never attempt live-secret usage.
+- `agent_api_live` should fail early if the secret is missing, or continue into `tests/integration_openai` when the secret is present.

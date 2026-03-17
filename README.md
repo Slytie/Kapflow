@@ -228,9 +228,11 @@ Inspection outputs:
 ## GitHub Actions Secret Setup (`OPENAI_API_KEY` + weekly-agent env gate)
 - Store the key as a repository secret named `OPENAI_API_KEY` in GitHub Settings -> Secrets and variables -> Actions.
 - Define repository variable `ONETRUTH_RUN_OPENAI_WEEKLY_AGENT_E2E` (default `0`); switch to `1` only when weekly Stage04 real-network suites are ready to run.
-- `agent_api.yml` runs OpenAI integration tests only when `OPENAI_API_KEY` is present.
+- `agent_api.yml` is the scheduled/manual mock lane and intentionally stays non-network.
+- `agent_api_live.yml` is the manual-only live lane and expects `OPENAI_API_KEY` to be configured before it is run.
 - Weekly Stage04 real-network tests inside `tests/integration_openai` require both `ONETRUTH_RUN_OPENAI_E2E=1` and `ONETRUTH_RUN_OPENAI_WEEKLY_AGENT_E2E=1`, so they stay deliberate/opt-in.
-- Manual run path: GitHub -> Actions -> `agent_api` -> Run workflow.
+- Manual mock run path: GitHub -> Actions -> `agent_api` -> Run workflow.
+- Manual live run path: GitHub -> Actions -> `agent_api_live` -> Run workflow.
 - PRs from forks do not receive repository secrets, so OpenAI integration tests are intentionally gated and skipped in that context.
 - OpenAI key safety guidance: use environment variables/secrets and never commit keys ([OpenAI API key safety](https://help.openai.com/en/articles/5112595-best-practices-for-api-key-safety)).
 - GitHub Actions secrets docs: [Using secrets in GitHub Actions](https://docs.github.com/en/actions/security-for-github-actions/security-guides/using-secrets-in-github-actions) and [Events triggered by pull requests from forks](https://docs.github.com/en/actions/using-workflows/events-that-trigger-workflows#pull_request).
@@ -247,9 +249,13 @@ Inspection outputs:
 ## CI topology
 - `main.yml` now exposes separate PR-oriented lanes: `required-fast / lint`, `required-fast / contract`, `required-fast / unit`, `required-fast / security`, `runtime-required`, and `frontend`.
 - `secret_hygiene / secret-hygiene` remains a separate PR-capable workflow that runs `python scripts/validate_repo.py --domain secrets` rather than being folded into the main workflow's `security` job.
+- `dependency_review.yml` now runs on pull requests to review dependency changes before merge.
+- `codeql.yml` now scans Python plus JavaScript/TypeScript on pull requests, pushes to `main`, and a lightweight schedule.
 - `release-confidence` remains available for post-merge/manual confidence on `push` to `main` and `workflow_dispatch`; it is no longer part of the pull-request lane count.
 - Local equivalents are `make ci-fast-backend`, `make ci-runtime-required`, and `make ci-backend` (aggregate alias).
-- `agent_api.yml` now reuses `ci-fast-backend` before its existing gated OpenAI integration step.
+- `agent_api.yml` now reuses `ci-fast-backend` as the scheduled/manual mock lane with no live OpenAI step.
+- `agent_api_live.yml` now isolates the manual gated live OpenAI integration path behind repository secrets/vars.
+- GitHub Actions in repo-managed workflows are now pinned to full commit SHAs instead of floating major tags.
 - Marking specific workflow/job names as required in branch protection remains a hosted GitHub operator setting rather than something the repo can enforce from source code.
 
 ## Execution-session runtime (canonical vs derived)

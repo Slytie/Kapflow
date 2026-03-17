@@ -41,12 +41,13 @@ The repo's internal runtime/control semantics are stronger than its outer produc
 ## Definition of Done
 - a fresh operator can explain what production is, what lab is, how a release reaches prod, and how identity/bootstrap work in shared environments without relying on browser configuration or raw workspace sharing.
 
-## Current Repo Status (2026-03-17 implementation pass)
+## Current Repo Status (2026-03-18 implementation pass)
 - Backend `shared_env` principal resolution is credible and the frontend now boots through a server-derived viewer session contract instead of treating browser headers as production identity.
 - The supported `onetruth-api` `local_dev` startup path now enforces loopback-only binds by default and requires an explicit unsafe override for controlled non-loopback test scenarios.
 - Production and lab topology are now explicit as separate single-node environments over the current `SQLite + local filesystem artifacts` substrate, deployed from `release_source_bundle`.
 - Backup/restore/rollback docs and rehearsal basis now exist, but actual rehearsal evidence is still required before claiming G1 item 5 is satisfied.
-- Structured boundary logs plus internal JSON health/readiness/metrics now exist for the first-user lane, but dashboards/alerts/time-series remain out of scope and GitHub perimeter hardening is the next operator-facing gap.
+- Structured boundary logs plus internal JSON health/readiness/metrics now exist for the first-user lane, and the GitHub perimeter now also has full-SHA action pinning, dependency review, CodeQL, and a routine-mock vs manual-live OpenAI workflow split.
+- Hosted GitHub settings verification remains manual/operator-owned, and Workflow Lab Phase 0 is the next operator-facing gap.
 
 ## Tasks
 - TASK-0110

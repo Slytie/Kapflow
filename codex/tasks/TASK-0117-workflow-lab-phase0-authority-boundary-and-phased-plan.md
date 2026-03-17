@@ -2,7 +2,7 @@
 id: TASK-0117
 epic: EPIC-110
 title: "Create Workflow Lab Phase 0 docs, authority boundary, and phased plan"
-status: TODO
+status: DONE
 owners: ["platform"]
 reviewers: ["qa"]
 depends_on: []
@@ -59,3 +59,8 @@ Create the Phase 0 Workflow Lab docs set: overview, authority boundary, concepts
 
 ## Notes / decisions
 Phase 0 should stay deliberately lightweight. The point is to clarify, not to platformize.
+
+## Implementation notes
+- Added a thin `docs/workflow_lab/` Phase 0 doc tree with an overview, explicit authority boundary, and phased-plan/gate recap.
+- Clarified in the authority and derivation docs that Workflow Lab outputs remain evidence/derived material and must not become production truth or a second semantics compiler.
+- Added a contract test to freeze the non-authoritative lab boundary and the current gated task posture.

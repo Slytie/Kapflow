@@ -12,7 +12,7 @@ The next package is now intentionally split into two coordinated lanes:
 
 Promotion remains release-mediated by default: `lab -> review/certification/release -> prod`, not direct runtime mutation from lab into production.
 
-Package update: `TASK-0115` is now complete. The repo now has internal JSON ops endpoints for health/readiness/metrics, non-mutating substrate probes, and safe process-local route counters over the first-user single-node lane, while keeping dashboards/alerts/time-series out of scope; the next queued productization step is `TASK-0116`.
+Package update: `TASK-0117` is now complete. The repo now has a thin `docs/workflow_lab/` Phase 0 doc tree, explicit Workflow Lab authority-boundary language, and a frozen non-authoritative/gated lab posture; the next queued step is schema-first `TASK-0118`.
 
 Runtime scaffold bootstrap now includes canonical workflow/task/approval/artifact/pointer substrate under `src/onetruth/` + `alembic/` with a stable CLI lifecycle boundary:
 - timeline substrate: `init-db`, `events append`, `events list`

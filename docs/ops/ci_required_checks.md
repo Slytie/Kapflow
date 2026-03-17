@@ -84,5 +84,14 @@ The release-confidence gate is a targeted regression tripwire, not a deployment 
 - current focus references existing task files
 - no stale approval vocabulary or actor taxonomy remains (`approval.grant`, `user` actor type, etc.)
 
+## GitHub perimeter checks
+- all repo-managed GitHub Actions workflows pin external actions to full 40-character commit SHAs
+- `secret_hygiene` remains a separate workflow that runs `python scripts/validate_repo.py --domain secrets`
+- `dependency_review` runs on pull requests
+- `codeql` runs on pull requests, pushes to `main`, and a lightweight schedule
+- `agent_api` remains mock-only for scheduled/manual routine coverage
+- `agent_api_live` is manual-only and holds the gated real OpenAI path
+- hosted GitHub required-check / branch-protection settings are verified manually outside repo source
+
 Compatibility note:
 - `make schema-validate` remains available as an alias to `make assurance-fast` in this tranche.

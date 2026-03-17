@@ -37,6 +37,16 @@ Record any decisions made since the last session so a fresh Codex run can rehydr
 - Readiness decision: first-user readiness now fails only on core substrate unavailability (missing/unusable SQLite DB file or artifact root), while degraded-mode and projection-coherence visibility surface as warnings rather than redefining the node as unavailable.
 - Metrics-safety decision: route metrics are process-local aggregates keyed only by `route_name`, `method`, and `status_family`; they intentionally omit request ids, tenant/domain values, actor identity, paths, route params, headers, and payload-derived data.
 
+## 2026-03-18 (TASK-0117 Workflow Lab Phase 0 authority boundary and phased plan)
+- Phase-0-boundary decision: Workflow Lab now has an explicit `docs/workflow_lab/` entrypoint, authority boundary, and phased-plan recap, and that Phase 0 surface is docs-only/non-authoritative by design.
+- Authority decision: Workflow Lab outputs may exist as evidence or derived material, but they must not become workflow-defining semantics, promotion truth, direct production state, or a second semantics compiler.
+- Gating decision: the repo now states more plainly that schema-first TASK-0118 is next, while TASK-0121 and TASK-0122 remain gated on `G1` and `G2`.
+
+## 2026-03-18 (TASK-0116 GitHub perimeter hardening and mock-vs-live OpenAI split)
+- Workflow-provenance decision: repo-managed GitHub Actions workflows now pin external actions to verified full commit SHAs instead of floating major tags.
+- Perimeter-workflow decision: pull requests now have an explicit `dependency_review` workflow, and Python plus JavaScript/TypeScript code scanning now lives in a dedicated `codeql` workflow for pull_request / push-to-main / schedule.
+- OpenAI-lane decision: `agent_api.yml` is now the scheduled/manual mock lane over `ci-fast-backend`, while `agent_api_live.yml` is the manual gated real OpenAI workflow that expects live secrets and preserves the existing weekly Stage04 dual gate.
+
 ## 2026-03-17 (TASK-0108 structured API boundary logging)
 - Boundary-observability decision: the API shell now emits compact JSON-line records through logger `onetruth.api.boundary` with three fixed event names: `request_started`, `request_finished`, and `request_failed`.
 - Safety decision: boundary logs keep a strict allowlist of request-context and mutation-correlation fields only, and intentionally do not log bodies, bearer tokens, raw headers, actor roles, large payload fields, `actor_id`, or exception text.

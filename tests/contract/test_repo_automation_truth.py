@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from pathlib import Path
 
 import yaml
@@ -8,9 +9,13 @@ from tests.helpers.repo_paths import REPO_ROOT
 
 
 DEPENDABOT_PATH = REPO_ROOT / ".github" / "dependabot.yml"
+WORKFLOWS_DIR = REPO_ROOT / ".github" / "workflows"
 SECRET_HYGIENE_WORKFLOW_PATH = REPO_ROOT / ".github" / "workflows" / "secret_hygiene.yml"
 MAIN_WORKFLOW_PATH = REPO_ROOT / ".github" / "workflows" / "main.yml"
 AGENT_API_WORKFLOW_PATH = REPO_ROOT / ".github" / "workflows" / "agent_api.yml"
+AGENT_API_LIVE_WORKFLOW_PATH = REPO_ROOT / ".github" / "workflows" / "agent_api_live.yml"
+DEPENDENCY_REVIEW_WORKFLOW_PATH = REPO_ROOT / ".github" / "workflows" / "dependency_review.yml"
+CODEQL_WORKFLOW_PATH = REPO_ROOT / ".github" / "workflows" / "codeql.yml"
 MAKEFILE_PATH = REPO_ROOT / "Makefile"
 
 
@@ -33,6 +38,19 @@ def _load_workflow_triggers(loaded: dict[str, object]) -> dict[str, object]:
         triggers = loaded.get(True)
     assert isinstance(triggers, dict), "workflow must define triggers under 'on'"
     return triggers
+
+
+def _assert_all_actions_are_sha_pinned(path: Path) -> None:
+    workflow_text = path.read_text(encoding="utf-8")
+    for line in workflow_text.splitlines():
+        if "uses:" not in line:
+            continue
+        uses_value = line.split("uses:", 1)[1].strip()
+        if uses_value.startswith("./") or uses_value.startswith("docker://"):
+            continue
+        assert re.fullmatch(r"[^@\s]+@[0-9a-f]{40}(?:\s+#.*)?", uses_value), (
+            f"{path} must pin external actions to a full 40-character commit SHA: {uses_value}"
+        )
 
 
 def test_dependabot_covers_repo_package_managers() -> None:
@@ -67,6 +85,7 @@ def test_secret_hygiene_workflow_runs_validator_secret_mode() -> None:
     workflow_text = SECRET_HYGIENE_WORKFLOW_PATH.read_text(encoding="utf-8")
     assert 'python -m pip install -e ".[api,dev]"' in workflow_text
     assert "python scripts/validate_repo.py --domain secrets" in workflow_text
+    _assert_all_actions_are_sha_pinned(SECRET_HYGIENE_WORKFLOW_PATH)
 
 
 def test_main_workflow_splits_fast_required_lanes_and_runtime_required() -> None:
@@ -120,9 +139,10 @@ def test_main_workflow_splits_fast_required_lanes_and_runtime_required() -> None
     workflow_text = MAIN_WORKFLOW_PATH.read_text(encoding="utf-8")
     assert "make PYTHON=python ci-runtime-required" in workflow_text
     assert "make PYTHON=python ${{ matrix.make_target }}" in workflow_text
+    _assert_all_actions_are_sha_pinned(MAIN_WORKFLOW_PATH)
 
 
-def test_agent_api_workflow_uses_fast_backend_baseline() -> None:
+def test_agent_api_workflow_is_mock_only_and_uses_fast_backend_baseline() -> None:
     assert AGENT_API_WORKFLOW_PATH.exists()
     loaded, _jobs = _load_workflow_jobs(AGENT_API_WORKFLOW_PATH)
     assert loaded["name"] == "agent_api"
@@ -134,6 +154,75 @@ def test_agent_api_workflow_uses_fast_backend_baseline() -> None:
     workflow_text = AGENT_API_WORKFLOW_PATH.read_text(encoding="utf-8")
     assert "make PYTHON=python ci-fast-backend" in workflow_text
     assert "make PYTHON=python ci-backend" not in workflow_text
+    assert "OPENAI_API_KEY" not in workflow_text
+    assert "tests/integration_openai" not in workflow_text
+    _assert_all_actions_are_sha_pinned(AGENT_API_WORKFLOW_PATH)
+
+
+def test_agent_api_live_workflow_is_manual_and_runs_gated_openai_tests() -> None:
+    assert AGENT_API_LIVE_WORKFLOW_PATH.exists()
+    loaded, jobs = _load_workflow_jobs(AGENT_API_LIVE_WORKFLOW_PATH)
+    assert loaded["name"] == "agent_api_live"
+
+    triggers = _load_workflow_triggers(loaded)
+    assert set(triggers) == {"workflow_dispatch"}
+
+    job = jobs.get("openai-live-integration")
+    assert isinstance(job, dict)
+
+    workflow_text = AGENT_API_LIVE_WORKFLOW_PATH.read_text(encoding="utf-8")
+    assert "make PYTHON=python ci-fast-backend" in workflow_text
+    assert "OPENAI_API_KEY" in workflow_text
+    assert "ONETRUTH_RUN_OPENAI_E2E=1" in workflow_text
+    assert "ONETRUTH_RUN_OPENAI_WEEKLY_AGENT_E2E" in workflow_text
+    assert "tests/integration_openai" in workflow_text
+    _assert_all_actions_are_sha_pinned(AGENT_API_LIVE_WORKFLOW_PATH)
+
+
+def test_dependency_review_and_codeql_workflows_exist_with_expected_posture() -> None:
+    assert DEPENDENCY_REVIEW_WORKFLOW_PATH.exists()
+    dependency_review_loaded, dependency_review_jobs = _load_workflow_jobs(
+        DEPENDENCY_REVIEW_WORKFLOW_PATH
+    )
+    assert dependency_review_loaded["name"] == "dependency_review"
+    assert set(_load_workflow_triggers(dependency_review_loaded)) == {"pull_request"}
+    assert dependency_review_loaded["permissions"] == {"contents": "read"}
+    assert "dependency-review" in dependency_review_jobs
+    dependency_review_text = DEPENDENCY_REVIEW_WORKFLOW_PATH.read_text(encoding="utf-8")
+    assert "actions/dependency-review-action@" in dependency_review_text
+    _assert_all_actions_are_sha_pinned(DEPENDENCY_REVIEW_WORKFLOW_PATH)
+
+    assert CODEQL_WORKFLOW_PATH.exists()
+    codeql_loaded, codeql_jobs = _load_workflow_jobs(CODEQL_WORKFLOW_PATH)
+    assert codeql_loaded["name"] == "codeql"
+    codeql_triggers = _load_workflow_triggers(codeql_loaded)
+    assert "push" in codeql_triggers
+    assert "pull_request" in codeql_triggers
+    assert "schedule" in codeql_triggers
+    assert codeql_loaded["permissions"] == {"contents": "read"}
+    analyze_job = codeql_jobs.get("analyze")
+    assert isinstance(analyze_job, dict)
+    assert analyze_job.get("permissions") == {
+        "actions": "read",
+        "contents": "read",
+        "security-events": "write",
+    }
+    codeql_text = CODEQL_WORKFLOW_PATH.read_text(encoding="utf-8")
+    assert "github/codeql-action/init@" in codeql_text
+    assert "github/codeql-action/analyze@" in codeql_text
+    _assert_all_actions_are_sha_pinned(CODEQL_WORKFLOW_PATH)
+
+
+def test_all_checked_workflows_exist() -> None:
+    workflow_names = {path.name for path in WORKFLOWS_DIR.glob("*.yml")}
+    assert {
+        "main.yml",
+        "secret_hygiene.yml",
+        "agent_api.yml",
+        "agent_api_live.yml",
+        "dependency_review.yml",
+        "codeql.yml",
+    }.issubset(workflow_names)
 
 
 def test_makefile_exposes_fast_and_runtime_ci_slices() -> None:
