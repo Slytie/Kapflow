@@ -2,7 +2,7 @@
 id: TASK-0106
 epic: EPIC-080
 title: "Restore optional-extra honesty for onetruth.api with lazy import boundaries"
-status: TODO
+status: DONE
 owners: ["platform"]
 reviewers: ["qa"]
 depends_on: ["TASK-0095", "TASK-0101"]
@@ -72,3 +72,9 @@ Make `onetruth.api` import surfaces honest:
 
 ## Notes / decisions
 Treat this as packaging discipline, not as a semantic runtime change.
+
+## Implementation notes (2026-03-17)
+- `src/onetruth/api/__init__.py` now exports `app` and `create_app` lazily via `__getattr__`, so plain `import onetruth.api` no longer imports `main`.
+- `src/onetruth/api/main.py` now imports the shared-env JWT resolver only inside `_resolve_boundary_config()`, and the default `app` export is now a lazy cached ASGI wrapper instead of `app = create_app()` at import time.
+- `src/onetruth/api/shared_env_principal_resolver.py` no longer imports `jwt` eagerly; `PyJWT` is required only when the shared-env JWT resolver path is actually activated, and missing installs now raise an explicit runtime hint.
+- Added subprocess-based packaging/import contract coverage in `tests/contract/test_api_optional_extra_import_boundaries.py`.

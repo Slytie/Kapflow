@@ -2,6 +2,11 @@
 
 Record any decisions made since the last session so a fresh Codex run can rehydrate quickly.
 
+## 2026-03-17 (TASK-0107 route-registry modularization)
+- Control-plane structure decision: route metadata now lives in resource-scoped `src/onetruth/api/route_specs/*.py` modules plus a tiny shared `_core.py`, while `src/onetruth/api/route_registry.py` remains the single public assembly point for `ROUTES` and `match_route`.
+- Parity decision: the assembled registry preserves the exact global route order, suffix precedence, request-body policy metadata, and the current permissive-vs-strict path quirks; no handler, payload, or trust-boundary semantics changed in this tranche.
+- Fitness decision: contract coverage now forbids route-spec modules from importing each other, `api.main`, or `route_registry.py`, forbids `route_registry.py` from importing route handlers directly, and keeps route modules plus `main.py` from depending on `route_specs` directly.
+
 ## 2026-03-14 (TASK-0101 shared_env JWT principal resolver)
 - Shared-env identity decision: when `ONETRUTH_SHARED_ENV_JWT_ISSUER`, `ONETRUTH_SHARED_ENV_JWT_AUDIENCE`, and `ONETRUTH_SHARED_ENV_JWT_PUBLIC_KEY_PEM` are all configured and no explicit resolver is injected, `shared_env` now resolves request context from `Authorization: Bearer <JWT>` using offline `RS256` verification.
 - Boundary decision: `local_dev` and `ci_test` keep the existing trusted-header path unchanged, trusted-header CORS remains local-dev-only, and conflicting `x-onetruth-*` headers are ignored in `shared_env`.
@@ -533,3 +538,9 @@ Record any decisions made since the last session so a fresh Codex run can rehydr
 - Extraction decision: `create_execution_session_command`, `request_tool_execution_command`, `evaluate_policy_decision_command`, `complete_tool_execution_command`, `transition_execution_session_state_command`, and `reconcile_executions_command` now live in `src/onetruth/application/handlers/execution_runtime.py` behind thin compatibility wrappers in `workflow_task_lifecycle.py`.
 - Caller decision: `stage06_openai_sandbox.py`, `weekly_stage04_openai_agent.py`, CLI execution commands, and the direct execution runtime tests now import the extracted execution seam directly instead of routing those mutations through the legacy hotspot.
 - Guardrail decision: contract coverage now forbids extracted handlers plus API/service/CLI layers from drifting back to legacy execution mutation imports, while execution read surfaces remain on `read_commands`.
+
+## 2026-03-17 (TASK-0106 optional API import honesty)
+- Packaging-boundary decision: `src/onetruth/api/__init__.py` and `src/onetruth/api/main.py` now keep `onetruth.api` imports lazy, so lightweight API modules no longer pull in optional `api` dependencies at import time.
+- Dependency-localization decision: `src/onetruth/api/shared_env_principal_resolver.py` now imports `PyJWT` only when the configured shared-env JWT resolver path is actually activated.
+- Compatibility decision: `from onetruth.api import app`, `from onetruth.api import create_app`, `from onetruth.api.main import app`, `from onetruth.api.main import create_app`, and `onetruth.api.main:app` remain supported surfaces.
+- Scope decision: this task did not change boundary-profile defaults, attested-principal claim mapping, trusted-header rules, route behavior, or error payload semantics for valid configured runtimes.

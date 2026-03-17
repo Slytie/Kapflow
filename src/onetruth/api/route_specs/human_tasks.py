@@ -1,0 +1,199 @@
+from __future__ import annotations
+
+from onetruth.api.routes.artifacts import (
+    list_human_task_artifacts_endpoint,
+    upload_human_task_artifact_endpoint,
+)
+from onetruth.api.routes.human_tasks import (
+    claim_human_task_endpoint,
+    complete_human_task_endpoint,
+    confirm_human_task_review_endpoint,
+    get_human_task_endpoint,
+    get_human_task_subgraph_endpoint,
+    list_human_tasks_endpoint,
+    run_stage06_agent_review_endpoint,
+    run_weekly_stage04_openai_agent_endpoint,
+)
+from onetruth.api.route_specs._core import (
+    JSON_ARTIFACT_BODY,
+    JSON_COMMAND_BODY,
+    NO_BODY,
+    RouteSpec,
+    _exact,
+    _param,
+    _require_page,
+    _require_payload,
+)
+
+HUMAN_TASK_ROUTE_SPECS: tuple[RouteSpec, ...] = (
+    RouteSpec(
+        name="human_tasks.list",
+        method="GET",
+        pattern=_exact("/api/v1/human-tasks"),
+        body_policy=NO_BODY,
+        needs_page=True,
+        dispatch=lambda execution, _params: list_human_tasks_endpoint(
+            execution.connection,
+            context=execution.context,
+            query=execution.query,
+            page=_require_page(execution.page),
+        ),
+    ),
+    RouteSpec(
+        name="human_tasks.detail",
+        method="GET",
+        pattern=_param(
+            "/api/v1/human-tasks/",
+            param_name="human_task_id",
+        ),
+        body_policy=NO_BODY,
+        needs_page=False,
+        dispatch=lambda execution, params: get_human_task_endpoint(
+            execution.connection,
+            context=execution.context,
+            human_task_id=params["human_task_id"],
+        ),
+    ),
+    RouteSpec(
+        name="human_tasks.subgraph",
+        method="GET",
+        pattern=_param(
+            "/api/v1/human-tasks/",
+            param_name="human_task_id",
+            suffix="/subgraph",
+        ),
+        body_policy=NO_BODY,
+        needs_page=False,
+        dispatch=lambda execution, params: get_human_task_subgraph_endpoint(
+            execution.connection,
+            context=execution.context,
+            human_task_id=params["human_task_id"],
+        ),
+    ),
+    RouteSpec(
+        name="human_tasks.artifacts.list",
+        method="GET",
+        pattern=_param(
+            "/api/v1/human-tasks/",
+            param_name="human_task_id",
+            suffix="/artifacts",
+        ),
+        body_policy=NO_BODY,
+        needs_page=True,
+        dispatch=lambda execution, params: list_human_task_artifacts_endpoint(
+            execution.connection,
+            context=execution.context,
+            human_task_id=params["human_task_id"],
+            page=_require_page(execution.page),
+        ),
+    ),
+    RouteSpec(
+        name="human_tasks.artifacts.upload",
+        method="POST",
+        pattern=_param(
+            "/api/v1/human-tasks/",
+            param_name="human_task_id",
+            suffix="/artifacts/upload",
+        ),
+        body_policy=JSON_ARTIFACT_BODY,
+        needs_page=False,
+        dispatch=lambda execution, params: upload_human_task_artifact_endpoint(
+            execution.connection,
+            context=execution.context,
+            db_url=execution.db_url,
+            human_task_id=params["human_task_id"],
+            payload=_require_payload(execution.payload),
+        ),
+    ),
+    RouteSpec(
+        name="human_tasks.claim",
+        method="POST",
+        pattern=_param(
+            "/api/v1/human-tasks/",
+            param_name="human_task_id",
+            suffix="/claim",
+            allow_slash=True,
+        ),
+        body_policy=JSON_COMMAND_BODY,
+        needs_page=False,
+        dispatch=lambda execution, params: claim_human_task_endpoint(
+            execution.connection,
+            context=execution.context,
+            human_task_id=params["human_task_id"],
+            payload=_require_payload(execution.payload),
+        ),
+    ),
+    RouteSpec(
+        name="human_tasks.complete",
+        method="POST",
+        pattern=_param(
+            "/api/v1/human-tasks/",
+            param_name="human_task_id",
+            suffix="/complete",
+            allow_slash=True,
+        ),
+        body_policy=JSON_COMMAND_BODY,
+        needs_page=False,
+        dispatch=lambda execution, params: complete_human_task_endpoint(
+            execution.connection,
+            context=execution.context,
+            human_task_id=params["human_task_id"],
+            payload=_require_payload(execution.payload),
+        ),
+    ),
+    RouteSpec(
+        name="human_tasks.confirm_review",
+        method="POST",
+        pattern=_param(
+            "/api/v1/human-tasks/",
+            param_name="human_task_id",
+            suffix="/confirm-review",
+            allow_slash=True,
+        ),
+        body_policy=JSON_COMMAND_BODY,
+        needs_page=False,
+        dispatch=lambda execution, params: confirm_human_task_review_endpoint(
+            execution.connection,
+            context=execution.context,
+            db_url=execution.db_url,
+            human_task_id=params["human_task_id"],
+            payload=_require_payload(execution.payload),
+        ),
+    ),
+    RouteSpec(
+        name="human_tasks.stage06_agent_review",
+        method="POST",
+        pattern=_param(
+            "/api/v1/human-tasks/",
+            param_name="human_task_id",
+            suffix="/stage06-agent-review",
+            allow_slash=True,
+        ),
+        body_policy=JSON_COMMAND_BODY,
+        needs_page=False,
+        dispatch=lambda execution, params: run_stage06_agent_review_endpoint(
+            execution.connection,
+            context=execution.context,
+            human_task_id=params["human_task_id"],
+            payload=_require_payload(execution.payload),
+        ),
+    ),
+    RouteSpec(
+        name="human_tasks.weekly_stage04_openai_agent",
+        method="POST",
+        pattern=_param(
+            "/api/v1/human-tasks/",
+            param_name="human_task_id",
+            suffix="/weekly-stage04-openai-agent",
+            allow_slash=True,
+        ),
+        body_policy=JSON_COMMAND_BODY,
+        needs_page=False,
+        dispatch=lambda execution, params: run_weekly_stage04_openai_agent_endpoint(
+            execution.connection,
+            context=execution.context,
+            human_task_id=params["human_task_id"],
+            payload=_require_payload(execution.payload),
+        ),
+    ),
+)

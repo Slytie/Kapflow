@@ -79,9 +79,13 @@
   - internal handoff bundles and runtime workspace bundles remain valid but are explicitly non-release distribution paths.
 - Scope remains intentionally bounded to the authored three-workflow logistics story shell.
 
-## Planned next tranche
-- `TASK-0106` should make package metadata and import behavior agree for `onetruth.api`.
-- `TASK-0107` should keep the route/control-plane shell narrow rather than more abstract.
+## Latest completed tranche
+- `TASK-0106` made package metadata and import behavior agree more closely for `onetruth.api`.
+- Lightweight API imports no longer require `PyJWT` or `uvicorn`, while the shared-env JWT resolver and `onetruth-api` entrypoint still fail locally with explicit install guidance when those optional dependencies are actually needed.
+- `TASK-0107` split the control-plane route table into resource-scoped `src/onetruth/api/route_specs/` modules while keeping `src/onetruth/api/route_registry.py` as the one assembled `ROUTES` / `match_route` truth surface.
+- Contract coverage now keeps `main.py`, route modules, route-spec modules, and the public registry from collapsing into a wider internal framework, while preserving exact route order and the existing slash/body-policy quirks.
+
+## Remaining tranche
 - `TASK-0108` should improve diagnosability without leaking bodies, tokens, or secrets.
 - `TASK-0109` should split assurance domains without making the operator story harder to understand.
 - Red-team question: “Are we turning the control-plane or assurance layer into a platform bigger than the repo actually needs?”

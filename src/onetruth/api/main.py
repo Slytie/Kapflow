@@ -31,9 +31,6 @@ from onetruth.api.request_correlation import (
 )
 from onetruth.api.responses import BinaryResponse
 from onetruth.api.route_registry import RequestBodyPolicy, RouteExecutionContext, match_route
-from onetruth.api.shared_env_principal_resolver import (
-    shared_env_jwt_principal_resolver_from_env,
-)
 
 ASGIApp = Callable[[dict[str, Any], Callable[[], Awaitable[dict[str, Any]]], Callable[[dict[str, Any]], Awaitable[None]]], Awaitable[None]]
 
@@ -50,6 +47,7 @@ _CORS_DEFAULT_ALLOW_HEADERS = ",".join(
     ]
 )
 _API_BOUNDARY_PROFILE_ENV = "ONETRUTH_API_BOUNDARY_PROFILE"
+_default_app_cache: ASGIApp | None = None
 
 
 @dataclass(frozen=True)
@@ -212,6 +210,10 @@ def _resolve_boundary_config(
             profile=resolved_profile,
             principal_resolver=trusted_header_principal_resolver,
         )
+    from onetruth.api.shared_env_principal_resolver import (
+        shared_env_jwt_principal_resolver_from_env,
+    )
+
     shared_env_resolver = shared_env_jwt_principal_resolver_from_env()
     if shared_env_resolver is not None:
         return ApiBoundaryConfig(
@@ -518,7 +520,15 @@ def main(argv: list[str] | None = None) -> int:
     return 0
 
 
-app = create_app()
+def _default_app() -> ASGIApp:
+    global _default_app_cache
+    if _default_app_cache is None:
+        _default_app_cache = create_app()
+    return _default_app_cache
+
+
+async def app(scope, receive, send) -> None:
+    await _default_app()(scope, receive, send)
 
 
 if __name__ == "__main__":

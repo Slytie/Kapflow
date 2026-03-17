@@ -26,6 +26,7 @@ A one-truth system still fails if scope leaks through projections, caches, or ge
 ## Status
 - `TASK-0002`, `TASK-0078`, and `TASK-0101` are complete.
 - The API trust boundary now has explicit `local_dev`, `ci_test`, and `shared_env` profiles; `shared_env` fails closed by default, trusted-header CORS is limited to loopback local-dev origins, and a configured bearer-JWT resolver can now provide attested principals in `shared_env` without trusting `x-onetruth-*` headers.
+- `TASK-0106` also tightened packaging-only import behavior around that resolver path: lightweight `onetruth.api` imports no longer require `PyJWT`, while the configured shared-env JWT path still activates the same attested principal semantics.
 
 ## Tasks
 - TASK-0002

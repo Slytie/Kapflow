@@ -2,7 +2,7 @@
 id: TASK-0107
 epic: EPIC-080
 title: "Modularize the route registry and add control-plane framework fitness checks"
-status: TODO
+status: DONE
 owners: ["platform"]
 reviewers: ["qa"]
 depends_on: ["TASK-0095"]
@@ -63,3 +63,8 @@ Split the route registry into resource-scoped route-spec modules with one small 
 
 ## Notes / decisions
 This task should make the internal boundary framework smaller in cognition cost, not more abstract.
+
+## Implementation notes (2026-03-17)
+- `src/onetruth/api/route_registry.py` is now a slim assembly surface that re-exports the route metadata/types from `src/onetruth/api/route_specs/_core.py`, assembles `ROUTES` in the preserved global order, and keeps `match_route()` as the one public matcher.
+- Route metadata now lives in resource-scoped modules under `src/onetruth/api/route_specs/`, so the control-plane table no longer concentrates in one oversized file while route handlers, payloads, and trust behavior stay unchanged.
+- `tests/unit/test_api_route_registry.py` now freezes the exact assembled route-name order, and `tests/contract/test_route_registry_framework_fitness.py` forbids `route_registry.py`, `main.py`, route modules, and route-spec modules from drifting into a wider internal framework.

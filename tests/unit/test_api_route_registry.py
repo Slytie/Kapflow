@@ -14,6 +14,50 @@ def test_route_registry_route_names_are_unique() -> None:
     assert len(route_names) == len(set(route_names))
 
 
+def test_route_registry_preserves_exact_global_route_order() -> None:
+    assert [route.name for route in ROUTES] == [
+        "human_tasks.list",
+        "human_tasks.detail",
+        "human_tasks.subgraph",
+        "human_tasks.artifacts.list",
+        "human_tasks.artifacts.upload",
+        "human_tasks.claim",
+        "human_tasks.complete",
+        "human_tasks.confirm_review",
+        "human_tasks.stage06_agent_review",
+        "human_tasks.weekly_stage04_openai_agent",
+        "approvals.list",
+        "approvals.detail",
+        "approvals.artifacts.list",
+        "approvals.artifacts.upload",
+        "approvals.respond",
+        "flags.list",
+        "flags.detail",
+        "flags.artifacts.list",
+        "flags.artifacts.upload",
+        "flags.transition",
+        "workflow_runs.list",
+        "workflow_runs.artifacts.list",
+        "workflow_runs.artifacts.upload",
+        "workflow_runs.timeline",
+        "workflow_runs.workspace",
+        "workflow_runs.detail",
+        "pointers.list",
+        "templates.list",
+        "templates.download.binary",
+        "templates.download",
+        "templates.detail",
+        "artifacts.ingest",
+        "artifacts.list",
+        "artifacts.download.binary",
+        "artifacts.download",
+        "artifacts.detail",
+        "timeline_events.list",
+        "board.schedule_planning",
+        "stories.logistics_three_workflow",
+    ]
+
+
 def test_route_registry_matches_representative_exact_and_parameterized_routes() -> None:
     exact_match = match_route("GET", "/api/v1/workflow-runs")
     assert exact_match is not None

@@ -24,8 +24,8 @@ Also see `docs/patterns/PATTERN_INDEX.yaml` for the full tagged library.
 
 Context pack: `codex/context/EPIC-080.md`
 
-## Current Repo Status (2026-03-14)
-- Completed in this epic: `TASK-0014`, `TASK-0015`, `TASK-0027`, `TASK-0044`, `TASK-0046`, `TASK-0047`, `TASK-0048`, `TASK-0049`, `TASK-0055`, `TASK-0056`, `TASK-0058`, `TASK-0064`, `TASK-0076`, `TASK-0083`, `TASK-0084`, `TASK-0085`, `TASK-0090`, `TASK-0091`, `TASK-0094`, `TASK-0095`, `TASK-0096`, `TASK-0098`, `TASK-0099`, `TASK-0100`.
+## Current Repo Status (2026-03-17)
+- Completed in this epic: `TASK-0014`, `TASK-0015`, `TASK-0027`, `TASK-0044`, `TASK-0046`, `TASK-0047`, `TASK-0048`, `TASK-0049`, `TASK-0055`, `TASK-0056`, `TASK-0058`, `TASK-0064`, `TASK-0076`, `TASK-0083`, `TASK-0084`, `TASK-0085`, `TASK-0090`, `TASK-0091`, `TASK-0094`, `TASK-0095`, `TASK-0096`, `TASK-0098`, `TASK-0099`, `TASK-0100`, `TASK-0106`, and `TASK-0107`.
 - Primary operator/demo FE entrypoint is now `/demo/logistics`, powered by canonical backend story seam `GET /api/v1/stories/logistics-three-workflow`.
 - Schedule-only board/workspace/runs/timeline surfaces remain available as legacy/internal regression paths and are explicitly labeled as legacy in navigation/UI copy.
 - `TASK-0076` restored the legacy schedule-only board's compatibility with the current pointer-query contract without changing its board payload shape or promoting it back to a primary product surface.
@@ -40,6 +40,15 @@ Context pack: `codex/context/EPIC-080.md`
 - `TASK-0098` migrated frontend/client download surfaces to the binary `.bin` transport, removed frontend dependence on JSON/base64 download envelopes, and made clean `npm ci` from the frontend lockfile the explicit install truth.
 - `TASK-0099` split CI into parallel fast required lanes (`lint`, `contract`, `unit`, `security`) plus a separate `runtime-required` lane, moved `release-confidence` off pull requests, and kept `secret_hygiene` as its own PR-capable security workflow while retargeting `agent_api` to the fast backend aggregate.
 - `TASK-0100` made `release_source_bundle` the only documented/operator-default shareable source artifact, added deterministic `release_provenance.json` sidecars to release exports, and demoted handoff/manual zip paths to internal-only review flows.
+- `TASK-0106` aligned optional `api` extras with real import behavior:
+  - `onetruth.api` package exports are now lazy,
+  - `onetruth.api.main` no longer imports the JWT resolver eagerly,
+  - the default `app` export is lazy/cached instead of constructing the ASGI app at import time,
+  - and `PyJWT` is required only when the shared-env JWT resolver path is actually activated.
+- `TASK-0107` modularized the control-plane route table without broadening the shell:
+  - route metadata now lives in resource-scoped `src/onetruth/api/route_specs/` modules plus a tiny shared `_core.py`,
+  - `src/onetruth/api/route_registry.py` remains the single public `ROUTES` / `match_route` assembly surface,
+  - and framework-fitness tests now keep `main.py`, route modules, and route-spec modules from growing into a broader internal framework.
 - Scope boundary remains unchanged: no second FE truth model and no generalized workflow-family UI framework was introduced in this tranche.
 
 ## Tasks
@@ -69,13 +78,9 @@ Context pack: `codex/context/EPIC-080.md`
 - TASK-0100
 
 Planned next tranche in this epic:
-- `TASK-0106` restores optional-extra honesty for `onetruth.api`.
-- `TASK-0107` modularizes the route registry before the control-plane shell becomes a second hidden framework.
 - `TASK-0108` adds structured request/mutation observability now that request ids and route metadata are in place.
 - `TASK-0109` keeps the assurance layer from becoming the next monolith by splitting validator domains and improving portability.
 
 ## Queued Tasks
-- TASK-0106
-- TASK-0107
 - TASK-0108
 - TASK-0109

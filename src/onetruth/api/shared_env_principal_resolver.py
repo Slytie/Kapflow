@@ -3,8 +3,6 @@ from __future__ import annotations
 import os
 from typing import Any, Mapping
 
-import jwt
-
 from .dependencies import (
     RequestContext,
     PrincipalResolver,
@@ -20,6 +18,10 @@ _AUTHORIZATION_HEADER = "authorization"
 _JWT_ALGORITHMS = ("RS256",)
 _SHARED_ENV_ERROR_CODE = "invalid_attested_identity"
 _MISSING_BEARER_TOKEN_CODE = "missing_bearer_token"
+_PYJWT_IMPORT_HINT = (
+    "PyJWT is required for the shared_env JWT principal resolver. "
+    "Install with `python3 -m pip install -e .[api]`."
+)
 
 
 def shared_env_jwt_principal_resolver_from_env() -> PrincipalResolver | None:
@@ -28,6 +30,7 @@ def shared_env_jwt_principal_resolver_from_env() -> PrincipalResolver | None:
     public_key_pem = _configured_env(SHARED_ENV_JWT_PUBLIC_KEY_PEM_ENV)
     if issuer is None or audience is None or public_key_pem is None:
         return None
+    _pyjwt_module()
     return build_shared_env_jwt_principal_resolver(
         issuer=issuer,
         audience=audience,
@@ -106,6 +109,7 @@ def _decode_jwt(
     audience: str,
     public_key_pem: str,
 ) -> dict[str, Any]:
+    jwt = _pyjwt_module()
     try:
         claims = jwt.decode(
             token,
@@ -157,3 +161,11 @@ def _required_claim_string(claims: Mapping[str, Any], claim_name: str) -> str:
             details={"boundary_profile": "shared_env", "claim": claim_name},
         )
     return raw_value.strip()
+
+
+def _pyjwt_module():
+    try:
+        import jwt
+    except ImportError as exc:
+        raise RuntimeError(_PYJWT_IMPORT_HINT) from exc
+    return jwt

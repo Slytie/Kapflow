@@ -17,6 +17,7 @@
 - Trusted `x-onetruth-*` headers are allowed only in `local_dev` and `ci_test`.
 - Trusted-header CORS exists only in `local_dev`, and only for loopback browser origins.
 - Conflicting trusted headers are ignored in `shared_env`; scope/capability decisions must derive from the attested request context instead.
+- `TASK-0106` changed only packaging posture around this resolver path: lightweight `onetruth.api` imports are now lazy, but the shared-env JWT semantics, claim mapping, and fail-closed behavior are unchanged.
 
 ## Contracts / schemas to treat as authoritative
 - `docs/architecture/scope_model.md`
