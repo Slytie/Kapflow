@@ -3,8 +3,8 @@ from __future__ import annotations
 import sqlite3
 from typing import Any
 
-from onetruth.application.handlers.workflow_task_lifecycle import (
-    CommandError,
+from onetruth.application.handlers._shared.command_boundary import CommandError
+from onetruth.application.handlers.approvals import (
     respond_approval_command,
     show_approval_command,
 )

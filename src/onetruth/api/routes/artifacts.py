@@ -3,13 +3,15 @@ from __future__ import annotations
 import sqlite3
 from typing import Any
 
-from onetruth.application.handlers.workflow_task_lifecycle import (
-    CommandError,
+from onetruth.application.handlers._shared.command_boundary import CommandError
+from onetruth.application.handlers.approvals import show_approval_command
+from onetruth.application.handlers.artifacts import (
     download_artifact_blob_command,
     ingest_artifact_document_command,
+)
+from onetruth.application.read_commands import (
     list_artifacts_for_subject_command,
     list_artifacts_for_workflow_run_command,
-    show_approval_command,
     show_artifact_version_command,
     show_flag_command,
     show_human_task_command,

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any, Iterable
 
-from onetruth.application.handlers.workflow_task_lifecycle import CommandError
+from onetruth.application.handlers._shared.command_boundary import CommandError
 from onetruth.application.services.stage06_openai_sandbox import (
     evaluate_stage06_policy_for_actor,
 )

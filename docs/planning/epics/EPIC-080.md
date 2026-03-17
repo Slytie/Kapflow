@@ -67,3 +67,15 @@ Context pack: `codex/context/EPIC-080.md`
 - TASK-0098
 - TASK-0099
 - TASK-0100
+
+Planned next tranche in this epic:
+- `TASK-0106` restores optional-extra honesty for `onetruth.api`.
+- `TASK-0107` modularizes the route registry before the control-plane shell becomes a second hidden framework.
+- `TASK-0108` adds structured request/mutation observability now that request ids and route metadata are in place.
+- `TASK-0109` keeps the assurance layer from becoming the next monolith by splitting validator domains and improving portability.
+
+## Queued Tasks
+- TASK-0106
+- TASK-0107
+- TASK-0108
+- TASK-0109

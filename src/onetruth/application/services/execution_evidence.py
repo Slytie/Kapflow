@@ -8,7 +8,7 @@ from pathlib import Path
 import sqlite3
 from typing import Any, Mapping
 
-from onetruth.application.handlers.workflow_task_lifecycle import (
+from onetruth.application.handlers.artifacts import (
     create_artifact_version_command,
 )
 from onetruth.infrastructure.artifacts.storage import write_blob

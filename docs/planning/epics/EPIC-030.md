@@ -44,3 +44,10 @@ Context pack: `codex/context/EPIC-030.md`
 - TASK-0030
 - TASK-0081
 - TASK-0097
+
+Planned next tranche in this epic:
+- `TASK-0104` continues the artifact/pointer line by extracting artifact-version and pointer-promotion mutation families behind a narrower lineage/canonical-scope seam.
+- This is explicitly structural; no object-store or transport-v3 work is queued in the same task.
+
+## Queued Tasks
+- TASK-0104

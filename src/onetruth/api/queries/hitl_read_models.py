@@ -4,10 +4,8 @@ import json
 import sqlite3
 from typing import Any
 
-from onetruth.application.handlers.workflow_task_lifecycle import (
-    CommandError,
-    list_workflow_runs_command,
-)
+from onetruth.application.handlers._shared.command_boundary import CommandError
+from onetruth.application.read_commands import list_workflow_runs_command
 from onetruth.api.dependencies import Page, RequestContext, scoped_workflow_run
 from onetruth.api.errors import api_error_from_command
 

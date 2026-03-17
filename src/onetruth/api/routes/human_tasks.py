@@ -3,11 +3,13 @@ from __future__ import annotations
 import sqlite3
 from typing import Any
 
-from onetruth.application.handlers.workflow_task_lifecycle import (
-    CommandError,
+from onetruth.application.handlers._shared.command_boundary import CommandError
+from onetruth.application.handlers.human_tasks import (
     claim_human_task_command,
     complete_human_task_command,
     confirm_human_task_review_command,
+)
+from onetruth.application.read_commands import (
     list_artifacts_for_subject_command,
     show_human_task_command,
 )

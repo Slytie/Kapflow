@@ -10,12 +10,12 @@ import sqlite3
 from typing import Any
 import zipfile
 
+from onetruth.application.handlers._shared.command_boundary import CommandError
+from onetruth.application.handlers.artifacts import create_artifact_version_command
 from onetruth.application.handlers.workflow_task_lifecycle import (
-    CommandError,
     complete_tool_execution_command,
     create_execution_session_command,
     complete_human_task_command,
-    create_artifact_version_command,
     evaluate_policy_decision_command,
     request_tool_execution_command,
     transition_execution_session_state_command,

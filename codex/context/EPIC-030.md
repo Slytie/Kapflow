@@ -44,3 +44,8 @@
   - artifact and template downloads now have sibling binary `.bin` routes that return bytes with attachment headers,
   - the existing `/download` JSON+base64 routes remain available as compatibility surfaces,
   - transport changed without reopening artifact metadata, pointer, provenance, or trust semantics.
+
+## Planned next tranche
+- `TASK-0104` is structural artifact work, not semantic artifact work.
+- Keep one-truth artifact officialness exactly as-is; the task is to move artifact/pointer mutation code and lineage helpers behind a cleaner seam.
+- Red-team question: “Did we accidentally mix transport concerns into a lineage/pointer extraction task?”

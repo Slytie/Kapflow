@@ -30,3 +30,24 @@ Also see `docs/patterns/PATTERN_INDEX.yaml` for the full tagged library.
 
 ## Tasks
 - TASK-0013
+
+## Current Repo Status (2026-03-14)
+- Completed in this epic: `TASK-0013`, `TASK-0050`, `TASK-0052`, `TASK-0053`, `TASK-0065`, `TASK-0066`, `TASK-0069`, `TASK-0070`, `TASK-0088`, `TASK-0089`, and `TASK-0101`.
+- Stage06 and weekly Stage04 now have a real attested shared-env principal seam and a bounded execution runtime, but execution command centrality still sits too close to the legacy orchestration hotspot.
+
+## Planned next tranche in this epic
+- `TASK-0105` will extract the execution/tool/policy command family so Stage06 and weekly Stage04 services stop importing execution semantics from `workflow_task_lifecycle.py`.
+
+## Queued Tasks
+- TASK-0013
+- TASK-0050
+- TASK-0052
+- TASK-0053
+- TASK-0065
+- TASK-0066
+- TASK-0069
+- TASK-0070
+- TASK-0088
+- TASK-0089
+- TASK-0101
+- TASK-0105

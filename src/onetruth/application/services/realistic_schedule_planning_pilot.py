@@ -9,28 +9,38 @@ from pathlib import Path
 import sqlite3
 from typing import Any, Iterable, Sequence
 
-from onetruth.application.handlers.workflow_task_lifecycle import (
-    CommandError,
+from onetruth.application.handlers._shared.command_boundary import CommandError
+from onetruth.application.handlers.approvals import (
+    list_approvals_for_workflow_run_command,
+    request_approval_command,
+    respond_approval_command,
+)
+from onetruth.application.handlers.artifacts import (
+    ingest_artifact_document_command,
+)
+from onetruth.application.handlers.flags import (
     activate_stage07_issue_from_flag_command,
+    create_flag_command,
+    transition_flag_state_command,
+)
+from onetruth.application.handlers.human_tasks import (
     claim_human_task_command,
     complete_human_task_command,
     confirm_human_task_review_command,
-    create_flag_command,
+)
+from onetruth.application.handlers.pointers import promote_pointer_command
+from onetruth.application.handlers.workflow_task_lifecycle import (
     create_task_run_command,
     create_workflow_run_command,
-    ingest_artifact_document_command,
-    list_approvals_for_workflow_run_command,
+)
+from onetruth.application.read_commands import (
     list_artifacts_for_workflow_run_command,
     list_execution_sessions_for_workflow_run_command,
     list_flags_for_workflow_run_command,
     list_pointers_for_workflow_run_command,
     list_tasks_for_workflow_run_command,
-    promote_pointer_command,
-    request_approval_command,
-    respond_approval_command,
     show_human_task_command,
     show_workflow_run_command,
-    transition_flag_state_command,
 )
 from onetruth.application.services.example_document_corpus import (
     ExampleDocumentCorpus,

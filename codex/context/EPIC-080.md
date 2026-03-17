@@ -78,3 +78,10 @@
   - release exports now include a deterministic repo-owned `release_provenance.json` sidecar in addition to `bundle_manifest.json`,
   - internal handoff bundles and runtime workspace bundles remain valid but are explicitly non-release distribution paths.
 - Scope remains intentionally bounded to the authored three-workflow logistics story shell.
+
+## Planned next tranche
+- `TASK-0106` should make package metadata and import behavior agree for `onetruth.api`.
+- `TASK-0107` should keep the route/control-plane shell narrow rather than more abstract.
+- `TASK-0108` should improve diagnosability without leaking bodies, tokens, or secrets.
+- `TASK-0109` should split assurance domains without making the operator story harder to understand.
+- Red-team question: “Are we turning the control-plane or assurance layer into a platform bigger than the repo actually needs?”

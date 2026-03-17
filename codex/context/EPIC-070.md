@@ -35,3 +35,8 @@
 - “Can the same request run twice?”
 - “Could this leak across tenants/domains?”
 - “Does the audit timeline still reconstruct what happened?”
+
+## Planned next tranche
+- `TASK-0105` should treat execution/tool/policy code as a bounded runtime facet with its own handler surface.
+- Do not use the extraction to broaden OpenAI/runtime semantics or add distributed-systems assumptions.
+- Red-team question: “Did we reduce dependency on the orchestration hotspot, or just create another wrapper around it?”

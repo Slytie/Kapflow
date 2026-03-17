@@ -9,8 +9,8 @@ from typing import Any
 
 import yaml
 
-from onetruth.application.handlers.workflow_task_lifecycle import (
-    CommandError,
+from onetruth.application.handlers._shared.command_boundary import CommandError
+from onetruth.application.read_commands import (
     list_artifacts_for_workflow_run_command,
 )
 from onetruth.application.projections.coherence_harness import (

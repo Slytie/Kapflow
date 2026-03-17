@@ -3,11 +3,11 @@ from __future__ import annotations
 import sqlite3
 from typing import Any
 
-from onetruth.application.handlers.workflow_task_lifecycle import (
-    CommandError,
-    show_flag_command,
+from onetruth.application.handlers._shared.command_boundary import CommandError
+from onetruth.application.handlers.flags import (
     transition_flag_state_command,
 )
+from onetruth.application.read_commands import show_flag_command
 from onetruth.infrastructure.events.event_store import DuplicateIdempotencyKeyError
 
 from onetruth.api.dependencies import Page, RequestContext, scoped_workflow_run

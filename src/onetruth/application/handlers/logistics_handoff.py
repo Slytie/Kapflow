@@ -8,7 +8,7 @@ import sqlite3
 from typing import Any
 from uuid import uuid4
 
-from onetruth.application.handlers.workflow_task_lifecycle import CommandError
+from onetruth.application.handlers._shared.command_boundary import CommandError
 from onetruth.application.services.logistics_handoff_runtime import apply_partition_transform_by_id
 from onetruth.domain.partition_codec import validate_partition_key
 from onetruth.infrastructure.definitions.family_compiler import (

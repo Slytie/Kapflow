@@ -4,10 +4,10 @@ import json
 import sqlite3
 from typing import Any
 
+from onetruth.application.handlers.artifacts import create_artifact_version_command
+from onetruth.application.handlers.pointers import promote_pointer_command
 from onetruth.application.handlers.workflow_task_lifecycle import (
-    create_artifact_version_command,
     create_workflow_run_command,
-    promote_pointer_command,
 )
 from onetruth.domain.pointer_address import PointerId
 from onetruth.infrastructure.events.event_store import create_sqlite_substrate

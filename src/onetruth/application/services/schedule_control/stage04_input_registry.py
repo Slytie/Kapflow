@@ -7,7 +7,7 @@ from typing import Any, Mapping
 
 import yaml
 
-from onetruth.application.handlers.workflow_task_lifecycle import CommandError
+from onetruth.application.handlers._shared.command_boundary import CommandError
 
 
 _REPO_ROOT = Path(__file__).resolve().parents[5]

@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
-from onetruth.application.handlers.workflow_task_lifecycle import CommandError
+from onetruth.application.handlers._shared.command_boundary import CommandError
 from onetruth.infrastructure.events.event_store import DuplicateIdempotencyKeyError
 
 

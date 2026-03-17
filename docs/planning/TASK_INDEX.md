@@ -105,3 +105,11 @@
 | TASK-0101 | EPIC-010 | DONE | high | Conditional shared_env principal resolver and attested identity integration |
 
 Note: `TASK-0087` / `TASK-0088` / `TASK-0089` were formerly duplicated as `TASK-0071` / `TASK-0072` / `TASK-0073` before the 2026-03-13 truth-alignment backlog sync. `TASK-0071` / `TASK-0072` / `TASK-0073` now refer only to the Stage04 progression.
+| TASK-0102 | EPIC-040 | DONE | high | Decenter workflow_task_lifecycle by extracting neutral read/error boundary surfaces |
+| TASK-0103 | EPIC-040 | DONE | high | Extract the flag and Stage07 issue-loop mutation family |
+| TASK-0104 | EPIC-030 | TODO | high | Extract artifact-version and pointer-promotion mutation families |
+| TASK-0105 | EPIC-070 | TODO | high | Extract execution, tool, and policy command family |
+| TASK-0106 | EPIC-080 | TODO | medium | Restore optional-extra honesty for onetruth.api with lazy import boundaries |
+| TASK-0107 | EPIC-080 | TODO | medium | Modularize the route registry and add control-plane framework fitness checks |
+| TASK-0108 | EPIC-080 | TODO | medium | Add structured API boundary logging and mutation-audit correlation |
+| TASK-0109 | EPIC-080 | TODO | medium | Split repo assurance domains and make validator entrypoints portable |

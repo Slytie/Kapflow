@@ -8,9 +8,11 @@ import sqlite3
 from typing import Any, Callable
 
 from onetruth.infrastructure.events.event_store import (
+    DuplicateIdempotencyKeyError,
     create_command_receipt,
     event_id_for_type,
     get_command_receipt,
+    get_event_by_idempotency_key,
     utc_now_iso,
 )
 from onetruth.infrastructure.repositories.task_runs import get_task_run
@@ -323,6 +325,21 @@ def _required_event_idempotency_key(idempotency_key: Any, suffix: str) -> str:
             details={},
         )
     return key
+
+
+def _assert_idempotency_available(
+    connection: sqlite3.Connection,
+    event_idempotency_key: str | None,
+) -> None:
+    if event_idempotency_key is None:
+        return
+    existing = get_event_by_idempotency_key(connection, event_idempotency_key)
+    if existing is None:
+        return
+    raise DuplicateIdempotencyKeyError(
+        event_idempotency_key,
+        str(existing["event_id"]),
+    )
 
 
 def _future_iso(lease_seconds: int) -> str:

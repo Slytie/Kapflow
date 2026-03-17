@@ -7,9 +7,9 @@ from pathlib import Path
 import sqlite3
 from typing import Any
 
+from onetruth.application.handlers._shared.command_boundary import CommandError
 from onetruth.application.handlers.schedule_control import persist_weekly_stage04_output_payloads
 from onetruth.application.handlers.workflow_task_lifecycle import (
-    CommandError,
     complete_tool_execution_command,
     create_execution_session_command,
     evaluate_policy_decision_command,

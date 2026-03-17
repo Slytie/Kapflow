@@ -8,46 +8,56 @@ import sys
 from pathlib import Path
 from typing import Any
 
-from onetruth.application.handlers._shared.command_boundary import _prepare_command_receipt
-from onetruth.application.handlers.workflow_task_lifecycle import (
+from onetruth.application.handlers._shared.command_boundary import (
     CommandError,
-    activate_stage07_issue_from_flag_command,
+    _prepare_command_receipt,
+)
+from onetruth.application.handlers.approvals import (
+    list_approvals_for_workflow_run_command,
+    request_approval_command,
+    respond_approval_command,
+    show_approval_command,
+)
+from onetruth.application.handlers.artifacts import (
     create_artifact_version_command,
-    create_execution_session_command,
+    download_artifact_blob_command,
+    ingest_artifact_document_command,
+)
+from onetruth.application.handlers.flags import (
+    activate_stage07_issue_from_flag_command,
     create_flag_command,
+    reconcile_stage07_command,
+    transition_flag_state_command,
+)
+from onetruth.application.handlers.pointers import promote_pointer_command
+from onetruth.application.read_commands import (
+    list_artifacts_for_subject_command,
+    list_artifacts_for_workflow_run_command,
+    list_execution_sessions_for_workflow_run_command,
+    list_flags_for_workflow_run_command,
+    list_pointers_for_workflow_run_command,
+    list_tasks_for_workflow_run_command,
+    list_workflow_runs_command,
+    show_artifact_version_command,
+    show_execution_session_command,
+    show_flag_command,
+    show_human_task_command,
+    show_pointer_command,
+    show_policy_decision_command,
+    show_tool_execution_command,
+    show_workflow_run_command,
+)
+from onetruth.application.handlers.workflow_task_lifecycle import (
+    create_execution_session_command,
     claim_human_task_command,
     complete_human_task_command,
     confirm_human_task_review_command,
     create_task_run_command,
     create_workflow_run_command,
-    list_approvals_for_workflow_run_command,
-    list_artifacts_for_workflow_run_command,
-    list_artifacts_for_subject_command,
-    list_flags_for_workflow_run_command,
-    list_pointers_for_workflow_run_command,
-    list_tasks_for_workflow_run_command,
-    list_workflow_runs_command,
-    download_artifact_blob_command,
-    ingest_artifact_document_command,
-    promote_pointer_command,
-    reconcile_stage07_command,
     reconcile_executions_command,
-    list_execution_sessions_for_workflow_run_command,
-    request_approval_command,
     request_tool_execution_command,
-    respond_approval_command,
-    show_execution_session_command,
-    show_flag_command,
-    show_policy_decision_command,
-    show_approval_command,
-    show_artifact_version_command,
-    show_human_task_command,
-    show_tool_execution_command,
-    show_pointer_command,
-    show_workflow_run_command,
     sweep_leases_command,
     transition_execution_session_state_command,
-    transition_flag_state_command,
 )
 from onetruth.application.handlers.logistics_handoff import (
     activate_live_dispatch_command,

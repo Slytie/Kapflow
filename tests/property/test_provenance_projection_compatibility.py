@@ -3,8 +3,8 @@ from __future__ import annotations
 from itertools import permutations
 import sqlite3
 
+from onetruth.application.handlers.artifacts import create_artifact_version_command
 from onetruth.application.handlers.workflow_task_lifecycle import (
-    create_artifact_version_command,
     create_workflow_run_command,
 )
 from onetruth.infrastructure.events.event_store import create_sqlite_substrate

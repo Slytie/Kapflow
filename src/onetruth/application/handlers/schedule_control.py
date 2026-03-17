@@ -4,7 +4,7 @@ import hashlib
 import sqlite3
 from typing import Any
 
-from onetruth.application.handlers.workflow_task_lifecycle import CommandError
+from onetruth.application.handlers._shared.command_boundary import CommandError
 from onetruth.application.services.schedule_control import (
     build_weekly_schedule_control_bundle,
     run_weekly_stage04_deterministic_build,

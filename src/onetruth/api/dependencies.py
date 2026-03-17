@@ -5,10 +5,8 @@ import os
 import sqlite3
 from typing import Any, Callable, Literal, Mapping, Sequence
 
-from onetruth.application.handlers.workflow_task_lifecycle import (
-    CommandError,
-    show_workflow_run_command,
-)
+from onetruth.application.handlers._shared.command_boundary import CommandError
+from onetruth.application.read_commands import show_workflow_run_command
 from onetruth.infrastructure.db.session import DEFAULT_DB_URL, open_sqlite_connection
 
 from .errors import ApiError, api_error_from_command

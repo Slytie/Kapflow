@@ -499,3 +499,27 @@ Record any decisions made since the last session so a fresh Codex run can rehydr
 - Per-workflow authored semantics now include two repo-native execution-overlay files: `DECISION_CATALOG.yaml` and `EXECUTION_PROFILE.yaml`.
 - Generated runbook packs, tool matrices, approval logs, and CompanyOS IR are treated as generated derivatives, not authoritative source.
 - Business execution and agentic execution will share one event system, one approval model, and one run model.
+
+## 2026-03-14 — Planned next package after TASK-0101
+- We are treating the next tranche as a **centrality + operability** package, not another trust-semantics package.
+- Primary next risks are now:
+  - residual centrality around `workflow_task_lifecycle.py`,
+  - package-boundary leaks in `onetruth.api`,
+  - control-plane framework creep around `route_registry.py`,
+  - and assurance-kernel concentration in `scripts/validate_repo.py`.
+- The next queued tasks are `TASK-0102` through `TASK-0109`.
+- Explicit deferrals for this tranche:
+  - no PostgreSQL/object-store migration,
+  - no broader auth/policy redesign,
+  - no streaming upload rewrite,
+  - no large logistics-story or weekly-agent service decomposition yet.
+
+## 2026-03-17 (TASK-0102 neutral read/error seam)
+- Centrality-retirement decision: shared runtime reads now live in `src/onetruth/application/read_commands/` instead of being sourced only from `workflow_task_lifecycle.py`.
+- Boundary decision: API/query/service layers now consume `CommandError` from `src/onetruth/application/handlers/_shared/command_boundary.py`, while read-side approvals still import from `src/onetruth/application/handlers/approvals.py` and legacy `workflow_task_lifecycle.py` stays import-compatible through thin wrappers.
+- Guardrail decision: contract coverage now forbids API/query/service layers from importing shared read/error surfaces from the legacy hotspot, while allowing remaining mutation-family imports to retire in later tasks.
+
+## 2026-03-17 (TASK-0103 flag and Stage07 extraction)
+- Extraction decision: `create_flag_command`, `transition_flag_state_command`, `activate_stage07_issue_from_flag_command`, and `reconcile_stage07_command` now live in `src/onetruth/application/handlers/flags.py` behind thin compatibility wrappers in `workflow_task_lifecycle.py`.
+- Caller decision: API flag routes, the realistic scheduling pilot, and the CLI now import the extracted flag family directly instead of routing those mutations through the legacy hotspot.
+- Helper-seam decision: shared event-idempotency availability checks now live on `src/onetruth/application/handlers/_shared/command_boundary.py` so the extracted flag family can stay free of legacy imports without broadening semantics.

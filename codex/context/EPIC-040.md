@@ -45,3 +45,8 @@
 - `TASK-0086` is complete: the approvals command family lives in `src/onetruth/application/handlers/approvals.py` behind compatibility wrappers in `workflow_task_lifecycle.py`.
 - `TASK-0092` is complete: shared command-boundary helpers now live in `src/onetruth/application/handlers/_shared/command_boundary.py`, the extracted approvals family no longer imports `workflow_task_lifecycle.py`, and a contract test forbids that compatibility cycle from reappearing.
 - `TASK-0093` is complete: the human-task mutation family now lives in `src/onetruth/application/handlers/human_tasks.py`, confirm-review support helpers moved behind `_shared/artifact_effects.py`, and legacy callers still import through thin wrappers in `workflow_task_lifecycle.py`.
+- `TASK-0102` is complete: shared runtime reads now live in `src/onetruth/application/read_commands/`, API/query/service callers no longer import neutral read/error surfaces from `workflow_task_lifecycle.py`, and a contract test forbids those shared imports from drifting back.
+- `TASK-0103` is complete: the flag and Stage07 issue-loop mutation family now lives in `src/onetruth/application/handlers/flags.py`, direct callers use that extracted family instead of the legacy hotspot, and helper sharing stays on the neutral command-boundary seam.
+
+## Planned next tranche
+- Red-team question for future EPIC-040 extractions: “Are we actually lowering centrality, or just moving code while every direct caller still depends on the old module?”
