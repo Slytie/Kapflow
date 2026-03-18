@@ -24,9 +24,10 @@ After G2, plan and (only if justified) begin the world-materialization, comparis
 - No public Workflow Lab product surface by default.
 
 ## Source files to read first
+- `docs/workflow_lab/PROMOTION_GATE.md`
 - `docs/planning/PRODUCTION_AND_WORKFLOW_LAB_PLAN.md`
 - `docs/workflow_lab/*`
-- readiness-gate docs proving G2
+- readiness-gate evidence proving G2, with `docs/workflow_lab/PROMOTION_GATE.md` as the first proof source
 - any evidence from actual lab usage and release cycles
 - workflow/version docs and current `workflow_version` handling
 
@@ -58,4 +59,4 @@ After G2, plan and (only if justified) begin the world-materialization, comparis
 - G2 remains a real gate, not ceremonial text.
 
 ## Notes / decisions
-Blocked until G2 is explicitly recorded. This task exists mostly to protect the repo from premature generalization.
+Blocked until G2 is explicitly recorded in `docs/workflow_lab/PROMOTION_GATE.md`. This task exists mostly to protect the repo from premature generalization.

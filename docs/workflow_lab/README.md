@@ -32,9 +32,12 @@ The healthy promotion path remains:
 
 - `lab -> review/certification/release -> prod`
 
+See [PROMOTION_GATE.md](/Users/tylerclark/git/pythonProject/companyos/docs/workflow_lab/PROMOTION_GATE.md) for the qualifying evidence, excluded artifacts, and the current uncleared `G1` / `G2` ledger.
+
 ## Docs in this folder
 - [AUTHORITY_BOUNDARY.md](/Users/tylerclark/git/pythonProject/companyos/docs/workflow_lab/AUTHORITY_BOUNDARY.md)
 - [PHASED_PLAN.md](/Users/tylerclark/git/pythonProject/companyos/docs/workflow_lab/PHASED_PLAN.md)
+- [PROMOTION_GATE.md](/Users/tylerclark/git/pythonProject/companyos/docs/workflow_lab/PROMOTION_GATE.md)
 - [SCHEMA_PACK.md](/Users/tylerclark/git/pythonProject/companyos/docs/workflow_lab/SCHEMA_PACK.md)
 - [NORMALIZATION.md](/Users/tylerclark/git/pythonProject/companyos/docs/workflow_lab/NORMALIZATION.md)
 

@@ -14,6 +14,7 @@
 
 ## Contracts / docs to treat as authoritative
 - `docs/planning/PRODUCTION_AND_WORKFLOW_LAB_PLAN.md`
+- `docs/workflow_lab/PROMOTION_GATE.md`
 - `docs/status/CURRENT_FOCUS.md`
 - `docs/status/DECISIONS_SINCE_LAST.md`
 - `docs/planning/epics/EPIC-100.md`
@@ -43,7 +44,8 @@
 - Production and lab topology are now explicit: separate single-node environments over the current `SQLite + local filesystem artifacts` substrate, deployed from `release_source_bundle`.
 - Backup/restore/rollback docs and rehearsal basis now exist for the first-user substrate, but G1 still requires actual recorded rehearsal evidence.
 - Structured boundary logs plus internal JSON health/readiness/metrics now exist for the first-user lane, and the GitHub perimeter now also has full-SHA action pinning, dependency review, CodeQL, and a mock-vs-live OpenAI workflow split.
-- Hosted GitHub settings verification remains operator-owned, and Workflow Lab Phase 0 is now the next obvious gap.
+- The explicit Workflow Lab promotion gate and current G1/G2 status ledger now live in `docs/workflow_lab/PROMOTION_GATE.md`.
+- Hosted GitHub settings verification remains operator-owned, and Workflow Lab execution/comparison work remains blocked until gate evidence is explicitly recorded.
 
 ## Planned task order inside this epic
 1. `TASK-0110`

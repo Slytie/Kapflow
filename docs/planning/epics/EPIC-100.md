@@ -47,7 +47,8 @@ The repo's internal runtime/control semantics are stronger than its outer produc
 - Production and lab topology are now explicit as separate single-node environments over the current `SQLite + local filesystem artifacts` substrate, deployed from `release_source_bundle`.
 - Backup/restore/rollback docs and rehearsal basis now exist, but actual rehearsal evidence is still required before claiming G1 item 5 is satisfied.
 - Structured boundary logs plus internal JSON health/readiness/metrics now exist for the first-user lane, and the GitHub perimeter now also has full-SHA action pinning, dependency review, CodeQL, and a routine-mock vs manual-live OpenAI workflow split.
-- Hosted GitHub settings verification remains manual/operator-owned, and Workflow Lab Phase 0 is the next operator-facing gap.
+- The explicit Workflow Lab promotion gate and G1/G2 status ledger now live in `docs/workflow_lab/PROMOTION_GATE.md`.
+- Hosted GitHub settings verification remains manual/operator-owned, and later Workflow Lab execution/comparison work stays blocked until gate evidence is explicitly recorded.
 
 ## Tasks
 - TASK-0110

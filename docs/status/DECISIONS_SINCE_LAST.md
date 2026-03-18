@@ -52,6 +52,11 @@ Record any decisions made since the last session so a fresh Codex run can rehydr
 - Certification-scope decision: capability certification normalization is per scenario row, not one aggregate certification-level `run_report_core`, so each scenario keeps its own evidence/report boundary.
 - Boundary decision: TASK-0119 added no `compare_report` generation, no execution adapters, no freshness guards, no public Workflow Lab surface, and no `src/onetruth/workflow_lab/` package; the next Workflow Lab step is TASK-0120 gate/release documentation.
 
+## 2026-03-18 (TASK-0120 Workflow Lab promotion gate and G1/G2 freeze)
+- Gate-contract decision: `docs/workflow_lab/PROMOTION_GATE.md` is now the authoritative repo-native reference for the release-mediated promotion gate `G` and the current status of readiness gates `G1` and `G2`.
+- Gate-honesty decision: both `G1` and `G2` remain explicitly uncleared; the repo now says plainly that contract/docs alone do not clear an operational gate and that recorded evidence is required where specified.
+- Routing decision: `TASK-0121` and `TASK-0122` now point directly at `docs/workflow_lab/PROMOTION_GATE.md` as the first proof source for unblocking, so later Workflow Lab work cannot quietly bypass the recorded-gate requirement.
+
 ## 2026-03-18 (TASK-0116 GitHub perimeter hardening and mock-vs-live OpenAI split)
 - Workflow-provenance decision: repo-managed GitHub Actions workflows now pin external actions to verified full commit SHAs instead of floating major tags.
 - Perimeter-workflow decision: pull requests now have an explicit `dependency_review` workflow, and Python plus JavaScript/TypeScript code scanning now lives in a dedicated `codeql` workflow for pull_request / push-to-main / schedule.

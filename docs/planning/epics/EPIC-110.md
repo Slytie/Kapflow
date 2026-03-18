@@ -45,9 +45,10 @@ We want to keep developing candidate tasks, processes, and workflows in a lab wh
 - Phase 0 docs now exist under `docs/workflow_lab/README.md`, `docs/workflow_lab/AUTHORITY_BOUNDARY.md`, and `docs/workflow_lab/PHASED_PLAN.md`.
 - The thin core schema pack now exists under `schemas/workflow_lab/` and `docs/workflow_lab/SCHEMA_PACK.md`.
 - Thin normalization now exists through `src/onetruth/application/services/workflow_lab_normalization.py`, and current weekly Stage04, realistic schedule-planning, and certification outputs now emit adjacent Workflow Lab report/review artifacts.
+- The explicit release-mediated promotion gate and current G1/G2 status ledger now live in `docs/workflow_lab/PROMOTION_GATE.md`.
 - There is still no `src/onetruth/workflow_lab/` package, which is the intended thin starting posture.
 - The repo already emits strong raw materials for Phase 1: Stage04 inspection packets and pilot summaries, realistic scheduling pilot outputs, current capability certification outputs, and runtime workspace/export bundles.
-- The next gap is TASK-0120 release-mediated promotion-gate and readiness-gate documentation, not runtime machinery.
+- No further ungated Workflow Lab build task remains; `TASK-0121` and `TASK-0122` stay blocked until gate evidence is explicitly recorded.
 
 ## Tasks
 - TASK-0117

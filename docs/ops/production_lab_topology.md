@@ -64,3 +64,5 @@ The promotion gate `G` is a reviewed release process:
 - production deploy
 
 It is not a third runtime service and it does not move live runtime state from lab into production.
+
+See `docs/workflow_lab/PROMOTION_GATE.md` for the authoritative promotion-gate contract and the current `G1` / `G2` status ledger.

@@ -19,6 +19,7 @@
 - `docs/workflow_lab/README.md`
 - `docs/workflow_lab/AUTHORITY_BOUNDARY.md`
 - `docs/workflow_lab/PHASED_PLAN.md`
+- `docs/workflow_lab/PROMOTION_GATE.md`
 - `docs/workflow_lab/SCHEMA_PACK.md`
 - `docs/architecture/AUTHORITY_MODEL.md`
 - `docs/architecture/DERIVATION_AND_GENERATION_POLICY.md`
@@ -46,13 +47,14 @@
 - `docs/workflow_lab/` now exists as a thin Phase 0 doc tree.
 - The thin Workflow Lab core schema pack now exists under `schemas/workflow_lab/`.
 - The repo now normalizes weekly Stage04 pilot outputs, realistic schedule-planning pilot outputs, and current capability certification scenarios into adjacent Workflow Lab report/review artifacts.
+- The explicit release-mediated promotion gate and current G1/G2 status ledger now live in `docs/workflow_lab/PROMOTION_GATE.md`.
 - There is still no `src/onetruth/workflow_lab/` package, which keeps Workflow Lab off the runtime surface for now.
 - The repo already emits rich raw material for Phase 1 normalization:
   - Stage04 inspection packets and pilot summaries
   - realistic scheduling pilot outputs
   - current capability certification outputs
   - runtime workspace/export bundles
-- The next queued gap is TASK-0120 release-mediated promotion-gate and readiness-gate documentation; heavy Workflow Lab execution/comparison work remains gated on G1/G2.
+- No further ungated Workflow Lab build task remains; heavy Workflow Lab execution/comparison work remains gated on G1/G2 and must use `docs/workflow_lab/PROMOTION_GATE.md` as the proof source.
 
 ## Planned task order inside this epic
 1. `TASK-0117`

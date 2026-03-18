@@ -20,14 +20,17 @@ The first B1 step, `TASK-0118`, now defines the thin core schema pack under `sch
 
 The next B1 step, `TASK-0119`, now normalizes weekly Stage04 pilot outputs, realistic schedule-planning pilot outputs, and current capability certification scenarios into adjacent `workflow_lab_run_report.json` + `workflow_lab_review_packet.md` evidence files.
 
-The next queued Workflow Lab task is now:
-- `TASK-0120`
+`TASK-0120` now defines the explicit release-mediated promotion gate and current `G1` / `G2` status ledger in [PROMOTION_GATE.md](/Users/tylerclark/git/pythonProject/companyos/docs/workflow_lab/PROMOTION_GATE.md).
+
+No further ungated Workflow Lab build task remains after normalization + gate documentation.
 
 ## Later gated phases
 - `TASK-0121` stays gated on `G1`
 - `TASK-0122` stays gated on `G2`
 
 ### G1 recap
+The authoritative current-status ledger now lives in [PROMOTION_GATE.md](/Users/tylerclark/git/pythonProject/companyos/docs/workflow_lab/PROMOTION_GATE.md).
+
 Do not start the first true execution-layer work until:
 1. production is deployed through the official release path
 2. frontend identity is server-derived in `shared_env`
@@ -43,6 +46,8 @@ Do not start worlds/compare/semantic-version work until:
 3. lab reports are already useful in practice
 4. there is repeated demand for repeatable candidate comparison
 5. there is an explicit workflow-version coexistence strategy if semantic promotion is going to be routine
+
+Current status remains explicitly uncleared until [PROMOTION_GATE.md](/Users/tylerclark/git/pythonProject/companyos/docs/workflow_lab/PROMOTION_GATE.md) is updated with repo-native evidence.
 
 ## Ongoing guardrails
 - keep Workflow Lab off the public/UI critical path at first

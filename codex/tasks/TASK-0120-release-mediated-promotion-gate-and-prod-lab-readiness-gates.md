@@ -2,7 +2,7 @@
 id: TASK-0120
 epic: EPIC-110
 title: "Define the release-mediated promotion gate and explicit readiness gates G1/G2"
-status: TODO
+status: DONE
 owners: ["platform"]
 reviewers: ["qa"]
 depends_on: ["TASK-0113", "TASK-0114", "TASK-0117", "TASK-0118", "TASK-0119"]
@@ -59,3 +59,16 @@ Define the release-mediated promotion gate and the explicit G1/G2 readiness chec
 
 ## Notes / decisions
 This task is the conceptual bridge between productization and Workflow Lab. It should remain documentation/runbook focused.
+
+Implemented in TASK-0120:
+- Added `docs/workflow_lab/PROMOTION_GATE.md` as the authoritative release-mediated promotion-gate contract and current G1/G2 status ledger.
+- Froze the gate contract with `tests/contract/test_workflow_lab_promotion_gate_docs.py`.
+- Cross-linked the gate doc from Workflow Lab, planning, and operator topology docs so future sessions can find it quickly.
+- Tightened `TASK-0121` and `TASK-0122` so the required proof source for G1/G2 is explicit.
+- Preserved the current honest posture: both `G1` and `G2` remain uncleared, and no runtime engine or public control-plane surface was added.
+
+Verification:
+- `python3.11 -m pytest -q tests/contract/test_workflow_lab_promotion_gate_docs.py`
+- `python3.11 -m pytest -q tests/contract/test_workflow_lab_phase0_docs.py`
+- `python3.11 -m pytest -q tests/contract/test_production_topology_reference_docs.py`
+- `python3 scripts/validate_repo.py --schemas-only`

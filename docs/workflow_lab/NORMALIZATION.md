@@ -38,4 +38,6 @@ TASK-0119 does **not**:
 - add world materialization or semantic-version coexistence machinery
 
 ## Next step
-With normalization now in place, the next Workflow Lab step is TASK-0120: document the release-mediated promotion gate and freeze the explicit `G1` / `G2` stop lines.
+With normalization now in place, TASK-0120 defines the explicit release-mediated gate and freezes the current `G1` / `G2` stop lines in [PROMOTION_GATE.md](/Users/tylerclark/git/pythonProject/companyos/docs/workflow_lab/PROMOTION_GATE.md).
+
+No further ungated Workflow Lab build task remains after this tranche. `TASK-0121` and `TASK-0122` stay blocked until that gate doc is updated with explicit recorded evidence.

@@ -24,11 +24,12 @@ After G1, add the first bounded Workflow Lab execution layer: explicit execution
 - No direct production runtime mutation.
 
 ## Source files to read first
+- `docs/workflow_lab/PROMOTION_GATE.md`
 - `docs/planning/PRODUCTION_AND_WORKFLOW_LAB_PLAN.md`
 - `docs/workflow_lab/*`
 - `schemas/workflow_lab/*`
 - Stage04 runtime/pilot services
-- readiness-gate docs proving G1
+- readiness-gate evidence proving G1, with `docs/workflow_lab/PROMOTION_GATE.md` as the first proof source
 
 ## Context packs / patterns to consult
 - codex/context/EPIC-110.md
@@ -62,4 +63,4 @@ After G1, add the first bounded Workflow Lab execution layer: explicit execution
 - The task does not start at all unless G1 is explicitly satisfied.
 
 ## Notes / decisions
-Blocked until G1 is explicitly recorded. The point of this task is disciplined timing, not just feature sequencing.
+Blocked until G1 is explicitly recorded in `docs/workflow_lab/PROMOTION_GATE.md`. The point of this task is disciplined timing, not just feature sequencing.

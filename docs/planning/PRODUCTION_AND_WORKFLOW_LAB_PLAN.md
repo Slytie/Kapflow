@@ -36,7 +36,7 @@ not direct mutation from lab into production.
 - Workflow Lab Phase 0 docs now exist under `docs/workflow_lab/`, but there is still no runtime package and that remains the correct posture for now.
 - Workflow Lab core schema pack now exists under `schemas/workflow_lab/` and `docs/workflow_lab/SCHEMA_PACK.md`.
 - Workflow Lab normalization now exists for weekly Stage04 pilot outputs, realistic schedule-planning pilot outputs, and current capability certification scenarios, emitting adjacent `workflow_lab_run_report.json` and `workflow_lab_review_packet.md` evidence artifacts.
-- The next Workflow Lab gap is release-mediated promotion-gate and readiness-gate documentation, not new runtime machinery.
+- The explicit release-mediated promotion gate and current `G1` / `G2` status ledger now live in `docs/workflow_lab/PROMOTION_GATE.md`; no further ungated Workflow Lab build task remains.
 
 ## Lane A — productization
 This lane leads.
@@ -77,6 +77,7 @@ Phase 0 docs:
 - `docs/workflow_lab/README.md`
 - `docs/workflow_lab/AUTHORITY_BOUNDARY.md`
 - `docs/workflow_lab/PHASED_PLAN.md`
+- `docs/workflow_lab/PROMOTION_GATE.md`
 
 ### B1 — normalized evidence over current outputs (next)
 The thin report/freshness schema pack now exists, and TASK-0119 now maps existing repo outputs into that shared contract.
@@ -87,7 +88,9 @@ Normalize what the repo already knows how to produce:
 - current capability certification outputs
 - optionally exported runtime workspace bundles as future sanitized-world inputs
 
-The next non-gated Workflow Lab step after normalization is `TASK-0120`.
+TASK-0120 now defines the explicit release-mediated promotion gate and current G1/G2 status ledger in `docs/workflow_lab/PROMOTION_GATE.md`.
+
+No further ungated Workflow Lab build task remains after normalization + gate documentation. `TASK-0121` and `TASK-0122` stay blocked until that gate doc is updated with explicit recorded evidence.
 
 ### B2 — first true lab execution layer (gated on G1)
 Only after production clears G1:
@@ -105,6 +108,8 @@ Only after there is real demand and at least one stable production user:
 - only later any multi-version semantic coexistence machinery
 
 ## Readiness gates
+
+The authoritative current-status ledger for these gates now lives in `docs/workflow_lab/PROMOTION_GATE.md`.
 
 ### G1 — before B2
 Do not start the first true lab execution layer until:
@@ -152,6 +157,8 @@ The default promotion mode should be:
 - `candidate release + lab evidence + review -> tagged release -> production deploy`
 
 not live mutation of production workflow truth.
+
+See `docs/workflow_lab/PROMOTION_GATE.md` for the authoritative gate contract, qualifying evidence, and current uncleared status.
 
 ## Task mapping
 - EPIC-100 covers the productization lane.
