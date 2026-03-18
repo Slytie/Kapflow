@@ -36,6 +36,7 @@ The healthy promotion path remains:
 - [AUTHORITY_BOUNDARY.md](/Users/tylerclark/git/pythonProject/companyos/docs/workflow_lab/AUTHORITY_BOUNDARY.md)
 - [PHASED_PLAN.md](/Users/tylerclark/git/pythonProject/companyos/docs/workflow_lab/PHASED_PLAN.md)
 - [SCHEMA_PACK.md](/Users/tylerclark/git/pythonProject/companyos/docs/workflow_lab/SCHEMA_PACK.md)
+- [NORMALIZATION.md](/Users/tylerclark/git/pythonProject/companyos/docs/workflow_lab/NORMALIZATION.md)
 
 Use these alongside:
 - `docs/planning/PRODUCTION_AND_WORKFLOW_LAB_PLAN.md`

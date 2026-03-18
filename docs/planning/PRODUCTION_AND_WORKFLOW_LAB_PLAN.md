@@ -34,7 +34,9 @@ not direct mutation from lab into production.
 - A basic observability baseline now exists through internal JSON ops endpoints for health/readiness/metrics over safe process-local counters and non-mutating substrate probes.
 - The GitHub perimeter now has full-SHA action pinning, explicit dependency-review and CodeQL workflows, and a routine-mock vs manual-live OpenAI workflow split; hosted settings verification remains manual.
 - Workflow Lab Phase 0 docs now exist under `docs/workflow_lab/`, but there is still no runtime package and that remains the correct posture for now.
-- Workflow Lab core schema pack now exists under `schemas/workflow_lab/` and `docs/workflow_lab/SCHEMA_PACK.md`; the next gap is normalization over existing outputs rather than inventing a new lab runtime.
+- Workflow Lab core schema pack now exists under `schemas/workflow_lab/` and `docs/workflow_lab/SCHEMA_PACK.md`.
+- Workflow Lab normalization now exists for weekly Stage04 pilot outputs, realistic schedule-planning pilot outputs, and current capability certification scenarios, emitting adjacent `workflow_lab_run_report.json` and `workflow_lab_review_packet.md` evidence artifacts.
+- The next Workflow Lab gap is release-mediated promotion-gate and readiness-gate documentation, not new runtime machinery.
 
 ## Lane A — productization
 This lane leads.
@@ -77,13 +79,15 @@ Phase 0 docs:
 - `docs/workflow_lab/PHASED_PLAN.md`
 
 ### B1 — normalized evidence over current outputs (next)
-The thin report/freshness schema pack now exists; the next step is mapping existing repo outputs into that shared contract.
+The thin report/freshness schema pack now exists, and TASK-0119 now maps existing repo outputs into that shared contract.
 
 Normalize what the repo already knows how to produce:
 - weekly Stage04 inspection packets and pilot summaries
 - realistic scheduling pilot outputs
 - current capability certification outputs
 - optionally exported runtime workspace bundles as future sanitized-world inputs
+
+The next non-gated Workflow Lab step after normalization is `TASK-0120`.
 
 ### B2 — first true lab execution layer (gated on G1)
 Only after production clears G1:

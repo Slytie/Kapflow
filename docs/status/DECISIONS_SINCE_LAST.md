@@ -47,6 +47,11 @@ Record any decisions made since the last session so a fresh Codex run can rehydr
 - Boundary decision: `VariantSpec` is now explicitly reserved for execution variation under fixed semantics, while `RunProfile`, `WorldInstance`, and `CompareReport` stay metadata-only shells rather than submission policy, world-materialization, or semantic-version engines.
 - Validation decision: repo schema validation now covers `schemas/workflow_lab/*`, and the next non-gated Workflow Lab step is TASK-0119 normalization over existing Stage04/scheduling/certification outputs.
 
+## 2026-03-18 (TASK-0119 Workflow Lab normalization over existing outputs)
+- Normalization decision: the repo now emits adjacent `workflow_lab_run_report.json` and `workflow_lab_review_packet.md` artifacts from three existing output families: weekly Stage04 pilot packets, realistic schedule-planning pilot packets, and current capability certification scenarios.
+- Certification-scope decision: capability certification normalization is per scenario row, not one aggregate certification-level `run_report_core`, so each scenario keeps its own evidence/report boundary.
+- Boundary decision: TASK-0119 added no `compare_report` generation, no execution adapters, no freshness guards, no public Workflow Lab surface, and no `src/onetruth/workflow_lab/` package; the next Workflow Lab step is TASK-0120 gate/release documentation.
+
 ## 2026-03-18 (TASK-0116 GitHub perimeter hardening and mock-vs-live OpenAI split)
 - Workflow-provenance decision: repo-managed GitHub Actions workflows now pin external actions to verified full commit SHAs instead of floating major tags.
 - Perimeter-workflow decision: pull requests now have an explicit `dependency_review` workflow, and Python plus JavaScript/TypeScript code scanning now lives in a dedicated `codeql` workflow for pull_request / push-to-main / schedule.

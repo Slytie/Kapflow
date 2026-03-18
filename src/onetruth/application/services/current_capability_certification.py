@@ -12,6 +12,10 @@ import sys
 from typing import Callable, Mapping, Sequence
 import zipfile
 
+from onetruth.application.services.workflow_lab_normalization import (
+    normalize_capability_certification_reports,
+    write_workflow_lab_artifacts,
+)
 from onetruth.infrastructure.events.event_store import utc_now_iso
 
 SCENARIO_STAGE06_PUBLISH_READY = "stage06_publish_ready"
@@ -189,6 +193,21 @@ def run_current_capability_certification(
     }
     manifest["manifest_path"] = str(resolved_manifest_path)
     manifest["manifest_markdown_path"] = str(resolved_markdown_path)
+    workflow_lab_reports = normalize_capability_certification_reports(
+        manifest,
+        manifest_path=resolved_manifest_path,
+    )
+    reports_by_scenario_id = {
+        str(report["variant"]["execution_axes"]["scenario_id"]): report
+        for report in workflow_lab_reports
+    }
+    for scenario in scenario_rows:
+        scenario_id = str(scenario["scenario_id"])
+        workflow_lab_paths = write_workflow_lab_artifacts(
+            reports_by_scenario_id[scenario_id],
+            output_dir=resolved_root / scenario_id,
+        )
+        scenario.update(workflow_lab_paths)
 
     resolved_manifest_path.parent.mkdir(parents=True, exist_ok=True)
     resolved_manifest_path.write_text(

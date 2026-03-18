@@ -45,13 +45,14 @@
 ## Current Repo Status (2026-03-18 implementation pass)
 - `docs/workflow_lab/` now exists as a thin Phase 0 doc tree.
 - The thin Workflow Lab core schema pack now exists under `schemas/workflow_lab/`.
+- The repo now normalizes weekly Stage04 pilot outputs, realistic schedule-planning pilot outputs, and current capability certification scenarios into adjacent Workflow Lab report/review artifacts.
 - There is still no `src/onetruth/workflow_lab/` package, which keeps Workflow Lab off the runtime surface for now.
 - The repo already emits rich raw material for Phase 1 normalization:
   - Stage04 inspection packets and pilot summaries
   - realistic scheduling pilot outputs
   - current capability certification outputs
   - runtime workspace/export bundles
-- The next queued gap is TASK-0119 normalization over those outputs; heavy Workflow Lab execution/comparison work remains gated on G1/G2.
+- The next queued gap is TASK-0120 release-mediated promotion-gate and readiness-gate documentation; heavy Workflow Lab execution/comparison work remains gated on G1/G2.
 
 ## Planned task order inside this epic
 1. `TASK-0117`

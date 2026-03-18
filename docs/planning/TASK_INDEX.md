@@ -123,7 +123,7 @@ Note: `TASK-0087` / `TASK-0088` / `TASK-0089` were formerly duplicated as `TASK-
 | TASK-0116 | EPIC-100 | DONE | medium | Harden the GitHub perimeter and split scheduled mock vs manual live OpenAI workflows |
 | TASK-0117 | EPIC-110 | DONE | medium | Create Workflow Lab Phase 0 docs, authority boundary, and phased plan |
 | TASK-0118 | EPIC-110 | DONE | medium | Add Workflow Lab report/freshness and core schema pack |
-| TASK-0119 | EPIC-110 | TODO | high | Normalize Stage04, realistic scheduling, and capability outputs into Workflow Lab reports |
+| TASK-0119 | EPIC-110 | DONE | high | Normalize Stage04, realistic scheduling, and capability outputs into Workflow Lab reports |
 | TASK-0120 | EPIC-110 | TODO | medium | Define the release-mediated promotion gate and explicit readiness gates G1/G2 |
 | TASK-0121 | EPIC-110 | BLOCKED | high | Add VariantSpec/RunProfile, freshness guards, and the first Stage04 lab adapter after G1 |
 | TASK-0122 | EPIC-110 | BLOCKED | high | Plan world materialization, comparison, and semantic-version coexistence after G2 |

@@ -2,7 +2,7 @@
 id: TASK-0119
 epic: EPIC-110
 title: "Normalize Stage04, realistic scheduling, and capability outputs into Workflow Lab reports"
-status: TODO
+status: DONE
 owners: ["platform"]
 reviewers: ["qa"]
 depends_on: ["TASK-0118"]
@@ -47,7 +47,7 @@ Implement the first Workflow Lab normalizers and derived review packets over the
 ## Plan
 1. Normalize weekly Stage04 outputs into `RunReport.core`.
 2. Normalize realistic scheduling pilot outputs into the same contract.
-3. Normalize current capability certification outputs where it adds practical comparison value.
+3. Normalize current capability certification outputs as one normalized report per scenario row.
 4. Render a derived review packet from the normalized truth and freeze behavior with tests.
 
 ## Verification
@@ -61,3 +61,15 @@ Implement the first Workflow Lab normalizers and derived review packets over the
 
 ## Notes / decisions
 Prefer scripts or a thin package surface first; do not introduce a large `workflow_lab` runtime package unless task 0110 has already made dependency boundaries honest enough.
+
+Implemented in TASK-0119:
+- `src/onetruth/application/services/workflow_lab_normalization.py` now normalizes weekly Stage04 inspection packets, realistic schedule-planning inspection packets, and current capability certification scenarios into `workflow_lab_run_report.json`.
+- The same module renders `workflow_lab_review_packet.md` from the normalized report only.
+- Weekly Stage04 and realistic schedule-planning pilot suites now emit adjacent Workflow Lab artifacts per pilot and add their paths into each `pilot_runs[]` row.
+- Current capability certification now emits one Workflow Lab report + review packet per scenario output directory and records those paths in `scenarios[]`.
+- No `compare_report` generation, execution adapter, freshness guard, or public Workflow Lab API/UI was added.
+
+Verification:
+- `python3.11 -m pytest -q tests/runtime/contracts/test_workflow_lab_report_normalization.py`
+- `python3.11 -m pytest -q tests/runtime/test_logistics_weekly_agent_pilot.py tests/runtime/test_realistic_schedule_planning_pilot.py tests/runtime/contracts/test_current_capability_certification_harness.py`
+- `python3 scripts/validate_repo.py --schemas-only`

@@ -18,6 +18,8 @@ The next normalization task can map current repo outputs into `run_report_core` 
 - `inspection_packet`
 - `certification_manifest`
 
+TASK-0119 now uses this schema pack to emit adjacent `workflow_lab_run_report.json` and `workflow_lab_review_packet.md` files over those existing outputs.
+
 Later work may also normalize selected runtime workspace/export bundles, but that does not change the authority boundary.
 
 ## What this task does not add

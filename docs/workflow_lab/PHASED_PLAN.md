@@ -18,8 +18,10 @@ Normalize evidence the repo already knows how to produce:
 
 The first B1 step, `TASK-0118`, now defines the thin core schema pack under `schemas/workflow_lab/` and [SCHEMA_PACK.md](/Users/tylerclark/git/pythonProject/companyos/docs/workflow_lab/SCHEMA_PACK.md).
 
-The next queued Workflow Lab task is:
-- `TASK-0119`
+The next B1 step, `TASK-0119`, now normalizes weekly Stage04 pilot outputs, realistic schedule-planning pilot outputs, and current capability certification scenarios into adjacent `workflow_lab_run_report.json` + `workflow_lab_review_packet.md` evidence files.
+
+The next queued Workflow Lab task is now:
+- `TASK-0120`
 
 ## Later gated phases
 - `TASK-0121` stays gated on `G1`

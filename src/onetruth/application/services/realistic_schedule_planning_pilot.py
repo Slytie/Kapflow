@@ -47,6 +47,10 @@ from onetruth.application.services.example_document_corpus import (
     load_example_document_corpus,
     seed_payloads_for_set,
 )
+from onetruth.application.services.workflow_lab_normalization import (
+    normalize_schedule_planning_report,
+    write_workflow_lab_artifacts,
+)
 from onetruth.application.services.stage06_openai_sandbox import (
     run_stage06_openai_review_sandbox,
 )
@@ -232,6 +236,8 @@ def run_realistic_schedule_planning_pilot_suite(
     resolved_artifact_root.mkdir(parents=True, exist_ok=True)
 
     corpus = load_example_document_corpus(manifest_path)
+    summary_json_path = resolved_output_root / "pilot_summary.json"
+    summary_md_path = resolved_output_root / "pilot_summary.md"
 
     pilot_results: list[dict[str, Any]] = []
     for pilot_id in selected:
@@ -305,6 +311,19 @@ def run_realistic_schedule_planning_pilot_suite(
         md_path = pilot_dir / "inspection_packet.md"
         json_path.write_text(json.dumps(packet, indent=2, sort_keys=True), encoding="utf-8")
         md_path.write_text(_packet_to_markdown(packet), encoding="utf-8")
+        workflow_lab_paths = write_workflow_lab_artifacts(
+            normalize_schedule_planning_report(
+                {
+                    "status": "ok",
+                    "pilot_key": pilot_key,
+                    "openai_mode": openai_mode,
+                },
+                packet,
+                summary_path=summary_json_path,
+                packet_path=json_path,
+            ),
+            output_dir=pilot_dir,
+        )
         pilot_results.append(
             {
                 "pilot_id": pilot_id,
@@ -312,6 +331,7 @@ def run_realistic_schedule_planning_pilot_suite(
                 "reused_existing": not created,
                 "inspection_packet_path": str(json_path),
                 "inspection_markdown_path": str(md_path),
+                **workflow_lab_paths,
             }
         )
 
@@ -325,8 +345,6 @@ def run_realistic_schedule_planning_pilot_suite(
         "openai_mode": openai_mode,
         "pilot_runs": pilot_results,
     }
-    summary_json_path = resolved_output_root / "pilot_summary.json"
-    summary_md_path = resolved_output_root / "pilot_summary.md"
     summary_json_path.write_text(json.dumps(summary, indent=2, sort_keys=True), encoding="utf-8")
     summary_md_path.write_text(_summary_to_markdown(summary), encoding="utf-8")
     summary["summary_json_path"] = str(summary_json_path)
