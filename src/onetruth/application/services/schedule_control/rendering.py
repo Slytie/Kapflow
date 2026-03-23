@@ -7,6 +7,7 @@ from .bundle_builder import (
     DriverServiceDayState,
     WeeklyScheduleControlBundle,
 )
+from .contract_minimization import summarize_contract_change_metrics
 from .iterative_allocator import (
     MAX_ALLOCATION_BATCH_SIZE,
     MAX_REPAIR_MOVES_PER_ITERATION,
@@ -113,6 +114,7 @@ def render_stage04_candidate_delta(
         iteration_summaries=iteration_summaries,
         repair_moves=repair_moves,
     )
+    contract_change_summary = summarize_contract_change_metrics(selected_candidates)
     columns = [
         "candidate_delta_id",
         "route_slot_id",
@@ -128,6 +130,11 @@ def render_stage04_candidate_delta(
         "delta_kind",
         "pressure_group_id",
         "availability_state",
+        "baseline_template_state",
+        "planned_driver_day_state",
+        "new_agreement_required",
+        "new_agreement_trigger_reason",
+        "template_state_preservation_fit",
         "preference_fit",
         "continuity_score",
         "preferred_shift_band_fit",
@@ -156,6 +163,11 @@ def render_stage04_candidate_delta(
                 str(selected.get("delta_kind") or "allocation"),
                 str(selected.get("pressure_group_id") or ""),
                 str(selected.get("availability_state") or ""),
+                str(selected.get("baseline_template_state") or ""),
+                str(selected.get("planned_driver_day_state") or ""),
+                bool(selected.get("new_agreement_required")),
+                str(selected.get("new_agreement_trigger_reason") or ""),
+                round(float(selected.get("template_state_preservation_fit") or 0.0), 4),
                 round(float(selected.get("preference_fit") or 0.0), 4),
                 round(float(selected.get("continuity_score") or 0.0), 4),
                 round(float(selected.get("preferred_shift_band_fit") or 0.0), 4),
@@ -172,6 +184,7 @@ def render_stage04_candidate_delta(
         "rows": rows,
         "candidate_delta_id": candidate_delta_id,
         "coverage_summary": coverage_summary,
+        "contract_change_summary": contract_change_summary,
         "iteration_deltas": [item.to_payload() for item in iteration_summaries],
         "repair_moves": [item.to_payload() for item in repair_moves],
         "reallocation_moves": [item.to_payload() for item in repair_moves],
@@ -213,6 +226,11 @@ def render_stage04_draft_weekly_schedule_workbook(
         "assigned_driver_id",
         "assignment_status",
         "projected_minutes",
+        "baseline_template_state",
+        "planned_driver_day_state",
+        "new_agreement_required",
+        "new_agreement_trigger_reason",
+        "template_state_preservation_fit",
         "candidate_delta_id",
         "source_bundle_id",
         "iteration_index",
@@ -228,6 +246,11 @@ def render_stage04_draft_weekly_schedule_workbook(
                 str(selected.get("candidate_driver_id") or ""),
                 str(selected.get("hard_filter_status") or "blocked"),
                 int(selected.get("projected_minutes") or 0),
+                str(selected.get("baseline_template_state") or ""),
+                str(selected.get("planned_driver_day_state") or ""),
+                bool(selected.get("new_agreement_required")),
+                str(selected.get("new_agreement_trigger_reason") or ""),
+                round(float(selected.get("template_state_preservation_fit") or 0.0), 4),
                 candidate_delta_id,
                 bundle.bundle_id,
                 int(selected.get("iteration_index") or 0),
@@ -252,6 +275,7 @@ def render_stage04_draft_weekly_schedule_doc(
     coverage_summary: dict[str, Any],
 ) -> dict[str, Any]:
     summary = validation_summary.get("summary") if isinstance(validation_summary, dict) else {}
+    contract_change_summary = summarize_contract_change_metrics(selected_candidates)
     return {
         "summary": {
             "bundle_id": bundle.bundle_id,
@@ -267,6 +291,30 @@ def render_stage04_draft_weekly_schedule_doc(
             ),
             "phase_counts": dict((coverage_summary.get("phase_counts") or {})),
             "coverage_summary": coverage_summary,
+            **contract_change_summary,
+        },
+        "selected_assignments": [
+            {
+                "service_date": str(selected.get("service_date") or ""),
+                "route_slot_id": str(selected.get("route_slot_id") or ""),
+                "route_id": str(selected.get("route_id") or ""),
+                "candidate_driver_id": str(selected.get("candidate_driver_id") or ""),
+                "baseline_template_state": str(selected.get("baseline_template_state") or ""),
+                "planned_driver_day_state": str(selected.get("planned_driver_day_state") or ""),
+                "new_agreement_required": bool(selected.get("new_agreement_required")),
+                "new_agreement_trigger_reason": str(
+                    selected.get("new_agreement_trigger_reason") or ""
+                ),
+                "template_state_preservation_fit": round(
+                    float(selected.get("template_state_preservation_fit") or 0.0),
+                    4,
+                ),
+            }
+            for selected in selected_candidates
+            if str(selected.get("assignment_action") or "assign") == "assign"
+        ],
+        "contract_change_summary": {
+            key: value for key, value in contract_change_summary.items()
         }
     }
 

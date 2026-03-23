@@ -36,6 +36,9 @@ from onetruth.application.services.schedule_control import (
     execute_next_weekly_allocation_iteration,
     expand_route_slot_requirements,
 )
+from onetruth.application.services.schedule_control.contract_minimization import (
+    summarize_contract_change_metrics,
+)
 from onetruth.application.services.schedule_control.stage04_input_registry import (
     resolve_weekly_stage04_input_artifacts,
 )
@@ -1188,6 +1191,9 @@ class _Stage04DeterministicTooling:
             "candidate_count": build_result["candidate_count"],
             "selected_candidate_count": build_result["selected_candidate_count"],
             "coverage_summary": build_result["coverage_summary"],
+            "contract_change_summary": summarize_contract_change_metrics(
+                build_result.get("selected_candidates") or []
+            ),
             "selected_candidates": build_result["selected_candidates"],
             "artifacts": {
                 key: {
@@ -1573,6 +1579,7 @@ def _compact_validation_summary(validation_summary: Any) -> dict[str, Any] | Non
             "soft_score_totals": (
                 dict(soft_score_totals) if isinstance(soft_score_totals, dict) else None
             ),
+            "contract_change_summary": _compact_contract_change_summary(summary),
         },
         "planner_state": _compact_stage04_planner_state(validation_summary.get("planner_state")),
         "latest_iteration_index": validation_summary.get("latest_iteration_index"),
@@ -1601,6 +1608,9 @@ def _compact_stage04_build_result(stage04_build_result: Any) -> dict[str, Any] |
         "candidate_count": stage04_build_result.get("candidate_count"),
         "selected_candidate_count": stage04_build_result.get("selected_candidate_count"),
         "coverage_summary": _compact_coverage_summary(stage04_build_result.get("coverage_summary")),
+        "contract_change_summary": _compact_contract_change_summary(
+            stage04_build_result.get("contract_change_summary")
+        ),
         "artifacts": (
             {
                 key: {
@@ -1620,6 +1630,21 @@ def _recommended_stage04_next_action(*, planner_complete: bool) -> str:
     if planner_complete:
         return "finalize_weekly_stage04_draft_outputs"
     return "apply_stage04_next_iteration"
+
+
+def _compact_contract_change_summary(summary: Any) -> dict[str, Any] | None:
+    if not isinstance(summary, dict):
+        return None
+    return {
+        "new_agreement_required_count": int(summary.get("new_agreement_required_count") or 0),
+        "new_agreement_driver_day_count": int(
+            summary.get("new_agreement_driver_day_count") or 0
+        ),
+        "new_agreement_driver_ids": list(summary.get("new_agreement_driver_ids") or []),
+        "new_agreement_by_service_date": dict(
+            summary.get("new_agreement_by_service_date") or {}
+        ),
+    }
 
 
 def _resolve_stage04_input_artifacts(

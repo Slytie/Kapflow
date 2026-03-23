@@ -124,8 +124,11 @@ Pilot behavior:
 
 Pilot selection posture:
 - `weekly_stage04_realistic_artifacts` is the default real-network Stage04 pilot and is pinned to the over-capacity `PW-2026-W12` source-material contract under `fixtures/logistics/weekly_stage04_realistic_source_material.yaml`,
+- `weekly_stage04_actual_ops_lab` is an explicit-only Stage04 pilot pinned to the Sunday-start `PW-2026-W13` actual-ops lab package under `fixtures/logistics/weekly_stage04_actual_ops_lab_source_material.yaml`,
 - `weekly_stage04_agent_baseline` remains available as the tiny `PW-2026-W10` smoke/regression pilot for local/mock coverage,
-- when `scripts/run_logistics_weekly_agent_pilot.py` is invoked with `--openai-mode real` and no explicit `--pilot`, it now runs only the realistic over-capacity pilot by default.
+- when `scripts/run_logistics_weekly_agent_pilot.py` is invoked with `--openai-mode mock` and no explicit `--pilot`, it still runs only the baseline + realistic pilots by default,
+- when `scripts/run_logistics_weekly_agent_pilot.py` is invoked with `--openai-mode real` and no explicit `--pilot`, it still runs only the realistic over-capacity pilot by default,
+- the actual-ops lab pilot must be selected explicitly with `--pilot weekly_stage04_actual_ops_lab` or `--pilot all`.
 - that realistic real-network pilot applies a pilot-scoped `ONETRUTH_OPENAI_MODEL=gpt-5-mini` override only for the live Stage04 call; shared repo defaults remain unchanged and effective TPM limits still depend on the active project/org tier instead of hardcoded assumptions.
 
 Inspection packets are canonical-reference-heavy and include:

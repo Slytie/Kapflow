@@ -3,10 +3,12 @@ from __future__ import annotations
 import json
 import os
 from pathlib import Path
+from urllib.parse import urlparse
 
 from onetruth.application.services.logistics_weekly_agent_pilot import (
     PILOT_DEFINITIONS,
     PILOT_WEEKLY_STAGE04_AGENT,
+    PILOT_WEEKLY_STAGE04_ACTUAL_OPS_LAB,
     PILOT_WEEKLY_STAGE04_REALISTIC_ARTIFACTS,
     _ensure_workflow_run,
     _run_weekly_stage04_agent_pilot,
@@ -110,8 +112,17 @@ def _artifact_rows_for_kind(
 
 def _load_artifact_payload(row: dict[str, object]) -> dict[str, object]:
     storage_uri = str(row["storage_uri"])
-    payload_path = Path(storage_uri.removeprefix("file://"))
-    return json.loads(payload_path.read_text(encoding="utf-8"))
+    parsed_uri = urlparse(storage_uri)
+    if parsed_uri.scheme in {"", "file"}:
+        payload_path = Path(parsed_uri.path if parsed_uri.scheme == "file" else storage_uri)
+        if payload_path.exists():
+            return json.loads(payload_path.read_text(encoding="utf-8"))
+    metadata = row.get("metadata_json")
+    if isinstance(metadata, dict):
+        return metadata
+    if isinstance(metadata, str):
+        return json.loads(metadata)
+    raise FileNotFoundError(f"artifact payload is unavailable for storage_uri={storage_uri}")
 
 
 def _payload_size_bytes(payload: dict[str, object]) -> int:
@@ -185,16 +196,23 @@ def test_weekly_stage04_pilot_selection_defaults_real_to_realistic() -> None:
     assert resolve_weekly_stage04_pilot_ids(["all"], openai_mode="real") == (
         PILOT_WEEKLY_STAGE04_AGENT,
         PILOT_WEEKLY_STAGE04_REALISTIC_ARTIFACTS,
+        PILOT_WEEKLY_STAGE04_ACTUAL_OPS_LAB,
     )
     assert resolve_weekly_stage04_pilot_ids(
         [PILOT_WEEKLY_STAGE04_AGENT],
         openai_mode="real",
     ) == (PILOT_WEEKLY_STAGE04_AGENT,)
+    assert resolve_weekly_stage04_pilot_ids(
+        [PILOT_WEEKLY_STAGE04_ACTUAL_OPS_LAB],
+        openai_mode="mock",
+    ) == (PILOT_WEEKLY_STAGE04_ACTUAL_OPS_LAB,)
 
-
-def test_weekly_stage04_fixture_profiles_distinguish_realistic_from_tiny() -> None:
+def test_weekly_stage04_fixture_profiles_cover_tiny_realistic_and_actual_ops() -> None:
     realistic = describe_weekly_stage04_pilot_fixture_profile(
         PILOT_WEEKLY_STAGE04_REALISTIC_ARTIFACTS
+    )
+    actual_ops = describe_weekly_stage04_pilot_fixture_profile(
+        PILOT_WEEKLY_STAGE04_ACTUAL_OPS_LAB
     )
     tiny = describe_weekly_stage04_pilot_fixture_profile(PILOT_WEEKLY_STAGE04_AGENT)
 
@@ -203,6 +221,13 @@ def test_weekly_stage04_fixture_profiles_distinguish_realistic_from_tiny() -> No
     assert realistic["driver_count"] == 40
     assert realistic["has_daily_availability_states"] is True
     assert realistic["has_previous_week_history"] is True
+
+    assert actual_ops["planning_week_id"] == "PW-2026-W13"
+    assert actual_ops["route_slot_count"] == 139
+    assert actual_ops["driver_count"] == 51
+    assert actual_ops["has_daily_availability_states"] is True
+    assert actual_ops["has_previous_week_history"] is True
+    assert actual_ops["fixture_contract"] == "weekly_stage04_actual_ops_lab_v1"
 
     assert tiny["planning_week_id"] == "PW-2026-W10"
     assert tiny["route_slot_count"] == 2
@@ -325,6 +350,7 @@ def test_realistic_weekly_stage04_pilot_compacts_model_payloads_and_keeps_full_e
             if str(item.get("type") or "") != "function_call_output":
                 continue
             output_payload = json.loads(str(item.get("output") or "{}"))
+            assert not _contains_key(output_payload, "new_agreement_rows")
             assert not _contains_key(output_payload, "route_allocations")
             assert not _contains_key(output_payload, "remaining_route_slot_ids")
             assert not _contains_key(output_payload, "selected_candidates")
@@ -350,6 +376,8 @@ def test_realistic_weekly_stage04_pilot_compacts_model_payloads_and_keeps_full_e
         for call in finalize_result["function_calls"]
         if call["name"] == "finalize_weekly_stage04_draft_outputs"
     )
+    assert _contains_key(finalize_call["output"], "new_agreement_rows")
+    assert not _contains_key(finalize_call["model_output"], "new_agreement_rows")
     assert _contains_key(finalize_call["output"], "selected_candidates")
     assert not _contains_key(finalize_call["model_output"], "selected_candidates")
 
@@ -467,3 +495,72 @@ def test_realistic_weekly_stage04_pilot_seeds_shared_realistic_fixture_shape(tmp
     assert final_iteration["phase"] == "improvement"
     assert final_iteration["moved_route_slot_ids"]
     assert final_iteration["soft_objective_delta"] > 0.0
+
+
+def test_actual_ops_weekly_stage04_pilot_exports_expected_output_kinds_and_full_coverage(
+    tmp_path: Path,
+) -> None:
+    db_url, summary, packets = _run_pilot(
+        tmp_path,
+        pilot_ids=[PILOT_WEEKLY_STAGE04_ACTUAL_OPS_LAB],
+        pilot_key="weekly-stage04-actual-ops",
+    )
+    packet = packets[0]
+    workflow_run_id = str(packet["workflow_run"]["workflow_run_id"])
+
+    assert summary["openai_mode"] == "mock"
+    assert packet["workflow_run"]["partition_key"] == "PW-2026-W13"
+    assert packet["quality_signals"]["stage04_output_artifacts_present"] is True
+    assert packet["quality_signals"]["no_pointer_promotions"] is True
+    output_artifacts = packet["canonical_evidence"]["stage04_output_artifacts_by_kind"]
+    assert set(output_artifacts) == {
+        "planning.candidate_schedule_delta.workbook",
+        "planning.draft_weekly_schedule.doc",
+        "planning.draft_weekly_schedule.workbook",
+        "planning.input_bundle.doc",
+        "planning.validation_summary.doc",
+    }
+    for ids in output_artifacts.values():
+        assert ids
+    assert packet["stage04_analysis"]["coverage_summary"]["assigned_route_slots"] == 139
+    assert packet["stage04_analysis"]["coverage_summary"]["uncovered_route_slots"] == 0
+    assert (
+        packet["stage04_analysis"]["contract_change_summary"]["new_agreement_required_count"]
+        <= 10
+    )
+    assert len(
+        packet["stage04_analysis"]["contract_change_summary"]["new_agreement_rows"]
+    ) == packet["stage04_analysis"]["contract_change_summary"]["new_agreement_required_count"]
+    assert len(packet["stage04_analysis"]["iterations"]) == 18
+
+    candidate_delta = _load_artifact_payload(
+        _artifact_rows_for_kind(
+            db_url,
+            workflow_run_id,
+            "planning.candidate_schedule_delta.workbook",
+        )[0]
+    )
+    validation_summary = _load_artifact_payload(
+        _artifact_rows_for_kind(
+            db_url,
+            workflow_run_id,
+            "planning.validation_summary.doc",
+        )[0]
+    )["summary"]
+    draft_doc = _load_artifact_payload(
+        _artifact_rows_for_kind(
+            db_url,
+            workflow_run_id,
+            "planning.draft_weekly_schedule.doc",
+        )[0]
+    )
+    new_agreement_idx = candidate_delta["columns"].index("new_agreement_required")
+
+    assert "baseline_template_state" in candidate_delta["columns"]
+    assert validation_summary["new_agreement_required_count"] <= 10
+    assert sum(1 for row in candidate_delta["rows"] if bool(row[new_agreement_idx])) == validation_summary[
+        "new_agreement_required_count"
+    ]
+    assert draft_doc["summary"]["new_agreement_required_count"] == validation_summary[
+        "new_agreement_required_count"
+    ]

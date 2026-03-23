@@ -67,10 +67,19 @@ REPO_ROOT = Path(__file__).resolve().parents[4]
 REALISTIC_WEEKLY_STAGE04_SOURCE_MATERIAL_PATH = (
     REPO_ROOT / "fixtures" / "logistics" / "weekly_stage04_realistic_source_material.yaml"
 )
+ACTUAL_OPS_WEEKLY_STAGE04_SOURCE_MATERIAL_PATH = (
+    REPO_ROOT / "fixtures" / "logistics" / "weekly_stage04_actual_ops_lab_source_material.yaml"
+)
 
 PILOT_WEEKLY_STAGE04_AGENT = "weekly_stage04_agent_baseline"
 PILOT_WEEKLY_STAGE04_REALISTIC_ARTIFACTS = "weekly_stage04_realistic_artifacts"
+PILOT_WEEKLY_STAGE04_ACTUAL_OPS_LAB = "weekly_stage04_actual_ops_lab"
 ALL_PILOT_IDS: tuple[str, ...] = (
+    PILOT_WEEKLY_STAGE04_AGENT,
+    PILOT_WEEKLY_STAGE04_REALISTIC_ARTIFACTS,
+    PILOT_WEEKLY_STAGE04_ACTUAL_OPS_LAB,
+)
+DEFAULT_MOCK_PILOT_IDS: tuple[str, ...] = (
     PILOT_WEEKLY_STAGE04_AGENT,
     PILOT_WEEKLY_STAGE04_REALISTIC_ARTIFACTS,
 )
@@ -287,6 +296,8 @@ class WeeklyPilotDefinition:
     logical_date: str
     stage_focus: str
     description: str
+    source_material_loader: str = "inline"
+    source_material_path: Path | None = None
     real_openai_model: str | None = None
 
 
@@ -307,7 +318,21 @@ PILOT_DEFINITIONS: dict[str, WeeklyPilotDefinition] = {
             "Weekly Stage04 bounded OpenAI agent run over realistic day-resolution planning "
             "artifacts derived from the over-capacity weekly hard-case handoff."
         ),
+        source_material_loader="realistic_manifest_enriched",
+        source_material_path=REALISTIC_WEEKLY_STAGE04_SOURCE_MATERIAL_PATH,
         real_openai_model="gpt-5-mini",
+    ),
+    PILOT_WEEKLY_STAGE04_ACTUAL_OPS_LAB: WeeklyPilotDefinition(
+        pilot_id=PILOT_WEEKLY_STAGE04_ACTUAL_OPS_LAB,
+        partition_key="PW-2026-W13",
+        logical_date="2026-03-22",
+        stage_focus="Stage04",
+        description=(
+            "Weekly Stage04 bounded OpenAI agent run over the normalized actual-ops lab "
+            "package with explicit Sunday-start operational scope."
+        ),
+        source_material_loader="manifest_identity",
+        source_material_path=ACTUAL_OPS_WEEKLY_STAGE04_SOURCE_MATERIAL_PATH,
     ),
 }
 
@@ -321,7 +346,7 @@ def resolve_weekly_stage04_pilot_ids(
         raise ValueError("openai_mode must be 'mock' or 'real'")
 
     if not pilot_ids:
-        return DEFAULT_REAL_OPENAI_PILOT_IDS if openai_mode == "real" else ALL_PILOT_IDS
+        return DEFAULT_REAL_OPENAI_PILOT_IDS if openai_mode == "real" else DEFAULT_MOCK_PILOT_IDS
 
     normalized = tuple(
         str(pilot_id).strip()
@@ -329,7 +354,7 @@ def resolve_weekly_stage04_pilot_ids(
         if str(pilot_id).strip()
     )
     if not normalized:
-        return DEFAULT_REAL_OPENAI_PILOT_IDS if openai_mode == "real" else ALL_PILOT_IDS
+        return DEFAULT_REAL_OPENAI_PILOT_IDS if openai_mode == "real" else DEFAULT_MOCK_PILOT_IDS
     if "all" in normalized:
         return ALL_PILOT_IDS
 
@@ -361,18 +386,19 @@ def describe_weekly_stage04_pilot_fixture_profile(pilot_id: str) -> dict[str, An
         if str(column).strip()
     }
 
+    definition = PILOT_DEFINITIONS[pilot_id]
     source_contract = "weekly_stage04_tiny_smoke_regression"
     source_material_path = None
-    if pilot_id == PILOT_WEEKLY_STAGE04_REALISTIC_ARTIFACTS:
-        source_material = _load_realistic_weekly_stage04_source_material()
+    if definition.source_material_path is not None:
+        source_material = _load_weekly_stage04_source_material(definition.source_material_path)
         source_contract = str(source_material.get("fixture_contract") or source_contract)
-        source_material_path = str(REALISTIC_WEEKLY_STAGE04_SOURCE_MATERIAL_PATH)
+        source_material_path = str(definition.source_material_path)
 
     return {
         "pilot_id": pilot_id,
         "planning_week_id": str(
             route_slot_requirements.get("planning_week_id")
-            or PILOT_DEFINITIONS[pilot_id].partition_key
+            or definition.partition_key
         ),
         "route_slot_count": len(expand_route_slot_requirements(parsed_route_slots)),
         "driver_count": len(list(driver_capabilities.get("rows") or [])),
@@ -812,8 +838,13 @@ def _create_stage04_input_artifact(
 
 
 def _stage04_source_material_for_pilot(pilot_id: str) -> dict[str, dict[str, Any]]:
-    if pilot_id == PILOT_WEEKLY_STAGE04_REALISTIC_ARTIFACTS:
+    definition = PILOT_DEFINITIONS[pilot_id]
+    if definition.source_material_loader == "realistic_manifest_enriched":
         return build_realistic_weekly_stage04_fixture_payloads()
+    if definition.source_material_loader == "manifest_identity":
+        if definition.source_material_path is None:
+            raise ValueError(f"{pilot_id} must declare source_material_path")
+        return build_identity_weekly_stage04_fixture_payloads(definition.source_material_path)
     return {
         "route_slot_requirements": _ROUTE_SLOT_REQUIREMENTS_METADATA,
         "driver_capabilities": _DRIVER_CAPABILITIES_METADATA,
@@ -823,21 +854,11 @@ def _stage04_source_material_for_pilot(pilot_id: str) -> dict[str, dict[str, Any
 
 
 def build_realistic_weekly_stage04_fixture_payloads() -> dict[str, dict[str, Any]]:
-    source = _load_realistic_weekly_stage04_source_material()
-    source_artifacts = source.get("source_artifacts")
-    if not isinstance(source_artifacts, dict):
-        raise ValueError("realistic Stage04 source material must declare source_artifacts")
-
-    route_slots = _load_realistic_stage04_example(
-        source_artifacts["route_slot_requirements"]
+    source = _load_weekly_stage04_source_material(REALISTIC_WEEKLY_STAGE04_SOURCE_MATERIAL_PATH)
+    route_slots, driver_capabilities, approved_availability, actual_hours = _load_weekly_stage04_source_artifacts(
+        source,
+        source_material_path=REALISTIC_WEEKLY_STAGE04_SOURCE_MATERIAL_PATH,
     )
-    driver_capabilities = _load_realistic_stage04_example(
-        source_artifacts["driver_capabilities"]
-    )
-    approved_availability = _load_realistic_stage04_example(
-        source_artifacts["approved_availability"]
-    )
-    actual_hours = _load_realistic_stage04_example(source_artifacts["actual_hours"])
 
     return {
         "route_slot_requirements": _enrich_realistic_route_slot_requirements(
@@ -860,11 +881,61 @@ def build_realistic_weekly_stage04_fixture_payloads() -> dict[str, dict[str, Any
     }
 
 
-def _load_realistic_stage04_example(path_text: Any) -> dict[str, Any]:
-    path = REPO_ROOT / str(path_text)
+def build_actual_ops_weekly_stage04_fixture_payloads() -> dict[str, dict[str, Any]]:
+    return build_identity_weekly_stage04_fixture_payloads(
+        ACTUAL_OPS_WEEKLY_STAGE04_SOURCE_MATERIAL_PATH
+    )
+
+
+def build_identity_weekly_stage04_fixture_payloads(
+    source_material_path: Path,
+) -> dict[str, dict[str, Any]]:
+    source = _load_weekly_stage04_source_material(source_material_path)
+    route_slots, driver_capabilities, approved_availability, actual_hours = _load_weekly_stage04_source_artifacts(
+        source,
+        source_material_path=source_material_path,
+    )
+    return {
+        "route_slot_requirements": route_slots,
+        "driver_capabilities": driver_capabilities,
+        "approved_availability": approved_availability,
+        "actual_hours": actual_hours,
+    }
+
+
+def _load_weekly_stage04_source_artifacts(
+    source: dict[str, Any],
+    *,
+    source_material_path: Path,
+) -> tuple[dict[str, Any], dict[str, Any], dict[str, Any], dict[str, Any]]:
+    source_artifacts = source.get("source_artifacts")
+    if not isinstance(source_artifacts, dict):
+        raise ValueError("weekly Stage04 source material must declare source_artifacts")
+
+    route_slots = _load_weekly_stage04_source_artifact(
+        source_artifacts["route_slot_requirements"],
+        source_material_path=source_material_path,
+    )
+    driver_capabilities = _load_weekly_stage04_source_artifact(
+        source_artifacts["driver_capabilities"],
+        source_material_path=source_material_path,
+    )
+    approved_availability = _load_weekly_stage04_source_artifact(
+        source_artifacts["approved_availability"],
+        source_material_path=source_material_path,
+    )
+    actual_hours = _load_weekly_stage04_source_artifact(
+        source_artifacts["actual_hours"],
+        source_material_path=source_material_path,
+    )
+    return route_slots, driver_capabilities, approved_availability, actual_hours
+
+
+def _load_weekly_stage04_source_artifact(path_text: Any, *, source_material_path: Path) -> dict[str, Any]:
+    path = _resolve_source_material_artifact_path(path_text, source_material_path=source_material_path)
     loaded = yaml.safe_load(path.read_text(encoding="utf-8"))
     if not isinstance(loaded, dict):
-        raise ValueError(f"realistic Stage04 example must decode to an object: {path}")
+        raise ValueError(f"weekly Stage04 example must decode to an object: {path}")
     return copy.deepcopy(loaded)
 
 
@@ -1028,13 +1099,18 @@ def _enrich_realistic_actual_hours(
     return example
 
 
-def _load_realistic_weekly_stage04_source_material() -> dict[str, Any]:
-    loaded = yaml.safe_load(
-        REALISTIC_WEEKLY_STAGE04_SOURCE_MATERIAL_PATH.read_text(encoding="utf-8")
-    )
+def _load_weekly_stage04_source_material(path: Path) -> dict[str, Any]:
+    loaded = yaml.safe_load(path.read_text(encoding="utf-8"))
     if not isinstance(loaded, dict):
-        raise ValueError("realistic Stage04 source material must decode to an object")
+        raise ValueError(f"weekly Stage04 source material must decode to an object: {path}")
     return loaded
+
+
+def _resolve_source_material_artifact_path(path_text: Any, *, source_material_path: Path) -> Path:
+    relative_to_manifest = (source_material_path.parent / str(path_text)).resolve()
+    if relative_to_manifest.exists():
+        return relative_to_manifest
+    return (REPO_ROOT / str(path_text)).resolve()
 
 
 def _rolling_7_limits_by_driver(driver_capabilities: dict[str, Any]) -> dict[str, int]:
@@ -1546,6 +1622,17 @@ def _stage04_analysis(
     warnings = [str(item) for item in summary.get("warnings") or []]
     coverage_summary = dict(candidate_delta.get("coverage_summary") or {})
     coverage_summary.update(summary.get("coverage_summary") or {})
+    contract_change_summary = {
+        "new_agreement_required_count": int(summary.get("new_agreement_required_count") or 0),
+        "new_agreement_driver_day_count": int(
+            summary.get("new_agreement_driver_day_count") or 0
+        ),
+        "new_agreement_driver_ids": list(summary.get("new_agreement_driver_ids") or []),
+        "new_agreement_by_service_date": dict(
+            summary.get("new_agreement_by_service_date") or {}
+        ),
+        "new_agreement_rows": list(summary.get("new_agreement_rows") or []),
+    }
     if not tradeoffs:
         uncovered_count = int(coverage_summary.get("uncovered_route_slots") or 0)
         pending_count = int(coverage_summary.get("pending_route_slots") or 0)
@@ -1610,6 +1697,7 @@ def _stage04_analysis(
         "coverage_summary": coverage_summary,
         "phase_counts": dict(coverage_summary.get("phase_counts") or {}),
         "soft_score_totals": summary.get("soft_score_totals") or {},
+        "contract_change_summary": contract_change_summary,
         "tradeoffs": tradeoffs,
         "warnings": warnings,
         "draft_summary": (
@@ -1747,14 +1835,38 @@ def _packet_to_markdown(packet: dict[str, Any]) -> str:
     )
     if stage04_analysis:
         coverage_summary = stage04_analysis.get("coverage_summary") or {}
+        contract_change_summary = stage04_analysis.get("contract_change_summary") or {}
         lines.extend(
             [
                 f"- Iterations: {len(stage04_analysis.get('iterations') or [])}",
                 f"- Assigned route slots: {coverage_summary.get('assigned_route_slots', 0)}",
                 f"- Uncovered route slots: {coverage_summary.get('uncovered_route_slots', 0)}",
                 f"- Pending route slots: {coverage_summary.get('pending_route_slots', 0)}",
+                (
+                    "- New agreement required rows: "
+                    f"{contract_change_summary.get('new_agreement_required_count', 0)}"
+                ),
+                (
+                    "- New agreement driver-days: "
+                    f"{contract_change_summary.get('new_agreement_driver_day_count', 0)}"
+                ),
             ]
         )
+        if contract_change_summary.get("new_agreement_driver_ids"):
+            lines.append(
+                "- New agreement driver IDs: "
+                + ", ".join(contract_change_summary.get("new_agreement_driver_ids") or [])
+            )
+        if contract_change_summary.get("new_agreement_by_service_date"):
+            lines.append(
+                "- New agreement by service date: "
+                + ", ".join(
+                    f"{service_date}={count}"
+                    for service_date, count in sorted(
+                        (contract_change_summary.get("new_agreement_by_service_date") or {}).items()
+                    )
+                )
+            )
         for tradeoff in stage04_analysis.get("tradeoffs") or []:
             lines.append(f"- Tradeoff: {tradeoff}")
         for iteration in stage04_analysis.get("iterations") or []:

@@ -11,12 +11,15 @@ from onetruth.application.services.execution_evidence import (
     EXECUTION_COMPILED_SPEC_ARTIFACT_KIND,
     EXECUTION_COMPILE_SOURCE_MANIFEST_ARTIFACT_KIND,
 )
+from onetruth.application.services.logistics_weekly_agent_pilot import (
+    build_actual_ops_weekly_stage04_fixture_payloads,
+)
 from onetruth.application.services.schedule_control.stage04_input_registry import (
     resolve_weekly_stage04_input_artifacts,
 )
 from onetruth.integrations.openai import OpenAIResponsesFunctionCallingRunner
 from tests.runtime.helpers.runtime_api import RuntimeApiClient
-from tests.runtime.helpers.runtime_cli import REPO_ROOT
+from tests.runtime.helpers.runtime_cli import REPO_ROOT, run_cli, stdout_json
 from tests.runtime.helpers.scenario_harness import RuntimeScenarioHarness
 
 SCENARIO_PATH = (
@@ -101,6 +104,105 @@ def _prepare_claimed_stage04_task(
     )
     assert claimed.status_code == 200, claimed.payload
     return harness, client, human_task_id
+
+
+def _prepare_claimed_stage04_task_from_fixture(
+    tmp_path: Path,
+    *,
+    fixture_payloads: dict[str, dict[str, object]],
+    partition_key: str,
+    logical_date: str,
+    scenario_tag: str,
+) -> tuple[RuntimeScenarioHarness, RuntimeApiClient, str, str]:
+    harness = RuntimeScenarioHarness.from_yaml(SCENARIO_PATH, tmp_path).prepare()
+    workflow_run_id = _create_weekly_workflow_run(
+        harness,
+        partition_key=partition_key,
+        logical_date=logical_date,
+        scenario_tag=scenario_tag,
+    )
+    for step_key, artifact_kind, payload_key in (
+        ("route-slot-requirements", "planning.route_slot_requirements.workbook", "route_slot_requirements"),
+        ("driver-capabilities", "planning.driver_capabilities.workbook", "driver_capabilities"),
+        ("approved-availability", "planning.approved_availability.workbook", "approved_availability"),
+        ("actual-hours", "planning.actual_hours_snapshot.workbook", "actual_hours"),
+    ):
+        harness.run_action(
+            action="artifacts.create-version",
+            payload={
+                "workflow_run_id": workflow_run_id,
+                "artifact_kind": artifact_kind,
+                "artifact_role": "official_input",
+                "media_type": "application/json",
+                "storage_uri": f"inmem://runtime/stage04/{scenario_tag}/{step_key}",
+                "content_digest": f"sha256:{scenario_tag}:{step_key}",
+                "metadata_json": fixture_payloads[payload_key],
+                "idempotency_key": f"scenario:{scenario_tag}:artifacts.create:{step_key}",
+            },
+        )
+
+    created = harness.run_action(
+        action="tasks.create",
+        payload={
+            "workflow_run_id": workflow_run_id,
+            "stage_id": "Stage04",
+            "task_kind": "work_item",
+            "create_human_task": True,
+            "candidate_roles": ["schedule_planner"],
+            "owner_role": "schedule_planner",
+            "activation_key": f"scenario:{scenario_tag}:stage04:execution-runtime",
+            "idempotency_key": f"scenario:{scenario_tag}:tasks.create:stage04-execution-runtime",
+        },
+    )
+    human_task_id = str(created["result"]["human_task"]["human_task_id"])
+
+    client = RuntimeApiClient(
+        db_url=harness.db_url,
+        tenant_id="tenant-logistics",
+        domain_id="domain-hub",
+        actor_id="human:schedule-planner-1",
+        actor_type="human",
+        actor_roles=["schedule_planner"],
+    )
+    claimed = client.post(
+        f"/api/v1/human-tasks/{human_task_id}/claim",
+        payload={
+            "lease_seconds": 300,
+            "idempotency_key": f"api:{scenario_tag}:stage04-runtime-claim",
+        },
+    )
+    assert claimed.status_code == 200, claimed.payload
+    return harness, client, human_task_id, workflow_run_id
+
+
+def _create_weekly_workflow_run(
+    harness: RuntimeScenarioHarness,
+    *,
+    partition_key: str,
+    logical_date: str,
+    scenario_tag: str,
+) -> str:
+    result = run_cli(
+        "--db-url",
+        harness.db_url,
+        "runs",
+        "create",
+        "--json",
+        json.dumps(
+            {
+                "workflow_id": "weekly_schedule_planning.v1",
+                "workflow_version": "v1",
+                "tenant_id": "tenant-logistics",
+                "domain_id": "domain-hub",
+                "partition_key": partition_key,
+                "logical_date": logical_date,
+                "activation_key": f"{scenario_tag}:workflow-run",
+                "idempotency_key": f"scenario:{scenario_tag}:runs.create",
+            },
+            separators=(",", ":"),
+        ),
+    )
+    return str(stdout_json(result)["workflow_run"]["workflow_run_id"])
 
 
 def _mock_stage04_runner() -> OpenAIResponsesFunctionCallingRunner:
@@ -390,6 +492,91 @@ def test_weekly_stage04_execution_runtime_persists_rows_events_and_trace_evidenc
     assert "tool.execution.approved" in event_types
     assert "tool.execution.completed" in event_types
     assert "execution.session.state_changed" in event_types
+
+
+def test_weekly_stage04_execution_runtime_actual_ops_fixture_reaches_full_coverage(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    harness, client, human_task_id, workflow_run_id = _prepare_claimed_stage04_task_from_fixture(
+        tmp_path,
+        fixture_payloads=build_actual_ops_weekly_stage04_fixture_payloads(),
+        partition_key="PW-2026-W13",
+        logical_date="2026-03-22",
+        scenario_tag="weekly-stage04-actual-ops-runtime",
+    )
+    monkeypatch.setattr(
+        "onetruth.application.services.weekly_stage04_openai_agent.build_weekly_stage04_openai_agent_runner_from_env",
+        lambda: _mock_stage04_runner(),
+    )
+    monkeypatch.setenv("ONETRUTH_ARTIFACT_ROOT", str(tmp_path / "artifacts"))
+
+    response = client.post(
+        f"/api/v1/human-tasks/{human_task_id}/weekly-stage04-openai-agent",
+        payload={"idempotency_key": "api:weekly-stage04-actual-ops-runtime:stage04-runtime"},
+    )
+    assert response.status_code == 200, response.payload
+    result = response.payload["result"]
+
+    assert result["stage04_build_result"]["selected_candidate_count"] == 139
+    assert result["stage04_build_result"]["coverage_summary"]["assigned_route_slots"] == 139
+    assert result["stage04_build_result"]["coverage_summary"]["uncovered_route_slots"] == 0
+
+    sessions = harness.query_rows(
+        "SELECT state FROM execution_sessions WHERE workflow_run_id = ?",
+        (workflow_run_id,),
+    )
+    assert [row["state"] for row in sessions] == ["SUCCEEDED"]
+
+    input_bundle_rows = harness.query_rows(
+        """
+        SELECT metadata_json
+        FROM artifact_versions
+        WHERE workflow_run_id = ?
+          AND artifact_kind = 'planning.input_bundle.doc'
+        """,
+        (workflow_run_id,),
+    )
+    input_bundle_payload = json.loads(str(input_bundle_rows[0]["metadata_json"]))
+    assert input_bundle_payload["bundle"]["scope_dates"] == {
+        "start": "2026-03-22",
+        "end_exclusive": "2026-03-29",
+    }
+
+    output_rows = harness.query_rows(
+        """
+        SELECT artifact_kind, metadata_json
+        FROM artifact_versions
+        WHERE workflow_run_id = ?
+          AND artifact_kind IN (
+            'planning.candidate_schedule_delta.workbook',
+            'planning.validation_summary.doc',
+            'planning.draft_weekly_schedule.doc'
+          )
+        """,
+        (workflow_run_id,),
+    )
+    output_by_kind = {
+        str(row["artifact_kind"]): json.loads(str(row["metadata_json"]))
+        for row in output_rows
+    }
+    candidate_delta = output_by_kind["planning.candidate_schedule_delta.workbook"]
+    validation_summary = output_by_kind["planning.validation_summary.doc"]["summary"]
+    draft_doc = output_by_kind["planning.draft_weekly_schedule.doc"]
+    new_agreement_idx = candidate_delta["columns"].index("new_agreement_required")
+
+    assert "baseline_template_state" in candidate_delta["columns"]
+    assert "planned_driver_day_state" in candidate_delta["columns"]
+    assert "template_state_preservation_fit" in candidate_delta["columns"]
+    assert validation_summary["new_agreement_required_count"] <= 10
+    assert len(validation_summary["new_agreement_rows"]) == validation_summary["new_agreement_required_count"]
+    assert sum(1 for row in candidate_delta["rows"] if bool(row[new_agreement_idx])) == validation_summary[
+        "new_agreement_required_count"
+    ]
+    assert draft_doc["summary"]["new_agreement_required_count"] == validation_summary[
+        "new_agreement_required_count"
+    ]
+    assert draft_doc["selected_assignments"]
 
 
 def test_weekly_stage04_execution_runtime_records_retry_history_without_duplicate_turn_artifacts(

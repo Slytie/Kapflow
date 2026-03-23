@@ -5,6 +5,7 @@ from datetime import date
 from typing import Any
 
 from .bundle_builder import DriverCapability, DriverServiceDayState, WeeklyScheduleControlBundle
+from .contract_minimization import assess_contract_minimization
 from .planning_state import PartialWeeklyScheduleState
 from .route_slot_requirements import RouteSlotRequirement
 from .validation import HardValidationResult
@@ -40,6 +41,7 @@ SOFT_SCORE_WEIGHTS: dict[str, float] = {
     "reliability_score": 0.08,
     "rolling7_headroom": 0.05,
     "avoidable_assignment_score": 0.06,
+    "template_state_preservation_fit": 0.28,
 }
 
 
@@ -63,6 +65,11 @@ class SoftScore:
     seniority_preference_fit: float
     reliability_score: float
     avoidable_assignment_score: float
+    baseline_template_state: str
+    planned_driver_day_state: str
+    new_agreement_required: bool
+    new_agreement_trigger_reason: str
+    template_state_preservation_fit: float
     current_week_shift_count: int
     projected_rolling7_minutes: int
     remaining_rolling7_minutes: int
@@ -77,6 +84,10 @@ def score_candidate(
     hard_validation: HardValidationResult,
     schedule_state: PartialWeeklyScheduleState | None = None,
 ) -> SoftScore:
+    blocked_assessment = assess_contract_minimization(
+        availability_state=hard_validation.driver_day_availability_state,
+        planned_driver_day_state="assigned",
+    )
     if hard_validation.status != "pass":
         return SoftScore(
             total=0.0,
@@ -97,6 +108,11 @@ def score_candidate(
             seniority_preference_fit=0.0,
             reliability_score=0.0,
             avoidable_assignment_score=0.0,
+            baseline_template_state=blocked_assessment.baseline_template_state,
+            planned_driver_day_state=blocked_assessment.planned_driver_day_state,
+            new_agreement_required=blocked_assessment.new_agreement_required,
+            new_agreement_trigger_reason=blocked_assessment.new_agreement_trigger_reason,
+            template_state_preservation_fit=blocked_assessment.template_state_preservation_fit,
             current_week_shift_count=hard_validation.current_week_shift_count,
             projected_rolling7_minutes=hard_validation.projected_rolling7_minutes,
             remaining_rolling7_minutes=hard_validation.remaining_rolling7_minutes,
@@ -108,6 +124,10 @@ def score_candidate(
     availability_state = _availability_state_label(
         driver_day=driver_day,
         fallback=hard_validation.driver_day_availability_state,
+    )
+    contract_assessment = assess_contract_minimization(
+        availability_state=availability_state,
+        planned_driver_day_state="assigned",
     )
 
     target_shifts = max(int(getattr(availability, "target_shifts_per_week", 4)), 1)
@@ -162,10 +182,11 @@ def score_candidate(
         driver_day=driver_day,
     )
     preference_fit = _clamp01(
-        (availability_state_fit * 0.4)
-        + (preferred_shift_band_fit * 0.2)
-        + (preferred_route_slot_class_fit * 0.2)
-        + (avoidable_assignment_score * 0.2)
+        (availability_state_fit * 0.32)
+        + (preferred_shift_band_fit * 0.16)
+        + (preferred_route_slot_class_fit * 0.16)
+        + (avoidable_assignment_score * 0.16)
+        + (contract_assessment.template_state_preservation_fit * 0.20)
     )
     continuity_score = _previous_week_continuity(
         route_slot=route_slot,
@@ -209,6 +230,10 @@ def score_candidate(
         + (SOFT_SCORE_WEIGHTS["reliability_score"] * reliability_score)
         + (SOFT_SCORE_WEIGHTS["rolling7_headroom"] * rolling7_headroom)
         + (SOFT_SCORE_WEIGHTS["avoidable_assignment_score"] * avoidable_assignment_score)
+        + (
+            SOFT_SCORE_WEIGHTS["template_state_preservation_fit"]
+            * contract_assessment.template_state_preservation_fit
+        )
     )
     bucket = _score_bucket_for_total(total)
     return SoftScore(
@@ -230,6 +255,14 @@ def score_candidate(
         seniority_preference_fit=round(seniority_preference_fit, 6),
         reliability_score=round(reliability_score, 6),
         avoidable_assignment_score=round(avoidable_assignment_score, 6),
+        baseline_template_state=contract_assessment.baseline_template_state,
+        planned_driver_day_state=contract_assessment.planned_driver_day_state,
+        new_agreement_required=contract_assessment.new_agreement_required,
+        new_agreement_trigger_reason=contract_assessment.new_agreement_trigger_reason,
+        template_state_preservation_fit=round(
+            contract_assessment.template_state_preservation_fit,
+            6,
+        ),
         current_week_shift_count=current_week_shift_count,
         projected_rolling7_minutes=hard_validation.projected_rolling7_minutes,
         remaining_rolling7_minutes=hard_validation.remaining_rolling7_minutes,
@@ -238,7 +271,7 @@ def score_candidate(
 
 
 def deterministic_rank_candidates(candidates: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    def sort_key(item: dict[str, Any]) -> tuple[int, int, float, float, float, float, str]:
+    def sort_key(item: dict[str, Any]) -> tuple[int, int, float, float, float, float, float, str]:
         hard_filter_status = str(item.get("hard_filter_status", "blocked")).strip().lower()
         score_bucket = str(item.get("score_bucket", "blocked")).strip().lower()
         candidate_driver_id = str(item.get("candidate_driver_id", ""))
@@ -246,6 +279,7 @@ def deterministic_rank_candidates(candidates: list[dict[str, Any]]) -> list[dict
             _HARD_FILTER_ORDER.get(hard_filter_status, 99),
             _SCORE_BUCKET_ORDER.get(score_bucket, 99),
             -float(item.get("soft_score_total") or 0.0),
+            -float(item.get("template_state_preservation_fit") or 0.0),
             -float(item.get("preference_fit") or 0.0),
             -float(item.get("continuity_score") or item.get("previous_week_stability") or 0.0),
             -float(item.get("reliability_score") or 0.0),
@@ -279,6 +313,7 @@ def summarize_soft_scores(selected_candidates: list[dict[str, Any]]) -> dict[str
             "seniority_preference_fit": 0.0,
             "reliability_score": 0.0,
             "avoidable_assignment_score": 0.0,
+            "template_state_preservation_fit": 0.0,
         }
 
     count = float(len(pass_candidates))
@@ -300,6 +335,7 @@ def summarize_soft_scores(selected_candidates: list[dict[str, Any]]) -> dict[str
         "seniority_preference_fit",
         "reliability_score",
         "avoidable_assignment_score",
+        "template_state_preservation_fit",
     ):
         totals[key] = sum(float(item.get(key) or 0.0) for item in pass_candidates) / count
     return totals

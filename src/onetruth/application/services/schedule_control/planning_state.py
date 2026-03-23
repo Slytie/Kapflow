@@ -53,6 +53,11 @@ class ScheduledAssignment:
     previous_assignment_driver_id: str = ""
     displaced_route_slot_id: str = ""
     displaced_driver_id: str = ""
+    baseline_template_state: str = ""
+    planned_driver_day_state: str = ""
+    new_agreement_required: bool = False
+    new_agreement_trigger_reason: str = ""
+    template_state_preservation_fit: float = 0.0
     warnings: tuple[str, ...] = ()
 
     def to_row(self) -> dict[str, Any]:
@@ -100,6 +105,11 @@ class ScheduledAssignment:
             "previous_assignment_driver_id": self.previous_assignment_driver_id,
             "displaced_route_slot_id": self.displaced_route_slot_id,
             "displaced_driver_id": self.displaced_driver_id,
+            "baseline_template_state": self.baseline_template_state,
+            "planned_driver_day_state": self.planned_driver_day_state,
+            "new_agreement_required": self.new_agreement_required,
+            "new_agreement_trigger_reason": self.new_agreement_trigger_reason,
+            "template_state_preservation_fit": self.template_state_preservation_fit,
             "warnings": list(self.warnings),
         }
 

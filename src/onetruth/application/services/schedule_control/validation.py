@@ -5,6 +5,7 @@ from datetime import datetime, time, timedelta
 from typing import Any
 
 from .bundle_builder import DriverCapability, WeeklyScheduleControlBundle
+from .contract_minimization import summarize_contract_change_metrics
 from .planning_state import IterationSummary, PartialWeeklyScheduleState, RepairMove
 from .route_slot_requirements import RouteSlotRequirement
 
@@ -196,6 +197,7 @@ def build_stage04_validation_summary(
     uncovered_route_slot_ids: list[str] = []
     iterations = iteration_summaries or []
     repairs = repair_moves or []
+    contract_change_summary = summarize_contract_change_metrics(selected_candidates)
 
     for candidate in selected_candidates:
         route_slot_id = str(candidate.get("route_slot_id") or "")
@@ -215,7 +217,17 @@ def build_stage04_validation_summary(
                 f"{driver_id} selected for {route_slot_id} with {candidate.get('score_bucket')} soft score"
             )
         availability_state = str(candidate.get("availability_state") or "")
-        if availability_state in {"AVOID_IF_POSSIBLE", "ON_CALL_ONLY"}:
+        if bool(candidate.get("new_agreement_required")):
+            trigger_reason = str(candidate.get("new_agreement_trigger_reason") or "")
+            warnings.append(
+                f"{driver_id} selected for {route_slot_id} requires new agreement"
+                + (f" ({trigger_reason})" if trigger_reason else "")
+            )
+        elif str(candidate.get("baseline_template_state") or "") == "on_call_template":
+            warnings.append(
+                f"{driver_id} selected for {route_slot_id} using signed on-call template day"
+            )
+        elif availability_state == "AVOID_IF_POSSIBLE":
             warnings.append(
                 f"{driver_id} selected for {route_slot_id} using {availability_state} availability state"
             )
@@ -231,7 +243,6 @@ def build_stage04_validation_summary(
             tradeoffs.append(
                 f"{route_slot_id} re-assigned in iteration {candidate.get('iteration_index')} to improve preference fit while keeping hard rules satisfied."
             )
-
     hard_rule_result = "pass" if not violations else "fail"
     if hard_rule_result == "pass" and warnings:
         recommendation = "forward_to_stage05_manager_review_with_warnings"
@@ -294,6 +305,7 @@ def build_stage04_validation_summary(
         "repair_moves": [item.to_payload() for item in repairs],
         "reallocation_moves": [item.to_payload() for item in repairs],
         "recommended_action": recommendation,
+        **contract_change_summary,
     }
 
 

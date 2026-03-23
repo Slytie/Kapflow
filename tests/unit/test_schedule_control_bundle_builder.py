@@ -1,6 +1,11 @@
 from __future__ import annotations
 
+import copy
+
+import pytest
+
 from onetruth.application.services.logistics_weekly_agent_pilot import (
+    build_actual_ops_weekly_stage04_fixture_payloads,
     build_realistic_weekly_stage04_fixture_payloads,
 )
 from onetruth.application.services.schedule_control import build_weekly_schedule_control_bundle
@@ -283,3 +288,226 @@ def test_realistic_weekly_stage04_fixture_payloads_lock_overcapacity_contract() 
         "SICK_CALL",
         "WORKED",
     }
+
+
+def test_build_weekly_schedule_control_bundle_resolves_actual_ops_explicit_scope() -> None:
+    workflow_run = {
+        "workflow_run_id": "wr-weekly-actual-ops-001",
+        "partition_key": "PW-2026-W13",
+    }
+    fixture = build_actual_ops_weekly_stage04_fixture_payloads()
+
+    bundle = build_weekly_schedule_control_bundle(
+        workflow_run=workflow_run,
+        route_slot_requirements_artifact={
+            "artifact_version_id": "av-route-actual-ops-001",
+            "artifact_kind": "planning.route_slot_requirements.workbook",
+            "dataset_key": "planning.route_slot_requirements.workbook",
+            "metadata_json": fixture["route_slot_requirements"],
+        },
+        driver_capabilities_artifact={
+            "artifact_version_id": "av-driver-actual-ops-001",
+            "artifact_kind": "planning.driver_capabilities.workbook",
+            "dataset_key": "planning.driver_capabilities.workbook",
+            "metadata_json": fixture["driver_capabilities"],
+        },
+        approved_availability_artifact={
+            "artifact_version_id": "av-availability-actual-ops-001",
+            "artifact_kind": "planning.approved_availability.workbook",
+            "dataset_key": "planning.approved_availability.workbook",
+            "metadata_json": fixture["approved_availability"],
+        },
+        actual_hours_artifact={
+            "artifact_version_id": "av-hours-actual-ops-001",
+            "artifact_kind": "planning.actual_hours_snapshot.workbook",
+            "dataset_key": "planning.actual_hours_snapshot.workbook",
+            "metadata_json": fixture["actual_hours"],
+        },
+    )
+
+    assert bundle.scope_start == "2026-03-22"
+    assert bundle.scope_end_exclusive == "2026-03-29"
+    assert bundle.availability_by_driver["A11X1NH2FPH5RV"].previous_week_states[0].service_date == "2026-03-15"
+    assert bundle.availability_by_driver["A11X1NH2FPH5RV"].previous_week_states[-1].service_date == "2026-03-21"
+    assert len(bundle.drivers) == 51
+    assert sum(item.planned_route_count for item in bundle.daily_demand_by_service_date.values()) == 139
+
+
+def test_build_weekly_schedule_control_bundle_rejects_conflicting_explicit_scope_bounds() -> None:
+    workflow_run, route_slots_artifact, driver_caps_artifact, availability_artifact, actual_hours_artifact = (
+        _small_scope_test_inputs()
+    )
+    route_slots_artifact["metadata_json"]["scope_start"] = "2026-03-02"
+    route_slots_artifact["metadata_json"]["scope_end_exclusive"] = "2026-03-09"
+    driver_caps_artifact["metadata_json"]["scope_start"] = "2026-03-03"
+    driver_caps_artifact["metadata_json"]["scope_end_exclusive"] = "2026-03-10"
+
+    with pytest.raises(ValueError, match="conflicting explicit scope bounds"):
+        build_weekly_schedule_control_bundle(
+            workflow_run=workflow_run,
+            route_slot_requirements_artifact=route_slots_artifact,
+            driver_capabilities_artifact=driver_caps_artifact,
+            approved_availability_artifact=availability_artifact,
+            actual_hours_artifact=actual_hours_artifact,
+        )
+
+
+def test_build_weekly_schedule_control_bundle_rejects_partial_explicit_scope_bounds() -> None:
+    workflow_run, route_slots_artifact, driver_caps_artifact, availability_artifact, actual_hours_artifact = (
+        _small_scope_test_inputs()
+    )
+    route_slots_artifact["metadata_json"]["scope_start"] = "2026-03-02"
+
+    with pytest.raises(ValueError, match="must declare both scope_start and scope_end_exclusive"):
+        build_weekly_schedule_control_bundle(
+            workflow_run=workflow_run,
+            route_slot_requirements_artifact=route_slots_artifact,
+            driver_capabilities_artifact=driver_caps_artifact,
+            approved_availability_artifact=availability_artifact,
+            actual_hours_artifact=actual_hours_artifact,
+        )
+
+
+def test_build_weekly_schedule_control_bundle_rejects_out_of_scope_route_slot_dates() -> None:
+    workflow_run, route_slots_artifact, driver_caps_artifact, availability_artifact, actual_hours_artifact = (
+        _small_scope_test_inputs()
+    )
+    route_slots_artifact["metadata_json"]["scope_start"] = "2026-03-03"
+    route_slots_artifact["metadata_json"]["scope_end_exclusive"] = "2026-03-10"
+
+    with pytest.raises(ValueError, match="route-slot service_date values outside resolved weekly scope"):
+        build_weekly_schedule_control_bundle(
+            workflow_run=workflow_run,
+            route_slot_requirements_artifact=route_slots_artifact,
+            driver_capabilities_artifact=driver_caps_artifact,
+            approved_availability_artifact=availability_artifact,
+            actual_hours_artifact=actual_hours_artifact,
+        )
+
+
+def test_build_weekly_schedule_control_bundle_rejects_out_of_scope_explicit_availability_dates() -> None:
+    workflow_run, route_slots_artifact, driver_caps_artifact, availability_artifact, actual_hours_artifact = (
+        _small_scope_test_inputs()
+    )
+    route_slots_artifact["metadata_json"]["scope_start"] = "2026-03-02"
+    route_slots_artifact["metadata_json"]["scope_end_exclusive"] = "2026-03-09"
+    availability_artifact["metadata_json"]["rows"][0][2] = "2026-03-09"
+
+    with pytest.raises(
+        ValueError,
+        match="explicit availability service_date values outside resolved weekly scope",
+    ):
+        build_weekly_schedule_control_bundle(
+            workflow_run=workflow_run,
+            route_slot_requirements_artifact=route_slots_artifact,
+            driver_capabilities_artifact=driver_caps_artifact,
+            approved_availability_artifact=availability_artifact,
+            actual_hours_artifact=actual_hours_artifact,
+        )
+
+
+def _small_scope_test_inputs() -> tuple[dict[str, object], dict[str, object], dict[str, object], dict[str, object], dict[str, object]]:
+    workflow_run = {
+        "workflow_run_id": "wr-weekly-scope-001",
+        "partition_key": "PW-2026-W10",
+    }
+    route_slots_artifact = {
+        "artifact_version_id": "av-routes-scope-001",
+        "artifact_kind": "planning.route_slot_requirements.workbook",
+        "dataset_key": "planning.route_slot_requirements.workbook",
+        "metadata_json": {
+            "columns": [
+                "service_date",
+                "route_slot_id",
+                "route_slot_class",
+                "required_skill",
+                "vehicle_type",
+                "shift_start",
+                "shift_end",
+                "estimated_hours",
+                "source_snapshot_row_ref",
+            ],
+            "rows": [
+                [
+                    "2026-03-02",
+                    "slot-20260302-cx100",
+                    "cycle1_standard",
+                    "parcel_delivery",
+                    "XL_van",
+                    "11:40",
+                    "20:10",
+                    8.5,
+                    "amazon:row-001",
+                ],
+            ],
+        },
+    }
+    driver_caps_artifact = {
+        "artifact_version_id": "av-driver-scope-001",
+        "artifact_kind": "planning.driver_capabilities.workbook",
+        "dataset_key": "planning.driver_capabilities.workbook",
+        "metadata_json": {
+            "columns": [
+                "driver_id",
+                "skills",
+                "vehicle_certifications",
+                "eligible_route_slot_classes",
+                "approved_restrictions",
+                "notes",
+            ],
+            "rows": [["DRV-01", "parcel_delivery", "XL_van", "cycle1_standard", "", ""]],
+        },
+    }
+    availability_artifact = {
+        "artifact_version_id": "av-availability-scope-001",
+        "artifact_kind": "planning.approved_availability.workbook",
+        "dataset_key": "planning.approved_availability.workbook",
+        "metadata_json": {
+            "columns": [
+                "driver_id",
+                "driver_name",
+                "service_date",
+                "availability_state",
+                "preferred_route_slot_classes",
+                "avoid_route_slot_classes",
+                "target_shifts_per_week",
+                "on_call_eligible",
+                "preferred_shift_band",
+                "previous_week_state",
+                "locked_by_manager",
+                "notes",
+            ],
+            "rows": [
+                [
+                    "DRV-01",
+                    "Driver One",
+                    "2026-03-02",
+                    "AVAILABLE",
+                    "",
+                    "",
+                    4,
+                    "yes",
+                    "",
+                    "WORKED",
+                    "no",
+                    "",
+                ],
+            ],
+        },
+    }
+    actual_hours_artifact = {
+        "artifact_version_id": "av-hours-scope-001",
+        "artifact_kind": "planning.actual_hours_snapshot.workbook",
+        "dataset_key": "planning.actual_hours_snapshot.workbook",
+        "metadata_json": {
+            "columns": ["service_date", "driver_id", "actual_minutes"],
+            "rows": [["2026-02-24", "DRV-01", 390]],
+        },
+    }
+    return (
+        copy.deepcopy(workflow_run),
+        copy.deepcopy(route_slots_artifact),
+        copy.deepcopy(driver_caps_artifact),
+        copy.deepcopy(availability_artifact),
+        copy.deepcopy(actual_hours_artifact),
+    )

@@ -41,6 +41,11 @@ class CandidateEvaluation:
     seniority_preference_fit: float
     reliability_score: float
     avoidable_assignment_score: float
+    baseline_template_state: str
+    planned_driver_day_state: str
+    new_agreement_required: bool
+    new_agreement_trigger_reason: str
+    template_state_preservation_fit: float
     current_week_shift_count: int
     projected_rolling7_minutes: int
     remaining_rolling7_minutes: int
@@ -78,6 +83,11 @@ class CandidateEvaluation:
             "seniority_preference_fit": self.seniority_preference_fit,
             "reliability_score": self.reliability_score,
             "avoidable_assignment_score": self.avoidable_assignment_score,
+            "baseline_template_state": self.baseline_template_state,
+            "planned_driver_day_state": self.planned_driver_day_state,
+            "new_agreement_required": self.new_agreement_required,
+            "new_agreement_trigger_reason": self.new_agreement_trigger_reason,
+            "template_state_preservation_fit": self.template_state_preservation_fit,
             "current_week_shift_count": self.current_week_shift_count,
             "projected_rolling7_minutes": self.projected_rolling7_minutes,
             "remaining_rolling7_minutes": self.remaining_rolling7_minutes,
@@ -148,6 +158,11 @@ def generate_weekly_candidate_matrix(
                     seniority_preference_fit=soft_score.seniority_preference_fit,
                     reliability_score=soft_score.reliability_score,
                     avoidable_assignment_score=soft_score.avoidable_assignment_score,
+                    baseline_template_state=soft_score.baseline_template_state,
+                    planned_driver_day_state=soft_score.planned_driver_day_state,
+                    new_agreement_required=soft_score.new_agreement_required,
+                    new_agreement_trigger_reason=soft_score.new_agreement_trigger_reason,
+                    template_state_preservation_fit=soft_score.template_state_preservation_fit,
                     current_week_shift_count=soft_score.current_week_shift_count,
                     projected_rolling7_minutes=soft_score.projected_rolling7_minutes,
                     remaining_rolling7_minutes=soft_score.remaining_rolling7_minutes,
@@ -177,6 +192,11 @@ def select_weekly_candidates(candidate_matrix: list[CandidateEvaluation]) -> lis
     for key in sorted(candidates_by_slot.keys()):
         ranked_rows = deterministic_rank_candidates(candidates_by_slot[key])
         selected = ranked_rows[0]
+        assignment_action = (
+            "assign"
+            if str(selected.get("hard_filter_status") or "") == "pass"
+            else "unassigned"
+        )
         selected_rows.append(
             {
                 "service_date": selected["service_date"],
@@ -215,6 +235,23 @@ def select_weekly_candidates(candidate_matrix: list[CandidateEvaluation]) -> lis
                 "avoidable_assignment_score": float(
                     selected.get("avoidable_assignment_score") or 0.0
                 ),
+                "baseline_template_state": str(selected.get("baseline_template_state") or ""),
+                "planned_driver_day_state": (
+                    "assigned" if assignment_action == "assign" else "unassigned"
+                ),
+                "new_agreement_required": (
+                    bool(selected.get("new_agreement_required"))
+                    if assignment_action == "assign"
+                    else False
+                ),
+                "new_agreement_trigger_reason": (
+                    str(selected.get("new_agreement_trigger_reason") or "")
+                    if assignment_action == "assign"
+                    else ""
+                ),
+                "template_state_preservation_fit": float(
+                    selected.get("template_state_preservation_fit") or 0.0
+                ),
                 "current_week_shift_count": int(selected.get("current_week_shift_count") or 0),
                 "projected_rolling7_minutes": int(
                     selected.get("projected_rolling7_minutes") or 0
@@ -222,11 +259,7 @@ def select_weekly_candidates(candidate_matrix: list[CandidateEvaluation]) -> lis
                 "remaining_rolling7_minutes": int(
                     selected.get("remaining_rolling7_minutes") or 0
                 ),
-                "assignment_action": (
-                    "assign"
-                    if str(selected.get("hard_filter_status") or "") == "pass"
-                    else "unassigned"
-                ),
+                "assignment_action": assignment_action,
                 "rationale_code": _rationale_code(selected),
             }
         )

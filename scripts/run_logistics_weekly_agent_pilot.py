@@ -46,7 +46,7 @@ def _build_parser() -> argparse.ArgumentParser:
         help=(
             "Use deterministic mock runner or real OpenAI runner for Stage04 pilot steps. "
             "When --pilot is omitted, mock runs all pilots and real runs only the realistic "
-            "over-capacity pilot."
+            "over-capacity pilot; the actual-ops lab pilot is opt-in."
         ),
     )
     parser.add_argument(
@@ -56,7 +56,8 @@ def _build_parser() -> argparse.ArgumentParser:
         choices=[*ALL_PILOT_IDS, "all"],
         help=(
             "Pilot scenario to run. Can be repeated. With --openai-mode real, omitting --pilot "
-            "defaults to the realistic over-capacity pilot; use --pilot all to opt into both pilots."
+            "defaults to the realistic over-capacity pilot; use --pilot all to opt into every "
+            "available pilot including the actual-ops lab fixture."
         ),
     )
     parser.add_argument(

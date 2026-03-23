@@ -1,11 +1,17 @@
 from __future__ import annotations
 
 from onetruth.application.services.schedule_control import build_weekly_schedule_control_bundle
+from onetruth.application.services.schedule_control.contract_minimization import (
+    assess_contract_minimization,
+)
 from onetruth.application.services.schedule_control.planning_state import (
     PartialWeeklyScheduleState,
     ScheduledAssignment,
 )
-from onetruth.application.services.schedule_control.validation import evaluate_hard_constraints
+from onetruth.application.services.schedule_control.validation import (
+    build_stage04_validation_summary,
+    evaluate_hard_constraints,
+)
 
 
 def test_evaluate_hard_constraints_fails_for_missing_skill() -> None:
@@ -303,6 +309,101 @@ def test_evaluate_hard_constraints_blocks_for_same_day_overlap_when_state_is_pre
 
     assert result.status == "blocked"
     assert "shift_overlap" in result.reasons
+
+
+def test_contract_minimization_assessment_maps_template_proxy_states() -> None:
+    available = assess_contract_minimization(
+        availability_state="AVAILABLE",
+        planned_driver_day_state="assigned",
+    )
+    on_call = assess_contract_minimization(
+        availability_state="ON_CALL_ONLY",
+        planned_driver_day_state="assigned",
+    )
+    yellow = assess_contract_minimization(
+        availability_state="AVOID_IF_POSSIBLE",
+        planned_driver_day_state="assigned",
+    )
+
+    assert available.baseline_template_state == "white_template"
+    assert available.new_agreement_required is True
+    assert available.new_agreement_trigger_reason == "white_template_to_assigned"
+    assert on_call.baseline_template_state == "on_call_template"
+    assert on_call.new_agreement_required is False
+    assert on_call.template_state_preservation_fit > available.template_state_preservation_fit
+    assert yellow.baseline_template_state == "yellow_template"
+    assert yellow.new_agreement_required is True
+
+
+def test_validation_summary_surfaces_contract_metrics_and_distinguishes_on_call_warning() -> None:
+    bundle = _build_bundle(
+        route_required_skill="parcel_delivery",
+        driver_skills="parcel_delivery",
+        driver_restrictions="",
+        shift_end="20:10",
+        actual_minutes=800,
+        approved_unavailable_dates="",
+    )
+
+    summary = build_stage04_validation_summary(
+        bundle=bundle,
+        selected_candidates=[
+            {
+                "route_slot_id": "slot-20260302-cx100",
+                "route_id": "CX100",
+                "service_date": "2026-03-02",
+                "candidate_driver_id": "DRV-01",
+                "assignment_action": "assign",
+                "hard_filter_status": "pass",
+                "score_bucket": "good",
+                "availability_state": "AVAILABLE",
+                "baseline_template_state": "white_template",
+                "planned_driver_day_state": "assigned",
+                "new_agreement_required": True,
+                "new_agreement_trigger_reason": "white_template_to_assigned",
+                "previous_week_stability": 0.8,
+                "delta_kind": "allocation",
+                "iteration_index": 1,
+            },
+            {
+                "route_slot_id": "slot-20260303-cx101",
+                "route_id": "CX101",
+                "service_date": "2026-03-03",
+                "candidate_driver_id": "DRV-02",
+                "assignment_action": "assign",
+                "hard_filter_status": "pass",
+                "score_bucket": "good",
+                "availability_state": "ON_CALL_ONLY",
+                "baseline_template_state": "on_call_template",
+                "planned_driver_day_state": "assigned",
+                "new_agreement_required": False,
+                "new_agreement_trigger_reason": "",
+                "previous_week_stability": 0.8,
+                "delta_kind": "allocation",
+                "iteration_index": 1,
+            },
+        ],
+        soft_score_totals={"template_state_preservation_fit": 0.64},
+    )
+
+    assert summary["new_agreement_required_count"] == 1
+    assert summary["new_agreement_driver_day_count"] == 1
+    assert summary["new_agreement_driver_ids"] == ["DRV-01"]
+    assert summary["new_agreement_by_service_date"] == {"2026-03-02": 1}
+    assert summary["new_agreement_rows"] == [
+        {
+            "route_slot_id": "slot-20260302-cx100",
+            "route_id": "CX100",
+            "service_date": "2026-03-02",
+            "candidate_driver_id": "DRV-01",
+            "baseline_template_state": "white_template",
+            "planned_driver_day_state": "assigned",
+            "new_agreement_trigger_reason": "white_template_to_assigned",
+        }
+    ]
+    assert any("requires new agreement" in warning for warning in summary["warnings"])
+    assert any("signed on-call template day" in warning for warning in summary["warnings"])
+    assert not any("using ON_CALL_ONLY availability state" in warning for warning in summary["warnings"])
 
 
 def _build_bundle(

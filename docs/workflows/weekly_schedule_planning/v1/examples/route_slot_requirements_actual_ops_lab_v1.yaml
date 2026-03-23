@@ -1,0 +1,203 @@
+artifact_kind: planning.route_slot_requirements.workbook
+example_id: weekly_stage04_actual_ops_lab_v1
+schema_version: '1.0'
+planning_week_id: PW-2026-W13
+operational_week_start: '2026-03-22'
+scope_start: '2026-03-22'
+scope_end_exclusive: '2026-03-29'
+shape: aggregate_daily_route_count_rows
+columns:
+- service_date
+- route_slot_id
+- route_slot_class
+- required_skill
+- vehicle_type
+- shift_start
+- shift_end
+- estimated_hours
+- required_count
+- route_id
+- source_message_id
+- station_code
+- service_area
+- source_snapshot_row_ref
+- slot_band
+rows:
+- - '2026-03-22'
+  - slot-20260322-cycle1-standard
+  - cycle1_standard
+  - parcel_delivery
+  - XL_van
+  - '11:30'
+  - '20:00'
+  - 8.5
+  - 18
+  - CYC0322
+  - amazon-route-email-2026-03-20
+  - DVC4
+  - Pitt Meadows
+  - email-carry-forward:2026-03-22
+  - ''
+- - '2026-03-23'
+  - slot-20260323-cycle1-standard
+  - cycle1_standard
+  - parcel_delivery
+  - XL_van
+  - '11:30'
+  - '20:00'
+  - 8.5
+  - 23
+  - CYC0323
+  - amazon-route-email-2026-03-20
+  - DVC4
+  - Pitt Meadows
+  - email-carry-forward:2026-03-23
+  - ''
+- - '2026-03-24'
+  - slot-20260324-cycle1-standard
+  - cycle1_standard
+  - parcel_delivery
+  - XL_van
+  - '11:30'
+  - '20:00'
+  - 8.5
+  - 20
+  - CYC0324
+  - amazon-route-email-2026-03-20
+  - DVC4
+  - Pitt Meadows
+  - email-carry-forward:2026-03-24
+  - ''
+- - '2026-03-25'
+  - slot-20260325-cycle1-standard
+  - cycle1_standard
+  - parcel_delivery
+  - XL_van
+  - '11:30'
+  - '20:00'
+  - 8.5
+  - 20
+  - CYC0325
+  - amazon-route-email-2026-03-20
+  - DVC4
+  - Pitt Meadows
+  - email-carry-forward:2026-03-25
+  - ''
+- - '2026-03-26'
+  - slot-20260326-cycle1-standard
+  - cycle1_standard
+  - parcel_delivery
+  - XL_van
+  - '11:30'
+  - '20:00'
+  - 8.5
+  - 20
+  - CYC0326
+  - amazon-route-email-2026-03-20
+  - DVC4
+  - Pitt Meadows
+  - email-carry-forward:2026-03-26
+  - ''
+- - '2026-03-27'
+  - slot-20260327-cycle1-standard
+  - cycle1_standard
+  - parcel_delivery
+  - XL_van
+  - '11:30'
+  - '20:00'
+  - 8.5
+  - 20
+  - CYC0327
+  - amazon-route-email-2026-03-20
+  - DVC4
+  - Pitt Meadows
+  - email-carry-forward:2026-03-27
+  - ''
+- - '2026-03-28'
+  - slot-20260328-cycle1-standard
+  - cycle1_standard
+  - parcel_delivery
+  - XL_van
+  - '11:30'
+  - '20:00'
+  - 8.5
+  - 18
+  - CYC0328
+  - amazon-route-email-2026-03-20
+  - DVC4
+  - Pitt Meadows
+  - email-carry-forward:2026-03-28
+  - ''
+daily_demand_columns:
+- service_date
+- planned_route_count
+- standard_slot_count
+- rescue_slot_count
+- overflow_slot_count
+- source_message_id
+- source_kind
+- change_kind
+daily_demand_rows:
+- - '2026-03-22'
+  - 18
+  - 18
+  - 0
+  - 0
+  - amazon-route-email-2026-03-20
+  - carry_forward_last_week_route_counts
+  - carry_forward_assumption
+- - '2026-03-23'
+  - 23
+  - 23
+  - 0
+  - 0
+  - amazon-route-email-2026-03-20
+  - carry_forward_last_week_route_counts
+  - carry_forward_assumption
+- - '2026-03-24'
+  - 20
+  - 20
+  - 0
+  - 0
+  - amazon-route-email-2026-03-20
+  - carry_forward_last_week_route_counts
+  - carry_forward_assumption
+- - '2026-03-25'
+  - 20
+  - 20
+  - 0
+  - 0
+  - amazon-route-email-2026-03-20
+  - carry_forward_last_week_route_counts
+  - carry_forward_assumption
+- - '2026-03-26'
+  - 20
+  - 20
+  - 0
+  - 0
+  - amazon-route-email-2026-03-20
+  - carry_forward_last_week_route_counts
+  - carry_forward_assumption
+- - '2026-03-27'
+  - 20
+  - 20
+  - 0
+  - 0
+  - amazon-route-email-2026-03-20
+  - carry_forward_last_week_route_counts
+  - carry_forward_assumption
+- - '2026-03-28'
+  - 18
+  - 18
+  - 0
+  - 0
+  - amazon-route-email-2026-03-20
+  - carry_forward_last_week_route_counts
+  - carry_forward_assumption
+planner_notes:
+- Route counts for 2026-03-22..2026-03-28 are carried forward from the Amazon route
+  update email for 2026-03-15..2026-03-21 per lab instruction.
+- All routes are temporarily modeled as homogeneous cycle1_standard parcel-delivery
+  XL-van slots until richer route mix data arrives.
+- This payload carries explicit Sunday-start operational scope even though the repo
+  PlanningWeekID remains ISO-based.

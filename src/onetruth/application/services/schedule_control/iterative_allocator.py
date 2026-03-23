@@ -1184,6 +1184,21 @@ def _decision_from_candidate(
         previous_assignment_driver_id=previous_assignment_driver_id,
         displaced_route_slot_id=displaced_route_slot_id,
         displaced_driver_id=displaced_driver_id,
+        baseline_template_state=candidate.baseline_template_state,
+        planned_driver_day_state=(
+            candidate.planned_driver_day_state
+            if assignment_action == "assign"
+            else "unassigned"
+        ),
+        new_agreement_required=(
+            candidate.new_agreement_required if assignment_action == "assign" else False
+        ),
+        new_agreement_trigger_reason=(
+            candidate.new_agreement_trigger_reason if assignment_action == "assign" else ""
+        ),
+        template_state_preservation_fit=(
+            candidate.template_state_preservation_fit if assignment_action == "assign" else 0.0
+        ),
         warnings=_decision_warnings(candidate),
     )
 
@@ -1236,6 +1251,7 @@ def _unassigned_decision(
         station_code=route_slot.station_code,
         service_area=route_slot.service_area,
         planning_phase=phase,
+        planned_driver_day_state="unassigned",
     )
 
 
@@ -1357,6 +1373,7 @@ def _improvement_focus_assignments(
             if item.route_slot_id not in blocked_route_slot_ids
         ),
         key=lambda item: (
+            item.template_state_preservation_fit,
             item.preference_fit,
             item.continuity_score,
             item.soft_score_total,
@@ -1412,7 +1429,11 @@ def _decision_warnings(candidate: CandidateEvaluation) -> tuple[str, ...]:
         warnings.append("low_soft_score")
     if candidate.previous_week_stability < 0.4:
         warnings.append("weak_previous_week_continuity")
-    if candidate.availability_state in {"AVOID_IF_POSSIBLE", "ON_CALL_ONLY"}:
+    if candidate.new_agreement_required:
+        warnings.append("new_agreement_required")
+    if candidate.baseline_template_state == "on_call_template":
+        warnings.append("used_on_call_template_day")
+    if candidate.availability_state == "AVOID_IF_POSSIBLE":
         warnings.append("avoidable_availability_state_used")
     return tuple(warnings)
 

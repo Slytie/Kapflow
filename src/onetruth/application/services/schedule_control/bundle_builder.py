@@ -159,11 +159,26 @@ def build_weekly_schedule_control_bundle(
             f"(got {planning_week_id!r})"
         )
 
-    scope_start_date, scope_end_exclusive_date = _planning_week_bounds(planning_week_id)
+    scope_start_date, scope_end_exclusive_date = _resolve_weekly_scope_bounds(
+        planning_week_id=planning_week_id,
+        artifacts=(
+            route_slot_requirements_artifact,
+            driver_capabilities_artifact,
+            approved_availability_artifact,
+            actual_hours_artifact,
+            route_horizon_artifact,
+        ),
+    )
 
     route_slots = _parse_route_slots(route_slot_requirements_artifact)
     if not route_slots:
         raise ValueError("route_slot_requirements artifact does not contain any route slots")
+    _validate_route_slot_service_dates(
+        route_slots=route_slots,
+        scope_start=scope_start_date,
+        scope_end_exclusive=scope_end_exclusive_date,
+        artifact_label=_artifact_label(route_slot_requirements_artifact),
+    )
 
     drivers = _parse_driver_capabilities(driver_capabilities_artifact)
     if not drivers:
@@ -309,6 +324,7 @@ def _parse_approved_availability(
             planning_week_start=planning_week_start,
             planning_week_end_exclusive=planning_week_end_exclusive,
             actual_entries_by_driver=actual_entries_by_driver,
+            artifact_label=_artifact_label(artifact),
         )
 
     parsed: dict[str, DriverAvailability] = {}
@@ -360,7 +376,14 @@ def _parse_explicit_driver_day_availability(
     planning_week_start: date,
     planning_week_end_exclusive: date,
     actual_entries_by_driver: Mapping[str, tuple[ActualHoursEntry, ...]],
+    artifact_label: str,
 ) -> dict[str, DriverAvailability]:
+    _validate_explicit_service_date_rows(
+        rows=rows,
+        scope_start=planning_week_start,
+        scope_end_exclusive=planning_week_end_exclusive,
+        artifact_label=artifact_label,
+    )
     grouped: dict[str, dict[str, Any]] = {}
     for row in rows:
         driver_id = str(row.get("driver_id") or "").strip()
@@ -957,6 +980,140 @@ def _planning_week_bounds(planning_week_id: str) -> tuple[date, date]:
     start = date.fromisocalendar(int(year_text), int(week_text), 1)
     end_exclusive = start + timedelta(days=7)
     return start, end_exclusive
+
+
+def _resolve_weekly_scope_bounds(
+    *,
+    planning_week_id: str,
+    artifacts: Iterable[Mapping[str, Any] | None],
+) -> tuple[date, date]:
+    explicit_bounds: dict[str, tuple[date, date]] = {}
+    for artifact in artifacts:
+        if artifact is None:
+            continue
+        bounds = _explicit_scope_bounds(artifact)
+        if bounds is None:
+            continue
+        explicit_bounds[_artifact_label(artifact)] = bounds
+
+    if not explicit_bounds:
+        return _planning_week_bounds(planning_week_id)
+
+    unique_bounds = {bounds for bounds in explicit_bounds.values()}
+    if len(unique_bounds) != 1:
+        details = ", ".join(
+            f"{label}={bounds[0].isoformat()}..{bounds[1].isoformat()}"
+            for label, bounds in sorted(explicit_bounds.items())
+        )
+        raise ValueError(
+            "weekly Stage04 input artifacts declare conflicting explicit scope bounds: "
+            f"{details}"
+        )
+    return next(iter(unique_bounds))
+
+
+def _explicit_scope_bounds(artifact: Mapping[str, Any]) -> tuple[date, date] | None:
+    metadata = _metadata_json(artifact)
+    scope_start_text = str(metadata.get("scope_start") or "").strip()
+    scope_end_text = str(metadata.get("scope_end_exclusive") or "").strip()
+    if not scope_start_text and not scope_end_text:
+        return None
+    if not scope_start_text or not scope_end_text:
+        raise ValueError(
+            f"{_artifact_label(artifact)} must declare both scope_start and "
+            "scope_end_exclusive when either explicit scope bound is present"
+        )
+    scope_start = _parse_service_date(scope_start_text, context=f"{_artifact_label(artifact)} scope_start")
+    scope_end_exclusive = _parse_service_date(
+        scope_end_text,
+        context=f"{_artifact_label(artifact)} scope_end_exclusive",
+    )
+    if scope_end_exclusive <= scope_start:
+        raise ValueError(
+            f"{_artifact_label(artifact)} must declare scope_end_exclusive after scope_start "
+            f"(got {scope_start_text}..{scope_end_text})"
+        )
+    return scope_start, scope_end_exclusive
+
+
+def _validate_route_slot_service_dates(
+    *,
+    route_slots: tuple[RouteSlotRequirement, ...],
+    scope_start: date,
+    scope_end_exclusive: date,
+    artifact_label: str,
+) -> None:
+    out_of_scope_dates = sorted(
+        {
+            route_slot.service_date
+            for route_slot in route_slots
+            if not _service_date_in_scope(
+                route_slot.service_date,
+                scope_start=scope_start,
+                scope_end_exclusive=scope_end_exclusive,
+            )
+        }
+    )
+    if out_of_scope_dates:
+        raise ValueError(
+            f"{artifact_label} contains route-slot service_date values outside resolved weekly "
+            f"scope {scope_start.isoformat()}..{scope_end_exclusive.isoformat()}: "
+            f"{out_of_scope_dates}"
+        )
+
+
+def _validate_explicit_service_date_rows(
+    *,
+    rows: list[dict[str, Any]],
+    scope_start: date,
+    scope_end_exclusive: date,
+    artifact_label: str,
+) -> None:
+    out_of_scope_dates = sorted(
+        {
+            service_date
+            for row in rows
+            for service_date in [str(row.get("service_date") or "").strip()]
+            if service_date
+            and not _service_date_in_scope(
+                service_date,
+                scope_start=scope_start,
+                scope_end_exclusive=scope_end_exclusive,
+            )
+        }
+    )
+    if out_of_scope_dates:
+        raise ValueError(
+            f"{artifact_label} contains explicit availability service_date values outside "
+            f"resolved weekly scope {scope_start.isoformat()}..{scope_end_exclusive.isoformat()}: "
+            f"{out_of_scope_dates}"
+        )
+
+
+def _service_date_in_scope(
+    service_date_text: str,
+    *,
+    scope_start: date,
+    scope_end_exclusive: date,
+) -> bool:
+    service_date = _parse_service_date(service_date_text, context="service_date")
+    return scope_start <= service_date < scope_end_exclusive
+
+
+def _parse_service_date(value: str, *, context: str) -> date:
+    try:
+        return date.fromisoformat(value)
+    except ValueError as exc:
+        raise ValueError(f"{context} must be an ISO date (got {value!r})") from exc
+
+
+def _artifact_label(artifact: Mapping[str, Any]) -> str:
+    return str(
+        artifact.get("dataset_key")
+        or artifact.get("artifact_kind")
+        or artifact.get("artifact_version_id")
+        or "artifact"
+    ).strip()
 
 
 def _metadata_json(artifact: Mapping[str, Any]) -> dict[str, Any]:
