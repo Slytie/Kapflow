@@ -131,6 +131,7 @@ rows:
 daily_demand_columns:
 - service_date
 - planned_route_count
+- on_call_target
 - standard_slot_count
 - rescue_slot_count
 - overflow_slot_count
@@ -140,6 +141,7 @@ daily_demand_columns:
 daily_demand_rows:
 - - '2026-03-22'
   - 16
+  - 4
   - 16
   - 0
   - 0
@@ -148,6 +150,7 @@ daily_demand_rows:
   - holdout_route_total_override
 - - '2026-03-23'
   - 23
+  - 4
   - 23
   - 0
   - 0
@@ -156,6 +159,7 @@ daily_demand_rows:
   - holdout_route_total_override
 - - '2026-03-24'
   - 20
+  - 4
   - 20
   - 0
   - 0
@@ -164,6 +168,7 @@ daily_demand_rows:
   - holdout_route_total_override
 - - '2026-03-25'
   - 19
+  - 4
   - 19
   - 0
   - 0
@@ -172,6 +177,7 @@ daily_demand_rows:
   - holdout_route_total_override
 - - '2026-03-26'
   - 21
+  - 4
   - 21
   - 0
   - 0
@@ -180,6 +186,7 @@ daily_demand_rows:
   - holdout_route_total_override
 - - '2026-03-27'
   - 18
+  - 4
   - 18
   - 0
   - 0
@@ -188,6 +195,7 @@ daily_demand_rows:
   - holdout_route_total_override
 - - '2026-03-28'
   - 17
+  - 4
   - 17
   - 0
   - 0
@@ -198,6 +206,8 @@ planner_notes:
 - Route counts for 2026-03-22..2026-03-28 come only from Schedule March 22 to March 28.pdf.
 - Staffing cells, staffing patterns, and richer route mix data from that holdout schedule are
   intentionally excluded from this lab-normalized package.
+- The deterministic planner should cover required routes first, then fill up to four explicit
+  On-Call buffer positions per day if legal driver-days remain.
 - All routes are temporarily modeled as homogeneous cycle1_standard parcel-delivery
   XL-van slots until richer route mix data arrives.
 - This payload carries explicit Sunday-start operational scope even though the repo

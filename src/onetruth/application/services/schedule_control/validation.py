@@ -187,6 +187,8 @@ def build_stage04_validation_summary(
     *,
     bundle: WeeklyScheduleControlBundle,
     selected_candidates: list[dict[str, Any]],
+    reserve_rows: list[dict[str, Any]] | None = None,
+    reserve_summary: dict[str, Any] | None = None,
     soft_score_totals: dict[str, float],
     iteration_summaries: list[IterationSummary] | None = None,
     repair_moves: list[RepairMove] | None = None,
@@ -197,7 +199,11 @@ def build_stage04_validation_summary(
     uncovered_route_slot_ids: list[str] = []
     iterations = iteration_summaries or []
     repairs = repair_moves or []
-    contract_change_summary = summarize_contract_change_metrics(selected_candidates)
+    resolved_reserve_rows = list(reserve_rows or [])
+    resolved_reserve_summary = dict(reserve_summary or {})
+    contract_change_summary = summarize_contract_change_metrics(
+        [*selected_candidates, *resolved_reserve_rows]
+    )
 
     for candidate in selected_candidates:
         route_slot_id = str(candidate.get("route_slot_id") or "")
@@ -243,6 +249,31 @@ def build_stage04_validation_summary(
             tradeoffs.append(
                 f"{route_slot_id} re-assigned in iteration {candidate.get('iteration_index')} to improve preference fit while keeping hard rules satisfied."
             )
+    for reserve_row in resolved_reserve_rows:
+        driver_id = str(reserve_row.get("candidate_driver_id") or "unassigned")
+        service_date = str(reserve_row.get("service_date") or "")
+        reserve_slot_id = str(reserve_row.get("route_slot_id") or "")
+        if bool(reserve_row.get("new_agreement_required")):
+            trigger_reason = str(reserve_row.get("new_agreement_trigger_reason") or "")
+            warnings.append(
+                f"{driver_id} selected for on-call buffer {reserve_slot_id or service_date} requires new agreement"
+                + (f" ({trigger_reason})" if trigger_reason else "")
+            )
+        elif str(reserve_row.get("availability_state") or "") == "AVOID_IF_POSSIBLE":
+            warnings.append(
+                f"{driver_id} selected for on-call buffer {reserve_slot_id or service_date} using AVOID_IF_POSSIBLE availability state"
+            )
+
+    unmet_on_call_target_by_service_date = dict(
+        resolved_reserve_summary.get("unmet_on_call_target_by_service_date") or {}
+    )
+    for service_date, shortfall in sorted(unmet_on_call_target_by_service_date.items()):
+        if int(shortfall or 0) <= 0:
+            continue
+        warnings.append(
+            f"{service_date} on-call buffer short by {int(shortfall)} after deterministic reserve selection"
+        )
+
     hard_rule_result = "pass" if not violations else "fail"
     if hard_rule_result == "pass" and warnings:
         recommendation = "forward_to_stage05_manager_review_with_warnings"
@@ -302,6 +333,7 @@ def build_stage04_validation_summary(
         "violations": violations,
         "warnings": warnings,
         "tradeoffs": tradeoffs,
+        "reserve_summary": resolved_reserve_summary,
         "repair_moves": [item.to_payload() for item in repairs],
         "reallocation_moves": [item.to_payload() for item in repairs],
         "recommended_action": recommendation,

@@ -40,6 +40,7 @@ def render_stage04_input_bundle(
                 {
                     "service_date": item.service_date,
                     "planned_route_count": item.planned_route_count,
+                    "on_call_target": item.on_call_target,
                     "standard_slot_count": item.standard_slot_count,
                     "standard_early_slot_count": item.standard_early_slot_count,
                     "standard_late_slot_count": item.standard_late_slot_count,
@@ -104,6 +105,7 @@ def render_stage04_candidate_delta(
     *,
     bundle: WeeklyScheduleControlBundle,
     selected_candidates: list[dict[str, Any]],
+    reserve_rows: list[dict[str, Any]],
     iteration_summaries: list[IterationSummary],
     repair_moves: list[RepairMove],
     coverage_summary: dict[str, Any],
@@ -114,7 +116,9 @@ def render_stage04_candidate_delta(
         iteration_summaries=iteration_summaries,
         repair_moves=repair_moves,
     )
-    contract_change_summary = summarize_contract_change_metrics(selected_candidates)
+    contract_change_summary = summarize_contract_change_metrics(
+        [*selected_candidates, *reserve_rows]
+    )
     columns = [
         "candidate_delta_id",
         "route_slot_id",
@@ -185,6 +189,7 @@ def render_stage04_candidate_delta(
         "candidate_delta_id": candidate_delta_id,
         "coverage_summary": coverage_summary,
         "contract_change_summary": contract_change_summary,
+        "reserve_rows": [_reserve_output_row(row) for row in reserve_rows],
         "iteration_deltas": [item.to_payload() for item in iteration_summaries],
         "repair_moves": [item.to_payload() for item in repair_moves],
         "reallocation_moves": [item.to_payload() for item in repair_moves],
@@ -195,6 +200,8 @@ def render_stage04_validation_summary(
     *,
     bundle: WeeklyScheduleControlBundle,
     selected_candidates: list[dict[str, Any]],
+    reserve_rows: list[dict[str, Any]],
+    reserve_summary: dict[str, Any],
     candidate_delta_id: str,
     iteration_summaries: list[IterationSummary],
     repair_moves: list[RepairMove],
@@ -204,6 +211,8 @@ def render_stage04_validation_summary(
     summary = build_stage04_validation_summary(
         bundle=bundle,
         selected_candidates=selected_candidates,
+        reserve_rows=reserve_rows,
+        reserve_summary=reserve_summary,
         soft_score_totals=soft_totals,
         iteration_summaries=iteration_summaries,
         repair_moves=repair_moves,
@@ -217,6 +226,7 @@ def render_stage04_draft_weekly_schedule_workbook(
     *,
     bundle: WeeklyScheduleControlBundle,
     selected_candidates: list[dict[str, Any]],
+    reserve_rows: list[dict[str, Any]],
     candidate_delta_id: str,
     iteration_summaries: list[IterationSummary],
 ) -> dict[str, Any]:
@@ -262,6 +272,7 @@ def render_stage04_draft_weekly_schedule_workbook(
     return {
         "columns": columns,
         "rows": rows,
+        "reserve_rows": [_reserve_output_row(row) for row in reserve_rows],
         "iteration_deltas": [item.to_payload() for item in iteration_summaries],
     }
 
@@ -271,15 +282,20 @@ def render_stage04_draft_weekly_schedule_doc(
     bundle: WeeklyScheduleControlBundle,
     validation_summary: dict[str, Any],
     selected_candidates: list[dict[str, Any]],
+    reserve_rows: list[dict[str, Any]],
+    reserve_summary: dict[str, Any],
     iteration_summaries: list[IterationSummary],
     coverage_summary: dict[str, Any],
 ) -> dict[str, Any]:
     summary = validation_summary.get("summary") if isinstance(validation_summary, dict) else {}
-    contract_change_summary = summarize_contract_change_metrics(selected_candidates)
+    contract_change_summary = summarize_contract_change_metrics(
+        [*selected_candidates, *reserve_rows]
+    )
     return {
         "summary": {
             "bundle_id": bundle.bundle_id,
             "selected_route_slot_count": len(selected_candidates),
+            "selected_on_call_count": len(reserve_rows),
             "hard_rule_result": str(summary.get("hard_rule_result") or "unknown"),
             "recommended_action": str(summary.get("recommended_action") or "review_required"),
             "warnings": list(summary.get("warnings") or []),
@@ -291,6 +307,7 @@ def render_stage04_draft_weekly_schedule_doc(
             ),
             "phase_counts": dict((coverage_summary.get("phase_counts") or {})),
             "coverage_summary": coverage_summary,
+            "reserve_summary": dict(reserve_summary),
             **contract_change_summary,
         },
         "selected_assignments": [
@@ -313,6 +330,7 @@ def render_stage04_draft_weekly_schedule_doc(
             for selected in selected_candidates
             if str(selected.get("assignment_action") or "assign") == "assign"
         ],
+        "selected_on_call_rows": [_reserve_output_row(row) for row in reserve_rows],
         "contract_change_summary": {
             key: value for key, value in contract_change_summary.items()
         }
@@ -381,6 +399,34 @@ def _route_id_from_slot(route_slot_id: str) -> str:
     compact = route_slot_id.split("#", maxsplit=1)[0]
     token = compact.rsplit("-", maxsplit=1)[-1]
     return token.upper()
+
+
+def _reserve_output_row(row: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "service_date": str(row.get("service_date") or ""),
+        "route_slot_id": str(row.get("route_slot_id") or ""),
+        "route_id": str(row.get("route_id") or ""),
+        "assigned_driver_id": str(
+            row.get("assigned_driver_id")
+            or row.get("candidate_driver_id")
+            or ""
+        ),
+        "availability_state": str(row.get("availability_state") or ""),
+        "baseline_template_state": str(row.get("baseline_template_state") or ""),
+        "planned_driver_day_state": str(row.get("planned_driver_day_state") or ""),
+        "new_agreement_required": bool(row.get("new_agreement_required")),
+        "new_agreement_trigger_reason": str(row.get("new_agreement_trigger_reason") or ""),
+        "template_state_preservation_fit": round(
+            float(row.get("template_state_preservation_fit") or 0.0),
+            4,
+        ),
+        "iteration_index": int(row.get("iteration_index") or 0),
+        "phase": str(row.get("phase") or row.get("planning_phase") or ""),
+        "projected_minutes": int(row.get("projected_minutes") or 0),
+        "rationale_code": str(row.get("rationale_code") or ""),
+        "assignment_action": str(row.get("assignment_action") or ""),
+        "assignment_status": str(row.get("assignment_status") or ""),
+    }
 
 
 def _driver_profile(

@@ -168,6 +168,7 @@ def _build_analysis_payload(
     selected_assignment_rows = [
         _selected_assignment_row(dict(zip(columns, row)))
         for row in list(candidate_delta.get("rows") or [])
+        if str(dict(zip(columns, row)).get("assignment_action") or "assign") == "assign"
     ]
     selected_assignment_rows.sort(
         key=lambda row: (
@@ -177,8 +178,16 @@ def _build_analysis_payload(
         )
     )
 
+    reserve_rows = [
+        _selected_assignment_row(dict(row))
+        for row in list(candidate_delta.get("reserve_rows") or [])
+        if isinstance(row, dict)
+    ]
+    reserve_summary = dict(validation_summary.get("reserve_summary") or {})
     new_agreement_rows = [
-        row for row in selected_assignment_rows if bool(row["new_agreement_required"])
+        _selected_assignment_row(dict(row))
+        for row in list(validation_summary.get("new_agreement_rows") or [])
+        if isinstance(row, dict)
     ]
     availability_state_counts = {
         state: 0 for state in _availability_state_order(selected_assignment_rows)
@@ -200,7 +209,7 @@ def _build_analysis_payload(
 
     on_call_template_usage_count = sum(
         1
-        for row in selected_assignment_rows
+        for row in reserve_rows
         if str(row["baseline_template_state"] or "") == "on_call_template"
     )
     white_template_agreement_count = sum(
@@ -213,6 +222,16 @@ def _build_analysis_payload(
         for row in new_agreement_rows
         if str(row["new_agreement_trigger_reason"] or "") == "yellow_template_to_assigned"
     )
+    white_template_on_call_count = sum(
+        1
+        for row in new_agreement_rows
+        if str(row["new_agreement_trigger_reason"] or "") == "white_template_to_on_call"
+    )
+    yellow_template_on_call_count = sum(
+        1
+        for row in new_agreement_rows
+        if str(row["new_agreement_trigger_reason"] or "") == "yellow_template_to_on_call"
+    )
 
     return {
         "coverage_summary": coverage_summary,
@@ -223,6 +242,7 @@ def _build_analysis_payload(
             validation_summary.get("new_agreement_by_service_date") or {}
         ),
         "warning_count": len(validation_summary.get("warnings") or []),
+        "reserve_summary": reserve_summary,
         "baseline_template_state_counts": baseline_template_state_counts,
         "baseline_template_state_order": list(
             _baseline_template_state_order(selected_assignment_rows)
@@ -230,10 +250,13 @@ def _build_analysis_payload(
         "availability_state_counts": availability_state_counts,
         "availability_state_order": list(_availability_state_order(selected_assignment_rows)),
         "selected_assignment_rows": selected_assignment_rows,
+        "reserve_rows": reserve_rows,
         "new_agreement_rows": new_agreement_rows,
         "on_call_template_usage_count": on_call_template_usage_count,
         "white_template_agreement_count": white_template_agreement_count,
         "yellow_template_agreement_count": yellow_template_agreement_count,
+        "white_template_on_call_count": white_template_on_call_count,
+        "yellow_template_on_call_count": yellow_template_on_call_count,
     }
 
 
@@ -242,7 +265,11 @@ def _selected_assignment_row(row: dict[str, Any]) -> dict[str, Any]:
         "service_date": str(row.get("service_date") or ""),
         "route_slot_id": str(row.get("route_slot_id") or ""),
         "route_id": str(row.get("route_id") or ""),
-        "assigned_driver_id": str(row.get("assigned_driver_id") or ""),
+        "assigned_driver_id": str(
+            row.get("assigned_driver_id")
+            or row.get("candidate_driver_id")
+            or ""
+        ),
         "availability_state": str(row.get("availability_state") or ""),
         "baseline_template_state": str(row.get("baseline_template_state") or ""),
         "planned_driver_day_state": str(row.get("planned_driver_day_state") or ""),
@@ -250,7 +277,7 @@ def _selected_assignment_row(row: dict[str, Any]) -> dict[str, Any]:
         "new_agreement_trigger_reason": str(row.get("new_agreement_trigger_reason") or ""),
         "template_state_preservation_fit": row.get("template_state_preservation_fit"),
         "iteration_index": int(row.get("iteration_index") or 0),
-        "phase": str(row.get("phase") or ""),
+        "phase": str(row.get("phase") or row.get("planning_phase") or ""),
         "projected_minutes": int(row.get("projected_minutes") or 0),
         "rationale_code": str(row.get("rationale_code") or ""),
     }
@@ -356,6 +383,26 @@ def _build_bundle_readme(
     lines.extend(
         [
             "",
+            "## On-Call Buffer Summary",
+            "",
+        ]
+    )
+    reserve_summary = dict(analysis.get("reserve_summary") or {})
+    target_by_service_date = dict(reserve_summary.get("on_call_target_by_service_date") or {})
+    filled_by_service_date = dict(reserve_summary.get("selected_on_call_by_service_date") or {})
+    lines.append(
+        f"- On-call buffer total: `{reserve_summary.get('selected_on_call_total', 0)}` filled / "
+        f"`{reserve_summary.get('target_on_call_total', 0)}` targeted"
+    )
+    for service_date in sorted(target_by_service_date):
+        lines.append(
+            f"- `{service_date}`: `{filled_by_service_date.get(service_date, 0)}` filled / "
+            f"`{target_by_service_date.get(service_date, 0)}` targeted"
+        )
+
+    lines.extend(
+        [
+            "",
             "## On-Call Template Usage",
             "",
         ]
@@ -372,16 +419,21 @@ def _build_bundle_readme(
 
 def _build_on_call_template_note(analysis: dict[str, Any]) -> str:
     on_call_usage_count = int(analysis["on_call_template_usage_count"])
+    reserve_summary = dict(analysis.get("reserve_summary") or {})
+    selected_on_call_total = int(reserve_summary.get("selected_on_call_total") or 0)
+    target_on_call_total = int(reserve_summary.get("target_on_call_total") or 0)
     if on_call_usage_count > 0:
         headline = (
-            "- Summary: The patch used on-call template days "
-            f"`{on_call_usage_count}` time(s) instead of taking all contract-change "
+            "- Summary: The patch filled "
+            f"`{selected_on_call_total}` of `{target_on_call_total}` On-Call buffer positions "
+            f"and used signed on-call template days `{on_call_usage_count}` time(s) before taking "
             "relief from white/yellow days."
         )
     else:
         headline = (
-            "- Summary: The patch did not use on-call template days instead of "
-            "white/yellow days."
+            "- Summary: The patch filled "
+            f"`{selected_on_call_total}` of `{target_on_call_total}` On-Call buffer positions "
+            "without using signed on-call template days."
         )
     return "\n".join(
         [
@@ -389,16 +441,28 @@ def _build_on_call_template_note(analysis: dict[str, Any]) -> str:
             "",
             headline,
             (
+                "- On-call buffer positions filled: "
+                f"`{selected_on_call_total}` / `{target_on_call_total}`"
+            ),
+            (
                 "- On-call template day assignments: "
                 f"`{on_call_usage_count}`"
             ),
             (
-                "- White-template agreement cases: "
+                "- White-template assigned agreement cases: "
                 f"`{analysis['white_template_agreement_count']}`"
             ),
             (
-                "- Yellow-template agreement cases: "
+                "- Yellow-template assigned agreement cases: "
                 f"`{analysis['yellow_template_agreement_count']}`"
+            ),
+            (
+                "- White-template On-Call agreement cases: "
+                f"`{analysis['white_template_on_call_count']}`"
+            ),
+            (
+                "- Yellow-template On-Call agreement cases: "
+                f"`{analysis['yellow_template_on_call_count']}`"
             ),
         ]
     )

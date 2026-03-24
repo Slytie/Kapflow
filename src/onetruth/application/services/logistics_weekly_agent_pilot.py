@@ -1631,6 +1631,12 @@ def _stage04_analysis(
         "new_agreement_by_service_date": dict(
             summary.get("new_agreement_by_service_date") or {}
         ),
+        "new_agreement_by_driver_id": dict(
+            summary.get("new_agreement_by_driver_id") or {}
+        ),
+        "new_agreement_transition_counts": dict(
+            summary.get("new_agreement_transition_counts") or {}
+        ),
         "new_agreement_rows": list(summary.get("new_agreement_rows") or []),
     }
     if not tradeoffs:
@@ -1698,6 +1704,7 @@ def _stage04_analysis(
         "phase_counts": dict(coverage_summary.get("phase_counts") or {}),
         "soft_score_totals": summary.get("soft_score_totals") or {},
         "contract_change_summary": contract_change_summary,
+        "reserve_summary": dict(summary.get("reserve_summary") or {}),
         "tradeoffs": tradeoffs,
         "warnings": warnings,
         "draft_summary": (
@@ -1836,12 +1843,17 @@ def _packet_to_markdown(packet: dict[str, Any]) -> str:
     if stage04_analysis:
         coverage_summary = stage04_analysis.get("coverage_summary") or {}
         contract_change_summary = stage04_analysis.get("contract_change_summary") or {}
+        reserve_summary = stage04_analysis.get("reserve_summary") or {}
         lines.extend(
             [
                 f"- Iterations: {len(stage04_analysis.get('iterations') or [])}",
                 f"- Assigned route slots: {coverage_summary.get('assigned_route_slots', 0)}",
                 f"- Uncovered route slots: {coverage_summary.get('uncovered_route_slots', 0)}",
                 f"- Pending route slots: {coverage_summary.get('pending_route_slots', 0)}",
+                (
+                    "- Selected On-Call buffer rows: "
+                    f"{reserve_summary.get('selected_on_call_total', 0)}"
+                ),
                 (
                     "- New agreement required rows: "
                     f"{contract_change_summary.get('new_agreement_required_count', 0)}"
@@ -1864,6 +1876,16 @@ def _packet_to_markdown(packet: dict[str, Any]) -> str:
                     f"{service_date}={count}"
                     for service_date, count in sorted(
                         (contract_change_summary.get("new_agreement_by_service_date") or {}).items()
+                    )
+                )
+            )
+        if reserve_summary.get("selected_on_call_by_service_date"):
+            lines.append(
+                "- On-call buffer by service date: "
+                + ", ".join(
+                    f"{service_date}={count}/{(reserve_summary.get('on_call_target_by_service_date') or {}).get(service_date, 0)}"
+                    for service_date, count in sorted(
+                        (reserve_summary.get("selected_on_call_by_service_date") or {}).items()
                     )
                 )
             )

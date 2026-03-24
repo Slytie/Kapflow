@@ -1067,6 +1067,8 @@ class _Stage04DeterministicTooling:
             "candidate_count": len(rendered.candidate_matrix),
             "selected_candidate_count": len(rendered.selected_candidates),
             "selected_candidates": rendered.selected_candidates,
+            "reserve_rows": rendered.reserve_rows,
+            "reserve_summary": rendered.reserve_summary,
             "iteration_summaries": rendered.iteration_summaries,
             "repair_moves": rendered.repair_moves,
             "coverage_summary": rendered.coverage_summary,
@@ -1190,11 +1192,17 @@ class _Stage04DeterministicTooling:
             "bundle_id": build_result["bundle_id"],
             "candidate_count": build_result["candidate_count"],
             "selected_candidate_count": build_result["selected_candidate_count"],
+            "selected_on_call_count": len(build_result.get("reserve_rows") or []),
             "coverage_summary": build_result["coverage_summary"],
+            "reserve_summary": dict(build_result.get("reserve_summary") or {}),
             "contract_change_summary": summarize_contract_change_metrics(
-                build_result.get("selected_candidates") or []
+                [
+                    *(build_result.get("selected_candidates") or []),
+                    *(build_result.get("reserve_rows") or []),
+                ]
             ),
             "selected_candidates": build_result["selected_candidates"],
+            "selected_on_call_rows": list(build_result.get("reserve_rows") or []),
             "artifacts": {
                 key: {
                     "artifact_version_id": value["artifact_version_id"],
@@ -1576,6 +1584,11 @@ def _compact_validation_summary(validation_summary: Any) -> dict[str, Any] | Non
             "warnings": list(summary.get("warnings") or [])[:3],
             "tradeoffs": list(summary.get("tradeoffs") or [])[:3],
             "coverage_summary": _compact_coverage_summary(coverage_summary),
+            "reserve_summary": (
+                dict(summary.get("reserve_summary") or {})
+                if isinstance(summary.get("reserve_summary"), dict)
+                else None
+            ),
             "soft_score_totals": (
                 dict(soft_score_totals) if isinstance(soft_score_totals, dict) else None
             ),
@@ -1607,7 +1620,13 @@ def _compact_stage04_build_result(stage04_build_result: Any) -> dict[str, Any] |
         "bundle_id": stage04_build_result.get("bundle_id"),
         "candidate_count": stage04_build_result.get("candidate_count"),
         "selected_candidate_count": stage04_build_result.get("selected_candidate_count"),
+        "selected_on_call_count": len(stage04_build_result.get("reserve_rows") or []),
         "coverage_summary": _compact_coverage_summary(stage04_build_result.get("coverage_summary")),
+        "reserve_summary": (
+            dict(stage04_build_result.get("reserve_summary") or {})
+            if isinstance(stage04_build_result.get("reserve_summary"), dict)
+            else None
+        ),
         "contract_change_summary": _compact_contract_change_summary(
             stage04_build_result.get("contract_change_summary")
         ),

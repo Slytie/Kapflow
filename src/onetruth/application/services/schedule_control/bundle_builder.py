@@ -108,6 +108,7 @@ class DriverPolicySignal:
 class DailyDemandSummary:
     service_date: str
     planned_route_count: int
+    on_call_target: int
     standard_slot_count: int
     standard_early_slot_count: int
     standard_late_slot_count: int
@@ -724,6 +725,7 @@ def _parse_daily_demand_summary(
         parsed[service_date] = DailyDemandSummary(
             service_date=service_date,
             planned_route_count=max(_coerce_int(row.get("planned_route_count"), default=0), 0),
+            on_call_target=max(_coerce_int(row.get("on_call_target"), default=0), 0),
             standard_slot_count=max(
                 _coerce_int(
                     row.get("standard_slot_count"),
@@ -759,6 +761,7 @@ def _parse_daily_demand_summary(
             {
                 "service_date": slot.service_date,
                 "planned_route_count": 0,
+                "on_call_target": 0,
                 "standard_slot_count": 0,
                 "standard_early_slot_count": 0,
                 "standard_late_slot_count": 0,
@@ -788,6 +791,7 @@ def _parse_daily_demand_summary(
         service_date: DailyDemandSummary(
             service_date=service_date,
             planned_route_count=int(values["planned_route_count"]),
+            on_call_target=int(values["on_call_target"]),
             standard_slot_count=int(values["standard_slot_count"]),
             standard_early_slot_count=int(values["standard_early_slot_count"]),
             standard_late_slot_count=int(values["standard_late_slot_count"]),
