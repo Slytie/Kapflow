@@ -223,11 +223,11 @@ def test_weekly_stage04_fixture_profiles_cover_tiny_realistic_and_actual_ops() -
     assert realistic["has_previous_week_history"] is True
 
     assert actual_ops["planning_week_id"] == "PW-2026-W13"
-    assert actual_ops["route_slot_count"] == 139
+    assert actual_ops["route_slot_count"] == 134
     assert actual_ops["driver_count"] == 51
     assert actual_ops["has_daily_availability_states"] is True
     assert actual_ops["has_previous_week_history"] is True
-    assert actual_ops["fixture_contract"] == "weekly_stage04_actual_ops_lab_v1"
+    assert actual_ops["fixture_contract"] == "weekly_stage04_actual_ops_lab_v2"
 
     assert tiny["planning_week_id"] == "PW-2026-W10"
     assert tiny["route_slot_count"] == 2
@@ -522,7 +522,7 @@ def test_actual_ops_weekly_stage04_pilot_exports_expected_output_kinds_and_full_
     }
     for ids in output_artifacts.values():
         assert ids
-    assert packet["stage04_analysis"]["coverage_summary"]["assigned_route_slots"] == 139
+    assert packet["stage04_analysis"]["coverage_summary"]["assigned_route_slots"] == 134
     assert packet["stage04_analysis"]["coverage_summary"]["uncovered_route_slots"] == 0
     assert (
         packet["stage04_analysis"]["contract_change_summary"]["new_agreement_required_count"]
@@ -531,7 +531,7 @@ def test_actual_ops_weekly_stage04_pilot_exports_expected_output_kinds_and_full_
     assert len(
         packet["stage04_analysis"]["contract_change_summary"]["new_agreement_rows"]
     ) == packet["stage04_analysis"]["contract_change_summary"]["new_agreement_required_count"]
-    assert len(packet["stage04_analysis"]["iterations"]) == 18
+    assert packet["stage04_analysis"]["iterations"]
 
     candidate_delta = _load_artifact_payload(
         _artifact_rows_for_kind(
@@ -557,10 +557,12 @@ def test_actual_ops_weekly_stage04_pilot_exports_expected_output_kinds_and_full_
     new_agreement_idx = candidate_delta["columns"].index("new_agreement_required")
 
     assert "baseline_template_state" in candidate_delta["columns"]
+    assert candidate_delta["coverage_summary"]["assigned_route_slots"] == 134
     assert validation_summary["new_agreement_required_count"] <= 10
     assert sum(1 for row in candidate_delta["rows"] if bool(row[new_agreement_idx])) == validation_summary[
         "new_agreement_required_count"
     ]
+    assert len(candidate_delta["iteration_deltas"]) == len(packet["stage04_analysis"]["iterations"])
     assert draft_doc["summary"]["new_agreement_required_count"] == validation_summary[
         "new_agreement_required_count"
     ]

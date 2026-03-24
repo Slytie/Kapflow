@@ -1,0 +1,33 @@
+# pack-refs with: peeled fully-peeled sorted 
+8e8d111f23286ad596d8dd914c1a921cea78df2c refs/heads/dependabot/github_actions/actions/checkout-6.0.2
+823a9391f21987a411762be711f401882eb10b6d refs/heads/dependabot/github_actions/actions/setup-node-6.3.0
+e659478752e44a8faae32f79716fdb3edb4fdb2b refs/heads/dependabot/github_actions/actions/setup-python-6.2.0
+596398aa3bf0a19e98cb6637e045ec90edbfe610 refs/heads/dependabot/npm_and_yarn/frontend/jsdom-29.0.0
+1efa13b35a17d4a8f4c4a829bea046c845b2b690 refs/heads/dependabot/npm_and_yarn/frontend/msw-2.12.13
+e18506235b980cd75aeee433732c64b3fdab6c3c refs/heads/dependabot/npm_and_yarn/frontend/multi-d88693a43a
+20a727b1fcfdeb4b1c19475079f771a5fa992b5e refs/heads/dependabot/npm_and_yarn/frontend/vite-8.0.0
+d4be56ca0eda7e97ce3f3926aafdab39a18778c4 refs/heads/dependabot/npm_and_yarn/frontend/vitejs/plugin-react-6.0.1
+baf52d3dee4e98c27d8ef6de36cfb5e8d5fad732 refs/heads/dependabot/pip/pytest-gte-8-and-lt-10
+8dd0eecf13dce89d9b05d35406de82a3b4272561 refs/heads/dev
+f9990e79499ea54cda82505a37a2140913e5ccbd refs/heads/main
+f9990e79499ea54cda82505a37a2140913e5ccbd refs/heads/production
+823a9391f21987a411762be711f401882eb10b6d refs/pull/1/head
+8385ced7671ee999204f035ace1074aa629f9b81 refs/pull/1/merge
+e659478752e44a8faae32f79716fdb3edb4fdb2b refs/pull/2/head
+fff2d6fb3bbdc8bd982d8369bef3184d893bc86b refs/pull/2/merge
+8e8d111f23286ad596d8dd914c1a921cea78df2c refs/pull/3/head
+39f0e1ba30245a19296661eb78ba08f3f3be8172 refs/pull/3/merge
+baf52d3dee4e98c27d8ef6de36cfb5e8d5fad732 refs/pull/4/head
+f654c569fe54413fbb4fc5cf5a71a9b6cc853004 refs/pull/4/merge
+1efa13b35a17d4a8f4c4a829bea046c845b2b690 refs/pull/5/head
+2a8ac6d1b5ebb1616c6c17d084b972c1c10197c0 refs/pull/5/merge
+d4be56ca0eda7e97ce3f3926aafdab39a18778c4 refs/pull/6/head
+14f06d51371ddceccb7c8a482d772fb6f543ede6 refs/pull/6/merge
+596398aa3bf0a19e98cb6637e045ec90edbfe610 refs/pull/7/head
+9dfbf6dd81b5d0754f48acd0ca61868eb8b8ca0a refs/pull/7/merge
+20a727b1fcfdeb4b1c19475079f771a5fa992b5e refs/pull/8/head
+046f40e502c99141565cdb6117c4ea71ad8185f8 refs/pull/8/merge
+e18506235b980cd75aeee433732c64b3fdab6c3c refs/pull/9/head
+34c515d6716b962be5e04c5ac0674b832799d843 refs/pull/9/merge
+fa6614aeca816754cbc222067732e29d786368a0 refs/tags/rc-2026-03-18-01
+^f9990e79499ea54cda82505a37a2140913e5ccbd

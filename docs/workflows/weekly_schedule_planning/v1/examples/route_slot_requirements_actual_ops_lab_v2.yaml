@@ -1,0 +1,204 @@
+artifact_kind: planning.route_slot_requirements.workbook
+example_id: weekly_stage04_actual_ops_lab_v2
+schema_version: '1.0'
+planning_week_id: PW-2026-W13
+operational_week_start: '2026-03-22'
+scope_start: '2026-03-22'
+scope_end_exclusive: '2026-03-29'
+shape: aggregate_daily_route_count_rows
+columns:
+- service_date
+- route_slot_id
+- route_slot_class
+- required_skill
+- vehicle_type
+- shift_start
+- shift_end
+- estimated_hours
+- required_count
+- route_id
+- source_message_id
+- station_code
+- service_area
+- source_snapshot_row_ref
+- slot_band
+rows:
+- - '2026-03-22'
+  - slot-20260322-cycle1-standard
+  - cycle1_standard
+  - parcel_delivery
+  - XL_van
+  - '11:30'
+  - '20:00'
+  - 8.5
+  - 16
+  - CYC0322
+  - manager-schedule-pdf-2026-03-22-to-2026-03-28
+  - DVC4
+  - Pitt Meadows
+  - holdout-route-total:2026-03-22
+  - ''
+- - '2026-03-23'
+  - slot-20260323-cycle1-standard
+  - cycle1_standard
+  - parcel_delivery
+  - XL_van
+  - '11:30'
+  - '20:00'
+  - 8.5
+  - 23
+  - CYC0323
+  - manager-schedule-pdf-2026-03-22-to-2026-03-28
+  - DVC4
+  - Pitt Meadows
+  - holdout-route-total:2026-03-23
+  - ''
+- - '2026-03-24'
+  - slot-20260324-cycle1-standard
+  - cycle1_standard
+  - parcel_delivery
+  - XL_van
+  - '11:30'
+  - '20:00'
+  - 8.5
+  - 20
+  - CYC0324
+  - manager-schedule-pdf-2026-03-22-to-2026-03-28
+  - DVC4
+  - Pitt Meadows
+  - holdout-route-total:2026-03-24
+  - ''
+- - '2026-03-25'
+  - slot-20260325-cycle1-standard
+  - cycle1_standard
+  - parcel_delivery
+  - XL_van
+  - '11:30'
+  - '20:00'
+  - 8.5
+  - 19
+  - CYC0325
+  - manager-schedule-pdf-2026-03-22-to-2026-03-28
+  - DVC4
+  - Pitt Meadows
+  - holdout-route-total:2026-03-25
+  - ''
+- - '2026-03-26'
+  - slot-20260326-cycle1-standard
+  - cycle1_standard
+  - parcel_delivery
+  - XL_van
+  - '11:30'
+  - '20:00'
+  - 8.5
+  - 21
+  - CYC0326
+  - manager-schedule-pdf-2026-03-22-to-2026-03-28
+  - DVC4
+  - Pitt Meadows
+  - holdout-route-total:2026-03-26
+  - ''
+- - '2026-03-27'
+  - slot-20260327-cycle1-standard
+  - cycle1_standard
+  - parcel_delivery
+  - XL_van
+  - '11:30'
+  - '20:00'
+  - 8.5
+  - 18
+  - CYC0327
+  - manager-schedule-pdf-2026-03-22-to-2026-03-28
+  - DVC4
+  - Pitt Meadows
+  - holdout-route-total:2026-03-27
+  - ''
+- - '2026-03-28'
+  - slot-20260328-cycle1-standard
+  - cycle1_standard
+  - parcel_delivery
+  - XL_van
+  - '11:30'
+  - '20:00'
+  - 8.5
+  - 17
+  - CYC0328
+  - manager-schedule-pdf-2026-03-22-to-2026-03-28
+  - DVC4
+  - Pitt Meadows
+  - holdout-route-total:2026-03-28
+  - ''
+daily_demand_columns:
+- service_date
+- planned_route_count
+- standard_slot_count
+- rescue_slot_count
+- overflow_slot_count
+- source_message_id
+- source_kind
+- change_kind
+daily_demand_rows:
+- - '2026-03-22'
+  - 16
+  - 16
+  - 0
+  - 0
+  - manager-schedule-pdf-2026-03-22-to-2026-03-28
+  - manager_schedule_pdf_route_totals_only
+  - holdout_route_total_override
+- - '2026-03-23'
+  - 23
+  - 23
+  - 0
+  - 0
+  - manager-schedule-pdf-2026-03-22-to-2026-03-28
+  - manager_schedule_pdf_route_totals_only
+  - holdout_route_total_override
+- - '2026-03-24'
+  - 20
+  - 20
+  - 0
+  - 0
+  - manager-schedule-pdf-2026-03-22-to-2026-03-28
+  - manager_schedule_pdf_route_totals_only
+  - holdout_route_total_override
+- - '2026-03-25'
+  - 19
+  - 19
+  - 0
+  - 0
+  - manager-schedule-pdf-2026-03-22-to-2026-03-28
+  - manager_schedule_pdf_route_totals_only
+  - holdout_route_total_override
+- - '2026-03-26'
+  - 21
+  - 21
+  - 0
+  - 0
+  - manager-schedule-pdf-2026-03-22-to-2026-03-28
+  - manager_schedule_pdf_route_totals_only
+  - holdout_route_total_override
+- - '2026-03-27'
+  - 18
+  - 18
+  - 0
+  - 0
+  - manager-schedule-pdf-2026-03-22-to-2026-03-28
+  - manager_schedule_pdf_route_totals_only
+  - holdout_route_total_override
+- - '2026-03-28'
+  - 17
+  - 17
+  - 0
+  - 0
+  - manager-schedule-pdf-2026-03-22-to-2026-03-28
+  - manager_schedule_pdf_route_totals_only
+  - holdout_route_total_override
+planner_notes:
+- Route counts for 2026-03-22..2026-03-28 come only from Schedule March 22 to March 28.pdf.
+- Staffing cells, staffing patterns, and richer route mix data from that holdout schedule are
+  intentionally excluded from this lab-normalized package.
+- All routes are temporarily modeled as homogeneous cycle1_standard parcel-delivery
+  XL-van slots until richer route mix data arrives.
+- This payload carries explicit Sunday-start operational scope even though the repo
+  PlanningWeekID remains ISO-based.

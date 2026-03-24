@@ -8,40 +8,61 @@ import subprocess
 import sys
 import zipfile
 
-from onetruth.infrastructure.db.session import open_sqlite_connection
-from onetruth.infrastructure.events.event_store import create_sqlite_substrate
 from onetruth.application.services.logistics_weekly_agent_pilot import (
     PILOT_WEEKLY_STAGE04_ACTUAL_OPS_LAB,
     run_logistics_weekly_agent_pilot_suite,
 )
+from onetruth.infrastructure.db.session import open_sqlite_connection
+from onetruth.infrastructure.events.event_store import create_sqlite_substrate
 from tests.runtime.helpers.runtime_cli import REPO_ROOT, SRC_ROOT
 
 
 _EXPECTED_ARCHIVE_ENTRIES = {
     "bundle_manifest.json",
     "README.md",
-    "canonical_outputs/planning.input_bundle.doc.json",
     "canonical_outputs/planning.candidate_schedule_delta.workbook.json",
     "canonical_outputs/planning.validation_summary.doc.json",
     "canonical_outputs/planning.draft_weekly_schedule.workbook.json",
     "canonical_outputs/planning.draft_weekly_schedule.doc.json",
-    "pilot_outputs/inspection_packet.json",
-    "pilot_outputs/inspection_packet.md",
-    "pilot_outputs/pilot_summary.json",
-    "pilot_outputs/pilot_summary.md",
-    "pilot_outputs/workflow_lab_run_report.json",
-    "pilot_outputs/workflow_lab_review_packet.md",
-    "analysis/analyst_report.md",
-    "analysis/service_date_summary.csv",
-    "analysis/assignment_details.csv",
-    "analysis/availability_state_summary.csv",
-    "analysis/request_day_assignments.csv",
-    "comparison/manager_schedule_comparison_template.csv",
-    "comparison/README.md",
+    "csv/new_agreement_required_rows.csv",
+    "csv/selected_route_slot_assignments.csv",
+    "notes/on_call_template_usage.md",
 }
 
+_CSV_FIELDNAMES = [
+    "service_date",
+    "route_slot_id",
+    "route_id",
+    "assigned_driver_id",
+    "availability_state",
+    "baseline_template_state",
+    "planned_driver_day_state",
+    "new_agreement_required",
+    "new_agreement_trigger_reason",
+    "template_state_preservation_fit",
+    "iteration_index",
+    "phase",
+    "projected_minutes",
+    "rationale_code",
+]
 
-def _run_pilot(tmp_path: Path) -> tuple[Path, Path, dict[str, object], dict[str, object]]:
+_CANONICAL_OUTPUT_KINDS = (
+    "planning.candidate_schedule_delta.workbook",
+    "planning.validation_summary.doc",
+    "planning.draft_weekly_schedule.workbook",
+    "planning.draft_weekly_schedule.doc",
+)
+
+_BASELINE_TEMPLATE_STATE_ORDER = (
+    "assigned_template",
+    "on_call_template",
+    "white_template",
+    "yellow_template",
+    "black_template",
+)
+
+
+def _run_pilot(tmp_path: Path) -> tuple[Path, dict[str, object], dict[str, object]]:
     db_url = f"sqlite:///{tmp_path / 'runtime.db'}"
     output_root = tmp_path / "pilot_outputs"
     artifact_root = tmp_path / "artifacts"
@@ -64,7 +85,7 @@ def _run_pilot(tmp_path: Path) -> tuple[Path, Path, dict[str, object], dict[str,
     run_root = Path(str(summary["output_root"]))
     packet_path = run_root / PILOT_WEEKLY_STAGE04_ACTUAL_OPS_LAB / "inspection_packet.json"
     packet = json.loads(packet_path.read_text(encoding="utf-8"))
-    return run_root, packet_path, summary, packet
+    return run_root, summary, packet
 
 
 def _run_export_script(tmp_path: Path, *, run_root: Path) -> tuple[Path, dict[str, object]]:
@@ -110,11 +131,136 @@ def _read_zip_csv(archive: zipfile.ZipFile, name: str) -> list[dict[str, str]]:
     return list(csv.DictReader(text.splitlines()))
 
 
+def _artifact_metadata(
+    inspection_packet: dict[str, object],
+    artifact_kind: str,
+) -> dict[str, object]:
+    for artifact in inspection_packet["artifacts"]:
+        if artifact["artifact_kind"] == artifact_kind:
+            return dict(artifact["metadata_json"])
+    raise AssertionError(f"artifact not found: {artifact_kind}")
+
+
+def _selected_assignment_rows(inspection_packet: dict[str, object]) -> list[dict[str, object]]:
+    candidate_delta = _artifact_metadata(
+        inspection_packet,
+        "planning.candidate_schedule_delta.workbook",
+    )
+    columns = [str(column) for column in candidate_delta["columns"]]
+    rows = [
+        dict(zip(columns, row))
+        for row in candidate_delta["rows"]
+    ]
+    normalized = [
+        {
+            "service_date": str(row.get("service_date") or ""),
+            "route_slot_id": str(row.get("route_slot_id") or ""),
+            "route_id": str(row.get("route_id") or ""),
+            "assigned_driver_id": str(row.get("assigned_driver_id") or ""),
+            "availability_state": str(row.get("availability_state") or ""),
+            "baseline_template_state": str(row.get("baseline_template_state") or ""),
+            "planned_driver_day_state": str(row.get("planned_driver_day_state") or ""),
+            "new_agreement_required": bool(row.get("new_agreement_required")),
+            "new_agreement_trigger_reason": str(row.get("new_agreement_trigger_reason") or ""),
+            "template_state_preservation_fit": row.get("template_state_preservation_fit"),
+            "iteration_index": int(row.get("iteration_index") or 0),
+            "phase": str(row.get("phase") or ""),
+            "projected_minutes": int(row.get("projected_minutes") or 0),
+            "rationale_code": str(row.get("rationale_code") or ""),
+        }
+        for row in rows
+    ]
+    return sorted(
+        normalized,
+        key=lambda row: (
+            str(row["service_date"]),
+            str(row["route_slot_id"]),
+            str(row["assigned_driver_id"]),
+        ),
+    )
+
+
+def _csv_string_rows(rows: list[dict[str, object]]) -> list[dict[str, str]]:
+    return [
+        {
+            field: "" if row.get(field) is None else str(row.get(field))
+            for field in _CSV_FIELDNAMES
+        }
+        for row in rows
+    ]
+
+
+def _expected_on_call_note_lines(selected_rows: list[dict[str, object]]) -> list[str]:
+    on_call_usage_count = sum(
+        1
+        for row in selected_rows
+        if str(row.get("baseline_template_state") or "") == "on_call_template"
+    )
+    white_template_count = sum(
+        1
+        for row in selected_rows
+        if bool(row.get("new_agreement_required"))
+        and str(row.get("new_agreement_trigger_reason") or "") == "white_template_to_assigned"
+    )
+    yellow_template_count = sum(
+        1
+        for row in selected_rows
+        if bool(row.get("new_agreement_required"))
+        and str(row.get("new_agreement_trigger_reason") or "") == "yellow_template_to_assigned"
+    )
+    if on_call_usage_count > 0:
+        summary_line = (
+            "- Summary: The patch used on-call template days "
+            f"`{on_call_usage_count}` time(s) instead of taking all contract-change "
+            "relief from white/yellow days."
+        )
+    else:
+        summary_line = (
+            "- Summary: The patch did not use on-call template days instead of "
+            "white/yellow days."
+        )
+    return [
+        summary_line,
+        f"- On-call template day assignments: `{on_call_usage_count}`",
+        f"- White-template agreement cases: `{white_template_count}`",
+        f"- Yellow-template agreement cases: `{yellow_template_count}`",
+    ]
+
+
+def _baseline_template_counts(selected_rows: list[dict[str, object]]) -> dict[str, int]:
+    counts = {state: 0 for state in _BASELINE_TEMPLATE_STATE_ORDER}
+    for row in selected_rows:
+        state = str(row.get("baseline_template_state") or "")
+        if not state:
+            continue
+        counts[state] = counts.get(state, 0) + 1
+    return counts
+
+
 def test_weekly_stage04_review_bundle_exports_expected_structure_and_metrics(
     tmp_path: Path,
 ) -> None:
-    run_root, packet_path, _summary, inspection_packet = _run_pilot(tmp_path)
+    run_root, _summary, inspection_packet = _run_pilot(tmp_path)
     bundle_path, export_result = _run_export_script(tmp_path, run_root=run_root)
+
+    validation_summary = _artifact_metadata(
+        inspection_packet,
+        "planning.validation_summary.doc",
+    )["summary"]
+    coverage_summary = validation_summary["coverage_summary"]
+    selected_rows = _selected_assignment_rows(inspection_packet)
+    expected_selected_rows = _csv_string_rows(selected_rows)
+    expected_new_agreement_rows = [
+        row for row in expected_selected_rows if row["new_agreement_required"] == "True"
+    ]
+
+    availability_counts: dict[str, int] = {}
+    for row in selected_rows:
+        state = str(row["availability_state"] or "")
+        if not state:
+            continue
+        availability_counts[state] = availability_counts.get(state, 0) + 1
+    baseline_template_counts = _baseline_template_counts(selected_rows)
 
     assert bundle_path.exists()
     assert export_result["status"] == "ok"
@@ -123,100 +269,64 @@ def test_weekly_stage04_review_bundle_exports_expected_structure_and_metrics(
 
     with zipfile.ZipFile(bundle_path, "r") as archive:
         names = set(archive.namelist())
-        assert _EXPECTED_ARCHIVE_ENTRIES.issubset(names)
+        assert names == _EXPECTED_ARCHIVE_ENTRIES
 
-        for artifact_kind in (
-            "planning.input_bundle.doc",
-            "planning.candidate_schedule_delta.workbook",
-            "planning.validation_summary.doc",
-            "planning.draft_weekly_schedule.workbook",
-            "planning.draft_weekly_schedule.doc",
-        ):
-            expected = next(
-                artifact["metadata_json"]
-                for artifact in inspection_packet["artifacts"]
-                if artifact["artifact_kind"] == artifact_kind
-            )
+        for artifact_kind in _CANONICAL_OUTPUT_KINDS:
+            expected = _artifact_metadata(inspection_packet, artifact_kind)
             actual = _read_zip_json(archive, f"canonical_outputs/{artifact_kind}.json")
             assert actual == expected
 
-        analyst_report = archive.read("analysis/analyst_report.md").decode("utf-8")
-        assert "139 assigned / 0 uncovered" in analyst_report
-        assert "Assigned route slots: `139`" in analyst_report
-        assert "Uncovered route slots: `0`" in analyst_report
-        assert "Manager ground-truth comparison is pending" in analyst_report
+        readme = archive.read("README.md").decode("utf-8")
+        assert (
+            f"- Coverage: `{coverage_summary['assigned_route_slots']} assigned / "
+            f"{coverage_summary['uncovered_route_slots']} uncovered`"
+        ) in readme
+        assert (
+            f"- New agreement required count: "
+            f"`{validation_summary['new_agreement_required_count']}`"
+        ) in readme
+        assert f"- Warning count: `{len(validation_summary['warnings'])}`" in readme
+        for service_date, count in sorted(validation_summary["new_agreement_by_service_date"].items()):
+            assert f"- `{service_date}`: `{count}`" in readme
+        for state in _BASELINE_TEMPLATE_STATE_ORDER:
+            count = baseline_template_counts.get(state, 0)
+            if count <= 0:
+                continue
+            assert f"- `{state}`: `{count}`" in readme
+        for state, count in sorted(availability_counts.items()):
+            if count <= 0:
+                continue
+            assert f"- `{state}`: `{count}`" in readme
 
-        service_date_rows = _read_zip_csv(archive, "analysis/service_date_summary.csv")
-        assert service_date_rows == [
-            {
-                "service_date": "2026-03-22",
-                "planned_route_count": "18",
-                "assigned_route_count": "18",
-                "assigned_driver_count": "18",
-            },
-            {
-                "service_date": "2026-03-23",
-                "planned_route_count": "23",
-                "assigned_route_count": "23",
-                "assigned_driver_count": "23",
-            },
-            {
-                "service_date": "2026-03-24",
-                "planned_route_count": "20",
-                "assigned_route_count": "20",
-                "assigned_driver_count": "20",
-            },
-            {
-                "service_date": "2026-03-25",
-                "planned_route_count": "20",
-                "assigned_route_count": "20",
-                "assigned_driver_count": "20",
-            },
-            {
-                "service_date": "2026-03-26",
-                "planned_route_count": "20",
-                "assigned_route_count": "20",
-                "assigned_driver_count": "20",
-            },
-            {
-                "service_date": "2026-03-27",
-                "planned_route_count": "20",
-                "assigned_route_count": "20",
-                "assigned_driver_count": "20",
-            },
-            {
-                "service_date": "2026-03-28",
-                "planned_route_count": "18",
-                "assigned_route_count": "18",
-                "assigned_driver_count": "18",
-            },
-        ]
+        note_text = archive.read("notes/on_call_template_usage.md").decode("utf-8")
+        assert "# On-Call Template Usage" in note_text
+        for line in _expected_on_call_note_lines(selected_rows):
+            assert line in note_text
+            assert line in readme
 
-        availability_rows = _read_zip_csv(archive, "analysis/availability_state_summary.csv")
-        assert availability_rows == [
-            {"availability_state": "PREFERRED", "assignment_count": "121"},
-            {"availability_state": "AVAILABLE", "assignment_count": "17"},
-            {"availability_state": "AVOID_IF_POSSIBLE", "assignment_count": "1"},
-            {"availability_state": "ON_CALL_ONLY", "assignment_count": "0"},
-            {"availability_state": "CANNOT", "assignment_count": "0"},
-        ]
+        selected_assignment_rows = _read_zip_csv(
+            archive,
+            "csv/selected_route_slot_assignments.csv",
+        )
+        assert selected_assignment_rows == expected_selected_rows
+        assert len(selected_assignment_rows) == coverage_summary["assigned_route_slots"]
+        assert list(selected_assignment_rows[0].keys()) == _CSV_FIELDNAMES
 
-        request_rows = _read_zip_csv(archive, "analysis/request_day_assignments.csv")
-        assert request_rows == []
-
-        assignment_rows = _read_zip_csv(archive, "analysis/assignment_details.csv")
-        assert len(assignment_rows) == 139
-        assert assignment_rows[0]["request_day_flag"] == "no"
-
-        comparison_readme = archive.read("comparison/README.md").decode("utf-8")
-        assert "not bundled yet" in comparison_readme
-        comparison_rows = _read_zip_csv(archive, "comparison/manager_schedule_comparison_template.csv")
-        assert len(comparison_rows) == 139
-        assert comparison_rows[0]["manager_assigned_driver_id"] == ""
+        new_agreement_rows = _read_zip_csv(
+            archive,
+            "csv/new_agreement_required_rows.csv",
+        )
+        assert new_agreement_rows == expected_new_agreement_rows
+        assert len(new_agreement_rows) == validation_summary["new_agreement_required_count"]
+        assert all(row["new_agreement_required"] == "True" for row in new_agreement_rows)
 
         manifest = _read_zip_json(archive, "bundle_manifest.json")
         assert manifest["bundle_kind"] == "weekly_stage04_review_bundle"
         assert manifest["pilot_id"] == PILOT_WEEKLY_STAGE04_ACTUAL_OPS_LAB
         assert manifest["workflow_run_id"] == inspection_packet["workflow_run"]["workflow_run_id"]
-
-    assert packet_path.exists()
+        assert manifest["canonical_output_kinds"] == list(_CANONICAL_OUTPUT_KINDS)
+        assert manifest["csv_files"] == [
+            "csv/new_agreement_required_rows.csv",
+            "csv/selected_route_slot_assignments.csv",
+        ]
+        assert manifest["note_files"] == ["notes/on_call_template_usage.md"]

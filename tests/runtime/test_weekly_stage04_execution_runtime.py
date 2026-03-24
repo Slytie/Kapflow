@@ -518,8 +518,8 @@ def test_weekly_stage04_execution_runtime_actual_ops_fixture_reaches_full_covera
     assert response.status_code == 200, response.payload
     result = response.payload["result"]
 
-    assert result["stage04_build_result"]["selected_candidate_count"] == 139
-    assert result["stage04_build_result"]["coverage_summary"]["assigned_route_slots"] == 139
+    assert result["stage04_build_result"]["selected_candidate_count"] == 134
+    assert result["stage04_build_result"]["coverage_summary"]["assigned_route_slots"] == 134
     assert result["stage04_build_result"]["coverage_summary"]["uncovered_route_slots"] == 0
 
     sessions = harness.query_rows(

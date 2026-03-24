@@ -330,7 +330,7 @@ def test_build_weekly_schedule_control_bundle_resolves_actual_ops_explicit_scope
     assert bundle.availability_by_driver["A11X1NH2FPH5RV"].previous_week_states[0].service_date == "2026-03-15"
     assert bundle.availability_by_driver["A11X1NH2FPH5RV"].previous_week_states[-1].service_date == "2026-03-21"
     assert len(bundle.drivers) == 51
-    assert sum(item.planned_route_count for item in bundle.daily_demand_by_service_date.values()) == 139
+    assert sum(item.planned_route_count for item in bundle.daily_demand_by_service_date.values()) == 134
 
 
 def test_build_weekly_schedule_control_bundle_rejects_conflicting_explicit_scope_bounds() -> None:

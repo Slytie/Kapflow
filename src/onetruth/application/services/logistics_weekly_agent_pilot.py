@@ -68,7 +68,7 @@ REALISTIC_WEEKLY_STAGE04_SOURCE_MATERIAL_PATH = (
     REPO_ROOT / "fixtures" / "logistics" / "weekly_stage04_realistic_source_material.yaml"
 )
 ACTUAL_OPS_WEEKLY_STAGE04_SOURCE_MATERIAL_PATH = (
-    REPO_ROOT / "fixtures" / "logistics" / "weekly_stage04_actual_ops_lab_source_material.yaml"
+    REPO_ROOT / "fixtures" / "logistics" / "weekly_stage04_actual_ops_lab_source_material_v2.yaml"
 )
 
 PILOT_WEEKLY_STAGE04_AGENT = "weekly_stage04_agent_baseline"

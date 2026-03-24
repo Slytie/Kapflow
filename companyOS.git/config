@@ -1,0 +1,16 @@
+[core]
+	repositoryformatversion = 0
+	filemode = true
+	bare = true
+	ignorecase = true
+	precomposeunicode = true
+[remote "origin"]
+	url = git@github.com:Slytie/companyOS.git
+	fetch = +refs/*:refs/*
+	mirror = true
+[remote "agent_mechanics"]
+	url = git@github.com:Slytie/agent_mechanics.git
+	fetch = +refs/heads/*:refs/remotes/agent_mechanics/*
+[remote "meta_metaclaw"]
+	url = git@github.com:Slytie/meta-metaclaw.git
+	fetch = +refs/heads/*:refs/remotes/meta_metaclaw/*
