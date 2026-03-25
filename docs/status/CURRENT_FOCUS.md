@@ -4,34 +4,27 @@
 Stage 4 - Vertical Slice MVP (repo merged around one truth system)
 
 ## Current milestone
-Application-facing FE update: `EPIC-120` is now landed as a bounded logistics workpage slice on top of the existing `/demo/logistics` shell.
+Primary runtime/debug work remains the logistics weekly/live family. `TASK-0128` is now complete, so the immediate application-facing tranche inside `EPIC-120` has a frozen post-v0 workpage query contract, route family, and snapshot policy.
 
-Implemented routes:
+Current implemented baseline:
 - `/demo/logistics/workpages/schedule-v0`
 - `/demo/logistics/workpages/eod-v0`
+- full-page routes under `AppShell`
+- frontend-local/example-backed workpage pages and tests
 
-Implemented posture:
-- frontend-first
-- fixture-backed
-- full-page
-- explicitly not a generic artifact editor
+Immediate next application package (`EPIC-120`, post-`TASK-0128` batch):
+- `TASK-0129`: backend schedule demo workpage query route + generated snapshot
+- `TASK-0130`: backend EOD demo workpage query route + generated snapshot
+- `TASK-0131`: HTTP-backed frontend migration plus loading/error/freshness and shell regressions
 
-Important boundaries that still hold:
-- no backend workpage HTTP contract yet
-- no live-dispatch morning page in this tranche
+Important scope boundaries for this tranche:
+- no backend workpage submit/materialize path yet
+- no generic artifact editor
 - keep the schedule page on the **weekly planning review + selected-day preview** side of the boundary
 - keep the EOD page on the **dispatch-reporting draft/review** side of the boundary (`reporting.upd_draft.workbook` semantics)
-- keep workpage fixtures distinct from backend-owned `fixtures/frontend_contracts/` snapshots
-
-## Next planned package (productization + Workflow Lab)
-The next package is now intentionally split into two coordinated lanes:
-- **EPIC-100 / TASK-0110..0116**: productization/perimeter/substrate work for a stable first-user production lane
-- **EPIC-110 / TASK-0117..0120**: Workflow Lab Phase 0/1 only (thin, non-authoritative docs/schemas/normalization)
-- **TASK-0121..0122** are explicitly gated on readiness checks `G1` / `G2` from `docs/planning/PRODUCTION_AND_WORKFLOW_LAB_PLAN.md`
-
-Promotion remains release-mediated by default: `lab -> review/certification/release -> prod`, not direct runtime mutation from lab into production.
-
-Package update: `TASK-0120` is now complete. Workflow Lab now has an explicit `docs/workflow_lab/PROMOTION_GATE.md` contract that freezes release-mediated promotion and the current uncleared `G1` / `G2` stop lines; there is no further ungated Workflow Lab build task, and `TASK-0121` / `TASK-0122` remain blocked pending explicit recorded evidence.
+- treat schedule as a **composite** page, not a single-artifact page
+- treat EOD as the likely **first future artifact-backed** workpage after the query seam is proven
+- keep workpage planning fixtures distinct from backend-owned generated contract snapshots
 
 Runtime scaffold bootstrap now includes canonical workflow/task/approval/artifact/pointer substrate under `src/onetruth/` + `alembic/` with a stable CLI lifecycle boundary:
 - timeline substrate: `init-db`, `events append`, `events list`

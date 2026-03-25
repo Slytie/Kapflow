@@ -104,12 +104,14 @@ frontend/
   - `boardRepository`
   - `workpagesRepository`
 - Components/pages do not call raw `fetch`.
+- Workpage routes may start life behind temporary example-backed adapters, but active routes should migrate to HTTP-backed repositories once the server query contract exists.
 
 ## 6) Polling and freshness model
 - Pages use TanStack Query with bounded polling intervals.
 - `FreshnessBanner` displays last successful refresh time and manual refresh affordance.
 - Query invalidation is used after mutations to re-read authoritative state.
 - No websocket/live-sync path in v1.
+- Workpage pages should surface explicit freshness/source metadata once they move onto backend demo query routes.
 
 ## 7) URL-synced filter strategy
 - Search params encode `run`, `state`, `assignee`, `severity`, and `q`.
@@ -122,6 +124,7 @@ frontend/
 - Workpage tests: view-model builders, repository seam, schedule/EOD page renders, local edit interactions, and logistics route integration.
 - Integration tests: claim/complete/respond round-trips, forbidden response handling, reload stability.
 - Backend API contract tests verify `/api/v1` route contracts for board/list/detail/mutations.
+- Workpage route tests should freeze both the page render behavior and the workpage query contract boundary.
 
 ## 9) Accessibility expectations
 - Keyboard-operable interactive controls.
@@ -129,8 +132,14 @@ frontend/
 - Drawer host has accessible close control and ARIA label.
 - Status/severity signals include text (not color-only).
 
-## 10) Workpage posture
-- Workpages are full-page logistics-shell routes under `/demo/logistics/*`, not drawer-first retrofits.
-- The first workpage tranche is fixture-backed and derived-only; it deliberately avoids a fake backend API.
+## 10) Workpage surfaces
+- Workpages live under `/demo/logistics/workpages/*`.
+- Treat `/demo/logistics/*` as logistics-shell routes in `AppShell`.
+- These pages are sibling full-page routes under `AppShell`, not children rendered inside `LogisticsDemoPage`.
+- The current v0 pages are fixture-backed and derived-only.
+- Active routes should migrate from example-backed adapters to HTTP-backed repositories as soon as the demo query routes exist.
 - `schedule-v0` stays on the weekly-planning review side of the boundary and only offers local what-if inputs.
 - `eod-v0` stays on `reporting.upd_draft.workbook` / draft-review semantics and does not claim final-packet authority.
+- The schedule page is **composite** over multiple weekly-planning source datasets; future backend route design must leave room for run/composite projections and not assume one artifact per page.
+- The EOD page is the better candidate for the first future artifact-backed path.
+- Human-authored workpage fixtures live under `fixtures/logistics/workpages/` and are distinct from backend-generated frontend contract snapshots in `fixtures/frontend_contracts/`.

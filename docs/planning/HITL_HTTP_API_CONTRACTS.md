@@ -282,7 +282,54 @@ Board object shape:
 - `pointers[]`
 - `summary`
 
-### 3.10 Artifact/document rows and downloads
+### 3.10 Workpage demo surfaces
+Route-family decision:
+- `GET /api/v1/workpages/demo/{workpage_id}`
+- reserve future siblings such as:
+  - `GET /api/v1/workpages/artifacts/{artifact_version_id}`
+  - `GET /api/v1/workpages/workflow-runs/{workflow_run_id}/{workpage_kind}`
+
+Only the `demo` subfamily is currently frozen by repo-native docs. Backend implementation begins in `TASK-0129` and `TASK-0130`.
+
+Current planned demo workpage ids:
+- `schedule-v0`
+- `eod-v0`
+
+Response:
+- `{"status":"ok","command":"api.workpages.demo","workpage":{...},"source":{...},"freshness":{...}}`
+
+Workpage object shape (`workpage`):
+- `workpage_id`
+- `version`
+- `title`
+- `mode`
+- `workflow_id`
+- `dataset_key`
+- `source_artifact_version_id`
+- `source_examples`
+- `summary`
+- `sections`
+- `validation`
+
+Source metadata shape (`source`):
+- `mode` (`demo|artifact_projection|run_projection`)
+- `primary_dataset_key`
+- `source_dataset_keys[]`
+- `source_artifact_version_id`
+- `source_refs[]`
+
+Freshness metadata shape (`freshness`):
+- `generated_at`
+- `source_kind`
+- `source_version`
+
+Notes:
+- The schedule page is composite and may set `primary_dataset_key` to `null` while populating `source_dataset_keys[]`.
+- The EOD page should remain aligned to `reporting.upd_draft.workbook`, not final-packet semantics.
+- Demo workpage routes must be backend-built from authoritative example/source inputs, not by serving the human-authored workpage YAML fixtures verbatim.
+- Backend-generated workpage route snapshots belong under `fixtures/frontend_contracts/`; human-authored workpage planning fixtures remain under `fixtures/logistics/workpages/`.
+
+### 3.11 Artifact/document rows and downloads
 Endpoints:
 - `GET /api/v1/artifacts`
 - `GET /api/v1/artifacts/{artifact_version_id}`

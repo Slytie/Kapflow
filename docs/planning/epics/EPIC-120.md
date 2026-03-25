@@ -1,9 +1,13 @@
 # EPIC-120 - Logistics workpages v0 (schedule + end-of-day report)
 
 ## Summary
-Build the first full-page logistics work surfaces as **frontend-first, fixture-backed prototypes** on top of the existing primary demo shell.
+Build the first full-page logistics work surfaces and then move them onto the repo's normal **server-authoritative query path** without jumping straight into generic artifact editing.
 
-This epic exists to validate the page contract and operator UX for two concrete workpages:
+This epic now spans two tightly bounded tranches:
+1. **Tranche A (implemented through `TASK-0127`):** frontend-first, fixture-backed page validation under `/demo/logistics/workpages/*`
+2. **Tranche B (started by `TASK-0128`):** server-owned demo query routes and frontend migration to those routes
+
+The epic still exists to validate two concrete workpages only:
 - weekly schedule review + selected-day preview
 - end-of-day reporting draft/review
 
@@ -11,21 +15,21 @@ It is intentionally **not** a generic artifact editor epic.
 
 ## Scope
 ### In scope
-- repo-native product brief for workpages v0
-- repo-native workpage plan and view-model examples
-- frontend `WorkpageViewModel` contract + example data seam
-- `/demo/logistics/workpages/schedule-v0`
-- `/demo/logistics/workpages/eod-v0`
-- route/page/component tests proving the pages render and behave from example data
+- repo-native product brief and implementation plan for logistics workpages
+- shared `WorkpageViewModel` / workpage query contract discipline
+- full-page routes under `/demo/logistics/workpages/*`
+- server-owned demo query surfaces for `schedule-v0` and `eod-v0`
+- backend-owned generated frontend contract snapshots for those query surfaces
+- frontend migration from local example adapters to HTTP-backed repositories
 - documentation and task-memory updates that keep the repo truthful while this slice lands
 
 ### Out of scope
-- backend workpage API
-- artifact-linked submit/materialize semantics
+- backend workpage submit/materialize semantics
 - generic template builder / drag-drop editor
 - live-dispatch morning workpage
 - driver self-service
 - spreadsheet formula-engine emulation
+- a generic one-artifact workpage assumption for every future page
 
 ## Dependencies
 - EPIC-025 (logistics workflow packs and normalized examples already exist)
@@ -37,14 +41,16 @@ It is intentionally **not** a generic artifact editor epic.
 
 Context pack: `codex/context/EPIC-120.md`
 
-## Current Repo Status (2026-03-25 implementation pass)
-- Primary logistics UI entrypoint is `/demo/logistics`.
-- Workpage routes now exist as fixture-backed full-page surfaces under `/demo/logistics/workpages/*`.
-- There is still no backend workpage projection/submit contract.
-- The repo now carries a consistent partial 2026-03-16 QDCI/DVC4 example family for the first EOD workpage.
-- `weekly_schedule_planning.v1` owns the weekly base plan; day-of replan belongs to `live_dispatch.v1`.
-- `dispatch_reporting.v1` separates normalized actuals, draft packet generation, review, and final output; the first EOD workpage aligns to `reporting.upd_draft.workbook` semantics rather than Stage05 final packet semantics.
-- This epic remains frontend-first by design: the page contract landed before backend artifact projection/submit work.
+## Current Repo Status (2026-03-25 post-`TASK-0128` contract freeze)
+- `/demo/logistics/workpages/schedule-v0` and `/demo/logistics/workpages/eod-v0` exist as full-page routes under `AppShell`.
+- The active pages are still **frontend-local/example-backed** after `TASK-0128`.
+- Repo-native docs now freeze the post-v0 workpage query contract, route family, and snapshot policy.
+- The next correctness move is to implement backend demo query surfaces for `schedule-v0` and `eod-v0` while keeping edits local/demo-scoped.
+- `weekly_schedule_planning.v1` still owns the **pre-week / Friday** weekly build. Day-of replan belongs to `live_dispatch.v1` and must not leak into the schedule workpage scope.
+- `dispatch_reporting.v1` still separates normalized actuals, draft packet generation, review, and final packet output. The EOD page remains aligned to `reporting.upd_draft.workbook` semantics rather than Stage05 final output.
+- The schedule page is **composite** over multiple weekly-planning example inputs. It must not be forced into a single-artifact identity too early.
+- The EOD page is the better candidate for the **first future artifact-backed path** because it maps more naturally to one reporting packet/workbook family.
+- Workpage query snapshots, once generated from backend routes, belong in `fixtures/frontend_contracts/` because they are backend-owned generated API fixtures. The human-authored workpage fixtures under `fixtures/logistics/workpages/` remain a different class of artifact.
 
 ## Tasks
 - TASK-0123
@@ -52,6 +58,10 @@ Context pack: `codex/context/EPIC-120.md`
 - TASK-0125
 - TASK-0126
 - TASK-0127
+- TASK-0128
+- TASK-0129
+- TASK-0130
+- TASK-0131
 
 ## Red-team question
-Are we quietly building a generic artifact editor, a live-dispatch console, or a second client-side truth model instead of the bounded schedule/EOD workpage slice this epic actually intends?
+Are we keeping the next batch bounded to **server-authoritative workpage queries** and a clean frontend migration, or are we quietly skipping ahead into artifact submit/materialize work before the shared query seam is proven?

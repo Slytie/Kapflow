@@ -1,20 +1,23 @@
 # EPIC-120 Context Pack - Logistics workpages v0
 
 **Purpose (why you might open this):**
-- You are implementing or extending the first logistics workpage FE surfaces.
-- You need to keep the workpage slice aligned with the current primary `/demo/logistics` shell.
-- You need to know which docs, examples, and product constraints are authoritative for schedule and end-of-day report pages.
+- You are implementing or reviewing the logistics workpage slice.
+- You need to know whether you are in the frontend-only validation tranche or the post-`TASK-0128` server-query tranche.
+- You need to keep schedule and end-of-day report pages aligned with the current logistics workflow family without inventing a second truth path.
 
 ## Non-negotiable invariants to keep in mind
-- Workpages are **derived UI surfaces**, not a second truth model.
-- The first tranche is **frontend-first** and **fixture-backed**.
-- Do not invent a backend workpage API in the first FE slice.
+- Workpages are **derived UI/query surfaces**, not a second truth model.
+- The first tranche validated the page contract with frontend-local example seams.
+- The next tranche moves active pages onto **server-authoritative query contracts**.
+- Do not jump straight into backend submit/materialize semantics in this batch.
 - Do not retrofit the pages into the drawer model; these are full-page routes.
 - Do not start from the legacy schedule-only FE routes.
 - Keep the first scope to **schedule** and **end-of-day report** only.
 - Keep the schedule page on the **weekly planning** side of the boundary; day-of replan belongs to `live_dispatch.v1`.
 - Keep the EOD page on the **reporting draft/review** side of the boundary; do not anchor it to Stage05 final output semantics in v0.
-- Update repo-native status/task/docs in the same change set when visible truth about this epic changes.
+- The schedule page is composite and must not be forced into one-artifact semantics too early.
+- The EOD page is the better first future artifact-backed candidate.
+- Update repo-native status/task/docs in the same change set when truth about this epic changes.
 
 ## Contracts / docs to treat as authoritative
 - `docs/status/CURRENT_FOCUS.md`
@@ -26,6 +29,7 @@
 - `docs/planning/FRONTEND_INTERACTION_RULES.md`
 - `docs/planning/FRONTEND_PAGE_MAP.md`
 - `docs/planning/CURRENT_CAPABILITY_AND_CERTIFICATION_MATRIX.md`
+- `docs/planning/HITL_HTTP_API_CONTRACTS.md`
 - `docs/workflows/weekly_schedule_planning/v1/WORKFLOW_CONTRACT.yaml`
 - `docs/workflows/weekly_schedule_planning/v1/OPERATING_MODEL.md`
 - `docs/workflows/live_dispatch/v1/OPERATING_MODEL.md`
@@ -49,24 +53,29 @@
 - view-model mapping tests for schedule and EOD example builders
 - page render tests for both workpages
 - interaction tests for bounded editable controls
-- route integration tests proving the pages live under `/demo/logistics/workpages/*`
-- doc/task-memory updates when routes/status/capability truth changes
+- backend route/contract tests for demo workpage query surfaces
+- backend-generated frontend contract snapshot coverage for those routes
+- frontend repository migration tests for workpage pages
+- loading/error/freshness and route regression tests under `/demo/logistics/workpages/*`
+- doc/task-memory updates when route/status/capability truth changes
 
-## Current Repo Status (2026-03-25 implementation pass)
-- The operator shell is route-based and repository-backed.
-- `/demo/logistics` is the primary logistics surface.
-- Existing task/action pages are drawer-first; workpages are the implemented full-page exception.
-- The workpage repository/type surface exists as an example-backed frontend seam.
-- There is no workpage HTTP contract yet.
-- `AppShell` now treats `/demo/logistics/*` as logistics-shell routes.
-- Workpage fixtures are human-authored planning/test artifacts and remain distinct from backend-owned `fixtures/frontend_contracts/` snapshots.
+## Current Repo Status (2026-03-25 post-`TASK-0128` contract freeze)
+- `/demo/logistics/workpages/schedule-v0` and `/demo/logistics/workpages/eod-v0` exist as full-page routes.
+- The active pages are still frontend-local/example-backed after `TASK-0128`.
+- The post-v0 workpage query contract, route family, and snapshot policy are now frozen in repo-native docs.
+- No backend demo workpage routes exist yet.
+- No artifact-backed workpage path exists yet.
+- `fixtures/frontend_contracts/` remain backend-generated frontend API snapshots; future workpage query snapshots belong there too.
+- Workpage planning fixtures remain distinct human-authored artifacts under `fixtures/logistics/workpages/`.
 
-## Planned next work after this epic
-- Backend projection of `(artifact_version, template) -> WorkpageViewModel`
-- Backend submit/materialize flow for `(base_artifact_version, patch) -> new_artifact_version`
+## Planned next work after this phase
+- `TASK-0129` - backend schedule demo workpage query route + snapshot
+- `TASK-0130` - backend EOD demo workpage query route + snapshot
+- `TASK-0131` - HTTP-backed frontend repository migration and shell regressions
+- first artifact-backed EOD read/write path later, after the shared query seam is proven
 
 ## Red-team questions for future runs
-- Are we trying to solve artifact round-trip editing before the page contract is proven?
-- Are we recreating raw spreadsheets instead of building guided operator pages?
-- Are we adding new routes/components without updating page-map/status/capability docs?
-- Are we quietly expanding this slice into live dispatch, a driver portal, or a fake backend API?
+- Are we keeping active workpage pages on frontend-local data for too long instead of moving them onto server-owned queries?
+- Are we quietly broadening the batch into submit/materialize semantics before the shared query seam is proven?
+- Are we forcing schedule into one-artifact thinking when it is really a composite/run-oriented page?
+- Are we confusing backend-generated API snapshots with the human-authored workpage planning fixtures?

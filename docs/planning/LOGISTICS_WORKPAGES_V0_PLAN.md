@@ -1,218 +1,183 @@
 # Logistics workpages v0 - repo-grounded implementation plan
 
 ## Why this exists
-The repo now has a strong canonical runtime/artifact substrate and a primary logistics operator shell at `/demo/logistics`, but it still lacks a full-page work surface for logistics operators.
+The repo now has a strong canonical runtime/artifact substrate, full-page workpage routes exist under the primary logistics demo shell, and `TASK-0128` has frozen the next query contract, route family, and snapshot policy.
 
-The next application package is therefore **not** a generic artifact editor. It is a bounded workpage slice:
+This epic is still **not** a generic artifact editor. It remains a bounded workpage slice:
 - **Schedule workpage v0** grounded in `weekly_schedule_planning.v1`
 - **End-of-day report workpage v0** grounded in `dispatch_reporting.v1`
 
 ## Current repo grounding
-### What already exists
+### Baseline after `TASK-0128`
+The repo now contains:
+- full-page routes:
+  - `/demo/logistics/workpages/schedule-v0`
+  - `/demo/logistics/workpages/eod-v0`
+- a shared frontend `WorkpageViewModel` contract
+- local/example-backed workpage repositories or equivalent data seams
+- route/page tests proving the pages render and behave from example data
+- logistics-shell route classification for `/demo/logistics/*`
+- repo-native docs freezing the post-v0 workpage query contract, route family, and snapshot policy
+
+### What already exists beneath that baseline
 - Primary operator/demo route: `/demo/logistics`
 - Canonical three-workflow family story: `GET /api/v1/stories/logistics-three-workflow`
 - Frontend repository/query seams under `frontend/src/lib/repositories/`
 - Stable React/Vite/TanStack Query shell with drawer-first detail for existing task-centric surfaces
 - Repo-native normalized weekly scheduling examples under `docs/workflows/weekly_schedule_planning/v1/examples/`
 - Repo-native normalized dispatch reporting examples under `docs/workflows/dispatch_reporting/v1/examples/`
+- Human-authored workpage planning fixtures under `fixtures/logistics/workpages/`
 
-### What does not exist yet
-- no workpage routes
-- no workpage repository/type surface
-- no workpage API contract
-- no artifact-linked workpage projection/submit backend
-- no logistics-family template registry for workpage pages
+### What still does not exist after `TASK-0128`
+- no backend demo workpage query routes yet
+- no backend-owned workpage contract snapshots yet
+- no artifact-linked workpage projection/submit backend yet
+- no logistics-family template/runtime for generalized workpage pages
 
-### Repo-specific nuances that change execution
+## Repo-specific nuances that change the remaining batch
 - `weekly_schedule_planning.v1` explicitly owns the **pre-week / Friday** weekly build. Day-of replan belongs to `live_dispatch.v1`.
-- `dispatch_reporting.v1` explicitly separates normalized actuals, UPD draft generation, manager review, and final packet output. The EOD page therefore belongs closer to the **draft/review** portion of the reporting flow than to Stage05 final output.
-- `fixtures/frontend_contracts/` are backend-owned generated API snapshots. Workpage fixtures are a **different class** of artifact and must remain human-authored planning/test fixtures under `fixtures/logistics/workpages/`.
-- `frontend/src/app/AppShell.tsx` currently treats only the exact path `/demo/logistics` as a logistics-shell route. The workpage tranche must treat `/demo/logistics/*` as logistics routes, and the new pages should be sibling routes under `AppShell`, not nested inside `LogisticsDemoPage.tsx`.
+- `dispatch_reporting.v1` explicitly separates normalized actuals, UPD draft generation, manager review, and final packet output. The EOD page therefore remains closer to the **draft/review** portion of the reporting flow than to Stage05 final output.
+- The **schedule page is composite** over multiple weekly-planning inputs. It should not be forced into a single-artifact identity just because the EOD page may later be artifact-backed.
+- The **EOD page is the better first future artifact-backed candidate** because it maps naturally to one reporting packet/workbook family.
+- `fixtures/frontend_contracts/` are backend-owned generated API snapshots. Once workpage demo routes exist, their query snapshots may live there because they are backend-generated, even if the underlying data originates from deterministic example packs.
+- The human-authored source examples and workpage planning fixtures remain distinct under `docs/workflows/.../examples/` and `fixtures/logistics/workpages/`.
 
-## Architectural decision
+## Architectural decision for the remaining batch
 ### Start here
-Start FE development from:
+Move from:
 
-`normalized examples -> WorkpageViewModel -> full-page UI`
+`frontend-local examples -> WorkpageViewModel -> full-page UI`
 
-and **not yet** from:
+to:
 
-`artifact bytes -> extractor -> editor -> new artifact version`
+`backend-owned query contract -> backend demo projection -> frontend repository -> full-page UI`
+
+### Do not start here yet
+Do **not** jump directly to:
+
+`artifact bytes -> extractor -> workpage submit -> new artifact version`
 
 ### Why
-Because the repo already has strong normalized examples and a primary logistics demo shell, but it does not yet have the backend workpage projection/submit contract. The lowest-risk way to begin is to stabilize the frontend page contract first.
+Because the repo's frontend architecture assumes server-owned query contracts, and the current workpages should not stay on a frontend-local data seam once the page contract is proven.
 
 ## Authority model for this tranche
 The invariant remains:
 - runtime/backend truth is authoritative,
+- query contracts are server-owned projections,
 - UI is derived,
-- and the first workpage tranche must **not** invent a second truth path.
+- and this batch must still **not** invent a second truth path.
 
-Therefore, in v0:
-- workpage pages are derived from example data,
+Therefore, in the remaining batch:
+- workpage pages become **backend-query-backed**,
 - edits remain local/demo-scoped,
-- and no artifact mutation or pointer semantics are introduced in the UI.
+- no artifact mutation or pointer semantics are introduced in the UI,
+- and no submit/materialize API is added yet.
 
-## Preflight alignment before coding
-Before `TASK-0124` begins real FE work, confirm all of the following:
-- the EPIC-120 planning/context/task files are present in the repo tree,
-- the schedule page is still on the weekly-planning side of the boundary,
-- the EOD page is still on the reporting draft/review side of the boundary,
-- the EOD example family is internally consistent,
-- and the route shape still treats `/demo/logistics` as the primary entrypoint.
+## Contract decision frozen in `TASK-0128`
+### Route family
+Freeze a route family that leaves room for both demo and future non-demo projections:
+- `GET /api/v1/workpages/demo/{workpage_id}`
+- reserve future siblings such as:
+  - `GET /api/v1/workpages/artifacts/{artifact_version_id}`
+  - `GET /api/v1/workpages/workflow-runs/{workflow_run_id}/{workpage_kind}`
 
-If any of the above drift, fix the repo-native docs/fixtures first.
+Only the **demo** subfamily should be implemented in the remaining batch.
 
-## Workpage contract direction
-The first shared type should be a small `WorkpageViewModel` with:
-- top-level metadata (`workpage_id`, `title`, `workflow_id`, `dataset_key`, `mode`, `source_examples`, `summary`, `validation`)
-- a section union limited to:
-  - `summary_cards`
-  - `table`
-  - `note_panel`
-  - `form`
-  - `checklist`
-  - `history_stub`
+### Contract shape
+Freeze a small server-owned workpage contract:
 
-Important constraint:
-- page-specific detail belongs inside section payloads,
-- not as global top-level fields that try to predict every future workpage shape.
+```ts
+interface WorkpageContract {
+  workpage: WorkpageViewModel;
+  source: {
+    mode: "demo" | "artifact_projection" | "run_projection";
+    primary_dataset_key: string | null;
+    source_dataset_keys: string[];
+    source_artifact_version_id: string | null;
+    source_refs: string[];
+  };
+  freshness: {
+    generated_at: string;
+    source_kind: string;
+    source_version: string;
+  };
+}
+```
 
-## Example data seam
-The initial repository seam is intentionally honest:
-- it is example-backed,
-- it is replaceable,
-- and it should be named accordingly.
+Important nuance: `dataset_key` alone is not sufficient because the schedule page is composite. The next contract must support:
+- `primary_dataset_key` for pages like EOD,
+- plus `source_dataset_keys[]` for composite pages like schedule.
 
-Acceptable first locations:
-- `frontend/src/lib/repositories/workpagesRepository.ts`
-- or a clearly named equivalent under `frontend/src/lib/workpages/`
+## Backend source choice for the remaining batch
+### Schedule route (`schedule-v0`)
+The backend route should build the workpage contract from the **weekly normalized example set**, not by simply serving the human-authored workpage fixture verbatim.
 
-What it should do in v0:
-- return the schedule example view model,
-- return the EOD example view model,
-- and avoid implying a server contract that does not exist yet.
+Use as source material:
+- `route_slot_requirements_actual_ops_lab_v2.yaml`
+- `approved_availability_actual_ops_lab_v1.yaml`
+- `driver_capabilities_actual_ops_lab_v1.yaml`
+- `actual_hours_snapshot_actual_ops_lab_v1.yaml`
+- `stage04_input_bundle_actual_ops_lab_v2.yaml`
 
-What it should not do yet:
-- parse YAML in the browser runtime,
-- fetch `/api/v1/workpages/*`,
-- or simulate save/submit semantics.
+The human-authored workpage fixture remains a planning/oracle artifact, not the active source of truth for the route payload.
 
-## Fixture strategy
-Two fixture classes now matter:
+### EOD route (`eod-v0`)
+The backend route should build the workpage contract from the **consistent partial 2026-03-16 dispatch-reporting example family**, not from an ad hoc frontend constant.
 
-### Backend-owned frontend contract snapshots
-- live under `fixtures/frontend_contracts/`
-- generated from real runtime scenario state
-- used to freeze existing HTTP/query surfaces
+Use as source material:
+- `eos_route_rows_2026_03_16_qdci_partial_example.yaml`
+- `normalized_actuals_2026_03_16_qdci_partial_example.yaml`
+- `upd_candidate_2026_03_16_qdci_partial_example.yaml`
 
-### Workpage FE planning/test fixtures
-- live under `fixtures/logistics/workpages/`
-- human-authored
-- derived from repo-native normalized examples and the product brief
-- used to freeze the early page contract
+Again, the human-authored workpage fixture remains a planning/oracle artifact rather than the live backend source.
 
-Do not blur those two classes together.
+## Snapshot policy
+Once the backend demo routes exist, generate backend-owned snapshots such as:
+- `fixtures/frontend_contracts/workpage_schedule_v0_state.json`
+- `fixtures/frontend_contracts/workpage_eod_v0_state.json`
 
-## Schedule workpage v0
-Route:
-- `/demo/logistics/workpages/schedule-v0`
+These are valid frontend contract fixtures because they are generated from backend routes.
 
-Grounding:
-- `weekly_schedule_planning.v1`
-- weekly review posture
-- selected-day preview only
+## FE migration rule for the remaining batch
+After backend demo routes exist:
+- active routes under `/demo/logistics/workpages/*` must stop depending on frontend-local example adapters,
+- pages should query through a repository backed by `onetruthApi`,
+- local edit state remains layered on top of the fetched base contract,
+- and loading/error/freshness surfaces should be explicit and tested.
 
-Must render:
-- week summary
-- daily demand and coverage table
-- selected-day preview
-- driver roster/detail excerpt
-- a boundary note that day-of truth remains in `live_dispatch.v1`
-- selected-day local what-if inputs
-- history stub
+## Testing order for the remaining batch
+### 1. Backend schedule route tests (`TASK-0129`)
+- prove `GET /api/v1/workpages/demo/schedule-v0` returns a stable workpage contract
+- export a backend-owned snapshot
 
-Must not imply:
-- authoritative day-of dispatch editing
-- spreadsheet cloning
-- backend save/submit
+### 2. Backend EOD route tests (`TASK-0130`)
+- prove `GET /api/v1/workpages/demo/eod-v0` returns a stable workpage contract
+- export a backend-owned snapshot
 
-## End-of-day report workpage v0
-Route:
-- `/demo/logistics/workpages/eod-v0`
+### 3. Frontend migration tests (`TASK-0131`)
+- repository/query wiring
+- loading/error/freshness behavior
+- route regression under `/demo/logistics/workpages/*`
+- pages still preserve bounded local edit interactions
 
-Grounding:
-- `dispatch_reporting.v1`
-- draft/review posture
-- `reporting.upd_draft.workbook` semantics
-
-Must render:
-- top summary cards
-- formula-integrity warning panel
-- route actuals table
-- manual closeout form
-- UPD candidate checklist
-- history stub
-
-Must not imply:
-- Stage05 final-packet authority
-- PDF generation
-- source-workbook formula emulation
-
-## Route integration
-### Shell behavior
-`AppShell` must:
-- treat `/demo/logistics/*` as logistics-shell routes,
-- keep the logistics nav entry active for those routes,
-- and keep secondary detail routes visible across the logistics-shell prefix.
-
-### Page behavior
-The workpages must be:
-- sibling routes under `AppShell`,
-- full pages,
-- and separate from the drawer-first detail flow used on the existing task-centric pages.
-
-### Entry points
-The primary discoverability path is still `/demo/logistics`.
-That page should add truthful links to the two workpages without turning them into the new app root.
-
-## Testing order
-### 1. View-model tests
-Freeze the mapping from repo examples into the frontend `WorkpageViewModel` shape.
-
-### 2. Page render tests
-Prove the schedule page and the EOD page render the expected sections from example data.
-
-### 3. Edit/interaction tests
-Prove bounded manual fields and table edits behave deterministically in UI state.
-
-### 4. Route integration tests
-Prove the new routes mount as **sibling routes under `AppShell`**, treat `/demo/logistics/*` as logistics-shell routes, and keep `/demo/logistics` as the primary entrypoint.
-
-## Explicit non-goals
+## Explicit non-goals for this batch
+- no artifact submit/materialize path yet
 - no generic artifact editor
-- no live-dispatch morning page in this tranche
-- no backend workpage HTTP contract yet
-- no artifact version submit semantics yet
-- no drag/drop layout builder yet
+- no live-dispatch morning page
+- no workbook extraction/materialization runtime yet
+- no drag/drop layout builder
 - no spreadsheet formula engine emulation
-- no attempt to reproduce raw Excel layout
 
-## Future phases after v0 FE is validated
-### Phase 2 - backend projection
-Add:
+## Deferred next batch after this one
+The likely next batch after `TASK-0131` is:
+- first **artifact-backed** EOD workpage read path,
+- then first EOD submit/materialize path,
+- while the schedule page remains composite/run-oriented until a stable packet/run projection is explicitly chosen.
 
-`(artifact_version, template) -> WorkpageViewModel`
-
-### Phase 3 - backend submit / compile
-Add:
-
-`(base_artifact_version, patch) -> new_artifact_version`
-
-Those phases are intentionally deferred until the page contract is validated by FE prototype work.
+That future batch should begin with the EOD page, not the schedule page.
 
 ## Documentation maintenance rules for this build
-Every EPIC-120 Codex task must update repo-native memory in the same change set when relevant.
+Every post-`TASK-0128` Codex task must update repo-native memory in the same change set when relevant.
 
 Minimum docs to review/update when touched by the task:
 - `docs/status/CURRENT_FOCUS.md`
@@ -224,24 +189,23 @@ Minimum docs to review/update when touched by the task:
 Update these too when the change affects them:
 - `docs/planning/FRONTEND_ARCHITECTURE.md`
 - `docs/planning/FRONTEND_INTERACTION_RULES.md`
+- `docs/planning/HITL_HTTP_API_CONTRACTS.md`
 - `AGENTS.md`
 - `LLM_RUNBOOK.md`
 - `codex/CODEX_CONTEXT.yaml`
+- `fixtures/frontend_contracts/README.md`
 
-## Codex execution order
-1. `TASK-0123` - freeze scope/product brief/fixtures/docs routing
-2. `TASK-0124` - run preflight alignment and add the workpage view-model contract + example data seam
-3. `TASK-0125` - build schedule workpage v0 page + tests
-4. `TASK-0126` - build EOD workpage v0 page + tests
-5. `TASK-0127` - integrate routes/entrypoints and reconcile docs/capability surfaces
+## Codex execution order for the remaining batch
+1. `TASK-0129` - implement the backend schedule demo workpage query route + snapshot
+2. `TASK-0130` - implement the backend EOD demo workpage query route + snapshot
+3. `TASK-0131` - migrate the frontend pages to the HTTP-backed repository and harden UX/docs
 
 ## Red-team guardrails
-Before any code lands, verify all of the following remain true:
-- The page is a **full page**, not a drawer retrofit.
-- The task is anchored to `/demo/logistics`, not the legacy schedule-only surfaces.
-- The code is building a repo-native frontend page contract, not inventing a fake backend API.
-- The EOD page is a guided operational form, not a spreadsheet clone.
-- The EOD page is anchored to reporting draft/review semantics, not Stage05 final-output semantics.
-- The schedule page is about **weekly planning review + selected-day preview**, not a live-dispatch control tower.
-- Workpage fixtures remain distinct from backend-owned frontend contract snapshots.
+Before any code lands in the remaining batch, verify all of the following remain true:
+- The active workpage routes are moving toward **server-authoritative queries**, not staying forever on frontend-local demo data.
+- The route family leaves room for both **artifact-backed** and **run/composite** future workpages.
+- The schedule page is still **weekly planning review + selected-day preview**, not a live-dispatch control tower.
+- The EOD page is still **draft/review**, not final-packet semantics.
+- The backend demo routes build from domain/source examples rather than just serving hand-authored workpage fixtures verbatim.
+- Backend-generated workpage snapshots remain distinct from the human-authored planning/oracle fixtures.
 - Repo-native docs/status/task memory remain current in the same PR.

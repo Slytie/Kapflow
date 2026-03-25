@@ -2,6 +2,13 @@
 
 Record any decisions made since the last session so a fresh Codex run can rehydrate quickly.
 
+## 2026-03-25 (TASK-0128 workpage query contract and snapshot policy freeze)
+- Phase-boundary decision: once the frontend-only workpage tranche was complete, the next batch moved to **server-authoritative query contracts** before any submit/materialize path.
+- Route-family decision: the workpage API family now reserves separate subfamilies for `demo`, `artifacts`, and potentially `workflow-runs` because the schedule page is composite and may later be run-oriented while EOD is the better first artifact-backed candidate.
+- Composite-source decision: the shared workpage contract must support `primary_dataset_key` plus `source_dataset_keys[]`; a single `dataset_key` is not rich enough for the schedule page.
+- Snapshot-policy decision: once backend workpage demo routes exist, their generated contract fixtures belong in `fixtures/frontend_contracts/` because they are backend-owned API snapshots, while the human-authored workpage YAML fixtures remain planning/oracle artifacts under `fixtures/logistics/workpages/`.
+- Future-artifact decision: the first artifact-backed workpage should be **EOD**, not schedule, because `dispatch_reporting.v1` has the cleaner single-packet/workbook fit and the schedule page is intentionally composite.
+
 ## 2026-03-25 (EPIC-120 logistics workpages v0 implementation)
 - Workpage-seam decision: the first workpage contract is an example-backed frontend `WorkpageViewModel` + `workpagesRepository`, not a fake `/api/v1/workpages/*` server contract.
 - Route-structure decision: workpages are sibling full-page routes under `AppShell`, and logistics-shell behavior now treats `/demo/logistics/*` as logistics routes rather than matching only the exact `/demo/logistics` path.
