@@ -102,16 +102,16 @@ frontend/
   - `pointersRepository`
   - `timelineRepository`
   - `boardRepository`
-  - `workpagesRepository`
+- `workpagesRepository`
 - Components/pages do not call raw `fetch`.
-- Workpage routes may start life behind temporary example-backed adapters, but active routes should migrate to HTTP-backed repositories once the server query contract exists.
+- Workpage example builders may remain as oracle/test fixtures, but the active workpage routes now read backend demo query contracts through HTTP-backed repositories.
 
 ## 6) Polling and freshness model
 - Pages use TanStack Query with bounded polling intervals.
 - `FreshnessBanner` displays last successful refresh time and manual refresh affordance.
 - Query invalidation is used after mutations to re-read authoritative state.
 - No websocket/live-sync path in v1.
-- Workpage pages should surface explicit freshness/source metadata once they move onto backend demo query routes.
+- Workpage pages now surface explicit page-local freshness/source metadata because `AppShell` intentionally hides the global shell freshness banner on `/demo/logistics/*`.
 
 ## 7) URL-synced filter strategy
 - Search params encode `run`, `state`, `assignee`, `severity`, and `q`.
@@ -121,7 +121,7 @@ frontend/
 ## 8) Test strategy
 - Component tests: inline actions, compact metadata, drawer behavior, attachment affordances.
 - Route tests: board lanes, my-work filtering, approvals workspace, exceptions metadata, run detail tabs.
-- Workpage tests: view-model builders, repository seam, schedule/EOD page renders, local edit interactions, and logistics route integration.
+- Workpage tests: repository/API seam coverage, schedule/EOD page renders, refresh-preserved local edit interactions, retry/error behavior, and logistics route integration.
 - Integration tests: claim/complete/respond round-trips, forbidden response handling, reload stability.
 - Backend API contract tests verify `/api/v1` route contracts for board/list/detail/mutations.
 - Workpage route tests should freeze both the page render behavior and the workpage query contract boundary.
@@ -136,8 +136,8 @@ frontend/
 - Workpages live under `/demo/logistics/workpages/*`.
 - Treat `/demo/logistics/*` as logistics-shell routes in `AppShell`.
 - These pages are sibling full-page routes under `AppShell`, not children rendered inside `LogisticsDemoPage`.
-- The current v0 pages are fixture-backed and derived-only.
-- Active routes should migrate from example-backed adapters to HTTP-backed repositories as soon as the demo query routes exist.
+- The current v0 pages are derived-only but now read backend demo query contracts through the HTTP-backed workpage repository.
+- Example-backed builders remain oracle/test fixtures only; they are no longer the active route seam.
 - `schedule-v0` stays on the weekly-planning review side of the boundary and only offers local what-if inputs.
 - `eod-v0` stays on `reporting.upd_draft.workbook` / draft-review semantics and does not claim final-packet authority.
 - The schedule page is **composite** over multiple weekly-planning source datasets; future backend route design must leave room for run/composite projections and not assume one artifact per page.

@@ -4,6 +4,8 @@ import type {
   HumanTaskRow,
   HumanTaskSubgraph
 } from "@/lib/types/contracts";
+import eodWorkpageStateSnapshot from "@fixtures/workpage_eod_v0_state.json";
+import scheduleWorkpageStateSnapshot from "@fixtures/workpage_schedule_v0_state.json";
 
 import {
   buildBoardContract,
@@ -1087,6 +1089,12 @@ export function mutationLog(): string[] {
 }
 
 export const handlers = [
+  http.get("*/api/v1/workpages/demo/schedule-v0", () =>
+    HttpResponse.json(scheduleWorkpageStateSnapshot.workpage_state)
+  ),
+  http.get("*/api/v1/workpages/demo/eod-v0", () =>
+    HttpResponse.json(eodWorkpageStateSnapshot.workpage_state)
+  ),
   http.get("*/api/v1/viewer", ({ request }) =>
     ok({
       command: "api.viewer.bootstrap",

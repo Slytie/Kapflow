@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import { StatePanel } from "@/components/StatePanel";
 import {
@@ -10,6 +10,8 @@ import {
   WorkpageTableSection
 } from "@/components/workpages/WorkpageContent";
 import { WorkpageFormSection } from "@/components/workpages/WorkpageFormSection";
+import { apiConfig } from "@/lib/api/config";
+import { errorText } from "@/lib/api/errorText";
 import { workpagesRepository } from "@/lib/repositories";
 import type {
   WorkpageFormSection as WorkpageFormSectionModel,
@@ -18,7 +20,11 @@ import type {
   WorkpageSummaryCardsSection as WorkpageSummaryCardsSectionModel,
   WorkpageTableSection as WorkpageTableSectionModel
 } from "@/lib/types/workpages";
-import { buildFormState, type WorkpageFormState } from "@/lib/workpages/state";
+import {
+  buildEditableSectionResetKey,
+  buildFormState,
+  type WorkpageFormState
+} from "@/lib/workpages/state";
 
 function findTableSection(
   sections: WorkpageTableSectionModel[],
@@ -30,10 +36,12 @@ function findTableSection(
 export function LogisticsScheduleWorkpagePage(): JSX.Element {
   const query = useQuery({
     queryKey: ["workpages", "schedule-v0"],
-    queryFn: () => workpagesRepository.scheduleExample()
+    queryFn: () => workpagesRepository.schedule(),
+    refetchInterval: apiConfig.pollIntervalMs
   });
 
-  const model = query.data;
+  const contract = query.data;
+  const model = contract?.workpage;
   const summarySection = useMemo(
     () =>
       model?.sections.find(
@@ -70,27 +78,46 @@ export function LogisticsScheduleWorkpagePage(): JSX.Element {
     [model]
   );
   const [formState, setFormState] = useState<WorkpageFormState>({});
+  const lastFormResetKeyRef = useRef<string | null>(null);
+  const formResetKey = useMemo(() => {
+    if (!contract || !formSection) {
+      return null;
+    }
+    return buildEditableSectionResetKey(contract.workpage, contract.freshness.source_version, formSection);
+  }, [contract, formSection]);
 
   useEffect(() => {
-    setFormState(formSection ? buildFormState(formSection) : {});
-  }, [formSection]);
+    if (!formSection || !formResetKey) {
+      lastFormResetKeyRef.current = null;
+      setFormState({});
+      return;
+    }
+    if (lastFormResetKeyRef.current === formResetKey) {
+      return;
+    }
+    lastFormResetKeyRef.current = formResetKey;
+    setFormState(buildFormState(formSection));
+  }, [formResetKey, formSection]);
 
   if (query.isLoading) {
     return (
       <StatePanel
         kind="loading"
         title="Loading schedule workpage"
-        detail="Building the example-backed workpage view model."
+        detail="Fetching the backend demo workpage query."
       />
     );
   }
 
-  if (query.isError || !model) {
+  if (query.isError || !contract || !model) {
     return (
       <StatePanel
         kind="error"
         title="Schedule workpage failed to load"
-        detail="Unable to build the schedule workpage example."
+        detail={errorText(query.error, "Unable to load the schedule workpage demo query.")}
+        onRetry={() => {
+          void query.refetch();
+        }}
       />
     );
   }
@@ -98,7 +125,7 @@ export function LogisticsScheduleWorkpagePage(): JSX.Element {
   return (
     <WorkpageFrame
       eyebrow="Weekly Planning Review"
-      description="A fixture-backed full page for weekly schedule review, selected-day preview, and bounded what-if exploration."
+      description="A backend demo query for weekly schedule review, selected-day preview, and bounded what-if exploration."
       summaryItems={[
         `Week ${model.summary.planning_week_id}`,
         `${model.summary.service_area}`,
@@ -106,6 +133,13 @@ export function LogisticsScheduleWorkpagePage(): JSX.Element {
         `Week starts ${model.summary.operational_week_start}`
       ]}
       model={model}
+      source={contract.source}
+      freshness={contract.freshness}
+      onRefresh={() => {
+        void query.refetch();
+      }}
+      isRefreshing={query.isFetching}
+      pollIntervalMs={apiConfig.pollIntervalMs}
       testId="schedule-workpage-page"
     >
       <div className="workpage-page__grid workpage-page__grid--two-column">

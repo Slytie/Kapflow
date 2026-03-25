@@ -135,4 +135,4 @@ Note: `TASK-0087` / `TASK-0088` / `TASK-0089` were formerly duplicated as `TASK-
 | TASK-0128 | EPIC-120 | DONE | medium | Freeze the post-v0 server-authoritative workpage query contract, route family, and snapshot policy |
 | TASK-0129 | EPIC-120 | DONE | medium | Implement the backend schedule demo workpage query route and generated contract snapshot |
 | TASK-0130 | EPIC-120 | DONE | medium | Implement the backend EOD demo workpage query route and generated contract snapshot |
-| TASK-0131 | EPIC-120 | TODO | medium | Migrate workpage routes to the HTTP-backed repository and harden loading/freshness/shell regressions |
+| TASK-0131 | EPIC-120 | DONE | medium | Migrate workpage routes to the HTTP-backed repository and harden loading/freshness/shell regressions |

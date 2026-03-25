@@ -15,6 +15,7 @@ import type {
   TemplateRecord,
   TemplateRegistryMetadata,
   TimelineEvent,
+  WorkpageContract,
   WorkflowRunDetailContract,
   WorkflowRunWorkspaceContract,
   WorkflowWorkspaceFreshness,
@@ -85,6 +86,12 @@ interface WorkflowRunWorkspaceEnvelope extends ListEnvelope {
   };
   user_work?: Array<Record<string, unknown>>;
   blocking_work?: Array<Record<string, unknown>>;
+  freshness?: Record<string, unknown>;
+}
+
+interface WorkpageEnvelope extends ListEnvelope {
+  workpage?: Record<string, unknown>;
+  source?: Record<string, unknown>;
   freshness?: Record<string, unknown>;
 }
 
@@ -184,6 +191,13 @@ function requiredArray<T = unknown>(value: unknown, field: string): T[] {
     throw new Error(`Invalid API response: expected array at '${field}'.`);
   }
   return value as T[];
+}
+
+function requiredObject(value: unknown, field: string): Record<string, unknown> {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    throw new Error(`Invalid API response: expected object at '${field}'.`);
+  }
+  return value as Record<string, unknown>;
 }
 
 function normalizeGraphNode(node: Record<string, unknown>, index: number): WorkflowWorkspaceGraphNode {
@@ -654,6 +668,51 @@ function normalizeViewerSession(session: unknown): ViewerSession {
   };
 }
 
+function normalizeWorkpageContract(payload: WorkpageEnvelope): WorkpageContract {
+  const workpage = requiredObject(payload.workpage, "workpage");
+  const source = requiredObject(payload.source, "source");
+  const freshness = requiredObject(payload.freshness, "freshness");
+
+  if (!Array.isArray(workpage.sections)) {
+    throw new Error("Invalid API response: expected array at 'workpage.sections'.");
+  }
+  if (
+    !workpage.source_examples ||
+    typeof workpage.source_examples !== "object" ||
+    Array.isArray(workpage.source_examples)
+  ) {
+    throw new Error("Invalid API response: expected object at 'workpage.source_examples'.");
+  }
+  if (
+    !workpage.validation ||
+    typeof workpage.validation !== "object" ||
+    Array.isArray(workpage.validation)
+  ) {
+    throw new Error("Invalid API response: expected object at 'workpage.validation'.");
+  }
+
+  return {
+    workpage: workpage as unknown as WorkpageContract["workpage"],
+    source: {
+      mode: asString(source.mode),
+      primary_dataset_key:
+        source.primary_dataset_key === null ? null : asString(source.primary_dataset_key),
+      source_dataset_keys: requiredArray(source.source_dataset_keys, "source.source_dataset_keys")
+        .map((datasetKey) => asString(datasetKey))
+        .filter(Boolean),
+      source_artifact_version_id: asStringOrNull(source.source_artifact_version_id),
+      source_refs: requiredArray(source.source_refs, "source.source_refs")
+        .map((ref) => asString(ref))
+        .filter(Boolean)
+    },
+    freshness: {
+      generated_at: asString(freshness.generated_at),
+      source_kind: asString(freshness.source_kind),
+      source_version: asString(freshness.source_version)
+    }
+  };
+}
+
 export interface ArtifactUploadPayload {
   artifact_kind: string;
   artifact_role?: string;
@@ -834,6 +893,13 @@ export const onetruthApi = {
       `/workflow-runs/${workflowRunId}/workspace`
     );
     return normalizeWorkspaceContract(payload);
+  },
+
+  async getDemoWorkpage(workpageId: string): Promise<WorkpageContract> {
+    const payload = await requestJson<WorkpageEnvelope>(
+      `/workpages/demo/${encodeURIComponent(workpageId)}`
+    );
+    return normalizeWorkpageContract(payload);
   },
 
   async listPointers(query: {

@@ -450,7 +450,7 @@ export function LogisticsDemoPage(): JSX.Element {
           </p>
         </div>
         <div className="logistics-demo-page__header-links">
-          <p>Fixture-backed workpages</p>
+          <p>Backend demo workpages</p>
           <Link className="link-button" to="/demo/logistics/workpages/schedule-v0">
             Open weekly review workpage
           </Link>

@@ -2,7 +2,7 @@
 id: TASK-0131
 epic: EPIC-120
 title: "Migrate workpage routes to the HTTP-backed repository and harden loading/freshness/shell regressions"
-status: TODO
+status: DONE
 owners: ["frontend"]
 reviewers: ["backend", "qa"]
 depends_on: ["TASK-0129", "TASK-0130"]
@@ -54,9 +54,8 @@ Migrate the active workpage pages to a HTTP-backed repository over the new backe
 
 ## Verification
 - `npm --prefix frontend run typecheck`
-- targeted frontend tests for workpage pages/repository/shell regressions
-- snapshot/contract checks if relevant
-- `python3 scripts/validate_repo.py --schemas-only`
+- `npm --prefix frontend run test:run -- src/lib/api/onetruthApi.workpages.test.ts src/lib/repositories/workpagesRepository.test.ts src/lib/repositories/repositoryContracts.test.ts src/pages/logisticsScheduleWorkpagePage.test.tsx src/pages/dispatchReportWorkpagePage.test.tsx src/pages/logisticsWorkpageRoutes.test.tsx`
+- `python3.11 scripts/validate_repo.py --schemas-only`
 
 ## Acceptance criteria
 - Active workpage routes no longer rely on frontend-local example adapters.
@@ -67,3 +66,10 @@ Migrate the active workpage pages to a HTTP-backed repository over the new backe
 
 ## Notes / decisions
 If contract drift is discovered during the migration, fix it through the backend contract and repo docs rather than layering silent frontend reinterpretation.
+
+## Outcome
+- Active workpage routes now load backend demo query contracts through `onetruthApi.getDemoWorkpage()` and `workpagesRepository.schedule()` / `workpagesRepository.eod()`.
+- The frontend now keeps the backend wrapper contract visible: both workpage pages render page-local freshness/source metadata because `AppShell` intentionally suppresses the global shell freshness banner for `/demo/logistics/*`.
+- Local form/checklist state is preserved across refreshes when only `freshness.generated_at` changes; local edits reset only when the meaningful base contract identity changes.
+- MSW workpage endpoint coverage now serves the committed backend-owned snapshots from `fixtures/frontend_contracts/` instead of hand-built inline payloads.
+- No submit/materialize semantics were added in this task.

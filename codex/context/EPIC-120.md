@@ -59,19 +59,21 @@
 - loading/error/freshness and route regression tests under `/demo/logistics/workpages/*`
 - doc/task-memory updates when route/status/capability truth changes
 
-## Current Repo Status (2026-03-25 post-`TASK-0130` backend demo routes)
+## Current Repo Status (2026-03-25 post-`TASK-0131` frontend migration)
 - `/demo/logistics/workpages/schedule-v0` and `/demo/logistics/workpages/eod-v0` exist as full-page routes.
-- The active pages are still frontend-local/example-backed after `TASK-0130`.
+- The active pages now read backend demo query contracts through the HTTP-backed repository seam.
 - The post-v0 workpage query contract, route family, and snapshot policy are now frozen in repo-native docs.
 - `GET /api/v1/workpages/demo/schedule-v0` and `GET /api/v1/workpages/demo/eod-v0` now exist as backend demo workpage routes.
 - `fixtures/frontend_contracts/workpage_schedule_v0_state.json` and `fixtures/frontend_contracts/workpage_eod_v0_state.json` now exist as backend-generated workpage query snapshots.
+- Workpage pages now render local freshness/source metadata from the backend wrapper contract because the logistics shell hides the global shell freshness banner on `/demo/logistics/*`.
+- Local form/checklist edits now survive refreshes when only `freshness.generated_at` changes.
 - No artifact-backed workpage path exists yet.
 - `fixtures/frontend_contracts/` remain backend-generated frontend API snapshots; future workpage query snapshots belong there too.
 - Workpage planning fixtures remain distinct human-authored artifacts under `fixtures/logistics/workpages/`.
 
 ## Planned next work after this phase
-- `TASK-0131` - HTTP-backed frontend repository migration and shell regressions
-- first artifact-backed EOD read/write path later, after the shared query seam is proven
+- choose the next bounded tranche deliberately; `TASK-0131` completed the planned query-seam migration batch
+- first artifact-backed EOD read/write path later, after a dedicated contract/task freeze
 
 ## Red-team questions for future runs
 - Are we keeping active workpage pages on frontend-local data for too long instead of moving them onto server-owned queries?

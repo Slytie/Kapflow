@@ -2,6 +2,12 @@
 
 Record any decisions made since the last session so a fresh Codex run can rehydrate quickly.
 
+## 2026-03-25 (TASK-0131 HTTP-backed frontend workpage migration and local freshness)
+- Frontend data-seam decision: the active `/demo/logistics/workpages/schedule-v0` and `/demo/logistics/workpages/eod-v0` routes now read backend demo query contracts through `onetruthApi.getDemoWorkpage()` and `workpagesRepository.schedule()` / `workpagesRepository.eod()` instead of frontend-local example adapters.
+- Wrapper-visibility decision: the frontend now keeps the backend workpage wrapper visible instead of stripping it to the inner `WorkpageViewModel`; workpage pages render local `source` / `freshness` metadata because `AppShell` intentionally hides the global shell freshness banner on `/demo/logistics/*`.
+- Local-state decision: workpage form/checklist edits remain local-only and are now reset only when the meaningful base contract identity changes; `freshness.generated_at` alone must not wipe local edits during refresh.
+- Test-fixture decision: frontend MSW workpage handlers now serve the committed backend-owned snapshots from `fixtures/frontend_contracts/`, not hand-built inline workpage payloads.
+
 ## 2026-03-25 (TASK-0130 EOD demo workpage query route and snapshot)
 - Query-surface decision: `GET /api/v1/workpages/demo/eod-v0` now exists as the second implemented backend-owned workpage route, reusing the shared `workpages.demo.detail` family instead of introducing a new EOD-specific route seam.
 - Source-build decision: the EOD workpage payload is built from the consistent partial 2026-03-16 QDCI/DVC4 dispatch-reporting example family, not by serving `fixtures/logistics/workpages/eod_report_workpage_v0_view_model_example.yaml`.

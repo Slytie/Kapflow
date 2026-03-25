@@ -41,13 +41,15 @@ It is intentionally **not** a generic artifact editor epic.
 
 Context pack: `codex/context/EPIC-120.md`
 
-## Current Repo Status (2026-03-25 post-`TASK-0130` backend demo routes)
+## Current Repo Status (2026-03-25 post-`TASK-0131` frontend migration)
 - `/demo/logistics/workpages/schedule-v0` and `/demo/logistics/workpages/eod-v0` exist as full-page routes under `AppShell`.
-- The active pages are still **frontend-local/example-backed** after `TASK-0130`; frontend migration has not started yet.
+- The active pages now read backend demo query contracts through the HTTP-backed workpage repository; frontend-local example adapters are no longer the live route seam.
 - Repo-native docs now freeze the post-v0 workpage query contract, route family, and snapshot policy.
 - `GET /api/v1/workpages/demo/schedule-v0` and `GET /api/v1/workpages/demo/eod-v0` now exist as backend demo workpage query surfaces.
 - `fixtures/frontend_contracts/workpage_schedule_v0_state.json` and `fixtures/frontend_contracts/workpage_eod_v0_state.json` now exist as backend-generated workpage query snapshots.
-- The next correctness move is to migrate the frontend workpage routes onto the HTTP-backed repository seam.
+- The workpage pages now render local freshness/source metadata from the backend wrapper contract because the logistics shell suppresses the global freshness banner on `/demo/logistics/*`.
+- Local workpage edits remain bounded to UI state and survive refreshes when only `freshness.generated_at` changes.
+- No submit/materialize path exists yet; the shared query seam is now proven and the next tranche should be chosen deliberately.
 - `weekly_schedule_planning.v1` still owns the **pre-week / Friday** weekly build. Day-of replan belongs to `live_dispatch.v1` and must not leak into the schedule workpage scope.
 - `dispatch_reporting.v1` still separates normalized actuals, draft packet generation, review, and final packet output. The EOD page remains aligned to `reporting.upd_draft.workbook` semantics rather than Stage05 final output.
 - The schedule page is **composite** over multiple weekly-planning example inputs. It must not be forced into a single-artifact identity too early.
@@ -67,4 +69,4 @@ Context pack: `codex/context/EPIC-120.md`
 - TASK-0131
 
 ## Red-team question
-Are we keeping the next batch bounded to **server-authoritative workpage queries** and a clean frontend migration, or are we quietly skipping ahead into artifact submit/materialize work before the shared query seam is proven?
+Now that the shared query seam is proven, are we choosing the next tranche deliberately, or are we quietly skipping ahead into artifact submit/materialize work without freezing the next bounded read/write contract first?

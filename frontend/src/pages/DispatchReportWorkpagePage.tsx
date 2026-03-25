@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import { StatePanel } from "@/components/StatePanel";
 import { WorkpageChecklistSection } from "@/components/workpages/WorkpageChecklistSection";
@@ -11,6 +11,8 @@ import {
   WorkpageTableSection
 } from "@/components/workpages/WorkpageContent";
 import { WorkpageFormSection } from "@/components/workpages/WorkpageFormSection";
+import { apiConfig } from "@/lib/api/config";
+import { errorText } from "@/lib/api/errorText";
 import { workpagesRepository } from "@/lib/repositories";
 import type {
   WorkpageChecklistSection as WorkpageChecklistSectionModel,
@@ -21,6 +23,7 @@ import type {
   WorkpageTableSection as WorkpageTableSectionModel
 } from "@/lib/types/workpages";
 import {
+  buildEditableSectionResetKey,
   buildChecklistState,
   buildFormState,
   type WorkpageChecklistState,
@@ -37,10 +40,12 @@ function findTableSection(
 export function DispatchReportWorkpagePage(): JSX.Element {
   const query = useQuery({
     queryKey: ["workpages", "eod-v0"],
-    queryFn: () => workpagesRepository.eodExample()
+    queryFn: () => workpagesRepository.eod(),
+    refetchInterval: apiConfig.pollIntervalMs
   });
 
-  const model = query.data;
+  const contract = query.data;
+  const model = contract?.workpage;
   const summarySection = useMemo(
     () =>
       model?.sections.find(
@@ -85,31 +90,70 @@ export function DispatchReportWorkpagePage(): JSX.Element {
   );
   const [formState, setFormState] = useState<WorkpageFormState>({});
   const [checklistState, setChecklistState] = useState<WorkpageChecklistState>({});
+  const lastFormResetKeyRef = useRef<string | null>(null);
+  const lastChecklistResetKeyRef = useRef<string | null>(null);
+  const formResetKey = useMemo(() => {
+    if (!contract || !formSection) {
+      return null;
+    }
+    return buildEditableSectionResetKey(contract.workpage, contract.freshness.source_version, formSection);
+  }, [contract, formSection]);
+  const checklistResetKey = useMemo(() => {
+    if (!contract || !checklistSection) {
+      return null;
+    }
+    return buildEditableSectionResetKey(
+      contract.workpage,
+      contract.freshness.source_version,
+      checklistSection
+    );
+  }, [contract, checklistSection]);
 
   useEffect(() => {
-    setFormState(formSection ? buildFormState(formSection) : {});
-  }, [formSection]);
+    if (!formSection || !formResetKey) {
+      lastFormResetKeyRef.current = null;
+      setFormState({});
+      return;
+    }
+    if (lastFormResetKeyRef.current === formResetKey) {
+      return;
+    }
+    lastFormResetKeyRef.current = formResetKey;
+    setFormState(buildFormState(formSection));
+  }, [formResetKey, formSection]);
 
   useEffect(() => {
-    setChecklistState(checklistSection ? buildChecklistState(checklistSection) : {});
-  }, [checklistSection]);
+    if (!checklistSection || !checklistResetKey) {
+      lastChecklistResetKeyRef.current = null;
+      setChecklistState({});
+      return;
+    }
+    if (lastChecklistResetKeyRef.current === checklistResetKey) {
+      return;
+    }
+    lastChecklistResetKeyRef.current = checklistResetKey;
+    setChecklistState(buildChecklistState(checklistSection));
+  }, [checklistResetKey, checklistSection]);
 
   if (query.isLoading) {
     return (
       <StatePanel
         kind="loading"
         title="Loading end-of-day workpage"
-        detail="Building the example-backed dispatch-reporting workpage."
+        detail="Fetching the backend dispatch-reporting demo workpage query."
       />
     );
   }
 
-  if (query.isError || !model) {
+  if (query.isError || !contract || !model) {
     return (
       <StatePanel
         kind="error"
         title="End-of-day workpage failed to load"
-        detail="Unable to build the dispatch-reporting workpage example."
+        detail={errorText(query.error, "Unable to load the dispatch-reporting workpage demo query.")}
+        onRetry={() => {
+          void query.refetch();
+        }}
       />
     );
   }
@@ -117,7 +161,7 @@ export function DispatchReportWorkpagePage(): JSX.Element {
   return (
     <WorkpageFrame
       eyebrow="Dispatch Reporting Draft"
-      description="A fixture-backed full page for route actual review, closeout capture, and UPD draft posture."
+      description="A backend demo query for route actual review, closeout capture, and UPD draft posture."
       summaryItems={[
         `Service date ${model.summary.service_date}`,
         `${model.summary.station_code}`,
@@ -125,6 +169,13 @@ export function DispatchReportWorkpagePage(): JSX.Element {
         "UPD draft anchor"
       ]}
       model={model}
+      source={contract.source}
+      freshness={contract.freshness}
+      onRefresh={() => {
+        void query.refetch();
+      }}
+      isRefreshing={query.isFetching}
+      pollIntervalMs={apiConfig.pollIntervalMs}
       testId="dispatch-report-workpage-page"
     >
       <div className="workpage-page__grid workpage-page__grid--two-column">

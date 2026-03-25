@@ -1,3 +1,5 @@
+import type { WorkpageViewModel } from "@/lib/types/workpages";
+
 export type HumanTaskState = "OPEN" | "CLAIMED" | "COMPLETED";
 export type ApprovalState = "PENDING" | "RESPONDED";
 export type HumanTaskExpansionKind = "none" | "task_subgraph";
@@ -373,6 +375,26 @@ export interface WorkflowRunWorkspaceContract {
   blocking_work: WorkflowWorkspaceWorkItem[];
   latest_event_sequence: number | null;
   freshness: WorkflowWorkspaceFreshness;
+}
+
+export interface WorkpageSourceMetadata {
+  mode: string;
+  primary_dataset_key: string | null;
+  source_dataset_keys: string[];
+  source_artifact_version_id: string | null;
+  source_refs: string[];
+}
+
+export interface WorkpageFreshness {
+  generated_at: string;
+  source_kind: string;
+  source_version: string;
+}
+
+export interface WorkpageContract {
+  workpage: WorkpageViewModel;
+  source: WorkpageSourceMetadata;
+  freshness: WorkpageFreshness;
 }
 
 export type LogisticsStoryFamilyNodeKind = "module";

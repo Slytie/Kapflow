@@ -4,20 +4,23 @@
 Stage 4 - Vertical Slice MVP (repo merged around one truth system)
 
 ## Current milestone
-Primary runtime/debug work remains the logistics weekly/live family. `TASK-0130` is now complete, so the immediate application-facing tranche inside `EPIC-120` now includes both server-owned demo workpage query routes and generated workpage snapshots on top of the `TASK-0128` contract freeze.
+Primary runtime/debug work remains the logistics weekly/live family. `TASK-0131` is now complete, so the immediate application-facing tranche inside `EPIC-120` now includes both server-owned demo workpage query routes and the active frontend migration onto those routes on top of the `TASK-0128` contract freeze.
 
 Current implemented baseline:
 - `/demo/logistics/workpages/schedule-v0`
 - `/demo/logistics/workpages/eod-v0`
 - full-page routes under `AppShell`
-- frontend-local/example-backed workpage pages and tests
+- HTTP-backed workpage pages and tests over the backend demo query seam
+- workpage-local freshness/source metadata rendered inside each page because the logistics shell suppresses the global freshness banner
+- bounded local form/checklist edits preserved across refreshes when only backend `freshness.generated_at` changes
 - backend schedule demo workpage query route: `GET /api/v1/workpages/demo/schedule-v0`
 - backend EOD demo workpage query route: `GET /api/v1/workpages/demo/eod-v0`
 - backend-generated schedule workpage snapshot: `fixtures/frontend_contracts/workpage_schedule_v0_state.json`
 - backend-generated EOD workpage snapshot: `fixtures/frontend_contracts/workpage_eod_v0_state.json`
 
-Immediate next application package (`EPIC-120`, post-`TASK-0130` batch):
-- `TASK-0131`: HTTP-backed frontend migration plus loading/error/freshness and shell regressions
+Immediate next application package:
+- choose the next bounded post-`TASK-0131` tranche deliberately; the query seam is now proven and no submit/materialize task is active yet
+- the first future artifact-backed candidate remains the EOD page, but that path is not started in the current baseline
 
 Important scope boundaries for this tranche:
 - no backend workpage submit/materialize path yet

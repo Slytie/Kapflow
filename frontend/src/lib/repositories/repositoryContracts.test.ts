@@ -37,8 +37,8 @@ describe("Repository contract compatibility", () => {
       workflowRunsRepository.workspace("wr-test-001"),
       templatesRepository.list({ workflowId: "schedule_planning.v1", variant: "empty" }),
       logisticsStoryRepository.view({ planningWeekId: "PW-2026-W10" }),
-      workpagesRepository.scheduleExample(),
-      workpagesRepository.eodExample()
+      workpagesRepository.schedule(),
+      workpagesRepository.eod()
     ]);
 
     expect(Array.isArray(tasks)).toBe(true);
@@ -66,7 +66,13 @@ describe("Repository contract compatibility", () => {
       )
     ).toBe(true);
     expect(logisticsStory.board.work_items.length).toBeGreaterThan(0);
-    expect(scheduleWorkpage.sections.length).toBeGreaterThan(0);
-    expect(eodWorkpage.sections.length).toBeGreaterThan(0);
+    expect(scheduleWorkpage.workpage.sections.length).toBeGreaterThan(0);
+    expect(scheduleWorkpage.source.source_dataset_keys.length).toBe(5);
+    expect(scheduleWorkpage.freshness.source_version).toBe("weekly_stage04_actual_ops_lab_v2");
+    expect(eodWorkpage.workpage.sections.length).toBeGreaterThan(0);
+    expect(eodWorkpage.source.primary_dataset_key).toBe("reporting.upd_draft.workbook");
+    expect(eodWorkpage.freshness.source_version).toBe(
+      "dispatch_reporting_2026_03_16_qdci_dvc4_partial_v1"
+    );
   });
 });

@@ -1,7 +1,8 @@
 import type {
   WorkpageChecklistSection,
   WorkpageFormSection,
-  WorkpageFormValue
+  WorkpageFormValue,
+  WorkpageViewModel
 } from "@/lib/types/workpages";
 
 export type WorkpageFormState = Record<string, WorkpageFormValue>;
@@ -27,4 +28,30 @@ export function buildChecklistState(section: WorkpageChecklistSection): Workpage
       }
     ])
   );
+}
+
+export function buildEditableSectionResetKey(
+  workpage: Pick<WorkpageViewModel, "workpage_id" | "version">,
+  sourceVersion: string,
+  section: WorkpageFormSection | WorkpageChecklistSection
+): string {
+  if (section.kind === "form") {
+    return [
+      workpage.workpage_id,
+      workpage.version,
+      sourceVersion,
+      section.kind,
+      section.form_id,
+      section.fields.map((field) => field.key).join(",")
+    ].join("|");
+  }
+
+  return [
+    workpage.workpage_id,
+    workpage.version,
+    sourceVersion,
+    section.kind,
+    section.checklist_id,
+    section.items.map((item) => item.item_id).join(",")
+  ].join("|");
 }

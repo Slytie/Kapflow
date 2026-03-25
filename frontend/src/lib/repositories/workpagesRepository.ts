@@ -1,15 +1,12 @@
-import {
-  buildEndOfDayWorkpageViewModel,
-  buildScheduleWorkpageViewModel
-} from "@/lib/workpages/exampleViewModels";
-import type { WorkpageViewModel } from "@/lib/types/workpages";
+import { onetruthApi } from "@/lib/api/onetruthApi";
+import type { WorkpageContract } from "@/lib/types/contracts";
 
 export const workpagesRepository = {
-  async scheduleExample(): Promise<WorkpageViewModel> {
-    return buildScheduleWorkpageViewModel();
+  async schedule(): Promise<WorkpageContract> {
+    return onetruthApi.getDemoWorkpage("schedule-v0");
   },
 
-  async eodExample(): Promise<WorkpageViewModel> {
-    return buildEndOfDayWorkpageViewModel();
+  async eod(): Promise<WorkpageContract> {
+    return onetruthApi.getDemoWorkpage("eod-v0");
   }
 };
