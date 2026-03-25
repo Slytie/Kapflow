@@ -6,4 +6,5 @@ export { logisticsStoryRepository } from "@/lib/repositories/logisticsStoryRepos
 export { pointersRepository } from "@/lib/repositories/pointersRepository";
 export { templatesRepository } from "@/lib/repositories/templatesRepository";
 export { timelineRepository } from "@/lib/repositories/timelineRepository";
+export { workpagesRepository } from "@/lib/repositories/workpagesRepository";
 export { workflowRunsRepository } from "@/lib/repositories/workflowRunsRepository";

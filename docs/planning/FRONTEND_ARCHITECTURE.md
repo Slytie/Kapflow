@@ -40,11 +40,14 @@ frontend/
       StatusBadge.tsx
       TaskCardWide.tsx
       TimelineRow.tsx
+      workpages/
     pages/
       BoardPage.tsx
       MyWorkPage.tsx
       ApprovalsPage.tsx
+      DispatchReportWorkpagePage.tsx
       ExceptionsPage.tsx
+      LogisticsScheduleWorkpagePage.tsx
       RunsPage.tsx
       RunDetailPage.tsx
       OfficialOutputsPage.tsx
@@ -56,9 +59,12 @@ frontend/
         idempotency.ts
         onetruthApi.ts
       repositories/
+        workpagesRepository.ts
+      workpages/
       mappers/boardLaneMapper.ts
       state/
       types/
+        workpages.ts
     test/
       api/
         contractState.ts
@@ -67,6 +73,9 @@ frontend/
 ```
 
 ## 3) Route map
+- `/demo/logistics` -> primary three-workflow logistics shell
+- `/demo/logistics/workpages/schedule-v0` -> weekly schedule review + selected-day preview workpage
+- `/demo/logistics/workpages/eod-v0` -> end-of-day draft/review workpage
 - `/board` -> board overview lanes (tasks/approvals/exception work)
 - `/my-work` -> dense assigned queue with inline actions
 - `/approvals` -> approval queue + review workspace split
@@ -93,6 +102,7 @@ frontend/
   - `pointersRepository`
   - `timelineRepository`
   - `boardRepository`
+  - `workpagesRepository`
 - Components/pages do not call raw `fetch`.
 
 ## 6) Polling and freshness model
@@ -109,6 +119,7 @@ frontend/
 ## 8) Test strategy
 - Component tests: inline actions, compact metadata, drawer behavior, attachment affordances.
 - Route tests: board lanes, my-work filtering, approvals workspace, exceptions metadata, run detail tabs.
+- Workpage tests: view-model builders, repository seam, schedule/EOD page renders, local edit interactions, and logistics route integration.
 - Integration tests: claim/complete/respond round-trips, forbidden response handling, reload stability.
 - Backend API contract tests verify `/api/v1` route contracts for board/list/detail/mutations.
 
@@ -117,3 +128,9 @@ frontend/
 - Explicit button controls for transitions/affordances (no drag-only interactions).
 - Drawer host has accessible close control and ARIA label.
 - Status/severity signals include text (not color-only).
+
+## 10) Workpage posture
+- Workpages are full-page logistics-shell routes under `/demo/logistics/*`, not drawer-first retrofits.
+- The first workpage tranche is fixture-backed and derived-only; it deliberately avoids a fake backend API.
+- `schedule-v0` stays on the weekly-planning review side of the boundary and only offers local what-if inputs.
+- `eod-v0` stays on `reporting.upd_draft.workbook` / draft-review semantics and does not claim final-packet authority.

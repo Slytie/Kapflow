@@ -449,6 +449,15 @@ export function LogisticsDemoPage(): JSX.Element {
             Planning week {story.partitions.planning_week_id} · Service dates {story.partitions.service_date_ids.join(", ")}
           </p>
         </div>
+        <div className="logistics-demo-page__header-links">
+          <p>Fixture-backed workpages</p>
+          <Link className="link-button" to="/demo/logistics/workpages/schedule-v0">
+            Open weekly review workpage
+          </Link>
+          <Link className="link-button" to="/demo/logistics/workpages/eod-v0">
+            Open end-of-day workpage
+          </Link>
+        </div>
       </header>
 
       <WorkflowGraph

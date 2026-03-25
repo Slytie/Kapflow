@@ -1,0 +1,47 @@
+source_note: Representative partial route rows normalized from the uploaded 2026-03-16 EOS material for QDCI / DVC4. Suitable for EPIC-120 frontend prototype work only.
+columns:
+- service_date
+- route_id
+- driver_name
+- packages_dispatched
+- packages_delivered
+- planned_start
+- planned_finish
+- actual_start
+- actual_finish
+- route_minutes
+- source
+rows:
+- - '2026-03-16'
+  - CX100
+  - Brahamvir Singh
+  - 286
+  - 286
+  - '11:50'
+  - '18:40'
+  - '11:50'
+  - '22:27'
+  - 637
+  - EOS 2026-03-16 (partial)
+- - '2026-03-16'
+  - CX95
+  - Tarandeep Singh
+  - 292
+  - 290
+  - '11:50'
+  - '18:20'
+  - '11:50'
+  - '21:37'
+  - 587
+  - EOS 2026-03-16 (partial)
+- - '2026-03-16'
+  - CX99
+  - Yong-Kyoon Kim
+  - 208
+  - 207
+  - '11:55'
+  - '18:30'
+  - '11:55'
+  - '20:52'
+  - 537
+  - EOS 2026-03-16 (partial)

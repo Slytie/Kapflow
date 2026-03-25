@@ -25,6 +25,7 @@ Baseline reads (always):
 - the task file you are executing (`codex/tasks/TASK-*.md`)
 - the relevant epic file (`docs/planning/epics/EPIC-*.md`) if applicable
 - the relevant workflow pack (default for new agentic scheduling work: logistics weekly/live via `docs/workflows/logistics_ops_family/v1/`, `docs/workflows/weekly_schedule_planning/v1/`, and `docs/workflows/live_dispatch/v1/`; treat `schedule_planning.v1` as regression/reference-only unless explicitly needed)
+- for workpage FE tasks, also load `docs/planning/LOGISTICS_WORKPAGES_V0_PLAN.md`, `docs/planning/LOGISTICS_WORKPAGES_V0_PRODUCT_BRIEF.md`, `docs/workflows/weekly_schedule_planning/v1/OPERATING_MODEL.md`, `docs/workflows/live_dispatch/v1/OPERATING_MODEL.md`, `docs/workflows/dispatch_reporting/v1/WORKFLOW_CONTRACT.yaml`, `docs/workflows/dispatch_reporting/v1/OPERATING_MODEL.md`, `docs/workflows/dispatch_reporting/v1/examples/*`, `fixtures/frontend_contracts/README.md`, and `fixtures/logistics/workpages/*`
 
 Only when needed:
 - Authority chain / source-of-truth changes:
@@ -141,6 +142,14 @@ Include:
 - The priority slice is a fully-agentive end-to-end weekly/live logistics flow over the canonical substrate.
 - Legacy `schedule_planning.v1` remains regression/reference-only for this routing posture.
 - Payroll remains a reference workflow used to validate shared semantics against a linear approval-heavy path.
+
+## Workpage v0 reminder
+- The current application-facing FE slice is `EPIC-120`: fixture-backed full-page workpages for weekly schedule review and end-of-day reporting.
+- Start from normalized examples -> `WorkpageViewModel` -> page UI.
+- Do not start from a backend workpage API or a generic artifact editor.
+- Keep the schedule page on the weekly-planning side of the boundary and the EOD page on the reporting draft/review side of the boundary.
+- Keep workpage fixtures distinct from backend-owned `fixtures/frontend_contracts/` snapshots.
+- Keep docs/status/task memory current in the same change set whenever routes or visible product truth change.
 
 ## Default safe commands
 - `make lint`

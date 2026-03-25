@@ -7,12 +7,26 @@ import {
   pointersRepository,
   templatesRepository,
   timelineRepository,
+  workpagesRepository,
   workflowRunsRepository
 } from "@/lib/repositories";
 
 describe("Repository contract compatibility", () => {
   it("loads API contract shapes through repository adapters", async () => {
-    const [tasks, approvals, flags, runs, pointers, timeline, board, workspace, templates, logisticsStory] = await Promise.all([
+    const [
+      tasks,
+      approvals,
+      flags,
+      runs,
+      pointers,
+      timeline,
+      board,
+      workspace,
+      templates,
+      logisticsStory,
+      scheduleWorkpage,
+      eodWorkpage
+    ] = await Promise.all([
       humanTasksRepository.list({ workflowRunId: "wr-test-001" }),
       approvalsRepository.list({ workflowRunId: "wr-test-001" }),
       flagsRepository.list({ workflowRunId: "wr-test-001" }),
@@ -22,7 +36,9 @@ describe("Repository contract compatibility", () => {
       boardRepository.view({ workflowRunId: "wr-test-001" }),
       workflowRunsRepository.workspace("wr-test-001"),
       templatesRepository.list({ workflowId: "schedule_planning.v1", variant: "empty" }),
-      logisticsStoryRepository.view({ planningWeekId: "PW-2026-W10" })
+      logisticsStoryRepository.view({ planningWeekId: "PW-2026-W10" }),
+      workpagesRepository.scheduleExample(),
+      workpagesRepository.eodExample()
     ]);
 
     expect(Array.isArray(tasks)).toBe(true);
@@ -50,5 +66,7 @@ describe("Repository contract compatibility", () => {
       )
     ).toBe(true);
     expect(logisticsStory.board.work_items.length).toBeGreaterThan(0);
+    expect(scheduleWorkpage.sections.length).toBeGreaterThan(0);
+    expect(eodWorkpage.sections.length).toBeGreaterThan(0);
   });
 });

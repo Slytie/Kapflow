@@ -1,0 +1,35 @@
+source_note: Partial normalized route actuals for the 2026-03-16 QDCI / DVC4 EOS material. Formula-integrity warning retained because the source workbook summary sheets contained broken formulas.
+columns:
+- service_date
+- route_id
+- driver_name
+- actual_minutes
+- returned_packages
+- return_reasons
+- upd_candidate
+- formula_integrity_warning
+rows:
+- - '2026-03-16'
+  - CX100
+  - Brahamvir Singh
+  - 637
+  - 0
+  - ''
+  - true
+  - source workbook had broken summary formulas
+- - '2026-03-16'
+  - CX95
+  - Tarandeep Singh
+  - 587
+  - 2
+  - BC,FDD
+  - false
+  - ''
+- - '2026-03-16'
+  - CX99
+  - Yong-Kyoon Kim
+  - 537
+  - 1
+  - NSL
+  - false
+  - ''

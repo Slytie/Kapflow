@@ -5,6 +5,7 @@ import { Navigate, Route, BrowserRouter as Router, Routes } from "react-router-d
 import { AppShell } from "@/app/AppShell";
 import { BoardPage } from "@/pages/BoardPage";
 import { ApprovalsPage } from "@/pages/ApprovalsPage";
+import { DispatchReportWorkpagePage } from "@/pages/DispatchReportWorkpagePage";
 import { ExceptionsPage } from "@/pages/ExceptionsPage";
 import { MyWorkPage } from "@/pages/MyWorkPage";
 import { OfficialOutputsPage } from "@/pages/OfficialOutputsPage";
@@ -13,6 +14,7 @@ import { RunWorkspacePage } from "@/pages/RunWorkspacePage";
 import { RunsPage } from "@/pages/RunsPage";
 import { TimelinePage } from "@/pages/TimelinePage";
 import { LogisticsDemoPage } from "@/pages/LogisticsDemoPage";
+import { LogisticsScheduleWorkpagePage } from "@/pages/LogisticsScheduleWorkpagePage";
 import { WorkspaceHomePage } from "@/pages/WorkspaceHomePage";
 import { DrawerProvider } from "@/lib/state/drawerContext";
 import "@/app/app.css";
@@ -39,6 +41,8 @@ export function App(): JSX.Element {
             <Route path="/" element={<Navigate to="/demo/logistics" replace />} />
             <Route element={<AppShell />}>
               <Route path="/demo/logistics" element={<LogisticsDemoPage />} />
+              <Route path="/demo/logistics/workpages/schedule-v0" element={<LogisticsScheduleWorkpagePage />} />
+              <Route path="/demo/logistics/workpages/eod-v0" element={<DispatchReportWorkpagePage />} />
               <Route path="/workspace" element={<WorkspaceHomePage />} />
               <Route path="/board" element={<BoardPage />} />
               <Route path="/my-work" element={<MyWorkPage />} />

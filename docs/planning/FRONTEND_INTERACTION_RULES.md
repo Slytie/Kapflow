@@ -52,3 +52,11 @@
 11. Legacy schedule surfaces are secondary.
 - `/demo/logistics` is the primary operator/demo entrypoint and app-root redirect target.
 - Schedule-era routes (for example `/board`, `/runs`, `/timeline`, `/workspace`) remain regression/supporting surfaces and are not primary navigation entrypoints.
+
+12. Workpage editing surfaces are full pages.
+- Logistics workpages live under `/demo/logistics/workpages/*`.
+- Treat `/demo/logistics/*` as logistics-shell routes in `AppShell`; these pages are sibling full-page routes under `AppShell`, not children rendered inside `LogisticsDemoPage`.
+- They are not drawer-first surfaces.
+- The first tranche is fixture-backed and derived-only; client state must not become artifact truth.
+- The first two workpages are weekly schedule review and end-of-day draft/review; generic artifact editing remains out of scope for this slice.
+- Weekly schedule v0 may show selected-day previews and local what-if controls, but it does not own semantically authoritative day-of dispatch replans.

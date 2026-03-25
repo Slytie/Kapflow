@@ -1,0 +1,197 @@
+workpage_id: schedule_workpage_v0_example
+version: 2
+title: Weekly schedule review
+mode: example
+workflow_id: weekly_schedule_planning.v1
+dataset_key: planning.input_bundle.doc
+source_artifact_version_id: null
+source_examples:
+  route_slot_requirements: docs/workflows/weekly_schedule_planning/v1/examples/route_slot_requirements_actual_ops_lab_v2.yaml
+  approved_availability: docs/workflows/weekly_schedule_planning/v1/examples/approved_availability_actual_ops_lab_v1.yaml
+  driver_capabilities: docs/workflows/weekly_schedule_planning/v1/examples/driver_capabilities_actual_ops_lab_v1.yaml
+  actual_hours_snapshot: docs/workflows/weekly_schedule_planning/v1/examples/actual_hours_snapshot_actual_ops_lab_v1.yaml
+  stage04_input_bundle: docs/workflows/weekly_schedule_planning/v1/examples/stage04_input_bundle_actual_ops_lab_v2.yaml
+summary:
+  planning_week_id: PW-2026-W13
+  operational_week_start: '2026-03-22'
+  service_area: Pitt Meadows
+  station_code: DVC4
+  total_routes_required: 134
+  drivers_in_scope: 51
+  on_call_target_per_day: 4
+  excess_capacity_target_per_day: 3
+  planner_note: Holdout schedule contributed route totals only; staffing cells were intentionally excluded from the normalized example package.
+sections:
+  - kind: summary_cards
+    title: Week summary
+    cards:
+      - key: planning_week
+        label: Planning week
+        value: PW-2026-W13
+      - key: total_routes
+        label: Required routes
+        value: 134
+      - key: drivers
+        label: Drivers in scope
+        value: 51
+      - key: on_call_target
+        label: Daily on-call target
+        value: 4
+      - key: excess_capacity_target
+        label: Daily excess-capacity target
+        value: 3
+  - kind: table
+    title: Daily demand and coverage posture
+    table_id: day_demand
+    columns:
+      - key: service_date
+        label: Service date
+      - key: planned_route_count
+        label: Planned routes
+      - key: on_call_target
+        label: On-call target
+      - key: excess_capacity_target
+        label: Excess-capacity target
+      - key: note
+        label: Note
+    rows:
+      - service_date: '2026-03-22'
+        planned_route_count: 16
+        on_call_target: 4
+        excess_capacity_target: 3
+        note: Holdout route total override
+      - service_date: '2026-03-23'
+        planned_route_count: 23
+        on_call_target: 4
+        excess_capacity_target: 3
+        note: Highest-demand day in the example week
+      - service_date: '2026-03-24'
+        planned_route_count: 20
+        on_call_target: 4
+        excess_capacity_target: 3
+        note: Selected-day preview slice for early FE review
+      - service_date: '2026-03-25'
+        planned_route_count: 19
+        on_call_target: 4
+        excess_capacity_target: 3
+        note: Stable mid-week posture
+      - service_date: '2026-03-26'
+        planned_route_count: 21
+        on_call_target: 4
+        excess_capacity_target: 3
+        note: Elevated route load
+      - service_date: '2026-03-27'
+        planned_route_count: 18
+        on_call_target: 4
+        excess_capacity_target: 3
+        note: Standard Friday posture
+      - service_date: '2026-03-28'
+        planned_route_count: 17
+        on_call_target: 4
+        excess_capacity_target: 3
+        note: Weekend closeout
+  - kind: table
+    title: Selected-day preview
+    table_id: selected_day_preview
+    columns:
+      - key: service_date
+        label: Selected day
+      - key: routes_required
+        label: Routes required
+      - key: drivers_available
+        label: Drivers available
+      - key: projected_on_call_needed
+        label: On-call needed
+      - key: open_questions
+        label: Open questions
+    rows:
+      - service_date: '2026-03-24'
+        routes_required: 20
+        drivers_available: 24
+        projected_on_call_needed: 4
+        open_questions: Confirm late requests and final on-call posture before day-of handoff.
+  - kind: table
+    title: Driver roster excerpt
+    table_id: driver_roster
+    columns:
+      - key: driver_name
+        label: Driver
+      - key: employment_type
+        label: Employment
+      - key: preferred_route_slot_classes
+        label: Preferred slot
+      - key: target_shifts_per_week
+        label: Target shifts
+      - key: on_call_eligible
+        label: On-call eligible
+      - key: previous_week_minutes
+        label: Previous-week minutes
+      - key: availability_summary
+        label: Availability summary
+    rows:
+      - driver_name: Parampreet Singh
+        employment_type: full_time
+        preferred_route_slot_classes: cycle1_standard
+        target_shifts_per_week: 5
+        on_call_eligible: true
+        previous_week_minutes: 1200
+        availability_summary: preferred 4 days; on-call-only 1 day; avoid-if-possible 2 days
+      - driver_name: Balwinder Singh
+        employment_type: part_time
+        preferred_route_slot_classes: cycle1_standard
+        target_shifts_per_week: 1
+        on_call_eligible: false
+        previous_week_minutes: 0
+        availability_summary: avoid-if-possible all week in the normalized example
+      - driver_name: Navjot Singh
+        employment_type: part_time
+        preferred_route_slot_classes: cycle1_standard
+        target_shifts_per_week: 1
+        on_call_eligible: false
+        previous_week_minutes: 0
+        availability_summary: available by heuristic upgrade in the normalized example
+  - kind: note_panel
+    title: Boundary note
+    body: This page is a weekly-planning review surface. Any selected-day controls below are local what-if inputs for the prototype and do not replace live_dispatch.v1 day-of truth.
+  - kind: form
+    title: Selected-day what-if inputs
+    form_id: selected_day_what_if
+    fields:
+      - key: scenario_sick_calls
+        label: Scenario sick calls
+        input: multi_select
+        options:
+          - Parampreet Singh
+          - Balwinder Singh
+          - Navjot Singh
+      - key: scenario_on_call_assignments
+        label: Scenario on-call assignments
+        input: multi_select
+        options:
+          - Parampreet Singh
+          - Brahmvir Singh
+          - Sachin Goyal
+      - key: scenario_added_routes
+        label: Scenario added routes
+        input: integer
+        value: 0
+      - key: scenario_dropped_routes
+        label: Scenario dropped routes
+        input: integer
+        value: 0
+      - key: scenario_note
+        label: Planner note
+        input: textarea
+        value: ''
+  - kind: history_stub
+    title: History
+    entries:
+      - label: Previous week actual-hours snapshot
+        value: available for comparison
+      - label: Rescue / fairness trend
+        value: future slice
+validation:
+  status: informational
+  warnings:
+    - This fixture is excerpted for FE work. It is not yet tied to a backend artifact projection contract.
+    - Selected-day controls are local what-if inputs only and do not claim ownership of live dispatch truth.

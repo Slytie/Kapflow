@@ -160,6 +160,22 @@ gated_context:
       - docs/workflows/live_dispatch/v1/EXECUTION_PROFILE.yaml
       - docs/workflows/live_dispatch/v1/ACCEPTANCE_CRITERIA.md
     note: Logistics weekly/live is the primary routing wedge for new agentic scheduling tasks.
+  logistics_workpages_fe_pack:
+    load_when: Task touches EPIC-120 or fixture-backed logistics workpage surfaces under /demo/logistics/workpages/*.
+    files:
+      - docs/planning/LOGISTICS_WORKPAGES_V0_PLAN.md
+      - docs/planning/LOGISTICS_WORKPAGES_V0_PRODUCT_BRIEF.md
+      - docs/planning/epics/EPIC-120.md
+      - codex/context/EPIC-120.md
+      - docs/workflows/weekly_schedule_planning/v1/OPERATING_MODEL.md
+      - docs/workflows/live_dispatch/v1/OPERATING_MODEL.md
+      - docs/workflows/weekly_schedule_planning/v1/examples/
+      - docs/workflows/dispatch_reporting/v1/WORKFLOW_CONTRACT.yaml
+      - docs/workflows/dispatch_reporting/v1/OPERATING_MODEL.md
+      - docs/workflows/dispatch_reporting/v1/examples/
+      - fixtures/frontend_contracts/README.md
+      - fixtures/logistics/workpages/
+    note: Workpages are fixture-backed derived FE surfaces; keep schedule on the weekly-planning side and EOD on the reporting draft/review side without inventing a backend workpage API.
   payroll_contract_pack:
     load_when: Task is explicitly tagged payroll OR change touches shared semantics that must be validated against a linear approval-heavy reference workflow.
     files:

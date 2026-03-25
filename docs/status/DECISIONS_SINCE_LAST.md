@@ -2,6 +2,15 @@
 
 Record any decisions made since the last session so a fresh Codex run can rehydrate quickly.
 
+## 2026-03-25 (EPIC-120 logistics workpages v0 implementation)
+- Workpage-seam decision: the first workpage contract is an example-backed frontend `WorkpageViewModel` + `workpagesRepository`, not a fake `/api/v1/workpages/*` server contract.
+- Route-structure decision: workpages are sibling full-page routes under `AppShell`, and logistics-shell behavior now treats `/demo/logistics/*` as logistics routes rather than matching only the exact `/demo/logistics` path.
+- Discovery decision: primary navigation stays unchanged; workpage discoverability comes from the primary `/demo/logistics` shell and preserved logistics secondary-nav treatment across the `/demo/logistics/*` prefix.
+- Schedule-boundary decision: the first schedule workpage remains a **weekly planning review + selected-day preview** surface. Any day-of controls in v0 are local what-if inputs only; day-of replan remains owned by `live_dispatch.v1`.
+- EOD-boundary decision: the first end-of-day workpage is aligned to **dispatch-reporting draft/review semantics** and anchors to `reporting.upd_draft.workbook`, not `reporting.final_packet.workbook`.
+- Fixture-consistency decision: the repo now carries a single partial 2026-03-16 QDCI/DVC4 reporting example family so the EOD prototype no longer mixes one source day's summary with another source day's route rows.
+- Fixture-class decision: workpage fixtures remain human-authored planning/test artifacts under `fixtures/logistics/workpages/` and stay distinct from backend-owned generated `fixtures/frontend_contracts/` snapshots.
+
 ## 2026-03-17 (next package planning: productization lane + Workflow Lab lane)
 - Planning decision: the next package is split into a leading **production lane** (`EPIC-100`) and a thinner **Workflow Lab lane** (`EPIC-110`) instead of treating productionization and experimentation as one blended platform task.
 - Promotion decision: until explicit multi-version coexistence is proven, the default promotion model remains `lab evidence + review + tagged release -> production deploy`, not direct runtime transfer of candidate workflows into production.

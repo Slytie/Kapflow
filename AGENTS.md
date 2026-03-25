@@ -23,6 +23,18 @@ Keep the default context small. Only load deeper docs when the task actually tou
   - `docs/workflows/weekly_schedule_planning/v1/WORKFLOW_CONTRACT.yaml`
   - `docs/workflows/live_dispatch/v1/WORKFLOW_CONTRACT.yaml`
 
+- Workpage FE v0 tasks (`EPIC-120`):
+  - `docs/planning/LOGISTICS_WORKPAGES_V0_PLAN.md`
+  - `docs/planning/LOGISTICS_WORKPAGES_V0_PRODUCT_BRIEF.md`
+  - `docs/workflows/weekly_schedule_planning/v1/OPERATING_MODEL.md`
+  - `docs/workflows/live_dispatch/v1/OPERATING_MODEL.md` (boundary check only; do not drift into live dispatch)
+  - `docs/workflows/weekly_schedule_planning/v1/examples/*`
+  - `docs/workflows/dispatch_reporting/v1/WORKFLOW_CONTRACT.yaml`
+  - `docs/workflows/dispatch_reporting/v1/OPERATING_MODEL.md`
+  - `docs/workflows/dispatch_reporting/v1/examples/*`
+  - `fixtures/frontend_contracts/README.md`
+  - `fixtures/logistics/workpages/*`
+
 - Load `docs/workflows/schedule_planning/v1/` only for regression/reference coverage:
   - when validating legacy schedule-only behavior against existing traces,
   - or when a shared semantic change must be cross-checked against the legacy authored surface.
@@ -102,6 +114,10 @@ If the task changes tests, retry/idempotency logic, or acceptance criteria:
 - Legacy `schedule_planning.v1` remains regression/reference-only in this posture.
 - This objective does **not** authorize a second agent-only truth path. Agents must still operate through the same workflow/task/approval/event/pointer substrate.
 - Payroll remains a secondary reference workflow used to validate the same shared semantics against a linear approval-heavy flow.
+- The current application-facing FE slice is `EPIC-120`: full-page fixture-backed workpages for weekly schedule review and end-of-day reporting under `/demo/logistics/workpages/*`.
+- Keep the schedule page on the weekly-planning side of the boundary; day-of replan belongs to `live_dispatch.v1`.
+- Keep the EOD page on the reporting draft/review side of the boundary; do not anchor it to Stage05 final-packet semantics in v0.
+- Workpage fixtures are human-authored planning/test fixtures and are intentionally distinct from backend-owned `fixtures/frontend_contracts/` snapshots.
 
 ## Non-negotiable invariants
 - **One truth system**: official claims come only from immutable objects, append-only events, and audited pointers.

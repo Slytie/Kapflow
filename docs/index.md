@@ -28,6 +28,8 @@
 - `docs/planning/STEP_RUN_SCENARIO_HARNESS.md`
 - `docs/planning/EPICS.md`
 - `docs/planning/TASK_INDEX.md`
+- `docs/planning/LOGISTICS_WORKPAGES_V0_PLAN.md`
+- `docs/planning/LOGISTICS_WORKPAGES_V0_PRODUCT_BRIEF.md`
 - `docs/planning/TEST_STRATEGY.md`
 - `docs/planning/TEST_MATRIX.md`
 - `docs/planning/TDD_IMPLEMENTATION_PLAN.md`

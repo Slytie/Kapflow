@@ -1,0 +1,175 @@
+workpage_id: eod_report_workpage_v0_example
+version: 2
+title: End-of-day report
+mode: example
+workflow_id: dispatch_reporting.v1
+dataset_key: reporting.upd_draft.workbook
+source_artifact_version_id: null
+source_examples:
+  eos_route_rows: docs/workflows/dispatch_reporting/v1/examples/eos_route_rows_2026_03_16_qdci_partial_example.yaml
+  normalized_actuals: docs/workflows/dispatch_reporting/v1/examples/normalized_actuals_2026_03_16_qdci_partial_example.yaml
+  upd_candidates: docs/workflows/dispatch_reporting/v1/examples/upd_candidate_2026_03_16_qdci_partial_example.yaml
+summary:
+  service_date: '2026-03-16'
+  station_code: DVC4
+  dsp_name: QDCI
+  total_routes_actual: 36
+  packages_dispatched: 5339
+  actual_dispatched: 5338
+  packages_delivered: 5282
+  packages_returned: 56
+  delivered_pct: 98.93
+  return_pct: 1.05
+  average_route_time: '8:41:14'
+  formula_integrity_warning: true
+  warning_note: Source workbook summary sheets contained broken formulas; row-level actuals remain the primary truth.
+sections:
+  - kind: summary_cards
+    title: Daily summary
+    cards:
+      - key: total_routes
+        label: Total routes actual
+        value: 36
+      - key: packages_dispatched
+        label: Packages dispatched
+        value: 5339
+      - key: packages_delivered
+        label: Packages delivered
+        value: 5282
+      - key: packages_returned
+        label: Packages returned
+        value: 56
+      - key: delivered_pct
+        label: Delivered %
+        value: 98.93%
+      - key: average_route_time
+        label: Average route time
+        value: '8:41:14'
+  - kind: note_panel
+    title: Formula-integrity warning
+    body: Source workbook summary tabs showed #REF!, #VALUE!, and #N/A failures. The v0 workpage should surface this warning instead of reproducing the broken formulas.
+  - kind: table
+    title: Route actuals
+    table_id: route_actuals
+    columns:
+      - key: route_id
+        label: Route
+      - key: driver_name
+        label: Driver
+      - key: packages_dispatched
+        label: Dispatched
+      - key: packages_delivered
+        label: Delivered
+      - key: planned_window
+        label: Planned
+      - key: actual_window
+        label: Actual
+      - key: actual_minutes
+        label: Minutes
+      - key: returns
+        label: Returns
+      - key: return_reasons
+        label: Return reasons
+      - key: upd_candidate
+        label: UPD?
+    rows:
+      - route_id: CX100
+        driver_name: Brahamvir Singh
+        packages_dispatched: 286
+        packages_delivered: 286
+        planned_window: 11:50 - 18:40
+        actual_window: 11:50 - 22:27
+        actual_minutes: 637
+        returns: 0
+        return_reasons: ''
+        upd_candidate: true
+      - route_id: CX95
+        driver_name: Tarandeep Singh
+        packages_dispatched: 292
+        packages_delivered: 290
+        planned_window: 11:50 - 18:20
+        actual_window: 11:50 - 21:37
+        actual_minutes: 587
+        returns: 2
+        return_reasons: BC,FDD
+        upd_candidate: false
+      - route_id: CX99
+        driver_name: Yong-Kyoon Kim
+        packages_dispatched: 208
+        packages_delivered: 207
+        planned_window: 11:55 - 18:30
+        actual_window: 11:55 - 20:52
+        actual_minutes: 537
+        returns: 1
+        return_reasons: NSL
+        upd_candidate: false
+  - kind: form
+    title: Manual closeout
+    form_id: closeout_details
+    fields:
+      - key: sick_calls
+        label: Sick calls
+        input: multi_select
+        options:
+          - Brahamvir Singh
+          - Tarandeep Singh
+          - Yong-Kyoon Kim
+      - key: unavailable_drivers
+        label: Not available
+        input: multi_select
+        options:
+          - Brahamvir Singh
+          - Tarandeep Singh
+          - Yong-Kyoon Kim
+      - key: working_devices
+        label: Working devices / rabbits
+        input: text
+        value: ''
+      - key: rescues
+        label: Rescues
+        input: repeater
+        value: []
+      - key: incidents
+        label: Incidents
+        input: repeater
+        value: []
+      - key: last_driver_clockout
+        label: Last driver clock-out
+        input: time
+        value: '22:27'
+      - key: dispatcher_comment
+        label: Dispatcher comment
+        input: textarea
+        value: ''
+      - key: manager_note
+        label: Manager note
+        input: textarea
+        value: ''
+  - kind: checklist
+    title: UPD candidate review
+    checklist_id: upd_candidates
+    items:
+      - driver_name: Brahamvir Singh
+        route_id: CX100
+        actual_minutes: 637
+        reason: '>600 minutes actual time'
+        selected: false
+        manager_note: ''
+      - driver_name: Tarandeep Singh
+        route_id: CX95
+        actual_minutes: 587
+        reason: Below 600 minutes
+        selected: false
+        manager_note: ''
+  - kind: history_stub
+    title: History
+    entries:
+      - label: Previous daily reports
+        value: future slice
+      - label: Weekly / monthly summaries
+        value: future slice
+validation:
+  status: informational
+  warnings:
+    - This fixture is a planning/test example only and is not yet backed by a backend artifact projection or submit contract.
+    - The 2026-03-16 reporting example pack is intentionally partial and exists to keep the prototype aligned to one consistent source family.

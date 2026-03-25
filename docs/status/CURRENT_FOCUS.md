@@ -4,6 +4,25 @@
 Stage 4 - Vertical Slice MVP (repo merged around one truth system)
 
 ## Current milestone
+Application-facing FE update: `EPIC-120` is now landed as a bounded logistics workpage slice on top of the existing `/demo/logistics` shell.
+
+Implemented routes:
+- `/demo/logistics/workpages/schedule-v0`
+- `/demo/logistics/workpages/eod-v0`
+
+Implemented posture:
+- frontend-first
+- fixture-backed
+- full-page
+- explicitly not a generic artifact editor
+
+Important boundaries that still hold:
+- no backend workpage HTTP contract yet
+- no live-dispatch morning page in this tranche
+- keep the schedule page on the **weekly planning review + selected-day preview** side of the boundary
+- keep the EOD page on the **dispatch-reporting draft/review** side of the boundary (`reporting.upd_draft.workbook` semantics)
+- keep workpage fixtures distinct from backend-owned `fixtures/frontend_contracts/` snapshots
+
 ## Next planned package (productization + Workflow Lab)
 The next package is now intentionally split into two coordinated lanes:
 - **EPIC-100 / TASK-0110..0116**: productization/perimeter/substrate work for a stable first-user production lane

@@ -127,3 +127,8 @@ Note: `TASK-0087` / `TASK-0088` / `TASK-0089` were formerly duplicated as `TASK-
 | TASK-0120 | EPIC-110 | DONE | medium | Define the release-mediated promotion gate and explicit readiness gates G1/G2 |
 | TASK-0121 | EPIC-110 | BLOCKED | high | Add VariantSpec/RunProfile, freshness guards, and the first Stage04 lab adapter after G1 |
 | TASK-0122 | EPIC-110 | BLOCKED | high | Plan world materialization, comparison, and semantic-version coexistence after G2 |
+| TASK-0123 | EPIC-120 | DONE | medium | Freeze logistics workpages v0 scope, product brief, and repo-native example fixtures |
+| TASK-0124 | EPIC-120 | DONE | medium | Run workpage preflight alignment and add the workpage view-model contract + example data seam |
+| TASK-0125 | EPIC-120 | DONE | medium | Implement the weekly schedule review workpage v0 page and tests |
+| TASK-0126 | EPIC-120 | DONE | medium | Implement the end-of-day draft/review workpage v0 page and tests |
+| TASK-0127 | EPIC-120 | DONE | medium | Integrate workpage entrypoints into the logistics demo shell and keep docs/status truth synchronized |
