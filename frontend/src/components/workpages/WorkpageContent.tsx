@@ -33,6 +33,8 @@ interface WorkpageFrameProps {
   onRefresh: () => void;
   isRefreshing?: boolean;
   pollIntervalMs?: number | false;
+  sourceDescription?: string;
+  heroActions?: ReactNode;
   children: ReactNode;
 }
 
@@ -47,9 +49,13 @@ export function WorkpageFrame({
   onRefresh,
   isRefreshing = false,
   pollIntervalMs,
+  sourceDescription = "Backend demo query served from repo-native workflow example bundles.",
+  heroActions,
   children
 }: WorkpageFrameProps): JSX.Element {
   const sourceDatasetLabel = source.primary_dataset_key ?? "Composite source bundle";
+  const sourceExampleEntries = Object.entries(model.source_examples);
+  const showSourceRefs = sourceExampleEntries.length === 0 && source.source_refs.length > 0;
 
   return (
     <section className="workpage-page" data-testid={testId}>
@@ -71,13 +77,14 @@ export function WorkpageFrame({
           <p>{model.workflow_id}</p>
           <p>{model.dataset_key}</p>
           <p>Mode: {model.mode}</p>
+          {heroActions ? <div className="workpage-page__hero-actions">{heroActions}</div> : null}
         </div>
       </header>
 
       <section className="workpage-panel">
         <header className="workpage-panel__header">
           <h2>Source grounding</h2>
-          <p>Backend demo query served from repo-native workflow example bundles.</p>
+          <p>{sourceDescription}</p>
         </header>
         <FreshnessBanner
           lastRefreshedAt={freshness.generated_at}
@@ -100,12 +107,20 @@ export function WorkpageFrame({
           </article>
         </div>
         <div className="workpage-page__source-grid">
-          {Object.entries(model.source_examples).map(([key, value]) => (
+          {sourceExampleEntries.map(([key, value]) => (
             <article key={key} className="workpage-page__source-item">
               <strong>{key}</strong>
               <p>{value}</p>
             </article>
           ))}
+          {showSourceRefs
+            ? source.source_refs.map((ref, index) => (
+                <article key={ref} className="workpage-page__source-item">
+                  <strong>{`source_ref_${index + 1}`}</strong>
+                  <p>{ref}</p>
+                </article>
+              ))
+            : null}
         </div>
         {model.validation.warnings.length > 0 ? (
           <ul className="workpage-page__warning-list">

@@ -7,7 +7,7 @@ import re
 from typing import Any
 
 from tests.runtime.helpers.runtime_api import RuntimeApiClient
-from tests.runtime.helpers.runtime_cli import REPO_ROOT
+from tests.runtime.helpers.runtime_cli import REPO_ROOT, run_cli
 from tests.runtime.helpers.scenario_harness import RuntimeScenarioHarness
 
 FRONTEND_SNAPSHOT_DIR = REPO_ROOT / "fixtures/frontend_contracts"
@@ -39,6 +39,9 @@ SNAPSHOT_FILES = {
     "official_outputs_pointers_state": "official_outputs_pointers_state.json",
     "workpage_schedule_v0_state": "workpage_schedule_v0_state.json",
     "workpage_eod_v0_state": "workpage_eod_v0_state.json",
+    "workpage_eod_v0_artifact_create_response": "workpage_eod_v0_artifact_create_response.json",
+    "workpage_eod_v0_artifact_state": "workpage_eod_v0_artifact_state.json",
+    "workpage_eod_v0_artifact_submit_response": "workpage_eod_v0_artifact_submit_response.json",
 }
 
 ID_FIELDS = {
@@ -157,6 +160,15 @@ def build_frontend_snapshots_payloads() -> dict[str, dict[str, Any]]:
             ),
             "workpage_eod_v0_state": _build_eod_workpage_snapshot(
                 tmp_path=base / "workpage_eod_v0"
+            ),
+            "workpage_eod_v0_artifact_create_response": _build_eod_artifact_create_snapshot(
+                tmp_path=base / "workpage_eod_v0_artifact_create"
+            ),
+            "workpage_eod_v0_artifact_state": _build_eod_artifact_state_snapshot(
+                tmp_path=base / "workpage_eod_v0_artifact_state"
+            ),
+            "workpage_eod_v0_artifact_submit_response": _build_eod_artifact_submit_snapshot(
+                tmp_path=base / "workpage_eod_v0_artifact_submit"
             ),
         }
         return snapshots
@@ -335,6 +347,90 @@ def _build_eod_workpage_snapshot(*, tmp_path: Path) -> dict[str, Any]:
                 "workpage_id": "eod-v0",
             },
             "workpage_state": payload,
+        }
+    )
+
+
+def _artifact_workpage_client(tmp_path: Path) -> RuntimeApiClient:
+    db_url = f"sqlite:///{tmp_path / 'workpage_eod_v0_artifact.db'}"
+    run_cli("--db-url", db_url, "init-db")
+    return RuntimeApiClient(
+        db_url=db_url,
+        tenant_id="tenant-a",
+        domain_id="domain-x",
+        actor_id="human:frontend-snapshot-exporter",
+        actor_type="human",
+        actor_roles=["dispatch_supervisor", "operations_manager", "schedule_planner"],
+    )
+
+
+def _build_eod_artifact_create_snapshot(*, tmp_path: Path) -> dict[str, Any]:
+    tmp_path.mkdir(parents=True, exist_ok=True)
+    client = _artifact_workpage_client(tmp_path)
+    payload = client.post(
+        "/api/v1/workpages/demo/eod-v0/drafts",
+        payload={"idempotency_key": "snapshot:eod-artifact-create"},
+    ).payload
+    return _stabilize(
+        {
+            "snapshot_id": "workpage_eod_v0_artifact_create_response",
+            "source": {
+                "capture": "artifact_backed_create_response",
+                "workpage_id": "eod-v0",
+            },
+            "create_response": payload,
+        }
+    )
+
+
+def _build_eod_artifact_state_snapshot(*, tmp_path: Path) -> dict[str, Any]:
+    tmp_path.mkdir(parents=True, exist_ok=True)
+    client = _artifact_workpage_client(tmp_path)
+    created = client.post(
+        "/api/v1/workpages/demo/eod-v0/drafts",
+        payload={"idempotency_key": "snapshot:eod-artifact-state:create"},
+    ).payload
+    artifact_version_id = str(created["draft"]["artifact_version_id"])
+    payload = client.get(f"/api/v1/workpages/artifacts/{artifact_version_id}").payload
+    return _stabilize(
+        {
+            "snapshot_id": "workpage_eod_v0_artifact_state",
+            "source": {
+                "capture": "artifact_backed_read_projection",
+                "workpage_id": "eod-v0",
+            },
+            "workpage_state": payload,
+        }
+    )
+
+
+def _build_eod_artifact_submit_snapshot(*, tmp_path: Path) -> dict[str, Any]:
+    tmp_path.mkdir(parents=True, exist_ok=True)
+    client = _artifact_workpage_client(tmp_path)
+    created = client.post(
+        "/api/v1/workpages/demo/eod-v0/drafts",
+        payload={"idempotency_key": "snapshot:eod-artifact-submit:create"},
+    ).payload
+    artifact_version_id = str(created["draft"]["artifact_version_id"])
+    payload = client.post(
+        f"/api/v1/workpages/artifacts/{artifact_version_id}/submit",
+        payload={
+            "form_values": {
+                "dispatcher_comment": "Snapshot submit path",
+                "manager_note": "Backend-owned artifact response fixture.",
+            },
+            "checklist_values": [],
+            "idempotency_key": "snapshot:eod-artifact-submit",
+        },
+    ).payload
+    return _stabilize(
+        {
+            "snapshot_id": "workpage_eod_v0_artifact_submit_response",
+            "source": {
+                "capture": "artifact_backed_submit_response",
+                "workpage_id": "eod-v0",
+            },
+            "submit_response": payload,
         }
     )
 

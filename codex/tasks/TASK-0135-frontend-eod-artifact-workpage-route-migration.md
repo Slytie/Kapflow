@@ -2,7 +2,7 @@
 id: TASK-0135
 epic: EPIC-121
 title: "Migrate the EOD page to the artifact-backed route with submit/conflict/download/version-lineage UX"
-status: TODO
+status: DONE
 owners: ["frontend"]
 reviewers: ["backend", "qa"]
 depends_on: ["TASK-0134"]
@@ -60,3 +60,17 @@ Add the artifact-backed EOD route and migrate the active editable EOD experience
 
 ## Notes / decisions
 Keep local dirty/edit state on top of the fetched base contract, but let the server remain authoritative for validation/write decisions.
+
+## Outcome
+- `/demo/logistics/workpages/eod-v0` now remains the query-backed landing page, but renders as a read-only preview with a `Create editable draft` action.
+- `/demo/logistics/workpages/eod-v0/artifacts/:artifactVersionId` is now the active editable EOD surface and reuses the existing section/field contract while loading from the artifact-backed backend route family added in `TASK-0134`.
+- The artifact-backed page now supports submit, stale-artifact conflict reopen flow, workbook download through the normal artifact binary route, and bounded lineage visibility using `artifact_context`.
+- Shared workpage frame/form/checklist components now support query-backed preview mode and artifact-backed action mode without changing schedule behavior.
+
+## Verification notes
+- `npm --prefix frontend run test:run -- src/lib/api/onetruthApi.workpages.test.ts src/lib/repositories/workpagesRepository.test.ts src/pages/dispatchReportWorkpagePage.test.tsx src/pages/logisticsWorkpageRoutes.test.tsx`
+- `npm --prefix frontend run typecheck`
+- `python3 scripts/validate_repo.py --schemas-only`
+
+## Follow-ups
+- `TASK-0136` remains the next bounded tranche for explicit demo entrypoints and richer version-history/reopen discovery beyond the minimal lineage controls added here.

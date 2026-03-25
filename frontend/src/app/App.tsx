@@ -5,7 +5,10 @@ import { Navigate, Route, BrowserRouter as Router, Routes } from "react-router-d
 import { AppShell } from "@/app/AppShell";
 import { BoardPage } from "@/pages/BoardPage";
 import { ApprovalsPage } from "@/pages/ApprovalsPage";
-import { DispatchReportWorkpagePage } from "@/pages/DispatchReportWorkpagePage";
+import {
+  DispatchReportArtifactWorkpagePage,
+  DispatchReportWorkpagePage
+} from "@/pages/DispatchReportWorkpagePage";
 import { ExceptionsPage } from "@/pages/ExceptionsPage";
 import { MyWorkPage } from "@/pages/MyWorkPage";
 import { OfficialOutputsPage } from "@/pages/OfficialOutputsPage";
@@ -43,6 +46,10 @@ export function App(): JSX.Element {
               <Route path="/demo/logistics" element={<LogisticsDemoPage />} />
               <Route path="/demo/logistics/workpages/schedule-v0" element={<LogisticsScheduleWorkpagePage />} />
               <Route path="/demo/logistics/workpages/eod-v0" element={<DispatchReportWorkpagePage />} />
+              <Route
+                path="/demo/logistics/workpages/eod-v0/artifacts/:artifactVersionId"
+                element={<DispatchReportArtifactWorkpagePage />}
+              />
               <Route path="/workspace" element={<WorkspaceHomePage />} />
               <Route path="/board" element={<BoardPage />} />
               <Route path="/my-work" element={<MyWorkPage />} />

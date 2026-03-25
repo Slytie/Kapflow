@@ -16,6 +16,8 @@ import type {
   TemplateRegistryMetadata,
   TimelineEvent,
   WorkpageContract,
+  WorkpageDraftResponse,
+  WorkpageSubmittedResponse,
   WorkflowRunDetailContract,
   WorkflowRunWorkspaceContract,
   WorkflowWorkspaceFreshness,
@@ -93,6 +95,15 @@ interface WorkpageEnvelope extends ListEnvelope {
   workpage?: Record<string, unknown>;
   source?: Record<string, unknown>;
   freshness?: Record<string, unknown>;
+  artifact_context?: Record<string, unknown> | null;
+}
+
+interface WorkpageDraftEnvelope extends ListEnvelope {
+  draft?: Record<string, unknown>;
+}
+
+interface WorkpageSubmitEnvelope extends ListEnvelope {
+  submitted?: Record<string, unknown>;
 }
 
 interface PointersEnvelope extends ListEnvelope {
@@ -672,6 +683,10 @@ function normalizeWorkpageContract(payload: WorkpageEnvelope): WorkpageContract 
   const workpage = requiredObject(payload.workpage, "workpage");
   const source = requiredObject(payload.source, "source");
   const freshness = requiredObject(payload.freshness, "freshness");
+  const artifactContext =
+    payload.artifact_context === null || payload.artifact_context === undefined
+      ? null
+      : requiredObject(payload.artifact_context, "artifact_context");
 
   if (!Array.isArray(workpage.sections)) {
     throw new Error("Invalid API response: expected array at 'workpage.sections'.");
@@ -709,7 +724,45 @@ function normalizeWorkpageContract(payload: WorkpageEnvelope): WorkpageContract 
       generated_at: asString(freshness.generated_at),
       source_kind: asString(freshness.source_kind),
       source_version: asString(freshness.source_version)
-    }
+    },
+    artifact_context: artifactContext
+      ? {
+          artifact_version_id: asString(artifactContext.artifact_version_id),
+          workflow_run_id: asString(artifactContext.workflow_run_id),
+          artifact_kind: asString(artifactContext.artifact_kind),
+          supersedes_artifact_version_id: asStringOrNull(
+            artifactContext.supersedes_artifact_version_id
+          ),
+          superseded_by_artifact_version_id: asStringOrNull(
+            artifactContext.superseded_by_artifact_version_id
+          ),
+          latest_in_chain_artifact_version_id: asString(
+            artifactContext.latest_in_chain_artifact_version_id
+          ),
+          download_path: asString(artifactContext.download_path)
+        }
+      : null
+  };
+}
+
+function normalizeWorkpageDraftResponse(payload: WorkpageDraftEnvelope): WorkpageDraftResponse {
+  const draft = requiredObject(payload.draft, "draft");
+  return {
+    workflow_run_id: asString(draft.workflow_run_id),
+    artifact_version_id: asString(draft.artifact_version_id),
+    route: asString(draft.route)
+  };
+}
+
+function normalizeWorkpageSubmittedResponse(
+  payload: WorkpageSubmitEnvelope
+): WorkpageSubmittedResponse {
+  const submitted = requiredObject(payload.submitted, "submitted");
+  return {
+    workflow_run_id: asString(submitted.workflow_run_id),
+    artifact_version_id: asString(submitted.artifact_version_id),
+    supersedes_artifact_version_id: asString(submitted.supersedes_artifact_version_id),
+    route: asString(submitted.route)
   };
 }
 
@@ -900,6 +953,39 @@ export const onetruthApi = {
       `/workpages/demo/${encodeURIComponent(workpageId)}`
     );
     return normalizeWorkpageContract(payload);
+  },
+
+  async createDemoEodDraft(payload: { idempotency_key: string }): Promise<WorkpageDraftResponse> {
+    const result = await requestJson<WorkpageDraftEnvelope>("/workpages/demo/eod-v0/drafts", {
+      method: "POST",
+      body: payload
+    });
+    return normalizeWorkpageDraftResponse(result);
+  },
+
+  async getArtifactWorkpage(artifactVersionId: string): Promise<WorkpageContract> {
+    const payload = await requestJson<WorkpageEnvelope>(
+      `/workpages/artifacts/${encodeURIComponent(artifactVersionId)}`
+    );
+    return normalizeWorkpageContract(payload);
+  },
+
+  async submitArtifactWorkpage(
+    artifactVersionId: string,
+    payload: {
+      form_values: Record<string, unknown>;
+      checklist_values: Array<Record<string, unknown>>;
+      idempotency_key: string;
+    }
+  ): Promise<WorkpageSubmittedResponse> {
+    const result = await requestJson<WorkpageSubmitEnvelope>(
+      `/workpages/artifacts/${encodeURIComponent(artifactVersionId)}/submit`,
+      {
+        method: "POST",
+        body: payload
+      }
+    );
+    return normalizeWorkpageSubmittedResponse(result);
   },
 
   async listPointers(query: {

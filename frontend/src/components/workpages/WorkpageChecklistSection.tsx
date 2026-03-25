@@ -6,13 +6,15 @@ interface WorkpageChecklistSectionProps {
   values: WorkpageChecklistState;
   onToggle: (itemId: string, checked: boolean) => void;
   onNoteChange: (itemId: string, note: string) => void;
+  readOnly?: boolean;
 }
 
 export function WorkpageChecklistSection({
   section,
   values,
   onToggle,
-  onNoteChange
+  onNoteChange,
+  readOnly = false
 }: WorkpageChecklistSectionProps): JSX.Element {
   return (
     <section className="workpage-panel">
@@ -35,6 +37,7 @@ export function WorkpageChecklistSection({
                 <input
                   type="checkbox"
                   checked={value.selected}
+                  disabled={readOnly}
                   onChange={(event) => onToggle(item.item_id, event.currentTarget.checked)}
                 />
                 <span>{item.title}</span>
@@ -49,6 +52,7 @@ export function WorkpageChecklistSection({
                 <span>Manager note</span>
                 <textarea
                   value={value.note}
+                  disabled={readOnly}
                   onChange={(event) => onNoteChange(item.item_id, event.currentTarget.value)}
                   rows={3}
                 />

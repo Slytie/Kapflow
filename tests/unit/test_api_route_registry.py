@@ -59,6 +59,9 @@ def test_route_registry_preserves_exact_global_route_order() -> None:
         "timeline_events.list",
         "board.schedule_planning",
         "stories.logistics_three_workflow",
+        "workpages.eod_drafts.create",
+        "workpages.artifact.detail",
+        "workpages.artifact.submit",
         "workpages.demo.detail",
     ]
 
@@ -92,6 +95,21 @@ def test_route_registry_matches_representative_exact_and_parameterized_routes() 
     assert eod_workpage_match is not None
     assert eod_workpage_match.route.name == "workpages.demo.detail"
     assert eod_workpage_match.params == {"workpage_id": "eod-v0"}
+
+    artifact_workpage_match = match_route("GET", "/api/v1/workpages/artifacts/av-001")
+    assert artifact_workpage_match is not None
+    assert artifact_workpage_match.route.name == "workpages.artifact.detail"
+    assert artifact_workpage_match.params == {"artifact_version_id": "av-001"}
+
+    artifact_submit_match = match_route("POST", "/api/v1/workpages/artifacts/av-001/submit")
+    assert artifact_submit_match is not None
+    assert artifact_submit_match.route.name == "workpages.artifact.submit"
+    assert artifact_submit_match.params == {"artifact_version_id": "av-001"}
+
+    eod_draft_match = match_route("POST", "/api/v1/workpages/demo/eod-v0/drafts")
+    assert eod_draft_match is not None
+    assert eod_draft_match.route.name == "workpages.eod_drafts.create"
+    assert eod_draft_match.params == {}
 
 
 def test_route_registry_preserves_suffix_precedence_over_detail_routes() -> None:
@@ -151,6 +169,21 @@ def test_route_registry_exposes_representative_metadata() -> None:
     assert routes_by_name["workflow_runs.workspace"].body_policy == NO_BODY
 
     assert routes_by_name["artifacts.ingest"].body_policy == JSON_ARTIFACT_BODY
+
+    assert routes_by_name["workpages.eod_drafts.create"].needs_page is False
+    assert routes_by_name["workpages.eod_drafts.create"].body_policy == JSON_COMMAND_BODY
+    assert routes_by_name["workpages.eod_drafts.create"].requires_request_context is True
+    assert routes_by_name["workpages.eod_drafts.create"].needs_db_connection is True
+
+    assert routes_by_name["workpages.artifact.detail"].needs_page is False
+    assert routes_by_name["workpages.artifact.detail"].body_policy == NO_BODY
+    assert routes_by_name["workpages.artifact.detail"].requires_request_context is True
+    assert routes_by_name["workpages.artifact.detail"].needs_db_connection is True
+
+    assert routes_by_name["workpages.artifact.submit"].needs_page is False
+    assert routes_by_name["workpages.artifact.submit"].body_policy == JSON_COMMAND_BODY
+    assert routes_by_name["workpages.artifact.submit"].requires_request_context is True
+    assert routes_by_name["workpages.artifact.submit"].needs_db_connection is True
 
     assert routes_by_name["workpages.demo.detail"].needs_page is False
     assert routes_by_name["workpages.demo.detail"].body_policy == NO_BODY

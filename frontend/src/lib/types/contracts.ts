@@ -391,10 +391,34 @@ export interface WorkpageFreshness {
   source_version: string;
 }
 
+export interface WorkpageArtifactContext {
+  artifact_version_id: string;
+  workflow_run_id: string;
+  artifact_kind: string;
+  supersedes_artifact_version_id: string | null;
+  superseded_by_artifact_version_id: string | null;
+  latest_in_chain_artifact_version_id: string;
+  download_path: string;
+}
+
+export interface WorkpageDraftResponse {
+  workflow_run_id: string;
+  artifact_version_id: string;
+  route: string;
+}
+
+export interface WorkpageSubmittedResponse {
+  workflow_run_id: string;
+  artifact_version_id: string;
+  supersedes_artifact_version_id: string;
+  route: string;
+}
+
 export interface WorkpageContract {
   workpage: WorkpageViewModel;
   source: WorkpageSourceMetadata;
   freshness: WorkpageFreshness;
+  artifact_context: WorkpageArtifactContext | null;
 }
 
 export type LogisticsStoryFamilyNodeKind = "module";

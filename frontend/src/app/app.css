@@ -670,11 +670,24 @@
   color: #6d737b;
 }
 
+.workpage-page__hero-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 6px;
+  margin-top: 6px;
+}
+
 .workpage-panel {
   border: 1px solid #ddd9d4;
   border-radius: 14px;
   background: #faf8f3;
   padding: 14px;
+}
+
+.workpage-panel--callout {
+  background: #f4f6ef;
+  border-color: #cfd6c0;
 }
 
 .workpage-panel__header {

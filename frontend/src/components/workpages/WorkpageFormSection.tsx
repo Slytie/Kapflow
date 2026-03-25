@@ -18,12 +18,14 @@ interface WorkpageFormSectionProps {
   section: WorkpageFormSectionModel;
   values: WorkpageFormState;
   onChange: (fieldKey: string, value: WorkpageFormState[string]) => void;
+  readOnly?: boolean;
 }
 
 function renderRepeaterField(
   field: WorkpageFormField,
   value: WorkpageFormState[string],
-  onChange: WorkpageFormSectionProps["onChange"]
+  onChange: WorkpageFormSectionProps["onChange"],
+  readOnly: boolean
 ): JSX.Element {
   const entries = valuesForField(value);
   return (
@@ -34,6 +36,7 @@ function renderRepeaterField(
           <input
             type="text"
             value={entry}
+            disabled={readOnly}
             onChange={(event) => {
               const nextEntries = [...entries];
               nextEntries[index] = event.currentTarget.value;
@@ -44,6 +47,7 @@ function renderRepeaterField(
           <button
             type="button"
             className="action-btn"
+            disabled={readOnly}
             onClick={() => onChange(field.key, entries.filter((_, currentIndex) => currentIndex !== index))}
           >
             Remove
@@ -53,6 +57,7 @@ function renderRepeaterField(
       <button
         type="button"
         className="action-btn"
+        disabled={readOnly}
         onClick={() => onChange(field.key, [...entries, ""])}
       >
         Add entry
@@ -64,7 +69,8 @@ function renderRepeaterField(
 export function WorkpageFormSection({
   section,
   values,
-  onChange
+  onChange,
+  readOnly = false
 }: WorkpageFormSectionProps): JSX.Element {
   return (
     <section className="workpage-panel">
@@ -87,6 +93,7 @@ export function WorkpageFormSection({
                         <input
                           type="checkbox"
                           checked={isSelected}
+                          disabled={readOnly}
                           onChange={() => {
                             const nextValues = isSelected
                               ? selectedValues.filter((current) => current !== option)
@@ -109,6 +116,7 @@ export function WorkpageFormSection({
                 <span>{field.label}</span>
                 <textarea
                   value={fieldTextValue(value)}
+                  disabled={readOnly}
                   onChange={(event) => onChange(field.key, event.currentTarget.value)}
                   rows={4}
                 />
@@ -122,6 +130,7 @@ export function WorkpageFormSection({
                 <span>{field.label}</span>
                 <input
                   type="number"
+                  disabled={readOnly}
                   value={typeof value === "number" ? value : Number.parseInt(fieldTextValue(value), 10) || 0}
                   onChange={(event: ChangeEvent<HTMLInputElement>) =>
                     onChange(field.key, Number.parseInt(event.currentTarget.value || "0", 10))
@@ -135,7 +144,7 @@ export function WorkpageFormSection({
             return (
               <div key={field.key} className="workpage-form__field">
                 <span>{field.label}</span>
-                {renderRepeaterField(field, value, onChange)}
+                {renderRepeaterField(field, value, onChange, readOnly)}
               </div>
             );
           }
@@ -146,6 +155,7 @@ export function WorkpageFormSection({
               <input
                 type={field.input === "time" ? "time" : "text"}
                 value={fieldTextValue(value)}
+                disabled={readOnly}
                 onChange={(event) => onChange(field.key, event.currentTarget.value)}
               />
             </label>

@@ -4,7 +4,7 @@
 Stage 4 - Vertical Slice MVP (repo merged around one truth system)
 
 ## Current milestone
-Primary runtime/debug work remains the logistics weekly/live family. `TASK-0133` is now complete, so the repo has frozen the first artifact-backed EOD workpage contract and now also has the bounded reporting template-pack/registry/workbook-adapter foundation on top of the post-`TASK-0131` query-backed baseline.
+Primary runtime/debug work remains the logistics weekly/live family. `TASK-0135` is now complete, so the repo has frozen the first artifact-backed EOD workpage contract, added the bounded reporting template-pack/registry/workbook-adapter foundation, implemented the backend EOD artifact create/read/submit slice, and migrated the frontend EOD editing path onto the new artifact-backed route while leaving the query landing page in place.
 
 Current implemented baseline:
 - `/demo/logistics/workpages/schedule-v0`
@@ -25,9 +25,18 @@ Current implemented baseline:
   - `POST /api/v1/workpages/demo/eod-v0/drafts`
   - `GET /api/v1/workpages/artifacts/{artifact_version_id}`
   - `POST /api/v1/workpages/artifacts/{artifact_version_id}/submit`
+- canonical backend EOD artifact draft/create/read/submit behavior for `dispatch_reporting.v1` runs seeded from the Stage03 empty workbook template
+- artifact-backed EOD wrapper metadata with `source.mode=artifact_projection`, artifact lineage/download context, and immutable superseding workbook versions on submit
+- backend-generated artifact-backed EOD snapshots:
+  - `fixtures/frontend_contracts/workpage_eod_v0_artifact_create_response.json`
+  - `fixtures/frontend_contracts/workpage_eod_v0_artifact_state.json`
+  - `fixtures/frontend_contracts/workpage_eod_v0_artifact_submit_response.json`
+- frontend query-backed EOD landing page now renders as a read-only preview with an explicit `Create editable draft` action
+- frontend artifact-backed EOD route now exists at `/demo/logistics/workpages/eod-v0/artifacts/:artifactVersionId`
+- the artifact-backed EOD page now supports submit, stale-artifact conflict reopen UX, workbook download, and bounded previous/latest lineage actions while preserving local edits across refreshes when the base artifact version is unchanged
 
 Immediate next application package:
-- `TASK-0134` is now the next bounded tranche: implement backend EOD artifact draft/projection/submit routes and generated snapshots on top of the new reporting template/workbook foundation
+- `TASK-0136` is now the next bounded tranche: expose clearer demo entrypoints and richer artifact-history/reopen affordances around the new artifact-backed EOD slice
 - the artifact-backed slice remains **EOD only** for now; schedule stays query-backed and composite
 
 Important scope boundaries for this tranche:

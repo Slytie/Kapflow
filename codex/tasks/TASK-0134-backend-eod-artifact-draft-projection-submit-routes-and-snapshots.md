@@ -2,7 +2,7 @@
 id: TASK-0134
 epic: EPIC-121
 title: "Implement backend EOD artifact draft/projection/submit routes and generated snapshots"
-status: TODO
+status: DONE
 owners: ["backend"]
 reviewers: ["frontend", "qa"]
 depends_on: ["TASK-0133"]
@@ -69,3 +69,20 @@ Implement the backend routes that make the first artifact-backed EOD slice real:
 
 ## Notes / decisions
 The backend should reuse canonical artifact ingestion/creation patterns where possible rather than inventing a side-channel store for workbook bytes.
+
+## Outcomes
+- Added the first artifact-backed EOD workpage route family:
+  - `POST /api/v1/workpages/demo/eod-v0/drafts`
+  - `GET /api/v1/workpages/artifacts/{artifact_version_id}`
+  - `POST /api/v1/workpages/artifacts/{artifact_version_id}/submit`
+- Kept the existing query-backed `GET /api/v1/workpages/demo/eod-v0` landing page unchanged while adding canonical run-backed draft/create/read/submit behavior for `dispatch_reporting.v1`.
+- Reused the `TASK-0133` workbook adapter to seed a Stage03 empty draft workbook, project artifact-backed state into the existing EOD workpage contract, and materialize submitted edits into a new immutable superseding workbook artifact version.
+- Added backend-owned generated snapshots for create/read/submit so frontend work can migrate against committed API fixtures instead of frontend-local artifact mocks.
+
+## Verification notes
+- `PYTHONPATH=/tmp/onetruth-py311:src python3.11 -m pytest -q tests/unit/test_api_route_registry.py tests/runtime/api/test_workpages_artifact_eod_contract.py tests/runtime/contracts/test_frontend_snapshot_fixtures.py`
+- `PYTHONPATH=/tmp/onetruth-py311:src python3.11 scripts/export_frontend_snapshots.py --check`
+- `python3 scripts/validate_repo.py --schemas-only`
+
+## Follow-ups
+- `TASK-0135` should switch the frontend EOD page from the query-backed route to the new artifact-backed create/read/submit flow, including conflict reopen and download/version-lineage UX.

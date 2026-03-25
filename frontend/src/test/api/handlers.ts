@@ -4,6 +4,9 @@ import type {
   HumanTaskRow,
   HumanTaskSubgraph
 } from "@/lib/types/contracts";
+import eodArtifactCreateResponseSnapshot from "@fixtures/workpage_eod_v0_artifact_create_response.json";
+import eodArtifactStateSnapshot from "@fixtures/workpage_eod_v0_artifact_state.json";
+import eodArtifactSubmitResponseSnapshot from "@fixtures/workpage_eod_v0_artifact_submit_response.json";
 import eodWorkpageStateSnapshot from "@fixtures/workpage_eod_v0_state.json";
 import scheduleWorkpageStateSnapshot from "@fixtures/workpage_schedule_v0_state.json";
 
@@ -17,6 +20,280 @@ import {
 const ok = (payload: Record<string, unknown>) => HttpResponse.json({ status: "ok", ...payload });
 
 let state = createContractState();
+let eodArtifactVersionCounter = 0;
+const eodArtifactVersions = new Map<string, EodArtifactVersionState>();
+const EOD_WORKFLOW_RUN_ID = "wr-eod-artifact-001";
+
+interface EodArtifactVersionState {
+  artifactVersionId: string;
+  workflowRunId: string;
+  fileName: string;
+  payload: Record<string, unknown>;
+  supersedesArtifactVersionId: string | null;
+  supersededByArtifactVersionId: string | null;
+  latestInChainArtifactVersionId: string;
+}
+
+function nowIso(): string {
+  return new Date().toISOString();
+}
+
+function cloneJson<T>(value: T): T {
+  return structuredClone(value);
+}
+
+function nextEodArtifactVersionId(): string {
+  eodArtifactVersionCounter += 1;
+  return `av-eod-artifact-${String(eodArtifactVersionCounter).padStart(3, "0")}`;
+}
+
+function artifactRoute(artifactVersionId: string): string {
+  return `/demo/logistics/workpages/eod-v0/artifacts/${artifactVersionId}`;
+}
+
+function eodArtifactFileName(artifactVersionId: string): string {
+  return `dispatch_reporting_stage03_${artifactVersionId}.xlsx`;
+}
+
+function findSectionByKind(payload: Record<string, unknown>, kind: string): Record<string, unknown> | null {
+  const workpage = payload.workpage;
+  if (!workpage || typeof workpage !== "object" || Array.isArray(workpage)) {
+    return null;
+  }
+  const sections = (workpage as Record<string, unknown>).sections;
+  if (!Array.isArray(sections)) {
+    return null;
+  }
+  return (
+    sections.find(
+      (section) =>
+        section &&
+        typeof section === "object" &&
+        !Array.isArray(section) &&
+        (section as Record<string, unknown>).kind === kind
+    ) as Record<string, unknown> | undefined
+  ) ?? null;
+}
+
+function patchArtifactPayloadLineage(version: EodArtifactVersionState): void {
+  const payload = version.payload;
+  const artifactContext = payload.artifact_context;
+  if (artifactContext && typeof artifactContext === "object" && !Array.isArray(artifactContext)) {
+    const artifactContextRecord = artifactContext as Record<string, unknown>;
+    artifactContextRecord.artifact_version_id = version.artifactVersionId;
+    artifactContextRecord.workflow_run_id = version.workflowRunId;
+    artifactContextRecord.supersedes_artifact_version_id = version.supersedesArtifactVersionId;
+    artifactContextRecord.superseded_by_artifact_version_id = version.supersededByArtifactVersionId;
+    artifactContextRecord.latest_in_chain_artifact_version_id = version.latestInChainArtifactVersionId;
+    artifactContextRecord.download_path = `/api/v1/artifacts/${version.artifactVersionId}/download.bin`;
+  }
+
+  const freshness = payload.freshness;
+  if (freshness && typeof freshness === "object" && !Array.isArray(freshness)) {
+    const freshnessRecord = freshness as Record<string, unknown>;
+    freshnessRecord.generated_at = nowIso();
+    freshnessRecord.source_version = version.artifactVersionId;
+  }
+
+  const source = payload.source;
+  if (source && typeof source === "object" && !Array.isArray(source)) {
+    (source as Record<string, unknown>).source_artifact_version_id = version.artifactVersionId;
+  }
+
+  const workpage = payload.workpage;
+  if (workpage && typeof workpage === "object" && !Array.isArray(workpage)) {
+    (workpage as Record<string, unknown>).source_artifact_version_id = version.artifactVersionId;
+  }
+
+  const historySection = findSectionByKind(payload, "history_stub");
+  if (historySection) {
+    historySection.entries = [
+      {
+        label: "Current artifact version",
+        value: version.artifactVersionId
+      },
+      {
+        label: "Supersedes",
+        value: version.supersedesArtifactVersionId ?? "Initial draft"
+      },
+      {
+        label: "Latest draft in chain",
+        value: version.latestInChainArtifactVersionId
+      }
+    ];
+  }
+}
+
+function applyArtifactDraftEdits(
+  payload: Record<string, unknown>,
+  formValues: Record<string, unknown>,
+  checklistValues: Array<{ item_id: string; selected: boolean; note: string }>
+): void {
+  const formSection = findSectionByKind(payload, "form");
+  if (formSection) {
+    const fields = formSection.fields;
+    if (Array.isArray(fields)) {
+      formSection.fields = fields.map((field) => {
+        if (!field || typeof field !== "object" || Array.isArray(field)) {
+          return field;
+        }
+        const fieldRecord = { ...(field as Record<string, unknown>) };
+        const key = typeof fieldRecord.key === "string" ? fieldRecord.key : "";
+        if (key && key in formValues) {
+          fieldRecord.value = formValues[key];
+        }
+        return fieldRecord;
+      });
+    }
+  }
+
+  const checklistSection = findSectionByKind(payload, "checklist");
+  if (checklistSection) {
+    const items = checklistSection.items;
+    if (Array.isArray(items) && items.length > 0) {
+      const checklistById = new Map(checklistValues.map((value) => [value.item_id, value]));
+      checklistSection.items = items.map((item) => {
+        if (!item || typeof item !== "object" || Array.isArray(item)) {
+          return item;
+        }
+        const itemRecord = { ...(item as Record<string, unknown>) };
+        const itemId = typeof itemRecord.item_id === "string" ? itemRecord.item_id : "";
+        const next = checklistById.get(itemId);
+        if (next) {
+          itemRecord.selected = next.selected;
+          itemRecord.note = next.note;
+        }
+        return itemRecord;
+      });
+    }
+  }
+}
+
+function buildEodArtifactPayload(input: {
+  artifactVersionId: string;
+  workflowRunId: string;
+  supersedesArtifactVersionId: string | null;
+  supersededByArtifactVersionId: string | null;
+  latestInChainArtifactVersionId: string;
+  formValues?: Record<string, unknown>;
+  checklistValues?: Array<{ item_id: string; selected: boolean; note: string }>;
+}): Record<string, unknown> {
+  const payload = cloneJson(eodArtifactStateSnapshot.workpage_state) as Record<string, unknown>;
+  const workpage = payload.workpage as Record<string, unknown>;
+  const source = payload.source as Record<string, unknown>;
+  const freshness = payload.freshness as Record<string, unknown>;
+  const artifactContext = payload.artifact_context as Record<string, unknown>;
+
+  workpage.source_artifact_version_id = input.artifactVersionId;
+  source.source_artifact_version_id = input.artifactVersionId;
+  freshness.generated_at = nowIso();
+  freshness.source_version = input.artifactVersionId;
+  artifactContext.artifact_version_id = input.artifactVersionId;
+  artifactContext.workflow_run_id = input.workflowRunId;
+  artifactContext.supersedes_artifact_version_id = input.supersedesArtifactVersionId;
+  artifactContext.superseded_by_artifact_version_id = input.supersededByArtifactVersionId;
+  artifactContext.latest_in_chain_artifact_version_id = input.latestInChainArtifactVersionId;
+  artifactContext.download_path = `/api/v1/artifacts/${input.artifactVersionId}/download.bin`;
+
+  patchArtifactPayloadLineage({
+    artifactVersionId: input.artifactVersionId,
+    workflowRunId: input.workflowRunId,
+    fileName: eodArtifactFileName(input.artifactVersionId),
+    payload,
+    supersedesArtifactVersionId: input.supersedesArtifactVersionId,
+    supersededByArtifactVersionId: input.supersededByArtifactVersionId,
+    latestInChainArtifactVersionId: input.latestInChainArtifactVersionId
+  });
+
+  applyArtifactDraftEdits(payload, input.formValues ?? {}, input.checklistValues ?? []);
+  return payload;
+}
+
+function addEodArtifactVersion(input: {
+  artifactVersionId: string;
+  workflowRunId: string;
+  supersedesArtifactVersionId: string | null;
+  supersededByArtifactVersionId?: string | null;
+  latestInChainArtifactVersionId: string;
+  formValues?: Record<string, unknown>;
+  checklistValues?: Array<{ item_id: string; selected: boolean; note: string }>;
+}): EodArtifactVersionState {
+  const version: EodArtifactVersionState = {
+    artifactVersionId: input.artifactVersionId,
+    workflowRunId: input.workflowRunId,
+    fileName: eodArtifactFileName(input.artifactVersionId),
+    payload: buildEodArtifactPayload({
+      artifactVersionId: input.artifactVersionId,
+      workflowRunId: input.workflowRunId,
+      supersedesArtifactVersionId: input.supersedesArtifactVersionId,
+      supersededByArtifactVersionId: input.supersededByArtifactVersionId ?? null,
+      latestInChainArtifactVersionId: input.latestInChainArtifactVersionId,
+      formValues: input.formValues,
+      checklistValues: input.checklistValues
+    }),
+    supersedesArtifactVersionId: input.supersedesArtifactVersionId,
+    supersededByArtifactVersionId: input.supersededByArtifactVersionId ?? null,
+    latestInChainArtifactVersionId: input.latestInChainArtifactVersionId
+  };
+  eodArtifactVersions.set(version.artifactVersionId, version);
+  return version;
+}
+
+function updateEodArtifactChainLatest(artifactVersionId: string, latestArtifactVersionId: string): void {
+  let currentArtifactVersionId: string | null = artifactVersionId;
+  while (currentArtifactVersionId) {
+    const version = eodArtifactVersions.get(currentArtifactVersionId);
+    if (!version) {
+      break;
+    }
+    version.latestInChainArtifactVersionId = latestArtifactVersionId;
+    patchArtifactPayloadLineage(version);
+    currentArtifactVersionId = version.supersedesArtifactVersionId;
+  }
+}
+
+function ensureEodArtifactDraft(): EodArtifactVersionState {
+  const artifactVersionId = nextEodArtifactVersionId();
+  return addEodArtifactVersion({
+    artifactVersionId,
+    workflowRunId: EOD_WORKFLOW_RUN_ID,
+    supersedesArtifactVersionId: null,
+    latestInChainArtifactVersionId: artifactVersionId
+  });
+}
+
+function eodArtifactCreateResponse(version: EodArtifactVersionState): Record<string, unknown> {
+  const payload = cloneJson(
+    eodArtifactCreateResponseSnapshot.create_response
+  ) as Record<string, unknown>;
+  payload.draft = {
+    artifact_version_id: version.artifactVersionId,
+    route: artifactRoute(version.artifactVersionId),
+    workflow_run_id: version.workflowRunId
+  };
+  return payload;
+}
+
+function eodArtifactSubmitResponse(
+  version: EodArtifactVersionState,
+  supersedesArtifactVersionId: string
+): Record<string, unknown> {
+  const payload = cloneJson(
+    eodArtifactSubmitResponseSnapshot.submit_response
+  ) as Record<string, unknown>;
+  payload.submitted = {
+    artifact_version_id: version.artifactVersionId,
+    route: artifactRoute(version.artifactVersionId),
+    supersedes_artifact_version_id: supersedesArtifactVersionId,
+    workflow_run_id: version.workflowRunId
+  };
+  return payload;
+}
+
+function resetEodArtifactVersions(): void {
+  eodArtifactVersionCounter = 0;
+  eodArtifactVersions.clear();
+}
 
 const TEMPLATE_FIXTURES = [
   {
@@ -1078,6 +1355,7 @@ function buildLogisticsStoryPayload(planningWeekId: string, request: Request, se
 
 export function resetApiState(): void {
   state = createContractState();
+  resetEodArtifactVersions();
 }
 
 export function forceForbiddenResponses(value: boolean): void {
@@ -1095,6 +1373,143 @@ export const handlers = [
   http.get("*/api/v1/workpages/demo/eod-v0", () =>
     HttpResponse.json(eodWorkpageStateSnapshot.workpage_state)
   ),
+  http.post("*/api/v1/workpages/demo/eod-v0/drafts", ({ request }) => {
+    if (!inScope(request)) {
+      return forbiddenWorkflowRun();
+    }
+
+    const version = ensureEodArtifactDraft();
+    state.audit.mutations.push(`workpage-eod-draft-create:${version.artifactVersionId}`);
+    return ok({
+      command: "api.workpages.eod_drafts.create",
+      draft: (eodArtifactCreateResponse(version).draft as Record<string, unknown>) ?? {}
+    });
+  }),
+  http.get("*/api/v1/workpages/artifacts/:artifactVersionId", ({ params, request }) => {
+    if (!inScope(request)) {
+      return HttpResponse.json(
+        {
+          status: "error",
+          error: {
+            code: "workpage_artifact_not_found",
+            message: "artifact-backed workpage not found",
+            details: {
+              artifact_version_id: String(params.artifactVersionId)
+            }
+          }
+        },
+        { status: 404 }
+      );
+    }
+
+    const artifactVersionId = String(params.artifactVersionId);
+    const version = eodArtifactVersions.get(artifactVersionId);
+    if (!version) {
+      return HttpResponse.json(
+        {
+          status: "error",
+          error: {
+            code: "workpage_artifact_not_found",
+            message: "artifact-backed workpage not found",
+            details: {
+              artifact_version_id: artifactVersionId
+            }
+          }
+        },
+        { status: 404 }
+      );
+    }
+
+    patchArtifactPayloadLineage(version);
+    return HttpResponse.json(version.payload);
+  }),
+  http.post("*/api/v1/workpages/artifacts/:artifactVersionId/submit", async ({ params, request }) => {
+    if (!inScope(request)) {
+      return HttpResponse.json(
+        {
+          status: "error",
+          error: {
+            code: "workpage_artifact_not_found",
+            message: "artifact-backed workpage not found",
+            details: {
+              artifact_version_id: String(params.artifactVersionId)
+            }
+          }
+        },
+        { status: 404 }
+      );
+    }
+
+    const artifactVersionId = String(params.artifactVersionId);
+    const baseVersion = eodArtifactVersions.get(artifactVersionId);
+    if (!baseVersion) {
+      return HttpResponse.json(
+        {
+          status: "error",
+          error: {
+            code: "workpage_artifact_not_found",
+            message: "artifact-backed workpage not found",
+            details: {
+              artifact_version_id: artifactVersionId
+            }
+          }
+        },
+        { status: 404 }
+      );
+    }
+
+    if (baseVersion.supersededByArtifactVersionId) {
+      return HttpResponse.json(
+        {
+          status: "error",
+          error: {
+            code: "workpage_artifact_conflict",
+            message: "artifact-backed workpage already has a newer draft",
+            details: {
+              artifact_version_id: artifactVersionId,
+              latest_artifact_version_id: baseVersion.latestInChainArtifactVersionId,
+              workflow_run_id: baseVersion.workflowRunId,
+              route: artifactRoute(baseVersion.latestInChainArtifactVersionId)
+            }
+          }
+        },
+        { status: 409 }
+      );
+    }
+
+    const body = (await request.json()) as {
+      form_values?: Record<string, unknown>;
+      checklist_values?: Array<{
+        item_id: string;
+        selected: boolean;
+        note: string;
+      }>;
+    };
+    const submittedArtifactVersionId = nextEodArtifactVersionId();
+    const submittedVersion = addEodArtifactVersion({
+      artifactVersionId: submittedArtifactVersionId,
+      workflowRunId: baseVersion.workflowRunId,
+      supersedesArtifactVersionId: artifactVersionId,
+      latestInChainArtifactVersionId: submittedArtifactVersionId,
+      formValues:
+        body.form_values && typeof body.form_values === "object" && !Array.isArray(body.form_values)
+          ? body.form_values
+          : {},
+      checklistValues: Array.isArray(body.checklist_values) ? body.checklist_values : []
+    });
+    baseVersion.supersededByArtifactVersionId = submittedArtifactVersionId;
+    patchArtifactPayloadLineage(baseVersion);
+    updateEodArtifactChainLatest(submittedArtifactVersionId, submittedArtifactVersionId);
+
+    state.audit.mutations.push(
+      `workpage-eod-artifact-submit:${artifactVersionId}:${submittedArtifactVersionId}`
+    );
+    return ok({
+      command: "api.workpages.artifact.submit",
+      submitted: (eodArtifactSubmitResponse(submittedVersion, artifactVersionId)
+        .submitted as Record<string, unknown>) ?? {}
+    });
+  }),
   http.get("*/api/v1/viewer", ({ request }) =>
     ok({
       command: "api.viewer.bootstrap",
@@ -1779,6 +2194,15 @@ export const handlers = [
       return forbiddenWorkflowRun();
     }
     const artifactVersionId = String(params.artifactVersionId);
+    const eodArtifactVersion = eodArtifactVersions.get(artifactVersionId);
+    if (eodArtifactVersion) {
+      state.audit.mutations.push(`artifact-download-bin:${artifactVersionId}`);
+      return binaryDownloadResponse(artifactDownloadBody(artifactVersionId), {
+        fileName: eodArtifactVersion.fileName,
+        mediaType: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        requestId: `httpreq_artifact_${artifactVersionId}`
+      });
+    }
     const artifactVersion = state.artifactVersions.find(
       (artifact) => artifact.artifact_version_id === artifactVersionId
     );

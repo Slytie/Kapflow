@@ -75,7 +75,8 @@ frontend/
 ## 3) Route map
 - `/demo/logistics` -> primary three-workflow logistics shell
 - `/demo/logistics/workpages/schedule-v0` -> weekly schedule review + selected-day preview workpage
-- `/demo/logistics/workpages/eod-v0` -> end-of-day draft/review workpage
+- `/demo/logistics/workpages/eod-v0` -> end-of-day landing/preview workpage with create-draft affordance
+- `/demo/logistics/workpages/eod-v0/artifacts/:artifactVersionId` -> artifact-backed end-of-day draft/review workpage
 - `/board` -> board overview lanes (tasks/approvals/exception work)
 - `/my-work` -> dense assigned queue with inline actions
 - `/approvals` -> approval queue + review workspace split
@@ -121,7 +122,7 @@ frontend/
 ## 8) Test strategy
 - Component tests: inline actions, compact metadata, drawer behavior, attachment affordances.
 - Route tests: board lanes, my-work filtering, approvals workspace, exceptions metadata, run detail tabs.
-- Workpage tests: repository/API seam coverage, schedule/EOD page renders, refresh-preserved local edit interactions, retry/error behavior, and logistics route integration.
+- Workpage tests: repository/API seam coverage, schedule/EOD page renders, create-draft navigation, refresh-preserved local edit interactions, submit/conflict/download/lineage behavior, and logistics route integration.
 - Integration tests: claim/complete/respond round-trips, forbidden response handling, reload stability.
 - Backend API contract tests verify `/api/v1` route contracts for board/list/detail/mutations.
 - Workpage route tests should freeze both the page render behavior and the workpage query contract boundary.
@@ -136,10 +137,12 @@ frontend/
 - Workpages live under `/demo/logistics/workpages/*`.
 - Treat `/demo/logistics/*` as logistics-shell routes in `AppShell`.
 - These pages are sibling full-page routes under `AppShell`, not children rendered inside `LogisticsDemoPage`.
-- The current v0 pages are derived-only but now read backend demo query contracts through the HTTP-backed workpage repository.
+- The current v0 pages now split between a query-backed landing surface and an artifact-backed editing surface while still reading backend-owned contracts through the HTTP-backed workpage repository.
 - Example-backed builders remain oracle/test fixtures only; they are no longer the active route seam.
 - `schedule-v0` stays on the weekly-planning review side of the boundary and only offers local what-if inputs.
 - `eod-v0` stays on `reporting.upd_draft.workbook` / draft-review semantics and does not claim final-packet authority.
+- `/demo/logistics/workpages/eod-v0` remains the query-backed landing page and is now preview-only with a create-draft CTA.
+- `/demo/logistics/workpages/eod-v0/artifacts/:artifactVersionId` is the only active editable EOD surface in this epic; it reuses the same section ids, adds bounded submit/conflict/download/lineage UX, and keeps the backend authoritative for version changes.
 - The schedule page is **composite** over multiple weekly-planning source datasets; future backend route design must leave room for run/composite projections and not assume one artifact per page.
 - The EOD page is the better candidate for the first future artifact-backed path.
 - Human-authored workpage fixtures live under `fixtures/logistics/workpages/` and are distinct from backend-generated frontend contract snapshots in `fixtures/frontend_contracts/`.

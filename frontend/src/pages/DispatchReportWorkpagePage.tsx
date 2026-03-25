@@ -1,5 +1,6 @@
-import { useQuery } from "@tanstack/react-query";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { type Dispatch, type ReactNode, type SetStateAction, useEffect, useMemo, useRef, useState } from "react";
+import { Link, useNavigate, useParams } from "react-router-dom";
 
 import { StatePanel } from "@/components/StatePanel";
 import { WorkpageChecklistSection } from "@/components/workpages/WorkpageChecklistSection";
@@ -13,7 +14,9 @@ import {
 import { WorkpageFormSection } from "@/components/workpages/WorkpageFormSection";
 import { apiConfig } from "@/lib/api/config";
 import { errorText } from "@/lib/api/errorText";
+import { isApiClientError } from "@/lib/api/httpClient";
 import { workpagesRepository } from "@/lib/repositories";
+import type { WorkpageContract } from "@/lib/types/contracts";
 import type {
   WorkpageChecklistSection as WorkpageChecklistSectionModel,
   WorkpageFormSection as WorkpageFormSectionModel,
@@ -37,57 +40,72 @@ function findTableSection(
   return sections.find((section) => section.table_id === tableId) ?? null;
 }
 
-export function DispatchReportWorkpagePage(): JSX.Element {
-  const query = useQuery({
-    queryKey: ["workpages", "eod-v0"],
-    queryFn: () => workpagesRepository.eod(),
-    refetchInterval: apiConfig.pollIntervalMs
-  });
+function artifactRoute(artifactVersionId: string): string {
+  return `/demo/logistics/workpages/eod-v0/artifacts/${artifactVersionId}`;
+}
 
-  const contract = query.data;
-  const model = contract?.workpage;
-  const summarySection = useMemo(
-    () =>
-      model?.sections.find(
-        (section): section is WorkpageSummaryCardsSectionModel => section.kind === "summary_cards"
-      ) ?? null,
-    [model]
-  );
-  const noteSection = useMemo(
-    () =>
-      model?.sections.find(
-        (section): section is WorkpageNotePanelSectionModel => section.kind === "note_panel"
-      ) ?? null,
-    [model]
-  );
-  const historySection = useMemo(
-    () =>
-      model?.sections.find(
-        (section): section is WorkpageHistorySectionModel => section.kind === "history_stub"
-      ) ?? null,
-    [model]
-  );
-  const tableSections = useMemo(
-    () =>
-      model?.sections.filter(
-        (section): section is WorkpageTableSectionModel => section.kind === "table"
-      ) ?? [],
-    [model]
-  );
-  const formSection = useMemo(
-    () =>
-      model?.sections.find(
-        (section): section is WorkpageFormSectionModel => section.kind === "form"
-      ) ?? null,
-    [model]
-  );
-  const checklistSection = useMemo(
-    () =>
-      model?.sections.find(
-        (section): section is WorkpageChecklistSectionModel => section.kind === "checklist"
-      ) ?? null,
-    [model]
-  );
+function asString(value: unknown): string | null {
+  return typeof value === "string" && value.trim().length > 0 ? value : null;
+}
+
+function workpageConflictDetails(error: unknown): {
+  artifactVersionId: string;
+  latestArtifactVersionId: string;
+  workflowRunId: string;
+  route: string;
+} | null {
+  if (!isApiClientError(error) || error.code !== "workpage_artifact_conflict" || !error.details) {
+    return null;
+  }
+  const artifactVersionId = asString(error.details.artifact_version_id);
+  const latestArtifactVersionId = asString(error.details.latest_artifact_version_id);
+  const workflowRunId = asString(error.details.workflow_run_id);
+  const route = asString(error.details.route);
+  if (!artifactVersionId || !latestArtifactVersionId || !workflowRunId || !route) {
+    return null;
+  }
+  return {
+    artifactVersionId,
+    latestArtifactVersionId,
+    workflowRunId,
+    route
+  };
+}
+
+function orderedChecklistSubmitValues(
+  section: WorkpageChecklistSectionModel | null,
+  checklistState: WorkpageChecklistState
+): Array<{
+  item_id: string;
+  selected: boolean;
+  note: string;
+}> {
+  if (!section) {
+    return [];
+  }
+  return section.items.map((item) => {
+    const value = checklistState[item.item_id] ?? {
+      selected: item.selected,
+      note: item.note
+    };
+    return {
+      item_id: item.item_id,
+      selected: value.selected,
+      note: value.note
+    };
+  });
+}
+
+function useEditableEodState(
+  contract: WorkpageContract | undefined,
+  formSection: WorkpageFormSectionModel | null,
+  checklistSection: WorkpageChecklistSectionModel | null
+): {
+  formState: WorkpageFormState;
+  setFormState: Dispatch<SetStateAction<WorkpageFormState>>;
+  checklistState: WorkpageChecklistState;
+  setChecklistState: Dispatch<SetStateAction<WorkpageChecklistState>>;
+} {
   const [formState, setFormState] = useState<WorkpageFormState>({});
   const [checklistState, setChecklistState] = useState<WorkpageChecklistState>({});
   const lastFormResetKeyRef = useRef<string | null>(null);
@@ -135,49 +153,113 @@ export function DispatchReportWorkpagePage(): JSX.Element {
     setChecklistState(buildChecklistState(checklistSection));
   }, [checklistResetKey, checklistSection]);
 
-  if (query.isLoading) {
-    return (
-      <StatePanel
-        kind="loading"
-        title="Loading end-of-day workpage"
-        detail="Fetching the backend dispatch-reporting demo workpage query."
-      />
-    );
-  }
+  return {
+    formState,
+    setFormState,
+    checklistState,
+    setChecklistState
+  };
+}
 
-  if (query.isError || !contract || !model) {
-    return (
-      <StatePanel
-        kind="error"
-        title="End-of-day workpage failed to load"
-        detail={errorText(query.error, "Unable to load the dispatch-reporting workpage demo query.")}
-        onRetry={() => {
-          void query.refetch();
-        }}
-      />
-    );
-  }
+interface DispatchReportWorkpageViewProps {
+  contract: WorkpageContract;
+  testId: string;
+  sourceDescription: string;
+  summaryLabel: string;
+  heroActions?: ReactNode;
+  preContent?: ReactNode;
+  editable: boolean;
+  formState?: WorkpageFormState;
+  checklistState?: WorkpageChecklistState;
+  onFormChange?: (fieldKey: string, value: WorkpageFormState[string]) => void;
+  onChecklistToggle?: (itemId: string, checked: boolean) => void;
+  onChecklistNoteChange?: (itemId: string, note: string) => void;
+  onRefresh: () => void;
+  isRefreshing: boolean;
+}
+
+function DispatchReportWorkpageView({
+  contract,
+  testId,
+  sourceDescription,
+  summaryLabel,
+  heroActions,
+  preContent,
+  editable,
+  formState = {},
+  checklistState = {},
+  onFormChange = () => undefined,
+  onChecklistToggle = () => undefined,
+  onChecklistNoteChange = () => undefined,
+  onRefresh,
+  isRefreshing
+}: DispatchReportWorkpageViewProps): JSX.Element {
+  const model = contract.workpage;
+  const summarySection = useMemo(
+    () =>
+      model.sections.find(
+        (section): section is WorkpageSummaryCardsSectionModel => section.kind === "summary_cards"
+      ) ?? null,
+    [model]
+  );
+  const noteSection = useMemo(
+    () =>
+      model.sections.find(
+        (section): section is WorkpageNotePanelSectionModel => section.kind === "note_panel"
+      ) ?? null,
+    [model]
+  );
+  const historySection = useMemo(
+    () =>
+      model.sections.find(
+        (section): section is WorkpageHistorySectionModel => section.kind === "history_stub"
+      ) ?? null,
+    [model]
+  );
+  const tableSections = useMemo(
+    () =>
+      model.sections.filter(
+        (section): section is WorkpageTableSectionModel => section.kind === "table"
+      ) ?? [],
+    [model]
+  );
+  const formSection = useMemo(
+    () =>
+      model.sections.find(
+        (section): section is WorkpageFormSectionModel => section.kind === "form"
+      ) ?? null,
+    [model]
+  );
+  const checklistSection = useMemo(
+    () =>
+      model.sections.find(
+        (section): section is WorkpageChecklistSectionModel => section.kind === "checklist"
+      ) ?? null,
+    [model]
+  );
 
   return (
     <WorkpageFrame
       eyebrow="Dispatch Reporting Draft"
-      description="A backend demo query for route actual review, closeout capture, and UPD draft posture."
+      description="A bounded EOD workpage for route actual review, closeout capture, and UPD draft posture."
       summaryItems={[
         `Service date ${model.summary.service_date}`,
         `${model.summary.station_code}`,
         `${model.summary.dsp_name}`,
-        "UPD draft anchor"
+        summaryLabel
       ]}
       model={model}
       source={contract.source}
       freshness={contract.freshness}
-      onRefresh={() => {
-        void query.refetch();
-      }}
-      isRefreshing={query.isFetching}
+      onRefresh={onRefresh}
+      isRefreshing={isRefreshing}
       pollIntervalMs={apiConfig.pollIntervalMs}
-      testId="dispatch-report-workpage-page"
+      testId={testId}
+      sourceDescription={sourceDescription}
+      heroActions={heroActions}
     >
+      {preContent}
+
       <div className="workpage-page__grid workpage-page__grid--two-column">
         {summarySection ? <WorkpageSummaryCardsSection section={summarySection} /> : null}
         {noteSection ? <WorkpageNotePanelSection section={noteSection} /> : null}
@@ -192,41 +274,365 @@ export function DispatchReportWorkpagePage(): JSX.Element {
           <WorkpageFormSection
             section={formSection}
             values={formState}
-            onChange={(fieldKey, value) => {
-              setFormState((current) => ({
-                ...current,
-                [fieldKey]: value
-              }));
-            }}
+            onChange={onFormChange}
+            readOnly={!editable}
           />
         ) : null}
         {checklistSection ? (
           <WorkpageChecklistSection
             section={checklistSection}
             values={checklistState}
-            onToggle={(itemId, checked) => {
-              setChecklistState((current) => ({
-                ...current,
-                [itemId]: {
-                  ...(current[itemId] ?? { selected: false, note: "" }),
-                  selected: checked
-                }
-              }));
-            }}
-            onNoteChange={(itemId, note) => {
-              setChecklistState((current) => ({
-                ...current,
-                [itemId]: {
-                  ...(current[itemId] ?? { selected: false, note: "" }),
-                  note
-                }
-              }));
-            }}
+            onToggle={onChecklistToggle}
+            onNoteChange={onChecklistNoteChange}
+            readOnly={!editable}
           />
         ) : null}
       </div>
 
       {historySection ? <WorkpageHistorySection section={historySection} /> : null}
     </WorkpageFrame>
+  );
+}
+
+export function DispatchReportWorkpagePage(): JSX.Element {
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const query = useQuery({
+    queryKey: ["workpages", "eod-v0", "landing"],
+    queryFn: () => workpagesRepository.eod(),
+    refetchInterval: apiConfig.pollIntervalMs
+  });
+  const createDraftMutation = useMutation({
+    mutationFn: () => workpagesRepository.createEodDraft(),
+    onSuccess: (draft) => {
+      void queryClient.invalidateQueries({ queryKey: ["workpages"] });
+      navigate(draft.route);
+    }
+  });
+
+  if (query.isLoading) {
+    return (
+      <StatePanel
+        kind="loading"
+        title="Loading end-of-day workpage"
+        detail="Fetching the backend dispatch-reporting landing query."
+      />
+    );
+  }
+
+  if (query.isError || !query.data) {
+    return (
+      <StatePanel
+        kind="error"
+        title="End-of-day workpage failed to load"
+        detail={errorText(query.error, "Unable to load the dispatch-reporting workpage landing query.")}
+        onRetry={() => {
+          void query.refetch();
+        }}
+      />
+    );
+  }
+
+  return (
+    <DispatchReportWorkpageView
+      contract={query.data}
+      testId="dispatch-report-workpage-page"
+      sourceDescription="Backend demo query served from repo-native workflow example bundles. Create an editable draft to switch into artifact-backed workbook editing."
+      summaryLabel="Query preview"
+      editable={false}
+      onRefresh={() => {
+        void query.refetch();
+      }}
+      isRefreshing={query.isFetching || createDraftMutation.isPending}
+      preContent={
+        <>
+          {createDraftMutation.isError ? (
+            <StatePanel
+              kind="error"
+              title="Editable draft creation failed"
+              detail={errorText(createDraftMutation.error, "Unable to create an editable EOD draft.")}
+            />
+          ) : null}
+          <section className="workpage-panel workpage-panel--callout">
+            <header className="workpage-panel__header">
+              <h2>Create editable draft</h2>
+              <p>
+                This landing page is a read-only preview. Create an immutable workbook-backed draft
+                before making closeout or UPD review edits.
+              </p>
+            </header>
+            <div className="action-cluster">
+              <button
+                type="button"
+                className="action-btn action-btn--positive"
+                disabled={createDraftMutation.isPending}
+                onClick={() => createDraftMutation.mutate()}
+              >
+                {createDraftMutation.isPending ? "Creating draft..." : "Create editable draft"}
+              </button>
+            </div>
+          </section>
+        </>
+      }
+    />
+  );
+}
+
+export function DispatchReportArtifactWorkpagePage(): JSX.Element {
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const { artifactVersionId } = useParams<{ artifactVersionId: string }>();
+  const query = useQuery({
+    queryKey: ["workpages", "eod-v0", "artifacts", artifactVersionId],
+    queryFn: () => workpagesRepository.eodArtifact(artifactVersionId ?? ""),
+    enabled: Boolean(artifactVersionId),
+    refetchInterval: apiConfig.pollIntervalMs
+  });
+  const model = query.data?.workpage;
+  const formSection = useMemo(
+    () =>
+      model?.sections.find(
+        (section): section is WorkpageFormSectionModel => section.kind === "form"
+      ) ?? null,
+    [model]
+  );
+  const checklistSection = useMemo(
+    () =>
+      model?.sections.find(
+        (section): section is WorkpageChecklistSectionModel => section.kind === "checklist"
+      ) ?? null,
+    [model]
+  );
+  const { formState, setFormState, checklistState, setChecklistState } = useEditableEodState(
+    query.data,
+    formSection,
+    checklistSection
+  );
+  const submitMutation = useMutation({
+    mutationFn: () =>
+      workpagesRepository.submitEodArtifact(artifactVersionId ?? "", {
+        formValues: formState,
+        checklistValues: orderedChecklistSubmitValues(checklistSection, checklistState)
+      }),
+    onSuccess: (submitted) => {
+      void queryClient.invalidateQueries({ queryKey: ["workpages"] });
+      navigate(submitted.route);
+    }
+  });
+  const downloadMutation = useMutation({
+    mutationFn: (currentArtifactVersionId: string) =>
+      workpagesRepository.downloadEodArtifactWorkbook(currentArtifactVersionId)
+  });
+
+  if (query.isLoading) {
+    return (
+      <StatePanel
+        kind="loading"
+        title="Loading artifact-backed EOD draft"
+        detail="Fetching the immutable workbook-backed EOD workpage projection."
+      />
+    );
+  }
+
+  if (query.isError || !query.data || !artifactVersionId) {
+    return (
+      <StatePanel
+        kind="error"
+        title="Artifact-backed EOD draft failed to load"
+        detail={errorText(query.error, "Unable to load the artifact-backed EOD draft.")}
+        onRetry={() => {
+          void query.refetch();
+        }}
+      />
+    );
+  }
+
+  const contract = query.data;
+  const artifactContext = contract.artifact_context;
+  const latestArtifactVersionId =
+    artifactContext?.latest_in_chain_artifact_version_id ?? artifactVersionId;
+  const latestRoute = artifactRoute(latestArtifactVersionId);
+  const previousArtifactVersionId = artifactContext?.supersedes_artifact_version_id;
+  const previousRoute = previousArtifactVersionId ? artifactRoute(previousArtifactVersionId) : null;
+  const isStaleArtifact = latestArtifactVersionId !== artifactVersionId;
+  const submitConflict = workpageConflictDetails(submitMutation.error);
+  const staleOrConflictRoute = submitConflict?.route ?? (isStaleArtifact ? latestRoute : null);
+
+  return (
+    <DispatchReportWorkpageView
+      contract={contract}
+      testId="dispatch-report-artifact-workpage-page"
+      sourceDescription="Artifact-backed projection of an immutable Stage03 reporting workbook draft. Submit creates a new superseding workbook artifact version."
+      summaryLabel={`Artifact ${artifactVersionId}`}
+      editable={true}
+      formState={formState}
+      checklistState={checklistState}
+      onFormChange={(fieldKey, value) => {
+        setFormState((current) => ({
+          ...current,
+          [fieldKey]: value
+        }));
+      }}
+      onChecklistToggle={(itemId, checked) => {
+        setChecklistState((current) => ({
+          ...current,
+          [itemId]: {
+            ...(current[itemId] ?? { selected: false, note: "" }),
+            selected: checked
+          }
+        }));
+      }}
+      onChecklistNoteChange={(itemId, note) => {
+        setChecklistState((current) => ({
+          ...current,
+          [itemId]: {
+            ...(current[itemId] ?? { selected: false, note: "" }),
+            note
+          }
+        }));
+      }}
+      onRefresh={() => {
+        void query.refetch();
+      }}
+      isRefreshing={query.isFetching || submitMutation.isPending || downloadMutation.isPending}
+      heroActions={
+        <>
+          <Link className="link-button" to="/demo/logistics/workpages/eod-v0">
+            Back to query landing
+          </Link>
+          <button
+            type="button"
+            className="action-btn"
+            disabled={downloadMutation.isPending}
+            onClick={() => downloadMutation.mutate(artifactVersionId)}
+          >
+            {downloadMutation.isPending ? "Downloading workbook..." : "Download workbook"}
+          </button>
+        </>
+      }
+      preContent={
+        <>
+          {submitConflict ? (
+            <section className="workpage-panel workpage-panel--callout">
+              <header className="workpage-panel__header">
+                <h2>Latest draft already exists</h2>
+                <p>
+                  This base artifact has already been superseded. Keep your local edits for now,
+                  then reopen the latest artifact-backed draft before submitting again.
+                </p>
+              </header>
+              <div className="action-cluster">
+                <Link className="link-button" to={submitConflict.route}>
+                  Open latest draft
+                </Link>
+              </div>
+            </section>
+          ) : null}
+
+          {!submitConflict && isStaleArtifact && staleOrConflictRoute ? (
+            <section className="workpage-panel workpage-panel--callout">
+              <header className="workpage-panel__header">
+                <h2>Latest draft available</h2>
+                <p>
+                  This artifact version is no longer the latest draft in the chain. Reopen the
+                  latest version before submitting more changes.
+                </p>
+              </header>
+              <div className="action-cluster">
+                <Link className="link-button" to={staleOrConflictRoute}>
+                  Open latest draft
+                </Link>
+              </div>
+            </section>
+          ) : null}
+
+          {submitMutation.isError && !submitConflict ? (
+            <StatePanel
+              kind="error"
+              title="Draft submit failed"
+              detail={errorText(submitMutation.error, "Unable to submit the artifact-backed draft.")}
+            />
+          ) : null}
+
+          {downloadMutation.isError ? (
+            <StatePanel
+              kind="error"
+              title="Workbook download failed"
+              detail={errorText(downloadMutation.error, "Unable to download the workbook artifact.")}
+            />
+          ) : null}
+
+          <section className="workpage-panel workpage-panel--callout">
+            <header className="workpage-panel__header">
+              <h2>Draft actions</h2>
+              <p>
+                Submit creates a new immutable workbook artifact version. The current draft remains
+                authoritative until you explicitly submit.
+              </p>
+            </header>
+            <div className="action-cluster">
+              <button
+                type="button"
+                className="action-btn action-btn--positive"
+                disabled={submitMutation.isPending || isStaleArtifact}
+                onClick={() => submitMutation.mutate()}
+              >
+                {submitMutation.isPending ? "Submitting draft..." : "Submit draft"}
+              </button>
+            </div>
+          </section>
+
+          {artifactContext ? (
+            <section className="workpage-panel">
+              <header className="workpage-panel__header">
+                <h2>Artifact lineage</h2>
+                <p>
+                  This page stays derived from immutable workbook artifacts. Use the lineage links
+                  below to reopen adjacent versions without leaving the EOD workpage surface.
+                </p>
+              </header>
+              <div className="workpage-page__source-grid workpage-page__source-grid--metadata">
+                <article className="workpage-page__source-item">
+                  <strong>Current artifact</strong>
+                  <p>{artifactContext.artifact_version_id}</p>
+                </article>
+                <article className="workpage-page__source-item">
+                  <strong>Workflow run</strong>
+                  <p>{artifactContext.workflow_run_id}</p>
+                </article>
+                <article className="workpage-page__source-item">
+                  <strong>Artifact kind</strong>
+                  <p>{artifactContext.artifact_kind}</p>
+                </article>
+                <article className="workpage-page__source-item">
+                  <strong>Latest in chain</strong>
+                  <p>{artifactContext.latest_in_chain_artifact_version_id}</p>
+                </article>
+                <article className="workpage-page__source-item">
+                  <strong>Supersedes</strong>
+                  <p>{artifactContext.supersedes_artifact_version_id ?? "Initial draft"}</p>
+                </article>
+                <article className="workpage-page__source-item">
+                  <strong>Superseded by</strong>
+                  <p>{artifactContext.superseded_by_artifact_version_id ?? "Current latest"}</p>
+                </article>
+              </div>
+              <div className="action-cluster">
+                {previousRoute ? (
+                  <Link className="link-button" to={previousRoute}>
+                    Open previous draft
+                  </Link>
+                ) : null}
+                {latestRoute !== artifactRoute(artifactVersionId) ? (
+                  <Link className="link-button" to={latestRoute}>
+                    Open latest draft
+                  </Link>
+                ) : null}
+              </div>
+            </section>
+          ) : null}
+        </>
+      }
+    />
   );
 }

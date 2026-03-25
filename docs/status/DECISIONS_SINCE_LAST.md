@@ -2,6 +2,21 @@
 
 Record any decisions made since the last session so a fresh Codex run can rehydrate quickly.
 
+## 2026-03-25 (TASK-0135 frontend EOD artifact route migration)
+- Route-posture decision: `/demo/logistics/workpages/eod-v0` remains the query-backed EOD landing page, but it is now preview-only with an explicit create-draft affordance; active EOD edits now live only on `/demo/logistics/workpages/eod-v0/artifacts/{artifact_version_id}`.
+- Frontend-contract decision: the frontend workpage contract now preserves optional `artifact_context` so the same page composition can render both query-backed landing payloads and artifact-backed EOD state without inventing a second local schema.
+- Mutation decision: draft creation and artifact submit now flow through dedicated frontend repository methods with generated idempotency keys, and successful create/submit navigation follows the backend-owned `route` field rather than reconstructing client-side paths.
+- Conflict-handling decision: `workpage_artifact_conflict` now preserves current local edits in memory, surfaces an inline reopen panel, and avoids client-side merge/rebase logic in this tranche.
+- Lineage/download decision: the first artifact-backed EOD page exposes only bounded lineage truth from `artifact_context` plus workbook download through the existing artifact binary route; richer recent-history discovery remains deferred to `TASK-0136`.
+
+## 2026-03-25 (TASK-0134 backend EOD artifact draft/create/read/submit slice)
+- Route-surface decision: the first artifact-backed EOD slice now exists as `POST /api/v1/workpages/demo/eod-v0/drafts`, `GET /api/v1/workpages/artifacts/{artifact_version_id}`, and `POST /api/v1/workpages/artifacts/{artifact_version_id}/submit`, while the existing query-backed `GET /api/v1/workpages/demo/eod-v0` landing page remains in place until the frontend migration tranche.
+- Canonical-run decision: demo EOD draft creation now resolves or creates exactly one bounded `dispatch_reporting.v1` run for the known `SD-2026-03-16` demo slice using activation key `dispatch_reporting.v1:SD-2026-03-16:eod-v0:artifact-draft`; the backend does not invent a runless workbook lane.
+- Artifact-truth decision: the first draft is seeded from `dispatch_reporting.stage03.upd_draft.workbook.empty.v1` and persisted as a normal immutable `artifact_version` with truthful metadata for template provenance, demo workpage scope, service date, station, DSP, and workbook file naming.
+- Projection decision: artifact-backed EOD reads keep the existing wrapper and section/field ids stable for the frontend, but authoritative freshness now comes from `artifact_version` lineage and `source.mode=artifact_projection` rather than the older query-only seam.
+- Submit decision: EOD submit now creates a new immutable superseding workbook artifact version, maps only bounded UI-backed edits into `ManualCloseout` and `UpdCandidates`, appends a server-managed changelog row, and fails closed with `409 workpage_artifact_conflict` when the base artifact already has a newer descendant.
+- Snapshot decision: backend-owned frontend contract fixtures now include committed create/read/submit snapshots for the artifact-backed EOD slice so `TASK-0135` can switch the UI over without inventing frontend-local artifact payloads.
+
 ## 2026-03-25 (TASK-0133 reporting template pack, multi-registry support, and EOD workbook adapter)
 - Template-pack decision: `dispatch_reporting.v1` now has a real repo-native `template_pack/` tree with a bounded Stage03 `reporting.upd_draft.workbook` workbook pair plus inert authored placeholders for the remaining dispatch-reporting `ARTIFACT_MAP` template paths so assurance can stay honest.
 - Registry decision: template discovery is now multi-workflow and deterministic across `fixtures/workflows/*/template_registry.v1.yaml`, while `template_id` uniqueness is enforced across the full catalog and schedule consumers continue to pin `workflow_id="schedule_planning.v1"` explicitly.

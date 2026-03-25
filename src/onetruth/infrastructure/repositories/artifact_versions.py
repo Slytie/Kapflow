@@ -115,6 +115,71 @@ def get_artifact_version(
     return item
 
 
+def get_superseding_artifact_version(
+    connection: sqlite3.Connection,
+    artifact_version_id: str,
+) -> dict[str, Any] | None:
+    row = connection.execute(
+        """
+        SELECT
+            artifact_version_id,
+            workflow_run_id,
+            tenant_id,
+            domain_id,
+            dataset_key,
+            partition_kind,
+            partition_key,
+            task_run_id,
+            artifact_kind,
+            artifact_role,
+            media_type,
+            storage_uri,
+            content_digest,
+            byte_size,
+            metadata_json,
+            parent_artifact_version_id,
+            supersedes_artifact_version_id,
+            lineage_note,
+            created_at
+        FROM artifact_versions
+        WHERE supersedes_artifact_version_id = ?
+        ORDER BY created_at DESC, artifact_version_id DESC
+        LIMIT 1
+        """,
+        (artifact_version_id,),
+    ).fetchone()
+    if row is None:
+        return None
+    item = dict(row)
+    item["metadata_json"] = json.loads(item["metadata_json"])
+    return item
+
+
+def get_latest_artifact_version_in_chain(
+    connection: sqlite3.Connection,
+    artifact_version_id: str,
+) -> dict[str, Any] | None:
+    current = get_artifact_version(connection, artifact_version_id)
+    if current is None:
+        return None
+
+    seen_artifact_version_ids = {artifact_version_id}
+    while True:
+        superseding = get_superseding_artifact_version(
+            connection,
+            str(current["artifact_version_id"]),
+        )
+        if superseding is None:
+            return current
+        current_id = str(superseding["artifact_version_id"])
+        if current_id in seen_artifact_version_ids:
+            raise ValueError(
+                f"artifact_version supersession cycle detected: {current_id}"
+            )
+        seen_artifact_version_ids.add(current_id)
+        current = superseding
+
+
 def list_artifact_versions_for_workflow_run(
     connection: sqlite3.Connection,
     workflow_run_id: str,
