@@ -1,0 +1,18 @@
+registry:
+  workflow_id: dispatch_reporting.v1
+  version: 1
+  templates:
+    - template_id: dispatch_reporting.stage03.upd_draft.workbook.empty.v1
+      stage_id: Stage03
+      dataset_key: reporting.upd_draft.workbook
+      variant: empty
+      media_type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet
+      source_path: fixtures/workflows/dispatch_reporting/template_pack/Stage03_Threshold_Detection_and_Draft_Packet/Stage03_Threshold_Detection_and_Draft_Packet_upd_draft_Spreadsheet_Template_EMPTY.xlsx
+      description: Empty Stage03 dispatch-reporting UPD draft workbook template.
+    - template_id: dispatch_reporting.stage03.upd_draft.workbook.example.v1
+      stage_id: Stage03
+      dataset_key: reporting.upd_draft.workbook
+      variant: completed_example
+      media_type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet
+      source_path: fixtures/workflows/dispatch_reporting/template_pack/Stage03_Threshold_Detection_and_Draft_Packet/Stage03_Threshold_Detection_and_Draft_Packet_upd_draft_Spreadsheet_Example_COMPLETED.xlsx
+      description: Completed Stage03 dispatch-reporting UPD draft workbook example.

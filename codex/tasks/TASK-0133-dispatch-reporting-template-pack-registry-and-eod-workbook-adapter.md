@@ -2,7 +2,7 @@
 id: TASK-0133
 epic: EPIC-121
 title: "Add dispatch-reporting template-pack/registry support and EOD workbook adapter round-trip tests"
-status: TODO
+status: DONE
 owners: ["backend"]
 reviewers: ["frontend", "qa"]
 depends_on: ["TASK-0132"]
@@ -65,3 +65,12 @@ Add the bounded template-pack/registry/workbook-adapter foundation required for 
 
 ## Notes / decisions
 Prefer a bounded semantic workbook over trying to mirror the raw EOS workbook. This epic is proving the artifact-backed editing loop, not spreadsheet fidelity for every legacy column/formula.
+
+## Outcomes
+- Added `fixtures/workflows/dispatch_reporting/template_pack/` with a real bounded Stage03 workbook template/example pair for `reporting.upd_draft.workbook` plus inert placeholders for the remaining authored dispatch-reporting template paths so assurance can stay honest.
+- Added `fixtures/workflows/dispatch_reporting/template_registry.v1.yaml` and refactored the template-registry service/API to discover multiple workflow manifests deterministically while preserving schedule-specific consumers through explicit `workflow_id` filtering.
+- Added `src/onetruth/application/services/dispatch_reporting_workbook.py` with bytes-in/bytes-out projection and materialization helpers for the bounded EOD workbook tables, including read-only table protection and server-managed changelog append semantics.
+- Added targeted runtime/unit/contract coverage for multi-registry discovery, reporting template downloads, invalid registry surfaces, dependency honesty, and workbook round-trip behavior.
+
+## Follow-ups
+- `TASK-0134` should now build the artifact-backed EOD draft/projection/submit routes on top of the new reporting template/workbook seam.

@@ -2,6 +2,13 @@
 
 Record any decisions made since the last session so a fresh Codex run can rehydrate quickly.
 
+## 2026-03-25 (TASK-0133 reporting template pack, multi-registry support, and EOD workbook adapter)
+- Template-pack decision: `dispatch_reporting.v1` now has a real repo-native `template_pack/` tree with a bounded Stage03 `reporting.upd_draft.workbook` workbook pair plus inert authored placeholders for the remaining dispatch-reporting `ARTIFACT_MAP` template paths so assurance can stay honest.
+- Registry decision: template discovery is now multi-workflow and deterministic across `fixtures/workflows/*/template_registry.v1.yaml`, while `template_id` uniqueness is enforced across the full catalog and schedule consumers continue to pin `workflow_id="schedule_planning.v1"` explicitly.
+- API-surface decision: `GET /api/v1/templates` now reports `registries[]` for the matching workflow packs and only populates singular `registry` metadata when the filtered response resolves to exactly one workflow registry.
+- Workbook-seam decision: the first real workbook adapter remains workflow-specific and bounded to `dispatch_reporting.v1` Stage03 semantics; it projects workbook bytes into the EOD semantic tables and materializes explicit edits back to new workbook bytes without becoming a generic editor runtime.
+- Dependency decision: `openpyxl` is now a core runtime dependency for the first truthful `.xlsx` round-trip seam, but imports stay isolated to the dispatch-reporting workbook adapter module so package-root lazy imports do not regress.
+
 ## 2026-03-25 (TASK-0132 artifact-backed EOD contract and route-family freeze)
 - Epic-boundary decision: after the query-backed `EPIC-120` tranche, the next workpage tranche is the **first artifact-backed vertical slice**, not more query/demo polish.
 - First-write-path decision: the first artifact-backed workpage is **EOD only**, aligned to `dispatch_reporting.v1` Stage03 draft/review semantics (`reporting.upd_draft.workbook`).

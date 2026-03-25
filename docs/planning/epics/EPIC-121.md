@@ -49,9 +49,9 @@ Context pack: `codex/context/EPIC-121.md`
 - `TASK-0132` has now frozen the first artifact-backed EOD route family, canonical run anchoring, and save/conflict boundaries in repo-native docs.
 - The existing `/demo/logistics/workpages/eod-v0` page remains the query-backed landing page; the artifact-backed page is a sibling route keyed by `artifact_version_id`.
 - The repo already has canonical artifact version lineage via `supersedes_artifact_version_id`.
-- The repo still lacks a `dispatch_reporting.v1` template pack and currently has template-registry support centered on `schedule_planning.v1`.
+- The repo now has a bounded `dispatch_reporting.v1` template pack, multi-workflow template-registry support, and a first Stage03 workbook adapter/materializer seam through `TASK-0133`.
 - The schedule page is still composite and remains query-backed in this epic.
-- No artifact-backed EOD route implementation exists yet; `TASK-0133` is now the next implementation tranche.
+- No artifact-backed EOD route implementation exists yet; `TASK-0134` is now the next implementation tranche.
 
 ## Tasks
 - TASK-0132

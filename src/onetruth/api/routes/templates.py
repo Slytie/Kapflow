@@ -4,7 +4,9 @@ import sqlite3
 from typing import Any
 
 from onetruth.application.services.template_registry import (
-    load_template_registry,
+    TemplateRegistry,
+    TemplateRegistryCatalog,
+    load_template_registry_catalog,
     list_templates,
 )
 from onetruth.infrastructure.artifacts.storage import encode_base64_content
@@ -29,22 +31,28 @@ def list_templates_endpoint(
     dataset_key = query.get("dataset_key")
     variant = query.get("variant")
 
-    registry = _load_registry()
+    catalog = _load_catalog()
     rows = list_templates(
-        registry=registry,
+        registry=catalog,
         workflow_id=workflow_id,
         stage_id=stage_id,
         dataset_key=dataset_key,
         variant=variant,
     )
+    matched_registries = _matched_registries(
+        catalog,
+        rows=rows,
+        workflow_id=workflow_id,
+    )
     rows = rows[page.offset : page.offset + page.limit]
     return {
         "command": "api.templates.list",
-        "registry": {
-            "id": f"{registry.workflow_id.split('.', 1)[0]}.template_registry",
-            "workflow_id": registry.workflow_id,
-            "version": registry.version,
-        },
+        "registry": (
+            matched_registries[0].as_public_dict()
+            if len(matched_registries) == 1
+            else None
+        ),
+        "registries": [item.as_public_dict() for item in matched_registries],
         "templates": rows,
         "page": {"limit": page.limit, "offset": page.offset},
     }
@@ -83,9 +91,9 @@ def download_template_binary_endpoint(
 
 
 def _load_template_bytes(template_id: str):
-    registry = _load_registry()
+    catalog = _load_catalog()
     try:
-        template = registry.template_by_id(template_id)
+        template = catalog.template_by_id(template_id)
     except ValueError as exc:
         raise ApiError(
             status_code=404,
@@ -107,9 +115,9 @@ def get_template_endpoint(
     del connection
     del context
 
-    registry = _load_registry()
+    catalog = _load_catalog()
     try:
-        template = registry.template_by_id(template_id)
+        template = catalog.template_by_id(template_id)
     except ValueError as exc:
         raise ApiError(
             status_code=404,
@@ -123,9 +131,9 @@ def get_template_endpoint(
     }
 
 
-def _load_registry():
+def _load_catalog() -> TemplateRegistryCatalog:
     try:
-        return load_template_registry()
+        return load_template_registry_catalog()
     except Exception as exc:  # pragma: no cover - defensive surface for malformed local fixtures
         raise ApiError(
             status_code=500,
@@ -133,3 +141,25 @@ def _load_registry():
             message="template registry is unavailable",
             details={"error": exc.__class__.__name__},
         ) from exc
+
+
+def _matched_registries(
+    catalog: TemplateRegistryCatalog,
+    *,
+    rows: list[dict[str, Any]],
+    workflow_id: str | None,
+) -> list[TemplateRegistry]:
+    if workflow_id is not None:
+        registry = catalog.registry_by_workflow_id(workflow_id)
+        return [registry] if registry is not None else []
+
+    matched_workflow_ids = {
+        str(item["workflow_id"])
+        for item in rows
+        if item.get("workflow_id") is not None
+    }
+    return [
+        registry
+        for registry in catalog.registries
+        if registry.workflow_id in matched_workflow_ids
+    ]

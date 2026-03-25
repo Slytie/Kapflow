@@ -38,7 +38,7 @@ def run_governance_domain(state: AssuranceState) -> None:
     validate_shared_vocab(indexes, state)
     validate_workflow_pack_semantics(indexes, event_map, state)
     validate_workflow_family_semantics(state)
-    validate_schedule_template_registry(indexes, state)
+    validate_template_registries(indexes, state)
     validate_schedule_runbook_assets(state)
 
 
@@ -596,88 +596,119 @@ def validate_workflow_family_semantics(state: AssuranceState) -> None:
             )
 
 
-def validate_schedule_template_registry(indexes: dict[str, Any], state: AssuranceState) -> None:
+def validate_template_registries(indexes: dict[str, Any], state: AssuranceState) -> None:
     collector = state.collector
-    registry_path = (
+    schedule_registry_path = (
         ROOT / "fixtures" / "workflows" / "schedule_planning" / "template_registry.v1.yaml"
     )
-    if not registry_path.exists():
+    if not schedule_registry_path.exists():
         collector.fail(
             "schedule template registry is missing: "
             "fixtures/workflows/schedule_planning/template_registry.v1.yaml"
         )
         return
-    loaded = load_yaml(registry_path)
-    if not isinstance(loaded, dict):
-        collector.fail("schedule template registry must parse as an object")
-        return
-    registry = loaded.get("registry")
+    registry_paths = sorted((ROOT / "fixtures" / "workflows").glob("*/template_registry.v1.yaml"))
     collector.require(
-        isinstance(registry, dict),
-        "template registry has registry metadata object",
+        bool(registry_paths),
+        "template registry manifests exist under fixtures/workflows/*/template_registry.v1.yaml",
     )
-    if not isinstance(registry, dict):
-        return
-    templates = registry.get("templates")
-    collector.require(isinstance(templates, list), "template registry has templates list")
-    if not isinstance(templates, list):
+    if not registry_paths:
         return
 
-    collector.require(
-        registry.get("workflow_id") == "schedule_planning.v1",
-        "template registry workflow_id is schedule_planning.v1",
-    )
-    collector.require(
-        int(registry.get("version") or 0) >= 1,
-        "template registry version is positive",
-    )
-
-    seen_ids: set[str] = set()
-    seen_variants: set[str] = set()
-    for index, item in enumerate(templates):
-        if not isinstance(item, dict):
-            collector.fail(f"template registry entry must be object: index={index}")
+    seen_workflow_ids: set[str] = set()
+    seen_template_ids: set[str] = set()
+    for registry_path in registry_paths:
+        relative_path = registry_path.relative_to(ROOT)
+        loaded = load_yaml(registry_path)
+        if not isinstance(loaded, dict):
+            collector.fail(f"template registry must parse as an object: {relative_path}")
             continue
-        required = [
-            "template_id",
-            "stage_id",
-            "dataset_key",
-            "variant",
-            "media_type",
-            "source_path",
-        ]
-        for field in required:
-            collector.require(
-                item.get(field) is not None,
-                f"template registry field present: index={index} field={field}",
-            )
-        template_id = str(item.get("template_id") or "")
-        if template_id:
-            collector.require(
-                template_id not in seen_ids,
-                f"template registry template_id unique: {template_id}",
-            )
-            seen_ids.add(template_id)
-        dataset_key = str(item.get("dataset_key") or "")
-        if dataset_key:
-            collector.require(
-                dataset_key in indexes["dataset_keys"],
-                f"template registry dataset key registered: {dataset_key}",
-            )
-        variant = str(item.get("variant") or "")
-        if variant:
-            seen_variants.add(variant)
-        source_path = str(item.get("source_path") or "")
-        if source_path:
-            collector.require(
-                (ROOT / source_path).exists(),
-                f"template registry file exists: {source_path}",
-            )
+        registry = loaded.get("registry")
+        collector.require(
+            isinstance(registry, dict),
+            f"template registry has registry metadata object: {relative_path}",
+        )
+        if not isinstance(registry, dict):
+            continue
+        templates = registry.get("templates")
+        collector.require(
+            isinstance(templates, list),
+            f"template registry has templates list: {relative_path}",
+        )
+        if not isinstance(templates, list):
+            continue
 
-    collector.require("empty" in seen_variants, "template registry includes empty variants")
+        workflow_id = str(registry.get("workflow_id") or "")
+        collector.require(
+            bool(workflow_id),
+            f"template registry workflow_id is present: {relative_path}",
+        )
+        if workflow_id:
+            collector.require(
+                workflow_id not in seen_workflow_ids,
+                f"template registry workflow_id unique: {workflow_id}",
+            )
+            seen_workflow_ids.add(workflow_id)
+        collector.require(
+            int(registry.get("version") or 0) >= 1,
+            f"template registry version is positive: {relative_path}",
+        )
+
+        seen_variants: set[str] = set()
+        for index, item in enumerate(templates):
+            if not isinstance(item, dict):
+                collector.fail(
+                    f"template registry entry must be object: {relative_path} index={index}"
+                )
+                continue
+            required = [
+                "template_id",
+                "stage_id",
+                "dataset_key",
+                "variant",
+                "media_type",
+                "source_path",
+            ]
+            for field in required:
+                collector.require(
+                    item.get(field) is not None,
+                    f"template registry field present: {relative_path} index={index} field={field}",
+                )
+            template_id = str(item.get("template_id") or "")
+            if template_id:
+                collector.require(
+                    template_id not in seen_template_ids,
+                    f"template registry template_id unique: {template_id}",
+                )
+                seen_template_ids.add(template_id)
+            dataset_key = str(item.get("dataset_key") or "")
+            if dataset_key:
+                collector.require(
+                    dataset_key in indexes["dataset_keys"],
+                    f"template registry dataset key registered: {dataset_key}",
+                )
+            variant = str(item.get("variant") or "")
+            if variant:
+                seen_variants.add(variant)
+            source_path = str(item.get("source_path") or "")
+            if source_path:
+                collector.require(
+                    (ROOT / source_path).exists(),
+                    f"template registry file exists: {source_path}",
+                )
+
+        collector.require(
+            "empty" in seen_variants,
+            f"template registry includes empty variants: {relative_path}",
+        )
+        collector.require(
+            "completed_example" in seen_variants,
+            f"template registry includes completed_example variants: {relative_path}",
+        )
+
     collector.require(
-        "completed_example" in seen_variants,
-        "template registry includes completed_example variants",
+        "schedule_planning.v1" in seen_workflow_ids,
+        "template registries include schedule_planning.v1",
     )
 
 

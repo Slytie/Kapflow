@@ -49,17 +49,16 @@
 - doc/task-memory updates when capability truth changes
 
 ## Current repo status
-- `TASK-0124`..`TASK-0132` are now complete.
+- `TASK-0124`..`TASK-0133` are now complete.
 - Query-backed workpage routes already exist under `/demo/logistics/workpages/*`.
 - The EOD page already exists as a server-authored query-backed page.
 - The artifact-backed EOD contract is now frozen in repo-native docs.
-- The repo still lacks the reporting template-pack/registry support needed for a truthful artifact-backed EOD path.
+- The repo now contains the bounded reporting template pack, multi-workflow template registry, and first Stage03 workbook adapter/materializer seam needed for a truthful artifact-backed EOD path.
 
 ## Planned implementation order inside this epic
-1. `TASK-0133`
-2. `TASK-0134`
-3. `TASK-0135`
-4. `TASK-0136`
+1. `TASK-0134`
+2. `TASK-0135`
+3. `TASK-0136`
 
 ## Preflight questions for future runs
 - Does the repo now contain a bounded `dispatch_reporting.v1` template pack and registry entry for `reporting.upd_draft.workbook`?

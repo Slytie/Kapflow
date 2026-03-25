@@ -4,7 +4,7 @@
 Stage 4 - Vertical Slice MVP (repo merged around one truth system)
 
 ## Current milestone
-Primary runtime/debug work remains the logistics weekly/live family. `TASK-0132` is now complete, so the repo has frozen the first artifact-backed EOD workpage contract, route family, and canonical run-anchoring rules on top of the post-`TASK-0131` query-backed baseline.
+Primary runtime/debug work remains the logistics weekly/live family. `TASK-0133` is now complete, so the repo has frozen the first artifact-backed EOD workpage contract and now also has the bounded reporting template-pack/registry/workbook-adapter foundation on top of the post-`TASK-0131` query-backed baseline.
 
 Current implemented baseline:
 - `/demo/logistics/workpages/schedule-v0`
@@ -18,13 +18,16 @@ Current implemented baseline:
 - backend-generated schedule workpage snapshot: `fixtures/frontend_contracts/workpage_schedule_v0_state.json`
 - backend-generated EOD workpage snapshot: `fixtures/frontend_contracts/workpage_eod_v0_state.json`
 - repo-native artifact-path brief/plan for the first artifact-backed EOD slice
+- bounded `dispatch_reporting.v1` template pack under `fixtures/workflows/dispatch_reporting/template_pack/`
+- bounded multi-workflow template registry discovery across `schedule_planning.v1` and `dispatch_reporting.v1`
+- first dispatch-reporting workbook adapter/materializer seam for `reporting.upd_draft.workbook`
 - frozen artifact-backed EOD route family:
   - `POST /api/v1/workpages/demo/eod-v0/drafts`
   - `GET /api/v1/workpages/artifacts/{artifact_version_id}`
   - `POST /api/v1/workpages/artifacts/{artifact_version_id}/submit`
 
 Immediate next application package:
-- `TASK-0133` is now the next bounded tranche: add the missing `dispatch_reporting.v1` template pack, bounded multi-workflow template-registry support, and the first EOD workbook adapter/materializer tests
+- `TASK-0134` is now the next bounded tranche: implement backend EOD artifact draft/projection/submit routes and generated snapshots on top of the new reporting template/workbook foundation
 - the artifact-backed slice remains **EOD only** for now; schedule stays query-backed and composite
 
 Important scope boundaries for this tranche:

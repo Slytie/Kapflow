@@ -19,6 +19,10 @@ TEMPLATE_PATH = (
     REPO_ROOT
     / "fixtures/workflows/schedule_planning/template_pack/Stage05_Draft_Schedule_Triage/Stage05_Draft_Schedule_Triage_Spreadsheet_Template_EMPTY.xlsx"
 )
+REPORTING_TEMPLATE_PATH = (
+    REPO_ROOT
+    / "fixtures/workflows/dispatch_reporting/template_pack/Stage03_Threshold_Detection_and_Draft_Packet/Stage03_Threshold_Detection_and_Draft_Packet_upd_draft_Spreadsheet_Template_EMPTY.xlsx"
+)
 
 
 def _client(tmp_path: Path) -> RuntimeApiClient:
@@ -100,6 +104,27 @@ def test_template_download_binary_endpoint_returns_exact_bytes_and_headers(
     assert (
         response.headers["content-disposition"]
         == 'attachment; filename="Stage05_Draft_Schedule_Triage_Spreadsheet_Template_EMPTY.xlsx"'
+    )
+    assert response.headers["x-request-id"].startswith("httpreq_")
+
+
+def test_dispatch_reporting_template_download_binary_endpoint_returns_exact_bytes_and_headers(
+    tmp_path: Path,
+) -> None:
+    client = _client(tmp_path)
+    template_id = "dispatch_reporting.stage03.upd_draft.workbook.empty.v1"
+
+    response = client.get_raw(f"/api/v1/templates/{template_id}/download.bin")
+
+    assert response.status_code == 200
+    assert response.body == REPORTING_TEMPLATE_PATH.read_bytes()
+    assert response.headers["content-type"] == (
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    )
+    assert response.headers["content-length"] == str(len(response.body))
+    assert (
+        response.headers["content-disposition"]
+        == 'attachment; filename="Stage03_Threshold_Detection_and_Draft_Packet_upd_draft_Spreadsheet_Template_EMPTY.xlsx"'
     )
     assert response.headers["x-request-id"].startswith("httpreq_")
 

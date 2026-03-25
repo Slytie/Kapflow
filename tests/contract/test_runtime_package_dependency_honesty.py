@@ -42,6 +42,13 @@ def test_pyyaml_is_a_core_runtime_dependency() -> None:
     assert "PyYAML>=6,<7" not in optional_dependencies["dev"]
 
 
+def test_openpyxl_is_a_core_runtime_dependency() -> None:
+    dependencies, optional_dependencies = _pyproject_dependencies()
+
+    assert "openpyxl>=3.1,<4.0" in dependencies
+    assert "openpyxl>=3.1,<4.0" not in optional_dependencies["dev"]
+
+
 def test_bare_package_imports_stay_lazy() -> None:
     result = _run_probe(
         textwrap.dedent(
