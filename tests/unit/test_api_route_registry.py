@@ -59,6 +59,7 @@ def test_route_registry_preserves_exact_global_route_order() -> None:
         "timeline_events.list",
         "board.schedule_planning",
         "stories.logistics_three_workflow",
+        "workpages.demo.detail",
     ]
 
 
@@ -81,6 +82,11 @@ def test_route_registry_matches_representative_exact_and_parameterized_routes() 
     story_match = match_route("GET", "/api/v1/stories/logistics-three-workflow")
     assert story_match is not None
     assert story_match.route.name == "stories.logistics_three_workflow"
+
+    workpage_match = match_route("GET", "/api/v1/workpages/demo/schedule-v0")
+    assert workpage_match is not None
+    assert workpage_match.route.name == "workpages.demo.detail"
+    assert workpage_match.params == {"workpage_id": "schedule-v0"}
 
 
 def test_route_registry_preserves_suffix_precedence_over_detail_routes() -> None:
@@ -140,6 +146,11 @@ def test_route_registry_exposes_representative_metadata() -> None:
     assert routes_by_name["workflow_runs.workspace"].body_policy == NO_BODY
 
     assert routes_by_name["artifacts.ingest"].body_policy == JSON_ARTIFACT_BODY
+
+    assert routes_by_name["workpages.demo.detail"].needs_page is False
+    assert routes_by_name["workpages.demo.detail"].body_policy == NO_BODY
+    assert routes_by_name["workpages.demo.detail"].requires_request_context is True
+    assert routes_by_name["workpages.demo.detail"].needs_db_connection is False
 
 
 def test_route_registry_preserves_current_permissive_vs_strict_slash_behavior() -> None:

@@ -41,11 +41,13 @@ It is intentionally **not** a generic artifact editor epic.
 
 Context pack: `codex/context/EPIC-120.md`
 
-## Current Repo Status (2026-03-25 post-`TASK-0128` contract freeze)
+## Current Repo Status (2026-03-25 post-`TASK-0129` schedule route)
 - `/demo/logistics/workpages/schedule-v0` and `/demo/logistics/workpages/eod-v0` exist as full-page routes under `AppShell`.
-- The active pages are still **frontend-local/example-backed** after `TASK-0128`.
+- The active pages are still **frontend-local/example-backed** after `TASK-0129`; frontend migration has not started yet.
 - Repo-native docs now freeze the post-v0 workpage query contract, route family, and snapshot policy.
-- The next correctness move is to implement backend demo query surfaces for `schedule-v0` and `eod-v0` while keeping edits local/demo-scoped.
+- `GET /api/v1/workpages/demo/schedule-v0` now exists as the first backend demo workpage query surface.
+- `fixtures/frontend_contracts/workpage_schedule_v0_state.json` now exists as the first backend-generated workpage query snapshot.
+- The next correctness move is to implement the EOD backend demo query surface and then migrate the frontend workpage routes onto the HTTP-backed repository seam.
 - `weekly_schedule_planning.v1` still owns the **pre-week / Friday** weekly build. Day-of replan belongs to `live_dispatch.v1` and must not leak into the schedule workpage scope.
 - `dispatch_reporting.v1` still separates normalized actuals, draft packet generation, review, and final packet output. The EOD page remains aligned to `reporting.upd_draft.workbook` semantics rather than Stage05 final output.
 - The schedule page is **composite** over multiple weekly-planning example inputs. It must not be forced into a single-artifact identity too early.

@@ -2,6 +2,12 @@
 
 Record any decisions made since the last session so a fresh Codex run can rehydrate quickly.
 
+## 2026-03-25 (TASK-0129 schedule demo workpage query route and snapshot)
+- Query-surface decision: `GET /api/v1/workpages/demo/schedule-v0` is now the first implemented backend-owned workpage route, and it remains a read-only derived surface with request-context enforcement but no DB dependency.
+- Compatibility decision: the wrapped inner workpage object still keeps `mode=example` and `dataset_key=planning.input_bundle.doc` for the current frontend `WorkpageViewModel` seam, while authoritative query semantics live in the top-level `source` and `freshness` wrapper.
+- Source-build decision: the schedule workpage payload is built from the actual-ops weekly Stage04 normalized example pack through the existing schedule-control bundle builder, not by serving `fixtures/logistics/workpages/schedule_workpage_v0_view_model_example.yaml`.
+- Snapshot decision: `fixtures/frontend_contracts/workpage_schedule_v0_state.json` is now a committed backend-generated contract fixture produced through the shared frontend snapshot export/check path.
+
 ## 2026-03-25 (TASK-0128 workpage query contract and snapshot policy freeze)
 - Phase-boundary decision: once the frontend-only workpage tranche was complete, the next batch moved to **server-authoritative query contracts** before any submit/materialize path.
 - Route-family decision: the workpage API family now reserves separate subfamilies for `demo`, `artifacts`, and potentially `workflow-runs` because the schedule page is composite and may later be run-oriented while EOD is the better first artifact-backed candidate.

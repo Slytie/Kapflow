@@ -1,14 +1,14 @@
 # Logistics workpages v0 - repo-grounded implementation plan
 
 ## Why this exists
-The repo now has a strong canonical runtime/artifact substrate, full-page workpage routes exist under the primary logistics demo shell, and `TASK-0128` has frozen the next query contract, route family, and snapshot policy.
+The repo now has a strong canonical runtime/artifact substrate, full-page workpage routes exist under the primary logistics demo shell, `TASK-0128` has frozen the next query contract, route family, and snapshot policy, and `TASK-0129` has landed the first backend schedule demo query surface plus generated snapshot.
 
 This epic is still **not** a generic artifact editor. It remains a bounded workpage slice:
 - **Schedule workpage v0** grounded in `weekly_schedule_planning.v1`
 - **End-of-day report workpage v0** grounded in `dispatch_reporting.v1`
 
 ## Current repo grounding
-### Baseline after `TASK-0128`
+### Baseline after `TASK-0129`
 The repo now contains:
 - full-page routes:
   - `/demo/logistics/workpages/schedule-v0`
@@ -18,6 +18,8 @@ The repo now contains:
 - route/page tests proving the pages render and behave from example data
 - logistics-shell route classification for `/demo/logistics/*`
 - repo-native docs freezing the post-v0 workpage query contract, route family, and snapshot policy
+- backend schedule demo route: `GET /api/v1/workpages/demo/schedule-v0`
+- backend-generated schedule snapshot: `fixtures/frontend_contracts/workpage_schedule_v0_state.json`
 
 ### What already exists beneath that baseline
 - Primary operator/demo route: `/demo/logistics`
@@ -28,9 +30,10 @@ The repo now contains:
 - Repo-native normalized dispatch reporting examples under `docs/workflows/dispatch_reporting/v1/examples/`
 - Human-authored workpage planning fixtures under `fixtures/logistics/workpages/`
 
-### What still does not exist after `TASK-0128`
-- no backend demo workpage query routes yet
-- no backend-owned workpage contract snapshots yet
+### What still does not exist after `TASK-0129`
+- no backend EOD demo workpage query route yet
+- no backend-generated EOD workpage snapshot yet
+- no frontend migration onto the HTTP-backed workpage repository seam yet
 - no artifact-linked workpage projection/submit backend yet
 - no logistics-family template/runtime for generalized workpage pages
 
@@ -146,15 +149,11 @@ After backend demo routes exist:
 - and loading/error/freshness surfaces should be explicit and tested.
 
 ## Testing order for the remaining batch
-### 1. Backend schedule route tests (`TASK-0129`)
-- prove `GET /api/v1/workpages/demo/schedule-v0` returns a stable workpage contract
-- export a backend-owned snapshot
-
-### 2. Backend EOD route tests (`TASK-0130`)
+### 1. Backend EOD route tests (`TASK-0130`)
 - prove `GET /api/v1/workpages/demo/eod-v0` returns a stable workpage contract
 - export a backend-owned snapshot
 
-### 3. Frontend migration tests (`TASK-0131`)
+### 2. Frontend migration tests (`TASK-0131`)
 - repository/query wiring
 - loading/error/freshness behavior
 - route regression under `/demo/logistics/workpages/*`
@@ -196,9 +195,8 @@ Update these too when the change affects them:
 - `fixtures/frontend_contracts/README.md`
 
 ## Codex execution order for the remaining batch
-1. `TASK-0129` - implement the backend schedule demo workpage query route + snapshot
-2. `TASK-0130` - implement the backend EOD demo workpage query route + snapshot
-3. `TASK-0131` - migrate the frontend pages to the HTTP-backed repository and harden UX/docs
+1. `TASK-0130` - implement the backend EOD demo workpage query route + snapshot
+2. `TASK-0131` - migrate the frontend pages to the HTTP-backed repository and harden UX/docs
 
 ## Red-team guardrails
 Before any code lands in the remaining batch, verify all of the following remain true:

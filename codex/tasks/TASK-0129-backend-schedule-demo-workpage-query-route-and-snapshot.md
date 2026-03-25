@@ -2,7 +2,7 @@
 id: TASK-0129
 epic: EPIC-120
 title: "Implement the backend schedule demo workpage query route and generated contract snapshot"
-status: TODO
+status: DONE
 owners: ["backend"]
 reviewers: ["frontend", "qa"]
 depends_on: ["TASK-0128"]
@@ -63,3 +63,26 @@ Add the first backend demo workpage query surface for the schedule page, backed 
 
 ## Notes / decisions
 Keep the schedule page explicitly on the weekly-planning side of the boundary. Selected-day preview is fine; semantically authoritative day-of dispatch editing is not.
+
+## Source files changed
+- `src/onetruth/application/services/logistics_workpages.py`
+- `src/onetruth/api/routes/workpages.py`
+- `src/onetruth/api/route_specs/workpages.py`
+- `src/onetruth/api/route_registry.py`
+- `tests/runtime/api/test_workpages_demo_schedule_contract.py`
+- `tests/runtime/helpers/frontend_snapshots.py`
+- `tests/unit/test_api_route_registry.py`
+- `fixtures/frontend_contracts/workpage_schedule_v0_state.json`
+- repo-native status/task-memory docs for `EPIC-120`
+
+## Verification run
+- `PYTHONPATH=src python3.11 -m pytest -q tests/unit/test_api_route_registry.py tests/runtime/api/test_workpages_demo_schedule_contract.py`
+- `PYTHONPATH=src python3.11 -m pytest -q tests/runtime/contracts/test_frontend_snapshot_fixtures.py`
+- `PYTHONPATH=src python3.11 scripts/export_frontend_snapshots.py --check`
+- `python3.11 scripts/validate_repo.py --schemas-only`
+
+## Completion notes
+- Added the first backend demo workpage query route at `GET /api/v1/workpages/demo/schedule-v0`.
+- Built the payload from the weekly actual-ops normalized example pack through the schedule-control bundle builder instead of serving the hand-authored workpage YAML.
+- Committed the first backend-generated workpage snapshot at `fixtures/frontend_contracts/workpage_schedule_v0_state.json`.
+- Left frontend repository migration and EOD backend query work for `TASK-0130` and `TASK-0131`.

@@ -4,16 +4,17 @@
 Stage 4 - Vertical Slice MVP (repo merged around one truth system)
 
 ## Current milestone
-Primary runtime/debug work remains the logistics weekly/live family. `TASK-0128` is now complete, so the immediate application-facing tranche inside `EPIC-120` has a frozen post-v0 workpage query contract, route family, and snapshot policy.
+Primary runtime/debug work remains the logistics weekly/live family. `TASK-0129` is now complete, so the immediate application-facing tranche inside `EPIC-120` now includes the first server-owned demo workpage query route and generated schedule snapshot on top of the `TASK-0128` contract freeze.
 
 Current implemented baseline:
 - `/demo/logistics/workpages/schedule-v0`
 - `/demo/logistics/workpages/eod-v0`
 - full-page routes under `AppShell`
 - frontend-local/example-backed workpage pages and tests
+- backend schedule demo workpage query route: `GET /api/v1/workpages/demo/schedule-v0`
+- backend-generated schedule workpage snapshot: `fixtures/frontend_contracts/workpage_schedule_v0_state.json`
 
-Immediate next application package (`EPIC-120`, post-`TASK-0128` batch):
-- `TASK-0129`: backend schedule demo workpage query route + generated snapshot
+Immediate next application package (`EPIC-120`, post-`TASK-0129` batch):
 - `TASK-0130`: backend EOD demo workpage query route + generated snapshot
 - `TASK-0131`: HTTP-backed frontend migration plus loading/error/freshness and shell regressions
 

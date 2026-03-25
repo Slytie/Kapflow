@@ -59,17 +59,17 @@
 - loading/error/freshness and route regression tests under `/demo/logistics/workpages/*`
 - doc/task-memory updates when route/status/capability truth changes
 
-## Current Repo Status (2026-03-25 post-`TASK-0128` contract freeze)
+## Current Repo Status (2026-03-25 post-`TASK-0129` schedule route)
 - `/demo/logistics/workpages/schedule-v0` and `/demo/logistics/workpages/eod-v0` exist as full-page routes.
-- The active pages are still frontend-local/example-backed after `TASK-0128`.
+- The active pages are still frontend-local/example-backed after `TASK-0129`.
 - The post-v0 workpage query contract, route family, and snapshot policy are now frozen in repo-native docs.
-- No backend demo workpage routes exist yet.
+- `GET /api/v1/workpages/demo/schedule-v0` now exists as the first backend demo workpage route.
+- `fixtures/frontend_contracts/workpage_schedule_v0_state.json` now exists as the first backend-generated workpage query snapshot.
 - No artifact-backed workpage path exists yet.
 - `fixtures/frontend_contracts/` remain backend-generated frontend API snapshots; future workpage query snapshots belong there too.
 - Workpage planning fixtures remain distinct human-authored artifacts under `fixtures/logistics/workpages/`.
 
 ## Planned next work after this phase
-- `TASK-0129` - backend schedule demo workpage query route + snapshot
 - `TASK-0130` - backend EOD demo workpage query route + snapshot
 - `TASK-0131` - HTTP-backed frontend repository migration and shell regressions
 - first artifact-backed EOD read/write path later, after the shared query seam is proven

@@ -289,7 +289,7 @@ Route-family decision:
   - `GET /api/v1/workpages/artifacts/{artifact_version_id}`
   - `GET /api/v1/workpages/workflow-runs/{workflow_run_id}/{workpage_kind}`
 
-Only the `demo` subfamily is currently frozen by repo-native docs. Backend implementation begins in `TASK-0129` and `TASK-0130`.
+Only the `demo` subfamily is currently frozen by repo-native docs. `schedule-v0` is implemented in `TASK-0129`, and `eod-v0` remains the next backend route in `TASK-0130`.
 
 Current planned demo workpage ids:
 - `schedule-v0`

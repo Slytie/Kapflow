@@ -20,10 +20,10 @@ They are generated from real runtime scenario states, not hand-authored.
 - `run_detail_state.json`
 - `timeline_state.json`
 - `official_outputs_pointers_state.json`
+- `workpage_schedule_v0_state.json`
 
 ## Reserved future workpage snapshots
-Once backend demo workpage routes exist, their generated query snapshots also belong here, for example:
-- `workpage_schedule_v0_state.json`
+Future backend demo workpage route snapshots also belong here, for example:
 - `workpage_eod_v0_state.json`
 
 These remain backend-owned API contract fixtures and are intentionally distinct from the human-authored planning/oracle fixtures under `fixtures/logistics/workpages/`.

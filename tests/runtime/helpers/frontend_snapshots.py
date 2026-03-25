@@ -37,6 +37,7 @@ SNAPSHOT_FILES = {
     "run_detail_state": "run_detail_state.json",
     "timeline_state": "timeline_state.json",
     "official_outputs_pointers_state": "official_outputs_pointers_state.json",
+    "workpage_schedule_v0_state": "workpage_schedule_v0_state.json",
 }
 
 ID_FIELDS = {
@@ -73,6 +74,7 @@ TIMESTAMP_FIELDS = {
     "event_time",
     "occurred_at",
     "recorded_at",
+    "generated_at",
 }
 
 EMBEDDED_ID_PATTERNS = {
@@ -148,6 +150,9 @@ def build_frontend_snapshots_payloads() -> dict[str, dict[str, Any]]:
             "timeline_state": _build_timeline_snapshot(harness=stage07_major),
             "official_outputs_pointers_state": _build_official_outputs_snapshot(
                 harness=stage07_major
+            ),
+            "workpage_schedule_v0_state": _build_schedule_workpage_snapshot(
+                tmp_path=base / "workpage_schedule_v0"
             ),
         }
         return snapshots
@@ -280,6 +285,29 @@ def _build_official_outputs_snapshot(harness: RuntimeScenarioHarness) -> dict[st
                 "pointers": pointers,
                 "artifact_versions": artifacts,
             },
+        }
+    )
+
+
+def _build_schedule_workpage_snapshot(*, tmp_path: Path) -> dict[str, Any]:
+    tmp_path.mkdir(parents=True, exist_ok=True)
+    client = RuntimeApiClient(
+        db_url=str(tmp_path / "workpage_schedule_v0.db"),
+        tenant_id="tenant-a",
+        domain_id="domain-x",
+        actor_id="human:frontend-snapshot-exporter",
+        actor_type="human",
+        actor_roles=["dispatch_supervisor", "operations_manager", "schedule_planner"],
+    )
+    payload = client.get("/api/v1/workpages/demo/schedule-v0").payload
+    return _stabilize(
+        {
+            "snapshot_id": "workpage_schedule_v0_state",
+            "source": {
+                "capture": "repo_example_demo_query",
+                "workpage_id": "schedule-v0",
+            },
+            "workpage_state": payload,
         }
     )
 
