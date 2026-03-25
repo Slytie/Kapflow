@@ -132,6 +132,7 @@ daily_demand_columns:
 - service_date
 - planned_route_count
 - on_call_target
+- excess_capacity_target
 - standard_slot_count
 - rescue_slot_count
 - overflow_slot_count
@@ -142,6 +143,7 @@ daily_demand_rows:
 - - '2026-03-22'
   - 16
   - 4
+  - 3
   - 16
   - 0
   - 0
@@ -151,6 +153,7 @@ daily_demand_rows:
 - - '2026-03-23'
   - 23
   - 4
+  - 3
   - 23
   - 0
   - 0
@@ -160,6 +163,7 @@ daily_demand_rows:
 - - '2026-03-24'
   - 20
   - 4
+  - 3
   - 20
   - 0
   - 0
@@ -169,6 +173,7 @@ daily_demand_rows:
 - - '2026-03-25'
   - 19
   - 4
+  - 3
   - 19
   - 0
   - 0
@@ -178,6 +183,7 @@ daily_demand_rows:
 - - '2026-03-26'
   - 21
   - 4
+  - 3
   - 21
   - 0
   - 0
@@ -187,6 +193,7 @@ daily_demand_rows:
 - - '2026-03-27'
   - 18
   - 4
+  - 3
   - 18
   - 0
   - 0
@@ -196,6 +203,7 @@ daily_demand_rows:
 - - '2026-03-28'
   - 17
   - 4
+  - 3
   - 17
   - 0
   - 0
@@ -208,6 +216,8 @@ planner_notes:
   intentionally excluded from this lab-normalized package.
 - The deterministic planner should cover required routes first, then fill up to four explicit
   On-Call buffer positions per day if legal driver-days remain.
+- After route coverage and On-Call filling, the deterministic planner should also fill up to
+  three excess-capacity baseline shifts per day if legal driver-days remain.
 - All routes are temporarily modeled as homogeneous cycle1_standard parcel-delivery
   XL-van slots until richer route mix data arrives.
 - This payload carries explicit Sunday-start operational scope even though the repo

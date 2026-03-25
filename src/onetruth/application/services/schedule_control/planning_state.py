@@ -276,6 +276,28 @@ class PartialWeeklyScheduleState:
     def record_repair_move(self, move: RepairMove) -> None:
         self.repair_moves.append(move)
 
+    def extend_route_slots(
+        self,
+        route_slots: Iterable[RouteSlotRequirement],
+    ) -> None:
+        updated = dict(self.route_slots_by_id)
+        for route_slot in route_slots:
+            updated[route_slot.route_slot_id] = route_slot
+        ordered = tuple(
+            sorted(
+                updated.values(),
+                key=lambda item: (
+                    item.service_date,
+                    item.station_code,
+                    item.service_area,
+                    item.shift_start,
+                    item.route_slot_id,
+                ),
+            )
+        )
+        self.route_slots_by_id = {item.route_slot_id: item for item in ordered}
+        self.ordered_route_slot_ids = tuple(item.route_slot_id for item in ordered)
+
     def clone(self) -> PartialWeeklyScheduleState:
         return PartialWeeklyScheduleState(
             ordered_route_slot_ids=self.ordered_route_slot_ids,

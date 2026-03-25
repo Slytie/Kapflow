@@ -23,10 +23,19 @@ class RouteSlotRequirement:
     source_kind: str = ""
     route_family: str = ""
     preferred_shift_band: str = ""
+    demand_kind: str = "route"
 
     @property
     def projected_minutes(self) -> int:
         return int(round(self.estimated_hours * 60.0))
+
+    @property
+    def is_on_call_demand(self) -> bool:
+        return str(self.demand_kind or "").strip().lower() == "on_call"
+
+    @property
+    def is_excess_capacity_demand(self) -> bool:
+        return str(self.demand_kind or "").strip().lower() == "excess_capacity"
 
 
 def parse_route_slot_requirements(*, columns: list[str], rows: Iterable[Any]) -> tuple[RouteSlotRequirement, ...]:
@@ -56,6 +65,7 @@ def parse_route_slot_requirements(*, columns: list[str], rows: Iterable[Any]) ->
                 source_kind=str(raw.get("source_kind") or "").strip(),
                 route_family=_route_family_from_row(raw),
                 preferred_shift_band=_preferred_shift_band_from_row(raw),
+                demand_kind=str(raw.get("demand_kind") or "route").strip() or "route",
             )
         )
 
@@ -110,6 +120,7 @@ def expand_route_slot_requirements(
                     source_kind=slot.source_kind,
                     route_family=slot.route_family,
                     preferred_shift_band=slot.preferred_shift_band,
+                    demand_kind=slot.demand_kind,
                 )
             )
     return tuple(expanded)

@@ -23,6 +23,7 @@ MAX_IMPROVEMENT_MOVES_PER_ITERATION = 2
 MAX_IMPROVEMENT_FOCUS_ASSIGNMENTS = 16
 MAX_IMPROVEMENT_SWAP_PARTNERS = 3
 UNCOVERED_ROUTE_SLOT_PENALTY = 2.5
+ZERO_SHIFT_DRIVER_PENALTY = 1.0
 MIN_MEANINGFUL_SOFT_DELTA = 0.015
 
 
@@ -56,6 +57,7 @@ class IterationExecutionResult:
 class ScheduleQualitySnapshot:
     assigned_route_slots: int
     uncovered_route_slots: int
+    zero_shift_driver_count: int
     soft_objective_total: float
     stability_total: float
     target_shift_gap_total: float
@@ -141,7 +143,7 @@ def _execute_baseline_iteration(
     batch_id = f"{bundle.bundle_id}:iter-{iteration_index:02d}"
     candidate_start = len(candidate_matrix)
     coverage_before = _coverage_summary(schedule_state)
-    quality_before = _schedule_quality_snapshot(schedule_state)
+    quality_before = _schedule_quality_snapshot(schedule_state=schedule_state, bundle=bundle)
 
     uncovered_slots = _allocate_batch(
         bundle=bundle,
@@ -184,7 +186,7 @@ def _execute_baseline_iteration(
         )
 
     coverage_after = _coverage_summary(schedule_state)
-    quality_after = _schedule_quality_snapshot(schedule_state)
+    quality_after = _schedule_quality_snapshot(schedule_state=schedule_state, bundle=bundle)
     quality_delta = _quality_delta(before=quality_before, after=quality_after)
     batch_route_slot_ids = tuple(slot.route_slot_id for slot in batch_slots)
     assigned_route_slot_ids = tuple(
@@ -279,7 +281,7 @@ def _execute_improvement_iteration(
     candidate_start = len(candidate_matrix)
     repair_count_before = len(schedule_state.repair_moves)
     coverage_before = _coverage_summary(schedule_state)
-    quality_before = _schedule_quality_snapshot(schedule_state)
+    quality_before = _schedule_quality_snapshot(schedule_state=schedule_state, bundle=bundle)
     rejected_reasons: list[str] = []
     blocked_route_slot_ids: set[str] = set()
     if schedule_state.iteration_summaries:
@@ -359,7 +361,7 @@ def _execute_improvement_iteration(
         phase="improvement",
         batch_size=len(affected_route_slot_ids),
     )
-    quality_after = _schedule_quality_snapshot(schedule_state)
+    quality_after = _schedule_quality_snapshot(schedule_state=schedule_state, bundle=bundle)
     quality_delta = _quality_delta(before=quality_before, after=quality_after)
     summary = IterationSummary(
         iteration_index=iteration_index,
@@ -510,7 +512,7 @@ def _best_repair_candidate(
         batch_id=batch_id,
     )
     best_candidate: MoveProposal | None = None
-    quality_before = _schedule_quality_snapshot(schedule_state)
+    quality_before = _schedule_quality_snapshot(schedule_state=schedule_state, bundle=bundle)
 
     for assignment in local_assignments[:MAX_LOCAL_REPAIR_CANDIDATES]:
         exclusion = {assignment.route_slot_id}
@@ -583,7 +585,7 @@ def _best_repair_candidate(
         temp_state = schedule_state.clone()
         temp_state.record_assignment(replacement_decision)
         temp_state.record_assignment(filled_decision)
-        quality_after = _schedule_quality_snapshot(temp_state)
+        quality_after = _schedule_quality_snapshot(schedule_state=temp_state, bundle=bundle)
         delta = _quality_delta(before=quality_before, after=quality_after)
         if not _meaningful_improvement(delta):
             continue
@@ -644,7 +646,7 @@ def _best_improvement_move(
     pressure_group_id: str,
     blocked_route_slot_ids: set[str],
 ) -> tuple[MoveProposal | None, list[str]]:
-    quality_before = _schedule_quality_snapshot(schedule_state)
+    quality_before = _schedule_quality_snapshot(schedule_state=schedule_state, bundle=bundle)
     assignments = _improvement_focus_assignments(
         schedule_state=schedule_state,
         blocked_route_slot_ids=blocked_route_slot_ids,
@@ -748,8 +750,10 @@ def _best_direct_reassignment(
         )
         temp_state = schedule_state.clone()
         temp_state.record_assignment(decision)
-        quality_after = _schedule_quality_snapshot(temp_state)
+        quality_after = _schedule_quality_snapshot(schedule_state=temp_state, bundle=bundle)
         delta = _quality_delta(before=quality_before, after=quality_after)
+        if delta["zero_shift_driver_delta"] < 0:
+            continue
         if delta["soft_objective_delta"] < MIN_MEANINGFUL_SOFT_DELTA:
             continue
         move = RepairMove(
@@ -872,8 +876,10 @@ def _best_swap_reassignment(
         temp_state = schedule_state.clone()
         temp_state.record_assignment(left_decision)
         temp_state.record_assignment(right_decision)
-        quality_after = _schedule_quality_snapshot(temp_state)
+        quality_after = _schedule_quality_snapshot(schedule_state=temp_state, bundle=bundle)
         delta = _quality_delta(before=quality_before, after=quality_after)
+        if delta["zero_shift_driver_delta"] < 0:
+            continue
         if delta["soft_objective_delta"] < MIN_MEANINGFUL_SOFT_DELTA:
             continue
         move = RepairMove(
@@ -1313,15 +1319,27 @@ def _coverage_summary_with_pending_iteration(
 
 
 def _schedule_quality_snapshot(
+    *,
     schedule_state: PartialWeeklyScheduleState,
+    bundle: WeeklyScheduleControlBundle,
 ) -> ScheduleQualitySnapshot:
     assigned = list(schedule_state.assignments_by_slot.values())
     uncovered = len(schedule_state.uncovered_route_slot_ids()) + len(schedule_state.remaining_route_slots())
+    used_driver_ids = {
+        item.candidate_driver_id for item in assigned if str(item.candidate_driver_id or "").strip()
+    }
+    zero_shift_driver_count = max(len(bundle.drivers) - len(used_driver_ids), 0)
     soft_total = sum(item.soft_score_total for item in assigned)
     return ScheduleQualitySnapshot(
         assigned_route_slots=len(assigned),
         uncovered_route_slots=uncovered,
-        soft_objective_total=round(soft_total - (uncovered * UNCOVERED_ROUTE_SLOT_PENALTY), 6),
+        zero_shift_driver_count=zero_shift_driver_count,
+        soft_objective_total=round(
+            soft_total
+            - (uncovered * UNCOVERED_ROUTE_SLOT_PENALTY)
+            - (zero_shift_driver_count * ZERO_SHIFT_DRIVER_PENALTY),
+            6,
+        ),
         stability_total=round(sum(item.continuity_score for item in assigned), 6),
         target_shift_gap_total=round(sum(item.target_shift_gap for item in assigned), 6),
         preference_fit_total=round(sum(item.preference_fit for item in assigned), 6),
@@ -1335,6 +1353,7 @@ def _quality_delta(
 ) -> dict[str, float]:
     return {
         "coverage_delta": before.uncovered_route_slots - after.uncovered_route_slots,
+        "zero_shift_driver_delta": before.zero_shift_driver_count - after.zero_shift_driver_count,
         "soft_objective_delta": round(after.soft_objective_total - before.soft_objective_total, 6),
         "stability_delta": round(after.stability_total - before.stability_total, 6),
         "target_shift_gap_delta": round(after.target_shift_gap_total - before.target_shift_gap_total, 6),
@@ -1345,6 +1364,7 @@ def _quality_delta(
 def _meaningful_improvement(delta: dict[str, float]) -> bool:
     return bool(
         delta["coverage_delta"] > 0
+        or delta["zero_shift_driver_delta"] > 0
         or delta["soft_objective_delta"] >= MIN_MEANINGFUL_SOFT_DELTA
         or delta["preference_fit_delta"] >= MIN_MEANINGFUL_SOFT_DELTA
         or delta["stability_delta"] >= MIN_MEANINGFUL_SOFT_DELTA
@@ -1354,6 +1374,7 @@ def _meaningful_improvement(delta: dict[str, float]) -> bool:
 def _proposal_sort_key(proposal: MoveProposal) -> tuple[float, float, float, str]:
     move = proposal.move
     return (
+        -float(proposal.quality_after.zero_shift_driver_count),
         move.soft_objective_delta,
         move.preference_fit_delta,
         move.stability_delta,

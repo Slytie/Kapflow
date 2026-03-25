@@ -614,3 +614,8 @@ Record any decisions made since the last session so a fresh Codex run can rehydr
 - Dependency-localization decision: `src/onetruth/api/shared_env_principal_resolver.py` now imports `PyJWT` only when the configured shared-env JWT resolver path is actually activated.
 - Compatibility decision: `from onetruth.api import app`, `from onetruth.api import create_app`, `from onetruth.api.main import app`, `from onetruth.api.main import create_app`, and `onetruth.api.main:app` remain supported surfaces.
 - Scope decision: this task did not change boundary-profile defaults, attested-principal claim mapping, trusted-header rules, route behavior, or error payload semantics for valid configured runtimes.
+
+## 2026-03-24 (Minimal on-call buffer rerun)
+- Planner decision: Stage04 on-call demand is now allocated through the same deterministic candidate-generation, hard-validation, and ranking path as route demand, with an internal demand-kind marker rather than authored fixture-schema changes.
+- Fairness decision: post-coverage soft-improvement moves now account for zero-shift drivers so the deterministic allocator does not trade away a driver's only shift to gain a small soft-score bump.
+- Runtime-budget decision: the authored weekly Stage04 stop policy now allows `28` tool turns so the actual-ops mock/runtime slice can complete the longer deterministic rerun, finalize outputs, and return a final response without exhausting the control-plane budget.

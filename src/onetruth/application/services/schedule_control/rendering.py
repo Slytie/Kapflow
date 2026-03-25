@@ -41,6 +41,7 @@ def render_stage04_input_bundle(
                     "service_date": item.service_date,
                     "planned_route_count": item.planned_route_count,
                     "on_call_target": item.on_call_target,
+                    "excess_capacity_target": item.excess_capacity_target,
                     "standard_slot_count": item.standard_slot_count,
                     "standard_early_slot_count": item.standard_early_slot_count,
                     "standard_late_slot_count": item.standard_late_slot_count,
@@ -106,6 +107,8 @@ def render_stage04_candidate_delta(
     bundle: WeeklyScheduleControlBundle,
     selected_candidates: list[dict[str, Any]],
     reserve_rows: list[dict[str, Any]],
+    excess_capacity_rows: list[dict[str, Any]],
+    excess_capacity_summary: dict[str, Any],
     iteration_summaries: list[IterationSummary],
     repair_moves: list[RepairMove],
     coverage_summary: dict[str, Any],
@@ -117,7 +120,7 @@ def render_stage04_candidate_delta(
         repair_moves=repair_moves,
     )
     contract_change_summary = summarize_contract_change_metrics(
-        [*selected_candidates, *reserve_rows]
+        [*selected_candidates, *excess_capacity_rows, *reserve_rows]
     )
     columns = [
         "candidate_delta_id",
@@ -149,14 +152,14 @@ def render_stage04_candidate_delta(
         "coverage_pressure",
     ]
     rows: list[list[Any]] = []
-    for selected in selected_candidates:
+    for selected in [*selected_candidates, *excess_capacity_rows]:
         route_slot_id = str(selected.get("route_slot_id") or "")
         rows.append(
             [
                 candidate_delta_id,
                 route_slot_id,
                 str(selected.get("service_date") or ""),
-                _route_id_from_slot(route_slot_id),
+                str(selected.get("route_id") or _route_id_from_slot(route_slot_id)),
                 str(selected.get("candidate_driver_id") or ""),
                 str(selected.get("assignment_action") or "assign"),
                 str(selected.get("rationale_code") or ""),
@@ -190,6 +193,7 @@ def render_stage04_candidate_delta(
         "coverage_summary": coverage_summary,
         "contract_change_summary": contract_change_summary,
         "reserve_rows": [_reserve_output_row(row) for row in reserve_rows],
+        "excess_capacity_summary": dict(excess_capacity_summary),
         "iteration_deltas": [item.to_payload() for item in iteration_summaries],
         "repair_moves": [item.to_payload() for item in repair_moves],
         "reallocation_moves": [item.to_payload() for item in repair_moves],
@@ -202,6 +206,8 @@ def render_stage04_validation_summary(
     selected_candidates: list[dict[str, Any]],
     reserve_rows: list[dict[str, Any]],
     reserve_summary: dict[str, Any],
+    excess_capacity_rows: list[dict[str, Any]],
+    excess_capacity_summary: dict[str, Any],
     candidate_delta_id: str,
     iteration_summaries: list[IterationSummary],
     repair_moves: list[RepairMove],
@@ -213,6 +219,8 @@ def render_stage04_validation_summary(
         selected_candidates=selected_candidates,
         reserve_rows=reserve_rows,
         reserve_summary=reserve_summary,
+        excess_capacity_rows=excess_capacity_rows,
+        excess_capacity_summary=excess_capacity_summary,
         soft_score_totals=soft_totals,
         iteration_summaries=iteration_summaries,
         repair_moves=repair_moves,
@@ -227,6 +235,7 @@ def render_stage04_draft_weekly_schedule_workbook(
     bundle: WeeklyScheduleControlBundle,
     selected_candidates: list[dict[str, Any]],
     reserve_rows: list[dict[str, Any]],
+    excess_capacity_rows: list[dict[str, Any]],
     candidate_delta_id: str,
     iteration_summaries: list[IterationSummary],
 ) -> dict[str, Any]:
@@ -248,7 +257,7 @@ def render_stage04_draft_weekly_schedule_workbook(
         "previous_week_stability",
     ]
     rows: list[list[Any]] = []
-    for selected in selected_candidates:
+    for selected in [*selected_candidates, *excess_capacity_rows]:
         rows.append(
             [
                 str(selected.get("service_date") or ""),
@@ -284,17 +293,20 @@ def render_stage04_draft_weekly_schedule_doc(
     selected_candidates: list[dict[str, Any]],
     reserve_rows: list[dict[str, Any]],
     reserve_summary: dict[str, Any],
+    excess_capacity_rows: list[dict[str, Any]],
+    excess_capacity_summary: dict[str, Any],
     iteration_summaries: list[IterationSummary],
     coverage_summary: dict[str, Any],
 ) -> dict[str, Any]:
     summary = validation_summary.get("summary") if isinstance(validation_summary, dict) else {}
     contract_change_summary = summarize_contract_change_metrics(
-        [*selected_candidates, *reserve_rows]
+        [*selected_candidates, *excess_capacity_rows, *reserve_rows]
     )
     return {
         "summary": {
             "bundle_id": bundle.bundle_id,
             "selected_route_slot_count": len(selected_candidates),
+            "selected_excess_capacity_count": len(excess_capacity_rows),
             "selected_on_call_count": len(reserve_rows),
             "hard_rule_result": str(summary.get("hard_rule_result") or "unknown"),
             "recommended_action": str(summary.get("recommended_action") or "review_required"),
@@ -308,6 +320,7 @@ def render_stage04_draft_weekly_schedule_doc(
             "phase_counts": dict((coverage_summary.get("phase_counts") or {})),
             "coverage_summary": coverage_summary,
             "reserve_summary": dict(reserve_summary),
+            "excess_capacity_summary": dict(excess_capacity_summary),
             **contract_change_summary,
         },
         "selected_assignments": [
@@ -327,7 +340,7 @@ def render_stage04_draft_weekly_schedule_doc(
                     4,
                 ),
             }
-            for selected in selected_candidates
+            for selected in [*selected_candidates, *excess_capacity_rows]
             if str(selected.get("assignment_action") or "assign") == "assign"
         ],
         "selected_on_call_rows": [_reserve_output_row(row) for row in reserve_rows],

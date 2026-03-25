@@ -184,11 +184,19 @@ def _build_analysis_payload(
         if isinstance(row, dict)
     ]
     reserve_summary = dict(validation_summary.get("reserve_summary") or {})
+    excess_capacity_summary = dict(validation_summary.get("excess_capacity_summary") or {})
     new_agreement_rows = [
         _selected_assignment_row(dict(row))
         for row in list(validation_summary.get("new_agreement_rows") or [])
         if isinstance(row, dict)
     ]
+    new_agreement_rows.sort(
+        key=lambda row: (
+            str(row["service_date"]),
+            str(row["assigned_driver_id"]),
+            str(row["route_slot_id"]),
+        )
+    )
     availability_state_counts = {
         state: 0 for state in _availability_state_order(selected_assignment_rows)
     }
@@ -243,6 +251,7 @@ def _build_analysis_payload(
         ),
         "warning_count": len(validation_summary.get("warnings") or []),
         "reserve_summary": reserve_summary,
+        "excess_capacity_summary": excess_capacity_summary,
         "baseline_template_state_counts": baseline_template_state_counts,
         "baseline_template_state_order": list(
             _baseline_template_state_order(selected_assignment_rows)
@@ -273,7 +282,9 @@ def _selected_assignment_row(row: dict[str, Any]) -> dict[str, Any]:
         "availability_state": str(row.get("availability_state") or ""),
         "baseline_template_state": str(row.get("baseline_template_state") or ""),
         "planned_driver_day_state": str(row.get("planned_driver_day_state") or ""),
-        "new_agreement_required": bool(row.get("new_agreement_required")),
+        "new_agreement_required": bool(
+            row.get("new_agreement_required") or row.get("new_agreement_trigger_reason")
+        ),
         "new_agreement_trigger_reason": str(row.get("new_agreement_trigger_reason") or ""),
         "template_state_preservation_fit": row.get("template_state_preservation_fit"),
         "iteration_index": int(row.get("iteration_index") or 0),
@@ -379,6 +390,31 @@ def _build_bundle_readme(
         if count <= 0:
             continue
         lines.append(f"- `{state}`: `{count}`")
+
+    lines.extend(
+        [
+            "",
+            "## Excess-Capacity Baseline Shift Summary",
+            "",
+        ]
+    )
+    excess_capacity_summary = dict(analysis.get("excess_capacity_summary") or {})
+    excess_target_by_service_date = dict(
+        excess_capacity_summary.get("excess_capacity_target_by_service_date") or {}
+    )
+    excess_filled_by_service_date = dict(
+        excess_capacity_summary.get("selected_excess_capacity_by_service_date") or {}
+    )
+    lines.append(
+        "- Excess-capacity baseline shifts: "
+        f"`{excess_capacity_summary.get('selected_excess_capacity_total', 0)}` filled / "
+        f"`{excess_capacity_summary.get('target_excess_capacity_total', 0)}` targeted"
+    )
+    for service_date in sorted(excess_target_by_service_date):
+        lines.append(
+            f"- `{service_date}`: `{excess_filled_by_service_date.get(service_date, 0)}` filled / "
+            f"`{excess_target_by_service_date.get(service_date, 0)}` targeted"
+        )
 
     lines.extend(
         [

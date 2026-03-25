@@ -35,6 +35,7 @@ from onetruth.application.services.schedule_control import (
     build_weekly_schedule_control_bundle,
     execute_next_weekly_allocation_iteration,
     expand_route_slot_requirements,
+    select_on_call_reserve_rows,
 )
 from onetruth.application.services.schedule_control.contract_minimization import (
     summarize_contract_change_metrics,
@@ -1054,10 +1055,21 @@ class _Stage04DeterministicTooling:
         return self._cached_finalized_build_result
 
     def _render_current_outputs(self) -> dict[str, Any]:
+        selected_candidates = [item.to_row() for item in self.schedule_state.final_decisions()]
+        reserve_result = select_on_call_reserve_rows(
+            bundle=self.bundle,
+            selected_candidates=selected_candidates,
+            iteration_index=len(self.schedule_state.iteration_summaries) + 1,
+            schedule_state=self.schedule_state,
+        )
         rendered = build_stage04_deterministic_outputs(
             bundle=self.bundle,
             candidate_matrix=list(self.candidate_matrix),
-            selected_candidates=[item.to_row() for item in self.schedule_state.final_decisions()],
+            selected_candidates=selected_candidates,
+            reserve_rows=reserve_result.reserve_rows,
+            reserve_summary=reserve_result.reserve_summary,
+            excess_capacity_rows=reserve_result.excess_capacity_rows,
+            excess_capacity_summary=reserve_result.excess_capacity_summary,
             iteration_summaries=list(self.schedule_state.iteration_summaries),
             repair_moves=list(self.schedule_state.repair_moves),
             coverage_summary=self._coverage_summary(),
@@ -1065,10 +1077,15 @@ class _Stage04DeterministicTooling:
         return {
             "bundle_id": rendered.bundle.bundle_id,
             "candidate_count": len(rendered.candidate_matrix),
-            "selected_candidate_count": len(rendered.selected_candidates),
+            "selected_candidate_count": int(
+                (rendered.coverage_summary.get("assigned_route_slots") or 0)
+            ),
+            "selected_excess_capacity_count": len(rendered.excess_capacity_rows),
             "selected_candidates": rendered.selected_candidates,
             "reserve_rows": rendered.reserve_rows,
             "reserve_summary": rendered.reserve_summary,
+            "excess_capacity_rows": rendered.excess_capacity_rows,
+            "excess_capacity_summary": rendered.excess_capacity_summary,
             "iteration_summaries": rendered.iteration_summaries,
             "repair_moves": rendered.repair_moves,
             "coverage_summary": rendered.coverage_summary,
@@ -1192,16 +1209,20 @@ class _Stage04DeterministicTooling:
             "bundle_id": build_result["bundle_id"],
             "candidate_count": build_result["candidate_count"],
             "selected_candidate_count": build_result["selected_candidate_count"],
+            "selected_excess_capacity_count": len(build_result.get("excess_capacity_rows") or []),
             "selected_on_call_count": len(build_result.get("reserve_rows") or []),
             "coverage_summary": build_result["coverage_summary"],
             "reserve_summary": dict(build_result.get("reserve_summary") or {}),
+            "excess_capacity_summary": dict(build_result.get("excess_capacity_summary") or {}),
             "contract_change_summary": summarize_contract_change_metrics(
                 [
                     *(build_result.get("selected_candidates") or []),
+                    *(build_result.get("excess_capacity_rows") or []),
                     *(build_result.get("reserve_rows") or []),
                 ]
             ),
             "selected_candidates": build_result["selected_candidates"],
+            "selected_excess_capacity_rows": list(build_result.get("excess_capacity_rows") or []),
             "selected_on_call_rows": list(build_result.get("reserve_rows") or []),
             "artifacts": {
                 key: {
@@ -1589,6 +1610,11 @@ def _compact_validation_summary(validation_summary: Any) -> dict[str, Any] | Non
                 if isinstance(summary.get("reserve_summary"), dict)
                 else None
             ),
+            "excess_capacity_summary": (
+                dict(summary.get("excess_capacity_summary") or {})
+                if isinstance(summary.get("excess_capacity_summary"), dict)
+                else None
+            ),
             "soft_score_totals": (
                 dict(soft_score_totals) if isinstance(soft_score_totals, dict) else None
             ),
@@ -1620,11 +1646,17 @@ def _compact_stage04_build_result(stage04_build_result: Any) -> dict[str, Any] |
         "bundle_id": stage04_build_result.get("bundle_id"),
         "candidate_count": stage04_build_result.get("candidate_count"),
         "selected_candidate_count": stage04_build_result.get("selected_candidate_count"),
+        "selected_excess_capacity_count": len(stage04_build_result.get("excess_capacity_rows") or []),
         "selected_on_call_count": len(stage04_build_result.get("reserve_rows") or []),
         "coverage_summary": _compact_coverage_summary(stage04_build_result.get("coverage_summary")),
         "reserve_summary": (
             dict(stage04_build_result.get("reserve_summary") or {})
             if isinstance(stage04_build_result.get("reserve_summary"), dict)
+            else None
+        ),
+        "excess_capacity_summary": (
+            dict(stage04_build_result.get("excess_capacity_summary") or {})
+            if isinstance(stage04_build_result.get("excess_capacity_summary"), dict)
             else None
         ),
         "contract_change_summary": _compact_contract_change_summary(

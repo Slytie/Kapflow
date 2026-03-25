@@ -40,6 +40,8 @@ notes:
   staffing patterns, and richer route-shape details remain out of scope for this package.
 - This package also carries an explicit On-Call buffer target of four legal reserve positions
   per day after route coverage, without inflating route counts.
+- This package now also carries an explicit excess-capacity baseline target of three legal
+  scheduled shifts per day after route coverage and On-Call filling, without inflating route counts.
 - All non-route-total pilot inputs are intentionally unchanged from weekly_stage04_actual_ops_lab_v1.
 - The operational service week is Sunday through Saturday, while the repo PlanningWeekID
   remains ISO Monday through Sunday; this package keeps both values explicit for review.

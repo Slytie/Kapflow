@@ -331,6 +331,44 @@ def test_build_weekly_schedule_control_bundle_resolves_actual_ops_explicit_scope
     assert bundle.availability_by_driver["A11X1NH2FPH5RV"].previous_week_states[-1].service_date == "2026-03-21"
     assert len(bundle.drivers) == 51
     assert sum(item.planned_route_count for item in bundle.daily_demand_by_service_date.values()) == 134
+    assert {
+        service_date: item.planned_route_count
+        for service_date, item in bundle.daily_demand_by_service_date.items()
+    } == {
+        "2026-03-22": 16,
+        "2026-03-23": 23,
+        "2026-03-24": 20,
+        "2026-03-25": 19,
+        "2026-03-26": 21,
+        "2026-03-27": 18,
+        "2026-03-28": 17,
+    }
+    assert {
+        service_date: item.on_call_target
+        for service_date, item in bundle.daily_demand_by_service_date.items()
+    } == {
+        "2026-03-22": 4,
+        "2026-03-23": 4,
+        "2026-03-24": 4,
+        "2026-03-25": 4,
+        "2026-03-26": 4,
+        "2026-03-27": 4,
+        "2026-03-28": 4,
+    }
+    assert sum(item.on_call_target for item in bundle.daily_demand_by_service_date.values()) == 28
+    assert {
+        service_date: item.excess_capacity_target
+        for service_date, item in bundle.daily_demand_by_service_date.items()
+    } == {
+        "2026-03-22": 3,
+        "2026-03-23": 3,
+        "2026-03-24": 3,
+        "2026-03-25": 3,
+        "2026-03-26": 3,
+        "2026-03-27": 3,
+        "2026-03-28": 3,
+    }
+    assert sum(item.excess_capacity_target for item in bundle.daily_demand_by_service_date.values()) == 21
 
 
 def test_build_weekly_schedule_control_bundle_rejects_conflicting_explicit_scope_bounds() -> None:

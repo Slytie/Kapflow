@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections import Counter
 import json
 import os
 from pathlib import Path
@@ -137,6 +138,31 @@ def _contains_key(value: object, target_key: str) -> bool:
     if isinstance(value, list):
         return any(_contains_key(item, target_key) for item in value)
     return False
+
+
+def _driver_shift_distribution(
+    *,
+    candidate_delta: dict[str, object],
+    input_bundle: dict[str, object],
+) -> tuple[Counter[str], dict[str, dict[str, object]], list[str]]:
+    columns = [str(column) for column in candidate_delta["columns"]]
+    shift_counter: Counter[str] = Counter()
+    for row in candidate_delta["rows"]:
+        normalized = dict(zip(columns, row))
+        driver_id = str(normalized.get("assigned_driver_id") or "")
+        if driver_id:
+            shift_counter[driver_id] += 1
+    for row in candidate_delta.get("reserve_rows") or []:
+        driver_id = str(row.get("assigned_driver_id") or row.get("candidate_driver_id") or "")
+        if driver_id:
+            shift_counter[driver_id] += 1
+
+    profiles = {
+        str(profile["driver_id"]): dict(profile)
+        for profile in input_bundle["bundle"]["driver_profiles"]
+    }
+    zero_shift_driver_ids = sorted(set(profiles) - set(shift_counter))
+    return shift_counter, profiles, zero_shift_driver_ids
 
 
 def test_weekly_stage04_pilot_mock_emits_canonical_execution_and_evidence_packet(
@@ -524,10 +550,7 @@ def test_actual_ops_weekly_stage04_pilot_exports_expected_output_kinds_and_full_
         assert ids
     assert packet["stage04_analysis"]["coverage_summary"]["assigned_route_slots"] == 134
     assert packet["stage04_analysis"]["coverage_summary"]["uncovered_route_slots"] == 0
-    assert (
-        packet["stage04_analysis"]["contract_change_summary"]["new_agreement_required_count"]
-        <= 10
-    )
+    assert packet["stage04_analysis"]["excess_capacity_summary"]["selected_excess_capacity_total"] == 21
     assert len(
         packet["stage04_analysis"]["contract_change_summary"]["new_agreement_rows"]
     ) == packet["stage04_analysis"]["contract_change_summary"]["new_agreement_required_count"]
@@ -538,6 +561,13 @@ def test_actual_ops_weekly_stage04_pilot_exports_expected_output_kinds_and_full_
             db_url,
             workflow_run_id,
             "planning.candidate_schedule_delta.workbook",
+        )[0]
+    )
+    input_bundle = _load_artifact_payload(
+        _artifact_rows_for_kind(
+            db_url,
+            workflow_run_id,
+            "planning.input_bundle.doc",
         )[0]
     )
     validation_summary = _load_artifact_payload(
@@ -555,14 +585,61 @@ def test_actual_ops_weekly_stage04_pilot_exports_expected_output_kinds_and_full_
         )[0]
     )
     new_agreement_idx = candidate_delta["columns"].index("new_agreement_required")
+    shift_counter, profiles, zero_shift_driver_ids = _driver_shift_distribution(
+        candidate_delta=candidate_delta,
+        input_bundle=input_bundle,
+    )
+    drivers_below_three = {
+        driver_id: count for driver_id, count in shift_counter.items() if count < 3
+    }
 
     assert "baseline_template_state" in candidate_delta["columns"]
     assert candidate_delta["coverage_summary"]["assigned_route_slots"] == 134
-    assert validation_summary["new_agreement_required_count"] <= 10
-    assert sum(1 for row in candidate_delta["rows"] if bool(row[new_agreement_idx])) == validation_summary[
-        "new_agreement_required_count"
-    ]
+    assert validation_summary["reserve_summary"]["target_on_call_total"] == 28
+    assert validation_summary["reserve_summary"]["selected_on_call_total"] == 28
+    assert all(
+        count == 4
+        for count in validation_summary["reserve_summary"]["selected_on_call_by_service_date"].values()
+    )
+    assert all(
+        count == 0
+        for count in validation_summary["reserve_summary"]["unmet_on_call_target_by_service_date"].values()
+    )
+    assert validation_summary["excess_capacity_summary"]["target_excess_capacity_total"] == 21
+    assert validation_summary["excess_capacity_summary"]["selected_excess_capacity_total"] == 21
+    assert all(
+        count == 3
+        for count in validation_summary["excess_capacity_summary"][
+            "selected_excess_capacity_by_service_date"
+        ].values()
+    )
+    assert all(
+        count == 0
+        for count in validation_summary["excess_capacity_summary"][
+            "unmet_excess_capacity_target_by_service_date"
+        ].values()
+    )
+    assert any(
+        key.endswith("_to_on_call")
+        for key in validation_summary["new_agreement_transition_counts"]
+    )
+    route_new_agreement_count = sum(
+        1 for row in candidate_delta["rows"] if bool(row[new_agreement_idx])
+    )
+    reserve_new_agreement_count = sum(
+        1 for row in candidate_delta.get("reserve_rows") or [] if bool(row.get("new_agreement_required"))
+    )
+    assert (
+        route_new_agreement_count + reserve_new_agreement_count
+        == validation_summary["new_agreement_required_count"]
+    )
     assert len(candidate_delta["iteration_deltas"]) == len(packet["stage04_analysis"]["iterations"])
     assert draft_doc["summary"]["new_agreement_required_count"] == validation_summary[
         "new_agreement_required_count"
     ]
+    assert draft_doc["summary"]["selected_excess_capacity_count"] == 21
+    assert zero_shift_driver_ids == []
+    assert all(
+        profiles[driver_id]["policy_signal"]["max_shifts_per_week"] < 3
+        for driver_id in drivers_below_three
+    )

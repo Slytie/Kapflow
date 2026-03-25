@@ -24,6 +24,7 @@ expected_planner_posture:
   primary_tradeoffs:
   - favor planned Cycle 1 days over blank-template reserve days
   - fill up to four explicit On-Call buffer positions per day only after route coverage is complete
+  - fill up to three excess-capacity baseline shifts per day only after route coverage and On-Call filling
   - respect raw-request-as-unavailable lab assumptions on requested dates
   - use previous-week activity and fairness to rank legal alternatives
   - treat all routes as homogeneous until route-mix detail arrives

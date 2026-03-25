@@ -82,7 +82,7 @@ profile:
     - planning.draft_weekly_schedule.workbook
     decision_refs: []
     stop_rules:
-      max_tool_calls: 24
+      max_tool_calls: 28
       no_progress_ticks: 3
       on_exhaustion: escalate
     projections:

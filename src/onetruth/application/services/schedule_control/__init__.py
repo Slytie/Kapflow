@@ -46,6 +46,8 @@ class Stage04DeterministicBuildResult:
     selected_candidates: list[dict[str, Any]]
     reserve_rows: list[dict[str, Any]]
     reserve_summary: dict[str, Any]
+    excess_capacity_rows: list[dict[str, Any]]
+    excess_capacity_summary: dict[str, Any]
     iteration_summaries: list[dict[str, Any]]
     repair_moves: list[dict[str, Any]]
     coverage_summary: dict[str, Any]
@@ -72,6 +74,8 @@ def run_weekly_stage04_deterministic_build(
         selected_candidates=allocation_result.selected_candidates,
         reserve_rows=reserve_result.reserve_rows,
         reserve_summary=reserve_result.reserve_summary,
+        excess_capacity_rows=reserve_result.excess_capacity_rows,
+        excess_capacity_summary=reserve_result.excess_capacity_summary,
         iteration_summaries=allocation_result.iteration_summaries,
         repair_moves=allocation_result.repair_moves,
         coverage_summary=allocation_result.coverage_summary,
@@ -85,17 +89,23 @@ def build_stage04_deterministic_outputs(
     selected_candidates: list[dict[str, Any]],
     reserve_rows: list[dict[str, Any]] | None = None,
     reserve_summary: dict[str, Any] | None = None,
+    excess_capacity_rows: list[dict[str, Any]] | None = None,
+    excess_capacity_summary: dict[str, Any] | None = None,
     iteration_summaries: list[IterationSummary],
     repair_moves: list[RepairMove],
     coverage_summary: dict[str, Any],
 ) -> Stage04DeterministicBuildResult:
     resolved_reserve_rows = list(reserve_rows or [])
     resolved_reserve_summary = dict(reserve_summary or {})
+    resolved_excess_capacity_rows = list(excess_capacity_rows or [])
+    resolved_excess_capacity_summary = dict(excess_capacity_summary or {})
     input_bundle_payload = render_stage04_input_bundle(bundle=bundle)
     candidate_delta_payload = render_stage04_candidate_delta(
         bundle=bundle,
         selected_candidates=selected_candidates,
         reserve_rows=resolved_reserve_rows,
+        excess_capacity_rows=resolved_excess_capacity_rows,
+        excess_capacity_summary=resolved_excess_capacity_summary,
         iteration_summaries=iteration_summaries,
         repair_moves=repair_moves,
         coverage_summary=coverage_summary,
@@ -106,6 +116,8 @@ def build_stage04_deterministic_outputs(
         selected_candidates=selected_candidates,
         reserve_rows=resolved_reserve_rows,
         reserve_summary=resolved_reserve_summary,
+        excess_capacity_rows=resolved_excess_capacity_rows,
+        excess_capacity_summary=resolved_excess_capacity_summary,
         candidate_delta_id=candidate_delta_id,
         iteration_summaries=iteration_summaries,
         repair_moves=repair_moves,
@@ -115,6 +127,7 @@ def build_stage04_deterministic_outputs(
         bundle=bundle,
         selected_candidates=selected_candidates,
         reserve_rows=resolved_reserve_rows,
+        excess_capacity_rows=resolved_excess_capacity_rows,
         candidate_delta_id=candidate_delta_id,
         iteration_summaries=iteration_summaries,
     )
@@ -124,6 +137,8 @@ def build_stage04_deterministic_outputs(
         selected_candidates=selected_candidates,
         reserve_rows=resolved_reserve_rows,
         reserve_summary=resolved_reserve_summary,
+        excess_capacity_rows=resolved_excess_capacity_rows,
+        excess_capacity_summary=resolved_excess_capacity_summary,
         iteration_summaries=iteration_summaries,
         coverage_summary=coverage_summary,
     )
@@ -134,6 +149,8 @@ def build_stage04_deterministic_outputs(
         selected_candidates=selected_candidates,
         reserve_rows=resolved_reserve_rows,
         reserve_summary=resolved_reserve_summary,
+        excess_capacity_rows=resolved_excess_capacity_rows,
+        excess_capacity_summary=resolved_excess_capacity_summary,
         iteration_summaries=[item.to_payload() for item in iteration_summaries],
         repair_moves=[item.to_payload() for item in repair_moves],
         coverage_summary=coverage_summary,

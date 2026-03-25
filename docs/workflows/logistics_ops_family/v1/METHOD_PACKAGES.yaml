@@ -85,7 +85,7 @@ registry:
       output_schema_ref: schema.schedule_control.weekly_base_build_outputs.v1
       lowering_rule_ref: lowering.schedule_control.weekly_base_build_outputs.v1
       stop_policy:
-        max_tool_calls: 24
+        max_tool_calls: 28
         no_progress_ticks: 3
         on_exhaustion: escalate
       replay_policy:

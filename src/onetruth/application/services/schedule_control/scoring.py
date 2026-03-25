@@ -84,9 +84,10 @@ def score_candidate(
     hard_validation: HardValidationResult,
     schedule_state: PartialWeeklyScheduleState | None = None,
 ) -> SoftScore:
+    planned_driver_day_state = _planned_driver_day_state_for_slot(route_slot)
     blocked_assessment = assess_contract_minimization(
         availability_state=hard_validation.driver_day_availability_state,
-        planned_driver_day_state="assigned",
+        planned_driver_day_state=planned_driver_day_state,
     )
     if hard_validation.status != "pass":
         return SoftScore(
@@ -127,7 +128,7 @@ def score_candidate(
     )
     contract_assessment = assess_contract_minimization(
         availability_state=availability_state,
-        planned_driver_day_state="assigned",
+        planned_driver_day_state=planned_driver_day_state,
     )
 
     target_shifts = max(int(getattr(availability, "target_shifts_per_week", 4)), 1)
@@ -271,12 +272,17 @@ def score_candidate(
 
 
 def deterministic_rank_candidates(candidates: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    def sort_key(item: dict[str, Any]) -> tuple[int, int, float, float, float, float, float, str]:
+    def sort_key(
+        item: dict[str, Any],
+    ) -> tuple[int, int, int, float, int, float, float, float, float, str]:
         hard_filter_status = str(item.get("hard_filter_status", "blocked")).strip().lower()
         score_bucket = str(item.get("score_bucket", "blocked")).strip().lower()
         candidate_driver_id = str(item.get("candidate_driver_id", ""))
         return (
             _HARD_FILTER_ORDER.get(hard_filter_status, 99),
+            _synthetic_demand_priority_rank(item),
+            int(item.get("current_week_shift_count") or 0),
+            -float(item.get("target_shift_gap") or 0.0),
             _SCORE_BUCKET_ORDER.get(score_bucket, 99),
             -float(item.get("soft_score_total") or 0.0),
             -float(item.get("template_state_preservation_fit") or 0.0),
@@ -287,6 +293,35 @@ def deterministic_rank_candidates(candidates: list[dict[str, Any]]) -> list[dict
         )
 
     return sorted(candidates, key=sort_key)
+
+
+def _synthetic_demand_priority_rank(item: dict[str, Any]) -> int:
+    demand_kind = str(item.get("demand_kind") or "route").strip().lower()
+    availability_state = str(item.get("availability_state") or "").strip().upper()
+    baseline_template_state = str(item.get("baseline_template_state") or "").strip().lower()
+    if demand_kind == "on_call":
+        if availability_state == "ON_CALL_ONLY" or baseline_template_state == "on_call_template":
+            return 0
+        if availability_state == "AVAILABLE" or baseline_template_state == "white_template":
+            return 1
+        if (
+            availability_state == "AVOID_IF_POSSIBLE"
+            or baseline_template_state == "yellow_template"
+        ):
+            return 2
+        return 9
+    if demand_kind == "excess_capacity":
+        if availability_state == "PREFERRED" or baseline_template_state == "assigned_template":
+            return 0
+        if availability_state == "AVAILABLE" or baseline_template_state == "white_template":
+            return 1
+        if (
+            availability_state == "AVOID_IF_POSSIBLE"
+            or baseline_template_state == "yellow_template"
+        ):
+            return 2
+        return 9
+    return 0
 
 
 def summarize_soft_scores(selected_candidates: list[dict[str, Any]]) -> dict[str, float]:
@@ -368,14 +403,23 @@ def _coverage_pressure(
     schedule_state: PartialWeeklyScheduleState | None,
 ) -> float:
     demand = bundle.daily_demand_by_service_date.get(route_slot.service_date)
-    planned_route_count = max(int(getattr(demand, "planned_route_count", 0)), 1)
-    unresolved_for_day = planned_route_count
+    demand_kind = str(route_slot.demand_kind or "route").strip().lower()
+    if route_slot.is_on_call_demand:
+        planned_count = max(int(getattr(demand, "on_call_target", 0)), 1)
+    elif route_slot.is_excess_capacity_demand:
+        planned_count = max(int(getattr(demand, "excess_capacity_target", 0)), 1)
+    else:
+        planned_count = max(int(getattr(demand, "planned_route_count", 0)), 1)
+    unresolved_for_day = planned_count
     if schedule_state is not None:
         unresolved_for_day = sum(
-            1 for item in schedule_state.remaining_route_slots() if item.service_date == route_slot.service_date
+            1
+            for item in schedule_state.remaining_route_slots()
+            if item.service_date == route_slot.service_date
+            and str(item.demand_kind or "route").strip().lower() == demand_kind
         )
         unresolved_for_day = max(unresolved_for_day, 1)
-    pressure = unresolved_for_day / float(planned_route_count)
+    pressure = unresolved_for_day / float(planned_count)
     if "rescue" in str(route_slot.route_slot_class or ""):
         pressure += 0.15
     elif "overflow" in str(route_slot.route_slot_class or ""):
@@ -519,8 +563,8 @@ def _on_call_coverage(
     if availability_state == "ON_CALL_ONLY":
         return 0.2
     if availability is not None and bool(getattr(availability, "on_call_eligible", False)):
-        return 0.72
-    return 0.58
+        return 0.42
+    return 0.78
 
 
 def _previous_week_continuity(
@@ -669,12 +713,18 @@ def _reliability_score(
 
 
 def _is_flexible_slot(route_slot: RouteSlotRequirement) -> bool:
+    if route_slot.is_on_call_demand:
+        return True
     route_slot_class = str(route_slot.route_slot_class or "").lower()
     route_band = str(route_slot.preferred_shift_band or "").lower()
     return "rescue" in route_slot_class or "overflow" in route_slot_class or route_band in {
         "rescue",
         "overflow",
     }
+
+
+def _planned_driver_day_state_for_slot(route_slot: RouteSlotRequirement) -> str:
+    return "on_call" if route_slot.is_on_call_demand else "assigned"
 
 
 def _weekday_token(service_date: str) -> str:

@@ -14,6 +14,7 @@ from .validation import evaluate_hard_constraints
 class CandidateEvaluation:
     route_slot_id: str
     route_id: str
+    demand_kind: str
     service_date: str
     route_slot_class: str
     station_code: str
@@ -56,6 +57,7 @@ class CandidateEvaluation:
         return {
             "route_slot_id": self.route_slot_id,
             "route_id": self.route_id,
+            "demand_kind": self.demand_kind,
             "service_date": self.service_date,
             "route_slot_class": self.route_slot_class,
             "station_code": self.station_code,
@@ -131,6 +133,7 @@ def generate_weekly_candidate_matrix(
                 CandidateEvaluation(
                     route_slot_id=route_slot.route_slot_id,
                     route_id=route_slot.route_id,
+                    demand_kind=str(route_slot.demand_kind or "route"),
                     service_date=route_slot.service_date,
                     route_slot_class=route_slot.route_slot_class,
                     station_code=route_slot.station_code,
@@ -202,6 +205,7 @@ def select_weekly_candidates(candidate_matrix: list[CandidateEvaluation]) -> lis
                 "service_date": selected["service_date"],
                 "route_slot_id": selected["route_slot_id"],
                 "route_id": selected["route_id"],
+                "demand_kind": str(selected.get("demand_kind") or "route"),
                 "candidate_driver_id": selected["candidate_driver_id"],
                 "hard_filter_status": selected["hard_filter_status"],
                 "hard_filter_reasons": list(selected.get("hard_filter_reasons") or []),
@@ -237,7 +241,11 @@ def select_weekly_candidates(candidate_matrix: list[CandidateEvaluation]) -> lis
                 ),
                 "baseline_template_state": str(selected.get("baseline_template_state") or ""),
                 "planned_driver_day_state": (
-                    "assigned" if assignment_action == "assign" else "unassigned"
+                    (
+                        str(selected.get("planned_driver_day_state") or "assigned")
+                        if assignment_action == "assign"
+                        else "unassigned"
+                    )
                 ),
                 "new_agreement_required": (
                     bool(selected.get("new_agreement_required"))

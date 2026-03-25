@@ -1,28 +1,26 @@
 from __future__ import annotations
 
-from collections import Counter, defaultdict
+from collections import Counter
 from dataclasses import dataclass
-from datetime import date, timedelta
 from typing import Any
 
-from .bundle_builder import DriverAvailability, WeeklyScheduleControlBundle
-from .contract_minimization import assess_contract_minimization
+from .bundle_builder import WeeklyScheduleControlBundle
+from .candidate_generation import generate_weekly_candidate_matrix, select_weekly_candidates
+from .planning_state import PartialWeeklyScheduleState, ScheduledAssignment
+from .route_slot_requirements import RouteSlotRequirement, expand_route_slot_requirements
 
 ON_CALL_BUFFER_PROJECTED_MINUTES = 180
-
-_RESERVE_TEMPLATE_PRIORITY = {
-    "on_call_template": 0,
-    "white_template": 1,
-    "yellow_template": 2,
-}
-
-_ELIGIBLE_RESERVE_TEMPLATE_STATES = frozenset(_RESERVE_TEMPLATE_PRIORITY)
+DEFAULT_EXCESS_CAPACITY_ESTIMATED_HOURS = 8.5
+_ON_CALL_ROUTE_ID = "ON_CALL"
+_EXCESS_CAPACITY_ROUTE_ID = "EXCESS_CAPACITY"
 
 
 @dataclass(frozen=True)
 class ReserveSelectionResult:
     reserve_rows: list[dict[str, Any]]
     reserve_summary: dict[str, Any]
+    excess_capacity_rows: list[dict[str, Any]]
+    excess_capacity_summary: dict[str, Any]
 
 
 def select_on_call_reserve_rows(
@@ -30,285 +28,365 @@ def select_on_call_reserve_rows(
     bundle: WeeklyScheduleControlBundle,
     selected_candidates: list[dict[str, Any]],
     iteration_index: int,
+    schedule_state: PartialWeeklyScheduleState | None = None,
 ) -> ReserveSelectionResult:
-    route_rows = [
-        row
-        for row in selected_candidates
-        if str(row.get("assignment_action") or "") == "assign"
-        and str(row.get("hard_filter_status") or "") == "pass"
-    ]
-    route_assignments_by_driver = _rows_by_driver(route_rows)
-    route_assignments_by_driver_date = {
-        (str(row.get("candidate_driver_id") or ""), str(row.get("service_date") or ""))
-        for row in route_rows
-        if str(row.get("candidate_driver_id") or "").strip()
-        and str(row.get("service_date") or "").strip()
-    }
-    selected_reserve_rows: list[dict[str, Any]] = []
-    reserve_assignments_by_driver: dict[str, list[dict[str, Any]]] = defaultdict(list)
-    reserve_assignments_by_driver_date: set[tuple[str, str]] = set()
-    on_call_targets_by_service_date: dict[str, int] = {}
-    selected_on_call_by_service_date: Counter[str] = Counter()
-
-    for service_date in sorted(bundle.daily_demand_by_service_date):
-        demand = bundle.daily_demand_by_service_date[service_date]
-        on_call_target = max(int(getattr(demand, "on_call_target", 0) or 0), 0)
-        on_call_targets_by_service_date[service_date] = on_call_target
-        if on_call_target <= 0:
-            continue
-
-        candidates = _reserve_candidates_for_date(
+    resolved_schedule_state = (
+        schedule_state.clone()
+        if schedule_state is not None
+        else _schedule_state_from_selected_routes(
             bundle=bundle,
-            service_date=service_date,
-            route_assignments_by_driver=route_assignments_by_driver,
-            route_assignments_by_driver_date=route_assignments_by_driver_date,
-            reserve_assignments_by_driver=reserve_assignments_by_driver,
-            reserve_assignments_by_driver_date=reserve_assignments_by_driver_date,
+            selected_candidates=selected_candidates,
         )
-        for sequence, candidate in enumerate(candidates, start=1):
-            if selected_on_call_by_service_date[service_date] >= on_call_target:
-                break
-            reserve_row = _build_reserve_row(
-                candidate=candidate,
-                sequence=sequence,
-                iteration_index=iteration_index,
-            )
-            selected_reserve_rows.append(reserve_row)
-            reserve_assignments_by_driver[candidate["candidate_driver_id"]].append(reserve_row)
-            reserve_assignments_by_driver_date.add(
-                (candidate["candidate_driver_id"], service_date)
-            )
-            selected_on_call_by_service_date[service_date] += 1
+    )
+    on_call_slots = _build_synthetic_slots(bundle=bundle, demand_kind="on_call")
+    resolved_schedule_state.extend_route_slots(on_call_slots)
+    reserve_rows, reserve_summary = _allocate_synthetic_capacity_rows(
+        bundle=bundle,
+        route_slots=on_call_slots,
+        schedule_state=resolved_schedule_state,
+        iteration_index=iteration_index,
+        demand_kind="on_call",
+    )
 
-    filled_on_call_by_service_date = {
-        service_date: int(selected_on_call_by_service_date.get(service_date, 0))
-        for service_date in sorted(on_call_targets_by_service_date)
-    }
-    unmet_on_call_target_by_service_date = {
-        service_date: max(on_call_targets_by_service_date[service_date] - filled_count, 0)
-        for service_date, filled_count in filled_on_call_by_service_date.items()
-    }
-    reserve_summary = {
-        "on_call_target_by_service_date": on_call_targets_by_service_date,
-        "selected_on_call_by_service_date": filled_on_call_by_service_date,
-        "unmet_on_call_target_by_service_date": unmet_on_call_target_by_service_date,
-        "target_on_call_total": sum(on_call_targets_by_service_date.values()),
-        "selected_on_call_total": sum(filled_on_call_by_service_date.values()),
-        "unmet_on_call_target_total": sum(unmet_on_call_target_by_service_date.values()),
-    }
+    excess_capacity_slots = _build_synthetic_slots(bundle=bundle, demand_kind="excess_capacity")
+    resolved_schedule_state.extend_route_slots(excess_capacity_slots)
+    excess_capacity_rows, excess_capacity_summary = _allocate_synthetic_capacity_rows(
+        bundle=bundle,
+        route_slots=excess_capacity_slots,
+        schedule_state=resolved_schedule_state,
+        iteration_index=iteration_index,
+        demand_kind="excess_capacity",
+    )
     return ReserveSelectionResult(
-        reserve_rows=selected_reserve_rows,
+        reserve_rows=reserve_rows,
         reserve_summary=reserve_summary,
+        excess_capacity_rows=excess_capacity_rows,
+        excess_capacity_summary=excess_capacity_summary,
     )
 
 
-def _reserve_candidates_for_date(
+def _schedule_state_from_selected_routes(
     *,
     bundle: WeeklyScheduleControlBundle,
-    service_date: str,
-    route_assignments_by_driver: dict[str, list[dict[str, Any]]],
-    route_assignments_by_driver_date: set[tuple[str, str]],
-    reserve_assignments_by_driver: dict[str, list[dict[str, Any]]],
-    reserve_assignments_by_driver_date: set[tuple[str, str]],
-) -> list[dict[str, Any]]:
-    candidates: list[dict[str, Any]] = []
-    for driver in bundle.drivers:
-        driver_id = str(driver.driver_id)
-        if (driver_id, service_date) in route_assignments_by_driver_date:
+    selected_candidates: list[dict[str, Any]],
+) -> PartialWeeklyScheduleState:
+    route_slots = expand_route_slot_requirements(bundle.route_slots)
+    schedule_state = PartialWeeklyScheduleState.from_route_slots(route_slots)
+    for row in selected_candidates:
+        if str(row.get("assignment_action") or "") != "assign":
             continue
-        if (driver_id, service_date) in reserve_assignments_by_driver_date:
+        if str(row.get("hard_filter_status") or "") != "pass":
             continue
-
-        availability = bundle.availability_by_driver.get(driver_id)
-        availability_state = _availability_state_for_date(
-            availability=availability,
-            service_date=service_date,
-        )
-        contract = assess_contract_minimization(
-            availability_state=availability_state,
-            planned_driver_day_state="on_call",
-        )
-        if contract.baseline_template_state not in _ELIGIBLE_RESERVE_TEMPLATE_STATES:
+        route_slot_id = str(row.get("route_slot_id") or "")
+        if not route_slot_id or route_slot_id not in schedule_state.route_slots_by_id:
             continue
-
-        current_week_shift_count = (
-            len(route_assignments_by_driver.get(driver_id, ()))
-            + len(reserve_assignments_by_driver.get(driver_id, ()))
+        schedule_state.record_assignment(
+            _assignment_from_row(
+                route_slot=schedule_state.route_slot(route_slot_id),
+                row=row,
+                assignment_action="assign",
+                planning_phase=str(row.get("planning_phase") or row.get("phase") or "baseline"),
+                delta_kind=str(row.get("delta_kind") or "allocation"),
+                batch_id=str(row.get("batch_id") or ""),
+                pressure_group_id=str(row.get("pressure_group_id") or ""),
+            )
         )
-        max_shifts_per_week = _max_shifts_per_week(bundle=bundle, driver_id=driver_id)
-        if current_week_shift_count + 1 > max_shifts_per_week:
+    return schedule_state
+
+
+def _build_synthetic_slots(
+    *,
+    bundle: WeeklyScheduleControlBundle,
+    demand_kind: str,
+) -> tuple[RouteSlotRequirement, ...]:
+    templates_by_service_date: dict[str, RouteSlotRequirement] = {}
+    for route_slot in bundle.route_slots:
+        templates_by_service_date.setdefault(route_slot.service_date, route_slot)
+
+    slots: list[RouteSlotRequirement] = []
+    for service_date, demand in sorted(bundle.daily_demand_by_service_date.items()):
+        target_count = max(int(_synthetic_target_count(demand=demand, demand_kind=demand_kind) or 0), 0)
+        if target_count <= 0:
             continue
+        template = templates_by_service_date.get(service_date)
+        compact_date = service_date.replace("-", "")
+        for sequence in range(1, target_count + 1):
+            slots.append(
+                RouteSlotRequirement(
+                    service_date=service_date,
+                    route_slot_id=_synthetic_route_slot_id(
+                        demand_kind=demand_kind,
+                        compact_date=compact_date,
+                        sequence=sequence,
+                    ),
+                    route_slot_class=str(template.route_slot_class if template else ""),
+                    required_skill=str(template.required_skill if template else ""),
+                    vehicle_type=str(template.vehicle_type if template else ""),
+                    shift_start=str(template.shift_start if template else "11:30"),
+                    shift_end=str(template.shift_end if template else "20:00"),
+                    estimated_hours=_synthetic_estimated_hours(
+                        demand_kind=demand_kind,
+                        template=template,
+                    ),
+                    source_snapshot_row_ref=_synthetic_source_snapshot_row_ref(
+                        demand_kind=demand_kind,
+                        service_date=service_date,
+                    ),
+                    route_id=_synthetic_route_id(demand_kind),
+                    source_message_id=(
+                        template.source_message_id
+                        if template is not None
+                        else _synthetic_source_kind(demand_kind)
+                    ),
+                    station_code=str(template.station_code if template else ""),
+                    service_area=str(template.service_area if template else ""),
+                    source_kind=_synthetic_source_kind(demand_kind),
+                    route_family=demand_kind,
+                    preferred_shift_band=str(template.preferred_shift_band if template else ""),
+                    demand_kind=demand_kind,
+                )
+            )
+    return tuple(slots)
 
-        projected_rolling7_minutes = _projected_rolling7_minutes(
-            bundle=bundle,
-            driver_id=driver_id,
-            service_date=service_date,
-            route_assignments=route_assignments_by_driver.get(driver_id, ()),
-            reserve_assignments=reserve_assignments_by_driver.get(driver_id, ()),
-        )
-        rolling7_limit = _rolling7_limit_minutes(bundle=bundle, driver_id=driver_id)
-        if rolling7_limit > 0 and projected_rolling7_minutes > rolling7_limit:
-            continue
-
-        candidates.append(
-            {
-                "service_date": service_date,
-                "candidate_driver_id": driver_id,
-                "assigned_driver_id": driver_id,
-                "availability_state": availability_state,
-                "baseline_template_state": contract.baseline_template_state,
-                "planned_driver_day_state": contract.planned_driver_day_state,
-                "new_agreement_required": contract.new_agreement_required,
-                "new_agreement_trigger_reason": contract.new_agreement_trigger_reason,
-                "template_state_preservation_fit": contract.template_state_preservation_fit,
-                "current_week_shift_count": current_week_shift_count,
-                "projected_rolling7_minutes": projected_rolling7_minutes,
-                "remaining_rolling7_minutes": max(rolling7_limit - projected_rolling7_minutes, 0),
-                "on_call_eligible": bool(getattr(availability, "on_call_eligible", False)),
-            }
-        )
-
-    return sorted(candidates, key=_reserve_candidate_sort_key)
-
-
-def _reserve_candidate_sort_key(candidate: dict[str, Any]) -> tuple[int, int, int, int, str]:
-    return (
-        _RESERVE_TEMPLATE_PRIORITY.get(
-            str(candidate.get("baseline_template_state") or ""),
-            len(_RESERVE_TEMPLATE_PRIORITY),
-        ),
-        0 if bool(candidate.get("on_call_eligible")) else 1,
-        int(candidate.get("current_week_shift_count") or 0),
-        int(candidate.get("projected_rolling7_minutes") or 0),
-        str(candidate.get("candidate_driver_id") or ""),
+def _allocate_synthetic_capacity_rows(
+    *,
+    bundle: WeeklyScheduleControlBundle,
+    route_slots: tuple[RouteSlotRequirement, ...],
+    schedule_state: PartialWeeklyScheduleState,
+    iteration_index: int,
+    demand_kind: str,
+) -> tuple[list[dict[str, Any]], dict[str, Any]]:
+    selected_by_service_date: Counter[str] = Counter()
+    selected_rows: list[dict[str, Any]] = []
+    target_by_service_date = _synthetic_targets_by_service_date(
+        bundle=bundle,
+        demand_kind=demand_kind,
     )
 
+    for route_slot in route_slots:
+        selected_row = _allocate_synthetic_slot(
+            bundle=bundle,
+            route_slot=route_slot,
+            schedule_state=schedule_state,
+            iteration_index=iteration_index,
+            demand_kind=demand_kind,
+        )
+        if selected_row is None:
+            continue
+        selected_rows.append(selected_row)
+        selected_by_service_date[route_slot.service_date] += 1
 
-def _build_reserve_row(
+    filled_by_service_date = {
+        service_date: int(selected_by_service_date.get(service_date, 0))
+        for service_date in sorted(target_by_service_date)
+    }
+    unmet_by_service_date = {
+        service_date: max(target_by_service_date[service_date] - filled_count, 0)
+        for service_date, filled_count in filled_by_service_date.items()
+    }
+    if demand_kind == "on_call":
+        summary = {
+            "on_call_target_by_service_date": target_by_service_date,
+            "selected_on_call_by_service_date": filled_by_service_date,
+            "unmet_on_call_target_by_service_date": unmet_by_service_date,
+            "target_on_call_total": sum(target_by_service_date.values()),
+            "selected_on_call_total": sum(filled_by_service_date.values()),
+            "unmet_on_call_target_total": sum(unmet_by_service_date.values()),
+        }
+    else:
+        summary = {
+            "excess_capacity_target_by_service_date": target_by_service_date,
+            "selected_excess_capacity_by_service_date": filled_by_service_date,
+            "unmet_excess_capacity_target_by_service_date": unmet_by_service_date,
+            "target_excess_capacity_total": sum(target_by_service_date.values()),
+            "selected_excess_capacity_total": sum(filled_by_service_date.values()),
+            "unmet_excess_capacity_target_total": sum(unmet_by_service_date.values()),
+        }
+    return selected_rows, summary
+
+
+def _allocate_synthetic_slot(
     *,
-    candidate: dict[str, Any],
-    sequence: int,
+    bundle: WeeklyScheduleControlBundle,
+    route_slot: RouteSlotRequirement,
+    schedule_state: PartialWeeklyScheduleState,
     iteration_index: int,
-) -> dict[str, Any]:
-    service_date = str(candidate.get("service_date") or "")
-    compact_date = service_date.replace("-", "")
-    baseline_template_state = str(candidate.get("baseline_template_state") or "")
-    rationale_code = {
-        "on_call_template": "reserve_fill_on_call_template",
-        "white_template": "reserve_fill_white_template",
-        "yellow_template": "reserve_fill_yellow_template",
-    }.get(baseline_template_state, "reserve_fill")
-    return {
-        "service_date": service_date,
-        "route_slot_id": f"oncall-{compact_date}#{sequence:02d}",
-        "route_id": "ON_CALL",
-        "candidate_driver_id": str(candidate.get("candidate_driver_id") or ""),
-        "assigned_driver_id": str(candidate.get("assigned_driver_id") or ""),
-        "assignment_action": "reserve",
-        "assignment_status": "reserve",
-        "hard_filter_status": "pass",
-        "hard_filter_reasons": [],
-        "score_bucket": "good",
-        "soft_score_total": round(float(candidate.get("template_state_preservation_fit") or 0.0), 6),
-        "projected_minutes": ON_CALL_BUFFER_PROJECTED_MINUTES,
-        "availability_state": str(candidate.get("availability_state") or ""),
-        "baseline_template_state": baseline_template_state,
-        "planned_driver_day_state": "on_call",
-        "new_agreement_required": bool(candidate.get("new_agreement_required")),
-        "new_agreement_trigger_reason": str(candidate.get("new_agreement_trigger_reason") or ""),
-        "template_state_preservation_fit": round(
-            float(candidate.get("template_state_preservation_fit") or 0.0),
+    demand_kind: str,
+) -> dict[str, Any] | None:
+    candidate_matrix = generate_weekly_candidate_matrix(
+        bundle=bundle,
+        route_slots=(route_slot,),
+        schedule_state=schedule_state,
+        iteration_index=iteration_index,
+        evaluation_kind=("reserve" if demand_kind == "on_call" else demand_kind),
+    )
+    selected_rows = select_weekly_candidates(candidate_matrix)
+    if not selected_rows:
+        return None
+
+    selected = selected_rows[0]
+    if str(selected.get("assignment_action") or "") != "assign":
+        return None
+    if str(selected.get("hard_filter_status") or "") != "pass":
+        return None
+
+    assignment = _assignment_from_row(
+        route_slot=route_slot,
+        row=selected,
+        assignment_action=("reserve" if demand_kind == "on_call" else "assign"),
+        planning_phase=(
+            "reserve_buffer" if demand_kind == "on_call" else "baseline_excess_capacity"
+        ),
+        delta_kind=("reserve" if demand_kind == "on_call" else "excess_capacity"),
+        batch_id=(
+            f"reserve-buffer:{route_slot.service_date}"
+            if demand_kind == "on_call"
+            else f"baseline-excess-capacity:{route_slot.service_date}"
+        ),
+        pressure_group_id=(
+            f"{route_slot.service_date}|ON_CALL|reserve_buffer"
+            if demand_kind == "on_call"
+            else f"{route_slot.service_date}|EXCESS_CAPACITY|baseline_excess_capacity"
+        ),
+        increment_shift_count=True,
+    )
+    schedule_state.record_assignment(assignment)
+    selected_row = assignment.to_row()
+    if demand_kind == "on_call":
+        selected_row["assignment_status"] = "reserve"
+        selected_row["phase"] = "reserve_buffer"
+    return selected_row
+
+
+def _assignment_from_row(
+    *,
+    route_slot: RouteSlotRequirement,
+    row: dict[str, Any],
+    assignment_action: str,
+    planning_phase: str,
+    delta_kind: str,
+    batch_id: str,
+    pressure_group_id: str,
+    increment_shift_count: bool = False,
+) -> ScheduledAssignment:
+    baseline_template_state = str(row.get("baseline_template_state") or "")
+    rationale_code = str(row.get("rationale_code") or "")
+    if assignment_action == "reserve":
+        rationale_code = {
+            "on_call_template": "reserve_fill_on_call_template",
+            "white_template": "reserve_fill_white_template",
+            "yellow_template": "reserve_fill_yellow_template",
+        }.get(baseline_template_state, "reserve_fill")
+    elif route_slot.is_excess_capacity_demand:
+        rationale_code = {
+            "assigned_template": "excess_capacity_fill_assigned_template",
+            "white_template": "excess_capacity_fill_white_template",
+            "yellow_template": "excess_capacity_fill_yellow_template",
+        }.get(baseline_template_state, "excess_capacity_fill")
+    return ScheduledAssignment(
+        route_slot_id=route_slot.route_slot_id,
+        route_id=str(row.get("route_id") or route_slot.route_id),
+        service_date=route_slot.service_date,
+        candidate_driver_id=str(row.get("candidate_driver_id") or ""),
+        assignment_action=assignment_action,
+        hard_filter_status=str(row.get("hard_filter_status") or "pass"),
+        hard_filter_reasons=tuple(str(item) for item in (row.get("hard_filter_reasons") or [])),
+        score_bucket=str(row.get("score_bucket") or "good"),
+        soft_score_total=round(float(row.get("soft_score_total") or 0.0), 6),
+        projected_minutes=route_slot.projected_minutes,
+        fairness_balance=round(float(row.get("fairness_balance") or 0.0), 6),
+        on_call_coverage=round(float(row.get("on_call_coverage") or 0.0), 6),
+        lost_work_credit=round(float(row.get("lost_work_credit") or 0.0), 6),
+        coverage_pressure=round(float(row.get("coverage_pressure") or 0.0), 6),
+        availability_fit=round(float(row.get("availability_fit") or 0.0), 6),
+        availability_state=str(row.get("availability_state") or ""),
+        availability_state_fit=round(float(row.get("availability_state_fit") or 0.0), 6),
+        preferred_shift_band_fit=round(float(row.get("preferred_shift_band_fit") or 0.0), 6),
+        preferred_route_slot_class_fit=round(
+            float(row.get("preferred_route_slot_class_fit") or 0.0),
             6,
         ),
-        "current_week_shift_count": int(candidate.get("current_week_shift_count") or 0) + 1,
-        "projected_rolling7_minutes": int(candidate.get("projected_rolling7_minutes") or 0),
-        "remaining_rolling7_minutes": int(candidate.get("remaining_rolling7_minutes") or 0),
-        "iteration_index": iteration_index,
-        "phase": "reserve_buffer",
-        "planning_phase": "reserve_buffer",
-        "delta_kind": "reserve",
-        "rationale_code": rationale_code,
+        preference_fit=round(float(row.get("preference_fit") or 0.0), 6),
+        previous_week_stability=round(float(row.get("previous_week_stability") or 0.0), 6),
+        continuity_score=round(float(row.get("continuity_score") or 0.0), 6),
+        target_shift_gap=round(float(row.get("target_shift_gap") or 0.0), 6),
+        seniority_score=round(float(row.get("seniority_score") or 0.0), 6),
+        seniority_preference_fit=round(float(row.get("seniority_preference_fit") or 0.0), 6),
+        reliability_score=round(float(row.get("reliability_score") or 0.0), 6),
+        avoidable_assignment_score=round(float(row.get("avoidable_assignment_score") or 0.0), 6),
+        current_week_shift_count=(
+            int(row.get("current_week_shift_count") or 0) + (1 if increment_shift_count else 0)
+        ),
+        projected_rolling7_minutes=int(row.get("projected_rolling7_minutes") or 0),
+        remaining_rolling7_minutes=int(row.get("remaining_rolling7_minutes") or 0),
+        iteration_index=int(row.get("iteration_index") or 0),
+        batch_id=batch_id,
+        pressure_group_id=pressure_group_id,
+        delta_kind=delta_kind,
+        rationale_code=rationale_code,
+        route_slot_class=route_slot.route_slot_class,
+        station_code=route_slot.station_code,
+        service_area=route_slot.service_area,
+        planning_phase=planning_phase,
+        baseline_template_state=baseline_template_state,
+        planned_driver_day_state=str(row.get("planned_driver_day_state") or ""),
+        new_agreement_required=bool(row.get("new_agreement_required")),
+        new_agreement_trigger_reason=str(row.get("new_agreement_trigger_reason") or ""),
+        template_state_preservation_fit=round(
+            float(row.get("template_state_preservation_fit") or 0.0),
+            6,
+        ),
+    )
+
+
+def _synthetic_targets_by_service_date(
+    *,
+    bundle: WeeklyScheduleControlBundle,
+    demand_kind: str,
+) -> dict[str, int]:
+    return {
+        service_date: max(int(_synthetic_target_count(demand=demand, demand_kind=demand_kind) or 0), 0)
+        for service_date, demand in sorted(bundle.daily_demand_by_service_date.items())
     }
 
 
-def _rows_by_driver(rows: list[dict[str, Any]]) -> dict[str, list[dict[str, Any]]]:
-    by_driver: dict[str, list[dict[str, Any]]] = defaultdict(list)
-    for row in rows:
-        driver_id = str(row.get("candidate_driver_id") or "")
-        if not driver_id:
-            continue
-        by_driver[driver_id].append(row)
-    return by_driver
+def _synthetic_target_count(*, demand: Any, demand_kind: str) -> int:
+    if demand_kind == "on_call":
+        return int(getattr(demand, "on_call_target", 0) or 0)
+    return int(getattr(demand, "excess_capacity_target", 0) or 0)
 
 
-def _availability_state_for_date(
+def _synthetic_route_slot_id(*, demand_kind: str, compact_date: str, sequence: int) -> str:
+    if demand_kind == "on_call":
+        return f"oncall-{compact_date}#{sequence:02d}"
+    return f"excess-{compact_date}#{sequence:02d}"
+
+
+def _synthetic_estimated_hours(
     *,
-    availability: DriverAvailability | None,
-    service_date: str,
-) -> str:
-    if availability is None:
-        return "UNKNOWN"
-    for state in getattr(availability, "daily_states", ()):
-        if state.service_date == service_date:
-            token = str(getattr(state, "state", "") or "").strip().upper()
-            if token:
-                return token
-            normalized = str(getattr(state, "normalized_state", "") or "").strip().lower()
-            if normalized == "approved_unavailable":
-                return "CANNOT"
-            if normalized == "emergency_only":
-                return "ON_CALL_ONLY"
-            if normalized == "available":
-                return "AVAILABLE"
-            if normalized == "pattern_off":
-                return "PATTERN_OFF"
-    return "UNKNOWN"
+    demand_kind: str,
+    template: RouteSlotRequirement | None,
+) -> float:
+    if demand_kind == "on_call":
+        return ON_CALL_BUFFER_PROJECTED_MINUTES / 60.0
+    if template is not None and float(template.estimated_hours or 0.0) > 0.0:
+        return float(template.estimated_hours)
+    return DEFAULT_EXCESS_CAPACITY_ESTIMATED_HOURS
 
 
-def _max_shifts_per_week(*, bundle: WeeklyScheduleControlBundle, driver_id: str) -> int:
-    policy_signal = bundle.policy_signals_by_driver.get(driver_id)
-    if policy_signal is not None:
-        return max(int(policy_signal.max_shifts_per_week), 1)
-    availability = bundle.availability_by_driver.get(driver_id)
-    return max(int(getattr(availability, "target_shifts_per_week", 4) or 4), 1)
+def _synthetic_source_snapshot_row_ref(*, demand_kind: str, service_date: str) -> str:
+    if demand_kind == "on_call":
+        return f"daily_on_call_target:{service_date}"
+    return f"daily_excess_capacity_target:{service_date}"
 
 
-def _rolling7_limit_minutes(*, bundle: WeeklyScheduleControlBundle, driver_id: str) -> int:
-    policy_signal = bundle.policy_signals_by_driver.get(driver_id)
-    if policy_signal is not None:
-        return max(int(policy_signal.max_minutes_rolling7), 0)
-    return 0
+def _synthetic_route_id(demand_kind: str) -> str:
+    if demand_kind == "on_call":
+        return _ON_CALL_ROUTE_ID
+    return _EXCESS_CAPACITY_ROUTE_ID
 
 
-def _projected_rolling7_minutes(
-    *,
-    bundle: WeeklyScheduleControlBundle,
-    driver_id: str,
-    service_date: str,
-    route_assignments: list[dict[str, Any]],
-    reserve_assignments: list[dict[str, Any]],
-) -> int:
-    service_day = date.fromisoformat(service_date)
-    window_start = service_day - timedelta(days=6)
-    window_start_text = window_start.isoformat()
-    actual_minutes = sum(
-        int(entry.actual_minutes)
-        for entry in bundle.actual_entries_by_driver.get(driver_id, ())
-        if window_start_text <= entry.service_date <= service_date
-    )
-    planned_route_minutes = sum(
-        int(row.get("projected_minutes") or 0)
-        for row in route_assignments
-        if window_start_text <= str(row.get("service_date") or "") <= service_date
-    )
-    planned_reserve_minutes = sum(
-        int(row.get("projected_minutes") or 0)
-        for row in reserve_assignments
-        if window_start_text <= str(row.get("service_date") or "") <= service_date
-    )
-    return (
-        actual_minutes
-        + planned_route_minutes
-        + planned_reserve_minutes
-        + ON_CALL_BUFFER_PROJECTED_MINUTES
-    )
+def _synthetic_source_kind(demand_kind: str) -> str:
+    if demand_kind == "on_call":
+        return "daily_on_call_target"
+    return "daily_excess_capacity_target"

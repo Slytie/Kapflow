@@ -11,28 +11,36 @@ from onetruth.application.services.schedule_control.scoring import (
 from onetruth.application.services.schedule_control.validation import HardValidationResult
 
 
-def test_deterministic_rank_candidates_orders_by_hard_filter_then_bucket_then_driver_id() -> None:
+def test_deterministic_rank_candidates_prefers_underworked_drivers_before_score_tiebreaks() -> None:
     ranked = deterministic_rank_candidates(
         [
             {
                 "candidate_driver_id": "DRV-03",
                 "hard_filter_status": "pass",
-                "score_bucket": "good",
+                "score_bucket": "best",
+                "current_week_shift_count": 2,
+                "target_shift_gap": 0.25,
             },
             {
                 "candidate_driver_id": "DRV-01",
                 "hard_filter_status": "pass",
-                "score_bucket": "best",
+                "score_bucket": "good",
+                "current_week_shift_count": 0,
+                "target_shift_gap": 1.0,
             },
             {
                 "candidate_driver_id": "DRV-02",
                 "hard_filter_status": "pass",
-                "score_bucket": "best",
+                "score_bucket": "good",
+                "current_week_shift_count": 0,
+                "target_shift_gap": 0.5,
             },
             {
                 "candidate_driver_id": "DRV-09",
                 "hard_filter_status": "blocked",
                 "score_bucket": "best",
+                "current_week_shift_count": 0,
+                "target_shift_gap": 1.0,
             },
         ]
     )
@@ -42,6 +50,66 @@ def test_deterministic_rank_candidates_orders_by_hard_filter_then_bucket_then_dr
         "DRV-02",
         "DRV-03",
         "DRV-09",
+    ]
+
+
+def test_deterministic_rank_candidates_uses_synthetic_demand_priority_before_fairness() -> None:
+    ranked_on_call = deterministic_rank_candidates(
+        [
+            {
+                "candidate_driver_id": "DRV-WHITE",
+                "hard_filter_status": "pass",
+                "score_bucket": "best",
+                "demand_kind": "on_call",
+                "availability_state": "AVAILABLE",
+                "baseline_template_state": "white_template",
+                "current_week_shift_count": 0,
+                "target_shift_gap": 1.0,
+            },
+            {
+                "candidate_driver_id": "DRV-ONCALL",
+                "hard_filter_status": "pass",
+                "score_bucket": "good",
+                "demand_kind": "on_call",
+                "availability_state": "ON_CALL_ONLY",
+                "baseline_template_state": "on_call_template",
+                "current_week_shift_count": 3,
+                "target_shift_gap": 0.25,
+            },
+        ]
+    )
+    ranked_excess = deterministic_rank_candidates(
+        [
+            {
+                "candidate_driver_id": "DRV-WHITE",
+                "hard_filter_status": "pass",
+                "score_bucket": "best",
+                "demand_kind": "excess_capacity",
+                "availability_state": "AVAILABLE",
+                "baseline_template_state": "white_template",
+                "current_week_shift_count": 0,
+                "target_shift_gap": 1.0,
+            },
+            {
+                "candidate_driver_id": "DRV-PREFERRED",
+                "hard_filter_status": "pass",
+                "score_bucket": "good",
+                "demand_kind": "excess_capacity",
+                "availability_state": "PREFERRED",
+                "baseline_template_state": "assigned_template",
+                "current_week_shift_count": 3,
+                "target_shift_gap": 0.25,
+            },
+        ]
+    )
+
+    assert [item["candidate_driver_id"] for item in ranked_on_call] == [
+        "DRV-ONCALL",
+        "DRV-WHITE",
+    ]
+    assert [item["candidate_driver_id"] for item in ranked_excess] == [
+        "DRV-PREFERRED",
+        "DRV-WHITE",
     ]
 
 

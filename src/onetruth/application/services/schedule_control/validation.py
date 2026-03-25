@@ -59,6 +59,16 @@ def evaluate_hard_constraints(
         blocked_reasons.append("driver_day_pattern_off")
     elif driver_day_state == "emergency_only" and not _is_emergency_eligible_slot(route_slot):
         blocked_reasons.append("driver_day_emergency_only")
+    if route_slot.is_on_call_demand and not bool(
+        getattr(availability, "on_call_eligible", False)
+    ):
+        blocked_reasons.append("driver_not_on_call_eligible")
+    synthetic_demand_reason = _synthetic_demand_block_reason(
+        route_slot=route_slot,
+        availability_state=driver_day_availability_state,
+    )
+    if synthetic_demand_reason:
+        blocked_reasons.append(synthetic_demand_reason)
 
     restriction_set = set(driver.approved_restrictions)
     if "no_shift_after_21_30" in restriction_set:
@@ -189,6 +199,8 @@ def build_stage04_validation_summary(
     selected_candidates: list[dict[str, Any]],
     reserve_rows: list[dict[str, Any]] | None = None,
     reserve_summary: dict[str, Any] | None = None,
+    excess_capacity_rows: list[dict[str, Any]] | None = None,
+    excess_capacity_summary: dict[str, Any] | None = None,
     soft_score_totals: dict[str, float],
     iteration_summaries: list[IterationSummary] | None = None,
     repair_moves: list[RepairMove] | None = None,
@@ -201,8 +213,10 @@ def build_stage04_validation_summary(
     repairs = repair_moves or []
     resolved_reserve_rows = list(reserve_rows or [])
     resolved_reserve_summary = dict(reserve_summary or {})
+    resolved_excess_capacity_rows = list(excess_capacity_rows or [])
+    resolved_excess_capacity_summary = dict(excess_capacity_summary or {})
     contract_change_summary = summarize_contract_change_metrics(
-        [*selected_candidates, *resolved_reserve_rows]
+        [*selected_candidates, *resolved_excess_capacity_rows, *resolved_reserve_rows]
     )
 
     for candidate in selected_candidates:
@@ -249,6 +263,20 @@ def build_stage04_validation_summary(
             tradeoffs.append(
                 f"{route_slot_id} re-assigned in iteration {candidate.get('iteration_index')} to improve preference fit while keeping hard rules satisfied."
             )
+    for excess_row in resolved_excess_capacity_rows:
+        driver_id = str(excess_row.get("candidate_driver_id") or "unassigned")
+        service_date = str(excess_row.get("service_date") or "")
+        route_slot_id = str(excess_row.get("route_slot_id") or service_date)
+        if bool(excess_row.get("new_agreement_required")):
+            trigger_reason = str(excess_row.get("new_agreement_trigger_reason") or "")
+            warnings.append(
+                f"{driver_id} selected for excess-capacity baseline shift {route_slot_id} requires new agreement"
+                + (f" ({trigger_reason})" if trigger_reason else "")
+            )
+        elif str(excess_row.get("availability_state") or "") == "AVOID_IF_POSSIBLE":
+            warnings.append(
+                f"{driver_id} selected for excess-capacity baseline shift {route_slot_id} using AVOID_IF_POSSIBLE availability state"
+            )
     for reserve_row in resolved_reserve_rows:
         driver_id = str(reserve_row.get("candidate_driver_id") or "unassigned")
         service_date = str(reserve_row.get("service_date") or "")
@@ -271,7 +299,16 @@ def build_stage04_validation_summary(
         if int(shortfall or 0) <= 0:
             continue
         warnings.append(
-            f"{service_date} on-call buffer short by {int(shortfall)} after deterministic reserve selection"
+            f"{service_date} on-call buffer short by {int(shortfall)} after deterministic reserve allocation"
+        )
+    unmet_excess_capacity_target_by_service_date = dict(
+        resolved_excess_capacity_summary.get("unmet_excess_capacity_target_by_service_date") or {}
+    )
+    for service_date, shortfall in sorted(unmet_excess_capacity_target_by_service_date.items()):
+        if int(shortfall or 0) <= 0:
+            continue
+        warnings.append(
+            f"{service_date} excess-capacity baseline shift target short by {int(shortfall)} after deterministic allocation"
         )
 
     hard_rule_result = "pass" if not violations else "fail"
@@ -334,6 +371,7 @@ def build_stage04_validation_summary(
         "warnings": warnings,
         "tradeoffs": tradeoffs,
         "reserve_summary": resolved_reserve_summary,
+        "excess_capacity_summary": resolved_excess_capacity_summary,
         "repair_moves": [item.to_payload() for item in repairs],
         "reallocation_moves": [item.to_payload() for item in repairs],
         "recommended_action": recommendation,
@@ -416,6 +454,27 @@ def _driver_day_availability_state(*, driver_day_record: Any | None, normalized_
 def _is_emergency_eligible_slot(route_slot: RouteSlotRequirement) -> bool:
     route_slot_class = str(route_slot.route_slot_class or "")
     return "rescue" in route_slot_class or "overflow" in route_slot_class
+
+
+def _synthetic_demand_block_reason(
+    *,
+    route_slot: RouteSlotRequirement,
+    availability_state: str,
+) -> str:
+    token = str(availability_state or "").strip().upper()
+    if route_slot.is_on_call_demand:
+        if token == "PREFERRED":
+            return "on_call_demand_disallows_preferred"
+        if token in {"ON_CALL_ONLY", "AVAILABLE", "AVOID_IF_POSSIBLE"}:
+            return ""
+        return "on_call_demand_ineligible_availability_state"
+    if route_slot.is_excess_capacity_demand:
+        if token == "ON_CALL_ONLY":
+            return "excess_capacity_disallows_on_call_only"
+        if token in {"PREFERRED", "AVAILABLE", "AVOID_IF_POSSIBLE"}:
+            return ""
+        return "excess_capacity_ineligible_availability_state"
+    return ""
 
 
 def _shift_windows_overlap(left: RouteSlotRequirement, right: RouteSlotRequirement) -> bool:

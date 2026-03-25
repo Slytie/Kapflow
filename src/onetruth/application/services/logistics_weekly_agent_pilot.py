@@ -1705,6 +1705,7 @@ def _stage04_analysis(
         "soft_score_totals": summary.get("soft_score_totals") or {},
         "contract_change_summary": contract_change_summary,
         "reserve_summary": dict(summary.get("reserve_summary") or {}),
+        "excess_capacity_summary": dict(summary.get("excess_capacity_summary") or {}),
         "tradeoffs": tradeoffs,
         "warnings": warnings,
         "draft_summary": (
@@ -1844,12 +1845,17 @@ def _packet_to_markdown(packet: dict[str, Any]) -> str:
         coverage_summary = stage04_analysis.get("coverage_summary") or {}
         contract_change_summary = stage04_analysis.get("contract_change_summary") or {}
         reserve_summary = stage04_analysis.get("reserve_summary") or {}
+        excess_capacity_summary = stage04_analysis.get("excess_capacity_summary") or {}
         lines.extend(
             [
                 f"- Iterations: {len(stage04_analysis.get('iterations') or [])}",
                 f"- Assigned route slots: {coverage_summary.get('assigned_route_slots', 0)}",
                 f"- Uncovered route slots: {coverage_summary.get('uncovered_route_slots', 0)}",
                 f"- Pending route slots: {coverage_summary.get('pending_route_slots', 0)}",
+                (
+                    "- Selected excess-capacity baseline shift rows: "
+                    f"{excess_capacity_summary.get('selected_excess_capacity_total', 0)}"
+                ),
                 (
                     "- Selected On-Call buffer rows: "
                     f"{reserve_summary.get('selected_on_call_total', 0)}"
@@ -1886,6 +1892,19 @@ def _packet_to_markdown(packet: dict[str, Any]) -> str:
                     f"{service_date}={count}/{(reserve_summary.get('on_call_target_by_service_date') or {}).get(service_date, 0)}"
                     for service_date, count in sorted(
                         (reserve_summary.get("selected_on_call_by_service_date") or {}).items()
+                    )
+                )
+            )
+        if excess_capacity_summary.get("selected_excess_capacity_by_service_date"):
+            lines.append(
+                "- Excess-capacity baseline shifts by service date: "
+                + ", ".join(
+                    f"{service_date}={count}/{(excess_capacity_summary.get('excess_capacity_target_by_service_date') or {}).get(service_date, 0)}"
+                    for service_date, count in sorted(
+                        (
+                            excess_capacity_summary.get("selected_excess_capacity_by_service_date")
+                            or {}
+                        ).items()
                     )
                 )
             )

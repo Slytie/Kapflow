@@ -190,40 +190,94 @@ def _csv_string_rows(rows: list[dict[str, object]]) -> list[dict[str, str]]:
     ]
 
 
-def _expected_on_call_note_lines(selected_rows: list[dict[str, object]]) -> list[str]:
+def _normalized_new_agreement_rows(rows: list[dict[str, object]]) -> list[dict[str, object]]:
+    normalized = [
+        {
+            "service_date": str(row.get("service_date") or ""),
+            "route_slot_id": str(row.get("route_slot_id") or ""),
+            "route_id": str(row.get("route_id") or ""),
+            "assigned_driver_id": str(
+                row.get("assigned_driver_id") or row.get("candidate_driver_id") or ""
+            ),
+            "availability_state": str(row.get("availability_state") or ""),
+            "baseline_template_state": str(row.get("baseline_template_state") or ""),
+            "planned_driver_day_state": str(row.get("planned_driver_day_state") or ""),
+            "new_agreement_required": bool(
+                row.get("new_agreement_required") or row.get("new_agreement_trigger_reason")
+            ),
+            "new_agreement_trigger_reason": str(row.get("new_agreement_trigger_reason") or ""),
+            "template_state_preservation_fit": row.get("template_state_preservation_fit"),
+            "iteration_index": int(row.get("iteration_index") or 0),
+            "phase": str(row.get("phase") or row.get("planning_phase") or ""),
+            "projected_minutes": int(row.get("projected_minutes") or 0),
+            "rationale_code": str(row.get("rationale_code") or ""),
+        }
+        for row in rows
+    ]
+    return sorted(
+        normalized,
+        key=lambda row: (
+            str(row["service_date"]),
+            str(row["assigned_driver_id"]),
+            str(row["route_slot_id"]),
+        ),
+    )
+
+
+def _expected_on_call_note_lines(
+    *,
+    reserve_rows: list[dict[str, object]],
+    reserve_summary: dict[str, object],
+    new_agreement_rows: list[dict[str, object]],
+) -> list[str]:
     on_call_usage_count = sum(
         1
-        for row in selected_rows
+        for row in reserve_rows
         if str(row.get("baseline_template_state") or "") == "on_call_template"
     )
     white_template_count = sum(
         1
-        for row in selected_rows
-        if bool(row.get("new_agreement_required"))
-        and str(row.get("new_agreement_trigger_reason") or "") == "white_template_to_assigned"
+        for row in new_agreement_rows
+        if str(row.get("new_agreement_trigger_reason") or "") == "white_template_to_assigned"
     )
     yellow_template_count = sum(
         1
-        for row in selected_rows
-        if bool(row.get("new_agreement_required"))
-        and str(row.get("new_agreement_trigger_reason") or "") == "yellow_template_to_assigned"
+        for row in new_agreement_rows
+        if str(row.get("new_agreement_trigger_reason") or "") == "yellow_template_to_assigned"
     )
+    white_template_on_call_count = sum(
+        1
+        for row in new_agreement_rows
+        if str(row.get("new_agreement_trigger_reason") or "") == "white_template_to_on_call"
+    )
+    yellow_template_on_call_count = sum(
+        1
+        for row in new_agreement_rows
+        if str(row.get("new_agreement_trigger_reason") or "") == "yellow_template_to_on_call"
+    )
+    selected_on_call_total = int(reserve_summary.get("selected_on_call_total") or 0)
+    target_on_call_total = int(reserve_summary.get("target_on_call_total") or 0)
     if on_call_usage_count > 0:
         summary_line = (
-            "- Summary: The patch used on-call template days "
-            f"`{on_call_usage_count}` time(s) instead of taking all contract-change "
+            "- Summary: The patch filled "
+            f"`{selected_on_call_total}` of `{target_on_call_total}` On-Call buffer positions "
+            f"and used signed on-call template days `{on_call_usage_count}` time(s) before taking "
             "relief from white/yellow days."
         )
     else:
         summary_line = (
-            "- Summary: The patch did not use on-call template days instead of "
-            "white/yellow days."
+            "- Summary: The patch filled "
+            f"`{selected_on_call_total}` of `{target_on_call_total}` On-Call buffer positions "
+            "without using signed on-call template days."
         )
     return [
         summary_line,
+        f"- On-call buffer positions filled: `{selected_on_call_total}` / `{target_on_call_total}`",
         f"- On-call template day assignments: `{on_call_usage_count}`",
-        f"- White-template agreement cases: `{white_template_count}`",
-        f"- Yellow-template agreement cases: `{yellow_template_count}`",
+        f"- White-template assigned agreement cases: `{white_template_count}`",
+        f"- Yellow-template assigned agreement cases: `{yellow_template_count}`",
+        f"- White-template On-Call agreement cases: `{white_template_on_call_count}`",
+        f"- Yellow-template On-Call agreement cases: `{yellow_template_on_call_count}`",
     ]
 
 
@@ -247,12 +301,20 @@ def test_weekly_stage04_review_bundle_exports_expected_structure_and_metrics(
         inspection_packet,
         "planning.validation_summary.doc",
     )["summary"]
+    candidate_delta = _artifact_metadata(
+        inspection_packet,
+        "planning.candidate_schedule_delta.workbook",
+    )
     coverage_summary = validation_summary["coverage_summary"]
     selected_rows = _selected_assignment_rows(inspection_packet)
     expected_selected_rows = _csv_string_rows(selected_rows)
-    expected_new_agreement_rows = [
-        row for row in expected_selected_rows if row["new_agreement_required"] == "True"
-    ]
+    reserve_rows = list(candidate_delta.get("reserve_rows") or [])
+    reserve_summary = dict(validation_summary.get("reserve_summary") or {})
+    excess_capacity_summary = dict(validation_summary.get("excess_capacity_summary") or {})
+    new_agreement_rows = list(validation_summary.get("new_agreement_rows") or [])
+    expected_new_agreement_rows = _csv_string_rows(
+        _normalized_new_agreement_rows(new_agreement_rows)
+    )
 
     availability_counts: dict[str, int] = {}
     for row in selected_rows:
@@ -297,10 +359,26 @@ def test_weekly_stage04_review_bundle_exports_expected_structure_and_metrics(
             if count <= 0:
                 continue
             assert f"- `{state}`: `{count}`" in readme
+        assert (
+            "- Excess-capacity baseline shifts: "
+            f"`{excess_capacity_summary['selected_excess_capacity_total']}` filled / "
+            f"`{excess_capacity_summary['target_excess_capacity_total']}` targeted"
+        ) in readme
+        for service_date, count in sorted(
+            excess_capacity_summary["selected_excess_capacity_by_service_date"].items()
+        ):
+            assert (
+                f"- `{service_date}`: `{count}` filled / "
+                f"`{excess_capacity_summary['excess_capacity_target_by_service_date'][service_date]}` targeted"
+            ) in readme
 
         note_text = archive.read("notes/on_call_template_usage.md").decode("utf-8")
         assert "# On-Call Template Usage" in note_text
-        for line in _expected_on_call_note_lines(selected_rows):
+        for line in _expected_on_call_note_lines(
+            reserve_rows=reserve_rows,
+            reserve_summary=reserve_summary,
+            new_agreement_rows=new_agreement_rows,
+        ):
             assert line in note_text
             assert line in readme
 
@@ -309,7 +387,10 @@ def test_weekly_stage04_review_bundle_exports_expected_structure_and_metrics(
             "csv/selected_route_slot_assignments.csv",
         )
         assert selected_assignment_rows == expected_selected_rows
-        assert len(selected_assignment_rows) == coverage_summary["assigned_route_slots"]
+        assert len(selected_assignment_rows) == (
+            coverage_summary["assigned_route_slots"]
+            + excess_capacity_summary["selected_excess_capacity_total"]
+        )
         assert list(selected_assignment_rows[0].keys()) == _CSV_FIELDNAMES
 
         new_agreement_rows = _read_zip_csv(

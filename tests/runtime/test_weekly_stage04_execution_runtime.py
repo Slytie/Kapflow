@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections import Counter
 import json
 from pathlib import Path
 from urllib.parse import urlparse
@@ -519,6 +520,7 @@ def test_weekly_stage04_execution_runtime_actual_ops_fixture_reaches_full_covera
     result = response.payload["result"]
 
     assert result["stage04_build_result"]["selected_candidate_count"] == 134
+    assert result["stage04_build_result"]["selected_excess_capacity_count"] == 21
     assert result["stage04_build_result"]["coverage_summary"]["assigned_route_slots"] == 134
     assert result["stage04_build_result"]["coverage_summary"]["uncovered_route_slots"] == 0
 
@@ -564,19 +566,78 @@ def test_weekly_stage04_execution_runtime_actual_ops_fixture_reaches_full_covera
     validation_summary = output_by_kind["planning.validation_summary.doc"]["summary"]
     draft_doc = output_by_kind["planning.draft_weekly_schedule.doc"]
     new_agreement_idx = candidate_delta["columns"].index("new_agreement_required")
+    shift_counter = Counter()
+    candidate_columns = [str(column) for column in candidate_delta["columns"]]
+    for row in candidate_delta["rows"]:
+        normalized = dict(zip(candidate_columns, row))
+        driver_id = str(normalized.get("assigned_driver_id") or "")
+        if driver_id:
+            shift_counter[driver_id] += 1
+    for row in candidate_delta.get("reserve_rows") or []:
+        driver_id = str(row.get("assigned_driver_id") or row.get("candidate_driver_id") or "")
+        if driver_id:
+            shift_counter[driver_id] += 1
+    driver_profiles = {
+        str(profile["driver_id"]): dict(profile)
+        for profile in input_bundle_payload["bundle"]["driver_profiles"]
+    }
+    zero_shift_driver_ids = sorted(set(driver_profiles) - set(shift_counter))
+    drivers_below_three = {
+        driver_id: count for driver_id, count in shift_counter.items() if count < 3
+    }
 
     assert "baseline_template_state" in candidate_delta["columns"]
     assert "planned_driver_day_state" in candidate_delta["columns"]
     assert "template_state_preservation_fit" in candidate_delta["columns"]
-    assert validation_summary["new_agreement_required_count"] <= 10
+    assert validation_summary["reserve_summary"]["target_on_call_total"] == 28
+    assert validation_summary["reserve_summary"]["selected_on_call_total"] == 28
+    assert all(
+        count == 4
+        for count in validation_summary["reserve_summary"]["selected_on_call_by_service_date"].values()
+    )
+    assert all(
+        count == 0
+        for count in validation_summary["reserve_summary"]["unmet_on_call_target_by_service_date"].values()
+    )
+    assert validation_summary["excess_capacity_summary"]["target_excess_capacity_total"] == 21
+    assert validation_summary["excess_capacity_summary"]["selected_excess_capacity_total"] == 21
+    assert all(
+        count == 3
+        for count in validation_summary["excess_capacity_summary"][
+            "selected_excess_capacity_by_service_date"
+        ].values()
+    )
+    assert all(
+        count == 0
+        for count in validation_summary["excess_capacity_summary"][
+            "unmet_excess_capacity_target_by_service_date"
+        ].values()
+    )
+    assert any(
+        key.endswith("_to_on_call")
+        for key in validation_summary["new_agreement_transition_counts"]
+    )
     assert len(validation_summary["new_agreement_rows"]) == validation_summary["new_agreement_required_count"]
-    assert sum(1 for row in candidate_delta["rows"] if bool(row[new_agreement_idx])) == validation_summary[
-        "new_agreement_required_count"
-    ]
+    route_new_agreement_count = sum(
+        1 for row in candidate_delta["rows"] if bool(row[new_agreement_idx])
+    )
+    reserve_new_agreement_count = sum(
+        1 for row in candidate_delta.get("reserve_rows") or [] if bool(row.get("new_agreement_required"))
+    )
+    assert (
+        route_new_agreement_count + reserve_new_agreement_count
+        == validation_summary["new_agreement_required_count"]
+    )
     assert draft_doc["summary"]["new_agreement_required_count"] == validation_summary[
         "new_agreement_required_count"
     ]
+    assert draft_doc["summary"]["selected_excess_capacity_count"] == 21
     assert draft_doc["selected_assignments"]
+    assert zero_shift_driver_ids == []
+    assert all(
+        driver_profiles[driver_id]["policy_signal"]["max_shifts_per_week"] < 3
+        for driver_id in drivers_below_three
+    )
 
 
 def test_weekly_stage04_execution_runtime_records_retry_history_without_duplicate_turn_artifacts(
