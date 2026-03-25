@@ -2,6 +2,16 @@
 
 Record any decisions made since the last session so a fresh Codex run can rehydrate quickly.
 
+## 2026-03-25 (TASK-0132 artifact-backed EOD contract and route-family freeze)
+- Epic-boundary decision: after the query-backed `EPIC-120` tranche, the next workpage tranche is the **first artifact-backed vertical slice**, not more query/demo polish.
+- First-write-path decision: the first artifact-backed workpage is **EOD only**, aligned to `dispatch_reporting.v1` Stage03 draft/review semantics (`reporting.upd_draft.workbook`).
+- Route-family decision: keep the existing demo query routes, add `POST /api/v1/workpages/demo/eod-v0/drafts`, `GET /api/v1/workpages/artifacts/{artifact_version_id}`, and `POST /api/v1/workpages/artifacts/{artifact_version_id}/submit`, and keep workflow-run-backed workpages reserved for later.
+- Canonical-anchoring decision: do **not** invent runless demo artifacts. The first EOD drafts must live inside a canonical `dispatch_reporting.v1` workflow run, even if that run is resolved or created by a deterministic demo helper for the known service-date example.
+- Save-semantics decision: explicit submit/save creates a new immutable artifact version that `supersedes` the prior workbook version. No in-place workbook mutation and no per-keystroke autosave into `artifact_versions`.
+- Schedule-boundary decision: the schedule page remains **query-backed and composite** in this epic; do not force schedule into a single-artifact write model yet.
+- Template-registry decision: the repo currently has template-pack/registry support concentrated on `schedule_planning.v1`; `TASK-0133` is now the next tranche because this epic needs a bounded `dispatch_reporting.v1` template pack and enough multi-workflow registry support to instantiate `reporting.upd_draft.workbook` truthfully.
+- Workflow-integration decision: this epic stops at the first artifact-backed EOD slice and demo-shell entrypoints. Human-task/workspace integration is a later epic unless a bounded existing dispatch-reporting lane already supports it without broadening scope.
+
 ## 2026-03-25 (TASK-0131 HTTP-backed frontend workpage migration and local freshness)
 - Frontend data-seam decision: the active `/demo/logistics/workpages/schedule-v0` and `/demo/logistics/workpages/eod-v0` routes now read backend demo query contracts through `onetruthApi.getDemoWorkpage()` and `workpagesRepository.schedule()` / `workpagesRepository.eod()` instead of frontend-local example adapters.
 - Wrapper-visibility decision: the frontend now keeps the backend workpage wrapper visible instead of stripping it to the inner `WorkpageViewModel`; workpage pages render local `source` / `freshness` metadata because `AppShell` intentionally hides the global shell freshness banner on `/demo/logistics/*`.

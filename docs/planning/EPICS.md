@@ -21,7 +21,8 @@ Current runtime/debug priority: **Schedule Planning**. Payroll remains the secon
 | EPIC-090 | Acceptance suite + golden traces (happy path + negatives) | S4-A07 | EPIC-000..080 |
 | EPIC-100 | Production perimeter + substrate + release-mediated promotion discipline | viewer/bootstrap, deploy/runbook reference, production/lab topology | EPIC-010, EPIC-080 |
 | EPIC-110 | Workflow Lab (thin, non-authoritative candidate-evaluation lane) | docs/schemas/normalizers for lab evidence and gated later execution adapters | EPIC-025, EPIC-080, EPIC-100 |
-| EPIC-120 | Logistics workpages v0 (fixture-backed weekly schedule review + EOD draft/review FE wedge) | workpage plan/product brief, example view-model fixtures, full-page FE routes under `/demo/logistics/workpages/*` | EPIC-025, EPIC-080 |
+| EPIC-120 | Logistics workpages v0 (weekly schedule review + EOD draft/review, query-backed surfaces) | workpage plan/product brief, example source fixtures, full-page FE routes under `/demo/logistics/workpages/*`, backend workpage query contracts/snapshots | EPIC-025, EPIC-080 |
+| EPIC-121 | First artifact-backed workpage slice (EOD draft/review on immutable workbook artifacts) | artifact-backed EOD brief/plan, dispatch-reporting template pack + registry support, EOD draft/projection/submit routes, artifact-backed FE page/lineage UX | EPIC-120, EPIC-030 |
 
 ## Update rules
 - Keep epic files in `docs/planning/epics/`

@@ -285,18 +285,24 @@ Board object shape:
 ### 3.10 Workpage demo surfaces
 Route-family decision:
 - `GET /api/v1/workpages/demo/{workpage_id}`
-- reserve future siblings such as:
+- current frozen artifact-backed EOD siblings:
+  - `POST /api/v1/workpages/demo/eod-v0/drafts`
   - `GET /api/v1/workpages/artifacts/{artifact_version_id}`
+  - `POST /api/v1/workpages/artifacts/{artifact_version_id}/submit`
+- reserve later siblings such as:
   - `GET /api/v1/workpages/workflow-runs/{workflow_run_id}/{workpage_kind}`
 
-Only the `demo` subfamily is currently frozen by repo-native docs. `schedule-v0` and `eod-v0` are now both implemented backend demo routes.
+The `demo` subfamily is implemented today. The first artifact-backed family is frozen only for EOD in this epic; schedule remains query-backed.
 
 Current planned demo workpage ids:
 - `schedule-v0`
 - `eod-v0`
 
-Response:
+Demo query response:
 - `{"status":"ok","command":"api.workpages.demo","workpage":{...},"source":{...},"freshness":{...}}`
+
+Artifact-backed read response:
+- `{"status":"ok","command":"api.workpages.artifact","workpage":{...},"source":{...},"freshness":{...},"artifact_context":{...}}`
 
 Workpage object shape (`workpage`):
 - `workpage_id`
@@ -323,9 +329,21 @@ Freshness metadata shape (`freshness`):
 - `source_kind`
 - `source_version`
 
+Artifact context shape (`artifact_context`):
+- `artifact_version_id`
+- `workflow_run_id`
+- `artifact_kind`
+- `supersedes_artifact_version_id`
+- `superseded_by_artifact_version_id`
+- `latest_in_chain_artifact_version_id`
+- `download_path`
+
 Notes:
 - The schedule page is composite and may set `primary_dataset_key` to `null` while populating `source_dataset_keys[]`.
 - The EOD page should remain aligned to `reporting.upd_draft.workbook`, not final-packet semantics.
+- The first artifact-backed slice is **EOD only**; schedule stays on the query-backed route family in this epic.
+- Artifact-backed EOD reads must remain projections over canonical workbook artifacts; the workpage is derived and the workbook artifact version remains authoritative truth.
+- Artifact-backed EOD drafts must be anchored to canonical `dispatch_reporting.v1` workflow runs. No runless demo artifact store is allowed.
 - The implemented EOD route is intentionally built from an intentionally partial example family, so its authoritative demo-query summary values are source-derived partial totals with explicit formula-integrity warnings rather than fixture-only full-day numbers.
 - Demo workpage routes must be backend-built from authoritative example/source inputs, not by serving the human-authored workpage YAML fixtures verbatim.
 - Backend-generated workpage route snapshots belong under `fixtures/frontend_contracts/`; human-authored workpage planning fixtures remain under `fixtures/logistics/workpages/`.
@@ -432,7 +450,45 @@ Rules:
 - storage-root selection is server-owned on shared HTTP,
 - scope checks apply to subject and workflow ownership before upload.
 
-### 4.5 Run bounded Stage06 OpenAI review sandbox
+### 4.5 Create artifact-backed EOD draft
+Endpoint:
+- `POST /api/v1/workpages/demo/eod-v0/drafts`
+
+Body:
+- `idempotency_key`
+
+Response:
+- `{"status":"ok","command":"api.workpages.eod_drafts.create","draft":{"workflow_run_id":"...","artifact_version_id":"...","route":"/demo/logistics/workpages/eod-v0/artifacts/{artifact_version_id}"}}`
+
+Rules:
+- resolve or create the canonical demo `dispatch_reporting.v1` run for the known example slice,
+- instantiate a new `reporting.upd_draft.workbook` artifact version from the reporting template pack,
+- do not create runless demo artifacts,
+- keep create semantics explicit and idempotent.
+
+### 4.6 Submit artifact-backed EOD draft
+Endpoint:
+- `POST /api/v1/workpages/artifacts/{artifact_version_id}/submit`
+
+Body:
+- `form_values`
+- `checklist_values[]`
+- `idempotency_key`
+
+Response:
+- `{"status":"ok","command":"api.workpages.artifact.submit","submitted":{"workflow_run_id":"...","artifact_version_id":"...","supersedes_artifact_version_id":"...","route":"/demo/logistics/workpages/eod-v0/artifacts/{artifact_version_id}"}}`
+
+Conflict error:
+- `{"status":"error","error":{"code":"workpage_artifact_conflict","message":"...","details":{"artifact_version_id":"...","latest_artifact_version_id":"...","workflow_run_id":"...","route":"..."}}}`
+
+Rules:
+- submit creates a **new immutable** workbook artifact version,
+- the new version must set `supersedes_artifact_version_id` to the submitted base artifact version,
+- explicit submit/save only; no per-keystroke artifact writes,
+- if the base artifact version has already been superseded in the same draft chain, fail closed with `workpage_artifact_conflict`,
+- final-packet approval/pointer semantics remain out of scope for this epic.
+
+### 4.7 Run bounded Stage06 OpenAI review sandbox
 Endpoint:
 - `POST /api/v1/human-tasks/{human_task_id}/stage06-agent-review`
 

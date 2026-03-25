@@ -4,7 +4,7 @@
 Stage 4 - Vertical Slice MVP (repo merged around one truth system)
 
 ## Current milestone
-Primary runtime/debug work remains the logistics weekly/live family. `TASK-0131` is now complete, so the immediate application-facing tranche inside `EPIC-120` now includes both server-owned demo workpage query routes and the active frontend migration onto those routes on top of the `TASK-0128` contract freeze.
+Primary runtime/debug work remains the logistics weekly/live family. `TASK-0132` is now complete, so the repo has frozen the first artifact-backed EOD workpage contract, route family, and canonical run-anchoring rules on top of the post-`TASK-0131` query-backed baseline.
 
 Current implemented baseline:
 - `/demo/logistics/workpages/schedule-v0`
@@ -17,18 +17,24 @@ Current implemented baseline:
 - backend EOD demo workpage query route: `GET /api/v1/workpages/demo/eod-v0`
 - backend-generated schedule workpage snapshot: `fixtures/frontend_contracts/workpage_schedule_v0_state.json`
 - backend-generated EOD workpage snapshot: `fixtures/frontend_contracts/workpage_eod_v0_state.json`
+- repo-native artifact-path brief/plan for the first artifact-backed EOD slice
+- frozen artifact-backed EOD route family:
+  - `POST /api/v1/workpages/demo/eod-v0/drafts`
+  - `GET /api/v1/workpages/artifacts/{artifact_version_id}`
+  - `POST /api/v1/workpages/artifacts/{artifact_version_id}/submit`
 
 Immediate next application package:
-- choose the next bounded post-`TASK-0131` tranche deliberately; the query seam is now proven and no submit/materialize task is active yet
-- the first future artifact-backed candidate remains the EOD page, but that path is not started in the current baseline
+- `TASK-0133` is now the next bounded tranche: add the missing `dispatch_reporting.v1` template pack, bounded multi-workflow template-registry support, and the first EOD workbook adapter/materializer tests
+- the artifact-backed slice remains **EOD only** for now; schedule stays query-backed and composite
 
 Important scope boundaries for this tranche:
-- no backend workpage submit/materialize path yet
 - no generic artifact editor
+- no schedule artifact-backed write path yet
 - keep the schedule page on the **weekly planning review + selected-day preview** side of the boundary
 - keep the EOD page on the **dispatch-reporting draft/review** side of the boundary (`reporting.upd_draft.workbook` semantics)
-- treat schedule as a **composite** page, not a single-artifact page
-- treat EOD as the likely **first future artifact-backed** workpage after the query seam is proven
+- keep the first artifact-backed slice anchored to canonical `dispatch_reporting.v1` workflow runs; no runless demo artifacts
+- keep explicit submit/create-new-version semantics; no per-keystroke autosave into `artifact_versions`
+- do not broaden into final-packet approval/pointer semantics in this epic
 - keep the EOD backend route honest to its intentionally partial 2026-03-16 source family; do not smuggle full-day fixture-only totals back into the query contract
 - keep workpage planning fixtures distinct from backend-owned generated contract snapshots
 
