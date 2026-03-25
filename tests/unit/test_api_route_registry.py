@@ -88,6 +88,11 @@ def test_route_registry_matches_representative_exact_and_parameterized_routes() 
     assert workpage_match.route.name == "workpages.demo.detail"
     assert workpage_match.params == {"workpage_id": "schedule-v0"}
 
+    eod_workpage_match = match_route("GET", "/api/v1/workpages/demo/eod-v0")
+    assert eod_workpage_match is not None
+    assert eod_workpage_match.route.name == "workpages.demo.detail"
+    assert eod_workpage_match.params == {"workpage_id": "eod-v0"}
+
 
 def test_route_registry_preserves_suffix_precedence_over_detail_routes() -> None:
     template_download = match_route(

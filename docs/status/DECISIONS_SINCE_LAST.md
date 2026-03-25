@@ -2,6 +2,12 @@
 
 Record any decisions made since the last session so a fresh Codex run can rehydrate quickly.
 
+## 2026-03-25 (TASK-0130 EOD demo workpage query route and snapshot)
+- Query-surface decision: `GET /api/v1/workpages/demo/eod-v0` now exists as the second implemented backend-owned workpage route, reusing the shared `workpages.demo.detail` family instead of introducing a new EOD-specific route seam.
+- Source-build decision: the EOD workpage payload is built from the consistent partial 2026-03-16 QDCI/DVC4 dispatch-reporting example family, not by serving `fixtures/logistics/workpages/eod_report_workpage_v0_view_model_example.yaml`.
+- Partial-honesty decision: because the sanctioned EOD source family is intentionally partial, the backend contract now surfaces source-derived partial totals plus formula-integrity warnings instead of carrying the fixture's older full-day summary numbers into the authoritative query surface.
+- Snapshot decision: `fixtures/frontend_contracts/workpage_eod_v0_state.json` is now a committed backend-generated contract fixture produced through the shared frontend snapshot export/check path.
+
 ## 2026-03-25 (TASK-0129 schedule demo workpage query route and snapshot)
 - Query-surface decision: `GET /api/v1/workpages/demo/schedule-v0` is now the first implemented backend-owned workpage route, and it remains a read-only derived surface with request-context enforcement but no DB dependency.
 - Compatibility decision: the wrapped inner workpage object still keeps `mode=example` and `dataset_key=planning.input_bundle.doc` for the current frontend `WorkpageViewModel` seam, while authoritative query semantics live in the top-level `source` and `freshness` wrapper.

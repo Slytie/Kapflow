@@ -134,6 +134,8 @@ Use as source material:
 
 Again, the human-authored workpage fixture remains a planning/oracle artifact rather than the live backend source.
 
+Because that sanctioned source family is intentionally partial, the backend EOD contract should expose **source-derived partial totals plus explicit formula-integrity warnings** rather than carrying the hand-authored fixture's older full-day summary numbers into the authoritative query surface.
+
 ## Snapshot policy
 Once the backend demo routes exist, generate backend-owned snapshots such as:
 - `fixtures/frontend_contracts/workpage_schedule_v0_state.json`
@@ -149,11 +151,7 @@ After backend demo routes exist:
 - and loading/error/freshness surfaces should be explicit and tested.
 
 ## Testing order for the remaining batch
-### 1. Backend EOD route tests (`TASK-0130`)
-- prove `GET /api/v1/workpages/demo/eod-v0` returns a stable workpage contract
-- export a backend-owned snapshot
-
-### 2. Frontend migration tests (`TASK-0131`)
+### 1. Frontend migration tests (`TASK-0131`)
 - repository/query wiring
 - loading/error/freshness behavior
 - route regression under `/demo/logistics/workpages/*`
@@ -195,8 +193,7 @@ Update these too when the change affects them:
 - `fixtures/frontend_contracts/README.md`
 
 ## Codex execution order for the remaining batch
-1. `TASK-0130` - implement the backend EOD demo workpage query route + snapshot
-2. `TASK-0131` - migrate the frontend pages to the HTTP-backed repository and harden UX/docs
+1. `TASK-0131` - migrate the frontend pages to the HTTP-backed repository and harden UX/docs
 
 ## Red-team guardrails
 Before any code lands in the remaining batch, verify all of the following remain true:

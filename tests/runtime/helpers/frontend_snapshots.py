@@ -38,6 +38,7 @@ SNAPSHOT_FILES = {
     "timeline_state": "timeline_state.json",
     "official_outputs_pointers_state": "official_outputs_pointers_state.json",
     "workpage_schedule_v0_state": "workpage_schedule_v0_state.json",
+    "workpage_eod_v0_state": "workpage_eod_v0_state.json",
 }
 
 ID_FIELDS = {
@@ -153,6 +154,9 @@ def build_frontend_snapshots_payloads() -> dict[str, dict[str, Any]]:
             ),
             "workpage_schedule_v0_state": _build_schedule_workpage_snapshot(
                 tmp_path=base / "workpage_schedule_v0"
+            ),
+            "workpage_eod_v0_state": _build_eod_workpage_snapshot(
+                tmp_path=base / "workpage_eod_v0"
             ),
         }
         return snapshots
@@ -306,6 +310,29 @@ def _build_schedule_workpage_snapshot(*, tmp_path: Path) -> dict[str, Any]:
             "source": {
                 "capture": "repo_example_demo_query",
                 "workpage_id": "schedule-v0",
+            },
+            "workpage_state": payload,
+        }
+    )
+
+
+def _build_eod_workpage_snapshot(*, tmp_path: Path) -> dict[str, Any]:
+    tmp_path.mkdir(parents=True, exist_ok=True)
+    client = RuntimeApiClient(
+        db_url=str(tmp_path / "workpage_eod_v0.db"),
+        tenant_id="tenant-a",
+        domain_id="domain-x",
+        actor_id="human:frontend-snapshot-exporter",
+        actor_type="human",
+        actor_roles=["dispatch_supervisor", "operations_manager", "schedule_planner"],
+    )
+    payload = client.get("/api/v1/workpages/demo/eod-v0").payload
+    return _stabilize(
+        {
+            "snapshot_id": "workpage_eod_v0_state",
+            "source": {
+                "capture": "repo_example_demo_query",
+                "workpage_id": "eod-v0",
             },
             "workpage_state": payload,
         }

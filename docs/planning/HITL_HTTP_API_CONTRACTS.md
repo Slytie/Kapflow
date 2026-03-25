@@ -289,7 +289,7 @@ Route-family decision:
   - `GET /api/v1/workpages/artifacts/{artifact_version_id}`
   - `GET /api/v1/workpages/workflow-runs/{workflow_run_id}/{workpage_kind}`
 
-Only the `demo` subfamily is currently frozen by repo-native docs. `schedule-v0` is implemented in `TASK-0129`, and `eod-v0` remains the next backend route in `TASK-0130`.
+Only the `demo` subfamily is currently frozen by repo-native docs. `schedule-v0` and `eod-v0` are now both implemented backend demo routes.
 
 Current planned demo workpage ids:
 - `schedule-v0`
@@ -326,6 +326,7 @@ Freshness metadata shape (`freshness`):
 Notes:
 - The schedule page is composite and may set `primary_dataset_key` to `null` while populating `source_dataset_keys[]`.
 - The EOD page should remain aligned to `reporting.upd_draft.workbook`, not final-packet semantics.
+- The implemented EOD route is intentionally built from an intentionally partial example family, so its authoritative demo-query summary values are source-derived partial totals with explicit formula-integrity warnings rather than fixture-only full-day numbers.
 - Demo workpage routes must be backend-built from authoritative example/source inputs, not by serving the human-authored workpage YAML fixtures verbatim.
 - Backend-generated workpage route snapshots belong under `fixtures/frontend_contracts/`; human-authored workpage planning fixtures remain under `fixtures/logistics/workpages/`.
 

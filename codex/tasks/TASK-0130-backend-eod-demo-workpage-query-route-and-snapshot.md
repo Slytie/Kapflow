@@ -2,7 +2,7 @@
 id: TASK-0130
 epic: EPIC-120
 title: "Implement the backend EOD demo workpage query route and generated contract snapshot"
-status: TODO
+status: DONE
 owners: ["backend"]
 reviewers: ["frontend", "qa"]
 depends_on: ["TASK-0128"]
@@ -63,3 +63,15 @@ Add the backend demo workpage query surface for the EOD page, backed by the cons
 
 ## Notes / decisions
 Surface formula-integrity warnings explicitly in the contract. Do not attempt workbook-formula emulation in this task.
+
+## Outcomes
+- Extended the shared demo workpage query seam so `GET /api/v1/workpages/demo/eod-v0` resolves through the existing `workpages.demo.detail` route family rather than adding a parallel route.
+- Built the backend EOD payload from the consistent 2026-03-16 QDCI/DVC4 partial dispatch-reporting example family under `docs/workflows/dispatch_reporting/v1/examples/`.
+- Kept the route aligned to `reporting.upd_draft.workbook` semantics, surfaced formula-integrity warnings explicitly, and froze honest partial-source-derived summary values instead of serving the hand-authored fixture verbatim.
+- Extended the shared frontend snapshot export path and committed `fixtures/frontend_contracts/workpage_eod_v0_state.json` as a backend-owned API contract fixture.
+
+## Verification run
+- `PYTHONPATH=src python3.11 -m pytest -q tests/unit/test_api_route_registry.py tests/runtime/api/test_workpages_demo_schedule_contract.py tests/runtime/api/test_workpages_demo_eod_contract.py`
+- `PYTHONPATH=src python3.11 -m pytest -q tests/runtime/contracts/test_frontend_snapshot_fixtures.py`
+- `PYTHONPATH=src python3.11 scripts/export_frontend_snapshots.py --check`
+- `python3.11 scripts/validate_repo.py --schemas-only`

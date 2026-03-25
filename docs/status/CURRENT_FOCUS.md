@@ -4,7 +4,7 @@
 Stage 4 - Vertical Slice MVP (repo merged around one truth system)
 
 ## Current milestone
-Primary runtime/debug work remains the logistics weekly/live family. `TASK-0129` is now complete, so the immediate application-facing tranche inside `EPIC-120` now includes the first server-owned demo workpage query route and generated schedule snapshot on top of the `TASK-0128` contract freeze.
+Primary runtime/debug work remains the logistics weekly/live family. `TASK-0130` is now complete, so the immediate application-facing tranche inside `EPIC-120` now includes both server-owned demo workpage query routes and generated workpage snapshots on top of the `TASK-0128` contract freeze.
 
 Current implemented baseline:
 - `/demo/logistics/workpages/schedule-v0`
@@ -12,10 +12,11 @@ Current implemented baseline:
 - full-page routes under `AppShell`
 - frontend-local/example-backed workpage pages and tests
 - backend schedule demo workpage query route: `GET /api/v1/workpages/demo/schedule-v0`
+- backend EOD demo workpage query route: `GET /api/v1/workpages/demo/eod-v0`
 - backend-generated schedule workpage snapshot: `fixtures/frontend_contracts/workpage_schedule_v0_state.json`
+- backend-generated EOD workpage snapshot: `fixtures/frontend_contracts/workpage_eod_v0_state.json`
 
-Immediate next application package (`EPIC-120`, post-`TASK-0129` batch):
-- `TASK-0130`: backend EOD demo workpage query route + generated snapshot
+Immediate next application package (`EPIC-120`, post-`TASK-0130` batch):
 - `TASK-0131`: HTTP-backed frontend migration plus loading/error/freshness and shell regressions
 
 Important scope boundaries for this tranche:
@@ -25,6 +26,7 @@ Important scope boundaries for this tranche:
 - keep the EOD page on the **dispatch-reporting draft/review** side of the boundary (`reporting.upd_draft.workbook` semantics)
 - treat schedule as a **composite** page, not a single-artifact page
 - treat EOD as the likely **first future artifact-backed** workpage after the query seam is proven
+- keep the EOD backend route honest to its intentionally partial 2026-03-16 source family; do not smuggle full-day fixture-only totals back into the query contract
 - keep workpage planning fixtures distinct from backend-owned generated contract snapshots
 
 Runtime scaffold bootstrap now includes canonical workflow/task/approval/artifact/pointer substrate under `src/onetruth/` + `alembic/` with a stable CLI lifecycle boundary:

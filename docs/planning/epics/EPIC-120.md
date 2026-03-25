@@ -41,17 +41,18 @@ It is intentionally **not** a generic artifact editor epic.
 
 Context pack: `codex/context/EPIC-120.md`
 
-## Current Repo Status (2026-03-25 post-`TASK-0129` schedule route)
+## Current Repo Status (2026-03-25 post-`TASK-0130` backend demo routes)
 - `/demo/logistics/workpages/schedule-v0` and `/demo/logistics/workpages/eod-v0` exist as full-page routes under `AppShell`.
-- The active pages are still **frontend-local/example-backed** after `TASK-0129`; frontend migration has not started yet.
+- The active pages are still **frontend-local/example-backed** after `TASK-0130`; frontend migration has not started yet.
 - Repo-native docs now freeze the post-v0 workpage query contract, route family, and snapshot policy.
-- `GET /api/v1/workpages/demo/schedule-v0` now exists as the first backend demo workpage query surface.
-- `fixtures/frontend_contracts/workpage_schedule_v0_state.json` now exists as the first backend-generated workpage query snapshot.
-- The next correctness move is to implement the EOD backend demo query surface and then migrate the frontend workpage routes onto the HTTP-backed repository seam.
+- `GET /api/v1/workpages/demo/schedule-v0` and `GET /api/v1/workpages/demo/eod-v0` now exist as backend demo workpage query surfaces.
+- `fixtures/frontend_contracts/workpage_schedule_v0_state.json` and `fixtures/frontend_contracts/workpage_eod_v0_state.json` now exist as backend-generated workpage query snapshots.
+- The next correctness move is to migrate the frontend workpage routes onto the HTTP-backed repository seam.
 - `weekly_schedule_planning.v1` still owns the **pre-week / Friday** weekly build. Day-of replan belongs to `live_dispatch.v1` and must not leak into the schedule workpage scope.
 - `dispatch_reporting.v1` still separates normalized actuals, draft packet generation, review, and final packet output. The EOD page remains aligned to `reporting.upd_draft.workbook` semantics rather than Stage05 final output.
 - The schedule page is **composite** over multiple weekly-planning example inputs. It must not be forced into a single-artifact identity too early.
 - The EOD page is the better candidate for the **first future artifact-backed path** because it maps more naturally to one reporting packet/workbook family.
+- The implemented EOD backend route is intentionally honest to its partial example family: summary cards are source-derived partial totals with explicit formula-integrity warnings, not fixture-only full-day totals.
 - Workpage query snapshots, once generated from backend routes, belong in `fixtures/frontend_contracts/` because they are backend-owned generated API fixtures. The human-authored workpage fixtures under `fixtures/logistics/workpages/` remain a different class of artifact.
 
 ## Tasks
