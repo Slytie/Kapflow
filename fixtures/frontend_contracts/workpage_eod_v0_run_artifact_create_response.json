@@ -1,0 +1,17 @@
+{
+  "create_response": {
+    "command": "api.workpages.eod_drafts.create",
+    "draft": {
+      "artifact_version_id": "<artifact_version_id:1>",
+      "route": "/runs/<workflow_run_id:2>/workpages/eod-v0/artifacts/<artifact_version_id:1>",
+      "workflow_run_id": "<workflow_run_id:2>"
+    },
+    "status": "ok"
+  },
+  "snapshot_id": "workpage_eod_v0_run_artifact_create_response",
+  "source": {
+    "capture": "workflow_run_artifact_backed_create_response",
+    "workflow_run_id": "<workflow_run_id:2>",
+    "workpage_id": "eod-v0"
+  }
+}

@@ -23,6 +23,11 @@ _DATASET_PAYLOAD_KEYS: tuple[tuple[str, str], ...] = (
     ("planning.actual_hours_snapshot.workbook", "actual_hours"),
 )
 
+_REPORTING_SOURCE_DATASET_KEYS: tuple[str, ...] = (
+    "reporting.eos_raw.workbook",
+    "reporting.actuals_normalized.workbook",
+)
+
 
 def seed_actual_ops_weekly_schedule_run(
     *,
@@ -87,6 +92,73 @@ def seed_actual_ops_weekly_schedule_run(
         "workflow_run_id": workflow_run_id,
         "artifacts_by_kind": artifacts_by_kind,
         "fixture_contract": str(source_material["fixture_contract"]),
+    }
+
+
+def seed_dispatch_reporting_workpage_run(
+    *,
+    db_url: str,
+    tenant_id: str,
+    domain_id: str,
+    run_tag: str,
+    include_source_artifacts: bool = True,
+) -> dict[str, Any]:
+    run_cli("--db-url", db_url, "init-db")
+    created_run = run_cli(
+        "--db-url",
+        db_url,
+        "runs",
+        "create",
+        "--json",
+        json.dumps(
+            {
+                "workflow_id": "dispatch_reporting.v1",
+                "workflow_version": "v1",
+                "tenant_id": tenant_id,
+                "domain_id": domain_id,
+                "partition_key": "SD-2026-03-16",
+                "logical_date": "2026-03-16",
+                "activation_key": f"{run_tag}:dispatch-reporting-workpage",
+                "idempotency_key": f"{run_tag}:runs.create",
+            },
+            separators=(",", ":"),
+        ),
+    )
+    workflow_run = stdout_json(created_run)["workflow_run"]
+    workflow_run_id = str(workflow_run["workflow_run_id"])
+
+    artifacts_by_kind: dict[str, dict[str, Any]] = {}
+    if include_source_artifacts:
+        for artifact_kind in _REPORTING_SOURCE_DATASET_KEYS:
+            created_artifact = run_cli(
+                "--db-url",
+                db_url,
+                "artifacts",
+                "create-version",
+                "--json",
+                json.dumps(
+                    {
+                        "workflow_run_id": workflow_run_id,
+                        "artifact_kind": artifact_kind,
+                        "artifact_role": "official_input",
+                        "media_type": "application/json",
+                        "storage_uri": f"inmem://workpages/{run_tag}/{artifact_kind}",
+                        "content_digest": f"sha256:{run_tag}:{artifact_kind}",
+                        "metadata_json": {
+                            "service_date": "2026-03-16",
+                            "workpage_seed": "dispatch-reporting-run",
+                        },
+                        "idempotency_key": f"{run_tag}:artifacts.create:{artifact_kind}",
+                    },
+                    separators=(",", ":"),
+                ),
+            )
+            artifacts_by_kind[artifact_kind] = stdout_json(created_artifact)["artifact_version"]
+
+    return {
+        "workflow_run": workflow_run,
+        "workflow_run_id": workflow_run_id,
+        "artifacts_by_kind": artifacts_by_kind,
     }
 
 

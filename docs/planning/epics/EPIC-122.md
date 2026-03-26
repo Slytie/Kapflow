@@ -10,7 +10,7 @@ This epic is intentionally asymmetric:
 This epic is intentionally **not** the schedule write-path epic and **not** the broad workspace/task integration epic.
 
 ## Status
-Active as of 2026-03-26. `TASK-0137` and `TASK-0138` are now complete, so the route family, alias posture, and minimal run-context/draft-resolution contract are frozen in repo-native docs and the first canonical run-backed schedule route plus generated snapshot now exist. `TASK-0139` is the next bounded implementation tranche.
+Active as of 2026-03-26. `TASK-0137`, `TASK-0138`, and `TASK-0139` are now complete, so the route family, alias posture, and minimal run-context/draft-resolution contract are frozen in repo-native docs and the backend now exposes canonical run-backed schedule and EOD workpage access routes plus generated snapshots. `TASK-0140` is the next bounded implementation tranche.
 
 ## Scope
 ### In scope
@@ -47,14 +47,15 @@ Context pack: `codex/context/EPIC-122.md`
 - The repo already has immutable artifact lineage, download, and conflict handling for artifact-backed EOD editing.
 - `TASK-0137` is now complete: the canonical backend run-backed workpage family, the canonical frontend run-backed route posture, and the `run_context` / `draft_resolution` boundary are all frozen in repo-native docs.
 - The schedule page remains composite and should not be forced into one-artifact semantics in this epic.
-- The EOD page already has the first artifact-backed write path, so the next EOD work is run-backed landing/latest-draft resolution rather than deeper write semantics.
+- `TASK-0139` is now complete: the backend exposes `GET /api/v1/workpages/workflow-runs/{workflow_run_id}/eod-v0` plus `POST /api/v1/workpages/workflow-runs/{workflow_run_id}/eod-v0/drafts`, while artifact-backed EOD editing remains a separate explicit lane.
+- The EOD page already has the first artifact-backed write path, so the next work is frontend migration to the canonical run-backed routes rather than deeper write semantics.
 - `/demo/logistics/workpages/*` remains a curated alias/entrypoint family until the canonical run-backed surfaces are implemented and proven.
 - Legacy workspace/task surfaces still contain old schedule-centric assumptions and should not absorb this epic.
 
 ## Tasks
 - TASK-0137 - DONE
 - TASK-0138 - DONE
-- TASK-0139 - TODO
+- TASK-0139 - DONE
 - TASK-0140 - TODO
 - TASK-0141 - TODO
 

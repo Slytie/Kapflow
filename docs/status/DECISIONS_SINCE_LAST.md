@@ -2,6 +2,13 @@
 
 Record any decisions made since the last session so a fresh Codex run can rehydrate quickly.
 
+## 2026-03-26 (TASK-0139 workflow-run-backed EOD landing, latest-draft resolution, and canonical draft create)
+- Route implementation decision: the canonical `dispatch_reporting.v1` run-backed workpage access lane is now live at `GET /api/v1/workpages/workflow-runs/{workflow_run_id}/eod-v0` plus `POST /api/v1/workpages/workflow-runs/{workflow_run_id}/eod-v0/drafts`; the existing demo create alias remains in place as a compatibility/entrypoint surface until the frontend migration tranche.
+- Landing-contract decision: the run-backed EOD landing route intentionally reuses the existing validated read-only EOD landing body, sets `source.mode=run_projection`, keeps `source.source_artifact_version_id=null`, adds `run_context`, and exposes EOD-only `draft_resolution` without overloading `artifact_context`.
+- Latest-draft decision: run-backed EOD resolution now selects the newest compatible `reporting.upd_draft.workbook` artifact inside the supplied workflow run, accepting artifacts with no `demo_workpage_id` tag or `demo_workpage_id=eod-v0`, and returning canonical `/runs/{workflow_run_id}/workpages/eod-v0/artifacts/{artifact_version_id}` reopen routes.
+- Freshness/source decision: the run-backed EOD landing now uses `freshness.source_kind=workflow_run_projection` and `freshness.source_version=<latest_draft_artifact_version_id|workflow_run_id>`, while `source.source_refs` point at matching workflow-run artifact-detail routes in EOD source order when those artifacts exist.
+- Snapshot decision: backend-owned frontend contract fixtures now include `fixtures/frontend_contracts/workpage_eod_v0_run_state.json` and `fixtures/frontend_contracts/workpage_eod_v0_run_artifact_create_response.json`, generated from a real seeded reporting run.
+
 ## 2026-03-26 (TASK-0138 workflow-run-backed schedule route and snapshot)
 - Route implementation decision: the first canonical EPIC-122 backend surface is now live at `GET /api/v1/workpages/workflow-runs/{workflow_run_id}/schedule-v0`; the existing demo schedule route remains in place as a curated alias/input surface until the frontend migration tranche.
 - Projection-source decision: the run-backed schedule workpage now builds from the latest canonical Stage04 run artifacts on a real `weekly_schedule_planning.v1` workflow run (`planning.route_slot_requirements.workbook`, `planning.driver_capabilities.workbook`, optional `planning.approved_availability.workbook`, optional `planning.actual_hours_snapshot.workbook`) rather than serving a planning fixture verbatim or depending on the logistics story summary.

@@ -81,6 +81,11 @@ Build from a real `dispatch_reporting.v1` workflow run and expose:
 - the latest editable artifact version if it exists,
 - and the canonical artifact-backed route needed to reopen that draft.
 
+Implemented in `TASK-0139`:
+- `GET /api/v1/workpages/workflow-runs/{workflow_run_id}/eod-v0`
+- `POST /api/v1/workpages/workflow-runs/{workflow_run_id}/eod-v0/drafts`
+- backend-generated snapshots `fixtures/frontend_contracts/workpage_eod_v0_run_state.json` and `fixtures/frontend_contracts/workpage_eod_v0_run_artifact_create_response.json`
+
 Important guardrails:
 - keep actual editing on the existing artifact-backed route,
 - do not quietly switch to final-packet semantics,
@@ -97,7 +102,7 @@ These belong under `fixtures/frontend_contracts/` because they are backend-gener
 ## Epic task order
 1. `TASK-0137` - DONE
 2. `TASK-0138` - DONE
-3. `TASK-0139` - implement the backend run-backed EOD landing/draft-resolution route + snapshot
+3. `TASK-0139` - DONE
 4. `TASK-0140` - migrate the frontend to workflow-run-backed routes while preserving artifact-backed EOD editing handoff
 5. `TASK-0141` - expose demo/story drilldown entrypoints and keep docs/status truthful
 

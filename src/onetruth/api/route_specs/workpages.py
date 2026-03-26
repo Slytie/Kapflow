@@ -14,6 +14,7 @@ from onetruth.api.route_specs._core import (
 from onetruth.api.routes.workpages import (
     artifact_workpage_endpoint,
     create_demo_eod_draft_endpoint,
+    create_workflow_run_eod_draft_endpoint,
     demo_workpage_endpoint,
     submit_artifact_workpage_endpoint,
     workflow_run_workpage_endpoint,
@@ -56,6 +57,24 @@ WORKPAGE_ROUTE_SPECS: tuple[RouteSpec, ...] = (
         dispatch=lambda execution, params: _dispatch_workflow_run_workpage(
             execution,
             params["workflow_run_workpage"],
+        ),
+    ),
+    RouteSpec(
+        name="workpages.workflow_run.eod_drafts.create",
+        method="POST",
+        pattern=_param(
+            "/api/v1/workpages/workflow-runs/",
+            param_name="workflow_run_id",
+            suffix="/eod-v0/drafts",
+        ),
+        body_policy=JSON_COMMAND_BODY,
+        needs_page=False,
+        dispatch=lambda execution, params: create_workflow_run_eod_draft_endpoint(
+            require_connection(execution.connection),
+            context=require_request_context(execution.context),
+            db_url=execution.db_url,
+            workflow_run_id=params["workflow_run_id"],
+            payload=_require_payload(execution.payload),
         ),
     ),
     RouteSpec(

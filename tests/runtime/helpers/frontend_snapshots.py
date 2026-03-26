@@ -9,7 +9,10 @@ from typing import Any
 from tests.runtime.helpers.runtime_api import RuntimeApiClient
 from tests.runtime.helpers.runtime_cli import REPO_ROOT, run_cli
 from tests.runtime.helpers.scenario_harness import RuntimeScenarioHarness
-from tests.runtime.helpers.workpage_runs import seed_actual_ops_weekly_schedule_run
+from tests.runtime.helpers.workpage_runs import (
+    seed_actual_ops_weekly_schedule_run,
+    seed_dispatch_reporting_workpage_run,
+)
 
 FRONTEND_SNAPSHOT_DIR = REPO_ROOT / "fixtures/frontend_contracts"
 
@@ -41,6 +44,8 @@ SNAPSHOT_FILES = {
     "workpage_schedule_v0_state": "workpage_schedule_v0_state.json",
     "workpage_schedule_v0_run_state": "workpage_schedule_v0_run_state.json",
     "workpage_eod_v0_state": "workpage_eod_v0_state.json",
+    "workpage_eod_v0_run_state": "workpage_eod_v0_run_state.json",
+    "workpage_eod_v0_run_artifact_create_response": "workpage_eod_v0_run_artifact_create_response.json",
     "workpage_eod_v0_artifact_create_response": "workpage_eod_v0_artifact_create_response.json",
     "workpage_eod_v0_artifact_state": "workpage_eod_v0_artifact_state.json",
     "workpage_eod_v0_artifact_submit_response": "workpage_eod_v0_artifact_submit_response.json",
@@ -166,6 +171,12 @@ def build_frontend_snapshots_payloads() -> dict[str, dict[str, Any]]:
             ),
             "workpage_eod_v0_state": _build_eod_workpage_snapshot(
                 tmp_path=base / "workpage_eod_v0"
+            ),
+            "workpage_eod_v0_run_state": _build_eod_run_workpage_snapshot(
+                tmp_path=base / "workpage_eod_v0_run"
+            ),
+            "workpage_eod_v0_run_artifact_create_response": _build_eod_run_artifact_create_snapshot(
+                tmp_path=base / "workpage_eod_v0_run_artifact_create"
             ),
             "workpage_eod_v0_artifact_create_response": _build_eod_artifact_create_snapshot(
                 tmp_path=base / "workpage_eod_v0_artifact_create"
@@ -391,6 +402,44 @@ def _build_eod_workpage_snapshot(*, tmp_path: Path) -> dict[str, Any]:
     )
 
 
+def _build_eod_run_workpage_snapshot(*, tmp_path: Path) -> dict[str, Any]:
+    tmp_path.mkdir(parents=True, exist_ok=True)
+    db_url = f"sqlite:///{tmp_path / 'workpage_eod_v0_run.db'}"
+    seeded = seed_dispatch_reporting_workpage_run(
+        db_url=db_url,
+        tenant_id="tenant-a",
+        domain_id="domain-x",
+        run_tag="snapshot:workpage-eod-v0-run",
+    )
+    client = RuntimeApiClient(
+        db_url=db_url,
+        tenant_id="tenant-a",
+        domain_id="domain-x",
+        actor_id="human:frontend-snapshot-exporter",
+        actor_type="human",
+        actor_roles=["dispatch_supervisor", "operations_manager", "schedule_planner"],
+    )
+    workflow_run_id = str(seeded["workflow_run_id"])
+    client.post(
+        f"/api/v1/workpages/workflow-runs/{workflow_run_id}/eod-v0/drafts",
+        payload={"idempotency_key": "snapshot:workpage-eod-v0-run:create"},
+    )
+    payload = client.get(
+        f"/api/v1/workpages/workflow-runs/{workflow_run_id}/eod-v0"
+    ).payload
+    return _stabilize(
+        {
+            "snapshot_id": "workpage_eod_v0_run_state",
+            "source": {
+                "capture": "workflow_run_query",
+                "workflow_run_id": workflow_run_id,
+                "workpage_id": "eod-v0",
+            },
+            "workpage_state": payload,
+        }
+    )
+
+
 def _artifact_workpage_client(tmp_path: Path) -> RuntimeApiClient:
     db_url = f"sqlite:///{tmp_path / 'workpage_eod_v0_artifact.db'}"
     run_cli("--db-url", db_url, "init-db")
@@ -416,6 +465,41 @@ def _build_eod_artifact_create_snapshot(*, tmp_path: Path) -> dict[str, Any]:
             "snapshot_id": "workpage_eod_v0_artifact_create_response",
             "source": {
                 "capture": "artifact_backed_create_response",
+                "workpage_id": "eod-v0",
+            },
+            "create_response": payload,
+        }
+    )
+
+
+def _build_eod_run_artifact_create_snapshot(*, tmp_path: Path) -> dict[str, Any]:
+    tmp_path.mkdir(parents=True, exist_ok=True)
+    db_url = f"sqlite:///{tmp_path / 'workpage_eod_v0_run_artifact_create.db'}"
+    seeded = seed_dispatch_reporting_workpage_run(
+        db_url=db_url,
+        tenant_id="tenant-a",
+        domain_id="domain-x",
+        run_tag="snapshot:workpage-eod-v0-run-artifact-create",
+    )
+    client = RuntimeApiClient(
+        db_url=db_url,
+        tenant_id="tenant-a",
+        domain_id="domain-x",
+        actor_id="human:frontend-snapshot-exporter",
+        actor_type="human",
+        actor_roles=["dispatch_supervisor", "operations_manager", "schedule_planner"],
+    )
+    workflow_run_id = str(seeded["workflow_run_id"])
+    payload = client.post(
+        f"/api/v1/workpages/workflow-runs/{workflow_run_id}/eod-v0/drafts",
+        payload={"idempotency_key": "snapshot:eod-run-artifact-create"},
+    ).payload
+    return _stabilize(
+        {
+            "snapshot_id": "workpage_eod_v0_run_artifact_create_response",
+            "source": {
+                "capture": "workflow_run_artifact_backed_create_response",
+                "workflow_run_id": workflow_run_id,
                 "workpage_id": "eod-v0",
             },
             "create_response": payload,

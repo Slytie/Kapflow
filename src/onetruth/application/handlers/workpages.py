@@ -119,19 +119,12 @@ def create_demo_eod_draft_command(
             created_at=now,
             event_idempotency=run_event_idempotency,
         )
-        template = _load_eod_template_record()
-        artifact = _create_workbook_artifact_version(
+        artifact = _create_eod_draft_artifact_version(
             connection,
             storage_root=storage_root,
             workflow_run_id=str(workflow_run["workflow_run_id"]),
-            artifact_bytes=template.source_path.read_bytes(),
-            artifact_role=None,
-            file_name=_draft_file_name(),
-            media_type=template.media_type,
-            metadata_json=_draft_metadata(template),
             parent_artifact_version_id=None,
             supersedes_artifact_version_id=None,
-            lineage_note="Initial artifact-backed EOD draft seeded from Stage03 template.",
             actor_id=actor_id,
             actor_type=actor_type,
             event_idempotency=artifact_event_idempotency,
@@ -141,7 +134,88 @@ def create_demo_eod_draft_command(
             "draft": {
                 "workflow_run_id": str(workflow_run["workflow_run_id"]),
                 "artifact_version_id": artifact_version_id,
-                "route": f"{EOD_UI_ROUTE_PREFIX}{artifact_version_id}",
+                "route": _demo_eod_ui_route(artifact_version_id),
+            }
+        }
+
+    result, replay = _execute_with_command_receipt(
+        connection,
+        receipt=receipt,
+        operation=_operation,
+    )
+    return _command_receipt_payload(
+        result,
+        receipt=receipt,
+        replay=replay,
+        include_receipt=include_receipt,
+    )
+
+
+def create_workflow_run_eod_draft_command(
+    connection: sqlite3.Connection,
+    workflow_run: Mapping[str, Any],
+    payload: dict[str, Any],
+    *,
+    storage_root: Path,
+    include_receipt: bool = False,
+) -> dict[str, Any]:
+    workflow_run_id = _require_non_empty_string(
+        workflow_run.get("workflow_run_id"),
+        field_name="workflow_run_id",
+    )
+    tenant_id = _require_non_empty_string(payload.get("tenant_id"), field_name="tenant_id")
+    domain_id = _require_non_empty_string(payload.get("domain_id"), field_name="domain_id")
+    actor_id = _require_non_empty_string(payload.get("actor_id"), field_name="actor_id")
+    actor_type = _require_non_empty_string(payload.get("actor_type"), field_name="actor_type")
+
+    receipt = _prepare_command_receipt(
+        command_name="workpages.eod-drafts.create",
+        payload={
+            **payload,
+            "workflow_run_id": workflow_run_id,
+            "workflow_id": WORKFLOW_ID,
+            "workpage_id": DEMO_WORKPAGE_ID,
+        },
+        fingerprint_payload={
+            "tenant_id": tenant_id,
+            "domain_id": domain_id,
+            "workflow_run_id": workflow_run_id,
+            "workflow_id": WORKFLOW_ID,
+            "workpage_id": DEMO_WORKPAGE_ID,
+            "template_id": EOD_TEMPLATE_ID,
+            "actor_id": actor_id,
+            "actor_type": actor_type,
+        },
+        tenant_id=tenant_id,
+        domain_id=domain_id,
+        workflow_run_id=workflow_run_id,
+        idempotency_required=True,
+    )
+    artifact_event_idempotency = _receipt_event_idempotency_key(
+        receipt,
+        "workpages.eod-drafts.create.artifact.version.created",
+    )
+
+    def _operation() -> dict[str, Any]:
+        artifact = _create_eod_draft_artifact_version(
+            connection,
+            storage_root=storage_root,
+            workflow_run_id=workflow_run_id,
+            parent_artifact_version_id=None,
+            supersedes_artifact_version_id=None,
+            actor_id=actor_id,
+            actor_type=actor_type,
+            event_idempotency=artifact_event_idempotency,
+        )
+        artifact_version_id = str(artifact["artifact_version_id"])
+        return {
+            "draft": {
+                "workflow_run_id": workflow_run_id,
+                "artifact_version_id": artifact_version_id,
+                "route": _canonical_eod_ui_route(
+                    workflow_run_id=workflow_run_id,
+                    artifact_version_id=artifact_version_id,
+                ),
             }
         }
 
@@ -237,7 +311,7 @@ def submit_eod_artifact_workpage_command(
                 "workflow_run_id": str(base_artifact["workflow_run_id"]),
                 "artifact_version_id": submitted_artifact_version_id,
                 "supersedes_artifact_version_id": artifact_version_id,
-                "route": f"{EOD_UI_ROUTE_PREFIX}{submitted_artifact_version_id}",
+                "route": _demo_eod_ui_route(submitted_artifact_version_id),
             }
         }
 
@@ -553,6 +627,36 @@ def _change_log_entry(*, actor_id: str) -> dict[str, str]:
     }
 
 
+def _create_eod_draft_artifact_version(
+    connection: sqlite3.Connection,
+    *,
+    storage_root: Path,
+    workflow_run_id: str,
+    parent_artifact_version_id: str | None,
+    supersedes_artifact_version_id: str | None,
+    actor_id: str,
+    actor_type: str,
+    event_idempotency: str | None,
+) -> dict[str, Any]:
+    template = _load_eod_template_record()
+    return _create_workbook_artifact_version(
+        connection,
+        storage_root=storage_root,
+        workflow_run_id=workflow_run_id,
+        artifact_bytes=template.source_path.read_bytes(),
+        artifact_role=None,
+        file_name=_draft_file_name(),
+        media_type=template.media_type,
+        metadata_json=_draft_metadata(template),
+        parent_artifact_version_id=parent_artifact_version_id,
+        supersedes_artifact_version_id=supersedes_artifact_version_id,
+        lineage_note="Initial artifact-backed EOD draft seeded from Stage03 template.",
+        actor_id=actor_id,
+        actor_type=actor_type,
+        event_idempotency=event_idempotency,
+    )
+
+
 def _draft_metadata(template: TemplateRecord) -> dict[str, Any]:
     template_path = template.as_public_dict()["file_path"]
     return {
@@ -629,7 +733,7 @@ def _assert_artifact_not_already_superseded(
             "artifact_version_id": artifact_version_id,
             "latest_artifact_version_id": latest_id,
             "workflow_run_id": str(superseding["workflow_run_id"]),
-            "route": f"{EOD_UI_ROUTE_PREFIX}{latest_id}",
+            "route": _demo_eod_ui_route(latest_id),
         },
     )
 
@@ -693,6 +797,14 @@ def _metadata_string(
             if text:
                 return text
     return default
+
+
+def _demo_eod_ui_route(artifact_version_id: str) -> str:
+    return f"{EOD_UI_ROUTE_PREFIX}{artifact_version_id}"
+
+
+def _canonical_eod_ui_route(*, workflow_run_id: str, artifact_version_id: str) -> str:
+    return f"/runs/{workflow_run_id}/workpages/eod-v0/artifacts/{artifact_version_id}"
 
 
 def _draft_file_name() -> str:

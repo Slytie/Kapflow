@@ -143,6 +143,6 @@ Note: `TASK-0087` / `TASK-0088` / `TASK-0089` were formerly duplicated as `TASK-
 | TASK-0136 | EPIC-121 | DONE | medium | Expose demo entrypoints, recent-version history, and doc/status sync for the artifact-backed EOD slice |
 | TASK-0137 | EPIC-122 | DONE | medium | Freeze the workflow-run-backed workpage route family, alias posture, and draft-resolution contract |
 | TASK-0138 | EPIC-122 | DONE | high | Implement the backend workflow-run-backed schedule workpage query route and generated snapshot |
-| TASK-0139 | EPIC-122 | TODO | high | Implement the backend workflow-run-backed EOD landing/draft-resolution route and generated snapshot |
+| TASK-0139 | EPIC-122 | DONE | high | Implement the backend workflow-run-backed EOD landing/draft-resolution route and generated snapshot |
 | TASK-0140 | EPIC-122 | TODO | high | Migrate the frontend to workflow-run-backed workpage routes while preserving artifact-backed EOD editing handoff |
 | TASK-0141 | EPIC-122 | TODO | medium | Expose demo/story drilldown entrypoints and keep workflow-run-backed workpage docs/status synchronized |

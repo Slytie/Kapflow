@@ -99,6 +99,12 @@ _EOD_SOURCE_EXAMPLES = {
     ),
 }
 
+_EOD_VALIDATION_WARNINGS = [
+    "This server-owned demo query is built from an intentionally partial 2026-03-16 dispatch-reporting example family.",
+    "Workbook summary formulas were broken in the source material, so row-level actuals remain the primary truth for this projection.",
+    "Manual closeout inputs remain local-only in v0; no submit/materialize contract exists yet.",
+]
+
 _ROSTER_TARGET_NAMES = (
     "Parampreet Singh",
     "Balwinder Singh",
@@ -490,6 +496,52 @@ def _schedule_runtime_source_refs(
     return refs
 
 
+def _eod_runtime_source_refs(artifacts: list[dict[str, Any]]) -> list[str]:
+    refs: list[str] = []
+    latest_draft = _latest_compatible_eod_draft_artifact(artifacts)
+    artifacts_by_dataset_key: dict[str, Mapping[str, Any] | None] = {
+        _EOD_RAW_DATASET_KEY: _latest_artifact_for_dataset_key(
+            artifacts,
+            dataset_key=_EOD_RAW_DATASET_KEY,
+        ),
+        _EOD_NORMALIZED_DATASET_KEY: _latest_artifact_for_dataset_key(
+            artifacts,
+            dataset_key=_EOD_NORMALIZED_DATASET_KEY,
+        ),
+        _EOD_DRAFT_DATASET_KEY: latest_draft,
+    }
+    for _label, dataset_key in _EOD_SOURCE_DATASETS:
+        artifact = artifacts_by_dataset_key.get(dataset_key)
+        if artifact is None:
+            continue
+        ref = _artifact_detail_ref(artifact)
+        if ref not in refs:
+            refs.append(ref)
+    return refs
+
+
+def _eod_draft_resolution(
+    *,
+    workflow_run_id: str,
+    latest_draft: Mapping[str, Any] | None,
+) -> dict[str, Any]:
+    if latest_draft is None:
+        return {
+            "state": "no_draft",
+            "latest_artifact_version_id": None,
+            "artifact_route": None,
+        }
+    latest_artifact_version_id = _require_text(latest_draft.get("artifact_version_id"))
+    return {
+        "state": "latest_draft_available",
+        "latest_artifact_version_id": latest_artifact_version_id,
+        "artifact_route": (
+            f"/runs/{workflow_run_id}/workpages/eod-v0/artifacts/"
+            f"{latest_artifact_version_id}"
+        ),
+    }
+
+
 def _artifact_detail_ref(artifact: Mapping[str, Any]) -> str:
     return f"/api/v1/artifacts/{_require_text(artifact.get('artifact_version_id'))}"
 
@@ -505,6 +557,30 @@ def _latest_artifact_for_dataset_key(
             continue
         latest = artifact
     return latest
+
+
+def _latest_compatible_eod_draft_artifact(
+    artifacts: list[dict[str, Any]],
+) -> dict[str, Any] | None:
+    latest: dict[str, Any] | None = None
+    for artifact in artifacts:
+        if not _is_compatible_eod_draft_artifact(artifact):
+            continue
+        latest = artifact
+    return latest
+
+
+def _is_compatible_eod_draft_artifact(artifact: Mapping[str, Any]) -> bool:
+    if (
+        str(artifact.get("dataset_key") or artifact.get("artifact_kind") or "")
+        != _EOD_DRAFT_DATASET_KEY
+    ):
+        return False
+    metadata_json = artifact.get("metadata_json")
+    if not isinstance(metadata_json, Mapping):
+        return True
+    demo_workpage_id = metadata_json.get("demo_workpage_id")
+    return demo_workpage_id is None or str(demo_workpage_id) == EOD_DEMO_WORKPAGE_ID
 
 
 def _require_mapping(
@@ -523,87 +599,63 @@ def _optional_mapping(value: Mapping[str, Any] | None) -> Mapping[str, Any] | No
 
 def build_eod_demo_workpage_contract() -> dict[str, Any]:
     source_examples = dict(_EOD_SOURCE_EXAMPLES)
-    route_rows = _load_eod_route_rows()
-    normalized_rows = _load_eod_normalized_actuals()
-    upd_rows = _load_eod_upd_candidates()
     source_refs = [
         source_examples["eos_route_rows"],
         source_examples["normalized_actuals"],
         source_examples["upd_candidates"],
     ]
 
+    return _build_eod_landing_contract(
+        source_examples=source_examples,
+        source_mode="demo",
+        source_refs=source_refs,
+        freshness_source_kind="repo_example_bundle",
+        freshness_source_version=_EOD_SOURCE_VERSION,
+    )
+
+
+def build_eod_workflow_run_workpage_contract(
+    *,
+    workflow_run: Mapping[str, Any],
+    artifacts: list[dict[str, Any]],
+) -> dict[str, Any]:
+    workflow_run_id = _require_text(workflow_run.get("workflow_run_id"))
+    latest_draft = _latest_compatible_eod_draft_artifact(artifacts)
+
     return {
-        "workpage": {
-            "workpage_id": EOD_DEMO_WORKPAGE_ID,
-            "version": 2,
-            "title": "End-of-day report",
-            "mode": "example",
-            "workflow_id": _EOD_WORKFLOW_ID,
-            "dataset_key": _EOD_DRAFT_DATASET_KEY,
-            "source_artifact_version_id": None,
-            "source_examples": source_examples,
-            "summary": _eod_summary(route_rows, normalized_rows),
-            "sections": [
-                {
-                    "kind": "summary_cards",
-                    "title": "Daily summary",
-                    "cards": _eod_summary_cards(route_rows, normalized_rows),
-                },
-                {
-                    "kind": "note_panel",
-                    "title": "Formula-integrity warning",
-                    "body": _EOD_NOTE_PANEL_BODY,
-                },
-                {
-                    "kind": "table",
-                    "title": "Route actuals",
-                    "table_id": "route_actuals",
-                    "columns": [
-                        {"key": "route_id", "label": "Route"},
-                        {"key": "driver_name", "label": "Driver"},
-                        {"key": "packages_dispatched", "label": "Dispatched"},
-                        {"key": "packages_delivered", "label": "Delivered"},
-                        {"key": "planned_window", "label": "Planned"},
-                        {"key": "actual_window", "label": "Actual"},
-                        {"key": "actual_minutes", "label": "Minutes"},
-                        {"key": "returns", "label": "Returns"},
-                        {"key": "return_reasons", "label": "Return reasons"},
-                        {"key": "upd_candidate", "label": "UPD?"},
-                    ],
-                    "rows": _eod_route_actual_rows(route_rows, normalized_rows),
-                },
-                {
-                    "kind": "form",
-                    "title": "Manual closeout",
-                    "form_id": "closeout_details",
-                    "fields": _eod_form_fields(route_rows),
-                },
-                {
-                    "kind": "checklist",
-                    "title": "UPD candidate review",
-                    "checklist_id": "upd_candidates",
-                    "items": _eod_checklist_items(upd_rows),
-                },
-                {
-                    "kind": "history_stub",
-                    "title": "History",
-                    "entries": [
-                        {"label": "Previous daily reports", "value": "future slice"},
-                        {"label": "Weekly / monthly summaries", "value": "future slice"},
-                    ],
-                },
-            ],
-            "validation": {
-                "status": "informational",
-                "warnings": [
-                    "This server-owned demo query is built from an intentionally partial 2026-03-16 dispatch-reporting example family.",
-                    "Workbook summary formulas were broken in the source material, so row-level actuals remain the primary truth for this projection.",
-                    "Manual closeout inputs remain local-only in v0; no submit/materialize contract exists yet.",
-                ],
-            },
-        },
+        **_build_eod_landing_contract(
+            source_examples={},
+            source_mode="run_projection",
+            source_refs=_eod_runtime_source_refs(artifacts),
+            freshness_source_kind="workflow_run_projection",
+            freshness_source_version=(
+                _require_text(latest_draft.get("artifact_version_id"))
+                if latest_draft is not None
+                else workflow_run_id
+            ),
+        ),
+        "run_context": _workflow_run_context(workflow_run),
+        "draft_resolution": _eod_draft_resolution(
+            workflow_run_id=workflow_run_id,
+            latest_draft=latest_draft,
+        ),
+    }
+
+
+def _build_eod_landing_contract(
+    *,
+    source_examples: Mapping[str, str],
+    source_mode: str,
+    source_refs: list[str],
+    freshness_source_kind: str,
+    freshness_source_version: str,
+) -> dict[str, Any]:
+    return {
+        "workpage": _build_eod_landing_workpage_view_model(
+            source_examples=source_examples,
+        ),
         "source": {
-            "mode": "demo",
+            "mode": source_mode,
             "primary_dataset_key": _EOD_DRAFT_DATASET_KEY,
             "source_dataset_keys": [dataset_key for _, dataset_key in _EOD_SOURCE_DATASETS],
             "source_artifact_version_id": None,
@@ -611,8 +663,82 @@ def build_eod_demo_workpage_contract() -> dict[str, Any]:
         },
         "freshness": {
             "generated_at": utc_now_iso(),
-            "source_kind": "repo_example_bundle",
-            "source_version": _EOD_SOURCE_VERSION,
+            "source_kind": freshness_source_kind,
+            "source_version": freshness_source_version,
+        },
+    }
+
+
+def _build_eod_landing_workpage_view_model(
+    *,
+    source_examples: Mapping[str, str],
+) -> dict[str, Any]:
+    route_rows = _load_eod_route_rows()
+    normalized_rows = _load_eod_normalized_actuals()
+    upd_rows = _load_eod_upd_candidates()
+    return {
+        "workpage_id": EOD_DEMO_WORKPAGE_ID,
+        "version": 2,
+        "title": "End-of-day report",
+        "mode": "example",
+        "workflow_id": _EOD_WORKFLOW_ID,
+        "dataset_key": _EOD_DRAFT_DATASET_KEY,
+        "source_artifact_version_id": None,
+        "source_examples": dict(source_examples),
+        "summary": _eod_summary(route_rows, normalized_rows),
+        "sections": [
+            {
+                "kind": "summary_cards",
+                "title": "Daily summary",
+                "cards": _eod_summary_cards(route_rows, normalized_rows),
+            },
+            {
+                "kind": "note_panel",
+                "title": "Formula-integrity warning",
+                "body": _EOD_NOTE_PANEL_BODY,
+            },
+            {
+                "kind": "table",
+                "title": "Route actuals",
+                "table_id": "route_actuals",
+                "columns": [
+                    {"key": "route_id", "label": "Route"},
+                    {"key": "driver_name", "label": "Driver"},
+                    {"key": "packages_dispatched", "label": "Dispatched"},
+                    {"key": "packages_delivered", "label": "Delivered"},
+                    {"key": "planned_window", "label": "Planned"},
+                    {"key": "actual_window", "label": "Actual"},
+                    {"key": "actual_minutes", "label": "Minutes"},
+                    {"key": "returns", "label": "Returns"},
+                    {"key": "return_reasons", "label": "Return reasons"},
+                    {"key": "upd_candidate", "label": "UPD?"},
+                ],
+                "rows": _eod_route_actual_rows(route_rows, normalized_rows),
+            },
+            {
+                "kind": "form",
+                "title": "Manual closeout",
+                "form_id": "closeout_details",
+                "fields": _eod_form_fields(route_rows),
+            },
+            {
+                "kind": "checklist",
+                "title": "UPD candidate review",
+                "checklist_id": "upd_candidates",
+                "items": _eod_checklist_items(upd_rows),
+            },
+            {
+                "kind": "history_stub",
+                "title": "History",
+                "entries": [
+                    {"label": "Previous daily reports", "value": "future slice"},
+                    {"label": "Weekly / monthly summaries", "value": "future slice"},
+                ],
+            },
+        ],
+        "validation": {
+            "status": "informational",
+            "warnings": list(_EOD_VALIDATION_WARNINGS),
         },
     }
 

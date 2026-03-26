@@ -49,18 +49,19 @@
 - The first artifact-backed EOD draft/create/read/submit slice is complete through `TASK-0136`.
 - `TASK-0137` is complete, so the workflow-run-backed route family, alias posture, and minimal `run_context` / `draft_resolution` contract are now frozen.
 - `TASK-0138` is complete, so the repo now exposes the first canonical run-backed workpage route at `GET /api/v1/workpages/workflow-runs/{workflow_run_id}/schedule-v0` and the backend-owned snapshot `fixtures/frontend_contracts/workpage_schedule_v0_run_state.json`.
+- `TASK-0139` is complete, so the repo now also exposes `GET /api/v1/workpages/workflow-runs/{workflow_run_id}/eod-v0` plus `POST /api/v1/workpages/workflow-runs/{workflow_run_id}/eod-v0/drafts`, along with backend-owned snapshots for the run-backed EOD landing and canonical create response.
 - EOD editing already lives on an artifact-backed route keyed by `artifact_version_id`.
-- The missing next layer is the run-backed EOD landing/latest-draft-resolution route plus the later frontend migration to canonical `/runs/:workflowRunId/workpages/*`.
+- The missing next layer is the frontend migration to canonical `/runs/:workflowRunId/workpages/*` plus demo/story drilldown follow-through.
 
 ## Planned implementation order inside this epic
 1. `TASK-0138` - DONE
-2. `TASK-0139`
+2. `TASK-0139` - DONE
 3. `TASK-0140`
 4. `TASK-0141`
 
 ## Preflight questions for future runs
 - Does the repo still contain the expected post-`TASK-0136` baseline before you start backend/frontend implementation?
-- Does the repo still contain the expected post-`TASK-0138` baseline before you start the EOD landing or frontend migration slices?
+- Does the repo still contain the expected post-`TASK-0139` baseline before you start the frontend migration or drilldown slices?
 - Does the route family in `docs/planning/HITL_HTTP_API_CONTRACTS.md` still match `docs/planning/FRONTEND_PAGE_MAP.md` and `docs/planning/LOGISTICS_WORKPAGES_RUN_SURFACES_PLAN.md`?
 - Is schedule still treated as composite/query-backed rather than one-artifact/write-backed?
 - Does the EOD run-backed landing route clearly hand off to the existing artifact-backed edit route rather than duplicating write semantics?

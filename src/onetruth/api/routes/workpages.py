@@ -5,6 +5,7 @@ import sqlite3
 from onetruth.application.handlers._shared.command_boundary import CommandError
 from onetruth.application.handlers.workpages import (
     create_demo_eod_draft_command,
+    create_workflow_run_eod_draft_command,
     submit_eod_artifact_workpage_command,
 )
 from onetruth.api.dependencies import RequestContext, scoped_workflow_run
@@ -18,6 +19,7 @@ from onetruth.application.services.logistics_workpages import (
     WorkpageProjectionUnavailableError,
     build_eod_artifact_workpage_contract,
     build_demo_workpage_contract,
+    build_eod_workflow_run_workpage_contract,
     build_schedule_workflow_run_workpage_contract,
 )
 from onetruth.application.services.dispatch_reporting_workbook import (
@@ -65,10 +67,36 @@ def workflow_run_workpage_endpoint(
     workpage_kind: str,
 ) -> dict[str, object]:
     workflow_run = scoped_workflow_run(connection, context, workflow_run_id)
-    if (
-        workpage_kind != "schedule-v0"
-        or str(workflow_run.get("workflow_id") or "") != "weekly_schedule_planning.v1"
-    ):
+    workflow_id = str(workflow_run.get("workflow_id") or "")
+
+    if workpage_kind == "schedule-v0" and workflow_id == "weekly_schedule_planning.v1":
+        try:
+            contract = build_schedule_workflow_run_workpage_contract(
+                workflow_run=workflow_run,
+                artifacts=list_artifacts_for_workflow_run_command(connection, workflow_run_id),
+            )
+        except WorkpageProjectionUnavailableError as exc:
+            raise ApiError(
+                status_code=409,
+                code="workpage_projection_unavailable",
+                message=str(exc),
+                details={
+                    "workflow_run_id": exc.workflow_run_id,
+                    "workpage_id": exc.workpage_id,
+                    "missing_dataset_keys": exc.missing_dataset_keys,
+                },
+            ) from exc
+        except CommandError as exc:
+            raise api_error_from_command(exc) from exc
+    elif workpage_kind == "eod-v0" and workflow_id == "dispatch_reporting.v1":
+        try:
+            contract = build_eod_workflow_run_workpage_contract(
+                workflow_run=workflow_run,
+                artifacts=list_artifacts_for_workflow_run_command(connection, workflow_run_id),
+            )
+        except CommandError as exc:
+            raise api_error_from_command(exc) from exc
+    else:
         raise ApiError(
             status_code=404,
             code="workpage_not_found",
@@ -78,25 +106,6 @@ def workflow_run_workpage_endpoint(
                 "workpage_id": workpage_kind,
             },
         )
-
-    try:
-        contract = build_schedule_workflow_run_workpage_contract(
-            workflow_run=workflow_run,
-            artifacts=list_artifacts_for_workflow_run_command(connection, workflow_run_id),
-        )
-    except WorkpageProjectionUnavailableError as exc:
-        raise ApiError(
-            status_code=409,
-            code="workpage_projection_unavailable",
-            message=str(exc),
-            details={
-                "workflow_run_id": exc.workflow_run_id,
-                "workpage_id": exc.workpage_id,
-                "missing_dataset_keys": exc.missing_dataset_keys,
-            },
-        ) from exc
-    except CommandError as exc:
-        raise api_error_from_command(exc) from exc
 
     return {
         "command": "api.workpages.workflow_run",
@@ -114,6 +123,46 @@ def create_demo_eod_draft_endpoint(
     try:
         result = create_demo_eod_draft_command(
             connection,
+            {
+                **payload,
+                "tenant_id": context.tenant_id,
+                "domain_id": context.domain_id,
+                "actor_id": context.actor_id,
+                "actor_type": context.actor_type,
+            },
+            storage_root=default_storage_root_for_db_url(db_url),
+        )
+    except CommandError as exc:
+        raise api_error_from_command(exc) from exc
+    return {
+        "command": "api.workpages.eod_drafts.create",
+        **result,
+    }
+
+
+def create_workflow_run_eod_draft_endpoint(
+    connection: sqlite3.Connection,
+    *,
+    context: RequestContext,
+    db_url: str,
+    workflow_run_id: str,
+    payload: dict[str, object],
+) -> dict[str, object]:
+    workflow_run = scoped_workflow_run(connection, context, workflow_run_id)
+    if str(workflow_run.get("workflow_id") or "") != WORKFLOW_ID:
+        raise ApiError(
+            status_code=404,
+            code="workpage_not_found",
+            message="workpage not found",
+            details={
+                "workflow_run_id": workflow_run_id,
+                "workpage_id": "eod-v0",
+            },
+        )
+    try:
+        result = create_workflow_run_eod_draft_command(
+            connection,
+            workflow_run,
             {
                 **payload,
                 "tenant_id": context.tenant_id,

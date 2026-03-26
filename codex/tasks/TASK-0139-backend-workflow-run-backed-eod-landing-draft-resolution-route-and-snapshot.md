@@ -2,7 +2,7 @@
 id: TASK-0139
 epic: EPIC-122
 title: "Implement the backend workflow-run-backed EOD landing/draft-resolution route and generated snapshot"
-status: TODO
+status: DONE
 owners: ["backend"]
 reviewers: ["frontend", "qa"]
 depends_on: ["TASK-0137"]
@@ -62,3 +62,21 @@ Implement the backend workflow-run-backed EOD landing/draft-resolution route and
 
 ## Notes / decisions
 Do not overload artifact-only metadata on a run-backed landing page if the page is not itself an artifact projection. Keep landing/resolution and editing clearly separated.
+
+## Outcome
+- The repo now exposes the canonical run-backed EOD landing route at `GET /api/v1/workpages/workflow-runs/{workflow_run_id}/eod-v0` and the canonical run-backed draft-create route at `POST /api/v1/workpages/workflow-runs/{workflow_run_id}/eod-v0/drafts`.
+- The run-backed EOD landing response intentionally reuses the existing validated read-only EOD landing body, adds `run_context` plus `draft_resolution`, sets `source.mode=run_projection`, and keeps `artifact_context` absent so landing and editing remain clearly separated.
+- Latest-draft resolution now selects the newest compatible `reporting.upd_draft.workbook` artifact inside the supplied reporting run and returns canonical `/runs/{workflow_run_id}/workpages/eod-v0/artifacts/{artifact_version_id}` handoff routes without changing artifact-backed submit semantics.
+- The canonical run-backed draft-create route now seeds the same immutable `reporting.upd_draft.workbook` artifact family inside the supplied `dispatch_reporting.v1` run, while the demo create alias remains unchanged as a compatibility entrypoint.
+- Backend-owned frontend contract fixtures now include `fixtures/frontend_contracts/workpage_eod_v0_run_state.json` and `fixtures/frontend_contracts/workpage_eod_v0_run_artifact_create_response.json`.
+- Repo-memory now records `TASK-0139` as complete and moves the next EPIC-122 implementation focus to `TASK-0140`.
+
+## Verification notes
+- `PYTHONPATH=/tmp/onetruth-py311:src python3.11 -m pytest -q tests/runtime/api/test_workpages_run_eod_contract.py tests/runtime/api/test_workpages_artifact_eod_contract.py tests/runtime/api/test_workpages_run_schedule_contract.py tests/unit/test_api_route_registry.py`
+- `PYTHONPATH=/tmp/onetruth-py311:src python3.11 scripts/export_frontend_snapshots.py --check`
+- `PYTHONPATH=/tmp/onetruth-py311:src python3.11 -m pytest -q tests/runtime/contracts/test_frontend_snapshot_fixtures.py`
+- `python3.11 scripts/validate_repo.py --schemas-only`
+
+## Follow-ups
+- `TASK-0140` is next: migrate the frontend to canonical `/runs/:workflowRunId/workpages/*` routes while preserving the explicit artifact-backed EOD handoff.
+- `TASK-0141` should update demo/story drilldowns so the canonical run-backed workpage routes are discoverable without leaving docs/status stale.

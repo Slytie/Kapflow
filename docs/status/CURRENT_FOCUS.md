@@ -4,7 +4,7 @@
 Stage 4 - Vertical Slice MVP (repo merged around one truth system)
 
 ## Current milestone
-Primary runtime/debug work remains the logistics weekly/live family. `TASK-0137` and `TASK-0138` are now complete, so the repo now has both the closed EPIC-121 artifact-backed EOD slice and the first real EPIC-122 workflow-run-backed workpage surface: the current demo/query and artifact-backed EOD routes stay intact, the canonical run-backed route family and minimal run-context/draft-resolution boundary are frozen in repo-native docs, and the first canonical run-backed schedule query route plus generated snapshot now exist before frontend migration begins.
+Primary runtime/debug work remains the logistics weekly/live family. `TASK-0137`, `TASK-0138`, and `TASK-0139` are now complete, so the repo now has both the closed EPIC-121 artifact-backed EOD slice and the full backend EPIC-122 workflow-run-backed workpage access layer needed before frontend migration: the current demo/query and artifact-backed EOD routes stay intact, the canonical run-backed route family and minimal run-context/draft-resolution boundary are frozen in repo-native docs, and the canonical run-backed schedule query route plus the canonical run-backed EOD landing/create surfaces and generated snapshots now exist before frontend migration begins.
 
 Current implemented baseline:
 - `/demo/logistics/workpages/schedule-v0`
@@ -16,9 +16,13 @@ Current implemented baseline:
 - backend schedule demo workpage query route: `GET /api/v1/workpages/demo/schedule-v0`
 - backend workflow-run-backed schedule workpage query route: `GET /api/v1/workpages/workflow-runs/{workflow_run_id}/schedule-v0`
 - backend EOD demo workpage query route: `GET /api/v1/workpages/demo/eod-v0`
+- backend workflow-run-backed EOD landing route: `GET /api/v1/workpages/workflow-runs/{workflow_run_id}/eod-v0`
+- backend workflow-run-backed EOD draft-create route: `POST /api/v1/workpages/workflow-runs/{workflow_run_id}/eod-v0/drafts`
 - backend-generated schedule workpage snapshot: `fixtures/frontend_contracts/workpage_schedule_v0_state.json`
 - backend-generated workflow-run-backed schedule workpage snapshot: `fixtures/frontend_contracts/workpage_schedule_v0_run_state.json`
 - backend-generated EOD workpage snapshot: `fixtures/frontend_contracts/workpage_eod_v0_state.json`
+- backend-generated workflow-run-backed EOD landing snapshot: `fixtures/frontend_contracts/workpage_eod_v0_run_state.json`
+- backend-generated workflow-run-backed EOD draft-create snapshot: `fixtures/frontend_contracts/workpage_eod_v0_run_artifact_create_response.json`
 - repo-native artifact-path brief/plan for the first artifact-backed EOD slice
 - bounded `dispatch_reporting.v1` template pack under `fixtures/workflows/dispatch_reporting/template_pack/`
 - bounded multi-workflow template registry discovery across `schedule_planning.v1` and `dispatch_reporting.v1`
@@ -42,7 +46,7 @@ Current implemented baseline:
 - the artifact-backed EOD page now supports submit, stale-artifact conflict reopen UX, workbook download, bounded previous/latest lineage actions, and a recent draft history panel sourced from `GET /api/v1/workflow-runs/{workflow_run_id}/artifacts`, while preserving local edits across refreshes when the base artifact version is unchanged
 - workflow-run artifact listing now truthfully exposes the bounded EOD workbook chain needed by that recent-history panel
 
-Current next-layer contract and route baseline (`TASK-0137` + `TASK-0138`):
+Current next-layer contract and route baseline (`TASK-0137` + `TASK-0138` + `TASK-0139`):
 - canonical backend workflow-run-backed workpage route family:
   - `GET /api/v1/workpages/workflow-runs/{workflow_run_id}/{workpage_kind}`
   - `POST /api/v1/workpages/workflow-runs/{workflow_run_id}/eod-v0/drafts`
@@ -55,12 +59,15 @@ Current next-layer contract and route baseline (`TASK-0137` + `TASK-0138`):
 - only the run-backed EOD landing response adds `draft_resolution`; keep `artifact_context` reserved for artifact-projection responses
 - schedule remains query-backed/composite in this epic, and EOD editing remains anchored to the existing artifact-backed route keyed by `artifact_version_id`
 - the canonical run-backed schedule route now projects from canonical weekly Stage04 run artifacts with `source.mode=run_projection`, `freshness.source_kind=workflow_run_projection`, `freshness.source_version=bundle.bundle_id`, and `409 workpage_projection_unavailable` when required Stage04 inputs are missing
+- the canonical run-backed EOD landing route now reuses the validated read-only EOD landing body, sets `source.mode=run_projection`, adds `run_context` plus `draft_resolution`, leaves `artifact_context` absent, and resolves the latest compatible `reporting.upd_draft.workbook` artifact route without moving edits onto the landing surface
+- the canonical run-backed EOD create route now seeds the same immutable `reporting.upd_draft.workbook` artifact family inside the supplied `dispatch_reporting.v1` run and returns canonical `/runs/{workflow_run_id}/workpages/eod-v0/artifacts/{artifact_version_id}` handoff routes
 
 Immediate next application package:
 - EPIC-122 is now the active next workpage package
 - `TASK-0137` is complete as the route-family / alias / contract freeze tranche
 - `TASK-0138` is complete as the backend run-backed schedule route + snapshot tranche
-- `TASK-0139` is the next bounded implementation tranche and should add the run-backed EOD landing/draft-resolution surface without reopening EOD artifact editing semantics
+- `TASK-0139` is complete as the backend run-backed EOD landing/draft-resolution route + canonical create tranche
+- `TASK-0140` is the next bounded implementation tranche and should migrate the frontend to canonical `/runs/:workflowRunId/workpages/*` routes without reopening EOD artifact editing semantics
 - the artifact-backed slice remains **EOD only** for now; schedule stays query-backed and composite
 
 Important scope boundaries that remain true after this slice:

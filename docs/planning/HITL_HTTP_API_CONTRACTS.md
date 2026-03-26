@@ -287,12 +287,11 @@ Route-family decision:
 - implemented today:
   - `GET /api/v1/workpages/demo/{workpage_id}`
   - `GET /api/v1/workpages/workflow-runs/{workflow_run_id}/schedule-v0`
+  - `GET /api/v1/workpages/workflow-runs/{workflow_run_id}/eod-v0`
   - `POST /api/v1/workpages/demo/eod-v0/drafts`
+  - `POST /api/v1/workpages/workflow-runs/{workflow_run_id}/eod-v0/drafts`
   - `GET /api/v1/workpages/artifacts/{artifact_version_id}`
   - `POST /api/v1/workpages/artifacts/{artifact_version_id}/submit`
-- frozen remaining EPIC-122 family:
-  - `GET /api/v1/workpages/workflow-runs/{workflow_run_id}/eod-v0`
-  - `POST /api/v1/workpages/workflow-runs/{workflow_run_id}/eod-v0/drafts`
 
 The `demo` subfamily is implemented today. During EPIC-122 it remains a curated alias/entrypoint family, not the long-term canonical access model. The first artifact-backed family remains frozen only for EOD; schedule stays query-backed/composite.
 
@@ -303,7 +302,7 @@ Current planned demo workpage ids:
 Demo query response:
 - `{"status":"ok","command":"api.workpages.demo","workpage":{...},"source":{...},"freshness":{...}}`
 
-Workflow-run-backed query response (implemented today for `schedule-v0`; reused by remaining EPIC-122 run-backed surfaces):
+Workflow-run-backed query response (implemented today for `schedule-v0` and `eod-v0`):
 - `{"status":"ok","command":"api.workpages.workflow_run","workpage":{...},"source":{...},"freshness":{...},"run_context":{...},"draft_resolution":null|{...}}`
 
 Artifact-backed read response:
@@ -366,6 +365,9 @@ Notes:
 - The implemented run-backed schedule route uses `source.mode=run_projection`, keeps `source_artifact_version_id=null`, and uses `freshness.source_kind=workflow_run_projection` plus `freshness.source_version=bundle.bundle_id`.
 - If a weekly run does not yet have the required Stage04 input artifacts, the run-backed schedule route should fail cleanly with `409 workpage_projection_unavailable` and explicit missing dataset keys rather than falling back to demo defaults.
 - Run-backed EOD landing responses should set `run_context` plus `draft_resolution`, but must not pretend to be artifact projections.
+- The implemented run-backed EOD landing route currently lives at `GET /api/v1/workpages/workflow-runs/{workflow_run_id}/eod-v0`.
+- The implemented run-backed EOD landing route intentionally reuses the validated read-only EOD landing body, sets `source.mode=run_projection`, keeps `source.source_artifact_version_id=null`, and uses `freshness.source_kind=workflow_run_projection` plus `freshness.source_version=<latest_compatible_draft_artifact_version_id|workflow_run_id>`.
+- The implemented run-backed EOD landing route resolves `draft_resolution` from the newest compatible `reporting.upd_draft.workbook` artifact in the supplied workflow run and leaves `artifact_context` absent.
 - `artifact_context` is reserved for `source.mode=artifact_projection`; do not overload it on run-backed landing pages.
 - `TASK-0137` intentionally freezes a narrow `draft_resolution` field instead of a generic `actions` blob.
 - Artifact-backed EOD reads must remain projections over canonical workbook artifacts; the workpage is derived and the workbook artifact version remains authoritative truth.
@@ -480,7 +482,7 @@ Rules:
 Endpoint:
 - current implemented alias:
   - `POST /api/v1/workpages/demo/eod-v0/drafts`
-- frozen canonical EPIC-122 route:
+- implemented canonical EPIC-122 route:
   - `POST /api/v1/workpages/workflow-runs/{workflow_run_id}/eod-v0/drafts`
 
 Body:
@@ -489,7 +491,7 @@ Body:
 Response:
 - current implemented alias response:
   - `{"status":"ok","command":"api.workpages.eod_drafts.create","draft":{"workflow_run_id":"...","artifact_version_id":"...","route":"/demo/logistics/workpages/eod-v0/artifacts/{artifact_version_id}"}}`
-- canonical EPIC-122 response target:
+- implemented canonical EPIC-122 response:
   - `{"status":"ok","command":"api.workpages.eod_drafts.create","draft":{"workflow_run_id":"...","artifact_version_id":"...","route":"/runs/{workflow_run_id}/workpages/eod-v0/artifacts/{artifact_version_id}"}}`
 
 Rules:

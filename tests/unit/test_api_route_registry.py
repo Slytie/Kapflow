@@ -60,6 +60,7 @@ def test_route_registry_preserves_exact_global_route_order() -> None:
         "board.schedule_planning",
         "stories.logistics_three_workflow",
         "workpages.workflow_run.detail",
+        "workpages.workflow_run.eod_drafts.create",
         "workpages.eod_drafts.create",
         "workpages.artifact.detail",
         "workpages.artifact.submit",
@@ -96,6 +97,14 @@ def test_route_registry_matches_representative_exact_and_parameterized_routes() 
     assert workflow_run_workpage_match.params == {
         "workflow_run_workpage": "wr-001/schedule-v0"
     }
+
+    workflow_run_eod_draft_match = match_route(
+        "POST",
+        "/api/v1/workpages/workflow-runs/wr-001/eod-v0/drafts",
+    )
+    assert workflow_run_eod_draft_match is not None
+    assert workflow_run_eod_draft_match.route.name == "workpages.workflow_run.eod_drafts.create"
+    assert workflow_run_eod_draft_match.params == {"workflow_run_id": "wr-001"}
 
     workpage_match = match_route("GET", "/api/v1/workpages/demo/schedule-v0")
     assert workpage_match is not None
@@ -185,6 +194,14 @@ def test_route_registry_exposes_representative_metadata() -> None:
     assert routes_by_name["workpages.workflow_run.detail"].body_policy == NO_BODY
     assert routes_by_name["workpages.workflow_run.detail"].requires_request_context is True
     assert routes_by_name["workpages.workflow_run.detail"].needs_db_connection is True
+
+    assert routes_by_name["workpages.workflow_run.eod_drafts.create"].needs_page is False
+    assert routes_by_name["workpages.workflow_run.eod_drafts.create"].body_policy == JSON_COMMAND_BODY
+    assert (
+        routes_by_name["workpages.workflow_run.eod_drafts.create"].requires_request_context
+        is True
+    )
+    assert routes_by_name["workpages.workflow_run.eod_drafts.create"].needs_db_connection is True
 
     assert routes_by_name["workpages.eod_drafts.create"].needs_page is False
     assert routes_by_name["workpages.eod_drafts.create"].body_policy == JSON_COMMAND_BODY
