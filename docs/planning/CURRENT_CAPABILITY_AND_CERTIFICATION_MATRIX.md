@@ -77,6 +77,11 @@ Additional `TASK-0141` verification commands executed:
 - `npm --prefix frontend run typecheck` - passed
 - `python3.11 scripts/validate_repo.py --schemas-only` - passed
 
+## EPIC-123 Schedule Artifact Boundary Freeze Addendum (2026-03-26)
+Additional `TASK-0142` verification commands executed:
+- `python3.11 scripts/validate_repo.py --schemas-only` - passed
+- `rg -n "EPIC-123|TASK-0142|planning\\.draft_weekly_schedule\\.workbook|schedule-v0/artifacts|schedule-v0/drafts" docs codex` - passed
+
 ## Weekly Stage04 Pilot Addendum (2026-03-12)
 Additional TASK-0070 verification commands executed:
 - `PYTHONPATH=src python3 scripts/run_logistics_weekly_agent_pilot.py --db-url sqlite:///./.tmp/logistics-weekly-stage04-pilot.db --pilot-key verify-task-0070-fresh --openai-mode mock --json` - passed (`workflow_run_id=wr-8802bae7fa0e735404703924`)
@@ -113,4 +118,4 @@ Evidence:
 - Real OpenAI network paths (Stage06 and weekly Stage04) were not executed in this pass because real-network env gates were intentionally left disabled; certification here remains mock/runtime-surface only for those slices.
 - Workspace graph runtime coverage is currently schedule-planning-specific; this pass does not certify graph projectors for other workflow families.
 - Logistics handoff runtime is certified for the implemented weekly->live and reporting->planning edges above; this pass does not claim generalized coverage for every future family edge.
-- Workpage routes are certified for the current query-backed schedule/EOD preview surfaces, the backend-only run-backed schedule/EOD slices, and the first bounded artifact-backed EOD slice only; this pass does not certify generic artifact editing, schedule artifact writes, or future workspace/human-task workpage integration.
+- Workpage routes are certified for the current query-backed schedule/EOD preview surfaces, the backend-only run-backed schedule/EOD slices, and the first bounded artifact-backed EOD slice only; this pass does not certify generic artifact editing, schedule artifact writes, or future workspace/human-task workpage integration. `TASK-0142` only freezes the next schedule artifact boundary around `planning.draft_weekly_schedule.workbook`; it does not implement or certify that slice yet.

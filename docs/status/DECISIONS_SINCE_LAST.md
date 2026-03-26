@@ -2,6 +2,13 @@
 
 Record any decisions made since the last session so a fresh Codex run can rehydrate quickly.
 
+## 2026-03-26 (TASK-0142 schedule draft artifact path, route family, and stage boundary freeze)
+- Next-epic decision: after EPIC-122 closeout, the repo now chooses **EPIC-123** as the next workpage epic; the next bounded workpage lane is the Stage04 schedule draft artifact path, not broader workspace/human-task integration.
+- Artifact-boundary decision: `planning.draft_weekly_schedule.workbook` is now frozen as an immutable draft-review artifact in the canonical run chain, editable in a future workpage slice but not official weekly truth; `planning.manager_review.doc` remains evidence only.
+- Route-posture decision: the canonical run-backed landing remains `/runs/:workflowRunId/workpages/schedule-v0`, the reserved canonical artifact route is `/runs/:workflowRunId/workpages/schedule-v0/artifacts/:artifactVersionId`, and the backend should reuse the existing generic `GET /api/v1/workpages/artifacts/{artifact_version_id}` / `POST /api/v1/workpages/artifacts/{artifact_version_id}/submit` family rather than inventing schedule-specific artifact endpoints.
+- Creation-boundary decision: the first schedule artifact slice must not add `POST /api/v1/workpages/workflow-runs/{workflow_run_id}/schedule-v0/drafts`; the initial editable draft already exists as a Stage04 output artifact.
+- Stop-line decision: Stage06 `planning.published_weekly_schedule.workbook`, Stage07 `planning.daily_dispatch_seed.*`, live-dispatch day-of replan, generic spreadsheet-editor scope, and broad workspace/task modernization all remain out of scope.
+
 ## 2026-03-26 (TASK-0141 demo/story drilldowns and workflow-run-backed workpage doc sync)
 - Demo-shell discovery decision: `/demo/logistics` now presents canonical run-backed workpage links as the primary workpage entrypoints, derived from the single linked weekly-planning and dispatch-reporting runs in the current story; the old demo workpage routes remain available in a clearly labeled compatibility-alias section instead of the primary header path.
 - Drilldown mapping decision: the family-node drilldown card now exposes `Open schedule workpage` for `weekly_schedule_planning.v1` runs and `Open EOD workpage` for `dispatch_reporting.v1` runs, while `live_dispatch.v1` remains workspace/detail-only in this epic.

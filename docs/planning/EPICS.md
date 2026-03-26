@@ -24,6 +24,7 @@ Current runtime/debug priority: **Schedule Planning**. Payroll remains the secon
 | EPIC-120 | Logistics workpages v0 (weekly schedule review + EOD draft/review, query-backed surfaces) | workpage plan/product brief, example source fixtures, full-page FE routes under `/demo/logistics/workpages/*`, backend workpage query contracts/snapshots | EPIC-025, EPIC-080 |
 | EPIC-121 | First artifact-backed workpage slice (EOD draft/review on immutable workbook artifacts) | artifact-backed EOD brief/plan, dispatch-reporting template pack + registry support, EOD draft/projection/submit routes, artifact-backed FE page/lineage UX | EPIC-120, EPIC-030 |
 | EPIC-122 | Workflow-run-backed workpages (canonical run-backed schedule review + EOD draft resolution) | run-surfaces brief/plan, workflow-run-backed workpage route family, run-backed schedule/EOD contracts, frontend `/runs/:workflowRunId/workpages/*` routes, demo/story drilldown entrypoints | EPIC-120, EPIC-121, EPIC-080 |
+| EPIC-123 | Schedule draft artifact-backed workpages (Stage04 draft weekly schedule workbook lane) | schedule-artifact-path brief/plan, Stage04 draft workbook authority freeze, reserved canonical schedule artifact route posture, later schedule artifact projection/submit/UI migration tasks | EPIC-120, EPIC-122, EPIC-030 |
 
 ## Update rules
 - Keep epic files in `docs/planning/epics/`

@@ -4,7 +4,7 @@
 Stage 4 - Vertical Slice MVP (repo merged around one truth system)
 
 ## Current milestone
-Primary runtime/debug work remains the logistics weekly/live family. `TASK-0137`, `TASK-0138`, `TASK-0139`, `TASK-0140`, and `TASK-0141` are now complete, so the repo now has both the closed EPIC-121 artifact-backed EOD slice and the full EPIC-122 workflow-run-backed workpage access layer across backend and frontend: the current demo/query and artifact-backed EOD routes stay intact as compatibility aliases, the canonical run-backed route family and minimal run-context/draft-resolution boundary are frozen in repo-native docs, the canonical `/runs/:workflowRunId/workpages/*` schedule/EOD surfaces now exist in the app, and `/demo/logistics` now exposes those canonical workpage routes as the primary discoverable path.
+Primary runtime/debug work remains the logistics weekly/live family. `TASK-0137`, `TASK-0138`, `TASK-0139`, `TASK-0140`, `TASK-0141`, and `TASK-0142` are now complete, so the repo now has both the closed EPIC-121 artifact-backed EOD slice, the full EPIC-122 workflow-run-backed workpage access layer across backend and frontend, and the first EPIC-123 schedule-artifact-path freeze: the current demo/query and artifact-backed EOD routes stay intact as compatibility aliases, the canonical run-backed route family and minimal run-context/draft-resolution boundary remain frozen in repo-native docs, the canonical `/runs/:workflowRunId/workpages/*` schedule/EOD surfaces now exist in the app, `/demo/logistics` exposes those canonical workpage routes as the primary discoverable path, and the next schedule write lane is now explicitly bounded around the Stage04 `planning.draft_weekly_schedule.workbook` artifact rather than Stage06 publish or Stage07 seed surfaces.
 
 Current implemented baseline:
 - `/demo/logistics/workpages/schedule-v0`
@@ -52,6 +52,7 @@ Current implemented baseline:
 - the artifact-backed EOD page now supports submit, stale-artifact conflict reopen UX, workbook download, bounded previous/latest lineage actions, and a recent draft history panel sourced from `GET /api/v1/workflow-runs/{workflow_run_id}/artifacts`, while preserving local edits across refreshes when the base artifact version is unchanged
 - artifact-backed EOD submit/conflict handoff routes now point at canonical `/runs/{workflow_run_id}/workpages/eod-v0/artifacts/{artifact_version_id}` paths once the canonical run-backed pages are active
 - workflow-run artifact listing now truthfully exposes the bounded EOD workbook chain needed by that recent-history panel
+- repo-native schedule-artifact-path brief/plan plus `EPIC-123` context/task memory now freeze the first future schedule artifact-backed slice around `planning.draft_weekly_schedule.workbook`
 
 Current EPIC-122 implemented route and contract baseline (`TASK-0137` + `TASK-0138` + `TASK-0139` + `TASK-0140` + `TASK-0141`):
 - canonical backend workflow-run-backed workpage route family:
@@ -70,16 +71,22 @@ Current EPIC-122 implemented route and contract baseline (`TASK-0137` + `TASK-01
 - the canonical run-backed EOD create route now seeds the same immutable `reporting.upd_draft.workbook` artifact family inside the supplied `dispatch_reporting.v1` run and returns canonical `/runs/{workflow_run_id}/workpages/eod-v0/artifacts/{artifact_version_id}` handoff routes
 
 Immediate next application package:
-- EPIC-122 is now complete as the workflow-run-backed workpage access epic
-- the canonical `/runs/:workflowRunId/workpages/*` route family is now both implemented and discoverable from `/demo/logistics`
+- EPIC-122 is complete and EPIC-123 has now started through doc/contract-only `TASK-0142`
+- the canonical `/runs/:workflowRunId/workpages/*` route family remains implemented and discoverable from `/demo/logistics`
 - the demo workpage routes remain implemented compatibility aliases, not the primary access model
-- the artifact-backed slice remains **EOD only** for now; schedule stays query-backed and composite
-- the next application choice should be framed deliberately as a new epic decision rather than a hidden EPIC-122 follow-on
+- the only implemented artifact-backed slice remains **EOD** for now; schedule still stays query-backed and composite in the product today
+- the first future schedule artifact-backed slice is now frozen around the Stage04 `planning.draft_weekly_schedule.workbook`
+- the canonical run-backed landing remains `/runs/:workflowRunId/workpages/schedule-v0`, and the reserved future artifact route is `/runs/:workflowRunId/workpages/schedule-v0/artifacts/:artifactVersionId`
+- the future schedule artifact slice should reuse `GET /api/v1/workpages/artifacts/{artifact_version_id}` and `POST /api/v1/workpages/artifacts/{artifact_version_id}/submit`
+- do not add a first-slice `POST /api/v1/workpages/workflow-runs/{workflow_run_id}/schedule-v0/drafts`; Stage04 already materializes the initial draft workbook
+- the next task should now be the first EPIC-123 implementation tranche rather than another epic-selection pass
 
 Important scope boundaries that remain true after this slice:
 - no generic artifact editor
 - no schedule artifact-backed write path yet
 - keep the schedule page on the **weekly planning review + selected-day preview** side of the boundary
+- when the first schedule artifact-backed slice begins, anchor it to Stage04 `planning.draft_weekly_schedule.workbook`; `planning.manager_review.doc` remains evidence, not the editable workpage artifact
+- keep `planning.published_weekly_schedule.workbook` and `planning.daily_dispatch_seed.*` out of the first schedule edit surface
 - keep the EOD page on the **dispatch-reporting draft/review** side of the boundary (`reporting.upd_draft.workbook` semantics)
 - keep the first artifact-backed slice anchored to canonical `dispatch_reporting.v1` workflow runs; no runless demo artifacts
 - keep explicit submit/create-new-version semantics; no per-keystroke autosave into `artifact_versions`

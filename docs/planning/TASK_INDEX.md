@@ -146,3 +146,4 @@ Note: `TASK-0087` / `TASK-0088` / `TASK-0089` were formerly duplicated as `TASK-
 | TASK-0139 | EPIC-122 | DONE | high | Implement the backend workflow-run-backed EOD landing/draft-resolution route and generated snapshot |
 | TASK-0140 | EPIC-122 | DONE | high | Migrate the frontend to workflow-run-backed workpage routes while preserving artifact-backed EOD editing handoff |
 | TASK-0141 | EPIC-122 | DONE | medium | Expose demo/story drilldown entrypoints and keep workflow-run-backed workpage docs/status synchronized |
+| TASK-0142 | EPIC-123 | DONE | medium | Freeze the schedule draft artifact path, route family, and stage boundary |
