@@ -279,7 +279,7 @@ def test_submit_artifact_workpage_creates_superseding_version_and_updates_projec
         == base_artifact_version_id
     )
     assert submitted.payload["submitted"]["route"] == (
-        f"/demo/logistics/workpages/eod-v0/artifacts/{submitted_artifact_version_id}"
+        f"/runs/{created.payload['draft']['workflow_run_id']}/workpages/eod-v0/artifacts/{submitted_artifact_version_id}"
     )
 
     base_read = client.get(f"/api/v1/workpages/artifacts/{base_artifact_version_id}")
@@ -430,7 +430,7 @@ def test_submit_artifact_workpage_returns_conflict_for_stale_base(tmp_path: Path
         "artifact_version_id": base_artifact_version_id,
         "latest_artifact_version_id": latest_artifact_version_id,
         "workflow_run_id": created.payload["draft"]["workflow_run_id"],
-        "route": f"/demo/logistics/workpages/eod-v0/artifacts/{latest_artifact_version_id}",
+        "route": f"/runs/{created.payload['draft']['workflow_run_id']}/workpages/eod-v0/artifacts/{latest_artifact_version_id}",
     }
 
 

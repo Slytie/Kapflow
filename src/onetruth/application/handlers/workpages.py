@@ -306,12 +306,16 @@ def submit_eod_artifact_workpage_command(
             event_idempotency=artifact_event_idempotency,
         )
         submitted_artifact_version_id = str(new_artifact["artifact_version_id"])
+        workflow_run_id = str(base_artifact["workflow_run_id"])
         return {
             "submitted": {
-                "workflow_run_id": str(base_artifact["workflow_run_id"]),
+                "workflow_run_id": workflow_run_id,
                 "artifact_version_id": submitted_artifact_version_id,
                 "supersedes_artifact_version_id": artifact_version_id,
-                "route": _demo_eod_ui_route(submitted_artifact_version_id),
+                "route": _canonical_eod_ui_route(
+                    workflow_run_id=workflow_run_id,
+                    artifact_version_id=submitted_artifact_version_id,
+                ),
             }
         }
 
@@ -733,7 +737,10 @@ def _assert_artifact_not_already_superseded(
             "artifact_version_id": artifact_version_id,
             "latest_artifact_version_id": latest_id,
             "workflow_run_id": str(superseding["workflow_run_id"]),
-            "route": _demo_eod_ui_route(latest_id),
+            "route": _canonical_eod_ui_route(
+                workflow_run_id=str(superseding["workflow_run_id"]),
+                artifact_version_id=latest_id,
+            ),
         },
     )
 

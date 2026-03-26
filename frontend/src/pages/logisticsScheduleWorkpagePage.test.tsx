@@ -2,6 +2,7 @@ import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { HttpResponse, http } from "msw";
 
+import scheduleRunWorkpageStateSnapshot from "@fixtures/workpage_schedule_v0_run_state.json";
 import scheduleWorkpageStateSnapshot from "@fixtures/workpage_schedule_v0_state.json";
 import { App } from "@/app/App";
 import { getApiRequestContextHeaders, setApiRequestContextHeaders } from "@/lib/api/config";
@@ -42,7 +43,7 @@ describe("LogisticsScheduleWorkpagePage", () => {
         "Backend demo query served from repo-native workflow example bundles."
       )
     ).toBeInTheDocument();
-    expect(within(page).getByText("weekly_stage04_actual_ops_lab_v2")).toBeInTheDocument();
+    expect(within(page).getByText("weekly_stage04_actual_ops_lab_v3")).toBeInTheDocument();
     expect(within(page).getByText("Composite source bundle")).toBeInTheDocument();
     expect(screen.getByLabelText("Secondary detail routes")).toBeInTheDocument();
     expect(screen.queryByText(/Server-authoritative view backed by HITL HTTP query contracts/i)).not.toBeInTheDocument();
@@ -101,5 +102,40 @@ describe("LogisticsScheduleWorkpagePage", () => {
     await user.click(screen.getByRole("button", { name: "Retry" }));
 
     expect(await screen.findByTestId("schedule-workpage-page")).toBeInTheDocument();
+  });
+
+  it("renders the canonical run-backed schedule page and keeps local edits across refresh", async () => {
+    const user = userEvent.setup();
+    let responseCount = 0;
+    server.use(
+      http.get("*/api/v1/workpages/workflow-runs/:workflowRunId/schedule-v0", ({ params }) => {
+        responseCount += 1;
+        const payload = structuredClone(scheduleRunWorkpageStateSnapshot.workpage_state);
+        payload.freshness.generated_at =
+          responseCount === 1 ? "2026-03-25T08:10:00Z" : "2026-03-25T08:10:30Z";
+        payload.run_context.workflow_run_id = String(params.workflowRunId);
+        payload.run_context.activation_key = `snapshot:${String(params.workflowRunId)}:weekly`;
+        return HttpResponse.json(payload);
+      })
+    );
+    setFrontendOperatorContext();
+    window.history.pushState({}, "", "/runs/wr-weekly-001/workpages/schedule-v0");
+    render(<App />);
+
+    const page = await screen.findByTestId("schedule-workpage-page");
+    expect(within(page).getByText("run_projection")).toBeInTheDocument();
+    expect(
+      within(page).getByText(/Workflow-run-backed schedule projection served from canonical weekly Stage04 source artifacts/i)
+    ).toBeInTheDocument();
+
+    const sickCallsFieldset = screen.getByText("Scenario sick calls").closest("fieldset");
+    expect(sickCallsFieldset).not.toBeNull();
+
+    await user.click(within(sickCallsFieldset as HTMLElement).getByRole("checkbox", { name: "Parampreet Singh" }));
+    await user.type(screen.getByRole("textbox", { name: /Planner note/i }), "Run-backed what-if");
+    await user.click(screen.getByRole("button", { name: "Refresh" }));
+
+    expect(within(sickCallsFieldset as HTMLElement).getByRole("checkbox", { name: "Parampreet Singh" })).toBeChecked();
+    expect(screen.getByRole("textbox", { name: /Planner note/i })).toHaveValue("Run-backed what-if");
   });
 });

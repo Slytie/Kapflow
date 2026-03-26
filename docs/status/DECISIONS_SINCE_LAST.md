@@ -2,6 +2,13 @@
 
 Record any decisions made since the last session so a fresh Codex run can rehydrate quickly.
 
+## 2026-03-26 (TASK-0140 frontend workflow-run-backed workpage routes and canonical EOD artifact handoff)
+- Frontend-route decision: the canonical workpage surfaces are now active under `/runs/:workflowRunId/workpages/schedule-v0`, `/runs/:workflowRunId/workpages/eod-v0`, and `/runs/:workflowRunId/workpages/eod-v0/artifacts/:artifactVersionId`; the existing `/demo/logistics/workpages/*` pages remain in place as compatibility aliases rather than the primary access model.
+- Frontend-contract decision: the frontend now preserves optional `run_context` and optional `draft_resolution` in `WorkpageContract` so the canonical run-backed workpage responses are consumed directly instead of being flattened back into demo-only assumptions.
+- Landing-handoff decision: the run-backed EOD landing now follows backend `draft_resolution` truthfully, showing `Create editable draft` only for `no_draft` and `Open latest draft` when a compatible workbook draft already exists for the reporting run.
+- Artifact-route decision: artifact-backed EOD submit success and stale/conflict reopen flows now hand off to canonical `/runs/{workflow_run_id}/workpages/eod-v0/artifacts/{artifact_version_id}` routes; the frontend no longer relies on demo-only artifact route truth once the canonical pages are active.
+- Scope decision: this tranche intentionally stops at canonical route activation and artifact handoff. Demo-shell header links and story drilldown entrypoints remain for `TASK-0141`.
+
 ## 2026-03-26 (TASK-0139 workflow-run-backed EOD landing, latest-draft resolution, and canonical draft create)
 - Route implementation decision: the canonical `dispatch_reporting.v1` run-backed workpage access lane is now live at `GET /api/v1/workpages/workflow-runs/{workflow_run_id}/eod-v0` plus `POST /api/v1/workpages/workflow-runs/{workflow_run_id}/eod-v0/drafts`; the existing demo create alias remains in place as a compatibility/entrypoint surface until the frontend migration tranche.
 - Landing-contract decision: the run-backed EOD landing route intentionally reuses the existing validated read-only EOD landing body, sets `source.mode=run_projection`, keeps `source.source_artifact_version_id=null`, adds `run_context`, and exposes EOD-only `draft_resolution` without overloading `artifact_context`.

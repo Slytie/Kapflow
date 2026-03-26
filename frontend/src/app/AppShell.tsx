@@ -39,8 +39,10 @@ export function AppShell(): JSX.Element {
   const [lastRefreshedAt, setLastRefreshedAt] = useState<string | null>(null);
   const isWorkspaceRoute = /^\/runs\/[^/]+\/workspace$/.test(location.pathname);
   const isTimelineRoute = location.pathname === "/timeline";
-  const isLogisticsShellRoute =
+  const isDemoLogisticsRoute =
     location.pathname === "/demo/logistics" || location.pathname.startsWith("/demo/logistics/");
+  const isRunWorkpageRoute = /^\/runs\/[^/]+\/workpages(?:\/.*)?$/.test(location.pathname);
+  const isWorkpageFullPageRoute = isDemoLogisticsRoute || isRunWorkpageRoute;
   const viewerQuery = useQuery({
     queryKey: ["viewer-session"],
     queryFn: () => onetruthApi.getViewerSession()
@@ -186,7 +188,7 @@ export function AppShell(): JSX.Element {
             </NavLink>
           ))}
         </nav>
-        {isLogisticsShellRoute ? (
+        {isWorkpageFullPageRoute ? (
           <div className="app-shell__secondary-nav" aria-label="Secondary detail routes">
             <p>Secondary detail routes</p>
             {SECONDARY_LINKS.map((link) => (
@@ -203,7 +205,7 @@ export function AppShell(): JSX.Element {
       </aside>
 
       <section className="app-shell__main">
-        {isWorkspaceRoute || isTimelineRoute || isLogisticsShellRoute ? null : (
+        {isWorkspaceRoute || isTimelineRoute || isWorkpageFullPageRoute ? null : (
           <>
             <header className="app-shell__header">
               <div>

@@ -293,7 +293,7 @@ Route-family decision:
   - `GET /api/v1/workpages/artifacts/{artifact_version_id}`
   - `POST /api/v1/workpages/artifacts/{artifact_version_id}/submit`
 
-The `demo` subfamily is implemented today. During EPIC-122 it remains a curated alias/entrypoint family, not the long-term canonical access model. The first artifact-backed family remains frozen only for EOD; schedule stays query-backed/composite.
+The `demo` subfamily is implemented today. During EPIC-122 it remains a curated alias/entrypoint family, not the long-term canonical access model. The canonical frontend run-backed pages now live under `/runs/:workflowRunId/workpages/*`, while the first artifact-backed family remains frozen only for EOD and schedule stays query-backed/composite.
 
 Current planned demo workpage ids:
 - `schedule-v0`
@@ -512,16 +512,16 @@ Body:
 - `idempotency_key`
 
 Response:
-- `{"status":"ok","command":"api.workpages.artifact.submit","submitted":{"workflow_run_id":"...","artifact_version_id":"...","supersedes_artifact_version_id":"...","route":"/demo/logistics/workpages/eod-v0/artifacts/{artifact_version_id}"}}`
+- `{"status":"ok","command":"api.workpages.artifact.submit","submitted":{"workflow_run_id":"...","artifact_version_id":"...","supersedes_artifact_version_id":"...","route":"/runs/{workflow_run_id}/workpages/eod-v0/artifacts/{artifact_version_id}"}}`
 
 Conflict error:
-- `{"status":"error","error":{"code":"workpage_artifact_conflict","message":"...","details":{"artifact_version_id":"...","latest_artifact_version_id":"...","workflow_run_id":"...","route":"..."}}}`
+- `{"status":"error","error":{"code":"workpage_artifact_conflict","message":"...","details":{"artifact_version_id":"...","latest_artifact_version_id":"...","workflow_run_id":"...","route":"/runs/{workflow_run_id}/workpages/eod-v0/artifacts/{artifact_version_id}"}}}`
 
 Rules:
 - submit creates a **new immutable** workbook artifact version,
 - the new version must set `supersedes_artifact_version_id` to the submitted base artifact version,
 - explicit submit/save only; no per-keystroke artifact writes,
-- once the canonical EPIC-122 frontend routes are active, the returned `route` should point at `/runs/{workflow_run_id}/workpages/eod-v0/artifacts/{artifact_version_id}` rather than a demo alias,
+- the returned `route` now points at `/runs/{workflow_run_id}/workpages/eod-v0/artifacts/{artifact_version_id}` so stale/conflict reopen and submit success stay inside the canonical nested workpage family,
 - if the base artifact version has already been superseded in the same draft chain, fail closed with `workpage_artifact_conflict`,
 - final-packet approval/pointer semantics remain out of scope for this epic.
 

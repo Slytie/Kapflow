@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useParams } from "react-router-dom";
 
 import { StatePanel } from "@/components/StatePanel";
 import {
@@ -34,9 +35,14 @@ function findTableSection(
 }
 
 export function LogisticsScheduleWorkpagePage(): JSX.Element {
+  const { workflowRunId } = useParams<{ workflowRunId: string }>();
+  const isRunBacked = Boolean(workflowRunId);
   const query = useQuery({
-    queryKey: ["workpages", "schedule-v0"],
-    queryFn: () => workpagesRepository.schedule(),
+    queryKey: ["workpages", "schedule-v0", workflowRunId ?? "demo"],
+    queryFn: () =>
+      workflowRunId
+        ? workpagesRepository.scheduleForRun(workflowRunId)
+        : workpagesRepository.schedule(),
     refetchInterval: apiConfig.pollIntervalMs
   });
 
@@ -104,7 +110,11 @@ export function LogisticsScheduleWorkpagePage(): JSX.Element {
       <StatePanel
         kind="loading"
         title="Loading schedule workpage"
-        detail="Fetching the backend demo workpage query."
+        detail={
+          isRunBacked
+            ? "Fetching the workflow-run-backed schedule workpage."
+            : "Fetching the backend demo workpage query."
+        }
       />
     );
   }
@@ -114,7 +124,12 @@ export function LogisticsScheduleWorkpagePage(): JSX.Element {
       <StatePanel
         kind="error"
         title="Schedule workpage failed to load"
-        detail={errorText(query.error, "Unable to load the schedule workpage demo query.")}
+        detail={errorText(
+          query.error,
+          isRunBacked
+            ? "Unable to load the workflow-run-backed schedule workpage."
+            : "Unable to load the schedule workpage demo query."
+        )}
         onRetry={() => {
           void query.refetch();
         }}
@@ -125,7 +140,11 @@ export function LogisticsScheduleWorkpagePage(): JSX.Element {
   return (
     <WorkpageFrame
       eyebrow="Weekly Planning Review"
-      description="A backend demo query for weekly schedule review, selected-day preview, and bounded what-if exploration."
+      description={
+        isRunBacked
+          ? "A workflow-run-backed weekly planning review for selected-day preview and bounded what-if exploration."
+          : "A backend demo query for weekly schedule review, selected-day preview, and bounded what-if exploration."
+      }
       summaryItems={[
         `Week ${model.summary.planning_week_id}`,
         `${model.summary.service_area}`,
@@ -141,6 +160,13 @@ export function LogisticsScheduleWorkpagePage(): JSX.Element {
       isRefreshing={query.isFetching}
       pollIntervalMs={apiConfig.pollIntervalMs}
       testId="schedule-workpage-page"
+      sourceDescription={
+        isRunBacked
+          ? "Workflow-run-backed schedule projection served from canonical weekly Stage04 source artifacts."
+          : undefined
+      }
+      backLink={workflowRunId ? `/runs/${workflowRunId}` : undefined}
+      backLabel={workflowRunId ? "Back to run detail" : undefined}
     >
       <div className="workpage-page__grid workpage-page__grid--two-column">
         {summarySection ? <WorkpageSummaryCardsSection section={summarySection} /> : null}

@@ -9,9 +9,9 @@
     "status": "ok",
     "submitted": {
       "artifact_version_id": "<artifact_version_id:1>",
-      "route": "/demo/logistics/workpages/eod-v0/artifacts/<artifact_version_id:1>",
-      "supersedes_artifact_version_id": "<supersedes_artifact_version_id:2>",
-      "workflow_run_id": "<workflow_run_id:3>"
+      "route": "/runs/<workflow_run_id:2>/workpages/eod-v0/artifacts/<artifact_version_id:1>",
+      "supersedes_artifact_version_id": "<supersedes_artifact_version_id:3>",
+      "workflow_run_id": "<workflow_run_id:2>"
     }
   }
 }

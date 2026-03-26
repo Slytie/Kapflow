@@ -50,6 +50,15 @@ export function App(): JSX.Element {
                 path="/demo/logistics/workpages/eod-v0/artifacts/:artifactVersionId"
                 element={<DispatchReportArtifactWorkpagePage />}
               />
+              <Route
+                path="/runs/:workflowRunId/workpages/schedule-v0"
+                element={<LogisticsScheduleWorkpagePage />}
+              />
+              <Route path="/runs/:workflowRunId/workpages/eod-v0" element={<DispatchReportWorkpagePage />} />
+              <Route
+                path="/runs/:workflowRunId/workpages/eod-v0/artifacts/:artifactVersionId"
+                element={<DispatchReportArtifactWorkpagePage />}
+              />
               <Route path="/workspace" element={<WorkspaceHomePage />} />
               <Route path="/board" element={<BoardPage />} />
               <Route path="/my-work" element={<MyWorkPage />} />

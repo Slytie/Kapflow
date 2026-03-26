@@ -35,6 +35,8 @@ interface WorkpageFrameProps {
   pollIntervalMs?: number | false;
   sourceDescription?: string;
   heroActions?: ReactNode;
+  backLink?: string;
+  backLabel?: string;
   children: ReactNode;
 }
 
@@ -51,6 +53,8 @@ export function WorkpageFrame({
   pollIntervalMs,
   sourceDescription = "Backend demo query served from repo-native workflow example bundles.",
   heroActions,
+  backLink = "/demo/logistics",
+  backLabel = "Back to logistics demo",
   children
 }: WorkpageFrameProps): JSX.Element {
   const sourceDatasetLabel = source.primary_dataset_key ?? "Composite source bundle";
@@ -71,8 +75,8 @@ export function WorkpageFrame({
           </div>
         </div>
         <div className="workpage-page__hero-links">
-          <Link className="link-button" to="/demo/logistics">
-            Back to logistics demo
+          <Link className="link-button" to={backLink}>
+            {backLabel}
           </Link>
           <p>{model.workflow_id}</p>
           <p>{model.dataset_key}</p>

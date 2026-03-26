@@ -55,6 +55,13 @@ Keep the existing artifact-backed EOD routes unchanged:
 
 Keep the current demo routes as aliases/entrypoints while the canonical run-backed surfaces are introduced.
 
+Implemented in `TASK-0140`:
+- the frontend now serves `/runs/:workflowRunId/workpages/schedule-v0`
+- the frontend now serves `/runs/:workflowRunId/workpages/eod-v0`
+- the frontend now serves `/runs/:workflowRunId/workpages/eod-v0/artifacts/:artifactVersionId`
+- `/demo/logistics/workpages/*` remains in place as a compatibility alias family
+- artifact-backed submit/conflict handoff routes now point at canonical nested `/runs/{workflow_run_id}/workpages/eod-v0/artifacts/{artifact_version_id}` pages
+
 ## Contract freeze from TASK-0137
 The existing `WorkpageContract` remains the right inner contract for the page body. EPIC-122 freezes only the smallest additions needed for canonical run-backed usage:
 - add optional `run_context` for run-backed surfaces,
@@ -103,7 +110,7 @@ These belong under `fixtures/frontend_contracts/` because they are backend-gener
 1. `TASK-0137` - DONE
 2. `TASK-0138` - DONE
 3. `TASK-0139` - DONE
-4. `TASK-0140` - migrate the frontend to workflow-run-backed routes while preserving artifact-backed EOD editing handoff
+4. `TASK-0140` - DONE
 5. `TASK-0141` - expose demo/story drilldown entrypoints and keep docs/status truthful
 
 ## Explicit non-goals

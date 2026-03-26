@@ -68,7 +68,7 @@ describe("Repository contract compatibility", () => {
     expect(logisticsStory.board.work_items.length).toBeGreaterThan(0);
     expect(scheduleWorkpage.workpage.sections.length).toBeGreaterThan(0);
     expect(scheduleWorkpage.source.source_dataset_keys.length).toBe(5);
-    expect(scheduleWorkpage.freshness.source_version).toBe("weekly_stage04_actual_ops_lab_v2");
+    expect(scheduleWorkpage.freshness.source_version).toBe("weekly_stage04_actual_ops_lab_v3");
     expect(eodWorkpage.workpage.sections.length).toBeGreaterThan(0);
     expect(eodWorkpage.source.primary_dataset_key).toBe("reporting.upd_draft.workbook");
     expect(eodWorkpage.freshness.source_version).toBe(

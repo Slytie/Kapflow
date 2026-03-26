@@ -401,6 +401,22 @@ export interface WorkpageArtifactContext {
   download_path: string;
 }
 
+export interface WorkpageRunContext {
+  workflow_run_id: string;
+  workflow_id: string;
+  workflow_version: string;
+  partition_key: string;
+  logical_date: string;
+  activation_key: string;
+  state: string;
+}
+
+export interface WorkpageDraftResolution {
+  state: "no_draft" | "latest_draft_available";
+  latest_artifact_version_id: string | null;
+  artifact_route: string | null;
+}
+
 export interface WorkpageDraftResponse {
   workflow_run_id: string;
   artifact_version_id: string;
@@ -419,6 +435,8 @@ export interface WorkpageContract {
   source: WorkpageSourceMetadata;
   freshness: WorkpageFreshness;
   artifact_context: WorkpageArtifactContext | null;
+  run_context: WorkpageRunContext | null;
+  draft_resolution: WorkpageDraftResolution | null;
 }
 
 export type LogisticsStoryFamilyNodeKind = "module";

@@ -13,8 +13,16 @@ export const workpagesRepository = {
     return onetruthApi.getDemoWorkpage("schedule-v0");
   },
 
+  async scheduleForRun(workflowRunId: string): Promise<WorkpageContract> {
+    return onetruthApi.getWorkflowRunScheduleWorkpage(workflowRunId);
+  },
+
   async eod(): Promise<WorkpageContract> {
     return onetruthApi.getDemoWorkpage("eod-v0");
+  },
+
+  async eodForRun(workflowRunId: string): Promise<WorkpageContract> {
+    return onetruthApi.getWorkflowRunEodWorkpage(workflowRunId);
   },
 
   async eodArtifact(artifactVersionId: string): Promise<WorkpageContract> {
@@ -24,6 +32,12 @@ export const workpagesRepository = {
   async createEodDraft(): Promise<WorkpageDraftResponse> {
     return onetruthApi.createDemoEodDraft({
       idempotency_key: createIdempotencyKey("workpage-eod-draft-create", "eod-v0")
+    });
+  },
+
+  async createEodDraftForRun(workflowRunId: string): Promise<WorkpageDraftResponse> {
+    return onetruthApi.createWorkflowRunEodDraft(workflowRunId, {
+      idempotency_key: createIdempotencyKey("workpage-eod-draft-create", workflowRunId)
     });
   },
 

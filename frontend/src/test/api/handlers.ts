@@ -5,9 +5,12 @@ import type {
   HumanTaskSubgraph
 } from "@/lib/types/contracts";
 import eodArtifactCreateResponseSnapshot from "@fixtures/workpage_eod_v0_artifact_create_response.json";
+import eodRunArtifactCreateResponseSnapshot from "@fixtures/workpage_eod_v0_run_artifact_create_response.json";
+import eodRunWorkpageStateSnapshot from "@fixtures/workpage_eod_v0_run_state.json";
 import eodArtifactStateSnapshot from "@fixtures/workpage_eod_v0_artifact_state.json";
 import eodArtifactSubmitResponseSnapshot from "@fixtures/workpage_eod_v0_artifact_submit_response.json";
 import eodWorkpageStateSnapshot from "@fixtures/workpage_eod_v0_state.json";
+import scheduleRunWorkpageStateSnapshot from "@fixtures/workpage_schedule_v0_run_state.json";
 import scheduleWorkpageStateSnapshot from "@fixtures/workpage_schedule_v0_state.json";
 
 import {
@@ -49,8 +52,10 @@ function nextEodArtifactVersionId(): string {
   return `av-eod-artifact-${String(eodArtifactVersionCounter).padStart(3, "0")}`;
 }
 
-function artifactRoute(artifactVersionId: string): string {
-  return `/demo/logistics/workpages/eod-v0/artifacts/${artifactVersionId}`;
+function artifactRoute(artifactVersionId: string, workflowRunId?: string): string {
+  return workflowRunId
+    ? `/runs/${workflowRunId}/workpages/eod-v0/artifacts/${artifactVersionId}`
+    : `/demo/logistics/workpages/eod-v0/artifacts/${artifactVersionId}`;
 }
 
 function sortArtifactRowsAscending(left: ArtifactVersionRow, right: ArtifactVersionRow): number {
@@ -318,23 +323,39 @@ function updateEodArtifactChainLatest(artifactVersionId: string, latestArtifactV
   }
 }
 
-function ensureEodArtifactDraft(): EodArtifactVersionState {
+function latestEodArtifactForRun(workflowRunId: string): EodArtifactVersionState | null {
+  return Array.from(eodArtifactVersions.values())
+    .filter((version) => version.workflowRunId === workflowRunId)
+    .sort((left, right) => {
+      const createdAtCompare = right.createdAt.localeCompare(left.createdAt);
+      if (createdAtCompare !== 0) {
+        return createdAtCompare;
+      }
+      return right.artifactVersionId.localeCompare(left.artifactVersionId);
+    })[0] ?? null;
+}
+
+function ensureEodArtifactDraft(workflowRunId = EOD_WORKFLOW_RUN_ID): EodArtifactVersionState {
   const artifactVersionId = nextEodArtifactVersionId();
   return addEodArtifactVersion({
     artifactVersionId,
-    workflowRunId: EOD_WORKFLOW_RUN_ID,
+    workflowRunId,
     supersedesArtifactVersionId: null,
     latestInChainArtifactVersionId: artifactVersionId
   });
 }
 
-function eodArtifactCreateResponse(version: EodArtifactVersionState): Record<string, unknown> {
-  const payload = cloneJson(
-    eodArtifactCreateResponseSnapshot.create_response
-  ) as Record<string, unknown>;
+function eodArtifactCreateResponse(
+  version: EodArtifactVersionState,
+  workflowRunId?: string
+): Record<string, unknown> {
+  const snapshot = workflowRunId
+    ? eodRunArtifactCreateResponseSnapshot.create_response
+    : eodArtifactCreateResponseSnapshot.create_response;
+  const payload = cloneJson(snapshot) as Record<string, unknown>;
   payload.draft = {
     artifact_version_id: version.artifactVersionId,
-    route: artifactRoute(version.artifactVersionId),
+    route: artifactRoute(version.artifactVersionId, workflowRunId),
     workflow_run_id: version.workflowRunId
   };
   return payload;
@@ -349,10 +370,56 @@ function eodArtifactSubmitResponse(
   ) as Record<string, unknown>;
   payload.submitted = {
     artifact_version_id: version.artifactVersionId,
-    route: artifactRoute(version.artifactVersionId),
+    route: artifactRoute(version.artifactVersionId, version.workflowRunId),
     supersedes_artifact_version_id: supersedesArtifactVersionId,
     workflow_run_id: version.workflowRunId
   };
+  return payload;
+}
+
+function buildRunScheduleWorkpagePayload(workflowRunId: string): Record<string, unknown> {
+  const payload = cloneJson(scheduleRunWorkpageStateSnapshot.workpage_state) as Record<string, unknown>;
+  const runContext = payload.run_context as Record<string, unknown>;
+  runContext.workflow_run_id = workflowRunId;
+  runContext.activation_key = `snapshot:${workflowRunId}:weekly-schedule-workpage`;
+  return payload;
+}
+
+function buildRunEodWorkpagePayload(workflowRunId: string): Record<string, unknown> {
+  const payload = cloneJson(eodRunWorkpageStateSnapshot.workpage_state) as Record<string, unknown>;
+  const runContext = payload.run_context as Record<string, unknown>;
+  const freshness = payload.freshness as Record<string, unknown>;
+  const source = payload.source as Record<string, unknown>;
+  const draftResolution = payload.draft_resolution as Record<string, unknown>;
+
+  runContext.workflow_run_id = workflowRunId;
+  runContext.activation_key = `snapshot:${workflowRunId}:dispatch-reporting-workpage`;
+
+  const latestVersion = latestEodArtifactForRun(workflowRunId);
+  if (!latestVersion) {
+    draftResolution.state = "no_draft";
+    draftResolution.latest_artifact_version_id = null;
+    draftResolution.artifact_route = null;
+    freshness.source_version = workflowRunId;
+    source.source_refs = [
+      "/api/v1/artifacts/av-reporting-eos-001",
+      "/api/v1/artifacts/av-reporting-actuals-001"
+    ];
+    return payload;
+  }
+
+  draftResolution.state = "latest_draft_available";
+  draftResolution.latest_artifact_version_id = latestVersion.artifactVersionId;
+  draftResolution.artifact_route = artifactRoute(
+    latestVersion.artifactVersionId,
+    workflowRunId
+  );
+  freshness.source_version = latestVersion.artifactVersionId;
+  source.source_refs = [
+    "/api/v1/artifacts/av-reporting-eos-001",
+    "/api/v1/artifacts/av-reporting-actuals-001",
+    `/api/v1/artifacts/${latestVersion.artifactVersionId}`
+  ];
   return payload;
 }
 
@@ -1436,9 +1503,21 @@ export const handlers = [
   http.get("*/api/v1/workpages/demo/schedule-v0", () =>
     HttpResponse.json(scheduleWorkpageStateSnapshot.workpage_state)
   ),
+  http.get("*/api/v1/workpages/workflow-runs/:workflowRunId/schedule-v0", ({ params, request }) => {
+    if (!inScope(request)) {
+      return forbiddenWorkflowRun();
+    }
+    return HttpResponse.json(buildRunScheduleWorkpagePayload(String(params.workflowRunId)));
+  }),
   http.get("*/api/v1/workpages/demo/eod-v0", () =>
     HttpResponse.json(eodWorkpageStateSnapshot.workpage_state)
   ),
+  http.get("*/api/v1/workpages/workflow-runs/:workflowRunId/eod-v0", ({ params, request }) => {
+    if (!inScope(request)) {
+      return forbiddenWorkflowRun();
+    }
+    return HttpResponse.json(buildRunEodWorkpagePayload(String(params.workflowRunId)));
+  }),
   http.post("*/api/v1/workpages/demo/eod-v0/drafts", ({ request }) => {
     if (!inScope(request)) {
       return forbiddenWorkflowRun();
@@ -1449,6 +1528,22 @@ export const handlers = [
     return ok({
       command: "api.workpages.eod_drafts.create",
       draft: (eodArtifactCreateResponse(version).draft as Record<string, unknown>) ?? {}
+    });
+  }),
+  http.post("*/api/v1/workpages/workflow-runs/:workflowRunId/eod-v0/drafts", ({ params, request }) => {
+    if (!inScope(request)) {
+      return forbiddenWorkflowRun();
+    }
+
+    const workflowRunId = String(params.workflowRunId);
+    const version = ensureEodArtifactDraft(workflowRunId);
+    state.audit.mutations.push(
+      `workpage-eod-draft-create:${workflowRunId}:${version.artifactVersionId}`
+    );
+    return ok({
+      command: "api.workpages.eod_drafts.create",
+      draft:
+        (eodArtifactCreateResponse(version, workflowRunId).draft as Record<string, unknown>) ?? {}
     });
   }),
   http.get("*/api/v1/workpages/artifacts/:artifactVersionId", ({ params, request }) => {
@@ -1535,7 +1630,10 @@ export const handlers = [
               artifact_version_id: artifactVersionId,
               latest_artifact_version_id: baseVersion.latestInChainArtifactVersionId,
               workflow_run_id: baseVersion.workflowRunId,
-              route: artifactRoute(baseVersion.latestInChainArtifactVersionId)
+              route: artifactRoute(
+                baseVersion.latestInChainArtifactVersionId,
+                baseVersion.workflowRunId
+              )
             }
           }
         },

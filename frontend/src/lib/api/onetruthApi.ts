@@ -96,6 +96,8 @@ interface WorkpageEnvelope extends ListEnvelope {
   source?: Record<string, unknown>;
   freshness?: Record<string, unknown>;
   artifact_context?: Record<string, unknown> | null;
+  run_context?: Record<string, unknown> | null;
+  draft_resolution?: Record<string, unknown> | null;
 }
 
 interface WorkpageDraftEnvelope extends ListEnvelope {
@@ -687,6 +689,14 @@ function normalizeWorkpageContract(payload: WorkpageEnvelope): WorkpageContract 
     payload.artifact_context === null || payload.artifact_context === undefined
       ? null
       : requiredObject(payload.artifact_context, "artifact_context");
+  const runContext =
+    payload.run_context === null || payload.run_context === undefined
+      ? null
+      : requiredObject(payload.run_context, "run_context");
+  const draftResolution =
+    payload.draft_resolution === null || payload.draft_resolution === undefined
+      ? null
+      : requiredObject(payload.draft_resolution, "draft_resolution");
 
   if (!Array.isArray(workpage.sections)) {
     throw new Error("Invalid API response: expected array at 'workpage.sections'.");
@@ -740,6 +750,27 @@ function normalizeWorkpageContract(payload: WorkpageEnvelope): WorkpageContract 
             artifactContext.latest_in_chain_artifact_version_id
           ),
           download_path: asString(artifactContext.download_path)
+        }
+      : null,
+    run_context: runContext
+      ? {
+          workflow_run_id: asString(runContext.workflow_run_id),
+          workflow_id: asString(runContext.workflow_id),
+          workflow_version: asString(runContext.workflow_version),
+          partition_key: asString(runContext.partition_key),
+          logical_date: asString(runContext.logical_date),
+          activation_key: asString(runContext.activation_key),
+          state: asString(runContext.state)
+        }
+      : null,
+    draft_resolution: draftResolution
+      ? {
+          state:
+            asString(draftResolution.state) === "latest_draft_available"
+              ? "latest_draft_available"
+              : "no_draft",
+          latest_artifact_version_id: asStringOrNull(draftResolution.latest_artifact_version_id),
+          artifact_route: asStringOrNull(draftResolution.artifact_route)
         }
       : null
   };
@@ -960,6 +991,34 @@ export const onetruthApi = {
       method: "POST",
       body: payload
     });
+    return normalizeWorkpageDraftResponse(result);
+  },
+
+  async getWorkflowRunScheduleWorkpage(workflowRunId: string): Promise<WorkpageContract> {
+    const payload = await requestJson<WorkpageEnvelope>(
+      `/workpages/workflow-runs/${encodeURIComponent(workflowRunId)}/schedule-v0`
+    );
+    return normalizeWorkpageContract(payload);
+  },
+
+  async getWorkflowRunEodWorkpage(workflowRunId: string): Promise<WorkpageContract> {
+    const payload = await requestJson<WorkpageEnvelope>(
+      `/workpages/workflow-runs/${encodeURIComponent(workflowRunId)}/eod-v0`
+    );
+    return normalizeWorkpageContract(payload);
+  },
+
+  async createWorkflowRunEodDraft(
+    workflowRunId: string,
+    payload: { idempotency_key: string }
+  ): Promise<WorkpageDraftResponse> {
+    const result = await requestJson<WorkpageDraftEnvelope>(
+      `/workpages/workflow-runs/${encodeURIComponent(workflowRunId)}/eod-v0/drafts`,
+      {
+        method: "POST",
+        body: payload
+      }
+    );
     return normalizeWorkpageDraftResponse(result);
   },
 

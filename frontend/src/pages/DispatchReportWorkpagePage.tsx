@@ -40,8 +40,22 @@ function findTableSection(
   return sections.find((section) => section.table_id === tableId) ?? null;
 }
 
-function artifactRoute(artifactVersionId: string): string {
-  return `/demo/logistics/workpages/eod-v0/artifacts/${artifactVersionId}`;
+function eodLandingRoute(workflowRunId?: string): string {
+  return workflowRunId
+    ? `/runs/${workflowRunId}/workpages/eod-v0`
+    : "/demo/logistics/workpages/eod-v0";
+}
+
+function artifactRoute(artifactVersionId: string, workflowRunId?: string): string {
+  return workflowRunId
+    ? `/runs/${workflowRunId}/workpages/eod-v0/artifacts/${artifactVersionId}`
+    : `/demo/logistics/workpages/eod-v0/artifacts/${artifactVersionId}`;
+}
+
+function workpageBackRoute(workflowRunId?: string): { href: string; label: string } {
+  return workflowRunId
+    ? { href: `/runs/${workflowRunId}`, label: "Back to run detail" }
+    : { href: "/demo/logistics", label: "Back to logistics demo" };
 }
 
 function recentDraftActionLabel(
@@ -186,6 +200,8 @@ interface DispatchReportWorkpageViewProps {
   testId: string;
   sourceDescription: string;
   summaryLabel: string;
+  backLink?: string;
+  backLabel?: string;
   heroActions?: ReactNode;
   preContent?: ReactNode;
   editable: boolean;
@@ -203,6 +219,8 @@ function DispatchReportWorkpageView({
   testId,
   sourceDescription,
   summaryLabel,
+  backLink,
+  backLabel,
   heroActions,
   preContent,
   editable,
@@ -277,6 +295,8 @@ function DispatchReportWorkpageView({
       testId={testId}
       sourceDescription={sourceDescription}
       heroActions={heroActions}
+      backLink={backLink}
+      backLabel={backLabel}
     >
       {preContent}
 
@@ -317,13 +337,19 @@ function DispatchReportWorkpageView({
 export function DispatchReportWorkpagePage(): JSX.Element {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const { workflowRunId } = useParams<{ workflowRunId: string }>();
+  const isRunBacked = Boolean(workflowRunId);
   const query = useQuery({
-    queryKey: ["workpages", "eod-v0", "landing"],
-    queryFn: () => workpagesRepository.eod(),
+    queryKey: ["workpages", "eod-v0", "landing", workflowRunId ?? "demo"],
+    queryFn: () =>
+      workflowRunId ? workpagesRepository.eodForRun(workflowRunId) : workpagesRepository.eod(),
     refetchInterval: apiConfig.pollIntervalMs
   });
   const createDraftMutation = useMutation({
-    mutationFn: () => workpagesRepository.createEodDraft(),
+    mutationFn: () =>
+      workflowRunId
+        ? workpagesRepository.createEodDraftForRun(workflowRunId)
+        : workpagesRepository.createEodDraft(),
     onSuccess: (draft) => {
       void queryClient.invalidateQueries({ queryKey: ["workpages"] });
       navigate(draft.route);
@@ -335,7 +361,11 @@ export function DispatchReportWorkpagePage(): JSX.Element {
       <StatePanel
         kind="loading"
         title="Loading end-of-day workpage"
-        detail="Fetching the backend dispatch-reporting landing query."
+        detail={
+          isRunBacked
+            ? "Fetching the workflow-run-backed dispatch-reporting landing workpage."
+            : "Fetching the backend dispatch-reporting landing query."
+        }
       />
     );
   }
@@ -345,7 +375,12 @@ export function DispatchReportWorkpagePage(): JSX.Element {
       <StatePanel
         kind="error"
         title="End-of-day workpage failed to load"
-        detail={errorText(query.error, "Unable to load the dispatch-reporting workpage landing query.")}
+        detail={errorText(
+          query.error,
+          isRunBacked
+            ? "Unable to load the workflow-run-backed dispatch-reporting landing workpage."
+            : "Unable to load the dispatch-reporting workpage landing query."
+        )}
         onRetry={() => {
           void query.refetch();
         }}
@@ -353,12 +388,24 @@ export function DispatchReportWorkpagePage(): JSX.Element {
     );
   }
 
+  const latestDraftRoute =
+    query.data.draft_resolution?.state === "latest_draft_available"
+      ? query.data.draft_resolution.artifact_route
+      : null;
+  const backRoute = workpageBackRoute(workflowRunId);
+
   return (
     <DispatchReportWorkpageView
       contract={query.data}
       testId="dispatch-report-workpage-page"
-      sourceDescription="Backend demo query served from repo-native workflow example bundles. Create an editable draft to switch into artifact-backed workbook editing."
-      summaryLabel="Query preview"
+      sourceDescription={
+        isRunBacked
+          ? "Workflow-run-backed dispatch-reporting landing with latest-draft resolution over a canonical reporting run."
+          : "Backend demo query served from repo-native workflow example bundles. Create an editable draft to switch into artifact-backed workbook editing."
+      }
+      summaryLabel={isRunBacked ? "Run-backed preview" : "Query preview"}
+      backLink={backRoute.href}
+      backLabel={backRoute.label}
       editable={false}
       onRefresh={() => {
         void query.refetch();
@@ -373,25 +420,42 @@ export function DispatchReportWorkpagePage(): JSX.Element {
               detail={errorText(createDraftMutation.error, "Unable to create an editable EOD draft.")}
             />
           ) : null}
-          <section className="workpage-panel workpage-panel--callout">
-            <header className="workpage-panel__header">
-              <h2>Create editable draft</h2>
-              <p>
-                This landing page is a read-only preview. Create an immutable workbook-backed draft
-                before making closeout or UPD review edits.
-              </p>
-            </header>
-            <div className="action-cluster">
-              <button
-                type="button"
-                className="action-btn action-btn--positive"
-                disabled={createDraftMutation.isPending}
-                onClick={() => createDraftMutation.mutate()}
-              >
-                {createDraftMutation.isPending ? "Creating draft..." : "Create editable draft"}
-              </button>
-            </div>
-          </section>
+          {latestDraftRoute ? (
+            <section className="workpage-panel workpage-panel--callout">
+              <header className="workpage-panel__header">
+                <h2>Latest draft available</h2>
+                <p>
+                  This landing page already resolved the newest editable workbook-backed draft for
+                  this reporting run. Reopen that draft before making closeout or UPD review edits.
+                </p>
+              </header>
+              <div className="action-cluster">
+                <Link className="link-button" to={latestDraftRoute}>
+                  Open latest draft
+                </Link>
+              </div>
+            </section>
+          ) : (
+            <section className="workpage-panel workpage-panel--callout">
+              <header className="workpage-panel__header">
+                <h2>Create editable draft</h2>
+                <p>
+                  This landing page is a read-only preview. Create an immutable workbook-backed
+                  draft before making closeout or UPD review edits.
+                </p>
+              </header>
+              <div className="action-cluster">
+                <button
+                  type="button"
+                  className="action-btn action-btn--positive"
+                  disabled={createDraftMutation.isPending}
+                  onClick={() => createDraftMutation.mutate()}
+                >
+                  {createDraftMutation.isPending ? "Creating draft..." : "Create editable draft"}
+                </button>
+              </div>
+            </section>
+          )}
         </>
       }
     />
@@ -401,18 +465,29 @@ export function DispatchReportWorkpagePage(): JSX.Element {
 export function DispatchReportArtifactWorkpagePage(): JSX.Element {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const { artifactVersionId } = useParams<{ artifactVersionId: string }>();
+  const { artifactVersionId, workflowRunId } = useParams<{
+    artifactVersionId: string;
+    workflowRunId: string;
+  }>();
   const query = useQuery({
-    queryKey: ["workpages", "eod-v0", "artifacts", artifactVersionId],
+    queryKey: ["workpages", "eod-v0", "artifacts", workflowRunId ?? "demo", artifactVersionId],
     queryFn: () => workpagesRepository.eodArtifact(artifactVersionId ?? ""),
     enabled: Boolean(artifactVersionId),
     refetchInterval: apiConfig.pollIntervalMs
   });
-  const workflowRunId = query.data?.artifact_context?.workflow_run_id ?? "";
+  const artifactWorkflowRunId =
+    workflowRunId ?? query.data?.artifact_context?.workflow_run_id ?? "";
   const historyQuery = useQuery({
-    queryKey: ["workpages", "eod-v0", "artifacts", artifactVersionId, "history", workflowRunId],
-    queryFn: () => workpagesRepository.listEodDraftHistory(workflowRunId),
-    enabled: workflowRunId.length > 0,
+    queryKey: [
+      "workpages",
+      "eod-v0",
+      "artifacts",
+      artifactVersionId,
+      "history",
+      artifactWorkflowRunId
+    ],
+    queryFn: () => workpagesRepository.listEodDraftHistory(artifactWorkflowRunId),
+    enabled: artifactWorkflowRunId.length > 0,
     refetchInterval: apiConfig.pollIntervalMs
   });
   const model = query.data?.workpage;
@@ -478,13 +553,16 @@ export function DispatchReportArtifactWorkpagePage(): JSX.Element {
   const artifactContext = contract.artifact_context;
   const latestArtifactVersionId =
     artifactContext?.latest_in_chain_artifact_version_id ?? artifactVersionId;
-  const latestRoute = artifactRoute(latestArtifactVersionId);
+  const latestRoute = artifactRoute(latestArtifactVersionId, workflowRunId);
   const previousArtifactVersionId = artifactContext?.supersedes_artifact_version_id ?? null;
-  const previousRoute = previousArtifactVersionId ? artifactRoute(previousArtifactVersionId) : null;
+  const previousRoute = previousArtifactVersionId
+    ? artifactRoute(previousArtifactVersionId, workflowRunId)
+    : null;
   const recentDraftHistory: ArtifactVersionRow[] = historyQuery.data ?? [];
   const isStaleArtifact = latestArtifactVersionId !== artifactVersionId;
   const submitConflict = workpageConflictDetails(submitMutation.error);
   const staleOrConflictRoute = submitConflict?.route ?? (isStaleArtifact ? latestRoute : null);
+  const backRoute = workpageBackRoute(workflowRunId);
 
   return (
     <DispatchReportWorkpageView
@@ -492,6 +570,8 @@ export function DispatchReportArtifactWorkpagePage(): JSX.Element {
       testId="dispatch-report-artifact-workpage-page"
       sourceDescription="Artifact-backed projection of an immutable Stage03 reporting workbook draft. Submit creates a new superseding workbook artifact version."
       summaryLabel={`Artifact ${artifactVersionId}`}
+      backLink={backRoute.href}
+      backLabel={backRoute.label}
       editable={true}
       formState={formState}
       checklistState={checklistState}
@@ -521,7 +601,7 @@ export function DispatchReportArtifactWorkpagePage(): JSX.Element {
       }}
       onRefresh={() => {
         void query.refetch();
-        if (workflowRunId.length > 0) {
+        if (artifactWorkflowRunId.length > 0) {
           void historyQuery.refetch();
         }
       }}
@@ -530,7 +610,7 @@ export function DispatchReportArtifactWorkpagePage(): JSX.Element {
       }
       heroActions={
         <>
-          <Link className="link-button" to="/demo/logistics/workpages/eod-v0">
+          <Link className="link-button" to={eodLandingRoute(workflowRunId)}>
             Back to query landing
           </Link>
           <button
@@ -656,7 +736,7 @@ export function DispatchReportArtifactWorkpagePage(): JSX.Element {
                     Open previous draft
                   </Link>
                 ) : null}
-                {latestRoute !== artifactRoute(artifactVersionId) ? (
+                {latestRoute !== artifactRoute(artifactVersionId, workflowRunId) ? (
                   <Link className="link-button" to={latestRoute}>
                     Open latest draft
                   </Link>
@@ -734,13 +814,13 @@ export function DispatchReportArtifactWorkpagePage(): JSX.Element {
                             )}
                           </div>
                         </div>
-                        <div className="action-cluster">
-                          <Link
-                            className="link-button"
-                            to={artifactRoute(artifact.artifact_version_id)}
-                          >
-                            {actionLabel}
-                          </Link>
+                      <div className="action-cluster">
+                        <Link
+                          className="link-button"
+                          to={artifactRoute(artifact.artifact_version_id, workflowRunId)}
+                        >
+                          {actionLabel}
+                        </Link>
                         </div>
                       </article>
                     );

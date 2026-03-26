@@ -2,7 +2,7 @@
 id: TASK-0140
 epic: EPIC-122
 title: "Migrate the frontend to workflow-run-backed workpage routes while preserving artifact-backed EOD editing handoff"
-status: TODO
+status: DONE
 owners: ["frontend"]
 reviewers: ["backend", "qa"]
 depends_on: ["TASK-0138", "TASK-0139"]
@@ -61,3 +61,22 @@ Add workflow-run-backed frontend routes and repositories, preserve the validated
 
 ## Notes / decisions
 Do not silently reinterpret backend contracts in frontend code. If the contract is wrong, fix it in the backend/docs rather than hiding the mismatch.
+
+## Implementation outcome
+- Added canonical frontend routes at `/runs/:workflowRunId/workpages/schedule-v0`, `/runs/:workflowRunId/workpages/eod-v0`, and `/runs/:workflowRunId/workpages/eod-v0/artifacts/:artifactVersionId`.
+- Extended the frontend workpage contract/API/repository seam to preserve backend `run_context` and `draft_resolution` without inventing a second local schema.
+- Reused the existing schedule/EOD/artifact-backed pages as route-aware pages so canonical run-backed usage and demo aliases share the same validated UI.
+- Kept `/demo/logistics/workpages/*` working as compatibility aliases while the canonical run-backed pages became first-class.
+- Corrected artifact-backed submit/conflict route truth so canonical nested `/runs/{workflow_run_id}/workpages/eod-v0/artifacts/{artifact_version_id}` paths are returned once the run-backed frontend is active.
+
+## Commands run
+- `npm --prefix frontend run typecheck`
+- `npm --prefix frontend run test:run -- src/lib/api/onetruthApi.workpages.test.ts src/lib/repositories/workpagesRepository.test.ts src/pages/logisticsWorkpageRoutes.test.tsx src/pages/logisticsScheduleWorkpagePage.test.tsx src/pages/dispatchReportWorkpagePage.test.tsx src/pages/logisticsDemoPage.test.tsx`
+- `PYTHONPATH=/tmp/onetruth-py311:src python3.11 -m pytest -q tests/runtime/api/test_workpages_artifact_eod_contract.py`
+- `PYTHONPATH=/tmp/onetruth-py311:src python3.11 scripts/export_frontend_snapshots.py`
+- `PYTHONPATH=/tmp/onetruth-py311:src python3.11 scripts/export_frontend_snapshots.py --check`
+- `PYTHONPATH=/tmp/onetruth-py311:src python3.11 -m pytest -q tests/runtime/contracts/test_frontend_snapshot_fixtures.py`
+- `python3.11 scripts/validate_repo.py --schemas-only`
+
+## Follow-ups
+- `TASK-0141` should rewire demo-shell/story drilldown entrypoints toward the canonical `/runs/:workflowRunId/workpages/*` surfaces and keep the alias posture/documentation truthful.
