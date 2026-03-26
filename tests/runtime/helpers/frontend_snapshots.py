@@ -9,6 +9,7 @@ from typing import Any
 from tests.runtime.helpers.runtime_api import RuntimeApiClient
 from tests.runtime.helpers.runtime_cli import REPO_ROOT, run_cli
 from tests.runtime.helpers.scenario_harness import RuntimeScenarioHarness
+from tests.runtime.helpers.workpage_runs import seed_actual_ops_weekly_schedule_run
 
 FRONTEND_SNAPSHOT_DIR = REPO_ROOT / "fixtures/frontend_contracts"
 
@@ -38,6 +39,7 @@ SNAPSHOT_FILES = {
     "timeline_state": "timeline_state.json",
     "official_outputs_pointers_state": "official_outputs_pointers_state.json",
     "workpage_schedule_v0_state": "workpage_schedule_v0_state.json",
+    "workpage_schedule_v0_run_state": "workpage_schedule_v0_run_state.json",
     "workpage_eod_v0_state": "workpage_eod_v0_state.json",
     "workpage_eod_v0_artifact_create_response": "workpage_eod_v0_artifact_create_response.json",
     "workpage_eod_v0_artifact_state": "workpage_eod_v0_artifact_state.json",
@@ -88,6 +90,7 @@ EMBEDDED_ID_PATTERNS = {
     "approval_id": re.compile(r"ap-[0-9a-fA-F-]{8,}"),
     "artifact_version_id": re.compile(r"av-[0-9a-fA-F-]{8,}"),
     "flag_id": re.compile(r"fl-[0-9a-fA-F-]{8,}"),
+    "bundle_id": re.compile(r"bundle-[a-z0-9-]+-stage04-[0-9a-f]{10}"),
     "command_receipt_key": re.compile(r"command-receipt:[0-9a-f]{64}"),
 }
 
@@ -157,6 +160,9 @@ def build_frontend_snapshots_payloads() -> dict[str, dict[str, Any]]:
             ),
             "workpage_schedule_v0_state": _build_schedule_workpage_snapshot(
                 tmp_path=base / "workpage_schedule_v0"
+            ),
+            "workpage_schedule_v0_run_state": _build_schedule_run_workpage_snapshot(
+                tmp_path=base / "workpage_schedule_v0_run"
             ),
             "workpage_eod_v0_state": _build_eod_workpage_snapshot(
                 tmp_path=base / "workpage_eod_v0"
@@ -321,6 +327,40 @@ def _build_schedule_workpage_snapshot(*, tmp_path: Path) -> dict[str, Any]:
             "snapshot_id": "workpage_schedule_v0_state",
             "source": {
                 "capture": "repo_example_demo_query",
+                "workpage_id": "schedule-v0",
+            },
+            "workpage_state": payload,
+        }
+    )
+
+
+def _build_schedule_run_workpage_snapshot(*, tmp_path: Path) -> dict[str, Any]:
+    tmp_path.mkdir(parents=True, exist_ok=True)
+    db_url = f"sqlite:///{tmp_path / 'workpage_schedule_v0_run.db'}"
+    seeded = seed_actual_ops_weekly_schedule_run(
+        db_url=db_url,
+        tenant_id="tenant-a",
+        domain_id="domain-x",
+        run_tag="snapshot:workpage-schedule-v0-run",
+    )
+    client = RuntimeApiClient(
+        db_url=db_url,
+        tenant_id="tenant-a",
+        domain_id="domain-x",
+        actor_id="human:frontend-snapshot-exporter",
+        actor_type="human",
+        actor_roles=["dispatch_supervisor", "operations_manager", "schedule_planner"],
+    )
+    workflow_run_id = str(seeded["workflow_run_id"])
+    payload = client.get(
+        f"/api/v1/workpages/workflow-runs/{workflow_run_id}/schedule-v0"
+    ).payload
+    return _stabilize(
+        {
+            "snapshot_id": "workpage_schedule_v0_run_state",
+            "source": {
+                "capture": "workflow_run_query",
+                "workflow_run_id": workflow_run_id,
                 "workpage_id": "schedule-v0",
             },
             "workpage_state": payload,

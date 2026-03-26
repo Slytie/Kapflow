@@ -286,11 +286,12 @@ Board object shape:
 Route-family decision:
 - implemented today:
   - `GET /api/v1/workpages/demo/{workpage_id}`
+  - `GET /api/v1/workpages/workflow-runs/{workflow_run_id}/schedule-v0`
   - `POST /api/v1/workpages/demo/eod-v0/drafts`
   - `GET /api/v1/workpages/artifacts/{artifact_version_id}`
   - `POST /api/v1/workpages/artifacts/{artifact_version_id}/submit`
-- frozen next family for EPIC-122:
-  - `GET /api/v1/workpages/workflow-runs/{workflow_run_id}/{workpage_kind}`
+- frozen remaining EPIC-122 family:
+  - `GET /api/v1/workpages/workflow-runs/{workflow_run_id}/eod-v0`
   - `POST /api/v1/workpages/workflow-runs/{workflow_run_id}/eod-v0/drafts`
 
 The `demo` subfamily is implemented today. During EPIC-122 it remains a curated alias/entrypoint family, not the long-term canonical access model. The first artifact-backed family remains frozen only for EOD; schedule stays query-backed/composite.
@@ -302,7 +303,7 @@ Current planned demo workpage ids:
 Demo query response:
 - `{"status":"ok","command":"api.workpages.demo","workpage":{...},"source":{...},"freshness":{...}}`
 
-Workflow-run-backed query response (frozen contract for EPIC-122, not yet implemented):
+Workflow-run-backed query response (implemented today for `schedule-v0`; reused by remaining EPIC-122 run-backed surfaces):
 - `{"status":"ok","command":"api.workpages.workflow_run","workpage":{...},"source":{...},"freshness":{...},"run_context":{...},"draft_resolution":null|{...}}`
 
 Artifact-backed read response:
@@ -361,6 +362,9 @@ Notes:
 - The EOD page should remain aligned to `reporting.upd_draft.workbook`, not final-packet semantics.
 - The first artifact-backed slice is **EOD only**; schedule stays on the query-backed route family in this epic.
 - Run-backed schedule responses should set `run_context` and leave `draft_resolution=null`.
+- The implemented run-backed schedule route currently lives at `GET /api/v1/workpages/workflow-runs/{workflow_run_id}/schedule-v0`.
+- The implemented run-backed schedule route uses `source.mode=run_projection`, keeps `source_artifact_version_id=null`, and uses `freshness.source_kind=workflow_run_projection` plus `freshness.source_version=bundle.bundle_id`.
+- If a weekly run does not yet have the required Stage04 input artifacts, the run-backed schedule route should fail cleanly with `409 workpage_projection_unavailable` and explicit missing dataset keys rather than falling back to demo defaults.
 - Run-backed EOD landing responses should set `run_context` plus `draft_resolution`, but must not pretend to be artifact projections.
 - `artifact_context` is reserved for `source.mode=artifact_projection`; do not overload it on run-backed landing pages.
 - `TASK-0137` intentionally freezes a narrow `draft_resolution` field instead of a generic `actions` blob.

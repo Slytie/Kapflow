@@ -7,13 +7,18 @@ from onetruth.application.handlers.workpages import (
     create_demo_eod_draft_command,
     submit_eod_artifact_workpage_command,
 )
-from onetruth.api.dependencies import RequestContext
+from onetruth.api.dependencies import RequestContext, scoped_workflow_run
 from onetruth.api.errors import ApiError, api_error_from_command
-from onetruth.application.read_commands import show_artifact_version_command
+from onetruth.application.read_commands import (
+    list_artifacts_for_workflow_run_command,
+    show_artifact_version_command,
+)
 from onetruth.application.services.logistics_workpages import (
     DemoWorkpageNotFoundError,
+    WorkpageProjectionUnavailableError,
     build_eod_artifact_workpage_contract,
     build_demo_workpage_contract,
+    build_schedule_workflow_run_workpage_contract,
 )
 from onetruth.application.services.dispatch_reporting_workbook import (
     DATASET_KEY,
@@ -48,6 +53,53 @@ def demo_workpage_endpoint(
         ) from exc
     return {
         "command": "api.workpages.demo",
+        **contract,
+    }
+
+
+def workflow_run_workpage_endpoint(
+    connection: sqlite3.Connection,
+    *,
+    context: RequestContext,
+    workflow_run_id: str,
+    workpage_kind: str,
+) -> dict[str, object]:
+    workflow_run = scoped_workflow_run(connection, context, workflow_run_id)
+    if (
+        workpage_kind != "schedule-v0"
+        or str(workflow_run.get("workflow_id") or "") != "weekly_schedule_planning.v1"
+    ):
+        raise ApiError(
+            status_code=404,
+            code="workpage_not_found",
+            message="workpage not found",
+            details={
+                "workflow_run_id": workflow_run_id,
+                "workpage_id": workpage_kind,
+            },
+        )
+
+    try:
+        contract = build_schedule_workflow_run_workpage_contract(
+            workflow_run=workflow_run,
+            artifacts=list_artifacts_for_workflow_run_command(connection, workflow_run_id),
+        )
+    except WorkpageProjectionUnavailableError as exc:
+        raise ApiError(
+            status_code=409,
+            code="workpage_projection_unavailable",
+            message=str(exc),
+            details={
+                "workflow_run_id": exc.workflow_run_id,
+                "workpage_id": exc.workpage_id,
+                "missing_dataset_keys": exc.missing_dataset_keys,
+            },
+        ) from exc
+    except CommandError as exc:
+        raise api_error_from_command(exc) from exc
+
+    return {
+        "command": "api.workpages.workflow_run",
         **contract,
     }
 
@@ -214,8 +266,6 @@ def _scoped_workflow_run_for_artifact(
     artifact: dict[str, object],
     artifact_version_id: str,
 ) -> dict[str, object]:
-    from onetruth.api.dependencies import scoped_workflow_run
-
     try:
         return scoped_workflow_run(connection, context, workflow_run_id)
     except ApiError as exc:

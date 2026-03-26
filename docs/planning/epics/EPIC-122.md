@@ -10,7 +10,7 @@ This epic is intentionally asymmetric:
 This epic is intentionally **not** the schedule write-path epic and **not** the broad workspace/task integration epic.
 
 ## Status
-Active as of 2026-03-26. `TASK-0137` is complete, so the route family, alias posture, and minimal run-context/draft-resolution contract are now frozen in repo-native docs. `TASK-0138` is the next bounded implementation tranche.
+Active as of 2026-03-26. `TASK-0137` and `TASK-0138` are now complete, so the route family, alias posture, and minimal run-context/draft-resolution contract are frozen in repo-native docs and the first canonical run-backed schedule route plus generated snapshot now exist. `TASK-0139` is the next bounded implementation tranche.
 
 ## Scope
 ### In scope
@@ -53,7 +53,7 @@ Context pack: `codex/context/EPIC-122.md`
 
 ## Tasks
 - TASK-0137 - DONE
-- TASK-0138 - TODO
+- TASK-0138 - DONE
 - TASK-0139 - TODO
 - TASK-0140 - TODO
 - TASK-0141 - TODO

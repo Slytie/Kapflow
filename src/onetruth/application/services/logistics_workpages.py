@@ -7,12 +7,16 @@ from typing import Any, Mapping
 
 import yaml
 
+from onetruth.application.handlers._shared.command_boundary import CommandError
 from onetruth.application.services.logistics_weekly_agent_pilot import (
     build_actual_ops_weekly_stage04_fixture_payloads,
 )
 from onetruth.application.services.schedule_control import (
     WeeklyScheduleControlBundle,
     build_weekly_schedule_control_bundle,
+)
+from onetruth.application.services.schedule_control.stage04_input_registry import (
+    resolve_weekly_stage04_input_artifacts,
 )
 from onetruth.infrastructure.events.event_store import utc_now_iso
 
@@ -114,6 +118,21 @@ class DemoWorkpageNotFoundError(LookupError):
         self.workpage_id = workpage_id
 
 
+class WorkpageProjectionUnavailableError(RuntimeError):
+    def __init__(
+        self,
+        *,
+        workflow_run_id: str,
+        workpage_id: str,
+        message: str,
+        missing_dataset_keys: list[str] | None = None,
+    ) -> None:
+        super().__init__(message)
+        self.workflow_run_id = workflow_run_id
+        self.workpage_id = workpage_id
+        self.missing_dataset_keys = list(missing_dataset_keys or [])
+
+
 def build_demo_workpage_contract(workpage_id: str) -> dict[str, Any]:
     if workpage_id == SCHEDULE_DEMO_WORKPAGE_ID:
         return build_schedule_demo_workpage_contract()
@@ -122,199 +141,123 @@ def build_demo_workpage_contract(workpage_id: str) -> dict[str, Any]:
     raise DemoWorkpageNotFoundError(workpage_id)
 
 
+def build_schedule_workflow_run_workpage_contract(
+    *,
+    workflow_run: Mapping[str, Any],
+    artifacts: list[dict[str, Any]],
+) -> dict[str, Any]:
+    workflow_run_id = _require_text(workflow_run.get("workflow_run_id"))
+    try:
+        resolved_inputs = resolve_weekly_stage04_input_artifacts(
+            artifacts=artifacts,
+            stage_spec={"required_evidence_keys": [_ROUTE_SLOT_DATASET_KEY, _DRIVER_CAPABILITIES_DATASET_KEY]},
+        )
+        bundle = build_weekly_schedule_control_bundle(
+            workflow_run=workflow_run,
+            route_slot_requirements_artifact=_require_mapping(
+                resolved_inputs.get("route_slot_requirements"),
+                field_name="route_slot_requirements",
+            ),
+            driver_capabilities_artifact=_require_mapping(
+                resolved_inputs.get("driver_capabilities"),
+                field_name="driver_capabilities",
+            ),
+            approved_availability_artifact=_optional_mapping(
+                resolved_inputs.get("approved_availability")
+            ),
+            actual_hours_artifact=_optional_mapping(resolved_inputs.get("actual_hours")),
+            route_horizon_artifact=None,
+        )
+    except CommandError as exc:
+        if exc.code != "stage04_input_artifact_missing":
+            raise
+        missing_slots = exc.details.get("missing_slots", [])
+        missing_dataset_keys = [
+            _require_text(slot.get("dataset_key"))
+            for slot in missing_slots
+            if isinstance(slot, dict) and slot.get("dataset_key") is not None
+        ]
+        raise WorkpageProjectionUnavailableError(
+            workflow_run_id=workflow_run_id,
+            workpage_id=SCHEDULE_DEMO_WORKPAGE_ID,
+            message="workflow-run-backed schedule workpage is unavailable until the weekly Stage04 inputs exist for this run",
+            missing_dataset_keys=missing_dataset_keys,
+        ) from exc
+    except ValueError as exc:
+        raise WorkpageProjectionUnavailableError(
+            workflow_run_id=workflow_run_id,
+            workpage_id=SCHEDULE_DEMO_WORKPAGE_ID,
+            message=f"workflow-run-backed schedule workpage is unavailable: {exc}",
+        ) from exc
+
+    source_refs = _schedule_runtime_source_refs(
+        resolved_inputs=resolved_inputs,
+        input_bundle_artifact=_latest_artifact_for_dataset_key(
+            artifacts,
+            dataset_key=_INPUT_BUNDLE_DATASET_KEY,
+        ),
+    )
+    return {
+        **_build_schedule_workpage_contract(
+            bundle=bundle,
+            source_examples={},
+            source_mode="run_projection",
+            source_refs=source_refs,
+            freshness_source_kind="workflow_run_projection",
+            freshness_source_version=bundle.bundle_id,
+            validation_warnings=[
+                "This workflow-run-backed schedule projection is built from canonical weekly-planning input artifacts for the selected run.",
+                "Selected-day controls are local what-if inputs only and do not claim ownership of live dispatch truth.",
+            ],
+        ),
+        "run_context": _workflow_run_context(workflow_run),
+        "draft_resolution": None,
+    }
+
+
 def build_schedule_demo_workpage_contract() -> dict[str, Any]:
     source_material = _load_actual_ops_source_material()
     source_examples = _source_examples(source_material)
     bundle = _schedule_demo_bundle()
 
-    source_refs = [
-        source_examples["route_slot_requirements"],
-        source_examples["approved_availability"],
-        source_examples["driver_capabilities"],
-        source_examples["actual_hours_snapshot"],
-        source_examples["stage04_input_bundle"],
-    ]
-    primary_demand = _sorted_daily_demand(bundle)[0]
+    return _build_schedule_workpage_contract(
+        bundle=bundle,
+        source_examples=source_examples,
+        source_mode="demo",
+        source_refs=[
+            source_examples["route_slot_requirements"],
+            source_examples["approved_availability"],
+            source_examples["driver_capabilities"],
+            source_examples["actual_hours_snapshot"],
+            source_examples["stage04_input_bundle"],
+        ],
+        freshness_source_kind="repo_example_bundle",
+        freshness_source_version=_require_text(source_material.get("fixture_contract")),
+        validation_warnings=[
+            "This server-owned demo query is built from repo-native weekly planning example sources.",
+            "Selected-day controls are local what-if inputs only and do not claim ownership of live dispatch truth.",
+        ],
+    )
 
+
+def _build_schedule_workpage_contract(
+    *,
+    bundle: WeeklyScheduleControlBundle,
+    source_examples: Mapping[str, str],
+    source_mode: str,
+    source_refs: list[str],
+    freshness_source_kind: str,
+    freshness_source_version: str,
+    validation_warnings: list[str],
+) -> dict[str, Any]:
     return {
-        "workpage": {
-            "workpage_id": SCHEDULE_DEMO_WORKPAGE_ID,
-            "version": 2,
-            "title": "Weekly schedule review",
-            "mode": "example",
-            "workflow_id": _SCHEDULE_WORKFLOW_ID,
-            "dataset_key": _INPUT_BUNDLE_DATASET_KEY,
-            "source_artifact_version_id": None,
-            "source_examples": source_examples,
-            "summary": {
-                "planning_week_id": bundle.planning_week_id,
-                "operational_week_start": bundle.scope_start,
-                "service_area": _first_non_empty(slot.service_area for slot in bundle.route_slots),
-                "station_code": _first_non_empty(slot.station_code for slot in bundle.route_slots),
-                "total_routes_required": sum(
-                    item.planned_route_count for item in bundle.daily_demand_by_service_date.values()
-                ),
-                "drivers_in_scope": len(bundle.drivers),
-                "on_call_target_per_day": primary_demand.on_call_target,
-                "excess_capacity_target_per_day": primary_demand.excess_capacity_target,
-                "planner_note": _PLANNER_NOTE,
-            },
-            "sections": [
-                {
-                    "kind": "summary_cards",
-                    "title": "Week summary",
-                    "cards": [
-                        {
-                            "key": "planning_week",
-                            "label": "Planning week",
-                            "value": bundle.planning_week_id,
-                        },
-                        {
-                            "key": "total_routes",
-                            "label": "Required routes",
-                            "value": sum(
-                                item.planned_route_count
-                                for item in bundle.daily_demand_by_service_date.values()
-                            ),
-                        },
-                        {
-                            "key": "drivers",
-                            "label": "Drivers in scope",
-                            "value": len(bundle.drivers),
-                        },
-                        {
-                            "key": "on_call_target",
-                            "label": "Daily on-call target",
-                            "value": primary_demand.on_call_target,
-                        },
-                        {
-                            "key": "excess_capacity_target",
-                            "label": "Daily excess-capacity target",
-                            "value": primary_demand.excess_capacity_target,
-                        },
-                    ],
-                },
-                {
-                    "kind": "table",
-                    "title": "Daily demand and coverage posture",
-                    "table_id": "day_demand",
-                    "columns": [
-                        {"key": "service_date", "label": "Service date"},
-                        {"key": "planned_route_count", "label": "Planned routes"},
-                        {"key": "on_call_target", "label": "On-call target"},
-                        {"key": "excess_capacity_target", "label": "Excess-capacity target"},
-                        {"key": "note", "label": "Note"},
-                    ],
-                    "rows": _day_demand_rows(bundle),
-                },
-                {
-                    "kind": "table",
-                    "title": "Selected-day preview",
-                    "table_id": "selected_day_preview",
-                    "columns": [
-                        {"key": "service_date", "label": "Selected day"},
-                        {"key": "routes_required", "label": "Routes required"},
-                        {"key": "drivers_available", "label": "Drivers available"},
-                        {"key": "projected_on_call_needed", "label": "On-call needed"},
-                        {"key": "open_questions", "label": "Open questions"},
-                    ],
-                    "rows": [_selected_day_preview_row(bundle)],
-                },
-                {
-                    "kind": "table",
-                    "title": "Driver roster excerpt",
-                    "table_id": "driver_roster",
-                    "columns": [
-                        {"key": "driver_name", "label": "Driver"},
-                        {"key": "employment_type", "label": "Employment"},
-                        {
-                            "key": "preferred_route_slot_classes",
-                            "label": "Preferred slot",
-                        },
-                        {"key": "target_shifts_per_week", "label": "Target shifts"},
-                        {"key": "on_call_eligible", "label": "On-call eligible"},
-                        {"key": "previous_week_minutes", "label": "Previous-week minutes"},
-                        {"key": "availability_summary", "label": "Availability summary"},
-                    ],
-                    "rows": _driver_roster_rows(bundle),
-                },
-                {
-                    "kind": "note_panel",
-                    "title": "Boundary note",
-                    "body": (
-                        "This page is a weekly-planning review surface. Any selected-day "
-                        "controls below are local what-if inputs for the prototype and do "
-                        "not replace live_dispatch.v1 day-of truth."
-                    ),
-                },
-                {
-                    "kind": "form",
-                    "title": "Selected-day what-if inputs",
-                    "form_id": "selected_day_what_if",
-                    "fields": [
-                        {
-                            "key": "scenario_sick_calls",
-                            "label": "Scenario sick calls",
-                            "input": "multi_select",
-                            "options": _multi_select_options(bundle),
-                            "value": [],
-                        },
-                        {
-                            "key": "scenario_on_call_assignments",
-                            "label": "Scenario on-call assignments",
-                            "input": "multi_select",
-                            "options": [
-                                name
-                                for name in _FORM_ON_CALL_OPTIONS
-                                if name in _available_driver_names(bundle)
-                            ],
-                            "value": [],
-                        },
-                        {
-                            "key": "scenario_added_routes",
-                            "label": "Scenario added routes",
-                            "input": "integer",
-                            "value": 0,
-                        },
-                        {
-                            "key": "scenario_dropped_routes",
-                            "label": "Scenario dropped routes",
-                            "input": "integer",
-                            "value": 0,
-                        },
-                        {
-                            "key": "scenario_note",
-                            "label": "Planner note",
-                            "input": "textarea",
-                            "value": "",
-                        },
-                    ],
-                },
-                {
-                    "kind": "history_stub",
-                    "title": "History",
-                    "entries": [
-                        {
-                            "label": "Previous week actual-hours snapshot",
-                            "value": "available for comparison",
-                        },
-                        {
-                            "label": "Rescue / fairness trend",
-                            "value": "future slice",
-                        },
-                    ],
-                },
-            ],
-            "validation": {
-                "status": "informational",
-                "warnings": [
-                    "This server-owned demo query is built from repo-native weekly planning example sources.",
-                    "Selected-day controls are local what-if inputs only and do not claim ownership of live dispatch truth.",
-                ],
-            },
-        },
+        "workpage": _build_schedule_workpage_view_model(
+            bundle=bundle,
+            source_examples=source_examples,
+            validation_warnings=validation_warnings,
+        ),
         "source": {
-            "mode": "demo",
+            "mode": source_mode,
             "primary_dataset_key": None,
             "source_dataset_keys": [dataset_key for _, dataset_key in _SOURCE_DATASETS],
             "source_artifact_version_id": None,
@@ -322,10 +265,260 @@ def build_schedule_demo_workpage_contract() -> dict[str, Any]:
         },
         "freshness": {
             "generated_at": utc_now_iso(),
-            "source_kind": "repo_example_bundle",
-            "source_version": _require_text(source_material.get("fixture_contract")),
+            "source_kind": freshness_source_kind,
+            "source_version": freshness_source_version,
         },
     }
+
+
+def _build_schedule_workpage_view_model(
+    *,
+    bundle: WeeklyScheduleControlBundle,
+    source_examples: Mapping[str, str],
+    validation_warnings: list[str],
+) -> dict[str, Any]:
+    primary_demand = _sorted_daily_demand(bundle)[0]
+    return {
+        "workpage_id": SCHEDULE_DEMO_WORKPAGE_ID,
+        "version": 2,
+        "title": "Weekly schedule review",
+        "mode": "example",
+        "workflow_id": _SCHEDULE_WORKFLOW_ID,
+        "dataset_key": _INPUT_BUNDLE_DATASET_KEY,
+        "source_artifact_version_id": None,
+        "source_examples": dict(source_examples),
+        "summary": {
+            "planning_week_id": bundle.planning_week_id,
+            "operational_week_start": bundle.scope_start,
+            "service_area": _first_non_empty(slot.service_area for slot in bundle.route_slots),
+            "station_code": _first_non_empty(slot.station_code for slot in bundle.route_slots),
+            "total_routes_required": sum(
+                item.planned_route_count for item in bundle.daily_demand_by_service_date.values()
+            ),
+            "drivers_in_scope": len(bundle.drivers),
+            "on_call_target_per_day": primary_demand.on_call_target,
+            "excess_capacity_target_per_day": primary_demand.excess_capacity_target,
+            "planner_note": _PLANNER_NOTE,
+        },
+        "sections": [
+            {
+                "kind": "summary_cards",
+                "title": "Week summary",
+                "cards": [
+                    {
+                        "key": "planning_week",
+                        "label": "Planning week",
+                        "value": bundle.planning_week_id,
+                    },
+                    {
+                        "key": "total_routes",
+                        "label": "Required routes",
+                        "value": sum(
+                            item.planned_route_count
+                            for item in bundle.daily_demand_by_service_date.values()
+                        ),
+                    },
+                    {
+                        "key": "drivers",
+                        "label": "Drivers in scope",
+                        "value": len(bundle.drivers),
+                    },
+                    {
+                        "key": "on_call_target",
+                        "label": "Daily on-call target",
+                        "value": primary_demand.on_call_target,
+                    },
+                    {
+                        "key": "excess_capacity_target",
+                        "label": "Daily excess-capacity target",
+                        "value": primary_demand.excess_capacity_target,
+                    },
+                ],
+            },
+            {
+                "kind": "table",
+                "title": "Daily demand and coverage posture",
+                "table_id": "day_demand",
+                "columns": [
+                    {"key": "service_date", "label": "Service date"},
+                    {"key": "planned_route_count", "label": "Planned routes"},
+                    {"key": "on_call_target", "label": "On-call target"},
+                    {"key": "excess_capacity_target", "label": "Excess-capacity target"},
+                    {"key": "note", "label": "Note"},
+                ],
+                "rows": _day_demand_rows(bundle),
+            },
+            {
+                "kind": "table",
+                "title": "Selected-day preview",
+                "table_id": "selected_day_preview",
+                "columns": [
+                    {"key": "service_date", "label": "Selected day"},
+                    {"key": "routes_required", "label": "Routes required"},
+                    {"key": "drivers_available", "label": "Drivers available"},
+                    {"key": "projected_on_call_needed", "label": "On-call needed"},
+                    {"key": "open_questions", "label": "Open questions"},
+                ],
+                "rows": [_selected_day_preview_row(bundle)],
+            },
+            {
+                "kind": "table",
+                "title": "Driver roster excerpt",
+                "table_id": "driver_roster",
+                "columns": [
+                    {"key": "driver_name", "label": "Driver"},
+                    {"key": "employment_type", "label": "Employment"},
+                    {
+                        "key": "preferred_route_slot_classes",
+                        "label": "Preferred slot",
+                    },
+                    {"key": "target_shifts_per_week", "label": "Target shifts"},
+                    {"key": "on_call_eligible", "label": "On-call eligible"},
+                    {"key": "previous_week_minutes", "label": "Previous-week minutes"},
+                    {"key": "availability_summary", "label": "Availability summary"},
+                ],
+                "rows": _driver_roster_rows(bundle),
+            },
+            {
+                "kind": "note_panel",
+                "title": "Boundary note",
+                "body": (
+                    "This page is a weekly-planning review surface. Any selected-day "
+                    "controls below are local what-if inputs for the prototype and do "
+                    "not replace live_dispatch.v1 day-of truth."
+                ),
+            },
+            {
+                "kind": "form",
+                "title": "Selected-day what-if inputs",
+                "form_id": "selected_day_what_if",
+                "fields": [
+                    {
+                        "key": "scenario_sick_calls",
+                        "label": "Scenario sick calls",
+                        "input": "multi_select",
+                        "options": _multi_select_options(bundle),
+                        "value": [],
+                    },
+                    {
+                        "key": "scenario_on_call_assignments",
+                        "label": "Scenario on-call assignments",
+                        "input": "multi_select",
+                        "options": [
+                            name
+                            for name in _FORM_ON_CALL_OPTIONS
+                            if name in _available_driver_names(bundle)
+                        ],
+                        "value": [],
+                    },
+                    {
+                        "key": "scenario_added_routes",
+                        "label": "Scenario added routes",
+                        "input": "integer",
+                        "value": 0,
+                    },
+                    {
+                        "key": "scenario_dropped_routes",
+                        "label": "Scenario dropped routes",
+                        "input": "integer",
+                        "value": 0,
+                    },
+                    {
+                        "key": "scenario_note",
+                        "label": "Planner note",
+                        "input": "textarea",
+                        "value": "",
+                    },
+                ],
+            },
+            {
+                "kind": "history_stub",
+                "title": "History",
+                "entries": [
+                    {
+                        "label": "Previous week actual-hours snapshot",
+                        "value": "available for comparison",
+                    },
+                    {
+                        "label": "Rescue / fairness trend",
+                        "value": "future slice",
+                    },
+                ],
+            },
+        ],
+        "validation": {
+            "status": "informational",
+            "warnings": validation_warnings,
+        },
+    }
+
+
+def _workflow_run_context(workflow_run: Mapping[str, Any]) -> dict[str, Any]:
+    return {
+        "workflow_run_id": _require_text(workflow_run.get("workflow_run_id")),
+        "workflow_id": _require_text(workflow_run.get("workflow_id")),
+        "workflow_version": _require_text(workflow_run.get("workflow_version")),
+        "partition_key": _require_text(workflow_run.get("partition_key")),
+        "logical_date": _require_text(workflow_run.get("logical_date")),
+        "activation_key": _require_text(workflow_run.get("activation_key")),
+        "state": _require_text(workflow_run.get("state")),
+    }
+
+
+def _schedule_runtime_source_refs(
+    *,
+    resolved_inputs: Mapping[str, Mapping[str, Any] | None],
+    input_bundle_artifact: Mapping[str, Any] | None,
+) -> list[str]:
+    refs: list[str] = []
+    for slot_key in (
+        "route_slot_requirements",
+        "approved_availability",
+        "driver_capabilities",
+        "actual_hours",
+    ):
+        artifact = resolved_inputs.get(slot_key)
+        if artifact is None:
+            continue
+        ref = _artifact_detail_ref(artifact)
+        if ref not in refs:
+            refs.append(ref)
+    if input_bundle_artifact is not None:
+        input_bundle_ref = _artifact_detail_ref(input_bundle_artifact)
+        if input_bundle_ref not in refs:
+            refs.append(input_bundle_ref)
+    return refs
+
+
+def _artifact_detail_ref(artifact: Mapping[str, Any]) -> str:
+    return f"/api/v1/artifacts/{_require_text(artifact.get('artifact_version_id'))}"
+
+
+def _latest_artifact_for_dataset_key(
+    artifacts: list[dict[str, Any]],
+    *,
+    dataset_key: str,
+) -> dict[str, Any] | None:
+    latest: dict[str, Any] | None = None
+    for artifact in artifacts:
+        if str(artifact.get("dataset_key") or artifact.get("artifact_kind") or "") != dataset_key:
+            continue
+        latest = artifact
+    return latest
+
+
+def _require_mapping(
+    value: Mapping[str, Any] | None,
+    *,
+    field_name: str,
+) -> Mapping[str, Any]:
+    if value is None:
+        raise ValueError(f"{field_name} artifact is required")
+    return value
+
+
+def _optional_mapping(value: Mapping[str, Any] | None) -> Mapping[str, Any] | None:
+    return value
 
 
 def build_eod_demo_workpage_contract() -> dict[str, Any]:

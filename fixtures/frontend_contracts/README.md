@@ -8,8 +8,8 @@ They are generated from real runtime scenario states, not hand-authored.
 1. Re-generate fixtures:
    - `make frontend-snapshots`
 2. Verify fixtures match scenario-backed exports:
-   - `PYTHONPATH=src python3 scripts/export_frontend_snapshots.py --check`
-   - `PYTHONPATH=src pytest -q tests/runtime/contracts/test_frontend_snapshot_fixtures.py`
+   - `PYTHONPATH=/tmp/onetruth-py311:src python3.11 scripts/export_frontend_snapshots.py --check`
+   - `PYTHONPATH=/tmp/onetruth-py311:src pytest -q tests/runtime/contracts/test_frontend_snapshot_fixtures.py`
 
 ## Snapshot set
 - `stage06_publish_ready_board_state.json`
@@ -21,6 +21,7 @@ They are generated from real runtime scenario states, not hand-authored.
 - `timeline_state.json`
 - `official_outputs_pointers_state.json`
 - `workpage_schedule_v0_state.json`
+- `workpage_schedule_v0_run_state.json`
 - `workpage_eod_v0_state.json`
 - `workpage_eod_v0_artifact_create_response.json`
 - `workpage_eod_v0_artifact_state.json`

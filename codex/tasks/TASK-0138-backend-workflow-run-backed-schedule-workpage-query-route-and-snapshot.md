@@ -2,7 +2,7 @@
 id: TASK-0138
 epic: EPIC-122
 title: "Implement the backend workflow-run-backed schedule workpage query route and generated snapshot"
-status: TODO
+status: DONE
 owners: ["backend"]
 reviewers: ["frontend", "qa"]
 depends_on: ["TASK-0137"]
@@ -62,3 +62,22 @@ Implement the backend workflow-run-backed schedule workpage query route and gene
 
 ## Notes / decisions
 Keep schedule explicitly query-backed/composite. If a missing run-side dependency appears, surface it as run/projection truth rather than hiding it behind demo defaults.
+
+## Outcome
+- The repo now exposes the first canonical EPIC-122 backend route at `GET /api/v1/workpages/workflow-runs/{workflow_run_id}/schedule-v0`.
+- The run-backed schedule payload is built from canonical weekly Stage04 run artifacts rather than serving a planning fixture verbatim, while preserving the existing inner schedule workpage body and section ids for the later frontend migration.
+- The run-backed schedule response now carries `source.mode=run_projection`, `run_context`, `draft_resolution=null`, and `freshness.source_kind=workflow_run_projection` with `freshness.source_version=bundle.bundle_id`.
+- Missing required weekly Stage04 inputs now fail cleanly as `409 workpage_projection_unavailable` with explicit missing dataset keys instead of silently falling back to demo defaults.
+- Backend-owned frontend contract fixtures now include `fixtures/frontend_contracts/workpage_schedule_v0_run_state.json`, generated from a real seeded weekly run.
+- Repo-memory now records `TASK-0138` as complete and moves the next EPIC-122 implementation focus to `TASK-0139`.
+
+## Verification notes
+- `PYTHONPATH=/tmp/onetruth-py311:src python3.11 -m pytest -q tests/runtime/api/test_workpages_run_schedule_contract.py`
+- `PYTHONPATH=/tmp/onetruth-py311:src python3.11 scripts/export_frontend_snapshots.py --check`
+- `PYTHONPATH=/tmp/onetruth-py311:src python3.11 -m pytest -q tests/runtime/contracts/test_frontend_snapshot_fixtures.py`
+- `python3.11 scripts/validate_repo.py --schemas-only`
+
+## Follow-ups
+- `TASK-0139` is next: implement the run-backed EOD landing/draft-resolution route while keeping artifact-backed EOD editing distinct.
+- `TASK-0140` should consume the new run-backed schedule snapshot and route contract rather than inventing a second frontend-only shape.
+- `TASK-0141` should update demo/story drilldowns so canonical run-backed workpages are discoverable without leaving docs/status stale.

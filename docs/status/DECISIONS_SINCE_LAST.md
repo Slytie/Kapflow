@@ -2,6 +2,13 @@
 
 Record any decisions made since the last session so a fresh Codex run can rehydrate quickly.
 
+## 2026-03-26 (TASK-0138 workflow-run-backed schedule route and snapshot)
+- Route implementation decision: the first canonical EPIC-122 backend surface is now live at `GET /api/v1/workpages/workflow-runs/{workflow_run_id}/schedule-v0`; the existing demo schedule route remains in place as a curated alias/input surface until the frontend migration tranche.
+- Projection-source decision: the run-backed schedule workpage now builds from the latest canonical Stage04 run artifacts on a real `weekly_schedule_planning.v1` workflow run (`planning.route_slot_requirements.workbook`, `planning.driver_capabilities.workbook`, optional `planning.approved_availability.workbook`, optional `planning.actual_hours_snapshot.workbook`) rather than serving a planning fixture verbatim or depending on the logistics story summary.
+- Composite-contract decision: the run-backed schedule response uses `source.mode=run_projection`, keeps `source.primary_dataset_key=null`, keeps both `source_artifact_version_id` fields null, exposes `run_context`, leaves `draft_resolution=null`, and uses `freshness.source_kind=workflow_run_projection` plus `freshness.source_version=bundle.bundle_id` so local UI what-if state only resets when canonical source artifacts change.
+- Failure-posture decision: unsupported workpage kinds and non-weekly workflow families fail closed as `404 workpage_not_found`, while weekly runs missing required Stage04 inputs now fail cleanly as `409 workpage_projection_unavailable` with explicit missing dataset keys instead of silently falling back to demo defaults.
+- Snapshot decision: backend-owned frontend contract fixtures now include `fixtures/frontend_contracts/workpage_schedule_v0_run_state.json`, generated from a real seeded weekly run over canonical Stage04 artifact truth.
+
 ## 2026-03-26 (TASK-0137 workflow-run-backed workpage contract, alias posture, and draft-resolution freeze)
 - Next-epic decision: after the first artifact-backed EOD slice closed through `TASK-0136`, the next workpage epic is **EPIC-122 workflow-run-backed workpages**, not schedule write-path work, not deeper EOD finalization, and not broader workspace/task modernization.
 - Route-family decision: the canonical backend run-backed family is `GET /api/v1/workpages/workflow-runs/{workflow_run_id}/{workpage_kind}` plus `POST /api/v1/workpages/workflow-runs/{workflow_run_id}/eod-v0/drafts`; the existing artifact-backed EOD read/submit routes remain unchanged.

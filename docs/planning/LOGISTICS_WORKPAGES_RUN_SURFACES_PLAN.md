@@ -6,7 +6,7 @@ After the first workpage tranche and the first artifact-backed EOD slice, the re
 - an artifact-backed EOD draft/create/read/submit loop,
 - and bounded recent-version/history affordances around that EOD slice.
 
-The next unproven part of the original product vision is the **workflow-native access model**.
+The next unproven parts of the original product vision are the remaining workflow-native access surfaces beyond the first implemented run-backed schedule route.
 
 ## Repo-grounded constraints that shape this epic
 ### 1) Demo workpages are not the final access model
@@ -65,6 +65,10 @@ The existing `WorkpageContract` remains the right inner contract for the page bo
 ### Run-backed schedule route
 Build from a real `weekly_schedule_planning.v1` workflow run and the run's canonical weekly-planning source material / derived bundle state.
 
+Implemented in `TASK-0138`:
+- `GET /api/v1/workpages/workflow-runs/{workflow_run_id}/schedule-v0`
+- backend-generated snapshot `fixtures/frontend_contracts/workpage_schedule_v0_run_state.json`
+
 Important guardrails:
 - do not serve the human-authored workpage fixture verbatim,
 - do not treat the logistics story board summary as the only truth,
@@ -92,7 +96,7 @@ These belong under `fixtures/frontend_contracts/` because they are backend-gener
 
 ## Epic task order
 1. `TASK-0137` - DONE
-2. `TASK-0138` - implement the backend run-backed schedule workpage query route + snapshot
+2. `TASK-0138` - DONE
 3. `TASK-0139` - implement the backend run-backed EOD landing/draft-resolution route + snapshot
 4. `TASK-0140` - migrate the frontend to workflow-run-backed routes while preserving artifact-backed EOD editing handoff
 5. `TASK-0141` - expose demo/story drilldown entrypoints and keep docs/status truthful
