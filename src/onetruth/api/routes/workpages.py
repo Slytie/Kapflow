@@ -7,6 +7,7 @@ from onetruth.application.handlers.workpages import (
     create_demo_eod_draft_command,
     create_workflow_run_eod_draft_command,
     submit_eod_artifact_workpage_command,
+    submit_schedule_artifact_workpage_command,
 )
 from onetruth.api.dependencies import RequestContext, scoped_workflow_run
 from onetruth.api.errors import ApiError, api_error_from_command
@@ -20,12 +21,19 @@ from onetruth.application.services.logistics_workpages import (
     build_eod_artifact_workpage_contract,
     build_demo_workpage_contract,
     build_eod_workflow_run_workpage_contract,
+    build_schedule_artifact_workpage_contract,
     build_schedule_workflow_run_workpage_contract,
 )
 from onetruth.application.services.dispatch_reporting_workbook import (
-    DATASET_KEY,
-    WORKFLOW_ID,
+    DATASET_KEY as EOD_DATASET_KEY,
+    WORKFLOW_ID as EOD_WORKFLOW_ID,
     project_upd_draft_workbook,
+)
+from onetruth.application.services.schedule_control.draft_workbook import (
+    SCHEDULE_DRAFT_DATASET_KEY,
+    SCHEDULE_WORKFLOW_ID,
+    draft_workbook_bytes_from_metadata_json,
+    project_stage04_draft_weekly_schedule_workbook,
 )
 from onetruth.infrastructure.artifacts.storage import (
     ArtifactStorageError,
@@ -149,7 +157,7 @@ def create_workflow_run_eod_draft_endpoint(
     payload: dict[str, object],
 ) -> dict[str, object]:
     workflow_run = scoped_workflow_run(connection, context, workflow_run_id)
-    if str(workflow_run.get("workflow_id") or "") != WORKFLOW_ID:
+    if str(workflow_run.get("workflow_id") or "") != EOD_WORKFLOW_ID:
         raise ApiError(
             status_code=404,
             code="workpage_not_found",
@@ -199,14 +207,17 @@ def artifact_workpage_endpoint(
         artifact=artifact,
         artifact_version_id=artifact_version_id,
     )
-    _assert_eod_artifact_family(
-        artifact=artifact,
-        workflow_id=str(workflow_run["workflow_id"]),
-        artifact_version_id=artifact_version_id,
-    )
+    workflow_id = str(workflow_run["workflow_id"])
+    artifacts = list_artifacts_for_workflow_run_command(connection, workflow_run_id)
+    latest = get_latest_artifact_version_in_chain(connection, artifact_version_id)
+    superseded_by = get_superseding_artifact_version(connection, artifact_version_id)
 
     try:
-        workbook_bytes = read_blob(str(artifact["storage_uri"]))
+        workbook_bytes = _artifact_workpage_bytes(
+            artifact=artifact,
+            workflow_id=workflow_id,
+            artifact_version_id=artifact_version_id,
+        )
     except ArtifactStorageError as exc:
         raise ApiError(
             status_code=500,
@@ -214,48 +225,75 @@ def artifact_workpage_endpoint(
             message="artifact-backed workpage storage is unavailable",
             details={"artifact_version_id": artifact_version_id},
         ) from exc
-
-    projection = project_upd_draft_workbook(workbook_bytes)
-    latest = get_latest_artifact_version_in_chain(connection, artifact_version_id)
-    superseded_by = get_superseding_artifact_version(connection, artifact_version_id)
-    metadata_json = artifact.get("metadata_json") or {}
-    contract = build_eod_artifact_workpage_contract(
-        artifact_version_id=artifact_version_id,
-        workflow_run_id=workflow_run_id,
-        supersedes_artifact_version_id=(
-            str(artifact["supersedes_artifact_version_id"])
-            if artifact.get("supersedes_artifact_version_id") is not None
-            else None
-        ),
-        superseded_by_artifact_version_id=(
-            str(superseded_by["artifact_version_id"])
-            if superseded_by is not None
-            else None
-        ),
-        latest_in_chain_artifact_version_id=(
-            str(latest["artifact_version_id"])
-            if latest is not None
-            else artifact_version_id
-        ),
-        download_path=f"/api/v1/artifacts/{artifact_version_id}/download.bin",
-        projection=projection,
-        source_refs=_artifact_source_refs(metadata_json),
-        service_date=_artifact_metadata_value(
-            metadata_json,
-            "service_date",
-            default="2026-03-16",
-        ),
-        station_code=_artifact_metadata_value(
-            metadata_json,
-            "station_code",
-            default="DVC4",
-        ),
-        dsp_name=_artifact_metadata_value(
-            metadata_json,
-            "dsp_name",
-            default="QDCI",
-        ),
-    )
+    if _is_eod_artifact_family(artifact=artifact, workflow_id=workflow_id):
+        metadata_json = artifact.get("metadata_json") or {}
+        contract = build_eod_artifact_workpage_contract(
+            artifact_version_id=artifact_version_id,
+            workflow_run_id=workflow_run_id,
+            supersedes_artifact_version_id=(
+                str(artifact["supersedes_artifact_version_id"])
+                if artifact.get("supersedes_artifact_version_id") is not None
+                else None
+            ),
+            superseded_by_artifact_version_id=(
+                str(superseded_by["artifact_version_id"])
+                if superseded_by is not None
+                else None
+            ),
+            latest_in_chain_artifact_version_id=(
+                str(latest["artifact_version_id"])
+                if latest is not None
+                else artifact_version_id
+            ),
+            download_path=f"/api/v1/artifacts/{artifact_version_id}/download.bin",
+            projection=project_upd_draft_workbook(workbook_bytes),
+            source_refs=_artifact_source_refs(metadata_json),
+            service_date=_artifact_metadata_value(
+                metadata_json,
+                "service_date",
+                default="2026-03-16",
+            ),
+            station_code=_artifact_metadata_value(
+                metadata_json,
+                "station_code",
+                default="DVC4",
+            ),
+            dsp_name=_artifact_metadata_value(
+                metadata_json,
+                "dsp_name",
+                default="QDCI",
+            ),
+        )
+    elif _is_schedule_artifact_family(artifact=artifact, workflow_id=workflow_id):
+        contract = build_schedule_artifact_workpage_contract(
+            artifact_version_id=artifact_version_id,
+            workflow_run=workflow_run,
+            artifacts=artifacts,
+            supersedes_artifact_version_id=(
+                str(artifact["supersedes_artifact_version_id"])
+                if artifact.get("supersedes_artifact_version_id") is not None
+                else None
+            ),
+            superseded_by_artifact_version_id=(
+                str(superseded_by["artifact_version_id"])
+                if superseded_by is not None
+                else None
+            ),
+            latest_in_chain_artifact_version_id=(
+                str(latest["artifact_version_id"])
+                if latest is not None
+                else artifact_version_id
+            ),
+            download_path=f"/api/v1/artifacts/{artifact_version_id}/download.bin",
+            projection=project_stage04_draft_weekly_schedule_workbook(workbook_bytes),
+        )
+    else:
+        raise ApiError(
+            status_code=404,
+            code="workpage_artifact_not_found",
+            message="artifact-backed workpage not found",
+            details={"artifact_version_id": artifact_version_id},
+        )
     return {
         "command": "api.workpages.artifact",
         **contract,
@@ -282,23 +320,37 @@ def submit_artifact_workpage_endpoint(
         artifact=artifact,
         artifact_version_id=artifact_version_id,
     )
-    _assert_eod_artifact_family(
-        artifact=artifact,
-        workflow_id=str(workflow_run["workflow_id"]),
-        artifact_version_id=artifact_version_id,
-    )
-
+    workflow_id = str(workflow_run["workflow_id"])
     try:
-        result = submit_eod_artifact_workpage_command(
-            connection,
-            {
-                **payload,
-                "artifact_version_id": artifact_version_id,
-                "actor_id": context.actor_id,
-                "actor_type": context.actor_type,
-            },
-            storage_root=default_storage_root_for_db_url(db_url),
-        )
+        if _is_eod_artifact_family(artifact=artifact, workflow_id=workflow_id):
+            result = submit_eod_artifact_workpage_command(
+                connection,
+                {
+                    **payload,
+                    "artifact_version_id": artifact_version_id,
+                    "actor_id": context.actor_id,
+                    "actor_type": context.actor_type,
+                },
+                storage_root=default_storage_root_for_db_url(db_url),
+            )
+        elif _is_schedule_artifact_family(artifact=artifact, workflow_id=workflow_id):
+            result = submit_schedule_artifact_workpage_command(
+                connection,
+                {
+                    **payload,
+                    "artifact_version_id": artifact_version_id,
+                    "actor_id": context.actor_id,
+                    "actor_type": context.actor_type,
+                },
+                storage_root=default_storage_root_for_db_url(db_url),
+            )
+        else:
+            raise ApiError(
+                status_code=404,
+                code="workpage_artifact_not_found",
+                message="artifact-backed workpage not found",
+                details={"artifact_version_id": artifact_version_id},
+            )
     except CommandError as exc:
         raise api_error_from_command(exc) from exc
     return {
@@ -326,23 +378,52 @@ def _scoped_workflow_run_for_artifact(
         ) from exc
 
 
-def _assert_eod_artifact_family(
+def _is_eod_artifact_family(
+    *,
+    artifact: dict[str, object],
+    workflow_id: str,
+) -> bool:
+    return (
+        str(artifact.get("artifact_kind") or "") == EOD_DATASET_KEY
+        and str(artifact.get("dataset_key") or "") == EOD_DATASET_KEY
+        and workflow_id == EOD_WORKFLOW_ID
+    )
+
+
+def _is_schedule_artifact_family(
+    *,
+    artifact: dict[str, object],
+    workflow_id: str,
+) -> bool:
+    return (
+        str(artifact.get("artifact_kind") or "") == SCHEDULE_DRAFT_DATASET_KEY
+        and str(artifact.get("dataset_key") or "") == SCHEDULE_DRAFT_DATASET_KEY
+        and workflow_id == SCHEDULE_WORKFLOW_ID
+    )
+
+
+def _artifact_workpage_bytes(
     *,
     artifact: dict[str, object],
     workflow_id: str,
     artifact_version_id: str,
-) -> None:
-    if (
-        str(artifact.get("artifact_kind") or "") != DATASET_KEY
-        or str(artifact.get("dataset_key") or "") != DATASET_KEY
-        or workflow_id != WORKFLOW_ID
-    ):
-        raise ApiError(
-            status_code=404,
-            code="workpage_artifact_not_found",
-            message="artifact-backed workpage not found",
-            details={"artifact_version_id": artifact_version_id},
-        )
+) -> bytes:
+    if _is_schedule_artifact_family(artifact=artifact, workflow_id=workflow_id):
+        storage_uri = str(artifact.get("storage_uri") or "")
+        if storage_uri.startswith("file:"):
+            return read_blob(storage_uri)
+        try:
+            return draft_workbook_bytes_from_metadata_json(artifact.get("metadata_json"))
+        except ValueError as exc:
+            raise ArtifactStorageError(str(exc)) from exc
+    if _is_eod_artifact_family(artifact=artifact, workflow_id=workflow_id):
+        return read_blob(str(artifact["storage_uri"]))
+    raise ApiError(
+        status_code=404,
+        code="workpage_artifact_not_found",
+        message="artifact-backed workpage not found",
+        details={"artifact_version_id": artifact_version_id},
+    )
 
 
 def _artifact_metadata_value(

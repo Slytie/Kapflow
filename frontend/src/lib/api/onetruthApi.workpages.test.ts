@@ -5,6 +5,8 @@ import artifactCreateRunSnapshot from "@fixtures/workpage_eod_v0_run_artifact_cr
 import eodRunWorkpageStateSnapshot from "@fixtures/workpage_eod_v0_run_state.json";
 import artifactStateSnapshot from "@fixtures/workpage_eod_v0_artifact_state.json";
 import artifactSubmitSnapshot from "@fixtures/workpage_eod_v0_artifact_submit_response.json";
+import scheduleArtifactStateSnapshot from "@fixtures/workpage_schedule_v0_artifact_state.json";
+import scheduleArtifactSubmitSnapshot from "@fixtures/workpage_schedule_v0_artifact_submit_response.json";
 import scheduleRunWorkpageStateSnapshot from "@fixtures/workpage_schedule_v0_run_state.json";
 import scheduleWorkpageStateSnapshot from "@fixtures/workpage_schedule_v0_state.json";
 import { onetruthApi } from "@/lib/api/onetruthApi";
@@ -75,6 +77,27 @@ describe("onetruthApi workpage parsing", () => {
     expect(contract.artifact_context).toBeNull();
   });
 
+  it("parses the schedule artifact-backed workpage wrapper including artifact context", async () => {
+    server.use(
+      http.get("*/api/v1/workpages/artifacts/:artifactVersionId", () =>
+        HttpResponse.json(scheduleArtifactStateSnapshot.workpage_state)
+      )
+    );
+
+    const contract = await onetruthApi.getArtifactWorkpage("av-schedule-artifact-001");
+
+    expect(contract.source.mode).toBe("artifact_projection");
+    expect(contract.freshness.source_kind).toBe("artifact_version");
+    expect(contract.artifact_context).toMatchObject({
+      artifact_kind: "planning.draft_weekly_schedule.workbook",
+      artifact_version_id: "<artifact_version_id:2>",
+      workflow_run_id: "<workflow_run_id:1>",
+      latest_in_chain_artifact_version_id: "<artifact_version_id:2>"
+    });
+    expect(contract.run_context).toBeNull();
+    expect(contract.draft_resolution).toBeNull();
+  });
+
   it("parses the workflow-run-backed EOD landing wrapper including draft resolution", async () => {
     server.use(
       http.get("*/api/v1/workpages/workflow-runs/:workflowRunId/eod-v0", () =>
@@ -138,5 +161,21 @@ describe("onetruthApi workpage parsing", () => {
     });
 
     expect(submitted).toEqual(artifactSubmitSnapshot.submit_response.submitted);
+  });
+
+  it("parses the schedule artifact-submit envelope", async () => {
+    server.use(
+      http.post("*/api/v1/workpages/artifacts/:artifactVersionId/submit", () =>
+        HttpResponse.json(scheduleArtifactSubmitSnapshot.submit_response)
+      )
+    );
+
+    const submitted = await onetruthApi.submitArtifactWorkpage("av-schedule-artifact-001", {
+      rows: [],
+      reserve_rows: [],
+      idempotency_key: "frontend:test:submit-schedule-draft"
+    });
+
+    expect(submitted).toEqual(scheduleArtifactSubmitSnapshot.submit_response.submitted);
   });
 });

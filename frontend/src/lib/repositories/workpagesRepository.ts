@@ -29,6 +29,10 @@ export const workpagesRepository = {
     return onetruthApi.getArtifactWorkpage(artifactVersionId);
   },
 
+  async scheduleArtifact(artifactVersionId: string): Promise<WorkpageContract> {
+    return onetruthApi.getArtifactWorkpage(artifactVersionId);
+  },
+
   async createEodDraft(): Promise<WorkpageDraftResponse> {
     return onetruthApi.createDemoEodDraft({
       idempotency_key: createIdempotencyKey("workpage-eod-draft-create", "eod-v0")
@@ -61,6 +65,20 @@ export const workpagesRepository = {
       .slice(0, 5);
   },
 
+  async listScheduleDraftHistory(workflowRunId: string): Promise<ArtifactVersionRow[]> {
+    const artifacts = await onetruthApi.listWorkflowRunArtifacts(workflowRunId);
+    return artifacts
+      .filter((artifact) => artifact.artifact_kind === "planning.draft_weekly_schedule.workbook")
+      .sort((left, right) => {
+        const createdAtCompare = right.created_at.localeCompare(left.created_at);
+        if (createdAtCompare !== 0) {
+          return createdAtCompare;
+        }
+        return right.artifact_version_id.localeCompare(left.artifact_version_id);
+      })
+      .slice(0, 5);
+  },
+
   async submitEodArtifact(
     artifactVersionId: string,
     payload: {
@@ -79,8 +97,27 @@ export const workpagesRepository = {
     });
   },
 
+  async submitScheduleArtifact(
+    artifactVersionId: string,
+    payload: {
+      rows: Array<Record<string, unknown>>;
+      reserveRows: Array<Record<string, unknown>>;
+    }
+  ): Promise<WorkpageSubmittedResponse> {
+    return onetruthApi.submitArtifactWorkpage(artifactVersionId, {
+      rows: payload.rows,
+      reserve_rows: payload.reserveRows,
+      idempotency_key: createIdempotencyKey("workpage-schedule-artifact-submit", artifactVersionId)
+    });
+  },
+
   async downloadEodArtifactWorkbook(artifactVersionId: string): Promise<void> {
     const downloaded = await onetruthApi.downloadArtifact(artifactVersionId);
     downloadBinaryToFile(downloaded, `${artifactVersionId}.xlsx`);
+  },
+
+  async downloadScheduleArtifactJson(artifactVersionId: string): Promise<void> {
+    const downloaded = await onetruthApi.downloadArtifact(artifactVersionId);
+    downloadBinaryToFile(downloaded, `${artifactVersionId}.json`);
   }
 };

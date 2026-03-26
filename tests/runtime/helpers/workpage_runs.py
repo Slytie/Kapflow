@@ -95,6 +95,49 @@ def seed_actual_ops_weekly_schedule_run(
     }
 
 
+def seed_actual_ops_weekly_schedule_run_with_stage04_outputs(
+    *,
+    db_url: str,
+    tenant_id: str,
+    domain_id: str,
+    run_tag: str,
+) -> dict[str, Any]:
+    seeded = seed_actual_ops_weekly_schedule_run(
+        db_url=db_url,
+        tenant_id=tenant_id,
+        domain_id=domain_id,
+        run_tag=run_tag,
+    )
+    workflow_run_id = str(seeded["workflow_run_id"])
+    artifacts_by_kind = seeded["artifacts_by_kind"]
+    payload = {
+        "workflow_run_id": workflow_run_id,
+        "route_slot_requirements_artifact_version_id": str(
+            artifacts_by_kind["planning.route_slot_requirements.workbook"]["artifact_version_id"]
+        ),
+        "driver_capabilities_artifact_version_id": str(
+            artifacts_by_kind["planning.driver_capabilities.workbook"]["artifact_version_id"]
+        ),
+        "approved_availability_artifact_version_id": str(
+            artifacts_by_kind["planning.approved_availability.workbook"]["artifact_version_id"]
+        ),
+        "actual_hours_artifact_version_id": str(
+            artifacts_by_kind["planning.actual_hours_snapshot.workbook"]["artifact_version_id"]
+        ),
+        "idempotency_key": f"{run_tag}:schedule-control.build-weekly",
+    }
+    built = run_cli(
+        "--db-url",
+        db_url,
+        "schedule-control",
+        "build-weekly",
+        "--json",
+        json.dumps(payload, separators=(",", ":")),
+    )
+    seeded["stage04_outputs"] = stdout_json(built)["result"]["artifacts"]
+    return seeded
+
+
 def seed_dispatch_reporting_workpage_run(
     *,
     db_url: str,

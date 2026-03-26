@@ -66,7 +66,9 @@ export function AppShell(): JSX.Element {
       }
       const dataUpdatedAt = query.state.dataUpdatedAt;
       if (dataUpdatedAt > 0) {
-        setLastRefreshedAt(new Date(dataUpdatedAt).toISOString());
+        queueMicrotask(() => {
+          setLastRefreshedAt(new Date(dataUpdatedAt).toISOString());
+        });
       }
     });
   }, [queryClient]);

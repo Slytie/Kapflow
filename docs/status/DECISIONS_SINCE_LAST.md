@@ -2,6 +2,21 @@
 
 Record any decisions made since the last session so a fresh Codex run can rehydrate quickly.
 
+## 2026-03-26 (TASK-0143 backend schedule artifact projection, submit, and snapshots)
+- Artifact-family decision: the existing generic artifact-backed workpage family now supports the bounded Stage04 schedule draft lane for `weekly_schedule_planning.v1` + `planning.draft_weekly_schedule.workbook`; the response envelope stays the same as EOD (`workpage`, `source`, `freshness`, `artifact_context`) and still leaves `run_context=null` / `draft_resolution=null`.
+- Submit-boundary decision: schedule artifact submit is intentionally narrow and JSON-backed; it only allows bounded assignment/reserve row edits, creates a new immutable superseding `planning.draft_weekly_schedule.workbook` version, and keeps iteration deltas read-only.
+- Snapshot decision: backend-owned frontend contract fixtures now include `fixtures/frontend_contracts/workpage_schedule_v0_artifact_state.json` and `fixtures/frontend_contracts/workpage_schedule_v0_artifact_submit_response.json`.
+
+## 2026-03-26 (TASK-0144 frontend schedule artifact route, page, and landing handoff)
+- Route-posture decision: the canonical schedule artifact route is now live at `/runs/:workflowRunId/workpages/schedule-v0/artifacts/:artifactVersionId`; there is still no demo schedule artifact alias route.
+- Landing-handoff decision: the run-backed schedule landing now discovers the newest `planning.draft_weekly_schedule.workbook` from canonical workflow-run artifact truth and offers `Open editable draft` only through that lineage-aware route family.
+- UX-boundary decision: the schedule artifact page now supports bounded assignment/reserve edits, explicit submit, recent draft history reopen, stale/conflict reopen, and truthful JSON download, while keeping Stage06 publish, Stage07 seeds, and live-dispatch semantics out of scope.
+
+## 2026-03-26 (TASK-0145 EPIC-123 closeout and doc/demo posture sync)
+- Epic-closeout decision: EPIC-123 is now complete. The repo should describe the Stage04 schedule artifact-backed slice as implemented, not as a reserved future posture.
+- Scope-preservation decision: closing EPIC-123 does **not** authorize a `schedule-v0/drafts` create route, generic artifact editing, Stage06 publish/pointer semantics, Stage07 seed editing, or live-dispatch control expansion.
+- Next-step decision: the next post-EPIC-123 application tranche should be selected deliberately rather than implied by stale workpage planning memory.
+
 ## 2026-03-26 (TASK-0142 schedule draft artifact path, route family, and stage boundary freeze)
 - Next-epic decision: after EPIC-122 closeout, the repo now chooses **EPIC-123** as the next workpage epic; the next bounded workpage lane is the Stage04 schedule draft artifact path, not broader workspace/human-task integration.
 - Artifact-boundary decision: `planning.draft_weekly_schedule.workbook` is now frozen as an immutable draft-review artifact in the canonical run chain, editable in a future workpage slice but not official weekly truth; `planning.manager_review.doc` remains evidence only.

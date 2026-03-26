@@ -1,4 +1,5 @@
 import { workpagesRepository } from "@/lib/repositories";
+import { mutationLog } from "@/test/api/handlers";
 
 describe("workpagesRepository", () => {
   it("returns isolated demo query and artifact-backed EOD contracts plus create/submit responses", async () => {
@@ -67,5 +68,48 @@ describe("workpagesRepository", () => {
       artifact_route: "/runs/wr-reporting-001/workpages/eod-v0/artifacts/av-eod-artifact-001"
     });
     expect(eodLandingAfterCreate.artifact_context).toBeNull();
+  });
+
+  it("returns schedule artifact history, fetches the artifact contract, submits a new version, and downloads JSON", async () => {
+    const scheduleLanding = await workpagesRepository.scheduleForRun("wr-weekly-001");
+    const initialHistory = await workpagesRepository.listScheduleDraftHistory("wr-weekly-001");
+    const artifact = await workpagesRepository.scheduleArtifact("av-schedule-artifact-001");
+    const assignmentRows = (artifact.workpage.sections[2] as { rows: Array<Record<string, unknown>> }).rows.map(
+      (row) => ({ ...row })
+    );
+    const reserveRows = (artifact.workpage.sections[3] as { rows: Array<Record<string, unknown>> }).rows.map(
+      (row) => ({ ...row })
+    );
+    assignmentRows[0] = {
+      ...assignmentRows[0],
+      assigned_driver_id: "DRV-MANUAL-77",
+      assignment_status: "manual_override"
+    };
+    reserveRows[0] = {
+      ...reserveRows[0],
+      assigned_driver_id: "DRV-MANUAL-88",
+      assignment_status: "manual_override"
+    };
+    const submitted = await workpagesRepository.submitScheduleArtifact("av-schedule-artifact-001", {
+      rows: assignmentRows,
+      reserveRows
+    });
+    const submittedHistory = await workpagesRepository.listScheduleDraftHistory("wr-weekly-001");
+    await workpagesRepository.downloadScheduleArtifactJson("av-schedule-artifact-002");
+
+    expect(scheduleLanding.source.mode).toBe("run_projection");
+    expect(initialHistory.map((row) => row.artifact_version_id)).toEqual(["av-schedule-artifact-001"]);
+    expect(artifact.source.mode).toBe("artifact_projection");
+    expect(artifact.artifact_context?.artifact_kind).toBe("planning.draft_weekly_schedule.workbook");
+    expect(submitted.artifact_version_id).toBe("av-schedule-artifact-002");
+    expect(submitted.supersedes_artifact_version_id).toBe("av-schedule-artifact-001");
+    expect(submitted.route).toBe(
+      "/runs/wr-weekly-001/workpages/schedule-v0/artifacts/av-schedule-artifact-002"
+    );
+    expect(submittedHistory.map((row) => row.artifact_version_id)).toEqual([
+      "av-schedule-artifact-002",
+      "av-schedule-artifact-001"
+    ]);
+    expect(mutationLog()).toContain("artifact-download-bin:av-schedule-artifact-002");
   });
 });

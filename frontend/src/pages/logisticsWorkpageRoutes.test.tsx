@@ -74,6 +74,21 @@ describe("logistics workpage routes", () => {
     expect(window.location.pathname).toBe("/runs/wr-weekly-001/workpages/schedule-v0");
   });
 
+  it("navigates from the run-backed schedule landing to the canonical schedule artifact route", async () => {
+    const user = userEvent.setup();
+    setFrontendOperatorContext();
+    window.history.pushState({}, "", "/runs/wr-weekly-001/workpages/schedule-v0");
+    render(<App />);
+
+    expect(await screen.findByTestId("schedule-workpage-page")).toBeInTheDocument();
+    await user.click(await screen.findByRole("link", { name: "Open editable draft" }));
+
+    expect(await screen.findByTestId("schedule-artifact-workpage-page")).toBeInTheDocument();
+    expect(window.location.pathname).toBe(
+      "/runs/wr-weekly-001/workpages/schedule-v0/artifacts/av-schedule-artifact-001"
+    );
+  });
+
   it("creates an editable draft from the canonical run-backed EOD landing", async () => {
     const user = userEvent.setup();
     setFrontendOperatorContext();

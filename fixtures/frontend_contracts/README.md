@@ -22,6 +22,8 @@ They are generated from real runtime scenario states, not hand-authored.
 - `official_outputs_pointers_state.json`
 - `workpage_schedule_v0_state.json`
 - `workpage_schedule_v0_run_state.json`
+- `workpage_schedule_v0_artifact_state.json`
+- `workpage_schedule_v0_artifact_submit_response.json`
 - `workpage_eod_v0_state.json`
 - `workpage_eod_v0_run_state.json`
 - `workpage_eod_v0_run_artifact_create_response.json`

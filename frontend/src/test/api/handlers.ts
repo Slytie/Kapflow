@@ -10,6 +10,8 @@ import eodRunWorkpageStateSnapshot from "@fixtures/workpage_eod_v0_run_state.jso
 import eodArtifactStateSnapshot from "@fixtures/workpage_eod_v0_artifact_state.json";
 import eodArtifactSubmitResponseSnapshot from "@fixtures/workpage_eod_v0_artifact_submit_response.json";
 import eodWorkpageStateSnapshot from "@fixtures/workpage_eod_v0_state.json";
+import scheduleArtifactStateSnapshot from "@fixtures/workpage_schedule_v0_artifact_state.json";
+import scheduleArtifactSubmitResponseSnapshot from "@fixtures/workpage_schedule_v0_artifact_submit_response.json";
 import scheduleRunWorkpageStateSnapshot from "@fixtures/workpage_schedule_v0_run_state.json";
 import scheduleWorkpageStateSnapshot from "@fixtures/workpage_schedule_v0_state.json";
 
@@ -24,10 +26,13 @@ const ok = (payload: Record<string, unknown>) => HttpResponse.json({ status: "ok
 
 let state = createContractState();
 let eodArtifactVersionCounter = 0;
+let scheduleArtifactVersionCounter = 0;
 const eodArtifactVersions = new Map<string, EodArtifactVersionState>();
+const scheduleArtifactVersions = new Map<string, ScheduleArtifactVersionState>();
 const EOD_WORKFLOW_RUN_ID = "wr-eod-artifact-001";
+const SCHEDULE_WORKFLOW_RUN_ID = "wr-weekly-001";
 
-interface EodArtifactVersionState {
+interface ArtifactWorkpageVersionState {
   artifactVersionId: string;
   workflowRunId: string;
   fileName: string;
@@ -37,6 +42,17 @@ interface EodArtifactVersionState {
   supersedesArtifactVersionId: string | null;
   supersededByArtifactVersionId: string | null;
   latestInChainArtifactVersionId: string;
+}
+
+type EodArtifactVersionState = ArtifactWorkpageVersionState;
+
+interface ScheduleArtifactVersionState extends ArtifactWorkpageVersionState {
+  workbookPayload: {
+    columns: string[];
+    rows: Array<Array<unknown>>;
+    reserve_rows: Array<Record<string, unknown>>;
+    iteration_deltas: Array<Record<string, unknown>>;
+  };
 }
 
 function nowIso(): string {
@@ -52,10 +68,19 @@ function nextEodArtifactVersionId(): string {
   return `av-eod-artifact-${String(eodArtifactVersionCounter).padStart(3, "0")}`;
 }
 
+function nextScheduleArtifactVersionId(): string {
+  scheduleArtifactVersionCounter += 1;
+  return `av-schedule-artifact-${String(scheduleArtifactVersionCounter).padStart(3, "0")}`;
+}
+
 function artifactRoute(artifactVersionId: string, workflowRunId?: string): string {
   return workflowRunId
     ? `/runs/${workflowRunId}/workpages/eod-v0/artifacts/${artifactVersionId}`
     : `/demo/logistics/workpages/eod-v0/artifacts/${artifactVersionId}`;
+}
+
+function scheduleArtifactRoute(artifactVersionId: string, workflowRunId: string): string {
+  return `/runs/${workflowRunId}/workpages/schedule-v0/artifacts/${artifactVersionId}`;
 }
 
 function sortArtifactRowsAscending(left: ArtifactVersionRow, right: ArtifactVersionRow): number {
@@ -68,6 +93,10 @@ function sortArtifactRowsAscending(left: ArtifactVersionRow, right: ArtifactVers
 
 function eodArtifactFileName(artifactVersionId: string): string {
   return `dispatch_reporting_stage03_${artifactVersionId}.xlsx`;
+}
+
+function scheduleArtifactFileName(artifactVersionId: string): string {
+  return `weekly_schedule_stage04_${artifactVersionId}.json`;
 }
 
 function findSectionByKind(payload: Record<string, unknown>, kind: string): Record<string, unknown> | null {
@@ -90,7 +119,30 @@ function findSectionByKind(payload: Record<string, unknown>, kind: string): Reco
   ) ?? null;
 }
 
-function patchArtifactPayloadLineage(version: EodArtifactVersionState): void {
+function findTableSectionById(
+  payload: Record<string, unknown>,
+  tableId: string
+): Record<string, unknown> | null {
+  const workpage = payload.workpage;
+  if (!workpage || typeof workpage !== "object" || Array.isArray(workpage)) {
+    return null;
+  }
+  const sections = (workpage as Record<string, unknown>).sections;
+  if (!Array.isArray(sections)) {
+    return null;
+  }
+  return (
+    sections.find(
+      (section) =>
+        section &&
+        typeof section === "object" &&
+        !Array.isArray(section) &&
+        (section as Record<string, unknown>).table_id === tableId
+    ) as Record<string, unknown> | undefined
+  ) ?? null;
+}
+
+function patchArtifactPayloadLineage(version: ArtifactWorkpageVersionState): void {
   const payload = version.payload;
   const artifactContext = payload.artifact_context;
   if (artifactContext && typeof artifactContext === "object" && !Array.isArray(artifactContext)) {
@@ -228,6 +280,127 @@ function buildEodArtifactPayload(input: {
   return payload;
 }
 
+function buildScheduleWorkbookPayload(
+  assignmentRows?: Array<Record<string, unknown>>,
+  reserveRows?: Array<Record<string, unknown>>
+): ScheduleArtifactVersionState["workbookPayload"] {
+  const payload = cloneJson(scheduleArtifactStateSnapshot.workpage_state) as Record<string, unknown>;
+  const assignmentSection = findTableSectionById(payload, "assignment_rows");
+  const reserveSection = findTableSectionById(payload, "reserve_rows");
+  const iterationSection = findTableSectionById(payload, "iteration_deltas");
+  const columns = Array.isArray(assignmentSection?.columns)
+    ? assignmentSection.columns
+        .map((column) =>
+          column && typeof column === "object" && !Array.isArray(column)
+            ? String((column as Record<string, unknown>).key ?? "")
+            : ""
+        )
+        .filter((value): value is string => value.length > 0)
+    : [];
+  const baseAssignmentRows = Array.isArray(assignmentSection?.rows)
+    ? assignmentSection.rows.map((row) =>
+        row && typeof row === "object" && !Array.isArray(row) ? { ...(row as Record<string, unknown>) } : {}
+      )
+    : [];
+  const baseReserveRows = Array.isArray(reserveSection?.rows)
+    ? reserveSection.rows.map((row) =>
+        row && typeof row === "object" && !Array.isArray(row) ? { ...(row as Record<string, unknown>) } : {}
+      )
+    : [];
+  const baseIterationRows = Array.isArray(iterationSection?.rows)
+    ? iterationSection.rows.map((row) =>
+        row && typeof row === "object" && !Array.isArray(row) ? { ...(row as Record<string, unknown>) } : {}
+      )
+    : [];
+  const nextAssignmentRows = assignmentRows ?? baseAssignmentRows;
+  const nextReserveRows = reserveRows ?? baseReserveRows;
+  return {
+    columns,
+    rows: nextAssignmentRows.map((row) => columns.map((column) => row[column] ?? null)),
+    reserve_rows: nextReserveRows.map((row) => ({ ...row })),
+    iteration_deltas: baseIterationRows.map((row) => ({ ...row })),
+  };
+}
+
+function applyScheduleArtifactEdits(
+  payload: Record<string, unknown>,
+  workbookPayload: ScheduleArtifactVersionState["workbookPayload"]
+): void {
+  const assignmentSection = findTableSectionById(payload, "assignment_rows");
+  if (assignmentSection) {
+    assignmentSection.rows = workbookPayload.rows.map((row) =>
+      workbookPayload.columns.reduce<Record<string, unknown>>((record, column, columnIndex) => {
+        record[column] = row[columnIndex] ?? null;
+        return record;
+      }, {})
+    );
+  }
+
+  const reserveSection = findTableSectionById(payload, "reserve_rows");
+  if (reserveSection) {
+    reserveSection.rows = workbookPayload.reserve_rows.map((row) => ({ ...row }));
+  }
+
+  const iterationSection = findTableSectionById(payload, "iteration_deltas");
+  if (iterationSection) {
+    iterationSection.rows = workbookPayload.iteration_deltas.map((row) => ({ ...row }));
+  }
+
+  const workpage = payload.workpage;
+  if (workpage && typeof workpage === "object" && !Array.isArray(workpage)) {
+    const summary = (workpage as Record<string, unknown>).summary;
+    if (summary && typeof summary === "object" && !Array.isArray(summary)) {
+      const summaryRecord = summary as Record<string, unknown>;
+      summaryRecord.route_assignment_count = workbookPayload.rows.length;
+      summaryRecord.reserve_assignment_count = workbookPayload.reserve_rows.length;
+      summaryRecord.iteration_count = workbookPayload.iteration_deltas.length;
+    }
+  }
+}
+
+function buildScheduleArtifactPayload(input: {
+  artifactVersionId: string;
+  workflowRunId: string;
+  supersedesArtifactVersionId: string | null;
+  supersededByArtifactVersionId: string | null;
+  latestInChainArtifactVersionId: string;
+  workbookPayload: ScheduleArtifactVersionState["workbookPayload"];
+}): Record<string, unknown> {
+  const payload = cloneJson(scheduleArtifactStateSnapshot.workpage_state) as Record<string, unknown>;
+  const workpage = payload.workpage as Record<string, unknown>;
+  const source = payload.source as Record<string, unknown>;
+  const freshness = payload.freshness as Record<string, unknown>;
+  const artifactContext = payload.artifact_context as Record<string, unknown>;
+
+  workpage.source_artifact_version_id = input.artifactVersionId;
+  source.source_artifact_version_id = input.artifactVersionId;
+  freshness.generated_at = nowIso();
+  freshness.source_version = input.artifactVersionId;
+  artifactContext.artifact_version_id = input.artifactVersionId;
+  artifactContext.workflow_run_id = input.workflowRunId;
+  artifactContext.supersedes_artifact_version_id = input.supersedesArtifactVersionId;
+  artifactContext.superseded_by_artifact_version_id = input.supersededByArtifactVersionId;
+  artifactContext.latest_in_chain_artifact_version_id = input.latestInChainArtifactVersionId;
+  artifactContext.download_path = `/api/v1/artifacts/${input.artifactVersionId}/download.bin`;
+
+  patchArtifactPayloadLineage({
+    artifactVersionId: input.artifactVersionId,
+    workflowRunId: input.workflowRunId,
+    fileName: scheduleArtifactFileName(input.artifactVersionId),
+    createdAt: nowIso(),
+    lineageNote: input.supersedesArtifactVersionId
+      ? "Submitted schedule draft artifact version."
+      : "Initial Stage04 draft weekly schedule artifact.",
+    payload,
+    supersedesArtifactVersionId: input.supersedesArtifactVersionId,
+    supersededByArtifactVersionId: input.supersededByArtifactVersionId,
+    latestInChainArtifactVersionId: input.latestInChainArtifactVersionId
+  });
+
+  applyScheduleArtifactEdits(payload, input.workbookPayload);
+  return payload;
+}
+
 function addEodArtifactVersion(input: {
   artifactVersionId: string;
   workflowRunId: string;
@@ -300,12 +473,91 @@ function eodArtifactVersionRow(version: EodArtifactVersionState): ArtifactVersio
   };
 }
 
+function addScheduleArtifactVersion(input: {
+  artifactVersionId: string;
+  workflowRunId: string;
+  supersedesArtifactVersionId: string | null;
+  supersededByArtifactVersionId?: string | null;
+  latestInChainArtifactVersionId: string;
+  assignmentRows?: Array<Record<string, unknown>>;
+  reserveRows?: Array<Record<string, unknown>>;
+}): ScheduleArtifactVersionState {
+  const createdAt = nowIso();
+  const workbookPayload = buildScheduleWorkbookPayload(input.assignmentRows, input.reserveRows);
+  const version: ScheduleArtifactVersionState = {
+    artifactVersionId: input.artifactVersionId,
+    workflowRunId: input.workflowRunId,
+    fileName: scheduleArtifactFileName(input.artifactVersionId),
+    createdAt,
+    lineageNote: input.supersedesArtifactVersionId
+      ? "Submitted schedule draft artifact version."
+      : "Initial Stage04 draft weekly schedule artifact.",
+    payload: buildScheduleArtifactPayload({
+      artifactVersionId: input.artifactVersionId,
+      workflowRunId: input.workflowRunId,
+      supersedesArtifactVersionId: input.supersedesArtifactVersionId,
+      supersededByArtifactVersionId: input.supersededByArtifactVersionId ?? null,
+      latestInChainArtifactVersionId: input.latestInChainArtifactVersionId,
+      workbookPayload
+    }),
+    workbookPayload,
+    supersedesArtifactVersionId: input.supersedesArtifactVersionId,
+    supersededByArtifactVersionId: input.supersededByArtifactVersionId ?? null,
+    latestInChainArtifactVersionId: input.latestInChainArtifactVersionId
+  };
+  scheduleArtifactVersions.set(version.artifactVersionId, version);
+  return version;
+}
+
+function scheduleArtifactVersionRow(version: ScheduleArtifactVersionState): ArtifactVersionRow {
+  return {
+    artifact_version_id: version.artifactVersionId,
+    workflow_run_id: version.workflowRunId,
+    task_run_id: null,
+    artifact_kind: "planning.draft_weekly_schedule.workbook",
+    artifact_role: "",
+    media_type: "application/json",
+    storage_uri: `memory://workpages/${version.fileName}`,
+    content_digest: `sha256:${version.artifactVersionId}`,
+    byte_size: JSON.stringify(version.workbookPayload).length,
+    metadata_json: {
+      file_name: version.fileName,
+      planning_week_id: "PW-2026-W13",
+      station_code: "DVC4",
+      workflow_family: "weekly_schedule_planning.v1"
+    },
+    parent_artifact_version_id: version.supersedesArtifactVersionId,
+    supersedes_artifact_version_id: version.supersedesArtifactVersionId,
+    lineage_note: version.lineageNote,
+    created_at: version.createdAt,
+    links: [
+      {
+        artifact_version_id: version.artifactVersionId,
+        workflow_run_id: version.workflowRunId,
+        subject_kind: "workflow_run",
+        subject_id: version.workflowRunId,
+        relation_kind: "subject",
+        created_at: version.createdAt,
+        created_by_actor_id: null,
+        created_by_actor_type: null
+      }
+    ]
+  };
+}
+
 function listWorkflowRunArtifacts(workflowRunId: string): ArtifactVersionRow[] {
+  if (workflowRunId === SCHEDULE_WORKFLOW_RUN_ID) {
+    ensureScheduleArtifactDraft(workflowRunId);
+  }
   const eodArtifacts =
     workflowRunId === EOD_WORKFLOW_RUN_ID
       ? Array.from(eodArtifactVersions.values()).map(eodArtifactVersionRow)
       : [];
-  return [...listArtifactsForSubject("workflow_run", workflowRunId), ...eodArtifacts].sort(
+  const scheduleArtifacts =
+    workflowRunId === SCHEDULE_WORKFLOW_RUN_ID
+      ? Array.from(scheduleArtifactVersions.values()).map(scheduleArtifactVersionRow)
+      : [];
+  return [...listArtifactsForSubject("workflow_run", workflowRunId), ...eodArtifacts, ...scheduleArtifacts].sort(
     sortArtifactRowsAscending
   );
 }
@@ -335,9 +587,53 @@ function latestEodArtifactForRun(workflowRunId: string): EodArtifactVersionState
     })[0] ?? null;
 }
 
+function updateScheduleArtifactChainLatest(
+  artifactVersionId: string,
+  latestArtifactVersionId: string
+): void {
+  let currentArtifactVersionId: string | null = artifactVersionId;
+  while (currentArtifactVersionId) {
+    const version = scheduleArtifactVersions.get(currentArtifactVersionId);
+    if (!version) {
+      break;
+    }
+    version.latestInChainArtifactVersionId = latestArtifactVersionId;
+    patchArtifactPayloadLineage(version);
+    currentArtifactVersionId = version.supersedesArtifactVersionId;
+  }
+}
+
+function latestScheduleArtifactForRun(workflowRunId: string): ScheduleArtifactVersionState | null {
+  return Array.from(scheduleArtifactVersions.values())
+    .filter((version) => version.workflowRunId === workflowRunId)
+    .sort((left, right) => {
+      const createdAtCompare = right.createdAt.localeCompare(left.createdAt);
+      if (createdAtCompare !== 0) {
+        return createdAtCompare;
+      }
+      return right.artifactVersionId.localeCompare(left.artifactVersionId);
+    })[0] ?? null;
+}
+
 function ensureEodArtifactDraft(workflowRunId = EOD_WORKFLOW_RUN_ID): EodArtifactVersionState {
   const artifactVersionId = nextEodArtifactVersionId();
   return addEodArtifactVersion({
+    artifactVersionId,
+    workflowRunId,
+    supersedesArtifactVersionId: null,
+    latestInChainArtifactVersionId: artifactVersionId
+  });
+}
+
+function ensureScheduleArtifactDraft(
+  workflowRunId = SCHEDULE_WORKFLOW_RUN_ID
+): ScheduleArtifactVersionState {
+  const existing = latestScheduleArtifactForRun(workflowRunId);
+  if (existing) {
+    return existing;
+  }
+  const artifactVersionId = nextScheduleArtifactVersionId();
+  return addScheduleArtifactVersion({
     artifactVersionId,
     workflowRunId,
     supersedesArtifactVersionId: null,
@@ -377,7 +673,24 @@ function eodArtifactSubmitResponse(
   return payload;
 }
 
+function scheduleArtifactSubmitResponse(
+  version: ScheduleArtifactVersionState,
+  supersedesArtifactVersionId: string
+): Record<string, unknown> {
+  const payload = cloneJson(
+    scheduleArtifactSubmitResponseSnapshot.submit_response
+  ) as Record<string, unknown>;
+  payload.submitted = {
+    artifact_version_id: version.artifactVersionId,
+    route: scheduleArtifactRoute(version.artifactVersionId, version.workflowRunId),
+    supersedes_artifact_version_id: supersedesArtifactVersionId,
+    workflow_run_id: version.workflowRunId
+  };
+  return payload;
+}
+
 function buildRunScheduleWorkpagePayload(workflowRunId: string): Record<string, unknown> {
+  ensureScheduleArtifactDraft(workflowRunId);
   const payload = cloneJson(scheduleRunWorkpageStateSnapshot.workpage_state) as Record<string, unknown>;
   const runContext = payload.run_context as Record<string, unknown>;
   runContext.workflow_run_id = workflowRunId;
@@ -426,6 +739,11 @@ function buildRunEodWorkpagePayload(workflowRunId: string): Record<string, unkno
 function resetEodArtifactVersions(): void {
   eodArtifactVersionCounter = 0;
   eodArtifactVersions.clear();
+}
+
+function resetScheduleArtifactVersions(): void {
+  scheduleArtifactVersionCounter = 0;
+  scheduleArtifactVersions.clear();
 }
 
 const TEMPLATE_FIXTURES = [
@@ -1489,6 +1807,7 @@ function buildLogisticsStoryPayload(planningWeekId: string, request: Request, se
 export function resetApiState(): void {
   state = createContractState();
   resetEodArtifactVersions();
+  resetScheduleArtifactVersions();
 }
 
 export function forceForbiddenResponses(value: boolean): void {
@@ -1564,8 +1883,14 @@ export const handlers = [
     }
 
     const artifactVersionId = String(params.artifactVersionId);
-    const version = eodArtifactVersions.get(artifactVersionId);
-    if (!version) {
+    const scheduleVersion = scheduleArtifactVersions.get(artifactVersionId);
+    if (scheduleVersion) {
+      patchArtifactPayloadLineage(scheduleVersion);
+      return HttpResponse.json(scheduleVersion.payload);
+    }
+
+    const eodVersion = eodArtifactVersions.get(artifactVersionId);
+    if (!eodVersion) {
       return HttpResponse.json(
         {
           status: "error",
@@ -1581,8 +1906,8 @@ export const handlers = [
       );
     }
 
-    patchArtifactPayloadLineage(version);
-    return HttpResponse.json(version.payload);
+    patchArtifactPayloadLineage(eodVersion);
+    return HttpResponse.json(eodVersion.payload);
   }),
   http.post("*/api/v1/workpages/artifacts/:artifactVersionId/submit", async ({ params, request }) => {
     if (!inScope(request)) {
@@ -1602,6 +1927,57 @@ export const handlers = [
     }
 
     const artifactVersionId = String(params.artifactVersionId);
+    const scheduleBaseVersion = scheduleArtifactVersions.get(artifactVersionId);
+    if (scheduleBaseVersion) {
+      if (scheduleBaseVersion.supersededByArtifactVersionId) {
+        return HttpResponse.json(
+          {
+            status: "error",
+            error: {
+              code: "workpage_artifact_conflict",
+              message: "artifact-backed workpage already has a newer draft",
+              details: {
+                artifact_version_id: artifactVersionId,
+                latest_artifact_version_id: scheduleBaseVersion.latestInChainArtifactVersionId,
+                workflow_run_id: scheduleBaseVersion.workflowRunId,
+                route: scheduleArtifactRoute(
+                  scheduleBaseVersion.latestInChainArtifactVersionId,
+                  scheduleBaseVersion.workflowRunId
+                )
+              }
+            }
+          },
+          { status: 409 }
+        );
+      }
+
+      const body = (await request.json()) as {
+        rows?: Array<Record<string, unknown>>;
+        reserve_rows?: Array<Record<string, unknown>>;
+      };
+      const submittedArtifactVersionId = nextScheduleArtifactVersionId();
+      const submittedVersion = addScheduleArtifactVersion({
+        artifactVersionId: submittedArtifactVersionId,
+        workflowRunId: scheduleBaseVersion.workflowRunId,
+        supersedesArtifactVersionId: artifactVersionId,
+        latestInChainArtifactVersionId: submittedArtifactVersionId,
+        assignmentRows: Array.isArray(body.rows) ? body.rows : undefined,
+        reserveRows: Array.isArray(body.reserve_rows) ? body.reserve_rows : undefined
+      });
+      scheduleBaseVersion.supersededByArtifactVersionId = submittedArtifactVersionId;
+      patchArtifactPayloadLineage(scheduleBaseVersion);
+      updateScheduleArtifactChainLatest(submittedArtifactVersionId, submittedArtifactVersionId);
+
+      state.audit.mutations.push(
+        `workpage-schedule-artifact-submit:${artifactVersionId}:${submittedArtifactVersionId}`
+      );
+      return ok({
+        command: "api.workpages.artifact.submit",
+        submitted: (scheduleArtifactSubmitResponse(submittedVersion, artifactVersionId)
+          .submitted as Record<string, unknown>) ?? {}
+      });
+    }
+
     const baseVersion = eodArtifactVersions.get(artifactVersionId);
     if (!baseVersion) {
       return HttpResponse.json(
@@ -2358,6 +2734,18 @@ export const handlers = [
       return forbiddenWorkflowRun();
     }
     const artifactVersionId = String(params.artifactVersionId);
+    const scheduleArtifactVersion = scheduleArtifactVersions.get(artifactVersionId);
+    if (scheduleArtifactVersion) {
+      state.audit.mutations.push(`artifact-download-bin:${artifactVersionId}`);
+      return binaryDownloadResponse(
+        JSON.stringify(scheduleArtifactVersion.workbookPayload, null, 2),
+        {
+          fileName: scheduleArtifactVersion.fileName,
+          mediaType: "application/json",
+          requestId: `httpreq_artifact_${artifactVersionId}`
+        }
+      );
+    }
     const eodArtifactVersion = eodArtifactVersions.get(artifactVersionId);
     if (eodArtifactVersion) {
       state.audit.mutations.push(`artifact-download-bin:${artifactVersionId}`);

@@ -1,0 +1,18 @@
+{
+  "snapshot_id": "workpage_schedule_v0_artifact_submit_response",
+  "source": {
+    "capture": "artifact_backed_submit_response",
+    "workflow_run_id": "<workflow_run_id:1>",
+    "workpage_id": "schedule-v0"
+  },
+  "submit_response": {
+    "command": "api.workpages.artifact.submit",
+    "status": "ok",
+    "submitted": {
+      "artifact_version_id": "<artifact_version_id:2>",
+      "route": "/runs/<workflow_run_id:1>/workpages/schedule-v0/artifacts/<artifact_version_id:2>",
+      "supersedes_artifact_version_id": "<supersedes_artifact_version_id:3>",
+      "workflow_run_id": "<workflow_run_id:1>"
+    }
+  }
+}

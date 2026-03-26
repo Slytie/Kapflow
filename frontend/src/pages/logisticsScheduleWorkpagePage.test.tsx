@@ -138,4 +138,21 @@ describe("LogisticsScheduleWorkpagePage", () => {
     expect(within(sickCallsFieldset as HTMLElement).getByRole("checkbox", { name: "Parampreet Singh" })).toBeChecked();
     expect(screen.getByRole("textbox", { name: /Planner note/i })).toHaveValue("Run-backed what-if");
   });
+
+  it("shows the latest Stage04 draft handoff on the run-backed landing and navigates to the canonical artifact route", async () => {
+    const user = userEvent.setup();
+    setFrontendOperatorContext();
+    window.history.pushState({}, "", "/runs/wr-weekly-001/workpages/schedule-v0");
+    render(<App />);
+
+    expect(await screen.findByTestId("schedule-workpage-page")).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Editable draft available" })).toBeInTheDocument();
+
+    await user.click(screen.getByRole("link", { name: "Open editable draft" }));
+
+    expect(await screen.findByTestId("schedule-artifact-workpage-page")).toBeInTheDocument();
+    expect(window.location.pathname).toBe(
+      "/runs/wr-weekly-001/workpages/schedule-v0/artifacts/av-schedule-artifact-001"
+    );
+  });
 });

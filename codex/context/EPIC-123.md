@@ -38,14 +38,16 @@
 - Query-backed and run-backed schedule landing pages already exist and are validated.
 - EPIC-121 already proved the first generic artifact-backed workpage read/submit family on EOD.
 - `weekly_schedule_planning.v1` Stage04 already emits `planning.draft_weekly_schedule.workbook`, so the first schedule artifact slice does not need a new draft-create mutation.
-- `TASK-0142` is now complete, so the repo has frozen the next schedule artifact boundary around the Stage04 draft workbook, reserved `/runs/:workflowRunId/workpages/schedule-v0/artifacts/:artifactVersionId`, and explicitly kept Stage06 publish, Stage07 seeds, live dispatch, and workspace modernization out of scope.
-- EPIC-123 is now open as the next workpage epic. Follow-on implementation tasks still need to be queued.
+- `TASK-0142` froze the schedule artifact boundary around the Stage04 draft workbook and explicitly kept Stage06 publish, Stage07 seeds, live dispatch, and workspace modernization out of scope.
+- `TASK-0143` implemented backend schedule artifact projection/submit plus backend-owned read/submit snapshots over the generic artifact-backed workpage family.
+- `TASK-0144` implemented the canonical frontend schedule artifact route `/runs/:workflowRunId/workpages/schedule-v0/artifacts/:artifactVersionId`, landing-page handoff, recent-history reopen, stale/conflict reopen, and truthful JSON download.
+- `TASK-0145` closes EPIC-123 in repo memory. The epic is now complete; the next application tranche should be chosen deliberately rather than inferred from stale planning docs.
 
 ## Planned implementation order inside this epic
 1. `TASK-0142` - DONE
-2. Future backend schedule artifact projection/submit tranche - not yet queued
-3. Future frontend schedule artifact-route migration tranche - not yet queued
-4. Future demo/doc closeout tranche - not yet queued
+2. `TASK-0143` - DONE
+3. `TASK-0144` - DONE
+4. `TASK-0145` - DONE
 
 ## Preflight questions for future runs
 - Does the repo still contain the post-`TASK-0142` freeze that anchors the schedule artifact slice to `planning.draft_weekly_schedule.workbook`?

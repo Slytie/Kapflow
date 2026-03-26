@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from pathlib import Path
 import sqlite3
 from typing import Any, Mapping, Sequence
@@ -17,10 +18,17 @@ from onetruth.application.handlers._shared.command_boundary import (
     _receipt_event_idempotency_key,
 )
 from onetruth.application.services.dispatch_reporting_workbook import (
-    DATASET_KEY,
-    WORKFLOW_ID,
+    DATASET_KEY as EOD_DATASET_KEY,
+    WORKFLOW_ID as EOD_WORKFLOW_ID,
     materialize_upd_draft_workbook,
     project_upd_draft_workbook,
+)
+from onetruth.application.services.schedule_control.draft_workbook import (
+    SCHEDULE_DRAFT_DATASET_KEY,
+    SCHEDULE_WORKFLOW_ID,
+    draft_workbook_bytes_from_metadata_json,
+    materialize_stage04_draft_weekly_schedule_workbook,
+    project_stage04_draft_weekly_schedule_workbook,
 )
 from onetruth.application.services.template_registry import (
     TemplateRecord,
@@ -76,14 +84,14 @@ def create_demo_eod_draft_command(
         command_name="workpages.eod-drafts.create",
         payload={
             **payload,
-            "workflow_id": WORKFLOW_ID,
+            "workflow_id": EOD_WORKFLOW_ID,
             "partition_key": DEMO_SERVICE_DATE_ID,
             "workpage_id": DEMO_WORKPAGE_ID,
         },
         fingerprint_payload={
             "tenant_id": tenant_id,
             "domain_id": domain_id,
-            "workflow_id": WORKFLOW_ID,
+            "workflow_id": EOD_WORKFLOW_ID,
             "partition_key": DEMO_SERVICE_DATE_ID,
             "workpage_id": DEMO_WORKPAGE_ID,
             "template_id": EOD_TEMPLATE_ID,
@@ -173,14 +181,14 @@ def create_workflow_run_eod_draft_command(
         payload={
             **payload,
             "workflow_run_id": workflow_run_id,
-            "workflow_id": WORKFLOW_ID,
+            "workflow_id": EOD_WORKFLOW_ID,
             "workpage_id": DEMO_WORKPAGE_ID,
         },
         fingerprint_payload={
             "tenant_id": tenant_id,
             "domain_id": domain_id,
             "workflow_run_id": workflow_run_id,
-            "workflow_id": WORKFLOW_ID,
+            "workflow_id": EOD_WORKFLOW_ID,
             "workpage_id": DEMO_WORKPAGE_ID,
             "template_id": EOD_TEMPLATE_ID,
             "actor_id": actor_id,
@@ -268,7 +276,11 @@ def submit_eod_artifact_workpage_command(
     )
 
     def _operation() -> dict[str, Any]:
-        _assert_artifact_not_already_superseded(connection, artifact_version_id)
+        _assert_artifact_not_already_superseded(
+            connection,
+            artifact_version_id,
+            route_builder=_canonical_eod_ui_route,
+        )
         workbook_bytes = _read_workbook_bytes(base_artifact)
         projection = project_upd_draft_workbook(workbook_bytes)
         edits = _build_submit_edits(
@@ -285,6 +297,7 @@ def submit_eod_artifact_workpage_command(
             connection,
             storage_root=storage_root,
             workflow_run_id=str(base_artifact["workflow_run_id"]),
+            artifact_kind=EOD_DATASET_KEY,
             artifact_bytes=updated_bytes,
             artifact_role=(
                 str(base_artifact["artifact_role"])
@@ -332,6 +345,108 @@ def submit_eod_artifact_workpage_command(
     )
 
 
+def submit_schedule_artifact_workpage_command(
+    connection: sqlite3.Connection,
+    payload: dict[str, Any],
+    *,
+    storage_root: Path,
+    include_receipt: bool = False,
+) -> dict[str, Any]:
+    artifact_version_id = _require_non_empty_string(
+        payload.get("artifact_version_id"),
+        field_name="artifact_version_id",
+    )
+    actor_id = _require_non_empty_string(payload.get("actor_id"), field_name="actor_id")
+    actor_type = _require_non_empty_string(payload.get("actor_type"), field_name="actor_type")
+    base_artifact = _require_schedule_artifact_version(connection, artifact_version_id)
+
+    receipt = _prepare_command_receipt(
+        command_name="workpages.artifact.submit",
+        payload=payload,
+        fingerprint_payload={
+            "artifact_version_id": artifact_version_id,
+            "rows": payload.get("rows"),
+            "reserve_rows": payload.get("reserve_rows"),
+            "actor_id": actor_id,
+            "actor_type": actor_type,
+        },
+        tenant_id=str(base_artifact.get("tenant_id") or ""),
+        domain_id=str(base_artifact.get("domain_id") or ""),
+        workflow_run_id=str(base_artifact["workflow_run_id"]),
+        idempotency_required=True,
+    )
+    artifact_event_idempotency = _receipt_event_idempotency_key(
+        receipt,
+        "workpages.artifact.submit.artifact.version.created",
+    )
+
+    def _operation() -> dict[str, Any]:
+        _assert_artifact_not_already_superseded(
+            connection,
+            artifact_version_id,
+            route_builder=_canonical_schedule_ui_route,
+        )
+        workbook_bytes = _read_schedule_draft_artifact_bytes(base_artifact)
+        try:
+            updated_bytes = materialize_stage04_draft_weekly_schedule_workbook(
+                workbook_bytes,
+                rows=payload.get("rows"),
+                reserve_rows=payload.get("reserve_rows"),
+            )
+        except ValueError as exc:
+            raise CommandError(
+                code="invalid_payload",
+                message=str(exc),
+                details={},
+            ) from exc
+        new_artifact = _create_workbook_artifact_version(
+            connection,
+            storage_root=storage_root,
+            workflow_run_id=str(base_artifact["workflow_run_id"]),
+            artifact_kind=SCHEDULE_DRAFT_DATASET_KEY,
+            artifact_bytes=updated_bytes,
+            artifact_role=(
+                str(base_artifact["artifact_role"])
+                if base_artifact.get("artifact_role") is not None
+                else None
+            ),
+            file_name=_schedule_draft_file_name(base_artifact),
+            media_type=str(base_artifact.get("media_type") or "application/json"),
+            metadata_json=_schedule_submitted_metadata(updated_bytes),
+            parent_artifact_version_id=artifact_version_id,
+            supersedes_artifact_version_id=artifact_version_id,
+            lineage_note="Submitted artifact-backed schedule draft version.",
+            actor_id=actor_id,
+            actor_type=actor_type,
+            event_idempotency=artifact_event_idempotency,
+        )
+        submitted_artifact_version_id = str(new_artifact["artifact_version_id"])
+        workflow_run_id = str(base_artifact["workflow_run_id"])
+        return {
+            "submitted": {
+                "workflow_run_id": workflow_run_id,
+                "artifact_version_id": submitted_artifact_version_id,
+                "supersedes_artifact_version_id": artifact_version_id,
+                "route": _canonical_schedule_ui_route(
+                    workflow_run_id=workflow_run_id,
+                    artifact_version_id=submitted_artifact_version_id,
+                ),
+            }
+        }
+
+    result, replay = _execute_with_command_receipt(
+        connection,
+        receipt=receipt,
+        operation=_operation,
+    )
+    return _command_receipt_payload(
+        result,
+        receipt=receipt,
+        replay=replay,
+        include_receipt=include_receipt,
+    )
+
+
 def _resolve_or_create_demo_reporting_run(
     connection: sqlite3.Connection,
     *,
@@ -355,7 +470,7 @@ def _resolve_or_create_demo_reporting_run(
         create_workflow_run(
             connection,
             workflow_run_id=workflow_run_id,
-            workflow_id=WORKFLOW_ID,
+            workflow_id=EOD_WORKFLOW_ID,
             workflow_version=WORKFLOW_VERSION,
             tenant_id=tenant_id,
             domain_id=domain_id,
@@ -388,21 +503,21 @@ def _resolve_or_create_demo_reporting_run(
                 {
                     "rel": "uses_definition",
                     "type": "workflow_contract_version",
-                    "id": f"{WORKFLOW_ID}@{WORKFLOW_VERSION}",
+                    "id": f"{EOD_WORKFLOW_ID}@{WORKFLOW_VERSION}",
                 },
                 {
                     "rel": "uses_decisions",
                     "type": "decision_catalog_version",
-                    "id": f"{WORKFLOW_ID}@{WORKFLOW_VERSION}",
+                    "id": f"{EOD_WORKFLOW_ID}@{WORKFLOW_VERSION}",
                 },
                 {
                     "rel": "uses_profile",
                     "type": "execution_profile_version",
-                    "id": f"{WORKFLOW_ID}@{WORKFLOW_VERSION}",
+                    "id": f"{EOD_WORKFLOW_ID}@{WORKFLOW_VERSION}",
                 },
             ],
             payload={
-                "workflow_id": WORKFLOW_ID,
+                "workflow_id": EOD_WORKFLOW_ID,
                 "partition_key": DEMO_SERVICE_DATE_ID,
                 "activation_key": DEMO_ACTIVATION_KEY,
                 "logical_date": DEMO_SERVICE_DATE,
@@ -428,7 +543,7 @@ def _find_demo_reporting_run(
 ) -> dict[str, Any] | None:
     for run in list_workflow_runs(
         connection,
-        workflow_id=WORKFLOW_ID,
+        workflow_id=EOD_WORKFLOW_ID,
         tenant_id=tenant_id,
         domain_id=domain_id,
         state=None,
@@ -443,6 +558,7 @@ def _create_workbook_artifact_version(
     *,
     storage_root: Path,
     workflow_run_id: str,
+    artifact_kind: str,
     artifact_bytes: bytes,
     artifact_role: str | None,
     file_name: str,
@@ -466,7 +582,7 @@ def _create_workbook_artifact_version(
         {
             "artifact_version_id": f"av-{uuid4()}",
             "workflow_run_id": workflow_run_id,
-            "artifact_kind": DATASET_KEY,
+            "artifact_kind": artifact_kind,
             "artifact_role": artifact_role,
             "media_type": media_type,
             "storage_uri": storage_uri,
@@ -647,6 +763,7 @@ def _create_eod_draft_artifact_version(
         connection,
         storage_root=storage_root,
         workflow_run_id=workflow_run_id,
+        artifact_kind=EOD_DATASET_KEY,
         artifact_bytes=template.source_path.read_bytes(),
         artifact_role=None,
         file_name=_draft_file_name(),
@@ -691,6 +808,24 @@ def _submitted_metadata(base_artifact: Mapping[str, Any]) -> dict[str, Any]:
     return result
 
 
+def _schedule_submitted_metadata(updated_bytes: bytes) -> dict[str, Any]:
+    try:
+        payload = json.loads(updated_bytes.decode("utf-8"))
+    except Exception as exc:
+        raise CommandError(
+            code="invalid_payload",
+            message="updated schedule draft workbook must remain valid JSON",
+            details={},
+        ) from exc
+    if not isinstance(payload, Mapping):
+        raise CommandError(
+            code="invalid_payload",
+            message="updated schedule draft workbook must decode to an object",
+            details={},
+        )
+    return dict(payload)
+
+
 def _load_eod_template_record() -> TemplateRecord:
     try:
         return load_template_registry_catalog().template_by_id(EOD_TEMPLATE_ID)
@@ -720,6 +855,8 @@ def _read_workbook_bytes(artifact: Mapping[str, Any]) -> bytes:
 def _assert_artifact_not_already_superseded(
     connection: sqlite3.Connection,
     artifact_version_id: str,
+    *,
+    route_builder,
 ) -> None:
     superseding = get_superseding_artifact_version(connection, artifact_version_id)
     if superseding is None:
@@ -737,7 +874,7 @@ def _assert_artifact_not_already_superseded(
             "artifact_version_id": artifact_version_id,
             "latest_artifact_version_id": latest_id,
             "workflow_run_id": str(superseding["workflow_run_id"]),
-            "route": _canonical_eod_ui_route(
+            "route": route_builder(
                 workflow_run_id=str(superseding["workflow_run_id"]),
                 artifact_version_id=latest_id,
             ),
@@ -756,20 +893,62 @@ def _require_eod_artifact_version(
             message="artifact-backed workpage not found",
             details={"artifact_version_id": artifact_version_id},
         )
-    if str(artifact.get("artifact_kind") or "") != DATASET_KEY:
+    if str(artifact.get("artifact_kind") or "") != EOD_DATASET_KEY:
         raise CommandError(
             code="workpage_artifact_not_found",
             message="artifact-backed workpage not found",
             details={"artifact_version_id": artifact_version_id},
         )
     workflow_run = get_workflow_run(connection, str(artifact["workflow_run_id"]))
-    if workflow_run is None or str(workflow_run.get("workflow_id") or "") != WORKFLOW_ID:
+    if workflow_run is None or str(workflow_run.get("workflow_id") or "") != EOD_WORKFLOW_ID:
         raise CommandError(
             code="workpage_artifact_not_found",
             message="artifact-backed workpage not found",
             details={"artifact_version_id": artifact_version_id},
         )
     return artifact
+
+
+def _require_schedule_artifact_version(
+    connection: sqlite3.Connection,
+    artifact_version_id: str,
+) -> dict[str, Any]:
+    artifact = get_artifact_version(connection, artifact_version_id)
+    if artifact is None:
+        raise CommandError(
+            code="workpage_artifact_not_found",
+            message="artifact-backed workpage not found",
+            details={"artifact_version_id": artifact_version_id},
+        )
+    if str(artifact.get("artifact_kind") or "") != SCHEDULE_DRAFT_DATASET_KEY:
+        raise CommandError(
+            code="workpage_artifact_not_found",
+            message="artifact-backed workpage not found",
+            details={"artifact_version_id": artifact_version_id},
+        )
+    workflow_run = get_workflow_run(connection, str(artifact["workflow_run_id"]))
+    if workflow_run is None or str(workflow_run.get("workflow_id") or "") != SCHEDULE_WORKFLOW_ID:
+        raise CommandError(
+            code="workpage_artifact_not_found",
+            message="artifact-backed workpage not found",
+            details={"artifact_version_id": artifact_version_id},
+        )
+    return artifact
+
+
+def _read_schedule_draft_artifact_bytes(artifact: Mapping[str, Any]) -> bytes:
+    storage_uri = str(artifact.get("storage_uri") or "")
+    if storage_uri.startswith("file:"):
+        return _read_workbook_bytes(artifact)
+    metadata_json = artifact.get("metadata_json")
+    try:
+        return draft_workbook_bytes_from_metadata_json(metadata_json)
+    except ValueError as exc:
+        raise CommandError(
+            code="artifact_version_not_found",
+            message=str(exc),
+            details={"artifact_version_id": str(artifact.get("artifact_version_id") or "")},
+        ) from exc
 
 
 def _require_projection_rows(raw_value: Any, label: str) -> list[dict[str, Any]]:
@@ -814,8 +993,23 @@ def _canonical_eod_ui_route(*, workflow_run_id: str, artifact_version_id: str) -
     return f"/runs/{workflow_run_id}/workpages/eod-v0/artifacts/{artifact_version_id}"
 
 
+def _canonical_schedule_ui_route(*, workflow_run_id: str, artifact_version_id: str) -> str:
+    return f"/runs/{workflow_run_id}/workpages/schedule-v0/artifacts/{artifact_version_id}"
+
+
 def _draft_file_name() -> str:
     return "dispatch_reporting_eod_v0_2026-03-16_qdci_dvc4_upd_draft.xlsx"
+
+
+def _schedule_draft_file_name(base_artifact: Mapping[str, Any]) -> str:
+    return _metadata_string(
+        base_artifact.get("metadata_json"),
+        "file_name",
+        default=(
+            f"weekly_schedule_stage04_{str(base_artifact.get('workflow_run_id') or 'draft')}_"
+            "draft_workbook.json"
+        ),
+    )
 
 
 def _xlsx_media_type() -> str:

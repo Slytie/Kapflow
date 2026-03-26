@@ -1032,8 +1032,10 @@ export const onetruthApi = {
   async submitArtifactWorkpage(
     artifactVersionId: string,
     payload: {
-      form_values: Record<string, unknown>;
-      checklist_values: Array<Record<string, unknown>>;
+      form_values?: Record<string, unknown>;
+      checklist_values?: Array<Record<string, unknown>>;
+      rows?: Array<Record<string, unknown>>;
+      reserve_rows?: Array<Record<string, unknown>>;
       idempotency_key: string;
     }
   ): Promise<WorkpageSubmittedResponse> {

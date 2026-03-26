@@ -17,7 +17,10 @@ import { RunWorkspacePage } from "@/pages/RunWorkspacePage";
 import { RunsPage } from "@/pages/RunsPage";
 import { TimelinePage } from "@/pages/TimelinePage";
 import { LogisticsDemoPage } from "@/pages/LogisticsDemoPage";
-import { LogisticsScheduleWorkpagePage } from "@/pages/LogisticsScheduleWorkpagePage";
+import {
+  LogisticsScheduleArtifactWorkpagePage,
+  LogisticsScheduleWorkpagePage
+} from "@/pages/LogisticsScheduleWorkpagePage";
 import { WorkspaceHomePage } from "@/pages/WorkspaceHomePage";
 import { DrawerProvider } from "@/lib/state/drawerContext";
 import "@/app/app.css";
@@ -53,6 +56,10 @@ export function App(): JSX.Element {
               <Route
                 path="/runs/:workflowRunId/workpages/schedule-v0"
                 element={<LogisticsScheduleWorkpagePage />}
+              />
+              <Route
+                path="/runs/:workflowRunId/workpages/schedule-v0/artifacts/:artifactVersionId"
+                element={<LogisticsScheduleArtifactWorkpagePage />}
               />
               <Route path="/runs/:workflowRunId/workpages/eod-v0" element={<DispatchReportWorkpagePage />} />
               <Route

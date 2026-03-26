@@ -15,6 +15,9 @@ from onetruth.application.services.schedule_control import (
     WeeklyScheduleControlBundle,
     build_weekly_schedule_control_bundle,
 )
+from onetruth.application.services.schedule_control.draft_workbook import (
+    SCHEDULE_DRAFT_DATASET_KEY,
+)
 from onetruth.application.services.schedule_control.stage04_input_registry import (
     resolve_weekly_stage04_input_artifacts,
 )
@@ -58,6 +61,8 @@ _APPROVED_AVAILABILITY_DATASET_KEY = "planning.approved_availability.workbook"
 _DRIVER_CAPABILITIES_DATASET_KEY = "planning.driver_capabilities.workbook"
 _ACTUAL_HOURS_DATASET_KEY = "planning.actual_hours_snapshot.workbook"
 _INPUT_BUNDLE_DATASET_KEY = "planning.input_bundle.doc"
+_SCHEDULE_DRAFT_DOC_DATASET_KEY = "planning.draft_weekly_schedule.doc"
+_SCHEDULE_VALIDATION_SUMMARY_DATASET_KEY = "planning.validation_summary.doc"
 _EOD_RAW_DATASET_KEY = "reporting.eos_raw.workbook"
 _EOD_NORMALIZED_DATASET_KEY = "reporting.actuals_normalized.workbook"
 _EOD_DRAFT_DATASET_KEY = "reporting.upd_draft.workbook"
@@ -873,6 +878,211 @@ def build_eod_artifact_workpage_contract(
     }
 
 
+def build_schedule_artifact_workpage_contract(
+    *,
+    artifact_version_id: str,
+    workflow_run: Mapping[str, Any],
+    artifacts: list[dict[str, Any]],
+    supersedes_artifact_version_id: str | None,
+    superseded_by_artifact_version_id: str | None,
+    latest_in_chain_artifact_version_id: str,
+    download_path: str,
+    projection: Mapping[str, Any],
+    generated_at: str | None = None,
+) -> dict[str, Any]:
+    assignment_rows = _projection_rows(projection, "rows")
+    reserve_rows = _projection_rows(projection, "reserve_rows")
+    iteration_rows = _projection_rows(projection, "iteration_deltas")
+    summary = _schedule_artifact_summary(
+        workflow_run=workflow_run,
+        assignment_rows=assignment_rows,
+        reserve_rows=reserve_rows,
+        iteration_rows=iteration_rows,
+    )
+    workflow_run_id = _require_text(workflow_run.get("workflow_run_id"))
+    return {
+        "workpage": {
+            "workpage_id": SCHEDULE_DEMO_WORKPAGE_ID,
+            "version": 2,
+            "title": "Weekly schedule draft artifact",
+            "mode": "example",
+            "workflow_id": _SCHEDULE_WORKFLOW_ID,
+            "dataset_key": SCHEDULE_DRAFT_DATASET_KEY,
+            "source_artifact_version_id": artifact_version_id,
+            "source_examples": {},
+            "summary": summary,
+            "sections": [
+                {
+                    "kind": "summary_cards",
+                    "title": "Draft workbook summary",
+                    "cards": [
+                        {
+                            "key": "planning_week_id",
+                            "label": "Planning week",
+                            "value": summary["planning_week_id"],
+                        },
+                        {
+                            "key": "route_assignment_count",
+                            "label": "Route assignments",
+                            "value": summary["route_assignment_count"],
+                        },
+                        {
+                            "key": "reserve_assignment_count",
+                            "label": "Reserve rows",
+                            "value": summary["reserve_assignment_count"],
+                        },
+                        {
+                            "key": "iteration_count",
+                            "label": "Iterations",
+                            "value": summary["iteration_count"],
+                        },
+                        {
+                            "key": "source_bundle_id",
+                            "label": "Source bundle",
+                            "value": summary["source_bundle_id"],
+                        },
+                    ],
+                },
+                {
+                    "kind": "note_panel",
+                    "title": "Stage04 draft boundary",
+                    "body": (
+                        "This page edits the immutable Stage04 draft weekly schedule workbook only. "
+                        "It does not claim published weekly truth, does not replace manager-review "
+                        "evidence, and does not reach into live_dispatch.v1 day-of control."
+                    ),
+                },
+                {
+                    "kind": "table",
+                    "title": "Route assignments",
+                    "table_id": "assignment_rows",
+                    "columns": _schedule_table_columns(
+                        assignment_rows,
+                        preferred_order=[
+                            "service_date",
+                            "route_slot_id",
+                            "assigned_driver_id",
+                            "assignment_status",
+                            "projected_minutes",
+                            "baseline_template_state",
+                            "planned_driver_day_state",
+                            "new_agreement_required",
+                            "new_agreement_trigger_reason",
+                            "template_state_preservation_fit",
+                            "candidate_delta_id",
+                            "source_bundle_id",
+                            "iteration_index",
+                            "delta_kind",
+                            "previous_week_stability",
+                        ],
+                    ),
+                    "rows": _schedule_scalar_rows(assignment_rows),
+                },
+                {
+                    "kind": "table",
+                    "title": "Reserve posture",
+                    "table_id": "reserve_rows",
+                    "columns": _schedule_table_columns(
+                        reserve_rows,
+                        preferred_order=[
+                            "service_date",
+                            "route_slot_id",
+                            "route_id",
+                            "assigned_driver_id",
+                            "assignment_status",
+                            "phase",
+                            "projected_minutes",
+                            "availability_state",
+                            "baseline_template_state",
+                            "planned_driver_day_state",
+                            "new_agreement_required",
+                            "new_agreement_trigger_reason",
+                            "template_state_preservation_fit",
+                            "iteration_index",
+                            "rationale_code",
+                            "assignment_action",
+                        ],
+                    ),
+                    "rows": _schedule_scalar_rows(reserve_rows),
+                },
+                {
+                    "kind": "table",
+                    "title": "Iteration deltas",
+                    "table_id": "iteration_deltas",
+                    "columns": _schedule_table_columns(
+                        iteration_rows,
+                        preferred_order=[
+                            "iteration_index",
+                            "batch_id",
+                            "planning_phase",
+                            "pressure_group_id",
+                            "batch_size",
+                            "route_slot_ids",
+                            "assigned_route_slot_ids",
+                            "uncovered_route_slot_ids",
+                            "moved_route_slot_ids",
+                        ],
+                    ),
+                    "rows": _schedule_scalar_rows(iteration_rows),
+                },
+                {
+                    "kind": "history_stub",
+                    "title": "History",
+                    "entries": [
+                        {
+                            "label": "Current artifact version",
+                            "value": artifact_version_id,
+                        },
+                        {
+                            "label": "Supersedes",
+                            "value": supersedes_artifact_version_id or "Initial Stage04 draft",
+                        },
+                        {
+                            "label": "Latest draft in chain",
+                            "value": latest_in_chain_artifact_version_id,
+                        },
+                    ],
+                },
+            ],
+            "validation": {
+                "status": "informational",
+                "warnings": [
+                    "This artifact-backed schedule workpage edits only the Stage04 draft weekly schedule workbook for the selected run.",
+                    "Published weekly truth still begins only at Stage06 pointer promotion, and live dispatch remains downstream.",
+                ],
+            },
+        },
+        "source": {
+            "mode": "artifact_projection",
+            "primary_dataset_key": SCHEDULE_DRAFT_DATASET_KEY,
+            "source_dataset_keys": [
+                SCHEDULE_DRAFT_DATASET_KEY,
+                _SCHEDULE_DRAFT_DOC_DATASET_KEY,
+                _SCHEDULE_VALIDATION_SUMMARY_DATASET_KEY,
+            ],
+            "source_artifact_version_id": artifact_version_id,
+            "source_refs": _schedule_artifact_source_refs(
+                artifacts=artifacts,
+                artifact_version_id=artifact_version_id,
+            ),
+        },
+        "freshness": {
+            "generated_at": generated_at or utc_now_iso(),
+            "source_kind": "artifact_version",
+            "source_version": artifact_version_id,
+        },
+        "artifact_context": {
+            "artifact_version_id": artifact_version_id,
+            "workflow_run_id": workflow_run_id,
+            "artifact_kind": SCHEDULE_DRAFT_DATASET_KEY,
+            "supersedes_artifact_version_id": supersedes_artifact_version_id,
+            "superseded_by_artifact_version_id": superseded_by_artifact_version_id,
+            "latest_in_chain_artifact_version_id": latest_in_chain_artifact_version_id,
+            "download_path": download_path,
+        },
+    }
+
+
 @lru_cache(maxsize=1)
 def _load_actual_ops_source_material() -> dict[str, Any]:
     loaded = yaml.safe_load(_ACTUAL_OPS_SOURCE_MATERIAL_PATH.read_text(encoding="utf-8"))
@@ -1178,6 +1388,94 @@ def _projection_rows(projection: Mapping[str, Any], key: str) -> list[dict[str, 
         if isinstance(row, Mapping):
             rows.append(dict(row))
     return rows
+
+
+def _schedule_artifact_summary(
+    *,
+    workflow_run: Mapping[str, Any],
+    assignment_rows: list[dict[str, Any]],
+    reserve_rows: list[dict[str, Any]],
+    iteration_rows: list[dict[str, Any]],
+) -> dict[str, Any]:
+    first_assignment = assignment_rows[0] if assignment_rows else {}
+    source_bundle_id = _require_text_or_default(
+        first_assignment.get("source_bundle_id"),
+        default="unavailable",
+    )
+    candidate_delta_id = _require_text_or_default(
+        first_assignment.get("candidate_delta_id"),
+        default="unavailable",
+    )
+    return {
+        "planning_week_id": _require_text(workflow_run.get("partition_key")),
+        "operational_week_start": _require_text(workflow_run.get("logical_date")),
+        "route_assignment_count": len(assignment_rows),
+        "reserve_assignment_count": len(reserve_rows),
+        "iteration_count": len(iteration_rows),
+        "source_bundle_id": source_bundle_id,
+        "candidate_delta_id": candidate_delta_id,
+    }
+
+
+def _schedule_artifact_source_refs(
+    *,
+    artifacts: list[dict[str, Any]],
+    artifact_version_id: str,
+) -> list[str]:
+    refs: list[str] = []
+    for dataset_key in (
+        SCHEDULE_DRAFT_DATASET_KEY,
+        _SCHEDULE_DRAFT_DOC_DATASET_KEY,
+        _SCHEDULE_VALIDATION_SUMMARY_DATASET_KEY,
+    ):
+        artifact = _latest_artifact_for_dataset_key(artifacts, dataset_key=dataset_key)
+        if artifact is None:
+            continue
+        ref = _artifact_detail_ref(artifact)
+        if ref not in refs:
+            refs.append(ref)
+    if not refs:
+        refs.append(f"/api/v1/artifacts/{artifact_version_id}")
+    return refs
+
+
+def _schedule_table_columns(
+    rows: list[dict[str, Any]],
+    *,
+    preferred_order: list[str],
+) -> list[dict[str, str]]:
+    if not rows:
+        return [{"key": "empty", "label": "No rows"}]
+    first_row = rows[0]
+    ordered_keys = [key for key in preferred_order if key in first_row]
+    ordered_keys.extend(
+        key for key in first_row.keys() if key not in ordered_keys
+    )
+    return [
+        {
+            "key": key,
+            "label": key.replace("_", " ").title(),
+        }
+        for key in ordered_keys
+    ]
+
+
+def _schedule_scalar_rows(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    return [
+        {
+            key: _schedule_scalar_value(value)
+            for key, value in row.items()
+        }
+        for row in rows
+    ]
+
+
+def _schedule_scalar_value(value: Any) -> Any:
+    if value is None or isinstance(value, (str, int, float, bool)):
+        return value
+    if isinstance(value, list):
+        return ", ".join(str(item) for item in value)
+    return str(value)
 
 
 def _artifact_eod_summary(
@@ -1549,6 +1847,11 @@ def _require_text(value: Any) -> str:
     if not text:
         raise ValueError("expected non-empty text value")
     return text
+
+
+def _require_text_or_default(value: Any, *, default: str) -> str:
+    text = str(value or "").strip()
+    return text or default
 
 
 def _require_int(value: Any) -> int:

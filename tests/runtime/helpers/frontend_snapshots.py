@@ -11,6 +11,7 @@ from tests.runtime.helpers.runtime_cli import REPO_ROOT, run_cli
 from tests.runtime.helpers.scenario_harness import RuntimeScenarioHarness
 from tests.runtime.helpers.workpage_runs import (
     seed_actual_ops_weekly_schedule_run,
+    seed_actual_ops_weekly_schedule_run_with_stage04_outputs,
     seed_dispatch_reporting_workpage_run,
 )
 
@@ -43,6 +44,8 @@ SNAPSHOT_FILES = {
     "official_outputs_pointers_state": "official_outputs_pointers_state.json",
     "workpage_schedule_v0_state": "workpage_schedule_v0_state.json",
     "workpage_schedule_v0_run_state": "workpage_schedule_v0_run_state.json",
+    "workpage_schedule_v0_artifact_state": "workpage_schedule_v0_artifact_state.json",
+    "workpage_schedule_v0_artifact_submit_response": "workpage_schedule_v0_artifact_submit_response.json",
     "workpage_eod_v0_state": "workpage_eod_v0_state.json",
     "workpage_eod_v0_run_state": "workpage_eod_v0_run_state.json",
     "workpage_eod_v0_run_artifact_create_response": "workpage_eod_v0_run_artifact_create_response.json",
@@ -96,6 +99,9 @@ EMBEDDED_ID_PATTERNS = {
     "artifact_version_id": re.compile(r"av-[0-9a-fA-F-]{8,}"),
     "flag_id": re.compile(r"fl-[0-9a-fA-F-]{8,}"),
     "bundle_id": re.compile(r"bundle-[a-z0-9-]+-stage04-[0-9a-f]{10}"),
+    "candidate_delta_id": re.compile(
+        r"cand-[a-z0-9-]+-stage04-[0-9a-f]{8,}-[0-9a-f]{8,}"
+    ),
     "command_receipt_key": re.compile(r"command-receipt:[0-9a-f]{64}"),
 }
 
@@ -168,6 +174,12 @@ def build_frontend_snapshots_payloads() -> dict[str, dict[str, Any]]:
             ),
             "workpage_schedule_v0_run_state": _build_schedule_run_workpage_snapshot(
                 tmp_path=base / "workpage_schedule_v0_run"
+            ),
+            "workpage_schedule_v0_artifact_state": _build_schedule_artifact_state_snapshot(
+                tmp_path=base / "workpage_schedule_v0_artifact_state"
+            ),
+            "workpage_schedule_v0_artifact_submit_response": _build_schedule_artifact_submit_snapshot(
+                tmp_path=base / "workpage_schedule_v0_artifact_submit"
             ),
             "workpage_eod_v0_state": _build_eod_workpage_snapshot(
                 tmp_path=base / "workpage_eod_v0"
@@ -375,6 +387,90 @@ def _build_schedule_run_workpage_snapshot(*, tmp_path: Path) -> dict[str, Any]:
                 "workpage_id": "schedule-v0",
             },
             "workpage_state": payload,
+        }
+    )
+
+
+def _build_schedule_artifact_state_snapshot(*, tmp_path: Path) -> dict[str, Any]:
+    tmp_path.mkdir(parents=True, exist_ok=True)
+    db_url = f"sqlite:///{tmp_path / 'workpage_schedule_v0_artifact.db'}"
+    seeded = seed_actual_ops_weekly_schedule_run_with_stage04_outputs(
+        db_url=db_url,
+        tenant_id="tenant-a",
+        domain_id="domain-x",
+        run_tag="snapshot:workpage-schedule-v0-artifact",
+    )
+    client = RuntimeApiClient(
+        db_url=db_url,
+        tenant_id="tenant-a",
+        domain_id="domain-x",
+        actor_id="human:frontend-snapshot-exporter",
+        actor_type="human",
+        actor_roles=["dispatch_supervisor", "operations_manager", "schedule_planner"],
+    )
+    artifact_version_id = str(seeded["stage04_outputs"]["draft_workbook"]["artifact_version_id"])
+    payload = client.get(f"/api/v1/workpages/artifacts/{artifact_version_id}").payload
+    return _stabilize(
+        {
+            "snapshot_id": "workpage_schedule_v0_artifact_state",
+            "source": {
+                "capture": "artifact_backed_read_projection",
+                "workflow_run_id": seeded["workflow_run_id"],
+                "workpage_id": "schedule-v0",
+            },
+            "workpage_state": payload,
+        }
+    )
+
+
+def _build_schedule_artifact_submit_snapshot(*, tmp_path: Path) -> dict[str, Any]:
+    tmp_path.mkdir(parents=True, exist_ok=True)
+    db_url = f"sqlite:///{tmp_path / 'workpage_schedule_v0_artifact_submit.db'}"
+    seeded = seed_actual_ops_weekly_schedule_run_with_stage04_outputs(
+        db_url=db_url,
+        tenant_id="tenant-a",
+        domain_id="domain-x",
+        run_tag="snapshot:workpage-schedule-v0-artifact-submit",
+    )
+    client = RuntimeApiClient(
+        db_url=db_url,
+        tenant_id="tenant-a",
+        domain_id="domain-x",
+        actor_id="human:frontend-snapshot-exporter",
+        actor_type="human",
+        actor_roles=["dispatch_supervisor", "operations_manager", "schedule_planner"],
+    )
+    artifact_version_id = str(seeded["stage04_outputs"]["draft_workbook"]["artifact_version_id"])
+    current = client.get(f"/api/v1/workpages/artifacts/{artifact_version_id}").payload
+    assignment_rows = list(current["workpage"]["sections"][2]["rows"])
+    reserve_rows = list(current["workpage"]["sections"][3]["rows"])
+    assignment_rows[0] = {
+        **assignment_rows[0],
+        "assigned_driver_id": "DRV-SNAPSHOT-77",
+        "assignment_status": "manual_override",
+    }
+    reserve_rows[0] = {
+        **reserve_rows[0],
+        "assigned_driver_id": "DRV-SNAPSHOT-88",
+        "assignment_status": "manual_override",
+    }
+    payload = client.post(
+        f"/api/v1/workpages/artifacts/{artifact_version_id}/submit",
+        payload={
+            "rows": assignment_rows,
+            "reserve_rows": reserve_rows,
+            "idempotency_key": "snapshot:schedule-artifact-submit",
+        },
+    ).payload
+    return _stabilize(
+        {
+            "snapshot_id": "workpage_schedule_v0_artifact_submit_response",
+            "source": {
+                "capture": "artifact_backed_submit_response",
+                "workflow_run_id": seeded["workflow_run_id"],
+                "workpage_id": "schedule-v0",
+            },
+            "submit_response": payload,
         }
     )
 

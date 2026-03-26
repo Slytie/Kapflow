@@ -283,14 +283,31 @@ def download_artifact_blob_command(
     try:
         content = read_blob(storage_uri)
     except ArtifactStorageError as exc:
-        raise CommandError(
-            code="artifact_blob_not_found",
-            message=str(exc),
-            details={
-                "artifact_version_id": artifact_version_id,
-                "storage_uri": storage_uri,
-            },
-        ) from exc
+        if str(artifact.get("artifact_kind") or "") == "planning.draft_weekly_schedule.workbook":
+            from onetruth.application.services.schedule_control.draft_workbook import (
+                draft_workbook_bytes_from_metadata_json,
+            )
+
+            try:
+                content = draft_workbook_bytes_from_metadata_json(artifact.get("metadata_json"))
+            except ValueError as metadata_exc:
+                raise CommandError(
+                    code="artifact_blob_not_found",
+                    message=str(metadata_exc),
+                    details={
+                        "artifact_version_id": artifact_version_id,
+                        "storage_uri": storage_uri,
+                    },
+                ) from metadata_exc
+        else:
+            raise CommandError(
+                code="artifact_blob_not_found",
+                message=str(exc),
+                details={
+                    "artifact_version_id": artifact_version_id,
+                    "storage_uri": storage_uri,
+                },
+            ) from exc
     return {
         "artifact_version": artifact,
         "content_bytes": content,

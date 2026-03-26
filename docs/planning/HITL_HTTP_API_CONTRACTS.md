@@ -293,7 +293,7 @@ Route-family decision:
   - `GET /api/v1/workpages/artifacts/{artifact_version_id}`
   - `POST /api/v1/workpages/artifacts/{artifact_version_id}/submit`
 
-The `demo` subfamily is implemented today. After EPIC-122 it remains a compatibility-alias family, not the primary or long-term canonical access model. The canonical frontend run-backed pages now live under `/runs/:workflowRunId/workpages/*`, while the only implemented artifact-backed family remains EOD and schedule stays query-backed/composite in the product today.
+The `demo` subfamily is implemented today. After EPIC-122 it remains a compatibility-alias family, not the primary or long-term canonical access model. The canonical frontend run-backed pages now live under `/runs/:workflowRunId/workpages/*`. After EPIC-123, the implemented artifact-backed family now covers both EOD (`reporting.upd_draft.workbook`) and the bounded Stage04 schedule draft lane (`planning.draft_weekly_schedule.workbook`), while Stage06 publish, Stage07 seeds, and live-dispatch remain out of scope.
 
 Current planned demo workpage ids:
 - `schedule-v0`
@@ -359,13 +359,14 @@ Draft resolution shape (`draft_resolution`, run-backed EOD landing only):
 Notes:
 - The schedule page is composite and may set `primary_dataset_key` to `null` while populating `source_dataset_keys[]`.
 - The EOD page should remain aligned to `reporting.upd_draft.workbook`, not final-packet semantics.
-- The first implemented artifact-backed slice is **EOD only**; schedule stays on the query-backed route family in the product today.
+- The artifact-backed workpage family now supports both the EOD workbook lane and the bounded Stage04 schedule draft workbook lane.
 - Run-backed schedule responses should set `run_context` and leave `draft_resolution=null`.
 - The implemented run-backed schedule route currently lives at `GET /api/v1/workpages/workflow-runs/{workflow_run_id}/schedule-v0`.
 - The implemented run-backed schedule route uses `source.mode=run_projection`, keeps `source_artifact_version_id=null`, and uses `freshness.source_kind=workflow_run_projection` plus `freshness.source_version=bundle.bundle_id`.
 - If a weekly run does not yet have the required Stage04 input artifacts, the run-backed schedule route should fail cleanly with `409 workpage_projection_unavailable` and explicit missing dataset keys rather than falling back to demo defaults.
-- EPIC-123 now freezes the first future schedule artifact-backed slice around `planning.draft_weekly_schedule.workbook`: reserve the canonical frontend route `/runs/:workflowRunId/workpages/schedule-v0/artifacts/:artifactVersionId`, reuse the existing generic artifact-backed `GET /api/v1/workpages/artifacts/{artifact_version_id}` and `POST /api/v1/workpages/artifacts/{artifact_version_id}/submit` family, and do **not** add `POST /api/v1/workpages/workflow-runs/{workflow_run_id}/schedule-v0/drafts` because Stage04 already materializes the initial draft workbook.
-- In that future schedule slice, `planning.manager_review.doc` remains evidence only, while `planning.published_weekly_schedule.workbook` and `planning.daily_dispatch_seed.*` remain outside the edit surface.
+- The implemented schedule artifact-backed slice is anchored to `planning.draft_weekly_schedule.workbook` on canonical frontend route `/runs/:workflowRunId/workpages/schedule-v0/artifacts/:artifactVersionId`, reusing the existing generic artifact-backed `GET /api/v1/workpages/artifacts/{artifact_version_id}` and `POST /api/v1/workpages/artifacts/{artifact_version_id}/submit` family.
+- Do **not** add `POST /api/v1/workpages/workflow-runs/{workflow_run_id}/schedule-v0/drafts`; Stage04 already materializes the initial draft workbook.
+- In the implemented schedule slice, `planning.manager_review.doc` remains evidence only, while `planning.published_weekly_schedule.workbook` and `planning.daily_dispatch_seed.*` remain outside the edit surface.
 - Run-backed EOD landing responses should set `run_context` plus `draft_resolution`, but must not pretend to be artifact projections.
 - The implemented run-backed EOD landing route currently lives at `GET /api/v1/workpages/workflow-runs/{workflow_run_id}/eod-v0`.
 - The implemented run-backed EOD landing route intentionally reuses the validated read-only EOD landing body, sets `source.mode=run_projection`, keeps `source.source_artifact_version_id=null`, and uses `freshness.source_kind=workflow_run_projection` plus `freshness.source_version=<latest_compatible_draft_artifact_version_id|workflow_run_id>`.
