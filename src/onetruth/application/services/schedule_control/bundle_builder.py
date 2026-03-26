@@ -97,11 +97,36 @@ class Rolling7ComplianceSnapshot:
 class DriverPolicySignal:
     driver_id: str
     target_shifts_per_week: int
+    source_target_shifts_per_week: int
+    minimum_desired_shifts_per_week: int
+    avoid_overtime_after_shifts_per_week: int
     max_shifts_per_week: int
+    hard_max_shifts_per_week: int | None
     max_minutes_rolling7: int
+    hard_max_minutes_rolling7: int | None
     on_call_eligible: bool
     emergency_only: bool
+    target_shifts_per_week_is_heuristic: bool
+    max_shifts_per_week_is_heuristic: bool
+    max_minutes_rolling7_is_heuristic: bool
     tags: tuple[str, ...]
+
+
+@dataclass(frozen=True)
+class BufferTargetRange:
+    min_count: int
+    preferred_count: int
+    max_count: int
+
+
+@dataclass(frozen=True)
+class WeeklyPlanningPolicy:
+    minimum_desired_shifts_per_week: int = 3
+    preferred_target_shifts_per_week: int = 4
+    avoid_overtime_after_shifts_per_week: int = 4
+    heuristic_weekly_targets_are_soft: bool = False
+    heuristic_weekly_caps_are_soft: bool = False
+    heuristic_rolling7_caps_are_soft: bool = False
 
 
 @dataclass(frozen=True)
@@ -110,6 +135,8 @@ class DailyDemandSummary:
     planned_route_count: int
     on_call_target: int
     excess_capacity_target: int
+    on_call_target_range: BufferTargetRange
+    excess_capacity_target_range: BufferTargetRange
     standard_slot_count: int
     standard_early_slot_count: int
     standard_late_slot_count: int
@@ -128,6 +155,7 @@ class WeeklyScheduleControlBundle:
     trigger_type: str
     scope_start: str
     scope_end_exclusive: str
+    planning_policy: WeeklyPlanningPolicy
     route_slots: tuple[RouteSlotRequirement, ...]
     drivers: tuple[DriverCapability, ...]
     availability_by_driver: dict[str, DriverAvailability]
@@ -197,9 +225,11 @@ def build_weekly_schedule_control_bundle(
         route_slot_requirements_artifact=route_slot_requirements_artifact,
         route_slots=route_slots,
     )
+    planning_policy = _parse_planning_policy(route_slot_requirements_artifact)
     policy_signals_by_driver = _build_policy_signals(
         drivers=drivers,
         availability_by_driver=availability_by_driver,
+        planning_policy=planning_policy,
     )
     rolling_7_compliance_by_driver = _build_rolling_7_snapshots(
         planning_week_start=scope_start_date,
@@ -248,6 +278,7 @@ def build_weekly_schedule_control_bundle(
         trigger_type=str(trigger_type),
         scope_start=scope_start_date.isoformat(),
         scope_end_exclusive=scope_end_exclusive_date.isoformat(),
+        planning_policy=planning_policy,
         route_slots=route_slots,
         drivers=drivers,
         availability_by_driver=availability_by_driver,
@@ -726,10 +757,33 @@ def _parse_daily_demand_summary(
         parsed[service_date] = DailyDemandSummary(
             service_date=service_date,
             planned_route_count=max(_coerce_int(row.get("planned_route_count"), default=0), 0),
-            on_call_target=max(_coerce_int(row.get("on_call_target"), default=0), 0),
-            excess_capacity_target=max(
-                _coerce_int(row.get("excess_capacity_target"), default=0),
-                0,
+            on_call_target=_buffer_target_range(
+                row=row,
+                min_key="on_call_min_target",
+                preferred_key="on_call_preferred_target",
+                max_key="on_call_max_target",
+                fallback_key="on_call_target",
+            ).preferred_count,
+            excess_capacity_target=_buffer_target_range(
+                row=row,
+                min_key="excess_capacity_min_target",
+                preferred_key="excess_capacity_preferred_target",
+                max_key="excess_capacity_max_target",
+                fallback_key="excess_capacity_target",
+            ).preferred_count,
+            on_call_target_range=_buffer_target_range(
+                row=row,
+                min_key="on_call_min_target",
+                preferred_key="on_call_preferred_target",
+                max_key="on_call_max_target",
+                fallback_key="on_call_target",
+            ),
+            excess_capacity_target_range=_buffer_target_range(
+                row=row,
+                min_key="excess_capacity_min_target",
+                preferred_key="excess_capacity_preferred_target",
+                max_key="excess_capacity_max_target",
+                fallback_key="excess_capacity_target",
             ),
             standard_slot_count=max(
                 _coerce_int(
@@ -768,6 +822,8 @@ def _parse_daily_demand_summary(
                 "planned_route_count": 0,
                 "on_call_target": 0,
                 "excess_capacity_target": 0,
+                "on_call_target_range": BufferTargetRange(0, 0, 0),
+                "excess_capacity_target_range": BufferTargetRange(0, 0, 0),
                 "standard_slot_count": 0,
                 "standard_early_slot_count": 0,
                 "standard_late_slot_count": 0,
@@ -799,6 +855,8 @@ def _parse_daily_demand_summary(
             planned_route_count=int(values["planned_route_count"]),
             on_call_target=int(values["on_call_target"]),
             excess_capacity_target=int(values["excess_capacity_target"]),
+            on_call_target_range=values["on_call_target_range"],
+            excess_capacity_target_range=values["excess_capacity_target_range"],
             standard_slot_count=int(values["standard_slot_count"]),
             standard_early_slot_count=int(values["standard_early_slot_count"]),
             standard_late_slot_count=int(values["standard_late_slot_count"]),
@@ -816,6 +874,7 @@ def _build_policy_signals(
     *,
     drivers: tuple[DriverCapability, ...],
     availability_by_driver: Mapping[str, DriverAvailability],
+    planning_policy: WeeklyPlanningPolicy,
 ) -> dict[str, DriverPolicySignal]:
     signals: dict[str, DriverPolicySignal] = {}
     availability_driver_ids = set(availability_by_driver.keys())
@@ -823,18 +882,35 @@ def _build_policy_signals(
     for driver_id in sorted(set(capability_by_driver.keys()) | availability_driver_ids):
         capability = capability_by_driver.get(driver_id)
         availability = availability_by_driver.get(driver_id)
-        target_shifts_per_week = (
+        source_target_shifts_per_week = (
             availability.target_shifts_per_week if availability is not None else 4
         )
+        target_shifts_per_week = (
+            planning_policy.preferred_target_shifts_per_week
+            if planning_policy.heuristic_weekly_targets_are_soft
+            else source_target_shifts_per_week
+        )
         restriction_set = set(capability.approved_restrictions if capability is not None else ())
-        max_shifts_per_week = _restriction_prefixed_int(
+        source_max_shifts_per_week = _restriction_prefixed_int(
             restriction_set,
             prefix="max_shifts_per_week=",
-        ) or target_shifts_per_week
-        max_minutes_rolling7 = _restriction_prefixed_int(
+        ) or source_target_shifts_per_week
+        max_shifts_per_week = max(source_max_shifts_per_week, 1)
+        hard_max_shifts_per_week = (
+            None
+            if planning_policy.heuristic_weekly_caps_are_soft
+            else max_shifts_per_week
+        )
+        source_max_minutes_rolling7 = _restriction_prefixed_int(
             restriction_set,
             prefix="max_minutes_rolling7=",
-        ) or (max(max_shifts_per_week, target_shifts_per_week) * 600)
+        ) or (max(max_shifts_per_week, source_target_shifts_per_week) * 600)
+        max_minutes_rolling7 = max(source_max_minutes_rolling7, 1)
+        hard_max_minutes_rolling7 = (
+            None
+            if planning_policy.heuristic_rolling7_caps_are_soft
+            else max_minutes_rolling7
+        )
         tags = _unique_tokens(
             [
                 *(capability.policy_tags if capability is not None else ()),
@@ -844,13 +920,74 @@ def _build_policy_signals(
         signals[driver_id] = DriverPolicySignal(
             driver_id=driver_id,
             target_shifts_per_week=target_shifts_per_week,
+            source_target_shifts_per_week=source_target_shifts_per_week,
+            minimum_desired_shifts_per_week=planning_policy.minimum_desired_shifts_per_week,
+            avoid_overtime_after_shifts_per_week=planning_policy.avoid_overtime_after_shifts_per_week,
             max_shifts_per_week=max(max_shifts_per_week, 1),
+            hard_max_shifts_per_week=hard_max_shifts_per_week,
             max_minutes_rolling7=max(max_minutes_rolling7, 1),
+            hard_max_minutes_rolling7=hard_max_minutes_rolling7,
             on_call_eligible=bool(availability.on_call_eligible) if availability is not None else False,
             emergency_only=bool(availability.emergency_only) if availability is not None else False,
+            target_shifts_per_week_is_heuristic=planning_policy.heuristic_weekly_targets_are_soft,
+            max_shifts_per_week_is_heuristic=planning_policy.heuristic_weekly_caps_are_soft,
+            max_minutes_rolling7_is_heuristic=planning_policy.heuristic_rolling7_caps_are_soft,
             tags=tags,
         )
     return signals
+
+
+def _parse_planning_policy(artifact: Mapping[str, Any]) -> WeeklyPlanningPolicy:
+    metadata = _metadata_json(artifact)
+    raw = metadata.get("planning_policy")
+    if not isinstance(raw, Mapping):
+        return WeeklyPlanningPolicy()
+    work_distribution = raw.get("work_distribution")
+    if not isinstance(work_distribution, Mapping):
+        work_distribution = {}
+    return WeeklyPlanningPolicy(
+        minimum_desired_shifts_per_week=max(
+            _coerce_int(work_distribution.get("minimum_desired_shifts_per_week"), default=3),
+            1,
+        ),
+        preferred_target_shifts_per_week=max(
+            _coerce_int(work_distribution.get("preferred_target_shifts_per_week"), default=4),
+            1,
+        ),
+        avoid_overtime_after_shifts_per_week=max(
+            _coerce_int(work_distribution.get("avoid_overtime_after_shifts_per_week"), default=4),
+            1,
+        ),
+        heuristic_weekly_targets_are_soft=_coerce_bool(
+            raw.get("heuristic_weekly_targets_are_soft")
+        ),
+        heuristic_weekly_caps_are_soft=_coerce_bool(raw.get("heuristic_weekly_caps_are_soft")),
+        heuristic_rolling7_caps_are_soft=_coerce_bool(
+            raw.get("heuristic_rolling7_caps_are_soft")
+        ),
+    )
+
+
+def _buffer_target_range(
+    *,
+    row: Mapping[str, Any],
+    min_key: str,
+    preferred_key: str,
+    max_key: str,
+    fallback_key: str,
+) -> BufferTargetRange:
+    fallback = max(_coerce_int(row.get(fallback_key), default=0), 0)
+    preferred = max(_coerce_int(row.get(preferred_key), default=fallback), 0)
+    minimum = max(_coerce_int(row.get(min_key), default=preferred), 0)
+    maximum = max(_coerce_int(row.get(max_key), default=preferred), 0)
+    if maximum < minimum:
+        maximum = minimum
+    preferred = min(max(preferred, minimum), maximum)
+    return BufferTargetRange(
+        min_count=minimum,
+        preferred_count=preferred,
+        max_count=maximum,
+    )
 
 
 def _build_rolling_7_snapshots(

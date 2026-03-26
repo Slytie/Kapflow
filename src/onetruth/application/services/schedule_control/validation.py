@@ -95,15 +95,18 @@ def evaluate_hard_constraints(
         if schedule_state is not None
         else 0
     )
-    max_shifts_per_week = (
-        int(policy_signal.max_shifts_per_week)
-        if policy_signal is not None
-        else max(int(getattr(availability, "target_shifts_per_week", 4)), 1)
+    hard_max_shifts_per_week = (
+        int(policy_signal.hard_max_shifts_per_week)
+        if policy_signal is not None and policy_signal.hard_max_shifts_per_week is not None
+        else None
     )
-    if current_week_shift_count + 1 > max_shifts_per_week:
+    if (
+        hard_max_shifts_per_week is not None
+        and current_week_shift_count + 1 > hard_max_shifts_per_week
+    ):
         blocked_reasons.append("max_shifts_per_week")
 
-    rolling_minutes_limit = (
+    display_rolling_minutes_limit = (
         int(policy_signal.max_minutes_rolling7)
         if policy_signal is not None
         else (
@@ -113,6 +116,11 @@ def evaluate_hard_constraints(
             )
             or 0
         )
+    )
+    hard_rolling_minutes_limit = (
+        int(policy_signal.hard_max_minutes_rolling7)
+        if policy_signal is not None and policy_signal.hard_max_minutes_rolling7 is not None
+        else None
     )
     if schedule_state is not None:
         projected_rolling7_minutes, _ = schedule_state.projected_rolling7_state(
@@ -125,8 +133,12 @@ def evaluate_hard_constraints(
     else:
         projected_rolling7_minutes = int(bundle.actual_minutes_by_driver.get(driver.driver_id, 0))
         projected_rolling7_minutes += route_slot.projected_minutes
-    remaining_rolling7_minutes = max(rolling_minutes_limit - projected_rolling7_minutes, 0)
-    if rolling_minutes_limit > 0 and projected_rolling7_minutes > rolling_minutes_limit:
+    remaining_rolling7_minutes = max(display_rolling_minutes_limit - projected_rolling7_minutes, 0)
+    if (
+        hard_rolling_minutes_limit is not None
+        and hard_rolling_minutes_limit > 0
+        and projected_rolling7_minutes > hard_rolling_minutes_limit
+    ):
         blocked_reasons.append("rolling_7_day_limit")
 
     if schedule_state is not None:
@@ -310,6 +322,16 @@ def build_stage04_validation_summary(
         warnings.append(
             f"{service_date} excess-capacity baseline shift target short by {int(shortfall)} after deterministic allocation"
         )
+    for service_date, note in sorted(
+        dict(resolved_reserve_summary.get("selection_note_by_service_date") or {}).items()
+    ):
+        if str(note).strip():
+            warnings.append(f"{service_date} on-call buffer note: {str(note).strip()}")
+    for service_date, note in sorted(
+        dict(resolved_excess_capacity_summary.get("selection_note_by_service_date") or {}).items()
+    ):
+        if str(note).strip():
+            warnings.append(f"{service_date} excess-capacity note: {str(note).strip()}")
 
     hard_rule_result = "pass" if not violations else "fail"
     if hard_rule_result == "pass" and warnings:

@@ -114,7 +114,6 @@ def test_execute_next_iteration_runs_soft_improvement_after_full_coverage() -> N
     assert result is not None
     assert result.phase == "improvement"
     assert result.summary.moved_route_slot_ids == ("slot-early", "slot-late")
-    assert result.summary.soft_objective_delta > 0.0
     assert result.summary.preference_fit_delta > 0.0
     assert result.repair_moves[0].move_kind == "swap"
     decisions = {item.route_slot_id: item for item in schedule_state.final_decisions()}

@@ -230,6 +230,69 @@ def test_build_weekly_schedule_control_bundle_parses_realistic_day_resolution_fi
     assert bundle.daily_demand_by_service_date["2026-03-16"].standard_late_slot_count == 6
 
 
+def test_build_weekly_schedule_control_bundle_parses_actual_ops_v3_policy_ranges() -> None:
+    workflow_run = {
+        "workflow_run_id": "wr-weekly-actual-ops-v3-001",
+        "partition_key": "PW-2026-W13",
+    }
+    fixture = build_actual_ops_weekly_stage04_fixture_payloads()
+
+    bundle = build_weekly_schedule_control_bundle(
+        workflow_run=workflow_run,
+        route_slot_requirements_artifact={
+            "artifact_version_id": "av-route-actual-ops-v3-001",
+            "artifact_kind": "planning.route_slot_requirements.workbook",
+            "dataset_key": "planning.route_slot_requirements.workbook",
+            "metadata_json": fixture["route_slot_requirements"],
+        },
+        driver_capabilities_artifact={
+            "artifact_version_id": "av-driver-actual-ops-v3-001",
+            "artifact_kind": "planning.driver_capabilities.workbook",
+            "dataset_key": "planning.driver_capabilities.workbook",
+            "metadata_json": fixture["driver_capabilities"],
+        },
+        approved_availability_artifact={
+            "artifact_version_id": "av-availability-actual-ops-v3-001",
+            "artifact_kind": "planning.approved_availability.workbook",
+            "dataset_key": "planning.approved_availability.workbook",
+            "metadata_json": fixture["approved_availability"],
+        },
+        actual_hours_artifact={
+            "artifact_version_id": "av-hours-actual-ops-v3-001",
+            "artifact_kind": "planning.actual_hours_snapshot.workbook",
+            "dataset_key": "planning.actual_hours_snapshot.workbook",
+            "metadata_json": fixture["actual_hours"],
+        },
+    )
+
+    assert bundle.planning_policy.minimum_desired_shifts_per_week == 3
+    assert bundle.planning_policy.preferred_target_shifts_per_week == 4
+    assert bundle.planning_policy.avoid_overtime_after_shifts_per_week == 4
+    assert bundle.planning_policy.heuristic_weekly_targets_are_soft is True
+    assert bundle.planning_policy.heuristic_weekly_caps_are_soft is True
+    assert bundle.planning_policy.heuristic_rolling7_caps_are_soft is True
+
+    demand = bundle.daily_demand_by_service_date["2026-03-22"]
+    assert demand.on_call_target == 4
+    assert demand.on_call_target_range.min_count == 3
+    assert demand.on_call_target_range.preferred_count == 4
+    assert demand.on_call_target_range.max_count == 5
+    assert demand.excess_capacity_target == 3
+    assert demand.excess_capacity_target_range.min_count == 2
+    assert demand.excess_capacity_target_range.preferred_count == 3
+    assert demand.excess_capacity_target_range.max_count == 5
+
+    policy_signal = bundle.policy_signals_by_driver["A185MOPEG4MOST"]
+    assert policy_signal.source_target_shifts_per_week == 1
+    assert policy_signal.target_shifts_per_week == 4
+    assert policy_signal.max_shifts_per_week == 1
+    assert policy_signal.hard_max_shifts_per_week is None
+    assert policy_signal.max_minutes_rolling7 == 600
+    assert policy_signal.hard_max_minutes_rolling7 is None
+    assert policy_signal.minimum_desired_shifts_per_week == 3
+    assert policy_signal.avoid_overtime_after_shifts_per_week == 4
+
+
 def test_realistic_weekly_stage04_fixture_payloads_lock_overcapacity_contract() -> None:
     fixture = build_realistic_weekly_stage04_fixture_payloads()
 

@@ -32,6 +32,26 @@ def render_stage04_input_bundle(
                 "start": bundle.scope_start,
                 "end_exclusive": bundle.scope_end_exclusive,
             },
+            "planning_policy": {
+                "minimum_desired_shifts_per_week": (
+                    bundle.planning_policy.minimum_desired_shifts_per_week
+                ),
+                "preferred_target_shifts_per_week": (
+                    bundle.planning_policy.preferred_target_shifts_per_week
+                ),
+                "avoid_overtime_after_shifts_per_week": (
+                    bundle.planning_policy.avoid_overtime_after_shifts_per_week
+                ),
+                "heuristic_weekly_targets_are_soft": (
+                    bundle.planning_policy.heuristic_weekly_targets_are_soft
+                ),
+                "heuristic_weekly_caps_are_soft": (
+                    bundle.planning_policy.heuristic_weekly_caps_are_soft
+                ),
+                "heuristic_rolling7_caps_are_soft": (
+                    bundle.planning_policy.heuristic_rolling7_caps_are_soft
+                ),
+            },
             "publish_intent": "publish_weekly_base_schedule",
             "referenced_artifacts": list(bundle.referenced_artifacts),
             "external_evidence_refs": list(bundle.external_evidence_refs),
@@ -41,7 +61,17 @@ def render_stage04_input_bundle(
                     "service_date": item.service_date,
                     "planned_route_count": item.planned_route_count,
                     "on_call_target": item.on_call_target,
+                    "on_call_target_range": {
+                        "min": item.on_call_target_range.min_count,
+                        "preferred": item.on_call_target_range.preferred_count,
+                        "max": item.on_call_target_range.max_count,
+                    },
                     "excess_capacity_target": item.excess_capacity_target,
+                    "excess_capacity_target_range": {
+                        "min": item.excess_capacity_target_range.min_count,
+                        "preferred": item.excess_capacity_target_range.preferred_count,
+                        "max": item.excess_capacity_target_range.max_count,
+                    },
                     "standard_slot_count": item.standard_slot_count,
                     "standard_early_slot_count": item.standard_early_slot_count,
                     "standard_late_slot_count": item.standard_late_slot_count,
@@ -513,10 +543,28 @@ def _driver_profile(
         "policy_signal": (
             {
                 "target_shifts_per_week": policy_signal.target_shifts_per_week,
+                "source_target_shifts_per_week": policy_signal.source_target_shifts_per_week,
+                "minimum_desired_shifts_per_week": (
+                    policy_signal.minimum_desired_shifts_per_week
+                ),
+                "avoid_overtime_after_shifts_per_week": (
+                    policy_signal.avoid_overtime_after_shifts_per_week
+                ),
                 "max_shifts_per_week": policy_signal.max_shifts_per_week,
+                "hard_max_shifts_per_week": policy_signal.hard_max_shifts_per_week,
                 "max_minutes_rolling7": policy_signal.max_minutes_rolling7,
+                "hard_max_minutes_rolling7": policy_signal.hard_max_minutes_rolling7,
                 "on_call_eligible": policy_signal.on_call_eligible,
                 "emergency_only": policy_signal.emergency_only,
+                "target_shifts_per_week_is_heuristic": (
+                    policy_signal.target_shifts_per_week_is_heuristic
+                ),
+                "max_shifts_per_week_is_heuristic": (
+                    policy_signal.max_shifts_per_week_is_heuristic
+                ),
+                "max_minutes_rolling7_is_heuristic": (
+                    policy_signal.max_minutes_rolling7_is_heuristic
+                ),
                 "tags": list(policy_signal.tags),
             }
             if policy_signal is not None

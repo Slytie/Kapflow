@@ -1,0 +1,285 @@
+artifact_kind: planning.route_slot_requirements.workbook
+example_id: weekly_stage04_actual_ops_lab_v3
+schema_version: '1.0'
+planning_week_id: PW-2026-W13
+operational_week_start: '2026-03-22'
+scope_start: '2026-03-22'
+scope_end_exclusive: '2026-03-29'
+shape: aggregate_daily_route_count_rows
+planning_policy:
+  heuristic_weekly_targets_are_soft: true
+  heuristic_weekly_caps_are_soft: true
+  heuristic_rolling7_caps_are_soft: true
+  work_distribution:
+    minimum_desired_shifts_per_week: 3
+    preferred_target_shifts_per_week: 4
+    avoid_overtime_after_shifts_per_week: 4
+columns:
+- service_date
+- route_slot_id
+- route_slot_class
+- required_skill
+- vehicle_type
+- shift_start
+- shift_end
+- estimated_hours
+- required_count
+- route_id
+- source_message_id
+- station_code
+- service_area
+- source_snapshot_row_ref
+- slot_band
+rows:
+- - '2026-03-22'
+  - slot-20260322-cycle1-standard
+  - cycle1_standard
+  - parcel_delivery
+  - XL_van
+  - '11:30'
+  - '20:00'
+  - 8.5
+  - 16
+  - CYC0322
+  - manager-schedule-pdf-2026-03-22-to-2026-03-28
+  - DVC4
+  - Pitt Meadows
+  - holdout-route-total:2026-03-22
+  - ''
+- - '2026-03-23'
+  - slot-20260323-cycle1-standard
+  - cycle1_standard
+  - parcel_delivery
+  - XL_van
+  - '11:30'
+  - '20:00'
+  - 8.5
+  - 23
+  - CYC0323
+  - manager-schedule-pdf-2026-03-22-to-2026-03-28
+  - DVC4
+  - Pitt Meadows
+  - holdout-route-total:2026-03-23
+  - ''
+- - '2026-03-24'
+  - slot-20260324-cycle1-standard
+  - cycle1_standard
+  - parcel_delivery
+  - XL_van
+  - '11:30'
+  - '20:00'
+  - 8.5
+  - 20
+  - CYC0324
+  - manager-schedule-pdf-2026-03-22-to-2026-03-28
+  - DVC4
+  - Pitt Meadows
+  - holdout-route-total:2026-03-24
+  - ''
+- - '2026-03-25'
+  - slot-20260325-cycle1-standard
+  - cycle1_standard
+  - parcel_delivery
+  - XL_van
+  - '11:30'
+  - '20:00'
+  - 8.5
+  - 19
+  - CYC0325
+  - manager-schedule-pdf-2026-03-22-to-2026-03-28
+  - DVC4
+  - Pitt Meadows
+  - holdout-route-total:2026-03-25
+  - ''
+- - '2026-03-26'
+  - slot-20260326-cycle1-standard
+  - cycle1_standard
+  - parcel_delivery
+  - XL_van
+  - '11:30'
+  - '20:00'
+  - 8.5
+  - 21
+  - CYC0326
+  - manager-schedule-pdf-2026-03-22-to-2026-03-28
+  - DVC4
+  - Pitt Meadows
+  - holdout-route-total:2026-03-26
+  - ''
+- - '2026-03-27'
+  - slot-20260327-cycle1-standard
+  - cycle1_standard
+  - parcel_delivery
+  - XL_van
+  - '11:30'
+  - '20:00'
+  - 8.5
+  - 18
+  - CYC0327
+  - manager-schedule-pdf-2026-03-22-to-2026-03-28
+  - DVC4
+  - Pitt Meadows
+  - holdout-route-total:2026-03-27
+  - ''
+- - '2026-03-28'
+  - slot-20260328-cycle1-standard
+  - cycle1_standard
+  - parcel_delivery
+  - XL_van
+  - '11:30'
+  - '20:00'
+  - 8.5
+  - 17
+  - CYC0328
+  - manager-schedule-pdf-2026-03-22-to-2026-03-28
+  - DVC4
+  - Pitt Meadows
+  - holdout-route-total:2026-03-28
+  - ''
+daily_demand_columns:
+- service_date
+- planned_route_count
+- on_call_target
+- on_call_min_target
+- on_call_preferred_target
+- on_call_max_target
+- excess_capacity_target
+- excess_capacity_min_target
+- excess_capacity_preferred_target
+- excess_capacity_max_target
+- standard_slot_count
+- rescue_slot_count
+- overflow_slot_count
+- source_message_id
+- source_kind
+- change_kind
+daily_demand_rows:
+- - '2026-03-22'
+  - 16
+  - 4
+  - 3
+  - 4
+  - 5
+  - 3
+  - 2
+  - 3
+  - 5
+  - 16
+  - 0
+  - 0
+  - manager-schedule-pdf-2026-03-22-to-2026-03-28
+  - manager_schedule_pdf_route_totals_only
+  - holdout_route_total_override
+- - '2026-03-23'
+  - 23
+  - 4
+  - 3
+  - 4
+  - 5
+  - 3
+  - 2
+  - 3
+  - 5
+  - 23
+  - 0
+  - 0
+  - manager-schedule-pdf-2026-03-22-to-2026-03-28
+  - manager_schedule_pdf_route_totals_only
+  - holdout_route_total_override
+- - '2026-03-24'
+  - 20
+  - 4
+  - 3
+  - 4
+  - 5
+  - 3
+  - 2
+  - 3
+  - 5
+  - 20
+  - 0
+  - 0
+  - manager-schedule-pdf-2026-03-22-to-2026-03-28
+  - manager_schedule_pdf_route_totals_only
+  - holdout_route_total_override
+- - '2026-03-25'
+  - 19
+  - 4
+  - 3
+  - 4
+  - 5
+  - 3
+  - 2
+  - 3
+  - 5
+  - 19
+  - 0
+  - 0
+  - manager-schedule-pdf-2026-03-22-to-2026-03-28
+  - manager_schedule_pdf_route_totals_only
+  - holdout_route_total_override
+- - '2026-03-26'
+  - 21
+  - 4
+  - 3
+  - 4
+  - 5
+  - 3
+  - 2
+  - 3
+  - 5
+  - 21
+  - 0
+  - 0
+  - manager-schedule-pdf-2026-03-22-to-2026-03-28
+  - manager_schedule_pdf_route_totals_only
+  - holdout_route_total_override
+- - '2026-03-27'
+  - 18
+  - 4
+  - 3
+  - 4
+  - 5
+  - 3
+  - 2
+  - 3
+  - 5
+  - 18
+  - 0
+  - 0
+  - manager-schedule-pdf-2026-03-22-to-2026-03-28
+  - manager_schedule_pdf_route_totals_only
+  - holdout_route_total_override
+- - '2026-03-28'
+  - 17
+  - 4
+  - 3
+  - 4
+  - 5
+  - 3
+  - 2
+  - 3
+  - 5
+  - 17
+  - 0
+  - 0
+  - manager-schedule-pdf-2026-03-22-to-2026-03-28
+  - manager_schedule_pdf_route_totals_only
+  - holdout_route_total_override
+planner_notes:
+- Route counts for 2026-03-22..2026-03-28 come only from Schedule March 22 to March 28.pdf.
+- Staffing cells, staffing patterns, and richer route mix data from that holdout schedule are
+  intentionally excluded from this lab-normalized package.
+- The deterministic planner should cover required routes first, then fill at least three
+  On-Call buffer positions per day where legal, prefer four, and stop before five when added
+  reserve would worsen work balance, trigger avoidable churn, or create 5th-placement overtime.
+- After route coverage and On-Call filling, the deterministic planner should fill at least two
+  excess-capacity baseline shifts per day where legal, prefer three, and stop before five when
+  stronger work-balance priorities would be harmed.
+- Weekly target shifts and rolling 7 / weekly cap defaults from the compatibility package are
+  heuristic guidance for this pilot package; explicit availability, eligibility, locks, and
+  named restrictions remain authoritative.
+- All routes are temporarily modeled as homogeneous cycle1_standard parcel-delivery
+  XL-van slots until richer route mix data arrives.
+- This payload carries explicit Sunday-start operational scope even though the repo
+  PlanningWeekID remains ISO-based.

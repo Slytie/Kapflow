@@ -1605,15 +1605,9 @@ def _compact_validation_summary(validation_summary: Any) -> dict[str, Any] | Non
             "warnings": list(summary.get("warnings") or [])[:3],
             "tradeoffs": list(summary.get("tradeoffs") or [])[:3],
             "coverage_summary": _compact_coverage_summary(coverage_summary),
-            "reserve_summary": (
-                dict(summary.get("reserve_summary") or {})
-                if isinstance(summary.get("reserve_summary"), dict)
-                else None
-            ),
-            "excess_capacity_summary": (
-                dict(summary.get("excess_capacity_summary") or {})
-                if isinstance(summary.get("excess_capacity_summary"), dict)
-                else None
+            "reserve_summary": _compact_buffer_summary(summary.get("reserve_summary")),
+            "excess_capacity_summary": _compact_buffer_summary(
+                summary.get("excess_capacity_summary")
             ),
             "soft_score_totals": (
                 dict(soft_score_totals) if isinstance(soft_score_totals, dict) else None
@@ -1649,15 +1643,9 @@ def _compact_stage04_build_result(stage04_build_result: Any) -> dict[str, Any] |
         "selected_excess_capacity_count": len(stage04_build_result.get("excess_capacity_rows") or []),
         "selected_on_call_count": len(stage04_build_result.get("reserve_rows") or []),
         "coverage_summary": _compact_coverage_summary(stage04_build_result.get("coverage_summary")),
-        "reserve_summary": (
-            dict(stage04_build_result.get("reserve_summary") or {})
-            if isinstance(stage04_build_result.get("reserve_summary"), dict)
-            else None
-        ),
-        "excess_capacity_summary": (
-            dict(stage04_build_result.get("excess_capacity_summary") or {})
-            if isinstance(stage04_build_result.get("excess_capacity_summary"), dict)
-            else None
+        "reserve_summary": _compact_buffer_summary(stage04_build_result.get("reserve_summary")),
+        "excess_capacity_summary": _compact_buffer_summary(
+            stage04_build_result.get("excess_capacity_summary")
         ),
         "contract_change_summary": _compact_contract_change_summary(
             stage04_build_result.get("contract_change_summary")
@@ -1686,14 +1674,83 @@ def _recommended_stage04_next_action(*, planner_complete: bool) -> str:
 def _compact_contract_change_summary(summary: Any) -> dict[str, Any] | None:
     if not isinstance(summary, dict):
         return None
+    raw_driver_ids = summary.get("new_agreement_driver_ids")
+    raw_service_dates = summary.get("new_agreement_by_service_date")
     return {
         "new_agreement_required_count": int(summary.get("new_agreement_required_count") or 0),
         "new_agreement_driver_day_count": int(
             summary.get("new_agreement_driver_day_count") or 0
         ),
-        "new_agreement_driver_ids": list(summary.get("new_agreement_driver_ids") or []),
-        "new_agreement_by_service_date": dict(
-            summary.get("new_agreement_by_service_date") or {}
+        "new_agreement_driver_count": (
+            len(raw_driver_ids)
+            if isinstance(raw_driver_ids, (list, tuple, set))
+            else 0
+        ),
+        "new_agreement_service_date_count": (
+            len(raw_service_dates)
+            if isinstance(raw_service_dates, dict)
+            else 0
+        ),
+    }
+
+
+def _compact_buffer_summary(summary: Any) -> dict[str, Any] | None:
+    if not isinstance(summary, dict):
+        return None
+    target_by_service_date = (
+        summary.get("on_call_target_by_service_date")
+        or summary.get("excess_capacity_target_by_service_date")
+        or {}
+    )
+    selected_by_service_date = (
+        summary.get("selected_on_call_by_service_date")
+        or summary.get("selected_excess_capacity_by_service_date")
+        or {}
+    )
+    unmet_by_service_date = (
+        summary.get("unmet_on_call_target_by_service_date")
+        or summary.get("unmet_excess_capacity_target_by_service_date")
+        or {}
+    )
+    selection_notes = summary.get("selection_note_by_service_date") or {}
+    return {
+        "preferred_total": int(
+            summary.get("preferred_on_call_total")
+            or summary.get("preferred_excess_capacity_total")
+            or 0
+        ),
+        "target_total": int(
+            summary.get("target_on_call_total")
+            or summary.get("target_excess_capacity_total")
+            or 0
+        ),
+        "selected_total": int(
+            summary.get("selected_on_call_total")
+            or summary.get("selected_excess_capacity_total")
+            or 0
+        ),
+        "unmet_target_total": int(
+            summary.get("unmet_on_call_target_total")
+            or summary.get("unmet_excess_capacity_target_total")
+            or 0
+        ),
+        "service_date_count": len(target_by_service_date) if isinstance(target_by_service_date, dict) else 0,
+        "days_with_selected_capacity": (
+            sum(
+                1
+                for count in selected_by_service_date.values()
+                if int(count or 0) > 0
+            )
+            if isinstance(selected_by_service_date, dict)
+            else 0
+        ),
+        "days_with_shortfall": (
+            sum(1 for count in unmet_by_service_date.values() if int(count or 0) > 0)
+            if isinstance(unmet_by_service_date, dict)
+            else 0
+        ),
+        "days_with_selection_notes": (
+            len(selection_notes) if isinstance(selection_notes, dict) else 0
         ),
     }
 

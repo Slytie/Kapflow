@@ -1,0 +1,55 @@
+source_note: Actual ops lab input package normalized from the semi-clean March 20 compatibility
+  package plus holdout manager schedule route totals from Schedule March 22 to March 28.pdf.
+fixture_contract: weekly_stage04_actual_ops_lab_v3
+planning_week_id: PW-2026-W13
+operational_week_start: '2026-03-22'
+scope_start: '2026-03-22'
+scope_end_exclusive: '2026-03-29'
+service_week_convention: sunday_start_operational_week_lab_assumption
+active_driver_count: 51
+route_slot_count: 134
+availability_states:
+- PREFERRED
+- AVAILABLE
+- AVOID_IF_POSSIBLE
+- ON_CALL_ONLY
+- CANNOT
+previous_week_history_states:
+- WORKED
+- ON_CALL
+- DISPATCH
+- SICK_CALL
+- CANCELLED
+- NA
+daily_route_counts:
+  '2026-03-22': 16
+  '2026-03-23': 23
+  '2026-03-24': 20
+  '2026-03-25': 19
+  '2026-03-26': 21
+  '2026-03-27': 18
+  '2026-03-28': 17
+source_artifacts:
+  route_slot_requirements: docs/workflows/weekly_schedule_planning/v1/examples/route_slot_requirements_actual_ops_lab_v3.yaml
+  driver_capabilities: docs/workflows/weekly_schedule_planning/v1/examples/driver_capabilities_actual_ops_lab_v1.yaml
+  approved_availability: docs/workflows/weekly_schedule_planning/v1/examples/approved_availability_actual_ops_lab_v1.yaml
+  actual_hours: docs/workflows/weekly_schedule_planning/v1/examples/actual_hours_snapshot_actual_ops_lab_v1.yaml
+  input_bundle_manifest: docs/workflows/weekly_schedule_planning/v1/examples/stage04_input_bundle_actual_ops_lab_v3.yaml
+notes:
+- Only the daily route totals came from Schedule March 22 to March 28.pdf; staffing cells,
+  staffing patterns, and richer route-shape details remain out of scope for this package.
+- This package carries range-aware On-Call buffer guidance of min 3 / preferred 4 / max 5
+  legal reserve positions per day after route coverage, without inflating route counts.
+- This package also carries range-aware excess-capacity guidance of min 2 / preferred 3 /
+  max 5 legal scheduled shifts per day after route coverage and On-Call filling, without
+  inflating route counts.
+- Compatibility-package target/cap values remain visible for review, but this pilot treats
+  weekly target shifts and rolling 7 / weekly cap defaults as heuristic planner guidance
+  rather than silent hard blockers.
+- All non-route-total pilot inputs are intentionally unchanged from weekly_stage04_actual_ops_lab_v1.
+- The operational service week is Sunday through Saturday, while the repo PlanningWeekID
+  remains ISO Monday through Sunday; this package keeps both values explicit for review.
+- Raw requests were treated as unavailability only for this pilot package; a strict-truth
+  pipeline would require approval state.
+- Previous-week actuals are proxy values inferred from state labels, not payroll-grade
+  closeout minutes.

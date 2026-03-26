@@ -28,20 +28,20 @@ _HARD_FILTER_ORDER = {
 }
 
 SOFT_SCORE_WEIGHTS: dict[str, float] = {
-    "coverage_pressure": 0.10,
-    "availability_state_fit": 0.12,
-    "preferred_shift_band_fit": 0.10,
-    "preferred_route_slot_class_fit": 0.10,
-    "previous_week_continuity": 0.14,
-    "target_shift_gap": 0.10,
-    "fairness_balance": 0.08,
+    "coverage_pressure": 0.12,
+    "availability_state_fit": 0.10,
+    "preferred_shift_band_fit": 0.06,
+    "preferred_route_slot_class_fit": 0.06,
+    "previous_week_continuity": 0.05,
+    "target_shift_gap": 0.18,
+    "fairness_balance": 0.18,
     "on_call_coverage": 0.05,
-    "lost_work_credit": 0.04,
-    "seniority_preference_fit": 0.08,
-    "reliability_score": 0.08,
-    "rolling7_headroom": 0.05,
-    "avoidable_assignment_score": 0.06,
-    "template_state_preservation_fit": 0.28,
+    "lost_work_credit": 0.16,
+    "seniority_preference_fit": 0.05,
+    "reliability_score": 0.05,
+    "rolling7_headroom": 0.03,
+    "avoidable_assignment_score": 0.05,
+    "template_state_preservation_fit": 0.07,
 }
 
 
@@ -121,6 +121,7 @@ def score_candidate(
         )
 
     availability = bundle.availability_by_driver.get(driver.driver_id)
+    policy_signal = bundle.policy_signals_by_driver.get(driver.driver_id)
     driver_day = _driver_day_record(availability=availability, service_date=route_slot.service_date)
     availability_state = _availability_state_label(
         driver_day=driver_day,
@@ -131,7 +132,14 @@ def score_candidate(
         planned_driver_day_state=planned_driver_day_state,
     )
 
-    target_shifts = max(int(getattr(availability, "target_shifts_per_week", 4)), 1)
+    target_shifts = max(
+        int(
+            policy_signal.target_shifts_per_week
+            if policy_signal is not None
+            else getattr(availability, "target_shifts_per_week", 4)
+        ),
+        1,
+    )
     expected_target_minutes = target_shifts * 480
     observed_minutes = int(bundle.actual_minutes_by_driver.get(driver.driver_id, 0))
     current_week_shift_count = hard_validation.current_week_shift_count
@@ -209,8 +217,8 @@ def score_candidate(
         driver_day=driver_day,
     )
     rolling7_limit = (
-        bundle.policy_signals_by_driver.get(driver.driver_id).max_minutes_rolling7
-        if driver.driver_id in bundle.policy_signals_by_driver
+        policy_signal.max_minutes_rolling7
+        if policy_signal is not None
         else max(expected_target_minutes, 1)
     )
     rolling7_headroom = _clamp01(
@@ -274,17 +282,35 @@ def score_candidate(
 def deterministic_rank_candidates(candidates: list[dict[str, Any]]) -> list[dict[str, Any]]:
     def sort_key(
         item: dict[str, Any],
-    ) -> tuple[int, int, int, float, int, float, float, float, float, str]:
+    ) -> tuple[int, int, int, int, int, int, float, int, float, float, float, float, str]:
         hard_filter_status = str(item.get("hard_filter_status", "blocked")).strip().lower()
         score_bucket = str(item.get("score_bucket", "blocked")).strip().lower()
         candidate_driver_id = str(item.get("candidate_driver_id", ""))
+        current_week_shift_count = int(item.get("current_week_shift_count") or 0)
+        projected_week_shift_count = current_week_shift_count + (
+            1 if hard_filter_status == "pass" else 0
+        )
         return (
             _HARD_FILTER_ORDER.get(hard_filter_status, 99),
             _synthetic_demand_priority_rank(item),
-            int(item.get("current_week_shift_count") or 0),
-            -float(item.get("target_shift_gap") or 0.0),
+            _work_distribution_priority_rank(
+                current_week_shift_count=current_week_shift_count,
+                projected_week_shift_count=projected_week_shift_count,
+            ),
+            _overtime_priority_rank(projected_week_shift_count=projected_week_shift_count),
+            -_reaches_minimum_work(
+                current_week_shift_count=current_week_shift_count,
+                projected_week_shift_count=projected_week_shift_count,
+            ),
+            -_reaches_preferred_work(
+                current_week_shift_count=current_week_shift_count,
+                projected_week_shift_count=projected_week_shift_count,
+            ),
+            -float(item.get("fairness_balance") or 0.0),
             _SCORE_BUCKET_ORDER.get(score_bucket, 99),
             -float(item.get("soft_score_total") or 0.0),
+            -float(item.get("target_shift_gap") or 0.0),
+            -float(item.get("lost_work_credit") or 0.0),
             -float(item.get("template_state_preservation_fit") or 0.0),
             -float(item.get("preference_fit") or 0.0),
             -float(item.get("continuity_score") or item.get("previous_week_stability") or 0.0),
@@ -602,23 +628,23 @@ def _previous_week_continuity(
         elif raw_state == "WORKED":
             base = 0.68
         elif raw_state == "DISPATCH":
-            base = 0.72 if previous_slot_class == route_slot_class else 0.58
+            base = 0.58 if previous_slot_class == route_slot_class else 0.42
         elif raw_state == "ON_CALL":
-            base = 0.76 if _is_flexible_slot(route_slot) else 0.44
+            base = 0.42 if _is_flexible_slot(route_slot) else 0.26
         elif raw_state == "CANCELLED":
-            base = 0.16
-        elif raw_state == "SICK_CALL":
             base = 0.08
+        elif raw_state == "SICK_CALL":
+            base = 0.04
         elif raw_state == "NA":
-            base = 0.32
+            base = 0.08
         elif normalized_state == "worked":
             base = 0.64
         elif normalized_state == "available_not_assigned":
-            base = 0.48
+            base = 0.16
         elif normalized_state == "blocked_previous_week":
-            base = 0.18
+            base = 0.08
         else:
-            base = 0.22
+            base = 0.12
     tags = set(driver.policy_tags) | set(getattr(availability, "policy_tags", ()))
     if "stability_preferred" in tags and base > 0.0:
         base += 0.08
@@ -725,6 +751,42 @@ def _is_flexible_slot(route_slot: RouteSlotRequirement) -> bool:
 
 def _planned_driver_day_state_for_slot(route_slot: RouteSlotRequirement) -> str:
     return "on_call" if route_slot.is_on_call_demand else "assigned"
+
+
+def _work_distribution_priority_rank(
+    *,
+    current_week_shift_count: int,
+    projected_week_shift_count: int,
+) -> int:
+    if current_week_shift_count < 3 and projected_week_shift_count >= 3:
+        return 0
+    if current_week_shift_count < 4 and projected_week_shift_count >= 4:
+        return 1
+    if current_week_shift_count < 3:
+        return 2
+    if projected_week_shift_count <= 4:
+        return 3
+    return 4
+
+
+def _overtime_priority_rank(*, projected_week_shift_count: int) -> int:
+    return 1 if projected_week_shift_count >= 5 else 0
+
+
+def _reaches_minimum_work(
+    *,
+    current_week_shift_count: int,
+    projected_week_shift_count: int,
+) -> int:
+    return int(current_week_shift_count < 3 and projected_week_shift_count >= 3)
+
+
+def _reaches_preferred_work(
+    *,
+    current_week_shift_count: int,
+    projected_week_shift_count: int,
+) -> int:
+    return int(current_week_shift_count < 4 and projected_week_shift_count >= 4)
 
 
 def _weekday_token(service_date: str) -> str:

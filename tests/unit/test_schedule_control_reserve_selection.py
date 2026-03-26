@@ -126,12 +126,128 @@ def test_select_on_call_reserve_rows_allocates_excess_capacity_as_assigned_work(
     }
 
 
+def test_select_excess_capacity_rows_stop_at_preferred_when_max_would_harm_work_balance() -> None:
+    bundle = _build_bundle(
+        daily_targets=(
+            ("2026-03-02", 3, 0, 0),
+            ("2026-03-03", 3, 0, 0),
+            ("2026-03-04", 1, 0, 0),
+            ("2026-03-05", 1, 0, 2),
+        ),
+        daily_target_ranges={
+            "2026-03-05": {
+                "excess_capacity_min_target": 1,
+                "excess_capacity_preferred_target": 2,
+                "excess_capacity_max_target": 3,
+            }
+        },
+        planning_policy={
+            "heuristic_weekly_caps_are_soft": True,
+            "heuristic_rolling7_caps_are_soft": True,
+            "work_distribution": {
+                "minimum_desired_shifts_per_week": 3,
+                "preferred_target_shifts_per_week": 4,
+                "avoid_overtime_after_shifts_per_week": 4,
+            },
+        },
+        driver_rows=(
+            ("DRV-HIGH", "parcel_delivery", "cycle1_standard", "", "full_time"),
+            ("DRV-LOW-1", "parcel_delivery", "cycle1_standard", "", "full_time"),
+            ("DRV-LOW-2", "parcel_delivery", "cycle1_standard", "", "full_time"),
+        ),
+        availability_rows=(
+            ("DRV-HIGH", 3, "no", "2026-03-02", "PREFERRED"),
+            ("DRV-HIGH", 3, "no", "2026-03-03", "PREFERRED"),
+            ("DRV-HIGH", 3, "no", "2026-03-04", "PREFERRED"),
+            ("DRV-HIGH", 3, "no", "2026-03-05", "PREFERRED"),
+            ("DRV-LOW-1", 3, "no", "2026-03-02", "PREFERRED"),
+            ("DRV-LOW-1", 3, "no", "2026-03-03", "PREFERRED"),
+            ("DRV-LOW-1", 3, "no", "2026-03-05", "PREFERRED"),
+            ("DRV-LOW-2", 3, "no", "2026-03-02", "PREFERRED"),
+            ("DRV-LOW-2", 3, "no", "2026-03-03", "PREFERRED"),
+            ("DRV-LOW-2", 3, "no", "2026-03-05", "PREFERRED"),
+        ),
+        actual_rows=(),
+    )
+
+    result = select_on_call_reserve_rows(
+        bundle=bundle,
+        selected_candidates=[
+            {
+                "route_slot_id": "slot-2026-03-02-cycle1#01",
+                "candidate_driver_id": "DRV-HIGH",
+                "assignment_action": "assign",
+                "hard_filter_status": "pass",
+            },
+            {
+                "route_slot_id": "slot-2026-03-02-cycle1#02",
+                "candidate_driver_id": "DRV-LOW-1",
+                "assignment_action": "assign",
+                "hard_filter_status": "pass",
+            },
+            {
+                "route_slot_id": "slot-2026-03-02-cycle1#03",
+                "candidate_driver_id": "DRV-LOW-2",
+                "assignment_action": "assign",
+                "hard_filter_status": "pass",
+            },
+            {
+                "route_slot_id": "slot-2026-03-03-cycle1#01",
+                "candidate_driver_id": "DRV-HIGH",
+                "assignment_action": "assign",
+                "hard_filter_status": "pass",
+            },
+            {
+                "route_slot_id": "slot-2026-03-03-cycle1#02",
+                "candidate_driver_id": "DRV-LOW-1",
+                "assignment_action": "assign",
+                "hard_filter_status": "pass",
+            },
+            {
+                "route_slot_id": "slot-2026-03-03-cycle1#03",
+                "candidate_driver_id": "DRV-LOW-2",
+                "assignment_action": "assign",
+                "hard_filter_status": "pass",
+            },
+            {
+                "route_slot_id": "slot-2026-03-04-cycle1",
+                "candidate_driver_id": "DRV-HIGH",
+                "assignment_action": "assign",
+                "hard_filter_status": "pass",
+            },
+        ],
+        iteration_index=5,
+    )
+
+    assert result.excess_capacity_summary["configured_excess_capacity_range_by_service_date"][
+        "2026-03-05"
+    ] == {
+        "min": 1,
+        "preferred": 2,
+        "max": 3,
+    }
+    assert result.excess_capacity_summary["excess_capacity_target_by_service_date"]["2026-03-05"] == 2
+    assert (
+        result.excess_capacity_summary["selected_excess_capacity_by_service_date"]["2026-03-05"]
+        == 2
+    )
+    assert result.excess_capacity_summary["selection_note_by_service_date"]["2026-03-05"] == (
+        "held at preferred 2 because additional excess-capacity buffer work would worsen work balance"
+    )
+    assert {row["candidate_driver_id"] for row in result.excess_capacity_rows} == {
+        "DRV-LOW-1",
+        "DRV-LOW-2",
+    }
+
+
 def _build_bundle(
     *,
     daily_targets: tuple[tuple[str, int, int, int], ...],
+    daily_target_ranges: dict[str, dict[str, int]] | None = None,
     driver_rows: tuple[tuple[str, str, str, str, str], ...],
     availability_rows: tuple[tuple[str, int, str, str, str], ...],
     actual_rows: tuple[tuple[str, str, int], ...],
+    planning_policy: dict[str, object] | None = None,
 ):
     workflow_run = {
         "workflow_run_id": "wr-weekly-reserve-tests",
@@ -142,6 +258,7 @@ def _build_bundle(
         "artifact_kind": "planning.route_slot_requirements.workbook",
         "dataset_key": "planning.route_slot_requirements.workbook",
         "metadata_json": {
+            **({"planning_policy": dict(planning_policy)} if planning_policy is not None else {}),
             "columns": [
                 "service_date",
                 "route_slot_id",
@@ -175,7 +292,13 @@ def _build_bundle(
                 "service_date",
                 "planned_route_count",
                 "on_call_target",
+                "on_call_min_target",
+                "on_call_preferred_target",
+                "on_call_max_target",
                 "excess_capacity_target",
+                "excess_capacity_min_target",
+                "excess_capacity_preferred_target",
+                "excess_capacity_max_target",
                 "standard_slot_count",
                 "rescue_slot_count",
                 "overflow_slot_count",
@@ -188,7 +311,31 @@ def _build_bundle(
                     service_date,
                     route_count,
                     on_call_target,
+                    (daily_target_ranges or {}).get(service_date, {}).get(
+                        "on_call_min_target",
+                        on_call_target,
+                    ),
+                    (daily_target_ranges or {}).get(service_date, {}).get(
+                        "on_call_preferred_target",
+                        on_call_target,
+                    ),
+                    (daily_target_ranges or {}).get(service_date, {}).get(
+                        "on_call_max_target",
+                        on_call_target,
+                    ),
                     excess_capacity_target,
+                    (daily_target_ranges or {}).get(service_date, {}).get(
+                        "excess_capacity_min_target",
+                        excess_capacity_target,
+                    ),
+                    (daily_target_ranges or {}).get(service_date, {}).get(
+                        "excess_capacity_preferred_target",
+                        excess_capacity_target,
+                    ),
+                    (daily_target_ranges or {}).get(service_date, {}).get(
+                        "excess_capacity_max_target",
+                        excess_capacity_target,
+                    ),
                     route_count,
                     0,
                     0,

@@ -23,7 +23,7 @@ from onetruth.infrastructure.events.event_store import utc_now_iso
 
 REPO_ROOT = Path(__file__).resolve().parents[4]
 _ACTUAL_OPS_SOURCE_MATERIAL_PATH = (
-    REPO_ROOT / "fixtures" / "logistics" / "weekly_stage04_actual_ops_lab_source_material_v2.yaml"
+    REPO_ROOT / "fixtures" / "logistics" / "weekly_stage04_actual_ops_lab_source_material_v3.yaml"
 )
 
 SCHEDULE_DEMO_WORKPAGE_ID = "schedule-v0"

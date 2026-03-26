@@ -1,6 +1,10 @@
 from __future__ import annotations
 
-from onetruth.application.services.weekly_stage04_openai_agent import _stage04_tool_specs
+from onetruth.application.services.weekly_stage04_openai_agent import (
+    _compact_stage04_build_result,
+    _compact_validation_summary,
+    _stage04_tool_specs,
+)
 
 
 def test_stage04_tool_schemas_are_strict_openai_compatible() -> None:
@@ -43,3 +47,43 @@ def test_stage04_tool_schemas_are_strict_openai_compatible() -> None:
         {"type": "integer", "minimum": 1},
         {"type": "null"},
     ]
+
+
+def test_stage04_compact_outputs_keep_contract_change_counts_only() -> None:
+    contract_change_summary = {
+        "new_agreement_required_count": 5,
+        "new_agreement_driver_day_count": 4,
+        "new_agreement_driver_ids": ["DRV-01", "DRV-02", "DRV-03"],
+        "new_agreement_by_service_date": {
+            "2026-03-22": 2,
+            "2026-03-23": 2,
+        },
+    }
+
+    validation_summary = _compact_validation_summary(
+        {
+            "summary": {
+                **contract_change_summary,
+            }
+        }
+    )
+    assert validation_summary is not None
+    assert validation_summary["summary"]["contract_change_summary"] == {
+        "new_agreement_required_count": 5,
+        "new_agreement_driver_day_count": 4,
+        "new_agreement_driver_count": 3,
+        "new_agreement_service_date_count": 2,
+    }
+
+    build_result = _compact_stage04_build_result(
+        {
+            "contract_change_summary": contract_change_summary,
+        }
+    )
+    assert build_result is not None
+    assert build_result["contract_change_summary"] == {
+        "new_agreement_required_count": 5,
+        "new_agreement_driver_day_count": 4,
+        "new_agreement_driver_count": 3,
+        "new_agreement_service_date_count": 2,
+    }

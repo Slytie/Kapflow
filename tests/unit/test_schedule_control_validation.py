@@ -77,6 +77,169 @@ def test_evaluate_hard_constraints_blocks_for_driver_day_unavailable() -> None:
     assert "driver_unavailable" in result.reasons
 
 
+def test_evaluate_hard_constraints_treats_heuristic_caps_as_soft() -> None:
+    workflow_run = {
+        "workflow_run_id": "wr-weekly-heuristic-caps-soft",
+        "partition_key": "PW-2026-W10",
+    }
+    bundle = build_weekly_schedule_control_bundle(
+        workflow_run=workflow_run,
+        route_slot_requirements_artifact={
+            "artifact_version_id": "av-routes-heuristic-caps-soft",
+            "artifact_kind": "planning.route_slot_requirements.workbook",
+            "dataset_key": "planning.route_slot_requirements.workbook",
+            "metadata_json": {
+                "planning_policy": {
+                    "heuristic_weekly_targets_are_soft": True,
+                    "heuristic_weekly_caps_are_soft": True,
+                    "heuristic_rolling7_caps_are_soft": True,
+                    "work_distribution": {
+                        "minimum_desired_shifts_per_week": 3,
+                        "preferred_target_shifts_per_week": 4,
+                        "avoid_overtime_after_shifts_per_week": 4,
+                    },
+                },
+                "columns": [
+                    "service_date",
+                    "route_slot_id",
+                    "route_slot_class",
+                    "required_skill",
+                    "vehicle_type",
+                    "shift_start",
+                    "shift_end",
+                    "estimated_hours",
+                    "source_snapshot_row_ref",
+                ],
+                "rows": [
+                    [
+                        "2026-03-02",
+                        "slot-20260302-cx100",
+                        "cycle1_standard",
+                        "parcel_delivery",
+                        "XL_van",
+                        "11:40",
+                        "20:10",
+                        8.5,
+                        "amazon:row-001",
+                    ],
+                    [
+                        "2026-03-03",
+                        "slot-20260303-cx101",
+                        "cycle1_standard",
+                        "parcel_delivery",
+                        "XL_van",
+                        "11:40",
+                        "20:10",
+                        8.5,
+                        "amazon:row-002",
+                    ],
+                ],
+            },
+        },
+        driver_capabilities_artifact={
+            "artifact_version_id": "av-driver-heuristic-caps-soft",
+            "artifact_kind": "planning.driver_capabilities.workbook",
+            "dataset_key": "planning.driver_capabilities.workbook",
+            "metadata_json": {
+                "columns": [
+                    "driver_id",
+                    "skills",
+                    "vehicle_certifications",
+                    "eligible_route_slot_classes",
+                    "approved_restrictions",
+                    "notes",
+                ],
+                "rows": [
+                    [
+                        "DRV-01",
+                        "parcel_delivery",
+                        "XL_van",
+                        "cycle1_standard",
+                        "max_shifts_per_week=1,max_minutes_rolling7=3300",
+                        "",
+                    ],
+                ],
+            },
+        },
+        approved_availability_artifact={
+            "artifact_version_id": "av-availability-heuristic-caps-soft",
+            "artifact_kind": "planning.approved_availability.workbook",
+            "dataset_key": "planning.approved_availability.workbook",
+            "metadata_json": {
+                "columns": [
+                    "driver_id",
+                    "target_shifts_per_week",
+                    "on_call_eligible",
+                    "approved_unavailable_dates",
+                    "regular_pattern",
+                ],
+                "rows": [["DRV-01", 1, "yes", "", "Mon,Tue,Wed,Thu"]],
+            },
+        },
+        actual_hours_artifact={
+            "artifact_version_id": "av-hours-heuristic-caps-soft",
+            "artifact_kind": "planning.actual_hours_snapshot.workbook",
+            "dataset_key": "planning.actual_hours_snapshot.workbook",
+            "metadata_json": {
+                "columns": ["service_date", "driver_id", "actual_minutes"],
+                "rows": [["2026-02-26", "DRV-01", 3200]],
+            },
+        },
+    )
+    schedule_state = PartialWeeklyScheduleState.from_route_slots(bundle.route_slots)
+    schedule_state.record_assignment(
+        ScheduledAssignment(
+            route_slot_id=bundle.route_slots[0].route_slot_id,
+            route_id=bundle.route_slots[0].route_id,
+            service_date=bundle.route_slots[0].service_date,
+            candidate_driver_id="DRV-01",
+            assignment_action="assign",
+            hard_filter_status="pass",
+            hard_filter_reasons=(),
+            score_bucket="best",
+            soft_score_total=0.9,
+            projected_minutes=bundle.route_slots[0].projected_minutes,
+            fairness_balance=0.8,
+            on_call_coverage=0.8,
+            lost_work_credit=0.8,
+            coverage_pressure=0.8,
+            availability_fit=1.0,
+            availability_state="AVAILABLE",
+            availability_state_fit=1.0,
+            preferred_shift_band_fit=0.8,
+            preferred_route_slot_class_fit=0.8,
+            preference_fit=0.8,
+            previous_week_stability=0.7,
+            continuity_score=0.7,
+            target_shift_gap=1.0,
+            seniority_score=0.8,
+            seniority_preference_fit=0.8,
+            reliability_score=0.8,
+            avoidable_assignment_score=0.9,
+            current_week_shift_count=1,
+            projected_rolling7_minutes=3710,
+            remaining_rolling7_minutes=0,
+            iteration_index=1,
+            batch_id="iter-01",
+            pressure_group_id="2026-03-02|DVC4|Pitt Meadows",
+            delta_kind="allocation",
+            rationale_code="seed",
+        )
+    )
+
+    result = evaluate_hard_constraints(
+        bundle=bundle,
+        route_slot=bundle.route_slots[1],
+        driver=bundle.drivers[0],
+        schedule_state=schedule_state,
+    )
+
+    assert result.status == "pass"
+    assert "max_shifts_per_week" not in result.reasons
+    assert "rolling_7_day_limit" not in result.reasons
+    assert result.remaining_rolling7_minutes == 0
+
+
 def test_evaluate_hard_constraints_keeps_on_call_only_as_soft_state() -> None:
     workflow_run = {
         "workflow_run_id": "wr-weekly-on-call-soft",

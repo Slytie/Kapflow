@@ -5,9 +5,10 @@ from dataclasses import dataclass
 from typing import Any
 
 from .bundle_builder import WeeklyScheduleControlBundle
-from .candidate_generation import generate_weekly_candidate_matrix, select_weekly_candidates
+from .candidate_generation import generate_weekly_candidate_matrix
 from .planning_state import PartialWeeklyScheduleState, ScheduledAssignment
 from .route_slot_requirements import RouteSlotRequirement, expand_route_slot_requirements
+from .scoring import deterministic_rank_candidates
 
 ON_CALL_BUFFER_PROJECTED_MINUTES = 180
 DEFAULT_EXCESS_CAPACITY_ESTIMATED_HOURS = 8.5
@@ -105,7 +106,10 @@ def _build_synthetic_slots(
 
     slots: list[RouteSlotRequirement] = []
     for service_date, demand in sorted(bundle.daily_demand_by_service_date.items()):
-        target_count = max(int(_synthetic_target_count(demand=demand, demand_kind=demand_kind) or 0), 0)
+        target_count = max(
+            int(_synthetic_target_range(demand=demand, demand_kind=demand_kind).max_count or 0),
+            0,
+        )
         if target_count <= 0:
             continue
         template = templates_by_service_date.get(service_date)
@@ -158,46 +162,108 @@ def _allocate_synthetic_capacity_rows(
 ) -> tuple[list[dict[str, Any]], dict[str, Any]]:
     selected_by_service_date: Counter[str] = Counter()
     selected_rows: list[dict[str, Any]] = []
-    target_by_service_date = _synthetic_targets_by_service_date(
+    target_range_by_service_date = _synthetic_target_ranges_by_service_date(
         bundle=bundle,
         demand_kind=demand_kind,
     )
-
+    target_by_service_date: dict[str, int] = {}
+    note_by_service_date: dict[str, str] = {}
+    route_slots_by_service_date: dict[str, list[RouteSlotRequirement]] = {}
     for route_slot in route_slots:
-        selected_row = _allocate_synthetic_slot(
-            bundle=bundle,
-            route_slot=route_slot,
-            schedule_state=schedule_state,
-            iteration_index=iteration_index,
-            demand_kind=demand_kind,
-        )
-        if selected_row is None:
-            continue
-        selected_rows.append(selected_row)
-        selected_by_service_date[route_slot.service_date] += 1
+        route_slots_by_service_date.setdefault(route_slot.service_date, []).append(route_slot)
+
+    for service_date, target_range in sorted(target_range_by_service_date.items()):
+        service_date_slots = route_slots_by_service_date.get(service_date, [])
+        selected_count = 0
+        selection_note = ""
+        chosen_target = 0
+
+        for slot_index, route_slot in enumerate(service_date_slots, start=1):
+            selected_row, rejection_reason = _allocate_synthetic_slot(
+                bundle=bundle,
+                route_slot=route_slot,
+                schedule_state=schedule_state,
+                iteration_index=iteration_index,
+                demand_kind=demand_kind,
+                slot_index=slot_index,
+                target_range=target_range,
+            )
+            if selected_row is None:
+                chosen_target = (
+                    target_range.min_count
+                    if selected_count < target_range.min_count
+                    else selected_count
+                )
+                selection_note = _synthetic_selection_note(
+                    demand_kind=demand_kind,
+                    target_range=target_range,
+                    selected_count=selected_count,
+                    rejection_reason=rejection_reason,
+                )
+                break
+            selected_rows.append(selected_row)
+            selected_by_service_date[service_date] += 1
+            selected_count += 1
+            chosen_target = selected_count
+
+        if not selection_note and selected_count < target_range.min_count:
+            chosen_target = target_range.min_count
+            selection_note = _synthetic_selection_note(
+                demand_kind=demand_kind,
+                target_range=target_range,
+                selected_count=selected_count,
+                rejection_reason="minimum_range_shortfall",
+            )
+        elif not selection_note:
+            chosen_target = max(chosen_target, selected_count)
+
+        target_by_service_date[service_date] = chosen_target
+        if selection_note:
+            note_by_service_date[service_date] = selection_note
 
     filled_by_service_date = {
         service_date: int(selected_by_service_date.get(service_date, 0))
-        for service_date in sorted(target_by_service_date)
+        for service_date in sorted(target_range_by_service_date)
     }
     unmet_by_service_date = {
         service_date: max(target_by_service_date[service_date] - filled_count, 0)
         for service_date, filled_count in filled_by_service_date.items()
     }
+    configured_range_by_service_date = {
+        service_date: {
+            "min": target_range.min_count,
+            "preferred": target_range.preferred_count,
+            "max": target_range.max_count,
+        }
+        for service_date, target_range in sorted(target_range_by_service_date.items())
+    }
+    preferred_by_service_date = {
+        service_date: target_range.preferred_count
+        for service_date, target_range in sorted(target_range_by_service_date.items())
+    }
+
     if demand_kind == "on_call":
         summary = {
+            "configured_on_call_range_by_service_date": configured_range_by_service_date,
+            "preferred_on_call_target_by_service_date": preferred_by_service_date,
             "on_call_target_by_service_date": target_by_service_date,
             "selected_on_call_by_service_date": filled_by_service_date,
             "unmet_on_call_target_by_service_date": unmet_by_service_date,
+            "selection_note_by_service_date": note_by_service_date,
+            "preferred_on_call_total": sum(preferred_by_service_date.values()),
             "target_on_call_total": sum(target_by_service_date.values()),
             "selected_on_call_total": sum(filled_by_service_date.values()),
             "unmet_on_call_target_total": sum(unmet_by_service_date.values()),
         }
     else:
         summary = {
+            "configured_excess_capacity_range_by_service_date": configured_range_by_service_date,
+            "preferred_excess_capacity_target_by_service_date": preferred_by_service_date,
             "excess_capacity_target_by_service_date": target_by_service_date,
             "selected_excess_capacity_by_service_date": filled_by_service_date,
             "unmet_excess_capacity_target_by_service_date": unmet_by_service_date,
+            "selection_note_by_service_date": note_by_service_date,
+            "preferred_excess_capacity_total": sum(preferred_by_service_date.values()),
             "target_excess_capacity_total": sum(target_by_service_date.values()),
             "selected_excess_capacity_total": sum(filled_by_service_date.values()),
             "unmet_excess_capacity_target_total": sum(unmet_by_service_date.values()),
@@ -212,7 +278,9 @@ def _allocate_synthetic_slot(
     schedule_state: PartialWeeklyScheduleState,
     iteration_index: int,
     demand_kind: str,
-) -> dict[str, Any] | None:
+    slot_index: int,
+    target_range: Any,
+) -> tuple[dict[str, Any] | None, str]:
     candidate_matrix = generate_weekly_candidate_matrix(
         bundle=bundle,
         route_slots=(route_slot,),
@@ -220,42 +288,48 @@ def _allocate_synthetic_slot(
         iteration_index=iteration_index,
         evaluation_kind=("reserve" if demand_kind == "on_call" else demand_kind),
     )
-    selected_rows = select_weekly_candidates(candidate_matrix)
-    if not selected_rows:
-        return None
+    ranked_rows = deterministic_rank_candidates([item.to_row() for item in candidate_matrix])
+    rejection_reason = "no_legal_candidate"
+    for selected in ranked_rows:
+        if str(selected.get("hard_filter_status") or "") != "pass":
+            continue
+        rejection_reason = _synthetic_candidate_rejection_reason(
+            bundle=bundle,
+            selected=selected,
+            demand_kind=demand_kind,
+            slot_index=slot_index,
+            target_range=target_range,
+        )
+        if rejection_reason:
+            continue
 
-    selected = selected_rows[0]
-    if str(selected.get("assignment_action") or "") != "assign":
-        return None
-    if str(selected.get("hard_filter_status") or "") != "pass":
-        return None
-
-    assignment = _assignment_from_row(
-        route_slot=route_slot,
-        row=selected,
-        assignment_action=("reserve" if demand_kind == "on_call" else "assign"),
-        planning_phase=(
-            "reserve_buffer" if demand_kind == "on_call" else "baseline_excess_capacity"
-        ),
-        delta_kind=("reserve" if demand_kind == "on_call" else "excess_capacity"),
-        batch_id=(
-            f"reserve-buffer:{route_slot.service_date}"
-            if demand_kind == "on_call"
-            else f"baseline-excess-capacity:{route_slot.service_date}"
-        ),
-        pressure_group_id=(
-            f"{route_slot.service_date}|ON_CALL|reserve_buffer"
-            if demand_kind == "on_call"
-            else f"{route_slot.service_date}|EXCESS_CAPACITY|baseline_excess_capacity"
-        ),
-        increment_shift_count=True,
-    )
-    schedule_state.record_assignment(assignment)
-    selected_row = assignment.to_row()
-    if demand_kind == "on_call":
-        selected_row["assignment_status"] = "reserve"
-        selected_row["phase"] = "reserve_buffer"
-    return selected_row
+        assignment = _assignment_from_row(
+            route_slot=route_slot,
+            row=selected,
+            assignment_action=("reserve" if demand_kind == "on_call" else "assign"),
+            planning_phase=(
+                "reserve_buffer" if demand_kind == "on_call" else "baseline_excess_capacity"
+            ),
+            delta_kind=("reserve" if demand_kind == "on_call" else "excess_capacity"),
+            batch_id=(
+                f"reserve-buffer:{route_slot.service_date}"
+                if demand_kind == "on_call"
+                else f"baseline-excess-capacity:{route_slot.service_date}"
+            ),
+            pressure_group_id=(
+                f"{route_slot.service_date}|ON_CALL|reserve_buffer"
+                if demand_kind == "on_call"
+                else f"{route_slot.service_date}|EXCESS_CAPACITY|baseline_excess_capacity"
+            ),
+            increment_shift_count=True,
+        )
+        schedule_state.record_assignment(assignment)
+        selected_row = assignment.to_row()
+        if demand_kind == "on_call":
+            selected_row["assignment_status"] = "reserve"
+            selected_row["phase"] = "reserve_buffer"
+        return selected_row, ""
+    return None, rejection_reason
 
 
 def _assignment_from_row(
@@ -339,21 +413,83 @@ def _assignment_from_row(
     )
 
 
-def _synthetic_targets_by_service_date(
+def _synthetic_target_ranges_by_service_date(
     *,
     bundle: WeeklyScheduleControlBundle,
     demand_kind: str,
-) -> dict[str, int]:
+) -> dict[str, Any]:
     return {
-        service_date: max(int(_synthetic_target_count(demand=demand, demand_kind=demand_kind) or 0), 0)
+        service_date: _synthetic_target_range(demand=demand, demand_kind=demand_kind)
         for service_date, demand in sorted(bundle.daily_demand_by_service_date.items())
     }
 
 
-def _synthetic_target_count(*, demand: Any, demand_kind: str) -> int:
+def _synthetic_target_range(*, demand: Any, demand_kind: str) -> Any:
     if demand_kind == "on_call":
-        return int(getattr(demand, "on_call_target", 0) or 0)
-    return int(getattr(demand, "excess_capacity_target", 0) or 0)
+        return getattr(demand, "on_call_target_range")
+    return getattr(demand, "excess_capacity_target_range")
+
+
+def _synthetic_candidate_rejection_reason(
+    *,
+    bundle: WeeklyScheduleControlBundle,
+    selected: dict[str, Any],
+    demand_kind: str,
+    slot_index: int,
+    target_range: Any,
+) -> str:
+    current_week_shift_count = int(selected.get("current_week_shift_count") or 0)
+    projected_week_shift_count = current_week_shift_count + 1
+    if projected_week_shift_count > bundle.planning_policy.avoid_overtime_after_shifts_per_week:
+        return "would_create_5th_placement_overtime"
+    if slot_index > target_range.preferred_count:
+        if current_week_shift_count >= bundle.planning_policy.minimum_desired_shifts_per_week:
+            return "would_extend_buffer_above_preferred_without_low_work_recovery"
+        if bool(selected.get("new_agreement_required")):
+            return "would_extend_buffer_above_preferred_with_new_agreement_churn"
+    return ""
+
+
+def _synthetic_selection_note(
+    *,
+    demand_kind: str,
+    target_range: Any,
+    selected_count: int,
+    rejection_reason: str,
+) -> str:
+    buffer_label = "on-call buffer" if demand_kind == "on_call" else "excess-capacity buffer"
+    if selected_count < target_range.min_count:
+        return (
+            f"held at {selected_count} below minimum {target_range.min_count} because additional "
+            f"{buffer_label} work would worsen work balance or create 5th-placement overtime"
+        )
+    if selected_count < target_range.preferred_count:
+        return (
+            f"held at {selected_count} below preferred {target_range.preferred_count} because "
+            f"additional {buffer_label} work would worsen work balance or create 5th-placement overtime"
+        )
+    if (
+        selected_count < target_range.max_count
+        and rejection_reason == "would_extend_buffer_above_preferred_without_low_work_recovery"
+    ):
+        return (
+            f"held at preferred {target_range.preferred_count} because additional {buffer_label} "
+            "work would worsen work balance"
+        )
+    if (
+        selected_count < target_range.max_count
+        and rejection_reason == "would_create_5th_placement_overtime"
+    ):
+        return (
+            f"held at preferred {target_range.preferred_count} because additional {buffer_label} "
+            "work would create 5th-placement overtime"
+        )
+    if rejection_reason == "would_extend_buffer_above_preferred_with_new_agreement_churn":
+        return (
+            f"stopped at preferred {target_range.preferred_count} because additional {buffer_label} "
+            "positions would add avoidable new-agreement churn"
+        )
+    return ""
 
 
 def _synthetic_route_slot_id(*, demand_kind: str, compact_date: str, sequence: int) -> str:

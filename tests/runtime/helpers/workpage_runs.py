@@ -13,7 +13,7 @@ from .runtime_cli import REPO_ROOT, run_cli, stdout_json
 
 
 _ACTUAL_OPS_SOURCE_MATERIAL_PATH = (
-    REPO_ROOT / "fixtures" / "logistics" / "weekly_stage04_actual_ops_lab_source_material_v2.yaml"
+    REPO_ROOT / "fixtures" / "logistics" / "weekly_stage04_actual_ops_lab_source_material_v3.yaml"
 )
 
 _DATASET_PAYLOAD_KEYS: tuple[tuple[str, str], ...] = (

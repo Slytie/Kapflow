@@ -11,7 +11,7 @@ from onetruth.application.services.schedule_control.scoring import (
 from onetruth.application.services.schedule_control.validation import HardValidationResult
 
 
-def test_deterministic_rank_candidates_prefers_underworked_drivers_before_score_tiebreaks() -> None:
+def test_deterministic_rank_candidates_prioritizes_reaching_three_shifts_before_zero_to_one() -> None:
     ranked = deterministic_rank_candidates(
         [
             {
@@ -46,10 +46,40 @@ def test_deterministic_rank_candidates_prefers_underworked_drivers_before_score_
     )
 
     assert [item["candidate_driver_id"] for item in ranked] == [
+        "DRV-03",
         "DRV-01",
         "DRV-02",
-        "DRV-03",
         "DRV-09",
+    ]
+
+
+def test_deterministic_rank_candidates_avoids_fifth_shift_before_template_tiebreaks() -> None:
+    ranked = deterministic_rank_candidates(
+        [
+            {
+                "candidate_driver_id": "DRV-FOURTH",
+                "hard_filter_status": "pass",
+                "score_bucket": "good",
+                "current_week_shift_count": 3,
+                "target_shift_gap": 0.25,
+                "template_state_preservation_fit": 0.0,
+                "soft_score_total": 0.55,
+            },
+            {
+                "candidate_driver_id": "DRV-FIFTH",
+                "hard_filter_status": "pass",
+                "score_bucket": "best",
+                "current_week_shift_count": 4,
+                "target_shift_gap": 1.0,
+                "template_state_preservation_fit": 1.0,
+                "soft_score_total": 0.95,
+            },
+        ]
+    )
+
+    assert [item["candidate_driver_id"] for item in ranked] == [
+        "DRV-FOURTH",
+        "DRV-FIFTH",
     ]
 
 

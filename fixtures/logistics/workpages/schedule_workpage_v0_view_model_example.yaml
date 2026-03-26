@@ -6,11 +6,11 @@ workflow_id: weekly_schedule_planning.v1
 dataset_key: planning.input_bundle.doc
 source_artifact_version_id: null
 source_examples:
-  route_slot_requirements: docs/workflows/weekly_schedule_planning/v1/examples/route_slot_requirements_actual_ops_lab_v2.yaml
+  route_slot_requirements: docs/workflows/weekly_schedule_planning/v1/examples/route_slot_requirements_actual_ops_lab_v3.yaml
   approved_availability: docs/workflows/weekly_schedule_planning/v1/examples/approved_availability_actual_ops_lab_v1.yaml
   driver_capabilities: docs/workflows/weekly_schedule_planning/v1/examples/driver_capabilities_actual_ops_lab_v1.yaml
   actual_hours_snapshot: docs/workflows/weekly_schedule_planning/v1/examples/actual_hours_snapshot_actual_ops_lab_v1.yaml
-  stage04_input_bundle: docs/workflows/weekly_schedule_planning/v1/examples/stage04_input_bundle_actual_ops_lab_v2.yaml
+  stage04_input_bundle: docs/workflows/weekly_schedule_planning/v1/examples/stage04_input_bundle_actual_ops_lab_v3.yaml
 summary:
   planning_week_id: PW-2026-W13
   operational_week_start: '2026-03-22'

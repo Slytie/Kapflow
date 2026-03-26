@@ -9,7 +9,7 @@
     "freshness": {
       "generated_at": "<ts:1>",
       "source_kind": "repo_example_bundle",
-      "source_version": "weekly_stage04_actual_ops_lab_v2"
+      "source_version": "weekly_stage04_actual_ops_lab_v3"
     },
     "source": {
       "mode": "demo",
@@ -23,11 +23,11 @@
         "planning.input_bundle.doc"
       ],
       "source_refs": [
-        "docs/workflows/weekly_schedule_planning/v1/examples/route_slot_requirements_actual_ops_lab_v2.yaml",
+        "docs/workflows/weekly_schedule_planning/v1/examples/route_slot_requirements_actual_ops_lab_v3.yaml",
         "docs/workflows/weekly_schedule_planning/v1/examples/approved_availability_actual_ops_lab_v1.yaml",
         "docs/workflows/weekly_schedule_planning/v1/examples/driver_capabilities_actual_ops_lab_v1.yaml",
         "docs/workflows/weekly_schedule_planning/v1/examples/actual_hours_snapshot_actual_ops_lab_v1.yaml",
-        "docs/workflows/weekly_schedule_planning/v1/examples/stage04_input_bundle_actual_ops_lab_v2.yaml"
+        "docs/workflows/weekly_schedule_planning/v1/examples/stage04_input_bundle_actual_ops_lab_v3.yaml"
       ]
     },
     "status": "ok",
@@ -316,8 +316,8 @@
         "actual_hours_snapshot": "docs/workflows/weekly_schedule_planning/v1/examples/actual_hours_snapshot_actual_ops_lab_v1.yaml",
         "approved_availability": "docs/workflows/weekly_schedule_planning/v1/examples/approved_availability_actual_ops_lab_v1.yaml",
         "driver_capabilities": "docs/workflows/weekly_schedule_planning/v1/examples/driver_capabilities_actual_ops_lab_v1.yaml",
-        "route_slot_requirements": "docs/workflows/weekly_schedule_planning/v1/examples/route_slot_requirements_actual_ops_lab_v2.yaml",
-        "stage04_input_bundle": "docs/workflows/weekly_schedule_planning/v1/examples/stage04_input_bundle_actual_ops_lab_v2.yaml"
+        "route_slot_requirements": "docs/workflows/weekly_schedule_planning/v1/examples/route_slot_requirements_actual_ops_lab_v3.yaml",
+        "stage04_input_bundle": "docs/workflows/weekly_schedule_planning/v1/examples/stage04_input_bundle_actual_ops_lab_v3.yaml"
       },
       "summary": {
         "drivers_in_scope": 51,

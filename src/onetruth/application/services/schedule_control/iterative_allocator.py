@@ -24,6 +24,8 @@ MAX_IMPROVEMENT_FOCUS_ASSIGNMENTS = 16
 MAX_IMPROVEMENT_SWAP_PARTNERS = 3
 UNCOVERED_ROUTE_SLOT_PENALTY = 2.5
 ZERO_SHIFT_DRIVER_PENALTY = 1.0
+LOW_WORK_DRIVER_PENALTY = 0.75
+OVERTIME_DRIVER_PENALTY = 1.1
 MIN_MEANINGFUL_SOFT_DELTA = 0.015
 
 
@@ -58,6 +60,8 @@ class ScheduleQualitySnapshot:
     assigned_route_slots: int
     uncovered_route_slots: int
     zero_shift_driver_count: int
+    below_minimum_work_driver_count: int
+    overtime_driver_count: int
     soft_objective_total: float
     stability_total: float
     target_shift_gap_total: float
@@ -752,9 +756,14 @@ def _best_direct_reassignment(
         temp_state.record_assignment(decision)
         quality_after = _schedule_quality_snapshot(schedule_state=temp_state, bundle=bundle)
         delta = _quality_delta(before=quality_before, after=quality_after)
-        if delta["zero_shift_driver_delta"] < 0:
+        if (
+            delta["coverage_delta"] < 0
+            or delta["zero_shift_driver_delta"] < 0
+            or delta["below_minimum_work_driver_delta"] < 0
+            or delta["overtime_driver_delta"] < 0
+        ):
             continue
-        if delta["soft_objective_delta"] < MIN_MEANINGFUL_SOFT_DELTA:
+        if not _meaningful_improvement(delta):
             continue
         move = RepairMove(
             iteration_index=iteration_index,
@@ -878,9 +887,14 @@ def _best_swap_reassignment(
         temp_state.record_assignment(right_decision)
         quality_after = _schedule_quality_snapshot(schedule_state=temp_state, bundle=bundle)
         delta = _quality_delta(before=quality_before, after=quality_after)
-        if delta["zero_shift_driver_delta"] < 0:
+        if (
+            delta["coverage_delta"] < 0
+            or delta["zero_shift_driver_delta"] < 0
+            or delta["below_minimum_work_driver_delta"] < 0
+            or delta["overtime_driver_delta"] < 0
+        ):
             continue
-        if delta["soft_objective_delta"] < MIN_MEANINGFUL_SOFT_DELTA:
+        if not _meaningful_improvement(delta):
             continue
         move = RepairMove(
             iteration_index=iteration_index,
@@ -1329,15 +1343,41 @@ def _schedule_quality_snapshot(
         item.candidate_driver_id for item in assigned if str(item.candidate_driver_id or "").strip()
     }
     zero_shift_driver_count = max(len(bundle.drivers) - len(used_driver_ids), 0)
+    assignment_count_by_driver: dict[str, int] = {}
+    for item in assigned:
+        driver_id = str(item.candidate_driver_id or "").strip()
+        if not driver_id:
+            continue
+        assignment_count_by_driver[driver_id] = assignment_count_by_driver.get(driver_id, 0) + 1
+    below_minimum_work_driver_count = 0
+    overtime_driver_count = 0
+    for driver in bundle.drivers:
+        driver_id = driver.driver_id
+        policy_signal = bundle.policy_signals_by_driver.get(driver_id)
+        assignment_count = assignment_count_by_driver.get(driver_id, 0)
+        minimum_desired = (
+            policy_signal.minimum_desired_shifts_per_week if policy_signal is not None else 3
+        )
+        avoid_overtime_after = (
+            policy_signal.avoid_overtime_after_shifts_per_week if policy_signal is not None else 4
+        )
+        if assignment_count < minimum_desired:
+            below_minimum_work_driver_count += 1
+        if assignment_count > avoid_overtime_after:
+            overtime_driver_count += 1
     soft_total = sum(item.soft_score_total for item in assigned)
     return ScheduleQualitySnapshot(
         assigned_route_slots=len(assigned),
         uncovered_route_slots=uncovered,
         zero_shift_driver_count=zero_shift_driver_count,
+        below_minimum_work_driver_count=below_minimum_work_driver_count,
+        overtime_driver_count=overtime_driver_count,
         soft_objective_total=round(
             soft_total
             - (uncovered * UNCOVERED_ROUTE_SLOT_PENALTY)
-            - (zero_shift_driver_count * ZERO_SHIFT_DRIVER_PENALTY),
+            - (zero_shift_driver_count * ZERO_SHIFT_DRIVER_PENALTY)
+            - (below_minimum_work_driver_count * LOW_WORK_DRIVER_PENALTY)
+            - (overtime_driver_count * OVERTIME_DRIVER_PENALTY),
             6,
         ),
         stability_total=round(sum(item.continuity_score for item in assigned), 6),
@@ -1354,6 +1394,10 @@ def _quality_delta(
     return {
         "coverage_delta": before.uncovered_route_slots - after.uncovered_route_slots,
         "zero_shift_driver_delta": before.zero_shift_driver_count - after.zero_shift_driver_count,
+        "below_minimum_work_driver_delta": (
+            before.below_minimum_work_driver_count - after.below_minimum_work_driver_count
+        ),
+        "overtime_driver_delta": before.overtime_driver_count - after.overtime_driver_count,
         "soft_objective_delta": round(after.soft_objective_total - before.soft_objective_total, 6),
         "stability_delta": round(after.stability_total - before.stability_total, 6),
         "target_shift_gap_delta": round(after.target_shift_gap_total - before.target_shift_gap_total, 6),
@@ -1365,16 +1409,22 @@ def _meaningful_improvement(delta: dict[str, float]) -> bool:
     return bool(
         delta["coverage_delta"] > 0
         or delta["zero_shift_driver_delta"] > 0
+        or delta["below_minimum_work_driver_delta"] > 0
+        or delta["overtime_driver_delta"] > 0
         or delta["soft_objective_delta"] >= MIN_MEANINGFUL_SOFT_DELTA
         or delta["preference_fit_delta"] >= MIN_MEANINGFUL_SOFT_DELTA
         or delta["stability_delta"] >= MIN_MEANINGFUL_SOFT_DELTA
     )
 
 
-def _proposal_sort_key(proposal: MoveProposal) -> tuple[float, float, float, str]:
+def _proposal_sort_key(
+    proposal: MoveProposal,
+) -> tuple[float, float, float, float, float, float, str]:
     move = proposal.move
     return (
         -float(proposal.quality_after.zero_shift_driver_count),
+        -float(proposal.quality_after.below_minimum_work_driver_count),
+        -float(proposal.quality_after.overtime_driver_count),
         move.soft_objective_delta,
         move.preference_fit_delta,
         move.stability_delta,
@@ -1394,6 +1444,7 @@ def _improvement_focus_assignments(
             if item.route_slot_id not in blocked_route_slot_ids
         ),
         key=lambda item: (
+            -int(item.current_week_shift_count),
             item.template_state_preservation_fit,
             item.preference_fit,
             item.continuity_score,

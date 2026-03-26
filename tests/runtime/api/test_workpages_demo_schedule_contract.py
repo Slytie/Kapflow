@@ -15,11 +15,11 @@ EXPECTED_SOURCE_DATASET_KEYS = [
 ]
 
 EXPECTED_SOURCE_REFS = [
-    "docs/workflows/weekly_schedule_planning/v1/examples/route_slot_requirements_actual_ops_lab_v2.yaml",
+    "docs/workflows/weekly_schedule_planning/v1/examples/route_slot_requirements_actual_ops_lab_v3.yaml",
     "docs/workflows/weekly_schedule_planning/v1/examples/approved_availability_actual_ops_lab_v1.yaml",
     "docs/workflows/weekly_schedule_planning/v1/examples/driver_capabilities_actual_ops_lab_v1.yaml",
     "docs/workflows/weekly_schedule_planning/v1/examples/actual_hours_snapshot_actual_ops_lab_v1.yaml",
-    "docs/workflows/weekly_schedule_planning/v1/examples/stage04_input_bundle_actual_ops_lab_v2.yaml",
+    "docs/workflows/weekly_schedule_planning/v1/examples/stage04_input_bundle_actual_ops_lab_v3.yaml",
 ]
 
 
@@ -62,7 +62,7 @@ def test_schedule_demo_workpage_contract_returns_server_owned_wrapper(tmp_path: 
 
     freshness = payload["freshness"]
     assert freshness["source_kind"] == "repo_example_bundle"
-    assert freshness["source_version"] == "weekly_stage04_actual_ops_lab_v2"
+    assert freshness["source_version"] == "weekly_stage04_actual_ops_lab_v3"
     assert freshness["generated_at"]
 
     sections = workpage["sections"]

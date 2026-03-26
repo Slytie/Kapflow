@@ -5,9 +5,6 @@ from dataclasses import dataclass
 import io
 from typing import Any
 
-from openpyxl import load_workbook
-from openpyxl.utils import get_column_letter, range_boundaries
-
 
 WORKFLOW_ID = "dispatch_reporting.v1"
 DATASET_KEY = "reporting.upd_draft.workbook"
@@ -130,7 +127,7 @@ SERVER_MANAGED_TABLE_KEY = "change_log_stage03_upd_draft"
 
 
 def project_upd_draft_workbook(content: bytes) -> dict[str, Any]:
-    workbook = load_workbook(io.BytesIO(content))
+    workbook = _load_workbook_from_bytes(content)
     projection = {
         "workflow_id": WORKFLOW_ID,
         "dataset_key": DATASET_KEY,
@@ -160,7 +157,7 @@ def materialize_upd_draft_workbook(
     if read_only_keys:
         raise ValueError(f"read-only workbook tables cannot be edited: {sorted(read_only_keys)}")
 
-    workbook = load_workbook(io.BytesIO(base_content))
+    workbook = _load_workbook_from_bytes(base_content)
     for table_key in EDITABLE_TABLE_KEYS:
         if table_key not in edits:
             continue
@@ -192,7 +189,7 @@ def _read_table_rows(workbook, spec: WorkbookTableSpec) -> list[dict[str, Any]]:
             raise ValueError(f"required table missing: {spec.workbook_table_name}")
         return []
 
-    min_col, min_row, max_col, max_row = range_boundaries(table.ref)
+    min_col, min_row, max_col, max_row = _range_boundaries(table.ref)
     headers = [
         worksheet.cell(row=min_row, column=column_index).value
         for column_index in range(min_col, max_col + 1)
@@ -239,7 +236,25 @@ def _write_table_rows(workbook, spec: WorkbookTableSpec, rows: list[dict[str, An
         worksheet.append([None for _ in spec.headers])
         last_row = 2
 
-    table.ref = f"A1:{get_column_letter(len(spec.headers))}{last_row}"
+    table.ref = f"A1:{_get_column_letter(len(spec.headers))}{last_row}"
+
+
+def _load_workbook_from_bytes(content: bytes):
+    from openpyxl import load_workbook
+
+    return load_workbook(io.BytesIO(content))
+
+
+def _range_boundaries(reference: str) -> tuple[int, int, int, int]:
+    from openpyxl.utils import range_boundaries
+
+    return range_boundaries(reference)
+
+
+def _get_column_letter(column_index: int) -> str:
+    from openpyxl.utils import get_column_letter
+
+    return get_column_letter(column_index)
 
 
 def _normalize_client_rows(raw_rows: Any, *, spec: WorkbookTableSpec) -> list[dict[str, Any]]:
