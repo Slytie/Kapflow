@@ -282,17 +282,18 @@ Board object shape:
 - `pointers[]`
 - `summary`
 
-### 3.10 Workpage demo surfaces
+### 3.10 Workpage surfaces
 Route-family decision:
-- `GET /api/v1/workpages/demo/{workpage_id}`
-- current frozen artifact-backed EOD siblings:
+- implemented today:
+  - `GET /api/v1/workpages/demo/{workpage_id}`
   - `POST /api/v1/workpages/demo/eod-v0/drafts`
   - `GET /api/v1/workpages/artifacts/{artifact_version_id}`
   - `POST /api/v1/workpages/artifacts/{artifact_version_id}/submit`
-- reserve later siblings such as:
+- frozen next family for EPIC-122:
   - `GET /api/v1/workpages/workflow-runs/{workflow_run_id}/{workpage_kind}`
+  - `POST /api/v1/workpages/workflow-runs/{workflow_run_id}/eod-v0/drafts`
 
-The `demo` subfamily is implemented today. The first artifact-backed family is frozen only for EOD in this epic; schedule remains query-backed.
+The `demo` subfamily is implemented today. During EPIC-122 it remains a curated alias/entrypoint family, not the long-term canonical access model. The first artifact-backed family remains frozen only for EOD; schedule stays query-backed/composite.
 
 Current planned demo workpage ids:
 - `schedule-v0`
@@ -300,6 +301,9 @@ Current planned demo workpage ids:
 
 Demo query response:
 - `{"status":"ok","command":"api.workpages.demo","workpage":{...},"source":{...},"freshness":{...}}`
+
+Workflow-run-backed query response (frozen contract for EPIC-122, not yet implemented):
+- `{"status":"ok","command":"api.workpages.workflow_run","workpage":{...},"source":{...},"freshness":{...},"run_context":{...},"draft_resolution":null|{...}}`
 
 Artifact-backed read response:
 - `{"status":"ok","command":"api.workpages.artifact","workpage":{...},"source":{...},"freshness":{...},"artifact_context":{...}}`
@@ -329,6 +333,15 @@ Freshness metadata shape (`freshness`):
 - `source_kind`
 - `source_version`
 
+Run context shape (`run_context`, run-backed surfaces only):
+- `workflow_run_id`
+- `workflow_id`
+- `workflow_version`
+- `partition_key`
+- `logical_date`
+- `activation_key`
+- `state`
+
 Artifact context shape (`artifact_context`):
 - `artifact_version_id`
 - `workflow_run_id`
@@ -338,10 +351,19 @@ Artifact context shape (`artifact_context`):
 - `latest_in_chain_artifact_version_id`
 - `download_path`
 
+Draft resolution shape (`draft_resolution`, run-backed EOD landing only):
+- `state` (`no_draft|latest_draft_available`)
+- `latest_artifact_version_id`
+- `artifact_route`
+
 Notes:
 - The schedule page is composite and may set `primary_dataset_key` to `null` while populating `source_dataset_keys[]`.
 - The EOD page should remain aligned to `reporting.upd_draft.workbook`, not final-packet semantics.
 - The first artifact-backed slice is **EOD only**; schedule stays on the query-backed route family in this epic.
+- Run-backed schedule responses should set `run_context` and leave `draft_resolution=null`.
+- Run-backed EOD landing responses should set `run_context` plus `draft_resolution`, but must not pretend to be artifact projections.
+- `artifact_context` is reserved for `source.mode=artifact_projection`; do not overload it on run-backed landing pages.
+- `TASK-0137` intentionally freezes a narrow `draft_resolution` field instead of a generic `actions` blob.
 - Artifact-backed EOD reads must remain projections over canonical workbook artifacts; the workpage is derived and the workbook artifact version remains authoritative truth.
 - Artifact-backed EOD drafts must be anchored to canonical `dispatch_reporting.v1` workflow runs. No runless demo artifact store is allowed.
 - The implemented EOD route is intentionally built from an intentionally partial example family, so its authoritative demo-query summary values are source-derived partial totals with explicit formula-integrity warnings rather than fixture-only full-day numbers.
@@ -452,18 +474,26 @@ Rules:
 
 ### 4.5 Create artifact-backed EOD draft
 Endpoint:
-- `POST /api/v1/workpages/demo/eod-v0/drafts`
+- current implemented alias:
+  - `POST /api/v1/workpages/demo/eod-v0/drafts`
+- frozen canonical EPIC-122 route:
+  - `POST /api/v1/workpages/workflow-runs/{workflow_run_id}/eod-v0/drafts`
 
 Body:
 - `idempotency_key`
 
 Response:
-- `{"status":"ok","command":"api.workpages.eod_drafts.create","draft":{"workflow_run_id":"...","artifact_version_id":"...","route":"/demo/logistics/workpages/eod-v0/artifacts/{artifact_version_id}"}}`
+- current implemented alias response:
+  - `{"status":"ok","command":"api.workpages.eod_drafts.create","draft":{"workflow_run_id":"...","artifact_version_id":"...","route":"/demo/logistics/workpages/eod-v0/artifacts/{artifact_version_id}"}}`
+- canonical EPIC-122 response target:
+  - `{"status":"ok","command":"api.workpages.eod_drafts.create","draft":{"workflow_run_id":"...","artifact_version_id":"...","route":"/runs/{workflow_run_id}/workpages/eod-v0/artifacts/{artifact_version_id}"}}`
 
 Rules:
 - resolve or create the canonical demo `dispatch_reporting.v1` run for the known example slice,
+- the run-backed EPIC-122 create route must resolve drafts only inside the supplied canonical workflow run,
 - instantiate a new `reporting.upd_draft.workbook` artifact version from the reporting template pack,
 - do not create runless demo artifacts,
+- keep the demo create route as a compatibility alias until the canonical run-backed surfaces are proven,
 - keep create semantics explicit and idempotent.
 
 ### 4.6 Submit artifact-backed EOD draft
@@ -485,6 +515,7 @@ Rules:
 - submit creates a **new immutable** workbook artifact version,
 - the new version must set `supersedes_artifact_version_id` to the submitted base artifact version,
 - explicit submit/save only; no per-keystroke artifact writes,
+- once the canonical EPIC-122 frontend routes are active, the returned `route` should point at `/runs/{workflow_run_id}/workpages/eod-v0/artifacts/{artifact_version_id}` rather than a demo alias,
 - if the base artifact version has already been superseded in the same draft chain, fail closed with `workpage_artifact_conflict`,
 - final-packet approval/pointer semantics remain out of scope for this epic.
 

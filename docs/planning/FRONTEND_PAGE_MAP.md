@@ -1,5 +1,7 @@
 # FRONTEND_PAGE_MAP.md
 
+The inventory below lists the currently implemented routes first. EPIC-122 also freezes a future canonical workpage route posture under `/runs/:workflowRunId/workpages/*`; those planned routes are listed separately and are not implemented yet.
+
 ## Page inventory
 
 | Page | Purpose | Primary user action | Primary data source | Cards/Rows | Detail model |
@@ -17,3 +19,11 @@
 | `/runs/:workflowRunId` | Full run inspection across timeline/tasks/approvals/artifacts/exceptions | Tabbed inspection | `GET /api/v1/workflow-runs/{id}` + `GET /api/v1/timeline-events` | Rows and tab lists | Page tabs + drawer hook |
 | `/official-outputs` | Pointer/current official output visibility | Inspect pointer promotion metadata | `GET /api/v1/pointers` via `pointersRepository` | Cards (`PointerCard`) | Drawer |
 | `/timeline` | Legacy schedule-oriented event stream explorer | Filter and inspect event details | `GET /api/v1/timeline-events` via `timelineRepository` | Rows (`TimelineRow`) | Drawer |
+
+## EPIC-122 Canonical Route Posture (Frozen, Not Yet Implemented)
+
+| Page | Purpose | Primary user action | Primary data source | Cards/Rows | Detail model |
+|---|---|---|---|---|---|
+| `/runs/:workflowRunId/workpages/schedule-v0` | Planned canonical weekly-planning run-backed review workpage | Open a schedule review page that is explicitly tied to one `weekly_schedule_planning.v1` run while keeping the page query-backed/composite | `GET /api/v1/workpages/workflow-runs/{workflow_run_id}/schedule-v0` via a future run-backed `workpagesRepository` method; `/demo/logistics/workpages/schedule-v0` remains a curated alias until this route is proven. | Same weekly review sections already validated for the current workpage page | Full page under `AppShell` |
+| `/runs/:workflowRunId/workpages/eod-v0` | Planned canonical dispatch-reporting run-backed landing/draft-resolution workpage | Open the EOD landing for one `dispatch_reporting.v1` run, see whether a latest editable draft already exists, and either create or reopen that draft | `GET /api/v1/workpages/workflow-runs/{workflow_run_id}/eod-v0` plus `POST /api/v1/workpages/workflow-runs/{workflow_run_id}/eod-v0/drafts`; the response adds `run_context` plus EOD-only `draft_resolution`, while `/demo/logistics/workpages/eod-v0` remains a curated alias until this route is proven. | Same landing/preview sections already validated for the current EOD landing page | Full page under `AppShell` |
+| `/runs/:workflowRunId/workpages/eod-v0/artifacts/:artifactVersionId` | Planned canonical frontend route for artifact-backed EOD editing under a workflow-run workpage family | Continue editing through the existing immutable workbook-backed EOD route after the run-backed landing resolves or creates the latest draft | Backend artifact APIs stay unchanged: `GET /api/v1/workpages/artifacts/{artifact_version_id}`, `POST /api/v1/workpages/artifacts/{artifact_version_id}/submit`, and `GET /api/v1/workflow-runs/{workflow_run_id}/artifacts`; this nested frontend route is the canonical post-EPIC-122 posture, while `/demo/logistics/workpages/eod-v0/artifacts/:artifactVersionId` remains a curated alias during migration. | Same artifact-backed EOD sections already validated for the current page | Full page under `AppShell` |

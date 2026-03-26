@@ -2,6 +2,13 @@
 
 Record any decisions made since the last session so a fresh Codex run can rehydrate quickly.
 
+## 2026-03-26 (TASK-0137 workflow-run-backed workpage contract, alias posture, and draft-resolution freeze)
+- Next-epic decision: after the first artifact-backed EOD slice closed through `TASK-0136`, the next workpage epic is **EPIC-122 workflow-run-backed workpages**, not schedule write-path work, not deeper EOD finalization, and not broader workspace/task modernization.
+- Route-family decision: the canonical backend run-backed family is `GET /api/v1/workpages/workflow-runs/{workflow_run_id}/{workpage_kind}` plus `POST /api/v1/workpages/workflow-runs/{workflow_run_id}/eod-v0/drafts`; the existing artifact-backed EOD read/submit routes remain unchanged.
+- Frontend-route decision: the canonical frontend posture is `/runs/:workflowRunId/workpages/schedule-v0`, `/runs/:workflowRunId/workpages/eod-v0`, and `/runs/:workflowRunId/workpages/eod-v0/artifacts/:artifactVersionId`, with `/demo/logistics/workpages/*` retained as curated aliases until the canonical routes are proven.
+- Contract decision: run-backed workpages keep the existing body/source/freshness contract and add optional `run_context`; only the run-backed EOD landing adds `draft_resolution`, and `artifact_context` remains reserved for artifact-projection responses.
+- Scope decision: schedule stays query-backed/composite, the EOD run-backed landing stays distinct from artifact-backed editing, this epic does not add a generic `actions` blob, and final-packet/approval semantics remain out of scope.
+
 ## 2026-03-25 (TASK-0136 demo entrypoints, recent draft history, and EPIC-121 close-out)
 - Demo-shell entrypoint decision: `/demo/logistics` now exposes `Open EOD preview` and `Create editable EOD draft` in the existing backend-demo-workpages header group; the dispatch-reporting family-node detail card remains a separate reporting/story surface and does not claim that it is already the same artifact-draft lane.
 - Landing-page decision: `/demo/logistics/workpages/eod-v0` remains preview/create-only. We still do not invent frontend-local "open latest draft" discovery there without canonical run truth.

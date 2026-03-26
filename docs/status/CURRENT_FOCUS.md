@@ -4,7 +4,7 @@
 Stage 4 - Vertical Slice MVP (repo merged around one truth system)
 
 ## Current milestone
-Primary runtime/debug work remains the logistics weekly/live family. `TASK-0136` is now complete, so EPIC-121's first bounded artifact-backed EOD workpage slice is now end to end: the repo has frozen the route family, added the bounded reporting template-pack/registry/workbook-adapter foundation, implemented backend EOD artifact create/read/submit behavior, migrated the frontend EOD editing path onto the artifact-backed route, and closed the demo-entrypoint/history/doc sync tranche.
+Primary runtime/debug work remains the logistics weekly/live family. `TASK-0137` is now complete, so the repo now has both the closed EPIC-121 artifact-backed EOD slice and the initial EPIC-122 contract freeze for workflow-run-backed workpages: the current demo/query and artifact-backed EOD routes stay intact, while the next canonical run-backed route family, alias posture, and minimal run-context/draft-resolution boundary are now frozen in repo-native docs before backend/frontend implementation begins.
 
 Current implemented baseline:
 - `/demo/logistics/workpages/schedule-v0`
@@ -40,9 +40,23 @@ Current implemented baseline:
 - the artifact-backed EOD page now supports submit, stale-artifact conflict reopen UX, workbook download, bounded previous/latest lineage actions, and a recent draft history panel sourced from `GET /api/v1/workflow-runs/{workflow_run_id}/artifacts`, while preserving local edits across refreshes when the base artifact version is unchanged
 - workflow-run artifact listing now truthfully exposes the bounded EOD workbook chain needed by that recent-history panel
 
+Newly frozen next-layer contract baseline (`TASK-0137`):
+- canonical backend workflow-run-backed workpage route family:
+  - `GET /api/v1/workpages/workflow-runs/{workflow_run_id}/{workpage_kind}`
+  - `POST /api/v1/workpages/workflow-runs/{workflow_run_id}/eod-v0/drafts`
+- canonical frontend workflow-run-backed route posture:
+  - `/runs/:workflowRunId/workpages/schedule-v0`
+  - `/runs/:workflowRunId/workpages/eod-v0`
+  - `/runs/:workflowRunId/workpages/eod-v0/artifacts/:artifactVersionId`
+- `/demo/logistics/workpages/*` remains a curated alias/entrypoint family until the canonical run-backed routes are implemented and proven
+- run-backed workpage responses will reuse the existing workpage body contract and add optional `run_context`
+- only the run-backed EOD landing response adds `draft_resolution`; keep `artifact_context` reserved for artifact-projection responses
+- schedule remains query-backed/composite in this epic, and EOD editing remains anchored to the existing artifact-backed route keyed by `artifact_version_id`
+
 Immediate next application package:
-- EPIC-121 is effectively complete as the first bounded artifact-backed workpage slice
-- the next planning decision should be a new epic choice: deeper dispatch-reporting/workspace integration versus a future schedule artifact boundary
+- EPIC-122 is now the active next workpage package
+- `TASK-0137` is complete as the route-family / alias / contract freeze tranche
+- `TASK-0138` is the next bounded implementation tranche; `TASK-0139` follows on the same frozen contract and can run in parallel only when isolated worktrees are used
 - the artifact-backed slice remains **EOD only** for now; schedule stays query-backed and composite
 
 Important scope boundaries that remain true after this slice:

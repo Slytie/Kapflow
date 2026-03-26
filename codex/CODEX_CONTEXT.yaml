@@ -175,7 +175,22 @@ gated_context:
       - docs/workflows/dispatch_reporting/v1/examples/
       - fixtures/frontend_contracts/README.md
       - fixtures/logistics/workpages/
-    note: Workpages are fixture-backed derived FE surfaces; keep schedule on the weekly-planning side and EOD on the reporting draft/review side without inventing a backend workpage API.
+    note: Use for EPIC-120 and the current demo-alias workpage surfaces. Preserve the weekly-planning vs reporting boundary and keep human-authored workpage fixtures distinct from backend-owned contract snapshots.
+  logistics_workpages_run_surfaces_pack:
+    load_when: Task touches EPIC-122 or workflow-run-backed workpage surfaces under /runs/:workflowRunId/workpages/*.
+    files:
+      - docs/planning/LOGISTICS_WORKPAGES_RUN_SURFACES_PLAN.md
+      - docs/planning/LOGISTICS_WORKPAGES_RUN_SURFACES_BRIEF.md
+      - docs/planning/epics/EPIC-122.md
+      - codex/context/EPIC-122.md
+      - docs/planning/HITL_HTTP_API_CONTRACTS.md
+      - docs/planning/FRONTEND_PAGE_MAP.md
+      - src/onetruth/api/routes/workpages.py
+      - src/onetruth/api/route_specs/workpages.py
+      - frontend/src/app/App.tsx
+      - frontend/src/app/AppShell.tsx
+      - frontend/src/lib/repositories/workpagesRepository.ts
+    note: Use after EPIC-121 when freezing or implementing canonical workflow-run-backed workpage access. Keep schedule query-backed/composite and keep EOD artifact-backed editing distinct from the run-backed landing.
   payroll_contract_pack:
     load_when: Task is explicitly tagged payroll OR change touches shared semantics that must be validated against a linear approval-heavy reference workflow.
     files:
