@@ -13,6 +13,7 @@ function buildArtifactPayload(artifactVersionId: string): Record<string, unknown
   payload.freshness.source_version = artifactVersionId;
   payload.source.source_artifact_version_id = artifactVersionId;
   payload.artifact_context.artifact_version_id = artifactVersionId;
+  payload.artifact_context.workflow_run_id = "wr-eod-artifact-001";
   payload.artifact_context.download_path = `/api/v1/artifacts/${artifactVersionId}/download.bin`;
   payload.artifact_context.latest_in_chain_artifact_version_id = artifactVersionId;
   payload.artifact_context.supersedes_artifact_version_id = null;
@@ -113,6 +114,36 @@ describe("DispatchReportWorkpagePage", () => {
     await waitFor(() => {
       expect(mutationLog()).toContain("artifact-download-bin:av-eod-artifact-002");
     });
+  });
+
+  it("loads recent draft history from workflow-run artifacts and reopens adjacent draft versions", async () => {
+    const user = userEvent.setup();
+    window.history.pushState({}, "", "/demo/logistics/workpages/eod-v0");
+    render(<App />);
+
+    await user.click(await screen.findByRole("button", { name: "Create editable draft" }));
+    await screen.findByTestId("dispatch-report-artifact-workpage-page");
+    await user.click(screen.getByRole("button", { name: "Submit draft" }));
+
+    await waitFor(() => {
+      expect(window.location.pathname).toBe("/demo/logistics/workpages/eod-v0/artifacts/av-eod-artifact-002");
+    });
+
+    const historyHeading = await screen.findByRole("heading", { name: "Recent draft versions" });
+    const historyPanel = historyHeading.closest("section");
+    expect(historyPanel).not.toBeNull();
+    expect(within(historyPanel as HTMLElement).getByText("av-eod-artifact-002")).toBeInTheDocument();
+    expect(within(historyPanel as HTMLElement).getByText("av-eod-artifact-001")).toBeInTheDocument();
+    expect(within(historyPanel as HTMLElement).getByText("Current")).toBeInTheDocument();
+    expect(within(historyPanel as HTMLElement).getByText("Latest")).toBeInTheDocument();
+    expect(within(historyPanel as HTMLElement).getByText("Superseded")).toBeInTheDocument();
+
+    await user.click(within(historyPanel as HTMLElement).getByRole("link", { name: "Open previous draft" }));
+
+    await waitFor(() => {
+      expect(window.location.pathname).toBe("/demo/logistics/workpages/eod-v0/artifacts/av-eod-artifact-001");
+    });
+    expect(await screen.findByRole("heading", { name: "Latest draft available" })).toBeInTheDocument();
   });
 
   it("shows conflict reopen UX and preserves local edits until the operator navigates", async () => {

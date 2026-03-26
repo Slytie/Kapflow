@@ -5,6 +5,7 @@ describe("workpagesRepository", () => {
     const queryLanding = await workpagesRepository.eod();
     const draft = await workpagesRepository.createEodDraft();
     const artifact = await workpagesRepository.eodArtifact(draft.artifact_version_id);
+    const draftHistory = await workpagesRepository.listEodDraftHistory(draft.workflow_run_id);
     const submitted = await workpagesRepository.submitEodArtifact(draft.artifact_version_id, {
       formValues: {
         working_devices: "36 online",
@@ -12,6 +13,7 @@ describe("workpagesRepository", () => {
       },
       checklistValues: []
     });
+    const submittedHistory = await workpagesRepository.listEodDraftHistory(draft.workflow_run_id);
 
     queryLanding.workpage.summary.service_date = "mutated";
 
@@ -25,9 +27,15 @@ describe("workpagesRepository", () => {
     expect(artifact.source.mode).toBe("artifact_projection");
     expect(artifact.artifact_context?.artifact_version_id).toBe("av-eod-artifact-001");
     expect(artifact.freshness.source_version).toBe("av-eod-artifact-001");
+    expect(draftHistory.map((row) => row.artifact_version_id)).toEqual(["av-eod-artifact-001"]);
 
     expect(submitted.artifact_version_id).toBe("av-eod-artifact-002");
     expect(submitted.supersedes_artifact_version_id).toBe("av-eod-artifact-001");
     expect(submitted.route).toBe("/demo/logistics/workpages/eod-v0/artifacts/av-eod-artifact-002");
+    expect(submittedHistory.map((row) => row.artifact_version_id)).toEqual([
+      "av-eod-artifact-002",
+      "av-eod-artifact-001"
+    ]);
+    expect(submittedHistory[0]?.lineage_note).toMatch(/Submitted artifact-backed EOD draft version/i);
   });
 });

@@ -2,6 +2,7 @@ import { createIdempotencyKey } from "@/lib/api/idempotency";
 import { onetruthApi } from "@/lib/api/onetruthApi";
 import { downloadBinaryToFile } from "@/lib/repositories/artifactAttachments";
 import type {
+  ArtifactVersionRow,
   WorkpageContract,
   WorkpageDraftResponse,
   WorkpageSubmittedResponse
@@ -24,6 +25,26 @@ export const workpagesRepository = {
     return onetruthApi.createDemoEodDraft({
       idempotency_key: createIdempotencyKey("workpage-eod-draft-create", "eod-v0")
     });
+  },
+
+  async listEodDraftHistory(workflowRunId: string): Promise<ArtifactVersionRow[]> {
+    const artifacts = await onetruthApi.listWorkflowRunArtifacts(workflowRunId);
+    return artifacts
+      .filter((artifact) => {
+        if (artifact.artifact_kind !== "reporting.upd_draft.workbook") {
+          return false;
+        }
+        const demoWorkpageId = artifact.metadata_json?.demo_workpage_id;
+        return typeof demoWorkpageId !== "string" || demoWorkpageId === "eod-v0";
+      })
+      .sort((left, right) => {
+        const createdAtCompare = right.created_at.localeCompare(left.created_at);
+        if (createdAtCompare !== 0) {
+          return createdAtCompare;
+        }
+        return right.artifact_version_id.localeCompare(left.artifact_version_id);
+      })
+      .slice(0, 5);
   },
 
   async submitEodArtifact(

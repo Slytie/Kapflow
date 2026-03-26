@@ -4,7 +4,7 @@
 Stage 4 - Vertical Slice MVP (repo merged around one truth system)
 
 ## Current milestone
-Primary runtime/debug work remains the logistics weekly/live family. `TASK-0135` is now complete, so the repo has frozen the first artifact-backed EOD workpage contract, added the bounded reporting template-pack/registry/workbook-adapter foundation, implemented the backend EOD artifact create/read/submit slice, and migrated the frontend EOD editing path onto the new artifact-backed route while leaving the query landing page in place.
+Primary runtime/debug work remains the logistics weekly/live family. `TASK-0136` is now complete, so EPIC-121's first bounded artifact-backed EOD workpage slice is now end to end: the repo has frozen the route family, added the bounded reporting template-pack/registry/workbook-adapter foundation, implemented backend EOD artifact create/read/submit behavior, migrated the frontend EOD editing path onto the artifact-backed route, and closed the demo-entrypoint/history/doc sync tranche.
 
 Current implemented baseline:
 - `/demo/logistics/workpages/schedule-v0`
@@ -31,15 +31,21 @@ Current implemented baseline:
   - `fixtures/frontend_contracts/workpage_eod_v0_artifact_create_response.json`
   - `fixtures/frontend_contracts/workpage_eod_v0_artifact_state.json`
   - `fixtures/frontend_contracts/workpage_eod_v0_artifact_submit_response.json`
+- logistics demo shell backend-demo-workpages header now exposes:
+  - `Open weekly review workpage`
+  - `Open EOD preview`
+  - `Create editable EOD draft`
 - frontend query-backed EOD landing page now renders as a read-only preview with an explicit `Create editable draft` action
 - frontend artifact-backed EOD route now exists at `/demo/logistics/workpages/eod-v0/artifacts/:artifactVersionId`
-- the artifact-backed EOD page now supports submit, stale-artifact conflict reopen UX, workbook download, and bounded previous/latest lineage actions while preserving local edits across refreshes when the base artifact version is unchanged
+- the artifact-backed EOD page now supports submit, stale-artifact conflict reopen UX, workbook download, bounded previous/latest lineage actions, and a recent draft history panel sourced from `GET /api/v1/workflow-runs/{workflow_run_id}/artifacts`, while preserving local edits across refreshes when the base artifact version is unchanged
+- workflow-run artifact listing now truthfully exposes the bounded EOD workbook chain needed by that recent-history panel
 
 Immediate next application package:
-- `TASK-0136` is now the next bounded tranche: expose clearer demo entrypoints and richer artifact-history/reopen affordances around the new artifact-backed EOD slice
+- EPIC-121 is effectively complete as the first bounded artifact-backed workpage slice
+- the next planning decision should be a new epic choice: deeper dispatch-reporting/workspace integration versus a future schedule artifact boundary
 - the artifact-backed slice remains **EOD only** for now; schedule stays query-backed and composite
 
-Important scope boundaries for this tranche:
+Important scope boundaries that remain true after this slice:
 - no generic artifact editor
 - no schedule artifact-backed write path yet
 - keep the schedule page on the **weekly planning review + selected-day preview** side of the boundary

@@ -58,6 +58,31 @@ describe("LogisticsDemoPage", () => {
     expect(within(detailPanel).getByRole("heading", { name: "Dispatch Reporting" })).toBeInTheDocument();
   });
 
+  it("shows truthful workpage entrypoints and can create an editable EOD draft from the shell header", async () => {
+    const user = userEvent.setup();
+    setFrontendOperatorContext();
+    window.history.pushState({}, "", "/demo/logistics?planning_week_id=PW-2026-W10");
+    render(<App />);
+
+    const page = await screen.findByTestId("logistics-demo-page");
+    expect(within(page).getByText("Backend demo workpages")).toBeInTheDocument();
+    expect(within(page).getByRole("link", { name: "Open weekly review workpage" })).toHaveAttribute(
+      "href",
+      "/demo/logistics/workpages/schedule-v0"
+    );
+    expect(within(page).getByRole("link", { name: "Open EOD preview" })).toHaveAttribute(
+      "href",
+      "/demo/logistics/workpages/eod-v0"
+    );
+
+    await user.click(within(page).getByRole("button", { name: "Create editable EOD draft" }));
+
+    expect(await screen.findByTestId("dispatch-report-artifact-workpage-page")).toBeInTheDocument();
+    expect(window.location.pathname).toBe(
+      "/demo/logistics/workpages/eod-v0/artifacts/av-eod-artifact-001"
+    );
+  });
+
   it("requires explicit run selection when a family node links to multiple runs", async () => {
     const user = userEvent.setup();
     setFrontendOperatorContext();

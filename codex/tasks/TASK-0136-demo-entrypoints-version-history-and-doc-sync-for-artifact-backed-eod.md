@@ -2,7 +2,7 @@
 id: TASK-0136
 epic: EPIC-121
 title: "Expose demo entrypoints, recent-version history, and doc/status sync for the artifact-backed EOD slice"
-status: TODO
+status: DONE
 owners: ["frontend", "backend"]
 reviewers: ["qa"]
 depends_on: ["TASK-0135"]
@@ -43,9 +43,9 @@ Polish the first artifact-backed slice so it is discoverable from the logistics 
 - the task file itself with outcomes and follow-ups
 
 ## Plan
-1. Add truthful create or open entrypoints from the query-backed EOD surface into the artifact-backed route.
-2. Make recent-version history or lineage easy to inspect in the artifact-backed page.
-3. Update repo-native docs/status/task memory to reflect the new capability.
+1. Add truthful create entrypoints from the logistics demo shell into the artifact-backed EOD route while keeping the query landing page preview/create-only.
+2. Make recent-version history easy to inspect from the artifact-backed page by reusing canonical workflow-run artifact truth.
+3. Update repo-native docs/status/task memory to reflect the finished capability.
 4. Freeze shell regressions so `/demo/logistics/*` remains coherent.
 
 ## Verification
@@ -61,3 +61,19 @@ Polish the first artifact-backed slice so it is discoverable from the logistics 
 
 ## Notes / decisions
 This task is where the slice becomes understandable to future fresh-session Codex runs, not just technically functional.
+
+## Outcome
+- The logistics demo shell now exposes `Open EOD preview` and `Create editable EOD draft` in the existing backend-demo-workpages header group, and draft creation navigates using the backend-owned `draft.route`.
+- The artifact-backed EOD page now loads a bounded recent draft history panel from `GET /api/v1/workflow-runs/{workflow_run_id}/artifacts`, filtered to the `reporting.upd_draft.workbook` chain for `demo_workpage_id=eod-v0`.
+- Recent history now shows `Current`, `Latest`, and `Superseded` labels plus reopen actions for previous/current/latest versions without adding a new backend route family.
+- The workflow-run artifact list contract now truthfully exposes the EOD workbook versions created by the bounded demo slice, so the frontend history panel reads canonical run/artifact truth instead of frontend-local state.
+- Repo-memory/docs now mark EPIC-121's first bounded slice complete and frame the next move as a new epic choice rather than hidden widening inside this slice.
+
+## Verification notes
+- `npm --prefix frontend run test:run -- src/lib/repositories/workpagesRepository.test.ts src/pages/logisticsDemoPage.test.tsx src/pages/dispatchReportWorkpagePage.test.tsx src/pages/logisticsWorkpageRoutes.test.tsx`
+- `npm --prefix frontend run typecheck`
+- `PYTHONPATH=/tmp/onetruth-py311:src python3.11 -m pytest -q tests/runtime/api/test_workpages_artifact_eod_contract.py`
+- `python3 scripts/validate_repo.py --schemas-only`
+
+## Follow-ups
+- Choose the next epic deliberately: deeper dispatch-reporting/workspace integration versus a future schedule artifact boundary.

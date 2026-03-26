@@ -28,6 +28,8 @@ interface EodArtifactVersionState {
   artifactVersionId: string;
   workflowRunId: string;
   fileName: string;
+  createdAt: string;
+  lineageNote: string | null;
   payload: Record<string, unknown>;
   supersedesArtifactVersionId: string | null;
   supersededByArtifactVersionId: string | null;
@@ -49,6 +51,14 @@ function nextEodArtifactVersionId(): string {
 
 function artifactRoute(artifactVersionId: string): string {
   return `/demo/logistics/workpages/eod-v0/artifacts/${artifactVersionId}`;
+}
+
+function sortArtifactRowsAscending(left: ArtifactVersionRow, right: ArtifactVersionRow): number {
+  const createdAtCompare = left.created_at.localeCompare(right.created_at);
+  if (createdAtCompare !== 0) {
+    return createdAtCompare;
+  }
+  return left.artifact_version_id.localeCompare(right.artifact_version_id);
 }
 
 function eodArtifactFileName(artifactVersionId: string): string {
@@ -199,6 +209,10 @@ function buildEodArtifactPayload(input: {
     artifactVersionId: input.artifactVersionId,
     workflowRunId: input.workflowRunId,
     fileName: eodArtifactFileName(input.artifactVersionId),
+    createdAt: nowIso(),
+    lineageNote: input.supersedesArtifactVersionId
+      ? "Submitted artifact-backed EOD draft version."
+      : "Initial artifact-backed EOD draft seeded from Stage03 template.",
     payload,
     supersedesArtifactVersionId: input.supersedesArtifactVersionId,
     supersededByArtifactVersionId: input.supersededByArtifactVersionId,
@@ -218,10 +232,15 @@ function addEodArtifactVersion(input: {
   formValues?: Record<string, unknown>;
   checklistValues?: Array<{ item_id: string; selected: boolean; note: string }>;
 }): EodArtifactVersionState {
+  const createdAt = nowIso();
   const version: EodArtifactVersionState = {
     artifactVersionId: input.artifactVersionId,
     workflowRunId: input.workflowRunId,
     fileName: eodArtifactFileName(input.artifactVersionId),
+    createdAt,
+    lineageNote: input.supersedesArtifactVersionId
+      ? "Submitted artifact-backed EOD draft version."
+      : "Initial artifact-backed EOD draft seeded from Stage03 template.",
     payload: buildEodArtifactPayload({
       artifactVersionId: input.artifactVersionId,
       workflowRunId: input.workflowRunId,
@@ -237,6 +256,53 @@ function addEodArtifactVersion(input: {
   };
   eodArtifactVersions.set(version.artifactVersionId, version);
   return version;
+}
+
+function eodArtifactVersionRow(version: EodArtifactVersionState): ArtifactVersionRow {
+  return {
+    artifact_version_id: version.artifactVersionId,
+    workflow_run_id: version.workflowRunId,
+    task_run_id: null,
+    artifact_kind: "reporting.upd_draft.workbook",
+    artifact_role: "",
+    media_type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    storage_uri: `memory://workpages/${version.fileName}`,
+    content_digest: `sha256:${version.artifactVersionId}`,
+    byte_size: 1024,
+    metadata_json: {
+      demo_workpage_id: "eod-v0",
+      file_name: version.fileName,
+      service_date: "2026-03-16",
+      station_code: "DVC4",
+      dsp_name: "QDCI"
+    },
+    parent_artifact_version_id: version.supersedesArtifactVersionId,
+    supersedes_artifact_version_id: version.supersedesArtifactVersionId,
+    lineage_note: version.lineageNote,
+    created_at: version.createdAt,
+    links: [
+      {
+        artifact_version_id: version.artifactVersionId,
+        workflow_run_id: version.workflowRunId,
+        subject_kind: "workflow_run",
+        subject_id: version.workflowRunId,
+        relation_kind: "subject",
+        created_at: version.createdAt,
+        created_by_actor_id: null,
+        created_by_actor_type: null
+      }
+    ]
+  };
+}
+
+function listWorkflowRunArtifacts(workflowRunId: string): ArtifactVersionRow[] {
+  const eodArtifacts =
+    workflowRunId === EOD_WORKFLOW_RUN_ID
+      ? Array.from(eodArtifactVersions.values()).map(eodArtifactVersionRow)
+      : [];
+  return [...listArtifactsForSubject("workflow_run", workflowRunId), ...eodArtifacts].sort(
+    sortArtifactRowsAscending
+  );
 }
 
 function updateEodArtifactChainLatest(artifactVersionId: string, latestArtifactVersionId: string): void {
@@ -2046,7 +2112,7 @@ export const handlers = [
     const workflowRunId = String(params.workflowRunId);
     return ok({
       command: "api.workflow_runs.artifacts.list",
-      artifact_versions: listArtifactsForSubject("workflow_run", workflowRunId)
+      artifact_versions: listWorkflowRunArtifacts(workflowRunId)
     });
   }),
 

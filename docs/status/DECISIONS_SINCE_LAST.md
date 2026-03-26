@@ -2,6 +2,13 @@
 
 Record any decisions made since the last session so a fresh Codex run can rehydrate quickly.
 
+## 2026-03-25 (TASK-0136 demo entrypoints, recent draft history, and EPIC-121 close-out)
+- Demo-shell entrypoint decision: `/demo/logistics` now exposes `Open EOD preview` and `Create editable EOD draft` in the existing backend-demo-workpages header group; the dispatch-reporting family-node detail card remains a separate reporting/story surface and does not claim that it is already the same artifact-draft lane.
+- Landing-page decision: `/demo/logistics/workpages/eod-v0` remains preview/create-only. We still do not invent frontend-local "open latest draft" discovery there without canonical run truth.
+- History-surface decision: the artifact-backed EOD page now reuses `GET /api/v1/workflow-runs/{workflow_run_id}/artifacts` for recent-version discovery, with the frontend filtering to `reporting.upd_draft.workbook` plus `demo_workpage_id=eod-v0` when metadata is present, rather than adding a new history route or client-only version list.
+- Artifact-list decision: `GET /api/v1/workflow-runs/{workflow_run_id}/artifacts` must surface the canonical EOD draft chain for the bounded demo run so the recent-version panel reads authoritative workflow-run/artifact truth instead of older subject-attachment-only data.
+- Epic-closure decision: EPIC-121's first bounded slice is now complete. The next decision should be framed as a new epic choice (deeper dispatch-reporting/workspace integration versus a future schedule artifact boundary), not as hidden widening inside this slice.
+
 ## 2026-03-25 (TASK-0135 frontend EOD artifact route migration)
 - Route-posture decision: `/demo/logistics/workpages/eod-v0` remains the query-backed EOD landing page, but it is now preview-only with an explicit create-draft affordance; active EOD edits now live only on `/demo/logistics/workpages/eod-v0/artifacts/{artifact_version_id}`.
 - Frontend-contract decision: the frontend workpage contract now preserves optional `artifact_context` so the same page composition can render both query-backed landing payloads and artifact-backed EOD state without inventing a second local schema.

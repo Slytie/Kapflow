@@ -73,7 +73,7 @@ frontend/
 ```
 
 ## 3) Route map
-- `/demo/logistics` -> primary three-workflow logistics shell
+- `/demo/logistics` -> primary three-workflow logistics shell plus workpage launch point for EOD preview/create
 - `/demo/logistics/workpages/schedule-v0` -> weekly schedule review + selected-day preview workpage
 - `/demo/logistics/workpages/eod-v0` -> end-of-day landing/preview workpage with create-draft affordance
 - `/demo/logistics/workpages/eod-v0/artifacts/:artifactVersionId` -> artifact-backed end-of-day draft/review workpage
@@ -103,7 +103,7 @@ frontend/
   - `pointersRepository`
   - `timelineRepository`
   - `boardRepository`
-- `workpagesRepository`
+- `workpagesRepository` (including EOD draft creation, submit, and recent-history filtering over workflow-run artifact lists)
 - Components/pages do not call raw `fetch`.
 - Workpage example builders may remain as oracle/test fixtures, but the active workpage routes now read backend demo query contracts through HTTP-backed repositories.
 
@@ -122,7 +122,7 @@ frontend/
 ## 8) Test strategy
 - Component tests: inline actions, compact metadata, drawer behavior, attachment affordances.
 - Route tests: board lanes, my-work filtering, approvals workspace, exceptions metadata, run detail tabs.
-- Workpage tests: repository/API seam coverage, schedule/EOD page renders, create-draft navigation, refresh-preserved local edit interactions, submit/conflict/download/lineage behavior, and logistics route integration.
+- Workpage tests: repository/API seam coverage, schedule/EOD page renders, logistics-shell preview/create entrypoints, refresh-preserved local edit interactions, submit/conflict/download behavior, and recent draft history/reopen behavior on the artifact-backed EOD route.
 - Integration tests: claim/complete/respond round-trips, forbidden response handling, reload stability.
 - Backend API contract tests verify `/api/v1` route contracts for board/list/detail/mutations.
 - Workpage route tests should freeze both the page render behavior and the workpage query contract boundary.
@@ -141,8 +141,10 @@ frontend/
 - Example-backed builders remain oracle/test fixtures only; they are no longer the active route seam.
 - `schedule-v0` stays on the weekly-planning review side of the boundary and only offers local what-if inputs.
 - `eod-v0` stays on `reporting.upd_draft.workbook` / draft-review semantics and does not claim final-packet authority.
+- The logistics shell now exposes `Open weekly review workpage`, `Open EOD preview`, and `Create editable EOD draft` in its backend-demo-workpages header area rather than overloading the dispatch-reporting family detail card.
 - `/demo/logistics/workpages/eod-v0` remains the query-backed landing page and is now preview-only with a create-draft CTA.
 - `/demo/logistics/workpages/eod-v0/artifacts/:artifactVersionId` is the only active editable EOD surface in this epic; it reuses the same section ids, adds bounded submit/conflict/download/lineage UX, and keeps the backend authoritative for version changes.
+- The artifact-backed EOD route also reuses `GET /api/v1/workflow-runs/{workflow_run_id}/artifacts` for recent draft history instead of adding a new workpage-specific history endpoint.
 - The schedule page is **composite** over multiple weekly-planning source datasets; future backend route design must leave room for run/composite projections and not assume one artifact per page.
-- The EOD page is the better candidate for the first future artifact-backed path.
+- The EOD page is the first implemented artifact-backed workpage path.
 - Human-authored workpage fixtures live under `fixtures/logistics/workpages/` and are distinct from backend-generated frontend contract snapshots in `fixtures/frontend_contracts/`.

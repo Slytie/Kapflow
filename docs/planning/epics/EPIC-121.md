@@ -14,6 +14,9 @@ This epic is intentionally narrow:
 
 It is intentionally **not** the generic artifact-editor epic and **not** the schedule write-path epic.
 
+## Status
+Completed on 2026-03-25 through `TASK-0136`. The first bounded artifact-backed EOD slice now exists end to end in the logistics demo shell and repo-memory is synchronized to that visible truth.
+
 ## Scope
 ### In scope
 - repo-native artifact-path brief/plan and context pack
@@ -50,15 +53,18 @@ Context pack: `codex/context/EPIC-121.md`
 - The existing `/demo/logistics/workpages/eod-v0` page remains the query-backed landing page; the artifact-backed page is a sibling route keyed by `artifact_version_id`.
 - The repo already has canonical artifact version lineage via `supersedes_artifact_version_id`.
 - The repo now has a bounded `dispatch_reporting.v1` template pack, multi-workflow template-registry support, and a first Stage03 workbook adapter/materializer seam through `TASK-0133`.
+- `TASK-0134` through `TASK-0136` are complete: backend artifact draft/create/read/submit, frontend artifact-backed EOD editing, demo-shell entrypoints, and recent draft history are all implemented.
+- `/demo/logistics` now exposes direct `Open EOD preview` and `Create editable EOD draft` entrypoints in the backend-demo-workpages header group.
+- The artifact-backed EOD page now reads recent draft history from `GET /api/v1/workflow-runs/{workflow_run_id}/artifacts`, filtered to the bounded `reporting.upd_draft.workbook` chain.
 - The schedule page is still composite and remains query-backed in this epic.
-- No artifact-backed EOD route implementation exists yet; `TASK-0134` is now the next implementation tranche.
+- EPIC-121 is now closed as the first bounded artifact-backed workpage slice; the next move should be chosen as a new epic rather than by silently widening this one.
 
 ## Tasks
-- TASK-0132
-- TASK-0133
-- TASK-0134
-- TASK-0135
-- TASK-0136
+- TASK-0132 - DONE
+- TASK-0133 - DONE
+- TASK-0134 - DONE
+- TASK-0135 - DONE
+- TASK-0136 - DONE
 
 ## Red-team question
 Are we still proving one bounded artifact-backed EOD path inside the canonical run/artifact model, or are we quietly broadening into a generic editor, schedule writes, or approval/final-packet semantics before the first immutable-write slice is stable?

@@ -257,12 +257,7 @@ def list_workflow_run_artifacts_endpoint(
     page: Page,
 ) -> dict[str, Any]:
     scoped_workflow_run(connection, context, workflow_run_id)
-    rows = list_artifacts_for_subject_command(
-        connection,
-        workflow_run_id=workflow_run_id,
-        subject_kind="workflow_run",
-        subject_id=workflow_run_id,
-    )
+    rows = list_artifacts_for_workflow_run_command(connection, workflow_run_id)
     rows = rows[page.offset : page.offset + page.limit]
     return {
         "command": "api.workflow_runs.artifacts.list",

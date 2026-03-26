@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Link, useSearchParams } from "react-router-dom";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 
 import { LaneColumn } from "@/components/LaneColumn";
 import { StatePanel } from "@/components/StatePanel";
@@ -8,7 +8,7 @@ import { WorkflowGraph } from "@/components/WorkflowGraph";
 import { apiConfig } from "@/lib/api/config";
 import { errorText } from "@/lib/api/errorText";
 import { onetruthApi } from "@/lib/api/onetruthApi";
-import { logisticsStoryRepository, workflowRunsRepository } from "@/lib/repositories";
+import { logisticsStoryRepository, workpagesRepository, workflowRunsRepository } from "@/lib/repositories";
 import { downloadBinaryToFile } from "@/lib/repositories/artifactAttachments";
 import { useDrawer } from "@/lib/state/drawerContext";
 import type {
@@ -211,6 +211,7 @@ function runRefSummary(
 
 export function LogisticsDemoPage(): JSX.Element {
   const { open } = useDrawer();
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [searchParams] = useSearchParams();
   const planningWeekId = searchParams.get("planning_week_id")?.trim() || "PW-2026-W10";
@@ -229,6 +230,13 @@ export function LogisticsDemoPage(): JSX.Element {
         serviceDateId
       }),
     refetchInterval: apiConfig.pollIntervalMs
+  });
+  const createEodDraftMutation = useMutation({
+    mutationFn: () => workpagesRepository.createEodDraft(),
+    onSuccess: (draft) => {
+      void queryClient.invalidateQueries({ queryKey: ["workpages"] });
+      navigate(draft.route);
+    }
   });
 
   const story = query.data;
@@ -455,8 +463,24 @@ export function LogisticsDemoPage(): JSX.Element {
             Open weekly review workpage
           </Link>
           <Link className="link-button" to="/demo/logistics/workpages/eod-v0">
-            Open end-of-day workpage
+            Open EOD preview
           </Link>
+          <button
+            type="button"
+            className="action-btn action-btn--positive"
+            disabled={createEodDraftMutation.isPending}
+            onClick={() => createEodDraftMutation.mutate()}
+          >
+            {createEodDraftMutation.isPending ? "Creating editable EOD draft..." : "Create editable EOD draft"}
+          </button>
+          {createEodDraftMutation.isError ? (
+            <p className="logistics-demo-page__header-links-error">
+              {errorText(
+                createEodDraftMutation.error,
+                "Unable to create the artifact-backed EOD draft."
+              )}
+            </p>
+          ) : null}
         </div>
       </header>
 

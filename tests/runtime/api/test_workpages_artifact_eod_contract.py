@@ -323,6 +323,45 @@ def test_submit_artifact_workpage_creates_superseding_version_and_updates_projec
     )
 
 
+def test_workflow_run_artifact_list_includes_eod_draft_chain_versions(tmp_path: Path) -> None:
+    client = _client(tmp_path)
+    created = client.post(
+        "/api/v1/workpages/demo/eod-v0/drafts",
+        payload={"idempotency_key": "api:eod-draft:history-001"},
+    )
+    workflow_run_id = str(created.payload["draft"]["workflow_run_id"])
+    base_artifact_version_id = str(created.payload["draft"]["artifact_version_id"])
+
+    submitted = client.post(
+        f"/api/v1/workpages/artifacts/{base_artifact_version_id}/submit",
+        payload={
+            "form_values": {
+                "working_devices": "37",
+                "dispatcher_comment": "History list regression",
+            },
+            "checklist_values": [],
+            "idempotency_key": "api:eod-draft:history-submit-001",
+        },
+    )
+    submitted_artifact_version_id = str(submitted.payload["submitted"]["artifact_version_id"])
+
+    listed = client.get(f"/api/v1/workflow-runs/{workflow_run_id}/artifacts")
+    assert listed.status_code == 200
+    assert listed.payload["status"] == "ok"
+    assert listed.payload["command"] == "api.workflow_runs.artifacts.list"
+
+    workbook_rows = [
+        row
+        for row in listed.payload["artifact_versions"]
+        if row["artifact_kind"] == "reporting.upd_draft.workbook"
+    ]
+    assert [row["artifact_version_id"] for row in workbook_rows] == [
+        base_artifact_version_id,
+        submitted_artifact_version_id,
+    ]
+    assert all(row["metadata_json"]["demo_workpage_id"] == "eod-v0" for row in workbook_rows)
+
+
 def test_submit_artifact_workpage_replays_idempotently_without_duplicate_versions(
     tmp_path: Path,
 ) -> None:

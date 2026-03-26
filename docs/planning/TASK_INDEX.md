@@ -140,4 +140,4 @@ Note: `TASK-0087` / `TASK-0088` / `TASK-0089` were formerly duplicated as `TASK-
 | TASK-0133 | EPIC-121 | DONE | high | Add dispatch-reporting template-pack/registry support and EOD workbook adapter round-trip tests |
 | TASK-0134 | EPIC-121 | DONE | high | Implement backend EOD artifact draft/projection/submit routes and generated snapshots |
 | TASK-0135 | EPIC-121 | DONE | high | Migrate the EOD page to the artifact-backed route with submit/conflict/download/version-lineage UX |
-| TASK-0136 | EPIC-121 | TODO | medium | Expose demo entrypoints, recent-version history, and doc/status sync for the artifact-backed EOD slice |
+| TASK-0136 | EPIC-121 | DONE | medium | Expose demo entrypoints, recent-version history, and doc/status sync for the artifact-backed EOD slice |

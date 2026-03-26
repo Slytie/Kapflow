@@ -395,6 +395,14 @@
   font-size: 12px;
 }
 
+.logistics-demo-page__header-links-error {
+  margin: 0;
+  color: var(--danger);
+  font-size: 12px;
+  max-width: 280px;
+  text-align: right;
+}
+
 .logistics-demo-page__panel {
   border: 1px solid #ddd9d4;
   border-radius: 12px;
@@ -837,6 +845,25 @@
 }
 
 .workpage-history__item p {
+  margin: 0;
+  color: #68707a;
+}
+
+.workpage-history__meta {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.workpage-history__badges {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 6px;
+}
+
+.workpage-history__empty {
   margin: 0;
   color: #68707a;
 }

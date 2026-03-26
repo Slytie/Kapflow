@@ -34,9 +34,21 @@ describe("logistics workpage routes", () => {
     window.history.pushState({}, "", "/demo/logistics?planning_week_id=PW-2026-W10");
     render(<App />);
 
-    await user.click(await screen.findByRole("link", { name: "Open end-of-day workpage" }));
+    await user.click(await screen.findByRole("link", { name: "Open EOD preview" }));
 
     expect(await screen.findByTestId("dispatch-report-workpage-page")).toBeInTheDocument();
     expect(window.location.pathname).toBe("/demo/logistics/workpages/eod-v0");
+  });
+
+  it("creates an editable EOD draft directly from the logistics demo shell", async () => {
+    const user = userEvent.setup();
+    setFrontendOperatorContext();
+    window.history.pushState({}, "", "/demo/logistics?planning_week_id=PW-2026-W10");
+    render(<App />);
+
+    await user.click(await screen.findByRole("button", { name: "Create editable EOD draft" }));
+
+    expect(await screen.findByTestId("dispatch-report-artifact-workpage-page")).toBeInTheDocument();
+    expect(window.location.pathname).toBe("/demo/logistics/workpages/eod-v0/artifacts/av-eod-artifact-001");
   });
 });
