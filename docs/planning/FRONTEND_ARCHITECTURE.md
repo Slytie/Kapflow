@@ -134,14 +134,15 @@ frontend/
 - Status/severity signals include text (not color-only).
 
 ## 10) Workpage surfaces
-- Workpages live under `/demo/logistics/workpages/*`.
+- Canonical workflow-run-backed workpages live under `/runs/:workflowRunId/workpages/*`.
+- `/demo/logistics/workpages/*` remains implemented as a compatibility-alias family.
 - Treat `/demo/logistics/*` as logistics-shell routes in `AppShell`.
 - These pages are sibling full-page routes under `AppShell`, not children rendered inside `LogisticsDemoPage`.
 - The current v0 pages now split between a query-backed landing surface and an artifact-backed editing surface while still reading backend-owned contracts through the HTTP-backed workpage repository.
 - Example-backed builders remain oracle/test fixtures only; they are no longer the active route seam.
 - `schedule-v0` stays on the weekly-planning review side of the boundary and only offers local what-if inputs.
 - `eod-v0` stays on `reporting.upd_draft.workbook` / draft-review semantics and does not claim final-packet authority.
-- The logistics shell now exposes `Open weekly review workpage`, `Open EOD preview`, and `Create editable EOD draft` in its backend-demo-workpages header area rather than overloading the dispatch-reporting family detail card.
+- The logistics shell now exposes canonical run-backed workpage links as the primary header actions, keeps demo workpage links in a clearly labeled compatibility-alias section, and adds run-specific workpage CTAs to the weekly-planning and dispatch-reporting family drilldown card.
 - `/demo/logistics/workpages/eod-v0` remains the query-backed landing page and is now preview-only with a create-draft CTA.
 - `/demo/logistics/workpages/eod-v0/artifacts/:artifactVersionId` is the only active editable EOD surface in this epic; it reuses the same section ids, adds bounded submit/conflict/download/lineage UX, and keeps the backend authoritative for version changes.
 - The artifact-backed EOD route also reuses `GET /api/v1/workflow-runs/{workflow_run_id}/artifacts` for recent draft history instead of adding a new workpage-specific history endpoint.

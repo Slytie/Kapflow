@@ -4,7 +4,7 @@
 Stage 4 - Vertical Slice MVP (repo merged around one truth system)
 
 ## Current milestone
-Primary runtime/debug work remains the logistics weekly/live family. `TASK-0137`, `TASK-0138`, `TASK-0139`, and `TASK-0140` are now complete, so the repo now has both the closed EPIC-121 artifact-backed EOD slice and the full EPIC-122 workflow-run-backed workpage access layer across backend and frontend: the current demo/query and artifact-backed EOD routes stay intact as compatibility aliases, the canonical run-backed route family and minimal run-context/draft-resolution boundary are frozen in repo-native docs, and the canonical `/runs/:workflowRunId/workpages/*` schedule/EOD surfaces now exist in the app before the remaining demo/story drilldown follow-through.
+Primary runtime/debug work remains the logistics weekly/live family. `TASK-0137`, `TASK-0138`, `TASK-0139`, `TASK-0140`, and `TASK-0141` are now complete, so the repo now has both the closed EPIC-121 artifact-backed EOD slice and the full EPIC-122 workflow-run-backed workpage access layer across backend and frontend: the current demo/query and artifact-backed EOD routes stay intact as compatibility aliases, the canonical run-backed route family and minimal run-context/draft-resolution boundary are frozen in repo-native docs, the canonical `/runs/:workflowRunId/workpages/*` schedule/EOD surfaces now exist in the app, and `/demo/logistics` now exposes those canonical workpage routes as the primary discoverable path.
 
 Current implemented baseline:
 - `/demo/logistics/workpages/schedule-v0`
@@ -40,19 +40,20 @@ Current implemented baseline:
   - `fixtures/frontend_contracts/workpage_eod_v0_artifact_create_response.json`
   - `fixtures/frontend_contracts/workpage_eod_v0_artifact_state.json`
   - `fixtures/frontend_contracts/workpage_eod_v0_artifact_submit_response.json`
-- logistics demo shell backend-demo-workpages header now exposes:
-  - `Open weekly review workpage`
-  - `Open EOD preview`
-  - `Create editable EOD draft`
+- logistics demo shell now exposes:
+  - primary canonical run-backed workpage launch links for the single linked weekly-planning and dispatch-reporting runs in the current story
+  - a clearly labeled compatibility-alias section for `/demo/logistics/workpages/*`
+  - run-specific canonical workpage drilldowns from the family-node detail card for weekly-planning and dispatch-reporting runs
 - frontend query-backed EOD landing page now renders as a read-only preview with an explicit `Create editable draft` action
 - frontend artifact-backed EOD route now exists at `/demo/logistics/workpages/eod-v0/artifacts/:artifactVersionId`
 - frontend run-backed schedule and EOD landing pages now reuse the validated workpage UI on the canonical `/runs/:workflowRunId/workpages/*` routes while keeping demo routes as compatibility aliases
 - frontend run-backed EOD landing now respects backend `draft_resolution`, showing either `Create editable draft` or `Open latest draft` from the supplied canonical artifact route
+- live-dispatch family drilldowns still do not expose a workpage CTA in EPIC-122; they remain workspace/detail-only
 - the artifact-backed EOD page now supports submit, stale-artifact conflict reopen UX, workbook download, bounded previous/latest lineage actions, and a recent draft history panel sourced from `GET /api/v1/workflow-runs/{workflow_run_id}/artifacts`, while preserving local edits across refreshes when the base artifact version is unchanged
 - artifact-backed EOD submit/conflict handoff routes now point at canonical `/runs/{workflow_run_id}/workpages/eod-v0/artifacts/{artifact_version_id}` paths once the canonical run-backed pages are active
 - workflow-run artifact listing now truthfully exposes the bounded EOD workbook chain needed by that recent-history panel
 
-Current EPIC-122 implemented route and contract baseline (`TASK-0137` + `TASK-0138` + `TASK-0139` + `TASK-0140`):
+Current EPIC-122 implemented route and contract baseline (`TASK-0137` + `TASK-0138` + `TASK-0139` + `TASK-0140` + `TASK-0141`):
 - canonical backend workflow-run-backed workpage route family:
   - `GET /api/v1/workpages/workflow-runs/{workflow_run_id}/{workpage_kind}`
   - `POST /api/v1/workpages/workflow-runs/{workflow_run_id}/eod-v0/drafts`
@@ -60,7 +61,7 @@ Current EPIC-122 implemented route and contract baseline (`TASK-0137` + `TASK-01
   - `/runs/:workflowRunId/workpages/schedule-v0`
   - `/runs/:workflowRunId/workpages/eod-v0`
   - `/runs/:workflowRunId/workpages/eod-v0/artifacts/:artifactVersionId`
-- `/demo/logistics/workpages/*` remains a curated alias/entrypoint family until the canonical run-backed routes are implemented and proven
+- `/demo/logistics/workpages/*` remains an implemented compatibility-alias family after the canonical run-backed routes are proven; it is no longer the primary discoverable access model
 - run-backed workpage responses will reuse the existing workpage body contract and add optional `run_context`
 - only the run-backed EOD landing response adds `draft_resolution`; keep `artifact_context` reserved for artifact-projection responses
 - schedule remains query-backed/composite in this epic, and EOD editing remains anchored to the existing artifact-backed route keyed by `artifact_version_id`
@@ -69,13 +70,11 @@ Current EPIC-122 implemented route and contract baseline (`TASK-0137` + `TASK-01
 - the canonical run-backed EOD create route now seeds the same immutable `reporting.upd_draft.workbook` artifact family inside the supplied `dispatch_reporting.v1` run and returns canonical `/runs/{workflow_run_id}/workpages/eod-v0/artifacts/{artifact_version_id}` handoff routes
 
 Immediate next application package:
-- EPIC-122 is now the active next workpage package
-- `TASK-0137` is complete as the route-family / alias / contract freeze tranche
-- `TASK-0138` is complete as the backend run-backed schedule route + snapshot tranche
-- `TASK-0139` is complete as the backend run-backed EOD landing/draft-resolution route + canonical create tranche
-- `TASK-0140` is complete as the frontend migration tranche for canonical `/runs/:workflowRunId/workpages/*` routes plus canonical artifact handoff
-- `TASK-0141` is the next bounded implementation tranche and should expose demo/story drilldown entrypoints while keeping the alias posture and repo-memory truthful
+- EPIC-122 is now complete as the workflow-run-backed workpage access epic
+- the canonical `/runs/:workflowRunId/workpages/*` route family is now both implemented and discoverable from `/demo/logistics`
+- the demo workpage routes remain implemented compatibility aliases, not the primary access model
 - the artifact-backed slice remains **EOD only** for now; schedule stays query-backed and composite
+- the next application choice should be framed deliberately as a new epic decision rather than a hidden EPIC-122 follow-on
 
 Important scope boundaries that remain true after this slice:
 - no generic artifact editor

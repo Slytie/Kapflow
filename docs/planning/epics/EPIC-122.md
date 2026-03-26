@@ -10,7 +10,7 @@ This epic is intentionally asymmetric:
 This epic is intentionally **not** the schedule write-path epic and **not** the broad workspace/task integration epic.
 
 ## Status
-Active as of 2026-03-26. `TASK-0137`, `TASK-0138`, `TASK-0139`, and `TASK-0140` are now complete, so the route family, alias posture, and minimal run-context/draft-resolution contract are frozen in repo-native docs, the backend exposes canonical run-backed schedule and EOD workpage access routes plus generated snapshots, and the frontend now activates the canonical `/runs/:workflowRunId/workpages/*` schedule/EOD surfaces. `TASK-0141` is the next bounded implementation tranche.
+Complete as of 2026-03-26. `TASK-0137`, `TASK-0138`, `TASK-0139`, `TASK-0140`, and `TASK-0141` are now complete, so the route family, alias posture, and minimal run-context/draft-resolution contract are frozen in repo-native docs, the backend exposes canonical run-backed schedule and EOD workpage access routes plus generated snapshots, the frontend activates the canonical `/runs/:workflowRunId/workpages/*` schedule/EOD surfaces, and `/demo/logistics` now exposes those canonical workpage routes as the primary discoverable entrypoint while keeping demo workpage routes as compatibility aliases.
 
 ## Scope
 ### In scope
@@ -49,8 +49,9 @@ Context pack: `codex/context/EPIC-122.md`
 - The schedule page remains composite and should not be forced into one-artifact semantics in this epic.
 - `TASK-0139` is now complete: the backend exposes `GET /api/v1/workpages/workflow-runs/{workflow_run_id}/eod-v0` plus `POST /api/v1/workpages/workflow-runs/{workflow_run_id}/eod-v0/drafts`, while artifact-backed EOD editing remains a separate explicit lane.
 - `TASK-0140` is now complete: the frontend exposes `/runs/:workflowRunId/workpages/schedule-v0`, `/runs/:workflowRunId/workpages/eod-v0`, and `/runs/:workflowRunId/workpages/eod-v0/artifacts/:artifactVersionId`, preserving the validated page UI while switching active run-backed usage to the canonical route family.
+- `TASK-0141` is now complete: `/demo/logistics` advertises the canonical run-backed schedule/EOD workpage routes as the primary discoverable path, family-node drilldowns expose run-specific workpage CTAs for weekly-planning and dispatch-reporting runs, and demo workpage routes remain clearly labeled compatibility aliases.
 - Artifact-backed EOD submit/conflict responses now hand off to canonical nested `/runs/{workflow_run_id}/workpages/eod-v0/artifacts/{artifact_version_id}` routes once the canonical frontend pages are active.
-- `/demo/logistics/workpages/*` remains a curated alias/entrypoint family while the canonical run-backed surfaces are proven and demo/story entrypoints are updated.
+- `/demo/logistics/workpages/*` remains an implemented compatibility-alias family after the canonical run-backed surfaces are proven; it is no longer the primary access model.
 - Legacy workspace/task surfaces still contain old schedule-centric assumptions and should not absorb this epic.
 
 ## Tasks
@@ -58,7 +59,7 @@ Context pack: `codex/context/EPIC-122.md`
 - TASK-0138 - DONE
 - TASK-0139 - DONE
 - TASK-0140 - DONE
-- TASK-0141 - TODO
+- TASK-0141 - DONE
 
 ## Red-team question
 Are we still promoting workpages from demo-only surfaces to canonical workflow-run-backed surfaces, or are we quietly broadening into schedule writes, EOD finalization, or legacy workspace/task modernization before the workflow-native access model is proven?

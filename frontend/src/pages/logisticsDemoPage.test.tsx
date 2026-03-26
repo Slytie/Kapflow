@@ -39,6 +39,9 @@ describe("LogisticsDemoPage", () => {
     expect(
       within(detailPanel).getByRole("link", { name: "Open run detail (secondary)" })
     ).toHaveAttribute("href", "/runs/wr-weekly-001");
+    expect(
+      within(detailPanel).getByRole("link", { name: "Open schedule workpage" })
+    ).toHaveAttribute("href", "/runs/wr-weekly-001/workpages/schedule-v0");
 
     expect(await within(page).findByTestId("logistics-demo-drilldown-graph")).toBeInTheDocument();
   });
@@ -56,34 +59,58 @@ describe("LogisticsDemoPage", () => {
 
     const detailPanel = within(page).getByTestId("logistics-module-detail-panel");
     expect(within(detailPanel).getByRole("heading", { name: "Dispatch Reporting" })).toBeInTheDocument();
+    expect(
+      within(detailPanel).getByRole("link", { name: "Open EOD workpage" })
+    ).toHaveAttribute("href", "/runs/wr-report-001/workpages/eod-v0");
   });
 
-  it("shows truthful workpage entrypoints and can create an editable EOD draft from the shell header", async () => {
+  it("shows canonical header entrypoints and keeps demo workpages as compatibility aliases", async () => {
+    setFrontendOperatorContext();
+    window.history.pushState({}, "", "/demo/logistics?planning_week_id=PW-2026-W10");
+    render(<App />);
+
+    const page = await screen.findByTestId("logistics-demo-page");
+    const canonicalHeader = within(page).getByText("Canonical run-backed workpages").closest("div") as HTMLElement;
+    const aliasHeader = within(page).getByText("Compatibility alias workpages").closest("div") as HTMLElement;
+
+    expect(canonicalHeader).toBeInTheDocument();
+    expect(within(canonicalHeader).getByRole("link", { name: "Open weekly review workpage" })).toHaveAttribute(
+      "href",
+      "/runs/wr-weekly-001/workpages/schedule-v0"
+    );
+    expect(within(canonicalHeader).getByRole("link", { name: "Open EOD workpage" })).toHaveAttribute(
+      "href",
+      "/runs/wr-report-001/workpages/eod-v0"
+    );
+    expect(aliasHeader).toBeInTheDocument();
+    expect(within(aliasHeader).getByRole("link", { name: "Open demo schedule alias" })).toHaveAttribute(
+      "href",
+      "/demo/logistics/workpages/schedule-v0"
+    );
+    expect(within(aliasHeader).getByRole("link", { name: "Open demo EOD alias" })).toHaveAttribute(
+      "href",
+      "/demo/logistics/workpages/eod-v0"
+    );
+    expect(within(page).queryByRole("button", { name: "Create editable EOD draft" })).not.toBeInTheDocument();
+  });
+
+  it("does not expose a workpage CTA for live-dispatch drilldowns", async () => {
     const user = userEvent.setup();
     setFrontendOperatorContext();
     window.history.pushState({}, "", "/demo/logistics?planning_week_id=PW-2026-W10");
     render(<App />);
 
     const page = await screen.findByTestId("logistics-demo-page");
-    expect(within(page).getByText("Backend demo workpages")).toBeInTheDocument();
-    expect(within(page).getByRole("link", { name: "Open weekly review workpage" })).toHaveAttribute(
-      "href",
-      "/demo/logistics/workpages/schedule-v0"
-    );
-    expect(within(page).getByRole("link", { name: "Open EOD preview" })).toHaveAttribute(
-      "href",
-      "/demo/logistics/workpages/eod-v0"
-    );
+    const liveDispatchNode = within(page).getByTestId("workflow-graph-node-live_dispatch");
+    await user.click(liveDispatchNode);
 
-    await user.click(within(page).getByRole("button", { name: "Create editable EOD draft" }));
-
-    expect(await screen.findByTestId("dispatch-report-artifact-workpage-page")).toBeInTheDocument();
-    expect(window.location.pathname).toBe(
-      "/demo/logistics/workpages/eod-v0/artifacts/av-eod-artifact-001"
-    );
+    const detailPanel = within(page).getByTestId("logistics-module-detail-panel");
+    expect(within(detailPanel).getByRole("heading", { name: "Live Dispatch" })).toBeInTheDocument();
+    expect(within(detailPanel).queryByRole("link", { name: "Open schedule workpage" })).not.toBeInTheDocument();
+    expect(within(detailPanel).queryByRole("link", { name: "Open EOD workpage" })).not.toBeInTheDocument();
   });
 
-  it("requires explicit run selection when a family node links to multiple runs", async () => {
+  it("requires explicit run selection when a workpage family links to multiple runs", async () => {
     const user = userEvent.setup();
     setFrontendOperatorContext();
 
@@ -108,23 +135,23 @@ describe("LogisticsDemoPage", () => {
               family_version: 1,
               modules: [
                 {
-                  module_id: "live_dispatch",
-                  workflow_id: "live_dispatch.v1",
-                  partition_kind: "ServiceDateID",
-                  activation_policy: "event_driven",
+                  module_id: "weekly_schedule_planning",
+                  workflow_id: "weekly_schedule_planning.v1",
+                  partition_kind: "PlanningWeekID",
+                  activation_policy: "manual_or_event",
                   status: "active",
                   node_kind: "module",
                   drilldown_kind: "run_group",
                   drilldown_refs: [
                     {
-                      workflow_run_id: "wr-test-001",
-                      workflow_id: "schedule_planning.v1",
-                      partition_key: "SD-2026-03-07"
+                      workflow_run_id: "wr-weekly-001",
+                      workflow_id: "weekly_schedule_planning.v1",
+                      partition_key: "PW-2026-W10"
                     },
                     {
-                      workflow_run_id: "wr-live-001",
-                      workflow_id: "live_dispatch.v1",
-                      partition_key: "SD-2026-03-06"
+                      workflow_run_id: "wr-weekly-002",
+                      workflow_id: "weekly_schedule_planning.v1",
+                      partition_key: "PW-2026-W11"
                     }
                   ],
                   artifact_refs: [],
@@ -134,27 +161,41 @@ describe("LogisticsDemoPage", () => {
               edges: []
             },
             linked_workflow_runs: {
-              weekly_schedule_planning: [],
-              live_dispatch: [
+              weekly_schedule_planning: [
                 {
-                  workflow_run_id: "wr-live-001",
-                  workflow_id: "live_dispatch.v1",
+                  workflow_run_id: "wr-weekly-001",
+                  workflow_id: "weekly_schedule_planning.v1",
                   workflow_version: "v1",
                   tenant_id: "tenant-a",
                   domain_id: "domain-x",
-                  partition_key: "SD-2026-03-06",
-                  logical_date: "SD-2026-03-06",
-                  activation_key: "live_dispatch.v1:SD-2026-03-06",
+                  partition_key: "PW-2026-W10",
+                  logical_date: "PW-2026-W10",
+                  activation_key: "weekly_schedule_planning.v1:PW-2026-W10",
                   state: "OPEN",
                   active_issue_count: 1,
                   created_at: "2026-03-09T00:00:00Z",
                   updated_at: "2026-03-09T00:00:00Z"
+                },
+                {
+                  workflow_run_id: "wr-weekly-002",
+                  workflow_id: "weekly_schedule_planning.v1",
+                  workflow_version: "v1",
+                  tenant_id: "tenant-a",
+                  domain_id: "domain-x",
+                  partition_key: "PW-2026-W11",
+                  logical_date: "PW-2026-W11",
+                  activation_key: "weekly_schedule_planning.v1:PW-2026-W11",
+                  state: "READY",
+                  active_issue_count: 0,
+                  created_at: "2026-03-10T00:00:00Z",
+                  updated_at: "2026-03-10T00:00:00Z"
                 }
               ],
+              live_dispatch: [],
               dispatch_reporting: [],
               summary: {
-                weekly_schedule_planning_count: 0,
-                live_dispatch_count: 1,
+                weekly_schedule_planning_count: 2,
+                live_dispatch_count: 0,
                 dispatch_reporting_count: 0
               }
             },
@@ -209,12 +250,21 @@ describe("LogisticsDemoPage", () => {
     render(<App />);
 
     const page = await screen.findByTestId("logistics-demo-page");
+    expect(within(page).queryByRole("link", { name: "Open weekly review workpage" })).not.toBeInTheDocument();
+    expect(
+      within(page).getByText(
+        "Weekly review workpage: choose a linked weekly-planning run from the family-node drill-down below."
+      )
+    ).toBeInTheDocument();
+
     const detailPanel = within(page).getByTestId("logistics-module-detail-panel");
     expect(within(detailPanel).getByText(/Choose a workflow run to open drill-down/i)).toBeInTheDocument();
     expect(within(page).queryByTestId("logistics-demo-drilldown-graph")).not.toBeInTheDocument();
 
-    await user.click(within(detailPanel).getByRole("button", { name: /wr-test-001/i }));
-    expect(await within(page).findByTestId("logistics-demo-drilldown-graph")).toBeInTheDocument();
+    await user.click(within(detailPanel).getByRole("button", { name: /wr-weekly-002/i }));
+    expect(
+      within(detailPanel).getByRole("link", { name: "Open schedule workpage" })
+    ).toHaveAttribute("href", "/runs/wr-weekly-002/workpages/schedule-v0");
   });
 
   it("renders family-node artifact download affordances", async () => {

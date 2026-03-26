@@ -2,7 +2,7 @@
 id: TASK-0141
 epic: EPIC-122
 title: "Expose demo/story drilldown entrypoints and keep workflow-run-backed workpage docs/status synchronized"
-status: TODO
+status: DONE
 owners: ["frontend", "backend"]
 reviewers: ["qa"]
 depends_on: ["TASK-0140"]
@@ -59,3 +59,17 @@ Expose truthful demo/story drilldown entrypoints into the new workflow-run-backe
 
 ## Notes / decisions
 This task is where the new canonical route posture becomes understandable to future fresh-session Codex runs, not just technically implemented.
+
+## Implementation outcome
+- Promoted canonical run-backed workpage links to the primary header actions on `/demo/logistics`, derived from the single linked weekly-planning and dispatch-reporting runs in the story payload.
+- Demoted `/demo/logistics/workpages/*` to a clearly labeled compatibility-alias section instead of the primary header path.
+- Added run-specific canonical workpage CTAs to the family-node drilldown card for `weekly_schedule_planning.v1` and `dispatch_reporting.v1`, while leaving `live_dispatch.v1` on workspace/detail-only drilldown posture.
+- Synchronized repo-native status, page-map, capability, epic, task-index, and context-pack memory so fresh sessions see the same canonical-vs-alias posture that the app now shows.
+
+## Commands run
+- `npm --prefix frontend run test:run -- src/pages/logisticsDemoPage.test.tsx src/pages/logisticsWorkpageRoutes.test.tsx src/pages/logisticsScheduleWorkpagePage.test.tsx src/pages/dispatchReportWorkpagePage.test.tsx`
+- `npm --prefix frontend run typecheck`
+- `python3.11 scripts/validate_repo.py --schemas-only`
+
+## Follow-ups
+- EPIC-122 is complete. The next move should be framed as a new epic choice rather than a hidden route-posture follow-up inside this epic.

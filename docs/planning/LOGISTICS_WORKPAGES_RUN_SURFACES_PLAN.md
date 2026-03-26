@@ -6,15 +6,15 @@ After the first workpage tranche and the first artifact-backed EOD slice, the re
 - an artifact-backed EOD draft/create/read/submit loop,
 - and bounded recent-version/history affordances around that EOD slice.
 
-The next unproven parts of the original product vision are the remaining workflow-native access surfaces beyond the first implemented run-backed schedule route.
+This document now records the implemented workflow-native access model that graduated workpages beyond demo-only discovery.
 
 ## Repo-grounded constraints that shape this epic
 ### 1) Demo workpages are not the final access model
 The current workpage surfaces are discovered from the logistics demo shell. That is useful for curation and demos, but it is not the final workflow-native surface.
 
 Implication:
-- keep `/demo/logistics/workpages/*` as curated aliases/entrypoints,
-- but introduce canonical workflow-run-backed routes for real workpage access.
+- keep `/demo/logistics/workpages/*` as compatibility aliases,
+- but use canonical workflow-run-backed routes for real workpage access.
 
 ### 2) Schedule is composite
 The schedule page is still a composite projection over weekly-planning inputs and selected-day preview state.
@@ -53,7 +53,7 @@ Keep the existing artifact-backed EOD routes unchanged:
 - `/runs/:workflowRunId/workpages/eod-v0`
 - `/runs/:workflowRunId/workpages/eod-v0/artifacts/:artifactVersionId`
 
-Keep the current demo routes as aliases/entrypoints while the canonical run-backed surfaces are introduced.
+Keep the current demo routes as compatibility aliases while the canonical run-backed surfaces are introduced and proven.
 
 Implemented in `TASK-0140`:
 - the frontend now serves `/runs/:workflowRunId/workpages/schedule-v0`
@@ -61,6 +61,11 @@ Implemented in `TASK-0140`:
 - the frontend now serves `/runs/:workflowRunId/workpages/eod-v0/artifacts/:artifactVersionId`
 - `/demo/logistics/workpages/*` remains in place as a compatibility alias family
 - artifact-backed submit/conflict handoff routes now point at canonical nested `/runs/{workflow_run_id}/workpages/eod-v0/artifacts/{artifact_version_id}` pages
+
+Implemented in `TASK-0141`:
+- `/demo/logistics` now exposes canonical run-backed workpage links as the primary discoverable header actions
+- weekly-planning and dispatch-reporting family-node drilldowns now expose run-specific canonical workpage CTAs
+- `/demo/logistics/workpages/*` remains a clearly labeled compatibility-alias family rather than the primary access model
 
 ## Contract freeze from TASK-0137
 The existing `WorkpageContract` remains the right inner contract for the page body. EPIC-122 freezes only the smallest additions needed for canonical run-backed usage:
@@ -111,7 +116,7 @@ These belong under `fixtures/frontend_contracts/` because they are backend-gener
 2. `TASK-0138` - DONE
 3. `TASK-0139` - DONE
 4. `TASK-0140` - DONE
-5. `TASK-0141` - expose demo/story drilldown entrypoints and keep docs/status truthful
+5. `TASK-0141` - DONE
 
 ## Explicit non-goals
 - no schedule write/materialize path

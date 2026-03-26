@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Link, useNavigate, useSearchParams } from "react-router-dom";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { Link, useSearchParams } from "react-router-dom";
 
 import { LaneColumn } from "@/components/LaneColumn";
 import { StatePanel } from "@/components/StatePanel";
@@ -8,7 +8,7 @@ import { WorkflowGraph } from "@/components/WorkflowGraph";
 import { apiConfig } from "@/lib/api/config";
 import { errorText } from "@/lib/api/errorText";
 import { onetruthApi } from "@/lib/api/onetruthApi";
-import { logisticsStoryRepository, workpagesRepository, workflowRunsRepository } from "@/lib/repositories";
+import { logisticsStoryRepository, workflowRunsRepository } from "@/lib/repositories";
 import { downloadBinaryToFile } from "@/lib/repositories/artifactAttachments";
 import { useDrawer } from "@/lib/state/drawerContext";
 import type {
@@ -209,9 +209,61 @@ function runRefSummary(
   return `${ref.workflow_run_id} · ${ref.partition_key}`;
 }
 
+interface WorkpageRouteLink {
+  label: string;
+  to: string;
+}
+
+function headerWorkpageRouteForRun(run: WorkflowRunRow): WorkpageRouteLink | null {
+  switch (run.workflow_id) {
+    case "weekly_schedule_planning.v1":
+      return {
+        label: "Open weekly review workpage",
+        to: `/runs/${run.workflow_run_id}/workpages/schedule-v0`
+      };
+    case "dispatch_reporting.v1":
+      return {
+        label: "Open EOD workpage",
+        to: `/runs/${run.workflow_run_id}/workpages/eod-v0`
+      };
+    default:
+      return null;
+  }
+}
+
+function drilldownWorkpageRouteForRun(
+  workflowRunId: string,
+  workflowId: string
+): WorkpageRouteLink | null {
+  switch (workflowId) {
+    case "weekly_schedule_planning.v1":
+      return {
+        label: "Open schedule workpage",
+        to: `/runs/${workflowRunId}/workpages/schedule-v0`
+      };
+    case "dispatch_reporting.v1":
+      return {
+        label: "Open EOD workpage",
+        to: `/runs/${workflowRunId}/workpages/eod-v0`
+      };
+    default:
+      return null;
+  }
+}
+
+function canonicalHeaderGuidance(
+  runCount: number,
+  workpageLabel: string,
+  workflowLabel: string
+): string {
+  if (runCount === 0) {
+    return `${workpageLabel}: no linked ${workflowLabel} run is available in this story.`;
+  }
+  return `${workpageLabel}: choose a linked ${workflowLabel} run from the family-node drill-down below.`;
+}
+
 export function LogisticsDemoPage(): JSX.Element {
   const { open } = useDrawer();
-  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [searchParams] = useSearchParams();
   const planningWeekId = searchParams.get("planning_week_id")?.trim() || "PW-2026-W10";
@@ -230,13 +282,6 @@ export function LogisticsDemoPage(): JSX.Element {
         serviceDateId
       }),
     refetchInterval: apiConfig.pollIntervalMs
-  });
-  const createEodDraftMutation = useMutation({
-    mutationFn: () => workpagesRepository.createEodDraft(),
-    onSuccess: (draft) => {
-      void queryClient.invalidateQueries({ queryKey: ["workpages"] });
-      navigate(draft.route);
-    }
   });
 
   const story = query.data;
@@ -341,6 +386,19 @@ export function LogisticsDemoPage(): JSX.Element {
     }
     return graphNodesWithResponsibility(drilldownWorkspace.graph.nodes, drilldownDetail.human_tasks);
   }, [drilldownWorkspace, drilldownDetail]);
+
+  const selectedDrilldownWorkpageLink = useMemo(() => {
+    if (!selectedDrilldownRunId) {
+      return null;
+    }
+    const selectedRun = selectedModuleRuns.find(
+      ({ ref }) => ref.workflow_run_id === selectedDrilldownRunId
+    );
+    const workflowId = selectedRun?.run?.workflow_id ?? selectedRun?.ref.workflow_id;
+    return workflowId
+      ? drilldownWorkpageRouteForRun(selectedDrilldownRunId, workflowId)
+      : null;
+  }, [selectedDrilldownRunId, selectedModuleRuns]);
 
   const boardItemsByLane = useMemo(() => (story ? groupedBoardItems(story) : new Map()), [story]);
   const sortedBoardLanes = useMemo(
@@ -447,6 +505,21 @@ export function LogisticsDemoPage(): JSX.Element {
     return <StatePanel kind="empty" title="No logistics story payload available" />;
   }
 
+  const scheduleHeaderRun =
+    story.linked_workflow_runs.weekly_schedule_planning.length === 1
+      ? story.linked_workflow_runs.weekly_schedule_planning[0]
+      : null;
+  const eodHeaderRun =
+    story.linked_workflow_runs.dispatch_reporting.length === 1
+      ? story.linked_workflow_runs.dispatch_reporting[0]
+      : null;
+  const scheduleHeaderLink = scheduleHeaderRun
+    ? headerWorkpageRouteForRun(scheduleHeaderRun)
+    : null;
+  const eodHeaderLink = eodHeaderRun
+    ? headerWorkpageRouteForRun(eodHeaderRun)
+    : null;
+
   return (
     <section className="logistics-demo-page" data-testid="logistics-demo-page">
       <header className="logistics-demo-page__header">
@@ -458,29 +531,44 @@ export function LogisticsDemoPage(): JSX.Element {
           </p>
         </div>
         <div className="logistics-demo-page__header-links">
-          <p>Backend demo workpages</p>
-          <Link className="link-button" to="/demo/logistics/workpages/schedule-v0">
-            Open weekly review workpage
-          </Link>
-          <Link className="link-button" to="/demo/logistics/workpages/eod-v0">
-            Open EOD preview
-          </Link>
-          <button
-            type="button"
-            className="action-btn action-btn--positive"
-            disabled={createEodDraftMutation.isPending}
-            onClick={() => createEodDraftMutation.mutate()}
-          >
-            {createEodDraftMutation.isPending ? "Creating editable EOD draft..." : "Create editable EOD draft"}
-          </button>
-          {createEodDraftMutation.isError ? (
-            <p className="logistics-demo-page__header-links-error">
-              {errorText(
-                createEodDraftMutation.error,
-                "Unable to create the artifact-backed EOD draft."
-              )}
-            </p>
-          ) : null}
+          <div className="logistics-demo-page__header-link-group">
+            <p>Canonical run-backed workpages</p>
+            {scheduleHeaderLink ? (
+              <Link className="link-button" to={scheduleHeaderLink.to}>
+                {scheduleHeaderLink.label}
+              </Link>
+            ) : (
+              <p className="logistics-demo-page__header-guidance">
+                {canonicalHeaderGuidance(
+                  story.linked_workflow_runs.weekly_schedule_planning.length,
+                  "Weekly review workpage",
+                  "weekly-planning"
+                )}
+              </p>
+            )}
+            {eodHeaderLink ? (
+              <Link className="link-button" to={eodHeaderLink.to}>
+                {eodHeaderLink.label}
+              </Link>
+            ) : (
+              <p className="logistics-demo-page__header-guidance">
+                {canonicalHeaderGuidance(
+                  story.linked_workflow_runs.dispatch_reporting.length,
+                  "EOD workpage",
+                  "dispatch-reporting"
+                )}
+              </p>
+            )}
+          </div>
+          <div className="logistics-demo-page__header-link-group logistics-demo-page__header-link-group--secondary">
+            <p>Compatibility alias workpages</p>
+            <Link className="link-button" to="/demo/logistics/workpages/schedule-v0">
+              Open demo schedule alias
+            </Link>
+            <Link className="link-button" to="/demo/logistics/workpages/eod-v0">
+              Open demo EOD alias
+            </Link>
+          </div>
         </div>
       </header>
 
@@ -590,17 +678,29 @@ export function LogisticsDemoPage(): JSX.Element {
                 </div>
               ) : null}
               {selectedDrilldownRunId ? (
-                <div className="logistics-demo-page__secondary-links">
-                  <p>Secondary detail routes</p>
-                  <div>
-                    <Link className="link-button" to={`/runs/${selectedDrilldownRunId}/workspace`}>
-                      Open full workspace
-                    </Link>
-                    <Link className="link-button" to={`/runs/${selectedDrilldownRunId}`}>
-                      Open run detail (secondary)
-                    </Link>
+                <>
+                  {selectedDrilldownWorkpageLink ? (
+                    <div className="logistics-demo-page__primary-links">
+                      <p>Canonical workpage route</p>
+                      <div>
+                        <Link className="link-button" to={selectedDrilldownWorkpageLink.to}>
+                          {selectedDrilldownWorkpageLink.label}
+                        </Link>
+                      </div>
+                    </div>
+                  ) : null}
+                  <div className="logistics-demo-page__secondary-links">
+                    <p>Secondary detail routes</p>
+                    <div>
+                      <Link className="link-button" to={`/runs/${selectedDrilldownRunId}/workspace`}>
+                        Open full workspace
+                      </Link>
+                      <Link className="link-button" to={`/runs/${selectedDrilldownRunId}`}>
+                        Open run detail (secondary)
+                      </Link>
+                    </div>
                   </div>
-                </div>
+                </>
               ) : null}
             </article>
           </div>

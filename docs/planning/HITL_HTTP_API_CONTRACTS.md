@@ -293,7 +293,7 @@ Route-family decision:
   - `GET /api/v1/workpages/artifacts/{artifact_version_id}`
   - `POST /api/v1/workpages/artifacts/{artifact_version_id}/submit`
 
-The `demo` subfamily is implemented today. During EPIC-122 it remains a curated alias/entrypoint family, not the long-term canonical access model. The canonical frontend run-backed pages now live under `/runs/:workflowRunId/workpages/*`, while the first artifact-backed family remains frozen only for EOD and schedule stays query-backed/composite.
+The `demo` subfamily is implemented today. After EPIC-122 it remains a compatibility-alias family, not the primary or long-term canonical access model. The canonical frontend run-backed pages now live under `/runs/:workflowRunId/workpages/*`, while the first artifact-backed family remains frozen only for EOD and schedule stays query-backed/composite.
 
 Current planned demo workpage ids:
 - `schedule-v0`

@@ -2,6 +2,12 @@
 
 Record any decisions made since the last session so a fresh Codex run can rehydrate quickly.
 
+## 2026-03-26 (TASK-0141 demo/story drilldowns and workflow-run-backed workpage doc sync)
+- Demo-shell discovery decision: `/demo/logistics` now presents canonical run-backed workpage links as the primary workpage entrypoints, derived from the single linked weekly-planning and dispatch-reporting runs in the current story; the old demo workpage routes remain available in a clearly labeled compatibility-alias section instead of the primary header path.
+- Drilldown mapping decision: the family-node drilldown card now exposes `Open schedule workpage` for `weekly_schedule_planning.v1` runs and `Open EOD workpage` for `dispatch_reporting.v1` runs, while `live_dispatch.v1` remains workspace/detail-only in this epic.
+- Alias-posture decision: `/demo/logistics/workpages/*` remains implemented and truthful for compatibility coverage, but the repo should no longer describe those routes as the primary or only discoverable access model once the canonical `/runs/{workflow_run_id}/workpages/*` surfaces are active.
+- Epic-closeout decision: EPIC-122 now closes at canonical run-backed route discoverability plus doc/status sync; the next move should be framed as a new epic choice rather than a hidden `TASK-0142`.
+
 ## 2026-03-26 (TASK-0140 frontend workflow-run-backed workpage routes and canonical EOD artifact handoff)
 - Frontend-route decision: the canonical workpage surfaces are now active under `/runs/:workflowRunId/workpages/schedule-v0`, `/runs/:workflowRunId/workpages/eod-v0`, and `/runs/:workflowRunId/workpages/eod-v0/artifacts/:artifactVersionId`; the existing `/demo/logistics/workpages/*` pages remain in place as compatibility aliases rather than the primary access model.
 - Frontend-contract decision: the frontend now preserves optional `run_context` and optional `draft_resolution` in `WorkpageContract` so the canonical run-backed workpage responses are consumed directly instead of being flattened back into demo-only assumptions.
