@@ -8,6 +8,7 @@ from uuid import uuid4
 
 from onetruth.application.handlers._shared.artifact_effects import (
     _create_artifact_version_effects,
+    _validate_artifact_link_subject,
 )
 from onetruth.application.handlers._shared.command_boundary import (
     CommandError,
@@ -45,6 +46,9 @@ from onetruth.infrastructure.repositories.artifact_versions import (
     get_latest_artifact_version_in_chain,
     get_superseding_artifact_version,
 )
+from onetruth.infrastructure.repositories.approvals import get_approval
+from onetruth.infrastructure.repositories.human_tasks import get_human_task
+from onetruth.infrastructure.repositories.task_runs import get_task_run
 from onetruth.infrastructure.repositories.workflow_runs import (
     create_workflow_run,
     get_workflow_run,
@@ -61,6 +65,16 @@ DEMO_DSP_NAME = "QDCI"
 DEMO_ACTIVATION_KEY = "dispatch_reporting.v1:SD-2026-03-16:eod-v0:artifact-draft"
 EOD_TEMPLATE_ID = "dispatch_reporting.stage03.upd_draft.workbook.empty.v1"
 EOD_UI_ROUTE_PREFIX = "/demo/logistics/workpages/eod-v0/artifacts/"
+WORKPAGE_SUBJECT_LINK_FIELDS = frozenset({"subject_kind", "subject_id"})
+SCHEDULE_WORKPAGE_SUPPORTED_TASK_SURFACES = frozenset(
+    {
+        ("Stage04", "work_item"),
+        ("Stage05", "information_request"),
+        ("Stage05", "final_review"),
+    }
+)
+SCHEDULE_WORKPAGE_SUPPORTED_APPROVAL_SCOPE_REFS = frozenset({"Stage06"})
+EOD_WORKPAGE_SUPPORTED_APPROVAL_SCOPE_REFS = frozenset({"Stage04"})
 
 
 def create_demo_eod_draft_command(
@@ -74,6 +88,7 @@ def create_demo_eod_draft_command(
     domain_id = _require_non_empty_string(payload.get("domain_id"), field_name="domain_id")
     actor_id = _require_non_empty_string(payload.get("actor_id"), field_name="actor_id")
     actor_type = _require_non_empty_string(payload.get("actor_type"), field_name="actor_type")
+    _reject_demo_workpage_subject_link(payload.get("subject_link"))
 
     existing_run = _find_demo_reporting_run(
         connection,
@@ -175,6 +190,14 @@ def create_workflow_run_eod_draft_command(
     domain_id = _require_non_empty_string(payload.get("domain_id"), field_name="domain_id")
     actor_id = _require_non_empty_string(payload.get("actor_id"), field_name="actor_id")
     actor_type = _require_non_empty_string(payload.get("actor_type"), field_name="actor_type")
+    subject_link = _resolve_workpage_subject_link(
+        connection,
+        workflow_run_id=workflow_run_id,
+        workflow_id=EOD_WORKFLOW_ID,
+        workpage_kind=DEMO_WORKPAGE_ID,
+        flow_kind="create",
+        raw_subject_link=payload.get("subject_link"),
+    )
 
     receipt = _prepare_command_receipt(
         command_name="workpages.eod-drafts.create",
@@ -193,6 +216,7 @@ def create_workflow_run_eod_draft_command(
             "template_id": EOD_TEMPLATE_ID,
             "actor_id": actor_id,
             "actor_type": actor_type,
+            "subject_link": subject_link,
         },
         tenant_id=tenant_id,
         domain_id=domain_id,
@@ -214,6 +238,10 @@ def create_workflow_run_eod_draft_command(
             actor_id=actor_id,
             actor_type=actor_type,
             event_idempotency=artifact_event_idempotency,
+            links=_artifact_links_for_workpage_subject(
+                subject_link,
+                relation_kind="draft",
+            ),
         )
         artifact_version_id = str(artifact["artifact_version_id"])
         return {
@@ -254,6 +282,14 @@ def submit_eod_artifact_workpage_command(
     actor_id = _require_non_empty_string(payload.get("actor_id"), field_name="actor_id")
     actor_type = _require_non_empty_string(payload.get("actor_type"), field_name="actor_type")
     base_artifact = _require_eod_artifact_version(connection, artifact_version_id)
+    subject_link = _resolve_workpage_subject_link(
+        connection,
+        workflow_run_id=str(base_artifact["workflow_run_id"]),
+        workflow_id=EOD_WORKFLOW_ID,
+        workpage_kind=DEMO_WORKPAGE_ID,
+        flow_kind="submit",
+        raw_subject_link=payload.get("subject_link"),
+    )
 
     receipt = _prepare_command_receipt(
         command_name="workpages.artifact.submit",
@@ -264,6 +300,7 @@ def submit_eod_artifact_workpage_command(
             "checklist_values": payload.get("checklist_values"),
             "actor_id": actor_id,
             "actor_type": actor_type,
+            "subject_link": subject_link,
         },
         tenant_id=str(base_artifact.get("tenant_id") or ""),
         domain_id=str(base_artifact.get("domain_id") or ""),
@@ -317,6 +354,10 @@ def submit_eod_artifact_workpage_command(
             actor_id=actor_id,
             actor_type=actor_type,
             event_idempotency=artifact_event_idempotency,
+            links=_artifact_links_for_workpage_subject(
+                subject_link,
+                relation_kind="response",
+            ),
         )
         submitted_artifact_version_id = str(new_artifact["artifact_version_id"])
         workflow_run_id = str(base_artifact["workflow_run_id"])
@@ -359,6 +400,14 @@ def submit_schedule_artifact_workpage_command(
     actor_id = _require_non_empty_string(payload.get("actor_id"), field_name="actor_id")
     actor_type = _require_non_empty_string(payload.get("actor_type"), field_name="actor_type")
     base_artifact = _require_schedule_artifact_version(connection, artifact_version_id)
+    subject_link = _resolve_workpage_subject_link(
+        connection,
+        workflow_run_id=str(base_artifact["workflow_run_id"]),
+        workflow_id=SCHEDULE_WORKFLOW_ID,
+        workpage_kind="schedule-v0",
+        flow_kind="submit",
+        raw_subject_link=payload.get("subject_link"),
+    )
 
     receipt = _prepare_command_receipt(
         command_name="workpages.artifact.submit",
@@ -369,6 +418,7 @@ def submit_schedule_artifact_workpage_command(
             "reserve_rows": payload.get("reserve_rows"),
             "actor_id": actor_id,
             "actor_type": actor_type,
+            "subject_link": subject_link,
         },
         tenant_id=str(base_artifact.get("tenant_id") or ""),
         domain_id=str(base_artifact.get("domain_id") or ""),
@@ -419,6 +469,10 @@ def submit_schedule_artifact_workpage_command(
             actor_id=actor_id,
             actor_type=actor_type,
             event_idempotency=artifact_event_idempotency,
+            links=_artifact_links_for_workpage_subject(
+                subject_link,
+                relation_kind="response",
+            ),
         )
         submitted_artifact_version_id = str(new_artifact["artifact_version_id"])
         workflow_run_id = str(base_artifact["workflow_run_id"])
@@ -570,6 +624,7 @@ def _create_workbook_artifact_version(
     actor_id: str,
     actor_type: str,
     event_idempotency: str | None,
+    links: list[dict[str, str]] | None = None,
 ) -> dict[str, Any]:
     storage_uri, content_digest, byte_size = write_blob(
         storage_root=storage_root,
@@ -597,6 +652,7 @@ def _create_workbook_artifact_version(
             "parent_artifact_version_id": parent_artifact_version_id,
             "supersedes_artifact_version_id": supersedes_artifact_version_id,
             "lineage_note": lineage_note,
+            "links": links,
             "actor_id": actor_id,
             "actor_type": actor_type,
         },
@@ -757,6 +813,7 @@ def _create_eod_draft_artifact_version(
     actor_id: str,
     actor_type: str,
     event_idempotency: str | None,
+    links: list[dict[str, str]] | None = None,
 ) -> dict[str, Any]:
     template = _load_eod_template_record()
     return _create_workbook_artifact_version(
@@ -775,6 +832,7 @@ def _create_eod_draft_artifact_version(
         actor_id=actor_id,
         actor_type=actor_type,
         event_idempotency=event_idempotency,
+        links=links,
     )
 
 
@@ -1014,6 +1072,210 @@ def _schedule_draft_file_name(base_artifact: Mapping[str, Any]) -> str:
 
 def _xlsx_media_type() -> str:
     return "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+
+
+def _reject_demo_workpage_subject_link(raw_subject_link: Any) -> None:
+    if raw_subject_link is None:
+        return
+    raise _invalid_workpage_subject_link(
+        message="subject_link is not supported on the demo EOD draft-create alias",
+        route_family="demo",
+        workpage_kind=DEMO_WORKPAGE_ID,
+    )
+
+
+def _resolve_workpage_subject_link(
+    connection: sqlite3.Connection,
+    *,
+    workflow_run_id: str,
+    workflow_id: str,
+    workpage_kind: str,
+    flow_kind: str,
+    raw_subject_link: Any,
+) -> dict[str, str] | None:
+    if raw_subject_link is None:
+        return None
+    if not isinstance(raw_subject_link, Mapping):
+        raise _invalid_workpage_subject_link(
+            message="subject_link must be an object",
+            workpage_kind=workpage_kind,
+            flow_kind=flow_kind,
+        )
+    extra_fields = sorted(set(raw_subject_link.keys()).difference(WORKPAGE_SUBJECT_LINK_FIELDS))
+    if extra_fields:
+        raise _invalid_workpage_subject_link(
+            message="subject_link contains unsupported fields",
+            workpage_kind=workpage_kind,
+            flow_kind=flow_kind,
+            extra_fields=extra_fields,
+        )
+    subject_kind = str(raw_subject_link.get("subject_kind") or "").strip()
+    subject_id = str(raw_subject_link.get("subject_id") or "").strip()
+    if not subject_kind or not subject_id:
+        raise _invalid_workpage_subject_link(
+            message="subject_link requires subject_kind and subject_id",
+            workpage_kind=workpage_kind,
+            flow_kind=flow_kind,
+        )
+    subject_link = {"subject_kind": subject_kind, "subject_id": subject_id}
+    _validate_artifact_link_subject(
+        connection,
+        workflow_run_id=workflow_run_id,
+        subject_kind=subject_kind,
+        subject_id=subject_id,
+    )
+    if workflow_id == SCHEDULE_WORKFLOW_ID and workpage_kind == "schedule-v0" and flow_kind == "submit":
+        _validate_schedule_workpage_subject_link(
+            connection,
+            workflow_run_id=workflow_run_id,
+            subject_link=subject_link,
+        )
+        return subject_link
+    if workflow_id == EOD_WORKFLOW_ID and workpage_kind == DEMO_WORKPAGE_ID and flow_kind in {"create", "submit"}:
+        _validate_eod_workpage_subject_link(
+            connection,
+            workflow_run_id=workflow_run_id,
+            subject_link=subject_link,
+        )
+        return subject_link
+    raise _invalid_workpage_subject_link(
+        message="subject_link is unsupported for this workpage flow",
+        workflow_id=workflow_id,
+        workpage_kind=workpage_kind,
+        flow_kind=flow_kind,
+        subject_kind=subject_kind,
+        subject_id=subject_id,
+    )
+
+
+def _validate_schedule_workpage_subject_link(
+    connection: sqlite3.Connection,
+    *,
+    workflow_run_id: str,
+    subject_link: Mapping[str, str],
+) -> None:
+    subject_kind = str(subject_link["subject_kind"])
+    subject_id = str(subject_link["subject_id"])
+    if subject_kind == "human_task":
+        human_task = get_human_task(connection, subject_id)
+        if human_task is None:
+            raise _invalid_workpage_subject_link(
+                message="human task not found for schedule workpage subject_link",
+                workflow_run_id=workflow_run_id,
+                subject_kind=subject_kind,
+                subject_id=subject_id,
+            )
+        task_run = get_task_run(connection, str(human_task["task_run_id"]))
+        if task_run is None:
+            raise _invalid_workpage_subject_link(
+                message="human task stage could not be resolved for schedule workpage subject_link",
+                workflow_run_id=workflow_run_id,
+                subject_kind=subject_kind,
+                subject_id=subject_id,
+            )
+        stage_id = str(task_run.get("stage_id") or "")
+        task_kind = str(human_task.get("task_kind") or "")
+        if (stage_id, task_kind) not in SCHEDULE_WORKPAGE_SUPPORTED_TASK_SURFACES:
+            raise _invalid_workpage_subject_link(
+                message="human task is not a supported schedule workpage surface",
+                workflow_run_id=workflow_run_id,
+                subject_kind=subject_kind,
+                subject_id=subject_id,
+                stage_id=stage_id,
+                task_kind=task_kind,
+            )
+        return
+    if subject_kind == "approval":
+        approval = get_approval(connection, subject_id)
+        if approval is None:
+            raise _invalid_workpage_subject_link(
+                message="approval not found for schedule workpage subject_link",
+                workflow_run_id=workflow_run_id,
+                subject_kind=subject_kind,
+                subject_id=subject_id,
+            )
+        scope_kind = str(approval.get("scope_kind") or "")
+        scope_ref = str(approval.get("scope_ref") or "")
+        if scope_kind != "stage" or scope_ref not in SCHEDULE_WORKPAGE_SUPPORTED_APPROVAL_SCOPE_REFS:
+            raise _invalid_workpage_subject_link(
+                message="approval is not a supported schedule workpage surface",
+                workflow_run_id=workflow_run_id,
+                subject_kind=subject_kind,
+                subject_id=subject_id,
+                scope_kind=scope_kind,
+                scope_ref=scope_ref,
+            )
+        return
+    raise _invalid_workpage_subject_link(
+        message="unsupported subject_kind for schedule workpage subject_link",
+        workflow_run_id=workflow_run_id,
+        subject_kind=subject_kind,
+        subject_id=subject_id,
+    )
+
+
+def _validate_eod_workpage_subject_link(
+    connection: sqlite3.Connection,
+    *,
+    workflow_run_id: str,
+    subject_link: Mapping[str, str],
+) -> None:
+    subject_kind = str(subject_link["subject_kind"])
+    subject_id = str(subject_link["subject_id"])
+    if subject_kind != "approval":
+        raise _invalid_workpage_subject_link(
+            message="only approval subjects are supported for EOD workpage subject_link",
+            workflow_run_id=workflow_run_id,
+            subject_kind=subject_kind,
+            subject_id=subject_id,
+        )
+    approval = get_approval(connection, subject_id)
+    if approval is None:
+        raise _invalid_workpage_subject_link(
+            message="approval not found for EOD workpage subject_link",
+            workflow_run_id=workflow_run_id,
+            subject_kind=subject_kind,
+            subject_id=subject_id,
+        )
+    scope_kind = str(approval.get("scope_kind") or "")
+    scope_ref = str(approval.get("scope_ref") or "")
+    if scope_kind != "stage" or scope_ref not in EOD_WORKPAGE_SUPPORTED_APPROVAL_SCOPE_REFS:
+        raise _invalid_workpage_subject_link(
+            message="approval is not a supported EOD workpage surface",
+            workflow_run_id=workflow_run_id,
+            subject_kind=subject_kind,
+            subject_id=subject_id,
+            scope_kind=scope_kind,
+            scope_ref=scope_ref,
+        )
+
+
+def _artifact_links_for_workpage_subject(
+    subject_link: Mapping[str, str] | None,
+    *,
+    relation_kind: str,
+) -> list[dict[str, str]] | None:
+    if subject_link is None:
+        return None
+    return [
+        {
+            "subject_kind": str(subject_link["subject_kind"]),
+            "subject_id": str(subject_link["subject_id"]),
+            "relation_kind": relation_kind,
+        }
+    ]
+
+
+def _invalid_workpage_subject_link(
+    *,
+    message: str,
+    **details: Any,
+) -> CommandError:
+    return CommandError(
+        code="invalid_workpage_subject_link",
+        message=message,
+        details=details,
+    )
 
 
 def _require_non_empty_string(value: Any, *, field_name: str) -> str:

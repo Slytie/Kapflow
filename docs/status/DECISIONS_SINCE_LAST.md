@@ -2,6 +2,13 @@
 
 Record any decisions made since the last session so a fresh Codex run can rehydrate quickly.
 
+## 2026-03-27 (TASK-0147 backend requirement-aware artifact linkage and supported-surface policy)
+- Requirement-counting decision: human-task requirement satisfaction is now relation-kind aware instead of raw-link-count based; legacy `schedule_planning.v1` upload requirements remain `attachment`-satisfiable only, while the first EPIC-124 rule allows only submitted `response` links to satisfy `weekly_schedule_planning.v1` Stage05 `information_request` for `planning.draft_weekly_schedule.workbook`.
+- Workpage-write-boundary decision: canonical stage-linked workpage create/submit flows now accept at most one optional `subject_link` object (`subject_kind`, `subject_id`) and translate it into the existing artifact `links[]` seam internally; callers do not supply raw `links[]` or `relation_kind` on workpage routes.
+- Supported-surface decision: schedule workpage submit may link only to the frozen supported Stage04/Stage05 human-task surfaces or Stage06 approvals, while dispatch-reporting EOD create/submit may link only to Stage04 approvals; unsupported subject surfaces now fail closed as `invalid_workpage_subject_link`.
+- Demo-alias decision: `POST /api/v1/workpages/demo/eod-v0/drafts` explicitly rejects `subject_link` so the compatibility alias does not silently widen into a stage-linked truth surface.
+- Verification-boundary decision: `TASK-0147` records the pre-existing `dispatch_reporting_workbook.py` `zip(..., strict=True)` EOD submit/read regression as an external baseline caveat and keeps its own EOD linkage verification focused on the new write-boundary behavior rather than broadening into that repair.
+
 ## 2026-03-27 (TASK-0146 stage-linked workpage contract, supported matrix, and subject-link semantics)
 - Contract-seam decision: the first stage-linked workpage action layer is now frozen as additive `workpage_actions[]` on workspace work items returned by `GET /api/v1/workflow-runs/{workflow_run_id}/workspace`; graph nodes do not gain workpage actions, and the repo does not add a separate action map, route family, or shell.
 - Supported-surface decision: the first bounded support matrix is now explicit for selected `weekly_schedule_planning.v1` Stage04/Stage05/Stage06 workspace items and `dispatch_reporting.v1` Stage04 approval workspace items only; `/demo/logistics` story work items, `/board`, `/my-work`, `/approvals`, `/runs/:workflowRunId` detail tabs, `live_dispatch.v1`, Stage06 publish editing, Stage07 seed editing, and EOD finalization remain out of scope.

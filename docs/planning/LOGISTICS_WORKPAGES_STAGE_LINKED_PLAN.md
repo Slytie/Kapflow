@@ -142,8 +142,9 @@ Backend only.
 Deliverables:
 - relation-kind-aware requirement counting
 - supported logistics requirement matrix modernization
-- optional subject-link payload support in relevant workpage create/submit commands
+- optional singular `subject_link` payload support in relevant canonical workpage create/submit commands
 - same-run and same-subject validation at the write boundary
+- weekly Stage05 information-request requirement satisfaction limited to submitted `response` links, not `draft` or plain `attachment` links
 
 ### TASK-0148 - Backend workspace/stage-linked workpage action projection and snapshots
 Projection layer.

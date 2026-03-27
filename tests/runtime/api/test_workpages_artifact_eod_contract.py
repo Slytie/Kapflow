@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+import onetruth.application.handlers.workpages as workpage_handlers
 from onetruth.application.handlers.artifacts import ingest_artifact_document_command
 from onetruth.application.handlers.workflow_task_lifecycle import (
     create_workflow_run_command,
@@ -17,6 +18,7 @@ from onetruth.infrastructure.artifacts.storage import (
 from onetruth.infrastructure.db.session import open_sqlite_connection
 from tests.runtime.helpers.runtime_api import RuntimeApiClient
 from tests.runtime.helpers.runtime_cli import REPO_ROOT, run_cli
+from tests.runtime.helpers.workpage_runs import seed_dispatch_reporting_workpage_run
 
 
 REPORTING_TEMPLATE_PATH = (
@@ -64,6 +66,37 @@ def _other_scope_client(tmp_path: Path) -> RuntimeApiClient:
 
 def _init_db(tmp_path: Path) -> None:
     run_cli("--db-url", _db_url(tmp_path), "init-db")
+
+
+def _request_approval(
+    tmp_path: Path,
+    *,
+    workflow_run_id: str,
+    approval_id: str,
+    scope_ref: str,
+) -> dict[str, object]:
+    requested = run_cli(
+        "--db-url",
+        _db_url(tmp_path),
+        "approvals",
+        "request",
+        "--json",
+        json.dumps(
+            {
+                "approval_id": approval_id,
+                "workflow_run_id": workflow_run_id,
+                "approval_kind": "business_decision",
+                "scope_kind": "stage",
+                "scope_ref": scope_ref,
+                "candidate_roles": ["operations_manager"],
+                "required_role": "operations_manager",
+                "action": "confirm_dispatch_reporting_packet",
+                "idempotency_key": f"api:eod-draft:approval:{approval_id}",
+            },
+            separators=(",", ":"),
+        ),
+    )
+    return json.loads(requested.stdout)["approval"]
 
 
 def test_create_eod_draft_creates_canonical_reporting_run_and_artifact(tmp_path: Path) -> None:
@@ -142,6 +175,56 @@ def test_create_eod_draft_replays_idempotently_without_duplicate_artifacts(tmp_p
             "SELECT COUNT(*) FROM artifact_versions"
         ).fetchone()[0]
     assert artifact_count == 1
+
+
+def test_canonical_eod_draft_create_links_supported_stage04_approval_as_draft(
+    tmp_path: Path,
+) -> None:
+    seeded = seed_dispatch_reporting_workpage_run(
+        db_url=_db_url(tmp_path),
+        tenant_id="tenant-a",
+        domain_id="domain-x",
+        run_tag="api:eod-draft:canonical-subject-create",
+    )
+    workflow_run_id = str(seeded["workflow_run_id"])
+    approval = _request_approval(
+        tmp_path,
+        workflow_run_id=workflow_run_id,
+        approval_id="ap-dispatch-stage04",
+        scope_ref="Stage04",
+    )
+    client = _client(tmp_path)
+
+    response = client.post(
+        f"/api/v1/workpages/workflow-runs/{workflow_run_id}/eod-v0/drafts",
+        payload={
+            "subject_link": {
+                "subject_kind": "approval",
+                "subject_id": str(approval["approval_id"]),
+            },
+            "idempotency_key": "api:eod-draft:canonical-subject-create",
+        },
+    )
+    assert response.status_code == 200
+    artifact_version_id = str(response.payload["draft"]["artifact_version_id"])
+
+    with open_sqlite_connection(_db_url(tmp_path)) as connection:
+        rows = connection.execute(
+            """
+            SELECT subject_kind, subject_id, relation_kind
+            FROM artifact_links
+            WHERE artifact_version_id = ?
+            ORDER BY subject_kind ASC, subject_id ASC, relation_kind ASC
+            """,
+            (artifact_version_id,),
+        ).fetchall()
+    assert [dict(row) for row in rows] == [
+        {
+            "subject_kind": "approval",
+            "subject_id": "ap-dispatch-stage04",
+            "relation_kind": "draft",
+        }
+    ]
 
 
 def test_artifact_backed_eod_workpage_returns_projected_contract(tmp_path: Path) -> None:
@@ -323,6 +406,88 @@ def test_submit_artifact_workpage_creates_superseding_version_and_updates_projec
     )
 
 
+def test_submit_artifact_workpage_links_supported_stage04_approval_as_response(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    monkeypatch.setattr(
+        workpage_handlers,
+        "project_upd_draft_workbook",
+        lambda _workbook_bytes: {
+            "manual_closeout": [
+                {
+                    "sick_calls": "",
+                    "unavailable_drivers": "",
+                    "working_devices": "",
+                    "rescues": "",
+                    "incidents": "",
+                    "last_driver_clockout": "",
+                    "dispatcher_comment": "",
+                    "manager_note": "",
+                }
+            ],
+            "upd_candidates": [],
+        },
+    )
+    monkeypatch.setattr(
+        workpage_handlers,
+        "materialize_upd_draft_workbook",
+        lambda workbook_bytes, edits, change_log_entry: workbook_bytes,
+    )
+    seeded = seed_dispatch_reporting_workpage_run(
+        db_url=_db_url(tmp_path),
+        tenant_id="tenant-a",
+        domain_id="domain-x",
+        run_tag="api:eod-draft:subject-submit",
+    )
+    workflow_run_id = str(seeded["workflow_run_id"])
+    approval = _request_approval(
+        tmp_path,
+        workflow_run_id=workflow_run_id,
+        approval_id="ap-dispatch-stage04-submit",
+        scope_ref="Stage04",
+    )
+    client = _client(tmp_path)
+    created = client.post(
+        f"/api/v1/workpages/workflow-runs/{workflow_run_id}/eod-v0/drafts",
+        payload={"idempotency_key": "api:eod-draft:subject-submit:create"},
+    )
+    base_artifact_version_id = str(created.payload["draft"]["artifact_version_id"])
+
+    submitted = client.post(
+        f"/api/v1/workpages/artifacts/{base_artifact_version_id}/submit",
+        payload={
+            "form_values": {"dispatcher_comment": "Linked to Stage04 approval."},
+            "checklist_values": [],
+            "subject_link": {
+                "subject_kind": "approval",
+                "subject_id": str(approval["approval_id"]),
+            },
+            "idempotency_key": "api:eod-draft:subject-submit",
+        },
+    )
+    assert submitted.status_code == 200
+    submitted_artifact_version_id = str(submitted.payload["submitted"]["artifact_version_id"])
+
+    with open_sqlite_connection(_db_url(tmp_path)) as connection:
+        rows = connection.execute(
+            """
+            SELECT subject_kind, subject_id, relation_kind
+            FROM artifact_links
+            WHERE artifact_version_id = ?
+            ORDER BY subject_kind ASC, subject_id ASC, relation_kind ASC
+            """,
+            (submitted_artifact_version_id,),
+        ).fetchall()
+    assert [dict(row) for row in rows] == [
+        {
+            "subject_kind": "approval",
+            "subject_id": "ap-dispatch-stage04-submit",
+            "relation_kind": "response",
+        }
+    ]
+
+
 def test_workflow_run_artifact_list_includes_eod_draft_chain_versions(tmp_path: Path) -> None:
     client = _client(tmp_path)
     created = client.post(
@@ -395,6 +560,61 @@ def test_submit_artifact_workpage_replays_idempotently_without_duplicate_version
             "SELECT COUNT(*) FROM artifact_versions"
         ).fetchone()[0]
     assert artifact_count == 2
+
+
+def test_demo_eod_draft_create_rejects_subject_link(tmp_path: Path) -> None:
+    client = _client(tmp_path)
+
+    response = client.post(
+        "/api/v1/workpages/demo/eod-v0/drafts",
+        payload={
+            "subject_link": {
+                "subject_kind": "approval",
+                "subject_id": "ap-demo-should-fail",
+            },
+            "idempotency_key": "api:eod-draft:demo-subject-link",
+        },
+    )
+    assert response.status_code == 400
+    assert response.payload["error"]["code"] == "invalid_workpage_subject_link"
+
+
+def test_canonical_eod_draft_create_rejects_cross_run_approval_subject_link(
+    tmp_path: Path,
+) -> None:
+    first_run = seed_dispatch_reporting_workpage_run(
+        db_url=_db_url(tmp_path),
+        tenant_id="tenant-a",
+        domain_id="domain-x",
+        run_tag="api:eod-draft:cross-run:first",
+    )
+    second_run = seed_dispatch_reporting_workpage_run(
+        db_url=_db_url(tmp_path),
+        tenant_id="tenant-a",
+        domain_id="domain-x",
+        run_tag="api:eod-draft:cross-run:second",
+        include_source_artifacts=False,
+    )
+    approval = _request_approval(
+        tmp_path,
+        workflow_run_id=str(second_run["workflow_run_id"]),
+        approval_id="ap-cross-run-stage04",
+        scope_ref="Stage04",
+    )
+    client = _client(tmp_path)
+
+    response = client.post(
+        f"/api/v1/workpages/workflow-runs/{first_run['workflow_run_id']}/eod-v0/drafts",
+        payload={
+            "subject_link": {
+                "subject_kind": "approval",
+                "subject_id": str(approval["approval_id"]),
+            },
+            "idempotency_key": "api:eod-draft:cross-run:create",
+        },
+    )
+    assert response.status_code == 404
+    assert response.payload["error"]["code"] == "cross_workflow_link_reference"
 
 
 def test_submit_artifact_workpage_returns_conflict_for_stale_base(tmp_path: Path) -> None:

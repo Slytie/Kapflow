@@ -359,6 +359,8 @@ The `demo` subfamily is implemented today. After EPIC-122 it remains a compatibi
 
 `TASK-0146` does not add any new workpage routes. Stage-linked workpage access remains an additive workspace projection over these existing canonical families rather than a second route family or second shell.
 
+`TASK-0147` keeps the write-boundary seam on these same routes. Supported stage-linked create/submit flows may now accept one optional `subject_link` object; callers do not supply raw `links[]` or `relation_kind`, and the server derives relation-kind semantics from the specific workpage flow.
+
 Current planned demo workpage ids:
 - `schedule-v0`
 - `eod-v0`
@@ -554,6 +556,7 @@ Endpoint:
 
 Body:
 - `idempotency_key`
+- `subject_link` (optional on the canonical run-backed route only; object with `subject_kind` and `subject_id`)
 
 Response:
 - current implemented alias response:
@@ -567,15 +570,21 @@ Rules:
 - instantiate a new `reporting.upd_draft.workbook` artifact version from the reporting template pack,
 - do not create runless demo artifacts,
 - keep the demo create route as a compatibility alias until the canonical run-backed surfaces are proven,
-- keep create semantics explicit and idempotent.
+- keep create semantics explicit and idempotent,
+- the demo alias rejects `subject_link` with `invalid_workpage_subject_link`,
+- the canonical run-backed create route accepts `subject_link` only for supported `dispatch_reporting.v1` Stage04 approval surfaces,
+- callers do not supply `relation_kind`; the server derives `draft`,
+- same-run subject validation still fails closed as `cross_workflow_link_reference`.
 
-### 4.6 Submit artifact-backed EOD draft
+### 4.6 Submit artifact-backed workpage draft
 Endpoint:
 - `POST /api/v1/workpages/artifacts/{artifact_version_id}/submit`
 
 Body:
-- `form_values`
-- `checklist_values[]`
+- workpage edit fields:
+  - `form_values` + `checklist_values[]` for EOD
+  - `rows` + `reserve_rows` for schedule
+- `subject_link` (optional; object with `subject_kind` and `subject_id` on supported surfaces only)
 - `idempotency_key`
 
 Response:
@@ -590,6 +599,10 @@ Rules:
 - explicit submit/save only; no per-keystroke artifact writes,
 - the returned `route` now points at `/runs/{workflow_run_id}/workpages/eod-v0/artifacts/{artifact_version_id}` so stale/conflict reopen and submit success stay inside the canonical nested workpage family,
 - if the base artifact version has already been superseded in the same draft chain, fail closed with `workpage_artifact_conflict`,
+- the shared submit route now covers both the implemented EOD draft lane and the bounded Stage04 schedule draft lane,
+- supported `subject_link` surfaces stay frozen to the `TASK-0146` matrix; invalid or unsupported surfaces fail closed as `invalid_workpage_subject_link`,
+- callers do not supply `relation_kind`; the server derives `response`,
+- same-run subject validation still fails closed as `cross_workflow_link_reference`,
 - final-packet approval/pointer semantics remain out of scope for this epic.
 
 ### 4.7 Run bounded Stage06 OpenAI review sandbox
