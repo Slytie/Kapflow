@@ -4,7 +4,7 @@
 Stage 4 - Vertical Slice MVP (repo merged around one truth system)
 
 ## Current milestone
-Primary runtime/debug work remains the logistics weekly/live family. `TASK-0137` through `TASK-0149` are now complete, so the repo now has the closed EPIC-121 artifact-backed EOD slice, the full EPIC-122 workflow-run-backed workpage access layer across backend and frontend, the closed EPIC-123 Stage04 schedule artifact-backed slice, and the implemented EPIC-124 stage-linked workspace CTA slice short of closeout: the current demo/query and artifact-backed EOD routes stay intact as compatibility aliases, the canonical run-backed route family and minimal run-context/draft-resolution boundary remain frozen in repo-native docs, the canonical `/runs/:workflowRunId/workpages/*` schedule/EOD surfaces now exist in the app, `/demo/logistics` exposes those canonical workpage routes as the primary discoverable path, and supported `/runs/:workflowRunId/workspace` work items now project and render backend-owned `workpage_actions[]` without adding a second shell or route family. The next bounded tranche is `TASK-0150` EPIC-124 closeout and doc/regression-truth sync.
+Primary runtime/debug work remains the logistics weekly/live family. `TASK-0137` through `TASK-0150` are now complete, so the repo now has the closed EPIC-121 artifact-backed EOD slice, the full EPIC-122 workflow-run-backed workpage access layer across backend and frontend, the closed EPIC-123 Stage04 schedule artifact-backed slice, and the closed EPIC-124 stage-linked workspace CTA slice: the current demo/query and artifact-backed EOD routes stay intact as compatibility aliases, the canonical run-backed route family and minimal run-context/draft-resolution boundary remain frozen in repo-native docs, the canonical `/runs/:workflowRunId/workpages/*` schedule/EOD surfaces now exist in the app, `/demo/logistics` exposes those canonical workpage routes as the primary discoverable path, and supported `/runs/:workflowRunId/workspace` work items now project and render backend-owned `workpage_actions[]` without adding a second shell or route family. The next app-facing tranche remains intentionally unselected after EPIC-124 closeout.
 
 Current implemented baseline:
 - `/demo/logistics/workpages/schedule-v0`
@@ -83,7 +83,7 @@ Current EPIC-122 implemented route and contract baseline (`TASK-0137` + `TASK-01
 - the canonical run-backed EOD create route now seeds the same immutable `reporting.upd_draft.workbook` artifact family inside the supplied `dispatch_reporting.v1` run and returns canonical `/runs/{workflow_run_id}/workpages/eod-v0/artifacts/{artifact_version_id}` handoff routes
 
 Immediate next application package:
-- EPIC-124 remains the active application tranche, and `TASK-0146` plus `TASK-0147` now freeze its contract boundary and backend linkage posture in repo-native docs
+- EPIC-124 is complete, and its contract, backend linkage posture, workspace action projection, frontend CTA handoff, and closeout memory are now all repo-native
 - stage-linked workpage actions are additive `workpage_actions[]` on `/runs/:workflowRunId/workspace` work items only; do not put them on graph nodes, a top-level action map, or a second route family
 - the first supported matrix is intentionally small: selected `weekly_schedule_planning.v1` Stage04/Stage05/Stage06 workspace items and `dispatch_reporting.v1` Stage04 approval workspace items
 - the canonical `/runs/:workflowRunId/workpages/*` route family remains the only frontend route truth; demo workpage routes remain compatibility aliases, not the primary access model
@@ -198,7 +198,7 @@ Repo-truth certification snapshot: current capability status and command/test ev
 - Adopted a pytest-backed TDD harness with a stable AT-SCH scenario catalog and reference replay reducer
 
 ### Next tasks (priority order)
-1. `TASK-0150` - Close EPIC-124 and synchronize docs, status, snapshot/regression truth, and remaining known caveats once behavior lands.
+1. Choose the next bounded post-EPIC-124 application tranche deliberately; no follow-on epic is selected in repo memory yet.
 
 ## Test-first working mode
 Before adding runtime services or API surfaces:

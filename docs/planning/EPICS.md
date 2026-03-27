@@ -27,6 +27,8 @@ Current runtime/debug priority: **Schedule Planning**. Payroll remains the secon
 | EPIC-123 | Schedule draft artifact-backed workpages (Stage04 draft weekly schedule workbook lane) | schedule-artifact-path brief/plan, Stage04 draft workbook authority freeze, schedule artifact projection/submit over the generic artifact-backed workpage family, backend-owned snapshots, and canonical frontend schedule artifact route/page | EPIC-120, EPIC-122, EPIC-030 |
 | EPIC-124 | Stage-linked workpages and requirement-aware artifact linkage | stage-linked workpage brief/plan, workspace `workpage_actions[]` contract freeze, relation-kind-aware subject-link semantics, backend action projection/snapshots, and frontend stage-linked CTA integration | EPIC-122, EPIC-123, EPIC-050, EPIC-060, EPIC-030 |
 
+Status note (2026-03-27): EPIC-124 is complete. The next post-EPIC-124 application epic remains intentionally unselected in repo memory so closeout does not imply schedule widening, EOD finalization, or broader workspace rollout.
+
 ## Update rules
 - Keep epic files in `docs/planning/epics/`
 - Keep task briefs in `codex/tasks/`

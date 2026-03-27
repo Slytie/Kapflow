@@ -342,6 +342,9 @@ describe("RunWorkspacePage", () => {
             disabled_reason: null
           })
         })
+      ),
+      http.get("*/api/v1/workpages/artifacts/av-schedule-artifact-001", () =>
+        HttpResponse.json(scheduleArtifactStateSnapshot.workpage_state)
       )
     );
 

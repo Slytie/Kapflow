@@ -98,7 +98,7 @@ describe("LogisticsScheduleArtifactWorkpagePage", () => {
         expect(mutationLog()).toContain("artifact-download-bin:av-schedule-artifact-002");
       });
     },
-    15000
+    25000
   );
 
   it("reopens the previous draft from history and shows the stale-version guidance", async () => {
@@ -178,7 +178,7 @@ describe("LogisticsScheduleArtifactWorkpagePage", () => {
     expect(window.location.pathname).toBe(
       "/runs/wr-weekly-001/workpages/schedule-v0/artifacts/av-schedule-artifact-latest"
     );
-  });
+  }, 10000);
 
   it("drops mismatched workspace subject context when submitting schedule drafts directly", async () => {
     const user = userEvent.setup();

@@ -1,9 +1,9 @@
 # EPIC-124 Context Pack - Stage-linked workpages and requirement-aware artifact linkage
 
 Purpose:
-- You are implementing or reviewing the next workpage epic after EPIC-123.
-- You need to make the current logistics workpages reachable from supported task/approval/workspace surfaces without creating a second truth path.
-- You need to modernize requirement satisfaction so workpage drafts do not count as responses.
+- You are reviewing or extending the completed EPIC-124 workpage slice after EPIC-123.
+- You need to preserve the supported stage-linked workspace workpage surface without creating a second truth path.
+- You need to keep requirement satisfaction honest so workpage drafts never count as responses.
 
 ## Non-negotiable invariants to keep in mind
 - Workpages remain derived surfaces; runtime rows, events, and artifacts remain canonical truth.
@@ -46,18 +46,22 @@ Purpose:
 ## Current repo status
 - EPIC-122 is complete: canonical run-backed schedule and EOD workpage routes are live.
 - EPIC-123 is complete: artifact-backed EOD and bounded Stage04 schedule artifact lanes are live.
-- EPIC-124 is now repo-native and starts with a contract freeze instead of implementation drift.
-- Workspace/task surfaces still do not expose backend-projected workpage actions.
-- `task_requirements.py` still needs relation-kind-aware modernization for workpage-safe requirement satisfaction.
-- `artifact_effects.py` already provides a usable `links[]` seam with `relation_kind`, so the repo has a natural boundary for subject-linked artifact creation/submission.
+- EPIC-124 is complete: the repo-native contract freeze, backend requirement/link semantics, backend workspace action projection/snapshots, and frontend CTA integration are all landed.
+- Supported `/runs/:workflowRunId/workspace` items now expose and render backend-projected `workpage_actions[]`; graph nodes and unsupported queues remain action-free.
+- `task_requirements.py` now applies the first relation-kind-aware workpage-safe satisfaction rule, and supported workpage create/submit flows now translate one optional `subject_link` into the existing artifact `links[]` seam.
+- The targeted frontend runner note now remains explicit: use `npm --prefix frontend run test:run -- --fileParallelism=false ...` until the shared MSW artifact-map harness is parallel-safe.
 - A known pre-existing baseline caveat remains: targeted workpage verification still fails the run-backed EOD latest-draft-after-submit path because `dispatch_reporting_workbook.py` calls `zip()` with keyword arguments.
 
-## Planned implementation order inside this epic
+## Completed implementation order inside this epic
 1. `TASK-0146` - Freeze contract and semantics
 2. `TASK-0147` - Backend requirement/link semantics
 3. `TASK-0148` - Backend workspace/stage-linked action projection and snapshots
 4. `TASK-0149` - Frontend CTA integration
 5. `TASK-0150` - Closeout and doc/regression sync
+
+## Post-epic posture
+- EPIC-124 does not authorize schedule Stage06 publish editing, Stage07 seed/live-dispatch widening, EOD finalization, or a broader workspace rollout.
+- The next app-facing epic remains intentionally unselected after closeout.
 
 ## Smallest context set for the next tasks
 - `docs/planning/LOGISTICS_WORKPAGES_STAGE_LINKED_PLAN.md`

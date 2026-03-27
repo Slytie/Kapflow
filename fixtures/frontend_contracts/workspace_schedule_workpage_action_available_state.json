@@ -93,9 +93,9 @@
     "command": "api.workflow_runs.workspace",
     "freshness": {
       "generated_at": "<ts:2>",
-      "latest_event_recorded_at": "2026-03-27T14:51:08.487111Z",
+      "latest_event_recorded_at": "2026-03-27T16:44:53.440584Z",
       "latest_event_sequence": 7,
-      "workflow_run_updated_at": "2026-03-27T14:49:15.809077Z"
+      "workflow_run_updated_at": "2026-03-27T16:43:53.257668Z"
     },
     "graph": {
       "edges": [],

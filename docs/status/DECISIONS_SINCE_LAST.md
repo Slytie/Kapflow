@@ -2,6 +2,13 @@
 
 Record any decisions made since the last session so a fresh Codex run can rehydrate quickly.
 
+## 2026-03-27 (TASK-0150 EPIC-124 closeout and regression-truth sync)
+- Epic-closeout decision: EPIC-124 is now complete, and repo memory should describe stage-linked workpage actions, supported subject-link semantics, backend workspace projection, and frontend CTA handoff as implemented rather than as a future tranche.
+- Boundary decision: closeout reaffirms that `workpage_actions[]` lives only on workspace work items, supported workpage create/submit flows accept at most one optional `subject_link`, graph nodes do not gain workpage actions, no second workpage route family or shell was added, and workpage access never becomes approval finalization.
+- Verification-posture decision: the targeted frontend runner remains `npm --prefix frontend run test:run -- --fileParallelism=false ...` until the shared MSW artifact-map harness is parallel-safe; this is a test-harness note, not a product contract change.
+- Cleanup decision: EPIC-124 closeout stays repo-tracked only; local untracked residue such as a repo-root `node_modules/` directory is not part of epic completion or source truth.
+- Next-step decision: the next post-EPIC-124 app-facing epic remains intentionally unselected, and closing this epic does not imply Stage06/Stage07 widening, EOD finalization, or broader workspace rollout.
+
 ## 2026-03-27 (TASK-0147 backend requirement-aware artifact linkage and supported-surface policy)
 - Requirement-counting decision: human-task requirement satisfaction is now relation-kind aware instead of raw-link-count based; legacy `schedule_planning.v1` upload requirements remain `attachment`-satisfiable only, while the first EPIC-124 rule allows only submitted `response` links to satisfy `weekly_schedule_planning.v1` Stage05 `information_request` for `planning.draft_weekly_schedule.workbook`.
 - Workpage-write-boundary decision: canonical stage-linked workpage create/submit flows now accept at most one optional `subject_link` object (`subject_kind`, `subject_id`) and translate it into the existing artifact `links[]` seam internally; callers do not supply raw `links[]` or `relation_kind` on workpage routes.

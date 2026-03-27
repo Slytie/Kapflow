@@ -87,6 +87,21 @@ Additional `TASK-0142` through `TASK-0145` verification commands executed:
 - `npm --prefix frontend run typecheck` - passed
 - `npm --prefix frontend run test:run -- src/lib/api/onetruthApi.workpages.test.ts src/lib/repositories/workpagesRepository.test.ts src/pages/logisticsScheduleWorkpagePage.test.tsx src/pages/logisticsScheduleArtifactWorkpagePage.test.tsx src/pages/logisticsWorkpageRoutes.test.tsx` - passed
 
+## EPIC-124 Stage-linked Workspace Action Closeout Addendum (2026-03-27)
+Additional `TASK-0146` through `TASK-0150` verification commands executed:
+- `python3 scripts/validate_repo.py --schemas-only` - passed (`4797 check(s) passed`)
+- `PYTHONPATH=/tmp/onetruth-py311:src pytest -q tests/unit/test_task_requirements.py` - passed
+- `PYTHONPATH=/tmp/onetruth-py311:src pytest -q tests/runtime/api/test_workspace_workpage_actions.py` - passed
+- `PYTHONPATH=/tmp/onetruth-py311:src pytest -q tests/runtime/api/test_workflow_run_workspace_endpoint.py` - passed
+- `PYTHONPATH=/tmp/onetruth-py311:src pytest -q tests/runtime/api/test_workpages_artifact_eod_contract.py` - passed
+- `npm --prefix frontend run typecheck` - passed
+- `npm --prefix frontend run test:run -- --fileParallelism=false src/lib/api/onetruthApi.workspace.test.ts src/pages/runWorkspacePage.test.tsx src/pages/dispatchReportWorkpagePage.test.tsx src/pages/logisticsScheduleArtifactWorkpagePage.test.tsx` - passed
+
+Closeout verification notes:
+- The EPIC-124 workspace-action fixtures were regenerated in place after a bounded mismatch on `workspace_schedule_workpage_action_available_state.json`.
+- The full-corpus reruns `PYTHONPATH=/tmp/onetruth-py311:src python3.11 scripts/export_frontend_snapshots.py --check` and `PYTHONPATH=/tmp/onetruth-py311:src python3.11 -m pytest -q tests/runtime/contracts/test_frontend_snapshot_fixtures.py` were relaunched after that bounded fixture rewrite, but they did not return a final result before this closeout pass ended in the current environment.
+- `PYTHONPATH=/tmp/onetruth-py311:src pytest -q tests/runtime/api/test_workpages_artifact_schedule_contract.py` was also relaunched during closeout and likewise did not return a final result before this pass ended.
+
 ## Weekly Stage04 Pilot Addendum (2026-03-12)
 Additional TASK-0070 verification commands executed:
 - `PYTHONPATH=src python3 scripts/run_logistics_weekly_agent_pilot.py --db-url sqlite:///./.tmp/logistics-weekly-stage04-pilot.db --pilot-key verify-task-0070-fresh --openai-mode mock --json` - passed (`workflow_run_id=wr-8802bae7fa0e735404703924`)
