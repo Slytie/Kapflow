@@ -190,6 +190,7 @@ Workspace item shape (`user_work[]`, `blocking_work[]`):
 - `subject_id`
 - `canonical_state`
 - `available_actions[]` (server-computed)
+- `workpage_actions[]` (optional, additive, server-computed stage-linked workpage actions)
 - `blocking_requirements[]` (server-computed)
 - `linked_artifact_count`
 - `missing_required_inputs[]`
@@ -197,6 +198,67 @@ Workspace item shape (`user_work[]`, `blocking_work[]`):
 - `can_upload_attachment`
 - `can_run_stage06_agent_review`
 - `metadata` (subject-specific rendering keys)
+
+Stage-linked workpage action shape (`workpage_actions[]`, frozen in `TASK-0146`):
+- lives only on workspace work items (`user_work[]`, `blocking_work[]`)
+- does not live on `graph.nodes[]`
+- does not add a separate top-level action map
+- preserves existing `available_actions[]` for non-workpage inline mutations
+- shape:
+  - `action_id`
+  - `workpage_kind`
+  - `label`
+  - `presentation` (`open_route|create_draft_then_open`)
+  - `state` (`available|unavailable`)
+  - `route` (canonical frontend route or `null`)
+  - `create_path` (canonical API create path or `null`)
+  - `subject_context` (`subject_kind`, `subject_id`, `workflow_run_id`)
+  - `link_policy` (`create_relation_kind`, `submit_relation_kind`)
+  - `disabled_reason`
+
+Example:
+
+```json
+{
+  "action_id": "workpage.schedule-v0.open_latest_draft",
+  "workpage_kind": "schedule-v0",
+  "label": "Open schedule draft",
+  "presentation": "open_route",
+  "state": "available",
+  "route": "/runs/wr-123/workpages/schedule-v0/artifacts/av-456",
+  "create_path": null,
+  "subject_context": {
+    "subject_kind": "human_task",
+    "subject_id": "ht-123",
+    "workflow_run_id": "wr-123"
+  },
+  "link_policy": {
+    "create_relation_kind": null,
+    "submit_relation_kind": "response"
+  },
+  "disabled_reason": null
+}
+```
+
+Supported surface matrix (frozen in `TASK-0146`):
+
+| Workflow | Surface | Supported subject | Action target | Presentation | Notes |
+|---|---|---|---|---|---|
+| `weekly_schedule_planning.v1` | `/runs/:workflowRunId/workspace` work items | human task `Stage04/work_item` | latest canonical schedule artifact route | `open_route` | Bounded Stage04 draft-edit lane. No create route exists. |
+| `weekly_schedule_planning.v1` | `/runs/:workflowRunId/workspace` work items | human task `Stage05/information_request` | latest canonical schedule artifact route | `open_route` | Access is for draft review/edit context only. |
+| `weekly_schedule_planning.v1` | `/runs/:workflowRunId/workspace` work items | human task `Stage05/final_review` | latest canonical schedule artifact route | `open_route` | Review access only, not publish or finalization. |
+| `weekly_schedule_planning.v1` | `/runs/:workflowRunId/workspace` work items | approval `scope_ref=Stage06` | latest canonical schedule artifact route | `open_route` | Approval access stays distinct from approval response. |
+| `dispatch_reporting.v1` | `/runs/:workflowRunId/workspace` work items | approval `scope_ref=Stage04` | latest canonical EOD artifact route if present, else canonical EOD create route | `open_route` or `create_draft_then_open` | Approval access only, no implicit approval response. |
+
+Subject-link semantics (frozen in `TASK-0146`):
+- `attachment` keeps existing upload/evidence semantics
+- `draft` is reserved for in-progress workpage draft association and never satisfies required uploads, required reviews, approval response, or completion/finalization truth
+- `response` is reserved for the new artifact version created by workpage submit and is the only workpage-linked relation kind that later tasks may allow to satisfy supported requirements
+- `open_route` actions create no link by themselves
+- weekly schedule actions freeze to `create_relation_kind=null` and `submit_relation_kind=response`
+- dispatch-reporting approval actions freeze to `create_relation_kind=draft` and `submit_relation_kind=response`
+- opening or submitting a workpage does not call `POST /api/v1/approvals/{id}/respond`
+- `TASK-0146` does not add workpage actions to graph nodes, `/board`, `/my-work`, `/approvals`, `/runs/:workflowRunId` detail tabs, `/demo/logistics` story work items, `live_dispatch.v1`, Stage06 publish editing, Stage07 seed editing, or EOD finalization
 
 ### 3.7 Timeline feed
 Endpoint:
@@ -294,6 +356,8 @@ Route-family decision:
   - `POST /api/v1/workpages/artifacts/{artifact_version_id}/submit`
 
 The `demo` subfamily is implemented today. After EPIC-122 it remains a compatibility-alias family, not the primary or long-term canonical access model. The canonical frontend run-backed pages now live under `/runs/:workflowRunId/workpages/*`. After EPIC-123, the implemented artifact-backed family now covers both EOD (`reporting.upd_draft.workbook`) and the bounded Stage04 schedule draft lane (`planning.draft_weekly_schedule.workbook`), while Stage06 publish, Stage07 seeds, and live-dispatch remain out of scope.
+
+`TASK-0146` does not add any new workpage routes. Stage-linked workpage access remains an additive workspace projection over these existing canonical families rather than a second route family or second shell.
 
 Current planned demo workpage ids:
 - `schedule-v0`

@@ -2,6 +2,13 @@
 
 Record any decisions made since the last session so a fresh Codex run can rehydrate quickly.
 
+## 2026-03-27 (TASK-0146 stage-linked workpage contract, supported matrix, and subject-link semantics)
+- Contract-seam decision: the first stage-linked workpage action layer is now frozen as additive `workpage_actions[]` on workspace work items returned by `GET /api/v1/workflow-runs/{workflow_run_id}/workspace`; graph nodes do not gain workpage actions, and the repo does not add a separate action map, route family, or shell.
+- Supported-surface decision: the first bounded support matrix is now explicit for selected `weekly_schedule_planning.v1` Stage04/Stage05/Stage06 workspace items and `dispatch_reporting.v1` Stage04 approval workspace items only; `/demo/logistics` story work items, `/board`, `/my-work`, `/approvals`, `/runs/:workflowRunId` detail tabs, `live_dispatch.v1`, Stage06 publish editing, Stage07 seed editing, and EOD finalization remain out of scope.
+- Relation-kind decision: `draft` is now explicitly reserved for in-progress workpage association and never satisfies required uploads, required reviews, approval response, or completion/finalization truth; `response` is reserved for submitted workpage artifacts and is the only workpage-linked relation kind that later tasks may allow to satisfy supported requirements.
+- Approval-boundary decision: opening or submitting a workpage from an approval-linked surface remains distinct from approval response and does not call `POST /api/v1/approvals/{id}/respond`.
+- Baseline-caveat decision: the repo now records a pre-existing EOD submit-path regression in `tests/runtime/api/test_workpages_run_eod_contract.py::test_eod_workflow_run_workpage_uses_latest_draft_after_submit`, traced to `dispatch_reporting_workbook.py`, as a baseline reconciliation item rather than broadening `TASK-0146` into behavior work.
+
 ## 2026-03-26 (TASK-0143 backend schedule artifact projection, submit, and snapshots)
 - Artifact-family decision: the existing generic artifact-backed workpage family now supports the bounded Stage04 schedule draft lane for `weekly_schedule_planning.v1` + `planning.draft_weekly_schedule.workbook`; the response envelope stays the same as EOD (`workpage`, `source`, `freshness`, `artifact_context`) and still leaves `run_context=null` / `draft_resolution=null`.
 - Submit-boundary decision: schedule artifact submit is intentionally narrow and JSON-backed; it only allows bounded assignment/reserve row edits, creates a new immutable superseding `planning.draft_weekly_schedule.workbook` version, and keeps iteration deltas read-only.
