@@ -2,7 +2,7 @@
 id: TASK-0149
 epic: EPIC-124
 title: "Implement frontend stage-linked workpage actions, handoffs, and refresh truth on workspace surfaces"
-status: TODO
+status: DONE
 owners: ["frontend"]
 reviewers: ["qa"]
 depends_on: ["TASK-0148"]
@@ -66,3 +66,17 @@ Render the projected workpage actions on the supported workspace surfaces, wire 
 - CTA flows open the correct canonical run-backed or artifact-backed workpage routes.
 - Workspace requirement posture updates correctly after create/submit.
 - The frontend does not silently infer route semantics that the backend contract does not provide.
+
+## Outcome
+- The frontend workspace contract now normalizes backend `workpage_actions[]` and defaults missing action arrays to `[]` rather than inventing CTA state locally.
+- `WorkspaceTaskBoard.tsx` now renders backend-projected workpage actions on supported task and approval cards, keeps unavailable states disabled/truthful, and preserves the existing required-review `Open Draft` download behavior.
+- Workspace CTA create flows now POST to backend-provided `create_path` values through a generic repository helper instead of hardcoding EOD draft-create routes in the UI.
+- Workspace-to-workpage handoff now carries `workpageSubjectContext` through router state, and schedule/EOD artifact submit pages translate valid same-run state into backend `subject_link` payloads while dropping malformed or cross-run state.
+- Workspace-related query invalidation now lives in one shared helper reused by the workspace page and by both schedule/EOD submit success paths, keeping workspace truth synchronized after create/submit.
+
+## Commands run
+- `npm --prefix frontend run typecheck`
+- `npm --prefix frontend run test:run -- --fileParallelism=false src/lib/api/onetruthApi.workspace.test.ts src/pages/runWorkspacePage.test.tsx src/pages/dispatchReportWorkpagePage.test.tsx src/pages/logisticsScheduleArtifactWorkpagePage.test.tsx`
+
+## Follow-ups
+- `TASK-0150` should close EPIC-124, reconcile repo-native docs/status memory, and record the targeted frontend test runner note (`--fileParallelism=false`) until the shared MSW artifact-map harness is made parallel-safe.

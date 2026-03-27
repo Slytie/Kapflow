@@ -9,6 +9,7 @@ from onetruth.application.services.logistics_weekly_agent_pilot import (
     build_actual_ops_weekly_stage04_fixture_payloads,
 )
 
+from .runtime_api import RuntimeApiClient
 from .runtime_cli import REPO_ROOT, run_cli, stdout_json
 
 
@@ -203,6 +204,145 @@ def seed_dispatch_reporting_workpage_run(
         "workflow_run_id": workflow_run_id,
         "artifacts_by_kind": artifacts_by_kind,
     }
+
+
+def seed_weekly_workspace_supported_task_surface_with_draft(
+    *,
+    db_url: str,
+    tenant_id: str,
+    domain_id: str,
+    run_tag: str,
+) -> dict[str, Any]:
+    seeded = seed_actual_ops_weekly_schedule_run_with_stage04_outputs(
+        db_url=db_url,
+        tenant_id=tenant_id,
+        domain_id=domain_id,
+        run_tag=run_tag,
+    )
+    result = run_cli(
+        "--db-url",
+        db_url,
+        "tasks",
+        "create",
+        "--json",
+        json.dumps(
+            {
+                "workflow_run_id": seeded["workflow_run_id"],
+                "stage_id": "Stage05",
+                "task_kind": "information_request",
+                "activation_key": f"{run_tag}:task:create",
+                "candidate_roles": ["schedule_planner"],
+                "owner_role": "schedule_planner",
+                "create_human_task": True,
+                "idempotency_key": f"{run_tag}:task:create",
+            },
+            separators=(",", ":"),
+        ),
+    )
+    seeded["workspace_surface"] = stdout_json(result)["result"]
+    return seeded
+
+
+def seed_weekly_workspace_stage04_task_surface_without_draft(
+    *,
+    db_url: str,
+    tenant_id: str,
+    domain_id: str,
+    run_tag: str,
+) -> dict[str, Any]:
+    seeded = seed_actual_ops_weekly_schedule_run(
+        db_url=db_url,
+        tenant_id=tenant_id,
+        domain_id=domain_id,
+        run_tag=run_tag,
+    )
+    result = run_cli(
+        "--db-url",
+        db_url,
+        "tasks",
+        "create",
+        "--json",
+        json.dumps(
+            {
+                "workflow_run_id": seeded["workflow_run_id"],
+                "stage_id": "Stage04",
+                "task_kind": "work_item",
+                "activation_key": f"{run_tag}:task:create",
+                "candidate_roles": ["schedule_planner"],
+                "owner_role": "schedule_planner",
+                "create_human_task": True,
+                "idempotency_key": f"{run_tag}:task:create",
+            },
+            separators=(",", ":"),
+        ),
+    )
+    seeded["workspace_surface"] = stdout_json(result)["result"]
+    return seeded
+
+
+def seed_dispatch_workspace_stage04_approval_without_draft(
+    *,
+    db_url: str,
+    tenant_id: str,
+    domain_id: str,
+    run_tag: str,
+) -> dict[str, Any]:
+    seeded = seed_dispatch_reporting_workpage_run(
+        db_url=db_url,
+        tenant_id=tenant_id,
+        domain_id=domain_id,
+        run_tag=run_tag,
+    )
+    result = run_cli(
+        "--db-url",
+        db_url,
+        "approvals",
+        "request",
+        "--json",
+        json.dumps(
+            {
+                "workflow_run_id": seeded["workflow_run_id"],
+                "approval_kind": "business_decision",
+                "scope_kind": "stage",
+                "scope_ref": "Stage04",
+                "candidate_roles": ["dispatch_supervisor"],
+                "required_role": "dispatch_supervisor",
+                "action": "review_eod_draft",
+                "idempotency_key": f"{run_tag}:approval:request",
+            },
+            separators=(",", ":"),
+        ),
+    )
+    seeded["workspace_surface"] = {"approval": stdout_json(result)["approval"]}
+    return seeded
+
+
+def seed_dispatch_workspace_stage04_approval_with_draft(
+    *,
+    db_url: str,
+    tenant_id: str,
+    domain_id: str,
+    run_tag: str,
+) -> dict[str, Any]:
+    seeded = seed_dispatch_workspace_stage04_approval_without_draft(
+        db_url=db_url,
+        tenant_id=tenant_id,
+        domain_id=domain_id,
+        run_tag=run_tag,
+    )
+    client = RuntimeApiClient(
+        db_url=db_url,
+        tenant_id=tenant_id,
+        domain_id=domain_id,
+        actor_id="human:frontend-snapshot-exporter",
+        actor_type="human",
+        actor_roles=["dispatch_supervisor"],
+    )
+    seeded["draft"] = client.post(
+        f"/api/v1/workpages/workflow-runs/{seeded['workflow_run_id']}/eod-v0/drafts",
+        payload={"idempotency_key": f"{run_tag}:eod-draft:create"},
+    ).payload
+    return seeded
 
 
 def _load_actual_ops_source_material() -> dict[str, Any]:

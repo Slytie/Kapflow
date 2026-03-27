@@ -1,4 +1,5 @@
 import { requestBinary, requestJson } from "@/lib/api/httpClient";
+import { apiConfig } from "@/lib/api/config";
 import type {
   ApprovalRow,
   BoardContract,
@@ -20,6 +21,7 @@ import type {
   WorkpageSubmittedResponse,
   WorkflowRunDetailContract,
   WorkflowRunWorkspaceContract,
+  WorkflowWorkspaceWorkpageAction,
   WorkflowWorkspaceFreshness,
   WorkflowWorkspaceGraphEdge,
   WorkflowWorkspaceGraphNode,
@@ -365,6 +367,38 @@ function normalizeRequiredReviews(value: unknown): WorkflowWorkspaceRequiredRevi
   }));
 }
 
+function normalizeWorkpageActions(value: unknown): WorkflowWorkspaceWorkpageAction[] {
+  return asArray<Record<string, unknown>>(value).map((action) => {
+    const subjectContext = asRecord(action.subject_context);
+    const linkPolicy = asRecord(action.link_policy);
+    const rawPresentation = asString(action.presentation, "open_route");
+    const presentation: WorkflowWorkspaceWorkpageAction["presentation"] =
+      rawPresentation === "create_draft_then_open" ? "create_draft_then_open" : "open_route";
+    const rawState = asString(action.state, "unavailable");
+    const state: WorkflowWorkspaceWorkpageAction["state"] =
+      rawState === "available" ? "available" : "unavailable";
+    return {
+      action_id: asString(action.action_id),
+      workpage_kind: asString(action.workpage_kind),
+      label: asString(action.label),
+      presentation,
+      state,
+      route: asStringOrNull(action.route),
+      create_path: asStringOrNull(action.create_path),
+      subject_context: {
+        subject_kind: asString(subjectContext.subject_kind) === "approval" ? "approval" : "human_task",
+        subject_id: asString(subjectContext.subject_id),
+        workflow_run_id: asString(subjectContext.workflow_run_id)
+      },
+      link_policy: {
+        create_relation_kind: asStringOrNull(linkPolicy.create_relation_kind),
+        submit_relation_kind: asStringOrNull(linkPolicy.submit_relation_kind)
+      },
+      disabled_reason: asStringOrNull(action.disabled_reason)
+    };
+  });
+}
+
 function normalizeWorkspaceTaskItem(
   item: Record<string, unknown>,
   workflowRun: WorkflowRunRow,
@@ -404,6 +438,7 @@ function normalizeWorkspaceTaskItem(
     human_task: task,
     graph_node_id: graphNodeIdForStage(task.stage_id, graphNodes),
     available_actions: asArray<string>(item.available_actions),
+    workpage_actions: normalizeWorkpageActions(item.workpage_actions),
     missing_required_inputs: asArray<string>(item.missing_required_inputs),
     required_uploads: normalizeRequiredUploads(item.required_uploads),
     required_reviews: normalizeRequiredReviews(item.required_reviews),
@@ -446,6 +481,7 @@ function normalizeWorkspaceApprovalItem(
     approval,
     graph_node_id: graphNodeIdForStage(approval.scope_ref, graphNodes),
     available_actions: asArray<string>(item.available_actions),
+    workpage_actions: normalizeWorkpageActions(item.workpage_actions),
     missing_required_inputs: asArray<string>(item.missing_required_inputs),
     required_uploads: [],
     required_reviews: [],
@@ -487,6 +523,7 @@ function normalizeWorkspaceFlagItem(
     flag,
     graph_node_id: graphNodeIdForStage("Stage07", graphNodes),
     available_actions: asArray<string>(item.available_actions),
+    workpage_actions: normalizeWorkpageActions(item.workpage_actions),
     missing_required_inputs: asArray<string>(item.missing_required_inputs),
     required_uploads: [],
     required_reviews: [],
@@ -797,6 +834,29 @@ function normalizeWorkpageSubmittedResponse(
   };
 }
 
+interface WorkpageSubjectLinkPayload {
+  subject_kind: "human_task" | "approval";
+  subject_id: string;
+}
+
+function normalizeApiPath(path: string): string {
+  if (!path) {
+    return path;
+  }
+  if (path.startsWith("http://") || path.startsWith("https://")) {
+    const url = new URL(path);
+    path = `${url.pathname}${url.search}${url.hash}`;
+  }
+  if (path.startsWith(apiConfig.baseUrl)) {
+    const suffix = path.slice(apiConfig.baseUrl.length);
+    return suffix.startsWith("/") ? suffix : `/${suffix}`;
+  }
+  if (path.startsWith("/api/v1/")) {
+    return path.slice("/api/v1".length);
+  }
+  return path;
+}
+
 export interface ArtifactUploadPayload {
   artifact_kind: string;
   artifact_role?: string;
@@ -1010,7 +1070,7 @@ export const onetruthApi = {
 
   async createWorkflowRunEodDraft(
     workflowRunId: string,
-    payload: { idempotency_key: string }
+    payload: { idempotency_key: string; subject_link?: WorkpageSubjectLinkPayload }
   ): Promise<WorkpageDraftResponse> {
     const result = await requestJson<WorkpageDraftEnvelope>(
       `/workpages/workflow-runs/${encodeURIComponent(workflowRunId)}/eod-v0/drafts`,
@@ -1029,6 +1089,17 @@ export const onetruthApi = {
     return normalizeWorkpageContract(payload);
   },
 
+  async createWorkpageDraftAtPath(
+    createPath: string,
+    payload: { idempotency_key: string; subject_link?: WorkpageSubjectLinkPayload }
+  ): Promise<WorkpageDraftResponse> {
+    const result = await requestJson<WorkpageDraftEnvelope>(normalizeApiPath(createPath), {
+      method: "POST",
+      body: payload
+    });
+    return normalizeWorkpageDraftResponse(result);
+  },
+
   async submitArtifactWorkpage(
     artifactVersionId: string,
     payload: {
@@ -1036,6 +1107,7 @@ export const onetruthApi = {
       checklist_values?: Array<Record<string, unknown>>;
       rows?: Array<Record<string, unknown>>;
       reserve_rows?: Array<Record<string, unknown>>;
+      subject_link?: WorkpageSubjectLinkPayload;
       idempotency_key: string;
     }
   ): Promise<WorkpageSubmittedResponse> {

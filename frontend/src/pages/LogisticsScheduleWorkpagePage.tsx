@@ -8,7 +8,7 @@ import {
   useRef,
   useState
 } from "react";
-import { Link, useNavigate, useParams } from "react-router-dom";
+import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 
 import { StatePanel } from "@/components/StatePanel";
 import {
@@ -24,6 +24,8 @@ import { errorText } from "@/lib/api/errorText";
 import { isApiClientError } from "@/lib/api/httpClient";
 import { workpagesRepository } from "@/lib/repositories";
 import type { ArtifactVersionRow, WorkpageContract } from "@/lib/types/contracts";
+import { invalidateWorkspaceViews } from "@/lib/workspace/queryInvalidation";
+import { resolveWorkpageSubjectContext } from "@/lib/workspace/workpageSubjectContext";
 import type {
   WorkpageFormSection as WorkpageFormSectionModel,
   WorkpageHistorySection as WorkpageHistorySectionModel,
@@ -494,6 +496,7 @@ export function LogisticsScheduleWorkpagePage(): JSX.Element {
 
 export function LogisticsScheduleArtifactWorkpagePage(): JSX.Element {
   const navigate = useNavigate();
+  const location = useLocation();
   const queryClient = useQueryClient();
   const [pendingNavigationRoute, setPendingNavigationRoute] = useState<string | null>(null);
   const { artifactVersionId, workflowRunId } = useParams<{
@@ -562,9 +565,10 @@ export function LogisticsScheduleArtifactWorkpagePage(): JSX.Element {
       workpagesRepository.submitScheduleArtifact(artifactVersionId ?? "", {
         rows: assignmentRows,
         reserveRows
-      }),
+      }, resolveWorkpageSubjectContext(location.state, { workflowRunId: artifactWorkflowRunId })),
     onSuccess: (submitted) => {
       void queryClient.invalidateQueries({ queryKey: ["workpages"] });
+      void invalidateWorkspaceViews(queryClient, submitted.workflow_run_id);
       setPendingNavigationRoute(submitted.route);
     }
   });
@@ -577,9 +581,9 @@ export function LogisticsScheduleArtifactWorkpagePage(): JSX.Element {
     if (!pendingNavigationRoute) {
       return;
     }
-    navigate(pendingNavigationRoute);
+    navigate(pendingNavigationRoute, { state: location.state });
     setPendingNavigationRoute(null);
-  }, [navigate, pendingNavigationRoute]);
+  }, [location.state, navigate, pendingNavigationRoute]);
 
   if (query.isLoading) {
     return (

@@ -24,6 +24,10 @@ They are generated from real runtime scenario states, not hand-authored.
 - `workpage_schedule_v0_run_state.json`
 - `workpage_schedule_v0_artifact_state.json`
 - `workpage_schedule_v0_artifact_submit_response.json`
+- `workspace_schedule_workpage_action_available_state.json`
+- `workspace_schedule_workpage_action_unavailable_state.json`
+- `workspace_eod_workpage_action_create_state.json`
+- `workspace_eod_workpage_action_open_state.json`
 - `workpage_eod_v0_state.json`
 - `workpage_eod_v0_run_state.json`
 - `workpage_eod_v0_run_artifact_create_response.json`

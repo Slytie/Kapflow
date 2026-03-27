@@ -4,7 +4,7 @@ The inventory below lists the currently implemented routes first. As of `TASK-01
 
 As of `TASK-0144`, EPIC-123 now also implements the bounded schedule artifact-backed route under `/runs/:workflowRunId/workpages/schedule-v0/artifacts/:artifactVersionId`, keeping the edit lane anchored to Stage04 `planning.draft_weekly_schedule.workbook` and intentionally not adding a demo schedule artifact alias.
 
-As of `TASK-0146`, EPIC-124 freezes the first stage-linked workpage action surface on `/runs/:workflowRunId/workspace` work items only. This is a contract boundary, not yet an implemented CTA layer, and it does not add a second workpage route family or a second top-level shell.
+As of `TASK-0149`, EPIC-124 now implements the first stage-linked workpage action surface on `/runs/:workflowRunId/workspace` work items only. The CTA layer reuses backend-projected action metadata plus the existing canonical `/runs/:workflowRunId/workpages/*` family, and it still does not add a second workpage route family or a second top-level shell.
 
 ## Page inventory
 
@@ -39,13 +39,13 @@ As of `TASK-0146`, EPIC-124 freezes the first stage-linked workpage action surfa
 |---|---|---|---|---|---|
 | `/runs/:workflowRunId/workpages/schedule-v0/artifacts/:artifactVersionId` | Canonical artifact-backed route for the bounded Stage04 schedule draft lane | Open a concrete `planning.draft_weekly_schedule.workbook` version for bounded review/edit after entering through the existing run-backed schedule landing page | Reuses the generic artifact-backed family: `GET /api/v1/workpages/artifacts/{artifact_version_id}` and `POST /api/v1/workpages/artifacts/{artifact_version_id}/submit`. No schedule-specific draft-create route exists because Stage04 already materializes the initial draft workbook. | Same weekly-planning review body plus bounded edit affordances for assignment/reserve rows only; iteration deltas remain read-only | Full page under `AppShell` |
 
-## EPIC-124 Stage-linked Workspace Action Boundary (Frozen In TASK-0146; Not Yet Implemented)
+## EPIC-124 Stage-linked Workspace Action Boundary (Implemented In TASK-0148 + TASK-0149)
 
 | Page | Purpose | Primary user action | Primary data source | Cards/Rows | Detail model |
 |---|---|---|---|---|---|
-| `/runs/:workflowRunId/workspace` | First supported stage-linked workpage action consumer for the logistics family | Open backend-projected workpage actions from supported workspace work items while keeping graph nodes, drawers, and other queues unchanged | `GET /api/v1/workflow-runs/{id}/workspace` with additive `workpage_actions[]` on `user_work[]` and `blocking_work[]` only; actions resolve into the existing canonical `/runs/:workflowRunId/workpages/*` family and existing create paths rather than a new route family | Existing workspace graph plus work-item cards; the future CTA layer belongs on supported work items only | Existing workspace page/drawer model; no second shell |
+| `/runs/:workflowRunId/workspace` | First supported stage-linked workpage action consumer for the logistics family | Open or create backend-projected workpages from supported workspace work items while keeping graph nodes, drawers, and other queues unchanged | `GET /api/v1/workflow-runs/{id}/workspace` with additive `workpage_actions[]` on `user_work[]` and `blocking_work[]` only; actions resolve into the existing canonical `/runs/:workflowRunId/workpages/*` family and backend-provided create paths rather than a new route family | Existing workspace graph plus work-item cards with bounded workpage CTAs on supported items only | Existing workspace page/drawer model; no second shell |
 
 Frozen support notes:
 - First supported subjects are bounded to selected `weekly_schedule_planning.v1` Stage04/Stage05/Stage06 workspace items and `dispatch_reporting.v1` Stage04 approval workspace items.
 - `workpage_actions[]` is intentionally not frozen for graph nodes, `/demo/logistics` story-board work items, `/board`, `/my-work`, `/approvals`, or `/runs/:workflowRunId` detail tabs in `TASK-0146`.
-- The frontend should eventually render backend-projected action metadata; it should not infer launch behavior from task kind once EPIC-124 implementation starts.
+- The frontend now renders backend-projected action metadata on supported workspace cards and passes `workpageSubjectContext` through router state into schedule/EOD submit flows instead of inferring launch behavior from task kind.

@@ -29,6 +29,13 @@ from onetruth.application.services.task_actionability import (
     compute_flag_actionability,
     compute_human_task_actionability,
 )
+from onetruth.application.services.logistics_workpages import (
+    canonical_eod_artifact_route,
+    canonical_eod_draft_create_path,
+    canonical_schedule_artifact_route,
+    latest_compatible_eod_draft_artifact,
+    latest_schedule_draft_artifact,
+)
 from onetruth.application.services.task_requirements import (
     build_human_task_requirement_index,
 )
@@ -166,6 +173,10 @@ def get_workflow_run_workspace_endpoint(
         human_tasks=human_tasks,
         artifact_versions=artifact_versions,
     )
+    workpage_projection = _build_workspace_workpage_projection(
+        workflow_run=workflow_run,
+        artifact_versions=artifact_versions,
+    )
     graph = project_workspace_graph(
         workflow_id=str(workflow_run.get("workflow_id")),
         workflow_run=workflow_run,
@@ -191,6 +202,8 @@ def get_workflow_run_workspace_endpoint(
                 subject_id=str(task["human_task_id"]),
             ),
             requirement_state=requirement_index.get(str(task["human_task_id"])),
+            workflow_run=workflow_run,
+            workpage_projection=workpage_projection,
         )
         if _is_user_relevant_task(task=task, context=context):
             user_work.append(item)
@@ -206,6 +219,8 @@ def get_workflow_run_workspace_endpoint(
                 subject_kind="approval",
                 subject_id=str(approval["approval_id"]),
             ),
+            workflow_run=workflow_run,
+            workpage_projection=workpage_projection,
         )
         if _is_user_relevant_approval(approval=approval, context=context):
             user_work.append(item)
@@ -221,6 +236,7 @@ def get_workflow_run_workspace_endpoint(
                 subject_kind="flag",
                 subject_id=str(flag["flag_id"]),
             ),
+            workpage_projection=workpage_projection,
         )
         if _is_user_relevant_flag(flag=flag, context=context):
             user_work.append(item)
@@ -393,6 +409,8 @@ def _workspace_human_task_item(
     context: RequestContext,
     linked_artifact_count: int,
     requirement_state: dict[str, Any] | None,
+    workflow_run: dict[str, Any],
+    workpage_projection: dict[str, Any],
 ) -> dict[str, Any]:
     actionability = compute_human_task_actionability(
         task=task,
@@ -408,6 +426,11 @@ def _workspace_human_task_item(
         "subject_id": str(task["human_task_id"]),
         "canonical_state": str(task.get("state")),
         **actionability,
+        "workpage_actions": _project_human_task_workpage_actions(
+            task=task,
+            workflow_run=workflow_run,
+            workpage_projection=workpage_projection,
+        ),
         "metadata": {
             "workflow_run_id": str(task["workflow_run_id"]),
             "task_run_id": str(task["task_run_id"]),
@@ -431,6 +454,8 @@ def _workspace_approval_item(
     approval: dict[str, Any],
     context: RequestContext,
     linked_artifact_count: int,
+    workflow_run: dict[str, Any],
+    workpage_projection: dict[str, Any],
 ) -> dict[str, Any]:
     actionability = compute_approval_actionability(
         approval=approval,
@@ -443,6 +468,11 @@ def _workspace_approval_item(
         "subject_id": str(approval["approval_id"]),
         "canonical_state": str(approval.get("state")),
         **actionability,
+        "workpage_actions": _project_approval_workpage_actions(
+            approval=approval,
+            workflow_run=workflow_run,
+            workpage_projection=workpage_projection,
+        ),
         "metadata": {
             "workflow_run_id": str(approval["workflow_run_id"]),
             "task_run_id": (
@@ -468,6 +498,7 @@ def _workspace_flag_item(
     flag: dict[str, Any],
     context: RequestContext,
     linked_artifact_count: int,
+    workpage_projection: dict[str, Any],
 ) -> dict[str, Any]:
     actionability = compute_flag_actionability(
         flag=flag,
@@ -480,6 +511,10 @@ def _workspace_flag_item(
         "subject_id": str(flag["flag_id"]),
         "canonical_state": str(flag.get("state")),
         **actionability,
+        "workpage_actions": _project_flag_workpage_actions(
+            flag=flag,
+            workpage_projection=workpage_projection,
+        ),
         "metadata": {
             "workflow_run_id": str(flag["workflow_run_id"]),
             "kind": str(flag.get("kind")),
@@ -491,6 +526,178 @@ def _workspace_flag_item(
             "closed_at": flag.get("closed_at"),
             "updated_at": flag.get("updated_at"),
         },
+    }
+
+
+def _build_workspace_workpage_projection(
+    *,
+    workflow_run: dict[str, Any],
+    artifact_versions: list[dict[str, Any]],
+) -> dict[str, Any]:
+    return {
+        "workflow_id": str(workflow_run.get("workflow_id") or ""),
+        "workflow_run_id": str(workflow_run.get("workflow_run_id") or ""),
+        "latest_schedule_draft": latest_schedule_draft_artifact(artifact_versions),
+        "latest_eod_draft": latest_compatible_eod_draft_artifact(artifact_versions),
+    }
+
+
+def _project_human_task_workpage_actions(
+    *,
+    task: dict[str, Any],
+    workflow_run: dict[str, Any],
+    workpage_projection: dict[str, Any],
+) -> list[dict[str, Any]]:
+    workflow_id = str(workflow_run.get("workflow_id") or "")
+    if workflow_id != "weekly_schedule_planning.v1":
+        return []
+    surface = (str(task.get("stage_id") or ""), str(task.get("task_kind") or ""))
+    if surface not in {
+        ("Stage04", "work_item"),
+        ("Stage05", "information_request"),
+        ("Stage05", "final_review"),
+    }:
+        return []
+    return [
+        _schedule_workpage_action(
+            workflow_run_id=str(task["workflow_run_id"]),
+            subject_kind="human_task",
+            subject_id=str(task["human_task_id"]),
+            latest_schedule_draft=workpage_projection.get("latest_schedule_draft"),
+        )
+    ]
+
+
+def _project_approval_workpage_actions(
+    *,
+    approval: dict[str, Any],
+    workflow_run: dict[str, Any],
+    workpage_projection: dict[str, Any],
+) -> list[dict[str, Any]]:
+    workflow_id = str(workflow_run.get("workflow_id") or "")
+    scope_ref = str(approval.get("scope_ref") or "")
+    workflow_run_id = str(approval["workflow_run_id"])
+    approval_id = str(approval["approval_id"])
+    if workflow_id == "weekly_schedule_planning.v1" and scope_ref == "Stage06":
+        return [
+            _schedule_workpage_action(
+                workflow_run_id=workflow_run_id,
+                subject_kind="approval",
+                subject_id=approval_id,
+                latest_schedule_draft=workpage_projection.get("latest_schedule_draft"),
+            )
+        ]
+    if workflow_id == "dispatch_reporting.v1" and scope_ref == "Stage04":
+        return [
+            _eod_workpage_action(
+                workflow_run_id=workflow_run_id,
+                subject_kind="approval",
+                subject_id=approval_id,
+                latest_eod_draft=workpage_projection.get("latest_eod_draft"),
+            )
+        ]
+    return []
+
+
+def _project_flag_workpage_actions(
+    *,
+    flag: dict[str, Any],
+    workpage_projection: dict[str, Any],
+) -> list[dict[str, Any]]:
+    del flag, workpage_projection
+    return []
+
+
+def _schedule_workpage_action(
+    *,
+    workflow_run_id: str,
+    subject_kind: str,
+    subject_id: str,
+    latest_schedule_draft: Any,
+) -> dict[str, Any]:
+    route: str | None = None
+    state = "unavailable"
+    disabled_reason = "schedule_draft_unavailable"
+    if isinstance(latest_schedule_draft, dict):
+        artifact_version_id = str(latest_schedule_draft.get("artifact_version_id") or "")
+        if artifact_version_id:
+            route = canonical_schedule_artifact_route(
+                workflow_run_id=workflow_run_id,
+                artifact_version_id=artifact_version_id,
+            )
+            state = "available"
+            disabled_reason = None
+    return {
+        "action_id": "workpage.schedule-v0.open_latest_draft",
+        "workpage_kind": "schedule-v0",
+        "label": "Open schedule draft",
+        "presentation": "open_route",
+        "state": state,
+        "route": route,
+        "create_path": None,
+        "subject_context": {
+            "subject_kind": subject_kind,
+            "subject_id": subject_id,
+            "workflow_run_id": workflow_run_id,
+        },
+        "link_policy": {
+            "create_relation_kind": None,
+            "submit_relation_kind": "response",
+        },
+        "disabled_reason": disabled_reason,
+    }
+
+
+def _eod_workpage_action(
+    *,
+    workflow_run_id: str,
+    subject_kind: str,
+    subject_id: str,
+    latest_eod_draft: Any,
+) -> dict[str, Any]:
+    if isinstance(latest_eod_draft, dict):
+        artifact_version_id = str(latest_eod_draft.get("artifact_version_id") or "")
+        if artifact_version_id:
+            return {
+                "action_id": "workpage.eod-v0.open_latest_draft",
+                "workpage_kind": "eod-v0",
+                "label": "Open EOD draft",
+                "presentation": "open_route",
+                "state": "available",
+                "route": canonical_eod_artifact_route(
+                    workflow_run_id=workflow_run_id,
+                    artifact_version_id=artifact_version_id,
+                ),
+                "create_path": None,
+                "subject_context": {
+                    "subject_kind": subject_kind,
+                    "subject_id": subject_id,
+                    "workflow_run_id": workflow_run_id,
+                },
+                "link_policy": {
+                    "create_relation_kind": "draft",
+                    "submit_relation_kind": "response",
+                },
+                "disabled_reason": None,
+            }
+    return {
+        "action_id": "workpage.eod-v0.create_draft",
+        "workpage_kind": "eod-v0",
+        "label": "Create EOD draft",
+        "presentation": "create_draft_then_open",
+        "state": "available",
+        "route": None,
+        "create_path": canonical_eod_draft_create_path(workflow_run_id=workflow_run_id),
+        "subject_context": {
+            "subject_kind": subject_kind,
+            "subject_id": subject_id,
+            "workflow_run_id": workflow_run_id,
+        },
+        "link_policy": {
+            "create_relation_kind": "draft",
+            "submit_relation_kind": "response",
+        },
+        "disabled_reason": None,
     }
 
 

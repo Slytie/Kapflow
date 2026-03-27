@@ -1,5 +1,6 @@
 import { type ChangeEvent, useId, useMemo, useRef } from "react";
 import { useMutation } from "@tanstack/react-query";
+import { useNavigate } from "react-router-dom";
 
 import { AttachmentActions } from "@/components/AttachmentActions";
 import { StatePanel } from "@/components/StatePanel";
@@ -8,7 +9,8 @@ import {
   approvalsRepository,
   flagsRepository,
   humanTasksRepository,
-  templatesRepository
+  templatesRepository,
+  workpagesRepository
 } from "@/lib/repositories";
 import type {
   ApprovalRow,
@@ -20,6 +22,7 @@ import type {
   WorkflowWorkspaceApprovalWorkItem,
   WorkflowWorkspaceFlagWorkItem,
   WorkflowWorkspaceRequiredUpload,
+  WorkflowWorkspaceWorkpageAction,
   WorkflowWorkspaceTaskWorkItem,
   WorkflowWorkspaceWorkItem
 } from "@/lib/types/contracts";
@@ -150,6 +153,13 @@ function hasAction(item: WorkflowWorkspaceWorkItem | null, candidates: string[])
   }
   const actions = new Set(item.available_actions.map((action) => action.toLowerCase()));
   return candidates.some((candidate) => actions.has(candidate.toLowerCase()));
+}
+
+function workpageActionStateLabel(action: WorkflowWorkspaceWorkpageAction): string {
+  if (action.disabled_reason === "schedule_draft_unavailable") {
+    return "Schedule draft unavailable for this run yet";
+  }
+  return action.disabled_reason ?? action.label;
 }
 
 function humanize(value: string): string {
@@ -339,6 +349,7 @@ export function WorkspaceTaskBoard({
   onRefresh,
   onOpenDetails
 }: WorkspaceTaskBoardProps): JSX.Element {
+  const navigate = useNavigate();
   const claimMutation = useMutation({
     mutationFn: (humanTaskId: string) => humanTasksRepository.claim(humanTaskId),
     onSuccess: onRefresh
@@ -392,6 +403,21 @@ export function WorkspaceTaskBoard({
     mutationFn: (templateId: string) => templatesRepository.download(templateId)
   });
 
+  const workpageActionMutation = useMutation({
+    mutationFn: (action: WorkflowWorkspaceWorkpageAction) => {
+      if (action.presentation !== "create_draft_then_open" || !action.create_path) {
+        throw new Error("Unsupported workspace workpage action");
+      }
+      return workpagesRepository.launchWorkspaceDraft(action.create_path, action.subject_context);
+    },
+    onSuccess: (draft, action) => {
+      onRefresh();
+      navigate(draft.route, {
+        state: { workpageSubjectContext: action.subject_context }
+      });
+    }
+  });
+
   const openDraftMutation = useMutation({
     mutationFn: (artifactVersionId: string) =>
       humanTasksRepository.openDraftArtifact(artifactVersionId)
@@ -430,12 +456,28 @@ export function WorkspaceTaskBoard({
     uploadTaskAttachmentMutation.error ??
     uploadRequiredResponseMutation.error ??
     downloadTemplateMutation.error ??
+    workpageActionMutation.error ??
     openDraftMutation.error ??
     downloadTaskAttachmentMutation.error ??
     uploadApprovalAttachmentMutation.error ??
     downloadApprovalAttachmentMutation.error ??
     uploadFlagAttachmentMutation.error ??
     downloadFlagAttachmentMutation.error;
+
+  const openWorkspaceWorkpage = (action: WorkflowWorkspaceWorkpageAction): void => {
+    if (action.state !== "available") {
+      return;
+    }
+    if (action.presentation === "open_route" && action.route) {
+      navigate(action.route, {
+        state: { workpageSubjectContext: action.subject_context }
+      });
+      return;
+    }
+    if (action.presentation === "create_draft_then_open" && action.create_path) {
+      workpageActionMutation.mutate(action);
+    }
+  };
 
   const taskItemById = useMemo(() => {
     const map = new Map<string, WorkflowWorkspaceTaskWorkItem>();
@@ -592,9 +634,14 @@ export function WorkspaceTaskBoard({
                       uploadRequiredResponseMutation.variables?.humanTaskId ===
                         card.task.human_task_id) ||
                     downloadTemplateMutation.isPending ||
+                    (workpageActionMutation.isPending &&
+                      workpageActionMutation.variables?.subject_context.subject_kind === "human_task" &&
+                      workpageActionMutation.variables?.subject_context.subject_id ===
+                        card.task.human_task_id) ||
                     openDraftMutation.isPending ||
                     (downloadTaskAttachmentMutation.isPending &&
                       downloadTaskAttachmentMutation.variables === card.task.human_task_id);
+                  const workpageActions = card.item?.workpage_actions ?? [];
 
                   const canClaim =
                     hasAction(card.item, ["claim", "claim_human_task"]) ||
@@ -681,6 +728,24 @@ export function WorkspaceTaskBoard({
                         <details className="workspace-board-card__menu">
                           <summary aria-label={`Actions for ${card.title}`}>...</summary>
                           <div className="workspace-board-card__actions">
+                            {workpageActions.map((action) => (
+                              <button
+                                key={action.action_id}
+                                type="button"
+                                className="workspace-board-action"
+                                onClick={() => openWorkspaceWorkpage(action)}
+                                disabled={
+                                  taskBusy ||
+                                  action.state !== "available" ||
+                                  (action.presentation === "open_route" && !action.route) ||
+                                  (action.presentation === "create_draft_then_open" &&
+                                    !action.create_path)
+                                }
+                                title={action.state === "available" ? undefined : workpageActionStateLabel(action)}
+                              >
+                                {action.label}
+                              </button>
+                            ))}
                             <button
                               type="button"
                               className="workspace-board-action"
@@ -872,6 +937,14 @@ export function WorkspaceTaskBoard({
                       {missingInputHint ? (
                         <p className="workspace-board-card__hint">{missingInputHint}</p>
                       ) : null}
+                      {workpageActions.some((action) => action.state !== "available") ? (
+                        <p className="workspace-board-card__hint">
+                          {workpageActions
+                            .filter((action) => action.state !== "available")
+                            .map((action) => workpageActionStateLabel(action))
+                            .join(" · ")}
+                        </p>
+                      ) : null}
                     </article>
                   );
                 }
@@ -880,11 +953,16 @@ export function WorkspaceTaskBoard({
                   const approvalBusy =
                     (approvalMutation.isPending &&
                       approvalMutation.variables?.approvalId === card.approval.approval_id) ||
+                    (workpageActionMutation.isPending &&
+                      workpageActionMutation.variables?.subject_context.subject_kind === "approval" &&
+                      workpageActionMutation.variables?.subject_context.subject_id ===
+                        card.approval.approval_id) ||
                     (uploadApprovalAttachmentMutation.isPending &&
                       uploadApprovalAttachmentMutation.variables?.approvalId ===
                         card.approval.approval_id) ||
                     (downloadApprovalAttachmentMutation.isPending &&
                       downloadApprovalAttachmentMutation.variables === card.approval.approval_id);
+                  const workpageActions = card.item?.workpage_actions ?? [];
 
                   const canApprove =
                     hasAction(card.item, ["respond_approve", "approve", "respond_approval"]) ||
@@ -916,6 +994,24 @@ export function WorkspaceTaskBoard({
                         <details className="workspace-board-card__menu">
                           <summary aria-label={`Actions for ${card.title}`}>...</summary>
                           <div className="workspace-board-card__actions">
+                            {workpageActions.map((action) => (
+                              <button
+                                key={action.action_id}
+                                type="button"
+                                className="workspace-board-action"
+                                onClick={() => openWorkspaceWorkpage(action)}
+                                disabled={
+                                  approvalBusy ||
+                                  action.state !== "available" ||
+                                  (action.presentation === "open_route" && !action.route) ||
+                                  (action.presentation === "create_draft_then_open" &&
+                                    !action.create_path)
+                                }
+                                title={action.state === "available" ? undefined : workpageActionStateLabel(action)}
+                              >
+                                {action.label}
+                              </button>
+                            ))}
                             <button
                               type="button"
                               className="workspace-board-action workspace-board-action--primary"
@@ -1010,6 +1106,14 @@ export function WorkspaceTaskBoard({
                         <span className="workspace-board-counter">{card.primaryCount}</span>
                         <span className="workspace-board-counter">{card.secondaryCount}</span>
                       </footer>
+                      {workpageActions.some((action) => action.state !== "available") ? (
+                        <p className="workspace-board-card__hint">
+                          {workpageActions
+                            .filter((action) => action.state !== "available")
+                            .map((action) => workpageActionStateLabel(action))
+                            .join(" · ")}
+                        </p>
+                      ) : null}
                     </article>
                   );
                 }

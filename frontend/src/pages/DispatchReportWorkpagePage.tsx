@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { type Dispatch, type ReactNode, type SetStateAction, useEffect, useMemo, useRef, useState } from "react";
-import { Link, useNavigate, useParams } from "react-router-dom";
+import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 
 import { StatePanel } from "@/components/StatePanel";
 import { WorkpageChecklistSection } from "@/components/workpages/WorkpageChecklistSection";
@@ -17,6 +17,8 @@ import { errorText } from "@/lib/api/errorText";
 import { isApiClientError } from "@/lib/api/httpClient";
 import { workpagesRepository } from "@/lib/repositories";
 import type { ArtifactVersionRow, WorkpageContract } from "@/lib/types/contracts";
+import { invalidateWorkspaceViews } from "@/lib/workspace/queryInvalidation";
+import { resolveWorkpageSubjectContext } from "@/lib/workspace/workpageSubjectContext";
 import type {
   WorkpageChecklistSection as WorkpageChecklistSectionModel,
   WorkpageFormSection as WorkpageFormSectionModel,
@@ -465,6 +467,7 @@ export function DispatchReportWorkpagePage(): JSX.Element {
 export function DispatchReportArtifactWorkpagePage(): JSX.Element {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const location = useLocation();
   const { artifactVersionId, workflowRunId } = useParams<{
     artifactVersionId: string;
     workflowRunId: string;
@@ -515,10 +518,11 @@ export function DispatchReportArtifactWorkpagePage(): JSX.Element {
       workpagesRepository.submitEodArtifact(artifactVersionId ?? "", {
         formValues: formState,
         checklistValues: orderedChecklistSubmitValues(checklistSection, checklistState)
-      }),
+      }, resolveWorkpageSubjectContext(location.state, { workflowRunId: artifactWorkflowRunId })),
     onSuccess: (submitted) => {
       void queryClient.invalidateQueries({ queryKey: ["workpages"] });
-      navigate(submitted.route);
+      void invalidateWorkspaceViews(queryClient, submitted.workflow_run_id);
+      navigate(submitted.route, { state: location.state });
     }
   });
   const downloadMutation = useMutation({

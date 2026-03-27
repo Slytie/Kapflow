@@ -2,7 +2,7 @@
 id: TASK-0148
 epic: EPIC-124
 title: "Implement backend workspace/stage-linked workpage action projection and generated snapshots"
-status: TODO
+status: DONE
 owners: ["backend"]
 reviewers: ["qa"]
 depends_on: ["TASK-0147"]
@@ -67,3 +67,20 @@ Add backend-projected workpage actions to the supported logistics workspace surf
 - The projected actions resolve to canonical run-backed or artifact-backed routes.
 - Generated snapshots exist and remain distinct from human-authored workpage planning fixtures.
 - No frontend-local inference is required for the supported CTA layer.
+
+## Outcome
+- `workflow_runs.py` now projects bounded `workpage_actions[]` onto supported workspace task and approval items while leaving graph nodes and unsupported surfaces unchanged.
+- The backend now reuses shared canonical route helpers from `logistics_workpages.py` so workspace action routes, run-backed handoffs, and artifact submit responses share one route truth.
+- Weekly schedule surfaces now truthfully project either an available `open_route` action or an unavailable `schedule_draft_unavailable` state based on the latest Stage04 draft artifact in the run.
+- Dispatch-reporting Stage04 approvals now truthfully project either `create_draft_then_open` or `open_route` based on whether a compatible EOD draft already exists.
+- Backend-owned frontend contract fixtures now include four new workspace-action snapshots for weekly available/unavailable and dispatch create/open states.
+
+## Commands run
+- `pytest -q tests/runtime/api/test_workspace_workpage_actions.py tests/runtime/api/test_workflow_run_workspace_endpoint.py`
+- `PYTHONPATH=/tmp/onetruth-py311:src python3.11 scripts/export_frontend_snapshots.py`
+- `PYTHONPATH=/tmp/onetruth-py311:src python3.11 scripts/export_frontend_snapshots.py --check`
+- `PYTHONPATH=/tmp/onetruth-py311:src pytest -q tests/runtime/contracts/test_frontend_snapshot_fixtures.py`
+
+## Follow-ups
+- `TASK-0149` should consume the projected `workpage_actions[]` contract directly instead of inferring launch behavior from task kind or artifact state.
+- `TASK-0150` should close EPIC-124 by reconciling docs/status memory and recording the remaining known baseline caveats without broadening into new workpage families.

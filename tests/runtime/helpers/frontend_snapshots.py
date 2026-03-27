@@ -12,7 +12,11 @@ from tests.runtime.helpers.scenario_harness import RuntimeScenarioHarness
 from tests.runtime.helpers.workpage_runs import (
     seed_actual_ops_weekly_schedule_run,
     seed_actual_ops_weekly_schedule_run_with_stage04_outputs,
+    seed_dispatch_workspace_stage04_approval_with_draft,
+    seed_dispatch_workspace_stage04_approval_without_draft,
     seed_dispatch_reporting_workpage_run,
+    seed_weekly_workspace_stage04_task_surface_without_draft,
+    seed_weekly_workspace_supported_task_surface_with_draft,
 )
 
 FRONTEND_SNAPSHOT_DIR = REPO_ROOT / "fixtures/frontend_contracts"
@@ -46,6 +50,10 @@ SNAPSHOT_FILES = {
     "workpage_schedule_v0_run_state": "workpage_schedule_v0_run_state.json",
     "workpage_schedule_v0_artifact_state": "workpage_schedule_v0_artifact_state.json",
     "workpage_schedule_v0_artifact_submit_response": "workpage_schedule_v0_artifact_submit_response.json",
+    "workspace_schedule_workpage_action_available_state": "workspace_schedule_workpage_action_available_state.json",
+    "workspace_schedule_workpage_action_unavailable_state": "workspace_schedule_workpage_action_unavailable_state.json",
+    "workspace_eod_workpage_action_create_state": "workspace_eod_workpage_action_create_state.json",
+    "workspace_eod_workpage_action_open_state": "workspace_eod_workpage_action_open_state.json",
     "workpage_eod_v0_state": "workpage_eod_v0_state.json",
     "workpage_eod_v0_run_state": "workpage_eod_v0_run_state.json",
     "workpage_eod_v0_run_artifact_create_response": "workpage_eod_v0_run_artifact_create_response.json",
@@ -180,6 +188,18 @@ def build_frontend_snapshots_payloads() -> dict[str, dict[str, Any]]:
             ),
             "workpage_schedule_v0_artifact_submit_response": _build_schedule_artifact_submit_snapshot(
                 tmp_path=base / "workpage_schedule_v0_artifact_submit"
+            ),
+            "workspace_schedule_workpage_action_available_state": _build_workspace_schedule_action_available_snapshot(
+                tmp_path=base / "workspace_schedule_workpage_action_available"
+            ),
+            "workspace_schedule_workpage_action_unavailable_state": _build_workspace_schedule_action_unavailable_snapshot(
+                tmp_path=base / "workspace_schedule_workpage_action_unavailable"
+            ),
+            "workspace_eod_workpage_action_create_state": _build_workspace_eod_action_create_snapshot(
+                tmp_path=base / "workspace_eod_workpage_action_create"
+            ),
+            "workspace_eod_workpage_action_open_state": _build_workspace_eod_action_open_snapshot(
+                tmp_path=base / "workspace_eod_workpage_action_open"
             ),
             "workpage_eod_v0_state": _build_eod_workpage_snapshot(
                 tmp_path=base / "workpage_eod_v0"
@@ -471,6 +491,126 @@ def _build_schedule_artifact_submit_snapshot(*, tmp_path: Path) -> dict[str, Any
                 "workpage_id": "schedule-v0",
             },
             "submit_response": payload,
+        }
+    )
+
+
+def _build_workspace_schedule_action_available_snapshot(*, tmp_path: Path) -> dict[str, Any]:
+    tmp_path.mkdir(parents=True, exist_ok=True)
+    db_url = f"sqlite:///{tmp_path / 'workspace_schedule_action_available.db'}"
+    seeded = seed_weekly_workspace_supported_task_surface_with_draft(
+        db_url=db_url,
+        tenant_id="tenant-a",
+        domain_id="domain-x",
+        run_tag="snapshot:workspace-schedule-action-available",
+    )
+    client = RuntimeApiClient(
+        db_url=db_url,
+        tenant_id="tenant-a",
+        domain_id="domain-x",
+        actor_id="human:frontend-snapshot-exporter",
+        actor_type="human",
+        actor_roles=["schedule_planner"],
+    )
+    payload = client.get(f"/api/v1/workflow-runs/{seeded['workflow_run_id']}/workspace").payload
+    return _stabilize(
+        {
+            "snapshot_id": "workspace_schedule_workpage_action_available_state",
+            "source": {
+                "capture": "workspace_schedule_workpage_action_available",
+                "workflow_run_id": seeded["workflow_run_id"],
+            },
+            "workspace": payload,
+        }
+    )
+
+
+def _build_workspace_schedule_action_unavailable_snapshot(*, tmp_path: Path) -> dict[str, Any]:
+    tmp_path.mkdir(parents=True, exist_ok=True)
+    db_url = f"sqlite:///{tmp_path / 'workspace_schedule_action_unavailable.db'}"
+    seeded = seed_weekly_workspace_stage04_task_surface_without_draft(
+        db_url=db_url,
+        tenant_id="tenant-a",
+        domain_id="domain-x",
+        run_tag="snapshot:workspace-schedule-action-unavailable",
+    )
+    client = RuntimeApiClient(
+        db_url=db_url,
+        tenant_id="tenant-a",
+        domain_id="domain-x",
+        actor_id="human:frontend-snapshot-exporter",
+        actor_type="human",
+        actor_roles=["schedule_planner"],
+    )
+    payload = client.get(f"/api/v1/workflow-runs/{seeded['workflow_run_id']}/workspace").payload
+    return _stabilize(
+        {
+            "snapshot_id": "workspace_schedule_workpage_action_unavailable_state",
+            "source": {
+                "capture": "workspace_schedule_workpage_action_unavailable",
+                "workflow_run_id": seeded["workflow_run_id"],
+            },
+            "workspace": payload,
+        }
+    )
+
+
+def _build_workspace_eod_action_create_snapshot(*, tmp_path: Path) -> dict[str, Any]:
+    tmp_path.mkdir(parents=True, exist_ok=True)
+    db_url = f"sqlite:///{tmp_path / 'workspace_eod_action_create.db'}"
+    seeded = seed_dispatch_workspace_stage04_approval_without_draft(
+        db_url=db_url,
+        tenant_id="tenant-a",
+        domain_id="domain-x",
+        run_tag="snapshot:workspace-eod-action-create",
+    )
+    client = RuntimeApiClient(
+        db_url=db_url,
+        tenant_id="tenant-a",
+        domain_id="domain-x",
+        actor_id="human:frontend-snapshot-exporter",
+        actor_type="human",
+        actor_roles=["dispatch_supervisor"],
+    )
+    payload = client.get(f"/api/v1/workflow-runs/{seeded['workflow_run_id']}/workspace").payload
+    return _stabilize(
+        {
+            "snapshot_id": "workspace_eod_workpage_action_create_state",
+            "source": {
+                "capture": "workspace_eod_workpage_action_create",
+                "workflow_run_id": seeded["workflow_run_id"],
+            },
+            "workspace": payload,
+        }
+    )
+
+
+def _build_workspace_eod_action_open_snapshot(*, tmp_path: Path) -> dict[str, Any]:
+    tmp_path.mkdir(parents=True, exist_ok=True)
+    db_url = f"sqlite:///{tmp_path / 'workspace_eod_action_open.db'}"
+    seeded = seed_dispatch_workspace_stage04_approval_with_draft(
+        db_url=db_url,
+        tenant_id="tenant-a",
+        domain_id="domain-x",
+        run_tag="snapshot:workspace-eod-action-open",
+    )
+    client = RuntimeApiClient(
+        db_url=db_url,
+        tenant_id="tenant-a",
+        domain_id="domain-x",
+        actor_id="human:frontend-snapshot-exporter",
+        actor_type="human",
+        actor_roles=["dispatch_supervisor"],
+    )
+    payload = client.get(f"/api/v1/workflow-runs/{seeded['workflow_run_id']}/workspace").payload
+    return _stabilize(
+        {
+            "snapshot_id": "workspace_eod_workpage_action_open_state",
+            "source": {
+                "capture": "workspace_eod_workpage_action_open",
+                "workflow_run_id": seeded["workflow_run_id"],
+            },
+            "workspace": payload,
         }
     )
 

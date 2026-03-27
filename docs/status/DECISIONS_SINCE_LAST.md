@@ -9,6 +9,18 @@ Record any decisions made since the last session so a fresh Codex run can rehydr
 - Demo-alias decision: `POST /api/v1/workpages/demo/eod-v0/drafts` explicitly rejects `subject_link` so the compatibility alias does not silently widen into a stage-linked truth surface.
 - Verification-boundary decision: `TASK-0147` records the pre-existing `dispatch_reporting_workbook.py` `zip(..., strict=True)` EOD submit/read regression as an external baseline caveat and keeps its own EOD linkage verification focused on the new write-boundary behavior rather than broadening into that repair.
 
+## 2026-03-27 (TASK-0148 backend workspace action projection and snapshots)
+- Projection-seam decision: supported stage-linked workpage actions are now emitted only on workspace `user_work[]` / `blocking_work[]` items; graph nodes remain stage aggregates with no `workpage_actions[]`.
+- Route-truth decision: workspace action routes, create paths, and submit handoff routes now share reusable helpers in `logistics_workpages.py` so the workspace projection cannot drift from canonical run-backed/artifact-backed workpage responses.
+- Availability decision: weekly schedule work items now project either an available `open_route` action or an unavailable `schedule_draft_unavailable` action state based on actual Stage04 draft artifact truth, while dispatch-reporting Stage04 approvals project either `create_draft_then_open` or `open_route` based on EOD draft existence.
+- Snapshot decision: backend-owned frontend fixtures now include explicit workspace action contract states for weekly available/unavailable and dispatch create/open posture.
+
+## 2026-03-27 (TASK-0149 frontend workspace CTA rendering, handoff, and refresh truth)
+- Frontend-contract decision: the frontend now consumes backend `workpage_actions[]` directly on normalized workspace items and defaults missing arrays to `[]`; it no longer infers supported workpage launches from task kind.
+- Handoff decision: workspace CTA create flows now POST to backend-provided `create_path` values, and workspace-to-workpage navigation carries `workpageSubjectContext` through router state rather than URL/query params.
+- Submit-boundary decision: schedule/EOD artifact submit pages now forward `subject_link` only when router state resolves to a valid same-run subject context; malformed or cross-run state is dropped without breaking direct route access.
+- Refresh-truth decision: workspace CTA create success and workpage submit success now reuse one shared workspace invalidation helper so workspace/run-detail/query surfaces refresh together after stage-linked workpage changes.
+
 ## 2026-03-27 (TASK-0146 stage-linked workpage contract, supported matrix, and subject-link semantics)
 - Contract-seam decision: the first stage-linked workpage action layer is now frozen as additive `workpage_actions[]` on workspace work items returned by `GET /api/v1/workflow-runs/{workflow_run_id}/workspace`; graph nodes do not gain workpage actions, and the repo does not add a separate action map, route family, or shell.
 - Supported-surface decision: the first bounded support matrix is now explicit for selected `weekly_schedule_planning.v1` Stage04/Stage05/Stage06 workspace items and `dispatch_reporting.v1` Stage04 approval workspace items only; `/demo/logistics` story work items, `/board`, `/my-work`, `/approvals`, `/runs/:workflowRunId` detail tabs, `live_dispatch.v1`, Stage06 publish editing, Stage07 seed editing, and EOD finalization remain out of scope.

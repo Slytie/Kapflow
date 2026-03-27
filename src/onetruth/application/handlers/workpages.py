@@ -31,6 +31,10 @@ from onetruth.application.services.schedule_control.draft_workbook import (
     materialize_stage04_draft_weekly_schedule_workbook,
     project_stage04_draft_weekly_schedule_workbook,
 )
+from onetruth.application.services.logistics_workpages import (
+    canonical_eod_artifact_route,
+    canonical_schedule_artifact_route,
+)
 from onetruth.application.services.template_registry import (
     TemplateRecord,
     load_template_registry_catalog,
@@ -1048,11 +1052,17 @@ def _demo_eod_ui_route(artifact_version_id: str) -> str:
 
 
 def _canonical_eod_ui_route(*, workflow_run_id: str, artifact_version_id: str) -> str:
-    return f"/runs/{workflow_run_id}/workpages/eod-v0/artifacts/{artifact_version_id}"
+    return canonical_eod_artifact_route(
+        workflow_run_id=workflow_run_id,
+        artifact_version_id=artifact_version_id,
+    )
 
 
 def _canonical_schedule_ui_route(*, workflow_run_id: str, artifact_version_id: str) -> str:
-    return f"/runs/{workflow_run_id}/workpages/schedule-v0/artifacts/{artifact_version_id}"
+    return canonical_schedule_artifact_route(
+        workflow_run_id=workflow_run_id,
+        artifact_version_id=artifact_version_id,
+    )
 
 
 def _draft_file_name() -> str:

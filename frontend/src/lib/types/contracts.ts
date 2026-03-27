@@ -334,10 +334,35 @@ export interface WorkflowWorkspaceRequiredReview {
   status: string;
 }
 
+export interface WorkpageActionSubjectContext {
+  subject_kind: "human_task" | "approval";
+  subject_id: string;
+  workflow_run_id: string;
+}
+
+export interface WorkpageActionLinkPolicy {
+  create_relation_kind: string | null;
+  submit_relation_kind: string | null;
+}
+
+export interface WorkflowWorkspaceWorkpageAction {
+  action_id: string;
+  workpage_kind: string;
+  label: string;
+  presentation: "open_route" | "create_draft_then_open";
+  state: "available" | "unavailable";
+  route: string | null;
+  create_path: string | null;
+  subject_context: WorkpageActionSubjectContext;
+  link_policy: WorkpageActionLinkPolicy;
+  disabled_reason: string | null;
+}
+
 interface WorkflowWorkspaceWorkItemBase {
   work_id: string;
   graph_node_id: string | null;
   available_actions: string[];
+  workpage_actions: WorkflowWorkspaceWorkpageAction[];
   missing_required_inputs: string[];
   required_uploads: WorkflowWorkspaceRequiredUpload[];
   required_reviews: WorkflowWorkspaceRequiredReview[];

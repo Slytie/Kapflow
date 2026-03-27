@@ -1,0 +1,454 @@
+{
+  "snapshot_id": "workspace_schedule_workpage_action_unavailable_state",
+  "source": {
+    "capture": "workspace_schedule_workpage_action_unavailable",
+    "workflow_run_id": "<workflow_run_id:1>"
+  },
+  "workspace": {
+    "blocking_work": [
+      {
+        "available_actions": [
+          "claim",
+          "upload_attachment"
+        ],
+        "blocking_reason_codes": [],
+        "blocking_requirements": [],
+        "can_complete": false,
+        "can_confirm_review": false,
+        "can_run_stage06_agent_review": false,
+        "can_run_weekly_stage04_openai_agent": false,
+        "can_upload_attachment": true,
+        "canonical_state": "OPEN",
+        "id": "human_task:<human_task_id:2>",
+        "linked_artifact_count": 0,
+        "metadata": {
+          "assignee_actor_id": null,
+          "assignee_actor_type": null,
+          "blocked_on_kind": null,
+          "blocked_on_ref": null,
+          "candidate_roles": [
+            "schedule_planner"
+          ],
+          "due_at": null,
+          "owner_role": "schedule_planner",
+          "spawned_from_flag_id": null,
+          "stage_id": "Stage04",
+          "task_kind": "work_item",
+          "task_run_id": "<task_run_id:3>",
+          "updated_at": "<ts:1>",
+          "workflow_run_id": "<workflow_run_id:1>"
+        },
+        "missing_required_inputs": [],
+        "required_reviews": [],
+        "required_uploads": [],
+        "subject_id": "<human_task_id:2>",
+        "subject_kind": "human_task",
+        "workpage_actions": [
+          {
+            "action_id": "workpage.schedule-v0.open_latest_draft",
+            "create_path": null,
+            "disabled_reason": "schedule_draft_unavailable",
+            "label": "Open schedule draft",
+            "link_policy": {
+              "create_relation_kind": null,
+              "submit_relation_kind": "response"
+            },
+            "presentation": "open_route",
+            "route": null,
+            "state": "unavailable",
+            "subject_context": {
+              "subject_id": "<human_task_id:2>",
+              "subject_kind": "human_task",
+              "workflow_run_id": "<workflow_run_id:1>"
+            },
+            "workpage_kind": "schedule-v0"
+          }
+        ]
+      }
+    ],
+    "command": "api.workflow_runs.workspace",
+    "freshness": {
+      "generated_at": "<ts:2>",
+      "latest_event_recorded_at": "2026-03-27T14:51:15.860233Z",
+      "latest_event_sequence": 7,
+      "workflow_run_updated_at": "2026-03-27T14:51:13.542785Z"
+    },
+    "graph": {
+      "edges": [],
+      "latest_event_sequence": 7,
+      "nodes": [],
+      "summary": {
+        "blocking_count": 0,
+        "completed_count": 0,
+        "node_count": 0,
+        "status_counts": {},
+        "warning_count": 0,
+        "workflow_id": "weekly_schedule_planning.v1",
+        "workflow_run_id": "<workflow_run_id:1>"
+      },
+      "warnings": [
+        {
+          "code": "workspace_graph_projector_not_found",
+          "message": "No workspace graph projector is registered for workflow_id=weekly_schedule_planning.v1.",
+          "subject_ids": []
+        }
+      ]
+    },
+    "official_outputs": {
+      "coherence": {
+        "coherence_status": "passed",
+        "failure_code": null,
+        "fingerprint": "4f53cda18c2baa0c0354bb5f",
+        "issues": [],
+        "policy": {
+          "emit_event": "projection.coherence_failed",
+          "on_drift": "warn_visible"
+        },
+        "projection_id": "workspace_official_outputs:<workflow_run_id:1>",
+        "projection_kind": "workspace_official_outputs",
+        "source_refs": []
+      },
+      "outputs": [],
+      "pointers": []
+    },
+    "projection_coherence": [
+      {
+        "coherence_status": "passed",
+        "failure_code": null,
+        "fingerprint": "4f53cda18c2baa0c0354bb5f",
+        "issues": [],
+        "policy": {
+          "emit_event": "projection.coherence_failed",
+          "on_drift": "warn_visible"
+        },
+        "projection_id": "workspace_official_outputs:<workflow_run_id:1>",
+        "projection_kind": "workspace_official_outputs",
+        "source_refs": []
+      }
+    ],
+    "status": "ok",
+    "timeline_excerpt": {
+      "event_count": 7,
+      "events": [
+        {
+          "actor": {
+            "id": "system:runtime",
+            "type": "system"
+          },
+          "domain_id": "domain-x",
+          "event_id": "<event_id:4>",
+          "event_type": "workflow.run.created",
+          "idempotency_key": "<command_receipt_key:5>:runs.create.workflow.run.created",
+          "links": [
+            {
+              "id": "<workflow_run_id:1>",
+              "rel": "subject",
+              "type": "workflow_run"
+            },
+            {
+              "id": "weekly_schedule_planning.v1@v1",
+              "rel": "uses_definition",
+              "type": "workflow_contract_version"
+            },
+            {
+              "id": "weekly_schedule_planning.v1@v1",
+              "rel": "uses_decisions",
+              "type": "decision_catalog_version"
+            },
+            {
+              "id": "weekly_schedule_planning.v1@v1",
+              "rel": "uses_profile",
+              "type": "execution_profile_version"
+            }
+          ],
+          "occurred_at": "<ts:3>",
+          "payload": {
+            "activation_key": "snapshot:workspace-schedule-action-unavailable:weekly-schedule-workpage",
+            "logical_date": "2026-03-22",
+            "partition_key": "PW-2026-W13",
+            "workflow_id": "weekly_schedule_planning.v1"
+          },
+          "recorded_at": "<ts:4>",
+          "schema_version": "1.0",
+          "sequence_no": 1,
+          "tenant_id": "tenant-a"
+        },
+        {
+          "actor": {
+            "id": "system:runtime",
+            "type": "system"
+          },
+          "domain_id": "domain-x",
+          "event_id": "<event_id:6>",
+          "event_type": "artifact.version.created",
+          "idempotency_key": "<command_receipt_key:7>:artifacts.create-version.artifact.version.created",
+          "links": [
+            {
+              "id": "<artifact_version_id:8>",
+              "rel": "subject",
+              "type": "artifact_version"
+            },
+            {
+              "id": "<workflow_run_id:1>",
+              "rel": "subject",
+              "type": "workflow_run"
+            }
+          ],
+          "occurred_at": "<ts:5>",
+          "payload": {
+            "artifact_version_id": "<artifact_version_id:8>",
+            "dataset_key": "planning.route_slot_requirements.workbook"
+          },
+          "recorded_at": "<ts:6>",
+          "schema_version": "1.0",
+          "sequence_no": 2,
+          "tenant_id": "tenant-a"
+        },
+        {
+          "actor": {
+            "id": "system:runtime",
+            "type": "system"
+          },
+          "domain_id": "domain-x",
+          "event_id": "<event_id:9>",
+          "event_type": "artifact.version.created",
+          "idempotency_key": "<command_receipt_key:10>:artifacts.create-version.artifact.version.created",
+          "links": [
+            {
+              "id": "<artifact_version_id:11>",
+              "rel": "subject",
+              "type": "artifact_version"
+            },
+            {
+              "id": "<workflow_run_id:1>",
+              "rel": "subject",
+              "type": "workflow_run"
+            }
+          ],
+          "occurred_at": "<ts:7>",
+          "payload": {
+            "artifact_version_id": "<artifact_version_id:11>",
+            "dataset_key": "planning.driver_capabilities.workbook"
+          },
+          "recorded_at": "<ts:8>",
+          "schema_version": "1.0",
+          "sequence_no": 3,
+          "tenant_id": "tenant-a"
+        },
+        {
+          "actor": {
+            "id": "system:runtime",
+            "type": "system"
+          },
+          "domain_id": "domain-x",
+          "event_id": "<event_id:12>",
+          "event_type": "artifact.version.created",
+          "idempotency_key": "<command_receipt_key:13>:artifacts.create-version.artifact.version.created",
+          "links": [
+            {
+              "id": "<artifact_version_id:14>",
+              "rel": "subject",
+              "type": "artifact_version"
+            },
+            {
+              "id": "<workflow_run_id:1>",
+              "rel": "subject",
+              "type": "workflow_run"
+            }
+          ],
+          "occurred_at": "<ts:9>",
+          "payload": {
+            "artifact_version_id": "<artifact_version_id:14>",
+            "dataset_key": "planning.approved_availability.workbook"
+          },
+          "recorded_at": "<ts:10>",
+          "schema_version": "1.0",
+          "sequence_no": 4,
+          "tenant_id": "tenant-a"
+        },
+        {
+          "actor": {
+            "id": "system:runtime",
+            "type": "system"
+          },
+          "domain_id": "domain-x",
+          "event_id": "<event_id:15>",
+          "event_type": "artifact.version.created",
+          "idempotency_key": "<command_receipt_key:16>:artifacts.create-version.artifact.version.created",
+          "links": [
+            {
+              "id": "<artifact_version_id:17>",
+              "rel": "subject",
+              "type": "artifact_version"
+            },
+            {
+              "id": "<workflow_run_id:1>",
+              "rel": "subject",
+              "type": "workflow_run"
+            }
+          ],
+          "occurred_at": "<ts:11>",
+          "payload": {
+            "artifact_version_id": "<artifact_version_id:17>",
+            "dataset_key": "planning.actual_hours_snapshot.workbook"
+          },
+          "recorded_at": "<ts:12>",
+          "schema_version": "1.0",
+          "sequence_no": 5,
+          "tenant_id": "tenant-a"
+        },
+        {
+          "actor": {
+            "id": "system:runtime",
+            "type": "system"
+          },
+          "domain_id": "domain-x",
+          "event_id": "<event_id:18>",
+          "event_type": "task.run.created",
+          "idempotency_key": "<command_receipt_key:19>:tasks.create.task.run.created",
+          "links": [
+            {
+              "id": "<workflow_run_id:1>",
+              "rel": "subject",
+              "type": "workflow_run"
+            },
+            {
+              "id": "<task_run_id:3>",
+              "rel": "subject",
+              "type": "task_run"
+            }
+          ],
+          "occurred_at": "<ts:13>",
+          "payload": {
+            "activation_key": "snapshot:workspace-schedule-action-unavailable:task:create",
+            "generation": 0,
+            "spawn_cause_kind": "none",
+            "spawn_depth": 0,
+            "stage_id": "Stage04",
+            "task_kind": "work_item",
+            "task_run_id": "<task_run_id:3>"
+          },
+          "recorded_at": "<ts:14>",
+          "schema_version": "1.0",
+          "sequence_no": 6,
+          "tenant_id": "tenant-a"
+        },
+        {
+          "actor": {
+            "id": "system:runtime",
+            "type": "system"
+          },
+          "domain_id": "domain-x",
+          "event_id": "<event_id:20>",
+          "event_type": "task.created",
+          "idempotency_key": "<command_receipt_key:19>:tasks.create.task.created",
+          "links": [
+            {
+              "id": "<workflow_run_id:1>",
+              "rel": "subject",
+              "type": "workflow_run"
+            },
+            {
+              "id": "<task_run_id:3>",
+              "rel": "subject",
+              "type": "task_run"
+            },
+            {
+              "id": "<human_task_id:2>",
+              "rel": "subject",
+              "type": "human_task"
+            }
+          ],
+          "occurred_at": "<ts:15>",
+          "payload": {
+            "candidate_roles": [
+              "schedule_planner"
+            ],
+            "human_task_id": "<human_task_id:2>",
+            "state": "OPEN",
+            "task_kind": "work_item"
+          },
+          "recorded_at": "<ts:16>",
+          "schema_version": "1.0",
+          "sequence_no": 7,
+          "tenant_id": "tenant-a"
+        }
+      ]
+    },
+    "user_work": [
+      {
+        "available_actions": [
+          "claim",
+          "upload_attachment"
+        ],
+        "blocking_reason_codes": [],
+        "blocking_requirements": [],
+        "can_complete": false,
+        "can_confirm_review": false,
+        "can_run_stage06_agent_review": false,
+        "can_run_weekly_stage04_openai_agent": false,
+        "can_upload_attachment": true,
+        "canonical_state": "OPEN",
+        "id": "human_task:<human_task_id:2>",
+        "linked_artifact_count": 0,
+        "metadata": {
+          "assignee_actor_id": null,
+          "assignee_actor_type": null,
+          "blocked_on_kind": null,
+          "blocked_on_ref": null,
+          "candidate_roles": [
+            "schedule_planner"
+          ],
+          "due_at": null,
+          "owner_role": "schedule_planner",
+          "spawned_from_flag_id": null,
+          "stage_id": "Stage04",
+          "task_kind": "work_item",
+          "task_run_id": "<task_run_id:3>",
+          "updated_at": "<ts:1>",
+          "workflow_run_id": "<workflow_run_id:1>"
+        },
+        "missing_required_inputs": [],
+        "required_reviews": [],
+        "required_uploads": [],
+        "subject_id": "<human_task_id:2>",
+        "subject_kind": "human_task",
+        "workpage_actions": [
+          {
+            "action_id": "workpage.schedule-v0.open_latest_draft",
+            "create_path": null,
+            "disabled_reason": "schedule_draft_unavailable",
+            "label": "Open schedule draft",
+            "link_policy": {
+              "create_relation_kind": null,
+              "submit_relation_kind": "response"
+            },
+            "presentation": "open_route",
+            "route": null,
+            "state": "unavailable",
+            "subject_context": {
+              "subject_id": "<human_task_id:2>",
+              "subject_kind": "human_task",
+              "workflow_run_id": "<workflow_run_id:1>"
+            },
+            "workpage_kind": "schedule-v0"
+          }
+        ]
+      }
+    ],
+    "workflow_run": {
+      "activation_key": "snapshot:workspace-schedule-action-unavailable:weekly-schedule-workpage",
+      "active_issue_count": 0,
+      "created_at": "<ts:17>",
+      "domain_id": "domain-x",
+      "logical_date": "2026-03-22",
+      "partition_key": "PW-2026-W13",
+      "state": "OPEN",
+      "tenant_id": "tenant-a",
+      "updated_at": "<ts:18>",
+      "workflow_id": "weekly_schedule_planning.v1",
+      "workflow_run_id": "<workflow_run_id:1>",
+      "workflow_version": "v1"
+    }
+  }
+}

@@ -152,6 +152,6 @@ Note: `TASK-0087` / `TASK-0088` / `TASK-0089` were formerly duplicated as `TASK-
 | TASK-0145 | EPIC-123 | DONE | medium | Close EPIC-123 and synchronize demo/doc/status posture |
 | TASK-0146 | EPIC-124 | DONE | medium | Freeze the stage-linked workpage action contract, supported-surface matrix, and subject-link semantics |
 | TASK-0147 | EPIC-124 | DONE | high | Implement backend requirement-aware artifact linkage and supported-surface policy for workpage flows |
-| TASK-0148 | EPIC-124 | TODO | high | Implement backend workspace/stage-linked workpage action projection and generated snapshots |
-| TASK-0149 | EPIC-124 | TODO | high | Implement frontend stage-linked workpage actions, handoffs, and refresh truth on workspace surfaces |
+| TASK-0148 | EPIC-124 | DONE | high | Implement backend workspace/stage-linked workpage action projection and generated snapshots |
+| TASK-0149 | EPIC-124 | DONE | high | Implement frontend stage-linked workpage actions, handoffs, and refresh truth on workspace surfaces |
 | TASK-0150 | EPIC-124 | TODO | medium | Close EPIC-124 and synchronize stage-linked workpage docs, status, and regression truth |

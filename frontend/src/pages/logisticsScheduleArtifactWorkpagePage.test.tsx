@@ -179,4 +179,55 @@ describe("LogisticsScheduleArtifactWorkpagePage", () => {
       "/runs/wr-weekly-001/workpages/schedule-v0/artifacts/av-schedule-artifact-latest"
     );
   });
+
+  it("drops mismatched workspace subject context when submitting schedule drafts directly", async () => {
+    const user = userEvent.setup();
+    const submitBodies: Array<Record<string, unknown>> = [];
+    server.use(
+      http.get("*/api/v1/workpages/artifacts/av-schedule-artifact-001", () =>
+        HttpResponse.json(buildScheduleArtifactPayload("av-schedule-artifact-001"))
+      ),
+      http.post("*/api/v1/workpages/artifacts/:artifactVersionId/submit", async ({ params, request }) => {
+        submitBodies.push((await request.json()) as Record<string, unknown>);
+        return HttpResponse.json({
+          status: "ok",
+          command: "api.workpages.artifact.submit",
+          submitted: {
+            workflow_run_id: "wr-weekly-001",
+            artifact_version_id: "av-schedule-artifact-010",
+            supersedes_artifact_version_id: String(params.artifactVersionId),
+            route: "/runs/wr-weekly-001/workpages/schedule-v0/artifacts/av-schedule-artifact-010"
+          }
+        });
+      }),
+      http.get("*/api/v1/workpages/artifacts/av-schedule-artifact-010", () =>
+        HttpResponse.json(buildScheduleArtifactPayload("av-schedule-artifact-010"))
+      )
+    );
+
+    window.history.pushState(
+      {
+        workpageSubjectContext: {
+          subject_kind: "human_task",
+          subject_id: "ht-stage04-001",
+          workflow_run_id: "wr-other-run"
+        }
+      },
+      "",
+      "/runs/wr-weekly-001/workpages/schedule-v0/artifacts/av-schedule-artifact-001"
+    );
+    render(<App />);
+
+    await screen.findByTestId("schedule-artifact-workpage-page");
+    await user.click(screen.getByRole("button", { name: "Submit draft" }));
+
+    await waitFor(() => {
+      expect(window.location.pathname).toBe(
+        "/runs/wr-weekly-001/workpages/schedule-v0/artifacts/av-schedule-artifact-010"
+      );
+    });
+
+    expect(submitBodies).toHaveLength(1);
+    expect(submitBodies[0]).not.toHaveProperty("subject_link");
+  });
 });

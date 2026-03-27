@@ -152,6 +152,33 @@ def build_demo_workpage_contract(workpage_id: str) -> dict[str, Any]:
     raise DemoWorkpageNotFoundError(workpage_id)
 
 
+def canonical_schedule_artifact_route(*, workflow_run_id: str, artifact_version_id: str) -> str:
+    return f"/runs/{workflow_run_id}/workpages/{SCHEDULE_DEMO_WORKPAGE_ID}/artifacts/{artifact_version_id}"
+
+
+def canonical_eod_artifact_route(*, workflow_run_id: str, artifact_version_id: str) -> str:
+    return f"/runs/{workflow_run_id}/workpages/{EOD_DEMO_WORKPAGE_ID}/artifacts/{artifact_version_id}"
+
+
+def canonical_eod_draft_create_path(*, workflow_run_id: str) -> str:
+    return f"/api/v1/workpages/workflow-runs/{workflow_run_id}/{EOD_DEMO_WORKPAGE_ID}/drafts"
+
+
+def latest_schedule_draft_artifact(
+    artifacts: list[dict[str, Any]],
+) -> dict[str, Any] | None:
+    return _latest_artifact_for_dataset_key(
+        artifacts,
+        dataset_key=SCHEDULE_DRAFT_DATASET_KEY,
+    )
+
+
+def latest_compatible_eod_draft_artifact(
+    artifacts: list[dict[str, Any]],
+) -> dict[str, Any] | None:
+    return _latest_compatible_eod_draft_artifact(artifacts)
+
+
 def build_schedule_workflow_run_workpage_contract(
     *,
     workflow_run: Mapping[str, Any],
@@ -540,9 +567,9 @@ def _eod_draft_resolution(
     return {
         "state": "latest_draft_available",
         "latest_artifact_version_id": latest_artifact_version_id,
-        "artifact_route": (
-            f"/runs/{workflow_run_id}/workpages/eod-v0/artifacts/"
-            f"{latest_artifact_version_id}"
+        "artifact_route": canonical_eod_artifact_route(
+            workflow_run_id=workflow_run_id,
+            artifact_version_id=latest_artifact_version_id,
         ),
     }
 

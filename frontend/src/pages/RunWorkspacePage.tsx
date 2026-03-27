@@ -10,6 +10,7 @@ import { apiConfig } from "@/lib/api/config";
 import { errorText } from "@/lib/api/errorText";
 import { workflowRunsRepository } from "@/lib/repositories";
 import { useDrawer } from "@/lib/state/drawerContext";
+import { invalidateWorkspaceViews } from "@/lib/workspace/queryInvalidation";
 import {
   buildStageNodeDrawerPayload,
   graphNodesWithResponsibility,
@@ -22,18 +23,7 @@ export function RunWorkspacePage(): JSX.Element {
   const { open } = useDrawer();
 
   const refreshWorkspaceViews = (): void => {
-    if (!workflowRunId) {
-      return;
-    }
-    void Promise.all([
-      queryClient.invalidateQueries({ queryKey: ["run-workspace", workflowRunId] }),
-      queryClient.invalidateQueries({ queryKey: ["run-detail", workflowRunId] }),
-      queryClient.invalidateQueries({ queryKey: ["board-view"] }),
-      queryClient.invalidateQueries({ queryKey: ["my-work"] }),
-      queryClient.invalidateQueries({ queryKey: ["approvals"] }),
-      queryClient.invalidateQueries({ queryKey: ["exceptions"] }),
-      queryClient.invalidateQueries({ queryKey: ["runs"] })
-    ]);
+    void invalidateWorkspaceViews(queryClient, workflowRunId);
   };
 
   const workspaceQuery = useQuery({

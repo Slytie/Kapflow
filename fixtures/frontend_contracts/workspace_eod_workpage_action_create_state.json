@@ -1,0 +1,352 @@
+{
+  "snapshot_id": "workspace_eod_workpage_action_create_state",
+  "source": {
+    "capture": "workspace_eod_workpage_action_create",
+    "workflow_run_id": "<workflow_run_id:1>"
+  },
+  "workspace": {
+    "blocking_work": [
+      {
+        "available_actions": [
+          "respond",
+          "upload_attachment"
+        ],
+        "blocking_reason_codes": [],
+        "blocking_requirements": [],
+        "can_complete": false,
+        "can_confirm_review": false,
+        "can_run_stage06_agent_review": false,
+        "can_run_weekly_stage04_openai_agent": false,
+        "can_upload_attachment": true,
+        "canonical_state": "PENDING",
+        "id": "approval:<approval_id:2>",
+        "linked_artifact_count": 0,
+        "metadata": {
+          "approval_kind": "business_decision",
+          "candidate_roles": [
+            "dispatch_supervisor"
+          ],
+          "requested_at": "<ts:1>",
+          "required_role": "dispatch_supervisor",
+          "responded_at": null,
+          "response_kind": null,
+          "scope_kind": "stage",
+          "scope_ref": "Stage04",
+          "task_run_id": null,
+          "updated_at": "<ts:2>",
+          "workflow_run_id": "<workflow_run_id:1>"
+        },
+        "missing_required_inputs": [],
+        "required_reviews": [],
+        "required_uploads": [],
+        "subject_id": "<approval_id:2>",
+        "subject_kind": "approval",
+        "workpage_actions": [
+          {
+            "action_id": "workpage.eod-v0.create_draft",
+            "create_path": "/api/v1/workpages/workflow-runs/<workflow_run_id:1>/eod-v0/drafts",
+            "disabled_reason": null,
+            "label": "Create EOD draft",
+            "link_policy": {
+              "create_relation_kind": "draft",
+              "submit_relation_kind": "response"
+            },
+            "presentation": "create_draft_then_open",
+            "route": null,
+            "state": "available",
+            "subject_context": {
+              "subject_id": "<approval_id:2>",
+              "subject_kind": "approval",
+              "workflow_run_id": "<workflow_run_id:1>"
+            },
+            "workpage_kind": "eod-v0"
+          }
+        ]
+      }
+    ],
+    "command": "api.workflow_runs.workspace",
+    "freshness": {
+      "generated_at": "<ts:3>",
+      "latest_event_recorded_at": "2026-03-27T14:42:14.928738Z",
+      "latest_event_sequence": 4,
+      "workflow_run_updated_at": "2026-03-27T14:42:13.406067Z"
+    },
+    "graph": {
+      "edges": [],
+      "latest_event_sequence": 4,
+      "nodes": [],
+      "summary": {
+        "blocking_count": 0,
+        "completed_count": 0,
+        "node_count": 0,
+        "status_counts": {},
+        "warning_count": 0,
+        "workflow_id": "dispatch_reporting.v1",
+        "workflow_run_id": "<workflow_run_id:1>"
+      },
+      "warnings": [
+        {
+          "code": "workspace_graph_projector_not_found",
+          "message": "No workspace graph projector is registered for workflow_id=dispatch_reporting.v1.",
+          "subject_ids": []
+        }
+      ]
+    },
+    "official_outputs": {
+      "coherence": {
+        "coherence_status": "passed",
+        "failure_code": null,
+        "fingerprint": "4f53cda18c2baa0c0354bb5f",
+        "issues": [],
+        "policy": {
+          "emit_event": "projection.coherence_failed",
+          "on_drift": "warn_visible"
+        },
+        "projection_id": "workspace_official_outputs:<workflow_run_id:1>",
+        "projection_kind": "workspace_official_outputs",
+        "source_refs": []
+      },
+      "outputs": [],
+      "pointers": []
+    },
+    "projection_coherence": [
+      {
+        "coherence_status": "passed",
+        "failure_code": null,
+        "fingerprint": "4f53cda18c2baa0c0354bb5f",
+        "issues": [],
+        "policy": {
+          "emit_event": "projection.coherence_failed",
+          "on_drift": "warn_visible"
+        },
+        "projection_id": "workspace_official_outputs:<workflow_run_id:1>",
+        "projection_kind": "workspace_official_outputs",
+        "source_refs": []
+      }
+    ],
+    "status": "ok",
+    "timeline_excerpt": {
+      "event_count": 4,
+      "events": [
+        {
+          "actor": {
+            "id": "system:runtime",
+            "type": "system"
+          },
+          "domain_id": "domain-x",
+          "event_id": "<event_id:3>",
+          "event_type": "workflow.run.created",
+          "idempotency_key": "<command_receipt_key:4>:runs.create.workflow.run.created",
+          "links": [
+            {
+              "id": "<workflow_run_id:1>",
+              "rel": "subject",
+              "type": "workflow_run"
+            },
+            {
+              "id": "dispatch_reporting.v1@v1",
+              "rel": "uses_definition",
+              "type": "workflow_contract_version"
+            },
+            {
+              "id": "dispatch_reporting.v1@v1",
+              "rel": "uses_decisions",
+              "type": "decision_catalog_version"
+            },
+            {
+              "id": "dispatch_reporting.v1@v1",
+              "rel": "uses_profile",
+              "type": "execution_profile_version"
+            }
+          ],
+          "occurred_at": "<ts:4>",
+          "payload": {
+            "activation_key": "snapshot:workspace-eod-action-create:dispatch-reporting-workpage",
+            "logical_date": "2026-03-16",
+            "partition_key": "SD-2026-03-16",
+            "workflow_id": "dispatch_reporting.v1"
+          },
+          "recorded_at": "<ts:5>",
+          "schema_version": "1.0",
+          "sequence_no": 1,
+          "tenant_id": "tenant-a"
+        },
+        {
+          "actor": {
+            "id": "system:runtime",
+            "type": "system"
+          },
+          "domain_id": "domain-x",
+          "event_id": "<event_id:5>",
+          "event_type": "artifact.version.created",
+          "idempotency_key": "<command_receipt_key:6>:artifacts.create-version.artifact.version.created",
+          "links": [
+            {
+              "id": "<artifact_version_id:7>",
+              "rel": "subject",
+              "type": "artifact_version"
+            },
+            {
+              "id": "<workflow_run_id:1>",
+              "rel": "subject",
+              "type": "workflow_run"
+            }
+          ],
+          "occurred_at": "<ts:6>",
+          "payload": {
+            "artifact_version_id": "<artifact_version_id:7>",
+            "dataset_key": "reporting.eos_raw.workbook"
+          },
+          "recorded_at": "<ts:7>",
+          "schema_version": "1.0",
+          "sequence_no": 2,
+          "tenant_id": "tenant-a"
+        },
+        {
+          "actor": {
+            "id": "system:runtime",
+            "type": "system"
+          },
+          "domain_id": "domain-x",
+          "event_id": "<event_id:8>",
+          "event_type": "artifact.version.created",
+          "idempotency_key": "<command_receipt_key:9>:artifacts.create-version.artifact.version.created",
+          "links": [
+            {
+              "id": "<artifact_version_id:10>",
+              "rel": "subject",
+              "type": "artifact_version"
+            },
+            {
+              "id": "<workflow_run_id:1>",
+              "rel": "subject",
+              "type": "workflow_run"
+            }
+          ],
+          "occurred_at": "<ts:8>",
+          "payload": {
+            "artifact_version_id": "<artifact_version_id:10>",
+            "dataset_key": "reporting.actuals_normalized.workbook"
+          },
+          "recorded_at": "<ts:9>",
+          "schema_version": "1.0",
+          "sequence_no": 3,
+          "tenant_id": "tenant-a"
+        },
+        {
+          "actor": {
+            "id": "system:runtime",
+            "type": "system"
+          },
+          "domain_id": "domain-x",
+          "event_id": "<event_id:11>",
+          "event_type": "approval.requested",
+          "idempotency_key": "<command_receipt_key:12>:approvals.request.approval.requested",
+          "links": [
+            {
+              "id": "<approval_id:2>",
+              "rel": "subject",
+              "type": "approval"
+            },
+            {
+              "id": "<workflow_run_id:1>",
+              "rel": "subject",
+              "type": "workflow_run"
+            }
+          ],
+          "occurred_at": "<ts:10>",
+          "payload": {
+            "action": "review_eod_draft",
+            "allowed_responses": [
+              "approve",
+              "reject",
+              "request_changes",
+              "cancel",
+              "expire"
+            ],
+            "approval_id": "<approval_id:2>",
+            "approval_kind": "business_decision",
+            "requested_from_role": "dispatch_supervisor"
+          },
+          "recorded_at": "<ts:11>",
+          "schema_version": "1.0",
+          "sequence_no": 4,
+          "tenant_id": "tenant-a"
+        }
+      ]
+    },
+    "user_work": [
+      {
+        "available_actions": [
+          "respond",
+          "upload_attachment"
+        ],
+        "blocking_reason_codes": [],
+        "blocking_requirements": [],
+        "can_complete": false,
+        "can_confirm_review": false,
+        "can_run_stage06_agent_review": false,
+        "can_run_weekly_stage04_openai_agent": false,
+        "can_upload_attachment": true,
+        "canonical_state": "PENDING",
+        "id": "approval:<approval_id:2>",
+        "linked_artifact_count": 0,
+        "metadata": {
+          "approval_kind": "business_decision",
+          "candidate_roles": [
+            "dispatch_supervisor"
+          ],
+          "requested_at": "<ts:1>",
+          "required_role": "dispatch_supervisor",
+          "responded_at": null,
+          "response_kind": null,
+          "scope_kind": "stage",
+          "scope_ref": "Stage04",
+          "task_run_id": null,
+          "updated_at": "<ts:2>",
+          "workflow_run_id": "<workflow_run_id:1>"
+        },
+        "missing_required_inputs": [],
+        "required_reviews": [],
+        "required_uploads": [],
+        "subject_id": "<approval_id:2>",
+        "subject_kind": "approval",
+        "workpage_actions": [
+          {
+            "action_id": "workpage.eod-v0.create_draft",
+            "create_path": "/api/v1/workpages/workflow-runs/<workflow_run_id:1>/eod-v0/drafts",
+            "disabled_reason": null,
+            "label": "Create EOD draft",
+            "link_policy": {
+              "create_relation_kind": "draft",
+              "submit_relation_kind": "response"
+            },
+            "presentation": "create_draft_then_open",
+            "route": null,
+            "state": "available",
+            "subject_context": {
+              "subject_id": "<approval_id:2>",
+              "subject_kind": "approval",
+              "workflow_run_id": "<workflow_run_id:1>"
+            },
+            "workpage_kind": "eod-v0"
+          }
+        ]
+      }
+    ],
+    "workflow_run": {
+      "activation_key": "snapshot:workspace-eod-action-create:dispatch-reporting-workpage",
+      "active_issue_count": 0,
+      "created_at": "<ts:12>",
+      "domain_id": "domain-x",
+      "logical_date": "2026-03-16",
+      "partition_key": "SD-2026-03-16",
+      "state": "OPEN",
+      "tenant_id": "tenant-a",
+      "updated_at": "<ts:13>",
+      "workflow_id": "dispatch_reporting.v1",
+      "workflow_run_id": "<workflow_run_id:1>",
+      "workflow_version": "v1"
+    }
+  }
+}

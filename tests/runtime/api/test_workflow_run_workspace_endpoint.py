@@ -71,6 +71,7 @@ def test_workspace_endpoint_returns_expected_envelope(tmp_path: Path) -> None:
         "latest_event_sequence",
         "warnings",
     }
+    assert all("workpage_actions" not in node for node in payload["graph"]["nodes"])
     assert isinstance(payload["user_work"], list)
     assert isinstance(payload["blocking_work"], list)
     assert isinstance(payload["timeline_excerpt"]["events"], list)
@@ -90,6 +91,7 @@ def test_workspace_endpoint_returns_expected_envelope(tmp_path: Path) -> None:
         "subject_id",
         "canonical_state",
         "available_actions",
+        "workpage_actions",
         "linked_artifact_count",
         "missing_required_inputs",
         "metadata",

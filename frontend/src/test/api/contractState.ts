@@ -195,6 +195,7 @@ function buildWorkspaceTaskItem(
   options: {
     graphNodeId: string;
     availableActions: string[];
+    workpageActions?: WorkflowWorkspaceWorkItem["workpage_actions"];
     missingRequiredInputs?: string[];
     requiredUploads?: WorkflowWorkspaceWorkItem["required_uploads"];
     requiredReviews?: WorkflowWorkspaceWorkItem["required_reviews"];
@@ -208,6 +209,7 @@ function buildWorkspaceTaskItem(
     human_task: task,
     graph_node_id: options.graphNodeId,
     available_actions: options.availableActions,
+    workpage_actions: options.workpageActions ?? [],
     missing_required_inputs: options.missingRequiredInputs ?? [],
     required_uploads: options.requiredUploads ?? [],
     required_reviews: options.requiredReviews ?? [],
@@ -220,6 +222,7 @@ function buildWorkspaceApprovalItem(
   approval: ApprovalRow,
   options: {
     graphNodeId: string;
+    workpageActions?: WorkflowWorkspaceWorkItem["workpage_actions"];
     blockingReason?: string | null;
   }
 ): WorkflowWorkspaceWorkItem {
@@ -228,6 +231,7 @@ function buildWorkspaceApprovalItem(
     item_kind: "approval",
     approval,
     graph_node_id: options.graphNodeId,
+    workpage_actions: options.workpageActions ?? [],
     available_actions:
       approval.state === "PENDING"
         ? [
@@ -253,6 +257,7 @@ function buildWorkspaceFlagItem(flag: FlagRow): WorkflowWorkspaceWorkItem {
     item_kind: "flag",
     flag,
     graph_node_id: "stage07",
+    workpage_actions: [],
     available_actions: ["upload_attachment", "download_attachment"],
     missing_required_inputs: [],
     required_uploads: [],

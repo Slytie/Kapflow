@@ -1,4 +1,5 @@
 import { render, screen, waitFor, within } from "@testing-library/react";
+import { QueryClient } from "@tanstack/react-query";
 import userEvent from "@testing-library/user-event";
 import { HttpResponse, http } from "msw";
 
@@ -223,6 +224,71 @@ describe("DispatchReportWorkpagePage", () => {
     expect(await screen.findByTestId("dispatch-report-artifact-workpage-page")).toBeInTheDocument();
     expect(screen.getByLabelText("Secondary detail routes")).toBeInTheDocument();
     expect(window.location.pathname).toBe("/demo/logistics/workpages/eod-v0/artifacts/av-direct-001");
+  });
+
+  it("submits canonical artifact drafts with carried workspace subject context and refresh invalidation", async () => {
+    const user = userEvent.setup();
+    const submitBodies: Array<Record<string, unknown>> = [];
+    const invalidateSpy = vi.spyOn(QueryClient.prototype, "invalidateQueries");
+    server.use(
+      http.get("*/api/v1/workpages/artifacts/av-eod-artifact-001", () =>
+        HttpResponse.json(buildArtifactPayload("av-eod-artifact-001"))
+      ),
+      http.post("*/api/v1/workpages/artifacts/:artifactVersionId/submit", async ({ params, request }) => {
+        submitBodies.push((await request.json()) as Record<string, unknown>);
+        return HttpResponse.json({
+          status: "ok",
+          command: "api.workpages.artifact.submit",
+          submitted: {
+            workflow_run_id: "wr-eod-artifact-001",
+            artifact_version_id: "av-eod-artifact-010",
+            supersedes_artifact_version_id: String(params.artifactVersionId),
+            route: "/runs/wr-eod-artifact-001/workpages/eod-v0/artifacts/av-eod-artifact-010"
+          }
+        });
+      }),
+      http.get("*/api/v1/workpages/artifacts/av-eod-artifact-010", () =>
+        HttpResponse.json(buildArtifactPayload("av-eod-artifact-010"))
+      )
+    );
+
+    window.history.pushState(
+      {
+        usr: {
+          workpageSubjectContext: {
+            subject_kind: "approval",
+            subject_id: "ap-stage04-001",
+            workflow_run_id: "wr-eod-artifact-001"
+          }
+        },
+        key: "default",
+        idx: 0
+      },
+      "",
+      "/runs/wr-eod-artifact-001/workpages/eod-v0/artifacts/av-eod-artifact-001"
+    );
+    render(<App />);
+
+    await screen.findByTestId("dispatch-report-artifact-workpage-page");
+    await user.click(screen.getByRole("button", { name: "Submit draft" }));
+
+    await waitFor(() => {
+      expect(window.location.pathname).toBe(
+        "/runs/wr-eod-artifact-001/workpages/eod-v0/artifacts/av-eod-artifact-010"
+      );
+    });
+
+    expect(submitBodies).toHaveLength(1);
+    expect(submitBodies[0]).toMatchObject({
+      subject_link: {
+        subject_kind: "approval",
+        subject_id: "ap-stage04-001"
+      }
+    });
+    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ["workpages"] });
+    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ["run-workspace", "wr-eod-artifact-001"] });
+    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ["run-detail", "wr-eod-artifact-001"] });
+    invalidateSpy.mockRestore();
   });
 
   it("renders the canonical run-backed landing with a latest-draft handoff", async () => {

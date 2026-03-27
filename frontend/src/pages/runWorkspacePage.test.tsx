@@ -2,11 +2,59 @@ import { fireEvent, render, screen, waitFor, within } from "@testing-library/rea
 import userEvent from "@testing-library/user-event";
 import { http, HttpResponse } from "msw";
 
+import eodArtifactStateSnapshot from "@fixtures/workpage_eod_v0_artifact_state.json";
+import scheduleArtifactStateSnapshot from "@fixtures/workpage_schedule_v0_artifact_state.json";
 import { App } from "@/app/App";
+import type {
+  WorkflowRunWorkspaceContract,
+  WorkflowWorkspaceApprovalWorkItem,
+  WorkflowWorkspaceTaskWorkItem,
+  WorkflowWorkspaceWorkpageAction
+} from "@/lib/types/contracts";
 import { RunWorkspacePage } from "@/pages/RunWorkspacePage";
 import { mutationLog } from "@/test/api/handlers";
+import {
+  buildWorkflowRunWorkspace,
+  createContractState
+} from "@/test/api/contractState";
 import { server } from "@/test/api/server";
 import { renderRoute } from "@/test/renderRoute";
+
+function buildWorkspaceWithTaskWorkpageAction(
+  action: WorkflowWorkspaceWorkpageAction
+): WorkflowRunWorkspaceContract {
+  const workspace = buildWorkflowRunWorkspace(createContractState(), "wr-test-001");
+  const applyAction = (item: WorkflowRunWorkspaceContract["user_work"][number]) =>
+    item.item_kind === "human_task" && item.human_task.human_task_id === "ht-claimed-002"
+      ? ({
+          ...item,
+          workpage_actions: [action]
+        } satisfies WorkflowWorkspaceTaskWorkItem)
+      : item;
+  return {
+    ...workspace,
+    user_work: workspace.user_work.map(applyAction),
+    blocking_work: workspace.blocking_work.map(applyAction)
+  };
+}
+
+function buildWorkspaceWithApprovalWorkpageAction(
+  action: WorkflowWorkspaceWorkpageAction
+): WorkflowRunWorkspaceContract {
+  const workspace = buildWorkflowRunWorkspace(createContractState(), "wr-test-001");
+  const applyAction = (item: WorkflowRunWorkspaceContract["user_work"][number]) =>
+    item.item_kind === "approval" && item.approval.approval_id === "ap-pending-001"
+      ? ({
+          ...item,
+          workpage_actions: [action]
+        } satisfies WorkflowWorkspaceApprovalWorkItem)
+      : item;
+  return {
+    ...workspace,
+    user_work: workspace.user_work.map(applyAction),
+    blocking_work: workspace.blocking_work.map(applyAction)
+  };
+}
 
 describe("RunWorkspacePage", () => {
   it("renders graph block and swimlanes on the same page", async () => {
@@ -213,6 +261,167 @@ describe("RunWorkspacePage", () => {
     expect(
       within(taskCard as HTMLElement).getAllByRole("button", { name: "Confirm Reviewed" }).length
     ).toBeGreaterThan(0);
+  });
+
+  it("renders unavailable projected workpage actions without replacing existing review actions", async () => {
+    server.use(
+      http.get("*/api/v1/workflow-runs/:workflowRunId/workspace", () =>
+        HttpResponse.json({
+          status: "ok",
+          command: "api.workflow_runs.workspace",
+          workspace: buildWorkspaceWithTaskWorkpageAction({
+            action_id: "workpage.schedule-v0.open_latest_draft",
+            workpage_kind: "schedule-v0",
+            label: "Open schedule draft",
+            presentation: "open_route",
+            state: "unavailable",
+            route: null,
+            create_path: null,
+            subject_context: {
+              subject_kind: "human_task",
+              subject_id: "ht-claimed-002",
+              workflow_run_id: "wr-test-001"
+            },
+            link_policy: {
+              create_relation_kind: null,
+              submit_relation_kind: "response"
+            },
+            disabled_reason: "schedule_draft_unavailable"
+          })
+        })
+      ),
+      http.get("*/api/v1/workpages/artifacts/av-schedule-artifact-001", () =>
+        HttpResponse.json(structuredClone(scheduleArtifactStateSnapshot.workpage_state))
+      )
+    );
+
+    renderRoute(<RunWorkspacePage />, {
+      route: "/runs/wr-test-001/workspace",
+      path: "/runs/:workflowRunId/workspace"
+    });
+
+    const taskCard = (await screen.findByRole("heading", { name: "Review Packet" })).closest("article");
+    expect(taskCard).not.toBeNull();
+    expect(
+      within(taskCard as HTMLElement).getByRole("button", { name: "Open schedule draft" })
+    ).toBeDisabled();
+    expect(
+      within(taskCard as HTMLElement)
+        .getAllByRole("button", { name: "Open Draft" })
+        .every((button) => !(button as HTMLButtonElement).disabled)
+    ).toBe(true);
+    expect(
+      within(taskCard as HTMLElement).getByText("Schedule draft unavailable for this run yet")
+    ).toBeInTheDocument();
+  });
+
+  it("navigates directly to projected open-route workpages from workspace task cards", async () => {
+    const user = userEvent.setup();
+    server.use(
+      http.get("*/api/v1/workflow-runs/:workflowRunId/workspace", () =>
+        HttpResponse.json({
+          status: "ok",
+          command: "api.workflow_runs.workspace",
+          workspace: buildWorkspaceWithTaskWorkpageAction({
+            action_id: "workpage.schedule-v0.open_latest_draft",
+            workpage_kind: "schedule-v0",
+            label: "Open schedule draft",
+            presentation: "open_route",
+            state: "available",
+            route: "/runs/wr-weekly-001/workpages/schedule-v0/artifacts/av-schedule-artifact-001",
+            create_path: null,
+            subject_context: {
+              subject_kind: "human_task",
+              subject_id: "ht-claimed-002",
+              workflow_run_id: "wr-test-001"
+            },
+            link_policy: {
+              create_relation_kind: null,
+              submit_relation_kind: "response"
+            },
+            disabled_reason: null
+          })
+        })
+      )
+    );
+
+    window.history.pushState({}, "", "/runs/wr-test-001/workspace");
+    render(<App />);
+
+    await user.click(await screen.findByRole("button", { name: "Open schedule draft" }));
+
+    await waitFor(() => {
+      expect(window.location.pathname).toBe(
+        "/runs/wr-weekly-001/workpages/schedule-v0/artifacts/av-schedule-artifact-001"
+      );
+    });
+    expect(await screen.findByTestId("schedule-artifact-workpage-page")).toBeInTheDocument();
+  });
+
+  it("creates projected workspace drafts through backend-provided create paths", async () => {
+    const user = userEvent.setup();
+    const requestBodies: Array<Record<string, unknown>> = [];
+    server.use(
+      http.get("*/api/v1/workflow-runs/:workflowRunId/workspace", () =>
+        HttpResponse.json({
+          status: "ok",
+          command: "api.workflow_runs.workspace",
+          workspace: buildWorkspaceWithApprovalWorkpageAction({
+            action_id: "workpage.eod-v0.create_draft",
+            workpage_kind: "eod-v0",
+            label: "Create EOD draft",
+            presentation: "create_draft_then_open",
+            state: "available",
+            route: null,
+            create_path: "/api/v1/workpages/workflow-runs/wr-eod-artifact-001/eod-v0/drafts",
+            subject_context: {
+              subject_kind: "approval",
+              subject_id: "ap-pending-001",
+              workflow_run_id: "wr-test-001"
+            },
+            link_policy: {
+              create_relation_kind: "draft",
+              submit_relation_kind: "response"
+            },
+            disabled_reason: null
+          })
+        })
+      ),
+      http.get("*/api/v1/workpages/artifacts/av-eod-artifact-001", () =>
+        HttpResponse.json(structuredClone(eodArtifactStateSnapshot.workpage_state))
+      ),
+      http.post("*/api/v1/workpages/workflow-runs/:workflowRunId/eod-v0/drafts", async ({ params, request }) => {
+        requestBodies.push((await request.json()) as Record<string, unknown>);
+        return HttpResponse.json({
+          status: "ok",
+          command: "api.workpages.eod_drafts.create",
+          draft: {
+            workflow_run_id: String(params.workflowRunId),
+            artifact_version_id: "av-eod-artifact-001",
+            route: `/runs/${String(params.workflowRunId)}/workpages/eod-v0/artifacts/av-eod-artifact-001`
+          }
+        });
+      })
+    );
+
+    window.history.pushState({}, "", "/runs/wr-test-001/workspace");
+    render(<App />);
+
+    await user.click(await screen.findByRole("button", { name: "Create EOD draft" }));
+
+    await waitFor(() => {
+      expect(window.location.pathname).toBe(
+        "/runs/wr-eod-artifact-001/workpages/eod-v0/artifacts/av-eod-artifact-001"
+      );
+    });
+    expect(requestBodies).toHaveLength(1);
+    expect(requestBodies[0]).toMatchObject({
+      subject_link: {
+        subject_kind: "approval",
+        subject_id: "ap-pending-001"
+      }
+    });
+    expect(await screen.findByTestId("dispatch-report-artifact-workpage-page")).toBeInTheDocument();
   });
 
   it("confirm-review unblocks completion after workspace refetch", async () => {
