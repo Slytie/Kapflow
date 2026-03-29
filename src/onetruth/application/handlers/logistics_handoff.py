@@ -3,19 +3,20 @@ from __future__ import annotations
 from datetime import date
 from functools import lru_cache
 import hashlib
+import json
 from pathlib import Path
 import sqlite3
 from typing import Any
 from uuid import uuid4
 
-from onetruth.application.handlers._shared.command_boundary import CommandError
+from onetruth.application.handlers._shared.command_boundary import CommandError, _event_envelope
 from onetruth.application.services.logistics_handoff_runtime import apply_partition_transform_by_id
 from onetruth.domain.partition_codec import validate_partition_key
 from onetruth.infrastructure.definitions.family_compiler import (
     DefinitionCompileError,
     compile_workflow_family,
 )
-from onetruth.infrastructure.events.event_store import utc_now_iso
+from onetruth.infrastructure.events.event_store import append_event, utc_now_iso
 from onetruth.infrastructure.repositories.artifact_provenance import create_artifact_provenance_edge
 from onetruth.infrastructure.repositories.artifact_versions import (
     create_artifact_version,
@@ -32,6 +33,14 @@ from onetruth.infrastructure.repositories.input_bindings import (
     InputBindingConflictError,
     create_workflow_run_input,
 )
+from onetruth.infrastructure.repositories.human_tasks import (
+    create_human_task,
+    get_human_task_by_task_run_id,
+)
+from onetruth.infrastructure.repositories.task_runs import (
+    create_task_run,
+    get_task_run_by_activation_key,
+)
 from onetruth.infrastructure.repositories.workflow_runs import (
     create_workflow_run,
     get_workflow_run,
@@ -47,6 +56,7 @@ WEEKLY_DAILY_SEED_KIND = "planning.daily_dispatch_seed.workbook"
 LIVE_SEED_KIND = "dispatch.base_schedule_seed.workbook"
 LIVE_ROUTE_DELTA_KIND = "dispatch.route_delta_intake.workbook"
 LIVE_ACTUAL_HOURS_KIND = "dispatch.actual_hours_snapshot.workbook"
+LIVE_STAGE01_TASK_KIND = "dispatch_seed_intake"
 NOTIFY_ONLY_MODE = "notify_only"
 WRITER_MODE_SOURCE_ONLY = "source_only"
 
@@ -574,6 +584,212 @@ def activate_live_dispatch_command(
     }
 
 
+def prepare_live_dispatch_day_command(
+    connection: sqlite3.Connection,
+    payload: dict[str, Any],
+) -> dict[str, Any]:
+    _require_fields(
+        payload,
+        [
+            "workflow_run_id",
+            "published_artifact_version_id",
+            "service_date_id",
+            "idempotency_key",
+        ],
+    )
+
+    weekly_run_id = str(payload["workflow_run_id"])
+    published_artifact_version_id = str(payload["published_artifact_version_id"])
+    service_date_id = str(payload["service_date_id"])
+    idempotency_key = str(payload["idempotency_key"])
+
+    materialized = materialize_weekly_seeds_command(
+        connection,
+        {
+            "workflow_run_id": weekly_run_id,
+            "published_artifact_version_id": published_artifact_version_id,
+            "service_date_id": service_date_id,
+            "idempotency_key": idempotency_key,
+        },
+    )
+    edge_rows = list(materialized.get("edge_executions") or [])
+    seed_rows = list(materialized.get("seed_artifacts") or [])
+    if len(edge_rows) != 1 or len(seed_rows) != 1:
+        raise CommandError(
+            code="prepare_live_dispatch_failed",
+            message="prepare-live-dispatch-day requires exactly one service-day seed edge",
+            details={
+                "workflow_run_id": weekly_run_id,
+                "service_date_id": service_date_id,
+                "edge_execution_count": len(edge_rows),
+                "seed_artifact_count": len(seed_rows),
+            },
+        )
+
+    edge = edge_rows[0]
+    seed_artifact = seed_rows[0]
+    source_workflow_run = _require_workflow_run(connection, weekly_run_id)
+    scope = {
+        "tenant_id": str(source_workflow_run["tenant_id"]),
+        "domain_id": str(source_workflow_run["domain_id"]),
+    }
+
+    edge_status = str(edge.get("status") or "")
+    if edge_status == "activated":
+        target_workflow_run_id = str(edge.get("target_workflow_run_id") or "").strip()
+        if not target_workflow_run_id:
+            raise CommandError(
+                code="edge_execution_status_transition_invalid",
+                message="activated live-dispatch edge is missing a target workflow run",
+                details={"edge_execution_id": str(edge.get("edge_execution_id") or "")},
+            )
+        target_workflow_run = _require_workflow_run(connection, target_workflow_run_id)
+        seed_intake_task = _ensure_live_dispatch_seed_intake_task(
+            connection,
+            workflow_run_id=target_workflow_run_id,
+            actor_id=str(payload.get("actor_id") or "system:runtime"),
+            actor_type=str(payload.get("actor_type") or "system"),
+            scope={
+                "tenant_id": str(target_workflow_run["tenant_id"]),
+                "domain_id": str(target_workflow_run["domain_id"]),
+            },
+            created_at=utc_now_iso(),
+        )
+        return {
+            "edge_execution": edge,
+            "target_workflow_run": target_workflow_run,
+            "live_seed_artifact": _require_artifact(
+                connection,
+                _stable_live_input_artifact_id(str(edge["edge_execution_id"]), LIVE_SEED_KIND),
+            ),
+            "seed_intake_task": seed_intake_task,
+        }
+
+    if edge_status != "prepared":
+        raise CommandError(
+            code="edge_execution_status_transition_invalid",
+            message="prepare-live-dispatch-day requires a prepared weekly seed edge",
+            details={
+                "edge_execution_id": str(edge.get("edge_execution_id") or ""),
+                "status": edge_status,
+            },
+        )
+
+    edge_execution_id = str(edge["edge_execution_id"])
+    _begin_transaction(connection)
+    try:
+        now = utc_now_iso()
+        target_workflow_run = _resolve_or_create_live_dispatch_run(
+            connection,
+            tenant_id=scope["tenant_id"],
+            domain_id=scope["domain_id"],
+            service_date_id=service_date_id,
+            activation_key=str(edge.get("target_activation_key") or f"{LIVE_WORKFLOW_ID}:{service_date_id}"),
+            created_at=now,
+        )
+        target_workflow_run_id = str(target_workflow_run["workflow_run_id"])
+
+        live_seed = _create_or_load_artifact_version(
+            connection,
+            artifact_version_id=_stable_live_input_artifact_id(edge_execution_id, LIVE_SEED_KIND),
+            workflow_run_id=target_workflow_run_id,
+            tenant_id=scope["tenant_id"],
+            domain_id=scope["domain_id"],
+            dataset_key=LIVE_SEED_KIND,
+            partition_kind="ServiceDateID",
+            partition_key=service_date_id,
+            artifact_kind=LIVE_SEED_KIND,
+            artifact_role="official_input",
+            media_type=str(seed_artifact.get("media_type") or "application/octet-stream"),
+            storage_uri=str(seed_artifact["storage_uri"]),
+            content_digest=str(seed_artifact["content_digest"]),
+            metadata_json={
+                "edge_execution_id": edge_execution_id,
+                "source_artifact_version_id": str(seed_artifact["artifact_version_id"]),
+                "service_date_id": service_date_id,
+                "prepared_via": "prepare_live_dispatch_day",
+            },
+            parent_artifact_version_id=str(seed_artifact["artifact_version_id"]),
+            supersedes_artifact_version_id=None,
+            lineage_note="handoff_live_seed_prepared",
+            created_at=now,
+        )
+        _create_or_ignore_provenance_edge(
+            connection,
+            output_artifact_version_id=str(live_seed["artifact_version_id"]),
+            input_artifact_version_id=str(seed_artifact["artifact_version_id"]),
+            edge_type="derives_from",
+            workflow_run_id=target_workflow_run_id,
+            edge_order=0,
+            created_at=now,
+            edge_id=(
+                "ape-"
+                f"{_digest('live-seed-prepared-provenance', edge_execution_id, str(seed_artifact['artifact_version_id']))}"
+            ),
+            metadata_json={"edge_execution_id": edge_execution_id},
+        )
+        _create_or_ignore_workflow_input_binding(
+            connection,
+            workflow_run_id=target_workflow_run_id,
+            binding_key="stage01.base_seed",
+            source_ref=str(seed_artifact["artifact_version_id"]),
+            artifact_version_id=str(live_seed["artifact_version_id"]),
+            metadata_json={"edge_execution_id": edge_execution_id, "kind": LIVE_SEED_KIND},
+            captured_at=now,
+        )
+
+        updated_edge = update_edge_execution_activation(
+            connection,
+            edge_execution_id=edge_execution_id,
+            target_workflow_run_id=target_workflow_run_id,
+            trigger_ref=str(seed_artifact["artifact_version_id"]),
+            activation_idempotency_key=idempotency_key,
+            status="activated",
+            cursor_state={
+                "phase": "seed_prepared",
+                "service_date_id": service_date_id,
+                "trigger_ref": str(seed_artifact["artifact_version_id"]),
+            },
+            compensation_state={"mode": "mark_stale", "state": "none"},
+            input_bindings={
+                "base_seed_source_artifact_version_id": str(seed_artifact["artifact_version_id"]),
+                "live_input_artifact_version_ids": {
+                    LIVE_SEED_KIND: str(live_seed["artifact_version_id"]),
+                },
+            },
+            activated_at=now,
+            updated_at=now,
+        )
+        if updated_edge is None:
+            raise CommandError(
+                code="edge_execution_not_found",
+                message="edge execution not found during live-day preparation update",
+                details={"edge_execution_id": edge_execution_id},
+            )
+        seed_intake_task = _ensure_live_dispatch_seed_intake_task(
+            connection,
+            workflow_run_id=target_workflow_run_id,
+            actor_id=str(payload.get("actor_id") or "system:runtime"),
+            actor_type=str(payload.get("actor_type") or "system"),
+            scope={
+                "tenant_id": str(target_workflow_run["tenant_id"]),
+                "domain_id": str(target_workflow_run["domain_id"]),
+            },
+            created_at=now,
+        )
+    except Exception:
+        connection.rollback()
+        raise
+    connection.commit()
+
+    return {
+        "edge_execution": updated_edge,
+        "target_workflow_run": target_workflow_run,
+        "live_seed_artifact": live_seed,
+        "seed_intake_task": seed_intake_task,
+    }
+
+
 def notify_only_handoff_command(
     connection: sqlite3.Connection,
     payload: dict[str, Any],
@@ -784,6 +1000,7 @@ def notify_only_handoff_command(
                     "target_dataset_key": edge_descriptor["target_dataset_key"],
                 },
                 captured_at=now,
+                replace_on_conflict=True,
             )
 
             edge_execution_id = f"ee-{uuid4()}"
@@ -1060,6 +1277,153 @@ def _resolve_or_create_live_dispatch_run(
     )
 
 
+def _ensure_live_dispatch_seed_intake_task(
+    connection: sqlite3.Connection,
+    *,
+    workflow_run_id: str,
+    actor_id: str,
+    actor_type: str,
+    scope: dict[str, str],
+    created_at: str,
+) -> dict[str, Any]:
+    activation_key = f"live:{workflow_run_id}:stage01:dispatch-seed-intake"
+    existing_task_run = get_task_run_by_activation_key(
+        connection,
+        workflow_run_id=workflow_run_id,
+        activation_key=activation_key,
+    )
+    if existing_task_run is not None:
+        if (
+            str(existing_task_run.get("stage_id") or "") != "Stage01"
+            or str(existing_task_run.get("task_kind") or "") != LIVE_STAGE01_TASK_KIND
+        ):
+            raise CommandError(
+                code="duplicate_spawned_task_activation",
+                message="live-dispatch seed-intake activation key is already used by another task",
+                details={
+                    "workflow_run_id": workflow_run_id,
+                    "activation_key": activation_key,
+                    "task_run_id": str(existing_task_run["task_run_id"]),
+                },
+            )
+        existing_human_task = get_human_task_by_task_run_id(
+            connection,
+            str(existing_task_run["task_run_id"]),
+        )
+        if existing_human_task is not None:
+            return {
+                "task_run_id": str(existing_task_run["task_run_id"]),
+                "human_task_id": str(existing_human_task["human_task_id"]),
+                "stage_id": "Stage01",
+                "task_kind": LIVE_STAGE01_TASK_KIND,
+                "activation_key": activation_key,
+                "generation": int(existing_task_run.get("generation") or 0),
+            }
+
+    task_run_id = (
+        str(existing_task_run["task_run_id"])
+        if existing_task_run is not None
+        else f"tr-{uuid4()}"
+    )
+    human_task_id = f"ht-{uuid4()}"
+
+    if existing_task_run is None:
+        create_task_run(
+            connection,
+            task_run_id=task_run_id,
+            workflow_run_id=workflow_run_id,
+            stage_id="Stage01",
+            task_kind=LIVE_STAGE01_TASK_KIND,
+            state="READY",
+            generation=0,
+            activation_key=activation_key,
+            blocked_on_kind=None,
+            blocked_on_ref=None,
+            spawned_from_flag_id=None,
+            spawned_from_task_run_id=None,
+            spawn_rule_id=None,
+            spawn_cause_kind="handoff_activation",
+            spawn_cause_event_id=None,
+            spawn_depth=0,
+            spawn_budget_key=None,
+            created_at=created_at,
+        )
+        append_event(
+            connection,
+            _event_envelope(
+                event_type="task.run.created",
+                tenant_id=scope["tenant_id"],
+                domain_id=scope["domain_id"],
+                actor_type=actor_type,
+                actor_id=actor_id,
+                links=[
+                    {"rel": "subject", "type": "workflow_run", "id": workflow_run_id},
+                    {"rel": "subject", "type": "task_run", "id": task_run_id},
+                ],
+                payload={
+                    "task_run_id": task_run_id,
+                    "stage_id": "Stage01",
+                    "task_kind": LIVE_STAGE01_TASK_KIND,
+                    "activation_key": activation_key,
+                    "generation": 0,
+                    "spawned_from_flag_id": None,
+                    "spawned_from_task_run_id": None,
+                    "spawn_rule_id": None,
+                    "spawn_cause_kind": "handoff_activation",
+                    "spawn_cause_event_id": None,
+                    "spawn_budget_key": None,
+                    "spawn_depth": 0,
+                },
+                idempotency_key=None,
+            ),
+        )
+
+    create_human_task(
+        connection,
+        human_task_id=human_task_id,
+        workflow_run_id=workflow_run_id,
+        task_run_id=task_run_id,
+        task_kind=LIVE_STAGE01_TASK_KIND,
+        state="OPEN",
+        candidate_roles=["dispatch_supervisor"],
+        owner_role="dispatch_supervisor",
+        due_at=None,
+        escalation_at=None,
+        generation=0,
+        created_at=created_at,
+    )
+    append_event(
+        connection,
+        _event_envelope(
+            event_type="task.created",
+            tenant_id=scope["tenant_id"],
+            domain_id=scope["domain_id"],
+            actor_type=actor_type,
+            actor_id=actor_id,
+            links=[
+                {"rel": "subject", "type": "workflow_run", "id": workflow_run_id},
+                {"rel": "subject", "type": "task_run", "id": task_run_id},
+                {"rel": "subject", "type": "human_task", "id": human_task_id},
+            ],
+            payload={
+                "human_task_id": human_task_id,
+                "task_kind": LIVE_STAGE01_TASK_KIND,
+                "state": "OPEN",
+                "candidate_roles": ["dispatch_supervisor"],
+            },
+            idempotency_key=None,
+        ),
+    )
+    return {
+        "task_run_id": task_run_id,
+        "human_task_id": human_task_id,
+        "stage_id": "Stage01",
+        "task_kind": LIVE_STAGE01_TASK_KIND,
+        "activation_key": activation_key,
+        "generation": 0,
+    }
+
+
 def _logical_date_from_service_date_id(service_date_id: str) -> str:
     validate_partition_key("ServiceDateID", service_date_id)
     return service_date_id.removeprefix("SD-")
@@ -1173,6 +1537,7 @@ def _create_or_ignore_workflow_input_binding(
     artifact_version_id: str,
     metadata_json: dict[str, Any],
     captured_at: str,
+    replace_on_conflict: bool = False,
 ) -> None:
     try:
         create_workflow_run_input(
@@ -1201,6 +1566,17 @@ def _create_or_ignore_workflow_input_binding(
             and str(existing.get("artifact_version_id") or "") == artifact_version_id
         ):
             return
+        if replace_on_conflict and existing is not None:
+            _update_workflow_run_input_binding(
+                connection,
+                workflow_run_id=workflow_run_id,
+                binding_key=binding_key,
+                source_ref=source_ref,
+                artifact_version_id=artifact_version_id,
+                metadata_json=metadata_json,
+                captured_at=captured_at,
+            )
+            return
         raise CommandError(
             code="handoff_input_binding_conflict",
             message="existing workflow input binding conflicts with handoff replay inputs",
@@ -1221,6 +1597,42 @@ def _create_or_ignore_workflow_input_binding(
                 ),
             },
         )
+
+
+def _update_workflow_run_input_binding(
+    connection: sqlite3.Connection,
+    *,
+    workflow_run_id: str,
+    binding_key: str,
+    source_ref: str,
+    artifact_version_id: str,
+    metadata_json: dict[str, Any],
+    captured_at: str,
+) -> None:
+    connection.execute(
+        """
+        UPDATE workflow_run_inputs
+        SET
+            source_kind = 'artifact_version',
+            source_ref = ?,
+            artifact_version_id = ?,
+            pointer_key = NULL,
+            pointer_generation = NULL,
+            pointer_artifact_version_id = NULL,
+            captured_by_task_run_id = NULL,
+            captured_at = ?,
+            metadata_json = ?
+        WHERE workflow_run_id = ? AND binding_key = ?
+        """,
+        (
+            source_ref,
+            artifact_version_id,
+            captured_at,
+            json.dumps(metadata_json, separators=(",", ":")),
+            workflow_run_id,
+            binding_key,
+        ),
+    )
 
 
 def _get_workflow_run_input_binding(

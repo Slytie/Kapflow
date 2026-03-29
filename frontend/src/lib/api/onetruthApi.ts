@@ -93,6 +93,16 @@ interface WorkflowRunWorkspaceEnvelope extends ListEnvelope {
   freshness?: Record<string, unknown>;
 }
 
+interface PrepareLiveDispatchEnvelope extends ListEnvelope {
+  workflow_run_id: string;
+  result: {
+    edge_execution: Record<string, unknown>;
+    target_workflow_run: WorkflowRunRow;
+    live_seed_artifact: WorkflowRunDetailContract["artifact_versions"][number];
+    seed_intake_task: Record<string, unknown>;
+  };
+}
+
 interface WorkpageEnvelope extends ListEnvelope {
   workpage?: Record<string, unknown>;
   source?: Record<string, unknown>;
@@ -1053,6 +1063,24 @@ export const onetruthApi = {
       `/workflow-runs/${workflowRunId}/workspace`
     );
     return normalizeWorkspaceContract(payload);
+  },
+
+  async prepareLiveDispatchDay(
+    workflowRunId: string,
+    payload: {
+      published_artifact_version_id: string;
+      service_date_id: string;
+      idempotency_key: string;
+    }
+  ): Promise<PrepareLiveDispatchEnvelope["result"]> {
+    const result = await requestJson<PrepareLiveDispatchEnvelope>(
+      `/workflow-runs/${workflowRunId}/prepare-live-dispatch-day`,
+      {
+        method: "POST",
+        body: payload
+      }
+    );
+    return requiredObject(result.result, "result") as PrepareLiveDispatchEnvelope["result"];
   },
 
   async getDemoWorkpage(workpageId: string): Promise<WorkpageContract> {

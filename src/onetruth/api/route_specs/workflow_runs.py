@@ -9,6 +9,7 @@ from onetruth.api.routes.workflow_runs import (
     get_workflow_run_detail_endpoint,
     get_workflow_run_workspace_endpoint,
     list_workflow_runs_endpoint,
+    prepare_live_dispatch_day_endpoint,
 )
 from onetruth.api.route_specs._core import (
     JSON_ARTIFACT_BODY,
@@ -103,6 +104,23 @@ WORKFLOW_RUN_ROUTE_SPECS: tuple[RouteSpec, ...] = (
             context=execution.context,
             workflow_run_id=params["workflow_run_id"],
             query=execution.query,
+        ),
+    ),
+    RouteSpec(
+        name="workflow_runs.prepare_live_dispatch_day",
+        method="POST",
+        pattern=_param(
+            "/api/v1/workflow-runs/",
+            param_name="workflow_run_id",
+            suffix="/prepare-live-dispatch-day",
+        ),
+        body_policy=JSON_ARTIFACT_BODY,
+        needs_page=False,
+        dispatch=lambda execution, params: prepare_live_dispatch_day_endpoint(
+            execution.connection,
+            context=execution.context,
+            workflow_run_id=params["workflow_run_id"],
+            payload=_require_payload(execution.payload),
         ),
     ),
     RouteSpec(

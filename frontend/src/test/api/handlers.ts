@@ -1352,106 +1352,189 @@ function buildStoryRun(
 
 function buildLogisticsStoryPayload(planningWeekId: string, request: Request, serviceDateId?: string) {
   const now = new Date().toISOString();
-  const reportingRun = buildStoryRun({
-    workflowRunId: "wr-report-001",
+  const currentServiceDateId = serviceDateId ?? "SD-2026-03-06";
+  const weeklyRun =
+    state.workflowRuns.find(
+      (run) =>
+        run.workflow_id === "weekly_schedule_planning.v1" && run.partition_key === planningWeekId
+    ) ??
+    buildStoryRun({
+      workflowRunId: "wr-weekly-001",
+      workflowId: "weekly_schedule_planning.v1",
+      partitionKey: planningWeekId,
+      state: "OPEN",
+      activeIssueCount: 1
+    });
+  const reportingRun =
+    state.workflowRuns.find(
+      (run) =>
+        run.workflow_id === "dispatch_reporting.v1" && run.partition_key === currentServiceDateId
+    ) ??
+    buildStoryRun({
+      workflowRunId: "wr-report-001",
+      workflowId: "dispatch_reporting.v1",
+      partitionKey: currentServiceDateId,
+      state: "OPEN",
+      activeIssueCount: 0
+    });
+  const liveRun =
+    state.workflowRuns.find(
+      (run) => run.workflow_id === "live_dispatch.v1" && run.partition_key === currentServiceDateId
+    ) ?? null;
+
+  const weeklyTask = state.humanTasks.find((task) => task.human_task_id === "ht-weekly-001");
+  const reportingTask = state.humanTasks.find((task) => task.human_task_id === "ht-reporting-001");
+  const liveTask =
+    liveRun != null
+      ? (state.humanTasks.find(
+          (task) =>
+            task.workflow_run_id === liveRun.workflow_run_id && task.task_kind === "dispatch_seed_intake"
+        ) ?? null)
+      : null;
+
+  const weeklyTaskResponse = weeklyTask ? enrichHumanTaskForResponse(weeklyTask, request) : null;
+  const reportingTaskResponse = reportingTask
+    ? enrichHumanTaskForResponse(reportingTask, request)
+    : null;
+  const liveTaskResponse = liveTask ? enrichHumanTaskForResponse(liveTask, request) : null;
+
+  const priorFeedbackRun = buildStoryRun({
+    workflowRunId: "wr-report-feedback-001",
     workflowId: "dispatch_reporting.v1",
-    partitionKey: serviceDateId ?? "SD-2026-03-06",
+    partitionKey: "SD-2026-03-05",
     state: "COMPLETED",
     activeIssueCount: 0
   });
-  const weeklyRun = buildStoryRun({
-    workflowRunId: "wr-weekly-001",
-    workflowId: "weekly_schedule_planning.v1",
-    partitionKey: planningWeekId,
-    state: "OPEN",
-    activeIssueCount: 1
-  });
-  const liveRun = buildStoryRun({
-    workflowRunId: "wr-live-001",
-    workflowId: "live_dispatch.v1",
-    partitionKey: serviceDateId ?? "SD-2026-03-06",
-    state: "OPEN",
-    activeIssueCount: 1
-  });
-  const storyTasks = {
-    weekly: state.humanTasks.find((task) => task.human_task_id === "ht-weekly-001"),
-    live: state.humanTasks.find((task) => task.human_task_id === "ht-live-001"),
-    reporting: state.humanTasks.find((task) => task.human_task_id === "ht-reporting-001")
+  const reportingFeedbackArtifact = {
+    artifact_version_id: "av-reporting-feedback-001",
+    workflow_run_id: priorFeedbackRun.workflow_run_id,
+    task_run_id: "tr-report-feedback-stage04-001",
+    artifact_kind: "reporting.final_packet.workbook",
+    artifact_role: "official_output",
+    media_type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    storage_uri: "memory://story/av-reporting-feedback-001.xlsx",
+    content_digest: "sha256:reporting-feedback-001",
+    byte_size: 960,
+    metadata_json: {
+      file_name: "dispatch_reporting_feedback_packet.xlsx"
+    },
+    parent_artifact_version_id: null,
+    supersedes_artifact_version_id: null,
+    lineage_note: null,
+    created_at: now
   };
-  const weeklyTask = storyTasks.weekly
-    ? enrichHumanTaskForResponse(storyTasks.weekly, request)
-    : null;
-  const liveTask = storyTasks.live ? enrichHumanTaskForResponse(storyTasks.live, request) : null;
-  const reportingTask = storyTasks.reporting
-    ? enrichHumanTaskForResponse(storyTasks.reporting, request)
-    : null;
+  const reportingFeedbackPointer = {
+    workflow_run_id: priorFeedbackRun.workflow_run_id,
+    pointer_key: "official:reporting.final_packet.workbook",
+    scope_kind: "stage",
+    scope_ref: "Stage04",
+    artifact_kind: "reporting.final_packet.workbook",
+    artifact_version_id: reportingFeedbackArtifact.artifact_version_id,
+    promotion_reason: "official_finalize",
+    promoted_by_task_run_id: "tr-report-feedback-stage04-001",
+    approved_by_approval_id: "ap-report-feedback-stage04-001",
+    generation: 1,
+    updated_at: now
+  };
+  const weeklyPublishedArtifact = state.artifactVersions.find(
+    (artifact) =>
+      artifact.workflow_run_id === weeklyRun.workflow_run_id &&
+      artifact.artifact_kind === "planning.published_weekly_schedule.workbook" &&
+      artifact.artifact_role === "official_output"
+  );
+  const liveSeedArtifact =
+    liveRun != null
+      ? (state.artifactVersions.find(
+          (artifact) =>
+            artifact.workflow_run_id === liveRun.workflow_run_id &&
+            artifact.artifact_kind === "dispatch.base_schedule_seed.workbook"
+        ) ?? null)
+      : null;
 
-  const pointers = [
-    {
-      workflow_run_id: weeklyRun.workflow_run_id,
-      pointer_key: "official:planning.published_weekly_schedule.workbook",
-      scope_kind: "stage",
-      scope_ref: "Stage06",
-      artifact_kind: "planning.published_weekly_schedule.workbook",
-      artifact_version_id: "av-weekly-001",
-      promotion_reason: "official_publish",
-      promoted_by_task_run_id: "tr-weekly-stage06",
-      approved_by_approval_id: "ap-weekly-stage06",
-      generation: 1,
-      updated_at: now
-    },
-    {
-      workflow_run_id: reportingRun.workflow_run_id,
-      pointer_key: "official:reporting.final_packet.workbook",
-      scope_kind: "stage",
-      scope_ref: "Stage05",
-      artifact_kind: "reporting.final_packet.workbook",
-      artifact_version_id: "av-reporting-001",
-      promotion_reason: "official_publish",
-      promoted_by_task_run_id: "tr-report-stage05",
-      approved_by_approval_id: "ap-report-stage05",
-      generation: 1,
-      updated_at: now
-    }
-  ];
+  const workItems = [
+    weeklyTaskResponse
+      ? {
+          item_id: `human_task:${weeklyTaskResponse.human_task_id}`,
+          item_type: "human_task" as const,
+          lane:
+            weeklyTaskResponse.state === "CLAIMED"
+              ? "human_tasks.claimed"
+              : weeklyTaskResponse.state === "COMPLETED"
+                ? "human_tasks.completed"
+                : "human_tasks.open",
+          title: "Stage04 weekly_input_intake",
+          workflow_run_id: weeklyRun.workflow_run_id,
+          workflow_id: weeklyRun.workflow_id,
+          subject_id: weeklyTaskResponse.human_task_id,
+          stage_id: weeklyTaskResponse.stage_id,
+          task_kind: weeklyTaskResponse.task_kind,
+          state: weeklyTaskResponse.state,
+          owner_role: weeklyTaskResponse.owner_role,
+          available_actions: weeklyTaskResponse.available_actions ?? [],
+          blocking_reason_codes: weeklyTaskResponse.blocking_reason_codes ?? [],
+          missing_required_inputs: weeklyTaskResponse.missing_required_inputs ?? [],
+          linked_artifact_count: 0
+        }
+      : null,
+    liveTaskResponse && liveRun
+      ? {
+          item_id: `human_task:${liveTaskResponse.human_task_id}`,
+          item_type: "human_task" as const,
+          lane:
+            liveTaskResponse.state === "CLAIMED"
+              ? "human_tasks.claimed"
+              : liveTaskResponse.state === "COMPLETED"
+                ? "human_tasks.completed"
+                : "human_tasks.open",
+          title: "Stage01 dispatch_seed_intake",
+          workflow_run_id: liveRun.workflow_run_id,
+          workflow_id: liveRun.workflow_id,
+          subject_id: liveTaskResponse.human_task_id,
+          stage_id: liveTaskResponse.stage_id,
+          task_kind: liveTaskResponse.task_kind,
+          state: liveTaskResponse.state,
+          owner_role: liveTaskResponse.owner_role,
+          available_actions: liveTaskResponse.available_actions ?? [],
+          blocking_reason_codes: liveTaskResponse.blocking_reason_codes ?? [],
+          missing_required_inputs: liveTaskResponse.missing_required_inputs ?? [],
+          linked_artifact_count: liveSeedArtifact ? 1 : 0
+        }
+      : null,
+    reportingTaskResponse
+      ? {
+          item_id: `human_task:${reportingTaskResponse.human_task_id}`,
+          item_type: "human_task" as const,
+          lane:
+            reportingTaskResponse.state === "CLAIMED"
+              ? "human_tasks.claimed"
+              : reportingTaskResponse.state === "COMPLETED"
+                ? "human_tasks.completed"
+                : "human_tasks.open",
+          title: "Stage01 eos_input_intake",
+          workflow_run_id: reportingRun.workflow_run_id,
+          workflow_id: reportingRun.workflow_id,
+          subject_id: reportingTaskResponse.human_task_id,
+          stage_id: reportingTaskResponse.stage_id,
+          task_kind: reportingTaskResponse.task_kind,
+          state: reportingTaskResponse.state,
+          owner_role: reportingTaskResponse.owner_role,
+          available_actions: reportingTaskResponse.available_actions ?? [],
+          blocking_reason_codes: reportingTaskResponse.blocking_reason_codes ?? [],
+          missing_required_inputs: reportingTaskResponse.missing_required_inputs ?? [],
+          linked_artifact_count: 0
+        }
+      : null
+  ].filter(Boolean);
 
-  const officialOutputArtifacts = [
-    {
-      artifact_version_id: "av-weekly-001",
-      workflow_run_id: weeklyRun.workflow_run_id,
-      task_run_id: "tr-weekly-stage06",
-      artifact_kind: "planning.published_weekly_schedule.workbook",
-      artifact_role: "official_output",
-      media_type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-      storage_uri: "memory://story/av-weekly-001.xlsx",
-      content_digest: "sha256:weekly001",
-      byte_size: 1024,
-      metadata_json: {
-        file_name: "weekly_schedule.xlsx"
-      },
-      parent_artifact_version_id: null,
-      supersedes_artifact_version_id: null,
-      lineage_note: null,
-      created_at: now
-    },
-    {
-      artifact_version_id: "av-reporting-001",
-      workflow_run_id: reportingRun.workflow_run_id,
-      task_run_id: "tr-report-stage05",
-      artifact_kind: "reporting.final_packet.workbook",
-      artifact_role: "official_output",
-      media_type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-      storage_uri: "memory://story/av-reporting-001.xlsx",
-      content_digest: "sha256:reporting001",
-      byte_size: 960,
-      metadata_json: {
-        file_name: "dispatch_reporting_packet.xlsx"
-      },
-      parent_artifact_version_id: null,
-      supersedes_artifact_version_id: null,
-      lineage_note: null,
-      created_at: now
-    }
+  const laneDefinitions = [
+    { lane: "flags.open", label: "Open Exceptions", position: 5 },
+    { lane: "human_tasks.open", label: "Open Tasks", position: 10 },
+    { lane: "human_tasks.claimed", label: "Claimed Tasks", position: 20 },
+    { lane: "approvals.pending", label: "Pending Approvals", position: 30 },
+    { lane: "approvals.responded", label: "Responded Approvals", position: 40 },
+    { lane: "human_tasks.completed", label: "Completed Tasks", position: 50 },
+    { lane: "flags.resolved", label: "Resolved Exceptions", position: 60 },
+    { lane: "flags.closed", label: "Closed Exceptions", position: 70 }
   ];
 
   return {
@@ -1463,7 +1546,7 @@ function buildLogisticsStoryPayload(planningWeekId: string, request: Request, se
     },
     partitions: {
       planning_week_id: planningWeekId,
-      service_date_ids: [serviceDateId ?? "SD-2026-03-06"]
+      service_date_ids: [currentServiceDateId]
     },
     family_graph: {
       family_id: "logistics_ops_family.v1",
@@ -1484,14 +1567,8 @@ function buildLogisticsStoryPayload(planningWeekId: string, request: Request, se
               partition_key: reportingRun.partition_key
             }
           ],
-          artifact_refs: [
-            {
-              artifact_version_id: "av-reporting-001",
-              label: "dispatch_reporting_packet.xlsx",
-              source_label: "Official output"
-            }
-          ],
-          selection_summary: "1 linked run, 1 downloadable artifact"
+          artifact_refs: [],
+          selection_summary: "1 linked run, 0 downloadable artifacts"
         },
         {
           module_id: "weekly_schedule_planning",
@@ -1508,32 +1585,44 @@ function buildLogisticsStoryPayload(planningWeekId: string, request: Request, se
               partition_key: weeklyRun.partition_key
             }
           ],
-          artifact_refs: [
-            {
-              artifact_version_id: "av-weekly-001",
-              label: "weekly_schedule.xlsx",
-              source_label: "Official output"
-            }
-          ],
-          selection_summary: "1 linked run, 1 downloadable artifact"
+          artifact_refs: weeklyPublishedArtifact
+            ? [
+                {
+                  artifact_version_id: weeklyPublishedArtifact.artifact_version_id,
+                  label:
+                    String(
+                      (weeklyPublishedArtifact.metadata_json as Record<string, unknown> | null)?.file_name ??
+                        weeklyPublishedArtifact.artifact_version_id
+                    ) || weeklyPublishedArtifact.artifact_version_id,
+                  source_label: "Official output"
+                }
+              ]
+            : [],
+          selection_summary: weeklyPublishedArtifact
+            ? "1 linked run, 1 downloadable artifact"
+            : "1 linked run, 0 downloadable artifacts"
         },
         {
           module_id: "live_dispatch",
           workflow_id: "live_dispatch.v1",
           partition_kind: "ServiceDateID",
           activation_policy: "event_driven",
-          status: "active",
+          status: liveRun ? "active" : "ready",
           node_kind: "module",
-          drilldown_kind: "workflow_run",
-          drilldown_refs: [
-            {
-              workflow_run_id: liveRun.workflow_run_id,
-              workflow_id: liveRun.workflow_id,
-              partition_key: liveRun.partition_key
-            }
-          ],
+          drilldown_kind: liveRun ? "workflow_run" : "none",
+          drilldown_refs: liveRun
+            ? [
+                {
+                  workflow_run_id: liveRun.workflow_run_id,
+                  workflow_id: liveRun.workflow_id,
+                  partition_key: liveRun.partition_key
+                }
+              ]
+            : [],
           artifact_refs: [],
-          selection_summary: "1 linked run, 0 downloadable artifacts"
+          selection_summary: liveRun
+            ? "1 linked run, 0 downloadable artifacts"
+            : "0 linked runs, prepare service day after weekly publish"
         }
       ],
       edges: [
@@ -1567,11 +1656,11 @@ function buildLogisticsStoryPayload(planningWeekId: string, request: Request, se
     },
     linked_workflow_runs: {
       weekly_schedule_planning: [weeklyRun],
-      live_dispatch: [liveRun],
+      live_dispatch: liveRun ? [liveRun] : [],
       dispatch_reporting: [reportingRun],
       summary: {
         weekly_schedule_planning_count: 1,
-        live_dispatch_count: 1,
+        live_dispatch_count: liveRun ? 1 : 0,
         dispatch_reporting_count: 1
       }
     },
@@ -1579,31 +1668,34 @@ function buildLogisticsStoryPayload(planningWeekId: string, request: Request, se
       edges: [
         {
           edge_id: "weekly_seed_to_live_dispatch",
-          execution_count: 1,
-          status_counts: { activated: 1 },
+          execution_count: liveRun ? 1 : 0,
+          status_counts: liveRun ? { activated: 1 } : {},
           coherence_failed_count: 0,
-          executions: [
-            {
-              edge_execution_id: "edge-weekly-live-001",
-              edge_id: "weekly_seed_to_live_dispatch",
-              source_workflow_run_id: weeklyRun.workflow_run_id,
-              source_stage_id: "Stage07",
-              source_artifact_version_id: "av-weekly-seed-001",
-              target_workflow_id: liveRun.workflow_id,
-              target_workflow_run_id: liveRun.workflow_run_id,
-              target_stage_id: "Stage01",
-              target_partition_key: liveRun.partition_key,
-              status: "activated",
-              created_at: now,
-              updated_at: now,
-              activated_at: now,
-              source_workflow_run: weeklyRun,
-              target_workflow_run: liveRun,
-              coherence: {
-                coherence_status: "passed"
-              }
-            }
-          ]
+          executions: liveRun
+            ? [
+                {
+                  edge_execution_id: "edge-weekly-live-001",
+                  edge_id: "weekly_seed_to_live_dispatch",
+                  source_workflow_run_id: weeklyRun.workflow_run_id,
+                  source_stage_id: "Stage07",
+                  source_artifact_version_id:
+                    weeklyPublishedArtifact?.artifact_version_id ?? "av-weekly-seed-001",
+                  target_workflow_id: liveRun.workflow_id,
+                  target_workflow_run_id: liveRun.workflow_run_id,
+                  target_stage_id: "Stage01",
+                  target_partition_key: liveRun.partition_key,
+                  status: "activated",
+                  created_at: now,
+                  updated_at: now,
+                  activated_at: now,
+                  source_workflow_run: weeklyRun,
+                  target_workflow_run: liveRun,
+                  coherence: {
+                    coherence_status: "passed"
+                  }
+                }
+              ]
+            : []
         },
         {
           edge_id: "reporting_actuals_to_future_planning",
@@ -1614,9 +1706,9 @@ function buildLogisticsStoryPayload(planningWeekId: string, request: Request, se
             {
               edge_execution_id: "edge-reporting-weekly-001",
               edge_id: "reporting_actuals_to_future_planning",
-              source_workflow_run_id: reportingRun.workflow_run_id,
-              source_stage_id: "Stage05",
-              source_artifact_version_id: "av-reporting-actuals-001",
+              source_workflow_run_id: priorFeedbackRun.workflow_run_id,
+              source_stage_id: "Stage04",
+              source_artifact_version_id: reportingFeedbackArtifact.artifact_version_id,
               target_workflow_id: weeklyRun.workflow_id,
               target_workflow_run_id: weeklyRun.workflow_run_id,
               target_stage_id: "Stage03",
@@ -1625,7 +1717,7 @@ function buildLogisticsStoryPayload(planningWeekId: string, request: Request, se
               created_at: now,
               updated_at: now,
               activated_at: null,
-              source_workflow_run: reportingRun,
+              source_workflow_run: priorFeedbackRun,
               target_workflow_run: weeklyRun,
               coherence: {
                 coherence_status: "passed"
@@ -1635,153 +1727,50 @@ function buildLogisticsStoryPayload(planningWeekId: string, request: Request, se
         }
       ],
       summary: {
-        edge_execution_count: 2,
+        edge_execution_count: liveRun ? 2 : 1,
         coherence_failed_count: 0
       }
     },
     board: {
-      lanes: [
-        { lane: "flags.open", label: "Open Exceptions", position: 5, item_count: 1 },
-        { lane: "human_tasks.open", label: "Open Tasks", position: 10, item_count: 1 },
-        { lane: "human_tasks.claimed", label: "Claimed Tasks", position: 20, item_count: 1 },
-        { lane: "approvals.pending", label: "Pending Approvals", position: 30, item_count: 1 },
-        { lane: "approvals.responded", label: "Responded Approvals", position: 40, item_count: 0 },
-        { lane: "human_tasks.completed", label: "Completed Tasks", position: 50, item_count: 1 },
-        { lane: "flags.resolved", label: "Resolved Exceptions", position: 60, item_count: 0 },
-        { lane: "flags.closed", label: "Closed Exceptions", position: 70, item_count: 0 }
-      ],
-      work_items: [
-        {
-          item_id: "flag:flag-live-001",
-          item_type: "flag",
-          lane: "flags.open",
-          title: "Live dispatch route conflict",
-          workflow_run_id: liveRun.workflow_run_id,
-          workflow_id: liveRun.workflow_id,
-          subject_id: "flag-live-001",
-          kind: "route_conflict",
-          severity: "high",
-          state: "open",
-          available_actions: ["upload_attachment", "download_attachment"],
-          blocking_reason_codes: [],
-          missing_required_inputs: [],
-          linked_artifact_count: 1
-        },
-        {
-          item_id: "human_task:ht-weekly-001",
-          item_type: "human_task",
-          lane:
-            weeklyTask?.state === "CLAIMED"
-              ? "human_tasks.claimed"
-              : weeklyTask?.state === "COMPLETED"
-                ? "human_tasks.completed"
-                : "human_tasks.open",
-          title: "Stage03 planning_feedback_review",
-          workflow_run_id: weeklyRun.workflow_run_id,
-          workflow_id: weeklyRun.workflow_id,
-          subject_id: "ht-weekly-001",
-          stage_id: weeklyTask?.stage_id ?? "Stage03",
-          task_kind: weeklyTask?.task_kind ?? "planning_feedback_review",
-          state: weeklyTask?.state ?? "OPEN",
-          owner_role: weeklyTask?.owner_role ?? "schedule_planner",
-          available_actions: weeklyTask?.available_actions ?? ["claim"],
-          blocking_reason_codes: weeklyTask?.blocking_reason_codes ?? [],
-          missing_required_inputs: weeklyTask?.missing_required_inputs ?? [],
-          linked_artifact_count: 0
-        },
-        {
-          item_id: "human_task:ht-live-001",
-          item_type: "human_task",
-          lane:
-            liveTask?.state === "OPEN"
-              ? "human_tasks.open"
-              : liveTask?.state === "COMPLETED"
-                ? "human_tasks.completed"
-                : "human_tasks.claimed",
-          title: "Stage01 dispatch_seed_intake",
-          workflow_run_id: liveRun.workflow_run_id,
-          workflow_id: liveRun.workflow_id,
-          subject_id: "ht-live-001",
-          stage_id: liveTask?.stage_id ?? "Stage01",
-          task_kind: liveTask?.task_kind ?? "dispatch_seed_intake",
-          state: liveTask?.state ?? "CLAIMED",
-          owner_role: liveTask?.owner_role ?? "dispatch_supervisor",
-          available_actions: liveTask?.available_actions ?? ["complete"],
-          blocking_reason_codes: liveTask?.blocking_reason_codes ?? [],
-          missing_required_inputs: liveTask?.missing_required_inputs ?? [],
-          linked_artifact_count: 1
-        },
-        {
-          item_id: "approval:ap-weekly-001",
-          item_type: "approval",
-          lane: "approvals.pending",
-          title: "business_decision Stage07",
-          workflow_run_id: weeklyRun.workflow_run_id,
-          workflow_id: weeklyRun.workflow_id,
-          subject_id: "ap-weekly-001",
-          approval_kind: "business_decision",
-          scope_kind: "stage",
-          scope_ref: "Stage07",
-          required_role: "operations_manager",
-          state: "PENDING",
-          available_actions: ["respond_approve", "respond_reject"],
-          blocking_reason_codes: [],
-          missing_required_inputs: [],
-          linked_artifact_count: 1
-        },
-        {
-          item_id: "human_task:ht-reporting-001",
-          item_type: "human_task",
-          lane:
-            reportingTask?.state === "OPEN"
-              ? "human_tasks.open"
-              : reportingTask?.state === "CLAIMED"
-                ? "human_tasks.claimed"
-                : "human_tasks.completed",
-          title: "Stage05 finalize_reporting_packet",
-          workflow_run_id: reportingRun.workflow_run_id,
-          workflow_id: reportingRun.workflow_id,
-          subject_id: "ht-reporting-001",
-          stage_id: reportingTask?.stage_id ?? "Stage05",
-          task_kind: reportingTask?.task_kind ?? "finalize_reporting_packet",
-          state: reportingTask?.state ?? "COMPLETED",
-          owner_role: reportingTask?.owner_role ?? "operations_manager",
-          available_actions: reportingTask?.available_actions ?? [],
-          blocking_reason_codes: reportingTask?.blocking_reason_codes ?? [],
-          missing_required_inputs: reportingTask?.missing_required_inputs ?? [],
-          linked_artifact_count: 2
-        }
-      ],
+      lanes: laneDefinitions.map((lane) => ({
+        ...lane,
+        item_count: workItems.filter((item) => item?.lane === lane.lane).length
+      })),
+      work_items: workItems,
       page: { limit: 100, offset: 0 },
       summary: {
-        work_item_count: 5,
-        human_task_count: 3,
-        approval_count: 1,
-        flag_count: 1,
-        primary_actionable_count: 3,
-        workflow_item_counts: {
-          "weekly_schedule_planning.v1": 2,
-          "live_dispatch.v1": 2,
-          "dispatch_reporting.v1": 1
-        }
+        work_item_count: workItems.length,
+        human_task_count: workItems.filter((item) => item?.item_type === "human_task").length,
+        approval_count: 0,
+        flag_count: 0,
+        primary_actionable_count: workItems.filter(
+          (item) => item?.item_type === "human_task" && (item.available_actions?.length ?? 0) > 0
+        ).length,
+        workflow_item_counts: workItems.reduce<Record<string, number>>((acc, item) => {
+          acc[item.workflow_id] = (acc[item.workflow_id] ?? 0) + 1;
+          return acc;
+        }, {})
       }
     },
     official_outputs: {
-      pointers,
-      pointer_outputs: pointers.map((pointer, index) => ({
-        pointer,
-        artifact_version: officialOutputArtifacts[index] ?? null
-      })),
-      official_output_artifacts: officialOutputArtifacts,
+      pointers: [reportingFeedbackPointer],
+      pointer_outputs: [
+        {
+          pointer: reportingFeedbackPointer,
+          artifact_version: reportingFeedbackArtifact
+        }
+      ],
+      official_output_artifacts: [reportingFeedbackArtifact],
       coherence: {
-        coherence_status: "passed"
+        "official:reporting.final_packet.workbook": {
+          coherence_status: "passed"
+        }
       },
       summary: {
-        pointer_count: 2,
-        pointer_output_count: 2,
-        official_output_artifact_count: 2,
+        pointer_count: 1,
+        pointer_output_count: 1,
+        official_output_artifact_count: 1,
         artifact_kind_counts: {
-          "planning.published_weekly_schedule.workbook": 1,
           "reporting.final_packet.workbook": 1
         }
       }
@@ -1794,7 +1783,9 @@ function buildLogisticsStoryPayload(planningWeekId: string, request: Request, se
     },
     coherence: {
       official_outputs: {
-        coherence_status: "passed"
+        "official:reporting.final_packet.workbook": {
+          coherence_status: "passed"
+        }
       },
       handoff_edges: [
         { edge_id: "weekly_seed_to_live_dispatch", coherence_failed_count: 0 },
@@ -1802,6 +1793,62 @@ function buildLogisticsStoryPayload(planningWeekId: string, request: Request, se
       ]
     }
   };
+}
+
+function ensurePreparedLiveDispatchState(serviceDateId: string) {
+  const liveRun =
+    state.workflowRuns.find(
+      (run) => run.workflow_id === "live_dispatch.v1" && run.partition_key === serviceDateId
+    ) ??
+    (() => {
+      const created = buildStoryRun({
+        workflowRunId: "wr-live-001",
+        workflowId: "live_dispatch.v1",
+        partitionKey: serviceDateId,
+        state: "OPEN",
+        activeIssueCount: 0
+      });
+      state.workflowRuns.push(created);
+      return created;
+    })();
+
+  const liveTask =
+    state.humanTasks.find(
+      (task) => task.workflow_run_id === liveRun.workflow_run_id && task.task_kind === "dispatch_seed_intake"
+    ) ??
+    (() => {
+      const now = new Date().toISOString();
+      const created = {
+        human_task_id: "ht-live-001",
+        workflow_run_id: liveRun.workflow_run_id,
+        task_run_id: "tr-live-stage01-001",
+        task_kind: "dispatch_seed_intake",
+        state: "OPEN",
+        candidate_roles: ["dispatch_supervisor"],
+        owner_role: "dispatch_supervisor",
+        assignee_actor_id: null,
+        assignee_actor_type: null,
+        due_at: null,
+        escalation_at: null,
+        lease_version: 0,
+        claimed_at: null,
+        claimed_until: null,
+        linked_approval_id: null,
+        reopen_count: 0,
+        generation: 0,
+        created_at: now,
+        updated_at: now,
+        task_run_state: "READY",
+        stage_id: "Stage01",
+        blocked_on_kind: null,
+        blocked_on_ref: null,
+        spawned_from_flag_id: null
+      };
+      state.humanTasks.push(created);
+      return created;
+    })();
+
+  return { liveRun, liveTask };
 }
 
 export function resetApiState(): void {
@@ -2576,6 +2623,62 @@ export const handlers = [
     return ok({
       command: "api.workflow_runs.workspace",
       workspace
+    });
+  }),
+
+  http.post("*/api/v1/workflow-runs/:workflowRunId/prepare-live-dispatch-day", async ({ params, request }) => {
+    if (!inScope(request)) {
+      return forbiddenWorkflowRun();
+    }
+    const workflowRunId = String(params.workflowRunId);
+    const body = (await request.json()) as Record<string, unknown>;
+    const serviceDateId =
+      typeof body.service_date_id === "string" && body.service_date_id.trim().length > 0
+        ? body.service_date_id.trim()
+        : "SD-2026-03-06";
+    const publishedArtifactVersionId =
+      typeof body.published_artifact_version_id === "string"
+        ? body.published_artifact_version_id
+        : "av-weekly-001";
+
+    const { liveRun, liveTask } = ensurePreparedLiveDispatchState(serviceDateId);
+    state.audit.mutations.push(`prepare-live-dispatch:${workflowRunId}:${serviceDateId}`);
+
+    return ok({
+      command: "api.workflow_runs.prepare_live_dispatch_day",
+      workflow_run_id: workflowRunId,
+      result: {
+        edge_execution: {
+          edge_execution_id: "edge-weekly-live-001",
+          edge_id: "weekly_seed_to_live_dispatch",
+          source_workflow_run_id: workflowRunId,
+          target_workflow_run_id: liveRun.workflow_run_id,
+          target_partition_key: serviceDateId,
+          status: "activated"
+        },
+        target_workflow_run: liveRun,
+        live_seed_artifact: {
+          artifact_version_id: "av-live-001",
+          workflow_run_id: liveRun.workflow_run_id,
+          task_run_id: liveTask.task_run_id,
+          artifact_kind: "dispatch.base_schedule_seed.workbook",
+          artifact_role: "official_input",
+          media_type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+          storage_uri: "memory://story/av-live-001.xlsx",
+          content_digest: "sha256:live001",
+          byte_size: 860,
+          metadata_json: {
+            source_artifact_version_id: publishedArtifactVersionId,
+            service_date_id: serviceDateId,
+            file_name: "dispatch_seed_intake.xlsx"
+          },
+          parent_artifact_version_id: publishedArtifactVersionId,
+          supersedes_artifact_version_id: null,
+          lineage_note: null,
+          created_at: new Date().toISOString()
+        },
+        seed_intake_task: enrichHumanTaskForResponse(liveTask, request)
+      }
     });
   }),
 

@@ -3,6 +3,7 @@ story:
   version: 1
   family_id: logistics_ops_family.v1
   status: canonical_first_demo
+  default_demo_posture: weekly_first_local_demo
   workflow_ids:
     weekly_schedule_planning: weekly_schedule_planning.v1
     live_dispatch: live_dispatch.v1
@@ -46,24 +47,54 @@ story:
       - drilldown_refs
       - artifact_refs
       - selection_summary
+  default_seed_contract:
+    default_seed: fixtures/scenarios/logistics/weekly_first_local_demo_seed.yaml
+    regression_reference_seed: fixtures/scenarios/logistics/three_workflow_demo_story_seed.yaml
+    launcher_script: scripts/run_logistics_local_demo.py
+    start_state:
+      weekly_schedule_planning: one linked current run, open at Stage04/weekly_input_intake
+      dispatch_reporting: one linked current run, open at Stage01/eos_input_intake
+      live_dispatch: no linked current run until explicit prepare-live-dispatch-day
+      prior_feedback: one prior reporting final packet plus visible reporting_actuals_to_future_planning handoff
   expected_story_artifacts:
-    weekly:
+    present_at_seed_time:
+      reporting:
+        - reporting.final_packet.workbook
+      planning_feedback_input:
+        - planning.actual_hours_snapshot.workbook
+    produced_during_walkthrough:
+      weekly:
+        - planning.published_weekly_schedule.workbook
+        - planning.daily_dispatch_seed.workbook
+      live_dispatch_inputs:
+        - dispatch.base_schedule_seed.workbook
+        - dispatch.route_delta_intake.workbook
+      live_dispatch_outputs:
+        - dispatch.official_replan_delta.workbook
+      reporting:
+        - reporting.final_packet.workbook
+    full_lineage_reference_seed:
+      weekly:
       - planning.published_weekly_schedule.workbook
       - planning.daily_dispatch_seed.workbook
-    live_dispatch_inputs:
+      live_dispatch_inputs:
       - dispatch.base_schedule_seed.workbook
       - dispatch.route_delta_intake.workbook
       - dispatch.actual_hours_snapshot.workbook
-    reporting:
+      reporting:
       - reporting.final_packet.workbook
-    planning_feedback_input:
+      planning_feedback_input:
       - planning.actual_hours_snapshot.workbook
   acceptance_walkthrough:
     - step: open_logistics_story_route
       expected: endpoint returns one payload with graph, links, handoffs, board, and official-output summary
-    - step: inspect_weekly_to_live_edge
-      expected: weekly_seed_to_live_dispatch execution status and live run linkage are visible
+    - step: open_weekly_workspace_from_start_here
+      expected: weekly workspace is the primary first-step operator surface and the story remains truthful before weekly publish exists
+    - step: publish_weekly_truth_then_prepare_live_day
+      expected: weekly_seed_to_live_dispatch stays visible before activation, then live run linkage appears only after explicit prepare-live-dispatch-day
     - step: inspect_reporting_feedback_edge
       expected: reporting_actuals_to_future_planning execution and Stage03 input binding lineage are visible
+    - step: open_reporting_workspace_as_final_operator_step
+      expected: reporting workspace remains visible from the start, but the intended walkthrough reaches it after weekly publish and live replan
     - step: inspect_board
-      expected: actionable human task, approval, and flag work appears across weekly, live, and reporting runs
+      expected: actionable human task, approval, and flag work appears for the linked runs that currently exist, and contextual workpage links stay secondary to workspace entrypoints

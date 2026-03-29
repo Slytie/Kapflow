@@ -2,6 +2,13 @@
 
 Record any decisions made since the last session so a fresh Codex run can rehydrate quickly.
 
+## 2026-03-29 (TASK-0155 weekly-first local demo seed, runbook, and workspace-first story shell)
+- Demo-posture decision: the default local logistics walkthrough now starts from a weekly-first seed with one current weekly run open at `Stage04/weekly_input_intake`, one current reporting run open at `Stage01/eos_input_intake`, one prior reporting-feedback run already finalized, and no current live-dispatch run until the operator explicitly prepares the service day.
+- Entry-surface decision: `/demo/logistics` is now workspace-first for the first operator demo, with weekly and reporting workspaces as primary CTAs, live dispatch shown as `Prepare service day` until activation, and workpage links kept contextual/secondary instead of the main starting point.
+- Seeder decision: `scripts/run_logistics_local_demo.py` plus `fixtures/scenarios/logistics/weekly_first_local_demo_seed.yaml` are now the user-facing local demo seed contract; the older `three_workflow_demo_story_seed.yaml` remains regression/reference coverage rather than the default start state.
+- OpenAI honesty decision: weekly Stage04 local demoing stays on the real OpenAI path; the launcher output and runbook must call out `OPENAI_API_KEY` as required rather than silently downgrading behavior.
+- Story-contract decision: the three-workflow demo contract now explicitly allows partial-progress linked runs and official-output summaries during the weekly-first walkthrough, while still preserving the fully linked reference seed for regression coverage.
+
 ## 2026-03-29 (TASK-0153 daily EOS intake, EOD review loop, finalize, and planning feedback)
 - Daily-lane decision: the first implemented EPIC-125 reporting operator loop is now `Stage01/eos_input_intake -> deterministic Stage02/Stage03 workbook build -> Stage04/final_packet_review -> Stage04 approval`, and it stays fully inside the existing workflow/task/approval/artifact/pointer/handoff substrate.
 - Intake-contract decision: `dispatch_reporting.v1` `Stage01/eos_input_intake` required uploads now carry explicit `artifact_role`; `reporting.eos_raw.workbook` is required `official_input`, while `reporting.eos_raw.doc` remains optional evidence only.

@@ -44,6 +44,17 @@ export const workflowRunsRepository = {
     return onetruthApi.getWorkflowRunWorkspace(workflowRunId);
   },
 
+  async prepareLiveDispatchDay(
+    workflowRunId: string,
+    payload: {
+      published_artifact_version_id: string;
+      service_date_id: string;
+      idempotency_key: string;
+    }
+  ) {
+    return onetruthApi.prepareLiveDispatchDay(workflowRunId, payload);
+  },
+
   async uploadAttachment(workflowRunId: string, file: File): Promise<void> {
     await uploadAttachmentForSubject({
       subjectKind: "workflow_run",

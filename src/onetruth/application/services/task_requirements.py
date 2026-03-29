@@ -14,6 +14,8 @@ WEEKLY_WORKFLOW_ID = "weekly_schedule_planning.v1"
 WEEKLY_DRAFT_ARTIFACT_KIND = "planning.draft_weekly_schedule.workbook"
 DISPATCH_REPORTING_WORKFLOW_ID = "dispatch_reporting.v1"
 DISPATCH_REPORTING_DRAFT_ARTIFACT_KIND = "reporting.upd_draft.workbook"
+LIVE_DISPATCH_WORKFLOW_ID = "live_dispatch.v1"
+LIVE_DISPATCH_DELTA_ARTIFACT_KIND = "dispatch.route_delta_intake.workbook"
 
 _REQUIRED_UPLOAD_SPECS: dict[tuple[str, str, str], tuple[dict[str, Any], ...]] = {
     (
@@ -166,6 +168,44 @@ _REQUIRED_UPLOAD_SPECS: dict[tuple[str, str, str], tuple[dict[str, Any], ...]] =
             "allowed_relation_kinds": ("attachment",),
         },
     ),
+    (
+        "live_dispatch.v1",
+        "Stage01",
+        "dispatch_seed_intake",
+    ): (
+        {
+            "dataset_key": "dispatch.route_delta_intake.workbook",
+            "artifact_kind": "dispatch.route_delta_intake.workbook",
+            "artifact_role": "official_input",
+            "allowed_relation_kinds": ("attachment",),
+        },
+        {
+            "dataset_key": "dispatch.actual_hours_snapshot.workbook",
+            "artifact_kind": "dispatch.actual_hours_snapshot.workbook",
+            "artifact_role": "official_input",
+            "allowed_relation_kinds": ("attachment",),
+            "required": False,
+        },
+        {
+            "dataset_key": "dispatch.route_delta_intake.doc",
+            "artifact_kind": "dispatch.route_delta_intake.doc",
+            "artifact_role": "evidence",
+            "allowed_relation_kinds": ("attachment",),
+            "required": False,
+        },
+    ),
+    (
+        "live_dispatch.v1",
+        "Stage03",
+        "dispatcher_review",
+    ): (
+        {
+            "dataset_key": "dispatch.dispatcher_review.doc",
+            "artifact_kind": "dispatch.dispatcher_review.doc",
+            "artifact_role": "evidence",
+            "allowed_relation_kinds": ("attachment",),
+        },
+    ),
 }
 
 _REQUIRED_REVIEW_ARTIFACT_KINDS: dict[tuple[str, str], tuple[str, ...]] = {
@@ -194,6 +234,12 @@ _REQUIRED_REVIEW_ARTIFACT_KINDS: dict[tuple[str, str], tuple[str, ...]] = {
         "final_packet_review",
     ): (
         "reporting.upd_draft.workbook",
+    ),
+    (
+        "Stage03",
+        "dispatcher_review",
+    ): (
+        "dispatch.route_delta_intake.workbook",
     ),
 }
 

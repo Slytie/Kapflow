@@ -3,11 +3,13 @@ from __future__ import annotations
 from typing import Any, Callable
 
 from .base import WorkspaceGraphProjection
+from .live_dispatch import project_live_dispatch_workspace_graph
 from .schedule_planning import project_schedule_planning_workspace_graph
 
 GraphProjector = Callable[..., WorkspaceGraphProjection]
 
 PROJECTOR_REGISTRY: dict[str, GraphProjector] = {
+    "live_dispatch.v1": project_live_dispatch_workspace_graph,
     "schedule_planning.v1": project_schedule_planning_workspace_graph,
 }
 
@@ -60,4 +62,3 @@ def project_workspace_graph(
         latest_event_sequence=latest_event_sequence,
     )
     return projection.as_dict()
-

@@ -16,6 +16,7 @@ SCHEDULE_TEMPLATE_PACK_ROOT = REPO_ROOT / "fixtures/workflows/schedule_planning/
 EXAMPLE_DOCUMENT_CORPUS_PATH = REPO_ROOT / "fixtures/example_document_corpus/manifest.yaml"
 
 ACTION_TO_COMMAND = {
+    "runs.create": ("runs", "create"),
     "tasks.create": ("tasks", "create"),
     "tasks.claim": ("tasks", "claim"),
     "tasks.complete": ("tasks", "complete"),
@@ -290,6 +291,7 @@ class RuntimeScenarioHarness:
             self.scenario.get("activation_key") or f"{self.scenario_id}:workflow-run"
         )
         payload = {
+            "workflow_run_id": self.scenario.get("workflow_run_id"),
             "workflow_id": str(self.scenario["workflow_id"]),
             "workflow_version": str(self.scenario.get("workflow_version", "v1")),
             "tenant_id": str(scope["tenant_id"]),

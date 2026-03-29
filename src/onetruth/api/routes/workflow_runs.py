@@ -5,6 +5,9 @@ import sqlite3
 from typing import Any
 
 from onetruth.application.handlers._shared.command_boundary import CommandError
+from onetruth.application.handlers.logistics_handoff import (
+    prepare_live_dispatch_day_command,
+)
 from onetruth.application.handlers.approvals import (
     list_approvals_for_workflow_run_command,
 )
@@ -296,6 +299,34 @@ def get_workflow_run_workspace_endpoint(
             "event_count": len(timeline_excerpt),
         },
         "freshness": freshness,
+    }
+
+
+def prepare_live_dispatch_day_endpoint(
+    connection: sqlite3.Connection,
+    *,
+    context: RequestContext,
+    workflow_run_id: str,
+    payload: dict[str, Any],
+) -> dict[str, Any]:
+    scoped_workflow_run(connection, context, workflow_run_id)
+    command_payload = {
+        "workflow_run_id": workflow_run_id,
+        "published_artifact_version_id": payload.get("published_artifact_version_id"),
+        "service_date_id": payload.get("service_date_id"),
+        "idempotency_key": payload.get("idempotency_key"),
+        "actor_id": context.actor_id,
+        "actor_type": context.actor_type,
+    }
+    try:
+        result = prepare_live_dispatch_day_command(connection, command_payload)
+    except CommandError as exc:
+        raise api_error_from_command(exc) from exc
+
+    return {
+        "command": "api.workflow_runs.prepare_live_dispatch_day",
+        "workflow_run_id": workflow_run_id,
+        "result": result,
     }
 
 

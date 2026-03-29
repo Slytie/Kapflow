@@ -8,3 +8,4 @@ Current runbooks:
 - `backup_and_restore.md` - environment-state backup, restore, and rehearsal basis for the first-user single-node production/lab reference
 - `rollback_and_deploy.md` - release-bundle deploy and rollback for the first-user single-node production/lab reference
 - `generated_artifact_drift.md`
+- `logistics_local_demo_weekly_first.md` - exact local startup, seed, upload-pack, and click path for the first weekly-first operator walkthrough

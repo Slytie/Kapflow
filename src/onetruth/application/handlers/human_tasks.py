@@ -10,7 +10,12 @@ from onetruth.application.handlers._shared.artifact_effects import (
     _create_artifact_version_effects,
     _ingest_artifact_document_effects,
 )
-from onetruth.application.handlers.approvals import _request_approval_effects
+from onetruth.application.handlers.approvals import (
+    _latest_review_confirmation_for_human_task,
+    _request_approval_effects,
+    _reviewed_artifact_id_from_confirmation,
+)
+from onetruth.application.handlers.pointers import _promote_pointer_effects
 from onetruth.application.handlers._shared.command_boundary import (
     CommandError,
     _assert_actor_type,
@@ -84,6 +89,13 @@ from onetruth.infrastructure.repositories.workflow_runs import get_workflow_run
 WEEKLY_WORKFLOW_ID = "weekly_schedule_planning.v1"
 WEEKLY_DRAFT_ARTIFACT_KIND = "planning.draft_weekly_schedule.workbook"
 WEEKLY_PUBLISH_ACTION = "publish_weekly_base_schedule"
+LIVE_DISPATCH_WORKFLOW_ID = "live_dispatch.v1"
+LIVE_ROUTE_DELTA_ARTIFACT_KIND = "dispatch.route_delta_intake.workbook"
+LIVE_ACTUAL_HOURS_ARTIFACT_KIND = "dispatch.actual_hours_snapshot.workbook"
+LIVE_REVIEW_TASK_KIND = "dispatcher_review"
+LIVE_OFFICIAL_DELTA_ARTIFACT_KIND = "dispatch.official_replan_delta.workbook"
+LIVE_CHANGE_NOTICE_ARTIFACT_KIND = "dispatch.change_notice.doc"
+LIVE_OFFICIAL_POINTER_KEY = "official:dispatch.official_replan_delta.workbook"
 DISPATCH_REPORTING_DRAFT_TEMPLATE_ID = "dispatch_reporting.stage03.upd_draft.workbook.empty.v1"
 
 
@@ -666,8 +678,25 @@ def complete_human_task_command(
             created_at=now,
             storage_root=storage_root,
         )
+        live_effects = _apply_live_dispatch_completion_effects(
+            connection,
+            workflow_run=workflow_run,
+            task_run=task_run,
+            human_task=completed,
+            completion_outcome=completion_outcome,
+            actor_id=str(payload["actor_id"]),
+            actor_type=actor_type,
+            scope=scope,
+            receipt_event_idempotency_base=(
+                receipt.event_idempotency_base if receipt is not None else None
+            ),
+            parent_completion_event_id=parent_completion_event_id,
+            created_at=now,
+            storage_root=storage_root,
+        )
         spawned_children.extend(weekly_effects["spawned_children"])
         spawned_children.extend(dispatch_effects["spawned_children"])
+        spawned_children.extend(live_effects["spawned_children"])
         completed_now = get_human_task(connection, str(payload["human_task_id"]))
         run_now = get_task_run_for_human_task(connection, str(payload["human_task_id"]))
         return {
@@ -677,6 +706,7 @@ def complete_human_task_command(
             "requested_approvals": [
                 *weekly_effects["requested_approvals"],
                 *dispatch_effects["requested_approvals"],
+                *live_effects["requested_approvals"],
             ],
         }
 
@@ -713,6 +743,11 @@ def _effective_completion_outcome(
         return {
             ("Stage01", "eos_input_intake"): "eos_inputs_ready",
             ("Stage04", DISPATCH_REVIEW_TASK_KIND): "draft_ready_for_manager_confirmation",
+        }.get(surface, requested_outcome)
+    if workflow_id == LIVE_DISPATCH_WORKFLOW_ID:
+        return {
+            ("Stage01", "dispatch_seed_intake"): "intake_ready_for_review",
+            ("Stage03", LIVE_REVIEW_TASK_KIND): "reviewed_replan_ready",
         }.get(surface, requested_outcome)
     return requested_outcome
 
@@ -1436,6 +1471,452 @@ def _ensure_dispatch_reporting_review_approval(
         event_idempotency=_event_idempotency_key(
             receipt_event_idempotency_base,
             "dispatch-reporting.stage04.final-packet.approval.requested",
+        ),
+    )
+
+
+def _apply_live_dispatch_completion_effects(
+    connection: sqlite3.Connection,
+    *,
+    workflow_run: dict[str, Any],
+    task_run: dict[str, Any],
+    human_task: dict[str, Any],
+    completion_outcome: str,
+    actor_id: str,
+    actor_type: str,
+    scope: dict[str, Any],
+    receipt_event_idempotency_base: str | None,
+    parent_completion_event_id: str,
+    created_at: str,
+    storage_root: Path | None,
+) -> dict[str, list[dict[str, Any]]]:
+    if str(workflow_run.get("workflow_id") or "") != LIVE_DISPATCH_WORKFLOW_ID:
+        return {"spawned_children": [], "requested_approvals": []}
+
+    workflow_run_id = str(task_run["workflow_run_id"])
+    parent_task_run_id = str(task_run["task_run_id"])
+    human_task_id = str(human_task["human_task_id"])
+    surface = (
+        str(task_run.get("stage_id") or ""),
+        str(task_run.get("task_kind") or ""),
+        completion_outcome,
+    )
+    if surface == ("Stage01", "dispatch_seed_intake", "intake_ready_for_review"):
+        latest_route_delta = _latest_artifact_for_kind(
+            connection,
+            workflow_run_id=workflow_run_id,
+            artifact_kind=LIVE_ROUTE_DELTA_ARTIFACT_KIND,
+        )
+        if latest_route_delta is None:
+            raise CommandError(
+                code="required_artifact_missing",
+                message="live dispatch intake completion requires a route-delta workbook upload",
+                details={
+                    "workflow_run_id": workflow_run_id,
+                    "artifact_kind": LIVE_ROUTE_DELTA_ARTIFACT_KIND,
+                },
+            )
+        review_task = _ensure_live_dispatch_child_human_task(
+            connection,
+            workflow_run_id=workflow_run_id,
+            activation_key=(
+                f"live:{workflow_run_id}:stage03:dispatcher-review:"
+                f"{latest_route_delta['artifact_version_id']}"
+            ),
+            stage_id="Stage03",
+            task_kind=LIVE_REVIEW_TASK_KIND,
+            candidate_roles=["dispatch_supervisor"],
+            owner_role="dispatch_supervisor",
+            actor_id=actor_id,
+            actor_type=actor_type,
+            scope=scope,
+            parent_task_run_id=parent_task_run_id,
+            spawn_rule_id="live_stage03_review_after_seed_intake",
+            parent_completion_event_id=parent_completion_event_id,
+            receipt_event_idempotency_base=receipt_event_idempotency_base,
+            created_at=created_at,
+        )
+        return {"spawned_children": [review_task], "requested_approvals": []}
+
+    if surface == ("Stage03", LIVE_REVIEW_TASK_KIND, "reviewed_replan_ready"):
+        if storage_root is None:
+            raise CommandError(
+                code="storage_root_required",
+                message="live dispatch finalize requires artifact storage access",
+                details={"workflow_run_id": workflow_run_id},
+            )
+        artifacts = list_artifact_versions_for_workflow_run(connection, workflow_run_id)
+        latest_route_delta = _latest_artifact_for_kind(
+            connection,
+            workflow_run_id=workflow_run_id,
+            artifact_kind=LIVE_ROUTE_DELTA_ARTIFACT_KIND,
+        )
+        if latest_route_delta is None:
+            raise CommandError(
+                code="required_artifact_missing",
+                message="live dispatch review completion requires a current route-delta workbook",
+                details={
+                    "workflow_run_id": workflow_run_id,
+                    "artifact_kind": LIVE_ROUTE_DELTA_ARTIFACT_KIND,
+                },
+            )
+        review_confirmation = _latest_review_confirmation_for_human_task(
+            artifacts=artifacts,
+            human_task_id=human_task_id,
+        )
+        reviewed_route_delta_artifact_version_id = _reviewed_artifact_id_from_confirmation(
+            artifacts=artifacts,
+            review_confirmation=review_confirmation,
+            artifact_kind=LIVE_ROUTE_DELTA_ARTIFACT_KIND,
+        )
+        if reviewed_route_delta_artifact_version_id is None:
+            raise CommandError(
+                code="live_dispatch_review_requirements_not_satisfied",
+                message="live dispatch finalize requires review confirmation on the latest route-delta workbook",
+                details={
+                    "workflow_run_id": workflow_run_id,
+                    "human_task_id": human_task_id,
+                    "artifact_kind": LIVE_ROUTE_DELTA_ARTIFACT_KIND,
+                },
+            )
+        latest_route_delta_artifact_version_id = str(latest_route_delta["artifact_version_id"])
+        if reviewed_route_delta_artifact_version_id != latest_route_delta_artifact_version_id:
+            raise CommandError(
+                code="stable_dispatch_delta_required",
+                message="live dispatch finalize requires the reviewed route-delta workbook to remain the latest version",
+                details={
+                    "workflow_run_id": workflow_run_id,
+                    "human_task_id": human_task_id,
+                    "reviewed_route_delta_artifact_version_id": reviewed_route_delta_artifact_version_id,
+                    "latest_route_delta_artifact_version_id": latest_route_delta_artifact_version_id,
+                },
+            )
+        _finalize_live_dispatch_replan(
+            connection,
+            storage_root=storage_root,
+            workflow_run_id=workflow_run_id,
+            task_run_id=parent_task_run_id,
+            human_task_id=human_task_id,
+            reviewed_route_delta_artifact_version_id=reviewed_route_delta_artifact_version_id,
+            actor_id=actor_id,
+            actor_type=actor_type,
+            receipt_event_idempotency_base=receipt_event_idempotency_base,
+        )
+        return {"spawned_children": [], "requested_approvals": []}
+
+    return {"spawned_children": [], "requested_approvals": []}
+
+
+def _ensure_live_dispatch_child_human_task(
+    connection: sqlite3.Connection,
+    *,
+    workflow_run_id: str,
+    activation_key: str,
+    stage_id: str,
+    task_kind: str,
+    candidate_roles: list[str],
+    owner_role: str | None,
+    actor_id: str,
+    actor_type: str,
+    scope: dict[str, Any],
+    parent_task_run_id: str,
+    spawn_rule_id: str,
+    parent_completion_event_id: str,
+    receipt_event_idempotency_base: str | None,
+    created_at: str,
+) -> dict[str, Any]:
+    existing_task_run = get_task_run_by_activation_key(
+        connection,
+        workflow_run_id=workflow_run_id,
+        activation_key=activation_key,
+    )
+    if existing_task_run is not None:
+        if (
+            str(existing_task_run.get("stage_id") or "") != stage_id
+            or str(existing_task_run.get("task_kind") or "") != task_kind
+        ):
+            raise CommandError(
+                code="duplicate_spawned_task_activation",
+                message="live dispatch follow-on activation key is already in use by a different task",
+                details={
+                    "workflow_run_id": workflow_run_id,
+                    "activation_key": activation_key,
+                    "expected_stage_id": stage_id,
+                    "expected_task_kind": task_kind,
+                    "actual_task_run_id": str(existing_task_run["task_run_id"]),
+                },
+            )
+        existing_human_task = get_human_task_by_task_run_id(
+            connection,
+            str(existing_task_run["task_run_id"]),
+        )
+        if existing_human_task is not None:
+            return {
+                "task_run_id": str(existing_task_run["task_run_id"]),
+                "human_task_id": str(existing_human_task["human_task_id"]),
+                "stage_id": stage_id,
+                "task_kind": task_kind,
+                "spawn_rule_id": spawn_rule_id,
+                "activation_key": activation_key,
+                "generation": int(existing_task_run.get("generation") or 0),
+                "spawned_from_flag_id": existing_task_run.get("spawned_from_flag_id"),
+            }
+
+    task_run_id = (
+        str(existing_task_run["task_run_id"])
+        if existing_task_run is not None
+        else f"tr-{uuid4()}"
+    )
+    human_task_id = f"ht-{uuid4()}"
+
+    if existing_task_run is None:
+        create_task_run(
+            connection,
+            task_run_id=task_run_id,
+            workflow_run_id=workflow_run_id,
+            stage_id=stage_id,
+            task_kind=task_kind,
+            state="READY",
+            generation=0,
+            activation_key=activation_key,
+            blocked_on_kind=None,
+            blocked_on_ref=None,
+            spawned_from_flag_id=None,
+            spawned_from_task_run_id=parent_task_run_id,
+            spawn_rule_id=spawn_rule_id,
+            spawn_cause_kind="task_completion",
+            spawn_cause_event_id=parent_completion_event_id,
+            spawn_depth=0,
+            spawn_budget_key=None,
+            created_at=created_at,
+        )
+        append_event(
+            connection,
+            _event_envelope(
+                event_type="task.run.created",
+                tenant_id=scope["tenant_id"],
+                domain_id=scope["domain_id"],
+                actor_type=actor_type,
+                actor_id=actor_id,
+                links=[
+                    {"rel": "subject", "type": "workflow_run", "id": workflow_run_id},
+                    {"rel": "subject", "type": "task_run", "id": task_run_id},
+                ],
+                payload={
+                    "task_run_id": task_run_id,
+                    "stage_id": stage_id,
+                    "task_kind": task_kind,
+                    "activation_key": activation_key,
+                    "generation": 0,
+                    "spawned_from_flag_id": None,
+                    "spawned_from_task_run_id": parent_task_run_id,
+                    "spawn_rule_id": spawn_rule_id,
+                    "spawn_cause_kind": "task_completion",
+                    "spawn_cause_event_id": parent_completion_event_id,
+                    "spawn_budget_key": None,
+                    "spawn_depth": 0,
+                },
+                idempotency_key=_event_idempotency_key(
+                    receipt_event_idempotency_base,
+                    f"live-dispatch.{spawn_rule_id}.task.run.created",
+                ),
+            ),
+        )
+
+    create_human_task(
+        connection,
+        human_task_id=human_task_id,
+        workflow_run_id=workflow_run_id,
+        task_run_id=task_run_id,
+        task_kind=task_kind,
+        state="OPEN",
+        candidate_roles=candidate_roles,
+        owner_role=owner_role,
+        due_at=None,
+        escalation_at=None,
+        generation=0,
+        created_at=created_at,
+    )
+    append_event(
+        connection,
+        _event_envelope(
+            event_type="task.created",
+            tenant_id=scope["tenant_id"],
+            domain_id=scope["domain_id"],
+            actor_type=actor_type,
+            actor_id=actor_id,
+            links=[
+                {"rel": "subject", "type": "workflow_run", "id": workflow_run_id},
+                {"rel": "subject", "type": "task_run", "id": task_run_id},
+                {"rel": "subject", "type": "human_task", "id": human_task_id},
+            ],
+            payload={
+                "human_task_id": human_task_id,
+                "task_kind": task_kind,
+                "state": "OPEN",
+                "candidate_roles": candidate_roles,
+            },
+            idempotency_key=_event_idempotency_key(
+                receipt_event_idempotency_base,
+                f"live-dispatch.{spawn_rule_id}.task.created",
+            ),
+        ),
+    )
+    return {
+        "task_run_id": task_run_id,
+        "human_task_id": human_task_id,
+        "stage_id": stage_id,
+        "task_kind": task_kind,
+        "spawn_rule_id": spawn_rule_id,
+        "activation_key": activation_key,
+        "generation": 0,
+        "spawned_from_flag_id": None,
+    }
+
+
+def _finalize_live_dispatch_replan(
+    connection: sqlite3.Connection,
+    *,
+    storage_root: Path,
+    workflow_run_id: str,
+    task_run_id: str,
+    human_task_id: str,
+    reviewed_route_delta_artifact_version_id: str,
+    actor_id: str,
+    actor_type: str,
+    receipt_event_idempotency_base: str | None,
+) -> None:
+    reviewed_route_delta = get_artifact_version(
+        connection,
+        reviewed_route_delta_artifact_version_id,
+    )
+    if reviewed_route_delta is None:
+        raise CommandError(
+            code="artifact_version_not_found",
+            message="reviewed route-delta artifact was not found for live dispatch finalize",
+            details={"artifact_version_id": reviewed_route_delta_artifact_version_id},
+        )
+    actual_hours_artifact = _latest_artifact_for_kind(
+        connection,
+        workflow_run_id=workflow_run_id,
+        artifact_kind=LIVE_ACTUAL_HOURS_ARTIFACT_KIND,
+    )
+    finalized_at = utc_now_iso()
+    change_notice_metadata = {
+        "schema_version": "1.0",
+        "kind": "live_dispatch_change_notice",
+        "workflow_run_id": workflow_run_id,
+        "task_run_id": task_run_id,
+        "human_task_id": human_task_id,
+        "reviewed_route_delta_artifact_version_id": reviewed_route_delta_artifact_version_id,
+        "actual_hours_artifact_version_id": (
+            str(actual_hours_artifact["artifact_version_id"])
+            if actual_hours_artifact is not None
+            else None
+        ),
+        "published_at": finalized_at,
+        "published_by": {"id": actor_id, "type": actor_type},
+    }
+    change_notice = _create_blob_artifact_version(
+        connection,
+        storage_root=storage_root,
+        workflow_run_id=workflow_run_id,
+        task_run_id=task_run_id,
+        artifact_kind=LIVE_CHANGE_NOTICE_ARTIFACT_KIND,
+        artifact_role="evidence",
+        artifact_bytes=_json_bytes(change_notice_metadata),
+        file_name=f"{workflow_run_id}-change-notice.json",
+        media_type="application/json",
+        metadata_json=change_notice_metadata,
+        parent_artifact_version_id=reviewed_route_delta_artifact_version_id,
+        supersedes_artifact_version_id=None,
+        lineage_note="live_dispatch_change_notice",
+        actor_id=actor_id,
+        actor_type=actor_type,
+        links=[
+            {
+                "subject_kind": "task_run",
+                "subject_id": task_run_id,
+                "relation_kind": "output",
+            },
+            {
+                "subject_kind": "human_task",
+                "subject_id": human_task_id,
+                "relation_kind": "output",
+            },
+        ],
+        event_idempotency=_event_idempotency_key(
+            receipt_event_idempotency_base,
+            "live-dispatch.change-notice.artifact.version.created",
+        ),
+    )
+
+    reviewed_metadata = reviewed_route_delta.get("metadata_json")
+    official_delta_metadata = dict(reviewed_metadata) if isinstance(reviewed_metadata, dict) else {}
+    official_delta_metadata.update(
+        {
+            "officialized_from_artifact_version_id": reviewed_route_delta_artifact_version_id,
+            "change_notice_artifact_version_id": str(change_notice["artifact_version_id"]),
+            "finalized_at": finalized_at,
+        }
+    )
+    official_delta = _create_artifact_version_effects(
+        connection,
+        {
+            "artifact_version_id": f"av-{uuid4()}",
+            "workflow_run_id": workflow_run_id,
+            "task_run_id": task_run_id,
+            "artifact_kind": LIVE_OFFICIAL_DELTA_ARTIFACT_KIND,
+            "artifact_role": "official_output",
+            "media_type": str(reviewed_route_delta["media_type"]),
+            "storage_uri": str(reviewed_route_delta["storage_uri"]),
+            "content_digest": str(reviewed_route_delta["content_digest"]),
+            "byte_size": reviewed_route_delta.get("byte_size"),
+            "metadata_json": official_delta_metadata,
+            "parent_artifact_version_id": reviewed_route_delta_artifact_version_id,
+            "lineage_note": "live_dispatch_official_replan_delta",
+            "links": [
+                {
+                    "subject_kind": "task_run",
+                    "subject_id": task_run_id,
+                    "relation_kind": "output",
+                },
+                {
+                    "subject_kind": "human_task",
+                    "subject_id": human_task_id,
+                    "relation_kind": "output",
+                },
+            ],
+            "actor_id": actor_id,
+            "actor_type": actor_type,
+        },
+        event_idempotency=_event_idempotency_key(
+            receipt_event_idempotency_base,
+            "live-dispatch.official-replan-delta.artifact.version.created",
+        ),
+    )
+    _promote_pointer_effects(
+        connection,
+        {
+            "workflow_run_id": workflow_run_id,
+            "scope_kind": "stage",
+            "scope_ref": "Stage05",
+            "pointer_key": LIVE_OFFICIAL_POINTER_KEY,
+            "artifact_kind": LIVE_OFFICIAL_DELTA_ARTIFACT_KIND,
+            "artifact_version_id": str(official_delta["artifact_version_id"]),
+            "promotion_reason": "official_dispatch_replan",
+            "promoted_by_task_run_id": task_run_id,
+            "reviewed_artifact_version_id": reviewed_route_delta_artifact_version_id,
+            "actor_id": actor_id,
+            "actor_type": actor_type,
+        },
+        event_idempotency=_event_idempotency_key(
+            receipt_event_idempotency_base,
+            "live-dispatch.official-replan-delta.artifact.pointer.promoted",
+        ),
+        drift_idempotency=_event_idempotency_key(
+            receipt_event_idempotency_base,
+            "live-dispatch.official-replan-delta.artifact.pointer.drift-detected",
         ),
     )
 

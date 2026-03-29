@@ -1,0 +1,15 @@
+{
+  "schema_version": "1.0",
+  "kind": "live_dispatch_small_change_delta",
+  "service_date_id": "SD-2026-03-06",
+  "changes": [
+    {
+      "route_id": "R-140",
+      "delta": 1,
+      "reason": "Demo small-change add-on route"
+    }
+  ],
+  "notes": [
+    "Bounded small-change live delta for the TASK-0155 local demo walkthrough."
+  ]
+}

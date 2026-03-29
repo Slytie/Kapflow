@@ -322,8 +322,6 @@ def _query_story_edge_rows(
                 continue
             if str(item["target_partition_key"]) != planning_week_id:
                 continue
-            if service_date_id is not None and source_partition_key != service_date_id:
-                continue
         else:
             continue
         filtered.append(item)

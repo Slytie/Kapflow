@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useSearchParams } from "react-router-dom";
 
 import { LaneColumn } from "@/components/LaneColumn";
@@ -7,6 +7,7 @@ import { StatePanel } from "@/components/StatePanel";
 import { WorkflowGraph } from "@/components/WorkflowGraph";
 import { apiConfig } from "@/lib/api/config";
 import { errorText } from "@/lib/api/errorText";
+import { createIdempotencyKey } from "@/lib/api/idempotency";
 import { onetruthApi } from "@/lib/api/onetruthApi";
 import { logisticsStoryRepository, workflowRunsRepository } from "@/lib/repositories";
 import { downloadBinaryToFile } from "@/lib/repositories/artifactAttachments";
@@ -262,6 +263,42 @@ function canonicalHeaderGuidance(
   return `${workpageLabel}: choose a linked ${workflowLabel} run from the family-node drill-down below.`;
 }
 
+function preferredHeaderRun(runs: WorkflowRunRow[]): WorkflowRunRow | null {
+  if (runs.length !== 1) {
+    return null;
+  }
+  return runs[0];
+}
+
+function storyModuleById(
+  story: LogisticsThreeWorkflowStoryContract,
+  moduleId: string
+): LogisticsStoryFamilyModule | null {
+  return story.family_graph.modules.find((module) => module.module_id === moduleId) ?? null;
+}
+
+function latestOfficialArtifactForRun(
+  story: LogisticsThreeWorkflowStoryContract,
+  workflowRunId: string,
+  artifactKind: string
+): string | null {
+  const matches = story.official_outputs.official_output_artifacts.filter(
+    (artifact) =>
+      artifact.workflow_run_id === workflowRunId && artifact.artifact_kind === artifactKind
+  );
+  if (matches.length === 0) {
+    return null;
+  }
+  matches.sort((left, right) => {
+    const createdAtCompare = right.created_at.localeCompare(left.created_at);
+    if (createdAtCompare !== 0) {
+      return createdAtCompare;
+    }
+    return right.artifact_version_id.localeCompare(left.artifact_version_id);
+  });
+  return matches[0]?.artifact_version_id ?? null;
+}
+
 export function LogisticsDemoPage(): JSX.Element {
   const { open } = useDrawer();
   const queryClient = useQueryClient();
@@ -285,6 +322,7 @@ export function LogisticsDemoPage(): JSX.Element {
   });
 
   const story = query.data;
+  const activeServiceDateId = serviceDateId ?? story?.partitions.service_date_ids[0] ?? "";
   const runById = useMemo(() => {
     if (!story) {
       return new Map<string, WorkflowRunRow>();
@@ -405,6 +443,63 @@ export function LogisticsDemoPage(): JSX.Element {
     () => (story ? [...story.board.lanes].sort((left, right) => left.position - right.position) : []),
     [story]
   );
+  const weeklyHeaderRun = useMemo(
+    () =>
+      story
+        ? preferredHeaderRun(story.linked_workflow_runs.weekly_schedule_planning)
+        : null,
+    [story]
+  );
+  const reportingHeaderRun = useMemo(
+    () =>
+      story
+        ? preferredHeaderRun(story.linked_workflow_runs.dispatch_reporting)
+        : null,
+    [story]
+  );
+  const liveHeaderRun = useMemo(
+    () => (story ? preferredHeaderRun(story.linked_workflow_runs.live_dispatch) : null),
+    [story]
+  );
+  const weeklyHeaderLink = weeklyHeaderRun ? headerWorkpageRouteForRun(weeklyHeaderRun) : null;
+  const reportingHeaderLink = reportingHeaderRun
+    ? headerWorkpageRouteForRun(reportingHeaderRun)
+    : null;
+  const weeklyPublishedArtifactVersionId = useMemo(() => {
+    if (!story || !weeklyHeaderRun) {
+      return null;
+    }
+    return latestOfficialArtifactForRun(
+      story,
+      weeklyHeaderRun.workflow_run_id,
+      "planning.published_weekly_schedule.workbook"
+    );
+  }, [story, weeklyHeaderRun]);
+  const liveModule = useMemo(
+    () => (story ? storyModuleById(story, "live_dispatch") : null),
+    [story]
+  );
+
+  const prepareLiveDispatchMutation = useMutation({
+    mutationFn: async () => {
+      if (!weeklyHeaderRun || !weeklyPublishedArtifactVersionId || !activeServiceDateId) {
+        throw new Error("Weekly publish must exist before preparing the live dispatch day.");
+      }
+      return workflowRunsRepository.prepareLiveDispatchDay(weeklyHeaderRun.workflow_run_id, {
+        published_artifact_version_id: weeklyPublishedArtifactVersionId,
+        service_date_id: activeServiceDateId,
+        idempotency_key: createIdempotencyKey(
+          "prepare-live-dispatch-day",
+          `${weeklyHeaderRun.workflow_run_id}:${activeServiceDateId}`
+        )
+      });
+    },
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({
+        queryKey: ["logistics-demo-story", planningWeekId, serviceDateId]
+      });
+    }
+  });
 
   const prefetchDrilldown = (workflowRunId: string): void => {
     void queryClient.prefetchQuery({
@@ -505,21 +600,6 @@ export function LogisticsDemoPage(): JSX.Element {
     return <StatePanel kind="empty" title="No logistics story payload available" />;
   }
 
-  const scheduleHeaderRun =
-    story.linked_workflow_runs.weekly_schedule_planning.length === 1
-      ? story.linked_workflow_runs.weekly_schedule_planning[0]
-      : null;
-  const eodHeaderRun =
-    story.linked_workflow_runs.dispatch_reporting.length === 1
-      ? story.linked_workflow_runs.dispatch_reporting[0]
-      : null;
-  const scheduleHeaderLink = scheduleHeaderRun
-    ? headerWorkpageRouteForRun(scheduleHeaderRun)
-    : null;
-  const eodHeaderLink = eodHeaderRun
-    ? headerWorkpageRouteForRun(eodHeaderRun)
-    : null;
-
   return (
     <section className="logistics-demo-page" data-testid="logistics-demo-page">
       <header className="logistics-demo-page__header">
@@ -532,10 +612,74 @@ export function LogisticsDemoPage(): JSX.Element {
         </div>
         <div className="logistics-demo-page__header-links">
           <div className="logistics-demo-page__header-link-group">
-            <p>Canonical run-backed workpages</p>
-            {scheduleHeaderLink ? (
-              <Link className="link-button" to={scheduleHeaderLink.to}>
-                {scheduleHeaderLink.label}
+            <p>Start Here: Weekly Planning</p>
+            {weeklyHeaderRun ? (
+              <Link className="link-button" to={`/runs/${weeklyHeaderRun.workflow_run_id}/workspace`}>
+                Open weekly workspace
+              </Link>
+            ) : (
+              <p className="logistics-demo-page__header-guidance">
+                No linked weekly-planning run is available for this story.
+              </p>
+            )}
+            <p className="logistics-demo-page__header-guidance">
+              Upload weekly inputs, run the real Stage04 OpenAI build, review the draft, and publish before starting live dispatch.
+            </p>
+            <p className="logistics-demo-page__header-guidance">
+              Weekly Stage04 build requires <code>OPENAI_API_KEY</code> in the backend environment.
+            </p>
+          </div>
+          <div className="logistics-demo-page__header-link-group">
+            <p>Step 2: Live Dispatch</p>
+            {liveHeaderRun ? (
+              <Link className="link-button" to={`/runs/${liveHeaderRun.workflow_run_id}/workspace`}>
+                Open live dispatch workspace
+              </Link>
+            ) : weeklyHeaderRun && weeklyPublishedArtifactVersionId ? (
+              <button
+                type="button"
+                className="link-button"
+                onClick={() => void prepareLiveDispatchMutation.mutateAsync()}
+                disabled={prepareLiveDispatchMutation.isPending}
+              >
+                {prepareLiveDispatchMutation.isPending ? "Preparing service day..." : "Prepare service day"}
+              </button>
+            ) : (
+              <p className="logistics-demo-page__header-guidance">
+                Publish the current weekly schedule first. This step creates the live-dispatch run for {activeServiceDateId || "the selected service date"}.
+              </p>
+            )}
+            <p className="logistics-demo-page__header-guidance">
+              {liveModule?.selection_summary?.trim().length
+                ? liveModule.selection_summary
+                : "Prepare the service day after weekly publish; no live-dispatch run exists yet."}
+            </p>
+            {prepareLiveDispatchMutation.isError ? (
+              <p className="detail-drawer__error">
+                {errorText(prepareLiveDispatchMutation.error, "Unable to prepare the live dispatch day")}
+              </p>
+            ) : null}
+          </div>
+          <div className="logistics-demo-page__header-link-group">
+            <p>Step 3: Reporting</p>
+            {reportingHeaderRun ? (
+              <Link className="link-button" to={`/runs/${reportingHeaderRun.workflow_run_id}/workspace`}>
+                Open reporting workspace
+              </Link>
+            ) : (
+              <p className="logistics-demo-page__header-guidance">
+                No linked dispatch-reporting run is available for this story.
+              </p>
+            )}
+            <p className="logistics-demo-page__header-guidance">
+              Finish the daily walkthrough here by uploading EOS inputs, reviewing the generated draft, and approving finalization.
+            </p>
+          </div>
+          <div className="logistics-demo-page__header-link-group logistics-demo-page__header-link-group--secondary">
+            <p>Contextual workpages</p>
+            {weeklyHeaderLink ? (
+              <Link className="link-button" to={weeklyHeaderLink.to}>
+                {weeklyHeaderLink.label}
               </Link>
             ) : (
               <p className="logistics-demo-page__header-guidance">
@@ -546,9 +690,9 @@ export function LogisticsDemoPage(): JSX.Element {
                 )}
               </p>
             )}
-            {eodHeaderLink ? (
-              <Link className="link-button" to={eodHeaderLink.to}>
-                {eodHeaderLink.label}
+            {reportingHeaderLink ? (
+              <Link className="link-button" to={reportingHeaderLink.to}>
+                {reportingHeaderLink.label}
               </Link>
             ) : (
               <p className="logistics-demo-page__header-guidance">
@@ -559,9 +703,6 @@ export function LogisticsDemoPage(): JSX.Element {
                 )}
               </p>
             )}
-          </div>
-          <div className="logistics-demo-page__header-link-group logistics-demo-page__header-link-group--secondary">
-            <p>Compatibility alias workpages</p>
             <Link className="link-button" to="/demo/logistics/workpages/schedule-v0">
               Open demo schedule alias
             </Link>

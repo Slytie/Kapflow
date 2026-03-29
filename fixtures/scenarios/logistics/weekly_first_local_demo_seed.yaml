@@ -1,0 +1,106 @@
+scenario_id: logistics_weekly_first_local_demo_seed
+workflow_run_id: wr-demo-weekly-current
+workflow_id: weekly_schedule_planning.v1
+workflow_version: v1
+partition_key: PW-2026-W10
+logical_date: "2026-03-02"
+activation_key: logistics-demo:weekly:current
+scope:
+  tenant_id: tenant-logistics
+  domain_id: domain-hub
+steps:
+  - id: create_weekly_intake_task
+    action: tasks.create
+    payload:
+      workflow_run_id: "{{workflow_run.workflow_run_id}}"
+      task_run_id: tr-demo-weekly-intake
+      human_task_id: ht-demo-weekly-intake
+      stage_id: Stage04
+      task_kind: weekly_input_intake
+      activation_key: logistics-demo:weekly:stage04:intake
+      candidate_roles:
+        - schedule_planner
+      owner_role: schedule_planner
+      create_human_task: true
+      idempotency_key: scenario:logistics_weekly_first_local_demo_seed:task:weekly-intake
+    save_as: weekly_intake_task
+  - id: create_prior_reporting_run
+    action: runs.create
+    payload:
+      workflow_run_id: wr-demo-reporting-feedback
+      workflow_id: dispatch_reporting.v1
+      workflow_version: v1
+      tenant_id: tenant-logistics
+      domain_id: domain-hub
+      partition_key: SD-2026-03-05
+      logical_date: "2026-03-05"
+      activation_key: logistics-demo:reporting:feedback
+      idempotency_key: scenario:logistics_weekly_first_local_demo_seed:runs.create:prior-reporting
+    save_as: prior_reporting_run
+  - id: create_prior_reporting_final_packet
+    action: artifacts.create-version
+    payload:
+      workflow_run_id: "{{prior_reporting_run.workflow_run.workflow_run_id}}"
+      artifact_version_id: av-demo-reporting-feedback-final
+      artifact_kind: reporting.final_packet.workbook
+      artifact_role: official_output
+      media_type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet
+      storage_uri: inmem://scenario/logistics/weekly-first-demo/reporting-final-packet.xlsx
+      content_digest: sha256:logistics-weekly-first-demo-reporting-final-packet
+      canonical_partition_kind: ServiceDateID
+      canonical_partition_key: SD-2026-03-05
+      metadata_json:
+        scenario_id: logistics_weekly_first_local_demo_seed
+        file_name: reporting-final-packet-prior.xlsx
+      idempotency_key: scenario:logistics_weekly_first_local_demo_seed:artifact:prior-reporting-final
+    save_as: prior_reporting_final_packet
+  - id: promote_prior_reporting_pointer
+    action: pointers.promote
+    payload:
+      workflow_run_id: "{{prior_reporting_run.workflow_run.workflow_run_id}}"
+      scope_kind: stage
+      scope_ref: Stage04
+      pointer_key: official:reporting.final_packet.workbook
+      artifact_kind: reporting.final_packet.workbook
+      artifact_version_id: "{{prior_reporting_final_packet.artifact_version.artifact_version_id}}"
+      promotion_reason: official_finalize
+      actor_id: human:demo-operator
+      actor_type: human
+      idempotency_key: scenario:logistics_weekly_first_local_demo_seed:pointer:prior-reporting-final
+    save_as: prior_reporting_pointer
+  - id: notify_prior_reporting_feedback
+    action: handoffs.notify-only
+    payload:
+      edge_id: reporting_actuals_to_future_planning
+      source_workflow_run_id: "{{prior_reporting_run.workflow_run.workflow_run_id}}"
+      source_artifact_version_id: "{{prior_reporting_final_packet.artifact_version.artifact_version_id}}"
+      idempotency_key: scenario:logistics_weekly_first_local_demo_seed:handoff:reporting-feedback
+    save_as: reporting_feedback_handoff
+  - id: create_current_reporting_run
+    action: runs.create
+    payload:
+      workflow_run_id: wr-demo-reporting-current
+      workflow_id: dispatch_reporting.v1
+      workflow_version: v1
+      tenant_id: tenant-logistics
+      domain_id: domain-hub
+      partition_key: SD-2026-03-06
+      logical_date: "2026-03-06"
+      activation_key: logistics-demo:reporting:current
+      idempotency_key: scenario:logistics_weekly_first_local_demo_seed:runs.create:current-reporting
+    save_as: current_reporting_run
+  - id: create_current_reporting_intake_task
+    action: tasks.create
+    payload:
+      workflow_run_id: "{{current_reporting_run.workflow_run.workflow_run_id}}"
+      task_run_id: tr-demo-reporting-intake
+      human_task_id: ht-demo-reporting-intake
+      stage_id: Stage01
+      task_kind: eos_input_intake
+      activation_key: logistics-demo:reporting:stage01:intake
+      candidate_roles:
+        - dispatch_supervisor
+      owner_role: dispatch_supervisor
+      create_human_task: true
+      idempotency_key: scenario:logistics_weekly_first_local_demo_seed:task:reporting-intake
+    save_as: current_reporting_intake_task

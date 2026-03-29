@@ -4,7 +4,7 @@
 Stage 4 - Vertical Slice MVP (repo merged around one truth system)
 
 ## Current milestone
-Primary runtime/debug work remains the logistics weekly/live family. `TASK-0137` through `TASK-0153` are now complete, so the repo now has the closed EPIC-121 artifact-backed EOD slice, the full EPIC-122 workflow-run-backed workpage access layer across backend and frontend, the closed EPIC-123 Stage04 schedule artifact-backed slice, the closed EPIC-124 stage-linked workspace CTA slice, the closed EPIC-125 contract freeze, the first implemented EPIC-125 weekly operator lane, and the first implemented EPIC-125 daily reporting operator lane. The current demo/query and artifact-backed EOD routes stay intact as compatibility aliases, the canonical run-backed route family and minimal run-context/draft-resolution boundary remain frozen in repo-native docs, the canonical `/runs/:workflowRunId/workpages/*` schedule/EOD surfaces now exist in the app, `/demo/logistics` exposes those canonical workpage routes as the primary discoverable path, supported `/runs/:workflowRunId/workspace` work items now project and render backend-owned `workpage_actions[]` without adding a second shell or route family, and the next app-facing implementation tranche is now explicitly EPIC-125 `TASK-0154`.
+Primary runtime/debug work remains the logistics weekly/live family. `TASK-0137` through `TASK-0153` are now complete, and `TASK-0155` is now implemented as the weekly-first local operator demo slice. The repo now has the closed EPIC-121 artifact-backed EOD slice, the full EPIC-122 workflow-run-backed workpage access layer across backend and frontend, the closed EPIC-123 Stage04 schedule artifact-backed slice, the closed EPIC-124 stage-linked workspace CTA slice, the closed EPIC-125 contract freeze, the first implemented EPIC-125 weekly operator lane, the first implemented EPIC-125 daily reporting operator lane, and a dedicated weekly-first local demo seed/runbook/entry surface over the same canonical runtime truth. The current demo/query and artifact-backed EOD routes stay intact as compatibility aliases, the canonical run-backed route family and minimal run-context/draft-resolution boundary remain frozen in repo-native docs, `/demo/logistics` now starts from workspace-first weekly/reporting entrypoints plus an explicit live `Prepare service day` action, and the next app-facing implementation tranche remains the remaining bounded live-dispatch closure in EPIC-125 `TASK-0154`.
 
 Current implemented baseline:
 - `/demo/logistics/workpages/schedule-v0`
@@ -75,6 +75,11 @@ Current implemented baseline:
 - weekly `Stage04/work_item` completion now upserts `Stage05/final_review`, and weekly `Stage05/final_review` completion now requests one `Stage06` `publish_weekly_base_schedule` approval
 - approving weekly `Stage06` publish approvals now auto-creates `planning.publish_packet.doc`, auto-creates `planning.published_weekly_schedule.workbook`, and auto-promotes `official:planning.published_weekly_schedule.workbook` while failing closed if the reviewed draft is stale
 - the frontend now renders `Run Stage04 Build` wherever task actions are shown, sends required-upload `artifact_role` through the upload flow, and labels weekly task surfaces as intake/build/review instead of raw task-kind jargon
+- the repo now has a dedicated weekly-first local demo seed at `fixtures/scenarios/logistics/weekly_first_local_demo_seed.yaml` plus launcher `scripts/run_logistics_local_demo.py`, which emits stable story/workspace URLs, a nullable live workspace URL, the live prepare-day path, and `openai_api_key_present`
+- the default local demo seed now starts with prior reporting feedback already bound into weekly actual-hours truth, a current weekly run open at `Stage04/weekly_input_intake`, a current reporting run open at `Stage01/eos_input_intake`, and no current live run until the operator explicitly prepares the service day
+- `/demo/logistics` is now a workspace-first operator shell for the first local walkthrough: weekly and reporting workspaces are primary CTAs, live dispatch stays in `Prepare service day` posture until activation, and contextual workpage links are secondary
+- the app now exposes `POST /api/v1/workflow-runs/{workflow_run_id}/prepare-live-dispatch-day` so the demo shell can create the live run/seed intake task through canonical runtime truth instead of requiring a CLI detour
+- the first local demo runbook now lives at `docs/ops/runbooks/logistics_local_demo_weekly_first.md`, and the bounded demo upload pack lives at `fixtures/logistics/local_demo_upload_pack/`
 
 Current EPIC-122 implemented route and contract baseline (`TASK-0137` + `TASK-0138` + `TASK-0139` + `TASK-0140` + `TASK-0141`):
 - canonical backend workflow-run-backed workpage route family:
@@ -97,7 +102,7 @@ Immediate next application package:
 - weekly Friday machine truth is now frozen as Stage04-ready workbook input (`planning.route_slot_requirements.workbook`, approved availability, seeded driver capabilities, plus actual-hours feedback), while raw route email/doc remains evidence only
 - daily actual-routes truth remains in `dispatch_reporting.v1`; the existing EOD artifact-backed workpage stays attached to the generated reporting draft artifact rather than becoming a finalization shortcut
 - daily schedule change remains a bounded manual `live_dispatch.v1` delta lane over existing seed activation and official delta promotion semantics; do not widen into live-dispatch candidate generation or widened weekly schedule editing
-- the first serious local FE/BE demo milestone is after `TASK-0155`, while the continuous production-shaped cadence/deploy milestone remains after `TASK-0156`
+- the first serious local FE/BE demo path is now seeded and runnable under `TASK-0155`; capture walkthrough feedback in `TASK-0157`, while the continuous production-shaped cadence/deploy milestone remains after `TASK-0156`
 - do not start EPIC-126 hardening until the first local demo feedback is real
 - the known pre-existing run-backed EOD latest-draft-after-submit regression in `dispatch_reporting_workbook.py` remains a separate baseline caveat and is not part of EPIC-125 scope
 
@@ -207,9 +212,9 @@ Repo-truth certification snapshot: current capability status and command/test ev
 - Adopted a pytest-backed TDD harness with a stable AT-SCH scenario catalog and reference replay reducer
 
 ### Next tasks (priority order)
-1. `TASK-0154` - Add the minimal manual daily-replan lane through live-dispatch seed activation and official delta promotion, while keeping the lane non-algorithmic.
-2. `TASK-0155` - Add the local demo runbook, seeded operator smoke path, and stable entrypoints for the first serious weekly/daily walkthrough.
-3. `TASK-0156` - Add the external cadence tick and single-node production-shaped runbook after the local demo path is real.
+1. `TASK-0154` - Finish the remaining bounded live-dispatch closure around the manual daily-replan lane, especially the not-yet-closed major-change/approval policy semantics.
+2. `TASK-0156` - Add the external cadence tick and single-node production-shaped runbook after the weekly-first local demo path is real.
+3. `TASK-0157` - Sync the first local-demo feedback back into repo-native planning truth without starting EPIC-126 hardening early.
 
 ## Test-first working mode
 Before adding runtime services or API surfaces:

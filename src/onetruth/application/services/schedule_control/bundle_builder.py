@@ -3,7 +3,10 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import date, timedelta
 import hashlib
+import json
 from typing import Any, Iterable, Mapping
+
+from onetruth.infrastructure.artifacts.storage import ArtifactStorageError, read_blob
 
 from .route_slot_requirements import RouteSlotRequirement, parse_route_slot_requirements
 
@@ -1267,11 +1270,49 @@ def _artifact_label(artifact: Mapping[str, Any]) -> str:
 def _metadata_json(artifact: Mapping[str, Any]) -> dict[str, Any]:
     metadata = artifact.get("metadata_json")
     if isinstance(metadata, dict):
+        if _is_generic_frontend_upload_metadata(metadata):
+            parsed = _parsed_json_blob_metadata(artifact)
+            if parsed is not None:
+                return parsed
         return metadata
+    parsed = _parsed_json_blob_metadata(artifact)
+    if parsed is not None:
+        return parsed
     raise ValueError(
         "artifact metadata_json must be a JSON object "
         f"(artifact_version_id={artifact.get('artifact_version_id')})"
     )
+
+
+def _is_generic_frontend_upload_metadata(metadata: Mapping[str, Any]) -> bool:
+    generic_keys = {
+        "original_file_name",
+        "uploaded_via",
+        "subject_kind",
+        "subject_id",
+        "ingress_file_name",
+        "ingress_media_type",
+        "ingress_kind",
+    }
+    metadata_keys = {str(key) for key in metadata.keys()}
+    if not metadata_keys:
+        return True
+    return metadata_keys.issubset(generic_keys)
+
+
+def _parsed_json_blob_metadata(artifact: Mapping[str, Any]) -> dict[str, Any] | None:
+    storage_uri = str(artifact.get("storage_uri") or "").strip()
+    if not storage_uri:
+        return None
+    try:
+        blob = read_blob(storage_uri)
+    except ArtifactStorageError:
+        return None
+    try:
+        parsed = json.loads(blob.decode("utf-8"))
+    except (UnicodeDecodeError, json.JSONDecodeError):
+        return None
+    return parsed if isinstance(parsed, dict) else None
 
 
 def _extract_table(

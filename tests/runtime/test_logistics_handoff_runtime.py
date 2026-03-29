@@ -1502,6 +1502,96 @@ def test_notify_only_handoff_is_idempotent_for_target_run_resolution_and_edge_re
     assert binding_rows[0]["source_ref"] == str(final_packet["artifact_version_id"])
 
 
+def test_notify_only_handoff_refreshes_weekly_actual_hours_binding_for_newer_feedback(
+    tmp_path: Path,
+) -> None:
+    db_url, db_path = _init_db(tmp_path)
+    first_reporting_run = _create_workflow_run(
+        db_url,
+        workflow_id="dispatch_reporting.v1",
+        partition_key="SD-2026-03-05",
+        logical_date="2026-03-05",
+        activation_key="dispatch_reporting.v1:SD-2026-03-05:first",
+        idempotency_key="idem:runs.create:dispatch_reporting.v1:SD-2026-03-05:first",
+    )
+    first_final_packet = _create_artifact_version(
+        db_url,
+        workflow_run_id=str(first_reporting_run["workflow_run_id"]),
+        artifact_kind="reporting.final_packet.workbook",
+        idempotency_key="idem:artifact:reporting-final-packet:first",
+        artifact_role="official_output",
+        media_type="application/octet-stream",
+        canonical_partition_kind="ServiceDateID",
+        canonical_partition_key="SD-2026-03-05",
+    )
+    first = _notify_only_handoff(
+        db_url,
+        edge_id="reporting_actuals_to_future_planning",
+        source_workflow_run_id=str(first_reporting_run["workflow_run_id"]),
+        source_artifact_version_id=str(first_final_packet["artifact_version_id"]),
+        idempotency_key="idem:handoff:notify:reporting:first-feedback",
+    )
+
+    second_reporting_run = _create_workflow_run(
+        db_url,
+        workflow_id="dispatch_reporting.v1",
+        partition_key="SD-2026-03-06",
+        logical_date="2026-03-06",
+        activation_key="dispatch_reporting.v1:SD-2026-03-06:second",
+        idempotency_key="idem:runs.create:dispatch_reporting.v1:SD-2026-03-06:second",
+    )
+    second_final_packet = _create_artifact_version(
+        db_url,
+        workflow_run_id=str(second_reporting_run["workflow_run_id"]),
+        artifact_kind="reporting.final_packet.workbook",
+        idempotency_key="idem:artifact:reporting-final-packet:second",
+        artifact_role="official_output",
+        media_type="application/octet-stream",
+        canonical_partition_kind="ServiceDateID",
+        canonical_partition_key="SD-2026-03-06",
+    )
+    second = _notify_only_handoff(
+        db_url,
+        edge_id="reporting_actuals_to_future_planning",
+        source_workflow_run_id=str(second_reporting_run["workflow_run_id"]),
+        source_artifact_version_id=str(second_final_packet["artifact_version_id"]),
+        idempotency_key="idem:handoff:notify:reporting:second-feedback",
+    )
+
+    assert (
+        str(first["target_workflow_runs"][0]["workflow_run_id"])
+        == str(second["target_workflow_runs"][0]["workflow_run_id"])
+    )
+
+    binding_rows = _query_rows(
+        db_path,
+        """
+        SELECT binding_key, source_ref, artifact_version_id
+        FROM workflow_run_inputs
+        WHERE workflow_run_id = ?
+        """,
+        (str(second["target_workflow_runs"][0]["workflow_run_id"]),),
+    )
+    assert binding_rows == [
+        {
+            "binding_key": "stage03.actual_hours_snapshot",
+            "source_ref": str(second_final_packet["artifact_version_id"]),
+            "artifact_version_id": str(second["target_input_artifacts"][0]["artifact_version_id"]),
+        }
+    ]
+
+    edge_rows = _query_rows(
+        db_path,
+        """
+        SELECT edge_execution_id
+        FROM edge_executions
+        WHERE edge_id = 'reporting_actuals_to_future_planning'
+        ORDER BY created_at ASC
+        """,
+    )
+    assert len(edge_rows) == 2
+
+
 def test_notify_only_handoff_rejects_non_notify_only_edge_ids(tmp_path: Path) -> None:
     db_url, _, weekly_run, published = _setup_weekly_with_publish(tmp_path)
     failed = run_cli(
