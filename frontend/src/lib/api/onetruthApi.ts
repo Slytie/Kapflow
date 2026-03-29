@@ -350,6 +350,8 @@ function normalizeRequiredUploads(value: unknown): WorkflowWorkspaceRequiredUplo
     dataset_key: asString(item.dataset_key),
     template_id: asStringOrNull(item.template_id),
     artifact_kind: asString(item.artifact_kind),
+    artifact_role: asStringOrNull(item.artifact_role),
+    required: typeof item.required === "boolean" ? item.required : true,
     required_count: asNumber(item.required_count, 1),
     current_count: asNumber(item.current_count, 0),
     status: asString(item.status, "missing")
@@ -965,6 +967,20 @@ export const onetruthApi = {
   ): Promise<Record<string, unknown>> {
     const result = await requestJson<ClaimCompleteResultEnvelope>(
       `/human-tasks/${humanTaskId}/stage06-agent-review`,
+      {
+        method: "POST",
+        body: payload
+      }
+    );
+    return result.result;
+  },
+
+  async runWeeklyStage04OpenAIAgent(
+    humanTaskId: string,
+    payload: { idempotency_key: string }
+  ): Promise<Record<string, unknown>> {
+    const result = await requestJson<ClaimCompleteResultEnvelope>(
+      `/human-tasks/${humanTaskId}/weekly-stage04-openai-agent`,
       {
         method: "POST",
         body: payload

@@ -2,6 +2,7 @@ import { ActionCluster } from "@/components/ActionCluster";
 import { AttachmentActions } from "@/components/AttachmentActions";
 import { StatusBadge } from "@/components/StatusBadge";
 import type { HumanTaskRow } from "@/lib/types/contracts";
+import { taskDisplayHeading } from "@/lib/workspace/taskLabels";
 import type { ActionItem } from "@/components/ActionCluster";
 
 interface TaskCardWideProps {
@@ -63,7 +64,7 @@ export function TaskCardWide({
   return (
     <article className="task-card-wide" data-testid="task-card-wide">
       <header>
-        <h4>{task.stage_id} · {task.task_kind}</h4>
+        <h4>{taskDisplayHeading(task)}</h4>
         <StatusBadge status={task.state} />
       </header>
       <p className="task-card-wide__meta">

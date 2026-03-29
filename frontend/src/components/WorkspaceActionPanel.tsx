@@ -18,6 +18,7 @@ import type {
   WorkflowWorkspaceTaskWorkItem
 } from "@/lib/types/contracts";
 import type { DrawerPayload } from "@/lib/types/ui";
+import { taskDisplayHeading } from "@/lib/workspace/taskLabels";
 
 type WorkspacePanelMode = "user_work" | "blocking_work";
 
@@ -44,7 +45,7 @@ function missingInputHint(item: WorkflowWorkspaceTaskWorkItem): string | undefin
 function taskDetailPayload(item: WorkflowWorkspaceTaskWorkItem): DrawerPayload {
   const task = item.human_task;
   return {
-    title: `${task.stage_id} ${task.task_kind}`,
+    title: taskDisplayHeading(task),
     subtitle: task.human_task_id,
     description:
       "Task details remain drawer-first. Workspace cards stay dense so graph and queue remain synchronized.",
@@ -129,6 +130,11 @@ export function WorkspaceActionPanel({
     onSuccess: onRefresh
   });
 
+  const runWeeklyStage04AgentMutation = useMutation({
+    mutationFn: (humanTaskId: string) => humanTasksRepository.runWeeklyStage04OpenAIAgent(humanTaskId),
+    onSuccess: onRefresh
+  });
+
   const approvalMutation = useMutation({
     mutationFn: (payload: {
       approvalId: string;
@@ -176,6 +182,7 @@ export function WorkspaceActionPanel({
     claimMutation.error ??
     completeMutation.error ??
     runStage06ReviewMutation.error ??
+    runWeeklyStage04AgentMutation.error ??
     approvalMutation.error ??
     uploadTaskAttachmentMutation.error ??
     downloadTaskAttachmentMutation.error ??
@@ -235,6 +242,8 @@ export function WorkspaceActionPanel({
                 (completeMutation.isPending && completeMutation.variables === task.human_task_id) ||
                 (runStage06ReviewMutation.isPending &&
                   runStage06ReviewMutation.variables === task.human_task_id) ||
+                (runWeeklyStage04AgentMutation.isPending &&
+                  runWeeklyStage04AgentMutation.variables === task.human_task_id) ||
                 (uploadTaskAttachmentMutation.isPending &&
                   uploadTaskAttachmentMutation.variables?.humanTaskId === task.human_task_id) ||
                 (downloadTaskAttachmentMutation.isPending &&
@@ -251,6 +260,9 @@ export function WorkspaceActionPanel({
               const canRunStage06Review = hasAction(item, [
                 "run_stage06_agent_review",
                 "stage06_agent_review"
+              ]);
+              const canRunWeeklyStage04Agent = hasAction(item, [
+                "run_weekly_stage04_openai_agent"
               ]);
 
               return (
@@ -278,17 +290,31 @@ export function WorkspaceActionPanel({
                   needInfoDisabled
                   completeHint={missingInputHint(item)}
                   extraActions={
-                    canRunStage06Review
-                      ? [
-                          {
-                            key: "stage06-ai-review",
-                            label: "AI Review Assist",
-                            tone: "default",
-                            onClick: () => runStage06ReviewMutation.mutate(task.human_task_id),
-                            disabled: taskIsBusy
-                          }
-                        ]
-                      : []
+                    [
+                      ...(canRunWeeklyStage04Agent
+                        ? [
+                            {
+                              key: "weekly-stage04-build",
+                              label: "Run Stage04 Build",
+                              tone: "default" as const,
+                              onClick: () =>
+                                runWeeklyStage04AgentMutation.mutate(task.human_task_id),
+                              disabled: taskIsBusy
+                            }
+                          ]
+                        : []),
+                      ...(canRunStage06Review
+                        ? [
+                            {
+                              key: "stage06-ai-review",
+                              label: "AI Review Assist",
+                              tone: "default" as const,
+                              onClick: () => runStage06ReviewMutation.mutate(task.human_task_id),
+                              disabled: taskIsBusy
+                            }
+                          ]
+                        : [])
+                    ]
                   }
                   actionPending={taskIsBusy}
                   onDetails={() => onOpenDetails(taskDetailPayload(item))}

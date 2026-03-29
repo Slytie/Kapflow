@@ -245,6 +245,8 @@ def _task_blocking_requirements(
                 "dataset_key": upload.get("dataset_key"),
                 "template_id": upload.get("template_id"),
                 "artifact_kind": upload.get("artifact_kind"),
+                "artifact_role": upload.get("artifact_role"),
+                "required": upload.get("required"),
                 "required_count": upload.get("required_count"),
                 "current_count": upload.get("current_count"),
                 "status": upload.get("status"),

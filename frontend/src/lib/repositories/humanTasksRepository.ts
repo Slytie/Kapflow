@@ -76,6 +76,12 @@ export const humanTasksRepository = {
     });
   },
 
+  async runWeeklyStage04OpenAIAgent(humanTaskId: string): Promise<void> {
+    await onetruthApi.runWeeklyStage04OpenAIAgent(humanTaskId, {
+      idempotency_key: createIdempotencyKey("weekly-stage04-openai-agent", humanTaskId)
+    });
+  },
+
   async confirmReview(humanTaskId: string, reviewedArtifactVersionIds: string[]): Promise<void> {
     const reviewedIds = [...new Set(reviewedArtifactVersionIds.filter(Boolean))].sort();
     if (reviewedIds.length === 0) {
@@ -102,7 +108,7 @@ export const humanTasksRepository = {
       subjectId: humanTaskId,
       file,
       artifactKind: requirement.artifact_kind || requirement.dataset_key,
-      artifactRole: "evidence"
+      artifactRole: requirement.artifact_role || "evidence"
     });
   },
 

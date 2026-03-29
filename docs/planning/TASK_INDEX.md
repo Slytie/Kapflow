@@ -155,3 +155,13 @@ Note: `TASK-0087` / `TASK-0088` / `TASK-0089` were formerly duplicated as `TASK-
 | TASK-0148 | EPIC-124 | DONE | high | Implement backend workspace/stage-linked workpage action projection and generated snapshots |
 | TASK-0149 | EPIC-124 | DONE | high | Implement frontend stage-linked workpage actions, handoffs, and refresh truth on workspace surfaces |
 | TASK-0150 | EPIC-124 | DONE | medium | Close EPIC-124 and synchronize stage-linked workpage docs, status, and regression truth |
+| TASK-0151 | EPIC-125 | DONE | medium | Freeze the operational cadence contract, authoritative-input policy, and local-demo milestone |
+| TASK-0152 | EPIC-125 | TODO | high | Wire the weekly Friday intake and Stage04 build/review/publish loop around Stage04-ready inputs |
+| TASK-0153 | EPIC-125 | TODO | high | Wire the daily EOS intake, draft-reporting review workpage, finalize flow, and planning feedback handoff |
+| TASK-0154 | EPIC-125 | TODO | high | Add the minimal manual daily-replan lane through live dispatch seed activation and official delta promotion |
+| TASK-0155 | EPIC-125 | TODO | medium | Add the local FE/BE demo runbook, seeded operator smoke path, and demo entrypoints for the first user test |
+| TASK-0156 | EPIC-125 | TODO | medium | Add the external cadence tick, single-node production-shaped deployment path, and operator runbook |
+| TASK-0157 | EPIC-125 | TODO | medium | Close EPIC-125, capture first-demo feedback, and sync doc/status truth |
+| TASK-0158 | EPIC-126 | TODO | medium | Triage first-demo feedback and land the highest-value workpage UX corrections |
+| TASK-0159 | EPIC-126 | TODO | medium | Harden regression, observability, and failure-state truth for weekly/daily operator loops |
+| TASK-0160 | EPIC-126 | TODO | medium | Freeze the Workpages v1 boundary, clean up route posture, and close doc truth |

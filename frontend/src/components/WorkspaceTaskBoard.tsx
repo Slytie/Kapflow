@@ -27,6 +27,7 @@ import type {
   WorkflowWorkspaceWorkItem
 } from "@/lib/types/contracts";
 import type { DrawerArtifact, DrawerPayload } from "@/lib/types/ui";
+import { taskDisplayHeading, taskDisplayLabel } from "@/lib/workspace/taskLabels";
 
 type WorkspaceLaneId = "todo" | "in_progress" | "review" | "done";
 
@@ -133,7 +134,7 @@ function RequiredUploadActions({
         onClick={openFilePicker}
         disabled={disabled}
       >
-        Upload Response
+        {requirement.artifact_role === "official_input" ? "Upload Input" : "Upload Response"}
       </button>
       <button
         type="button"
@@ -162,6 +163,16 @@ function workpageActionStateLabel(action: WorkflowWorkspaceWorkpageAction): stri
   return action.disabled_reason ?? action.label;
 }
 
+function requirementLabel(requirement: WorkflowWorkspaceRequiredUpload): string {
+  if (requirement.required === false) {
+    return "Optional context";
+  }
+  if (requirement.artifact_role === "official_input") {
+    return "Required input";
+  }
+  return "Required upload";
+}
+
 function humanize(value: string): string {
   return value
     .replace(/[_-]+/g, " ")
@@ -176,6 +187,9 @@ function humanizeBlockingReason(code: string): string {
   }
   if (code === "candidate_role_mismatch") {
     return "Your current actor role cannot claim this task";
+  }
+  if (code === "required_artifact_missing") {
+    return "A current draft weekly schedule is still required";
   }
   return humanize(code.split(":")[0] ?? code);
 }
@@ -277,7 +291,7 @@ function taskDetailPayload(
 ): DrawerPayload {
   const artifacts = _taskArtifacts(task, artifactVersions);
   return {
-    title: `${task.stage_id} ${humanize(task.task_kind)}`,
+    title: taskDisplayHeading(task),
     subtitle: task.human_task_id,
     description:
       "Task details remain drawer-first so cards can stay dense and synchronized with the graph.",
@@ -371,6 +385,11 @@ export function WorkspaceTaskBoard({
     onSuccess: onRefresh
   });
 
+  const runWeeklyStage04AgentMutation = useMutation({
+    mutationFn: (humanTaskId: string) => humanTasksRepository.runWeeklyStage04OpenAIAgent(humanTaskId),
+    onSuccess: onRefresh
+  });
+
   const approvalMutation = useMutation({
     mutationFn: (payload: {
       approvalId: string;
@@ -452,6 +471,7 @@ export function WorkspaceTaskBoard({
     completeMutation.error ??
     confirmReviewMutation.error ??
     runStage06ReviewMutation.error ??
+    runWeeklyStage04AgentMutation.error ??
     approvalMutation.error ??
     uploadTaskAttachmentMutation.error ??
     uploadRequiredResponseMutation.error ??
@@ -519,7 +539,7 @@ export function WorkspaceTaskBoard({
         cardId: `task:${task.human_task_id}`,
         kind: "task",
         lane: laneForTask(task),
-        title: humanize(task.task_kind),
+        title: taskDisplayLabel(task),
         tag: taskTag(task),
         avatars: avatarSources.slice(0, 2),
         primaryCount: Math.max(1, avatarSources.length),
@@ -627,6 +647,8 @@ export function WorkspaceTaskBoard({
                       confirmReviewMutation.variables?.humanTaskId === card.task.human_task_id) ||
                     (runStage06ReviewMutation.isPending &&
                       runStage06ReviewMutation.variables === card.task.human_task_id) ||
+                    (runWeeklyStage04AgentMutation.isPending &&
+                      runWeeklyStage04AgentMutation.variables === card.task.human_task_id) ||
                     (uploadTaskAttachmentMutation.isPending &&
                       uploadTaskAttachmentMutation.variables?.humanTaskId ===
                         card.task.human_task_id) ||
@@ -658,6 +680,9 @@ export function WorkspaceTaskBoard({
                   const canRunStage06Review = hasAction(card.item, [
                     "run_stage06_agent_review",
                     "stage06_agent_review"
+                  ]);
+                  const canRunWeeklyStage04Agent = hasAction(card.item, [
+                    "run_weekly_stage04_openai_agent"
                   ]);
                   const canConfirmReview = hasAction(card.item, ["confirm_review"]);
                   const requirementBlocked =
@@ -765,6 +790,18 @@ export function WorkspaceTaskBoard({
                             >
                               Complete
                             </button>
+                            {canRunWeeklyStage04Agent ? (
+                              <button
+                                type="button"
+                                className="workspace-board-action"
+                                onClick={() =>
+                                  runWeeklyStage04AgentMutation.mutate(card.task.human_task_id)
+                                }
+                                disabled={taskBusy}
+                              >
+                                Run Stage04 Build
+                              </button>
+                            ) : null}
                             {canRunStage06Review ? (
                               <button
                                 type="button"
@@ -825,7 +862,7 @@ export function WorkspaceTaskBoard({
                               className="workspace-board-card__requirement"
                             >
                               <p>
-                                Required upload: {requirement.dataset_key} ({requirement.status})
+                                {requirementLabel(requirement)}: {requirement.dataset_key} ({requirement.status})
                               </p>
                               <RequiredUploadActions
                                 requirement={requirement}

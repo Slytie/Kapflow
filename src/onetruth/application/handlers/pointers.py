@@ -102,367 +102,12 @@ def promote_pointer_command(
     )
 
     def _operation() -> dict[str, Any]:
-        workflow_scope = _workflow_scope(connection, workflow_run_id)
-        artifact_version = get_artifact_version(connection, artifact_version_id)
-        if artifact_version is None:
-            raise CommandError(
-                code="artifact_version_not_found",
-                message="artifact version not found for pointer promotion",
-                details={"artifact_version_id": artifact_version_id},
-            )
-        expected_artifact_scope = _canonical_artifact_scope_fields(
-            tenant_id=workflow_scope["tenant_id"],
-            domain_id=workflow_scope["domain_id"],
-            workflow_partition_key=workflow_scope["partition_key"],
-            artifact_kind=artifact_kind,
-        )
-        artifact_scope = _load_artifact_canonical_scope(
+        return _promote_pointer_effects(
             connection,
-            artifact_version_id=artifact_version_id,
+            payload,
+            event_idempotency=event_idempotency,
+            drift_idempotency=drift_idempotency,
         )
-        _assert_artifact_matches_expected_scope(
-            artifact_version_id=artifact_version_id,
-            expected_scope=expected_artifact_scope,
-            artifact_scope=artifact_scope,
-            context="promotion_target",
-        )
-
-        promotion_reason = (
-            str(payload["promotion_reason"])
-            if payload.get("promotion_reason") is not None
-            else None
-        )
-        actor_type = str(payload.get("actor_type", "system"))
-        if promotion_reason in {"official_publish", "official_major_replan"} and actor_type != "human":
-            raise CommandError(
-                code="official_promotion_requires_human_actor",
-                message="official pointer promotion must be performed by a human actor",
-                details={"promotion_reason": promotion_reason, "actor_type": actor_type},
-            )
-        approved_by_approval_id = (
-            str(payload["approved_by_approval_id"])
-            if payload.get("approved_by_approval_id") is not None
-            else None
-        )
-        if promotion_reason in {"official_publish", "official_major_replan"} and approved_by_approval_id is None:
-            raise CommandError(
-                code="approval_required_for_promotion",
-                message=f"{promotion_reason} promotions require approved_by_approval_id",
-                details={"promotion_reason": promotion_reason},
-            )
-        if approved_by_approval_id is not None:
-            approval = get_approval(connection, approved_by_approval_id)
-            if approval is None:
-                raise CommandError(
-                    code="approval_not_found",
-                    message="approved_by_approval_id was not found",
-                    details={"approved_by_approval_id": approved_by_approval_id},
-                )
-            if str(approval["workflow_run_id"]) != workflow_run_id:
-                raise CommandError(
-                    code="cross_workflow_approval_reference",
-                    message="approval belongs to a different workflow_run",
-                    details={
-                        "approved_by_approval_id": approved_by_approval_id,
-                        "approval_workflow_run_id": str(approval["workflow_run_id"]),
-                        "workflow_run_id": workflow_run_id,
-                    },
-                )
-            if str(approval["state"]) != "RESPONDED" or str(approval.get("response_kind")) != "approve":
-                raise CommandError(
-                    code="approval_not_approved",
-                    message="pointer promotion requires an approved approval response",
-                    details={
-                        "approved_by_approval_id": approved_by_approval_id,
-                        "state": str(approval["state"]),
-                        "response_kind": approval.get("response_kind"),
-                    },
-                )
-            if (
-                promotion_reason == "official_major_replan"
-                and str(approval.get("scope_ref")) != "Stage07"
-            ):
-                raise CommandError(
-                    code="major_replan_approval_required",
-                    message="official_major_replan requires a Stage07 approval response",
-                    details={
-                        "approved_by_approval_id": approved_by_approval_id,
-                        "scope_ref": str(approval.get("scope_ref")),
-                    },
-                )
-
-        promoted_by_task_run_id = (
-            str(payload["promoted_by_task_run_id"])
-            if payload.get("promoted_by_task_run_id") is not None
-            else None
-        )
-        if promoted_by_task_run_id is not None:
-            _validate_task_run_belongs_to_workflow(
-                connection,
-                task_run_id=promoted_by_task_run_id,
-                workflow_run_id=workflow_run_id,
-            )
-
-        canonical_pointer_identity = _canonical_pointer_identity_fields(
-            tenant_id=workflow_scope["tenant_id"],
-            domain_id=workflow_scope["domain_id"],
-            workflow_partition_key=workflow_scope["partition_key"],
-            workflow_run_id=workflow_run_id,
-            pointer_key=pointer_key,
-            scope_kind=scope_kind,
-            scope_ref=scope_ref,
-            artifact_kind=artifact_kind,
-            stream_key=(
-                str(payload["stream_key"])
-                if payload.get("stream_key") is not None
-                else None
-            ),
-            registry_kind=payload.get("registry_kind"),
-        )
-        if canonical_pointer_identity["pointer_id"] is None:
-            raise CommandError(
-                code="pointer_identity_unresolved",
-                message="canonical pointer identity could not be resolved safely",
-                details={
-                    "workflow_run_id": workflow_run_id,
-                    "pointer_key": pointer_key,
-                    "artifact_kind": artifact_kind,
-                },
-            )
-        prior_target_pointer = get_pointer(
-            connection,
-            workflow_run_id=workflow_run_id,
-            pointer_key=pointer_key,
-        )
-        now = utc_now_iso()
-        pointer, changed = promote_pointer(
-            connection,
-            workflow_run_id=workflow_run_id,
-            pointer_key=pointer_key,
-            scope_kind=scope_kind,
-            scope_ref=scope_ref,
-            artifact_kind=artifact_kind,
-            artifact_version_id=artifact_version_id,
-            promotion_reason=promotion_reason,
-            promoted_by_task_run_id=promoted_by_task_run_id,
-            approved_by_approval_id=approved_by_approval_id,
-            updated_at=now,
-            expected_generation=(
-                int(payload["expected_generation"])
-                if payload.get("expected_generation") is not None
-                else None
-            ),
-            pointer_id=canonical_pointer_identity["pointer_id"],
-            tenant_id=canonical_pointer_identity["tenant_id"],
-            domain_id=canonical_pointer_identity["domain_id"],
-            dataset_key=canonical_pointer_identity["dataset_key"],
-            partition_kind=canonical_pointer_identity["partition_kind"],
-            partition_key=canonical_pointer_identity["partition_key"],
-            stream_key=canonical_pointer_identity["stream_key"],
-            registry_kind=canonical_pointer_identity["registry_kind"],
-        )
-        if not changed:
-            raise CommandError(
-                code="pointer_already_current",
-                message="pointer already targets requested artifact_version_id",
-                details={
-                    "workflow_run_id": workflow_run_id,
-                    "pointer_key": pointer_key,
-                    "artifact_version_id": artifact_version_id,
-                },
-            )
-        canonical_pointer_id = str(pointer.get("pointer_id") or "").strip()
-        if not canonical_pointer_id:
-            raise CommandError(
-                code="pointer_identity_unresolved",
-                message="canonical pointer identity missing after promotion",
-                details={
-                    "workflow_run_id": workflow_run_id,
-                    "pointer_key": pointer_key,
-                },
-            )
-        canonical_dataset_key = str(
-            pointer.get("dataset_key")
-            or canonical_pointer_identity.get("dataset_key")
-            or ""
-        ).strip().lower()
-        if not canonical_dataset_key:
-            raise CommandError(
-                code="pointer_identity_unresolved",
-                message="canonical pointer dataset key missing after promotion",
-                details={
-                    "workflow_run_id": workflow_run_id,
-                    "pointer_key": pointer_key,
-                },
-            )
-
-        if prior_target_pointer is not None:
-            _capture_pointer_input_binding(
-                connection,
-                workflow_run_id=workflow_run_id,
-                task_run_id=promoted_by_task_run_id,
-                binding_key=_input_binding_key(
-                    prefix="pointer.promote.target_before",
-                    event_idempotency=event_idempotency,
-                    discriminator=pointer_key,
-                ),
-                pointer_key=pointer_key,
-                pointer=prior_target_pointer,
-                captured_at=now,
-                metadata_json={
-                    "capture_reason": "pointer_promotion_target_before_update",
-                    "promotion_pointer_key": pointer_key,
-                },
-            )
-
-        links = [
-            {"rel": "subject", "type": "pointer", "id": canonical_pointer_id},
-            {"rel": "subject", "type": "workflow_run", "id": workflow_run_id},
-            {"rel": "subject", "type": "artifact_version", "id": artifact_version_id},
-        ]
-        reviewed_artifact_version_id = (
-            str(payload["reviewed_artifact_version_id"])
-            if payload.get("reviewed_artifact_version_id") is not None
-            else (
-                str(payload["reviewed_base_artifact_version_id"])
-                if payload.get("reviewed_base_artifact_version_id") is not None
-                else None
-            )
-        )
-        append_event(
-            connection,
-            _event_envelope(
-                event_type="artifact.pointer.promoted",
-                tenant_id=workflow_scope["tenant_id"],
-                domain_id=workflow_scope["domain_id"],
-                actor_type=actor_type,
-                actor_id=str(payload.get("actor_id", "system:runtime")),
-                links=links,
-                payload={
-                    "pointer_id": canonical_pointer_id,
-                    "dataset_key": canonical_dataset_key,
-                    "promoted_artifact_version_id": artifact_version_id,
-                    "reviewed_artifact_version_id": reviewed_artifact_version_id,
-                },
-                idempotency_key=event_idempotency,
-            ),
-        )
-
-        if reviewed_artifact_version_id is not None:
-            _capture_artifact_input_binding(
-                connection,
-                workflow_run_id=workflow_run_id,
-                task_run_id=promoted_by_task_run_id,
-                binding_key=_input_binding_key(
-                    prefix="pointer.promote.reviewed_artifact",
-                    event_idempotency=event_idempotency,
-                    discriminator=reviewed_artifact_version_id,
-                ),
-                source_ref=reviewed_artifact_version_id,
-                artifact_version_id=reviewed_artifact_version_id,
-                captured_at=now,
-                metadata_json={
-                    "capture_reason": "pointer_promotion_reviewed_artifact",
-                    "promotion_pointer_key": pointer_key,
-                },
-            )
-
-        drift_detected = False
-        drift_reason = (
-            str(payload["drift_reason"])
-            if payload.get("drift_reason") is not None
-            else None
-        )
-        reviewed_base_artifact_version_id = (
-            str(payload["reviewed_base_artifact_version_id"])
-            if payload.get("reviewed_base_artifact_version_id") is not None
-            else None
-        )
-        if reviewed_base_artifact_version_id is not None:
-            base_pointer_key = str(
-                payload.get("base_pointer_key") or "official:schedule.published_schedule.workbook"
-            )
-            base_pointer = get_pointer(
-                connection,
-                workflow_run_id=workflow_run_id,
-                pointer_key=base_pointer_key,
-            )
-            if base_pointer is None:
-                raise CommandError(
-                    code="base_pointer_not_found",
-                    message="base pointer was not found for drift check",
-                    details={
-                        "workflow_run_id": workflow_run_id,
-                        "base_pointer_key": base_pointer_key,
-                    },
-                )
-            _capture_pointer_input_binding(
-                connection,
-                workflow_run_id=workflow_run_id,
-                task_run_id=promoted_by_task_run_id,
-                binding_key=_input_binding_key(
-                    prefix="pointer.promote.reviewed_base_pointer",
-                    event_idempotency=event_idempotency,
-                    discriminator=base_pointer_key,
-                ),
-                pointer_key=base_pointer_key,
-                pointer=base_pointer,
-                captured_at=now,
-                metadata_json={
-                    "capture_reason": "pointer_promotion_reviewed_base_pointer",
-                    "promotion_pointer_key": pointer_key,
-                },
-            )
-            current_base_artifact_version_id = str(base_pointer["artifact_version_id"])
-            if reviewed_base_artifact_version_id != current_base_artifact_version_id:
-                drift_detected = True
-                if drift_reason is None:
-                    drift_reason = "reviewed_base_version_stale_at_promotion"
-        elif (
-            reviewed_artifact_version_id is not None
-            and reviewed_artifact_version_id != artifact_version_id
-        ):
-            drift_detected = True
-            if drift_reason is None:
-                drift_reason = "reviewed_version_differs_from_promoted_version"
-
-        if drift_detected:
-            append_event(
-                connection,
-                _event_envelope(
-                    event_type="artifact.pointer.drift_detected",
-                    tenant_id=workflow_scope["tenant_id"],
-                    domain_id=workflow_scope["domain_id"],
-                    actor_type=actor_type,
-                    actor_id=str(payload.get("actor_id", "system:runtime")),
-                    links=links,
-                    payload={
-                        "pointer_id": canonical_pointer_id,
-                        "dataset_key": canonical_dataset_key,
-                        "reviewed_artifact_version_id": str(
-                            reviewed_artifact_version_id or reviewed_base_artifact_version_id
-                        ),
-                        "promoted_artifact_version_id": artifact_version_id,
-                        "drift_reason": drift_reason,
-                    },
-                    idempotency_key=drift_idempotency,
-                ),
-            )
-        promoted_pointer = get_pointer(
-            connection,
-            workflow_run_id=workflow_run_id,
-            pointer_key=pointer_key,
-        )
-        if promoted_pointer is None:
-            raise CommandError(
-                code="pointer_not_found",
-                message="pointer not found after promotion",
-                details={
-                    "workflow_run_id": workflow_run_id,
-                    "pointer_key": pointer_key,
-                },
-            )
-        return promoted_pointer
 
     try:
         result, replay = _execute_with_command_receipt(
@@ -512,6 +157,407 @@ def promote_pointer_command(
         replay=replay,
         include_receipt=include_receipt,
     )
+
+
+def _promote_pointer_effects(
+    connection: sqlite3.Connection,
+    payload: dict[str, Any],
+    *,
+    event_idempotency: str | None,
+    drift_idempotency: str | None,
+) -> dict[str, Any]:
+    workflow_run_id = str(payload["workflow_run_id"])
+    scope_kind = str(payload["scope_kind"])
+    scope_ref = str(payload["scope_ref"])
+    pointer_key = str(payload["pointer_key"])
+    artifact_kind = str(payload["artifact_kind"])
+    artifact_version_id = str(payload["artifact_version_id"])
+    workflow_scope = _workflow_scope(connection, workflow_run_id)
+    artifact_version = get_artifact_version(connection, artifact_version_id)
+    if artifact_version is None:
+        raise CommandError(
+            code="artifact_version_not_found",
+            message="artifact version not found for pointer promotion",
+            details={"artifact_version_id": artifact_version_id},
+        )
+    expected_artifact_scope = _canonical_artifact_scope_fields(
+        tenant_id=workflow_scope["tenant_id"],
+        domain_id=workflow_scope["domain_id"],
+        workflow_partition_key=workflow_scope["partition_key"],
+        artifact_kind=artifact_kind,
+    )
+    artifact_scope = _load_artifact_canonical_scope(
+        connection,
+        artifact_version_id=artifact_version_id,
+    )
+    _assert_artifact_matches_expected_scope(
+        artifact_version_id=artifact_version_id,
+        expected_scope=expected_artifact_scope,
+        artifact_scope=artifact_scope,
+        context="promotion_target",
+    )
+
+    promotion_reason = (
+        str(payload["promotion_reason"])
+        if payload.get("promotion_reason") is not None
+        else None
+    )
+    actor_type = str(payload.get("actor_type", "system"))
+    if promotion_reason in {"official_publish", "official_major_replan"} and actor_type != "human":
+        raise CommandError(
+            code="official_promotion_requires_human_actor",
+            message="official pointer promotion must be performed by a human actor",
+            details={"promotion_reason": promotion_reason, "actor_type": actor_type},
+        )
+    approved_by_approval_id = (
+        str(payload["approved_by_approval_id"])
+        if payload.get("approved_by_approval_id") is not None
+        else None
+    )
+    if promotion_reason in {"official_publish", "official_major_replan"} and approved_by_approval_id is None:
+        raise CommandError(
+            code="approval_required_for_promotion",
+            message=f"{promotion_reason} promotions require approved_by_approval_id",
+            details={"promotion_reason": promotion_reason},
+        )
+    if approved_by_approval_id is not None:
+        approval = get_approval(connection, approved_by_approval_id)
+        if approval is None:
+            raise CommandError(
+                code="approval_not_found",
+                message="approved_by_approval_id was not found",
+                details={"approved_by_approval_id": approved_by_approval_id},
+            )
+        if str(approval["workflow_run_id"]) != workflow_run_id:
+            raise CommandError(
+                code="cross_workflow_approval_reference",
+                message="approval belongs to a different workflow_run",
+                details={
+                    "approved_by_approval_id": approved_by_approval_id,
+                    "approval_workflow_run_id": str(approval["workflow_run_id"]),
+                    "workflow_run_id": workflow_run_id,
+                },
+            )
+        if str(approval["state"]) != "RESPONDED" or str(approval.get("response_kind")) != "approve":
+            raise CommandError(
+                code="approval_not_approved",
+                message="pointer promotion requires an approved approval response",
+                details={
+                    "approved_by_approval_id": approved_by_approval_id,
+                    "state": str(approval["state"]),
+                    "response_kind": approval.get("response_kind"),
+                },
+            )
+        if (
+            promotion_reason == "official_major_replan"
+            and str(approval.get("scope_ref")) != "Stage07"
+        ):
+            raise CommandError(
+                code="major_replan_approval_required",
+                message="official_major_replan requires a Stage07 approval response",
+                details={
+                    "approved_by_approval_id": approved_by_approval_id,
+                    "scope_ref": str(approval.get("scope_ref")),
+                },
+            )
+
+    promoted_by_task_run_id = (
+        str(payload["promoted_by_task_run_id"])
+        if payload.get("promoted_by_task_run_id") is not None
+        else None
+    )
+    if promoted_by_task_run_id is not None:
+        _validate_task_run_belongs_to_workflow(
+            connection,
+            task_run_id=promoted_by_task_run_id,
+            workflow_run_id=workflow_run_id,
+        )
+
+    canonical_pointer_identity = _canonical_pointer_identity_fields(
+        tenant_id=workflow_scope["tenant_id"],
+        domain_id=workflow_scope["domain_id"],
+        workflow_partition_key=workflow_scope["partition_key"],
+        workflow_run_id=workflow_run_id,
+        pointer_key=pointer_key,
+        scope_kind=scope_kind,
+        scope_ref=scope_ref,
+        artifact_kind=artifact_kind,
+        stream_key=(
+            str(payload["stream_key"])
+            if payload.get("stream_key") is not None
+            else None
+        ),
+        registry_kind=payload.get("registry_kind"),
+    )
+    if canonical_pointer_identity["pointer_id"] is None:
+        raise CommandError(
+            code="pointer_identity_unresolved",
+            message="canonical pointer identity could not be resolved safely",
+            details={
+                "workflow_run_id": workflow_run_id,
+                "pointer_key": pointer_key,
+                "artifact_kind": artifact_kind,
+            },
+        )
+    prior_target_pointer = get_pointer(
+        connection,
+        workflow_run_id=workflow_run_id,
+        pointer_key=pointer_key,
+    )
+    now = utc_now_iso()
+    pointer, changed = promote_pointer(
+        connection,
+        workflow_run_id=workflow_run_id,
+        pointer_key=pointer_key,
+        scope_kind=scope_kind,
+        scope_ref=scope_ref,
+        artifact_kind=artifact_kind,
+        artifact_version_id=artifact_version_id,
+        promotion_reason=promotion_reason,
+        promoted_by_task_run_id=promoted_by_task_run_id,
+        approved_by_approval_id=approved_by_approval_id,
+        updated_at=now,
+        expected_generation=(
+            int(payload["expected_generation"])
+            if payload.get("expected_generation") is not None
+            else None
+        ),
+        pointer_id=canonical_pointer_identity["pointer_id"],
+        tenant_id=canonical_pointer_identity["tenant_id"],
+        domain_id=canonical_pointer_identity["domain_id"],
+        dataset_key=canonical_pointer_identity["dataset_key"],
+        partition_kind=canonical_pointer_identity["partition_kind"],
+        partition_key=canonical_pointer_identity["partition_key"],
+        stream_key=canonical_pointer_identity["stream_key"],
+        registry_kind=canonical_pointer_identity["registry_kind"],
+    )
+    if not changed:
+        raise CommandError(
+            code="pointer_already_current",
+            message="pointer already targets requested artifact_version_id",
+            details={
+                "workflow_run_id": workflow_run_id,
+                "pointer_key": pointer_key,
+                "artifact_version_id": artifact_version_id,
+            },
+        )
+    canonical_pointer_id = str(pointer.get("pointer_id") or "").strip()
+    if not canonical_pointer_id:
+        raise CommandError(
+            code="pointer_identity_unresolved",
+            message="canonical pointer identity missing after promotion",
+            details={
+                "workflow_run_id": workflow_run_id,
+                "pointer_key": pointer_key,
+            },
+        )
+    canonical_dataset_key = str(
+        pointer.get("dataset_key")
+        or canonical_pointer_identity.get("dataset_key")
+        or ""
+    ).strip().lower()
+    if not canonical_dataset_key:
+        raise CommandError(
+            code="pointer_identity_unresolved",
+            message="canonical pointer dataset key missing after promotion",
+            details={
+                "workflow_run_id": workflow_run_id,
+                "pointer_key": pointer_key,
+            },
+        )
+
+    if prior_target_pointer is not None:
+        _capture_pointer_input_binding(
+            connection,
+            workflow_run_id=workflow_run_id,
+            task_run_id=promoted_by_task_run_id,
+            binding_key=_input_binding_key(
+                prefix="pointer.promote.target_before",
+                event_idempotency=event_idempotency,
+                discriminator=pointer_key,
+            ),
+            pointer_key=pointer_key,
+            pointer=prior_target_pointer,
+            captured_at=now,
+            metadata_json={
+                "capture_reason": "pointer_promotion_target_before_update",
+                "promotion_pointer_key": pointer_key,
+            },
+        )
+
+    links = [
+        {"rel": "subject", "type": "pointer", "id": canonical_pointer_id},
+        {"rel": "subject", "type": "workflow_run", "id": workflow_run_id},
+        {"rel": "subject", "type": "artifact_version", "id": artifact_version_id},
+    ]
+    reviewed_artifact_version_id = (
+        str(payload["reviewed_artifact_version_id"])
+        if payload.get("reviewed_artifact_version_id") is not None
+        else (
+            str(payload["reviewed_base_artifact_version_id"])
+            if payload.get("reviewed_base_artifact_version_id") is not None
+            else None
+        )
+    )
+    append_event(
+        connection,
+        _event_envelope(
+            event_type="artifact.pointer.promoted",
+            tenant_id=workflow_scope["tenant_id"],
+            domain_id=workflow_scope["domain_id"],
+            actor_type=actor_type,
+            actor_id=str(payload.get("actor_id", "system:runtime")),
+            links=links,
+            payload={
+                "pointer_id": canonical_pointer_id,
+                "dataset_key": canonical_dataset_key,
+                "promoted_artifact_version_id": artifact_version_id,
+                "reviewed_artifact_version_id": reviewed_artifact_version_id,
+            },
+            idempotency_key=event_idempotency,
+        ),
+    )
+
+    if reviewed_artifact_version_id is not None:
+        _capture_artifact_input_binding(
+            connection,
+            workflow_run_id=workflow_run_id,
+            task_run_id=promoted_by_task_run_id,
+            binding_key=_input_binding_key(
+                prefix="pointer.promote.reviewed_artifact",
+                event_idempotency=event_idempotency,
+                discriminator=reviewed_artifact_version_id,
+            ),
+            source_ref=reviewed_artifact_version_id,
+            artifact_version_id=reviewed_artifact_version_id,
+            captured_at=now,
+            metadata_json={
+                "capture_reason": "pointer_promotion_reviewed_artifact",
+                "promotion_pointer_key": pointer_key,
+            },
+        )
+
+    drift_detected = False
+    drift_reason = (
+        str(payload["drift_reason"])
+        if payload.get("drift_reason") is not None
+        else None
+    )
+    reviewed_base_artifact_version_id = (
+        str(payload["reviewed_base_artifact_version_id"])
+        if payload.get("reviewed_base_artifact_version_id") is not None
+        else None
+    )
+    if reviewed_base_artifact_version_id is not None:
+        base_pointer_key = str(
+            payload.get("base_pointer_key") or "official:schedule.published_schedule.workbook"
+        )
+        base_pointer = get_pointer(
+            connection,
+            workflow_run_id=workflow_run_id,
+            pointer_key=base_pointer_key,
+        )
+        if base_pointer is None:
+            raise CommandError(
+                code="base_pointer_not_found",
+                message="base pointer was not found for drift check",
+                details={
+                    "workflow_run_id": workflow_run_id,
+                    "base_pointer_key": base_pointer_key,
+                },
+            )
+        _capture_pointer_input_binding(
+            connection,
+            workflow_run_id=workflow_run_id,
+            task_run_id=promoted_by_task_run_id,
+            binding_key=_input_binding_key(
+                prefix="pointer.promote.reviewed_base_pointer",
+                event_idempotency=event_idempotency,
+                discriminator=base_pointer_key,
+            ),
+            pointer_key=base_pointer_key,
+            pointer=base_pointer,
+            captured_at=now,
+            metadata_json={
+                "capture_reason": "pointer_promotion_reviewed_base_pointer",
+                "promotion_pointer_key": pointer_key,
+            },
+        )
+        current_base_artifact_version_id = str(base_pointer["artifact_version_id"])
+        if reviewed_base_artifact_version_id != current_base_artifact_version_id:
+            drift_detected = True
+            if drift_reason is None:
+                drift_reason = "reviewed_base_version_stale_at_promotion"
+    elif _reviewed_artifact_diff_is_drift(
+        connection,
+        promotion_reason=promotion_reason,
+        reviewed_artifact_version_id=reviewed_artifact_version_id,
+        promoted_artifact_version_id=artifact_version_id,
+        promoted_artifact_kind=artifact_kind,
+    ):
+        drift_detected = True
+        if drift_reason is None:
+            drift_reason = "reviewed_version_differs_from_promoted_version"
+
+    if drift_detected:
+        append_event(
+            connection,
+            _event_envelope(
+                event_type="artifact.pointer.drift_detected",
+                tenant_id=workflow_scope["tenant_id"],
+                domain_id=workflow_scope["domain_id"],
+                actor_type=actor_type,
+                actor_id=str(payload.get("actor_id", "system:runtime")),
+                links=links,
+                payload={
+                    "pointer_id": canonical_pointer_id,
+                    "dataset_key": canonical_dataset_key,
+                    "reviewed_artifact_version_id": str(
+                        reviewed_artifact_version_id or reviewed_base_artifact_version_id
+                    ),
+                    "promoted_artifact_version_id": artifact_version_id,
+                    "drift_reason": drift_reason,
+                },
+                idempotency_key=drift_idempotency,
+            ),
+        )
+    promoted_pointer = get_pointer(
+        connection,
+        workflow_run_id=workflow_run_id,
+        pointer_key=pointer_key,
+    )
+    if promoted_pointer is None:
+        raise CommandError(
+            code="pointer_not_found",
+            message="pointer not found after promotion",
+            details={
+                "workflow_run_id": workflow_run_id,
+                "pointer_key": pointer_key,
+            },
+        )
+    return promoted_pointer
+
+
+def _reviewed_artifact_diff_is_drift(
+    connection: sqlite3.Connection,
+    *,
+    promotion_reason: str | None,
+    reviewed_artifact_version_id: str | None,
+    promoted_artifact_version_id: str,
+    promoted_artifact_kind: str,
+) -> bool:
+    if reviewed_artifact_version_id is None:
+        return False
+    if reviewed_artifact_version_id == promoted_artifact_version_id:
+        return False
+    if promotion_reason == "official_publish":
+        reviewed_artifact = get_artifact_version(connection, reviewed_artifact_version_id)
+        if (
+            reviewed_artifact is not None
+            and str(reviewed_artifact.get("artifact_kind") or "") != promoted_artifact_kind
+        ):
+            return False
+    return True
 
 
 def _canonical_pointer_identity_fields(

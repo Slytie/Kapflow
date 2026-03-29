@@ -26,8 +26,10 @@ Current runtime/debug priority: **Schedule Planning**. Payroll remains the secon
 | EPIC-122 | Workflow-run-backed workpages (canonical run-backed schedule review + EOD draft resolution) | run-surfaces brief/plan, workflow-run-backed workpage route family, run-backed schedule/EOD contracts, frontend `/runs/:workflowRunId/workpages/*` routes, demo/story drilldown entrypoints | EPIC-120, EPIC-121, EPIC-080 |
 | EPIC-123 | Schedule draft artifact-backed workpages (Stage04 draft weekly schedule workbook lane) | schedule-artifact-path brief/plan, Stage04 draft workbook authority freeze, schedule artifact projection/submit over the generic artifact-backed workpage family, backend-owned snapshots, and canonical frontend schedule artifact route/page | EPIC-120, EPIC-122, EPIC-030 |
 | EPIC-124 | Stage-linked workpages and requirement-aware artifact linkage | stage-linked workpage brief/plan, workspace `workpage_actions[]` contract freeze, relation-kind-aware subject-link semantics, backend action projection/snapshots, and frontend stage-linked CTA integration | EPIC-122, EPIC-123, EPIC-050, EPIC-060, EPIC-030 |
+| EPIC-125 | Operational cadence demo (weekly planning + minimal daily replan + daily reporting first-user lane) | operational-cadence executive summary/plan, external cadence tick, weekly Friday intake + Stage04 build/review/publish loop, minimal manual live-dispatch delta loop, daily EOS->draft-review-finalize loop, local demo runbook, single-node production-shaped demo runbook | EPIC-124, EPIC-121, EPIC-122, EPIC-123, EPIC-030, EPIC-040, EPIC-100 |
+| EPIC-126 | Workpages v1 hardening and closeout | feedback triage, UX/regression hardening, observability/runbook tightening, canonical route cleanup, explicit Workpages v1 boundary and acceptance proof | EPIC-125, EPIC-124, EPIC-100 |
 
-Status note (2026-03-27): EPIC-124 is complete. The next post-EPIC-124 application epic remains intentionally unselected in repo memory so closeout does not imply schedule widening, EOD finalization, or broader workspace rollout.
+Status note (2026-03-29): EPIC-124 is complete, EPIC-125 is now the active app-facing epic with `TASK-0151` complete as a doc-only contract freeze, and EPIC-126 remains explicitly deferred until after the first local demo feedback exists.
 
 ## Update rules
 - Keep epic files in `docs/planning/epics/`

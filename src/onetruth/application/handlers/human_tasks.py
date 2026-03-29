@@ -9,6 +9,7 @@ from uuid import uuid4
 from onetruth.application.handlers._shared.artifact_effects import (
     _ingest_artifact_document_effects,
 )
+from onetruth.application.handlers.approvals import _request_approval_effects
 from onetruth.application.handlers._shared.command_boundary import (
     CommandError,
     _assert_actor_type,
@@ -43,19 +44,30 @@ from onetruth.infrastructure.artifacts.storage import (
     encode_base64_content,
 )
 from onetruth.infrastructure.events.event_store import append_event, utc_now_iso
-from onetruth.infrastructure.repositories.artifact_versions import get_artifact_version
+from onetruth.infrastructure.repositories.artifact_versions import (
+    get_artifact_version,
+    list_artifact_versions_for_workflow_run,
+)
+from onetruth.infrastructure.repositories.approvals import list_approvals_for_workflow_run
 from onetruth.infrastructure.repositories.human_tasks import (
     claim_human_task as claim_human_task_row,
     complete_human_task as complete_human_task_row,
     create_human_task,
     get_human_task,
+    get_human_task_by_task_run_id,
 )
 from onetruth.infrastructure.repositories.task_runs import (
     create_task_run,
     get_task_run,
+    get_task_run_by_activation_key,
     get_task_run_for_human_task,
     transition_task_run_state,
 )
+from onetruth.infrastructure.repositories.workflow_runs import get_workflow_run
+
+WEEKLY_WORKFLOW_ID = "weekly_schedule_planning.v1"
+WEEKLY_DRAFT_ARTIFACT_KIND = "planning.draft_weekly_schedule.workbook"
+WEEKLY_PUBLISH_ACTION = "publish_weekly_base_schedule"
 
 
 def claim_human_task_command(
@@ -337,6 +349,18 @@ def complete_human_task_command(
                 message="task run not found for human task completion",
                 details={"task_run_id": str(completed["task_run_id"])},
             )
+        workflow_run = get_workflow_run(connection, str(completed["workflow_run_id"]))
+        if workflow_run is None:
+            raise CommandError(
+                code="workflow_run_not_found",
+                message="workflow run not found for human task completion",
+                details={"workflow_run_id": str(completed["workflow_run_id"])},
+            )
+        completion_outcome = _effective_completion_outcome(
+            workflow_run=workflow_run,
+            task_run=task_run,
+            requested_outcome=str(payload["outcome"]),
+        )
 
         from_state = str(task_run["state"])
         if from_state not in {"IN_PROGRESS", "READY"}:
@@ -401,7 +425,7 @@ def complete_human_task_command(
             ],
             payload={
                 "human_task_id": str(completed["human_task_id"]),
-                "completion_code": str(payload["outcome"]),
+                "completion_code": completion_outcome,
             },
             idempotency_key=completed_event_idempotency,
         )
@@ -435,7 +459,7 @@ def complete_human_task_command(
             spawn_plans.extend(
                 resolve_stage06_spawn_plans(
                     parent_task_run=task_run,
-                    completion_outcome=str(payload["outcome"]),
+                    completion_outcome=completion_outcome,
                     parent_completion_event_id=parent_completion_event_id,
                 )
             )
@@ -449,7 +473,7 @@ def complete_human_task_command(
             spawn_plans.extend(
                 resolve_stage07_spawn_plans(
                     parent_task_run=task_run,
-                    completion_outcome=str(payload["outcome"]),
+                    completion_outcome=completion_outcome,
                     parent_completion_event_id=parent_completion_event_id,
                 )
             )
@@ -593,12 +617,29 @@ def complete_human_task_command(
                     "spawned_from_flag_id": spawned_from_flag_id,
                 }
             )
+        weekly_effects = _apply_weekly_completion_effects(
+            connection,
+            workflow_run=workflow_run,
+            task_run=task_run,
+            human_task=completed,
+            completion_outcome=completion_outcome,
+            actor_id=str(payload["actor_id"]),
+            actor_type=actor_type,
+            scope=scope,
+            receipt_event_idempotency_base=(
+                receipt.event_idempotency_base if receipt is not None else None
+            ),
+            parent_completion_event_id=parent_completion_event_id,
+            created_at=now,
+        )
+        spawned_children.extend(weekly_effects["spawned_children"])
         completed_now = get_human_task(connection, str(payload["human_task_id"]))
         run_now = get_task_run_for_human_task(connection, str(payload["human_task_id"]))
         return {
             "human_task": completed_now,
             "task_run": run_now,
             "spawned_children": spawned_children,
+            "requested_approvals": weekly_effects["requested_approvals"],
         }
 
     result, replay = _execute_with_command_receipt(
@@ -612,6 +653,344 @@ def complete_human_task_command(
         replay=replay,
         include_receipt=include_receipt,
     )
+
+
+def _effective_completion_outcome(
+    *,
+    workflow_run: dict[str, Any],
+    task_run: dict[str, Any],
+    requested_outcome: str,
+) -> str:
+    if requested_outcome != "complete":
+        return requested_outcome
+    if str(workflow_run.get("workflow_id") or "") != WEEKLY_WORKFLOW_ID:
+        return requested_outcome
+    return {
+        ("Stage04", "weekly_input_intake"): "inputs_ready",
+        ("Stage04", "work_item"): "draft_ready_for_review",
+        ("Stage05", "final_review"): "draft_is_publish_ready",
+    }.get(
+        (str(task_run.get("stage_id") or ""), str(task_run.get("task_kind") or "")),
+        requested_outcome,
+    )
+
+
+def _apply_weekly_completion_effects(
+    connection: sqlite3.Connection,
+    *,
+    workflow_run: dict[str, Any],
+    task_run: dict[str, Any],
+    human_task: dict[str, Any],
+    completion_outcome: str,
+    actor_id: str,
+    actor_type: str,
+    scope: dict[str, Any],
+    receipt_event_idempotency_base: str | None,
+    parent_completion_event_id: str,
+    created_at: str,
+) -> dict[str, list[dict[str, Any]]]:
+    if str(workflow_run.get("workflow_id") or "") != WEEKLY_WORKFLOW_ID:
+        return {"spawned_children": [], "requested_approvals": []}
+
+    workflow_run_id = str(task_run["workflow_run_id"])
+    parent_task_run_id = str(task_run["task_run_id"])
+    surface = (
+        str(task_run.get("stage_id") or ""),
+        str(task_run.get("task_kind") or ""),
+        completion_outcome,
+    )
+    if surface == ("Stage04", "weekly_input_intake", "inputs_ready"):
+        build_task = _ensure_weekly_child_human_task(
+            connection,
+            workflow_run_id=workflow_run_id,
+            activation_key=f"weekly:{workflow_run_id}:stage04:build",
+            stage_id="Stage04",
+            task_kind="work_item",
+            candidate_roles=["schedule_planner"],
+            owner_role="schedule_planner",
+            actor_id=actor_id,
+            actor_type=actor_type,
+            scope=scope,
+            parent_task_run_id=parent_task_run_id,
+            spawn_rule_id="weekly_stage04_build_after_intake",
+            parent_completion_event_id=parent_completion_event_id,
+            receipt_event_idempotency_base=receipt_event_idempotency_base,
+            created_at=created_at,
+        )
+        return {"spawned_children": [build_task], "requested_approvals": []}
+    if surface == ("Stage04", "work_item", "draft_ready_for_review"):
+        latest_draft = _latest_artifact_for_kind(
+            connection,
+            workflow_run_id=workflow_run_id,
+            artifact_kind=WEEKLY_DRAFT_ARTIFACT_KIND,
+        )
+        if latest_draft is None:
+            raise CommandError(
+                code="required_artifact_missing",
+                message="weekly Stage04 completion requires a current draft weekly schedule artifact",
+                details={
+                    "workflow_run_id": workflow_run_id,
+                    "artifact_kind": WEEKLY_DRAFT_ARTIFACT_KIND,
+                },
+            )
+        final_review_task = _ensure_weekly_child_human_task(
+            connection,
+            workflow_run_id=workflow_run_id,
+            activation_key=(
+                f"weekly:{workflow_run_id}:stage05:final-review:"
+                f"{latest_draft['artifact_version_id']}"
+            ),
+            stage_id="Stage05",
+            task_kind="final_review",
+            candidate_roles=["operations_manager"],
+            owner_role="operations_manager",
+            actor_id=actor_id,
+            actor_type=actor_type,
+            scope=scope,
+            parent_task_run_id=parent_task_run_id,
+            spawn_rule_id="weekly_stage05_review_after_stage04_build",
+            parent_completion_event_id=parent_completion_event_id,
+            receipt_event_idempotency_base=receipt_event_idempotency_base,
+            created_at=created_at,
+        )
+        return {"spawned_children": [final_review_task], "requested_approvals": []}
+    if surface == ("Stage05", "final_review", "draft_is_publish_ready"):
+        approval = _ensure_weekly_publish_approval(
+            connection,
+            workflow_run_id=workflow_run_id,
+            task_run_id=parent_task_run_id,
+            actor_id=actor_id,
+            actor_type=actor_type,
+            receipt_event_idempotency_base=receipt_event_idempotency_base,
+        )
+        return {"spawned_children": [], "requested_approvals": [approval]}
+    return {"spawned_children": [], "requested_approvals": []}
+
+
+def _ensure_weekly_child_human_task(
+    connection: sqlite3.Connection,
+    *,
+    workflow_run_id: str,
+    activation_key: str,
+    stage_id: str,
+    task_kind: str,
+    candidate_roles: list[str],
+    owner_role: str | None,
+    actor_id: str,
+    actor_type: str,
+    scope: dict[str, Any],
+    parent_task_run_id: str,
+    spawn_rule_id: str,
+    parent_completion_event_id: str,
+    receipt_event_idempotency_base: str | None,
+    created_at: str,
+) -> dict[str, Any]:
+    existing_task_run = get_task_run_by_activation_key(
+        connection,
+        workflow_run_id=workflow_run_id,
+        activation_key=activation_key,
+    )
+    if existing_task_run is not None:
+        if (
+            str(existing_task_run.get("stage_id") or "") != stage_id
+            or str(existing_task_run.get("task_kind") or "") != task_kind
+        ):
+            raise CommandError(
+                code="duplicate_spawned_task_activation",
+                message="weekly follow-on activation key is already in use by a different task",
+                details={
+                    "workflow_run_id": workflow_run_id,
+                    "activation_key": activation_key,
+                    "expected_stage_id": stage_id,
+                    "expected_task_kind": task_kind,
+                    "actual_task_run_id": str(existing_task_run["task_run_id"]),
+                },
+            )
+        existing_human_task = get_human_task_by_task_run_id(
+            connection,
+            str(existing_task_run["task_run_id"]),
+        )
+        if existing_human_task is not None:
+            return {
+                "task_run_id": str(existing_task_run["task_run_id"]),
+                "human_task_id": str(existing_human_task["human_task_id"]),
+                "stage_id": stage_id,
+                "task_kind": task_kind,
+                "spawn_rule_id": spawn_rule_id,
+                "activation_key": activation_key,
+                "generation": int(existing_task_run.get("generation") or 0),
+                "spawned_from_flag_id": existing_task_run.get("spawned_from_flag_id"),
+            }
+
+    task_run_id = (
+        str(existing_task_run["task_run_id"])
+        if existing_task_run is not None
+        else f"tr-{uuid4()}"
+    )
+    human_task_id = f"ht-{uuid4()}"
+
+    if existing_task_run is None:
+        create_task_run(
+            connection,
+            task_run_id=task_run_id,
+            workflow_run_id=workflow_run_id,
+            stage_id=stage_id,
+            task_kind=task_kind,
+            state="READY",
+            generation=0,
+            activation_key=activation_key,
+            blocked_on_kind=None,
+            blocked_on_ref=None,
+            spawned_from_flag_id=None,
+            spawned_from_task_run_id=parent_task_run_id,
+            spawn_rule_id=spawn_rule_id,
+            spawn_cause_kind="task_completion",
+            spawn_cause_event_id=parent_completion_event_id,
+            spawn_depth=0,
+            spawn_budget_key=None,
+            created_at=created_at,
+        )
+        append_event(
+            connection,
+            _event_envelope(
+                event_type="task.run.created",
+                tenant_id=scope["tenant_id"],
+                domain_id=scope["domain_id"],
+                actor_type=actor_type,
+                actor_id=actor_id,
+                links=[
+                    {"rel": "subject", "type": "workflow_run", "id": workflow_run_id},
+                    {"rel": "subject", "type": "task_run", "id": task_run_id},
+                ],
+                payload={
+                    "task_run_id": task_run_id,
+                    "stage_id": stage_id,
+                    "task_kind": task_kind,
+                    "activation_key": activation_key,
+                    "generation": 0,
+                    "spawned_from_flag_id": None,
+                    "spawned_from_task_run_id": parent_task_run_id,
+                    "spawn_rule_id": spawn_rule_id,
+                    "spawn_cause_kind": "task_completion",
+                    "spawn_cause_event_id": parent_completion_event_id,
+                    "spawn_budget_key": None,
+                    "spawn_depth": 0,
+                },
+                idempotency_key=_event_idempotency_key(
+                    receipt_event_idempotency_base,
+                    f"weekly.{spawn_rule_id}.task.run.created",
+                ),
+            ),
+        )
+
+    create_human_task(
+        connection,
+        human_task_id=human_task_id,
+        workflow_run_id=workflow_run_id,
+        task_run_id=task_run_id,
+        task_kind=task_kind,
+        state="OPEN",
+        candidate_roles=candidate_roles,
+        owner_role=owner_role,
+        due_at=None,
+        escalation_at=None,
+        generation=0,
+        created_at=created_at,
+    )
+    append_event(
+        connection,
+        _event_envelope(
+            event_type="task.created",
+            tenant_id=scope["tenant_id"],
+            domain_id=scope["domain_id"],
+            actor_type=actor_type,
+            actor_id=actor_id,
+            links=[
+                {"rel": "subject", "type": "workflow_run", "id": workflow_run_id},
+                {"rel": "subject", "type": "task_run", "id": task_run_id},
+                {"rel": "subject", "type": "human_task", "id": human_task_id},
+            ],
+            payload={
+                "human_task_id": human_task_id,
+                "task_kind": task_kind,
+                "state": "OPEN",
+                "candidate_roles": candidate_roles,
+            },
+            idempotency_key=_event_idempotency_key(
+                receipt_event_idempotency_base,
+                f"weekly.{spawn_rule_id}.task.created",
+            ),
+        ),
+    )
+    return {
+        "task_run_id": task_run_id,
+        "human_task_id": human_task_id,
+        "stage_id": stage_id,
+        "task_kind": task_kind,
+        "spawn_rule_id": spawn_rule_id,
+        "activation_key": activation_key,
+        "generation": 0,
+        "spawned_from_flag_id": None,
+    }
+
+
+def _ensure_weekly_publish_approval(
+    connection: sqlite3.Connection,
+    *,
+    workflow_run_id: str,
+    task_run_id: str,
+    actor_id: str,
+    actor_type: str,
+    receipt_event_idempotency_base: str | None,
+) -> dict[str, Any]:
+    for approval in list_approvals_for_workflow_run(connection, workflow_run_id):
+        if str(approval.get("scope_kind") or "") != "stage":
+            continue
+        if str(approval.get("scope_ref") or "") != "Stage06":
+            continue
+        if str(approval.get("task_run_id") or "") != task_run_id:
+            continue
+        return approval
+
+    return _request_approval_effects(
+        connection,
+        {
+            "workflow_run_id": workflow_run_id,
+            "task_run_id": task_run_id,
+            "requested_by_task_run_id": task_run_id,
+            "approval_kind": "business_decision",
+            "scope_kind": "stage",
+            "scope_ref": "Stage06",
+            "candidate_roles": ["operations_manager"],
+            "required_role": "operations_manager",
+            "action": WEEKLY_PUBLISH_ACTION,
+            "actor_id": actor_id,
+            "actor_type": actor_type,
+        },
+        approval_id=f"ap-{uuid4()}",
+        task_run_id=task_run_id,
+        requested_by_task_run_id=task_run_id,
+        candidate_roles=["operations_manager"],
+        allowed_responses=["approve", "reject", "request_changes", "cancel", "expire"],
+        event_idempotency=_event_idempotency_key(
+            receipt_event_idempotency_base,
+            "weekly.stage06.publish.approval.requested",
+        ),
+    )
+
+
+def _latest_artifact_for_kind(
+    connection: sqlite3.Connection,
+    *,
+    workflow_run_id: str,
+    artifact_kind: str,
+) -> dict[str, Any] | None:
+    latest: dict[str, Any] | None = None
+    for artifact in list_artifact_versions_for_workflow_run(connection, workflow_run_id):
+        if str(artifact.get("artifact_kind") or "") != artifact_kind:
+            continue
+        latest = artifact
+    return latest
 
 
 def confirm_human_task_review_command(

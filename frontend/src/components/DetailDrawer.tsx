@@ -28,6 +28,7 @@ type TaskAction =
   | "claim"
   | "complete"
   | "run_stage06_agent_review"
+  | "run_weekly_stage04_openai_agent"
   | "confirm_review"
   | "upload_attachment";
 
@@ -469,6 +470,8 @@ export function DetailDrawer({ payload, onClose }: DetailDrawerProps): JSX.Eleme
         await humanTasksRepository.complete(activeTask.human_task_id);
       } else if (action === "run_stage06_agent_review") {
         await humanTasksRepository.runStage06AgentReview(activeTask.human_task_id);
+      } else if (action === "run_weekly_stage04_openai_agent") {
+        await humanTasksRepository.runWeeklyStage04OpenAIAgent(activeTask.human_task_id);
       } else if (action === "confirm_review") {
         const reviewedArtifactVersionIds = artifacts.map((artifact) => artifact.artifact_version_id);
         if (reviewedArtifactVersionIds.length === 0) {
@@ -662,6 +665,16 @@ export function DetailDrawer({ payload, onClose }: DetailDrawerProps): JSX.Eleme
                 onClick={() => void handleTaskAction("run_stage06_agent_review")}
               >
                 Run Stage06 Review
+              </button>
+            ) : null}
+            {hasAction(["run_weekly_stage04_openai_agent"]) ? (
+              <button
+                type="button"
+                className="action-btn"
+                disabled={pendingTaskAction !== null}
+                onClick={() => void handleTaskAction("run_weekly_stage04_openai_agent")}
+              >
+                Run Stage04 Build
               </button>
             ) : null}
             {hasAction(["confirm_review"]) ? (

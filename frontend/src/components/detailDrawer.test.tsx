@@ -209,6 +209,56 @@ describe("Detail drawer flow", () => {
     getSpy.mockRestore();
   });
 
+  it("renders the weekly Stage04 build action and invokes it from the drawer", async () => {
+    const user = userEvent.setup();
+    const runStage04Spy = vi
+      .spyOn(humanTasksRepository, "runWeeklyStage04OpenAIAgent")
+      .mockResolvedValue();
+    const getSpy = vi.spyOn(humanTasksRepository, "get").mockResolvedValue({
+      ...task,
+      stage_id: "Stage04",
+      task_kind: "work_item",
+      owner_role: "schedule_planner",
+      available_actions: ["run_weekly_stage04_openai_agent"],
+      missing_required_inputs: [],
+      blocking_reason_codes: []
+    });
+    vi.spyOn(onetruthApi, "listArtifactsForSubject").mockResolvedValue([]);
+    renderWithQueryClient(
+      <DetailDrawer
+        payload={{
+          title: "Stage04 Build Weekly Draft",
+          subtitle: "ht-2",
+          fields: [],
+          task: {
+            human_task_id: "ht-2",
+            workflow_run_id: "wr-2",
+            task_run_id: "tr-2",
+            stage_id: "Stage04",
+            task_kind: "work_item",
+            state: "CLAIMED",
+            assignee_actor_id: "human:schedule-planner-1",
+            assignee_actor_type: "human",
+            owner_role: "schedule_planner",
+            available_actions: ["run_weekly_stage04_openai_agent"],
+            blocking_reason_codes: [],
+            missing_required_inputs: []
+          }
+        }}
+        onClose={() => undefined}
+      />
+    );
+
+    expect(await screen.findByRole("button", { name: "Run Stage04 Build" })).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Run Stage04 Build" }));
+    await waitFor(() => {
+      expect(runStage04Spy).toHaveBeenCalledWith("ht-2");
+    });
+
+    runStage04Spy.mockRestore();
+    getSpy.mockRestore();
+  });
+
   it("lazy-loads composite task subgraph and collapses with Escape", async () => {
     const user = userEvent.setup();
     const getSpy = vi.spyOn(humanTasksRepository, "get").mockResolvedValue({

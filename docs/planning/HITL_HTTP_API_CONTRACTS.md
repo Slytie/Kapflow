@@ -192,12 +192,41 @@ Workspace item shape (`user_work[]`, `blocking_work[]`):
 - `available_actions[]` (server-computed)
 - `workpage_actions[]` (optional, additive, server-computed stage-linked workpage actions)
 - `blocking_requirements[]` (server-computed)
+- `required_uploads[]` (server-computed requirement rows)
+- `required_reviews[]` (server-computed review-confirmation rows)
 - `linked_artifact_count`
 - `missing_required_inputs[]`
 - `can_complete`
 - `can_upload_attachment`
 - `can_run_stage06_agent_review`
+- `can_run_weekly_stage04_openai_agent`
 - `metadata` (subject-specific rendering keys)
+
+Required upload row shape (`required_uploads[]`):
+- `dataset_key`
+- `template_id`
+- `artifact_kind`
+- `artifact_role`
+- `required`
+- `required_count`
+- `current_count`
+- `linked_count`
+- `status`
+
+Required review row shape (`required_reviews[]`):
+- `dataset_key`
+- `artifact_kind`
+- `required_count`
+- `reviewed_artifact_version_id`
+- `review_confirmation_artifact_version_id`
+- `status`
+
+Weekly workspace-specific notes:
+- `weekly_schedule_planning.v1` `Stage04/weekly_input_intake` required uploads now include explicit `artifact_role` and `required` flags.
+- The required weekly intake uploads are stored as `official_input` for `planning.route_slot_requirements.workbook`, `planning.approved_availability.workbook`, and `planning.driver_capabilities.workbook`.
+- `planning.actual_hours_snapshot.workbook` is optional `official_input`.
+- `planning.route_horizon.doc` and `planning.route_horizon.workbook` remain optional `evidence`.
+- claimed `Stage04/work_item` tasks may expose `run_weekly_stage04_openai_agent` in `available_actions[]`.
 
 Stage-linked workpage action shape (`workpage_actions[]`, frozen in `TASK-0146`):
 - lives only on workspace work items (`user_work[]`, `blocking_work[]`)
@@ -507,6 +536,11 @@ Body:
 Response:
 - `{"status":"ok","command":"api.human_tasks.complete","human_task_id":"...","result":{...}}`
 
+Weekly completion semantics:
+- `weekly_schedule_planning.v1` `Stage04/weekly_input_intake` keeps `outcome=complete` at the API boundary, but the backend maps it to `inputs_ready` and upserts one `Stage04/work_item` build task when the required weekly uploads exist.
+- `weekly_schedule_planning.v1` `Stage04/work_item` keeps `outcome=complete`, but the backend maps it to `draft_ready_for_review`; completion fails closed unless the run has a latest `planning.draft_weekly_schedule.workbook`, and success upserts one `Stage05/final_review` task keyed to that draft version.
+- `weekly_schedule_planning.v1` `Stage05/final_review` keeps `outcome=complete`, but the backend maps it to `draft_is_publish_ready`; completion fails closed unless `planning.manager_review.doc` is attached and review confirmation covers the latest draft, and success requests one `Stage06` approval for `publish_weekly_base_schedule`.
+
 ### 4.3 Respond approval
 Endpoint:
 - `POST /api/v1/approvals/{approval_id}/respond`
@@ -518,6 +552,11 @@ Body:
 
 Response:
 - `{"status":"ok","command":"api.approvals.respond","approval_id":"...","approval":{...}}`
+
+Weekly approval side effect:
+- approving `weekly_schedule_planning.v1` `Stage06` `publish_weekly_base_schedule` now auto-runs the bounded weekly publish command inside the canonical approval-response path.
+- that side effect creates `planning.publish_packet.doc`, creates `planning.published_weekly_schedule.workbook`, and promotes `official:planning.published_weekly_schedule.workbook`.
+- the publish side effect fails closed with `stable_base_schedule_required` if the reviewed draft is no longer the latest draft workbook for the run.
 
 ### 4.4 Upload artifact/document attachment
 Endpoints:

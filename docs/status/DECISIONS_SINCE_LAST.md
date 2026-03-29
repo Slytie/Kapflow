@@ -2,6 +2,22 @@
 
 Record any decisions made since the last session so a fresh Codex run can rehydrate quickly.
 
+## 2026-03-29 (TASK-0152 weekly Friday intake, Stage04 build/review loop, and auto-publish)
+- Weekly-lane decision: the first implemented EPIC-125 weekly operator loop is now `Stage04/weekly_input_intake -> Stage04/work_item -> Stage05/final_review -> Stage06 publish approval`, and it stays fully inside the existing workflow/task/approval/artifact/pointer substrate.
+- Intake-contract decision: required-upload rows now carry explicit `artifact_role` and `required` flags; for weekly intake the three Stage04-ready workbook inputs are stored as `official_input`, actual-hours stays optional `official_input`, and route-horizon artifacts remain optional evidence only.
+- Completion-semantics decision: the public task-complete API payload stays `outcome=complete`, while backend lifecycle logic now maps weekly intake/build/review completions to `inputs_ready`, `draft_ready_for_review`, and `draft_is_publish_ready` without adding a second UI command shape.
+- Publish-trigger decision: approving a weekly `Stage06` `publish_weekly_base_schedule` approval now auto-runs the bounded weekly publish command inside `approvals.respond`, creating `planning.publish_packet.doc`, creating `planning.published_weekly_schedule.workbook`, and promoting `official:planning.published_weekly_schedule.workbook`.
+- Staleness decision: weekly publish fails closed as `stable_base_schedule_required` if the reviewed draft is no longer the latest draft workbook; approval approval must not silently promote a newer or different draft.
+- Frontend-copy decision: weekly task surfaces now use intake/build/review wording and expose `Run Stage04 Build` plus `Upload Input`/`Required input` copy on the relevant workspace and drawer surfaces, while keeping the existing route family and workpage submit flow unchanged.
+
+## 2026-03-29 (TASK-0151 operational cadence contract, authoritative-input policy, and local-demo milestone)
+- Next-epic decision: EPIC-125 is now the active post-EPIC-124 application epic, and `TASK-0151` is complete as the doc-only freeze before any weekly/daily operator-loop coding begins.
+- Weekly-input decision: the first operational weekly machine-truth seam is Stage04-ready workbook input, not raw route email/doc parsing; raw route email/doc remains evidence only in EPIC-125.
+- Daily-reporting decision: daily actual-routes truth stays in `dispatch_reporting.v1`, and the EOD review workpage remains attached to the generated reporting draft artifact rather than becoming a shortcut around finalization truth.
+- Daily-replan decision: day-of schedule change in EPIC-125 is a minimal manual `live_dispatch.v1` delta lane over the existing seed activation and official delta promotion semantics, not widened weekly schedule editing and not live-dispatch candidate generation.
+- Milestone decision: the first serious local FE/BE demo milestone is after `TASK-0155`, while the continuous production-shaped cadence/deploy milestone remains after `TASK-0156`.
+- Hardening decision: EPIC-126 stays explicitly deferred until after real local-demo feedback exists; importing its planning/task/context memory does not authorize early hardening work.
+
 ## 2026-03-27 (TASK-0150 EPIC-124 closeout and regression-truth sync)
 - Epic-closeout decision: EPIC-124 is now complete, and repo memory should describe stage-linked workpage actions, supported subject-link semantics, backend workspace projection, and frontend CTA handoff as implemented rather than as a future tranche.
 - Boundary decision: closeout reaffirms that `workpage_actions[]` lives only on workspace work items, supported workpage create/submit flows accept at most one optional `subject_link`, graph nodes do not gain workpage actions, no second workpage route family or shell was added, and workpage access never becomes approval finalization.

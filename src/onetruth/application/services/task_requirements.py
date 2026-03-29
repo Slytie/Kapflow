@@ -10,6 +10,8 @@ from onetruth.infrastructure.repositories.artifact_versions import (
 from onetruth.infrastructure.repositories.workflow_runs import get_workflow_run
 
 REVIEW_CONFIRMATION_ARTIFACT_KIND = "human_task.review_confirmation.json"
+WEEKLY_WORKFLOW_ID = "weekly_schedule_planning.v1"
+WEEKLY_DRAFT_ARTIFACT_KIND = "planning.draft_weekly_schedule.workbook"
 
 _REQUIRED_UPLOAD_SPECS: dict[tuple[str, str, str], tuple[dict[str, Any], ...]] = {
     (
@@ -20,6 +22,7 @@ _REQUIRED_UPLOAD_SPECS: dict[tuple[str, str, str], tuple[dict[str, Any], ...]] =
         {
             "dataset_key": "schedule.draft_schedule.workbook",
             "artifact_kind": "schedule.draft_schedule.workbook",
+            "artifact_role": "evidence",
             "allowed_relation_kinds": ("attachment",),
             "template_workflow_id": "schedule_planning.v1",
             "template_variant": "empty",
@@ -33,6 +36,7 @@ _REQUIRED_UPLOAD_SPECS: dict[tuple[str, str, str], tuple[dict[str, Any], ...]] =
         {
             "dataset_key": "schedule.supervisor_review.doc",
             "artifact_kind": "schedule.supervisor_review.doc",
+            "artifact_role": "evidence",
             "allowed_relation_kinds": ("attachment",),
         },
     ),
@@ -44,6 +48,7 @@ _REQUIRED_UPLOAD_SPECS: dict[tuple[str, str, str], tuple[dict[str, Any], ...]] =
         {
             "dataset_key": "schedule.exception_board.doc",
             "artifact_kind": "schedule.exception_board.doc",
+            "artifact_role": "evidence",
             "allowed_relation_kinds": ("attachment",),
         },
     ),
@@ -55,7 +60,53 @@ _REQUIRED_UPLOAD_SPECS: dict[tuple[str, str, str], tuple[dict[str, Any], ...]] =
         {
             "dataset_key": "schedule.exception_board.doc",
             "artifact_kind": "schedule.exception_board.doc",
+            "artifact_role": "evidence",
             "allowed_relation_kinds": ("attachment",),
+        },
+    ),
+    (
+        "weekly_schedule_planning.v1",
+        "Stage04",
+        "weekly_input_intake",
+    ): (
+        {
+            "dataset_key": "planning.route_slot_requirements.workbook",
+            "artifact_kind": "planning.route_slot_requirements.workbook",
+            "artifact_role": "official_input",
+            "allowed_relation_kinds": ("attachment",),
+        },
+        {
+            "dataset_key": "planning.approved_availability.workbook",
+            "artifact_kind": "planning.approved_availability.workbook",
+            "artifact_role": "official_input",
+            "allowed_relation_kinds": ("attachment",),
+        },
+        {
+            "dataset_key": "planning.driver_capabilities.workbook",
+            "artifact_kind": "planning.driver_capabilities.workbook",
+            "artifact_role": "official_input",
+            "allowed_relation_kinds": ("attachment",),
+        },
+        {
+            "dataset_key": "planning.actual_hours_snapshot.workbook",
+            "artifact_kind": "planning.actual_hours_snapshot.workbook",
+            "artifact_role": "official_input",
+            "allowed_relation_kinds": ("attachment",),
+            "required": False,
+        },
+        {
+            "dataset_key": "planning.route_horizon.doc",
+            "artifact_kind": "planning.route_horizon.doc",
+            "artifact_role": "evidence",
+            "allowed_relation_kinds": ("attachment",),
+            "required": False,
+        },
+        {
+            "dataset_key": "planning.route_horizon.workbook",
+            "artifact_kind": "planning.route_horizon.workbook",
+            "artifact_role": "evidence",
+            "allowed_relation_kinds": ("attachment",),
+            "required": False,
         },
     ),
     (
@@ -66,12 +117,31 @@ _REQUIRED_UPLOAD_SPECS: dict[tuple[str, str, str], tuple[dict[str, Any], ...]] =
         {
             "dataset_key": "planning.draft_weekly_schedule.workbook",
             "artifact_kind": "planning.draft_weekly_schedule.workbook",
+            "artifact_role": "evidence",
             "allowed_relation_kinds": ("response",),
+        },
+    ),
+    (
+        "weekly_schedule_planning.v1",
+        "Stage05",
+        "final_review",
+    ): (
+        {
+            "dataset_key": "planning.manager_review.doc",
+            "artifact_kind": "planning.manager_review.doc",
+            "artifact_role": "evidence",
+            "allowed_relation_kinds": ("attachment",),
         },
     ),
 }
 
 _REQUIRED_REVIEW_ARTIFACT_KINDS: dict[tuple[str, str], tuple[str, ...]] = {
+    (
+        "Stage05",
+        "final_review",
+    ): (
+        "planning.draft_weekly_schedule.workbook",
+    ),
     (
         "Stage06",
         "final_review",
@@ -157,6 +227,8 @@ def build_human_task_requirement_index(
         for spec in _REQUIRED_UPLOAD_SPECS.get((workflow_id, stage_id, task_kind), ()):
             dataset_key = str(spec["dataset_key"])
             artifact_kind = str(spec.get("artifact_kind") or dataset_key)
+            artifact_role = str(spec.get("artifact_role") or "evidence")
+            required = bool(spec.get("required", True))
             template = _resolve_template_record(
                 templates_by_scope,
                 template_workflow_id=spec.get("template_workflow_id"),
@@ -172,7 +244,10 @@ def build_human_task_requirement_index(
                 artifact_link_counts,
                 allowed_relation_kinds=tuple(spec.get("allowed_relation_kinds") or ()),
             )
-            status = "satisfied" if current_count >= 1 else "missing"
+            if current_count >= 1:
+                status = "satisfied" if required else "provided"
+            else:
+                status = "missing" if required else "optional"
             if status == "missing":
                 blocking_reasons.append(
                     {
@@ -189,6 +264,8 @@ def build_human_task_requirement_index(
                         str(template["template_id"]) if template is not None else None
                     ),
                     "artifact_kind": artifact_kind,
+                    "artifact_role": artifact_role,
+                    "required": required,
                     "required_count": 1,
                     "current_count": current_count,
                     "linked_count": linked_count,
@@ -231,6 +308,16 @@ def build_human_task_requirement_index(
                     "status": status,
                 }
             )
+
+        _apply_weekly_dynamic_requirements(
+            workflow_id=workflow_id,
+            stage_id=stage_id,
+            task_kind=task_kind,
+            latest_draft_by_kind=latest_draft_by_kind,
+            blocking_reasons=blocking_reasons,
+            blocking_reason_codes=blocking_reason_codes,
+            missing_required_inputs=missing_required_inputs,
+        )
 
         requirements[human_task_id] = {
             "required_uploads": required_uploads,
@@ -283,6 +370,50 @@ def _confirmed_reviews_by_human_task(
                 continue
             bucket[raw] = str(artifact.get("artifact_version_id"))
     return confirmed
+
+
+def _apply_weekly_dynamic_requirements(
+    *,
+    workflow_id: str,
+    stage_id: str,
+    task_kind: str,
+    latest_draft_by_kind: dict[str, dict[str, Any]],
+    blocking_reasons: list[dict[str, Any]],
+    blocking_reason_codes: list[str],
+    missing_required_inputs: list[str],
+) -> None:
+    if workflow_id != WEEKLY_WORKFLOW_ID:
+        return
+    if (stage_id, task_kind) not in {
+        ("Stage04", "work_item"),
+        ("Stage05", "final_review"),
+    }:
+        return
+    if latest_draft_by_kind.get(WEEKLY_DRAFT_ARTIFACT_KIND) is not None:
+        return
+    _append_missing_artifact_requirement(
+        blocking_reasons=blocking_reasons,
+        blocking_reason_codes=blocking_reason_codes,
+        missing_required_inputs=missing_required_inputs,
+        artifact_kind=WEEKLY_DRAFT_ARTIFACT_KIND,
+    )
+
+
+def _append_missing_artifact_requirement(
+    *,
+    blocking_reasons: list[dict[str, Any]],
+    blocking_reason_codes: list[str],
+    missing_required_inputs: list[str],
+    artifact_kind: str,
+) -> None:
+    blocking_reasons.append(
+        {
+            "code": "required_artifact_missing",
+            "details": {"artifact_kind": artifact_kind},
+        }
+    )
+    blocking_reason_codes.append(f"required_artifact_missing:{artifact_kind}")
+    missing_required_inputs.append(artifact_kind)
 
 
 def _load_template_indexes_by_scope() -> dict[tuple[str, str], dict[str, dict[str, Any]]]:

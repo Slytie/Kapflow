@@ -68,4 +68,19 @@ describe("TaskCardWide", () => {
     expect(onUpload).toHaveBeenCalledTimes(1);
     expect(onDownload).toHaveBeenCalledTimes(1);
   });
+
+  it("maps weekly task kinds to operator-friendly headings", () => {
+    render(
+      <TaskCardWide
+        task={{
+          ...task,
+          stage_id: "Stage04",
+          task_kind: "weekly_input_intake"
+        }}
+        onDetails={() => undefined}
+      />
+    );
+
+    expect(screen.getByRole("heading", { name: "Stage04 · Weekly Intake" })).toBeInTheDocument();
+  });
 });

@@ -320,6 +320,8 @@ export interface WorkflowWorkspaceRequiredUpload {
   dataset_key: string;
   template_id: string | null;
   artifact_kind: string;
+  artifact_role?: string | null;
+  required?: boolean;
   required_count: number;
   current_count: number;
   status: string;
