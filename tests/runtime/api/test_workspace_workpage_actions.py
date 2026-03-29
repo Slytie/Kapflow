@@ -6,6 +6,7 @@ from tests.runtime.helpers.runtime_api import RuntimeApiClient
 from tests.runtime.helpers.workpage_runs import (
     seed_dispatch_workspace_stage04_approval_with_draft,
     seed_dispatch_workspace_stage04_approval_without_draft,
+    seed_dispatch_workspace_stage04_review_task_with_draft,
     seed_weekly_workspace_stage04_task_surface_without_draft,
     seed_weekly_workspace_supported_task_surface_with_draft,
 )
@@ -220,6 +221,54 @@ def test_dispatch_stage04_approval_projects_open_latest_draft_action(tmp_path: P
             "subject_context": {
                 "subject_kind": "approval",
                 "subject_id": approval_id,
+                "workflow_run_id": seeded["workflow_run_id"],
+            },
+            "link_policy": {
+                "create_relation_kind": "draft",
+                "submit_relation_kind": "response",
+            },
+            "disabled_reason": None,
+        }
+    ]
+
+
+def test_dispatch_stage04_review_task_projects_open_latest_draft_action(tmp_path: Path) -> None:
+    db_url = f"sqlite:///{tmp_path / 'workspace_eod_review_task_open.db'}"
+    seeded = seed_dispatch_workspace_stage04_review_task_with_draft(
+        db_url=db_url,
+        tenant_id="tenant-a",
+        domain_id="domain-x",
+        run_tag="test:workspace-eod-review-task-open",
+    )
+    human_task_id = str(seeded["workspace_surface"]["human_task"]["human_task_id"])
+    artifact_version_id = str(seeded["draft"]["draft"]["artifact_version_id"])
+
+    response = _client(
+        db_url=db_url,
+        actor_id="human:dispatch-supervisor-3",
+        actor_roles=["dispatch_supervisor"],
+    ).get(f"/api/v1/workflow-runs/{seeded['workflow_run_id']}/workspace")
+    assert response.status_code == 200
+
+    item = _workspace_item(
+        response.payload,
+        subject_kind="human_task",
+        subject_id=human_task_id,
+    )
+    assert item["workpage_actions"] == [
+        {
+            "action_id": "workpage.eod-v0.open_latest_draft",
+            "workpage_kind": "eod-v0",
+            "label": "Open EOD draft",
+            "presentation": "open_route",
+            "state": "available",
+            "route": (
+                f"/runs/{seeded['workflow_run_id']}/workpages/eod-v0/artifacts/{artifact_version_id}"
+            ),
+            "create_path": None,
+            "subject_context": {
+                "subject_kind": "human_task",
+                "subject_id": human_task_id,
                 "workflow_run_id": seeded["workflow_run_id"],
             },
             "link_policy": {

@@ -137,6 +137,7 @@ HUMAN_TASK_ROUTE_SPECS: tuple[RouteSpec, ...] = (
         dispatch=lambda execution, params: complete_human_task_endpoint(
             execution.connection,
             context=execution.context,
+            db_url=execution.db_url,
             human_task_id=params["human_task_id"],
             payload=_require_payload(execution.payload),
         ),

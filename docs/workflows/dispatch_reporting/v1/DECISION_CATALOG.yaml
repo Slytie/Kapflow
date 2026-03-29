@@ -13,7 +13,7 @@ catalog:
     - request_changes
     evidence_requirements:
       artifact_keys:
-      - reporting.upd_draft.doc
+      - reporting.upd_draft.workbook
       - reporting.manager_review.doc
       projection_id: reporting.stage04.review_packet
     sla:
@@ -22,3 +22,4 @@ catalog:
         escalate_to_role: operations_manager
     notes:
     - Confirmation is required before official closeout output exists.
+    - Approving this decision auto-finalizes `reporting.final_packet.workbook` and triggers the bounded planning-feedback handoff.

@@ -40,7 +40,7 @@ Purpose:
 ## Current repo status
 - EPIC-124 is complete, so supported workspace items already expose bounded `workpage_actions[]`, and canonical run-backed/artifact-backed workpage routes are already live.
 - `weekly_schedule_planning.v1` already has the bounded Stage04 build/review lane and official publish semantics.
-- `dispatch_reporting.v1` already has the authoritative daily actual-routes intake lane and the artifact-backed EOD review workpage.
+- `dispatch_reporting.v1` now has the bounded daily EOS intake -> deterministic draft build -> Stage04 review -> finalize -> planning feedback lane, and the artifact-backed EOD review workpage remains the review surface.
 - `live_dispatch.v1` already has weekly seed activation, route-delta intake, actual-hours binding, and official ordered-delta promotion semantics.
 - `TASK-0151` has now made EPIC-125 repo-native and frozen the stop lines before any weekly/daily cadence behavior work begins.
 
@@ -54,7 +54,7 @@ Purpose:
 7. `TASK-0157` - Closeout, demo-feedback capture, and doc/status sync
 
 ## Post-task posture
-- `TASK-0152` is the next bounded implementation tranche.
+- `TASK-0154` is the next bounded implementation tranche.
 - Do not start EPIC-126 early.
 - Do not add raw-email parser ownership, live-dispatch algorithmics, schedule Stage06/Stage07 widening, or an embedded scheduler in this epic.
 
@@ -62,10 +62,11 @@ Purpose:
 - `docs/planning/LOGISTICS_WORKPAGES_OPERATIONAL_CADENCE_PLAN.md`
 - `docs/planning/LOGISTICS_WORKPAGES_OPERATIONAL_CADENCE_EXEC_SUMMARY.md`
 - `docs/planning/epics/EPIC-125.md`
-- `docs/workflows/weekly_schedule_planning/v1/WORKFLOW_CONTRACT.yaml`
-- `src/onetruth/application/services/weekly_stage04_openai_agent.py`
+- `docs/workflows/live_dispatch/v1/WORKFLOW_CONTRACT.yaml`
+- `docs/workflows/live_dispatch/v1/OPERATING_MODEL.md`
+- `src/onetruth/application/handlers/logistics_handoff.py`
 - `src/onetruth/application/handlers/workpages.py`
-- `src/onetruth/api/routes/human_tasks.py`
+- `src/onetruth/api/routes/workflow_runs.py`
 
 ## Red-team questions for future runs
 - Are we quietly turning raw route email/doc into authoritative system input?

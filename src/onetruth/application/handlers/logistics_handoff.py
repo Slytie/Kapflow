@@ -674,7 +674,9 @@ def notify_only_handoff_command(
         dataset_key=edge_descriptor["target_dataset_key"],
     )
 
-    _begin_transaction(connection)
+    started_transaction = not connection.in_transaction
+    if started_transaction:
+        _begin_transaction(connection)
     try:
         for target_partition_key in target_partition_keys:
             validate_partition_key(edge_descriptor["target_partition_kind"], target_partition_key)
@@ -829,9 +831,11 @@ def notify_only_handoff_command(
             target_workflow_runs.append(target_workflow_run)
             target_input_artifacts.append(target_input_artifact)
     except Exception:
-        connection.rollback()
+        if started_transaction:
+            connection.rollback()
         raise
-    connection.commit()
+    if started_transaction:
+        connection.commit()
 
     return {
         "edge_executions": edge_rows,

@@ -99,6 +99,38 @@ def _request_approval(
     return json.loads(requested.stdout)["approval"]
 
 
+def _request_review_task(
+    tmp_path: Path,
+    *,
+    workflow_run_id: str,
+    human_task_id: str,
+    task_run_id: str,
+) -> dict[str, object]:
+    created = run_cli(
+        "--db-url",
+        _db_url(tmp_path),
+        "tasks",
+        "create",
+        "--json",
+        json.dumps(
+            {
+                "workflow_run_id": workflow_run_id,
+                "task_run_id": task_run_id,
+                "human_task_id": human_task_id,
+                "stage_id": "Stage04",
+                "task_kind": "final_packet_review",
+                "activation_key": f"api:eod-draft:review-task:{human_task_id}",
+                "candidate_roles": ["dispatch_supervisor"],
+                "owner_role": "dispatch_supervisor",
+                "create_human_task": True,
+                "idempotency_key": f"api:eod-draft:review-task:{human_task_id}",
+            },
+            separators=(",", ":"),
+        ),
+    )
+    return json.loads(created.stdout)["result"]["human_task"]
+
+
 def test_create_eod_draft_creates_canonical_reporting_run_and_artifact(tmp_path: Path) -> None:
     client = _client(tmp_path)
 
@@ -222,6 +254,57 @@ def test_canonical_eod_draft_create_links_supported_stage04_approval_as_draft(
         {
             "subject_kind": "approval",
             "subject_id": "ap-dispatch-stage04",
+            "relation_kind": "draft",
+        }
+    ]
+
+
+def test_canonical_eod_draft_create_links_supported_stage04_review_task_as_draft(
+    tmp_path: Path,
+) -> None:
+    seeded = seed_dispatch_reporting_workpage_run(
+        db_url=_db_url(tmp_path),
+        tenant_id="tenant-a",
+        domain_id="domain-x",
+        run_tag="api:eod-draft:canonical-review-task-create",
+        include_source_artifacts=False,
+    )
+    workflow_run_id = str(seeded["workflow_run_id"])
+    review_task = _request_review_task(
+        tmp_path,
+        workflow_run_id=workflow_run_id,
+        human_task_id="ht-dispatch-stage04-review",
+        task_run_id="tr-dispatch-stage04-review",
+    )
+    client = _client(tmp_path)
+
+    response = client.post(
+        f"/api/v1/workpages/workflow-runs/{workflow_run_id}/eod-v0/drafts",
+        payload={
+            "subject_link": {
+                "subject_kind": "human_task",
+                "subject_id": str(review_task["human_task_id"]),
+            },
+            "idempotency_key": "api:eod-draft:canonical-review-task-create",
+        },
+    )
+    assert response.status_code == 200
+    artifact_version_id = str(response.payload["draft"]["artifact_version_id"])
+
+    with open_sqlite_connection(_db_url(tmp_path)) as connection:
+        rows = connection.execute(
+            """
+            SELECT subject_kind, subject_id, relation_kind
+            FROM artifact_links
+            WHERE artifact_version_id = ?
+            ORDER BY subject_kind ASC, subject_id ASC, relation_kind ASC
+            """,
+            (artifact_version_id,),
+        ).fetchall()
+    assert [dict(row) for row in rows] == [
+        {
+            "subject_kind": "human_task",
+            "subject_id": "ht-dispatch-stage04-review",
             "relation_kind": "draft",
         }
     ]
@@ -483,6 +566,70 @@ def test_submit_artifact_workpage_links_supported_stage04_approval_as_response(
         {
             "subject_kind": "approval",
             "subject_id": "ap-dispatch-stage04-submit",
+            "relation_kind": "response",
+        }
+    ]
+
+
+def test_submit_artifact_workpage_links_supported_stage04_review_task_as_response(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    monkeypatch.setattr(
+        workpage_handlers,
+        "materialize_upd_draft_workbook",
+        lambda workbook_bytes, edits, change_log_entry: workbook_bytes,
+    )
+    seeded = seed_dispatch_reporting_workpage_run(
+        db_url=_db_url(tmp_path),
+        tenant_id="tenant-a",
+        domain_id="domain-x",
+        run_tag="api:eod-draft:review-task-submit",
+        include_source_artifacts=False,
+    )
+    workflow_run_id = str(seeded["workflow_run_id"])
+    review_task = _request_review_task(
+        tmp_path,
+        workflow_run_id=workflow_run_id,
+        human_task_id="ht-dispatch-stage04-review-submit",
+        task_run_id="tr-dispatch-stage04-review-submit",
+    )
+    client = _client(tmp_path)
+    created = client.post(
+        f"/api/v1/workpages/workflow-runs/{workflow_run_id}/eod-v0/drafts",
+        payload={"idempotency_key": "api:eod-draft:review-task-submit:create"},
+    )
+    base_artifact_version_id = str(created.payload["draft"]["artifact_version_id"])
+
+    submitted = client.post(
+        f"/api/v1/workpages/artifacts/{base_artifact_version_id}/submit",
+        payload={
+            "form_values": {"dispatcher_comment": "Linked to Stage04 review task."},
+            "checklist_values": [],
+            "subject_link": {
+                "subject_kind": "human_task",
+                "subject_id": str(review_task["human_task_id"]),
+            },
+            "idempotency_key": "api:eod-draft:review-task-submit",
+        },
+    )
+    assert submitted.status_code == 200
+    submitted_artifact_version_id = str(submitted.payload["submitted"]["artifact_version_id"])
+
+    with open_sqlite_connection(_db_url(tmp_path)) as connection:
+        rows = connection.execute(
+            """
+            SELECT subject_kind, subject_id, relation_kind
+            FROM artifact_links
+            WHERE artifact_version_id = ?
+            ORDER BY subject_kind ASC, subject_id ASC, relation_kind ASC
+            """,
+            (submitted_artifact_version_id,),
+        ).fetchall()
+    assert [dict(row) for row in rows] == [
+        {
+            "subject_kind": "human_task",
+            "subject_id": "ht-dispatch-stage04-review-submit",
             "relation_kind": "response",
         }
     ]

@@ -9,7 +9,7 @@ This epic is intentionally bounded to:
 - `dispatch_reporting.v1`
 
 ## Status
-Active on 2026-03-29. `TASK-0151` is complete and freezes the operator-loop contract, authoritative-input posture, and milestone boundaries. `TASK-0152` is now complete and lands the weekly Friday intake -> Stage04 build -> review -> publish loop. `TASK-0153` is the next bounded implementation tranche.
+Active on 2026-03-29. `TASK-0151` is complete and freezes the operator-loop contract, authoritative-input posture, and milestone boundaries. `TASK-0152` is now complete and lands the weekly Friday intake -> Stage04 build -> review -> publish loop. `TASK-0153` is now complete and lands the daily EOS intake -> deterministic draft build -> EOD review -> finalize -> planning feedback loop. `TASK-0154` is the next bounded implementation tranche.
 
 ## Key goal
 Prove the following operator loop end to end:
@@ -75,7 +75,7 @@ Context pack: `codex/context/EPIC-125.md`
 ## Tasks
 - TASK-0151 - DONE
 - TASK-0152 - DONE
-- TASK-0153 - TODO
+- TASK-0153 - DONE
 - TASK-0154 - TODO
 - TASK-0155 - TODO
 - TASK-0156 - TODO

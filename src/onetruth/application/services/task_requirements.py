@@ -12,6 +12,8 @@ from onetruth.infrastructure.repositories.workflow_runs import get_workflow_run
 REVIEW_CONFIRMATION_ARTIFACT_KIND = "human_task.review_confirmation.json"
 WEEKLY_WORKFLOW_ID = "weekly_schedule_planning.v1"
 WEEKLY_DRAFT_ARTIFACT_KIND = "planning.draft_weekly_schedule.workbook"
+DISPATCH_REPORTING_WORKFLOW_ID = "dispatch_reporting.v1"
+DISPATCH_REPORTING_DRAFT_ARTIFACT_KIND = "reporting.upd_draft.workbook"
 
 _REQUIRED_UPLOAD_SPECS: dict[tuple[str, str, str], tuple[dict[str, Any], ...]] = {
     (
@@ -133,6 +135,37 @@ _REQUIRED_UPLOAD_SPECS: dict[tuple[str, str, str], tuple[dict[str, Any], ...]] =
             "allowed_relation_kinds": ("attachment",),
         },
     ),
+    (
+        "dispatch_reporting.v1",
+        "Stage01",
+        "eos_input_intake",
+    ): (
+        {
+            "dataset_key": "reporting.eos_raw.workbook",
+            "artifact_kind": "reporting.eos_raw.workbook",
+            "artifact_role": "official_input",
+            "allowed_relation_kinds": ("attachment",),
+        },
+        {
+            "dataset_key": "reporting.eos_raw.doc",
+            "artifact_kind": "reporting.eos_raw.doc",
+            "artifact_role": "evidence",
+            "allowed_relation_kinds": ("attachment",),
+            "required": False,
+        },
+    ),
+    (
+        "dispatch_reporting.v1",
+        "Stage04",
+        "final_packet_review",
+    ): (
+        {
+            "dataset_key": "reporting.manager_review.doc",
+            "artifact_kind": "reporting.manager_review.doc",
+            "artifact_role": "evidence",
+            "allowed_relation_kinds": ("attachment",),
+        },
+    ),
 }
 
 _REQUIRED_REVIEW_ARTIFACT_KINDS: dict[tuple[str, str], tuple[str, ...]] = {
@@ -155,6 +188,12 @@ _REQUIRED_REVIEW_ARTIFACT_KINDS: dict[tuple[str, str], tuple[str, ...]] = {
     ): (
         "schedule.stage07.replan_packet",
         "schedule.replan_delta.workbook",
+    ),
+    (
+        "Stage04",
+        "final_packet_review",
+    ): (
+        "reporting.upd_draft.workbook",
     ),
 }
 

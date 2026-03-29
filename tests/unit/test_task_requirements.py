@@ -35,6 +35,20 @@ def _workflow_payload(workflow_run_id: str) -> dict[str, str]:
     }
 
 
+def _dispatch_workflow_payload(workflow_run_id: str) -> dict[str, str]:
+    return {
+        "workflow_run_id": workflow_run_id,
+        "workflow_id": "dispatch_reporting.v1",
+        "workflow_version": "v1",
+        "tenant_id": "tenant-a",
+        "domain_id": "domain-x",
+        "partition_key": "SD-2026-03-16",
+        "logical_date": "2026-03-16",
+        "activation_key": "dispatch-stage01-intake",
+        "idempotency_key": f"idem:runs.create:{workflow_run_id}",
+    }
+
+
 def _task_payload(
     workflow_run_id: str,
     *,
@@ -487,6 +501,206 @@ def test_weekly_stage05_final_review_requires_manager_review_and_latest_review_c
             "required_count": 1,
             "reviewed_artifact_version_id": "av-weekly-stage05-draft",
             "review_confirmation_artifact_version_id": "av-weekly-stage05-review-confirmed",
+            "status": "confirmed",
+        }
+    ]
+    assert confirmed_state["missing_required_inputs"] == []
+    assert confirmed_state["blocking_reason_codes"] == []
+
+
+def test_dispatch_stage01_eos_input_intake_requirements_expose_official_input_role() -> None:
+    connection = _connection()
+    workflow_run_id = "wr-dispatch-stage01-intake"
+    human_task_id = "ht-dispatch-stage01-intake"
+    create_workflow_run_command(connection, _dispatch_workflow_payload(workflow_run_id))
+    create_task_run_command(
+        connection,
+        _task_payload(
+            workflow_run_id,
+            task_run_id="tr-dispatch-stage01-intake",
+            human_task_id=human_task_id,
+            stage_id="Stage01",
+            task_kind="eos_input_intake",
+            activation_key="dispatch-stage01-eos-intake",
+        ),
+    )
+
+    state = _requirement_state(
+        connection,
+        workflow_run_id,
+        human_task_id=human_task_id,
+        stage_id="Stage01",
+        task_kind="eos_input_intake",
+    )
+
+    assert state["missing_required_inputs"] == ["reporting.eos_raw.workbook"]
+    assert state["blocking_reason_codes"] == [
+        "required_upload_missing:reporting.eos_raw.workbook"
+    ]
+    assert state["required_reviews"] == []
+    assert state["required_uploads"] == [
+        {
+            "dataset_key": "reporting.eos_raw.workbook",
+            "template_id": None,
+            "artifact_kind": "reporting.eos_raw.workbook",
+            "artifact_role": "official_input",
+            "required": True,
+            "required_count": 1,
+            "current_count": 0,
+            "linked_count": 0,
+            "status": "missing",
+        },
+        {
+            "dataset_key": "reporting.eos_raw.doc",
+            "template_id": None,
+            "artifact_kind": "reporting.eos_raw.doc",
+            "artifact_role": "evidence",
+            "required": False,
+            "required_count": 1,
+            "current_count": 0,
+            "linked_count": 0,
+            "status": "optional",
+        },
+    ]
+
+
+def test_dispatch_stage04_final_packet_review_requires_manager_review_and_latest_review_confirmation() -> None:
+    connection = _connection()
+    workflow_run_id = "wr-dispatch-stage04-review"
+    human_task_id = "ht-dispatch-stage04-review"
+    task_run_id = "tr-dispatch-stage04-review"
+    create_workflow_run_command(connection, _dispatch_workflow_payload(workflow_run_id))
+    create_task_run_command(
+        connection,
+        _task_payload(
+            workflow_run_id,
+            task_run_id=task_run_id,
+            human_task_id=human_task_id,
+            stage_id="Stage04",
+            task_kind="final_packet_review",
+            activation_key="dispatch-stage04-final-packet-review",
+        ),
+    )
+
+    initial_state = _requirement_state(
+        connection,
+        workflow_run_id,
+        human_task_id=human_task_id,
+        stage_id="Stage04",
+        task_kind="final_packet_review",
+    )
+    assert initial_state["required_reviews"] == []
+    assert initial_state["missing_required_inputs"] == ["reporting.manager_review.doc"]
+    assert initial_state["blocking_reason_codes"] == [
+        "required_upload_missing:reporting.manager_review.doc"
+    ]
+
+    create_artifact_version_command(
+        connection,
+        _artifact_payload(
+            workflow_run_id,
+            artifact_version_id="av-dispatch-stage03-draft",
+            artifact_kind="reporting.upd_draft.workbook",
+            relation_kind="draft",
+            subject_id=human_task_id,
+            links=[],
+        ),
+    )
+    draft_state = _requirement_state(
+        connection,
+        workflow_run_id,
+        human_task_id=human_task_id,
+        stage_id="Stage04",
+        task_kind="final_packet_review",
+    )
+    assert draft_state["required_uploads"] == [
+        {
+            "dataset_key": "reporting.manager_review.doc",
+            "template_id": None,
+            "artifact_kind": "reporting.manager_review.doc",
+            "artifact_role": "evidence",
+            "required": True,
+            "required_count": 1,
+            "current_count": 0,
+            "linked_count": 0,
+            "status": "missing",
+        }
+    ]
+    assert draft_state["required_reviews"] == [
+        {
+            "dataset_key": "reporting.upd_draft.workbook",
+            "artifact_kind": "reporting.upd_draft.workbook",
+            "required_count": 1,
+            "reviewed_artifact_version_id": "av-dispatch-stage03-draft",
+            "review_confirmation_artifact_version_id": None,
+            "status": "pending_confirmation",
+        }
+    ]
+    assert draft_state["missing_required_inputs"] == [
+        "reporting.manager_review.doc",
+        "reporting.upd_draft.workbook",
+    ]
+    assert draft_state["blocking_reason_codes"] == [
+        "required_upload_missing:reporting.manager_review.doc",
+        "required_review_confirmation_missing:reporting.upd_draft.workbook",
+    ]
+
+    create_artifact_version_command(
+        connection,
+        _artifact_payload(
+            workflow_run_id,
+            artifact_version_id="av-dispatch-manager-review",
+            artifact_kind="reporting.manager_review.doc",
+            artifact_role="evidence",
+            relation_kind="attachment",
+            subject_id=human_task_id,
+            links=[
+                {
+                    "subject_kind": "human_task",
+                    "subject_id": human_task_id,
+                    "relation_kind": "attachment",
+                }
+            ],
+        ),
+    )
+    create_artifact_version_command(
+        connection,
+        _artifact_payload(
+            workflow_run_id,
+            artifact_version_id="av-dispatch-review-confirmed",
+            artifact_kind=REVIEW_CONFIRMATION_ARTIFACT_KIND,
+            artifact_role="review_evidence",
+            metadata_json={
+                "human_task_id": human_task_id,
+                "task_run_id": task_run_id,
+                "workflow_run_id": workflow_run_id,
+                "reviewed_artifact_version_ids": ["av-dispatch-stage03-draft"],
+            },
+            relation_kind="review_confirmation",
+            subject_id=human_task_id,
+            links=[
+                {
+                    "subject_kind": "human_task",
+                    "subject_id": human_task_id,
+                    "relation_kind": "review_confirmation",
+                }
+            ],
+        ),
+    )
+    confirmed_state = _requirement_state(
+        connection,
+        workflow_run_id,
+        human_task_id=human_task_id,
+        stage_id="Stage04",
+        task_kind="final_packet_review",
+    )
+    assert confirmed_state["required_reviews"] == [
+        {
+            "dataset_key": "reporting.upd_draft.workbook",
+            "artifact_kind": "reporting.upd_draft.workbook",
+            "required_count": 1,
+            "reviewed_artifact_version_id": "av-dispatch-stage03-draft",
+            "review_confirmation_artifact_version_id": "av-dispatch-review-confirmed",
             "status": "confirmed",
         }
     ]

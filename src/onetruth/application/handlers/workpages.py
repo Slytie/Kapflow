@@ -78,6 +78,7 @@ SCHEDULE_WORKPAGE_SUPPORTED_TASK_SURFACES = frozenset(
     }
 )
 SCHEDULE_WORKPAGE_SUPPORTED_APPROVAL_SCOPE_REFS = frozenset({"Stage06"})
+EOD_WORKPAGE_SUPPORTED_TASK_SURFACES = frozenset({("Stage04", "final_packet_review")})
 EOD_WORKPAGE_SUPPORTED_APPROVAL_SCOPE_REFS = frozenset({"Stage04"})
 
 
@@ -1232,9 +1233,38 @@ def _validate_eod_workpage_subject_link(
 ) -> None:
     subject_kind = str(subject_link["subject_kind"])
     subject_id = str(subject_link["subject_id"])
+    if subject_kind == "human_task":
+        human_task = get_human_task(connection, subject_id)
+        if human_task is None:
+            raise _invalid_workpage_subject_link(
+                message="human task not found for EOD workpage subject_link",
+                workflow_run_id=workflow_run_id,
+                subject_kind=subject_kind,
+                subject_id=subject_id,
+            )
+        task_run = get_task_run(connection, str(human_task["task_run_id"]))
+        if task_run is None:
+            raise _invalid_workpage_subject_link(
+                message="human task stage could not be resolved for EOD workpage subject_link",
+                workflow_run_id=workflow_run_id,
+                subject_kind=subject_kind,
+                subject_id=subject_id,
+            )
+        stage_id = str(task_run.get("stage_id") or "")
+        task_kind = str(human_task.get("task_kind") or "")
+        if (stage_id, task_kind) not in EOD_WORKPAGE_SUPPORTED_TASK_SURFACES:
+            raise _invalid_workpage_subject_link(
+                message="human task is not a supported EOD workpage surface",
+                workflow_run_id=workflow_run_id,
+                subject_kind=subject_kind,
+                subject_id=subject_id,
+                stage_id=stage_id,
+                task_kind=task_kind,
+            )
+        return
     if subject_kind != "approval":
         raise _invalid_workpage_subject_link(
-            message="only approval subjects are supported for EOD workpage subject_link",
+            message="only approval or supported human-task subjects are allowed for EOD workpage subject_link",
             workflow_run_id=workflow_run_id,
             subject_kind=subject_kind,
             subject_id=subject_id,

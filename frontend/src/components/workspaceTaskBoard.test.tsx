@@ -133,6 +133,114 @@ function buildWeeklyIntakeSurface(): {
   };
 }
 
+function buildDispatchReviewSurface(): {
+  workspace: WorkflowRunWorkspaceContract;
+  detail: WorkflowRunDetailContract;
+} {
+  const state = createContractState();
+  state.humanTasks = state.humanTasks.map((task) =>
+    task.human_task_id === "ht-claimed-002"
+      ? {
+          ...task,
+          stage_id: "Stage04",
+          task_kind: "final_packet_review",
+          owner_role: "dispatch_supervisor",
+          candidate_roles: ["dispatch_supervisor"]
+        }
+      : task
+  );
+  const detail = buildWorkflowRunDetail(state, "wr-test-001");
+  const baseWorkspace = buildWorkflowRunWorkspace(state, "wr-test-001");
+  const patchTaskItem = (
+    item: WorkflowRunWorkspaceContract["user_work"][number]
+  ): typeof item =>
+    item.item_kind === "human_task" && item.human_task.human_task_id === "ht-claimed-002"
+      ? {
+          ...item,
+          workpage_actions: [
+            {
+              action_id: "workpage.eod-v0.open_latest_draft",
+              workpage_kind: "eod-v0",
+              label: "Open EOD draft",
+              presentation: "open_route",
+              state: "available",
+              route: "/runs/wr-test-001/workpages/eod-v0/artifacts/av-review-draft-001",
+              create_path: null,
+              subject_context: {
+                subject_kind: "human_task",
+                subject_id: "ht-claimed-002",
+                workflow_run_id: "wr-test-001"
+              },
+              link_policy: {
+                create_relation_kind: "draft",
+                submit_relation_kind: "response"
+              },
+              disabled_reason: null
+            }
+          ]
+        }
+      : item;
+  return {
+    detail,
+    workspace: {
+      ...baseWorkspace,
+      user_work: baseWorkspace.user_work.map(patchTaskItem),
+      blocking_work: baseWorkspace.blocking_work.map(patchTaskItem)
+    }
+  };
+}
+
+function buildDispatchIntakeSurface(): {
+  workspace: WorkflowRunWorkspaceContract;
+  detail: WorkflowRunDetailContract;
+} {
+  const state = createContractState();
+  state.humanTasks = state.humanTasks.map((task) =>
+    task.human_task_id === "ht-claimed-002"
+      ? {
+          ...task,
+          stage_id: "Stage01",
+          task_kind: "eos_input_intake",
+          owner_role: "dispatch_supervisor",
+          candidate_roles: ["dispatch_supervisor"]
+        }
+      : task
+  );
+  const detail = buildWorkflowRunDetail(state, "wr-test-001");
+  const baseWorkspace = buildWorkflowRunWorkspace(state, "wr-test-001");
+  const patchTaskItem = (
+    item: WorkflowRunWorkspaceContract["user_work"][number]
+  ): typeof item =>
+    item.item_kind === "human_task" && item.human_task.human_task_id === "ht-claimed-002"
+      ? {
+          ...item,
+          available_actions: ["upload_attachment"],
+          required_uploads: [
+            {
+              dataset_key: "reporting.eos_raw.workbook",
+              artifact_kind: "reporting.eos_raw.workbook",
+              artifact_role: "official_input",
+              required: true,
+              required_count: 1,
+              current_count: 0,
+              status: "missing"
+            }
+          ],
+          required_reviews: [],
+          missing_required_inputs: ["reporting.eos_raw.workbook"],
+          blocking_reason_codes: ["required_upload_missing:reporting.eos_raw.workbook"]
+        }
+      : item;
+  return {
+    detail,
+    workspace: {
+      ...baseWorkspace,
+      user_work: baseWorkspace.user_work.map(patchTaskItem),
+      blocking_work: baseWorkspace.blocking_work.map(patchTaskItem)
+    }
+  };
+}
+
 describe("WorkspaceTaskBoard weekly surfaces", () => {
   it("renders the weekly Stage04 build action and invokes the repository method", async () => {
     const user = userEvent.setup();
@@ -172,6 +280,35 @@ describe("WorkspaceTaskBoard weekly surfaces", () => {
     ).toBeInTheDocument();
     expect(
       within(card as HTMLElement).getByRole("button", { name: "Upload Input" })
+    ).toBeInTheDocument();
+  });
+
+  it("renders dispatch daily intake copy with required-input upload wording", async () => {
+    const { workspace, detail } = buildDispatchIntakeSurface();
+    renderBoard(workspace, detail);
+
+    const card = (await screen.findByRole("heading", { name: "Daily EOS Intake" })).closest("article");
+    expect(card).not.toBeNull();
+    expect(
+      within(card as HTMLElement).getByText(/Required input: reporting\.eos_raw\.workbook/i)
+    ).toBeInTheDocument();
+    expect(
+      within(card as HTMLElement).getByRole("button", { name: "Upload Input" })
+    ).toBeInTheDocument();
+  });
+
+  it("renders dispatch review copy and keeps the EOD draft action available", async () => {
+    const { workspace, detail } = buildDispatchReviewSurface();
+    renderBoard(workspace, detail);
+
+    const card = (await screen.findByRole("heading", { name: "Review EOD Draft" })).closest("article");
+    expect(card).not.toBeNull();
+
+    await userEvent.setup().click(
+      within(card as HTMLElement).getByLabelText("Actions for Review EOD Draft")
+    );
+    expect(
+      within(card as HTMLElement).getByRole("button", { name: "Open EOD draft" })
     ).toBeInTheDocument();
   });
 });

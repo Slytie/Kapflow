@@ -53,23 +53,16 @@ stages:
   name: Actuals_Normalization
   in_scope_mvp: true
   artifacts:
-  - dataset_key: reporting.actuals_normalized.doc
-    kind: document
-    role: evidence
   - dataset_key: reporting.actuals_normalized.workbook
     kind: spreadsheet
     role: official_input
   notes:
   - Row-level operational truth outranks fragile spreadsheet summary formulas.
-  - 'This stage should recompute totals and flag formula-integrity issues such as
-    #REF! or #VALUE!.'
+  - This stage deterministically rebuilds normalized actuals from the uploaded EOS workbook and surfaces formula-integrity warnings explicitly.
 - id: Stage03
   name: Threshold_Detection_and_Draft_Packet
   in_scope_mvp: true
   artifacts:
-  - dataset_key: reporting.upd_draft.doc
-    kind: document
-    role: evidence
   - dataset_key: reporting.upd_draft.workbook
     kind: spreadsheet
     role: official_input
@@ -85,6 +78,7 @@ stages:
   notes:
   - Generate the draft reporting packet and mark cases that may require UPD / >600-minute
     follow-up.
+  - The first operator lane is workbook-first; `reporting.upd_draft.workbook` is the editable review surface for `eod-v0`.
 - id: Stage04
   name: Manager_Review_Confirm
   in_scope_mvp: true
@@ -97,22 +91,19 @@ stages:
     kind: document
     role: evidence
   notes:
+  - A `Stage04/final_packet_review` human task owns the draft review workpage before the manager approval gate is requested.
   - Manager confirmation is required before any reporting packet becomes official.
 - id: Stage05
   name: Finalize_Reporting_Packet
   in_scope_mvp: true
   artifacts:
-  - dataset_key: reporting.final_packet.doc
-    kind: document
-    role: official_output
   - dataset_key: reporting.final_packet.workbook
     kind: spreadsheet
     role: official_output
   notes:
-  - Finalized reporting output is linked back to the source EOS upload and normalized
-    row set.
-  - A downstream actual-hours snapshot from this packet should feed future planning
-    and dispatch eligibility.
+  - Approving Stage04 auto-finalizes `reporting.final_packet.workbook` from the reviewed draft workbook; no separate document packet is emitted in the first operator lane.
+  - Finalized reporting output is linked back to the source EOS upload and normalized row set.
+  - A downstream actual-hours snapshot from this packet should feed future planning and dispatch eligibility through the existing notify-only handoff.
 event_inventory:
   platform_required:
   - workflow.run.created

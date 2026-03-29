@@ -30,6 +30,11 @@ export function ApprovalCard({
   requestInfoDisabled = false,
   actionPending = false
 }: ApprovalCardProps): JSX.Element {
+  const autoApproveHint =
+    approval.scope_ref === "Stage04"
+      ? "Approving finalizes the daily packet and sends planning feedback automatically."
+      : null;
+
   return (
     <article className="approval-card">
       <header>
@@ -37,6 +42,7 @@ export function ApprovalCard({
         <StatusBadge status={approval.state} />
       </header>
       <p>{approval.approval_kind} · Required: {approval.required_role}</p>
+      {autoApproveHint ? <p>{autoApproveHint}</p> : null}
       <ActionCluster
         actions={[
           {

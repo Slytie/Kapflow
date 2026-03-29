@@ -633,7 +633,15 @@ def _handle_tasks_complete(args: argparse.Namespace) -> int:
     if isinstance(connection, int):
         return connection
     try:
-        result = complete_human_task_command(connection, payload, include_receipt=True)
+        result = complete_human_task_command(
+            connection,
+            payload,
+            include_receipt=True,
+            storage_root=default_storage_root_for_db_url(
+                args.db_url,
+                override=payload.get("storage_root"),
+            ),
+        )
     except CommandError as exc:
         return _emit_error(code=exc.code, message=exc.message, details=exc.details)
     except DuplicateIdempotencyKeyError as exc:

@@ -4,7 +4,7 @@
 Stage 4 - Vertical Slice MVP (repo merged around one truth system)
 
 ## Current milestone
-Primary runtime/debug work remains the logistics weekly/live family. `TASK-0137` through `TASK-0152` are now complete, so the repo now has the closed EPIC-121 artifact-backed EOD slice, the full EPIC-122 workflow-run-backed workpage access layer across backend and frontend, the closed EPIC-123 Stage04 schedule artifact-backed slice, the closed EPIC-124 stage-linked workspace CTA slice, the closed EPIC-125 contract freeze, and the first implemented EPIC-125 weekly operator lane. The current demo/query and artifact-backed EOD routes stay intact as compatibility aliases, the canonical run-backed route family and minimal run-context/draft-resolution boundary remain frozen in repo-native docs, the canonical `/runs/:workflowRunId/workpages/*` schedule/EOD surfaces now exist in the app, `/demo/logistics` exposes those canonical workpage routes as the primary discoverable path, supported `/runs/:workflowRunId/workspace` work items now project and render backend-owned `workpage_actions[]` without adding a second shell or route family, and the next app-facing implementation tranche is now explicitly EPIC-125 `TASK-0153`.
+Primary runtime/debug work remains the logistics weekly/live family. `TASK-0137` through `TASK-0153` are now complete, so the repo now has the closed EPIC-121 artifact-backed EOD slice, the full EPIC-122 workflow-run-backed workpage access layer across backend and frontend, the closed EPIC-123 Stage04 schedule artifact-backed slice, the closed EPIC-124 stage-linked workspace CTA slice, the closed EPIC-125 contract freeze, the first implemented EPIC-125 weekly operator lane, and the first implemented EPIC-125 daily reporting operator lane. The current demo/query and artifact-backed EOD routes stay intact as compatibility aliases, the canonical run-backed route family and minimal run-context/draft-resolution boundary remain frozen in repo-native docs, the canonical `/runs/:workflowRunId/workpages/*` schedule/EOD surfaces now exist in the app, `/demo/logistics` exposes those canonical workpage routes as the primary discoverable path, supported `/runs/:workflowRunId/workspace` work items now project and render backend-owned `workpage_actions[]` without adding a second shell or route family, and the next app-facing implementation tranche is now explicitly EPIC-125 `TASK-0154`.
 
 Current implemented baseline:
 - `/demo/logistics/workpages/schedule-v0`
@@ -43,6 +43,10 @@ Current implemented baseline:
   - `fixtures/frontend_contracts/workpage_eod_v0_artifact_create_response.json`
   - `fixtures/frontend_contracts/workpage_eod_v0_artifact_state.json`
   - `fixtures/frontend_contracts/workpage_eod_v0_artifact_submit_response.json`
+- bounded `dispatch_reporting.v1` Stage01 intake contract with `artifact_role=official_input` for `reporting.eos_raw.workbook`
+- deterministic daily reporting build from EOS workbook to `reporting.actuals_normalized.workbook` plus seeded `reporting.upd_draft.workbook`
+- Stage04 `final_packet_review` human-task lane that opens the canonical `eod-v0` workpage against the latest draft workbook
+- Stage04 reporting approval approval now auto-finalizes `reporting.final_packet.workbook`, promotes `official:reporting.final_packet.workbook`, and invokes the existing `reporting_actuals_to_future_planning` notify-only handoff
 - logistics demo shell now exposes:
   - primary canonical run-backed workpage launch links for the single linked weekly-planning and dispatch-reporting runs in the current story
   - a clearly labeled compatibility-alias section for `/demo/logistics/workpages/*`
@@ -203,9 +207,9 @@ Repo-truth certification snapshot: current capability status and command/test ev
 - Adopted a pytest-backed TDD harness with a stable AT-SCH scenario catalog and reference replay reducer
 
 ### Next tasks (priority order)
-1. `TASK-0153` - Wire the daily EOS intake, draft-reporting review workpage, finalize flow, and planning feedback handoff without widening reporting scope.
-2. `TASK-0154` - Add the minimal manual daily-replan lane through live-dispatch seed activation and official delta promotion, while keeping the lane non-algorithmic.
-3. `TASK-0155` - Add the local demo runbook, seeded operator smoke path, and stable entrypoints for the first serious weekly/daily walkthrough.
+1. `TASK-0154` - Add the minimal manual daily-replan lane through live-dispatch seed activation and official delta promotion, while keeping the lane non-algorithmic.
+2. `TASK-0155` - Add the local demo runbook, seeded operator smoke path, and stable entrypoints for the first serious weekly/daily walkthrough.
+3. `TASK-0156` - Add the external cadence tick and single-node production-shaped runbook after the local demo path is real.
 
 ## Test-first working mode
 Before adding runtime services or API surfaces:

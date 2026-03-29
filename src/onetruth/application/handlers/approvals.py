@@ -26,6 +26,18 @@ from onetruth.application.handlers._shared.command_boundary import (
     _workflow_scope,
 )
 from onetruth.application.handlers.pointers import _promote_pointer_effects
+from onetruth.application.handlers.logistics_handoff import notify_only_handoff_command
+from onetruth.application.services.dispatch_reporting_build import (
+    FINAL_PACKET_ARTIFACT_KIND as DISPATCH_FINAL_PACKET_ARTIFACT_KIND,
+    FINAL_PACKET_POINTER_KEY as DISPATCH_FINAL_PACKET_POINTER_KEY,
+    MANAGER_REVIEW_ARTIFACT_KIND as DISPATCH_MANAGER_REVIEW_ARTIFACT_KIND,
+    REPORTING_TO_PLANNING_EDGE_ID as DISPATCH_REPORTING_TO_PLANNING_EDGE_ID,
+    REVIEW_APPROVAL_ACTION as DISPATCH_REVIEW_APPROVAL_ACTION,
+    REVIEW_APPROVAL_SCOPE_REF as DISPATCH_REVIEW_APPROVAL_SCOPE_REF,
+    REVIEW_TASK_KIND as DISPATCH_REVIEW_TASK_KIND,
+    UPD_DRAFT_ARTIFACT_KIND as DISPATCH_UPD_DRAFT_ARTIFACT_KIND,
+    WORKFLOW_ID as DISPATCH_REPORTING_WORKFLOW_ID,
+)
 from onetruth.application.services.task_requirements import (
     REVIEW_CONFIRMATION_ARTIFACT_KIND,
     build_human_task_requirement_index,
@@ -411,6 +423,14 @@ def respond_approval_command(
                 actor_type=actor_type,
                 event_idempotency_base=receipt.event_idempotency_base if receipt is not None else None,
             )
+            _maybe_finalize_dispatch_reporting_approval(
+                connection,
+                approval=responded,
+                requested_action=requested_action,
+                actor_id=str(payload["actor_id"]),
+                actor_type=actor_type,
+                event_idempotency_base=receipt.event_idempotency_base if receipt is not None else None,
+            )
         approval = get_approval(connection, str(payload["approval_id"]))
         if approval is None:
             raise CommandError(
@@ -731,6 +751,242 @@ def _maybe_auto_publish_weekly_approval(
             event_idempotency_base,
             "weekly-publish.artifact.pointer.drift-detected",
         ),
+    )
+
+
+def _maybe_finalize_dispatch_reporting_approval(
+    connection: sqlite3.Connection,
+    *,
+    approval: dict[str, Any],
+    requested_action: str,
+    actor_id: str,
+    actor_type: str,
+    event_idempotency_base: str | None,
+) -> None:
+    workflow_run_id = str(approval["workflow_run_id"])
+    workflow_run = get_workflow_run(connection, workflow_run_id)
+    if workflow_run is None:
+        raise CommandError(
+            code="workflow_run_not_found",
+            message="workflow run not found for dispatch reporting finalize side effect",
+            details={"workflow_run_id": workflow_run_id},
+        )
+    if str(workflow_run.get("workflow_id") or "") != DISPATCH_REPORTING_WORKFLOW_ID:
+        return
+    if str(approval.get("scope_ref") or "") != DISPATCH_REVIEW_APPROVAL_SCOPE_REF:
+        return
+    if requested_action != DISPATCH_REVIEW_APPROVAL_ACTION:
+        return
+
+    task_run_id = str(
+        approval.get("task_run_id")
+        or approval.get("requested_by_task_run_id")
+        or ""
+    ).strip()
+    if not task_run_id:
+        raise CommandError(
+            code="dispatch_reporting_finalize_context_missing",
+            message="dispatch reporting finalize approval must reference the reviewed Stage04 task",
+            details={"approval_id": str(approval["approval_id"])},
+        )
+    task_run = get_task_run(connection, task_run_id)
+    if task_run is None:
+        raise CommandError(
+            code="task_run_not_found",
+            message="review task run not found for dispatch reporting finalize approval",
+            details={
+                "approval_id": str(approval["approval_id"]),
+                "task_run_id": task_run_id,
+            },
+        )
+    if str(task_run.get("task_kind") or "") != DISPATCH_REVIEW_TASK_KIND:
+        raise CommandError(
+            code="dispatch_reporting_finalize_context_missing",
+            message="dispatch reporting finalize approval must reference the Stage04 review task",
+            details={
+                "approval_id": str(approval["approval_id"]),
+                "task_run_id": task_run_id,
+                "task_kind": str(task_run.get("task_kind") or ""),
+            },
+        )
+    human_task = get_human_task_by_task_run_id(connection, task_run_id)
+    if human_task is None:
+        raise CommandError(
+            code="human_task_not_found",
+            message="review human task not found for dispatch reporting finalize approval",
+            details={
+                "approval_id": str(approval["approval_id"]),
+                "task_run_id": task_run_id,
+            },
+        )
+
+    artifacts = list_artifact_versions_for_workflow_run(connection, workflow_run_id)
+    latest_draft = _latest_artifact_of_kind(artifacts, DISPATCH_UPD_DRAFT_ARTIFACT_KIND)
+    if latest_draft is None:
+        raise CommandError(
+            code="stable_base_schedule_required",
+            message="dispatch reporting finalize requires a current EOD draft artifact",
+            details={
+                "approval_id": str(approval["approval_id"]),
+                "workflow_run_id": workflow_run_id,
+                "artifact_kind": DISPATCH_UPD_DRAFT_ARTIFACT_KIND,
+            },
+        )
+
+    requirement_state = build_human_task_requirement_index(
+        connection,
+        workflow_run_id=workflow_run_id,
+        human_tasks=[
+            {
+                **human_task,
+                "stage_id": task_run.get("stage_id"),
+                "task_kind": task_run.get("task_kind"),
+            }
+        ],
+        artifact_versions=artifacts,
+    ).get(str(human_task["human_task_id"]), {})
+    manager_review_requirement = _required_upload_for_kind(
+        requirement_state=requirement_state,
+        artifact_kind=DISPATCH_MANAGER_REVIEW_ARTIFACT_KIND,
+    )
+    if manager_review_requirement is None or str(manager_review_requirement.get("status") or "") == "missing":
+        raise CommandError(
+            code="dispatch_reporting_finalize_requirements_not_satisfied",
+            message="dispatch reporting finalize requires the manager review attachment",
+            details={
+                "approval_id": str(approval["approval_id"]),
+                "human_task_id": str(human_task["human_task_id"]),
+                "artifact_kind": DISPATCH_MANAGER_REVIEW_ARTIFACT_KIND,
+            },
+        )
+
+    review_confirmation = _latest_review_confirmation_for_human_task(
+        artifacts=artifacts,
+        human_task_id=str(human_task["human_task_id"]),
+    )
+    reviewed_draft_artifact_version_id = _reviewed_artifact_id_from_confirmation(
+        artifacts=artifacts,
+        review_confirmation=review_confirmation,
+        artifact_kind=DISPATCH_UPD_DRAFT_ARTIFACT_KIND,
+    )
+    if reviewed_draft_artifact_version_id is None:
+        raise CommandError(
+            code="dispatch_reporting_finalize_requirements_not_satisfied",
+            message="dispatch reporting finalize requires a review confirmation for the reviewed draft",
+            details={
+                "approval_id": str(approval["approval_id"]),
+                "human_task_id": str(human_task["human_task_id"]),
+                "artifact_kind": DISPATCH_UPD_DRAFT_ARTIFACT_KIND,
+            },
+        )
+
+    latest_draft_artifact_version_id = str(latest_draft["artifact_version_id"])
+    if reviewed_draft_artifact_version_id != latest_draft_artifact_version_id:
+        raise CommandError(
+            code="stable_base_schedule_required",
+            message="dispatch reporting finalize requires the reviewed draft to remain the latest draft",
+            details={
+                "approval_id": str(approval["approval_id"]),
+                "workflow_run_id": workflow_run_id,
+                "reviewed_draft_artifact_version_id": reviewed_draft_artifact_version_id,
+                "latest_draft_artifact_version_id": latest_draft_artifact_version_id,
+            },
+        )
+
+    draft_artifact = get_artifact_version(connection, latest_draft_artifact_version_id)
+    if draft_artifact is None:
+        raise CommandError(
+            code="artifact_version_not_found",
+            message="reviewed draft artifact was not found for dispatch reporting finalize",
+            details={"artifact_version_id": latest_draft_artifact_version_id},
+        )
+
+    draft_metadata = draft_artifact.get("metadata_json")
+    finalized_metadata = dict(draft_metadata) if isinstance(draft_metadata, dict) else {}
+    finalized_metadata.update(
+        {
+            "finalized_from_artifact_version_id": reviewed_draft_artifact_version_id,
+            "approval_id": str(approval["approval_id"]),
+            "finalized_at": utc_now_iso(),
+        }
+    )
+    finalized_artifact = _create_artifact_version_effects(
+        connection,
+        {
+            "artifact_version_id": f"av-{uuid4()}",
+            "workflow_run_id": workflow_run_id,
+            "task_run_id": task_run_id,
+            "artifact_kind": DISPATCH_FINAL_PACKET_ARTIFACT_KIND,
+            "artifact_role": "official_output",
+            "media_type": str(draft_artifact["media_type"]),
+            "storage_uri": str(draft_artifact["storage_uri"]),
+            "content_digest": str(draft_artifact["content_digest"]),
+            "byte_size": draft_artifact.get("byte_size"),
+            "metadata_json": finalized_metadata,
+            "parent_artifact_version_id": reviewed_draft_artifact_version_id,
+            "lineage_note": "dispatch_reporting_finalized_packet",
+            "links": [
+                {
+                    "subject_kind": "approval",
+                    "subject_id": str(approval["approval_id"]),
+                    "relation_kind": "output",
+                },
+                {
+                    "subject_kind": "task_run",
+                    "subject_id": task_run_id,
+                    "relation_kind": "output",
+                },
+                {
+                    "subject_kind": "human_task",
+                    "subject_id": str(human_task["human_task_id"]),
+                    "relation_kind": "output",
+                },
+            ],
+            "actor_id": actor_id,
+            "actor_type": actor_type,
+        },
+        event_idempotency=_event_idempotency_key(
+            event_idempotency_base,
+            "dispatch-reporting.final-packet.artifact.version.created",
+        ),
+    )
+    _promote_pointer_effects(
+        connection,
+        {
+            "workflow_run_id": workflow_run_id,
+            "scope_kind": "stage",
+            "scope_ref": DISPATCH_REVIEW_APPROVAL_SCOPE_REF,
+            "pointer_key": DISPATCH_FINAL_PACKET_POINTER_KEY,
+            "artifact_kind": DISPATCH_FINAL_PACKET_ARTIFACT_KIND,
+            "artifact_version_id": str(finalized_artifact["artifact_version_id"]),
+            "promotion_reason": "official_finalize",
+            "approved_by_approval_id": str(approval["approval_id"]),
+            "promoted_by_task_run_id": task_run_id,
+            "reviewed_artifact_version_id": reviewed_draft_artifact_version_id,
+            "actor_id": actor_id,
+            "actor_type": actor_type,
+        },
+        event_idempotency=_event_idempotency_key(
+            event_idempotency_base,
+            "dispatch-reporting.final-packet.artifact.pointer.promoted",
+        ),
+        drift_idempotency=_event_idempotency_key(
+            event_idempotency_base,
+            "dispatch-reporting.final-packet.artifact.pointer.drift-detected",
+        ),
+    )
+    notify_only_handoff_command(
+        connection,
+        {
+            "edge_id": DISPATCH_REPORTING_TO_PLANNING_EDGE_ID,
+            "source_workflow_run_id": workflow_run_id,
+            "source_artifact_version_id": str(finalized_artifact["artifact_version_id"]),
+            "idempotency_key": (
+                f"{event_idempotency_base}:dispatch-reporting:planning-handoff"
+                if event_idempotency_base is not None
+                else f"dispatch-reporting:planning-handoff:{approval['approval_id']}"
+            ),
+        },
     )
 
 

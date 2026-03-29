@@ -176,6 +176,29 @@ def materialize_upd_draft_workbook(
     return buffer.getvalue()
 
 
+def seed_upd_draft_workbook(
+    base_content: bytes,
+    tables: Mapping[str, Any],
+) -> bytes:
+    if not isinstance(tables, Mapping):
+        raise ValueError("seed workbook tables must be a mapping")
+
+    requested_keys = {str(key) for key in tables}
+    unknown_keys = requested_keys - set(TABLE_SPECS_BY_KEY)
+    if unknown_keys:
+        raise ValueError(f"unknown workbook tables: {sorted(unknown_keys)}")
+
+    workbook = _load_workbook_from_bytes(base_content)
+    for table_key in requested_keys:
+        spec = TABLE_SPECS_BY_KEY[table_key]
+        normalized_rows = _normalize_client_rows(tables[table_key], spec=spec)
+        _write_table_rows(workbook, spec, normalized_rows)
+
+    buffer = io.BytesIO()
+    workbook.save(buffer)
+    return buffer.getvalue()
+
+
 def _read_table_rows(workbook, spec: WorkbookTableSpec) -> list[dict[str, Any]]:
     worksheet = workbook[spec.workbook_table_name] if spec.workbook_table_name in workbook.sheetnames else None
     if worksheet is None:

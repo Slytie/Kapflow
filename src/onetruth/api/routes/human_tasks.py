@@ -227,6 +227,7 @@ def complete_human_task_endpoint(
     connection: sqlite3.Connection,
     *,
     context: RequestContext,
+    db_url: str,
     human_task_id: str,
     payload: dict[str, Any],
 ) -> dict[str, Any]:
@@ -241,7 +242,12 @@ def complete_human_task_endpoint(
         "idempotency_key": payload.get("idempotency_key"),
     }
     try:
-        result = complete_human_task_command(connection, command_payload, include_receipt=True)
+        result = complete_human_task_command(
+            connection,
+            command_payload,
+            include_receipt=True,
+            storage_root=default_storage_root_for_db_url(db_url),
+        )
     except CommandError as exc:
         raise api_error_from_command(exc) from exc
     except DuplicateIdempotencyKeyError as exc:

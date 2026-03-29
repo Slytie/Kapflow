@@ -2,6 +2,14 @@
 
 Record any decisions made since the last session so a fresh Codex run can rehydrate quickly.
 
+## 2026-03-29 (TASK-0153 daily EOS intake, EOD review loop, finalize, and planning feedback)
+- Daily-lane decision: the first implemented EPIC-125 reporting operator loop is now `Stage01/eos_input_intake -> deterministic Stage02/Stage03 workbook build -> Stage04/final_packet_review -> Stage04 approval`, and it stays fully inside the existing workflow/task/approval/artifact/pointer/handoff substrate.
+- Intake-contract decision: `dispatch_reporting.v1` `Stage01/eos_input_intake` required uploads now carry explicit `artifact_role`; `reporting.eos_raw.workbook` is required `official_input`, while `reporting.eos_raw.doc` remains optional evidence only.
+- Build-boundary decision: the first reporting build is intentionally bounded to the known EOS workbook family already represented by the repo's reporting workbook seam; unsupported workbook shapes fail closed instead of widening into a generic spreadsheet ETL engine.
+- Review-surface decision: `Stage04/final_packet_review` is now the supported human-task EOD workpage surface, and completion keeps `outcome=complete` at the API boundary while backend lifecycle logic maps it to `draft_ready_for_manager_confirmation`.
+- Finalize-trigger decision: approving a `dispatch_reporting.v1` `Stage04` `confirm_dispatch_reporting_packet` approval now auto-finalizes `reporting.final_packet.workbook`, promotes `official:reporting.final_packet.workbook`, and invokes the existing `reporting_actuals_to_future_planning` notify-only handoff.
+- Staleness decision: daily finalize fails closed as `stable_base_schedule_required` if the reviewed draft workbook is no longer the latest draft workbook for the run; approval approval must not silently finalize a newer or different draft.
+
 ## 2026-03-29 (TASK-0152 weekly Friday intake, Stage04 build/review loop, and auto-publish)
 - Weekly-lane decision: the first implemented EPIC-125 weekly operator loop is now `Stage04/weekly_input_intake -> Stage04/work_item -> Stage05/final_review -> Stage06 publish approval`, and it stays fully inside the existing workflow/task/approval/artifact/pointer substrate.
 - Intake-contract decision: required-upload rows now carry explicit `artifact_role` and `required` flags; for weekly intake the three Stage04-ready workbook inputs are stored as `official_input`, actual-hours stays optional `official_input`, and route-horizon artifacts remain optional evidence only.

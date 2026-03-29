@@ -228,6 +228,11 @@ Weekly workspace-specific notes:
 - `planning.route_horizon.doc` and `planning.route_horizon.workbook` remain optional `evidence`.
 - claimed `Stage04/work_item` tasks may expose `run_weekly_stage04_openai_agent` in `available_actions[]`.
 
+Dispatch-reporting workspace-specific notes:
+- `dispatch_reporting.v1` `Stage01/eos_input_intake` required uploads now include explicit `artifact_role`; `reporting.eos_raw.workbook` is required `official_input`, while `reporting.eos_raw.doc` remains optional `evidence`.
+- `dispatch_reporting.v1` `Stage04/final_packet_review` requires `reporting.manager_review.doc` plus review confirmation on the latest `reporting.upd_draft.workbook`.
+- `dispatch_reporting.v1` `Stage04/final_packet_review` work items may expose the canonical `eod-v0` `open_route` workpage action against the latest draft workbook.
+
 Stage-linked workpage action shape (`workpage_actions[]`, frozen in `TASK-0146`):
 - lives only on workspace work items (`user_work[]`, `blocking_work[]`)
 - does not live on `graph.nodes[]`
@@ -466,6 +471,7 @@ Notes:
 - The implemented run-backed EOD landing route currently lives at `GET /api/v1/workpages/workflow-runs/{workflow_run_id}/eod-v0`.
 - The implemented run-backed EOD landing route intentionally reuses the validated read-only EOD landing body, sets `source.mode=run_projection`, keeps `source.source_artifact_version_id=null`, and uses `freshness.source_kind=workflow_run_projection` plus `freshness.source_version=<latest_compatible_draft_artifact_version_id|workflow_run_id>`.
 - The implemented run-backed EOD landing route resolves `draft_resolution` from the newest compatible `reporting.upd_draft.workbook` artifact in the supplied workflow run and leaves `artifact_context` absent.
+- Supported stage-linked EOD write surfaces now include both the existing `dispatch_reporting.v1` Stage04 approval surface and the `Stage04/final_packet_review` human-task review surface.
 - `artifact_context` is reserved for `source.mode=artifact_projection`; do not overload it on run-backed landing pages.
 - `TASK-0137` intentionally freezes a narrow `draft_resolution` field instead of a generic `actions` blob.
 - Artifact-backed EOD reads must remain projections over canonical workbook artifacts; the workpage is derived and the workbook artifact version remains authoritative truth.
@@ -541,6 +547,10 @@ Weekly completion semantics:
 - `weekly_schedule_planning.v1` `Stage04/work_item` keeps `outcome=complete`, but the backend maps it to `draft_ready_for_review`; completion fails closed unless the run has a latest `planning.draft_weekly_schedule.workbook`, and success upserts one `Stage05/final_review` task keyed to that draft version.
 - `weekly_schedule_planning.v1` `Stage05/final_review` keeps `outcome=complete`, but the backend maps it to `draft_is_publish_ready`; completion fails closed unless `planning.manager_review.doc` is attached and review confirmation covers the latest draft, and success requests one `Stage06` approval for `publish_weekly_base_schedule`.
 
+Dispatch-reporting completion semantics:
+- `dispatch_reporting.v1` `Stage01/eos_input_intake` keeps `outcome=complete` at the API boundary, but the backend maps it to `eos_inputs_ready`; completion fails closed unless the run has a latest `reporting.eos_raw.workbook`, and success deterministically creates `reporting.actuals_normalized.workbook`, seeds `reporting.upd_draft.workbook`, and upserts one `Stage04/final_packet_review` task keyed to that draft version.
+- `dispatch_reporting.v1` `Stage04/final_packet_review` keeps `outcome=complete`, but the backend maps it to `draft_ready_for_manager_confirmation`; completion fails closed unless `reporting.manager_review.doc` is attached and review confirmation covers the latest draft workbook, and success requests one `Stage04` approval for `confirm_dispatch_reporting_packet`.
+
 ### 4.3 Respond approval
 Endpoint:
 - `POST /api/v1/approvals/{approval_id}/respond`
@@ -557,6 +567,11 @@ Weekly approval side effect:
 - approving `weekly_schedule_planning.v1` `Stage06` `publish_weekly_base_schedule` now auto-runs the bounded weekly publish command inside the canonical approval-response path.
 - that side effect creates `planning.publish_packet.doc`, creates `planning.published_weekly_schedule.workbook`, and promotes `official:planning.published_weekly_schedule.workbook`.
 - the publish side effect fails closed with `stable_base_schedule_required` if the reviewed draft is no longer the latest draft workbook for the run.
+
+Dispatch-reporting approval side effect:
+- approving `dispatch_reporting.v1` `Stage04` `confirm_dispatch_reporting_packet` now auto-runs the bounded finalize path inside the canonical approval-response path.
+- that side effect creates `reporting.final_packet.workbook`, promotes `official:reporting.final_packet.workbook`, and invokes the existing `reporting_actuals_to_future_planning` `notify_only` handoff.
+- the finalize side effect fails closed with `stable_base_schedule_required` if the reviewed draft is no longer the latest draft workbook for the run.
 
 ### 4.4 Upload artifact/document attachment
 Endpoints:
@@ -611,7 +626,7 @@ Rules:
 - keep the demo create route as a compatibility alias until the canonical run-backed surfaces are proven,
 - keep create semantics explicit and idempotent,
 - the demo alias rejects `subject_link` with `invalid_workpage_subject_link`,
-- the canonical run-backed create route accepts `subject_link` only for supported `dispatch_reporting.v1` Stage04 approval surfaces,
+- the canonical run-backed create route accepts `subject_link` only for supported `dispatch_reporting.v1` Stage04 approval surfaces and `Stage04/final_packet_review` human-task surfaces,
 - callers do not supply `relation_kind`; the server derives `draft`,
 - same-run subject validation still fails closed as `cross_workflow_link_reference`.
 
@@ -642,7 +657,7 @@ Rules:
 - supported `subject_link` surfaces stay frozen to the `TASK-0146` matrix; invalid or unsupported surfaces fail closed as `invalid_workpage_subject_link`,
 - callers do not supply `relation_kind`; the server derives `response`,
 - same-run subject validation still fails closed as `cross_workflow_link_reference`,
-- final-packet approval/pointer semantics remain out of scope for this epic.
+- weekly schedule publish still remains outside workpage submit semantics, while dispatch-reporting Stage04 approval approval now owns the bounded daily finalize-and-feedback side effect.
 
 ### 4.7 Run bounded Stage06 OpenAI review sandbox
 Endpoint:

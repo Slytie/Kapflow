@@ -345,6 +345,63 @@ def seed_dispatch_workspace_stage04_approval_with_draft(
     return seeded
 
 
+def seed_dispatch_workspace_stage04_review_task_with_draft(
+    *,
+    db_url: str,
+    tenant_id: str,
+    domain_id: str,
+    run_tag: str,
+) -> dict[str, Any]:
+    seeded = seed_dispatch_reporting_workpage_run(
+        db_url=db_url,
+        tenant_id=tenant_id,
+        domain_id=domain_id,
+        run_tag=run_tag,
+        include_source_artifacts=False,
+    )
+    result = run_cli(
+        "--db-url",
+        db_url,
+        "tasks",
+        "create",
+        "--json",
+        json.dumps(
+            {
+                "workflow_run_id": seeded["workflow_run_id"],
+                "stage_id": "Stage04",
+                "task_kind": "final_packet_review",
+                "activation_key": f"{run_tag}:task:create",
+                "candidate_roles": ["dispatch_supervisor"],
+                "owner_role": "dispatch_supervisor",
+                "create_human_task": True,
+                "idempotency_key": f"{run_tag}:task:create",
+            },
+            separators=(",", ":"),
+        ),
+    )
+    seeded["workspace_surface"] = stdout_json(result)["result"]
+    human_task_id = str(seeded["workspace_surface"]["human_task"]["human_task_id"])
+    client = RuntimeApiClient(
+        db_url=db_url,
+        tenant_id=tenant_id,
+        domain_id=domain_id,
+        actor_id="human:dispatch-supervisor-seed",
+        actor_type="human",
+        actor_roles=["dispatch_supervisor"],
+    )
+    seeded["draft"] = client.post(
+        f"/api/v1/workpages/workflow-runs/{seeded['workflow_run_id']}/eod-v0/drafts",
+        payload={
+            "subject_link": {
+                "subject_kind": "human_task",
+                "subject_id": human_task_id,
+            },
+            "idempotency_key": f"{run_tag}:eod-draft:create",
+        },
+    ).payload
+    return seeded
+
+
 def _load_actual_ops_source_material() -> dict[str, Any]:
     loaded = yaml.safe_load(_ACTUAL_OPS_SOURCE_MATERIAL_PATH.read_text(encoding="utf-8"))
     if not isinstance(loaded, dict):

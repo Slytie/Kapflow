@@ -549,23 +549,32 @@ def _project_human_task_workpage_actions(
     workpage_projection: dict[str, Any],
 ) -> list[dict[str, Any]]:
     workflow_id = str(workflow_run.get("workflow_id") or "")
-    if workflow_id != "weekly_schedule_planning.v1":
-        return []
     surface = (str(task.get("stage_id") or ""), str(task.get("task_kind") or ""))
-    if surface not in {
-        ("Stage04", "work_item"),
-        ("Stage05", "information_request"),
-        ("Stage05", "final_review"),
-    }:
-        return []
-    return [
-        _schedule_workpage_action(
-            workflow_run_id=str(task["workflow_run_id"]),
-            subject_kind="human_task",
-            subject_id=str(task["human_task_id"]),
-            latest_schedule_draft=workpage_projection.get("latest_schedule_draft"),
-        )
-    ]
+    if workflow_id == "weekly_schedule_planning.v1":
+        if surface not in {
+            ("Stage04", "work_item"),
+            ("Stage05", "information_request"),
+            ("Stage05", "final_review"),
+        }:
+            return []
+        return [
+            _schedule_workpage_action(
+                workflow_run_id=str(task["workflow_run_id"]),
+                subject_kind="human_task",
+                subject_id=str(task["human_task_id"]),
+                latest_schedule_draft=workpage_projection.get("latest_schedule_draft"),
+            )
+        ]
+    if workflow_id == "dispatch_reporting.v1" and surface == ("Stage04", "final_packet_review"):
+        return [
+            _eod_workpage_action(
+                workflow_run_id=str(task["workflow_run_id"]),
+                subject_kind="human_task",
+                subject_id=str(task["human_task_id"]),
+                latest_eod_draft=workpage_projection.get("latest_eod_draft"),
+            )
+        ]
+    return []
 
 
 def _project_approval_workpage_actions(

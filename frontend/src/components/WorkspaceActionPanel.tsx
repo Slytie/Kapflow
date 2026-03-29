@@ -78,10 +78,14 @@ function taskDetailPayload(item: WorkflowWorkspaceTaskWorkItem): DrawerPayload {
 
 function approvalDetailPayload(item: WorkflowWorkspaceApprovalWorkItem): DrawerPayload {
   const approval = item.approval;
+  const description =
+    approval.scope_ref === "Stage04"
+      ? "Approval evidence and response context are shown in drawer. Approving this daily review finalizes the workbook and triggers planning feedback automatically."
+      : "Approval evidence and response context are shown in drawer.";
   return {
     title: `${approval.approval_kind} ${approval.scope_ref}`,
     subtitle: approval.approval_id,
-    description: "Approval evidence and response context are shown in drawer.",
+    description,
     fields: [
       { label: "State", value: approval.state },
       { label: "Required role", value: approval.required_role },
