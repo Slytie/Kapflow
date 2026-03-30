@@ -157,6 +157,7 @@ class OpenAIResponsesFunctionCallingRunner:
         tools: list[ResponsesFunctionToolSpec],
         execute_function: FunctionExecutor,
         max_turns: int,
+        previous_response_id: str | None = None,
         no_progress_limit: int | None = None,
         progress_evaluator: ProgressEvaluator | None = None,
         model_output_serializer: ModelOutputSerializer | None = None,
@@ -180,7 +181,11 @@ class OpenAIResponsesFunctionCallingRunner:
             )
         tool_map = {tool.name: tool for tool in tools}
         pending_input = initial_input
-        previous_response_id: str | None = None
+        continuation_response_id = (
+            str(previous_response_id).strip()
+            if str(previous_response_id or "").strip()
+            else None
+        )
         turns: list[ResponsesTurnRecord] = []
         usage_totals: dict[str, int] = {}
         no_progress_streak = 0
@@ -191,8 +196,8 @@ class OpenAIResponsesFunctionCallingRunner:
                 "input": pending_input,
                 "tools": [tool.as_openai_tool() for tool in tools],
             }
-            if previous_response_id is not None:
-                request_payload["previous_response_id"] = previous_response_id
+            if continuation_response_id is not None:
+                request_payload["previous_response_id"] = continuation_response_id
 
             request_outcome = self._request_with_retries(request_payload)
             response_payload = request_outcome.payload
@@ -310,7 +315,7 @@ class OpenAIResponsesFunctionCallingRunner:
                     code="openai_invalid_output",
                     message="response with function_call items is missing response id",
                 )
-            previous_response_id = response_id
+            continuation_response_id = response_id
             pending_input = next_input
 
         raise OpenAIResponsesError(

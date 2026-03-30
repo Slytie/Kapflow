@@ -133,6 +133,42 @@ def test_function_calling_loop_allows_final_response_without_function_calls() ->
     assert result.turns[0].function_calls == ()
 
 
+def test_function_calling_loop_accepts_initial_previous_response_id() -> None:
+    requests: list[dict[str, Any]] = []
+
+    def transport(payload: dict[str, Any], __: float) -> tuple[int, dict[str, Any], str | None]:
+        requests.append(payload)
+        return (
+            200,
+            {
+                "id": "resp_final",
+                "model": "gpt-4.1-mini",
+                "usage": {"input_tokens": 3, "output_tokens": 2},
+                "output_text": '{"summary":"continued"}',
+            },
+            "req_final",
+        )
+
+    runner = OpenAIResponsesFunctionCallingRunner(
+        api_key="sk-test",
+        model="gpt-4.1-mini",
+        base_url="https://api.openai.test/v1",
+        timeout_seconds=5.0,
+        max_retries=0,
+        transport=transport,
+    )
+    result = runner.run_function_calling_loop(
+        initial_input=[{"role": "user", "content": [{"type": "input_text", "text": "continue"}]}],
+        tools=[],
+        execute_function=lambda _name, _arguments: {},
+        max_turns=2,
+        previous_response_id="resp_previous_turn",
+    )
+
+    assert result.final_response_id == "resp_final"
+    assert requests[0]["previous_response_id"] == "resp_previous_turn"
+
+
 def test_function_calling_loop_raises_when_max_turns_exhausted() -> None:
     attempts = {"count": 0}
 

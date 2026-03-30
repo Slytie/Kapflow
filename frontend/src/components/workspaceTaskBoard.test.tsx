@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, screen, waitFor, within } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 
@@ -9,6 +9,7 @@ import type {
   WorkflowRunDetailContract,
   WorkflowRunWorkspaceContract
 } from "@/lib/types/contracts";
+import type { DrawerPayload } from "@/lib/types/ui";
 import {
   buildWorkflowRunDetail,
   buildWorkflowRunWorkspace,
@@ -17,7 +18,8 @@ import {
 
 function renderBoard(
   workspace: WorkflowRunWorkspaceContract,
-  detail: WorkflowRunDetailContract
+  detail: WorkflowRunDetailContract,
+  onOpenDetails: (payload: DrawerPayload) => void = () => undefined
 ) {
   const queryClient = new QueryClient({
     defaultOptions: {
@@ -32,7 +34,7 @@ function renderBoard(
           workspace={workspace}
           detail={detail}
           onRefresh={() => undefined}
-          onOpenDetails={() => undefined}
+          onOpenDetails={onOpenDetails}
         />
       </QueryClientProvider>
     </MemoryRouter>
@@ -281,6 +283,28 @@ describe("WorkspaceTaskBoard weekly surfaces", () => {
     expect(
       within(card as HTMLElement).getByRole("button", { name: "Upload Input" })
     ).toBeInTheDocument();
+  });
+
+  it("opens task details from primary card click and keyboard activation without menu bleed-through", async () => {
+    const user = userEvent.setup();
+    const onOpenDetails = vi.fn();
+    const { workspace, detail } = buildWeeklyIntakeSurface();
+    renderBoard(workspace, detail, onOpenDetails);
+
+    const card = (await screen.findByRole("heading", { name: "Weekly Intake" })).closest("article");
+    expect(card).not.toBeNull();
+
+    await user.click(card as HTMLElement);
+    expect(onOpenDetails).toHaveBeenCalledTimes(1);
+
+    (card as HTMLElement).focus();
+    fireEvent.keyDown(card as HTMLElement, { key: "Enter" });
+    expect(onOpenDetails).toHaveBeenCalledTimes(2);
+
+    await user.click(
+      within(card as HTMLElement).getByLabelText("Actions for Weekly Intake")
+    );
+    expect(onOpenDetails).toHaveBeenCalledTimes(2);
   });
 
   it("renders dispatch daily intake copy with required-input upload wording", async () => {

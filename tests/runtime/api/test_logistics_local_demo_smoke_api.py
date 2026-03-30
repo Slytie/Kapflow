@@ -14,14 +14,16 @@ from onetruth.application.services.logistics_weekly_agent_pilot import (
     _ROUTE_SLOT_REQUIREMENTS_METADATA,
 )
 from onetruth.infrastructure.db.session import open_sqlite_connection
-from tests.runtime.api.test_weekly_stage04_openai_agent_api import _mock_stage04_runner
+from tests.runtime.api.test_weekly_stage04_openai_agent_api import (
+    _mock_stage04_runner_with_finalize_repair,
+)
 from tests.runtime.helpers.runtime_api import RuntimeApiClient
 from tests.runtime.helpers.runtime_cli import REPO_ROOT, run_cli
 
 
 EOS_SUPPORTED_WORKBOOK_PATH = (
     REPO_ROOT
-    / "fixtures/workflows/dispatch_reporting/template_pack/Stage03_Threshold_Detection_and_Draft_Packet/Stage03_Threshold_Detection_and_Draft_Packet_upd_draft_Spreadsheet_Example_COMPLETED.xlsx"
+    / "fixtures/logistics/local_demo_upload_pack/reporting/reporting_eos_raw.xlsx"
 )
 XLSX_MEDIA_TYPE = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
 
@@ -180,7 +182,7 @@ def test_weekly_first_local_demo_seed_smoke_path_walks_weekly_live_and_reporting
     monkeypatch.setenv("ONETRUTH_ARTIFACT_ROOT", str(artifact_root))
     monkeypatch.setattr(
         "onetruth.application.services.weekly_stage04_openai_agent.build_weekly_stage04_openai_agent_runner_from_env",
-        lambda: _mock_stage04_runner(),
+        lambda: _mock_stage04_runner_with_finalize_repair(),
     )
 
     client = _client(db_url=db_url)

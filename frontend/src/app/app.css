@@ -1051,6 +1051,29 @@
   margin-top: 8px;
 }
 
+.detail-drawer__requirements {
+  margin-top: 12px;
+}
+
+.detail-drawer__requirements h4 {
+  margin: 0 0 8px;
+  font-size: 13px;
+  color: var(--ink-800);
+}
+
+.detail-drawer__requirement-actions {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.detail-drawer__inline-status {
+  align-self: center;
+  color: var(--ink-600);
+  font-size: 12px;
+}
+
 .detail-drawer__subgraph {
   margin-top: 12px;
   border: 1px solid var(--ink-200);

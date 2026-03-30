@@ -2,6 +2,11 @@
 
 Record any decisions made since the last session so a fresh Codex run can rehydrate quickly.
 
+## 2026-03-30 (weekly Stage04 finalize-repair continuation and failure reclassification)
+- Finalize-invariant decision: weekly Stage04 still requires an explicit model-invoked `finalize_weekly_stage04_draft_outputs` call before any draft artifacts count as complete; backend auto-finalization remains out of scope.
+- Repair-boundary decision: if the deterministic planner is already complete and the first Responses loop ends with final text but no finalize call, the runtime now performs one bounded continuation on the same Responses thread with a finalize-only tool surface and monotonic rebased turn evidence.
+- Failure-classification decision: unrepaired weekly Stage04 finalize omission now surfaces as a runtime/model failure (`502`) with `stage04_finalize_required` plus `planner_complete`, `repair_attempted`, and `final_response_id` details, instead of being treated as a `400` bad request.
+
 ## 2026-03-29 (TASK-0155 weekly-first local demo seed, runbook, and workspace-first story shell)
 - Demo-posture decision: the default local logistics walkthrough now starts from a weekly-first seed with one current weekly run open at `Stage04/weekly_input_intake`, one current reporting run open at `Stage01/eos_input_intake`, one prior reporting-feedback run already finalized, and no current live-dispatch run until the operator explicitly prepares the service day.
 - Entry-surface decision: `/demo/logistics` is now workspace-first for the first operator demo, with weekly and reporting workspaces as primary CTAs, live dispatch shown as `Prepare service day` until activation, and workpage links kept contextual/secondary instead of the main starting point.

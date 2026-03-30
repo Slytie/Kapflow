@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from copy import deepcopy
+from dataclasses import replace
 import json
 import os
 from pathlib import Path
@@ -319,10 +320,13 @@ def run_weekly_stage04_openai_agent(
     stop_policy = _stage04_stop_policy_from_stage_spec(stage_spec)
     runtime_evidence_artifacts: list[dict[str, Any]] = []
     runtime_turn_evidence: list[dict[str, Any]] = []
-    agent_result: Any | None = None
+    agent_result_payload: dict[str, Any] | None = None
     stage04_build_result: dict[str, Any] | None = None
+    latest_final_response_id: str | None = None
+    repair_attempted = False
 
-    def _persist_turn_evidence(turn: Any) -> None:
+    def _persist_turn_evidence(turn: Any, *, turn_index_offset: int = 0) -> None:
+        turn_record = _rebase_turn_record(turn, turn_index_offset=turn_index_offset)
         request_artifact, result_artifact = persist_prepared_execution_evidence_artifacts(
             connection=connection,
             workflow_run_id=str(human_task["workflow_run_id"]),
@@ -334,10 +338,10 @@ def run_weekly_stage04_openai_agent(
                 prepare_runtime_turn_evidence_artifact(
                     artifact_kind=RUNTIME_TOOL_REQUEST_ARTIFACT_KIND,
                     execution_session_id=execution_session_id,
-                    turn_index=int(turn.turn_index),
+                    turn_index=int(turn_record.turn_index),
                     payload_json=_build_turn_request_payload(
                         execution_session_id=execution_session_id,
-                        turn=turn,
+                        turn=turn_record,
                     ),
                     idempotency_suffix_prefix="tool-request",
                     relation_kind="stage04_tool_request_turn",
@@ -345,17 +349,17 @@ def run_weekly_stage04_openai_agent(
                     tool_execution_id=tool_execution_id,
                     policy_decision_id=policy_decision_id,
                     extra_metadata={
-                        "progress_made": bool(turn.progress_made),
-                        "no_progress_streak": int(turn.no_progress_streak),
+                        "progress_made": bool(turn_record.progress_made),
+                        "no_progress_streak": int(turn_record.no_progress_streak),
                     },
                 ),
                 prepare_runtime_turn_evidence_artifact(
                     artifact_kind=RUNTIME_TOOL_RESULT_ARTIFACT_KIND,
                     execution_session_id=execution_session_id,
-                    turn_index=int(turn.turn_index),
+                    turn_index=int(turn_record.turn_index),
                     payload_json=_build_turn_result_payload(
                         execution_session_id=execution_session_id,
-                        turn=turn,
+                        turn=turn_record,
                         tooling=tooling,
                     ),
                     idempotency_suffix_prefix="tool-result",
@@ -364,8 +368,8 @@ def run_weekly_stage04_openai_agent(
                     tool_execution_id=tool_execution_id,
                     policy_decision_id=policy_decision_id,
                     extra_metadata={
-                        "progress_made": bool(turn.progress_made),
-                        "no_progress_streak": int(turn.no_progress_streak),
+                        "progress_made": bool(turn_record.progress_made),
+                        "no_progress_streak": int(turn_record.no_progress_streak),
                         "planner_complete": bool(tooling.planner_complete()),
                     },
                 ),
@@ -375,10 +379,10 @@ def run_weekly_stage04_openai_agent(
         runtime_evidence_artifacts.extend([request_artifact, result_artifact])
         runtime_turn_evidence.append(
             {
-                "turn_index": int(turn.turn_index),
-                "progress_made": bool(turn.progress_made),
-                "no_progress_streak": int(turn.no_progress_streak),
-                "request_attempts": int(getattr(turn, "request_attempts", 1) or 1),
+                "turn_index": int(turn_record.turn_index),
+                "progress_made": bool(turn_record.progress_made),
+                "no_progress_streak": int(turn_record.no_progress_streak),
+                "request_attempts": int(getattr(turn_record, "request_attempts", 1) or 1),
                 "request_artifact_version_id": str(request_artifact["artifact_version_id"]),
                 "result_artifact_version_id": str(result_artifact["artifact_version_id"]),
             }
@@ -399,9 +403,45 @@ def run_weekly_stage04_openai_agent(
             model_output_serializer=tooling.model_output_payload,
             on_turn_complete=_persist_turn_evidence,
         )
+        latest_final_response_id = str(agent_result.final_response_id or "") or None
+        agent_result_payload = agent_result.as_dict()
         stage04_build_result = tooling.finalized_build_result() or _extract_finalized_build_result_from_turns(
-            agent_result
+            agent_result_payload
         )
+        if (
+            stage04_build_result is None
+            and tooling.planner_complete()
+            and latest_final_response_id is not None
+        ):
+            repair_attempted = True
+            repair_turn_index_offset = len(tuple(agent_result.turns or ()))
+            repair_agent_result = selected_runner.run_function_calling_loop(
+                initial_input=_stage04_finalize_repair_input(
+                    context_pack=context_pack,
+                    planner_state=tooling.planner_state_snapshot(),
+                ),
+                tools=_stage04_finalize_only_tool_specs(tool_specs),
+                execute_function=tooling.execute,
+                max_turns=2,
+                previous_response_id=latest_final_response_id,
+                model_output_serializer=tooling.model_output_payload,
+                on_turn_complete=lambda turn: _persist_turn_evidence(
+                    turn,
+                    turn_index_offset=repair_turn_index_offset,
+                ),
+            )
+            latest_final_response_id = (
+                str(repair_agent_result.final_response_id or "") or latest_final_response_id
+            )
+            agent_result_payload = _merge_agent_result_payloads(
+                agent_result_payload,
+                repair_agent_result.as_dict(),
+                turn_index_offset=repair_turn_index_offset,
+            )
+            stage04_build_result = (
+                tooling.finalized_build_result()
+                or _extract_finalized_build_result_from_turns(agent_result_payload)
+            )
         if stage04_build_result is None:
             raise CommandError(
                 code="stage04_finalize_required",
@@ -410,6 +450,8 @@ def run_weekly_stage04_openai_agent(
                     "execution_session_id": execution_session_id,
                     "remaining_route_slots": tooling.remaining_route_slot_ids(),
                     "planner_complete": tooling.planner_complete(),
+                    "repair_attempted": repair_attempted,
+                    "final_response_id": latest_final_response_id,
                 },
             )
 
@@ -427,7 +469,7 @@ def run_weekly_stage04_openai_agent(
             context_pack_artifact=context_pack_artifact,
             runtime_turn_evidence=runtime_turn_evidence,
             planner_state=tooling.planner_state_snapshot(),
-            agent_result=agent_result.as_dict(),
+            agent_result=agent_result_payload,
             stage04_build_result=stage04_build_result,
             execution_outcome="succeeded",
         )
@@ -448,7 +490,7 @@ def run_weekly_stage04_openai_agent(
                 context_pack_artifact=context_pack_artifact,
                 runtime_turn_evidence=runtime_turn_evidence,
                 planner_state=tooling.planner_state_snapshot(),
-                agent_result=agent_result.as_dict() if agent_result is not None else None,
+                agent_result=agent_result_payload,
                 stage04_build_result=stage04_build_result,
                 execution_outcome="failed",
                 error_code=str(getattr(exc, "code", exc.__class__.__name__)),
@@ -512,7 +554,7 @@ def run_weekly_stage04_openai_agent(
         "context_pack_artifact": context_pack_artifact,
         "runtime_evidence_artifacts": runtime_evidence_artifacts,
         "runtime_turn_evidence": runtime_turn_evidence,
-        "agent_result": agent_result.as_dict(),
+        "agent_result": agent_result_payload,
         "stage04_build_result": stage04_build_result,
     }
 
@@ -659,6 +701,16 @@ def _stage04_tool_specs(stage_spec: dict[str, Any]) -> list[ResponsesFunctionToo
     return specs
 
 
+def _stage04_finalize_only_tool_specs(
+    tool_specs: list[ResponsesFunctionToolSpec],
+) -> list[ResponsesFunctionToolSpec]:
+    return [
+        item
+        for item in tool_specs
+        if str(item.name or "") == "finalize_weekly_stage04_draft_outputs"
+    ]
+
+
 def _allowed_tool_classes(stage_spec: dict[str, Any]) -> set[str]:
     runtime_bindings = stage_spec.get("runtime_bindings")
     if not isinstance(runtime_bindings, dict):
@@ -757,6 +809,35 @@ def _initial_model_input(
             "when_context_is_unclear": "get_stage04_context",
             "when_planner_complete": "get_stage04_validation_summary_then_finalize_weekly_stage04_draft_outputs",
         },
+    }
+    return [
+        {
+            "role": "system",
+            "content": [{"type": "input_text", "text": system_prompt}],
+        },
+        {
+            "role": "user",
+            "content": [{"type": "input_text", "text": json.dumps(user_payload, separators=(",", ":"))}],
+        },
+    ]
+
+
+def _stage04_finalize_repair_input(
+    *,
+    context_pack: dict[str, Any],
+    planner_state: dict[str, Any],
+) -> list[dict[str, Any]]:
+    system_prompt = (
+        "The previous response ended without the required finalize tool call. "
+        "You must explicitly call finalize_weekly_stage04_draft_outputs before any textual completion. "
+        "Do not ask for more context, do not call any other tool, and do not return text until after the finalize tool call succeeds."
+    )
+    user_payload = {
+        "task": "Recover the Stage04 run by explicitly finalizing the already-complete deterministic planner outputs.",
+        "required_tool": "finalize_weekly_stage04_draft_outputs",
+        "workflow_run_id": context_pack.get("workflow_run_id"),
+        "human_task_id": context_pack.get("human_task_id"),
+        "planner_state": _compact_stage04_planner_state(planner_state),
     }
     return [
         {
@@ -1366,16 +1447,95 @@ def _parse_runtime_output_json(value: str) -> Any:
         return value
 
 
+def _rebase_turn_record(turn: Any, *, turn_index_offset: int) -> Any:
+    if turn_index_offset <= 0:
+        return turn
+    return replace(turn, turn_index=int(turn.turn_index) + int(turn_index_offset))
+
+
+def _rebase_agent_result_payload(
+    agent_result: dict[str, Any],
+    *,
+    turn_index_offset: int,
+) -> dict[str, Any]:
+    if turn_index_offset <= 0:
+        return dict(agent_result)
+    rebased = deepcopy(agent_result)
+    rebased_turns = []
+    for turn in list(rebased.get("turns") or []):
+        if not isinstance(turn, dict):
+            rebased_turns.append(turn)
+            continue
+        rebased_turn = dict(turn)
+        rebased_turn["turn_index"] = int(rebased_turn.get("turn_index") or 0) + int(turn_index_offset)
+        rebased_turns.append(rebased_turn)
+    rebased["turns"] = rebased_turns
+    return rebased
+
+
+def _accumulate_usage_totals(target: dict[str, int], usage: Any) -> None:
+    if not isinstance(usage, dict):
+        return
+    for key, value in usage.items():
+        if isinstance(value, int):
+            target[str(key)] = int(target.get(str(key), 0)) + int(value)
+
+
+def _merge_agent_result_payloads(
+    primary_result: dict[str, Any],
+    repair_result: dict[str, Any],
+    *,
+    turn_index_offset: int,
+) -> dict[str, Any]:
+    merged_usage: dict[str, int] = {}
+    _accumulate_usage_totals(merged_usage, primary_result.get("total_usage"))
+    _accumulate_usage_totals(merged_usage, repair_result.get("total_usage"))
+    rebased_repair = _rebase_agent_result_payload(
+        repair_result,
+        turn_index_offset=turn_index_offset,
+    )
+    return {
+        "turns": [*(list(primary_result.get("turns") or [])), *(list(rebased_repair.get("turns") or []))],
+        "final_response_id": repair_result.get("final_response_id") or primary_result.get("final_response_id"),
+        "final_request_id": repair_result.get("final_request_id") or primary_result.get("final_request_id"),
+        "final_output_text": repair_result.get("final_output_text") or primary_result.get("final_output_text"),
+        "total_usage": merged_usage,
+        "repair_attempted": True,
+        "repair_turn_count": len(list(rebased_repair.get("turns") or [])),
+    }
+
+
+def _agent_result_turns(agent_result: Any) -> tuple[Any, ...]:
+    if isinstance(agent_result, dict):
+        return tuple(agent_result.get("turns") or ())
+    return tuple(getattr(agent_result, "turns", ()) or ())
+
+
+def _turn_function_calls(turn: Any) -> tuple[Any, ...]:
+    if isinstance(turn, dict):
+        return tuple(turn.get("function_calls") or ())
+    return tuple(getattr(turn, "function_calls", ()) or ())
+
+
 def _extract_finalized_build_result_from_turns(agent_result: Any) -> dict[str, Any] | None:
-    turns = getattr(agent_result, "turns", ())
-    for turn in reversed(tuple(turns or ())):
-        function_calls = getattr(turn, "function_calls", ())
-        for function_call in reversed(tuple(function_calls or ())):
-            if str(getattr(function_call, "name", "") or "") != "finalize_weekly_stage04_draft_outputs":
-                continue
-            parsed_output = _parse_runtime_output_json(
-                getattr(function_call, "evidence_output_json", getattr(function_call, "output_json", ""))
+    for turn in reversed(_agent_result_turns(agent_result)):
+        for function_call in reversed(_turn_function_calls(turn)):
+            function_name = (
+                str(function_call.get("name") or "")
+                if isinstance(function_call, dict)
+                else str(getattr(function_call, "name", "") or "")
             )
+            if function_name != "finalize_weekly_stage04_draft_outputs":
+                continue
+            if isinstance(function_call, dict):
+                raw_output = function_call.get("evidence_output_json") or function_call.get("output_json") or ""
+            else:
+                raw_output = getattr(
+                    function_call,
+                    "evidence_output_json",
+                    getattr(function_call, "output_json", ""),
+                )
+            parsed_output = _parse_runtime_output_json(raw_output)
             if not isinstance(parsed_output, dict):
                 continue
             stage04_build_result = parsed_output.get("stage04_build_result")

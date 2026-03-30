@@ -65,7 +65,7 @@ Expected seeder output:
 4. Upload the three required weekly workbooks, then optionally upload `weekly_actual_hours_snapshot_optional.xlsx`.
 5. Complete the intake task.
 6. Claim `Run Stage04 Build`.
-7. Click `Run Stage04 Build` and wait for the OpenAI-backed run to succeed.
+7. Click `Run Stage04 Build` and wait for the OpenAI-backed run to succeed. The runtime will do one bounded finalize-only recovery if the model finishes without the required `finalize_weekly_stage04_draft_outputs` call, but it still fails closed if finalize never occurs.
 8. Complete the Stage04 build task.
 9. Claim `Final Review`.
 10. Open the schedule workpage from the review task, make at least one bounded edit, and submit the new draft.

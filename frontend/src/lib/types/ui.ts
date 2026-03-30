@@ -6,6 +6,8 @@ import type {
   HumanTaskRow,
   PointerRow,
   TimelineEvent,
+  WorkflowWorkspaceRequiredReview,
+  WorkflowWorkspaceRequiredUpload,
   WorkflowRunDetailContract,
   WorkflowRunRow
 } from "@/lib/types/contracts";
@@ -59,6 +61,8 @@ export interface DrawerTaskContext {
   available_actions: string[];
   blocking_reason_codes: string[];
   missing_required_inputs: string[];
+  required_uploads?: WorkflowWorkspaceRequiredUpload[];
+  required_reviews?: WorkflowWorkspaceRequiredReview[];
   is_composite?: boolean;
   expansion_kind?: HumanTaskExpansionKind;
   subgraph_ref?: HumanTaskSubgraphRef | null;

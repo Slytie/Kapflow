@@ -86,6 +86,8 @@ export interface HumanTaskRow {
   blocking_reason_codes?: string[];
   can_complete?: boolean;
   can_confirm_review?: boolean;
+  required_uploads?: WorkflowWorkspaceRequiredUpload[];
+  required_reviews?: WorkflowWorkspaceRequiredReview[];
   is_composite?: boolean;
   expansion_kind?: HumanTaskExpansionKind;
   subgraph_ref?: HumanTaskSubgraphRef | null;

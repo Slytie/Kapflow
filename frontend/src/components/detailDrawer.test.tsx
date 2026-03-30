@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, screen, waitFor, within } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useState } from "react";
 
@@ -196,7 +196,7 @@ describe("Detail drawer flow", () => {
     );
 
     expect(await screen.findByRole("button", { name: "Run Stage06 Review" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Upload attachment" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Add supporting attachment" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Claim" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Complete" })).not.toBeInTheDocument();
 
@@ -206,6 +206,208 @@ describe("Detail drawer flow", () => {
     });
 
     runStage06Spy.mockRestore();
+    getSpy.mockRestore();
+  });
+
+  it("renders requirement-specific uploads in the drawer and refreshes completion state", async () => {
+    const uploadRequiredResponseSpy = vi
+      .spyOn(humanTasksRepository, "uploadRequiredResponse")
+      .mockResolvedValue();
+    const getSpy = vi
+      .spyOn(humanTasksRepository, "get")
+      .mockResolvedValueOnce({
+        ...task,
+        stage_id: "Stage04",
+        task_kind: "weekly_input_intake",
+        owner_role: "schedule_planner",
+        available_actions: ["upload_attachment"],
+        missing_required_inputs: ["planning.route_slot_requirements.workbook"],
+        blocking_reason_codes: ["required_upload_missing:planning.route_slot_requirements.workbook"],
+        required_uploads: [
+          {
+            dataset_key: "planning.route_slot_requirements.workbook",
+            artifact_kind: "planning.route_slot_requirements.workbook",
+            artifact_role: "official_input",
+            template_id: "tpl-weekly-route-slots",
+            required: true,
+            required_count: 1,
+            current_count: 0,
+            status: "missing"
+          }
+        ],
+        required_reviews: []
+      })
+      .mockResolvedValueOnce({
+        ...task,
+        stage_id: "Stage04",
+        task_kind: "weekly_input_intake",
+        owner_role: "schedule_planner",
+        available_actions: ["complete", "upload_attachment"],
+        missing_required_inputs: [],
+        blocking_reason_codes: [],
+        required_uploads: [
+          {
+            dataset_key: "planning.route_slot_requirements.workbook",
+            artifact_kind: "planning.route_slot_requirements.workbook",
+            artifact_role: "official_input",
+            template_id: "tpl-weekly-route-slots",
+            required: true,
+            required_count: 1,
+            current_count: 1,
+            status: "satisfied"
+          }
+        ],
+        required_reviews: []
+      });
+    vi.spyOn(onetruthApi, "listArtifactsForSubject").mockResolvedValue([]);
+
+    renderWithQueryClient(
+      <DetailDrawer
+        payload={{
+          title: "Weekly Intake",
+          subtitle: "ht-2",
+          fields: [],
+          task: {
+            human_task_id: "ht-2",
+            workflow_run_id: "wr-2",
+            task_run_id: "tr-2",
+            stage_id: "Stage04",
+            task_kind: "weekly_input_intake",
+            state: "CLAIMED",
+            assignee_actor_id: "human:schedule-planner-1",
+            assignee_actor_type: "human",
+            owner_role: "schedule_planner",
+            available_actions: ["upload_attachment"],
+            blocking_reason_codes: [
+              "required_upload_missing:planning.route_slot_requirements.workbook"
+            ],
+            missing_required_inputs: ["planning.route_slot_requirements.workbook"],
+            required_uploads: [
+              {
+                dataset_key: "planning.route_slot_requirements.workbook",
+                artifact_kind: "planning.route_slot_requirements.workbook",
+                artifact_role: "official_input",
+                template_id: "tpl-weekly-route-slots",
+                required: true,
+                required_count: 1,
+                current_count: 0,
+                status: "missing"
+              }
+            ],
+            required_reviews: []
+          }
+        }}
+        onClose={() => undefined}
+      />
+    );
+
+    expect(await screen.findByRole("heading", { name: "Required Inputs / Uploads" })).toBeInTheDocument();
+    const requirementRows = screen.getAllByText(/planning\.route_slot_requirements\.workbook/i);
+    const requirementRow = requirementRows[requirementRows.length - 1]?.closest(".detail-drawer__artifact-row");
+    expect(requirementRow).not.toBeNull();
+    expect(
+      within(requirementRow as HTMLElement).getByText(/Required input · missing/i)
+    ).toBeInTheDocument();
+    expect(
+      within(requirementRow as HTMLElement).getByRole("button", { name: "Upload Input" })
+    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Add supporting attachment" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Complete" })).not.toBeInTheDocument();
+
+    const fileInput = (requirementRow as HTMLElement).querySelector("input[type='file']");
+    expect(fileInput).not.toBeNull();
+    const file = new File(["fixture"], "weekly-route-slots.xlsx", {
+      type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    });
+    fireEvent.change(fileInput as HTMLInputElement, { target: { files: [file] } });
+
+    await waitFor(() => {
+      expect(uploadRequiredResponseSpy).toHaveBeenCalledWith(
+        "ht-2",
+        expect.objectContaining({
+          dataset_key: "planning.route_slot_requirements.workbook",
+          artifact_role: "official_input"
+        }),
+        file
+      );
+    });
+
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: "Complete" })).toBeInTheDocument();
+      expect(screen.getByText(/Required input · satisfied/i)).toBeInTheDocument();
+    });
+
+    uploadRequiredResponseSpy.mockRestore();
+    getSpy.mockRestore();
+  });
+
+  it("keeps optional uploads from blocking completion in the drawer", async () => {
+    const getSpy = vi.spyOn(humanTasksRepository, "get").mockResolvedValue({
+      ...task,
+      available_actions: ["complete", "upload_attachment"],
+      missing_required_inputs: [],
+      blocking_reason_codes: [],
+      required_uploads: [
+        {
+          dataset_key: "planning.route_horizon.doc",
+          artifact_kind: "planning.route_horizon.doc",
+          artifact_role: "evidence",
+          template_id: null,
+          required: false,
+          required_count: 1,
+          current_count: 0,
+          status: "missing"
+        }
+      ],
+      required_reviews: []
+    });
+    vi.spyOn(onetruthApi, "listArtifactsForSubject").mockResolvedValue([]);
+
+    renderWithQueryClient(
+      <DetailDrawer
+        payload={{
+          title: "Weekly Intake",
+          subtitle: "ht-2",
+          fields: [],
+          task: {
+            human_task_id: "ht-2",
+            workflow_run_id: "wr-2",
+            task_run_id: "tr-2",
+            stage_id: "Stage04",
+            task_kind: "weekly_input_intake",
+            state: "CLAIMED",
+            assignee_actor_id: "human:schedule-planner-1",
+            assignee_actor_type: "human",
+            owner_role: "schedule_planner",
+            available_actions: ["complete", "upload_attachment"],
+            blocking_reason_codes: [],
+            missing_required_inputs: [],
+            required_uploads: [
+              {
+                dataset_key: "planning.route_horizon.doc",
+                artifact_kind: "planning.route_horizon.doc",
+                artifact_role: "evidence",
+                template_id: null,
+                required: false,
+                required_count: 1,
+                current_count: 0,
+                status: "missing"
+              }
+            ],
+            required_reviews: []
+          }
+        }}
+        onClose={() => undefined}
+      />
+    );
+
+    expect(
+      await screen.findByText((_, element) =>
+        element?.textContent === "Optional context · missing · optional"
+      )
+    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Complete" })).toBeEnabled();
+
     getSpy.mockRestore();
   });
 

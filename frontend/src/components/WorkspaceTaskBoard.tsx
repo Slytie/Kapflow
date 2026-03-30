@@ -284,6 +284,17 @@ function _taskArtifacts(
   );
 }
 
+function isInteractiveTarget(target: EventTarget | null): boolean {
+  return (
+    target instanceof HTMLElement &&
+    Boolean(
+      target.closest(
+        "button, a, input, select, textarea, summary, details, label, [role='button']"
+      )
+    )
+  );
+}
+
 function taskDetailPayload(
   item: WorkflowWorkspaceTaskWorkItem | null,
   task: HumanTaskRow,
@@ -306,6 +317,29 @@ function taskDetailPayload(
       },
       { label: "Artifacts", value: String(artifacts.length) }
     ],
+    task: {
+      human_task_id: task.human_task_id,
+      workflow_run_id: task.workflow_run_id,
+      task_run_id: task.task_run_id,
+      stage_id: task.stage_id,
+      task_kind: task.task_kind,
+      state: task.state,
+      assignee_actor_id: task.assignee_actor_id,
+      assignee_actor_type: task.assignee_actor_type,
+      owner_role: task.owner_role,
+      candidate_roles: task.candidate_roles ?? [],
+      linked_approval_id: task.linked_approval_id,
+      blocked_on_kind: task.blocked_on_kind,
+      blocked_on_ref: task.blocked_on_ref,
+      available_actions: item?.available_actions ?? task.available_actions ?? [],
+      blocking_reason_codes: item?.blocking_reason_codes ?? task.blocking_reason_codes ?? [],
+      missing_required_inputs: item?.missing_required_inputs ?? task.missing_required_inputs ?? [],
+      required_uploads: item?.required_uploads ?? task.required_uploads ?? [],
+      required_reviews: item?.required_reviews ?? task.required_reviews ?? [],
+      is_composite: task.is_composite ?? false,
+      expansion_kind: task.expansion_kind ?? "none",
+      subgraph_ref: task.subgraph_ref ?? null
+    },
     artifacts,
     artifact_sources: [
       {
@@ -741,16 +775,41 @@ export function WorkspaceTaskBoard({
                     );
                   }
                   const missingInputHint = hints.length > 0 ? hints.join(" \u00b7 ") : null;
+                  const openTaskDetails = (): void => {
+                    onOpenDetails(taskDetailPayload(card.item, card.task, detail.artifact_versions));
+                  };
 
                   return (
                     <article
                       key={card.cardId}
-                      className="workspace-board-card"
+                      className="workspace-board-card workspace-board-card--interactive"
                       data-testid="workspace-task-card"
+                      tabIndex={0}
+                      aria-label={`Open ${card.title} details`}
+                      onClick={(event) => {
+                        if (isInteractiveTarget(event.target)) {
+                          return;
+                        }
+                        openTaskDetails();
+                      }}
+                      onKeyDown={(event) => {
+                        if (isInteractiveTarget(event.target)) {
+                          return;
+                        }
+                        if (event.key !== "Enter" && event.key !== " ") {
+                          return;
+                        }
+                        event.preventDefault();
+                        openTaskDetails();
+                      }}
                     >
                       <header>
                         <h4>{card.title}</h4>
-                        <details className="workspace-board-card__menu">
+                        <details
+                          className="workspace-board-card__menu"
+                          onClick={(event) => event.stopPropagation()}
+                          onKeyDown={(event) => event.stopPropagation()}
+                        >
                           <summary aria-label={`Actions for ${card.title}`}>...</summary>
                           <div className="workspace-board-card__actions">
                             {workpageActions.map((action) => (
@@ -836,11 +895,7 @@ export function WorkspaceTaskBoard({
                             <button
                               type="button"
                               className="workspace-board-action"
-                              onClick={() =>
-                                onOpenDetails(
-                                  taskDetailPayload(card.item, card.task, detail.artifact_versions)
-                                )
-                              }
+                              onClick={openTaskDetails}
                             >
                               Details
                             </button>

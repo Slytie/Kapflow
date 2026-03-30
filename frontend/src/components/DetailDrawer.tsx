@@ -1,16 +1,18 @@
-import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { type ChangeEvent, memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 
 import { onetruthApi } from "@/lib/api/onetruthApi";
 import { errorText } from "@/lib/api/errorText";
 import { downloadBinaryToFile } from "@/lib/repositories/artifactAttachments";
-import { humanTasksRepository } from "@/lib/repositories";
+import { humanTasksRepository, templatesRepository } from "@/lib/repositories";
 import type {
   HumanTaskRow,
   HumanTaskSubgraph,
   HumanTaskSubgraphArtifactRef,
-  HumanTaskSubgraphNode
+  HumanTaskSubgraphNode,
+  WorkflowWorkspaceRequiredReview,
+  WorkflowWorkspaceRequiredUpload
 } from "@/lib/types/contracts";
 import type {
   DrawerArtifact,
@@ -30,12 +32,21 @@ type TaskAction =
   | "run_stage06_agent_review"
   | "run_weekly_stage04_openai_agent"
   | "confirm_review"
-  | "upload_attachment";
+  | "upload_attachment"
+  | "upload_required_response"
+  | "open_required_review_draft";
 
 interface TaskSubgraphViewProps {
   subgraph: HumanTaskSubgraph;
   onDownloadArtifact: (artifactRef: HumanTaskSubgraphArtifactRef) => Promise<void>;
   downloadingArtifactVersionId: string | null;
+}
+
+interface DrawerRequiredUploadActionsProps {
+  requirement: WorkflowWorkspaceRequiredUpload;
+  disabled: boolean;
+  onUpload: (file: File) => void;
+  onDownloadTemplate?: () => void;
 }
 
 function humanReadableNodeStatus(status: string): string {
@@ -49,6 +60,20 @@ function humanReadableNodeStatus(status: string): string {
     return "Awaiting approval";
   }
   return status.replace(/_/g, " ");
+}
+
+function requirementLabel(requirement: WorkflowWorkspaceRequiredUpload): string {
+  if (requirement.required === false) {
+    return "Optional context";
+  }
+  if (requirement.artifact_role === "official_input") {
+    return "Required input";
+  }
+  return "Required upload";
+}
+
+function reviewStatusLabel(review: WorkflowWorkspaceRequiredReview): string {
+  return review.status.replace(/_/g, " ");
 }
 
 const TaskSubgraphView = memo(function TaskSubgraphView({
@@ -180,6 +205,58 @@ const TaskSubgraphView = memo(function TaskSubgraphView({
   );
 });
 
+function DrawerRequiredUploadActions({
+  requirement,
+  disabled,
+  onUpload,
+  onDownloadTemplate
+}: DrawerRequiredUploadActionsProps): JSX.Element {
+  const inputRef = useRef<HTMLInputElement | null>(null);
+
+  const openFilePicker = (): void => {
+    if (disabled) {
+      return;
+    }
+    inputRef.current?.click();
+  };
+
+  const onInputChanged = (event: ChangeEvent<HTMLInputElement>): void => {
+    const file = event.currentTarget.files?.[0];
+    if (file) {
+      onUpload(file);
+    }
+    event.currentTarget.value = "";
+  };
+
+  return (
+    <div className="detail-drawer__requirement-actions">
+      <input
+        ref={inputRef}
+        type="file"
+        onChange={onInputChanged}
+        tabIndex={-1}
+        style={{ display: "none" }}
+      />
+      <button
+        type="button"
+        className="action-btn"
+        onClick={openFilePicker}
+        disabled={disabled}
+      >
+        {requirement.artifact_role === "official_input" ? "Upload Input" : "Upload Response"}
+      </button>
+      <button
+        type="button"
+        className="action-btn"
+        onClick={onDownloadTemplate}
+        disabled={disabled || !onDownloadTemplate || !requirement.template_id}
+      >
+        Download Template
+      </button>
+    </div>
+  );
+}
+
 export function DetailDrawer({ payload, onClose }: DetailDrawerProps): JSX.Element {
   const queryClient = useQueryClient();
   const [downloadError, setDownloadError] = useState<unknown>(null);
@@ -192,6 +269,8 @@ export function DetailDrawer({ payload, onClose }: DetailDrawerProps): JSX.Eleme
   const [taskLoadError, setTaskLoadError] = useState<unknown>(null);
   const [taskActionError, setTaskActionError] = useState<unknown>(null);
   const [pendingTaskAction, setPendingTaskAction] = useState<TaskAction | null>(null);
+  const [activeRequirementKey, setActiveRequirementKey] = useState<string | null>(null);
+  const [downloadingTemplateId, setDownloadingTemplateId] = useState<string | null>(null);
   const uploadInputRef = useRef<HTMLInputElement | null>(null);
   const expandProcessButtonRef = useRef<HTMLButtonElement | null>(null);
   const subgraphHeadingRef = useRef<HTMLHeadingElement | null>(null);
@@ -207,6 +286,8 @@ export function DetailDrawer({ payload, onClose }: DetailDrawerProps): JSX.Eleme
     setDownloadError(null);
     setDownloadingArtifactVersionId(null);
     setTaskActionError(null);
+    setActiveRequirementKey(null);
+    setDownloadingTemplateId(null);
   }, [payload]);
 
   useEffect(() => {
@@ -256,6 +337,15 @@ export function DetailDrawer({ payload, onClose }: DetailDrawerProps): JSX.Eleme
   useEffect(() => {
     activeTaskIdRef.current = activeTask?.human_task_id ?? null;
   }, [activeTask?.human_task_id]);
+
+  const requiredUploads = activeTask?.required_uploads ?? [];
+  const requiredReviews = activeTask?.required_reviews ?? [];
+  const requiredReviewArtifactVersionIds = requiredReviews
+    .map((review) => review.reviewed_artifact_version_id)
+    .filter((value): value is string => Boolean(value));
+  const hasPendingReviewConfirmation = requiredReviews.some(
+    (review) => review.status === "pending_confirmation"
+  );
 
   const isCompositeTask =
     Boolean(activeTask?.is_composite) && activeTask?.expansion_kind === "task_subgraph";
@@ -473,7 +563,10 @@ export function DetailDrawer({ payload, onClose }: DetailDrawerProps): JSX.Eleme
       } else if (action === "run_weekly_stage04_openai_agent") {
         await humanTasksRepository.runWeeklyStage04OpenAIAgent(activeTask.human_task_id);
       } else if (action === "confirm_review") {
-        const reviewedArtifactVersionIds = artifacts.map((artifact) => artifact.artifact_version_id);
+        const reviewedArtifactVersionIds =
+          requiredReviewArtifactVersionIds.length > 0
+            ? requiredReviewArtifactVersionIds
+            : artifacts.map((artifact) => artifact.artifact_version_id);
         if (reviewedArtifactVersionIds.length === 0) {
           throw new Error("No linked artifacts are available to confirm review.");
         }
@@ -488,6 +581,29 @@ export function DetailDrawer({ payload, onClose }: DetailDrawerProps): JSX.Eleme
     }
   };
 
+  const handleUploadRequiredResponse = async (
+    requirement: WorkflowWorkspaceRequiredUpload,
+    file: File
+  ): Promise<void> => {
+    if (!activeTask) {
+      return;
+    }
+    const requirementKey = `${requirement.dataset_key}:${requirement.artifact_kind}`;
+    setTaskActionError(null);
+    setPendingTaskAction("upload_required_response");
+    setActiveRequirementKey(requirementKey);
+    try {
+      await humanTasksRepository.uploadRequiredResponse(activeTask.human_task_id, requirement, file);
+      await invalidateTaskViews(activeTask.workflow_run_id);
+      await refreshTaskContext(activeTask.human_task_id);
+    } catch (error) {
+      setTaskActionError(error);
+    } finally {
+      setPendingTaskAction(null);
+      setActiveRequirementKey(null);
+    }
+  };
+
   const handleUploadAttachment = async (file: File): Promise<void> => {
     if (!activeTask) {
       return;
@@ -498,6 +614,30 @@ export function DetailDrawer({ payload, onClose }: DetailDrawerProps): JSX.Eleme
       await humanTasksRepository.uploadAttachment(activeTask.human_task_id, file);
       await invalidateTaskViews(activeTask.workflow_run_id);
       await refreshTaskContext(activeTask.human_task_id);
+    } catch (error) {
+      setTaskActionError(error);
+    } finally {
+      setPendingTaskAction(null);
+    }
+  };
+
+  const handleDownloadRequirementTemplate = async (templateId: string): Promise<void> => {
+    setTaskActionError(null);
+    setDownloadingTemplateId(templateId);
+    try {
+      await templatesRepository.download(templateId);
+    } catch (error) {
+      setTaskActionError(error);
+    } finally {
+      setDownloadingTemplateId(null);
+    }
+  };
+
+  const handleOpenRequiredReviewDraft = async (artifactVersionId: string): Promise<void> => {
+    setTaskActionError(null);
+    setPendingTaskAction("open_required_review_draft");
+    try {
+      await humanTasksRepository.openDraftArtifact(artifactVersionId);
     } catch (error) {
       setTaskActionError(error);
     } finally {
@@ -636,6 +776,89 @@ export function DetailDrawer({ payload, onClose }: DetailDrawerProps): JSX.Eleme
               </dd>
             </div>
           </dl>
+          {requiredUploads.length > 0 ? (
+            <section className="detail-drawer__requirements" aria-label="Required uploads">
+              <h4>Required Inputs / Uploads</h4>
+              <ul className="detail-drawer__artifact-list">
+                {requiredUploads.map((requirement) => {
+                  const requirementKey = `${requirement.dataset_key}:${requirement.artifact_kind}`;
+                  const requirementBusy =
+                    pendingTaskAction === "upload_required_response" &&
+                    activeRequirementKey === requirementKey;
+                  return (
+                    <li
+                      key={`required-upload:${requirementKey}`}
+                      className="detail-drawer__artifact-row"
+                    >
+                      <div className="detail-drawer__artifact-meta">
+                        <p className="detail-drawer__artifact-name">{requirement.dataset_key}</p>
+                        <p className="detail-drawer__artifact-details">
+                          {requirementLabel(requirement)} · {requirement.status}
+                          {requirement.required === false ? " · optional" : ""}
+                        </p>
+                      </div>
+                      <DrawerRequiredUploadActions
+                        requirement={requirement}
+                        disabled={pendingTaskAction !== null || downloadingTemplateId !== null}
+                        onUpload={(file) => {
+                          void handleUploadRequiredResponse(requirement, file);
+                        }}
+                        onDownloadTemplate={
+                          requirement.template_id
+                            ? () => void handleDownloadRequirementTemplate(requirement.template_id as string)
+                            : undefined
+                        }
+                      />
+                      {requirementBusy ? (
+                        <span className="detail-drawer__inline-status">Uploading…</span>
+                      ) : null}
+                    </li>
+                  );
+                })}
+              </ul>
+            </section>
+          ) : null}
+          {requiredReviews.length > 0 ? (
+            <section className="detail-drawer__requirements" aria-label="Required reviews">
+              <h4>Required Reviews</h4>
+              <ul className="detail-drawer__artifact-list">
+                {requiredReviews.map((review) => (
+                  <li
+                    key={`required-review:${review.dataset_key}:${review.artifact_kind}`}
+                    className="detail-drawer__artifact-row"
+                  >
+                    <div className="detail-drawer__artifact-meta">
+                      <p className="detail-drawer__artifact-name">{review.dataset_key}</p>
+                      <p className="detail-drawer__artifact-details">
+                        Required review · {reviewStatusLabel(review)}
+                      </p>
+                    </div>
+                    <div className="detail-drawer__requirement-actions">
+                      <button
+                        type="button"
+                        className="action-btn"
+                        disabled={
+                          pendingTaskAction !== null || !review.reviewed_artifact_version_id
+                        }
+                        onClick={() => {
+                          if (review.reviewed_artifact_version_id) {
+                            void handleOpenRequiredReviewDraft(review.reviewed_artifact_version_id);
+                          }
+                        }}
+                      >
+                        Open Draft
+                      </button>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+              {hasPendingReviewConfirmation ? (
+                <p className="detail-drawer__hint">
+                  Confirm review once all required draft artifacts have been checked.
+                </p>
+              ) : null}
+            </section>
+          ) : null}
           <div className="detail-drawer__task-actions">
             {hasAction(["claim", "claim_human_task"]) ? (
               <button
@@ -681,7 +904,11 @@ export function DetailDrawer({ payload, onClose }: DetailDrawerProps): JSX.Eleme
               <button
                 type="button"
                 className="action-btn"
-                disabled={pendingTaskAction !== null}
+                disabled={
+                  pendingTaskAction !== null ||
+                  requiredReviewArtifactVersionIds.length === 0 ||
+                  !hasPendingReviewConfirmation
+                }
                 onClick={() => void handleTaskAction("confirm_review")}
               >
                 Confirm Review
@@ -694,7 +921,7 @@ export function DetailDrawer({ payload, onClose }: DetailDrawerProps): JSX.Eleme
                 disabled={pendingTaskAction !== null}
                 onClick={openUploadPicker}
               >
-                Upload attachment
+                Add supporting attachment
               </button>
             ) : null}
             {isCompositeTask ? (
@@ -850,6 +1077,8 @@ function drawerTaskContext(task: HumanTaskRow): DrawerTaskContext {
     available_actions: task.available_actions ?? [],
     blocking_reason_codes: task.blocking_reason_codes ?? [],
     missing_required_inputs: task.missing_required_inputs ?? [],
+    required_uploads: task.required_uploads ?? [],
+    required_reviews: task.required_reviews ?? [],
     is_composite: task.is_composite ?? false,
     expansion_kind: task.expansion_kind ?? "none",
     subgraph_ref: task.subgraph_ref ?? null

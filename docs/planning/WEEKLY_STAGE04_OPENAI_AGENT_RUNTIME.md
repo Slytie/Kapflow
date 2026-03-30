@@ -48,6 +48,8 @@ Behavior:
 - persists per-turn request/result evidence as the loop advances,
 - enforces authored `no_progress_ticks` from compiled Stage04 control metadata,
 - requires an explicit deterministic finalize tool call before any Stage04 draft artifacts are materialized,
+- if the planner is already complete and the model returns final text without that finalize call, performs one bounded continuation on the same Responses thread with a finalize-only tool surface and a corrective prompt,
+- still fails closed if that bounded continuation does not produce the finalize call; the explicit-finalize invariant is not relaxed,
 - retries `rate_limit_exceeded` Responses calls inside the same turn with bounded `Retry-After`/message-derived backoff before failing the execution,
 - continues until a turn returns no function calls or the authored stop budget is exhausted.
 
@@ -93,10 +95,11 @@ Shared helper posture:
 Evidence captures:
 - full context pack payload plus the compact model-facing initial context summary,
 - per-turn request/response metadata,
+- any bounded finalize-repair continuation turns rebased into the same monotonic turn sequence,
 - function calls, parsed compact `function_call_output` payloads, full evidence tool outputs, and progress accounting,
 - response/request ids and usage,
 - request retry attempts/history when rate limiting occurs,
-- execution trace summary including turn evidence refs, finalize state, and exhausted retry details.
+- execution trace summary including turn evidence refs, finalize state, repair-attempt metadata, and exhausted retry details.
 
 ## Policy posture
 Policy-gated before model execution:

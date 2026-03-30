@@ -384,6 +384,15 @@
   gap: 8px;
 }
 
+.workspace-board-card--interactive {
+  cursor: pointer;
+}
+
+.workspace-board-card--interactive:focus-visible {
+  outline: 2px solid #4a6fa1;
+  outline-offset: 2px;
+}
+
 .workspace-board-card > header {
   display: flex;
   justify-content: space-between;

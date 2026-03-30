@@ -330,6 +330,13 @@ def run_weekly_stage04_openai_agent_endpoint(
     try:
         result = run_weekly_stage04_openai_agent(connection, command_payload)
     except CommandError as exc:
+        if exc.code == "stage04_finalize_required":
+            raise ApiError(
+                status_code=502,
+                code=exc.code,
+                message=exc.message,
+                details=exc.details,
+            ) from exc
         raise api_error_from_command(exc) from exc
     except DuplicateIdempotencyKeyError as exc:
         raise api_error_from_duplicate_idempotency(exc) from exc
