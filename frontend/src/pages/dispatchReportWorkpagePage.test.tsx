@@ -138,13 +138,13 @@ describe("DispatchReportWorkpagePage", () => {
     const historyHeading = await screen.findByRole("heading", { name: "Recent draft versions" });
     const historyPanel = historyHeading.closest("section");
     expect(historyPanel).not.toBeNull();
-    expect(within(historyPanel as HTMLElement).getByText("av-eod-artifact-002")).toBeInTheDocument();
-    expect(within(historyPanel as HTMLElement).getByText("av-eod-artifact-001")).toBeInTheDocument();
+    expect(within(historyPanel as HTMLElement).getByText("Current draft")).toBeInTheDocument();
+    expect(within(historyPanel as HTMLElement).getByText("Previous draft")).toBeInTheDocument();
     expect(within(historyPanel as HTMLElement).getByText("Current")).toBeInTheDocument();
     expect(within(historyPanel as HTMLElement).getByText("Latest")).toBeInTheDocument();
     expect(within(historyPanel as HTMLElement).getByText("Superseded")).toBeInTheDocument();
 
-    await user.click(within(historyPanel as HTMLElement).getByRole("link", { name: "Open previous draft" }));
+    await user.click(within(historyPanel as HTMLElement).getByRole("link", { name: /Previous draft/i }));
 
     await waitFor(() => {
       expect(window.location.pathname).toBe(
@@ -209,6 +209,7 @@ describe("DispatchReportWorkpagePage", () => {
   });
 
   it("renders the artifact-backed route directly under the logistics shell", async () => {
+    const user = userEvent.setup();
     server.use(
       http.get("*/api/v1/workpages/artifacts/av-direct-001", () =>
         HttpResponse.json(buildArtifactPayload("av-direct-001"))
@@ -219,7 +220,13 @@ describe("DispatchReportWorkpagePage", () => {
     render(<App />);
 
     expect(await screen.findByTestId("dispatch-report-artifact-workpage-page")).toBeInTheDocument();
-    expect(screen.getByLabelText("Secondary detail routes")).toBeInTheDocument();
+    expect(screen.queryByText("Secondary detail routes")).not.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Open secondary detail routes" }));
+    const shellInfoDialog = await screen.findByRole("dialog", { name: "Secondary detail routes" });
+    expect(within(shellInfoDialog).getByRole("link", { name: "Run Details" })).toHaveAttribute(
+      "href",
+      "/runs"
+    );
     expect(window.location.pathname).toBe("/demo/logistics/workpages/eod-v0/artifacts/av-direct-001");
   });
 

@@ -11,6 +11,10 @@ import {
 import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 
 import { StatePanel } from "@/components/StatePanel";
+import {
+  DraftVersionTimeline,
+  draftVersionPrimaryLabel
+} from "@/components/workpages/DraftVersionTimeline";
 import { ScheduleArtifactAdvancedInfo } from "@/components/workpages/ScheduleArtifactAdvancedInfo";
 import { ScheduleHeatmapEditor } from "@/components/workpages/ScheduleHeatmapEditor";
 import {
@@ -582,6 +586,7 @@ export function LogisticsScheduleArtifactWorkpagePage(): JSX.Element {
   const artifactContext = contract.artifact_context;
   const latestArtifactVersionId =
     artifactContext?.latest_in_chain_artifact_version_id ?? artifactVersionId;
+  const previousArtifactVersionId = artifactContext?.supersedes_artifact_version_id ?? null;
   const latestRoute = scheduleArtifactRoute(latestArtifactVersionId, workflowRunId);
   const recentDraftHistory: ArtifactVersionRow[] = historyQuery.data ?? [];
   const isStaleArtifact = latestArtifactVersionId !== artifactVersionId;
@@ -770,34 +775,22 @@ export function LogisticsScheduleArtifactWorkpagePage(): JSX.Element {
           ) : null}
 
           {!historyQuery.isError && recentDraftHistory.length > 0 ? (
-            <div className="workpage-history">
-              {recentDraftHistory.map((artifact) => {
-                const route = scheduleArtifactRoute(artifact.artifact_version_id, workflowRunId);
-                const isCurrent = artifact.artifact_version_id === artifactVersionId;
-                const isLatest = artifact.artifact_version_id === latestArtifactVersionId;
-                const label = isCurrent
-                  ? "Open current draft"
-                  : isLatest
-                    ? "Open latest draft"
-                    : "Open draft";
-                return (
-                  <article
-                    key={artifact.artifact_version_id}
-                    className="workpage-history__item"
-                    data-testid={`schedule-draft-history-${artifact.artifact_version_id}`}
-                  >
-                    <strong>{artifact.artifact_version_id}</strong>
-                    <p>{artifact.created_at}</p>
-                    <p>{artifact.lineage_note ?? "Schedule draft artifact version."}</p>
-                    <div className="action-cluster">
-                      <Link className="link-button" to={route}>
-                        {label}
-                      </Link>
-                    </div>
-                  </article>
-                );
-              })}
-            </div>
+            <DraftVersionTimeline
+              ariaLabel="Recent schedule draft versions"
+              entries={recentDraftHistory.map((artifact) => ({
+                artifactVersionId: artifact.artifact_version_id,
+                createdAt: artifact.created_at,
+                label: draftVersionPrimaryLabel(artifact.artifact_version_id, {
+                  currentArtifactVersionId: artifactVersionId,
+                  previousArtifactVersionId
+                }),
+                isCurrent: artifact.artifact_version_id === artifactVersionId,
+                isLatest: artifact.artifact_version_id === latestArtifactVersionId,
+                note: artifact.lineage_note ?? "Schedule draft artifact version.",
+                testId: `schedule-draft-history-${artifact.artifact_version_id}`,
+                to: scheduleArtifactRoute(artifact.artifact_version_id, workflowRunId)
+              }))}
+            />
           ) : null}
         </section>
       ) : null}

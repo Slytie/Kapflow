@@ -322,7 +322,9 @@ describe("LogisticsDemoPage", () => {
     expect(within(refreshedInlineSchedule).getByText("Artifact av-schedule-artifact-002")).toBeInTheDocument();
 
     const timeline = within(detailPanel).getByLabelText("Weekly draft versions timeline");
-    await user.click(within(timeline).getByRole("button", { name: /Open previous draft/i }));
+    expect(within(timeline).getByText("Current draft")).toBeInTheDocument();
+    expect(within(timeline).getByText("Previous draft")).toBeInTheDocument();
+    await user.click(within(timeline).getByRole("button", { name: /Previous draft/i }));
 
     await waitFor(() => {
       expect(within(detailPanel).getByText("Artifact av-schedule-artifact-001")).toBeInTheDocument();

@@ -264,6 +264,10 @@ describe("logistics workpage routes", () => {
     render(<App />);
 
     expect(await screen.findByTestId("schedule-workpage-page")).toBeInTheDocument();
+    const navActions = screen.getByTestId("app-shell-nav-actions");
+    expect(within(navActions).getByRole("button", { name: "Open secondary detail routes" })).toBeInTheDocument();
+    expect(within(navActions).getByRole("button", { name: "Open utility menu" })).toBeInTheDocument();
+    expect(screen.queryByText("Secondary detail routes")).not.toBeInTheDocument();
     expect(screen.getByTestId("logistics-family-nav-node-weekly_schedule_planning")).toHaveAttribute(
       "aria-pressed",
       "true"
@@ -272,6 +276,14 @@ describe("logistics workpage routes", () => {
       "aria-pressed",
       "false"
     );
+
+    await user.click(within(navActions).getByRole("button", { name: "Open secondary detail routes" }));
+    const detailRoutesDialog = await screen.findByRole("dialog", { name: "Secondary detail routes" });
+    expect(within(detailRoutesDialog).getByRole("link", { name: "Run Details" })).toHaveAttribute(
+      "href",
+      "/runs"
+    );
+    await user.click(screen.getByRole("button", { name: /Close Secondary detail routes/i }));
 
     await user.click(await screen.findByRole("link", { name: "Open editable draft" }));
 

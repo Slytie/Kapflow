@@ -142,7 +142,6 @@ export function DraftVersionTimeline({
                     ))}
                   </span>
                 </span>
-                <span className="draft-version-timeline__artifact">{entry.artifactVersionId}</span>
                 <span className="draft-version-timeline__timestamp">{formatDraftTimestamp(entry.createdAt)}</span>
                 {entry.note ? <span className="draft-version-timeline__note">{entry.note}</span> : null}
               </span>
@@ -160,12 +159,21 @@ export function DraftVersionTimeline({
               )}
               data-testid={entry.testId}
             >
-              {"to" in entry ? (
-                <Link className="draft-version-timeline__entry" to={entry.to}>
+              {entry.to !== undefined ? (
+                <Link
+                  className="draft-version-timeline__entry"
+                  to={entry.to}
+                  aria-current={isSelected ? "page" : undefined}
+                >
                   {content}
                 </Link>
               ) : (
-                <button type="button" className="draft-version-timeline__entry" onClick={entry.onSelect}>
+                <button
+                  type="button"
+                  className="draft-version-timeline__entry"
+                  onClick={entry.onSelect}
+                  aria-pressed={isSelected}
+                >
                   {content}
                 </button>
               )}

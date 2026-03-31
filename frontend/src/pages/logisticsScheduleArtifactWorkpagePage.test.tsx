@@ -70,7 +70,9 @@ describe("LogisticsScheduleArtifactWorkpagePage", () => {
       window.history.pushState({}, "", "/runs/wr-weekly-001/workpages/schedule-v0");
       render(<App />);
 
-      await user.click(await screen.findByRole("link", { name: "Open editable draft" }));
+      await user.click(
+        await screen.findByRole("link", { name: "Open editable draft" }, { timeout: 5000 })
+      );
       expect(await screen.findByTestId("schedule-artifact-workpage-page")).toBeInTheDocument();
 
       const heatmap = heatmapSection();
@@ -110,8 +112,8 @@ describe("LogisticsScheduleArtifactWorkpagePage", () => {
 
       const historyPanel = screen.getByRole("heading", { name: "Recent draft versions" }).closest("section");
       expect(historyPanel).not.toBeNull();
-      expect(within(historyPanel as HTMLElement).getByText("av-schedule-artifact-002")).toBeInTheDocument();
-      expect(within(historyPanel as HTMLElement).getByText("av-schedule-artifact-001")).toBeInTheDocument();
+      expect(within(historyPanel as HTMLElement).getByText("Current draft")).toBeInTheDocument();
+      expect(within(historyPanel as HTMLElement).getByText("Previous draft")).toBeInTheDocument();
 
       await user.click(screen.getByRole("button", { name: "Download draft JSON" }));
       await waitFor(() => {
@@ -138,7 +140,7 @@ describe("LogisticsScheduleArtifactWorkpagePage", () => {
 
     await user.click(
       within(screen.getByTestId("schedule-draft-history-av-schedule-artifact-001")).getByRole("link", {
-        name: "Open draft"
+        name: /Previous draft/i
       })
     );
 

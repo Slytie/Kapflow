@@ -5,6 +5,7 @@ import { useIsFetching, useQuery, useQueryClient } from "@tanstack/react-query";
 import { DetailDrawer } from "@/components/DetailDrawer";
 import { FilterBar } from "@/components/FilterBar";
 import { FreshnessBanner } from "@/components/FreshnessBanner";
+import { InfoDialog } from "@/components/InfoDialog";
 import { LogisticsFamilyNav } from "@/components/LogisticsFamilyNav";
 import { StatePanel } from "@/components/StatePanel";
 import { useShellFilters } from "@/app/useShellFilters";
@@ -380,49 +381,57 @@ export function AppShell(): JSX.Element {
               </div>
             )}
 
-            <div className="app-shell__utility-menu">
-              <button
-                type="button"
-                className="action-btn"
-                aria-expanded={isUtilityMenuOpen}
-                aria-label="Open utility menu"
-                onClick={() => {
-                  setIsUtilityMenuOpen((current) => !current);
-                }}
-              >
-                Menu
-              </button>
-              {isUtilityMenuOpen ? (
-                <div className="app-shell__utility-menu-popover" role="menu">
-                  {UTILITY_LINKS.map((link) => (
-                    <NavLink
-                      key={link.to}
-                      to={link.to}
-                      role="menuitem"
-                      className={({ isActive }) => (isActive ? "active" : "")}
-                    >
-                      {link.label}
-                    </NavLink>
-                  ))}
-                </div>
+            <div className="app-shell__nav-actions" data-testid="app-shell-nav-actions">
+              {isWorkpageFullPageRoute ? (
+                <InfoDialog
+                  triggerLabel="Open secondary detail routes"
+                  dialogTitle="Secondary detail routes"
+                  dialogDescription="Open secondary logistics detail destinations without taking extra header space."
+                  className="app-shell__secondary-info-button"
+                >
+                  <div className="app-shell__secondary-links-dialog">
+                    {SECONDARY_LINKS.map((link) => (
+                      <NavLink
+                        key={link.to}
+                        to={link.to}
+                        className={({ isActive }) => `link-button${isActive ? " active" : ""}`}
+                      >
+                        {link.label}
+                      </NavLink>
+                    ))}
+                  </div>
+                </InfoDialog>
               ) : null}
+
+              <div className="app-shell__utility-menu">
+                <button
+                  type="button"
+                  className="action-btn"
+                  aria-expanded={isUtilityMenuOpen}
+                  aria-label="Open utility menu"
+                  onClick={() => {
+                    setIsUtilityMenuOpen((current) => !current);
+                  }}
+                >
+                  Menu
+                </button>
+                {isUtilityMenuOpen ? (
+                  <div className="app-shell__utility-menu-popover" role="menu">
+                    {UTILITY_LINKS.map((link) => (
+                      <NavLink
+                        key={link.to}
+                        to={link.to}
+                        role="menuitem"
+                        className={({ isActive }) => (isActive ? "active" : "")}
+                      >
+                        {link.label}
+                      </NavLink>
+                    ))}
+                  </div>
+                ) : null}
+              </div>
             </div>
           </div>
-
-          {isWorkpageFullPageRoute ? (
-            <div className="app-shell__secondary-nav" aria-label="Secondary detail routes">
-              <p>Secondary detail routes</p>
-              {SECONDARY_LINKS.map((link) => (
-                <NavLink
-                  key={link.to}
-                  to={link.to}
-                  className={({ isActive }) => (isActive ? "active" : "")}
-                >
-                  {link.label}
-                </NavLink>
-              ))}
-            </div>
-          ) : null}
         </div>
       </aside>
 

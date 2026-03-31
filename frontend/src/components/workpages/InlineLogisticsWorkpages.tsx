@@ -10,6 +10,10 @@ import {
 import { Link } from "react-router-dom";
 
 import { StatePanel } from "@/components/StatePanel";
+import {
+  DraftVersionTimeline,
+  draftVersionPrimaryLabel
+} from "@/components/workpages/DraftVersionTimeline";
 import { ScheduleArtifactAdvancedInfo } from "@/components/workpages/ScheduleArtifactAdvancedInfo";
 import { ScheduleHeatmapEditor } from "@/components/workpages/ScheduleHeatmapEditor";
 import { WorkpageChecklistSection } from "@/components/workpages/WorkpageChecklistSection";
@@ -94,26 +98,6 @@ function buildTableSectionResetKey(
     section.columns.map((column) => column.key).join(","),
     section.rows.length
   ].join("|");
-}
-
-function recentDraftActionLabel(
-  artifactVersionId: string,
-  options: {
-    currentArtifactVersionId: string;
-    previousArtifactVersionId: string | null;
-    latestArtifactVersionId: string;
-  }
-): string {
-  if (artifactVersionId === options.currentArtifactVersionId) {
-    return "Open current draft";
-  }
-  if (artifactVersionId === options.latestArtifactVersionId) {
-    return "Open latest draft";
-  }
-  if (options.previousArtifactVersionId && artifactVersionId === options.previousArtifactVersionId) {
-    return "Open previous draft";
-  }
-  return "Open draft";
 }
 
 function orderedChecklistSubmitValues(
@@ -269,38 +253,30 @@ function InlineDraftTimeline({
   title: string;
 }): JSX.Element {
   return (
-    <aside className="inline-workpage-shell__timeline" aria-label={`${title} timeline`}>
-      <header>
-        <p className="timeline-page__eyebrow">Draft Timeline</p>
-        <h4>{title}</h4>
-      </header>
-      <div className="inline-workpage-shell__timeline-list">
-        {history.map((artifact) => {
-          const isCurrent = artifact.artifact_version_id === currentArtifactVersionId;
-          const isLatest = artifact.artifact_version_id === latestArtifactVersionId;
-          return (
-            <button
-              key={artifact.artifact_version_id}
-              type="button"
-              className={`inline-workpage-shell__timeline-item${isCurrent ? " is-selected" : ""}`}
-              aria-pressed={isCurrent}
-              onClick={() => onSelect(artifact.artifact_version_id)}
-            >
-              <strong>
-                {recentDraftActionLabel(artifact.artifact_version_id, {
-                  currentArtifactVersionId,
-                  previousArtifactVersionId,
-                  latestArtifactVersionId
-                })}
-              </strong>
-              <span>{artifact.artifact_version_id}</span>
-              <small>{artifact.created_at}</small>
-              {isLatest ? <em>Latest</em> : null}
-            </button>
-          );
-        })}
-      </div>
-    </aside>
+    <DraftVersionTimeline
+      ariaLabel={`${title} timeline`}
+      variant="sidebar"
+      className="inline-workpage-shell__timeline"
+      eyebrow="Draft Timeline"
+      title={title}
+      entries={history.map((artifact) => {
+        const isCurrent = artifact.artifact_version_id === currentArtifactVersionId;
+        const isLatest = artifact.artifact_version_id === latestArtifactVersionId;
+        return {
+          artifactVersionId: artifact.artifact_version_id,
+          createdAt: artifact.created_at,
+          label: draftVersionPrimaryLabel(artifact.artifact_version_id, {
+            currentArtifactVersionId,
+            previousArtifactVersionId
+          }),
+          isCurrent,
+          isLatest,
+          isSelected: isCurrent,
+          note: artifact.lineage_note,
+          onSelect: () => onSelect(artifact.artifact_version_id)
+        };
+      })}
+    />
   );
 }
 

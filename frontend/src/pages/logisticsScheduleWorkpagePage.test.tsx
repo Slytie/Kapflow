@@ -41,7 +41,14 @@ describe("LogisticsScheduleWorkpagePage", () => {
     expect(
       within(page).queryByText("Backend demo query served from repo-native workflow example bundles.")
     ).not.toBeInTheDocument();
-    expect(screen.getByLabelText("Secondary detail routes")).toBeInTheDocument();
+    expect(screen.queryByText("Secondary detail routes")).not.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Open secondary detail routes" }));
+    const shellInfoDialog = await screen.findByRole("dialog", { name: "Secondary detail routes" });
+    expect(within(shellInfoDialog).getByRole("link", { name: "Run Details" })).toHaveAttribute(
+      "href",
+      "/runs"
+    );
+    await user.click(screen.getByRole("button", { name: /Close Secondary detail routes/i }));
     expect(screen.queryByText(/Server-authoritative view backed by HITL HTTP query contracts/i)).not.toBeInTheDocument();
     expect(screen.queryByPlaceholderText("all or wr-...")).not.toBeInTheDocument();
 

@@ -3,6 +3,10 @@ import { type Dispatch, type ReactNode, type SetStateAction, useEffect, useMemo,
 import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 
 import { StatePanel } from "@/components/StatePanel";
+import {
+  DraftVersionTimeline,
+  draftVersionPrimaryLabel
+} from "@/components/workpages/DraftVersionTimeline";
 import { WorkpageChecklistSection } from "@/components/workpages/WorkpageChecklistSection";
 import {
   WorkpageFrame,
@@ -58,26 +62,6 @@ function workpageBackRoute(workflowRunId?: string): { href: string; label: strin
   return workflowRunId
     ? { href: `/runs/${workflowRunId}`, label: "Back to run detail" }
     : { href: "/demo/logistics", label: "Back to logistics demo" };
-}
-
-function recentDraftActionLabel(
-  artifactVersionId: string,
-  options: {
-    currentArtifactVersionId: string;
-    previousArtifactVersionId: string | null;
-    latestArtifactVersionId: string;
-  }
-): string {
-  if (artifactVersionId === options.currentArtifactVersionId) {
-    return "Open current draft";
-  }
-  if (artifactVersionId === options.latestArtifactVersionId) {
-    return "Open latest draft";
-  }
-  if (options.previousArtifactVersionId && artifactVersionId === options.previousArtifactVersionId) {
-    return "Open previous draft";
-  }
-  return "Open draft";
 }
 
 function asString(value: unknown): string | null {
@@ -785,51 +769,21 @@ export function DispatchReportArtifactWorkpagePage(): JSX.Element {
               ) : null}
 
               {!historyQuery.isError && recentDraftHistory.length > 0 ? (
-                <div className="workpage-history">
-                  {recentDraftHistory.map((artifact): JSX.Element => {
-                    const isCurrentArtifact = artifact.artifact_version_id === artifactVersionId;
-                    const isLatestArtifact =
-                      artifact.artifact_version_id === latestArtifactVersionId;
-                    const actionLabel = recentDraftActionLabel(artifact.artifact_version_id, {
+                <DraftVersionTimeline
+                  ariaLabel="Recent reporting draft versions"
+                  entries={recentDraftHistory.map((artifact) => ({
+                    artifactVersionId: artifact.artifact_version_id,
+                    createdAt: artifact.created_at,
+                    label: draftVersionPrimaryLabel(artifact.artifact_version_id, {
                       currentArtifactVersionId: artifactVersionId,
-                      previousArtifactVersionId,
-                      latestArtifactVersionId
-                    });
-
-                    return (
-                      <article
-                        key={artifact.artifact_version_id}
-                        className="workpage-history__item"
-                      >
-                        <div className="workpage-history__meta">
-                          <div>
-                            <strong>{artifact.artifact_version_id}</strong>
-                            <p>Created {artifact.created_at}</p>
-                            {artifact.lineage_note ? <p>{artifact.lineage_note}</p> : null}
-                          </div>
-                          <div className="workpage-history__badges">
-                            {isCurrentArtifact ? (
-                              <span className="status-badge status-badge--active">Current</span>
-                            ) : null}
-                            {isLatestArtifact ? (
-                              <span className="status-badge status-badge--success">Latest</span>
-                            ) : (
-                              <span className="status-badge status-badge--warning">Superseded</span>
-                            )}
-                          </div>
-                        </div>
-                      <div className="action-cluster">
-                        <Link
-                          className="link-button"
-                          to={artifactRoute(artifact.artifact_version_id, workflowRunId)}
-                        >
-                          {actionLabel}
-                        </Link>
-                        </div>
-                      </article>
-                    );
-                  })}
-                </div>
+                      previousArtifactVersionId
+                    }),
+                    isCurrent: artifact.artifact_version_id === artifactVersionId,
+                    isLatest: artifact.artifact_version_id === latestArtifactVersionId,
+                    note: artifact.lineage_note,
+                    to: artifactRoute(artifact.artifact_version_id, workflowRunId)
+                  }))}
+                />
               ) : null}
             </section>
           ) : null}
