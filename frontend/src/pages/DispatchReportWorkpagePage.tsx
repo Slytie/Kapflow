@@ -188,8 +188,12 @@ interface DispatchReportWorkpageViewProps {
   summaryLabel: string;
   backLink?: string;
   backLabel?: string;
+  heroTitleActions?: ReactNode;
+  heroSupportText?: ReactNode;
   heroActions?: ReactNode;
+  stickyTitleBar?: boolean;
   preContent?: ReactNode;
+  sideRail?: ReactNode;
   editable: boolean;
   formState?: WorkpageFormState;
   checklistState?: WorkpageChecklistState;
@@ -207,8 +211,12 @@ function DispatchReportWorkpageView({
   summaryLabel,
   backLink,
   backLabel,
+  heroTitleActions,
+  heroSupportText,
   heroActions,
+  stickyTitleBar = false,
   preContent,
+  sideRail,
   editable,
   formState = {},
   checklistState = {},
@@ -262,34 +270,9 @@ function DispatchReportWorkpageView({
     [model]
   );
 
-  return (
-    <WorkpageFrame
-      eyebrow="Dispatch Reporting Draft"
-      description="A bounded EOD workpage for route actual review, closeout capture, and UPD draft posture."
-      summaryItems={[
-        `Service date ${model.summary.service_date}`,
-        `${model.summary.station_code}`,
-        `${model.summary.dsp_name}`,
-        summaryLabel
-      ]}
-      model={model}
-      source={contract.source}
-      freshness={contract.freshness}
-      onRefresh={onRefresh}
-      isRefreshing={isRefreshing}
-      pollIntervalMs={apiConfig.pollIntervalMs}
-      testId={testId}
-      sourceDescription={sourceDescription}
-      heroActions={heroActions}
-      backLink={backLink}
-      backLabel={backLabel}
-    >
-      {preContent}
-
-      <div className="workpage-page__grid workpage-page__grid--two-column">
-        {summarySection ? <WorkpageSummaryCardsSection section={summarySection} /> : null}
-        {noteSection ? <WorkpageNotePanelSection section={noteSection} /> : null}
-      </div>
+  const mainContent = (
+    <>
+      {summarySection ? <WorkpageSummaryCardsSection section={summarySection} /> : null}
 
       {findTableSection(tableSections, "route_actuals") ? (
         <WorkpageTableSection section={findTableSection(tableSections, "route_actuals") as WorkpageTableSectionModel} />
@@ -316,6 +299,46 @@ function DispatchReportWorkpageView({
       </div>
 
       {historySection ? <WorkpageHistorySection section={historySection} /> : null}
+    </>
+  );
+
+  return (
+    <WorkpageFrame
+      eyebrow="Dispatch Reporting Draft"
+      description="A bounded EOD workpage for route actual review, closeout capture, and UPD draft posture."
+      summaryItems={[
+        `Service date ${model.summary.service_date}`,
+        `${model.summary.station_code}`,
+        `${model.summary.dsp_name}`,
+        summaryLabel
+      ]}
+      model={model}
+      source={contract.source}
+      freshness={contract.freshness}
+      onRefresh={onRefresh}
+      isRefreshing={isRefreshing}
+      pollIntervalMs={apiConfig.pollIntervalMs}
+      testId={testId}
+      metadataPresentation="dialog"
+      infoDialogTitle={editable ? "EOD draft context" : "Dispatch reporting context"}
+      sourceDescription={sourceDescription}
+      infoDialogContent={noteSection ? <WorkpageNotePanelSection section={noteSection} /> : undefined}
+      heroTitleActions={heroTitleActions}
+      heroSupportText={heroSupportText}
+      heroActions={heroActions}
+      stickyTitleBar={stickyTitleBar}
+      backLink={backLink}
+      backLabel={backLabel}
+    >
+      {preContent}
+      {sideRail ? (
+        <div className="workpage-page__artifact-layout">
+          <div className="workpage-page__artifact-main">{mainContent}</div>
+          <aside className="workpage-page__artifact-rail">{sideRail}</aside>
+        </div>
+      ) : (
+        mainContent
+      )}
     </WorkpageFrame>
   );
 }
@@ -543,9 +566,6 @@ export function DispatchReportArtifactWorkpagePage(): JSX.Element {
     artifactContext?.latest_in_chain_artifact_version_id ?? artifactVersionId;
   const latestRoute = artifactRoute(latestArtifactVersionId, workflowRunId);
   const previousArtifactVersionId = artifactContext?.supersedes_artifact_version_id ?? null;
-  const previousRoute = previousArtifactVersionId
-    ? artifactRoute(previousArtifactVersionId, workflowRunId)
-    : null;
   const recentDraftHistory: ArtifactVersionRow[] = historyQuery.data ?? [];
   const isStaleArtifact = latestArtifactVersionId !== artifactVersionId;
   const submitConflict = workpageConflictDetails(submitMutation.error);
@@ -596,11 +616,16 @@ export function DispatchReportArtifactWorkpagePage(): JSX.Element {
       isRefreshing={
         query.isFetching || historyQuery.isFetching || submitMutation.isPending || downloadMutation.isPending
       }
-      heroActions={
+      heroTitleActions={
         <>
-          <Link className="link-button" to={eodLandingRoute(workflowRunId)}>
-            Back to query landing
-          </Link>
+          <button
+            type="button"
+            className="action-btn action-btn--positive"
+            disabled={submitMutation.isPending || isStaleArtifact}
+            onClick={() => submitMutation.mutate()}
+          >
+            {submitMutation.isPending ? "Submitting draft..." : "Submit draft"}
+          </button>
           <button
             type="button"
             className="action-btn"
@@ -610,6 +635,72 @@ export function DispatchReportArtifactWorkpagePage(): JSX.Element {
             {downloadMutation.isPending ? "Downloading workbook..." : "Download workbook"}
           </button>
         </>
+      }
+      heroActions={
+        <Link className="link-button" to={eodLandingRoute(workflowRunId)}>
+          Back to query landing
+        </Link>
+      }
+      heroSupportText="Submit creates a new immutable workbook artifact version. The current draft remains authoritative until you explicitly submit."
+      stickyTitleBar
+      sideRail={
+        artifactContext ? (
+          <section
+            className="workpage-panel workpage-page__artifact-rail-panel"
+            data-testid="dispatch-report-draft-history-rail"
+          >
+            <header className="workpage-panel__header">
+              <h2>Recent draft versions</h2>
+              <p>
+                Recent immutable `reporting.upd_draft.workbook` versions for this demo reporting
+                run. Use these links to reopen adjacent draft states without leaving the EOD
+                workpage surface.
+              </p>
+            </header>
+
+            {historyQuery.isError ? (
+              <section className="workpage-panel workpage-panel--callout">
+                <header className="workpage-panel__header">
+                  <h2>Recent draft history unavailable</h2>
+                  <p>
+                    {errorText(
+                      historyQuery.error,
+                      "Unable to load recent artifact-backed EOD draft history."
+                    )}
+                  </p>
+                </header>
+              </section>
+            ) : null}
+
+            {!historyQuery.isError && historyQuery.isLoading ? (
+              <p className="workpage-history__empty">Loading recent draft history...</p>
+            ) : null}
+
+            {!historyQuery.isError && !historyQuery.isLoading && recentDraftHistory.length === 0 ? (
+              <p className="workpage-history__empty">
+                No recent draft history is available for this reporting run yet.
+              </p>
+            ) : null}
+
+            {!historyQuery.isError && recentDraftHistory.length > 0 ? (
+              <DraftVersionTimeline
+                ariaLabel="Recent reporting draft versions"
+                entries={recentDraftHistory.map((artifact) => ({
+                  artifactVersionId: artifact.artifact_version_id,
+                  createdAt: artifact.created_at,
+                  label: draftVersionPrimaryLabel(artifact.artifact_version_id, {
+                    currentArtifactVersionId: artifactVersionId,
+                    previousArtifactVersionId
+                  }),
+                  isCurrent: artifact.artifact_version_id === artifactVersionId,
+                  isLatest: artifact.artifact_version_id === latestArtifactVersionId,
+                  note: artifact.lineage_note,
+                  to: artifactRoute(artifact.artifact_version_id, workflowRunId)
+                }))}
+              />
+            ) : null}
+          </section>
+        ) : null
       }
       preContent={
         <>
@@ -661,131 +752,6 @@ export function DispatchReportArtifactWorkpagePage(): JSX.Element {
               title="Workbook download failed"
               detail={errorText(downloadMutation.error, "Unable to download the workbook artifact.")}
             />
-          ) : null}
-
-          <section className="workpage-panel workpage-panel--callout">
-            <header className="workpage-panel__header">
-              <h2>Draft actions</h2>
-              <p>
-                Submit creates a new immutable workbook artifact version. The current draft remains
-                authoritative until you explicitly submit.
-              </p>
-            </header>
-            <div className="action-cluster">
-              <button
-                type="button"
-                className="action-btn action-btn--positive"
-                disabled={submitMutation.isPending || isStaleArtifact}
-                onClick={() => submitMutation.mutate()}
-              >
-                {submitMutation.isPending ? "Submitting draft..." : "Submit draft"}
-              </button>
-            </div>
-          </section>
-
-          {artifactContext ? (
-            <section className="workpage-panel">
-              <header className="workpage-panel__header">
-                <h2>Artifact lineage</h2>
-                <p>
-                  This page stays derived from immutable workbook artifacts. Use the lineage links
-                  below to reopen adjacent versions without leaving the EOD workpage surface.
-                </p>
-              </header>
-              <div className="workpage-page__source-grid workpage-page__source-grid--metadata">
-                <article className="workpage-page__source-item">
-                  <strong>Current artifact</strong>
-                  <p>{artifactContext.artifact_version_id}</p>
-                </article>
-                <article className="workpage-page__source-item">
-                  <strong>Workflow run</strong>
-                  <p>{artifactContext.workflow_run_id}</p>
-                </article>
-                <article className="workpage-page__source-item">
-                  <strong>Artifact kind</strong>
-                  <p>{artifactContext.artifact_kind}</p>
-                </article>
-                <article className="workpage-page__source-item">
-                  <strong>Latest in chain</strong>
-                  <p>{artifactContext.latest_in_chain_artifact_version_id}</p>
-                </article>
-                <article className="workpage-page__source-item">
-                  <strong>Supersedes</strong>
-                  <p>{artifactContext.supersedes_artifact_version_id ?? "Initial draft"}</p>
-                </article>
-                <article className="workpage-page__source-item">
-                  <strong>Superseded by</strong>
-                  <p>{artifactContext.superseded_by_artifact_version_id ?? "Current latest"}</p>
-                </article>
-              </div>
-              <div className="action-cluster">
-                {previousRoute ? (
-                  <Link className="link-button" to={previousRoute}>
-                    Open previous draft
-                  </Link>
-                ) : null}
-                {latestRoute !== artifactRoute(artifactVersionId, workflowRunId) ? (
-                  <Link className="link-button" to={latestRoute}>
-                    Open latest draft
-                  </Link>
-                ) : null}
-              </div>
-            </section>
-          ) : null}
-
-          {artifactContext ? (
-            <section className="workpage-panel">
-              <header className="workpage-panel__header">
-                <h2>Recent draft versions</h2>
-                <p>
-                  Recent immutable `reporting.upd_draft.workbook` versions for this demo reporting
-                  run. Use these links to reopen adjacent draft states without leaving the EOD
-                  workpage surface.
-                </p>
-              </header>
-
-              {historyQuery.isError ? (
-                <section className="workpage-panel workpage-panel--callout">
-                  <header className="workpage-panel__header">
-                    <h2>Recent draft history unavailable</h2>
-                    <p>
-                      {errorText(
-                        historyQuery.error,
-                        "Unable to load recent artifact-backed EOD draft history."
-                      )}
-                    </p>
-                  </header>
-                </section>
-              ) : null}
-
-              {!historyQuery.isError && historyQuery.isLoading ? (
-                <p className="workpage-history__empty">Loading recent draft history...</p>
-              ) : null}
-
-              {!historyQuery.isError && !historyQuery.isLoading && recentDraftHistory.length === 0 ? (
-                <p className="workpage-history__empty">
-                  No recent draft history is available for this reporting run yet.
-                </p>
-              ) : null}
-
-              {!historyQuery.isError && recentDraftHistory.length > 0 ? (
-                <DraftVersionTimeline
-                  ariaLabel="Recent reporting draft versions"
-                  entries={recentDraftHistory.map((artifact) => ({
-                    artifactVersionId: artifact.artifact_version_id,
-                    createdAt: artifact.created_at,
-                    label: draftVersionPrimaryLabel(artifact.artifact_version_id, {
-                      currentArtifactVersionId: artifactVersionId,
-                      previousArtifactVersionId
-                    }),
-                    isCurrent: artifact.artifact_version_id === artifactVersionId,
-                    isLatest: artifact.artifact_version_id === latestArtifactVersionId,
-                    note: artifact.lineage_note,
-                    to: artifactRoute(artifact.artifact_version_id, workflowRunId)
-                  }))}
-                />
-              ) : null}
-            </section>
           ) : null}
         </>
       }

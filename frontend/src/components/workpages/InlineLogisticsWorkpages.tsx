@@ -471,23 +471,43 @@ export function InlineScheduleWorkpage({
           pollIntervalMs={apiConfig.pollIntervalMs}
           metadataPresentation="dialog"
           infoDialogTitle={isArtifactBacked ? "Schedule draft context" : "Weekly planning context"}
+          heroTitleActions={
+            isArtifactBacked && effectiveArtifactVersionId ? (
+              <>
+                <button
+                  type="button"
+                  className="action-btn action-btn--positive"
+                  disabled={submitMutation.isPending}
+                  onClick={() => submitMutation.mutate()}
+                >
+                  {submitMutation.isPending ? "Submitting draft..." : "Submit draft"}
+                </button>
+                <button
+                  type="button"
+                  className="action-btn"
+                  disabled={downloadMutation.isPending}
+                  onClick={() =>
+                    downloadMutation.mutate(currentArtifactVersionId ?? effectiveArtifactVersionId)
+                  }
+                >
+                  {downloadMutation.isPending ? "Downloading draft..." : "Download draft JSON"}
+                </button>
+              </>
+            ) : null
+          }
+          heroSupportText={
+            isArtifactBacked
+              ? "Submit creates a new immutable weekly draft artifact and keeps this inline panel on the latest version."
+              : undefined
+          }
           heroActions={
             <div className="action-cluster">
               <Link className="link-button" to={fullRoute}>
                 Open full workpage
               </Link>
-              {isArtifactBacked && currentArtifactVersionId ? (
-                <button
-                  type="button"
-                  className="action-btn"
-                  disabled={downloadMutation.isPending}
-                  onClick={() => downloadMutation.mutate(currentArtifactVersionId)}
-                >
-                  {downloadMutation.isPending ? "Downloading draft..." : "Download draft JSON"}
-                </button>
-              ) : null}
             </div>
           }
+          stickyTitleBar={isArtifactBacked}
           infoDialogContent={
             isArtifactBacked ? (
               <ScheduleArtifactAdvancedInfo
@@ -523,25 +543,6 @@ export function InlineScheduleWorkpage({
               title="Draft JSON download failed"
               detail={errorText(downloadMutation.error, "Unable to download the schedule draft artifact.")}
             />
-          ) : null}
-
-          {isArtifactBacked ? (
-            <section className="workpage-panel workpage-panel--callout">
-              <header className="workpage-panel__header">
-                <h2>Draft actions</h2>
-                <p>Submit creates a new immutable weekly draft artifact and keeps this inline panel on the latest version.</p>
-              </header>
-              <div className="action-cluster">
-                <button
-                  type="button"
-                  className="action-btn action-btn--positive"
-                  disabled={submitMutation.isPending || !effectiveArtifactVersionId}
-                  onClick={() => submitMutation.mutate()}
-                >
-                  {submitMutation.isPending ? "Submitting draft..." : "Submit draft"}
-                </button>
-              </div>
-            </section>
           ) : null}
 
           {summarySection ? <WorkpageSummaryCardsSection section={summarySection} /> : null}
@@ -784,23 +785,46 @@ export function InlineDispatchReportWorkpage({
             downloadMutation.isPending
           }
           pollIntervalMs={apiConfig.pollIntervalMs}
+          metadataPresentation="dialog"
+          infoDialogTitle={isArtifactBacked ? "EOD draft context" : "Dispatch reporting context"}
+          infoDialogContent={noteSection ? <WorkpageNotePanelSection section={noteSection} /> : undefined}
+          heroTitleActions={
+            isArtifactBacked && effectiveArtifactVersionId ? (
+              <>
+                <button
+                  type="button"
+                  className="action-btn action-btn--positive"
+                  disabled={submitMutation.isPending}
+                  onClick={() => submitMutation.mutate()}
+                >
+                  {submitMutation.isPending ? "Submitting draft..." : "Submit draft"}
+                </button>
+                <button
+                  type="button"
+                  className="action-btn"
+                  disabled={downloadMutation.isPending}
+                  onClick={() =>
+                    downloadMutation.mutate(currentArtifactVersionId ?? effectiveArtifactVersionId)
+                  }
+                >
+                  {downloadMutation.isPending ? "Downloading workbook..." : "Download workbook"}
+                </button>
+              </>
+            ) : null
+          }
+          heroSupportText={
+            isArtifactBacked
+              ? "Submit creates a new immutable reporting draft artifact and keeps this inline panel on the latest version."
+              : undefined
+          }
           heroActions={
             <div className="action-cluster">
               <Link className="link-button" to={fullRoute}>
                 Open full workpage
               </Link>
-              {isArtifactBacked && currentArtifactVersionId ? (
-                <button
-                  type="button"
-                  className="action-btn"
-                  disabled={downloadMutation.isPending}
-                  onClick={() => downloadMutation.mutate(currentArtifactVersionId)}
-                >
-                  {downloadMutation.isPending ? "Downloading workbook..." : "Download workbook"}
-                </button>
-              ) : null}
             </div>
           }
+          stickyTitleBar={isArtifactBacked}
         >
           {createDraftMutation.isError ? (
             <StatePanel
@@ -849,29 +873,9 @@ export function InlineDispatchReportWorkpage({
                 </div>
               ) : null}
             </section>
-          ) : (
-            <section className="workpage-panel workpage-panel--callout">
-              <header className="workpage-panel__header">
-                <h2>Draft actions</h2>
-                <p>Submit creates a new immutable reporting draft artifact and keeps this inline panel on the latest version.</p>
-              </header>
-              <div className="action-cluster">
-                <button
-                  type="button"
-                  className="action-btn action-btn--positive"
-                  disabled={submitMutation.isPending || !effectiveArtifactVersionId}
-                  onClick={() => submitMutation.mutate()}
-                >
-                  {submitMutation.isPending ? "Submitting draft..." : "Submit draft"}
-                </button>
-              </div>
-            </section>
-          )}
+          ) : null}
 
-          <div className="workpage-page__grid workpage-page__grid--two-column">
-            {summarySection ? <WorkpageSummaryCardsSection section={summarySection} /> : null}
-            {noteSection ? <WorkpageNotePanelSection section={noteSection} /> : null}
-          </div>
+          {summarySection ? <WorkpageSummaryCardsSection section={summarySection} /> : null}
 
           {!isArtifactBacked
             ? tableSections.map((section) => <WorkpageTableSection key={section.table_id} section={section} />)

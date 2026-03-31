@@ -38,6 +38,14 @@ describe("LogisticsScheduleWorkpagePage", () => {
 
     const page = await screen.findByTestId("schedule-workpage-page");
     expect(within(page).getByRole("heading", { name: "Weekly schedule review" })).toBeInTheDocument();
+    const summarySection = within(page).getByTestId("workpage-summary-section");
+    expect(summarySection).toHaveClass("workpage-summary-section");
+    expect(summarySection).not.toHaveClass("workpage-panel");
+    expect(within(summarySection).getByRole("heading", { name: "Week summary" })).toBeInTheDocument();
+    expect(
+      within(summarySection).getByTestId("workpage-summary-card-planning_week")
+    ).toHaveClass("workpage-summary-card");
+    expect(within(summarySection).getByText("PW-2026-W13")).toBeInTheDocument();
     expect(
       within(page).queryByText("Backend demo query served from repo-native workflow example bundles.")
     ).not.toBeInTheDocument();

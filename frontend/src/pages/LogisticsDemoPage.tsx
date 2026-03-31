@@ -339,13 +339,6 @@ export function LogisticsDemoPage(): JSX.Element {
       </section>
 
       <section className="logistics-demo-page__panel" data-testid="logistics-module-detail-panel">
-        <header className="logistics-demo-page__panel-header">
-          <h3>Family Node Detail</h3>
-          <p>
-            The shell nav drives workflow switching. This page keeps the selected module context,
-            run drill-down, and inline work surface together.
-          </p>
-        </header>
         {selectedModule ? (
           <div className="logistics-demo-page__detail-stack">
             <section className="logistics-demo-page__detail-summary">

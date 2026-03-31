@@ -73,7 +73,36 @@ describe("LogisticsScheduleArtifactWorkpagePage", () => {
       await user.click(
         await screen.findByRole("link", { name: "Open editable draft" }, { timeout: 5000 })
       );
-      expect(await screen.findByTestId("schedule-artifact-workpage-page")).toBeInTheDocument();
+      const artifactPage = await screen.findByTestId("schedule-artifact-workpage-page");
+      const artifactTitleBar = artifactPage.querySelector(".workpage-page__hero-title-bar");
+      const artifactHeroActions = artifactPage.querySelector(".workpage-page__hero-actions");
+      const draftHistoryRail = within(artifactPage).getByTestId("schedule-draft-history-rail");
+      expect(artifactTitleBar).not.toBeNull();
+      expect(artifactTitleBar).toHaveClass("workpage-page__hero-title-bar--sticky");
+      expect(
+        within(artifactTitleBar as HTMLElement).getByRole("button", { name: "Submit draft" })
+      ).toBeInTheDocument();
+      expect(
+        within(artifactTitleBar as HTMLElement).getByRole("button", { name: "Download draft JSON" })
+      ).toBeInTheDocument();
+      expect(artifactHeroActions).not.toBeNull();
+      expect(
+        within(artifactHeroActions as HTMLElement).getByRole("link", { name: "Back to query landing" })
+      ).toBeInTheDocument();
+      expect(
+        within(artifactHeroActions as HTMLElement).queryByRole("button", { name: "Download draft JSON" })
+      ).not.toBeInTheDocument();
+      expect(draftHistoryRail.closest("aside")).toHaveClass("workpage-page__artifact-rail");
+      expect(within(draftHistoryRail).getByRole("heading", { name: "Recent draft versions" })).toBeInTheDocument();
+      expect(within(artifactPage).queryByRole("heading", { name: "Draft actions" })).not.toBeInTheDocument();
+      const summarySection = within(artifactPage).getByTestId("workpage-summary-section");
+      expect(
+        within(summarySection).getByRole("heading", { name: "Draft workbook summary" })
+      ).toBeInTheDocument();
+      expect(
+        within(summarySection).getByTestId("workpage-summary-card-route_assignment_count")
+      ).toHaveClass("workpage-summary-card");
+      expect(within(summarySection).getByText("158")).toBeInTheDocument();
 
       const heatmap = heatmapSection();
       const sourceCell = heatmapButton(
@@ -110,8 +139,7 @@ describe("LogisticsScheduleArtifactWorkpagePage", () => {
         })
       ).toBeInTheDocument();
 
-      const historyPanel = screen.getByRole("heading", { name: "Recent draft versions" }).closest("section");
-      expect(historyPanel).not.toBeNull();
+      const historyPanel = screen.getByTestId("schedule-draft-history-rail");
       expect(within(historyPanel as HTMLElement).getByText("Current draft")).toBeInTheDocument();
       expect(within(historyPanel as HTMLElement).getByText("Previous draft")).toBeInTheDocument();
 

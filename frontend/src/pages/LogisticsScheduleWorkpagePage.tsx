@@ -177,7 +177,10 @@ interface LogisticsScheduleWorkpageViewProps {
   testId: string;
   backLink?: string;
   backLabel?: string;
+  heroTitleActions?: ReactNode;
+  heroSupportText?: ReactNode;
   heroActions?: ReactNode;
+  stickyTitleBar?: boolean;
   preContent?: ReactNode;
   onRefresh: () => void;
   isRefreshing: boolean;
@@ -190,7 +193,10 @@ function LogisticsScheduleWorkpageView({
   testId,
   backLink,
   backLabel,
+  heroTitleActions,
+  heroSupportText,
   heroActions,
+  stickyTitleBar = false,
   preContent,
   onRefresh,
   isRefreshing
@@ -273,7 +279,10 @@ function LogisticsScheduleWorkpageView({
       metadataPresentation="dialog"
       infoDialogTitle="Weekly planning context"
       sourceDescription={sourceDescription}
+      heroTitleActions={heroTitleActions}
+      heroSupportText={heroSupportText}
       heroActions={heroActions}
+      stickyTitleBar={stickyTitleBar}
       infoDialogContent={
         <>
           {noteSection ? <WorkpageNotePanelSection section={noteSection} /> : null}
@@ -621,11 +630,16 @@ export function LogisticsScheduleArtifactWorkpagePage(): JSX.Element {
       metadataPresentation="dialog"
       infoDialogTitle="Schedule draft context"
       sourceDescription="Artifact-backed projection of an immutable Stage04 draft weekly schedule workbook. Submit creates a new superseding schedule draft artifact version."
-      heroActions={
+      heroTitleActions={
         <>
-          <Link className="link-button" to={scheduleLandingRoute(workflowRunId)}>
-            Back to query landing
-          </Link>
+          <button
+            type="button"
+            className="action-btn action-btn--positive"
+            disabled={submitMutation.isPending || isStaleArtifact}
+            onClick={() => submitMutation.mutate()}
+          >
+            {submitMutation.isPending ? "Submitting draft..." : "Submit draft"}
+          </button>
           <button
             type="button"
             className="action-btn"
@@ -636,6 +650,13 @@ export function LogisticsScheduleArtifactWorkpagePage(): JSX.Element {
           </button>
         </>
       }
+      heroSupportText="Submit creates a new immutable weekly schedule draft version in this run lineage."
+      heroActions={
+        <Link className="link-button" to={scheduleLandingRoute(workflowRunId)}>
+          Back to query landing
+        </Link>
+      }
+      stickyTitleBar
       infoDialogContent={
         <ScheduleArtifactAdvancedInfo
           noteSection={noteSection}
@@ -701,99 +722,86 @@ export function LogisticsScheduleArtifactWorkpagePage(): JSX.Element {
           detail={errorText(downloadMutation.error, "Unable to download the schedule draft artifact.")}
         />
       ) : null}
+      <div className="workpage-page__artifact-layout">
+        <div className="workpage-page__artifact-main">
+          {summarySection ? <WorkpageSummaryCardsSection section={summarySection} /> : null}
 
-      <section className="workpage-panel workpage-panel--callout">
-        <header className="workpage-panel__header">
-          <h2>Draft actions</h2>
-          <p>
-            Submit creates a new immutable `planning.draft_weekly_schedule.workbook` version in the
-            same run lineage. No publish, pointer promotion, or daily-dispatch materialization
-            happens from this surface.
-          </p>
-        </header>
-        <div className="action-cluster">
-          <button
-            type="button"
-            className="action-btn action-btn--positive"
-            disabled={submitMutation.isPending || isStaleArtifact}
-            onClick={() => submitMutation.mutate()}
-          >
-            {submitMutation.isPending ? "Submitting draft..." : "Submit draft"}
-          </button>
+          <ScheduleHeatmapEditor
+            section={heatmapSection}
+            assignmentRows={assignmentRows}
+            reserveRows={reserveRows}
+            onRowsChange={({ assignmentRows: nextAssignmentRows, reserveRows: nextReserveRows }) => {
+              setAssignmentRows(nextAssignmentRows);
+              setReserveRows(nextReserveRows);
+            }}
+          />
+
+          {dayDemandSection ? <WorkpageTableSection section={dayDemandSection} /> : null}
+
+          {selectedDaySection ? <WorkpageTableSection section={selectedDaySection} /> : null}
+
+          {driverRosterSection ? <WorkpageTableSection section={driverRosterSection} /> : null}
         </div>
-      </section>
 
-      {summarySection ? <WorkpageSummaryCardsSection section={summarySection} /> : null}
-
-      <ScheduleHeatmapEditor
-        section={heatmapSection}
-        assignmentRows={assignmentRows}
-        reserveRows={reserveRows}
-        onRowsChange={({ assignmentRows: nextAssignmentRows, reserveRows: nextReserveRows }) => {
-          setAssignmentRows(nextAssignmentRows);
-          setReserveRows(nextReserveRows);
-        }}
-      />
-
-      {dayDemandSection ? <WorkpageTableSection section={dayDemandSection} /> : null}
-
-      {selectedDaySection ? <WorkpageTableSection section={selectedDaySection} /> : null}
-
-      {driverRosterSection ? <WorkpageTableSection section={driverRosterSection} /> : null}
-
-      {artifactContext ? (
-        <section className="workpage-panel">
-          <header className="workpage-panel__header">
-            <h2>Recent draft versions</h2>
-            <p>
-              Recent immutable `planning.draft_weekly_schedule.workbook` versions for this weekly
-              planning run. Reopen adjacent draft states without leaving the schedule workpage
-              surface.
-            </p>
-          </header>
-
-          {historyQuery.isError ? (
-            <section className="workpage-panel workpage-panel--callout">
+        {artifactContext ? (
+          <aside className="workpage-page__artifact-rail">
+            <section
+              className="workpage-panel workpage-page__artifact-rail-panel"
+              data-testid="schedule-draft-history-rail"
+            >
               <header className="workpage-panel__header">
-                <h2>Recent draft history unavailable</h2>
+                <h2>Recent draft versions</h2>
                 <p>
-                  {errorText(
-                    historyQuery.error,
-                    "Unable to load recent schedule draft history for this run."
-                  )}
+                  Recent immutable `planning.draft_weekly_schedule.workbook` versions for this weekly
+                  planning run. Reopen adjacent draft states without leaving the schedule workpage
+                  surface.
                 </p>
               </header>
+
+              {historyQuery.isError ? (
+                <section className="workpage-panel workpage-panel--callout">
+                  <header className="workpage-panel__header">
+                    <h2>Recent draft history unavailable</h2>
+                    <p>
+                      {errorText(
+                        historyQuery.error,
+                        "Unable to load recent schedule draft history for this run."
+                      )}
+                    </p>
+                  </header>
+                </section>
+              ) : null}
+
+              {!historyQuery.isError && historyQuery.isLoading ? (
+                <p className="workpage-history__empty">Loading recent draft history...</p>
+              ) : null}
+
+              {!historyQuery.isError && !historyQuery.isLoading && recentDraftHistory.length === 0 ? (
+                <p className="workpage-history__empty">No recent schedule draft versions found for this run.</p>
+              ) : null}
+
+              {!historyQuery.isError && recentDraftHistory.length > 0 ? (
+                <DraftVersionTimeline
+                  ariaLabel="Recent schedule draft versions"
+                  entries={recentDraftHistory.map((artifact) => ({
+                    artifactVersionId: artifact.artifact_version_id,
+                    createdAt: artifact.created_at,
+                    label: draftVersionPrimaryLabel(artifact.artifact_version_id, {
+                      currentArtifactVersionId: artifactVersionId,
+                      previousArtifactVersionId
+                    }),
+                    isCurrent: artifact.artifact_version_id === artifactVersionId,
+                    isLatest: artifact.artifact_version_id === latestArtifactVersionId,
+                    note: artifact.lineage_note ?? "Schedule draft artifact version.",
+                    testId: `schedule-draft-history-${artifact.artifact_version_id}`,
+                    to: scheduleArtifactRoute(artifact.artifact_version_id, workflowRunId)
+                  }))}
+                />
+              ) : null}
             </section>
-          ) : null}
-
-          {!historyQuery.isError && historyQuery.isLoading ? (
-            <p>Loading recent draft history…</p>
-          ) : null}
-
-          {!historyQuery.isError && !historyQuery.isLoading && recentDraftHistory.length === 0 ? (
-            <p>No recent schedule draft versions found for this run.</p>
-          ) : null}
-
-          {!historyQuery.isError && recentDraftHistory.length > 0 ? (
-            <DraftVersionTimeline
-              ariaLabel="Recent schedule draft versions"
-              entries={recentDraftHistory.map((artifact) => ({
-                artifactVersionId: artifact.artifact_version_id,
-                createdAt: artifact.created_at,
-                label: draftVersionPrimaryLabel(artifact.artifact_version_id, {
-                  currentArtifactVersionId: artifactVersionId,
-                  previousArtifactVersionId
-                }),
-                isCurrent: artifact.artifact_version_id === artifactVersionId,
-                isLatest: artifact.artifact_version_id === latestArtifactVersionId,
-                note: artifact.lineage_note ?? "Schedule draft artifact version.",
-                testId: `schedule-draft-history-${artifact.artifact_version_id}`,
-                to: scheduleArtifactRoute(artifact.artifact_version_id, workflowRunId)
-              }))}
-            />
-          ) : null}
-        </section>
-      ) : null}
+          </aside>
+        ) : null}
+      </div>
     </WorkpageFrame>
   );
 }

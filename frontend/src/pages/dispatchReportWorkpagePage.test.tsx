@@ -40,18 +40,68 @@ describe("DispatchReportWorkpagePage", () => {
 
     const page = await screen.findByTestId("dispatch-report-workpage-page");
     expect(within(page).getByRole("heading", { name: "End-of-day report" })).toBeInTheDocument();
+    const landingSummarySection = within(page).getByTestId("workpage-summary-section");
+    expect(within(landingSummarySection).getByRole("heading", { name: "Daily summary" })).toBeInTheDocument();
+    expect(
+      within(landingSummarySection).getByTestId("workpage-summary-card-packages_dispatched")
+    ).toHaveClass("workpage-summary-card");
     expect(screen.getByRole("button", { name: "Create editable draft" })).toBeInTheDocument();
     expect(screen.getByRole("textbox", { name: /Working devices \/ rabbits/i })).toBeDisabled();
     expect(screen.getByRole("textbox", { name: /Dispatcher comment/i })).toBeDisabled();
+    expect(within(page).queryByRole("heading", { name: "Source grounding" })).not.toBeInTheDocument();
+    expect(within(page).queryByRole("heading", { name: "Formula-integrity warning" })).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: /Open info for End-of-day report/i }));
+    const landingInfoDialog = await screen.findByRole("dialog", { name: "Dispatch reporting context" });
+    expect(within(landingInfoDialog).getByRole("heading", { name: "Source grounding" })).toBeInTheDocument();
+    expect(within(landingInfoDialog).getByRole("heading", { name: "Formula-integrity warning" })).toBeInTheDocument();
     expect(
-      within(page).getByText(/Create an editable draft to switch into artifact-backed workbook editing/i)
-    ).toBeInTheDocument();
+      within(landingInfoDialog).getAllByText(
+        /Create an editable draft to switch into artifact-backed workbook editing/i
+      )
+    ).not.toHaveLength(0);
+    await user.click(screen.getByRole("button", { name: /Close Dispatch reporting context/i }));
 
     await user.click(screen.getByRole("button", { name: "Create editable draft" }));
 
-    expect(await screen.findByTestId("dispatch-report-artifact-workpage-page")).toBeInTheDocument();
+    const artifactPage = await screen.findByTestId("dispatch-report-artifact-workpage-page");
+    const artifactTitleBar = artifactPage.querySelector(".workpage-page__hero-title-bar");
+    const artifactHeroActions = artifactPage.querySelector(".workpage-page__hero-actions");
+    const draftHistoryRail = within(artifactPage).getByTestId("dispatch-report-draft-history-rail");
+    expect(artifactTitleBar).not.toBeNull();
+    expect(artifactTitleBar).toHaveClass("workpage-page__hero-title-bar--sticky");
+    expect(
+      within(artifactTitleBar as HTMLElement).getByRole("button", { name: "Submit draft" })
+    ).toBeInTheDocument();
+    expect(
+      within(artifactTitleBar as HTMLElement).getByRole("button", { name: "Download workbook" })
+    ).toBeInTheDocument();
+    expect(artifactHeroActions).not.toBeNull();
+    expect(
+      within(artifactHeroActions as HTMLElement).getByRole("link", { name: "Back to query landing" })
+    ).toBeInTheDocument();
+    expect(
+      within(artifactHeroActions as HTMLElement).queryByRole("button", { name: "Download workbook" })
+    ).not.toBeInTheDocument();
+    expect(draftHistoryRail.closest("aside")).toHaveClass("workpage-page__artifact-rail");
+    expect(within(draftHistoryRail).getByRole("heading", { name: "Recent draft versions" })).toBeInTheDocument();
+    expect(within(artifactPage).queryByRole("heading", { name: "Artifact lineage" })).not.toBeInTheDocument();
+    expect(within(artifactPage).queryByRole("heading", { name: "Draft actions" })).not.toBeInTheDocument();
+    expect(artifactPage).toBeInTheDocument();
+    const artifactSummarySection = within(artifactPage).getByTestId("workpage-summary-section");
+    expect(within(artifactSummarySection).getByRole("heading", { name: "Daily summary" })).toBeInTheDocument();
+    expect(
+      within(artifactSummarySection).getByTestId("workpage-summary-card-delivered_pct")
+    ).toHaveClass("workpage-summary-card");
     expect(window.location.pathname).toBe("/demo/logistics/workpages/eod-v0/artifacts/av-eod-artifact-001");
-    expect(screen.getByText("artifact_projection")).toBeInTheDocument();
+    expect(within(artifactPage).queryByRole("heading", { name: "Source grounding" })).not.toBeInTheDocument();
+    expect(within(artifactPage).queryByRole("heading", { name: "Artifact-backed projection note" })).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: /Open info for End-of-day report/i }));
+    const draftInfoDialog = await screen.findByRole("dialog", { name: "EOD draft context" });
+    expect(within(draftInfoDialog).getByText("artifact_projection")).toBeInTheDocument();
+    expect(within(draftInfoDialog).getByRole("heading", { name: "Artifact-backed projection note" })).toBeInTheDocument();
+    expect(within(draftInfoDialog).getAllByText("reporting.upd_draft.workbook")).not.toHaveLength(0);
   });
 
   it("keeps artifact-backed local edits across refresh when the same artifact version is re-fetched", async () => {
@@ -71,7 +121,10 @@ describe("DispatchReportWorkpagePage", () => {
       "Draft edits should stay local across refresh."
     );
 
-    await user.click(screen.getByRole("button", { name: "Refresh" }));
+    await user.click(screen.getByRole("button", { name: /Open info for End-of-day report/i }));
+    const infoDialog = await screen.findByRole("dialog", { name: "EOD draft context" });
+    await user.click(within(infoDialog).getByRole("button", { name: "Refresh" }));
+    await user.click(screen.getByRole("button", { name: /Close EOD draft context/i }));
 
     expect(screen.getByRole("textbox", { name: /Working devices \/ rabbits/i })).toHaveValue(
       "36 online"
@@ -135,9 +188,7 @@ describe("DispatchReportWorkpagePage", () => {
       );
     });
 
-    const historyHeading = await screen.findByRole("heading", { name: "Recent draft versions" });
-    const historyPanel = historyHeading.closest("section");
-    expect(historyPanel).not.toBeNull();
+    const historyPanel = await screen.findByTestId("dispatch-report-draft-history-rail");
     expect(within(historyPanel as HTMLElement).getByText("Current draft")).toBeInTheDocument();
     expect(within(historyPanel as HTMLElement).getByText("Previous draft")).toBeInTheDocument();
     expect(within(historyPanel as HTMLElement).getByText("Current")).toBeInTheDocument();
