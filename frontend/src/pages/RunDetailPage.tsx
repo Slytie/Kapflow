@@ -11,6 +11,7 @@ import { TimelineRow } from "@/components/TimelineRow";
 import { useShellFilters } from "@/app/useShellFilters";
 import { timelineRepository, workflowRunsRepository } from "@/lib/repositories";
 import { useDrawer } from "@/lib/state/drawerContext";
+import { buildTaskDocumentPreviewCues } from "@/lib/workspace/taskDocumentUi";
 
 type RunTab = "timeline" | "tasks" | "approvals" | "artifacts" | "exceptions";
 
@@ -138,15 +139,43 @@ export function RunDetailPage(): JSX.Element {
               title={`${task.stage_id} · ${task.task_kind}`}
               subtitle={task.human_task_id}
               status={task.state}
+              documentCues={buildTaskDocumentPreviewCues(task)}
               onDetails={() =>
                 open({
                   title: `${task.stage_id} ${task.task_kind}`,
                   subtitle: task.human_task_id,
+                  description: "Run detail task context opens in the centered task modal.",
                   fields: [
                     { label: "Task run", value: task.task_run_id },
                     { label: "State", value: task.state },
                     { label: "Assignee", value: task.assignee_actor_id ?? "unassigned" }
                   ],
+                  task: {
+                    human_task_id: task.human_task_id,
+                    workflow_run_id: task.workflow_run_id,
+                    task_run_id: task.task_run_id,
+                    stage_id: task.stage_id,
+                    task_kind: task.task_kind,
+                    state: task.state,
+                    created_at: task.created_at,
+                    updated_at: task.updated_at,
+                    assignee_actor_id: task.assignee_actor_id,
+                    assignee_actor_type: task.assignee_actor_type,
+                    owner_role: task.owner_role,
+                    candidate_roles: task.candidate_roles ?? [],
+                    linked_approval_id: task.linked_approval_id,
+                    blocked_on_kind: task.blocked_on_kind,
+                    blocked_on_ref: task.blocked_on_ref,
+                    available_actions: task.available_actions ?? [],
+                    blocking_reason_codes: task.blocking_reason_codes ?? [],
+                    missing_required_inputs: task.missing_required_inputs ?? [],
+                    required_uploads: task.required_uploads ?? [],
+                    required_reviews: task.required_reviews ?? [],
+                    workpage_actions: task.workpage_actions ?? [],
+                    is_composite: task.is_composite ?? false,
+                    expansion_kind: task.expansion_kind ?? "none",
+                    subgraph_ref: task.subgraph_ref ?? null
+                  },
                   artifact_sources: [
                     {
                       workflow_run_id: task.workflow_run_id,

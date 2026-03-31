@@ -14,6 +14,9 @@ describe("QueueRow", () => {
         title="Stage06 · information_request"
         subtitle="dispatch_supervisor · wr-1"
         status="OPEN"
+        documentCues={[
+          { key: "review", label: "Review required", tone: "warning" }
+        ]}
         onDetails={() => undefined}
         onClaim={onClaim}
         onComplete={onComplete}
@@ -22,6 +25,8 @@ describe("QueueRow", () => {
 
     expect(screen.getByText("Stage06 · information_request")).toBeInTheDocument();
     expect(screen.getByText("dispatch_supervisor · wr-1")).toBeInTheDocument();
+    expect(screen.getByText("Review required")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Upload" })).not.toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: "Claim" }));
     await user.click(screen.getByRole("button", { name: "Complete" }));

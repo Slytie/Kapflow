@@ -7,13 +7,15 @@ import type {
 import eodArtifactCreateResponseSnapshot from "@fixtures/workpage_eod_v0_artifact_create_response.json";
 import eodRunArtifactCreateResponseSnapshot from "@fixtures/workpage_eod_v0_run_artifact_create_response.json";
 import eodRunWorkpageStateSnapshot from "@fixtures/workpage_eod_v0_run_state.json";
-import eodArtifactStateSnapshot from "@fixtures/workpage_eod_v0_artifact_state.json";
-import eodArtifactSubmitResponseSnapshot from "@fixtures/workpage_eod_v0_artifact_submit_response.json";
 import eodWorkpageStateSnapshot from "@fixtures/workpage_eod_v0_state.json";
 import scheduleArtifactStateSnapshot from "@fixtures/workpage_schedule_v0_artifact_state.json";
 import scheduleArtifactSubmitResponseSnapshot from "@fixtures/workpage_schedule_v0_artifact_submit_response.json";
 import scheduleRunWorkpageStateSnapshot from "@fixtures/workpage_schedule_v0_run_state.json";
 import scheduleWorkpageStateSnapshot from "@fixtures/workpage_schedule_v0_state.json";
+import {
+  buildEodArtifactSubmitResponse,
+  buildEodArtifactWorkpageState
+} from "@/test/workpages/eodArtifactFixture";
 
 import {
   buildBoardContract,
@@ -245,22 +247,14 @@ function buildEodArtifactPayload(input: {
   formValues?: Record<string, unknown>;
   checklistValues?: Array<{ item_id: string; selected: boolean; note: string }>;
 }): Record<string, unknown> {
-  const payload = cloneJson(eodArtifactStateSnapshot.workpage_state) as Record<string, unknown>;
-  const workpage = payload.workpage as Record<string, unknown>;
-  const source = payload.source as Record<string, unknown>;
-  const freshness = payload.freshness as Record<string, unknown>;
-  const artifactContext = payload.artifact_context as Record<string, unknown>;
-
-  workpage.source_artifact_version_id = input.artifactVersionId;
-  source.source_artifact_version_id = input.artifactVersionId;
-  freshness.generated_at = nowIso();
-  freshness.source_version = input.artifactVersionId;
-  artifactContext.artifact_version_id = input.artifactVersionId;
-  artifactContext.workflow_run_id = input.workflowRunId;
-  artifactContext.supersedes_artifact_version_id = input.supersedesArtifactVersionId;
-  artifactContext.superseded_by_artifact_version_id = input.supersededByArtifactVersionId;
-  artifactContext.latest_in_chain_artifact_version_id = input.latestInChainArtifactVersionId;
-  artifactContext.download_path = `/api/v1/artifacts/${input.artifactVersionId}/download.bin`;
+  const payload = buildEodArtifactWorkpageState({
+    artifactVersionId: input.artifactVersionId,
+    workflowRunId: input.workflowRunId,
+    supersedesArtifactVersionId: input.supersedesArtifactVersionId,
+    supersededByArtifactVersionId: input.supersededByArtifactVersionId,
+    latestArtifactVersionId: input.latestInChainArtifactVersionId,
+    generatedAt: nowIso()
+  });
 
   patchArtifactPayloadLineage({
     artifactVersionId: input.artifactVersionId,
@@ -661,16 +655,11 @@ function eodArtifactSubmitResponse(
   version: EodArtifactVersionState,
   supersedesArtifactVersionId: string
 ): Record<string, unknown> {
-  const payload = cloneJson(
-    eodArtifactSubmitResponseSnapshot.submit_response
-  ) as Record<string, unknown>;
-  payload.submitted = {
-    artifact_version_id: version.artifactVersionId,
-    route: artifactRoute(version.artifactVersionId, version.workflowRunId),
-    supersedes_artifact_version_id: supersedesArtifactVersionId,
-    workflow_run_id: version.workflowRunId
-  };
-  return payload;
+  return buildEodArtifactSubmitResponse({
+    artifactVersionId: version.artifactVersionId,
+    workflowRunId: version.workflowRunId,
+    supersedesArtifactVersionId
+  });
 }
 
 function scheduleArtifactSubmitResponse(

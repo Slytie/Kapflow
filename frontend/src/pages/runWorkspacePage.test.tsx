@@ -2,7 +2,6 @@ import { fireEvent, render, screen, waitFor, within } from "@testing-library/rea
 import userEvent from "@testing-library/user-event";
 import { http, HttpResponse } from "msw";
 
-import eodArtifactStateSnapshot from "@fixtures/workpage_eod_v0_artifact_state.json";
 import scheduleArtifactStateSnapshot from "@fixtures/workpage_schedule_v0_artifact_state.json";
 import { App } from "@/app/App";
 import type {
@@ -19,6 +18,7 @@ import {
 } from "@/test/api/contractState";
 import { server } from "@/test/api/server";
 import { renderRoute } from "@/test/renderRoute";
+import { buildEodArtifactWorkpageState } from "@/test/workpages/eodArtifactFixture";
 
 function buildWorkspaceWithTaskWorkpageAction(
   action: WorkflowWorkspaceWorkpageAction
@@ -54,6 +54,34 @@ function buildWorkspaceWithApprovalWorkpageAction(
     user_work: workspace.user_work.map(applyAction),
     blocking_work: workspace.blocking_work.map(applyAction)
   };
+}
+
+async function findWorkspaceCard(title: string): Promise<HTMLElement> {
+  const card = (await screen.findByRole("heading", { name: title })).closest("article");
+  expect(card).not.toBeNull();
+  return card as HTMLElement;
+}
+
+async function openWorkspaceCardMenu(
+  _user: ReturnType<typeof userEvent.setup>,
+  title: string
+): Promise<HTMLElement> {
+  return findWorkspaceCard(title);
+}
+
+async function openTaskModalFromWorkspaceCard(
+  user: ReturnType<typeof userEvent.setup>,
+  title: string
+): Promise<{ card: HTMLElement; modal: HTMLElement }> {
+  const card = await findWorkspaceCard(title);
+  await user.click(within(card).getByRole("button", { name: "Details" }));
+  const modal = await screen.findByRole("dialog");
+  return { card, modal };
+}
+
+function renderWorkspaceApp(): void {
+  window.history.pushState({}, "", "/runs/wr-test-001/workspace");
+  render(<App />);
 }
 
 describe("RunWorkspacePage", () => {
@@ -185,15 +213,15 @@ describe("RunWorkspacePage", () => {
 
   it("shows template download for required upload rows", async () => {
     const user = userEvent.setup();
-    renderRoute(<RunWorkspacePage />, {
-      route: "/runs/wr-test-001/workspace",
-      path: "/runs/:workflowRunId/workspace"
-    });
+    renderWorkspaceApp();
 
-    const taskCard = (await screen.findByRole("heading", { name: "Review Packet" })).closest("article");
-    expect(taskCard).not.toBeNull();
-    const downloadTemplate = within(taskCard as HTMLElement).getByRole("button", {
-      name: "Download Template"
+    const { modal } = await openTaskModalFromWorkspaceCard(user, "Review Packet");
+    const requirementRow = within(modal)
+      .getByText("Supervisor Review Packet")
+      .closest(".task-modal__document-row");
+    expect(requirementRow).not.toBeNull();
+    const downloadTemplate = within(requirementRow as HTMLElement).getByRole("button", {
+      name: "Download template"
     });
     expect(downloadTemplate).toBeEnabled();
 
@@ -206,24 +234,18 @@ describe("RunWorkspacePage", () => {
   });
 
   it("upload changes requirement state after workspace refetch", async () => {
-    renderRoute(<RunWorkspacePage />, {
-      route: "/runs/wr-test-001/workspace",
-      path: "/runs/:workflowRunId/workspace"
-    });
+    const user = userEvent.setup();
+    renderWorkspaceApp();
 
-    const initialCard = (await screen.findByRole("heading", { name: "Review Packet" })).closest(
-      "article"
-    );
-    expect(initialCard).not.toBeNull();
-
-    expect(
-      within(initialCard as HTMLElement).getByText(/schedule\.supervisor_review\.doc \(missing\)/i)
-    ).toBeInTheDocument();
-
-    const requiredUploadRow = within(initialCard as HTMLElement)
-      .getByText(/Required upload: schedule\.supervisor_review\.doc/i)
-      .closest(".workspace-board-card__requirement");
+    const { modal } = await openTaskModalFromWorkspaceCard(user, "Review Packet");
+    const requiredUploadRow = within(modal)
+      .getByText("Supervisor Review Packet")
+      .closest(".task-modal__document-row");
     expect(requiredUploadRow).not.toBeNull();
+    expect(within(requiredUploadRow as HTMLElement).getByText("Missing")).toBeInTheDocument();
+    expect(
+      within(requiredUploadRow as HTMLElement).getByRole("button", { name: "Add File" })
+    ).toBeInTheDocument();
     const fileInput = (requiredUploadRow as HTMLElement).querySelector("input[type='file']");
     expect(fileInput).not.toBeNull();
     const file = new File(["evidence"], "review-evidence.txt", { type: "text/plain" });
@@ -234,36 +256,33 @@ describe("RunWorkspacePage", () => {
     });
 
     await waitFor(() => {
+      expect(within(modal).getByText("Satisfied")).toBeInTheDocument();
+      expect(within(modal).getByRole("button", { name: "Replace" })).toBeInTheDocument();
+      expect(within(modal).getByRole("button", { name: "Submit for Review" })).toBeEnabled();
+    });
+
+    await waitFor(() => {
       const card = screen.getByRole("heading", { name: "Review Packet" }).closest("article");
       expect(card).not.toBeNull();
-      expect(
-        within(card as HTMLElement).getByText(/schedule\.supervisor_review\.doc \(satisfied\)/i)
-      ).toBeInTheDocument();
-      expect(
-        within(card as HTMLElement)
-          .getAllByRole("button", { name: "Complete" })
-          .every((button) => (button as HTMLButtonElement).disabled)
-      ).toBe(true);
+      expect(within(card as HTMLElement).getByText("2 missing inputs")).toBeInTheDocument();
     }, { timeout: 2500 });
   });
 
-  it("shows required review actions including confirm-review", async () => {
-    renderRoute(<RunWorkspacePage />, {
-      route: "/runs/wr-test-001/workspace",
-      path: "/runs/:workflowRunId/workspace"
-    });
+  it("shows required review rows in the task modal and keeps confirm-review as the primary action", async () => {
+    const user = userEvent.setup();
+    renderWorkspaceApp();
 
-    const taskCard = (await screen.findByRole("heading", { name: "Review Packet" })).closest("article");
-    expect(taskCard).not.toBeNull();
+    const { modal } = await openTaskModalFromWorkspaceCard(user, "Review Packet");
+    expect(within(modal).getByRole("heading", { name: "Required Documents" })).toBeInTheDocument();
+    expect(within(modal).getAllByRole("button", { name: "View" }).length).toBeGreaterThan(0);
     expect(
-      within(taskCard as HTMLElement).getAllByRole("button", { name: "Open Draft" }).length
+      within(modal).getAllByText("Review Required").length
     ).toBeGreaterThan(0);
-    expect(
-      within(taskCard as HTMLElement).getAllByRole("button", { name: "Confirm Reviewed" }).length
-    ).toBeGreaterThan(0);
+    expect(within(modal).getByRole("button", { name: "Submit for Review" })).toBeEnabled();
   });
 
   it("renders unavailable projected workpage actions without replacing existing review actions", async () => {
+    const user = userEvent.setup();
     server.use(
       http.get("*/api/v1/workflow-runs/:workflowRunId/workspace", () =>
         HttpResponse.json({
@@ -295,24 +314,17 @@ describe("RunWorkspacePage", () => {
       )
     );
 
-    renderRoute(<RunWorkspacePage />, {
-      route: "/runs/wr-test-001/workspace",
-      path: "/runs/:workflowRunId/workspace"
-    });
+    renderWorkspaceApp();
 
-    const taskCard = (await screen.findByRole("heading", { name: "Review Packet" })).closest("article");
-    expect(taskCard).not.toBeNull();
+    const taskCard = await openWorkspaceCardMenu(user, "Review Packet");
     expect(
-      within(taskCard as HTMLElement).getByRole("button", { name: "Open schedule draft" })
+      within(taskCard).getByRole("button", { name: "Open schedule draft" })
     ).toBeDisabled();
-    expect(
-      within(taskCard as HTMLElement)
-        .getAllByRole("button", { name: "Open Draft" })
-        .every((button) => !(button as HTMLButtonElement).disabled)
-    ).toBe(true);
-    expect(
-      within(taskCard as HTMLElement).getByText("Schedule draft unavailable for this run yet")
-    ).toBeInTheDocument();
+    expect(within(taskCard).getByText("Schedule draft unavailable for this run yet")).toBeInTheDocument();
+
+    const { modal } = await openTaskModalFromWorkspaceCard(user, "Review Packet");
+    expect(within(modal).queryByRole("link", { name: "Open schedule draft" })).not.toBeInTheDocument();
+    expect(within(modal).getByRole("button", { name: "Submit for Review" })).toBeEnabled();
   });
 
   it("navigates directly to projected open-route workpages from workspace task cards", async () => {
@@ -351,7 +363,8 @@ describe("RunWorkspacePage", () => {
     window.history.pushState({}, "", "/runs/wr-test-001/workspace");
     render(<App />);
 
-    await user.click(await screen.findByRole("button", { name: "Open schedule draft" }));
+    const taskCard = await openWorkspaceCardMenu(user, "Review Packet");
+    await user.click(within(taskCard).getByRole("button", { name: "Open schedule draft" }));
 
     await waitFor(() => {
       expect(window.location.pathname).toBe(
@@ -391,7 +404,12 @@ describe("RunWorkspacePage", () => {
         })
       ),
       http.get("*/api/v1/workpages/artifacts/av-eod-artifact-001", () =>
-        HttpResponse.json(structuredClone(eodArtifactStateSnapshot.workpage_state))
+        HttpResponse.json(
+          buildEodArtifactWorkpageState({
+            artifactVersionId: "av-eod-artifact-001",
+            workflowRunId: "wr-eod-artifact-001"
+          })
+        )
       ),
       http.post("*/api/v1/workpages/workflow-runs/:workflowRunId/eod-v0/drafts", async ({ params, request }) => {
         requestBodies.push((await request.json()) as Record<string, unknown>);
@@ -410,7 +428,8 @@ describe("RunWorkspacePage", () => {
     window.history.pushState({}, "", "/runs/wr-test-001/workspace");
     render(<App />);
 
-    await user.click(await screen.findByRole("button", { name: "Create EOD draft" }));
+    const approvalCard = await openWorkspaceCardMenu(user, "Stage07 Approval");
+    await user.click(within(approvalCard).getByRole("button", { name: "Create EOD draft" }));
 
     await waitFor(() => {
       expect(window.location.pathname).toBe(
@@ -424,24 +443,16 @@ describe("RunWorkspacePage", () => {
         subject_id: "ap-pending-001"
       }
     });
-    expect(await screen.findByTestId("dispatch-report-artifact-workpage-page")).toBeInTheDocument();
   });
 
   it("confirm-review unblocks completion after workspace refetch", async () => {
     const user = userEvent.setup();
-    renderRoute(<RunWorkspacePage />, {
-      route: "/runs/wr-test-001/workspace",
-      path: "/runs/:workflowRunId/workspace"
-    });
+    renderWorkspaceApp();
 
-    const initialCard = (await screen.findByRole("heading", { name: "Review Packet" })).closest(
-      "article"
-    );
-    expect(initialCard).not.toBeNull();
-
-    const requiredUploadRow = within(initialCard as HTMLElement)
-      .getByText(/Required upload: schedule\.supervisor_review\.doc/i)
-      .closest(".workspace-board-card__requirement");
+    const { card, modal } = await openTaskModalFromWorkspaceCard(user, "Review Packet");
+    const requiredUploadRow = within(modal)
+      .getByText("Supervisor Review Packet")
+      .closest(".task-modal__document-row");
     expect(requiredUploadRow).not.toBeNull();
     const uploadInput = (requiredUploadRow as HTMLElement).querySelector("input[type='file']");
     expect(uploadInput).not.toBeNull();
@@ -453,24 +464,20 @@ describe("RunWorkspacePage", () => {
       expect(mutationLog()).toContain("upload:human_task:ht-claimed-002");
     });
 
-    const confirmButtons = within(initialCard as HTMLElement).getAllByRole("button", {
-      name: "Confirm Reviewed"
-    });
-    await user.click(confirmButtons[0]);
+    await user.click(within(modal).getByRole("button", { name: "Submit for Review" }));
 
     await waitFor(() => {
       expect(mutationLog()).toContain("confirm-review:ht-claimed-002");
     });
 
     await waitFor(() => {
-      const card = screen.getByRole("heading", { name: "Review Packet" }).closest("article");
-      expect(card).not.toBeNull();
       expect(
-        within(card as HTMLElement)
+        within(card)
           .getAllByRole("button", { name: "Complete" })
           .some((button) => !(button as HTMLButtonElement).disabled)
       ).toBe(true);
     });
+    expect(within(modal).getByRole("button", { name: "Complete Task" })).toBeEnabled();
   });
 
   it("renders approval work and execute respond actions", async () => {
@@ -480,11 +487,8 @@ describe("RunWorkspacePage", () => {
       path: "/runs/:workflowRunId/workspace"
     });
 
-    const approvalCard = (
-      await screen.findByRole("heading", { name: "Stage07 Approval" })
-    ).closest("article");
-    expect(approvalCard).not.toBeNull();
-    await user.click(within(approvalCard as HTMLElement).getByRole("button", { name: "Approve" }));
+    const approvalCard = await openWorkspaceCardMenu(user, "Stage07 Approval");
+    await user.click(within(approvalCard).getByRole("button", { name: "Approve" }));
 
     await waitFor(() => {
       expect(mutationLog()).toContain("respond:ap-pending-001:approve");
@@ -498,13 +502,10 @@ describe("RunWorkspacePage", () => {
       path: "/runs/:workflowRunId/workspace"
     });
 
-    const flagCard = (
-      await screen.findByRole("heading", { name: /Courier C-104 did not report/i })
-    ).closest("article");
-    expect(flagCard).not.toBeNull();
+    const flagCard = await openWorkspaceCardMenu(user, "Courier C-104 did not report for shift");
 
-    const uploadButton = within(flagCard as HTMLElement).getByRole("button", { name: "Upload" });
-    const downloadButton = within(flagCard as HTMLElement).getByRole("button", { name: "Download" });
+    const uploadButton = within(flagCard).getByRole("button", { name: "Upload" });
+    const downloadButton = within(flagCard).getByRole("button", { name: "Download" });
     expect(uploadButton).toBeEnabled();
     expect(downloadButton).toBeEnabled();
 

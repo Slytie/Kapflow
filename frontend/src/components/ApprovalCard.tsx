@@ -37,40 +37,45 @@ export function ApprovalCard({
 
   return (
     <article className="approval-card">
-      <header>
-        <h4>{approval.scope_ref}</h4>
+      <header className="approval-card__header">
+        <div>
+          <p className="approval-card__eyebrow">Approval</p>
+          <h4>{approval.scope_ref}</h4>
+        </div>
         <StatusBadge status={approval.state} />
       </header>
-      <p>{approval.approval_kind} · Required: {approval.required_role}</p>
+      <p className="approval-card__meta">{approval.approval_kind} · Required: {approval.required_role}</p>
       {autoApproveHint ? <p>{autoApproveHint}</p> : null}
-      <ActionCluster
-        actions={[
-          {
-            key: "approve",
-            label: "Approve",
-            tone: "positive",
-            onClick: onApprove,
-            disabled: actionPending || approveDisabled
-          },
-          {
-            key: "reject",
-            label: "Reject",
-            tone: "negative",
-            onClick: onReject,
-            disabled: actionPending || rejectDisabled
-          },
-          {
-            key: "request_more",
-            label: "Request Info",
-            onClick: onRequestInfo,
-            disabled: actionPending || requestInfoDisabled
-          }
-        ]}
-      />
-      <AttachmentActions onUpload={onUpload} onDownload={onDownload} disabled={actionPending} />
-      <button type="button" className="link-button" onClick={onDetails}>
-        Details
-      </button>
+      <div className="approval-card__actions">
+        <ActionCluster
+          actions={[
+            {
+              key: "approve",
+              label: "Approve",
+              tone: "positive",
+              onClick: onApprove,
+              disabled: actionPending || approveDisabled
+            },
+            {
+              key: "reject",
+              label: "Reject",
+              tone: "negative",
+              onClick: onReject,
+              disabled: actionPending || rejectDisabled
+            },
+            {
+              key: "request_more",
+              label: "Request Info",
+              onClick: onRequestInfo,
+              disabled: actionPending || requestInfoDisabled
+            }
+          ]}
+        />
+        <AttachmentActions onUpload={onUpload} onDownload={onDownload} disabled={actionPending} />
+        <button type="button" className="link-button" onClick={onDetails}>
+          Details
+        </button>
+      </div>
     </article>
   );
 }

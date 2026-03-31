@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from collections import Counter
+from datetime import date
 from functools import lru_cache
 from pathlib import Path
 from typing import Any, Mapping
@@ -920,6 +921,7 @@ def build_schedule_artifact_workpage_contract(
     assignment_rows = _projection_rows(projection, "rows")
     reserve_rows = _projection_rows(projection, "reserve_rows")
     iteration_rows = _projection_rows(projection, "iteration_deltas")
+    bundle = _build_schedule_artifact_bundle(workflow_run=workflow_run, artifacts=artifacts)
     summary = _schedule_artifact_summary(
         workflow_run=workflow_run,
         assignment_rows=assignment_rows,
@@ -969,6 +971,77 @@ def build_schedule_artifact_workpage_contract(
                             "value": summary["source_bundle_id"],
                         },
                     ],
+                },
+                {
+                    "kind": "schedule_heatmap",
+                    "title": "Planned schedule heatmap",
+                    "subtitle": (
+                        "Click a filled cell to arm it, then click another cell on the same day "
+                        "to move or swap the planned state before saving a new draft."
+                    ),
+                    **_schedule_heatmap_payload(
+                        bundle=bundle,
+                        assignment_rows=assignment_rows,
+                        reserve_rows=reserve_rows,
+                    ),
+                },
+                {
+                    "kind": "table",
+                    "title": "Daily demand and coverage posture",
+                    "table_id": "day_demand",
+                    "columns": [
+                        {"key": "service_date", "label": "Service date"},
+                        {"key": "planned_route_count", "label": "Planned routes"},
+                        {"key": "on_call_target", "label": "On-call target"},
+                        {"key": "excess_capacity_target", "label": "Excess-capacity target"},
+                        {"key": "note", "label": "Note"},
+                    ],
+                    "rows": _artifact_day_demand_rows(
+                        bundle=bundle,
+                        assignment_rows=assignment_rows,
+                        reserve_rows=reserve_rows,
+                    ),
+                },
+                {
+                    "kind": "table",
+                    "title": "Selected-day preview",
+                    "table_id": "selected_day_preview",
+                    "columns": [
+                        {"key": "service_date", "label": "Selected day"},
+                        {"key": "routes_required", "label": "Routes required"},
+                        {"key": "drivers_available", "label": "Drivers available"},
+                        {"key": "projected_on_call_needed", "label": "On-call needed"},
+                        {"key": "open_questions", "label": "Open questions"},
+                    ],
+                    "rows": [
+                        _artifact_selected_day_preview_row(
+                            bundle=bundle,
+                            assignment_rows=assignment_rows,
+                            reserve_rows=reserve_rows,
+                        )
+                    ],
+                },
+                {
+                    "kind": "table",
+                    "title": "Driver roster",
+                    "table_id": "driver_roster",
+                    "columns": [
+                        {"key": "driver_name", "label": "Driver"},
+                        {"key": "employment_type", "label": "Employment"},
+                        {
+                            "key": "preferred_route_slot_classes",
+                            "label": "Preferred slot",
+                        },
+                        {"key": "target_shifts_per_week", "label": "Target shifts"},
+                        {"key": "on_call_eligible", "label": "On-call eligible"},
+                        {"key": "previous_week_minutes", "label": "Previous-week minutes"},
+                        {"key": "availability_summary", "label": "Availability summary"},
+                    ],
+                    "rows": _artifact_driver_roster_rows(
+                        bundle=bundle,
+                        assignment_rows=assignment_rows,
+                        reserve_rows=reserve_rows,
+                    ),
                 },
                 {
                     "kind": "note_panel",
@@ -1417,6 +1490,339 @@ def _projection_rows(projection: Mapping[str, Any], key: str) -> list[dict[str, 
     return rows
 
 
+def _build_schedule_artifact_bundle(
+    *,
+    workflow_run: Mapping[str, Any],
+    artifacts: list[dict[str, Any]],
+) -> WeeklyScheduleControlBundle | None:
+    try:
+        resolved_inputs = resolve_weekly_stage04_input_artifacts(
+            artifacts=artifacts,
+            stage_spec={
+                "required_evidence_keys": [
+                    _ROUTE_SLOT_DATASET_KEY,
+                    _DRIVER_CAPABILITIES_DATASET_KEY,
+                ]
+            },
+        )
+        return build_weekly_schedule_control_bundle(
+            workflow_run=workflow_run,
+            route_slot_requirements_artifact=_require_mapping(
+                resolved_inputs.get("route_slot_requirements"),
+                field_name="route_slot_requirements",
+            ),
+            driver_capabilities_artifact=_require_mapping(
+                resolved_inputs.get("driver_capabilities"),
+                field_name="driver_capabilities",
+            ),
+            approved_availability_artifact=_optional_mapping(
+                resolved_inputs.get("approved_availability")
+            ),
+            actual_hours_artifact=_optional_mapping(resolved_inputs.get("actual_hours")),
+            route_horizon_artifact=None,
+        )
+    except (CommandError, ValueError):
+        return None
+
+
+def _schedule_heatmap_payload(
+    *,
+    bundle: WeeklyScheduleControlBundle | None,
+    assignment_rows: list[dict[str, Any]],
+    reserve_rows: list[dict[str, Any]],
+) -> dict[str, Any]:
+    service_dates = _schedule_heatmap_service_dates(
+        bundle=bundle,
+        assignment_rows=assignment_rows,
+        reserve_rows=reserve_rows,
+    )
+    people = _schedule_heatmap_people(
+        bundle=bundle,
+        assignment_rows=assignment_rows,
+        reserve_rows=reserve_rows,
+        service_dates=service_dates,
+    )
+    cell_map = _schedule_heatmap_cell_map(
+        assignment_rows=assignment_rows,
+        reserve_rows=reserve_rows,
+    )
+    return {
+        "service_dates": service_dates,
+        "people": [
+            {
+                **person,
+                "cells": [
+                    _schedule_heatmap_cell_payload(
+                        service_date=item["service_date"],
+                        row=cell_map.get((person["driver_id"], item["service_date"])),
+                    )
+                    for item in service_dates
+                ],
+            }
+            for person in people
+        ],
+    }
+
+
+def _schedule_heatmap_service_dates(
+    *,
+    bundle: WeeklyScheduleControlBundle | None,
+    assignment_rows: list[dict[str, Any]],
+    reserve_rows: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    if bundle is not None:
+        ordered_dates = sorted(bundle.daily_demand_by_service_date.keys())
+    else:
+        ordered_dates = sorted(
+            {
+                _require_text(row.get("service_date"))
+                for row in [*assignment_rows, *reserve_rows]
+                if str(row.get("service_date") or "").strip()
+            }
+        )
+    selected_service_date = (
+        _selected_day_service_date(bundle) if bundle is not None else (ordered_dates[0] if ordered_dates else "")
+    )
+    return [
+        {
+            "service_date": service_date,
+            "label": service_date,
+            "weekday_label": _weekday_label(service_date),
+            "is_selected_day": service_date == selected_service_date,
+        }
+        for service_date in ordered_dates
+    ]
+
+
+def _schedule_heatmap_people(
+    *,
+    bundle: WeeklyScheduleControlBundle | None,
+    assignment_rows: list[dict[str, Any]],
+    reserve_rows: list[dict[str, Any]],
+    service_dates: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    people: list[dict[str, Any]] = []
+    seen_driver_ids: set[str] = set()
+
+    if bundle is not None:
+        for driver in sorted(
+            bundle.drivers,
+            key=lambda item: (
+                str(item.driver_name or item.driver_id).lower(),
+                item.driver_id,
+            ),
+        ):
+            availability = bundle.availability_by_driver.get(driver.driver_id)
+            people.append(
+                {
+                    "driver_id": driver.driver_id,
+                    "driver_name": driver.driver_name or driver.driver_id,
+                    "employment_type": (
+                        driver.employment_type
+                        or (availability.employment_type if availability is not None else "")
+                    ),
+                    "on_call_eligible": (
+                        bool(availability.on_call_eligible)
+                        if availability is not None
+                        else False
+                    ),
+                    "previous_week_minutes": bundle.actual_minutes_by_driver.get(driver.driver_id, 0),
+                    "availability_summary": _availability_summary(availability),
+                }
+            )
+            seen_driver_ids.add(driver.driver_id)
+
+    referenced_driver_ids = sorted(
+        {
+            _require_text(row.get("assigned_driver_id"))
+            for row in [*assignment_rows, *reserve_rows]
+            if str(row.get("assigned_driver_id") or "").strip()
+        }
+    )
+    for driver_id in referenced_driver_ids:
+        if driver_id in seen_driver_ids:
+            continue
+        people.append(
+            {
+                "driver_id": driver_id,
+                "driver_name": driver_id,
+                "employment_type": "",
+                "on_call_eligible": False,
+                "previous_week_minutes": 0,
+                "availability_summary": "driver only present in the current draft rows",
+            }
+        )
+        seen_driver_ids.add(driver_id)
+
+    if people:
+        return people
+
+    fallback_people: list[dict[str, Any]] = []
+    for index, service_date in enumerate(service_dates):
+        fallback_people.append(
+            {
+                "driver_id": f"unassigned-{index + 1}",
+                "driver_name": f"Unassigned {service_date['service_date']}",
+                "employment_type": "",
+                "on_call_eligible": False,
+                "previous_week_minutes": 0,
+                "availability_summary": "No driver rows available",
+            }
+        )
+    return fallback_people
+
+
+def _schedule_heatmap_cell_map(
+    *,
+    assignment_rows: list[dict[str, Any]],
+    reserve_rows: list[dict[str, Any]],
+) -> dict[tuple[str, str], dict[str, Any]]:
+    cell_map: dict[tuple[str, str], dict[str, Any]] = {}
+    for row in assignment_rows:
+        driver_id = str(row.get("assigned_driver_id") or "").strip()
+        service_date = str(row.get("service_date") or "").strip()
+        if not driver_id or not service_date:
+            continue
+        cell_map[(driver_id, service_date)] = {
+            "row_kind": "assignment",
+            "row": row,
+        }
+    for row in reserve_rows:
+        driver_id = str(row.get("assigned_driver_id") or "").strip()
+        service_date = str(row.get("service_date") or "").strip()
+        if not driver_id or not service_date:
+            continue
+        cell_map.setdefault(
+            (driver_id, service_date),
+            {
+                "row_kind": "reserve",
+                "row": row,
+            },
+        )
+    return cell_map
+
+
+def _schedule_heatmap_cell_payload(
+    *,
+    service_date: str,
+    row: dict[str, Any] | None,
+) -> dict[str, Any]:
+    if row is None:
+        return {
+            "service_date": service_date,
+            "state": "empty",
+            "row_kind": None,
+            "route_slot_id": None,
+            "projected_minutes": None,
+            "assignment_status": None,
+            "planned_driver_day_state": None,
+            "manual_override": False,
+        }
+    source_row = _require_mapping(row.get("row"), field_name="row")
+    row_kind = str(row.get("row_kind") or "").strip() or None
+    planned_state = str(source_row.get("planned_driver_day_state") or "").strip()
+    if not planned_state:
+        planned_state = "on_call" if row_kind == "reserve" else "assigned"
+    assignment_status = str(source_row.get("assignment_status") or "").strip() or None
+    return {
+        "service_date": service_date,
+        "state": planned_state or "empty",
+        "row_kind": row_kind,
+        "route_slot_id": str(source_row.get("route_slot_id") or "").strip() or None,
+        "projected_minutes": _int_or_none(source_row.get("projected_minutes")),
+        "assignment_status": assignment_status,
+        "planned_driver_day_state": planned_state or None,
+        "manual_override": assignment_status == "manual_override",
+    }
+
+
+def _artifact_day_demand_rows(
+    *,
+    bundle: WeeklyScheduleControlBundle | None,
+    assignment_rows: list[dict[str, Any]],
+    reserve_rows: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    if bundle is not None:
+        return _day_demand_rows(bundle)
+
+    counts = _schedule_daily_row_counts(
+        assignment_rows=assignment_rows,
+        reserve_rows=reserve_rows,
+    )
+    return [
+        {
+            "service_date": service_date,
+            "planned_route_count": counts["assignment_count"],
+            "on_call_target": counts["reserve_count"],
+            "excess_capacity_target": 0,
+            "note": "Derived from current draft rows only",
+        }
+        for service_date, counts in sorted(counts.items())
+    ]
+
+
+def _artifact_selected_day_preview_row(
+    *,
+    bundle: WeeklyScheduleControlBundle | None,
+    assignment_rows: list[dict[str, Any]],
+    reserve_rows: list[dict[str, Any]],
+) -> dict[str, Any]:
+    if bundle is not None:
+        return _selected_day_preview_row(bundle)
+
+    counts_by_date = _schedule_daily_row_counts(
+        assignment_rows=assignment_rows,
+        reserve_rows=reserve_rows,
+    )
+    if not counts_by_date:
+        return {
+            "service_date": "",
+            "routes_required": 0,
+            "drivers_available": 0,
+            "projected_on_call_needed": 0,
+            "open_questions": _SELECTED_DAY_OPEN_QUESTION,
+        }
+    service_date = next(iter(sorted(counts_by_date.keys())))
+    counts = counts_by_date[service_date]
+    return {
+        "service_date": service_date,
+        "routes_required": counts["assignment_count"],
+        "drivers_available": counts["assignment_count"] + counts["reserve_count"],
+        "projected_on_call_needed": counts["reserve_count"],
+        "open_questions": _SELECTED_DAY_OPEN_QUESTION,
+    }
+
+
+def _artifact_driver_roster_rows(
+    *,
+    bundle: WeeklyScheduleControlBundle | None,
+    assignment_rows: list[dict[str, Any]],
+    reserve_rows: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    if bundle is not None:
+        return _full_driver_roster_rows(bundle)
+
+    driver_ids = sorted(
+        {
+            _require_text(row.get("assigned_driver_id"))
+            for row in [*assignment_rows, *reserve_rows]
+            if str(row.get("assigned_driver_id") or "").strip()
+        }
+    )
+    return [
+        {
+            "driver_name": driver_id,
+            "employment_type": "",
+            "preferred_route_slot_classes": "",
+            "target_shifts_per_week": 0,
+            "on_call_eligible": False,
+            "previous_week_minutes": 0,
+            "availability_summary": "driver only present in the current draft rows",
+        }
+        for driver_id in driver_ids
+    ]
+
+
 def _schedule_artifact_summary(
     *,
     workflow_run: Mapping[str, Any],
@@ -1767,13 +2173,14 @@ def _format_average_minutes(minutes: list[int]) -> str:
 
 
 def _selected_day_preview_row(bundle: WeeklyScheduleControlBundle) -> dict[str, Any]:
-    demand = bundle.daily_demand_by_service_date.get(_PREVIEW_SERVICE_DATE)
+    selected_service_date = _selected_day_service_date(bundle)
+    demand = bundle.daily_demand_by_service_date.get(selected_service_date)
     if demand is None:
         raise ValueError(
-            f"selected-day preview date is missing from schedule demo source: {_PREVIEW_SERVICE_DATE}"
+            "selected-day preview date is missing from schedule bundle"
         )
     return {
-        "service_date": _PREVIEW_SERVICE_DATE,
+        "service_date": selected_service_date,
         "routes_required": demand.planned_route_count,
         "drivers_available": demand.planned_route_count + demand.on_call_target,
         "projected_on_call_needed": demand.on_call_target,
@@ -1828,6 +2235,44 @@ def _driver_roster_rows(bundle: WeeklyScheduleControlBundle) -> list[dict[str, A
     return rows
 
 
+def _full_driver_roster_rows(bundle: WeeklyScheduleControlBundle) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+    for capability in sorted(
+        bundle.drivers,
+        key=lambda item: (
+            str(item.driver_name or item.driver_id).lower(),
+            item.driver_id,
+        ),
+    ):
+        availability = bundle.availability_by_driver.get(capability.driver_id)
+        rows.append(
+            {
+                "driver_name": capability.driver_name or capability.driver_id,
+                "employment_type": (
+                    capability.employment_type
+                    or (availability.employment_type if availability is not None else "")
+                ),
+                "preferred_route_slot_classes": ", ".join(
+                    capability.preferred_route_slot_classes
+                ),
+                "target_shifts_per_week": (
+                    availability.target_shifts_per_week if availability is not None else 0
+                ),
+                "on_call_eligible": (
+                    bool(availability.on_call_eligible)
+                    if availability is not None
+                    else False
+                ),
+                "previous_week_minutes": bundle.actual_minutes_by_driver.get(
+                    capability.driver_id,
+                    0,
+                ),
+                "availability_summary": _availability_summary(availability),
+            }
+        )
+    return rows
+
+
 def _availability_summary(availability: Any) -> str:
     if availability is None or not availability.daily_states:
         return "no planning-week availability recorded"
@@ -1846,6 +2291,40 @@ def _availability_summary(availability: Any) -> str:
         if count > 0
     ]
     return "; ".join(parts) if parts else "no planning-week availability recorded"
+
+
+def _selected_day_service_date(bundle: WeeklyScheduleControlBundle) -> str:
+    if _PREVIEW_SERVICE_DATE in bundle.daily_demand_by_service_date:
+        return _PREVIEW_SERVICE_DATE
+    ordered_dates = sorted(bundle.daily_demand_by_service_date.keys())
+    if not ordered_dates:
+        raise ValueError("schedule bundle does not contain any service dates")
+    return ordered_dates[min(2, len(ordered_dates) - 1)]
+
+
+def _schedule_daily_row_counts(
+    *,
+    assignment_rows: list[dict[str, Any]],
+    reserve_rows: list[dict[str, Any]],
+) -> dict[str, dict[str, int]]:
+    counts: dict[str, dict[str, int]] = {}
+    for row in assignment_rows:
+        service_date = str(row.get("service_date") or "").strip()
+        if not service_date:
+            continue
+        counts.setdefault(
+            service_date,
+            {"assignment_count": 0, "reserve_count": 0},
+        )["assignment_count"] += 1
+    for row in reserve_rows:
+        service_date = str(row.get("service_date") or "").strip()
+        if not service_date:
+            continue
+        counts.setdefault(
+            service_date,
+            {"assignment_count": 0, "reserve_count": 0},
+        )["reserve_count"] += 1
+    return counts
 
 
 def _multi_select_options(bundle: WeeklyScheduleControlBundle) -> list[str]:
@@ -1902,6 +2381,24 @@ def _int_or_zero(value: Any) -> int:
     if not text:
         return 0
     return _require_int(value)
+
+
+def _int_or_none(value: Any) -> int | None:
+    text = str(value or "").strip()
+    if not text:
+        return None
+    return _require_int(value)
+
+
+def _weekday_label(service_date: str) -> str:
+    parts = service_date.split("-")
+    if len(parts) != 3:
+        return service_date
+    try:
+        year, month, day = (int(part) for part in parts)
+    except ValueError:
+        return service_date
+    return date(year, month, day).strftime("%a")
 
 
 def _split_workbook_multivalue(value: Any) -> list[str]:

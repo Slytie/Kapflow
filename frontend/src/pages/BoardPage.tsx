@@ -12,11 +12,11 @@ import { useShellFilters } from "@/app/useShellFilters";
 import {
   approvalsRepository,
   boardRepository,
-  flagsRepository,
-  humanTasksRepository
+  flagsRepository
 } from "@/lib/repositories";
 import { useDrawer } from "@/lib/state/drawerContext";
 import type { HumanTaskRow } from "@/lib/types/contracts";
+import { buildTaskDocumentPreviewCues } from "@/lib/workspace/taskDocumentUi";
 
 function hasAction(task: HumanTaskRow, candidates: string[]): boolean {
   const actions = task.available_actions ?? [];
@@ -78,16 +78,6 @@ export function BoardPage(): JSX.Element {
     onSuccess: refreshBoardViews
   });
 
-  const uploadTaskAttachmentMutation = useMutation({
-    mutationFn: (payload: { humanTaskId: string; file: File }) =>
-      humanTasksRepository.uploadAttachment(payload.humanTaskId, payload.file),
-    onSuccess: refreshBoardViews
-  });
-
-  const downloadTaskAttachmentMutation = useMutation({
-    mutationFn: (humanTaskId: string) => humanTasksRepository.downloadLatestAttachment(humanTaskId)
-  });
-
   const uploadApprovalAttachmentMutation = useMutation({
     mutationFn: (payload: { approvalId: string; file: File }) =>
       approvalsRepository.uploadAttachment(payload.approvalId, payload.file),
@@ -121,8 +111,6 @@ export function BoardPage(): JSX.Element {
 
   const mutationError =
     approvalMutation.error ??
-    uploadTaskAttachmentMutation.error ??
-    downloadTaskAttachmentMutation.error ??
     uploadApprovalAttachmentMutation.error ??
     downloadApprovalAttachmentMutation.error ??
     uploadFlagAttachmentMutation.error ??
@@ -164,30 +152,17 @@ export function BoardPage(): JSX.Element {
           <LaneColumn key={lane.id} title={lane.title} count={lane.items.length}>
             {lane.items.map((item) => {
               if (item.kind === "task") {
-                const taskIsBusy =
-                  (uploadTaskAttachmentMutation.isPending &&
-                    uploadTaskAttachmentMutation.variables?.humanTaskId === item.task.human_task_id) ||
-                  (downloadTaskAttachmentMutation.isPending &&
-                    downloadTaskAttachmentMutation.variables === item.task.human_task_id);
-
                 return (
                   <TaskCardWide
                     key={item.task.human_task_id}
                     task={item.task}
                     completeHint={taskActionHint(item.task)}
-                    onUpload={(file) =>
-                      uploadTaskAttachmentMutation.mutate({
-                        humanTaskId: item.task.human_task_id,
-                        file
-                      })
-                    }
-                    onDownload={() => downloadTaskAttachmentMutation.mutate(item.task.human_task_id)}
-                    actionPending={taskIsBusy}
+                    documentCues={buildTaskDocumentPreviewCues(item.task)}
                     onDetails={() =>
                       open({
                         title: `${item.task.stage_id} ${item.task.task_kind}`,
                         subtitle: item.task.human_task_id,
-                        description: "Extended task description stays in drawer to keep board cards dense.",
+                        description: "Extended task context opens in the centered task modal so board cards can stay dense.",
                         fields: [
                           { label: "State", value: item.task.state },
                           { label: "Assignee", value: item.task.assignee_actor_id ?? "unassigned" },
@@ -200,6 +175,8 @@ export function BoardPage(): JSX.Element {
                           stage_id: item.task.stage_id,
                           task_kind: item.task.task_kind,
                           state: item.task.state,
+                          created_at: item.task.created_at,
+                          updated_at: item.task.updated_at,
                           assignee_actor_id: item.task.assignee_actor_id,
                           assignee_actor_type: item.task.assignee_actor_type,
                           owner_role: item.task.owner_role,
@@ -209,7 +186,13 @@ export function BoardPage(): JSX.Element {
                           blocked_on_ref: item.task.blocked_on_ref,
                           available_actions: item.task.available_actions ?? [],
                           blocking_reason_codes: item.task.blocking_reason_codes ?? [],
-                          missing_required_inputs: item.task.missing_required_inputs ?? []
+                          missing_required_inputs: item.task.missing_required_inputs ?? [],
+                          required_uploads: item.task.required_uploads ?? [],
+                          required_reviews: item.task.required_reviews ?? [],
+                          workpage_actions: item.task.workpage_actions ?? [],
+                          is_composite: item.task.is_composite ?? false,
+                          expansion_kind: item.task.expansion_kind ?? "none",
+                          subgraph_ref: item.task.subgraph_ref ?? null
                         },
                         artifact_sources: [
                           {

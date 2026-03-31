@@ -414,6 +414,10 @@
   gap: 8px;
 }
 
+.workspace-board-card .task-document-cues {
+  margin-top: 2px;
+}
+
 .workspace-board-card__requirements {
   display: flex;
   flex-direction: column;
@@ -662,5 +666,359 @@
 
   .workspace-task-board__grid {
     grid-template-columns: 1fr;
+  }
+}
+
+/* Zen Operations workspace refresh */
+
+.app-shell--workspace,
+.app-shell--workspace .app-shell__nav,
+.app-shell--workspace .app-shell__main {
+  background: transparent;
+}
+
+.app-shell--workspace .app-shell__nav {
+  position: sticky;
+  top: 0;
+  z-index: 24;
+  border-bottom: 1px solid var(--ghost-border);
+  box-shadow: 0 10px 28px rgba(47, 52, 48, 0.03);
+  backdrop-filter: blur(18px);
+}
+
+.app-shell--workspace .app-shell__content {
+  min-height: calc(100vh - 72px);
+}
+
+.app-shell--workspace .detail-drawer {
+  background: rgba(250, 249, 246, 0.82);
+  border-left: 1px solid var(--ghost-border);
+  box-shadow: -20px 0 48px rgba(47, 52, 48, 0.08);
+  backdrop-filter: blur(20px);
+}
+
+.workspace-page {
+  border: 1px solid var(--ghost-border);
+  border-radius: 28px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.82), rgba(244, 244, 240, 0.94));
+  box-shadow: var(--shadow-floating);
+}
+
+.workspace-page__divider {
+  background: rgba(175, 179, 174, 0.24);
+}
+
+.workspace-graph,
+.workspace-task-board {
+  background: transparent;
+}
+
+.workspace-graph {
+  padding: 28px 28px 18px;
+  gap: 16px;
+}
+
+.workspace-graph__tabs {
+  gap: 18px;
+  border-bottom: 1px solid rgba(175, 179, 174, 0.24);
+  padding-bottom: 4px;
+}
+
+.workspace-graph__tabs button {
+  color: var(--ink-soft);
+  font-family: var(--font-display);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.workspace-graph__tabs button.is-active {
+  border-bottom-color: var(--accent);
+  color: var(--ink);
+}
+
+.workspace-graph__tab-step span {
+  background: rgba(255, 219, 206, 0.88);
+  color: var(--accent-dim);
+  box-shadow: inset 0 0 0 1px rgba(166, 59, 0, 0.08);
+}
+
+.workspace-graph__viewport {
+  border: 1px solid var(--ghost-border);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.58);
+  padding: 12px 10px 10px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8);
+}
+
+.workspace-graph__arrow,
+.workspace-graph__edge--linear,
+.workspace-graph__edge--branch,
+.workspace-graph__edge--loopback,
+.workspace-graph__edge--muted {
+  fill: rgba(119, 124, 119, 0.52);
+  stroke: rgba(119, 124, 119, 0.52);
+}
+
+.workspace-graph__edge--completed {
+  stroke: rgba(87, 98, 88, 0.6);
+}
+
+.workspace-graph__edge--active {
+  stroke: rgba(166, 59, 0, 0.5);
+}
+
+.workspace-graph__edge--warning {
+  stroke: rgba(159, 64, 61, 0.52);
+}
+
+.workspace-graph__edge-label,
+.workspace-graph__freshness,
+.workflow-graph-pill__stage,
+.workflow-graph-pill__responsibility,
+.workflow-graph-pill__task-detail {
+  fill: var(--ink-muted);
+  color: var(--ink-muted);
+}
+
+.workflow-graph-pill rect {
+  stroke: rgba(175, 179, 174, 0.34);
+  stroke-width: 1;
+}
+
+.workflow-graph-pill__icon circle {
+  fill: rgba(175, 179, 174, 0.48);
+}
+
+.workflow-graph-pill__label {
+  fill: var(--ink);
+  font-family: var(--font-display);
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.015em;
+}
+
+.workflow-graph-pill__stage {
+  font-family: var(--font-display);
+  letter-spacing: 0.05em;
+}
+
+.workflow-graph-pill--completed rect {
+  fill: rgba(235, 247, 234, 0.96);
+  stroke: rgba(87, 98, 88, 0.26);
+  filter: drop-shadow(0 8px 18px rgba(47, 52, 48, 0.04));
+}
+
+.workflow-graph-pill--completed .workflow-graph-pill__icon circle {
+  fill: rgba(87, 98, 88, 0.68);
+}
+
+.workflow-graph-pill--active rect {
+  fill: rgba(255, 219, 206, 0.92);
+  stroke: rgba(166, 59, 0, 0.28);
+  filter: drop-shadow(0 10px 24px rgba(166, 59, 0, 0.08));
+}
+
+.workflow-graph-pill--active .workflow-graph-pill__icon circle {
+  fill: rgba(166, 59, 0, 0.72);
+}
+
+.workflow-graph-pill--warning rect {
+  fill: rgba(247, 225, 222, 0.94);
+  stroke: rgba(159, 64, 61, 0.3);
+  filter: drop-shadow(0 8px 18px rgba(47, 52, 48, 0.04));
+}
+
+.workflow-graph-pill--warning .workflow-graph-pill__icon circle {
+  fill: rgba(159, 64, 61, 0.68);
+}
+
+.workflow-graph-pill--muted rect {
+  fill: rgba(244, 244, 240, 0.9);
+  stroke: rgba(175, 179, 174, 0.34);
+}
+
+.workflow-graph-pill--muted .workflow-graph-pill__icon circle {
+  fill: rgba(175, 179, 174, 0.54);
+}
+
+.workflow-graph-pill.is-selected rect,
+.workflow-graph-pill:focus-visible rect {
+  stroke: rgba(166, 59, 0, 0.52);
+}
+
+.workspace-task-board {
+  padding: 22px 28px 28px;
+  gap: 16px;
+}
+
+.workspace-task-board__grid {
+  gap: 20px;
+}
+
+.workspace-lane {
+  border-right: 1px solid rgba(175, 179, 174, 0.2);
+  padding-right: 18px;
+}
+
+.workspace-lane > header h3 {
+  color: var(--ink);
+  font-family: var(--font-display);
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: 0.015em;
+}
+
+.workspace-lane > header span {
+  min-width: 30px;
+  background: rgba(244, 244, 240, 0.98);
+  color: var(--ink-soft);
+  font-family: var(--font-display);
+  font-size: 12px;
+  letter-spacing: 0.04em;
+}
+
+.workspace-lane__cards {
+  gap: 12px;
+  padding-right: 6px;
+}
+
+.workspace-board-card {
+  border: 1px solid var(--ghost-border);
+  border-radius: 18px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.88), rgba(255, 255, 255, 0.98));
+  box-shadow: var(--shadow-ambient);
+  padding: 14px 14px 12px;
+  gap: 10px;
+}
+
+.workspace-board-card > header h4 {
+  color: var(--ink);
+  font-family: var(--font-display);
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+}
+
+.workspace-board-card__requirement {
+  border: 1px solid rgba(175, 179, 174, 0.18);
+  border-radius: 14px;
+  background: rgba(244, 244, 240, 0.88);
+  padding: 9px 10px;
+}
+
+.workspace-board-card__requirement p,
+.workspace-board-card__hint {
+  color: var(--ink-soft);
+}
+
+.workspace-board-tag {
+  border-radius: 999px;
+  font-family: var(--font-display);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.workspace-board-tag--design {
+  background: rgba(247, 225, 222, 0.84);
+  color: var(--error);
+  border-color: rgba(159, 64, 61, 0.14);
+}
+
+.workspace-board-tag--backend {
+  background: rgba(235, 247, 234, 0.96);
+  color: var(--success);
+  border-color: rgba(87, 98, 88, 0.14);
+}
+
+.workspace-board-tag--frontend {
+  background: rgba(255, 219, 206, 0.78);
+  color: var(--accent-dim);
+  border-color: rgba(166, 59, 0, 0.14);
+}
+
+.workspace-avatar {
+  border-color: rgba(255, 255, 255, 0.86);
+  background: linear-gradient(135deg, rgba(255, 219, 206, 0.86), rgba(166, 59, 0, 0.78));
+  color: #fff6f3;
+}
+
+.workspace-board-counter {
+  border-color: var(--ghost-border);
+  background: rgba(244, 244, 240, 0.96);
+  color: var(--ink-soft);
+}
+
+.workspace-board-card__menu summary {
+  border-color: var(--ghost-border);
+  border-radius: 12px;
+  color: var(--ink-muted);
+  background: rgba(244, 244, 240, 0.94);
+}
+
+.workspace-board-card__actions {
+  border: 1px solid var(--ghost-border);
+  border-radius: 16px;
+  background: rgba(250, 249, 246, 0.96);
+  box-shadow: var(--shadow-floating);
+}
+
+.workspace-board-action {
+  border: 1px solid var(--ghost-border);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.86);
+  color: var(--ink);
+  padding: 8px 10px;
+}
+
+.workspace-board-action:hover:not(:disabled) {
+  background: rgba(244, 244, 240, 0.96);
+}
+
+.workspace-board-card .link-button {
+  color: var(--accent);
+}
+
+.workspace-board-card .attachment-actions .link-button {
+  border: 1px solid var(--ghost-border);
+  border-radius: 999px;
+  padding: 6px 10px;
+  color: var(--ink-soft);
+  background: rgba(255, 255, 255, 0.82);
+}
+
+@media (max-width: 1280px) {
+  .workspace-page {
+    border-radius: 24px;
+  }
+
+  .workspace-task-board__grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 840px) {
+  .app-shell--workspace .app-shell__nav,
+  .app-shell--workspace .app-shell__main {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+
+  .workspace-graph,
+  .workspace-task-board {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+
+  .workspace-page {
+    border-radius: 22px;
+  }
+
+  .workspace-lane {
+    padding-right: 0;
+    border-right: 0;
   }
 }

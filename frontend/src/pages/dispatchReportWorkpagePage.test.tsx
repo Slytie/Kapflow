@@ -4,26 +4,23 @@ import userEvent from "@testing-library/user-event";
 import { HttpResponse, http } from "msw";
 
 import eodRunWorkpageStateSnapshot from "@fixtures/workpage_eod_v0_run_state.json";
-import artifactStateSnapshot from "@fixtures/workpage_eod_v0_artifact_state.json";
 import { App } from "@/app/App";
 import { mutationLog } from "@/test/api/handlers";
 import { server } from "@/test/api/server";
+import { buildEodArtifactWorkpageState } from "@/test/workpages/eodArtifactFixture";
 
 function buildArtifactPayload(
   artifactVersionId: string,
   workflowRunId = "wr-eod-artifact-001"
 ): Record<string, unknown> {
-  const payload = structuredClone(artifactStateSnapshot.workpage_state);
-  payload.freshness.generated_at = "2026-03-25T09:00:00Z";
-  payload.freshness.source_version = artifactVersionId;
-  payload.source.source_artifact_version_id = artifactVersionId;
-  payload.artifact_context.artifact_version_id = artifactVersionId;
-  payload.artifact_context.workflow_run_id = workflowRunId;
-  payload.artifact_context.download_path = `/api/v1/artifacts/${artifactVersionId}/download.bin`;
-  payload.artifact_context.latest_in_chain_artifact_version_id = artifactVersionId;
-  payload.artifact_context.supersedes_artifact_version_id = null;
-  payload.artifact_context.superseded_by_artifact_version_id = null;
-  payload.workpage.source_artifact_version_id = artifactVersionId;
+  const payload = buildEodArtifactWorkpageState({
+    artifactVersionId,
+    workflowRunId,
+    latestArtifactVersionId: artifactVersionId,
+    supersedesArtifactVersionId: null,
+    supersededByArtifactVersionId: null,
+    generatedAt: "2026-03-25T09:00:00Z"
+  });
   const history = payload.workpage.sections.find(
     (section) => section.kind === "history_stub"
   ) as { entries: Array<{ label: string; value: string }> };

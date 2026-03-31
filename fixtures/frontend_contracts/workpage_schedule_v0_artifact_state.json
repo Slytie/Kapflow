@@ -73,6 +73,4747 @@
           "title": "Draft workbook summary"
         },
         {
+          "kind": "schedule_heatmap",
+          "people": [
+            {
+              "availability_summary": "preferred 4 days; available 1 day; cannot 2 days",
+              "cells": [
+                {
+                  "assignment_status": "pass",
+                  "manual_override": false,
+                  "planned_driver_day_state": "assigned",
+                  "projected_minutes": 510,
+                  "route_slot_id": "slot-20260322-cycle1-standard#07",
+                  "row_kind": "assignment",
+                  "service_date": "2026-03-22",
+                  "state": "assigned"
+                },
+                {
+                  "assignment_status": null,
+                  "manual_override": false,
+                  "planned_driver_day_state": null,
+                  "projected_minutes": null,
+                  "route_slot_id": null,
+                  "row_kind": null,
+                  "service_date": "2026-03-23",
+                  "state": "empty"
+                },
+                {
+                  "assignment_status": null,
+                  "manual_override": false,
+                  "planned_driver_day_state": null,
+                  "projected_minutes": null,
+                  "route_slot_id": null,
+                  "row_kind": null,
+                  "service_date": "2026-03-24",
+                  "state": "empty"
+                },
+                {
+                  "assignment_status": "pass",
+                  "manual_override": false,
+                  "planned_driver_day_state": "assigned",
+                  "projected_minutes": 510,
+                  "route_slot_id": "excess-20260325#04",
+                  "row_kind": "assignment",
+                  "service_date": "2026-03-25",
+                  "state": "assigned"
+                },
+                {
+                  "assignment_status": "pass",
+                  "manual_override": false,
+                  "planned_driver_day_state": "assigned",
+                  "projected_minutes": 510,
+                  "route_slot_id": "excess-20260326#02",
+                  "row_kind": "assignment",
+                  "service_date": "2026-03-26",
+                  "state": "assigned"
+                },
+                {
+                  "assignment_status": null,
+                  "manual_override": false,
+                  "planned_driver_day_state": null,
+                  "projected_minutes": null,
+                  "route_slot_id": null,
+                  "row_kind": null,
+                  "service_date": "2026-03-27",
+                  "state": "empty"
+                },
+                {
+                  "assignment_status": null,
+                  "manual_override": false,
+                  "planned_driver_day_state": null,
+                  "projected_minutes": null,
+                  "route_slot_id": null,
+                  "row_kind": null,
+                  "service_date": "2026-03-28",
+                  "state": "empty"
+                }
+              ],
+              "driver_id": "A2TU4ZRI65E1H8",
+              "driver_name": "Abhiraj Singh",
+              "employment_type": "full_time",
+              "on_call_eligible": true,
+              "previous_week_minutes": 2220
+            },
+            {
+              "availability_summary": "preferred 3 days; on-call-only 1 day; avoid-if-possible 1 day; cannot 2 days",
+              "cells": [
+                {
+                  "assignment_status": "reserve",
+                  "manual_override": false,
+                  "planned_driver_day_state": "on_call",
+                  "projected_minutes": 180,
+                  "route_slot_id": "oncall-20260322#02",
+                  "row_kind": "reserve",
+                  "service_date": "2026-03-22",
+                  "state": "on_call"
+                },
+                {
+                  "assignment_status": null,
+                  "manual_override": false,
+                  "planned_driver_day_state": null,
+                  "projected_minutes": null,
+                  "route_slot_id": null,
+                  "row_kind": null,
+                  "service_date": "2026-03-23",
+                  "state": "empty"
+                },
+                {
+                  "assignment_status": null,
+                  "manual_override": false,
+                  "planned_driver_day_state": null,
+                  "projected_minutes": null,
+                  "route_slot_id": null,
+                  "row_kind": null,
+                  "service_date": "2026-03-24",
+                  "state": "empty"
+                },
+                {
+                  "assignment_status": "pass",
+                  "manual_override": false,
+                  "planned_driver_day_state": "assigned",
+                  "projected_minutes": 510,
+                  "route_slot_id": "slot-20260325-cycle1-standard#18",
+                  "row_kind": "assignment",
+                  "service_date": "2026-03-25",
+                  "state": "assigned"
+                },
+                {
+                  "assignment_status": "pass",
+                  "manual_override": false,
+                  "planned_driver_day_state": "assigned",
+                  "projected_minutes": 510,
+                  "route_slot_id": "slot-20260326-cycle1-standard#19",
+                  "row_kind": "assignment",
+                  "service_date": "2026-03-26",
+                  "state": "assigned"
+                },
+                {
+                  "assignment_status": "pass",
+                  "manual_override": false,
+                  "planned_driver_day_state": "assigned",
+                  "projected_minutes": 510,
+                  "route_slot_id": "slot-20260327-cycle1-standard#07",
+                  "row_kind": "assignment",
+                  "service_date": "2026-03-27",
+                  "state": "assigned"
+                },
+                {
+                  "assignment_status": null,
+                  "manual_override": false,
+                  "planned_driver_day_state": null,
+                  "projected_minutes": null,
+                  "route_slot_id": null,
+                  "row_kind": null,
+                  "service_date": "2026-03-28",
+                  "state": "empty"
+                }
+              ],
+              "driver_id": "A3M38Z4NGI9OR3",
+              "driver_name": "Akash",
+              "employment_type": "full_time",
+              "on_call_eligible": true,
+              "previous_week_minutes": 1710
+            },
+            {
+              "availability_summary": "preferred 4 days; available 1 day; on-call-only 1 day; avoid-if-possible 1 day",
+              "cells": [
+                {
+                  "assignment_status": "pass",
+                  "manual_override": false,
+                  "planned_driver_day_state": "assigned",
+                  "projected_minutes": 510,
+                  "route_slot_id": "slot-20260322-cycle1-standard#14",
+                  "row_kind": "assignment",
+                  "service_date": "2026-03-22",
+                  "state": "assigned"
+                },
+                {
+                  "assignment_status": null,
+                  "manual_override": false,
+                  "planned_driver_day_state": null,
+                  "projected_minutes": null,
+                  "route_slot_id": null,
+                  "row_kind": null,
+                  "service_date": "2026-03-23",
+                  "state": "empty"
+                },
+                {
+                  "assignment_status": null,
+                  "manual_override": false,
+                  "planned_driver_day_state": null,
+                  "projected_minutes": null,
+                  "route_slot_id": null,
+                  "row_kind": null,
+                  "service_date": "2026-03-24",
+                  "state": "empty"
+                },
+                {
+                  "assignment_status": "reserve",
+                  "manual_override": false,
+                  "planned_driver_day_state": "on_call",
+                  "projected_minutes": 180,
+                  "route_slot_id": "oncall-20260325#03",
+                  "row_kind": "reserve",
+                  "service_date": "2026-03-25",
+                  "state": "on_call"
+                },
+                {
+                  "assignment_status": null,
+                  "manual_override": false,
+                  "planned_driver_day_state": null,
+                  "projected_minutes": null,
+                  "route_slot_id": null,
+                  "row_kind": null,
+                  "service_date": "2026-03-26",
+                  "state": "empty"
+                },
+                {
+                  "assignment_status": "pass",
+                  "manual_override": false,
+                  "planned_driver_day_state": "assigned",
+                  "projected_minutes": 510,
+                  "route_slot_id": "slot-20260327-cycle1-standard#12",
+                  "row_kind": "assignment",
+                  "service_date": "2026-03-27",
+                  "state": "assigned"
+                },
+                {
+                  "assignment_status": "pass",
+                  "manual_override": false,
+                  "planned_driver_day_state": "assigned",
+                  "projected_minutes": 510,
+                  "route_slot_id": "slot-20260328-cycle1-standard#14",
+                  "row_kind": "assignment",
+                  "service_date": "2026-03-28",
+                  "state": "assigned"
+                }
+              ],
+              "driver_id": "A1JSQIK4OD79DV",
+              "driver_name": "Amritpal Singh",
+              "employment_type": "full_time",
+              "on_call_eligible": true,
+              "previous_week_minutes": 2220
+            },
+            {
+              "availability_summary": "avoid-if-possible 7 days",
+              "cells": [
+                {
+                  "assignment_status": "pass",
+                  "manual_override": false,
+                  "planned_driver_day_state": "assigned",
+                  "projected_minutes": 510,
+                  "route_slot_id": "slot-20260322-cycle1-standard#02",
+                  "row_kind": "assignment",
+                  "service_date": "2026-03-22",
+                  "state": "assigned"
+                },
+                {
+                  "assignment_status": "pass",
+                  "manual_override": false,
+                  "planned_driver_day_state": "assigned",
+                  "projected_minutes": 510,
+                  "route_slot_id": "slot-20260323-cycle1-standard#09",
+                  "row_kind": "assignment",
+                  "service_date": "2026-03-23",
+                  "state": "assigned"
+                },
+                {
+                  "assignment_status": null,
+                  "manual_override": false,
+                  "planned_driver_day_state": null,
+                  "projected_minutes": null,
+                  "route_slot_id": null,
+                  "row_kind": null,
+                  "service_date": "2026-03-24",
+                  "state": "empty"
+                },
+                {
+                  "assignment_status": null,
+                  "manual_override": false,
+                  "planned_driver_day_state": null,
+                  "projected_minutes": null,
+                  "route_slot_id": null,
+                  "row_kind": null,
+                  "service_date": "2026-03-25",
+                  "state": "empty"
+                },
+                {
+                  "assignment_status": null,
+                  "manual_override": false,
+                  "planned_driver_day_state": null,
+                  "projected_minutes": null,
+                  "route_slot_id": null,
+                  "row_kind": null,
+                  "service_date": "2026-03-26",
+                  "state": "empty"
+                },
+                {
+                  "assignment_status": "pass",
+                  "manual_override": false,
+                  "planned_driver_day_state": "assigned",
+                  "projected_minutes": 510,
+                  "route_slot_id": "slot-20260327-cycle1-standard#02",
+                  "row_kind": "assignment",
+                  "service_date": "2026-03-27",
+                  "state": "assigned"
+                },
+                {
+                  "assignment_status": "pass",
+                  "manual_override": false,
+                  "planned_driver_day_state": "assigned",
+                  "projected_minutes": 510,
+                  "route_slot_id": "slot-20260328-cycle1-standard#01",
+                  "row_kind": "assignment",
+                  "service_date": "2026-03-28",
+                  "state": "assigned"
+                }
+              ],
+              "driver_id": "A149421ZGG7QED",
+              "driver_name": "Balwinder Singh",
+              "employment_type": "part_time",
+              "on_call_eligible": false,
+              "previous_week_minutes": 0
+            },
+            {
+              "availability_summary": "preferred 4 days; available 2 days; on-call-only 1 day",
+              "cells": [
+                {
+                  "assignment_status": "pass",
+                  "manual_override": false,
+                  "planned_driver_day_state": "assigned",
+                  "projected_minutes": 510,
+                  "route_slot_id": "slot-20260322-cycle1-standard#09",
+                  "row_kind": "assignment",
+                  "service_date": "2026-03-22",
+                  "state": "assigned"
+                },
+                {
+                  "assignment_status": null,
+                  "manual_override": false,
+                  "planned_driver_day_state": null,
+                  "projected_minutes": null,
+                  "route_slot_id": null,
+                  "row_kind": null,
+                  "service_date": "2026-03-23",
+                  "state": "empty"
+                },
+                {
+                  "assignment_status": null,
+                  "manual_override": false,
+                  "planned_driver_day_state": null,
+                  "projected_minutes": null,
+                  "route_slot_id": null,
+                  "row_kind": null,
+                  "service_date": "2026-03-24",
+                  "state": "empty"
+                },
+                {
+                  "assignment_status": "pass",
+                  "manual_override": false,
+                  "planned_driver_day_state": "assigned",
+                  "projected_minutes": 510,
+                  "route_slot_id": "slot-20260325-cycle1-standard#15",
+                  "row_kind": "assignment",
+                  "service_date": "2026-03-25",
+                  "state": "assigned"
+                },
+                {
+                  "assignment_status": "reserve",
+                  "manual_override": false,
+                  "planned_driver_day_state": "on_call",
+                  "projected_minutes": 180,
+                  "route_slot_id": "oncall-20260326#03",
+                  "row_kind": "reserve",
+                  "service_date": "2026-03-26",
+                  "state": "on_call"
+                },
+                {
+                  "assignment_status": null,
+                  "manual_override": false,
+                  "planned_driver_day_state": null,
+                  "projected_minutes": null,
+                  "route_slot_id": null,
+                  "row_kind": null,
+                  "service_date": "2026-03-27",
+                  "state": "empty"
+                },
+                {
+                  "assignment_status": "pass",
+                  "manual_override": false,
+                  "planned_driver_day_state": "assigned",
+                  "projected_minutes": 510,
+                  "route_slot_id": "slot-20260328-cycle1-standard#03",
+                  "row_kind": "assignment",
+                  "service_date": "2026-03-28",
+                  "state": "assigned"
+                }
+              ],
+              "driver_id": "A1P1CDL949GCH7",
+              "driver_name": "Brahmvir Singh",
+              "employment_type": "full_time",
+              "on_call_eligible": true,
+              "previous_week_minutes": 1710
+            },
+            {
+              "availability_summary": "preferred 4 days; on-call-only 1 day; avoid-if-possible 2 days",
+              "cells": [
+                {
+                  "assignment_status": "pass",
+                  "manual_override": false,
+                  "planned_driver_day_state": "assigned",
+                  "projected_minutes": 510,
+                  "route_slot_id": "slot-20260322-cycle1-standard#04",
+                  "row_kind": "assignment",
+                  "service_date": "2026-03-22",
+                  "state": "assigned"
+                },
+                {
+                  "assignment_status": "pass",
+                  "manual_override": false,
+                  "planned_driver_day_state": "assigned",
+                  "projected_minutes": 510,
+                  "route_slot_id": "excess-20260323#01",
+                  "row_kind": "assignment",
+                  "service_date": "2026-03-23",
+                  "state": "assigned"
+                },
+                {
+                  "assignment_status": "pass",
+                  "manual_override": false,
+                  "planned_driver_day_state": "assigned",
+                  "projected_minutes": 510,
+                  "route_slot_id": "excess-20260324#02",
+                  "row_kind": "assignment",
+                  "service_date": "2026-03-24",
+                  "state": "assigned"
+                },
+                {
+                  "assignment_status": null,
+                  "manual_override": false,
+                  "planned_driver_day_state": null,
+                  "projected_minutes": null,
+                  "route_slot_id": null,
+                  "row_kind": null,
+                  "service_date": "2026-03-25",
+                  "state": "empty"
+                },
+                {
+                  "assignment_status": "reserve",
+                  "manual_override": false,
+                  "planned_driver_day_state": "on_call",
+                  "projected_minutes": 180,
+                  "route_slot_id": "oncall-20260326#04",
+                  "row_kind": "reserve",
+                  "service_date": "2026-03-26",
+                  "state": "on_call"
+                },
+                {
+                  "assignment_status": null,
+                  "manual_override": false,
+                  "planned_driver_day_state": null,
+                  "projected_minutes": null,
+                  "route_slot_id": null,
+                  "row_kind": null,
+                  "service_date": "2026-03-27",
+                  "state": "empty"
+                },
+                {
+                  "assignment_status": null,
+                  "manual_override": false,
+                  "planned_driver_day_state": null,
+                  "projected_minutes": null,
+                  "route_slot_id": null,
+                  "row_kind": null,
+                  "service_date": "2026-03-28",
+                  "state": "empty"
+                }
+              ],
+              "driver_id": "ATBR9WDPPKXCM",
+              "driver_name": "Chanpreet Singh Rai",
+              "employment_type": "full_time",
+              "on_call_eligible": true,
+              "previous_week_minutes": 2220
+            },
+            {
+              "availability_summary": "preferred 4 days; available 2 days; on-call-only 1 day",
+              "cells": [
+                {
+                  "assignment_status": "pass",
+                  "manual_override": false,
+                  "planned_driver_day_state": "assigned",
+                  "projected_minutes": 510,
+                  "route_slot_id": "slot-20260322-cycle1-standard#12",
+                  "row_kind": "assignment",
+                  "service_date": "2026-03-22",
+                  "state": "assigned"
+                },
+                {
+                  "assignment_status": "pass",
+                  "manual_override": false,
+                  "planned_driver_day_state": "assigned",
+                  "projected_minutes": 510,
+                  "route_slot_id": "slot-20260323-cycle1-standard#19",
+                  "row_kind": "assignment",
+                  "service_date": "2026-03-23",
+                  "state": "assigned"
+                },
+                {
+                  "assignment_status": null,
+                  "manual_override": false,
+                  "planned_driver_day_state": null,
+                  "projected_minutes": null,
+                  "route_slot_id": null,
+                  "row_kind": null,
+                  "service_date": "2026-03-24",
+                  "state": "empty"
+                },
+                {
+                  "assignment_status": null,
+                  "manual_override": false,
+                  "planned_driver_day_state": null,
+                  "projected_minutes": null,
+                  "route_slot_id": null,
+                  "row_kind": null,
+                  "service_date": "2026-03-25",
+                  "state": "empty"
+                },
+                {
+                  "assignment_status": "pass",
+                  "manual_override": false,
+                  "planned_driver_day_state": "assigned",
+                  "projected_minutes": 510,
+                  "route_slot_id": "slot-20260326-cycle1-standard#18",
+                  "row_kind": "assignment",
+                  "service_date": "2026-03-26",
+                  "state": "assigned"
+                },
+                {
+                  "assignment_status": "pass",
+                  "manual_override": false,
+                  "planned_driver_day_state": "assigned",
+                  "projected_minutes": 510,
+                  "route_slot_id": "slot-20260327-cycle1-standard#08",
+                  "row_kind": "assignment",
+                  "service_date": "2026-03-27",
+                  "state": "assigned"
+                },
+                {
+                  "assignment_status": null,
+                  "manual_override": false,
+                  "planned_driver_day_state": null,
+                  "projected_minutes": null,
+                  "route_slot_id": null,
+                  "row_kind": null,
+                  "service_date": "2026-03-28",
+                  "state": "empty"
+                }
+              ],
+              "driver_id": "A1S1XUJABAWLGR",
+              "driver_name": "Charanjit Singh",
+              "employment_type": "full_time",
+              "on_call_eligible": true,
+              "previous_week_minutes": 1710
+            },
+            {
+              "availability_summary": "preferred 4 days; on-call-only 1 day; avoid-if-possible 2 days",
+              "cells": [
+                {
+                  "assignment_status": "pass",
+                  "manual_override": false,
+                  "planned_driver_day_state": "assigned",
+                  "projected_minutes": 510,
+                  "route_slot_id": "slot-20260322-cycle1-standard#05",
+                  "row_kind": "assignment",
+                  "service_date": "2026-03-22",
+                  "state": "assigned"
+                },
+                {
+                  "assignment_status": "pass",
+                  "manual_override": false,
+                  "planned_driver_day_state": "assigned",
+                  "projected_minutes": 510,
+                  "route_slot_id": "excess-20260323#03",
+                  "row_kind": "assignment",
+                  "service_date": "2026-03-23",
+                  "state": "assigned"
+                },
+                {
+                  "assignment_status": null,
+                  "manual_override": false,
+                  "planned_driver_day_state": null,
+                  "projected_minutes": null,
+                  "route_slot_id": null,
+                  "row_kind": null,
+                  "service_date": "2026-03-24",
+                  "state": "empty"
+                },
+                {
+                  "assignment_status": "pass",
+                  "manual_override": false,
+                  "planned_driver_day_state": "assigned",
+                  "projected_minutes": 510,
+                  "route_slot_id": "excess-20260325#03",
+                  "row_kind": "assignment",
+                  "service_date": "2026-03-25",
+                  "state": "assigned"
+                },
+                {
+                  "assignment_status": null,
+                  "manual_override": false,
+                  "planned_driver_day_state": null,
+                  "projected_minutes": null,
+                  "route_slot_id": null,
+                  "row_kind": null,
+                  "service_date": "2026-03-26",
+                  "state": "empty"
+                },
+                {
+                  "assignment_status": null,
+                  "manual_override": false,
+                  "planned_driver_day_state": null,
+                  "projected_minutes": null,
+                  "route_slot_id": null,
+                  "row_kind": null,
+                  "service_date": "2026-03-27",
+                  "state": "empty"
+                },
+                {
+                  "assignment_status": "reserve",
+                  "manual_override": false,
+                  "planned_driver_day_state": "on_call",
+                  "projected_minutes": 180,
+                  "route_slot_id": "oncall-20260328#03",
+                  "row_kind": "reserve",
+                  "service_date": "2026-03-28",
+                  "state": "on_call"
+                }
+              ],
+              "driver_id": "A2S2SO4XUULX7H",
+              "driver_name": "Ekjot Singh",
+              "employment_type": "full_time",
+              "on_call_eligible": true,
+              "previous_week_minutes": 2220
+            },
+            {
+              "availability_summary": "preferred 4 days; available 1 day; avoid-if-possible 2 days",
+              "cells": [
+                {
+                  "assignment_status": null,
+                  "manual_override": false,
+                  "planned_driver_day_state": null,
+                  "projected_minutes": null,
+                  "route_slot_id": null,
+                  "row_kind": null,
+                  "service_date": "2026-03-22",
+                  "state": "empty"
+                },
+                {
+                  "assignment_status": null,
+                  "manual_override": false,
+                  "planned_driver_day_state": null,
+                  "projected_minutes": null,
+                  "route_slot_id": null,
+                  "row_kind": null,
+                  "service_date": "2026-03-23",
+                  "state": "empty"
+                },
+                {
+                  "assignment_status": null,
+                  "manual_override": false,
+                  "planned_driver_day_state": null,
+                  "projected_minutes": null,
+                  "route_slot_id": null,
+                  "row_kind": null,
+                  "service_date": "2026-03-24",
+                  "state": "empty"
+                },
+                {
+                  "assignment_status": null,
+                  "manual_override": false,
+                  "planned_driver_day_state": null,
+                  "projected_minutes": null,
+                  "route_slot_id": null,
+                  "row_kind": null,
+                  "service_date": "2026-03-25",
+                  "state": "empty"
+                },
+                {
+                  "assignment_status": "pass",
+                  "manual_override": false,
+                  "planned_driver_day_state": "assigned",
+                  "projected_minutes": 510,
+                  "route_slot_id": "slot-20260326-cycle1-standard#11",
+                  "row_kind": "assignment",
+                  "service_date": "2026-03-26",
+                  "state": "assigned"
+                },
+                {
+                  "assignment_status": "pass",
+                  "manual_override": false,
+                  "planned_driver_day_state": "assigned",
+                  "projected_minutes": 510,
+                  "route_slot_id": "slot-20260327-cycle1-standard#18",
+                  "row_kind": "assignment",
+                  "service_date": "2026-03-27",
+                  "state": "assigned"
+                },
+                {
+                  "assignment_status": "pass",
+                  "manual_override": false,
+                  "planned_driver_day_state": "assigned",
+                  "projected_minutes": 510,
+                  "route_slot_id": "slot-20260328-cycle1-standard#16",
+                  "row_kind": "assignment",
+                  "service_date": "2026-03-28",
+                  "state": "assigned"
+                }
+              ],
+              "driver_id": "A3959UPAEK7B1W",
+              "driver_name": "Gagandeep Singh Singh",
+              "employment_type": "full_time",
+              "on_call_eligible": true,
+              "previous_week_minutes": 2040
+            },
+            {
+              "availability_summary": "preferred 2 days; available 3 days; on-call-only 1 day; avoid-if-possible 1 day",
+              "cells": [
+                {
+                  "assignment_status": null,
+                  "manual_override": false,
+                  "planned_driver_day_state": null,
+                  "projected_minutes": null,
+                  "route_slot_id": null,
+                  "row_kind": null,
+                  "service_date": "2026-03-22",
+                  "state": "empty"
+                },
+                {
+                  "assignment_status": null,
+                  "manual_override": false,
+                  "planned_driver_day_state": null,
+                  "projected_minutes": null,
+                  "route_slot_id": null,
+                  "row_kind": null,
+                  "service_date": "2026-03-23",
+                  "state": "empty"
+                },
+                {
+                  "assignment_status": null,
+                  "manual_override": false,
+                  "planned_driver_day_state": null,
+                  "projected_minutes": null,
+                  "route_slot_id": null,
+                  "row_kind": null,
+                  "service_date": "2026-03-24",
+                  "state": "empty"
+                },
+                {
+                  "assignment_status": "reserve",
+                  "manual_override": false,
+                  "planned_driver_day_state": "on_call",
+                  "projected_minutes": 180,
+                  "route_slot_id": "oncall-20260325#05",
+                  "row_kind": "reserve",
+                  "service_date": "2026-03-25",
+                  "state": "on_call"
+                },
+                {
+                  "assignment_status": null,
+                  "manual_override": false,
+                  "planned_driver_day_state": null,
+                  "projected_minutes": null,
+                  "route_slot_id": null,
+                  "row_kind": null,
+                  "service_date": "2026-03-26",
+                  "state": "empty"
+                },
+                {
+                  "assignment_status": "pass",
+                  "manual_override": false,
+                  "planned_driver_day_state": "assigned",
+                  "projected_minutes": 510,
+                  "route_slot_id": "excess-20260327#01",
+                  "row_kind": "assignment",
+                  "service_date": "2026-03-27",
+                  "state": "assigned"
+                },
+                {
+                  "assignment_status": "pass",
+                  "manual_override": false,
+                  "planned_driver_day_state": "assigned",
+                  "projected_minutes": 510,
+                  "route_slot_id": "slot-20260328-cycle1-standard#06",
+                  "row_kind": "assignment",
+                  "service_date": "2026-03-28",
+                  "state": "assigned"
+                }
+              ],
+              "driver_id": "A3OYGBYE20UA2R",
+              "driver_name": "Gaganpreet Singh Dhindsa",
+              "employment_type": "part_time",
+              "on_call_eligible": true,
+              "previous_week_minutes": 1950
+            },
+            {
+              "availability_summary": "preferred 1 day; available 4 days; on-call-only 1 day; cannot 1 day",
+              "cells": [
+                {
+                  "assignment_status": null,
+                  "manual_override": false,
+                  "planned_driver_day_state": null,
+                  "projected_minutes": null,
+                  "route_slot_id": null,
+                  "row_kind": null,
+                  "service_date": "2026-03-22",
+                  "state": "empty"
+                },
+                {
+                  "assignment_status": null,
+                  "manual_override": false,
+                  "planned_driver_day_state": null,
+                  "projected_minutes": null,
+                  "route_slot_id": null,
+                  "row_kind": null,
+                  "service_date": "2026-03-23",
+                  "state": "empty"
+                },
+                {
+                  "assignment_status": null,
+                  "manual_override": false,
+                  "planned_driver_day_state": null,
+                  "projected_minutes": null,
+                  "route_slot_id": null,
+                  "row_kind": null,
+                  "service_date": "2026-03-24",
+                  "state": "empty"
+                },
+                {
+                  "assignment_status": null,
+                  "manual_override": false,
+                  "planned_driver_day_state": null,
+                  "projected_minutes": null,
+                  "route_slot_id": null,
+                  "row_kind": null,
+                  "service_date": "2026-03-25",
+                  "state": "empty"
+                },
+                {
+                  "assignment_status": null,
+                  "manual_override": false,
+                  "planned_driver_day_state": null,
+                  "projected_minutes": null,
+                  "route_slot_id": null,
+                  "row_kind": null,
+                  "service_date": "2026-03-26",
+                  "state": "empty"
+                },
+                {
+                  "assignment_status": "pass",
+                  "manual_override": false,
+                  "planned_driver_day_state": "assigned",
+                  "projected_minutes": 510,
+                  "route_slot_id": "slot-20260327-cycle1-standard#16",
+                  "row_kind": "assignment",
+                  "service_date": "2026-03-27",
+                  "state": "assigned"
+                },
+                {
+                  "assignment_status": null,
+                  "manual_override": false,
+                  "planned_driver_day_state": null,
+                  "projected_minutes": null,
+                  "route_slot_id": null,
+                  "row_kind": null,
+                  "service_date": "2026-03-28",
+                  "state": "empty"
+                }
+              ],
+              "driver_id": "AGOU3M5WUIHWC",
+              "driver_name": "Gurdas Singh Sidhu",
+              "employment_type": "full_time",
+              "on_call_eligible": true,
+              "previous_week_minutes": 2220
+            },
+            {
+              "availability_summary": "available 4 days; on-call-only 2 days; avoid-if-possible 1 day",
+              "cells": [
+                {
+                  "assignment_status": null,
+                  "manual_override": false,
+                  "planned_driver_day_state": null,
+                  "projected_minutes": null,
+                  "route_slot_id": null,
+                  "row_kind": null,
+                  "service_date": "2026-03-22",
+                  "state": "empty"
+                },
+                {
+                  "assignment_status": "pass",
+                  "manual_override": false,
+                  "planned_driver_day_state": "assigned",
+                  "projected_minutes": 510,
+                  "route_slot_id": "slot-20260323-cycle1-standard#10",
+                  "row_kind": "assignment",
+                  "service_date": "2026-03-23",
+                  "state": "assigned"
+                },
+                {
+                  "assignment_status": "pass",
+                  "manual_override": false,
+                  "planned_driver_day_state": "assigned",
+                  "projected_minutes": 510,
+                  "route_slot_id": "slot-20260324-cycle1-standard#09",
+                  "row_kind": "assignment",
+                  "service_date": "2026-03-24",
+                  "state": "assigned"
+                },
+                {
+                  "assignment_status": "pass",
+                  "manual_override": false,
+                  "planned_driver_day_state": "assigned",
+                  "projected_minutes": 510,
+                  "route_slot_id": "slot-20260325-cycle1-standard#09",
+                  "row_kind": "assignment",
+                  "service_date": "2026-03-25",
+                  "state": "assigned"
+                },
+                {
+                  "assignment_status": "pass",
+                  "manual_override": false,
+                  "planned_driver_day_state": "assigned",
+                  "projected_minutes": 510,
+                  "route_slot_id": "slot-20260326-cycle1-standard#07",
+                  "row_kind": "assignment",
+                  "service_date": "2026-03-26",
+                  "state": "assigned"
+                },
+                {
+                  "assignment_status": null,
+                  "manual_override": false,
+                  "planned_driver_day_state": null,
+                  "projected_minutes": null,
+                  "route_slot_id": null,
+                  "row_kind": null,
+                  "service_date": "2026-03-27",
+                  "state": "empty"
+                },
+                {
+                  "assignment_status": null,
+                  "manual_override": false,
+                  "planned_driver_day_state": null,
+                  "projected_minutes": null,
+                  "route_slot_id": null,
+                  "row_kind": null,
+                  "service_date": "2026-03-28",
+                  "state": "empty"
+                }
+              ],
+              "driver_id": "AHRF1Y9PK4GXB",
+              "driver_name": "Hamant Kumar",
+              "employment_type": "part_time",
+              "on_call_eligible": true,
+              "previous_week_minutes": 0
+            },
+            {
+              "availability_summary": "available 3 days; avoid-if-possible 4 days",
+              "cells": [
+                {
+                  "assignment_status": null,
+                  "manual_override": false,
+                  "planned_driver_day_state": null,
+                  "projected_minutes": null,
+                  "route_slot_id": null,
+                  "row_kind": null,
+                  "service_date": "2026-03-22",
+                  "state": "empty"
+                },
+                {
+                  "assignment_status": "pass",
+                  "manual_override": false,
+                  "planned_driver_day_state": "assigned",
+                  "projected_minutes": 510,
+                  "route_slot_id": "slot-20260323-cycle1-standard#02",
+                  "row_kind": "assignment",
+                  "service_date": "2026-03-23",
+                  "state": "assigned"
+                },
+                {
+                  "assignment_status": "pass",
+                  "manual_override": false,
+                  "planned_driver_day_state": "assigned",
+                  "projected_minutes": 510,
+                  "route_slot_id": "slot-20260324-cycle1-standard#07",
+                  "row_kind": "assignment",
+                  "service_date": "2026-03-24",
+                  "state": "assigned"
+                },
+                {
+                  "assignment_status": "pass",
+                  "manual_override": false,
+                  "planned_driver_day_state": "assigned",
+                  "projected_minutes": 510,
+                  "route_slot_id": "slot-20260325-cycle1-standard#07",
+                  "row_kind": "assignment",
+                  "service_date": "2026-03-25",
+                  "state": "assigned"
+                },
+                {
+                  "assignment_status": "pass",
+                  "manual_override": false,
+                  "planned_driver_day_state": "assigned",
+                  "projected_minutes": 510,
+                  "route_slot_id": "slot-20260326-cycle1-standard#08",
+                  "row_kind": "assignment",
+                  "service_date": "2026-03-26",
+                  "state": "assigned"
+                },
+                {
+                  "assignment_status": null,
+                  "manual_override": false,
+                  "planned_driver_day_state": null,
+                  "projected_minutes": null,
+                  "route_slot_id": null,
+                  "row_kind": null,
+                  "service_date": "2026-03-27",
+                  "state": "empty"
+                },
+                {
+                  "assignment_status": null,
+                  "manual_override": false,
+                  "planned_driver_day_state": null,
+                  "projected_minutes": null,
+                  "route_slot_id": null,
+                  "row_kind": null,
+                  "service_date": "2026-03-28",
+                  "state": "empty"
+                }
+              ],
+              "driver_id": "A3BQS4NVAKL2HQ",
+              "driver_name": "Harkirpal Singh Sidhu",
+              "employment_type": "part_time",
+              "on_call_eligible": false,
+              "previous_week_minutes": 0
+            },
+            {
+              "availability_summary": "preferred 4 days; available 1 day; avoid-if-possible 2 days",
+              "cells": [
+                {
+                  "assignment_status": null,
+                  "manual_override": false,
+                  "planned_driver_day_state": null,
+                  "projected_minutes": null,
+                  "route_slot_id": null,
+                  "row_kind": null,
+                  "service_date": "2026-03-22",
+                  "state": "empty"
+                },
+                {
+                  "assignment_status": "pass",
+                  "manual_override": false,
+                  "planned_driver_day_state": "assigned",
+                  "projected_minutes": 510,
+                  "route_slot_id": "slot-20260323-cycle1-standard#13",
+                  "row_kind": "assignment",
+                  "service_date": "2026-03-23",
+                  "state": "assigned"
+                },
+                {
+                  "assignment_status": "pass",
+                  "manual_override": false,
+                  "planned_driver_day_state": "assigned",
+                  "projected_minutes": 510,
+                  "route_slot_id": "slot-20260324-cycle1-standard#16",
+                  "row_kind": "assignment",
+                  "service_date": "2026-03-24",
+                  "state": "assigned"
+                },
+                {
+                  "assignment_status": "pass",
+                  "manual_override": false,
+                  "planned_driver_day_state": "assigned",
+                  "projected_minutes": 510,
+                  "route_slot_id": "slot-20260325-cycle1-standard#11",
+                  "row_kind": "assignment",
+                  "service_date": "2026-03-25",
+                  "state": "assigned"
+                },
+                {
+                  "assignment_status": null,
+                  "manual_override": false,
+                  "planned_driver_day_state": null,
+                  "projected_minutes": null,
+                  "route_slot_id": null,
+                  "row_kind": null,
+                  "service_date": "2026-03-26",
+                  "state": "empty"
+                },
+                {
+                  "assignment_status": null,
+                  "manual_override": false,
+                  "planned_driver_day_state": null,
+                  "projected_minutes": null,
+                  "route_slot_id": null,
+                  "row_kind": null,
+                  "service_date": "2026-03-27",
+                  "state": "empty"
+                },
+                {
+                  "assignment_status": "pass",
+                  "manual_override": false,
+                  "planned_driver_day_state": "assigned",
+                  "projected_minutes": 510,
+                  "route_slot_id": "slot-20260328-cycle1-standard#10",
+                  "row_kind": "assignment",
+                  "service_date": "2026-03-28",
+                  "state": "assigned"
+                }
+              ],
+              "driver_id": "AHJWCXI2ORDJY",
+              "driver_name": "Harmanpreet Singh",
+              "employment_type": "full_time",
+              "on_call_eligible": false,
+              "previous_week_minutes": 2040
+            },
+            {
+              "availability_summary": "preferred 3 days; on-call-only 1 day; cannot 3 days",
+              "cells": [
+                {
+                  "assignment_status": null,
+                  "manual_override": false,
+                  "planned_driver_day_state": null,
+                  "projected_minutes": null,
+                  "route_slot_id": null,
+                  "row_kind": null,
+                  "service_date": "2026-03-22",
+                  "state": "empty"
+                },
+                {
+                  "assignment_status": null,
+                  "manual_override": false,
+                  "planned_driver_day_state": null,
+                  "projected_minutes": null,
+                  "route_slot_id": null,
+                  "row_kind": null,
+                  "service_date": "2026-03-23",
+                  "state": "empty"
+                },
+                {
+                  "assignment_status": "reserve",
+                  "manual_override": false,
+                  "planned_driver_day_state": "on_call",
+                  "projected_minutes": 180,
+                  "route_slot_id": "oncall-20260324#02",
+                  "row_kind": "reserve",
+                  "service_date": "2026-03-24",
+                  "state": "on_call"
+                },
+                {
+                  "assignment_status": null,
+                  "manual_override": false,
+                  "planned_driver_day_state": null,
+                  "projected_minutes": null,
+                  "route_slot_id": null,
+                  "row_kind": null,
+                  "service_date": "2026-03-25",
+                  "state": "empty"
+                },
+                {
+                  "assignment_status": null,
+                  "manual_override": false,
+                  "planned_driver_day_state": null,
+                  "projected_minutes": null,
+                  "route_slot_id": null,
+                  "row_kind": null,
+                  "service_date": "2026-03-26",
+                  "state": "empty"
+                },
+                {
+                  "assignment_status": "pass",
+                  "manual_override": false,
+                  "planned_driver_day_state": "assigned",
+                  "projected_minutes": 510,
+                  "route_slot_id": "excess-20260327#02",
+                  "row_kind": "assignment",
+                  "service_date": "2026-03-27",
+                  "state": "assigned"
+                },
+                {
+                  "assignment_status": "pass",
+                  "manual_override": false,
+                  "planned_driver_day_state": "assigned",
+                  "projected_minutes": 510,
+                  "route_slot_id": "slot-20260328-cycle1-standard#13",
+                  "row_kind": "assignment",
+                  "service_date": "2026-03-28",
+                  "state": "assigned"
+                }
+              ],
+              "driver_id": "A3M45AZWH3K5F3",
+              "driver_name": "Harnamanpreet SIngh",
+              "employment_type": "full_time",
+              "on_call_eligible": true,
+              "previous_week_minutes": 2040
+            },
+            {
+              "availability_summary": "available 4 days; on-call-only 2 days; avoid-if-possible 1 day",
+              "cells": [
+                {
+                  "assignment_status": null,
+                  "manual_override": false,
+                  "planned_driver_day_state": null,
+                  "projected_minutes": null,
+                  "route_slot_id": null,
+                  "row_kind": null,
+                  "service_date": "2026-03-22",
+                  "state": "empty"
+                },
+                {
+                  "assignment_status": "pass",
+                  "manual_override": false,
+                  "planned_driver_day_state": "assigned",
+                  "projected_minutes": 510,
+                  "route_slot_id": "slot-20260323-cycle1-standard#06",
+                  "row_kind": "assignment",
+                  "service_date": "2026-03-23",
+                  "state": "assigned"
+                },
+                {
+                  "assignment_status": "pass",
+                  "manual_override": false,
+                  "planned_driver_day_state": "assigned",
+                  "projected_minutes": 510,
+                  "route_slot_id": "slot-20260324-cycle1-standard#06",
+                  "row_kind": "assignment",
+                  "service_date": "2026-03-24",
+                  "state": "assigned"
+                },
+                {
+                  "assignment_status": "pass",
+                  "manual_override": false,
+                  "planned_driver_day_state": "assigned",
+                  "projected_minutes": 510,
+                  "route_slot_id": "slot-20260325-cycle1-standard#06",
+                  "row_kind": "assignment",
+                  "service_date": "2026-03-25",
+                  "state": "assigned"
+                },
+                {
+                  "assignment_status": "pass",
+                  "manual_override": false,
+                  "planned_driver_day_state": "assigned",
+                  "projected_minutes": 510,
+                  "route_slot_id": "slot-20260326-cycle1-standard#09",
+                  "row_kind": "assignment",
+                  "service_date": "2026-03-26",
+                  "state": "assigned"
+                },
+                {
+                  "assignment_status": null,
+                  "manual_override": false,
+                  "planned_driver_day_state": null,
+                  "projected_minutes": null,
+                  "route_slot_id": null,
+                  "row_kind": null,
+                  "service_date": "2026-03-27",
+                  "state": "empty"
+                },
+                {
+                  "assignment_status": null,
+                  "manual_override": false,
+                  "planned_driver_day_state": null,
+                  "projected_minutes": null,
+                  "route_slot_id": null,
+                  "row_kind": null,
+                  "service_date": "2026-03-28",
+                  "state": "empty"
+                }
+              ],
+              "driver_id": "A1TJRL0G751SZK",
+              "driver_name": "Harvinder SIngh",
+              "employment_type": "part_time",
+              "on_call_eligible": true,
+              "previous_week_minutes": 0
+            },
+            {
+              "availability_summary": "preferred 4 days; on-call-only 1 day; avoid-if-possible 2 days",
+              "cells": [
+                {
+                  "assignment_status": null,
+                  "manual_override": false,
+                  "planned_driver_day_state": null,
+                  "projected_minutes": null,
+                  "route_slot_id": null,
+                  "row_kind": null,
+                  "service_date": "2026-03-22",
+                  "state": "empty"
+                },
+                {
+                  "assignment_status": "pass",
+                  "manual_override": false,
+                  "planned_driver_day_state": "assigned",
+                  "projected_minutes": 510,
+                  "route_slot_id": "excess-20260323#02",
+                  "row_kind": "assignment",
+                  "service_date": "2026-03-23",
+                  "state": "assigned"
+                },
+                {
+                  "assignment_status": null,
+                  "manual_override": false,
+                  "planned_driver_day_state": null,
+                  "projected_minutes": null,
+                  "route_slot_id": null,
+                  "row_kind": null,
+                  "service_date": "2026-03-24",
+                  "state": "empty"
+                },
+                {
+                  "assignment_status": "pass",
+                  "manual_override": false,
+                  "planned_driver_day_state": "assigned",
+                  "projected_minutes": 510,
+                  "route_slot_id": "excess-20260325#02",
+                  "row_kind": "assignment",
+                  "service_date": "2026-03-25",
+                  "state": "assigned"
+                },
+                {
+                  "assignment_status": "pass",
+                  "manual_override": false,
+                  "planned_driver_day_state": "assigned",
+                  "projected_minutes": 510,
+                  "route_slot_id": "slot-20260326-cycle1-standard#12",
+                  "row_kind": "assignment",
+                  "service_date": "2026-03-26",
+                  "state": "assigned"
+                },
+                {
+                  "assignment_status": "reserve",
+                  "manual_override": false,
+                  "planned_driver_day_state": "on_call",
+                  "projected_minutes": 180,
+                  "route_slot_id": "oncall-20260327#04",
+                  "row_kind": "reserve",
+                  "service_date": "2026-03-27",
+                  "state": "on_call"
+                },
+                {
+                  "assignment_status": null,
+                  "manual_override": false,
+                  "planned_driver_day_state": null,
+                  "projected_minutes": null,
+                  "route_slot_id": null,
+                  "row_kind": null,
+                  "service_date": "2026-03-28",
+                  "state": "empty"
+                }
+              ],
+              "driver_id": "A2WDUOOWN1ORVL",
+              "driver_name": "Iqbal Singh",
+              "employment_type": "full_time",
+              "on_call_eligible": true,
+              "previous_week_minutes": 2220
+            },
+            {
+              "availability_summary": "available 5 days; on-call-only 2 days",
+              "cells": [
+                {
+                  "assignment_status": null,
+                  "manual_override": false,
+                  "planned_driver_day_state": null,
+                  "projected_minutes": null,
+                  "route_slot_id": null,
+                  "row_kind": null,
+                  "service_date": "2026-03-22",
+                  "state": "empty"
+                },
+                {
+                  "assignment_status": null,
+                  "manual_override": false,
+                  "planned_driver_day_state": null,
+                  "projected_minutes": null,
+                  "route_slot_id": null,
+                  "row_kind": null,
+                  "service_date": "2026-03-23",
+                  "state": "empty"
+                },
+                {
+                  "assignment_status": "reserve",
+                  "manual_override": false,
+                  "planned_driver_day_state": "on_call",
+                  "projected_minutes": 180,
+                  "route_slot_id": "oncall-20260324#03",
+                  "row_kind": "reserve",
+                  "service_date": "2026-03-24",
+                  "state": "on_call"
+                },
+                {
+                  "assignment_status": null,
+                  "manual_override": false,
+                  "planned_driver_day_state": null,
+                  "projected_minutes": null,
+                  "route_slot_id": null,
+                  "row_kind": null,
+                  "service_date": "2026-03-25",
+                  "state": "empty"
+                },
+                {
+                  "assignment_status": null,
+                  "manual_override": false,
+                  "planned_driver_day_state": null,
+                  "projected_minutes": null,
+                  "route_slot_id": null,
+                  "row_kind": null,
+                  "service_date": "2026-03-26",
+                  "state": "empty"
+                },
+                {
+                  "assignment_status": null,
+                  "manual_override": false,
+                  "planned_driver_day_state": null,
+                  "projected_minutes": null,
+                  "route_slot_id": null,
+                  "row_kind": null,
+                  "service_date": "2026-03-27",
+                  "state": "empty"
+                },
+                {
+                  "assignment_status": "pass",
+                  "manual_override": false,
+                  "planned_driver_day_state": "assigned",
+                  "projected_minutes": 510,
+                  "route_slot_id": "excess-20260328#02",
+                  "row_kind": "assignment",
+                  "service_date": "2026-03-28",
+                  "state": "assigned"
+                }
+              ],
+              "driver_id": "A3NLLQPB0L46N9",
+              "driver_name": "Jagraj Singh",
+              "employment_type": "part_time",
+              "on_call_eligible": true,
+              "previous_week_minutes": 2220
+            },
+            {
+              "availability_summary": "available 3 days; avoid-if-possible 4 days",
+              "cells": [
+                {
+                  "assignment_status": null,
+                  "manual_override": false,
+                  "planned_driver_day_state": null,
+                  "projected_minutes": null,
+                  "route_slot_id": null,
+                  "row_kind": null,
+                  "service_date": "2026-03-22",
+                  "state": "empty"
+                },
+                {
+                  "assignment_status": "pass",
+                  "manual_override": false,
+                  "planned_driver_day_state": "assigned",
+                  "projected_minutes": 510,
+                  "route_slot_id": "slot-20260323-cycle1-standard#08",
+                  "row_kind": "assignment",
+                  "service_date": "2026-03-23",
+                  "state": "assigned"
+                },
+                {
+                  "assignment_status": "pass",
+                  "manual_override": false,
+                  "planned_driver_day_state": "assigned",
+                  "projected_minutes": 510,
+                  "route_slot_id": "slot-20260324-cycle1-standard#03",
+                  "row_kind": "assignment",
+                  "service_date": "2026-03-24",
+                  "state": "assigned"
+                },
+                {
+                  "assignment_status": "pass",
+                  "manual_override": false,
+                  "planned_driver_day_state": "assigned",
+                  "projected_minutes": 510,
+                  "route_slot_id": "slot-20260325-cycle1-standard#04",
+                  "row_kind": "assignment",
+                  "service_date": "2026-03-25",
+                  "state": "assigned"
+                },
+                {
+                  "assignment_status": "pass",
+                  "manual_override": false,
+                  "planned_driver_day_state": "assigned",
+                  "projected_minutes": 510,
+                  "route_slot_id": "slot-20260326-cycle1-standard#03",
+                  "row_kind": "assignment",
+                  "service_date": "2026-03-26",
+                  "state": "assigned"
+                },
+                {
+                  "assignment_status": null,
+                  "manual_override": false,
+                  "planned_driver_day_state": null,
+                  "projected_minutes": null,
+                  "route_slot_id": null,
+                  "row_kind": null,
+                  "service_date": "2026-03-27",
+                  "state": "empty"
+                },
+                {
+                  "assignment_status": null,
+                  "manual_override": false,
+                  "planned_driver_day_state": null,
+                  "projected_minutes": null,
+                  "route_slot_id": null,
+                  "row_kind": null,
+                  "service_date": "2026-03-28",
+                  "state": "empty"
+                }
+              ],
+              "driver_id": "A1HIH95LQQ9EQE",
+              "driver_name": "Jasdeep Sidhu",
+              "employment_type": "part_time",
+              "on_call_eligible": false,
+              "previous_week_minutes": 0
+            },
+            {
+              "availability_summary": "preferred 4 days; on-call-only 1 day; avoid-if-possible 2 days",
+              "cells": [
+                {
+                  "assignment_status": "pass",
+                  "manual_override": false,
+                  "planned_driver_day_state": "assigned",
+                  "projected_minutes": 510,
+                  "route_slot_id": "slot-20260322-cycle1-standard#03",
+                  "row_kind": "assignment",
+                  "service_date": "2026-03-22",
+                  "state": "assigned"
+                },
+                {
+                  "assignment_status": null,
+                  "manual_override": false,
+                  "planned_driver_day_state": null,
+                  "projected_minutes": null,
+                  "route_slot_id": null,
+                  "row_kind": null,
+                  "service_date": "2026-03-23",
+                  "state": "empty"
+                },
+                {
+                  "assignment_status": "pass",
+                  "manual_override": false,
+                  "planned_driver_day_state": "assigned",
+                  "projected_minutes": 510,
+                  "route_slot_id": "slot-20260324-cycle1-standard#20",
+                  "row_kind": "assignment",
+                  "service_date": "2026-03-24",
+                  "state": "assigned"
+                },
+                {
+                  "assignment_status": "pass",
+                  "manual_override": false,
+                  "planned_driver_day_state": "assigned",
+                  "projected_minutes": 510,
+                  "route_slot_id": "slot-20260325-cycle1-standard#17",
+                  "row_kind": "assignment",
+                  "service_date": "2026-03-25",
+                  "state": "assigned"
+                },
+                {
+                  "assignment_status": "reserve",
+                  "manual_override": false,
+                  "planned_driver_day_state": "on_call",
+                  "projected_minutes": 180,
+                  "route_slot_id": "oncall-20260326#01",
+                  "row_kind": "reserve",
+                  "service_date": "2026-03-26",
+                  "state": "on_call"
+                },
+                {
+                  "assignment_status": null,
+                  "manual_override": false,
+                  "planned_driver_day_state": null,
+                  "projected_minutes": null,
+                  "route_slot_id": null,
+                  "row_kind": null,
+                  "service_date": "2026-03-27",
+                  "state": "empty"
+                },
+                {
+                  "assignment_status": null,
+                  "manual_override": false,
+                  "planned_driver_day_state": null,
+                  "projected_minutes": null,
+                  "route_slot_id": null,
+                  "row_kind": null,
+                  "service_date": "2026-03-28",
+                  "state": "empty"
+                }
+              ],
+              "driver_id": "AXBXED50KRZYC",
+              "driver_name": "Jiwanpreet Singh",
+              "employment_type": "full_time",
+              "on_call_eligible": true,
+              "previous_week_minutes": 2220
+            },
+            {
+              "availability_summary": "preferred 4 days; available 1 day; on-call-only 2 days",
+              "cells": [
+                {
+                  "assignment_status": null,
+                  "manual_override": false,
+                  "planned_driver_day_state": null,
+                  "projected_minutes": null,
+                  "route_slot_id": null,
+                  "row_kind": null,
+                  "service_date": "2026-03-22",
+                  "state": "empty"
+                },
+                {
+                  "assignment_status": null,
+                  "manual_override": false,
+                  "planned_driver_day_state": null,
+                  "projected_minutes": null,
+                  "route_slot_id": null,
+                  "row_kind": null,
+                  "service_date": "2026-03-23",
+                  "state": "empty"
+                },
+                {
+                  "assignment_status": "pass",
+                  "manual_override": false,
+                  "planned_driver_day_state": "assigned",
+                  "projected_minutes": 510,
+                  "route_slot_id": "slot-20260324-cycle1-standard#12",
+                  "row_kind": "assignment",
+                  "service_date": "2026-03-24",
+                  "state": "assigned"
+                },
+                {
+                  "assignment_status": "pass",
+                  "manual_override": false,
+                  "planned_driver_day_state": "assigned",
+                  "projected_minutes": 510,
+                  "route_slot_id": "slot-20260325-cycle1-standard#12",
+                  "row_kind": "assignment",
+                  "service_date": "2026-03-25",
+                  "state": "assigned"
+                },
+                {
+                  "assignment_status": "reserve",
+                  "manual_override": false,
+                  "planned_driver_day_state": "on_call",
+                  "projected_minutes": 180,
+                  "route_slot_id": "oncall-20260326#02",
+                  "row_kind": "reserve",
+                  "service_date": "2026-03-26",
+                  "state": "on_call"
+                },
+                {
+                  "assignment_status": "pass",
+                  "manual_override": false,
+                  "planned_driver_day_state": "assigned",
+                  "projected_minutes": 510,
+                  "route_slot_id": "slot-20260327-cycle1-standard#04",
+                  "row_kind": "assignment",
+                  "service_date": "2026-03-27",
+                  "state": "assigned"
+                },
+                {
+                  "assignment_status": null,
+                  "manual_override": false,
+                  "planned_driver_day_state": null,
+                  "projected_minutes": null,
+                  "route_slot_id": null,
+                  "row_kind": null,
+                  "service_date": "2026-03-28",
+                  "state": "empty"
+                }
+              ],
+              "driver_id": "A34WEHEN1XXRKR",
+              "driver_name": "Karanveer Singh",
+              "employment_type": "full_time",
+              "on_call_eligible": true,
+              "previous_week_minutes": 1440
+            },
+            {
+              "availability_summary": "preferred 4 days; on-call-only 1 day; avoid-if-possible 2 days",
+              "cells": [
+                {
+                  "assignment_status": "pass",
+                  "manual_override": false,
+                  "planned_driver_day_state": "assigned",
+                  "projected_minutes": 510,
+                  "route_slot_id": "slot-20260322-cycle1-standard#10",
+                  "row_kind": "assignment",
+                  "service_date": "2026-03-22",
+                  "state": "assigned"
+                },
+                {
+                  "assignment_status": null,
+                  "manual_override": false,
+                  "planned_driver_day_state": null,
+                  "projected_minutes": null,
+                  "route_slot_id": null,
+                  "row_kind": null,
+                  "service_date": "2026-03-23",
+                  "state": "empty"
+                },
+                {
+                  "assignment_status": null,
+                  "manual_override": false,
+                  "planned_driver_day_state": null,
+                  "projected_minutes": null,
+                  "route_slot_id": null,
+                  "row_kind": null,
+                  "service_date": "2026-03-24",
+                  "state": "empty"
+                },
+                {
+                  "assignment_status": "pass",
+                  "manual_override": false,
+                  "planned_driver_day_state": "assigned",
+                  "projected_minutes": 510,
+                  "route_slot_id": "slot-20260325-cycle1-standard#16",
+                  "row_kind": "assignment",
+                  "service_date": "2026-03-25",
+                  "state": "assigned"
+                },
+                {
+                  "assignment_status": null,
+                  "manual_override": false,
+                  "planned_driver_day_state": null,
+                  "projected_minutes": null,
+                  "route_slot_id": null,
+                  "row_kind": null,
+                  "service_date": "2026-03-26",
+                  "state": "empty"
+                },
+                {
+                  "assignment_status": "pass",
+                  "manual_override": false,
+                  "planned_driver_day_state": "assigned",
+                  "projected_minutes": 510,
+                  "route_slot_id": "slot-20260327-cycle1-standard#14",
+                  "row_kind": "assignment",
+                  "service_date": "2026-03-27",
+                  "state": "assigned"
+                },
+                {
+                  "assignment_status": "pass",
+                  "manual_override": false,
+                  "planned_driver_day_state": "assigned",
+                  "projected_minutes": 510,
+                  "route_slot_id": "slot-20260328-cycle1-standard#08",
+                  "row_kind": "assignment",
+                  "service_date": "2026-03-28",
+                  "state": "assigned"
+                }
+              ],
+              "driver_id": "A2KXEYK2UAQ1SX",
+              "driver_name": "Khushdeep Singh Cheema",
+              "employment_type": "full_time",
+              "on_call_eligible": true,
+              "previous_week_minutes": 2220
+            },
+            {
+              "availability_summary": "preferred 4 days; available 2 days; on-call-only 1 day",
+              "cells": [
+                {
+                  "assignment_status": "pass",
+                  "manual_override": false,
+                  "planned_driver_day_state": "assigned",
+                  "projected_minutes": 510,
+                  "route_slot_id": "excess-20260322#03",
+                  "row_kind": "assignment",
+                  "service_date": "2026-03-22",
+                  "state": "assigned"
+                },
+                {
+                  "assignment_status": "reserve",
+                  "manual_override": false,
+                  "planned_driver_day_state": "on_call",
+                  "projected_minutes": 180,
+                  "route_slot_id": "oncall-20260323#03",
+                  "row_kind": "reserve",
+                  "service_date": "2026-03-23",
+                  "state": "on_call"
+                },
+                {
+                  "assignment_status": null,
+                  "manual_override": false,
+                  "planned_driver_day_state": null,
+                  "projected_minutes": null,
+                  "route_slot_id": null,
+                  "row_kind": null,
+                  "service_date": "2026-03-24",
+                  "state": "empty"
+                },
+                {
+                  "assignment_status": null,
+                  "manual_override": false,
+                  "planned_driver_day_state": null,
+                  "projected_minutes": null,
+                  "route_slot_id": null,
+                  "row_kind": null,
+                  "service_date": "2026-03-25",
+                  "state": "empty"
+                },
+                {
+                  "assignment_status": "pass",
+                  "manual_override": false,
+                  "planned_driver_day_state": "assigned",
+                  "projected_minutes": 510,
+                  "route_slot_id": "slot-20260326-cycle1-standard#14",
+                  "row_kind": "assignment",
+                  "service_date": "2026-03-26",
+                  "state": "assigned"
+                },
+                {
+                  "assignment_status": null,
+                  "manual_override": false,
+                  "planned_driver_day_state": null,
+                  "projected_minutes": null,
+                  "route_slot_id": null,
+                  "row_kind": null,
+                  "service_date": "2026-03-27",
+                  "state": "empty"
+                },
+                {
+                  "assignment_status": "reserve",
+                  "manual_override": false,
+                  "planned_driver_day_state": "on_call",
+                  "projected_minutes": 180,
+                  "route_slot_id": "oncall-20260328#04",
+                  "row_kind": "reserve",
+                  "service_date": "2026-03-28",
+                  "state": "on_call"
+                }
+              ],
+              "driver_id": "A2SCS728PUCGTE",
+              "driver_name": "Lovepreet Bassi",
+              "employment_type": "full_time",
+              "on_call_eligible": true,
+              "previous_week_minutes": 2220
+            },
+            {
+              "availability_summary": "available 6 days; on-call-only 1 day",
+              "cells": [
+                {
+                  "assignment_status": null,
+                  "manual_override": false,
+                  "planned_driver_day_state": null,
+                  "projected_minutes": null,
+                  "route_slot_id": null,
+                  "row_kind": null,
+                  "service_date": "2026-03-22",
+                  "state": "empty"
+                },
+                {
+                  "assignment_status": "reserve",
+                  "manual_override": false,
+                  "planned_driver_day_state": "on_call",
+                  "projected_minutes": 180,
+                  "route_slot_id": "oncall-20260323#04",
+                  "row_kind": "reserve",
+                  "service_date": "2026-03-23",
+                  "state": "on_call"
+                },
+                {
+                  "assignment_status": null,
+                  "manual_override": false,
+                  "planned_driver_day_state": null,
+                  "projected_minutes": null,
+                  "route_slot_id": null,
+                  "row_kind": null,
+                  "service_date": "2026-03-24",
+                  "state": "empty"
+                },
+                {
+                  "assignment_status": null,
+                  "manual_override": false,
+                  "planned_driver_day_state": null,
+                  "projected_minutes": null,
+                  "route_slot_id": null,
+                  "row_kind": null,
+                  "service_date": "2026-03-25",
+                  "state": "empty"
+                },
+                {
+                  "assignment_status": null,
+                  "manual_override": false,
+                  "planned_driver_day_state": null,
+                  "projected_minutes": null,
+                  "route_slot_id": null,
+                  "row_kind": null,
+                  "service_date": "2026-03-26",
+                  "state": "empty"
+                },
+                {
+                  "assignment_status": null,
+                  "manual_override": false,
+                  "planned_driver_day_state": null,
+                  "projected_minutes": null,
+                  "route_slot_id": null,
+                  "row_kind": null,
+                  "service_date": "2026-03-27",
+                  "state": "empty"
+                },
+                {
+                  "assignment_status": "reserve",
+                  "manual_override": false,
+                  "planned_driver_day_state": "on_call",
+                  "projected_minutes": 180,
+                  "route_slot_id": "oncall-20260328#01",
+                  "row_kind": "reserve",
+                  "service_date": "2026-03-28",
+                  "state": "on_call"
+                }
+              ],
+              "driver_id": "A7IT4OGI9NGQX",
+              "driver_name": "Lovepreet Gill",
+              "employment_type": "part_time",
+              "on_call_eligible": true,
+              "previous_week_minutes": 2040
+            },
+            {
+              "availability_summary": "preferred 4 days; on-call-only 2 days; avoid-if-possible 1 day",
+              "cells": [
+                {
+                  "assignment_status": "reserve",
+                  "manual_override": false,
+                  "planned_driver_day_state": "on_call",
+                  "projected_minutes": 180,
+                  "route_slot_id": "oncall-20260322#04",
+                  "row_kind": "reserve",
+                  "service_date": "2026-03-22",
+                  "state": "on_call"
+                },
+                {
+                  "assignment_status": "pass",
+                  "manual_override": false,
+                  "planned_driver_day_state": "assigned",
+                  "projected_minutes": 510,
+                  "route_slot_id": "slot-20260323-cycle1-standard#17",
+                  "row_kind": "assignment",
+                  "service_date": "2026-03-23",
+                  "state": "assigned"
+                },
+                {
+                  "assignment_status": "pass",
+                  "manual_override": false,
+                  "planned_driver_day_state": "assigned",
+                  "projected_minutes": 510,
+                  "route_slot_id": "excess-20260324#03",
+                  "row_kind": "assignment",
+                  "service_date": "2026-03-24",
+                  "state": "assigned"
+                },
+                {
+                  "assignment_status": null,
+                  "manual_override": false,
+                  "planned_driver_day_state": null,
+                  "projected_minutes": null,
+                  "route_slot_id": null,
+                  "row_kind": null,
+                  "service_date": "2026-03-25",
+                  "state": "empty"
+                },
+                {
+                  "assignment_status": null,
+                  "manual_override": false,
+                  "planned_driver_day_state": null,
+                  "projected_minutes": null,
+                  "route_slot_id": null,
+                  "row_kind": null,
+                  "service_date": "2026-03-26",
+                  "state": "empty"
+                },
+                {
+                  "assignment_status": "reserve",
+                  "manual_override": false,
+                  "planned_driver_day_state": "on_call",
+                  "projected_minutes": 180,
+                  "route_slot_id": "oncall-20260327#01",
+                  "row_kind": "reserve",
+                  "service_date": "2026-03-27",
+                  "state": "on_call"
+                },
+                {
+                  "assignment_status": null,
+                  "manual_override": false,
+                  "planned_driver_day_state": null,
+                  "projected_minutes": null,
+                  "route_slot_id": null,
+                  "row_kind": null,
+                  "service_date": "2026-03-28",
+                  "state": "empty"
+                }
+              ],
+              "driver_id": "AZULSLRV35N5I",
+              "driver_name": "Lovepreet Singh",
+              "employment_type": "full_time",
+              "on_call_eligible": true,
+              "previous_week_minutes": 2220
+            },
+            {
+              "availability_summary": "available 2 days; avoid-if-possible 5 days",
+              "cells": [
+                {
+                  "assignment_status": null,
+                  "manual_override": false,
+                  "planned_driver_day_state": null,
+                  "projected_minutes": null,
+                  "route_slot_id": null,
+                  "row_kind": null,
+                  "service_date": "2026-03-22",
+                  "state": "empty"
+                },
+                {
+                  "assignment_status": "pass",
+                  "manual_override": false,
+                  "planned_driver_day_state": "assigned",
+                  "projected_minutes": 510,
+                  "route_slot_id": "slot-20260323-cycle1-standard#04",
+                  "row_kind": "assignment",
+                  "service_date": "2026-03-23",
+                  "state": "assigned"
+                },
+                {
+                  "assignment_status": "pass",
+                  "manual_override": false,
+                  "planned_driver_day_state": "assigned",
+                  "projected_minutes": 510,
+                  "route_slot_id": "slot-20260324-cycle1-standard#08",
+                  "row_kind": "assignment",
+                  "service_date": "2026-03-24",
+                  "state": "assigned"
+                },
+                {
+                  "assignment_status": "pass",
+                  "manual_override": false,
+                  "planned_driver_day_state": "assigned",
+                  "projected_minutes": 510,
+                  "route_slot_id": "slot-20260325-cycle1-standard#08",
+                  "row_kind": "assignment",
+                  "service_date": "2026-03-25",
+                  "state": "assigned"
+                },
+                {
+                  "assignment_status": "pass",
+                  "manual_override": false,
+                  "planned_driver_day_state": "assigned",
+                  "projected_minutes": 510,
+                  "route_slot_id": "slot-20260326-cycle1-standard#10",
+                  "row_kind": "assignment",
+                  "service_date": "2026-03-26",
+                  "state": "assigned"
+                },
+                {
+                  "assignment_status": null,
+                  "manual_override": false,
+                  "planned_driver_day_state": null,
+                  "projected_minutes": null,
+                  "route_slot_id": null,
+                  "row_kind": null,
+                  "service_date": "2026-03-27",
+                  "state": "empty"
+                },
+                {
+                  "assignment_status": null,
+                  "manual_override": false,
+                  "planned_driver_day_state": null,
+                  "projected_minutes": null,
+                  "route_slot_id": null,
+                  "row_kind": null,
+                  "service_date": "2026-03-28",
+                  "state": "empty"
+                }
+              ],
+              "driver_id": "A4RCGY31PTY9M",
+              "driver_name": "Maninder Pal Singh",
+              "employment_type": "part_time",
+              "on_call_eligible": false,
+              "previous_week_minutes": 0
+            },
+            {
+              "availability_summary": "preferred 4 days; available 1 day; on-call-only 1 day; avoid-if-possible 1 day",
+              "cells": [
+                {
+                  "assignment_status": "pass",
+                  "manual_override": false,
+                  "planned_driver_day_state": "assigned",
+                  "projected_minutes": 510,
+                  "route_slot_id": "excess-20260322#01",
+                  "row_kind": "assignment",
+                  "service_date": "2026-03-22",
+                  "state": "assigned"
+                },
+                {
+                  "assignment_status": null,
+                  "manual_override": false,
+                  "planned_driver_day_state": null,
+                  "projected_minutes": null,
+                  "route_slot_id": null,
+                  "row_kind": null,
+                  "service_date": "2026-03-23",
+                  "state": "empty"
+                },
+                {
+                  "assignment_status": "pass",
+                  "manual_override": false,
+                  "planned_driver_day_state": "assigned",
+                  "projected_minutes": 510,
+                  "route_slot_id": "slot-20260324-cycle1-standard#11",
+                  "row_kind": "assignment",
+                  "service_date": "2026-03-24",
+                  "state": "assigned"
+                },
+                {
+                  "assignment_status": null,
+                  "manual_override": false,
+                  "planned_driver_day_state": null,
+                  "projected_minutes": null,
+                  "route_slot_id": null,
+                  "row_kind": null,
+                  "service_date": "2026-03-25",
+                  "state": "empty"
+                },
+                {
+                  "assignment_status": "reserve",
+                  "manual_override": false,
+                  "planned_driver_day_state": "on_call",
+                  "projected_minutes": 180,
+                  "route_slot_id": "oncall-20260326#05",
+                  "row_kind": "reserve",
+                  "service_date": "2026-03-26",
+                  "state": "on_call"
+                },
+                {
+                  "assignment_status": null,
+                  "manual_override": false,
+                  "planned_driver_day_state": null,
+                  "projected_minutes": null,
+                  "route_slot_id": null,
+                  "row_kind": null,
+                  "service_date": "2026-03-27",
+                  "state": "empty"
+                },
+                {
+                  "assignment_status": "pass",
+                  "manual_override": false,
+                  "planned_driver_day_state": "assigned",
+                  "projected_minutes": 510,
+                  "route_slot_id": "excess-20260328#01",
+                  "row_kind": "assignment",
+                  "service_date": "2026-03-28",
+                  "state": "assigned"
+                }
+              ],
+              "driver_id": "A2VHAFSZ54XXA8",
+              "driver_name": "Manpreet",
+              "employment_type": "full_time",
+              "on_call_eligible": true,
+              "previous_week_minutes": 2220
+            },
+            {
+              "availability_summary": "preferred 4 days; available 1 day; on-call-only 2 days",
+              "cells": [
+                {
+                  "assignment_status": "pass",
+                  "manual_override": false,
+                  "planned_driver_day_state": "assigned",
+                  "projected_minutes": 510,
+                  "route_slot_id": "excess-20260322#02",
+                  "row_kind": "assignment",
+                  "service_date": "2026-03-22",
+                  "state": "assigned"
+                },
+                {
+                  "assignment_status": null,
+                  "manual_override": false,
+                  "planned_driver_day_state": null,
+                  "projected_minutes": null,
+                  "route_slot_id": null,
+                  "row_kind": null,
+                  "service_date": "2026-03-23",
+                  "state": "empty"
+                },
+                {
+                  "assignment_status": "reserve",
+                  "manual_override": false,
+                  "planned_driver_day_state": "on_call",
+                  "projected_minutes": 180,
+                  "route_slot_id": "oncall-20260324#04",
+                  "row_kind": "reserve",
+                  "service_date": "2026-03-24",
+                  "state": "on_call"
+                },
+                {
+                  "assignment_status": "reserve",
+                  "manual_override": false,
+                  "planned_driver_day_state": "on_call",
+                  "projected_minutes": 180,
+                  "route_slot_id": "oncall-20260325#01",
+                  "row_kind": "reserve",
+                  "service_date": "2026-03-25",
+                  "state": "on_call"
+                },
+                {
+                  "assignment_status": "pass",
+                  "manual_override": false,
+                  "planned_driver_day_state": "assigned",
+                  "projected_minutes": 510,
+                  "route_slot_id": "slot-20260326-cycle1-standard#16",
+                  "row_kind": "assignment",
+                  "service_date": "2026-03-26",
+                  "state": "assigned"
+                },
+                {
+                  "assignment_status": null,
+                  "manual_override": false,
+                  "planned_driver_day_state": null,
+                  "projected_minutes": null,
+                  "route_slot_id": null,
+                  "row_kind": null,
+                  "service_date": "2026-03-27",
+                  "state": "empty"
+                },
+                {
+                  "assignment_status": null,
+                  "manual_override": false,
+                  "planned_driver_day_state": null,
+                  "projected_minutes": null,
+                  "route_slot_id": null,
+                  "row_kind": null,
+                  "service_date": "2026-03-28",
+                  "state": "empty"
+                }
+              ],
+              "driver_id": "A3RO6BBCA3NOYM",
+              "driver_name": "Mehakpreet Singh",
+              "employment_type": "full_time",
+              "on_call_eligible": true,
+              "previous_week_minutes": 2220
+            },
+            {
+              "availability_summary": "available 5 days; avoid-if-possible 2 days",
+              "cells": [
+                {
+                  "assignment_status": null,
+                  "manual_override": false,
+                  "planned_driver_day_state": null,
+                  "projected_minutes": null,
+                  "route_slot_id": null,
+                  "row_kind": null,
+                  "service_date": "2026-03-22",
+                  "state": "empty"
+                },
+                {
+                  "assignment_status": "pass",
+                  "manual_override": false,
+                  "planned_driver_day_state": "assigned",
+                  "projected_minutes": 510,
+                  "route_slot_id": "slot-20260323-cycle1-standard#01",
+                  "row_kind": "assignment",
+                  "service_date": "2026-03-23",
+                  "state": "assigned"
+                },
+                {
+                  "assignment_status": "pass",
+                  "manual_override": false,
+                  "planned_driver_day_state": "assigned",
+                  "projected_minutes": 510,
+                  "route_slot_id": "slot-20260324-cycle1-standard#02",
+                  "row_kind": "assignment",
+                  "service_date": "2026-03-24",
+                  "state": "assigned"
+                },
+                {
+                  "assignment_status": "pass",
+                  "manual_override": false,
+                  "planned_driver_day_state": "assigned",
+                  "projected_minutes": 510,
+                  "route_slot_id": "slot-20260325-cycle1-standard#03",
+                  "row_kind": "assignment",
+                  "service_date": "2026-03-25",
+                  "state": "assigned"
+                },
+                {
+                  "assignment_status": "pass",
+                  "manual_override": false,
+                  "planned_driver_day_state": "assigned",
+                  "projected_minutes": 510,
+                  "route_slot_id": "slot-20260326-cycle1-standard#02",
+                  "row_kind": "assignment",
+                  "service_date": "2026-03-26",
+                  "state": "assigned"
+                },
+                {
+                  "assignment_status": null,
+                  "manual_override": false,
+                  "planned_driver_day_state": null,
+                  "projected_minutes": null,
+                  "route_slot_id": null,
+                  "row_kind": null,
+                  "service_date": "2026-03-27",
+                  "state": "empty"
+                },
+                {
+                  "assignment_status": null,
+                  "manual_override": false,
+                  "planned_driver_day_state": null,
+                  "projected_minutes": null,
+                  "route_slot_id": null,
+                  "row_kind": null,
+                  "service_date": "2026-03-28",
+                  "state": "empty"
+                }
+              ],
+              "driver_id": "A185MOPEG4MOST",
+              "driver_name": "Navjot Singh",
+              "employment_type": "part_time",
+              "on_call_eligible": false,
+              "previous_week_minutes": 0
+            },
+            {
+              "availability_summary": "preferred 4 days; on-call-only 1 day; avoid-if-possible 2 days",
+              "cells": [
+                {
+                  "assignment_status": null,
+                  "manual_override": false,
+                  "planned_driver_day_state": null,
+                  "projected_minutes": null,
+                  "route_slot_id": null,
+                  "row_kind": null,
+                  "service_date": "2026-03-22",
+                  "state": "empty"
+                },
+                {
+                  "assignment_status": "pass",
+                  "manual_override": false,
+                  "planned_driver_day_state": "assigned",
+                  "projected_minutes": 510,
+                  "route_slot_id": "slot-20260323-cycle1-standard#23",
+                  "row_kind": "assignment",
+                  "service_date": "2026-03-23",
+                  "state": "assigned"
+                },
+                {
+                  "assignment_status": null,
+                  "manual_override": false,
+                  "planned_driver_day_state": null,
+                  "projected_minutes": null,
+                  "route_slot_id": null,
+                  "row_kind": null,
+                  "service_date": "2026-03-24",
+                  "state": "empty"
+                },
+                {
+                  "assignment_status": "reserve",
+                  "manual_override": false,
+                  "planned_driver_day_state": "on_call",
+                  "projected_minutes": 180,
+                  "route_slot_id": "oncall-20260325#04",
+                  "row_kind": "reserve",
+                  "service_date": "2026-03-25",
+                  "state": "on_call"
+                },
+                {
+                  "assignment_status": "pass",
+                  "manual_override": false,
+                  "planned_driver_day_state": "assigned",
+                  "projected_minutes": 510,
+                  "route_slot_id": "slot-20260326-cycle1-standard#17",
+                  "row_kind": "assignment",
+                  "service_date": "2026-03-26",
+                  "state": "assigned"
+                },
+                {
+                  "assignment_status": "pass",
+                  "manual_override": false,
+                  "planned_driver_day_state": "assigned",
+                  "projected_minutes": 510,
+                  "route_slot_id": "slot-20260327-cycle1-standard#06",
+                  "row_kind": "assignment",
+                  "service_date": "2026-03-27",
+                  "state": "assigned"
+                },
+                {
+                  "assignment_status": null,
+                  "manual_override": false,
+                  "planned_driver_day_state": null,
+                  "projected_minutes": null,
+                  "route_slot_id": null,
+                  "row_kind": null,
+                  "service_date": "2026-03-28",
+                  "state": "empty"
+                }
+              ],
+              "driver_id": "A1NJLYPMMEKHLK",
+              "driver_name": "Paramjit Gherha",
+              "employment_type": "full_time",
+              "on_call_eligible": true,
+              "previous_week_minutes": 1530
+            },
+            {
+              "availability_summary": "preferred 4 days; on-call-only 1 day; avoid-if-possible 2 days",
+              "cells": [
+                {
+                  "assignment_status": null,
+                  "manual_override": false,
+                  "planned_driver_day_state": null,
+                  "projected_minutes": null,
+                  "route_slot_id": null,
+                  "row_kind": null,
+                  "service_date": "2026-03-22",
+                  "state": "empty"
+                },
+                {
+                  "assignment_status": "pass",
+                  "manual_override": false,
+                  "planned_driver_day_state": "assigned",
+                  "projected_minutes": 510,
+                  "route_slot_id": "slot-20260323-cycle1-standard#22",
+                  "row_kind": "assignment",
+                  "service_date": "2026-03-23",
+                  "state": "assigned"
+                },
+                {
+                  "assignment_status": "reserve",
+                  "manual_override": false,
+                  "planned_driver_day_state": "on_call",
+                  "projected_minutes": 180,
+                  "route_slot_id": "oncall-20260324#01",
+                  "row_kind": "reserve",
+                  "service_date": "2026-03-24",
+                  "state": "on_call"
+                },
+                {
+                  "assignment_status": null,
+                  "manual_override": false,
+                  "planned_driver_day_state": null,
+                  "projected_minutes": null,
+                  "route_slot_id": null,
+                  "row_kind": null,
+                  "service_date": "2026-03-25",
+                  "state": "empty"
+                },
+                {
+                  "assignment_status": null,
+                  "manual_override": false,
+                  "planned_driver_day_state": null,
+                  "projected_minutes": null,
+                  "route_slot_id": null,
+                  "row_kind": null,
+                  "service_date": "2026-03-26",
+                  "state": "empty"
+                },
+                {
+                  "assignment_status": "pass",
+                  "manual_override": false,
+                  "planned_driver_day_state": "assigned",
+                  "projected_minutes": 510,
+                  "route_slot_id": "slot-20260327-cycle1-standard#10",
+                  "row_kind": "assignment",
+                  "service_date": "2026-03-27",
+                  "state": "assigned"
+                },
+                {
+                  "assignment_status": "pass",
+                  "manual_override": false,
+                  "planned_driver_day_state": "assigned",
+                  "projected_minutes": 510,
+                  "route_slot_id": "slot-20260328-cycle1-standard#12",
+                  "row_kind": "assignment",
+                  "service_date": "2026-03-28",
+                  "state": "assigned"
+                }
+              ],
+              "driver_id": "A11X1NH2FPH5RV",
+              "driver_name": "Parampreet Singh",
+              "employment_type": "full_time",
+              "on_call_eligible": true,
+              "previous_week_minutes": 1710
+            },
+            {
+              "availability_summary": "preferred 4 days; on-call-only 2 days; avoid-if-possible 1 day",
+              "cells": [
+                {
+                  "assignment_status": "pass",
+                  "manual_override": false,
+                  "planned_driver_day_state": "assigned",
+                  "projected_minutes": 510,
+                  "route_slot_id": "slot-20260322-cycle1-standard#15",
+                  "row_kind": "assignment",
+                  "service_date": "2026-03-22",
+                  "state": "assigned"
+                },
+                {
+                  "assignment_status": "reserve",
+                  "manual_override": false,
+                  "planned_driver_day_state": "on_call",
+                  "projected_minutes": 180,
+                  "route_slot_id": "oncall-20260323#02",
+                  "row_kind": "reserve",
+                  "service_date": "2026-03-23",
+                  "state": "on_call"
+                },
+                {
+                  "assignment_status": null,
+                  "manual_override": false,
+                  "planned_driver_day_state": null,
+                  "projected_minutes": null,
+                  "route_slot_id": null,
+                  "row_kind": null,
+                  "service_date": "2026-03-24",
+                  "state": "empty"
+                },
+                {
+                  "assignment_status": null,
+                  "manual_override": false,
+                  "planned_driver_day_state": null,
+                  "projected_minutes": null,
+                  "route_slot_id": null,
+                  "row_kind": null,
+                  "service_date": "2026-03-25",
+                  "state": "empty"
+                },
+                {
+                  "assignment_status": null,
+                  "manual_override": false,
+                  "planned_driver_day_state": null,
+                  "projected_minutes": null,
+                  "route_slot_id": null,
+                  "row_kind": null,
+                  "service_date": "2026-03-26",
+                  "state": "empty"
+                },
+                {
+                  "assignment_status": "pass",
+                  "manual_override": false,
+                  "planned_driver_day_state": "assigned",
+                  "projected_minutes": 510,
+                  "route_slot_id": "slot-20260327-cycle1-standard#09",
+                  "row_kind": "assignment",
+                  "service_date": "2026-03-27",
+                  "state": "assigned"
+                },
+                {
+                  "assignment_status": "pass",
+                  "manual_override": false,
+                  "planned_driver_day_state": "assigned",
+                  "projected_minutes": 510,
+                  "route_slot_id": "slot-20260328-cycle1-standard#17",
+                  "row_kind": "assignment",
+                  "service_date": "2026-03-28",
+                  "state": "assigned"
+                }
+              ],
+              "driver_id": "AU6YIGC7GXQGA",
+              "driver_name": "Pardeep Singh",
+              "employment_type": "full_time",
+              "on_call_eligible": true,
+              "previous_week_minutes": 1710
+            },
+            {
+              "availability_summary": "available 4 days; avoid-if-possible 3 days",
+              "cells": [
+                {
+                  "assignment_status": null,
+                  "manual_override": false,
+                  "planned_driver_day_state": null,
+                  "projected_minutes": null,
+                  "route_slot_id": null,
+                  "row_kind": null,
+                  "service_date": "2026-03-22",
+                  "state": "empty"
+                },
+                {
+                  "assignment_status": "pass",
+                  "manual_override": false,
+                  "planned_driver_day_state": "assigned",
+                  "projected_minutes": 510,
+                  "route_slot_id": "slot-20260323-cycle1-standard#03",
+                  "row_kind": "assignment",
+                  "service_date": "2026-03-23",
+                  "state": "assigned"
+                },
+                {
+                  "assignment_status": "pass",
+                  "manual_override": false,
+                  "planned_driver_day_state": "assigned",
+                  "projected_minutes": 510,
+                  "route_slot_id": "slot-20260324-cycle1-standard#04",
+                  "row_kind": "assignment",
+                  "service_date": "2026-03-24",
+                  "state": "assigned"
+                },
+                {
+                  "assignment_status": "pass",
+                  "manual_override": false,
+                  "planned_driver_day_state": "assigned",
+                  "projected_minutes": 510,
+                  "route_slot_id": "slot-20260325-cycle1-standard#05",
+                  "row_kind": "assignment",
+                  "service_date": "2026-03-25",
+                  "state": "assigned"
+                },
+                {
+                  "assignment_status": "pass",
+                  "manual_override": false,
+                  "planned_driver_day_state": "assigned",
+                  "projected_minutes": 510,
+                  "route_slot_id": "slot-20260326-cycle1-standard#04",
+                  "row_kind": "assignment",
+                  "service_date": "2026-03-26",
+                  "state": "assigned"
+                },
+                {
+                  "assignment_status": null,
+                  "manual_override": false,
+                  "planned_driver_day_state": null,
+                  "projected_minutes": null,
+                  "route_slot_id": null,
+                  "row_kind": null,
+                  "service_date": "2026-03-27",
+                  "state": "empty"
+                },
+                {
+                  "assignment_status": null,
+                  "manual_override": false,
+                  "planned_driver_day_state": null,
+                  "projected_minutes": null,
+                  "route_slot_id": null,
+                  "row_kind": null,
+                  "service_date": "2026-03-28",
+                  "state": "empty"
+                }
+              ],
+              "driver_id": "A3TPKATQLBDJG",
+              "driver_name": "Rahul Bajaj",
+              "employment_type": "part_time",
+              "on_call_eligible": false,
+              "previous_week_minutes": 0
+            },
+            {
+              "availability_summary": "preferred 4 days; on-call-only 1 day; avoid-if-possible 2 days",
+              "cells": [
+                {
+                  "assignment_status": "pass",
+                  "manual_override": false,
+                  "planned_driver_day_state": "assigned",
+                  "projected_minutes": 510,
+                  "route_slot_id": "slot-20260322-cycle1-standard#16",
+                  "row_kind": "assignment",
+                  "service_date": "2026-03-22",
+                  "state": "assigned"
+                },
+                {
+                  "assignment_status": null,
+                  "manual_override": false,
+                  "planned_driver_day_state": null,
+                  "projected_minutes": null,
+                  "route_slot_id": null,
+                  "row_kind": null,
+                  "service_date": "2026-03-23",
+                  "state": "empty"
+                },
+                {
+                  "assignment_status": null,
+                  "manual_override": false,
+                  "planned_driver_day_state": null,
+                  "projected_minutes": null,
+                  "route_slot_id": null,
+                  "row_kind": null,
+                  "service_date": "2026-03-24",
+                  "state": "empty"
+                },
+                {
+                  "assignment_status": null,
+                  "manual_override": false,
+                  "planned_driver_day_state": null,
+                  "projected_minutes": null,
+                  "route_slot_id": null,
+                  "row_kind": null,
+                  "service_date": "2026-03-25",
+                  "state": "empty"
+                },
+                {
+                  "assignment_status": "pass",
+                  "manual_override": false,
+                  "planned_driver_day_state": "assigned",
+                  "projected_minutes": 510,
+                  "route_slot_id": "slot-20260326-cycle1-standard#13",
+                  "row_kind": "assignment",
+                  "service_date": "2026-03-26",
+                  "state": "assigned"
+                },
+                {
+                  "assignment_status": "reserve",
+                  "manual_override": false,
+                  "planned_driver_day_state": "on_call",
+                  "projected_minutes": 180,
+                  "route_slot_id": "oncall-20260327#02",
+                  "row_kind": "reserve",
+                  "service_date": "2026-03-27",
+                  "state": "on_call"
+                },
+                {
+                  "assignment_status": "pass",
+                  "manual_override": false,
+                  "planned_driver_day_state": "assigned",
+                  "projected_minutes": 510,
+                  "route_slot_id": "slot-20260328-cycle1-standard#15",
+                  "row_kind": "assignment",
+                  "service_date": "2026-03-28",
+                  "state": "assigned"
+                }
+              ],
+              "driver_id": "AKF1ZEB0TWD96",
+              "driver_name": "Rahul mannan",
+              "employment_type": "full_time",
+              "on_call_eligible": true,
+              "previous_week_minutes": 2220
+            },
+            {
+              "availability_summary": "preferred 4 days; available 2 days; on-call-only 1 day",
+              "cells": [
+                {
+                  "assignment_status": "pass",
+                  "manual_override": false,
+                  "planned_driver_day_state": "assigned",
+                  "projected_minutes": 510,
+                  "route_slot_id": "slot-20260322-cycle1-standard#13",
+                  "row_kind": "assignment",
+                  "service_date": "2026-03-22",
+                  "state": "assigned"
+                },
+                {
+                  "assignment_status": "pass",
+                  "manual_override": false,
+                  "planned_driver_day_state": "assigned",
+                  "projected_minutes": 510,
+                  "route_slot_id": "slot-20260323-cycle1-standard#21",
+                  "row_kind": "assignment",
+                  "service_date": "2026-03-23",
+                  "state": "assigned"
+                },
+                {
+                  "assignment_status": "pass",
+                  "manual_override": false,
+                  "planned_driver_day_state": "assigned",
+                  "projected_minutes": 510,
+                  "route_slot_id": "slot-20260324-cycle1-standard#13",
+                  "row_kind": "assignment",
+                  "service_date": "2026-03-24",
+                  "state": "assigned"
+                },
+                {
+                  "assignment_status": null,
+                  "manual_override": false,
+                  "planned_driver_day_state": null,
+                  "projected_minutes": null,
+                  "route_slot_id": null,
+                  "row_kind": null,
+                  "service_date": "2026-03-25",
+                  "state": "empty"
+                },
+                {
+                  "assignment_status": null,
+                  "manual_override": false,
+                  "planned_driver_day_state": null,
+                  "projected_minutes": null,
+                  "route_slot_id": null,
+                  "row_kind": null,
+                  "service_date": "2026-03-26",
+                  "state": "empty"
+                },
+                {
+                  "assignment_status": "pass",
+                  "manual_override": false,
+                  "planned_driver_day_state": "assigned",
+                  "projected_minutes": 510,
+                  "route_slot_id": "slot-20260327-cycle1-standard#13",
+                  "row_kind": "assignment",
+                  "service_date": "2026-03-27",
+                  "state": "assigned"
+                },
+                {
+                  "assignment_status": null,
+                  "manual_override": false,
+                  "planned_driver_day_state": null,
+                  "projected_minutes": null,
+                  "route_slot_id": null,
+                  "row_kind": null,
+                  "service_date": "2026-03-28",
+                  "state": "empty"
+                }
+              ],
+              "driver_id": "A52BQ5U4SHE8W",
+              "driver_name": "Rajveer Singh",
+              "employment_type": "full_time",
+              "on_call_eligible": true,
+              "previous_week_minutes": 2640
+            },
+            {
+              "availability_summary": "preferred 4 days; available 1 day; on-call-only 1 day; avoid-if-possible 1 day",
+              "cells": [
+                {
+                  "assignment_status": "pass",
+                  "manual_override": false,
+                  "planned_driver_day_state": "assigned",
+                  "projected_minutes": 510,
+                  "route_slot_id": "slot-20260322-cycle1-standard#08",
+                  "row_kind": "assignment",
+                  "service_date": "2026-03-22",
+                  "state": "assigned"
+                },
+                {
+                  "assignment_status": "reserve",
+                  "manual_override": false,
+                  "planned_driver_day_state": "on_call",
+                  "projected_minutes": 180,
+                  "route_slot_id": "oncall-20260323#01",
+                  "row_kind": "reserve",
+                  "service_date": "2026-03-23",
+                  "state": "on_call"
+                },
+                {
+                  "assignment_status": "pass",
+                  "manual_override": false,
+                  "planned_driver_day_state": "assigned",
+                  "projected_minutes": 510,
+                  "route_slot_id": "slot-20260324-cycle1-standard#19",
+                  "row_kind": "assignment",
+                  "service_date": "2026-03-24",
+                  "state": "assigned"
+                },
+                {
+                  "assignment_status": null,
+                  "manual_override": false,
+                  "planned_driver_day_state": null,
+                  "projected_minutes": null,
+                  "route_slot_id": null,
+                  "row_kind": null,
+                  "service_date": "2026-03-25",
+                  "state": "empty"
+                },
+                {
+                  "assignment_status": null,
+                  "manual_override": false,
+                  "planned_driver_day_state": null,
+                  "projected_minutes": null,
+                  "route_slot_id": null,
+                  "row_kind": null,
+                  "service_date": "2026-03-26",
+                  "state": "empty"
+                },
+                {
+                  "assignment_status": null,
+                  "manual_override": false,
+                  "planned_driver_day_state": null,
+                  "projected_minutes": null,
+                  "route_slot_id": null,
+                  "row_kind": null,
+                  "service_date": "2026-03-27",
+                  "state": "empty"
+                },
+                {
+                  "assignment_status": "pass",
+                  "manual_override": false,
+                  "planned_driver_day_state": "assigned",
+                  "projected_minutes": 510,
+                  "route_slot_id": "slot-20260328-cycle1-standard#11",
+                  "row_kind": "assignment",
+                  "service_date": "2026-03-28",
+                  "state": "assigned"
+                }
+              ],
+              "driver_id": "A3QZ9AS16464VX",
+              "driver_name": "Ravdeep Singh",
+              "employment_type": "full_time",
+              "on_call_eligible": true,
+              "previous_week_minutes": 2220
+            },
+            {
+              "availability_summary": "available 4 days; on-call-only 2 days; avoid-if-possible 1 day",
+              "cells": [
+                {
+                  "assignment_status": null,
+                  "manual_override": false,
+                  "planned_driver_day_state": null,
+                  "projected_minutes": null,
+                  "route_slot_id": null,
+                  "row_kind": null,
+                  "service_date": "2026-03-22",
+                  "state": "empty"
+                },
+                {
+                  "assignment_status": null,
+                  "manual_override": false,
+                  "planned_driver_day_state": null,
+                  "projected_minutes": null,
+                  "route_slot_id": null,
+                  "row_kind": null,
+                  "service_date": "2026-03-23",
+                  "state": "empty"
+                },
+                {
+                  "assignment_status": "pass",
+                  "manual_override": false,
+                  "planned_driver_day_state": "assigned",
+                  "projected_minutes": 510,
+                  "route_slot_id": "slot-20260324-cycle1-standard#10",
+                  "row_kind": "assignment",
+                  "service_date": "2026-03-24",
+                  "state": "assigned"
+                },
+                {
+                  "assignment_status": "pass",
+                  "manual_override": false,
+                  "planned_driver_day_state": "assigned",
+                  "projected_minutes": 510,
+                  "route_slot_id": "slot-20260325-cycle1-standard#01",
+                  "row_kind": "assignment",
+                  "service_date": "2026-03-25",
+                  "state": "assigned"
+                },
+                {
+                  "assignment_status": "pass",
+                  "manual_override": false,
+                  "planned_driver_day_state": "assigned",
+                  "projected_minutes": 510,
+                  "route_slot_id": "slot-20260326-cycle1-standard#01",
+                  "row_kind": "assignment",
+                  "service_date": "2026-03-26",
+                  "state": "assigned"
+                },
+                {
+                  "assignment_status": "pass",
+                  "manual_override": false,
+                  "planned_driver_day_state": "assigned",
+                  "projected_minutes": 510,
+                  "route_slot_id": "slot-20260327-cycle1-standard#01",
+                  "row_kind": "assignment",
+                  "service_date": "2026-03-27",
+                  "state": "assigned"
+                },
+                {
+                  "assignment_status": null,
+                  "manual_override": false,
+                  "planned_driver_day_state": null,
+                  "projected_minutes": null,
+                  "route_slot_id": null,
+                  "row_kind": null,
+                  "service_date": "2026-03-28",
+                  "state": "empty"
+                }
+              ],
+              "driver_id": "A1ARZD44V26ZMJ",
+              "driver_name": "Ravinderpreet Singh",
+              "employment_type": "part_time",
+              "on_call_eligible": true,
+              "previous_week_minutes": 0
+            },
+            {
+              "availability_summary": "preferred 4 days; on-call-only 1 day; avoid-if-possible 2 days",
+              "cells": [
+                {
+                  "assignment_status": null,
+                  "manual_override": false,
+                  "planned_driver_day_state": null,
+                  "projected_minutes": null,
+                  "route_slot_id": null,
+                  "row_kind": null,
+                  "service_date": "2026-03-22",
+                  "state": "empty"
+                },
+                {
+                  "assignment_status": "pass",
+                  "manual_override": false,
+                  "planned_driver_day_state": "assigned",
+                  "projected_minutes": 510,
+                  "route_slot_id": "slot-20260323-cycle1-standard#14",
+                  "row_kind": "assignment",
+                  "service_date": "2026-03-23",
+                  "state": "assigned"
+                },
+                {
+                  "assignment_status": "pass",
+                  "manual_override": false,
+                  "planned_driver_day_state": "assigned",
+                  "projected_minutes": 510,
+                  "route_slot_id": "slot-20260324-cycle1-standard#17",
+                  "row_kind": "assignment",
+                  "service_date": "2026-03-24",
+                  "state": "assigned"
+                },
+                {
+                  "assignment_status": "pass",
+                  "manual_override": false,
+                  "planned_driver_day_state": "assigned",
+                  "projected_minutes": 510,
+                  "route_slot_id": "slot-20260325-cycle1-standard#19",
+                  "row_kind": "assignment",
+                  "service_date": "2026-03-25",
+                  "state": "assigned"
+                },
+                {
+                  "assignment_status": "pass",
+                  "manual_override": false,
+                  "planned_driver_day_state": "assigned",
+                  "projected_minutes": 510,
+                  "route_slot_id": "slot-20260326-cycle1-standard#20",
+                  "row_kind": "assignment",
+                  "service_date": "2026-03-26",
+                  "state": "assigned"
+                },
+                {
+                  "assignment_status": null,
+                  "manual_override": false,
+                  "planned_driver_day_state": null,
+                  "projected_minutes": null,
+                  "route_slot_id": null,
+                  "row_kind": null,
+                  "service_date": "2026-03-27",
+                  "state": "empty"
+                },
+                {
+                  "assignment_status": null,
+                  "manual_override": false,
+                  "planned_driver_day_state": null,
+                  "projected_minutes": null,
+                  "route_slot_id": null,
+                  "row_kind": null,
+                  "service_date": "2026-03-28",
+                  "state": "empty"
+                }
+              ],
+              "driver_id": "A3QZGAMB5M5IK0",
+              "driver_name": "Rompal Singh Hayer",
+              "employment_type": "full_time",
+              "on_call_eligible": true,
+              "previous_week_minutes": 2220
+            },
+            {
+              "availability_summary": "preferred 4 days; available 2 days; avoid-if-possible 1 day",
+              "cells": [
+                {
+                  "assignment_status": "pass",
+                  "manual_override": false,
+                  "planned_driver_day_state": "assigned",
+                  "projected_minutes": 510,
+                  "route_slot_id": "excess-20260322#04",
+                  "row_kind": "assignment",
+                  "service_date": "2026-03-22",
+                  "state": "assigned"
+                },
+                {
+                  "assignment_status": "pass",
+                  "manual_override": false,
+                  "planned_driver_day_state": "assigned",
+                  "projected_minutes": 510,
+                  "route_slot_id": "excess-20260323#05",
+                  "row_kind": "assignment",
+                  "service_date": "2026-03-23",
+                  "state": "assigned"
+                },
+                {
+                  "assignment_status": null,
+                  "manual_override": false,
+                  "planned_driver_day_state": null,
+                  "projected_minutes": null,
+                  "route_slot_id": null,
+                  "row_kind": null,
+                  "service_date": "2026-03-24",
+                  "state": "empty"
+                },
+                {
+                  "assignment_status": null,
+                  "manual_override": false,
+                  "planned_driver_day_state": null,
+                  "projected_minutes": null,
+                  "route_slot_id": null,
+                  "row_kind": null,
+                  "service_date": "2026-03-25",
+                  "state": "empty"
+                },
+                {
+                  "assignment_status": null,
+                  "manual_override": false,
+                  "planned_driver_day_state": null,
+                  "projected_minutes": null,
+                  "route_slot_id": null,
+                  "row_kind": null,
+                  "service_date": "2026-03-26",
+                  "state": "empty"
+                },
+                {
+                  "assignment_status": null,
+                  "manual_override": false,
+                  "planned_driver_day_state": null,
+                  "projected_minutes": null,
+                  "route_slot_id": null,
+                  "row_kind": null,
+                  "service_date": "2026-03-27",
+                  "state": "empty"
+                },
+                {
+                  "assignment_status": "pass",
+                  "manual_override": false,
+                  "planned_driver_day_state": "assigned",
+                  "projected_minutes": 510,
+                  "route_slot_id": "slot-20260328-cycle1-standard#05",
+                  "row_kind": "assignment",
+                  "service_date": "2026-03-28",
+                  "state": "assigned"
+                }
+              ],
+              "driver_id": "A2FC17ONJKWXTE",
+              "driver_name": "Sachin Goyal",
+              "employment_type": "full_time",
+              "on_call_eligible": true,
+              "previous_week_minutes": 2040
+            },
+            {
+              "availability_summary": "preferred 4 days; avoid-if-possible 3 days",
+              "cells": [
+                {
+                  "assignment_status": null,
+                  "manual_override": false,
+                  "planned_driver_day_state": null,
+                  "projected_minutes": null,
+                  "route_slot_id": null,
+                  "row_kind": null,
+                  "service_date": "2026-03-22",
+                  "state": "empty"
+                },
+                {
+                  "assignment_status": null,
+                  "manual_override": false,
+                  "planned_driver_day_state": null,
+                  "projected_minutes": null,
+                  "route_slot_id": null,
+                  "row_kind": null,
+                  "service_date": "2026-03-23",
+                  "state": "empty"
+                },
+                {
+                  "assignment_status": "pass",
+                  "manual_override": false,
+                  "planned_driver_day_state": "assigned",
+                  "projected_minutes": 510,
+                  "route_slot_id": "slot-20260324-cycle1-standard#14",
+                  "row_kind": "assignment",
+                  "service_date": "2026-03-24",
+                  "state": "assigned"
+                },
+                {
+                  "assignment_status": "pass",
+                  "manual_override": false,
+                  "planned_driver_day_state": "assigned",
+                  "projected_minutes": 510,
+                  "route_slot_id": "slot-20260325-cycle1-standard#14",
+                  "row_kind": "assignment",
+                  "service_date": "2026-03-25",
+                  "state": "assigned"
+                },
+                {
+                  "assignment_status": "pass",
+                  "manual_override": false,
+                  "planned_driver_day_state": "assigned",
+                  "projected_minutes": 510,
+                  "route_slot_id": "excess-20260326#03",
+                  "row_kind": "assignment",
+                  "service_date": "2026-03-26",
+                  "state": "assigned"
+                },
+                {
+                  "assignment_status": "pass",
+                  "manual_override": false,
+                  "planned_driver_day_state": "assigned",
+                  "projected_minutes": 510,
+                  "route_slot_id": "slot-20260327-cycle1-standard#05",
+                  "row_kind": "assignment",
+                  "service_date": "2026-03-27",
+                  "state": "assigned"
+                },
+                {
+                  "assignment_status": null,
+                  "manual_override": false,
+                  "planned_driver_day_state": null,
+                  "projected_minutes": null,
+                  "route_slot_id": null,
+                  "row_kind": null,
+                  "service_date": "2026-03-28",
+                  "state": "empty"
+                }
+              ],
+              "driver_id": "A3E56T6T8L9V8J",
+              "driver_name": "Shafahad Ali Shah",
+              "employment_type": "full_time",
+              "on_call_eligible": false,
+              "previous_week_minutes": 1530
+            },
+            {
+              "availability_summary": "preferred 4 days; available 1 day; on-call-only 1 day; avoid-if-possible 1 day",
+              "cells": [
+                {
+                  "assignment_status": null,
+                  "manual_override": false,
+                  "planned_driver_day_state": null,
+                  "projected_minutes": null,
+                  "route_slot_id": null,
+                  "row_kind": null,
+                  "service_date": "2026-03-22",
+                  "state": "empty"
+                },
+                {
+                  "assignment_status": null,
+                  "manual_override": false,
+                  "planned_driver_day_state": null,
+                  "projected_minutes": null,
+                  "route_slot_id": null,
+                  "row_kind": null,
+                  "service_date": "2026-03-23",
+                  "state": "empty"
+                },
+                {
+                  "assignment_status": null,
+                  "manual_override": false,
+                  "planned_driver_day_state": null,
+                  "projected_minutes": null,
+                  "route_slot_id": null,
+                  "row_kind": null,
+                  "service_date": "2026-03-24",
+                  "state": "empty"
+                },
+                {
+                  "assignment_status": "reserve",
+                  "manual_override": false,
+                  "planned_driver_day_state": "on_call",
+                  "projected_minutes": 180,
+                  "route_slot_id": "oncall-20260325#02",
+                  "row_kind": "reserve",
+                  "service_date": "2026-03-25",
+                  "state": "on_call"
+                },
+                {
+                  "assignment_status": "pass",
+                  "manual_override": false,
+                  "planned_driver_day_state": "assigned",
+                  "projected_minutes": 510,
+                  "route_slot_id": "slot-20260326-cycle1-standard#15",
+                  "row_kind": "assignment",
+                  "service_date": "2026-03-26",
+                  "state": "assigned"
+                },
+                {
+                  "assignment_status": "pass",
+                  "manual_override": false,
+                  "planned_driver_day_state": "assigned",
+                  "projected_minutes": 510,
+                  "route_slot_id": "slot-20260327-cycle1-standard#15",
+                  "row_kind": "assignment",
+                  "service_date": "2026-03-27",
+                  "state": "assigned"
+                },
+                {
+                  "assignment_status": "pass",
+                  "manual_override": false,
+                  "planned_driver_day_state": "assigned",
+                  "projected_minutes": 510,
+                  "route_slot_id": "slot-20260328-cycle1-standard#09",
+                  "row_kind": "assignment",
+                  "service_date": "2026-03-28",
+                  "state": "assigned"
+                }
+              ],
+              "driver_id": "A4KU9LEU82OTF",
+              "driver_name": "Sikander Singh",
+              "employment_type": "full_time",
+              "on_call_eligible": true,
+              "previous_week_minutes": 2220
+            },
+            {
+              "availability_summary": "preferred 4 days; available 1 day; on-call-only 1 day; avoid-if-possible 1 day",
+              "cells": [
+                {
+                  "assignment_status": null,
+                  "manual_override": false,
+                  "planned_driver_day_state": null,
+                  "projected_minutes": null,
+                  "route_slot_id": null,
+                  "row_kind": null,
+                  "service_date": "2026-03-22",
+                  "state": "empty"
+                },
+                {
+                  "assignment_status": "pass",
+                  "manual_override": false,
+                  "planned_driver_day_state": "assigned",
+                  "projected_minutes": 510,
+                  "route_slot_id": "slot-20260323-cycle1-standard#07",
+                  "row_kind": "assignment",
+                  "service_date": "2026-03-23",
+                  "state": "assigned"
+                },
+                {
+                  "assignment_status": "pass",
+                  "manual_override": false,
+                  "planned_driver_day_state": "assigned",
+                  "projected_minutes": 510,
+                  "route_slot_id": "slot-20260324-cycle1-standard#01",
+                  "row_kind": "assignment",
+                  "service_date": "2026-03-24",
+                  "state": "assigned"
+                },
+                {
+                  "assignment_status": "pass",
+                  "manual_override": false,
+                  "planned_driver_day_state": "assigned",
+                  "projected_minutes": 510,
+                  "route_slot_id": "slot-20260325-cycle1-standard#02",
+                  "row_kind": "assignment",
+                  "service_date": "2026-03-25",
+                  "state": "assigned"
+                },
+                {
+                  "assignment_status": "pass",
+                  "manual_override": false,
+                  "planned_driver_day_state": "assigned",
+                  "projected_minutes": 510,
+                  "route_slot_id": "slot-20260326-cycle1-standard#05",
+                  "row_kind": "assignment",
+                  "service_date": "2026-03-26",
+                  "state": "assigned"
+                },
+                {
+                  "assignment_status": null,
+                  "manual_override": false,
+                  "planned_driver_day_state": null,
+                  "projected_minutes": null,
+                  "route_slot_id": null,
+                  "row_kind": null,
+                  "service_date": "2026-03-27",
+                  "state": "empty"
+                },
+                {
+                  "assignment_status": null,
+                  "manual_override": false,
+                  "planned_driver_day_state": null,
+                  "projected_minutes": null,
+                  "route_slot_id": null,
+                  "row_kind": null,
+                  "service_date": "2026-03-28",
+                  "state": "empty"
+                }
+              ],
+              "driver_id": "AIFFWKTFS3ZPS",
+              "driver_name": "Sukhmanpreet Singh",
+              "employment_type": "full_time",
+              "on_call_eligible": true,
+              "previous_week_minutes": 0
+            },
+            {
+              "availability_summary": "preferred 4 days; on-call-only 1 day; avoid-if-possible 2 days",
+              "cells": [
+                {
+                  "assignment_status": "reserve",
+                  "manual_override": false,
+                  "planned_driver_day_state": "on_call",
+                  "projected_minutes": 180,
+                  "route_slot_id": "oncall-20260322#03",
+                  "row_kind": "reserve",
+                  "service_date": "2026-03-22",
+                  "state": "on_call"
+                },
+                {
+                  "assignment_status": "pass",
+                  "manual_override": false,
+                  "planned_driver_day_state": "assigned",
+                  "projected_minutes": 510,
+                  "route_slot_id": "slot-20260323-cycle1-standard#18",
+                  "row_kind": "assignment",
+                  "service_date": "2026-03-23",
+                  "state": "assigned"
+                },
+                {
+                  "assignment_status": null,
+                  "manual_override": false,
+                  "planned_driver_day_state": null,
+                  "projected_minutes": null,
+                  "route_slot_id": null,
+                  "row_kind": null,
+                  "service_date": "2026-03-24",
+                  "state": "empty"
+                },
+                {
+                  "assignment_status": null,
+                  "manual_override": false,
+                  "planned_driver_day_state": null,
+                  "projected_minutes": null,
+                  "route_slot_id": null,
+                  "row_kind": null,
+                  "service_date": "2026-03-25",
+                  "state": "empty"
+                },
+                {
+                  "assignment_status": "pass",
+                  "manual_override": false,
+                  "planned_driver_day_state": "assigned",
+                  "projected_minutes": 510,
+                  "route_slot_id": "excess-20260326#01",
+                  "row_kind": "assignment",
+                  "service_date": "2026-03-26",
+                  "state": "assigned"
+                },
+                {
+                  "assignment_status": "pass",
+                  "manual_override": false,
+                  "planned_driver_day_state": "assigned",
+                  "projected_minutes": 510,
+                  "route_slot_id": "excess-20260327#03",
+                  "row_kind": "assignment",
+                  "service_date": "2026-03-27",
+                  "state": "assigned"
+                },
+                {
+                  "assignment_status": null,
+                  "manual_override": false,
+                  "planned_driver_day_state": null,
+                  "projected_minutes": null,
+                  "route_slot_id": null,
+                  "row_kind": null,
+                  "service_date": "2026-03-28",
+                  "state": "empty"
+                }
+              ],
+              "driver_id": "AYLV43T35EAIN",
+              "driver_name": "Sukhwinder Singh",
+              "employment_type": "full_time",
+              "on_call_eligible": true,
+              "previous_week_minutes": 2220
+            },
+            {
+              "availability_summary": "preferred 4 days; on-call-only 1 day; avoid-if-possible 2 days",
+              "cells": [
+                {
+                  "assignment_status": "pass",
+                  "manual_override": false,
+                  "planned_driver_day_state": "assigned",
+                  "projected_minutes": 510,
+                  "route_slot_id": "slot-20260322-cycle1-standard#11",
+                  "row_kind": "assignment",
+                  "service_date": "2026-03-22",
+                  "state": "assigned"
+                },
+                {
+                  "assignment_status": "pass",
+                  "manual_override": false,
+                  "planned_driver_day_state": "assigned",
+                  "projected_minutes": 510,
+                  "route_slot_id": "slot-20260323-cycle1-standard#20",
+                  "row_kind": "assignment",
+                  "service_date": "2026-03-23",
+                  "state": "assigned"
+                },
+                {
+                  "assignment_status": null,
+                  "manual_override": false,
+                  "planned_driver_day_state": null,
+                  "projected_minutes": null,
+                  "route_slot_id": null,
+                  "row_kind": null,
+                  "service_date": "2026-03-24",
+                  "state": "empty"
+                },
+                {
+                  "assignment_status": null,
+                  "manual_override": false,
+                  "planned_driver_day_state": null,
+                  "projected_minutes": null,
+                  "route_slot_id": null,
+                  "row_kind": null,
+                  "service_date": "2026-03-25",
+                  "state": "empty"
+                },
+                {
+                  "assignment_status": null,
+                  "manual_override": false,
+                  "planned_driver_day_state": null,
+                  "projected_minutes": null,
+                  "route_slot_id": null,
+                  "row_kind": null,
+                  "service_date": "2026-03-26",
+                  "state": "empty"
+                },
+                {
+                  "assignment_status": "pass",
+                  "manual_override": false,
+                  "planned_driver_day_state": "assigned",
+                  "projected_minutes": 510,
+                  "route_slot_id": "slot-20260327-cycle1-standard#11",
+                  "row_kind": "assignment",
+                  "service_date": "2026-03-27",
+                  "state": "assigned"
+                },
+                {
+                  "assignment_status": "pass",
+                  "manual_override": false,
+                  "planned_driver_day_state": "assigned",
+                  "projected_minutes": 510,
+                  "route_slot_id": "slot-20260328-cycle1-standard#07",
+                  "row_kind": "assignment",
+                  "service_date": "2026-03-28",
+                  "state": "assigned"
+                }
+              ],
+              "driver_id": "A1NQEGRS26IBJA",
+              "driver_name": "Suraj Pratap Singh",
+              "employment_type": "full_time",
+              "on_call_eligible": true,
+              "previous_week_minutes": 2220
+            },
+            {
+              "availability_summary": "preferred 2 days; available 4 days; avoid-if-possible 1 day",
+              "cells": [
+                {
+                  "assignment_status": "pass",
+                  "manual_override": false,
+                  "planned_driver_day_state": "assigned",
+                  "projected_minutes": 510,
+                  "route_slot_id": "slot-20260322-cycle1-standard#01",
+                  "row_kind": "assignment",
+                  "service_date": "2026-03-22",
+                  "state": "assigned"
+                },
+                {
+                  "assignment_status": "pass",
+                  "manual_override": false,
+                  "planned_driver_day_state": "assigned",
+                  "projected_minutes": 510,
+                  "route_slot_id": "slot-20260323-cycle1-standard#11",
+                  "row_kind": "assignment",
+                  "service_date": "2026-03-23",
+                  "state": "assigned"
+                },
+                {
+                  "assignment_status": null,
+                  "manual_override": false,
+                  "planned_driver_day_state": null,
+                  "projected_minutes": null,
+                  "route_slot_id": null,
+                  "row_kind": null,
+                  "service_date": "2026-03-24",
+                  "state": "empty"
+                },
+                {
+                  "assignment_status": null,
+                  "manual_override": false,
+                  "planned_driver_day_state": null,
+                  "projected_minutes": null,
+                  "route_slot_id": null,
+                  "row_kind": null,
+                  "service_date": "2026-03-25",
+                  "state": "empty"
+                },
+                {
+                  "assignment_status": null,
+                  "manual_override": false,
+                  "planned_driver_day_state": null,
+                  "projected_minutes": null,
+                  "route_slot_id": null,
+                  "row_kind": null,
+                  "service_date": "2026-03-26",
+                  "state": "empty"
+                },
+                {
+                  "assignment_status": "pass",
+                  "manual_override": false,
+                  "planned_driver_day_state": "assigned",
+                  "projected_minutes": 510,
+                  "route_slot_id": "slot-20260327-cycle1-standard#03",
+                  "row_kind": "assignment",
+                  "service_date": "2026-03-27",
+                  "state": "assigned"
+                },
+                {
+                  "assignment_status": "pass",
+                  "manual_override": false,
+                  "planned_driver_day_state": "assigned",
+                  "projected_minutes": 510,
+                  "route_slot_id": "slot-20260328-cycle1-standard#02",
+                  "row_kind": "assignment",
+                  "service_date": "2026-03-28",
+                  "state": "assigned"
+                }
+              ],
+              "driver_id": "A5DRVS25INNWR",
+              "driver_name": "Syed Kamran Shah",
+              "employment_type": "part_time",
+              "on_call_eligible": true,
+              "previous_week_minutes": 1020
+            },
+            {
+              "availability_summary": "available 5 days; avoid-if-possible 2 days",
+              "cells": [
+                {
+                  "assignment_status": null,
+                  "manual_override": false,
+                  "planned_driver_day_state": null,
+                  "projected_minutes": null,
+                  "route_slot_id": null,
+                  "row_kind": null,
+                  "service_date": "2026-03-22",
+                  "state": "empty"
+                },
+                {
+                  "assignment_status": null,
+                  "manual_override": false,
+                  "planned_driver_day_state": null,
+                  "projected_minutes": null,
+                  "route_slot_id": null,
+                  "row_kind": null,
+                  "service_date": "2026-03-23",
+                  "state": "empty"
+                },
+                {
+                  "assignment_status": null,
+                  "manual_override": false,
+                  "planned_driver_day_state": null,
+                  "projected_minutes": null,
+                  "route_slot_id": null,
+                  "row_kind": null,
+                  "service_date": "2026-03-24",
+                  "state": "empty"
+                },
+                {
+                  "assignment_status": null,
+                  "manual_override": false,
+                  "planned_driver_day_state": null,
+                  "projected_minutes": null,
+                  "route_slot_id": null,
+                  "row_kind": null,
+                  "service_date": "2026-03-25",
+                  "state": "empty"
+                },
+                {
+                  "assignment_status": null,
+                  "manual_override": false,
+                  "planned_driver_day_state": null,
+                  "projected_minutes": null,
+                  "route_slot_id": null,
+                  "row_kind": null,
+                  "service_date": "2026-03-26",
+                  "state": "empty"
+                },
+                {
+                  "assignment_status": null,
+                  "manual_override": false,
+                  "planned_driver_day_state": null,
+                  "projected_minutes": null,
+                  "route_slot_id": null,
+                  "row_kind": null,
+                  "service_date": "2026-03-27",
+                  "state": "empty"
+                },
+                {
+                  "assignment_status": "pass",
+                  "manual_override": false,
+                  "planned_driver_day_state": "assigned",
+                  "projected_minutes": 510,
+                  "route_slot_id": "slot-20260328-cycle1-standard#04",
+                  "row_kind": "assignment",
+                  "service_date": "2026-03-28",
+                  "state": "assigned"
+                }
+              ],
+              "driver_id": "A2GJBFCCI1VYRB",
+              "driver_name": "Tanveer Singh",
+              "employment_type": "part_time",
+              "on_call_eligible": true,
+              "previous_week_minutes": 1710
+            },
+            {
+              "availability_summary": "preferred 4 days; on-call-only 1 day; avoid-if-possible 2 days",
+              "cells": [
+                {
+                  "assignment_status": null,
+                  "manual_override": false,
+                  "planned_driver_day_state": null,
+                  "projected_minutes": null,
+                  "route_slot_id": null,
+                  "row_kind": null,
+                  "service_date": "2026-03-22",
+                  "state": "empty"
+                },
+                {
+                  "assignment_status": "pass",
+                  "manual_override": false,
+                  "planned_driver_day_state": "assigned",
+                  "projected_minutes": 510,
+                  "route_slot_id": "slot-20260323-cycle1-standard#16",
+                  "row_kind": "assignment",
+                  "service_date": "2026-03-23",
+                  "state": "assigned"
+                },
+                {
+                  "assignment_status": "pass",
+                  "manual_override": false,
+                  "planned_driver_day_state": "assigned",
+                  "projected_minutes": 510,
+                  "route_slot_id": "excess-20260324#01",
+                  "row_kind": "assignment",
+                  "service_date": "2026-03-24",
+                  "state": "assigned"
+                },
+                {
+                  "assignment_status": "pass",
+                  "manual_override": false,
+                  "planned_driver_day_state": "assigned",
+                  "projected_minutes": 510,
+                  "route_slot_id": "excess-20260325#01",
+                  "row_kind": "assignment",
+                  "service_date": "2026-03-25",
+                  "state": "assigned"
+                },
+                {
+                  "assignment_status": null,
+                  "manual_override": false,
+                  "planned_driver_day_state": null,
+                  "projected_minutes": null,
+                  "route_slot_id": null,
+                  "row_kind": null,
+                  "service_date": "2026-03-26",
+                  "state": "empty"
+                },
+                {
+                  "assignment_status": "reserve",
+                  "manual_override": false,
+                  "planned_driver_day_state": "on_call",
+                  "projected_minutes": 180,
+                  "route_slot_id": "oncall-20260327#03",
+                  "row_kind": "reserve",
+                  "service_date": "2026-03-27",
+                  "state": "on_call"
+                },
+                {
+                  "assignment_status": null,
+                  "manual_override": false,
+                  "planned_driver_day_state": null,
+                  "projected_minutes": null,
+                  "route_slot_id": null,
+                  "row_kind": null,
+                  "service_date": "2026-03-28",
+                  "state": "empty"
+                }
+              ],
+              "driver_id": "A33HB7XV71IC7T",
+              "driver_name": "Tarandeep Singh",
+              "employment_type": "full_time",
+              "on_call_eligible": true,
+              "previous_week_minutes": 2220
+            },
+            {
+              "availability_summary": "available 6 days; avoid-if-possible 1 day",
+              "cells": [
+                {
+                  "assignment_status": null,
+                  "manual_override": false,
+                  "planned_driver_day_state": null,
+                  "projected_minutes": null,
+                  "route_slot_id": null,
+                  "row_kind": null,
+                  "service_date": "2026-03-22",
+                  "state": "empty"
+                },
+                {
+                  "assignment_status": "pass",
+                  "manual_override": false,
+                  "planned_driver_day_state": "assigned",
+                  "projected_minutes": 510,
+                  "route_slot_id": "slot-20260323-cycle1-standard#05",
+                  "row_kind": "assignment",
+                  "service_date": "2026-03-23",
+                  "state": "assigned"
+                },
+                {
+                  "assignment_status": "pass",
+                  "manual_override": false,
+                  "planned_driver_day_state": "assigned",
+                  "projected_minutes": 510,
+                  "route_slot_id": "slot-20260324-cycle1-standard#05",
+                  "row_kind": "assignment",
+                  "service_date": "2026-03-24",
+                  "state": "assigned"
+                },
+                {
+                  "assignment_status": "pass",
+                  "manual_override": false,
+                  "planned_driver_day_state": "assigned",
+                  "projected_minutes": 510,
+                  "route_slot_id": "slot-20260325-cycle1-standard#10",
+                  "row_kind": "assignment",
+                  "service_date": "2026-03-25",
+                  "state": "assigned"
+                },
+                {
+                  "assignment_status": "pass",
+                  "manual_override": false,
+                  "planned_driver_day_state": "assigned",
+                  "projected_minutes": 510,
+                  "route_slot_id": "slot-20260326-cycle1-standard#06",
+                  "row_kind": "assignment",
+                  "service_date": "2026-03-26",
+                  "state": "assigned"
+                },
+                {
+                  "assignment_status": null,
+                  "manual_override": false,
+                  "planned_driver_day_state": null,
+                  "projected_minutes": null,
+                  "route_slot_id": null,
+                  "row_kind": null,
+                  "service_date": "2026-03-27",
+                  "state": "empty"
+                },
+                {
+                  "assignment_status": null,
+                  "manual_override": false,
+                  "planned_driver_day_state": null,
+                  "projected_minutes": null,
+                  "route_slot_id": null,
+                  "row_kind": null,
+                  "service_date": "2026-03-28",
+                  "state": "empty"
+                }
+              ],
+              "driver_id": "A1BWWMZFC5PAMI",
+              "driver_name": "Veerdevinder Singh",
+              "employment_type": "part_time",
+              "on_call_eligible": false,
+              "previous_week_minutes": 0
+            },
+            {
+              "availability_summary": "preferred 4 days; on-call-only 1 day; avoid-if-possible 2 days",
+              "cells": [
+                {
+                  "assignment_status": "pass",
+                  "manual_override": false,
+                  "planned_driver_day_state": "assigned",
+                  "projected_minutes": 510,
+                  "route_slot_id": "slot-20260322-cycle1-standard#06",
+                  "row_kind": "assignment",
+                  "service_date": "2026-03-22",
+                  "state": "assigned"
+                },
+                {
+                  "assignment_status": "pass",
+                  "manual_override": false,
+                  "planned_driver_day_state": "assigned",
+                  "projected_minutes": 510,
+                  "route_slot_id": "excess-20260323#04",
+                  "row_kind": "assignment",
+                  "service_date": "2026-03-23",
+                  "state": "assigned"
+                },
+                {
+                  "assignment_status": null,
+                  "manual_override": false,
+                  "planned_driver_day_state": null,
+                  "projected_minutes": null,
+                  "route_slot_id": null,
+                  "row_kind": null,
+                  "service_date": "2026-03-24",
+                  "state": "empty"
+                },
+                {
+                  "assignment_status": null,
+                  "manual_override": false,
+                  "planned_driver_day_state": null,
+                  "projected_minutes": null,
+                  "route_slot_id": null,
+                  "row_kind": null,
+                  "service_date": "2026-03-25",
+                  "state": "empty"
+                },
+                {
+                  "assignment_status": null,
+                  "manual_override": false,
+                  "planned_driver_day_state": null,
+                  "projected_minutes": null,
+                  "route_slot_id": null,
+                  "row_kind": null,
+                  "service_date": "2026-03-26",
+                  "state": "empty"
+                },
+                {
+                  "assignment_status": null,
+                  "manual_override": false,
+                  "planned_driver_day_state": null,
+                  "projected_minutes": null,
+                  "route_slot_id": null,
+                  "row_kind": null,
+                  "service_date": "2026-03-27",
+                  "state": "empty"
+                },
+                {
+                  "assignment_status": "reserve",
+                  "manual_override": false,
+                  "planned_driver_day_state": "on_call",
+                  "projected_minutes": 180,
+                  "route_slot_id": "oncall-20260328#02",
+                  "row_kind": "reserve",
+                  "service_date": "2026-03-28",
+                  "state": "on_call"
+                }
+              ],
+              "driver_id": "A2YLZCTDXK95J",
+              "driver_name": "Vishal Bhagat",
+              "employment_type": "full_time",
+              "on_call_eligible": true,
+              "previous_week_minutes": 2220
+            },
+            {
+              "availability_summary": "preferred 4 days; on-call-only 2 days; avoid-if-possible 1 day",
+              "cells": [
+                {
+                  "assignment_status": "reserve",
+                  "manual_override": false,
+                  "planned_driver_day_state": "on_call",
+                  "projected_minutes": 180,
+                  "route_slot_id": "oncall-20260322#01",
+                  "row_kind": "reserve",
+                  "service_date": "2026-03-22",
+                  "state": "on_call"
+                },
+                {
+                  "assignment_status": "pass",
+                  "manual_override": false,
+                  "planned_driver_day_state": "assigned",
+                  "projected_minutes": 510,
+                  "route_slot_id": "slot-20260323-cycle1-standard#15",
+                  "row_kind": "assignment",
+                  "service_date": "2026-03-23",
+                  "state": "assigned"
+                },
+                {
+                  "assignment_status": "pass",
+                  "manual_override": false,
+                  "planned_driver_day_state": "assigned",
+                  "projected_minutes": 510,
+                  "route_slot_id": "slot-20260324-cycle1-standard#18",
+                  "row_kind": "assignment",
+                  "service_date": "2026-03-24",
+                  "state": "assigned"
+                },
+                {
+                  "assignment_status": null,
+                  "manual_override": false,
+                  "planned_driver_day_state": null,
+                  "projected_minutes": null,
+                  "route_slot_id": null,
+                  "row_kind": null,
+                  "service_date": "2026-03-25",
+                  "state": "empty"
+                },
+                {
+                  "assignment_status": "pass",
+                  "manual_override": false,
+                  "planned_driver_day_state": "assigned",
+                  "projected_minutes": 510,
+                  "route_slot_id": "slot-20260326-cycle1-standard#21",
+                  "row_kind": "assignment",
+                  "service_date": "2026-03-26",
+                  "state": "assigned"
+                },
+                {
+                  "assignment_status": null,
+                  "manual_override": false,
+                  "planned_driver_day_state": null,
+                  "projected_minutes": null,
+                  "route_slot_id": null,
+                  "row_kind": null,
+                  "service_date": "2026-03-27",
+                  "state": "empty"
+                },
+                {
+                  "assignment_status": null,
+                  "manual_override": false,
+                  "planned_driver_day_state": null,
+                  "projected_minutes": null,
+                  "route_slot_id": null,
+                  "row_kind": null,
+                  "service_date": "2026-03-28",
+                  "state": "empty"
+                }
+              ],
+              "driver_id": "A7FWBKAGXA5LK",
+              "driver_name": "Vishal Chaudhary",
+              "employment_type": "full_time",
+              "on_call_eligible": true,
+              "previous_week_minutes": 2220
+            },
+            {
+              "availability_summary": "preferred 4 days; avoid-if-possible 3 days",
+              "cells": [
+                {
+                  "assignment_status": null,
+                  "manual_override": false,
+                  "planned_driver_day_state": null,
+                  "projected_minutes": null,
+                  "route_slot_id": null,
+                  "row_kind": null,
+                  "service_date": "2026-03-22",
+                  "state": "empty"
+                },
+                {
+                  "assignment_status": "pass",
+                  "manual_override": false,
+                  "planned_driver_day_state": "assigned",
+                  "projected_minutes": 510,
+                  "route_slot_id": "slot-20260323-cycle1-standard#12",
+                  "row_kind": "assignment",
+                  "service_date": "2026-03-23",
+                  "state": "assigned"
+                },
+                {
+                  "assignment_status": "pass",
+                  "manual_override": false,
+                  "planned_driver_day_state": "assigned",
+                  "projected_minutes": 510,
+                  "route_slot_id": "slot-20260324-cycle1-standard#15",
+                  "row_kind": "assignment",
+                  "service_date": "2026-03-24",
+                  "state": "assigned"
+                },
+                {
+                  "assignment_status": "pass",
+                  "manual_override": false,
+                  "planned_driver_day_state": "assigned",
+                  "projected_minutes": 510,
+                  "route_slot_id": "slot-20260325-cycle1-standard#13",
+                  "row_kind": "assignment",
+                  "service_date": "2026-03-25",
+                  "state": "assigned"
+                },
+                {
+                  "assignment_status": null,
+                  "manual_override": false,
+                  "planned_driver_day_state": null,
+                  "projected_minutes": null,
+                  "route_slot_id": null,
+                  "row_kind": null,
+                  "service_date": "2026-03-26",
+                  "state": "empty"
+                },
+                {
+                  "assignment_status": "pass",
+                  "manual_override": false,
+                  "planned_driver_day_state": "assigned",
+                  "projected_minutes": 510,
+                  "route_slot_id": "slot-20260327-cycle1-standard#17",
+                  "row_kind": "assignment",
+                  "service_date": "2026-03-27",
+                  "state": "assigned"
+                },
+                {
+                  "assignment_status": null,
+                  "manual_override": false,
+                  "planned_driver_day_state": null,
+                  "projected_minutes": null,
+                  "route_slot_id": null,
+                  "row_kind": null,
+                  "service_date": "2026-03-28",
+                  "state": "empty"
+                }
+              ],
+              "driver_id": "A1A7SAPA6J2ZJJ",
+              "driver_name": "Yong-Kyoon Kim",
+              "employment_type": "full_time",
+              "on_call_eligible": false,
+              "previous_week_minutes": 2040
+            }
+          ],
+          "service_dates": [
+            {
+              "is_selected_day": false,
+              "label": "2026-03-22",
+              "service_date": "2026-03-22",
+              "weekday_label": "Sun"
+            },
+            {
+              "is_selected_day": false,
+              "label": "2026-03-23",
+              "service_date": "2026-03-23",
+              "weekday_label": "Mon"
+            },
+            {
+              "is_selected_day": true,
+              "label": "2026-03-24",
+              "service_date": "2026-03-24",
+              "weekday_label": "Tue"
+            },
+            {
+              "is_selected_day": false,
+              "label": "2026-03-25",
+              "service_date": "2026-03-25",
+              "weekday_label": "Wed"
+            },
+            {
+              "is_selected_day": false,
+              "label": "2026-03-26",
+              "service_date": "2026-03-26",
+              "weekday_label": "Thu"
+            },
+            {
+              "is_selected_day": false,
+              "label": "2026-03-27",
+              "service_date": "2026-03-27",
+              "weekday_label": "Fri"
+            },
+            {
+              "is_selected_day": false,
+              "label": "2026-03-28",
+              "service_date": "2026-03-28",
+              "weekday_label": "Sat"
+            }
+          ],
+          "subtitle": "Click a filled cell to arm it, then click another cell on the same day to move or swap the planned state before saving a new draft.",
+          "title": "Planned schedule heatmap"
+        },
+        {
+          "columns": [
+            {
+              "key": "service_date",
+              "label": "Service date"
+            },
+            {
+              "key": "planned_route_count",
+              "label": "Planned routes"
+            },
+            {
+              "key": "on_call_target",
+              "label": "On-call target"
+            },
+            {
+              "key": "excess_capacity_target",
+              "label": "Excess-capacity target"
+            },
+            {
+              "key": "note",
+              "label": "Note"
+            }
+          ],
+          "kind": "table",
+          "rows": [
+            {
+              "excess_capacity_target": 3,
+              "note": "Holdout route total override",
+              "on_call_target": 4,
+              "planned_route_count": 16,
+              "service_date": "2026-03-22"
+            },
+            {
+              "excess_capacity_target": 3,
+              "note": "Holdout route total override; Highest-demand day in the example week",
+              "on_call_target": 4,
+              "planned_route_count": 23,
+              "service_date": "2026-03-23"
+            },
+            {
+              "excess_capacity_target": 3,
+              "note": "Holdout route total override; Selected-day preview default",
+              "on_call_target": 4,
+              "planned_route_count": 20,
+              "service_date": "2026-03-24"
+            },
+            {
+              "excess_capacity_target": 3,
+              "note": "Holdout route total override",
+              "on_call_target": 4,
+              "planned_route_count": 19,
+              "service_date": "2026-03-25"
+            },
+            {
+              "excess_capacity_target": 3,
+              "note": "Holdout route total override",
+              "on_call_target": 4,
+              "planned_route_count": 21,
+              "service_date": "2026-03-26"
+            },
+            {
+              "excess_capacity_target": 3,
+              "note": "Holdout route total override",
+              "on_call_target": 4,
+              "planned_route_count": 18,
+              "service_date": "2026-03-27"
+            },
+            {
+              "excess_capacity_target": 3,
+              "note": "Holdout route total override",
+              "on_call_target": 4,
+              "planned_route_count": 17,
+              "service_date": "2026-03-28"
+            }
+          ],
+          "table_id": "day_demand",
+          "title": "Daily demand and coverage posture"
+        },
+        {
+          "columns": [
+            {
+              "key": "service_date",
+              "label": "Selected day"
+            },
+            {
+              "key": "routes_required",
+              "label": "Routes required"
+            },
+            {
+              "key": "drivers_available",
+              "label": "Drivers available"
+            },
+            {
+              "key": "projected_on_call_needed",
+              "label": "On-call needed"
+            },
+            {
+              "key": "open_questions",
+              "label": "Open questions"
+            }
+          ],
+          "kind": "table",
+          "rows": [
+            {
+              "drivers_available": 24,
+              "open_questions": "Confirm late requests and final on-call posture before day-of handoff.",
+              "projected_on_call_needed": 4,
+              "routes_required": 20,
+              "service_date": "2026-03-24"
+            }
+          ],
+          "table_id": "selected_day_preview",
+          "title": "Selected-day preview"
+        },
+        {
+          "columns": [
+            {
+              "key": "driver_name",
+              "label": "Driver"
+            },
+            {
+              "key": "employment_type",
+              "label": "Employment"
+            },
+            {
+              "key": "preferred_route_slot_classes",
+              "label": "Preferred slot"
+            },
+            {
+              "key": "target_shifts_per_week",
+              "label": "Target shifts"
+            },
+            {
+              "key": "on_call_eligible",
+              "label": "On-call eligible"
+            },
+            {
+              "key": "previous_week_minutes",
+              "label": "Previous-week minutes"
+            },
+            {
+              "key": "availability_summary",
+              "label": "Availability summary"
+            }
+          ],
+          "kind": "table",
+          "rows": [
+            {
+              "availability_summary": "preferred 4 days; available 1 day; cannot 2 days",
+              "driver_name": "Abhiraj Singh",
+              "employment_type": "full_time",
+              "on_call_eligible": true,
+              "preferred_route_slot_classes": "cycle1_standard",
+              "previous_week_minutes": 2220,
+              "target_shifts_per_week": 5
+            },
+            {
+              "availability_summary": "preferred 3 days; on-call-only 1 day; avoid-if-possible 1 day; cannot 2 days",
+              "driver_name": "Akash",
+              "employment_type": "full_time",
+              "on_call_eligible": true,
+              "preferred_route_slot_classes": "cycle1_standard",
+              "previous_week_minutes": 1710,
+              "target_shifts_per_week": 5
+            },
+            {
+              "availability_summary": "preferred 4 days; available 1 day; on-call-only 1 day; avoid-if-possible 1 day",
+              "driver_name": "Amritpal Singh",
+              "employment_type": "full_time",
+              "on_call_eligible": true,
+              "preferred_route_slot_classes": "cycle1_standard",
+              "previous_week_minutes": 2220,
+              "target_shifts_per_week": 5
+            },
+            {
+              "availability_summary": "avoid-if-possible 7 days",
+              "driver_name": "Balwinder Singh",
+              "employment_type": "part_time",
+              "on_call_eligible": false,
+              "preferred_route_slot_classes": "cycle1_standard",
+              "previous_week_minutes": 0,
+              "target_shifts_per_week": 1
+            },
+            {
+              "availability_summary": "preferred 4 days; available 2 days; on-call-only 1 day",
+              "driver_name": "Brahmvir Singh",
+              "employment_type": "full_time",
+              "on_call_eligible": true,
+              "preferred_route_slot_classes": "cycle1_standard",
+              "previous_week_minutes": 1710,
+              "target_shifts_per_week": 5
+            },
+            {
+              "availability_summary": "preferred 4 days; on-call-only 1 day; avoid-if-possible 2 days",
+              "driver_name": "Chanpreet Singh Rai",
+              "employment_type": "full_time",
+              "on_call_eligible": true,
+              "preferred_route_slot_classes": "cycle1_standard",
+              "previous_week_minutes": 2220,
+              "target_shifts_per_week": 5
+            },
+            {
+              "availability_summary": "preferred 4 days; available 2 days; on-call-only 1 day",
+              "driver_name": "Charanjit Singh",
+              "employment_type": "full_time",
+              "on_call_eligible": true,
+              "preferred_route_slot_classes": "cycle1_standard",
+              "previous_week_minutes": 1710,
+              "target_shifts_per_week": 5
+            },
+            {
+              "availability_summary": "preferred 4 days; on-call-only 1 day; avoid-if-possible 2 days",
+              "driver_name": "Ekjot Singh",
+              "employment_type": "full_time",
+              "on_call_eligible": true,
+              "preferred_route_slot_classes": "cycle1_standard",
+              "previous_week_minutes": 2220,
+              "target_shifts_per_week": 5
+            },
+            {
+              "availability_summary": "preferred 4 days; available 1 day; avoid-if-possible 2 days",
+              "driver_name": "Gagandeep Singh Singh",
+              "employment_type": "full_time",
+              "on_call_eligible": true,
+              "preferred_route_slot_classes": "cycle1_standard",
+              "previous_week_minutes": 2040,
+              "target_shifts_per_week": 4
+            },
+            {
+              "availability_summary": "preferred 2 days; available 3 days; on-call-only 1 day; avoid-if-possible 1 day",
+              "driver_name": "Gaganpreet Singh Dhindsa",
+              "employment_type": "part_time",
+              "on_call_eligible": true,
+              "preferred_route_slot_classes": "cycle1_standard",
+              "previous_week_minutes": 1950,
+              "target_shifts_per_week": 3
+            },
+            {
+              "availability_summary": "preferred 1 day; available 4 days; on-call-only 1 day; cannot 1 day",
+              "driver_name": "Gurdas Singh Sidhu",
+              "employment_type": "full_time",
+              "on_call_eligible": true,
+              "preferred_route_slot_classes": "cycle1_standard",
+              "previous_week_minutes": 2220,
+              "target_shifts_per_week": 2
+            },
+            {
+              "availability_summary": "available 4 days; on-call-only 2 days; avoid-if-possible 1 day",
+              "driver_name": "Hamant Kumar",
+              "employment_type": "part_time",
+              "on_call_eligible": true,
+              "preferred_route_slot_classes": "cycle1_standard",
+              "previous_week_minutes": 0,
+              "target_shifts_per_week": 1
+            },
+            {
+              "availability_summary": "available 3 days; avoid-if-possible 4 days",
+              "driver_name": "Harkirpal Singh Sidhu",
+              "employment_type": "part_time",
+              "on_call_eligible": false,
+              "preferred_route_slot_classes": "cycle1_standard",
+              "previous_week_minutes": 0,
+              "target_shifts_per_week": 1
+            },
+            {
+              "availability_summary": "preferred 4 days; available 1 day; avoid-if-possible 2 days",
+              "driver_name": "Harmanpreet Singh",
+              "employment_type": "full_time",
+              "on_call_eligible": false,
+              "preferred_route_slot_classes": "cycle1_standard",
+              "previous_week_minutes": 2040,
+              "target_shifts_per_week": 4
+            },
+            {
+              "availability_summary": "preferred 3 days; on-call-only 1 day; cannot 3 days",
+              "driver_name": "Harnamanpreet SIngh",
+              "employment_type": "full_time",
+              "on_call_eligible": true,
+              "preferred_route_slot_classes": "cycle1_standard",
+              "previous_week_minutes": 2040,
+              "target_shifts_per_week": 5
+            },
+            {
+              "availability_summary": "available 4 days; on-call-only 2 days; avoid-if-possible 1 day",
+              "driver_name": "Harvinder SIngh",
+              "employment_type": "part_time",
+              "on_call_eligible": true,
+              "preferred_route_slot_classes": "cycle1_standard",
+              "previous_week_minutes": 0,
+              "target_shifts_per_week": 1
+            },
+            {
+              "availability_summary": "preferred 4 days; on-call-only 1 day; avoid-if-possible 2 days",
+              "driver_name": "Iqbal Singh",
+              "employment_type": "full_time",
+              "on_call_eligible": true,
+              "preferred_route_slot_classes": "cycle1_standard",
+              "previous_week_minutes": 2220,
+              "target_shifts_per_week": 5
+            },
+            {
+              "availability_summary": "available 5 days; on-call-only 2 days",
+              "driver_name": "Jagraj Singh",
+              "employment_type": "part_time",
+              "on_call_eligible": true,
+              "preferred_route_slot_classes": "cycle1_standard",
+              "previous_week_minutes": 2220,
+              "target_shifts_per_week": 1
+            },
+            {
+              "availability_summary": "available 3 days; avoid-if-possible 4 days",
+              "driver_name": "Jasdeep Sidhu",
+              "employment_type": "part_time",
+              "on_call_eligible": false,
+              "preferred_route_slot_classes": "cycle1_standard",
+              "previous_week_minutes": 0,
+              "target_shifts_per_week": 1
+            },
+            {
+              "availability_summary": "preferred 4 days; on-call-only 1 day; avoid-if-possible 2 days",
+              "driver_name": "Jiwanpreet Singh",
+              "employment_type": "full_time",
+              "on_call_eligible": true,
+              "preferred_route_slot_classes": "cycle1_standard",
+              "previous_week_minutes": 2220,
+              "target_shifts_per_week": 5
+            },
+            {
+              "availability_summary": "preferred 4 days; available 1 day; on-call-only 2 days",
+              "driver_name": "Karanveer Singh",
+              "employment_type": "full_time",
+              "on_call_eligible": true,
+              "preferred_route_slot_classes": "cycle1_standard",
+              "previous_week_minutes": 1440,
+              "target_shifts_per_week": 5
+            },
+            {
+              "availability_summary": "preferred 4 days; on-call-only 1 day; avoid-if-possible 2 days",
+              "driver_name": "Khushdeep Singh Cheema",
+              "employment_type": "full_time",
+              "on_call_eligible": true,
+              "preferred_route_slot_classes": "cycle1_standard",
+              "previous_week_minutes": 2220,
+              "target_shifts_per_week": 5
+            },
+            {
+              "availability_summary": "preferred 4 days; available 2 days; on-call-only 1 day",
+              "driver_name": "Lovepreet Bassi",
+              "employment_type": "full_time",
+              "on_call_eligible": true,
+              "preferred_route_slot_classes": "cycle1_standard",
+              "previous_week_minutes": 2220,
+              "target_shifts_per_week": 5
+            },
+            {
+              "availability_summary": "available 6 days; on-call-only 1 day",
+              "driver_name": "Lovepreet Gill",
+              "employment_type": "part_time",
+              "on_call_eligible": true,
+              "preferred_route_slot_classes": "cycle1_standard",
+              "previous_week_minutes": 2040,
+              "target_shifts_per_week": 1
+            },
+            {
+              "availability_summary": "preferred 4 days; on-call-only 2 days; avoid-if-possible 1 day",
+              "driver_name": "Lovepreet Singh",
+              "employment_type": "full_time",
+              "on_call_eligible": true,
+              "preferred_route_slot_classes": "cycle1_standard",
+              "previous_week_minutes": 2220,
+              "target_shifts_per_week": 5
+            },
+            {
+              "availability_summary": "available 2 days; avoid-if-possible 5 days",
+              "driver_name": "Maninder Pal Singh",
+              "employment_type": "part_time",
+              "on_call_eligible": false,
+              "preferred_route_slot_classes": "cycle1_standard",
+              "previous_week_minutes": 0,
+              "target_shifts_per_week": 1
+            },
+            {
+              "availability_summary": "preferred 4 days; available 1 day; on-call-only 1 day; avoid-if-possible 1 day",
+              "driver_name": "Manpreet",
+              "employment_type": "full_time",
+              "on_call_eligible": true,
+              "preferred_route_slot_classes": "cycle1_standard",
+              "previous_week_minutes": 2220,
+              "target_shifts_per_week": 5
+            },
+            {
+              "availability_summary": "preferred 4 days; available 1 day; on-call-only 2 days",
+              "driver_name": "Mehakpreet Singh",
+              "employment_type": "full_time",
+              "on_call_eligible": true,
+              "preferred_route_slot_classes": "cycle1_standard",
+              "previous_week_minutes": 2220,
+              "target_shifts_per_week": 5
+            },
+            {
+              "availability_summary": "available 5 days; avoid-if-possible 2 days",
+              "driver_name": "Navjot Singh",
+              "employment_type": "part_time",
+              "on_call_eligible": false,
+              "preferred_route_slot_classes": "cycle1_standard",
+              "previous_week_minutes": 0,
+              "target_shifts_per_week": 1
+            },
+            {
+              "availability_summary": "preferred 4 days; on-call-only 1 day; avoid-if-possible 2 days",
+              "driver_name": "Paramjit Gherha",
+              "employment_type": "full_time",
+              "on_call_eligible": true,
+              "preferred_route_slot_classes": "cycle1_standard",
+              "previous_week_minutes": 1530,
+              "target_shifts_per_week": 5
+            },
+            {
+              "availability_summary": "preferred 4 days; on-call-only 1 day; avoid-if-possible 2 days",
+              "driver_name": "Parampreet Singh",
+              "employment_type": "full_time",
+              "on_call_eligible": true,
+              "preferred_route_slot_classes": "cycle1_standard",
+              "previous_week_minutes": 1710,
+              "target_shifts_per_week": 5
+            },
+            {
+              "availability_summary": "preferred 4 days; on-call-only 2 days; avoid-if-possible 1 day",
+              "driver_name": "Pardeep Singh",
+              "employment_type": "full_time",
+              "on_call_eligible": true,
+              "preferred_route_slot_classes": "cycle1_standard",
+              "previous_week_minutes": 1710,
+              "target_shifts_per_week": 5
+            },
+            {
+              "availability_summary": "available 4 days; avoid-if-possible 3 days",
+              "driver_name": "Rahul Bajaj",
+              "employment_type": "part_time",
+              "on_call_eligible": false,
+              "preferred_route_slot_classes": "cycle1_standard",
+              "previous_week_minutes": 0,
+              "target_shifts_per_week": 1
+            },
+            {
+              "availability_summary": "preferred 4 days; on-call-only 1 day; avoid-if-possible 2 days",
+              "driver_name": "Rahul mannan",
+              "employment_type": "full_time",
+              "on_call_eligible": true,
+              "preferred_route_slot_classes": "cycle1_standard",
+              "previous_week_minutes": 2220,
+              "target_shifts_per_week": 5
+            },
+            {
+              "availability_summary": "preferred 4 days; available 2 days; on-call-only 1 day",
+              "driver_name": "Rajveer Singh",
+              "employment_type": "full_time",
+              "on_call_eligible": true,
+              "preferred_route_slot_classes": "cycle1_standard",
+              "previous_week_minutes": 2640,
+              "target_shifts_per_week": 5
+            },
+            {
+              "availability_summary": "preferred 4 days; available 1 day; on-call-only 1 day; avoid-if-possible 1 day",
+              "driver_name": "Ravdeep Singh",
+              "employment_type": "full_time",
+              "on_call_eligible": true,
+              "preferred_route_slot_classes": "cycle1_standard",
+              "previous_week_minutes": 2220,
+              "target_shifts_per_week": 5
+            },
+            {
+              "availability_summary": "available 4 days; on-call-only 2 days; avoid-if-possible 1 day",
+              "driver_name": "Ravinderpreet Singh",
+              "employment_type": "part_time",
+              "on_call_eligible": true,
+              "preferred_route_slot_classes": "cycle1_standard",
+              "previous_week_minutes": 0,
+              "target_shifts_per_week": 1
+            },
+            {
+              "availability_summary": "preferred 4 days; on-call-only 1 day; avoid-if-possible 2 days",
+              "driver_name": "Rompal Singh Hayer",
+              "employment_type": "full_time",
+              "on_call_eligible": true,
+              "preferred_route_slot_classes": "cycle1_standard",
+              "previous_week_minutes": 2220,
+              "target_shifts_per_week": 5
+            },
+            {
+              "availability_summary": "preferred 4 days; available 2 days; avoid-if-possible 1 day",
+              "driver_name": "Sachin Goyal",
+              "employment_type": "full_time",
+              "on_call_eligible": true,
+              "preferred_route_slot_classes": "cycle1_standard",
+              "previous_week_minutes": 2040,
+              "target_shifts_per_week": 4
+            },
+            {
+              "availability_summary": "preferred 4 days; avoid-if-possible 3 days",
+              "driver_name": "Shafahad Ali Shah",
+              "employment_type": "full_time",
+              "on_call_eligible": false,
+              "preferred_route_slot_classes": "cycle1_standard",
+              "previous_week_minutes": 1530,
+              "target_shifts_per_week": 4
+            },
+            {
+              "availability_summary": "preferred 4 days; available 1 day; on-call-only 1 day; avoid-if-possible 1 day",
+              "driver_name": "Sikander Singh",
+              "employment_type": "full_time",
+              "on_call_eligible": true,
+              "preferred_route_slot_classes": "cycle1_standard",
+              "previous_week_minutes": 2220,
+              "target_shifts_per_week": 5
+            },
+            {
+              "availability_summary": "preferred 4 days; available 1 day; on-call-only 1 day; avoid-if-possible 1 day",
+              "driver_name": "Sukhmanpreet Singh",
+              "employment_type": "full_time",
+              "on_call_eligible": true,
+              "preferred_route_slot_classes": "cycle1_standard",
+              "previous_week_minutes": 0,
+              "target_shifts_per_week": 5
+            },
+            {
+              "availability_summary": "preferred 4 days; on-call-only 1 day; avoid-if-possible 2 days",
+              "driver_name": "Sukhwinder Singh",
+              "employment_type": "full_time",
+              "on_call_eligible": true,
+              "preferred_route_slot_classes": "cycle1_standard",
+              "previous_week_minutes": 2220,
+              "target_shifts_per_week": 5
+            },
+            {
+              "availability_summary": "preferred 4 days; on-call-only 1 day; avoid-if-possible 2 days",
+              "driver_name": "Suraj Pratap Singh",
+              "employment_type": "full_time",
+              "on_call_eligible": true,
+              "preferred_route_slot_classes": "cycle1_standard",
+              "previous_week_minutes": 2220,
+              "target_shifts_per_week": 5
+            },
+            {
+              "availability_summary": "preferred 2 days; available 4 days; avoid-if-possible 1 day",
+              "driver_name": "Syed Kamran Shah",
+              "employment_type": "part_time",
+              "on_call_eligible": true,
+              "preferred_route_slot_classes": "cycle1_standard",
+              "previous_week_minutes": 1020,
+              "target_shifts_per_week": 2
+            },
+            {
+              "availability_summary": "available 5 days; avoid-if-possible 2 days",
+              "driver_name": "Tanveer Singh",
+              "employment_type": "part_time",
+              "on_call_eligible": true,
+              "preferred_route_slot_classes": "cycle1_standard",
+              "previous_week_minutes": 1710,
+              "target_shifts_per_week": 1
+            },
+            {
+              "availability_summary": "preferred 4 days; on-call-only 1 day; avoid-if-possible 2 days",
+              "driver_name": "Tarandeep Singh",
+              "employment_type": "full_time",
+              "on_call_eligible": true,
+              "preferred_route_slot_classes": "cycle1_standard",
+              "previous_week_minutes": 2220,
+              "target_shifts_per_week": 5
+            },
+            {
+              "availability_summary": "available 6 days; avoid-if-possible 1 day",
+              "driver_name": "Veerdevinder Singh",
+              "employment_type": "part_time",
+              "on_call_eligible": false,
+              "preferred_route_slot_classes": "cycle1_standard",
+              "previous_week_minutes": 0,
+              "target_shifts_per_week": 1
+            },
+            {
+              "availability_summary": "preferred 4 days; on-call-only 1 day; avoid-if-possible 2 days",
+              "driver_name": "Vishal Bhagat",
+              "employment_type": "full_time",
+              "on_call_eligible": true,
+              "preferred_route_slot_classes": "cycle1_standard",
+              "previous_week_minutes": 2220,
+              "target_shifts_per_week": 5
+            },
+            {
+              "availability_summary": "preferred 4 days; on-call-only 2 days; avoid-if-possible 1 day",
+              "driver_name": "Vishal Chaudhary",
+              "employment_type": "full_time",
+              "on_call_eligible": true,
+              "preferred_route_slot_classes": "cycle1_standard",
+              "previous_week_minutes": 2220,
+              "target_shifts_per_week": 5
+            },
+            {
+              "availability_summary": "preferred 4 days; avoid-if-possible 3 days",
+              "driver_name": "Yong-Kyoon Kim",
+              "employment_type": "full_time",
+              "on_call_eligible": false,
+              "preferred_route_slot_classes": "cycle1_standard",
+              "previous_week_minutes": 2040,
+              "target_shifts_per_week": 4
+            }
+          ],
+          "table_id": "driver_roster",
+          "title": "Driver roster"
+        },
+        {
           "body": "This page edits the immutable Stage04 draft weekly schedule workbook only. It does not claim published weekly truth, does not replace manager-review evidence, and does not reach into live_dispatch.v1 day-of control.",
           "kind": "note_panel",
           "title": "Stage04 draft boundary"

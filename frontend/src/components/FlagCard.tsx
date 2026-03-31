@@ -20,18 +20,23 @@ export function FlagCard({
 }: FlagCardProps): JSX.Element {
   return (
     <article className="flag-card">
-      <header>
-        <h4>{flag.kind}</h4>
+      <header className="flag-card__header">
+        <div>
+          <p className="flag-card__eyebrow">Exception</p>
+          <h4>{flag.kind}</h4>
+        </div>
         <div className="flag-card__chips">
           <SeverityChip severity={flag.severity} />
           <StatusBadge status={flag.state} />
         </div>
       </header>
-      <p>{flag.summary}</p>
-      <AttachmentActions onUpload={onUpload} onDownload={onDownload} disabled={actionPending} />
-      <button type="button" className="link-button" onClick={onDetails}>
-        Details
-      </button>
+      <p className="flag-card__summary">{flag.summary}</p>
+      <div className="flag-card__actions">
+        <AttachmentActions onUpload={onUpload} onDownload={onDownload} disabled={actionPending} />
+        <button type="button" className="link-button" onClick={onDetails}>
+          Details
+        </button>
+      </div>
     </article>
   );
 }

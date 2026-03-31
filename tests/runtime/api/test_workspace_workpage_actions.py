@@ -92,6 +92,50 @@ def test_weekly_workspace_supported_surface_projects_available_schedule_action(
     ]
 
 
+def test_human_task_detail_projects_available_schedule_action(tmp_path: Path) -> None:
+    db_url = f"sqlite:///{tmp_path / 'task_detail_schedule_action_available.db'}"
+    seeded = seed_weekly_workspace_supported_task_surface_with_draft(
+        db_url=db_url,
+        tenant_id="tenant-a",
+        domain_id="domain-x",
+        run_tag="test:task-detail-schedule-action-available",
+    )
+    human_task_id = str(seeded["workspace_surface"]["human_task"]["human_task_id"])
+    artifact_version_id = str(seeded["stage04_outputs"]["draft_workbook"]["artifact_version_id"])
+
+    response = _client(
+        db_url=db_url,
+        actor_id="human:schedule-planner-1",
+        actor_roles=["schedule_planner"],
+    ).get(f"/api/v1/human-tasks/{human_task_id}")
+    assert response.status_code == 200
+
+    assert response.payload["human_task"]["workpage_actions"] == [
+        {
+            "action_id": "workpage.schedule-v0.open_latest_draft",
+            "workpage_kind": "schedule-v0",
+            "label": "Open schedule draft",
+            "presentation": "open_route",
+            "state": "available",
+            "route": (
+                f"/runs/{seeded['workflow_run_id']}/workpages/schedule-v0/artifacts/"
+                f"{artifact_version_id}"
+            ),
+            "create_path": None,
+            "subject_context": {
+                "subject_kind": "human_task",
+                "subject_id": human_task_id,
+                "workflow_run_id": seeded["workflow_run_id"],
+            },
+            "link_policy": {
+                "create_relation_kind": None,
+                "submit_relation_kind": "response",
+            },
+            "disabled_reason": None,
+        }
+    ]
+
+
 def test_weekly_stage04_surface_projects_unavailable_schedule_action(tmp_path: Path) -> None:
     db_url = f"sqlite:///{tmp_path / 'workspace_schedule_action_unavailable.db'}"
     seeded = seed_weekly_workspace_stage04_task_surface_without_draft(
@@ -115,6 +159,46 @@ def test_weekly_stage04_surface_projects_unavailable_schedule_action(tmp_path: P
         subject_id=human_task_id,
     )
     assert item["workpage_actions"] == [
+        {
+            "action_id": "workpage.schedule-v0.open_latest_draft",
+            "workpage_kind": "schedule-v0",
+            "label": "Open schedule draft",
+            "presentation": "open_route",
+            "state": "unavailable",
+            "route": None,
+            "create_path": None,
+            "subject_context": {
+                "subject_kind": "human_task",
+                "subject_id": human_task_id,
+                "workflow_run_id": seeded["workflow_run_id"],
+            },
+            "link_policy": {
+                "create_relation_kind": None,
+                "submit_relation_kind": "response",
+            },
+            "disabled_reason": "schedule_draft_unavailable",
+        }
+    ]
+
+
+def test_human_task_detail_projects_unavailable_schedule_action(tmp_path: Path) -> None:
+    db_url = f"sqlite:///{tmp_path / 'task_detail_schedule_action_unavailable.db'}"
+    seeded = seed_weekly_workspace_stage04_task_surface_without_draft(
+        db_url=db_url,
+        tenant_id="tenant-a",
+        domain_id="domain-x",
+        run_tag="test:task-detail-schedule-action-unavailable",
+    )
+    human_task_id = str(seeded["workspace_surface"]["human_task"]["human_task_id"])
+
+    response = _client(
+        db_url=db_url,
+        actor_id="human:schedule-planner-2",
+        actor_roles=["schedule_planner"],
+    ).get(f"/api/v1/human-tasks/{human_task_id}")
+    assert response.status_code == 200
+
+    assert response.payload["human_task"]["workpage_actions"] == [
         {
             "action_id": "workpage.schedule-v0.open_latest_draft",
             "workpage_kind": "schedule-v0",

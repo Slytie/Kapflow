@@ -1,17 +1,17 @@
 import { ActionCluster } from "@/components/ActionCluster";
-import { AttachmentActions } from "@/components/AttachmentActions";
+import { TaskDocumentCues } from "@/components/TaskDocumentCues";
 import { StatusBadge } from "@/components/StatusBadge";
+import type { TaskDocumentPreviewCue } from "@/lib/workspace/taskDocumentUi";
 
 interface QueueRowProps {
   title: string;
   subtitle: string;
   status: string;
   hint?: string;
+  documentCues?: TaskDocumentPreviewCue[];
   onDetails: () => void;
   onClaim?: () => void;
   onComplete?: () => void;
-  onUpload?: (file: File) => void;
-  onDownload?: () => void;
   actionPending?: boolean;
 }
 
@@ -20,11 +20,10 @@ export function QueueRow({
   subtitle,
   status,
   hint,
+  documentCues = [],
   onDetails,
   onClaim,
   onComplete,
-  onUpload,
-  onDownload,
   actionPending = false
 }: QueueRowProps): JSX.Element {
   const actions = [
@@ -41,16 +40,20 @@ export function QueueRow({
   return (
     <article className="queue-row" data-testid="queue-row">
       <div className="queue-row__main">
-        <h4>{title}</h4>
+        <div className="queue-row__headline">
+          <h4>{title}</h4>
+          <StatusBadge status={status} />
+        </div>
         <p>{subtitle}</p>
+        <TaskDocumentCues cues={documentCues} compact />
+        {hint ? <p className="queue-row__hint">{hint}</p> : null}
       </div>
-      <StatusBadge status={status} />
-      <AttachmentActions compact onUpload={onUpload} onDownload={onDownload} disabled={actionPending} />
-      {actions.length > 0 ? <ActionCluster actions={actions} /> : null}
-      <button type="button" className="link-button" onClick={onDetails}>
-        Details
-      </button>
-      {hint ? <p className="queue-row__hint">{hint}</p> : null}
+      <div className="queue-row__controls">
+        {actions.length > 0 ? <ActionCluster actions={actions} /> : null}
+        <button type="button" className="link-button" onClick={onDetails}>
+          Details
+        </button>
+      </div>
     </article>
   );
 }

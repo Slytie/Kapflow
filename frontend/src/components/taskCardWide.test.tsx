@@ -37,36 +37,32 @@ describe("TaskCardWide", () => {
     const onClaim = vi.fn();
     const onComplete = vi.fn();
     const onNeedInfo = vi.fn();
-    const onUpload = vi.fn();
-    const onDownload = vi.fn();
 
-    const view = render(
+    render(
       <TaskCardWide
         task={task}
         onDetails={() => undefined}
         onClaim={onClaim}
         onComplete={onComplete}
         onNeedInfo={onNeedInfo}
-        onUpload={onUpload}
-        onDownload={onDownload}
+        documentCues={[
+          { key: "missing", label: "1 missing input", tone: "danger" },
+          { key: "artifacts", label: "2 artifacts", tone: "neutral" }
+        ]}
       />
     );
 
     await user.click(screen.getByRole("button", { name: "Claim" }));
     await user.click(screen.getByRole("button", { name: "Complete" }));
     await user.click(screen.getByRole("button", { name: "Need Info" }));
-    await user.click(screen.getByRole("button", { name: "Upload" }));
-    await user.click(screen.getByRole("button", { name: "Download" }));
-    const fileInput = view.container.querySelector("input[type='file']");
-    expect(fileInput).not.toBeNull();
-    const file = new File(["stub"], "attachment.txt", { type: "text/plain" });
-    await user.upload(fileInput as HTMLInputElement, file);
+    expect(screen.getByText("1 missing input")).toBeInTheDocument();
+    expect(screen.getByText("2 artifacts")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Upload" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Download" })).not.toBeInTheDocument();
 
     expect(onClaim).toHaveBeenCalledTimes(1);
     expect(onComplete).toHaveBeenCalledTimes(1);
     expect(onNeedInfo).toHaveBeenCalledTimes(1);
-    expect(onUpload).toHaveBeenCalledTimes(1);
-    expect(onDownload).toHaveBeenCalledTimes(1);
   });
 
   it("maps weekly task kinds to operator-friendly headings", () => {

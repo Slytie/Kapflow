@@ -56,6 +56,10 @@ EXPECTED_EXPANSION_KEYS = {
     "subgraph_ref",
 }
 
+EXPECTED_DETAIL_ONLY_KEYS = {
+    "workpage_actions",
+}
+
 
 def _api_client(harness: RuntimeScenarioHarness) -> RuntimeApiClient:
     return RuntimeApiClient(
@@ -96,6 +100,7 @@ def test_human_task_list_contract_and_filters(tmp_path: Path) -> None:
     assert EXPECTED_BASE_KEYS.issubset(set(detail.payload["human_task"].keys()))
     assert EXPECTED_ACTIONABILITY_KEYS.issubset(set(detail.payload["human_task"].keys()))
     assert EXPECTED_EXPANSION_KEYS.issubset(set(detail.payload["human_task"].keys()))
+    assert EXPECTED_DETAIL_ONLY_KEYS.issubset(set(detail.payload["human_task"].keys()))
 
     filtered_claimed = client.get(
         "/api/v1/human-tasks",

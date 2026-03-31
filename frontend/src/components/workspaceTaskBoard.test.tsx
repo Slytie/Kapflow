@@ -110,6 +110,7 @@ function buildWeeklyIntakeSurface(): {
           required_uploads: [
             {
               dataset_key: "planning.route_slot_requirements.workbook",
+              template_id: null,
               artifact_kind: "planning.route_slot_requirements.workbook",
               artifact_role: "official_input",
               required: true,
@@ -220,6 +221,7 @@ function buildDispatchIntakeSurface(): {
           required_uploads: [
             {
               dataset_key: "reporting.eos_raw.workbook",
+              template_id: null,
               artifact_kind: "reporting.eos_raw.workbook",
               artifact_role: "official_input",
               required: true,
@@ -275,14 +277,13 @@ describe("WorkspaceTaskBoard weekly surfaces", () => {
 
     const card = (await screen.findByRole("heading", { name: "Weekly Intake" })).closest("article");
     expect(card).not.toBeNull();
+    expect(within(card as HTMLElement).getByText("1 missing input")).toBeInTheDocument();
     expect(
-      within(card as HTMLElement).getByText(
-        /Required input: planning\.route_slot_requirements\.workbook/i
-      )
+      within(card as HTMLElement).getByText(/Missing required inputs: planning\.route_slot_requirements\.workbook/i)
     ).toBeInTheDocument();
     expect(
-      within(card as HTMLElement).getByRole("button", { name: "Upload Input" })
-    ).toBeInTheDocument();
+      within(card as HTMLElement).queryByRole("button", { name: "Upload Input" })
+    ).not.toBeInTheDocument();
   });
 
   it("opens task details from primary card click and keyboard activation without menu bleed-through", async () => {
@@ -313,12 +314,13 @@ describe("WorkspaceTaskBoard weekly surfaces", () => {
 
     const card = (await screen.findByRole("heading", { name: "Daily EOS Intake" })).closest("article");
     expect(card).not.toBeNull();
+    expect(within(card as HTMLElement).getByText("1 missing input")).toBeInTheDocument();
     expect(
-      within(card as HTMLElement).getByText(/Required input: reporting\.eos_raw\.workbook/i)
+      within(card as HTMLElement).getByText(/Missing required inputs: reporting\.eos_raw\.workbook/i)
     ).toBeInTheDocument();
     expect(
-      within(card as HTMLElement).getByRole("button", { name: "Upload Input" })
-    ).toBeInTheDocument();
+      within(card as HTMLElement).queryByRole("button", { name: "Upload Input" })
+    ).not.toBeInTheDocument();
   });
 
   it("renders dispatch review copy and keeps the EOD draft action available", async () => {
@@ -334,5 +336,30 @@ describe("WorkspaceTaskBoard weekly surfaces", () => {
     expect(
       within(card as HTMLElement).getByRole("button", { name: "Open EOD draft" })
     ).toBeInTheDocument();
+  });
+
+  it("passes task workpage actions into the drawer payload on primary open", async () => {
+    const user = userEvent.setup();
+    const onOpenDetails = vi.fn();
+    const { workspace, detail } = buildDispatchReviewSurface();
+    renderBoard(workspace, detail, onOpenDetails);
+
+    const card = (await screen.findByRole("heading", { name: "Review EOD Draft" })).closest("article");
+    expect(card).not.toBeNull();
+
+    await user.click(card as HTMLElement);
+
+    expect(onOpenDetails).toHaveBeenCalledWith(
+      expect.objectContaining({
+        task: expect.objectContaining({
+          workpage_actions: [
+            expect.objectContaining({
+              action_id: "workpage.eod-v0.open_latest_draft",
+              label: "Open EOD draft"
+            })
+          ]
+        })
+      })
+    );
   });
 });

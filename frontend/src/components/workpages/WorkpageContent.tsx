@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import { Link } from "react-router-dom";
 
 import { FreshnessBanner } from "@/components/FreshnessBanner";
+import { InfoDialog } from "@/components/InfoDialog";
 import type { WorkpageFreshness, WorkpageSourceMetadata } from "@/lib/types/contracts";
 import type {
   WorkpageHistorySection,
@@ -37,6 +38,11 @@ interface WorkpageFrameProps {
   heroActions?: ReactNode;
   backLink?: string;
   backLabel?: string;
+  layout?: "page" | "embedded";
+  metadataPresentation?: "panel" | "dialog";
+  infoDialogTitle?: string;
+  infoDialogDescription?: string;
+  infoDialogContent?: ReactNode;
   children: ReactNode;
 }
 
@@ -55,18 +61,28 @@ export function WorkpageFrame({
   heroActions,
   backLink = "/demo/logistics",
   backLabel = "Back to logistics demo",
+  layout = "page",
+  metadataPresentation = "panel",
+  infoDialogTitle = "Workpage info",
+  infoDialogDescription,
+  infoDialogContent,
   children
 }: WorkpageFrameProps): JSX.Element {
   const sourceDatasetLabel = source.primary_dataset_key ?? "Composite source bundle";
   const sourceExampleEntries = Object.entries(model.source_examples);
   const showSourceRefs = sourceExampleEntries.length === 0 && source.source_refs.length > 0;
+  const isEmbedded = layout === "embedded";
+  const showMetadataDialog = metadataPresentation === "dialog";
 
   return (
-    <section className="workpage-page" data-testid={testId}>
-      <header className="workpage-page__hero">
+    <section
+      className={`workpage-page${isEmbedded ? " workpage-page--embedded" : ""}`}
+      data-testid={testId}
+    >
+      <header className={`workpage-page__hero${isEmbedded ? " workpage-page__hero--embedded" : ""}`}>
         <div>
           <p className="timeline-page__eyebrow">{eyebrow}</p>
-          <h1>{model.title}</h1>
+          {isEmbedded ? <h2>{model.title}</h2> : <h1>{model.title}</h1>}
           <p>{description}</p>
           <div className="timeline-page__summary">
             {summaryItems.map((item) => (
@@ -74,66 +90,147 @@ export function WorkpageFrame({
             ))}
           </div>
         </div>
-        <div className="workpage-page__hero-links">
-          <Link className="link-button" to={backLink}>
-            {backLabel}
-          </Link>
-          <p>{model.workflow_id}</p>
-          <p>{model.dataset_key}</p>
-          <p>Mode: {model.mode}</p>
+        <div
+          className={`workpage-page__hero-links${isEmbedded ? " workpage-page__hero-links--embedded" : ""}`}
+        >
+          <div className="workpage-page__hero-tools">
+            {!isEmbedded ? (
+              <Link className="link-button" to={backLink}>
+                {backLabel}
+              </Link>
+            ) : null}
+            {showMetadataDialog ? (
+              <InfoDialog
+                triggerLabel={`Open info for ${model.title}`}
+                dialogTitle={infoDialogTitle}
+                dialogDescription={infoDialogDescription ?? sourceDescription}
+              >
+                <section className="workpage-panel workpage-panel--note">
+                  <header className="workpage-panel__header">
+                    <h2>Source grounding</h2>
+                    <p>{sourceDescription}</p>
+                  </header>
+                  <FreshnessBanner
+                    lastRefreshedAt={freshness.generated_at}
+                    onRefresh={onRefresh}
+                    isRefreshing={isRefreshing}
+                    pollIntervalMs={pollIntervalMs}
+                  />
+                  <div className="workpage-page__source-grid workpage-page__source-grid--metadata">
+                    <article className="workpage-page__source-item">
+                      <strong>Workflow</strong>
+                      <p>{model.workflow_id}</p>
+                    </article>
+                    <article className="workpage-page__source-item">
+                      <strong>Dataset key</strong>
+                      <p>{model.dataset_key}</p>
+                    </article>
+                    <article className="workpage-page__source-item">
+                      <strong>Mode</strong>
+                      <p>{model.mode}</p>
+                    </article>
+                    <article className="workpage-page__source-item">
+                      <strong>Source mode</strong>
+                      <p>{source.mode}</p>
+                    </article>
+                    <article className="workpage-page__source-item">
+                      <strong>Primary dataset</strong>
+                      <p>{sourceDatasetLabel}</p>
+                    </article>
+                    <article className="workpage-page__source-item">
+                      <strong>Source version</strong>
+                      <p>{freshness.source_version}</p>
+                    </article>
+                  </div>
+                  <div className="workpage-page__source-grid">
+                    {sourceExampleEntries.map(([key, value]) => (
+                      <article key={key} className="workpage-page__source-item">
+                        <strong>{key}</strong>
+                        <p>{value}</p>
+                      </article>
+                    ))}
+                    {showSourceRefs
+                      ? source.source_refs.map((ref, index) => (
+                          <article key={ref} className="workpage-page__source-item">
+                            <strong>{`source_ref_${index + 1}`}</strong>
+                            <p>{ref}</p>
+                          </article>
+                        ))
+                      : null}
+                  </div>
+                  {model.validation.warnings.length > 0 ? (
+                    <ul className="workpage-page__warning-list">
+                      {model.validation.warnings.map((warning) => (
+                        <li key={warning}>{warning}</li>
+                      ))}
+                    </ul>
+                  ) : null}
+                </section>
+                {infoDialogContent}
+              </InfoDialog>
+            ) : (
+              <>
+                <p>{model.workflow_id}</p>
+                <p>{model.dataset_key}</p>
+                <p>Mode: {model.mode}</p>
+              </>
+            )}
+          </div>
           {heroActions ? <div className="workpage-page__hero-actions">{heroActions}</div> : null}
         </div>
       </header>
 
-      <section className="workpage-panel">
-        <header className="workpage-panel__header">
-          <h2>Source grounding</h2>
-          <p>{sourceDescription}</p>
-        </header>
-        <FreshnessBanner
-          lastRefreshedAt={freshness.generated_at}
-          onRefresh={onRefresh}
-          isRefreshing={isRefreshing}
-          pollIntervalMs={pollIntervalMs}
-        />
-        <div className="workpage-page__source-grid workpage-page__source-grid--metadata">
-          <article className="workpage-page__source-item">
-            <strong>Source mode</strong>
-            <p>{source.mode}</p>
-          </article>
-          <article className="workpage-page__source-item">
-            <strong>Primary dataset</strong>
-            <p>{sourceDatasetLabel}</p>
-          </article>
-          <article className="workpage-page__source-item">
-            <strong>Source version</strong>
-            <p>{freshness.source_version}</p>
-          </article>
-        </div>
-        <div className="workpage-page__source-grid">
-          {sourceExampleEntries.map(([key, value]) => (
-            <article key={key} className="workpage-page__source-item">
-              <strong>{key}</strong>
-              <p>{value}</p>
+      {!showMetadataDialog ? (
+        <section className="workpage-panel">
+          <header className="workpage-panel__header">
+            <h2>Source grounding</h2>
+            <p>{sourceDescription}</p>
+          </header>
+          <FreshnessBanner
+            lastRefreshedAt={freshness.generated_at}
+            onRefresh={onRefresh}
+            isRefreshing={isRefreshing}
+            pollIntervalMs={pollIntervalMs}
+          />
+          <div className="workpage-page__source-grid workpage-page__source-grid--metadata">
+            <article className="workpage-page__source-item">
+              <strong>Source mode</strong>
+              <p>{source.mode}</p>
             </article>
-          ))}
-          {showSourceRefs
-            ? source.source_refs.map((ref, index) => (
-                <article key={ref} className="workpage-page__source-item">
-                  <strong>{`source_ref_${index + 1}`}</strong>
-                  <p>{ref}</p>
-                </article>
-              ))
-            : null}
-        </div>
-        {model.validation.warnings.length > 0 ? (
-          <ul className="workpage-page__warning-list">
-            {model.validation.warnings.map((warning) => (
-              <li key={warning}>{warning}</li>
+            <article className="workpage-page__source-item">
+              <strong>Primary dataset</strong>
+              <p>{sourceDatasetLabel}</p>
+            </article>
+            <article className="workpage-page__source-item">
+              <strong>Source version</strong>
+              <p>{freshness.source_version}</p>
+            </article>
+          </div>
+          <div className="workpage-page__source-grid">
+            {sourceExampleEntries.map(([key, value]) => (
+              <article key={key} className="workpage-page__source-item">
+                <strong>{key}</strong>
+                <p>{value}</p>
+              </article>
             ))}
-          </ul>
-        ) : null}
-      </section>
+            {showSourceRefs
+              ? source.source_refs.map((ref, index) => (
+                  <article key={ref} className="workpage-page__source-item">
+                    <strong>{`source_ref_${index + 1}`}</strong>
+                    <p>{ref}</p>
+                  </article>
+                ))
+              : null}
+          </div>
+          {model.validation.warnings.length > 0 ? (
+            <ul className="workpage-page__warning-list">
+              {model.validation.warnings.map((warning) => (
+                <li key={warning}>{warning}</li>
+              ))}
+            </ul>
+          ) : null}
+        </section>
+      ) : null}
 
       {children}
     </section>

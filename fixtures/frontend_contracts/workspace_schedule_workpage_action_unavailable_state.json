@@ -11,7 +11,9 @@
           "claim",
           "upload_attachment"
         ],
-        "blocking_reason_codes": [],
+        "blocking_reason_codes": [
+          "required_artifact_missing"
+        ],
         "blocking_requirements": [],
         "can_complete": false,
         "can_confirm_review": false,
@@ -38,7 +40,9 @@
           "updated_at": "<ts:1>",
           "workflow_run_id": "<workflow_run_id:1>"
         },
-        "missing_required_inputs": [],
+        "missing_required_inputs": [
+          "planning.draft_weekly_schedule.workbook"
+        ],
         "required_reviews": [],
         "required_uploads": [],
         "subject_id": "<human_task_id:2>",
@@ -69,9 +73,9 @@
     "command": "api.workflow_runs.workspace",
     "freshness": {
       "generated_at": "<ts:2>",
-      "latest_event_recorded_at": "2026-03-27T16:44:56.968179Z",
+      "latest_event_recorded_at": "2026-03-31T11:59:16.852184Z",
       "latest_event_sequence": 7,
-      "workflow_run_updated_at": "2026-03-27T16:44:55.403907Z"
+      "workflow_run_updated_at": "2026-03-31T11:59:16.250277Z"
     },
     "graph": {
       "edges": [],
@@ -381,7 +385,9 @@
           "claim",
           "upload_attachment"
         ],
-        "blocking_reason_codes": [],
+        "blocking_reason_codes": [
+          "required_artifact_missing"
+        ],
         "blocking_requirements": [],
         "can_complete": false,
         "can_confirm_review": false,
@@ -408,7 +414,9 @@
           "updated_at": "<ts:1>",
           "workflow_run_id": "<workflow_run_id:1>"
         },
-        "missing_required_inputs": [],
+        "missing_required_inputs": [
+          "planning.draft_weekly_schedule.workbook"
+        ],
         "required_reviews": [],
         "required_uploads": [],
         "subject_id": "<human_task_id:2>",

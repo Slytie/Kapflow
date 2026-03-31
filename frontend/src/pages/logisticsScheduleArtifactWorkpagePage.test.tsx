@@ -7,6 +7,35 @@ import { App } from "@/app/App";
 import { mutationLog } from "@/test/api/handlers";
 import { server } from "@/test/api/server";
 
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function heatmapSection(): HTMLElement {
+  const section = screen.getByRole("heading", { name: "Planned schedule heatmap" }).closest("section");
+  if (!section) {
+    throw new Error("Heatmap section not found");
+  }
+  return section as HTMLElement;
+}
+
+function heatmapButton(
+  section: HTMLElement,
+  predicate: (label: string) => boolean
+): HTMLButtonElement {
+  const button = within(section)
+    .getAllByRole("button")
+    .find((candidate) => predicate(candidate.getAttribute("aria-label") ?? ""));
+  if (!button) {
+    throw new Error("Matching heatmap cell not found");
+  }
+  return button as HTMLButtonElement;
+}
+
+function personNameFromLabel(label: string): string {
+  return label.split(" on ")[0] ?? label;
+}
+
 function buildScheduleArtifactPayload(
   artifactVersionId: string,
   workflowRunId = "wr-weekly-001"
@@ -35,63 +64,54 @@ function buildScheduleArtifactPayload(
 
 describe("LogisticsScheduleArtifactWorkpagePage", () => {
   it(
-    "opens the latest draft from the run-backed landing, submits a superseding version, and downloads JSON",
+    "opens the latest draft from the run-backed landing, moves planned work in the heatmap, submits a superseding version, and downloads JSON",
     async () => {
       const user = userEvent.setup();
       window.history.pushState({}, "", "/runs/wr-weekly-001/workpages/schedule-v0");
       render(<App />);
 
-    await user.click(await screen.findByRole("link", { name: "Open editable draft" }));
-    expect(await screen.findByTestId("schedule-artifact-workpage-page")).toBeInTheDocument();
+      await user.click(await screen.findByRole("link", { name: "Open editable draft" }));
+      expect(await screen.findByTestId("schedule-artifact-workpage-page")).toBeInTheDocument();
 
-    const assignmentDriverInput = screen.getByRole("textbox", {
-      name: "Route assignments Assigned Driver Id 1"
-    });
-    const assignmentStatusInput = screen.getByRole("textbox", {
-      name: "Route assignments Assignment Status 1"
-    });
-    const reserveDriverInput = screen.getByRole("textbox", {
-      name: "Reserve posture Assigned Driver Id 1"
-    });
-    const reserveStatusInput = screen.getByRole("textbox", {
-      name: "Reserve posture Assignment Status 1"
-    });
-
-    await user.clear(assignmentDriverInput);
-    await user.type(assignmentDriverInput, "DRV-MANUAL-77");
-    await user.clear(assignmentStatusInput);
-    await user.type(assignmentStatusInput, "manual_override");
-    await user.clear(reserveDriverInput);
-    await user.type(reserveDriverInput, "DRV-MANUAL-88");
-    await user.clear(reserveStatusInput);
-    await user.type(reserveStatusInput, "manual_override");
-
-    await user.click(screen.getByRole("button", { name: "Submit draft" }));
-
-    await waitFor(() => {
-      expect(window.location.pathname).toBe(
-        "/runs/wr-weekly-001/workpages/schedule-v0/artifacts/av-schedule-artifact-002"
+      const heatmap = heatmapSection();
+      const sourceCell = heatmapButton(
+        heatmap,
+        (label) => label.includes("2026-03-22: assigned route")
       );
-    });
+      const targetCell = heatmapButton(
+        heatmap,
+        (label) => label.includes("2026-03-22: no planned work")
+      );
+      const targetName = personNameFromLabel(targetCell.getAttribute("aria-label") ?? "");
 
-    expect(await screen.findByTestId("schedule-artifact-workpage-page")).toBeInTheDocument();
-    expect(screen.getByRole("textbox", { name: "Route assignments Assigned Driver Id 1" })).toHaveValue(
-      "DRV-MANUAL-77"
-    );
-    expect(screen.getByRole("textbox", { name: "Route assignments Assignment Status 1" })).toHaveValue(
-      "manual_override"
-    );
-    expect(screen.getByRole("textbox", { name: "Reserve posture Assigned Driver Id 1" })).toHaveValue(
-      "DRV-MANUAL-88"
-    );
-    expect(screen.getByRole("textbox", { name: "Reserve posture Assignment Status 1" })).toHaveValue(
-      "manual_override"
-    );
+      await user.click(sourceCell);
+      await user.click(targetCell);
 
-    const historyPanel = screen.getByRole("heading", { name: "Recent draft versions" }).closest("section");
-    expect(historyPanel).not.toBeNull();
-    expect(within(historyPanel as HTMLElement).getByText("av-schedule-artifact-002")).toBeInTheDocument();
-    expect(within(historyPanel as HTMLElement).getByText("av-schedule-artifact-001")).toBeInTheDocument();
+      expect(
+        within(heatmap).getByRole("button", {
+          name: new RegExp(`^${escapeRegExp(targetName)} on 2026-03-22: assigned route, manually overridden$`)
+        })
+      ).toBeInTheDocument();
+
+      await user.click(screen.getByRole("button", { name: "Submit draft" }));
+
+      await waitFor(() => {
+        expect(window.location.pathname).toBe(
+          "/runs/wr-weekly-001/workpages/schedule-v0/artifacts/av-schedule-artifact-002"
+        );
+      });
+
+      expect(await screen.findByTestId("schedule-artifact-workpage-page")).toBeInTheDocument();
+      expect(
+        screen.getByRole("button", {
+          name: new RegExp(`^${escapeRegExp(targetName)} on 2026-03-22: assigned route, manually overridden$`)
+        })
+      ).toBeInTheDocument();
+
+      const historyPanel = screen.getByRole("heading", { name: "Recent draft versions" }).closest("section");
+      expect(historyPanel).not.toBeNull();
+      expect(within(historyPanel as HTMLElement).getByText("av-schedule-artifact-002")).toBeInTheDocument();
+      expect(within(historyPanel as HTMLElement).getByText("av-schedule-artifact-001")).toBeInTheDocument();
 
       await user.click(screen.getByRole("button", { name: "Download draft JSON" }));
       await waitFor(() => {
@@ -116,7 +136,11 @@ describe("LogisticsScheduleArtifactWorkpagePage", () => {
       );
     });
 
-    await user.click(screen.getByRole("link", { name: "Open previous draft" }));
+    await user.click(
+      within(screen.getByTestId("schedule-draft-history-av-schedule-artifact-001")).getByRole("link", {
+        name: "Open draft"
+      })
+    );
 
     await waitFor(() => {
       expect(window.location.pathname).toBe(
@@ -159,18 +183,28 @@ describe("LogisticsScheduleArtifactWorkpagePage", () => {
     await user.click(await screen.findByRole("link", { name: "Open editable draft" }));
     expect(await screen.findByTestId("schedule-artifact-workpage-page")).toBeInTheDocument();
 
-    const assignmentDriverInput = screen.getByRole("textbox", {
-      name: "Route assignments Assigned Driver Id 1"
-    });
-    await user.clear(assignmentDriverInput);
-    await user.type(assignmentDriverInput, "DRV-CONFLICT-11");
+    const heatmap = heatmapSection();
+    const sourceCell = heatmapButton(
+      heatmap,
+      (label) => label.includes("2026-03-22: assigned route")
+    );
+    const targetCell = heatmapButton(
+      heatmap,
+      (label) => label.includes("2026-03-22: no planned work")
+    );
+    const targetName = personNameFromLabel(targetCell.getAttribute("aria-label") ?? "");
+
+    await user.click(sourceCell);
+    await user.click(targetCell);
 
     await user.click(screen.getByRole("button", { name: "Submit draft" }));
 
     expect(await screen.findByRole("heading", { name: "Latest draft already exists" })).toBeInTheDocument();
-    expect(screen.getByRole("textbox", { name: "Route assignments Assigned Driver Id 1" })).toHaveValue(
-      "DRV-CONFLICT-11"
-    );
+    expect(
+      screen.getByRole("button", {
+        name: new RegExp(`^${escapeRegExp(targetName)} on 2026-03-22: assigned route, manually overridden$`)
+      })
+    ).toBeInTheDocument();
 
     await user.click(screen.getByRole("link", { name: "Open latest draft" }));
 
@@ -230,4 +264,43 @@ describe("LogisticsScheduleArtifactWorkpagePage", () => {
     expect(submitBodies).toHaveLength(1);
     expect(submitBodies[0]).not.toHaveProperty("subject_link");
   });
+
+  it(
+    "supports same-day assignment to reserve swaps in the heatmap",
+    async () => {
+      const user = userEvent.setup();
+      window.history.pushState({}, "", "/runs/wr-weekly-001/workpages/schedule-v0");
+      render(<App />);
+
+      await user.click(await screen.findByRole("link", { name: "Open editable draft" }));
+      expect(await screen.findByTestId("schedule-artifact-workpage-page")).toBeInTheDocument();
+
+      const heatmap = heatmapSection();
+      const assignmentCell = heatmapButton(
+        heatmap,
+        (label) => label.includes("2026-03-22: assigned route")
+      );
+      const reserveCell = heatmapButton(
+        heatmap,
+        (label) => label.includes("2026-03-22: on call")
+      );
+      const assignmentName = personNameFromLabel(assignmentCell.getAttribute("aria-label") ?? "");
+      const reserveName = personNameFromLabel(reserveCell.getAttribute("aria-label") ?? "");
+
+      await user.click(assignmentCell);
+      await user.click(reserveCell);
+
+      expect(
+        within(heatmap).getByRole("button", {
+          name: new RegExp(`^${escapeRegExp(reserveName)} on 2026-03-22: assigned route, manually overridden$`)
+        })
+      ).toBeInTheDocument();
+      expect(
+        within(heatmap).getByRole("button", {
+          name: new RegExp(`^${escapeRegExp(assignmentName)} on 2026-03-22: on call, manually overridden$`)
+        })
+      ).toBeInTheDocument();
+    },
+    10000
+  );
 });

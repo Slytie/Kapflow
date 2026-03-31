@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 
 import { apiConfig } from "@/lib/api/config";
 import { errorText } from "@/lib/api/errorText";
@@ -8,6 +8,7 @@ import { useShellFilters } from "@/app/useShellFilters";
 import { humanTasksRepository } from "@/lib/repositories";
 import { useDrawer } from "@/lib/state/drawerContext";
 import type { HumanTaskRow } from "@/lib/types/contracts";
+import { buildTaskDocumentPreviewCues } from "@/lib/workspace/taskDocumentUi";
 
 function hasAction(task: HumanTaskRow, candidates: string[]): boolean {
   const actions = task.available_actions ?? [];
@@ -111,26 +112,8 @@ function taskActionHint(task: HumanTaskRow, canClaim: boolean, canComplete: bool
 }
 
 export function MyWorkPage(): JSX.Element {
-  const queryClient = useQueryClient();
   const { filters } = useShellFilters();
   const { open } = useDrawer();
-
-  const refreshQueues = (): void => {
-    void Promise.all([
-      queryClient.invalidateQueries({ queryKey: ["my-work"] }),
-      queryClient.invalidateQueries({ queryKey: ["board-view"] })
-    ]);
-  };
-
-  const uploadAttachmentMutation = useMutation({
-    mutationFn: (payload: { humanTaskId: string; file: File }) =>
-      humanTasksRepository.uploadAttachment(payload.humanTaskId, payload.file),
-    onSuccess: refreshQueues
-  });
-
-  const downloadAttachmentMutation = useMutation({
-    mutationFn: (humanTaskId: string) => humanTasksRepository.downloadLatestAttachment(humanTaskId)
-  });
 
   const query = useQuery({
     queryKey: ["my-work", filters.workflowRunId, filters.state, filters.assignee, filters.query],
@@ -143,9 +126,6 @@ export function MyWorkPage(): JSX.Element {
       }),
     refetchInterval: apiConfig.pollIntervalMs
   });
-
-  const mutationError =
-    uploadAttachmentMutation.error ?? downloadAttachmentMutation.error;
 
   if (query.isLoading) {
     return <StatePanel kind="loading" title="Loading my work" detail="Fetching task queue from API." />;
@@ -176,20 +156,8 @@ export function MyWorkPage(): JSX.Element {
   return (
     <section data-testid="my-work-page">
       <h2>My Work Queue</h2>
-      {mutationError ? (
-        <StatePanel
-          kind="error"
-          title="Task action failed"
-          detail={errorText(mutationError, "Could not apply task action")}
-        />
-      ) : null}
       <div className="stack-list">
         {data.map((task) => {
-          const taskIsBusy =
-            (uploadAttachmentMutation.isPending &&
-              uploadAttachmentMutation.variables?.humanTaskId === task.human_task_id) ||
-            (downloadAttachmentMutation.isPending &&
-              downloadAttachmentMutation.variables === task.human_task_id);
           const canClaim = canClaimTask(task);
           const canComplete = canCompleteTask(task);
 
@@ -200,16 +168,12 @@ export function MyWorkPage(): JSX.Element {
               subtitle={`${task.owner_role ?? "unknown"} · ${task.workflow_run_id}`}
               status={task.state}
               hint={taskActionHint(task, canClaim, canComplete)}
-              onUpload={(file) =>
-                uploadAttachmentMutation.mutate({ humanTaskId: task.human_task_id, file })
-              }
-              onDownload={() => downloadAttachmentMutation.mutate(task.human_task_id)}
-              actionPending={taskIsBusy}
+              documentCues={buildTaskDocumentPreviewCues(task)}
               onDetails={() =>
                 open({
                   title: `${task.stage_id} ${task.task_kind}`,
                   subtitle: task.human_task_id,
-                  description: "Compact rows hide descriptions by default; details live in drawer.",
+                  description: "Compact rows hide descriptions by default; the full task opens in the centered task modal.",
                   fields: [
                     { label: "Assignee", value: task.assignee_actor_id ?? "unassigned" },
                     { label: "Blocked on", value: task.blocked_on_kind ?? "none" },
@@ -222,6 +186,8 @@ export function MyWorkPage(): JSX.Element {
                     stage_id: task.stage_id,
                     task_kind: task.task_kind,
                     state: task.state,
+                    created_at: task.created_at,
+                    updated_at: task.updated_at,
                     assignee_actor_id: task.assignee_actor_id,
                     assignee_actor_type: task.assignee_actor_type,
                     owner_role: task.owner_role,
@@ -231,7 +197,13 @@ export function MyWorkPage(): JSX.Element {
                     blocked_on_ref: task.blocked_on_ref,
                     available_actions: task.available_actions ?? [],
                     blocking_reason_codes: task.blocking_reason_codes ?? [],
-                    missing_required_inputs: task.missing_required_inputs ?? []
+                    missing_required_inputs: task.missing_required_inputs ?? [],
+                    required_uploads: task.required_uploads ?? [],
+                    required_reviews: task.required_reviews ?? [],
+                    workpage_actions: task.workpage_actions ?? [],
+                    is_composite: task.is_composite ?? false,
+                    expansion_kind: task.expansion_kind ?? "none",
+                    subgraph_ref: task.subgraph_ref ?? null
                   },
                   artifact_sources: [
                     {

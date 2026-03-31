@@ -53,6 +53,44 @@ export interface WorkpageTableSection {
   rows: WorkpageTableRow[];
 }
 
+export type WorkpageScheduleHeatmapCellState = "assigned" | "on_call" | "empty";
+
+export interface WorkpageScheduleHeatmapDate {
+  service_date: string;
+  label: string;
+  weekday_label: string;
+  is_selected_day?: boolean;
+}
+
+export interface WorkpageScheduleHeatmapCell {
+  service_date: string;
+  state: WorkpageScheduleHeatmapCellState;
+  row_kind: "assignment" | "reserve" | null;
+  route_slot_id: string | null;
+  projected_minutes: number | null;
+  assignment_status: string | null;
+  planned_driver_day_state: string | null;
+  manual_override: boolean;
+}
+
+export interface WorkpageScheduleHeatmapPerson {
+  driver_id: string;
+  driver_name: string;
+  employment_type: string;
+  on_call_eligible: boolean;
+  previous_week_minutes: number;
+  availability_summary: string;
+  cells: WorkpageScheduleHeatmapCell[];
+}
+
+export interface WorkpageScheduleHeatmapSection {
+  kind: "schedule_heatmap";
+  title: string;
+  subtitle?: string;
+  service_dates: WorkpageScheduleHeatmapDate[];
+  people: WorkpageScheduleHeatmapPerson[];
+}
+
 export interface WorkpageNotePanelSection {
   kind: "note_panel";
   title: string;
@@ -82,6 +120,7 @@ export interface WorkpageHistorySection {
 export type WorkpageSection =
   | WorkpageSummaryCardsSection
   | WorkpageTableSection
+  | WorkpageScheduleHeatmapSection
   | WorkpageNotePanelSection
   | WorkpageFormSection
   | WorkpageChecklistSection

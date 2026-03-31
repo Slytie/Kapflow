@@ -1,15 +1,15 @@
-import { type ChangeEvent, useId, useMemo, useRef } from "react";
+import { useMemo } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 
 import { AttachmentActions } from "@/components/AttachmentActions";
 import { StatePanel } from "@/components/StatePanel";
+import { TaskDocumentCues } from "@/components/TaskDocumentCues";
 import { errorText } from "@/lib/api/errorText";
 import {
   approvalsRepository,
   flagsRepository,
   humanTasksRepository,
-  templatesRepository,
   workpagesRepository
 } from "@/lib/repositories";
 import type {
@@ -21,12 +21,12 @@ import type {
   WorkflowRunWorkspaceContract,
   WorkflowWorkspaceApprovalWorkItem,
   WorkflowWorkspaceFlagWorkItem,
-  WorkflowWorkspaceRequiredUpload,
   WorkflowWorkspaceWorkpageAction,
   WorkflowWorkspaceTaskWorkItem,
   WorkflowWorkspaceWorkItem
 } from "@/lib/types/contracts";
 import type { DrawerArtifact, DrawerPayload } from "@/lib/types/ui";
+import { buildTaskDocumentPreviewCues } from "@/lib/workspace/taskDocumentUi";
 import { taskDisplayHeading, taskDisplayLabel } from "@/lib/workspace/taskLabels";
 
 type WorkspaceLaneId = "todo" | "in_progress" | "review" | "done";
@@ -87,67 +87,6 @@ const LANE_CONFIG: Array<{ id: WorkspaceLaneId; label: string }> = [
   { id: "done", label: "Done" }
 ];
 
-interface RequiredUploadActionsProps {
-  requirement: WorkflowWorkspaceRequiredUpload;
-  disabled: boolean;
-  onUpload: (file: File) => void;
-  onDownloadTemplate?: () => void;
-}
-
-function RequiredUploadActions({
-  requirement,
-  disabled,
-  onUpload,
-  onDownloadTemplate
-}: RequiredUploadActionsProps): JSX.Element {
-  const inputRef = useRef<HTMLInputElement | null>(null);
-  const inputId = useId();
-
-  const openFilePicker = (): void => {
-    if (disabled) {
-      return;
-    }
-    inputRef.current?.click();
-  };
-
-  const onInputChanged = (event: ChangeEvent<HTMLInputElement>): void => {
-    const file = event.currentTarget.files?.[0];
-    if (file) {
-      onUpload(file);
-    }
-    event.currentTarget.value = "";
-  };
-
-  return (
-    <div className="workspace-required-upload-actions">
-      <input
-        id={inputId}
-        ref={inputRef}
-        type="file"
-        onChange={onInputChanged}
-        tabIndex={-1}
-        style={{ display: "none" }}
-      />
-      <button
-        type="button"
-        className="workspace-board-action"
-        onClick={openFilePicker}
-        disabled={disabled}
-      >
-        {requirement.artifact_role === "official_input" ? "Upload Input" : "Upload Response"}
-      </button>
-      <button
-        type="button"
-        className="workspace-board-action"
-        onClick={onDownloadTemplate}
-        disabled={disabled || !onDownloadTemplate || !requirement.template_id}
-      >
-        Download Template
-      </button>
-    </div>
-  );
-}
-
 function hasAction(item: WorkflowWorkspaceWorkItem | null, candidates: string[]): boolean {
   if (!item) {
     return false;
@@ -161,16 +100,6 @@ function workpageActionStateLabel(action: WorkflowWorkspaceWorkpageAction): stri
     return "Schedule draft unavailable for this run yet";
   }
   return action.disabled_reason ?? action.label;
-}
-
-function requirementLabel(requirement: WorkflowWorkspaceRequiredUpload): string {
-  if (requirement.required === false) {
-    return "Optional context";
-  }
-  if (requirement.artifact_role === "official_input") {
-    return "Required input";
-  }
-  return "Required upload";
 }
 
 function humanize(value: string): string {
@@ -305,7 +234,7 @@ function taskDetailPayload(
     title: taskDisplayHeading(task),
     subtitle: task.human_task_id,
     description:
-      "Task details remain drawer-first so cards can stay dense and synchronized with the graph.",
+      "Task details open in the centered task modal so cards can stay dense and synchronized with the graph.",
     fields: [
       { label: "State", value: task.state },
       { label: "Owner role", value: task.owner_role ?? "n/a" },
@@ -324,6 +253,8 @@ function taskDetailPayload(
       stage_id: task.stage_id,
       task_kind: task.task_kind,
       state: task.state,
+      created_at: task.created_at,
+      updated_at: task.updated_at,
       assignee_actor_id: task.assignee_actor_id,
       assignee_actor_type: task.assignee_actor_type,
       owner_role: task.owner_role,
@@ -336,6 +267,7 @@ function taskDetailPayload(
       missing_required_inputs: item?.missing_required_inputs ?? task.missing_required_inputs ?? [],
       required_uploads: item?.required_uploads ?? task.required_uploads ?? [],
       required_reviews: item?.required_reviews ?? task.required_reviews ?? [],
+      workpage_actions: item?.workpage_actions ?? task.workpage_actions ?? [],
       is_composite: task.is_composite ?? false,
       expansion_kind: task.expansion_kind ?? "none",
       subgraph_ref: task.subgraph_ref ?? null
@@ -408,12 +340,6 @@ export function WorkspaceTaskBoard({
     onSuccess: onRefresh
   });
 
-  const confirmReviewMutation = useMutation({
-    mutationFn: (payload: { humanTaskId: string; reviewedArtifactVersionIds: string[] }) =>
-      humanTasksRepository.confirmReview(payload.humanTaskId, payload.reviewedArtifactVersionIds),
-    onSuccess: onRefresh
-  });
-
   const runStage06ReviewMutation = useMutation({
     mutationFn: (humanTaskId: string) => humanTasksRepository.runStage06AgentReview(humanTaskId),
     onSuccess: onRefresh
@@ -432,30 +358,6 @@ export function WorkspaceTaskBoard({
     onSuccess: onRefresh
   });
 
-  const uploadTaskAttachmentMutation = useMutation({
-    mutationFn: (payload: { humanTaskId: string; file: File }) =>
-      humanTasksRepository.uploadAttachment(payload.humanTaskId, payload.file),
-    onSuccess: onRefresh
-  });
-
-  const uploadRequiredResponseMutation = useMutation({
-    mutationFn: (payload: {
-      humanTaskId: string;
-      requirement: WorkflowWorkspaceRequiredUpload;
-      file: File;
-    }) =>
-      humanTasksRepository.uploadRequiredResponse(
-        payload.humanTaskId,
-        payload.requirement,
-        payload.file
-      ),
-    onSuccess: onRefresh
-  });
-
-  const downloadTemplateMutation = useMutation({
-    mutationFn: (templateId: string) => templatesRepository.download(templateId)
-  });
-
   const workpageActionMutation = useMutation({
     mutationFn: (action: WorkflowWorkspaceWorkpageAction) => {
       if (action.presentation !== "create_draft_then_open" || !action.create_path) {
@@ -469,15 +371,6 @@ export function WorkspaceTaskBoard({
         state: { workpageSubjectContext: action.subject_context }
       });
     }
-  });
-
-  const openDraftMutation = useMutation({
-    mutationFn: (artifactVersionId: string) =>
-      humanTasksRepository.openDraftArtifact(artifactVersionId)
-  });
-
-  const downloadTaskAttachmentMutation = useMutation({
-    mutationFn: (humanTaskId: string) => humanTasksRepository.downloadLatestAttachment(humanTaskId)
   });
 
   const uploadApprovalAttachmentMutation = useMutation({
@@ -503,16 +396,10 @@ export function WorkspaceTaskBoard({
   const mutationError =
     claimMutation.error ??
     completeMutation.error ??
-    confirmReviewMutation.error ??
     runStage06ReviewMutation.error ??
     runWeeklyStage04AgentMutation.error ??
     approvalMutation.error ??
-    uploadTaskAttachmentMutation.error ??
-    uploadRequiredResponseMutation.error ??
-    downloadTemplateMutation.error ??
     workpageActionMutation.error ??
-    openDraftMutation.error ??
-    downloadTaskAttachmentMutation.error ??
     uploadApprovalAttachmentMutation.error ??
     downloadApprovalAttachmentMutation.error ??
     uploadFlagAttachmentMutation.error ??
@@ -662,41 +549,21 @@ export function WorkspaceTaskBoard({
               </span>
             </header>
 
-            <div className="workspace-lane__cards">
-              {laneCards[lane.id].map((card) => {
+              <div className="workspace-lane__cards">
+                {laneCards[lane.id].map((card) => {
                 if (card.kind === "task") {
-                  const requiredUploads = card.item?.required_uploads ?? [];
-                  const requiredReviews = card.item?.required_reviews ?? [];
-                  const reviewArtifactVersionIds = requiredReviews
-                    .map((review) => review.reviewed_artifact_version_id)
-                    .filter((value): value is string => Boolean(value));
-                  const hasPendingReviewConfirmation = requiredReviews.some(
-                    (review) => review.status === "pending_confirmation"
-                  );
                   const taskBusy =
                     (claimMutation.isPending && claimMutation.variables === card.task.human_task_id) ||
                     (completeMutation.isPending &&
                       completeMutation.variables === card.task.human_task_id) ||
-                    (confirmReviewMutation.isPending &&
-                      confirmReviewMutation.variables?.humanTaskId === card.task.human_task_id) ||
                     (runStage06ReviewMutation.isPending &&
                       runStage06ReviewMutation.variables === card.task.human_task_id) ||
                     (runWeeklyStage04AgentMutation.isPending &&
                       runWeeklyStage04AgentMutation.variables === card.task.human_task_id) ||
-                    (uploadTaskAttachmentMutation.isPending &&
-                      uploadTaskAttachmentMutation.variables?.humanTaskId ===
-                        card.task.human_task_id) ||
-                    (uploadRequiredResponseMutation.isPending &&
-                      uploadRequiredResponseMutation.variables?.humanTaskId ===
-                        card.task.human_task_id) ||
-                    downloadTemplateMutation.isPending ||
                     (workpageActionMutation.isPending &&
                       workpageActionMutation.variables?.subject_context.subject_kind === "human_task" &&
                       workpageActionMutation.variables?.subject_context.subject_id ===
-                        card.task.human_task_id) ||
-                    openDraftMutation.isPending ||
-                    (downloadTaskAttachmentMutation.isPending &&
-                      downloadTaskAttachmentMutation.variables === card.task.human_task_id);
+                        card.task.human_task_id);
                   const workpageActions = card.item?.workpage_actions ?? [];
 
                   const canClaim =
@@ -705,12 +572,6 @@ export function WorkspaceTaskBoard({
                   const canComplete =
                     hasAction(card.item, ["complete", "complete_human_task"]) ||
                     (card.item === null && card.task.state === "CLAIMED");
-                  const canUpload = hasAction(card.item, ["upload_attachment", "upload_artifact"]);
-                  const canDownload = hasAction(card.item, [
-                    "download_attachment",
-                    "download_artifact",
-                    "download_attachments"
-                  ]);
                   const canRunStage06Review = hasAction(card.item, [
                     "run_stage06_agent_review",
                     "stage06_agent_review"
@@ -718,11 +579,22 @@ export function WorkspaceTaskBoard({
                   const canRunWeeklyStage04Agent = hasAction(card.item, [
                     "run_weekly_stage04_openai_agent"
                   ]);
-                  const canConfirmReview = hasAction(card.item, ["confirm_review"]);
                   const requirementBlocked =
                     (card.item?.missing_required_inputs.length ?? 0) > 0 ||
                     (card.item?.blocking_reason_codes.length ?? 0) > 0;
                   const canCompleteNow = canComplete && !requirementBlocked;
+                  const taskArtifacts = _taskArtifacts(card.task, detail.artifact_versions);
+                  const documentCues = buildTaskDocumentPreviewCues({
+                    missing_required_inputs:
+                      card.item?.missing_required_inputs ?? card.task.missing_required_inputs ?? [],
+                    required_uploads:
+                      card.item?.required_uploads ?? card.task.required_uploads ?? [],
+                    required_reviews:
+                      card.item?.required_reviews ?? card.task.required_reviews ?? [],
+                    available_actions:
+                      card.item?.available_actions ?? card.task.available_actions ?? [],
+                    artifact_count: taskArtifacts.length
+                  });
 
                   const hints: string[] = [];
                   if (!canClaim && card.task.state === "OPEN") {
@@ -873,25 +745,6 @@ export function WorkspaceTaskBoard({
                                 AI Review Assist
                               </button>
                             ) : null}
-                            <AttachmentActions
-                              compact
-                              onUpload={
-                                canUpload
-                                  ? (file) =>
-                                      uploadTaskAttachmentMutation.mutate({
-                                        humanTaskId: card.task.human_task_id,
-                                        file
-                                      })
-                                  : undefined
-                              }
-                              onDownload={
-                                canDownload
-                                  ? () =>
-                                      downloadTaskAttachmentMutation.mutate(card.task.human_task_id)
-                                  : undefined
-                              }
-                              disabled={taskBusy}
-                            />
                             <button
                               type="button"
                               className="workspace-board-action"
@@ -908,82 +761,7 @@ export function WorkspaceTaskBoard({
                           {card.tag}
                         </span>
                       </div>
-
-                      {requiredUploads.length > 0 ? (
-                        <div className="workspace-board-card__requirements">
-                          {requiredUploads.map((requirement, index) => (
-                            <div
-                              key={`${card.cardId}:required-upload:${index}:${requirement.dataset_key}`}
-                              className="workspace-board-card__requirement"
-                            >
-                              <p>
-                                {requirementLabel(requirement)}: {requirement.dataset_key} ({requirement.status})
-                              </p>
-                              <RequiredUploadActions
-                                requirement={requirement}
-                                disabled={taskBusy}
-                                onUpload={(file) =>
-                                  uploadRequiredResponseMutation.mutate({
-                                    humanTaskId: card.task.human_task_id,
-                                    requirement,
-                                    file
-                                  })
-                                }
-                                onDownloadTemplate={
-                                  requirement.template_id
-                                    ? () => downloadTemplateMutation.mutate(requirement.template_id as string)
-                                    : undefined
-                                }
-                              />
-                            </div>
-                          ))}
-                        </div>
-                      ) : null}
-
-                      {requiredReviews.length > 0 ? (
-                        <div className="workspace-board-card__requirements">
-                          {requiredReviews.map((requirement, index) => (
-                            <div
-                              key={`${card.cardId}:required-review:${index}:${requirement.artifact_kind}`}
-                              className="workspace-board-card__requirement"
-                            >
-                              <p>Required review: {requirement.artifact_kind} ({requirement.status})</p>
-                              <div className="workspace-required-upload-actions">
-                                <button
-                                  type="button"
-                                  className="workspace-board-action"
-                                  onClick={() => {
-                                    if (requirement.reviewed_artifact_version_id) {
-                                      openDraftMutation.mutate(requirement.reviewed_artifact_version_id);
-                                    }
-                                  }}
-                                  disabled={taskBusy || !requirement.reviewed_artifact_version_id}
-                                >
-                                  Open Draft
-                                </button>
-                                <button
-                                  type="button"
-                                  className="workspace-board-action"
-                                  onClick={() =>
-                                    confirmReviewMutation.mutate({
-                                      humanTaskId: card.task.human_task_id,
-                                      reviewedArtifactVersionIds: reviewArtifactVersionIds
-                                    })
-                                  }
-                                  disabled={
-                                    taskBusy ||
-                                    !canConfirmReview ||
-                                    !hasPendingReviewConfirmation ||
-                                    reviewArtifactVersionIds.length === 0
-                                  }
-                                >
-                                  Confirm Reviewed
-                                </button>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      ) : null}
+                      <TaskDocumentCues cues={documentCues} compact />
 
                       {card.task.state !== "COMPLETED" ? (
                         <div className="workspace-board-card__quick-actions">

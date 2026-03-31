@@ -6,6 +6,7 @@ import type {
   HumanTaskRow,
   PointerRow,
   TimelineEvent,
+  WorkflowWorkspaceWorkpageAction,
   WorkflowWorkspaceRequiredReview,
   WorkflowWorkspaceRequiredUpload,
   WorkflowRunDetailContract,
@@ -44,6 +45,12 @@ export interface DrawerArtifactSource {
   source_label: string;
 }
 
+export interface DrawerDownloadableArtifact {
+  artifact_version_id: string;
+  label: string;
+  source_label: string;
+}
+
 export interface DrawerTaskContext {
   human_task_id: string;
   workflow_run_id: string;
@@ -51,6 +58,8 @@ export interface DrawerTaskContext {
   stage_id: string;
   task_kind: string;
   state: string;
+  created_at?: string | null;
+  updated_at?: string | null;
   assignee_actor_id: string | null;
   assignee_actor_type: string | null;
   owner_role: string | null;
@@ -63,6 +72,7 @@ export interface DrawerTaskContext {
   missing_required_inputs: string[];
   required_uploads?: WorkflowWorkspaceRequiredUpload[];
   required_reviews?: WorkflowWorkspaceRequiredReview[];
+  workpage_actions?: WorkflowWorkspaceWorkpageAction[];
   is_composite?: boolean;
   expansion_kind?: HumanTaskExpansionKind;
   subgraph_ref?: HumanTaskSubgraphRef | null;
@@ -79,6 +89,7 @@ export interface DrawerPayload {
   description?: string;
   fields: DrawerField[];
   links?: DrawerLink[];
+  downloadable_artifacts?: DrawerDownloadableArtifact[];
   artifacts?: DrawerArtifact[];
   artifact_sources?: DrawerArtifactSource[];
   task?: DrawerTaskContext;

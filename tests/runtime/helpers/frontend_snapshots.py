@@ -462,8 +462,20 @@ def _build_schedule_artifact_submit_snapshot(*, tmp_path: Path) -> dict[str, Any
     )
     artifact_version_id = str(seeded["stage04_outputs"]["draft_workbook"]["artifact_version_id"])
     current = client.get(f"/api/v1/workpages/artifacts/{artifact_version_id}").payload
-    assignment_rows = list(current["workpage"]["sections"][2]["rows"])
-    reserve_rows = list(current["workpage"]["sections"][3]["rows"])
+    assignment_rows = list(
+        next(
+            section["rows"]
+            for section in current["workpage"]["sections"]
+            if section.get("table_id") == "assignment_rows"
+        )
+    )
+    reserve_rows = list(
+        next(
+            section["rows"]
+            for section in current["workpage"]["sections"]
+            if section.get("table_id") == "reserve_rows"
+        )
+    )
     assignment_rows[0] = {
         **assignment_rows[0],
         "assigned_driver_id": "DRV-SNAPSHOT-77",

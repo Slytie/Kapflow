@@ -1,315 +1,52 @@
 import { useEffect, useMemo, useState } from "react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useSearchParams } from "react-router-dom";
 
 import { LaneColumn } from "@/components/LaneColumn";
 import { StatePanel } from "@/components/StatePanel";
+import { TaskDocumentCues } from "@/components/TaskDocumentCues";
 import { WorkflowGraph } from "@/components/WorkflowGraph";
+import { InfoDialog } from "@/components/InfoDialog";
+import {
+  InlineDispatchReportWorkpage,
+  InlineScheduleWorkpage
+} from "@/components/workpages/InlineLogisticsWorkpages";
 import { apiConfig } from "@/lib/api/config";
 import { errorText } from "@/lib/api/errorText";
-import { createIdempotencyKey } from "@/lib/api/idempotency";
-import { onetruthApi } from "@/lib/api/onetruthApi";
+import {
+  artifactLabel,
+  boardItemMeta,
+  boardItemSupportText,
+  buildBoardItemDrawerPayload,
+  DEFAULT_LOGISTICS_PLANNING_WEEK_ID,
+  editorialBoard,
+  moduleDisplayLabel,
+  moduleRunRefs,
+  runRefSummary,
+  runRowsForStory,
+  stateBadgeClass
+} from "@/lib/logistics/familyStory";
 import { logisticsStoryRepository, workflowRunsRepository } from "@/lib/repositories";
-import { downloadBinaryToFile } from "@/lib/repositories/artifactAttachments";
 import { useDrawer } from "@/lib/state/drawerContext";
-import type {
-  LogisticsStoryBoardWorkItem,
-  LogisticsStoryFamilyModule,
-  LogisticsStoryModuleArtifactRef,
-  LogisticsStoryModuleDrilldownRef,
-  LogisticsThreeWorkflowStoryContract,
-  WorkflowRunRow,
-  WorkflowWorkspaceFreshness,
-  WorkflowWorkspaceGraphEdge,
-  WorkflowWorkspaceGraphNode
-} from "@/lib/types/contracts";
+import type { LogisticsStoryFamilyModule } from "@/lib/types/contracts";
 import {
   buildStageNodeDrawerPayload,
   graphNodesWithResponsibility,
   workspaceTab
 } from "@/lib/workspace/runWorkspaceGraph";
-
-const DEMO_TABS = ["Logistics Family Process"];
-const MODULE_LAYOUT: Record<string, { row: number; column: number; label: string }> = {
-  dispatch_reporting: {
-    row: 0,
-    column: 0,
-    label: "Dispatch Reporting"
-  },
-  weekly_schedule_planning: {
-    row: 0,
-    column: 1,
-    label: "Weekly Schedule Planning"
-  },
-  live_dispatch: {
-    row: 0,
-    column: 2,
-    label: "Live Dispatch"
-  }
-};
-
-function normalizeStatus(input: string): string {
-  return input.trim().toLowerCase();
-}
-
-function graphStatusForModule(
-  moduleStatus: string,
-  runStates: string[]
-): WorkflowWorkspaceGraphNode["status"] {
-  const normalizedRunStates = runStates.map(normalizeStatus);
-  if (
-    normalizedRunStates.some((state) =>
-      new Set(["open", "ready", "in_progress", "claimed", "pending", "triage", "blocked"]).has(
-        state
-      )
-    )
-  ) {
-    return "in_progress";
-  }
-  if (normalizedRunStates.length > 0) {
-    return "completed";
-  }
-
-  const normalizedModuleStatus = normalizeStatus(moduleStatus);
-  if (["blocked", "error", "failed", "warning"].includes(normalizedModuleStatus)) {
-    return "warning";
-  }
-  if (["active", "ready", "enabled"].includes(normalizedModuleStatus)) {
-    return "ready";
-  }
-  return "not_started";
-}
-
-function moduleDisplayLabel(module: LogisticsStoryFamilyModule): string {
-  return MODULE_LAYOUT[module.module_id]?.label ?? module.module_id;
-}
-
-function runRowsForStory(story: LogisticsThreeWorkflowStoryContract): WorkflowRunRow[] {
-  return [
-    ...story.linked_workflow_runs.dispatch_reporting,
-    ...story.linked_workflow_runs.weekly_schedule_planning,
-    ...story.linked_workflow_runs.live_dispatch
-  ];
-}
-
-function moduleRunRefs(module: LogisticsStoryFamilyModule): LogisticsStoryModuleDrilldownRef[] {
-  const deduped = new Map<string, LogisticsStoryModuleDrilldownRef>();
-  for (const ref of module.drilldown_refs) {
-    if (!deduped.has(ref.workflow_run_id)) {
-      deduped.set(ref.workflow_run_id, ref);
-    }
-  }
-  return Array.from(deduped.values());
-}
-
-function graphNodes(story: LogisticsThreeWorkflowStoryContract): WorkflowWorkspaceGraphNode[] {
-  const storyRuns = runRowsForStory(story);
-  const runById = new Map(storyRuns.map((run) => [run.workflow_run_id, run]));
-  return story.family_graph.modules.map((module, index) => {
-    const moduleLayout = MODULE_LAYOUT[module.module_id] ?? {
-      row: 0,
-      column: index,
-      label: module.module_id
-    };
-    const refs = moduleRunRefs(module);
-    const refRunStates = refs
-      .map((ref) => runById.get(ref.workflow_run_id)?.state ?? "")
-      .filter((state) => state.length > 0);
-    const workflowRunStates =
-      refRunStates.length > 0
-        ? refRunStates
-        : storyRuns
-            .filter((run) => run.workflow_id === module.workflow_id)
-            .map((run) => run.state);
-    const runCount = refs.length > 0 ? refs.length : workflowRunStates.length;
-
-    return {
-      node_id: module.module_id,
-      stage_id: module.workflow_id,
-      label: moduleLayout.label,
-      status: graphStatusForModule(module.status, workflowRunStates),
-      row: moduleLayout.row,
-      column: moduleLayout.column,
-      is_blocking: false,
-      responsibility_summary:
-        runCount > 0
-          ? `${runCount} linked run${runCount === 1 ? "" : "s"}`
-          : "No linked runs",
-      responsibility_detail: module.selection_summary || module.activation_policy
-    };
-  });
-}
-
-function graphEdges(story: LogisticsThreeWorkflowStoryContract): WorkflowWorkspaceGraphEdge[] {
-  return story.family_graph.edges.map((edge) => ({
-    edge_id: edge.edge_id,
-    from_node_id: edge.source_module_id,
-    to_node_id: edge.target_module_id,
-    edge_kind: edge.handoff_mode === "notify_only" ? "branch" : "linear",
-    label: edge.handoff_mode
-  }));
-}
-
-function storyFreshness(story: LogisticsThreeWorkflowStoryContract): WorkflowWorkspaceFreshness {
-  return {
-    status: story.freshness.latest_event_recorded_at ? "fresh" : "unknown",
-    as_of: story.freshness.latest_event_recorded_at ?? story.freshness.generated_at,
-    note: `story generated at ${story.freshness.generated_at}`
-  };
-}
-
-function stateBadgeClass(state: string): string {
-  const normalized = normalizeStatus(state);
-  if (["completed", "responded", "closed", "resolved"].includes(normalized)) {
-    return "status-badge status-badge--success";
-  }
-  if (["open", "claimed", "pending", "triage", "blocked", "ready", "in_progress"].includes(normalized)) {
-    return "status-badge status-badge--active";
-  }
-  return "status-badge status-badge--default";
-}
-
-function groupedBoardItems(story: LogisticsThreeWorkflowStoryContract): Map<string, LogisticsStoryBoardWorkItem[]> {
-  const byLane = new Map<string, LogisticsStoryBoardWorkItem[]>();
-  for (const item of story.board.work_items) {
-    const existing = byLane.get(item.lane) ?? [];
-    existing.push(item);
-    byLane.set(item.lane, existing);
-  }
-  return byLane;
-}
-
-function boardItemMeta(item: LogisticsStoryBoardWorkItem): string {
-  if (item.item_type === "human_task") {
-    return `${item.stage_id ?? "stage"} · ${item.task_kind ?? "task"}`;
-  }
-  if (item.item_type === "approval") {
-    return `${item.approval_kind ?? "approval"} · ${item.scope_ref ?? "scope"}`;
-  }
-  return `${item.kind ?? "flag"} · ${item.severity ?? "severity"}`;
-}
-
-function boardItemActions(item: LogisticsStoryBoardWorkItem): string {
-  if (item.available_actions.length === 0) {
-    return "none";
-  }
-  return item.available_actions.join(", ");
-}
-
-function artifactLabel(artifactRef: LogisticsStoryModuleArtifactRef): string {
-  return artifactRef.label.trim().length > 0 ? artifactRef.label : artifactRef.artifact_version_id;
-}
-
-function runRefSummary(
-  ref: LogisticsStoryModuleDrilldownRef,
-  run: WorkflowRunRow | null
-): string {
-  if (run) {
-    return `${run.workflow_run_id} · ${run.state} · ${run.partition_key}`;
-  }
-  return `${ref.workflow_run_id} · ${ref.partition_key}`;
-}
-
-interface WorkpageRouteLink {
-  label: string;
-  to: string;
-}
-
-function headerWorkpageRouteForRun(run: WorkflowRunRow): WorkpageRouteLink | null {
-  switch (run.workflow_id) {
-    case "weekly_schedule_planning.v1":
-      return {
-        label: "Open weekly review workpage",
-        to: `/runs/${run.workflow_run_id}/workpages/schedule-v0`
-      };
-    case "dispatch_reporting.v1":
-      return {
-        label: "Open EOD workpage",
-        to: `/runs/${run.workflow_run_id}/workpages/eod-v0`
-      };
-    default:
-      return null;
-  }
-}
-
-function drilldownWorkpageRouteForRun(
-  workflowRunId: string,
-  workflowId: string
-): WorkpageRouteLink | null {
-  switch (workflowId) {
-    case "weekly_schedule_planning.v1":
-      return {
-        label: "Open schedule workpage",
-        to: `/runs/${workflowRunId}/workpages/schedule-v0`
-      };
-    case "dispatch_reporting.v1":
-      return {
-        label: "Open EOD workpage",
-        to: `/runs/${workflowRunId}/workpages/eod-v0`
-      };
-    default:
-      return null;
-  }
-}
-
-function canonicalHeaderGuidance(
-  runCount: number,
-  workpageLabel: string,
-  workflowLabel: string
-): string {
-  if (runCount === 0) {
-    return `${workpageLabel}: no linked ${workflowLabel} run is available in this story.`;
-  }
-  return `${workpageLabel}: choose a linked ${workflowLabel} run from the family-node drill-down below.`;
-}
-
-function preferredHeaderRun(runs: WorkflowRunRow[]): WorkflowRunRow | null {
-  if (runs.length !== 1) {
-    return null;
-  }
-  return runs[0];
-}
-
-function storyModuleById(
-  story: LogisticsThreeWorkflowStoryContract,
-  moduleId: string
-): LogisticsStoryFamilyModule | null {
-  return story.family_graph.modules.find((module) => module.module_id === moduleId) ?? null;
-}
-
-function latestOfficialArtifactForRun(
-  story: LogisticsThreeWorkflowStoryContract,
-  workflowRunId: string,
-  artifactKind: string
-): string | null {
-  const matches = story.official_outputs.official_output_artifacts.filter(
-    (artifact) =>
-      artifact.workflow_run_id === workflowRunId && artifact.artifact_kind === artifactKind
-  );
-  if (matches.length === 0) {
-    return null;
-  }
-  matches.sort((left, right) => {
-    const createdAtCompare = right.created_at.localeCompare(left.created_at);
-    if (createdAtCompare !== 0) {
-      return createdAtCompare;
-    }
-    return right.artifact_version_id.localeCompare(left.artifact_version_id);
-  });
-  return matches[0]?.artifact_version_id ?? null;
-}
+import { buildTaskDocumentPreviewCues } from "@/lib/workspace/taskDocumentUi";
 
 export function LogisticsDemoPage(): JSX.Element {
   const { open } = useDrawer();
   const queryClient = useQueryClient();
-  const [searchParams] = useSearchParams();
-  const planningWeekId = searchParams.get("planning_week_id")?.trim() || "PW-2026-W10";
+  const [searchParams, setSearchParams] = useSearchParams();
+  const planningWeekId =
+    searchParams.get("planning_week_id")?.trim() || DEFAULT_LOGISTICS_PLANNING_WEEK_ID;
   const serviceDateId = searchParams.get("service_date_id")?.trim() || undefined;
-  const [selectedModuleId, setSelectedModuleId] = useState<string | null>(null);
-  const [selectedDrilldownRunId, setSelectedDrilldownRunId] = useState<string | null>(null);
   const [selectedDrilldownNodeId, setSelectedDrilldownNodeId] = useState<string | null>(null);
-  const [downloadingArtifactVersionId, setDownloadingArtifactVersionId] = useState<string | null>(null);
-  const [familyArtifactError, setFamilyArtifactError] = useState<unknown>(null);
+  const [isBoardExpanded, setIsBoardExpanded] = useState(false);
+  const selectedModuleIdParam = searchParams.get("module")?.trim() || null;
+  const selectedRunIdParam = searchParams.get("workflow_run_id")?.trim() || null;
 
   const query = useQuery({
     queryKey: ["logistics-demo-story", planningWeekId, serviceDateId],
@@ -322,45 +59,28 @@ export function LogisticsDemoPage(): JSX.Element {
   });
 
   const story = query.data;
-  const activeServiceDateId = serviceDateId ?? story?.partitions.service_date_ids[0] ?? "";
   const runById = useMemo(() => {
     if (!story) {
-      return new Map<string, WorkflowRunRow>();
+      return new Map();
     }
     return new Map(runRowsForStory(story).map((run) => [run.workflow_run_id, run]));
   }, [story]);
-  const graph = useMemo(
-    () =>
-      story
-        ? {
-            nodes: graphNodes(story),
-            edges: graphEdges(story)
-          }
-        : { nodes: [], edges: [] },
-    [story]
-  );
-
-  useEffect(() => {
-    if (!story) {
-      setSelectedModuleId(null);
-      return;
-    }
-    const moduleIds = new Set(story.family_graph.modules.map((module) => module.module_id));
-    if (selectedModuleId && moduleIds.has(selectedModuleId)) {
-      return;
-    }
-    setSelectedModuleId(story.family_graph.modules[0]?.module_id ?? null);
-  }, [selectedModuleId, story]);
 
   const selectedModule = useMemo(() => {
     if (!story) {
       return null;
     }
-    if (selectedModuleId) {
-      return story.family_graph.modules.find((module) => module.module_id === selectedModuleId) ?? null;
+    if (selectedModuleIdParam) {
+      return (
+        story.family_graph.modules.find(
+          (module) => module.module_id === selectedModuleIdParam
+        ) ??
+        story.family_graph.modules[0] ??
+        null
+      );
     }
     return story.family_graph.modules[0] ?? null;
-  }, [selectedModuleId, story]);
+  }, [selectedModuleIdParam, story]);
 
   const selectedModuleRefs = useMemo(
     () => (selectedModule ? moduleRunRefs(selectedModule) : []),
@@ -376,31 +96,59 @@ export function LogisticsDemoPage(): JSX.Element {
     [runById, selectedModuleRefs]
   );
 
-  const selectedModuleRunIdsKey = useMemo(
-    () => selectedModuleRefs.map((ref) => ref.workflow_run_id).join("|"),
-    [selectedModuleRefs]
-  );
+  const selectedDrilldownRunId = useMemo(() => {
+    if (selectedModuleRuns.length === 1) {
+      return selectedModuleRuns[0]?.ref.workflow_run_id ?? null;
+    }
+    if (
+      selectedRunIdParam &&
+      selectedModuleRuns.some(
+        ({ ref }) => ref.workflow_run_id === selectedRunIdParam
+      )
+    ) {
+      return selectedRunIdParam;
+    }
+    return null;
+  }, [selectedModuleRuns, selectedRunIdParam]);
 
   useEffect(() => {
-    const runIds =
-      selectedModuleRunIdsKey.trim().length > 0
-        ? selectedModuleRunIdsKey.split("|").filter((id) => id.length > 0)
-        : [];
-    setSelectedDrilldownRunId((current) => {
-      if (runIds.length === 0) {
-        return null;
+    if (!story || !selectedModule) {
+      return;
+    }
+    const nextParams = new URLSearchParams(searchParams);
+    let changed = false;
+    if (nextParams.get("planning_week_id") !== planningWeekId) {
+      nextParams.set("planning_week_id", planningWeekId);
+      changed = true;
+    }
+    if (nextParams.get("module") !== selectedModule.module_id) {
+      nextParams.set("module", selectedModule.module_id);
+      changed = true;
+    }
+    if (selectedDrilldownRunId) {
+      if (nextParams.get("workflow_run_id") !== selectedDrilldownRunId) {
+        nextParams.set("workflow_run_id", selectedDrilldownRunId);
+        changed = true;
       }
-      if (runIds.length === 1) {
-        return runIds[0];
-      }
-      if (current && runIds.includes(current)) {
-        return current;
-      }
-      return null;
-    });
+    } else if (nextParams.has("workflow_run_id")) {
+      nextParams.delete("workflow_run_id");
+      changed = true;
+    }
+    if (changed) {
+      setSearchParams(nextParams, { replace: true });
+    }
+  }, [
+    planningWeekId,
+    searchParams,
+    selectedDrilldownRunId,
+    selectedModule,
+    setSearchParams,
+    story
+  ]);
+
+  useEffect(() => {
     setSelectedDrilldownNodeId(null);
-    setFamilyArtifactError(null);
-  }, [selectedModule?.module_id, selectedModuleRunIdsKey]);
+  }, [selectedModule?.module_id, selectedDrilldownRunId]);
 
   const drilldownWorkspaceQuery = useQuery({
     queryKey: ["logistics-drilldown-workspace", selectedDrilldownRunId],
@@ -425,81 +173,20 @@ export function LogisticsDemoPage(): JSX.Element {
     return graphNodesWithResponsibility(drilldownWorkspace.graph.nodes, drilldownDetail.human_tasks);
   }, [drilldownWorkspace, drilldownDetail]);
 
-  const selectedDrilldownWorkpageLink = useMemo(() => {
-    if (!selectedDrilldownRunId) {
-      return null;
-    }
-    const selectedRun = selectedModuleRuns.find(
-      ({ ref }) => ref.workflow_run_id === selectedDrilldownRunId
-    );
-    const workflowId = selectedRun?.run?.workflow_id ?? selectedRun?.ref.workflow_id;
-    return workflowId
-      ? drilldownWorkpageRouteForRun(selectedDrilldownRunId, workflowId)
-      : null;
-  }, [selectedDrilldownRunId, selectedModuleRuns]);
-
-  const boardItemsByLane = useMemo(() => (story ? groupedBoardItems(story) : new Map()), [story]);
-  const sortedBoardLanes = useMemo(
-    () => (story ? [...story.board.lanes].sort((left, right) => left.position - right.position) : []),
-    [story]
-  );
-  const weeklyHeaderRun = useMemo(
+  const selectedDrilldownRun = useMemo(
     () =>
-      story
-        ? preferredHeaderRun(story.linked_workflow_runs.weekly_schedule_planning)
+      selectedDrilldownRunId
+        ? selectedModuleRuns.find(({ ref }) => ref.workflow_run_id === selectedDrilldownRunId) ?? null
         : null,
-    [story]
+    [selectedDrilldownRunId, selectedModuleRuns]
   );
-  const reportingHeaderRun = useMemo(
-    () =>
-      story
-        ? preferredHeaderRun(story.linked_workflow_runs.dispatch_reporting)
-        : null,
-    [story]
-  );
-  const liveHeaderRun = useMemo(
-    () => (story ? preferredHeaderRun(story.linked_workflow_runs.live_dispatch) : null),
-    [story]
-  );
-  const weeklyHeaderLink = weeklyHeaderRun ? headerWorkpageRouteForRun(weeklyHeaderRun) : null;
-  const reportingHeaderLink = reportingHeaderRun
-    ? headerWorkpageRouteForRun(reportingHeaderRun)
-    : null;
-  const weeklyPublishedArtifactVersionId = useMemo(() => {
-    if (!story || !weeklyHeaderRun) {
-      return null;
-    }
-    return latestOfficialArtifactForRun(
-      story,
-      weeklyHeaderRun.workflow_run_id,
-      "planning.published_weekly_schedule.workbook"
-    );
-  }, [story, weeklyHeaderRun]);
-  const liveModule = useMemo(
-    () => (story ? storyModuleById(story, "live_dispatch") : null),
-    [story]
-  );
+  const selectedDrilldownWorkflowId =
+    selectedDrilldownRun?.run?.workflow_id ?? selectedDrilldownRun?.ref.workflow_id ?? null;
 
-  const prepareLiveDispatchMutation = useMutation({
-    mutationFn: async () => {
-      if (!weeklyHeaderRun || !weeklyPublishedArtifactVersionId || !activeServiceDateId) {
-        throw new Error("Weekly publish must exist before preparing the live dispatch day.");
-      }
-      return workflowRunsRepository.prepareLiveDispatchDay(weeklyHeaderRun.workflow_run_id, {
-        published_artifact_version_id: weeklyPublishedArtifactVersionId,
-        service_date_id: activeServiceDateId,
-        idempotency_key: createIdempotencyKey(
-          "prepare-live-dispatch-day",
-          `${weeklyHeaderRun.workflow_run_id}:${activeServiceDateId}`
-        )
-      });
-    },
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({
-        queryKey: ["logistics-demo-story", planningWeekId, serviceDateId]
-      });
-    }
-  });
+  const boardPresentation = useMemo(
+    () => (story ? editorialBoard(story) : { lanes: [], flags: [] }),
+    [story]
+  );
 
   const prefetchDrilldown = (workflowRunId: string): void => {
     void queryClient.prefetchQuery({
@@ -512,67 +199,42 @@ export function LogisticsDemoPage(): JSX.Element {
     });
   };
 
-  const openTaskDrawer = (item: LogisticsStoryBoardWorkItem): void => {
-    open({
-      title: item.title,
-      subtitle: item.subject_id,
-      description: "Inspect context and run authoritative task actions without leaving the logistics demo shell.",
-      fields: [
-        { label: "Workflow", value: item.workflow_id },
-        { label: "Workflow run", value: item.workflow_run_id },
-        { label: "State", value: item.state },
-        { label: "Board lane", value: item.lane },
-        { label: "Actions", value: boardItemActions(item) }
-      ],
-      links: [
-        { label: "Open run workspace", to: `/runs/${item.workflow_run_id}/workspace` },
-        { label: "Open run detail (secondary)", to: `/runs/${item.workflow_run_id}` }
-      ],
-      task: {
-        human_task_id: item.subject_id,
-        workflow_run_id: item.workflow_run_id,
-        task_run_id: "loading",
-        stage_id: item.stage_id ?? "unknown",
-        task_kind: item.task_kind ?? "unknown",
-        state: item.state,
-        assignee_actor_id: null,
-        assignee_actor_type: null,
-        owner_role: item.owner_role ?? null,
-        linked_approval_id: null,
-        blocked_on_kind: null,
-        blocked_on_ref: null,
-        available_actions: item.available_actions,
-        blocking_reason_codes: item.blocking_reason_codes,
-        missing_required_inputs: item.missing_required_inputs
-      },
-      artifact_sources: [
-        {
-          workflow_run_id: item.workflow_run_id,
-          subject_kind: "human_task",
-          subject_id: item.subject_id,
-          source_label: "Task attachment"
-        }
-      ]
-    });
+  const selectDrilldownRun = (workflowRunId: string): void => {
+    const nextParams = new URLSearchParams(searchParams);
+    nextParams.set("planning_week_id", planningWeekId);
+    if (selectedModule) {
+      nextParams.set("module", selectedModule.module_id);
+    }
+    nextParams.set("workflow_run_id", workflowRunId);
+    setSearchParams(nextParams);
   };
 
-  const handleDownloadFamilyArtifact = async (
-    artifactRef: LogisticsStoryModuleArtifactRef
-  ): Promise<void> => {
-    setFamilyArtifactError(null);
-    setDownloadingArtifactVersionId(artifactRef.artifact_version_id);
-    try {
-      const downloaded = await onetruthApi.downloadArtifact(artifactRef.artifact_version_id);
-      const fileName =
-        artifactRef.label && artifactRef.label.length > 0
-          ? artifactRef.label
-          : artifactRef.artifact_version_id;
-      downloadBinaryToFile(downloaded, fileName);
-    } catch (error) {
-      setFamilyArtifactError(error);
-    } finally {
-      setDownloadingArtifactVersionId(null);
+  const openBoardItemDetail = (
+    item: Parameters<typeof buildBoardItemDrawerPayload>[0]
+  ): void => {
+    open(buildBoardItemDrawerPayload(item));
+  };
+
+  const openFamilyArtifactDrawer = (module: LogisticsStoryFamilyModule): void => {
+    if (module.artifact_refs.length === 0) {
+      return;
     }
+    open({
+      title: moduleDisplayLabel(module),
+      subtitle: "Family node artifacts",
+      description: "Download linked family-node artifacts without leaving the logistics demo shell.",
+      fields: [
+        { label: "Workflow", value: module.workflow_id },
+        { label: "Partition kind", value: module.partition_kind },
+        { label: "Activation policy", value: module.activation_policy },
+        { label: "Status", value: module.status }
+      ],
+      downloadable_artifacts: module.artifact_refs.map((artifactRef) => ({
+        artifact_version_id: artifactRef.artifact_version_id,
+        label: artifactLabel(artifactRef),
+        source_label: artifactRef.source_label
+      }))
+    });
   };
 
   if (query.isLoading) {
@@ -602,248 +264,248 @@ export function LogisticsDemoPage(): JSX.Element {
 
   return (
     <section className="logistics-demo-page" data-testid="logistics-demo-page">
-      <header className="logistics-demo-page__header">
-        <div>
-          <p className="timeline-page__eyebrow">Primary Operator Entrypoint</p>
-          <h2>Logistics Three-Workflow Demo</h2>
-          <p>
-            Planning week {story.partitions.planning_week_id} · Service dates {story.partitions.service_date_ids.join(", ")}
+      <section
+        className="logistics-demo-page__panel logistics-demo-page__panel--task-board"
+        data-testid="logistics-task-board-panel"
+        data-expanded={isBoardExpanded}
+      >
+        <header className="logistics-demo-page__panel-header">
+          <div>
+            <h3>Editorial Task Board</h3>
+            <p>
+              {boardPresentation.lanes.reduce((count, lane) => count + lane.items.length, 0)} active
+              tasks and approvals across weekly, live, and reporting work
+            </p>
+          </div>
+          <button
+            type="button"
+            className="action-btn"
+            aria-expanded={isBoardExpanded}
+            onClick={() => {
+              setIsBoardExpanded((current) => !current);
+            }}
+          >
+            {isBoardExpanded ? "Hide task board" : "Show task board"}
+          </button>
+        </header>
+        {isBoardExpanded ? (
+          <div className="logistics-demo-page__task-board-shell">
+            <div className="board-grid board-grid--story">
+              {boardPresentation.lanes.map((lane) => (
+                <LaneColumn key={lane.id} title={lane.title} count={lane.items.length}>
+                  {lane.items.length === 0 ? (
+                    <p className="logistics-demo-page__empty-lane">No active work in lane.</p>
+                  ) : null}
+                  {lane.items.map((item) => (
+                    <article
+                      key={item.item_id}
+                      className={`logistics-demo-page__board-item logistics-demo-page__board-item--${item.item_type}`}
+                    >
+                      <button
+                        type="button"
+                        className="logistics-demo-page__board-item-trigger"
+                        onClick={() => openBoardItemDetail(item)}
+                      >
+                        <header>
+                          <div>
+                            <p className="logistics-demo-page__board-item-kicker">
+                              {item.item_type === "human_task"
+                                ? "Task"
+                                : item.item_type === "approval"
+                                  ? "Approval"
+                                  : "Flag"}
+                            </p>
+                            <h4>{item.title}</h4>
+                          </div>
+                          <span className={stateBadgeClass(item.state)}>{item.state}</span>
+                        </header>
+                        <p>{boardItemMeta(item)}</p>
+                        <p>{item.workflow_id}</p>
+                        {boardItemSupportText(item) ? <p>{boardItemSupportText(item)}</p> : null}
+                        <TaskDocumentCues cues={buildTaskDocumentPreviewCues(item)} compact />
+                      </button>
+                    </article>
+                  ))}
+                </LaneColumn>
+              ))}
+            </div>
+          </div>
+        ) : (
+          <p className="logistics-demo-page__board-collapsed-copy">
+            The compact task strip stays pinned in the shell. Expand this board when you need the
+            full lane view.
           </p>
-        </div>
-        <div className="logistics-demo-page__header-links">
-          <div className="logistics-demo-page__header-link-group">
-            <p>Start Here: Weekly Planning</p>
-            {weeklyHeaderRun ? (
-              <Link className="link-button" to={`/runs/${weeklyHeaderRun.workflow_run_id}/workspace`}>
-                Open weekly workspace
-              </Link>
-            ) : (
-              <p className="logistics-demo-page__header-guidance">
-                No linked weekly-planning run is available for this story.
-              </p>
-            )}
-            <p className="logistics-demo-page__header-guidance">
-              Upload weekly inputs, run the real Stage04 OpenAI build, review the draft, and publish before starting live dispatch.
-            </p>
-            <p className="logistics-demo-page__header-guidance">
-              Weekly Stage04 build requires <code>OPENAI_API_KEY</code> in the backend environment.
-            </p>
-          </div>
-          <div className="logistics-demo-page__header-link-group">
-            <p>Step 2: Live Dispatch</p>
-            {liveHeaderRun ? (
-              <Link className="link-button" to={`/runs/${liveHeaderRun.workflow_run_id}/workspace`}>
-                Open live dispatch workspace
-              </Link>
-            ) : weeklyHeaderRun && weeklyPublishedArtifactVersionId ? (
-              <button
-                type="button"
-                className="link-button"
-                onClick={() => void prepareLiveDispatchMutation.mutateAsync()}
-                disabled={prepareLiveDispatchMutation.isPending}
-              >
-                {prepareLiveDispatchMutation.isPending ? "Preparing service day..." : "Prepare service day"}
-              </button>
-            ) : (
-              <p className="logistics-demo-page__header-guidance">
-                Publish the current weekly schedule first. This step creates the live-dispatch run for {activeServiceDateId || "the selected service date"}.
-              </p>
-            )}
-            <p className="logistics-demo-page__header-guidance">
-              {liveModule?.selection_summary?.trim().length
-                ? liveModule.selection_summary
-                : "Prepare the service day after weekly publish; no live-dispatch run exists yet."}
-            </p>
-            {prepareLiveDispatchMutation.isError ? (
-              <p className="detail-drawer__error">
-                {errorText(prepareLiveDispatchMutation.error, "Unable to prepare the live dispatch day")}
-              </p>
-            ) : null}
-          </div>
-          <div className="logistics-demo-page__header-link-group">
-            <p>Step 3: Reporting</p>
-            {reportingHeaderRun ? (
-              <Link className="link-button" to={`/runs/${reportingHeaderRun.workflow_run_id}/workspace`}>
-                Open reporting workspace
-              </Link>
-            ) : (
-              <p className="logistics-demo-page__header-guidance">
-                No linked dispatch-reporting run is available for this story.
-              </p>
-            )}
-            <p className="logistics-demo-page__header-guidance">
-              Finish the daily walkthrough here by uploading EOS inputs, reviewing the generated draft, and approving finalization.
-            </p>
-          </div>
-          <div className="logistics-demo-page__header-link-group logistics-demo-page__header-link-group--secondary">
-            <p>Contextual workpages</p>
-            {weeklyHeaderLink ? (
-              <Link className="link-button" to={weeklyHeaderLink.to}>
-                {weeklyHeaderLink.label}
-              </Link>
-            ) : (
-              <p className="logistics-demo-page__header-guidance">
-                {canonicalHeaderGuidance(
-                  story.linked_workflow_runs.weekly_schedule_planning.length,
-                  "Weekly review workpage",
-                  "weekly-planning"
-                )}
-              </p>
-            )}
-            {reportingHeaderLink ? (
-              <Link className="link-button" to={reportingHeaderLink.to}>
-                {reportingHeaderLink.label}
-              </Link>
-            ) : (
-              <p className="logistics-demo-page__header-guidance">
-                {canonicalHeaderGuidance(
-                  story.linked_workflow_runs.dispatch_reporting.length,
-                  "EOD workpage",
-                  "dispatch-reporting"
-                )}
-              </p>
-            )}
-            <Link className="link-button" to="/demo/logistics/workpages/schedule-v0">
-              Open demo schedule alias
-            </Link>
-            <Link className="link-button" to="/demo/logistics/workpages/eod-v0">
-              Open demo EOD alias
-            </Link>
-          </div>
-        </div>
-      </header>
-
-      <WorkflowGraph
-        nodes={graph.nodes}
-        edges={graph.edges}
-        freshness={storyFreshness(story)}
-        latestEventSequence={story.freshness.latest_event_sequence}
-        selectedWorkflowTab={DEMO_TABS[0]}
-        tabs={DEMO_TABS}
-        showStepBadge={false}
-        selectedNodeId={selectedModule?.module_id ?? null}
-        onNodeSelect={(node) => {
-          setSelectedModuleId(node.node_id);
-        }}
-      />
+        )}
+      </section>
 
       <section className="logistics-demo-page__panel" data-testid="logistics-module-detail-panel">
         <header className="logistics-demo-page__panel-header">
           <h3>Family Node Detail</h3>
-          <p>Select a family module to inspect drill-down scope and artifacts</p>
+          <p>
+            The shell nav drives workflow switching. This page keeps the selected module context,
+            run drill-down, and inline work surface together.
+          </p>
         </header>
         {selectedModule ? (
-          <div className="logistics-demo-page__selection-grid">
-            <article className="logistics-demo-page__selection-card">
-              <h4>{moduleDisplayLabel(selectedModule)}</h4>
-              <p>{selectedModule.selection_summary}</p>
-              <dl className="logistics-demo-page__selection-fields">
-                <div>
-                  <dt>Workflow</dt>
-                  <dd>{selectedModule.workflow_id}</dd>
-                </div>
-                <div>
-                  <dt>Partition kind</dt>
-                  <dd>{selectedModule.partition_kind}</dd>
-                </div>
-                <div>
-                  <dt>Activation policy</dt>
-                  <dd>{selectedModule.activation_policy}</dd>
-                </div>
-                <div>
-                  <dt>Status</dt>
-                  <dd>{selectedModule.status}</dd>
-                </div>
-                <div>
-                  <dt>Drill-down mode</dt>
-                  <dd>{selectedModule.drilldown_kind}</dd>
-                </div>
-              </dl>
-              <div className="logistics-demo-page__artifact-actions">
-                <h5>Family Node Artifacts</h5>
-                {selectedModule.artifact_refs.length === 0 ? (
-                  <p>No downloadable artifacts linked.</p>
-                ) : (
-                  <ul>
-                    {selectedModule.artifact_refs.map((artifactRef) => (
-                      <li key={artifactRef.artifact_version_id}>
-                        <button
-                          type="button"
-                          className="action-btn"
-                          onClick={() => void handleDownloadFamilyArtifact(artifactRef)}
-                          disabled={downloadingArtifactVersionId === artifactRef.artifact_version_id}
-                        >
-                          Download {artifactLabel(artifactRef)}
-                        </button>
-                        <span>{artifactRef.source_label}</span>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </div>
-              {familyArtifactError ? (
-                <p className="detail-drawer__error">
-                  {errorText(familyArtifactError, "Family artifact download failed")}
-                </p>
-              ) : null}
-            </article>
-
-            <article className="logistics-demo-page__selection-card">
-              <h4>Workflow Run Drill-Down</h4>
-              {selectedModuleRuns.length === 0 ? <p>No drill-down runs available.</p> : null}
-              {selectedModuleRuns.length === 1 ? (
-                <div>
-                  <p>{runRefSummary(selectedModuleRuns[0].ref, selectedModuleRuns[0].run)}</p>
-                  <p>Single linked run selected automatically.</p>
-                </div>
-              ) : null}
-              {selectedModuleRuns.length > 1 ? (
-                <div className="logistics-demo-page__run-chooser" aria-label="Run chooser">
-                  <p>Choose a workflow run to open drill-down.</p>
-                  {selectedModuleRuns.map(({ ref, run }) => (
-                    <button
-                      key={ref.workflow_run_id}
-                      type="button"
-                      className={`logistics-demo-page__run-option${selectedDrilldownRunId === ref.workflow_run_id ? " is-selected" : ""}`}
-                      aria-pressed={selectedDrilldownRunId === ref.workflow_run_id}
-                      onMouseEnter={() => prefetchDrilldown(ref.workflow_run_id)}
-                      onFocus={() => prefetchDrilldown(ref.workflow_run_id)}
-                      onClick={() => {
-                        prefetchDrilldown(ref.workflow_run_id);
-                        setSelectedDrilldownRunId(ref.workflow_run_id);
-                      }}
-                    >
-                      {runRefSummary(ref, run)}
-                    </button>
-                  ))}
-                </div>
-              ) : null}
-              {selectedDrilldownRunId ? (
-                <>
-                  {selectedDrilldownWorkpageLink ? (
-                    <div className="logistics-demo-page__primary-links">
-                      <p>Canonical workpage route</p>
-                      <div>
-                        <Link className="link-button" to={selectedDrilldownWorkpageLink.to}>
-                          {selectedDrilldownWorkpageLink.label}
-                        </Link>
+          <div className="logistics-demo-page__detail-stack">
+            <section className="logistics-demo-page__detail-summary">
+              <div className="logistics-demo-page__detail-heading">
+                <h4>{moduleDisplayLabel(selectedModule)}</h4>
+                <InfoDialog
+                  triggerLabel={`Open info for ${moduleDisplayLabel(selectedModule)}`}
+                  dialogTitle={`${moduleDisplayLabel(selectedModule)} info`}
+                  dialogDescription="Family-node metadata, run drill-down, and artifact access for the selected logistics module."
+                >
+                  <div className="logistics-demo-page__dialog-stack">
+                    <section className="workpage-panel workpage-panel--note">
+                      <header className="workpage-panel__header">
+                        <h2>Selected module</h2>
+                        <p>Summary and technical node metadata for the current family module.</p>
+                      </header>
+                      {selectedModule.selection_summary.trim().length > 0 ? (
+                        <p className="logistics-demo-page__dialog-summary-copy">
+                          {selectedModule.selection_summary}
+                        </p>
+                      ) : null}
+                      <div className="logistics-demo-page__detail-kpis">
+                        <span>{`${selectedModuleRuns.length} linked run${selectedModuleRuns.length === 1 ? "" : "s"}`}</span>
+                        <span>{`${selectedModule.artifact_refs.length} downloadable artifact${selectedModule.artifact_refs.length === 1 ? "" : "s"}`}</span>
                       </div>
-                    </div>
-                  ) : null}
-                  <div className="logistics-demo-page__secondary-links">
-                    <p>Secondary detail routes</p>
-                    <div>
-                      <Link className="link-button" to={`/runs/${selectedDrilldownRunId}/workspace`}>
-                        Open full workspace
-                      </Link>
-                      <Link className="link-button" to={`/runs/${selectedDrilldownRunId}`}>
-                        Open run detail (secondary)
-                      </Link>
-                    </div>
+                      <dl className="logistics-demo-page__selection-fields logistics-demo-page__selection-fields--grid">
+                        <div>
+                          <dt>Workflow</dt>
+                          <dd>{selectedModule.workflow_id}</dd>
+                        </div>
+                        <div>
+                          <dt>Partition kind</dt>
+                          <dd>{selectedModule.partition_kind}</dd>
+                        </div>
+                        <div>
+                          <dt>Activation policy</dt>
+                          <dd>{selectedModule.activation_policy}</dd>
+                        </div>
+                        <div>
+                          <dt>Status</dt>
+                          <dd>{selectedModule.status}</dd>
+                        </div>
+                        <div>
+                          <dt>Drill-down mode</dt>
+                          <dd>{selectedModule.drilldown_kind}</dd>
+                        </div>
+                        <div>
+                          <dt>Linked runs</dt>
+                          <dd>{selectedModuleRuns.length}</dd>
+                        </div>
+                        <div>
+                          <dt>Downloadable artifacts</dt>
+                          <dd>{selectedModule.artifact_refs.length}</dd>
+                        </div>
+                      </dl>
+                    </section>
+
+                    <section className="workpage-panel workpage-panel--note">
+                      <header className="workpage-panel__header">
+                        <h2>Artifacts</h2>
+                        <p>Family-level artifacts stay available here without occupying the inline work surface.</p>
+                      </header>
+                      <div className="logistics-demo-page__artifact-link-section">
+                        {selectedModule.artifact_refs.length === 0 ? (
+                          <p>No family-node artifacts linked.</p>
+                        ) : (
+                          <button
+                            type="button"
+                            className="link-button"
+                            onClick={() => openFamilyArtifactDrawer(selectedModule)}
+                          >
+                            View family node artifacts
+                          </button>
+                        )}
+                      </div>
+                    </section>
+
+                    <section className="workpage-panel workpage-panel--note">
+                      <header className="workpage-panel__header">
+                        <h2>Workflow Run Drill-Down</h2>
+                        <p>Choose the linked workflow run that should drive the inline work surface and drill-down graph.</p>
+                      </header>
+                      <div className="logistics-demo-page__run-drilldown">
+                        {selectedModuleRuns.length === 0 ? <p>No drill-down runs available.</p> : null}
+                        {selectedModuleRuns.length === 1 ? (
+                          <div>
+                            <p>{runRefSummary(selectedModuleRuns[0].ref, selectedModuleRuns[0].run)}</p>
+                            <p>Single linked run selected automatically.</p>
+                          </div>
+                        ) : null}
+                        {selectedModuleRuns.length > 1 ? (
+                          <div className="logistics-demo-page__run-chooser" aria-label="Run chooser">
+                            <p>Choose a workflow run to open drill-down.</p>
+                            {selectedModuleRuns.map(({ ref, run }) => (
+                              <button
+                                key={ref.workflow_run_id}
+                                type="button"
+                                className={`logistics-demo-page__run-option${selectedDrilldownRunId === ref.workflow_run_id ? " is-selected" : ""}`}
+                                aria-pressed={selectedDrilldownRunId === ref.workflow_run_id}
+                                onMouseEnter={() => prefetchDrilldown(ref.workflow_run_id)}
+                                onFocus={() => prefetchDrilldown(ref.workflow_run_id)}
+                                onClick={() => {
+                                  prefetchDrilldown(ref.workflow_run_id);
+                                  selectDrilldownRun(ref.workflow_run_id);
+                                }}
+                              >
+                                {runRefSummary(ref, run)}
+                              </button>
+                            ))}
+                          </div>
+                        ) : null}
+                        {selectedDrilldownRunId ? (
+                          <div className="logistics-demo-page__secondary-links">
+                            <p>Secondary detail routes</p>
+                            <div>
+                              <Link className="link-button" to={`/runs/${selectedDrilldownRunId}/workspace`}>
+                                Open full workspace
+                              </Link>
+                              <Link className="link-button" to={`/runs/${selectedDrilldownRunId}`}>
+                                Open run detail (secondary)
+                              </Link>
+                            </div>
+                          </div>
+                        ) : null}
+                      </div>
+                    </section>
                   </div>
-                </>
-              ) : null}
-            </article>
+                </InfoDialog>
+              </div>
+            </section>
+
+            <div className="logistics-demo-page__detail-main">
+              {!selectedDrilldownRunId ? (
+                <StatePanel
+                  kind="empty"
+                  title="Choose a workflow run"
+                  detail="Pick a linked run in the summary above to load the inline work surface here."
+                />
+              ) : selectedDrilldownWorkflowId === "weekly_schedule_planning.v1" ? (
+                <InlineScheduleWorkpage workflowRunId={selectedDrilldownRunId} />
+              ) : selectedDrilldownWorkflowId === "dispatch_reporting.v1" ? (
+                <InlineDispatchReportWorkpage workflowRunId={selectedDrilldownRunId} />
+              ) : (
+                <section className="logistics-demo-page__inline-placeholder" data-testid="logistics-inline-live-placeholder">
+                  <p className="timeline-page__eyebrow">Live Dispatch</p>
+                  <h4>Workspace-first replan lane</h4>
+                  <p>
+                    This family module stays workspace-first in the current slice. Use the live-dispatch workspace and run detail for intake, review, and approval rather than an inline workpage.
+                  </p>
+                  <div className="action-cluster">
+                    <Link className="link-button" to={`/runs/${selectedDrilldownRunId}/workspace`}>
+                      Open full workspace
+                    </Link>
+                    <Link className="link-button" to={`/runs/${selectedDrilldownRunId}`}>
+                      Open run detail (secondary)
+                    </Link>
+                  </div>
+                </section>
+              )}
+            </div>
           </div>
         ) : (
           <p>Select a family node to inspect metadata.</p>
@@ -902,52 +564,6 @@ export function LogisticsDemoPage(): JSX.Element {
           ) : null}
         </section>
       ) : null}
-
-      <section className="logistics-demo-page__panel">
-        <header className="logistics-demo-page__panel-header">
-          <h3>Unified Action Board</h3>
-          <p>{story.board.summary.work_item_count} items across weekly, live, and reporting runs</p>
-        </header>
-        <div className="board-grid board-grid--story">
-          {sortedBoardLanes.map((lane) => {
-            const items: LogisticsStoryBoardWorkItem[] = boardItemsByLane.get(lane.lane) ?? [];
-            return (
-              <LaneColumn key={lane.lane} title={lane.label} count={lane.item_count}>
-                {items.length === 0 ? <p className="logistics-demo-page__empty-lane">No work in lane.</p> : null}
-                {items.map((item) => (
-                  <article key={item.item_id} className="logistics-demo-page__board-item">
-                    {item.item_type === "human_task" ? (
-                      <button
-                        type="button"
-                        className="logistics-demo-page__board-item-trigger"
-                        onClick={() => openTaskDrawer(item)}
-                      >
-                        <header>
-                          <h4>{item.title}</h4>
-                          <span className={stateBadgeClass(item.state)}>{item.state}</span>
-                        </header>
-                        <p>{boardItemMeta(item)}</p>
-                        <p>{item.workflow_id}</p>
-                        <p>Actions: {boardItemActions(item)}</p>
-                      </button>
-                    ) : (
-                      <>
-                        <header>
-                          <h4>{item.title}</h4>
-                          <span className={stateBadgeClass(item.state)}>{item.state}</span>
-                        </header>
-                        <p>{boardItemMeta(item)}</p>
-                        <p>{item.workflow_id}</p>
-                        <p>Actions: {boardItemActions(item)}</p>
-                      </>
-                    )}
-                  </article>
-                ))}
-              </LaneColumn>
-            );
-          })}
-        </div>
-      </section>
 
       <section className="logistics-demo-page__insights">
         <article className="logistics-demo-page__panel">

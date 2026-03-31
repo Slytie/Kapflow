@@ -16,15 +16,6 @@ describe("BoardPage", () => {
     expect(screen.getByLabelText("Needs Information")).toBeInTheDocument();
     expect(screen.getByLabelText("Exception Work")).toBeInTheDocument();
 
-    expect(
-      screen.getByText(
-        (_, element) =>
-          element?.tagName.toLowerCase() === "h4" &&
-          element.textContent?.includes("Stage06") === true &&
-          element.textContent?.includes("information_request") === true
-      )
-    ).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Claim" })).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Complete" })).not.toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Stage06 · Information Request" })).toBeInTheDocument();
   });
 });

@@ -17,8 +17,10 @@
         "blocking_requirements": [
           {
             "artifact_kind": "planning.draft_weekly_schedule.workbook",
+            "artifact_role": "evidence",
             "current_count": 0,
             "dataset_key": "planning.draft_weekly_schedule.workbook",
+            "required": true,
             "required_count": 1,
             "requirement": "required_upload",
             "status": "missing",
@@ -57,9 +59,11 @@
         "required_uploads": [
           {
             "artifact_kind": "planning.draft_weekly_schedule.workbook",
+            "artifact_role": "evidence",
             "current_count": 0,
             "dataset_key": "planning.draft_weekly_schedule.workbook",
             "linked_count": 0,
+            "required": true,
             "required_count": 1,
             "status": "missing",
             "template_id": null
@@ -93,9 +97,9 @@
     "command": "api.workflow_runs.workspace",
     "freshness": {
       "generated_at": "<ts:2>",
-      "latest_event_recorded_at": "2026-03-27T16:44:53.440584Z",
+      "latest_event_recorded_at": "2026-03-31T11:59:15.412426Z",
       "latest_event_sequence": 7,
-      "workflow_run_updated_at": "2026-03-27T16:43:53.257668Z"
+      "workflow_run_updated_at": "2026-03-31T11:58:53.100497Z"
     },
     "graph": {
       "edges": [],
@@ -411,8 +415,10 @@
         "blocking_requirements": [
           {
             "artifact_kind": "planning.draft_weekly_schedule.workbook",
+            "artifact_role": "evidence",
             "current_count": 0,
             "dataset_key": "planning.draft_weekly_schedule.workbook",
+            "required": true,
             "required_count": 1,
             "requirement": "required_upload",
             "status": "missing",
@@ -451,9 +457,11 @@
         "required_uploads": [
           {
             "artifact_kind": "planning.draft_weekly_schedule.workbook",
+            "artifact_role": "evidence",
             "current_count": 0,
             "dataset_key": "planning.draft_weekly_schedule.workbook",
             "linked_count": 0,
+            "required": true,
             "required_count": 1,
             "status": "missing",
             "template_id": null

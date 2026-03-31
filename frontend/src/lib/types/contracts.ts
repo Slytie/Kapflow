@@ -88,6 +88,7 @@ export interface HumanTaskRow {
   can_confirm_review?: boolean;
   required_uploads?: WorkflowWorkspaceRequiredUpload[];
   required_reviews?: WorkflowWorkspaceRequiredReview[];
+  workpage_actions?: WorkflowWorkspaceWorkpageAction[];
   is_composite?: boolean;
   expansion_kind?: HumanTaskExpansionKind;
   subgraph_ref?: HumanTaskSubgraphRef | null;

@@ -1,7 +1,18 @@
-import { type ChangeEvent, memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  type ChangeEvent,
+  type KeyboardEvent as ReactKeyboardEvent,
+  memo,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState
+} from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 
+import { InfoDialog } from "@/components/InfoDialog";
+import { StatusBadge } from "@/components/StatusBadge";
 import { onetruthApi } from "@/lib/api/onetruthApi";
 import { errorText } from "@/lib/api/errorText";
 import { downloadBinaryToFile } from "@/lib/repositories/artifactAttachments";
@@ -10,16 +21,19 @@ import type {
   HumanTaskRow,
   HumanTaskSubgraph,
   HumanTaskSubgraphArtifactRef,
-  HumanTaskSubgraphNode,
-  WorkflowWorkspaceRequiredReview,
   WorkflowWorkspaceRequiredUpload
 } from "@/lib/types/contracts";
 import type {
   DrawerArtifact,
   DrawerArtifactSource,
+  DrawerDownloadableArtifact,
   DrawerPayload,
   DrawerTaskContext
 } from "@/lib/types/ui";
+import {
+  buildTaskRequiredDocumentRows,
+  type TaskDocumentTone
+} from "@/lib/workspace/taskDocumentUi";
 
 interface DetailDrawerProps {
   payload: DrawerPayload | null;
@@ -43,11 +57,12 @@ interface TaskSubgraphViewProps {
 }
 
 interface DrawerRequiredUploadActionsProps {
-  requirement: WorkflowWorkspaceRequiredUpload;
+  actionLabel: "Add File" | "Replace";
   disabled: boolean;
   onUpload: (file: File) => void;
-  onDownloadTemplate?: () => void;
 }
+
+type TaskProcessTone = "active" | "pending" | "success" | "neutral" | "danger";
 
 function humanReadableNodeStatus(status: string): string {
   if (status === "in_progress") {
@@ -62,18 +77,134 @@ function humanReadableNodeStatus(status: string): string {
   return status.replace(/_/g, " ");
 }
 
-function requirementLabel(requirement: WorkflowWorkspaceRequiredUpload): string {
-  if (requirement.required === false) {
-    return "Optional context";
+function taskProcessTone(status: string): TaskProcessTone {
+  const normalized = status.trim().toLowerCase();
+  if (normalized === "in_progress" || normalized.includes("progress")) {
+    return "active";
   }
-  if (requirement.artifact_role === "official_input") {
-    return "Required input";
+  if (normalized === "awaiting_approval" || normalized.includes("approval") || normalized.includes("review")) {
+    return "pending";
   }
-  return "Required upload";
+  if (
+    normalized === "completed" ||
+    normalized === "complete" ||
+    normalized === "done" ||
+    normalized.includes("success") ||
+    normalized.includes("published")
+  ) {
+    return "success";
+  }
+  if (
+    normalized.includes("failed") ||
+    normalized.includes("error") ||
+    normalized.includes("blocked") ||
+    normalized.includes("degraded")
+  ) {
+    return "danger";
+  }
+  return "neutral";
 }
 
-function reviewStatusLabel(review: WorkflowWorkspaceRequiredReview): string {
-  return review.status.replace(/_/g, " ");
+function taskDocumentToneClass(tone: TaskDocumentTone): string {
+  return `task-modal__document-row task-modal__document-row--${tone}`;
+}
+
+function taskDocumentMarker(tone: TaskDocumentTone, kind: "upload" | "review"): string {
+  if (tone === "success") {
+    return "OK";
+  }
+  if (kind === "review") {
+    return "RV";
+  }
+  if (tone === "neutral") {
+    return "OPT";
+  }
+  return "!";
+}
+
+function humanizeValue(input: string): string {
+  return input
+    .replace(/[_-]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .replace(/\b\w/g, (char) => char.toUpperCase());
+}
+
+function formatTimestamp(timestamp: string | null | undefined): string | null {
+  if (!timestamp) {
+    return null;
+  }
+  const value = new Date(timestamp);
+  if (Number.isNaN(value.getTime())) {
+    return null;
+  }
+  return value.toLocaleString();
+}
+
+function taskBlockingSummary(task: DrawerTaskContext | null): string {
+  if (!task) {
+    return "No blockers recorded";
+  }
+  if (task.blocking_reason_codes.length > 0) {
+    return task.blocking_reason_codes.map(humanizeValue).join(", ");
+  }
+  if (task.blocked_on_kind) {
+    return humanizeValue(
+      task.blocked_on_ref ? `${task.blocked_on_kind} ${task.blocked_on_ref}` : task.blocked_on_kind
+    );
+  }
+  return "No blockers recorded";
+}
+
+function taskMissingInputSummary(task: DrawerTaskContext | null): string {
+  if (!task || task.missing_required_inputs.length === 0) {
+    return "Ready for work";
+  }
+  return task.missing_required_inputs.join(", ");
+}
+
+function taskReadinessSummary(task: DrawerTaskContext | null): string {
+  if (!task) {
+    return "Loading";
+  }
+  if (task.missing_required_inputs.length > 0) {
+    const count = task.missing_required_inputs.length;
+    return `${count} missing input${count === 1 ? "" : "s"}`;
+  }
+  if ((task.required_reviews ?? []).some((review) => review.status !== "confirmed")) {
+    return "Review required";
+  }
+  if (task.blocking_reason_codes.length > 0 || task.blocked_on_kind) {
+    return "Blocked";
+  }
+  return "Ready for work";
+}
+
+function taskPrimaryActionLabel(action: TaskAction): string {
+  if (action === "confirm_review") {
+    return "Submit for Review";
+  }
+  if (action === "complete") {
+    return "Complete Task";
+  }
+  if (action === "run_stage06_agent_review") {
+    return "Run Stage06 Review";
+  }
+  if (action === "run_weekly_stage04_openai_agent") {
+    return "Run Stage04 Build";
+  }
+  return humanizeValue(action);
+}
+
+function focusableElements(container: HTMLElement | null): HTMLElement[] {
+  if (!container) {
+    return [];
+  }
+  return Array.from(
+    container.querySelectorAll<HTMLElement>(
+      "a[href], button:not([disabled]), input:not([disabled]):not([type='hidden']), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex='-1'])"
+    )
+  ).filter((element) => !element.hasAttribute("disabled") && element.tabIndex !== -1);
 }
 
 const TaskSubgraphView = memo(function TaskSubgraphView({
@@ -81,135 +212,139 @@ const TaskSubgraphView = memo(function TaskSubgraphView({
   onDownloadArtifact,
   downloadingArtifactVersionId
 }: TaskSubgraphViewProps): JSX.Element {
-  const [selectedNodeId, setSelectedNodeId] = useState<string | null>(
-    subgraph.nodes[0]?.node_id ?? null
-  );
+  const [expandedNodeIds, setExpandedNodeIds] = useState<string[]>([]);
   const nodeButtonRefs = useRef<Array<HTMLButtonElement | null>>([]);
 
   useEffect(() => {
-    setSelectedNodeId(subgraph.nodes[0]?.node_id ?? null);
+    setExpandedNodeIds([]);
     nodeButtonRefs.current = [];
   }, [subgraph.graph_id, subgraph.nodes]);
 
-  const selectedNode = useMemo<HumanTaskSubgraphNode | null>(() => {
-    if (!selectedNodeId) {
-      return subgraph.nodes[0] ?? null;
-    }
-    return subgraph.nodes.find((node) => node.node_id === selectedNodeId) ?? subgraph.nodes[0] ?? null;
-  }, [selectedNodeId, subgraph.nodes]);
-
-  const selectedNodeEdges = useMemo(
-    () =>
-      selectedNode
-        ? subgraph.edges.filter(
-            (edge) =>
-              edge.from_node_id === selectedNode.node_id || edge.to_node_id === selectedNode.node_id
-          )
-        : [],
-    [selectedNode, subgraph.edges]
+  const expandedNodeIdSet = useMemo(() => new Set(expandedNodeIds), [expandedNodeIds]);
+  const nodeLabelById = useMemo(
+    () => new Map(subgraph.nodes.map((node) => [node.node_id, node.label])),
+    [subgraph.nodes]
   );
 
+  const toggleExpanded = (nodeId: string): void => {
+    setExpandedNodeIds((current) =>
+      current.includes(nodeId)
+        ? current.filter((candidate) => candidate !== nodeId)
+        : [...current, nodeId]
+    );
+  };
+
   return (
-    <div className="detail-drawer__subgraph-contents">
-      <div className="detail-drawer__subgraph-layout">
-        <ul className="detail-drawer__subgraph-node-list" aria-label="Process steps">
-          {subgraph.nodes.map((node, index) => {
-            const isSelected = selectedNode?.node_id === node.node_id;
-            return (
-              <li key={node.node_id}>
-                <button
-                  ref={(element) => {
-                    nodeButtonRefs.current[index] = element;
-                  }}
-                  type="button"
-                  className={`detail-drawer__subgraph-node-btn${isSelected ? " is-selected" : ""}`}
-                  aria-pressed={isSelected}
-                  onClick={() => setSelectedNodeId(node.node_id)}
-                  onKeyDown={(event) => {
-                    if (event.key !== "ArrowDown" && event.key !== "ArrowUp") {
-                      return;
-                    }
-                    event.preventDefault();
-                    const delta = event.key === "ArrowDown" ? 1 : -1;
-                    const nextIndex = (index + delta + subgraph.nodes.length) % subgraph.nodes.length;
-                    nodeButtonRefs.current[nextIndex]?.focus();
-                    setSelectedNodeId(subgraph.nodes[nextIndex]?.node_id ?? null);
-                  }}
-                >
-                  <span>{node.label}</span>
-                  <span className="detail-drawer__subgraph-node-status">
-                    {humanReadableNodeStatus(node.status)}
+    <div className="task-process-timeline">
+      <ul className="task-process-timeline__list" aria-label="Process steps">
+        {subgraph.nodes.map((node, index) => {
+          const expanded = expandedNodeIdSet.has(node.node_id);
+          const tone = taskProcessTone(node.status);
+          const statusLabel = humanReadableNodeStatus(node.status);
+          const connectedEdges = subgraph.edges.filter(
+            (edge) => edge.from_node_id === node.node_id || edge.to_node_id === node.node_id
+          );
+          const detailId = `task-process-node-${node.node_id}`;
+
+          return (
+            <li
+              key={node.node_id}
+              className={`task-process-timeline__item task-process-timeline__item--${tone}${expanded ? " is-expanded" : ""}`}
+            >
+              <button
+                ref={(element) => {
+                  nodeButtonRefs.current[index] = element;
+                }}
+                type="button"
+                className="task-process-timeline__toggle"
+                aria-expanded={expanded}
+                aria-controls={detailId}
+                onClick={() => toggleExpanded(node.node_id)}
+                onKeyDown={(event) => {
+                  if (event.key !== "ArrowDown" && event.key !== "ArrowUp") {
+                    return;
+                  }
+                  event.preventDefault();
+                  const delta = event.key === "ArrowDown" ? 1 : -1;
+                  const nextIndex = (index + delta + subgraph.nodes.length) % subgraph.nodes.length;
+                  nodeButtonRefs.current[nextIndex]?.focus();
+                }}
+              >
+                <span
+                  className={`task-process-timeline__marker task-process-timeline__marker--${tone}`}
+                  aria-hidden="true"
+                />
+                <span className="task-process-timeline__header">
+                  <span className="task-process-timeline__label">{node.label}</span>
+                  <span className={`task-process-timeline__status task-process-timeline__status--${tone}`}>
+                    {statusLabel}
                   </span>
+                </span>
+              </button>
+              {expanded ? (
+                <div id={detailId} className="task-process-timeline__detail">
+                  <p className="task-process-timeline__meta">
+                    {humanizeValue(node.node_kind)} · {statusLabel}
+                  </p>
+                  {connectedEdges.length > 0 ? (
+                    <ul className="task-process-timeline__edge-list" aria-label={`Transitions for ${node.label}`}>
+                      {connectedEdges.map((edge) => {
+                        const fromLabel = nodeLabelById.get(edge.from_node_id) ?? edge.from_node_id;
+                        const toLabel = nodeLabelById.get(edge.to_node_id) ?? edge.to_node_id;
+                        return (
+                          <li key={edge.edge_id}>
+                            {edge.from_node_id === node.node_id ? `Flows to ${toLabel}` : `Receives from ${fromLabel}`}
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  ) : (
+                    <p className="detail-drawer__hint">No linked transitions for this step.</p>
+                  )}
+                </div>
+              ) : null}
+            </li>
+          );
+        })}
+      </ul>
+
+      <div className="task-process-timeline__footer">
+        <p className="task-process-timeline__freshness">
+          Freshness: {subgraph.freshness.status}
+          {subgraph.freshness.as_of ? ` · as of ${new Date(subgraph.freshness.as_of).toLocaleString()}` : ""}
+        </p>
+
+        {subgraph.artifact_refs.length > 0 ? (
+          <ul className="task-process-timeline__artifact-list" aria-label="Process artifacts">
+            {subgraph.artifact_refs.map((artifactRef) => (
+              <li key={artifactRef.artifact_version_id} className="task-process-timeline__artifact-item">
+                <div className="task-process-timeline__artifact-copy">
+                  <p className="task-process-timeline__artifact-label">{artifactRef.label}</p>
+                  <p className="task-process-timeline__artifact-meta">{artifactRef.source_label}</p>
+                </div>
+                <button
+                  type="button"
+                  className="task-process-timeline__artifact-action"
+                  onClick={() => void onDownloadArtifact(artifactRef)}
+                  disabled={downloadingArtifactVersionId === artifactRef.artifact_version_id}
+                >
+                  Download
                 </button>
               </li>
-            );
-          })}
-        </ul>
-
-        <div className="detail-drawer__subgraph-node-detail" aria-live="polite">
-          {selectedNode ? (
-            <>
-              <p className="detail-drawer__subgraph-node-title">{selectedNode.label}</p>
-              <p className="detail-drawer__subgraph-node-meta">
-                {humanReadableNodeStatus(selectedNode.status)} · {selectedNode.node_kind}
-              </p>
-              {selectedNodeEdges.length > 0 ? (
-                <ul className="detail-drawer__subgraph-edge-list" aria-label="Connected transitions">
-                  {selectedNodeEdges.map((edge) => (
-                    <li key={edge.edge_id}>
-                      {edge.from_node_id} → {edge.to_node_id}
-                    </li>
-                  ))}
-                </ul>
-              ) : (
-                <p className="detail-drawer__hint">No linked transitions for this step.</p>
-              )}
-            </>
-          ) : (
-            <p className="detail-drawer__hint">No process step selected.</p>
-          )}
-        </div>
+            ))}
+          </ul>
+        ) : (
+          <p className="detail-drawer__hint">No process artifacts are currently linked.</p>
+        )}
       </div>
-
-      <p className="detail-drawer__subgraph-freshness">
-        Freshness: {subgraph.freshness.status}
-        {subgraph.freshness.as_of ? ` · as of ${new Date(subgraph.freshness.as_of).toLocaleString()}` : ""}
-      </p>
-
-      {subgraph.artifact_refs.length > 0 ? (
-        <ul className="detail-drawer__artifact-list">
-          {subgraph.artifact_refs.map((artifactRef) => (
-            <li
-              key={artifactRef.artifact_version_id}
-              className="detail-drawer__artifact-row detail-drawer__artifact-row--subgraph"
-            >
-              <div className="detail-drawer__artifact-meta">
-                <p className="detail-drawer__artifact-name">{artifactRef.label}</p>
-                <p className="detail-drawer__artifact-details">{artifactRef.source_label}</p>
-              </div>
-              <button
-                type="button"
-                className="action-btn"
-                onClick={() => void onDownloadArtifact(artifactRef)}
-                disabled={downloadingArtifactVersionId === artifactRef.artifact_version_id}
-              >
-                Download
-              </button>
-            </li>
-          ))}
-        </ul>
-      ) : (
-        <p className="detail-drawer__hint">No process artifacts are currently linked.</p>
-      )}
     </div>
   );
 });
 
 function DrawerRequiredUploadActions({
-  requirement,
+  actionLabel,
   disabled,
-  onUpload,
-  onDownloadTemplate
+  onUpload
 }: DrawerRequiredUploadActionsProps): JSX.Element {
   const inputRef = useRef<HTMLInputElement | null>(null);
 
@@ -243,15 +378,7 @@ function DrawerRequiredUploadActions({
         onClick={openFilePicker}
         disabled={disabled}
       >
-        {requirement.artifact_role === "official_input" ? "Upload Input" : "Upload Response"}
-      </button>
-      <button
-        type="button"
-        className="action-btn"
-        onClick={onDownloadTemplate}
-        disabled={disabled || !onDownloadTemplate || !requirement.template_id}
-      >
-        Download Template
+        {actionLabel}
       </button>
     </div>
   );
@@ -272,15 +399,17 @@ export function DetailDrawer({ payload, onClose }: DetailDrawerProps): JSX.Eleme
   const [activeRequirementKey, setActiveRequirementKey] = useState<string | null>(null);
   const [downloadingTemplateId, setDownloadingTemplateId] = useState<string | null>(null);
   const uploadInputRef = useRef<HTMLInputElement | null>(null);
-  const expandProcessButtonRef = useRef<HTMLButtonElement | null>(null);
-  const subgraphHeadingRef = useRef<HTMLHeadingElement | null>(null);
-  const [subgraphExpanded, setSubgraphExpanded] = useState(false);
+  const taskDialogRef = useRef<HTMLElement | null>(null);
+  const taskCloseButtonRef = useRef<HTMLButtonElement | null>(null);
+  const taskModalTriggerRef = useRef<HTMLElement | null>(null);
+  const taskModalWasOpenRef = useRef(false);
   const [subgraphLoading, setSubgraphLoading] = useState(false);
   const [subgraphError, setSubgraphError] = useState<unknown>(null);
   const [subgraph, setSubgraph] = useState<HumanTaskSubgraph | null>(null);
   const activeTaskIdRef = useRef<string | null>(null);
 
   const taskFromPayload = payload?.task ?? null;
+  const isTaskPayload = Boolean(taskFromPayload);
 
   useEffect(() => {
     setDownloadError(null);
@@ -291,7 +420,6 @@ export function DetailDrawer({ payload, onClose }: DetailDrawerProps): JSX.Eleme
   }, [payload]);
 
   useEffect(() => {
-    setSubgraphExpanded(false);
     setSubgraphLoading(false);
     setSubgraphError(null);
     setSubgraph(null);
@@ -313,7 +441,7 @@ export function DetailDrawer({ payload, onClose }: DetailDrawerProps): JSX.Eleme
       try {
         const task = await humanTasksRepository.get(taskFromPayload.human_task_id);
         if (!cancelled) {
-          setTaskDetails(drawerTaskContext(task));
+          setTaskDetails(drawerTaskContext(task, taskFromPayload));
           setTaskLoadError(null);
         }
       } catch (error) {
@@ -338,8 +466,35 @@ export function DetailDrawer({ payload, onClose }: DetailDrawerProps): JSX.Eleme
     activeTaskIdRef.current = activeTask?.human_task_id ?? null;
   }, [activeTask?.human_task_id]);
 
+  useEffect(() => {
+    if (isTaskPayload && !taskModalWasOpenRef.current) {
+      taskModalTriggerRef.current =
+        document.activeElement instanceof HTMLElement ? document.activeElement : null;
+      requestAnimationFrame(() => {
+        taskCloseButtonRef.current?.focus();
+      });
+    }
+
+    if (!isTaskPayload && taskModalWasOpenRef.current) {
+      taskModalTriggerRef.current?.focus();
+      taskModalTriggerRef.current = null;
+    }
+
+    taskModalWasOpenRef.current = isTaskPayload;
+  }, [isTaskPayload]);
+
   const requiredUploads = activeTask?.required_uploads ?? [];
   const requiredReviews = activeTask?.required_reviews ?? [];
+  const requiredDocumentRows = useMemo(
+    () =>
+      buildTaskRequiredDocumentRows({
+        required_uploads: requiredUploads,
+        required_reviews: requiredReviews
+      }),
+    [requiredReviews, requiredUploads]
+  );
+  const workpageActions = activeTask?.workpage_actions ?? [];
+  const downloadableArtifacts = payload?.downloadable_artifacts ?? [];
   const requiredReviewArtifactVersionIds = requiredReviews
     .map((review) => review.reviewed_artifact_version_id)
     .filter((value): value is string => Boolean(value));
@@ -349,20 +504,6 @@ export function DetailDrawer({ payload, onClose }: DetailDrawerProps): JSX.Eleme
 
   const isCompositeTask =
     Boolean(activeTask?.is_composite) && activeTask?.expansion_kind === "task_subgraph";
-
-  useEffect(() => {
-    if (isCompositeTask) {
-      return;
-    }
-    setSubgraphExpanded(false);
-  }, [isCompositeTask]);
-
-  useEffect(() => {
-    if (!subgraphExpanded) {
-      return;
-    }
-    subgraphHeadingRef.current?.focus();
-  }, [subgraphExpanded, subgraphLoading, subgraphError, subgraph]);
 
   const artifactSources = useMemo(
     () => mergeArtifactSources(payload?.artifact_sources ?? [], activeTask),
@@ -474,6 +615,15 @@ export function DetailDrawer({ payload, onClose }: DetailDrawerProps): JSX.Eleme
     });
   };
 
+  const handleDownloadLightweightArtifact = async (
+    artifact: DrawerDownloadableArtifact
+  ): Promise<void> => {
+    await downloadArtifactVersion({
+      artifactVersionId: artifact.artifact_version_id,
+      preferredFileName: artifact.label || null
+    });
+  };
+
   const handleDownloadSubgraphArtifact = async (
     artifactRef: HumanTaskSubgraphArtifactRef
   ): Promise<void> => {
@@ -506,6 +656,16 @@ export function DetailDrawer({ payload, onClose }: DetailDrawerProps): JSX.Eleme
     }
   }, []);
 
+  useEffect(() => {
+    if (!isCompositeTask) {
+      return;
+    }
+    if (!activeTask || subgraph || subgraphLoading || subgraphError) {
+      return;
+    }
+    void loadTaskSubgraph(activeTask.human_task_id);
+  }, [activeTask, isCompositeTask, loadTaskSubgraph, subgraph, subgraphError, subgraphLoading]);
+
   const hasAction = (candidates: string[]): boolean => {
     if (!activeTask) {
       return false;
@@ -514,24 +674,87 @@ export function DetailDrawer({ payload, onClose }: DetailDrawerProps): JSX.Eleme
     return candidates.some((candidate) => actionSet.has(candidate.toLowerCase()));
   };
 
-  const toggleTaskSubgraph = (): void => {
-    if (!activeTask || !isCompositeTask) {
+  const primaryTaskAction = (() => {
+    if (hasAction(["confirm_review"])) {
+      return "confirm_review";
+    }
+    if (hasAction(["complete", "complete_human_task"])) {
+      return "complete";
+    }
+    if (hasAction(["run_stage06_agent_review"])) {
+      return "run_stage06_agent_review";
+    }
+    if (hasAction(["run_weekly_stage04_openai_agent"])) {
+      return "run_weekly_stage04_openai_agent";
+    }
+    return null;
+  })();
+
+  const primaryTaskActionDisabled =
+    primaryTaskAction === "confirm_review"
+      ? pendingTaskAction !== null ||
+        (requiredReviewArtifactVersionIds.length === 0 && artifacts.length === 0) ||
+        (requiredReviews.length > 0 && !hasPendingReviewConfirmation)
+      : pendingTaskAction !== null;
+
+  const supportingRouteActions = workpageActions.filter((action) => action.state === "available" && action.route);
+  const workspaceLink = useMemo(() => {
+    const explicitWorkspaceLink = payload?.links?.find((link) => /workspace/i.test(link.label));
+    if (explicitWorkspaceLink) {
+      return {
+        ...explicitWorkspaceLink,
+        label: "Open Workspace"
+      };
+    }
+    if (!activeTask) {
+      return null;
+    }
+    return {
+      label: "Open Workspace",
+      to: `/runs/${activeTask.workflow_run_id}/workspace`
+    };
+  }, [activeTask, payload?.links]);
+  const secondaryLinks = (payload?.links ?? []).filter(
+    (link) => !workspaceLink || link.to !== workspaceLink.to
+  );
+
+  const handleTaskModalKeyDown = (event: ReactKeyboardEvent<HTMLDivElement>): void => {
+    if (event.key === "Escape") {
+      event.preventDefault();
+      onClose();
       return;
     }
-    if (subgraphExpanded) {
-      setSubgraphExpanded(false);
-      expandProcessButtonRef.current?.focus();
+
+    if (event.key !== "Tab") {
       return;
     }
-    setSubgraphExpanded(true);
-    if (!subgraph && !subgraphLoading) {
-      void loadTaskSubgraph(activeTask.human_task_id);
+
+    const focusable = focusableElements(taskDialogRef.current);
+    if (focusable.length === 0) {
+      event.preventDefault();
+      taskDialogRef.current?.focus();
+      return;
+    }
+
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+    if (event.shiftKey && document.activeElement === first) {
+      event.preventDefault();
+      last.focus();
+      return;
+    }
+    if (!event.shiftKey && document.activeElement === last) {
+      event.preventDefault();
+      first.focus();
     }
   };
 
-  const refreshTaskContext = async (humanTaskId: string): Promise<void> => {
+  const refreshTaskContext = async (
+    humanTaskId: string,
+    fallback: DrawerTaskContext | null = activeTask
+  ): Promise<void> => {
     const refreshed = await humanTasksRepository.get(humanTaskId);
-    setTaskDetails(drawerTaskContext(refreshed));
+    setTaskDetails(drawerTaskContext(refreshed, fallback));
   };
 
   const invalidateTaskViews = async (workflowRunId: string): Promise<void> => {
@@ -553,6 +776,7 @@ export function DetailDrawer({ payload, onClose }: DetailDrawerProps): JSX.Eleme
     }
     setTaskActionError(null);
     setPendingTaskAction(action);
+    let nextTaskContext = activeTask;
     try {
       if (action === "claim") {
         await humanTasksRepository.claim(activeTask.human_task_id);
@@ -571,9 +795,11 @@ export function DetailDrawer({ payload, onClose }: DetailDrawerProps): JSX.Eleme
           throw new Error("No linked artifacts are available to confirm review.");
         }
         await humanTasksRepository.confirmReview(activeTask.human_task_id, reviewedArtifactVersionIds);
+        nextTaskContext = withConfirmedRequiredReviews(activeTask);
+        setTaskDetails(nextTaskContext);
       }
       await invalidateTaskViews(activeTask.workflow_run_id);
-      await refreshTaskContext(activeTask.human_task_id);
+      await refreshTaskContext(activeTask.human_task_id, nextTaskContext);
     } catch (error) {
       setTaskActionError(error);
     } finally {
@@ -594,8 +820,10 @@ export function DetailDrawer({ payload, onClose }: DetailDrawerProps): JSX.Eleme
     setActiveRequirementKey(requirementKey);
     try {
       await humanTasksRepository.uploadRequiredResponse(activeTask.human_task_id, requirement, file);
+      const nextTaskContext = withSatisfiedRequiredUpload(activeTask, requirement);
+      setTaskDetails(nextTaskContext);
       await invalidateTaskViews(activeTask.workflow_run_id);
-      await refreshTaskContext(activeTask.human_task_id);
+      await refreshTaskContext(activeTask.human_task_id, nextTaskContext);
     } catch (error) {
       setTaskActionError(error);
     } finally {
@@ -613,7 +841,7 @@ export function DetailDrawer({ payload, onClose }: DetailDrawerProps): JSX.Eleme
     try {
       await humanTasksRepository.uploadAttachment(activeTask.human_task_id, file);
       await invalidateTaskViews(activeTask.workflow_run_id);
-      await refreshTaskContext(activeTask.human_task_id);
+      await refreshTaskContext(activeTask.human_task_id, activeTask);
     } catch (error) {
       setTaskActionError(error);
     } finally {
@@ -653,7 +881,378 @@ export function DetailDrawer({ payload, onClose }: DetailDrawerProps): JSX.Eleme
   };
 
   if (!payload) {
-    return <aside className="detail-drawer" aria-hidden="true" />;
+    return <aside className="detail-drawer detail-drawer--closed" aria-hidden="true" />;
+  }
+
+  if (isTaskPayload && activeTask) {
+    return (
+      <div
+        className="task-modal-backdrop"
+        onClick={(event) => {
+          if (event.target === event.currentTarget) {
+            onClose();
+          }
+        }}
+      >
+        <section
+          ref={taskDialogRef}
+          className="task-modal"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="task-modal-title"
+          aria-describedby="task-modal-description"
+          onKeyDown={handleTaskModalKeyDown}
+          tabIndex={-1}
+        >
+          <input
+            ref={uploadInputRef}
+            type="file"
+            style={{ display: "none" }}
+            tabIndex={-1}
+            onChange={(event) => {
+              const file = event.currentTarget.files?.[0];
+              if (file) {
+                void handleUploadAttachment(file);
+              }
+              event.currentTarget.value = "";
+            }}
+          />
+          <header className="task-modal__header">
+            <div className="task-modal__headline">
+              <div className="task-modal__title-row">
+                <div>
+                  <h2 id="task-modal-title">{payload.title}</h2>
+                  {taskDetails?.updated_at ? (
+                    <p className="task-modal__updated">
+                      Last updated {formatTimestamp(taskDetails.updated_at)}
+                    </p>
+                  ) : null}
+                </div>
+                <StatusBadge status={activeTask.state} />
+              </div>
+            </div>
+            <div className="task-modal__header-actions">
+              <button
+                ref={taskCloseButtonRef}
+                type="button"
+                className="link-button"
+                onClick={onClose}
+                aria-label="Close task modal"
+              >
+                Close
+              </button>
+              <InfoDialog
+                triggerLabel="Show task technical details"
+                dialogTitle="Task technical details"
+                dialogDescription="Identifiers and runtime references for this task."
+                className="task-modal__info-button"
+              >
+                <dl className="task-modal__technical-grid">
+                  <div>
+                    <dt>Task ID</dt>
+                    <dd>{activeTask.human_task_id}</dd>
+                  </div>
+                  <div>
+                    <dt>Run ID</dt>
+                    <dd>{activeTask.workflow_run_id}</dd>
+                  </div>
+                  {activeTask.task_run_id ? (
+                    <div>
+                      <dt>Task Run ID</dt>
+                      <dd>{activeTask.task_run_id}</dd>
+                    </div>
+                  ) : null}
+                </dl>
+              </InfoDialog>
+            </div>
+          </header>
+
+          <div className="task-modal__body">
+            <section className="task-modal__narrative">
+              <p id="task-modal-description">
+                {payload.description ??
+                  "Review the task context, confirm evidence readiness, and run authoritative actions without leaving the current workflow view."}
+              </p>
+            </section>
+
+            <section className="task-modal__section task-modal__section--summary" aria-label="Task overview">
+              <dl className="task-modal__summary-grid">
+                <div>
+                  <dt>Owner</dt>
+                  <dd>{activeTask.owner_role ?? "Unknown"}</dd>
+                </div>
+                <div>
+                  <dt>Assignee</dt>
+                  <dd>{activeTask.assignee_actor_id ?? "Unassigned"}</dd>
+                </div>
+                <div>
+                  <dt>Stage / kind</dt>
+                  <dd>
+                    {activeTask.stage_id} · {humanizeValue(activeTask.task_kind)}
+                  </dd>
+                </div>
+                <div>
+                  <dt>Readiness</dt>
+                  <dd>{taskReadinessSummary(activeTask)}</dd>
+                </div>
+              </dl>
+            </section>
+
+            <section className="task-modal__section" aria-label="Required documents">
+              <header className="task-modal__section-header">
+                <h3>Required Documents</h3>
+              </header>
+              {requiredDocumentRows.length > 0 ? (
+                <ul className="task-modal__document-list">
+                  {requiredDocumentRows.map((row) => {
+                    const requirementBusy =
+                      row.kind === "upload" &&
+                      pendingTaskAction === "upload_required_response" &&
+                      activeRequirementKey === `${row.requirement.dataset_key}:${row.requirement.artifact_kind}`;
+
+                    return (
+                      <li key={row.key} className={taskDocumentToneClass(row.tone)}>
+                        <div className="task-modal__document-indicator" aria-hidden="true">
+                          {taskDocumentMarker(row.tone, row.kind)}
+                        </div>
+                        <div className="task-modal__document-main">
+                          <p className="task-modal__document-label">{row.display.label}</p>
+                          <p className="task-modal__document-meta">{row.meta}</p>
+                          {row.kind === "upload" && row.templateLabel ? (
+                            <button
+                              type="button"
+                              className="task-modal__document-tertiary"
+                              disabled={pendingTaskAction !== null || downloadingTemplateId !== null}
+                              onClick={() => {
+                                if (row.requirement.template_id) {
+                                  void handleDownloadRequirementTemplate(row.requirement.template_id);
+                                }
+                              }}
+                            >
+                              {row.templateLabel}
+                            </button>
+                          ) : null}
+                        </div>
+                        <div className="task-modal__document-actions">
+                          <span className={`task-modal__document-chip task-modal__document-chip--${row.tone}`}>
+                            {row.statusLabel}
+                          </span>
+                          {row.kind === "upload" ? (
+                            <DrawerRequiredUploadActions
+                              actionLabel={row.actionLabel}
+                              disabled={pendingTaskAction !== null || downloadingTemplateId !== null}
+                              onUpload={(file) => {
+                                void handleUploadRequiredResponse(row.requirement, file);
+                              }}
+                            />
+                          ) : row.actionLabel ? (
+                            <button
+                              type="button"
+                              className="action-btn action-btn--ghost"
+                              disabled={pendingTaskAction !== null || !row.review.reviewed_artifact_version_id}
+                              onClick={() => {
+                                if (row.review.reviewed_artifact_version_id) {
+                                  void handleOpenRequiredReviewDraft(row.review.reviewed_artifact_version_id);
+                                }
+                              }}
+                            >
+                              {row.actionLabel}
+                            </button>
+                          ) : null}
+                          {requirementBusy ? (
+                            <span className="detail-drawer__inline-status">Uploading…</span>
+                          ) : null}
+                        </div>
+                      </li>
+                    );
+                  })}
+                </ul>
+              ) : (
+                <p className="detail-drawer__hint">No required documents for this task.</p>
+              )}
+              {hasPendingReviewConfirmation ? (
+                <p className="detail-drawer__hint">
+                  Confirm review once all required draft artifacts have been checked.
+                </p>
+              ) : null}
+            </section>
+
+            {isCompositeTask ? (
+              <section className="task-modal__section" aria-label="Task process">
+                <header className="task-modal__section-header">
+                  <h3>Task Process</h3>
+                </header>
+                {subgraphLoading ? <p className="detail-drawer__hint">Loading task process...</p> : null}
+                {!subgraphLoading && subgraphError ? (
+                  <div>
+                    <p className="detail-drawer__error">
+                      {errorText(subgraphError, "Task process failed to load")}
+                    </p>
+                    <button
+                      type="button"
+                      className="action-btn"
+                      onClick={() => {
+                        void loadTaskSubgraph(activeTask.human_task_id);
+                      }}
+                    >
+                      Retry process load
+                    </button>
+                  </div>
+                ) : null}
+                {!subgraphLoading && !subgraphError && subgraph ? (
+                  <TaskSubgraphView
+                    subgraph={subgraph}
+                    onDownloadArtifact={handleDownloadSubgraphArtifact}
+                    downloadingArtifactVersionId={downloadingArtifactVersionId}
+                  />
+                ) : null}
+                {!subgraphLoading && !subgraphError && !subgraph ? (
+                  <p className="detail-drawer__hint">No process graph is currently available.</p>
+                ) : null}
+              </section>
+            ) : null}
+
+            <section className="task-modal__section" aria-label="Task artifacts">
+              <header className="task-modal__section-header">
+                <h3>Task Artifacts</h3>
+                {hasAction(["upload_attachment"]) ? (
+                  <button
+                    type="button"
+                    className="task-modal__document-tertiary"
+                    disabled={pendingTaskAction !== null}
+                    onClick={openUploadPicker}
+                  >
+                    Add supporting attachment
+                  </button>
+                ) : null}
+              </header>
+              {artifacts.length > 0 ? (
+                <ul className="task-modal__artifact-chip-list">
+                  {artifacts.map((artifact) => (
+                    <li key={artifact.artifact_version_id}>
+                      <button
+                        type="button"
+                        className="task-modal__artifact-chip"
+                        onClick={() => void handleDownloadArtifact(artifact)}
+                        disabled={downloadingArtifactVersionId === artifact.artifact_version_id}
+                        aria-label={`Download ${artifact.file_name ?? artifact.artifact_kind}`}
+                      >
+                        <span className="task-modal__artifact-chip-label">
+                          {artifact.file_name ?? artifact.artifact_kind}
+                        </span>
+                        <span className="task-modal__artifact-chip-meta">
+                          {[artifact.source_label, artifact.artifact_role].filter(Boolean).join(" · ")}
+                        </span>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              ) : artifactsLoading ? (
+                <p className="detail-drawer__hint">Loading task artifacts...</p>
+              ) : payload.artifact_sources && payload.artifact_sources.length > 0 ? (
+                <p className="detail-drawer__hint">No task artifacts are currently linked.</p>
+              ) : (
+                <p className="detail-drawer__hint">No task artifacts are currently linked.</p>
+              )}
+            </section>
+
+            <footer className="task-modal__footer">
+              <dl className="task-modal__footer-meta">
+                <div>
+                  <dt>Candidate roles</dt>
+                  <dd>
+                    {activeTask.candidate_roles && activeTask.candidate_roles.length > 0
+                      ? activeTask.candidate_roles.join(", ")
+                      : "None"}
+                  </dd>
+                </div>
+                <div>
+                  <dt>Blocking / inputs</dt>
+                  <dd>
+                    {taskBlockingSummary(activeTask)}
+                    {taskMissingInputSummary(activeTask) !== "Ready for work"
+                      ? ` · ${taskMissingInputSummary(activeTask)}`
+                      : ""}
+                  </dd>
+                </div>
+              </dl>
+
+              <div className="task-modal__footer-actions">
+                <div className="task-modal__footer-actions-left">
+                  {hasAction(["claim", "claim_human_task"]) ? (
+                    <button
+                      type="button"
+                      className="action-btn"
+                      disabled={pendingTaskAction !== null}
+                      onClick={() => void handleTaskAction("claim")}
+                    >
+                      Claim
+                    </button>
+                  ) : null}
+                </div>
+                <div className="task-modal__footer-actions-right">
+                  {workspaceLink ? (
+                    <Link className="action-btn action-btn--ghost" to={workspaceLink.to}>
+                      {workspaceLink.label}
+                    </Link>
+                  ) : null}
+                  {secondaryLinks.map((link) => (
+                    <Link
+                      key={`${link.label}:${link.to}`}
+                      className="action-btn action-btn--ghost"
+                      to={link.to}
+                    >
+                      {link.label}
+                    </Link>
+                  ))}
+                  {supportingRouteActions.map((action) => (
+                    <Link
+                      key={action.action_id}
+                      className="action-btn action-btn--ghost"
+                      to={action.route as string}
+                    >
+                      {action.label}
+                    </Link>
+                  ))}
+                  {primaryTaskAction ? (
+                    <button
+                      type="button"
+                      className="action-btn action-btn--hero"
+                      disabled={primaryTaskActionDisabled}
+                      onClick={() => void handleTaskAction(primaryTaskAction)}
+                    >
+                      {taskPrimaryActionLabel(primaryTaskAction)}
+                    </button>
+                  ) : null}
+                </div>
+              </div>
+            </footer>
+
+            {downloadError ? (
+              <p className="detail-drawer__error">
+                {errorText(downloadError, "Artifact download failed")}
+              </p>
+            ) : null}
+            {artifactLoadError ? (
+              <p className="detail-drawer__error">
+                {errorText(artifactLoadError, "Task artifacts failed to load")}
+              </p>
+            ) : null}
+            {taskLoading ? <p className="detail-drawer__hint">Loading task context...</p> : null}
+            {taskLoadError ? (
+              <p className="detail-drawer__error">
+                {errorText(taskLoadError, "Task details failed to load")}
+              </p>
+            ) : null}
+            {taskActionError ? (
+              <p className="detail-drawer__error">
+                {errorText(taskActionError, "Task action failed")}
+              </p>
+            ) : null}
+          </div>
+        </section>
+      </div>
+    );
   }
 
   return (
@@ -684,312 +1283,30 @@ export function DetailDrawer({ payload, onClose }: DetailDrawerProps): JSX.Eleme
         </div>
       ) : null}
 
-      {activeTask ? (
-        <section className="detail-drawer__task" aria-label="Task context">
-          <h3>Task Context</h3>
-          <input
-            ref={uploadInputRef}
-            type="file"
-            style={{ display: "none" }}
-            tabIndex={-1}
-            onChange={(event) => {
-              const file = event.currentTarget.files?.[0];
-              if (file) {
-                void handleUploadAttachment(file);
-              }
-              event.currentTarget.value = "";
-            }}
-          />
-          <dl>
-            <div className="detail-drawer__field">
-              <dt>Task id</dt>
-              <dd>{activeTask.human_task_id}</dd>
-            </div>
-            <div className="detail-drawer__field">
-              <dt>State</dt>
-              <dd>{activeTask.state}</dd>
-            </div>
-            <div className="detail-drawer__field">
-              <dt>Assignee</dt>
-              <dd>{activeTask.assignee_actor_id ?? "unassigned"}</dd>
-            </div>
-            <div className="detail-drawer__field">
-              <dt>Owner role</dt>
-              <dd>{activeTask.owner_role ?? "unknown"}</dd>
-            </div>
-            <div className="detail-drawer__field">
-              <dt>Candidate roles</dt>
-              <dd>
-                {activeTask.candidate_roles && activeTask.candidate_roles.length > 0
-                  ? activeTask.candidate_roles.join(", ")
-                  : "none"}
-              </dd>
-            </div>
-            <div className="detail-drawer__field">
-              <dt>Workflow run</dt>
-              <dd>{activeTask.workflow_run_id}</dd>
-            </div>
-            <div className="detail-drawer__field">
-              <dt>Task run</dt>
-              <dd>{activeTask.task_run_id}</dd>
-            </div>
-            <div className="detail-drawer__field">
-              <dt>Stage / kind</dt>
-              <dd>
-                {activeTask.stage_id} · {activeTask.task_kind}
-              </dd>
-            </div>
-            <div className="detail-drawer__field">
-              <dt>Linked approval</dt>
-              <dd>{activeTask.linked_approval_id ?? "none"}</dd>
-            </div>
-            <div className="detail-drawer__field">
-              <dt>Blocked on</dt>
-              <dd>
-                {activeTask.blocked_on_kind
-                  ? `${activeTask.blocked_on_kind}${activeTask.blocked_on_ref ? `:${activeTask.blocked_on_ref}` : ""}`
-                  : "none"}
-              </dd>
-            </div>
-            <div className="detail-drawer__field">
-              <dt>Blocking reasons</dt>
-              <dd>
-                {activeTask.blocking_reason_codes.length > 0
-                  ? activeTask.blocking_reason_codes.join(", ")
-                  : "none"}
-              </dd>
-            </div>
-            <div className="detail-drawer__field">
-              <dt>Missing inputs</dt>
-              <dd>
-                {activeTask.missing_required_inputs.length > 0
-                  ? activeTask.missing_required_inputs.join(", ")
-                  : "none"}
-              </dd>
-            </div>
-            <div className="detail-drawer__field">
-              <dt>Available actions</dt>
-              <dd>
-                {activeTask.available_actions.length > 0
-                  ? activeTask.available_actions.join(", ")
-                  : "none"}
-              </dd>
-            </div>
-          </dl>
-          {requiredUploads.length > 0 ? (
-            <section className="detail-drawer__requirements" aria-label="Required uploads">
-              <h4>Required Inputs / Uploads</h4>
-              <ul className="detail-drawer__artifact-list">
-                {requiredUploads.map((requirement) => {
-                  const requirementKey = `${requirement.dataset_key}:${requirement.artifact_kind}`;
-                  const requirementBusy =
-                    pendingTaskAction === "upload_required_response" &&
-                    activeRequirementKey === requirementKey;
-                  return (
-                    <li
-                      key={`required-upload:${requirementKey}`}
-                      className="detail-drawer__artifact-row"
-                    >
-                      <div className="detail-drawer__artifact-meta">
-                        <p className="detail-drawer__artifact-name">{requirement.dataset_key}</p>
-                        <p className="detail-drawer__artifact-details">
-                          {requirementLabel(requirement)} · {requirement.status}
-                          {requirement.required === false ? " · optional" : ""}
-                        </p>
-                      </div>
-                      <DrawerRequiredUploadActions
-                        requirement={requirement}
-                        disabled={pendingTaskAction !== null || downloadingTemplateId !== null}
-                        onUpload={(file) => {
-                          void handleUploadRequiredResponse(requirement, file);
-                        }}
-                        onDownloadTemplate={
-                          requirement.template_id
-                            ? () => void handleDownloadRequirementTemplate(requirement.template_id as string)
-                            : undefined
-                        }
-                      />
-                      {requirementBusy ? (
-                        <span className="detail-drawer__inline-status">Uploading…</span>
-                      ) : null}
-                    </li>
-                  );
-                })}
-              </ul>
-            </section>
-          ) : null}
-          {requiredReviews.length > 0 ? (
-            <section className="detail-drawer__requirements" aria-label="Required reviews">
-              <h4>Required Reviews</h4>
-              <ul className="detail-drawer__artifact-list">
-                {requiredReviews.map((review) => (
-                  <li
-                    key={`required-review:${review.dataset_key}:${review.artifact_kind}`}
-                    className="detail-drawer__artifact-row"
-                  >
-                    <div className="detail-drawer__artifact-meta">
-                      <p className="detail-drawer__artifact-name">{review.dataset_key}</p>
-                      <p className="detail-drawer__artifact-details">
-                        Required review · {reviewStatusLabel(review)}
-                      </p>
-                    </div>
-                    <div className="detail-drawer__requirement-actions">
-                      <button
-                        type="button"
-                        className="action-btn"
-                        disabled={
-                          pendingTaskAction !== null || !review.reviewed_artifact_version_id
-                        }
-                        onClick={() => {
-                          if (review.reviewed_artifact_version_id) {
-                            void handleOpenRequiredReviewDraft(review.reviewed_artifact_version_id);
-                          }
-                        }}
-                      >
-                        Open Draft
-                      </button>
-                    </div>
-                  </li>
-                ))}
-              </ul>
-              {hasPendingReviewConfirmation ? (
-                <p className="detail-drawer__hint">
-                  Confirm review once all required draft artifacts have been checked.
-                </p>
-              ) : null}
-            </section>
-          ) : null}
-          <div className="detail-drawer__task-actions">
-            {hasAction(["claim", "claim_human_task"]) ? (
-              <button
-                type="button"
-                className="action-btn"
-                disabled={pendingTaskAction !== null}
-                onClick={() => void handleTaskAction("claim")}
+      {downloadableArtifacts.length > 0 ? (
+        <section className="detail-drawer__artifacts" aria-label="Downloadable artifacts">
+          <h3>Downloadable Artifacts ({downloadableArtifacts.length})</h3>
+          <ul className="detail-drawer__artifact-list">
+            {downloadableArtifacts.map((artifact) => (
+              <li
+                key={`downloadable-artifact:${artifact.artifact_version_id}`}
+                className="detail-drawer__artifact-row"
               >
-                Claim
-              </button>
-            ) : null}
-            {hasAction(["complete", "complete_human_task"]) ? (
-              <button
-                type="button"
-                className="action-btn action-btn--positive"
-                disabled={pendingTaskAction !== null}
-                onClick={() => void handleTaskAction("complete")}
-              >
-                Complete
-              </button>
-            ) : null}
-            {hasAction(["run_stage06_agent_review"]) ? (
-              <button
-                type="button"
-                className="action-btn"
-                disabled={pendingTaskAction !== null}
-                onClick={() => void handleTaskAction("run_stage06_agent_review")}
-              >
-                Run Stage06 Review
-              </button>
-            ) : null}
-            {hasAction(["run_weekly_stage04_openai_agent"]) ? (
-              <button
-                type="button"
-                className="action-btn"
-                disabled={pendingTaskAction !== null}
-                onClick={() => void handleTaskAction("run_weekly_stage04_openai_agent")}
-              >
-                Run Stage04 Build
-              </button>
-            ) : null}
-            {hasAction(["confirm_review"]) ? (
-              <button
-                type="button"
-                className="action-btn"
-                disabled={
-                  pendingTaskAction !== null ||
-                  requiredReviewArtifactVersionIds.length === 0 ||
-                  !hasPendingReviewConfirmation
-                }
-                onClick={() => void handleTaskAction("confirm_review")}
-              >
-                Confirm Review
-              </button>
-            ) : null}
-            {hasAction(["upload_attachment"]) ? (
-              <button
-                type="button"
-                className="action-btn"
-                disabled={pendingTaskAction !== null}
-                onClick={openUploadPicker}
-              >
-                Add supporting attachment
-              </button>
-            ) : null}
-            {isCompositeTask ? (
-              <button
-                ref={expandProcessButtonRef}
-                type="button"
-                className="action-btn"
-                aria-expanded={subgraphExpanded}
-                aria-controls="task-subgraph-panel"
-                disabled={subgraphLoading}
-                onClick={toggleTaskSubgraph}
-              >
-                {subgraphExpanded ? "Collapse process" : "Expand process"}
-              </button>
-            ) : null}
-          </div>
-
-          {isCompositeTask && subgraphExpanded ? (
-            <section
-              id="task-subgraph-panel"
-              className="detail-drawer__subgraph"
-              aria-label="Task process"
-              onKeyDown={(event) => {
-                if (event.key !== "Escape") {
-                  return;
-                }
-                event.preventDefault();
-                setSubgraphExpanded(false);
-                expandProcessButtonRef.current?.focus();
-              }}
-            >
-              <h4 ref={subgraphHeadingRef} tabIndex={-1}>
-                Task process
-              </h4>
-              {subgraphLoading ? (
-                <p className="detail-drawer__hint">Loading task process...</p>
-              ) : null}
-              {!subgraphLoading && subgraphError ? (
-                <div>
-                  <p className="detail-drawer__error">
-                    {errorText(subgraphError, "Task process failed to load")}
-                  </p>
-                  <button
-                    type="button"
-                    className="action-btn"
-                    onClick={() => {
-                      if (!activeTask) {
-                        return;
-                      }
-                      void loadTaskSubgraph(activeTask.human_task_id);
-                    }}
-                  >
-                    Retry process load
-                  </button>
+                <div className="detail-drawer__artifact-meta">
+                  <p className="detail-drawer__artifact-name">{artifact.label}</p>
+                  <p className="detail-drawer__artifact-details">{artifact.source_label}</p>
                 </div>
-              ) : null}
-              {!subgraphLoading && !subgraphError && subgraph ? (
-                <TaskSubgraphView
-                  subgraph={subgraph}
-                  onDownloadArtifact={handleDownloadSubgraphArtifact}
-                  downloadingArtifactVersionId={downloadingArtifactVersionId}
-                />
-              ) : null}
-              {!subgraphLoading && !subgraphError && !subgraph ? (
-                <p className="detail-drawer__hint">No process graph is currently available.</p>
-              ) : null}
-            </section>
-          ) : null}
+                <button
+                  type="button"
+                  className="action-btn"
+                  onClick={() => void handleDownloadLightweightArtifact(artifact)}
+                  disabled={downloadingArtifactVersionId === artifact.artifact_version_id}
+                >
+                  Download
+                </button>
+              </li>
+            ))}
+          </ul>
         </section>
       ) : null}
 
@@ -1023,9 +1340,7 @@ export function DetailDrawer({ payload, onClose }: DetailDrawerProps): JSX.Eleme
         </section>
       ) : null}
 
-      {artifactsLoading ? (
-        <p className="detail-drawer__hint">Loading task artifacts...</p>
-      ) : null}
+      {artifactsLoading ? <p className="detail-drawer__hint">Loading task artifacts...</p> : null}
 
       {!artifactsLoading &&
       artifacts.length === 0 &&
@@ -1045,21 +1360,121 @@ export function DetailDrawer({ payload, onClose }: DetailDrawerProps): JSX.Eleme
           {errorText(artifactLoadError, "Task artifacts failed to load")}
         </p>
       ) : null}
-
-      {taskLoading ? <p className="detail-drawer__hint">Loading task context...</p> : null}
-
-      {taskLoadError ? (
-        <p className="detail-drawer__error">{errorText(taskLoadError, "Task details failed to load")}</p>
-      ) : null}
-
-      {taskActionError ? (
-        <p className="detail-drawer__error">{errorText(taskActionError, "Task action failed")}</p>
-      ) : null}
     </aside>
   );
 }
 
-function drawerTaskContext(task: HumanTaskRow): DrawerTaskContext {
+function uniqueStrings(values: string[]): string[] {
+  return Array.from(new Set(values.filter(Boolean)));
+}
+
+function mergeTaskActions(
+  primary: string[] | null | undefined,
+  fallback: string[] | null | undefined
+): string[] {
+  return uniqueStrings([...(fallback ?? []), ...(primary ?? [])]);
+}
+
+function mergeTaskArray<T>(primary: T[] | null | undefined, fallback: T[] | null | undefined): T[] {
+  const primaryValues = primary ?? [];
+  if (primaryValues.length > 0) {
+    return primaryValues;
+  }
+  return fallback ?? [];
+}
+
+function withSatisfiedRequiredUpload(
+  task: DrawerTaskContext,
+  requirement: WorkflowWorkspaceRequiredUpload
+): DrawerTaskContext {
+  const requiredUploads = task.required_uploads ?? [];
+  const requiredReviews = task.required_reviews ?? [];
+  const updatedUploads = requiredUploads.map((row) => {
+    if (
+      row.dataset_key !== requirement.dataset_key ||
+      row.artifact_kind !== requirement.artifact_kind
+    ) {
+      return row;
+    }
+    return {
+      ...row,
+      current_count: Math.max(row.current_count, row.required_count, 1),
+      status: "satisfied"
+    };
+  });
+  const remainingMissingInputs = task.missing_required_inputs.filter(
+    (value) => value !== requirement.dataset_key && value !== requirement.artifact_kind
+  );
+  const remainingBlockingReasons = task.blocking_reason_codes.filter(
+    (code) =>
+      code !== `required_upload_missing:${requirement.dataset_key}` &&
+      code !== `required_upload_missing:${requirement.artifact_kind}`
+  );
+  const hasPendingReviewConfirmation = requiredReviews.some(
+    (review) => review.status !== "confirmed"
+  );
+  const nextActions = task.available_actions.filter(
+    (action) => action.toLowerCase() !== "complete"
+  );
+  if (hasPendingReviewConfirmation) {
+    nextActions.push("confirm_review");
+  } else if (remainingMissingInputs.length === 0) {
+    nextActions.push("complete");
+  }
+
+  return {
+    ...task,
+    required_uploads: updatedUploads,
+    missing_required_inputs: remainingMissingInputs,
+    blocking_reason_codes: remainingBlockingReasons,
+    available_actions: uniqueStrings(nextActions)
+  };
+}
+
+function withConfirmedRequiredReviews(task: DrawerTaskContext): DrawerTaskContext {
+  const requiredUploads = task.required_uploads ?? [];
+  const requiredReviews = task.required_reviews ?? [];
+  const updatedReviews = requiredReviews.map((review) => ({
+    ...review,
+    status: "confirmed" as const,
+    review_confirmation_artifact_version_id:
+      review.review_confirmation_artifact_version_id ?? "confirmed"
+  }));
+  const reviewKeys = new Set(
+    requiredReviews.flatMap((review) =>
+      [review.dataset_key, review.artifact_kind].filter((value): value is string => Boolean(value))
+    )
+  );
+  const remainingMissingInputs = task.missing_required_inputs.filter((value) => !reviewKeys.has(value));
+  const remainingBlockingReasons = task.blocking_reason_codes.filter(
+    (code) => !code.startsWith("required_review_confirmation_missing:")
+  );
+  const hasMissingRequiredUpload = requiredUploads.some(
+    (requirement) =>
+      requirement.required !== false &&
+      requirement.status !== "satisfied" &&
+      requirement.current_count < requirement.required_count
+  );
+  const nextActions = task.available_actions.filter(
+    (action) => action.toLowerCase() !== "confirm_review"
+  );
+  if (!hasMissingRequiredUpload && remainingMissingInputs.length === 0 && task.state !== "COMPLETED") {
+    nextActions.push("complete");
+  }
+
+  return {
+    ...task,
+    required_reviews: updatedReviews,
+    missing_required_inputs: remainingMissingInputs,
+    blocking_reason_codes: remainingBlockingReasons,
+    available_actions: uniqueStrings(nextActions)
+  };
+}
+
+function drawerTaskContext(
+  task: HumanTaskRow,
+  fallback: DrawerTaskContext | null = null
+): DrawerTaskContext {
   return {
     human_task_id: task.human_task_id,
     workflow_run_id: task.workflow_run_id,
@@ -1067,18 +1482,24 @@ function drawerTaskContext(task: HumanTaskRow): DrawerTaskContext {
     stage_id: task.stage_id,
     task_kind: task.task_kind,
     state: task.state,
+    created_at: task.created_at,
+    updated_at: task.updated_at,
     assignee_actor_id: task.assignee_actor_id,
     assignee_actor_type: task.assignee_actor_type,
     owner_role: task.owner_role,
-    candidate_roles: task.candidate_roles ?? [],
+    candidate_roles: task.candidate_roles ?? fallback?.candidate_roles ?? [],
     linked_approval_id: task.linked_approval_id,
     blocked_on_kind: task.blocked_on_kind,
     blocked_on_ref: task.blocked_on_ref,
-    available_actions: task.available_actions ?? [],
-    blocking_reason_codes: task.blocking_reason_codes ?? [],
-    missing_required_inputs: task.missing_required_inputs ?? [],
-    required_uploads: task.required_uploads ?? [],
-    required_reviews: task.required_reviews ?? [],
+    available_actions: mergeTaskActions(task.available_actions, fallback?.available_actions),
+    blocking_reason_codes: mergeTaskArray(task.blocking_reason_codes, fallback?.blocking_reason_codes),
+    missing_required_inputs: mergeTaskArray(
+      task.missing_required_inputs,
+      fallback?.missing_required_inputs
+    ),
+    required_uploads: mergeTaskArray(task.required_uploads, fallback?.required_uploads),
+    required_reviews: mergeTaskArray(task.required_reviews, fallback?.required_reviews),
+    workpage_actions: mergeTaskArray(task.workpage_actions, fallback?.workpage_actions),
     is_composite: task.is_composite ?? false,
     expansion_kind: task.expansion_kind ?? "none",
     subgraph_ref: task.subgraph_ref ?? null

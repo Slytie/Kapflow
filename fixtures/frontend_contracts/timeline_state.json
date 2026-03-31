@@ -759,7 +759,7 @@
         ],
         "occurred_at": "<ts:41>",
         "payload": {
-          "action": "stage:Stage07",
+          "action": "approve_major_replan",
           "approval_id": "<approval_id:43>",
           "outcome": "approved",
           "rationale": "Major replan approved due no-show",

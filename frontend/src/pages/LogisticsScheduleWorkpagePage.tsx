@@ -11,6 +11,8 @@ import {
 import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 
 import { StatePanel } from "@/components/StatePanel";
+import { ScheduleArtifactAdvancedInfo } from "@/components/workpages/ScheduleArtifactAdvancedInfo";
+import { ScheduleHeatmapEditor } from "@/components/workpages/ScheduleHeatmapEditor";
 import {
   WorkpageFrame,
   WorkpageHistorySection,
@@ -30,7 +32,7 @@ import type {
   WorkpageFormSection as WorkpageFormSectionModel,
   WorkpageHistorySection as WorkpageHistorySectionModel,
   WorkpageNotePanelSection as WorkpageNotePanelSectionModel,
-  WorkpageScalar,
+  WorkpageScheduleHeatmapSection as WorkpageScheduleHeatmapSectionModel,
   WorkpageSummaryCardsSection as WorkpageSummaryCardsSectionModel,
   WorkpageTableRow,
   WorkpageTableSection as WorkpageTableSectionModel
@@ -46,6 +48,16 @@ function findTableSection(
   tableId: string
 ): WorkpageTableSectionModel | null {
   return sections.find((section) => section.table_id === tableId) ?? null;
+}
+
+function findHeatmapSection(
+  sections: WorkpageContract["workpage"]["sections"]
+): WorkpageScheduleHeatmapSectionModel | null {
+  return (
+    sections.find(
+      (section): section is WorkpageScheduleHeatmapSectionModel => section.kind === "schedule_heatmap"
+    ) ?? null
+  );
 }
 
 function buildTableSectionResetKey(
@@ -76,16 +88,6 @@ function workpageBackRoute(workflowRunId?: string): { href: string; label: strin
   return workflowRunId
     ? { href: `/runs/${workflowRunId}`, label: "Back to run detail" }
     : { href: "/demo/logistics", label: "Back to logistics demo" };
-}
-
-function formatWorkpageValue(value: WorkpageScalar): string {
-  if (typeof value === "boolean") {
-    return value ? "Yes" : "No";
-  }
-  if (value === null) {
-    return "—";
-  }
-  return String(value);
 }
 
 function asString(value: unknown): string | null {
@@ -162,61 +164,6 @@ function useEditableScheduleArtifactRows(
     reserveRows,
     setReserveRows
   };
-}
-
-function EditableScheduleTable({
-  section,
-  rows,
-  onChange
-}: {
-  section: WorkpageTableSectionModel;
-  rows: WorkpageTableRow[];
-  onChange: (rowIndex: number, fieldKey: string, value: string) => void;
-}): JSX.Element {
-  return (
-    <section className="workpage-panel">
-      <header className="workpage-panel__header">
-        <h2>{section.title}</h2>
-      </header>
-      <div className="workpage-table__wrap">
-        <table className="workpage-table" data-testid={section.table_id}>
-          <thead>
-            <tr>
-              {section.columns.map((column) => (
-                <th key={column.key} scope="col">
-                  {column.label}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((row, rowIndex) => (
-              <tr key={`${section.table_id}-${rowIndex}`}>
-                {section.columns.map((column) => {
-                  const value = row[column.key] ?? null;
-                  if (column.key === "assigned_driver_id" || column.key === "assignment_status") {
-                    return (
-                      <td key={column.key}>
-                        <input
-                          type="text"
-                          value={typeof value === "string" ? value : String(value ?? "")}
-                          onChange={(event) => {
-                            onChange(rowIndex, column.key, event.currentTarget.value);
-                          }}
-                          aria-label={`${section.title} ${column.label} ${rowIndex + 1}`}
-                        />
-                      </td>
-                    );
-                  }
-                  return <td key={column.key}>{formatWorkpageValue(value)}</td>;
-                })}
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    </section>
-  );
 }
 
 interface LogisticsScheduleWorkpageViewProps {
@@ -319,30 +266,32 @@ function LogisticsScheduleWorkpageView({
       isRefreshing={isRefreshing}
       pollIntervalMs={apiConfig.pollIntervalMs}
       testId={testId}
+      metadataPresentation="dialog"
+      infoDialogTitle="Weekly planning context"
       sourceDescription={sourceDescription}
       heroActions={heroActions}
+      infoDialogContent={
+        <>
+          {noteSection ? <WorkpageNotePanelSection section={noteSection} /> : null}
+          {historySection ? <WorkpageHistorySection section={historySection} /> : null}
+        </>
+      }
       backLink={backLink}
       backLabel={backLabel}
     >
       {preContent}
 
-      <div className="workpage-page__grid workpage-page__grid--two-column">
-        {summarySection ? <WorkpageSummaryCardsSection section={summarySection} /> : null}
-        {noteSection ? <WorkpageNotePanelSection section={noteSection} /> : null}
-      </div>
+      {summarySection ? <WorkpageSummaryCardsSection section={summarySection} /> : null}
 
       {findTableSection(tableSections, "day_demand") ? (
         <WorkpageTableSection section={findTableSection(tableSections, "day_demand") as WorkpageTableSectionModel} />
       ) : null}
 
-      <div className="workpage-page__grid workpage-page__grid--two-column">
-        {findTableSection(tableSections, "selected_day_preview") ? (
-          <WorkpageTableSection
-            section={findTableSection(tableSections, "selected_day_preview") as WorkpageTableSectionModel}
-          />
-        ) : null}
-        {historySection ? <WorkpageHistorySection section={historySection} /> : null}
-      </div>
+      {findTableSection(tableSections, "selected_day_preview") ? (
+        <WorkpageTableSection
+          section={findTableSection(tableSections, "selected_day_preview") as WorkpageTableSectionModel}
+        />
+      ) : null}
 
       {findTableSection(tableSections, "driver_roster") ? (
         <WorkpageTableSection section={findTableSection(tableSections, "driver_roster") as WorkpageTableSectionModel} />
@@ -539,12 +488,25 @@ export function LogisticsScheduleArtifactWorkpagePage(): JSX.Element {
       ) ?? null,
     [model]
   );
+  const heatmapSection = useMemo(() => (model ? findHeatmapSection(model.sections) : null), [model]);
   const tableSections = useMemo(
     () =>
       model?.sections.filter(
         (section): section is WorkpageTableSectionModel => section.kind === "table"
       ) ?? [],
     [model]
+  );
+  const dayDemandSection = useMemo(
+    () => findTableSection(tableSections, "day_demand"),
+    [tableSections]
+  );
+  const selectedDaySection = useMemo(
+    () => findTableSection(tableSections, "selected_day_preview"),
+    [tableSections]
+  );
+  const driverRosterSection = useMemo(
+    () => findTableSection(tableSections, "driver_roster"),
+    [tableSections]
   );
   const assignmentSection = useMemo(
     () => findTableSection(tableSections, "assignment_rows"),
@@ -599,6 +561,7 @@ export function LogisticsScheduleArtifactWorkpagePage(): JSX.Element {
     query.isError ||
     !query.data ||
     !artifactVersionId ||
+    !heatmapSection ||
     !assignmentSection ||
     !reserveSection ||
     !iterationSection
@@ -620,10 +583,6 @@ export function LogisticsScheduleArtifactWorkpagePage(): JSX.Element {
   const latestArtifactVersionId =
     artifactContext?.latest_in_chain_artifact_version_id ?? artifactVersionId;
   const latestRoute = scheduleArtifactRoute(latestArtifactVersionId, workflowRunId);
-  const previousArtifactVersionId = artifactContext?.supersedes_artifact_version_id ?? null;
-  const previousRoute = previousArtifactVersionId
-    ? scheduleArtifactRoute(previousArtifactVersionId, workflowRunId)
-    : null;
   const recentDraftHistory: ArtifactVersionRow[] = historyQuery.data ?? [];
   const isStaleArtifact = latestArtifactVersionId !== artifactVersionId;
   const submitConflict = workpageConflictDetails(submitMutation.error);
@@ -654,6 +613,8 @@ export function LogisticsScheduleArtifactWorkpagePage(): JSX.Element {
       }
       pollIntervalMs={apiConfig.pollIntervalMs}
       testId="schedule-artifact-workpage-page"
+      metadataPresentation="dialog"
+      infoDialogTitle="Schedule draft context"
       sourceDescription="Artifact-backed projection of an immutable Stage04 draft weekly schedule workbook. Submit creates a new superseding schedule draft artifact version."
       heroActions={
         <>
@@ -669,6 +630,19 @@ export function LogisticsScheduleArtifactWorkpagePage(): JSX.Element {
             {downloadMutation.isPending ? "Downloading draft JSON..." : "Download draft JSON"}
           </button>
         </>
+      }
+      infoDialogContent={
+        <ScheduleArtifactAdvancedInfo
+          noteSection={noteSection}
+          historySection={historySection}
+          assignmentSection={assignmentSection}
+          reserveSection={reserveSection}
+          iterationSection={iterationSection}
+          artifactContext={artifactContext}
+          artifactRouteFor={(nextArtifactVersionId) =>
+            scheduleArtifactRoute(nextArtifactVersionId, workflowRunId)
+          }
+        />
       }
       backLink={backRoute.href}
       backLabel={backRoute.label}
@@ -744,99 +718,23 @@ export function LogisticsScheduleArtifactWorkpagePage(): JSX.Element {
         </div>
       </section>
 
-      {artifactContext ? (
-        <section className="workpage-panel">
-          <header className="workpage-panel__header">
-            <h2>Artifact lineage</h2>
-            <p>
-              This page stays derived from immutable schedule draft artifacts. Use the lineage links
-              below to reopen adjacent versions without leaving the schedule workpage surface.
-            </p>
-          </header>
-          <div className="workpage-page__source-grid workpage-page__source-grid--metadata">
-            <article className="workpage-page__source-item">
-              <strong>Current artifact</strong>
-              <p>{artifactContext.artifact_version_id}</p>
-            </article>
-            <article className="workpage-page__source-item">
-              <strong>Workflow run</strong>
-              <p>{artifactContext.workflow_run_id}</p>
-            </article>
-            <article className="workpage-page__source-item">
-              <strong>Artifact kind</strong>
-              <p>{artifactContext.artifact_kind}</p>
-            </article>
-            <article className="workpage-page__source-item">
-              <strong>Latest in chain</strong>
-              <p>{artifactContext.latest_in_chain_artifact_version_id}</p>
-            </article>
-            <article className="workpage-page__source-item">
-              <strong>Supersedes</strong>
-              <p>{artifactContext.supersedes_artifact_version_id ?? "Initial Stage04 draft"}</p>
-            </article>
-            <article className="workpage-page__source-item">
-              <strong>Superseded by</strong>
-              <p>{artifactContext.superseded_by_artifact_version_id ?? "Current latest"}</p>
-            </article>
-          </div>
-          <div className="action-cluster">
-            {previousRoute ? (
-              <Link className="link-button" to={previousRoute}>
-                Open previous draft
-              </Link>
-            ) : null}
-            {latestRoute !== scheduleArtifactRoute(artifactVersionId, workflowRunId) ? (
-              <Link className="link-button" to={latestRoute}>
-                Open latest draft
-              </Link>
-            ) : null}
-          </div>
-        </section>
-      ) : null}
+      {summarySection ? <WorkpageSummaryCardsSection section={summarySection} /> : null}
 
-      <div className="workpage-page__grid workpage-page__grid--two-column">
-        {summarySection ? <WorkpageSummaryCardsSection section={summarySection} /> : null}
-        {noteSection ? <WorkpageNotePanelSection section={noteSection} /> : null}
-      </div>
-
-      <EditableScheduleTable
-        section={assignmentSection}
-        rows={assignmentRows}
-        onChange={(rowIndex, fieldKey, value) => {
-          setAssignmentRows((current) =>
-            current.map((row, index) =>
-              index === rowIndex
-                ? {
-                    ...row,
-                    [fieldKey]: value
-                  }
-                : row
-            )
-          );
+      <ScheduleHeatmapEditor
+        section={heatmapSection}
+        assignmentRows={assignmentRows}
+        reserveRows={reserveRows}
+        onRowsChange={({ assignmentRows: nextAssignmentRows, reserveRows: nextReserveRows }) => {
+          setAssignmentRows(nextAssignmentRows);
+          setReserveRows(nextReserveRows);
         }}
       />
 
-      <EditableScheduleTable
-        section={reserveSection}
-        rows={reserveRows}
-        onChange={(rowIndex, fieldKey, value) => {
-          setReserveRows((current) =>
-            current.map((row, index) =>
-              index === rowIndex
-                ? {
-                    ...row,
-                    [fieldKey]: value
-                  }
-                : row
-            )
-          );
-        }}
-      />
+      {dayDemandSection ? <WorkpageTableSection section={dayDemandSection} /> : null}
 
-      <div className="workpage-page__grid workpage-page__grid--two-column">
-        <WorkpageTableSection section={iterationSection} />
-        {historySection ? <WorkpageHistorySection section={historySection} /> : null}
-      </div>
+      {selectedDaySection ? <WorkpageTableSection section={selectedDaySection} /> : null}
+
+      {driverRosterSection ? <WorkpageTableSection section={driverRosterSection} /> : null}
 
       {artifactContext ? (
         <section className="workpage-panel">

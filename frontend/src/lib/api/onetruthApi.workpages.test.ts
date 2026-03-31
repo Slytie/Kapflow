@@ -3,14 +3,16 @@ import { HttpResponse, http } from "msw";
 import artifactCreateSnapshot from "@fixtures/workpage_eod_v0_artifact_create_response.json";
 import artifactCreateRunSnapshot from "@fixtures/workpage_eod_v0_run_artifact_create_response.json";
 import eodRunWorkpageStateSnapshot from "@fixtures/workpage_eod_v0_run_state.json";
-import artifactStateSnapshot from "@fixtures/workpage_eod_v0_artifact_state.json";
-import artifactSubmitSnapshot from "@fixtures/workpage_eod_v0_artifact_submit_response.json";
 import scheduleArtifactStateSnapshot from "@fixtures/workpage_schedule_v0_artifact_state.json";
 import scheduleArtifactSubmitSnapshot from "@fixtures/workpage_schedule_v0_artifact_submit_response.json";
 import scheduleRunWorkpageStateSnapshot from "@fixtures/workpage_schedule_v0_run_state.json";
 import scheduleWorkpageStateSnapshot from "@fixtures/workpage_schedule_v0_state.json";
 import { onetruthApi } from "@/lib/api/onetruthApi";
 import { server } from "@/test/api/server";
+import {
+  buildEodArtifactSubmitResponse,
+  buildEodArtifactWorkpageState
+} from "@/test/workpages/eodArtifactFixture";
 
 describe("onetruthApi workpage parsing", () => {
   it("parses the backend demo workpage wrapper without stripping metadata", async () => {
@@ -41,7 +43,12 @@ describe("onetruthApi workpage parsing", () => {
   it("parses the artifact-backed workpage wrapper including artifact context", async () => {
     server.use(
       http.get("*/api/v1/workpages/artifacts/:artifactVersionId", () =>
-        HttpResponse.json(artifactStateSnapshot.workpage_state)
+        HttpResponse.json(
+          buildEodArtifactWorkpageState({
+            artifactVersionId: "<artifact_version_id:1>",
+            workflowRunId: "<workflow_run_id:2>"
+          })
+        )
       )
     );
 
@@ -150,7 +157,13 @@ describe("onetruthApi workpage parsing", () => {
   it("parses the artifact-submit envelope", async () => {
     server.use(
       http.post("*/api/v1/workpages/artifacts/:artifactVersionId/submit", () =>
-        HttpResponse.json(artifactSubmitSnapshot.submit_response)
+        HttpResponse.json(
+          buildEodArtifactSubmitResponse({
+            artifactVersionId: "<artifact_version_id:1>",
+            workflowRunId: "<workflow_run_id:2>",
+            supersedesArtifactVersionId: "<supersedes_artifact_version_id:3>"
+          })
+        )
       )
     );
 
@@ -160,7 +173,12 @@ describe("onetruthApi workpage parsing", () => {
       idempotency_key: "frontend:test:submit-draft"
     });
 
-    expect(submitted).toEqual(artifactSubmitSnapshot.submit_response.submitted);
+    expect(submitted).toEqual({
+      artifact_version_id: "<artifact_version_id:1>",
+      route: "/runs/<workflow_run_id:2>/workpages/eod-v0/artifacts/<artifact_version_id:1>",
+      supersedes_artifact_version_id: "<supersedes_artifact_version_id:3>",
+      workflow_run_id: "<workflow_run_id:2>"
+    });
   });
 
   it("parses the schedule artifact-submit envelope", async () => {

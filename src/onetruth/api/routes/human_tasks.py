@@ -38,6 +38,9 @@ from onetruth.api.errors import (
     api_error_from_command,
     api_error_from_duplicate_idempotency,
 )
+from onetruth.api.routes.workflow_runs import (
+    project_human_task_workpage_actions_for_detail,
+)
 
 
 TASK_SUBGRAPH_TEMPLATES: dict[str, dict[str, Any]] = {
@@ -143,6 +146,11 @@ def get_human_task_endpoint(
     _ensure_human_task_in_scope(connection, context=context, human_task_id=human_task_id)
     try:
         human_task = show_human_task_command(connection, human_task_id)
+        workpage_actions = project_human_task_workpage_actions_for_detail(
+            connection,
+            context=context,
+            task=human_task,
+        )
     except CommandError as exc:
         raise api_error_from_command(exc) from exc
     enriched = _enrich_human_tasks_with_actionability(
@@ -152,7 +160,7 @@ def get_human_task_endpoint(
     )
     return {
         "command": "api.human_tasks.detail",
-        "human_task": enriched[0],
+        "human_task": {**enriched[0], "workpage_actions": workpage_actions},
     }
 
 

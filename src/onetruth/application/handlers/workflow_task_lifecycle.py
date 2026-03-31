@@ -1475,6 +1475,7 @@ def complete_human_task_command(
     payload: dict[str, Any],
     *,
     include_receipt: bool = False,
+    storage_root: Path | None = None,
 ) -> dict[str, Any]:
     from onetruth.application.handlers.human_tasks import complete_human_task_command as _command
 
@@ -1482,6 +1483,7 @@ def complete_human_task_command(
         connection,
         payload,
         include_receipt=include_receipt,
+        storage_root=storage_root,
     )
 
 

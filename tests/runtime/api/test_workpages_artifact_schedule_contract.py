@@ -113,9 +113,16 @@ def _schedule_submit_rows(
     artifact_version_id: str,
 ) -> tuple[list[dict[str, object]], list[dict[str, object]]]:
     payload = client.get(f"/api/v1/workpages/artifacts/{artifact_version_id}").payload
+    sections = payload["workpage"]["sections"]
+    assignment_section = next(
+        section for section in sections if section.get("table_id") == "assignment_rows"
+    )
+    reserve_section = next(
+        section for section in sections if section.get("table_id") == "reserve_rows"
+    )
     return (
-        deepcopy(payload["workpage"]["sections"][2]["rows"]),
-        deepcopy(payload["workpage"]["sections"][3]["rows"]),
+        deepcopy(assignment_section["rows"]),
+        deepcopy(reserve_section["rows"]),
     )
 
 
@@ -155,6 +162,10 @@ def test_artifact_backed_schedule_workpage_returns_projected_contract(tmp_path: 
     assert str(summary["candidate_delta_id"]).startswith("cand-")
     assert [section["kind"] for section in workpage["sections"]] == [
         "summary_cards",
+        "schedule_heatmap",
+        "table",
+        "table",
+        "table",
         "note_panel",
         "table",
         "table",
@@ -162,12 +173,30 @@ def test_artifact_backed_schedule_workpage_returns_projected_contract(tmp_path: 
         "history_stub",
     ]
     assert [section["table_id"] for section in workpage["sections"] if section["kind"] == "table"] == [
+        "day_demand",
+        "selected_day_preview",
+        "driver_roster",
         "assignment_rows",
         "reserve_rows",
         "iteration_deltas",
     ]
-    assignment_rows = workpage["sections"][2]["rows"]
-    reserve_rows = workpage["sections"][3]["rows"]
+    heatmap_section = next(
+        section for section in workpage["sections"] if section["kind"] == "schedule_heatmap"
+    )
+    assignment_rows = next(
+        section["rows"]
+        for section in workpage["sections"]
+        if section.get("table_id") == "assignment_rows"
+    )
+    reserve_rows = next(
+        section["rows"]
+        for section in workpage["sections"]
+        if section.get("table_id") == "reserve_rows"
+    )
+    assert heatmap_section["service_dates"]
+    assert heatmap_section["people"]
+    assert heatmap_section["people"][0]["driver_name"]
+    assert len(heatmap_section["people"][0]["cells"]) == len(heatmap_section["service_dates"])
     assert assignment_rows[0]["assigned_driver_id"]
     assert assignment_rows[0]["assignment_status"]
     assert reserve_rows[0]["assignment_status"]
@@ -282,8 +311,20 @@ def test_schedule_artifact_submit_creates_superseding_version_and_replays_idempo
     client = _client(tmp_path)
 
     base = client.get(f"/api/v1/workpages/artifacts/{artifact_version_id}").payload
-    assignment_rows = deepcopy(base["workpage"]["sections"][2]["rows"])
-    reserve_rows = deepcopy(base["workpage"]["sections"][3]["rows"])
+    assignment_rows = deepcopy(
+        next(
+            section["rows"]
+            for section in base["workpage"]["sections"]
+            if section.get("table_id") == "assignment_rows"
+        )
+    )
+    reserve_rows = deepcopy(
+        next(
+            section["rows"]
+            for section in base["workpage"]["sections"]
+            if section.get("table_id") == "reserve_rows"
+        )
+    )
     assignment_rows[0]["assigned_driver_id"] = "DRV-MANUAL-77"
     assignment_rows[0]["assignment_status"] = "manual_override"
     reserve_rows[0]["assigned_driver_id"] = "DRV-MANUAL-88"
@@ -320,8 +361,16 @@ def test_schedule_artifact_submit_creates_superseding_version_and_replays_idempo
 
     refreshed = client.get(f"/api/v1/workpages/artifacts/{submitted_artifact_version_id}")
     assert refreshed.status_code == 200
-    refreshed_assignment_rows = refreshed.payload["workpage"]["sections"][2]["rows"]
-    refreshed_reserve_rows = refreshed.payload["workpage"]["sections"][3]["rows"]
+    refreshed_assignment_rows = next(
+        section["rows"]
+        for section in refreshed.payload["workpage"]["sections"]
+        if section.get("table_id") == "assignment_rows"
+    )
+    refreshed_reserve_rows = next(
+        section["rows"]
+        for section in refreshed.payload["workpage"]["sections"]
+        if section.get("table_id") == "reserve_rows"
+    )
     assert refreshed_assignment_rows[0]["assigned_driver_id"] == "DRV-MANUAL-77"
     assert refreshed_assignment_rows[0]["assignment_status"] == "manual_override"
     assert refreshed_reserve_rows[0]["assigned_driver_id"] == "DRV-MANUAL-88"
@@ -451,8 +500,20 @@ def test_schedule_artifact_submit_rejects_stale_base_versions(tmp_path: Path) ->
     client = _client(tmp_path)
 
     base = client.get(f"/api/v1/workpages/artifacts/{artifact_version_id}").payload
-    assignment_rows = deepcopy(base["workpage"]["sections"][2]["rows"])
-    reserve_rows = deepcopy(base["workpage"]["sections"][3]["rows"])
+    assignment_rows = deepcopy(
+        next(
+            section["rows"]
+            for section in base["workpage"]["sections"]
+            if section.get("table_id") == "assignment_rows"
+        )
+    )
+    reserve_rows = deepcopy(
+        next(
+            section["rows"]
+            for section in base["workpage"]["sections"]
+            if section.get("table_id") == "reserve_rows"
+        )
+    )
     assignment_rows[0]["assigned_driver_id"] = "DRV-MANUAL-77"
     assignment_rows[0]["assignment_status"] = "manual_override"
 

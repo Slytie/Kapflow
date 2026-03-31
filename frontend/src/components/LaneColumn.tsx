@@ -8,9 +8,9 @@ interface LaneColumnProps extends PropsWithChildren {
 export function LaneColumn({ title, count, children }: LaneColumnProps): JSX.Element {
   return (
     <section className="lane-column" aria-label={title}>
-      <header>
+      <header className="lane-column__header">
         <h3>{title}</h3>
-        <span>{count}</span>
+        <span className="lane-column__count">{count}</span>
       </header>
       <div className="lane-column__content">{children}</div>
     </section>

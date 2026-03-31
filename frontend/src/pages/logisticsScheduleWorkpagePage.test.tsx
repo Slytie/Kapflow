@@ -20,7 +20,7 @@ function setFrontendOperatorContext(): void {
 }
 
 describe("LogisticsScheduleWorkpagePage", () => {
-  it("renders inside the logistics shell, shows backend metadata, and keeps what-if edits local across refresh", async () => {
+  it("renders inside the logistics shell, keeps metadata behind info, and preserves what-if edits across refresh", async () => {
     const user = userEvent.setup();
     let responseCount = 0;
     server.use(
@@ -39,15 +39,22 @@ describe("LogisticsScheduleWorkpagePage", () => {
     const page = await screen.findByTestId("schedule-workpage-page");
     expect(within(page).getByRole("heading", { name: "Weekly schedule review" })).toBeInTheDocument();
     expect(
-      within(page).getByText(
-        "Backend demo query served from repo-native workflow example bundles."
-      )
-    ).toBeInTheDocument();
-    expect(within(page).getByText("weekly_stage04_actual_ops_lab_v3")).toBeInTheDocument();
-    expect(within(page).getByText("Composite source bundle")).toBeInTheDocument();
+      within(page).queryByText("Backend demo query served from repo-native workflow example bundles.")
+    ).not.toBeInTheDocument();
     expect(screen.getByLabelText("Secondary detail routes")).toBeInTheDocument();
     expect(screen.queryByText(/Server-authoritative view backed by HITL HTTP query contracts/i)).not.toBeInTheDocument();
     expect(screen.queryByPlaceholderText("all or wr-...")).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: /Open info for Weekly schedule review/i }));
+    const infoDialog = await screen.findByRole("dialog", { name: "Weekly planning context" });
+    expect(
+      within(infoDialog).getAllByText(
+        "Backend demo query served from repo-native workflow example bundles."
+      )[0]
+    ).toBeInTheDocument();
+    expect(within(infoDialog).getByText("weekly_stage04_actual_ops_lab_v3")).toBeInTheDocument();
+    expect(within(infoDialog).getByText("Composite source bundle")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: /Close Weekly planning context/i }));
 
     const sickCallsFieldset = screen.getByText("Scenario sick calls").closest("fieldset");
     expect(sickCallsFieldset).not.toBeNull();
@@ -61,7 +68,9 @@ describe("LogisticsScheduleWorkpagePage", () => {
     expect(screen.getByRole("spinbutton", { name: /Scenario added routes/i })).toHaveValue(2);
     expect(screen.getByRole("textbox", { name: /Planner note/i })).toHaveValue("Late-request what-if");
 
-    await user.click(screen.getByRole("button", { name: "Refresh" }));
+    await user.click(screen.getByRole("button", { name: /Open info for Weekly schedule review/i }));
+    await user.click(within(await screen.findByRole("dialog", { name: "Weekly planning context" })).getByRole("button", { name: "Refresh" }));
+    await user.click(screen.getByRole("button", { name: /Close Weekly planning context/i }));
 
     expect(within(sickCallsFieldset as HTMLElement).getByRole("checkbox", { name: "Parampreet Singh" })).toBeChecked();
     expect(screen.getByRole("spinbutton", { name: /Scenario added routes/i })).toHaveValue(2);
@@ -123,17 +132,26 @@ describe("LogisticsScheduleWorkpagePage", () => {
     render(<App />);
 
     const page = await screen.findByTestId("schedule-workpage-page");
-    expect(within(page).getByText("run_projection")).toBeInTheDocument();
+    expect(within(page).queryByText("run_projection")).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: /Open info for Weekly schedule review/i }));
+    const infoDialog = await screen.findByRole("dialog", { name: "Weekly planning context" });
+    expect(within(infoDialog).getByText("run_projection")).toBeInTheDocument();
     expect(
-      within(page).getByText(/Workflow-run-backed schedule projection served from canonical weekly Stage04 source artifacts/i)
+      within(infoDialog).getAllByText(
+        /Workflow-run-backed schedule projection served from canonical weekly Stage04 source artifacts/i
+      )[0]
     ).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: /Close Weekly planning context/i }));
 
     const sickCallsFieldset = screen.getByText("Scenario sick calls").closest("fieldset");
     expect(sickCallsFieldset).not.toBeNull();
 
     await user.click(within(sickCallsFieldset as HTMLElement).getByRole("checkbox", { name: "Parampreet Singh" }));
     await user.type(screen.getByRole("textbox", { name: /Planner note/i }), "Run-backed what-if");
-    await user.click(screen.getByRole("button", { name: "Refresh" }));
+    await user.click(screen.getByRole("button", { name: /Open info for Weekly schedule review/i }));
+    await user.click(within(await screen.findByRole("dialog", { name: "Weekly planning context" })).getByRole("button", { name: "Refresh" }));
+    await user.click(screen.getByRole("button", { name: /Close Weekly planning context/i }));
 
     expect(within(sickCallsFieldset as HTMLElement).getByRole("checkbox", { name: "Parampreet Singh" })).toBeChecked();
     expect(screen.getByRole("textbox", { name: /Planner note/i })).toHaveValue("Run-backed what-if");

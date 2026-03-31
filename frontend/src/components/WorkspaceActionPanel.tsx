@@ -18,6 +18,7 @@ import type {
   WorkflowWorkspaceTaskWorkItem
 } from "@/lib/types/contracts";
 import type { DrawerPayload } from "@/lib/types/ui";
+import { buildTaskDocumentPreviewCues } from "@/lib/workspace/taskDocumentUi";
 import { taskDisplayHeading } from "@/lib/workspace/taskLabels";
 
 type WorkspacePanelMode = "user_work" | "blocking_work";
@@ -48,7 +49,7 @@ function taskDetailPayload(item: WorkflowWorkspaceTaskWorkItem): DrawerPayload {
     title: taskDisplayHeading(task),
     subtitle: task.human_task_id,
     description:
-      "Task details remain drawer-first. Workspace cards stay dense so graph and queue remain synchronized.",
+      "Task details open in the centered task modal so workspace cards can stay dense while the graph remains synchronized.",
     fields: [
       { label: "State", value: task.state },
       { label: "Owner role", value: task.owner_role ?? "n/a" },
@@ -59,6 +60,32 @@ function taskDetailPayload(item: WorkflowWorkspaceTaskWorkItem): DrawerPayload {
         value: item.missing_required_inputs.join(", ") || "none"
       }
     ],
+    task: {
+      human_task_id: task.human_task_id,
+      workflow_run_id: task.workflow_run_id,
+      task_run_id: task.task_run_id,
+      stage_id: task.stage_id,
+      task_kind: task.task_kind,
+      state: task.state,
+      created_at: task.created_at,
+      updated_at: task.updated_at,
+      assignee_actor_id: task.assignee_actor_id,
+      assignee_actor_type: task.assignee_actor_type,
+      owner_role: task.owner_role,
+      candidate_roles: task.candidate_roles ?? [],
+      linked_approval_id: task.linked_approval_id,
+      blocked_on_kind: task.blocked_on_kind,
+      blocked_on_ref: task.blocked_on_ref,
+      available_actions: item.available_actions ?? task.available_actions ?? [],
+      blocking_reason_codes: item.blocking_reason_codes ?? task.blocking_reason_codes ?? [],
+      missing_required_inputs: item.missing_required_inputs ?? task.missing_required_inputs ?? [],
+      required_uploads: item.required_uploads ?? task.required_uploads ?? [],
+      required_reviews: item.required_reviews ?? task.required_reviews ?? [],
+      workpage_actions: item.workpage_actions ?? task.workpage_actions ?? [],
+      is_composite: task.is_composite ?? false,
+      expansion_kind: task.expansion_kind ?? "none",
+      subgraph_ref: task.subgraph_ref ?? null
+    },
     artifact_sources: [
       {
         workflow_run_id: task.workflow_run_id,
@@ -147,16 +174,6 @@ export function WorkspaceActionPanel({
     onSuccess: onRefresh
   });
 
-  const uploadTaskAttachmentMutation = useMutation({
-    mutationFn: (payload: { humanTaskId: string; file: File }) =>
-      humanTasksRepository.uploadAttachment(payload.humanTaskId, payload.file),
-    onSuccess: onRefresh
-  });
-
-  const downloadTaskAttachmentMutation = useMutation({
-    mutationFn: (humanTaskId: string) => humanTasksRepository.downloadLatestAttachment(humanTaskId)
-  });
-
   const uploadApprovalAttachmentMutation = useMutation({
     mutationFn: (payload: { approvalId: string; file: File }) =>
       approvalsRepository.uploadAttachment(payload.approvalId, payload.file),
@@ -188,8 +205,6 @@ export function WorkspaceActionPanel({
     runStage06ReviewMutation.error ??
     runWeeklyStage04AgentMutation.error ??
     approvalMutation.error ??
-    uploadTaskAttachmentMutation.error ??
-    downloadTaskAttachmentMutation.error ??
     uploadApprovalAttachmentMutation.error ??
     downloadApprovalAttachmentMutation.error ??
     uploadFlagAttachmentMutation.error ??
@@ -247,20 +262,10 @@ export function WorkspaceActionPanel({
                 (runStage06ReviewMutation.isPending &&
                   runStage06ReviewMutation.variables === task.human_task_id) ||
                 (runWeeklyStage04AgentMutation.isPending &&
-                  runWeeklyStage04AgentMutation.variables === task.human_task_id) ||
-                (uploadTaskAttachmentMutation.isPending &&
-                  uploadTaskAttachmentMutation.variables?.humanTaskId === task.human_task_id) ||
-                (downloadTaskAttachmentMutation.isPending &&
-                  downloadTaskAttachmentMutation.variables === task.human_task_id);
+                  runWeeklyStage04AgentMutation.variables === task.human_task_id);
 
               const canClaim = hasAction(item, ["claim", "claim_human_task"]);
               const canComplete = hasAction(item, ["complete", "complete_human_task"]);
-              const canUpload = hasAction(item, ["upload_attachment", "upload_artifact"]);
-              const canDownload = hasAction(item, [
-                "download_attachment",
-                "download_artifact",
-                "download_attachments"
-              ]);
               const canRunStage06Review = hasAction(item, [
                 "run_stage06_agent_review",
                 "stage06_agent_review"
@@ -275,24 +280,11 @@ export function WorkspaceActionPanel({
                   task={task}
                   onClaim={canClaim ? () => claimMutation.mutate(task.human_task_id) : undefined}
                   onComplete={canComplete ? () => completeMutation.mutate(task.human_task_id) : undefined}
-                  onUpload={
-                    canUpload
-                      ? (file) =>
-                          uploadTaskAttachmentMutation.mutate({
-                            humanTaskId: task.human_task_id,
-                            file
-                          })
-                      : undefined
-                  }
-                  onDownload={
-                    canDownload
-                      ? () => downloadTaskAttachmentMutation.mutate(task.human_task_id)
-                      : undefined
-                  }
                   claimDisabled={!canClaim}
                   completeDisabled={!canComplete || item.missing_required_inputs.length > 0}
                   needInfoDisabled
                   completeHint={missingInputHint(item)}
+                  documentCues={buildTaskDocumentPreviewCues(item)}
                   extraActions={
                     [
                       ...(canRunWeeklyStage04Agent

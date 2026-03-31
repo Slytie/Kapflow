@@ -573,6 +573,28 @@ def _build_workspace_workpage_projection(
     }
 
 
+def project_human_task_workpage_actions_for_detail(
+    connection: sqlite3.Connection,
+    *,
+    context: RequestContext,
+    task: dict[str, Any],
+) -> list[dict[str, Any]]:
+    workflow_run_id = str(task.get("workflow_run_id") or "")
+    if not workflow_run_id:
+        return []
+    workflow_run = scoped_workflow_run(connection, context, workflow_run_id)
+    artifact_versions = list_artifacts_for_workflow_run_command(connection, workflow_run_id)
+    workpage_projection = _build_workspace_workpage_projection(
+        workflow_run=workflow_run,
+        artifact_versions=artifact_versions,
+    )
+    return _project_human_task_workpage_actions(
+        task=task,
+        workflow_run=workflow_run,
+        workpage_projection=workpage_projection,
+    )
+
+
 def _project_human_task_workpage_actions(
     *,
     task: dict[str, Any],

@@ -154,9 +154,16 @@ def _schedule_submit_rows(
     artifact_version_id: str,
 ) -> tuple[list[dict[str, object]], list[dict[str, object]]]:
     payload = client.get(f"/api/v1/workpages/artifacts/{artifact_version_id}").payload
+    sections = payload["workpage"]["sections"]
+    assignment_section = next(
+        section for section in sections if section.get("table_id") == "assignment_rows"
+    )
+    reserve_section = next(
+        section for section in sections if section.get("table_id") == "reserve_rows"
+    )
     return (
-        deepcopy(payload["workpage"]["sections"][2]["rows"]),
-        deepcopy(payload["workpage"]["sections"][3]["rows"]),
+        deepcopy(assignment_section["rows"]),
+        deepcopy(reserve_section["rows"]),
     )
 
 
