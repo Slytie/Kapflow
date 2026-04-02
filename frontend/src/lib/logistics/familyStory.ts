@@ -10,6 +10,7 @@ import type {
   WorkflowWorkspaceGraphNode
 } from "@/lib/types/contracts";
 import type { DrawerPayload } from "@/lib/types/ui";
+import { taskDisplayHeading, taskDisplayLabel } from "@/lib/workspace/taskLabels";
 
 export const DEFAULT_LOGISTICS_PLANNING_WEEK_ID = "PW-2026-W10";
 
@@ -197,7 +198,7 @@ export function stateBadgeClass(state: string): string {
 
 export function boardItemMeta(item: LogisticsStoryBoardWorkItem): string {
   if (item.item_type === "human_task") {
-    return `${item.stage_id ?? "stage"} · ${item.task_kind ?? "task"}`;
+    return item.stage_id ?? "stage";
   }
   if (item.item_type === "approval") {
     return `${item.approval_kind ?? "approval"} · ${item.scope_ref ?? "scope"}`;
@@ -229,13 +230,43 @@ function isWaitingReviewItem(item: LogisticsStoryBoardWorkItem): boolean {
   );
 }
 
+function boardItemTaskLabel(item: LogisticsStoryBoardWorkItem): string {
+  if (!item.stage_id || !item.task_kind) {
+    return item.title;
+  }
+  return taskDisplayLabel({
+    stage_id: item.stage_id,
+    task_kind: item.task_kind
+  });
+}
+
+function boardItemTaskHeading(item: LogisticsStoryBoardWorkItem): string {
+  if (!item.stage_id || !item.task_kind) {
+    return item.title;
+  }
+  return taskDisplayHeading({
+    stage_id: item.stage_id,
+    task_kind: item.task_kind
+  });
+}
+
+function presentBoardItem(item: LogisticsStoryBoardWorkItem): LogisticsStoryBoardWorkItem {
+  if (item.item_type !== "human_task") {
+    return item;
+  }
+  return {
+    ...item,
+    title: boardItemTaskLabel(item)
+  };
+}
+
 export function editorialBoard(story: LogisticsThreeWorkflowStoryContract): {
   lanes: EditorialBoardLane[];
   flags: LogisticsStoryBoardWorkItem[];
 } {
-  const activeItems = story.board.work_items.filter(
-    (item) => !isResolvedBoardState(item.state)
-  );
+  const activeItems = story.board.work_items
+    .filter((item) => !isResolvedBoardState(item.state))
+    .map(presentBoardItem);
   const lanes: EditorialBoardLane[] = [
     { id: "todo", title: "To Do", items: [] },
     { id: "in_progress", title: "In Progress", items: [] },
@@ -311,7 +342,7 @@ export function buildBoardItemDrawerPayload(
 ): DrawerPayload {
   if (item.item_type === "human_task") {
     return {
-      title: item.title,
+      title: boardItemTaskHeading(item),
       subtitle: item.subject_id,
       description:
         "Inspect context and run authoritative task actions from the centered task modal without leaving the logistics shell.",

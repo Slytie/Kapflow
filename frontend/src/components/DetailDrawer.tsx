@@ -34,6 +34,7 @@ import {
   buildTaskRequiredDocumentRows,
   type TaskDocumentTone
 } from "@/lib/workspace/taskDocumentUi";
+import { taskDisplayHeading } from "@/lib/workspace/taskLabels";
 
 interface DetailDrawerProps {
   payload: DrawerPayload | null;
@@ -988,7 +989,7 @@ export function DetailDrawer({ payload, onClose }: DetailDrawerProps): JSX.Eleme
                 <div>
                   <dt>Stage / kind</dt>
                   <dd>
-                    {activeTask.stage_id} · {humanizeValue(activeTask.task_kind)}
+                    {taskDisplayHeading(activeTask)}
                   </dd>
                 </div>
                 <div>

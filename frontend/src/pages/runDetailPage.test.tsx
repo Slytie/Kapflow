@@ -16,7 +16,7 @@ describe("RunDetailPage", () => {
     expect(screen.getByText(/workflow.run.created/i)).toBeInTheDocument();
 
     await user.click(screen.getByRole("tab", { name: "tasks" }));
-    expect(screen.getByText(/exception_triage/i)).toBeInTheDocument();
+    expect(screen.getByText("Stage07 · Exception Triage")).toBeInTheDocument();
 
     await user.click(screen.getByRole("tab", { name: "artifacts" }));
     expect(screen.getByText(/schedule.replan_delta.workbook/i)).toBeInTheDocument();

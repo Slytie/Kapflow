@@ -13,13 +13,13 @@ export function taskDisplayLabel(task: Pick<HumanTaskRow, "stage_id" | "task_kin
     return "Prepare Live Day Inputs";
   }
   if (task.stage_id === "Stage01" && task.task_kind === "eos_input_intake") {
-    return "Daily EOS Intake";
+    return "End of Day Dispatch Report";
   }
   if (task.stage_id === "Stage04" && task.task_kind === "weekly_input_intake") {
-    return "Weekly Intake";
+    return "Weekly Scheduling Plan Inputs";
   }
   if (task.stage_id === "Stage04" && task.task_kind === "work_item") {
-    return "Build Weekly Draft";
+    return "Weekly Scheduling Agent";
   }
   if (task.stage_id === "Stage03" && task.task_kind === "dispatcher_review") {
     return "Review Live Replan";

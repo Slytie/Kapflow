@@ -17,6 +17,7 @@ import {
 import { useDrawer } from "@/lib/state/drawerContext";
 import type { HumanTaskRow } from "@/lib/types/contracts";
 import { buildTaskDocumentPreviewCues } from "@/lib/workspace/taskDocumentUi";
+import { taskDisplayHeading } from "@/lib/workspace/taskLabels";
 
 function hasAction(task: HumanTaskRow, candidates: string[]): boolean {
   const actions = task.available_actions ?? [];
@@ -160,7 +161,7 @@ export function BoardPage(): JSX.Element {
                     documentCues={buildTaskDocumentPreviewCues(item.task)}
                     onDetails={() =>
                       open({
-                        title: `${item.task.stage_id} ${item.task.task_kind}`,
+                        title: taskDisplayHeading(item.task),
                         subtitle: item.task.human_task_id,
                         description: "Extended task context opens in the centered task modal so board cards can stay dense.",
                         fields: [

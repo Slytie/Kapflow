@@ -254,11 +254,11 @@ describe("WorkspaceTaskBoard weekly surfaces", () => {
     const { workspace, detail } = buildWeeklyBuildSurface();
     renderBoard(workspace, detail);
 
-    const card = (await screen.findByRole("heading", { name: "Build Weekly Draft" })).closest("article");
+    const card = (await screen.findByRole("heading", { name: "Weekly Scheduling Agent" })).closest("article");
     expect(card).not.toBeNull();
 
     await user.click(
-      within(card as HTMLElement).getByLabelText("Actions for Build Weekly Draft")
+      within(card as HTMLElement).getByLabelText("Actions for Weekly Scheduling Agent")
     );
     await user.click(
       within(card as HTMLElement).getByRole("button", { name: "Run Stage04 Build" })
@@ -275,7 +275,7 @@ describe("WorkspaceTaskBoard weekly surfaces", () => {
     const { workspace, detail } = buildWeeklyIntakeSurface();
     renderBoard(workspace, detail);
 
-    const card = (await screen.findByRole("heading", { name: "Weekly Intake" })).closest("article");
+    const card = (await screen.findByRole("heading", { name: "Weekly Scheduling Plan Inputs" })).closest("article");
     expect(card).not.toBeNull();
     expect(within(card as HTMLElement).getByText("1 missing input")).toBeInTheDocument();
     expect(
@@ -292,7 +292,7 @@ describe("WorkspaceTaskBoard weekly surfaces", () => {
     const { workspace, detail } = buildWeeklyIntakeSurface();
     renderBoard(workspace, detail, onOpenDetails);
 
-    const card = (await screen.findByRole("heading", { name: "Weekly Intake" })).closest("article");
+    const card = (await screen.findByRole("heading", { name: "Weekly Scheduling Plan Inputs" })).closest("article");
     expect(card).not.toBeNull();
 
     await user.click(card as HTMLElement);
@@ -303,7 +303,7 @@ describe("WorkspaceTaskBoard weekly surfaces", () => {
     expect(onOpenDetails).toHaveBeenCalledTimes(2);
 
     await user.click(
-      within(card as HTMLElement).getByLabelText("Actions for Weekly Intake")
+      within(card as HTMLElement).getByLabelText("Actions for Weekly Scheduling Plan Inputs")
     );
     expect(onOpenDetails).toHaveBeenCalledTimes(2);
   });
@@ -312,7 +312,7 @@ describe("WorkspaceTaskBoard weekly surfaces", () => {
     const { workspace, detail } = buildDispatchIntakeSurface();
     renderBoard(workspace, detail);
 
-    const card = (await screen.findByRole("heading", { name: "Daily EOS Intake" })).closest("article");
+    const card = (await screen.findByRole("heading", { name: "End of Day Dispatch Report" })).closest("article");
     expect(card).not.toBeNull();
     expect(within(card as HTMLElement).getByText("1 missing input")).toBeInTheDocument();
     expect(

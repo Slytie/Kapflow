@@ -9,6 +9,7 @@ import { humanTasksRepository } from "@/lib/repositories";
 import { useDrawer } from "@/lib/state/drawerContext";
 import type { HumanTaskRow } from "@/lib/types/contracts";
 import { buildTaskDocumentPreviewCues } from "@/lib/workspace/taskDocumentUi";
+import { taskDisplayHeading } from "@/lib/workspace/taskLabels";
 
 function hasAction(task: HumanTaskRow, candidates: string[]): boolean {
   const actions = task.available_actions ?? [];
@@ -164,14 +165,14 @@ export function MyWorkPage(): JSX.Element {
           return (
             <QueueRow
               key={task.human_task_id}
-              title={`${task.stage_id} · ${task.task_kind}`}
+              title={taskDisplayHeading(task)}
               subtitle={`${task.owner_role ?? "unknown"} · ${task.workflow_run_id}`}
               status={task.state}
               hint={taskActionHint(task, canClaim, canComplete)}
               documentCues={buildTaskDocumentPreviewCues(task)}
               onDetails={() =>
                 open({
-                  title: `${task.stage_id} ${task.task_kind}`,
+                  title: taskDisplayHeading(task),
                   subtitle: task.human_task_id,
                   description: "Compact rows hide descriptions by default; the full task opens in the centered task modal.",
                   fields: [

@@ -14,7 +14,7 @@ describe("Frontend API integration flows", () => {
     window.history.pushState({}, "", "/my-work?run=wr-test-001&state=OPEN");
     render(<App />);
 
-    expect(await screen.findByText(/information_request/i)).toBeInTheDocument();
+    expect(await screen.findByText("Stage06 · Information Request")).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Details" }));
     await user.click(await screen.findByRole("button", { name: "Claim" }));
 
@@ -27,9 +27,9 @@ describe("Frontend API integration flows", () => {
     window.history.pushState({}, "", "/my-work?run=wr-test-001&state=CLAIMED");
     render(<App />);
 
-    expect(await screen.findByText(/review_packet/i)).toBeInTheDocument();
+    expect(await screen.findByText("Stage06 · Review Packet")).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Details" }));
-    await user.click(await screen.findByRole("button", { name: "Complete" }));
+    await user.click(await screen.findByRole("button", { name: "Complete Task" }));
 
     expect(await screen.findByText(/No actionable tasks for current user/i)).toBeInTheDocument();
     expect(mutationLog()).toContain("complete:ht-claimed-002");

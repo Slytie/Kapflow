@@ -12,8 +12,8 @@ describe("MyWorkPage", () => {
       path: "/my-work"
     });
 
-    expect(await screen.findByText(/information_request/i)).toBeInTheDocument();
-    expect(screen.queryByText(/exception_triage/i)).not.toBeInTheDocument();
+    expect(await screen.findByText("Stage06 · Information Request")).toBeInTheDocument();
+    expect(screen.queryByText("Stage07 · Exception Triage")).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Upload" })).not.toBeInTheDocument();
   });
 

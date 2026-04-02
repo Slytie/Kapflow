@@ -427,7 +427,9 @@ describe("LogisticsDemoPage", () => {
     await user.click(screen.getByTestId("logistics-task-strip-card-todo"));
 
     expect(window.location.pathname).toBe("/demo/logistics");
-    const taskModal = await screen.findByRole("dialog", { name: "Stage04 weekly_input_intake" });
+    const taskModal = await screen.findByRole("dialog", {
+      name: "Stage04 · Weekly Scheduling Plan Inputs"
+    });
     expect(taskModal).toBeInTheDocument();
     expect(await screen.findByRole("button", { name: "Claim" })).toBeInTheDocument();
     expect(within(taskModal).getByRole("link", { name: "Open Workspace" })).toHaveAttribute(
@@ -451,7 +453,7 @@ describe("LogisticsDemoPage", () => {
 
     const openTasksLane = within(page).getByLabelText("To Do");
     await user.click(
-      within(openTasksLane).getByRole("button", { name: /Stage04 weekly_input_intake/i })
+      within(openTasksLane).getByRole("button", { name: /Weekly Scheduling Plan Inputs/i })
     );
 
     await user.click(await screen.findByRole("button", { name: "Claim" }));
@@ -461,10 +463,10 @@ describe("LogisticsDemoPage", () => {
     });
     await waitFor(() => {
       expect(
-        within(within(page).getByLabelText("To Do")).queryByText(/Stage04 weekly_input_intake/i)
+        within(within(page).getByLabelText("To Do")).queryByText(/Weekly Scheduling Plan Inputs/i)
       ).not.toBeInTheDocument();
       expect(
-        within(within(page).getByLabelText("In Progress")).getByText(/Stage04 weekly_input_intake/i)
+        within(within(page).getByLabelText("In Progress")).getByText(/Weekly Scheduling Plan Inputs/i)
       ).toBeInTheDocument();
     });
     expect(await screen.findByRole("button", { name: "Complete Task" })).toBeInTheDocument();

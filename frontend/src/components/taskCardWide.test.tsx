@@ -77,6 +77,8 @@ describe("TaskCardWide", () => {
       />
     );
 
-    expect(screen.getByRole("heading", { name: "Stage04 · Weekly Intake" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: "Stage04 · Weekly Scheduling Plan Inputs" })
+    ).toBeInTheDocument();
   });
 });

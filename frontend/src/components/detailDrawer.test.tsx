@@ -441,7 +441,7 @@ describe("Detail drawer flow", () => {
     renderWithQueryClient(
       <DetailDrawer
         payload={{
-          title: "Build Weekly Draft",
+          title: "Stage04 · Weekly Scheduling Agent",
           subtitle: "ht-2",
           fields: [],
           task: {
@@ -484,7 +484,9 @@ describe("Detail drawer flow", () => {
       />
     );
 
-    expect(await screen.findByRole("dialog", { name: "Build Weekly Draft" })).toBeInTheDocument();
+    expect(
+      await screen.findByRole("dialog", { name: "Stage04 · Weekly Scheduling Agent" })
+    ).toBeInTheDocument();
     const workpageLink = screen.getByRole("link", { name: "Open schedule draft" });
     expect(workpageLink).toHaveAttribute(
       "href",
@@ -549,7 +551,7 @@ describe("Detail drawer flow", () => {
     renderWithQueryClient(
       <DetailDrawer
         payload={{
-          title: "Weekly Intake",
+          title: "Stage04 · Weekly Scheduling Plan Inputs",
           subtitle: "ht-2",
           fields: [],
           task: {
@@ -788,7 +790,7 @@ describe("Detail drawer flow", () => {
     renderWithQueryClient(
       <DetailDrawer
         payload={{
-          title: "Build Weekly Draft",
+          title: "Stage04 · Weekly Scheduling Agent",
           subtitle: "ht-2",
           fields: [],
           task: {
@@ -857,7 +859,7 @@ describe("Detail drawer flow", () => {
     renderWithQueryClient(
       <DetailDrawer
         payload={{
-          title: "Weekly Intake",
+          title: "Stage04 · Weekly Scheduling Plan Inputs",
           subtitle: "ht-2",
           fields: [],
           task: {
@@ -917,7 +919,7 @@ describe("Detail drawer flow", () => {
     renderWithQueryClient(
       <DetailDrawer
         payload={{
-          title: "Stage04 Build Weekly Draft",
+          title: "Stage04 · Weekly Scheduling Agent",
           subtitle: "ht-2",
           fields: [],
           task: {

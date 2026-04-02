@@ -12,6 +12,7 @@ import { useShellFilters } from "@/app/useShellFilters";
 import { timelineRepository, workflowRunsRepository } from "@/lib/repositories";
 import { useDrawer } from "@/lib/state/drawerContext";
 import { buildTaskDocumentPreviewCues } from "@/lib/workspace/taskDocumentUi";
+import { taskDisplayHeading } from "@/lib/workspace/taskLabels";
 
 type RunTab = "timeline" | "tasks" | "approvals" | "artifacts" | "exceptions";
 
@@ -136,13 +137,13 @@ export function RunDetailPage(): JSX.Element {
           {detail.human_tasks.map((task) => (
             <QueueRow
               key={task.human_task_id}
-              title={`${task.stage_id} · ${task.task_kind}`}
+              title={taskDisplayHeading(task)}
               subtitle={task.human_task_id}
               status={task.state}
               documentCues={buildTaskDocumentPreviewCues(task)}
               onDetails={() =>
                 open({
-                  title: `${task.stage_id} ${task.task_kind}`,
+                  title: taskDisplayHeading(task),
                   subtitle: task.human_task_id,
                   description: "Run detail task context opens in the centered task modal.",
                   fields: [
