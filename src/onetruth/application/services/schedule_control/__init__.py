@@ -37,6 +37,10 @@ from .reserve_selection import ReserveSelectionResult, select_on_call_reserve_ro
 from .route_slot_requirements import RouteSlotRequirement, expand_route_slot_requirements
 from .scoring import deterministic_rank_candidates, score_candidate, summarize_soft_scores
 from .validation import HardValidationResult, evaluate_hard_constraints
+from .workpage_calculations import (
+    build_schedule_calculation_snapshot_payload,
+    normalize_schedule_dependency_manifest,
+)
 
 
 @dataclass(frozen=True)
@@ -56,6 +60,7 @@ class Stage04DeterministicBuildResult:
     validation_summary_payload: dict[str, Any]
     draft_workbook_payload: dict[str, Any]
     draft_doc_payload: dict[str, Any]
+    calculation_snapshot_payload: dict[str, Any]
 
 
 def run_weekly_stage04_deterministic_build(
@@ -142,6 +147,16 @@ def build_stage04_deterministic_outputs(
         iteration_summaries=iteration_summaries,
         coverage_summary=coverage_summary,
     )
+    assignment_rows = _draft_workbook_assignment_rows(draft_workbook_payload)
+    calculation_snapshot_payload = build_schedule_calculation_snapshot_payload(
+        bundle=bundle,
+        dependency_state="aligned",
+        dependencies=normalize_schedule_dependency_manifest(
+            draft_workbook_payload.get("dependency_manifest")
+        ),
+        assignment_rows=assignment_rows,
+        reserve_rows=list(draft_workbook_payload.get("reserve_rows") or []),
+    )
 
     return Stage04DeterministicBuildResult(
         bundle=bundle,
@@ -159,7 +174,27 @@ def build_stage04_deterministic_outputs(
         validation_summary_payload=validation_summary_payload,
         draft_workbook_payload=draft_workbook_payload,
         draft_doc_payload=draft_doc_payload,
+        calculation_snapshot_payload=calculation_snapshot_payload,
     )
+
+
+def _draft_workbook_assignment_rows(
+    draft_workbook_payload: dict[str, Any],
+) -> list[dict[str, Any]]:
+    columns = list(draft_workbook_payload.get("columns") or [])
+    rows = list(draft_workbook_payload.get("rows") or [])
+    assignment_rows: list[dict[str, Any]] = []
+    for row in rows:
+        if not isinstance(row, list):
+            continue
+        assignment_rows.append(
+            {
+                str(column): row[index]
+                for index, column in enumerate(columns)
+                if index < len(row)
+            }
+        )
+    return assignment_rows
 
 
 __all__ = [

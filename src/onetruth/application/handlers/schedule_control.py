@@ -23,9 +23,10 @@ WEEKLY_WORKFLOW_ID = "weekly_schedule_planning.v1"
 STAGE04_OUTPUT_SPECS: tuple[tuple[str, str], ...] = (
     ("planning.input_bundle.doc", "official_input"),
     ("planning.candidate_schedule_delta.workbook", "official_input"),
-    ("planning.validation_summary.doc", "evidence"),
     ("planning.draft_weekly_schedule.workbook", "official_input"),
+    ("planning.validation_summary.doc", "evidence"),
     ("planning.draft_weekly_schedule.doc", "evidence"),
+    ("planning.schedule_calculation_snapshot.json", "evidence"),
 )
 
 
@@ -100,9 +101,12 @@ def build_weekly_schedule_control_command(
     output_payloads = {
         "planning.input_bundle.doc": deterministic_build.input_bundle_payload,
         "planning.candidate_schedule_delta.workbook": deterministic_build.candidate_delta_payload,
-        "planning.validation_summary.doc": deterministic_build.validation_summary_payload,
         "planning.draft_weekly_schedule.workbook": deterministic_build.draft_workbook_payload,
+        "planning.validation_summary.doc": deterministic_build.validation_summary_payload,
         "planning.draft_weekly_schedule.doc": deterministic_build.draft_doc_payload,
+        "planning.schedule_calculation_snapshot.json": (
+            deterministic_build.calculation_snapshot_payload
+        ),
     }
 
     source_inputs = [
@@ -138,9 +142,10 @@ def build_weekly_schedule_control_command(
         "artifacts": {
             "input_bundle": created_outputs["planning.input_bundle.doc"],
             "candidate_delta": created_outputs["planning.candidate_schedule_delta.workbook"],
-            "validation_summary": created_outputs["planning.validation_summary.doc"],
             "draft_workbook": created_outputs["planning.draft_weekly_schedule.workbook"],
+            "validation_summary": created_outputs["planning.validation_summary.doc"],
             "draft_doc": created_outputs["planning.draft_weekly_schedule.doc"],
+            "calculation_snapshot": created_outputs["planning.schedule_calculation_snapshot.json"],
         },
         "artifact_payloads": output_payloads,
     }
@@ -163,6 +168,12 @@ def persist_weekly_stage04_output_payloads(
         or ""
     )
     created_outputs: dict[str, dict[str, Any]] = {}
+    draft_artifact_version_id = _stable_output_artifact_id(
+        workflow_run_id=workflow_run_id,
+        artifact_kind="planning.draft_weekly_schedule.workbook",
+        bundle_id=bundle_id,
+        candidate_delta_id=candidate_delta_id,
+    )
     _begin_transaction(connection)
     try:
         for artifact_kind, artifact_role in STAGE04_OUTPUT_SPECS:
@@ -187,7 +198,15 @@ def persist_weekly_stage04_output_payloads(
                 storage_uri=f"inmem://schedule-control/{workflow_run_id}/{artifact_kind}",
                 content_digest=f"sha256:{_digest_payload(output_payloads[artifact_kind])}",
                 metadata_json=output_payloads[artifact_kind],
-                parent_artifact_version_id=None,
+                parent_artifact_version_id=(
+                    draft_artifact_version_id
+                    if artifact_kind in {
+                        "planning.validation_summary.doc",
+                        "planning.draft_weekly_schedule.doc",
+                        "planning.schedule_calculation_snapshot.json",
+                    }
+                    else None
+                ),
                 supersedes_artifact_version_id=None,
                 lineage_note="stage04_deterministic_schedule_control",
                 created_at=utc_now_iso(),

@@ -16,6 +16,8 @@ from onetruth.api.routes.workpages import (
     create_demo_eod_draft_endpoint,
     create_workflow_run_eod_draft_endpoint,
     demo_workpage_endpoint,
+    preview_artifact_workpage_endpoint,
+    preview_workflow_run_artifact_workpage_endpoint,
     submit_artifact_workpage_endpoint,
     submit_workflow_run_artifact_workpage_endpoint,
     workflow_run_artifact_workpage_endpoint,
@@ -100,7 +102,38 @@ def _dispatch_workflow_run_artifact_submit(execution, raw_value: str):
     )
 
 
+def _dispatch_workflow_run_artifact_preview(execution, raw_value: str):
+    workflow_run_id, workpage_kind, artifact_version_id = _split_workflow_run_artifact_path(
+        raw_value
+    )
+    return preview_workflow_run_artifact_workpage_endpoint(
+        require_connection(execution.connection),
+        context=require_request_context(execution.context),
+        workflow_run_id=workflow_run_id,
+        workpage_kind=workpage_kind,
+        artifact_version_id=artifact_version_id,
+        payload=_require_payload(execution.payload),
+    )
+
+
 WORKPAGE_ROUTE_SPECS: tuple[RouteSpec, ...] = (
+    RouteSpec(
+        name="workpages.workflow_run.artifact.preview",
+        method="POST",
+        pattern=_param(
+            "/api/v1/workpages/workflow-runs/",
+            param_name="workflow_run_artifact_preview",
+            suffix="/preview",
+            allow_slash=True,
+            required_substring="/artifacts/",
+        ),
+        body_policy=JSON_COMMAND_BODY,
+        needs_page=False,
+        dispatch=lambda execution, params: _dispatch_workflow_run_artifact_preview(
+            execution,
+            params["workflow_run_artifact_preview"],
+        ),
+    ),
     RouteSpec(
         name="workpages.workflow_run.artifact.detail",
         method="GET",
@@ -177,6 +210,23 @@ WORKPAGE_ROUTE_SPECS: tuple[RouteSpec, ...] = (
             require_connection(execution.connection),
             context=require_request_context(execution.context),
             db_url=execution.db_url,
+            payload=_require_payload(execution.payload),
+        ),
+    ),
+    RouteSpec(
+        name="workpages.artifact.preview",
+        method="POST",
+        pattern=_param(
+            "/api/v1/workpages/artifacts/",
+            param_name="artifact_version_id",
+            suffix="/preview",
+        ),
+        body_policy=JSON_COMMAND_BODY,
+        needs_page=False,
+        dispatch=lambda execution, params: preview_artifact_workpage_endpoint(
+            require_connection(execution.connection),
+            context=require_request_context(execution.context),
+            artifact_version_id=params["artifact_version_id"],
             payload=_require_payload(execution.payload),
         ),
     ),

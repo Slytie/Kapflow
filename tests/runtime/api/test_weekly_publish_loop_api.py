@@ -136,6 +136,27 @@ def _create_artifact_version(
     return stdout_json(created)["artifact_version"]
 
 
+def _update_artifact_metadata_json(
+    db_path: Path,
+    *,
+    artifact_version_id: str,
+    metadata_json: dict[str, object],
+) -> None:
+    connection = sqlite3.connect(db_path)
+    try:
+        connection.execute(
+            """
+            UPDATE artifact_versions
+            SET metadata_json = ?
+            WHERE artifact_version_id = ?
+            """,
+            (json.dumps(metadata_json, separators=(",", ":")), artifact_version_id),
+        )
+        connection.commit()
+    finally:
+        connection.close()
+
+
 def _workspace_item(payload: dict[str, object], *, subject_kind: str, subject_id: str) -> dict[str, object]:
     for key in ("user_work", "blocking_work"):
         rows = payload.get(key)
@@ -738,6 +759,256 @@ def test_weekly_publish_approval_fails_closed_when_reviewed_draft_is_stale(tmp_p
     )
     assert denied.status_code == 400
     assert denied.payload["error"]["code"] == "stable_base_schedule_required"
+
+    approvals = _query_rows(
+        db_path,
+        """
+        SELECT state, response_kind
+        FROM approvals
+        WHERE approval_id = ?
+        """,
+        (approval_id,),
+    )
+    assert approvals == [{"state": "PENDING", "response_kind": None}]
+
+    artifacts = _query_rows(
+        db_path,
+        """
+        SELECT artifact_kind
+        FROM artifact_versions
+        WHERE workflow_run_id = ?
+        ORDER BY created_at ASC
+        """,
+        (workflow_run_id,),
+    )
+    artifact_kinds = [str(row["artifact_kind"]) for row in artifacts]
+    assert "planning.publish_packet.doc" not in artifact_kinds
+    assert "planning.published_weekly_schedule.workbook" not in artifact_kinds
+
+    pointers = _query_rows(
+        db_path,
+        """
+        SELECT pointer_key
+        FROM artifact_pointers
+        WHERE workflow_run_id = ?
+        """,
+        (workflow_run_id,),
+    )
+    assert pointers == []
+
+
+def test_weekly_publish_approval_fails_closed_when_reviewed_draft_dependencies_drift(
+    tmp_path: Path,
+) -> None:
+    db_path = tmp_path / "dependency-drift-runtime.db"
+    db_url = f"sqlite:///{db_path}"
+    seeded = seed_actual_ops_weekly_schedule_run_with_stage04_outputs(
+        db_url=db_url,
+        tenant_id="tenant-a",
+        domain_id="domain-x",
+        run_tag="api:weekly-drifted-publish",
+    )
+    workflow_run_id = str(seeded["workflow_run_id"])
+    initial_draft_artifact_id = str(seeded["stage04_outputs"]["draft_workbook"]["artifact_version_id"])
+    route_requirements_artifact = seeded["artifacts_by_kind"]["planning.route_slot_requirements.workbook"]
+    created = _create_human_task(
+        db_url,
+        workflow_run_id=workflow_run_id,
+        stage_id="Stage05",
+        task_kind="final_review",
+        activation_key="api:weekly-drifted-publish:final-review",
+    )
+    review_task_id = str(created["human_task"]["human_task_id"])
+    planner_client = _client(
+        db_url=db_url,
+        actor_id="human:schedule-planner-7",
+        actor_roles=["schedule_planner"],
+    )
+    _claim_human_task(
+        planner_client,
+        review_task_id,
+        idempotency_key="api:weekly-drifted-publish:claim-review",
+    )
+
+    _upload_json_artifact(
+        planner_client,
+        human_task_id=review_task_id,
+        artifact_kind="planning.manager_review.doc",
+        artifact_role="evidence",
+        metadata_json={"review_status": "approved_pending_publish"},
+        idempotency_key="api:weekly-drifted-publish:upload-manager-review",
+    )
+    confirmed = planner_client.post(
+        f"/api/v1/human-tasks/{review_task_id}/confirm-review",
+        payload={
+            "reviewed_artifact_version_ids": [initial_draft_artifact_id],
+            "idempotency_key": "api:weekly-drifted-publish:confirm-review",
+        },
+    )
+    assert confirmed.status_code == 200, confirmed.payload
+
+    review_completed = planner_client.post(
+        f"/api/v1/human-tasks/{review_task_id}/complete",
+        payload={
+            "outcome": "complete",
+            "idempotency_key": "api:weekly-drifted-publish:complete-review",
+        },
+    )
+    assert review_completed.status_code == 200, review_completed.payload
+    approval_id = str(review_completed.payload["result"]["requested_approvals"][0]["approval_id"])
+
+    _create_artifact_version(
+        db_url,
+        workflow_run_id=workflow_run_id,
+        artifact_kind="planning.route_slot_requirements.workbook",
+        artifact_role="official_input",
+        metadata_json=dict(route_requirements_artifact["metadata_json"]),
+        idempotency_key="api:weekly-drifted-publish:new-route-requirements",
+    )
+
+    manager_client = _client(
+        db_url=db_url,
+        actor_id="human:operations-manager-3",
+        actor_roles=["operations_manager"],
+    )
+    denied = manager_client.post(
+        f"/api/v1/approvals/{approval_id}/respond",
+        payload={
+            "response_kind": "approve",
+            "response_reason": "attempt publish after route demand drifted",
+            "idempotency_key": "api:weekly-drifted-publish:approve",
+        },
+    )
+    assert denied.status_code == 400
+    assert denied.payload["error"]["code"] == "dependency_drift_detected"
+
+    approvals = _query_rows(
+        db_path,
+        """
+        SELECT state, response_kind
+        FROM approvals
+        WHERE approval_id = ?
+        """,
+        (approval_id,),
+    )
+    assert approvals == [{"state": "PENDING", "response_kind": None}]
+
+    artifacts = _query_rows(
+        db_path,
+        """
+        SELECT artifact_kind
+        FROM artifact_versions
+        WHERE workflow_run_id = ?
+        ORDER BY created_at ASC
+        """,
+        (workflow_run_id,),
+    )
+    artifact_kinds = [str(row["artifact_kind"]) for row in artifacts]
+    assert "planning.publish_packet.doc" not in artifact_kinds
+    assert "planning.published_weekly_schedule.workbook" not in artifact_kinds
+
+    pointers = _query_rows(
+        db_path,
+        """
+        SELECT pointer_key
+        FROM artifact_pointers
+        WHERE workflow_run_id = ?
+        """,
+        (workflow_run_id,),
+    )
+    assert pointers == []
+
+
+def test_weekly_publish_approval_fails_closed_when_reviewed_draft_has_no_pinned_baseline(
+    tmp_path: Path,
+) -> None:
+    db_path = tmp_path / "baseline-missing-runtime.db"
+    db_url = f"sqlite:///{db_path}"
+    seeded = seed_actual_ops_weekly_schedule_run_with_stage04_outputs(
+        db_url=db_url,
+        tenant_id="tenant-a",
+        domain_id="domain-x",
+        run_tag="api:weekly-baseline-missing-publish",
+    )
+    workflow_run_id = str(seeded["workflow_run_id"])
+    initial_draft_artifact_id = str(seeded["stage04_outputs"]["draft_workbook"]["artifact_version_id"])
+    draft_rows = _query_rows(
+        db_path,
+        """
+        SELECT metadata_json
+        FROM artifact_versions
+        WHERE artifact_version_id = ?
+        """,
+        (initial_draft_artifact_id,),
+    )
+    draft_metadata = json.loads(str(draft_rows[0]["metadata_json"]))
+    draft_metadata.pop("dependency_manifest", None)
+    _update_artifact_metadata_json(
+        db_path,
+        artifact_version_id=initial_draft_artifact_id,
+        metadata_json=draft_metadata,
+    )
+    created = _create_human_task(
+        db_url,
+        workflow_run_id=workflow_run_id,
+        stage_id="Stage05",
+        task_kind="final_review",
+        activation_key="api:weekly-baseline-missing-publish:final-review",
+    )
+    review_task_id = str(created["human_task"]["human_task_id"])
+    planner_client = _client(
+        db_url=db_url,
+        actor_id="human:schedule-planner-8",
+        actor_roles=["schedule_planner"],
+    )
+    _claim_human_task(
+        planner_client,
+        review_task_id,
+        idempotency_key="api:weekly-baseline-missing-publish:claim-review",
+    )
+
+    _upload_json_artifact(
+        planner_client,
+        human_task_id=review_task_id,
+        artifact_kind="planning.manager_review.doc",
+        artifact_role="evidence",
+        metadata_json={"review_status": "approved_pending_publish"},
+        idempotency_key="api:weekly-baseline-missing-publish:upload-manager-review",
+    )
+    confirmed = planner_client.post(
+        f"/api/v1/human-tasks/{review_task_id}/confirm-review",
+        payload={
+            "reviewed_artifact_version_ids": [initial_draft_artifact_id],
+            "idempotency_key": "api:weekly-baseline-missing-publish:confirm-review",
+        },
+    )
+    assert confirmed.status_code == 200, confirmed.payload
+
+    review_completed = planner_client.post(
+        f"/api/v1/human-tasks/{review_task_id}/complete",
+        payload={
+            "outcome": "complete",
+            "idempotency_key": "api:weekly-baseline-missing-publish:complete-review",
+        },
+    )
+    assert review_completed.status_code == 200, review_completed.payload
+    approval_id = str(review_completed.payload["result"]["requested_approvals"][0]["approval_id"])
+
+    manager_client = _client(
+        db_url=db_url,
+        actor_id="human:operations-manager-4",
+        actor_roles=["operations_manager"],
+    )
+    denied = manager_client.post(
+        f"/api/v1/approvals/{approval_id}/respond",
+        payload={
+            "response_kind": "approve",
+            "response_reason": "attempt publish with missing pinned baseline",
+            "idempotency_key": "api:weekly-baseline-missing-publish:approve",
+        },
+    )
+    assert denied.status_code == 400
+    assert denied.payload["error"]["code"] == "dependency_baseline_unavailable"
 
     approvals = _query_rows(
         db_path,

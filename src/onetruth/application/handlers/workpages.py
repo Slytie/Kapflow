@@ -31,6 +31,18 @@ from onetruth.application.services.schedule_control.draft_workbook import (
     materialize_stage04_draft_weekly_schedule_workbook,
     project_stage04_draft_weekly_schedule_workbook,
 )
+from onetruth.application.services.schedule_control.workpage_calculations import (
+    SCHEDULE_CALCULATION_SNAPSHOT_DATASET_KEY,
+    build_schedule_bundle_from_dependencies,
+    build_schedule_calculation_snapshot_payload,
+    build_schedule_calculations,
+    build_schedule_manual_draft_doc_payload,
+    build_schedule_manual_validation_summary_payload,
+    project_schedule_dependency_state,
+    resolve_schedule_dependency_artifacts,
+    schedule_preview_disabled_reason,
+    schedule_save_disabled_reason,
+)
 from onetruth.application.services.logistics_workpages import (
     canonical_eod_artifact_route,
     canonical_schedule_artifact_route,
@@ -49,6 +61,7 @@ from onetruth.infrastructure.repositories.artifact_versions import (
     get_artifact_version,
     get_latest_artifact_version_in_chain,
     get_superseding_artifact_version,
+    list_artifact_versions_for_workflow_run,
 )
 from onetruth.infrastructure.repositories.approvals import get_approval
 from onetruth.infrastructure.repositories.human_tasks import get_human_task
@@ -391,6 +404,61 @@ def submit_eod_artifact_workpage_command(
     )
 
 
+def preview_schedule_artifact_workpage_command(
+    connection: sqlite3.Connection,
+    payload: dict[str, Any],
+) -> dict[str, Any]:
+    artifact_version_id = _require_non_empty_string(
+        payload.get("artifact_version_id"),
+        field_name="artifact_version_id",
+    )
+    base_artifact = _require_schedule_artifact_version(connection, artifact_version_id)
+    workbook_bytes = _read_schedule_draft_artifact_bytes(base_artifact)
+    try:
+        updated_bytes = materialize_stage04_draft_weekly_schedule_workbook(
+            workbook_bytes,
+            rows=payload.get("rows"),
+            reserve_rows=payload.get("reserve_rows"),
+        )
+    except ValueError as exc:
+        raise CommandError(
+            code="invalid_payload",
+            message=str(exc),
+            details={},
+        ) from exc
+    preview_projection = project_stage04_draft_weekly_schedule_workbook(updated_bytes)
+    workflow_run, artifacts, dependency_projection, bundle = _schedule_preview_context(
+        connection,
+        artifact=base_artifact,
+    )
+    disabled_reason = schedule_preview_disabled_reason(dependency_projection.dependencies)
+    if disabled_reason is not None or bundle is None:
+        raise CommandError(
+            code="dependency_baseline_unavailable",
+            message="schedule preview requires a pinned dependency baseline",
+            details={
+                "artifact_version_id": artifact_version_id,
+                "dependency_state": dependency_projection.dependency_state,
+                "dependencies": dependency_projection.dependencies,
+            },
+        )
+    calculations = build_schedule_calculations(
+        bundle=bundle,
+        assignment_rows=preview_projection["rows"],
+        reserve_rows=preview_projection["reserve_rows"],
+    )
+    return {
+        "preview": {
+            "workflow_run_id": str(workflow_run["workflow_run_id"]),
+            "artifact_version_id": artifact_version_id,
+            "dirty": updated_bytes != workbook_bytes,
+            "dependency_state": dependency_projection.dependency_state,
+            "dependencies": dependency_projection.dependencies,
+            "calculations": calculations,
+        }
+    }
+
+
 def submit_schedule_artifact_workpage_command(
     connection: sqlite3.Connection,
     payload: dict[str, Any],
@@ -434,6 +502,18 @@ def submit_schedule_artifact_workpage_command(
         receipt,
         "workpages.artifact.submit.artifact.version.created",
     )
+    validation_summary_event_idempotency = _receipt_event_idempotency_key(
+        receipt,
+        "workpages.artifact.submit.schedule.validation-summary.artifact.version.created",
+    )
+    draft_doc_event_idempotency = _receipt_event_idempotency_key(
+        receipt,
+        "workpages.artifact.submit.schedule.draft-doc.artifact.version.created",
+    )
+    calculation_snapshot_event_idempotency = _receipt_event_idempotency_key(
+        receipt,
+        "workpages.artifact.submit.schedule.calculation-snapshot.artifact.version.created",
+    )
 
     def _operation() -> dict[str, Any]:
         _assert_artifact_not_already_superseded(
@@ -454,6 +534,31 @@ def submit_schedule_artifact_workpage_command(
                 message=str(exc),
                 details={},
             ) from exc
+        workflow_run, artifacts, dependency_projection, bundle = _schedule_preview_context(
+            connection,
+            artifact=base_artifact,
+        )
+        disabled_reason = schedule_save_disabled_reason(dependency_projection.dependencies)
+        if disabled_reason is not None or bundle is None:
+            raise CommandError(
+                code=disabled_reason or "dependency_baseline_unavailable",
+                message=(
+                    "schedule draft save requires aligned pinned dependencies"
+                    if disabled_reason == "dependency_drift_detected"
+                    else "schedule draft save requires a pinned dependency baseline"
+                ),
+                details={
+                    "artifact_version_id": artifact_version_id,
+                    "dependency_state": dependency_projection.dependency_state,
+                    "dependencies": dependency_projection.dependencies,
+                },
+            )
+        updated_projection = project_stage04_draft_weekly_schedule_workbook(updated_bytes)
+        calculations = build_schedule_calculations(
+            bundle=bundle,
+            assignment_rows=updated_projection["rows"],
+            reserve_rows=updated_projection["reserve_rows"],
+        )
         new_artifact = _create_workbook_artifact_version(
             connection,
             storage_root=storage_root,
@@ -480,7 +585,25 @@ def submit_schedule_artifact_workpage_command(
             ),
         )
         submitted_artifact_version_id = str(new_artifact["artifact_version_id"])
-        workflow_run_id = str(base_artifact["workflow_run_id"])
+        workflow_run_id = str(workflow_run["workflow_run_id"])
+        _create_schedule_companion_artifacts(
+            connection,
+            storage_root=storage_root,
+            workflow_run_id=workflow_run_id,
+            base_artifact=base_artifact,
+            draft_artifact_version_id=submitted_artifact_version_id,
+            bundle=bundle,
+            dependency_state=dependency_projection.dependency_state,
+            dependencies=dependency_projection.dependencies,
+            calculations=calculations,
+            assignment_rows=updated_projection["rows"],
+            reserve_rows=updated_projection["reserve_rows"],
+            actor_id=actor_id,
+            actor_type=actor_type,
+            validation_summary_event_idempotency=validation_summary_event_idempotency,
+            draft_doc_event_idempotency=draft_doc_event_idempotency,
+            calculation_snapshot_event_idempotency=calculation_snapshot_event_idempotency,
+        )
         return {
             "submitted": {
                 "workflow_run_id": workflow_run_id,
@@ -889,6 +1012,143 @@ def _schedule_submitted_metadata(updated_bytes: bytes) -> dict[str, Any]:
     return dict(payload)
 
 
+def _schedule_preview_context(
+    connection: sqlite3.Connection,
+    *,
+    artifact: Mapping[str, Any],
+) -> tuple[dict[str, Any], list[dict[str, Any]], Any, Any]:
+    workflow_run_id = _require_non_empty_string(
+        artifact.get("workflow_run_id"),
+        field_name="workflow_run_id",
+    )
+    workflow_run = get_workflow_run(connection, workflow_run_id)
+    if workflow_run is None:
+        raise CommandError(
+            code="workflow_run_not_found",
+            message="workflow run not found for schedule workpage artifact",
+            details={"workflow_run_id": workflow_run_id},
+        )
+    artifacts = list_artifact_versions_for_workflow_run(connection, workflow_run_id)
+    dependency_projection = project_schedule_dependency_state(
+        dependency_manifest=_schedule_dependency_manifest(artifact),
+        artifacts=artifacts,
+    )
+    dependency_artifacts = resolve_schedule_dependency_artifacts(
+        workflow_run_id=workflow_run_id,
+        artifacts=artifacts,
+        dependency_manifest=_schedule_dependency_manifest(artifact),
+    )
+    try:
+        bundle = build_schedule_bundle_from_dependencies(
+            workflow_run=workflow_run,
+            dependency_artifacts_by_key=dependency_artifacts,
+        )
+    except ValueError:
+        bundle = None
+    return workflow_run, artifacts, dependency_projection, bundle
+
+
+def _schedule_dependency_manifest(artifact: Mapping[str, Any]) -> object:
+    metadata_json = artifact.get("metadata_json")
+    if isinstance(metadata_json, Mapping):
+        return metadata_json.get("dependency_manifest")
+    return None
+
+
+def _create_schedule_companion_artifacts(
+    connection: sqlite3.Connection,
+    *,
+    storage_root: Path,
+    workflow_run_id: str,
+    base_artifact: Mapping[str, Any],
+    draft_artifact_version_id: str,
+    bundle: Any,
+    dependency_state: str,
+    dependencies: list[dict[str, Any]],
+    calculations: dict[str, Any],
+    assignment_rows: list[dict[str, Any]],
+    reserve_rows: list[dict[str, Any]],
+    actor_id: str,
+    actor_type: str,
+    validation_summary_event_idempotency: str | None,
+    draft_doc_event_idempotency: str | None,
+    calculation_snapshot_event_idempotency: str | None,
+) -> None:
+    validation_payload = build_schedule_manual_validation_summary_payload(
+        bundle=bundle,
+        dependency_state=dependency_state,
+        dependencies=dependencies,
+        calculations=calculations,
+    )
+    draft_doc_payload = build_schedule_manual_draft_doc_payload(
+        bundle=bundle,
+        dependency_state=dependency_state,
+        calculations=calculations,
+        assignment_rows=assignment_rows,
+        reserve_rows=reserve_rows,
+    )
+    calculation_snapshot_payload = build_schedule_calculation_snapshot_payload(
+        bundle=bundle,
+        dependency_state=dependency_state,
+        dependencies=dependencies,
+        assignment_rows=assignment_rows,
+        reserve_rows=reserve_rows,
+    )
+
+    for artifact_kind, payload, file_name, event_idempotency in (
+        (
+            "planning.validation_summary.doc",
+            validation_payload,
+            _schedule_companion_file_name(
+                base_artifact=base_artifact,
+                suffix="validation_summary.json",
+            ),
+            validation_summary_event_idempotency,
+        ),
+        (
+            "planning.draft_weekly_schedule.doc",
+            draft_doc_payload,
+            _schedule_companion_file_name(
+                base_artifact=base_artifact,
+                suffix="draft_doc.json",
+            ),
+            draft_doc_event_idempotency,
+        ),
+        (
+            SCHEDULE_CALCULATION_SNAPSHOT_DATASET_KEY,
+            calculation_snapshot_payload,
+            _schedule_companion_file_name(
+                base_artifact=base_artifact,
+                suffix="calculation_snapshot.json",
+            ),
+            calculation_snapshot_event_idempotency,
+        ),
+    ):
+        companion_bytes = json.dumps(payload, indent=2, sort_keys=True).encode("utf-8")
+        _create_workbook_artifact_version(
+            connection,
+            storage_root=storage_root,
+            workflow_run_id=workflow_run_id,
+            artifact_kind=artifact_kind,
+            artifact_bytes=companion_bytes,
+            artifact_role="evidence",
+            file_name=file_name,
+            media_type="application/json",
+            metadata_json={
+                **payload,
+                "draft_artifact_version_id": draft_artifact_version_id,
+            },
+            parent_artifact_version_id=draft_artifact_version_id,
+            supersedes_artifact_version_id=None,
+            lineage_note="schedule_workpage_companion",
+            actor_id=actor_id,
+            actor_type=actor_type,
+            event_idempotency=event_idempotency,
+            links=None,
+        )
+ 
+
+
 def _load_eod_template_record() -> TemplateRecord:
     try:
         return load_template_registry_catalog().template_by_id(EOD_TEMPLATE_ID)
@@ -1079,6 +1339,17 @@ def _schedule_draft_file_name(base_artifact: Mapping[str, Any]) -> str:
             "draft_workbook.json"
         ),
     )
+
+
+def _schedule_companion_file_name(
+    *,
+    base_artifact: Mapping[str, Any],
+    suffix: str,
+) -> str:
+    base_file_name = _schedule_draft_file_name(base_artifact)
+    if base_file_name.endswith("draft_workbook.json"):
+        return base_file_name.removesuffix("draft_workbook.json") + suffix
+    return f"{base_file_name}.{suffix}"
 
 
 def _xlsx_media_type() -> str:

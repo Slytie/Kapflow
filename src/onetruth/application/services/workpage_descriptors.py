@@ -43,6 +43,7 @@ class WorkpageDescriptor:
     frontend_artifact_route_builder: ArtifactRouteBuilder
     backend_artifact_route_builder: ArtifactRouteBuilder
     backend_artifact_submit_path_builder: ArtifactRouteBuilder | None
+    backend_artifact_preview_path_builder: ArtifactRouteBuilder | None
     draft_create_path_builder: DraftCreatePathBuilder | None
     open_action_id: str | None
     open_action_label: str | None
@@ -50,6 +51,8 @@ class WorkpageDescriptor:
     create_action_label: str | None
     submit_action_id: str | None
     submit_action_label: str | None
+    preview_action_id: str | None
+    preview_action_label: str | None
     create_relation_kind: str | None
     submit_relation_kind: str | None
 
@@ -96,6 +99,17 @@ def canonical_schedule_artifact_submit_path(
     return (
         f"/api/v1/workpages/workflow-runs/{workflow_run_id}/"
         f"{SCHEDULE_WORKPAGE_KIND}/artifacts/{artifact_version_id}/submit"
+    )
+
+
+def canonical_schedule_artifact_preview_path(
+    *,
+    workflow_run_id: str,
+    artifact_version_id: str,
+) -> str:
+    return (
+        f"/api/v1/workpages/workflow-runs/{workflow_run_id}/"
+        f"{SCHEDULE_WORKPAGE_KIND}/artifacts/{artifact_version_id}/preview"
     )
 
 
@@ -207,6 +221,10 @@ _DESCRIPTORS: tuple[WorkpageDescriptor, ...] = (
             workflow_run_id=workflow_run_id,
             artifact_version_id=artifact_version_id,
         ),
+        backend_artifact_preview_path_builder=lambda workflow_run_id, artifact_version_id: canonical_schedule_artifact_preview_path(
+            workflow_run_id=workflow_run_id,
+            artifact_version_id=artifact_version_id,
+        ),
         draft_create_path_builder=None,
         open_action_id="workpage.schedule-v0.open_latest_draft",
         open_action_label="Open schedule draft",
@@ -214,6 +232,8 @@ _DESCRIPTORS: tuple[WorkpageDescriptor, ...] = (
         create_action_label=None,
         submit_action_id="workpage.schedule-v0.save_draft",
         submit_action_label="Save draft",
+        preview_action_id="workpage.schedule-v0.preview_recalc",
+        preview_action_label="Preview recalculation",
         create_relation_kind=None,
         submit_relation_kind="response",
     ),
@@ -238,6 +258,7 @@ _DESCRIPTORS: tuple[WorkpageDescriptor, ...] = (
             workflow_run_id=workflow_run_id,
             artifact_version_id=artifact_version_id,
         ),
+        backend_artifact_preview_path_builder=None,
         draft_create_path_builder=lambda workflow_run_id: canonical_eod_draft_create_path(
             workflow_run_id=workflow_run_id
         ),
@@ -247,6 +268,8 @@ _DESCRIPTORS: tuple[WorkpageDescriptor, ...] = (
         create_action_label="Create EOD draft",
         submit_action_id="workpage.eod-v0.submit_draft",
         submit_action_label="Submit draft",
+        preview_action_id=None,
+        preview_action_label=None,
         create_relation_kind="draft",
         submit_relation_kind="response",
     ),
@@ -270,6 +293,7 @@ _DESCRIPTORS: tuple[WorkpageDescriptor, ...] = (
             f"/api/v1/workpages/workflow-runs/{workflow_run_id}/"
             f"{ROUTE_DEMAND_WORKPAGE_KIND}/artifacts/{artifact_version_id}/submit"
         ),
+        backend_artifact_preview_path_builder=None,
         draft_create_path_builder=None,
         open_action_id="workpage.route-demand-v0.open_latest",
         open_action_label="Open route demand",
@@ -277,6 +301,8 @@ _DESCRIPTORS: tuple[WorkpageDescriptor, ...] = (
         create_action_label=None,
         submit_action_id="workpage.route-demand-v0.save",
         submit_action_label="Save route demand",
+        preview_action_id=None,
+        preview_action_label=None,
         create_relation_kind=None,
         submit_relation_kind="response",
     ),
@@ -300,6 +326,7 @@ _DESCRIPTORS: tuple[WorkpageDescriptor, ...] = (
             f"/api/v1/workpages/workflow-runs/{workflow_run_id}/"
             f"{DRIVER_PREFERENCES_WORKPAGE_KIND}/artifacts/{artifact_version_id}/submit"
         ),
+        backend_artifact_preview_path_builder=None,
         draft_create_path_builder=None,
         open_action_id="workpage.driver-preferences-v0.open_latest",
         open_action_label="Open driver preferences",
@@ -307,6 +334,8 @@ _DESCRIPTORS: tuple[WorkpageDescriptor, ...] = (
         create_action_label=None,
         submit_action_id="workpage.driver-preferences-v0.save",
         submit_action_label="Save driver preferences",
+        preview_action_id=None,
+        preview_action_label=None,
         create_relation_kind=None,
         submit_relation_kind="response",
     ),

@@ -20,6 +20,16 @@ from onetruth.application.services.schedule_control import (
 from onetruth.application.services.schedule_control.draft_workbook import (
     SCHEDULE_DRAFT_DATASET_KEY,
 )
+from onetruth.application.services.schedule_control.workpage_calculations import (
+    SCHEDULE_CALCULATION_SNAPSHOT_DATASET_KEY,
+    build_schedule_bundle_from_dependencies,
+    build_schedule_calculations,
+    normalize_schedule_dependency_manifest,
+    project_schedule_dependency_state,
+    resolve_schedule_dependency_artifacts,
+    schedule_preview_disabled_reason,
+    schedule_save_disabled_reason,
+)
 from onetruth.application.services.schedule_control.stage04_input_registry import (
     resolve_weekly_stage04_input_artifacts,
 )
@@ -34,7 +44,9 @@ from onetruth.application.services.workpage_descriptors import (
     canonical_eod_artifact_route as descriptor_eod_artifact_route,
     canonical_eod_draft_create_path as descriptor_eod_draft_create_path,
     canonical_schedule_artifact_route as descriptor_schedule_artifact_route,
+    canonical_schedule_artifact_preview_path,
     canonical_schedule_artifact_submit_path,
+    get_workpage_descriptor,
 )
 from onetruth.infrastructure.events.event_store import utc_now_iso
 from onetruth.infrastructure.repositories.artifact_versions import (
@@ -479,40 +491,9 @@ def _schedule_dependency_rows_for_run(
 
 def _schedule_dependency_rows_for_artifact(
     *,
-    artifacts: list[dict[str, Any]],
-    source_refs: list[str],
+    dependencies: list[dict[str, Any]],
 ) -> list[dict[str, Any]]:
-    artifacts_by_key = {
-        "route_slot_requirements": _latest_artifact_for_dataset_key(
-            artifacts,
-            dataset_key=_ROUTE_SLOT_DATASET_KEY,
-        ),
-        "approved_availability": _latest_artifact_for_dataset_key(
-            artifacts,
-            dataset_key=_APPROVED_AVAILABILITY_DATASET_KEY,
-        ),
-        "driver_capabilities": _latest_artifact_for_dataset_key(
-            artifacts,
-            dataset_key=_DRIVER_CAPABILITIES_DATASET_KEY,
-        ),
-        "actual_hours": _latest_artifact_for_dataset_key(
-            artifacts,
-            dataset_key=_ACTUAL_HOURS_DATASET_KEY,
-        ),
-        "driver_preferences": _latest_artifact_for_dataset_key(
-            artifacts,
-            dataset_key=DRIVER_PREFERENCES_ARTIFACT_KIND,
-        ),
-    }
-    refs_by_key = {
-        key: _artifact_source_ref(artifact) for key, artifact in artifacts_by_key.items()
-    }
-    if not refs_by_key["route_slot_requirements"] and source_refs:
-        refs_by_key["route_slot_requirements"] = source_refs[0]
-    return _schedule_dependency_rows(
-        artifacts_by_key=artifacts_by_key,
-        refs_by_key=refs_by_key,
-    )
+    return [dict(row) for row in dependencies]
 
 
 def _schedule_dependency_rows(
@@ -818,22 +799,40 @@ def _schedule_artifact_contract_actions(
     artifact_kind: str,
     artifact_version_id: str,
     editable: bool,
+    dependencies: list[dict[str, Any]],
 ) -> list[dict[str, Any]]:
     if not editable or artifact_kind != SCHEDULE_DRAFT_DATASET_KEY:
         return []
+    descriptor = get_workpage_descriptor(SCHEDULE_DEMO_WORKPAGE_ID)
+    preview_disabled_reason = schedule_preview_disabled_reason(dependencies)
+    save_disabled_reason = schedule_save_disabled_reason(dependencies)
     return [
+        {
+            "action_id": str(descriptor.preview_action_id if descriptor is not None else "workpage.schedule-v0.preview_recalc"),
+            "kind": "preview_recalc",
+            "label": str(descriptor.preview_action_label if descriptor is not None else "Preview recalculation"),
+            "state": "blocked" if preview_disabled_reason else "available",
+            "workpage_kind": SCHEDULE_DEMO_WORKPAGE_ID,
+            "artifact_version_id": artifact_version_id,
+            "preview_path": canonical_schedule_artifact_preview_path(
+                workflow_run_id=workflow_run_id,
+                artifact_version_id=artifact_version_id,
+            ),
+            "disabled_reason": preview_disabled_reason,
+        },
         {
             "action_id": "workpage.schedule-v0.save_draft",
             "kind": "submit_artifact",
             "label": "Save draft",
-            "state": "available",
+            "state": "blocked" if save_disabled_reason else "available",
             "workpage_kind": SCHEDULE_DEMO_WORKPAGE_ID,
             "artifact_version_id": artifact_version_id,
             "submit_path": canonical_schedule_artifact_submit_path(
                 workflow_run_id=workflow_run_id,
                 artifact_version_id=artifact_version_id,
             ),
-        }
+            "disabled_reason": save_disabled_reason,
+        },
     ]
 
 
@@ -852,11 +851,12 @@ def _schedule_artifact_note_body(*, editable: bool) -> str:
 
 
 def _schedule_artifact_source_dataset_keys(*, artifact_kind: str) -> list[str]:
-    if artifact_kind == SCHEDULE_DRAFT_DATASET_KEY:
+    if artifact_kind in {SCHEDULE_DRAFT_DATASET_KEY, SCHEDULE_PUBLISHED_ARTIFACT_KIND}:
         return [
-            SCHEDULE_DRAFT_DATASET_KEY,
+            artifact_kind,
             _SCHEDULE_DRAFT_DOC_DATASET_KEY,
             _SCHEDULE_VALIDATION_SUMMARY_DATASET_KEY,
+            SCHEDULE_CALCULATION_SNAPSHOT_DATASET_KEY,
         ]
     return [artifact_kind]
 
@@ -1483,7 +1483,6 @@ def build_schedule_artifact_workpage_contract(
     assignment_rows = _projection_rows(projection, "rows")
     reserve_rows = _projection_rows(projection, "reserve_rows")
     iteration_rows = _projection_rows(projection, "iteration_deltas")
-    bundle = _build_schedule_artifact_bundle(workflow_run=workflow_run, artifacts=artifacts)
     summary = _schedule_artifact_summary(
         workflow_run=workflow_run,
         assignment_rows=assignment_rows,
@@ -1509,6 +1508,33 @@ def build_schedule_artifact_workpage_contract(
         default=artifact_version_id,
     )
     metadata_json = artifact.get("metadata_json")
+    draft_anchor_artifact_version_id = _schedule_anchor_artifact_version_id(
+        artifact=artifact,
+        artifact_kind=artifact_kind,
+    )
+    dependency_projection = project_schedule_dependency_state(
+        dependency_manifest=_schedule_artifact_dependency_manifest(metadata_json),
+        artifacts=artifacts,
+    )
+    dependency_artifacts = resolve_schedule_dependency_artifacts(
+        workflow_run_id=workflow_run_id,
+        artifacts=artifacts,
+        dependency_manifest=_schedule_artifact_dependency_manifest(metadata_json),
+    )
+    try:
+        bundle = build_schedule_bundle_from_dependencies(
+            workflow_run=workflow_run,
+            dependency_artifacts_by_key=dependency_artifacts,
+        )
+    except ValueError:
+        bundle = None
+    companion_artifacts = _schedule_companion_artifacts_for_draft(
+        artifacts=artifacts,
+        draft_artifact_version_id=draft_anchor_artifact_version_id,
+    )
+    calculation_snapshot = _schedule_calculation_snapshot_payload(
+        companion_artifacts.get(SCHEDULE_CALCULATION_SNAPSHOT_DATASET_KEY),
+    )
     contract = {
         "workpage": {
             "workpage_id": SCHEDULE_DEMO_WORKPAGE_ID,
@@ -1742,9 +1768,9 @@ def build_schedule_artifact_workpage_contract(
             "source_dataset_keys": _schedule_artifact_source_dataset_keys(artifact_kind=artifact_kind),
             "source_artifact_version_id": artifact_version_id,
             "source_refs": _schedule_artifact_source_refs(
-                artifacts=artifacts,
                 artifact_version_id=artifact_version_id,
                 artifact_kind=artifact_kind,
+                companion_artifacts=companion_artifacts,
             ),
         },
         "freshness": {
@@ -1782,20 +1808,31 @@ def build_schedule_artifact_workpage_contract(
                 editable=editable,
             ),
             "dependencies": _schedule_dependency_rows_for_artifact(
-                artifacts=artifacts,
-                source_refs=contract["source"]["source_refs"],
+                dependencies=dependency_projection.dependencies,
             ),
-            "calculations": _schedule_calculations(
-                day_demand_rows=_artifact_day_demand_rows(
-                    bundle=bundle,
-                    assignment_rows=assignment_rows,
-                    reserve_rows=reserve_rows,
-                ),
-                selected_day_row=_artifact_selected_day_preview_row(
-                    bundle=bundle,
-                    assignment_rows=assignment_rows,
-                    reserve_rows=reserve_rows,
-                ),
+            "calculations": (
+                calculation_snapshot
+                if calculation_snapshot is not None
+                else (
+                    build_schedule_calculations(
+                        bundle=bundle,
+                        assignment_rows=assignment_rows,
+                        reserve_rows=reserve_rows,
+                    )
+                    if bundle is not None
+                    else _schedule_calculations(
+                        day_demand_rows=_artifact_day_demand_rows(
+                            bundle=bundle,
+                            assignment_rows=assignment_rows,
+                            reserve_rows=reserve_rows,
+                        ),
+                        selected_day_row=_artifact_selected_day_preview_row(
+                            bundle=bundle,
+                            assignment_rows=assignment_rows,
+                            reserve_rows=reserve_rows,
+                        ),
+                    )
+                )
             ),
             "draft_lineage": _schedule_draft_lineage(
                 connection,
@@ -1809,6 +1846,7 @@ def build_schedule_artifact_workpage_contract(
                 artifact_kind=artifact_kind,
                 artifact_version_id=artifact_version_id,
                 editable=editable,
+                dependencies=dependency_projection.dependencies,
             ),
         }
     )
@@ -2484,27 +2522,84 @@ def _schedule_artifact_summary(
 
 def _schedule_artifact_source_refs(
     *,
-    artifacts: list[dict[str, Any]],
     artifact_version_id: str,
     artifact_kind: str,
+    companion_artifacts: Mapping[str, Mapping[str, Any]],
 ) -> list[str]:
-    if artifact_kind != SCHEDULE_DRAFT_DATASET_KEY:
-        return [f"/api/v1/artifacts/{artifact_version_id}"]
-    refs: list[str] = []
+    refs = [f"/api/v1/artifacts/{artifact_version_id}"]
     for dataset_key in (
-        SCHEDULE_DRAFT_DATASET_KEY,
         _SCHEDULE_DRAFT_DOC_DATASET_KEY,
         _SCHEDULE_VALIDATION_SUMMARY_DATASET_KEY,
+        SCHEDULE_CALCULATION_SNAPSHOT_DATASET_KEY,
     ):
-        artifact = _latest_artifact_for_dataset_key(artifacts, dataset_key=dataset_key)
+        artifact = companion_artifacts.get(dataset_key)
         if artifact is None:
             continue
         ref = _artifact_detail_ref(artifact)
         if ref not in refs:
             refs.append(ref)
-    if not refs:
-        refs.append(f"/api/v1/artifacts/{artifact_version_id}")
     return refs
+
+
+def _schedule_anchor_artifact_version_id(
+    *,
+    artifact: Mapping[str, Any],
+    artifact_kind: str,
+) -> str:
+    if artifact_kind == SCHEDULE_DRAFT_DATASET_KEY:
+        return _require_text(artifact.get("artifact_version_id"))
+    metadata_json = artifact.get("metadata_json")
+    if isinstance(metadata_json, Mapping):
+        anchored = _require_text_or_default(
+            metadata_json.get("published_from_artifact_version_id"),
+            default="",
+        )
+        if anchored:
+            return anchored
+    return _require_text(artifact.get("artifact_version_id"))
+
+
+def _schedule_artifact_dependency_manifest(metadata_json: object) -> object:
+    if isinstance(metadata_json, Mapping):
+        return metadata_json.get("dependency_manifest")
+    return None
+
+
+def _schedule_companion_artifacts_for_draft(
+    *,
+    artifacts: list[dict[str, Any]],
+    draft_artifact_version_id: str,
+) -> dict[str, dict[str, Any]]:
+    companion_artifacts: dict[str, dict[str, Any]] = {}
+    for artifact in artifacts:
+        if _require_text_or_default(artifact.get("parent_artifact_version_id"), default="") != draft_artifact_version_id:
+            continue
+        artifact_kind = _require_text_or_default(
+            artifact.get("artifact_kind") or artifact.get("dataset_key"),
+            default="",
+        )
+        if artifact_kind not in {
+            _SCHEDULE_DRAFT_DOC_DATASET_KEY,
+            _SCHEDULE_VALIDATION_SUMMARY_DATASET_KEY,
+            SCHEDULE_CALCULATION_SNAPSHOT_DATASET_KEY,
+        }:
+            continue
+        companion_artifacts[artifact_kind] = artifact
+    return companion_artifacts
+
+
+def _schedule_calculation_snapshot_payload(
+    artifact: Mapping[str, Any] | None,
+) -> dict[str, Any] | None:
+    if artifact is None:
+        return None
+    metadata_json = artifact.get("metadata_json")
+    if not isinstance(metadata_json, Mapping):
+        return None
+    calculations = metadata_json.get("calculations")
+    if not isinstance(calculations, Mapping):
+        return None
+    return dict(calculations)
 
 
 def _latest_superseding_artifact_version_id(

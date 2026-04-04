@@ -60,11 +60,13 @@ def test_route_registry_preserves_exact_global_route_order() -> None:
         "timeline_events.list",
         "board.schedule_planning",
         "stories.logistics_three_workflow",
+        "workpages.workflow_run.artifact.preview",
         "workpages.workflow_run.artifact.detail",
         "workpages.workflow_run.artifact.submit",
         "workpages.workflow_run.detail",
         "workpages.workflow_run.eod_drafts.create",
         "workpages.eod_drafts.create",
+        "workpages.artifact.preview",
         "workpages.artifact.detail",
         "workpages.artifact.submit",
         "workpages.demo.detail",
@@ -111,6 +113,19 @@ def test_route_registry_matches_representative_exact_and_parameterized_routes() 
         "workflow_run_artifact": "wr-001/schedule-v0/artifacts/av-001"
     }
 
+    workflow_run_artifact_preview_match = match_route(
+        "POST",
+        "/api/v1/workpages/workflow-runs/wr-001/schedule-v0/artifacts/av-001/preview",
+    )
+    assert workflow_run_artifact_preview_match is not None
+    assert (
+        workflow_run_artifact_preview_match.route.name
+        == "workpages.workflow_run.artifact.preview"
+    )
+    assert workflow_run_artifact_preview_match.params == {
+        "workflow_run_artifact_preview": "wr-001/schedule-v0/artifacts/av-001"
+    }
+
     workflow_run_artifact_submit_match = match_route(
         "POST",
         "/api/v1/workpages/workflow-runs/wr-001/schedule-v0/artifacts/av-001/submit",
@@ -143,6 +158,11 @@ def test_route_registry_matches_representative_exact_and_parameterized_routes() 
     assert artifact_workpage_match is not None
     assert artifact_workpage_match.route.name == "workpages.artifact.detail"
     assert artifact_workpage_match.params == {"artifact_version_id": "av-001"}
+
+    artifact_preview_match = match_route("POST", "/api/v1/workpages/artifacts/av-001/preview")
+    assert artifact_preview_match is not None
+    assert artifact_preview_match.route.name == "workpages.artifact.preview"
+    assert artifact_preview_match.params == {"artifact_version_id": "av-001"}
 
     artifact_submit_match = match_route("POST", "/api/v1/workpages/artifacts/av-001/submit")
     assert artifact_submit_match is not None
@@ -218,6 +238,14 @@ def test_route_registry_exposes_representative_metadata() -> None:
     assert routes_by_name["workpages.workflow_run.artifact.detail"].requires_request_context is True
     assert routes_by_name["workpages.workflow_run.artifact.detail"].needs_db_connection is True
 
+    assert routes_by_name["workpages.workflow_run.artifact.preview"].needs_page is False
+    assert routes_by_name["workpages.workflow_run.artifact.preview"].body_policy == JSON_COMMAND_BODY
+    assert (
+        routes_by_name["workpages.workflow_run.artifact.preview"].requires_request_context
+        is True
+    )
+    assert routes_by_name["workpages.workflow_run.artifact.preview"].needs_db_connection is True
+
     assert routes_by_name["workpages.workflow_run.artifact.submit"].needs_page is False
     assert routes_by_name["workpages.workflow_run.artifact.submit"].body_policy == JSON_COMMAND_BODY
     assert (
@@ -248,6 +276,11 @@ def test_route_registry_exposes_representative_metadata() -> None:
     assert routes_by_name["workpages.artifact.detail"].body_policy == NO_BODY
     assert routes_by_name["workpages.artifact.detail"].requires_request_context is True
     assert routes_by_name["workpages.artifact.detail"].needs_db_connection is True
+
+    assert routes_by_name["workpages.artifact.preview"].needs_page is False
+    assert routes_by_name["workpages.artifact.preview"].body_policy == JSON_COMMAND_BODY
+    assert routes_by_name["workpages.artifact.preview"].requires_request_context is True
+    assert routes_by_name["workpages.artifact.preview"].needs_db_connection is True
 
     assert routes_by_name["workpages.artifact.submit"].needs_page is False
     assert routes_by_name["workpages.artifact.submit"].body_policy == JSON_COMMAND_BODY

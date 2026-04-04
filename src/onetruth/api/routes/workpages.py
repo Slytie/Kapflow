@@ -6,6 +6,7 @@ from onetruth.application.handlers._shared.command_boundary import CommandError
 from onetruth.application.handlers.workpages import (
     create_demo_eod_draft_command,
     create_workflow_run_eod_draft_command,
+    preview_schedule_artifact_workpage_command,
     submit_eod_artifact_workpage_command,
     submit_schedule_artifact_workpage_command,
 )
@@ -174,6 +175,29 @@ def submit_workflow_run_artifact_workpage_endpoint(
     }
 
 
+def preview_workflow_run_artifact_workpage_endpoint(
+    connection: sqlite3.Connection,
+    *,
+    context: RequestContext,
+    workflow_run_id: str,
+    workpage_kind: str,
+    artifact_version_id: str,
+    payload: dict[str, object],
+) -> dict[str, object]:
+    result = _preview_artifact_workpage(
+        connection,
+        context=context,
+        artifact_version_id=artifact_version_id,
+        payload=payload,
+        workflow_run_id=workflow_run_id,
+        workpage_kind=workpage_kind,
+    )
+    return {
+        "command": "api.workpages.artifact.preview",
+        **result,
+    }
+
+
 def create_demo_eod_draft_endpoint(
     connection: sqlite3.Connection,
     *,
@@ -275,6 +299,25 @@ def submit_artifact_workpage_endpoint(
     )
     return {
         "command": "api.workpages.artifact.submit",
+        **result,
+    }
+
+
+def preview_artifact_workpage_endpoint(
+    connection: sqlite3.Connection,
+    *,
+    context: RequestContext,
+    artifact_version_id: str,
+    payload: dict[str, object],
+) -> dict[str, object]:
+    result = _preview_artifact_workpage(
+        connection,
+        context=context,
+        artifact_version_id=artifact_version_id,
+        payload=payload,
+    )
+    return {
+        "command": "api.workpages.artifact.preview",
         **result,
     }
 
@@ -476,6 +519,71 @@ def _submit_artifact_workpage(
                     "actor_type": context.actor_type,
                 },
                 storage_root=default_storage_root_for_db_url(db_url),
+            )
+    except CommandError as exc:
+        raise api_error_from_command(exc) from exc
+    raise ApiError(
+        status_code=404,
+        code="workpage_artifact_not_found",
+        message="artifact-backed workpage not found",
+        details={"artifact_version_id": artifact_version_id},
+    )
+
+
+def _preview_artifact_workpage(
+    connection: sqlite3.Connection,
+    *,
+    context: RequestContext,
+    artifact_version_id: str,
+    payload: dict[str, object],
+    workflow_run_id: str | None = None,
+    workpage_kind: str | None = None,
+) -> dict[str, object]:
+    try:
+        artifact = show_artifact_version_command(connection, artifact_version_id)
+    except CommandError as exc:
+        raise api_error_from_command(exc) from exc
+
+    artifact_workflow_run_id = str(artifact["workflow_run_id"])
+    if workflow_run_id is not None and artifact_workflow_run_id != workflow_run_id:
+        raise ApiError(
+            status_code=404,
+            code="workpage_artifact_not_found",
+            message="artifact-backed workpage not found",
+            details={"artifact_version_id": artifact_version_id},
+        )
+    workflow_run = _scoped_workflow_run_for_artifact(
+        connection,
+        context=context,
+        workflow_run_id=artifact_workflow_run_id,
+        artifact=artifact,
+        artifact_version_id=artifact_version_id,
+    )
+    descriptor = _resolve_public_artifact_descriptor(
+        workflow_id=str(workflow_run["workflow_id"]),
+        artifact=artifact,
+        artifact_version_id=artifact_version_id,
+        workpage_kind=workpage_kind,
+    )
+    artifact_kind = str(artifact.get("artifact_kind") or artifact.get("dataset_key") or "")
+    if (
+        descriptor.backend_artifact_preview_path_builder is None
+        or not descriptor.supports_editable_artifact_kind(artifact_kind)
+    ):
+        raise ApiError(
+            status_code=404,
+            code="workpage_artifact_not_found",
+            message="artifact-backed workpage not found",
+            details={"artifact_version_id": artifact_version_id},
+        )
+    try:
+        if descriptor.kind == SCHEDULE_DEMO_WORKPAGE_ID:
+            return preview_schedule_artifact_workpage_command(
+                connection,
+                {
+                    **payload,
+                    "artifact_version_id": artifact_version_id,
+                },
             )
     except CommandError as exc:
         raise api_error_from_command(exc) from exc

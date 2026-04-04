@@ -207,6 +207,55 @@ def _create_published_schedule_artifact(
     return stdout_json(created)["artifact_version"]
 
 
+def _create_artifact_version(
+    tmp_path: Path,
+    *,
+    workflow_run_id: str,
+    artifact_kind: str,
+    metadata_json: dict[str, Any],
+    idempotency_key: str,
+) -> dict[str, Any]:
+    created = run_cli(
+        "--db-url",
+        _db_url(tmp_path),
+        "artifacts",
+        "create-version",
+        "--json",
+        json.dumps(
+            {
+                "workflow_run_id": workflow_run_id,
+                "artifact_kind": artifact_kind,
+                "artifact_role": "official_input",
+                "media_type": "application/json",
+                "storage_uri": f"inmem://workpages/{idempotency_key}/{artifact_kind}",
+                "content_digest": f"sha256:{idempotency_key}:{artifact_kind}",
+                "metadata_json": metadata_json,
+                "idempotency_key": idempotency_key,
+            },
+            separators=(",", ":"),
+        ),
+    )
+    return stdout_json(created)["artifact_version"]
+
+
+def _update_artifact_metadata_json(
+    tmp_path: Path,
+    *,
+    artifact_version_id: str,
+    metadata_json: dict[str, Any],
+) -> None:
+    with open_sqlite_connection(_db_url(tmp_path)) as connection:
+        connection.execute(
+            """
+            UPDATE artifact_versions
+            SET metadata_json = ?
+            WHERE artifact_version_id = ?
+            """,
+            (json.dumps(metadata_json, separators=(",", ":")), artifact_version_id),
+        )
+        connection.commit()
+
+
 def test_artifact_backed_schedule_workpage_returns_projected_contract(tmp_path: Path) -> None:
     seeded = seed_actual_ops_weekly_schedule_run_with_stage04_outputs(
         db_url=_db_url(tmp_path),
@@ -290,12 +339,14 @@ def test_artifact_backed_schedule_workpage_returns_projected_contract(tmp_path: 
             "planning.draft_weekly_schedule.workbook",
             "planning.draft_weekly_schedule.doc",
             "planning.validation_summary.doc",
+            "planning.schedule_calculation_snapshot.json",
         ],
         "source_artifact_version_id": artifact_version_id,
         "source_refs": [
             f"/api/v1/artifacts/{artifact_version_id}",
             f"/api/v1/artifacts/{seeded['stage04_outputs']['draft_doc']['artifact_version_id']}",
             f"/api/v1/artifacts/{seeded['stage04_outputs']['validation_summary']['artifact_version_id']}",
+            f"/api/v1/artifacts/{seeded['stage04_outputs']['calculation_snapshot']['artifact_version_id']}",
         ],
     }
 
@@ -322,53 +373,20 @@ def test_artifact_backed_schedule_workpage_returns_projected_contract(tmp_path: 
         "latest_artifact_version_id": artifact_version_id,
         "accepted_artifact_version_id": None,
     }
-    assert payload["dependencies"] == [
-        {
-            "dependency_key": "route_slot_requirements",
-            "artifact_kind": "planning.route_slot_requirements.workbook",
-            "artifact_version_id": seeded["artifacts_by_kind"]["planning.route_slot_requirements.workbook"]["artifact_version_id"],
-            "impact_class": "hard",
-            "state": "resolved",
-            "source_ref": f"/api/v1/artifacts/{seeded['artifacts_by_kind']['planning.route_slot_requirements.workbook']['artifact_version_id']}",
-        },
-        {
-            "dependency_key": "approved_availability",
-            "artifact_kind": "planning.approved_availability.workbook",
-            "artifact_version_id": seeded["artifacts_by_kind"]["planning.approved_availability.workbook"]["artifact_version_id"],
-            "impact_class": "hard",
-            "state": "resolved",
-            "source_ref": f"/api/v1/artifacts/{seeded['artifacts_by_kind']['planning.approved_availability.workbook']['artifact_version_id']}",
-        },
-        {
-            "dependency_key": "driver_capabilities",
-            "artifact_kind": "planning.driver_capabilities.workbook",
-            "artifact_version_id": seeded["artifacts_by_kind"]["planning.driver_capabilities.workbook"]["artifact_version_id"],
-            "impact_class": "hard",
-            "state": "resolved",
-            "source_ref": f"/api/v1/artifacts/{seeded['artifacts_by_kind']['planning.driver_capabilities.workbook']['artifact_version_id']}",
-        },
-        {
-            "dependency_key": "actual_hours",
-            "artifact_kind": "planning.actual_hours_snapshot.workbook",
-            "artifact_version_id": seeded["artifacts_by_kind"]["planning.actual_hours_snapshot.workbook"]["artifact_version_id"],
-            "impact_class": "hard",
-            "state": "resolved",
-            "source_ref": f"/api/v1/artifacts/{seeded['artifacts_by_kind']['planning.actual_hours_snapshot.workbook']['artifact_version_id']}",
-        },
-        {
-            "dependency_key": "driver_preferences",
-            "artifact_kind": "planning.driver_shift_preferences.workbook",
-            "artifact_version_id": None,
-            "impact_class": "soft",
-            "state": "not_available",
-            "source_ref": None,
-        },
-    ]
+    dependencies = {row["dependency_key"]: row for row in payload["dependencies"]}
+    assert dependencies["route_slot_requirements"]["state"] == "aligned"
+    assert dependencies["approved_availability"]["state"] == "aligned"
+    assert dependencies["driver_capabilities"]["state"] == "aligned"
+    assert dependencies["actual_hours"]["state"] == "aligned"
+    assert dependencies["driver_preferences"]["state"] == "aligned"
+    assert dependencies["route_slot_requirements"]["artifact_version_id"] == str(
+        seeded["artifacts_by_kind"]["planning.route_slot_requirements.workbook"]["artifact_version_id"]
+    )
     calculations = payload["calculations"]
     assert calculations["top_bar"]["days"]
     assert calculations["selected_day"]["service_date"]
-    assert calculations["driver_metrics"] == []
-    assert calculations["checks"] == []
+    assert calculations["driver_metrics"]
+    assert calculations["checks"]
     assert payload["draft_lineage"] == {
         "current_artifact_version_id": artifact_version_id,
         "latest_artifact_version_id": artifact_version_id,
@@ -389,6 +407,19 @@ def test_artifact_backed_schedule_workpage_returns_projected_contract(tmp_path: 
     }
     assert payload["actions"] == [
         {
+            "action_id": "workpage.schedule-v0.preview_recalc",
+            "kind": "preview_recalc",
+            "label": "Preview recalculation",
+            "state": "available",
+            "workpage_kind": "schedule-v0",
+            "artifact_version_id": artifact_version_id,
+            "preview_path": (
+                f"/api/v1/workpages/workflow-runs/{workflow_run_id}/"
+                f"schedule-v0/artifacts/{artifact_version_id}/preview"
+            ),
+            "disabled_reason": None,
+        },
+        {
             "action_id": "workpage.schedule-v0.save_draft",
             "kind": "submit_artifact",
             "label": "Save draft",
@@ -399,7 +430,8 @@ def test_artifact_backed_schedule_workpage_returns_projected_contract(tmp_path: 
                 f"/api/v1/workpages/workflow-runs/{workflow_run_id}/"
                 f"schedule-v0/artifacts/{artifact_version_id}/submit"
             ),
-        }
+            "disabled_reason": None,
+        },
     ]
 
     downloaded = client.get_raw(f"/api/v1/artifacts/{artifact_version_id}/download.bin")
@@ -408,6 +440,7 @@ def test_artifact_backed_schedule_workpage_returns_projected_contract(tmp_path: 
     parsed_download = json.loads(downloaded.body.decode("utf-8"))
     assert parsed_download["columns"]
     assert parsed_download["rows"]
+    assert parsed_download["dependency_manifest"]
 
 
 def test_artifact_backed_schedule_workpage_reads_are_stable_except_for_generated_at(
@@ -521,9 +554,19 @@ def test_published_schedule_artifact_reads_under_schedule_workpage_kind(tmp_path
     assert payload["source"] == {
         "mode": "artifact_projection",
         "primary_dataset_key": PUBLISHED_SCHEDULE_DATASET_KEY,
-        "source_dataset_keys": [PUBLISHED_SCHEDULE_DATASET_KEY],
+        "source_dataset_keys": [
+            PUBLISHED_SCHEDULE_DATASET_KEY,
+            "planning.draft_weekly_schedule.doc",
+            "planning.validation_summary.doc",
+            "planning.schedule_calculation_snapshot.json",
+        ],
         "source_artifact_version_id": published_artifact_version_id,
-        "source_refs": [f"/api/v1/artifacts/{published_artifact_version_id}"],
+        "source_refs": [
+            f"/api/v1/artifacts/{published_artifact_version_id}",
+            f"/api/v1/artifacts/{seeded['stage04_outputs']['draft_doc']['artifact_version_id']}",
+            f"/api/v1/artifacts/{seeded['stage04_outputs']['validation_summary']['artifact_version_id']}",
+            f"/api/v1/artifacts/{seeded['stage04_outputs']['calculation_snapshot']['artifact_version_id']}",
+        ],
     }
     assert payload["artifact_context"]["artifact_kind"] == PUBLISHED_SCHEDULE_DATASET_KEY
     assert payload["artifact_state"] == {
@@ -723,6 +766,76 @@ def test_schedule_artifact_submit_canonical_route_matches_alias(tmp_path: Path) 
     assert alias.payload == canonical.payload
 
 
+def test_schedule_artifact_preview_canonical_route_matches_alias(tmp_path: Path) -> None:
+    seeded = seed_actual_ops_weekly_schedule_run_with_stage04_outputs(
+        db_url=_db_url(tmp_path),
+        tenant_id="tenant-a",
+        domain_id="domain-x",
+        run_tag="api:workpages:artifact-schedule:canonical-preview",
+    )
+    workflow_run_id = str(seeded["workflow_run_id"])
+    artifact_version_id = str(seeded["stage04_outputs"]["draft_workbook"]["artifact_version_id"])
+    client = _client(tmp_path)
+    assignment_rows, reserve_rows = _schedule_submit_rows(client, artifact_version_id)
+
+    canonical = client.post(
+        f"/api/v1/workpages/workflow-runs/{workflow_run_id}/"
+        f"schedule-v0/artifacts/{artifact_version_id}/preview",
+        payload={"rows": assignment_rows, "reserve_rows": reserve_rows},
+    )
+    alias = client.post(
+        f"/api/v1/workpages/artifacts/{artifact_version_id}/preview",
+        payload={"rows": assignment_rows, "reserve_rows": reserve_rows},
+    )
+
+    assert canonical.status_code == 200
+    assert alias.status_code == 200
+    assert alias.payload == canonical.payload
+
+
+def test_schedule_artifact_preview_recalculates_without_creating_artifacts(tmp_path: Path) -> None:
+    seeded = seed_actual_ops_weekly_schedule_run_with_stage04_outputs(
+        db_url=_db_url(tmp_path),
+        tenant_id="tenant-a",
+        domain_id="domain-x",
+        run_tag="api:workpages:artifact-schedule:preview",
+    )
+    workflow_run_id = str(seeded["workflow_run_id"])
+    artifact_version_id = str(seeded["stage04_outputs"]["draft_workbook"]["artifact_version_id"])
+    client = _client(tmp_path)
+    assignment_rows, reserve_rows = _schedule_submit_rows(client, artifact_version_id)
+    assignment_rows[0]["assigned_driver_id"] = "DRV-PREVIEW-77"
+    assignment_rows[0]["assignment_status"] = "manual_override"
+
+    with open_sqlite_connection(_db_url(tmp_path)) as connection:
+        before_count = connection.execute(
+            "SELECT COUNT(*) AS count FROM artifact_versions WHERE workflow_run_id = ?",
+            (workflow_run_id,),
+        ).fetchone()["count"]
+
+    response = client.post(
+        f"/api/v1/workpages/artifacts/{artifact_version_id}/preview",
+        payload={"rows": assignment_rows, "reserve_rows": reserve_rows},
+    )
+    assert response.status_code == 200
+    preview = response.payload["preview"]
+    assert preview["artifact_version_id"] == artifact_version_id
+    assert preview["workflow_run_id"] == workflow_run_id
+    assert preview["dirty"] is True
+    assert preview["dependency_state"] == "aligned"
+    assert preview["dependencies"]
+    assert preview["calculations"]["top_bar"]["days"]
+    assert preview["calculations"]["driver_metrics"]
+    assert preview["calculations"]["checks"]
+
+    with open_sqlite_connection(_db_url(tmp_path)) as connection:
+        after_count = connection.execute(
+            "SELECT COUNT(*) AS count FROM artifact_versions WHERE workflow_run_id = ?",
+            (workflow_run_id,),
+        ).fetchone()["count"]
+    assert after_count == before_count
+
+
 def test_schedule_artifact_submit_creates_superseding_version_and_replays_idempotently(
     tmp_path: Path,
 ) -> None:
@@ -801,6 +914,31 @@ def test_schedule_artifact_submit_creates_superseding_version_and_replays_idempo
     assert refreshed_assignment_rows[0]["assignment_status"] == "manual_override"
     assert refreshed_reserve_rows[0]["assigned_driver_id"] == "DRV-MANUAL-88"
     assert refreshed_reserve_rows[0]["assignment_status"] == "manual_override"
+    assert refreshed.payload["source"]["source_refs"][0] == (
+        f"/api/v1/artifacts/{submitted_artifact_version_id}"
+    )
+    assert refreshed.payload["source"]["source_dataset_keys"] == [
+        "planning.draft_weekly_schedule.workbook",
+        "planning.draft_weekly_schedule.doc",
+        "planning.validation_summary.doc",
+        "planning.schedule_calculation_snapshot.json",
+    ]
+
+    with open_sqlite_connection(_db_url(tmp_path)) as connection:
+        companion_rows = connection.execute(
+            """
+            SELECT artifact_kind
+            FROM artifact_versions
+            WHERE parent_artifact_version_id = ?
+            ORDER BY artifact_kind ASC
+            """,
+            (submitted_artifact_version_id,),
+        ).fetchall()
+    assert [str(row["artifact_kind"]) for row in companion_rows] == [
+        "planning.draft_weekly_schedule.doc",
+        "planning.schedule_calculation_snapshot.json",
+        "planning.validation_summary.doc",
+    ]
 
 
 def test_schedule_artifact_submit_links_response_to_supported_human_task_surface(
@@ -969,6 +1107,158 @@ def test_schedule_artifact_submit_rejects_stale_base_versions(tmp_path: Path) ->
         "workflow_run_id": workflow_run_id,
         "route": f"/runs/{workflow_run_id}/workpages/schedule-v0/artifacts/{latest_artifact_version_id}",
     }
+
+
+def test_schedule_artifact_hard_dependency_drift_surfaces_and_blocks_save(
+    tmp_path: Path,
+) -> None:
+    seeded = seed_actual_ops_weekly_schedule_run_with_stage04_outputs(
+        db_url=_db_url(tmp_path),
+        tenant_id="tenant-a",
+        domain_id="domain-x",
+        run_tag="api:workpages:artifact-schedule:dependency-drift",
+    )
+    workflow_run_id = str(seeded["workflow_run_id"])
+    artifact_version_id = str(seeded["stage04_outputs"]["draft_workbook"]["artifact_version_id"])
+    route_artifact_id = str(
+        seeded["artifacts_by_kind"]["planning.route_slot_requirements.workbook"]["artifact_version_id"]
+    )
+    route_artifact = _load_artifact_version(tmp_path, artifact_version_id=route_artifact_id)
+    _create_artifact_version(
+        tmp_path,
+        workflow_run_id=workflow_run_id,
+        artifact_kind="planning.route_slot_requirements.workbook",
+        metadata_json=dict(route_artifact["metadata_json"]),
+        idempotency_key="api:workpages:artifact-schedule:dependency-drift:new-route-demand",
+    )
+    client = _client(tmp_path)
+
+    payload = client.get(f"/api/v1/workpages/artifacts/{artifact_version_id}").payload
+    dependencies = {row["dependency_key"]: row for row in payload["dependencies"]}
+    assert dependencies["route_slot_requirements"]["state"] == "drifted"
+    assert payload["actions"] == [
+        {
+            "action_id": "workpage.schedule-v0.preview_recalc",
+            "kind": "preview_recalc",
+            "label": "Preview recalculation",
+            "state": "available",
+            "workpage_kind": "schedule-v0",
+            "artifact_version_id": artifact_version_id,
+            "preview_path": (
+                f"/api/v1/workpages/workflow-runs/{workflow_run_id}/"
+                f"schedule-v0/artifacts/{artifact_version_id}/preview"
+            ),
+            "disabled_reason": None,
+        },
+        {
+            "action_id": "workpage.schedule-v0.save_draft",
+            "kind": "submit_artifact",
+            "label": "Save draft",
+            "state": "blocked",
+            "workpage_kind": "schedule-v0",
+            "artifact_version_id": artifact_version_id,
+            "submit_path": (
+                f"/api/v1/workpages/workflow-runs/{workflow_run_id}/"
+                f"schedule-v0/artifacts/{artifact_version_id}/submit"
+            ),
+            "disabled_reason": "dependency_drift_detected",
+        },
+    ]
+
+    assignment_rows, reserve_rows = _schedule_submit_rows(client, artifact_version_id)
+    preview = client.post(
+        f"/api/v1/workpages/artifacts/{artifact_version_id}/preview",
+        payload={"rows": assignment_rows, "reserve_rows": reserve_rows},
+    )
+    assert preview.status_code == 200
+    assert preview.payload["preview"]["dependency_state"] == "drifted"
+
+    denied = client.post(
+        f"/api/v1/workpages/artifacts/{artifact_version_id}/submit",
+        payload={
+            "rows": assignment_rows,
+            "reserve_rows": reserve_rows,
+            "idempotency_key": "api:workpages:artifact-schedule:dependency-drift:submit",
+        },
+    )
+    assert denied.status_code == 400
+    assert denied.payload["error"]["code"] == "dependency_drift_detected"
+
+
+def test_schedule_artifact_without_pinned_manifest_remains_readable_but_blocks_preview_and_save(
+    tmp_path: Path,
+) -> None:
+    seeded = seed_actual_ops_weekly_schedule_run_with_stage04_outputs(
+        db_url=_db_url(tmp_path),
+        tenant_id="tenant-a",
+        domain_id="domain-x",
+        run_tag="api:workpages:artifact-schedule:not-pinned",
+    )
+    workflow_run_id = str(seeded["workflow_run_id"])
+    artifact_version_id = str(seeded["stage04_outputs"]["draft_workbook"]["artifact_version_id"])
+    base_artifact = _load_artifact_version(tmp_path, artifact_version_id=artifact_version_id)
+    metadata_json = dict(base_artifact["metadata_json"])
+    metadata_json.pop("dependency_manifest", None)
+    _update_artifact_metadata_json(
+        tmp_path,
+        artifact_version_id=artifact_version_id,
+        metadata_json=metadata_json,
+    )
+    client = _client(tmp_path)
+
+    payload = client.get(f"/api/v1/workpages/artifacts/{artifact_version_id}").payload
+    dependencies = {row["dependency_key"]: row for row in payload["dependencies"]}
+    assert dependencies["route_slot_requirements"]["state"] == "not_pinned"
+    assert dependencies["approved_availability"]["state"] == "not_pinned"
+    assert dependencies["driver_capabilities"]["state"] == "not_pinned"
+    assert dependencies["actual_hours"]["state"] == "not_pinned"
+    assert payload["actions"] == [
+        {
+            "action_id": "workpage.schedule-v0.preview_recalc",
+            "kind": "preview_recalc",
+            "label": "Preview recalculation",
+            "state": "blocked",
+            "workpage_kind": "schedule-v0",
+            "artifact_version_id": artifact_version_id,
+            "preview_path": (
+                f"/api/v1/workpages/workflow-runs/{workflow_run_id}/"
+                f"schedule-v0/artifacts/{artifact_version_id}/preview"
+            ),
+            "disabled_reason": "dependency_baseline_unavailable",
+        },
+        {
+            "action_id": "workpage.schedule-v0.save_draft",
+            "kind": "submit_artifact",
+            "label": "Save draft",
+            "state": "blocked",
+            "workpage_kind": "schedule-v0",
+            "artifact_version_id": artifact_version_id,
+            "submit_path": (
+                f"/api/v1/workpages/workflow-runs/{workflow_run_id}/"
+                f"schedule-v0/artifacts/{artifact_version_id}/submit"
+            ),
+            "disabled_reason": "dependency_baseline_unavailable",
+        },
+    ]
+
+    assignment_rows, reserve_rows = _schedule_submit_rows(client, artifact_version_id)
+    preview = client.post(
+        f"/api/v1/workpages/artifacts/{artifact_version_id}/preview",
+        payload={"rows": assignment_rows, "reserve_rows": reserve_rows},
+    )
+    assert preview.status_code == 400
+    assert preview.payload["error"]["code"] == "dependency_baseline_unavailable"
+
+    denied = client.post(
+        f"/api/v1/workpages/artifacts/{artifact_version_id}/submit",
+        payload={
+            "rows": assignment_rows,
+            "reserve_rows": reserve_rows,
+            "idempotency_key": "api:workpages:artifact-schedule:not-pinned:submit",
+        },
+    )
+    assert denied.status_code == 400
+    assert denied.payload["error"]["code"] == "dependency_baseline_unavailable"
 
 
 def test_schedule_artifact_submit_cross_scope_denial_fails_closed(tmp_path: Path) -> None:

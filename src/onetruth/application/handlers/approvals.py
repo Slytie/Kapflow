@@ -38,6 +38,10 @@ from onetruth.application.services.dispatch_reporting_build import (
     UPD_DRAFT_ARTIFACT_KIND as DISPATCH_UPD_DRAFT_ARTIFACT_KIND,
     WORKFLOW_ID as DISPATCH_REPORTING_WORKFLOW_ID,
 )
+from onetruth.application.services.schedule_control.workpage_calculations import (
+    project_schedule_dependency_state,
+    schedule_save_disabled_reason,
+)
 from onetruth.application.services.task_requirements import (
     REVIEW_CONFIRMATION_ARTIFACT_KIND,
     build_human_task_requirement_index,
@@ -607,6 +611,40 @@ def _maybe_auto_publish_weekly_approval(
             },
         )
 
+    draft_artifact = get_artifact_version(connection, latest_draft_artifact_version_id)
+    if draft_artifact is None:
+        raise CommandError(
+            code="artifact_version_not_found",
+            message="reviewed draft artifact was not found for weekly publish",
+            details={"artifact_version_id": latest_draft_artifact_version_id},
+        )
+    dependency_projection = project_schedule_dependency_state(
+        dependency_manifest=(
+            draft_artifact.get("metadata_json", {}).get("dependency_manifest")
+            if isinstance(draft_artifact.get("metadata_json"), dict)
+            else None
+        ),
+        artifacts=artifacts,
+    )
+    dependency_block_reason = schedule_save_disabled_reason(
+        dependency_projection.dependencies
+    )
+    if dependency_block_reason is not None:
+        raise CommandError(
+            code=dependency_block_reason,
+            message=(
+                "weekly publish requires aligned pinned schedule dependencies"
+                if dependency_block_reason == "dependency_drift_detected"
+                else "weekly publish requires a pinned schedule dependency baseline"
+            ),
+            details={
+                "approval_id": str(approval["approval_id"]),
+                "workflow_run_id": workflow_run_id,
+                "artifact_version_id": latest_draft_artifact_version_id,
+                "dependency_state": dependency_projection.dependency_state,
+                "dependencies": dependency_projection.dependencies,
+            },
+        )
     publish_packet_metadata = {
         "schema_version": "1.0",
         "kind": "weekly_publish_packet",
@@ -670,13 +708,6 @@ def _maybe_auto_publish_weekly_approval(
             "weekly-publish.publish-packet.artifact.version.created",
         ),
     )
-    draft_artifact = get_artifact_version(connection, latest_draft_artifact_version_id)
-    if draft_artifact is None:
-        raise CommandError(
-            code="artifact_version_not_found",
-            message="reviewed draft artifact was not found for weekly publish",
-            details={"artifact_version_id": latest_draft_artifact_version_id},
-        )
     draft_metadata = draft_artifact.get("metadata_json")
     published_metadata = dict(draft_metadata) if isinstance(draft_metadata, dict) else {}
     published_metadata.update(

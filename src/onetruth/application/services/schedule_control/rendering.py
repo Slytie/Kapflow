@@ -11,6 +11,7 @@ from .bundle_builder import (
     DriverServiceDayState,
     WeeklyScheduleControlBundle,
 )
+from .workpage_calculations import build_schedule_dependency_manifest_from_bundle
 from .contract_minimization import summarize_contract_change_metrics
 from .iterative_allocator import (
     MAX_ALLOCATION_BATCH_SIZE,
@@ -321,6 +322,7 @@ def render_stage04_draft_weekly_schedule_workbook(
                 item.service_area for item in bundle.route_slots
             ),
         ),
+        "dependency_manifest": build_schedule_dependency_manifest_from_bundle(bundle),
         "columns": columns,
         "rows": rows,
         "reserve_rows": [_reserve_output_row(row) for row in reserve_rows],
