@@ -5,7 +5,135 @@
     "workpage_id": "schedule-v0"
   },
   "workpage_state": {
+    "accepted_series": {
+      "current_artifact_version_id": null,
+      "entries": [],
+      "next_artifact_version_id": null,
+      "previous_artifact_version_id": null,
+      "series_key": null
+    },
+    "actions": [],
+    "artifact_state": {
+      "accepted_artifact_version_id": null,
+      "artifact_kind": "planning.draft_weekly_schedule.workbook",
+      "current_artifact_version_id": null,
+      "editable": false,
+      "latest_artifact_version_id": null,
+      "state_kind": "demo_projection"
+    },
+    "calculations": {
+      "checks": [],
+      "driver_metrics": [],
+      "selected_day": {
+        "drivers_available": 24,
+        "open_questions": "Confirm late requests and final on-call posture before day-of handoff.",
+        "projected_on_call_needed": 4,
+        "routes_required": 20,
+        "service_date": "2026-03-24"
+      },
+      "top_bar": {
+        "days": [
+          {
+            "excess_capacity_target": 3,
+            "on_call_target": 4,
+            "routes_required": 16,
+            "service_date": "2026-03-22",
+            "weekday_label": "Sun"
+          },
+          {
+            "excess_capacity_target": 3,
+            "on_call_target": 4,
+            "routes_required": 23,
+            "service_date": "2026-03-23",
+            "weekday_label": "Mon"
+          },
+          {
+            "excess_capacity_target": 3,
+            "on_call_target": 4,
+            "routes_required": 20,
+            "service_date": "2026-03-24",
+            "weekday_label": "Tue"
+          },
+          {
+            "excess_capacity_target": 3,
+            "on_call_target": 4,
+            "routes_required": 19,
+            "service_date": "2026-03-25",
+            "weekday_label": "Wed"
+          },
+          {
+            "excess_capacity_target": 3,
+            "on_call_target": 4,
+            "routes_required": 21,
+            "service_date": "2026-03-26",
+            "weekday_label": "Thu"
+          },
+          {
+            "excess_capacity_target": 3,
+            "on_call_target": 4,
+            "routes_required": 18,
+            "service_date": "2026-03-27",
+            "weekday_label": "Fri"
+          },
+          {
+            "excess_capacity_target": 3,
+            "on_call_target": 4,
+            "routes_required": 17,
+            "service_date": "2026-03-28",
+            "weekday_label": "Sat"
+          }
+        ]
+      }
+    },
     "command": "api.workpages.demo",
+    "dependencies": [
+      {
+        "artifact_kind": "planning.route_slot_requirements.workbook",
+        "artifact_version_id": null,
+        "dependency_key": "route_slot_requirements",
+        "impact_class": "hard",
+        "source_ref": "docs/workflows/weekly_schedule_planning/v1/examples/route_slot_requirements_actual_ops_lab_v3.yaml",
+        "state": "resolved"
+      },
+      {
+        "artifact_kind": "planning.approved_availability.workbook",
+        "artifact_version_id": null,
+        "dependency_key": "approved_availability",
+        "impact_class": "hard",
+        "source_ref": "docs/workflows/weekly_schedule_planning/v1/examples/approved_availability_actual_ops_lab_v1.yaml",
+        "state": "resolved"
+      },
+      {
+        "artifact_kind": "planning.driver_capabilities.workbook",
+        "artifact_version_id": null,
+        "dependency_key": "driver_capabilities",
+        "impact_class": "hard",
+        "source_ref": "docs/workflows/weekly_schedule_planning/v1/examples/driver_capabilities_actual_ops_lab_v1.yaml",
+        "state": "resolved"
+      },
+      {
+        "artifact_kind": "planning.actual_hours_snapshot.workbook",
+        "artifact_version_id": null,
+        "dependency_key": "actual_hours",
+        "impact_class": "hard",
+        "source_ref": "docs/workflows/weekly_schedule_planning/v1/examples/actual_hours_snapshot_actual_ops_lab_v1.yaml",
+        "state": "resolved"
+      },
+      {
+        "artifact_kind": "planning.driver_shift_preferences.workbook",
+        "artifact_version_id": null,
+        "dependency_key": "driver_preferences",
+        "impact_class": "soft",
+        "source_ref": null,
+        "state": "not_available"
+      }
+    ],
+    "draft_lineage": {
+      "current_artifact_version_id": null,
+      "latest_artifact_version_id": null,
+      "previous_artifact_version_id": null,
+      "recent_versions": []
+    },
     "freshness": {
       "generated_at": "<ts:1>",
       "source_kind": "repo_example_bundle",

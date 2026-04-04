@@ -40,6 +40,7 @@ class RoutePattern:
     suffix: str = ""
     param_name: str | None = None
     allow_slash: bool = False
+    required_substring: str | None = None
 
     def match(self, path: str) -> dict[str, str] | None:
         if self.exact_path is not None:
@@ -64,6 +65,8 @@ class RoutePattern:
                 return None
 
         if not value:
+            return None
+        if self.required_substring is not None and self.required_substring not in value:
             return None
         if not self.allow_slash and "/" in value:
             return None
@@ -112,12 +115,14 @@ def _param(
     param_name: str,
     suffix: str = "",
     allow_slash: bool = False,
+    required_substring: str | None = None,
 ) -> RoutePattern:
     return RoutePattern(
         prefix=prefix,
         suffix=suffix,
         param_name=param_name,
         allow_slash=allow_slash,
+        required_substring=required_substring,
     )
 
 

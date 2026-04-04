@@ -97,6 +97,8 @@ TIMESTAMP_FIELDS = {
     "occurred_at",
     "recorded_at",
     "generated_at",
+    "latest_event_recorded_at",
+    "workflow_run_updated_at",
 }
 
 EMBEDDED_ID_PATTERNS = {

@@ -67,9 +67,9 @@
     "command": "api.workflow_runs.workspace",
     "freshness": {
       "generated_at": "<ts:3>",
-      "latest_event_recorded_at": "2026-03-31T11:59:18.665250Z",
+      "latest_event_recorded_at": "<ts:4>",
       "latest_event_sequence": 5,
-      "workflow_run_updated_at": "2026-03-31T11:59:18.278023Z"
+      "workflow_run_updated_at": "<ts:5>"
     },
     "graph": {
       "edges": [],
@@ -159,14 +159,14 @@
               "type": "execution_profile_version"
             }
           ],
-          "occurred_at": "<ts:4>",
+          "occurred_at": "<ts:6>",
           "payload": {
             "activation_key": "snapshot:workspace-eod-action-open:dispatch-reporting-workpage",
             "logical_date": "2026-03-16",
             "partition_key": "SD-2026-03-16",
             "workflow_id": "dispatch_reporting.v1"
           },
-          "recorded_at": "<ts:5>",
+          "recorded_at": "<ts:7>",
           "schema_version": "1.0",
           "sequence_no": 1,
           "tenant_id": "tenant-a"
@@ -192,12 +192,12 @@
               "type": "workflow_run"
             }
           ],
-          "occurred_at": "<ts:6>",
+          "occurred_at": "<ts:8>",
           "payload": {
             "artifact_version_id": "<artifact_version_id:8>",
             "dataset_key": "reporting.eos_raw.workbook"
           },
-          "recorded_at": "<ts:7>",
+          "recorded_at": "<ts:9>",
           "schema_version": "1.0",
           "sequence_no": 2,
           "tenant_id": "tenant-a"
@@ -223,12 +223,12 @@
               "type": "workflow_run"
             }
           ],
-          "occurred_at": "<ts:8>",
+          "occurred_at": "<ts:10>",
           "payload": {
             "artifact_version_id": "<artifact_version_id:11>",
             "dataset_key": "reporting.actuals_normalized.workbook"
           },
-          "recorded_at": "<ts:9>",
+          "recorded_at": "<ts:11>",
           "schema_version": "1.0",
           "sequence_no": 3,
           "tenant_id": "tenant-a"
@@ -254,7 +254,7 @@
               "type": "workflow_run"
             }
           ],
-          "occurred_at": "<ts:10>",
+          "occurred_at": "<ts:12>",
           "payload": {
             "action": "review_eod_draft",
             "allowed_responses": [
@@ -268,7 +268,7 @@
             "approval_kind": "business_decision",
             "requested_from_role": "dispatch_supervisor"
           },
-          "recorded_at": "<ts:11>",
+          "recorded_at": "<ts:13>",
           "schema_version": "1.0",
           "sequence_no": 4,
           "tenant_id": "tenant-a"
@@ -294,12 +294,12 @@
               "type": "workflow_run"
             }
           ],
-          "occurred_at": "<ts:12>",
+          "occurred_at": "<ts:14>",
           "payload": {
             "artifact_version_id": "<artifact_version_id:3>",
             "dataset_key": "reporting.upd_draft.workbook"
           },
-          "recorded_at": "<ts:13>",
+          "recorded_at": "<ts:15>",
           "schema_version": "1.0",
           "sequence_no": 5,
           "tenant_id": "tenant-a"
@@ -368,13 +368,13 @@
     "workflow_run": {
       "activation_key": "snapshot:workspace-eod-action-open:dispatch-reporting-workpage",
       "active_issue_count": 0,
-      "created_at": "<ts:14>",
+      "created_at": "<ts:16>",
       "domain_id": "domain-x",
       "logical_date": "2026-03-16",
       "partition_key": "SD-2026-03-16",
       "state": "OPEN",
       "tenant_id": "tenant-a",
-      "updated_at": "<ts:15>",
+      "updated_at": "<ts:17>",
       "workflow_id": "dispatch_reporting.v1",
       "workflow_run_id": "<workflow_run_id:1>",
       "workflow_version": "v1"

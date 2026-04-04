@@ -134,6 +134,86 @@ def test_schedule_workflow_run_workpage_contract_returns_run_backed_projection(
         "Selected-day controls are local what-if inputs only and do not claim ownership of live dispatch truth.",
     ]
 
+    assert payload["artifact_state"] == {
+        "state_kind": "run_projection",
+        "artifact_kind": "planning.draft_weekly_schedule.workbook",
+        "editable": False,
+        "current_artifact_version_id": None,
+        "latest_artifact_version_id": None,
+        "accepted_artifact_version_id": None,
+    }
+    assert payload["dependencies"] == [
+        {
+            "dependency_key": "route_slot_requirements",
+            "artifact_kind": "planning.route_slot_requirements.workbook",
+            "artifact_version_id": seed["artifacts_by_kind"]["planning.route_slot_requirements.workbook"]["artifact_version_id"],
+            "impact_class": "hard",
+            "state": "resolved",
+            "source_ref": f"/api/v1/artifacts/{seed['artifacts_by_kind']['planning.route_slot_requirements.workbook']['artifact_version_id']}",
+        },
+        {
+            "dependency_key": "approved_availability",
+            "artifact_kind": "planning.approved_availability.workbook",
+            "artifact_version_id": seed["artifacts_by_kind"]["planning.approved_availability.workbook"]["artifact_version_id"],
+            "impact_class": "hard",
+            "state": "resolved",
+            "source_ref": f"/api/v1/artifacts/{seed['artifacts_by_kind']['planning.approved_availability.workbook']['artifact_version_id']}",
+        },
+        {
+            "dependency_key": "driver_capabilities",
+            "artifact_kind": "planning.driver_capabilities.workbook",
+            "artifact_version_id": seed["artifacts_by_kind"]["planning.driver_capabilities.workbook"]["artifact_version_id"],
+            "impact_class": "hard",
+            "state": "resolved",
+            "source_ref": f"/api/v1/artifacts/{seed['artifacts_by_kind']['planning.driver_capabilities.workbook']['artifact_version_id']}",
+        },
+        {
+            "dependency_key": "actual_hours",
+            "artifact_kind": "planning.actual_hours_snapshot.workbook",
+            "artifact_version_id": seed["artifacts_by_kind"]["planning.actual_hours_snapshot.workbook"]["artifact_version_id"],
+            "impact_class": "hard",
+            "state": "resolved",
+            "source_ref": f"/api/v1/artifacts/{seed['artifacts_by_kind']['planning.actual_hours_snapshot.workbook']['artifact_version_id']}",
+        },
+        {
+            "dependency_key": "driver_preferences",
+            "artifact_kind": "planning.driver_shift_preferences.workbook",
+            "artifact_version_id": None,
+            "impact_class": "soft",
+            "state": "not_available",
+            "source_ref": None,
+        },
+    ]
+    calculations = payload["calculations"]
+    assert calculations["top_bar"]["days"]
+    assert calculations["selected_day"]["service_date"] == "2026-03-24"
+    assert calculations["driver_metrics"] == []
+    assert calculations["checks"] == []
+    assert payload["draft_lineage"] == {
+        "current_artifact_version_id": None,
+        "latest_artifact_version_id": None,
+        "previous_artifact_version_id": None,
+        "recent_versions": [],
+    }
+    assert payload["accepted_series"] == {
+        "series_key": "weekly_schedule_planning.v1:dvc4:pitt-meadows",
+        "current_artifact_version_id": None,
+        "previous_artifact_version_id": None,
+        "next_artifact_version_id": None,
+        "entries": [],
+    }
+    assert payload["actions"] == [
+        {
+            "action_id": "workpage.schedule-v0.open_latest_draft",
+            "kind": "open_latest_draft",
+            "label": "Open schedule draft",
+            "state": "unavailable",
+            "workpage_kind": "schedule-v0",
+            "artifact_version_id": None,
+            "route": None,
+        }
+    ]
+
 
 def test_schedule_workflow_run_workpage_reads_are_stable_except_for_generated_at(
     tmp_path: Path,

@@ -73,9 +73,9 @@
     "command": "api.workflow_runs.workspace",
     "freshness": {
       "generated_at": "<ts:2>",
-      "latest_event_recorded_at": "2026-03-31T11:59:16.852184Z",
+      "latest_event_recorded_at": "<ts:3>",
       "latest_event_sequence": 7,
-      "workflow_run_updated_at": "2026-03-31T11:59:16.250277Z"
+      "workflow_run_updated_at": "<ts:4>"
     },
     "graph": {
       "edges": [],
@@ -165,14 +165,14 @@
               "type": "execution_profile_version"
             }
           ],
-          "occurred_at": "<ts:3>",
+          "occurred_at": "<ts:5>",
           "payload": {
             "activation_key": "snapshot:workspace-schedule-action-unavailable:weekly-schedule-workpage",
             "logical_date": "2026-03-22",
             "partition_key": "PW-2026-W13",
             "workflow_id": "weekly_schedule_planning.v1"
           },
-          "recorded_at": "<ts:4>",
+          "recorded_at": "<ts:6>",
           "schema_version": "1.0",
           "sequence_no": 1,
           "tenant_id": "tenant-a"
@@ -198,12 +198,12 @@
               "type": "workflow_run"
             }
           ],
-          "occurred_at": "<ts:5>",
+          "occurred_at": "<ts:7>",
           "payload": {
             "artifact_version_id": "<artifact_version_id:8>",
             "dataset_key": "planning.route_slot_requirements.workbook"
           },
-          "recorded_at": "<ts:6>",
+          "recorded_at": "<ts:8>",
           "schema_version": "1.0",
           "sequence_no": 2,
           "tenant_id": "tenant-a"
@@ -229,12 +229,12 @@
               "type": "workflow_run"
             }
           ],
-          "occurred_at": "<ts:7>",
+          "occurred_at": "<ts:9>",
           "payload": {
             "artifact_version_id": "<artifact_version_id:11>",
             "dataset_key": "planning.driver_capabilities.workbook"
           },
-          "recorded_at": "<ts:8>",
+          "recorded_at": "<ts:10>",
           "schema_version": "1.0",
           "sequence_no": 3,
           "tenant_id": "tenant-a"
@@ -260,12 +260,12 @@
               "type": "workflow_run"
             }
           ],
-          "occurred_at": "<ts:9>",
+          "occurred_at": "<ts:11>",
           "payload": {
             "artifact_version_id": "<artifact_version_id:14>",
             "dataset_key": "planning.approved_availability.workbook"
           },
-          "recorded_at": "<ts:10>",
+          "recorded_at": "<ts:12>",
           "schema_version": "1.0",
           "sequence_no": 4,
           "tenant_id": "tenant-a"
@@ -291,12 +291,12 @@
               "type": "workflow_run"
             }
           ],
-          "occurred_at": "<ts:11>",
+          "occurred_at": "<ts:13>",
           "payload": {
             "artifact_version_id": "<artifact_version_id:17>",
             "dataset_key": "planning.actual_hours_snapshot.workbook"
           },
-          "recorded_at": "<ts:12>",
+          "recorded_at": "<ts:14>",
           "schema_version": "1.0",
           "sequence_no": 5,
           "tenant_id": "tenant-a"
@@ -322,7 +322,7 @@
               "type": "task_run"
             }
           ],
-          "occurred_at": "<ts:13>",
+          "occurred_at": "<ts:15>",
           "payload": {
             "activation_key": "snapshot:workspace-schedule-action-unavailable:task:create",
             "generation": 0,
@@ -332,7 +332,7 @@
             "task_kind": "work_item",
             "task_run_id": "<task_run_id:3>"
           },
-          "recorded_at": "<ts:14>",
+          "recorded_at": "<ts:16>",
           "schema_version": "1.0",
           "sequence_no": 6,
           "tenant_id": "tenant-a"
@@ -363,7 +363,7 @@
               "type": "human_task"
             }
           ],
-          "occurred_at": "<ts:15>",
+          "occurred_at": "<ts:17>",
           "payload": {
             "candidate_roles": [
               "schedule_planner"
@@ -372,7 +372,7 @@
             "state": "OPEN",
             "task_kind": "work_item"
           },
-          "recorded_at": "<ts:16>",
+          "recorded_at": "<ts:18>",
           "schema_version": "1.0",
           "sequence_no": 7,
           "tenant_id": "tenant-a"
@@ -447,13 +447,13 @@
     "workflow_run": {
       "activation_key": "snapshot:workspace-schedule-action-unavailable:weekly-schedule-workpage",
       "active_issue_count": 0,
-      "created_at": "<ts:17>",
+      "created_at": "<ts:19>",
       "domain_id": "domain-x",
       "logical_date": "2026-03-22",
       "partition_key": "PW-2026-W13",
       "state": "OPEN",
       "tenant_id": "tenant-a",
-      "updated_at": "<ts:18>",
+      "updated_at": "<ts:20>",
       "workflow_id": "weekly_schedule_planning.v1",
       "workflow_run_id": "<workflow_run_id:1>",
       "workflow_version": "v1"

@@ -11,6 +11,7 @@ from onetruth.application.handlers.human_tasks import (
 )
 from onetruth.application.read_commands import (
     list_artifacts_for_subject_command,
+    list_artifacts_for_workflow_run_command,
     show_human_task_command,
 )
 from onetruth.application.services.task_actionability import (
@@ -26,6 +27,10 @@ from onetruth.application.services.weekly_stage04_openai_agent import (
 from onetruth.application.services.task_requirements import (
     build_human_task_requirement_index,
 )
+from onetruth.application.services.workpage_action_projection import (
+    build_workspace_workpage_projection,
+    project_human_task_workpage_actions,
+)
 from onetruth.integrations.openai import OpenAIConfigError, OpenAIResponsesError
 from onetruth.infrastructure.events.event_store import DuplicateIdempotencyKeyError
 from onetruth.infrastructure.repositories.human_tasks import get_human_task
@@ -37,9 +42,6 @@ from onetruth.api.errors import (
     ApiError,
     api_error_from_command,
     api_error_from_duplicate_idempotency,
-)
-from onetruth.api.routes.workflow_runs import (
-    project_human_task_workpage_actions_for_detail,
 )
 
 
@@ -146,10 +148,16 @@ def get_human_task_endpoint(
     _ensure_human_task_in_scope(connection, context=context, human_task_id=human_task_id)
     try:
         human_task = show_human_task_command(connection, human_task_id)
-        workpage_actions = project_human_task_workpage_actions_for_detail(
-            connection,
-            context=context,
+        workflow_run_id = str(human_task.get("workflow_run_id") or "")
+        workflow_run = scoped_workflow_run(connection, context, workflow_run_id)
+        artifact_versions = list_artifacts_for_workflow_run_command(connection, workflow_run_id)
+        workpage_actions = project_human_task_workpage_actions(
             task=human_task,
+            workflow_run=workflow_run,
+            workpage_projection=build_workspace_workpage_projection(
+                workflow_run=workflow_run,
+                artifact_versions=artifact_versions,
+            ),
         )
     except CommandError as exc:
         raise api_error_from_command(exc) from exc

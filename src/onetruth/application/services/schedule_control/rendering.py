@@ -3,6 +3,10 @@ from __future__ import annotations
 import hashlib
 from typing import Any
 
+from onetruth.application.services.workpage_descriptors import (
+    build_schedule_accepted_series_key,
+)
+
 from .bundle_builder import (
     DriverServiceDayState,
     WeeklyScheduleControlBundle,
@@ -309,6 +313,14 @@ def render_stage04_draft_weekly_schedule_workbook(
         )
 
     return {
+        "accepted_series_key": build_schedule_accepted_series_key(
+            station_code=_first_non_empty_value(
+                item.station_code for item in bundle.route_slots
+            ),
+            service_area=_first_non_empty_value(
+                item.service_area for item in bundle.route_slots
+            ),
+        ),
         "columns": columns,
         "rows": rows,
         "reserve_rows": [_reserve_output_row(row) for row in reserve_rows],
@@ -442,6 +454,14 @@ def _route_id_from_slot(route_slot_id: str) -> str:
     compact = route_slot_id.split("#", maxsplit=1)[0]
     token = compact.rsplit("-", maxsplit=1)[-1]
     return token.upper()
+
+
+def _first_non_empty_value(values: Any) -> str:
+    for value in values:
+        text = str(value or "").strip()
+        if text:
+            return text
+    return ""
 
 
 def _reserve_output_row(row: dict[str, Any]) -> dict[str, Any]:

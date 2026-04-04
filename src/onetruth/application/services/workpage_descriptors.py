@@ -1,0 +1,315 @@
+from __future__ import annotations
+
+from dataclasses import dataclass
+import re
+from typing import Callable
+
+
+SCHEDULE_WORKPAGE_KIND = "schedule-v0"
+EOD_WORKPAGE_KIND = "eod-v0"
+ROUTE_DEMAND_WORKPAGE_KIND = "route-demand-v0"
+DRIVER_PREFERENCES_WORKPAGE_KIND = "driver-preferences-v0"
+
+SCHEDULE_DEMO_WORKPAGE_ID = SCHEDULE_WORKPAGE_KIND
+EOD_DEMO_WORKPAGE_ID = EOD_WORKPAGE_KIND
+
+WEEKLY_SCHEDULE_WORKFLOW_ID = "weekly_schedule_planning.v1"
+DISPATCH_REPORTING_WORKFLOW_ID = "dispatch_reporting.v1"
+SCHEDULE_WORKFLOW_ID = WEEKLY_SCHEDULE_WORKFLOW_ID
+
+SCHEDULE_DRAFT_ARTIFACT_KIND = "planning.draft_weekly_schedule.workbook"
+SCHEDULE_PUBLISHED_ARTIFACT_KIND = "planning.published_weekly_schedule.workbook"
+EOD_DRAFT_ARTIFACT_KIND = "reporting.upd_draft.workbook"
+ROUTE_DEMAND_ARTIFACT_KIND = "planning.route_slot_requirements.workbook"
+DRIVER_PREFERENCES_ARTIFACT_KIND = "planning.driver_shift_preferences.workbook"
+
+
+ArtifactRouteBuilder = Callable[[str, str], str]
+DraftCreatePathBuilder = Callable[[str], str]
+
+_NON_ALNUM = re.compile(r"[^a-z0-9]+")
+
+
+@dataclass(frozen=True)
+class WorkpageDescriptor:
+    kind: str
+    workflow_id: str
+    demo_enabled: bool
+    run_enabled: bool
+    artifact_enabled: bool
+    submit_enabled: bool
+    artifact_kinds: frozenset[str]
+    editable_artifact_kinds: frozenset[str]
+    frontend_artifact_route_builder: ArtifactRouteBuilder
+    backend_artifact_route_builder: ArtifactRouteBuilder
+    backend_artifact_submit_path_builder: ArtifactRouteBuilder | None
+    draft_create_path_builder: DraftCreatePathBuilder | None
+    open_action_id: str | None
+    open_action_label: str | None
+    create_action_id: str | None
+    create_action_label: str | None
+    submit_action_id: str | None
+    submit_action_label: str | None
+    create_relation_kind: str | None
+    submit_relation_kind: str | None
+
+    def supports_workflow(self, workflow_id: str) -> bool:
+        return workflow_id == self.workflow_id
+
+    def supports_artifact_kind(self, artifact_kind: str) -> bool:
+        return artifact_kind in self.artifact_kinds
+
+    def supports_editable_artifact_kind(self, artifact_kind: str) -> bool:
+        return artifact_kind in self.editable_artifact_kinds
+
+
+def canonical_schedule_artifact_route(*, workflow_run_id: str, artifact_version_id: str) -> str:
+    return (
+        f"/runs/{workflow_run_id}/workpages/"
+        f"{SCHEDULE_WORKPAGE_KIND}/artifacts/{artifact_version_id}"
+    )
+
+
+def canonical_eod_artifact_route(*, workflow_run_id: str, artifact_version_id: str) -> str:
+    return f"/runs/{workflow_run_id}/workpages/{EOD_WORKPAGE_KIND}/artifacts/{artifact_version_id}"
+
+
+def canonical_schedule_artifact_path(*, workflow_run_id: str, artifact_version_id: str) -> str:
+    return (
+        f"/api/v1/workpages/workflow-runs/{workflow_run_id}/"
+        f"{SCHEDULE_WORKPAGE_KIND}/artifacts/{artifact_version_id}"
+    )
+
+
+def canonical_eod_artifact_path(*, workflow_run_id: str, artifact_version_id: str) -> str:
+    return (
+        f"/api/v1/workpages/workflow-runs/{workflow_run_id}/"
+        f"{EOD_WORKPAGE_KIND}/artifacts/{artifact_version_id}"
+    )
+
+
+def canonical_schedule_artifact_submit_path(
+    *,
+    workflow_run_id: str,
+    artifact_version_id: str,
+) -> str:
+    return (
+        f"/api/v1/workpages/workflow-runs/{workflow_run_id}/"
+        f"{SCHEDULE_WORKPAGE_KIND}/artifacts/{artifact_version_id}/submit"
+    )
+
+
+def canonical_eod_artifact_submit_path(
+    *,
+    workflow_run_id: str,
+    artifact_version_id: str,
+) -> str:
+    return (
+        f"/api/v1/workpages/workflow-runs/{workflow_run_id}/"
+        f"{EOD_WORKPAGE_KIND}/artifacts/{artifact_version_id}/submit"
+    )
+
+
+def canonical_eod_draft_create_path(*, workflow_run_id: str) -> str:
+    return f"/api/v1/workpages/workflow-runs/{workflow_run_id}/{EOD_WORKPAGE_KIND}/drafts"
+
+
+def build_schedule_accepted_series_key(
+    *,
+    station_code: str,
+    service_area: str,
+) -> str:
+    return (
+        f"{WEEKLY_SCHEDULE_WORKFLOW_ID}:"
+        f"{_normalize_scope_token(station_code)}:"
+        f"{_normalize_scope_token(service_area)}"
+    )
+
+
+def get_workpage_descriptor(workpage_kind: str) -> WorkpageDescriptor | None:
+    return _DESCRIPTORS_BY_KIND.get(workpage_kind)
+
+
+def require_workpage_descriptor(workpage_kind: str) -> WorkpageDescriptor:
+    descriptor = get_workpage_descriptor(workpage_kind)
+    if descriptor is None:
+        raise KeyError(f"unknown workpage kind: {workpage_kind}")
+    return descriptor
+
+
+def descriptor_for_public_demo(workpage_kind: str) -> WorkpageDescriptor | None:
+    descriptor = get_workpage_descriptor(workpage_kind)
+    if descriptor is None or not descriptor.demo_enabled:
+        return None
+    return descriptor
+
+
+def descriptor_for_public_run(
+    *,
+    workpage_kind: str,
+    workflow_id: str,
+) -> WorkpageDescriptor | None:
+    descriptor = get_workpage_descriptor(workpage_kind)
+    if descriptor is None or not descriptor.run_enabled or not descriptor.supports_workflow(workflow_id):
+        return None
+    return descriptor
+
+
+def descriptor_for_public_artifact(
+    *,
+    workflow_id: str,
+    artifact_kind: str,
+) -> WorkpageDescriptor | None:
+    for descriptor in _DESCRIPTORS:
+        if not descriptor.artifact_enabled:
+            continue
+        if descriptor.supports_workflow(workflow_id) and descriptor.supports_artifact_kind(artifact_kind):
+            return descriptor
+    return None
+
+
+def public_demo_workpage_ids() -> tuple[str, ...]:
+    return tuple(descriptor.kind for descriptor in _DESCRIPTORS if descriptor.demo_enabled)
+
+
+def _normalize_scope_token(value: object) -> str:
+    text = str(value or "").strip().lower()
+    if not text:
+        return "unknown"
+    normalized = _NON_ALNUM.sub("-", text).strip("-")
+    return normalized or "unknown"
+
+
+_DESCRIPTORS: tuple[WorkpageDescriptor, ...] = (
+    WorkpageDescriptor(
+        kind=SCHEDULE_WORKPAGE_KIND,
+        workflow_id=WEEKLY_SCHEDULE_WORKFLOW_ID,
+        demo_enabled=True,
+        run_enabled=True,
+        artifact_enabled=True,
+        submit_enabled=True,
+        artifact_kinds=frozenset(
+            {
+                SCHEDULE_DRAFT_ARTIFACT_KIND,
+                SCHEDULE_PUBLISHED_ARTIFACT_KIND,
+            }
+        ),
+        editable_artifact_kinds=frozenset({SCHEDULE_DRAFT_ARTIFACT_KIND}),
+        frontend_artifact_route_builder=lambda workflow_run_id, artifact_version_id: canonical_schedule_artifact_route(
+            workflow_run_id=workflow_run_id,
+            artifact_version_id=artifact_version_id,
+        ),
+        backend_artifact_route_builder=lambda workflow_run_id, artifact_version_id: canonical_schedule_artifact_path(
+            workflow_run_id=workflow_run_id,
+            artifact_version_id=artifact_version_id,
+        ),
+        backend_artifact_submit_path_builder=lambda workflow_run_id, artifact_version_id: canonical_schedule_artifact_submit_path(
+            workflow_run_id=workflow_run_id,
+            artifact_version_id=artifact_version_id,
+        ),
+        draft_create_path_builder=None,
+        open_action_id="workpage.schedule-v0.open_latest_draft",
+        open_action_label="Open schedule draft",
+        create_action_id=None,
+        create_action_label=None,
+        submit_action_id="workpage.schedule-v0.save_draft",
+        submit_action_label="Save draft",
+        create_relation_kind=None,
+        submit_relation_kind="response",
+    ),
+    WorkpageDescriptor(
+        kind=EOD_WORKPAGE_KIND,
+        workflow_id=DISPATCH_REPORTING_WORKFLOW_ID,
+        demo_enabled=True,
+        run_enabled=True,
+        artifact_enabled=True,
+        submit_enabled=True,
+        artifact_kinds=frozenset({EOD_DRAFT_ARTIFACT_KIND}),
+        editable_artifact_kinds=frozenset({EOD_DRAFT_ARTIFACT_KIND}),
+        frontend_artifact_route_builder=lambda workflow_run_id, artifact_version_id: canonical_eod_artifact_route(
+            workflow_run_id=workflow_run_id,
+            artifact_version_id=artifact_version_id,
+        ),
+        backend_artifact_route_builder=lambda workflow_run_id, artifact_version_id: canonical_eod_artifact_path(
+            workflow_run_id=workflow_run_id,
+            artifact_version_id=artifact_version_id,
+        ),
+        backend_artifact_submit_path_builder=lambda workflow_run_id, artifact_version_id: canonical_eod_artifact_submit_path(
+            workflow_run_id=workflow_run_id,
+            artifact_version_id=artifact_version_id,
+        ),
+        draft_create_path_builder=lambda workflow_run_id: canonical_eod_draft_create_path(
+            workflow_run_id=workflow_run_id
+        ),
+        open_action_id="workpage.eod-v0.open_latest_draft",
+        open_action_label="Open EOD draft",
+        create_action_id="workpage.eod-v0.create_draft",
+        create_action_label="Create EOD draft",
+        submit_action_id="workpage.eod-v0.submit_draft",
+        submit_action_label="Submit draft",
+        create_relation_kind="draft",
+        submit_relation_kind="response",
+    ),
+    WorkpageDescriptor(
+        kind=ROUTE_DEMAND_WORKPAGE_KIND,
+        workflow_id=WEEKLY_SCHEDULE_WORKFLOW_ID,
+        demo_enabled=False,
+        run_enabled=False,
+        artifact_enabled=False,
+        submit_enabled=False,
+        artifact_kinds=frozenset({ROUTE_DEMAND_ARTIFACT_KIND}),
+        editable_artifact_kinds=frozenset({ROUTE_DEMAND_ARTIFACT_KIND}),
+        frontend_artifact_route_builder=lambda workflow_run_id, artifact_version_id: (
+            f"/runs/{workflow_run_id}/workpages/{ROUTE_DEMAND_WORKPAGE_KIND}/artifacts/{artifact_version_id}"
+        ),
+        backend_artifact_route_builder=lambda workflow_run_id, artifact_version_id: (
+            f"/api/v1/workpages/workflow-runs/{workflow_run_id}/"
+            f"{ROUTE_DEMAND_WORKPAGE_KIND}/artifacts/{artifact_version_id}"
+        ),
+        backend_artifact_submit_path_builder=lambda workflow_run_id, artifact_version_id: (
+            f"/api/v1/workpages/workflow-runs/{workflow_run_id}/"
+            f"{ROUTE_DEMAND_WORKPAGE_KIND}/artifacts/{artifact_version_id}/submit"
+        ),
+        draft_create_path_builder=None,
+        open_action_id="workpage.route-demand-v0.open_latest",
+        open_action_label="Open route demand",
+        create_action_id=None,
+        create_action_label=None,
+        submit_action_id="workpage.route-demand-v0.save",
+        submit_action_label="Save route demand",
+        create_relation_kind=None,
+        submit_relation_kind="response",
+    ),
+    WorkpageDescriptor(
+        kind=DRIVER_PREFERENCES_WORKPAGE_KIND,
+        workflow_id=WEEKLY_SCHEDULE_WORKFLOW_ID,
+        demo_enabled=False,
+        run_enabled=False,
+        artifact_enabled=False,
+        submit_enabled=False,
+        artifact_kinds=frozenset({DRIVER_PREFERENCES_ARTIFACT_KIND}),
+        editable_artifact_kinds=frozenset({DRIVER_PREFERENCES_ARTIFACT_KIND}),
+        frontend_artifact_route_builder=lambda workflow_run_id, artifact_version_id: (
+            f"/runs/{workflow_run_id}/workpages/{DRIVER_PREFERENCES_WORKPAGE_KIND}/artifacts/{artifact_version_id}"
+        ),
+        backend_artifact_route_builder=lambda workflow_run_id, artifact_version_id: (
+            f"/api/v1/workpages/workflow-runs/{workflow_run_id}/"
+            f"{DRIVER_PREFERENCES_WORKPAGE_KIND}/artifacts/{artifact_version_id}"
+        ),
+        backend_artifact_submit_path_builder=lambda workflow_run_id, artifact_version_id: (
+            f"/api/v1/workpages/workflow-runs/{workflow_run_id}/"
+            f"{DRIVER_PREFERENCES_WORKPAGE_KIND}/artifacts/{artifact_version_id}/submit"
+        ),
+        draft_create_path_builder=None,
+        open_action_id="workpage.driver-preferences-v0.open_latest",
+        open_action_label="Open driver preferences",
+        create_action_id=None,
+        create_action_label=None,
+        submit_action_id="workpage.driver-preferences-v0.save",
+        submit_action_label="Save driver preferences",
+        create_relation_kind=None,
+        submit_relation_kind="response",
+    ),
+)
+
+_DESCRIPTORS_BY_KIND = {descriptor.kind: descriptor for descriptor in _DESCRIPTORS}

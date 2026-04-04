@@ -6,12 +6,150 @@
     "workpage_id": "schedule-v0"
   },
   "workpage_state": {
+    "accepted_series": {
+      "current_artifact_version_id": null,
+      "entries": [],
+      "next_artifact_version_id": null,
+      "previous_artifact_version_id": null,
+      "series_key": "weekly_schedule_planning.v1:dvc4:pitt-meadows"
+    },
+    "actions": [
+      {
+        "action_id": "workpage.schedule-v0.open_latest_draft",
+        "artifact_version_id": null,
+        "kind": "open_latest_draft",
+        "label": "Open schedule draft",
+        "route": null,
+        "state": "unavailable",
+        "workpage_kind": "schedule-v0"
+      }
+    ],
+    "artifact_state": {
+      "accepted_artifact_version_id": null,
+      "artifact_kind": "planning.draft_weekly_schedule.workbook",
+      "current_artifact_version_id": null,
+      "editable": false,
+      "latest_artifact_version_id": null,
+      "state_kind": "run_projection"
+    },
+    "calculations": {
+      "checks": [],
+      "driver_metrics": [],
+      "selected_day": {
+        "drivers_available": 24,
+        "open_questions": "Confirm late requests and final on-call posture before day-of handoff.",
+        "projected_on_call_needed": 4,
+        "routes_required": 20,
+        "service_date": "2026-03-24"
+      },
+      "top_bar": {
+        "days": [
+          {
+            "excess_capacity_target": 3,
+            "on_call_target": 4,
+            "routes_required": 16,
+            "service_date": "2026-03-22",
+            "weekday_label": "Sun"
+          },
+          {
+            "excess_capacity_target": 3,
+            "on_call_target": 4,
+            "routes_required": 23,
+            "service_date": "2026-03-23",
+            "weekday_label": "Mon"
+          },
+          {
+            "excess_capacity_target": 3,
+            "on_call_target": 4,
+            "routes_required": 20,
+            "service_date": "2026-03-24",
+            "weekday_label": "Tue"
+          },
+          {
+            "excess_capacity_target": 3,
+            "on_call_target": 4,
+            "routes_required": 19,
+            "service_date": "2026-03-25",
+            "weekday_label": "Wed"
+          },
+          {
+            "excess_capacity_target": 3,
+            "on_call_target": 4,
+            "routes_required": 21,
+            "service_date": "2026-03-26",
+            "weekday_label": "Thu"
+          },
+          {
+            "excess_capacity_target": 3,
+            "on_call_target": 4,
+            "routes_required": 18,
+            "service_date": "2026-03-27",
+            "weekday_label": "Fri"
+          },
+          {
+            "excess_capacity_target": 3,
+            "on_call_target": 4,
+            "routes_required": 17,
+            "service_date": "2026-03-28",
+            "weekday_label": "Sat"
+          }
+        ]
+      }
+    },
     "command": "api.workpages.workflow_run",
+    "dependencies": [
+      {
+        "artifact_kind": "planning.route_slot_requirements.workbook",
+        "artifact_version_id": "<artifact_version_id:2>",
+        "dependency_key": "route_slot_requirements",
+        "impact_class": "hard",
+        "source_ref": "/api/v1/artifacts/<artifact_version_id:2>",
+        "state": "resolved"
+      },
+      {
+        "artifact_kind": "planning.approved_availability.workbook",
+        "artifact_version_id": "<artifact_version_id:3>",
+        "dependency_key": "approved_availability",
+        "impact_class": "hard",
+        "source_ref": "/api/v1/artifacts/<artifact_version_id:3>",
+        "state": "resolved"
+      },
+      {
+        "artifact_kind": "planning.driver_capabilities.workbook",
+        "artifact_version_id": "<artifact_version_id:4>",
+        "dependency_key": "driver_capabilities",
+        "impact_class": "hard",
+        "source_ref": "/api/v1/artifacts/<artifact_version_id:4>",
+        "state": "resolved"
+      },
+      {
+        "artifact_kind": "planning.actual_hours_snapshot.workbook",
+        "artifact_version_id": "<artifact_version_id:5>",
+        "dependency_key": "actual_hours",
+        "impact_class": "hard",
+        "source_ref": "/api/v1/artifacts/<artifact_version_id:5>",
+        "state": "resolved"
+      },
+      {
+        "artifact_kind": "planning.driver_shift_preferences.workbook",
+        "artifact_version_id": null,
+        "dependency_key": "driver_preferences",
+        "impact_class": "soft",
+        "source_ref": null,
+        "state": "not_available"
+      }
+    ],
+    "draft_lineage": {
+      "current_artifact_version_id": null,
+      "latest_artifact_version_id": null,
+      "previous_artifact_version_id": null,
+      "recent_versions": []
+    },
     "draft_resolution": null,
     "freshness": {
       "generated_at": "<ts:1>",
       "source_kind": "workflow_run_projection",
-      "source_version": "<bundle_id:2>"
+      "source_version": "<bundle_id:6>"
     },
     "run_context": {
       "activation_key": "snapshot:workpage-schedule-v0-run:weekly-schedule-workpage",
@@ -34,10 +172,10 @@
         "planning.input_bundle.doc"
       ],
       "source_refs": [
+        "/api/v1/artifacts/<artifact_version_id:2>",
         "/api/v1/artifacts/<artifact_version_id:3>",
         "/api/v1/artifacts/<artifact_version_id:4>",
-        "/api/v1/artifacts/<artifact_version_id:5>",
-        "/api/v1/artifacts/<artifact_version_id:6>"
+        "/api/v1/artifacts/<artifact_version_id:5>"
       ]
     },
     "status": "ok",

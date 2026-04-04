@@ -218,3 +218,62 @@ def list_artifact_versions_for_workflow_run(
         item["metadata_json"] = json.loads(item["metadata_json"])
         items.append(item)
     return items
+
+
+def list_artifact_versions_for_scope_and_kind(
+    connection: sqlite3.Connection,
+    *,
+    tenant_id: str,
+    domain_id: str,
+    artifact_kind: str,
+    workflow_id: str | None = None,
+) -> list[dict[str, Any]]:
+    query = """
+        SELECT
+            av.artifact_version_id,
+            av.workflow_run_id,
+            av.tenant_id,
+            av.domain_id,
+            av.dataset_key,
+            av.partition_kind,
+            av.partition_key,
+            av.task_run_id,
+            av.artifact_kind,
+            av.artifact_role,
+            av.media_type,
+            av.storage_uri,
+            av.content_digest,
+            av.byte_size,
+            av.metadata_json,
+            av.parent_artifact_version_id,
+            av.supersedes_artifact_version_id,
+            av.lineage_note,
+            av.created_at,
+            wr.workflow_id AS workflow_id,
+            wr.partition_key AS workflow_partition_key,
+            wr.logical_date AS workflow_logical_date,
+            wr.state AS workflow_state
+        FROM artifact_versions av
+        JOIN workflow_runs wr
+          ON wr.workflow_run_id = av.workflow_run_id
+        WHERE av.tenant_id = ?
+          AND av.domain_id = ?
+          AND av.artifact_kind = ?
+    """
+    params: list[Any] = [tenant_id, domain_id, artifact_kind]
+    if workflow_id is not None:
+        query += " AND wr.workflow_id = ?"
+        params.append(workflow_id)
+    query += """
+        ORDER BY
+            wr.logical_date ASC,
+            av.created_at ASC,
+            av.artifact_version_id ASC
+    """
+    rows = connection.execute(query, params).fetchall()
+    items: list[dict[str, Any]] = []
+    for row in rows:
+        item = dict(row)
+        item["metadata_json"] = json.loads(item["metadata_json"])
+        items.append(item)
+    return items

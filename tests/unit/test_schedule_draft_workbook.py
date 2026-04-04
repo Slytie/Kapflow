@@ -97,6 +97,23 @@ def test_materialize_stage04_draft_weekly_schedule_workbook_updates_only_editabl
     assert updated["iteration_deltas"] == projection["iteration_deltas"]
 
 
+def test_materialize_stage04_draft_weekly_schedule_workbook_preserves_extra_top_level_fields() -> None:
+    base_payload = json.loads(_base_workbook_bytes().decode("utf-8"))
+    base_payload["accepted_series_key"] = "weekly_schedule_planning.v1:dvc4:pitt-meadows"
+    base_bytes = json.dumps(base_payload, indent=2, sort_keys=True).encode("utf-8")
+    projection = project_stage04_draft_weekly_schedule_workbook(base_bytes)
+
+    updated_bytes = materialize_stage04_draft_weekly_schedule_workbook(
+        base_bytes,
+        rows=projection["rows"],
+        reserve_rows=projection["reserve_rows"],
+    )
+
+    assert json.loads(updated_bytes.decode("utf-8"))["accepted_series_key"] == (
+        "weekly_schedule_planning.v1:dvc4:pitt-meadows"
+    )
+
+
 def test_materialize_stage04_draft_weekly_schedule_workbook_rejects_row_count_changes() -> None:
     projection = project_stage04_draft_weekly_schedule_workbook(_base_workbook_bytes())
 

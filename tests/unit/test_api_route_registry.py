@@ -45,6 +45,7 @@ def test_route_registry_preserves_exact_global_route_order() -> None:
         "workflow_runs.artifacts.upload",
         "workflow_runs.timeline",
         "workflow_runs.workspace",
+        "workflow_runs.prepare_live_dispatch_day",
         "workflow_runs.detail",
         "pointers.list",
         "templates.list",
@@ -59,6 +60,8 @@ def test_route_registry_preserves_exact_global_route_order() -> None:
         "timeline_events.list",
         "board.schedule_planning",
         "stories.logistics_three_workflow",
+        "workpages.workflow_run.artifact.detail",
+        "workpages.workflow_run.artifact.submit",
         "workpages.workflow_run.detail",
         "workpages.workflow_run.eod_drafts.create",
         "workpages.eod_drafts.create",
@@ -96,6 +99,26 @@ def test_route_registry_matches_representative_exact_and_parameterized_routes() 
     assert workflow_run_workpage_match.route.name == "workpages.workflow_run.detail"
     assert workflow_run_workpage_match.params == {
         "workflow_run_workpage": "wr-001/schedule-v0"
+    }
+
+    workflow_run_artifact_match = match_route(
+        "GET",
+        "/api/v1/workpages/workflow-runs/wr-001/schedule-v0/artifacts/av-001",
+    )
+    assert workflow_run_artifact_match is not None
+    assert workflow_run_artifact_match.route.name == "workpages.workflow_run.artifact.detail"
+    assert workflow_run_artifact_match.params == {
+        "workflow_run_artifact": "wr-001/schedule-v0/artifacts/av-001"
+    }
+
+    workflow_run_artifact_submit_match = match_route(
+        "POST",
+        "/api/v1/workpages/workflow-runs/wr-001/schedule-v0/artifacts/av-001/submit",
+    )
+    assert workflow_run_artifact_submit_match is not None
+    assert workflow_run_artifact_submit_match.route.name == "workpages.workflow_run.artifact.submit"
+    assert workflow_run_artifact_submit_match.params == {
+        "workflow_run_artifact_submit": "wr-001/schedule-v0/artifacts/av-001"
     }
 
     workflow_run_eod_draft_match = match_route(
@@ -189,6 +212,19 @@ def test_route_registry_exposes_representative_metadata() -> None:
     assert routes_by_name["workflow_runs.workspace"].body_policy == NO_BODY
 
     assert routes_by_name["artifacts.ingest"].body_policy == JSON_ARTIFACT_BODY
+
+    assert routes_by_name["workpages.workflow_run.artifact.detail"].needs_page is False
+    assert routes_by_name["workpages.workflow_run.artifact.detail"].body_policy == NO_BODY
+    assert routes_by_name["workpages.workflow_run.artifact.detail"].requires_request_context is True
+    assert routes_by_name["workpages.workflow_run.artifact.detail"].needs_db_connection is True
+
+    assert routes_by_name["workpages.workflow_run.artifact.submit"].needs_page is False
+    assert routes_by_name["workpages.workflow_run.artifact.submit"].body_policy == JSON_COMMAND_BODY
+    assert (
+        routes_by_name["workpages.workflow_run.artifact.submit"].requires_request_context
+        is True
+    )
+    assert routes_by_name["workpages.workflow_run.artifact.submit"].needs_db_connection is True
 
     assert routes_by_name["workpages.workflow_run.detail"].needs_page is False
     assert routes_by_name["workpages.workflow_run.detail"].body_policy == NO_BODY

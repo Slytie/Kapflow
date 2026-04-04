@@ -4,6 +4,7 @@ from collections import Counter
 from datetime import date
 from functools import lru_cache
 from pathlib import Path
+import sqlite3
 from typing import Any, Mapping
 
 import yaml
@@ -22,7 +23,25 @@ from onetruth.application.services.schedule_control.draft_workbook import (
 from onetruth.application.services.schedule_control.stage04_input_registry import (
     resolve_weekly_stage04_input_artifacts,
 )
+from onetruth.application.services.workpage_descriptors import (
+    DRIVER_PREFERENCES_ARTIFACT_KIND,
+    EOD_DEMO_WORKPAGE_ID,
+    EOD_DRAFT_ARTIFACT_KIND,
+    SCHEDULE_DEMO_WORKPAGE_ID,
+    SCHEDULE_PUBLISHED_ARTIFACT_KIND,
+    WEEKLY_SCHEDULE_WORKFLOW_ID,
+    build_schedule_accepted_series_key,
+    canonical_eod_artifact_route as descriptor_eod_artifact_route,
+    canonical_eod_draft_create_path as descriptor_eod_draft_create_path,
+    canonical_schedule_artifact_route as descriptor_schedule_artifact_route,
+    canonical_schedule_artifact_submit_path,
+)
 from onetruth.infrastructure.events.event_store import utc_now_iso
+from onetruth.infrastructure.repositories.artifact_versions import (
+    get_artifact_version,
+    get_latest_artifact_version_in_chain,
+    list_artifact_versions_for_scope_and_kind,
+)
 
 
 REPO_ROOT = Path(__file__).resolve().parents[4]
@@ -30,9 +49,7 @@ _ACTUAL_OPS_SOURCE_MATERIAL_PATH = (
     REPO_ROOT / "fixtures" / "logistics" / "weekly_stage04_actual_ops_lab_source_material_v3.yaml"
 )
 
-SCHEDULE_DEMO_WORKPAGE_ID = "schedule-v0"
-EOD_DEMO_WORKPAGE_ID = "eod-v0"
-_SCHEDULE_WORKFLOW_ID = "weekly_schedule_planning.v1"
+_SCHEDULE_WORKFLOW_ID = WEEKLY_SCHEDULE_WORKFLOW_ID
 _EOD_WORKFLOW_ID = "dispatch_reporting.v1"
 _PREVIEW_SERVICE_DATE = "2026-03-24"
 _PLANNER_NOTE = (
@@ -66,7 +83,7 @@ _SCHEDULE_DRAFT_DOC_DATASET_KEY = "planning.draft_weekly_schedule.doc"
 _SCHEDULE_VALIDATION_SUMMARY_DATASET_KEY = "planning.validation_summary.doc"
 _EOD_RAW_DATASET_KEY = "reporting.eos_raw.workbook"
 _EOD_NORMALIZED_DATASET_KEY = "reporting.actuals_normalized.workbook"
-_EOD_DRAFT_DATASET_KEY = "reporting.upd_draft.workbook"
+_EOD_DRAFT_DATASET_KEY = EOD_DRAFT_ARTIFACT_KIND
 
 _SOURCE_DATASETS: tuple[tuple[str, str], ...] = (
     ("route_slot_requirements", _ROUTE_SLOT_DATASET_KEY),
@@ -154,15 +171,21 @@ def build_demo_workpage_contract(workpage_id: str) -> dict[str, Any]:
 
 
 def canonical_schedule_artifact_route(*, workflow_run_id: str, artifact_version_id: str) -> str:
-    return f"/runs/{workflow_run_id}/workpages/{SCHEDULE_DEMO_WORKPAGE_ID}/artifacts/{artifact_version_id}"
+    return descriptor_schedule_artifact_route(
+        workflow_run_id=workflow_run_id,
+        artifact_version_id=artifact_version_id,
+    )
 
 
 def canonical_eod_artifact_route(*, workflow_run_id: str, artifact_version_id: str) -> str:
-    return f"/runs/{workflow_run_id}/workpages/{EOD_DEMO_WORKPAGE_ID}/artifacts/{artifact_version_id}"
+    return descriptor_eod_artifact_route(
+        workflow_run_id=workflow_run_id,
+        artifact_version_id=artifact_version_id,
+    )
 
 
 def canonical_eod_draft_create_path(*, workflow_run_id: str) -> str:
-    return f"/api/v1/workpages/workflow-runs/{workflow_run_id}/{EOD_DEMO_WORKPAGE_ID}/drafts"
+    return descriptor_eod_draft_create_path(workflow_run_id=workflow_run_id)
 
 
 def latest_schedule_draft_artifact(
@@ -181,6 +204,7 @@ def latest_compatible_eod_draft_artifact(
 
 
 def build_schedule_workflow_run_workpage_contract(
+    connection: sqlite3.Connection,
     *,
     workflow_run: Mapping[str, Any],
     artifacts: list[dict[str, Any]],
@@ -236,7 +260,15 @@ def build_schedule_workflow_run_workpage_contract(
             dataset_key=_INPUT_BUNDLE_DATASET_KEY,
         ),
     )
-    return {
+    accepted_series = _build_schedule_accepted_series(
+        connection,
+        workflow_run=workflow_run,
+        accepted_series_key=_bundle_schedule_accepted_series_key(bundle),
+        current_partition_key=_require_text(workflow_run.get("partition_key")),
+        current_workflow_run_id=None,
+        current_artifact_version_id=None,
+    )
+    contract = {
         **_build_schedule_workpage_contract(
             bundle=bundle,
             source_examples={},
@@ -252,6 +284,32 @@ def build_schedule_workflow_run_workpage_contract(
         "run_context": _workflow_run_context(workflow_run),
         "draft_resolution": None,
     }
+    latest_schedule_draft = latest_schedule_draft_artifact(artifacts)
+    contract.update(
+        {
+            "artifact_state": _schedule_run_artifact_state(
+                latest_schedule_draft=latest_schedule_draft,
+                accepted_artifact_version_id=_accepted_series_anchor_artifact_id(accepted_series),
+            ),
+            "dependencies": _schedule_dependency_rows_for_run(
+                resolved_inputs=resolved_inputs,
+                source_refs=source_refs,
+            ),
+            "calculations": _schedule_calculations(
+                day_demand_rows=_day_demand_rows(bundle),
+                selected_day_row=_selected_day_preview_row(bundle),
+            ),
+            "draft_lineage": _empty_draft_lineage(),
+            "accepted_series": accepted_series,
+            "actions": [
+                _schedule_open_latest_draft_contract_action(
+                    workflow_run_id=workflow_run_id,
+                    latest_schedule_draft=latest_schedule_draft,
+                )
+            ],
+        }
+    )
+    return contract
 
 
 def build_schedule_demo_workpage_contract() -> dict[str, Any]:
@@ -259,7 +317,7 @@ def build_schedule_demo_workpage_contract() -> dict[str, Any]:
     source_examples = _source_examples(source_material)
     bundle = _schedule_demo_bundle()
 
-    return _build_schedule_workpage_contract(
+    contract = _build_schedule_workpage_contract(
         bundle=bundle,
         source_examples=source_examples,
         source_mode="demo",
@@ -277,6 +335,20 @@ def build_schedule_demo_workpage_contract() -> dict[str, Any]:
             "Selected-day controls are local what-if inputs only and do not claim ownership of live dispatch truth.",
         ],
     )
+    contract.update(
+        {
+            "artifact_state": _schedule_demo_artifact_state(),
+            "dependencies": _schedule_dependency_rows_for_demo(source_examples=source_examples),
+            "calculations": _schedule_calculations(
+                day_demand_rows=_day_demand_rows(bundle),
+                selected_day_row=_selected_day_preview_row(bundle),
+            ),
+            "draft_lineage": _empty_draft_lineage(),
+            "accepted_series": _empty_accepted_series(),
+            "actions": [],
+        }
+    )
+    return contract
 
 
 def _build_schedule_workpage_contract(
@@ -308,6 +380,485 @@ def _build_schedule_workpage_contract(
             "source_version": freshness_source_version,
         },
     }
+
+
+def _schedule_demo_artifact_state() -> dict[str, Any]:
+    return {
+        "state_kind": "demo_projection",
+        "artifact_kind": SCHEDULE_DRAFT_DATASET_KEY,
+        "editable": False,
+        "current_artifact_version_id": None,
+        "latest_artifact_version_id": None,
+        "accepted_artifact_version_id": None,
+    }
+
+
+def _schedule_run_artifact_state(
+    *,
+    latest_schedule_draft: Mapping[str, Any] | None,
+    accepted_artifact_version_id: str | None,
+) -> dict[str, Any]:
+    latest_artifact_version_id = (
+        _require_text_or_default(
+            latest_schedule_draft.get("artifact_version_id"),
+            default="",
+        )
+        if latest_schedule_draft is not None
+        else ""
+    )
+    return {
+        "state_kind": "run_projection",
+        "artifact_kind": SCHEDULE_DRAFT_DATASET_KEY,
+        "editable": False,
+        "current_artifact_version_id": None,
+        "latest_artifact_version_id": latest_artifact_version_id or None,
+        "accepted_artifact_version_id": accepted_artifact_version_id,
+    }
+
+
+def _schedule_artifact_state(
+    *,
+    artifact_kind: str,
+    artifact_version_id: str,
+    latest_in_chain_artifact_version_id: str,
+    accepted_artifact_version_id: str | None,
+    editable: bool,
+) -> dict[str, Any]:
+    return {
+        "state_kind": "draft" if editable else "accepted",
+        "artifact_kind": artifact_kind,
+        "editable": editable,
+        "current_artifact_version_id": artifact_version_id,
+        "latest_artifact_version_id": latest_in_chain_artifact_version_id,
+        "accepted_artifact_version_id": accepted_artifact_version_id,
+    }
+
+
+def _schedule_dependency_rows_for_demo(
+    *,
+    source_examples: Mapping[str, str],
+) -> list[dict[str, Any]]:
+    refs_by_key = {
+        "route_slot_requirements": source_examples.get("route_slot_requirements"),
+        "approved_availability": source_examples.get("approved_availability"),
+        "driver_capabilities": source_examples.get("driver_capabilities"),
+        "actual_hours": source_examples.get("actual_hours_snapshot"),
+        "driver_preferences": None,
+    }
+    return _schedule_dependency_rows(
+        artifacts_by_key={},
+        refs_by_key=refs_by_key,
+    )
+
+
+def _schedule_dependency_rows_for_run(
+    *,
+    resolved_inputs: Mapping[str, Mapping[str, Any] | None],
+    source_refs: list[str],
+) -> list[dict[str, Any]]:
+    refs_by_key = {
+        "route_slot_requirements": _artifact_source_ref(resolved_inputs.get("route_slot_requirements")),
+        "approved_availability": _artifact_source_ref(resolved_inputs.get("approved_availability")),
+        "driver_capabilities": _artifact_source_ref(resolved_inputs.get("driver_capabilities")),
+        "actual_hours": _artifact_source_ref(resolved_inputs.get("actual_hours")),
+        "driver_preferences": None,
+    }
+    if not refs_by_key["route_slot_requirements"] and source_refs:
+        refs_by_key["route_slot_requirements"] = source_refs[0]
+    return _schedule_dependency_rows(
+        artifacts_by_key={
+            "route_slot_requirements": resolved_inputs.get("route_slot_requirements"),
+            "approved_availability": resolved_inputs.get("approved_availability"),
+            "driver_capabilities": resolved_inputs.get("driver_capabilities"),
+            "actual_hours": resolved_inputs.get("actual_hours"),
+            "driver_preferences": None,
+        },
+        refs_by_key=refs_by_key,
+    )
+
+
+def _schedule_dependency_rows_for_artifact(
+    *,
+    artifacts: list[dict[str, Any]],
+    source_refs: list[str],
+) -> list[dict[str, Any]]:
+    artifacts_by_key = {
+        "route_slot_requirements": _latest_artifact_for_dataset_key(
+            artifacts,
+            dataset_key=_ROUTE_SLOT_DATASET_KEY,
+        ),
+        "approved_availability": _latest_artifact_for_dataset_key(
+            artifacts,
+            dataset_key=_APPROVED_AVAILABILITY_DATASET_KEY,
+        ),
+        "driver_capabilities": _latest_artifact_for_dataset_key(
+            artifacts,
+            dataset_key=_DRIVER_CAPABILITIES_DATASET_KEY,
+        ),
+        "actual_hours": _latest_artifact_for_dataset_key(
+            artifacts,
+            dataset_key=_ACTUAL_HOURS_DATASET_KEY,
+        ),
+        "driver_preferences": _latest_artifact_for_dataset_key(
+            artifacts,
+            dataset_key=DRIVER_PREFERENCES_ARTIFACT_KIND,
+        ),
+    }
+    refs_by_key = {
+        key: _artifact_source_ref(artifact) for key, artifact in artifacts_by_key.items()
+    }
+    if not refs_by_key["route_slot_requirements"] and source_refs:
+        refs_by_key["route_slot_requirements"] = source_refs[0]
+    return _schedule_dependency_rows(
+        artifacts_by_key=artifacts_by_key,
+        refs_by_key=refs_by_key,
+    )
+
+
+def _schedule_dependency_rows(
+    *,
+    artifacts_by_key: Mapping[str, Mapping[str, Any] | None],
+    refs_by_key: Mapping[str, str | None],
+) -> list[dict[str, Any]]:
+    dependency_specs = (
+        ("route_slot_requirements", _ROUTE_SLOT_DATASET_KEY, "hard"),
+        ("approved_availability", _APPROVED_AVAILABILITY_DATASET_KEY, "hard"),
+        ("driver_capabilities", _DRIVER_CAPABILITIES_DATASET_KEY, "hard"),
+        ("actual_hours", _ACTUAL_HOURS_DATASET_KEY, "hard"),
+        ("driver_preferences", DRIVER_PREFERENCES_ARTIFACT_KIND, "soft"),
+    )
+    rows: list[dict[str, Any]] = []
+    for dependency_key, artifact_kind, impact_class in dependency_specs:
+        artifact = artifacts_by_key.get(dependency_key)
+        artifact_version_id = (
+            _require_text_or_default(artifact.get("artifact_version_id"), default="")
+            if artifact is not None
+            else ""
+        )
+        source_ref = refs_by_key.get(dependency_key)
+        rows.append(
+            {
+                "dependency_key": dependency_key,
+                "artifact_kind": artifact_kind,
+                "artifact_version_id": artifact_version_id or None,
+                "impact_class": impact_class,
+                "state": "resolved" if artifact_version_id or source_ref else "not_available",
+                "source_ref": source_ref,
+            }
+        )
+    return rows
+
+
+def _schedule_calculations(
+    *,
+    day_demand_rows: list[dict[str, Any]],
+    selected_day_row: Mapping[str, Any],
+) -> dict[str, Any]:
+    return {
+        "top_bar": {
+            "days": [
+                {
+                    "service_date": _require_text_or_default(row.get("service_date"), default=""),
+                    "weekday_label": _weekday_label(
+                        _require_text_or_default(row.get("service_date"), default="")
+                    ),
+                    "routes_required": _int_or_zero(row.get("planned_route_count")),
+                    "on_call_target": _int_or_zero(row.get("on_call_target")),
+                    "excess_capacity_target": _int_or_zero(row.get("excess_capacity_target")),
+                }
+                for row in day_demand_rows
+            ]
+        },
+        "selected_day": {
+            "service_date": _require_text_or_default(selected_day_row.get("service_date"), default=""),
+            "routes_required": _int_or_zero(selected_day_row.get("routes_required")),
+            "drivers_available": _int_or_zero(selected_day_row.get("drivers_available")),
+            "projected_on_call_needed": _int_or_zero(
+                selected_day_row.get("projected_on_call_needed")
+            ),
+            "open_questions": _require_text_or_default(
+                selected_day_row.get("open_questions"),
+                default="",
+            ),
+        },
+        "driver_metrics": [],
+        "checks": [],
+    }
+
+
+def _empty_draft_lineage() -> dict[str, Any]:
+    return {
+        "current_artifact_version_id": None,
+        "latest_artifact_version_id": None,
+        "previous_artifact_version_id": None,
+        "recent_versions": [],
+    }
+
+
+def _schedule_draft_lineage(
+    connection: sqlite3.Connection,
+    *,
+    artifact: Mapping[str, Any],
+    artifacts: list[dict[str, Any]],
+    artifact_kind: str,
+) -> dict[str, Any]:
+    artifact_version_id = _require_text(artifact.get("artifact_version_id"))
+    artifact_map = {
+        _require_text(item.get("artifact_version_id")): item
+        for item in artifacts
+        if item.get("artifact_version_id") is not None
+    }
+    if artifact_kind == SCHEDULE_DRAFT_DATASET_KEY:
+        current_artifact_version_id = artifact_version_id
+        latest_artifact_version_id = _latest_chain_artifact_version_id(
+            connection,
+            artifact_version_id=artifact_version_id,
+            default=artifact_version_id,
+        )
+        current = artifact
+    elif artifact_kind == SCHEDULE_PUBLISHED_ARTIFACT_KIND:
+        metadata_json = artifact.get("metadata_json")
+        if not isinstance(metadata_json, Mapping):
+            return _empty_draft_lineage()
+        anchor_artifact_version_id = _require_text_or_default(
+            metadata_json.get("published_from_artifact_version_id"),
+            default="",
+        )
+        if not anchor_artifact_version_id:
+            return _empty_draft_lineage()
+        current = artifact_map.get(anchor_artifact_version_id)
+        if current is None:
+            current = get_artifact_version(connection, anchor_artifact_version_id)
+        if current is None:
+            return _empty_draft_lineage()
+        current_artifact_version_id = anchor_artifact_version_id
+        latest_artifact_version_id = anchor_artifact_version_id
+    else:
+        return _empty_draft_lineage()
+
+    previous_artifact_version_id = _require_text_or_default(
+        current.get("supersedes_artifact_version_id"),
+        default="",
+    )
+    recent_versions: list[dict[str, Any]] = []
+    cursor: Mapping[str, Any] | None = current
+    seen_ids: set[str] = set()
+    while cursor is not None and len(recent_versions) < 5:
+        cursor_artifact_version_id = _require_text_or_default(
+            cursor.get("artifact_version_id"),
+            default="",
+        )
+        if not cursor_artifact_version_id or cursor_artifact_version_id in seen_ids:
+            break
+        seen_ids.add(cursor_artifact_version_id)
+        recent_versions.append(
+            {
+                "artifact_version_id": cursor_artifact_version_id,
+                "supersedes_artifact_version_id": _require_text_or_default(
+                    cursor.get("supersedes_artifact_version_id"),
+                    default="",
+                )
+                or None,
+            }
+        )
+        parent_artifact_version_id = _require_text_or_default(
+            cursor.get("supersedes_artifact_version_id"),
+            default="",
+        )
+        cursor = artifact_map.get(parent_artifact_version_id) if parent_artifact_version_id else None
+
+    return {
+        "current_artifact_version_id": current_artifact_version_id,
+        "latest_artifact_version_id": latest_artifact_version_id,
+        "previous_artifact_version_id": previous_artifact_version_id or None,
+        "recent_versions": recent_versions,
+    }
+
+
+def _build_schedule_accepted_series(
+    connection: sqlite3.Connection,
+    *,
+    workflow_run: Mapping[str, Any],
+    accepted_series_key: str | None,
+    current_partition_key: str | None,
+    current_workflow_run_id: str | None,
+    current_artifact_version_id: str | None,
+) -> dict[str, Any]:
+    series_key = _require_text_or_default(accepted_series_key, default="") or None
+    if not series_key:
+        return _empty_accepted_series()
+    rows = list_artifact_versions_for_scope_and_kind(
+        connection,
+        tenant_id=_require_text(workflow_run.get("tenant_id")),
+        domain_id=_require_text(workflow_run.get("domain_id")),
+        artifact_kind=SCHEDULE_PUBLISHED_ARTIFACT_KIND,
+        workflow_id=_SCHEDULE_WORKFLOW_ID,
+    )
+    entries = [
+        {
+            "artifact_version_id": _require_text(row.get("artifact_version_id")),
+            "workflow_run_id": _require_text(row.get("workflow_run_id")),
+            "partition_key": _require_text_or_default(
+                row.get("workflow_partition_key"),
+                default="",
+            ),
+            "logical_date": _require_text_or_default(
+                row.get("workflow_logical_date"),
+                default="",
+            ),
+            "artifact_kind": _require_text(row.get("artifact_kind")),
+        }
+        for row in rows
+        if _schedule_artifact_accepted_series_key(row.get("metadata_json")) == series_key
+    ]
+    if not entries:
+        return _empty_accepted_series(series_key=series_key)
+    current_index: int | None = None
+    if current_artifact_version_id:
+        for index, entry in enumerate(entries):
+            if entry["artifact_version_id"] == current_artifact_version_id:
+                current_index = index
+                break
+    if current_index is None and current_partition_key:
+        for index, entry in enumerate(entries):
+            if entry["partition_key"] != current_partition_key:
+                continue
+            if current_workflow_run_id and entry["workflow_run_id"] == current_workflow_run_id:
+                current_index = index
+                break
+            if current_index is None:
+                current_index = index
+    previous_artifact_version_id = (
+        entries[current_index - 1]["artifact_version_id"]
+        if current_index is not None and current_index > 0
+        else None
+    )
+    next_artifact_version_id = (
+        entries[current_index + 1]["artifact_version_id"]
+        if current_index is not None and current_index + 1 < len(entries)
+        else None
+    )
+    return {
+        "series_key": series_key,
+        "current_artifact_version_id": (
+            entries[current_index]["artifact_version_id"] if current_index is not None else None
+        ),
+        "previous_artifact_version_id": previous_artifact_version_id,
+        "next_artifact_version_id": next_artifact_version_id,
+        "entries": entries,
+    }
+
+
+def _empty_accepted_series(*, series_key: str | None = None) -> dict[str, Any]:
+    return {
+        "series_key": series_key,
+        "current_artifact_version_id": None,
+        "previous_artifact_version_id": None,
+        "next_artifact_version_id": None,
+        "entries": [],
+    }
+
+
+def _accepted_series_anchor_artifact_id(
+    accepted_series: Mapping[str, Any],
+) -> str | None:
+    return _require_text_or_default(
+        accepted_series.get("current_artifact_version_id"),
+        default="",
+    ) or None
+
+
+def _bundle_schedule_accepted_series_key(bundle: WeeklyScheduleControlBundle) -> str:
+    return build_schedule_accepted_series_key(
+        station_code=_first_non_empty(slot.station_code for slot in bundle.route_slots),
+        service_area=_first_non_empty(slot.service_area for slot in bundle.route_slots),
+    )
+
+
+def _schedule_artifact_accepted_series_key(metadata_json: object) -> str | None:
+    if not isinstance(metadata_json, Mapping):
+        return None
+    value = _require_text_or_default(metadata_json.get("accepted_series_key"), default="")
+    return value or None
+
+
+def _schedule_open_latest_draft_contract_action(
+    *,
+    workflow_run_id: str,
+    latest_schedule_draft: Mapping[str, Any] | None,
+) -> dict[str, Any]:
+    route: str | None = None
+    state = "unavailable"
+    artifact_version_id = None
+    if latest_schedule_draft is not None:
+        artifact_version_id = _require_text_or_default(
+            latest_schedule_draft.get("artifact_version_id"),
+            default="",
+        )
+        if artifact_version_id:
+            route = canonical_schedule_artifact_route(
+                workflow_run_id=workflow_run_id,
+                artifact_version_id=artifact_version_id,
+            )
+            state = "available"
+    return {
+        "action_id": "workpage.schedule-v0.open_latest_draft",
+        "kind": "open_latest_draft",
+        "label": "Open schedule draft",
+        "state": state,
+        "workpage_kind": SCHEDULE_DEMO_WORKPAGE_ID,
+        "artifact_version_id": artifact_version_id or None,
+        "route": route,
+    }
+
+
+def _schedule_artifact_contract_actions(
+    *,
+    workflow_run_id: str,
+    artifact_kind: str,
+    artifact_version_id: str,
+    editable: bool,
+) -> list[dict[str, Any]]:
+    if not editable or artifact_kind != SCHEDULE_DRAFT_DATASET_KEY:
+        return []
+    return [
+        {
+            "action_id": "workpage.schedule-v0.save_draft",
+            "kind": "submit_artifact",
+            "label": "Save draft",
+            "state": "available",
+            "workpage_kind": SCHEDULE_DEMO_WORKPAGE_ID,
+            "artifact_version_id": artifact_version_id,
+            "submit_path": canonical_schedule_artifact_submit_path(
+                workflow_run_id=workflow_run_id,
+                artifact_version_id=artifact_version_id,
+            ),
+        }
+    ]
+
+
+def _schedule_artifact_note_body(*, editable: bool) -> str:
+    if editable:
+        return (
+            "This page edits the immutable Stage04 draft weekly schedule workbook only. "
+            "It does not claim published weekly truth, does not replace manager-review "
+            "evidence, and does not reach into live_dispatch.v1 day-of control."
+        )
+    return (
+        "This page shows the accepted weekly schedule artifact as a read-only view. "
+        "Accepted-history navigation remains separate from draft lineage, and saving a new "
+        "draft still happens on the Stage04 draft workbook lane."
+    )
+
+
+def _schedule_artifact_source_dataset_keys(*, artifact_kind: str) -> list[str]:
+    if artifact_kind == SCHEDULE_DRAFT_DATASET_KEY:
+        return [
+            SCHEDULE_DRAFT_DATASET_KEY,
+            _SCHEDULE_DRAFT_DOC_DATASET_KEY,
+            _SCHEDULE_VALIDATION_SUMMARY_DATASET_KEY,
+        ]
+    return [artifact_kind]
 
 
 def _build_schedule_workpage_view_model(
@@ -577,6 +1128,18 @@ def _eod_draft_resolution(
 
 def _artifact_detail_ref(artifact: Mapping[str, Any]) -> str:
     return f"/api/v1/artifacts/{_require_text(artifact.get('artifact_version_id'))}"
+
+
+def _artifact_source_ref(artifact: Mapping[str, Any] | None) -> str | None:
+    if artifact is None:
+        return None
+    artifact_version_id = _require_text_or_default(
+        artifact.get("artifact_version_id"),
+        default="",
+    )
+    if not artifact_version_id:
+        return None
+    return _artifact_detail_ref(artifact)
 
 
 def _latest_artifact_for_dataset_key(
@@ -907,13 +1470,12 @@ def build_eod_artifact_workpage_contract(
 
 
 def build_schedule_artifact_workpage_contract(
+    connection: sqlite3.Connection,
     *,
     artifact_version_id: str,
+    artifact: Mapping[str, Any],
     workflow_run: Mapping[str, Any],
     artifacts: list[dict[str, Any]],
-    supersedes_artifact_version_id: str | None,
-    superseded_by_artifact_version_id: str | None,
-    latest_in_chain_artifact_version_id: str,
     download_path: str,
     projection: Mapping[str, Any],
     generated_at: str | None = None,
@@ -929,14 +1491,36 @@ def build_schedule_artifact_workpage_contract(
         iteration_rows=iteration_rows,
     )
     workflow_run_id = _require_text(workflow_run.get("workflow_run_id"))
-    return {
+    artifact_kind = _require_text(
+        artifact.get("artifact_kind") or artifact.get("dataset_key")
+    )
+    editable = artifact_kind == SCHEDULE_DRAFT_DATASET_KEY
+    supersedes_artifact_version_id = (
+        _require_text_or_default(artifact.get("supersedes_artifact_version_id"), default="")
+        or None
+    )
+    superseded_by_artifact_version_id = _latest_superseding_artifact_version_id(
+        artifact=artifact,
+        artifacts=artifacts,
+    )
+    latest_in_chain_artifact_version_id = _latest_chain_artifact_version_id(
+        connection,
+        artifact_version_id=artifact_version_id,
+        default=artifact_version_id,
+    )
+    metadata_json = artifact.get("metadata_json")
+    contract = {
         "workpage": {
             "workpage_id": SCHEDULE_DEMO_WORKPAGE_ID,
             "version": 2,
-            "title": "Weekly schedule draft artifact",
+            "title": (
+                "Weekly schedule draft artifact"
+                if editable
+                else "Weekly published schedule artifact"
+            ),
             "mode": "example",
             "workflow_id": _SCHEDULE_WORKFLOW_ID,
-            "dataset_key": SCHEDULE_DRAFT_DATASET_KEY,
+            "dataset_key": artifact_kind,
             "source_artifact_version_id": artifact_version_id,
             "source_examples": {},
             "summary": summary,
@@ -1045,12 +1629,12 @@ def build_schedule_artifact_workpage_contract(
                 },
                 {
                     "kind": "note_panel",
-                    "title": "Stage04 draft boundary",
-                    "body": (
-                        "This page edits the immutable Stage04 draft weekly schedule workbook only. "
-                        "It does not claim published weekly truth, does not replace manager-review "
-                        "evidence, and does not reach into live_dispatch.v1 day-of control."
+                    "title": (
+                        "Stage04 draft boundary"
+                        if editable
+                        else "Accepted weekly boundary"
                     ),
+                    "body": _schedule_artifact_note_body(editable=editable),
                 },
                 {
                     "kind": "table",
@@ -1154,16 +1738,13 @@ def build_schedule_artifact_workpage_contract(
         },
         "source": {
             "mode": "artifact_projection",
-            "primary_dataset_key": SCHEDULE_DRAFT_DATASET_KEY,
-            "source_dataset_keys": [
-                SCHEDULE_DRAFT_DATASET_KEY,
-                _SCHEDULE_DRAFT_DOC_DATASET_KEY,
-                _SCHEDULE_VALIDATION_SUMMARY_DATASET_KEY,
-            ],
+            "primary_dataset_key": artifact_kind,
+            "source_dataset_keys": _schedule_artifact_source_dataset_keys(artifact_kind=artifact_kind),
             "source_artifact_version_id": artifact_version_id,
             "source_refs": _schedule_artifact_source_refs(
                 artifacts=artifacts,
                 artifact_version_id=artifact_version_id,
+                artifact_kind=artifact_kind,
             ),
         },
         "freshness": {
@@ -1174,13 +1755,64 @@ def build_schedule_artifact_workpage_contract(
         "artifact_context": {
             "artifact_version_id": artifact_version_id,
             "workflow_run_id": workflow_run_id,
-            "artifact_kind": SCHEDULE_DRAFT_DATASET_KEY,
+            "artifact_kind": artifact_kind,
             "supersedes_artifact_version_id": supersedes_artifact_version_id,
             "superseded_by_artifact_version_id": superseded_by_artifact_version_id,
             "latest_in_chain_artifact_version_id": latest_in_chain_artifact_version_id,
             "download_path": download_path,
         },
     }
+    accepted_series = _build_schedule_accepted_series(
+        connection,
+        workflow_run=workflow_run,
+        accepted_series_key=_schedule_artifact_accepted_series_key(metadata_json),
+        current_partition_key=_require_text(workflow_run.get("partition_key")),
+        current_workflow_run_id=workflow_run_id,
+        current_artifact_version_id=(
+            artifact_version_id if artifact_kind == SCHEDULE_PUBLISHED_ARTIFACT_KIND else None
+        ),
+    )
+    contract.update(
+        {
+            "artifact_state": _schedule_artifact_state(
+                artifact_kind=artifact_kind,
+                artifact_version_id=artifact_version_id,
+                latest_in_chain_artifact_version_id=latest_in_chain_artifact_version_id,
+                accepted_artifact_version_id=_accepted_series_anchor_artifact_id(accepted_series),
+                editable=editable,
+            ),
+            "dependencies": _schedule_dependency_rows_for_artifact(
+                artifacts=artifacts,
+                source_refs=contract["source"]["source_refs"],
+            ),
+            "calculations": _schedule_calculations(
+                day_demand_rows=_artifact_day_demand_rows(
+                    bundle=bundle,
+                    assignment_rows=assignment_rows,
+                    reserve_rows=reserve_rows,
+                ),
+                selected_day_row=_artifact_selected_day_preview_row(
+                    bundle=bundle,
+                    assignment_rows=assignment_rows,
+                    reserve_rows=reserve_rows,
+                ),
+            ),
+            "draft_lineage": _schedule_draft_lineage(
+                connection,
+                artifact=artifact,
+                artifacts=artifacts,
+                artifact_kind=artifact_kind,
+            ),
+            "accepted_series": accepted_series,
+            "actions": _schedule_artifact_contract_actions(
+                workflow_run_id=workflow_run_id,
+                artifact_kind=artifact_kind,
+                artifact_version_id=artifact_version_id,
+                editable=editable,
+            ),
+        }
+    )
+    return contract
 
 
 @lru_cache(maxsize=1)
@@ -1854,7 +2486,10 @@ def _schedule_artifact_source_refs(
     *,
     artifacts: list[dict[str, Any]],
     artifact_version_id: str,
+    artifact_kind: str,
 ) -> list[str]:
+    if artifact_kind != SCHEDULE_DRAFT_DATASET_KEY:
+        return [f"/api/v1/artifacts/{artifact_version_id}"]
     refs: list[str] = []
     for dataset_key in (
         SCHEDULE_DRAFT_DATASET_KEY,
@@ -1870,6 +2505,44 @@ def _schedule_artifact_source_refs(
     if not refs:
         refs.append(f"/api/v1/artifacts/{artifact_version_id}")
     return refs
+
+
+def _latest_superseding_artifact_version_id(
+    *,
+    artifact: Mapping[str, Any],
+    artifacts: list[dict[str, Any]],
+) -> str | None:
+    artifact_version_id = _require_text_or_default(
+        artifact.get("artifact_version_id"),
+        default="",
+    )
+    if not artifact_version_id:
+        return None
+    latest: str | None = None
+    for item in artifacts:
+        supersedes_artifact_version_id = _require_text_or_default(
+            item.get("supersedes_artifact_version_id"),
+            default="",
+        )
+        if supersedes_artifact_version_id != artifact_version_id:
+            continue
+        latest = _require_text_or_default(item.get("artifact_version_id"), default="") or latest
+    return latest
+
+
+def _latest_chain_artifact_version_id(
+    connection: sqlite3.Connection,
+    *,
+    artifact_version_id: str,
+    default: str,
+) -> str:
+    try:
+        latest = get_latest_artifact_version_in_chain(connection, artifact_version_id)
+    except ValueError:
+        return default
+    if latest is None:
+        return default
+    return _require_text_or_default(latest.get("artifact_version_id"), default=default)
 
 
 def _schedule_table_columns(
