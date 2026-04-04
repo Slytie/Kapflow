@@ -2,6 +2,14 @@
 
 Record any decisions made since the last session so a fresh Codex run can rehydrate quickly.
 
+## 2026-04-04 (TASK-0201 EPIC-131 boundary freeze and routing selection)
+- Next-workpages-epic decision: EPIC-131 is now the selected app-facing workpages follow-on after the first weekly-first local demo clarification, and `TASK-0201` is complete as the doc-only repo-native freeze.
+- Boundary decision: `schedule-v0` is explicitly frozen as a driver reassignment/on-call surface plus server recalculation only; route-demand edits belong to a separate `route-demand-v0` surface, and `driver-preferences-v0` is a separate soft/advisory weekly snapshot.
+- Navigation decision: accepted-version arrows are accepted-history only, while draft lineage remains separate and must not share traversal semantics.
+- Repo-grounding decision: later route-demand UX may rely on backend-owned daily buckets already present in `planning.route_slot_requirements.workbook` example truth; the frontend must not invent slot-allocation heuristics by default.
+- Accepted-series decision: current repo review did not find a stable explicit artifact-level accepted-series grouping key on saved/published schedule artifacts, so `TASK-0202` must add that deliberately instead of relying on ad hoc metadata.
+- Backlog-routing decision: the remaining EPIC-125 cadence tasks (`TASK-0154`, `TASK-0156`, `TASK-0157`) remain tracked, but they are no longer the next app-facing workpages priority; EPIC-126 remains the later hardening/closeout tranche.
+
 ## 2026-03-30 (weekly Stage04 finalize-repair continuation and failure reclassification)
 - Finalize-invariant decision: weekly Stage04 still requires an explicit model-invoked `finalize_weekly_stage04_draft_outputs` call before any draft artifacts count as complete; backend auto-finalization remains out of scope.
 - Repair-boundary decision: if the deterministic planner is already complete and the first Responses loop ends with final text but no finalize call, the runtime now performs one bounded continuation on the same Responses thread with a finalize-only tool surface and monotonic rebased turn evidence.
