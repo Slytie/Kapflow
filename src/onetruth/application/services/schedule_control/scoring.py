@@ -292,11 +292,11 @@ def deterministic_rank_candidates(candidates: list[dict[str, Any]]) -> list[dict
         )
         return (
             _HARD_FILTER_ORDER.get(hard_filter_status, 99),
-            _synthetic_demand_priority_rank(item),
             _work_distribution_priority_rank(
                 current_week_shift_count=current_week_shift_count,
                 projected_week_shift_count=projected_week_shift_count,
             ),
+            _synthetic_demand_priority_rank(item),
             _overtime_priority_rank(projected_week_shift_count=projected_week_shift_count),
             -_reaches_minimum_work(
                 current_week_shift_count=current_week_shift_count,
@@ -760,13 +760,17 @@ def _work_distribution_priority_rank(
 ) -> int:
     if current_week_shift_count < 3 and projected_week_shift_count >= 3:
         return 0
-    if current_week_shift_count < 4 and projected_week_shift_count >= 4:
+    if current_week_shift_count == 0 and projected_week_shift_count >= 1:
         return 1
-    if current_week_shift_count < 3:
+    if current_week_shift_count == 1 and projected_week_shift_count >= 2:
         return 2
-    if projected_week_shift_count <= 4:
+    if current_week_shift_count < 4 and projected_week_shift_count >= 4:
         return 3
-    return 4
+    if current_week_shift_count < 3:
+        return 4
+    if projected_week_shift_count <= 4:
+        return 5
+    return 6
 
 
 def _overtime_priority_rank(*, projected_week_shift_count: int) -> int:

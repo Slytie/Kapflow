@@ -10,6 +10,7 @@ from onetruth.application.services.logistics_weekly_agent_pilot import (
     PILOT_DEFINITIONS,
     PILOT_WEEKLY_STAGE04_AGENT,
     PILOT_WEEKLY_STAGE04_ACTUAL_OPS_LAB,
+    PILOT_WEEKLY_STAGE04_ACTUAL_OPS_LAB_V4,
     PILOT_WEEKLY_STAGE04_REALISTIC_ARTIFACTS,
     _ensure_workflow_run,
     _run_weekly_stage04_agent_pilot,
@@ -223,6 +224,7 @@ def test_weekly_stage04_pilot_selection_defaults_real_to_realistic() -> None:
         PILOT_WEEKLY_STAGE04_AGENT,
         PILOT_WEEKLY_STAGE04_REALISTIC_ARTIFACTS,
         PILOT_WEEKLY_STAGE04_ACTUAL_OPS_LAB,
+        PILOT_WEEKLY_STAGE04_ACTUAL_OPS_LAB_V4,
     )
     assert resolve_weekly_stage04_pilot_ids(
         [PILOT_WEEKLY_STAGE04_AGENT],
@@ -240,6 +242,9 @@ def test_weekly_stage04_fixture_profiles_cover_tiny_realistic_and_actual_ops() -
     actual_ops = describe_weekly_stage04_pilot_fixture_profile(
         PILOT_WEEKLY_STAGE04_ACTUAL_OPS_LAB
     )
+    actual_ops_v4 = describe_weekly_stage04_pilot_fixture_profile(
+        PILOT_WEEKLY_STAGE04_ACTUAL_OPS_LAB_V4
+    )
     tiny = describe_weekly_stage04_pilot_fixture_profile(PILOT_WEEKLY_STAGE04_AGENT)
 
     assert realistic["planning_week_id"] == "PW-2026-W12"
@@ -254,6 +259,13 @@ def test_weekly_stage04_fixture_profiles_cover_tiny_realistic_and_actual_ops() -
     assert actual_ops["has_daily_availability_states"] is True
     assert actual_ops["has_previous_week_history"] is True
     assert actual_ops["fixture_contract"] == "weekly_stage04_actual_ops_lab_v3"
+
+    assert actual_ops_v4["planning_week_id"] == "PW-2026-W13"
+    assert actual_ops_v4["route_slot_count"] == 134
+    assert actual_ops_v4["driver_count"] == 51
+    assert actual_ops_v4["has_daily_availability_states"] is True
+    assert actual_ops_v4["has_previous_week_history"] is True
+    assert actual_ops_v4["fixture_contract"] == "weekly_stage04_actual_ops_lab_v4"
 
     assert tiny["planning_week_id"] == "PW-2026-W10"
     assert tiny["route_slot_count"] == 2
@@ -662,3 +674,63 @@ def test_actual_ops_weekly_stage04_pilot_exports_expected_output_kinds_and_full_
         )
         for driver_id in drivers_below_three
     )
+
+
+def test_actual_ops_v4_weekly_stage04_pilot_corrects_low_shift_driver_inputs(
+    tmp_path: Path,
+) -> None:
+    db_url, summary, packets = _run_pilot(
+        tmp_path,
+        pilot_ids=[PILOT_WEEKLY_STAGE04_ACTUAL_OPS_LAB_V4],
+        pilot_key="weekly-stage04-actual-ops-v4",
+    )
+    packet = packets[0]
+    workflow_run_id = str(packet["workflow_run"]["workflow_run_id"])
+
+    assert summary["openai_mode"] == "mock"
+    assert packet["workflow_run"]["partition_key"] == "PW-2026-W13"
+    assert packet["quality_signals"]["stage04_output_artifacts_present"] is True
+    assert packet["quality_signals"]["no_pointer_promotions"] is True
+    assert packet["stage04_analysis"]["coverage_summary"]["assigned_route_slots"] == 134
+    assert packet["stage04_analysis"]["coverage_summary"]["uncovered_route_slots"] == 0
+
+    candidate_delta = _load_artifact_payload(
+        _artifact_rows_for_kind(
+            db_url,
+            workflow_run_id,
+            "planning.candidate_schedule_delta.workbook",
+        )[0]
+    )
+    input_bundle = _load_artifact_payload(
+        _artifact_rows_for_kind(
+            db_url,
+            workflow_run_id,
+            "planning.input_bundle.doc",
+        )[0]
+    )
+    output_artifacts = packet["canonical_evidence"]["stage04_output_artifacts_by_kind"]
+    assert set(output_artifacts) == {
+        "planning.candidate_schedule_delta.workbook",
+        "planning.draft_weekly_schedule.doc",
+        "planning.draft_weekly_schedule.workbook",
+        "planning.input_bundle.doc",
+        "planning.validation_summary.doc",
+    }
+
+    shift_counter, profiles, zero_shift_driver_ids = _driver_shift_distribution(
+        candidate_delta=candidate_delta,
+        input_bundle=input_bundle,
+    )
+    corrected_driver_ids = {
+        "A2GJBFCCI1VYRB",
+        "A3NLLQPB0L46N9",
+        "A7IT4OGI9NGQX",
+        "AGOU3M5WUIHWC",
+    }
+    assert zero_shift_driver_ids == []
+    assert min(shift_counter.values(), default=0) >= 3
+    assert max(shift_counter.values(), default=0) <= 4
+    for driver_id in corrected_driver_ids:
+        assert int(profiles[driver_id]["policy_signal"]["source_target_shifts_per_week"] or 0) == 4
+        assert int(profiles[driver_id]["policy_signal"]["max_shifts_per_week"] or 0) == 4
+        assert int(profiles[driver_id]["policy_signal"]["max_minutes_rolling7"] or 0) == 2400

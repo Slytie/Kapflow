@@ -1,0 +1,949 @@
+artifact_kind: planning.driver_capabilities.workbook
+example_id: weekly_stage04_actual_ops_lab_v4
+schema_version: '1.0'
+planning_week_id: PW-2026-W13
+operational_week_start: '2026-03-22'
+columns:
+- driver_id
+- driver_name
+- employment_type
+- home_station
+- skills
+- vehicle_certifications
+- eligible_route_slot_classes
+- approved_restrictions
+- policy_tags
+- seniority_rank
+- attendance_reliability_index
+- recent_sick_calls_14d
+- recent_cancellations_14d
+- preferred_route_slot_classes
+- preferred_shift_band
+- notes
+- external_driver_ref
+rows:
+- - A185MOPEG4MOST
+  - Navjot Singh
+  - part_time
+  - DVC4
+  - parcel_delivery
+  - XL_van
+  - cycle1_standard
+  - max_shifts_per_week=1,max_minutes_rolling7=600
+  - attendance_clean
+  - 1
+  - 0.7
+  - 0
+  - 0
+  - cycle1_standard
+  - ''
+  - Derived from active-driver master + target-week compatibility package; employment
+    type and restrictions are lab heuristics.
+  - A185MOPEG4MOST
+- - A1A7SAPA6J2ZJJ
+  - Yong-Kyoon Kim
+  - full_time
+  - DVC4
+  - parcel_delivery
+  - XL_van
+  - cycle1_standard
+  - max_shifts_per_week=4,max_minutes_rolling7=2400
+  - stable_recent_history
+  - 2
+  - 0.89
+  - 1
+  - 0
+  - cycle1_standard
+  - ''
+  - Derived from active-driver master + target-week compatibility package; employment
+    type and restrictions are lab heuristics.
+  - A1A7SAPA6J2ZJJ
+- - A1HIH95LQQ9EQE
+  - Jasdeep Sidhu
+  - part_time
+  - DVC4
+  - parcel_delivery
+  - XL_van
+  - cycle1_standard
+  - max_shifts_per_week=1,max_minutes_rolling7=600
+  - attendance_clean
+  - 3
+  - 0.7
+  - 0
+  - 0
+  - cycle1_standard
+  - ''
+  - Derived from active-driver master + target-week compatibility package; employment
+    type and restrictions are lab heuristics.
+  - A1HIH95LQQ9EQE
+- - A1NQEGRS26IBJA
+  - Suraj Pratap Singh
+  - full_time
+  - DVC4
+  - parcel_delivery,on_call
+  - XL_van
+  - cycle1_standard
+  - max_shifts_per_week=5,max_minutes_rolling7=3000
+  - anchor,on_call_priority,attendance_clean,stable_recent_history
+  - 4
+  - 0.98
+  - 0
+  - 0
+  - cycle1_standard
+  - ''
+  - Derived from active-driver master + target-week compatibility package; employment
+    type and restrictions are lab heuristics.
+  - A1NQEGRS26IBJA
+- - A1P1CDL949GCH7
+  - Brahmvir Singh
+  - full_time
+  - DVC4
+  - parcel_delivery,on_call
+  - XL_van
+  - cycle1_standard
+  - max_shifts_per_week=5,max_minutes_rolling7=3000
+  - on_call_priority,stable_recent_history
+  - 5
+  - 0.94
+  - 1
+  - 0
+  - cycle1_standard
+  - ''
+  - Derived from active-driver master + target-week compatibility package; employment
+    type and restrictions are lab heuristics.
+  - A1P1CDL949GCH7
+- - A2FC17ONJKWXTE
+  - Sachin Goyal
+  - full_time
+  - DVC4
+  - parcel_delivery,on_call
+  - XL_van
+  - cycle1_standard
+  - max_shifts_per_week=4,max_minutes_rolling7=2400
+  - on_call_priority,stable_recent_history
+  - 6
+  - 0.97
+  - 0
+  - 0
+  - cycle1_standard
+  - ''
+  - Derived from active-driver master + target-week compatibility package; employment
+    type and restrictions are lab heuristics.
+  - A2FC17ONJKWXTE
+- - A2KXEYK2UAQ1SX
+  - Khushdeep Singh Cheema
+  - full_time
+  - DVC4
+  - parcel_delivery,on_call
+  - XL_van
+  - cycle1_standard
+  - max_shifts_per_week=5,max_minutes_rolling7=3000
+  - anchor,on_call_priority,stable_recent_history
+  - 7
+  - 0.98
+  - 0
+  - 0
+  - cycle1_standard
+  - ''
+  - Derived from active-driver master + target-week compatibility package; employment
+    type and restrictions are lab heuristics.
+  - A2KXEYK2UAQ1SX
+- - A2S2SO4XUULX7H
+  - Ekjot Singh
+  - full_time
+  - DVC4
+  - parcel_delivery,on_call
+  - XL_van
+  - cycle1_standard
+  - max_shifts_per_week=5,max_minutes_rolling7=3000
+  - anchor,on_call_priority,stable_recent_history
+  - 8
+  - 0.88
+  - 2
+  - 0
+  - cycle1_standard
+  - ''
+  - Derived from active-driver master + target-week compatibility package; employment
+    type and restrictions are lab heuristics.
+  - A2S2SO4XUULX7H
+- - A2SCS728PUCGTE
+  - Lovepreet Bassi
+  - full_time
+  - DVC4
+  - parcel_delivery,on_call
+  - XL_van
+  - cycle1_standard
+  - max_shifts_per_week=5,max_minutes_rolling7=3000
+  - anchor,on_call_priority,stable_recent_history
+  - 9
+  - 0.84
+  - 2
+  - 0
+  - cycle1_standard
+  - ''
+  - Derived from active-driver master + target-week compatibility package; employment
+    type and restrictions are lab heuristics.
+  - A2SCS728PUCGTE
+- - A2YLZCTDXK95J
+  - Vishal Bhagat
+  - full_time
+  - DVC4
+  - parcel_delivery,on_call
+  - XL_van
+  - cycle1_standard
+  - max_shifts_per_week=5,max_minutes_rolling7=3000
+  - anchor,on_call_priority,stable_recent_history
+  - 10
+  - 0.9
+  - 2
+  - 0
+  - cycle1_standard
+  - ''
+  - Derived from active-driver master + target-week compatibility package; employment
+    type and restrictions are lab heuristics.
+  - A2YLZCTDXK95J
+- - A33HB7XV71IC7T
+  - Tarandeep Singh
+  - full_time
+  - DVC4
+  - parcel_delivery,on_call
+  - XL_van
+  - cycle1_standard
+  - max_shifts_per_week=5,max_minutes_rolling7=3000
+  - anchor,on_call_priority,stable_recent_history
+  - 11
+  - 0.96
+  - 1
+  - 0
+  - cycle1_standard
+  - ''
+  - Derived from active-driver master + target-week compatibility package; employment
+    type and restrictions are lab heuristics.
+  - A33HB7XV71IC7T
+- - A34WEHEN1XXRKR
+  - Karanveer Singh
+  - full_time
+  - DVC4
+  - parcel_delivery,on_call
+  - XL_van
+  - cycle1_standard
+  - max_shifts_per_week=5,max_minutes_rolling7=3000
+  - on_call_priority
+  - 12
+  - 0.88
+  - 2
+  - 0
+  - cycle1_standard
+  - ''
+  - Derived from active-driver master + target-week compatibility package; employment
+    type and restrictions are lab heuristics.
+  - A34WEHEN1XXRKR
+- - A3959UPAEK7B1W
+  - Gagandeep Singh Singh
+  - full_time
+  - DVC4
+  - parcel_delivery,on_call
+  - XL_van
+  - cycle1_standard
+  - max_shifts_per_week=4,max_minutes_rolling7=2400
+  - stable_recent_history
+  - 13
+  - 0.9
+  - 1
+  - 0
+  - cycle1_standard
+  - ''
+  - Derived from active-driver master + target-week compatibility package; employment
+    type and restrictions are lab heuristics.
+  - A3959UPAEK7B1W
+- - A3BQS4NVAKL2HQ
+  - Harkirpal Singh Sidhu
+  - part_time
+  - DVC4
+  - parcel_delivery
+  - XL_van
+  - cycle1_standard
+  - max_shifts_per_week=1,max_minutes_rolling7=600
+  - attendance_clean
+  - 14
+  - 0.7
+  - 0
+  - 0
+  - cycle1_standard
+  - ''
+  - Derived from active-driver master + target-week compatibility package; employment
+    type and restrictions are lab heuristics.
+  - A3BQS4NVAKL2HQ
+- - A3M38Z4NGI9OR3
+  - Akash
+  - full_time
+  - DVC4
+  - parcel_delivery,on_call
+  - XL_van
+  - cycle1_standard
+  - max_shifts_per_week=5,max_minutes_rolling7=3000
+  - on_call_priority,stable_recent_history
+  - 15
+  - 0.95
+  - 1
+  - 0
+  - cycle1_standard
+  - ''
+  - Derived from active-driver master + target-week compatibility package; employment
+    type and restrictions are lab heuristics.
+  - A3M38Z4NGI9OR3
+- - A3OYGBYE20UA2R
+  - Gaganpreet Singh Dhindsa
+  - part_time
+  - DVC4
+  - parcel_delivery,on_call
+  - XL_van
+  - cycle1_standard
+  - max_shifts_per_week=3,max_minutes_rolling7=1800
+  - on_call_priority,attendance_clean
+  - 16
+  - 0.98
+  - 0
+  - 0
+  - cycle1_standard
+  - ''
+  - Derived from active-driver master + target-week compatibility package; employment
+    type and restrictions are lab heuristics.
+  - A3OYGBYE20UA2R
+- - A3QZGAMB5M5IK0
+  - Rompal Singh Hayer
+  - full_time
+  - DVC4
+  - parcel_delivery,on_call
+  - XL_van
+  - cycle1_standard
+  - max_shifts_per_week=5,max_minutes_rolling7=3000
+  - anchor,on_call_priority,stable_recent_history
+  - 17
+  - 0.98
+  - 0
+  - 0
+  - cycle1_standard
+  - ''
+  - Derived from active-driver master + target-week compatibility package; employment
+    type and restrictions are lab heuristics.
+  - A3QZGAMB5M5IK0
+- - A3TPKATQLBDJG
+  - Rahul Bajaj
+  - part_time
+  - DVC4
+  - parcel_delivery
+  - XL_van
+  - cycle1_standard
+  - max_shifts_per_week=1,max_minutes_rolling7=600
+  - attendance_clean
+  - 18
+  - 0.7
+  - 0
+  - 0
+  - cycle1_standard
+  - ''
+  - Derived from active-driver master + target-week compatibility package; employment
+    type and restrictions are lab heuristics.
+  - A3TPKATQLBDJG
+- - A4RCGY31PTY9M
+  - Maninder Pal Singh
+  - part_time
+  - DVC4
+  - parcel_delivery
+  - XL_van
+  - cycle1_standard
+  - max_shifts_per_week=1,max_minutes_rolling7=600
+  - attendance_clean
+  - 19
+  - 0.7
+  - 0
+  - 0
+  - cycle1_standard
+  - ''
+  - Derived from active-driver master + target-week compatibility package; employment
+    type and restrictions are lab heuristics.
+  - A4RCGY31PTY9M
+- - A5DRVS25INNWR
+  - Syed Kamran Shah
+  - part_time
+  - DVC4
+  - parcel_delivery,on_call
+  - XL_van
+  - cycle1_standard
+  - max_shifts_per_week=2,max_minutes_rolling7=1200
+  - ''
+  - 20
+  - 0.88
+  - 1
+  - 0
+  - cycle1_standard
+  - ''
+  - Derived from active-driver master + target-week compatibility package; employment
+    type and restrictions are lab heuristics.
+  - A5DRVS25INNWR
+- - A7FWBKAGXA5LK
+  - Vishal Chaudhary
+  - full_time
+  - DVC4
+  - parcel_delivery,on_call
+  - XL_van
+  - cycle1_standard
+  - max_shifts_per_week=5,max_minutes_rolling7=3000
+  - anchor,on_call_priority,stable_recent_history
+  - 21
+  - 0.98
+  - 0
+  - 0
+  - cycle1_standard
+  - ''
+  - Derived from active-driver master + target-week compatibility package; employment
+    type and restrictions are lab heuristics.
+  - A7FWBKAGXA5LK
+- - A7IT4OGI9NGQX
+  - Lovepreet Gill
+  - part_time
+  - DVC4
+  - parcel_delivery,on_call
+  - XL_van
+  - cycle1_standard
+  - max_shifts_per_week=4,max_minutes_rolling7=2400
+  - attendance_clean
+  - 22
+  - 0.98
+  - 0
+  - 0
+  - cycle1_standard
+  - ''
+  - Derived from active-driver master + target-week compatibility package; employment
+    type and restrictions are lab heuristics.
+  - A7IT4OGI9NGQX
+- - AHJWCXI2ORDJY
+  - Harmanpreet Singh
+  - full_time
+  - DVC4
+  - parcel_delivery
+  - XL_van
+  - cycle1_standard
+  - max_shifts_per_week=4,max_minutes_rolling7=2400
+  - attendance_clean,stable_recent_history
+  - 23
+  - 0.98
+  - 0
+  - 0
+  - cycle1_standard
+  - ''
+  - Derived from active-driver master + target-week compatibility package; employment
+    type and restrictions are lab heuristics.
+  - AHJWCXI2ORDJY
+- - AIFFWKTFS3ZPS
+  - Sukhmanpreet Singh
+  - full_time
+  - DVC4
+  - parcel_delivery,on_call
+  - XL_van
+  - cycle1_standard
+  - max_shifts_per_week=5,max_minutes_rolling7=3000
+  - on_call_priority
+  - 24
+  - 0.89
+  - 2
+  - 0
+  - cycle1_standard
+  - ''
+  - Derived from active-driver master + target-week compatibility package; employment
+    type and restrictions are lab heuristics.
+  - AIFFWKTFS3ZPS
+- - AKF1ZEB0TWD96
+  - Rahul mannan
+  - full_time
+  - DVC4
+  - parcel_delivery,on_call
+  - XL_van
+  - cycle1_standard
+  - max_shifts_per_week=5,max_minutes_rolling7=3000
+  - anchor,on_call_priority,stable_recent_history
+  - 25
+  - 0.98
+  - 0
+  - 0
+  - cycle1_standard
+  - ''
+  - Derived from active-driver master + target-week compatibility package; employment
+    type and restrictions are lab heuristics.
+  - AKF1ZEB0TWD96
+- - AXBXED50KRZYC
+  - Jiwanpreet Singh
+  - full_time
+  - DVC4
+  - parcel_delivery,on_call
+  - XL_van
+  - cycle1_standard
+  - max_shifts_per_week=5,max_minutes_rolling7=3000
+  - anchor,on_call_priority,stable_recent_history
+  - 26
+  - 0.98
+  - 0
+  - 0
+  - cycle1_standard
+  - ''
+  - Derived from active-driver master + target-week compatibility package; employment
+    type and restrictions are lab heuristics.
+  - AXBXED50KRZYC
+- - AZULSLRV35N5I
+  - Lovepreet Singh
+  - full_time
+  - DVC4
+  - parcel_delivery,on_call
+  - XL_van
+  - cycle1_standard
+  - max_shifts_per_week=5,max_minutes_rolling7=3000
+  - anchor,on_call_priority,stable_recent_history
+  - 27
+  - 0.98
+  - 0
+  - 0
+  - cycle1_standard
+  - ''
+  - Derived from active-driver master + target-week compatibility package; employment
+    type and restrictions are lab heuristics.
+  - AZULSLRV35N5I
+- - ATBR9WDPPKXCM
+  - Chanpreet Singh Rai
+  - full_time
+  - DVC4
+  - parcel_delivery,on_call
+  - XL_van
+  - cycle1_standard
+  - max_shifts_per_week=5,max_minutes_rolling7=3000
+  - anchor,on_call_priority,attendance_clean,stable_recent_history
+  - 28
+  - 0.98
+  - 0
+  - 0
+  - cycle1_standard
+  - ''
+  - Derived from active-driver master + target-week compatibility package; employment
+    type and restrictions are lab heuristics.
+  - ATBR9WDPPKXCM
+- - A52BQ5U4SHE8W
+  - Rajveer Singh
+  - full_time
+  - DVC4
+  - parcel_delivery,on_call
+  - XL_van
+  - cycle1_standard
+  - max_shifts_per_week=5,max_minutes_rolling7=3000
+  - anchor,on_call_priority,stable_recent_history
+  - 29
+  - 0.91
+  - 2
+  - 0
+  - cycle1_standard
+  - ''
+  - Derived from active-driver master + target-week compatibility package; employment
+    type and restrictions are lab heuristics.
+  - A52BQ5U4SHE8W
+- - A149421ZGG7QED
+  - Balwinder Singh
+  - part_time
+  - DVC4
+  - parcel_delivery
+  - XL_van
+  - cycle1_standard
+  - max_shifts_per_week=1,max_minutes_rolling7=600
+  - attendance_clean
+  - 30
+  - 0.7
+  - 0
+  - 0
+  - cycle1_standard
+  - ''
+  - Derived from active-driver master + target-week compatibility package; employment
+    type and restrictions are lab heuristics.
+  - A149421ZGG7QED
+- - A2WDUOOWN1ORVL
+  - Iqbal Singh
+  - full_time
+  - DVC4
+  - parcel_delivery,on_call
+  - XL_van
+  - cycle1_standard
+  - max_shifts_per_week=5,max_minutes_rolling7=3000
+  - anchor,on_call_priority,stable_recent_history
+  - 31
+  - 0.97
+  - 0
+  - 0
+  - cycle1_standard
+  - ''
+  - Derived from active-driver master + target-week compatibility package; employment
+    type and restrictions are lab heuristics.
+  - A2WDUOOWN1ORVL
+- - A2TU4ZRI65E1H8
+  - Abhiraj Singh
+  - full_time
+  - DVC4
+  - parcel_delivery,on_call
+  - XL_van
+  - cycle1_standard
+  - max_shifts_per_week=5,max_minutes_rolling7=3000
+  - anchor,on_call_priority,stable_recent_history
+  - 32
+  - 0.96
+  - 0
+  - 0
+  - cycle1_standard
+  - ''
+  - Derived from active-driver master + target-week compatibility package; employment
+    type and restrictions are lab heuristics.
+  - A2TU4ZRI65E1H8
+- - A2VHAFSZ54XXA8
+  - Manpreet
+  - full_time
+  - DVC4
+  - parcel_delivery,on_call
+  - XL_van
+  - cycle1_standard
+  - max_shifts_per_week=5,max_minutes_rolling7=3000
+  - anchor,on_call_priority,stable_recent_history
+  - 33
+  - 0.86
+  - 3
+  - 0
+  - cycle1_standard
+  - ''
+  - Derived from active-driver master + target-week compatibility package; employment
+    type and restrictions are lab heuristics.
+  - A2VHAFSZ54XXA8
+- - AYLV43T35EAIN
+  - Sukhwinder Singh
+  - full_time
+  - DVC4
+  - parcel_delivery,on_call
+  - XL_van
+  - cycle1_standard
+  - max_shifts_per_week=5,max_minutes_rolling7=3000
+  - anchor,on_call_priority,stable_recent_history
+  - 34
+  - 0.94
+  - 0
+  - 0
+  - cycle1_standard
+  - ''
+  - Derived from active-driver master + target-week compatibility package; employment
+    type and restrictions are lab heuristics.
+  - AYLV43T35EAIN
+- - A1BWWMZFC5PAMI
+  - Veerdevinder Singh
+  - part_time
+  - DVC4
+  - parcel_delivery
+  - XL_van
+  - cycle1_standard
+  - max_shifts_per_week=1,max_minutes_rolling7=600
+  - attendance_clean
+  - 35
+  - 0.7
+  - 0
+  - 0
+  - cycle1_standard
+  - ''
+  - Derived from active-driver master + target-week compatibility package; employment
+    type and restrictions are lab heuristics.
+  - A1BWWMZFC5PAMI
+- - A1NJLYPMMEKHLK
+  - Paramjit Gherha
+  - full_time
+  - DVC4
+  - parcel_delivery,on_call
+  - XL_van
+  - cycle1_standard
+  - max_shifts_per_week=5,max_minutes_rolling7=3000
+  - on_call_priority,stable_recent_history
+  - 36
+  - 0.86
+  - 4
+  - 0
+  - cycle1_standard
+  - ''
+  - Derived from active-driver master + target-week compatibility package; employment
+    type and restrictions are lab heuristics.
+  - A1NJLYPMMEKHLK
+- - A1JSQIK4OD79DV
+  - Amritpal Singh
+  - full_time
+  - DVC4
+  - parcel_delivery,on_call
+  - XL_van
+  - cycle1_standard
+  - max_shifts_per_week=5,max_minutes_rolling7=3000
+  - anchor,on_call_priority,stable_recent_history
+  - 37
+  - 0.89
+  - 2
+  - 0
+  - cycle1_standard
+  - ''
+  - Derived from active-driver master + target-week compatibility package; employment
+    type and restrictions are lab heuristics.
+  - A1JSQIK4OD79DV
+- - A1ARZD44V26ZMJ
+  - Ravinderpreet Singh
+  - part_time
+  - DVC4
+  - parcel_delivery,on_call
+  - XL_van
+  - cycle1_standard
+  - max_shifts_per_week=1,max_minutes_rolling7=600
+  - attendance_clean
+  - 38
+  - 0.7
+  - 0
+  - 0
+  - cycle1_standard
+  - ''
+  - Derived from active-driver master + target-week compatibility package; employment
+    type and restrictions are lab heuristics.
+  - A1ARZD44V26ZMJ
+- - A1TJRL0G751SZK
+  - Harvinder SIngh
+  - part_time
+  - DVC4
+  - parcel_delivery,on_call
+  - XL_van
+  - cycle1_standard
+  - max_shifts_per_week=1,max_minutes_rolling7=600
+  - ''
+  - 39
+  - 0.84
+  - 0
+  - 0
+  - cycle1_standard
+  - ''
+  - Derived from active-driver master + target-week compatibility package; employment
+    type and restrictions are lab heuristics.
+  - A1TJRL0G751SZK
+- - A3E56T6T8L9V8J
+  - Shafahad Ali Shah
+  - full_time
+  - DVC4
+  - parcel_delivery
+  - XL_van
+  - cycle1_standard
+  - max_shifts_per_week=4,max_minutes_rolling7=2400
+  - stable_recent_history
+  - 40
+  - 0.82
+  - 3
+  - 0
+  - cycle1_standard
+  - ''
+  - Derived from active-driver master + target-week compatibility package; employment
+    type and restrictions are lab heuristics.
+  - A3E56T6T8L9V8J
+- - AHRF1Y9PK4GXB
+  - Hamant Kumar
+  - part_time
+  - DVC4
+  - parcel_delivery,on_call
+  - XL_van
+  - cycle1_standard
+  - max_shifts_per_week=1,max_minutes_rolling7=600
+  - on_call_priority
+  - 41
+  - 0.82
+  - 0
+  - 0
+  - cycle1_standard
+  - ''
+  - Derived from active-driver master + target-week compatibility package; employment
+    type and restrictions are lab heuristics.
+  - AHRF1Y9PK4GXB
+- - A2GJBFCCI1VYRB
+  - Tanveer Singh
+  - part_time
+  - DVC4
+  - parcel_delivery,on_call
+  - XL_van
+  - cycle1_standard
+  - max_shifts_per_week=4,max_minutes_rolling7=2400
+  - on_call_priority
+  - 42
+  - 0.89
+  - 2
+  - 0
+  - cycle1_standard
+  - ''
+  - Derived from active-driver master + target-week compatibility package; employment
+    type and restrictions are lab heuristics.
+  - A2GJBFCCI1VYRB
+- - A3NLLQPB0L46N9
+  - Jagraj Singh
+  - part_time
+  - DVC4
+  - parcel_delivery,on_call
+  - XL_van
+  - cycle1_standard
+  - max_shifts_per_week=4,max_minutes_rolling7=2400
+  - on_call_priority
+  - 43
+  - 0.87
+  - 1
+  - 0
+  - cycle1_standard
+  - ''
+  - Derived from active-driver master + target-week compatibility package; employment
+    type and restrictions are lab heuristics.
+  - A3NLLQPB0L46N9
+- - A4KU9LEU82OTF
+  - Sikander Singh
+  - full_time
+  - DVC4
+  - parcel_delivery,on_call
+  - XL_van
+  - cycle1_standard
+  - max_shifts_per_week=5,max_minutes_rolling7=3000
+  - anchor,on_call_priority,stable_recent_history
+  - 44
+  - 0.94
+  - 1
+  - 0
+  - cycle1_standard
+  - ''
+  - Derived from active-driver master + target-week compatibility package; employment
+    type and restrictions are lab heuristics.
+  - A4KU9LEU82OTF
+- - AU6YIGC7GXQGA
+  - Pardeep Singh
+  - full_time
+  - DVC4
+  - parcel_delivery,on_call
+  - XL_van
+  - cycle1_standard
+  - max_shifts_per_week=5,max_minutes_rolling7=3000
+  - on_call_priority,stable_recent_history
+  - 45
+  - 0.87
+  - 2
+  - 0
+  - cycle1_standard
+  - ''
+  - Derived from active-driver master + target-week compatibility package; employment
+    type and restrictions are lab heuristics.
+  - AU6YIGC7GXQGA
+- - AGOU3M5WUIHWC
+  - Gurdas Singh Sidhu
+  - full_time
+  - DVC4
+  - parcel_delivery,on_call
+  - XL_van
+  - cycle1_standard
+  - max_shifts_per_week=4,max_minutes_rolling7=2400
+  - on_call_priority,attendance_clean
+  - 46
+  - 0.98
+  - 0
+  - 0
+  - cycle1_standard
+  - ''
+  - Derived from active-driver master + target-week compatibility package; employment
+    type and restrictions are lab heuristics.
+  - AGOU3M5WUIHWC
+- - A1S1XUJABAWLGR
+  - Charanjit Singh
+  - full_time
+  - DVC4
+  - parcel_delivery,on_call
+  - XL_van
+  - cycle1_standard
+  - max_shifts_per_week=5,max_minutes_rolling7=3000
+  - on_call_priority,stable_recent_history
+  - 47
+  - 0.91
+  - 1
+  - 0
+  - cycle1_standard
+  - ''
+  - Derived from active-driver master + target-week compatibility package; employment
+    type and restrictions are lab heuristics.
+  - A1S1XUJABAWLGR
+- - A3RO6BBCA3NOYM
+  - Mehakpreet Singh
+  - full_time
+  - DVC4
+  - parcel_delivery,on_call
+  - XL_van
+  - cycle1_standard
+  - max_shifts_per_week=5,max_minutes_rolling7=3000
+  - anchor,on_call_priority,stable_recent_history
+  - 48
+  - 0.91
+  - 1
+  - 0
+  - cycle1_standard
+  - ''
+  - Derived from active-driver master + target-week compatibility package; employment
+    type and restrictions are lab heuristics.
+  - A3RO6BBCA3NOYM
+- - A11X1NH2FPH5RV
+  - Parampreet Singh
+  - full_time
+  - DVC4
+  - parcel_delivery,on_call
+  - XL_van
+  - cycle1_standard
+  - max_shifts_per_week=5,max_minutes_rolling7=3000
+  - on_call_priority,stable_recent_history
+  - 49
+  - 0.89
+  - 2
+  - 0
+  - cycle1_standard
+  - ''
+  - Derived from active-driver master + target-week compatibility package; employment
+    type and restrictions are lab heuristics.
+  - A11X1NH2FPH5RV
+- - A3M45AZWH3K5F3
+  - Harnamanpreet SIngh
+  - full_time
+  - DVC4
+  - parcel_delivery,on_call
+  - XL_van
+  - cycle1_standard
+  - max_shifts_per_week=5,max_minutes_rolling7=3000
+  - anchor,on_call_priority,stable_recent_history
+  - 50
+  - 0.96
+  - 0
+  - 0
+  - cycle1_standard
+  - ''
+  - Derived from active-driver master + target-week compatibility package; employment
+    type and restrictions are lab heuristics.
+  - A3M45AZWH3K5F3
+- - A3QZ9AS16464VX
+  - Ravdeep Singh
+  - full_time
+  - DVC4
+  - parcel_delivery,on_call
+  - XL_van
+  - cycle1_standard
+  - max_shifts_per_week=5,max_minutes_rolling7=3000
+  - anchor,on_call_priority,stable_recent_history
+  - 51
+  - 0.98
+  - 0
+  - 0
+  - cycle1_standard
+  - ''
+  - Derived from active-driver master + target-week compatibility package; employment
+    type and restrictions are lab heuristics.
+  - A3QZ9AS16464VX
+planner_notes:
+- Driver capabilities were derived from the active-driver master in the compatibility
+  package.
+- Employment type, restrictions, and policy tags are heuristic lab fields and should
+  be reviewed before treating them as policy truth.
+- All active drivers are temporarily modeled as eligible for homogeneous cycle1_standard
+  parcel-delivery XL-van routes.

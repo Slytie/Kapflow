@@ -70,14 +70,19 @@ REALISTIC_WEEKLY_STAGE04_SOURCE_MATERIAL_PATH = (
 ACTUAL_OPS_WEEKLY_STAGE04_SOURCE_MATERIAL_PATH = (
     REPO_ROOT / "fixtures" / "logistics" / "weekly_stage04_actual_ops_lab_source_material_v3.yaml"
 )
+ACTUAL_OPS_V4_WEEKLY_STAGE04_SOURCE_MATERIAL_PATH = (
+    REPO_ROOT / "fixtures" / "logistics" / "weekly_stage04_actual_ops_lab_source_material_v4.yaml"
+)
 
 PILOT_WEEKLY_STAGE04_AGENT = "weekly_stage04_agent_baseline"
 PILOT_WEEKLY_STAGE04_REALISTIC_ARTIFACTS = "weekly_stage04_realistic_artifacts"
 PILOT_WEEKLY_STAGE04_ACTUAL_OPS_LAB = "weekly_stage04_actual_ops_lab"
+PILOT_WEEKLY_STAGE04_ACTUAL_OPS_LAB_V4 = "weekly_stage04_actual_ops_lab_v4"
 ALL_PILOT_IDS: tuple[str, ...] = (
     PILOT_WEEKLY_STAGE04_AGENT,
     PILOT_WEEKLY_STAGE04_REALISTIC_ARTIFACTS,
     PILOT_WEEKLY_STAGE04_ACTUAL_OPS_LAB,
+    PILOT_WEEKLY_STAGE04_ACTUAL_OPS_LAB_V4,
 )
 DEFAULT_MOCK_PILOT_IDS: tuple[str, ...] = (
     PILOT_WEEKLY_STAGE04_AGENT,
@@ -333,6 +338,19 @@ PILOT_DEFINITIONS: dict[str, WeeklyPilotDefinition] = {
         ),
         source_material_loader="manifest_identity",
         source_material_path=ACTUAL_OPS_WEEKLY_STAGE04_SOURCE_MATERIAL_PATH,
+    ),
+    PILOT_WEEKLY_STAGE04_ACTUAL_OPS_LAB_V4: WeeklyPilotDefinition(
+        pilot_id=PILOT_WEEKLY_STAGE04_ACTUAL_OPS_LAB_V4,
+        partition_key="PW-2026-W13",
+        logical_date="2026-03-22",
+        stage_focus="Stage04",
+        description=(
+            "Weekly Stage04 bounded OpenAI agent rerun over the pilot-local actual-ops "
+            "v4 package that removes prior-week-derived 1/2-shift heuristics for the "
+            "four low-shift drivers while preserving the same route-count and buffer seam."
+        ),
+        source_material_loader="manifest_identity",
+        source_material_path=ACTUAL_OPS_V4_WEEKLY_STAGE04_SOURCE_MATERIAL_PATH,
     ),
 }
 
