@@ -12,40 +12,39 @@ import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 
 import { StatePanel } from "@/components/StatePanel";
 import {
-  DraftVersionTimeline,
+  DraftVersionTimelineEntry,
   draftVersionPrimaryLabel
 } from "@/components/workpages/DraftVersionTimeline";
 import { ScheduleArtifactAdvancedInfo } from "@/components/workpages/ScheduleArtifactAdvancedInfo";
-import { ScheduleHeatmapEditor } from "@/components/workpages/ScheduleHeatmapEditor";
+import {
+  ScheduleWorkpageSurface,
+  type ScheduleVersionRailDefinition
+} from "@/components/workpages/ScheduleWorkpageSurface";
 import {
   WorkpageFrame,
   WorkpageHistorySection,
-  WorkpageNotePanelSection,
-  WorkpageSummaryCardsSection,
-  WorkpageTableSection
+  WorkpageNotePanelSection
 } from "@/components/workpages/WorkpageContent";
-import { WorkpageFormSection } from "@/components/workpages/WorkpageFormSection";
 import { apiConfig } from "@/lib/api/config";
 import { errorText } from "@/lib/api/errorText";
 import { isApiClientError } from "@/lib/api/httpClient";
 import { workpagesRepository } from "@/lib/repositories";
-import type { ArtifactVersionRow, WorkpageContract } from "@/lib/types/contracts";
+import type {
+  ArtifactVersionRow,
+  WorkpageContract,
+  WorkpagePreviewResponse
+} from "@/lib/types/contracts";
 import { invalidateWorkspaceViews } from "@/lib/workspace/queryInvalidation";
 import { resolveWorkpageSubjectContext } from "@/lib/workspace/workpageSubjectContext";
 import type {
-  WorkpageFormSection as WorkpageFormSectionModel,
   WorkpageHistorySection as WorkpageHistorySectionModel,
   WorkpageNotePanelSection as WorkpageNotePanelSectionModel,
+  WorkpageScheduleAction,
   WorkpageScheduleHeatmapSection as WorkpageScheduleHeatmapSectionModel,
   WorkpageSummaryCardsSection as WorkpageSummaryCardsSectionModel,
   WorkpageTableRow,
   WorkpageTableSection as WorkpageTableSectionModel
 } from "@/lib/types/workpages";
-import {
-  buildEditableSectionResetKey,
-  buildFormState,
-  type WorkpageFormState
-} from "@/lib/workpages/state";
 
 function findTableSection(
   sections: WorkpageTableSectionModel[],
@@ -96,6 +95,17 @@ function workpageBackRoute(workflowRunId?: string): { href: string; label: strin
 
 function asString(value: unknown): string | null {
   return typeof value === "string" && value.trim().length > 0 ? value : null;
+}
+
+function rowsSignature(rows: WorkpageTableRow[]): string {
+  return JSON.stringify(rows);
+}
+
+function findScheduleAction(
+  contract: WorkpageContract | undefined,
+  matcher: (action: WorkpageScheduleAction) => boolean
+): WorkpageScheduleAction | null {
+  return contract?.actions.find(matcher) ?? null;
 }
 
 function workpageConflictDetails(error: unknown): {
@@ -170,38 +180,109 @@ function useEditableScheduleArtifactRows(
   };
 }
 
-interface LogisticsScheduleWorkpageViewProps {
-  contract: WorkpageContract;
-  sourceDescription: string;
-  summaryLabel: string;
-  testId: string;
-  backLink?: string;
-  backLabel?: string;
-  heroTitleActions?: ReactNode;
-  heroSupportText?: ReactNode;
-  heroActions?: ReactNode;
-  stickyTitleBar?: boolean;
-  preContent?: ReactNode;
-  onRefresh: () => void;
-  isRefreshing: boolean;
+function buildAcceptedRail(
+  contract: WorkpageContract,
+  workflowRunId?: string
+): ScheduleVersionRailDefinition {
+  const acceptedSeries = contract.accepted_series;
+  const latestLogicalDate = acceptedSeries?.entries.reduce<string | null>((current, entry) => {
+    if (!current || entry.logical_date > current) {
+      return entry.logical_date;
+    }
+    return current;
+  }, null);
+  const entries: DraftVersionTimelineEntry[] = (acceptedSeries?.entries ?? []).map((entry) => ({
+    artifactVersionId: entry.artifact_version_id,
+    createdAt: entry.logical_date,
+    label:
+      entry.artifact_version_id === acceptedSeries?.current_artifact_version_id
+        ? "Current accepted"
+        : entry.logical_date,
+    isCurrent: entry.artifact_version_id === acceptedSeries?.current_artifact_version_id,
+    isLatest: entry.logical_date === latestLogicalDate,
+    note: `${entry.partition_key} · ${entry.artifact_kind}`,
+    testId: `schedule-accepted-history-${entry.artifact_version_id}`,
+    to: scheduleArtifactRoute(entry.artifact_version_id, workflowRunId)
+  }));
+
+  return {
+    testId: "schedule-accepted-history-rail",
+    title: "Accepted history",
+    eyebrow: "Accepted series",
+    description: "Accepted navigation stays on accepted weekly history only and never traverses draft lineage.",
+    emptyText: "No accepted schedule history is available for this surface yet.",
+    entries,
+    previousRoute: acceptedSeries?.previous_artifact_version_id
+      ? scheduleArtifactRoute(acceptedSeries.previous_artifact_version_id, workflowRunId)
+      : null,
+    nextRoute: acceptedSeries?.next_artifact_version_id
+      ? scheduleArtifactRoute(acceptedSeries.next_artifact_version_id, workflowRunId)
+      : null,
+    previousLabel: "Previous accepted",
+    nextLabel: "Next accepted"
+  };
 }
 
-function LogisticsScheduleWorkpageView({
-  contract,
-  sourceDescription,
-  summaryLabel,
-  testId,
-  backLink,
-  backLabel,
-  heroTitleActions,
-  heroSupportText,
-  heroActions,
-  stickyTitleBar = false,
-  preContent,
-  onRefresh,
-  isRefreshing
-}: LogisticsScheduleWorkpageViewProps): JSX.Element {
-  const model = contract.workpage;
+function buildDraftRail(
+  contract: WorkpageContract,
+  historyRows: ArtifactVersionRow[],
+  workflowRunId?: string,
+  currentArtifactVersionId?: string
+): ScheduleVersionRailDefinition {
+  const historyById = new Map(historyRows.map((row) => [row.artifact_version_id, row]));
+  const draftLineage = contract.draft_lineage;
+  const lineageEntries = draftLineage?.recent_versions ?? [];
+  const currentDraftArtifactVersionId =
+    draftLineage?.current_artifact_version_id ?? currentArtifactVersionId ?? "";
+  const immediateNewerEntry =
+    lineageEntries.find(
+      (entry) => entry.supersedes_artifact_version_id === currentDraftArtifactVersionId
+    ) ?? null;
+  const entries: DraftVersionTimelineEntry[] = lineageEntries.map((entry) => {
+    const history = historyById.get(entry.artifact_version_id);
+    return {
+      artifactVersionId: entry.artifact_version_id,
+      createdAt: history?.created_at ?? entry.artifact_version_id,
+      label: draftVersionPrimaryLabel(entry.artifact_version_id, {
+        currentArtifactVersionId: currentDraftArtifactVersionId,
+        previousArtifactVersionId: draftLineage?.previous_artifact_version_id ?? null
+      }),
+      isCurrent: entry.artifact_version_id === currentDraftArtifactVersionId,
+      isLatest: entry.artifact_version_id === draftLineage?.latest_artifact_version_id,
+      note:
+        history?.lineage_note ??
+        (entry.supersedes_artifact_version_id
+          ? `Supersedes ${entry.supersedes_artifact_version_id}`
+          : "Initial schedule draft in this lineage."),
+      testId: `schedule-draft-history-${entry.artifact_version_id}`,
+      to: scheduleArtifactRoute(entry.artifact_version_id, workflowRunId)
+    };
+  });
+
+  return {
+    testId: "schedule-draft-history-rail",
+    title: "Draft lineage",
+    eyebrow: "Draft rail",
+    description: "Draft navigation stays within draft lineage and is enriched with artifact timestamps when available.",
+    emptyText: "No draft lineage is available on this surface yet.",
+    entries,
+    previousRoute: draftLineage?.previous_artifact_version_id
+      ? scheduleArtifactRoute(draftLineage.previous_artifact_version_id, workflowRunId)
+      : null,
+    nextRoute: immediateNewerEntry
+      ? scheduleArtifactRoute(immediateNewerEntry.artifact_version_id, workflowRunId)
+      : null,
+    previousLabel: "Previous draft",
+    nextLabel: immediateNewerEntry ? "Next draft" : "Latest draft unavailable"
+  };
+}
+
+const EMPTY_WORKPAGE_MODEL = {
+  sections: []
+} as unknown as WorkpageContract["workpage"];
+
+function useScheduleSections(contract?: WorkpageContract | null) {
+  const model = contract?.workpage ?? EMPTY_WORKPAGE_MODEL;
   const summarySection = useMemo(
     () =>
       model.sections.find(
@@ -223,6 +304,7 @@ function LogisticsScheduleWorkpageView({
       ) ?? null,
     [model]
   );
+  const heatmapSection = useMemo(() => findHeatmapSection(model.sections), [model]);
   const tableSections = useMemo(
     () =>
       model.sections.filter(
@@ -230,46 +312,72 @@ function LogisticsScheduleWorkpageView({
       ) ?? [],
     [model]
   );
-  const formSection = useMemo(
-    () =>
-      model.sections.find(
-        (section): section is WorkpageFormSectionModel => section.kind === "form"
-      ) ?? null,
-    [model]
-  );
-  const [formState, setFormState] = useState<WorkpageFormState>({});
-  const lastFormResetKeyRef = useRef<string | null>(null);
-  const formResetKey = useMemo(() => {
-    if (!contract || !formSection) {
-      return null;
-    }
-    return buildEditableSectionResetKey(contract.workpage, contract.freshness.source_version, formSection);
-  }, [contract, formSection]);
+  return {
+    summarySection,
+    noteSection,
+    historySection,
+    heatmapSection,
+    assignmentSection: findTableSection(tableSections, "assignment_rows"),
+    reserveSection: findTableSection(tableSections, "reserve_rows"),
+    iterationSection: findTableSection(tableSections, "iteration_deltas")
+  };
+}
 
-  useEffect(() => {
-    if (!formSection || !formResetKey) {
-      lastFormResetKeyRef.current = null;
-      setFormState({});
-      return;
-    }
-    if (lastFormResetKeyRef.current === formResetKey) {
-      return;
-    }
-    lastFormResetKeyRef.current = formResetKey;
-    setFormState(buildFormState(formSection));
-  }, [formResetKey, formSection]);
+interface LogisticsScheduleWorkpageViewProps {
+  contract: WorkpageContract;
+  sourceDescription: string;
+  summaryLabel: string;
+  testId: string;
+  backLink?: string;
+  backLabel?: string;
+  heroTitleActions?: ReactNode;
+  heroSupportText?: ReactNode;
+  heroActions?: ReactNode;
+  stickyTitleBar?: boolean;
+  preContent?: ReactNode;
+  onRefresh: () => void;
+  isRefreshing: boolean;
+  historyRows?: ArtifactVersionRow[];
+}
+
+function LogisticsScheduleWorkpageView({
+  contract,
+  sourceDescription,
+  summaryLabel,
+  testId,
+  backLink,
+  backLabel,
+  heroTitleActions,
+  heroSupportText,
+  heroActions,
+  stickyTitleBar = false,
+  preContent,
+  onRefresh,
+  isRefreshing,
+  historyRows = []
+}: LogisticsScheduleWorkpageViewProps): JSX.Element {
+  const { summarySection, noteSection, historySection, heatmapSection, assignmentSection, reserveSection } =
+    useScheduleSections(contract);
+  const workflowRunId = contract.run_context?.workflow_run_id ?? undefined;
+  const versionRails = useMemo(
+    () => [
+      buildAcceptedRail(contract, workflowRunId),
+      buildDraftRail(contract, historyRows, workflowRunId)
+    ],
+    [contract, historyRows, workflowRunId]
+  );
 
   return (
     <WorkpageFrame
       eyebrow="Weekly Planning Review"
-      description="A workflow-backed weekly planning review for bounded what-if exploration and draft-artifact handoff."
+      description="A workflow-backed weekly planning review for bounded draft navigation, live schedule context, and backend-authored metrics."
       summaryItems={[
-        `Week ${String(model.summary.planning_week_id ?? "unknown")}`,
-        String(model.summary.operational_week_start ?? "unknown"),
-        String(model.summary.station_code ?? model.summary.source_bundle_id ?? "—"),
+        `Week ${String(contract.workpage.summary.planning_week_id ?? "unknown")}`,
+        String(contract.workpage.summary.operational_week_start ?? "unknown"),
+        String(contract.workpage.summary.station_code ?? contract.workpage.summary.source_bundle_id ?? "—"),
         summaryLabel
       ]}
-      model={model}
+      model={contract.workpage}
       source={contract.source}
       freshness={contract.freshness}
       onRefresh={onRefresh}
@@ -293,35 +401,16 @@ function LogisticsScheduleWorkpageView({
       backLabel={backLabel}
     >
       {preContent}
-
-      {summarySection ? <WorkpageSummaryCardsSection section={summarySection} /> : null}
-
-      {findTableSection(tableSections, "day_demand") ? (
-        <WorkpageTableSection section={findTableSection(tableSections, "day_demand") as WorkpageTableSectionModel} />
-      ) : null}
-
-      {findTableSection(tableSections, "selected_day_preview") ? (
-        <WorkpageTableSection
-          section={findTableSection(tableSections, "selected_day_preview") as WorkpageTableSectionModel}
-        />
-      ) : null}
-
-      {findTableSection(tableSections, "driver_roster") ? (
-        <WorkpageTableSection section={findTableSection(tableSections, "driver_roster") as WorkpageTableSectionModel} />
-      ) : null}
-
-      {formSection ? (
-        <WorkpageFormSection
-          section={formSection}
-          values={formState}
-          onChange={(fieldKey, value) => {
-            setFormState((current) => ({
-              ...current,
-              [fieldKey]: value
-            }));
-          }}
-        />
-      ) : null}
+      <ScheduleWorkpageSurface
+        summarySection={summarySection}
+        heatmapSection={heatmapSection}
+        assignmentRows={assignmentSection?.rows ?? []}
+        reserveRows={reserveSection?.rows ?? []}
+        calculations={contract.calculations}
+        dependencies={contract.dependencies}
+        versionRails={versionRails}
+        readOnly
+      />
     </WorkpageFrame>
   );
 }
@@ -335,12 +424,6 @@ export function LogisticsScheduleWorkpagePage(): JSX.Element {
       workflowRunId
         ? workpagesRepository.scheduleForRun(workflowRunId)
         : workpagesRepository.schedule(),
-    refetchInterval: apiConfig.pollIntervalMs
-  });
-  const historyQuery = useQuery({
-    queryKey: ["workpages", "schedule-v0", "history", workflowRunId],
-    queryFn: () => workpagesRepository.listScheduleDraftHistory(workflowRunId ?? ""),
-    enabled: Boolean(workflowRunId),
     refetchInterval: apiConfig.pollIntervalMs
   });
 
@@ -376,7 +459,10 @@ export function LogisticsScheduleWorkpagePage(): JSX.Element {
     );
   }
 
-  const latestDraft = historyQuery.data?.[0] ?? null;
+  const openLatestDraftAction = findScheduleAction(
+    query.data,
+    (action) => action.kind === "open_latest_draft"
+  );
   const backRoute = workpageBackRoute(workflowRunId);
 
   return (
@@ -388,68 +474,41 @@ export function LogisticsScheduleWorkpagePage(): JSX.Element {
           ? "Workflow-run-backed schedule projection served from canonical weekly Stage04 source artifacts."
           : "Backend demo query served from repo-native workflow example bundles."
       }
-      summaryLabel={isRunBacked ? "Run-backed preview" : "Query preview"}
+      summaryLabel={isRunBacked ? "Run-backed review" : "Query preview"}
       backLink={backRoute.href}
       backLabel={backRoute.label}
       onRefresh={() => {
         void query.refetch();
-        if (workflowRunId) {
-          void historyQuery.refetch();
-        }
       }}
-      isRefreshing={query.isFetching || historyQuery.isFetching}
+      isRefreshing={query.isFetching}
       preContent={
         isRunBacked ? (
-          <>
-            {historyQuery.isError ? (
-              <StatePanel
-                kind="error"
-                title="Latest draft lookup failed"
-                detail={errorText(
-                  historyQuery.error,
-                  "Unable to resolve the latest schedule draft artifact for this run."
-                )}
-              />
-            ) : null}
-            {!historyQuery.isError && historyQuery.isLoading ? (
-              <section className="workpage-panel workpage-panel--callout">
-                <header className="workpage-panel__header">
-                  <h2>Checking for editable draft</h2>
-                  <p>Resolving the latest Stage04 draft weekly schedule artifact for this run.</p>
-                </header>
-              </section>
-            ) : null}
-            {!historyQuery.isError && !historyQuery.isLoading && latestDraft ? (
-              <section className="workpage-panel workpage-panel--callout">
-                <header className="workpage-panel__header">
-                  <h2>Editable draft available</h2>
-                  <p>
-                    This landing page remains the canonical review surface. Reopen the newest
-                    Stage04 draft workbook artifact when you need bounded draft edits.
-                  </p>
-                </header>
-                <div className="action-cluster">
-                  <Link
-                    className="link-button"
-                    to={scheduleArtifactRoute(latestDraft.artifact_version_id, workflowRunId)}
-                  >
-                    Open editable draft
-                  </Link>
-                </div>
-              </section>
-            ) : null}
-            {!historyQuery.isError && !historyQuery.isLoading && !latestDraft ? (
-              <section className="workpage-panel workpage-panel--callout">
-                <header className="workpage-panel__header">
-                  <h2>No editable draft artifact yet</h2>
-                  <p>
-                    The Stage04 draft weekly schedule artifact is not available for this run yet.
-                    Stay on the landing page until the canonical draft artifact exists.
-                  </p>
-                </header>
-              </section>
-            ) : null}
-          </>
+          openLatestDraftAction?.route && openLatestDraftAction.state === "available" ? (
+            <section className="workpage-panel workpage-panel--callout">
+              <header className="workpage-panel__header">
+                <h2>Editable draft available</h2>
+                <p>
+                  This landing page stays read-only. Open the backend-selected latest draft when you
+                  need live preview and save controls.
+                </p>
+              </header>
+              <div className="action-cluster">
+                <Link className="link-button" to={openLatestDraftAction.route}>
+                  Open editable draft
+                </Link>
+              </div>
+            </section>
+          ) : (
+            <section className="workpage-panel workpage-panel--callout">
+              <header className="workpage-panel__header">
+                <h2>No editable draft artifact yet</h2>
+                <p>
+                  The Stage04 draft weekly schedule artifact is not available for this run yet. Stay
+                  on the landing page until the canonical draft artifact exists.
+                </p>
+              </header>
+            </section>
+          )
         ) : null
       }
     />
@@ -460,7 +519,12 @@ export function LogisticsScheduleArtifactWorkpagePage(): JSX.Element {
   const navigate = useNavigate();
   const location = useLocation();
   const queryClient = useQueryClient();
+  const previewRequestSequenceRef = useRef(0);
   const [pendingNavigationRoute, setPendingNavigationRoute] = useState<string | null>(null);
+  const [previewResponse, setPreviewResponse] =
+    useState<WorkpagePreviewResponse["preview"] | null>(null);
+  const [previewErrorMessage, setPreviewErrorMessage] = useState<string | null>(null);
+  const [isPreviewPending, setIsPreviewPending] = useState(false);
   const { artifactVersionId, workflowRunId } = useParams<{
     artifactVersionId: string;
     workflowRunId: string;
@@ -471,7 +535,8 @@ export function LogisticsScheduleArtifactWorkpagePage(): JSX.Element {
     enabled: Boolean(artifactVersionId),
     refetchInterval: apiConfig.pollIntervalMs
   });
-  const artifactWorkflowRunId = workflowRunId ?? query.data?.artifact_context?.workflow_run_id ?? "";
+  const contract = query.data;
+  const artifactWorkflowRunId = workflowRunId ?? contract?.artifact_context?.workflow_run_id ?? "";
   const historyQuery = useQuery({
     queryKey: ["workpages", "schedule-v0", "history", artifactWorkflowRunId],
     queryFn: () => workpagesRepository.listScheduleDraftHistory(artifactWorkflowRunId),
@@ -479,68 +544,63 @@ export function LogisticsScheduleArtifactWorkpagePage(): JSX.Element {
     refetchInterval: apiConfig.pollIntervalMs
   });
 
-  const model = query.data?.workpage;
-  const summarySection = useMemo(
-    () =>
-      model?.sections.find(
-        (section): section is WorkpageSummaryCardsSectionModel => section.kind === "summary_cards"
-      ) ?? null,
-    [model]
-  );
-  const noteSection = useMemo(
-    () =>
-      model?.sections.find(
-        (section): section is WorkpageNotePanelSectionModel => section.kind === "note_panel"
-      ) ?? null,
-    [model]
-  );
-  const historySection = useMemo(
-    () =>
-      model?.sections.find(
-        (section): section is WorkpageHistorySectionModel => section.kind === "history_stub"
-      ) ?? null,
-    [model]
-  );
-  const heatmapSection = useMemo(() => (model ? findHeatmapSection(model.sections) : null), [model]);
-  const tableSections = useMemo(
-    () =>
-      model?.sections.filter(
-        (section): section is WorkpageTableSectionModel => section.kind === "table"
-      ) ?? [],
-    [model]
-  );
-  const dayDemandSection = useMemo(
-    () => findTableSection(tableSections, "day_demand"),
-    [tableSections]
-  );
-  const selectedDaySection = useMemo(
-    () => findTableSection(tableSections, "selected_day_preview"),
-    [tableSections]
-  );
-  const driverRosterSection = useMemo(
-    () => findTableSection(tableSections, "driver_roster"),
-    [tableSections]
-  );
-  const assignmentSection = useMemo(
-    () => findTableSection(tableSections, "assignment_rows"),
-    [tableSections]
-  );
-  const reserveSection = useMemo(
-    () => findTableSection(tableSections, "reserve_rows"),
-    [tableSections]
-  );
-  const iterationSection = useMemo(
-    () => findTableSection(tableSections, "iteration_deltas"),
-    [tableSections]
-  );
+  const {
+    summarySection,
+    noteSection,
+    historySection,
+    heatmapSection,
+    assignmentSection,
+    reserveSection,
+    iterationSection
+  } = useScheduleSections(contract);
+
   const { assignmentRows, setAssignmentRows, reserveRows, setReserveRows } =
-    useEditableScheduleArtifactRows(query.data, assignmentSection, reserveSection);
+    useEditableScheduleArtifactRows(contract, assignmentSection, reserveSection);
+  const previewAction = findScheduleAction(
+    contract,
+    (action) => action.kind === "preview_recalc" || action.action_id === "workpage.schedule-v0.preview_recalc"
+  );
+  const saveAction = findScheduleAction(
+    contract,
+    (action) => action.kind === "submit_artifact" || action.action_id === "workpage.schedule-v0.save_draft"
+  );
+  const baseAssignmentSignature = useMemo(
+    () => rowsSignature(assignmentSection?.rows ?? []),
+    [assignmentSection]
+  );
+  const baseReserveSignature = useMemo(
+    () => rowsSignature(reserveSection?.rows ?? []),
+    [reserveSection]
+  );
+  const assignmentSignature = useMemo(() => rowsSignature(assignmentRows), [assignmentRows]);
+  const reserveSignature = useMemo(() => rowsSignature(reserveRows), [reserveRows]);
+  const hasUnsavedEdits =
+    assignmentSignature !== baseAssignmentSignature || reserveSignature !== baseReserveSignature;
   const submitMutation = useMutation({
-    mutationFn: () =>
-      workpagesRepository.submitScheduleArtifact(artifactVersionId ?? "", {
-        rows: assignmentRows,
-        reserveRows
-      }, resolveWorkpageSubjectContext(location.state, { workflowRunId: artifactWorkflowRunId })),
+    mutationFn: () => {
+      const subjectContext = resolveWorkpageSubjectContext(location.state, {
+        workflowRunId: artifactWorkflowRunId
+      });
+      if (saveAction?.submit_path) {
+        return workpagesRepository.submitScheduleArtifactAtPath(
+          saveAction.submit_path,
+          artifactVersionId ?? "",
+          {
+            rows: assignmentRows,
+            reserveRows
+          },
+          subjectContext
+        );
+      }
+      return workpagesRepository.submitScheduleArtifact(
+        artifactVersionId ?? "",
+        {
+          rows: assignmentRows,
+          reserveRows
+        },
+        subjectContext
+      );
+    },
     onSuccess: (submitted) => {
       void queryClient.invalidateQueries({ queryKey: ["workpages"] });
       void invalidateWorkspaceViews(queryClient, submitted.workflow_run_id);
@@ -551,6 +611,71 @@ export function LogisticsScheduleArtifactWorkpagePage(): JSX.Element {
     mutationFn: (currentArtifactVersionId: string) =>
       workpagesRepository.downloadScheduleArtifactJson(currentArtifactVersionId)
   });
+
+  useEffect(() => {
+    setPreviewResponse(null);
+    setPreviewErrorMessage(null);
+    setIsPreviewPending(false);
+    previewRequestSequenceRef.current += 1;
+  }, [artifactVersionId]);
+
+  useEffect(() => {
+    previewRequestSequenceRef.current += 1;
+    const requestToken = previewRequestSequenceRef.current;
+
+    if (!hasUnsavedEdits) {
+      setPreviewResponse(null);
+      setPreviewErrorMessage(null);
+      setIsPreviewPending(false);
+      return;
+    }
+
+    if (!previewAction?.preview_path || previewAction.state !== "available") {
+      setIsPreviewPending(false);
+      return;
+    }
+
+    const timer = window.setTimeout(() => {
+      setIsPreviewPending(true);
+      void workpagesRepository
+        .previewScheduleArtifact(previewAction.preview_path ?? "", {
+          rows: assignmentRows,
+          reserveRows
+        })
+        .then((response) => {
+          if (previewRequestSequenceRef.current !== requestToken) {
+            return;
+          }
+          setPreviewResponse(response.preview);
+          setPreviewErrorMessage(null);
+        })
+        .catch((error) => {
+          if (previewRequestSequenceRef.current !== requestToken) {
+            return;
+          }
+          setPreviewErrorMessage(
+            errorText(error, "Unable to recalculate the backend-authored schedule preview.")
+          );
+        })
+        .finally(() => {
+          if (previewRequestSequenceRef.current === requestToken) {
+            setIsPreviewPending(false);
+          }
+        });
+    }, 500);
+
+    return () => {
+      window.clearTimeout(timer);
+    };
+  }, [
+    assignmentRows,
+    assignmentSignature,
+    hasUnsavedEdits,
+    previewAction?.preview_path,
+    previewAction?.state,
+    reserveRows,
+    reserveSignature
+  ]);
 
   useEffect(() => {
     if (!pendingNavigationRoute) {
@@ -572,7 +697,7 @@ export function LogisticsScheduleArtifactWorkpagePage(): JSX.Element {
 
   if (
     query.isError ||
-    !query.data ||
+    !contract ||
     !artifactVersionId ||
     !heatmapSection ||
     !assignmentSection ||
@@ -591,22 +716,35 @@ export function LogisticsScheduleArtifactWorkpagePage(): JSX.Element {
     );
   }
 
-  const contract = query.data;
   const artifactContext = contract.artifact_context;
   const latestArtifactVersionId =
     artifactContext?.latest_in_chain_artifact_version_id ?? artifactVersionId;
-  const previousArtifactVersionId = artifactContext?.supersedes_artifact_version_id ?? null;
   const latestRoute = scheduleArtifactRoute(latestArtifactVersionId, workflowRunId);
+  const currentCalculations = previewResponse?.calculations ?? contract.calculations;
+  const currentDependencies = previewResponse?.dependencies ?? contract.dependencies;
   const recentDraftHistory: ArtifactVersionRow[] = historyQuery.data ?? [];
   const isStaleArtifact = latestArtifactVersionId !== artifactVersionId;
   const submitConflict = workpageConflictDetails(submitMutation.error);
   const staleOrConflictRoute = submitConflict?.route ?? (isStaleArtifact ? latestRoute : null);
   const backRoute = workpageBackRoute(workflowRunId);
+  const versionRails = [
+    buildAcceptedRail(contract, workflowRunId),
+    buildDraftRail(contract, recentDraftHistory, workflowRunId, artifactVersionId)
+  ];
+  const previewBlockedReason =
+    hasUnsavedEdits && previewAction?.state !== "available"
+      ? previewAction?.disabled_reason ?? "Preview recalculation is unavailable for this draft."
+      : null;
+  const saveDisabled =
+    submitMutation.isPending ||
+    isStaleArtifact ||
+    saveAction?.state !== "available" ||
+    !artifactVersionId;
 
   return (
     <WorkpageFrame
       eyebrow="Weekly Schedule Draft Artifact"
-      description="A bounded Stage04 draft workbook edit lane. Submit creates a new immutable draft weekly schedule artifact version without publishing or crossing into live dispatch."
+      description="A bounded Stage04 draft workbook edit lane with live backend preview and explicit save into a new immutable draft version."
       summaryItems={[
         `Week ${String(contract.workpage.summary.planning_week_id ?? "unknown")}`,
         `Artifact ${artifactVersionId}`,
@@ -629,16 +767,16 @@ export function LogisticsScheduleArtifactWorkpagePage(): JSX.Element {
       testId="schedule-artifact-workpage-page"
       metadataPresentation="dialog"
       infoDialogTitle="Schedule draft context"
-      sourceDescription="Artifact-backed projection of an immutable Stage04 draft weekly schedule workbook. Submit creates a new superseding schedule draft artifact version."
+      sourceDescription="Artifact-backed projection of an immutable Stage04 draft weekly schedule workbook. Save creates a new superseding draft artifact version without publishing."
       heroTitleActions={
         <>
           <button
             type="button"
             className="action-btn action-btn--positive"
-            disabled={submitMutation.isPending || isStaleArtifact}
+            disabled={saveDisabled}
             onClick={() => submitMutation.mutate()}
           >
-            {submitMutation.isPending ? "Submitting draft..." : "Submit draft"}
+            {submitMutation.isPending ? "Saving draft..." : "Save draft"}
           </button>
           <button
             type="button"
@@ -650,7 +788,7 @@ export function LogisticsScheduleArtifactWorkpagePage(): JSX.Element {
           </button>
         </>
       }
-      heroSupportText="Submit creates a new immutable weekly schedule draft version in this run lineage."
+      heroSupportText="Live preview recalculates in place. Save creates the next immutable draft in this weekly lineage."
       heroActions={
         <Link className="link-button" to={scheduleLandingRoute(workflowRunId)}>
           Back to query landing
@@ -665,9 +803,6 @@ export function LogisticsScheduleArtifactWorkpagePage(): JSX.Element {
           reserveSection={reserveSection}
           iterationSection={iterationSection}
           artifactContext={artifactContext}
-          artifactRouteFor={(nextArtifactVersionId) =>
-            scheduleArtifactRoute(nextArtifactVersionId, workflowRunId)
-          }
         />
       }
       backLink={backRoute.href}
@@ -679,7 +814,7 @@ export function LogisticsScheduleArtifactWorkpagePage(): JSX.Element {
             <h2>Latest draft already exists</h2>
             <p>
               This base schedule artifact has already been superseded. Keep your local edits for
-              now, then reopen the latest draft artifact before submitting again.
+              now, then reopen the latest draft artifact before saving again.
             </p>
           </header>
           <div className="action-cluster">
@@ -696,7 +831,7 @@ export function LogisticsScheduleArtifactWorkpagePage(): JSX.Element {
             <h2>Latest draft available</h2>
             <p>
               This artifact version is no longer the latest draft in the chain. Reopen the latest
-              version before submitting more changes.
+              version before saving more changes.
             </p>
           </header>
           <div className="action-cluster">
@@ -710,8 +845,8 @@ export function LogisticsScheduleArtifactWorkpagePage(): JSX.Element {
       {submitMutation.isError && !submitConflict ? (
         <StatePanel
           kind="error"
-          title="Draft submit failed"
-          detail={errorText(submitMutation.error, "Unable to submit the artifact-backed schedule draft.")}
+          title="Draft save failed"
+          detail={errorText(submitMutation.error, "Unable to save the artifact-backed schedule draft.")}
         />
       ) : null}
 
@@ -722,86 +857,36 @@ export function LogisticsScheduleArtifactWorkpagePage(): JSX.Element {
           detail={errorText(downloadMutation.error, "Unable to download the schedule draft artifact.")}
         />
       ) : null}
-      <div className="workpage-page__artifact-layout">
-        <div className="workpage-page__artifact-main">
-          {summarySection ? <WorkpageSummaryCardsSection section={summarySection} /> : null}
 
-          <ScheduleHeatmapEditor
-            section={heatmapSection}
-            assignmentRows={assignmentRows}
-            reserveRows={reserveRows}
-            onRowsChange={({ assignmentRows: nextAssignmentRows, reserveRows: nextReserveRows }) => {
-              setAssignmentRows(nextAssignmentRows);
-              setReserveRows(nextReserveRows);
-            }}
-          />
+      {historyQuery.isError ? (
+        <StatePanel
+          kind="error"
+          title="Draft history unavailable"
+          detail={errorText(historyQuery.error, "Unable to load recent schedule draft history for this run.")}
+        />
+      ) : null}
 
-          {dayDemandSection ? <WorkpageTableSection section={dayDemandSection} /> : null}
-
-          {selectedDaySection ? <WorkpageTableSection section={selectedDaySection} /> : null}
-
-          {driverRosterSection ? <WorkpageTableSection section={driverRosterSection} /> : null}
-        </div>
-
-        {artifactContext ? (
-          <aside className="workpage-page__artifact-rail">
-            <section
-              className="workpage-panel workpage-page__artifact-rail-panel"
-              data-testid="schedule-draft-history-rail"
-            >
-              <header className="workpage-panel__header">
-                <h2>Recent draft versions</h2>
-                <p>
-                  Recent immutable `planning.draft_weekly_schedule.workbook` versions for this weekly
-                  planning run. Reopen adjacent draft states without leaving the schedule workpage
-                  surface.
-                </p>
-              </header>
-
-              {historyQuery.isError ? (
-                <section className="workpage-panel workpage-panel--callout">
-                  <header className="workpage-panel__header">
-                    <h2>Recent draft history unavailable</h2>
-                    <p>
-                      {errorText(
-                        historyQuery.error,
-                        "Unable to load recent schedule draft history for this run."
-                      )}
-                    </p>
-                  </header>
-                </section>
-              ) : null}
-
-              {!historyQuery.isError && historyQuery.isLoading ? (
-                <p className="workpage-history__empty">Loading recent draft history...</p>
-              ) : null}
-
-              {!historyQuery.isError && !historyQuery.isLoading && recentDraftHistory.length === 0 ? (
-                <p className="workpage-history__empty">No recent schedule draft versions found for this run.</p>
-              ) : null}
-
-              {!historyQuery.isError && recentDraftHistory.length > 0 ? (
-                <DraftVersionTimeline
-                  ariaLabel="Recent schedule draft versions"
-                  entries={recentDraftHistory.map((artifact) => ({
-                    artifactVersionId: artifact.artifact_version_id,
-                    createdAt: artifact.created_at,
-                    label: draftVersionPrimaryLabel(artifact.artifact_version_id, {
-                      currentArtifactVersionId: artifactVersionId,
-                      previousArtifactVersionId
-                    }),
-                    isCurrent: artifact.artifact_version_id === artifactVersionId,
-                    isLatest: artifact.artifact_version_id === latestArtifactVersionId,
-                    note: artifact.lineage_note ?? "Schedule draft artifact version.",
-                    testId: `schedule-draft-history-${artifact.artifact_version_id}`,
-                    to: scheduleArtifactRoute(artifact.artifact_version_id, workflowRunId)
-                  }))}
-                />
-              ) : null}
-            </section>
-          </aside>
-        ) : null}
-      </div>
+      <ScheduleWorkpageSurface
+        summarySection={summarySection}
+        heatmapSection={heatmapSection}
+        assignmentRows={assignmentRows}
+        reserveRows={reserveRows}
+        onRowsChange={({ assignmentRows: nextAssignmentRows, reserveRows: nextReserveRows }) => {
+          setAssignmentRows(nextAssignmentRows);
+          setReserveRows(nextReserveRows);
+        }}
+        calculations={currentCalculations}
+        dependencies={currentDependencies}
+        versionRails={versionRails}
+        readOnly={false}
+        previewStatus={{
+          isDirty: hasUnsavedEdits,
+          isPending: isPreviewPending,
+          error: previewErrorMessage,
+          blockedReason: previewBlockedReason
+        }}
+        saveAction={saveAction}
+      />
     </WorkpageFrame>
   );
 }

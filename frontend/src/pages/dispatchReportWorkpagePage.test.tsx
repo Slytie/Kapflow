@@ -20,10 +20,14 @@ function buildArtifactPayload(
     supersedesArtifactVersionId: null,
     supersededByArtifactVersionId: null,
     generatedAt: "2026-03-25T09:00:00Z"
-  });
-  const history = payload.workpage.sections.find(
-    (section) => section.kind === "history_stub"
-  ) as { entries: Array<{ label: string; value: string }> };
+  }) as {
+    workpage: {
+      sections: Array<{ kind?: string; entries?: Array<{ label: string; value: string }> }>;
+    };
+  } & Record<string, unknown>;
+  const history = payload.workpage.sections.find((section) => section.kind === "history_stub") as {
+    entries: Array<{ label: string; value: string }>;
+  };
   history.entries = [
     { label: "Current artifact version", value: artifactVersionId },
     { label: "Supersedes", value: "Initial draft" },

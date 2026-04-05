@@ -1,5 +1,3 @@
-import { Link } from "react-router-dom";
-
 import type { WorkpageContract } from "@/lib/types/contracts";
 import type {
   WorkpageHistorySection as WorkpageHistorySectionModel,
@@ -19,8 +17,7 @@ export function ScheduleArtifactAdvancedInfo({
   assignmentSection,
   reserveSection,
   iterationSection,
-  artifactContext,
-  artifactRouteFor
+  artifactContext
 }: {
   noteSection: WorkpageNotePanelSectionModel | null;
   historySection: WorkpageHistorySectionModel | null;
@@ -28,17 +25,7 @@ export function ScheduleArtifactAdvancedInfo({
   reserveSection: WorkpageTableSectionModel | null;
   iterationSection: WorkpageTableSectionModel | null;
   artifactContext: WorkpageContract["artifact_context"];
-  artifactRouteFor: (artifactVersionId: string) => string;
 }): JSX.Element {
-  const currentArtifactVersionId = artifactContext?.artifact_version_id ?? null;
-  const latestArtifactVersionId = artifactContext?.latest_in_chain_artifact_version_id ?? null;
-  const previousArtifactVersionId = artifactContext?.supersedes_artifact_version_id ?? null;
-  const previousRoute = previousArtifactVersionId ? artifactRouteFor(previousArtifactVersionId) : null;
-  const latestRoute =
-    latestArtifactVersionId && currentArtifactVersionId && latestArtifactVersionId !== currentArtifactVersionId
-      ? artifactRouteFor(latestArtifactVersionId)
-      : null;
-
   return (
     <>
       {noteSection ? <WorkpageNotePanelSection section={noteSection} /> : null}
@@ -46,7 +33,7 @@ export function ScheduleArtifactAdvancedInfo({
         <section className="workpage-panel">
           <header className="workpage-panel__header">
             <h2>Artifact lineage</h2>
-            <p>Technical draft lineage and raw workbook context stay available here without taking over the main surface.</p>
+            <p>Technical lineage and raw workbook context stay available here while the main surface focuses on live metrics and version rails.</p>
           </header>
           <div className="workpage-page__source-grid workpage-page__source-grid--metadata">
             <article className="workpage-page__source-item">
@@ -73,18 +60,6 @@ export function ScheduleArtifactAdvancedInfo({
               <strong>Superseded by</strong>
               <p>{artifactContext.superseded_by_artifact_version_id ?? "Current latest"}</p>
             </article>
-          </div>
-          <div className="action-cluster">
-            {previousRoute ? (
-              <Link className="link-button" to={previousRoute}>
-                Open previous draft
-              </Link>
-            ) : null}
-            {latestRoute ? (
-              <Link className="link-button" to={latestRoute}>
-                Open latest draft
-              </Link>
-            ) : null}
           </div>
         </section>
       ) : null}

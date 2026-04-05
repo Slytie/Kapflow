@@ -38,9 +38,10 @@ function personNameFromLabel(label: string): string {
 
 function buildScheduleArtifactPayload(
   artifactVersionId: string,
-  workflowRunId = "wr-weekly-001"
+  workflowRunId = "wr-weekly-001",
+  customize?: (payload: Record<string, any>) => void
 ): Record<string, unknown> {
-  const payload = structuredClone(scheduleArtifactStateSnapshot.workpage_state);
+  const payload = structuredClone(scheduleArtifactStateSnapshot.workpage_state) as Record<string, any>;
   payload.freshness.generated_at = "2026-03-25T09:15:00Z";
   payload.freshness.source_version = artifactVersionId;
   payload.source.source_artifact_version_id = artifactVersionId;
@@ -51,20 +52,49 @@ function buildScheduleArtifactPayload(
   payload.artifact_context.supersedes_artifact_version_id = null;
   payload.artifact_context.superseded_by_artifact_version_id = null;
   payload.workpage.source_artifact_version_id = artifactVersionId;
+  payload.artifact_state.current_artifact_version_id = artifactVersionId;
+  payload.artifact_state.latest_artifact_version_id = artifactVersionId;
+  payload.draft_lineage.current_artifact_version_id = artifactVersionId;
+  payload.draft_lineage.latest_artifact_version_id = artifactVersionId;
+  payload.draft_lineage.previous_artifact_version_id = null;
+  payload.draft_lineage.recent_versions = [
+    {
+      artifact_version_id: artifactVersionId,
+      supersedes_artifact_version_id: null
+    }
+  ];
+  payload.actions = payload.actions.map((action: Record<string, unknown>) => {
+    if (action.kind === "preview_recalc") {
+      return {
+        ...action,
+        artifact_version_id: artifactVersionId,
+        preview_path: `/api/v1/workpages/workflow-runs/${workflowRunId}/schedule-v0/artifacts/${artifactVersionId}/preview`
+      };
+    }
+    if (action.kind === "submit_artifact") {
+      return {
+        ...action,
+        artifact_version_id: artifactVersionId,
+        submit_path: `/api/v1/workpages/workflow-runs/${workflowRunId}/schedule-v0/artifacts/${artifactVersionId}/submit`
+      };
+    }
+    return action;
+  });
   const history = payload.workpage.sections.find(
-    (section) => section.kind === "history_stub"
+    (section: Record<string, unknown>) => section.kind === "history_stub"
   ) as { entries: Array<{ label: string; value: string }> };
   history.entries = [
     { label: "Current artifact version", value: artifactVersionId },
     { label: "Supersedes", value: "Initial Stage04 draft" },
     { label: "Latest draft in chain", value: artifactVersionId }
   ];
+  customize?.(payload);
   return payload;
 }
 
 describe("LogisticsScheduleArtifactWorkpagePage", () => {
   it(
-    "opens the latest draft from the run-backed landing, moves planned work in the heatmap, submits a superseding version, and downloads JSON",
+    "opens the latest draft from the run-backed landing, auto-previews heatmap edits, saves a superseding version, and downloads JSON",
     async () => {
       const user = userEvent.setup();
       window.history.pushState({}, "", "/runs/wr-weekly-001/workpages/schedule-v0");
@@ -76,11 +106,10 @@ describe("LogisticsScheduleArtifactWorkpagePage", () => {
       const artifactPage = await screen.findByTestId("schedule-artifact-workpage-page");
       const artifactTitleBar = artifactPage.querySelector(".workpage-page__hero-title-bar");
       const artifactHeroActions = artifactPage.querySelector(".workpage-page__hero-actions");
-      const draftHistoryRail = within(artifactPage).getByTestId("schedule-draft-history-rail");
       expect(artifactTitleBar).not.toBeNull();
       expect(artifactTitleBar).toHaveClass("workpage-page__hero-title-bar--sticky");
       expect(
-        within(artifactTitleBar as HTMLElement).getByRole("button", { name: "Submit draft" })
+        within(artifactTitleBar as HTMLElement).getByRole("button", { name: "Save draft" })
       ).toBeInTheDocument();
       expect(
         within(artifactTitleBar as HTMLElement).getByRole("button", { name: "Download draft JSON" })
@@ -89,20 +118,10 @@ describe("LogisticsScheduleArtifactWorkpagePage", () => {
       expect(
         within(artifactHeroActions as HTMLElement).getByRole("link", { name: "Back to query landing" })
       ).toBeInTheDocument();
-      expect(
-        within(artifactHeroActions as HTMLElement).queryByRole("button", { name: "Download draft JSON" })
-      ).not.toBeInTheDocument();
-      expect(draftHistoryRail.closest("aside")).toHaveClass("workpage-page__artifact-rail");
-      expect(within(draftHistoryRail).getByRole("heading", { name: "Recent draft versions" })).toBeInTheDocument();
-      expect(within(artifactPage).queryByRole("heading", { name: "Draft actions" })).not.toBeInTheDocument();
-      const summarySection = within(artifactPage).getByTestId("workpage-summary-section");
-      expect(
-        within(summarySection).getByRole("heading", { name: "Draft workbook summary" })
-      ).toBeInTheDocument();
-      expect(
-        within(summarySection).getByTestId("workpage-summary-card-route_assignment_count")
-      ).toHaveClass("workpage-summary-card");
-      expect(within(summarySection).getByText("158")).toBeInTheDocument();
+      expect(within(artifactPage).getByRole("heading", { name: "Accepted history" })).toBeInTheDocument();
+      expect(within(artifactPage).getByRole("heading", { name: "Draft lineage" })).toBeInTheDocument();
+      expect(within(artifactPage).getByRole("heading", { name: "Live preview" })).toBeInTheDocument();
+      expect(within(artifactPage).getByText("No accepted schedule history is available for this surface yet.")).toBeInTheDocument();
 
       const heatmap = heatmapSection();
       const sourceCell = heatmapButton(
@@ -124,7 +143,12 @@ describe("LogisticsScheduleArtifactWorkpagePage", () => {
         })
       ).toBeInTheDocument();
 
-      await user.click(screen.getByRole("button", { name: "Submit draft" }));
+      await waitFor(() => {
+        expect(mutationLog()).toContain("workpage-schedule-artifact-preview:av-schedule-artifact-001");
+      });
+      expect(await screen.findByText("Preview applied")).toBeInTheDocument();
+
+      await user.click(screen.getByRole("button", { name: "Save draft" }));
 
       await waitFor(() => {
         expect(window.location.pathname).toBe(
@@ -133,15 +157,9 @@ describe("LogisticsScheduleArtifactWorkpagePage", () => {
       });
 
       expect(await screen.findByTestId("schedule-artifact-workpage-page")).toBeInTheDocument();
-      expect(
-        screen.getByRole("button", {
-          name: new RegExp(`^${escapeRegExp(targetName)} on 2026-03-22: assigned route, manually overridden$`)
-        })
-      ).toBeInTheDocument();
-
       const historyPanel = screen.getByTestId("schedule-draft-history-rail");
       expect(within(historyPanel as HTMLElement).getByText("Current draft")).toBeInTheDocument();
-      expect(within(historyPanel as HTMLElement).getByText("Previous draft")).toBeInTheDocument();
+      expect(within(historyPanel as HTMLElement).getAllByText("Previous draft").length).toBeGreaterThan(0);
 
       await user.click(screen.getByRole("button", { name: "Download draft JSON" }));
       await waitFor(() => {
@@ -151,14 +169,14 @@ describe("LogisticsScheduleArtifactWorkpagePage", () => {
     25000
   );
 
-  it("reopens the previous draft from history and shows the stale-version guidance", async () => {
+  it("reopens the previous draft from the draft rail and shows the stale-version guidance", async () => {
     const user = userEvent.setup();
     window.history.pushState({}, "", "/runs/wr-weekly-001/workpages/schedule-v0");
     render(<App />);
 
     await user.click(await screen.findByRole("link", { name: "Open editable draft" }));
     expect(await screen.findByTestId("schedule-artifact-workpage-page")).toBeInTheDocument();
-    await user.click(screen.getByRole("button", { name: "Submit draft" }));
+    await user.click(screen.getByRole("button", { name: "Save draft" }));
 
     await waitFor(() => {
       expect(window.location.pathname).toBe(
@@ -183,24 +201,26 @@ describe("LogisticsScheduleArtifactWorkpagePage", () => {
   it("shows conflict reopen UX and keeps local edits until the operator navigates", async () => {
     const user = userEvent.setup();
     server.use(
-      http.post("*/api/v1/workpages/artifacts/:artifactVersionId/submit", ({ params }) =>
-        HttpResponse.json(
-          {
-            status: "error",
-            error: {
-              code: "workpage_artifact_conflict",
-              message: "artifact-backed workpage already has a newer draft",
-              details: {
-                artifact_version_id: String(params.artifactVersionId),
-                latest_artifact_version_id: "av-schedule-artifact-latest",
-                workflow_run_id: "wr-weekly-001",
-                route:
-                  "/runs/wr-weekly-001/workpages/schedule-v0/artifacts/av-schedule-artifact-latest"
+      http.post(
+        "*/api/v1/workpages/workflow-runs/:workflowRunId/schedule-v0/artifacts/:artifactVersionId/submit",
+        ({ params }) =>
+          HttpResponse.json(
+            {
+              status: "error",
+              error: {
+                code: "workpage_artifact_conflict",
+                message: "artifact-backed workpage already has a newer draft",
+                details: {
+                  artifact_version_id: String(params.artifactVersionId),
+                  latest_artifact_version_id: "av-schedule-artifact-latest",
+                  workflow_run_id: "wr-weekly-001",
+                  route:
+                    "/runs/wr-weekly-001/workpages/schedule-v0/artifacts/av-schedule-artifact-latest"
+                }
               }
-            }
-          },
-          { status: 409 }
-        )
+            },
+            { status: 409 }
+          )
       ),
       http.get("*/api/v1/workpages/artifacts/av-schedule-artifact-latest", () =>
         HttpResponse.json(buildScheduleArtifactPayload("av-schedule-artifact-latest"))
@@ -227,7 +247,7 @@ describe("LogisticsScheduleArtifactWorkpagePage", () => {
     await user.click(sourceCell);
     await user.click(targetCell);
 
-    await user.click(screen.getByRole("button", { name: "Submit draft" }));
+    await user.click(screen.getByRole("button", { name: "Save draft" }));
 
     expect(await screen.findByRole("heading", { name: "Latest draft already exists" })).toBeInTheDocument();
     expect(
@@ -244,26 +264,210 @@ describe("LogisticsScheduleArtifactWorkpagePage", () => {
     );
   }, 10000);
 
-  it("drops mismatched workspace subject context when submitting schedule drafts directly", async () => {
+  it("uses accepted-series navigation without traversing the draft rail", async () => {
+    const user = userEvent.setup();
+    server.use(
+      http.get("*/api/v1/workpages/artifacts/av-schedule-accepted-002", () =>
+        HttpResponse.json(
+          buildScheduleArtifactPayload("av-schedule-accepted-002", "wr-weekly-001", (payload) => {
+            payload.actions = [];
+            payload.artifact_context.artifact_kind = "planning.published_weekly_schedule.workbook";
+            payload.artifact_state = {
+              ...payload.artifact_state,
+              artifact_kind: "planning.published_weekly_schedule.workbook",
+              state_kind: "accepted",
+              editable: false,
+              current_artifact_version_id: "av-schedule-accepted-002",
+              accepted_artifact_version_id: "av-schedule-accepted-002"
+            };
+            payload.accepted_series = {
+              series_key: "weekly_schedule_planning.v1:dvc4:pitt-meadows",
+              current_artifact_version_id: "av-schedule-accepted-002",
+              previous_artifact_version_id: "av-schedule-accepted-001",
+              next_artifact_version_id: null,
+              entries: [
+                {
+                  artifact_version_id: "av-schedule-accepted-001",
+                  workflow_run_id: "wr-weekly-000",
+                  partition_key: "PW-2026-W12",
+                  logical_date: "2026-03-15",
+                  artifact_kind: "planning.published_weekly_schedule.workbook"
+                },
+                {
+                  artifact_version_id: "av-schedule-accepted-002",
+                  workflow_run_id: "wr-weekly-001",
+                  partition_key: "PW-2026-W13",
+                  logical_date: "2026-03-22",
+                  artifact_kind: "planning.published_weekly_schedule.workbook"
+                }
+              ]
+            };
+            payload.draft_lineage = {
+              current_artifact_version_id: "av-schedule-draft-011",
+              latest_artifact_version_id: "av-schedule-draft-011",
+              previous_artifact_version_id: "av-schedule-draft-010",
+              recent_versions: [
+                {
+                  artifact_version_id: "av-schedule-draft-011",
+                  supersedes_artifact_version_id: "av-schedule-draft-010"
+                },
+                {
+                  artifact_version_id: "av-schedule-draft-010",
+                  supersedes_artifact_version_id: null
+                }
+              ]
+            };
+          })
+        )
+      ),
+      http.get("*/api/v1/workpages/artifacts/av-schedule-accepted-001", () =>
+        HttpResponse.json(
+          buildScheduleArtifactPayload("av-schedule-accepted-001", "wr-weekly-000", (payload) => {
+            payload.actions = [];
+            payload.artifact_context.artifact_kind = "planning.published_weekly_schedule.workbook";
+            payload.artifact_state = {
+              ...payload.artifact_state,
+              artifact_kind: "planning.published_weekly_schedule.workbook",
+              state_kind: "accepted",
+              editable: false,
+              current_artifact_version_id: "av-schedule-accepted-001",
+              accepted_artifact_version_id: "av-schedule-accepted-001"
+            };
+            payload.accepted_series = {
+              series_key: "weekly_schedule_planning.v1:dvc4:pitt-meadows",
+              current_artifact_version_id: "av-schedule-accepted-001",
+              previous_artifact_version_id: null,
+              next_artifact_version_id: "av-schedule-accepted-002",
+              entries: [
+                {
+                  artifact_version_id: "av-schedule-accepted-001",
+                  workflow_run_id: "wr-weekly-000",
+                  partition_key: "PW-2026-W12",
+                  logical_date: "2026-03-15",
+                  artifact_kind: "planning.published_weekly_schedule.workbook"
+                },
+                {
+                  artifact_version_id: "av-schedule-accepted-002",
+                  workflow_run_id: "wr-weekly-001",
+                  partition_key: "PW-2026-W13",
+                  logical_date: "2026-03-22",
+                  artifact_kind: "planning.published_weekly_schedule.workbook"
+                }
+              ]
+            };
+          })
+        )
+      )
+    );
+
+    window.history.pushState(
+      {},
+      "",
+      "/runs/wr-weekly-001/workpages/schedule-v0/artifacts/av-schedule-accepted-002"
+    );
+    render(<App />);
+
+    expect(await screen.findByTestId("schedule-artifact-workpage-page")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Accepted history" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Draft lineage" })).toBeInTheDocument();
+
+    await user.click(screen.getByRole("link", { name: "Previous accepted" }));
+
+    await waitFor(() => {
+      expect(window.location.pathname).toBe(
+        "/runs/wr-weekly-001/workpages/schedule-v0/artifacts/av-schedule-accepted-001"
+      );
+    });
+  });
+
+  it(
+    "keeps the last successful preview visible when a later preview fails",
+    async () => {
+      const user = userEvent.setup();
+      window.history.pushState({}, "", "/runs/wr-weekly-001/workpages/schedule-v0");
+      render(<App />);
+
+    await user.click(await screen.findByRole("link", { name: "Open editable draft" }));
+    expect(await screen.findByTestId("schedule-artifact-workpage-page")).toBeInTheDocument();
+
+    const heatmap = heatmapSection();
+    const sourceCell = heatmapButton(
+      heatmap,
+      (label) => label.includes("2026-03-22: assigned route")
+    );
+    const targetCell = heatmapButton(
+      heatmap,
+      (label) => label.includes("2026-03-22: no planned work")
+    );
+    const sourceName = personNameFromLabel(sourceCell.getAttribute("aria-label") ?? "");
+    const targetName = personNameFromLabel(targetCell.getAttribute("aria-label") ?? "");
+
+    await user.click(sourceCell);
+    await user.click(targetCell);
+
+    await waitFor(() => {
+      expect(mutationLog()).toContain("workpage-schedule-artifact-preview:av-schedule-artifact-001");
+    });
+    expect(await screen.findByText("Preview applied")).toBeInTheDocument();
+
+    server.use(
+      http.post(
+        "*/api/v1/workpages/workflow-runs/:workflowRunId/schedule-v0/artifacts/:artifactVersionId/preview",
+        () =>
+          HttpResponse.json(
+            {
+              status: "error",
+              error: {
+                code: "preview_unavailable",
+                message: "preview calculation failed"
+              }
+            },
+            { status: 422 }
+          )
+      )
+    );
+
+    const secondSourceCell = heatmapButton(
+      heatmap,
+      (label) => label.includes(`${targetName} on 2026-03-22: assigned route`)
+    );
+    const secondTargetCell = heatmapButton(
+      heatmap,
+      (label) => label.includes(`${sourceName} on 2026-03-22: no planned work`)
+    );
+
+    await user.click(secondSourceCell);
+    await user.click(secondTargetCell);
+
+    expect(await screen.findByText(/preview_unavailable: preview calculation failed/i)).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Selected day" })).toBeInTheDocument();
+    },
+    10000
+  );
+
+  it("drops mismatched workspace subject context when saving schedule drafts directly", async () => {
     const user = userEvent.setup();
     const submitBodies: Array<Record<string, unknown>> = [];
     server.use(
       http.get("*/api/v1/workpages/artifacts/av-schedule-artifact-001", () =>
         HttpResponse.json(buildScheduleArtifactPayload("av-schedule-artifact-001"))
       ),
-      http.post("*/api/v1/workpages/artifacts/:artifactVersionId/submit", async ({ params, request }) => {
-        submitBodies.push((await request.json()) as Record<string, unknown>);
-        return HttpResponse.json({
-          status: "ok",
-          command: "api.workpages.artifact.submit",
-          submitted: {
-            workflow_run_id: "wr-weekly-001",
-            artifact_version_id: "av-schedule-artifact-010",
-            supersedes_artifact_version_id: String(params.artifactVersionId),
-            route: "/runs/wr-weekly-001/workpages/schedule-v0/artifacts/av-schedule-artifact-010"
-          }
-        });
-      }),
+      http.post(
+        "*/api/v1/workpages/workflow-runs/:workflowRunId/schedule-v0/artifacts/:artifactVersionId/submit",
+        async ({ params, request }) => {
+          submitBodies.push((await request.json()) as Record<string, unknown>);
+          return HttpResponse.json({
+            status: "ok",
+            command: "api.workpages.artifact.submit",
+            submitted: {
+              workflow_run_id: "wr-weekly-001",
+              artifact_version_id: "av-schedule-artifact-010",
+              supersedes_artifact_version_id: String(params.artifactVersionId),
+              route: "/runs/wr-weekly-001/workpages/schedule-v0/artifacts/av-schedule-artifact-010"
+            }
+          });
+        }
+      ),
       http.get("*/api/v1/workpages/artifacts/av-schedule-artifact-010", () =>
         HttpResponse.json(buildScheduleArtifactPayload("av-schedule-artifact-010"))
       )
@@ -283,7 +487,7 @@ describe("LogisticsScheduleArtifactWorkpagePage", () => {
     render(<App />);
 
     await screen.findByTestId("schedule-artifact-workpage-page");
-    await user.click(screen.getByRole("button", { name: "Submit draft" }));
+    await user.click(screen.getByRole("button", { name: "Save draft" }));
 
     await waitFor(() => {
       expect(window.location.pathname).toBe(

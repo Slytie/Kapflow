@@ -18,6 +18,7 @@ import type {
   TimelineEvent,
   WorkpageContract,
   WorkpageDraftResponse,
+  WorkpagePreviewResponse,
   WorkpageSubmittedResponse,
   WorkflowRunDetailContract,
   WorkflowRunWorkspaceContract,
@@ -31,6 +32,15 @@ import type {
   WorkflowRunRow,
   ViewerSession
 } from "@/lib/types/contracts";
+import type {
+  WorkpageScheduleAcceptedSeries,
+  WorkpageScheduleAction,
+  WorkpageScheduleArtifactState,
+  WorkpageScheduleCalculations,
+  WorkpageScheduleCheck,
+  WorkpageScheduleDependency,
+  WorkpageScheduleDraftLineage
+} from "@/lib/types/workpages";
 
 interface PageEnvelope {
   limit: number;
@@ -110,6 +120,12 @@ interface WorkpageEnvelope extends ListEnvelope {
   artifact_context?: Record<string, unknown> | null;
   run_context?: Record<string, unknown> | null;
   draft_resolution?: Record<string, unknown> | null;
+  artifact_state?: Record<string, unknown> | null;
+  calculations?: Record<string, unknown> | null;
+  draft_lineage?: Record<string, unknown> | null;
+  accepted_series?: Record<string, unknown> | null;
+  dependencies?: Array<Record<string, unknown>> | null;
+  actions?: Array<Record<string, unknown>> | null;
 }
 
 interface WorkpageDraftEnvelope extends ListEnvelope {
@@ -118,6 +134,10 @@ interface WorkpageDraftEnvelope extends ListEnvelope {
 
 interface WorkpageSubmitEnvelope extends ListEnvelope {
   submitted?: Record<string, unknown>;
+}
+
+interface WorkpagePreviewEnvelope extends ListEnvelope {
+  preview?: Record<string, unknown>;
 }
 
 interface PointersEnvelope extends ListEnvelope {
@@ -746,6 +766,22 @@ function normalizeWorkpageContract(payload: WorkpageEnvelope): WorkpageContract 
     payload.draft_resolution === null || payload.draft_resolution === undefined
       ? null
       : requiredObject(payload.draft_resolution, "draft_resolution");
+  const artifactState =
+    payload.artifact_state === null || payload.artifact_state === undefined
+      ? null
+      : requiredObject(payload.artifact_state, "artifact_state");
+  const calculations =
+    payload.calculations === null || payload.calculations === undefined
+      ? null
+      : requiredObject(payload.calculations, "calculations");
+  const draftLineage =
+    payload.draft_lineage === null || payload.draft_lineage === undefined
+      ? null
+      : requiredObject(payload.draft_lineage, "draft_lineage");
+  const acceptedSeries =
+    payload.accepted_series === null || payload.accepted_series === undefined
+      ? null
+      : requiredObject(payload.accepted_series, "accepted_series");
 
   if (!Array.isArray(workpage.sections)) {
     throw new Error("Invalid API response: expected array at 'workpage.sections'.");
@@ -821,7 +857,13 @@ function normalizeWorkpageContract(payload: WorkpageEnvelope): WorkpageContract 
           latest_artifact_version_id: asStringOrNull(draftResolution.latest_artifact_version_id),
           artifact_route: asStringOrNull(draftResolution.artifact_route)
         }
-      : null
+      : null,
+    artifact_state: normalizeScheduleArtifactState(artifactState),
+    dependencies: normalizeScheduleDependencies(payload.dependencies),
+    calculations: normalizeScheduleCalculations(calculations),
+    draft_lineage: normalizeScheduleDraftLineage(draftLineage),
+    accepted_series: normalizeScheduleAcceptedSeries(acceptedSeries),
+    actions: normalizeScheduleActions(payload.actions)
   };
 }
 
@@ -843,6 +885,213 @@ function normalizeWorkpageSubmittedResponse(
     artifact_version_id: asString(submitted.artifact_version_id),
     supersedes_artifact_version_id: asString(submitted.supersedes_artifact_version_id),
     route: asString(submitted.route)
+  };
+}
+
+function normalizeScheduleArtifactState(
+  value: Record<string, unknown> | null
+): WorkpageScheduleArtifactState | null {
+  if (!value) {
+    return null;
+  }
+  return {
+    state_kind: asString(value.state_kind),
+    artifact_kind: asString(value.artifact_kind),
+    editable: Boolean(value.editable),
+    current_artifact_version_id: asStringOrNull(value.current_artifact_version_id),
+    latest_artifact_version_id: asStringOrNull(value.latest_artifact_version_id),
+    accepted_artifact_version_id: asStringOrNull(value.accepted_artifact_version_id)
+  };
+}
+
+function normalizeScheduleDependency(
+  value: Record<string, unknown>
+): WorkpageScheduleDependency {
+  return {
+    dependency_key: asString(value.dependency_key),
+    artifact_kind: asString(value.artifact_kind),
+    artifact_version_id: asStringOrNull(value.artifact_version_id),
+    impact_class: asString(value.impact_class),
+    state: asString(value.state, "resolved") as WorkpageScheduleDependency["state"],
+    source_ref: asStringOrNull(value.source_ref)
+  };
+}
+
+function normalizeScheduleDependencies(
+  value: unknown
+): WorkpageScheduleDependency[] {
+  return asArray<Record<string, unknown>>(value).map(normalizeScheduleDependency);
+}
+
+function normalizeScheduleCheck(value: Record<string, unknown>): WorkpageScheduleCheck {
+  return {
+    check_id: asString(value.check_id),
+    label: asString(value.label),
+    state: asString(value.state),
+    blocking: Boolean(value.blocking),
+    affected_service_dates: asArray(value.affected_service_dates)
+      .map((item) => asString(item))
+      .filter(Boolean),
+    affected_driver_ids: asArray(value.affected_driver_ids)
+      .map((item) => asString(item))
+      .filter(Boolean)
+  };
+}
+
+function normalizeScheduleCalculations(
+  value: Record<string, unknown> | null
+): WorkpageScheduleCalculations | null {
+  if (!value) {
+    return null;
+  }
+  const topBar = asRecord(value.top_bar);
+  const selectedDay = asRecord(value.selected_day);
+  return {
+    top_bar: {
+      days: asArray<Record<string, unknown>>(topBar.days).map((day) => ({
+        service_date: asString(day.service_date),
+        weekday_label: asString(day.weekday_label),
+        routes_required: asNumber(day.routes_required),
+        routes_scheduled:
+          day.routes_scheduled === undefined ? undefined : asNumber(day.routes_scheduled),
+        on_call_target: asNumber(day.on_call_target),
+        on_call_drivers:
+          day.on_call_drivers === undefined ? undefined : asNumber(day.on_call_drivers),
+        total_staff: day.total_staff === undefined ? undefined : asNumber(day.total_staff),
+        excess_capacity:
+          day.excess_capacity === undefined ? undefined : asNumber(day.excess_capacity),
+        excess_capacity_target:
+          day.excess_capacity_target === undefined
+            ? undefined
+            : asNumber(day.excess_capacity_target),
+        available_driver_count:
+          day.available_driver_count === undefined
+            ? undefined
+            : asNumber(day.available_driver_count),
+        capacity_state:
+          day.capacity_state === undefined ? undefined : asString(day.capacity_state)
+      }))
+    },
+    selected_day: {
+      service_date: asString(selectedDay.service_date),
+      routes_required: asNumber(selectedDay.routes_required),
+      routes_scheduled:
+        selectedDay.routes_scheduled === undefined
+          ? undefined
+          : asNumber(selectedDay.routes_scheduled),
+      on_call_target:
+        selectedDay.on_call_target === undefined
+          ? undefined
+          : asNumber(selectedDay.on_call_target),
+      on_call_drivers:
+        selectedDay.on_call_drivers === undefined
+          ? undefined
+          : asNumber(selectedDay.on_call_drivers),
+      available_driver_count:
+        selectedDay.available_driver_count === undefined
+          ? undefined
+          : asNumber(selectedDay.available_driver_count),
+      available_driver_ids: asArray(selectedDay.available_driver_ids)
+        .map((item) => asString(item))
+        .filter(Boolean),
+      drivers_available:
+        selectedDay.drivers_available === undefined
+          ? undefined
+          : asNumber(selectedDay.drivers_available),
+      projected_on_call_needed:
+        selectedDay.projected_on_call_needed === undefined
+          ? undefined
+          : asNumber(selectedDay.projected_on_call_needed),
+      open_questions:
+        selectedDay.open_questions === undefined
+          ? undefined
+          : asString(selectedDay.open_questions)
+    },
+    driver_metrics: asArray<Record<string, unknown>>(value.driver_metrics).map((item) => ({
+      driver_id: asString(item.driver_id),
+      driver_name: asString(item.driver_name),
+      scheduled_hours: asNumber(item.scheduled_hours),
+      scheduled_routes: asNumber(item.scheduled_routes),
+      on_call_shifts: asNumber(item.on_call_shifts),
+      preference_state: asString(item.preference_state),
+      availability_state: asString(item.availability_state),
+      compliance_state: asString(item.compliance_state),
+      issues: asArray(item.issues).map((issue) => asString(issue)).filter(Boolean)
+    })),
+    checks: asArray<Record<string, unknown>>(value.checks).map(normalizeScheduleCheck)
+  };
+}
+
+function normalizeScheduleDraftLineage(
+  value: Record<string, unknown> | null
+): WorkpageScheduleDraftLineage | null {
+  if (!value) {
+    return null;
+  }
+  return {
+    current_artifact_version_id: asStringOrNull(value.current_artifact_version_id),
+    latest_artifact_version_id: asStringOrNull(value.latest_artifact_version_id),
+    previous_artifact_version_id: asStringOrNull(value.previous_artifact_version_id),
+    recent_versions: asArray<Record<string, unknown>>(value.recent_versions).map((item) => ({
+      artifact_version_id: asString(item.artifact_version_id),
+      supersedes_artifact_version_id: asStringOrNull(item.supersedes_artifact_version_id)
+    }))
+  };
+}
+
+function normalizeScheduleAcceptedSeries(
+  value: Record<string, unknown> | null
+): WorkpageScheduleAcceptedSeries | null {
+  if (!value) {
+    return null;
+  }
+  return {
+    series_key: asStringOrNull(value.series_key),
+    current_artifact_version_id: asStringOrNull(value.current_artifact_version_id),
+    previous_artifact_version_id: asStringOrNull(value.previous_artifact_version_id),
+    next_artifact_version_id: asStringOrNull(value.next_artifact_version_id),
+    entries: asArray<Record<string, unknown>>(value.entries).map((item) => ({
+      artifact_version_id: asString(item.artifact_version_id),
+      workflow_run_id: asString(item.workflow_run_id),
+      partition_key: asString(item.partition_key),
+      logical_date: asString(item.logical_date),
+      artifact_kind: asString(item.artifact_kind)
+    }))
+  };
+}
+
+function normalizeScheduleActions(value: unknown): WorkpageScheduleAction[] {
+  return asArray<Record<string, unknown>>(value).map((action) => ({
+    action_id: asString(action.action_id),
+    kind: asString(action.kind) as WorkpageScheduleAction["kind"],
+    label: asString(action.label),
+    state: asString(action.state, "unavailable") as WorkpageScheduleAction["state"],
+    workpage_kind: asString(action.workpage_kind),
+    artifact_version_id: asStringOrNull(action.artifact_version_id),
+    route: asStringOrNull(action.route),
+    preview_path: asStringOrNull(action.preview_path),
+    submit_path: asStringOrNull(action.submit_path),
+    disabled_reason: asStringOrNull(action.disabled_reason)
+  }));
+}
+
+function normalizeWorkpagePreviewResponse(
+  payload: WorkpagePreviewEnvelope
+): WorkpagePreviewResponse {
+  const preview = requiredObject(payload.preview, "preview");
+  const calculations = normalizeScheduleCalculations(asRecord(preview.calculations));
+  if (!calculations) {
+    throw new Error("Invalid API response: expected object at 'preview.calculations'.");
+  }
+  return {
+    preview: {
+      workflow_run_id: asString(preview.workflow_run_id),
+      artifact_version_id: asString(preview.artifact_version_id),
+      dirty: Boolean(preview.dirty),
+      dependency_state: asString(preview.dependency_state),
+      dependencies: normalizeScheduleDependencies(preview.dependencies),
+      calculations
+    }
   };
 }
 
@@ -1163,6 +1412,38 @@ export const onetruthApi = {
       }
     );
     return normalizeWorkpageSubmittedResponse(result);
+  },
+
+  async submitArtifactWorkpageAtPath(
+    submitPath: string,
+    payload: {
+      form_values?: Record<string, unknown>;
+      checklist_values?: Array<Record<string, unknown>>;
+      rows?: Array<Record<string, unknown>>;
+      reserve_rows?: Array<Record<string, unknown>>;
+      subject_link?: WorkpageSubjectLinkPayload;
+      idempotency_key: string;
+    }
+  ): Promise<WorkpageSubmittedResponse> {
+    const result = await requestJson<WorkpageSubmitEnvelope>(normalizeApiPath(submitPath), {
+      method: "POST",
+      body: payload
+    });
+    return normalizeWorkpageSubmittedResponse(result);
+  },
+
+  async previewArtifactWorkpageAtPath(
+    previewPath: string,
+    payload: {
+      rows: Array<Record<string, unknown>>;
+      reserve_rows: Array<Record<string, unknown>>;
+    }
+  ): Promise<WorkpagePreviewResponse> {
+    const result = await requestJson<WorkpagePreviewEnvelope>(normalizeApiPath(previewPath), {
+      method: "POST",
+      body: payload
+    });
+    return normalizeWorkpagePreviewResponse(result);
   },
 
   async listPointers(query: {

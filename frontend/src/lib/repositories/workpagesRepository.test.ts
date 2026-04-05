@@ -74,6 +74,8 @@ describe("workpagesRepository", () => {
     const scheduleLanding = await workpagesRepository.scheduleForRun("wr-weekly-001");
     const initialHistory = await workpagesRepository.listScheduleDraftHistory("wr-weekly-001");
     const artifact = await workpagesRepository.scheduleArtifact("av-schedule-artifact-001");
+    const previewAction = artifact.actions.find((action) => action.kind === "preview_recalc");
+    const saveAction = artifact.actions.find((action) => action.kind === "submit_artifact");
     const assignmentRows = (artifact.workpage.sections[2] as { rows: Array<Record<string, unknown>> }).rows.map(
       (row) => ({ ...row })
     );
@@ -90,10 +92,19 @@ describe("workpagesRepository", () => {
       assigned_driver_id: "DRV-MANUAL-88",
       assignment_status: "manual_override"
     };
-    const submitted = await workpagesRepository.submitScheduleArtifact("av-schedule-artifact-001", {
+    const preview = await workpagesRepository.previewScheduleArtifact(previewAction?.preview_path ?? "", {
       rows: assignmentRows,
       reserveRows
     });
+    const historyAfterPreview = await workpagesRepository.listScheduleDraftHistory("wr-weekly-001");
+    const submitted = await workpagesRepository.submitScheduleArtifactAtPath(
+      saveAction?.submit_path ?? "",
+      "av-schedule-artifact-001",
+      {
+        rows: assignmentRows,
+        reserveRows
+      }
+    );
     const submittedHistory = await workpagesRepository.listScheduleDraftHistory("wr-weekly-001");
     await workpagesRepository.downloadScheduleArtifactJson("av-schedule-artifact-002");
 
@@ -101,6 +112,11 @@ describe("workpagesRepository", () => {
     expect(initialHistory.map((row) => row.artifact_version_id)).toEqual(["av-schedule-artifact-001"]);
     expect(artifact.source.mode).toBe("artifact_projection");
     expect(artifact.artifact_context?.artifact_kind).toBe("planning.draft_weekly_schedule.workbook");
+    expect(preview.preview.artifact_version_id).toBe("av-schedule-artifact-001");
+    expect(preview.preview.dirty).toBe(true);
+    expect(historyAfterPreview.map((row) => row.artifact_version_id)).toEqual([
+      "av-schedule-artifact-001"
+    ]);
     expect(submitted.artifact_version_id).toBe("av-schedule-artifact-002");
     expect(submitted.supersedes_artifact_version_id).toBe("av-schedule-artifact-001");
     expect(submitted.route).toBe(
@@ -110,6 +126,7 @@ describe("workpagesRepository", () => {
       "av-schedule-artifact-002",
       "av-schedule-artifact-001"
     ]);
+    expect(mutationLog()).toContain("workpage-schedule-artifact-preview:av-schedule-artifact-001");
     expect(mutationLog()).toContain("artifact-download-bin:av-schedule-artifact-002");
   });
 });

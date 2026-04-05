@@ -101,6 +101,28 @@ describe("onetruthApi workpage parsing", () => {
       workflow_run_id: "<workflow_run_id:1>",
       latest_in_chain_artifact_version_id: "<artifact_version_id:2>"
     });
+    expect(contract.artifact_state).toMatchObject({
+      state_kind: "draft",
+      editable: true,
+      current_artifact_version_id: "<artifact_version_id:2>"
+    });
+    expect(contract.dependencies[0]).toMatchObject({
+      dependency_key: "route_slot_requirements",
+      state: "aligned"
+    });
+    expect(contract.calculations?.selected_day).toMatchObject({
+      service_date: "2026-03-24"
+    });
+    expect(contract.draft_lineage).toMatchObject({
+      current_artifact_version_id: "<artifact_version_id:2>"
+    });
+    expect(contract.accepted_series).toMatchObject({
+      series_key: "weekly_schedule_planning.v1:dvc4:pitt-meadows"
+    });
+    expect(contract.actions.map((action) => action.kind)).toEqual([
+      "preview_recalc",
+      "submit_artifact"
+    ]);
     expect(contract.run_context).toBeNull();
     expect(contract.draft_resolution).toBeNull();
   });
@@ -195,5 +217,55 @@ describe("onetruthApi workpage parsing", () => {
     });
 
     expect(submitted).toEqual(scheduleArtifactSubmitSnapshot.submit_response.submitted);
+  });
+
+  it("parses the canonical schedule artifact-submit and preview envelopes", async () => {
+    server.use(
+      http.post(
+        "*/api/v1/workpages/workflow-runs/:workflowRunId/schedule-v0/artifacts/:artifactVersionId/submit",
+        () => HttpResponse.json(scheduleArtifactSubmitSnapshot.submit_response)
+      ),
+      http.post(
+        "*/api/v1/workpages/workflow-runs/:workflowRunId/schedule-v0/artifacts/:artifactVersionId/preview",
+        () =>
+          HttpResponse.json({
+            status: "ok",
+            command: "api.workpages.artifact.preview",
+            preview: {
+              workflow_run_id: "<workflow_run_id:1>",
+              artifact_version_id: "<artifact_version_id:2>",
+              dirty: true,
+              dependency_state: "aligned",
+              dependencies: scheduleArtifactStateSnapshot.workpage_state.dependencies,
+              calculations: scheduleArtifactStateSnapshot.workpage_state.calculations
+            }
+          })
+      )
+    );
+
+    const submitted = await onetruthApi.submitArtifactWorkpageAtPath(
+      "/api/v1/workpages/workflow-runs/wr-weekly-001/schedule-v0/artifacts/av-schedule-artifact-001/submit",
+      {
+        rows: [],
+        reserve_rows: [],
+        idempotency_key: "frontend:test:submit-schedule-draft-canonical"
+      }
+    );
+    const preview = await onetruthApi.previewArtifactWorkpageAtPath(
+      "/api/v1/workpages/workflow-runs/wr-weekly-001/schedule-v0/artifacts/av-schedule-artifact-001/preview",
+      {
+        rows: [],
+        reserve_rows: []
+      }
+    );
+
+    expect(submitted).toEqual(scheduleArtifactSubmitSnapshot.submit_response.submitted);
+    expect(preview.preview).toMatchObject({
+      workflow_run_id: "<workflow_run_id:1>",
+      artifact_version_id: "<artifact_version_id:2>",
+      dirty: true,
+      dependency_state: "aligned"
+    });
+    expect(preview.preview.calculations.selected_day.service_date).toBe("2026-03-24");
   });
 });

@@ -6,6 +6,7 @@ import type {
   WorkpageContract,
   WorkpageDraftResponse,
   WorkpageActionSubjectContext,
+  WorkpagePreviewResponse,
   WorkpageSubmittedResponse
 } from "@/lib/types/contracts";
 
@@ -143,6 +144,36 @@ export const workpagesRepository = {
       reserve_rows: payload.reserveRows,
       subject_link: subjectLinkPayload(subjectContext),
       idempotency_key: createIdempotencyKey("workpage-schedule-artifact-submit", artifactVersionId)
+    });
+  },
+
+  async submitScheduleArtifactAtPath(
+    submitPath: string,
+    artifactVersionId: string,
+    payload: {
+      rows: Array<Record<string, unknown>>;
+      reserveRows: Array<Record<string, unknown>>;
+    },
+    subjectContext?: WorkpageActionSubjectContext
+  ): Promise<WorkpageSubmittedResponse> {
+    return onetruthApi.submitArtifactWorkpageAtPath(submitPath, {
+      rows: payload.rows,
+      reserve_rows: payload.reserveRows,
+      subject_link: subjectLinkPayload(subjectContext),
+      idempotency_key: createIdempotencyKey("workpage-schedule-artifact-submit", artifactVersionId)
+    });
+  },
+
+  async previewScheduleArtifact(
+    previewPath: string,
+    payload: {
+      rows: Array<Record<string, unknown>>;
+      reserveRows: Array<Record<string, unknown>>;
+    }
+  ): Promise<WorkpagePreviewResponse> {
+    return onetruthApi.previewArtifactWorkpageAtPath(previewPath, {
+      rows: payload.rows,
+      reserve_rows: payload.reserveRows
     });
   },
 

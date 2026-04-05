@@ -1,4 +1,13 @@
-import type { WorkpageViewModel } from "@/lib/types/workpages";
+import type {
+  WorkpageScheduleAcceptedSeries,
+  WorkpageScheduleAction,
+  WorkpageScheduleArtifactState,
+  WorkpageScheduleCalculations,
+  WorkpageScheduleDependency,
+  WorkpageScheduleDraftLineage,
+  WorkpageSchedulePreview,
+  WorkpageViewModel
+} from "@/lib/types/workpages";
 
 export type HumanTaskState = "OPEN" | "CLAIMED" | "COMPLETED";
 export type ApprovalState = "PENDING" | "RESPONDED";
@@ -460,6 +469,10 @@ export interface WorkpageSubmittedResponse {
   route: string;
 }
 
+export interface WorkpagePreviewResponse {
+  preview: WorkpageSchedulePreview;
+}
+
 export interface WorkpageContract {
   workpage: WorkpageViewModel;
   source: WorkpageSourceMetadata;
@@ -467,6 +480,12 @@ export interface WorkpageContract {
   artifact_context: WorkpageArtifactContext | null;
   run_context: WorkpageRunContext | null;
   draft_resolution: WorkpageDraftResolution | null;
+  artifact_state: WorkpageScheduleArtifactState | null;
+  dependencies: WorkpageScheduleDependency[];
+  calculations: WorkpageScheduleCalculations | null;
+  draft_lineage: WorkpageScheduleDraftLineage | null;
+  accepted_series: WorkpageScheduleAcceptedSeries | null;
+  actions: WorkpageScheduleAction[];
 }
 
 export type LogisticsStoryFamilyNodeKind = "module";

@@ -517,9 +517,6 @@ export function InlineScheduleWorkpage({
                 reserveSection={reserveSection}
                 iterationSection={iterationSection}
                 artifactContext={contract.artifact_context}
-                artifactRouteFor={(nextArtifactVersionId) =>
-                  scheduleArtifactRoute(nextArtifactVersionId, workflowRunId)
-                }
               />
             ) : (
               <>

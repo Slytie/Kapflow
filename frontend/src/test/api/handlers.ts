@@ -144,6 +144,247 @@ function findTableSectionById(
   ) ?? null;
 }
 
+function asString(value: unknown): string {
+  return typeof value === "string" ? value : String(value ?? "");
+}
+
+function asNumber(value: unknown): number {
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return value;
+  }
+  const parsed = Number(asString(value));
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function asObject(value: unknown): Record<string, unknown> | null {
+  return value && typeof value === "object" && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : null;
+}
+
+function asObjectArray(value: unknown): Array<Record<string, unknown>> {
+  return Array.isArray(value)
+    ? value.filter(
+        (entry): entry is Record<string, unknown> =>
+          Boolean(entry) && typeof entry === "object" && !Array.isArray(entry)
+      )
+    : [];
+}
+
+function scheduleVersionsForRun(workflowRunId: string): ScheduleArtifactVersionState[] {
+  return Array.from(scheduleArtifactVersions.values())
+    .filter((version) => version.workflowRunId === workflowRunId)
+    .sort((left, right) => {
+      const createdAtCompare = right.createdAt.localeCompare(left.createdAt);
+      if (createdAtCompare !== 0) {
+        return createdAtCompare;
+      }
+      return right.artifactVersionId.localeCompare(left.artifactVersionId);
+    });
+}
+
+function scheduleActionPath(
+  workflowRunId: string,
+  artifactVersionId: string,
+  action: "preview" | "submit"
+): string {
+  return `/api/v1/workpages/workflow-runs/${workflowRunId}/schedule-v0/artifacts/${artifactVersionId}/${action}`;
+}
+
+function scheduleHeatmapPeople(
+  payload: Record<string, unknown>
+): Array<{ driver_id: string; driver_name: string }> {
+  const heatmapSection = findSectionByKind(payload, "schedule_heatmap");
+  return asObjectArray(heatmapSection?.people).map((person) => ({
+    driver_id: asString(person.driver_id),
+    driver_name: asString(person.driver_name)
+  }));
+}
+
+function scheduleAssignmentRows(
+  workbookPayload: ScheduleArtifactVersionState["workbookPayload"]
+): Array<Record<string, unknown>> {
+  return workbookPayload.rows.map((row) =>
+    workbookPayload.columns.reduce<Record<string, unknown>>((record, column, columnIndex) => {
+      record[column] = row[columnIndex] ?? null;
+      return record;
+    }, {})
+  );
+}
+
+function updateScheduleCalculations(
+  payload: Record<string, unknown>,
+  workbookPayload: ScheduleArtifactVersionState["workbookPayload"]
+): void {
+  const calculations = asObject(payload.calculations);
+  if (!calculations) {
+    return;
+  }
+  const topBar = asObject(calculations.top_bar);
+  const selectedDay = asObject(calculations.selected_day);
+  const topBarDays = asObjectArray(topBar?.days);
+  const people = scheduleHeatmapPeople(payload);
+  const assignmentRows = scheduleAssignmentRows(workbookPayload);
+  const reserveRows = workbookPayload.reserve_rows.map((row) => ({ ...row }));
+  const selectedServiceDate =
+    asString(selectedDay?.service_date) || asString(topBarDays[0]?.service_date);
+  const baseDriverMetrics = new Map(
+    asObjectArray(calculations.driver_metrics).map((metric) => [asString(metric.driver_id), metric])
+  );
+  const driverIdsFromRows = new Set<string>();
+  assignmentRows.forEach((row) => {
+    const driverId = asString(row.assigned_driver_id).trim();
+    if (driverId) {
+      driverIdsFromRows.add(driverId);
+    }
+  });
+  reserveRows.forEach((row) => {
+    const driverId = asString(row.assigned_driver_id).trim();
+    if (driverId) {
+      driverIdsFromRows.add(driverId);
+    }
+  });
+  const peopleById = new Map(
+    [...people, ...Array.from(driverIdsFromRows).map((driverId) => ({ driver_id: driverId, driver_name: driverId }))].map(
+      (person) => [person.driver_id, person]
+    )
+  );
+
+  calculations.top_bar = {
+    days: topBarDays.map((day) => {
+      const serviceDate = asString(day.service_date);
+      const routesRequired = asNumber(day.routes_required);
+      const assignmentsForDay = assignmentRows.filter(
+        (row) => asString(row.service_date) === serviceDate
+      );
+      const reservesForDay = reserveRows.filter(
+        (row) => asString(row.service_date) === serviceDate
+      );
+      const staffedDrivers = new Set(
+        [...assignmentsForDay, ...reservesForDay]
+          .map((row) => asString(row.assigned_driver_id).trim())
+          .filter((driverId) => driverId.length > 0)
+      );
+      const routesScheduled = assignmentsForDay.length;
+      const onCallDrivers = reservesForDay.length;
+      return {
+        ...day,
+        routes_scheduled: routesScheduled,
+        on_call_drivers: onCallDrivers,
+        total_staff: staffedDrivers.size,
+        available_driver_count: Math.max(peopleById.size - staffedDrivers.size, 0),
+        excess_capacity: routesScheduled + onCallDrivers - routesRequired,
+        capacity_state: routesScheduled >= routesRequired ? "pass" : "fail",
+        excess_capacity_target: asNumber(day.excess_capacity_target)
+      };
+    })
+  };
+
+  const selectedAssignments = assignmentRows.filter(
+    (row) => asString(row.service_date) === selectedServiceDate
+  );
+  const selectedReserves = reserveRows.filter(
+    (row) => asString(row.service_date) === selectedServiceDate
+  );
+  const busyDriverIds = new Set(
+    [...selectedAssignments, ...selectedReserves]
+      .map((row) => asString(row.assigned_driver_id).trim())
+      .filter((driverId) => driverId.length > 0)
+  );
+  const availableDriverIds = Array.from(peopleById.keys()).filter(
+    (driverId) => !busyDriverIds.has(driverId)
+  );
+  calculations.selected_day = {
+    ...selectedDay,
+    service_date: selectedServiceDate,
+    routes_required: asNumber(selectedDay?.routes_required),
+    routes_scheduled: selectedAssignments.length,
+    on_call_target: asNumber(selectedDay?.on_call_target),
+    on_call_drivers: selectedReserves.length,
+    available_driver_count: availableDriverIds.length,
+    available_driver_ids: availableDriverIds,
+    drivers_available: availableDriverIds.length,
+    projected_on_call_needed: Math.max(
+      asNumber(selectedDay?.on_call_target) - selectedReserves.length,
+      0
+    ),
+    open_questions:
+      selectedAssignments.length < asNumber(selectedDay?.routes_required)
+        ? "Review unfilled route coverage and confirm the final on-call posture before saving."
+        : asString(selectedDay?.open_questions)
+  };
+
+  calculations.driver_metrics = Array.from(peopleById.values()).map((person) => {
+    const assignmentsForDriver = assignmentRows.filter(
+      (row) => asString(row.assigned_driver_id).trim() === person.driver_id
+    );
+    const reservesForDriver = reserveRows.filter(
+      (row) => asString(row.assigned_driver_id).trim() === person.driver_id
+    );
+    const baseMetric = baseDriverMetrics.get(person.driver_id);
+    const scheduledHours =
+      assignmentsForDriver.reduce((total, row) => total + asNumber(row.projected_minutes), 0) / 60;
+    const isBusyOnSelectedDay = busyDriverIds.has(person.driver_id);
+    const availabilityState =
+      !isBusyOnSelectedDay
+        ? "available"
+        : asString(baseMetric?.availability_state) || "scheduled";
+    const availabilityConflict =
+      asString(baseMetric?.availability_state) === "approved_unavailable" &&
+      assignmentsForDriver.length > 0;
+    const scheduledHoursRounded = Number(scheduledHours.toFixed(1));
+    const baseIssues = Array.isArray(baseMetric?.issues)
+      ? baseMetric.issues.map((issue) => asString(issue)).filter((issue) => issue.length > 0)
+      : [];
+    return {
+      driver_id: person.driver_id,
+      driver_name: person.driver_name,
+      scheduled_hours: scheduledHoursRounded,
+      scheduled_routes: assignmentsForDriver.length,
+      on_call_shifts: reservesForDriver.length,
+      preference_state: asString(baseMetric?.preference_state) || "neutral",
+      availability_state: availabilityState,
+      compliance_state: availabilityConflict ? "fail" : "pass",
+      issues: availabilityConflict ? ["assigned_while_unavailable"] : baseIssues
+    };
+  });
+
+  const topBarResults = asObjectArray(asObject(calculations.top_bar)?.days);
+  const routesMissingDates = topBarResults
+    .filter((day) => asNumber(day.routes_scheduled) < asNumber(day.routes_required))
+    .map((day) => asString(day.service_date));
+  const onCallMissingDates = topBarResults
+    .filter((day) => asNumber(day.on_call_drivers) < asNumber(day.on_call_target))
+    .map((day) => asString(day.service_date));
+  const hardBlockedDrivers = asObjectArray(calculations.driver_metrics)
+    .filter((metric) => asString(metric.compliance_state) !== "pass")
+    .map((metric) => asString(metric.driver_id))
+    .filter((driverId) => driverId.length > 0);
+  calculations.checks = [
+    {
+      check_id: "scheduled_capacity",
+      label: "Routes within scheduled capacity",
+      state: routesMissingDates.length > 0 ? "fail" : "pass",
+      blocking: true,
+      affected_service_dates: routesMissingDates
+    },
+    {
+      check_id: "on_call_buffer",
+      label: "On-call target coverage",
+      state: onCallMissingDates.length > 0 ? "warn" : "pass",
+      blocking: false,
+      affected_service_dates: onCallMissingDates
+    },
+    {
+      check_id: "hard_constraint_compliance",
+      label: "Hard assignment compliance",
+      state: hardBlockedDrivers.length > 0 ? "fail" : "pass",
+      blocking: true,
+      affected_driver_ids: hardBlockedDrivers
+    }
+  ];
+}
+
 function patchArtifactPayloadLineage(version: ArtifactWorkpageVersionState): void {
   const payload = version.payload;
   const artifactContext = payload.artifact_context;
@@ -190,6 +431,10 @@ function patchArtifactPayloadLineage(version: ArtifactWorkpageVersionState): voi
         value: version.latestInChainArtifactVersionId
       }
     ];
+  }
+
+  if ("workbookPayload" in version) {
+    patchScheduleArtifactContractState(version as ScheduleArtifactVersionState);
   }
 }
 
@@ -320,14 +565,10 @@ function applyScheduleArtifactEdits(
   payload: Record<string, unknown>,
   workbookPayload: ScheduleArtifactVersionState["workbookPayload"]
 ): void {
+  const assignmentRows = scheduleAssignmentRows(workbookPayload);
   const assignmentSection = findTableSectionById(payload, "assignment_rows");
   if (assignmentSection) {
-    assignmentSection.rows = workbookPayload.rows.map((row) =>
-      workbookPayload.columns.reduce<Record<string, unknown>>((record, column, columnIndex) => {
-        record[column] = row[columnIndex] ?? null;
-        return record;
-      }, {})
-    );
+    assignmentSection.rows = assignmentRows.map((row) => ({ ...row }));
   }
 
   const reserveSection = findTableSectionById(payload, "reserve_rows");
@@ -345,11 +586,13 @@ function applyScheduleArtifactEdits(
     const summary = (workpage as Record<string, unknown>).summary;
     if (summary && typeof summary === "object" && !Array.isArray(summary)) {
       const summaryRecord = summary as Record<string, unknown>;
-      summaryRecord.route_assignment_count = workbookPayload.rows.length;
+      summaryRecord.route_assignment_count = assignmentRows.length;
       summaryRecord.reserve_assignment_count = workbookPayload.reserve_rows.length;
       summaryRecord.iteration_count = workbookPayload.iteration_deltas.length;
     }
   }
+
+  updateScheduleCalculations(payload, workbookPayload);
 }
 
 function buildScheduleArtifactPayload(input: {
@@ -393,6 +636,96 @@ function buildScheduleArtifactPayload(input: {
 
   applyScheduleArtifactEdits(payload, input.workbookPayload);
   return payload;
+}
+
+function patchScheduleArtifactContractState(version: ScheduleArtifactVersionState): void {
+  const payload = version.payload;
+  const actions = Array.isArray(payload.actions) ? payload.actions : [];
+  payload.actions = actions.map((action) => {
+    if (!action || typeof action !== "object" || Array.isArray(action)) {
+      return action;
+    }
+    const record = { ...(action as Record<string, unknown>) };
+    const kind = asString(record.kind);
+    record.artifact_version_id = version.artifactVersionId;
+    if (kind === "preview_recalc") {
+      record.preview_path = scheduleActionPath(
+        version.workflowRunId,
+        version.artifactVersionId,
+        "preview"
+      );
+    }
+    if (kind === "submit_artifact") {
+      record.submit_path = scheduleActionPath(
+        version.workflowRunId,
+        version.artifactVersionId,
+        "submit"
+      );
+    }
+    return record;
+  });
+
+  const artifactState = asObject(payload.artifact_state);
+  if (artifactState) {
+    artifactState.current_artifact_version_id = version.artifactVersionId;
+    artifactState.latest_artifact_version_id = version.latestInChainArtifactVersionId;
+    artifactState.accepted_artifact_version_id = null;
+    artifactState.editable = true;
+    artifactState.state_kind = "draft";
+  }
+
+  const draftLineage = asObject(payload.draft_lineage);
+  if (draftLineage) {
+    const recentVersions = scheduleVersionsForRun(version.workflowRunId)
+      .slice(0, 5)
+      .map((item) => ({
+        artifact_version_id: item.artifactVersionId,
+        supersedes_artifact_version_id: item.supersedesArtifactVersionId
+      }));
+    draftLineage.current_artifact_version_id = version.artifactVersionId;
+    draftLineage.latest_artifact_version_id = version.latestInChainArtifactVersionId;
+    draftLineage.previous_artifact_version_id = version.supersedesArtifactVersionId;
+    draftLineage.recent_versions = recentVersions;
+  }
+
+  const acceptedSeries = asObject(payload.accepted_series);
+  if (acceptedSeries) {
+    acceptedSeries.current_artifact_version_id = null;
+    acceptedSeries.previous_artifact_version_id = null;
+    acceptedSeries.next_artifact_version_id = null;
+    acceptedSeries.entries = [];
+  }
+}
+
+function patchRunSchedulePayloadContractState(
+  payload: Record<string, unknown>,
+  workflowRunId: string
+): void {
+  const latestVersion = latestScheduleArtifactForRun(workflowRunId);
+  const actions = Array.isArray(payload.actions) ? payload.actions : [];
+  payload.actions = actions.map((action) => {
+    if (!action || typeof action !== "object" || Array.isArray(action)) {
+      return action;
+    }
+    const record = { ...(action as Record<string, unknown>) };
+    if (asString(record.kind) === "open_latest_draft") {
+      record.state = latestVersion ? "available" : "unavailable";
+      record.route = latestVersion
+        ? scheduleArtifactRoute(latestVersion.artifactVersionId, workflowRunId)
+        : null;
+      record.artifact_version_id = latestVersion?.artifactVersionId ?? null;
+    }
+    return record;
+  });
+
+  const artifactState = asObject(payload.artifact_state);
+  if (artifactState) {
+    artifactState.current_artifact_version_id = null;
+    artifactState.latest_artifact_version_id = latestVersion?.artifactVersionId ?? null;
+    artifactState.accepted_artifact_version_id = null;
+    artifactState.state_kind = "run_projection";
+    artifactState.editable = false;
+  }
 }
 
 function addEodArtifactVersion(input: {
@@ -500,6 +833,7 @@ function addScheduleArtifactVersion(input: {
     latestInChainArtifactVersionId: input.latestInChainArtifactVersionId
   };
   scheduleArtifactVersions.set(version.artifactVersionId, version);
+  patchScheduleArtifactContractState(version);
   return version;
 }
 
@@ -593,6 +927,7 @@ function updateScheduleArtifactChainLatest(
     }
     version.latestInChainArtifactVersionId = latestArtifactVersionId;
     patchArtifactPayloadLineage(version);
+    patchScheduleArtifactContractState(version);
     currentArtifactVersionId = version.supersedesArtifactVersionId;
   }
 }
@@ -678,12 +1013,33 @@ function scheduleArtifactSubmitResponse(
   return payload;
 }
 
+function schedulePreviewResponse(
+  version: ScheduleArtifactVersionState,
+  workbookPayload: ScheduleArtifactVersionState["workbookPayload"]
+): Record<string, unknown> {
+  const previewPayload = cloneJson(version.payload) as Record<string, unknown>;
+  applyScheduleArtifactEdits(previewPayload, workbookPayload);
+  const calculations = asObject(previewPayload.calculations) ?? {};
+  const dependencies = Array.isArray(previewPayload.dependencies) ? previewPayload.dependencies : [];
+  return {
+    preview: {
+      workflow_run_id: version.workflowRunId,
+      artifact_version_id: version.artifactVersionId,
+      dirty: true,
+      dependency_state: "aligned",
+      dependencies,
+      calculations
+    }
+  };
+}
+
 function buildRunScheduleWorkpagePayload(workflowRunId: string): Record<string, unknown> {
   ensureScheduleArtifactDraft(workflowRunId);
   const payload = cloneJson(scheduleRunWorkpageStateSnapshot.workpage_state) as Record<string, unknown>;
   const runContext = payload.run_context as Record<string, unknown>;
   runContext.workflow_run_id = workflowRunId;
   runContext.activation_key = `snapshot:${workflowRunId}:weekly-schedule-workpage`;
+  patchRunSchedulePayloadContractState(payload, workflowRunId);
   return payload;
 }
 
@@ -1736,6 +2092,9 @@ function buildLogisticsStoryPayload(planningWeekId: string, request: Request, se
           (item) => item?.item_type === "human_task" && (item.available_actions?.length ?? 0) > 0
         ).length,
         workflow_item_counts: workItems.reduce<Record<string, number>>((acc, item) => {
+          if (!item) {
+            return acc;
+          }
           acc[item.workflow_id] = (acc[item.workflow_id] ?? 0) + 1;
           return acc;
         }, {})
@@ -1807,7 +2166,7 @@ function ensurePreparedLiveDispatchState(serviceDateId: string) {
     ) ??
     (() => {
       const now = new Date().toISOString();
-      const created = {
+      const created: HumanTaskRow = {
         human_task_id: "ht-live-001",
         workflow_run_id: liveRun.workflow_run_id,
         task_run_id: "tr-live-stage01-001",
@@ -1852,6 +2211,112 @@ export function forceForbiddenResponses(value: boolean): void {
 
 export function mutationLog(): string[] {
   return [...state.audit.mutations];
+}
+
+function scheduleArtifactNotFoundResponse(artifactVersionId: string) {
+  return HttpResponse.json(
+    {
+      status: "error",
+      error: {
+        code: "workpage_artifact_not_found",
+        message: "artifact-backed workpage not found",
+        details: {
+          artifact_version_id: artifactVersionId
+        }
+      }
+    },
+    { status: 404 }
+  );
+}
+
+async function handleScheduleArtifactPreviewRequest(
+  artifactVersionId: string,
+  request: Request
+): Promise<Response> {
+  if (!inScope(request)) {
+    return scheduleArtifactNotFoundResponse(artifactVersionId);
+  }
+
+  const baseVersion = scheduleArtifactVersions.get(artifactVersionId);
+  if (!baseVersion) {
+    return scheduleArtifactNotFoundResponse(artifactVersionId);
+  }
+
+  const body = (await request.json()) as {
+    rows?: Array<Record<string, unknown>>;
+    reserve_rows?: Array<Record<string, unknown>>;
+  };
+  const workbookPayload = buildScheduleWorkbookPayload(
+    Array.isArray(body.rows) ? body.rows : undefined,
+    Array.isArray(body.reserve_rows) ? body.reserve_rows : undefined
+  );
+  state.audit.mutations.push(`workpage-schedule-artifact-preview:${artifactVersionId}`);
+  return ok({
+    command: "api.workpages.artifact.preview",
+    preview: (schedulePreviewResponse(baseVersion, workbookPayload).preview as Record<string, unknown>) ?? {}
+  });
+}
+
+async function handleScheduleArtifactSubmitRequest(
+  artifactVersionId: string,
+  request: Request
+): Promise<Response> {
+  if (!inScope(request)) {
+    return scheduleArtifactNotFoundResponse(artifactVersionId);
+  }
+
+  const scheduleBaseVersion = scheduleArtifactVersions.get(artifactVersionId);
+  if (!scheduleBaseVersion) {
+    return scheduleArtifactNotFoundResponse(artifactVersionId);
+  }
+
+  if (scheduleBaseVersion.supersededByArtifactVersionId) {
+    return HttpResponse.json(
+      {
+        status: "error",
+        error: {
+          code: "workpage_artifact_conflict",
+          message: "artifact-backed workpage already has a newer draft",
+          details: {
+            artifact_version_id: artifactVersionId,
+            latest_artifact_version_id: scheduleBaseVersion.latestInChainArtifactVersionId,
+            workflow_run_id: scheduleBaseVersion.workflowRunId,
+            route: scheduleArtifactRoute(
+              scheduleBaseVersion.latestInChainArtifactVersionId,
+              scheduleBaseVersion.workflowRunId
+            )
+          }
+        }
+      },
+      { status: 409 }
+    );
+  }
+
+  const body = (await request.json()) as {
+    rows?: Array<Record<string, unknown>>;
+    reserve_rows?: Array<Record<string, unknown>>;
+  };
+  const submittedArtifactVersionId = nextScheduleArtifactVersionId();
+  const submittedVersion = addScheduleArtifactVersion({
+    artifactVersionId: submittedArtifactVersionId,
+    workflowRunId: scheduleBaseVersion.workflowRunId,
+    supersedesArtifactVersionId: artifactVersionId,
+    latestInChainArtifactVersionId: submittedArtifactVersionId,
+    assignmentRows: Array.isArray(body.rows) ? body.rows : undefined,
+    reserveRows: Array.isArray(body.reserve_rows) ? body.reserve_rows : undefined
+  });
+  scheduleBaseVersion.supersededByArtifactVersionId = submittedArtifactVersionId;
+  patchArtifactPayloadLineage(scheduleBaseVersion);
+  updateScheduleArtifactChainLatest(submittedArtifactVersionId, submittedArtifactVersionId);
+
+  state.audit.mutations.push(
+    `workpage-schedule-artifact-submit:${artifactVersionId}:${submittedArtifactVersionId}`
+  );
+  return ok({
+    command: "api.workpages.artifact.submit",
+    submitted: (scheduleArtifactSubmitResponse(submittedVersion, artifactVersionId)
+      .submitted as Record<string, unknown>) ?? {}
+  });
 }
 
 export const handlers = [
@@ -1945,6 +2410,19 @@ export const handlers = [
     patchArtifactPayloadLineage(eodVersion);
     return HttpResponse.json(eodVersion.payload);
   }),
+  http.post(
+    "*/api/v1/workpages/workflow-runs/:workflowRunId/schedule-v0/artifacts/:artifactVersionId/preview",
+    async ({ params, request }) =>
+      handleScheduleArtifactPreviewRequest(String(params.artifactVersionId), request)
+  ),
+  http.post("*/api/v1/workpages/artifacts/:artifactVersionId/preview", async ({ params, request }) =>
+    handleScheduleArtifactPreviewRequest(String(params.artifactVersionId), request)
+  ),
+  http.post(
+    "*/api/v1/workpages/workflow-runs/:workflowRunId/schedule-v0/artifacts/:artifactVersionId/submit",
+    async ({ params, request }) =>
+      handleScheduleArtifactSubmitRequest(String(params.artifactVersionId), request)
+  ),
   http.post("*/api/v1/workpages/artifacts/:artifactVersionId/submit", async ({ params, request }) => {
     if (!inScope(request)) {
       return HttpResponse.json(
@@ -1965,53 +2443,7 @@ export const handlers = [
     const artifactVersionId = String(params.artifactVersionId);
     const scheduleBaseVersion = scheduleArtifactVersions.get(artifactVersionId);
     if (scheduleBaseVersion) {
-      if (scheduleBaseVersion.supersededByArtifactVersionId) {
-        return HttpResponse.json(
-          {
-            status: "error",
-            error: {
-              code: "workpage_artifact_conflict",
-              message: "artifact-backed workpage already has a newer draft",
-              details: {
-                artifact_version_id: artifactVersionId,
-                latest_artifact_version_id: scheduleBaseVersion.latestInChainArtifactVersionId,
-                workflow_run_id: scheduleBaseVersion.workflowRunId,
-                route: scheduleArtifactRoute(
-                  scheduleBaseVersion.latestInChainArtifactVersionId,
-                  scheduleBaseVersion.workflowRunId
-                )
-              }
-            }
-          },
-          { status: 409 }
-        );
-      }
-
-      const body = (await request.json()) as {
-        rows?: Array<Record<string, unknown>>;
-        reserve_rows?: Array<Record<string, unknown>>;
-      };
-      const submittedArtifactVersionId = nextScheduleArtifactVersionId();
-      const submittedVersion = addScheduleArtifactVersion({
-        artifactVersionId: submittedArtifactVersionId,
-        workflowRunId: scheduleBaseVersion.workflowRunId,
-        supersedesArtifactVersionId: artifactVersionId,
-        latestInChainArtifactVersionId: submittedArtifactVersionId,
-        assignmentRows: Array.isArray(body.rows) ? body.rows : undefined,
-        reserveRows: Array.isArray(body.reserve_rows) ? body.reserve_rows : undefined
-      });
-      scheduleBaseVersion.supersededByArtifactVersionId = submittedArtifactVersionId;
-      patchArtifactPayloadLineage(scheduleBaseVersion);
-      updateScheduleArtifactChainLatest(submittedArtifactVersionId, submittedArtifactVersionId);
-
-      state.audit.mutations.push(
-        `workpage-schedule-artifact-submit:${artifactVersionId}:${submittedArtifactVersionId}`
-      );
-      return ok({
-        command: "api.workpages.artifact.submit",
-        submitted: (scheduleArtifactSubmitResponse(submittedVersion, artifactVersionId)
-          .submitted as Record<string, unknown>) ?? {}
-      });
+      return handleScheduleArtifactSubmitRequest(artifactVersionId, request);
     }
 
     const baseVersion = eodArtifactVersions.get(artifactVersionId);

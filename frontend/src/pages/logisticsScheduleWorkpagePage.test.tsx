@@ -20,7 +20,7 @@ function setFrontendOperatorContext(): void {
 }
 
 describe("LogisticsScheduleWorkpagePage", () => {
-  it("renders inside the logistics shell, keeps metadata behind info, and preserves what-if edits across refresh", async () => {
+  it("renders the redesigned demo surface as read-only and keeps metadata behind info", async () => {
     const user = userEvent.setup();
     let responseCount = 0;
     server.use(
@@ -38,18 +38,20 @@ describe("LogisticsScheduleWorkpagePage", () => {
 
     const page = await screen.findByTestId("schedule-workpage-page");
     expect(within(page).getByRole("heading", { name: "Weekly schedule review" })).toBeInTheDocument();
-    const summarySection = within(page).getByTestId("workpage-summary-section");
-    expect(summarySection).toHaveClass("workpage-summary-section");
-    expect(summarySection).not.toHaveClass("workpage-panel");
-    expect(within(summarySection).getByRole("heading", { name: "Week summary" })).toBeInTheDocument();
-    expect(
-      within(summarySection).getByTestId("workpage-summary-card-planning_week")
-    ).toHaveClass("workpage-summary-card");
-    expect(within(summarySection).getByText("PW-2026-W13")).toBeInTheDocument();
+    expect(within(page).getByRole("heading", { name: "Capacity bar" })).toBeInTheDocument();
+    expect(within(page).getByRole("heading", { name: "Selected day" })).toBeInTheDocument();
+    expect(within(page).getByRole("heading", { name: "Dependency status" })).toBeInTheDocument();
+    expect(within(page).getByRole("heading", { name: "Checks" })).toBeInTheDocument();
+    expect(within(page).getByRole("heading", { name: "Driver metrics" })).toBeInTheDocument();
+    expect(within(page).getByRole("heading", { name: "Accepted history" })).toBeInTheDocument();
+    expect(within(page).getByRole("heading", { name: "Draft lineage" })).toBeInTheDocument();
+    expect(screen.queryByText("Scenario sick calls")).not.toBeInTheDocument();
+    expect(screen.queryByRole("textbox", { name: /Planner note/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole("spinbutton", { name: /Scenario added routes/i })).not.toBeInTheDocument();
+
     expect(
       within(page).queryByText("Backend demo query served from repo-native workflow example bundles.")
     ).not.toBeInTheDocument();
-    expect(screen.queryByText("Secondary detail routes")).not.toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Open secondary detail routes" }));
     const shellInfoDialog = await screen.findByRole("dialog", { name: "Secondary detail routes" });
     expect(within(shellInfoDialog).getByRole("link", { name: "Run Details" })).toHaveAttribute(
@@ -57,8 +59,6 @@ describe("LogisticsScheduleWorkpagePage", () => {
       "/runs"
     );
     await user.click(screen.getByRole("button", { name: /Close Secondary detail routes/i }));
-    expect(screen.queryByText(/Server-authoritative view backed by HITL HTTP query contracts/i)).not.toBeInTheDocument();
-    expect(screen.queryByPlaceholderText("all or wr-...")).not.toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: /Open info for Weekly schedule review/i }));
     const infoDialog = await screen.findByRole("dialog", { name: "Weekly planning context" });
@@ -68,28 +68,11 @@ describe("LogisticsScheduleWorkpagePage", () => {
       )[0]
     ).toBeInTheDocument();
     expect(within(infoDialog).getByText("weekly_stage04_actual_ops_lab_v3")).toBeInTheDocument();
-    expect(within(infoDialog).getByText("Composite source bundle")).toBeInTheDocument();
+    await user.click(
+      within(infoDialog).getByRole("button", { name: "Refresh" })
+    );
     await user.click(screen.getByRole("button", { name: /Close Weekly planning context/i }));
 
-    const sickCallsFieldset = screen.getByText("Scenario sick calls").closest("fieldset");
-    expect(sickCallsFieldset).not.toBeNull();
-
-    await user.click(within(sickCallsFieldset as HTMLElement).getByRole("checkbox", { name: "Parampreet Singh" }));
-    await user.clear(screen.getByRole("spinbutton", { name: /Scenario added routes/i }));
-    await user.type(screen.getByRole("spinbutton", { name: /Scenario added routes/i }), "2");
-    await user.type(screen.getByRole("textbox", { name: /Planner note/i }), "Late-request what-if");
-
-    expect(within(sickCallsFieldset as HTMLElement).getByRole("checkbox", { name: "Parampreet Singh" })).toBeChecked();
-    expect(screen.getByRole("spinbutton", { name: /Scenario added routes/i })).toHaveValue(2);
-    expect(screen.getByRole("textbox", { name: /Planner note/i })).toHaveValue("Late-request what-if");
-
-    await user.click(screen.getByRole("button", { name: /Open info for Weekly schedule review/i }));
-    await user.click(within(await screen.findByRole("dialog", { name: "Weekly planning context" })).getByRole("button", { name: "Refresh" }));
-    await user.click(screen.getByRole("button", { name: /Close Weekly planning context/i }));
-
-    expect(within(sickCallsFieldset as HTMLElement).getByRole("checkbox", { name: "Parampreet Singh" })).toBeChecked();
-    expect(screen.getByRole("spinbutton", { name: /Scenario added routes/i })).toHaveValue(2);
-    expect(screen.getByRole("textbox", { name: /Planner note/i })).toHaveValue("Late-request what-if");
     expect(mutationLog()).toEqual([]);
   });
 
@@ -128,17 +111,31 @@ describe("LogisticsScheduleWorkpagePage", () => {
     expect(await screen.findByTestId("schedule-workpage-page")).toBeInTheDocument();
   });
 
-  it("renders the canonical run-backed schedule page and keeps local edits across refresh", async () => {
+  it("renders the canonical run-backed schedule page as read-only while exposing the latest draft CTA", async () => {
     const user = userEvent.setup();
     let responseCount = 0;
     server.use(
       http.get("*/api/v1/workpages/workflow-runs/:workflowRunId/schedule-v0", ({ params }) => {
         responseCount += 1;
-        const payload = structuredClone(scheduleRunWorkpageStateSnapshot.workpage_state);
+        const payload = structuredClone(scheduleRunWorkpageStateSnapshot.workpage_state) as Record<
+          string,
+          any
+        >;
         payload.freshness.generated_at =
           responseCount === 1 ? "2026-03-25T08:10:00Z" : "2026-03-25T08:10:30Z";
         payload.run_context.workflow_run_id = String(params.workflowRunId);
         payload.run_context.activation_key = `snapshot:${String(params.workflowRunId)}:weekly`;
+        payload.actions = [
+          {
+            action_id: "workpage.schedule-v0.open_latest_draft",
+            artifact_version_id: "av-schedule-artifact-001",
+            kind: "open_latest_draft",
+            label: "Open schedule draft",
+            route: "/runs/wr-weekly-001/workpages/schedule-v0/artifacts/av-schedule-artifact-001",
+            state: "available",
+            workpage_kind: "schedule-v0"
+          }
+        ];
         return HttpResponse.json(payload);
       })
     );
@@ -147,7 +144,15 @@ describe("LogisticsScheduleWorkpagePage", () => {
     render(<App />);
 
     const page = await screen.findByTestId("schedule-workpage-page");
-    expect(within(page).queryByText("run_projection")).not.toBeInTheDocument();
+    expect(within(page).getByRole("heading", { name: "Editable draft available" })).toBeInTheDocument();
+    expect(within(page).getByRole("link", { name: "Open editable draft" })).toHaveAttribute(
+      "href",
+      "/runs/wr-weekly-001/workpages/schedule-v0/artifacts/av-schedule-artifact-001"
+    );
+    expect(screen.queryByText("Scenario sick calls")).not.toBeInTheDocument();
+    expect(screen.queryByRole("textbox", { name: /Planner note/i })).not.toBeInTheDocument();
+    expect(within(page).getByRole("heading", { name: "Capacity bar" })).toBeInTheDocument();
+    expect(within(page).getByRole("heading", { name: "Draft lineage" })).toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: /Open info for Weekly schedule review/i }));
     const infoDialog = await screen.findByRole("dialog", { name: "Weekly planning context" });
@@ -158,18 +163,6 @@ describe("LogisticsScheduleWorkpagePage", () => {
       )[0]
     ).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: /Close Weekly planning context/i }));
-
-    const sickCallsFieldset = screen.getByText("Scenario sick calls").closest("fieldset");
-    expect(sickCallsFieldset).not.toBeNull();
-
-    await user.click(within(sickCallsFieldset as HTMLElement).getByRole("checkbox", { name: "Parampreet Singh" }));
-    await user.type(screen.getByRole("textbox", { name: /Planner note/i }), "Run-backed what-if");
-    await user.click(screen.getByRole("button", { name: /Open info for Weekly schedule review/i }));
-    await user.click(within(await screen.findByRole("dialog", { name: "Weekly planning context" })).getByRole("button", { name: "Refresh" }));
-    await user.click(screen.getByRole("button", { name: /Close Weekly planning context/i }));
-
-    expect(within(sickCallsFieldset as HTMLElement).getByRole("checkbox", { name: "Parampreet Singh" })).toBeChecked();
-    expect(screen.getByRole("textbox", { name: /Planner note/i })).toHaveValue("Run-backed what-if");
   });
 
   it("shows the latest Stage04 draft handoff on the run-backed landing and navigates to the canonical artifact route", async () => {

@@ -117,6 +117,144 @@ export interface WorkpageHistorySection {
   entries: WorkpageHistoryEntry[];
 }
 
+export type WorkpageScheduleDependencyState =
+  | "aligned"
+  | "drifted"
+  | "missing"
+  | "not_available"
+  | "not_pinned"
+  | "resolved";
+
+export interface WorkpageScheduleArtifactState {
+  state_kind: string;
+  artifact_kind: string;
+  editable: boolean;
+  current_artifact_version_id: string | null;
+  latest_artifact_version_id: string | null;
+  accepted_artifact_version_id: string | null;
+}
+
+export interface WorkpageScheduleDependency {
+  dependency_key: string;
+  artifact_kind: string;
+  artifact_version_id: string | null;
+  impact_class: string;
+  state: WorkpageScheduleDependencyState;
+  source_ref: string | null;
+}
+
+export interface WorkpageScheduleCalculationTopBarDay {
+  service_date: string;
+  weekday_label: string;
+  routes_required: number;
+  routes_scheduled?: number;
+  on_call_target: number;
+  on_call_drivers?: number;
+  total_staff?: number;
+  excess_capacity?: number;
+  excess_capacity_target?: number;
+  available_driver_count?: number;
+  capacity_state?: string;
+}
+
+export interface WorkpageScheduleSelectedDay {
+  service_date: string;
+  routes_required: number;
+  routes_scheduled?: number;
+  on_call_target?: number;
+  on_call_drivers?: number;
+  available_driver_count?: number;
+  available_driver_ids?: string[];
+  drivers_available?: number;
+  projected_on_call_needed?: number;
+  open_questions?: string;
+}
+
+export interface WorkpageScheduleDriverMetric {
+  driver_id: string;
+  driver_name: string;
+  scheduled_hours: number;
+  scheduled_routes: number;
+  on_call_shifts: number;
+  preference_state: string;
+  availability_state: string;
+  compliance_state: string;
+  issues: string[];
+}
+
+export interface WorkpageScheduleCheck {
+  check_id: string;
+  label: string;
+  state: string;
+  blocking: boolean;
+  affected_service_dates?: string[];
+  affected_driver_ids?: string[];
+}
+
+export interface WorkpageScheduleCalculations {
+  top_bar: {
+    days: WorkpageScheduleCalculationTopBarDay[];
+  };
+  selected_day: WorkpageScheduleSelectedDay;
+  driver_metrics: WorkpageScheduleDriverMetric[];
+  checks: WorkpageScheduleCheck[];
+}
+
+export interface WorkpageScheduleDraftLineageEntry {
+  artifact_version_id: string;
+  supersedes_artifact_version_id: string | null;
+}
+
+export interface WorkpageScheduleDraftLineage {
+  current_artifact_version_id: string | null;
+  latest_artifact_version_id: string | null;
+  previous_artifact_version_id: string | null;
+  recent_versions: WorkpageScheduleDraftLineageEntry[];
+}
+
+export interface WorkpageScheduleAcceptedSeriesEntry {
+  artifact_version_id: string;
+  workflow_run_id: string;
+  partition_key: string;
+  logical_date: string;
+  artifact_kind: string;
+}
+
+export interface WorkpageScheduleAcceptedSeries {
+  series_key: string | null;
+  current_artifact_version_id: string | null;
+  previous_artifact_version_id: string | null;
+  next_artifact_version_id: string | null;
+  entries: WorkpageScheduleAcceptedSeriesEntry[];
+}
+
+export type WorkpageScheduleActionKind =
+  | "open_latest_draft"
+  | "preview_recalc"
+  | "submit_artifact";
+
+export interface WorkpageScheduleAction {
+  action_id: string;
+  kind: WorkpageScheduleActionKind;
+  label: string;
+  state: "available" | "blocked" | "unavailable";
+  workpage_kind: string;
+  artifact_version_id: string | null;
+  route?: string | null;
+  preview_path?: string | null;
+  submit_path?: string | null;
+  disabled_reason?: string | null;
+}
+
+export interface WorkpageSchedulePreview {
+  workflow_run_id: string;
+  artifact_version_id: string;
+  dirty: boolean;
+  dependency_state: string;
+  dependencies: WorkpageScheduleDependency[];
+  calculations: WorkpageScheduleCalculations;
+}
+
 export type WorkpageSection =
   | WorkpageSummaryCardsSection
   | WorkpageTableSection

@@ -30,6 +30,11 @@ interface ArmedCell {
   rowIndex: number;
 }
 
+interface ScheduleHeatmapDriverState {
+  availabilityState?: string;
+  complianceState?: string;
+}
+
 function asText(value: unknown): string {
   return typeof value === "string" ? value.trim() : String(value ?? "").trim();
 }
@@ -180,12 +185,20 @@ export function ScheduleHeatmapEditor({
   section,
   assignmentRows,
   reserveRows,
-  onRowsChange
+  onRowsChange,
+  readOnly = false,
+  selectedServiceDate = null,
+  availableDriverIds = [],
+  driverStateById = {}
 }: {
   section: WorkpageScheduleHeatmapSection;
   assignmentRows: WorkpageTableRow[];
   reserveRows: WorkpageTableRow[];
-  onRowsChange: (next: { assignmentRows: WorkpageTableRow[]; reserveRows: WorkpageTableRow[] }) => void;
+  onRowsChange?: (next: { assignmentRows: WorkpageTableRow[]; reserveRows: WorkpageTableRow[] }) => void;
+  readOnly?: boolean;
+  selectedServiceDate?: string | null;
+  availableDriverIds?: string[];
+  driverStateById?: Record<string, ScheduleHeatmapDriverState>;
 }): JSX.Element {
   const [armedCell, setArmedCell] = useState<ArmedCell | null>(null);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
@@ -211,7 +224,10 @@ export function ScheduleHeatmapEditor({
           <p>
             {armedCell
               ? `Moving ${armedCell.driverName}. Pick another cell on ${armedCell.serviceDate} to move or swap it.`
-              : section.subtitle ?? "Click a filled cell to start moving planned work."}
+              : section.subtitle ??
+                (readOnly
+                  ? "Server-authoritative schedule heatmap. Edit controls stay on draft artifact pages."
+                  : "Click a filled cell to start moving planned work.")}
           </p>
         </div>
         <div className="schedule-heatmap__legend" aria-label="Heatmap legend">
@@ -242,7 +258,15 @@ export function ScheduleHeatmapEditor({
             <tr>
               <th scope="col">People</th>
               {serviceDates.map((serviceDate) => (
-                <th key={serviceDate.service_date} scope="col">
+                <th
+                  key={serviceDate.service_date}
+                  scope="col"
+                  className={
+                    selectedServiceDate === serviceDate.service_date
+                      ? "schedule-heatmap__date-header schedule-heatmap__date-header--selected"
+                      : "schedule-heatmap__date-header"
+                  }
+                >
                   <span>{serviceDate.weekday_label}</span>
                   <strong>{serviceDate.label}</strong>
                 </th>
@@ -250,9 +274,21 @@ export function ScheduleHeatmapEditor({
             </tr>
           </thead>
           <tbody>
-            {people.map((person) => (
+            {people.map((person) => {
+              const driverState = driverStateById[person.driver_id] ?? {};
+              const isAvailableOnSelectedDay = availableDriverIds.includes(person.driver_id);
+              return (
               <tr key={person.driver_id}>
-                <th scope="row">
+                <th
+                  scope="row"
+                  className={`${
+                    isAvailableOnSelectedDay ? "schedule-heatmap__person-cell--available " : ""
+                  }${
+                    driverState.complianceState === "fail"
+                      ? "schedule-heatmap__person-cell--blocked"
+                      : ""
+                  }`.trim()}
+                >
                   <div className="schedule-heatmap__person">
                     <strong>{person.driver_name}</strong>
                     <span>
@@ -260,6 +296,12 @@ export function ScheduleHeatmapEditor({
                         .filter((value) => value.length > 0)
                         .join(" · ") || "planner roster"}
                     </span>
+                    {selectedServiceDate ? (
+                      <span className="schedule-heatmap__person-cues">
+                        {isAvailableOnSelectedDay ? "Available on selected day" : "Scheduled on selected day"}
+                        {driverState.complianceState === "fail" ? " · Compliance watch" : ""}
+                      </span>
+                    ) : null}
                   </div>
                 </th>
                 {serviceDates.map((serviceDate) => {
@@ -267,15 +309,22 @@ export function ScheduleHeatmapEditor({
                   const isArmed =
                     armedCell?.serviceDate === serviceDate.service_date &&
                     armedCell.driverId === person.driver_id;
+                  const isSelectedDay = selectedServiceDate === serviceDate.service_date;
+                  const isAvailableCell = isSelectedDay && availableDriverIds.includes(person.driver_id);
                   return (
                     <td key={`${person.driver_id}:${serviceDate.service_date}`}>
                       <button
                         type="button"
-                        className={`schedule-heatmap__cell schedule-heatmap__cell--${cell?.state ?? "empty"}${cell?.manualOverride ? " schedule-heatmap__cell--manual" : ""}${isArmed ? " is-armed" : ""}`}
+                        className={`schedule-heatmap__cell schedule-heatmap__cell--${cell?.state ?? "empty"}${cell?.manualOverride ? " schedule-heatmap__cell--manual" : ""}${isArmed ? " is-armed" : ""}${isSelectedDay ? " schedule-heatmap__cell--selected-day" : ""}${isAvailableCell ? " schedule-heatmap__cell--available" : ""}${driverState.complianceState === "fail" ? " schedule-heatmap__cell--blocked" : ""}${readOnly ? " schedule-heatmap__cell--readonly" : ""}`}
                         data-testid={`schedule-heatmap-cell-${serviceDate.service_date}-${person.driver_id}`}
                         aria-label={buildCellLabel(person, serviceDate, cell)}
                         aria-pressed={isArmed}
+                        aria-disabled={readOnly}
                         onClick={() => {
+                          if (readOnly || !onRowsChange) {
+                            setStatusMessage("This view is read-only. Open a draft artifact to move schedule cells.");
+                            return;
+                          }
                           if (!armedCell) {
                             if (!cell) {
                               setStatusMessage("Pick a planned cell first, then move it to another person on the same day.");
@@ -394,7 +443,8 @@ export function ScheduleHeatmapEditor({
                   );
                 })}
               </tr>
-            ))}
+            );
+            })}
           </tbody>
         </table>
       </div>
