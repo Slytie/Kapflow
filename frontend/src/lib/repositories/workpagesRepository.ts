@@ -32,6 +32,10 @@ export const workpagesRepository = {
     return onetruthApi.getWorkflowRunScheduleWorkpage(workflowRunId);
   },
 
+  async routeDemandForRun(workflowRunId: string): Promise<WorkpageContract> {
+    return onetruthApi.getWorkflowRunRouteDemandWorkpage(workflowRunId);
+  },
+
   async eod(): Promise<WorkpageContract> {
     return onetruthApi.getDemoWorkpage("eod-v0");
   },
@@ -46,6 +50,16 @@ export const workpagesRepository = {
 
   async scheduleArtifact(artifactVersionId: string): Promise<WorkpageContract> {
     return onetruthApi.getArtifactWorkpage(artifactVersionId);
+  },
+
+  async routeDemandArtifact(
+    workflowRunId: string,
+    artifactVersionId: string
+  ): Promise<WorkpageContract> {
+    return onetruthApi.getWorkflowRunRouteDemandArtifactWorkpage(
+      workflowRunId,
+      artifactVersionId
+    );
   },
 
   async createEodDraft(): Promise<WorkpageDraftResponse> {
@@ -101,6 +115,20 @@ export const workpagesRepository = {
     const artifacts = await onetruthApi.listWorkflowRunArtifacts(workflowRunId);
     return artifacts
       .filter((artifact) => artifact.artifact_kind === "planning.draft_weekly_schedule.workbook")
+      .sort((left, right) => {
+        const createdAtCompare = right.created_at.localeCompare(left.created_at);
+        if (createdAtCompare !== 0) {
+          return createdAtCompare;
+        }
+        return right.artifact_version_id.localeCompare(left.artifact_version_id);
+      })
+      .slice(0, 5);
+  },
+
+  async listRouteDemandHistory(workflowRunId: string): Promise<ArtifactVersionRow[]> {
+    const artifacts = await onetruthApi.listWorkflowRunArtifacts(workflowRunId);
+    return artifacts
+      .filter((artifact) => artifact.artifact_kind === "planning.route_slot_requirements.workbook")
       .sort((left, right) => {
         const createdAtCompare = right.created_at.localeCompare(left.created_at);
         if (createdAtCompare !== 0) {
@@ -174,6 +202,24 @@ export const workpagesRepository = {
     return onetruthApi.previewArtifactWorkpageAtPath(previewPath, {
       rows: payload.rows,
       reserve_rows: payload.reserveRows
+    });
+  },
+
+  async submitRouteDemandArtifactAtPath(
+    submitPath: string,
+    artifactVersionId: string,
+    payload: {
+      dailyDemandRows: Array<{
+        service_date: string;
+        planned_route_count: number;
+      }>;
+    },
+    subjectContext?: WorkpageActionSubjectContext
+  ): Promise<WorkpageSubmittedResponse> {
+    return onetruthApi.submitArtifactWorkpageAtPath(submitPath, {
+      daily_demand_rows: payload.dailyDemandRows,
+      subject_link: subjectLinkPayload(subjectContext),
+      idempotency_key: createIdempotencyKey("workpage-route-demand-artifact-submit", artifactVersionId)
     });
   },
 

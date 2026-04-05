@@ -8,6 +8,9 @@ import eodArtifactCreateResponseSnapshot from "@fixtures/workpage_eod_v0_artifac
 import eodRunArtifactCreateResponseSnapshot from "@fixtures/workpage_eod_v0_run_artifact_create_response.json";
 import eodRunWorkpageStateSnapshot from "@fixtures/workpage_eod_v0_run_state.json";
 import eodWorkpageStateSnapshot from "@fixtures/workpage_eod_v0_state.json";
+import routeDemandArtifactStateSnapshot from "@fixtures/workpage_route_demand_v0_artifact_state.json";
+import routeDemandArtifactSubmitResponseSnapshot from "@fixtures/workpage_route_demand_v0_artifact_submit_response.json";
+import routeDemandRunWorkpageStateSnapshot from "@fixtures/workpage_route_demand_v0_run_state.json";
 import scheduleArtifactStateSnapshot from "@fixtures/workpage_schedule_v0_artifact_state.json";
 import scheduleArtifactSubmitResponseSnapshot from "@fixtures/workpage_schedule_v0_artifact_submit_response.json";
 import scheduleRunWorkpageStateSnapshot from "@fixtures/workpage_schedule_v0_run_state.json";
@@ -29,8 +32,10 @@ const ok = (payload: Record<string, unknown>) => HttpResponse.json({ status: "ok
 let state = createContractState();
 let eodArtifactVersionCounter = 0;
 let scheduleArtifactVersionCounter = 0;
+let routeDemandArtifactVersionCounter = 0;
 const eodArtifactVersions = new Map<string, EodArtifactVersionState>();
 const scheduleArtifactVersions = new Map<string, ScheduleArtifactVersionState>();
+const routeDemandArtifactVersions = new Map<string, RouteDemandArtifactVersionState>();
 const EOD_WORKFLOW_RUN_ID = "wr-eod-artifact-001";
 const SCHEDULE_WORKFLOW_RUN_ID = "wr-weekly-001";
 
@@ -57,6 +62,11 @@ interface ScheduleArtifactVersionState extends ArtifactWorkpageVersionState {
   };
 }
 
+interface RouteDemandArtifactVersionState extends ArtifactWorkpageVersionState {
+  dayCards: Array<Record<string, unknown>>;
+  scheduleImpact: Record<string, unknown>;
+}
+
 function nowIso(): string {
   return new Date().toISOString();
 }
@@ -75,6 +85,11 @@ function nextScheduleArtifactVersionId(): string {
   return `av-schedule-artifact-${String(scheduleArtifactVersionCounter).padStart(3, "0")}`;
 }
 
+function nextRouteDemandArtifactVersionId(): string {
+  routeDemandArtifactVersionCounter += 1;
+  return `av-route-demand-artifact-${String(routeDemandArtifactVersionCounter).padStart(3, "0")}`;
+}
+
 function artifactRoute(artifactVersionId: string, workflowRunId?: string): string {
   return workflowRunId
     ? `/runs/${workflowRunId}/workpages/eod-v0/artifacts/${artifactVersionId}`
@@ -83,6 +98,10 @@ function artifactRoute(artifactVersionId: string, workflowRunId?: string): strin
 
 function scheduleArtifactRoute(artifactVersionId: string, workflowRunId: string): string {
   return `/runs/${workflowRunId}/workpages/schedule-v0/artifacts/${artifactVersionId}`;
+}
+
+function routeDemandArtifactRoute(artifactVersionId: string, workflowRunId: string): string {
+  return `/runs/${workflowRunId}/workpages/route-demand-v0/artifacts/${artifactVersionId}`;
 }
 
 function sortArtifactRowsAscending(left: ArtifactVersionRow, right: ArtifactVersionRow): number {
@@ -99,6 +118,10 @@ function eodArtifactFileName(artifactVersionId: string): string {
 
 function scheduleArtifactFileName(artifactVersionId: string): string {
   return `weekly_schedule_stage04_${artifactVersionId}.json`;
+}
+
+function routeDemandArtifactFileName(artifactVersionId: string): string {
+  return `route_demand_stage04_${artifactVersionId}.json`;
 }
 
 function findSectionByKind(payload: Record<string, unknown>, kind: string): Record<string, unknown> | null {
@@ -640,6 +663,8 @@ function buildScheduleArtifactPayload(input: {
 
 function patchScheduleArtifactContractState(version: ScheduleArtifactVersionState): void {
   const payload = version.payload;
+  ensureRouteDemandArtifactDraft(version.workflowRunId);
+  const latestRouteDemandVersion = latestRouteDemandArtifactForRun(version.workflowRunId);
   const actions = Array.isArray(payload.actions) ? payload.actions : [];
   payload.actions = actions.map((action) => {
     if (!action || typeof action !== "object" || Array.isArray(action)) {
@@ -661,6 +686,13 @@ function patchScheduleArtifactContractState(version: ScheduleArtifactVersionStat
         version.artifactVersionId,
         "submit"
       );
+    }
+    if (record.workpage_kind === "route-demand-v0" && kind === "open_latest") {
+      record.artifact_version_id = latestRouteDemandVersion?.artifactVersionId ?? null;
+      record.route = latestRouteDemandVersion
+        ? routeDemandArtifactRoute(latestRouteDemandVersion.artifactVersionId, version.workflowRunId)
+        : null;
+      record.state = latestRouteDemandVersion ? "available" : "unavailable";
     }
     return record;
   });
@@ -702,6 +734,8 @@ function patchRunSchedulePayloadContractState(
   workflowRunId: string
 ): void {
   const latestVersion = latestScheduleArtifactForRun(workflowRunId);
+  ensureRouteDemandArtifactDraft(workflowRunId);
+  const latestRouteDemandVersion = latestRouteDemandArtifactForRun(workflowRunId);
   const actions = Array.isArray(payload.actions) ? payload.actions : [];
   payload.actions = actions.map((action) => {
     if (!action || typeof action !== "object" || Array.isArray(action)) {
@@ -714,6 +748,13 @@ function patchRunSchedulePayloadContractState(
         ? scheduleArtifactRoute(latestVersion.artifactVersionId, workflowRunId)
         : null;
       record.artifact_version_id = latestVersion?.artifactVersionId ?? null;
+    }
+    if (record.workpage_kind === "route-demand-v0" && asString(record.kind) === "open_latest") {
+      record.state = latestRouteDemandVersion ? "available" : "unavailable";
+      record.route = latestRouteDemandVersion
+        ? routeDemandArtifactRoute(latestRouteDemandVersion.artifactVersionId, workflowRunId)
+        : null;
+      record.artifact_version_id = latestRouteDemandVersion?.artifactVersionId ?? null;
     }
     return record;
   });
@@ -876,6 +917,7 @@ function scheduleArtifactVersionRow(version: ScheduleArtifactVersionState): Arti
 function listWorkflowRunArtifacts(workflowRunId: string): ArtifactVersionRow[] {
   if (workflowRunId === SCHEDULE_WORKFLOW_RUN_ID) {
     ensureScheduleArtifactDraft(workflowRunId);
+    ensureRouteDemandArtifactDraft(workflowRunId);
   }
   const eodArtifacts =
     workflowRunId === EOD_WORKFLOW_RUN_ID
@@ -885,7 +927,11 @@ function listWorkflowRunArtifacts(workflowRunId: string): ArtifactVersionRow[] {
     workflowRunId === SCHEDULE_WORKFLOW_RUN_ID
       ? Array.from(scheduleArtifactVersions.values()).map(scheduleArtifactVersionRow)
       : [];
-  return [...listArtifactsForSubject("workflow_run", workflowRunId), ...eodArtifacts, ...scheduleArtifacts].sort(
+  const routeDemandArtifacts =
+    workflowRunId === SCHEDULE_WORKFLOW_RUN_ID
+      ? Array.from(routeDemandArtifactVersions.values()).map(routeDemandArtifactVersionRow)
+      : [];
+  return [...listArtifactsForSubject("workflow_run", workflowRunId), ...eodArtifacts, ...scheduleArtifacts, ...routeDemandArtifacts].sort(
     sortArtifactRowsAscending
   );
 }
@@ -1033,6 +1079,366 @@ function schedulePreviewResponse(
   };
 }
 
+function buildRouteDemandDayCards(
+  dayCards?: Array<Record<string, unknown>>
+): Array<Record<string, unknown>> {
+  const baseCards = asObjectArray(routeDemandArtifactStateSnapshot.workpage_state.calculations.day_cards);
+  const nextCards = dayCards ?? baseCards;
+  return nextCards.map((card) => ({
+    ...card,
+    planned_route_count: asNumber(card.planned_route_count),
+    standard_slot_count: asNumber(card.standard_slot_count),
+    standard_early_slot_count: asNumber(card.standard_early_slot_count),
+    standard_late_slot_count: asNumber(card.standard_late_slot_count),
+    rescue_slot_count: asNumber(card.rescue_slot_count),
+    overflow_slot_count: asNumber(card.overflow_slot_count),
+    on_call_target: asNumber(card.on_call_target),
+    excess_capacity_target: asNumber(card.excess_capacity_target)
+  }));
+}
+
+function patchRouteDemandArtifactContractState(version: RouteDemandArtifactVersionState): void {
+  const payload = version.payload;
+  const latestScheduleVersion = latestScheduleArtifactForRun(version.workflowRunId);
+  const actions = Array.isArray(payload.actions) ? payload.actions : [];
+  payload.actions = actions.map((action) => {
+    if (!action || typeof action !== "object" || Array.isArray(action)) {
+      return action;
+    }
+    const record = { ...(action as Record<string, unknown>) };
+    record.artifact_version_id = version.artifactVersionId;
+    if (asString(record.kind) === "save") {
+      record.submit_path = `/api/v1/workpages/workflow-runs/${version.workflowRunId}/route-demand-v0/artifacts/${version.artifactVersionId}/submit`;
+      record.state =
+        version.latestInChainArtifactVersionId === version.artifactVersionId ? "available" : "blocked";
+      record.disabled_reason =
+        version.latestInChainArtifactVersionId === version.artifactVersionId
+          ? null
+          : "historical_artifact_read_only";
+    }
+    return record;
+  });
+
+  const artifactState = asObject(payload.artifact_state);
+  if (artifactState) {
+    artifactState.current_artifact_version_id = version.artifactVersionId;
+    artifactState.latest_artifact_version_id = version.latestInChainArtifactVersionId;
+    artifactState.editable = version.latestInChainArtifactVersionId === version.artifactVersionId;
+    artifactState.state_kind = "artifact_projection";
+  }
+
+  const calculations = asObject(payload.calculations);
+  if (calculations) {
+    calculations.day_cards = version.dayCards.map((card) => ({ ...card }));
+  }
+
+  const workpage = asObject(payload.workpage);
+  if (workpage) {
+    const summary = asObject(workpage.summary);
+    if (summary) {
+      summary.service_day_count = version.dayCards.length;
+      summary.planned_route_total = version.dayCards.reduce(
+        (total, card) => total + asNumber(card.planned_route_count),
+        0
+      );
+    }
+  }
+
+  const dailyRowsSection = findTableSectionById(payload, "route_demand_daily_rows");
+  if (dailyRowsSection) {
+    dailyRowsSection.rows = version.dayCards.map((card) => ({
+      service_date: asString(card.service_date),
+      planned_route_count: asNumber(card.planned_route_count),
+      standard_slot_count: asNumber(card.standard_slot_count),
+      rescue_slot_count: asNumber(card.rescue_slot_count),
+      overflow_slot_count: asNumber(card.overflow_slot_count),
+      on_call_target: asNumber(card.on_call_target),
+      excess_capacity_target: asNumber(card.excess_capacity_target)
+    }));
+  }
+
+  const historySection = findSectionByKind(payload, "history_stub");
+  if (historySection) {
+    historySection.entries = [
+      {
+        label: "Current artifact version",
+        value: version.artifactVersionId
+      },
+      {
+        label: "Supersedes",
+        value: version.supersedesArtifactVersionId ?? "Initial route demand version"
+      },
+      {
+        label: "Latest route demand version",
+        value: version.latestInChainArtifactVersionId
+      }
+    ];
+  }
+
+  payload.schedule_impact = {
+    ...version.scheduleImpact,
+    latest_schedule_draft_artifact_version_id: latestScheduleVersion?.artifactVersionId ?? null,
+    latest_route_demand_artifact_version_id: version.latestInChainArtifactVersionId
+  };
+}
+
+function buildRouteDemandArtifactPayload(input: {
+  artifactVersionId: string;
+  workflowRunId: string;
+  supersedesArtifactVersionId: string | null;
+  supersededByArtifactVersionId: string | null;
+  latestInChainArtifactVersionId: string;
+  dayCards: Array<Record<string, unknown>>;
+  scheduleImpact: Record<string, unknown>;
+}): Record<string, unknown> {
+  const payload = cloneJson(routeDemandArtifactStateSnapshot.workpage_state) as Record<string, unknown>;
+  const workpage = asObject(payload.workpage) ?? {};
+  const source = asObject(payload.source) ?? {};
+  const freshness = asObject(payload.freshness) ?? {};
+  const artifactContext = asObject(payload.artifact_context) ?? {};
+
+  workpage.source_artifact_version_id = input.artifactVersionId;
+  source.source_artifact_version_id = input.artifactVersionId;
+  freshness.generated_at = nowIso();
+  freshness.source_version = input.artifactVersionId;
+  artifactContext.artifact_version_id = input.artifactVersionId;
+  artifactContext.workflow_run_id = input.workflowRunId;
+  artifactContext.supersedes_artifact_version_id = input.supersedesArtifactVersionId;
+  artifactContext.superseded_by_artifact_version_id = input.supersededByArtifactVersionId;
+  artifactContext.latest_in_chain_artifact_version_id = input.latestInChainArtifactVersionId;
+  artifactContext.download_path = `/api/v1/artifacts/${input.artifactVersionId}/download.bin`;
+
+  payload.workpage = workpage;
+  payload.source = source;
+  payload.freshness = freshness;
+  payload.artifact_context = artifactContext;
+
+  const version: RouteDemandArtifactVersionState = {
+    artifactVersionId: input.artifactVersionId,
+    workflowRunId: input.workflowRunId,
+    fileName: routeDemandArtifactFileName(input.artifactVersionId),
+    createdAt: nowIso(),
+    lineageNote: input.supersedesArtifactVersionId
+      ? "Submitted route-demand artifact version."
+      : "Initial Stage04 route-demand artifact.",
+    payload,
+    dayCards: input.dayCards.map((card) => ({ ...card })),
+    scheduleImpact: { ...input.scheduleImpact },
+    supersedesArtifactVersionId: input.supersedesArtifactVersionId,
+    supersededByArtifactVersionId: input.supersededByArtifactVersionId,
+    latestInChainArtifactVersionId: input.latestInChainArtifactVersionId
+  };
+
+  patchArtifactPayloadLineage(version);
+  patchRouteDemandArtifactContractState(version);
+  return payload;
+}
+
+function addRouteDemandArtifactVersion(input: {
+  artifactVersionId: string;
+  workflowRunId: string;
+  supersedesArtifactVersionId: string | null;
+  supersededByArtifactVersionId?: string | null;
+  latestInChainArtifactVersionId: string;
+  dayCards?: Array<Record<string, unknown>>;
+  scheduleImpact?: Record<string, unknown>;
+}): RouteDemandArtifactVersionState {
+  const createdAt = nowIso();
+  const dayCards = buildRouteDemandDayCards(input.dayCards);
+  const scheduleImpact = cloneJson(
+    input.scheduleImpact ?? routeDemandArtifactStateSnapshot.workpage_state.schedule_impact
+  ) as Record<string, unknown>;
+  const version: RouteDemandArtifactVersionState = {
+    artifactVersionId: input.artifactVersionId,
+    workflowRunId: input.workflowRunId,
+    fileName: routeDemandArtifactFileName(input.artifactVersionId),
+    createdAt,
+    lineageNote: input.supersedesArtifactVersionId
+      ? "Submitted route-demand artifact version."
+      : "Initial Stage04 route-demand artifact.",
+    payload: buildRouteDemandArtifactPayload({
+      artifactVersionId: input.artifactVersionId,
+      workflowRunId: input.workflowRunId,
+      supersedesArtifactVersionId: input.supersedesArtifactVersionId,
+      supersededByArtifactVersionId: input.supersededByArtifactVersionId ?? null,
+      latestInChainArtifactVersionId: input.latestInChainArtifactVersionId,
+      dayCards,
+      scheduleImpact
+    }),
+    dayCards,
+    scheduleImpact,
+    supersedesArtifactVersionId: input.supersedesArtifactVersionId,
+    supersededByArtifactVersionId: input.supersededByArtifactVersionId ?? null,
+    latestInChainArtifactVersionId: input.latestInChainArtifactVersionId
+  };
+  routeDemandArtifactVersions.set(version.artifactVersionId, version);
+  patchRouteDemandArtifactContractState(version);
+  return version;
+}
+
+function routeDemandArtifactVersionRow(version: RouteDemandArtifactVersionState): ArtifactVersionRow {
+  return {
+    artifact_version_id: version.artifactVersionId,
+    workflow_run_id: version.workflowRunId,
+    task_run_id: null,
+    artifact_kind: "planning.route_slot_requirements.workbook",
+    artifact_role: "",
+    media_type: "application/json",
+    storage_uri: `memory://workpages/${version.fileName}`,
+    content_digest: `sha256:${version.artifactVersionId}`,
+    byte_size: JSON.stringify(version.dayCards).length,
+    metadata_json: {
+      file_name: version.fileName,
+      planning_week_id: "PW-2026-W13",
+      station_code: "DVC4",
+      workflow_family: "weekly_schedule_planning.v1"
+    },
+    parent_artifact_version_id: version.supersedesArtifactVersionId,
+    supersedes_artifact_version_id: version.supersedesArtifactVersionId,
+    lineage_note: version.lineageNote,
+    created_at: version.createdAt,
+    links: [
+      {
+        artifact_version_id: version.artifactVersionId,
+        workflow_run_id: version.workflowRunId,
+        subject_kind: "workflow_run",
+        subject_id: version.workflowRunId,
+        relation_kind: "subject",
+        created_at: version.createdAt,
+        created_by_actor_id: null,
+        created_by_actor_type: null
+      }
+    ]
+  };
+}
+
+function updateRouteDemandArtifactChainLatest(
+  artifactVersionId: string,
+  latestArtifactVersionId: string
+): void {
+  let currentArtifactVersionId: string | null = artifactVersionId;
+  while (currentArtifactVersionId) {
+    const version = routeDemandArtifactVersions.get(currentArtifactVersionId);
+    if (!version) {
+      break;
+    }
+    version.latestInChainArtifactVersionId = latestArtifactVersionId;
+    patchArtifactPayloadLineage(version);
+    patchRouteDemandArtifactContractState(version);
+    currentArtifactVersionId = version.supersedesArtifactVersionId;
+  }
+}
+
+function latestRouteDemandArtifactForRun(workflowRunId: string): RouteDemandArtifactVersionState | null {
+  return Array.from(routeDemandArtifactVersions.values())
+    .filter((version) => version.workflowRunId === workflowRunId)
+    .sort((left, right) => {
+      const createdAtCompare = right.createdAt.localeCompare(left.createdAt);
+      if (createdAtCompare !== 0) {
+        return createdAtCompare;
+      }
+      return right.artifactVersionId.localeCompare(left.artifactVersionId);
+    })[0] ?? null;
+}
+
+function ensureRouteDemandArtifactDraft(
+  workflowRunId = SCHEDULE_WORKFLOW_RUN_ID
+): RouteDemandArtifactVersionState {
+  const existing = latestRouteDemandArtifactForRun(workflowRunId);
+  if (existing) {
+    return existing;
+  }
+  const artifactVersionId = nextRouteDemandArtifactVersionId();
+  return addRouteDemandArtifactVersion({
+    artifactVersionId,
+    workflowRunId,
+    supersedesArtifactVersionId: null,
+    latestInChainArtifactVersionId: artifactVersionId
+  });
+}
+
+function routeDemandArtifactSubmitResponse(
+  version: RouteDemandArtifactVersionState,
+  supersedesArtifactVersionId: string
+): Record<string, unknown> {
+  const payload = cloneJson(
+    routeDemandArtifactSubmitResponseSnapshot.submit_response
+  ) as Record<string, unknown>;
+  payload.submitted = {
+    artifact_version_id: version.artifactVersionId,
+    route: routeDemandArtifactRoute(version.artifactVersionId, version.workflowRunId),
+    supersedes_artifact_version_id: supersedesArtifactVersionId,
+    workflow_run_id: version.workflowRunId
+  };
+  return payload;
+}
+
+function buildRunRouteDemandWorkpagePayload(workflowRunId: string): Record<string, unknown> {
+  const latestScheduleVersion = ensureScheduleArtifactDraft(workflowRunId);
+  const latestVersion = ensureRouteDemandArtifactDraft(workflowRunId);
+  const payload = cloneJson(routeDemandRunWorkpageStateSnapshot.workpage_state) as Record<string, unknown>;
+  const runContext = asObject(payload.run_context) ?? {};
+  const freshness = asObject(payload.freshness) ?? {};
+  const source = asObject(payload.source) ?? {};
+  const artifactState = asObject(payload.artifact_state) ?? {};
+  const workpage = asObject(payload.workpage) ?? {};
+  const summary = asObject(workpage.summary) ?? {};
+  const actions = Array.isArray(payload.actions) ? payload.actions : [];
+
+  runContext.workflow_run_id = workflowRunId;
+  runContext.activation_key = `snapshot:${workflowRunId}:weekly-route-demand-workpage`;
+  freshness.source_version = latestVersion.artifactVersionId;
+  freshness.generated_at = nowIso();
+  source.source_refs = [`/api/v1/artifacts/${latestVersion.artifactVersionId}`];
+  artifactState.latest_artifact_version_id = latestVersion.artifactVersionId;
+  artifactState.current_artifact_version_id = null;
+  artifactState.editable = false;
+  summary.service_day_count = latestVersion.dayCards.length;
+  summary.planned_route_total = latestVersion.dayCards.reduce(
+    (total, card) => total + asNumber(card.planned_route_count),
+    0
+  );
+
+  const dailyRowsSection = findTableSectionById(payload, "route_demand_daily_rows");
+  if (dailyRowsSection) {
+    dailyRowsSection.rows = latestVersion.dayCards.map((card) => ({
+      service_date: asString(card.service_date),
+      planned_route_count: asNumber(card.planned_route_count),
+      standard_slot_count: asNumber(card.standard_slot_count),
+      rescue_slot_count: asNumber(card.rescue_slot_count),
+      overflow_slot_count: asNumber(card.overflow_slot_count),
+      on_call_target: asNumber(card.on_call_target),
+      excess_capacity_target: asNumber(card.excess_capacity_target)
+    }));
+  }
+
+  payload.run_context = runContext;
+  payload.freshness = freshness;
+  payload.source = source;
+  payload.artifact_state = artifactState;
+  workpage.summary = summary;
+  payload.workpage = workpage;
+  payload.calculations = {
+    day_cards: latestVersion.dayCards.map((card) => ({ ...card }))
+  };
+  payload.schedule_impact = {
+    ...latestVersion.scheduleImpact,
+    latest_schedule_draft_artifact_version_id: latestScheduleVersion.artifactVersionId,
+    latest_route_demand_artifact_version_id: latestVersion.artifactVersionId
+  };
+  payload.actions = actions.map((action) => {
+    if (!action || typeof action !== "object" || Array.isArray(action)) {
+      return action;
+    }
+    const record = { ...(action as Record<string, unknown>) };
+    record.artifact_version_id = latestVersion.artifactVersionId;
+    record.route = routeDemandArtifactRoute(latestVersion.artifactVersionId, workflowRunId);
+    record.state = "available";
+    return record;
+  });
+  return payload;
+}
+
 function buildRunScheduleWorkpagePayload(workflowRunId: string): Record<string, unknown> {
   ensureScheduleArtifactDraft(workflowRunId);
   const payload = cloneJson(scheduleRunWorkpageStateSnapshot.workpage_state) as Record<string, unknown>;
@@ -1089,6 +1495,11 @@ function resetEodArtifactVersions(): void {
 function resetScheduleArtifactVersions(): void {
   scheduleArtifactVersionCounter = 0;
   scheduleArtifactVersions.clear();
+}
+
+function resetRouteDemandArtifactVersions(): void {
+  routeDemandArtifactVersionCounter = 0;
+  routeDemandArtifactVersions.clear();
 }
 
 const TEMPLATE_FIXTURES = [
@@ -2203,6 +2614,7 @@ export function resetApiState(): void {
   state = createContractState();
   resetEodArtifactVersions();
   resetScheduleArtifactVersions();
+  resetRouteDemandArtifactVersions();
 }
 
 export function forceForbiddenResponses(value: boolean): void {
@@ -2319,6 +2731,84 @@ async function handleScheduleArtifactSubmitRequest(
   });
 }
 
+async function handleRouteDemandArtifactSubmitRequest(
+  artifactVersionId: string,
+  request: Request
+): Promise<Response> {
+  if (!inScope(request)) {
+    return scheduleArtifactNotFoundResponse(artifactVersionId);
+  }
+
+  const baseVersion = routeDemandArtifactVersions.get(artifactVersionId);
+  if (!baseVersion) {
+    return scheduleArtifactNotFoundResponse(artifactVersionId);
+  }
+
+  const body = (await request.json()) as {
+    daily_demand_rows?: Array<{
+      service_date?: string;
+      planned_route_count?: number;
+    }>;
+  };
+  const requestedCounts = new Map(
+    (body.daily_demand_rows ?? []).map((row) => [
+      asString(row.service_date),
+      asNumber(row.planned_route_count)
+    ])
+  );
+  const nextDayCards = baseVersion.dayCards.map((card) => {
+    const serviceDate = asString(card.service_date);
+    const currentCount = asNumber(card.planned_route_count);
+    const nextCount = serviceDate && requestedCounts.has(serviceDate)
+      ? Math.max(asNumber(requestedCounts.get(serviceDate)), 0)
+      : currentCount;
+    const delta = nextCount - currentCount;
+    return {
+      ...card,
+      planned_route_count: nextCount,
+      standard_slot_count: Math.max(asNumber(card.standard_slot_count) + delta, 0),
+      delta_from_previous_version: {
+        planned_route_count_delta: delta
+      }
+    };
+  });
+  const submittedArtifactVersionId = nextRouteDemandArtifactVersionId();
+  const submittedVersion = addRouteDemandArtifactVersion({
+    artifactVersionId: submittedArtifactVersionId,
+    workflowRunId: baseVersion.workflowRunId,
+    supersedesArtifactVersionId: artifactVersionId,
+    latestInChainArtifactVersionId: submittedArtifactVersionId,
+    dayCards: nextDayCards,
+    scheduleImpact: {
+      ...baseVersion.scheduleImpact,
+      dependency_state: "drifted",
+      schedule_state: "awaiting_refresh",
+      refresh_task: {
+        human_task_id: "ht-route-demand-refresh-001",
+        task_run_id: "tr-route-demand-refresh-001",
+        state: "OPEN",
+        owner_role: "schedule_planner",
+        activation_key: `workpage.route-demand-v0.schedule-refresh:${submittedArtifactVersionId}`,
+        blocked_on_kind: "artifact_version",
+        blocked_on_ref: submittedArtifactVersionId
+      }
+    }
+  });
+  baseVersion.supersededByArtifactVersionId = submittedArtifactVersionId;
+  patchArtifactPayloadLineage(baseVersion);
+  patchRouteDemandArtifactContractState(baseVersion);
+  updateRouteDemandArtifactChainLatest(submittedArtifactVersionId, submittedArtifactVersionId);
+
+  state.audit.mutations.push(
+    `workpage-route-demand-artifact-submit:${artifactVersionId}:${submittedArtifactVersionId}`
+  );
+  return ok({
+    command: "api.workpages.artifact.submit",
+    submitted: (routeDemandArtifactSubmitResponse(submittedVersion, artifactVersionId)
+      .submitted as Record<string, unknown>) ?? {}
+  });
+}
+
 export const handlers = [
   http.get("*/api/v1/workpages/demo/schedule-v0", () =>
     HttpResponse.json(scheduleWorkpageStateSnapshot.workpage_state)
@@ -2328,6 +2818,13 @@ export const handlers = [
       return forbiddenWorkflowRun();
     }
     return HttpResponse.json(buildRunScheduleWorkpagePayload(String(params.workflowRunId)));
+  }),
+  http.get("*/api/v1/workpages/workflow-runs/:workflowRunId/route-demand-v0", ({ params, request }) => {
+    if (!inScope(request)) {
+      return forbiddenWorkflowRun();
+    }
+    ensureScheduleArtifactDraft(String(params.workflowRunId));
+    return HttpResponse.json(buildRunRouteDemandWorkpagePayload(String(params.workflowRunId)));
   }),
   http.get("*/api/v1/workpages/demo/eod-v0", () =>
     HttpResponse.json(eodWorkpageStateSnapshot.workpage_state)
@@ -2384,6 +2881,13 @@ export const handlers = [
     }
 
     const artifactVersionId = String(params.artifactVersionId);
+    const routeDemandVersion = routeDemandArtifactVersions.get(artifactVersionId);
+    if (routeDemandVersion) {
+      patchArtifactPayloadLineage(routeDemandVersion);
+      patchRouteDemandArtifactContractState(routeDemandVersion);
+      return HttpResponse.json(routeDemandVersion.payload);
+    }
+
     const scheduleVersion = scheduleArtifactVersions.get(artifactVersionId);
     if (scheduleVersion) {
       patchArtifactPayloadLineage(scheduleVersion);
@@ -2415,6 +2919,24 @@ export const handlers = [
     async ({ params, request }) =>
       handleScheduleArtifactPreviewRequest(String(params.artifactVersionId), request)
   ),
+  http.get(
+    "*/api/v1/workpages/workflow-runs/:workflowRunId/route-demand-v0/artifacts/:artifactVersionId",
+    ({ params, request }) => {
+      if (!inScope(request)) {
+        return scheduleArtifactNotFoundResponse(String(params.artifactVersionId));
+      }
+      ensureScheduleArtifactDraft(String(params.workflowRunId));
+      ensureRouteDemandArtifactDraft(String(params.workflowRunId));
+      const artifactVersionId = String(params.artifactVersionId);
+      const version = routeDemandArtifactVersions.get(artifactVersionId);
+      if (!version) {
+        return scheduleArtifactNotFoundResponse(artifactVersionId);
+      }
+      patchArtifactPayloadLineage(version);
+      patchRouteDemandArtifactContractState(version);
+      return HttpResponse.json(version.payload);
+    }
+  ),
   http.post("*/api/v1/workpages/artifacts/:artifactVersionId/preview", async ({ params, request }) =>
     handleScheduleArtifactPreviewRequest(String(params.artifactVersionId), request)
   ),
@@ -2422,6 +2944,11 @@ export const handlers = [
     "*/api/v1/workpages/workflow-runs/:workflowRunId/schedule-v0/artifacts/:artifactVersionId/submit",
     async ({ params, request }) =>
       handleScheduleArtifactSubmitRequest(String(params.artifactVersionId), request)
+  ),
+  http.post(
+    "*/api/v1/workpages/workflow-runs/:workflowRunId/route-demand-v0/artifacts/:artifactVersionId/submit",
+    async ({ params, request }) =>
+      handleRouteDemandArtifactSubmitRequest(String(params.artifactVersionId), request)
   ),
   http.post("*/api/v1/workpages/artifacts/:artifactVersionId/submit", async ({ params, request }) => {
     if (!inScope(request)) {
@@ -2441,6 +2968,11 @@ export const handlers = [
     }
 
     const artifactVersionId = String(params.artifactVersionId);
+    const routeDemandBaseVersion = routeDemandArtifactVersions.get(artifactVersionId);
+    if (routeDemandBaseVersion) {
+      return handleRouteDemandArtifactSubmitRequest(artifactVersionId, request);
+    }
+
     const scheduleBaseVersion = scheduleArtifactVersions.get(artifactVersionId);
     if (scheduleBaseVersion) {
       return handleScheduleArtifactSubmitRequest(artifactVersionId, request);

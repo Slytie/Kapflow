@@ -31,6 +31,12 @@ from onetruth.application.services.schedule_control.draft_workbook import (
     materialize_stage04_draft_weekly_schedule_workbook,
     project_stage04_draft_weekly_schedule_workbook,
 )
+from onetruth.application.services.schedule_control.route_demand_workbook import (
+    ROUTE_DEMAND_DATASET_KEY,
+    materialize_route_demand_workbook,
+    project_route_demand_workbook,
+    route_demand_workbook_bytes_from_metadata_json,
+)
 from onetruth.application.services.schedule_control.workpage_calculations import (
     SCHEDULE_CALCULATION_SNAPSHOT_DATASET_KEY,
     build_schedule_bundle_from_dependencies,
@@ -44,8 +50,12 @@ from onetruth.application.services.schedule_control.workpage_calculations import
     schedule_save_disabled_reason,
 )
 from onetruth.application.services.logistics_workpages import (
+    ROUTE_DEMAND_REFRESH_TASK_ACTIVATION_PREFIX,
+    build_route_demand_refresh_activation_key,
     canonical_eod_artifact_route,
+    canonical_route_demand_artifact_route,
     canonical_schedule_artifact_route,
+    latest_schedule_draft_artifact,
 )
 from onetruth.application.services.template_registry import (
     TemplateRecord,
@@ -64,8 +74,12 @@ from onetruth.infrastructure.repositories.artifact_versions import (
     list_artifact_versions_for_workflow_run,
 )
 from onetruth.infrastructure.repositories.approvals import get_approval
-from onetruth.infrastructure.repositories.human_tasks import get_human_task
-from onetruth.infrastructure.repositories.task_runs import get_task_run
+from onetruth.infrastructure.repositories.human_tasks import (
+    create_human_task,
+    get_human_task,
+    list_human_tasks_for_workflow_run,
+)
+from onetruth.infrastructure.repositories.task_runs import create_task_run, get_task_run
 from onetruth.infrastructure.repositories.workflow_runs import (
     create_workflow_run,
     get_workflow_run,
@@ -629,6 +643,117 @@ def submit_schedule_artifact_workpage_command(
     )
 
 
+def submit_route_demand_artifact_workpage_command(
+    connection: sqlite3.Connection,
+    payload: dict[str, Any],
+    *,
+    storage_root: Path,
+    include_receipt: bool = False,
+) -> dict[str, Any]:
+    artifact_version_id = _require_non_empty_string(
+        payload.get("artifact_version_id"),
+        field_name="artifact_version_id",
+    )
+    actor_id = _require_non_empty_string(payload.get("actor_id"), field_name="actor_id")
+    actor_type = _require_non_empty_string(payload.get("actor_type"), field_name="actor_type")
+    base_artifact = _require_route_demand_artifact_version(connection, artifact_version_id)
+
+    receipt = _prepare_command_receipt(
+        command_name="workpages.artifact.submit",
+        payload=payload,
+        fingerprint_payload={
+            "artifact_version_id": artifact_version_id,
+            "daily_demand_rows": payload.get("daily_demand_rows"),
+            "actor_id": actor_id,
+            "actor_type": actor_type,
+        },
+        tenant_id=str(base_artifact.get("tenant_id") or ""),
+        domain_id=str(base_artifact.get("domain_id") or ""),
+        workflow_run_id=str(base_artifact["workflow_run_id"]),
+        idempotency_required=True,
+    )
+    artifact_event_idempotency = _receipt_event_idempotency_key(
+        receipt,
+        "workpages.artifact.submit.artifact.version.created",
+    )
+
+    def _operation() -> dict[str, Any]:
+        _assert_artifact_not_already_superseded(
+            connection,
+            artifact_version_id,
+            route_builder=_canonical_route_demand_ui_route,
+        )
+        workbook_bytes = _read_route_demand_artifact_bytes(base_artifact)
+        try:
+            updated_bytes = materialize_route_demand_workbook(
+                workbook_bytes,
+                daily_demand_rows=payload.get("daily_demand_rows"),
+            )
+        except ValueError as exc:
+            raise CommandError(
+                code="invalid_payload",
+                message=str(exc),
+                details={},
+            ) from exc
+
+        new_artifact = _create_workbook_artifact_version(
+            connection,
+            storage_root=storage_root,
+            workflow_run_id=str(base_artifact["workflow_run_id"]),
+            artifact_kind=ROUTE_DEMAND_DATASET_KEY,
+            artifact_bytes=updated_bytes,
+            artifact_role=(
+                str(base_artifact["artifact_role"])
+                if base_artifact.get("artifact_role") is not None
+                else None
+            ),
+            file_name=_route_demand_file_name(base_artifact),
+            media_type=str(base_artifact.get("media_type") or "application/json"),
+            metadata_json=_route_demand_submitted_metadata(updated_bytes),
+            parent_artifact_version_id=artifact_version_id,
+            supersedes_artifact_version_id=artifact_version_id,
+            lineage_note="Submitted artifact-backed route demand version.",
+            actor_id=actor_id,
+            actor_type=actor_type,
+            event_idempotency=artifact_event_idempotency,
+            links=None,
+        )
+        workflow_run_id = str(base_artifact["workflow_run_id"])
+        submitted_artifact_version_id = str(new_artifact["artifact_version_id"])
+        artifacts = list_artifact_versions_for_workflow_run(connection, workflow_run_id)
+        _create_or_reuse_route_demand_schedule_refresh_task(
+            connection,
+            workflow_run_id=workflow_run_id,
+            route_demand_artifact_version_id=submitted_artifact_version_id,
+            artifacts=artifacts,
+            actor_id=actor_id,
+            actor_type=actor_type,
+        )
+        return {
+            "submitted": {
+                "workflow_run_id": workflow_run_id,
+                "artifact_version_id": submitted_artifact_version_id,
+                "supersedes_artifact_version_id": artifact_version_id,
+                "route": _canonical_route_demand_ui_route(
+                    workflow_run_id=workflow_run_id,
+                    artifact_version_id=submitted_artifact_version_id,
+                ),
+            }
+        }
+
+    result, replay = _execute_with_command_receipt(
+        connection,
+        receipt=receipt,
+        operation=_operation,
+    )
+    return _command_receipt_payload(
+        result,
+        receipt=receipt,
+        replay=replay,
+        include_receipt=include_receipt,
+    )
+
+
 def _resolve_or_create_demo_reporting_run(
     connection: sqlite3.Connection,
     *,
@@ -1012,6 +1137,24 @@ def _schedule_submitted_metadata(updated_bytes: bytes) -> dict[str, Any]:
     return dict(payload)
 
 
+def _route_demand_submitted_metadata(updated_bytes: bytes) -> dict[str, Any]:
+    try:
+        payload = json.loads(updated_bytes.decode("utf-8"))
+    except Exception as exc:
+        raise CommandError(
+            code="invalid_payload",
+            message="updated route demand workbook must remain valid JSON",
+            details={},
+        ) from exc
+    if not isinstance(payload, Mapping):
+        raise CommandError(
+            code="invalid_payload",
+            message="updated route demand workbook must decode to an object",
+            details={},
+        )
+    return dict(payload)
+
+
 def _schedule_preview_context(
     connection: sqlite3.Connection,
     *,
@@ -1146,7 +1289,182 @@ def _create_schedule_companion_artifacts(
             event_idempotency=event_idempotency,
             links=None,
         )
- 
+
+
+def _create_or_reuse_route_demand_schedule_refresh_task(
+    connection: sqlite3.Connection,
+    *,
+    workflow_run_id: str,
+    route_demand_artifact_version_id: str,
+    artifacts: list[dict[str, Any]],
+    actor_id: str,
+    actor_type: str,
+) -> dict[str, Any] | None:
+    latest_schedule_draft = latest_schedule_draft_artifact(artifacts)
+    if latest_schedule_draft is None:
+        return None
+    dependency_projection = project_schedule_dependency_state(
+        dependency_manifest=_schedule_dependency_manifest(latest_schedule_draft),
+        artifacts=artifacts,
+    )
+    route_dependency = next(
+        (
+            row
+            for row in dependency_projection.dependencies
+            if str(row.get("dependency_key") or "") == "route_slot_requirements"
+        ),
+        None,
+    )
+    if route_dependency is not None and str(route_dependency.get("state") or "") == "aligned":
+        return None
+
+    existing = _active_route_demand_refresh_task(
+        connection,
+        workflow_run_id=workflow_run_id,
+    )
+    if existing is not None:
+        return existing
+
+    workflow_run = get_workflow_run(connection, workflow_run_id)
+    if workflow_run is None:
+        raise CommandError(
+            code="workflow_run_not_found",
+            message="workflow run not found for route-demand refresh task creation",
+            details={"workflow_run_id": workflow_run_id},
+        )
+
+    now = utc_now_iso()
+    task_run_id = f"tr-{uuid4()}"
+    human_task_id = f"ht-{uuid4()}"
+    activation_key = build_route_demand_refresh_activation_key(
+        artifact_version_id=route_demand_artifact_version_id
+    )
+
+    create_task_run(
+        connection,
+        task_run_id=task_run_id,
+        workflow_run_id=workflow_run_id,
+        stage_id="Stage04",
+        task_kind="work_item",
+        state="READY",
+        generation=0,
+        activation_key=activation_key,
+        blocked_on_kind="artifact_version",
+        blocked_on_ref=route_demand_artifact_version_id,
+        spawned_from_flag_id=None,
+        spawned_from_task_run_id=None,
+        spawn_rule_id=None,
+        spawn_cause_kind="route_demand_refresh",
+        spawn_cause_event_id=None,
+        spawn_depth=0,
+        spawn_budget_key=None,
+        created_at=now,
+    )
+    create_human_task(
+        connection,
+        human_task_id=human_task_id,
+        workflow_run_id=workflow_run_id,
+        task_run_id=task_run_id,
+        task_kind="work_item",
+        state="OPEN",
+        candidate_roles=["schedule_planner"],
+        owner_role="schedule_planner",
+        due_at=None,
+        escalation_at=None,
+        generation=0,
+        created_at=now,
+    )
+    append_event(
+        connection,
+        _event_envelope(
+            event_type="task.run.created",
+            tenant_id=str(workflow_run["tenant_id"]),
+            domain_id=str(workflow_run["domain_id"]),
+            actor_type=actor_type,
+            actor_id=actor_id,
+            links=[
+                {"rel": "subject", "type": "workflow_run", "id": workflow_run_id},
+                {"rel": "subject", "type": "task_run", "id": task_run_id},
+            ],
+            payload={
+                "task_run_id": task_run_id,
+                "stage_id": "Stage04",
+                "task_kind": "work_item",
+                "activation_key": activation_key,
+                "generation": 0,
+                "spawned_from_flag_id": None,
+                "spawned_from_task_run_id": None,
+                "spawn_rule_id": None,
+                "spawn_cause_kind": "route_demand_refresh",
+                "spawn_cause_event_id": None,
+                "spawn_budget_key": None,
+                "spawn_depth": 0,
+            },
+            idempotency_key=None,
+        ),
+    )
+    append_event(
+        connection,
+        _event_envelope(
+            event_type="task.created",
+            tenant_id=str(workflow_run["tenant_id"]),
+            domain_id=str(workflow_run["domain_id"]),
+            actor_type=actor_type,
+            actor_id=actor_id,
+            links=[
+                {"rel": "subject", "type": "workflow_run", "id": workflow_run_id},
+                {"rel": "subject", "type": "task_run", "id": task_run_id},
+                {"rel": "subject", "type": "human_task", "id": human_task_id},
+            ],
+            payload={
+                "human_task_id": human_task_id,
+                "task_kind": "work_item",
+                "state": "OPEN",
+                "candidate_roles": ["schedule_planner"],
+            },
+            idempotency_key=None,
+        ),
+    )
+    task_run = get_task_run(connection, task_run_id)
+    human_task = get_human_task(connection, human_task_id)
+    if task_run is None or human_task is None:
+        raise CommandError(
+            code="refresh_task_not_found",
+            message="route-demand refresh task was not found after creation",
+            details={
+                "task_run_id": task_run_id,
+                "human_task_id": human_task_id,
+            },
+        )
+    return {
+        "task_run": task_run,
+        "human_task": human_task,
+    }
+
+
+def _active_route_demand_refresh_task(
+    connection: sqlite3.Connection,
+    *,
+    workflow_run_id: str,
+) -> dict[str, Any] | None:
+    for task in reversed(list_human_tasks_for_workflow_run(connection, workflow_run_id)):
+        task_run = get_task_run(connection, str(task.get("task_run_id") or ""))
+        if task_run is None:
+            continue
+        activation_key = str(task_run.get("activation_key") or "")
+        if not activation_key.startswith(ROUTE_DEMAND_REFRESH_TASK_ACTIVATION_PREFIX):
+            continue
+        if str(task_run.get("stage_id") or "") != "Stage04":
+            continue
+        if str(task.get("task_kind") or "") != "work_item":
+            continue
+        if str(task.get("state") or "") not in {"OPEN", "CLAIMED"}:
+            continue
+        return {
+            "task_run": task_run,
+            "human_task": task,
+        }
+    return None
 
 
 def _load_eod_template_record() -> TemplateRecord:
@@ -1259,6 +1577,33 @@ def _require_schedule_artifact_version(
     return artifact
 
 
+def _require_route_demand_artifact_version(
+    connection: sqlite3.Connection,
+    artifact_version_id: str,
+) -> dict[str, Any]:
+    artifact = get_artifact_version(connection, artifact_version_id)
+    if artifact is None:
+        raise CommandError(
+            code="workpage_artifact_not_found",
+            message="artifact-backed workpage not found",
+            details={"artifact_version_id": artifact_version_id},
+        )
+    if str(artifact.get("artifact_kind") or "") != ROUTE_DEMAND_DATASET_KEY:
+        raise CommandError(
+            code="workpage_artifact_not_found",
+            message="artifact-backed workpage not found",
+            details={"artifact_version_id": artifact_version_id},
+        )
+    workflow_run = get_workflow_run(connection, str(artifact["workflow_run_id"]))
+    if workflow_run is None or str(workflow_run.get("workflow_id") or "") != SCHEDULE_WORKFLOW_ID:
+        raise CommandError(
+            code="workpage_artifact_not_found",
+            message="artifact-backed workpage not found",
+            details={"artifact_version_id": artifact_version_id},
+        )
+    return artifact
+
+
 def _read_schedule_draft_artifact_bytes(artifact: Mapping[str, Any]) -> bytes:
     storage_uri = str(artifact.get("storage_uri") or "")
     if storage_uri.startswith("file:"):
@@ -1266,6 +1611,20 @@ def _read_schedule_draft_artifact_bytes(artifact: Mapping[str, Any]) -> bytes:
     metadata_json = artifact.get("metadata_json")
     try:
         return draft_workbook_bytes_from_metadata_json(metadata_json)
+    except ValueError as exc:
+        raise CommandError(
+            code="artifact_version_not_found",
+            message=str(exc),
+            details={"artifact_version_id": str(artifact.get("artifact_version_id") or "")},
+        ) from exc
+
+
+def _read_route_demand_artifact_bytes(artifact: Mapping[str, Any]) -> bytes:
+    storage_uri = str(artifact.get("storage_uri") or "")
+    if storage_uri.startswith("file:"):
+        return _read_workbook_bytes(artifact)
+    try:
+        return route_demand_workbook_bytes_from_metadata_json(artifact.get("metadata_json"))
     except ValueError as exc:
         raise CommandError(
             code="artifact_version_not_found",
@@ -1326,6 +1685,13 @@ def _canonical_schedule_ui_route(*, workflow_run_id: str, artifact_version_id: s
     )
 
 
+def _canonical_route_demand_ui_route(*, workflow_run_id: str, artifact_version_id: str) -> str:
+    return canonical_route_demand_artifact_route(
+        workflow_run_id=workflow_run_id,
+        artifact_version_id=artifact_version_id,
+    )
+
+
 def _draft_file_name() -> str:
     return "dispatch_reporting_eod_v0_2026-03-16_qdci_dvc4_upd_draft.xlsx"
 
@@ -1337,6 +1703,17 @@ def _schedule_draft_file_name(base_artifact: Mapping[str, Any]) -> str:
         default=(
             f"weekly_schedule_stage04_{str(base_artifact.get('workflow_run_id') or 'draft')}_"
             "draft_workbook.json"
+        ),
+    )
+
+
+def _route_demand_file_name(base_artifact: Mapping[str, Any]) -> str:
+    return _metadata_string(
+        base_artifact.get("metadata_json"),
+        "file_name",
+        default=(
+            f"weekly_schedule_stage04_{str(base_artifact.get('workflow_run_id') or 'route-demand')}_"
+            "route_demand_workbook.json"
         ),
     )
 

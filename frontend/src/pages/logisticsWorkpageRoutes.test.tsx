@@ -316,6 +316,26 @@ describe("logistics workpage routes", () => {
     );
   });
 
+  it("keeps route-demand workpages inside the weekly-schedule shell module", async () => {
+    setFrontendOperatorContext();
+    window.history.pushState(
+      {},
+      "",
+      "/runs/wr-weekly-001/workpages/route-demand-v0/artifacts/av-route-demand-artifact-001"
+    );
+    render(<App />);
+
+    expect(await screen.findByTestId("route-demand-artifact-workpage-page")).toBeInTheDocument();
+    expect(screen.getByTestId("logistics-family-nav-node-weekly_schedule_planning")).toHaveAttribute(
+      "aria-pressed",
+      "true"
+    );
+    expect(screen.getByTestId("logistics-family-nav-node-dispatch_reporting")).toHaveAttribute(
+      "aria-pressed",
+      "false"
+    );
+  });
+
   it("routes multi-run modules back to the logistics home with the module selected", async () => {
     const user = userEvent.setup();
     setFrontendOperatorContext();

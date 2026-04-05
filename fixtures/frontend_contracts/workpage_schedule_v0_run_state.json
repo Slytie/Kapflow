@@ -22,6 +22,15 @@
         "route": null,
         "state": "unavailable",
         "workpage_kind": "schedule-v0"
+      },
+      {
+        "action_id": "workpage.route-demand-v0.open_latest",
+        "artifact_version_id": "<artifact_version_id:2>",
+        "kind": "open_latest",
+        "label": "Open route demand",
+        "route": "/runs/<workflow_run_id:1>/workpages/route-demand-v0/artifacts/<artifact_version_id:2>",
+        "state": "available",
+        "workpage_kind": "route-demand-v0"
       }
     ],
     "artifact_state": {

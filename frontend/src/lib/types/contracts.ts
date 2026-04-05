@@ -1,6 +1,8 @@
 import type {
+  WorkpageAction,
+  WorkpageRouteDemandCalculations,
+  WorkpageRouteDemandScheduleImpact,
   WorkpageScheduleAcceptedSeries,
-  WorkpageScheduleAction,
   WorkpageScheduleArtifactState,
   WorkpageScheduleCalculations,
   WorkpageScheduleDependency,
@@ -483,9 +485,11 @@ export interface WorkpageContract {
   artifact_state: WorkpageScheduleArtifactState | null;
   dependencies: WorkpageScheduleDependency[];
   calculations: WorkpageScheduleCalculations | null;
+  route_demand_calculations: WorkpageRouteDemandCalculations | null;
+  schedule_impact: WorkpageRouteDemandScheduleImpact | null;
   draft_lineage: WorkpageScheduleDraftLineage | null;
   accepted_series: WorkpageScheduleAcceptedSeries | null;
-  actions: WorkpageScheduleAction[];
+  actions: WorkpageAction[];
 }
 
 export type LogisticsStoryFamilyNodeKind = "module";

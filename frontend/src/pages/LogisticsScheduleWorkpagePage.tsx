@@ -39,6 +39,7 @@ import { resolveWorkpageSubjectContext } from "@/lib/workspace/workpageSubjectCo
 import type {
   WorkpageHistorySection as WorkpageHistorySectionModel,
   WorkpageNotePanelSection as WorkpageNotePanelSectionModel,
+  WorkpageRouteDemandAction,
   WorkpageScheduleAction,
   WorkpageScheduleHeatmapSection as WorkpageScheduleHeatmapSectionModel,
   WorkpageSummaryCardsSection as WorkpageSummaryCardsSectionModel,
@@ -105,7 +106,27 @@ function findScheduleAction(
   contract: WorkpageContract | undefined,
   matcher: (action: WorkpageScheduleAction) => boolean
 ): WorkpageScheduleAction | null {
-  return contract?.actions.find(matcher) ?? null;
+  return (
+    contract?.actions.find(
+      (action): action is WorkpageScheduleAction => {
+        if (action.workpage_kind !== "schedule-v0") {
+          return false;
+        }
+        return matcher(action as WorkpageScheduleAction);
+      }
+    ) ?? null
+  );
+}
+
+function findRouteDemandAction(
+  contract: WorkpageContract | undefined
+): WorkpageRouteDemandAction | null {
+  return (
+    contract?.actions.find(
+      (action): action is WorkpageRouteDemandAction =>
+        action.workpage_kind === "route-demand-v0"
+    ) ?? null
+  );
 }
 
 function workpageConflictDetails(error: unknown): {
@@ -463,6 +484,7 @@ export function LogisticsScheduleWorkpagePage(): JSX.Element {
     query.data,
     (action) => action.kind === "open_latest_draft"
   );
+  const routeDemandAction = findRouteDemandAction(query.data);
   const backRoute = workpageBackRoute(workflowRunId);
 
   return (
@@ -496,6 +518,11 @@ export function LogisticsScheduleWorkpagePage(): JSX.Element {
                 <Link className="link-button" to={openLatestDraftAction.route}>
                   Open editable draft
                 </Link>
+                {routeDemandAction?.route ? (
+                  <Link className="link-button" to={routeDemandAction.route}>
+                    Open route demand
+                  </Link>
+                ) : null}
               </div>
             </section>
           ) : (
@@ -507,6 +534,13 @@ export function LogisticsScheduleWorkpagePage(): JSX.Element {
                   on the landing page until the canonical draft artifact exists.
                 </p>
               </header>
+              {routeDemandAction?.route ? (
+                <div className="action-cluster">
+                  <Link className="link-button" to={routeDemandAction.route}>
+                    Open route demand
+                  </Link>
+                </div>
+              ) : null}
             </section>
           )
         ) : null
@@ -564,6 +598,7 @@ export function LogisticsScheduleArtifactWorkpagePage(): JSX.Element {
     contract,
     (action) => action.kind === "submit_artifact" || action.action_id === "workpage.schedule-v0.save_draft"
   );
+  const routeDemandAction = findRouteDemandAction(contract);
   const baseAssignmentSignature = useMemo(
     () => rowsSignature(assignmentSection?.rows ?? []),
     [assignmentSection]
@@ -790,9 +825,16 @@ export function LogisticsScheduleArtifactWorkpagePage(): JSX.Element {
       }
       heroSupportText="Live preview recalculates in place. Save creates the next immutable draft in this weekly lineage."
       heroActions={
-        <Link className="link-button" to={scheduleLandingRoute(workflowRunId)}>
-          Back to query landing
-        </Link>
+        <>
+          <Link className="link-button" to={scheduleLandingRoute(workflowRunId)}>
+            Back to query landing
+          </Link>
+          {routeDemandAction?.route ? (
+            <Link className="link-button" to={routeDemandAction.route}>
+              Open route demand
+            </Link>
+          ) : null}
+        </>
       }
       stickyTitleBar
       infoDialogContent={

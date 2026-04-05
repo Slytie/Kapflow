@@ -44,6 +44,13 @@ def _other_scope_client(tmp_path: Path) -> RuntimeApiClient:
     )
 
 
+def _action_by_id(
+    actions: list[dict[str, object]],
+    action_id: str,
+) -> dict[str, object]:
+    return next(action for action in actions if action["action_id"] == action_id)
+
+
 def test_schedule_workflow_run_workpage_contract_returns_run_backed_projection(
     tmp_path: Path,
 ) -> None:
@@ -202,17 +209,28 @@ def test_schedule_workflow_run_workpage_contract_returns_run_backed_projection(
         "next_artifact_version_id": None,
         "entries": [],
     }
-    assert payload["actions"] == [
-        {
-            "action_id": "workpage.schedule-v0.open_latest_draft",
-            "kind": "open_latest_draft",
-            "label": "Open schedule draft",
-            "state": "unavailable",
-            "workpage_kind": "schedule-v0",
-            "artifact_version_id": None,
-            "route": None,
-        }
-    ]
+    actions = payload["actions"]
+    assert _action_by_id(actions, "workpage.schedule-v0.open_latest_draft") == {
+        "action_id": "workpage.schedule-v0.open_latest_draft",
+        "kind": "open_latest_draft",
+        "label": "Open schedule draft",
+        "state": "unavailable",
+        "workpage_kind": "schedule-v0",
+        "artifact_version_id": None,
+        "route": None,
+    }
+    assert _action_by_id(actions, "workpage.route-demand-v0.open_latest") == {
+        "action_id": "workpage.route-demand-v0.open_latest",
+        "kind": "open_latest",
+        "label": "Open route demand",
+        "state": "available",
+        "workpage_kind": "route-demand-v0",
+        "artifact_version_id": seed["artifacts_by_kind"]["planning.route_slot_requirements.workbook"]["artifact_version_id"],
+        "route": (
+            f"/runs/{workflow_run_id}/workpages/route-demand-v0/artifacts/"
+            f"{seed['artifacts_by_kind']['planning.route_slot_requirements.workbook']['artifact_version_id']}"
+        ),
+    }
 
 
 def test_schedule_workflow_run_workpage_reads_are_stable_except_for_generated_at(

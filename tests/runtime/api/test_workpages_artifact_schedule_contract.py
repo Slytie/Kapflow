@@ -45,6 +45,13 @@ def _other_scope_client(tmp_path: Path) -> RuntimeApiClient:
     )
 
 
+def _action_by_id(
+    actions: list[dict[str, object]],
+    action_id: str,
+) -> dict[str, object]:
+    return next(action for action in actions if action["action_id"] == action_id)
+
+
 def _create_human_task(
     tmp_path: Path,
     *,
@@ -405,34 +412,45 @@ def test_artifact_backed_schedule_workpage_returns_projected_contract(tmp_path: 
         "next_artifact_version_id": None,
         "entries": [],
     }
-    assert payload["actions"] == [
-        {
-            "action_id": "workpage.schedule-v0.preview_recalc",
-            "kind": "preview_recalc",
-            "label": "Preview recalculation",
-            "state": "available",
-            "workpage_kind": "schedule-v0",
-            "artifact_version_id": artifact_version_id,
-            "preview_path": (
-                f"/api/v1/workpages/workflow-runs/{workflow_run_id}/"
-                f"schedule-v0/artifacts/{artifact_version_id}/preview"
-            ),
-            "disabled_reason": None,
-        },
-        {
-            "action_id": "workpage.schedule-v0.save_draft",
-            "kind": "submit_artifact",
-            "label": "Save draft",
-            "state": "available",
-            "workpage_kind": "schedule-v0",
-            "artifact_version_id": artifact_version_id,
-            "submit_path": (
-                f"/api/v1/workpages/workflow-runs/{workflow_run_id}/"
-                f"schedule-v0/artifacts/{artifact_version_id}/submit"
-            ),
-            "disabled_reason": None,
-        },
-    ]
+    actions = payload["actions"]
+    assert _action_by_id(actions, "workpage.schedule-v0.preview_recalc") == {
+        "action_id": "workpage.schedule-v0.preview_recalc",
+        "kind": "preview_recalc",
+        "label": "Preview recalculation",
+        "state": "available",
+        "workpage_kind": "schedule-v0",
+        "artifact_version_id": artifact_version_id,
+        "preview_path": (
+            f"/api/v1/workpages/workflow-runs/{workflow_run_id}/"
+            f"schedule-v0/artifacts/{artifact_version_id}/preview"
+        ),
+        "disabled_reason": None,
+    }
+    assert _action_by_id(actions, "workpage.schedule-v0.save_draft") == {
+        "action_id": "workpage.schedule-v0.save_draft",
+        "kind": "submit_artifact",
+        "label": "Save draft",
+        "state": "available",
+        "workpage_kind": "schedule-v0",
+        "artifact_version_id": artifact_version_id,
+        "submit_path": (
+            f"/api/v1/workpages/workflow-runs/{workflow_run_id}/"
+            f"schedule-v0/artifacts/{artifact_version_id}/submit"
+        ),
+        "disabled_reason": None,
+    }
+    assert _action_by_id(actions, "workpage.route-demand-v0.open_latest") == {
+        "action_id": "workpage.route-demand-v0.open_latest",
+        "kind": "open_latest",
+        "label": "Open route demand",
+        "state": "available",
+        "workpage_kind": "route-demand-v0",
+        "artifact_version_id": seeded["artifacts_by_kind"]["planning.route_slot_requirements.workbook"]["artifact_version_id"],
+        "route": (
+            f"/runs/{workflow_run_id}/workpages/route-demand-v0/artifacts/"
+            f"{seeded['artifacts_by_kind']['planning.route_slot_requirements.workbook']['artifact_version_id']}"
+        ),
+    }
 
     downloaded = client.get_raw(f"/api/v1/artifacts/{artifact_version_id}/download.bin")
     assert downloaded.status_code == 200
@@ -490,19 +508,23 @@ def test_artifact_backed_schedule_workpage_canonical_route_matches_alias(
     )
 
 
-def test_artifact_backed_schedule_workpage_rejects_wrong_artifact_family(tmp_path: Path) -> None:
+def test_schedule_artifact_route_rejects_wrong_artifact_family(tmp_path: Path) -> None:
     seeded = seed_actual_ops_weekly_schedule_run_with_stage04_outputs(
         db_url=_db_url(tmp_path),
         tenant_id="tenant-a",
         domain_id="domain-x",
         run_tag="api:workpages:artifact-schedule:wrong-kind",
     )
+    workflow_run_id = str(seeded["workflow_run_id"])
     wrong_artifact_id = str(
         seeded["artifacts_by_kind"]["planning.route_slot_requirements.workbook"]["artifact_version_id"]
     )
     client = _client(tmp_path)
 
-    response = client.get(f"/api/v1/workpages/artifacts/{wrong_artifact_id}")
+    response = client.get(
+        f"/api/v1/workpages/workflow-runs/{workflow_run_id}/"
+        f"schedule-v0/artifacts/{wrong_artifact_id}"
+    )
     assert response.status_code == 404
     assert response.payload["error"]["code"] == "workpage_artifact_not_found"
     assert response.payload["error"]["details"] == {"artifact_version_id": wrong_artifact_id}
@@ -597,7 +619,20 @@ def test_published_schedule_artifact_reads_under_schedule_workpage_kind(tmp_path
             "artifact_kind": PUBLISHED_SCHEDULE_DATASET_KEY,
         }
     ]
-    assert payload["actions"] == []
+    assert payload["actions"] == [
+        {
+            "action_id": "workpage.route-demand-v0.open_latest",
+            "kind": "open_latest",
+            "label": "Open route demand",
+            "state": "available",
+            "workpage_kind": "route-demand-v0",
+            "artifact_version_id": seeded["artifacts_by_kind"]["planning.route_slot_requirements.workbook"]["artifact_version_id"],
+            "route": (
+                f"/runs/{workflow_run_id}/workpages/route-demand-v0/artifacts/"
+                f"{seeded['artifacts_by_kind']['planning.route_slot_requirements.workbook']['artifact_version_id']}"
+            ),
+        }
+    ]
 
 
 def test_published_schedule_accepted_series_groups_same_key_only_with_scope_isolation(
@@ -1136,34 +1171,34 @@ def test_schedule_artifact_hard_dependency_drift_surfaces_and_blocks_save(
     payload = client.get(f"/api/v1/workpages/artifacts/{artifact_version_id}").payload
     dependencies = {row["dependency_key"]: row for row in payload["dependencies"]}
     assert dependencies["route_slot_requirements"]["state"] == "drifted"
-    assert payload["actions"] == [
-        {
-            "action_id": "workpage.schedule-v0.preview_recalc",
-            "kind": "preview_recalc",
-            "label": "Preview recalculation",
-            "state": "available",
-            "workpage_kind": "schedule-v0",
-            "artifact_version_id": artifact_version_id,
-            "preview_path": (
-                f"/api/v1/workpages/workflow-runs/{workflow_run_id}/"
-                f"schedule-v0/artifacts/{artifact_version_id}/preview"
-            ),
-            "disabled_reason": None,
-        },
-        {
-            "action_id": "workpage.schedule-v0.save_draft",
-            "kind": "submit_artifact",
-            "label": "Save draft",
-            "state": "blocked",
-            "workpage_kind": "schedule-v0",
-            "artifact_version_id": artifact_version_id,
-            "submit_path": (
-                f"/api/v1/workpages/workflow-runs/{workflow_run_id}/"
-                f"schedule-v0/artifacts/{artifact_version_id}/submit"
-            ),
-            "disabled_reason": "dependency_drift_detected",
-        },
-    ]
+    actions = payload["actions"]
+    assert _action_by_id(actions, "workpage.schedule-v0.preview_recalc") == {
+        "action_id": "workpage.schedule-v0.preview_recalc",
+        "kind": "preview_recalc",
+        "label": "Preview recalculation",
+        "state": "available",
+        "workpage_kind": "schedule-v0",
+        "artifact_version_id": artifact_version_id,
+        "preview_path": (
+            f"/api/v1/workpages/workflow-runs/{workflow_run_id}/"
+            f"schedule-v0/artifacts/{artifact_version_id}/preview"
+        ),
+        "disabled_reason": None,
+    }
+    assert _action_by_id(actions, "workpage.schedule-v0.save_draft") == {
+        "action_id": "workpage.schedule-v0.save_draft",
+        "kind": "submit_artifact",
+        "label": "Save draft",
+        "state": "blocked",
+        "workpage_kind": "schedule-v0",
+        "artifact_version_id": artifact_version_id,
+        "submit_path": (
+            f"/api/v1/workpages/workflow-runs/{workflow_run_id}/"
+            f"schedule-v0/artifacts/{artifact_version_id}/submit"
+        ),
+        "disabled_reason": "dependency_drift_detected",
+    }
+    assert _action_by_id(actions, "workpage.route-demand-v0.open_latest")["state"] == "available"
 
     assignment_rows, reserve_rows = _schedule_submit_rows(client, artifact_version_id)
     preview = client.post(
@@ -1212,34 +1247,34 @@ def test_schedule_artifact_without_pinned_manifest_remains_readable_but_blocks_p
     assert dependencies["approved_availability"]["state"] == "not_pinned"
     assert dependencies["driver_capabilities"]["state"] == "not_pinned"
     assert dependencies["actual_hours"]["state"] == "not_pinned"
-    assert payload["actions"] == [
-        {
-            "action_id": "workpage.schedule-v0.preview_recalc",
-            "kind": "preview_recalc",
-            "label": "Preview recalculation",
-            "state": "blocked",
-            "workpage_kind": "schedule-v0",
-            "artifact_version_id": artifact_version_id,
-            "preview_path": (
-                f"/api/v1/workpages/workflow-runs/{workflow_run_id}/"
-                f"schedule-v0/artifacts/{artifact_version_id}/preview"
-            ),
-            "disabled_reason": "dependency_baseline_unavailable",
-        },
-        {
-            "action_id": "workpage.schedule-v0.save_draft",
-            "kind": "submit_artifact",
-            "label": "Save draft",
-            "state": "blocked",
-            "workpage_kind": "schedule-v0",
-            "artifact_version_id": artifact_version_id,
-            "submit_path": (
-                f"/api/v1/workpages/workflow-runs/{workflow_run_id}/"
-                f"schedule-v0/artifacts/{artifact_version_id}/submit"
-            ),
-            "disabled_reason": "dependency_baseline_unavailable",
-        },
-    ]
+    actions = payload["actions"]
+    assert _action_by_id(actions, "workpage.schedule-v0.preview_recalc") == {
+        "action_id": "workpage.schedule-v0.preview_recalc",
+        "kind": "preview_recalc",
+        "label": "Preview recalculation",
+        "state": "blocked",
+        "workpage_kind": "schedule-v0",
+        "artifact_version_id": artifact_version_id,
+        "preview_path": (
+            f"/api/v1/workpages/workflow-runs/{workflow_run_id}/"
+            f"schedule-v0/artifacts/{artifact_version_id}/preview"
+        ),
+        "disabled_reason": "dependency_baseline_unavailable",
+    }
+    assert _action_by_id(actions, "workpage.schedule-v0.save_draft") == {
+        "action_id": "workpage.schedule-v0.save_draft",
+        "kind": "submit_artifact",
+        "label": "Save draft",
+        "state": "blocked",
+        "workpage_kind": "schedule-v0",
+        "artifact_version_id": artifact_version_id,
+        "submit_path": (
+            f"/api/v1/workpages/workflow-runs/{workflow_run_id}/"
+            f"schedule-v0/artifacts/{artifact_version_id}/submit"
+        ),
+        "disabled_reason": "dependency_baseline_unavailable",
+    }
+    assert _action_by_id(actions, "workpage.route-demand-v0.open_latest")["state"] == "available"
 
     assignment_rows, reserve_rows = _schedule_submit_rows(client, artifact_version_id)
     preview = client.post(

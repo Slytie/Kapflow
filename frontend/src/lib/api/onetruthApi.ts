@@ -34,12 +34,18 @@ import type {
 } from "@/lib/types/contracts";
 import type {
   WorkpageScheduleAcceptedSeries,
+  WorkpageAction,
   WorkpageScheduleAction,
   WorkpageScheduleArtifactState,
   WorkpageScheduleCalculations,
   WorkpageScheduleCheck,
   WorkpageScheduleDependency,
-  WorkpageScheduleDraftLineage
+  WorkpageScheduleDraftLineage,
+  WorkpageRouteDemandAction,
+  WorkpageRouteDemandCalculations,
+  WorkpageRouteDemandDayCard,
+  WorkpageRouteDemandRefreshTask,
+  WorkpageRouteDemandScheduleImpact
 } from "@/lib/types/workpages";
 
 interface PageEnvelope {
@@ -124,6 +130,7 @@ interface WorkpageEnvelope extends ListEnvelope {
   calculations?: Record<string, unknown> | null;
   draft_lineage?: Record<string, unknown> | null;
   accepted_series?: Record<string, unknown> | null;
+  schedule_impact?: Record<string, unknown> | null;
   dependencies?: Array<Record<string, unknown>> | null;
   actions?: Array<Record<string, unknown>> | null;
 }
@@ -782,6 +789,10 @@ function normalizeWorkpageContract(payload: WorkpageEnvelope): WorkpageContract 
     payload.accepted_series === null || payload.accepted_series === undefined
       ? null
       : requiredObject(payload.accepted_series, "accepted_series");
+  const scheduleImpact =
+    payload.schedule_impact === null || payload.schedule_impact === undefined
+      ? null
+      : requiredObject(payload.schedule_impact, "schedule_impact");
 
   if (!Array.isArray(workpage.sections)) {
     throw new Error("Invalid API response: expected array at 'workpage.sections'.");
@@ -861,9 +872,11 @@ function normalizeWorkpageContract(payload: WorkpageEnvelope): WorkpageContract 
     artifact_state: normalizeScheduleArtifactState(artifactState),
     dependencies: normalizeScheduleDependencies(payload.dependencies),
     calculations: normalizeScheduleCalculations(calculations),
+    route_demand_calculations: normalizeRouteDemandCalculations(calculations),
+    schedule_impact: normalizeRouteDemandScheduleImpact(scheduleImpact),
     draft_lineage: normalizeScheduleDraftLineage(draftLineage),
     accepted_series: normalizeScheduleAcceptedSeries(acceptedSeries),
-    actions: normalizeScheduleActions(payload.actions)
+    actions: normalizeWorkpageActionsForContract(payload.actions)
   };
 }
 
@@ -1073,6 +1086,113 @@ function normalizeScheduleActions(value: unknown): WorkpageScheduleAction[] {
     submit_path: asStringOrNull(action.submit_path),
     disabled_reason: asStringOrNull(action.disabled_reason)
   }));
+}
+
+function normalizeRouteDemandDayCard(
+  value: Record<string, unknown>
+): WorkpageRouteDemandDayCard {
+  const delta =
+    value.delta_from_previous_version &&
+    typeof value.delta_from_previous_version === "object" &&
+    !Array.isArray(value.delta_from_previous_version)
+      ? (value.delta_from_previous_version as Record<string, unknown>)
+      : null;
+  return {
+    service_date: asString(value.service_date),
+    weekday_label: asString(value.weekday_label),
+    planned_route_count: asNumber(value.planned_route_count),
+    standard_slot_count: asNumber(value.standard_slot_count),
+    standard_early_slot_count: asNumber(value.standard_early_slot_count),
+    standard_late_slot_count: asNumber(value.standard_late_slot_count),
+    rescue_slot_count: asNumber(value.rescue_slot_count),
+    overflow_slot_count: asNumber(value.overflow_slot_count),
+    on_call_target: asNumber(value.on_call_target),
+    excess_capacity_target: asNumber(value.excess_capacity_target),
+    delta_from_previous_version: delta
+      ? {
+          planned_route_count_delta: asNumber(delta.planned_route_count_delta)
+        }
+      : null
+  };
+}
+
+function normalizeRouteDemandCalculations(
+  value: Record<string, unknown> | null
+): WorkpageRouteDemandCalculations | null {
+  if (!value) {
+    return null;
+  }
+  if (!Array.isArray(value.day_cards)) {
+    return null;
+  }
+  return {
+    day_cards: asArray<Record<string, unknown>>(value.day_cards).map(
+      normalizeRouteDemandDayCard
+    )
+  };
+}
+
+function normalizeRouteDemandRefreshTask(
+  value: Record<string, unknown> | null
+): WorkpageRouteDemandRefreshTask | null {
+  if (!value) {
+    return null;
+  }
+  return {
+    human_task_id: asString(value.human_task_id),
+    task_run_id: asString(value.task_run_id),
+    state: asString(value.state),
+    owner_role: asStringOrNull(value.owner_role),
+    activation_key: asString(value.activation_key),
+    blocked_on_kind: asStringOrNull(value.blocked_on_kind),
+    blocked_on_ref: asStringOrNull(value.blocked_on_ref)
+  };
+}
+
+function normalizeRouteDemandScheduleImpact(
+  value: Record<string, unknown> | null
+): WorkpageRouteDemandScheduleImpact | null {
+  if (!value) {
+    return null;
+  }
+  return {
+    latest_schedule_draft_artifact_version_id: asStringOrNull(
+      value.latest_schedule_draft_artifact_version_id
+    ),
+    latest_route_demand_artifact_version_id: asStringOrNull(
+      value.latest_route_demand_artifact_version_id
+    ),
+    dependency_state: asString(value.dependency_state),
+    schedule_state: asString(value.schedule_state),
+    refresh_task: normalizeRouteDemandRefreshTask(
+      value.refresh_task &&
+        typeof value.refresh_task === "object" &&
+        !Array.isArray(value.refresh_task)
+        ? (value.refresh_task as Record<string, unknown>)
+        : null
+    )
+  };
+}
+
+function normalizeWorkpageActionsForContract(value: unknown): WorkpageAction[] {
+  return asArray<Record<string, unknown>>(value).map((action) => {
+    const kind = asString(action.kind);
+    if (kind === "open_latest" || kind === "save") {
+      const routeDemandAction: WorkpageRouteDemandAction = {
+        action_id: asString(action.action_id),
+        kind: kind as WorkpageRouteDemandAction["kind"],
+        label: asString(action.label),
+        state: asString(action.state, "unavailable") as WorkpageRouteDemandAction["state"],
+        workpage_kind: asString(action.workpage_kind),
+        artifact_version_id: asStringOrNull(action.artifact_version_id),
+        route: asStringOrNull(action.route),
+        submit_path: asStringOrNull(action.submit_path),
+        disabled_reason: asStringOrNull(action.disabled_reason)
+      };
+      return routeDemandAction;
+    }
+    return normalizeScheduleActions([action])[0] as WorkpageAction;
+  });
 }
 
 function normalizeWorkpagePreviewResponse(
@@ -1354,6 +1474,13 @@ export const onetruthApi = {
     return normalizeWorkpageContract(payload);
   },
 
+  async getWorkflowRunRouteDemandWorkpage(workflowRunId: string): Promise<WorkpageContract> {
+    const payload = await requestJson<WorkpageEnvelope>(
+      `/workpages/workflow-runs/${encodeURIComponent(workflowRunId)}/route-demand-v0`
+    );
+    return normalizeWorkpageContract(payload);
+  },
+
   async getWorkflowRunEodWorkpage(workflowRunId: string): Promise<WorkpageContract> {
     const payload = await requestJson<WorkpageEnvelope>(
       `/workpages/workflow-runs/${encodeURIComponent(workflowRunId)}/eod-v0`
@@ -1382,6 +1509,16 @@ export const onetruthApi = {
     return normalizeWorkpageContract(payload);
   },
 
+  async getWorkflowRunRouteDemandArtifactWorkpage(
+    workflowRunId: string,
+    artifactVersionId: string
+  ): Promise<WorkpageContract> {
+    const payload = await requestJson<WorkpageEnvelope>(
+      `/workpages/workflow-runs/${encodeURIComponent(workflowRunId)}/route-demand-v0/artifacts/${encodeURIComponent(artifactVersionId)}`
+    );
+    return normalizeWorkpageContract(payload);
+  },
+
   async createWorkpageDraftAtPath(
     createPath: string,
     payload: { idempotency_key: string; subject_link?: WorkpageSubjectLinkPayload }
@@ -1400,6 +1537,7 @@ export const onetruthApi = {
       checklist_values?: Array<Record<string, unknown>>;
       rows?: Array<Record<string, unknown>>;
       reserve_rows?: Array<Record<string, unknown>>;
+      daily_demand_rows?: Array<Record<string, unknown>>;
       subject_link?: WorkpageSubjectLinkPayload;
       idempotency_key: string;
     }
@@ -1421,6 +1559,7 @@ export const onetruthApi = {
       checklist_values?: Array<Record<string, unknown>>;
       rows?: Array<Record<string, unknown>>;
       reserve_rows?: Array<Record<string, unknown>>;
+      daily_demand_rows?: Array<Record<string, unknown>>;
       subject_link?: WorkpageSubjectLinkPayload;
       idempotency_key: string;
     }

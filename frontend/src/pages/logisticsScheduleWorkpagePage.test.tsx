@@ -134,6 +134,15 @@ describe("LogisticsScheduleWorkpagePage", () => {
             route: "/runs/wr-weekly-001/workpages/schedule-v0/artifacts/av-schedule-artifact-001",
             state: "available",
             workpage_kind: "schedule-v0"
+          },
+          {
+            action_id: "workpage.route-demand-v0.open_latest",
+            artifact_version_id: "av-route-demand-artifact-001",
+            kind: "open_latest",
+            label: "Open route demand",
+            route: "/runs/wr-weekly-001/workpages/route-demand-v0/artifacts/av-route-demand-artifact-001",
+            state: "available",
+            workpage_kind: "route-demand-v0"
           }
         ];
         return HttpResponse.json(payload);
@@ -148,6 +157,10 @@ describe("LogisticsScheduleWorkpagePage", () => {
     expect(within(page).getByRole("link", { name: "Open editable draft" })).toHaveAttribute(
       "href",
       "/runs/wr-weekly-001/workpages/schedule-v0/artifacts/av-schedule-artifact-001"
+    );
+    expect(within(page).getByRole("link", { name: "Open route demand" })).toHaveAttribute(
+      "href",
+      "/runs/wr-weekly-001/workpages/route-demand-v0/artifacts/av-route-demand-artifact-001"
     );
     expect(screen.queryByText("Scenario sick calls")).not.toBeInTheDocument();
     expect(screen.queryByRole("textbox", { name: /Planner note/i })).not.toBeInTheDocument();
@@ -179,6 +192,21 @@ describe("LogisticsScheduleWorkpagePage", () => {
     expect(await screen.findByTestId("schedule-artifact-workpage-page")).toBeInTheDocument();
     expect(window.location.pathname).toBe(
       "/runs/wr-weekly-001/workpages/schedule-v0/artifacts/av-schedule-artifact-001"
+    );
+  });
+
+  it("uses the schedule-side route-demand handoff without client-derived routing", async () => {
+    const user = userEvent.setup();
+    setFrontendOperatorContext();
+    window.history.pushState({}, "", "/runs/wr-weekly-001/workpages/schedule-v0");
+    render(<App />);
+
+    expect(await screen.findByTestId("schedule-workpage-page")).toBeInTheDocument();
+    await user.click(screen.getByRole("link", { name: "Open route demand" }));
+
+    expect(await screen.findByTestId("route-demand-artifact-workpage-page")).toBeInTheDocument();
+    expect(window.location.pathname).toBe(
+      "/runs/wr-weekly-001/workpages/route-demand-v0/artifacts/av-route-demand-artifact-001"
     );
   });
 });

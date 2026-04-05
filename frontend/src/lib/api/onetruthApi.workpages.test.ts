@@ -3,6 +3,9 @@ import { HttpResponse, http } from "msw";
 import artifactCreateSnapshot from "@fixtures/workpage_eod_v0_artifact_create_response.json";
 import artifactCreateRunSnapshot from "@fixtures/workpage_eod_v0_run_artifact_create_response.json";
 import eodRunWorkpageStateSnapshot from "@fixtures/workpage_eod_v0_run_state.json";
+import routeDemandArtifactStateSnapshot from "@fixtures/workpage_route_demand_v0_artifact_state.json";
+import routeDemandArtifactSubmitSnapshot from "@fixtures/workpage_route_demand_v0_artifact_submit_response.json";
+import routeDemandRunWorkpageStateSnapshot from "@fixtures/workpage_route_demand_v0_run_state.json";
 import scheduleArtifactStateSnapshot from "@fixtures/workpage_schedule_v0_artifact_state.json";
 import scheduleArtifactSubmitSnapshot from "@fixtures/workpage_schedule_v0_artifact_submit_response.json";
 import scheduleRunWorkpageStateSnapshot from "@fixtures/workpage_schedule_v0_run_state.json";
@@ -121,10 +124,50 @@ describe("onetruthApi workpage parsing", () => {
     });
     expect(contract.actions.map((action) => action.kind)).toEqual([
       "preview_recalc",
-      "submit_artifact"
+      "submit_artifact",
+      "open_latest"
     ]);
     expect(contract.run_context).toBeNull();
     expect(contract.draft_resolution).toBeNull();
+  });
+
+  it("parses the workflow-run-backed route-demand workpage wrapper including schedule impact", async () => {
+    server.use(
+      http.get("*/api/v1/workpages/workflow-runs/:workflowRunId/route-demand-v0", () =>
+        HttpResponse.json(routeDemandRunWorkpageStateSnapshot.workpage_state)
+      )
+    );
+
+    const contract = await onetruthApi.getWorkflowRunRouteDemandWorkpage("wr-weekly-001");
+
+    expect(contract.workpage.workpage_id).toBe("route-demand-v0");
+    expect(contract.route_demand_calculations?.day_cards[0]?.service_date).toBe("2026-03-22");
+    expect(contract.schedule_impact).toMatchObject({
+      dependency_state: "aligned"
+    });
+    expect(contract.actions.map((action) => action.kind)).toEqual(["open_latest"]);
+  });
+
+  it("parses the artifact-backed route-demand workpage wrapper including canonical save action", async () => {
+    server.use(
+      http.get(
+        "*/api/v1/workpages/workflow-runs/:workflowRunId/route-demand-v0/artifacts/:artifactVersionId",
+        () => HttpResponse.json(routeDemandArtifactStateSnapshot.workpage_state)
+      )
+    );
+
+    const contract = await onetruthApi.getWorkflowRunRouteDemandArtifactWorkpage(
+      "wr-weekly-001",
+      "av-route-demand-artifact-001"
+    );
+
+    expect(contract.source.mode).toBe("artifact_projection");
+    expect(contract.artifact_context?.artifact_kind).toBe(
+      "planning.route_slot_requirements.workbook"
+    );
+    expect(contract.route_demand_calculations?.day_cards.length).toBeGreaterThan(0);
+    expect(contract.schedule_impact?.latest_schedule_draft_artifact_version_id).toBeTruthy();
+    expect(contract.actions.map((action) => action.kind)).toEqual(["save"]);
   });
 
   it("parses the workflow-run-backed EOD landing wrapper including draft resolution", async () => {
@@ -267,5 +310,29 @@ describe("onetruthApi workpage parsing", () => {
       dependency_state: "aligned"
     });
     expect(preview.preview.calculations.selected_day.service_date).toBe("2026-03-24");
+  });
+
+  it("parses the canonical route-demand artifact-submit envelope", async () => {
+    server.use(
+      http.post(
+        "*/api/v1/workpages/workflow-runs/:workflowRunId/route-demand-v0/artifacts/:artifactVersionId/submit",
+        () => HttpResponse.json(routeDemandArtifactSubmitSnapshot.submit_response)
+      )
+    );
+
+    const submitted = await onetruthApi.submitArtifactWorkpageAtPath(
+      "/api/v1/workpages/workflow-runs/wr-weekly-001/route-demand-v0/artifacts/av-route-demand-artifact-001/submit",
+      {
+        daily_demand_rows: [
+          {
+            service_date: "2026-03-22",
+            planned_route_count: 24
+          }
+        ],
+        idempotency_key: "frontend:test:submit-route-demand-canonical"
+      }
+    );
+
+    expect(submitted).toEqual(routeDemandArtifactSubmitSnapshot.submit_response.submitted);
   });
 });

@@ -74,8 +74,14 @@ describe("workpagesRepository", () => {
     const scheduleLanding = await workpagesRepository.scheduleForRun("wr-weekly-001");
     const initialHistory = await workpagesRepository.listScheduleDraftHistory("wr-weekly-001");
     const artifact = await workpagesRepository.scheduleArtifact("av-schedule-artifact-001");
-    const previewAction = artifact.actions.find((action) => action.kind === "preview_recalc");
-    const saveAction = artifact.actions.find((action) => action.kind === "submit_artifact");
+    const previewAction = artifact.actions.find(
+      (action): action is typeof artifact.actions[number] & { preview_path: string } =>
+        action.kind === "preview_recalc" && typeof action.preview_path === "string"
+    );
+    const saveAction = artifact.actions.find(
+      (action): action is typeof artifact.actions[number] & { submit_path: string } =>
+        action.kind === "submit_artifact" && typeof action.submit_path === "string"
+    );
     const assignmentRows = (artifact.workpage.sections[2] as { rows: Array<Record<string, unknown>> }).rows.map(
       (row) => ({ ...row })
     );
@@ -128,5 +134,53 @@ describe("workpagesRepository", () => {
     ]);
     expect(mutationLog()).toContain("workpage-schedule-artifact-preview:av-schedule-artifact-001");
     expect(mutationLog()).toContain("artifact-download-bin:av-schedule-artifact-002");
+  });
+
+  it("returns route-demand contracts and saves a new immutable route-demand version", async () => {
+    const routeDemandLanding = await workpagesRepository.routeDemandForRun("wr-weekly-001");
+    const artifact = await workpagesRepository.routeDemandArtifact(
+      "wr-weekly-001",
+      "av-route-demand-artifact-001"
+    );
+    const initialHistory = await workpagesRepository.listRouteDemandHistory("wr-weekly-001");
+    const saveAction = artifact.actions.find((action) => action.kind === "save");
+    const firstDay = artifact.route_demand_calculations?.day_cards[0];
+    const submitted = await workpagesRepository.submitRouteDemandArtifactAtPath(
+      saveAction?.submit_path ?? "",
+      "av-route-demand-artifact-001",
+      {
+        dailyDemandRows: [
+          ...(artifact.route_demand_calculations?.day_cards ?? []).map((card, index) => ({
+            service_date: card.service_date,
+            planned_route_count:
+              index === 0 ? card.planned_route_count + 2 : card.planned_route_count
+          }))
+        ]
+      }
+    );
+    const submittedHistory = await workpagesRepository.listRouteDemandHistory("wr-weekly-001");
+
+    expect(routeDemandLanding.source.mode).toBe("run_projection");
+    expect(routeDemandLanding.workpage.workpage_id).toBe("route-demand-v0");
+    expect(routeDemandLanding.actions.map((action) => action.kind)).toEqual(["open_latest"]);
+    expect(artifact.source.mode).toBe("artifact_projection");
+    expect(artifact.route_demand_calculations?.day_cards[0]?.service_date).toBe(
+      firstDay?.service_date
+    );
+    expect(initialHistory.map((row) => row.artifact_version_id)).toEqual([
+      "av-route-demand-artifact-001"
+    ]);
+    expect(submitted.artifact_version_id).toBe("av-route-demand-artifact-002");
+    expect(submitted.supersedes_artifact_version_id).toBe("av-route-demand-artifact-001");
+    expect(submitted.route).toBe(
+      "/runs/wr-weekly-001/workpages/route-demand-v0/artifacts/av-route-demand-artifact-002"
+    );
+    expect(submittedHistory.map((row) => row.artifact_version_id)).toEqual([
+      "av-route-demand-artifact-002",
+      "av-route-demand-artifact-001"
+    ]);
+    expect(mutationLog()).toContain(
+      "workpage-route-demand-artifact-submit:av-route-demand-artifact-001:av-route-demand-artifact-002"
+    );
   });
 });

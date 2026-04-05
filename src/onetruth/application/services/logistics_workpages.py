@@ -20,6 +20,11 @@ from onetruth.application.services.schedule_control import (
 from onetruth.application.services.schedule_control.draft_workbook import (
     SCHEDULE_DRAFT_DATASET_KEY,
 )
+from onetruth.application.services.schedule_control.route_demand_workbook import (
+    ROUTE_DEMAND_DATASET_KEY,
+    route_demand_workbook_bytes_from_metadata_json,
+    project_route_demand_workbook,
+)
 from onetruth.application.services.schedule_control.workpage_calculations import (
     SCHEDULE_CALCULATION_SNAPSHOT_DATASET_KEY,
     build_schedule_bundle_from_dependencies,
@@ -37,12 +42,16 @@ from onetruth.application.services.workpage_descriptors import (
     DRIVER_PREFERENCES_ARTIFACT_KIND,
     EOD_DEMO_WORKPAGE_ID,
     EOD_DRAFT_ARTIFACT_KIND,
+    ROUTE_DEMAND_WORKPAGE_KIND,
+    ROUTE_DEMAND_ARTIFACT_KIND,
     SCHEDULE_DEMO_WORKPAGE_ID,
     SCHEDULE_PUBLISHED_ARTIFACT_KIND,
     WEEKLY_SCHEDULE_WORKFLOW_ID,
     build_schedule_accepted_series_key,
     canonical_eod_artifact_route as descriptor_eod_artifact_route,
     canonical_eod_draft_create_path as descriptor_eod_draft_create_path,
+    canonical_route_demand_artifact_route as descriptor_route_demand_artifact_route,
+    canonical_route_demand_artifact_submit_path,
     canonical_schedule_artifact_route as descriptor_schedule_artifact_route,
     canonical_schedule_artifact_preview_path,
     canonical_schedule_artifact_submit_path,
@@ -53,6 +62,12 @@ from onetruth.infrastructure.repositories.artifact_versions import (
     get_artifact_version,
     get_latest_artifact_version_in_chain,
     list_artifact_versions_for_scope_and_kind,
+)
+from onetruth.infrastructure.repositories.human_tasks import (
+    list_human_tasks_for_workflow_run,
+)
+from onetruth.infrastructure.repositories.task_runs import (
+    get_task_run,
 )
 
 
@@ -96,6 +111,7 @@ _SCHEDULE_VALIDATION_SUMMARY_DATASET_KEY = "planning.validation_summary.doc"
 _EOD_RAW_DATASET_KEY = "reporting.eos_raw.workbook"
 _EOD_NORMALIZED_DATASET_KEY = "reporting.actuals_normalized.workbook"
 _EOD_DRAFT_DATASET_KEY = EOD_DRAFT_ARTIFACT_KIND
+ROUTE_DEMAND_REFRESH_TASK_ACTIVATION_PREFIX = "workpage.route-demand-v0.schedule-refresh"
 
 _SOURCE_DATASETS: tuple[tuple[str, str], ...] = (
     ("route_slot_requirements", _ROUTE_SLOT_DATASET_KEY),
@@ -196,8 +212,19 @@ def canonical_eod_artifact_route(*, workflow_run_id: str, artifact_version_id: s
     )
 
 
+def canonical_route_demand_artifact_route(*, workflow_run_id: str, artifact_version_id: str) -> str:
+    return descriptor_route_demand_artifact_route(
+        workflow_run_id=workflow_run_id,
+        artifact_version_id=artifact_version_id,
+    )
+
+
 def canonical_eod_draft_create_path(*, workflow_run_id: str) -> str:
     return descriptor_eod_draft_create_path(workflow_run_id=workflow_run_id)
+
+
+def build_route_demand_refresh_activation_key(*, artifact_version_id: str) -> str:
+    return f"{ROUTE_DEMAND_REFRESH_TASK_ACTIVATION_PREFIX}:{artifact_version_id}"
 
 
 def latest_schedule_draft_artifact(
@@ -206,6 +233,15 @@ def latest_schedule_draft_artifact(
     return _latest_artifact_for_dataset_key(
         artifacts,
         dataset_key=SCHEDULE_DRAFT_DATASET_KEY,
+    )
+
+
+def latest_route_demand_artifact(
+    artifacts: list[dict[str, Any]],
+) -> dict[str, Any] | None:
+    return _latest_artifact_for_dataset_key(
+        artifacts,
+        dataset_key=ROUTE_DEMAND_DATASET_KEY,
     )
 
 
@@ -297,6 +333,7 @@ def build_schedule_workflow_run_workpage_contract(
         "draft_resolution": None,
     }
     latest_schedule_draft = latest_schedule_draft_artifact(artifacts)
+    latest_route_demand = latest_route_demand_artifact(artifacts)
     contract.update(
         {
             "artifact_state": _schedule_run_artifact_state(
@@ -313,14 +350,85 @@ def build_schedule_workflow_run_workpage_contract(
             ),
             "draft_lineage": _empty_draft_lineage(),
             "accepted_series": accepted_series,
-            "actions": [
-                _schedule_open_latest_draft_contract_action(
-                    workflow_run_id=workflow_run_id,
-                    latest_schedule_draft=latest_schedule_draft,
-                )
-            ],
+            "actions": _schedule_run_contract_actions(
+                workflow_run_id=workflow_run_id,
+                latest_schedule_draft=latest_schedule_draft,
+                latest_route_demand=latest_route_demand,
+            ),
         }
     )
+    return contract
+
+
+def build_route_demand_workflow_run_workpage_contract(
+    connection: sqlite3.Connection,
+    *,
+    workflow_run: Mapping[str, Any],
+    artifacts: list[dict[str, Any]],
+) -> dict[str, Any]:
+    workflow_run_id = _require_text(workflow_run.get("workflow_run_id"))
+    latest_artifact = latest_route_demand_artifact(artifacts)
+    if latest_artifact is None:
+        raise WorkpageProjectionUnavailableError(
+            workflow_run_id=workflow_run_id,
+            workpage_id=ROUTE_DEMAND_WORKPAGE_KIND,
+            message="workflow-run-backed route demand workpage is unavailable until the Stage04 route demand artifact exists for this run",
+            missing_dataset_keys=[ROUTE_DEMAND_DATASET_KEY],
+        )
+    projection = _route_demand_projection_from_artifact(latest_artifact)
+    day_cards = _route_demand_day_cards(
+        projection=projection,
+        previous_projection=None,
+    )
+    latest_schedule_draft = latest_schedule_draft_artifact(artifacts)
+    schedule_impact = _route_demand_schedule_impact(
+        connection,
+        workflow_run_id=workflow_run_id,
+        artifacts=artifacts,
+        latest_route_demand_artifact_version_id=_require_text(
+            latest_artifact.get("artifact_version_id")
+        ),
+        latest_schedule_draft=latest_schedule_draft,
+    )
+    contract = {
+        "workpage": _build_route_demand_workpage_view_model(
+            workflow_run=workflow_run,
+            projection=projection,
+            artifact_version_id=None,
+            supersedes_artifact_version_id=None,
+            latest_in_chain_artifact_version_id=_require_text(latest_artifact.get("artifact_version_id")),
+            editable=False,
+            validation_warnings=[
+                "This workflow-run-backed route demand page is built from the latest canonical Stage04 route-demand artifact for the selected run.",
+                "Route-demand edits stay on a separate truth surface from schedule reassignment and recalculation.",
+            ],
+        ),
+        "source": {
+            "mode": "run_projection",
+            "primary_dataset_key": ROUTE_DEMAND_DATASET_KEY,
+            "source_dataset_keys": [ROUTE_DEMAND_DATASET_KEY],
+            "source_artifact_version_id": None,
+            "source_refs": [
+                _artifact_source_ref(latest_artifact),
+            ],
+        },
+        "freshness": {
+            "generated_at": utc_now_iso(),
+            "source_kind": "workflow_run_projection",
+            "source_version": _require_text(latest_artifact.get("artifact_version_id")),
+        },
+        "run_context": _workflow_run_context(workflow_run),
+        "draft_resolution": None,
+        "artifact_state": _route_demand_run_artifact_state(latest_artifact=latest_artifact),
+        "calculations": {"day_cards": day_cards},
+        "schedule_impact": schedule_impact,
+        "actions": [
+            _route_demand_open_latest_contract_action(
+                workflow_run_id=workflow_run_id,
+                latest_artifact=latest_artifact,
+            )
+        ],
+    }
     return contract
 
 
@@ -793,6 +901,58 @@ def _schedule_open_latest_draft_contract_action(
     }
 
 
+def _schedule_route_demand_contract_action(
+    *,
+    workflow_run_id: str,
+    latest_route_demand: Mapping[str, Any] | None,
+) -> dict[str, Any]:
+    route: str | None = None
+    state = "unavailable"
+    artifact_version_id = None
+    if latest_route_demand is not None:
+        artifact_version_id = _require_text_or_default(
+            latest_route_demand.get("artifact_version_id"),
+            default="",
+        )
+        if artifact_version_id:
+            route = canonical_route_demand_artifact_route(
+                workflow_run_id=workflow_run_id,
+                artifact_version_id=artifact_version_id,
+            )
+            state = "available"
+    return {
+        "action_id": "workpage.route-demand-v0.open_latest",
+        "kind": "open_latest",
+        "label": "Open route demand",
+        "state": state,
+        "workpage_kind": ROUTE_DEMAND_WORKPAGE_KIND,
+        "artifact_version_id": artifact_version_id or None,
+        "route": route,
+    }
+
+
+def _schedule_run_contract_actions(
+    *,
+    workflow_run_id: str,
+    latest_schedule_draft: Mapping[str, Any] | None,
+    latest_route_demand: Mapping[str, Any] | None,
+) -> list[dict[str, Any]]:
+    actions = [
+        _schedule_open_latest_draft_contract_action(
+            workflow_run_id=workflow_run_id,
+            latest_schedule_draft=latest_schedule_draft,
+        )
+    ]
+    if latest_route_demand is not None:
+        actions.append(
+            _schedule_route_demand_contract_action(
+                workflow_run_id=workflow_run_id,
+                latest_route_demand=latest_route_demand,
+            )
+        )
+    return actions
+
+
 def _schedule_artifact_contract_actions(
     *,
     workflow_run_id: str,
@@ -800,40 +960,51 @@ def _schedule_artifact_contract_actions(
     artifact_version_id: str,
     editable: bool,
     dependencies: list[dict[str, Any]],
+    latest_route_demand: Mapping[str, Any] | None,
 ) -> list[dict[str, Any]]:
-    if not editable or artifact_kind != SCHEDULE_DRAFT_DATASET_KEY:
-        return []
-    descriptor = get_workpage_descriptor(SCHEDULE_DEMO_WORKPAGE_ID)
-    preview_disabled_reason = schedule_preview_disabled_reason(dependencies)
-    save_disabled_reason = schedule_save_disabled_reason(dependencies)
-    return [
-        {
-            "action_id": str(descriptor.preview_action_id if descriptor is not None else "workpage.schedule-v0.preview_recalc"),
-            "kind": "preview_recalc",
-            "label": str(descriptor.preview_action_label if descriptor is not None else "Preview recalculation"),
-            "state": "blocked" if preview_disabled_reason else "available",
-            "workpage_kind": SCHEDULE_DEMO_WORKPAGE_ID,
-            "artifact_version_id": artifact_version_id,
-            "preview_path": canonical_schedule_artifact_preview_path(
+    actions: list[dict[str, Any]] = []
+    if editable and artifact_kind == SCHEDULE_DRAFT_DATASET_KEY:
+        descriptor = get_workpage_descriptor(SCHEDULE_DEMO_WORKPAGE_ID)
+        preview_disabled_reason = schedule_preview_disabled_reason(dependencies)
+        save_disabled_reason = schedule_save_disabled_reason(dependencies)
+        actions.extend(
+            [
+                {
+                    "action_id": str(descriptor.preview_action_id if descriptor is not None else "workpage.schedule-v0.preview_recalc"),
+                    "kind": "preview_recalc",
+                    "label": str(descriptor.preview_action_label if descriptor is not None else "Preview recalculation"),
+                    "state": "blocked" if preview_disabled_reason else "available",
+                    "workpage_kind": SCHEDULE_DEMO_WORKPAGE_ID,
+                    "artifact_version_id": artifact_version_id,
+                    "preview_path": canonical_schedule_artifact_preview_path(
+                        workflow_run_id=workflow_run_id,
+                        artifact_version_id=artifact_version_id,
+                    ),
+                    "disabled_reason": preview_disabled_reason,
+                },
+                {
+                    "action_id": "workpage.schedule-v0.save_draft",
+                    "kind": "submit_artifact",
+                    "label": "Save draft",
+                    "state": "blocked" if save_disabled_reason else "available",
+                    "workpage_kind": SCHEDULE_DEMO_WORKPAGE_ID,
+                    "artifact_version_id": artifact_version_id,
+                    "submit_path": canonical_schedule_artifact_submit_path(
+                        workflow_run_id=workflow_run_id,
+                        artifact_version_id=artifact_version_id,
+                    ),
+                    "disabled_reason": save_disabled_reason,
+                },
+            ]
+        )
+    if latest_route_demand is not None:
+        actions.append(
+            _schedule_route_demand_contract_action(
                 workflow_run_id=workflow_run_id,
-                artifact_version_id=artifact_version_id,
-            ),
-            "disabled_reason": preview_disabled_reason,
-        },
-        {
-            "action_id": "workpage.schedule-v0.save_draft",
-            "kind": "submit_artifact",
-            "label": "Save draft",
-            "state": "blocked" if save_disabled_reason else "available",
-            "workpage_kind": SCHEDULE_DEMO_WORKPAGE_ID,
-            "artifact_version_id": artifact_version_id,
-            "submit_path": canonical_schedule_artifact_submit_path(
-                workflow_run_id=workflow_run_id,
-                artifact_version_id=artifact_version_id,
-            ),
-            "disabled_reason": save_disabled_reason,
-        },
-    ]
+                latest_route_demand=latest_route_demand,
+            )
+        )
+    return actions
 
 
 def _schedule_artifact_note_body(*, editable: bool) -> str:
@@ -1469,6 +1640,520 @@ def build_eod_artifact_workpage_contract(
     }
 
 
+def build_route_demand_artifact_workpage_contract(
+    connection: sqlite3.Connection,
+    *,
+    artifact_version_id: str,
+    artifact: Mapping[str, Any],
+    workflow_run: Mapping[str, Any],
+    artifacts: list[dict[str, Any]],
+    download_path: str,
+    projection: Mapping[str, Any],
+    generated_at: str | None = None,
+) -> dict[str, Any]:
+    workflow_run_id = _require_text(workflow_run.get("workflow_run_id"))
+    supersedes_artifact_version_id = (
+        _require_text_or_default(artifact.get("supersedes_artifact_version_id"), default="")
+        or None
+    )
+    latest_in_chain_artifact_version_id = _latest_chain_artifact_version_id(
+        connection,
+        artifact_version_id=artifact_version_id,
+        default=artifact_version_id,
+    )
+    editable = artifact_version_id == latest_in_chain_artifact_version_id
+    previous_projection = _route_demand_previous_projection(
+        artifacts=artifacts,
+        supersedes_artifact_version_id=supersedes_artifact_version_id,
+    )
+    latest_schedule_draft = latest_schedule_draft_artifact(artifacts)
+    schedule_impact = _route_demand_schedule_impact(
+        connection,
+        workflow_run_id=workflow_run_id,
+        artifacts=artifacts,
+        latest_route_demand_artifact_version_id=latest_in_chain_artifact_version_id,
+        latest_schedule_draft=latest_schedule_draft,
+    )
+    contract = {
+        "workpage": _build_route_demand_workpage_view_model(
+            workflow_run=workflow_run,
+            projection=projection,
+            artifact_version_id=artifact_version_id,
+            supersedes_artifact_version_id=supersedes_artifact_version_id,
+            latest_in_chain_artifact_version_id=latest_in_chain_artifact_version_id,
+            editable=editable,
+            validation_warnings=[
+                (
+                    "This artifact-backed route demand page edits daily route-demand truth only. "
+                    "It does not mutate schedule assignments or auto-refresh schedule drafts."
+                ),
+            ],
+        ),
+        "source": {
+            "mode": "artifact_projection",
+            "primary_dataset_key": ROUTE_DEMAND_DATASET_KEY,
+            "source_dataset_keys": [ROUTE_DEMAND_DATASET_KEY],
+            "source_artifact_version_id": artifact_version_id,
+            "source_refs": [f"/api/v1/artifacts/{artifact_version_id}"],
+        },
+        "freshness": {
+            "generated_at": generated_at or utc_now_iso(),
+            "source_kind": "artifact_version",
+            "source_version": artifact_version_id,
+        },
+        "artifact_context": {
+            "artifact_version_id": artifact_version_id,
+            "workflow_run_id": workflow_run_id,
+            "artifact_kind": ROUTE_DEMAND_ARTIFACT_KIND,
+            "supersedes_artifact_version_id": supersedes_artifact_version_id,
+            "superseded_by_artifact_version_id": _latest_superseding_artifact_version_id(
+                artifact=artifact,
+                artifacts=artifacts,
+            ),
+            "latest_in_chain_artifact_version_id": latest_in_chain_artifact_version_id,
+            "download_path": download_path,
+        },
+        "artifact_state": _route_demand_artifact_state(
+            artifact_version_id=artifact_version_id,
+            latest_artifact_version_id=latest_in_chain_artifact_version_id,
+            editable=editable,
+        ),
+        "calculations": {
+            "day_cards": _route_demand_day_cards(
+                projection=projection,
+                previous_projection=previous_projection,
+            )
+        },
+        "schedule_impact": schedule_impact,
+        "actions": _route_demand_artifact_contract_actions(
+            workflow_run_id=workflow_run_id,
+            artifact_version_id=artifact_version_id,
+            editable=editable,
+        ),
+    }
+    return contract
+
+
+def _route_demand_projection_from_artifact(
+    artifact: Mapping[str, Any],
+) -> dict[str, Any]:
+    return project_route_demand_workbook(
+        route_demand_workbook_bytes_from_metadata_json(artifact.get("metadata_json"))
+    )
+
+
+def _build_route_demand_workpage_view_model(
+    *,
+    workflow_run: Mapping[str, Any],
+    projection: Mapping[str, Any],
+    artifact_version_id: str | None,
+    supersedes_artifact_version_id: str | None,
+    latest_in_chain_artifact_version_id: str | None,
+    editable: bool,
+    validation_warnings: list[str],
+) -> dict[str, Any]:
+    summary = _route_demand_summary(
+        workflow_run=workflow_run,
+        projection=projection,
+    )
+    history_entries = [
+        {
+            "label": "Current artifact version",
+            "value": artifact_version_id or "Run-backed latest artifact",
+        },
+        {
+            "label": "Supersedes",
+            "value": supersedes_artifact_version_id or "Initial route demand version",
+        },
+        {
+            "label": "Latest route demand version",
+            "value": latest_in_chain_artifact_version_id or "Unavailable",
+        },
+    ]
+    return {
+        "workpage_id": ROUTE_DEMAND_WORKPAGE_KIND,
+        "version": 1,
+        "title": (
+            "Weekly route demand editor"
+            if artifact_version_id
+            else "Weekly route demand review"
+        ),
+        "mode": "example",
+        "workflow_id": _SCHEDULE_WORKFLOW_ID,
+        "dataset_key": ROUTE_DEMAND_DATASET_KEY,
+        "source_artifact_version_id": artifact_version_id,
+        "source_examples": {},
+        "summary": summary,
+        "sections": [
+            {
+                "kind": "summary_cards",
+                "title": "Route demand summary",
+                "cards": [
+                    {
+                        "key": "planning_week_id",
+                        "label": "Planning week",
+                        "value": summary["planning_week_id"],
+                    },
+                    {
+                        "key": "service_day_count",
+                        "label": "Service days",
+                        "value": summary["service_day_count"],
+                    },
+                    {
+                        "key": "planned_route_total",
+                        "label": "Planned routes",
+                        "value": summary["planned_route_total"],
+                    },
+                    {
+                        "key": "station_code",
+                        "label": "Station",
+                        "value": summary["station_code"],
+                    },
+                    {
+                        "key": "service_area",
+                        "label": "Service area",
+                        "value": summary["service_area"],
+                    },
+                ],
+            },
+            {
+                "kind": "note_panel",
+                "title": "Route demand boundary",
+                "body": (
+                    "This page edits route-demand truth only. Schedule reassignment, preview, and "
+                    "save stay on schedule-v0, and route-demand saves never auto-refresh schedule artifacts."
+                ),
+            },
+            {
+                "kind": "table",
+                "title": "Daily route demand",
+                "table_id": "route_demand_daily_rows",
+                "columns": [
+                    {"key": "service_date", "label": "Service date"},
+                    {"key": "planned_route_count", "label": "Planned routes"},
+                    {"key": "standard_slot_count", "label": "Standard"},
+                    {"key": "rescue_slot_count", "label": "Rescue"},
+                    {"key": "overflow_slot_count", "label": "Overflow"},
+                    {"key": "on_call_target", "label": "On-call target"},
+                    {"key": "excess_capacity_target", "label": "Excess-capacity target"},
+                ],
+                "rows": [
+                    {
+                        "service_date": item["service_date"],
+                        "planned_route_count": item["planned_route_count"],
+                        "standard_slot_count": item["standard_slot_count"],
+                        "rescue_slot_count": item["rescue_slot_count"],
+                        "overflow_slot_count": item["overflow_slot_count"],
+                        "on_call_target": item.get("on_call_target"),
+                        "excess_capacity_target": item.get("excess_capacity_target"),
+                    }
+                    for item in _route_demand_day_cards(
+                        projection=projection,
+                        previous_projection=None,
+                    )
+                ],
+            },
+            {
+                "kind": "history_stub",
+                "title": "History",
+                "entries": history_entries,
+            },
+        ],
+        "validation": {
+            "status": "informational",
+            "warnings": validation_warnings,
+        },
+    }
+
+
+def _route_demand_summary(
+    *,
+    workflow_run: Mapping[str, Any],
+    projection: Mapping[str, Any],
+) -> dict[str, Any]:
+    day_cards = _route_demand_day_cards(
+        projection=projection,
+        previous_projection=None,
+    )
+    station_code = ""
+    service_area = ""
+    for row in _projection_rows(projection, "rows"):
+        station_code = station_code or _require_text_or_default(row.get("station_code"), default="")
+        service_area = service_area or _require_text_or_default(row.get("service_area"), default="")
+        if station_code and service_area:
+            break
+    if not station_code or not service_area:
+        for row in _projection_rows(projection, "daily_demand_rows"):
+            station_code = station_code or _require_text_or_default(row.get("station_code"), default="")
+            service_area = service_area or _require_text_or_default(row.get("service_area"), default="")
+            if station_code and service_area:
+                break
+    return {
+        "planning_week_id": _require_text_or_default(
+            workflow_run.get("partition_key") or projection.get("planning_week_id"),
+            default="unknown",
+        ),
+        "operational_week_start": (
+            day_cards[0]["service_date"] if day_cards else _require_text_or_default(workflow_run.get("logical_date"), default="")
+        ),
+        "service_day_count": len(day_cards),
+        "planned_route_total": sum(_require_int(item.get("planned_route_count")) for item in day_cards),
+        "station_code": station_code or "unknown",
+        "service_area": service_area or "unknown",
+    }
+
+
+def _route_demand_day_cards(
+    *,
+    projection: Mapping[str, Any],
+    previous_projection: Mapping[str, Any] | None,
+) -> list[dict[str, Any]]:
+    daily_rows = _projection_rows(projection, "daily_demand_rows")
+    previous_by_date = {
+        _require_text(row.get("service_date")): row
+        for row in _projection_rows(previous_projection or {}, "daily_demand_rows")
+        if str(row.get("service_date") or "").strip()
+    }
+    cards: list[dict[str, Any]] = []
+    for row in daily_rows:
+        service_date = _require_text(row.get("service_date"))
+        previous_row = previous_by_date.get(service_date)
+        current_planned = max(_require_int(row.get("planned_route_count")), 0)
+        previous_planned = (
+            max(_require_int(previous_row.get("planned_route_count")), 0)
+            if previous_row is not None
+            else None
+        )
+        cards.append(
+            {
+                "service_date": service_date,
+                "weekday_label": _weekday_label(service_date),
+                "planned_route_count": current_planned,
+                "standard_slot_count": max(
+                    _require_int_or_default(
+                        row.get("standard_slot_count"),
+                        default=current_planned,
+                    ),
+                    0,
+                ),
+                "standard_early_slot_count": _require_int_or_default(
+                    row.get("standard_early_slot_count"),
+                    default=0,
+                ),
+                "standard_late_slot_count": _require_int_or_default(
+                    row.get("standard_late_slot_count"),
+                    default=0,
+                ),
+                "rescue_slot_count": max(
+                    _require_int_or_default(row.get("rescue_slot_count"), default=0),
+                    0,
+                ),
+                "overflow_slot_count": max(
+                    _require_int_or_default(row.get("overflow_slot_count"), default=0),
+                    0,
+                ),
+                "on_call_target": _require_int_or_default(row.get("on_call_target"), default=0),
+                "excess_capacity_target": _require_int_or_default(
+                    row.get("excess_capacity_target"),
+                    default=0,
+                ),
+                "delta_from_previous_version": (
+                    {
+                        "planned_route_count_delta": current_planned - previous_planned,
+                    }
+                    if previous_planned is not None
+                    else None
+                ),
+            }
+        )
+    return cards
+
+
+def _route_demand_previous_projection(
+    *,
+    artifacts: list[dict[str, Any]],
+    supersedes_artifact_version_id: str | None,
+) -> dict[str, Any] | None:
+    if not supersedes_artifact_version_id:
+        return None
+    for artifact in artifacts:
+        if _require_text_or_default(artifact.get("artifact_version_id"), default="") != supersedes_artifact_version_id:
+            continue
+        return _route_demand_projection_from_artifact(artifact)
+    return None
+
+
+def _route_demand_run_artifact_state(
+    *,
+    latest_artifact: Mapping[str, Any] | None,
+) -> dict[str, Any]:
+    latest_artifact_version_id = (
+        _require_text_or_default(latest_artifact.get("artifact_version_id"), default="")
+        if latest_artifact is not None
+        else ""
+    )
+    return {
+        "state_kind": "run_projection",
+        "artifact_kind": ROUTE_DEMAND_ARTIFACT_KIND,
+        "editable": False,
+        "current_artifact_version_id": None,
+        "latest_artifact_version_id": latest_artifact_version_id or None,
+        "accepted_artifact_version_id": None,
+    }
+
+
+def _route_demand_artifact_state(
+    *,
+    artifact_version_id: str,
+    latest_artifact_version_id: str,
+    editable: bool,
+) -> dict[str, Any]:
+    return {
+        "state_kind": "artifact_projection",
+        "artifact_kind": ROUTE_DEMAND_ARTIFACT_KIND,
+        "editable": editable,
+        "current_artifact_version_id": artifact_version_id,
+        "latest_artifact_version_id": latest_artifact_version_id,
+        "accepted_artifact_version_id": None,
+    }
+
+
+def _route_demand_open_latest_contract_action(
+    *,
+    workflow_run_id: str,
+    latest_artifact: Mapping[str, Any] | None,
+) -> dict[str, Any]:
+    route: str | None = None
+    state = "unavailable"
+    artifact_version_id = None
+    if latest_artifact is not None:
+        artifact_version_id = _require_text_or_default(
+            latest_artifact.get("artifact_version_id"),
+            default="",
+        )
+        if artifact_version_id:
+            route = canonical_route_demand_artifact_route(
+                workflow_run_id=workflow_run_id,
+                artifact_version_id=artifact_version_id,
+            )
+            state = "available"
+    return {
+        "action_id": "workpage.route-demand-v0.open_latest",
+        "kind": "open_latest",
+        "label": "Open route demand",
+        "state": state,
+        "workpage_kind": ROUTE_DEMAND_WORKPAGE_KIND,
+        "artifact_version_id": artifact_version_id or None,
+        "route": route,
+    }
+
+
+def _route_demand_artifact_contract_actions(
+    *,
+    workflow_run_id: str,
+    artifact_version_id: str,
+    editable: bool,
+) -> list[dict[str, Any]]:
+    return [
+        {
+            "action_id": "workpage.route-demand-v0.save",
+            "kind": "save",
+            "label": "Save route demand",
+            "state": "available" if editable else "blocked",
+            "workpage_kind": ROUTE_DEMAND_WORKPAGE_KIND,
+            "artifact_version_id": artifact_version_id,
+            "submit_path": canonical_route_demand_artifact_submit_path(
+                workflow_run_id=workflow_run_id,
+                artifact_version_id=artifact_version_id,
+            ),
+            "disabled_reason": None if editable else "historical_artifact_read_only",
+        }
+    ]
+
+
+def _route_demand_schedule_impact(
+    connection: sqlite3.Connection,
+    *,
+    workflow_run_id: str,
+    artifacts: list[dict[str, Any]],
+    latest_route_demand_artifact_version_id: str,
+    latest_schedule_draft: Mapping[str, Any] | None,
+) -> dict[str, Any]:
+    if latest_schedule_draft is None:
+        return {
+            "latest_schedule_draft_artifact_version_id": None,
+            "dependency_state": "no_draft",
+            "schedule_state": "no_draft",
+            "refresh_task": None,
+        }
+    dependency_projection = project_schedule_dependency_state(
+        dependency_manifest=_schedule_artifact_dependency_manifest(
+            latest_schedule_draft.get("metadata_json")
+        ),
+        artifacts=artifacts,
+    )
+    route_dependency = next(
+        (
+            row
+            for row in dependency_projection.dependencies
+            if _require_text(row.get("dependency_key")) == "route_slot_requirements"
+        ),
+        None,
+    )
+    dependency_state = (
+        _require_text_or_default(route_dependency.get("state"), default="aligned")
+        if route_dependency is not None
+        else "aligned"
+    )
+    refresh_task = _route_demand_active_refresh_task_summary(
+        connection,
+        workflow_run_id=workflow_run_id,
+    )
+    schedule_state = dependency_state
+    if dependency_state == "drifted" and refresh_task is not None:
+        schedule_state = "awaiting_refresh"
+    return {
+        "latest_schedule_draft_artifact_version_id": _require_text(
+            latest_schedule_draft.get("artifact_version_id")
+        ),
+        "dependency_state": dependency_state,
+        "schedule_state": schedule_state,
+        "refresh_task": refresh_task,
+        "latest_route_demand_artifact_version_id": latest_route_demand_artifact_version_id,
+    }
+
+
+def _route_demand_active_refresh_task_summary(
+    connection: sqlite3.Connection,
+    *,
+    workflow_run_id: str,
+) -> dict[str, Any] | None:
+    for task in reversed(list_human_tasks_for_workflow_run(connection, workflow_run_id)):
+        task_run = get_task_run(connection, str(task.get("task_run_id") or ""))
+        if task_run is None:
+            continue
+        activation_key = _require_text_or_default(task_run.get("activation_key"), default="")
+        if not activation_key.startswith(ROUTE_DEMAND_REFRESH_TASK_ACTIVATION_PREFIX):
+            continue
+        if _require_text(task_run.get("stage_id")) != "Stage04":
+            continue
+        if _require_text(task.get("task_kind")) != "work_item":
+            continue
+        task_state = _require_text_or_default(task.get("state"), default="")
+        if task_state not in {"OPEN", "CLAIMED"}:
+            continue
+        return {
+            "human_task_id": _require_text(task.get("human_task_id")),
+            "task_run_id": _require_text(task.get("task_run_id")),
+            "state": task_state,
+            "owner_role": _require_text_or_default(task.get("owner_role"), default="") or None,
+            "activation_key": activation_key,
+            "blocked_on_kind": _require_text_or_default(task_run.get("blocked_on_kind"), default="") or None,
+            "blocked_on_ref": _require_text_or_default(task_run.get("blocked_on_ref"), default="") or None,
+        }
+    return None
+
+
 def build_schedule_artifact_workpage_contract(
     connection: sqlite3.Connection,
     *,
@@ -1847,6 +2532,7 @@ def build_schedule_artifact_workpage_contract(
                 artifact_version_id=artifact_version_id,
                 editable=editable,
                 dependencies=dependency_projection.dependencies,
+                latest_route_demand=latest_route_demand_artifact(artifacts),
             ),
         }
     )
@@ -3135,6 +3821,13 @@ def _require_int(value: Any) -> int:
         return int(value)
     except (TypeError, ValueError) as exc:
         raise ValueError("expected integer value") from exc
+
+
+def _require_int_or_default(value: Any, *, default: int) -> int:
+    text = str(value or "").strip()
+    if not text:
+        return int(default)
+    return _require_int(value)
 
 
 def _truthy_bool(value: Any) -> bool:

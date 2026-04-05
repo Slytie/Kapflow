@@ -77,6 +77,17 @@ def canonical_eod_artifact_route(*, workflow_run_id: str, artifact_version_id: s
     return f"/runs/{workflow_run_id}/workpages/{EOD_WORKPAGE_KIND}/artifacts/{artifact_version_id}"
 
 
+def canonical_route_demand_artifact_route(
+    *,
+    workflow_run_id: str,
+    artifact_version_id: str,
+) -> str:
+    return (
+        f"/runs/{workflow_run_id}/workpages/"
+        f"{ROUTE_DEMAND_WORKPAGE_KIND}/artifacts/{artifact_version_id}"
+    )
+
+
 def canonical_schedule_artifact_path(*, workflow_run_id: str, artifact_version_id: str) -> str:
     return (
         f"/api/v1/workpages/workflow-runs/{workflow_run_id}/"
@@ -88,6 +99,17 @@ def canonical_eod_artifact_path(*, workflow_run_id: str, artifact_version_id: st
     return (
         f"/api/v1/workpages/workflow-runs/{workflow_run_id}/"
         f"{EOD_WORKPAGE_KIND}/artifacts/{artifact_version_id}"
+    )
+
+
+def canonical_route_demand_artifact_path(
+    *,
+    workflow_run_id: str,
+    artifact_version_id: str,
+) -> str:
+    return (
+        f"/api/v1/workpages/workflow-runs/{workflow_run_id}/"
+        f"{ROUTE_DEMAND_WORKPAGE_KIND}/artifacts/{artifact_version_id}"
     )
 
 
@@ -121,6 +143,17 @@ def canonical_eod_artifact_submit_path(
     return (
         f"/api/v1/workpages/workflow-runs/{workflow_run_id}/"
         f"{EOD_WORKPAGE_KIND}/artifacts/{artifact_version_id}/submit"
+    )
+
+
+def canonical_route_demand_artifact_submit_path(
+    *,
+    workflow_run_id: str,
+    artifact_version_id: str,
+) -> str:
+    return (
+        f"/api/v1/workpages/workflow-runs/{workflow_run_id}/"
+        f"{ROUTE_DEMAND_WORKPAGE_KIND}/artifacts/{artifact_version_id}/submit"
     )
 
 
@@ -277,21 +310,22 @@ _DESCRIPTORS: tuple[WorkpageDescriptor, ...] = (
         kind=ROUTE_DEMAND_WORKPAGE_KIND,
         workflow_id=WEEKLY_SCHEDULE_WORKFLOW_ID,
         demo_enabled=False,
-        run_enabled=False,
-        artifact_enabled=False,
-        submit_enabled=False,
+        run_enabled=True,
+        artifact_enabled=True,
+        submit_enabled=True,
         artifact_kinds=frozenset({ROUTE_DEMAND_ARTIFACT_KIND}),
         editable_artifact_kinds=frozenset({ROUTE_DEMAND_ARTIFACT_KIND}),
-        frontend_artifact_route_builder=lambda workflow_run_id, artifact_version_id: (
-            f"/runs/{workflow_run_id}/workpages/{ROUTE_DEMAND_WORKPAGE_KIND}/artifacts/{artifact_version_id}"
+        frontend_artifact_route_builder=lambda workflow_run_id, artifact_version_id: canonical_route_demand_artifact_route(
+            workflow_run_id=workflow_run_id,
+            artifact_version_id=artifact_version_id,
         ),
-        backend_artifact_route_builder=lambda workflow_run_id, artifact_version_id: (
-            f"/api/v1/workpages/workflow-runs/{workflow_run_id}/"
-            f"{ROUTE_DEMAND_WORKPAGE_KIND}/artifacts/{artifact_version_id}"
+        backend_artifact_route_builder=lambda workflow_run_id, artifact_version_id: canonical_route_demand_artifact_path(
+            workflow_run_id=workflow_run_id,
+            artifact_version_id=artifact_version_id,
         ),
-        backend_artifact_submit_path_builder=lambda workflow_run_id, artifact_version_id: (
-            f"/api/v1/workpages/workflow-runs/{workflow_run_id}/"
-            f"{ROUTE_DEMAND_WORKPAGE_KIND}/artifacts/{artifact_version_id}/submit"
+        backend_artifact_submit_path_builder=lambda workflow_run_id, artifact_version_id: canonical_route_demand_artifact_submit_path(
+            workflow_run_id=workflow_run_id,
+            artifact_version_id=artifact_version_id,
         ),
         backend_artifact_preview_path_builder=None,
         draft_create_path_builder=None,

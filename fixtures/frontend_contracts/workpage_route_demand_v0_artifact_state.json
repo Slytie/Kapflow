@@ -1,0 +1,339 @@
+{
+  "snapshot_id": "workpage_route_demand_v0_artifact_state",
+  "source": {
+    "capture": "artifact_backed_read_projection",
+    "workflow_run_id": "<workflow_run_id:1>",
+    "workpage_id": "route-demand-v0"
+  },
+  "workpage_state": {
+    "actions": [
+      {
+        "action_id": "workpage.route-demand-v0.save",
+        "artifact_version_id": "<artifact_version_id:2>",
+        "disabled_reason": null,
+        "kind": "save",
+        "label": "Save route demand",
+        "state": "available",
+        "submit_path": "/api/v1/workpages/workflow-runs/<workflow_run_id:1>/route-demand-v0/artifacts/<artifact_version_id:2>/submit",
+        "workpage_kind": "route-demand-v0"
+      }
+    ],
+    "artifact_context": {
+      "artifact_kind": "planning.route_slot_requirements.workbook",
+      "artifact_version_id": "<artifact_version_id:2>",
+      "download_path": "/api/v1/artifacts/<artifact_version_id:2>/download.bin",
+      "latest_in_chain_artifact_version_id": "<artifact_version_id:2>",
+      "superseded_by_artifact_version_id": null,
+      "supersedes_artifact_version_id": null,
+      "workflow_run_id": "<workflow_run_id:1>"
+    },
+    "artifact_state": {
+      "accepted_artifact_version_id": null,
+      "artifact_kind": "planning.route_slot_requirements.workbook",
+      "current_artifact_version_id": "<artifact_version_id:2>",
+      "editable": true,
+      "latest_artifact_version_id": "<artifact_version_id:2>",
+      "state_kind": "artifact_projection"
+    },
+    "calculations": {
+      "day_cards": [
+        {
+          "delta_from_previous_version": null,
+          "excess_capacity_target": 3,
+          "on_call_target": 4,
+          "overflow_slot_count": 0,
+          "planned_route_count": 16,
+          "rescue_slot_count": 0,
+          "service_date": "2026-03-22",
+          "standard_early_slot_count": 0,
+          "standard_late_slot_count": 0,
+          "standard_slot_count": 16,
+          "weekday_label": "Sun"
+        },
+        {
+          "delta_from_previous_version": null,
+          "excess_capacity_target": 3,
+          "on_call_target": 4,
+          "overflow_slot_count": 0,
+          "planned_route_count": 23,
+          "rescue_slot_count": 0,
+          "service_date": "2026-03-23",
+          "standard_early_slot_count": 0,
+          "standard_late_slot_count": 0,
+          "standard_slot_count": 23,
+          "weekday_label": "Mon"
+        },
+        {
+          "delta_from_previous_version": null,
+          "excess_capacity_target": 3,
+          "on_call_target": 4,
+          "overflow_slot_count": 0,
+          "planned_route_count": 20,
+          "rescue_slot_count": 0,
+          "service_date": "2026-03-24",
+          "standard_early_slot_count": 0,
+          "standard_late_slot_count": 0,
+          "standard_slot_count": 20,
+          "weekday_label": "Tue"
+        },
+        {
+          "delta_from_previous_version": null,
+          "excess_capacity_target": 3,
+          "on_call_target": 4,
+          "overflow_slot_count": 0,
+          "planned_route_count": 19,
+          "rescue_slot_count": 0,
+          "service_date": "2026-03-25",
+          "standard_early_slot_count": 0,
+          "standard_late_slot_count": 0,
+          "standard_slot_count": 19,
+          "weekday_label": "Wed"
+        },
+        {
+          "delta_from_previous_version": null,
+          "excess_capacity_target": 3,
+          "on_call_target": 4,
+          "overflow_slot_count": 0,
+          "planned_route_count": 21,
+          "rescue_slot_count": 0,
+          "service_date": "2026-03-26",
+          "standard_early_slot_count": 0,
+          "standard_late_slot_count": 0,
+          "standard_slot_count": 21,
+          "weekday_label": "Thu"
+        },
+        {
+          "delta_from_previous_version": null,
+          "excess_capacity_target": 3,
+          "on_call_target": 4,
+          "overflow_slot_count": 0,
+          "planned_route_count": 18,
+          "rescue_slot_count": 0,
+          "service_date": "2026-03-27",
+          "standard_early_slot_count": 0,
+          "standard_late_slot_count": 0,
+          "standard_slot_count": 18,
+          "weekday_label": "Fri"
+        },
+        {
+          "delta_from_previous_version": null,
+          "excess_capacity_target": 3,
+          "on_call_target": 4,
+          "overflow_slot_count": 0,
+          "planned_route_count": 17,
+          "rescue_slot_count": 0,
+          "service_date": "2026-03-28",
+          "standard_early_slot_count": 0,
+          "standard_late_slot_count": 0,
+          "standard_slot_count": 17,
+          "weekday_label": "Sat"
+        }
+      ]
+    },
+    "command": "api.workpages.artifact",
+    "freshness": {
+      "generated_at": "<ts:1>",
+      "source_kind": "artifact_version",
+      "source_version": "<artifact_version_id:2>"
+    },
+    "schedule_impact": {
+      "dependency_state": "aligned",
+      "latest_route_demand_artifact_version_id": "<artifact_version_id:2>",
+      "latest_schedule_draft_artifact_version_id": "<artifact_version_id:3>",
+      "refresh_task": null,
+      "schedule_state": "aligned"
+    },
+    "source": {
+      "mode": "artifact_projection",
+      "primary_dataset_key": "planning.route_slot_requirements.workbook",
+      "source_artifact_version_id": "<artifact_version_id:2>",
+      "source_dataset_keys": [
+        "planning.route_slot_requirements.workbook"
+      ],
+      "source_refs": [
+        "/api/v1/artifacts/<artifact_version_id:2>"
+      ]
+    },
+    "status": "ok",
+    "workpage": {
+      "dataset_key": "planning.route_slot_requirements.workbook",
+      "mode": "example",
+      "sections": [
+        {
+          "cards": [
+            {
+              "key": "planning_week_id",
+              "label": "Planning week",
+              "value": "PW-2026-W13"
+            },
+            {
+              "key": "service_day_count",
+              "label": "Service days",
+              "value": 7
+            },
+            {
+              "key": "planned_route_total",
+              "label": "Planned routes",
+              "value": 134
+            },
+            {
+              "key": "station_code",
+              "label": "Station",
+              "value": "DVC4"
+            },
+            {
+              "key": "service_area",
+              "label": "Service area",
+              "value": "Pitt Meadows"
+            }
+          ],
+          "kind": "summary_cards",
+          "title": "Route demand summary"
+        },
+        {
+          "body": "This page edits route-demand truth only. Schedule reassignment, preview, and save stay on schedule-v0, and route-demand saves never auto-refresh schedule artifacts.",
+          "kind": "note_panel",
+          "title": "Route demand boundary"
+        },
+        {
+          "columns": [
+            {
+              "key": "service_date",
+              "label": "Service date"
+            },
+            {
+              "key": "planned_route_count",
+              "label": "Planned routes"
+            },
+            {
+              "key": "standard_slot_count",
+              "label": "Standard"
+            },
+            {
+              "key": "rescue_slot_count",
+              "label": "Rescue"
+            },
+            {
+              "key": "overflow_slot_count",
+              "label": "Overflow"
+            },
+            {
+              "key": "on_call_target",
+              "label": "On-call target"
+            },
+            {
+              "key": "excess_capacity_target",
+              "label": "Excess-capacity target"
+            }
+          ],
+          "kind": "table",
+          "rows": [
+            {
+              "excess_capacity_target": 3,
+              "on_call_target": 4,
+              "overflow_slot_count": 0,
+              "planned_route_count": 16,
+              "rescue_slot_count": 0,
+              "service_date": "2026-03-22",
+              "standard_slot_count": 16
+            },
+            {
+              "excess_capacity_target": 3,
+              "on_call_target": 4,
+              "overflow_slot_count": 0,
+              "planned_route_count": 23,
+              "rescue_slot_count": 0,
+              "service_date": "2026-03-23",
+              "standard_slot_count": 23
+            },
+            {
+              "excess_capacity_target": 3,
+              "on_call_target": 4,
+              "overflow_slot_count": 0,
+              "planned_route_count": 20,
+              "rescue_slot_count": 0,
+              "service_date": "2026-03-24",
+              "standard_slot_count": 20
+            },
+            {
+              "excess_capacity_target": 3,
+              "on_call_target": 4,
+              "overflow_slot_count": 0,
+              "planned_route_count": 19,
+              "rescue_slot_count": 0,
+              "service_date": "2026-03-25",
+              "standard_slot_count": 19
+            },
+            {
+              "excess_capacity_target": 3,
+              "on_call_target": 4,
+              "overflow_slot_count": 0,
+              "planned_route_count": 21,
+              "rescue_slot_count": 0,
+              "service_date": "2026-03-26",
+              "standard_slot_count": 21
+            },
+            {
+              "excess_capacity_target": 3,
+              "on_call_target": 4,
+              "overflow_slot_count": 0,
+              "planned_route_count": 18,
+              "rescue_slot_count": 0,
+              "service_date": "2026-03-27",
+              "standard_slot_count": 18
+            },
+            {
+              "excess_capacity_target": 3,
+              "on_call_target": 4,
+              "overflow_slot_count": 0,
+              "planned_route_count": 17,
+              "rescue_slot_count": 0,
+              "service_date": "2026-03-28",
+              "standard_slot_count": 17
+            }
+          ],
+          "table_id": "route_demand_daily_rows",
+          "title": "Daily route demand"
+        },
+        {
+          "entries": [
+            {
+              "label": "Current artifact version",
+              "value": "<artifact_version_id:2>"
+            },
+            {
+              "label": "Supersedes",
+              "value": "Initial route demand version"
+            },
+            {
+              "label": "Latest route demand version",
+              "value": "<artifact_version_id:2>"
+            }
+          ],
+          "kind": "history_stub",
+          "title": "History"
+        }
+      ],
+      "source_artifact_version_id": "<artifact_version_id:2>",
+      "source_examples": {},
+      "summary": {
+        "operational_week_start": "2026-03-22",
+        "planned_route_total": 134,
+        "planning_week_id": "PW-2026-W13",
+        "service_area": "Pitt Meadows",
+        "service_day_count": 7,
+        "station_code": "DVC4"
+      },
+      "title": "Weekly route demand editor",
+      "validation": {
+        "status": "informational",
+        "warnings": [
+          "This artifact-backed route demand page edits daily route-demand truth only. It does not mutate schedule assignments or auto-refresh schedule drafts."
+        ]
+      },
+      "version": 1,
+      "workflow_id": "weekly_schedule_planning.v1",
+      "workpage_id": "route-demand-v0"
+    }
+  }
+}

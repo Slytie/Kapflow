@@ -33,6 +33,15 @@
         "state": "available",
         "submit_path": "/api/v1/workpages/workflow-runs/<workflow_run_id:1>/schedule-v0/artifacts/<artifact_version_id:2>/submit",
         "workpage_kind": "schedule-v0"
+      },
+      {
+        "action_id": "workpage.route-demand-v0.open_latest",
+        "artifact_version_id": "<artifact_version_id:3>",
+        "kind": "open_latest",
+        "label": "Open route demand",
+        "route": "/runs/<workflow_run_id:1>/workpages/route-demand-v0/artifacts/<artifact_version_id:3>",
+        "state": "available",
+        "workpage_kind": "route-demand-v0"
       }
     ],
     "artifact_context": {

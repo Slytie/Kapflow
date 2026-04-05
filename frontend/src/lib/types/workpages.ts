@@ -255,6 +255,60 @@ export interface WorkpageSchedulePreview {
   calculations: WorkpageScheduleCalculations;
 }
 
+export interface WorkpageRouteDemandDayCard {
+  service_date: string;
+  weekday_label: string;
+  planned_route_count: number;
+  standard_slot_count: number;
+  standard_early_slot_count: number;
+  standard_late_slot_count: number;
+  rescue_slot_count: number;
+  overflow_slot_count: number;
+  on_call_target: number;
+  excess_capacity_target: number;
+  delta_from_previous_version: {
+    planned_route_count_delta: number;
+  } | null;
+}
+
+export interface WorkpageRouteDemandCalculations {
+  day_cards: WorkpageRouteDemandDayCard[];
+}
+
+export interface WorkpageRouteDemandRefreshTask {
+  human_task_id: string;
+  task_run_id: string;
+  state: string;
+  owner_role: string | null;
+  activation_key: string;
+  blocked_on_kind: string | null;
+  blocked_on_ref: string | null;
+}
+
+export interface WorkpageRouteDemandScheduleImpact {
+  latest_schedule_draft_artifact_version_id: string | null;
+  latest_route_demand_artifact_version_id?: string | null;
+  dependency_state: string;
+  schedule_state: string;
+  refresh_task: WorkpageRouteDemandRefreshTask | null;
+}
+
+export type WorkpageRouteDemandActionKind = "open_latest" | "save";
+
+export interface WorkpageRouteDemandAction {
+  action_id: string;
+  kind: WorkpageRouteDemandActionKind;
+  label: string;
+  state: "available" | "blocked" | "unavailable";
+  workpage_kind: string;
+  artifact_version_id: string | null;
+  route?: string | null;
+  submit_path?: string | null;
+  disabled_reason?: string | null;
+}
+
+export type WorkpageAction = WorkpageScheduleAction | WorkpageRouteDemandAction;
+
 export type WorkpageSection =
   | WorkpageSummaryCardsSection
   | WorkpageTableSection

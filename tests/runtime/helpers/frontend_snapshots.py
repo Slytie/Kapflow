@@ -50,6 +50,9 @@ SNAPSHOT_FILES = {
     "workpage_schedule_v0_run_state": "workpage_schedule_v0_run_state.json",
     "workpage_schedule_v0_artifact_state": "workpage_schedule_v0_artifact_state.json",
     "workpage_schedule_v0_artifact_submit_response": "workpage_schedule_v0_artifact_submit_response.json",
+    "workpage_route_demand_v0_run_state": "workpage_route_demand_v0_run_state.json",
+    "workpage_route_demand_v0_artifact_state": "workpage_route_demand_v0_artifact_state.json",
+    "workpage_route_demand_v0_artifact_submit_response": "workpage_route_demand_v0_artifact_submit_response.json",
     "workspace_schedule_workpage_action_available_state": "workspace_schedule_workpage_action_available_state.json",
     "workspace_schedule_workpage_action_unavailable_state": "workspace_schedule_workpage_action_unavailable_state.json",
     "workspace_eod_workpage_action_create_state": "workspace_eod_workpage_action_create_state.json",
@@ -190,6 +193,15 @@ def build_frontend_snapshots_payloads() -> dict[str, dict[str, Any]]:
             ),
             "workpage_schedule_v0_artifact_submit_response": _build_schedule_artifact_submit_snapshot(
                 tmp_path=base / "workpage_schedule_v0_artifact_submit"
+            ),
+            "workpage_route_demand_v0_run_state": _build_route_demand_run_workpage_snapshot(
+                tmp_path=base / "workpage_route_demand_v0_run"
+            ),
+            "workpage_route_demand_v0_artifact_state": _build_route_demand_artifact_state_snapshot(
+                tmp_path=base / "workpage_route_demand_v0_artifact_state"
+            ),
+            "workpage_route_demand_v0_artifact_submit_response": _build_route_demand_artifact_submit_snapshot(
+                tmp_path=base / "workpage_route_demand_v0_artifact_submit"
             ),
             "workspace_schedule_workpage_action_available_state": _build_workspace_schedule_action_available_snapshot(
                 tmp_path=base / "workspace_schedule_workpage_action_available"
@@ -503,6 +515,135 @@ def _build_schedule_artifact_submit_snapshot(*, tmp_path: Path) -> dict[str, Any
                 "capture": "artifact_backed_submit_response",
                 "workflow_run_id": seeded["workflow_run_id"],
                 "workpage_id": "schedule-v0",
+            },
+            "submit_response": payload,
+        }
+    )
+
+
+def _build_route_demand_run_workpage_snapshot(*, tmp_path: Path) -> dict[str, Any]:
+    tmp_path.mkdir(parents=True, exist_ok=True)
+    db_url = f"sqlite:///{tmp_path / 'workpage_route_demand_v0_run.db'}"
+    seeded = seed_actual_ops_weekly_schedule_run_with_stage04_outputs(
+        db_url=db_url,
+        tenant_id="tenant-a",
+        domain_id="domain-x",
+        run_tag="snapshot:workpage-route-demand-v0-run",
+    )
+    client = RuntimeApiClient(
+        db_url=db_url,
+        tenant_id="tenant-a",
+        domain_id="domain-x",
+        actor_id="human:frontend-snapshot-exporter",
+        actor_type="human",
+        actor_roles=["dispatch_supervisor", "operations_manager", "schedule_planner"],
+    )
+    workflow_run_id = str(seeded["workflow_run_id"])
+    payload = client.get(
+        f"/api/v1/workpages/workflow-runs/{workflow_run_id}/route-demand-v0"
+    ).payload
+    return _stabilize(
+        {
+            "snapshot_id": "workpage_route_demand_v0_run_state",
+            "source": {
+                "capture": "workflow_run_query",
+                "workflow_run_id": workflow_run_id,
+                "workpage_id": "route-demand-v0",
+            },
+            "workpage_state": payload,
+        }
+    )
+
+
+def _build_route_demand_artifact_state_snapshot(*, tmp_path: Path) -> dict[str, Any]:
+    tmp_path.mkdir(parents=True, exist_ok=True)
+    db_url = f"sqlite:///{tmp_path / 'workpage_route_demand_v0_artifact.db'}"
+    seeded = seed_actual_ops_weekly_schedule_run_with_stage04_outputs(
+        db_url=db_url,
+        tenant_id="tenant-a",
+        domain_id="domain-x",
+        run_tag="snapshot:workpage-route-demand-v0-artifact",
+    )
+    client = RuntimeApiClient(
+        db_url=db_url,
+        tenant_id="tenant-a",
+        domain_id="domain-x",
+        actor_id="human:frontend-snapshot-exporter",
+        actor_type="human",
+        actor_roles=["dispatch_supervisor", "operations_manager", "schedule_planner"],
+    )
+    workflow_run_id = str(seeded["workflow_run_id"])
+    artifact_version_id = str(
+        seeded["artifacts_by_kind"]["planning.route_slot_requirements.workbook"]["artifact_version_id"]
+    )
+    payload = client.get(
+        f"/api/v1/workpages/workflow-runs/{workflow_run_id}/"
+        f"route-demand-v0/artifacts/{artifact_version_id}"
+    ).payload
+    return _stabilize(
+        {
+            "snapshot_id": "workpage_route_demand_v0_artifact_state",
+            "source": {
+                "capture": "artifact_backed_read_projection",
+                "workflow_run_id": workflow_run_id,
+                "workpage_id": "route-demand-v0",
+            },
+            "workpage_state": payload,
+        }
+    )
+
+
+def _build_route_demand_artifact_submit_snapshot(*, tmp_path: Path) -> dict[str, Any]:
+    tmp_path.mkdir(parents=True, exist_ok=True)
+    db_url = f"sqlite:///{tmp_path / 'workpage_route_demand_v0_artifact_submit.db'}"
+    seeded = seed_actual_ops_weekly_schedule_run_with_stage04_outputs(
+        db_url=db_url,
+        tenant_id="tenant-a",
+        domain_id="domain-x",
+        run_tag="snapshot:workpage-route-demand-v0-artifact-submit",
+    )
+    client = RuntimeApiClient(
+        db_url=db_url,
+        tenant_id="tenant-a",
+        domain_id="domain-x",
+        actor_id="human:frontend-snapshot-exporter",
+        actor_type="human",
+        actor_roles=["dispatch_supervisor", "operations_manager", "schedule_planner"],
+    )
+    workflow_run_id = str(seeded["workflow_run_id"])
+    artifact_version_id = str(
+        seeded["artifacts_by_kind"]["planning.route_slot_requirements.workbook"]["artifact_version_id"]
+    )
+    current = client.get(
+        f"/api/v1/workpages/workflow-runs/{workflow_run_id}/"
+        f"route-demand-v0/artifacts/{artifact_version_id}"
+    ).payload
+    day_cards = list(current["calculations"]["day_cards"])
+    day_cards[0] = {
+        **day_cards[0],
+        "planned_route_count": int(day_cards[0]["planned_route_count"]) + 2,
+    }
+    payload = client.post(
+        f"/api/v1/workpages/workflow-runs/{workflow_run_id}/"
+        f"route-demand-v0/artifacts/{artifact_version_id}/submit",
+        payload={
+            "daily_demand_rows": [
+                {
+                    "service_date": item["service_date"],
+                    "planned_route_count": item["planned_route_count"],
+                }
+                for item in day_cards
+            ],
+            "idempotency_key": "snapshot:route-demand-artifact-submit",
+        },
+    ).payload
+    return _stabilize(
+        {
+            "snapshot_id": "workpage_route_demand_v0_artifact_submit_response",
+            "source": {
+                "capture": "artifact_backed_submit_response",
+                "workflow_run_id": workflow_run_id,
+                "workpage_id": "route-demand-v0",
             },
             "submit_response": payload,
         }

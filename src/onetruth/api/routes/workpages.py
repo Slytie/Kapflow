@@ -7,6 +7,7 @@ from onetruth.application.handlers.workpages import (
     create_demo_eod_draft_command,
     create_workflow_run_eod_draft_command,
     preview_schedule_artifact_workpage_command,
+    submit_route_demand_artifact_workpage_command,
     submit_eod_artifact_workpage_command,
     submit_schedule_artifact_workpage_command,
 )
@@ -22,6 +23,8 @@ from onetruth.application.services.logistics_workpages import (
     build_eod_artifact_workpage_contract,
     build_demo_workpage_contract,
     build_eod_workflow_run_workpage_contract,
+    build_route_demand_artifact_workpage_contract,
+    build_route_demand_workflow_run_workpage_contract,
     build_schedule_artifact_workpage_contract,
     build_schedule_workflow_run_workpage_contract,
 )
@@ -34,8 +37,13 @@ from onetruth.application.services.schedule_control.draft_workbook import (
     draft_workbook_bytes_from_metadata_json,
     project_stage04_draft_weekly_schedule_workbook,
 )
+from onetruth.application.services.schedule_control.route_demand_workbook import (
+    project_route_demand_workbook,
+    route_demand_workbook_bytes_from_metadata_json,
+)
 from onetruth.application.services.workpage_descriptors import (
     EOD_DEMO_WORKPAGE_ID,
+    ROUTE_DEMAND_WORKPAGE_KIND,
     SCHEDULE_DEMO_WORKPAGE_ID,
     WorkpageDescriptor,
     descriptor_for_public_artifact,
@@ -336,6 +344,12 @@ def _build_workflow_run_workpage_contract(
             workflow_run=workflow_run,
             artifacts=artifacts,
         )
+    if descriptor.kind == ROUTE_DEMAND_WORKPAGE_KIND:
+        return build_route_demand_workflow_run_workpage_contract(
+            connection,
+            workflow_run=workflow_run,
+            artifacts=artifacts,
+        )
     if descriptor.kind == EOD_DEMO_WORKPAGE_ID:
         return build_eod_workflow_run_workpage_contract(
             workflow_run=workflow_run,
@@ -444,6 +458,16 @@ def _artifact_workpage_contract(
             download_path=f"/api/v1/artifacts/{artifact_version_id}/download.bin",
             projection=project_stage04_draft_weekly_schedule_workbook(workbook_bytes),
         )
+    if descriptor.kind == ROUTE_DEMAND_WORKPAGE_KIND:
+        return build_route_demand_artifact_workpage_contract(
+            connection,
+            artifact_version_id=artifact_version_id,
+            artifact=artifact,
+            workflow_run=workflow_run,
+            artifacts=artifacts,
+            download_path=f"/api/v1/artifacts/{artifact_version_id}/download.bin",
+            projection=project_route_demand_workbook(workbook_bytes),
+        )
     raise ApiError(
         status_code=404,
         code="workpage_artifact_not_found",
@@ -511,6 +535,17 @@ def _submit_artifact_workpage(
             )
         if descriptor.kind == SCHEDULE_DEMO_WORKPAGE_ID:
             return submit_schedule_artifact_workpage_command(
+                connection,
+                {
+                    **payload,
+                    "artifact_version_id": artifact_version_id,
+                    "actor_id": context.actor_id,
+                    "actor_type": context.actor_type,
+                },
+                storage_root=default_storage_root_for_db_url(db_url),
+            )
+        if descriptor.kind == ROUTE_DEMAND_WORKPAGE_KIND:
+            return submit_route_demand_artifact_workpage_command(
                 connection,
                 {
                     **payload,
@@ -660,6 +695,14 @@ def _artifact_workpage_bytes(
             return read_blob(storage_uri)
         try:
             return draft_workbook_bytes_from_metadata_json(artifact.get("metadata_json"))
+        except ValueError as exc:
+            raise ArtifactStorageError(str(exc)) from exc
+    if descriptor.kind == ROUTE_DEMAND_WORKPAGE_KIND and descriptor.supports_artifact_kind(artifact_kind):
+        storage_uri = str(artifact.get("storage_uri") or "")
+        if storage_uri.startswith("file:"):
+            return read_blob(storage_uri)
+        try:
+            return route_demand_workbook_bytes_from_metadata_json(artifact.get("metadata_json"))
         except ValueError as exc:
             raise ArtifactStorageError(str(exc)) from exc
     if descriptor.kind == EOD_DEMO_WORKPAGE_ID and artifact_kind == EOD_DATASET_KEY:
