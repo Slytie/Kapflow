@@ -24,10 +24,6 @@ function subjectLinkPayload(subjectContext?: WorkpageActionSubjectContext): {
 }
 
 export const workpagesRepository = {
-  async schedule(): Promise<WorkpageContract> {
-    return onetruthApi.getDemoWorkpage("schedule-v0");
-  },
-
   async scheduleForRun(workflowRunId: string): Promise<WorkpageContract> {
     return onetruthApi.getWorkflowRunScheduleWorkpage(workflowRunId);
   },
@@ -36,20 +32,22 @@ export const workpagesRepository = {
     return onetruthApi.getWorkflowRunRouteDemandWorkpage(workflowRunId);
   },
 
-  async eod(): Promise<WorkpageContract> {
-    return onetruthApi.getDemoWorkpage("eod-v0");
-  },
-
   async eodForRun(workflowRunId: string): Promise<WorkpageContract> {
     return onetruthApi.getWorkflowRunEodWorkpage(workflowRunId);
   },
 
-  async eodArtifact(artifactVersionId: string): Promise<WorkpageContract> {
-    return onetruthApi.getArtifactWorkpage(artifactVersionId);
+  async eodArtifact(
+    workflowRunId: string,
+    artifactVersionId: string
+  ): Promise<WorkpageContract> {
+    return onetruthApi.getWorkflowRunEodArtifactWorkpage(workflowRunId, artifactVersionId);
   },
 
-  async scheduleArtifact(artifactVersionId: string): Promise<WorkpageContract> {
-    return onetruthApi.getArtifactWorkpage(artifactVersionId);
+  async scheduleArtifact(
+    workflowRunId: string,
+    artifactVersionId: string
+  ): Promise<WorkpageContract> {
+    return onetruthApi.getWorkflowRunScheduleArtifactWorkpage(workflowRunId, artifactVersionId);
   },
 
   async routeDemandArtifact(
@@ -60,12 +58,6 @@ export const workpagesRepository = {
       workflowRunId,
       artifactVersionId
     );
-  },
-
-  async createEodDraft(): Promise<WorkpageCreateResponse> {
-    return onetruthApi.createDemoEodDraft({
-      idempotency_key: createIdempotencyKey("workpage-eod-draft-create", "eod-v0")
-    });
   },
 
   async createEodDraftForRun(
@@ -168,6 +160,7 @@ export const workpagesRepository = {
   },
 
   async submitEodArtifact(
+    workflowRunId: string,
     artifactVersionId: string,
     payload: {
       formValues: Record<string, unknown>;
@@ -179,7 +172,7 @@ export const workpagesRepository = {
     },
     subjectContext?: WorkpageActionSubjectContext
   ): Promise<WorkpageSubmittedResponse> {
-    return onetruthApi.submitArtifactWorkpage(artifactVersionId, {
+    return onetruthApi.submitWorkflowRunEodArtifactWorkpage(workflowRunId, artifactVersionId, {
       form_values: payload.formValues,
       checklist_values: payload.checklistValues,
       subject_link: subjectLinkPayload(subjectContext),
@@ -188,6 +181,7 @@ export const workpagesRepository = {
   },
 
   async submitScheduleArtifact(
+    workflowRunId: string,
     artifactVersionId: string,
     payload: {
       rows: Array<Record<string, unknown>>;
@@ -195,7 +189,7 @@ export const workpagesRepository = {
     },
     subjectContext?: WorkpageActionSubjectContext
   ): Promise<WorkpageSubmittedResponse> {
-    return onetruthApi.submitArtifactWorkpage(artifactVersionId, {
+    return onetruthApi.submitWorkflowRunScheduleArtifactWorkpage(workflowRunId, artifactVersionId, {
       rows: payload.rows,
       reserve_rows: payload.reserveRows,
       subject_link: subjectLinkPayload(subjectContext),

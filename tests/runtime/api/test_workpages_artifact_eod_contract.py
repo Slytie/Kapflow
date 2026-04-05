@@ -68,6 +68,21 @@ def _init_db(tmp_path: Path) -> None:
     run_cli("--db-url", _db_url(tmp_path), "init-db")
 
 
+def _draft_create_path(workflow_run_id: str) -> str:
+    return f"/api/v1/workpages/workflow-runs/{workflow_run_id}/eod-v0/drafts"
+
+
+def _artifact_path(workflow_run_id: str, artifact_version_id: str) -> str:
+    return (
+        f"/api/v1/workpages/workflow-runs/{workflow_run_id}/"
+        f"eod-v0/artifacts/{artifact_version_id}"
+    )
+
+
+def _submit_path(workflow_run_id: str, artifact_version_id: str) -> str:
+    return f"{_artifact_path(workflow_run_id, artifact_version_id)}/submit"
+
+
 def _request_approval(
     tmp_path: Path,
     *,
@@ -131,11 +146,20 @@ def _request_review_task(
     return json.loads(created.stdout)["result"]["human_task"]
 
 
-def test_create_eod_draft_creates_canonical_reporting_run_and_artifact(tmp_path: Path) -> None:
+def test_canonical_eod_draft_create_creates_artifact_in_seeded_reporting_run(
+    tmp_path: Path,
+) -> None:
+    seeded = seed_dispatch_reporting_workpage_run(
+        db_url=_db_url(tmp_path),
+        tenant_id="tenant-a",
+        domain_id="domain-x",
+        run_tag="api:eod-draft:create-001",
+    )
+    workflow_run_id = str(seeded["workflow_run_id"])
     client = _client(tmp_path)
 
     response = client.post(
-        "/api/v1/workpages/demo/eod-v0/drafts",
+        _draft_create_path(workflow_run_id),
         payload={"idempotency_key": "api:eod-draft:create-001"},
     )
     assert response.status_code == 200
@@ -144,8 +168,8 @@ def test_create_eod_draft_creates_canonical_reporting_run_and_artifact(tmp_path:
 
     draft = response.payload["draft"]
     artifact_version_id = str(draft["artifact_version_id"])
-    workflow_run_id = str(draft["workflow_run_id"])
-    assert draft["route"] == f"/demo/logistics/workpages/eod-v0/artifacts/{artifact_version_id}"
+    assert str(draft["workflow_run_id"]) == workflow_run_id
+    assert draft["route"] == f"/runs/{workflow_run_id}/workpages/eod-v0/artifacts/{artifact_version_id}"
 
     with open_sqlite_connection(_db_url(tmp_path)) as connection:
         run_rows = connection.execute(
@@ -159,7 +183,7 @@ def test_create_eod_draft_creates_canonical_reporting_run_and_artifact(tmp_path:
             {
                 "workflow_id": "dispatch_reporting.v1",
                 "partition_key": "SD-2026-03-16",
-                "activation_key": "dispatch_reporting.v1:SD-2026-03-16:eod-v0:artifact-draft",
+                "activation_key": "api:eod-draft:create-001:dispatch-reporting-workpage",
             }
         ]
 
@@ -186,15 +210,24 @@ def test_create_eod_draft_creates_canonical_reporting_run_and_artifact(tmp_path:
         assert metadata["dsp_name"] == "QDCI"
 
 
-def test_create_eod_draft_replays_idempotently_without_duplicate_artifacts(tmp_path: Path) -> None:
+def test_canonical_eod_draft_create_replays_idempotently_without_duplicate_artifacts(
+    tmp_path: Path,
+) -> None:
+    seeded = seed_dispatch_reporting_workpage_run(
+        db_url=_db_url(tmp_path),
+        tenant_id="tenant-a",
+        domain_id="domain-x",
+        run_tag="api:eod-draft:create-replay",
+    )
+    workflow_run_id = str(seeded["workflow_run_id"])
     client = _client(tmp_path)
 
     first = client.post(
-        "/api/v1/workpages/demo/eod-v0/drafts",
+        _draft_create_path(workflow_run_id),
         payload={"idempotency_key": "api:eod-draft:create-replay"},
     )
     second = client.post(
-        "/api/v1/workpages/demo/eod-v0/drafts",
+        _draft_create_path(workflow_run_id),
         payload={"idempotency_key": "api:eod-draft:create-replay"},
     )
 
@@ -311,14 +344,21 @@ def test_canonical_eod_draft_create_links_supported_stage04_review_task_as_draft
 
 
 def test_artifact_backed_eod_workpage_returns_projected_contract(tmp_path: Path) -> None:
+    seeded = seed_dispatch_reporting_workpage_run(
+        db_url=_db_url(tmp_path),
+        tenant_id="tenant-a",
+        domain_id="domain-x",
+        run_tag="api:eod-draft:read-001",
+    )
+    workflow_run_id = str(seeded["workflow_run_id"])
     client = _client(tmp_path)
     created = client.post(
-        "/api/v1/workpages/demo/eod-v0/drafts",
+        _draft_create_path(workflow_run_id),
         payload={"idempotency_key": "api:eod-draft:read-001"},
     )
     artifact_version_id = str(created.payload["draft"]["artifact_version_id"])
 
-    response = client.get(f"/api/v1/workpages/artifacts/{artifact_version_id}")
+    response = client.get(_artifact_path(workflow_run_id, artifact_version_id))
     assert response.status_code == 200
 
     payload = response.payload
@@ -409,9 +449,16 @@ def test_artifact_backed_eod_workpage_returns_projected_contract(tmp_path: Path)
 def test_submit_artifact_workpage_creates_superseding_version_and_updates_projection(
     tmp_path: Path,
 ) -> None:
+    seeded = seed_dispatch_reporting_workpage_run(
+        db_url=_db_url(tmp_path),
+        tenant_id="tenant-a",
+        domain_id="domain-x",
+        run_tag="api:eod-draft:submit-001",
+    )
+    workflow_run_id = str(seeded["workflow_run_id"])
     client = _client(tmp_path)
     created = client.post(
-        "/api/v1/workpages/demo/eod-v0/drafts",
+        _draft_create_path(workflow_run_id),
         payload={"idempotency_key": "api:eod-draft:submit-001"},
     )
     base_artifact_version_id = str(created.payload["draft"]["artifact_version_id"])
@@ -431,7 +478,7 @@ def test_submit_artifact_workpage_creates_superseding_version_and_updates_projec
         "idempotency_key": "api:eod-draft:submit-001",
     }
     submitted = client.post(
-        f"/api/v1/workpages/artifacts/{base_artifact_version_id}/submit",
+        _submit_path(workflow_run_id, base_artifact_version_id),
         payload=submit_payload,
     )
     assert submitted.status_code == 200
@@ -448,7 +495,7 @@ def test_submit_artifact_workpage_creates_superseding_version_and_updates_projec
         f"/runs/{created.payload['draft']['workflow_run_id']}/workpages/eod-v0/artifacts/{submitted_artifact_version_id}"
     )
 
-    base_read = client.get(f"/api/v1/workpages/artifacts/{base_artifact_version_id}")
+    base_read = client.get(_artifact_path(workflow_run_id, base_artifact_version_id))
     assert base_read.status_code == 200
     assert (
         base_read.payload["artifact_context"]["superseded_by_artifact_version_id"]
@@ -459,7 +506,7 @@ def test_submit_artifact_workpage_creates_superseding_version_and_updates_projec
         == submitted_artifact_version_id
     )
 
-    latest_read = client.get(f"/api/v1/workpages/artifacts/{submitted_artifact_version_id}")
+    latest_read = client.get(_artifact_path(workflow_run_id, submitted_artifact_version_id))
     assert latest_read.status_code == 200
     latest_form = {
         field["key"]: field["value"]
@@ -538,7 +585,7 @@ def test_submit_artifact_workpage_links_supported_stage04_approval_as_response(
     base_artifact_version_id = str(created.payload["draft"]["artifact_version_id"])
 
     submitted = client.post(
-        f"/api/v1/workpages/artifacts/{base_artifact_version_id}/submit",
+        _submit_path(workflow_run_id, base_artifact_version_id),
         payload={
             "form_values": {"dispatcher_comment": "Linked to Stage04 approval."},
             "checklist_values": [],
@@ -602,7 +649,7 @@ def test_submit_artifact_workpage_links_supported_stage04_review_task_as_respons
     base_artifact_version_id = str(created.payload["draft"]["artifact_version_id"])
 
     submitted = client.post(
-        f"/api/v1/workpages/artifacts/{base_artifact_version_id}/submit",
+        _submit_path(workflow_run_id, base_artifact_version_id),
         payload={
             "form_values": {"dispatcher_comment": "Linked to Stage04 review task."},
             "checklist_values": [],
@@ -636,16 +683,22 @@ def test_submit_artifact_workpage_links_supported_stage04_review_task_as_respons
 
 
 def test_workflow_run_artifact_list_includes_eod_draft_chain_versions(tmp_path: Path) -> None:
+    seeded = seed_dispatch_reporting_workpage_run(
+        db_url=_db_url(tmp_path),
+        tenant_id="tenant-a",
+        domain_id="domain-x",
+        run_tag="api:eod-draft:history-001",
+    )
+    workflow_run_id = str(seeded["workflow_run_id"])
     client = _client(tmp_path)
     created = client.post(
-        "/api/v1/workpages/demo/eod-v0/drafts",
+        _draft_create_path(workflow_run_id),
         payload={"idempotency_key": "api:eod-draft:history-001"},
     )
-    workflow_run_id = str(created.payload["draft"]["workflow_run_id"])
     base_artifact_version_id = str(created.payload["draft"]["artifact_version_id"])
 
     submitted = client.post(
-        f"/api/v1/workpages/artifacts/{base_artifact_version_id}/submit",
+        _submit_path(workflow_run_id, base_artifact_version_id),
         payload={
             "form_values": {
                 "working_devices": "37",
@@ -677,9 +730,16 @@ def test_workflow_run_artifact_list_includes_eod_draft_chain_versions(tmp_path: 
 def test_submit_artifact_workpage_replays_idempotently_without_duplicate_versions(
     tmp_path: Path,
 ) -> None:
+    seeded = seed_dispatch_reporting_workpage_run(
+        db_url=_db_url(tmp_path),
+        tenant_id="tenant-a",
+        domain_id="domain-x",
+        run_tag="api:eod-draft:submit-replay",
+    )
+    workflow_run_id = str(seeded["workflow_run_id"])
     client = _client(tmp_path)
     created = client.post(
-        "/api/v1/workpages/demo/eod-v0/drafts",
+        _draft_create_path(workflow_run_id),
         payload={"idempotency_key": "api:eod-draft:submit-replay:create"},
     )
     base_artifact_version_id = str(created.payload["draft"]["artifact_version_id"])
@@ -690,11 +750,11 @@ def test_submit_artifact_workpage_replays_idempotently_without_duplicate_version
     }
 
     first = client.post(
-        f"/api/v1/workpages/artifacts/{base_artifact_version_id}/submit",
+        _submit_path(workflow_run_id, base_artifact_version_id),
         payload=payload,
     )
     second = client.post(
-        f"/api/v1/workpages/artifacts/{base_artifact_version_id}/submit",
+        _submit_path(workflow_run_id, base_artifact_version_id),
         payload=payload,
     )
 
@@ -709,17 +769,24 @@ def test_submit_artifact_workpage_replays_idempotently_without_duplicate_version
     assert artifact_count == 2
 
 
-def test_demo_eod_draft_create_rejects_subject_link(tmp_path: Path) -> None:
+def test_canonical_eod_draft_create_rejects_invalid_subject_kind(tmp_path: Path) -> None:
+    seeded = seed_dispatch_reporting_workpage_run(
+        db_url=_db_url(tmp_path),
+        tenant_id="tenant-a",
+        domain_id="domain-x",
+        run_tag="api:eod-draft:invalid-subject-link",
+    )
+    workflow_run_id = str(seeded["workflow_run_id"])
     client = _client(tmp_path)
 
     response = client.post(
-        "/api/v1/workpages/demo/eod-v0/drafts",
+        _draft_create_path(workflow_run_id),
         payload={
             "subject_link": {
-                "subject_kind": "approval",
-                "subject_id": "ap-demo-should-fail",
+                "subject_kind": "workflow_run",
+                "subject_id": workflow_run_id,
             },
-            "idempotency_key": "api:eod-draft:demo-subject-link",
+            "idempotency_key": "api:eod-draft:invalid-subject-link",
         },
     )
     assert response.status_code == 400
@@ -765,15 +832,22 @@ def test_canonical_eod_draft_create_rejects_cross_run_approval_subject_link(
 
 
 def test_submit_artifact_workpage_returns_conflict_for_stale_base(tmp_path: Path) -> None:
+    seeded = seed_dispatch_reporting_workpage_run(
+        db_url=_db_url(tmp_path),
+        tenant_id="tenant-a",
+        domain_id="domain-x",
+        run_tag="api:eod-draft:conflict",
+    )
+    workflow_run_id = str(seeded["workflow_run_id"])
     client = _client(tmp_path)
     created = client.post(
-        "/api/v1/workpages/demo/eod-v0/drafts",
+        _draft_create_path(workflow_run_id),
         payload={"idempotency_key": "api:eod-draft:conflict:create"},
     )
     base_artifact_version_id = str(created.payload["draft"]["artifact_version_id"])
 
     first_submit = client.post(
-        f"/api/v1/workpages/artifacts/{base_artifact_version_id}/submit",
+        _submit_path(workflow_run_id, base_artifact_version_id),
         payload={
             "form_values": {"dispatcher_comment": "First submit"},
             "checklist_values": [],
@@ -784,7 +858,7 @@ def test_submit_artifact_workpage_returns_conflict_for_stale_base(tmp_path: Path
     latest_artifact_version_id = str(first_submit.payload["submitted"]["artifact_version_id"])
 
     conflict = client.post(
-        f"/api/v1/workpages/artifacts/{base_artifact_version_id}/submit",
+        _submit_path(workflow_run_id, base_artifact_version_id),
         payload={
             "form_values": {"dispatcher_comment": "Stale retry"},
             "checklist_values": [],
@@ -802,21 +876,28 @@ def test_submit_artifact_workpage_returns_conflict_for_stale_base(tmp_path: Path
 
 
 def test_artifact_backed_eod_routes_fail_closed_for_wrong_family_and_scope(tmp_path: Path) -> None:
+    seeded = seed_dispatch_reporting_workpage_run(
+        db_url=_db_url(tmp_path),
+        tenant_id="tenant-a",
+        domain_id="domain-x",
+        run_tag="api:eod-draft:scope-closed",
+    )
+    workflow_run_id = str(seeded["workflow_run_id"])
     client = _client(tmp_path)
     other_client = _other_scope_client(tmp_path)
 
     created = client.post(
-        "/api/v1/workpages/demo/eod-v0/drafts",
+        _draft_create_path(workflow_run_id),
         payload={"idempotency_key": "api:eod-draft:scope-closed"},
     )
     artifact_version_id = str(created.payload["draft"]["artifact_version_id"])
 
-    scope_denied = other_client.get(f"/api/v1/workpages/artifacts/{artifact_version_id}")
+    scope_denied = other_client.get(_artifact_path(workflow_run_id, artifact_version_id))
     assert scope_denied.status_code == 404
     assert scope_denied.payload["error"]["code"] == "workpage_artifact_not_found"
 
     wrong_family_artifact_version_id = _seed_schedule_artifact(_db_url(tmp_path))
-    wrong_family = client.get(f"/api/v1/workpages/artifacts/{wrong_family_artifact_version_id}")
+    wrong_family = client.get(_artifact_path(workflow_run_id, wrong_family_artifact_version_id))
     assert wrong_family.status_code == 404
     assert wrong_family.payload["error"]["code"] == "workpage_artifact_not_found"
 
@@ -824,9 +905,16 @@ def test_artifact_backed_eod_routes_fail_closed_for_wrong_family_and_scope(tmp_p
 def test_created_and_submitted_workpage_artifacts_download_through_normal_binary_route(
     tmp_path: Path,
 ) -> None:
+    seeded = seed_dispatch_reporting_workpage_run(
+        db_url=_db_url(tmp_path),
+        tenant_id="tenant-a",
+        domain_id="domain-x",
+        run_tag="api:eod-draft:download",
+    )
+    workflow_run_id = str(seeded["workflow_run_id"])
     client = _client(tmp_path)
     created = client.post(
-        "/api/v1/workpages/demo/eod-v0/drafts",
+        _draft_create_path(workflow_run_id),
         payload={"idempotency_key": "api:eod-draft:download:create"},
     )
     created_artifact_version_id = str(created.payload["draft"]["artifact_version_id"])
@@ -839,7 +927,7 @@ def test_created_and_submitted_workpage_artifacts_download_through_normal_binary
     )
 
     submitted = client.post(
-        f"/api/v1/workpages/artifacts/{created_artifact_version_id}/submit",
+        _submit_path(workflow_run_id, created_artifact_version_id),
         payload={
             "form_values": {
                 "dispatcher_comment": "Downloaded after submit",

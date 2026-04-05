@@ -46,22 +46,16 @@ function findTableSection(
   return sections.find((section) => section.table_id === tableId) ?? null;
 }
 
-function eodLandingRoute(workflowRunId?: string): string {
-  return workflowRunId
-    ? `/runs/${workflowRunId}/workpages/eod-v0`
-    : "/demo/logistics/workpages/eod-v0";
+function eodLandingRoute(workflowRunId: string): string {
+  return `/runs/${workflowRunId}/workpages/eod-v0`;
 }
 
-function artifactRoute(artifactVersionId: string, workflowRunId?: string): string {
-  return workflowRunId
-    ? `/runs/${workflowRunId}/workpages/eod-v0/artifacts/${artifactVersionId}`
-    : `/demo/logistics/workpages/eod-v0/artifacts/${artifactVersionId}`;
+function artifactRoute(artifactVersionId: string, workflowRunId: string): string {
+  return `/runs/${workflowRunId}/workpages/eod-v0/artifacts/${artifactVersionId}`;
 }
 
-function workpageBackRoute(workflowRunId?: string): { href: string; label: string } {
-  return workflowRunId
-    ? { href: `/runs/${workflowRunId}`, label: "Back to run detail" }
-    : { href: "/demo/logistics", label: "Back to logistics demo" };
+function workpageBackRoute(workflowRunId: string): { href: string; label: string } {
+  return { href: `/runs/${workflowRunId}`, label: "Back to run detail" };
 }
 
 function asString(value: unknown): string | null {
@@ -347,18 +341,22 @@ export function DispatchReportWorkpagePage(): JSX.Element {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { workflowRunId } = useParams<{ workflowRunId: string }>();
-  const isRunBacked = Boolean(workflowRunId);
+  if (!workflowRunId) {
+    return (
+      <StatePanel
+        kind="error"
+        title="End-of-day workpage route is unavailable"
+        detail="Open dispatch-reporting workpages from a canonical workflow-run route."
+      />
+    );
+  }
   const query = useQuery({
-    queryKey: ["workpages", "eod-v0", "landing", workflowRunId ?? "demo"],
-    queryFn: () =>
-      workflowRunId ? workpagesRepository.eodForRun(workflowRunId) : workpagesRepository.eod(),
+    queryKey: ["workpages", "eod-v0", "landing", workflowRunId],
+    queryFn: () => workpagesRepository.eodForRun(workflowRunId),
     refetchInterval: apiConfig.pollIntervalMs
   });
   const createDraftMutation = useMutation({
-    mutationFn: () =>
-      workflowRunId
-        ? workpagesRepository.createEodDraftForRun(workflowRunId)
-        : workpagesRepository.createEodDraft(),
+    mutationFn: () => workpagesRepository.createEodDraftForRun(workflowRunId),
     onSuccess: (draft) => {
       void queryClient.invalidateQueries({ queryKey: ["workpages"] });
       navigate(draft.route);
@@ -370,11 +368,7 @@ export function DispatchReportWorkpagePage(): JSX.Element {
       <StatePanel
         kind="loading"
         title="Loading end-of-day workpage"
-        detail={
-          isRunBacked
-            ? "Fetching the workflow-run-backed dispatch-reporting landing workpage."
-            : "Fetching the backend dispatch-reporting landing query."
-        }
+        detail="Fetching the workflow-run-backed dispatch-reporting landing workpage."
       />
     );
   }
@@ -384,12 +378,7 @@ export function DispatchReportWorkpagePage(): JSX.Element {
       <StatePanel
         kind="error"
         title="End-of-day workpage failed to load"
-        detail={errorText(
-          query.error,
-          isRunBacked
-            ? "Unable to load the workflow-run-backed dispatch-reporting landing workpage."
-            : "Unable to load the dispatch-reporting workpage landing query."
-        )}
+        detail={errorText(query.error, "Unable to load the workflow-run-backed dispatch-reporting landing workpage.")}
         onRetry={() => {
           void query.refetch();
         }}
@@ -407,12 +396,8 @@ export function DispatchReportWorkpagePage(): JSX.Element {
     <DispatchReportWorkpageView
       contract={query.data}
       testId="dispatch-report-workpage-page"
-      sourceDescription={
-        isRunBacked
-          ? "Workflow-run-backed dispatch-reporting landing with latest-draft resolution over a canonical reporting run."
-          : "Backend demo query served from repo-native workflow example bundles. Create an editable draft to switch into artifact-backed workbook editing."
-      }
-      summaryLabel={isRunBacked ? "Run-backed preview" : "Query preview"}
+      sourceDescription="Workflow-run-backed dispatch-reporting landing with latest-draft resolution over a canonical reporting run."
+      summaryLabel="Run-backed preview"
       backLink={backRoute.href}
       backLabel={backRoute.label}
       editable={false}
@@ -479,14 +464,22 @@ export function DispatchReportArtifactWorkpagePage(): JSX.Element {
     artifactVersionId: string;
     workflowRunId: string;
   }>();
+  if (!workflowRunId) {
+    return (
+      <StatePanel
+        kind="error"
+        title="Artifact-backed EOD route is unavailable"
+        detail="Open EOD drafts from a canonical workflow-run route."
+      />
+    );
+  }
   const query = useQuery({
-    queryKey: ["workpages", "eod-v0", "artifacts", workflowRunId ?? "demo", artifactVersionId],
-    queryFn: () => workpagesRepository.eodArtifact(artifactVersionId ?? ""),
-    enabled: Boolean(artifactVersionId),
+    queryKey: ["workpages", "eod-v0", "artifacts", workflowRunId, artifactVersionId],
+    queryFn: () => workpagesRepository.eodArtifact(workflowRunId, artifactVersionId ?? ""),
+    enabled: Boolean(artifactVersionId && workflowRunId),
     refetchInterval: apiConfig.pollIntervalMs
   });
-  const artifactWorkflowRunId =
-    workflowRunId ?? query.data?.artifact_context?.workflow_run_id ?? "";
+  const artifactWorkflowRunId = workflowRunId;
   const historyQuery = useQuery({
     queryKey: [
       "workpages",
@@ -522,10 +515,15 @@ export function DispatchReportArtifactWorkpagePage(): JSX.Element {
   );
   const submitMutation = useMutation({
     mutationFn: () =>
-      workpagesRepository.submitEodArtifact(artifactVersionId ?? "", {
-        formValues: formState,
-        checklistValues: orderedChecklistSubmitValues(checklistSection, checklistState)
-      }, resolveWorkpageSubjectContext(location.state, { workflowRunId: artifactWorkflowRunId })),
+      workpagesRepository.submitEodArtifact(
+        artifactWorkflowRunId,
+        artifactVersionId ?? "",
+        {
+          formValues: formState,
+          checklistValues: orderedChecklistSubmitValues(checklistSection, checklistState)
+        },
+        resolveWorkpageSubjectContext(location.state, { workflowRunId: artifactWorkflowRunId })
+      ),
     onSuccess: (submitted) => {
       void queryClient.invalidateQueries({ queryKey: ["workpages"] });
       void invalidateWorkspaceViews(queryClient, submitted.workflow_run_id);

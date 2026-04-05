@@ -70,18 +70,6 @@ function activeModuleIdForLocation(input: {
   if (input.pathname === "/demo/logistics") {
     return input.selectedModuleId ?? input.fallbackModuleId;
   }
-  if (input.pathname.startsWith("/demo/logistics/workpages/schedule-v0")) {
-    return "weekly_schedule_planning";
-  }
-  if (input.pathname.startsWith("/demo/logistics/workpages/route-demand-v0")) {
-    return "weekly_schedule_planning";
-  }
-  if (input.pathname.startsWith("/demo/logistics/workpages/driver-preferences-v0")) {
-    return "weekly_schedule_planning";
-  }
-  if (input.pathname.startsWith("/demo/logistics/workpages/eod-v0")) {
-    return "dispatch_reporting";
-  }
   if (/^\/runs\/[^/]+\/workpages\/schedule-v0(?:\/.*)?$/.test(input.pathname)) {
     return "weekly_schedule_planning";
   }

@@ -2,29 +2,33 @@ import { workpagesRepository } from "@/lib/repositories";
 import { mutationLog } from "@/test/api/handlers";
 
 describe("workpagesRepository", () => {
-  it("returns isolated demo query and artifact-backed EOD contracts plus create/submit responses", async () => {
-    const queryLanding = await workpagesRepository.eod();
-    const draft = await workpagesRepository.createEodDraft();
-    const artifact = await workpagesRepository.eodArtifact(draft.artifact_version_id);
-    const draftHistory = await workpagesRepository.listEodDraftHistory(draft.workflow_run_id);
-    const submitted = await workpagesRepository.submitEodArtifact(draft.artifact_version_id, {
-      formValues: {
-        working_devices: "36 online",
-        dispatcher_comment: "Drafted from the frontend repository test."
-      },
-      checklistValues: []
-    });
+  it("returns run-backed and artifact-backed EOD contracts plus canonical create/submit responses", async () => {
+    const queryLanding = await workpagesRepository.eodForRun("wr-reporting-001");
+    const draft = await workpagesRepository.createEodDraftForRun("wr-reporting-001");
+    const artifact = await workpagesRepository.eodArtifact(
+      draft.workflow_run_id,
+      draft.artifact_version_id
+    );
+    const draftHistory = await workpagesRepository.listEodDraftHistory("wr-reporting-001");
+    const submitted = await workpagesRepository.submitEodArtifact(
+      draft.workflow_run_id,
+      draft.artifact_version_id,
+      {
+        formValues: {
+          working_devices: "36 online",
+          dispatcher_comment: "Drafted from the frontend repository test."
+        },
+        checklistValues: []
+      }
+    );
     const submittedHistory = await workpagesRepository.listEodDraftHistory(draft.workflow_run_id);
 
-    queryLanding.workpage.summary.service_date = "mutated";
-
-    const queryLandingAgain = await workpagesRepository.eod();
-    expect(queryLandingAgain.workpage.summary.service_date).toBe("2026-03-16");
-    expect(queryLandingAgain.artifact_context).toBeNull();
-
     expect(draft.artifact_version_id).toBe("av-eod-artifact-001");
-    expect(draft.route).toBe("/demo/logistics/workpages/eod-v0/artifacts/av-eod-artifact-001");
+    expect(draft.route).toBe("/runs/wr-reporting-001/workpages/eod-v0/artifacts/av-eod-artifact-001");
 
+    expect(queryLanding.source.mode).toBe("run_projection");
+    expect(queryLanding.run_context?.workflow_run_id).toBe("wr-reporting-001");
+    expect(queryLanding.artifact_context).toBeNull();
     expect(artifact.source.mode).toBe("artifact_projection");
     expect(artifact.artifact_context?.artifact_version_id).toBe("av-eod-artifact-001");
     expect(artifact.freshness.source_version).toBe("av-eod-artifact-001");
@@ -32,7 +36,9 @@ describe("workpagesRepository", () => {
 
     expect(submitted.artifact_version_id).toBe("av-eod-artifact-002");
     expect(submitted.supersedes_artifact_version_id).toBe("av-eod-artifact-001");
-    expect(submitted.route).toBe("/runs/wr-eod-artifact-001/workpages/eod-v0/artifacts/av-eod-artifact-002");
+    expect(submitted.route).toBe(
+      "/runs/wr-reporting-001/workpages/eod-v0/artifacts/av-eod-artifact-002"
+    );
     expect(submittedHistory.map((row) => row.artifact_version_id)).toEqual([
       "av-eod-artifact-002",
       "av-eod-artifact-001"
@@ -73,7 +79,10 @@ describe("workpagesRepository", () => {
   it("returns schedule artifact history, fetches the artifact contract, submits a new version, and downloads JSON", async () => {
     const scheduleLanding = await workpagesRepository.scheduleForRun("wr-weekly-001");
     const initialHistory = await workpagesRepository.listScheduleDraftHistory("wr-weekly-001");
-    const artifact = await workpagesRepository.scheduleArtifact("av-schedule-artifact-001");
+    const artifact = await workpagesRepository.scheduleArtifact(
+      "wr-weekly-001",
+      "av-schedule-artifact-001"
+    );
     const previewAction = artifact.actions.find(
       (action): action is typeof artifact.actions[number] & { preview_path: string } =>
         action.kind === "preview_recalc" && typeof action.preview_path === "string"

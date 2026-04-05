@@ -375,7 +375,8 @@ def test_dispatch_reporting_happy_path_builds_review_finalizes_and_handoffs(
         idempotency_key="api:dispatch-happy:claim-review",
     )
     submitted = dispatcher_client.post(
-        f"/api/v1/workpages/artifacts/{initial_draft_artifact_id}/submit",
+        f"/api/v1/workpages/workflow-runs/{workflow_run_id}/"
+        f"eod-v0/artifacts/{initial_draft_artifact_id}/submit",
         payload={
             "form_values": {
                 "dispatcher_comment": "Reviewed Stage03 draft before manager confirmation.",
@@ -706,7 +707,8 @@ def test_dispatch_finalize_fails_closed_when_reviewed_draft_is_stale(tmp_path: P
     approval_id = _review_approval_id(db_path, workflow_run_id=workflow_run_id)
 
     newer_draft = dispatcher_client.post(
-        f"/api/v1/workpages/artifacts/{initial_draft_artifact_id}/submit",
+        f"/api/v1/workpages/workflow-runs/{workflow_run_id}/"
+        f"eod-v0/artifacts/{initial_draft_artifact_id}/submit",
         payload={
             "form_values": {"dispatcher_comment": "Create a newer draft before approval."},
             "checklist_values": [],

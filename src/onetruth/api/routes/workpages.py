@@ -4,7 +4,6 @@ import sqlite3
 
 from onetruth.application.handlers._shared.command_boundary import CommandError
 from onetruth.application.handlers.workpages import (
-    create_demo_eod_draft_command,
     create_workflow_run_driver_preferences_snapshot_command,
     create_workflow_run_eod_draft_command,
     preview_schedule_artifact_workpage_command,
@@ -20,10 +19,8 @@ from onetruth.application.read_commands import (
     show_artifact_version_command,
 )
 from onetruth.application.services.logistics_workpages import (
-    DemoWorkpageNotFoundError,
     WorkpageProjectionUnavailableError,
     build_eod_artifact_workpage_contract,
-    build_demo_workpage_contract,
     build_driver_preferences_artifact_workpage_contract,
     build_driver_preferences_workflow_run_workpage_contract,
     build_eod_workflow_run_workpage_contract,
@@ -55,8 +52,6 @@ from onetruth.application.services.workpage_descriptors import (
     ROUTE_DEMAND_WORKPAGE_KIND,
     SCHEDULE_DEMO_WORKPAGE_ID,
     WorkpageDescriptor,
-    descriptor_for_public_artifact,
-    descriptor_for_public_demo,
     descriptor_for_public_run,
     get_workpage_descriptor,
 )
@@ -65,35 +60,6 @@ from onetruth.infrastructure.artifacts.storage import (
     default_storage_root_for_db_url,
     read_blob,
 )
-
-
-def demo_workpage_endpoint(
-    *,
-    context: RequestContext,
-    workpage_id: str,
-) -> dict[str, object]:
-    del context
-    descriptor = descriptor_for_public_demo(workpage_id)
-    if descriptor is None:
-        raise ApiError(
-            status_code=404,
-            code="workpage_not_found",
-            message="workpage not found",
-            details={"workpage_id": workpage_id},
-        )
-    try:
-        contract = build_demo_workpage_contract(workpage_id)
-    except DemoWorkpageNotFoundError as exc:
-        raise ApiError(
-            status_code=404,
-            code="workpage_not_found",
-            message="workpage not found",
-            details={"workpage_id": exc.workpage_id},
-        ) from exc
-    return {
-        "command": "api.workpages.demo",
-        **contract,
-    }
 
 
 def workflow_run_workpage_endpoint(
@@ -215,33 +181,6 @@ def preview_workflow_run_artifact_workpage_endpoint(
     }
 
 
-def create_demo_eod_draft_endpoint(
-    connection: sqlite3.Connection,
-    *,
-    context: RequestContext,
-    db_url: str,
-    payload: dict[str, object],
-) -> dict[str, object]:
-    try:
-        result = create_demo_eod_draft_command(
-            connection,
-            {
-                **payload,
-                "tenant_id": context.tenant_id,
-                "domain_id": context.domain_id,
-                "actor_id": context.actor_id,
-                "actor_type": context.actor_type,
-            },
-            storage_root=default_storage_root_for_db_url(db_url),
-        )
-    except CommandError as exc:
-        raise api_error_from_command(exc) from exc
-    return {
-        "command": "api.workpages.eod_drafts.create",
-        **result,
-    }
-
-
 def create_workflow_run_eod_draft_endpoint(
     connection: sqlite3.Connection,
     *,
@@ -322,63 +261,6 @@ def create_workflow_run_driver_preferences_snapshot_endpoint(
     }
 
 
-def artifact_workpage_endpoint(
-    connection: sqlite3.Connection,
-    *,
-    context: RequestContext,
-    artifact_version_id: str,
-) -> dict[str, object]:
-    contract = _artifact_workpage_contract(
-        connection,
-        context=context,
-        artifact_version_id=artifact_version_id,
-    )
-    return {
-        "command": "api.workpages.artifact",
-        **contract,
-    }
-
-
-def submit_artifact_workpage_endpoint(
-    connection: sqlite3.Connection,
-    *,
-    context: RequestContext,
-    db_url: str,
-    artifact_version_id: str,
-    payload: dict[str, object],
-) -> dict[str, object]:
-    result = _submit_artifact_workpage(
-        connection,
-        context=context,
-        db_url=db_url,
-        artifact_version_id=artifact_version_id,
-        payload=payload,
-    )
-    return {
-        "command": "api.workpages.artifact.submit",
-        **result,
-    }
-
-
-def preview_artifact_workpage_endpoint(
-    connection: sqlite3.Connection,
-    *,
-    context: RequestContext,
-    artifact_version_id: str,
-    payload: dict[str, object],
-) -> dict[str, object]:
-    result = _preview_artifact_workpage(
-        connection,
-        context=context,
-        artifact_version_id=artifact_version_id,
-        payload=payload,
-    )
-    return {
-        "command": "api.workpages.artifact.preview",
-        **result,
-    }
-
-
 def _build_workflow_run_workpage_contract(
     connection: sqlite3.Connection,
     *,
@@ -426,8 +308,8 @@ def _artifact_workpage_contract(
     *,
     context: RequestContext,
     artifact_version_id: str,
-    workflow_run_id: str | None = None,
-    workpage_kind: str | None = None,
+    workflow_run_id: str,
+    workpage_kind: str,
 ) -> dict[str, object]:
     try:
         artifact = show_artifact_version_command(connection, artifact_version_id)
@@ -435,7 +317,7 @@ def _artifact_workpage_contract(
         raise api_error_from_command(exc) from exc
 
     artifact_workflow_run_id = str(artifact["workflow_run_id"])
-    if workflow_run_id is not None and artifact_workflow_run_id != workflow_run_id:
+    if artifact_workflow_run_id != workflow_run_id:
         raise ApiError(
             status_code=404,
             code="workpage_artifact_not_found",
@@ -548,8 +430,8 @@ def _submit_artifact_workpage(
     db_url: str,
     artifact_version_id: str,
     payload: dict[str, object],
-    workflow_run_id: str | None = None,
-    workpage_kind: str | None = None,
+    workflow_run_id: str,
+    workpage_kind: str,
 ) -> dict[str, object]:
     try:
         artifact = show_artifact_version_command(connection, artifact_version_id)
@@ -557,7 +439,7 @@ def _submit_artifact_workpage(
         raise api_error_from_command(exc) from exc
 
     artifact_workflow_run_id = str(artifact["workflow_run_id"])
-    if workflow_run_id is not None and artifact_workflow_run_id != workflow_run_id:
+    if artifact_workflow_run_id != workflow_run_id:
         raise ApiError(
             status_code=404,
             code="workpage_artifact_not_found",
@@ -647,8 +529,8 @@ def _preview_artifact_workpage(
     context: RequestContext,
     artifact_version_id: str,
     payload: dict[str, object],
-    workflow_run_id: str | None = None,
-    workpage_kind: str | None = None,
+    workflow_run_id: str,
+    workpage_kind: str,
 ) -> dict[str, object]:
     try:
         artifact = show_artifact_version_command(connection, artifact_version_id)
@@ -656,7 +538,7 @@ def _preview_artifact_workpage(
         raise api_error_from_command(exc) from exc
 
     artifact_workflow_run_id = str(artifact["workflow_run_id"])
-    if workflow_run_id is not None and artifact_workflow_run_id != workflow_run_id:
+    if artifact_workflow_run_id != workflow_run_id:
         raise ApiError(
             status_code=404,
             code="workpage_artifact_not_found",
@@ -711,23 +593,17 @@ def _resolve_public_artifact_descriptor(
     workflow_id: str,
     artifact: dict[str, object],
     artifact_version_id: str,
-    workpage_kind: str | None,
+    workpage_kind: str,
 ) -> WorkpageDescriptor:
     artifact_kind = str(artifact.get("artifact_kind") or artifact.get("dataset_key") or "")
-    if workpage_kind is None:
-        descriptor = descriptor_for_public_artifact(
-            workflow_id=workflow_id,
-            artifact_kind=artifact_kind,
-        )
-    else:
-        descriptor = get_workpage_descriptor(workpage_kind)
-        if descriptor is not None:
-            if (
-                not descriptor.artifact_enabled
-                or not descriptor.supports_workflow(workflow_id)
-                or not descriptor.supports_artifact_kind(artifact_kind)
-            ):
-                descriptor = None
+    descriptor = get_workpage_descriptor(workpage_kind)
+    if descriptor is not None:
+        if (
+            not descriptor.artifact_enabled
+            or not descriptor.supports_workflow(workflow_id)
+            or not descriptor.supports_artifact_kind(artifact_kind)
+        ):
+            descriptor = None
     if descriptor is None:
         raise ApiError(
             status_code=404,

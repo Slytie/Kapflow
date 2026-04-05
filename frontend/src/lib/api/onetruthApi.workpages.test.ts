@@ -1,6 +1,5 @@
 import { HttpResponse, http } from "msw";
 
-import artifactCreateSnapshot from "@fixtures/workpage_eod_v0_artifact_create_response.json";
 import artifactCreateRunSnapshot from "@fixtures/workpage_eod_v0_run_artifact_create_response.json";
 import driverPreferencesArtifactCreateSnapshot from "@fixtures/workpage_driver_preferences_v0_artifact_create_response.json";
 import driverPreferencesArtifactStateSnapshot from "@fixtures/workpage_driver_preferences_v0_artifact_state.json";
@@ -13,7 +12,6 @@ import routeDemandRunWorkpageStateSnapshot from "@fixtures/workpage_route_demand
 import scheduleArtifactStateSnapshot from "@fixtures/workpage_schedule_v0_artifact_state.json";
 import scheduleArtifactSubmitSnapshot from "@fixtures/workpage_schedule_v0_artifact_submit_response.json";
 import scheduleRunWorkpageStateSnapshot from "@fixtures/workpage_schedule_v0_run_state.json";
-import scheduleWorkpageStateSnapshot from "@fixtures/workpage_schedule_v0_state.json";
 import { onetruthApi } from "@/lib/api/onetruthApi";
 import { server } from "@/test/api/server";
 import {
@@ -22,34 +20,11 @@ import {
 } from "@/test/workpages/eodArtifactFixture";
 
 describe("onetruthApi workpage parsing", () => {
-  it("parses the backend demo workpage wrapper without stripping metadata", async () => {
+  it("parses the canonical artifact-backed EOD workpage wrapper including artifact context", async () => {
     server.use(
-      http.get("*/api/v1/workpages/demo/schedule-v0", () =>
-        HttpResponse.json(scheduleWorkpageStateSnapshot.workpage_state)
-      )
-    );
-
-    const contract = await onetruthApi.getDemoWorkpage("schedule-v0");
-
-    expect(contract.source).toMatchObject({
-      mode: "demo",
-      primary_dataset_key: null,
-      source_dataset_keys: [
-        "planning.route_slot_requirements.workbook",
-        "planning.approved_availability.workbook",
-        "planning.driver_capabilities.workbook",
-        "planning.actual_hours_snapshot.workbook",
-        "planning.input_bundle.doc"
-      ]
-    });
-    expect(contract.freshness.source_version).toBe("weekly_stage04_actual_ops_lab_v3");
-    expect(contract.artifact_context).toBeNull();
-    expect(contract.workpage.workpage_id).toBe("schedule-v0");
-  });
-
-  it("parses the artifact-backed workpage wrapper including artifact context", async () => {
-    server.use(
-      http.get("*/api/v1/workpages/artifacts/:artifactVersionId", () =>
+      http.get(
+        "*/api/v1/workpages/workflow-runs/:workflowRunId/eod-v0/artifacts/:artifactVersionId",
+        () =>
         HttpResponse.json(
           buildEodArtifactWorkpageState({
             artifactVersionId: "<artifact_version_id:1>",
@@ -59,7 +34,10 @@ describe("onetruthApi workpage parsing", () => {
       )
     );
 
-    const contract = await onetruthApi.getArtifactWorkpage("av-eod-artifact-001");
+    const contract = await onetruthApi.getWorkflowRunEodArtifactWorkpage(
+      "wr-reporting-001",
+      "av-eod-artifact-001"
+    );
 
     expect(contract.source.mode).toBe("artifact_projection");
     expect(contract.freshness.source_kind).toBe("artifact_version");
@@ -93,12 +71,17 @@ describe("onetruthApi workpage parsing", () => {
 
   it("parses the schedule artifact-backed workpage wrapper including artifact context", async () => {
     server.use(
-      http.get("*/api/v1/workpages/artifacts/:artifactVersionId", () =>
+      http.get(
+        "*/api/v1/workpages/workflow-runs/:workflowRunId/schedule-v0/artifacts/:artifactVersionId",
+        () =>
         HttpResponse.json(scheduleArtifactStateSnapshot.workpage_state)
       )
     );
 
-    const contract = await onetruthApi.getArtifactWorkpage("av-schedule-artifact-001");
+    const contract = await onetruthApi.getWorkflowRunScheduleArtifactWorkpage(
+      "wr-weekly-001",
+      "av-schedule-artifact-001"
+    );
 
     expect(contract.source.mode).toBe("artifact_projection");
     expect(contract.freshness.source_kind).toBe("artifact_version");
@@ -242,20 +225,6 @@ describe("onetruthApi workpage parsing", () => {
     });
   });
 
-  it("parses the draft-create envelope", async () => {
-    server.use(
-      http.post("*/api/v1/workpages/demo/eod-v0/drafts", () =>
-        HttpResponse.json(artifactCreateSnapshot.create_response)
-      )
-    );
-
-    const draft = await onetruthApi.createDemoEodDraft({
-      idempotency_key: "frontend:test:create-draft"
-    });
-
-    expect(draft).toEqual(artifactCreateSnapshot.create_response.draft);
-  });
-
   it("parses the workflow-run-backed draft-create envelope", async () => {
     server.use(
       http.post("*/api/v1/workpages/workflow-runs/:workflowRunId/eod-v0/drafts", () =>
@@ -287,9 +256,11 @@ describe("onetruthApi workpage parsing", () => {
     expect(created).toEqual(driverPreferencesArtifactCreateSnapshot.create_response.created);
   });
 
-  it("parses the artifact-submit envelope", async () => {
+  it("parses the canonical EOD artifact-submit envelope", async () => {
     server.use(
-      http.post("*/api/v1/workpages/artifacts/:artifactVersionId/submit", () =>
+      http.post(
+        "*/api/v1/workpages/workflow-runs/:workflowRunId/eod-v0/artifacts/:artifactVersionId/submit",
+        () =>
         HttpResponse.json(
           buildEodArtifactSubmitResponse({
             artifactVersionId: "<artifact_version_id:1>",
@@ -300,11 +271,15 @@ describe("onetruthApi workpage parsing", () => {
       )
     );
 
-    const submitted = await onetruthApi.submitArtifactWorkpage("av-eod-artifact-001", {
-      form_values: { working_devices: "36" },
-      checklist_values: [],
-      idempotency_key: "frontend:test:submit-draft"
-    });
+    const submitted = await onetruthApi.submitWorkflowRunEodArtifactWorkpage(
+      "wr-reporting-001",
+      "av-eod-artifact-001",
+      {
+        form_values: { working_devices: "36" },
+        checklist_values: [],
+        idempotency_key: "frontend:test:submit-draft"
+      }
+    );
 
     expect(submitted).toEqual({
       artifact_version_id: "<artifact_version_id:1>",
@@ -314,18 +289,24 @@ describe("onetruthApi workpage parsing", () => {
     });
   });
 
-  it("parses the schedule artifact-submit envelope", async () => {
+  it("parses the canonical schedule artifact-submit envelope", async () => {
     server.use(
-      http.post("*/api/v1/workpages/artifacts/:artifactVersionId/submit", () =>
+      http.post(
+        "*/api/v1/workpages/workflow-runs/:workflowRunId/schedule-v0/artifacts/:artifactVersionId/submit",
+        () =>
         HttpResponse.json(scheduleArtifactSubmitSnapshot.submit_response)
       )
     );
 
-    const submitted = await onetruthApi.submitArtifactWorkpage("av-schedule-artifact-001", {
-      rows: [],
-      reserve_rows: [],
-      idempotency_key: "frontend:test:submit-schedule-draft"
-    });
+    const submitted = await onetruthApi.submitWorkflowRunScheduleArtifactWorkpage(
+      "wr-weekly-001",
+      "av-schedule-artifact-001",
+      {
+        rows: [],
+        reserve_rows: [],
+        idempotency_key: "frontend:test:submit-schedule-draft"
+      }
+    );
 
     expect(submitted).toEqual(scheduleArtifactSubmitSnapshot.submit_response.submitted);
   });

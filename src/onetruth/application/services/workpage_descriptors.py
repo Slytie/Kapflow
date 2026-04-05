@@ -224,13 +224,6 @@ def require_workpage_descriptor(workpage_kind: str) -> WorkpageDescriptor:
     return descriptor
 
 
-def descriptor_for_public_demo(workpage_kind: str) -> WorkpageDescriptor | None:
-    descriptor = get_workpage_descriptor(workpage_kind)
-    if descriptor is None or not descriptor.demo_enabled:
-        return None
-    return descriptor
-
-
 def descriptor_for_public_run(
     *,
     workpage_kind: str,
@@ -240,23 +233,6 @@ def descriptor_for_public_run(
     if descriptor is None or not descriptor.run_enabled or not descriptor.supports_workflow(workflow_id):
         return None
     return descriptor
-
-
-def descriptor_for_public_artifact(
-    *,
-    workflow_id: str,
-    artifact_kind: str,
-) -> WorkpageDescriptor | None:
-    for descriptor in _DESCRIPTORS:
-        if not descriptor.artifact_enabled:
-            continue
-        if descriptor.supports_workflow(workflow_id) and descriptor.supports_artifact_kind(artifact_kind):
-            return descriptor
-    return None
-
-
-def public_demo_workpage_ids() -> tuple[str, ...]:
-    return tuple(descriptor.kind for descriptor in _DESCRIPTORS if descriptor.demo_enabled)
 
 
 def _normalize_scope_token(value: object) -> str:

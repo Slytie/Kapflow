@@ -37,9 +37,9 @@ function buildArtifactPayload(
 }
 
 describe("DispatchReportWorkpagePage", () => {
-  it("renders the query landing as a read-only preview and creates an editable draft route", async () => {
+  it("renders the canonical landing as a read-only preview and creates an editable draft route", async () => {
     const user = userEvent.setup();
-    window.history.pushState({}, "", "/demo/logistics/workpages/eod-v0");
+    window.history.pushState({}, "", "/runs/wr-reporting-001/workpages/eod-v0");
     render(<App />);
 
     const page = await screen.findByTestId("dispatch-report-workpage-page");
@@ -61,7 +61,7 @@ describe("DispatchReportWorkpagePage", () => {
     expect(within(landingInfoDialog).getByRole("heading", { name: "Formula-integrity warning" })).toBeInTheDocument();
     expect(
       within(landingInfoDialog).getAllByText(
-        /Create an editable draft to switch into artifact-backed workbook editing/i
+        /Workflow-run-backed dispatch-reporting landing with latest-draft resolution over a canonical reporting run/i
       )
     ).not.toHaveLength(0);
     await user.click(screen.getByRole("button", { name: /Close Dispatch reporting context/i }));
@@ -97,7 +97,9 @@ describe("DispatchReportWorkpagePage", () => {
     expect(
       within(artifactSummarySection).getByTestId("workpage-summary-card-delivered_pct")
     ).toHaveClass("workpage-summary-card");
-    expect(window.location.pathname).toBe("/demo/logistics/workpages/eod-v0/artifacts/av-eod-artifact-001");
+    expect(window.location.pathname).toBe(
+      "/runs/wr-reporting-001/workpages/eod-v0/artifacts/av-eod-artifact-001"
+    );
     expect(within(artifactPage).queryByRole("heading", { name: "Source grounding" })).not.toBeInTheDocument();
     expect(within(artifactPage).queryByRole("heading", { name: "Artifact-backed projection note" })).not.toBeInTheDocument();
 
@@ -110,7 +112,7 @@ describe("DispatchReportWorkpagePage", () => {
 
   it("keeps artifact-backed local edits across refresh when the same artifact version is re-fetched", async () => {
     const user = userEvent.setup();
-    window.history.pushState({}, "", "/demo/logistics/workpages/eod-v0");
+    window.history.pushState({}, "", "/runs/wr-reporting-001/workpages/eod-v0");
     render(<App />);
 
     await user.click(await screen.findByRole("button", { name: "Create editable draft" }));
@@ -141,7 +143,7 @@ describe("DispatchReportWorkpagePage", () => {
 
   it("submits the artifact-backed draft, navigates to the superseding route, and downloads the workbook", async () => {
     const user = userEvent.setup();
-    window.history.pushState({}, "", "/demo/logistics/workpages/eod-v0");
+    window.history.pushState({}, "", "/runs/wr-reporting-001/workpages/eod-v0");
     render(<App />);
 
     await user.click(await screen.findByRole("button", { name: "Create editable draft" }));
@@ -158,7 +160,7 @@ describe("DispatchReportWorkpagePage", () => {
 
     await waitFor(() => {
       expect(window.location.pathname).toBe(
-        "/runs/wr-eod-artifact-001/workpages/eod-v0/artifacts/av-eod-artifact-002"
+        "/runs/wr-reporting-001/workpages/eod-v0/artifacts/av-eod-artifact-002"
       );
     });
 
@@ -179,7 +181,7 @@ describe("DispatchReportWorkpagePage", () => {
 
   it("loads recent draft history from workflow-run artifacts and reopens adjacent draft versions", async () => {
     const user = userEvent.setup();
-    window.history.pushState({}, "", "/demo/logistics/workpages/eod-v0");
+    window.history.pushState({}, "", "/runs/wr-reporting-001/workpages/eod-v0");
     render(<App />);
 
     await user.click(await screen.findByRole("button", { name: "Create editable draft" }));
@@ -188,7 +190,7 @@ describe("DispatchReportWorkpagePage", () => {
 
     await waitFor(() => {
       expect(window.location.pathname).toBe(
-        "/runs/wr-eod-artifact-001/workpages/eod-v0/artifacts/av-eod-artifact-002"
+        "/runs/wr-reporting-001/workpages/eod-v0/artifacts/av-eod-artifact-002"
       );
     });
 
@@ -203,7 +205,7 @@ describe("DispatchReportWorkpagePage", () => {
 
     await waitFor(() => {
       expect(window.location.pathname).toBe(
-        "/runs/wr-eod-artifact-001/workpages/eod-v0/artifacts/av-eod-artifact-001"
+        "/runs/wr-reporting-001/workpages/eod-v0/artifacts/av-eod-artifact-001"
       );
     });
     expect(await screen.findByRole("heading", { name: "Latest draft available" })).toBeInTheDocument();
@@ -212,7 +214,9 @@ describe("DispatchReportWorkpagePage", () => {
   it("shows conflict reopen UX and preserves local edits until the operator navigates", async () => {
     const user = userEvent.setup();
     server.use(
-      http.post("*/api/v1/workpages/artifacts/:artifactVersionId/submit", ({ params }) =>
+      http.post(
+        "*/api/v1/workpages/workflow-runs/:workflowRunId/eod-v0/artifacts/:artifactVersionId/submit",
+        ({ params }) =>
         HttpResponse.json(
           {
             status: "error",
@@ -230,12 +234,14 @@ describe("DispatchReportWorkpagePage", () => {
           { status: 409 }
         )
       ),
-      http.get("*/api/v1/workpages/artifacts/av-eod-artifact-latest", () =>
+      http.get(
+        "*/api/v1/workpages/workflow-runs/:workflowRunId/eod-v0/artifacts/av-eod-artifact-latest",
+        () =>
         HttpResponse.json(buildArtifactPayload("av-eod-artifact-latest"))
       )
     );
 
-    window.history.pushState({}, "", "/demo/logistics/workpages/eod-v0");
+    window.history.pushState({}, "", "/runs/wr-reporting-001/workpages/eod-v0");
     render(<App />);
 
     await user.click(await screen.findByRole("button", { name: "Create editable draft" }));
@@ -263,15 +269,19 @@ describe("DispatchReportWorkpagePage", () => {
     );
   });
 
-  it("renders the artifact-backed route directly under the logistics shell", async () => {
+  it("renders the canonical artifact-backed route directly under the logistics shell", async () => {
     const user = userEvent.setup();
     server.use(
-      http.get("*/api/v1/workpages/artifacts/av-direct-001", () =>
+      http.get("*/api/v1/workpages/workflow-runs/:workflowRunId/eod-v0/artifacts/av-direct-001", () =>
         HttpResponse.json(buildArtifactPayload("av-direct-001"))
       )
     );
 
-    window.history.pushState({}, "", "/demo/logistics/workpages/eod-v0/artifacts/av-direct-001");
+    window.history.pushState(
+      {},
+      "",
+      "/runs/wr-eod-artifact-001/workpages/eod-v0/artifacts/av-direct-001"
+    );
     render(<App />);
 
     expect(await screen.findByTestId("dispatch-report-artifact-workpage-page")).toBeInTheDocument();
@@ -282,7 +292,9 @@ describe("DispatchReportWorkpagePage", () => {
       "href",
       "/runs"
     );
-    expect(window.location.pathname).toBe("/demo/logistics/workpages/eod-v0/artifacts/av-direct-001");
+    expect(window.location.pathname).toBe(
+      "/runs/wr-eod-artifact-001/workpages/eod-v0/artifacts/av-direct-001"
+    );
   });
 
   it("submits canonical artifact drafts with carried workspace subject context and refresh invalidation", async () => {
@@ -290,23 +302,26 @@ describe("DispatchReportWorkpagePage", () => {
     const submitBodies: Array<Record<string, unknown>> = [];
     const invalidateSpy = vi.spyOn(QueryClient.prototype, "invalidateQueries");
     server.use(
-      http.get("*/api/v1/workpages/artifacts/av-eod-artifact-001", () =>
+      http.get("*/api/v1/workpages/workflow-runs/:workflowRunId/eod-v0/artifacts/av-eod-artifact-001", () =>
         HttpResponse.json(buildArtifactPayload("av-eod-artifact-001"))
       ),
-      http.post("*/api/v1/workpages/artifacts/:artifactVersionId/submit", async ({ params, request }) => {
-        submitBodies.push((await request.json()) as Record<string, unknown>);
-        return HttpResponse.json({
-          status: "ok",
-          command: "api.workpages.artifact.submit",
-          submitted: {
-            workflow_run_id: "wr-eod-artifact-001",
-            artifact_version_id: "av-eod-artifact-010",
-            supersedes_artifact_version_id: String(params.artifactVersionId),
-            route: "/runs/wr-eod-artifact-001/workpages/eod-v0/artifacts/av-eod-artifact-010"
-          }
-        });
-      }),
-      http.get("*/api/v1/workpages/artifacts/av-eod-artifact-010", () =>
+      http.post(
+        "*/api/v1/workpages/workflow-runs/:workflowRunId/eod-v0/artifacts/:artifactVersionId/submit",
+        async ({ params, request }) => {
+          submitBodies.push((await request.json()) as Record<string, unknown>);
+          return HttpResponse.json({
+            status: "ok",
+            command: "api.workpages.artifact.submit",
+            submitted: {
+              workflow_run_id: "wr-eod-artifact-001",
+              artifact_version_id: "av-eod-artifact-010",
+              supersedes_artifact_version_id: String(params.artifactVersionId),
+              route: "/runs/wr-eod-artifact-001/workpages/eod-v0/artifacts/av-eod-artifact-010"
+            }
+          });
+        }
+      ),
+      http.get("*/api/v1/workpages/workflow-runs/:workflowRunId/eod-v0/artifacts/av-eod-artifact-010", () =>
         HttpResponse.json(buildArtifactPayload("av-eod-artifact-010"))
       )
     );
@@ -367,7 +382,7 @@ describe("DispatchReportWorkpagePage", () => {
         ];
         return HttpResponse.json(payload);
       }),
-      http.get("*/api/v1/workpages/artifacts/av-run-latest-001", () =>
+      http.get("*/api/v1/workpages/workflow-runs/:workflowRunId/eod-v0/artifacts/av-run-latest-001", () =>
         HttpResponse.json(buildArtifactPayload("av-run-latest-001", "wr-reporting-001"))
       )
     );

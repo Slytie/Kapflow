@@ -172,9 +172,13 @@ def _workspace_item(payload: dict[str, object], *, subject_kind: str, subject_id
 
 def _schedule_submit_rows(
     client: RuntimeApiClient,
+    workflow_run_id: str,
     artifact_version_id: str,
 ) -> tuple[list[dict[str, object]], list[dict[str, object]]]:
-    payload = client.get(f"/api/v1/workpages/artifacts/{artifact_version_id}").payload
+    payload = client.get(
+        f"/api/v1/workpages/workflow-runs/{workflow_run_id}/"
+        f"schedule-v0/artifacts/{artifact_version_id}"
+    ).payload
     sections = payload["workpage"]["sections"]
     assignment_section = next(
         section for section in sections if section.get("table_id") == "assignment_rows"
@@ -559,11 +563,16 @@ def test_weekly_publish_approval_auto_publishes_reviewed_latest_draft(tmp_path: 
         }
     ]
 
-    assignment_rows, reserve_rows = _schedule_submit_rows(manager_client, draft_artifact_id)
+    assignment_rows, reserve_rows = _schedule_submit_rows(
+        manager_client,
+        workflow_run_id,
+        draft_artifact_id,
+    )
     assignment_rows[0]["assigned_driver_id"] = "DRV-MANUAL-0152"
     assignment_rows[0]["assignment_status"] = "manual_override"
     submitted = manager_client.post(
-        f"/api/v1/workpages/artifacts/{draft_artifact_id}/submit",
+        f"/api/v1/workpages/workflow-runs/{workflow_run_id}/"
+        f"schedule-v0/artifacts/{draft_artifact_id}/submit",
         payload={
             "rows": assignment_rows,
             "reserve_rows": reserve_rows,
@@ -727,11 +736,16 @@ def test_weekly_publish_approval_fails_closed_when_reviewed_draft_is_stale(tmp_p
     assert review_completed.status_code == 200, review_completed.payload
     approval_id = str(review_completed.payload["result"]["requested_approvals"][0]["approval_id"])
 
-    assignment_rows, reserve_rows = _schedule_submit_rows(planner_client, initial_draft_artifact_id)
+    assignment_rows, reserve_rows = _schedule_submit_rows(
+        planner_client,
+        workflow_run_id,
+        initial_draft_artifact_id,
+    )
     assignment_rows[0]["assigned_driver_id"] = "DRV-STALE-0152"
     assignment_rows[0]["assignment_status"] = "manual_override"
     submitted = planner_client.post(
-        f"/api/v1/workpages/artifacts/{initial_draft_artifact_id}/submit",
+        f"/api/v1/workpages/workflow-runs/{workflow_run_id}/"
+        f"schedule-v0/artifacts/{initial_draft_artifact_id}/submit",
         payload={
             "rows": assignment_rows,
             "reserve_rows": reserve_rows,

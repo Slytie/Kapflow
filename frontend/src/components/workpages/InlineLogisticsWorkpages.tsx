@@ -310,7 +310,7 @@ export function InlineScheduleWorkpage({
     ],
     queryFn: () =>
       effectiveArtifactVersionId
-        ? workpagesRepository.scheduleArtifact(effectiveArtifactVersionId)
+        ? workpagesRepository.scheduleArtifact(workflowRunId, effectiveArtifactVersionId)
         : workpagesRepository.scheduleForRun(workflowRunId),
     enabled: !historyQuery.isLoading,
     refetchInterval: apiConfig.pollIntervalMs
@@ -375,7 +375,7 @@ export function InlineScheduleWorkpage({
 
   const submitMutation = useMutation({
     mutationFn: () =>
-      workpagesRepository.submitScheduleArtifact(effectiveArtifactVersionId ?? "", {
+      workpagesRepository.submitScheduleArtifact(workflowRunId, effectiveArtifactVersionId ?? "", {
         rows: assignmentRows,
         reserveRows
       }),
@@ -618,7 +618,7 @@ export function InlineDispatchReportWorkpage({
     ],
     queryFn: () =>
       effectiveArtifactVersionId
-        ? workpagesRepository.eodArtifact(effectiveArtifactVersionId)
+        ? workpagesRepository.eodArtifact(workflowRunId, effectiveArtifactVersionId)
         : workpagesRepository.eodForRun(workflowRunId),
     enabled: !historyQuery.isLoading,
     refetchInterval: apiConfig.pollIntervalMs
@@ -687,7 +687,7 @@ export function InlineDispatchReportWorkpage({
 
   const submitMutation = useMutation({
     mutationFn: () =>
-      workpagesRepository.submitEodArtifact(effectiveArtifactVersionId ?? "", {
+      workpagesRepository.submitEodArtifact(workflowRunId, effectiveArtifactVersionId ?? "", {
         formValues: formState,
         checklistValues: orderedChecklistSubmitValues(checklistSection, checklistState)
       }),

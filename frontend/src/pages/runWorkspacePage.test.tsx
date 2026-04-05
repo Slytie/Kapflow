@@ -309,7 +309,9 @@ describe("RunWorkspacePage", () => {
           })
         })
       ),
-      http.get("*/api/v1/workpages/artifacts/av-schedule-artifact-001", () =>
+      http.get(
+        "*/api/v1/workpages/workflow-runs/:workflowRunId/schedule-v0/artifacts/av-schedule-artifact-001",
+        () =>
         HttpResponse.json(structuredClone(scheduleArtifactStateSnapshot.workpage_state))
       )
     );
@@ -355,7 +357,9 @@ describe("RunWorkspacePage", () => {
           })
         })
       ),
-      http.get("*/api/v1/workpages/artifacts/av-schedule-artifact-001", () =>
+      http.get(
+        "*/api/v1/workpages/workflow-runs/:workflowRunId/schedule-v0/artifacts/av-schedule-artifact-001",
+        () =>
         HttpResponse.json(scheduleArtifactStateSnapshot.workpage_state)
       )
     );
@@ -403,7 +407,9 @@ describe("RunWorkspacePage", () => {
           })
         })
       ),
-      http.get("*/api/v1/workpages/artifacts/av-eod-artifact-001", () =>
+      http.get(
+        "*/api/v1/workpages/workflow-runs/:workflowRunId/eod-v0/artifacts/av-eod-artifact-001",
+        () =>
         HttpResponse.json(
           buildEodArtifactWorkpageState({
             artifactVersionId: "av-eod-artifact-001",

@@ -37,8 +37,8 @@ describe("Repository contract compatibility", () => {
       workflowRunsRepository.workspace("wr-test-001"),
       templatesRepository.list({ workflowId: "schedule_planning.v1", variant: "empty" }),
       logisticsStoryRepository.view({ planningWeekId: "PW-2026-W10" }),
-      workpagesRepository.schedule(),
-      workpagesRepository.eod()
+      workpagesRepository.scheduleForRun("wr-weekly-001"),
+      workpagesRepository.eodForRun("wr-reporting-001")
     ]);
 
     expect(Array.isArray(tasks)).toBe(true);
@@ -68,11 +68,9 @@ describe("Repository contract compatibility", () => {
     expect(logisticsStory.board.work_items.length).toBeGreaterThan(0);
     expect(scheduleWorkpage.workpage.sections.length).toBeGreaterThan(0);
     expect(scheduleWorkpage.source.source_dataset_keys.length).toBe(5);
-    expect(scheduleWorkpage.freshness.source_version).toBe("weekly_stage04_actual_ops_lab_v3");
+    expect(scheduleWorkpage.run_context?.workflow_run_id).toBe("wr-weekly-001");
     expect(eodWorkpage.workpage.sections.length).toBeGreaterThan(0);
     expect(eodWorkpage.source.primary_dataset_key).toBe("reporting.upd_draft.workbook");
-    expect(eodWorkpage.freshness.source_version).toBe(
-      "dispatch_reporting_2026_03_16_qdci_dvc4_partial_v1"
-    );
+    expect(eodWorkpage.run_context?.workflow_run_id).toBe("wr-reporting-001");
   });
 });

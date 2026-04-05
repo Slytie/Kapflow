@@ -4,10 +4,8 @@ import type {
   HumanTaskRow,
   HumanTaskSubgraph
 } from "@/lib/types/contracts";
-import eodArtifactCreateResponseSnapshot from "@fixtures/workpage_eod_v0_artifact_create_response.json";
 import eodRunArtifactCreateResponseSnapshot from "@fixtures/workpage_eod_v0_run_artifact_create_response.json";
 import eodRunWorkpageStateSnapshot from "@fixtures/workpage_eod_v0_run_state.json";
-import eodWorkpageStateSnapshot from "@fixtures/workpage_eod_v0_state.json";
 import driverPreferencesArtifactCreateResponseSnapshot from "@fixtures/workpage_driver_preferences_v0_artifact_create_response.json";
 import driverPreferencesArtifactStateSnapshot from "@fixtures/workpage_driver_preferences_v0_artifact_state.json";
 import driverPreferencesArtifactSubmitResponseSnapshot from "@fixtures/workpage_driver_preferences_v0_artifact_submit_response.json";
@@ -18,7 +16,6 @@ import routeDemandRunWorkpageStateSnapshot from "@fixtures/workpage_route_demand
 import scheduleArtifactStateSnapshot from "@fixtures/workpage_schedule_v0_artifact_state.json";
 import scheduleArtifactSubmitResponseSnapshot from "@fixtures/workpage_schedule_v0_artifact_submit_response.json";
 import scheduleRunWorkpageStateSnapshot from "@fixtures/workpage_schedule_v0_run_state.json";
-import scheduleWorkpageStateSnapshot from "@fixtures/workpage_schedule_v0_state.json";
 import {
   buildEodArtifactSubmitResponse,
   buildEodArtifactWorkpageState
@@ -109,10 +106,8 @@ function nextDriverPreferencesArtifactVersionId(): string {
   return `av-driver-preferences-artifact-${String(driverPreferencesArtifactVersionCounter).padStart(3, "0")}`;
 }
 
-function artifactRoute(artifactVersionId: string, workflowRunId?: string): string {
-  return workflowRunId
-    ? `/runs/${workflowRunId}/workpages/eod-v0/artifacts/${artifactVersionId}`
-    : `/demo/logistics/workpages/eod-v0/artifacts/${artifactVersionId}`;
+function artifactRoute(artifactVersionId: string, workflowRunId: string): string {
+  return `/runs/${workflowRunId}/workpages/eod-v0/artifacts/${artifactVersionId}`;
 }
 
 function scheduleArtifactRoute(artifactVersionId: string, workflowRunId: string): string {
@@ -1196,25 +1191,25 @@ function listWorkflowRunArtifacts(workflowRunId: string): ArtifactVersionRow[] {
     ensureScheduleArtifactDraft(workflowRunId);
     ensureRouteDemandArtifactDraft(workflowRunId);
   }
-  const eodArtifacts =
-    workflowRunId === EOD_WORKFLOW_RUN_ID
-      ? Array.from(eodArtifactVersions.values()).map(eodArtifactVersionRow)
-      : [];
-  const scheduleArtifacts =
-    workflowRunId === SCHEDULE_WORKFLOW_RUN_ID
-      ? Array.from(scheduleArtifactVersions.values()).map(scheduleArtifactVersionRow)
-      : [];
-  const routeDemandArtifacts =
-    workflowRunId === SCHEDULE_WORKFLOW_RUN_ID
-      ? Array.from(routeDemandArtifactVersions.values()).map(routeDemandArtifactVersionRow)
-      : [];
-  const driverPreferencesArtifacts =
-    workflowRunId === SCHEDULE_WORKFLOW_RUN_ID
-      ? Array.from(driverPreferencesArtifactVersions.values()).map(driverPreferencesArtifactVersionRow)
-      : [];
-  return [...listArtifactsForSubject("workflow_run", workflowRunId), ...eodArtifacts, ...scheduleArtifacts, ...routeDemandArtifacts, ...driverPreferencesArtifacts].sort(
-    sortArtifactRowsAscending
-  );
+  const eodArtifacts = Array.from(eodArtifactVersions.values())
+    .filter((version) => version.workflowRunId === workflowRunId)
+    .map(eodArtifactVersionRow);
+  const scheduleArtifacts = Array.from(scheduleArtifactVersions.values())
+    .filter((version) => version.workflowRunId === workflowRunId)
+    .map(scheduleArtifactVersionRow);
+  const routeDemandArtifacts = Array.from(routeDemandArtifactVersions.values())
+    .filter((version) => version.workflowRunId === workflowRunId)
+    .map(routeDemandArtifactVersionRow);
+  const driverPreferencesArtifacts = Array.from(driverPreferencesArtifactVersions.values())
+    .filter((version) => version.workflowRunId === workflowRunId)
+    .map(driverPreferencesArtifactVersionRow);
+  return [
+    ...listArtifactsForSubject("workflow_run", workflowRunId),
+    ...eodArtifacts,
+    ...scheduleArtifacts,
+    ...routeDemandArtifacts,
+    ...driverPreferencesArtifacts
+  ].sort(sortArtifactRowsAscending);
 }
 
 function updateEodArtifactChainLatest(artifactVersionId: string, latestArtifactVersionId: string): void {
@@ -1299,12 +1294,12 @@ function ensureScheduleArtifactDraft(
 
 function eodArtifactCreateResponse(
   version: EodArtifactVersionState,
-  workflowRunId?: string
+  workflowRunId: string
 ): Record<string, unknown> {
-  const snapshot = workflowRunId
-    ? eodRunArtifactCreateResponseSnapshot.create_response
-    : eodArtifactCreateResponseSnapshot.create_response;
-  const payload = cloneJson(snapshot) as Record<string, unknown>;
+  const payload = cloneJson(eodRunArtifactCreateResponseSnapshot.create_response) as Record<
+    string,
+    unknown
+  >;
   payload.draft = {
     artifact_version_id: version.artifactVersionId,
     route: artifactRoute(version.artifactVersionId, workflowRunId),
@@ -3581,9 +3576,6 @@ async function handleDriverPreferencesArtifactSubmitRequest(
 }
 
 export const handlers = [
-  http.get("*/api/v1/workpages/demo/schedule-v0", () =>
-    HttpResponse.json(scheduleWorkpageStateSnapshot.workpage_state)
-  ),
   http.get("*/api/v1/workpages/workflow-runs/:workflowRunId/schedule-v0", ({ params, request }) => {
     if (!inScope(request)) {
       return forbiddenWorkflowRun();
@@ -3611,26 +3603,11 @@ export const handlers = [
     ensureScheduleArtifactDraft(String(params.workflowRunId));
     return HttpResponse.json(buildRunRouteDemandWorkpagePayload(String(params.workflowRunId)));
   }),
-  http.get("*/api/v1/workpages/demo/eod-v0", () =>
-    HttpResponse.json(eodWorkpageStateSnapshot.workpage_state)
-  ),
   http.get("*/api/v1/workpages/workflow-runs/:workflowRunId/eod-v0", ({ params, request }) => {
     if (!inScope(request)) {
       return forbiddenWorkflowRun();
     }
     return HttpResponse.json(buildRunEodWorkpagePayload(String(params.workflowRunId)));
-  }),
-  http.post("*/api/v1/workpages/demo/eod-v0/drafts", ({ request }) => {
-    if (!inScope(request)) {
-      return forbiddenWorkflowRun();
-    }
-
-    const version = ensureEodArtifactDraft();
-    state.audit.mutations.push(`workpage-eod-draft-create:${version.artifactVersionId}`);
-    return ok({
-      command: "api.workpages.eod_drafts.create",
-      draft: (eodArtifactCreateResponse(version).draft as Record<string, unknown>) ?? {}
-    });
   }),
   http.post("*/api/v1/workpages/workflow-runs/:workflowRunId/eod-v0/drafts", ({ params, request }) => {
     if (!inScope(request)) {
@@ -3648,68 +3625,25 @@ export const handlers = [
         (eodArtifactCreateResponse(version, workflowRunId).draft as Record<string, unknown>) ?? {}
     });
   }),
-  http.get("*/api/v1/workpages/artifacts/:artifactVersionId", ({ params, request }) => {
-    if (!inScope(request)) {
-      return HttpResponse.json(
-        {
-          status: "error",
-          error: {
-            code: "workpage_artifact_not_found",
-            message: "artifact-backed workpage not found",
-            details: {
-              artifact_version_id: String(params.artifactVersionId)
-            }
-          }
-        },
-        { status: 404 }
-      );
-    }
-
-    const artifactVersionId = String(params.artifactVersionId);
-    const driverPreferencesVersion = driverPreferencesArtifactVersions.get(artifactVersionId);
-    if (driverPreferencesVersion) {
-      patchArtifactPayloadLineage(driverPreferencesVersion);
-      patchDriverPreferencesArtifactContractState(driverPreferencesVersion);
-      return HttpResponse.json(driverPreferencesVersion.payload);
-    }
-
-    const routeDemandVersion = routeDemandArtifactVersions.get(artifactVersionId);
-    if (routeDemandVersion) {
-      patchArtifactPayloadLineage(routeDemandVersion);
-      patchRouteDemandArtifactContractState(routeDemandVersion);
-      return HttpResponse.json(routeDemandVersion.payload);
-    }
-
-    const scheduleVersion = scheduleArtifactVersions.get(artifactVersionId);
-    if (scheduleVersion) {
-      patchArtifactPayloadLineage(scheduleVersion);
-      return HttpResponse.json(scheduleVersion.payload);
-    }
-
-    const eodVersion = eodArtifactVersions.get(artifactVersionId);
-    if (!eodVersion) {
-      return HttpResponse.json(
-        {
-          status: "error",
-          error: {
-            code: "workpage_artifact_not_found",
-            message: "artifact-backed workpage not found",
-            details: {
-              artifact_version_id: artifactVersionId
-            }
-          }
-        },
-        { status: 404 }
-      );
-    }
-
-    patchArtifactPayloadLineage(eodVersion);
-    return HttpResponse.json(eodVersion.payload);
-  }),
   http.post(
     "*/api/v1/workpages/workflow-runs/:workflowRunId/schedule-v0/artifacts/:artifactVersionId/preview",
     async ({ params, request }) =>
       handleScheduleArtifactPreviewRequest(String(params.artifactVersionId), request)
+  ),
+  http.get(
+    "*/api/v1/workpages/workflow-runs/:workflowRunId/schedule-v0/artifacts/:artifactVersionId",
+    ({ params, request }) => {
+      if (!inScope(request)) {
+        return scheduleArtifactNotFoundResponse(String(params.artifactVersionId));
+      }
+      const artifactVersionId = String(params.artifactVersionId);
+      const version = scheduleArtifactVersions.get(artifactVersionId);
+      if (!version) {
+        return scheduleArtifactNotFoundResponse(artifactVersionId);
+      }
+      patchArtifactPayloadLineage(version);
+      return HttpResponse.json(version.payload);
+    }
   ),
   http.get(
     "*/api/v1/workpages/workflow-runs/:workflowRunId/driver-preferences-v0/artifacts/:artifactVersionId",
@@ -3746,8 +3680,20 @@ export const handlers = [
       return HttpResponse.json(version.payload);
     }
   ),
-  http.post("*/api/v1/workpages/artifacts/:artifactVersionId/preview", async ({ params, request }) =>
-    handleScheduleArtifactPreviewRequest(String(params.artifactVersionId), request)
+  http.get(
+    "*/api/v1/workpages/workflow-runs/:workflowRunId/eod-v0/artifacts/:artifactVersionId",
+    ({ params, request }) => {
+      if (!inScope(request)) {
+        return scheduleArtifactNotFoundResponse(String(params.artifactVersionId));
+      }
+      const artifactVersionId = String(params.artifactVersionId);
+      const version = eodArtifactVersions.get(artifactVersionId);
+      if (!version) {
+        return scheduleArtifactNotFoundResponse(artifactVersionId);
+      }
+      patchArtifactPayloadLineage(version);
+      return HttpResponse.json(version.payload);
+    }
   ),
   http.post(
     "*/api/v1/workpages/workflow-runs/:workflowRunId/schedule-v0/artifacts/:artifactVersionId/submit",
@@ -3764,7 +3710,7 @@ export const handlers = [
     async ({ params, request }) =>
       handleDriverPreferencesArtifactSubmitRequest(String(params.artifactVersionId), request)
   ),
-  http.post("*/api/v1/workpages/artifacts/:artifactVersionId/submit", async ({ params, request }) => {
+  http.post("*/api/v1/workpages/workflow-runs/:workflowRunId/eod-v0/artifacts/:artifactVersionId/submit", async ({ params, request }) => {
     if (!inScope(request)) {
       return HttpResponse.json(
         {
@@ -3782,21 +3728,6 @@ export const handlers = [
     }
 
     const artifactVersionId = String(params.artifactVersionId);
-    const driverPreferencesBaseVersion = driverPreferencesArtifactVersions.get(artifactVersionId);
-    if (driverPreferencesBaseVersion) {
-      return handleDriverPreferencesArtifactSubmitRequest(artifactVersionId, request);
-    }
-
-    const routeDemandBaseVersion = routeDemandArtifactVersions.get(artifactVersionId);
-    if (routeDemandBaseVersion) {
-      return handleRouteDemandArtifactSubmitRequest(artifactVersionId, request);
-    }
-
-    const scheduleBaseVersion = scheduleArtifactVersions.get(artifactVersionId);
-    if (scheduleBaseVersion) {
-      return handleScheduleArtifactSubmitRequest(artifactVersionId, request);
-    }
-
     const baseVersion = eodArtifactVersions.get(artifactVersionId);
     if (!baseVersion) {
       return HttpResponse.json(

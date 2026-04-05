@@ -79,20 +79,16 @@ function buildTableSectionResetKey(
   ].join("|");
 }
 
-function scheduleLandingRoute(workflowRunId?: string): string {
-  return workflowRunId
-    ? `/runs/${workflowRunId}/workpages/schedule-v0`
-    : "/demo/logistics/workpages/schedule-v0";
+function scheduleLandingRoute(workflowRunId: string): string {
+  return `/runs/${workflowRunId}/workpages/schedule-v0`;
 }
 
-function scheduleArtifactRoute(artifactVersionId: string, workflowRunId?: string): string {
-  return `/runs/${workflowRunId ?? "unknown"}/workpages/schedule-v0/artifacts/${artifactVersionId}`;
+function scheduleArtifactRoute(artifactVersionId: string, workflowRunId: string): string {
+  return `/runs/${workflowRunId}/workpages/schedule-v0/artifacts/${artifactVersionId}`;
 }
 
-function workpageBackRoute(workflowRunId?: string): { href: string; label: string } {
-  return workflowRunId
-    ? { href: `/runs/${workflowRunId}`, label: "Back to run detail" }
-    : { href: "/demo/logistics", label: "Back to logistics demo" };
+function workpageBackRoute(workflowRunId: string): { href: string; label: string } {
+  return { href: `/runs/${workflowRunId}`, label: "Back to run detail" };
 }
 
 function asString(value: unknown): string | null {
@@ -215,7 +211,7 @@ function useEditableScheduleArtifactRows(
 
 function buildAcceptedRail(
   contract: WorkpageContract,
-  workflowRunId?: string
+  workflowRunId: string
 ): ScheduleVersionRailDefinition {
   const acceptedSeries = contract.accepted_series;
   const latestLogicalDate = acceptedSeries?.entries.reduce<string | null>((current, entry) => {
@@ -259,7 +255,7 @@ function buildAcceptedRail(
 function buildDraftRail(
   contract: WorkpageContract,
   historyRows: ArtifactVersionRow[],
-  workflowRunId?: string,
+  workflowRunId: string,
   currentArtifactVersionId?: string
 ): ScheduleVersionRailDefinition {
   const historyById = new Map(historyRows.map((row) => [row.artifact_version_id, row]));
@@ -393,10 +389,13 @@ function LogisticsScheduleWorkpageView({
     useScheduleSections(contract);
   const workflowRunId = contract.run_context?.workflow_run_id ?? undefined;
   const versionRails = useMemo(
-    () => [
-      buildAcceptedRail(contract, workflowRunId),
-      buildDraftRail(contract, historyRows, workflowRunId)
-    ],
+    () =>
+      workflowRunId
+        ? [
+            buildAcceptedRail(contract, workflowRunId),
+            buildDraftRail(contract, historyRows, workflowRunId)
+          ]
+        : [],
     [contract, historyRows, workflowRunId]
   );
 
@@ -453,13 +452,18 @@ export function LogisticsScheduleWorkpagePage(): JSX.Element {
   const location = useLocation();
   const queryClient = useQueryClient();
   const { workflowRunId } = useParams<{ workflowRunId: string }>();
-  const isRunBacked = Boolean(workflowRunId);
+  if (!workflowRunId) {
+    return (
+      <StatePanel
+        kind="error"
+        title="Schedule workpage route is unavailable"
+        detail="Open schedule workpages from a canonical workflow-run route."
+      />
+    );
+  }
   const query = useQuery({
-    queryKey: ["workpages", "schedule-v0", "landing", workflowRunId ?? "demo"],
-    queryFn: () =>
-      workflowRunId
-        ? workpagesRepository.scheduleForRun(workflowRunId)
-        : workpagesRepository.schedule(),
+    queryKey: ["workpages", "schedule-v0", "landing", workflowRunId],
+    queryFn: () => workpagesRepository.scheduleForRun(workflowRunId),
     refetchInterval: apiConfig.pollIntervalMs
   });
   const createDriverPreferencesMutation = useMutation({
@@ -476,11 +480,7 @@ export function LogisticsScheduleWorkpagePage(): JSX.Element {
       <StatePanel
         kind="loading"
         title="Loading schedule workpage"
-        detail={
-          isRunBacked
-            ? "Fetching the workflow-run-backed schedule workpage."
-            : "Fetching the backend demo workpage query."
-        }
+        detail="Fetching the workflow-run-backed schedule workpage."
       />
     );
   }
@@ -490,12 +490,7 @@ export function LogisticsScheduleWorkpagePage(): JSX.Element {
       <StatePanel
         kind="error"
         title="Schedule workpage failed to load"
-        detail={errorText(
-          query.error,
-          isRunBacked
-            ? "Unable to load the workflow-run-backed schedule workpage."
-            : "Unable to load the schedule workpage demo query."
-        )}
+        detail={errorText(query.error, "Unable to load the workflow-run-backed schedule workpage.")}
         onRetry={() => {
           void query.refetch();
         }}
@@ -515,12 +510,8 @@ export function LogisticsScheduleWorkpagePage(): JSX.Element {
     <LogisticsScheduleWorkpageView
       contract={query.data}
       testId="schedule-workpage-page"
-      sourceDescription={
-        isRunBacked
-          ? "Workflow-run-backed schedule projection served from canonical weekly Stage04 source artifacts."
-          : "Backend demo query served from repo-native workflow example bundles."
-      }
-      summaryLabel={isRunBacked ? "Run-backed review" : "Query preview"}
+      sourceDescription="Workflow-run-backed schedule projection served from canonical weekly Stage04 source artifacts."
+      summaryLabel="Run-backed review"
       backLink={backRoute.href}
       backLabel={backRoute.label}
       onRefresh={() => {
@@ -528,20 +519,57 @@ export function LogisticsScheduleWorkpagePage(): JSX.Element {
       }}
       isRefreshing={query.isFetching}
       preContent={
-        isRunBacked ? (
-          openLatestDraftAction?.route && openLatestDraftAction.state === "available" ? (
-            <section className="workpage-panel workpage-panel--callout">
-              <header className="workpage-panel__header">
-                <h2>Editable draft available</h2>
-                <p>
-                  This landing page stays read-only. Open the backend-selected latest draft when you
-                  need live preview and save controls.
-                </p>
-              </header>
-              <div className="action-cluster">
-                <Link className="link-button" to={openLatestDraftAction.route}>
-                  Open editable draft
+        openLatestDraftAction?.route && openLatestDraftAction.state === "available" ? (
+          <section className="workpage-panel workpage-panel--callout">
+            <header className="workpage-panel__header">
+              <h2>Editable draft available</h2>
+              <p>
+                This landing page stays read-only. Open the backend-selected latest draft when you
+                need live preview and save controls.
+              </p>
+            </header>
+            <div className="action-cluster">
+              <Link className="link-button" to={openLatestDraftAction.route}>
+                Open editable draft
+              </Link>
+              {routeDemandAction?.route ? (
+                <Link className="link-button" to={routeDemandAction.route}>
+                  Open route demand
                 </Link>
+              ) : null}
+              {driverPreferencesAction?.route ? (
+                <Link className="link-button" to={driverPreferencesAction.route}>
+                  Open driver preferences
+                </Link>
+              ) : driverPreferencesAction?.create_path ? (
+                <button
+                  type="button"
+                  className="action-btn"
+                  disabled={createDriverPreferencesMutation.isPending}
+                  onClick={() =>
+                    createDriverPreferencesMutation.mutate(
+                      driverPreferencesAction.create_path ?? ""
+                    )
+                  }
+                >
+                  {createDriverPreferencesMutation.isPending
+                    ? "Creating preferences snapshot..."
+                    : "Create preferences snapshot"}
+                </button>
+              ) : null}
+            </div>
+          </section>
+        ) : (
+          <section className="workpage-panel workpage-panel--callout">
+            <header className="workpage-panel__header">
+              <h2>No editable draft artifact yet</h2>
+              <p>
+                The Stage04 draft weekly schedule artifact is not available for this run yet. Stay
+                on the landing page until the canonical draft artifact exists.
+              </p>
+            </header>
+            {routeDemandAction?.route || driverPreferencesAction?.route || driverPreferencesAction?.create_path ? (
+              <div className="action-cluster">
                 {routeDemandAction?.route ? (
                   <Link className="link-button" to={routeDemandAction.route}>
                     Open route demand
@@ -568,48 +596,9 @@ export function LogisticsScheduleWorkpagePage(): JSX.Element {
                   </button>
                 ) : null}
               </div>
-            </section>
-          ) : (
-            <section className="workpage-panel workpage-panel--callout">
-              <header className="workpage-panel__header">
-                <h2>No editable draft artifact yet</h2>
-                <p>
-                  The Stage04 draft weekly schedule artifact is not available for this run yet. Stay
-                  on the landing page until the canonical draft artifact exists.
-                </p>
-              </header>
-              {routeDemandAction?.route || driverPreferencesAction?.route || driverPreferencesAction?.create_path ? (
-                <div className="action-cluster">
-                  {routeDemandAction?.route ? (
-                    <Link className="link-button" to={routeDemandAction.route}>
-                      Open route demand
-                    </Link>
-                  ) : null}
-                  {driverPreferencesAction?.route ? (
-                    <Link className="link-button" to={driverPreferencesAction.route}>
-                      Open driver preferences
-                    </Link>
-                  ) : driverPreferencesAction?.create_path ? (
-                    <button
-                      type="button"
-                      className="action-btn"
-                      disabled={createDriverPreferencesMutation.isPending}
-                      onClick={() =>
-                        createDriverPreferencesMutation.mutate(
-                          driverPreferencesAction.create_path ?? ""
-                        )
-                      }
-                    >
-                      {createDriverPreferencesMutation.isPending
-                        ? "Creating preferences snapshot..."
-                        : "Create preferences snapshot"}
-                    </button>
-                  ) : null}
-                </div>
-              ) : null}
-            </section>
-          )
-        ) : null
+            ) : null}
+          </section>
+        )
       }
     />
   );
@@ -629,14 +618,23 @@ export function LogisticsScheduleArtifactWorkpagePage(): JSX.Element {
     artifactVersionId: string;
     workflowRunId: string;
   }>();
+  if (!workflowRunId) {
+    return (
+      <StatePanel
+        kind="error"
+        title="Schedule draft route is unavailable"
+        detail="Open schedule drafts from a canonical workflow-run route."
+      />
+    );
+  }
   const query = useQuery({
     queryKey: ["workpages", "schedule-v0", "artifacts", workflowRunId, artifactVersionId],
-    queryFn: () => workpagesRepository.scheduleArtifact(artifactVersionId ?? ""),
-    enabled: Boolean(artifactVersionId),
+    queryFn: () => workpagesRepository.scheduleArtifact(workflowRunId, artifactVersionId ?? ""),
+    enabled: Boolean(artifactVersionId && workflowRunId),
     refetchInterval: apiConfig.pollIntervalMs
   });
   const contract = query.data;
-  const artifactWorkflowRunId = workflowRunId ?? contract?.artifact_context?.workflow_run_id ?? "";
+  const artifactWorkflowRunId = workflowRunId;
   const historyQuery = useQuery({
     queryKey: ["workpages", "schedule-v0", "history", artifactWorkflowRunId],
     queryFn: () => workpagesRepository.listScheduleDraftHistory(artifactWorkflowRunId),
@@ -695,6 +693,7 @@ export function LogisticsScheduleArtifactWorkpagePage(): JSX.Element {
         );
       }
       return workpagesRepository.submitScheduleArtifact(
+        artifactWorkflowRunId,
         artifactVersionId ?? "",
         {
           rows: assignmentRows,

@@ -104,7 +104,7 @@ def test_route_demand_run_workpage_contract_returns_latest_route_demand_projecti
     assert payload["calculations"]["day_cards"]
 
 
-def test_route_demand_artifact_workpage_supports_alias_and_historical_read_only(
+def test_route_demand_artifact_workpage_uses_canonical_route_and_retires_alias(
     tmp_path: Path,
 ) -> None:
     seeded = seed_actual_ops_weekly_schedule_run_with_stage04_outputs(
@@ -118,7 +118,10 @@ def test_route_demand_artifact_workpage_supports_alias_and_historical_read_only(
     route_artifact_id = str(route_artifact["artifact_version_id"])
     client = _client(tmp_path)
 
-    initial = client.get(f"/api/v1/workpages/artifacts/{route_artifact_id}")
+    initial = client.get(
+        f"/api/v1/workpages/workflow-runs/{workflow_run_id}/"
+        f"route-demand-v0/artifacts/{route_artifact_id}"
+    )
     assert initial.status_code == 200, initial.payload
     initial_payload = initial.payload
     assert initial_payload["workpage"]["workpage_id"] == "route-demand-v0"
@@ -136,6 +139,9 @@ def test_route_demand_artifact_workpage_supports_alias_and_historical_read_only(
             "disabled_reason": None,
         }
     ]
+    alias_read = client.get(f"/api/v1/workpages/artifacts/{route_artifact_id}")
+    assert alias_read.status_code == 404
+    assert alias_read.payload["error"]["code"] == "not_found"
 
     submit_rows = _route_demand_submit_rows(route_artifact)
     submit_rows[0]["planned_route_count"] = int(submit_rows[0]["planned_route_count"]) + 2
@@ -220,7 +226,10 @@ def test_route_demand_save_propagates_schedule_drift_and_creates_one_refresh_tas
         for action in run_schedule.payload["actions"]
     )
 
-    artifact_schedule = client.get(f"/api/v1/workpages/artifacts/{schedule_draft_artifact_id}")
+    artifact_schedule = client.get(
+        f"/api/v1/workpages/workflow-runs/{workflow_run_id}/"
+        f"schedule-v0/artifacts/{schedule_draft_artifact_id}"
+    )
     assert artifact_schedule.status_code == 200, artifact_schedule.payload
     artifact_route_dependency = next(
         row

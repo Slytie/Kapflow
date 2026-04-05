@@ -261,7 +261,8 @@ def test_eod_workflow_run_workpage_uses_latest_draft_after_submit(
     base_artifact_version_id = str(created.payload["draft"]["artifact_version_id"])
 
     submitted = client.post(
-        f"/api/v1/workpages/artifacts/{base_artifact_version_id}/submit",
+        f"/api/v1/workpages/workflow-runs/{workflow_run_id}/"
+        f"eod-v0/artifacts/{base_artifact_version_id}/submit",
         payload={
             "form_values": {
                 "dispatcher_comment": "Run-backed landing should reopen the latest draft.",

@@ -34,9 +34,13 @@ def _action_by_id(
 
 def _schedule_submit_rows(
     client: RuntimeApiClient,
+    workflow_run_id: str,
     artifact_version_id: str,
 ) -> tuple[list[dict[str, object]], list[dict[str, object]]]:
-    payload = client.get(f"/api/v1/workpages/artifacts/{artifact_version_id}").payload
+    payload = client.get(
+        f"/api/v1/workpages/workflow-runs/{workflow_run_id}/"
+        f"schedule-v0/artifacts/{artifact_version_id}"
+    ).payload
     sections = payload["workpage"]["sections"]
     assignment_section = next(
         section for section in sections if section.get("table_id") == "assignment_rows"
@@ -113,7 +117,7 @@ def test_driver_preferences_run_workpage_lands_on_create_snapshot_when_none_exis
     }
 
 
-def test_driver_preferences_create_route_returns_canonical_artifact_and_alias_read(
+def test_driver_preferences_create_route_returns_canonical_artifact_and_retires_alias_read(
     tmp_path: Path,
 ) -> None:
     seeded = seed_actual_ops_weekly_schedule_run_with_stage04_outputs(
@@ -140,9 +144,10 @@ def test_driver_preferences_create_route_returns_canonical_artifact_and_alias_re
         ),
     }
 
-    alias_read = client.get(f"/api/v1/workpages/artifacts/{artifact_version_id}")
-    assert alias_read.status_code == 200, alias_read.payload
-    payload = alias_read.payload
+    payload = client.get(
+        f"/api/v1/workpages/workflow-runs/{workflow_run_id}/"
+        f"driver-preferences-v0/artifacts/{artifact_version_id}"
+    ).payload
     assert payload["workpage"]["workpage_id"] == "driver-preferences-v0"
     assert payload["artifact_state"] == {
         "state_kind": "artifact_projection",
@@ -165,6 +170,9 @@ def test_driver_preferences_create_route_returns_canonical_artifact_and_alias_re
         ),
         "disabled_reason": None,
     }
+    alias_read = client.get(f"/api/v1/workpages/artifacts/{artifact_version_id}")
+    assert alias_read.status_code == 404
+    assert alias_read.payload["error"]["code"] == "not_found"
 
 
 def test_driver_preferences_submit_creates_successor_and_historical_read_only(
@@ -196,7 +204,8 @@ def test_driver_preferences_submit_creates_successor_and_historical_read_only(
     driver_rows[0]["preferences_by_weekday"]["mon"] = "open_to_work"
 
     submitted = client.post(
-        f"/api/v1/workpages/artifacts/{artifact_version_id}/submit",
+        f"/api/v1/workpages/workflow-runs/{workflow_run_id}/"
+        f"driver-preferences-v0/artifacts/{artifact_version_id}/submit",
         payload={
             "driver_rows": [
                 {
@@ -273,7 +282,11 @@ def test_schedule_contracts_use_latest_preferences_softly_and_keep_pinned_drafts
         workflow_run_id=workflow_run_id,
         run_tag="api:workpages:driver-preferences:schedule-soft",
     )
-    assignment_rows, reserve_rows = _schedule_submit_rows(client, initial_schedule_artifact_id)
+    assignment_rows, reserve_rows = _schedule_submit_rows(
+        client,
+        workflow_run_id,
+        initial_schedule_artifact_id,
+    )
     first_preferences_artifact_id = str(created["created"]["artifact_version_id"])
     run_schedule_before_update = client.get(
         f"/api/v1/workpages/workflow-runs/{workflow_run_id}/schedule-v0"
@@ -337,7 +350,8 @@ def test_schedule_contracts_use_latest_preferences_softly_and_keep_pinned_drafts
     pinned_schedule_artifact_id = str(saved_schedule.payload["submitted"]["artifact_version_id"])
 
     aligned_schedule_payload = client.get(
-        f"/api/v1/workpages/artifacts/{pinned_schedule_artifact_id}"
+        f"/api/v1/workpages/workflow-runs/{workflow_run_id}/"
+        f"schedule-v0/artifacts/{pinned_schedule_artifact_id}"
     ).payload
     aligned_driver_preferences_dependency = next(
         row
@@ -408,7 +422,8 @@ def test_schedule_contracts_use_latest_preferences_softly_and_keep_pinned_drafts
     }
 
     drifted_schedule_payload = client.get(
-        f"/api/v1/workpages/artifacts/{pinned_schedule_artifact_id}"
+        f"/api/v1/workpages/workflow-runs/{workflow_run_id}/"
+        f"schedule-v0/artifacts/{pinned_schedule_artifact_id}"
     ).payload
     drifted_driver_preferences_dependency = next(
         row

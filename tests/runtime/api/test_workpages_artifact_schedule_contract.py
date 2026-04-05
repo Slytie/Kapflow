@@ -120,9 +120,10 @@ def _request_approval(
 
 def _schedule_submit_rows(
     client: RuntimeApiClient,
+    workflow_run_id: str,
     artifact_version_id: str,
 ) -> tuple[list[dict[str, object]], list[dict[str, object]]]:
-    payload = client.get(f"/api/v1/workpages/artifacts/{artifact_version_id}").payload
+    payload = client.get(_artifact_path(workflow_run_id, artifact_version_id)).payload
     sections = payload["workpage"]["sections"]
     assignment_section = next(
         section for section in sections if section.get("table_id") == "assignment_rows"
@@ -134,6 +135,21 @@ def _schedule_submit_rows(
         deepcopy(assignment_section["rows"]),
         deepcopy(reserve_section["rows"]),
     )
+
+
+def _artifact_path(workflow_run_id: str, artifact_version_id: str) -> str:
+    return (
+        f"/api/v1/workpages/workflow-runs/{workflow_run_id}/"
+        f"schedule-v0/artifacts/{artifact_version_id}"
+    )
+
+
+def _submit_path(workflow_run_id: str, artifact_version_id: str) -> str:
+    return f"{_artifact_path(workflow_run_id, artifact_version_id)}/submit"
+
+
+def _preview_path(workflow_run_id: str, artifact_version_id: str) -> str:
+    return f"{_artifact_path(workflow_run_id, artifact_version_id)}/preview"
 
 
 def _load_artifact_version(
@@ -274,7 +290,7 @@ def test_artifact_backed_schedule_workpage_returns_projected_contract(tmp_path: 
     artifact_version_id = str(seeded["stage04_outputs"]["draft_workbook"]["artifact_version_id"])
     client = _client(tmp_path)
 
-    response = client.get(f"/api/v1/workpages/artifacts/{artifact_version_id}")
+    response = client.get(_artifact_path(workflow_run_id, artifact_version_id))
     assert response.status_code == 200
 
     payload = response.payload
@@ -485,7 +501,7 @@ def test_artifact_backed_schedule_workpage_reads_are_stable_except_for_generated
     )
     artifact_version_id = str(seeded["stage04_outputs"]["draft_workbook"]["artifact_version_id"])
     client = _client(tmp_path)
-    path = f"/api/v1/workpages/artifacts/{artifact_version_id}"
+    path = _artifact_path(str(seeded["workflow_run_id"]), artifact_version_id)
 
     first = client.get(path)
     second = client.get(path)
@@ -495,7 +511,7 @@ def test_artifact_backed_schedule_workpage_reads_are_stable_except_for_generated
     assert _without_generated_at(first.payload) == _without_generated_at(second.payload)
 
 
-def test_artifact_backed_schedule_workpage_canonical_route_matches_alias(
+def test_artifact_backed_schedule_workpage_retires_public_alias_route(
     tmp_path: Path,
 ) -> None:
     seeded = seed_actual_ops_weekly_schedule_run_with_stage04_outputs(
@@ -509,16 +525,11 @@ def test_artifact_backed_schedule_workpage_canonical_route_matches_alias(
     client = _client(tmp_path)
 
     alias_response = client.get(f"/api/v1/workpages/artifacts/{artifact_version_id}")
-    canonical_response = client.get(
-        f"/api/v1/workpages/workflow-runs/{workflow_run_id}/"
-        f"schedule-v0/artifacts/{artifact_version_id}"
-    )
+    canonical_response = client.get(_artifact_path(workflow_run_id, artifact_version_id))
 
-    assert alias_response.status_code == 200
+    assert alias_response.status_code == 404
+    assert alias_response.payload["error"]["code"] == "not_found"
     assert canonical_response.status_code == 200
-    assert _without_generated_at(alias_response.payload) == _without_generated_at(
-        canonical_response.payload
-    )
 
 
 def test_schedule_artifact_route_rejects_wrong_artifact_family(tmp_path: Path) -> None:
@@ -553,7 +564,7 @@ def test_artifact_backed_schedule_workpage_cross_scope_access_fails_closed(tmp_p
     artifact_version_id = str(seeded["stage04_outputs"]["draft_workbook"]["artifact_version_id"])
     client = _other_scope_client(tmp_path)
 
-    response = client.get(f"/api/v1/workpages/artifacts/{artifact_version_id}")
+    response = client.get(_artifact_path(workflow_run_id, artifact_version_id))
     assert response.status_code == 404
     assert response.payload["error"]["code"] == "workpage_artifact_not_found"
     assert response.payload["error"]["details"] == {"artifact_version_id": artifact_version_id}
@@ -792,7 +803,7 @@ def test_published_schedule_without_accepted_series_key_returns_empty_series(tmp
     }
 
 
-def test_schedule_artifact_submit_canonical_route_matches_alias(tmp_path: Path) -> None:
+def test_schedule_artifact_submit_retires_public_alias_route(tmp_path: Path) -> None:
     seeded = seed_actual_ops_weekly_schedule_run_with_stage04_outputs(
         db_url=_db_url(tmp_path),
         tenant_id="tenant-a",
@@ -802,11 +813,14 @@ def test_schedule_artifact_submit_canonical_route_matches_alias(tmp_path: Path) 
     workflow_run_id = str(seeded["workflow_run_id"])
     artifact_version_id = str(seeded["stage04_outputs"]["draft_workbook"]["artifact_version_id"])
     client = _client(tmp_path)
-    assignment_rows, reserve_rows = _schedule_submit_rows(client, artifact_version_id)
+    assignment_rows, reserve_rows = _schedule_submit_rows(
+        client,
+        workflow_run_id,
+        artifact_version_id,
+    )
 
     canonical = client.post(
-        f"/api/v1/workpages/workflow-runs/{workflow_run_id}/"
-        f"schedule-v0/artifacts/{artifact_version_id}/submit",
+        _submit_path(workflow_run_id, artifact_version_id),
         payload={
             "rows": assignment_rows,
             "reserve_rows": reserve_rows,
@@ -823,11 +837,11 @@ def test_schedule_artifact_submit_canonical_route_matches_alias(tmp_path: Path) 
     )
 
     assert canonical.status_code == 200
-    assert alias.status_code == 200
-    assert alias.payload == canonical.payload
+    assert alias.status_code == 404
+    assert alias.payload["error"]["code"] == "not_found"
 
 
-def test_schedule_artifact_preview_canonical_route_matches_alias(tmp_path: Path) -> None:
+def test_schedule_artifact_preview_retires_public_alias_route(tmp_path: Path) -> None:
     seeded = seed_actual_ops_weekly_schedule_run_with_stage04_outputs(
         db_url=_db_url(tmp_path),
         tenant_id="tenant-a",
@@ -837,11 +851,14 @@ def test_schedule_artifact_preview_canonical_route_matches_alias(tmp_path: Path)
     workflow_run_id = str(seeded["workflow_run_id"])
     artifact_version_id = str(seeded["stage04_outputs"]["draft_workbook"]["artifact_version_id"])
     client = _client(tmp_path)
-    assignment_rows, reserve_rows = _schedule_submit_rows(client, artifact_version_id)
+    assignment_rows, reserve_rows = _schedule_submit_rows(
+        client,
+        workflow_run_id,
+        artifact_version_id,
+    )
 
     canonical = client.post(
-        f"/api/v1/workpages/workflow-runs/{workflow_run_id}/"
-        f"schedule-v0/artifacts/{artifact_version_id}/preview",
+        _preview_path(workflow_run_id, artifact_version_id),
         payload={"rows": assignment_rows, "reserve_rows": reserve_rows},
     )
     alias = client.post(
@@ -850,8 +867,8 @@ def test_schedule_artifact_preview_canonical_route_matches_alias(tmp_path: Path)
     )
 
     assert canonical.status_code == 200
-    assert alias.status_code == 200
-    assert alias.payload == canonical.payload
+    assert alias.status_code == 404
+    assert alias.payload["error"]["code"] == "not_found"
 
 
 def test_schedule_artifact_preview_recalculates_without_creating_artifacts(tmp_path: Path) -> None:
@@ -864,7 +881,11 @@ def test_schedule_artifact_preview_recalculates_without_creating_artifacts(tmp_p
     workflow_run_id = str(seeded["workflow_run_id"])
     artifact_version_id = str(seeded["stage04_outputs"]["draft_workbook"]["artifact_version_id"])
     client = _client(tmp_path)
-    assignment_rows, reserve_rows = _schedule_submit_rows(client, artifact_version_id)
+    assignment_rows, reserve_rows = _schedule_submit_rows(
+        client,
+        workflow_run_id,
+        artifact_version_id,
+    )
     assignment_rows[0]["assigned_driver_id"] = "DRV-PREVIEW-77"
     assignment_rows[0]["assignment_status"] = "manual_override"
 
@@ -875,7 +896,7 @@ def test_schedule_artifact_preview_recalculates_without_creating_artifacts(tmp_p
         ).fetchone()["count"]
 
     response = client.post(
-        f"/api/v1/workpages/artifacts/{artifact_version_id}/preview",
+        _preview_path(workflow_run_id, artifact_version_id),
         payload={"rows": assignment_rows, "reserve_rows": reserve_rows},
     )
     assert response.status_code == 200
@@ -910,7 +931,7 @@ def test_schedule_artifact_submit_creates_superseding_version_and_replays_idempo
     artifact_version_id = str(seeded["stage04_outputs"]["draft_workbook"]["artifact_version_id"])
     client = _client(tmp_path)
 
-    base = client.get(f"/api/v1/workpages/artifacts/{artifact_version_id}").payload
+    base = client.get(_artifact_path(workflow_run_id, artifact_version_id)).payload
     assignment_rows = deepcopy(
         next(
             section["rows"]
@@ -931,7 +952,7 @@ def test_schedule_artifact_submit_creates_superseding_version_and_replays_idempo
     reserve_rows[0]["assignment_status"] = "manual_override"
 
     first = client.post(
-        f"/api/v1/workpages/artifacts/{artifact_version_id}/submit",
+        _submit_path(workflow_run_id, artifact_version_id),
         payload={
             "rows": assignment_rows,
             "reserve_rows": reserve_rows,
@@ -939,7 +960,7 @@ def test_schedule_artifact_submit_creates_superseding_version_and_replays_idempo
         },
     )
     second = client.post(
-        f"/api/v1/workpages/artifacts/{artifact_version_id}/submit",
+        _submit_path(workflow_run_id, artifact_version_id),
         payload={
             "rows": assignment_rows,
             "reserve_rows": reserve_rows,
@@ -959,7 +980,7 @@ def test_schedule_artifact_submit_creates_superseding_version_and_replays_idempo
         f"/runs/{workflow_run_id}/workpages/schedule-v0/artifacts/{submitted_artifact_version_id}"
     )
 
-    refreshed = client.get(f"/api/v1/workpages/artifacts/{submitted_artifact_version_id}")
+    refreshed = client.get(_artifact_path(workflow_run_id, submitted_artifact_version_id))
     assert refreshed.status_code == 200
     refreshed_assignment_rows = next(
         section["rows"]
@@ -1023,10 +1044,14 @@ def test_schedule_artifact_submit_links_response_to_supported_human_task_surface
         activation_key="stage05-information-request",
     )
     client = _client(tmp_path)
-    assignment_rows, reserve_rows = _schedule_submit_rows(client, artifact_version_id)
+    assignment_rows, reserve_rows = _schedule_submit_rows(
+        client,
+        workflow_run_id,
+        artifact_version_id,
+    )
 
     response = client.post(
-        f"/api/v1/workpages/artifacts/{artifact_version_id}/submit",
+        _submit_path(workflow_run_id, artifact_version_id),
         payload={
             "rows": assignment_rows,
             "reserve_rows": reserve_rows,
@@ -1077,10 +1102,14 @@ def test_schedule_artifact_submit_links_response_to_supported_stage06_approval_s
         scope_ref="Stage06",
     )
     client = _client(tmp_path)
-    assignment_rows, reserve_rows = _schedule_submit_rows(client, artifact_version_id)
+    assignment_rows, reserve_rows = _schedule_submit_rows(
+        client,
+        workflow_run_id,
+        artifact_version_id,
+    )
 
     response = client.post(
-        f"/api/v1/workpages/artifacts/{artifact_version_id}/submit",
+        _submit_path(workflow_run_id, artifact_version_id),
         payload={
             "rows": assignment_rows,
             "reserve_rows": reserve_rows,
@@ -1124,7 +1153,7 @@ def test_schedule_artifact_submit_rejects_stale_base_versions(tmp_path: Path) ->
     artifact_version_id = str(seeded["stage04_outputs"]["draft_workbook"]["artifact_version_id"])
     client = _client(tmp_path)
 
-    base = client.get(f"/api/v1/workpages/artifacts/{artifact_version_id}").payload
+    base = client.get(_artifact_path(workflow_run_id, artifact_version_id)).payload
     assignment_rows = deepcopy(
         next(
             section["rows"]
@@ -1143,7 +1172,7 @@ def test_schedule_artifact_submit_rejects_stale_base_versions(tmp_path: Path) ->
     assignment_rows[0]["assignment_status"] = "manual_override"
 
     created = client.post(
-        f"/api/v1/workpages/artifacts/{artifact_version_id}/submit",
+        _submit_path(workflow_run_id, artifact_version_id),
         payload={
             "rows": assignment_rows,
             "reserve_rows": reserve_rows,
@@ -1153,7 +1182,7 @@ def test_schedule_artifact_submit_rejects_stale_base_versions(tmp_path: Path) ->
     latest_artifact_version_id = str(created.payload["submitted"]["artifact_version_id"])
 
     stale = client.post(
-        f"/api/v1/workpages/artifacts/{artifact_version_id}/submit",
+        _submit_path(workflow_run_id, artifact_version_id),
         payload={
             "rows": assignment_rows,
             "reserve_rows": reserve_rows,
@@ -1194,7 +1223,7 @@ def test_schedule_artifact_hard_dependency_drift_surfaces_and_blocks_save(
     )
     client = _client(tmp_path)
 
-    payload = client.get(f"/api/v1/workpages/artifacts/{artifact_version_id}").payload
+    payload = client.get(_artifact_path(workflow_run_id, artifact_version_id)).payload
     dependencies = {row["dependency_key"]: row for row in payload["dependencies"]}
     assert dependencies["route_slot_requirements"]["state"] == "drifted"
     actions = payload["actions"]
@@ -1227,16 +1256,20 @@ def test_schedule_artifact_hard_dependency_drift_surfaces_and_blocks_save(
     assert _action_by_id(actions, "workpage.route-demand-v0.open_latest")["state"] == "available"
     assert _action_by_id(actions, "workpage.driver-preferences-v0.create_snapshot")["state"] == "available"
 
-    assignment_rows, reserve_rows = _schedule_submit_rows(client, artifact_version_id)
+    assignment_rows, reserve_rows = _schedule_submit_rows(
+        client,
+        workflow_run_id,
+        artifact_version_id,
+    )
     preview = client.post(
-        f"/api/v1/workpages/artifacts/{artifact_version_id}/preview",
+        _preview_path(workflow_run_id, artifact_version_id),
         payload={"rows": assignment_rows, "reserve_rows": reserve_rows},
     )
     assert preview.status_code == 200
     assert preview.payload["preview"]["dependency_state"] == "drifted"
 
     denied = client.post(
-        f"/api/v1/workpages/artifacts/{artifact_version_id}/submit",
+        _submit_path(workflow_run_id, artifact_version_id),
         payload={
             "rows": assignment_rows,
             "reserve_rows": reserve_rows,
@@ -1268,7 +1301,7 @@ def test_schedule_artifact_without_pinned_manifest_remains_readable_but_blocks_p
     )
     client = _client(tmp_path)
 
-    payload = client.get(f"/api/v1/workpages/artifacts/{artifact_version_id}").payload
+    payload = client.get(_artifact_path(workflow_run_id, artifact_version_id)).payload
     dependencies = {row["dependency_key"]: row for row in payload["dependencies"]}
     assert dependencies["route_slot_requirements"]["state"] == "not_pinned"
     assert dependencies["approved_availability"]["state"] == "not_pinned"
@@ -1304,16 +1337,20 @@ def test_schedule_artifact_without_pinned_manifest_remains_readable_but_blocks_p
     assert _action_by_id(actions, "workpage.route-demand-v0.open_latest")["state"] == "available"
     assert _action_by_id(actions, "workpage.driver-preferences-v0.create_snapshot")["state"] == "available"
 
-    assignment_rows, reserve_rows = _schedule_submit_rows(client, artifact_version_id)
+    assignment_rows, reserve_rows = _schedule_submit_rows(
+        client,
+        workflow_run_id,
+        artifact_version_id,
+    )
     preview = client.post(
-        f"/api/v1/workpages/artifacts/{artifact_version_id}/preview",
+        _preview_path(workflow_run_id, artifact_version_id),
         payload={"rows": assignment_rows, "reserve_rows": reserve_rows},
     )
     assert preview.status_code == 400
     assert preview.payload["error"]["code"] == "dependency_baseline_unavailable"
 
     denied = client.post(
-        f"/api/v1/workpages/artifacts/{artifact_version_id}/submit",
+        _submit_path(workflow_run_id, artifact_version_id),
         payload={
             "rows": assignment_rows,
             "reserve_rows": reserve_rows,
@@ -1335,7 +1372,7 @@ def test_schedule_artifact_submit_cross_scope_denial_fails_closed(tmp_path: Path
     other_scope_client = _other_scope_client(tmp_path)
 
     response = other_scope_client.post(
-        f"/api/v1/workpages/artifacts/{artifact_version_id}/submit",
+        _submit_path(str(seeded["workflow_run_id"]), artifact_version_id),
         payload={
             "rows": [],
             "reserve_rows": [],
@@ -1366,10 +1403,14 @@ def test_schedule_artifact_submit_rejects_unsupported_subject_surface(tmp_path: 
         activation_key="stage06-final-review",
     )
     client = _client(tmp_path)
-    assignment_rows, reserve_rows = _schedule_submit_rows(client, artifact_version_id)
+    assignment_rows, reserve_rows = _schedule_submit_rows(
+        client,
+        workflow_run_id,
+        artifact_version_id,
+    )
 
     response = client.post(
-        f"/api/v1/workpages/artifacts/{artifact_version_id}/submit",
+        _submit_path(workflow_run_id, artifact_version_id),
         payload={
             "rows": assignment_rows,
             "reserve_rows": reserve_rows,
@@ -1423,7 +1464,7 @@ def test_schedule_artifact_route_rejects_non_weekly_schedule_artifacts(tmp_path:
     artifact_version_id = str(stdout_json(created_artifact)["artifact_version"]["artifact_version_id"])
     client = _client(tmp_path)
 
-    response = client.get(f"/api/v1/workpages/artifacts/{artifact_version_id}")
+    response = client.get(_artifact_path(workflow_run_id, artifact_version_id))
     assert response.status_code == 404
     assert response.payload["error"]["code"] == "workpage_artifact_not_found"
     assert response.payload["error"]["details"] == {"artifact_version_id": artifact_version_id}

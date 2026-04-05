@@ -66,11 +66,6 @@ def test_route_registry_preserves_exact_global_route_order() -> None:
         "workpages.workflow_run.detail",
         "workpages.workflow_run.eod_drafts.create",
         "workpages.workflow_run.driver_preferences.snapshots.create",
-        "workpages.eod_drafts.create",
-        "workpages.artifact.preview",
-        "workpages.artifact.detail",
-        "workpages.artifact.submit",
-        "workpages.demo.detail",
     ]
 
 
@@ -158,35 +153,12 @@ def test_route_registry_matches_representative_exact_and_parameterized_routes() 
         "workflow_run_id": "wr-001"
     }
 
-    workpage_match = match_route("GET", "/api/v1/workpages/demo/schedule-v0")
-    assert workpage_match is not None
-    assert workpage_match.route.name == "workpages.demo.detail"
-    assert workpage_match.params == {"workpage_id": "schedule-v0"}
-
-    eod_workpage_match = match_route("GET", "/api/v1/workpages/demo/eod-v0")
-    assert eod_workpage_match is not None
-    assert eod_workpage_match.route.name == "workpages.demo.detail"
-    assert eod_workpage_match.params == {"workpage_id": "eod-v0"}
-
-    artifact_workpage_match = match_route("GET", "/api/v1/workpages/artifacts/av-001")
-    assert artifact_workpage_match is not None
-    assert artifact_workpage_match.route.name == "workpages.artifact.detail"
-    assert artifact_workpage_match.params == {"artifact_version_id": "av-001"}
-
-    artifact_preview_match = match_route("POST", "/api/v1/workpages/artifacts/av-001/preview")
-    assert artifact_preview_match is not None
-    assert artifact_preview_match.route.name == "workpages.artifact.preview"
-    assert artifact_preview_match.params == {"artifact_version_id": "av-001"}
-
-    artifact_submit_match = match_route("POST", "/api/v1/workpages/artifacts/av-001/submit")
-    assert artifact_submit_match is not None
-    assert artifact_submit_match.route.name == "workpages.artifact.submit"
-    assert artifact_submit_match.params == {"artifact_version_id": "av-001"}
-
-    eod_draft_match = match_route("POST", "/api/v1/workpages/demo/eod-v0/drafts")
-    assert eod_draft_match is not None
-    assert eod_draft_match.route.name == "workpages.eod_drafts.create"
-    assert eod_draft_match.params == {}
+    assert match_route("GET", "/api/v1/workpages/demo/schedule-v0") is None
+    assert match_route("GET", "/api/v1/workpages/demo/eod-v0") is None
+    assert match_route("GET", "/api/v1/workpages/artifacts/av-001") is None
+    assert match_route("POST", "/api/v1/workpages/artifacts/av-001/preview") is None
+    assert match_route("POST", "/api/v1/workpages/artifacts/av-001/submit") is None
+    assert match_route("POST", "/api/v1/workpages/demo/eod-v0/drafts") is None
 
 
 def test_route_registry_preserves_suffix_precedence_over_detail_routes() -> None:
@@ -301,30 +273,11 @@ def test_route_registry_exposes_representative_metadata() -> None:
     )
     assert routes_by_name["workpages.workflow_run.eod_drafts.create"].needs_db_connection is True
 
-    assert routes_by_name["workpages.eod_drafts.create"].needs_page is False
-    assert routes_by_name["workpages.eod_drafts.create"].body_policy == JSON_COMMAND_BODY
-    assert routes_by_name["workpages.eod_drafts.create"].requires_request_context is True
-    assert routes_by_name["workpages.eod_drafts.create"].needs_db_connection is True
-
-    assert routes_by_name["workpages.artifact.detail"].needs_page is False
-    assert routes_by_name["workpages.artifact.detail"].body_policy == NO_BODY
-    assert routes_by_name["workpages.artifact.detail"].requires_request_context is True
-    assert routes_by_name["workpages.artifact.detail"].needs_db_connection is True
-
-    assert routes_by_name["workpages.artifact.preview"].needs_page is False
-    assert routes_by_name["workpages.artifact.preview"].body_policy == JSON_COMMAND_BODY
-    assert routes_by_name["workpages.artifact.preview"].requires_request_context is True
-    assert routes_by_name["workpages.artifact.preview"].needs_db_connection is True
-
-    assert routes_by_name["workpages.artifact.submit"].needs_page is False
-    assert routes_by_name["workpages.artifact.submit"].body_policy == JSON_COMMAND_BODY
-    assert routes_by_name["workpages.artifact.submit"].requires_request_context is True
-    assert routes_by_name["workpages.artifact.submit"].needs_db_connection is True
-
-    assert routes_by_name["workpages.demo.detail"].needs_page is False
-    assert routes_by_name["workpages.demo.detail"].body_policy == NO_BODY
-    assert routes_by_name["workpages.demo.detail"].requires_request_context is True
-    assert routes_by_name["workpages.demo.detail"].needs_db_connection is False
+    assert "workpages.eod_drafts.create" not in routes_by_name
+    assert "workpages.artifact.detail" not in routes_by_name
+    assert "workpages.artifact.preview" not in routes_by_name
+    assert "workpages.artifact.submit" not in routes_by_name
+    assert "workpages.demo.detail" not in routes_by_name
 
 
 def test_route_registry_preserves_current_permissive_vs_strict_slash_behavior() -> None:

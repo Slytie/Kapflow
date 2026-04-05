@@ -415,9 +415,8 @@ function normalizeWorkpageActions(value: unknown): WorkflowWorkspaceWorkpageActi
   return asArray<Record<string, unknown>>(value).map((action) => {
     const subjectContext = asRecord(action.subject_context);
     const linkPolicy = asRecord(action.link_policy);
-    const rawPresentation = asString(action.presentation, "open_route");
     const presentation: WorkflowWorkspaceWorkpageAction["presentation"] =
-      rawPresentation === "create_then_open" || rawPresentation === "create_draft_then_open"
+      asString(action.presentation, "open_route") === "create_then_open"
         ? "create_then_open"
         : "open_route";
     const rawState = asString(action.state, "unavailable");
@@ -1565,21 +1564,6 @@ export const onetruthApi = {
     return requiredObject(result.result, "result") as PrepareLiveDispatchEnvelope["result"];
   },
 
-  async getDemoWorkpage(workpageId: string): Promise<WorkpageContract> {
-    const payload = await requestJson<WorkpageEnvelope>(
-      `/workpages/demo/${encodeURIComponent(workpageId)}`
-    );
-    return normalizeWorkpageContract(payload);
-  },
-
-  async createDemoEodDraft(payload: { idempotency_key: string }): Promise<WorkpageCreateResponse> {
-    const result = await requestJson<WorkpageCreateEnvelope>("/workpages/demo/eod-v0/drafts", {
-      method: "POST",
-      body: payload
-    });
-    return normalizeWorkpageCreateResponse(result);
-  },
-
   async getWorkflowRunScheduleWorkpage(workflowRunId: string): Promise<WorkpageContract> {
     const payload = await requestJson<WorkpageEnvelope>(
       `/workpages/workflow-runs/${encodeURIComponent(workflowRunId)}/schedule-v0`
@@ -1622,9 +1606,22 @@ export const onetruthApi = {
     return normalizeWorkpageCreateResponse(result);
   },
 
-  async getArtifactWorkpage(artifactVersionId: string): Promise<WorkpageContract> {
+  async getWorkflowRunScheduleArtifactWorkpage(
+    workflowRunId: string,
+    artifactVersionId: string
+  ): Promise<WorkpageContract> {
     const payload = await requestJson<WorkpageEnvelope>(
-      `/workpages/artifacts/${encodeURIComponent(artifactVersionId)}`
+      `/workpages/workflow-runs/${encodeURIComponent(workflowRunId)}/schedule-v0/artifacts/${encodeURIComponent(artifactVersionId)}`
+    );
+    return normalizeWorkpageContract(payload);
+  },
+
+  async getWorkflowRunEodArtifactWorkpage(
+    workflowRunId: string,
+    artifactVersionId: string
+  ): Promise<WorkpageContract> {
+    const payload = await requestJson<WorkpageEnvelope>(
+      `/workpages/workflow-runs/${encodeURIComponent(workflowRunId)}/eod-v0/artifacts/${encodeURIComponent(artifactVersionId)}`
     );
     return normalizeWorkpageContract(payload);
   },
@@ -1660,21 +1657,38 @@ export const onetruthApi = {
     return normalizeWorkpageCreateResponse(result);
   },
 
-  async submitArtifactWorkpage(
+  async submitWorkflowRunScheduleArtifactWorkpage(
+    workflowRunId: string,
     artifactVersionId: string,
     payload: {
-      form_values?: Record<string, unknown>;
-      checklist_values?: Array<Record<string, unknown>>;
       rows?: Array<Record<string, unknown>>;
       reserve_rows?: Array<Record<string, unknown>>;
-      daily_demand_rows?: Array<Record<string, unknown>>;
-      driver_rows?: Array<Record<string, unknown>>;
       subject_link?: WorkpageSubjectLinkPayload;
       idempotency_key: string;
     }
   ): Promise<WorkpageSubmittedResponse> {
     const result = await requestJson<WorkpageSubmitEnvelope>(
-      `/workpages/artifacts/${encodeURIComponent(artifactVersionId)}/submit`,
+      `/workpages/workflow-runs/${encodeURIComponent(workflowRunId)}/schedule-v0/artifacts/${encodeURIComponent(artifactVersionId)}/submit`,
+      {
+        method: "POST",
+        body: payload
+      }
+    );
+    return normalizeWorkpageSubmittedResponse(result);
+  },
+
+  async submitWorkflowRunEodArtifactWorkpage(
+    workflowRunId: string,
+    artifactVersionId: string,
+    payload: {
+      form_values?: Record<string, unknown>;
+      checklist_values?: Array<Record<string, unknown>>;
+      subject_link?: WorkpageSubjectLinkPayload;
+      idempotency_key: string;
+    }
+  ): Promise<WorkpageSubmittedResponse> {
+    const result = await requestJson<WorkpageSubmitEnvelope>(
+      `/workpages/workflow-runs/${encodeURIComponent(workflowRunId)}/eod-v0/artifacts/${encodeURIComponent(artifactVersionId)}/submit`,
       {
         method: "POST",
         body: payload

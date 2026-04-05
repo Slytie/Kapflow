@@ -55,12 +55,6 @@ export function App(): JSX.Element {
             <Route path="/" element={<Navigate to="/demo/logistics" replace />} />
             <Route element={<AppShell />}>
               <Route path="/demo/logistics" element={<LogisticsDemoPage />} />
-              <Route path="/demo/logistics/workpages/schedule-v0" element={<LogisticsScheduleWorkpagePage />} />
-              <Route path="/demo/logistics/workpages/eod-v0" element={<DispatchReportWorkpagePage />} />
-              <Route
-                path="/demo/logistics/workpages/eod-v0/artifacts/:artifactVersionId"
-                element={<DispatchReportArtifactWorkpagePage />}
-              />
               <Route
                 path="/runs/:workflowRunId/workpages/schedule-v0"
                 element={<LogisticsScheduleWorkpagePage />}

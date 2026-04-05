@@ -222,7 +222,9 @@ describe("LogisticsScheduleArtifactWorkpagePage", () => {
             { status: 409 }
           )
       ),
-      http.get("*/api/v1/workpages/artifacts/av-schedule-artifact-latest", () =>
+      http.get(
+        "*/api/v1/workpages/workflow-runs/:workflowRunId/schedule-v0/artifacts/av-schedule-artifact-latest",
+        () =>
         HttpResponse.json(buildScheduleArtifactPayload("av-schedule-artifact-latest"))
       )
     );
@@ -267,7 +269,9 @@ describe("LogisticsScheduleArtifactWorkpagePage", () => {
   it("uses accepted-series navigation without traversing the draft rail", async () => {
     const user = userEvent.setup();
     server.use(
-      http.get("*/api/v1/workpages/artifacts/av-schedule-accepted-002", () =>
+      http.get(
+        "*/api/v1/workpages/workflow-runs/:workflowRunId/schedule-v0/artifacts/av-schedule-accepted-002",
+        () =>
         HttpResponse.json(
           buildScheduleArtifactPayload("av-schedule-accepted-002", "wr-weekly-001", (payload) => {
             payload.actions = [];
@@ -320,7 +324,9 @@ describe("LogisticsScheduleArtifactWorkpagePage", () => {
           })
         )
       ),
-      http.get("*/api/v1/workpages/artifacts/av-schedule-accepted-001", () =>
+      http.get(
+        "*/api/v1/workpages/workflow-runs/:workflowRunId/schedule-v0/artifacts/av-schedule-accepted-001",
+        () =>
         HttpResponse.json(
           buildScheduleArtifactPayload("av-schedule-accepted-001", "wr-weekly-000", (payload) => {
             payload.actions = [];
@@ -449,7 +455,9 @@ describe("LogisticsScheduleArtifactWorkpagePage", () => {
     const user = userEvent.setup();
     const submitBodies: Array<Record<string, unknown>> = [];
     server.use(
-      http.get("*/api/v1/workpages/artifacts/av-schedule-artifact-001", () =>
+      http.get(
+        "*/api/v1/workpages/workflow-runs/:workflowRunId/schedule-v0/artifacts/av-schedule-artifact-001",
+        () =>
         HttpResponse.json(buildScheduleArtifactPayload("av-schedule-artifact-001"))
       ),
       http.post(
@@ -468,7 +476,9 @@ describe("LogisticsScheduleArtifactWorkpagePage", () => {
           });
         }
       ),
-      http.get("*/api/v1/workpages/artifacts/av-schedule-artifact-010", () =>
+      http.get(
+        "*/api/v1/workpages/workflow-runs/:workflowRunId/schedule-v0/artifacts/av-schedule-artifact-010",
+        () =>
         HttpResponse.json(buildScheduleArtifactPayload("av-schedule-artifact-010"))
       )
     );
