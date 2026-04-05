@@ -183,4 +183,53 @@ describe("workpagesRepository", () => {
       "workpage-route-demand-artifact-submit:av-route-demand-artifact-001:av-route-demand-artifact-002"
     );
   });
+
+  it("creates, reads, lists, and saves immutable driver-preferences snapshots", async () => {
+    const landingBeforeCreate = await workpagesRepository.driverPreferencesForRun("wr-weekly-001");
+    const created = await workpagesRepository.createWorkpage(
+      "/api/v1/workpages/workflow-runs/wr-weekly-001/driver-preferences-v0/snapshots"
+    );
+    const artifact = await workpagesRepository.driverPreferencesArtifact(
+      "wr-weekly-001",
+      created.artifact_version_id
+    );
+    const initialHistory = await workpagesRepository.listDriverPreferencesHistory("wr-weekly-001");
+    const saveAction = artifact.actions.find((action) => action.kind === "save");
+    const firstDriver = artifact.preference_grid?.drivers[0];
+    const submitted = await workpagesRepository.submitDriverPreferencesArtifactAtPath(
+      saveAction?.submit_path ?? "",
+      created.artifact_version_id,
+      {
+        driverRows: (artifact.preference_grid?.drivers ?? []).map((row, index) => ({
+          driver_id: row.driver_id,
+          preferences_by_weekday:
+            index === 0
+              ? { ...row.preferences_by_weekday, mon: "open_to_work" }
+              : row.preferences_by_weekday
+        }))
+      }
+    );
+    const submittedHistory = await workpagesRepository.listDriverPreferencesHistory("wr-weekly-001");
+
+    expect(landingBeforeCreate.actions.map((action) => action.kind)).toEqual(["create_snapshot"]);
+    expect(created.route).toBe(
+      "/runs/wr-weekly-001/workpages/driver-preferences-v0/artifacts/av-driver-preferences-artifact-001"
+    );
+    expect(artifact.preference_grid?.drivers[0]?.driver_id).toBe(firstDriver?.driver_id);
+    expect(initialHistory.map((row) => row.artifact_version_id)).toEqual([
+      "av-driver-preferences-artifact-001"
+    ]);
+    expect(submitted.artifact_version_id).toBe("av-driver-preferences-artifact-002");
+    expect(submitted.supersedes_artifact_version_id).toBe("av-driver-preferences-artifact-001");
+    expect(submitted.route).toBe(
+      "/runs/wr-weekly-001/workpages/driver-preferences-v0/artifacts/av-driver-preferences-artifact-002"
+    );
+    expect(submittedHistory.map((row) => row.artifact_version_id)).toEqual([
+      "av-driver-preferences-artifact-002",
+      "av-driver-preferences-artifact-001"
+    ]);
+    expect(mutationLog()).toContain(
+      "workpage-driver-preferences-artifact-submit:av-driver-preferences-artifact-001:av-driver-preferences-artifact-002"
+    );
+  });
 });

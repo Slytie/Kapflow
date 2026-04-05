@@ -65,6 +65,7 @@ def test_route_registry_preserves_exact_global_route_order() -> None:
         "workpages.workflow_run.artifact.submit",
         "workpages.workflow_run.detail",
         "workpages.workflow_run.eod_drafts.create",
+        "workpages.workflow_run.driver_preferences.snapshots.create",
         "workpages.eod_drafts.create",
         "workpages.artifact.preview",
         "workpages.artifact.detail",
@@ -143,6 +144,19 @@ def test_route_registry_matches_representative_exact_and_parameterized_routes() 
     assert workflow_run_eod_draft_match is not None
     assert workflow_run_eod_draft_match.route.name == "workpages.workflow_run.eod_drafts.create"
     assert workflow_run_eod_draft_match.params == {"workflow_run_id": "wr-001"}
+
+    workflow_run_driver_preferences_snapshot_match = match_route(
+        "POST",
+        "/api/v1/workpages/workflow-runs/wr-001/driver-preferences-v0/snapshots",
+    )
+    assert workflow_run_driver_preferences_snapshot_match is not None
+    assert (
+        workflow_run_driver_preferences_snapshot_match.route.name
+        == "workpages.workflow_run.driver_preferences.snapshots.create"
+    )
+    assert workflow_run_driver_preferences_snapshot_match.params == {
+        "workflow_run_id": "wr-001"
+    }
 
     workpage_match = match_route("GET", "/api/v1/workpages/demo/schedule-v0")
     assert workpage_match is not None
@@ -258,6 +272,26 @@ def test_route_registry_exposes_representative_metadata() -> None:
     assert routes_by_name["workpages.workflow_run.detail"].body_policy == NO_BODY
     assert routes_by_name["workpages.workflow_run.detail"].requires_request_context is True
     assert routes_by_name["workpages.workflow_run.detail"].needs_db_connection is True
+
+    assert (
+        routes_by_name["workpages.workflow_run.driver_preferences.snapshots.create"].needs_page
+        is False
+    )
+    assert (
+        routes_by_name["workpages.workflow_run.driver_preferences.snapshots.create"].body_policy
+        == JSON_COMMAND_BODY
+    )
+    assert (
+        routes_by_name[
+            "workpages.workflow_run.driver_preferences.snapshots.create"
+        ].requires_request_context
+        is True
+    )
+    assert (
+        routes_by_name["workpages.workflow_run.driver_preferences.snapshots.create"]
+        .needs_db_connection
+        is True
+    )
 
     assert routes_by_name["workpages.workflow_run.eod_drafts.create"].needs_page is False
     assert routes_by_name["workpages.workflow_run.eod_drafts.create"].body_policy == JSON_COMMAND_BODY

@@ -79,7 +79,7 @@ describe("onetruthApi workspace parsing", () => {
 
     expect(createItem?.workpage_actions[0]).toMatchObject({
       ...firstWorkpageAction(dispatchCreateSnapshot),
-      presentation: "create_draft_then_open",
+      presentation: "create_then_open",
       route: null
     });
     expect(openItem?.workpage_actions[0]).toMatchObject({

@@ -386,7 +386,7 @@ describe("RunWorkspacePage", () => {
             action_id: "workpage.eod-v0.create_draft",
             workpage_kind: "eod-v0",
             label: "Create EOD draft",
-            presentation: "create_draft_then_open",
+            presentation: "create_then_open",
             state: "available",
             route: null,
             create_path: "/api/v1/workpages/workflow-runs/wr-eod-artifact-001/eod-v0/drafts",

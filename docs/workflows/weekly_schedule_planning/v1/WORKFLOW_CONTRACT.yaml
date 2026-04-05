@@ -85,6 +85,9 @@ stages:
   - dataset_key: planning.route_slot_requirements.workbook
     kind: spreadsheet
     role: official_input
+  - dataset_key: planning.driver_shift_preferences.workbook
+    kind: spreadsheet
+    role: official_input
   - dataset_key: planning.driver_capabilities.workbook
     kind: spreadsheet
     role: official_input
@@ -121,6 +124,9 @@ stages:
     and recent actual hours.
   - Route-slot requirements and driver capabilities are canonical bridge inputs for
     deterministic Stage04 schedule-control candidate generation.
+  - Driver shift preferences may exist as an optional weekly advisory snapshot for
+    workpage-level schedule cues and operator review, but they do not become hard
+    scheduling truth in this workflow version.
   - Those same Stage04 bridge artifact kinds now carry richer day-resolution planning
     payloads, including daily demand summaries, driver-day availability states, prior-week
     day state, rolling-7 compliance inputs, and policy signals without introducing

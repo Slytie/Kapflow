@@ -1,5 +1,7 @@
 import type {
   WorkpageAction,
+  WorkpageDriverPreferencesGrid,
+  WorkpageDriverPreferencesScheduleImpact,
   WorkpageRouteDemandCalculations,
   WorkpageRouteDemandScheduleImpact,
   WorkpageScheduleAcceptedSeries,
@@ -365,7 +367,7 @@ export interface WorkflowWorkspaceWorkpageAction {
   action_id: string;
   workpage_kind: string;
   label: string;
-  presentation: "open_route" | "create_draft_then_open";
+  presentation: "open_route" | "create_then_open";
   state: "available" | "unavailable";
   route: string | null;
   create_path: string | null;
@@ -458,11 +460,13 @@ export interface WorkpageDraftResolution {
   artifact_route: string | null;
 }
 
-export interface WorkpageDraftResponse {
+export interface WorkpageCreateResponse {
   workflow_run_id: string;
   artifact_version_id: string;
   route: string;
 }
+
+export type WorkpageDraftResponse = WorkpageCreateResponse;
 
 export interface WorkpageSubmittedResponse {
   workflow_run_id: string;
@@ -486,7 +490,11 @@ export interface WorkpageContract {
   dependencies: WorkpageScheduleDependency[];
   calculations: WorkpageScheduleCalculations | null;
   route_demand_calculations: WorkpageRouteDemandCalculations | null;
-  schedule_impact: WorkpageRouteDemandScheduleImpact | null;
+  preference_grid: WorkpageDriverPreferencesGrid | null;
+  schedule_impact:
+    | WorkpageRouteDemandScheduleImpact
+    | WorkpageDriverPreferencesScheduleImpact
+    | null;
   draft_lineage: WorkpageScheduleDraftLineage | null;
   accepted_series: WorkpageScheduleAcceptedSeries | null;
   actions: WorkpageAction[];

@@ -248,7 +248,7 @@ def test_dispatch_stage04_approval_projects_create_draft_action(tmp_path: Path) 
             "action_id": "workpage.eod-v0.create_draft",
             "workpage_kind": "eod-v0",
             "label": "Create EOD draft",
-            "presentation": "create_draft_then_open",
+            "presentation": "create_then_open",
             "state": "available",
             "route": None,
             "create_path": (

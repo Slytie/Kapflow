@@ -8,6 +8,10 @@ import eodArtifactCreateResponseSnapshot from "@fixtures/workpage_eod_v0_artifac
 import eodRunArtifactCreateResponseSnapshot from "@fixtures/workpage_eod_v0_run_artifact_create_response.json";
 import eodRunWorkpageStateSnapshot from "@fixtures/workpage_eod_v0_run_state.json";
 import eodWorkpageStateSnapshot from "@fixtures/workpage_eod_v0_state.json";
+import driverPreferencesArtifactCreateResponseSnapshot from "@fixtures/workpage_driver_preferences_v0_artifact_create_response.json";
+import driverPreferencesArtifactStateSnapshot from "@fixtures/workpage_driver_preferences_v0_artifact_state.json";
+import driverPreferencesArtifactSubmitResponseSnapshot from "@fixtures/workpage_driver_preferences_v0_artifact_submit_response.json";
+import driverPreferencesRunWorkpageStateSnapshot from "@fixtures/workpage_driver_preferences_v0_run_state.json";
 import routeDemandArtifactStateSnapshot from "@fixtures/workpage_route_demand_v0_artifact_state.json";
 import routeDemandArtifactSubmitResponseSnapshot from "@fixtures/workpage_route_demand_v0_artifact_submit_response.json";
 import routeDemandRunWorkpageStateSnapshot from "@fixtures/workpage_route_demand_v0_run_state.json";
@@ -33,9 +37,11 @@ let state = createContractState();
 let eodArtifactVersionCounter = 0;
 let scheduleArtifactVersionCounter = 0;
 let routeDemandArtifactVersionCounter = 0;
+let driverPreferencesArtifactVersionCounter = 0;
 const eodArtifactVersions = new Map<string, EodArtifactVersionState>();
 const scheduleArtifactVersions = new Map<string, ScheduleArtifactVersionState>();
 const routeDemandArtifactVersions = new Map<string, RouteDemandArtifactVersionState>();
+const driverPreferencesArtifactVersions = new Map<string, DriverPreferencesArtifactVersionState>();
 const EOD_WORKFLOW_RUN_ID = "wr-eod-artifact-001";
 const SCHEDULE_WORKFLOW_RUN_ID = "wr-weekly-001";
 
@@ -67,6 +73,14 @@ interface RouteDemandArtifactVersionState extends ArtifactWorkpageVersionState {
   scheduleImpact: Record<string, unknown>;
 }
 
+interface DriverPreferencesArtifactVersionState extends ArtifactWorkpageVersionState {
+  preferenceGrid: {
+    weekdays: string[];
+    drivers: Array<Record<string, unknown>>;
+  };
+  scheduleImpact: Record<string, unknown>;
+}
+
 function nowIso(): string {
   return new Date().toISOString();
 }
@@ -90,6 +104,11 @@ function nextRouteDemandArtifactVersionId(): string {
   return `av-route-demand-artifact-${String(routeDemandArtifactVersionCounter).padStart(3, "0")}`;
 }
 
+function nextDriverPreferencesArtifactVersionId(): string {
+  driverPreferencesArtifactVersionCounter += 1;
+  return `av-driver-preferences-artifact-${String(driverPreferencesArtifactVersionCounter).padStart(3, "0")}`;
+}
+
 function artifactRoute(artifactVersionId: string, workflowRunId?: string): string {
   return workflowRunId
     ? `/runs/${workflowRunId}/workpages/eod-v0/artifacts/${artifactVersionId}`
@@ -102,6 +121,17 @@ function scheduleArtifactRoute(artifactVersionId: string, workflowRunId: string)
 
 function routeDemandArtifactRoute(artifactVersionId: string, workflowRunId: string): string {
   return `/runs/${workflowRunId}/workpages/route-demand-v0/artifacts/${artifactVersionId}`;
+}
+
+function driverPreferencesArtifactRoute(
+  artifactVersionId: string,
+  workflowRunId: string
+): string {
+  return `/runs/${workflowRunId}/workpages/driver-preferences-v0/artifacts/${artifactVersionId}`;
+}
+
+function driverPreferencesSnapshotCreatePath(workflowRunId: string): string {
+  return `/api/v1/workpages/workflow-runs/${workflowRunId}/driver-preferences-v0/snapshots`;
 }
 
 function sortArtifactRowsAscending(left: ArtifactVersionRow, right: ArtifactVersionRow): number {
@@ -122,6 +152,10 @@ function scheduleArtifactFileName(artifactVersionId: string): string {
 
 function routeDemandArtifactFileName(artifactVersionId: string): string {
   return `route_demand_stage04_${artifactVersionId}.json`;
+}
+
+function driverPreferencesArtifactFileName(artifactVersionId: string): string {
+  return `driver_preferences_stage04_${artifactVersionId}.json`;
 }
 
 function findSectionByKind(payload: Record<string, unknown>, kind: string): Record<string, unknown> | null {
@@ -171,6 +205,10 @@ function asString(value: unknown): string {
   return typeof value === "string" ? value : String(value ?? "");
 }
 
+function asStringOrNull(value: unknown): string | null {
+  return typeof value === "string" ? value : null;
+}
+
 function asNumber(value: unknown): number {
   if (typeof value === "number" && Number.isFinite(value)) {
     return value;
@@ -194,6 +232,81 @@ function asObjectArray(value: unknown): Array<Record<string, unknown>> {
     : [];
 }
 
+function weekdayKeyForServiceDate(serviceDate: string): string | null {
+  const parsed = new Date(`${serviceDate}T00:00:00Z`);
+  if (Number.isNaN(parsed.getTime())) {
+    return null;
+  }
+  return ["sun", "mon", "tue", "wed", "thu", "fri", "sat"][parsed.getUTCDay()] ?? null;
+}
+
+function driverPreferenceStateForServiceDate(
+  preferenceGrid: DriverPreferencesArtifactVersionState["preferenceGrid"] | null,
+  driverId: string,
+  serviceDate: string
+): string {
+  if (!preferenceGrid) {
+    return "neutral";
+  }
+  const weekdayKey = weekdayKeyForServiceDate(serviceDate);
+  if (!weekdayKey) {
+    return "unset";
+  }
+  const driverRow = preferenceGrid.drivers.find(
+    (row) => asString(row.driver_id) === driverId
+  );
+  const preferencesByWeekday = asObject(driverRow?.preferences_by_weekday);
+  const rawValue = weekdayKey ? asStringOrNull(preferencesByWeekday?.[weekdayKey]) : null;
+  return rawValue ?? "unset";
+}
+
+function cloneDriverPreferenceGrid(
+  value: DriverPreferencesArtifactVersionState["preferenceGrid"]
+): DriverPreferencesArtifactVersionState["preferenceGrid"] {
+  return {
+    weekdays: [...value.weekdays],
+    drivers: value.drivers.map((row) => ({
+      ...row,
+      preferences_by_weekday: { ...asObject(row.preferences_by_weekday) }
+    }))
+  };
+}
+
+function buildDriverPreferencesGrid(
+  preferenceGrid?: DriverPreferencesArtifactVersionState["preferenceGrid"]
+): DriverPreferencesArtifactVersionState["preferenceGrid"] {
+  const baseGrid = cloneJson(
+    (driverPreferencesArtifactStateSnapshot.workpage_state.preference_grid ?? {
+      weekdays: ["sun", "mon", "tue", "wed", "thu", "fri", "sat"],
+      drivers: []
+    }) as DriverPreferencesArtifactVersionState["preferenceGrid"]
+  );
+  const nextGrid = preferenceGrid ?? baseGrid;
+  return cloneDriverPreferenceGrid(nextGrid);
+}
+
+function buildDriverPreferencesScheduleImpact(
+  scheduleImpact?: Record<string, unknown>
+): Record<string, unknown> {
+  return cloneJson(
+    scheduleImpact ?? driverPreferencesArtifactStateSnapshot.workpage_state.schedule_impact
+  ) as Record<string, unknown>;
+}
+
+function driverPreferencesVersionsForRun(
+  workflowRunId: string
+): DriverPreferencesArtifactVersionState[] {
+  return Array.from(driverPreferencesArtifactVersions.values())
+    .filter((version) => version.workflowRunId === workflowRunId)
+    .sort((left, right) => {
+      const createdAtCompare = right.createdAt.localeCompare(left.createdAt);
+      if (createdAtCompare !== 0) {
+        return createdAtCompare;
+      }
+      return right.artifactVersionId.localeCompare(left.artifactVersionId);
+    });
+}
+
 function scheduleVersionsForRun(workflowRunId: string): ScheduleArtifactVersionState[] {
   return Array.from(scheduleArtifactVersions.values())
     .filter((version) => version.workflowRunId === workflowRunId)
@@ -204,6 +317,56 @@ function scheduleVersionsForRun(workflowRunId: string): ScheduleArtifactVersionS
       }
       return right.artifactVersionId.localeCompare(left.artifactVersionId);
     });
+}
+
+function scheduleWorkbookPayloadFromPayload(
+  payload: Record<string, unknown>
+): ScheduleArtifactVersionState["workbookPayload"] {
+  const assignmentSection = findTableSectionById(payload, "assignment_rows");
+  const reserveSection = findTableSectionById(payload, "reserve_rows");
+  const iterationSection = findTableSectionById(payload, "iteration_deltas");
+  const columns = Array.isArray(assignmentSection?.columns)
+    ? assignmentSection.columns
+        .map((column) =>
+          column && typeof column === "object" && !Array.isArray(column)
+            ? String((column as Record<string, unknown>).key ?? "")
+            : ""
+        )
+        .filter((value): value is string => value.length > 0)
+    : [];
+  const assignmentRows = asObjectArray(assignmentSection?.rows);
+  return {
+    columns,
+    rows: assignmentRows.map((row) => columns.map((column) => row[column] ?? null)),
+    reserve_rows: asObjectArray(reserveSection?.rows).map((row) => ({ ...row })),
+    iteration_deltas: asObjectArray(iterationSection?.rows).map((row) => ({ ...row }))
+  };
+}
+
+function buildDriverPreferencesScheduleAction(
+  workflowRunId: string
+): Record<string, unknown> {
+  const latestVersion = latestDriverPreferencesArtifactForRun(workflowRunId);
+  if (latestVersion) {
+    return {
+      action_id: "workpage.driver-preferences-v0.open_latest",
+      artifact_version_id: latestVersion.artifactVersionId,
+      kind: "open_latest",
+      label: "Open driver preferences",
+      route: driverPreferencesArtifactRoute(latestVersion.artifactVersionId, workflowRunId),
+      state: "available",
+      workpage_kind: "driver-preferences-v0"
+    };
+  }
+  return {
+    action_id: "workpage.driver-preferences-v0.create_snapshot",
+    artifact_version_id: null,
+    kind: "create_snapshot",
+    label: "Create driver preferences snapshot",
+    create_path: driverPreferencesSnapshotCreatePath(workflowRunId),
+    state: "available",
+    workpage_kind: "driver-preferences-v0"
+  };
 }
 
 function scheduleActionPath(
@@ -237,7 +400,8 @@ function scheduleAssignmentRows(
 
 function updateScheduleCalculations(
   payload: Record<string, unknown>,
-  workbookPayload: ScheduleArtifactVersionState["workbookPayload"]
+  workbookPayload: ScheduleArtifactVersionState["workbookPayload"],
+  preferenceGrid?: DriverPreferencesArtifactVersionState["preferenceGrid"] | null
 ): void {
   const calculations = asObject(payload.calculations);
   if (!calculations) {
@@ -317,6 +481,32 @@ function updateScheduleCalculations(
   const availableDriverIds = Array.from(peopleById.keys()).filter(
     (driverId) => !busyDriverIds.has(driverId)
   );
+  const availablePreferenceBuckets = {
+    open_to_work: [] as string[],
+    prefer_not_to_work: [] as string[],
+    definitely_can_not_work: [] as string[],
+    unset: [] as string[]
+  };
+  availableDriverIds.forEach((driverId) => {
+    const preferenceState = driverPreferenceStateForServiceDate(
+      preferenceGrid ?? null,
+      driverId,
+      selectedServiceDate
+    );
+    if (preferenceState === "open_to_work") {
+      availablePreferenceBuckets.open_to_work.push(driverId);
+      return;
+    }
+    if (preferenceState === "prefer_not_to_work") {
+      availablePreferenceBuckets.prefer_not_to_work.push(driverId);
+      return;
+    }
+    if (preferenceState === "definitely_can_not_work") {
+      availablePreferenceBuckets.definitely_can_not_work.push(driverId);
+      return;
+    }
+    availablePreferenceBuckets.unset.push(driverId);
+  });
   calculations.selected_day = {
     ...selectedDay,
     service_date: selectedServiceDate,
@@ -326,6 +516,7 @@ function updateScheduleCalculations(
     on_call_drivers: selectedReserves.length,
     available_driver_count: availableDriverIds.length,
     available_driver_ids: availableDriverIds,
+    available_preference_buckets: availablePreferenceBuckets,
     drivers_available: availableDriverIds.length,
     projected_on_call_needed: Math.max(
       asNumber(selectedDay?.on_call_target) - selectedReserves.length,
@@ -355,6 +546,11 @@ function updateScheduleCalculations(
     const availabilityConflict =
       asString(baseMetric?.availability_state) === "approved_unavailable" &&
       assignmentsForDriver.length > 0;
+    const preferenceState = driverPreferenceStateForServiceDate(
+      preferenceGrid ?? null,
+      person.driver_id,
+      selectedServiceDate
+    );
     const scheduledHoursRounded = Number(scheduledHours.toFixed(1));
     const baseIssues = Array.isArray(baseMetric?.issues)
       ? baseMetric.issues.map((issue) => asString(issue)).filter((issue) => issue.length > 0)
@@ -365,7 +561,10 @@ function updateScheduleCalculations(
       scheduled_hours: scheduledHoursRounded,
       scheduled_routes: assignmentsForDriver.length,
       on_call_shifts: reservesForDriver.length,
-      preference_state: asString(baseMetric?.preference_state) || "neutral",
+      preference_state:
+        preferenceGrid != null
+          ? preferenceState
+          : asString(baseMetric?.preference_state) || "neutral",
       availability_state: availabilityState,
       compliance_state: availabilityConflict ? "fail" : "pass",
       issues: availabilityConflict ? ["assigned_while_unavailable"] : baseIssues
@@ -381,6 +580,20 @@ function updateScheduleCalculations(
     .map((day) => asString(day.service_date));
   const hardBlockedDrivers = asObjectArray(calculations.driver_metrics)
     .filter((metric) => asString(metric.compliance_state) !== "pass")
+    .map((metric) => asString(metric.driver_id))
+    .filter((driverId) => driverId.length > 0);
+  const preferenceConflictDrivers = asObjectArray(calculations.driver_metrics)
+    .filter((metric) => {
+      const driverId = asString(metric.driver_id);
+      if (!busyDriverIds.has(driverId)) {
+        return false;
+      }
+      const preferenceState = asString(metric.preference_state);
+      return (
+        preferenceState === "prefer_not_to_work" ||
+        preferenceState === "definitely_can_not_work"
+      );
+    })
     .map((metric) => asString(metric.driver_id))
     .filter((driverId) => driverId.length > 0);
   calculations.checks = [
@@ -404,6 +617,13 @@ function updateScheduleCalculations(
       state: hardBlockedDrivers.length > 0 ? "fail" : "pass",
       blocking: true,
       affected_driver_ids: hardBlockedDrivers
+    },
+    {
+      check_id: "driver_preferences_alignment",
+      label: "Driver preferences alignment",
+      state: preferenceConflictDrivers.length > 0 ? "warn" : "pass",
+      blocking: false,
+      affected_driver_ids: preferenceConflictDrivers
     }
   ];
 }
@@ -586,7 +806,8 @@ function buildScheduleWorkbookPayload(
 
 function applyScheduleArtifactEdits(
   payload: Record<string, unknown>,
-  workbookPayload: ScheduleArtifactVersionState["workbookPayload"]
+  workbookPayload: ScheduleArtifactVersionState["workbookPayload"],
+  preferenceGrid?: DriverPreferencesArtifactVersionState["preferenceGrid"] | null
 ): void {
   const assignmentRows = scheduleAssignmentRows(workbookPayload);
   const assignmentSection = findTableSectionById(payload, "assignment_rows");
@@ -615,7 +836,7 @@ function applyScheduleArtifactEdits(
     }
   }
 
-  updateScheduleCalculations(payload, workbookPayload);
+  updateScheduleCalculations(payload, workbookPayload, preferenceGrid);
 }
 
 function buildScheduleArtifactPayload(input: {
@@ -665,8 +886,11 @@ function patchScheduleArtifactContractState(version: ScheduleArtifactVersionStat
   const payload = version.payload;
   ensureRouteDemandArtifactDraft(version.workflowRunId);
   const latestRouteDemandVersion = latestRouteDemandArtifactForRun(version.workflowRunId);
+  const latestDriverPreferencesVersion = latestDriverPreferencesArtifactForRun(version.workflowRunId);
   const actions = Array.isArray(payload.actions) ? payload.actions : [];
-  payload.actions = actions.map((action) => {
+  const mappedActions = actions
+    .filter((action) => asObject(action)?.workpage_kind !== "driver-preferences-v0")
+    .map((action) => {
     if (!action || typeof action !== "object" || Array.isArray(action)) {
       return action;
     }
@@ -696,6 +920,7 @@ function patchScheduleArtifactContractState(version: ScheduleArtifactVersionStat
     }
     return record;
   });
+  payload.actions = [...mappedActions, buildDriverPreferencesScheduleAction(version.workflowRunId)];
 
   const artifactState = asObject(payload.artifact_state);
   if (artifactState) {
@@ -727,6 +952,37 @@ function patchScheduleArtifactContractState(version: ScheduleArtifactVersionStat
     acceptedSeries.next_artifact_version_id = null;
     acceptedSeries.entries = [];
   }
+
+  const driverPreferencesDependency = asObjectArray(payload.dependencies).find(
+    (row) => asString(row.dependency_key) === "driver_preferences"
+  );
+  if (driverPreferencesDependency) {
+    const pinnedArtifactVersionId = asStringOrNull(driverPreferencesDependency.artifact_version_id);
+    if (pinnedArtifactVersionId) {
+      driverPreferencesDependency.state =
+        latestDriverPreferencesVersion?.artifactVersionId === pinnedArtifactVersionId
+          ? "aligned"
+          : "drifted";
+      driverPreferencesDependency.artifact_version_id = pinnedArtifactVersionId;
+      driverPreferencesDependency.source_ref = `/api/v1/artifacts/${pinnedArtifactVersionId}`;
+    } else if (latestDriverPreferencesVersion) {
+      driverPreferencesDependency.state = "not_pinned";
+      driverPreferencesDependency.artifact_version_id = null;
+      driverPreferencesDependency.source_ref = null;
+    } else {
+      driverPreferencesDependency.state = "not_available";
+      driverPreferencesDependency.artifact_version_id = null;
+      driverPreferencesDependency.source_ref = null;
+    }
+  }
+
+  const effectivePreferenceGrid =
+    driverPreferencesDependency && asStringOrNull(driverPreferencesDependency.artifact_version_id)
+      ? driverPreferencesArtifactVersions.get(
+          asString(driverPreferencesDependency.artifact_version_id)
+        )?.preferenceGrid ?? null
+      : null;
+  applyScheduleArtifactEdits(payload, version.workbookPayload, effectivePreferenceGrid);
 }
 
 function patchRunSchedulePayloadContractState(
@@ -736,8 +992,11 @@ function patchRunSchedulePayloadContractState(
   const latestVersion = latestScheduleArtifactForRun(workflowRunId);
   ensureRouteDemandArtifactDraft(workflowRunId);
   const latestRouteDemandVersion = latestRouteDemandArtifactForRun(workflowRunId);
+  const latestDriverPreferencesVersion = latestDriverPreferencesArtifactForRun(workflowRunId);
   const actions = Array.isArray(payload.actions) ? payload.actions : [];
-  payload.actions = actions.map((action) => {
+  const mappedActions = actions
+    .filter((action) => asObject(action)?.workpage_kind !== "driver-preferences-v0")
+    .map((action) => {
     if (!action || typeof action !== "object" || Array.isArray(action)) {
       return action;
     }
@@ -758,6 +1017,7 @@ function patchRunSchedulePayloadContractState(
     }
     return record;
   });
+  payload.actions = [...mappedActions, buildDriverPreferencesScheduleAction(workflowRunId)];
 
   const artifactState = asObject(payload.artifact_state);
   if (artifactState) {
@@ -767,6 +1027,23 @@ function patchRunSchedulePayloadContractState(
     artifactState.state_kind = "run_projection";
     artifactState.editable = false;
   }
+
+  const driverPreferencesDependency = asObjectArray(payload.dependencies).find(
+    (row) => asString(row.dependency_key) === "driver_preferences"
+  );
+  if (driverPreferencesDependency) {
+    driverPreferencesDependency.artifact_version_id = latestDriverPreferencesVersion?.artifactVersionId ?? null;
+    driverPreferencesDependency.source_ref = latestDriverPreferencesVersion
+      ? `/api/v1/artifacts/${latestDriverPreferencesVersion.artifactVersionId}`
+      : null;
+    driverPreferencesDependency.state = latestDriverPreferencesVersion ? "resolved" : "not_available";
+  }
+
+  updateScheduleCalculations(
+    payload,
+    scheduleWorkbookPayloadFromPayload(payload),
+    latestDriverPreferencesVersion?.preferenceGrid ?? null
+  );
 }
 
 function addEodArtifactVersion(input: {
@@ -931,7 +1208,11 @@ function listWorkflowRunArtifacts(workflowRunId: string): ArtifactVersionRow[] {
     workflowRunId === SCHEDULE_WORKFLOW_RUN_ID
       ? Array.from(routeDemandArtifactVersions.values()).map(routeDemandArtifactVersionRow)
       : [];
-  return [...listArtifactsForSubject("workflow_run", workflowRunId), ...eodArtifacts, ...scheduleArtifacts, ...routeDemandArtifacts].sort(
+  const driverPreferencesArtifacts =
+    workflowRunId === SCHEDULE_WORKFLOW_RUN_ID
+      ? Array.from(driverPreferencesArtifactVersions.values()).map(driverPreferencesArtifactVersionRow)
+      : [];
+  return [...listArtifactsForSubject("workflow_run", workflowRunId), ...eodArtifacts, ...scheduleArtifacts, ...routeDemandArtifacts, ...driverPreferencesArtifacts].sort(
     sortArtifactRowsAscending
   );
 }
@@ -1064,7 +1345,16 @@ function schedulePreviewResponse(
   workbookPayload: ScheduleArtifactVersionState["workbookPayload"]
 ): Record<string, unknown> {
   const previewPayload = cloneJson(version.payload) as Record<string, unknown>;
-  applyScheduleArtifactEdits(previewPayload, workbookPayload);
+  const driverPreferencesDependency = asObjectArray(previewPayload.dependencies).find(
+    (row) => asString(row.dependency_key) === "driver_preferences"
+  );
+  const preferenceGrid =
+    driverPreferencesDependency && asStringOrNull(driverPreferencesDependency.artifact_version_id)
+      ? driverPreferencesArtifactVersions.get(
+          asString(driverPreferencesDependency.artifact_version_id)
+        )?.preferenceGrid ?? null
+      : null;
+  applyScheduleArtifactEdits(previewPayload, workbookPayload, preferenceGrid);
   const calculations = asObject(previewPayload.calculations) ?? {};
   const dependencies = Array.isArray(previewPayload.dependencies) ? previewPayload.dependencies : [];
   return {
@@ -1367,6 +1657,352 @@ function routeDemandArtifactSubmitResponse(
   payload.submitted = {
     artifact_version_id: version.artifactVersionId,
     route: routeDemandArtifactRoute(version.artifactVersionId, version.workflowRunId),
+    supersedes_artifact_version_id: supersedesArtifactVersionId,
+    workflow_run_id: version.workflowRunId
+  };
+  return payload;
+}
+
+function latestDriverPreferencesArtifactForRun(
+  workflowRunId: string
+): DriverPreferencesArtifactVersionState | null {
+  return driverPreferencesVersionsForRun(workflowRunId)[0] ?? null;
+}
+
+function patchDriverPreferencesArtifactContractState(
+  version: DriverPreferencesArtifactVersionState
+): void {
+  const payload = version.payload;
+  const latestScheduleVersion = latestScheduleArtifactForRun(version.workflowRunId);
+  const actions = Array.isArray(payload.actions) ? payload.actions : [];
+  payload.actions = actions.map((action) => {
+    if (!action || typeof action !== "object" || Array.isArray(action)) {
+      return action;
+    }
+    const record = { ...(action as Record<string, unknown>) };
+    record.artifact_version_id = version.artifactVersionId;
+    if (asString(record.kind) === "save") {
+      record.submit_path =
+        `/api/v1/workpages/workflow-runs/${version.workflowRunId}/driver-preferences-v0/artifacts/` +
+        `${version.artifactVersionId}/submit`;
+      record.state =
+        version.latestInChainArtifactVersionId === version.artifactVersionId ? "available" : "blocked";
+      record.disabled_reason =
+        version.latestInChainArtifactVersionId === version.artifactVersionId
+          ? null
+          : "historical_artifact_read_only";
+    }
+    return record;
+  });
+
+  const artifactState = asObject(payload.artifact_state);
+  if (artifactState) {
+    artifactState.current_artifact_version_id = version.artifactVersionId;
+    artifactState.latest_artifact_version_id = version.latestInChainArtifactVersionId;
+    artifactState.editable = version.latestInChainArtifactVersionId === version.artifactVersionId;
+    artifactState.state_kind = "artifact_projection";
+  }
+
+  payload.preference_grid = cloneDriverPreferenceGrid(version.preferenceGrid);
+  payload.schedule_impact = {
+    ...version.scheduleImpact,
+    latest_schedule_draft_artifact_version_id: latestScheduleVersion?.artifactVersionId ?? null,
+    latest_driver_preferences_artifact_version_id: version.latestInChainArtifactVersionId
+  };
+
+  const workpage = asObject(payload.workpage);
+  if (workpage) {
+    const summary = asObject(workpage.summary);
+    if (summary) {
+      summary.driver_count = version.preferenceGrid.drivers.length;
+      summary.explicit_preference_count = version.preferenceGrid.drivers.reduce(
+        (total, row) =>
+          total +
+          Object.values(asObject(row.preferences_by_weekday) ?? {}).filter(
+            (value) => typeof value === "string"
+          )
+            .length,
+        0
+      );
+    }
+  }
+
+  const historySection = findSectionByKind(payload, "history_stub");
+  if (historySection) {
+    historySection.entries = [
+      {
+        label: "Current artifact version",
+        value: version.artifactVersionId
+      },
+      {
+        label: "Supersedes",
+        value: version.supersedesArtifactVersionId ?? "Initial preferences snapshot"
+      },
+      {
+        label: "Latest snapshot",
+        value: version.latestInChainArtifactVersionId
+      }
+    ];
+  }
+}
+
+function buildDriverPreferencesArtifactPayload(input: {
+  artifactVersionId: string;
+  workflowRunId: string;
+  supersedesArtifactVersionId: string | null;
+  supersededByArtifactVersionId: string | null;
+  latestInChainArtifactVersionId: string;
+  preferenceGrid: DriverPreferencesArtifactVersionState["preferenceGrid"];
+  scheduleImpact: Record<string, unknown>;
+}): Record<string, unknown> {
+  const payload = cloneJson(
+    driverPreferencesArtifactStateSnapshot.workpage_state
+  ) as Record<string, unknown>;
+  const workpage = asObject(payload.workpage) ?? {};
+  const source = asObject(payload.source) ?? {};
+  const freshness = asObject(payload.freshness) ?? {};
+  const artifactContext = asObject(payload.artifact_context) ?? {};
+
+  workpage.source_artifact_version_id = input.artifactVersionId;
+  source.source_artifact_version_id = input.artifactVersionId;
+  freshness.generated_at = nowIso();
+  freshness.source_version = input.artifactVersionId;
+  artifactContext.artifact_version_id = input.artifactVersionId;
+  artifactContext.workflow_run_id = input.workflowRunId;
+  artifactContext.supersedes_artifact_version_id = input.supersedesArtifactVersionId;
+  artifactContext.superseded_by_artifact_version_id = input.supersededByArtifactVersionId;
+  artifactContext.latest_in_chain_artifact_version_id = input.latestInChainArtifactVersionId;
+  artifactContext.download_path = `/api/v1/artifacts/${input.artifactVersionId}/download.bin`;
+
+  payload.workpage = workpage;
+  payload.source = source;
+  payload.freshness = freshness;
+  payload.artifact_context = artifactContext;
+
+  const version: DriverPreferencesArtifactVersionState = {
+    artifactVersionId: input.artifactVersionId,
+    workflowRunId: input.workflowRunId,
+    fileName: driverPreferencesArtifactFileName(input.artifactVersionId),
+    createdAt: nowIso(),
+    lineageNote: input.supersedesArtifactVersionId
+      ? "Submitted driver-preferences snapshot version."
+      : "Created initial driver preferences snapshot.",
+    payload,
+    preferenceGrid: cloneDriverPreferenceGrid(input.preferenceGrid),
+    scheduleImpact: { ...input.scheduleImpact },
+    supersedesArtifactVersionId: input.supersedesArtifactVersionId,
+    supersededByArtifactVersionId: input.supersededByArtifactVersionId,
+    latestInChainArtifactVersionId: input.latestInChainArtifactVersionId
+  };
+
+  patchArtifactPayloadLineage(version);
+  patchDriverPreferencesArtifactContractState(version);
+  return payload;
+}
+
+function addDriverPreferencesArtifactVersion(input: {
+  artifactVersionId: string;
+  workflowRunId: string;
+  supersedesArtifactVersionId: string | null;
+  supersededByArtifactVersionId?: string | null;
+  latestInChainArtifactVersionId: string;
+  preferenceGrid?: DriverPreferencesArtifactVersionState["preferenceGrid"];
+  scheduleImpact?: Record<string, unknown>;
+}): DriverPreferencesArtifactVersionState {
+  const createdAt = nowIso();
+  const preferenceGrid = buildDriverPreferencesGrid(input.preferenceGrid);
+  const scheduleImpact = buildDriverPreferencesScheduleImpact(input.scheduleImpact);
+  const version: DriverPreferencesArtifactVersionState = {
+    artifactVersionId: input.artifactVersionId,
+    workflowRunId: input.workflowRunId,
+    fileName: driverPreferencesArtifactFileName(input.artifactVersionId),
+    createdAt,
+    lineageNote: input.supersedesArtifactVersionId
+      ? "Submitted driver-preferences snapshot version."
+      : "Created initial driver preferences snapshot.",
+    payload: buildDriverPreferencesArtifactPayload({
+      artifactVersionId: input.artifactVersionId,
+      workflowRunId: input.workflowRunId,
+      supersedesArtifactVersionId: input.supersedesArtifactVersionId,
+      supersededByArtifactVersionId: input.supersededByArtifactVersionId ?? null,
+      latestInChainArtifactVersionId: input.latestInChainArtifactVersionId,
+      preferenceGrid,
+      scheduleImpact
+    }),
+    preferenceGrid,
+    scheduleImpact,
+    supersedesArtifactVersionId: input.supersedesArtifactVersionId,
+    supersededByArtifactVersionId: input.supersededByArtifactVersionId ?? null,
+    latestInChainArtifactVersionId: input.latestInChainArtifactVersionId
+  };
+  driverPreferencesArtifactVersions.set(version.artifactVersionId, version);
+  patchDriverPreferencesArtifactContractState(version);
+  return version;
+}
+
+function driverPreferencesArtifactVersionRow(
+  version: DriverPreferencesArtifactVersionState
+): ArtifactVersionRow {
+  return {
+    artifact_version_id: version.artifactVersionId,
+    workflow_run_id: version.workflowRunId,
+    task_run_id: null,
+    artifact_kind: "planning.driver_shift_preferences.workbook",
+    artifact_role: "",
+    media_type: "application/json",
+    storage_uri: `memory://workpages/${version.fileName}`,
+    content_digest: `sha256:${version.artifactVersionId}`,
+    byte_size: JSON.stringify(version.preferenceGrid).length,
+    metadata_json: {
+      file_name: version.fileName,
+      planning_week_id: "PW-2026-W13",
+      station_code: "DVC4",
+      workflow_family: "weekly_schedule_planning.v1"
+    },
+    parent_artifact_version_id: version.supersedesArtifactVersionId,
+    supersedes_artifact_version_id: version.supersedesArtifactVersionId,
+    lineage_note: version.lineageNote,
+    created_at: version.createdAt,
+    links: [
+      {
+        artifact_version_id: version.artifactVersionId,
+        workflow_run_id: version.workflowRunId,
+        subject_kind: "workflow_run",
+        subject_id: version.workflowRunId,
+        relation_kind: "subject",
+        created_at: version.createdAt,
+        created_by_actor_id: null,
+        created_by_actor_type: null
+      }
+    ]
+  };
+}
+
+function updateDriverPreferencesArtifactChainLatest(
+  artifactVersionId: string,
+  latestArtifactVersionId: string
+): void {
+  let currentArtifactVersionId: string | null = artifactVersionId;
+  while (currentArtifactVersionId) {
+    const version = driverPreferencesArtifactVersions.get(currentArtifactVersionId);
+    if (!version) {
+      break;
+    }
+    version.latestInChainArtifactVersionId = latestArtifactVersionId;
+    patchArtifactPayloadLineage(version);
+    patchDriverPreferencesArtifactContractState(version);
+    currentArtifactVersionId = version.supersedesArtifactVersionId;
+  }
+}
+
+function buildRunDriverPreferencesWorkpagePayload(workflowRunId: string): Record<string, unknown> {
+  const latestScheduleVersion = ensureScheduleArtifactDraft(workflowRunId);
+  const latestVersion = latestDriverPreferencesArtifactForRun(workflowRunId);
+  const payload = cloneJson(
+    driverPreferencesRunWorkpageStateSnapshot.workpage_state
+  ) as Record<string, unknown>;
+  const runContext = asObject(payload.run_context) ?? {};
+  const freshness = asObject(payload.freshness) ?? {};
+  const source = asObject(payload.source) ?? {};
+  const artifactState = asObject(payload.artifact_state) ?? {};
+  const workpage = asObject(payload.workpage) ?? {};
+  const summary = asObject(workpage.summary) ?? {};
+
+  runContext.workflow_run_id = workflowRunId;
+  runContext.activation_key = `snapshot:${workflowRunId}:weekly-driver-preferences-workpage`;
+  freshness.generated_at = nowIso();
+  freshness.source_version = latestVersion?.artifactVersionId ?? workflowRunId;
+  source.source_refs = latestVersion
+    ? [`/api/v1/artifacts/${latestVersion.artifactVersionId}`]
+    : [];
+  artifactState.current_artifact_version_id = null;
+  artifactState.latest_artifact_version_id = latestVersion?.artifactVersionId ?? null;
+  artifactState.editable = false;
+
+  if (latestVersion) {
+    summary.driver_count = latestVersion.preferenceGrid.drivers.length;
+    summary.explicit_preference_count = latestVersion.preferenceGrid.drivers.reduce(
+      (total, row) =>
+        total +
+        Object.values(asObject(row.preferences_by_weekday) ?? {}).filter(
+          (value) => typeof value === "string"
+        )
+          .length,
+      0
+    );
+    payload.preference_grid = cloneDriverPreferenceGrid(latestVersion.preferenceGrid);
+  }
+
+  payload.run_context = runContext;
+  payload.freshness = freshness;
+  payload.source = source;
+  payload.artifact_state = artifactState;
+  workpage.summary = summary;
+  payload.workpage = workpage;
+  payload.schedule_impact = latestVersion
+    ? {
+        ...latestVersion.scheduleImpact,
+        latest_schedule_draft_artifact_version_id: latestScheduleVersion.artifactVersionId,
+        latest_driver_preferences_artifact_version_id: latestVersion.artifactVersionId
+      }
+    : {
+        ...asObject(payload.schedule_impact),
+        latest_schedule_draft_artifact_version_id: latestScheduleVersion.artifactVersionId,
+        latest_driver_preferences_artifact_version_id: null,
+        dependency_state: "no_snapshot",
+        schedule_state: "no_snapshot"
+      };
+  payload.actions = [latestVersion
+    ? {
+        action_id: "workpage.driver-preferences-v0.open_latest",
+        artifact_version_id: latestVersion.artifactVersionId,
+        kind: "open_latest",
+        label: "Open latest snapshot",
+        route: driverPreferencesArtifactRoute(latestVersion.artifactVersionId, workflowRunId),
+        state: "available",
+        workpage_kind: "driver-preferences-v0"
+      }
+    : {
+        action_id: "workpage.driver-preferences-v0.create_snapshot",
+        artifact_version_id: null,
+        kind: "create_snapshot",
+        label: "Create preferences snapshot",
+        create_path: driverPreferencesSnapshotCreatePath(workflowRunId),
+        state: "available",
+        workpage_kind: "driver-preferences-v0"
+      }];
+  return payload;
+}
+
+function resetDriverPreferencesArtifactVersions(): void {
+  driverPreferencesArtifactVersionCounter = 0;
+  driverPreferencesArtifactVersions.clear();
+}
+
+function driverPreferencesArtifactCreateResponse(
+  version: DriverPreferencesArtifactVersionState
+): Record<string, unknown> {
+  const payload = cloneJson(
+    driverPreferencesArtifactCreateResponseSnapshot.create_response
+  ) as Record<string, unknown>;
+  payload.created = {
+    artifact_version_id: version.artifactVersionId,
+    route: driverPreferencesArtifactRoute(version.artifactVersionId, version.workflowRunId),
+    workflow_run_id: version.workflowRunId
+  };
+  return payload;
+}
+
+function driverPreferencesArtifactSubmitResponse(
+  version: DriverPreferencesArtifactVersionState,
+  supersedesArtifactVersionId: string
+): Record<string, unknown> {
+  const payload = cloneJson(
+    driverPreferencesArtifactSubmitResponseSnapshot.submit_response
+  ) as Record<string, unknown>;
+  payload.submitted = {
+    artifact_version_id: version.artifactVersionId,
+    route: driverPreferencesArtifactRoute(version.artifactVersionId, version.workflowRunId),
     supersedes_artifact_version_id: supersedesArtifactVersionId,
     workflow_run_id: version.workflowRunId
   };
@@ -2615,6 +3251,7 @@ export function resetApiState(): void {
   resetEodArtifactVersions();
   resetScheduleArtifactVersions();
   resetRouteDemandArtifactVersions();
+  resetDriverPreferencesArtifactVersions();
 }
 
 export function forceForbiddenResponses(value: boolean): void {
@@ -2809,6 +3446,140 @@ async function handleRouteDemandArtifactSubmitRequest(
   });
 }
 
+function createDriverPreferencesSnapshotResponse(workflowRunId: string, request: Request): Response {
+  if (!inScope(request)) {
+    return forbiddenWorkflowRun();
+  }
+
+  const existing = latestDriverPreferencesArtifactForRun(workflowRunId);
+  if (existing) {
+    return HttpResponse.json(
+      {
+        status: "error",
+        error: {
+          code: "driver_preferences_snapshot_exists",
+          message: "driver preferences snapshot already exists for this workflow run",
+          details: {
+            workflow_run_id: workflowRunId,
+            artifact_version_id: existing.artifactVersionId,
+            route: driverPreferencesArtifactRoute(existing.artifactVersionId, workflowRunId)
+          }
+        }
+      },
+      { status: 409 }
+    );
+  }
+
+  const createdArtifactVersionId = nextDriverPreferencesArtifactVersionId();
+  const createdVersion = addDriverPreferencesArtifactVersion({
+    artifactVersionId: createdArtifactVersionId,
+    workflowRunId,
+    supersedesArtifactVersionId: null,
+    latestInChainArtifactVersionId: createdArtifactVersionId
+  });
+  state.audit.mutations.push(
+    `workpage-driver-preferences-create:${workflowRunId}:${createdArtifactVersionId}`
+  );
+  return ok({
+    command: "api.workpages.driver_preferences.snapshots.create",
+    created:
+      (driverPreferencesArtifactCreateResponse(createdVersion).created as Record<string, unknown>) ??
+      {}
+  });
+}
+
+async function handleDriverPreferencesArtifactSubmitRequest(
+  artifactVersionId: string,
+  request: Request
+): Promise<Response> {
+  if (!inScope(request)) {
+    return scheduleArtifactNotFoundResponse(artifactVersionId);
+  }
+
+  const baseVersion = driverPreferencesArtifactVersions.get(artifactVersionId);
+  if (!baseVersion) {
+    return scheduleArtifactNotFoundResponse(artifactVersionId);
+  }
+
+  if (baseVersion.supersededByArtifactVersionId) {
+    return HttpResponse.json(
+      {
+        status: "error",
+        error: {
+          code: "workpage_artifact_conflict",
+          message: "artifact-backed workpage already has a newer draft",
+          details: {
+            artifact_version_id: artifactVersionId,
+            latest_artifact_version_id: baseVersion.latestInChainArtifactVersionId,
+            workflow_run_id: baseVersion.workflowRunId,
+            route: driverPreferencesArtifactRoute(
+              baseVersion.latestInChainArtifactVersionId,
+              baseVersion.workflowRunId
+            )
+          }
+        }
+      },
+      { status: 409 }
+    );
+  }
+
+  const body = (await request.json()) as {
+    driver_rows?: Array<{
+      driver_id?: string;
+      preferences_by_weekday?: Record<string, unknown>;
+    }>;
+  };
+  const requestedRows = Array.isArray(body.driver_rows) ? body.driver_rows : [];
+  const requestedByDriverId = new Map(
+    requestedRows.map((row) => [asString(row.driver_id), asObject(row.preferences_by_weekday)])
+  );
+  const nextPreferenceGrid = cloneDriverPreferenceGrid(baseVersion.preferenceGrid);
+  nextPreferenceGrid.drivers = nextPreferenceGrid.drivers.map((row) => {
+    const requestedPreferences = requestedByDriverId.get(asString(row.driver_id));
+    if (!requestedPreferences) {
+      return row;
+    }
+    return {
+      ...row,
+      preferences_by_weekday: {
+        ...asObject(row.preferences_by_weekday),
+        sun: asStringOrNull(requestedPreferences.sun),
+        mon: asStringOrNull(requestedPreferences.mon),
+        tue: asStringOrNull(requestedPreferences.tue),
+        wed: asStringOrNull(requestedPreferences.wed),
+        thu: asStringOrNull(requestedPreferences.thu),
+        fri: asStringOrNull(requestedPreferences.fri),
+        sat: asStringOrNull(requestedPreferences.sat)
+      }
+    };
+  });
+  const submittedArtifactVersionId = nextDriverPreferencesArtifactVersionId();
+  const submittedVersion = addDriverPreferencesArtifactVersion({
+    artifactVersionId: submittedArtifactVersionId,
+    workflowRunId: baseVersion.workflowRunId,
+    supersedesArtifactVersionId: artifactVersionId,
+    latestInChainArtifactVersionId: submittedArtifactVersionId,
+    preferenceGrid: nextPreferenceGrid,
+    scheduleImpact: {
+      ...baseVersion.scheduleImpact,
+      latest_driver_preferences_artifact_version_id: submittedArtifactVersionId
+    }
+  });
+  baseVersion.supersededByArtifactVersionId = submittedArtifactVersionId;
+  patchArtifactPayloadLineage(baseVersion);
+  patchDriverPreferencesArtifactContractState(baseVersion);
+  updateDriverPreferencesArtifactChainLatest(submittedArtifactVersionId, submittedArtifactVersionId);
+
+  state.audit.mutations.push(
+    `workpage-driver-preferences-artifact-submit:${artifactVersionId}:${submittedArtifactVersionId}`
+  );
+  return ok({
+    command: "api.workpages.artifact.submit",
+    submitted: (driverPreferencesArtifactSubmitResponse(submittedVersion, artifactVersionId)
+      .submitted as Record<string, unknown>) ?? {}
+  });
+}
+
 export const handlers = [
   http.get("*/api/v1/workpages/demo/schedule-v0", () =>
     HttpResponse.json(scheduleWorkpageStateSnapshot.workpage_state)
@@ -2819,6 +3590,20 @@ export const handlers = [
     }
     return HttpResponse.json(buildRunScheduleWorkpagePayload(String(params.workflowRunId)));
   }),
+  http.get(
+    "*/api/v1/workpages/workflow-runs/:workflowRunId/driver-preferences-v0",
+    ({ params, request }) => {
+      if (!inScope(request)) {
+        return forbiddenWorkflowRun();
+      }
+      ensureScheduleArtifactDraft(String(params.workflowRunId));
+      return HttpResponse.json(buildRunDriverPreferencesWorkpagePayload(String(params.workflowRunId)));
+    }
+  ),
+  http.post(
+    "*/api/v1/workpages/workflow-runs/:workflowRunId/driver-preferences-v0/snapshots",
+    ({ params, request }) => createDriverPreferencesSnapshotResponse(String(params.workflowRunId), request)
+  ),
   http.get("*/api/v1/workpages/workflow-runs/:workflowRunId/route-demand-v0", ({ params, request }) => {
     if (!inScope(request)) {
       return forbiddenWorkflowRun();
@@ -2881,6 +3666,13 @@ export const handlers = [
     }
 
     const artifactVersionId = String(params.artifactVersionId);
+    const driverPreferencesVersion = driverPreferencesArtifactVersions.get(artifactVersionId);
+    if (driverPreferencesVersion) {
+      patchArtifactPayloadLineage(driverPreferencesVersion);
+      patchDriverPreferencesArtifactContractState(driverPreferencesVersion);
+      return HttpResponse.json(driverPreferencesVersion.payload);
+    }
+
     const routeDemandVersion = routeDemandArtifactVersions.get(artifactVersionId);
     if (routeDemandVersion) {
       patchArtifactPayloadLineage(routeDemandVersion);
@@ -2920,6 +3712,23 @@ export const handlers = [
       handleScheduleArtifactPreviewRequest(String(params.artifactVersionId), request)
   ),
   http.get(
+    "*/api/v1/workpages/workflow-runs/:workflowRunId/driver-preferences-v0/artifacts/:artifactVersionId",
+    ({ params, request }) => {
+      if (!inScope(request)) {
+        return scheduleArtifactNotFoundResponse(String(params.artifactVersionId));
+      }
+      ensureScheduleArtifactDraft(String(params.workflowRunId));
+      const artifactVersionId = String(params.artifactVersionId);
+      const version = driverPreferencesArtifactVersions.get(artifactVersionId);
+      if (!version) {
+        return scheduleArtifactNotFoundResponse(artifactVersionId);
+      }
+      patchArtifactPayloadLineage(version);
+      patchDriverPreferencesArtifactContractState(version);
+      return HttpResponse.json(version.payload);
+    }
+  ),
+  http.get(
     "*/api/v1/workpages/workflow-runs/:workflowRunId/route-demand-v0/artifacts/:artifactVersionId",
     ({ params, request }) => {
       if (!inScope(request)) {
@@ -2950,6 +3759,11 @@ export const handlers = [
     async ({ params, request }) =>
       handleRouteDemandArtifactSubmitRequest(String(params.artifactVersionId), request)
   ),
+  http.post(
+    "*/api/v1/workpages/workflow-runs/:workflowRunId/driver-preferences-v0/artifacts/:artifactVersionId/submit",
+    async ({ params, request }) =>
+      handleDriverPreferencesArtifactSubmitRequest(String(params.artifactVersionId), request)
+  ),
   http.post("*/api/v1/workpages/artifacts/:artifactVersionId/submit", async ({ params, request }) => {
     if (!inScope(request)) {
       return HttpResponse.json(
@@ -2968,6 +3782,11 @@ export const handlers = [
     }
 
     const artifactVersionId = String(params.artifactVersionId);
+    const driverPreferencesBaseVersion = driverPreferencesArtifactVersions.get(artifactVersionId);
+    if (driverPreferencesBaseVersion) {
+      return handleDriverPreferencesArtifactSubmitRequest(artifactVersionId, request);
+    }
+
     const routeDemandBaseVersion = routeDemandArtifactVersions.get(artifactVersionId);
     if (routeDemandBaseVersion) {
       return handleRouteDemandArtifactSubmitRequest(artifactVersionId, request);

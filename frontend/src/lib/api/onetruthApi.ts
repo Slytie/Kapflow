@@ -16,8 +16,8 @@ import type {
   TemplateRecord,
   TemplateRegistryMetadata,
   TimelineEvent,
+  WorkpageCreateResponse,
   WorkpageContract,
-  WorkpageDraftResponse,
   WorkpagePreviewResponse,
   WorkpageSubmittedResponse,
   WorkflowRunDetailContract,
@@ -35,6 +35,9 @@ import type {
 import type {
   WorkpageScheduleAcceptedSeries,
   WorkpageAction,
+  WorkpageDriverPreferencesAction,
+  WorkpageDriverPreferencesGrid,
+  WorkpageDriverPreferencesScheduleImpact,
   WorkpageScheduleAction,
   WorkpageScheduleArtifactState,
   WorkpageScheduleCalculations,
@@ -131,12 +134,14 @@ interface WorkpageEnvelope extends ListEnvelope {
   draft_lineage?: Record<string, unknown> | null;
   accepted_series?: Record<string, unknown> | null;
   schedule_impact?: Record<string, unknown> | null;
+  preference_grid?: Record<string, unknown> | null;
   dependencies?: Array<Record<string, unknown>> | null;
   actions?: Array<Record<string, unknown>> | null;
 }
 
-interface WorkpageDraftEnvelope extends ListEnvelope {
+interface WorkpageCreateEnvelope extends ListEnvelope {
   draft?: Record<string, unknown>;
+  created?: Record<string, unknown>;
 }
 
 interface WorkpageSubmitEnvelope extends ListEnvelope {
@@ -412,7 +417,9 @@ function normalizeWorkpageActions(value: unknown): WorkflowWorkspaceWorkpageActi
     const linkPolicy = asRecord(action.link_policy);
     const rawPresentation = asString(action.presentation, "open_route");
     const presentation: WorkflowWorkspaceWorkpageAction["presentation"] =
-      rawPresentation === "create_draft_then_open" ? "create_draft_then_open" : "open_route";
+      rawPresentation === "create_then_open" || rawPresentation === "create_draft_then_open"
+        ? "create_then_open"
+        : "open_route";
     const rawState = asString(action.state, "unavailable");
     const state: WorkflowWorkspaceWorkpageAction["state"] =
       rawState === "available" ? "available" : "unavailable";
@@ -793,6 +800,10 @@ function normalizeWorkpageContract(payload: WorkpageEnvelope): WorkpageContract 
     payload.schedule_impact === null || payload.schedule_impact === undefined
       ? null
       : requiredObject(payload.schedule_impact, "schedule_impact");
+  const preferenceGrid =
+    payload.preference_grid === null || payload.preference_grid === undefined
+      ? null
+      : requiredObject(payload.preference_grid, "preference_grid");
 
   if (!Array.isArray(workpage.sections)) {
     throw new Error("Invalid API response: expected array at 'workpage.sections'.");
@@ -873,19 +884,20 @@ function normalizeWorkpageContract(payload: WorkpageEnvelope): WorkpageContract 
     dependencies: normalizeScheduleDependencies(payload.dependencies),
     calculations: normalizeScheduleCalculations(calculations),
     route_demand_calculations: normalizeRouteDemandCalculations(calculations),
-    schedule_impact: normalizeRouteDemandScheduleImpact(scheduleImpact),
+    preference_grid: normalizeDriverPreferencesGrid(preferenceGrid),
+    schedule_impact: normalizeScheduleImpact(scheduleImpact, asString(workpage.workpage_id)),
     draft_lineage: normalizeScheduleDraftLineage(draftLineage),
     accepted_series: normalizeScheduleAcceptedSeries(acceptedSeries),
     actions: normalizeWorkpageActionsForContract(payload.actions)
   };
 }
 
-function normalizeWorkpageDraftResponse(payload: WorkpageDraftEnvelope): WorkpageDraftResponse {
-  const draft = requiredObject(payload.draft, "draft");
+function normalizeWorkpageCreateResponse(payload: WorkpageCreateEnvelope): WorkpageCreateResponse {
+  const created = requiredObject(payload.created ?? payload.draft, "created");
   return {
-    workflow_run_id: asString(draft.workflow_run_id),
-    artifact_version_id: asString(draft.artifact_version_id),
-    route: asString(draft.route)
+    workflow_run_id: asString(created.workflow_run_id),
+    artifact_version_id: asString(created.artifact_version_id),
+    route: asString(created.route)
   };
 }
 
@@ -1007,6 +1019,24 @@ function normalizeScheduleCalculations(
       available_driver_ids: asArray(selectedDay.available_driver_ids)
         .map((item) => asString(item))
         .filter(Boolean),
+      available_preference_buckets: {
+        open_to_work: asArray(asRecord(selectedDay.available_preference_buckets).open_to_work)
+          .map((item) => asString(item))
+          .filter(Boolean),
+        prefer_not_to_work: asArray(
+          asRecord(selectedDay.available_preference_buckets).prefer_not_to_work
+        )
+          .map((item) => asString(item))
+          .filter(Boolean),
+        definitely_can_not_work: asArray(
+          asRecord(selectedDay.available_preference_buckets).definitely_can_not_work
+        )
+          .map((item) => asString(item))
+          .filter(Boolean),
+        unset: asArray(asRecord(selectedDay.available_preference_buckets).unset)
+          .map((item) => asString(item))
+          .filter(Boolean)
+      },
       drivers_available:
         selectedDay.drivers_available === undefined
           ? undefined
@@ -1174,9 +1204,92 @@ function normalizeRouteDemandScheduleImpact(
   };
 }
 
+function normalizeDriverPreferencesGrid(
+  value: Record<string, unknown> | null
+): WorkpageDriverPreferencesGrid | null {
+  if (!value) {
+    return null;
+  }
+  return {
+    weekdays: asArray(value.weekdays)
+      .map((item) => asString(item))
+      .filter(Boolean) as WorkpageDriverPreferencesGrid["weekdays"],
+    drivers: asArray<Record<string, unknown>>(value.drivers).map((item) => {
+      const preferences = asRecord(item.preferences_by_weekday);
+      return {
+        driver_id: asString(item.driver_id),
+        driver_name: asString(item.driver_name),
+        employment_type: asString(item.employment_type),
+        on_call_eligible: Boolean(item.on_call_eligible),
+        preferences_by_weekday: {
+          sun: asStringOrNull(preferences.sun),
+          mon: asStringOrNull(preferences.mon),
+          tue: asStringOrNull(preferences.tue),
+          wed: asStringOrNull(preferences.wed),
+          thu: asStringOrNull(preferences.thu),
+          fri: asStringOrNull(preferences.fri),
+          sat: asStringOrNull(preferences.sat)
+        }
+      };
+    })
+  };
+}
+
+function normalizeDriverPreferencesScheduleImpact(
+  value: Record<string, unknown> | null
+): WorkpageDriverPreferencesScheduleImpact | null {
+  if (!value) {
+    return null;
+  }
+  return {
+    latest_schedule_draft_artifact_version_id: asStringOrNull(
+      value.latest_schedule_draft_artifact_version_id
+    ),
+    latest_driver_preferences_artifact_version_id: asStringOrNull(
+      value.latest_driver_preferences_artifact_version_id
+    ),
+    dependency_state: asString(value.dependency_state),
+    schedule_state: asString(value.schedule_state)
+  };
+}
+
+function normalizeScheduleImpact(
+  value: Record<string, unknown> | null,
+  workpageId: string
+): WorkpageContract["schedule_impact"] {
+  if (!value) {
+    return null;
+  }
+  if (workpageId === "driver-preferences-v0") {
+    return normalizeDriverPreferencesScheduleImpact(value);
+  }
+  return normalizeRouteDemandScheduleImpact(value);
+}
+
+function normalizeDriverPreferencesAction(
+  action: Record<string, unknown>
+): WorkpageDriverPreferencesAction {
+  return {
+    action_id: asString(action.action_id),
+    kind: asString(action.kind) as WorkpageDriverPreferencesAction["kind"],
+    label: asString(action.label),
+    state: asString(action.state, "unavailable") as WorkpageDriverPreferencesAction["state"],
+    workpage_kind: asString(action.workpage_kind),
+    artifact_version_id: asStringOrNull(action.artifact_version_id),
+    route: asStringOrNull(action.route),
+    create_path: asStringOrNull(action.create_path),
+    submit_path: asStringOrNull(action.submit_path),
+    disabled_reason: asStringOrNull(action.disabled_reason)
+  };
+}
+
 function normalizeWorkpageActionsForContract(value: unknown): WorkpageAction[] {
   return asArray<Record<string, unknown>>(value).map((action) => {
+    const workpageKind = asString(action.workpage_kind);
     const kind = asString(action.kind);
+    if (workpageKind === "driver-preferences-v0") {
+      return normalizeDriverPreferencesAction(action);
+    }
     if (kind === "open_latest" || kind === "save") {
       const routeDemandAction: WorkpageRouteDemandAction = {
         action_id: asString(action.action_id),
@@ -1459,12 +1572,12 @@ export const onetruthApi = {
     return normalizeWorkpageContract(payload);
   },
 
-  async createDemoEodDraft(payload: { idempotency_key: string }): Promise<WorkpageDraftResponse> {
-    const result = await requestJson<WorkpageDraftEnvelope>("/workpages/demo/eod-v0/drafts", {
+  async createDemoEodDraft(payload: { idempotency_key: string }): Promise<WorkpageCreateResponse> {
+    const result = await requestJson<WorkpageCreateEnvelope>("/workpages/demo/eod-v0/drafts", {
       method: "POST",
       body: payload
     });
-    return normalizeWorkpageDraftResponse(result);
+    return normalizeWorkpageCreateResponse(result);
   },
 
   async getWorkflowRunScheduleWorkpage(workflowRunId: string): Promise<WorkpageContract> {
@@ -1481,6 +1594,13 @@ export const onetruthApi = {
     return normalizeWorkpageContract(payload);
   },
 
+  async getWorkflowRunDriverPreferencesWorkpage(workflowRunId: string): Promise<WorkpageContract> {
+    const payload = await requestJson<WorkpageEnvelope>(
+      `/workpages/workflow-runs/${encodeURIComponent(workflowRunId)}/driver-preferences-v0`
+    );
+    return normalizeWorkpageContract(payload);
+  },
+
   async getWorkflowRunEodWorkpage(workflowRunId: string): Promise<WorkpageContract> {
     const payload = await requestJson<WorkpageEnvelope>(
       `/workpages/workflow-runs/${encodeURIComponent(workflowRunId)}/eod-v0`
@@ -1491,15 +1611,15 @@ export const onetruthApi = {
   async createWorkflowRunEodDraft(
     workflowRunId: string,
     payload: { idempotency_key: string; subject_link?: WorkpageSubjectLinkPayload }
-  ): Promise<WorkpageDraftResponse> {
-    const result = await requestJson<WorkpageDraftEnvelope>(
+  ): Promise<WorkpageCreateResponse> {
+    const result = await requestJson<WorkpageCreateEnvelope>(
       `/workpages/workflow-runs/${encodeURIComponent(workflowRunId)}/eod-v0/drafts`,
       {
         method: "POST",
         body: payload
       }
     );
-    return normalizeWorkpageDraftResponse(result);
+    return normalizeWorkpageCreateResponse(result);
   },
 
   async getArtifactWorkpage(artifactVersionId: string): Promise<WorkpageContract> {
@@ -1519,15 +1639,25 @@ export const onetruthApi = {
     return normalizeWorkpageContract(payload);
   },
 
-  async createWorkpageDraftAtPath(
+  async getWorkflowRunDriverPreferencesArtifactWorkpage(
+    workflowRunId: string,
+    artifactVersionId: string
+  ): Promise<WorkpageContract> {
+    const payload = await requestJson<WorkpageEnvelope>(
+      `/workpages/workflow-runs/${encodeURIComponent(workflowRunId)}/driver-preferences-v0/artifacts/${encodeURIComponent(artifactVersionId)}`
+    );
+    return normalizeWorkpageContract(payload);
+  },
+
+  async createWorkpageAtPath(
     createPath: string,
     payload: { idempotency_key: string; subject_link?: WorkpageSubjectLinkPayload }
-  ): Promise<WorkpageDraftResponse> {
-    const result = await requestJson<WorkpageDraftEnvelope>(normalizeApiPath(createPath), {
+  ): Promise<WorkpageCreateResponse> {
+    const result = await requestJson<WorkpageCreateEnvelope>(normalizeApiPath(createPath), {
       method: "POST",
       body: payload
     });
-    return normalizeWorkpageDraftResponse(result);
+    return normalizeWorkpageCreateResponse(result);
   },
 
   async submitArtifactWorkpage(
@@ -1538,6 +1668,7 @@ export const onetruthApi = {
       rows?: Array<Record<string, unknown>>;
       reserve_rows?: Array<Record<string, unknown>>;
       daily_demand_rows?: Array<Record<string, unknown>>;
+      driver_rows?: Array<Record<string, unknown>>;
       subject_link?: WorkpageSubjectLinkPayload;
       idempotency_key: string;
     }
@@ -1560,6 +1691,7 @@ export const onetruthApi = {
       rows?: Array<Record<string, unknown>>;
       reserve_rows?: Array<Record<string, unknown>>;
       daily_demand_rows?: Array<Record<string, unknown>>;
+      driver_rows?: Array<Record<string, unknown>>;
       subject_link?: WorkpageSubjectLinkPayload;
       idempotency_key: string;
     }

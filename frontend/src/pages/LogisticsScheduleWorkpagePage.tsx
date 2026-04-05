@@ -38,6 +38,7 @@ import { invalidateWorkspaceViews } from "@/lib/workspace/queryInvalidation";
 import { resolveWorkpageSubjectContext } from "@/lib/workspace/workpageSubjectContext";
 import type {
   WorkpageHistorySection as WorkpageHistorySectionModel,
+  WorkpageDriverPreferencesAction,
   WorkpageNotePanelSection as WorkpageNotePanelSectionModel,
   WorkpageRouteDemandAction,
   WorkpageScheduleAction,
@@ -125,6 +126,17 @@ function findRouteDemandAction(
     contract?.actions.find(
       (action): action is WorkpageRouteDemandAction =>
         action.workpage_kind === "route-demand-v0"
+    ) ?? null
+  );
+}
+
+function findDriverPreferencesAction(
+  contract: WorkpageContract | undefined
+): WorkpageDriverPreferencesAction | null {
+  return (
+    contract?.actions.find(
+      (action): action is WorkpageDriverPreferencesAction =>
+        action.workpage_kind === "driver-preferences-v0"
     ) ?? null
   );
 }
@@ -437,6 +449,9 @@ function LogisticsScheduleWorkpageView({
 }
 
 export function LogisticsScheduleWorkpagePage(): JSX.Element {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const queryClient = useQueryClient();
   const { workflowRunId } = useParams<{ workflowRunId: string }>();
   const isRunBacked = Boolean(workflowRunId);
   const query = useQuery({
@@ -446,6 +461,14 @@ export function LogisticsScheduleWorkpagePage(): JSX.Element {
         ? workpagesRepository.scheduleForRun(workflowRunId)
         : workpagesRepository.schedule(),
     refetchInterval: apiConfig.pollIntervalMs
+  });
+  const createDriverPreferencesMutation = useMutation({
+    mutationFn: (createPath: string) => workpagesRepository.createWorkpage(createPath),
+    onSuccess: (created) => {
+      void queryClient.invalidateQueries({ queryKey: ["workpages"] });
+      void invalidateWorkspaceViews(queryClient, created.workflow_run_id);
+      navigate(created.route, { state: location.state });
+    }
   });
 
   if (query.isLoading) {
@@ -485,6 +508,7 @@ export function LogisticsScheduleWorkpagePage(): JSX.Element {
     (action) => action.kind === "open_latest_draft"
   );
   const routeDemandAction = findRouteDemandAction(query.data);
+  const driverPreferencesAction = findDriverPreferencesAction(query.data);
   const backRoute = workpageBackRoute(workflowRunId);
 
   return (
@@ -523,6 +547,26 @@ export function LogisticsScheduleWorkpagePage(): JSX.Element {
                     Open route demand
                   </Link>
                 ) : null}
+                {driverPreferencesAction?.route ? (
+                  <Link className="link-button" to={driverPreferencesAction.route}>
+                    Open driver preferences
+                  </Link>
+                ) : driverPreferencesAction?.create_path ? (
+                  <button
+                    type="button"
+                    className="action-btn"
+                    disabled={createDriverPreferencesMutation.isPending}
+                    onClick={() =>
+                      createDriverPreferencesMutation.mutate(
+                        driverPreferencesAction.create_path ?? ""
+                      )
+                    }
+                  >
+                    {createDriverPreferencesMutation.isPending
+                      ? "Creating preferences snapshot..."
+                      : "Create preferences snapshot"}
+                  </button>
+                ) : null}
               </div>
             </section>
           ) : (
@@ -534,11 +578,33 @@ export function LogisticsScheduleWorkpagePage(): JSX.Element {
                   on the landing page until the canonical draft artifact exists.
                 </p>
               </header>
-              {routeDemandAction?.route ? (
+              {routeDemandAction?.route || driverPreferencesAction?.route || driverPreferencesAction?.create_path ? (
                 <div className="action-cluster">
-                  <Link className="link-button" to={routeDemandAction.route}>
-                    Open route demand
-                  </Link>
+                  {routeDemandAction?.route ? (
+                    <Link className="link-button" to={routeDemandAction.route}>
+                      Open route demand
+                    </Link>
+                  ) : null}
+                  {driverPreferencesAction?.route ? (
+                    <Link className="link-button" to={driverPreferencesAction.route}>
+                      Open driver preferences
+                    </Link>
+                  ) : driverPreferencesAction?.create_path ? (
+                    <button
+                      type="button"
+                      className="action-btn"
+                      disabled={createDriverPreferencesMutation.isPending}
+                      onClick={() =>
+                        createDriverPreferencesMutation.mutate(
+                          driverPreferencesAction.create_path ?? ""
+                        )
+                      }
+                    >
+                      {createDriverPreferencesMutation.isPending
+                        ? "Creating preferences snapshot..."
+                        : "Create preferences snapshot"}
+                    </button>
+                  ) : null}
                 </div>
               ) : null}
             </section>
@@ -599,6 +665,7 @@ export function LogisticsScheduleArtifactWorkpagePage(): JSX.Element {
     (action) => action.kind === "submit_artifact" || action.action_id === "workpage.schedule-v0.save_draft"
   );
   const routeDemandAction = findRouteDemandAction(contract);
+  const driverPreferencesAction = findDriverPreferencesAction(contract);
   const baseAssignmentSignature = useMemo(
     () => rowsSignature(assignmentSection?.rows ?? []),
     [assignmentSection]
@@ -645,6 +712,14 @@ export function LogisticsScheduleArtifactWorkpagePage(): JSX.Element {
   const downloadMutation = useMutation({
     mutationFn: (currentArtifactVersionId: string) =>
       workpagesRepository.downloadScheduleArtifactJson(currentArtifactVersionId)
+  });
+  const createDriverPreferencesMutation = useMutation({
+    mutationFn: (createPath: string) => workpagesRepository.createWorkpage(createPath),
+    onSuccess: (created) => {
+      void queryClient.invalidateQueries({ queryKey: ["workpages"] });
+      void invalidateWorkspaceViews(queryClient, created.workflow_run_id);
+      navigate(created.route, { state: location.state });
+    }
   });
 
   useEffect(() => {
@@ -833,6 +908,26 @@ export function LogisticsScheduleArtifactWorkpagePage(): JSX.Element {
             <Link className="link-button" to={routeDemandAction.route}>
               Open route demand
             </Link>
+          ) : null}
+          {driverPreferencesAction?.route ? (
+            <Link className="link-button" to={driverPreferencesAction.route}>
+              Open driver preferences
+            </Link>
+          ) : driverPreferencesAction?.create_path ? (
+            <button
+              type="button"
+              className="action-btn"
+              disabled={createDriverPreferencesMutation.isPending}
+              onClick={() =>
+                createDriverPreferencesMutation.mutate(
+                  driverPreferencesAction.create_path ?? ""
+                )
+              }
+            >
+              {createDriverPreferencesMutation.isPending
+                ? "Creating preferences snapshot..."
+                : "Create preferences snapshot"}
+            </button>
           ) : null}
         </>
       }

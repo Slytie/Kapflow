@@ -10,6 +10,7 @@ from tests.runtime.helpers.runtime_api import RuntimeApiClient
 from tests.runtime.helpers.runtime_cli import REPO_ROOT, run_cli
 from tests.runtime.helpers.scenario_harness import RuntimeScenarioHarness
 from tests.runtime.helpers.workpage_runs import (
+    create_driver_preferences_snapshot,
     seed_actual_ops_weekly_schedule_run,
     seed_actual_ops_weekly_schedule_run_with_stage04_outputs,
     seed_dispatch_workspace_stage04_approval_with_draft,
@@ -53,6 +54,10 @@ SNAPSHOT_FILES = {
     "workpage_route_demand_v0_run_state": "workpage_route_demand_v0_run_state.json",
     "workpage_route_demand_v0_artifact_state": "workpage_route_demand_v0_artifact_state.json",
     "workpage_route_demand_v0_artifact_submit_response": "workpage_route_demand_v0_artifact_submit_response.json",
+    "workpage_driver_preferences_v0_run_state": "workpage_driver_preferences_v0_run_state.json",
+    "workpage_driver_preferences_v0_artifact_create_response": "workpage_driver_preferences_v0_artifact_create_response.json",
+    "workpage_driver_preferences_v0_artifact_state": "workpage_driver_preferences_v0_artifact_state.json",
+    "workpage_driver_preferences_v0_artifact_submit_response": "workpage_driver_preferences_v0_artifact_submit_response.json",
     "workspace_schedule_workpage_action_available_state": "workspace_schedule_workpage_action_available_state.json",
     "workspace_schedule_workpage_action_unavailable_state": "workspace_schedule_workpage_action_unavailable_state.json",
     "workspace_eod_workpage_action_create_state": "workspace_eod_workpage_action_create_state.json",
@@ -202,6 +207,18 @@ def build_frontend_snapshots_payloads() -> dict[str, dict[str, Any]]:
             ),
             "workpage_route_demand_v0_artifact_submit_response": _build_route_demand_artifact_submit_snapshot(
                 tmp_path=base / "workpage_route_demand_v0_artifact_submit"
+            ),
+            "workpage_driver_preferences_v0_run_state": _build_driver_preferences_run_workpage_snapshot(
+                tmp_path=base / "workpage_driver_preferences_v0_run"
+            ),
+            "workpage_driver_preferences_v0_artifact_create_response": _build_driver_preferences_artifact_create_snapshot(
+                tmp_path=base / "workpage_driver_preferences_v0_artifact_create"
+            ),
+            "workpage_driver_preferences_v0_artifact_state": _build_driver_preferences_artifact_state_snapshot(
+                tmp_path=base / "workpage_driver_preferences_v0_artifact_state"
+            ),
+            "workpage_driver_preferences_v0_artifact_submit_response": _build_driver_preferences_artifact_submit_snapshot(
+                tmp_path=base / "workpage_driver_preferences_v0_artifact_submit"
             ),
             "workspace_schedule_workpage_action_available_state": _build_workspace_schedule_action_available_snapshot(
                 tmp_path=base / "workspace_schedule_workpage_action_available"
@@ -644,6 +661,175 @@ def _build_route_demand_artifact_submit_snapshot(*, tmp_path: Path) -> dict[str,
                 "capture": "artifact_backed_submit_response",
                 "workflow_run_id": workflow_run_id,
                 "workpage_id": "route-demand-v0",
+            },
+            "submit_response": payload,
+        }
+    )
+
+
+def _build_driver_preferences_run_workpage_snapshot(*, tmp_path: Path) -> dict[str, Any]:
+    tmp_path.mkdir(parents=True, exist_ok=True)
+    db_url = f"sqlite:///{tmp_path / 'workpage_driver_preferences_v0_run.db'}"
+    seeded = seed_actual_ops_weekly_schedule_run_with_stage04_outputs(
+        db_url=db_url,
+        tenant_id="tenant-a",
+        domain_id="domain-x",
+        run_tag="snapshot:workpage-driver-preferences-v0-run",
+    )
+    client = RuntimeApiClient(
+        db_url=db_url,
+        tenant_id="tenant-a",
+        domain_id="domain-x",
+        actor_id="human:frontend-snapshot-exporter",
+        actor_type="human",
+        actor_roles=["dispatch_supervisor", "operations_manager", "schedule_planner"],
+    )
+    workflow_run_id = str(seeded["workflow_run_id"])
+    payload = client.get(
+        f"/api/v1/workpages/workflow-runs/{workflow_run_id}/driver-preferences-v0"
+    ).payload
+    return _stabilize(
+        {
+            "snapshot_id": "workpage_driver_preferences_v0_run_state",
+            "source": {
+                "capture": "workflow_run_query",
+                "workflow_run_id": workflow_run_id,
+                "workpage_id": "driver-preferences-v0",
+            },
+            "workpage_state": payload,
+        }
+    )
+
+
+def _build_driver_preferences_artifact_create_snapshot(*, tmp_path: Path) -> dict[str, Any]:
+    tmp_path.mkdir(parents=True, exist_ok=True)
+    db_url = f"sqlite:///{tmp_path / 'workpage_driver_preferences_v0_artifact_create.db'}"
+    seeded = seed_actual_ops_weekly_schedule_run_with_stage04_outputs(
+        db_url=db_url,
+        tenant_id="tenant-a",
+        domain_id="domain-x",
+        run_tag="snapshot:workpage-driver-preferences-v0-artifact-create",
+    )
+    payload = create_driver_preferences_snapshot(
+        db_url=db_url,
+        tenant_id="tenant-a",
+        domain_id="domain-x",
+        workflow_run_id=str(seeded["workflow_run_id"]),
+        run_tag="snapshot:workpage-driver-preferences-v0-artifact-create",
+    )
+    return _stabilize(
+        {
+            "snapshot_id": "workpage_driver_preferences_v0_artifact_create_response",
+            "source": {
+                "capture": "artifact_create_response",
+                "workflow_run_id": str(seeded["workflow_run_id"]),
+                "workpage_id": "driver-preferences-v0",
+            },
+            "create_response": payload,
+        }
+    )
+
+
+def _build_driver_preferences_artifact_state_snapshot(*, tmp_path: Path) -> dict[str, Any]:
+    tmp_path.mkdir(parents=True, exist_ok=True)
+    db_url = f"sqlite:///{tmp_path / 'workpage_driver_preferences_v0_artifact.db'}"
+    seeded = seed_actual_ops_weekly_schedule_run_with_stage04_outputs(
+        db_url=db_url,
+        tenant_id="tenant-a",
+        domain_id="domain-x",
+        run_tag="snapshot:workpage-driver-preferences-v0-artifact",
+    )
+    created = create_driver_preferences_snapshot(
+        db_url=db_url,
+        tenant_id="tenant-a",
+        domain_id="domain-x",
+        workflow_run_id=str(seeded["workflow_run_id"]),
+        run_tag="snapshot:workpage-driver-preferences-v0-artifact",
+    )
+    client = RuntimeApiClient(
+        db_url=db_url,
+        tenant_id="tenant-a",
+        domain_id="domain-x",
+        actor_id="human:frontend-snapshot-exporter",
+        actor_type="human",
+        actor_roles=["dispatch_supervisor", "operations_manager", "schedule_planner"],
+    )
+    workflow_run_id = str(seeded["workflow_run_id"])
+    artifact_version_id = str(created["created"]["artifact_version_id"])
+    payload = client.get(
+        f"/api/v1/workpages/workflow-runs/{workflow_run_id}/"
+        f"driver-preferences-v0/artifacts/{artifact_version_id}"
+    ).payload
+    return _stabilize(
+        {
+            "snapshot_id": "workpage_driver_preferences_v0_artifact_state",
+            "source": {
+                "capture": "artifact_backed_read_projection",
+                "workflow_run_id": workflow_run_id,
+                "workpage_id": "driver-preferences-v0",
+            },
+            "workpage_state": payload,
+        }
+    )
+
+
+def _build_driver_preferences_artifact_submit_snapshot(*, tmp_path: Path) -> dict[str, Any]:
+    tmp_path.mkdir(parents=True, exist_ok=True)
+    db_url = f"sqlite:///{tmp_path / 'workpage_driver_preferences_v0_artifact_submit.db'}"
+    seeded = seed_actual_ops_weekly_schedule_run_with_stage04_outputs(
+        db_url=db_url,
+        tenant_id="tenant-a",
+        domain_id="domain-x",
+        run_tag="snapshot:workpage-driver-preferences-v0-artifact-submit",
+    )
+    created = create_driver_preferences_snapshot(
+        db_url=db_url,
+        tenant_id="tenant-a",
+        domain_id="domain-x",
+        workflow_run_id=str(seeded["workflow_run_id"]),
+        run_tag="snapshot:workpage-driver-preferences-v0-artifact-submit",
+    )
+    client = RuntimeApiClient(
+        db_url=db_url,
+        tenant_id="tenant-a",
+        domain_id="domain-x",
+        actor_id="human:frontend-snapshot-exporter",
+        actor_type="human",
+        actor_roles=["dispatch_supervisor", "operations_manager", "schedule_planner"],
+    )
+    workflow_run_id = str(seeded["workflow_run_id"])
+    artifact_version_id = str(created["created"]["artifact_version_id"])
+    current = client.get(
+        f"/api/v1/workpages/workflow-runs/{workflow_run_id}/"
+        f"driver-preferences-v0/artifacts/{artifact_version_id}"
+    ).payload
+    driver_rows = list(current["preference_grid"]["drivers"])
+    first_row = dict(driver_rows[0])
+    first_preferences = dict(first_row["preferences_by_weekday"])
+    first_preferences["mon"] = "open_to_work"
+    first_row["preferences_by_weekday"] = first_preferences
+    driver_rows[0] = first_row
+    payload = client.post(
+        f"/api/v1/workpages/workflow-runs/{workflow_run_id}/"
+        f"driver-preferences-v0/artifacts/{artifact_version_id}/submit",
+        payload={
+            "driver_rows": [
+                {
+                    "driver_id": row["driver_id"],
+                    "preferences_by_weekday": row["preferences_by_weekday"],
+                }
+                for row in driver_rows
+            ],
+            "idempotency_key": "snapshot:driver-preferences-artifact-submit",
+        },
+    ).payload
+    return _stabilize(
+        {
+            "snapshot_id": "workpage_driver_preferences_v0_artifact_submit_response",
+            "source": {
+                "capture": "artifact_backed_submit_response",
+                "workflow_run_id": workflow_run_id,
+                "workpage_id": "driver-preferences-v0",
             },
             "submit_response": payload,
         }

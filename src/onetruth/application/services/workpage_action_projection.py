@@ -62,7 +62,7 @@ def project_human_task_workpage_actions(
         ]
     if workflow_id == "dispatch_reporting.v1" and surface in EOD_WORKPAGE_SUPPORTED_TASK_SURFACES:
         return [
-            _open_or_create_draft_action(
+            _open_or_create_action(
                 descriptor=_require_descriptor(EOD_WORKPAGE_KIND),
                 workflow_run_id=str(task["workflow_run_id"]),
                 subject_kind="human_task",
@@ -97,7 +97,7 @@ def project_approval_workpage_actions(
         ]
     if workflow_id == "dispatch_reporting.v1" and scope_ref in EOD_WORKPAGE_SUPPORTED_APPROVAL_SCOPE_REFS:
         return [
-            _open_or_create_draft_action(
+            _open_or_create_action(
                 descriptor=_require_descriptor(EOD_WORKPAGE_KIND),
                 workflow_run_id=workflow_run_id,
                 subject_kind="approval",
@@ -160,7 +160,7 @@ def _open_latest_draft_action(
     }
 
 
-def _open_or_create_draft_action(
+def _open_or_create_action(
     *,
     descriptor: WorkpageDescriptor,
     workflow_run_id: str,
@@ -195,15 +195,15 @@ def _open_or_create_draft_action(
                 "disabled_reason": None,
             }
     create_path = (
-        descriptor.draft_create_path_builder(workflow_run_id)
-        if descriptor.draft_create_path_builder is not None
+        descriptor.create_path_builder(workflow_run_id)
+        if descriptor.create_path_builder is not None
         else None
     )
     return {
         "action_id": str(descriptor.create_action_id or ""),
         "workpage_kind": descriptor.kind,
         "label": str(descriptor.create_action_label or ""),
-        "presentation": "create_draft_then_open",
+        "presentation": "create_then_open",
         "state": "available" if create_path else "unavailable",
         "route": None,
         "create_path": create_path,

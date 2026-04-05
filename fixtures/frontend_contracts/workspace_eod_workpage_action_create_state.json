@@ -51,7 +51,7 @@
               "create_relation_kind": "draft",
               "submit_relation_kind": "response"
             },
-            "presentation": "create_draft_then_open",
+            "presentation": "create_then_open",
             "route": null,
             "state": "available",
             "subject_context": {
@@ -321,7 +321,7 @@
               "create_relation_kind": "draft",
               "submit_relation_kind": "response"
             },
-            "presentation": "create_draft_then_open",
+            "presentation": "create_then_open",
             "route": null,
             "state": "available",
             "subject_context": {

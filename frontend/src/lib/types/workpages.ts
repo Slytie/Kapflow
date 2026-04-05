@@ -165,6 +165,12 @@ export interface WorkpageScheduleSelectedDay {
   on_call_drivers?: number;
   available_driver_count?: number;
   available_driver_ids?: string[];
+  available_preference_buckets?: {
+    open_to_work: string[];
+    prefer_not_to_work: string[];
+    definitely_can_not_work: string[];
+    unset: string[];
+  };
   drivers_available?: number;
   projected_on_call_needed?: number;
   open_questions?: string;
@@ -307,7 +313,53 @@ export interface WorkpageRouteDemandAction {
   disabled_reason?: string | null;
 }
 
-export type WorkpageAction = WorkpageScheduleAction | WorkpageRouteDemandAction;
+export interface WorkpageDriverPreferencesDriverRow {
+  driver_id: string;
+  driver_name: string;
+  employment_type: string;
+  on_call_eligible: boolean;
+  preferences_by_weekday: {
+    sun: string | null;
+    mon: string | null;
+    tue: string | null;
+    wed: string | null;
+    thu: string | null;
+    fri: string | null;
+    sat: string | null;
+  };
+}
+
+export interface WorkpageDriverPreferencesGrid {
+  weekdays: Array<"sun" | "mon" | "tue" | "wed" | "thu" | "fri" | "sat">;
+  drivers: WorkpageDriverPreferencesDriverRow[];
+}
+
+export interface WorkpageDriverPreferencesScheduleImpact {
+  latest_schedule_draft_artifact_version_id: string | null;
+  latest_driver_preferences_artifact_version_id?: string | null;
+  dependency_state: string;
+  schedule_state: string;
+}
+
+export type WorkpageDriverPreferencesActionKind = "open_latest" | "create_snapshot" | "save";
+
+export interface WorkpageDriverPreferencesAction {
+  action_id: string;
+  kind: WorkpageDriverPreferencesActionKind;
+  label: string;
+  state: "available" | "blocked" | "unavailable";
+  workpage_kind: string;
+  artifact_version_id: string | null;
+  route?: string | null;
+  create_path?: string | null;
+  submit_path?: string | null;
+  disabled_reason?: string | null;
+}
+
+export type WorkpageAction =
+  | WorkpageScheduleAction
+  | WorkpageRouteDemandAction
+  | WorkpageDriverPreferencesAction;
 
 export type WorkpageSection =
   | WorkpageSummaryCardsSection

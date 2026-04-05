@@ -42,6 +42,16 @@
         "route": "/runs/<workflow_run_id:1>/workpages/route-demand-v0/artifacts/<artifact_version_id:3>",
         "state": "available",
         "workpage_kind": "route-demand-v0"
+      },
+      {
+        "action_id": "workpage.driver-preferences-v0.create_snapshot",
+        "artifact_version_id": null,
+        "create_path": "/api/v1/workpages/workflow-runs/<workflow_run_id:1>/driver-preferences-v0/snapshots",
+        "kind": "create_snapshot",
+        "label": "Create preferences snapshot",
+        "route": null,
+        "state": "available",
+        "workpage_kind": "driver-preferences-v0"
       }
     ],
     "artifact_context": {
@@ -135,6 +145,13 @@
           "check_id": "hard_constraint_compliance",
           "label": "Hard assignment compliance",
           "state": "fail"
+        },
+        {
+          "affected_driver_ids": [],
+          "blocking": false,
+          "check_id": "driver_preferences_alignment",
+          "label": "Driver preference alignment",
+          "state": "pass"
         }
       ],
       "driver_metrics": [
@@ -148,7 +165,7 @@
             "rolling_7_day_limit"
           ],
           "on_call_shifts": 0,
-          "preference_state": "neutral",
+          "preference_state": "unset",
           "scheduled_hours": 25.5,
           "scheduled_routes": 3
         },
@@ -162,7 +179,7 @@
             "rolling_7_day_limit"
           ],
           "on_call_shifts": 0,
-          "preference_state": "neutral",
+          "preference_state": "unset",
           "scheduled_hours": 25.5,
           "scheduled_routes": 3
         },
@@ -176,7 +193,7 @@
             "rolling_7_day_limit"
           ],
           "on_call_shifts": 2,
-          "preference_state": "neutral",
+          "preference_state": "unset",
           "scheduled_hours": 23.0,
           "scheduled_routes": 2
         },
@@ -190,7 +207,7 @@
             "rolling_7_day_limit"
           ],
           "on_call_shifts": 0,
-          "preference_state": "neutral",
+          "preference_state": "unset",
           "scheduled_hours": 25.5,
           "scheduled_routes": 3
         },
@@ -204,7 +221,7 @@
             "rolling_7_day_limit"
           ],
           "on_call_shifts": 0,
-          "preference_state": "neutral",
+          "preference_state": "unset",
           "scheduled_hours": 34.0,
           "scheduled_routes": 4
         },
@@ -218,7 +235,7 @@
             "rolling_7_day_limit"
           ],
           "on_call_shifts": 1,
-          "preference_state": "neutral",
+          "preference_state": "unset",
           "scheduled_hours": 28.5,
           "scheduled_routes": 3
         },
@@ -232,7 +249,7 @@
             "rolling_7_day_limit"
           ],
           "on_call_shifts": 0,
-          "preference_state": "neutral",
+          "preference_state": "unset",
           "scheduled_hours": 25.5,
           "scheduled_routes": 3
         },
@@ -246,7 +263,7 @@
             "rolling_7_day_limit"
           ],
           "on_call_shifts": 1,
-          "preference_state": "neutral",
+          "preference_state": "unset",
           "scheduled_hours": 28.5,
           "scheduled_routes": 3
         },
@@ -260,7 +277,7 @@
             "rolling_7_day_limit"
           ],
           "on_call_shifts": 0,
-          "preference_state": "neutral",
+          "preference_state": "unset",
           "scheduled_hours": 34.0,
           "scheduled_routes": 4
         },
@@ -274,7 +291,7 @@
             "rolling_7_day_limit"
           ],
           "on_call_shifts": 1,
-          "preference_state": "neutral",
+          "preference_state": "unset",
           "scheduled_hours": 20.0,
           "scheduled_routes": 2
         },
@@ -288,7 +305,7 @@
             "rolling_7_day_limit"
           ],
           "on_call_shifts": 2,
-          "preference_state": "neutral",
+          "preference_state": "unset",
           "scheduled_hours": 14.5,
           "scheduled_routes": 1
         },
@@ -302,7 +319,7 @@
             "rolling_7_day_limit"
           ],
           "on_call_shifts": 1,
-          "preference_state": "neutral",
+          "preference_state": "unset",
           "scheduled_hours": 28.5,
           "scheduled_routes": 3
         },
@@ -316,7 +333,7 @@
             "rolling_7_day_limit"
           ],
           "on_call_shifts": 0,
-          "preference_state": "neutral",
+          "preference_state": "unset",
           "scheduled_hours": 25.5,
           "scheduled_routes": 3
         },
@@ -330,7 +347,7 @@
             "rolling_7_day_limit"
           ],
           "on_call_shifts": 0,
-          "preference_state": "neutral",
+          "preference_state": "unset",
           "scheduled_hours": 34.0,
           "scheduled_routes": 4
         },
@@ -344,7 +361,7 @@
             "rolling_7_day_limit"
           ],
           "on_call_shifts": 1,
-          "preference_state": "neutral",
+          "preference_state": "unset",
           "scheduled_hours": 28.5,
           "scheduled_routes": 3
         },
@@ -358,7 +375,7 @@
             "rolling_7_day_limit"
           ],
           "on_call_shifts": 1,
-          "preference_state": "neutral",
+          "preference_state": "unset",
           "scheduled_hours": 28.5,
           "scheduled_routes": 3
         },
@@ -372,7 +389,7 @@
             "rolling_7_day_limit"
           ],
           "on_call_shifts": 0,
-          "preference_state": "neutral",
+          "preference_state": "unset",
           "scheduled_hours": 25.5,
           "scheduled_routes": 3
         },
@@ -386,7 +403,7 @@
             "rolling_7_day_limit"
           ],
           "on_call_shifts": 2,
-          "preference_state": "neutral",
+          "preference_state": "unset",
           "scheduled_hours": 14.5,
           "scheduled_routes": 1
         },
@@ -400,7 +417,7 @@
             "rolling_7_day_limit"
           ],
           "on_call_shifts": 0,
-          "preference_state": "neutral",
+          "preference_state": "unset",
           "scheduled_hours": 25.5,
           "scheduled_routes": 3
         },
@@ -414,7 +431,7 @@
             "rolling_7_day_limit"
           ],
           "on_call_shifts": 0,
-          "preference_state": "neutral",
+          "preference_state": "unset",
           "scheduled_hours": 34.0,
           "scheduled_routes": 4
         },
@@ -428,7 +445,7 @@
             "rolling_7_day_limit"
           ],
           "on_call_shifts": 1,
-          "preference_state": "neutral",
+          "preference_state": "unset",
           "scheduled_hours": 28.5,
           "scheduled_routes": 3
         },
@@ -442,7 +459,7 @@
             "rolling_7_day_limit"
           ],
           "on_call_shifts": 0,
-          "preference_state": "neutral",
+          "preference_state": "unset",
           "scheduled_hours": 34.0,
           "scheduled_routes": 4
         },
@@ -456,7 +473,7 @@
             "rolling_7_day_limit"
           ],
           "on_call_shifts": 1,
-          "preference_state": "neutral",
+          "preference_state": "unset",
           "scheduled_hours": 28.5,
           "scheduled_routes": 3
         },
@@ -470,7 +487,7 @@
             "rolling_7_day_limit"
           ],
           "on_call_shifts": 0,
-          "preference_state": "neutral",
+          "preference_state": "unset",
           "scheduled_hours": 25.5,
           "scheduled_routes": 3
         },
@@ -484,7 +501,7 @@
             "rolling_7_day_limit"
           ],
           "on_call_shifts": 0,
-          "preference_state": "neutral",
+          "preference_state": "unset",
           "scheduled_hours": 34.0,
           "scheduled_routes": 4
         },
@@ -498,7 +515,7 @@
             "rolling_7_day_limit"
           ],
           "on_call_shifts": 0,
-          "preference_state": "neutral",
+          "preference_state": "unset",
           "scheduled_hours": 25.5,
           "scheduled_routes": 3
         },
@@ -512,7 +529,7 @@
             "rolling_7_day_limit"
           ],
           "on_call_shifts": 2,
-          "preference_state": "neutral",
+          "preference_state": "unset",
           "scheduled_hours": 23.0,
           "scheduled_routes": 2
         },
@@ -526,7 +543,7 @@
             "rolling_7_day_limit"
           ],
           "on_call_shifts": 2,
-          "preference_state": "neutral",
+          "preference_state": "unset",
           "scheduled_hours": 23.0,
           "scheduled_routes": 2
         },
@@ -540,7 +557,7 @@
             "rolling_7_day_limit"
           ],
           "on_call_shifts": 0,
-          "preference_state": "neutral",
+          "preference_state": "unset",
           "scheduled_hours": 25.5,
           "scheduled_routes": 3
         },
@@ -554,7 +571,7 @@
             "rolling_7_day_limit"
           ],
           "on_call_shifts": 0,
-          "preference_state": "neutral",
+          "preference_state": "unset",
           "scheduled_hours": 25.5,
           "scheduled_routes": 3
         },
@@ -568,7 +585,7 @@
             "rolling_7_day_limit"
           ],
           "on_call_shifts": 2,
-          "preference_state": "neutral",
+          "preference_state": "unset",
           "scheduled_hours": 23.0,
           "scheduled_routes": 2
         },
@@ -582,7 +599,7 @@
             "rolling_7_day_limit"
           ],
           "on_call_shifts": 0,
-          "preference_state": "neutral",
+          "preference_state": "unset",
           "scheduled_hours": 25.5,
           "scheduled_routes": 3
         },
@@ -596,7 +613,7 @@
             "rolling_7_day_limit"
           ],
           "on_call_shifts": 0,
-          "preference_state": "neutral",
+          "preference_state": "unset",
           "scheduled_hours": 25.5,
           "scheduled_routes": 3
         },
@@ -610,7 +627,7 @@
             "rolling_7_day_limit"
           ],
           "on_call_shifts": 1,
-          "preference_state": "neutral",
+          "preference_state": "unset",
           "scheduled_hours": 28.5,
           "scheduled_routes": 3
         },
@@ -624,7 +641,7 @@
             "rolling_7_day_limit"
           ],
           "on_call_shifts": 0,
-          "preference_state": "neutral",
+          "preference_state": "unset",
           "scheduled_hours": 25.5,
           "scheduled_routes": 3
         },
@@ -638,7 +655,7 @@
             "rolling_7_day_limit"
           ],
           "on_call_shifts": 0,
-          "preference_state": "neutral",
+          "preference_state": "unset",
           "scheduled_hours": 34.0,
           "scheduled_routes": 4
         },
@@ -652,7 +669,7 @@
             "rolling_7_day_limit"
           ],
           "on_call_shifts": 0,
-          "preference_state": "neutral",
+          "preference_state": "unset",
           "scheduled_hours": 25.5,
           "scheduled_routes": 3
         },
@@ -666,7 +683,7 @@
             "rolling_7_day_limit"
           ],
           "on_call_shifts": 1,
-          "preference_state": "neutral",
+          "preference_state": "unset",
           "scheduled_hours": 28.5,
           "scheduled_routes": 3
         },
@@ -680,7 +697,7 @@
             "rolling_7_day_limit"
           ],
           "on_call_shifts": 0,
-          "preference_state": "neutral",
+          "preference_state": "unset",
           "scheduled_hours": 34.0,
           "scheduled_routes": 4
         },
@@ -694,7 +711,7 @@
             "rolling_7_day_limit"
           ],
           "on_call_shifts": 0,
-          "preference_state": "neutral",
+          "preference_state": "unset",
           "scheduled_hours": 34.0,
           "scheduled_routes": 4
         },
@@ -708,7 +725,7 @@
             "rolling_7_day_limit"
           ],
           "on_call_shifts": 2,
-          "preference_state": "neutral",
+          "preference_state": "unset",
           "scheduled_hours": 23.0,
           "scheduled_routes": 2
         },
@@ -721,7 +738,7 @@
             "route_slot_not_in_pinned_baseline"
           ],
           "on_call_shifts": 0,
-          "preference_state": "neutral",
+          "preference_state": "unset",
           "scheduled_hours": 34.0,
           "scheduled_routes": 4
         },
@@ -735,7 +752,7 @@
             "rolling_7_day_limit"
           ],
           "on_call_shifts": 0,
-          "preference_state": "neutral",
+          "preference_state": "unset",
           "scheduled_hours": 25.5,
           "scheduled_routes": 3
         },
@@ -749,7 +766,7 @@
             "rolling_7_day_limit"
           ],
           "on_call_shifts": 0,
-          "preference_state": "neutral",
+          "preference_state": "unset",
           "scheduled_hours": 34.0,
           "scheduled_routes": 4
         },
@@ -763,7 +780,7 @@
             "rolling_7_day_limit"
           ],
           "on_call_shifts": 0,
-          "preference_state": "neutral",
+          "preference_state": "unset",
           "scheduled_hours": 34.0,
           "scheduled_routes": 4
         },
@@ -777,7 +794,7 @@
             "rolling_7_day_limit"
           ],
           "on_call_shifts": 2,
-          "preference_state": "neutral",
+          "preference_state": "unset",
           "scheduled_hours": 14.5,
           "scheduled_routes": 1
         },
@@ -791,7 +808,7 @@
             "rolling_7_day_limit"
           ],
           "on_call_shifts": 1,
-          "preference_state": "neutral",
+          "preference_state": "unset",
           "scheduled_hours": 28.5,
           "scheduled_routes": 3
         },
@@ -805,7 +822,7 @@
             "rolling_7_day_limit"
           ],
           "on_call_shifts": 0,
-          "preference_state": "neutral",
+          "preference_state": "unset",
           "scheduled_hours": 25.5,
           "scheduled_routes": 3
         },
@@ -819,7 +836,7 @@
             "rolling_7_day_limit"
           ],
           "on_call_shifts": 1,
-          "preference_state": "neutral",
+          "preference_state": "unset",
           "scheduled_hours": 28.5,
           "scheduled_routes": 3
         },
@@ -833,7 +850,7 @@
             "rolling_7_day_limit"
           ],
           "on_call_shifts": 0,
-          "preference_state": "neutral",
+          "preference_state": "unset",
           "scheduled_hours": 34.0,
           "scheduled_routes": 4
         },
@@ -847,7 +864,7 @@
             "rolling_7_day_limit"
           ],
           "on_call_shifts": 0,
-          "preference_state": "neutral",
+          "preference_state": "unset",
           "scheduled_hours": 34.0,
           "scheduled_routes": 4
         }
@@ -879,6 +896,36 @@
           "A1BWWMZFC5PAMI",
           "A2YLZCTDXK95J"
         ],
+        "available_preference_buckets": {
+          "definitely_can_not_work": [],
+          "open_to_work": [],
+          "prefer_not_to_work": [],
+          "unset": [
+            "A2TU4ZRI65E1H8",
+            "A149421ZGG7QED",
+            "A1S1XUJABAWLGR",
+            "A3OYGBYE20UA2R",
+            "AGOU3M5WUIHWC",
+            "AHRF1Y9PK4GXB",
+            "A3BQS4NVAKL2HQ",
+            "A3NLLQPB0L46N9",
+            "A1HIH95LQQ9EQE",
+            "A2KXEYK2UAQ1SX",
+            "A2SCS728PUCGTE",
+            "A7IT4OGI9NGQX",
+            "A4RCGY31PTY9M",
+            "A185MOPEG4MOST",
+            "A1NJLYPMMEKHLK",
+            "AU6YIGC7GXQGA",
+            "A3QZ9AS16464VX",
+            "A1ARZD44V26ZMJ",
+            "A4KU9LEU82OTF",
+            "AYLV43T35EAIN",
+            "A1NQEGRS26IBJA",
+            "A1BWWMZFC5PAMI",
+            "A2YLZCTDXK95J"
+          ]
+        },
         "on_call_drivers": 4,
         "on_call_target": 4,
         "routes_required": 20,

@@ -2,6 +2,10 @@ import { HttpResponse, http } from "msw";
 
 import artifactCreateSnapshot from "@fixtures/workpage_eod_v0_artifact_create_response.json";
 import artifactCreateRunSnapshot from "@fixtures/workpage_eod_v0_run_artifact_create_response.json";
+import driverPreferencesArtifactCreateSnapshot from "@fixtures/workpage_driver_preferences_v0_artifact_create_response.json";
+import driverPreferencesArtifactStateSnapshot from "@fixtures/workpage_driver_preferences_v0_artifact_state.json";
+import driverPreferencesArtifactSubmitSnapshot from "@fixtures/workpage_driver_preferences_v0_artifact_submit_response.json";
+import driverPreferencesRunWorkpageStateSnapshot from "@fixtures/workpage_driver_preferences_v0_run_state.json";
 import eodRunWorkpageStateSnapshot from "@fixtures/workpage_eod_v0_run_state.json";
 import routeDemandArtifactStateSnapshot from "@fixtures/workpage_route_demand_v0_artifact_state.json";
 import routeDemandArtifactSubmitSnapshot from "@fixtures/workpage_route_demand_v0_artifact_submit_response.json";
@@ -125,7 +129,8 @@ describe("onetruthApi workpage parsing", () => {
     expect(contract.actions.map((action) => action.kind)).toEqual([
       "preview_recalc",
       "submit_artifact",
-      "open_latest"
+      "open_latest",
+      "create_snapshot"
     ]);
     expect(contract.run_context).toBeNull();
     expect(contract.draft_resolution).toBeNull();
@@ -146,6 +151,52 @@ describe("onetruthApi workpage parsing", () => {
       dependency_state: "aligned"
     });
     expect(contract.actions.map((action) => action.kind)).toEqual(["open_latest"]);
+  });
+
+  it("parses the workflow-run-backed driver-preferences workpage wrapper including create action", async () => {
+    server.use(
+      http.get("*/api/v1/workpages/workflow-runs/:workflowRunId/driver-preferences-v0", () =>
+        HttpResponse.json(driverPreferencesRunWorkpageStateSnapshot.workpage_state)
+      )
+    );
+
+    const contract = await onetruthApi.getWorkflowRunDriverPreferencesWorkpage("wr-weekly-001");
+
+    expect(contract.workpage.workpage_id).toBe("driver-preferences-v0");
+    expect(contract.preference_grid?.weekdays).toEqual([
+      "sun",
+      "mon",
+      "tue",
+      "wed",
+      "thu",
+      "fri",
+      "sat"
+    ]);
+    expect(contract.schedule_impact).toMatchObject({
+      schedule_state: "no_snapshot"
+    });
+    expect(contract.actions.map((action) => action.kind)).toEqual(["create_snapshot"]);
+  });
+
+  it("parses the artifact-backed driver-preferences workpage wrapper including canonical save action", async () => {
+    server.use(
+      http.get(
+        "*/api/v1/workpages/workflow-runs/:workflowRunId/driver-preferences-v0/artifacts/:artifactVersionId",
+        () => HttpResponse.json(driverPreferencesArtifactStateSnapshot.workpage_state)
+      )
+    );
+
+    const contract = await onetruthApi.getWorkflowRunDriverPreferencesArtifactWorkpage(
+      "wr-weekly-001",
+      "av-driver-preferences-artifact-001"
+    );
+
+    expect(contract.source.mode).toBe("artifact_projection");
+    expect(contract.artifact_context?.artifact_kind).toBe(
+      "planning.driver_shift_preferences.workbook"
+    );
+    expect(contract.preference_grid?.drivers.length).toBeGreaterThan(0);
+    expect(contract.actions.map((action) => action.kind)).toEqual(["save"]);
   });
 
   it("parses the artifact-backed route-demand workpage wrapper including canonical save action", async () => {
@@ -217,6 +268,23 @@ describe("onetruthApi workpage parsing", () => {
     });
 
     expect(draft).toEqual(artifactCreateRunSnapshot.create_response.draft);
+  });
+
+  it("parses the generic workpage create envelope", async () => {
+    server.use(
+      http.post("*/api/v1/workpages/workflow-runs/:workflowRunId/driver-preferences-v0/snapshots", () =>
+        HttpResponse.json(driverPreferencesArtifactCreateSnapshot.create_response)
+      )
+    );
+
+    const created = await onetruthApi.createWorkpageAtPath(
+      "/api/v1/workpages/workflow-runs/wr-weekly-001/driver-preferences-v0/snapshots",
+      {
+        idempotency_key: "frontend:test:create-driver-preferences"
+      }
+    );
+
+    expect(created).toEqual(driverPreferencesArtifactCreateSnapshot.create_response.created);
   });
 
   it("parses the artifact-submit envelope", async () => {
@@ -334,5 +402,37 @@ describe("onetruthApi workpage parsing", () => {
     );
 
     expect(submitted).toEqual(routeDemandArtifactSubmitSnapshot.submit_response.submitted);
+  });
+
+  it("parses the canonical driver-preferences artifact-submit envelope", async () => {
+    server.use(
+      http.post(
+        "*/api/v1/workpages/workflow-runs/:workflowRunId/driver-preferences-v0/artifacts/:artifactVersionId/submit",
+        () => HttpResponse.json(driverPreferencesArtifactSubmitSnapshot.submit_response)
+      )
+    );
+
+    const submitted = await onetruthApi.submitArtifactWorkpageAtPath(
+      "/api/v1/workpages/workflow-runs/wr-weekly-001/driver-preferences-v0/artifacts/av-driver-preferences-artifact-001/submit",
+      {
+        driver_rows: [
+          {
+            driver_id: "DRV-001",
+            preferences_by_weekday: {
+              sun: null,
+              mon: "open_to_work",
+              tue: null,
+              wed: null,
+              thu: null,
+              fri: null,
+              sat: null
+            }
+          }
+        ],
+        idempotency_key: "frontend:test:submit-driver-preferences-canonical"
+      }
+    );
+
+    expect(submitted).toEqual(driverPreferencesArtifactSubmitSnapshot.submit_response.submitted);
   });
 });

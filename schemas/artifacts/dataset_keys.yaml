@@ -407,6 +407,12 @@ datasets:
   partitioned_by:
   - PlanningWeekID
   sensitivity: confidential
+- key: planning.driver_shift_preferences.workbook
+  description: Weekly driver shift-preferences snapshot workbook for soft advisory schedule cues
+  kind: spreadsheet
+  partitioned_by:
+  - PlanningWeekID
+  sensitivity: confidential
 - key: planning.input_bundle.doc
   description: Canonical weekly schedule-control input bundle document
   kind: document

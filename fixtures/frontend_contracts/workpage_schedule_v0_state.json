@@ -25,6 +25,13 @@
       "checks": [],
       "driver_metrics": [],
       "selected_day": {
+        "available_driver_ids": [],
+        "available_preference_buckets": {
+          "definitely_can_not_work": [],
+          "open_to_work": [],
+          "prefer_not_to_work": [],
+          "unset": []
+        },
         "drivers_available": 24,
         "open_questions": "Confirm late requests and final on-call posture before day-of handoff.",
         "projected_on_call_needed": 4,

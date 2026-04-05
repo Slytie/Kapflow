@@ -21,6 +21,7 @@ import type {
   WorkpageNotePanelSection as WorkpageNotePanelSectionModel,
   WorkpageRouteDemandAction,
   WorkpageRouteDemandDayCard,
+  WorkpageRouteDemandScheduleImpact,
   WorkpageSummaryCardsSection as WorkpageSummaryCardsSectionModel,
   WorkpageTableSection as WorkpageTableSectionModel
 } from "@/lib/types/workpages";
@@ -145,11 +146,12 @@ function RouteDemandScheduleImpactBanner({
   workflowRunId?: string;
 }): JSX.Element | null {
   const scheduleImpact = contract.schedule_impact;
-  if (!scheduleImpact) {
+  const routeDemandScheduleImpact = scheduleImpact as WorkpageRouteDemandScheduleImpact | null;
+  if (!routeDemandScheduleImpact) {
     return null;
   }
   const latestScheduleDraftArtifactVersionId =
-    scheduleImpact.latest_schedule_draft_artifact_version_id;
+    routeDemandScheduleImpact.latest_schedule_draft_artifact_version_id;
   const scheduleDraftRoute =
     workflowRunId && latestScheduleDraftArtifactVersionId
       ? scheduleArtifactRoute(workflowRunId, latestScheduleDraftArtifactVersionId)
@@ -177,8 +179,8 @@ function RouteDemandScheduleImpactBanner({
     }
   };
   const stateDetails =
-    stateCopy[scheduleImpact.schedule_state] ??
-    stateCopy[scheduleImpact.dependency_state] ??
+    stateCopy[routeDemandScheduleImpact.schedule_state] ??
+    stateCopy[routeDemandScheduleImpact.dependency_state] ??
     {
       title: "Schedule impact available",
       detail: "The backend reported the latest schedule draft posture for this route-demand surface."
@@ -197,7 +199,7 @@ function RouteDemandScheduleImpactBanner({
         </article>
         <article>
           <strong>Dependency state</strong>
-          <p>{scheduleImpact.dependency_state}</p>
+          <p>{routeDemandScheduleImpact.dependency_state}</p>
         </article>
         <article>
           <strong>Latest schedule draft</strong>
@@ -205,7 +207,7 @@ function RouteDemandScheduleImpactBanner({
         </article>
         <article>
           <strong>Refresh task</strong>
-          <p>{scheduleImpact.refresh_task?.human_task_id ?? "No refresh task"}</p>
+          <p>{routeDemandScheduleImpact.refresh_task?.human_task_id ?? "No refresh task"}</p>
         </article>
       </div>
       <div className="action-cluster">

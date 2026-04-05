@@ -143,6 +143,16 @@ describe("LogisticsScheduleWorkpagePage", () => {
             route: "/runs/wr-weekly-001/workpages/route-demand-v0/artifacts/av-route-demand-artifact-001",
             state: "available",
             workpage_kind: "route-demand-v0"
+          },
+          {
+            action_id: "workpage.driver-preferences-v0.create_snapshot",
+            artifact_version_id: null,
+            create_path: "/api/v1/workpages/workflow-runs/wr-weekly-001/driver-preferences-v0/snapshots",
+            kind: "create_snapshot",
+            label: "Create preferences snapshot",
+            route: null,
+            state: "available",
+            workpage_kind: "driver-preferences-v0"
           }
         ];
         return HttpResponse.json(payload);
@@ -162,6 +172,7 @@ describe("LogisticsScheduleWorkpagePage", () => {
       "href",
       "/runs/wr-weekly-001/workpages/route-demand-v0/artifacts/av-route-demand-artifact-001"
     );
+    expect(within(page).getByRole("button", { name: "Create preferences snapshot" })).toBeInTheDocument();
     expect(screen.queryByText("Scenario sick calls")).not.toBeInTheDocument();
     expect(screen.queryByRole("textbox", { name: /Planner note/i })).not.toBeInTheDocument();
     expect(within(page).getByRole("heading", { name: "Capacity bar" })).toBeInTheDocument();
@@ -207,6 +218,23 @@ describe("LogisticsScheduleWorkpagePage", () => {
     expect(await screen.findByTestId("route-demand-artifact-workpage-page")).toBeInTheDocument();
     expect(window.location.pathname).toBe(
       "/runs/wr-weekly-001/workpages/route-demand-v0/artifacts/av-route-demand-artifact-001"
+    );
+  });
+
+  it("uses the schedule-side driver-preferences handoff and renders backend preference cues", async () => {
+    const user = userEvent.setup();
+    setFrontendOperatorContext();
+    window.history.pushState({}, "", "/runs/wr-weekly-001/workpages/schedule-v0");
+    render(<App />);
+
+    const page = await screen.findByTestId("schedule-workpage-page");
+    expect(within(page).getByText("Unset")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Create preferences snapshot" }));
+
+    expect(await screen.findByTestId("driver-preferences-artifact-workpage-page")).toBeInTheDocument();
+    expect(window.location.pathname).toBe(
+      "/runs/wr-weekly-001/workpages/driver-preferences-v0/artifacts/av-driver-preferences-artifact-001"
     );
   });
 });

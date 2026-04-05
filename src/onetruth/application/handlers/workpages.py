@@ -31,6 +31,13 @@ from onetruth.application.services.schedule_control.draft_workbook import (
     materialize_stage04_draft_weekly_schedule_workbook,
     project_stage04_draft_weekly_schedule_workbook,
 )
+from onetruth.application.services.schedule_control.driver_preferences_workbook import (
+    DRIVER_PREFERENCES_DATASET_KEY,
+    build_initial_driver_preferences_workbook,
+    driver_preferences_workbook_bytes_from_metadata_json,
+    materialize_driver_preferences_workbook,
+    project_driver_preferences_workbook,
+)
 from onetruth.application.services.schedule_control.route_demand_workbook import (
     ROUTE_DEMAND_DATASET_KEY,
     materialize_route_demand_workbook,
@@ -44,17 +51,26 @@ from onetruth.application.services.schedule_control.workpage_calculations import
     build_schedule_calculations,
     build_schedule_manual_draft_doc_payload,
     build_schedule_manual_validation_summary_payload,
+    normalize_schedule_dependency_manifest,
     project_schedule_dependency_state,
     resolve_schedule_dependency_artifacts,
     schedule_preview_disabled_reason,
     schedule_save_disabled_reason,
 )
+from onetruth.application.services.schedule_control import (
+    build_weekly_schedule_control_bundle,
+)
+from onetruth.application.services.schedule_control.stage04_input_registry import (
+    resolve_weekly_stage04_input_artifacts,
+)
 from onetruth.application.services.logistics_workpages import (
     ROUTE_DEMAND_REFRESH_TASK_ACTIVATION_PREFIX,
     build_route_demand_refresh_activation_key,
+    canonical_driver_preferences_artifact_route,
     canonical_eod_artifact_route,
     canonical_route_demand_artifact_route,
     canonical_schedule_artifact_route,
+    latest_driver_preferences_artifact,
     latest_schedule_draft_artifact,
 )
 from onetruth.application.services.template_registry import (
@@ -300,6 +316,123 @@ def create_workflow_run_eod_draft_command(
     )
 
 
+def create_workflow_run_driver_preferences_snapshot_command(
+    connection: sqlite3.Connection,
+    workflow_run: Mapping[str, Any],
+    payload: dict[str, Any],
+    *,
+    storage_root: Path,
+    include_receipt: bool = False,
+) -> dict[str, Any]:
+    workflow_run_id = _require_non_empty_string(
+        workflow_run.get("workflow_run_id"),
+        field_name="workflow_run_id",
+    )
+    tenant_id = _require_non_empty_string(payload.get("tenant_id"), field_name="tenant_id")
+    domain_id = _require_non_empty_string(payload.get("domain_id"), field_name="domain_id")
+    actor_id = _require_non_empty_string(payload.get("actor_id"), field_name="actor_id")
+    actor_type = _require_non_empty_string(payload.get("actor_type"), field_name="actor_type")
+
+    receipt = _prepare_command_receipt(
+        command_name="workpages.driver-preferences.snapshots.create",
+        payload={
+            **payload,
+            "workflow_run_id": workflow_run_id,
+            "workflow_id": SCHEDULE_WORKFLOW_ID,
+            "workpage_id": "driver-preferences-v0",
+        },
+        fingerprint_payload={
+            "tenant_id": tenant_id,
+            "domain_id": domain_id,
+            "workflow_run_id": workflow_run_id,
+            "workflow_id": SCHEDULE_WORKFLOW_ID,
+            "workpage_id": "driver-preferences-v0",
+            "actor_id": actor_id,
+            "actor_type": actor_type,
+        },
+        tenant_id=tenant_id,
+        domain_id=domain_id,
+        workflow_run_id=workflow_run_id,
+        idempotency_required=True,
+    )
+    artifact_event_idempotency = _receipt_event_idempotency_key(
+        receipt,
+        "workpages.driver-preferences.snapshots.create.artifact.version.created",
+    )
+
+    def _operation() -> dict[str, Any]:
+        workflow_artifacts = list_artifact_versions_for_workflow_run(connection, workflow_run_id)
+        existing_snapshot = latest_driver_preferences_artifact(workflow_artifacts)
+        if existing_snapshot is not None:
+            existing_artifact_version_id = _require_non_empty_string(
+                existing_snapshot.get("artifact_version_id"),
+                field_name="artifact_version_id",
+            )
+            raise CommandError(
+                code="driver_preferences_snapshot_exists",
+                message="driver preferences snapshot already exists for this workflow run",
+                details={
+                    "workflow_run_id": workflow_run_id,
+                    "artifact_version_id": existing_artifact_version_id,
+                    "route": _canonical_driver_preferences_ui_route(
+                        workflow_run_id=workflow_run_id,
+                        artifact_version_id=existing_artifact_version_id,
+                    ),
+                },
+            )
+        bundle = _driver_preferences_bundle_for_run(
+            workflow_run=workflow_run,
+            artifacts=workflow_artifacts,
+        )
+        workbook_payload = build_initial_driver_preferences_workbook(bundle=bundle)
+        workbook_bytes = json.dumps(
+            workbook_payload,
+            indent=2,
+            sort_keys=True,
+        ).encode("utf-8")
+        new_artifact = _create_workbook_artifact_version(
+            connection,
+            storage_root=storage_root,
+            workflow_run_id=workflow_run_id,
+            artifact_kind=DRIVER_PREFERENCES_DATASET_KEY,
+            artifact_bytes=workbook_bytes,
+            artifact_role="official_input",
+            file_name=_driver_preferences_file_name(workflow_run),
+            media_type="application/json",
+            metadata_json=workbook_payload,
+            parent_artifact_version_id=None,
+            supersedes_artifact_version_id=None,
+            lineage_note="Created initial driver preferences snapshot.",
+            actor_id=actor_id,
+            actor_type=actor_type,
+            event_idempotency=artifact_event_idempotency,
+            links=None,
+        )
+        created_artifact_version_id = str(new_artifact["artifact_version_id"])
+        return {
+            "created": {
+                "workflow_run_id": workflow_run_id,
+                "artifact_version_id": created_artifact_version_id,
+                "route": _canonical_driver_preferences_ui_route(
+                    workflow_run_id=workflow_run_id,
+                    artifact_version_id=created_artifact_version_id,
+                ),
+            }
+        }
+
+    result, replay = _execute_with_command_receipt(
+        connection,
+        receipt=receipt,
+        operation=_operation,
+    )
+    return _command_receipt_payload(
+        result,
+        receipt=receipt,
+        replay=replay,
+        include_receipt=include_receipt,
+    )
+
+
 def submit_eod_artifact_workpage_command(
     connection: sqlite3.Connection,
     payload: dict[str, Any],
@@ -441,7 +574,7 @@ def preview_schedule_artifact_workpage_command(
             details={},
         ) from exc
     preview_projection = project_stage04_draft_weekly_schedule_workbook(updated_bytes)
-    workflow_run, artifacts, dependency_projection, bundle = _schedule_preview_context(
+    workflow_run, artifacts, dependency_projection, bundle, driver_preferences_projection = _schedule_preview_context(
         connection,
         artifact=base_artifact,
     )
@@ -460,6 +593,7 @@ def preview_schedule_artifact_workpage_command(
         bundle=bundle,
         assignment_rows=preview_projection["rows"],
         reserve_rows=preview_projection["reserve_rows"],
+        driver_preferences_projection=driver_preferences_projection,
     )
     return {
         "preview": {
@@ -548,7 +682,7 @@ def submit_schedule_artifact_workpage_command(
                 message=str(exc),
                 details={},
             ) from exc
-        workflow_run, artifacts, dependency_projection, bundle = _schedule_preview_context(
+        workflow_run, artifacts, dependency_projection, bundle, driver_preferences_projection = _schedule_preview_context(
             connection,
             artifact=base_artifact,
         )
@@ -568,11 +702,40 @@ def submit_schedule_artifact_workpage_command(
                 },
             )
         updated_projection = project_stage04_draft_weekly_schedule_workbook(updated_bytes)
+        effective_driver_preferences_projection = driver_preferences_projection
         calculations = build_schedule_calculations(
             bundle=bundle,
             assignment_rows=updated_projection["rows"],
             reserve_rows=updated_projection["reserve_rows"],
+            driver_preferences_projection=effective_driver_preferences_projection,
         )
+        metadata_json = _schedule_submitted_metadata(updated_bytes)
+        latest_driver_preferences = latest_driver_preferences_artifact(artifacts)
+        if latest_driver_preferences is not None:
+            had_pinned_driver_preferences = bool(
+                _driver_preferences_artifact_version_id_from_manifest(
+                    metadata_json.get("dependency_manifest")
+                )
+            )
+            metadata_json["dependency_manifest"] = _pin_latest_driver_preferences_dependency(
+                metadata_json.get("dependency_manifest"),
+                latest_driver_preferences=latest_driver_preferences,
+            )
+            if not had_pinned_driver_preferences:
+                try:
+                    effective_driver_preferences_projection = project_driver_preferences_workbook(
+                        driver_preferences_workbook_bytes_from_metadata_json(
+                            latest_driver_preferences.get("metadata_json")
+                        )
+                    )
+                except ValueError:
+                    effective_driver_preferences_projection = None
+                calculations = build_schedule_calculations(
+                    bundle=bundle,
+                    assignment_rows=updated_projection["rows"],
+                    reserve_rows=updated_projection["reserve_rows"],
+                    driver_preferences_projection=effective_driver_preferences_projection,
+                )
         new_artifact = _create_workbook_artifact_version(
             connection,
             storage_root=storage_root,
@@ -586,7 +749,7 @@ def submit_schedule_artifact_workpage_command(
             ),
             file_name=_schedule_draft_file_name(base_artifact),
             media_type=str(base_artifact.get("media_type") or "application/json"),
-            metadata_json=_schedule_submitted_metadata(updated_bytes),
+            metadata_json=metadata_json,
             parent_artifact_version_id=artifact_version_id,
             supersedes_artifact_version_id=artifact_version_id,
             lineage_note="Submitted artifact-backed schedule draft version.",
@@ -612,6 +775,7 @@ def submit_schedule_artifact_workpage_command(
             calculations=calculations,
             assignment_rows=updated_projection["rows"],
             reserve_rows=updated_projection["reserve_rows"],
+            driver_preferences_projection=effective_driver_preferences_projection,
             actor_id=actor_id,
             actor_type=actor_type,
             validation_summary_event_idempotency=validation_summary_event_idempotency,
@@ -735,6 +899,111 @@ def submit_route_demand_artifact_workpage_command(
                 "artifact_version_id": submitted_artifact_version_id,
                 "supersedes_artifact_version_id": artifact_version_id,
                 "route": _canonical_route_demand_ui_route(
+                    workflow_run_id=workflow_run_id,
+                    artifact_version_id=submitted_artifact_version_id,
+                ),
+            }
+        }
+
+    result, replay = _execute_with_command_receipt(
+        connection,
+        receipt=receipt,
+        operation=_operation,
+    )
+    return _command_receipt_payload(
+        result,
+        receipt=receipt,
+        replay=replay,
+        include_receipt=include_receipt,
+    )
+
+
+def submit_driver_preferences_artifact_workpage_command(
+    connection: sqlite3.Connection,
+    payload: dict[str, Any],
+    *,
+    storage_root: Path,
+    include_receipt: bool = False,
+) -> dict[str, Any]:
+    artifact_version_id = _require_non_empty_string(
+        payload.get("artifact_version_id"),
+        field_name="artifact_version_id",
+    )
+    actor_id = _require_non_empty_string(payload.get("actor_id"), field_name="actor_id")
+    actor_type = _require_non_empty_string(payload.get("actor_type"), field_name="actor_type")
+    base_artifact = _require_driver_preferences_artifact_version(
+        connection,
+        artifact_version_id,
+    )
+
+    receipt = _prepare_command_receipt(
+        command_name="workpages.artifact.submit",
+        payload=payload,
+        fingerprint_payload={
+            "artifact_version_id": artifact_version_id,
+            "driver_rows": payload.get("driver_rows"),
+            "actor_id": actor_id,
+            "actor_type": actor_type,
+        },
+        tenant_id=str(base_artifact.get("tenant_id") or ""),
+        domain_id=str(base_artifact.get("domain_id") or ""),
+        workflow_run_id=str(base_artifact["workflow_run_id"]),
+        idempotency_required=True,
+    )
+    artifact_event_idempotency = _receipt_event_idempotency_key(
+        receipt,
+        "workpages.artifact.submit.artifact.version.created",
+    )
+
+    def _operation() -> dict[str, Any]:
+        _assert_artifact_not_already_superseded(
+            connection,
+            artifact_version_id,
+            route_builder=_canonical_driver_preferences_ui_route,
+        )
+        workbook_bytes = _read_driver_preferences_artifact_bytes(base_artifact)
+        try:
+            updated_bytes = materialize_driver_preferences_workbook(
+                workbook_bytes,
+                driver_rows=payload.get("driver_rows"),
+            )
+        except ValueError as exc:
+            raise CommandError(
+                code="invalid_payload",
+                message=str(exc),
+                details={},
+            ) from exc
+
+        new_artifact = _create_workbook_artifact_version(
+            connection,
+            storage_root=storage_root,
+            workflow_run_id=str(base_artifact["workflow_run_id"]),
+            artifact_kind=DRIVER_PREFERENCES_DATASET_KEY,
+            artifact_bytes=updated_bytes,
+            artifact_role=(
+                str(base_artifact["artifact_role"])
+                if base_artifact.get("artifact_role") is not None
+                else None
+            ),
+            file_name=_driver_preferences_file_name(base_artifact),
+            media_type=str(base_artifact.get("media_type") or "application/json"),
+            metadata_json=_driver_preferences_submitted_metadata(updated_bytes),
+            parent_artifact_version_id=artifact_version_id,
+            supersedes_artifact_version_id=artifact_version_id,
+            lineage_note="Submitted artifact-backed driver preferences snapshot.",
+            actor_id=actor_id,
+            actor_type=actor_type,
+            event_idempotency=artifact_event_idempotency,
+            links=None,
+        )
+        workflow_run_id = str(base_artifact["workflow_run_id"])
+        submitted_artifact_version_id = str(new_artifact["artifact_version_id"])
+        return {
+            "submitted": {
+                "workflow_run_id": workflow_run_id,
+                "artifact_version_id": submitted_artifact_version_id,
+                "supersedes_artifact_version_id": artifact_version_id,
+                "route": _canonical_driver_preferences_ui_route(
                     workflow_run_id=workflow_run_id,
                     artifact_version_id=submitted_artifact_version_id,
                 ),
@@ -1155,11 +1424,29 @@ def _route_demand_submitted_metadata(updated_bytes: bytes) -> dict[str, Any]:
     return dict(payload)
 
 
+def _driver_preferences_submitted_metadata(updated_bytes: bytes) -> dict[str, Any]:
+    try:
+        payload = json.loads(updated_bytes.decode("utf-8"))
+    except Exception as exc:
+        raise CommandError(
+            code="invalid_payload",
+            message="updated driver preferences workbook must remain valid JSON",
+            details={},
+        ) from exc
+    if not isinstance(payload, Mapping):
+        raise CommandError(
+            code="invalid_payload",
+            message="updated driver preferences workbook must decode to an object",
+            details={},
+        )
+    return dict(payload)
+
+
 def _schedule_preview_context(
     connection: sqlite3.Connection,
     *,
     artifact: Mapping[str, Any],
-) -> tuple[dict[str, Any], list[dict[str, Any]], Any, Any]:
+) -> tuple[dict[str, Any], list[dict[str, Any]], Any, Any, dict[str, Any] | None]:
     workflow_run_id = _require_non_empty_string(
         artifact.get("workflow_run_id"),
         field_name="workflow_run_id",
@@ -1188,13 +1475,69 @@ def _schedule_preview_context(
         )
     except ValueError:
         bundle = None
-    return workflow_run, artifacts, dependency_projection, bundle
+    driver_preferences_projection = _driver_preferences_projection_from_dependency_artifacts(
+        dependency_artifacts
+    )
+    return workflow_run, artifacts, dependency_projection, bundle, driver_preferences_projection
 
 
 def _schedule_dependency_manifest(artifact: Mapping[str, Any]) -> object:
     metadata_json = artifact.get("metadata_json")
     if isinstance(metadata_json, Mapping):
         return metadata_json.get("dependency_manifest")
+    return None
+
+
+def _driver_preferences_projection_from_dependency_artifacts(
+    dependency_artifacts: Mapping[str, Mapping[str, Any] | None],
+) -> dict[str, Any] | None:
+    artifact = dependency_artifacts.get("driver_preferences")
+    if artifact is None:
+        return None
+    try:
+        return project_driver_preferences_workbook(
+            driver_preferences_workbook_bytes_from_metadata_json(artifact.get("metadata_json"))
+        )
+    except ValueError:
+        return None
+
+
+def _pin_latest_driver_preferences_dependency(
+    raw_manifest: object,
+    *,
+    latest_driver_preferences: Mapping[str, Any],
+) -> list[dict[str, Any]]:
+    normalized = normalize_schedule_dependency_manifest(raw_manifest)
+    latest_artifact_version_id = _require_non_empty_string(
+        latest_driver_preferences.get("artifact_version_id"),
+        field_name="artifact_version_id",
+    )
+    for row in normalized:
+        if str(row.get("dependency_key") or "") != "driver_preferences":
+            continue
+        if str(row.get("artifact_version_id") or "").strip():
+            return normalized
+        row["artifact_version_id"] = latest_artifact_version_id
+        row["source_ref"] = f"/api/v1/artifacts/{latest_artifact_version_id}"
+        return normalized
+    normalized.append(
+        {
+            "dependency_key": "driver_preferences",
+            "artifact_kind": DRIVER_PREFERENCES_DATASET_KEY,
+            "artifact_version_id": latest_artifact_version_id,
+            "impact_class": "soft",
+            "source_ref": f"/api/v1/artifacts/{latest_artifact_version_id}",
+        }
+    )
+    return normalized
+
+
+def _driver_preferences_artifact_version_id_from_manifest(raw_manifest: object) -> str | None:
+    for row in normalize_schedule_dependency_manifest(raw_manifest):
+        if str(row.get("dependency_key") or "") != "driver_preferences":
+            continue
+        artifact_version_id = str(row.get("artifact_version_id") or "").strip()
+        return artifact_version_id or None
     return None
 
 
@@ -1211,6 +1554,7 @@ def _create_schedule_companion_artifacts(
     calculations: dict[str, Any],
     assignment_rows: list[dict[str, Any]],
     reserve_rows: list[dict[str, Any]],
+    driver_preferences_projection: Mapping[str, Any] | None,
     actor_id: str,
     actor_type: str,
     validation_summary_event_idempotency: str | None,
@@ -1236,6 +1580,7 @@ def _create_schedule_companion_artifacts(
         dependencies=dependencies,
         assignment_rows=assignment_rows,
         reserve_rows=reserve_rows,
+        driver_preferences_projection=driver_preferences_projection,
     )
 
     for artifact_kind, payload, file_name, event_idempotency in (
@@ -1467,6 +1812,68 @@ def _active_route_demand_refresh_task(
     return None
 
 
+def _driver_preferences_bundle_for_run(
+    *,
+    workflow_run: Mapping[str, Any],
+    artifacts: list[dict[str, Any]],
+):
+    try:
+        resolved_inputs = resolve_weekly_stage04_input_artifacts(
+            artifacts=artifacts,
+            stage_spec={
+                "required_evidence_keys": [
+                    ROUTE_DEMAND_DATASET_KEY,
+                    "planning.driver_capabilities.workbook",
+                ]
+            },
+        )
+        return build_weekly_schedule_control_bundle(
+            workflow_run=workflow_run,
+            route_slot_requirements_artifact=_require_stage04_input_artifact(
+                resolved_inputs.get("route_slot_requirements"),
+                field_name="route_slot_requirements",
+            ),
+            driver_capabilities_artifact=_require_stage04_input_artifact(
+                resolved_inputs.get("driver_capabilities"),
+                field_name="driver_capabilities",
+            ),
+            approved_availability_artifact=_optional_stage04_input_artifact(
+                resolved_inputs.get("approved_availability")
+            ),
+            actual_hours_artifact=_optional_stage04_input_artifact(
+                resolved_inputs.get("actual_hours")
+            ),
+            route_horizon_artifact=None,
+        )
+    except CommandError as exc:
+        if exc.code != "stage04_input_artifact_missing":
+            raise
+        missing_slots = exc.details.get("missing_slots", [])
+        missing_dataset_keys = [
+            str(slot.get("dataset_key") or "").strip()
+            for slot in missing_slots
+            if isinstance(slot, Mapping) and str(slot.get("dataset_key") or "").strip()
+        ]
+        raise CommandError(
+            code="workpage_projection_unavailable",
+            message="driver preferences snapshot requires weekly Stage04 roster inputs",
+            details={
+                "workflow_run_id": str(workflow_run.get("workflow_run_id") or ""),
+                "workpage_id": "driver-preferences-v0",
+                "missing_dataset_keys": missing_dataset_keys,
+            },
+        ) from exc
+    except ValueError as exc:
+        raise CommandError(
+            code="workpage_projection_unavailable",
+            message=str(exc),
+            details={
+                "workflow_run_id": str(workflow_run.get("workflow_run_id") or ""),
+                "workpage_id": "driver-preferences-v0",
+            },
+        ) from exc
+
+
 def _load_eod_template_record() -> TemplateRecord:
     try:
         return load_template_registry_catalog().template_by_id(EOD_TEMPLATE_ID)
@@ -1604,6 +2011,33 @@ def _require_route_demand_artifact_version(
     return artifact
 
 
+def _require_driver_preferences_artifact_version(
+    connection: sqlite3.Connection,
+    artifact_version_id: str,
+) -> dict[str, Any]:
+    artifact = get_artifact_version(connection, artifact_version_id)
+    if artifact is None:
+        raise CommandError(
+            code="workpage_artifact_not_found",
+            message="artifact-backed workpage not found",
+            details={"artifact_version_id": artifact_version_id},
+        )
+    if str(artifact.get("artifact_kind") or "") != DRIVER_PREFERENCES_DATASET_KEY:
+        raise CommandError(
+            code="workpage_artifact_not_found",
+            message="artifact-backed workpage not found",
+            details={"artifact_version_id": artifact_version_id},
+        )
+    workflow_run = get_workflow_run(connection, str(artifact["workflow_run_id"]))
+    if workflow_run is None or str(workflow_run.get("workflow_id") or "") != SCHEDULE_WORKFLOW_ID:
+        raise CommandError(
+            code="workpage_artifact_not_found",
+            message="artifact-backed workpage not found",
+            details={"artifact_version_id": artifact_version_id},
+        )
+    return artifact
+
+
 def _read_schedule_draft_artifact_bytes(artifact: Mapping[str, Any]) -> bytes:
     storage_uri = str(artifact.get("storage_uri") or "")
     if storage_uri.startswith("file:"):
@@ -1633,6 +2067,22 @@ def _read_route_demand_artifact_bytes(artifact: Mapping[str, Any]) -> bytes:
         ) from exc
 
 
+def _read_driver_preferences_artifact_bytes(artifact: Mapping[str, Any]) -> bytes:
+    storage_uri = str(artifact.get("storage_uri") or "")
+    if storage_uri.startswith("file:"):
+        return _read_workbook_bytes(artifact)
+    try:
+        return driver_preferences_workbook_bytes_from_metadata_json(
+            artifact.get("metadata_json")
+        )
+    except ValueError as exc:
+        raise CommandError(
+            code="artifact_version_not_found",
+            message=str(exc),
+            details={"artifact_version_id": str(artifact.get("artifact_version_id") or "")},
+        ) from exc
+
+
 def _require_projection_rows(raw_value: Any, label: str) -> list[dict[str, Any]]:
     if not isinstance(raw_value, list):
         raise CommandError(
@@ -1650,6 +2100,26 @@ def _require_projection_rows(raw_value: Any, label: str) -> list[dict[str, Any]]
             )
         rows.append(dict(row))
     return rows
+
+
+def _require_stage04_input_artifact(
+    value: Mapping[str, Any] | None,
+    *,
+    field_name: str,
+) -> Mapping[str, Any]:
+    if value is None:
+        raise CommandError(
+            code="workpage_projection_unavailable",
+            message=f"{field_name} artifact is required",
+            details={"field_name": field_name},
+        )
+    return value
+
+
+def _optional_stage04_input_artifact(
+    value: Mapping[str, Any] | None,
+) -> Mapping[str, Any] | None:
+    return value if value is not None else None
 
 
 def _metadata_string(
@@ -1692,6 +2162,17 @@ def _canonical_route_demand_ui_route(*, workflow_run_id: str, artifact_version_i
     )
 
 
+def _canonical_driver_preferences_ui_route(
+    *,
+    workflow_run_id: str,
+    artifact_version_id: str,
+) -> str:
+    return canonical_driver_preferences_artifact_route(
+        workflow_run_id=workflow_run_id,
+        artifact_version_id=artifact_version_id,
+    )
+
+
 def _draft_file_name() -> str:
     return "dispatch_reporting_eod_v0_2026-03-16_qdci_dvc4_upd_draft.xlsx"
 
@@ -1714,6 +2195,17 @@ def _route_demand_file_name(base_artifact: Mapping[str, Any]) -> str:
         default=(
             f"weekly_schedule_stage04_{str(base_artifact.get('workflow_run_id') or 'route-demand')}_"
             "route_demand_workbook.json"
+        ),
+    )
+
+
+def _driver_preferences_file_name(base_artifact: Mapping[str, Any]) -> str:
+    return _metadata_string(
+        base_artifact.get("metadata_json"),
+        "file_name",
+        default=(
+            f"weekly_schedule_stage04_{str(base_artifact.get('workflow_run_id') or 'driver-preferences')}_"
+            "driver_preferences_workbook.json"
         ),
     )
 

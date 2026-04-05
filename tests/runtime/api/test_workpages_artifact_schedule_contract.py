@@ -451,6 +451,19 @@ def test_artifact_backed_schedule_workpage_returns_projected_contract(tmp_path: 
             f"{seeded['artifacts_by_kind']['planning.route_slot_requirements.workbook']['artifact_version_id']}"
         ),
     }
+    assert _action_by_id(actions, "workpage.driver-preferences-v0.create_snapshot") == {
+        "action_id": "workpage.driver-preferences-v0.create_snapshot",
+        "kind": "create_snapshot",
+        "label": "Create preferences snapshot",
+        "state": "available",
+        "workpage_kind": "driver-preferences-v0",
+        "artifact_version_id": None,
+        "route": None,
+        "create_path": (
+            f"/api/v1/workpages/workflow-runs/{workflow_run_id}/"
+            "driver-preferences-v0/snapshots"
+        ),
+    }
 
     downloaded = client.get_raw(f"/api/v1/artifacts/{artifact_version_id}/download.bin")
     assert downloaded.status_code == 200
@@ -631,7 +644,20 @@ def test_published_schedule_artifact_reads_under_schedule_workpage_kind(tmp_path
                 f"/runs/{workflow_run_id}/workpages/route-demand-v0/artifacts/"
                 f"{seeded['artifacts_by_kind']['planning.route_slot_requirements.workbook']['artifact_version_id']}"
             ),
-        }
+        },
+        {
+            "action_id": "workpage.driver-preferences-v0.create_snapshot",
+            "kind": "create_snapshot",
+            "label": "Create preferences snapshot",
+            "state": "available",
+            "workpage_kind": "driver-preferences-v0",
+            "artifact_version_id": None,
+            "route": None,
+            "create_path": (
+                f"/api/v1/workpages/workflow-runs/{workflow_run_id}/"
+                "driver-preferences-v0/snapshots"
+            ),
+        },
     ]
 
 
@@ -1199,6 +1225,7 @@ def test_schedule_artifact_hard_dependency_drift_surfaces_and_blocks_save(
         "disabled_reason": "dependency_drift_detected",
     }
     assert _action_by_id(actions, "workpage.route-demand-v0.open_latest")["state"] == "available"
+    assert _action_by_id(actions, "workpage.driver-preferences-v0.create_snapshot")["state"] == "available"
 
     assignment_rows, reserve_rows = _schedule_submit_rows(client, artifact_version_id)
     preview = client.post(
@@ -1275,6 +1302,7 @@ def test_schedule_artifact_without_pinned_manifest_remains_readable_but_blocks_p
         "disabled_reason": "dependency_baseline_unavailable",
     }
     assert _action_by_id(actions, "workpage.route-demand-v0.open_latest")["state"] == "available"
+    assert _action_by_id(actions, "workpage.driver-preferences-v0.create_snapshot")["state"] == "available"
 
     assignment_rows, reserve_rows = _schedule_submit_rows(client, artifact_version_id)
     preview = client.post(

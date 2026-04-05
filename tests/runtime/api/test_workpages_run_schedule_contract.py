@@ -194,8 +194,20 @@ def test_schedule_workflow_run_workpage_contract_returns_run_backed_projection(
     calculations = payload["calculations"]
     assert calculations["top_bar"]["days"]
     assert calculations["selected_day"]["service_date"] == "2026-03-24"
-    assert calculations["driver_metrics"] == []
-    assert calculations["checks"] == []
+    assert calculations["driver_metrics"]
+    assert all(
+        metric["preference_state"] == "unset" for metric in calculations["driver_metrics"]
+    )
+    assert set(calculations["selected_day"]["available_preference_buckets"]) == {
+        "open_to_work",
+        "prefer_not_to_work",
+        "definitely_can_not_work",
+        "unset",
+    }
+    assert any(
+        check["check_id"] == "driver_preferences_alignment" and check["blocking"] is False
+        for check in calculations["checks"]
+    )
     assert payload["draft_lineage"] == {
         "current_artifact_version_id": None,
         "latest_artifact_version_id": None,
@@ -229,6 +241,19 @@ def test_schedule_workflow_run_workpage_contract_returns_run_backed_projection(
         "route": (
             f"/runs/{workflow_run_id}/workpages/route-demand-v0/artifacts/"
             f"{seed['artifacts_by_kind']['planning.route_slot_requirements.workbook']['artifact_version_id']}"
+        ),
+    }
+    assert _action_by_id(actions, "workpage.driver-preferences-v0.create_snapshot") == {
+        "action_id": "workpage.driver-preferences-v0.create_snapshot",
+        "kind": "create_snapshot",
+        "label": "Create preferences snapshot",
+        "state": "available",
+        "workpage_kind": "driver-preferences-v0",
+        "artifact_version_id": None,
+        "route": None,
+        "create_path": (
+            f"/api/v1/workpages/workflow-runs/{workflow_run_id}/"
+            "driver-preferences-v0/snapshots"
         ),
     }
 

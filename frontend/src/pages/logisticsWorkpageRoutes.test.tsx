@@ -4,6 +4,7 @@ import userEvent from "@testing-library/user-event";
 
 import { App } from "@/app/App";
 import { getApiRequestContextHeaders, setApiRequestContextHeaders } from "@/lib/api/config";
+import { workpagesRepository } from "@/lib/repositories";
 import { server } from "@/test/api/server";
 
 function setFrontendOperatorContext(): void {
@@ -326,6 +327,29 @@ describe("logistics workpage routes", () => {
     render(<App />);
 
     expect(await screen.findByTestId("route-demand-artifact-workpage-page")).toBeInTheDocument();
+    expect(screen.getByTestId("logistics-family-nav-node-weekly_schedule_planning")).toHaveAttribute(
+      "aria-pressed",
+      "true"
+    );
+    expect(screen.getByTestId("logistics-family-nav-node-dispatch_reporting")).toHaveAttribute(
+      "aria-pressed",
+      "false"
+    );
+  });
+
+  it("keeps driver-preferences workpages inside the weekly-schedule shell module", async () => {
+    setFrontendOperatorContext();
+    await workpagesRepository.createWorkpage(
+      "/api/v1/workpages/workflow-runs/wr-weekly-001/driver-preferences-v0/snapshots"
+    );
+    window.history.pushState(
+      {},
+      "",
+      "/runs/wr-weekly-001/workpages/driver-preferences-v0/artifacts/av-driver-preferences-artifact-001"
+    );
+    render(<App />);
+
+    expect(await screen.findByTestId("driver-preferences-artifact-workpage-page")).toBeInTheDocument();
     expect(screen.getByTestId("logistics-family-nav-node-weekly_schedule_planning")).toHaveAttribute(
       "aria-pressed",
       "true"

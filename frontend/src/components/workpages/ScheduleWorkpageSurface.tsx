@@ -75,6 +75,13 @@ function isActionBlocked(action: WorkpageScheduleAction | null | undefined): boo
   return action?.state === "blocked" || action?.state === "unavailable";
 }
 
+function formatPreferenceLabel(state: string): string {
+  return state
+    .split("_")
+    .map((segment) => segment.charAt(0).toUpperCase() + segment.slice(1))
+    .join(" ");
+}
+
 function ScheduleVersionRail({
   rail
 }: {
@@ -153,6 +160,12 @@ export function ScheduleWorkpageSurface({
   const selectedDay = calculations?.selected_day ?? null;
   const selectedServiceDate = selectedDay?.service_date ?? null;
   const availableDriverIds = selectedDay?.available_driver_ids ?? [];
+  const availablePreferenceBuckets = selectedDay?.available_preference_buckets ?? {
+    open_to_work: [],
+    prefer_not_to_work: [],
+    definitely_can_not_work: [],
+    unset: []
+  };
   const driverStateById = Object.fromEntries(
     (calculations?.driver_metrics ?? []).map((metric) => [
       metric.driver_id,
@@ -271,15 +284,31 @@ export function ScheduleWorkpageSurface({
                     <dd>{selectedDay.available_driver_count ?? selectedDay.drivers_available ?? "—"}</dd>
                   </div>
                 </dl>
-                {availableDriverIds.length > 0 ? (
-                  <div className="schedule-selected-day__chips">
-                    {availableDriverIds.map((driverId) => (
-                      <span key={driverId} className="schedule-pill schedule-pill--success">
-                        {driverId}
-                      </span>
-                    ))}
-                  </div>
-                ) : null}
+                <div className="schedule-selected-day__chips">
+                  {availableDriverIds.map((driverId) => (
+                    <span key={driverId} className="schedule-pill schedule-pill--success">
+                      {driverId}
+                    </span>
+                  ))}
+                </div>
+                <div className="schedule-selected-day__preference-buckets">
+                  {Object.entries(availablePreferenceBuckets).map(([bucketKey, driverIds]) => (
+                    <article key={bucketKey} className="schedule-selected-day__preference-bucket">
+                      <strong>{formatPreferenceLabel(bucketKey)}</strong>
+                      <div className="schedule-selected-day__chips">
+                        {driverIds.length > 0 ? (
+                          driverIds.map((driverId) => (
+                            <span key={`${bucketKey}-${driverId}`} className="schedule-pill schedule-pill--neutral">
+                              {driverId}
+                            </span>
+                          ))
+                        ) : (
+                          <span className="schedule-selected-day__empty">None</span>
+                        )}
+                      </div>
+                    </article>
+                  ))}
+                </div>
               </div>
             ) : (
               <p className="workpage-history__empty">No selected-day summary available.</p>
@@ -362,6 +391,7 @@ export function ScheduleWorkpageSurface({
                     <th scope="col">Hours</th>
                     <th scope="col">Routes</th>
                     <th scope="col">On call</th>
+                    <th scope="col">Preference</th>
                     <th scope="col">Availability</th>
                     <th scope="col">Compliance</th>
                     <th scope="col">Issues</th>
@@ -397,6 +427,11 @@ export function ScheduleWorkpageSurface({
                         <td>{formatDriverHours(metric.scheduled_hours)}</td>
                         <td>{metric.scheduled_routes}</td>
                         <td>{metric.on_call_shifts}</td>
+                        <td>
+                          <span className={`schedule-pill schedule-pill--${pillToneForDriverState(metric.preference_state)}`}>
+                            {metric.preference_state}
+                          </span>
+                        </td>
                         <td>
                           <span className={`schedule-pill schedule-pill--${pillToneForDriverState(metric.availability_state)}`}>
                             {metric.availability_state}

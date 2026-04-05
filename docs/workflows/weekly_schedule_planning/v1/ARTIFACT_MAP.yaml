@@ -25,6 +25,8 @@ artifact_sets:
   # payload content inside the artifacts themselves.
   - key: planning.route_slot_requirements.workbook
     role: official_input
+  - key: planning.driver_shift_preferences.workbook
+    role: official_input
   - key: planning.driver_capabilities.workbook
     role: official_input
   - key: planning.input_bundle.doc

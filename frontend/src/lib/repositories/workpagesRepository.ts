@@ -4,7 +4,7 @@ import { downloadBinaryToFile } from "@/lib/repositories/artifactAttachments";
 import type {
   ArtifactVersionRow,
   WorkpageContract,
-  WorkpageDraftResponse,
+  WorkpageCreateResponse,
   WorkpageActionSubjectContext,
   WorkpagePreviewResponse,
   WorkpageSubmittedResponse
@@ -62,7 +62,7 @@ export const workpagesRepository = {
     );
   },
 
-  async createEodDraft(): Promise<WorkpageDraftResponse> {
+  async createEodDraft(): Promise<WorkpageCreateResponse> {
     return onetruthApi.createDemoEodDraft({
       idempotency_key: createIdempotencyKey("workpage-eod-draft-create", "eod-v0")
     });
@@ -71,24 +71,38 @@ export const workpagesRepository = {
   async createEodDraftForRun(
     workflowRunId: string,
     subjectContext?: WorkpageActionSubjectContext
-  ): Promise<WorkpageDraftResponse> {
+  ): Promise<WorkpageCreateResponse> {
     return onetruthApi.createWorkflowRunEodDraft(workflowRunId, {
       idempotency_key: createIdempotencyKey("workpage-eod-draft-create", workflowRunId),
       subject_link: subjectLinkPayload(subjectContext)
     });
   },
 
-  async launchWorkspaceDraft(
+  async createWorkpage(
     createPath: string,
     subjectContext?: WorkpageActionSubjectContext
-  ): Promise<WorkpageDraftResponse> {
-    return onetruthApi.createWorkpageDraftAtPath(createPath, {
+  ): Promise<WorkpageCreateResponse> {
+    return onetruthApi.createWorkpageAtPath(createPath, {
       idempotency_key: createIdempotencyKey(
-        "workspace-workpage-draft-create",
+        "workspace-workpage-create",
         `${createPath}:${subjectContext?.subject_kind ?? "none"}:${subjectContext?.subject_id ?? "none"}`
       ),
       subject_link: subjectLinkPayload(subjectContext)
     });
+  },
+
+  async driverPreferencesForRun(workflowRunId: string): Promise<WorkpageContract> {
+    return onetruthApi.getWorkflowRunDriverPreferencesWorkpage(workflowRunId);
+  },
+
+  async driverPreferencesArtifact(
+    workflowRunId: string,
+    artifactVersionId: string
+  ): Promise<WorkpageContract> {
+    return onetruthApi.getWorkflowRunDriverPreferencesArtifactWorkpage(
+      workflowRunId,
+      artifactVersionId
+    );
   },
 
   async listEodDraftHistory(workflowRunId: string): Promise<ArtifactVersionRow[]> {
@@ -129,6 +143,20 @@ export const workpagesRepository = {
     const artifacts = await onetruthApi.listWorkflowRunArtifacts(workflowRunId);
     return artifacts
       .filter((artifact) => artifact.artifact_kind === "planning.route_slot_requirements.workbook")
+      .sort((left, right) => {
+        const createdAtCompare = right.created_at.localeCompare(left.created_at);
+        if (createdAtCompare !== 0) {
+          return createdAtCompare;
+        }
+        return right.artifact_version_id.localeCompare(left.artifact_version_id);
+      })
+      .slice(0, 5);
+  },
+
+  async listDriverPreferencesHistory(workflowRunId: string): Promise<ArtifactVersionRow[]> {
+    const artifacts = await onetruthApi.listWorkflowRunArtifacts(workflowRunId);
+    return artifacts
+      .filter((artifact) => artifact.artifact_kind === "planning.driver_shift_preferences.workbook")
       .sort((left, right) => {
         const createdAtCompare = right.created_at.localeCompare(left.created_at);
         if (createdAtCompare !== 0) {
@@ -220,6 +248,25 @@ export const workpagesRepository = {
       daily_demand_rows: payload.dailyDemandRows,
       subject_link: subjectLinkPayload(subjectContext),
       idempotency_key: createIdempotencyKey("workpage-route-demand-artifact-submit", artifactVersionId)
+    });
+  },
+
+  async submitDriverPreferencesArtifactAtPath(
+    submitPath: string,
+    artifactVersionId: string,
+    payload: {
+      driverRows: Array<{
+        driver_id: string;
+        preferences_by_weekday: Record<string, string | null>;
+      }>;
+    }
+  ): Promise<WorkpageSubmittedResponse> {
+    return onetruthApi.submitArtifactWorkpageAtPath(submitPath, {
+      driver_rows: payload.driverRows,
+      idempotency_key: createIdempotencyKey(
+        "workpage-driver-preferences-artifact-submit",
+        artifactVersionId
+      )
     });
   },
 

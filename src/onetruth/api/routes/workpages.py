@@ -5,8 +5,10 @@ import sqlite3
 from onetruth.application.handlers._shared.command_boundary import CommandError
 from onetruth.application.handlers.workpages import (
     create_demo_eod_draft_command,
+    create_workflow_run_driver_preferences_snapshot_command,
     create_workflow_run_eod_draft_command,
     preview_schedule_artifact_workpage_command,
+    submit_driver_preferences_artifact_workpage_command,
     submit_route_demand_artifact_workpage_command,
     submit_eod_artifact_workpage_command,
     submit_schedule_artifact_workpage_command,
@@ -22,6 +24,8 @@ from onetruth.application.services.logistics_workpages import (
     WorkpageProjectionUnavailableError,
     build_eod_artifact_workpage_contract,
     build_demo_workpage_contract,
+    build_driver_preferences_artifact_workpage_contract,
+    build_driver_preferences_workflow_run_workpage_contract,
     build_eod_workflow_run_workpage_contract,
     build_route_demand_artifact_workpage_contract,
     build_route_demand_workflow_run_workpage_contract,
@@ -41,7 +45,12 @@ from onetruth.application.services.schedule_control.route_demand_workbook import
     project_route_demand_workbook,
     route_demand_workbook_bytes_from_metadata_json,
 )
+from onetruth.application.services.schedule_control.driver_preferences_workbook import (
+    project_driver_preferences_workbook,
+    driver_preferences_workbook_bytes_from_metadata_json,
+)
 from onetruth.application.services.workpage_descriptors import (
+    DRIVER_PREFERENCES_WORKPAGE_KIND,
     EOD_DEMO_WORKPAGE_ID,
     ROUTE_DEMAND_WORKPAGE_KIND,
     SCHEDULE_DEMO_WORKPAGE_ID,
@@ -273,6 +282,46 @@ def create_workflow_run_eod_draft_endpoint(
     }
 
 
+def create_workflow_run_driver_preferences_snapshot_endpoint(
+    connection: sqlite3.Connection,
+    *,
+    context: RequestContext,
+    db_url: str,
+    workflow_run_id: str,
+    payload: dict[str, object],
+) -> dict[str, object]:
+    workflow_run = scoped_workflow_run(connection, context, workflow_run_id)
+    if str(workflow_run.get("workflow_id") or "") != "weekly_schedule_planning.v1":
+        raise ApiError(
+            status_code=404,
+            code="workpage_not_found",
+            message="workpage not found",
+            details={
+                "workflow_run_id": workflow_run_id,
+                "workpage_id": DRIVER_PREFERENCES_WORKPAGE_KIND,
+            },
+        )
+    try:
+        result = create_workflow_run_driver_preferences_snapshot_command(
+            connection,
+            workflow_run,
+            {
+                **payload,
+                "tenant_id": context.tenant_id,
+                "domain_id": context.domain_id,
+                "actor_id": context.actor_id,
+                "actor_type": context.actor_type,
+            },
+            storage_root=default_storage_root_for_db_url(db_url),
+        )
+    except CommandError as exc:
+        raise api_error_from_command(exc) from exc
+    return {
+        "command": "api.workpages.driver_preferences.snapshots.create",
+        **result,
+    }
+
+
 def artifact_workpage_endpoint(
     connection: sqlite3.Connection,
     *,
@@ -346,6 +395,12 @@ def _build_workflow_run_workpage_contract(
         )
     if descriptor.kind == ROUTE_DEMAND_WORKPAGE_KIND:
         return build_route_demand_workflow_run_workpage_contract(
+            connection,
+            workflow_run=workflow_run,
+            artifacts=artifacts,
+        )
+    if descriptor.kind == DRIVER_PREFERENCES_WORKPAGE_KIND:
+        return build_driver_preferences_workflow_run_workpage_contract(
             connection,
             workflow_run=workflow_run,
             artifacts=artifacts,
@@ -468,6 +523,16 @@ def _artifact_workpage_contract(
             download_path=f"/api/v1/artifacts/{artifact_version_id}/download.bin",
             projection=project_route_demand_workbook(workbook_bytes),
         )
+    if descriptor.kind == DRIVER_PREFERENCES_WORKPAGE_KIND:
+        return build_driver_preferences_artifact_workpage_contract(
+            connection,
+            artifact_version_id=artifact_version_id,
+            artifact=artifact,
+            workflow_run=workflow_run,
+            artifacts=artifacts,
+            download_path=f"/api/v1/artifacts/{artifact_version_id}/download.bin",
+            projection=project_driver_preferences_workbook(workbook_bytes),
+        )
     raise ApiError(
         status_code=404,
         code="workpage_artifact_not_found",
@@ -546,6 +611,17 @@ def _submit_artifact_workpage(
             )
         if descriptor.kind == ROUTE_DEMAND_WORKPAGE_KIND:
             return submit_route_demand_artifact_workpage_command(
+                connection,
+                {
+                    **payload,
+                    "artifact_version_id": artifact_version_id,
+                    "actor_id": context.actor_id,
+                    "actor_type": context.actor_type,
+                },
+                storage_root=default_storage_root_for_db_url(db_url),
+            )
+        if descriptor.kind == DRIVER_PREFERENCES_WORKPAGE_KIND:
+            return submit_driver_preferences_artifact_workpage_command(
                 connection,
                 {
                     **payload,
@@ -703,6 +779,16 @@ def _artifact_workpage_bytes(
             return read_blob(storage_uri)
         try:
             return route_demand_workbook_bytes_from_metadata_json(artifact.get("metadata_json"))
+        except ValueError as exc:
+            raise ArtifactStorageError(str(exc)) from exc
+    if descriptor.kind == DRIVER_PREFERENCES_WORKPAGE_KIND and descriptor.supports_artifact_kind(artifact_kind):
+        storage_uri = str(artifact.get("storage_uri") or "")
+        if storage_uri.startswith("file:"):
+            return read_blob(storage_uri)
+        try:
+            return driver_preferences_workbook_bytes_from_metadata_json(
+                artifact.get("metadata_json")
+            )
         except ValueError as exc:
             raise ArtifactStorageError(str(exc)) from exc
     if descriptor.kind == EOD_DEMO_WORKPAGE_ID and artifact_kind == EOD_DATASET_KEY:

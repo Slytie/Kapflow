@@ -14,6 +14,7 @@ from onetruth.api.route_specs._core import (
 from onetruth.api.routes.workpages import (
     artifact_workpage_endpoint,
     create_demo_eod_draft_endpoint,
+    create_workflow_run_driver_preferences_snapshot_endpoint,
     create_workflow_run_eod_draft_endpoint,
     demo_workpage_endpoint,
     preview_artifact_workpage_endpoint,
@@ -193,6 +194,24 @@ WORKPAGE_ROUTE_SPECS: tuple[RouteSpec, ...] = (
         body_policy=JSON_COMMAND_BODY,
         needs_page=False,
         dispatch=lambda execution, params: create_workflow_run_eod_draft_endpoint(
+            require_connection(execution.connection),
+            context=require_request_context(execution.context),
+            db_url=execution.db_url,
+            workflow_run_id=params["workflow_run_id"],
+            payload=_require_payload(execution.payload),
+        ),
+    ),
+    RouteSpec(
+        name="workpages.workflow_run.driver_preferences.snapshots.create",
+        method="POST",
+        pattern=_param(
+            "/api/v1/workpages/workflow-runs/",
+            param_name="workflow_run_id",
+            suffix="/driver-preferences-v0/snapshots",
+        ),
+        body_policy=JSON_COMMAND_BODY,
+        needs_page=False,
+        dispatch=lambda execution, params: create_workflow_run_driver_preferences_snapshot_endpoint(
             require_connection(execution.connection),
             context=require_request_context(execution.context),
             db_url=execution.db_url,

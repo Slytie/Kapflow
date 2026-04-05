@@ -7,6 +7,10 @@ from typing import Any, Mapping
 from onetruth.application.services.workpage_descriptors import (
     DRIVER_PREFERENCES_ARTIFACT_KIND,
 )
+from onetruth.application.services.schedule_control.driver_preferences_workbook import (
+    annotate_driver_preferences_projection,
+    driver_preference_value_for_service_date,
+)
 
 from .bundle_builder import DriverAvailability, WeeklyScheduleControlBundle
 from .bundle_builder import build_weekly_schedule_control_bundle
@@ -36,6 +40,9 @@ _HARD_DEPENDENCY_KEYS = frozenset(
 )
 _BLOCKED_AVAILABILITY_STATES = frozenset(
     {"approved_unavailable", "pattern_off", "emergency_only"}
+)
+_PREFERENCE_WARNING_STATES = frozenset(
+    {"prefer_not_to_work", "definitely_can_not_work"}
 )
 
 
@@ -249,7 +256,9 @@ def build_schedule_calculations(
     bundle: WeeklyScheduleControlBundle,
     assignment_rows: list[dict[str, Any]],
     reserve_rows: list[dict[str, Any]],
+    driver_preferences_projection: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
+    preferences_projection = annotate_driver_preferences_projection(driver_preferences_projection)
     selected_service_date = _selected_service_date(bundle)
     route_slots_by_id = {item.route_slot_id: item for item in bundle.route_slots}
     drivers_by_id = {item.driver_id: item for item in bundle.drivers}
@@ -274,6 +283,11 @@ def build_schedule_calculations(
         drivers_by_id=drivers_by_id,
         schedule_state=schedule_state,
         assignment_rows=assignment_rows,
+    )
+    preference_conflict_driver_ids = _scheduled_preference_conflict_driver_ids(
+        assignment_rows=assignment_rows,
+        reserve_rows=reserve_rows,
+        driver_preferences_projection=preferences_projection,
     )
 
     top_bar_days: list[dict[str, Any]] = []
@@ -342,6 +356,11 @@ def build_schedule_calculations(
             affected_driver_ids.add(driver.driver_id)
         availability = bundle.availability_by_driver.get(driver.driver_id)
         availability_state = _availability_state(availability, selected_service_date)
+        preference_state = _preference_state(
+            driver_id=driver.driver_id,
+            service_date=selected_service_date,
+            driver_preferences_projection=preferences_projection,
+        )
         driver_metrics.append(
             {
                 "driver_id": driver.driver_id,
@@ -349,7 +368,7 @@ def build_schedule_calculations(
                 "scheduled_hours": round(scheduled_minutes / 60.0, 2),
                 "scheduled_routes": len(route_rows),
                 "on_call_shifts": len(on_call_rows),
-                "preference_state": _preference_state(driver=driver, route_rows=route_rows, route_slots_by_id=route_slots_by_id),
+                "preference_state": preference_state,
                 "availability_state": availability_state,
                 "compliance_state": (
                     "fail" if issues else "pass"
@@ -380,6 +399,13 @@ def build_schedule_calculations(
             "blocking": True,
             "affected_driver_ids": sorted(affected_driver_ids),
         },
+        {
+            "check_id": "driver_preferences_alignment",
+            "label": "Driver preference alignment",
+            "state": "warn" if preference_conflict_driver_ids else "pass",
+            "blocking": False,
+            "affected_driver_ids": sorted(preference_conflict_driver_ids),
+        },
     ]
 
     selected_day_top_bar = next(
@@ -404,6 +430,11 @@ def build_schedule_calculations(
             "on_call_drivers": int(selected_day_top_bar.get("on_call_drivers") or 0),
             "available_driver_count": len(selected_day_available_ids),
             "available_driver_ids": selected_day_available_ids,
+            "available_preference_buckets": _selected_day_available_preference_buckets(
+                available_driver_ids=selected_day_available_ids,
+                service_date=selected_service_date,
+                driver_preferences_projection=preferences_projection,
+            ),
         },
     }
 
@@ -415,6 +446,7 @@ def build_schedule_calculation_snapshot_payload(
     dependencies: list[dict[str, Any]],
     assignment_rows: list[dict[str, Any]],
     reserve_rows: list[dict[str, Any]],
+    driver_preferences_projection: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     return {
         "schema_version": "1.0",
@@ -426,6 +458,7 @@ def build_schedule_calculation_snapshot_payload(
             bundle=bundle,
             assignment_rows=assignment_rows,
             reserve_rows=reserve_rows,
+            driver_preferences_projection=driver_preferences_projection,
         ),
     }
 
@@ -700,23 +733,62 @@ def _availability_state(
 
 def _preference_state(
     *,
-    driver: Any,
-    route_rows: list[dict[str, Any]],
-    route_slots_by_id: Mapping[str, RouteSlotRequirement],
+    driver_id: str,
+    service_date: str,
+    driver_preferences_projection: Mapping[str, Any] | None,
 ) -> str:
-    preferred_classes = set(getattr(driver, "preferred_route_slot_classes", ()) or ())
-    preferred_shift_band = _normalized_text(getattr(driver, "preferred_shift_band", ""))
-    if not route_rows:
-        return "neutral"
-    for row in route_rows:
-        route_slot = route_slots_by_id.get(_normalized_text(row.get("route_slot_id")))
-        if route_slot is None:
+    return driver_preference_value_for_service_date(
+        projection=driver_preferences_projection,
+        driver_id=driver_id,
+        service_date=service_date,
+    )
+
+
+def _selected_day_available_preference_buckets(
+    *,
+    available_driver_ids: list[str],
+    service_date: str,
+    driver_preferences_projection: Mapping[str, Any] | None,
+) -> dict[str, list[str]]:
+    buckets = {
+        "open_to_work": [],
+        "prefer_not_to_work": [],
+        "definitely_can_not_work": [],
+        "unset": [],
+    }
+    for driver_id in available_driver_ids:
+        preference_state = _preference_state(
+            driver_id=driver_id,
+            service_date=service_date,
+            driver_preferences_projection=driver_preferences_projection,
+        )
+        buckets.setdefault(preference_state, [])
+        buckets[preference_state].append(driver_id)
+    return buckets
+
+
+def _scheduled_preference_conflict_driver_ids(
+    *,
+    assignment_rows: list[dict[str, Any]],
+    reserve_rows: list[dict[str, Any]],
+    driver_preferences_projection: Mapping[str, Any] | None,
+) -> set[str]:
+    if driver_preferences_projection is None:
+        return set()
+    conflicts: set[str] = set()
+    for row in [*assignment_rows, *reserve_rows]:
+        driver_id = _normalized_text(row.get("assigned_driver_id"))
+        service_date = _normalized_text(row.get("service_date"))
+        if not driver_id or not service_date:
             continue
-        if preferred_classes and route_slot.route_slot_class in preferred_classes:
-            return "preferred_match"
-        if preferred_shift_band and _normalized_text(route_slot.preferred_shift_band) == preferred_shift_band:
-            return "preferred_match"
-    return "neutral"
+        preference_state = _preference_state(
+            driver_id=driver_id,
+            service_date=service_date,
+            driver_preferences_projection=driver_preferences_projection,
+        )
+        if preference_state in _PREFERENCE_WARNING_STATES:
+            conflicts.add(driver_id)
+    return conflicts
 
 
 def _weekday_label(service_date: str) -> str:

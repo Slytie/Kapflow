@@ -139,6 +139,28 @@ def seed_actual_ops_weekly_schedule_run_with_stage04_outputs(
     return seeded
 
 
+def create_driver_preferences_snapshot(
+    *,
+    db_url: str,
+    tenant_id: str,
+    domain_id: str,
+    workflow_run_id: str,
+    run_tag: str,
+) -> dict[str, Any]:
+    client = RuntimeApiClient(
+        db_url=db_url,
+        tenant_id=tenant_id,
+        domain_id=domain_id,
+        actor_id="human:frontend-snapshot-exporter",
+        actor_type="human",
+        actor_roles=["dispatch_supervisor", "operations_manager", "schedule_planner"],
+    )
+    return client.post(
+        f"/api/v1/workpages/workflow-runs/{workflow_run_id}/driver-preferences-v0/snapshots",
+        payload={"idempotency_key": f"{run_tag}:driver-preferences:create"},
+    ).payload
+
+
 def seed_dispatch_reporting_workpage_run(
     *,
     db_url: str,

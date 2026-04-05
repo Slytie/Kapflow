@@ -1,0 +1,17 @@
+{
+  "create_response": {
+    "command": "api.workpages.driver_preferences.snapshots.create",
+    "created": {
+      "artifact_version_id": "<artifact_version_id:1>",
+      "route": "/runs/<workflow_run_id:2>/workpages/driver-preferences-v0/artifacts/<artifact_version_id:1>",
+      "workflow_run_id": "<workflow_run_id:2>"
+    },
+    "status": "ok"
+  },
+  "snapshot_id": "workpage_driver_preferences_v0_artifact_create_response",
+  "source": {
+    "capture": "artifact_create_response",
+    "workflow_run_id": "<workflow_run_id:2>",
+    "workpage_id": "driver-preferences-v0"
+  }
+}

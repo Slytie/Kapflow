@@ -18,6 +18,10 @@ import { RunsPage } from "@/pages/RunsPage";
 import { TimelinePage } from "@/pages/TimelinePage";
 import { LogisticsDemoPage } from "@/pages/LogisticsDemoPage";
 import {
+  LogisticsDriverPreferencesArtifactWorkpagePage,
+  LogisticsDriverPreferencesWorkpagePage
+} from "@/pages/LogisticsDriverPreferencesWorkpagePage";
+import {
   LogisticsRouteDemandArtifactWorkpagePage,
   LogisticsRouteDemandWorkpagePage
 } from "@/pages/LogisticsRouteDemandWorkpagePage";
@@ -66,12 +70,20 @@ export function App(): JSX.Element {
                 element={<LogisticsRouteDemandWorkpagePage />}
               />
               <Route
+                path="/runs/:workflowRunId/workpages/driver-preferences-v0"
+                element={<LogisticsDriverPreferencesWorkpagePage />}
+              />
+              <Route
                 path="/runs/:workflowRunId/workpages/schedule-v0/artifacts/:artifactVersionId"
                 element={<LogisticsScheduleArtifactWorkpagePage />}
               />
               <Route
                 path="/runs/:workflowRunId/workpages/route-demand-v0/artifacts/:artifactVersionId"
                 element={<LogisticsRouteDemandArtifactWorkpagePage />}
+              />
+              <Route
+                path="/runs/:workflowRunId/workpages/driver-preferences-v0/artifacts/:artifactVersionId"
+                element={<LogisticsDriverPreferencesArtifactWorkpagePage />}
               />
               <Route path="/runs/:workflowRunId/workpages/eod-v0" element={<DispatchReportWorkpagePage />} />
               <Route

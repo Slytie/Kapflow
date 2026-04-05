@@ -258,10 +258,10 @@ export function WorkspaceTaskBoard({
 
   const workpageActionMutation = useMutation({
     mutationFn: (action: WorkflowWorkspaceWorkpageAction) => {
-      if (action.presentation !== "create_draft_then_open" || !action.create_path) {
+      if (action.presentation !== "create_then_open" || !action.create_path) {
         throw new Error("Unsupported workspace workpage action");
       }
-      return workpagesRepository.launchWorkspaceDraft(action.create_path, action.subject_context);
+      return workpagesRepository.createWorkpage(action.create_path, action.subject_context);
     },
     onSuccess: (draft, action) => {
       onRefresh();
@@ -313,7 +313,7 @@ export function WorkspaceTaskBoard({
       });
       return;
     }
-    if (action.presentation === "create_draft_then_open" && action.create_path) {
+    if (action.presentation === "create_then_open" && action.create_path) {
       workpageActionMutation.mutate(action);
     }
   };
@@ -592,7 +592,7 @@ export function WorkspaceTaskBoard({
                                   taskBusy ||
                                   action.state !== "available" ||
                                   (action.presentation === "open_route" && !action.route) ||
-                                  (action.presentation === "create_draft_then_open" &&
+                                  (action.presentation === "create_then_open" &&
                                     !action.create_path)
                                 }
                                 title={action.state === "available" ? undefined : workpageActionStateLabel(action)}
@@ -772,7 +772,7 @@ export function WorkspaceTaskBoard({
                                   approvalBusy ||
                                   action.state !== "available" ||
                                   (action.presentation === "open_route" && !action.route) ||
-                                  (action.presentation === "create_draft_then_open" &&
+                                  (action.presentation === "create_then_open" &&
                                     !action.create_path)
                                 }
                                 title={action.state === "available" ? undefined : workpageActionStateLabel(action)}
