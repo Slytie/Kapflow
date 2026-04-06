@@ -83,7 +83,7 @@
           "title": "Daily summary"
         },
         {
-          "body": "This backend example-backed query uses intentionally partial repo examples. Source workbook summary tabs showed formula failures, so row-level actuals remain the primary truth and v0 surfaces a warning instead of reproducing broken formulas.",
+          "body": "This run-backed EOD landing is generated from canonical dispatch-reporting artifacts sourced from intentionally partial 2026-03-16 example material. Source workbook summary tabs showed formula failures, so row-level actuals remain the primary truth and the landing surfaces a warning instead of reproducing broken formulas.",
           "kind": "note_panel",
           "title": "Formula-integrity warning"
         },
@@ -294,15 +294,15 @@
         "service_date": "2026-03-16",
         "station_code": "DVC4",
         "total_routes_actual": 3,
-        "warning_note": "This backend example-backed query is built from an intentionally partial 2026-03-16 QDCI / DVC4 reporting example family. Row-level actuals remain the primary truth because the source workbook summary tabs contained broken formulas."
+        "warning_note": "This EOD projection is built from canonical dispatch-reporting artifacts sourced from an intentionally partial 2026-03-16 QDCI / DVC4 example family. Row-level actuals remain the primary truth because the source workbook summary tabs contained broken formulas."
       },
       "title": "End-of-day report",
       "validation": {
         "status": "informational",
         "warnings": [
-          "This server-owned example-backed query is built from an intentionally partial 2026-03-16 dispatch-reporting example family.",
+          "This run-backed EOD landing is generated from canonical dispatch-reporting artifacts sourced from an intentionally partial 2026-03-16 example family.",
           "Workbook summary formulas were broken in the source material, so row-level actuals remain the primary truth for this projection.",
-          "Manual closeout inputs remain local-only in v0; no submit/materialize contract exists yet."
+          "Create draft opens the immutable reporting workbook edit lane, and submit creates a new superseding workbook artifact version."
         ]
       },
       "version": 2,

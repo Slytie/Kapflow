@@ -94,14 +94,15 @@ _EOD_SERVICE_DATE = "2026-03-16"
 _EOD_STATION_CODE = "DVC4"
 _EOD_DSP_NAME = "QDCI"
 _EOD_WARNING_NOTE = (
-    "This backend example-backed query is built from an intentionally partial 2026-03-16 "
-    "QDCI / DVC4 reporting example family. Row-level actuals remain the primary truth "
+    "This EOD projection is built from canonical dispatch-reporting artifacts sourced from an "
+    "intentionally partial 2026-03-16 QDCI / DVC4 example family. Row-level actuals remain the primary truth "
     "because the source workbook summary tabs contained broken formulas."
 )
 _EOD_NOTE_PANEL_BODY = (
-    "This backend example-backed query uses intentionally partial repo examples. Source workbook "
-    "summary tabs showed formula failures, so row-level actuals remain the primary truth "
-    "and v0 surfaces a warning instead of reproducing broken formulas."
+    "This run-backed EOD landing is generated from canonical dispatch-reporting artifacts sourced "
+    "from intentionally partial 2026-03-16 example material. Source workbook summary tabs showed "
+    "formula failures, so row-level actuals remain the primary truth and the landing surfaces a "
+    "warning instead of reproducing broken formulas."
 )
 
 _ROUTE_SLOT_DATASET_KEY = "planning.route_slot_requirements.workbook"
@@ -146,9 +147,9 @@ _EOD_SOURCE_EXAMPLES = {
 }
 
 _EOD_VALIDATION_WARNINGS = [
-    "This server-owned example-backed query is built from an intentionally partial 2026-03-16 dispatch-reporting example family.",
+    "This run-backed EOD landing is generated from canonical dispatch-reporting artifacts sourced from an intentionally partial 2026-03-16 example family.",
     "Workbook summary formulas were broken in the source material, so row-level actuals remain the primary truth for this projection.",
-    "Manual closeout inputs remain local-only in v0; no submit/materialize contract exists yet.",
+    "Create draft opens the immutable reporting workbook edit lane, and submit creates a new superseding workbook artifact version.",
 ]
 
 _ROSTER_TARGET_NAMES = (

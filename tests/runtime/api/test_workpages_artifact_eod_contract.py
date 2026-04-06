@@ -392,9 +392,10 @@ def test_artifact_backed_eod_workpage_returns_projected_contract(tmp_path: Path)
         "average_route_time": "0:00:00",
         "formula_integrity_warning": False,
         "warning_note": (
-            "This backend example-backed query is built from an intentionally partial 2026-03-16 "
-            "QDCI / DVC4 reporting example family. Row-level actuals remain the primary truth "
-            "because the source workbook summary tabs contained broken formulas."
+            "This EOD projection is built from canonical dispatch-reporting artifacts sourced from "
+            "an intentionally partial 2026-03-16 QDCI / DVC4 example family. Row-level actuals "
+            "remain the primary truth because the source workbook summary tabs contained broken "
+            "formulas."
         ),
     }
 

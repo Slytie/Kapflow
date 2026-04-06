@@ -60,7 +60,7 @@ export function WorkpageFrame({
   onRefresh,
   isRefreshing = false,
   pollIntervalMs,
-  sourceDescription = "Backend demo query served from repo-native workflow example bundles.",
+  sourceDescription = "Canonical workpage projection served from backend-owned workflow artifacts and runtime truth.",
   heroTitleActions,
   heroSupportText,
   heroActions,

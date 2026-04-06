@@ -4,6 +4,11 @@ These JSON files are backend-owned frontend contract fixtures.
 
 They are generated from real runtime scenario states, not hand-authored.
 
+They describe the active canonical workpage posture:
+- `/demo/logistics` is only the shell entrypoint
+- public workpage routes are the canonical run/kind-scoped `/runs/:workflowRunId/workpages/*` frontend routes and `/api/v1/workpages/workflow-runs/{workflow_run_id}/{workpage_kind}*` backend routes
+- inner `workpage.mode` / `workpage.source_examples` fields remain temporary compatibility seams for the current view-model shape and are not the source of truth for route posture
+
 ## Refresh workflow
 1. Re-generate fixtures:
    - `make frontend-snapshots`

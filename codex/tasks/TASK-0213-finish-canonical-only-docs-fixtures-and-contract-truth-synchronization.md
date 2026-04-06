@@ -2,7 +2,7 @@
 id: TASK-0213
 epic: EPIC-132
 title: "Finish canonical-only docs, fixtures, and contract-truth synchronization"
-status: TODO
+status: DONE
 owners: ["backend", "frontend", "qa"]
 reviewers: ["architect"]
 depends_on: ["TASK-0211", "TASK-0212"]
@@ -55,3 +55,9 @@ Make active docs, fixtures, snapshot expectations, and route-level tests all tel
 - Active docs, fixtures, and tests are synchronized with the canonical-only posture.
 - No stale demo-era wording remains in active truth unless it is an intentional compatibility field.
 - Canonical-route expectations are explicit and regression-protected.
+
+## Execution notes
+- Kept `workpage.mode` / `workpage.source_examples` as compatibility fields for the current inner view-model seam instead of retiring them in this task.
+- Removed stale human-facing wording from active canonical EOD truth so run-backed and artifact-backed surfaces no longer describe themselves as demo/example-backed queries.
+- Updated active EOD landing truth to acknowledge the real immutable draft create/submit workbook lane instead of claiming manual closeout is local-only.
+- Refreshed backend-owned frontend contract fixtures after the copy cleanup and kept retired demo-route / alias-route tests explicit.

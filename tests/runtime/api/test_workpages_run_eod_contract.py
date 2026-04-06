@@ -18,9 +18,9 @@ EXPECTED_SOURCE_DATASET_KEYS = [
 ]
 
 EXPECTED_VALIDATION_WARNINGS = [
-    "This server-owned example-backed query is built from an intentionally partial 2026-03-16 dispatch-reporting example family.",
+    "This run-backed EOD landing is generated from canonical dispatch-reporting artifacts sourced from an intentionally partial 2026-03-16 example family.",
     "Workbook summary formulas were broken in the source material, so row-level actuals remain the primary truth for this projection.",
-    "Manual closeout inputs remain local-only in v0; no submit/materialize contract exists yet.",
+    "Create draft opens the immutable reporting workbook edit lane, and submit creates a new superseding workbook artifact version.",
 ]
 
 
@@ -93,9 +93,10 @@ def test_eod_workflow_run_workpage_contract_returns_run_backed_landing_without_d
         "average_route_time": "9:47:00",
         "formula_integrity_warning": True,
         "warning_note": (
-            "This backend example-backed query is built from an intentionally partial 2026-03-16 "
-            "QDCI / DVC4 reporting example family. Row-level actuals remain the primary truth "
-            "because the source workbook summary tabs contained broken formulas."
+            "This EOD projection is built from canonical dispatch-reporting artifacts sourced from "
+            "an intentionally partial 2026-03-16 QDCI / DVC4 example family. Row-level actuals "
+            "remain the primary truth because the source workbook summary tabs contained broken "
+            "formulas."
         ),
     }
     assert [section["kind"] for section in workpage["sections"]] == [

@@ -223,7 +223,7 @@
         "service_date": "2026-03-16",
         "station_code": "DVC4",
         "total_routes_actual": 0,
-        "warning_note": "This backend example-backed query is built from an intentionally partial 2026-03-16 QDCI / DVC4 reporting example family. Row-level actuals remain the primary truth because the source workbook summary tabs contained broken formulas."
+        "warning_note": "This EOD projection is built from canonical dispatch-reporting artifacts sourced from an intentionally partial 2026-03-16 QDCI / DVC4 example family. Row-level actuals remain the primary truth because the source workbook summary tabs contained broken formulas."
       },
       "title": "End-of-day report",
       "validation": {

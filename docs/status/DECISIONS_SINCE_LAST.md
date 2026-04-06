@@ -2,6 +2,11 @@
 
 Record any decisions made since the last session so a fresh Codex run can rehydrate quickly.
 
+## 2026-04-06 (TASK-0213 canonical-only wording and compatibility-field sync)
+- Contract-copy decision: active canonical workpage docs, snapshots, and route tests now describe run-backed and artifact-backed projections rather than demo-query posture; example wording remains only when it refers to source material.
+- Compatibility-seam decision: inner `workpage.mode` and `workpage.source_examples` remain temporary legacy view-model fields during EPIC-132 settlement, but authoritative public posture comes from the canonical run/kind-scoped routes and the outer workpage contract wrapper.
+- EOD-truth decision: active run-backed EOD truth must acknowledge the real draft create/submit workbook lane; no active contract should still claim manual closeout is local-only or that no submit/materialize path exists.
+
 ## 2026-04-06 (TASK-0212 workpage mutation smoke gate and dependency-readiness baseline)
 - Verification-lane decision: `make workpage-mutation-smoke` is now the fast canonical smoke slice for public workpage mutations, covering EOD create/submit replay, schedule submit replay, route-demand submit replay, driver-preferences snapshot replay, and weekly publish happy/drift behavior.
 - CI-truth decision: `workpage-mutation-smoke` now runs inside `ci-fast-backend` and as its own `required-fast / workpage-mutation-smoke` job in `.github/workflows/main.yml`.
