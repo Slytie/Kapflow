@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { type Dispatch, type SetStateAction, useEffect, useMemo, useState } from "react";
-import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
 
 import { StatePanel } from "@/components/StatePanel";
 import {
@@ -345,7 +345,6 @@ function DriverPreferencesGridEditor({
 
 export function LogisticsDriverPreferencesWorkpagePage(): JSX.Element {
   const navigate = useNavigate();
-  const location = useLocation();
   const queryClient = useQueryClient();
   const { workflowRunId } = useParams<{ workflowRunId: string }>();
   const query = useQuery({
@@ -480,7 +479,6 @@ export function LogisticsDriverPreferencesWorkpagePage(): JSX.Element {
 
 export function LogisticsDriverPreferencesArtifactWorkpagePage(): JSX.Element {
   const navigate = useNavigate();
-  const location = useLocation();
   const queryClient = useQueryClient();
   const { workflowRunId, artifactVersionId } = useParams<{
     workflowRunId: string;

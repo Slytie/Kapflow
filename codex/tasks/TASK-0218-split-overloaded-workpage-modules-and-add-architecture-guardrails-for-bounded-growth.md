@@ -2,7 +2,7 @@
 id: TASK-0218
 epic: EPIC-133
 title: "Split overloaded workpage modules and add architecture guardrails for bounded growth"
-status: TODO
+status: DONE
 owners: ["backend", "frontend"]
 reviewers: ["architect"]
 depends_on: ["TASK-0216", "TASK-0217"]
@@ -55,3 +55,26 @@ Reduce concentration and add guardrails so new workpage kinds extend the system 
 - The most overloaded workpage files are smaller and more purpose-bounded.
 - Future workpage additions can land through explicit seams instead of repeated large-file edits.
 - The repo is more extensible without becoming a framework project.
+
+## Completion notes
+- Completed on `2026-04-06`.
+- Backend concentration files now resolve through stable facades:
+  - `src/onetruth/application/handlers/workpages.py`
+  - `src/onetruth/application/services/logistics_workpages.py`
+- Handler logic now lives behind extracted modules for action resolution, reporting commands, schedule commands, weekly-control commands, and shared command support.
+- Frontend public entry files now stay under budget while preserving their exports:
+  - `frontend/src/components/WorkspaceTaskBoard.tsx`
+  - `frontend/src/pages/LogisticsScheduleWorkpagePage.tsx`
+  - `frontend/src/pages/LogisticsDemoPage.tsx`
+- Extracted helper seams now include:
+  - `frontend/src/lib/workspace/taskBoardModel.ts`
+  - `frontend/src/components/workspace/WorkspaceBoardCard.tsx`
+  - `frontend/src/lib/workpages/schedulePageModel.ts`
+  - `frontend/src/components/workpages/LogisticsScheduleWorkpageView.tsx`
+- Added explicit source-budget guardrails in `tests/unit/test_workpage_module_guardrails.py`.
+- Verification completed:
+  - `make PYTHON=/tmp/onetruth-py311-task0212/bin/python workpage-mutation-smoke`
+  - `npm --prefix frontend run test:run -- src/components/workspaceTaskBoard.test.tsx src/pages/runWorkspacePage.test.tsx src/pages/logisticsScheduleWorkpagePage.test.tsx src/pages/logisticsScheduleArtifactWorkpagePage.test.tsx src/pages/logisticsDemoPage.test.tsx src/pages/logisticsWorkpageRoutes.test.tsx src/pages/dispatchReportWorkpagePage.test.tsx src/pages/logisticsRouteDemandWorkpagePage.test.tsx src/pages/logisticsDriverPreferencesWorkpagePage.test.tsx`
+  - `make frontend-workpages-smoke`
+  - `PYTHONPATH=src /tmp/onetruth-py311-task0212/bin/python -m pytest -q tests/unit/test_workpages_active_source_guardrails.py tests/unit/test_api_route_registry.py tests/unit/test_workpage_module_guardrails.py`
+  - `git diff --check`

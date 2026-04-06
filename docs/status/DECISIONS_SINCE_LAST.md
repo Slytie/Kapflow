@@ -2,6 +2,11 @@
 
 Record any decisions made since the last session so a fresh Codex run can rehydrate quickly.
 
+## 2026-04-06 (TASK-0218 workpage concentration split and guardrails)
+- Facade decision: the public workpage handler/service entrypoints now stay stable through thin facades at `src/onetruth/application/handlers/workpages.py` and `src/onetruth/application/services/logistics_workpages.py`, while extracted modules own the refactor-heavy internals.
+- Frontend-boundary decision: the public workspace board, schedule page, and logistics demo page exports now remain intentionally thin and source-budgeted; extracted model/presentational seams such as `taskBoardModel.ts`, `WorkspaceBoardCard.tsx`, `schedulePageModel.ts`, and `LogisticsScheduleWorkpageView.tsx` protect the moved logic.
+- Guardrail decision: `tests/unit/test_workpage_module_guardrails.py` is now the explicit source-budget check for the five historical concentration files, and EPIC-133 closes once those budgets hold alongside the existing smoke/route/contract checks.
+
 ## 2026-04-06 (TASK-0217 demo shell launcher-only convergence)
 - Surface-boundary decision: `/demo/logistics` remains the logistics story shell, run chooser, family-artifact surface, and drill-down graph, but it no longer hosts editable workpages inline; all create/submit/history behavior now happens only on canonical `/runs/:workflowRunId/workpages/*` and `/runs/:workflowRunId/workspace` routes.
 - Navigation decision: the shell brand link now preserves derived logistics `module` and `workflow_run_id` context when returning from canonical logistics routes to `/demo/logistics`, so launcher state is restored instead of resetting to a blank shell.

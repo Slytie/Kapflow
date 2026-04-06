@@ -6,9 +6,9 @@ Reduce the remaining accidental complexity in the post-EPIC-131 workpage system 
 This epic starts after EPIC-132 and assumes the repo has a clean, green settlement baseline.
 
 ## Status
-Selected.
+Completed on `2026-04-06`.
 
-Progress note: `TASK-0215`, `TASK-0216`, and `TASK-0217` are complete. Canonical schedule, EOD, route-demand, and driver-preferences pages now consume backend-authored lineage/latest/accepted navigation and server-authored `action_ref` write intent from the workpage seams, and `/demo/logistics` is now a launcher-only shell that hands off all mutation behavior to canonical routes. The remaining active work is `TASK-0218` concentration splitting and guardrails.
+Closeout note: `TASK-0215` through `TASK-0218` are complete. Canonical schedule, EOD, route-demand, and driver-preferences pages now consume backend-authored lineage/latest/accepted navigation and server-authored `action_ref` write intent from the workpage seams, `/demo/logistics` is launcher-only, and the former concentration files are now guarded by bounded facades plus source-budget tests.
 
 ## First-principles objective
 A workpage is a server-authored projection:

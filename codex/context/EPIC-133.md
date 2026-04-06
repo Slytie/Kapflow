@@ -4,6 +4,9 @@ Purpose:
 - Reduce the accidental complexity left after EPIC-131 and EPIC-132 so future workpages can be added without reintroducing fragility.
 - This is still a bounded hardening epic, not a platform rewrite.
 
+Status:
+- Completed on `2026-04-06`.
+
 ## Non-negotiable invariants
 - Start only after EPIC-132 leaves a clean, green settlement baseline.
 - Public workpage posture remains canonical-only.
@@ -30,7 +33,7 @@ This is complete for the canonical create/submit flows. Canonical frontend navig
 This is complete for `/demo/logistics`. The demo shell is now launcher-only and no longer hosts an inline workpage mutation engine; create/submit/history behavior happens only on canonical workpage or workspace routes.
 
 ### 4. Large concentration files
-Current concentration points include:
+This is complete. The public concentration files now resolve through thinner facades or extracted helper seams, and explicit source-budget guardrails protect:
 - `src/onetruth/application/handlers/workpages.py`
 - `src/onetruth/application/services/logistics_workpages.py`
 - `frontend/src/components/WorkspaceTaskBoard.tsx`
@@ -51,7 +54,7 @@ Current concentration points include:
 - not a product-boundary reopen
 
 ## Stop line
-When this epic is complete, adding another workpage kind should primarily mean:
+With this epic complete, adding another workpage kind should primarily mean:
 - register descriptor/query/action pieces,
 - add bounded frontend host rendering,
 - add focused tests,

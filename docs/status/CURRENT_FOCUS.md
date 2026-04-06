@@ -14,11 +14,16 @@ The just-completed workpage settlement closeout now leaves the repo with:
 - a dedicated frontend workpage lane via `make frontend-workpages-smoke`
 - supported-environment verification truth anchored to Python `3.11` and Node `20` clean installs
 
-The next selected app-facing workpage tranche is **EPIC-133 - Workpage fragility reduction and extensibility hardening**:
+The just-completed app-facing workpage tranche is **EPIC-133 - Workpage fragility reduction and extensibility hardening**:
 - backend-owned lineage/latest-draft/history seams are complete for canonical workpage pages
 - server-authored action execution is complete for canonical create/submit flows
 - `/demo/logistics` is now a launcher-only shell that hands off to canonical workpage/workspace routes
-- the remaining active work is splitting the concentration files and adding guardrails without changing the canonical public route posture
+- the former concentration files now resolve through thinner facades and explicit source-budget guardrails
+
+There is no new app-facing workpage epic selected after EPIC-133 closeout. Remaining near-term backlog returns to the broader Stage 4 runtime/debug surface:
+- `TASK-0154` - finish the bounded live-dispatch manual daily-replan closure
+- `TASK-0156` - add the external cadence tick and single-node production-shaped runbook
+- `TASK-0157` - capture post-demo feedback against the canonical Workpages v1 posture
 
 EPIC-126 remains completed cleanup history, but it is no longer the active post-EPIC-131 plan.
 
@@ -54,7 +59,7 @@ Frozen product boundary:
 - `driver-preferences-v0` = soft/advisory weekly snapshot
 - accepted history and draft lineage remain separate
 
-Explicitly deferred beyond Workpages v1 and into EPIC-133 hardening:
+Still deferred beyond the completed Workpages v1 + EPIC-133 hardening tranche:
 - date-specific driver exceptions
 - automatic agentic rescheduling after route-demand changes
 - broader feedback-driven hardening beyond the settlement tranche
