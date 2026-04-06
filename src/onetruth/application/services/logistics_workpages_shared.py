@@ -64,6 +64,7 @@ from onetruth.application.services.workpage_descriptors import (
     canonical_schedule_artifact_route as descriptor_schedule_artifact_route,
     canonical_schedule_artifact_preview_path,
     canonical_schedule_artifact_submit_path,
+    canonical_workflow_run_workpage_route as descriptor_workflow_run_workpage_route,
     get_workpage_descriptor,
 )
 from onetruth.infrastructure.events.event_store import utc_now_iso
@@ -186,6 +187,13 @@ def canonical_schedule_artifact_route(*, workflow_run_id: str, artifact_version_
     return descriptor_schedule_artifact_route(
         workflow_run_id=workflow_run_id,
         artifact_version_id=artifact_version_id,
+    )
+
+
+def canonical_workflow_run_workpage_route(*, workflow_run_id: str, workpage_kind: str) -> str:
+    return descriptor_workflow_run_workpage_route(
+        workflow_run_id=workflow_run_id,
+        workpage_kind=workpage_kind,
     )
 
 

@@ -69,6 +69,10 @@ def canonical_schedule_artifact_route(*, workflow_run_id: str, artifact_version_
     )
 
 
+def canonical_workflow_run_workpage_route(*, workflow_run_id: str, workpage_kind: str) -> str:
+    return f"/runs/{workflow_run_id}/workpages/{workpage_kind}"
+
+
 def canonical_eod_artifact_route(*, workflow_run_id: str, artifact_version_id: str) -> str:
     return f"/runs/{workflow_run_id}/workpages/{EOD_WORKPAGE_KIND}/artifacts/{artifact_version_id}"
 
