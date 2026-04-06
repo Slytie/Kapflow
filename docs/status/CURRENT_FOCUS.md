@@ -9,7 +9,15 @@ Primary runtime/debug work remains the logistics weekly/live family. EPIC-131 an
 - backend workpage APIs live under `/api/v1/workpages/workflow-runs/{workflow_run_id}/{workpage_kind}*`
 - `/demo/logistics` remains the shell entrypoint, but nested demo workpage routes are retired
 
-No new app-facing epic is selected yet after the Workpages v1 closeout. The remaining backlog stays unselected until we deliberately choose the next tranche.
+The next selected app-facing workpage tranche is **EPIC-132 - Workpage reliability settlement and repo-truth closeout**:
+- import the post-EPIC-131 settlement docs/tasks/context into active repo truth
+- freeze the current clean baseline and reconcile the 2026-04-05 findings against the live repo
+- use supported-environment verification as the authority for any remaining mutation failures
+
+Planned follow-on after settlement:
+- **EPIC-133 - Workpage fragility reduction and extensibility hardening**
+
+EPIC-126 remains completed cleanup history, but it is no longer the active post-EPIC-131 plan.
 
 ## Current implemented baseline
 - weekly schedule landing, artifact editor, live preview, pinned dependency baselines, accepted-series navigation, and draft-lineage navigation on canonical schedule routes
@@ -43,12 +51,12 @@ Frozen product boundary:
 - `driver-preferences-v0` = soft/advisory weekly snapshot
 - accepted history and draft lineage remain separate
 
-Explicitly deferred beyond Workpages v1:
+Explicitly deferred beyond Workpages v1 and EPIC-132 settlement:
 - date-specific driver exceptions
 - automatic agentic rescheduling after route-demand changes
-- broader feedback-driven hardening beyond the current cleanup epic
+- broader feedback-driven hardening beyond the settlement tranche
 
-## Available backlog (not yet selected)
+## Available backlog (not yet selected beyond EPIC-132 / EPIC-133)
 1. `TASK-0154` - Finish the remaining bounded live-dispatch closure around the manual daily-replan lane.
 2. `TASK-0156` - Add the external cadence tick and single-node production-shaped runbook.
 3. `TASK-0157` - Capture post-demo feedback against the canonical Workpages v1 posture.

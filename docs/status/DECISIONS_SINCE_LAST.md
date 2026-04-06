@@ -2,6 +2,13 @@
 
 Record any decisions made since the last session so a fresh Codex run can rehydrate quickly.
 
+## 2026-04-06 (EPIC-132 selection and post-EPIC-131 settlement-plan import)
+- Selection decision: EPIC-132 is now the active follow-on workpage tranche after EPIC-131 and the completed EPIC-126 cleanup trio.
+- Plan-routing decision: EPIC-132 and EPIC-133 now supersede EPIC-126 as the active post-EPIC-131 settlement/hardening plan; EPIC-126 remains completed history rather than the current plan of record.
+- Reconciliation decision: the 2026-04-05 packet findings are imported as dated settlement evidence, not assumed live repo truth. TASK-0211 must classify them against the current checkout before treating any item as still open.
+- Environment-truth decision: supported-environment verification for remaining workpage settlement issues means Python `3.11` with `python3.11 -m pip install -e ".[api,dev]"` and Node `20` with the committed lockfile via `npm ci`; failures from `python3` 3.9 or partially installed environments are not repo regressions.
+- Deferral decision: client-carried `subject_link`, client-built history rails, inline demo mutation logic, and large-file decomposition remain explicit EPIC-133 debts unless one of them directly blocks EPIC-132 settlement.
+
 ## 2026-04-05 (EPIC-126 cleanup trio closeout)
 - Cleanup-closeout decision: `TASK-0158`, `TASK-0159`, and `TASK-0160` are complete, so the Workpages v1 cleanup trio should be treated as landed rather than active follow-on work.
 - Active-truth decision: current docs, current snapshots, and current source/test guardrails now describe only the canonical run/kind-scoped workpage posture plus `/demo/logistics` as the shell-only entrypoint.
