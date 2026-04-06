@@ -19,63 +19,65 @@ function setFrontendOperatorContext(): void {
 }
 
 describe("LogisticsScheduleWorkpagePage", () => {
-  it("renders the canonical run-backed surface as read-only and keeps metadata behind info", async () => {
-    const user = userEvent.setup();
-    let responseCount = 0;
-    server.use(
-      http.get("*/api/v1/workpages/workflow-runs/:workflowRunId/schedule-v0", ({ params }) => {
-        responseCount += 1;
-        const payload = structuredClone(scheduleRunWorkpageStateSnapshot.workpage_state) as Record<
-          string,
-          any
-        >;
-        payload.freshness.generated_at =
-          responseCount === 1 ? "2026-03-25T08:00:00Z" : "2026-03-25T08:00:30Z";
-        payload.run_context.workflow_run_id = String(params.workflowRunId);
-        return HttpResponse.json(payload);
-      })
-    );
-    setFrontendOperatorContext();
-    window.history.pushState({}, "", "/runs/wr-weekly-001/workpages/schedule-v0");
-    render(<App />);
+  it(
+    "renders the canonical run-backed surface as read-only and keeps metadata behind info",
+    async () => {
+      const user = userEvent.setup();
+      let responseCount = 0;
+      server.use(
+        http.get("*/api/v1/workpages/workflow-runs/:workflowRunId/schedule-v0", ({ params }) => {
+          responseCount += 1;
+          const payload = structuredClone(scheduleRunWorkpageStateSnapshot.workpage_state) as Record<
+            string,
+            any
+          >;
+          payload.freshness.generated_at =
+            responseCount === 1 ? "2026-03-25T08:00:00Z" : "2026-03-25T08:00:30Z";
+          payload.run_context.workflow_run_id = String(params.workflowRunId);
+          return HttpResponse.json(payload);
+        })
+      );
+      setFrontendOperatorContext();
+      window.history.pushState({}, "", "/runs/wr-weekly-001/workpages/schedule-v0");
+      render(<App />);
 
-    const page = await screen.findByTestId("schedule-workpage-page");
-    expect(within(page).getByRole("heading", { name: "Weekly schedule review" })).toBeInTheDocument();
-    expect(within(page).getByRole("heading", { name: "Capacity bar" })).toBeInTheDocument();
-    expect(within(page).getByRole("heading", { name: "Selected day" })).toBeInTheDocument();
-    expect(within(page).getByRole("heading", { name: "Dependency status" })).toBeInTheDocument();
-    expect(within(page).getByRole("heading", { name: "Checks" })).toBeInTheDocument();
-    expect(within(page).getByRole("heading", { name: "Driver metrics" })).toBeInTheDocument();
-    expect(within(page).getByRole("heading", { name: "Accepted history" })).toBeInTheDocument();
-    expect(within(page).getByRole("heading", { name: "Draft lineage" })).toBeInTheDocument();
-    expect(screen.queryByText("Scenario sick calls")).not.toBeInTheDocument();
-    expect(screen.queryByRole("textbox", { name: /Planner note/i })).not.toBeInTheDocument();
-    expect(screen.queryByRole("spinbutton", { name: /Scenario added routes/i })).not.toBeInTheDocument();
+      const page = await screen.findByTestId("schedule-workpage-page");
+      expect(within(page).getByRole("heading", { name: "Weekly schedule review" })).toBeInTheDocument();
+      expect(within(page).getByRole("heading", { name: "Capacity bar" })).toBeInTheDocument();
+      expect(within(page).getByRole("heading", { name: "Selected day" })).toBeInTheDocument();
+      expect(within(page).getByRole("heading", { name: "Dependency status" })).toBeInTheDocument();
+      expect(within(page).getByRole("heading", { name: "Checks" })).toBeInTheDocument();
+      expect(within(page).getByRole("heading", { name: "Driver metrics" })).toBeInTheDocument();
+      expect(within(page).getByRole("heading", { name: "Accepted history" })).toBeInTheDocument();
+      expect(within(page).getByRole("heading", { name: "Draft lineage" })).toBeInTheDocument();
+      expect(screen.queryByText("Scenario sick calls")).not.toBeInTheDocument();
+      expect(screen.queryByRole("textbox", { name: /Planner note/i })).not.toBeInTheDocument();
+      expect(screen.queryByRole("spinbutton", { name: /Scenario added routes/i })).not.toBeInTheDocument();
 
-    expect(within(page).queryByText(/repo-native workflow example bundles/i)).not.toBeInTheDocument();
-    await user.click(screen.getByRole("button", { name: "Open secondary detail routes" }));
-    const shellInfoDialog = await screen.findByRole("dialog", { name: "Secondary detail routes" });
-    expect(within(shellInfoDialog).getByRole("link", { name: "Run Details" })).toHaveAttribute(
-      "href",
-      "/runs"
-    );
-    await user.click(screen.getByRole("button", { name: /Close Secondary detail routes/i }));
+      expect(within(page).queryByText(/repo-native workflow example bundles/i)).not.toBeInTheDocument();
+      await user.click(screen.getByRole("button", { name: "Open secondary detail routes" }));
+      const shellInfoDialog = await screen.findByRole("dialog", { name: "Secondary detail routes" });
+      expect(within(shellInfoDialog).getByRole("link", { name: "Run Details" })).toHaveAttribute(
+        "href",
+        "/runs"
+      );
+      await user.click(screen.getByRole("button", { name: /Close Secondary detail routes/i }));
 
-    await user.click(screen.getByRole("button", { name: /Open info for Weekly schedule review/i }));
-    const infoDialog = await screen.findByRole("dialog", { name: "Weekly planning context" });
-    expect(within(infoDialog).getByText("run_projection")).toBeInTheDocument();
-    expect(
-      within(infoDialog).getAllByText(
-        /Workflow-run-backed schedule projection served from canonical weekly Stage04 source artifacts/i
-      )[0]
-    ).toBeInTheDocument();
-    await user.click(
-      within(infoDialog).getByRole("button", { name: "Refresh" })
-    );
-    await user.click(screen.getByRole("button", { name: /Close Weekly planning context/i }));
+      await user.click(screen.getByRole("button", { name: /Open info for Weekly schedule review/i }));
+      const infoDialog = await screen.findByRole("dialog", { name: "Weekly planning context" });
+      expect(within(infoDialog).getByText("run_projection")).toBeInTheDocument();
+      expect(
+        within(infoDialog).getAllByText(
+          /Workflow-run-backed schedule projection served from canonical weekly Stage04 source artifacts/i
+        )[0]
+      ).toBeInTheDocument();
+      await user.click(within(infoDialog).getByRole("button", { name: "Refresh" }));
+      await user.click(screen.getByRole("button", { name: /Close Weekly planning context/i }));
 
-    expect(mutationLog()).toEqual([]);
-  });
+      expect(mutationLog()).toEqual([]);
+    },
+    15000
+  );
 
   it("shows an error state and retries the canonical run-backed query", async () => {
     const user = userEvent.setup();

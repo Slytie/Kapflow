@@ -23,7 +23,7 @@ from tests.runtime.helpers.runtime_cli import REPO_ROOT, run_cli
 
 EOS_SUPPORTED_WORKBOOK_PATH = (
     REPO_ROOT
-    / "fixtures/logistics/local_demo_upload_pack/reporting/reporting_eos_raw.xlsx"
+    / "fixtures/workflows/dispatch_reporting/template_pack/Stage03_Threshold_Detection_and_Draft_Packet/Stage03_Threshold_Detection_and_Draft_Packet_upd_draft_Spreadsheet_Example_COMPLETED.xlsx"
 )
 XLSX_MEDIA_TYPE = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
 

@@ -1088,7 +1088,6 @@ function eodArtifactVersionRow(version: EodArtifactVersionState): ArtifactVersio
     content_digest: `sha256:${version.artifactVersionId}`,
     byte_size: 1024,
     metadata_json: {
-      demo_workpage_id: "eod-v0",
       file_name: version.fileName,
       service_date: "2026-03-16",
       station_code: "DVC4",

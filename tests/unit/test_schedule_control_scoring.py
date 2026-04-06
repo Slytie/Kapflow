@@ -93,8 +93,9 @@ def test_deterministic_rank_candidates_uses_synthetic_demand_priority_before_fai
                 "demand_kind": "on_call",
                 "availability_state": "AVAILABLE",
                 "baseline_template_state": "white_template",
-                "current_week_shift_count": 0,
-                "target_shift_gap": 1.0,
+                "current_week_shift_count": 3,
+                "target_shift_gap": 0.25,
+                "fairness_balance": 1.0,
             },
             {
                 "candidate_driver_id": "DRV-ONCALL",
@@ -105,6 +106,7 @@ def test_deterministic_rank_candidates_uses_synthetic_demand_priority_before_fai
                 "baseline_template_state": "on_call_template",
                 "current_week_shift_count": 3,
                 "target_shift_gap": 0.25,
+                "fairness_balance": 0.1,
             },
         ]
     )
@@ -117,8 +119,9 @@ def test_deterministic_rank_candidates_uses_synthetic_demand_priority_before_fai
                 "demand_kind": "excess_capacity",
                 "availability_state": "AVAILABLE",
                 "baseline_template_state": "white_template",
-                "current_week_shift_count": 0,
-                "target_shift_gap": 1.0,
+                "current_week_shift_count": 3,
+                "target_shift_gap": 0.25,
+                "fairness_balance": 1.0,
             },
             {
                 "candidate_driver_id": "DRV-PREFERRED",
@@ -129,6 +132,7 @@ def test_deterministic_rank_candidates_uses_synthetic_demand_priority_before_fai
                 "baseline_template_state": "assigned_template",
                 "current_week_shift_count": 3,
                 "target_shift_gap": 0.25,
+                "fairness_balance": 0.1,
             },
         ]
     )

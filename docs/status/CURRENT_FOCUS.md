@@ -4,218 +4,54 @@
 Stage 4 - Vertical Slice MVP (repo merged around one truth system)
 
 ## Current milestone
-Primary runtime/debug work remains the logistics weekly/live family. `TASK-0137` through `TASK-0153` are now complete, and `TASK-0155` is now implemented as the weekly-first local operator demo slice. The repo now has the closed EPIC-121 artifact-backed EOD slice, the full EPIC-122 workflow-run-backed workpage access layer across backend and frontend, the closed EPIC-123 Stage04 schedule artifact-backed slice, the closed EPIC-124 stage-linked workspace CTA slice, the closed EPIC-125 contract freeze, the first implemented EPIC-125 weekly operator lane, the first implemented EPIC-125 daily reporting operator lane, and a dedicated weekly-first local demo seed/runbook/entry surface over the same canonical runtime truth. The current demo/query and artifact-backed EOD routes stay intact as compatibility aliases, the canonical run-backed route family and minimal run-context/draft-resolution boundary remain frozen in repo-native docs, `/demo/logistics` now starts from workspace-first weekly/reporting entrypoints plus an explicit live `Prepare service day` action, and EPIC-131 is now the next selected app-facing workpages tranche. `TASK-0201` is complete as the doc-only freeze for schedule heatmap recalculation, route-demand separation, accepted-series navigation, and soft preferences; `TASK-0202` is the next implementation task, while the remaining EPIC-125 cadence backlog (`TASK-0154`, `TASK-0156`, `TASK-0157`) stays tracked separately.
-Weekly Stage04 local-demo execution now also performs one bounded finalize-only continuation on the same Responses thread when the model stops after planner completion without calling `finalize_weekly_stage04_draft_outputs`, while still failing closed if explicit finalize never occurs.
+Primary runtime/debug work remains the logistics weekly/live family. EPIC-131 and the EPIC-126 Workpages v1 cleanup trio are complete, and the public Workpages v1 posture is now canonical-only:
+- frontend workpage routes live under `/runs/:workflowRunId/workpages/*`
+- backend workpage APIs live under `/api/v1/workpages/workflow-runs/{workflow_run_id}/{workpage_kind}*`
+- `/demo/logistics` remains the shell entrypoint, but nested demo workpage routes are retired
 
-Current implemented baseline:
-- `/demo/logistics/workpages/schedule-v0`
-- `/demo/logistics/workpages/eod-v0`
-- full-page routes under `AppShell`
-- HTTP-backed workpage pages and tests over the backend demo query seam
-- workpage-local freshness/source metadata rendered inside each page because the logistics shell suppresses the global freshness banner
-- bounded local form/checklist edits preserved across refreshes when only backend `freshness.generated_at` changes
-- backend schedule demo workpage query route: `GET /api/v1/workpages/demo/schedule-v0`
-- backend workflow-run-backed schedule workpage query route: `GET /api/v1/workpages/workflow-runs/{workflow_run_id}/schedule-v0`
-- backend EOD demo workpage query route: `GET /api/v1/workpages/demo/eod-v0`
-- backend workflow-run-backed EOD landing route: `GET /api/v1/workpages/workflow-runs/{workflow_run_id}/eod-v0`
-- backend workflow-run-backed EOD draft-create route: `POST /api/v1/workpages/workflow-runs/{workflow_run_id}/eod-v0/drafts`
-- backend-generated schedule workpage snapshot: `fixtures/frontend_contracts/workpage_schedule_v0_state.json`
-- backend-generated workflow-run-backed schedule workpage snapshot: `fixtures/frontend_contracts/workpage_schedule_v0_run_state.json`
-- backend-generated artifact-backed schedule workpage snapshot: `fixtures/frontend_contracts/workpage_schedule_v0_artifact_state.json`
-- backend-generated artifact-backed schedule submit snapshot: `fixtures/frontend_contracts/workpage_schedule_v0_artifact_submit_response.json`
-- backend-generated EOD workpage snapshot: `fixtures/frontend_contracts/workpage_eod_v0_state.json`
-- backend-generated workflow-run-backed EOD landing snapshot: `fixtures/frontend_contracts/workpage_eod_v0_run_state.json`
-- backend-generated workflow-run-backed EOD draft-create snapshot: `fixtures/frontend_contracts/workpage_eod_v0_run_artifact_create_response.json`
-- canonical frontend workflow-run-backed schedule route: `/runs/:workflowRunId/workpages/schedule-v0`
-- canonical frontend workflow-run-backed schedule artifact route: `/runs/:workflowRunId/workpages/schedule-v0/artifacts/:artifactVersionId`
-- canonical frontend workflow-run-backed EOD landing route: `/runs/:workflowRunId/workpages/eod-v0`
-- canonical frontend workflow-run-backed EOD artifact route: `/runs/:workflowRunId/workpages/eod-v0/artifacts/:artifactVersionId`
-- repo-native artifact-path brief/plan for the first artifact-backed EOD slice
-- bounded `dispatch_reporting.v1` template pack under `fixtures/workflows/dispatch_reporting/template_pack/`
-- bounded multi-workflow template registry discovery across `schedule_planning.v1` and `dispatch_reporting.v1`
-- first dispatch-reporting workbook adapter/materializer seam for `reporting.upd_draft.workbook`
-- frozen artifact-backed EOD route family:
-  - `POST /api/v1/workpages/demo/eod-v0/drafts`
-  - `GET /api/v1/workpages/artifacts/{artifact_version_id}`
-  - `POST /api/v1/workpages/artifacts/{artifact_version_id}/submit`
-- canonical backend EOD artifact draft/create/read/submit behavior for `dispatch_reporting.v1` runs seeded from the Stage03 empty workbook template
-- artifact-backed EOD wrapper metadata with `source.mode=artifact_projection`, artifact lineage/download context, and immutable superseding workbook versions on submit
-- backend-generated artifact-backed EOD snapshots:
-  - `fixtures/frontend_contracts/workpage_eod_v0_artifact_create_response.json`
-  - `fixtures/frontend_contracts/workpage_eod_v0_artifact_state.json`
-  - `fixtures/frontend_contracts/workpage_eod_v0_artifact_submit_response.json`
-- bounded `dispatch_reporting.v1` Stage01 intake contract with `artifact_role=official_input` for `reporting.eos_raw.workbook`
-- deterministic daily reporting build from EOS workbook to `reporting.actuals_normalized.workbook` plus seeded `reporting.upd_draft.workbook`
-- Stage04 `final_packet_review` human-task lane that opens the canonical `eod-v0` workpage against the latest draft workbook
-- Stage04 reporting approval approval now auto-finalizes `reporting.final_packet.workbook`, promotes `official:reporting.final_packet.workbook`, and invokes the existing `reporting_actuals_to_future_planning` notify-only handoff
-- logistics demo shell now exposes:
-  - primary canonical run-backed workpage launch links for the single linked weekly-planning and dispatch-reporting runs in the current story
-  - a clearly labeled compatibility-alias section for `/demo/logistics/workpages/*`
-  - run-specific canonical workpage drilldowns from the family-node detail card for weekly-planning and dispatch-reporting runs
-- frontend query-backed EOD landing page now renders as a read-only preview with an explicit `Create editable draft` action
-- frontend artifact-backed EOD route now exists at `/demo/logistics/workpages/eod-v0/artifacts/:artifactVersionId`
-- frontend run-backed schedule and EOD landing pages now reuse the validated workpage UI on the canonical `/runs/:workflowRunId/workpages/*` routes while keeping demo routes as compatibility aliases
-- frontend run-backed EOD landing now respects backend `draft_resolution`, showing either `Create editable draft` or `Open latest draft` from the supplied canonical artifact route
-- live-dispatch family drilldowns still do not expose a workpage CTA in EPIC-122; they remain workspace/detail-only
-- the artifact-backed EOD page now supports submit, stale-artifact conflict reopen UX, workbook download, bounded previous/latest lineage actions, and a recent draft history panel sourced from `GET /api/v1/workflow-runs/{workflow_run_id}/artifacts`, while preserving local edits across refreshes when the base artifact version is unchanged
-- artifact-backed EOD submit/conflict handoff routes now point at canonical `/runs/{workflow_run_id}/workpages/eod-v0/artifacts/{artifact_version_id}` paths once the canonical run-backed pages are active
-- workflow-run artifact listing now truthfully exposes the bounded EOD workbook chain needed by that recent-history panel
-- the generic artifact-backed workpage family now also serves the bounded Stage04 schedule draft workbook slice for `planning.draft_weekly_schedule.workbook`
-- the run-backed schedule landing now discovers the newest Stage04 draft workbook artifact from workflow-run artifact truth and offers canonical `Open editable draft` handoff
-- the artifact-backed schedule page now supports bounded assignment/reserve edits, explicit immutable-version submit, recent draft history, stale/conflict reopen, and truthful JSON download
-- repo-native schedule-artifact-path brief/plan plus `EPIC-123` context/task memory now record the implemented Stage04 schedule artifact-backed slice around `planning.draft_weekly_schedule.workbook`
-- canonical workpage create/submit flows now support one optional `subject_link` object on supported surfaces only; the server derives `draft` versus `response` relation kinds and rejects unsupported demo/subject combinations fail-closed
-- relation-kind-aware requirement counting now treats `draft` as non-satisfying and allows only submitted `response` links to satisfy the bounded `weekly_schedule_planning.v1` Stage05 information-request workbook requirement
-- backend workspace responses now project bounded `workpage_actions[]` on supported human-task and approval work items only; graph nodes and unsupported surfaces remain action-free
-- backend-owned frontend contract fixtures now include workspace action snapshots for weekly schedule available/unavailable and dispatch-reporting create/open states
-- the workspace UI now renders backend-projected workpage CTAs on supported cards, uses backend-provided `create_path` values for draft creation, and carries `workpageSubjectContext` through router state into schedule/EOD artifact submit flows
-- post-create and post-submit refresh truth now reuses a shared workspace invalidation helper so `/runs/:workflowRunId/workspace`, run detail, and related queues refresh together
-- weekly `Stage04/weekly_input_intake` is now a first-class human-task surface with explicit required-upload rows, `artifact_role`, and optional-vs-required flags
-- weekly intake required uploads now store the three Stage04-ready workbook inputs as `official_input`, keep actual-hours optional as `official_input`, and keep route-horizon artifacts evidence-only
-- weekly human-task completion now maps the unchanged UI `outcome=complete` into `inputs_ready`, `draft_ready_for_review`, and `draft_is_publish_ready` on the canonical lifecycle path
-- weekly `Stage04/work_item` completion now upserts `Stage05/final_review`, and weekly `Stage05/final_review` completion now requests one `Stage06` `publish_weekly_base_schedule` approval
-- approving weekly `Stage06` publish approvals now auto-creates `planning.publish_packet.doc`, auto-creates `planning.published_weekly_schedule.workbook`, and auto-promotes `official:planning.published_weekly_schedule.workbook` while failing closed if the reviewed draft is stale
-- the frontend now renders `Run Stage04 Build` wherever task actions are shown, sends required-upload `artifact_role` through the upload flow, and labels weekly task surfaces as intake/build/review instead of raw task-kind jargon
-- the repo now has a dedicated weekly-first local demo seed at `fixtures/scenarios/logistics/weekly_first_local_demo_seed.yaml` plus launcher `scripts/run_logistics_local_demo.py`, which emits stable story/workspace URLs, a nullable live workspace URL, the live prepare-day path, and `openai_api_key_present`
-- the default local demo seed now starts with prior reporting feedback already bound into weekly actual-hours truth, a current weekly run open at `Stage04/weekly_input_intake`, a current reporting run open at `Stage01/eos_input_intake`, and no current live run until the operator explicitly prepares the service day
-- `/demo/logistics` is now a workspace-first operator shell for the first local walkthrough: weekly and reporting workspaces are primary CTAs, live dispatch stays in `Prepare service day` posture until activation, and contextual workpage links are secondary
-- the app now exposes `POST /api/v1/workflow-runs/{workflow_run_id}/prepare-live-dispatch-day` so the demo shell can create the live run/seed intake task through canonical runtime truth instead of requiring a CLI detour
-- the first local demo runbook now lives at `docs/ops/runbooks/logistics_local_demo_weekly_first.md`, and the bounded demo upload pack lives at `fixtures/logistics/local_demo_upload_pack/`
+No new app-facing epic is selected yet after the Workpages v1 closeout. The remaining backlog stays unselected until we deliberately choose the next tranche.
 
-Current EPIC-122 implemented route and contract baseline (`TASK-0137` + `TASK-0138` + `TASK-0139` + `TASK-0140` + `TASK-0141`):
-- canonical backend workflow-run-backed workpage route family:
-  - `GET /api/v1/workpages/workflow-runs/{workflow_run_id}/{workpage_kind}`
-  - `POST /api/v1/workpages/workflow-runs/{workflow_run_id}/eod-v0/drafts`
-- canonical frontend workflow-run-backed routes now active:
+## Current implemented baseline
+- weekly schedule landing, artifact editor, live preview, pinned dependency baselines, accepted-series navigation, and draft-lineage navigation on canonical schedule routes
+- `route-demand-v0` run landing plus artifact-backed immutable day-count editor
+- `driver-preferences-v0` run landing, snapshot creation, artifact-backed editor/history, and soft advisory schedule integration
+- `eod-v0` run landing plus canonical artifact-backed immutable workbook editing
+- backend workspace workpage actions with active vocabulary `open_route | create_then_open`
+- backend-owned frontend snapshots for canonical schedule, route-demand, driver-preferences, EOD, workspace, board, run-detail, timeline, and official-output surfaces
+
+Canonical workpage routes now in active use:
+- frontend:
   - `/runs/:workflowRunId/workpages/schedule-v0`
+  - `/runs/:workflowRunId/workpages/schedule-v0/artifacts/:artifactVersionId`
+  - `/runs/:workflowRunId/workpages/route-demand-v0`
+  - `/runs/:workflowRunId/workpages/route-demand-v0/artifacts/:artifactVersionId`
+  - `/runs/:workflowRunId/workpages/driver-preferences-v0`
+  - `/runs/:workflowRunId/workpages/driver-preferences-v0/artifacts/:artifactVersionId`
   - `/runs/:workflowRunId/workpages/eod-v0`
   - `/runs/:workflowRunId/workpages/eod-v0/artifacts/:artifactVersionId`
-- `/demo/logistics/workpages/*` remains an implemented compatibility-alias family after the canonical run-backed routes are proven; it is no longer the primary discoverable access model
-- run-backed workpage responses will reuse the existing workpage body contract and add optional `run_context`
-- only the run-backed EOD landing response adds `draft_resolution`; keep `artifact_context` reserved for artifact-projection responses
-- schedule remains query-backed/composite in this epic, and EOD editing remains anchored to the existing artifact-backed route keyed by `artifact_version_id`
-- the canonical run-backed schedule route now projects from canonical weekly Stage04 run artifacts with `source.mode=run_projection`, `freshness.source_kind=workflow_run_projection`, `freshness.source_version=bundle.bundle_id`, and `409 workpage_projection_unavailable` when required Stage04 inputs are missing
-- the canonical run-backed EOD landing route now reuses the validated read-only EOD landing body, sets `source.mode=run_projection`, adds `run_context` plus `draft_resolution`, leaves `artifact_context` absent, and resolves the latest compatible `reporting.upd_draft.workbook` artifact route without moving edits onto the landing surface
-- the canonical run-backed EOD create route now seeds the same immutable `reporting.upd_draft.workbook` artifact family inside the supplied `dispatch_reporting.v1` run and returns canonical `/runs/{workflow_run_id}/workpages/eod-v0/artifacts/{artifact_version_id}` handoff routes
+- backend:
+  - `GET /api/v1/workpages/workflow-runs/{workflow_run_id}/{workpage_kind}`
+  - `GET /api/v1/workpages/workflow-runs/{workflow_run_id}/{workpage_kind}/artifacts/{artifact_version_id}`
+  - `POST /api/v1/workpages/workflow-runs/{workflow_run_id}/{workpage_kind}/artifacts/{artifact_version_id}/submit`
+  - `POST /api/v1/workpages/workflow-runs/{workflow_run_id}/schedule-v0/artifacts/{artifact_version_id}/preview`
+  - `POST /api/v1/workpages/workflow-runs/{workflow_run_id}/eod-v0/drafts`
+  - `POST /api/v1/workpages/workflow-runs/{workflow_run_id}/driver-preferences-v0/snapshots`
 
-Immediate next application package:
-- EPIC-131 is now active as the next workpages priority, and `TASK-0201` is complete as the doc-only repo-native freeze for the clarified SME boundary
-- `schedule-v0` is now explicitly frozen as driver reassignment/on-call editing plus server recalculation only; `route-demand-v0` and `driver-preferences-v0` are separate planned surfaces
-- route-demand day editing can rely on backend-owned daily buckets from `planning.route_slot_requirements.workbook`; accepted history remains separate from draft lineage, and the explicit accepted-series scope key remains a deliberate `TASK-0202` follow-on
-- the first serious local FE/BE demo path is now seeded and runnable under `TASK-0155`; EPIC-131 is the selected follow-on from that clarified feedback, while the remaining EPIC-125 cadence/deploy backlog stays in `TASK-0154`, `TASK-0156`, and `TASK-0157`
-- EPIC-126 remains the later hardening/closeout tranche rather than the next immediate implementation epic
-- the known pre-existing run-backed EOD latest-draft-after-submit regression in `dispatch_reporting_workbook.py` remains a separate baseline caveat and is not part of EPIC-125 scope
+Frozen product boundary:
+- `schedule-v0` = reassignment/on-call edits plus recalculation only
+- `route-demand-v0` = route-demand truth editor
+- `driver-preferences-v0` = soft/advisory weekly snapshot
+- accepted history and draft lineage remain separate
 
-Important scope boundaries that remain true after this slice:
-- no generic artifact editor
-- keep the schedule page on the **weekly planning review + selected-day preview** side of the boundary
-- the implemented schedule artifact-backed slice is anchored to Stage04 `planning.draft_weekly_schedule.workbook`; `planning.manager_review.doc` remains evidence, not the editable workpage artifact
-- keep `planning.published_weekly_schedule.workbook` and `planning.daily_dispatch_seed.*` out of the first schedule edit surface
-- keep the EOD page on the **dispatch-reporting draft/review** side of the boundary (`reporting.upd_draft.workbook` semantics)
-- keep the first artifact-backed slice anchored to canonical `dispatch_reporting.v1` workflow runs; no runless demo artifacts
-- keep explicit submit/create-new-version semantics; no per-keystroke autosave into `artifact_versions`
-- do not broaden into final-packet approval/pointer semantics in this epic
-- keep the EOD backend route honest to its intentionally partial 2026-03-16 source family; do not smuggle full-day fixture-only totals back into the query contract
-- keep workpage planning fixtures distinct from backend-owned generated contract snapshots
+Explicitly deferred beyond Workpages v1:
+- date-specific driver exceptions
+- automatic agentic rescheduling after route-demand changes
+- broader feedback-driven hardening beyond the current cleanup epic
 
-Runtime scaffold bootstrap now includes canonical workflow/task/approval/artifact/pointer substrate under `src/onetruth/` + `alembic/` with a stable CLI lifecycle boundary:
-- timeline substrate: `init-db`, `events append`, `events list`
-- workflow/task substrate: `runs create/show/list`, `tasks create/claim/complete/show/list`
-- approval/artifact/pointer substrate: `approvals request/respond/show/list`, `artifacts create-version/show/list`, `pointers promote/show/list`
-- Stage07 issue substrate: `flags create/transition/show/list`, `stage07 activate-issue`, `maintenance sweep-leases`, `maintenance reconcile-stage07`
-- thin HTTP/query adapter: `/api/v1/ops/health`, `/api/v1/ops/readiness`, `/api/v1/ops/metrics`, `/api/v1/viewer`, `/api/v1/human-tasks`, `/api/v1/approvals`, `/api/v1/flags`, `/api/v1/workflow-runs`, `/api/v1/pointers`, `/api/v1/timeline-events`, `/api/v1/board/schedule-planning`, `/api/v1/stories/logistics-three-workflow`, plus API mutation delegates for claim/complete/respond
-Active coding milestone update: TASK-0110, TASK-0109, TASK-0108, TASK-0107, TASK-0106, TASK-0105, TASK-0104, TASK-0103, TASK-0102, TASK-0101, TASK-0100, TASK-0099, TASK-0098, TASK-0097, TASK-0096, TASK-0095, TASK-0094, TASK-0093, TASK-0092, TASK-0091, TASK-0090, TASK-0089, TASK-0088, TASK-0087, TASK-0086, TASK-0085, TASK-0084, TASK-0083, TASK-0082, TASK-0081, TASK-0080, TASK-0079, TASK-0078, TASK-0077, TASK-0076, TASK-0074, TASK-0073, TASK-0072, TASK-0071, TASK-0070, TASK-0069, TASK-0068, TASK-0067, TASK-0066, TASK-0065, TASK-0064, TASK-0063, and TASK-0031 are complete. Logistics composition/runtime semantics now cover deterministic Stage04 weekly schedule-control services (bundle resolution, route-slot expansion, iterative partial-schedule allocation/repair planning, state-aware hard validation, stability-aware soft scoring, and artifact lowerings), a bounded Stage04 weekly OpenAI Responses function-calling agent loop over compiled control metadata with iterative deterministic tool exposure, authored no-progress enforcement, explicit finalize-only draft materialization, and per-turn canonical execution evidence artifacts, a reproducible weekly Stage04 pilot runner with mock/real modes and iteration-level canonical inspection packets, deliberate dual-gated weekly real-network integration coverage (`ONETRUTH_RUN_OPENAI_E2E=1` + `ONETRUTH_RUN_OPENAI_WEEKLY_AGENT_E2E=1`), authored schedule-control bridge artifacts for weekly/live, pinned execution-control traceability, the first `materialize_seed` weekly->live slice, and a first-class `notify_only` reporting->planning slice (`dispatch_reporting.Stage05 -> weekly_schedule_planning.Stage03`) with typed partition transforms, idempotent `edge_executions`, deterministic target-run resolution/creation, canonical target input materialization/bindings, a canonical three-workflow story contract, and an authoritative backend story query seam for one logistics demo payload. Projection coherence harness behavior is now implemented with explicit block-vs-warn policy handling and visible `projection.coherence_failed` evidence for derived views. Repo-boundary hygiene is now tightened so `.onetruth_artifacts/`, local SQLite DBs, `.DS_Store`, and Codex handoff zips remain local-only outputs instead of tracked source. Source/export packaging now also has explicit bundle contracts: `handoff_source_bundle` remains the working-tree-sensitive internal review snapshot, `release_source_bundle` is now the only operator-facing clean tracked-commit distribution artifact and ships deterministic `release_provenance.json`, and `runtime_workspace_bundle` is an inspection/evidence export over canonical runtime truth. Bootstrap and governance posture are now also honest by default: `scripts/doctor.py` is the single local entrypoint, `make lint` now includes real Python lint plus frontend typecheck, `make assurance-fast` is now the truthful non-trace validator aggregate (with `make schema-validate` preserved as a compatibility alias), CI targets map cleanly to backend vs frontend checks, CODEOWNERS points only at real existing paths owned by `@tylerclark`, the repo ships an explicit MIT `LICENSE` plus `.nvmrc` for Node 20, Python package metadata now matches the validated `3.11` baseline exactly, local/CI installs converge on one editable `.[api,dev]` path with validator-enforced exclusion of tracked `*.egg-info` build artifacts, dependency updates are now automated for Python/frontend/GitHub Actions metadata, and a dedicated `secret_hygiene` workflow plus `--domain secrets` validation make secret scanning explicit while leaving revocation/history rewrite as operator-only follow-ups. CI topology is now also explicit and parallel by default: pull requests run `required-fast` lanes for lint, contract, unit, and security plus a separate `runtime-required` lane and standalone `frontend` lane, `release-confidence` is reserved for push/manual confidence, and `agent_api` reuses the fast backend aggregate before its gated OpenAI step. Weekly Stage04 input resolution now uses exact authored dataset-key bindings and fails closed on missing or conflicting Stage04 bridge keys instead of suffix-matching heuristics. Stage04 bridge payloads and the shared pilot/fixture layer now also support realistic day-resolution weekly planning inputs, including driver-day state, prior-week state, rolling-7 compliance snapshots, policy signals, and a deterministic 40-driver hard-case source material fixture while preserving the tiny smoke path. Weekly Stage04 deterministic planning now also builds the draft schedule through 5-10 route allocation rounds, bounded local repair attempts, and per-iteration delta reporting while keeping the same canonical Stage04 artifact keys. The Stage04 Responses wrapper now orchestrates those iterations explicitly through preview/apply/analysis/finalize tools while keeping the model out of schedule truth ownership. Legacy Stage06 sandbox execution semantics now derive from authored Stage06 execution-profile control plus a registry-backed runtime tool binding, so the bounded OpenAI executor alias is explicit without being confused for authored `allowed_tool_classes`. The legacy schedule-only board now also uses the same pointer-query contract as the rest of the thin HTTP surface, restoring stable regression coverage without changing its secondary status. The thin HTTP read layer now also routes shared HITL list queries through a neutral `src/onetruth/api/queries/` seam, and contract coverage forbids route-to-route imports without changing board or story payloads. The API trust boundary now also has explicit `local_dev` / `ci_test` / `shared_env` profiles, with `shared_env` failing closed by default, trusted-header CORS constrained to loopback local dev only, and a conditional bearer-JWT resolver that can derive attested principals in `shared_env` when `ONETRUTH_SHARED_ENV_JWT_*` configuration is present. The API shell is now also characterized by focused runtime tests for route misses, JSON parsing failures, unsupported scopes, and internal-error fallback, every HTTP response emits a header-only `x-request-id` seam without changing JSON bodies or event correlation semantics, route metadata now lives in a single declarative registry instead of duplicated handwritten match and dispatch switches, JSON POST routes now enforce explicit route-aware payload policies with deterministic `415 unsupported_media_type` and `413 payload_too_large` contracts while preserving existing empty-body `400 invalid_payload` behavior, and artifact/template downloads now also expose sibling binary `.bin` routes with attachment headers while the existing `/download` JSON+base64 paths remain compatibility surfaces. Frontend/client download surfaces now also consume those `.bin` routes directly, and frontend package/docs truth now require clean `npm ci` from `frontend/package-lock.json` instead of treating vendored `node_modules` as a supported runtime baseline. Read-side actionability now also projects shared per-aggregate capability decisions with structured internal reasons while preserving the existing public workspace/story actionability payloads. Shared/public HTTP artifact ingress now also accepts request bytes only, strips caller-controlled source-path provenance fields, and keeps local/scenario seeding on the same canonical artifact path without exposing caller-selected server-native storage controls. Canonical write paths now also enforce the frozen capability lattice for claim, complete, confirm-review, approval respond, and flag transition with explicit forbidden-vs-conflict semantics, while artifact upload remains intentionally broad collaboration. Canonical command-boundary retries now also resolve through scoped command receipts, so same-scope retries replay committed success with stable receipt metadata while raw `events append` keeps explicit duplicate-key failure semantics. `workflow_task_lifecycle.py` has now also completed its first controlled hotspot extraction: the approval command family lives in `src/onetruth/application/handlers/approvals.py`, while the old import surface stays stable through thin lazy wrappers in `workflow_task_lifecycle.py`. That approvals extraction now also depends on a neutral `src/onetruth/application/handlers/_shared/command_boundary.py` seam, so extracted modules no longer import `workflow_task_lifecycle.py` for shared receipt, scope, and event-envelope primitives. The next bounded hotspot move is now also complete: `claim_human_task_command`, `complete_human_task_command`, and `confirm_human_task_review_command` live in `src/onetruth/application/handlers/human_tasks.py`, with a private `_shared/artifact_effects.py` seam for review-confirmation support and legacy wrappers preserved for existing API/CLI/service callers. Shared runtime reads now also live in `src/onetruth/application/read_commands/`, API/query/service callers no longer import neutral read/error surfaces from `workflow_task_lifecycle.py`, and contract coverage forbids those shared imports from drifting back while later mutation-family extractions remain separate tasks. The flag and Stage07 issue-loop mutation family now also lives in `src/onetruth/application/handlers/flags.py`, with direct API/CLI/service callers moved to that extracted module while `workflow_task_lifecycle.py` stays import-compatible through thin wrappers. Artifact-version and pointer-promotion mutations now also live in `src/onetruth/application/handlers/artifacts.py` and `src/onetruth/application/handlers/pointers.py`, with shared artifact support isolated behind `_shared/artifact_effects.py`. Execution/tool/policy mutations now also live in `src/onetruth/application/handlers/execution_runtime.py`, with Stage06, weekly Stage04, CLI execution commands, and direct runtime tests importing that seam while `workflow_task_lifecycle.py` stays import-compatible through lazy wrappers. The API package boundary is now also honest about optional extras: `onetruth.api` exports are lazy, `onetruth.api.main` no longer pulls in the shared-env JWT resolver at import time, the default ASGI `app` export is lazy/cached, and configured shared-env JWT resolution now emits an explicit PyJWT install hint only when that optional path is activated. The control-plane route table is now also split into resource-scoped `src/onetruth/api/route_specs/` modules assembled by a slim public `route_registry.py`, and contract coverage now forbids `main.py`, route modules, and route-spec modules from collapsing into a wider internal framework while preserving exact route order and current path/body-policy behavior. The API boundary now also emits compact JSON-line `onetruth.api.boundary` start/finish/error logs with request ids, route metadata, latency, safe request-context fields, and narrow receipt-backed mutation correlation while deliberately excluding bodies, tokens, actor roles, `actor_id`, and exception text. The repo assurance layer is now also split into explicit `schema`, `governance`, `metadata`, `release`, `secrets`, and `traces` domains under `scripts/repo_assurance/`, with a truthful repeatable `--domain` selector, stable compatibility aliases, and portable release-preflight failures while `scripts/validate_repo.py` remains the single umbrella entrypoint.
-Planning-sync posture: `TASK-0076` through `TASK-0086` are now complete, and the centrality + operability tranche through `TASK-0109` is now complete.
-Demo-entrypoint posture: for the logistics three-workflow walkthrough, use frontend route `/demo/logistics` (backed by `GET /api/v1/stories/logistics-three-workflow`) as primary; keep `/api/v1/board/schedule-planning` and schedule-only UI routes as secondary regression/internal coverage, removed from primary nav and marked in-page as legacy.
-Primary interaction posture hardening: logistics unified-board human-task cards now open `DetailDrawer` directly (no primary run-page navigation), and the drawer exposes backend-authoritative task actions (`claim`, `complete`, `run_stage06_agent_review`, `confirm_review`, `upload_attachment`) plus linked artifact download when available; run detail remains a secondary drawer link.
-Multi-resolution drill-down posture: logistics family nodes are now selectable in-page, selected modules expose drill-down metadata and family artifact download affordances, single-run nodes auto-embed a workflow-run graph panel backed by `GET /api/v1/workflow-runs/{id}/workspace`, multi-run nodes require explicit run choice, and stale schedule-route links remain demoted to secondary detail navigation.
-Task-composite drill-down posture: human-task detail now exposes optional composite metadata (`is_composite`, `expansion_kind`, `subgraph_ref`) and composite task kinds in the logistics demo slice lazily project `GET /api/v1/human-tasks/{id}/subgraph` in the drawer via an explicit `Expand process` affordance; non-composite tasks remain drawer-only detail/action surfaces.
-Repo-truth certification snapshot: current capability status and command/test evidence are documented in `docs/planning/CURRENT_CAPABILITY_AND_CERTIFICATION_MATRIX.md` (2026-03-09).
-
-### Recently completed runtime-bootstrap tranche
-- TASK-0028 - Translated the runtime object model into a concrete Stage 4 runtime architecture, repo layout, persistence model, and first implementation slice
-- TASK-0040 - Instantiated the runtime scaffold (`src/onetruth/`, `alembic/`, `tests/runtime/`) with CLI-driven smoke tests for canonical timeline append/list behavior
-- TASK-0041 - Implemented canonical workflow/task substrate tables (`workflow_runs`, `task_runs`, `human_tasks`) with transactional lifecycle event emission and runtime concurrency/idempotency coverage
-- TASK-0042 - Implemented canonical approvals/artifacts/pointers substrate tables (`approvals`, `artifact_versions`, `artifact_pointers`) with transactional event emission and query-ready CLI list/show contracts for future HITL board work
-- TASK-0043 - Implemented the first real Schedule Planning Stage06 publish slice with transactional completion-driven child task spawning, CLI-driven scenario fixtures/harness tests, and query-contract stability tests
-- TASK-0044 - Implemented the first thin HITL HTTP/query adapter with board-ready read endpoints, mutation delegates over canonical handlers, scenario-backed API contracts, and cross-scope denial tests
-- TASK-0045 - Implemented the first Schedule Planning Stage07 issue-scoped replan loop with canonical flags, deduped issue activation, major-replan approval gating, delta promotion/drift visibility, and lease-expiry recovery/reconcile scenario coverage
-- TASK-0047 - Exported backend-owned frontend contract snapshots from real runtime scenarios under `fixtures/frontend_contracts/` with deterministic drift checks and snapshot contract tests
-- TASK-0046 - Implemented frontend app shell + HITL route skeletons + low-click reusable components + mock repository boundary over backend-owned fixtures
-- TASK-0048 - Swapped frontend repositories from mock snapshots to real `/api/v1` contracts, hardened loading/error/empty/freshness behavior, and added integration tests for claim/complete/respond flows
-- TASK-0050 - Added bounded Stage06 OpenAI Responses API sandbox classification with strict structured outputs, canonical evidence artifact capture, and gated real-network e2e coverage
-- TASK-0051 - Promoted template-pack completed examples into an executable document corpus with canonical artifact ingress, subject attachment linkage, API attachment surfaces, and backend-owned snapshot refresh integration
-- TASK-0052 - Converted the bounded Stage06 OpenAI spike into canonical execution runtime behavior with transactional session/tool/policy lifecycle events, explicit policy allow/deny gating, idempotent retry handling, and stale-session reconcile recovery
-- TASK-0053 - Locked the minimal OpenAI sandbox e2e spike as a bounded, canonical Stage06 path with deterministic mock coverage and opt-in real-network integration gating
-- TASK-0054 - Added the first realistic Schedule Planning pilot runner with corpus-seeded Stage06/Stage07 flows, bounded Stage06 agent execution-runtime evidence, and per-run inspection packets for operator walkthroughs
-- TASK-0030 - Closed Stage06 base + Stage07 ordered-delta artifact-store semantics with explicit reconstruction, idempotency, drift, and blob-authority boundary design in `docs/planning/ARTIFACT_STORE_DESIGN.md`
-- TASK-0032 - Implemented the first generator prototype lowering repo-native Schedule Planning source into generated runbook + CompanyOS-style IR + lineage manifests with freshness checks and no-invention tests
-- TASK-0056 - Stabilized repo hygiene/CI gates by adding explicit backend+snapshot+frontend quality targets, CI wiring for snapshot checks and frontend gates, and tracked-noise index cleanup rules
-- TASK-0057 - Implemented backend workflow workspace projection (`GET /api/v1/workflow-runs/{workflow_run_id}/workspace`), schedule-planning graph projector, server-computed actionability, workspace demo runner, workspace export bundle, and runtime tests/docs for graph/actionability/endpoint/bundle behavior
-- TASK-0058 - Implemented the frontend workflow workspace page (`/runs/:workflowRunId/workspace`) with server-projected live graph + synchronized actionable work panel, repository-backed workspace contracts/mutations, polling refresh coherence, and route/graph/action tests
-- TASK-0059 - Completed Strategy A strong closure by pinning canonical pointer identity semantics in pointer promotion/drift event payloads, fail-closed unresolved identity behavior, canonical `/api/v1/pointers` identity queries, and workspace/export official-output pointer identity assertions
-- TASK-0060 - Added logistics authored workflow packs (`weekly_schedule_planning`, `live_dispatch`, `availability_request`, `dispatch_reporting`, `timecard_audit`), authored logistics workflow-family + typed partition-transform surfaces, deterministic fail-closed family compilation to compiled module/edge descriptors, and logistics definitions examples while keeping runtime composition execution out of scope
-- TASK-0061 - Added logistics control-layer authored method packages, deterministic compiled stage execution metadata, activation-request validation, and execution-session payload derivation over existing canonical runtime activation objects without adding a second activation runtime model
-- TASK-0062 - Added the first explicit logistics handoff runtime slice (`weekly_schedule_planning.Stage07 -> live_dispatch.Stage01`) with idempotent `edge_executions`, one-logical-seed-per-service-day materialization, lazy live activation, and weekly->live golden slice coverage
-- TASK-0063 - Added generic `notify_only` runtime semantics over compiled family edges, landed the first reporting->planning feedback slice (`dispatch_reporting.Stage05 -> weekly_schedule_planning.Stage03`) with deterministic `ServiceDateID -> PlanningWeekID` transforms/target-run resolve-create/canonical input bindings, and added the first canonical three-workflow story contract + backend story endpoint (`GET /api/v1/stories/logistics-three-workflow`) for FE-safe composition
-- TASK-0064 - Landed a primary logistics demo UI route (`/demo/logistics`) over the canonical story endpoint, rendered family graph + unified cross-workflow action board + linked runs + official-output summary + handoff activity, moved task claim/complete transitions to a drawer-first model in logistics + board + my-work, and demoted schedule-only workspace/board/runs/timeline surfaces to secondary regression access outside primary nav
-- TASK-0065 - Switched Codex/LLM routing defaults for new agentic scheduling work to the logistics weekly/live surface, removed committed real OpenAI key material from tracked repo content, added tracked-file secret detection to `scripts/validate_repo.py`, and documented CI env-gating for future weekly-agent real-network suites
-- TASK-0066 - Hardened execution-runtime traceability by persisting pinned compiled execution semantics evidence artifacts, enabling execution-facet artifact links, and enforcing required execution-event link semantics at append time
-- TASK-0067 - Added authored weekly/live schedule-control bridge semantics (`route_slot_requirements`, `driver_capabilities`, canonical Stage04/Stage02 bundle+candidate+validation artifacts), documented canonical-vs-derived artifact classes, and explicitly locked current schedule/open-exception views to derived surfaces over canonical deltas/flags
-- TASK-0068 - Added deterministic Stage04 schedule-control services under a dedicated package (bundle resolution, route-slot expansion, candidate generation, hard validation, soft scoring, artifact lowerings), wired a runtime `schedule-control build-weekly` command slice, and added unit + runtime scenario coverage for replay-safe weekly build outputs
-- TASK-0069 - Added a bounded Stage04 weekly OpenAI agent runtime slice using the Responses API function-calling lifecycle, compiled control metadata pinning, deterministic Stage04 tool exposure, canonical context/turn/function/trace evidence artifacts, and bounded API/runtime/scenario coverage without publish bypass.
-- TASK-0070 - Added a reproducible weekly Stage04 logistics pilot runner (`scripts/run_logistics_weekly_agent_pilot.py`) with mock/real OpenAI modes, canonical-reference-heavy inspection packets, and dual-gated real-network e2e coverage in `tests/integration_openai/test_weekly_stage04_openai_real_e2e.py` while preserving Stage06 real-network suites.
-- TASK-0076 - Restored the legacy schedule-only board's compatibility with the current pointer-query contract, kept its response shape stable, and preserved its legacy/internal regression posture while leaving broader route-layer cleanup to TASK-0083.
-- TASK-0077 - Froze the capability lattice in architecture docs and contract tests, clarifying that routing, claim, completion, specialized execute, upload, approval response, and flag transition are separate axes while leaving write-boundary hardening to later tasks.
-- TASK-0078 - Added explicit API trust-boundary profiles (`local_dev`, `ci_test`, `shared_env`), made `shared_env` fail closed without an injected principal resolver, and constrained trusted-header CORS to loopback local-dev requests while moving the runtime API harness onto explicit `ci_test`.
-- TASK-0079 - Introduced shared per-aggregate capability-decision primitives for read-side actionability, kept the public actionability payloads stable, and added structured internal blocker reasons that still project back to the legacy blocking-reason codes.
-- TASK-0080 - Enforced the frozen capability decisions at the canonical write boundary for claim, complete, confirm-review, approval respond, and flag transition, split forbidden (`403`) from conflict (`409`) semantics, and kept artifact upload intentionally broader as a collaboration/evidence surface.
-- TASK-0083 - Extracted the shared HITL read-query seam into `src/onetruth/api/queries/`, removed route-to-route imports from the thin HTTP layer, and added contract coverage that keeps the primary logistics story and legacy board surfaces structurally honest without changing their payloads.
-- TASK-0085 - Added a single `scripts/doctor.py` bootstrap check, made `make lint`/`make ci` truthful, replaced placeholder CODEOWNERS entries with real existing-path ownership under `@tylerclark`, and added MIT/Node-version repo governance basics.
-- TASK-0094 - Characterized the hand-rolled API shell, added a header-only `x-request-id` seam for all API responses, and kept request correlation out of JSON payloads and timeline-event plumbing.
-- TASK-0095 - Replaced the duplicated handwritten API route matcher/dispatcher with a single declarative route registry while preserving existing route precedence, payload behavior, and trust semantics.
-- TASK-0099 - Split CI into fast required backend lanes plus one runtime-required lane, kept `secret_hygiene` separate as an explicit PR-capable guardrail workflow, moved `release-confidence` off PRs, and retargeted `agent_api` to `ci-fast-backend`.
-- TASK-0100 - Made `release_source_bundle` the only operator-facing distribution path, added deterministic `release_provenance.json` sidecars to release exports, and demoted handoff/manual zip paths to internal review only.
-- TASK-0098 - Migrated frontend/client download surfaces to binary `.bin` transport, removed frontend dependence on JSON/base64 download envelopes, and made clean `npm ci` the explicit frontend install truth.
-- TASK-0084 - Made `handoff_source_bundle`, `release_source_bundle`, and `runtime_workspace_bundle` explicit contracts, added archive manifests, and taught `scripts/validate_repo.py` to inspect a real exported release-bundle payload from a temporary clean `HEAD` clone.
-- TASK-0082 - Added scoped `command_receipts`, replay-safe public mutation envelopes (`idempotent_replay` + `receipt`), and command-scoped retry semantics that no longer leak raw event-store duplicate-key behavior across CLI/API command boundaries.
-- TASK-0090 - Closed the remaining bootstrap/install truth gap by aligning Python package metadata and CI/local editable installs around `.[api,dev]`, adding `.editorconfig` plus frontend Node engine metadata, and banning tracked `*.egg-info` build artifacts from source truth and release-bundle payloads.
-- TASK-0087 - Removed tracked local/runtime clutter from the repo boundary (`.onetruth_artifacts/`, `onetruth.db`, `.DS_Store`, and a tracked handoff zip), tightened ignore coverage for local evidence/DB outputs, and clarified that live runtime evidence belongs outside source/fixture paths.
-- TASK-0088 - Consolidated shared execution-evidence helpers and artifact-root policy handling for Stage06 and weekly Stage04 without changing business semantics, and clarified that local evidence roots are workstation-local rather than source authority.
-- TASK-0089 - Aligned the legacy Stage06 sandbox with compiled-control-style execution semantics by deriving pinned Stage06 execution metadata from the authored execution profile plus a registry-backed runtime tool binding, while keeping the sandbox bounded to the same single-call review path.
-- TASK-0073 (weekly Stage04 iterative agent loop and analysis) - Replaced the weekly Stage04 one-shot tool catalog with iterative deterministic preview/apply/analysis/finalize tools, removed unconditional post-loop build materialization, persisted per-turn canonical evidence plus authored no-progress accounting, and upgraded the realistic pilot packet with iteration-level route allocation and tradeoff analysis while preserving draft-only/no-pointer-promotion invariants.
-- TASK-0074 - Replaced weekly Stage04 suffix-based bridge-input lookup with a typed authored dataset-key registry validated against workflow contract/artifact-map/execution-profile source, and added fail-closed regression coverage for missing or conflicting required keys.
-- TASK-0071 (weekly Stage04 realistic artifacts bundle) - Enriched Stage04 weekly bridge payloads so the same artifact kinds can carry realistic day-resolution planning inputs, added a shared deterministic 40-driver hard-case source fixture and realistic Stage04 pilot path, and preserved the tiny two-driver smoke fixture/runtime baseline.
-- TASK-0072 (weekly Stage04 iterative deterministic allocation) - Replaced the one-shot Stage04 selector with a deterministic partial-schedule allocation/repair loop, added 5-10 route batch planning with bounded local repair, upgraded hard validation/scoring to use driver-day/rolling-7/stability context, and enriched the same Stage04 artifact keys with per-iteration delta, coverage, churn, and tradeoff details.
-- TASK-0031 - Implemented the first projection coherence harness (`docs/planning/PROJECTION_COHERENCE_HARNESS.md`) with runtime checks and tests for workspace/export/handoff derived views plus visible `projection.coherence_failed` emission behavior
-- Added `docs/planning/RUNTIME_BOOTSTRAP.md` and `docs/planning/FIRST_RUNTIME_SLICE.md`
-- Added `docs/adr/ADR-003-stage4-runtime-architecture.md`
-- Refreshed stale Codex routing: EPIC-040 / EPIC-050 no longer route default runtime work through Payroll, and missing context packs now exist for EPIC-010 / EPIC-025 / EPIC-030 / EPIC-060 / EPIC-080
-- Reconciled stale backlog/task memory so TASK-0029, TASK-0030, TASK-0032, and TASK-0039 are now marked DONE
-
-### Recently completed dynamic-loop clarification tranche
-- Locked the rule that task completion may spawn explicit follow-on task runs for information requests, re-review, final review, and issue-scoped child work
-- Added `docs/planning/STEP_RUN_SCENARIO_HARNESS.md` and TASK-0039 so runtime step tests are now part of the plan instead of an implied future wish
-- Extended Schedule Planning and Payroll workflow contracts with bounded `task_spawn_policy` / `spawn_rules`
-- Added child-task lineage fields to the canonical TaskRun schema and `task.run.created` payload schema
-- Added validator checks for spawn-rule completeness and for the existence of template-pack completed examples
-- Added a design trace + unit test showing parent task completion spawning an explicit child task
-
-### Recently completed semantic-closure tranche
-- TASK-0034 - Canonicalized governance vocabulary and actor taxonomy
-- TASK-0033 - Specified the fully-agentive Schedule Planning debug slice, temporal partition semantics, and issue activation keys
-- TASK-0027 - Added full authored-surface validation and drift checks
-- TASK-0035 - Tightened human-task and control-plane semantics for end-to-end agent execution
-- TASK-0036 - Added runtime object schemas for canonical run/task/approval/execution objects
-- TASK-0037 - Added event payload schemas and registry bindings
-- TASK-0038 - Authored Schedule Planning golden traces and acceptance oracles
-- Adopted a pytest-backed TDD harness with a stable AT-SCH scenario catalog and reference replay reducer
-
-### Next tasks (priority order)
-1. `TASK-0202` - Add backend workpage descriptors, calculated contract blocks, accepted-series queries, and the missing explicit accepted-series grouping key.
-2. `TASK-0154` - Finish the remaining bounded live-dispatch closure around the manual daily-replan lane, especially the not-yet-closed major-change/approval policy semantics.
-3. `TASK-0156` - Add the external cadence tick and single-node production-shaped runbook after the weekly-first local demo path is real.
-4. `TASK-0157` - Sync the first local-demo feedback back into repo-native planning truth without starting EPIC-126 hardening early.
+## Available backlog (not yet selected)
+1. `TASK-0154` - Finish the remaining bounded live-dispatch closure around the manual daily-replan lane.
+2. `TASK-0156` - Add the external cadence tick and single-node production-shaped runbook.
+3. `TASK-0157` - Capture post-demo feedback against the canonical Workpages v1 posture.
 
 ## Test-first working mode
 Before adding runtime services or API surfaces:
@@ -225,44 +61,8 @@ Before adding runtime services or API surfaces:
 
 Default verification loop:
 - `make assurance-fast`
-- `make schema-validate` (compatibility alias)
+- `make schema-validate`
 - `make contract`
 - `make replay`
 - `make acceptance`
 - `make security`
-
-## Recently completed merger work
-- authority model and derivation policy
-- curated vision / mathematics / threat-model docs
-- decision catalogs and execution profiles for both workflows
-- unified event / approval / orchestration / promotion docs
-- runbook skeletons and CI / test-matrix guidance
-- completed the Payroll authored workflow surface with an operating model
-- re-scoped Stage 4 routing docs so logistics weekly/live is the primary routing wedge for new agentic scheduling work (with schedule_planning retained as regression/reference)
-- closed the shared vocabulary, runtime-schema, payload-schema, and golden-trace gaps needed before implementation planning
-- locked the first concrete runtime architecture and file-placement plan so implementation can start without stack drift
-
-## Do not do
-- Do not introduce a peer authored workflow-definition system beside the repo workflow packs.
-- Do not hand-edit generated derivatives as if they were source.
-- Do not create separate agent-run or human-decision truth models outside the canonical docs.
-- Do not satisfy the fully-agentive test objective by inventing an agent-only state path that bypasses approvals, task runs, events, or pointer promotions.
-- Do not let test helpers or the reference reducer outrank the workflow packs or schemas.
-- Do not introduce a second source of truth in board/frontend work; UI must stay a derived surface over canonical runtime state and events.
-
-## Notes
-- For new agentic scheduling tasks, logistics weekly/live (`weekly_schedule_planning.v1 -> live_dispatch.v1`) is the primary routing wedge.
-- `schedule_planning.v1` remains available as legacy regression/reference coverage, not the default route for new scheduling task intake.
-- First code should live under `src/onetruth/` and `alembic/` as described in `docs/planning/RUNTIME_BOOTSTRAP.md` and `docs/planning/FIRST_RUNTIME_SLICE.md`.
-- Build order after scaffold: canonical timeline + core runtime tables -> Stage06 publish path and follow-on review/info loops -> step-run scenario harness -> thin HTTP/query adapter -> Stage07 issue loop -> execution sessions/policy gate -> projections/generator.
-- Payroll remains the secondary linear approval-heavy reference workflow and governance benchmark.
-- Payroll golden traces remain placeholder-only; do not treat Payroll as the primary replay corpus yet.
-- AT-SCH-001 .. AT-SCH-007 have stable golden-trace mappings for replay and acceptance work.
-
-## Current centrality + operability tranche
-The current repo has crossed from trust-alignment work into a centrality + operability phase. `TASK-0102`, `TASK-0103`, `TASK-0104`, `TASK-0105`, `TASK-0106`, `TASK-0107`, and `TASK-0108` are now complete, so the remaining bounded Codex tranche should focus on preventing the assurance layer from becoming the next hidden monolith.
-
-Remaining recommended task order:
-1. `TASK-0109`
-
-Important scoping rule: do **not** reopen the capability lattice or trust-profile semantics in this tranche unless a task explicitly says so.

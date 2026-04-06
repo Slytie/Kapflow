@@ -204,7 +204,7 @@ def test_canonical_eod_draft_create_creates_artifact_in_seeded_reporting_run(
         metadata = json.loads(str(artifact_row["metadata_json"]))
         assert metadata["template_id"] == "dispatch_reporting.stage03.upd_draft.workbook.empty.v1"
         assert metadata["seed_source_path"] == EXPECTED_TEMPLATE_REF
-        assert metadata["demo_workpage_id"] == "eod-v0"
+        assert "demo_workpage_id" not in metadata
         assert metadata["service_date"] == "2026-03-16"
         assert metadata["station_code"] == "DVC4"
         assert metadata["dsp_name"] == "QDCI"
@@ -237,7 +237,13 @@ def test_canonical_eod_draft_create_replays_idempotently_without_duplicate_artif
 
     with open_sqlite_connection(_db_url(tmp_path)) as connection:
         artifact_count = connection.execute(
-            "SELECT COUNT(*) FROM artifact_versions"
+            """
+            SELECT COUNT(*)
+            FROM artifact_versions
+            WHERE workflow_run_id = ?
+              AND dataset_key = 'reporting.upd_draft.workbook'
+            """,
+            (workflow_run_id,),
         ).fetchone()[0]
     assert artifact_count == 1
 
@@ -386,7 +392,7 @@ def test_artifact_backed_eod_workpage_returns_projected_contract(tmp_path: Path)
         "average_route_time": "0:00:00",
         "formula_integrity_warning": False,
         "warning_note": (
-            "This backend demo query is built from an intentionally partial 2026-03-16 "
+            "This backend example-backed query is built from an intentionally partial 2026-03-16 "
             "QDCI / DVC4 reporting example family. Row-level actuals remain the primary truth "
             "because the source workbook summary tabs contained broken formulas."
         ),
@@ -724,7 +730,7 @@ def test_workflow_run_artifact_list_includes_eod_draft_chain_versions(tmp_path: 
         base_artifact_version_id,
         submitted_artifact_version_id,
     ]
-    assert all(row["metadata_json"]["demo_workpage_id"] == "eod-v0" for row in workbook_rows)
+    assert all("demo_workpage_id" not in row["metadata_json"] for row in workbook_rows)
 
 
 def test_submit_artifact_workpage_replays_idempotently_without_duplicate_versions(
@@ -764,7 +770,13 @@ def test_submit_artifact_workpage_replays_idempotently_without_duplicate_version
 
     with open_sqlite_connection(_db_url(tmp_path)) as connection:
         artifact_count = connection.execute(
-            "SELECT COUNT(*) FROM artifact_versions"
+            """
+            SELECT COUNT(*)
+            FROM artifact_versions
+            WHERE workflow_run_id = ?
+              AND dataset_key = 'reporting.upd_draft.workbook'
+            """,
+            (workflow_run_id,),
         ).fetchone()[0]
     assert artifact_count == 2
 

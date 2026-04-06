@@ -33,9 +33,11 @@ from onetruth.application.services.execution_evidence import (
 from onetruth.application.services.schedule_control import (
     PartialWeeklyScheduleState,
     build_stage04_deterministic_outputs,
+    build_schedule_calculation_snapshot_payload,
     build_weekly_schedule_control_bundle,
     execute_next_weekly_allocation_iteration,
     expand_route_slot_requirements,
+    normalize_schedule_dependency_manifest,
     select_on_call_reserve_rows,
 )
 from onetruth.application.services.schedule_control.contract_minimization import (
@@ -1155,6 +1157,16 @@ class _Stage04DeterministicTooling:
             repair_moves=list(self.schedule_state.repair_moves),
             coverage_summary=self._coverage_summary(),
         )
+        draft_workbook_payload = rendered.draft_workbook_payload
+        calculation_snapshot_payload = build_schedule_calculation_snapshot_payload(
+            bundle=self.bundle,
+            dependency_state="aligned",
+            dependencies=normalize_schedule_dependency_manifest(
+                draft_workbook_payload.get("dependency_manifest")
+            ),
+            assignment_rows=_draft_workbook_assignment_rows(draft_workbook_payload),
+            reserve_rows=list(draft_workbook_payload.get("reserve_rows") or []),
+        )
         return {
             "bundle_id": rendered.bundle.bundle_id,
             "candidate_count": len(rendered.candidate_matrix),
@@ -1174,8 +1186,9 @@ class _Stage04DeterministicTooling:
                 "planning.input_bundle.doc": rendered.input_bundle_payload,
                 "planning.candidate_schedule_delta.workbook": rendered.candidate_delta_payload,
                 "planning.validation_summary.doc": rendered.validation_summary_payload,
-                "planning.draft_weekly_schedule.workbook": rendered.draft_workbook_payload,
+                "planning.draft_weekly_schedule.workbook": draft_workbook_payload,
                 "planning.draft_weekly_schedule.doc": rendered.draft_doc_payload,
+                "planning.schedule_calculation_snapshot.json": calculation_snapshot_payload,
             },
         }
 
@@ -1195,6 +1208,7 @@ class _Stage04DeterministicTooling:
                 "validation_summary": artifacts["planning.validation_summary.doc"],
                 "draft_workbook": artifacts["planning.draft_weekly_schedule.workbook"],
                 "draft_doc": artifacts["planning.draft_weekly_schedule.doc"],
+                "calculation_snapshot": artifacts["planning.schedule_calculation_snapshot.json"],
             },
         }
 
@@ -1913,6 +1927,25 @@ def _compact_buffer_summary(summary: Any) -> dict[str, Any] | None:
             len(selection_notes) if isinstance(selection_notes, dict) else 0
         ),
     }
+
+
+def _draft_workbook_assignment_rows(
+    draft_workbook_payload: dict[str, Any],
+) -> list[dict[str, Any]]:
+    columns = list(draft_workbook_payload.get("columns") or [])
+    rows = list(draft_workbook_payload.get("rows") or [])
+    assignment_rows: list[dict[str, Any]] = []
+    for row in rows:
+        if not isinstance(row, list):
+            continue
+        assignment_rows.append(
+            {
+                str(column): row[index]
+                for index, column in enumerate(columns)
+                if index < len(row)
+            }
+        )
+    return assignment_rows
 
 
 def _resolve_stage04_input_artifacts(

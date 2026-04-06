@@ -561,6 +561,7 @@ def test_artifact_backed_schedule_workpage_cross_scope_access_fails_closed(tmp_p
         domain_id="domain-x",
         run_tag="api:workpages:artifact-schedule:cross-scope",
     )
+    workflow_run_id = str(seeded["workflow_run_id"])
     artifact_version_id = str(seeded["stage04_outputs"]["draft_workbook"]["artifact_version_id"])
     client = _other_scope_client(tmp_path)
 

@@ -136,7 +136,7 @@ describe("AppShell viewer bootstrap", () => {
     render(<App />);
 
     expect(await screen.findByText("My Work Queue")).toBeInTheDocument();
-    expect(await screen.findByText("Stage06 · review_packet")).toBeInTheDocument();
+    expect(await screen.findByText("Stage06 · Review Packet")).toBeInTheDocument();
 
     const shell = document.querySelector(".app-shell");
     const closedDrawer = document.querySelector(".detail-drawer--closed");
@@ -146,8 +146,9 @@ describe("AppShell viewer bootstrap", () => {
 
     await user.click(screen.getByRole("button", { name: "Details" }));
 
-    const modal = await screen.findByRole("dialog", { name: "Stage06 review_packet" });
+    const modal = await screen.findByRole("dialog");
     expect(modal).toHaveClass("task-modal");
+    expect(within(modal).getByRole("heading", { name: "Stage06 · Review Packet" })).toBeInTheDocument();
     expect(getComputedStyle(shell as Element).gridTemplateColumns).not.toContain("380");
     expect(screen.queryByLabelText("Details drawer")).not.toBeInTheDocument();
   });

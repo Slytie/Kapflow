@@ -48,9 +48,9 @@ from onetruth.application.services.schedule_control.driver_preferences_workbook 
 )
 from onetruth.application.services.workpage_descriptors import (
     DRIVER_PREFERENCES_WORKPAGE_KIND,
-    EOD_DEMO_WORKPAGE_ID,
+    EOD_WORKPAGE_KIND,
     ROUTE_DEMAND_WORKPAGE_KIND,
-    SCHEDULE_DEMO_WORKPAGE_ID,
+    SCHEDULE_WORKPAGE_KIND,
     WorkpageDescriptor,
     descriptor_for_public_run,
     get_workpage_descriptor,
@@ -269,7 +269,7 @@ def _build_workflow_run_workpage_contract(
 ) -> dict[str, object]:
     workflow_run_id = str(workflow_run["workflow_run_id"])
     artifacts = list_artifacts_for_workflow_run_command(connection, workflow_run_id)
-    if descriptor.kind == SCHEDULE_DEMO_WORKPAGE_ID:
+    if descriptor.kind == SCHEDULE_WORKPAGE_KIND:
         return build_schedule_workflow_run_workpage_contract(
             connection,
             workflow_run=workflow_run,
@@ -287,7 +287,7 @@ def _build_workflow_run_workpage_contract(
             workflow_run=workflow_run,
             artifacts=artifacts,
         )
-    if descriptor.kind == EOD_DEMO_WORKPAGE_ID:
+    if descriptor.kind == EOD_WORKPAGE_KIND:
         return build_eod_workflow_run_workpage_contract(
             workflow_run=workflow_run,
             artifacts=artifacts,
@@ -354,7 +354,7 @@ def _artifact_workpage_contract(
             details={"artifact_version_id": artifact_version_id},
         ) from exc
 
-    if descriptor.kind == EOD_DEMO_WORKPAGE_ID:
+    if descriptor.kind == EOD_WORKPAGE_KIND:
         metadata_json = artifact.get("metadata_json") or {}
         return build_eod_artifact_workpage_contract(
             artifact_version_id=artifact_version_id,
@@ -385,7 +385,7 @@ def _artifact_workpage_contract(
                 default="QDCI",
             ),
         )
-    if descriptor.kind == SCHEDULE_DEMO_WORKPAGE_ID:
+    if descriptor.kind == SCHEDULE_WORKPAGE_KIND:
         return build_schedule_artifact_workpage_contract(
             connection,
             artifact_version_id=artifact_version_id,
@@ -469,7 +469,7 @@ def _submit_artifact_workpage(
         )
 
     try:
-        if descriptor.kind == EOD_DEMO_WORKPAGE_ID:
+        if descriptor.kind == EOD_WORKPAGE_KIND:
             return submit_eod_artifact_workpage_command(
                 connection,
                 {
@@ -480,7 +480,7 @@ def _submit_artifact_workpage(
                 },
                 storage_root=default_storage_root_for_db_url(db_url),
             )
-        if descriptor.kind == SCHEDULE_DEMO_WORKPAGE_ID:
+        if descriptor.kind == SCHEDULE_WORKPAGE_KIND:
             return submit_schedule_artifact_workpage_command(
                 connection,
                 {
@@ -570,7 +570,7 @@ def _preview_artifact_workpage(
             details={"artifact_version_id": artifact_version_id},
         )
     try:
-        if descriptor.kind == SCHEDULE_DEMO_WORKPAGE_ID:
+        if descriptor.kind == SCHEDULE_WORKPAGE_KIND:
             return preview_schedule_artifact_workpage_command(
                 connection,
                 {
@@ -641,7 +641,7 @@ def _artifact_workpage_bytes(
     artifact_version_id: str,
 ) -> bytes:
     artifact_kind = str(artifact.get("artifact_kind") or artifact.get("dataset_key") or "")
-    if descriptor.kind == SCHEDULE_DEMO_WORKPAGE_ID and descriptor.supports_artifact_kind(artifact_kind):
+    if descriptor.kind == SCHEDULE_WORKPAGE_KIND and descriptor.supports_artifact_kind(artifact_kind):
         storage_uri = str(artifact.get("storage_uri") or "")
         if storage_uri.startswith("file:"):
             return read_blob(storage_uri)
@@ -667,7 +667,7 @@ def _artifact_workpage_bytes(
             )
         except ValueError as exc:
             raise ArtifactStorageError(str(exc)) from exc
-    if descriptor.kind == EOD_DEMO_WORKPAGE_ID and artifact_kind == EOD_DATASET_KEY:
+    if descriptor.kind == EOD_WORKPAGE_KIND and artifact_kind == EOD_DATASET_KEY:
         return read_blob(str(artifact["storage_uri"]))
     raise ApiError(
         status_code=404,

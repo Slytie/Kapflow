@@ -73,6 +73,7 @@ from onetruth.application.services.logistics_workpages import (
     latest_driver_preferences_artifact,
     latest_schedule_draft_artifact,
 )
+from onetruth.application.services.workpage_descriptors import EOD_WORKPAGE_KIND
 from onetruth.application.services.template_registry import (
     TemplateRecord,
     load_template_registry_catalog,
@@ -97,21 +98,14 @@ from onetruth.infrastructure.repositories.human_tasks import (
 )
 from onetruth.infrastructure.repositories.task_runs import create_task_run, get_task_run
 from onetruth.infrastructure.repositories.workflow_runs import (
-    create_workflow_run,
     get_workflow_run,
-    list_workflow_runs,
 )
 
 
-WORKFLOW_VERSION = "v1"
-DEMO_WORKPAGE_ID = "eod-v0"
-DEMO_SERVICE_DATE_ID = "SD-2026-03-16"
-DEMO_SERVICE_DATE = "2026-03-16"
-DEMO_STATION_CODE = "DVC4"
-DEMO_DSP_NAME = "QDCI"
-DEMO_ACTIVATION_KEY = "dispatch_reporting.v1:SD-2026-03-16:eod-v0:artifact-draft"
+EOD_DEFAULT_SERVICE_DATE = "2026-03-16"
+EOD_DEFAULT_STATION_CODE = "DVC4"
+EOD_DEFAULT_DSP_NAME = "QDCI"
 EOD_TEMPLATE_ID = "dispatch_reporting.stage03.upd_draft.workbook.empty.v1"
-EOD_UI_ROUTE_PREFIX = "/demo/logistics/workpages/eod-v0/artifacts/"
 WORKPAGE_SUBJECT_LINK_FIELDS = frozenset({"subject_kind", "subject_id"})
 SCHEDULE_WORKPAGE_SUPPORTED_TASK_SURFACES = frozenset(
     {
@@ -123,103 +117,6 @@ SCHEDULE_WORKPAGE_SUPPORTED_TASK_SURFACES = frozenset(
 SCHEDULE_WORKPAGE_SUPPORTED_APPROVAL_SCOPE_REFS = frozenset({"Stage06"})
 EOD_WORKPAGE_SUPPORTED_TASK_SURFACES = frozenset({("Stage04", "final_packet_review")})
 EOD_WORKPAGE_SUPPORTED_APPROVAL_SCOPE_REFS = frozenset({"Stage04"})
-
-
-def create_demo_eod_draft_command(
-    connection: sqlite3.Connection,
-    payload: dict[str, Any],
-    *,
-    storage_root: Path,
-    include_receipt: bool = False,
-) -> dict[str, Any]:
-    tenant_id = _require_non_empty_string(payload.get("tenant_id"), field_name="tenant_id")
-    domain_id = _require_non_empty_string(payload.get("domain_id"), field_name="domain_id")
-    actor_id = _require_non_empty_string(payload.get("actor_id"), field_name="actor_id")
-    actor_type = _require_non_empty_string(payload.get("actor_type"), field_name="actor_type")
-    _reject_demo_workpage_subject_link(payload.get("subject_link"))
-
-    existing_run = _find_demo_reporting_run(
-        connection,
-        tenant_id=tenant_id,
-        domain_id=domain_id,
-    )
-    receipt = _prepare_command_receipt(
-        command_name="workpages.eod-drafts.create",
-        payload={
-            **payload,
-            "workflow_id": EOD_WORKFLOW_ID,
-            "partition_key": DEMO_SERVICE_DATE_ID,
-            "workpage_id": DEMO_WORKPAGE_ID,
-        },
-        fingerprint_payload={
-            "tenant_id": tenant_id,
-            "domain_id": domain_id,
-            "workflow_id": EOD_WORKFLOW_ID,
-            "partition_key": DEMO_SERVICE_DATE_ID,
-            "workpage_id": DEMO_WORKPAGE_ID,
-            "template_id": EOD_TEMPLATE_ID,
-            "actor_id": actor_id,
-            "actor_type": actor_type,
-        },
-        tenant_id=tenant_id,
-        domain_id=domain_id,
-        workflow_run_id=(
-            str(existing_run["workflow_run_id"])
-            if existing_run is not None
-            else None
-        ),
-        idempotency_required=True,
-    )
-    run_event_idempotency = _receipt_event_idempotency_key(
-        receipt,
-        "workpages.eod-drafts.create.workflow.run.created",
-    )
-    artifact_event_idempotency = _receipt_event_idempotency_key(
-        receipt,
-        "workpages.eod-drafts.create.artifact.version.created",
-    )
-
-    def _operation() -> dict[str, Any]:
-        now = utc_now_iso()
-        workflow_run = _resolve_or_create_demo_reporting_run(
-            connection,
-            tenant_id=tenant_id,
-            domain_id=domain_id,
-            actor_id=actor_id,
-            actor_type=actor_type,
-            created_at=now,
-            event_idempotency=run_event_idempotency,
-        )
-        artifact = _create_eod_draft_artifact_version(
-            connection,
-            storage_root=storage_root,
-            workflow_run_id=str(workflow_run["workflow_run_id"]),
-            parent_artifact_version_id=None,
-            supersedes_artifact_version_id=None,
-            actor_id=actor_id,
-            actor_type=actor_type,
-            event_idempotency=artifact_event_idempotency,
-        )
-        artifact_version_id = str(artifact["artifact_version_id"])
-        return {
-            "draft": {
-                "workflow_run_id": str(workflow_run["workflow_run_id"]),
-                "artifact_version_id": artifact_version_id,
-                "route": _demo_eod_ui_route(artifact_version_id),
-            }
-        }
-
-    result, replay = _execute_with_command_receipt(
-        connection,
-        receipt=receipt,
-        operation=_operation,
-    )
-    return _command_receipt_payload(
-        result,
-        receipt=receipt,
-        replay=replay,
-        include_receipt=include_receipt,
-    )
 
 
 def create_workflow_run_eod_draft_command(
@@ -242,7 +139,7 @@ def create_workflow_run_eod_draft_command(
         connection,
         workflow_run_id=workflow_run_id,
         workflow_id=EOD_WORKFLOW_ID,
-        workpage_kind=DEMO_WORKPAGE_ID,
+        workpage_kind=EOD_WORKPAGE_KIND,
         flow_kind="create",
         raw_subject_link=payload.get("subject_link"),
     )
@@ -253,14 +150,14 @@ def create_workflow_run_eod_draft_command(
             **payload,
             "workflow_run_id": workflow_run_id,
             "workflow_id": EOD_WORKFLOW_ID,
-            "workpage_id": DEMO_WORKPAGE_ID,
+            "workpage_id": EOD_WORKPAGE_KIND,
         },
         fingerprint_payload={
             "tenant_id": tenant_id,
             "domain_id": domain_id,
             "workflow_run_id": workflow_run_id,
             "workflow_id": EOD_WORKFLOW_ID,
-            "workpage_id": DEMO_WORKPAGE_ID,
+            "workpage_id": EOD_WORKPAGE_KIND,
             "template_id": EOD_TEMPLATE_ID,
             "actor_id": actor_id,
             "actor_type": actor_type,
@@ -451,7 +348,7 @@ def submit_eod_artifact_workpage_command(
         connection,
         workflow_run_id=str(base_artifact["workflow_run_id"]),
         workflow_id=EOD_WORKFLOW_ID,
-        workpage_kind=DEMO_WORKPAGE_ID,
+        workpage_kind=EOD_WORKPAGE_KIND,
         flow_kind="submit",
         raw_subject_link=payload.get("subject_link"),
     )
@@ -1022,113 +919,6 @@ def submit_driver_preferences_artifact_workpage_command(
         include_receipt=include_receipt,
     )
 
-
-def _resolve_or_create_demo_reporting_run(
-    connection: sqlite3.Connection,
-    *,
-    tenant_id: str,
-    domain_id: str,
-    actor_id: str,
-    actor_type: str,
-    created_at: str,
-    event_idempotency: str | None,
-) -> dict[str, Any]:
-    existing = _find_demo_reporting_run(
-        connection,
-        tenant_id=tenant_id,
-        domain_id=domain_id,
-    )
-    if existing is not None:
-        return existing
-
-    workflow_run_id = f"wr-{uuid4()}"
-    try:
-        create_workflow_run(
-            connection,
-            workflow_run_id=workflow_run_id,
-            workflow_id=EOD_WORKFLOW_ID,
-            workflow_version=WORKFLOW_VERSION,
-            tenant_id=tenant_id,
-            domain_id=domain_id,
-            partition_key=DEMO_SERVICE_DATE_ID,
-            logical_date=DEMO_SERVICE_DATE,
-            activation_key=DEMO_ACTIVATION_KEY,
-            state="OPEN",
-            created_at=created_at,
-        )
-    except sqlite3.IntegrityError:
-        refreshed = _find_demo_reporting_run(
-            connection,
-            tenant_id=tenant_id,
-            domain_id=domain_id,
-        )
-        if refreshed is not None:
-            return refreshed
-        raise
-
-    append_event(
-        connection,
-        _event_envelope(
-            event_type="workflow.run.created",
-            tenant_id=tenant_id,
-            domain_id=domain_id,
-            actor_type=actor_type,
-            actor_id=actor_id,
-            links=[
-                {"rel": "subject", "type": "workflow_run", "id": workflow_run_id},
-                {
-                    "rel": "uses_definition",
-                    "type": "workflow_contract_version",
-                    "id": f"{EOD_WORKFLOW_ID}@{WORKFLOW_VERSION}",
-                },
-                {
-                    "rel": "uses_decisions",
-                    "type": "decision_catalog_version",
-                    "id": f"{EOD_WORKFLOW_ID}@{WORKFLOW_VERSION}",
-                },
-                {
-                    "rel": "uses_profile",
-                    "type": "execution_profile_version",
-                    "id": f"{EOD_WORKFLOW_ID}@{WORKFLOW_VERSION}",
-                },
-            ],
-            payload={
-                "workflow_id": EOD_WORKFLOW_ID,
-                "partition_key": DEMO_SERVICE_DATE_ID,
-                "activation_key": DEMO_ACTIVATION_KEY,
-                "logical_date": DEMO_SERVICE_DATE,
-            },
-            idempotency_key=event_idempotency,
-        ),
-    )
-    created = get_workflow_run(connection, workflow_run_id)
-    if created is None:
-        raise CommandError(
-            code="workflow_run_not_found",
-            message="workflow run not found after creation",
-            details={"workflow_run_id": workflow_run_id},
-        )
-    return created
-
-
-def _find_demo_reporting_run(
-    connection: sqlite3.Connection,
-    *,
-    tenant_id: str,
-    domain_id: str,
-) -> dict[str, Any] | None:
-    for run in list_workflow_runs(
-        connection,
-        workflow_id=EOD_WORKFLOW_ID,
-        tenant_id=tenant_id,
-        domain_id=domain_id,
-        state=None,
-    ):
-        if str(run["partition_key"]) == DEMO_SERVICE_DATE_ID:
-            return run
-    return None
-
-
 def _create_workbook_artifact_version(
     connection: sqlite3.Connection,
     *,
@@ -1366,10 +1156,9 @@ def _draft_metadata(template: TemplateRecord) -> dict[str, Any]:
         "seed_source_path": template_path,
         "ingress_source_path": template_path,
         "ingress_kind": "local_source_path",
-        "demo_workpage_id": DEMO_WORKPAGE_ID,
-        "service_date": DEMO_SERVICE_DATE,
-        "station_code": DEMO_STATION_CODE,
-        "dsp_name": DEMO_DSP_NAME,
+        "service_date": EOD_DEFAULT_SERVICE_DATE,
+        "station_code": EOD_DEFAULT_STATION_CODE,
+        "dsp_name": EOD_DEFAULT_DSP_NAME,
     }
 
 
@@ -1381,10 +1170,9 @@ def _submitted_metadata(base_artifact: Mapping[str, Any]) -> dict[str, Any]:
     result = dict(metadata_json)
     result["ingress_kind"] = "workpage_submit"
     result.setdefault("template_id", EOD_TEMPLATE_ID)
-    result.setdefault("demo_workpage_id", DEMO_WORKPAGE_ID)
-    result.setdefault("service_date", DEMO_SERVICE_DATE)
-    result.setdefault("station_code", DEMO_STATION_CODE)
-    result.setdefault("dsp_name", DEMO_DSP_NAME)
+    result.setdefault("service_date", EOD_DEFAULT_SERVICE_DATE)
+    result.setdefault("station_code", EOD_DEFAULT_STATION_CODE)
+    result.setdefault("dsp_name", EOD_DEFAULT_DSP_NAME)
     return result
 
 
@@ -2136,11 +1924,6 @@ def _metadata_string(
                 return text
     return default
 
-
-def _demo_eod_ui_route(artifact_version_id: str) -> str:
-    return f"{EOD_UI_ROUTE_PREFIX}{artifact_version_id}"
-
-
 def _canonical_eod_ui_route(*, workflow_run_id: str, artifact_version_id: str) -> str:
     return canonical_eod_artifact_route(
         workflow_run_id=workflow_run_id,
@@ -2224,17 +2007,6 @@ def _schedule_companion_file_name(
 def _xlsx_media_type() -> str:
     return "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
 
-
-def _reject_demo_workpage_subject_link(raw_subject_link: Any) -> None:
-    if raw_subject_link is None:
-        return
-    raise _invalid_workpage_subject_link(
-        message="subject_link is not supported on the demo EOD draft-create alias",
-        route_family="demo",
-        workpage_kind=DEMO_WORKPAGE_ID,
-    )
-
-
 def _resolve_workpage_subject_link(
     connection: sqlite3.Connection,
     *,
@@ -2282,7 +2054,7 @@ def _resolve_workpage_subject_link(
             subject_link=subject_link,
         )
         return subject_link
-    if workflow_id == EOD_WORKFLOW_ID and workpage_kind == DEMO_WORKPAGE_ID and flow_kind in {"create", "submit"}:
+    if workflow_id == EOD_WORKFLOW_ID and workpage_kind == EOD_WORKPAGE_KIND and flow_kind in {"create", "submit"}:
         _validate_eod_workpage_subject_link(
             connection,
             workflow_run_id=workflow_run_id,

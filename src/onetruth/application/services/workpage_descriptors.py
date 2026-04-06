@@ -10,9 +10,6 @@ EOD_WORKPAGE_KIND = "eod-v0"
 ROUTE_DEMAND_WORKPAGE_KIND = "route-demand-v0"
 DRIVER_PREFERENCES_WORKPAGE_KIND = "driver-preferences-v0"
 
-SCHEDULE_DEMO_WORKPAGE_ID = SCHEDULE_WORKPAGE_KIND
-EOD_DEMO_WORKPAGE_ID = EOD_WORKPAGE_KIND
-
 WEEKLY_SCHEDULE_WORKFLOW_ID = "weekly_schedule_planning.v1"
 DISPATCH_REPORTING_WORKFLOW_ID = "dispatch_reporting.v1"
 SCHEDULE_WORKFLOW_ID = WEEKLY_SCHEDULE_WORKFLOW_ID
@@ -34,7 +31,6 @@ _NON_ALNUM = re.compile(r"[^a-z0-9]+")
 class WorkpageDescriptor:
     kind: str
     workflow_id: str
-    demo_enabled: bool
     run_enabled: bool
     artifact_enabled: bool
     submit_enabled: bool
@@ -247,7 +243,6 @@ _DESCRIPTORS: tuple[WorkpageDescriptor, ...] = (
     WorkpageDescriptor(
         kind=SCHEDULE_WORKPAGE_KIND,
         workflow_id=WEEKLY_SCHEDULE_WORKFLOW_ID,
-        demo_enabled=True,
         run_enabled=True,
         artifact_enabled=True,
         submit_enabled=True,
@@ -289,7 +284,6 @@ _DESCRIPTORS: tuple[WorkpageDescriptor, ...] = (
     WorkpageDescriptor(
         kind=EOD_WORKPAGE_KIND,
         workflow_id=DISPATCH_REPORTING_WORKFLOW_ID,
-        demo_enabled=True,
         run_enabled=True,
         artifact_enabled=True,
         submit_enabled=True,
@@ -325,7 +319,6 @@ _DESCRIPTORS: tuple[WorkpageDescriptor, ...] = (
     WorkpageDescriptor(
         kind=ROUTE_DEMAND_WORKPAGE_KIND,
         workflow_id=WEEKLY_SCHEDULE_WORKFLOW_ID,
-        demo_enabled=False,
         run_enabled=True,
         artifact_enabled=True,
         submit_enabled=True,
@@ -359,7 +352,6 @@ _DESCRIPTORS: tuple[WorkpageDescriptor, ...] = (
     WorkpageDescriptor(
         kind=DRIVER_PREFERENCES_WORKPAGE_KIND,
         workflow_id=WEEKLY_SCHEDULE_WORKFLOW_ID,
-        demo_enabled=False,
         run_enabled=True,
         artifact_enabled=True,
         submit_enabled=True,

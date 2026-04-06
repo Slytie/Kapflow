@@ -10,9 +10,6 @@ from typing import Any, Mapping
 import yaml
 
 from onetruth.application.handlers._shared.command_boundary import CommandError
-from onetruth.application.services.logistics_weekly_agent_pilot import (
-    build_actual_ops_weekly_stage04_fixture_payloads,
-)
 from onetruth.application.services.schedule_control import (
     WeeklyScheduleControlBundle,
     build_weekly_schedule_control_bundle,
@@ -46,11 +43,11 @@ from onetruth.application.services.schedule_control.stage04_input_registry impor
 )
 from onetruth.application.services.workpage_descriptors import (
     DRIVER_PREFERENCES_ARTIFACT_KIND,
-    EOD_DEMO_WORKPAGE_ID,
+    EOD_WORKPAGE_KIND,
     EOD_DRAFT_ARTIFACT_KIND,
     ROUTE_DEMAND_WORKPAGE_KIND,
     ROUTE_DEMAND_ARTIFACT_KIND,
-    SCHEDULE_DEMO_WORKPAGE_ID,
+    SCHEDULE_WORKPAGE_KIND,
     SCHEDULE_PUBLISHED_ARTIFACT_KIND,
     WEEKLY_SCHEDULE_WORKFLOW_ID,
     build_schedule_accepted_series_key,
@@ -82,9 +79,6 @@ from onetruth.infrastructure.repositories.task_runs import (
 
 
 REPO_ROOT = Path(__file__).resolve().parents[4]
-_ACTUAL_OPS_SOURCE_MATERIAL_PATH = (
-    REPO_ROOT / "fixtures" / "logistics" / "weekly_stage04_actual_ops_lab_source_material_v3.yaml"
-)
 
 _SCHEDULE_WORKFLOW_ID = WEEKLY_SCHEDULE_WORKFLOW_ID
 _EOD_WORKFLOW_ID = "dispatch_reporting.v1"
@@ -99,14 +93,13 @@ _SELECTED_DAY_OPEN_QUESTION = (
 _EOD_SERVICE_DATE = "2026-03-16"
 _EOD_STATION_CODE = "DVC4"
 _EOD_DSP_NAME = "QDCI"
-_EOD_SOURCE_VERSION = "dispatch_reporting_2026_03_16_qdci_dvc4_partial_v1"
 _EOD_WARNING_NOTE = (
-    "This backend demo query is built from an intentionally partial 2026-03-16 "
+    "This backend example-backed query is built from an intentionally partial 2026-03-16 "
     "QDCI / DVC4 reporting example family. Row-level actuals remain the primary truth "
     "because the source workbook summary tabs contained broken formulas."
 )
 _EOD_NOTE_PANEL_BODY = (
-    "This backend demo query uses intentionally partial repo examples. Source workbook "
+    "This backend example-backed query uses intentionally partial repo examples. Source workbook "
     "summary tabs showed formula failures, so row-level actuals remain the primary truth "
     "and v0 surfaces a warning instead of reproducing broken formulas."
 )
@@ -131,14 +124,6 @@ _SOURCE_DATASETS: tuple[tuple[str, str], ...] = (
     ("stage04_input_bundle", _INPUT_BUNDLE_DATASET_KEY),
 )
 
-_SOURCE_ARTIFACT_KEYS = {
-    "route_slot_requirements": "route_slot_requirements",
-    "approved_availability": "approved_availability",
-    "driver_capabilities": "driver_capabilities",
-    "actual_hours_snapshot": "actual_hours",
-    "stage04_input_bundle": "input_bundle_manifest",
-}
-
 _EOD_SOURCE_DATASETS: tuple[tuple[str, str], ...] = (
     ("eos_route_rows", _EOD_RAW_DATASET_KEY),
     ("normalized_actuals", _EOD_NORMALIZED_DATASET_KEY),
@@ -161,7 +146,7 @@ _EOD_SOURCE_EXAMPLES = {
 }
 
 _EOD_VALIDATION_WARNINGS = [
-    "This server-owned demo query is built from an intentionally partial 2026-03-16 dispatch-reporting example family.",
+    "This server-owned example-backed query is built from an intentionally partial 2026-03-16 dispatch-reporting example family.",
     "Workbook summary formulas were broken in the source material, so row-level actuals remain the primary truth for this projection.",
     "Manual closeout inputs remain local-only in v0; no submit/materialize contract exists yet.",
 ]
@@ -179,12 +164,6 @@ _FORM_ON_CALL_OPTIONS = (
 )
 
 
-class DemoWorkpageNotFoundError(LookupError):
-    def __init__(self, workpage_id: str) -> None:
-        super().__init__(f"demo workpage not found: {workpage_id}")
-        self.workpage_id = workpage_id
-
-
 class WorkpageProjectionUnavailableError(RuntimeError):
     def __init__(
         self,
@@ -198,14 +177,6 @@ class WorkpageProjectionUnavailableError(RuntimeError):
         self.workflow_run_id = workflow_run_id
         self.workpage_id = workpage_id
         self.missing_dataset_keys = list(missing_dataset_keys or [])
-
-
-def build_demo_workpage_contract(workpage_id: str) -> dict[str, Any]:
-    if workpage_id == SCHEDULE_DEMO_WORKPAGE_ID:
-        return build_schedule_demo_workpage_contract()
-    if workpage_id == EOD_DEMO_WORKPAGE_ID:
-        return build_eod_demo_workpage_contract()
-    raise DemoWorkpageNotFoundError(workpage_id)
 
 
 def canonical_schedule_artifact_route(*, workflow_run_id: str, artifact_version_id: str) -> str:
@@ -326,14 +297,14 @@ def build_schedule_workflow_run_workpage_contract(
         ]
         raise WorkpageProjectionUnavailableError(
             workflow_run_id=workflow_run_id,
-            workpage_id=SCHEDULE_DEMO_WORKPAGE_ID,
+            workpage_id=SCHEDULE_WORKPAGE_KIND,
             message="workflow-run-backed schedule workpage is unavailable until the weekly Stage04 inputs exist for this run",
             missing_dataset_keys=missing_dataset_keys,
         ) from exc
     except ValueError as exc:
         raise WorkpageProjectionUnavailableError(
             workflow_run_id=workflow_run_id,
-            workpage_id=SCHEDULE_DEMO_WORKPAGE_ID,
+            workpage_id=SCHEDULE_WORKPAGE_KIND,
             message=f"workflow-run-backed schedule workpage is unavailable: {exc}",
         ) from exc
 
@@ -555,45 +526,6 @@ def build_driver_preferences_workflow_run_workpage_contract(
     return contract
 
 
-def build_schedule_demo_workpage_contract() -> dict[str, Any]:
-    source_material = _load_actual_ops_source_material()
-    source_examples = _source_examples(source_material)
-    bundle = _schedule_demo_bundle()
-
-    contract = _build_schedule_workpage_contract(
-        bundle=bundle,
-        source_examples=source_examples,
-        source_mode="demo",
-        source_refs=[
-            source_examples["route_slot_requirements"],
-            source_examples["approved_availability"],
-            source_examples["driver_capabilities"],
-            source_examples["actual_hours_snapshot"],
-            source_examples["stage04_input_bundle"],
-        ],
-        freshness_source_kind="repo_example_bundle",
-        freshness_source_version=_require_text(source_material.get("fixture_contract")),
-        validation_warnings=[
-            "This server-owned demo query is built from repo-native weekly planning example sources.",
-            "Selected-day controls are local what-if inputs only and do not claim ownership of live dispatch truth.",
-        ],
-    )
-    contract.update(
-        {
-            "artifact_state": _schedule_demo_artifact_state(),
-            "dependencies": _schedule_dependency_rows_for_demo(source_examples=source_examples),
-            "calculations": _schedule_calculations(
-                day_demand_rows=_day_demand_rows(bundle),
-                selected_day_row=_selected_day_preview_row(bundle),
-            ),
-            "draft_lineage": _empty_draft_lineage(),
-            "accepted_series": _empty_accepted_series(),
-            "actions": [],
-        }
-    )
-    return contract
-
-
 def _build_schedule_workpage_contract(
     *,
     bundle: WeeklyScheduleControlBundle,
@@ -623,18 +555,6 @@ def _build_schedule_workpage_contract(
             "source_version": freshness_source_version,
         },
     }
-
-
-def _schedule_demo_artifact_state() -> dict[str, Any]:
-    return {
-        "state_kind": "demo_projection",
-        "artifact_kind": SCHEDULE_DRAFT_DATASET_KEY,
-        "editable": False,
-        "current_artifact_version_id": None,
-        "latest_artifact_version_id": None,
-        "accepted_artifact_version_id": None,
-    }
-
 
 def _schedule_run_artifact_state(
     *,
@@ -675,24 +595,6 @@ def _schedule_artifact_state(
         "latest_artifact_version_id": latest_in_chain_artifact_version_id,
         "accepted_artifact_version_id": accepted_artifact_version_id,
     }
-
-
-def _schedule_dependency_rows_for_demo(
-    *,
-    source_examples: Mapping[str, str],
-) -> list[dict[str, Any]]:
-    refs_by_key = {
-        "route_slot_requirements": source_examples.get("route_slot_requirements"),
-        "approved_availability": source_examples.get("approved_availability"),
-        "driver_capabilities": source_examples.get("driver_capabilities"),
-        "actual_hours": source_examples.get("actual_hours_snapshot"),
-        "driver_preferences": None,
-    }
-    return _schedule_dependency_rows(
-        artifacts_by_key={},
-        refs_by_key=refs_by_key,
-    )
-
 
 def _schedule_dependency_rows_for_run(
     *,
@@ -1026,7 +928,7 @@ def _schedule_open_latest_draft_contract_action(
         "kind": "open_latest_draft",
         "label": "Open schedule draft",
         "state": state,
-        "workpage_kind": SCHEDULE_DEMO_WORKPAGE_ID,
+        "workpage_kind": SCHEDULE_WORKPAGE_KIND,
         "artifact_version_id": artifact_version_id or None,
         "route": route,
     }
@@ -1140,7 +1042,7 @@ def _schedule_artifact_contract_actions(
 ) -> list[dict[str, Any]]:
     actions: list[dict[str, Any]] = []
     if editable and artifact_kind == SCHEDULE_DRAFT_DATASET_KEY:
-        descriptor = get_workpage_descriptor(SCHEDULE_DEMO_WORKPAGE_ID)
+        descriptor = get_workpage_descriptor(SCHEDULE_WORKPAGE_KIND)
         preview_disabled_reason = schedule_preview_disabled_reason(dependencies)
         save_disabled_reason = schedule_save_disabled_reason(dependencies)
         actions.extend(
@@ -1150,7 +1052,7 @@ def _schedule_artifact_contract_actions(
                     "kind": "preview_recalc",
                     "label": str(descriptor.preview_action_label if descriptor is not None else "Preview recalculation"),
                     "state": "blocked" if preview_disabled_reason else "available",
-                    "workpage_kind": SCHEDULE_DEMO_WORKPAGE_ID,
+                    "workpage_kind": SCHEDULE_WORKPAGE_KIND,
                     "artifact_version_id": artifact_version_id,
                     "preview_path": canonical_schedule_artifact_preview_path(
                         workflow_run_id=workflow_run_id,
@@ -1163,7 +1065,7 @@ def _schedule_artifact_contract_actions(
                     "kind": "submit_artifact",
                     "label": "Save draft",
                     "state": "blocked" if save_disabled_reason else "available",
-                    "workpage_kind": SCHEDULE_DEMO_WORKPAGE_ID,
+                    "workpage_kind": SCHEDULE_WORKPAGE_KIND,
                     "artifact_version_id": artifact_version_id,
                     "submit_path": canonical_schedule_artifact_submit_path(
                         workflow_run_id=workflow_run_id,
@@ -1222,7 +1124,7 @@ def _build_schedule_workpage_view_model(
 ) -> dict[str, Any]:
     primary_demand = _sorted_daily_demand(bundle)[0]
     return {
-        "workpage_id": SCHEDULE_DEMO_WORKPAGE_ID,
+        "workpage_id": SCHEDULE_WORKPAGE_KIND,
         "version": 2,
         "title": "Weekly schedule review",
         "mode": "example",
@@ -1525,16 +1427,10 @@ def _latest_compatible_eod_draft_artifact(
 
 
 def _is_compatible_eod_draft_artifact(artifact: Mapping[str, Any]) -> bool:
-    if (
+    return (
         str(artifact.get("dataset_key") or artifact.get("artifact_kind") or "")
-        != _EOD_DRAFT_DATASET_KEY
-    ):
-        return False
-    metadata_json = artifact.get("metadata_json")
-    if not isinstance(metadata_json, Mapping):
-        return True
-    demo_workpage_id = metadata_json.get("demo_workpage_id")
-    return demo_workpage_id is None or str(demo_workpage_id) == EOD_DEMO_WORKPAGE_ID
+        == _EOD_DRAFT_DATASET_KEY
+    )
 
 
 def _require_mapping(
@@ -1549,23 +1445,6 @@ def _require_mapping(
 
 def _optional_mapping(value: Mapping[str, Any] | None) -> Mapping[str, Any] | None:
     return value
-
-
-def build_eod_demo_workpage_contract() -> dict[str, Any]:
-    source_examples = dict(_EOD_SOURCE_EXAMPLES)
-    source_refs = [
-        source_examples["eos_route_rows"],
-        source_examples["normalized_actuals"],
-        source_examples["upd_candidates"],
-    ]
-
-    return _build_eod_landing_contract(
-        source_examples=source_examples,
-        source_mode="demo",
-        source_refs=source_refs,
-        freshness_source_kind="repo_example_bundle",
-        freshness_source_version=_EOD_SOURCE_VERSION,
-    )
 
 
 def build_eod_workflow_run_workpage_contract(
@@ -1631,7 +1510,7 @@ def _build_eod_landing_workpage_view_model(
     normalized_rows = _load_eod_normalized_actuals()
     upd_rows = _load_eod_upd_candidates()
     return {
-        "workpage_id": EOD_DEMO_WORKPAGE_ID,
+        "workpage_id": EOD_WORKPAGE_KIND,
         "version": 2,
         "title": "End-of-day report",
         "mode": "example",
@@ -1726,7 +1605,7 @@ def build_eod_artifact_workpage_contract(
     )
     return {
         "workpage": {
-            "workpage_id": EOD_DEMO_WORKPAGE_ID,
+            "workpage_id": EOD_WORKPAGE_KIND,
             "version": 2,
             "title": "End-of-day report",
             "mode": "example",
@@ -2891,7 +2770,7 @@ def build_schedule_artifact_workpage_contract(
     )
     contract = {
         "workpage": {
-            "workpage_id": SCHEDULE_DEMO_WORKPAGE_ID,
+            "workpage_id": SCHEDULE_WORKPAGE_KIND,
             "version": 2,
             "title": (
                 "Weekly schedule draft artifact"
@@ -3208,64 +3087,6 @@ def build_schedule_artifact_workpage_contract(
         }
     )
     return contract
-
-
-@lru_cache(maxsize=1)
-def _load_actual_ops_source_material() -> dict[str, Any]:
-    loaded = yaml.safe_load(_ACTUAL_OPS_SOURCE_MATERIAL_PATH.read_text(encoding="utf-8"))
-    if not isinstance(loaded, dict):
-        raise ValueError(
-            "weekly Stage04 actual-ops source material must decode to an object"
-        )
-    return loaded
-
-
-@lru_cache(maxsize=1)
-def _schedule_demo_bundle() -> WeeklyScheduleControlBundle:
-    source_material = _load_actual_ops_source_material()
-    fixture_payloads = build_actual_ops_weekly_stage04_fixture_payloads()
-    planning_week_id = _require_text(source_material.get("planning_week_id"))
-    return build_weekly_schedule_control_bundle(
-        workflow_run={
-            "workflow_run_id": "wr-demo-schedule-v0",
-            "partition_key": planning_week_id,
-        },
-        route_slot_requirements_artifact={
-            "artifact_version_id": "av-demo-schedule-v0-routes",
-            "artifact_kind": _ROUTE_SLOT_DATASET_KEY,
-            "dataset_key": _ROUTE_SLOT_DATASET_KEY,
-            "metadata_json": fixture_payloads["route_slot_requirements"],
-        },
-        driver_capabilities_artifact={
-            "artifact_version_id": "av-demo-schedule-v0-drivers",
-            "artifact_kind": _DRIVER_CAPABILITIES_DATASET_KEY,
-            "dataset_key": _DRIVER_CAPABILITIES_DATASET_KEY,
-            "metadata_json": fixture_payloads["driver_capabilities"],
-        },
-        approved_availability_artifact={
-            "artifact_version_id": "av-demo-schedule-v0-availability",
-            "artifact_kind": _APPROVED_AVAILABILITY_DATASET_KEY,
-            "dataset_key": _APPROVED_AVAILABILITY_DATASET_KEY,
-            "metadata_json": fixture_payloads["approved_availability"],
-        },
-        actual_hours_artifact={
-            "artifact_version_id": "av-demo-schedule-v0-hours",
-            "artifact_kind": _ACTUAL_HOURS_DATASET_KEY,
-            "dataset_key": _ACTUAL_HOURS_DATASET_KEY,
-            "metadata_json": fixture_payloads["actual_hours"],
-        },
-    )
-
-
-def _source_examples(source_material: dict[str, Any]) -> dict[str, str]:
-    source_artifacts = source_material.get("source_artifacts")
-    if not isinstance(source_artifacts, dict):
-        raise ValueError("weekly Stage04 source material must declare source_artifacts")
-    return {
-        label: _require_text(source_artifacts.get(_SOURCE_ARTIFACT_KEYS[label]))
-        for label, _dataset_key in _SOURCE_DATASETS
-    }
-
 
 def _sorted_daily_demand(bundle: WeeklyScheduleControlBundle) -> list[Any]:
     return sorted(

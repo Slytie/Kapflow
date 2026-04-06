@@ -650,9 +650,9 @@ export function DispatchReportArtifactWorkpagePage(): JSX.Element {
             <header className="workpage-panel__header">
               <h2>Recent draft versions</h2>
               <p>
-                Recent immutable `reporting.upd_draft.workbook` versions for this demo reporting
-                run. Use these links to reopen adjacent draft states without leaving the EOD
-                workpage surface.
+                Recent immutable `reporting.upd_draft.workbook` versions for this reporting
+                workflow run. Use these links to reopen adjacent draft states without leaving the
+                EOD workpage surface.
               </p>
             </header>
 

@@ -43,3 +43,15 @@ These items are intentionally deferred, but the nuance matters and should not be
 ## 10) Rich operator catalog
 **Why deferred:** useful long term, but Stage 4 only needs small execution algebra plus workflow-specific guidance.  
 **What to preserve:** operator vocabulary should emerge from repeated evidence, not speculative taxonomy inflation.
+
+## 11) Date-specific driver exceptions
+**Why deferred:** Workpages v1 froze preferences as a weekly advisory snapshot only.  
+**What to preserve:** date-specific exception truth must stay explicit and canonical rather than leaking into weekly preference snapshots or schedule-side local heuristics.
+
+## 12) Auto-rescheduling after route-demand changes
+**Why deferred:** Workpages v1 intentionally stops at explicit drift detection and follow-up task creation.  
+**What to preserve:** route-demand saves must not silently mutate schedule truth or bypass canonical workflow/task/approval control.
+
+## 13) Post-v1 workpage hardening beyond cleanup
+**Why deferred:** EPIC-126 cleanup is limited to canonical-route hardening, fixture pruning, and active-doc synchronization.  
+**What to preserve:** broader feedback-driven operator changes should be selected deliberately as a future app-facing tranche rather than smuggled into cleanup work.

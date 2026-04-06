@@ -47,6 +47,23 @@ describe("logistics workpage routes", () => {
     expect(window.location.pathname).toBe("/runs/wr-report-001/workpages/eod-v0");
   });
 
+  it.each([
+    "/demo/logistics/workpages/schedule-v0",
+    "/demo/logistics/workpages/eod-v0",
+    "/demo/logistics/workpages/eod-v0/artifacts/av-eod-artifact-001"
+  ])("keeps retired demo workpage route %s unresolved under the shared shell", async (path) => {
+    setFrontendOperatorContext();
+    window.history.pushState({}, "", path);
+    render(<App />);
+
+    await waitFor(() => {
+      expect(screen.queryByTestId("logistics-family-nav")).not.toBeInTheDocument();
+      expect(screen.queryByTestId("schedule-workpage-page")).not.toBeInTheDocument();
+      expect(screen.queryByTestId("dispatch-report-workpage-page")).not.toBeInTheDocument();
+      expect(screen.queryByTestId("dispatch-report-artifact-workpage-page")).not.toBeInTheDocument();
+    });
+  });
+
   it("navigates from the shell graph to the live-dispatch workspace", async () => {
     const user = userEvent.setup();
     setFrontendOperatorContext();

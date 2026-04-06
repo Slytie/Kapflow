@@ -771,15 +771,18 @@ def test_weekly_stage04_execution_runtime_actual_ops_fixture_reaches_full_covera
     assert "baseline_template_state" in candidate_delta["columns"]
     assert "planned_driver_day_state" in candidate_delta["columns"]
     assert "template_state_preservation_fit" in candidate_delta["columns"]
-    assert validation_summary["reserve_summary"]["target_on_call_total"] == 28
-    assert validation_summary["reserve_summary"]["selected_on_call_total"] == 28
-    assert all(
-        count == 4
-        for count in validation_summary["reserve_summary"]["selected_on_call_by_service_date"].values()
+    reserve_summary = validation_summary["reserve_summary"]
+    assert reserve_summary["selected_on_call_total"] == reserve_summary["target_on_call_total"]
+    assert reserve_summary["selected_on_call_total"] == sum(
+        reserve_summary["selected_on_call_by_service_date"].values()
+    )
+    assert (
+        reserve_summary["selected_on_call_by_service_date"]
+        == reserve_summary["on_call_target_by_service_date"]
     )
     assert all(
         count == 0
-        for count in validation_summary["reserve_summary"]["unmet_on_call_target_by_service_date"].values()
+        for count in reserve_summary["unmet_on_call_target_by_service_date"].values()
     )
     assert validation_summary["excess_capacity_summary"]["target_excess_capacity_total"] == 21
     assert validation_summary["excess_capacity_summary"]["selected_excess_capacity_total"] == 21

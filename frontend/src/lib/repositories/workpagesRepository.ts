@@ -100,13 +100,7 @@ export const workpagesRepository = {
   async listEodDraftHistory(workflowRunId: string): Promise<ArtifactVersionRow[]> {
     const artifacts = await onetruthApi.listWorkflowRunArtifacts(workflowRunId);
     return artifacts
-      .filter((artifact) => {
-        if (artifact.artifact_kind !== "reporting.upd_draft.workbook") {
-          return false;
-        }
-        const demoWorkpageId = artifact.metadata_json?.demo_workpage_id;
-        return typeof demoWorkpageId !== "string" || demoWorkpageId === "eod-v0";
-      })
+      .filter((artifact) => artifact.artifact_kind === "reporting.upd_draft.workbook")
       .sort((left, right) => {
         const createdAtCompare = right.created_at.localeCompare(left.created_at);
         if (createdAtCompare !== 0) {

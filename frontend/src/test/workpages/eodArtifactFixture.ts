@@ -18,7 +18,7 @@ const DEFAULT_GENERATED_AT = "2026-03-25T09:00:00Z";
 const DEFAULT_SOURCE_REF =
   "fixtures/workflows/dispatch_reporting/template_pack/Stage03_Threshold_Detection_and_Draft_Packet/Stage03_Threshold_Detection_and_Draft_Packet_upd_draft_Spreadsheet_Template_EMPTY.xlsx";
 const WARNING_NOTE =
-  "This backend demo query is built from an intentionally partial 2026-03-16 QDCI / DVC4 reporting example family. Row-level actuals remain the primary truth because the source workbook summary tabs contained broken formulas.";
+  "This backend example-backed query is built from an intentionally partial 2026-03-16 QDCI / DVC4 reporting example family. Row-level actuals remain the primary truth because the source workbook summary tabs contained broken formulas.";
 
 export function buildEodArtifactWorkpageState(
   options: EodArtifactWorkpageOptions

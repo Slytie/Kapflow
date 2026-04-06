@@ -1,35 +1,30 @@
-# EPIC-126 Context Pack - Workpages v1 hardening and closeout
+# EPIC-126 Context Pack - Completed Workpages v1 cleanup epic
 
 Purpose:
-- You are reviewing or extending the deferred hardening tranche that follows EPIC-125.
-- You should only use this context after the first local operator demo has happened and real feedback exists.
-- You need to tighten the first operator lane without reopening major product-scope questions.
+- Finish cleanup after EPIC-131 without reopening the product boundary.
+- Keep active repo truth aligned with the canonical-only workpage posture.
+- Rehydrate the landed cleanup decisions if a later maintenance pass touches the same seams.
 
-## Non-negotiable invariants to keep in mind
-- Workpages remain derived surfaces; runtime rows, events, artifacts, and pointers remain canonical truth.
-- Hardening is feedback-driven. Do not invent polish work for hypothetical flows.
-- Do not broaden into new workflow-family scope, raw-email parser ownership, live-dispatch algorithmics, or generic spreadsheet/runtime ambitions.
-- Route cleanup must preserve one canonical route truth and not create a second workpage family or shell.
+## Non-negotiable invariants
+- Workpages remain derived surfaces over canonical runtime truth.
+- No return to `/api/v1/workpages/demo/*`, `/api/v1/workpages/artifacts/*`, or `/demo/logistics/workpages/*`.
+- Active action vocabulary is `open_route | create_then_open`.
+- `/demo/logistics` stays as the shell entrypoint only.
 
-## Contracts and docs to treat as authoritative
+## Authoritative docs
 - `docs/planning/epics/EPIC-126.md`
-- `codex/context/EPIC-126.md`
-- `docs/planning/LOGISTICS_WORKPAGES_OPERATIONAL_CADENCE_PLAN.md`
 - `docs/status/CURRENT_FOCUS.md`
 - `docs/status/DECISIONS_SINCE_LAST.md`
-- the final EPIC-125 closeout docs and verification logs once they exist
+- `docs/planning/FRONTEND_PAGE_MAP.md`
+- `docs/planning/HITL_HTTP_API_CONTRACTS.md`
+- `docs/planning/LOGISTICS_WORKPAGES_V1_OPERATOR_READINESS_NOTE.md`
 
-## Current repo status
-- EPIC-125 is now active, but the first local operator demo and continuous production-shaped cadence milestones are not implemented yet.
-- EPIC-126 remains explicitly deferred until after that feedback exists.
-
-## Intended implementation order inside this epic
-1. `TASK-0158` - Triage first-demo feedback and land the highest-value UX corrections
-2. `TASK-0159` - Harden regression, observability, and failure-state truth
-3. `TASK-0160` - Freeze Workpages v1 boundary, clean up route posture, and close doc truth
+## Delivered sequence
+1. `TASK-0158` - internal cleanup and vocabulary normalization
+2. `TASK-0159` - canonical regression, fixture, and guardrail hardening
+3. `TASK-0160` - repo-truth closeout and active-doc synchronization
 
 ## Stop line
-- No new workflow-family scope.
-- No live-dispatch candidate generation or ranking.
-- No Stage06/Stage07 schedule workpage widening.
-- No generic email ingestion or spreadsheet-runtime expansion.
+- No new app-facing epic is selected after this cleanup closeout.
+- No new workpage surface is added here.
+- Historical docs may stay historical, but active docs and active fixtures must reflect the canonical-only posture.

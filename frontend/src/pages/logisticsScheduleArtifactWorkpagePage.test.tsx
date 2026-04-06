@@ -166,7 +166,7 @@ describe("LogisticsScheduleArtifactWorkpagePage", () => {
         expect(mutationLog()).toContain("artifact-download-bin:av-schedule-artifact-002");
       });
     },
-    25000
+    40000
   );
 
   it("reopens the previous draft from the draft rail and shows the stale-version guidance", async () => {

@@ -73,10 +73,15 @@ frontend/
 ```
 
 ## 3) Route map
-- `/demo/logistics` -> primary three-workflow logistics shell plus workpage launch point for EOD preview/create
-- `/demo/logistics/workpages/schedule-v0` -> weekly schedule review + selected-day preview workpage
-- `/demo/logistics/workpages/eod-v0` -> end-of-day landing/preview workpage with create-draft affordance
-- `/demo/logistics/workpages/eod-v0/artifacts/:artifactVersionId` -> artifact-backed end-of-day draft/review workpage
+- `/demo/logistics` -> primary three-workflow logistics shell plus canonical workpage launch point
+- `/runs/:workflowRunId/workpages/schedule-v0` -> canonical weekly schedule landing page
+- `/runs/:workflowRunId/workpages/schedule-v0/artifacts/:artifactVersionId` -> canonical artifact-backed weekly schedule editor/history page
+- `/runs/:workflowRunId/workpages/route-demand-v0` -> canonical route-demand landing page
+- `/runs/:workflowRunId/workpages/route-demand-v0/artifacts/:artifactVersionId` -> canonical artifact-backed route-demand editor/history page
+- `/runs/:workflowRunId/workpages/driver-preferences-v0` -> canonical driver-preferences landing page
+- `/runs/:workflowRunId/workpages/driver-preferences-v0/artifacts/:artifactVersionId` -> canonical artifact-backed driver-preferences editor/history page
+- `/runs/:workflowRunId/workpages/eod-v0` -> canonical end-of-day landing page
+- `/runs/:workflowRunId/workpages/eod-v0/artifacts/:artifactVersionId` -> canonical artifact-backed end-of-day editor/history page
 - `/board` -> board overview lanes (tasks/approvals/exception work)
 - `/my-work` -> dense assigned queue with inline actions
 - `/approvals` -> approval queue + review workspace split
@@ -103,9 +108,9 @@ frontend/
   - `pointersRepository`
   - `timelineRepository`
   - `boardRepository`
-- `workpagesRepository` (including EOD draft creation, submit, and recent-history filtering over workflow-run artifact lists)
+- `workpagesRepository` (including canonical workpage create/preview/submit flows and recent-history filtering over workflow-run artifact lists)
 - Components/pages do not call raw `fetch`.
-- Workpage example builders may remain as oracle/test fixtures, but the active workpage routes now read backend demo query contracts through HTTP-backed repositories.
+- Workpage example builders may remain as oracle/test fixtures, but the active workpage routes now read backend canonical run/kind-scoped contracts through HTTP-backed repositories.
 
 ## 6) Polling and freshness model
 - Pages use TanStack Query with bounded polling intervals.
@@ -135,17 +140,16 @@ frontend/
 
 ## 10) Workpage surfaces
 - Canonical workflow-run-backed workpages live under `/runs/:workflowRunId/workpages/*`.
-- `/demo/logistics/workpages/*` remains implemented as a compatibility-alias family.
 - Treat `/demo/logistics/*` as logistics-shell routes in `AppShell`.
 - These pages are sibling full-page routes under `AppShell`, not children rendered inside `LogisticsDemoPage`.
-- The current v0 pages now split between a query-backed landing surface and an artifact-backed editing surface while still reading backend-owned contracts through the HTTP-backed workpage repository.
-- Example-backed builders remain oracle/test fixtures only; they are no longer the active route seam.
-- `schedule-v0` stays on the weekly-planning review side of the boundary and only offers local what-if inputs.
+- The current workpage layer uses canonical run-backed landing surfaces and artifact-backed editing/history surfaces.
+- Example-backed builders remain oracle/test fixtures only; they are not the active route seam.
+- `schedule-v0` stays on the weekly-planning review side of the boundary and offers reassignment/on-call edits plus server recalculation only.
 - `eod-v0` stays on `reporting.upd_draft.workbook` / draft-review semantics and does not claim final-packet authority.
-- The logistics shell now exposes canonical run-backed workpage links as the primary header actions, keeps demo workpage links in a clearly labeled compatibility-alias section, and adds run-specific workpage CTAs to the weekly-planning and dispatch-reporting family drilldown card.
-- `/demo/logistics/workpages/eod-v0` remains the query-backed landing page and is now preview-only with a create-draft CTA.
-- `/demo/logistics/workpages/eod-v0/artifacts/:artifactVersionId` is the only active editable EOD surface in this epic; it reuses the same section ids, adds bounded submit/conflict/download/lineage UX, and keeps the backend authoritative for version changes.
+- `route-demand-v0` owns route-demand truth edits separately from `schedule-v0`.
+- `driver-preferences-v0` is a soft/advisory weekly snapshot surface only.
+- The logistics shell exposes canonical run-backed workpage links as the primary workpage entrypoints.
 - The artifact-backed EOD route also reuses `GET /api/v1/workflow-runs/{workflow_run_id}/artifacts` for recent draft history instead of adding a new workpage-specific history endpoint.
 - The schedule page is **composite** over multiple weekly-planning source datasets; future backend route design must leave room for run/composite projections and not assume one artifact per page.
-- The EOD page is the first implemented artifact-backed workpage path.
+- Active workspace action presentation is `open_route | create_then_open`.
 - Human-authored workpage fixtures live under `fixtures/logistics/workpages/` and are distinct from backend-generated frontend contract snapshots in `fixtures/frontend_contracts/`.

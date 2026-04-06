@@ -163,12 +163,12 @@ Note: `TASK-0087` / `TASK-0088` / `TASK-0089` were formerly duplicated as `TASK-
 | TASK-0156 | EPIC-125 | TODO | medium | Add the external cadence tick, single-node production-shaped deployment path, and operator runbook |
 | TASK-0157 | EPIC-125 | TODO | medium | Close EPIC-125, capture first-demo feedback, and sync doc/status truth |
 | TASK-0201 | EPIC-131 | DONE | medium | Freeze clarified SME decisions and correct the boundary between schedule edits, route-demand edits, and accepted-series navigation |
-| TASK-0202 | EPIC-131 | TODO | high | Add backend workpage descriptors, calculated contract blocks, and accepted-series queries |
-| TASK-0203 | EPIC-131 | TODO | high | Implement schedule preview recalculation, pinned baselines, and companion calculation evidence |
-| TASK-0204 | EPIC-131 | TODO | high | Redesign schedule-v0 frontend for live heatmap recalculation, driver metrics, compliance status, and version rails |
-| TASK-0205 | EPIC-131 | TODO | high | Implement route-demand-v0 operational editor and propagate route-demand changes into schedule drift |
-| TASK-0206 | EPIC-131 | TODO | medium | Add driver-preferences-v0 and integrate it as a soft advisory schedule input |
-| TASK-0207 | EPIC-131 | TODO | medium | Close the epic with regressions, docs, compatibility cleanup, and deferred-item markers |
-| TASK-0158 | EPIC-126 | TODO | medium | Triage first-demo feedback and land the highest-value workpage UX corrections |
-| TASK-0159 | EPIC-126 | TODO | medium | Harden regression, observability, and failure-state truth for weekly/daily operator loops |
-| TASK-0160 | EPIC-126 | TODO | medium | Freeze the Workpages v1 boundary, clean up route posture, and close doc truth |
+| TASK-0202 | EPIC-131 | DONE | high | Add backend workpage descriptors, calculated contract blocks, and accepted-series queries |
+| TASK-0203 | EPIC-131 | DONE | high | Implement schedule preview recalculation, pinned baselines, and companion calculation evidence |
+| TASK-0204 | EPIC-131 | DONE | high | Redesign schedule-v0 frontend for live heatmap recalculation, driver metrics, compliance status, and version rails |
+| TASK-0205 | EPIC-131 | DONE | high | Implement route-demand-v0 operational editor and propagate route-demand changes into schedule drift |
+| TASK-0206 | EPIC-131 | DONE | medium | Add driver-preferences-v0 and integrate it as a soft advisory schedule input |
+| TASK-0207 | EPIC-131 | DONE | medium | Close the epic with regressions, docs, compatibility cleanup, and deferred-item markers |
+| TASK-0158 | EPIC-126 | DONE | medium | Remove demo-era source drift and normalize active workpage action vocabulary |
+| TASK-0159 | EPIC-126 | DONE | medium | Harden canonical-route regressions, fixtures, and guardrails |
+| TASK-0160 | EPIC-126 | DONE | medium | Close Workpages v1 repo-truth and synchronize active docs |

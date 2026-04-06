@@ -721,6 +721,9 @@ def test_actual_ops_v4_weekly_stage04_pilot_corrects_low_shift_driver_inputs(
         candidate_delta=candidate_delta,
         input_bundle=input_bundle,
     )
+    drivers_below_three = {
+        driver_id: count for driver_id, count in shift_counter.items() if count < 3
+    }
     corrected_driver_ids = {
         "A2GJBFCCI1VYRB",
         "A3NLLQPB0L46N9",

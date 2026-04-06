@@ -2,6 +2,21 @@
 
 Record any decisions made since the last session so a fresh Codex run can rehydrate quickly.
 
+## 2026-04-05 (EPIC-126 cleanup trio closeout)
+- Cleanup-closeout decision: `TASK-0158`, `TASK-0159`, and `TASK-0160` are complete, so the Workpages v1 cleanup trio should be treated as landed rather than active follow-on work.
+- Active-truth decision: current docs, current snapshots, and current source/test guardrails now describe only the canonical run/kind-scoped workpage posture plus `/demo/logistics` as the shell-only entrypoint.
+- Fixture decision: retired frontend contract fixtures `workpage_schedule_v0_state.json`, `workpage_eod_v0_state.json`, and `workpage_eod_v0_artifact_create_response.json` are removed from the committed active set.
+- Build-artifact decision: `frontend/dist` is not a tracked repo-truth surface in this workspace and is excluded from active cleanup acceptance.
+- Selection decision: after the Workpages v1 cleanup trio, no new app-facing epic is selected yet.
+
+## 2026-04-05 (EPIC-131 closeout and EPIC-126 cleanup activation)
+- Closeout decision: EPIC-131 is complete, and `TASK-0202` through `TASK-0207` should be treated as implemented rather than pending.
+- Route-posture decision: the active public workpage posture is now canonical-only. Public `/api/v1/workpages/demo/*`, public `/api/v1/workpages/artifacts/*`, and frontend `/demo/logistics/workpages/*` are retired.
+- Shell decision: `/demo/logistics` remains the primary logistics shell entrypoint, but it launches only canonical `/runs/:workflowRunId/workpages/*` pages.
+- Vocabulary decision: active workspace/workpage action presentation is now `open_route | create_then_open` only.
+- Cleanup-epic decision: EPIC-126 is now the active follow-on cleanup epic for internal drift removal, canonical regression hardening, fixture pruning, and active-doc synchronization.
+- Selection decision: no new app-facing product-expansion epic is selected after EPIC-131; only EPIC-126 cleanup is active.
+
 ## 2026-04-04 (TASK-0201 EPIC-131 boundary freeze and routing selection)
 - Next-workpages-epic decision: EPIC-131 is now the selected app-facing workpages follow-on after the first weekly-first local demo clarification, and `TASK-0201` is complete as the doc-only repo-native freeze.
 - Boundary decision: `schedule-v0` is explicitly frozen as a driver reassignment/on-call surface plus server recalculation only; route-demand edits belong to a separate `route-demand-v0` surface, and `driver-preferences-v0` is a separate soft/advisory weekly snapshot.

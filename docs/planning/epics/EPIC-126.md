@@ -1,50 +1,41 @@
-# EPIC-126 - Workpages v1 hardening and closeout
+# EPIC-126 - Workpages v1 cleanup and closeout hardening
 
 ## Summary
-After the first operational cadence demo is running and a real local user demo has produced feedback, harden the weekly/daily operator lane and explicitly close the first version of Workpages.
+Clean up the post-EPIC-131 workpage layer without widening product scope. This epic landed as the Workpages v1 cleanup/closeout tranche.
 
 ## Status
-Proposed. Deferred until EPIC-125 reaches the first local demo and real feedback exists. Do not start this epic while EPIC-125 is still establishing the first running operator loop.
+Completed on 2026-04-05.
 
 ## Scope
 ### In scope
-- feedback-driven UX corrections from the first local demo
-- stronger regression coverage for weekly planning, manual daily replan, and daily reporting loops
-- clearer operator language around draft, response, official output, delta, lineage, and stale state
-- local/prod demo runbook tightening
-- route/alias cleanup once canonical operator paths are proven
-- explicit Workpages v1 boundary and acceptance proof
+- internal demo-era naming and stale action-vocabulary cleanup
+- canonical-route regression and snapshot hardening
+- active doc/status synchronization for the final Workpages v1 posture
+- explicit operator-readiness and deferred-item recording
 
 ### Out of scope
 - new workflow-family scope
-- algorithmic live-dispatch candidate generation
-- Stage06/Stage07 schedule workpage widening beyond the agreed v1 boundary
-- generic email ingestion or generic spreadsheet-runtime ambitions
-- broader topology changes unrelated to the first-user lane
+- new workpage kinds
+- route-alias resurrection
+- live-dispatch algorithmics or generic spreadsheet/runtime expansion
 
 ## Dependencies
-- EPIC-125 (running operator loop plus first local-demo feedback)
-- EPIC-124 (stage-linked workpage route/CTA foundation)
-- EPIC-100 (production-lane posture and runbook discipline)
-
-## Recommended pattern cards (read cards first)
-- `PATTERN-007`
-- `PATTERN-009`
+- EPIC-131
+- EPIC-124
+- EPIC-100
 
 Context pack: `codex/context/EPIC-126.md`
 
 ## Current repo posture
-- EPIC-125 is now active, but the local-demo milestone and continuous cadence milestone are not yet implemented.
-- Hardening should consume observed operator feedback, not imagined polish work.
-- This epic exists to tighten truth, regressions, language, observability, and route posture after the first real operator loop is demonstrated.
+- EPIC-131 is complete.
+- Public workpage posture is canonical-only.
+- `/demo/logistics` remains the shell entrypoint, but nested demo workpage routes are retired.
+- No new app-facing epic is selected after this cleanup closeout.
 
 ## Tasks
-- TASK-0158 - TODO
-- TASK-0159 - TODO
-- TASK-0160 - TODO
+- TASK-0158 - DONE
+- TASK-0159 - DONE
+- TASK-0160 - DONE
 
 ## Key decision
-Do not harden hypothetical flows. Hardening begins only after the first local operator demo and the initial production-shaped cadence milestone are real.
-
-## Red-team question
-Are we actually closing the first version of Workpages with explicit boundaries and stronger operator confidence, or are we using hardening as a way to continue widening product scope without declaring what v1 means?
+Treat this epic as cleanup and truth-hardening only. Do not smuggle new operator scope into the closeout tranche.

@@ -242,7 +242,7 @@ Stage-linked workpage action shape (`workpage_actions[]`, frozen in `TASK-0146`)
   - `action_id`
   - `workpage_kind`
   - `label`
-  - `presentation` (`open_route|create_draft_then_open`)
+  - `presentation` (`open_route|create_then_open`)
   - `state` (`available|unavailable`)
   - `route` (canonical frontend route or `null`)
   - `create_path` (canonical API create path or `null`)
@@ -282,7 +282,7 @@ Supported surface matrix (frozen in `TASK-0146`):
 | `weekly_schedule_planning.v1` | `/runs/:workflowRunId/workspace` work items | human task `Stage05/information_request` | latest canonical schedule artifact route | `open_route` | Access is for draft review/edit context only. |
 | `weekly_schedule_planning.v1` | `/runs/:workflowRunId/workspace` work items | human task `Stage05/final_review` | latest canonical schedule artifact route | `open_route` | Review access only, not publish or finalization. |
 | `weekly_schedule_planning.v1` | `/runs/:workflowRunId/workspace` work items | approval `scope_ref=Stage06` | latest canonical schedule artifact route | `open_route` | Approval access stays distinct from approval response. |
-| `dispatch_reporting.v1` | `/runs/:workflowRunId/workspace` work items | approval `scope_ref=Stage04` | latest canonical EOD artifact route if present, else canonical EOD create route | `open_route` or `create_draft_then_open` | Approval access only, no implicit approval response. |
+| `dispatch_reporting.v1` | `/runs/:workflowRunId/workspace` work items | approval `scope_ref=Stage04` | latest canonical EOD artifact route if present, else canonical EOD create route | `open_route` or `create_then_open` | Approval access only, no implicit approval response. |
 
 Subject-link semantics (frozen in `TASK-0146`):
 - `attachment` keeps existing upload/evidence semantics
@@ -381,26 +381,27 @@ Board object shape:
 ### 3.10 Workpage surfaces
 Route-family decision:
 - implemented today:
-  - `GET /api/v1/workpages/demo/{workpage_id}`
   - `GET /api/v1/workpages/workflow-runs/{workflow_run_id}/schedule-v0`
   - `GET /api/v1/workpages/workflow-runs/{workflow_run_id}/eod-v0`
-  - `POST /api/v1/workpages/demo/eod-v0/drafts`
+  - `GET /api/v1/workpages/workflow-runs/{workflow_run_id}/route-demand-v0`
+  - `GET /api/v1/workpages/workflow-runs/{workflow_run_id}/driver-preferences-v0`
   - `POST /api/v1/workpages/workflow-runs/{workflow_run_id}/eod-v0/drafts`
-  - `GET /api/v1/workpages/artifacts/{artifact_version_id}`
-  - `POST /api/v1/workpages/artifacts/{artifact_version_id}/submit`
+  - `POST /api/v1/workpages/workflow-runs/{workflow_run_id}/driver-preferences-v0/snapshots`
+  - `GET /api/v1/workpages/workflow-runs/{workflow_run_id}/{workpage_kind}/artifacts/{artifact_version_id}`
+  - `POST /api/v1/workpages/workflow-runs/{workflow_run_id}/{workpage_kind}/artifacts/{artifact_version_id}/submit`
+  - `POST /api/v1/workpages/workflow-runs/{workflow_run_id}/schedule-v0/artifacts/{artifact_version_id}/preview`
 
-The `demo` subfamily is implemented today. After EPIC-122 it remains a compatibility-alias family, not the primary or long-term canonical access model. The canonical frontend run-backed pages now live under `/runs/:workflowRunId/workpages/*`. After EPIC-123, the implemented artifact-backed family now covers both EOD (`reporting.upd_draft.workbook`) and the bounded Stage04 schedule draft lane (`planning.draft_weekly_schedule.workbook`), while Stage06 publish, Stage07 seeds, and live-dispatch remain out of scope.
+Public workpage posture is canonical-only. The frontend workpage pages now live under `/runs/:workflowRunId/workpages/*`, while `/demo/logistics` remains only the shell entrypoint that launches those canonical pages.
 
 `TASK-0146` does not add any new workpage routes. Stage-linked workpage access remains an additive workspace projection over these existing canonical families rather than a second route family or second shell.
 
 `TASK-0147` keeps the write-boundary seam on these same routes. Supported stage-linked create/submit flows may now accept one optional `subject_link` object; callers do not supply raw `links[]` or `relation_kind`, and the server derives relation-kind semantics from the specific workpage flow.
 
-Current planned demo workpage ids:
+Current planned workpage ids:
 - `schedule-v0`
 - `eod-v0`
-
-Demo query response:
-- `{"status":"ok","command":"api.workpages.demo","workpage":{...},"source":{...},"freshness":{...}}`
+- `route-demand-v0`
+- `driver-preferences-v0`
 
 Workflow-run-backed query response (implemented today for `schedule-v0` and `eod-v0`):
 - `{"status":"ok","command":"api.workpages.workflow_run","workpage":{...},"source":{...},"freshness":{...},"run_context":{...},"draft_resolution":null|{...}}`
@@ -422,7 +423,7 @@ Workpage object shape (`workpage`):
 - `validation`
 
 Source metadata shape (`source`):
-- `mode` (`demo|artifact_projection|run_projection`)
+- `mode` (`artifact_projection|run_projection`)
 - `primary_dataset_key`
 - `source_dataset_keys[]`
 - `source_artifact_version_id`
@@ -463,8 +464,8 @@ Notes:
 - Run-backed schedule responses should set `run_context` and leave `draft_resolution=null`.
 - The implemented run-backed schedule route currently lives at `GET /api/v1/workpages/workflow-runs/{workflow_run_id}/schedule-v0`.
 - The implemented run-backed schedule route uses `source.mode=run_projection`, keeps `source_artifact_version_id=null`, and uses `freshness.source_kind=workflow_run_projection` plus `freshness.source_version=bundle.bundle_id`.
-- If a weekly run does not yet have the required Stage04 input artifacts, the run-backed schedule route should fail cleanly with `409 workpage_projection_unavailable` and explicit missing dataset keys rather than falling back to demo defaults.
-- The implemented schedule artifact-backed slice is anchored to `planning.draft_weekly_schedule.workbook` on canonical frontend route `/runs/:workflowRunId/workpages/schedule-v0/artifacts/:artifactVersionId`, reusing the existing generic artifact-backed `GET /api/v1/workpages/artifacts/{artifact_version_id}` and `POST /api/v1/workpages/artifacts/{artifact_version_id}/submit` family.
+- If a weekly run does not yet have the required Stage04 input artifacts, the run-backed schedule route should fail cleanly with `409 workpage_projection_unavailable` and explicit missing dataset keys.
+- The implemented schedule artifact-backed slice is anchored to `planning.draft_weekly_schedule.workbook` on canonical frontend route `/runs/:workflowRunId/workpages/schedule-v0/artifacts/:artifactVersionId`, using the canonical run/kind-scoped artifact read, submit, and preview routes.
 - Do **not** add `POST /api/v1/workpages/workflow-runs/{workflow_run_id}/schedule-v0/drafts`; Stage04 already materializes the initial draft workbook.
 - In the implemented schedule slice, `planning.manager_review.doc` remains evidence only, while `planning.published_weekly_schedule.workbook` and `planning.daily_dispatch_seed.*` remain outside the edit surface.
 - Run-backed EOD landing responses should set `run_context` plus `draft_resolution`, but must not pretend to be artifact projections.
@@ -475,9 +476,8 @@ Notes:
 - `artifact_context` is reserved for `source.mode=artifact_projection`; do not overload it on run-backed landing pages.
 - `TASK-0137` intentionally freezes a narrow `draft_resolution` field instead of a generic `actions` blob.
 - Artifact-backed EOD reads must remain projections over canonical workbook artifacts; the workpage is derived and the workbook artifact version remains authoritative truth.
-- Artifact-backed EOD drafts must be anchored to canonical `dispatch_reporting.v1` workflow runs. No runless demo artifact store is allowed.
-- The implemented EOD route is intentionally built from an intentionally partial example family, so its authoritative demo-query summary values are source-derived partial totals with explicit formula-integrity warnings rather than fixture-only full-day numbers.
-- Demo workpage routes must be backend-built from authoritative example/source inputs, not by serving the human-authored workpage YAML fixtures verbatim.
+- Artifact-backed EOD drafts must be anchored to canonical `dispatch_reporting.v1` workflow runs.
+- The implemented EOD route is intentionally built from an intentionally partial example family, so its authoritative run/artifact summaries surface explicit formula-integrity warnings rather than fixture-only full-day numbers.
 - Backend-generated workpage route snapshots belong under `fixtures/frontend_contracts/`; human-authored workpage planning fixtures remain under `fixtures/logistics/workpages/`.
 
 ### 3.11 Artifact/document rows and downloads
@@ -603,36 +603,26 @@ Rules:
 
 ### 4.5 Create artifact-backed EOD draft
 Endpoint:
-- current implemented alias:
-  - `POST /api/v1/workpages/demo/eod-v0/drafts`
-- implemented canonical EPIC-122 route:
-  - `POST /api/v1/workpages/workflow-runs/{workflow_run_id}/eod-v0/drafts`
+- `POST /api/v1/workpages/workflow-runs/{workflow_run_id}/eod-v0/drafts`
 
 Body:
 - `idempotency_key`
 - `subject_link` (optional on the canonical run-backed route only; object with `subject_kind` and `subject_id`)
 
 Response:
-- current implemented alias response:
-  - `{"status":"ok","command":"api.workpages.eod_drafts.create","draft":{"workflow_run_id":"...","artifact_version_id":"...","route":"/demo/logistics/workpages/eod-v0/artifacts/{artifact_version_id}"}}`
-- implemented canonical EPIC-122 response:
-  - `{"status":"ok","command":"api.workpages.eod_drafts.create","draft":{"workflow_run_id":"...","artifact_version_id":"...","route":"/runs/{workflow_run_id}/workpages/eod-v0/artifacts/{artifact_version_id}"}}`
+- `{"status":"ok","command":"api.workpages.eod_drafts.create","draft":{"workflow_run_id":"...","artifact_version_id":"...","route":"/runs/{workflow_run_id}/workpages/eod-v0/artifacts/{artifact_version_id}"}}`
 
 Rules:
-- resolve or create the canonical demo `dispatch_reporting.v1` run for the known example slice,
-- the run-backed EPIC-122 create route must resolve drafts only inside the supplied canonical workflow run,
+- resolve drafts only inside the supplied canonical workflow run,
 - instantiate a new `reporting.upd_draft.workbook` artifact version from the reporting template pack,
-- do not create runless demo artifacts,
-- keep the demo create route as a compatibility alias until the canonical run-backed surfaces are proven,
 - keep create semantics explicit and idempotent,
-- the demo alias rejects `subject_link` with `invalid_workpage_subject_link`,
 - the canonical run-backed create route accepts `subject_link` only for supported `dispatch_reporting.v1` Stage04 approval surfaces and `Stage04/final_packet_review` human-task surfaces,
 - callers do not supply `relation_kind`; the server derives `draft`,
 - same-run subject validation still fails closed as `cross_workflow_link_reference`.
 
 ### 4.6 Submit artifact-backed workpage draft
 Endpoint:
-- `POST /api/v1/workpages/artifacts/{artifact_version_id}/submit`
+- `POST /api/v1/workpages/workflow-runs/{workflow_run_id}/{workpage_kind}/artifacts/{artifact_version_id}/submit`
 
 Body:
 - workpage edit fields:
