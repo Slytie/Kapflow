@@ -2,6 +2,11 @@
 
 Record any decisions made since the last session so a fresh Codex run can rehydrate quickly.
 
+## 2026-04-06 (TASK-0157 EPIC-125 closeout and first-demo feedback truth)
+- Epic-closeout decision: EPIC-125 is now complete; `TASK-0151` through `TASK-0157` should be treated as completed history rather than as an active operator-loop backlog.
+- Reconciliation decision: `TASK-0154` is marked `DONE` from existing live-dispatch runtime truth already visible in handlers, runtime proof, the weekly-first local demo smoke, and the operator runbooks; `TASK-0157` does not add new runtime behavior.
+- Feedback-handoff decision: first-demo feedback is now recorded as historical input to the later landed tranches (completed EPIC-126 cleanup history plus EPIC-131, EPIC-132, EPIC-133, and EPIC-134), not as permission to reopen EPIC-125 or speak about EPIC-126 in future tense.
+
 ## 2026-04-06 (TASK-0156 external cadence tick and single-node logistics operator runbook)
 - Cadence-entrypoint decision: the first continuous logistics operator cadence now runs through the repo-native installed CLI surface `onetruthctl cadence tick-logistics`, not a demo-only seed script and not an embedded scheduler.
 - Bounded-orchestration decision: the cadence tick may only ensure due weekly/reporting runs and human tasks plus prepare `live_dispatch.v1` once weekly publish truth exists; it must not upload operator inputs, run weekly Stage04, complete reviews, or auto-approve workflow work.

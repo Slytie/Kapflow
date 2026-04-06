@@ -1,5 +1,10 @@
 # Logistics Workpages - operational cadence plan (red-team revised)
 
+Status note (2026-04-06):
+- EPIC-125 is complete.
+- This document now serves as historical planning rationale for the operator-loop tranche.
+- The later feedback-consuming follow-on work is already reflected in completed EPIC-126 cleanup history plus the landed EPIC-131, EPIC-132, EPIC-133, and EPIC-134 tranches.
+
 ## Goal
 Deliver the smallest truthful operator lane that proves Workpages can run the first real logistics use case end to end:
 - weekly Friday planning,
@@ -51,11 +56,11 @@ Best practice at this stage is:
 - then wire the continuous external cadence and deployment path,
 - then harden.
 
-## Recommended epic sequence
+## Historical epic sequence
 ### EPIC-125 — Operational cadence demo
 Build the first local and production-shaped operator loop.
 
-### EPIC-126 — Workpages v1 hardening and closeout
+### Historical EPIC-126 handoff
 Consume feedback, harden the operator lane, tighten route truth, and close the v1 boundary.
 
 ## EPIC-125 architecture
@@ -109,8 +114,8 @@ It avoids introducing, for now:
 - a broader schedule-control UI,
 - a new route family or shell.
 
-## Local-demo milestone
-The first local demo should happen once the repo can truthfully do all of the following on a single developer machine:
+## Historical local-demo milestone
+At planning time, the first local demo needed to happen once the repo could truthfully do all of the following on a single developer machine:
 1. seed or create the next weekly planning run,
 2. upload the required weekly planning inputs,
 3. run the existing Stage04 planner/agent,
@@ -123,10 +128,10 @@ The first local demo should happen once the repo can truthfully do all of the fo
 10. finalize the daily reporting packet,
 11. verify the actual-hours feedback appears in planning truth.
 
-This milestone should come **before** external cadence automation.
+This milestone needed to come **before** external cadence automation.
 
-## Production-shaped milestone
-Only after the local milestone is working should the repo add:
+## Historical production-shaped milestone
+Only after the local milestone was working should the repo add:
 - an idempotent cadence CLI tick,
 - cron/systemd/Kubernetes CronJob wiring,
 - a single-node deployment/runbook,
@@ -141,8 +146,8 @@ Do not include:
 - broad hardening work,
 - multi-node operational complexity.
 
-## EPIC-126 goal
-Once the first local demo has happened and the production-shaped demo environment is up, EPIC-126 should:
+## Historical EPIC-126 goal at planning time
+Once the first local demo had happened and the production-shaped demo environment was up, EPIC-126 was expected to:
 - absorb feedback,
 - harden UX and operator language,
 - strengthen regression and observability,

@@ -9,7 +9,12 @@ This epic is intentionally bounded to:
 - `dispatch_reporting.v1`
 
 ## Status
-Active on 2026-03-29. `TASK-0151` is complete and freezes the operator-loop contract, authoritative-input posture, and milestone boundaries. `TASK-0152` is now complete and lands the weekly Friday intake -> Stage04 build -> review -> publish loop. `TASK-0153` is now complete and lands the daily EOS intake -> deterministic draft build -> EOD review -> finalize -> planning feedback loop. `TASK-0155` is now complete and lands the weekly-first local demo seed, runbook, and entry surface. `TASK-0156` is now complete and lands the external cadence tick plus single-node continuous operator runbook. The remaining cadence backlog is `TASK-0154` and `TASK-0157`, but EPIC-131 is now the next selected workpages priority.
+Completed on 2026-04-06. `TASK-0151` through `TASK-0157` are now complete. `TASK-0154` is reconciled to `DONE` from existing live-dispatch runtime truth rather than newly implemented during the closeout pass, and `TASK-0157` closes the epic by aligning repo memory plus recording the first-demo feedback handoff.
+
+Closeout note:
+- EPIC-125 is now completed history rather than an active implementation epic.
+- The downstream feedback-consuming work is already reflected in completed EPIC-126 cleanup history plus the landed EPIC-131, EPIC-132, EPIC-133, and EPIC-134 tranches.
+- First-demo feedback themes are frozen in `docs/planning/LOGISTICS_WORKPAGES_EPIC125_CLOSEOUT_AND_FEEDBACK_NOTE.md`.
 
 ## Key goal
 Prove the following operator loop end to end:
@@ -52,7 +57,7 @@ I^{daily}_{eos} \to B^{reporting}_{draft} \to R^{manager}_{eod} \to O^{daily}_{f
 3. Daily actual-routes truth remains in `dispatch_reporting.v1` through `reporting.eos_raw.workbook`.
 4. The daily schedule can change through a **manual live-dispatch delta lane**, not through widened weekly schedule editing.
 5. The first local demo happens **before** the continuous cadence/deploy milestone.
-6. Hardening remains deferred to EPIC-126.
+6. At planning time, hardening was deferred until after first-demo feedback; that follow-on path is now completed history.
 
 ## Dependencies
 - EPIC-124 (stage-linked workpages and requirement-aware artifact linkage)
@@ -67,23 +72,23 @@ Context pack: `codex/context/EPIC-125.md`
 
 ## Current repo status / rationale
 - EPIC-124 is complete, so the repo already has run-backed/artifact-backed workpage route truth plus bounded stage-linked CTA integration on supported workspace surfaces.
-- The existing weekly Stage04 build/review lane is already the lowest-risk weekly operator path; the immediate gap is truthful weekly intake and official weekly publish wiring.
-- The existing dispatch-reporting artifact-backed EOD lane is already the right review surface for daily actual-routes truth.
-- The existing weekly-to-live handoff and live-dispatch delta authority model already provide the smallest bounded day-of schedule-change seam.
-- `TASK-0151` now freezes the first running-operator posture so later EPIC-125 tasks do not drift into raw-email parser scope, live-dispatch algorithmics, embedded scheduling, or early EPIC-126 hardening.
+- The weekly Stage04 build/review/publish lane is now landed as the truthful weekly operator path.
+- The dispatch-reporting artifact-backed EOD lane is now landed as the daily actual-routes review/finalize surface.
+- The weekly-to-live handoff and live-dispatch delta authority model are now landed as the bounded day-of schedule-change seam; `TASK-0154` is reconciled to `DONE` from this existing runtime truth.
+- Later feedback-consuming work is already reflected in completed EPIC-126 cleanup history plus the landed EPIC-131, EPIC-132, EPIC-133, and EPIC-134 tranches.
 
 ## Tasks
 - TASK-0151 - DONE
 - TASK-0152 - DONE
 - TASK-0153 - DONE
-- TASK-0154 - TODO
+- TASK-0154 - DONE
 - TASK-0155 - DONE
 - TASK-0156 - DONE
-- TASK-0157 - TODO
+- TASK-0157 - DONE
 
 ## Local demo milestone
 The first serious local UI/operator demo is now available after `TASK-0155`.
-The repo now supports a complete single-machine weekly + daily walkthrough even though the external cadence tick is not yet wired.
+The repo now supports a complete single-machine weekly + daily walkthrough, including the bounded live replan lane.
 
 ## Continuous production-shaped milestone
 The first continuously running environment is now supported after `TASK-0156`.

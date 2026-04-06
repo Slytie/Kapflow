@@ -2,7 +2,7 @@
 id: TASK-0154
 epic: EPIC-125
 title: "Add the minimal manual daily-replan lane through live dispatch seed activation and official delta promotion"
-status: TODO
+status: DONE
 owners: ["backend"]
 reviewers: ["qa"]
 depends_on: ["TASK-0151"]
@@ -30,3 +30,7 @@ The first production use case must support day-of schedule change, but only in a
 - an operator can manually change the day’s schedule through the live-dispatch delta lane
 - the official delta is immutable and promoted truthfully
 - the weekly schedule workpage remains bounded and does not absorb day-of control
+
+## Closeout note
+`TASK-0154` is reconciled to `DONE` in `TASK-0157` from existing repo truth rather than new runtime work in the closeout pass.
+The bounded manual daily-replan lane is already present in the live-dispatch runtime handlers, the weekly-first local demo smoke, and the operator/demo runbooks.

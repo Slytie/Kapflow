@@ -1,9 +1,9 @@
 # EPIC-125 Context Pack - Operational cadence demo
 
 Purpose:
-- You are reviewing or extending the active EPIC-125 operator-loop tranche after EPIC-124 closeout.
+- You are reviewing historical EPIC-125 operator-loop truth after closeout.
 - You need to preserve one truthful weekly planning + minimal daily replan + daily reporting lane without inventing a second authority path.
-- You need to keep the first serious local demo earlier than cadence automation and earlier than hardening.
+- You should treat this pack as completed-history context, not as the active post-workpage plan of record.
 
 ## Non-negotiable invariants to keep in mind
 - Workpages remain derived review/edit surfaces; runtime rows, events, artifacts, pointers, and promotions remain canonical truth.
@@ -35,7 +35,7 @@ Purpose:
   - daily reporting closeout via `dispatch_reporting.v1` EOS intake, draft review, finalization, and planning feedback
 - The first local FE/BE demo milestone is after `TASK-0155`.
 - The continuous production-shaped cadence milestone is now landed through `TASK-0156`.
-- EPIC-126 hardening stays deferred until after local demo feedback exists.
+- At planning time, EPIC-126 hardening stayed deferred until after local demo feedback existed; that follow-on path is now completed history.
 
 ## Current repo status
 - EPIC-124 is complete, so supported workspace items already expose bounded `workpage_actions[]`, and canonical run-backed/artifact-backed workpage routes are already live.
@@ -44,24 +44,25 @@ Purpose:
 - `live_dispatch.v1` already has weekly seed activation, route-delta intake, actual-hours binding, and official ordered-delta promotion semantics.
 - `TASK-0152`, `TASK-0153`, and `TASK-0155` are now complete, so EPIC-125 already has the weekly operator lane, the daily reporting lane, and the weekly-first local demo surface.
 - `TASK-0156` is now complete, so EPIC-125 also has the external cadence tick plus the first continuous single-node operator runbook.
-- `TASK-0154` and `TASK-0157` remain open cadence/backlog items, but EPIC-131 is now the next selected workpages priority for clarified post-demo product work.
+- `TASK-0154` and `TASK-0157` are now complete, so EPIC-125 is closed as completed history.
+- The first-demo feedback handoff is frozen in `docs/planning/LOGISTICS_WORKPAGES_EPIC125_CLOSEOUT_AND_FEEDBACK_NOTE.md`, and the downstream work is already reflected in completed EPIC-126 cleanup history plus the landed EPIC-131, EPIC-132, EPIC-133, and EPIC-134 tranches.
 
-## Active implementation order inside this epic
+## Historical implementation order inside this epic
 1. `TASK-0151` - Freeze operator-loop contract, authoritative inputs, and milestones
 2. `TASK-0152` - DONE - Weekly Friday intake + Stage04 build/review/publish
 3. `TASK-0153` - DONE - Daily EOS intake + EOD draft review/finalize + planning feedback
-4. `TASK-0154` - Minimal manual daily replan via live-dispatch delta authority
+4. `TASK-0154` - DONE - Minimal manual daily replan via live-dispatch delta authority
 5. `TASK-0155` - DONE - Local demo runbook, smoke path, and entrypoints
 6. `TASK-0156` - DONE - External cadence tick + single-node production-shaped runbook
-7. `TASK-0157` - Closeout, demo-feedback capture, and doc/status sync
+7. `TASK-0157` - DONE - Closeout, demo-feedback capture, and doc/status sync
 
-## Post-task posture
-- `TASK-0154` remains the next bounded EPIC-125 truth-sync tranche if work returns to this epic.
-- EPIC-131 is now the next selected workpages priority based on clarified SME/demo feedback.
-- Do not start EPIC-126 early.
+## Post-closeout posture
+- EPIC-125 is now completed history and should not be reopened for new runtime scope.
+- Later feedback-consuming work is already reflected in completed EPIC-126 cleanup history plus the landed EPIC-131, EPIC-132, EPIC-133, and EPIC-134 tranches.
+- If work returns to operator loops, start from current repo truth rather than treating this pack as the next active implementation queue.
 - Do not add raw-email parser ownership, live-dispatch algorithmics, schedule Stage06/Stage07 widening, or an embedded scheduler in this epic.
 
-## Smallest context set for the next task
+## Smallest context set if work revisits this historical operator-loop tranche
 - `docs/planning/LOGISTICS_WORKPAGES_OPERATIONAL_CADENCE_PLAN.md`
 - `docs/planning/LOGISTICS_WORKPAGES_OPERATIONAL_CADENCE_EXEC_SUMMARY.md`
 - `docs/planning/epics/EPIC-125.md`

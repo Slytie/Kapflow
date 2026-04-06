@@ -1,9 +1,14 @@
 # Logistics Workpages - operational demo executive summary
 
+Status note (2026-04-06):
+- EPIC-125 is complete.
+- This document now serves as historical planning rationale for the first operator-loop tranche.
+- The later feedback-consuming follow-on work is already reflected in completed EPIC-126 cleanup history plus the landed EPIC-131, EPIC-132, EPIC-133, and EPIC-134 tranches.
+
 ## Purpose
 Move from **proven workpage technology** to a **running first-user operator lane** that can be demoed locally, then run continuously in a small production-shaped environment, before the hardening epic.
 
-The recommended sequence is:
+The historical recommended sequence was:
 
 \[
 \text{EPIC-124 (stage-linked workpages)} \,\to\, \text{EPIC-125 (operational cadence demo)} \,\to\, \text{EPIC-126 (hardening/closeout)}
@@ -105,13 +110,13 @@ The user specifically wants a workpage attached to the artifact generated from d
 3. **Reporting finalization and compliance handoff could be treated as optional.**
    They are not optional if actual routes taken are supposed to inform compliance truth.
 4. **The first local demo may surface substantial UX and operator-language issues.**
-   That is expected and should drive EPIC-126, not cause EPIC-125 to expand indefinitely.
+   That feedback was later consumed by completed EPIC-126 cleanup history plus the landed EPIC-131, EPIC-132, EPIC-133, and EPIC-134 tranches rather than reopening EPIC-125 indefinitely.
 5. **Schedule draft artifacts remain partially JSON-backed today.**
    This remains acceptable technical debt for the first running lane, but must stay explicit.
 
-## When you can start demos
-### Local FE/BE demo and UI user testing
-Plan to start **as soon as EPIC-125 reaches the local-demo milestone** (the task that adds the local runbook, seeded operator smoke path, and demo entrypoints).
+## Historical milestone timing
+### Historical local FE/BE demo and UI user-testing handoff
+At planning time, the repo was meant to start **as soon as EPIC-125 reached the local-demo milestone** (the task that adds the local runbook, seeded operator smoke path, and demo entrypoints).
 
 That is the right point to:
 - run the backend and frontend locally,
@@ -119,11 +124,11 @@ That is the right point to:
 - walk the daily reporting lane,
 - and gather high-volume UI/operator feedback.
 
-### Production-shaped continuous demo
-Move to the first continuously running environment only after the later EPIC-125 cadence/deployment milestone lands:
+### Historical production-shaped continuous demo handoff
+The repo was meant to move to the first continuously running environment only after the later EPIC-125 cadence/deployment milestone landed:
 - external cadence tick,
 - single-node deploy/runbook,
 - operational smoke path.
 
-### Hardening
-Do **not** begin EPIC-126 hardening until after the local demo feedback has been gathered.
+### Historical hardening handoff
+At planning time, EPIC-126 hardening was intentionally deferred until after local demo feedback had been gathered.

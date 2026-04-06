@@ -30,6 +30,11 @@ The just-completed production-shaped cadence milestone is **TASK-0156 - External
 - `onetruthctl cadence tick-logistics` now ensures due weekly/reporting state and prepares live dispatch once weekly publish truth exists
 - `docs/ops/runbooks/logistics_single_node_cadence.md` documents the bounded continuous single-node operator posture over the existing release/deploy topology
 
+EPIC-125 is now completed history:
+- `TASK-0154` is reconciled to `DONE` from the already-landed live-dispatch delta lane exercised by runtime handlers, the local demo smoke, and the operator runbooks
+- `TASK-0157` records the first-demo feedback handoff in `docs/planning/LOGISTICS_WORKPAGES_EPIC125_CLOSEOUT_AND_FEEDBACK_NOTE.md`
+- no EPIC-125 carry-forward task remains open
+
 EPIC-126 remains completed cleanup history, but it is no longer the active post-EPIC-131 plan.
 
 ## Current implemented baseline
@@ -70,8 +75,9 @@ Still deferred beyond the completed Workpages v1 + EPIC-133 hardening tranche:
 - broader feedback-driven hardening beyond the settlement tranche
 
 ## Available broader backlog (after EPIC-134)
-1. `TASK-0154` - Finish the remaining bounded live-dispatch closure around the manual daily-replan lane.
-2. `TASK-0157` - Capture post-demo feedback against the canonical Workpages v1 posture.
+No EPIC-125 carry-forward backlog item remains open.
+No new app-facing product-expansion epic is selected after EPIC-134.
+Future selection should be deliberate from deferred items and later feedback, not implied by stale EPIC-125 task state.
 
 ## Test-first working mode
 Before adding runtime services or API surfaces:

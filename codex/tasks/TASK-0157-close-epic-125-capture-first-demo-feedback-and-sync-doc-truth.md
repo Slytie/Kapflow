@@ -2,7 +2,7 @@
 id: TASK-0157
 epic: EPIC-125
 title: "Close EPIC-125, capture first-demo feedback, and sync doc/status truth"
-status: TODO
+status: DONE
 owners: ["docs"]
 reviewers: ["qa"]
 depends_on: ["TASK-0156"]
@@ -28,3 +28,7 @@ Before hardening begins, the repo should truthfully record what the first operat
 - repo memory is aligned
 - the feedback-to-hardening handoff is explicit
 - the next epic is clear
+
+## Closeout note
+`TASK-0157` closes EPIC-125 as completed history.
+The task aligns repo memory with the already-landed weekly/live/reporting operator loop, records the first-demo feedback themes in repo-native planning truth, and reconciles `TASK-0154` to `DONE` from existing runtime behavior.
