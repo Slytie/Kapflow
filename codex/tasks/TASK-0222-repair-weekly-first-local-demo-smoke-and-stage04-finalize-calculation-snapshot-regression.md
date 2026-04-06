@@ -2,7 +2,7 @@
 id: TASK-0222
 epic: EPIC-134
 title: "Correct the weekly-first local demo smoke diagnosis and reporting-intake runtime-dependency truth"
-status: TODO
+status: DONE
 owners: ["backend"]
 reviewers: ["qa"]
 depends_on: ["TASK-0221"]

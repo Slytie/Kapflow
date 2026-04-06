@@ -2,6 +2,11 @@
 
 Record any decisions made since the last session so a fresh Codex run can rehydrate quickly.
 
+## 2026-04-06 (TASK-0156 external cadence tick and single-node logistics operator runbook)
+- Cadence-entrypoint decision: the first continuous logistics operator cadence now runs through the repo-native installed CLI surface `onetruthctl cadence tick-logistics`, not a demo-only seed script and not an embedded scheduler.
+- Bounded-orchestration decision: the cadence tick may only ensure due weekly/reporting runs and human tasks plus prepare `live_dispatch.v1` once weekly publish truth exists; it must not upload operator inputs, run weekly Stage04, complete reviews, or auto-approve workflow work.
+- Replay decision: cadence replays are keyed by effective `ServiceDateID` and must not duplicate workflow runs, human tasks, edge executions, or live seed artifacts for the first-user logistics lane.
+
 ## 2026-04-06 (TASK-0222 supported-env reporting-intake truth correction)
 - Repro-source decision: for `TASK-0222`, the only authoritative repro surface is a clean Python `3.11` install bootstrapped with `python3.11 -m pip install -e ".[api,dev]"`; partial local Python `3.11` environments are not sufficient to diagnose the active blocker.
 - Scope-gate decision: supported-env verification is green for `tests/runtime/api/test_weekly_stage04_openai_agent_api.py`, `tests/runtime/api/test_dispatch_reporting_finalize_loop_api.py`, `tests/runtime/api/test_logistics_local_demo_smoke_api.py`, and `tests/unit/test_dispatch_reporting_workbook.py`, so Stage04 finalize repair is not the active `TASK-0222` target unless that repro goes red again.

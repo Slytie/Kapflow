@@ -2,7 +2,7 @@
 id: TASK-0223
 epic: EPIC-134
 title: "Add a one-command canonical workpage demo-prep script"
-status: TODO
+status: DONE
 owners: ["backend"]
 reviewers: ["pm", "qa"]
 depends_on: ["TASK-0221", "TASK-0222"]

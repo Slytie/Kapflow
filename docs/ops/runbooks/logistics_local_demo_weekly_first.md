@@ -5,6 +5,8 @@
 - Use the canonical runtime, workspace, artifact, approval, and pointer surfaces only.
 - Treat this runbook as the start of demo-feedback collection, not EPIC-126 hardening.
 
+If you want the deterministic canonical-workpage validation path without OpenAI or the full weekly/live/reporting loop, use `docs/ops/runbooks/logistics_canonical_workpage_demo.md` instead.
+
 ## Preconditions
 1. Export a real `OPENAI_API_KEY` before the weekly Stage04 build step.
 2. Use the supported local API entrypoint and the repo frontend dev server.

@@ -2,7 +2,7 @@
 id: TASK-0224
 epic: EPIC-134
 title: "Add the demo runbook and a canonical workpage demo-prep regression"
-status: TODO
+status: DONE
 owners: ["architect", "qa"]
 reviewers: ["pm"]
 depends_on: ["TASK-0223"]

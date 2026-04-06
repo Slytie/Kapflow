@@ -160,7 +160,7 @@ Note: `TASK-0087` / `TASK-0088` / `TASK-0089` were formerly duplicated as `TASK-
 | TASK-0153 | EPIC-125 | DONE | high | Wire the daily EOS intake, draft-reporting review workpage, finalize flow, and planning feedback handoff |
 | TASK-0154 | EPIC-125 | TODO | high | Add the minimal manual daily-replan lane through live dispatch seed activation and official delta promotion |
 | TASK-0155 | EPIC-125 | DONE | medium | Add the local FE/BE demo runbook, seeded operator smoke path, and demo entrypoints for the first user test |
-| TASK-0156 | EPIC-125 | TODO | medium | Add the external cadence tick, single-node production-shaped deployment path, and operator runbook |
+| TASK-0156 | EPIC-125 | DONE | medium | Add the external cadence tick, single-node production-shaped deployment path, and operator runbook |
 | TASK-0157 | EPIC-125 | TODO | medium | Close EPIC-125, capture first-demo feedback, and sync doc/status truth |
 | TASK-0201 | EPIC-131 | DONE | medium | Freeze clarified SME decisions and correct the boundary between schedule edits, route-demand edits, and accepted-series navigation |
 | TASK-0202 | EPIC-131 | DONE | high | Add backend workpage descriptors, calculated contract blocks, and accepted-series queries |
@@ -173,6 +173,6 @@ Note: `TASK-0087` / `TASK-0088` / `TASK-0089` were formerly duplicated as `TASK-
 | TASK-0159 | EPIC-126 | DONE | medium | Harden canonical-route regressions, fixtures, and guardrails |
 | TASK-0160 | EPIC-126 | DONE | medium | Close Workpages v1 repo-truth and synchronize active docs |
 | TASK-0221 | EPIC-134 | DONE | low | Freeze the minimal workpage demo boundary, canonical-route posture, and no-new-demo-mode rule |
-| TASK-0222 | EPIC-134 | TODO | medium | Correct the weekly-first local demo smoke diagnosis and reporting-intake runtime-dependency truth |
-| TASK-0223 | EPIC-134 | TODO | medium | Add a one-command canonical workpage demo-prep script |
-| TASK-0224 | EPIC-134 | TODO | low | Add the demo runbook and a canonical workpage demo-prep regression |
+| TASK-0222 | EPIC-134 | DONE | medium | Correct the weekly-first local demo smoke diagnosis and reporting-intake runtime-dependency truth |
+| TASK-0223 | EPIC-134 | DONE | medium | Add a one-command canonical workpage demo-prep script |
+| TASK-0224 | EPIC-134 | DONE | low | Add the demo runbook and a canonical workpage demo-prep regression |

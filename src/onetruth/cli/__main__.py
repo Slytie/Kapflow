@@ -71,6 +71,9 @@ from onetruth.application.handlers.logistics_handoff import (
 from onetruth.application.handlers.schedule_control import (
     build_weekly_schedule_control_command,
 )
+from onetruth.application.services.logistics_operational_cadence import (
+    tick_logistics_operational_cadence,
+)
 from onetruth.application.projections.coherence_harness import (
     COHERENCE_POLICY_WARN_VISIBLE,
     COHERENCE_STATUS_FAILED,
@@ -322,6 +325,19 @@ def _build_parser() -> argparse.ArgumentParser:
     )
     schedule_control_build_weekly.add_argument("--json", dest="json_payload", required=True)
     schedule_control_build_weekly.set_defaults(handler=_handle_schedule_control_build_weekly)
+
+    cadence = subparsers.add_parser("cadence", help="External cadence orchestration commands.")
+    cadence_sub = cadence.add_subparsers(dest="cadence_command", required=True)
+    cadence_tick_logistics = cadence_sub.add_parser(
+        "tick-logistics",
+        help="Ensure due logistics runs/tasks and prepare live dispatch when weekly publish truth exists.",
+    )
+    cadence_tick_logistics.add_argument(
+        "--service-date-id",
+        default=None,
+        help="Optional ServiceDateID override for deterministic replay and manual cadence checks.",
+    )
+    cadence_tick_logistics.set_defaults(handler=_handle_cadence_tick_logistics)
 
     flags = subparsers.add_parser("flags", help="Flag lifecycle commands.")
     flags_sub = flags.add_subparsers(dest="flags_command", required=True)
@@ -1584,6 +1600,23 @@ def _handle_schedule_control_build_weekly(args: argparse.Namespace) -> int:
     finally:
         connection.close()
     _json_print({"status": "ok", "command": "schedule-control.build-weekly", "result": result})
+    return 0
+
+
+def _handle_cadence_tick_logistics(args: argparse.Namespace) -> int:
+    connection = _open_connection_or_emit(args.db_url)
+    if isinstance(connection, int):
+        return connection
+    try:
+        result = tick_logistics_operational_cadence(
+            connection,
+            service_date_id=args.service_date_id,
+        )
+    except CommandError as exc:
+        return _emit_error(code=exc.code, message=exc.message, details=exc.details)
+    finally:
+        connection.close()
+    _json_print({"status": "ok", "command": "cadence.tick-logistics", **result})
     return 0
 
 

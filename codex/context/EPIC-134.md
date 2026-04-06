@@ -5,8 +5,8 @@ Purpose:
 - Keep the implementation bounded to demo enablement, not new product scope.
 
 Status:
-- Active as of `2026-04-06`.
-- `TASK-0221` is complete as the repo-memory freeze; `TASK-0222` through `TASK-0224` remain.
+- Complete as of `2026-04-06`.
+- `TASK-0221` through `TASK-0224` are complete.
 
 ## Non-negotiable invariants
 - Validate workpage behavior on canonical `/runs/:workflowRunId/workpages/*` routes.
@@ -27,10 +27,10 @@ Status:
 
 ## Repo-grounded findings
 1. `scripts/run_logistics_local_demo.py` only seeds scaffold state; it does not create the schedule draft or driver-preferences snapshot needed for the new canonical workpages.
-2. The full prep procedure currently lives in `tests/runtime/api/test_logistics_local_demo_smoke_api.py` rather than a user-facing script.
-3. Supported-env verification in a clean Python `3.11` install is green for the weekly Stage04 API, the dispatch-reporting finalize loop, the local demo smoke, and the dispatch-reporting workbook unit lane, so the imported Stage04 diagnosis is stale.
-4. The remaining `TASK-0222` gap is dependency honesty: a partial Python `3.11` environment without `openpyxl` currently misclassifies dispatch-reporting workbook parsing failure as `unsupported_eos_workbook_shape` instead of a missing runtime dependency.
-5. The canonical read-side workpage surfaces are otherwise already present, so the follow-on implementation should stay small.
+2. `scripts/run_logistics_workpage_demo_prep.py` now provides the supported deterministic demo-prep command and emits canonical workpage URLs in machine-readable JSON.
+3. Supported-env verification in a clean Python `3.11` install is green for the weekly Stage04 API, the dispatch-reporting finalize loop, the local demo smoke, and the dispatch-reporting workbook unit lane, so the imported Stage04 diagnosis is no longer the active blocker.
+4. Reporting intake now classifies missing workbook runtime support as `runtime_dependency_missing` with `dependency: "openpyxl"` instead of misclassifying that case as `unsupported_eos_workbook_shape`.
+5. The canonical read-side workpage surfaces, deterministic prep path, and short canonical demo runbook are now present, so EPIC-134 is closed as bounded demo enablement rather than ongoing product expansion.
 
 ## Preferred implementation shape
 - correct the stale local-demo diagnosis and missing-dependency classification first,

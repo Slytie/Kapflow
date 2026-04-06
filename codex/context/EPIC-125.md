@@ -34,7 +34,7 @@ Purpose:
   - minimal manual daily replan via `live_dispatch.v1` delta authority
   - daily reporting closeout via `dispatch_reporting.v1` EOS intake, draft review, finalization, and planning feedback
 - The first local FE/BE demo milestone is after `TASK-0155`.
-- The continuous production-shaped cadence milestone is after `TASK-0156`.
+- The continuous production-shaped cadence milestone is now landed through `TASK-0156`.
 - EPIC-126 hardening stays deferred until after local demo feedback exists.
 
 ## Current repo status
@@ -43,7 +43,8 @@ Purpose:
 - `dispatch_reporting.v1` now has the bounded daily EOS intake -> deterministic draft build -> Stage04 review -> finalize -> planning feedback lane, and the artifact-backed EOD review workpage remains the review surface.
 - `live_dispatch.v1` already has weekly seed activation, route-delta intake, actual-hours binding, and official ordered-delta promotion semantics.
 - `TASK-0152`, `TASK-0153`, and `TASK-0155` are now complete, so EPIC-125 already has the weekly operator lane, the daily reporting lane, and the weekly-first local demo surface.
-- `TASK-0154`, `TASK-0156`, and `TASK-0157` remain open cadence/backlog items, but EPIC-131 is now the next selected workpages priority for clarified post-demo product work.
+- `TASK-0156` is now complete, so EPIC-125 also has the external cadence tick plus the first continuous single-node operator runbook.
+- `TASK-0154` and `TASK-0157` remain open cadence/backlog items, but EPIC-131 is now the next selected workpages priority for clarified post-demo product work.
 
 ## Active implementation order inside this epic
 1. `TASK-0151` - Freeze operator-loop contract, authoritative inputs, and milestones
@@ -51,11 +52,11 @@ Purpose:
 3. `TASK-0153` - DONE - Daily EOS intake + EOD draft review/finalize + planning feedback
 4. `TASK-0154` - Minimal manual daily replan via live-dispatch delta authority
 5. `TASK-0155` - DONE - Local demo runbook, smoke path, and entrypoints
-6. `TASK-0156` - External cadence tick + single-node production-shaped runbook
+6. `TASK-0156` - DONE - External cadence tick + single-node production-shaped runbook
 7. `TASK-0157` - Closeout, demo-feedback capture, and doc/status sync
 
 ## Post-task posture
-- `TASK-0154` remains the next bounded EPIC-125 cadence tranche if work returns to this epic.
+- `TASK-0154` remains the next bounded EPIC-125 truth-sync tranche if work returns to this epic.
 - EPIC-131 is now the next selected workpages priority based on clarified SME/demo feedback.
 - Do not start EPIC-126 early.
 - Do not add raw-email parser ownership, live-dispatch algorithmics, schedule Stage06/Stage07 widening, or an embedded scheduler in this epic.

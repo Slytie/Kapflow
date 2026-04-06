@@ -9,7 +9,7 @@ This epic is intentionally bounded to:
 - `dispatch_reporting.v1`
 
 ## Status
-Active on 2026-03-29. `TASK-0151` is complete and freezes the operator-loop contract, authoritative-input posture, and milestone boundaries. `TASK-0152` is now complete and lands the weekly Friday intake -> Stage04 build -> review -> publish loop. `TASK-0153` is now complete and lands the daily EOS intake -> deterministic draft build -> EOD review -> finalize -> planning feedback loop. `TASK-0155` is now complete and lands the weekly-first local demo seed, runbook, and entry surface. The remaining cadence backlog is `TASK-0154`, `TASK-0156`, and `TASK-0157`, but EPIC-131 is now the next selected workpages priority.
+Active on 2026-03-29. `TASK-0151` is complete and freezes the operator-loop contract, authoritative-input posture, and milestone boundaries. `TASK-0152` is now complete and lands the weekly Friday intake -> Stage04 build -> review -> publish loop. `TASK-0153` is now complete and lands the daily EOS intake -> deterministic draft build -> EOD review -> finalize -> planning feedback loop. `TASK-0155` is now complete and lands the weekly-first local demo seed, runbook, and entry surface. `TASK-0156` is now complete and lands the external cadence tick plus single-node continuous operator runbook. The remaining cadence backlog is `TASK-0154` and `TASK-0157`, but EPIC-131 is now the next selected workpages priority.
 
 ## Key goal
 Prove the following operator loop end to end:
@@ -78,7 +78,7 @@ Context pack: `codex/context/EPIC-125.md`
 - TASK-0153 - DONE
 - TASK-0154 - TODO
 - TASK-0155 - DONE
-- TASK-0156 - TODO
+- TASK-0156 - DONE
 - TASK-0157 - TODO
 
 ## Local demo milestone
@@ -86,8 +86,8 @@ The first serious local UI/operator demo is now available after `TASK-0155`.
 The repo now supports a complete single-machine weekly + daily walkthrough even though the external cadence tick is not yet wired.
 
 ## Continuous production-shaped milestone
-You should expect to stand up the first continuously running environment after `TASK-0156`.
-That milestone adds the external cadence invocation and deploy/runbook posture.
+The first continuously running environment is now supported after `TASK-0156`.
+That milestone lands the external cadence invocation and single-node operator runbook posture.
 
 ## Red-team question
 Are we still reusing the repo’s existing workflow/artifact/handoff/workpage model with the smallest truthful additions, or are we quietly reintroducing parser scope, live-dispatch algorithmics, or broader schedule-control ambitions before the first local operator demo has even happened?

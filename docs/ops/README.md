@@ -12,6 +12,8 @@ Topology and deploy reference:
 - first-user production/lab topology: `docs/ops/production_lab_topology.md`
 - release-bundle deploy and rollback: `docs/ops/runbooks/rollback_and_deploy.md`
 - backup/restore and rehearsal basis: `docs/ops/runbooks/backup_and_restore.md`
+- continuous logistics cadence runbook: `docs/ops/runbooks/logistics_single_node_cadence.md`
+- canonical workpage demo walkthrough: `docs/ops/runbooks/logistics_canonical_workpage_demo.md`
 - internal ops visibility surface: `GET /api/v1/ops/health`, `GET /api/v1/ops/readiness`, `GET /api/v1/ops/metrics`
 
 Internal ops endpoint note:

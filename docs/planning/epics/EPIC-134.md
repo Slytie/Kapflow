@@ -6,12 +6,12 @@ Make it cheap and reliable to run a validation demo of the landed Workpages v1 c
 This epic starts after EPIC-133 and assumes the public workpage posture is already canonical-only.
 
 ## Status
-Active as of `2026-04-06`.
+Complete as of `2026-04-06`.
 
 Current state:
-- `TASK-0221` is complete as the repo-memory freeze for the demo boundary.
-- `TASK-0222` through `TASK-0224` remain the bounded implementation tranche.
-- Supported-env verification in a clean Python `3.11` install is green for the weekly Stage04 API, dispatch-reporting finalize loop, local demo smoke, and dispatch-reporting workbook unit lane; the remaining `TASK-0222` work is dependency-honesty plus stale-memory correction, not Stage04 repair.
+- `TASK-0221` through `TASK-0224` are complete as the bounded demo-enablement tranche.
+- Supported-env verification in a clean Python `3.11` install is green for the weekly Stage04 API, dispatch-reporting finalize loop, local demo smoke, and dispatch-reporting workbook unit lane.
+- The deterministic prep path, canonical demo runbook, and lightweight regressions now exist without adding any new public demo-only runtime path.
 
 ## First-principles objective
 Let:

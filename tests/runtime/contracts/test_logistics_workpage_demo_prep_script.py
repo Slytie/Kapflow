@@ -1,33 +1,11 @@
 from __future__ import annotations
 
 import json
-import os
 from pathlib import Path
-import subprocess
-import sys
 
-from tests.runtime.helpers.runtime_cli import REPO_ROOT, SRC_ROOT
-
-
-def _run_script(*, args: list[str]) -> dict[str, object]:
-    env = os.environ.copy()
-    existing_pythonpath = env.get("PYTHONPATH")
-    env["PYTHONPATH"] = (
-        f"{SRC_ROOT}{os.pathsep}{existing_pythonpath}" if existing_pythonpath else str(SRC_ROOT)
-    )
-    result = subprocess.run(
-        [sys.executable, *args],
-        cwd=REPO_ROOT,
-        env=env,
-        text=True,
-        capture_output=True,
-        check=False,
-    )
-    if result.returncode != 0:
-        raise AssertionError(
-            f"script failed ({result.returncode})\nCMD: {' '.join(args)}\nSTDOUT: {result.stdout}\nSTDERR: {result.stderr}"
-        )
-    return json.loads(result.stdout)
+from tests.runtime.helpers.logistics_workpage_demo import (
+    run_logistics_workpage_demo_prep_script,
+)
 
 
 def test_logistics_workpage_demo_prep_script_emits_stable_canonical_urls_and_ids(
@@ -35,20 +13,14 @@ def test_logistics_workpage_demo_prep_script_emits_stable_canonical_urls_and_ids
 ) -> None:
     db_url = f"sqlite:///{tmp_path / 'workpage-demo.db'}"
     output_json_path = tmp_path / "workpage-demo.json"
-    args = [
-        "scripts/run_logistics_workpage_demo_prep.py",
-        "--db-url",
-        db_url,
-        "--planning-week-id",
-        "PW-2026-W10",
-        "--service-date-id",
-        "SD-2026-03-06",
-        "--output-json",
-        str(output_json_path),
-    ]
-
-    first = _run_script(args=args)
-    second = _run_script(args=args)
+    first = run_logistics_workpage_demo_prep_script(
+        db_url=db_url,
+        output_json_path=output_json_path,
+    )
+    second = run_logistics_workpage_demo_prep_script(
+        db_url=db_url,
+        output_json_path=output_json_path,
+    )
 
     assert output_json_path.exists()
     written = json.loads(output_json_path.read_text(encoding="utf-8"))
@@ -92,17 +64,9 @@ def test_logistics_workpage_demo_prep_script_skips_driver_preferences_when_reque
     tmp_path: Path,
 ) -> None:
     db_url = f"sqlite:///{tmp_path / 'workpage-demo-no-driver-preferences.db'}"
-    payload = _run_script(
-        args=[
-            "scripts/run_logistics_workpage_demo_prep.py",
-            "--db-url",
-            db_url,
-            "--planning-week-id",
-            "PW-2026-W10",
-            "--service-date-id",
-            "SD-2026-03-06",
-            "--no-driver-preferences",
-        ]
+    payload = run_logistics_workpage_demo_prep_script(
+        db_url=db_url,
+        include_driver_preferences=False,
     )
 
     assert payload["status"] == "ok"

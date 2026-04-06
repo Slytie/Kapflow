@@ -2,7 +2,7 @@
 id: TASK-0156
 epic: EPIC-125
 title: "Add the external cadence tick, single-node production-shaped deployment path, and operator runbook"
-status: TODO
+status: DONE
 owners: ["backend", "ops"]
 reviewers: ["qa"]
 depends_on: ["TASK-0155"]
