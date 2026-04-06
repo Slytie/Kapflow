@@ -7,6 +7,11 @@ Record any decisions made since the last session so a fresh Codex run can rehydr
 - Navigation decision: accepted schedule history is now fully server-authored per entry, including cross-run `route` values inside `accepted_series.entries[]`; canonical pages must not rebuild accepted-history URLs from the current run id.
 - Debt-boundary decision: client-side artifact list/filter helpers remain only as deferred inline demo-shell debt for `TASK-0217`; canonical schedule, EOD, route-demand, and driver-preferences pages no longer use them to build history rails.
 
+## 2026-04-06 (TASK-0216 server-authored workpage action execution)
+- Write-seam decision: canonical workpage create/submit flows now prefer additive server-authored `action_ref` payloads; `subject_link` remains a deprecated compatibility fallback only when `action_ref` is absent, and mixed `action_ref` + `subject_link` payloads fail closed as `invalid_payload`.
+- Projection decision: workspace `workpage_actions[]` and canonical page `actions[]` now carry server-authored `action_ref` values, while the run-backed EOD landing keeps its frozen `draft_resolution` seam and extends it with `open_action_ref` / `create_action_ref`.
+- Frontend-handoff decision: canonical workspace/page navigation now carries `workpageActionRef` router state and canonical repository/page code no longer constructs raw `subject_link`; legacy `subject_context` and `link_policy` remain compatibility metadata for this tranche.
+
 ## 2026-04-06 (TASK-0214 frontend verification closeout and EPIC-132 completion)
 - Closeout-lane decision: `make frontend-workpages-smoke` is now the dedicated clean-install verification slice for the canonical workpage frontend, wrapping the schedule page, EOD page, and workpages repository tests under the committed Node `20` / `npm ci` baseline.
 - CI-truth decision: the main workflow now runs that slice as its own `frontend / workpages-smoke` job while keeping the broader `frontend` job for full typecheck/test/build coverage.

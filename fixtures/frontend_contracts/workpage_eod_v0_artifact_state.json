@@ -6,6 +6,25 @@
     "workpage_id": "eod-v0"
   },
   "workpage_state": {
+    "actions": [
+      {
+        "action_id": "workpage.eod-v0.submit_draft",
+        "action_ref": {
+          "action_id": "workpage.eod-v0.submit_draft",
+          "artifact_version_id": "<artifact_version_id:2>",
+          "subject": null,
+          "workflow_run_id": "<workflow_run_id:1>",
+          "workpage_kind": "eod-v0"
+        },
+        "artifact_version_id": "<artifact_version_id:2>",
+        "disabled_reason": null,
+        "kind": "submit_artifact",
+        "label": "Submit draft",
+        "state": "available",
+        "submit_path": "/api/v1/workpages/workflow-runs/<workflow_run_id:1>/eod-v0/artifacts/<artifact_version_id:2>/submit",
+        "workpage_kind": "eod-v0"
+      }
+    ],
     "artifact_context": {
       "artifact_kind": "reporting.upd_draft.workbook",
       "artifact_version_id": "<artifact_version_id:2>",

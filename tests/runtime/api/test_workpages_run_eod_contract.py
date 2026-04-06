@@ -138,6 +138,14 @@ def test_eod_workflow_run_workpage_contract_returns_run_backed_landing_without_d
         "state": "no_draft",
         "latest_artifact_version_id": None,
         "artifact_route": None,
+        "open_action_ref": None,
+        "create_action_ref": {
+            "action_id": "workpage.eod-v0.create_draft",
+            "workpage_kind": "eod-v0",
+            "workflow_run_id": workflow_run_id,
+            "artifact_version_id": None,
+            "subject": None,
+        },
     }
     assert payload["artifact_history"] is None
 
@@ -170,6 +178,14 @@ def test_eod_workflow_run_workpage_contract_returns_latest_draft_resolution(
         "artifact_route": (
             f"/runs/{workflow_run_id}/workpages/eod-v0/artifacts/{artifact_version_id}"
         ),
+        "open_action_ref": {
+            "action_id": "workpage.eod-v0.open_latest_draft",
+            "workpage_kind": "eod-v0",
+            "workflow_run_id": workflow_run_id,
+            "artifact_version_id": artifact_version_id,
+            "subject": None,
+        },
+        "create_action_ref": None,
     }
     assert payload["freshness"]["source_version"] == artifact_version_id
     assert payload["source"]["source_refs"] == [
@@ -284,6 +300,14 @@ def test_eod_workflow_run_workpage_uses_latest_draft_after_submit(
         "artifact_route": (
             f"/runs/{workflow_run_id}/workpages/eod-v0/artifacts/{latest_artifact_version_id}"
         ),
+        "open_action_ref": {
+            "action_id": "workpage.eod-v0.open_latest_draft",
+            "workpage_kind": "eod-v0",
+            "workflow_run_id": workflow_run_id,
+            "artifact_version_id": latest_artifact_version_id,
+            "subject": None,
+        },
+        "create_action_ref": None,
     }
     assert landing.payload["source"]["source_refs"][-1] == f"/api/v1/artifacts/{latest_artifact_version_id}"
     assert landing.payload["freshness"]["source_version"] == latest_artifact_version_id

@@ -102,6 +102,15 @@ function workpageActionStateLabel(action: WorkflowWorkspaceWorkpageAction): stri
   return action.disabled_reason ?? action.label;
 }
 
+function actionRefTargetsSubject(
+  action: WorkflowWorkspaceWorkpageAction | undefined,
+  subjectKind: "human_task" | "approval",
+  subjectId: string
+): boolean {
+  const subject = action?.action_ref?.subject;
+  return subject?.subject_kind === subjectKind && subject.subject_id === subjectId;
+}
+
 function humanize(value: string): string {
   return value
     .replace(/[_-]+/g, " ")
@@ -261,12 +270,19 @@ export function WorkspaceTaskBoard({
       if (action.presentation !== "create_then_open" || !action.create_path) {
         throw new Error("Unsupported workspace workpage action");
       }
-      return workpagesRepository.createWorkpage(action.create_path, action.subject_context);
+      return workpagesRepository.createWorkpage(action.create_path, action.action_ref ?? undefined);
     },
     onSuccess: (draft, action) => {
       onRefresh();
       navigate(draft.route, {
-        state: { workpageSubjectContext: action.subject_context }
+        state: {
+          workpageActionRef: action.action_ref
+            ? {
+                ...action.action_ref,
+                artifact_version_id: draft.artifact_version_id
+              }
+            : undefined
+        }
       });
     }
   });
@@ -309,7 +325,7 @@ export function WorkspaceTaskBoard({
     }
     if (action.presentation === "open_route" && action.route) {
       navigate(action.route, {
-        state: { workpageSubjectContext: action.subject_context }
+        state: { workpageActionRef: action.action_ref }
       });
       return;
     }
@@ -459,9 +475,11 @@ export function WorkspaceTaskBoard({
                     (runWeeklyStage04AgentMutation.isPending &&
                       runWeeklyStage04AgentMutation.variables === card.task.human_task_id) ||
                     (workpageActionMutation.isPending &&
-                      workpageActionMutation.variables?.subject_context.subject_kind === "human_task" &&
-                      workpageActionMutation.variables?.subject_context.subject_id ===
-                        card.task.human_task_id);
+                      actionRefTargetsSubject(
+                        workpageActionMutation.variables,
+                        "human_task",
+                        card.task.human_task_id
+                      ));
                   const workpageActions = card.item?.workpage_actions ?? [];
 
                   const canClaim =
@@ -722,9 +740,11 @@ export function WorkspaceTaskBoard({
                     (approvalMutation.isPending &&
                       approvalMutation.variables?.approvalId === card.approval.approval_id) ||
                     (workpageActionMutation.isPending &&
-                      workpageActionMutation.variables?.subject_context.subject_kind === "approval" &&
-                      workpageActionMutation.variables?.subject_context.subject_id ===
-                        card.approval.approval_id) ||
+                      actionRefTargetsSubject(
+                        workpageActionMutation.variables,
+                        "approval",
+                        card.approval.approval_id
+                      )) ||
                     (uploadApprovalAttachmentMutation.isPending &&
                       uploadApprovalAttachmentMutation.variables?.approvalId ===
                         card.approval.approval_id) ||

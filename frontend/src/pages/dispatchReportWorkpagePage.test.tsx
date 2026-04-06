@@ -333,10 +333,15 @@ describe("DispatchReportWorkpagePage", () => {
     window.history.pushState(
       {
         usr: {
-          workpageSubjectContext: {
-            subject_kind: "approval",
-            subject_id: "ap-stage04-001",
-            workflow_run_id: "wr-eod-artifact-001"
+          workpageActionRef: {
+            action_id: "workpage.eod-v0.open_latest_draft",
+            workpage_kind: "eod-v0",
+            workflow_run_id: "wr-eod-artifact-001",
+            artifact_version_id: "av-eod-artifact-001",
+            subject: {
+              subject_kind: "approval",
+              subject_id: "ap-stage04-001"
+            }
           }
         },
         key: "default",
@@ -358,9 +363,15 @@ describe("DispatchReportWorkpagePage", () => {
 
     expect(submitBodies).toHaveLength(1);
     expect(submitBodies[0]).toMatchObject({
-      subject_link: {
-        subject_kind: "approval",
-        subject_id: "ap-stage04-001"
+      action_ref: {
+        action_id: "workpage.eod-v0.submit_draft",
+        workpage_kind: "eod-v0",
+        workflow_run_id: "wr-eod-artifact-001",
+        artifact_version_id: "av-eod-artifact-001",
+        subject: {
+          subject_kind: "approval",
+          subject_id: "ap-stage04-001"
+        }
       }
     });
     expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ["workpages"] });

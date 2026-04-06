@@ -13,7 +13,11 @@ import { apiConfig } from "@/lib/api/config";
 import { errorText } from "@/lib/api/errorText";
 import { workpagesRepository } from "@/lib/repositories";
 import { invalidateWorkspaceViews } from "@/lib/workspace/queryInvalidation";
-import { resolveWorkpageSubjectContext } from "@/lib/workspace/workpageSubjectContext";
+import {
+  mergeWorkpageActionRef,
+  replaceWorkpageActionRefArtifactVersionId,
+  resolveWorkpageActionRef
+} from "@/lib/workspace/workpageActionRef";
 import type { WorkpageContract } from "@/lib/types/contracts";
 import type {
   WorkpageAction,
@@ -526,7 +530,6 @@ export function LogisticsRouteDemandArtifactWorkpagePage(): JSX.Element {
   const navigate = useNavigate();
   const location = useLocation();
   const queryClient = useQueryClient();
-  const [pendingNavigationRoute, setPendingNavigationRoute] = useState<string | null>(null);
   const { artifactVersionId, workflowRunId } = useParams<{
     artifactVersionId: string;
     workflowRunId: string;
@@ -563,9 +566,15 @@ export function LogisticsRouteDemandArtifactWorkpagePage(): JSX.Element {
   );
   const submitMutation = useMutation({
     mutationFn: () => {
-      const subjectContext = resolveWorkpageSubjectContext(location.state, {
-        workflowRunId: workflowRunId ?? ""
+      const carriedActionRef = resolveWorkpageActionRef(location.state, {
+        workflowRunId: workflowRunId ?? "",
+        workpageKind: "route-demand-v0",
+        artifactVersionId: artifactVersionId ?? ""
       });
+      const actionRef = mergeWorkpageActionRef(
+        saveAction?.action_ref ?? null,
+        carriedActionRef ?? null
+      );
       return workpagesRepository.submitRouteDemandArtifactAtPath(
         saveAction?.submit_path ?? "",
         artifactVersionId ?? "",
@@ -575,23 +584,27 @@ export function LogisticsRouteDemandArtifactWorkpagePage(): JSX.Element {
             planned_route_count: card.planned_route_count
           }))
         },
-        subjectContext
+        actionRef
       );
     },
     onSuccess: (submitted) => {
       void queryClient.invalidateQueries({ queryKey: ["workpages"] });
       void invalidateWorkspaceViews(queryClient, submitted.workflow_run_id);
-      setPendingNavigationRoute(submitted.route);
+      const carriedActionRef = resolveWorkpageActionRef(location.state, {
+        workflowRunId: workflowRunId ?? "",
+        workpageKind: "route-demand-v0",
+        artifactVersionId: artifactVersionId ?? ""
+      });
+      navigate(submitted.route, {
+        state: {
+          workpageActionRef: replaceWorkpageActionRefArtifactVersionId(
+            mergeWorkpageActionRef(saveAction?.action_ref ?? null, carriedActionRef ?? null),
+            submitted.artifact_version_id
+          )
+        }
+      });
     }
   });
-
-  useEffect(() => {
-    if (!pendingNavigationRoute) {
-      return;
-    }
-    navigate(pendingNavigationRoute, { state: location.state });
-    setPendingNavigationRoute(null);
-  }, [location.state, navigate, pendingNavigationRoute]);
 
   if (!workflowRunId || !artifactVersionId) {
     return (

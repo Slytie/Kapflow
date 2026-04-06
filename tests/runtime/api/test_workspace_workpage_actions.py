@@ -41,6 +41,27 @@ def _workspace_item(payload: dict[str, object], *, subject_kind: str, subject_id
     raise AssertionError(f"workspace item not found: {subject_kind}:{subject_id}")
 
 
+def _action_ref(
+    *,
+    action_id: str,
+    workpage_kind: str,
+    workflow_run_id: str,
+    artifact_version_id: str | None,
+    subject_kind: str,
+    subject_id: str,
+) -> dict[str, object]:
+    return {
+        "action_id": action_id,
+        "workpage_kind": workpage_kind,
+        "workflow_run_id": workflow_run_id,
+        "artifact_version_id": artifact_version_id,
+        "subject": {
+            "subject_kind": subject_kind,
+            "subject_id": subject_id,
+        },
+    }
+
+
 def test_weekly_workspace_supported_surface_projects_available_schedule_action(
     tmp_path: Path,
 ) -> None:
@@ -83,6 +104,14 @@ def test_weekly_workspace_supported_surface_projects_available_schedule_action(
                 "subject_id": human_task_id,
                 "workflow_run_id": seeded["workflow_run_id"],
             },
+            "action_ref": _action_ref(
+                action_id="workpage.schedule-v0.open_latest_draft",
+                workpage_kind="schedule-v0",
+                workflow_run_id=str(seeded["workflow_run_id"]),
+                artifact_version_id=artifact_version_id,
+                subject_kind="human_task",
+                subject_id=human_task_id,
+            ),
             "link_policy": {
                 "create_relation_kind": None,
                 "submit_relation_kind": "response",
@@ -127,6 +156,14 @@ def test_human_task_detail_projects_available_schedule_action(tmp_path: Path) ->
                 "subject_id": human_task_id,
                 "workflow_run_id": seeded["workflow_run_id"],
             },
+            "action_ref": _action_ref(
+                action_id="workpage.schedule-v0.open_latest_draft",
+                workpage_kind="schedule-v0",
+                workflow_run_id=str(seeded["workflow_run_id"]),
+                artifact_version_id=artifact_version_id,
+                subject_kind="human_task",
+                subject_id=human_task_id,
+            ),
             "link_policy": {
                 "create_relation_kind": None,
                 "submit_relation_kind": "response",
@@ -172,6 +209,14 @@ def test_weekly_stage04_surface_projects_unavailable_schedule_action(tmp_path: P
                 "subject_id": human_task_id,
                 "workflow_run_id": seeded["workflow_run_id"],
             },
+            "action_ref": _action_ref(
+                action_id="workpage.schedule-v0.open_latest_draft",
+                workpage_kind="schedule-v0",
+                workflow_run_id=str(seeded["workflow_run_id"]),
+                artifact_version_id=None,
+                subject_kind="human_task",
+                subject_id=human_task_id,
+            ),
             "link_policy": {
                 "create_relation_kind": None,
                 "submit_relation_kind": "response",
@@ -212,6 +257,14 @@ def test_human_task_detail_projects_unavailable_schedule_action(tmp_path: Path) 
                 "subject_id": human_task_id,
                 "workflow_run_id": seeded["workflow_run_id"],
             },
+            "action_ref": _action_ref(
+                action_id="workpage.schedule-v0.open_latest_draft",
+                workpage_kind="schedule-v0",
+                workflow_run_id=str(seeded["workflow_run_id"]),
+                artifact_version_id=None,
+                subject_kind="human_task",
+                subject_id=human_task_id,
+            ),
             "link_policy": {
                 "create_relation_kind": None,
                 "submit_relation_kind": "response",
@@ -259,6 +312,14 @@ def test_dispatch_stage04_approval_projects_create_draft_action(tmp_path: Path) 
                 "subject_id": approval_id,
                 "workflow_run_id": seeded["workflow_run_id"],
             },
+            "action_ref": _action_ref(
+                action_id="workpage.eod-v0.create_draft",
+                workpage_kind="eod-v0",
+                workflow_run_id=str(seeded["workflow_run_id"]),
+                artifact_version_id=None,
+                subject_kind="approval",
+                subject_id=approval_id,
+            ),
             "link_policy": {
                 "create_relation_kind": "draft",
                 "submit_relation_kind": "response",
@@ -307,6 +368,14 @@ def test_dispatch_stage04_approval_projects_open_latest_draft_action(tmp_path: P
                 "subject_id": approval_id,
                 "workflow_run_id": seeded["workflow_run_id"],
             },
+            "action_ref": _action_ref(
+                action_id="workpage.eod-v0.open_latest_draft",
+                workpage_kind="eod-v0",
+                workflow_run_id=str(seeded["workflow_run_id"]),
+                artifact_version_id=artifact_version_id,
+                subject_kind="approval",
+                subject_id=approval_id,
+            ),
             "link_policy": {
                 "create_relation_kind": "draft",
                 "submit_relation_kind": "response",
@@ -355,6 +424,14 @@ def test_dispatch_stage04_review_task_projects_open_latest_draft_action(tmp_path
                 "subject_id": human_task_id,
                 "workflow_run_id": seeded["workflow_run_id"],
             },
+            "action_ref": _action_ref(
+                action_id="workpage.eod-v0.open_latest_draft",
+                workpage_kind="eod-v0",
+                workflow_run_id=str(seeded["workflow_run_id"]),
+                artifact_version_id=artifact_version_id,
+                subject_kind="human_task",
+                subject_id=human_task_id,
+            ),
             "link_policy": {
                 "create_relation_kind": "draft",
                 "submit_relation_kind": "response",

@@ -373,6 +373,21 @@ function scheduleWorkbookPayloadFromPayload(
   };
 }
 
+function buildWorkpageActionRef(input: {
+  actionId: string;
+  workpageKind: string;
+  workflowRunId: string;
+  artifactVersionId: string | null;
+}): Record<string, unknown> {
+  return {
+    action_id: input.actionId,
+    workpage_kind: input.workpageKind,
+    workflow_run_id: input.workflowRunId,
+    artifact_version_id: input.artifactVersionId,
+    subject: null
+  };
+}
+
 function buildDriverPreferencesScheduleAction(
   workflowRunId: string
 ): Record<string, unknown> {
@@ -385,7 +400,13 @@ function buildDriverPreferencesScheduleAction(
       label: "Open driver preferences",
       route: driverPreferencesArtifactRoute(latestVersion.artifactVersionId, workflowRunId),
       state: "available",
-      workpage_kind: "driver-preferences-v0"
+      workpage_kind: "driver-preferences-v0",
+      action_ref: buildWorkpageActionRef({
+        actionId: "workpage.driver-preferences-v0.open_latest",
+        workpageKind: "driver-preferences-v0",
+        workflowRunId,
+        artifactVersionId: latestVersion.artifactVersionId
+      })
     };
   }
   return {
@@ -395,7 +416,13 @@ function buildDriverPreferencesScheduleAction(
     label: "Create driver preferences snapshot",
     create_path: driverPreferencesSnapshotCreatePath(workflowRunId),
     state: "available",
-    workpage_kind: "driver-preferences-v0"
+    workpage_kind: "driver-preferences-v0",
+    action_ref: buildWorkpageActionRef({
+      actionId: "workpage.driver-preferences-v0.create_snapshot",
+      workpageKind: "driver-preferences-v0",
+      workflowRunId,
+      artifactVersionId: null
+    })
   };
 }
 
@@ -943,6 +970,12 @@ function patchScheduleArtifactContractState(version: ScheduleArtifactVersionStat
         version.artifactVersionId,
         "preview"
       );
+      record.action_ref = buildWorkpageActionRef({
+        actionId: asString(record.action_id),
+        workpageKind: "schedule-v0",
+        workflowRunId: version.workflowRunId,
+        artifactVersionId: version.artifactVersionId
+      });
     }
     if (kind === "submit_artifact") {
       record.submit_path = scheduleActionPath(
@@ -950,6 +983,12 @@ function patchScheduleArtifactContractState(version: ScheduleArtifactVersionStat
         version.artifactVersionId,
         "submit"
       );
+      record.action_ref = buildWorkpageActionRef({
+        actionId: asString(record.action_id),
+        workpageKind: "schedule-v0",
+        workflowRunId: version.workflowRunId,
+        artifactVersionId: version.artifactVersionId
+      });
     }
     if (record.workpage_kind === "route-demand-v0" && kind === "open_latest") {
       record.artifact_version_id = latestRouteDemandVersion?.artifactVersionId ?? null;
@@ -957,6 +996,12 @@ function patchScheduleArtifactContractState(version: ScheduleArtifactVersionStat
         ? routeDemandArtifactRoute(latestRouteDemandVersion.artifactVersionId, version.workflowRunId)
         : null;
       record.state = latestRouteDemandVersion ? "available" : "unavailable";
+      record.action_ref = buildWorkpageActionRef({
+        actionId: asString(record.action_id),
+        workpageKind: "route-demand-v0",
+        workflowRunId: version.workflowRunId,
+        artifactVersionId: latestRouteDemandVersion?.artifactVersionId ?? null
+      });
     }
     return record;
   });
@@ -1053,6 +1098,12 @@ function patchRunSchedulePayloadContractState(
         ? scheduleArtifactRoute(latestVersion.artifactVersionId, workflowRunId)
         : null;
       record.artifact_version_id = latestVersion?.artifactVersionId ?? null;
+      record.action_ref = buildWorkpageActionRef({
+        actionId: asString(record.action_id),
+        workpageKind: "schedule-v0",
+        workflowRunId,
+        artifactVersionId: latestVersion?.artifactVersionId ?? null
+      });
     }
     if (record.workpage_kind === "route-demand-v0" && asString(record.kind) === "open_latest") {
       record.state = latestRouteDemandVersion ? "available" : "unavailable";
@@ -1060,6 +1111,12 @@ function patchRunSchedulePayloadContractState(
         ? routeDemandArtifactRoute(latestRouteDemandVersion.artifactVersionId, workflowRunId)
         : null;
       record.artifact_version_id = latestRouteDemandVersion?.artifactVersionId ?? null;
+      record.action_ref = buildWorkpageActionRef({
+        actionId: asString(record.action_id),
+        workpageKind: "route-demand-v0",
+        workflowRunId,
+        artifactVersionId: latestRouteDemandVersion?.artifactVersionId ?? null
+      });
     }
     return record;
   });
@@ -1452,6 +1509,12 @@ function patchRouteDemandArtifactContractState(version: RouteDemandArtifactVersi
         version.latestInChainArtifactVersionId === version.artifactVersionId
           ? null
           : "historical_artifact_read_only";
+      record.action_ref = buildWorkpageActionRef({
+        actionId: asString(record.action_id),
+        workpageKind: "route-demand-v0",
+        workflowRunId: version.workflowRunId,
+        artifactVersionId: version.artifactVersionId
+      });
     }
     return record;
   });
@@ -1745,6 +1808,12 @@ function patchDriverPreferencesArtifactContractState(
         version.latestInChainArtifactVersionId === version.artifactVersionId
           ? null
           : "historical_artifact_read_only";
+      record.action_ref = buildWorkpageActionRef({
+        actionId: asString(record.action_id),
+        workpageKind: "driver-preferences-v0",
+        workflowRunId: version.workflowRunId,
+        artifactVersionId: version.artifactVersionId
+      });
     }
     return record;
   });
@@ -2019,7 +2088,13 @@ function buildRunDriverPreferencesWorkpagePayload(workflowRunId: string): Record
         label: "Open latest snapshot",
         route: driverPreferencesArtifactRoute(latestVersion.artifactVersionId, workflowRunId),
         state: "available",
-        workpage_kind: "driver-preferences-v0"
+        workpage_kind: "driver-preferences-v0",
+        action_ref: buildWorkpageActionRef({
+          actionId: "workpage.driver-preferences-v0.open_latest",
+          workpageKind: "driver-preferences-v0",
+          workflowRunId,
+          artifactVersionId: latestVersion.artifactVersionId
+        })
       }
     : {
         action_id: "workpage.driver-preferences-v0.create_snapshot",
@@ -2028,7 +2103,13 @@ function buildRunDriverPreferencesWorkpagePayload(workflowRunId: string): Record
         label: "Create preferences snapshot",
         create_path: driverPreferencesSnapshotCreatePath(workflowRunId),
         state: "available",
-        workpage_kind: "driver-preferences-v0"
+        workpage_kind: "driver-preferences-v0",
+        action_ref: buildWorkpageActionRef({
+          actionId: "workpage.driver-preferences-v0.create_snapshot",
+          workpageKind: "driver-preferences-v0",
+          workflowRunId,
+          artifactVersionId: null
+        })
       }];
   return payload;
 }
@@ -2129,6 +2210,12 @@ function buildRunRouteDemandWorkpagePayload(workflowRunId: string): Record<strin
     record.artifact_version_id = latestVersion.artifactVersionId;
     record.route = routeDemandArtifactRoute(latestVersion.artifactVersionId, workflowRunId);
     record.state = "available";
+    record.action_ref = buildWorkpageActionRef({
+      actionId: asString(record.action_id),
+      workpageKind: "route-demand-v0",
+      workflowRunId,
+      artifactVersionId: latestVersion.artifactVersionId
+    });
     return record;
   });
   return payload;
@@ -2159,6 +2246,13 @@ function buildRunEodWorkpagePayload(workflowRunId: string): Record<string, unkno
     draftResolution.state = "no_draft";
     draftResolution.latest_artifact_version_id = null;
     draftResolution.artifact_route = null;
+    draftResolution.open_action_ref = null;
+    draftResolution.create_action_ref = buildWorkpageActionRef({
+      actionId: "workpage.eod-v0.create_draft",
+      workpageKind: "eod-v0",
+      workflowRunId,
+      artifactVersionId: null
+    });
     freshness.source_version = workflowRunId;
     source.source_refs = [
       "/api/v1/artifacts/av-reporting-eos-001",
@@ -2173,6 +2267,13 @@ function buildRunEodWorkpagePayload(workflowRunId: string): Record<string, unkno
     latestVersion.artifactVersionId,
     workflowRunId
   );
+  draftResolution.open_action_ref = buildWorkpageActionRef({
+    actionId: "workpage.eod-v0.open_latest_draft",
+    workpageKind: "eod-v0",
+    workflowRunId,
+    artifactVersionId: latestVersion.artifactVersionId
+  });
+  draftResolution.create_action_ref = null;
   freshness.source_version = latestVersion.artifactVersionId;
   source.source_refs = [
     "/api/v1/artifacts/av-reporting-eos-001",

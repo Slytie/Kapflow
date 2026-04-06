@@ -90,6 +90,30 @@ def _count_successors(
     return int(count)
 
 
+def _action_ref(
+    *,
+    action_id: str,
+    workpage_kind: str,
+    workflow_run_id: str,
+    artifact_version_id: str | None,
+    subject_kind: str | None = None,
+    subject_id: str | None = None,
+) -> dict[str, object]:
+    subject = None
+    if subject_kind is not None and subject_id is not None:
+        subject = {
+            "subject_kind": subject_kind,
+            "subject_id": subject_id,
+        }
+    return {
+        "action_id": action_id,
+        "workpage_kind": workpage_kind,
+        "workflow_run_id": workflow_run_id,
+        "artifact_version_id": artifact_version_id,
+        "subject": subject,
+    }
+
+
 def _eod_draft_create_path(workflow_run_id: str) -> str:
     return f"/api/v1/workpages/workflow-runs/{workflow_run_id}/eod-v0/drafts"
 
@@ -568,10 +592,14 @@ def test_workpage_mutation_smoke_weekly_publish_happy_path_promotes_official_poi
         payload={
             "rows": assignment_rows,
             "reserve_rows": reserve_rows,
-            "subject_link": {
-                "subject_kind": "human_task",
-                "subject_id": review_task_id,
-            },
+            "action_ref": _action_ref(
+                action_id="workpage.schedule-v0.save_draft",
+                workpage_kind="schedule-v0",
+                workflow_run_id=workflow_run_id,
+                artifact_version_id=draft_artifact_version_id,
+                subject_kind="human_task",
+                subject_id=review_task_id,
+            ),
             "idempotency_key": "api:workpage-smoke:weekly-publish:submit-draft",
         },
     )

@@ -10,7 +10,15 @@
     "command": "api.workpages.workflow_run",
     "draft_resolution": {
       "artifact_route": "/runs/<workflow_run_id:1>/workpages/eod-v0/artifacts/<artifact_version_id:2>",
+      "create_action_ref": null,
       "latest_artifact_version_id": "<artifact_version_id:2>",
+      "open_action_ref": {
+        "action_id": "workpage.eod-v0.open_latest_draft",
+        "artifact_version_id": "<artifact_version_id:2>",
+        "subject": null,
+        "workflow_run_id": "<workflow_run_id:1>",
+        "workpage_kind": "eod-v0"
+      },
       "state": "latest_draft_available"
     },
     "freshness": {

@@ -9,6 +9,13 @@
     "actions": [
       {
         "action_id": "workpage.driver-preferences-v0.create_snapshot",
+        "action_ref": {
+          "action_id": "workpage.driver-preferences-v0.create_snapshot",
+          "artifact_version_id": null,
+          "subject": null,
+          "workflow_run_id": "<workflow_run_id:1>",
+          "workpage_kind": "driver-preferences-v0"
+        },
         "artifact_version_id": null,
         "create_path": "/api/v1/workpages/workflow-runs/<workflow_run_id:1>/driver-preferences-v0/snapshots",
         "kind": "create_snapshot",

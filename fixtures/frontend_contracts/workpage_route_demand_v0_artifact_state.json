@@ -9,6 +9,13 @@
     "actions": [
       {
         "action_id": "workpage.route-demand-v0.save",
+        "action_ref": {
+          "action_id": "workpage.route-demand-v0.save",
+          "artifact_version_id": "<artifact_version_id:2>",
+          "subject": null,
+          "workflow_run_id": "<workflow_run_id:1>",
+          "workpage_kind": "route-demand-v0"
+        },
         "artifact_version_id": "<artifact_version_id:2>",
         "disabled_reason": null,
         "kind": "save",

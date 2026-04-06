@@ -83,6 +83,29 @@ def _submit_path(workflow_run_id: str, artifact_version_id: str) -> str:
     return f"{_artifact_path(workflow_run_id, artifact_version_id)}/submit"
 
 
+def _action_ref(
+    *,
+    action_id: str,
+    workflow_run_id: str,
+    artifact_version_id: str | None,
+    subject_kind: str | None = None,
+    subject_id: str | None = None,
+) -> dict[str, object]:
+    subject = None
+    if subject_kind is not None and subject_id is not None:
+        subject = {
+            "subject_kind": subject_kind,
+            "subject_id": subject_id,
+        }
+    return {
+        "action_id": action_id,
+        "workpage_kind": "eod-v0",
+        "workflow_run_id": workflow_run_id,
+        "artifact_version_id": artifact_version_id,
+        "subject": subject,
+    }
+
+
 def _request_approval(
     tmp_path: Path,
     *,
@@ -269,10 +292,13 @@ def test_canonical_eod_draft_create_links_supported_stage04_approval_as_draft(
     response = client.post(
         f"/api/v1/workpages/workflow-runs/{workflow_run_id}/eod-v0/drafts",
         payload={
-            "subject_link": {
-                "subject_kind": "approval",
-                "subject_id": str(approval["approval_id"]),
-            },
+            "action_ref": _action_ref(
+                action_id="workpage.eod-v0.create_draft",
+                workflow_run_id=workflow_run_id,
+                artifact_version_id=None,
+                subject_kind="approval",
+                subject_id=str(approval["approval_id"]),
+            ),
             "idempotency_key": "api:eod-draft:canonical-subject-create",
         },
     )
@@ -470,6 +496,23 @@ def test_artifact_backed_eod_workpage_returns_projected_contract(tmp_path: Path)
         }
     ]
     assert payload["artifact_history"]["entries"][0]["created_at"]
+    assert payload["actions"] == [
+        {
+            "action_id": "workpage.eod-v0.submit_draft",
+            "kind": "submit_artifact",
+            "label": "Submit draft",
+            "state": "available",
+            "workpage_kind": "eod-v0",
+            "artifact_version_id": artifact_version_id,
+            "submit_path": _submit_path(workflow_run_id, artifact_version_id),
+            "action_ref": _action_ref(
+                action_id="workpage.eod-v0.submit_draft",
+                workflow_run_id=workflow_run_id,
+                artifact_version_id=artifact_version_id,
+            ),
+            "disabled_reason": None,
+        }
+    ]
 
 
 def test_submit_artifact_workpage_creates_superseding_version_and_updates_projection(
@@ -615,10 +658,13 @@ def test_submit_artifact_workpage_links_supported_stage04_approval_as_response(
         payload={
             "form_values": {"dispatcher_comment": "Linked to Stage04 approval."},
             "checklist_values": [],
-            "subject_link": {
-                "subject_kind": "approval",
-                "subject_id": str(approval["approval_id"]),
-            },
+            "action_ref": _action_ref(
+                action_id="workpage.eod-v0.submit_draft",
+                workflow_run_id=workflow_run_id,
+                artifact_version_id=base_artifact_version_id,
+                subject_kind="approval",
+                subject_id=str(approval["approval_id"]),
+            ),
             "idempotency_key": "api:eod-draft:subject-submit",
         },
     )
@@ -823,6 +869,82 @@ def test_canonical_eod_draft_create_rejects_invalid_subject_kind(tmp_path: Path)
     )
     assert response.status_code == 400
     assert response.payload["error"]["code"] == "invalid_workpage_subject_link"
+
+
+def test_canonical_eod_draft_create_rejects_mixed_action_ref_and_subject_link(
+    tmp_path: Path,
+) -> None:
+    seeded = seed_dispatch_reporting_workpage_run(
+        db_url=_db_url(tmp_path),
+        tenant_id="tenant-a",
+        domain_id="domain-x",
+        run_tag="api:eod-draft:mixed-action-ref-subject-link",
+    )
+    workflow_run_id = str(seeded["workflow_run_id"])
+    client = _client(tmp_path)
+
+    response = client.post(
+        _draft_create_path(workflow_run_id),
+        payload={
+            "action_ref": _action_ref(
+                action_id="workpage.eod-v0.create_draft",
+                workflow_run_id=workflow_run_id,
+                artifact_version_id=None,
+                subject_kind="approval",
+                subject_id="ap-stage04",
+            ),
+            "subject_link": {
+                "subject_kind": "approval",
+                "subject_id": "ap-stage04",
+            },
+            "idempotency_key": "api:eod-draft:mixed-action-ref-subject-link",
+        },
+    )
+    assert response.status_code == 400
+    assert response.payload["error"]["code"] == "invalid_payload"
+    assert response.payload["error"]["details"] == {
+        "field_names": ["action_ref", "subject_link"]
+    }
+
+
+def test_submit_artifact_workpage_rejects_action_ref_for_wrong_artifact(
+    tmp_path: Path,
+) -> None:
+    seeded = seed_dispatch_reporting_workpage_run(
+        db_url=_db_url(tmp_path),
+        tenant_id="tenant-a",
+        domain_id="domain-x",
+        run_tag="api:eod-draft:invalid-action-ref-artifact",
+    )
+    workflow_run_id = str(seeded["workflow_run_id"])
+    client = _client(tmp_path)
+    created = client.post(
+        _draft_create_path(workflow_run_id),
+        payload={"idempotency_key": "api:eod-draft:invalid-action-ref-artifact:create"},
+    )
+    base_artifact_version_id = str(created.payload["draft"]["artifact_version_id"])
+
+    response = client.post(
+        _submit_path(workflow_run_id, base_artifact_version_id),
+        payload={
+            "form_values": {"dispatcher_comment": "Reject mismatched action ref."},
+            "checklist_values": [],
+            "action_ref": _action_ref(
+                action_id="workpage.eod-v0.submit_draft",
+                workflow_run_id=workflow_run_id,
+                artifact_version_id="av-wrong-artifact",
+            ),
+            "idempotency_key": "api:eod-draft:invalid-action-ref-artifact",
+        },
+    )
+    assert response.status_code == 400
+    assert response.payload["error"]["code"] == "invalid_workpage_action_ref"
+    assert response.payload["error"]["details"] == {
+        "workpage_kind": "eod-v0",
+        "flow_kind": "submit",
+        "artifact_version_id": base_artifact_version_id,
+        "action_artifact_version_id": "av-wrong-artifact",
+    }
 
 
 def test_canonical_eod_draft_create_rejects_cross_run_approval_subject_link(

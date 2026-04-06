@@ -85,14 +85,28 @@ function buildScheduleArtifactPayload(
       return {
         ...action,
         artifact_version_id: artifactVersionId,
-        preview_path: `/api/v1/workpages/workflow-runs/${workflowRunId}/schedule-v0/artifacts/${artifactVersionId}/preview`
+        preview_path: `/api/v1/workpages/workflow-runs/${workflowRunId}/schedule-v0/artifacts/${artifactVersionId}/preview`,
+        action_ref: {
+          action_id: String(action.action_id),
+          workpage_kind: "schedule-v0",
+          workflow_run_id: workflowRunId,
+          artifact_version_id: artifactVersionId,
+          subject: null
+        }
       };
     }
     if (action.kind === "submit_artifact") {
       return {
         ...action,
         artifact_version_id: artifactVersionId,
-        submit_path: `/api/v1/workpages/workflow-runs/${workflowRunId}/schedule-v0/artifacts/${artifactVersionId}/submit`
+        submit_path: `/api/v1/workpages/workflow-runs/${workflowRunId}/schedule-v0/artifacts/${artifactVersionId}/submit`,
+        action_ref: {
+          action_id: String(action.action_id),
+          workpage_kind: "schedule-v0",
+          workflow_run_id: workflowRunId,
+          artifact_version_id: artifactVersionId,
+          subject: null
+        }
       };
     }
     return action;
@@ -532,10 +546,15 @@ describe("LogisticsScheduleArtifactWorkpagePage", () => {
 
     window.history.pushState(
       {
-        workpageSubjectContext: {
-          subject_kind: "human_task",
-          subject_id: "ht-stage04-001",
-          workflow_run_id: "wr-other-run"
+        workpageActionRef: {
+          action_id: "workpage.schedule-v0.open_latest_draft",
+          workpage_kind: "schedule-v0",
+          workflow_run_id: "wr-other-run",
+          artifact_version_id: "av-schedule-artifact-001",
+          subject: {
+            subject_kind: "human_task",
+            subject_id: "ht-stage04-001"
+          }
         }
       },
       "",
@@ -553,7 +572,15 @@ describe("LogisticsScheduleArtifactWorkpagePage", () => {
     });
 
     expect(submitBodies).toHaveLength(1);
-    expect(submitBodies[0]).not.toHaveProperty("subject_link");
+    expect(submitBodies[0]).toMatchObject({
+      action_ref: {
+        action_id: "workpage.schedule-v0.save_draft",
+        workpage_kind: "schedule-v0",
+        workflow_run_id: "wr-weekly-001",
+        artifact_version_id: "av-schedule-artifact-001",
+        subject: null
+      }
+    });
   });
 
   it(

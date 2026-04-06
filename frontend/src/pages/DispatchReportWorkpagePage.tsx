@@ -22,8 +22,13 @@ import { isApiClientError } from "@/lib/api/httpClient";
 import { workpagesRepository } from "@/lib/repositories";
 import type { WorkpageContract } from "@/lib/types/contracts";
 import { invalidateWorkspaceViews } from "@/lib/workspace/queryInvalidation";
-import { resolveWorkpageSubjectContext } from "@/lib/workspace/workpageSubjectContext";
+import {
+  mergeWorkpageActionRef,
+  replaceWorkpageActionRefArtifactVersionId,
+  resolveWorkpageActionRef
+} from "@/lib/workspace/workpageActionRef";
 import type {
+  WorkpageEodAction,
   WorkpageChecklistSection as WorkpageChecklistSectionModel,
   WorkpageFormSection as WorkpageFormSectionModel,
   WorkpageHistorySection as WorkpageHistorySectionModel,
@@ -169,6 +174,15 @@ function useEditableEodState(
     checklistState,
     setChecklistState
   };
+}
+
+function findEodSubmitAction(contract: WorkpageContract | undefined): WorkpageEodAction | null {
+  return (
+    contract?.actions.find(
+      (action): action is WorkpageEodAction =>
+        action.workpage_kind === "eod-v0" && action.kind === "submit_artifact"
+    ) ?? null
+  );
 }
 
 interface DispatchReportWorkpageViewProps {
@@ -352,10 +366,21 @@ export function DispatchReportWorkpagePage(): JSX.Element {
     refetchInterval: apiConfig.pollIntervalMs
   });
   const createDraftMutation = useMutation({
-    mutationFn: () => workpagesRepository.createEodDraftForRun(workflowRunId),
+    mutationFn: () =>
+      workpagesRepository.createEodDraftForRun(
+        workflowRunId,
+        query.data?.draft_resolution?.create_action_ref ?? undefined
+      ),
     onSuccess: (draft) => {
       void queryClient.invalidateQueries({ queryKey: ["workpages"] });
-      navigate(draft.route);
+      navigate(draft.route, {
+        state: {
+          workpageActionRef: replaceWorkpageActionRefArtifactVersionId(
+            query.data?.draft_resolution?.create_action_ref,
+            draft.artifact_version_id
+          )
+        }
+      });
     }
   });
 
@@ -420,7 +445,13 @@ export function DispatchReportWorkpagePage(): JSX.Element {
                 </p>
               </header>
               <div className="action-cluster">
-                <Link className="link-button" to={latestDraftRoute}>
+                <Link
+                  className="link-button"
+                  to={latestDraftRoute}
+                  state={{
+                    workpageActionRef: query.data.draft_resolution?.open_action_ref ?? undefined
+                  }}
+                >
                   Open latest draft
                 </Link>
               </div>
@@ -496,21 +527,45 @@ export function DispatchReportArtifactWorkpagePage(): JSX.Element {
     formSection,
     checklistSection
   );
+  const submitAction = findEodSubmitAction(query.data);
   const submitMutation = useMutation({
-    mutationFn: () =>
-      workpagesRepository.submitEodArtifact(
+    mutationFn: () => {
+      const carriedActionRef = resolveWorkpageActionRef(location.state, {
+        workflowRunId: artifactWorkflowRunId,
+        workpageKind: "eod-v0",
+        artifactVersionId: artifactVersionId ?? ""
+      });
+      const actionRef = mergeWorkpageActionRef(
+        submitAction?.action_ref ?? null,
+        carriedActionRef ?? null
+      );
+      return workpagesRepository.submitEodArtifact(
         artifactWorkflowRunId,
         artifactVersionId ?? "",
         {
           formValues: formState,
           checklistValues: orderedChecklistSubmitValues(checklistSection, checklistState)
         },
-        resolveWorkpageSubjectContext(location.state, { workflowRunId: artifactWorkflowRunId })
-      ),
+        actionRef
+      );
+    },
     onSuccess: (submitted) => {
       void queryClient.invalidateQueries({ queryKey: ["workpages"] });
       void invalidateWorkspaceViews(queryClient, submitted.workflow_run_id);
-      navigate(submitted.route, { state: location.state });
+      const carriedActionRef = resolveWorkpageActionRef(location.state, {
+        workflowRunId: artifactWorkflowRunId,
+        workpageKind: "eod-v0",
+        artifactVersionId: artifactVersionId ?? ""
+      });
+      const nextActionRef = replaceWorkpageActionRefArtifactVersionId(
+        mergeWorkpageActionRef(submitAction?.action_ref ?? null, carriedActionRef ?? null),
+        submitted.artifact_version_id
+      );
+      navigate(submitted.route, {
+        state: {
+          workpageActionRef: nextActionRef
+        }
+      });
     }
   });
   const downloadMutation = useMutation({

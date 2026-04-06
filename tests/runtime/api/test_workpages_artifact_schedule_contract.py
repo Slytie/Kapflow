@@ -52,6 +52,30 @@ def _action_by_id(
     return next(action for action in actions if action["action_id"] == action_id)
 
 
+def _action_ref(
+    *,
+    action_id: str,
+    workpage_kind: str,
+    workflow_run_id: str,
+    artifact_version_id: str | None,
+    subject_kind: str | None = None,
+    subject_id: str | None = None,
+) -> dict[str, object]:
+    subject = None
+    if subject_kind is not None and subject_id is not None:
+        subject = {
+            "subject_kind": subject_kind,
+            "subject_id": subject_id,
+        }
+    return {
+        "action_id": action_id,
+        "workpage_kind": workpage_kind,
+        "workflow_run_id": workflow_run_id,
+        "artifact_version_id": artifact_version_id,
+        "subject": subject,
+    }
+
+
 def _create_human_task(
     tmp_path: Path,
     *,
@@ -454,6 +478,12 @@ def test_artifact_backed_schedule_workpage_returns_projected_contract(tmp_path: 
             f"/api/v1/workpages/workflow-runs/{workflow_run_id}/"
             f"schedule-v0/artifacts/{artifact_version_id}/preview"
         ),
+        "action_ref": _action_ref(
+            action_id="workpage.schedule-v0.preview_recalc",
+            workpage_kind="schedule-v0",
+            workflow_run_id=workflow_run_id,
+            artifact_version_id=artifact_version_id,
+        ),
         "disabled_reason": None,
     }
     assert _action_by_id(actions, "workpage.schedule-v0.save_draft") == {
@@ -466,6 +496,12 @@ def test_artifact_backed_schedule_workpage_returns_projected_contract(tmp_path: 
         "submit_path": (
             f"/api/v1/workpages/workflow-runs/{workflow_run_id}/"
             f"schedule-v0/artifacts/{artifact_version_id}/submit"
+        ),
+        "action_ref": _action_ref(
+            action_id="workpage.schedule-v0.save_draft",
+            workpage_kind="schedule-v0",
+            workflow_run_id=workflow_run_id,
+            artifact_version_id=artifact_version_id,
         ),
         "disabled_reason": None,
     }
@@ -480,6 +516,14 @@ def test_artifact_backed_schedule_workpage_returns_projected_contract(tmp_path: 
             f"/runs/{workflow_run_id}/workpages/route-demand-v0/artifacts/"
             f"{seeded['artifacts_by_kind']['planning.route_slot_requirements.workbook']['artifact_version_id']}"
         ),
+        "action_ref": _action_ref(
+            action_id="workpage.route-demand-v0.open_latest",
+            workpage_kind="route-demand-v0",
+            workflow_run_id=workflow_run_id,
+            artifact_version_id=str(
+                seeded["artifacts_by_kind"]["planning.route_slot_requirements.workbook"]["artifact_version_id"]
+            ),
+        ),
     }
     assert _action_by_id(actions, "workpage.driver-preferences-v0.create_snapshot") == {
         "action_id": "workpage.driver-preferences-v0.create_snapshot",
@@ -492,6 +536,12 @@ def test_artifact_backed_schedule_workpage_returns_projected_contract(tmp_path: 
         "create_path": (
             f"/api/v1/workpages/workflow-runs/{workflow_run_id}/"
             "driver-preferences-v0/snapshots"
+        ),
+        "action_ref": _action_ref(
+            action_id="workpage.driver-preferences-v0.create_snapshot",
+            workpage_kind="driver-preferences-v0",
+            workflow_run_id=workflow_run_id,
+            artifact_version_id=None,
         ),
     }
 
@@ -688,6 +738,14 @@ def test_published_schedule_artifact_reads_under_schedule_workpage_kind(tmp_path
                 f"/runs/{workflow_run_id}/workpages/route-demand-v0/artifacts/"
                 f"{seeded['artifacts_by_kind']['planning.route_slot_requirements.workbook']['artifact_version_id']}"
             ),
+            "action_ref": _action_ref(
+                action_id="workpage.route-demand-v0.open_latest",
+                workpage_kind="route-demand-v0",
+                workflow_run_id=workflow_run_id,
+                artifact_version_id=str(
+                    seeded["artifacts_by_kind"]["planning.route_slot_requirements.workbook"]["artifact_version_id"]
+                ),
+            ),
         },
         {
             "action_id": "workpage.driver-preferences-v0.create_snapshot",
@@ -700,6 +758,12 @@ def test_published_schedule_artifact_reads_under_schedule_workpage_kind(tmp_path
             "create_path": (
                 f"/api/v1/workpages/workflow-runs/{workflow_run_id}/"
                 "driver-preferences-v0/snapshots"
+            ),
+            "action_ref": _action_ref(
+                action_id="workpage.driver-preferences-v0.create_snapshot",
+                workpage_kind="driver-preferences-v0",
+                workflow_run_id=workflow_run_id,
+                artifact_version_id=None,
             ),
         },
     ]
@@ -1158,10 +1222,14 @@ def test_schedule_artifact_submit_links_response_to_supported_stage06_approval_s
         payload={
             "rows": assignment_rows,
             "reserve_rows": reserve_rows,
-            "subject_link": {
-                "subject_kind": "approval",
-                "subject_id": str(approval["approval_id"]),
-            },
+            "action_ref": _action_ref(
+                action_id="workpage.schedule-v0.save_draft",
+                workpage_kind="schedule-v0",
+                workflow_run_id=workflow_run_id,
+                artifact_version_id=artifact_version_id,
+                subject_kind="approval",
+                subject_id=str(approval["approval_id"]),
+            ),
             "idempotency_key": "api:workpages:artifact-schedule:subject-approval",
         },
     )
@@ -1244,6 +1312,93 @@ def test_schedule_artifact_submit_rejects_stale_base_versions(tmp_path: Path) ->
     }
 
 
+def test_schedule_artifact_submit_rejects_mixed_action_ref_and_subject_link(
+    tmp_path: Path,
+) -> None:
+    seeded = seed_actual_ops_weekly_schedule_run_with_stage04_outputs(
+        db_url=_db_url(tmp_path),
+        tenant_id="tenant-a",
+        domain_id="domain-x",
+        run_tag="api:workpages:artifact-schedule:mixed-action-ref-subject-link",
+    )
+    workflow_run_id = str(seeded["workflow_run_id"])
+    artifact_version_id = str(seeded["stage04_outputs"]["draft_workbook"]["artifact_version_id"])
+    client = _client(tmp_path)
+    assignment_rows, reserve_rows = _schedule_submit_rows(
+        client,
+        workflow_run_id,
+        artifact_version_id,
+    )
+
+    response = client.post(
+        _submit_path(workflow_run_id, artifact_version_id),
+        payload={
+            "rows": assignment_rows,
+            "reserve_rows": reserve_rows,
+            "action_ref": _action_ref(
+                action_id="workpage.schedule-v0.save_draft",
+                workpage_kind="schedule-v0",
+                workflow_run_id=workflow_run_id,
+                artifact_version_id=artifact_version_id,
+                subject_kind="approval",
+                subject_id="ap-stage06",
+            ),
+            "subject_link": {
+                "subject_kind": "approval",
+                "subject_id": "ap-stage06",
+            },
+            "idempotency_key": "api:workpages:artifact-schedule:mixed-action-ref-subject-link",
+        },
+    )
+    assert response.status_code == 400
+    assert response.payload["error"]["code"] == "invalid_payload"
+    assert response.payload["error"]["details"] == {
+        "field_names": ["action_ref", "subject_link"]
+    }
+
+
+def test_schedule_artifact_submit_rejects_action_ref_for_wrong_artifact(
+    tmp_path: Path,
+) -> None:
+    seeded = seed_actual_ops_weekly_schedule_run_with_stage04_outputs(
+        db_url=_db_url(tmp_path),
+        tenant_id="tenant-a",
+        domain_id="domain-x",
+        run_tag="api:workpages:artifact-schedule:invalid-action-ref-artifact",
+    )
+    workflow_run_id = str(seeded["workflow_run_id"])
+    artifact_version_id = str(seeded["stage04_outputs"]["draft_workbook"]["artifact_version_id"])
+    client = _client(tmp_path)
+    assignment_rows, reserve_rows = _schedule_submit_rows(
+        client,
+        workflow_run_id,
+        artifact_version_id,
+    )
+
+    response = client.post(
+        _submit_path(workflow_run_id, artifact_version_id),
+        payload={
+            "rows": assignment_rows,
+            "reserve_rows": reserve_rows,
+            "action_ref": _action_ref(
+                action_id="workpage.schedule-v0.save_draft",
+                workpage_kind="schedule-v0",
+                workflow_run_id=workflow_run_id,
+                artifact_version_id="av-wrong-artifact",
+            ),
+            "idempotency_key": "api:workpages:artifact-schedule:invalid-action-ref-artifact",
+        },
+    )
+    assert response.status_code == 400
+    assert response.payload["error"]["code"] == "invalid_workpage_action_ref"
+    assert response.payload["error"]["details"] == {
+        "workpage_kind": "schedule-v0",
+        "flow_kind": "submit",
+        "artifact_version_id": artifact_version_id,
+        "action_artifact_version_id": "av-wrong-artifact",
+    }
+
+
 def test_schedule_artifact_hard_dependency_drift_surfaces_and_blocks_save(
     tmp_path: Path,
 ) -> None:
@@ -1283,6 +1438,12 @@ def test_schedule_artifact_hard_dependency_drift_surfaces_and_blocks_save(
             f"/api/v1/workpages/workflow-runs/{workflow_run_id}/"
             f"schedule-v0/artifacts/{artifact_version_id}/preview"
         ),
+        "action_ref": _action_ref(
+            action_id="workpage.schedule-v0.preview_recalc",
+            workpage_kind="schedule-v0",
+            workflow_run_id=workflow_run_id,
+            artifact_version_id=artifact_version_id,
+        ),
         "disabled_reason": None,
     }
     assert _action_by_id(actions, "workpage.schedule-v0.save_draft") == {
@@ -1295,6 +1456,12 @@ def test_schedule_artifact_hard_dependency_drift_surfaces_and_blocks_save(
         "submit_path": (
             f"/api/v1/workpages/workflow-runs/{workflow_run_id}/"
             f"schedule-v0/artifacts/{artifact_version_id}/submit"
+        ),
+        "action_ref": _action_ref(
+            action_id="workpage.schedule-v0.save_draft",
+            workpage_kind="schedule-v0",
+            workflow_run_id=workflow_run_id,
+            artifact_version_id=artifact_version_id,
         ),
         "disabled_reason": "dependency_drift_detected",
     }
@@ -1364,6 +1531,12 @@ def test_schedule_artifact_without_pinned_manifest_remains_readable_but_blocks_p
             f"/api/v1/workpages/workflow-runs/{workflow_run_id}/"
             f"schedule-v0/artifacts/{artifact_version_id}/preview"
         ),
+        "action_ref": _action_ref(
+            action_id="workpage.schedule-v0.preview_recalc",
+            workpage_kind="schedule-v0",
+            workflow_run_id=workflow_run_id,
+            artifact_version_id=artifact_version_id,
+        ),
         "disabled_reason": "dependency_baseline_unavailable",
     }
     assert _action_by_id(actions, "workpage.schedule-v0.save_draft") == {
@@ -1376,6 +1549,12 @@ def test_schedule_artifact_without_pinned_manifest_remains_readable_but_blocks_p
         "submit_path": (
             f"/api/v1/workpages/workflow-runs/{workflow_run_id}/"
             f"schedule-v0/artifacts/{artifact_version_id}/submit"
+        ),
+        "action_ref": _action_ref(
+            action_id="workpage.schedule-v0.save_draft",
+            workpage_kind="schedule-v0",
+            workflow_run_id=workflow_run_id,
+            artifact_version_id=artifact_version_id,
         ),
         "disabled_reason": "dependency_baseline_unavailable",
     }

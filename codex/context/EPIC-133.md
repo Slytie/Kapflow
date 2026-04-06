@@ -24,7 +24,7 @@ Purpose:
 Canonical artifact-backed pages now consume backend-authored `artifact_history` and accepted-entry `route` values from the workpage GET contract. The remaining client-side list/filter history helpers in `frontend/src/lib/repositories/workpagesRepository.ts` are now explicit inline-demo debt for `TASK-0217`, not the canonical page path.
 
 ### 2. Client-owned workflow intent
-Frontend create/submit calls still pass raw `subject_link` values, and router state still influences workflow meaning.
+Canonical frontend create/submit flows now use server-authored `action_ref` values, and router state carries that bounded action handoff rather than raw subject meaning. Remaining raw `subject_link` behavior is compatibility/demo debt, not the canonical page path.
 
 ### 3. Dual mutation path
 `frontend/src/components/workpages/InlineLogisticsWorkpages.tsx` still acts like a second mutation engine inside the demo shell.

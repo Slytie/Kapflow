@@ -20,6 +20,26 @@ import { server } from "@/test/api/server";
 import { renderRoute } from "@/test/renderRoute";
 import { buildEodArtifactWorkpageState } from "@/test/workpages/eodArtifactFixture";
 
+function buildActionRef(params: {
+  actionId: string;
+  workpageKind: string;
+  workflowRunId: string;
+  artifactVersionId?: string | null;
+  subjectKind: "human_task" | "approval";
+  subjectId: string;
+}) {
+  return {
+    action_id: params.actionId,
+    workpage_kind: params.workpageKind,
+    workflow_run_id: params.workflowRunId,
+    artifact_version_id: params.artifactVersionId ?? null,
+    subject: {
+      subject_kind: params.subjectKind,
+      subject_id: params.subjectId
+    }
+  };
+}
+
 function buildWorkspaceWithTaskWorkpageAction(
   action: WorkflowWorkspaceWorkpageAction
 ): WorkflowRunWorkspaceContract {
@@ -305,6 +325,13 @@ describe("RunWorkspacePage", () => {
               create_relation_kind: null,
               submit_relation_kind: "response"
             },
+            action_ref: buildActionRef({
+              actionId: "workpage.schedule-v0.open_latest_draft",
+              workpageKind: "schedule-v0",
+              workflowRunId: "wr-test-001",
+              subjectKind: "human_task",
+              subjectId: "ht-claimed-002"
+            }),
             disabled_reason: "schedule_draft_unavailable"
           })
         })
@@ -353,6 +380,14 @@ describe("RunWorkspacePage", () => {
               create_relation_kind: null,
               submit_relation_kind: "response"
             },
+            action_ref: buildActionRef({
+              actionId: "workpage.schedule-v0.open_latest_draft",
+              workpageKind: "schedule-v0",
+              workflowRunId: "wr-test-001",
+              artifactVersionId: "av-schedule-artifact-001",
+              subjectKind: "human_task",
+              subjectId: "ht-claimed-002"
+            }),
             disabled_reason: null
           })
         })
@@ -403,6 +438,13 @@ describe("RunWorkspacePage", () => {
               create_relation_kind: "draft",
               submit_relation_kind: "response"
             },
+            action_ref: buildActionRef({
+              actionId: "workpage.eod-v0.create_draft",
+              workpageKind: "eod-v0",
+              workflowRunId: "wr-test-001",
+              subjectKind: "approval",
+              subjectId: "ap-pending-001"
+            }),
             disabled_reason: null
           })
         })
@@ -444,9 +486,15 @@ describe("RunWorkspacePage", () => {
     });
     expect(requestBodies).toHaveLength(1);
     expect(requestBodies[0]).toMatchObject({
-      subject_link: {
-        subject_kind: "approval",
-        subject_id: "ap-pending-001"
+      action_ref: {
+        action_id: "workpage.eod-v0.create_draft",
+        workpage_kind: "eod-v0",
+        workflow_run_id: "wr-test-001",
+        artifact_version_id: null,
+        subject: {
+          subject_kind: "approval",
+          subject_id: "ap-pending-001"
+        }
       }
     });
   });

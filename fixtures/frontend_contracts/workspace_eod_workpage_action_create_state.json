@@ -44,6 +44,16 @@
         "workpage_actions": [
           {
             "action_id": "workpage.eod-v0.create_draft",
+            "action_ref": {
+              "action_id": "workpage.eod-v0.create_draft",
+              "artifact_version_id": null,
+              "subject": {
+                "subject_id": "<approval_id:2>",
+                "subject_kind": "approval"
+              },
+              "workflow_run_id": "<workflow_run_id:1>",
+              "workpage_kind": "eod-v0"
+            },
             "create_path": "/api/v1/workpages/workflow-runs/<workflow_run_id:1>/eod-v0/drafts",
             "disabled_reason": null,
             "label": "Create EOD draft",
@@ -314,6 +324,16 @@
         "workpage_actions": [
           {
             "action_id": "workpage.eod-v0.create_draft",
+            "action_ref": {
+              "action_id": "workpage.eod-v0.create_draft",
+              "artifact_version_id": null,
+              "subject": {
+                "subject_id": "<approval_id:2>",
+                "subject_kind": "approval"
+              },
+              "workflow_run_id": "<workflow_run_id:1>",
+              "workpage_kind": "eod-v0"
+            },
             "create_path": "/api/v1/workpages/workflow-runs/<workflow_run_id:1>/eod-v0/drafts",
             "disabled_reason": null,
             "label": "Create EOD draft",

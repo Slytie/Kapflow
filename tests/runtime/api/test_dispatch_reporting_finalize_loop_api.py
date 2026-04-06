@@ -152,6 +152,29 @@ def _workspace_item(payload: dict[str, object], *, subject_kind: str, subject_id
     raise AssertionError(f"workspace item not found: {subject_kind}:{subject_id}")
 
 
+def _action_ref(
+    *,
+    action_id: str,
+    workflow_run_id: str,
+    artifact_version_id: str | None,
+    subject_kind: str | None = None,
+    subject_id: str | None = None,
+) -> dict[str, object]:
+    subject = None
+    if subject_kind is not None and subject_id is not None:
+        subject = {
+            "subject_kind": subject_kind,
+            "subject_id": subject_id,
+        }
+    return {
+        "action_id": action_id,
+        "workpage_kind": "eod-v0",
+        "workflow_run_id": workflow_run_id,
+        "artifact_version_id": artifact_version_id,
+        "subject": subject,
+    }
+
+
 def _latest_artifact_id(db_path: Path, *, workflow_run_id: str, artifact_kind: str) -> str:
     rows = _query_rows(
         db_path,
@@ -361,6 +384,13 @@ def test_dispatch_reporting_happy_path_builds_review_finalizes_and_handoffs(
                 "subject_id": review_task_id,
                 "workflow_run_id": workflow_run_id,
             },
+            "action_ref": _action_ref(
+                action_id="workpage.eod-v0.open_latest_draft",
+                workflow_run_id=workflow_run_id,
+                artifact_version_id=initial_draft_artifact_id,
+                subject_kind="human_task",
+                subject_id=review_task_id,
+            ),
             "link_policy": {
                 "create_relation_kind": "draft",
                 "submit_relation_kind": "response",
@@ -382,10 +412,13 @@ def test_dispatch_reporting_happy_path_builds_review_finalizes_and_handoffs(
                 "dispatcher_comment": "Reviewed Stage03 draft before manager confirmation.",
             },
             "checklist_values": [],
-            "subject_link": {
-                "subject_kind": "human_task",
-                "subject_id": review_task_id,
-            },
+            "action_ref": _action_ref(
+                action_id="workpage.eod-v0.submit_draft",
+                workflow_run_id=workflow_run_id,
+                artifact_version_id=initial_draft_artifact_id,
+                subject_kind="human_task",
+                subject_id=review_task_id,
+            ),
             "idempotency_key": "api:dispatch-happy:submit-review-edits",
         },
     )
@@ -712,10 +745,13 @@ def test_dispatch_finalize_fails_closed_when_reviewed_draft_is_stale(tmp_path: P
         payload={
             "form_values": {"dispatcher_comment": "Create a newer draft before approval."},
             "checklist_values": [],
-            "subject_link": {
-                "subject_kind": "human_task",
-                "subject_id": review_task_id,
-            },
+            "action_ref": _action_ref(
+                action_id="workpage.eod-v0.submit_draft",
+                workflow_run_id=workflow_run_id,
+                artifact_version_id=initial_draft_artifact_id,
+                subject_kind="human_task",
+                subject_id=review_task_id,
+            ),
             "idempotency_key": "api:dispatch-stale:create-newer-draft",
         },
     )

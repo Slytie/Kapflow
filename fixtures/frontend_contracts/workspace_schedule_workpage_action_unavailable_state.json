@@ -50,6 +50,16 @@
         "workpage_actions": [
           {
             "action_id": "workpage.schedule-v0.open_latest_draft",
+            "action_ref": {
+              "action_id": "workpage.schedule-v0.open_latest_draft",
+              "artifact_version_id": null,
+              "subject": {
+                "subject_id": "<human_task_id:2>",
+                "subject_kind": "human_task"
+              },
+              "workflow_run_id": "<workflow_run_id:1>",
+              "workpage_kind": "schedule-v0"
+            },
             "create_path": null,
             "disabled_reason": "schedule_draft_unavailable",
             "label": "Open schedule draft",
@@ -424,6 +434,16 @@
         "workpage_actions": [
           {
             "action_id": "workpage.schedule-v0.open_latest_draft",
+            "action_ref": {
+              "action_id": "workpage.schedule-v0.open_latest_draft",
+              "artifact_version_id": null,
+              "subject": {
+                "subject_id": "<human_task_id:2>",
+                "subject_kind": "human_task"
+              },
+              "workflow_run_id": "<workflow_run_id:1>",
+              "workpage_kind": "schedule-v0"
+            },
             "create_path": null,
             "disabled_reason": "schedule_draft_unavailable",
             "label": "Open schedule draft",

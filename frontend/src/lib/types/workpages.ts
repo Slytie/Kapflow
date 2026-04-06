@@ -253,6 +253,19 @@ export interface WorkpageScheduleAcceptedSeries {
   entries: WorkpageScheduleAcceptedSeriesEntry[];
 }
 
+export interface WorkpageActionRefSubject {
+  subject_kind: "human_task" | "approval";
+  subject_id: string;
+}
+
+export interface WorkpageActionRef {
+  action_id: string;
+  workpage_kind: string;
+  workflow_run_id: string;
+  artifact_version_id: string | null;
+  subject: WorkpageActionRefSubject | null;
+}
+
 export type WorkpageScheduleActionKind =
   | "open_latest_draft"
   | "preview_recalc"
@@ -268,6 +281,7 @@ export interface WorkpageScheduleAction {
   route?: string | null;
   preview_path?: string | null;
   submit_path?: string | null;
+  action_ref: WorkpageActionRef | null;
   disabled_reason?: string | null;
 }
 
@@ -329,6 +343,7 @@ export interface WorkpageRouteDemandAction {
   artifact_version_id: string | null;
   route?: string | null;
   submit_path?: string | null;
+  action_ref: WorkpageActionRef | null;
   disabled_reason?: string | null;
 }
 
@@ -372,13 +387,29 @@ export interface WorkpageDriverPreferencesAction {
   route?: string | null;
   create_path?: string | null;
   submit_path?: string | null;
+  action_ref: WorkpageActionRef | null;
+  disabled_reason?: string | null;
+}
+
+export type WorkpageEodActionKind = "submit_artifact";
+
+export interface WorkpageEodAction {
+  action_id: string;
+  kind: WorkpageEodActionKind;
+  label: string;
+  state: "available" | "blocked" | "unavailable";
+  workpage_kind: string;
+  artifact_version_id: string | null;
+  submit_path?: string | null;
+  action_ref: WorkpageActionRef | null;
   disabled_reason?: string | null;
 }
 
 export type WorkpageAction =
   | WorkpageScheduleAction
   | WorkpageRouteDemandAction
-  | WorkpageDriverPreferencesAction;
+  | WorkpageDriverPreferencesAction
+  | WorkpageEodAction;
 
 export type WorkpageSection =
   | WorkpageSummaryCardsSection

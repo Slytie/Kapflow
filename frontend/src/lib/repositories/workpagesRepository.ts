@@ -5,23 +5,10 @@ import type {
   ArtifactVersionRow,
   WorkpageContract,
   WorkpageCreateResponse,
-  WorkpageActionSubjectContext,
   WorkpagePreviewResponse,
   WorkpageSubmittedResponse
 } from "@/lib/types/contracts";
-
-function subjectLinkPayload(subjectContext?: WorkpageActionSubjectContext): {
-  subject_kind: "human_task" | "approval";
-  subject_id: string;
-} | undefined {
-  if (!subjectContext) {
-    return undefined;
-  }
-  return {
-    subject_kind: subjectContext.subject_kind,
-    subject_id: subjectContext.subject_id
-  };
-}
+import type { WorkpageActionRef } from "@/lib/types/workpages";
 
 export const workpagesRepository = {
   async scheduleForRun(workflowRunId: string): Promise<WorkpageContract> {
@@ -62,24 +49,24 @@ export const workpagesRepository = {
 
   async createEodDraftForRun(
     workflowRunId: string,
-    subjectContext?: WorkpageActionSubjectContext
+    actionRef?: WorkpageActionRef
   ): Promise<WorkpageCreateResponse> {
     return onetruthApi.createWorkflowRunEodDraft(workflowRunId, {
       idempotency_key: createIdempotencyKey("workpage-eod-draft-create", workflowRunId),
-      subject_link: subjectLinkPayload(subjectContext)
+      action_ref: actionRef
     });
   },
 
   async createWorkpage(
     createPath: string,
-    subjectContext?: WorkpageActionSubjectContext
+    actionRef?: WorkpageActionRef
   ): Promise<WorkpageCreateResponse> {
     return onetruthApi.createWorkpageAtPath(createPath, {
       idempotency_key: createIdempotencyKey(
         "workspace-workpage-create",
-        `${createPath}:${subjectContext?.subject_kind ?? "none"}:${subjectContext?.subject_id ?? "none"}`
+        `${createPath}:${actionRef?.subject?.subject_kind ?? "none"}:${actionRef?.subject?.subject_id ?? "none"}`
       ),
-      subject_link: subjectLinkPayload(subjectContext)
+      action_ref: actionRef
     });
   },
 
@@ -164,12 +151,12 @@ export const workpagesRepository = {
         note: string;
       }>;
     },
-    subjectContext?: WorkpageActionSubjectContext
+    actionRef?: WorkpageActionRef
   ): Promise<WorkpageSubmittedResponse> {
     return onetruthApi.submitWorkflowRunEodArtifactWorkpage(workflowRunId, artifactVersionId, {
       form_values: payload.formValues,
       checklist_values: payload.checklistValues,
-      subject_link: subjectLinkPayload(subjectContext),
+      action_ref: actionRef,
       idempotency_key: createIdempotencyKey("workpage-eod-artifact-submit", artifactVersionId)
     });
   },
@@ -181,12 +168,12 @@ export const workpagesRepository = {
       rows: Array<Record<string, unknown>>;
       reserveRows: Array<Record<string, unknown>>;
     },
-    subjectContext?: WorkpageActionSubjectContext
+    actionRef?: WorkpageActionRef
   ): Promise<WorkpageSubmittedResponse> {
     return onetruthApi.submitWorkflowRunScheduleArtifactWorkpage(workflowRunId, artifactVersionId, {
       rows: payload.rows,
       reserve_rows: payload.reserveRows,
-      subject_link: subjectLinkPayload(subjectContext),
+      action_ref: actionRef,
       idempotency_key: createIdempotencyKey("workpage-schedule-artifact-submit", artifactVersionId)
     });
   },
@@ -198,12 +185,12 @@ export const workpagesRepository = {
       rows: Array<Record<string, unknown>>;
       reserveRows: Array<Record<string, unknown>>;
     },
-    subjectContext?: WorkpageActionSubjectContext
+    actionRef?: WorkpageActionRef
   ): Promise<WorkpageSubmittedResponse> {
     return onetruthApi.submitArtifactWorkpageAtPath(submitPath, {
       rows: payload.rows,
       reserve_rows: payload.reserveRows,
-      subject_link: subjectLinkPayload(subjectContext),
+      action_ref: actionRef,
       idempotency_key: createIdempotencyKey("workpage-schedule-artifact-submit", artifactVersionId)
     });
   },
@@ -230,11 +217,11 @@ export const workpagesRepository = {
         planned_route_count: number;
       }>;
     },
-    subjectContext?: WorkpageActionSubjectContext
+    actionRef?: WorkpageActionRef
   ): Promise<WorkpageSubmittedResponse> {
     return onetruthApi.submitArtifactWorkpageAtPath(submitPath, {
       daily_demand_rows: payload.dailyDemandRows,
-      subject_link: subjectLinkPayload(subjectContext),
+      action_ref: actionRef,
       idempotency_key: createIdempotencyKey("workpage-route-demand-artifact-submit", artifactVersionId)
     });
   },
@@ -247,10 +234,12 @@ export const workpagesRepository = {
         driver_id: string;
         preferences_by_weekday: Record<string, string | null>;
       }>;
-    }
+    },
+    actionRef?: WorkpageActionRef
   ): Promise<WorkpageSubmittedResponse> {
     return onetruthApi.submitArtifactWorkpageAtPath(submitPath, {
       driver_rows: payload.driverRows,
+      action_ref: actionRef,
       idempotency_key: createIdempotencyKey(
         "workpage-driver-preferences-artifact-submit",
         artifactVersionId

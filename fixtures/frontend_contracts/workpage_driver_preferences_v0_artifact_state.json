@@ -9,6 +9,13 @@
     "actions": [
       {
         "action_id": "workpage.driver-preferences-v0.save",
+        "action_ref": {
+          "action_id": "workpage.driver-preferences-v0.save",
+          "artifact_version_id": "<artifact_version_id:2>",
+          "subject": null,
+          "workflow_run_id": "<workflow_run_id:1>",
+          "workpage_kind": "driver-preferences-v0"
+        },
         "artifact_version_id": "<artifact_version_id:2>",
         "disabled_reason": null,
         "kind": "save",

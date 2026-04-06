@@ -32,6 +32,22 @@ def _query_rows(db_url: str, sql: str, params: tuple[object, ...] = ()) -> list[
     return [dict(row) for row in rows]
 
 
+def _action_ref(
+    *,
+    action_id: str,
+    workpage_kind: str,
+    workflow_run_id: str,
+    artifact_version_id: str | None,
+) -> dict[str, object]:
+    return {
+        "action_id": action_id,
+        "workpage_kind": workpage_kind,
+        "workflow_run_id": workflow_run_id,
+        "artifact_version_id": artifact_version_id,
+        "subject": None,
+    }
+
+
 def _route_demand_submit_rows(route_artifact: dict[str, object]) -> list[dict[str, object]]:
     metadata_json = route_artifact["metadata_json"]
     assert isinstance(metadata_json, dict)
@@ -100,6 +116,12 @@ def test_route_demand_run_workpage_contract_returns_latest_route_demand_projecti
             "workpage_kind": "route-demand-v0",
             "artifact_version_id": latest_route_artifact_id,
             "route": f"/runs/{workflow_run_id}/workpages/route-demand-v0/artifacts/{latest_route_artifact_id}",
+            "action_ref": _action_ref(
+                action_id="workpage.route-demand-v0.open_latest",
+                workpage_kind="route-demand-v0",
+                workflow_run_id=workflow_run_id,
+                artifact_version_id=latest_route_artifact_id,
+            ),
         }
     ]
     assert payload["calculations"]["day_cards"]
@@ -154,6 +176,12 @@ def test_route_demand_artifact_workpage_uses_canonical_route_and_retires_alias(
             "workpage_kind": "route-demand-v0",
             "artifact_version_id": route_artifact_id,
             "submit_path": f"/api/v1/workpages/workflow-runs/{workflow_run_id}/route-demand-v0/artifacts/{route_artifact_id}/submit",
+            "action_ref": _action_ref(
+                action_id="workpage.route-demand-v0.save",
+                workpage_kind="route-demand-v0",
+                workflow_run_id=workflow_run_id,
+                artifact_version_id=route_artifact_id,
+            ),
             "disabled_reason": None,
         }
     ]
@@ -203,6 +231,12 @@ def test_route_demand_artifact_workpage_uses_canonical_route_and_retires_alias(
             "workpage_kind": "route-demand-v0",
             "artifact_version_id": route_artifact_id,
             "submit_path": f"/api/v1/workpages/workflow-runs/{workflow_run_id}/route-demand-v0/artifacts/{route_artifact_id}/submit",
+            "action_ref": _action_ref(
+                action_id="workpage.route-demand-v0.save",
+                workpage_kind="route-demand-v0",
+                workflow_run_id=workflow_run_id,
+                artifact_version_id=route_artifact_id,
+            ),
             "disabled_reason": "historical_artifact_read_only",
         }
     ]

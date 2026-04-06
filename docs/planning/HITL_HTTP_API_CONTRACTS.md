@@ -233,11 +233,12 @@ Dispatch-reporting workspace-specific notes:
 - `dispatch_reporting.v1` `Stage04/final_packet_review` requires `reporting.manager_review.doc` plus review confirmation on the latest `reporting.upd_draft.workbook`.
 - `dispatch_reporting.v1` `Stage04/final_packet_review` work items may expose the canonical `eod-v0` `open_route` workpage action against the latest draft workbook.
 
-Stage-linked workpage action shape (`workpage_actions[]`, frozen in `TASK-0146`):
+Stage-linked workpage action shape (`workpage_actions[]`, extended in `TASK-0216`):
 - lives only on workspace work items (`user_work[]`, `blocking_work[]`)
 - does not live on `graph.nodes[]`
 - does not add a separate top-level action map
 - preserves existing `available_actions[]` for non-workpage inline mutations
+- keeps `subject_context` and `link_policy` as compatibility metadata in this tranche, but canonical frontend code should prefer `action_ref`
 - shape:
   - `action_id`
   - `workpage_kind`
@@ -248,6 +249,7 @@ Stage-linked workpage action shape (`workpage_actions[]`, frozen in `TASK-0146`)
   - `create_path` (canonical API create path or `null`)
   - `subject_context` (`subject_kind`, `subject_id`, `workflow_run_id`)
   - `link_policy` (`create_relation_kind`, `submit_relation_kind`)
+  - `action_ref` (`action_id`, `workpage_kind`, `workflow_run_id`, `artifact_version_id`, `subject`)
   - `disabled_reason`
 
 Example:
@@ -270,6 +272,16 @@ Example:
     "create_relation_kind": null,
     "submit_relation_kind": "response"
   },
+  "action_ref": {
+    "action_id": "workpage.schedule-v0.open_latest_draft",
+    "workpage_kind": "schedule-v0",
+    "workflow_run_id": "wr-123",
+    "artifact_version_id": "av-456",
+    "subject": {
+      "subject_kind": "human_task",
+      "subject_id": "ht-123"
+    }
+  },
   "disabled_reason": null
 }
 ```
@@ -284,7 +296,10 @@ Supported surface matrix (frozen in `TASK-0146`):
 | `weekly_schedule_planning.v1` | `/runs/:workflowRunId/workspace` work items | approval `scope_ref=Stage06` | latest canonical schedule artifact route | `open_route` | Approval access stays distinct from approval response. |
 | `dispatch_reporting.v1` | `/runs/:workflowRunId/workspace` work items | approval `scope_ref=Stage04` | latest canonical EOD artifact route if present, else canonical EOD create route | `open_route` or `create_then_open` | Approval access only, no implicit approval response. |
 
-Subject-link semantics (frozen in `TASK-0146`):
+Workpage action handoff and relation semantics:
+- `action_ref` is the preferred canonical create/submit handoff, and the backend revalidates it against the authoritative run, workpage kind, artifact scope, and supported subject surface before writing.
+- `subject_link` remains a deprecated compatibility fallback only when `action_ref` is absent.
+- requests that send both `action_ref` and `subject_link` fail closed as `invalid_payload`
 - `attachment` keeps existing upload/evidence semantics
 - `draft` is reserved for in-progress workpage draft association and never satisfies required uploads, required reviews, approval response, or completion/finalization truth
 - `response` is reserved for the new artifact version created by workpage submit and is the only workpage-linked relation kind that later tasks may allow to satisfy supported requirements
@@ -395,7 +410,7 @@ Public workpage posture is canonical-only. The frontend workpage pages now live 
 
 `TASK-0146` does not add any new workpage routes. Stage-linked workpage access remains an additive workspace projection over these existing canonical families rather than a second route family or second shell.
 
-`TASK-0147` keeps the write-boundary seam on these same routes. Supported stage-linked create/submit flows may now accept one optional `subject_link` object; callers do not supply raw `links[]` or `relation_kind`, and the server derives relation-kind semantics from the specific workpage flow.
+`TASK-0216` keeps the write-boundary seam on these same routes. Supported stage-linked create/submit flows now prefer one additive server-authored `action_ref`; `subject_link` remains a deprecated compatibility fallback only when `action_ref` is absent. Callers do not supply raw `links[]` or `relation_kind`, and the server derives relation-kind semantics from the resolved action plus the specific workpage flow.
 
 Current planned workpage ids:
 - `schedule-v0`
@@ -456,6 +471,15 @@ Draft resolution shape (`draft_resolution`, run-backed EOD landing only):
 - `state` (`no_draft|latest_draft_available`)
 - `latest_artifact_version_id`
 - `artifact_route`
+- `open_action_ref`
+- `create_action_ref`
+
+Preferred workpage action handoff shape (`action_ref`):
+- `action_id`
+- `workpage_kind`
+- `workflow_run_id`
+- `artifact_version_id` (`null` for run-backed create/open actions)
+- `subject` (`null` or `{ subject_kind, subject_id }`)
 
 Notes:
 - The schedule page is composite and may set `primary_dataset_key` to `null` while populating `source_dataset_keys[]`.
@@ -471,12 +495,13 @@ Notes:
 - Run-backed EOD landing responses should set `run_context` plus `draft_resolution`, but must not pretend to be artifact projections.
 - The implemented run-backed EOD landing route currently lives at `GET /api/v1/workpages/workflow-runs/{workflow_run_id}/eod-v0`.
 - The implemented run-backed EOD landing route intentionally reuses the validated read-only EOD landing body, sets `source.mode=run_projection`, keeps `source.source_artifact_version_id=null`, and uses `freshness.source_kind=workflow_run_projection` plus `freshness.source_version=<latest_compatible_draft_artifact_version_id|workflow_run_id>`.
-- The implemented run-backed EOD landing route resolves `draft_resolution` from the newest compatible `reporting.upd_draft.workbook` artifact in the supplied workflow run and leaves `artifact_context` absent.
+- The implemented run-backed EOD landing route resolves `draft_resolution` from the newest compatible `reporting.upd_draft.workbook` artifact in the supplied workflow run, leaves `artifact_context` absent, and now publishes server-authored `open_action_ref` / `create_action_ref` values for the canonical write path.
 - Supported stage-linked EOD write surfaces now include both the existing `dispatch_reporting.v1` Stage04 approval surface and the `Stage04/final_packet_review` human-task review surface.
 - `artifact_context` is reserved for `source.mode=artifact_projection`; do not overload it on run-backed landing pages.
 - `TASK-0137` intentionally freezes a narrow `draft_resolution` field instead of a generic `actions` blob.
 - Artifact-backed EOD reads must remain projections over canonical workbook artifacts; the workpage is derived and the workbook artifact version remains authoritative truth.
 - Artifact-backed EOD drafts must be anchored to canonical `dispatch_reporting.v1` workflow runs.
+- Artifact-backed schedule, EOD, route-demand, and driver-preferences page actions now carry server-authored `action_ref` values so direct canonical page access does not need workspace router state to recover write intent.
 - The implemented EOD route is intentionally built from an intentionally partial example family, so its authoritative run/artifact summaries surface explicit formula-integrity warnings rather than fixture-only full-day numbers.
 - Backend-generated workpage route snapshots belong under `fixtures/frontend_contracts/`; human-authored workpage planning fixtures remain under `fixtures/logistics/workpages/`.
 
@@ -607,7 +632,8 @@ Endpoint:
 
 Body:
 - `idempotency_key`
-- `subject_link` (optional on the canonical run-backed route only; object with `subject_kind` and `subject_id`)
+- `action_ref` (optional preferred handoff; object with `action_id`, `workpage_kind`, `workflow_run_id`, `artifact_version_id`, and `subject`)
+- `subject_link` (deprecated fallback on the canonical run-backed route only; object with `subject_kind` and `subject_id`, accepted only when `action_ref` is absent)
 
 Response:
 - `{"status":"ok","command":"api.workpages.eod_drafts.create","draft":{"workflow_run_id":"...","artifact_version_id":"...","route":"/runs/{workflow_run_id}/workpages/eod-v0/artifacts/{artifact_version_id}"}}`
@@ -616,7 +642,9 @@ Rules:
 - resolve drafts only inside the supplied canonical workflow run,
 - instantiate a new `reporting.upd_draft.workbook` artifact version from the reporting template pack,
 - keep create semantics explicit and idempotent,
-- the canonical run-backed create route accepts `subject_link` only for supported `dispatch_reporting.v1` Stage04 approval surfaces and `Stage04/final_packet_review` human-task surfaces,
+- the canonical run-backed create route resolves create intent from the supplied `action_ref` when present and rejects mismatched run/workpage/subject state as `invalid_workpage_action_ref`,
+- the canonical run-backed create route accepts `subject_link` only when `action_ref` is absent, and only for supported `dispatch_reporting.v1` Stage04 approval surfaces and `Stage04/final_packet_review` human-task surfaces,
+- requests that send both `action_ref` and `subject_link` fail closed as `invalid_payload`,
 - callers do not supply `relation_kind`; the server derives `draft`,
 - same-run subject validation still fails closed as `cross_workflow_link_reference`.
 
@@ -628,7 +656,8 @@ Body:
 - workpage edit fields:
   - `form_values` + `checklist_values[]` for EOD
   - `rows` + `reserve_rows` for schedule
-- `subject_link` (optional; object with `subject_kind` and `subject_id` on supported surfaces only)
+- `action_ref` (optional preferred handoff; object with `action_id`, `workpage_kind`, `workflow_run_id`, `artifact_version_id`, and `subject`)
+- `subject_link` (deprecated fallback; object with `subject_kind` and `subject_id` on supported surfaces only, accepted only when `action_ref` is absent)
 - `idempotency_key`
 
 Response:
@@ -644,7 +673,9 @@ Rules:
 - the returned `route` now points at `/runs/{workflow_run_id}/workpages/eod-v0/artifacts/{artifact_version_id}` so stale/conflict reopen and submit success stay inside the canonical nested workpage family,
 - if the base artifact version has already been superseded in the same draft chain, fail closed with `workpage_artifact_conflict`,
 - the shared submit route now covers both the implemented EOD draft lane and the bounded Stage04 schedule draft lane,
-- supported `subject_link` surfaces stay frozen to the `TASK-0146` matrix; invalid or unsupported surfaces fail closed as `invalid_workpage_subject_link`,
+- the shared submit route resolves submit intent from `action_ref` when present and rejects mismatched run/workpage/artifact/subject state as `invalid_workpage_action_ref`,
+- supported `subject_link` surfaces stay frozen to the `TASK-0146` matrix; that fallback path is used only when `action_ref` is absent, and invalid or unsupported surfaces fail closed as `invalid_workpage_subject_link`,
+- requests that send both `action_ref` and `subject_link` fail closed as `invalid_payload`,
 - callers do not supply `relation_kind`; the server derives `response`,
 - same-run subject validation still fails closed as `cross_workflow_link_reference`,
 - weekly schedule publish still remains outside workpage submit semantics, while dispatch-reporting Stage04 approval approval now owns the bounded daily finalize-and-feedback side effect.

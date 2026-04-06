@@ -2,7 +2,7 @@
 id: TASK-0216
 epic: EPIC-133
 title: "Promote server-authored workpage action execution and deprecate raw subject-link writes"
-status: TODO
+status: DONE
 owners: ["backend", "frontend"]
 reviewers: ["architect"]
 depends_on: ["TASK-0215"]
@@ -56,3 +56,10 @@ Move primary workpage create/submit flows toward server-authored action executio
 ## Acceptance criteria
 - Primary workpage write flows no longer rely on raw client-carried workflow meaning.
 - Server-authored action semantics, not router state, own the meaning of create/submit operations.
+
+## Execution notes
+- Added a central backend `action_ref` resolution seam in `src/onetruth/application/handlers/workpages.py`, including authoritative run/workpage/artifact/subject validation, `invalid_workpage_action_ref` failures for mismatches, and `invalid_payload` rejection when callers send both `action_ref` and `subject_link`.
+- Workspace `workpage_actions[]`, canonical page `actions[]`, and the run-backed EOD `draft_resolution` surface now project server-authored `action_ref` values; artifact-backed EOD pages also now expose a submit page action so direct canonical page access can submit without workspace router state.
+- Canonical frontend workspace/page flows now carry `workpageActionRef` router state, submit/create through repository helpers that send `action_ref`, and stop constructing raw `subject_link` in the primary canonical paths.
+- The legacy `subject_link`, `subject_context`, and `link_policy` seams remain in place only as compatibility metadata/fallbacks for this tranche; inline demo-shell mutation convergence remains deferred to `TASK-0217`.
+- Backend-owned frontend contract fixtures under `fixtures/frontend_contracts/` were refreshed for the touched workspace and workpage surfaces so snapshot truth now includes the additive `action_ref`, `open_action_ref`, and `create_action_ref` fields.

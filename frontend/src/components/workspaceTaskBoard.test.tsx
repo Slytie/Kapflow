@@ -16,6 +16,26 @@ import {
   createContractState
 } from "@/test/api/contractState";
 
+function buildActionRef(params: {
+  actionId: string;
+  workpageKind: string;
+  workflowRunId: string;
+  artifactVersionId?: string | null;
+  subjectKind: "human_task" | "approval";
+  subjectId: string;
+}) {
+  return {
+    action_id: params.actionId,
+    workpage_kind: params.workpageKind,
+    workflow_run_id: params.workflowRunId,
+    artifact_version_id: params.artifactVersionId ?? null,
+    subject: {
+      subject_kind: params.subjectKind,
+      subject_id: params.subjectId
+    }
+  };
+}
+
 function renderBoard(
   workspace: WorkflowRunWorkspaceContract,
   detail: WorkflowRunDetailContract,
@@ -178,6 +198,14 @@ function buildDispatchReviewSurface(): {
                 create_relation_kind: "draft",
                 submit_relation_kind: "response"
               },
+              action_ref: buildActionRef({
+                actionId: "workpage.eod-v0.open_latest_draft",
+                workpageKind: "eod-v0",
+                workflowRunId: "wr-test-001",
+                artifactVersionId: "av-review-draft-001",
+                subjectKind: "human_task",
+                subjectId: "ht-claimed-002"
+              }),
               disabled_reason: null
             }
           ]

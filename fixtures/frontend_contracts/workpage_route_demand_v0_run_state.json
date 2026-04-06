@@ -9,6 +9,13 @@
     "actions": [
       {
         "action_id": "workpage.route-demand-v0.open_latest",
+        "action_ref": {
+          "action_id": "workpage.route-demand-v0.open_latest",
+          "artifact_version_id": "<artifact_version_id:2>",
+          "subject": null,
+          "workflow_run_id": "<workflow_run_id:1>",
+          "workpage_kind": "route-demand-v0"
+        },
         "artifact_version_id": "<artifact_version_id:2>",
         "kind": "open_latest",
         "label": "Open route demand",

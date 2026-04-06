@@ -47,6 +47,14 @@ describe("onetruthApi workpage parsing", () => {
       artifact_kind: "reporting.upd_draft.workbook",
       latest_in_chain_artifact_version_id: "<artifact_version_id:1>"
     });
+    expect(contract.actions).toMatchObject([
+      {
+        action_id: "workpage.eod-v0.submit_draft",
+        kind: "submit_artifact",
+        workpage_kind: "eod-v0",
+        artifact_version_id: "<artifact_version_id:1>"
+      }
+    ]);
     expect(contract.run_context).toBeNull();
     expect(contract.draft_resolution).toBeNull();
   });
@@ -221,7 +229,14 @@ describe("onetruthApi workpage parsing", () => {
     expect(contract.draft_resolution).toMatchObject({
       state: "latest_draft_available",
       artifact_route:
-        "/runs/<workflow_run_id:1>/workpages/eod-v0/artifacts/<artifact_version_id:2>"
+        "/runs/<workflow_run_id:1>/workpages/eod-v0/artifacts/<artifact_version_id:2>",
+      open_action_ref: {
+        action_id: "workpage.eod-v0.open_latest_draft",
+        workpage_kind: "eod-v0",
+        workflow_run_id: "<workflow_run_id:1>",
+        artifact_version_id: "<artifact_version_id:2>",
+        subject: null
+      }
     });
   });
 

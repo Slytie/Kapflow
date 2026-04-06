@@ -32,6 +32,22 @@ def _action_by_id(
     return next(action for action in actions if action["action_id"] == action_id)
 
 
+def _action_ref(
+    *,
+    action_id: str,
+    workpage_kind: str,
+    workflow_run_id: str,
+    artifact_version_id: str | None,
+) -> dict[str, object]:
+    return {
+        "action_id": action_id,
+        "workpage_kind": workpage_kind,
+        "workflow_run_id": workflow_run_id,
+        "artifact_version_id": artifact_version_id,
+        "subject": None,
+    }
+
+
 def _schedule_submit_rows(
     client: RuntimeApiClient,
     workflow_run_id: str,
@@ -115,6 +131,12 @@ def test_driver_preferences_run_workpage_lands_on_create_snapshot_when_none_exis
             f"/api/v1/workpages/workflow-runs/{workflow_run_id}/"
             "driver-preferences-v0/snapshots"
         ),
+        "action_ref": _action_ref(
+            action_id="workpage.driver-preferences-v0.create_snapshot",
+            workpage_kind="driver-preferences-v0",
+            workflow_run_id=workflow_run_id,
+            artifact_version_id=None,
+        ),
     }
 
 
@@ -187,6 +209,12 @@ def test_driver_preferences_create_route_returns_canonical_artifact_and_retires_
         "submit_path": (
             f"/api/v1/workpages/workflow-runs/{workflow_run_id}/"
             f"driver-preferences-v0/artifacts/{artifact_version_id}/submit"
+        ),
+        "action_ref": _action_ref(
+            action_id="workpage.driver-preferences-v0.save",
+            workpage_kind="driver-preferences-v0",
+            workflow_run_id=workflow_run_id,
+            artifact_version_id=artifact_version_id,
         ),
         "disabled_reason": None,
     }
@@ -286,6 +314,12 @@ def test_driver_preferences_submit_creates_successor_and_historical_read_only(
         "submit_path": (
             f"/api/v1/workpages/workflow-runs/{workflow_run_id}/"
             f"driver-preferences-v0/artifacts/{artifact_version_id}/submit"
+        ),
+        "action_ref": _action_ref(
+            action_id="workpage.driver-preferences-v0.save",
+            workpage_kind="driver-preferences-v0",
+            workflow_run_id=workflow_run_id,
+            artifact_version_id=artifact_version_id,
         ),
         "disabled_reason": "historical_artifact_read_only",
     }
@@ -443,6 +477,12 @@ def test_schedule_contracts_use_latest_preferences_softly_and_keep_pinned_drafts
         "route": (
             f"/runs/{workflow_run_id}/workpages/driver-preferences-v0/artifacts/"
             f"{latest_preferences_artifact_id}"
+        ),
+        "action_ref": _action_ref(
+            action_id="workpage.driver-preferences-v0.open_latest",
+            workpage_kind="driver-preferences-v0",
+            workflow_run_id=workflow_run_id,
+            artifact_version_id=latest_preferences_artifact_id,
         ),
     }
     assert set(run_payload["calculations"]["selected_day"]["available_preference_buckets"]) == {

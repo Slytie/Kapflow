@@ -12,6 +12,26 @@ import type { DrawerPayload } from "@/lib/types/ui";
 import type { HumanTaskRow } from "@/lib/types/contracts";
 import { mutationLog } from "@/test/api/handlers";
 
+function buildActionRef(params: {
+  actionId: string;
+  workpageKind: string;
+  workflowRunId: string;
+  artifactVersionId?: string | null;
+  subjectKind: "human_task" | "approval";
+  subjectId: string;
+}) {
+  return {
+    action_id: params.actionId,
+    workpage_kind: params.workpageKind,
+    workflow_run_id: params.workflowRunId,
+    artifact_version_id: params.artifactVersionId ?? null,
+    subject: {
+      subject_kind: params.subjectKind,
+      subject_id: params.subjectId
+    }
+  };
+}
+
 const task: HumanTaskRow = {
   human_task_id: "ht-2",
   workflow_run_id: "wr-2",
@@ -432,6 +452,14 @@ describe("Detail drawer flow", () => {
             create_relation_kind: null,
             submit_relation_kind: "response"
           },
+          action_ref: buildActionRef({
+            actionId: "workpage.schedule-v0.open_latest_draft",
+            workpageKind: "schedule-v0",
+            workflowRunId: "wr-2",
+            artifactVersionId: "av-weekly-draft-001",
+            subjectKind: "human_task",
+            subjectId: "ht-2"
+          }),
           disabled_reason: null
         }
       ]
@@ -475,6 +503,14 @@ describe("Detail drawer flow", () => {
                   create_relation_kind: null,
                   submit_relation_kind: "response"
                 },
+                action_ref: buildActionRef({
+                  actionId: "workpage.schedule-v0.open_latest_draft",
+                  workpageKind: "schedule-v0",
+                  workflowRunId: "wr-2",
+                  artifactVersionId: "av-weekly-draft-001",
+                  subjectKind: "human_task",
+                  subjectId: "ht-2"
+                }),
                 disabled_reason: null
               }
             ]
@@ -781,6 +817,14 @@ describe("Detail drawer flow", () => {
               create_relation_kind: null,
               submit_relation_kind: "response"
             },
+            action_ref: buildActionRef({
+              actionId: "workpage.schedule-v0.open_latest_draft",
+              workpageKind: "schedule-v0",
+              workflowRunId: "wr-2",
+              artifactVersionId: "av-weekly-draft-001",
+              subjectKind: "human_task",
+              subjectId: "ht-2"
+            }),
             disabled_reason: null
           }
         ]

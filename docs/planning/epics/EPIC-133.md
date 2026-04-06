@@ -8,7 +8,7 @@ This epic starts after EPIC-132 and assumes the repo has a clean, green settleme
 ## Status
 Selected.
 
-Progress note: `TASK-0215` is complete. Canonical schedule, EOD, route-demand, and driver-preferences pages now consume backend-authored lineage/latest/accepted navigation from the workpage GET contract; the remaining client-side history helpers are deferred inline demo-shell debt for `TASK-0217`.
+Progress note: `TASK-0215` and `TASK-0216` are complete. Canonical schedule, EOD, route-demand, and driver-preferences pages now consume backend-authored lineage/latest/accepted navigation and server-authored `action_ref` write intent from the workpage seams; the remaining inline demo-shell mutation debt is deferred to `TASK-0217`.
 
 ## First-principles objective
 A workpage is a server-authored projection:

@@ -72,6 +72,29 @@ export function buildEodArtifactWorkpageState(
         }
       ]
     },
+    actions: [
+      {
+        action_id: "workpage.eod-v0.submit_draft",
+        kind: "submit_artifact",
+        label: "Submit draft",
+        state:
+          options.artifactVersionId === latestArtifactVersionId ? "available" : "blocked",
+        workpage_kind: "eod-v0",
+        artifact_version_id: options.artifactVersionId,
+        submit_path: `/api/v1/workpages/workflow-runs/${workflowRunId}/eod-v0/artifacts/${options.artifactVersionId}/submit`,
+        action_ref: {
+          action_id: "workpage.eod-v0.submit_draft",
+          workpage_kind: "eod-v0",
+          workflow_run_id: workflowRunId,
+          artifact_version_id: options.artifactVersionId,
+          subject: null
+        },
+        disabled_reason:
+          options.artifactVersionId === latestArtifactVersionId
+            ? null
+            : "historical_artifact_read_only"
+      }
+    ],
     workpage: {
       dataset_key: "reporting.upd_draft.workbook",
       mode: "example",

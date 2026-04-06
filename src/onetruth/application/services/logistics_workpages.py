@@ -43,6 +43,7 @@ from onetruth.application.services.schedule_control.stage04_input_registry impor
 )
 from onetruth.application.services.workpage_descriptors import (
     DRIVER_PREFERENCES_ARTIFACT_KIND,
+    DRIVER_PREFERENCES_WORKPAGE_KIND,
     EOD_WORKPAGE_KIND,
     EOD_DRAFT_ARTIFACT_KIND,
     ROUTE_DEMAND_WORKPAGE_KIND,
@@ -56,6 +57,7 @@ from onetruth.application.services.workpage_descriptors import (
     canonical_driver_preferences_artifact_submit_path,
     canonical_driver_preferences_snapshot_create_path as descriptor_driver_preferences_snapshot_create_path,
     canonical_eod_artifact_route as descriptor_eod_artifact_route,
+    canonical_eod_artifact_submit_path,
     canonical_eod_draft_create_path as descriptor_eod_draft_create_path,
     canonical_route_demand_artifact_route as descriptor_route_demand_artifact_route,
     canonical_route_demand_artifact_submit_path,
@@ -220,6 +222,30 @@ def canonical_driver_preferences_snapshot_create_path(*, workflow_run_id: str) -
     return descriptor_driver_preferences_snapshot_create_path(
         workflow_run_id=workflow_run_id
     )
+
+
+def build_workpage_action_ref(
+    *,
+    action_id: str,
+    workpage_kind: str,
+    workflow_run_id: str,
+    artifact_version_id: str | None,
+    subject_kind: str | None = None,
+    subject_id: str | None = None,
+) -> dict[str, Any]:
+    subject: dict[str, str] | None = None
+    if subject_kind and subject_id:
+        subject = {
+            "subject_kind": subject_kind,
+            "subject_id": subject_id,
+        }
+    return {
+        "action_id": action_id,
+        "workpage_kind": workpage_kind,
+        "workflow_run_id": workflow_run_id,
+        "artifact_version_id": artifact_version_id,
+        "subject": subject,
+    }
 
 
 def build_route_demand_refresh_activation_key(*, artifact_version_id: str) -> str:
@@ -1115,6 +1141,12 @@ def _schedule_open_latest_draft_contract_action(
         "workpage_kind": SCHEDULE_WORKPAGE_KIND,
         "artifact_version_id": artifact_version_id or None,
         "route": route,
+        "action_ref": build_workpage_action_ref(
+            action_id="workpage.schedule-v0.open_latest_draft",
+            workpage_kind=SCHEDULE_WORKPAGE_KIND,
+            workflow_run_id=workflow_run_id,
+            artifact_version_id=artifact_version_id or None,
+        ),
     }
 
 
@@ -1145,6 +1177,12 @@ def _schedule_route_demand_contract_action(
         "workpage_kind": ROUTE_DEMAND_WORKPAGE_KIND,
         "artifact_version_id": artifact_version_id or None,
         "route": route,
+        "action_ref": build_workpage_action_ref(
+            action_id="workpage.route-demand-v0.open_latest",
+            workpage_kind=ROUTE_DEMAND_WORKPAGE_KIND,
+            workflow_run_id=workflow_run_id,
+            artifact_version_id=artifact_version_id or None,
+        ),
     }
 
 
@@ -1164,9 +1202,15 @@ def _schedule_driver_preferences_contract_action(
                 "kind": "open_latest",
                 "label": "Open driver preferences",
                 "state": "available",
-                "workpage_kind": "driver-preferences-v0",
+                "workpage_kind": DRIVER_PREFERENCES_WORKPAGE_KIND,
                 "artifact_version_id": artifact_version_id,
                 "route": canonical_driver_preferences_artifact_route(
+                    workflow_run_id=workflow_run_id,
+                    artifact_version_id=artifact_version_id,
+                ),
+                "action_ref": build_workpage_action_ref(
+                    action_id="workpage.driver-preferences-v0.open_latest",
+                    workpage_kind=DRIVER_PREFERENCES_WORKPAGE_KIND,
                     workflow_run_id=workflow_run_id,
                     artifact_version_id=artifact_version_id,
                 ),
@@ -1176,11 +1220,17 @@ def _schedule_driver_preferences_contract_action(
         "kind": "create_snapshot",
         "label": "Create preferences snapshot",
         "state": "available",
-        "workpage_kind": "driver-preferences-v0",
+        "workpage_kind": DRIVER_PREFERENCES_WORKPAGE_KIND,
         "artifact_version_id": None,
         "route": None,
         "create_path": canonical_driver_preferences_snapshot_create_path(
             workflow_run_id=workflow_run_id
+        ),
+        "action_ref": build_workpage_action_ref(
+            action_id="workpage.driver-preferences-v0.create_snapshot",
+            workpage_kind=DRIVER_PREFERENCES_WORKPAGE_KIND,
+            workflow_run_id=workflow_run_id,
+            artifact_version_id=None,
         ),
     }
 
@@ -1242,6 +1292,12 @@ def _schedule_artifact_contract_actions(
                         workflow_run_id=workflow_run_id,
                         artifact_version_id=artifact_version_id,
                     ),
+                    "action_ref": build_workpage_action_ref(
+                        action_id=str(descriptor.preview_action_id if descriptor is not None else "workpage.schedule-v0.preview_recalc"),
+                        workpage_kind=SCHEDULE_WORKPAGE_KIND,
+                        workflow_run_id=workflow_run_id,
+                        artifact_version_id=artifact_version_id,
+                    ),
                     "disabled_reason": preview_disabled_reason,
                 },
                 {
@@ -1252,6 +1308,12 @@ def _schedule_artifact_contract_actions(
                     "workpage_kind": SCHEDULE_WORKPAGE_KIND,
                     "artifact_version_id": artifact_version_id,
                     "submit_path": canonical_schedule_artifact_submit_path(
+                        workflow_run_id=workflow_run_id,
+                        artifact_version_id=artifact_version_id,
+                    ),
+                    "action_ref": build_workpage_action_ref(
+                        action_id="workpage.schedule-v0.save_draft",
+                        workpage_kind=SCHEDULE_WORKPAGE_KIND,
                         workflow_run_id=workflow_run_id,
                         artifact_version_id=artifact_version_id,
                     ),
@@ -1553,11 +1615,29 @@ def _eod_draft_resolution(
     workflow_run_id: str,
     latest_draft: Mapping[str, Any] | None,
 ) -> dict[str, Any]:
+    descriptor = get_workpage_descriptor(EOD_WORKPAGE_KIND)
+    create_action_id = (
+        str(descriptor.create_action_id)
+        if descriptor is not None and descriptor.create_action_id is not None
+        else "workpage.eod-v0.create_draft"
+    )
+    open_action_id = (
+        str(descriptor.open_action_id)
+        if descriptor is not None and descriptor.open_action_id is not None
+        else "workpage.eod-v0.open_latest_draft"
+    )
     if latest_draft is None:
         return {
             "state": "no_draft",
             "latest_artifact_version_id": None,
             "artifact_route": None,
+            "open_action_ref": None,
+            "create_action_ref": build_workpage_action_ref(
+                action_id=create_action_id,
+                workpage_kind=EOD_WORKPAGE_KIND,
+                workflow_run_id=workflow_run_id,
+                artifact_version_id=None,
+            ),
         }
     latest_artifact_version_id = _require_text(latest_draft.get("artifact_version_id"))
     return {
@@ -1567,6 +1647,13 @@ def _eod_draft_resolution(
             workflow_run_id=workflow_run_id,
             artifact_version_id=latest_artifact_version_id,
         ),
+        "open_action_ref": build_workpage_action_ref(
+            action_id=open_action_id,
+            workpage_kind=EOD_WORKPAGE_KIND,
+            workflow_run_id=workflow_run_id,
+            artifact_version_id=latest_artifact_version_id,
+        ),
+        "create_action_ref": None,
     }
 
 
@@ -1761,6 +1848,35 @@ def _build_eod_landing_workpage_view_model(
     }
 
 
+def _eod_artifact_contract_actions(
+    *,
+    workflow_run_id: str,
+    artifact_version_id: str,
+    editable: bool,
+) -> list[dict[str, Any]]:
+    return [
+        {
+            "action_id": "workpage.eod-v0.submit_draft",
+            "kind": "submit_artifact",
+            "label": "Submit draft",
+            "state": "available" if editable else "blocked",
+            "workpage_kind": EOD_WORKPAGE_KIND,
+            "artifact_version_id": artifact_version_id,
+            "submit_path": canonical_eod_artifact_submit_path(
+                workflow_run_id=workflow_run_id,
+                artifact_version_id=artifact_version_id,
+            ),
+            "action_ref": build_workpage_action_ref(
+                action_id="workpage.eod-v0.submit_draft",
+                workpage_kind=EOD_WORKPAGE_KIND,
+                workflow_run_id=workflow_run_id,
+                artifact_version_id=artifact_version_id,
+            ),
+            "disabled_reason": None if editable else "historical_artifact_read_only",
+        }
+    ]
+
+
 def build_eod_artifact_workpage_contract(
     connection: sqlite3.Connection,
     *,
@@ -1787,6 +1903,7 @@ def build_eod_artifact_workpage_contract(
         artifact_version_id=artifact_version_id,
         default=artifact_version_id,
     )
+    editable = artifact_version_id == latest_in_chain_artifact_version_id
     metadata_json = artifact.get("metadata_json")
     service_date = (
         _require_text_or_default(metadata_json.get("service_date"), default=_EOD_SERVICE_DATE)
@@ -1915,6 +2032,11 @@ def build_eod_artifact_workpage_contract(
             "latest_in_chain_artifact_version_id": latest_in_chain_artifact_version_id,
             "download_path": download_path,
         },
+        "actions": _eod_artifact_contract_actions(
+            workflow_run_id=workflow_run_id,
+            artifact_version_id=artifact_version_id,
+            editable=editable,
+        ),
         "artifact_history": _artifact_history_for_chain(
             connection,
             current_artifact=artifact,
@@ -2416,6 +2538,12 @@ def _route_demand_open_latest_contract_action(
         "workpage_kind": ROUTE_DEMAND_WORKPAGE_KIND,
         "artifact_version_id": artifact_version_id or None,
         "route": route,
+        "action_ref": build_workpage_action_ref(
+            action_id="workpage.route-demand-v0.open_latest",
+            workpage_kind=ROUTE_DEMAND_WORKPAGE_KIND,
+            workflow_run_id=workflow_run_id,
+            artifact_version_id=artifact_version_id or None,
+        ),
     }
 
 
@@ -2434,6 +2562,12 @@ def _route_demand_artifact_contract_actions(
             "workpage_kind": ROUTE_DEMAND_WORKPAGE_KIND,
             "artifact_version_id": artifact_version_id,
             "submit_path": canonical_route_demand_artifact_submit_path(
+                workflow_run_id=workflow_run_id,
+                artifact_version_id=artifact_version_id,
+            ),
+            "action_ref": build_workpage_action_ref(
+                action_id="workpage.route-demand-v0.save",
+                workpage_kind=ROUTE_DEMAND_WORKPAGE_KIND,
                 workflow_run_id=workflow_run_id,
                 artifact_version_id=artifact_version_id,
             ),
@@ -2736,9 +2870,15 @@ def _driver_preferences_run_contract_actions(
                     "kind": "open_latest",
                     "label": "Open latest snapshot",
                     "state": "available",
-                    "workpage_kind": "driver-preferences-v0",
+                    "workpage_kind": DRIVER_PREFERENCES_WORKPAGE_KIND,
                     "artifact_version_id": artifact_version_id,
                     "route": canonical_driver_preferences_artifact_route(
+                        workflow_run_id=workflow_run_id,
+                        artifact_version_id=artifact_version_id,
+                    ),
+                    "action_ref": build_workpage_action_ref(
+                        action_id="workpage.driver-preferences-v0.open_latest",
+                        workpage_kind=DRIVER_PREFERENCES_WORKPAGE_KIND,
                         workflow_run_id=workflow_run_id,
                         artifact_version_id=artifact_version_id,
                     ),
@@ -2750,11 +2890,17 @@ def _driver_preferences_run_contract_actions(
             "kind": "create_snapshot",
             "label": "Create preferences snapshot",
             "state": "available",
-            "workpage_kind": "driver-preferences-v0",
+            "workpage_kind": DRIVER_PREFERENCES_WORKPAGE_KIND,
             "artifact_version_id": None,
             "route": None,
             "create_path": canonical_driver_preferences_snapshot_create_path(
                 workflow_run_id=workflow_run_id
+            ),
+            "action_ref": build_workpage_action_ref(
+                action_id="workpage.driver-preferences-v0.create_snapshot",
+                workpage_kind=DRIVER_PREFERENCES_WORKPAGE_KIND,
+                workflow_run_id=workflow_run_id,
+                artifact_version_id=None,
             ),
         }
     ]
@@ -2772,9 +2918,15 @@ def _driver_preferences_artifact_contract_actions(
             "kind": "save",
             "label": "Save preferences snapshot",
             "state": "available" if editable else "blocked",
-            "workpage_kind": "driver-preferences-v0",
+            "workpage_kind": DRIVER_PREFERENCES_WORKPAGE_KIND,
             "artifact_version_id": artifact_version_id,
             "submit_path": canonical_driver_preferences_artifact_submit_path(
+                workflow_run_id=workflow_run_id,
+                artifact_version_id=artifact_version_id,
+            ),
+            "action_ref": build_workpage_action_ref(
+                action_id="workpage.driver-preferences-v0.save",
+                workpage_kind=DRIVER_PREFERENCES_WORKPAGE_KIND,
                 workflow_run_id=workflow_run_id,
                 artifact_version_id=artifact_version_id,
             ),

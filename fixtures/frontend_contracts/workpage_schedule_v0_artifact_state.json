@@ -16,6 +16,13 @@
     "actions": [
       {
         "action_id": "workpage.schedule-v0.preview_recalc",
+        "action_ref": {
+          "action_id": "workpage.schedule-v0.preview_recalc",
+          "artifact_version_id": "<artifact_version_id:2>",
+          "subject": null,
+          "workflow_run_id": "<workflow_run_id:1>",
+          "workpage_kind": "schedule-v0"
+        },
         "artifact_version_id": "<artifact_version_id:2>",
         "disabled_reason": null,
         "kind": "preview_recalc",
@@ -26,6 +33,13 @@
       },
       {
         "action_id": "workpage.schedule-v0.save_draft",
+        "action_ref": {
+          "action_id": "workpage.schedule-v0.save_draft",
+          "artifact_version_id": "<artifact_version_id:2>",
+          "subject": null,
+          "workflow_run_id": "<workflow_run_id:1>",
+          "workpage_kind": "schedule-v0"
+        },
         "artifact_version_id": "<artifact_version_id:2>",
         "disabled_reason": null,
         "kind": "submit_artifact",
@@ -36,6 +50,13 @@
       },
       {
         "action_id": "workpage.route-demand-v0.open_latest",
+        "action_ref": {
+          "action_id": "workpage.route-demand-v0.open_latest",
+          "artifact_version_id": "<artifact_version_id:3>",
+          "subject": null,
+          "workflow_run_id": "<workflow_run_id:1>",
+          "workpage_kind": "route-demand-v0"
+        },
         "artifact_version_id": "<artifact_version_id:3>",
         "kind": "open_latest",
         "label": "Open route demand",
@@ -45,6 +66,13 @@
       },
       {
         "action_id": "workpage.driver-preferences-v0.create_snapshot",
+        "action_ref": {
+          "action_id": "workpage.driver-preferences-v0.create_snapshot",
+          "artifact_version_id": null,
+          "subject": null,
+          "workflow_run_id": "<workflow_run_id:1>",
+          "workpage_kind": "driver-preferences-v0"
+        },
         "artifact_version_id": null,
         "create_path": "/api/v1/workpages/workflow-runs/<workflow_run_id:1>/driver-preferences-v0/snapshots",
         "kind": "create_snapshot",

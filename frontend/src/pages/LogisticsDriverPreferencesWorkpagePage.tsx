@@ -13,6 +13,7 @@ import { apiConfig } from "@/lib/api/config";
 import { errorText } from "@/lib/api/errorText";
 import { workpagesRepository } from "@/lib/repositories";
 import { invalidateWorkspaceViews } from "@/lib/workspace/queryInvalidation";
+import { replaceWorkpageActionRefArtifactVersionId } from "@/lib/workspace/workpageActionRef";
 import type { WorkpageContract } from "@/lib/types/contracts";
 import type {
   WorkpageArtifactHistory,
@@ -356,11 +357,19 @@ export function LogisticsDriverPreferencesWorkpagePage(): JSX.Element {
   const createAction = findDriverPreferencesAction(query.data, (action) => action.kind === "create_snapshot");
   const openLatestAction = findDriverPreferencesAction(query.data, (action) => action.kind === "open_latest");
   const createMutation = useMutation({
-    mutationFn: (createPath: string) => workpagesRepository.createWorkpage(createPath),
-    onSuccess: (created) => {
+    mutationFn: (payload: { createPath: string; actionRef: WorkpageDriverPreferencesAction["action_ref"] }) =>
+      workpagesRepository.createWorkpage(payload.createPath, payload.actionRef ?? undefined),
+    onSuccess: (created, payload) => {
       void queryClient.invalidateQueries({ queryKey: ["workpages"] });
       void invalidateWorkspaceViews(queryClient, created.workflow_run_id);
-      navigate(created.route, { state: location.state });
+      navigate(created.route, {
+        state: {
+          workpageActionRef: replaceWorkpageActionRefArtifactVersionId(
+            payload.actionRef ?? null,
+            created.artifact_version_id
+          )
+        }
+      });
     }
   });
 
@@ -428,7 +437,12 @@ export function LogisticsDriverPreferencesWorkpagePage(): JSX.Element {
               type="button"
               className="action-btn action-btn--positive"
               disabled={createMutation.isPending}
-              onClick={() => createMutation.mutate(createAction.create_path ?? "")}
+              onClick={() =>
+                createMutation.mutate({
+                  createPath: createAction.create_path ?? "",
+                  actionRef: createAction.action_ref
+                })
+              }
             >
               {createMutation.isPending ? "Creating preferences snapshot..." : "Create preferences snapshot"}
             </button>
@@ -494,16 +508,24 @@ export function LogisticsDriverPreferencesArtifactWorkpagePage(): JSX.Element {
         saveAction?.submit_path ?? "",
         artifactVersionId ?? "",
         {
-          driverRows: driverRows.map((row) => ({
-            driver_id: row.driver_id,
-            preferences_by_weekday: row.preferences_by_weekday
-          }))
-        }
+            driverRows: driverRows.map((row) => ({
+              driver_id: row.driver_id,
+              preferences_by_weekday: row.preferences_by_weekday
+            }))
+        },
+        saveAction?.action_ref ?? undefined
       ),
     onSuccess: (submitted) => {
       void queryClient.invalidateQueries({ queryKey: ["workpages"] });
       void invalidateWorkspaceViews(queryClient, submitted.workflow_run_id);
-      navigate(submitted.route, { state: location.state });
+      navigate(submitted.route, {
+        state: {
+          workpageActionRef: replaceWorkpageActionRefArtifactVersionId(
+            saveAction?.action_ref ?? null,
+            submitted.artifact_version_id
+          )
+        }
+      });
     }
   });
 

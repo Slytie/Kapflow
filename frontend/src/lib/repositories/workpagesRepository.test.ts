@@ -64,20 +64,32 @@ describe("workpagesRepository", () => {
 
     expect(eodLandingBeforeCreate.source.mode).toBe("run_projection");
     expect(eodLandingBeforeCreate.run_context?.workflow_run_id).toBe("wr-reporting-001");
-    expect(eodLandingBeforeCreate.draft_resolution).toEqual({
+    expect(eodLandingBeforeCreate.draft_resolution).toMatchObject({
       state: "no_draft",
       latest_artifact_version_id: null,
       artifact_route: null
+    });
+    expect(eodLandingBeforeCreate.draft_resolution?.create_action_ref).toMatchObject({
+      action_id: "workpage.eod-v0.create_draft",
+      workpage_kind: "eod-v0",
+      workflow_run_id: "wr-reporting-001",
+      artifact_version_id: null
     });
 
     expect(draft.workflow_run_id).toBe("wr-reporting-001");
     expect(draft.artifact_version_id).toBe("av-eod-artifact-001");
     expect(draft.route).toBe("/runs/wr-reporting-001/workpages/eod-v0/artifacts/av-eod-artifact-001");
 
-    expect(eodLandingAfterCreate.draft_resolution).toEqual({
+    expect(eodLandingAfterCreate.draft_resolution).toMatchObject({
       state: "latest_draft_available",
       latest_artifact_version_id: "av-eod-artifact-001",
       artifact_route: "/runs/wr-reporting-001/workpages/eod-v0/artifacts/av-eod-artifact-001"
+    });
+    expect(eodLandingAfterCreate.draft_resolution?.open_action_ref).toMatchObject({
+      action_id: "workpage.eod-v0.open_latest_draft",
+      workpage_kind: "eod-v0",
+      workflow_run_id: "wr-reporting-001",
+      artifact_version_id: "av-eod-artifact-001"
     });
     expect(eodLandingAfterCreate.artifact_context).toBeNull();
   });

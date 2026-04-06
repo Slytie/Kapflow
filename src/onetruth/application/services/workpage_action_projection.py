@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import Any
 
 from onetruth.application.services.logistics_workpages import (
+    build_workpage_action_ref,
     latest_compatible_eod_draft_artifact,
     latest_schedule_draft_artifact,
 )
@@ -130,6 +131,7 @@ def _open_latest_draft_action(
     route: str | None = None
     state = "unavailable"
     disabled_reason = unavailable_reason
+    artifact_version_id = None
     if isinstance(latest_artifact, dict):
         artifact_version_id = str(latest_artifact.get("artifact_version_id") or "")
         if artifact_version_id:
@@ -156,6 +158,14 @@ def _open_latest_draft_action(
             "create_relation_kind": descriptor.create_relation_kind,
             "submit_relation_kind": descriptor.submit_relation_kind,
         },
+        "action_ref": build_workpage_action_ref(
+            action_id=str(descriptor.open_action_id or ""),
+            workpage_kind=descriptor.kind,
+            workflow_run_id=workflow_run_id,
+            artifact_version_id=artifact_version_id or None,
+            subject_kind=subject_kind,
+            subject_id=subject_id,
+        ),
         "disabled_reason": disabled_reason,
     }
 
@@ -192,6 +202,14 @@ def _open_or_create_action(
                     "create_relation_kind": descriptor.create_relation_kind,
                     "submit_relation_kind": descriptor.submit_relation_kind,
                 },
+                "action_ref": build_workpage_action_ref(
+                    action_id=str(descriptor.open_action_id or ""),
+                    workpage_kind=descriptor.kind,
+                    workflow_run_id=workflow_run_id,
+                    artifact_version_id=artifact_version_id,
+                    subject_kind=subject_kind,
+                    subject_id=subject_id,
+                ),
                 "disabled_reason": None,
             }
     create_path = (
@@ -216,6 +234,14 @@ def _open_or_create_action(
             "create_relation_kind": descriptor.create_relation_kind,
             "submit_relation_kind": descriptor.submit_relation_kind,
         },
+        "action_ref": build_workpage_action_ref(
+            action_id=str(descriptor.create_action_id or ""),
+            workpage_kind=descriptor.kind,
+            workflow_run_id=workflow_run_id,
+            artifact_version_id=None,
+            subject_kind=subject_kind,
+            subject_id=subject_id,
+        ),
         "disabled_reason": None if create_path else unavailable_reason,
     }
 

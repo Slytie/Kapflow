@@ -31,7 +31,11 @@ import { isApiClientError } from "@/lib/api/httpClient";
 import { workpagesRepository } from "@/lib/repositories";
 import type { WorkpageContract, WorkpagePreviewResponse } from "@/lib/types/contracts";
 import { invalidateWorkspaceViews } from "@/lib/workspace/queryInvalidation";
-import { resolveWorkpageSubjectContext } from "@/lib/workspace/workpageSubjectContext";
+import {
+  mergeWorkpageActionRef,
+  replaceWorkpageActionRefArtifactVersionId,
+  resolveWorkpageActionRef
+} from "@/lib/workspace/workpageActionRef";
 import type {
   WorkpageHistorySection as WorkpageHistorySectionModel,
   WorkpageDriverPreferencesAction,
@@ -522,9 +526,10 @@ export function LogisticsScheduleWorkpagePage(): JSX.Element {
                   className="action-btn"
                   disabled={createDriverPreferencesMutation.isPending}
                   onClick={() =>
-                    createDriverPreferencesMutation.mutate(
-                      driverPreferencesAction.create_path ?? ""
-                    )
+                    createDriverPreferencesMutation.mutate({
+                      createPath: driverPreferencesAction.create_path ?? "",
+                      actionRef: driverPreferencesAction.action_ref
+                    })
                   }
                 >
                   {createDriverPreferencesMutation.isPending
@@ -560,9 +565,10 @@ export function LogisticsScheduleWorkpagePage(): JSX.Element {
                     className="action-btn"
                     disabled={createDriverPreferencesMutation.isPending}
                     onClick={() =>
-                      createDriverPreferencesMutation.mutate(
-                        driverPreferencesAction.create_path ?? ""
-                      )
+                      createDriverPreferencesMutation.mutate({
+                        createPath: driverPreferencesAction.create_path ?? "",
+                        actionRef: driverPreferencesAction.action_ref
+                      })
                     }
                   >
                     {createDriverPreferencesMutation.isPending
@@ -584,7 +590,6 @@ export function LogisticsScheduleArtifactWorkpagePage(): JSX.Element {
   const location = useLocation();
   const queryClient = useQueryClient();
   const previewRequestSequenceRef = useRef(0);
-  const [pendingNavigationRoute, setPendingNavigationRoute] = useState<string | null>(null);
   const [previewResponse, setPreviewResponse] =
     useState<WorkpagePreviewResponse["preview"] | null>(null);
   const [previewErrorMessage, setPreviewErrorMessage] = useState<string | null>(null);
@@ -647,9 +652,15 @@ export function LogisticsScheduleArtifactWorkpagePage(): JSX.Element {
     assignmentSignature !== baseAssignmentSignature || reserveSignature !== baseReserveSignature;
   const submitMutation = useMutation({
     mutationFn: () => {
-      const subjectContext = resolveWorkpageSubjectContext(location.state, {
-        workflowRunId: artifactWorkflowRunId
+      const carriedActionRef = resolveWorkpageActionRef(location.state, {
+        workflowRunId: artifactWorkflowRunId,
+        workpageKind: "schedule-v0",
+        artifactVersionId: artifactVersionId ?? ""
       });
+      const actionRef = mergeWorkpageActionRef(
+        saveAction?.action_ref ?? null,
+        carriedActionRef ?? null
+      );
       if (saveAction?.submit_path) {
         return workpagesRepository.submitScheduleArtifactAtPath(
           saveAction.submit_path,
@@ -658,7 +669,7 @@ export function LogisticsScheduleArtifactWorkpagePage(): JSX.Element {
             rows: assignmentRows,
             reserveRows
           },
-          subjectContext
+          actionRef
         );
       }
       return workpagesRepository.submitScheduleArtifact(
@@ -668,13 +679,25 @@ export function LogisticsScheduleArtifactWorkpagePage(): JSX.Element {
           rows: assignmentRows,
           reserveRows
         },
-        subjectContext
+        actionRef
       );
     },
     onSuccess: (submitted) => {
       void queryClient.invalidateQueries({ queryKey: ["workpages"] });
       void invalidateWorkspaceViews(queryClient, submitted.workflow_run_id);
-      setPendingNavigationRoute(submitted.route);
+      const carriedActionRef = resolveWorkpageActionRef(location.state, {
+        workflowRunId: artifactWorkflowRunId,
+        workpageKind: "schedule-v0",
+        artifactVersionId: artifactVersionId ?? ""
+      });
+      navigate(submitted.route, {
+        state: {
+          workpageActionRef: replaceWorkpageActionRefArtifactVersionId(
+            mergeWorkpageActionRef(saveAction?.action_ref ?? null, carriedActionRef ?? null),
+            submitted.artifact_version_id
+          )
+        }
+      });
     }
   });
   const downloadMutation = useMutation({
@@ -682,11 +705,19 @@ export function LogisticsScheduleArtifactWorkpagePage(): JSX.Element {
       workpagesRepository.downloadScheduleArtifactJson(currentArtifactVersionId)
   });
   const createDriverPreferencesMutation = useMutation({
-    mutationFn: (createPath: string) => workpagesRepository.createWorkpage(createPath),
-    onSuccess: (created) => {
+    mutationFn: (payload: { createPath: string; actionRef: WorkpageDriverPreferencesAction["action_ref"] }) =>
+      workpagesRepository.createWorkpage(payload.createPath, payload.actionRef ?? undefined),
+    onSuccess: (created, payload) => {
       void queryClient.invalidateQueries({ queryKey: ["workpages"] });
       void invalidateWorkspaceViews(queryClient, created.workflow_run_id);
-      navigate(created.route, { state: location.state });
+      navigate(created.route, {
+        state: {
+          workpageActionRef: replaceWorkpageActionRefArtifactVersionId(
+            payload.actionRef ?? null,
+            created.artifact_version_id
+          )
+        }
+      });
     }
   });
 
@@ -754,14 +785,6 @@ export function LogisticsScheduleArtifactWorkpagePage(): JSX.Element {
     reserveRows,
     reserveSignature
   ]);
-
-  useEffect(() => {
-    if (!pendingNavigationRoute) {
-      return;
-    }
-    navigate(pendingNavigationRoute, { state: location.state });
-    setPendingNavigationRoute(null);
-  }, [location.state, navigate, pendingNavigationRoute]);
 
   if (query.isLoading) {
     return (
@@ -881,9 +904,10 @@ export function LogisticsScheduleArtifactWorkpagePage(): JSX.Element {
               className="action-btn"
               disabled={createDriverPreferencesMutation.isPending}
               onClick={() =>
-                createDriverPreferencesMutation.mutate(
-                  driverPreferencesAction.create_path ?? ""
-                )
+                createDriverPreferencesMutation.mutate({
+                  createPath: driverPreferencesAction.create_path ?? "",
+                  actionRef: driverPreferencesAction.action_ref
+                })
               }
             >
               {createDriverPreferencesMutation.isPending

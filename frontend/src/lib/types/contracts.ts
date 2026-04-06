@@ -1,5 +1,6 @@
 import type {
   WorkpageAction,
+  WorkpageActionRef,
   WorkpageArtifactHistory,
   WorkpageDriverPreferencesGrid,
   WorkpageDriverPreferencesScheduleImpact,
@@ -374,6 +375,7 @@ export interface WorkflowWorkspaceWorkpageAction {
   create_path: string | null;
   subject_context: WorkpageActionSubjectContext;
   link_policy: WorkpageActionLinkPolicy;
+  action_ref: WorkpageActionRef | null;
   disabled_reason: string | null;
 }
 
@@ -459,6 +461,8 @@ export interface WorkpageDraftResolution {
   state: "no_draft" | "latest_draft_available";
   latest_artifact_version_id: string | null;
   artifact_route: string | null;
+  open_action_ref: WorkpageActionRef | null;
+  create_action_ref: WorkpageActionRef | null;
 }
 
 export interface WorkpageCreateResponse {

@@ -35,8 +35,10 @@ import type {
 import type {
   WorkpageScheduleAcceptedSeries,
   WorkpageAction,
+  WorkpageActionRef,
   WorkpageArtifactHistory,
   WorkpageDriverPreferencesAction,
+  WorkpageEodAction,
   WorkpageDriverPreferencesGrid,
   WorkpageDriverPreferencesScheduleImpact,
   WorkpageScheduleAction,
@@ -413,6 +415,31 @@ function normalizeRequiredReviews(value: unknown): WorkflowWorkspaceRequiredRevi
   }));
 }
 
+function normalizeWorkpageActionRef(value: unknown): WorkpageActionRef | null {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return null;
+  }
+  const actionRef = value as Record<string, unknown>;
+  const subjectValue = actionRef.subject;
+  const subject =
+    subjectValue && typeof subjectValue === "object" && !Array.isArray(subjectValue)
+      ? (subjectValue as Record<string, unknown>)
+      : null;
+  return {
+    action_id: asString(actionRef.action_id),
+    workpage_kind: asString(actionRef.workpage_kind),
+    workflow_run_id: asString(actionRef.workflow_run_id),
+    artifact_version_id: asStringOrNull(actionRef.artifact_version_id),
+    subject: subject
+      ? {
+          subject_kind:
+            asString(subject.subject_kind) === "approval" ? "approval" : "human_task",
+          subject_id: asString(subject.subject_id)
+        }
+      : null
+  };
+}
+
 function normalizeWorkpageActions(value: unknown): WorkflowWorkspaceWorkpageAction[] {
   return asArray<Record<string, unknown>>(value).map((action) => {
     const subjectContext = asRecord(action.subject_context);
@@ -441,6 +468,7 @@ function normalizeWorkpageActions(value: unknown): WorkflowWorkspaceWorkpageActi
         create_relation_kind: asStringOrNull(linkPolicy.create_relation_kind),
         submit_relation_kind: asStringOrNull(linkPolicy.submit_relation_kind)
       },
+      action_ref: normalizeWorkpageActionRef(action.action_ref),
       disabled_reason: asStringOrNull(action.disabled_reason)
     };
   });
@@ -882,7 +910,9 @@ function normalizeWorkpageContract(payload: WorkpageEnvelope): WorkpageContract 
               ? "latest_draft_available"
               : "no_draft",
           latest_artifact_version_id: asStringOrNull(draftResolution.latest_artifact_version_id),
-          artifact_route: asStringOrNull(draftResolution.artifact_route)
+          artifact_route: asStringOrNull(draftResolution.artifact_route),
+          open_action_ref: normalizeWorkpageActionRef(draftResolution.open_action_ref),
+          create_action_ref: normalizeWorkpageActionRef(draftResolution.create_action_ref)
         }
       : null,
     artifact_state: normalizeScheduleArtifactState(artifactState),
@@ -1144,6 +1174,7 @@ function normalizeScheduleActions(value: unknown): WorkpageScheduleAction[] {
     route: asStringOrNull(action.route),
     preview_path: asStringOrNull(action.preview_path),
     submit_path: asStringOrNull(action.submit_path),
+    action_ref: normalizeWorkpageActionRef(action.action_ref),
     disabled_reason: asStringOrNull(action.disabled_reason)
   }));
 }
@@ -1309,6 +1340,21 @@ function normalizeDriverPreferencesAction(
     route: asStringOrNull(action.route),
     create_path: asStringOrNull(action.create_path),
     submit_path: asStringOrNull(action.submit_path),
+    action_ref: normalizeWorkpageActionRef(action.action_ref),
+    disabled_reason: asStringOrNull(action.disabled_reason)
+  };
+}
+
+function normalizeEodAction(action: Record<string, unknown>): WorkpageEodAction {
+  return {
+    action_id: asString(action.action_id),
+    kind: "submit_artifact",
+    label: asString(action.label),
+    state: asString(action.state, "unavailable") as WorkpageEodAction["state"],
+    workpage_kind: asString(action.workpage_kind),
+    artifact_version_id: asStringOrNull(action.artifact_version_id),
+    submit_path: asStringOrNull(action.submit_path),
+    action_ref: normalizeWorkpageActionRef(action.action_ref),
     disabled_reason: asStringOrNull(action.disabled_reason)
   };
 }
@@ -1317,6 +1363,9 @@ function normalizeWorkpageActionsForContract(value: unknown): WorkpageAction[] {
   return asArray<Record<string, unknown>>(value).map((action) => {
     const workpageKind = asString(action.workpage_kind);
     const kind = asString(action.kind);
+    if (workpageKind === "eod-v0") {
+      return normalizeEodAction(action);
+    }
     if (workpageKind === "driver-preferences-v0") {
       return normalizeDriverPreferencesAction(action);
     }
@@ -1330,6 +1379,7 @@ function normalizeWorkpageActionsForContract(value: unknown): WorkpageAction[] {
         artifact_version_id: asStringOrNull(action.artifact_version_id),
         route: asStringOrNull(action.route),
         submit_path: asStringOrNull(action.submit_path),
+        action_ref: normalizeWorkpageActionRef(action.action_ref),
         disabled_reason: asStringOrNull(action.disabled_reason)
       };
       return routeDemandAction;
@@ -1625,7 +1675,11 @@ export const onetruthApi = {
 
   async createWorkflowRunEodDraft(
     workflowRunId: string,
-    payload: { idempotency_key: string; subject_link?: WorkpageSubjectLinkPayload }
+    payload: {
+      idempotency_key: string;
+      action_ref?: WorkpageActionRef;
+      subject_link?: WorkpageSubjectLinkPayload;
+    }
   ): Promise<WorkpageCreateResponse> {
     const result = await requestJson<WorkpageCreateEnvelope>(
       `/workpages/workflow-runs/${encodeURIComponent(workflowRunId)}/eod-v0/drafts`,
@@ -1679,7 +1733,11 @@ export const onetruthApi = {
 
   async createWorkpageAtPath(
     createPath: string,
-    payload: { idempotency_key: string; subject_link?: WorkpageSubjectLinkPayload }
+    payload: {
+      idempotency_key: string;
+      action_ref?: WorkpageActionRef;
+      subject_link?: WorkpageSubjectLinkPayload;
+    }
   ): Promise<WorkpageCreateResponse> {
     const result = await requestJson<WorkpageCreateEnvelope>(normalizeApiPath(createPath), {
       method: "POST",
@@ -1694,6 +1752,7 @@ export const onetruthApi = {
     payload: {
       rows?: Array<Record<string, unknown>>;
       reserve_rows?: Array<Record<string, unknown>>;
+      action_ref?: WorkpageActionRef;
       subject_link?: WorkpageSubjectLinkPayload;
       idempotency_key: string;
     }
@@ -1714,6 +1773,7 @@ export const onetruthApi = {
     payload: {
       form_values?: Record<string, unknown>;
       checklist_values?: Array<Record<string, unknown>>;
+      action_ref?: WorkpageActionRef;
       subject_link?: WorkpageSubjectLinkPayload;
       idempotency_key: string;
     }
@@ -1737,6 +1797,7 @@ export const onetruthApi = {
       reserve_rows?: Array<Record<string, unknown>>;
       daily_demand_rows?: Array<Record<string, unknown>>;
       driver_rows?: Array<Record<string, unknown>>;
+      action_ref?: WorkpageActionRef;
       subject_link?: WorkpageSubjectLinkPayload;
       idempotency_key: string;
     }

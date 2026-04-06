@@ -170,6 +170,30 @@ def _workspace_item(payload: dict[str, object], *, subject_kind: str, subject_id
     raise AssertionError(f"workspace item not found: {subject_kind}:{subject_id}")
 
 
+def _action_ref(
+    *,
+    action_id: str,
+    workpage_kind: str,
+    workflow_run_id: str,
+    artifact_version_id: str | None,
+    subject_kind: str | None = None,
+    subject_id: str | None = None,
+) -> dict[str, object]:
+    subject = None
+    if subject_kind is not None and subject_id is not None:
+        subject = {
+            "subject_kind": subject_kind,
+            "subject_id": subject_id,
+        }
+    return {
+        "action_id": action_id,
+        "workpage_kind": workpage_kind,
+        "workflow_run_id": workflow_run_id,
+        "artifact_version_id": artifact_version_id,
+        "subject": subject,
+    }
+
+
 def _schedule_submit_rows(
     client: RuntimeApiClient,
     workflow_run_id: str,
@@ -555,6 +579,14 @@ def test_weekly_publish_approval_auto_publishes_reviewed_latest_draft(tmp_path: 
                 "subject_id": review_task_id,
                 "workflow_run_id": workflow_run_id,
             },
+            "action_ref": _action_ref(
+                action_id="workpage.schedule-v0.open_latest_draft",
+                workpage_kind="schedule-v0",
+                workflow_run_id=workflow_run_id,
+                artifact_version_id=draft_artifact_id,
+                subject_kind="human_task",
+                subject_id=review_task_id,
+            ),
             "link_policy": {
                 "create_relation_kind": None,
                 "submit_relation_kind": "response",
@@ -576,10 +608,14 @@ def test_weekly_publish_approval_auto_publishes_reviewed_latest_draft(tmp_path: 
         payload={
             "rows": assignment_rows,
             "reserve_rows": reserve_rows,
-            "subject_link": {
-                "subject_kind": "human_task",
-                "subject_id": review_task_id,
-            },
+            "action_ref": _action_ref(
+                action_id="workpage.schedule-v0.save_draft",
+                workpage_kind="schedule-v0",
+                workflow_run_id=workflow_run_id,
+                artifact_version_id=draft_artifact_id,
+                subject_kind="human_task",
+                subject_id=review_task_id,
+            ),
             "idempotency_key": "api:weekly-happy:submit-draft",
         },
     )
@@ -749,10 +785,14 @@ def test_weekly_publish_approval_fails_closed_when_reviewed_draft_is_stale(tmp_p
         payload={
             "rows": assignment_rows,
             "reserve_rows": reserve_rows,
-            "subject_link": {
-                "subject_kind": "approval",
-                "subject_id": approval_id,
-            },
+            "action_ref": _action_ref(
+                action_id="workpage.schedule-v0.save_draft",
+                workpage_kind="schedule-v0",
+                workflow_run_id=workflow_run_id,
+                artifact_version_id=initial_draft_artifact_id,
+                subject_kind="approval",
+                subject_id=approval_id,
+            ),
             "idempotency_key": "api:weekly-stale-publish:submit-late-draft",
         },
     )
