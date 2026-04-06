@@ -17,3 +17,4 @@ Current coverage:
 - assert completion-driven Stage06 child-task spawning lineage + idempotency behavior,
 - assert board/query read-surface JSON contracts under `tests/runtime/contracts/`,
 - assert thin HTTP adapter contracts/mutations/scope-denial behavior under `tests/runtime/api/`.
+- fail fast in `make workpage-mutation-smoke` when required runtime mutation deps like `openpyxl` are missing, then protect the narrow public workpage mutation replay/publish baseline under `tests/runtime/api/test_workpage_mutation_smoke.py`.

@@ -2,7 +2,7 @@
 id: TASK-0212
 epic: EPIC-132
 title: "Restore green workpage mutation flows and add the shared smoke gate"
-status: TODO
+status: DONE
 owners: ["backend", "qa"]
 reviewers: ["architect"]
 depends_on: ["TASK-0211"]
@@ -41,23 +41,33 @@ Restore trustworthy mutation behavior for the current public workpage family and
 - targeted runtime tests and any tiny helper tests needed for the smoke gate
 
 ## Plan
-1. Fix any known shared-helper write regression that remains after supported-env verification.
-2. Reconcile idempotency assertions so tests count the correct semantic object.
-3. Add a narrow public workpage mutation smoke gate covering at least:
+1. Reproduce the workbook unit and EOD submit replay behavior in a clean Python 3.11 install with `.[api,dev]`.
+2. If that supported install still shows a real regression, fix only the smallest write-path seam required to restore truthful behavior.
+3. Add a narrow public workpage mutation smoke gate covering:
    - EOD create + replay,
    - EOD submit + replay,
    - schedule submit + replay,
    - route-demand submit + replay,
    - driver-preferences create/submit + replay,
    - weekly publish happy path and drift fail-closed path.
-4. Keep the smoke gate small enough to run on every change touching shared workpage mutation helpers.
+4. Add a fail-fast dependency-readiness probe for the smoke gate so missing runtime imports like `openpyxl` surface clearly before the API tests run.
+5. Wire the smoke gate into `make`, `ci-fast-backend`, and the main required CI matrix.
 
 ## Verification
-- targeted backend runtime/API tests
-- the new smoke gate runs green from a clean checkout
-- no duplicate truth objects are created by replay in the protected flows
+- clean Python `3.11` env with `python -m pip install -e ".[api,dev]"`
+- `PYTHONPATH=src python3.11 -m pytest -q tests/unit/test_dispatch_reporting_workbook.py`
+- `PYTHONPATH=src python3.11 -m pytest -q tests/runtime/api/test_workpages_artifact_eod_contract.py::test_submit_artifact_workpage_replays_idempotently_without_duplicate_versions`
+- `make PYTHON=python3.11 workpage-mutation-smoke`
+- targeted workpage runtime/API regression suites
+- `PYTHONPATH=src python3.11 -m pytest -q tests/contract/test_repo_automation_truth.py`
 
 ## Acceptance criteria
 - Public workpage mutation flows are green and trustworthy again.
 - The test layer asserts the correct semantic quantities.
 - A future one-line helper regression in shared workpage mutation code is caught by the smoke gate.
+
+## Execution notes
+- Clean-install verification in `/tmp/onetruth-py311-task0212` succeeded with `python -m pip install -e ".[api,dev]"`.
+- In that supported Python `3.11` environment, both `tests/unit/test_dispatch_reporting_workbook.py` and `tests/runtime/api/test_workpages_artifact_eod_contract.py::test_submit_artifact_workpage_replays_idempotently_without_duplicate_versions` passed without any runtime code change.
+- Because the supported-env reproduction was green, this task did not change `src/onetruth/application/services/dispatch_reporting_workbook.py` or `src/onetruth/application/handlers/workpages.py`.
+- The task instead landed a dedicated smoke module, a fail-fast runtime dependency probe in `make workpage-mutation-smoke`, CI wiring in `.github/workflows/main.yml`, and the matching repo-automation/doc-truth updates.

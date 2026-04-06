@@ -2,6 +2,11 @@
 
 Record any decisions made since the last session so a fresh Codex run can rehydrate quickly.
 
+## 2026-04-06 (TASK-0212 workpage mutation smoke gate and dependency-readiness baseline)
+- Verification-lane decision: `make workpage-mutation-smoke` is now the fast canonical smoke slice for public workpage mutations, covering EOD create/submit replay, schedule submit replay, route-demand submit replay, driver-preferences snapshot replay, and weekly publish happy/drift behavior.
+- CI-truth decision: `workpage-mutation-smoke` now runs inside `ci-fast-backend` and as its own `required-fast / workpage-mutation-smoke` job in `.github/workflows/main.yml`.
+- Environment-ambiguity decision: supported Python `3.11` clean-install verification confirms the EOD workbook/unit and submit replay flows are green when project dependencies are installed; the smoke gate now fails fast on missing runtime imports like `openpyxl` instead of surfacing that situation later as an ambiguous workpage `500`.
+
 ## 2026-04-06 (EPIC-132 selection and post-EPIC-131 settlement-plan import)
 - Selection decision: EPIC-132 is now the active follow-on workpage tranche after EPIC-131 and the completed EPIC-126 cleanup trio.
 - Plan-routing decision: EPIC-132 and EPIC-133 now supersede EPIC-126 as the active post-EPIC-131 settlement/hardening plan; EPIC-126 remains completed history rather than the current plan of record.

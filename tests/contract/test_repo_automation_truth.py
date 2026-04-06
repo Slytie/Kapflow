@@ -118,6 +118,7 @@ def test_main_workflow_splits_fast_required_lanes_and_runtime_required() -> None
         ("lint", "backend-lint"),
         ("contract", "contract"),
         ("unit", "unit"),
+        ("workpage-mutation-smoke", "workpage-mutation-smoke"),
         ("security", "security"),
     }
 
@@ -235,7 +236,7 @@ def test_makefile_exposes_fast_and_runtime_ci_slices() -> None:
     assert "schema-validate: assurance-fast" in makefile_text
     assert "$(VALIDATOR) --domain traces" in makefile_text
     assert "backend-lint: assurance-fast python-lint" in makefile_text
-    assert "ci-fast-backend: backend-lint contract unit security" in makefile_text
+    assert "ci-fast-backend: backend-lint contract unit workpage-mutation-smoke security" in makefile_text
     assert (
         "ci-runtime-required: replay acceptance runtime frontend-snapshots-check"
         in makefile_text

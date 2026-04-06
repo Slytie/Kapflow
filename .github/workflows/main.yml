@@ -24,6 +24,8 @@ jobs:
             make_target: contract
           - check: unit
             make_target: unit
+          - check: workpage-mutation-smoke
+            make_target: workpage-mutation-smoke
           - check: security
             make_target: security
     steps:
