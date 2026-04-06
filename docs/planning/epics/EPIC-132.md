@@ -6,7 +6,7 @@ Freeze the current post-EPIC-131 baseline, reconcile the 2026-04-05 settlement f
 This epic is about settlement, not new product scope.
 
 ## Status
-Selected.
+Completed on 2026-04-06 through `TASK-0211`, `TASK-0212`, `TASK-0213`, and `TASK-0214`. The settlement epic now leaves the repo on a clean, reproducible baseline and hands the next hardening tranche to EPIC-133.
 
 ## First-principles objective
 A public workpage mutation is valid only if it behaves like a deterministic, idempotent state transition on canonical truth:

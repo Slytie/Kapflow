@@ -4,18 +4,20 @@
 Stage 4 - Vertical Slice MVP (repo merged around one truth system)
 
 ## Current milestone
-Primary runtime/debug work remains the logistics weekly/live family. EPIC-131 and the EPIC-126 Workpages v1 cleanup trio are complete, and the public Workpages v1 posture is now canonical-only:
+Primary runtime/debug work remains the logistics weekly/live family. EPIC-131, the EPIC-126 Workpages v1 cleanup trio, and EPIC-132 are complete, and the public Workpages v1 posture is now canonical-only:
 - frontend workpage routes live under `/runs/:workflowRunId/workpages/*`
 - backend workpage APIs live under `/api/v1/workpages/workflow-runs/{workflow_run_id}/{workpage_kind}*`
 - `/demo/logistics` remains the shell entrypoint, but nested demo workpage routes are retired
 
-The next selected app-facing workpage tranche is **EPIC-132 - Workpage reliability settlement and repo-truth closeout**:
-- import the post-EPIC-131 settlement docs/tasks/context into active repo truth
-- freeze the current clean baseline and reconcile the 2026-04-05 findings against the live repo
-- use supported-environment verification as the authority for any remaining mutation failures
+The just-completed workpage settlement closeout now leaves the repo with:
+- a dedicated backend mutation lane via `make PYTHON=python3.11 workpage-mutation-smoke`
+- a dedicated frontend workpage lane via `make frontend-workpages-smoke`
+- supported-environment verification truth anchored to Python `3.11` and Node `20` clean installs
 
-Planned follow-on after settlement:
-- **EPIC-133 - Workpage fragility reduction and extensibility hardening**
+The next selected app-facing workpage tranche is **EPIC-133 - Workpage fragility reduction and extensibility hardening**:
+- move lineage/latest-draft/history queries behind backend-owned seams
+- promote server-authored action execution over raw client-carried mutation intent
+- converge the demo shell and split the remaining concentration files without changing the canonical public route posture
 
 EPIC-126 remains completed cleanup history, but it is no longer the active post-EPIC-131 plan.
 
@@ -51,12 +53,12 @@ Frozen product boundary:
 - `driver-preferences-v0` = soft/advisory weekly snapshot
 - accepted history and draft lineage remain separate
 
-Explicitly deferred beyond Workpages v1 and EPIC-132 settlement:
+Explicitly deferred beyond Workpages v1 and into EPIC-133 hardening:
 - date-specific driver exceptions
 - automatic agentic rescheduling after route-demand changes
 - broader feedback-driven hardening beyond the settlement tranche
 
-## Available backlog (not yet selected beyond EPIC-132 / EPIC-133)
+## Available backlog (not yet selected beyond EPIC-133)
 1. `TASK-0154` - Finish the remaining bounded live-dispatch closure around the manual daily-replan lane.
 2. `TASK-0156` - Add the external cadence tick and single-node production-shaped runbook.
 3. `TASK-0157` - Capture post-demo feedback against the canonical Workpages v1 posture.

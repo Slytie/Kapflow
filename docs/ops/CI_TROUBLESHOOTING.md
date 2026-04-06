@@ -44,14 +44,18 @@ Checks:
 ### Frontend job failures
 Symptoms:
 - `npm ci`, `npm run typecheck`, `npm run test:run`, or `npm run build` fails in `frontend`.
+- `make frontend-workpages-smoke` or the dedicated `frontend / workpages-smoke` job fails.
 
 Checks:
 - run from repo root:
+  - `node -v` and confirm the local interpreter is Node `20.x`
   - `cd frontend && npm ci`
+  - `make frontend-workpages-smoke`
   - `cd frontend && npm run typecheck`
   - `cd frontend && npm run test:run`
   - `cd frontend && npm run build`
 - ensure `frontend/package-lock.json` is in sync with `frontend/package.json`.
+- treat `npm ci` from the committed lockfile as the clean-install baseline; do not rely on archived local `node_modules` state.
 
 ### OpenAI integration step skipped
 Symptoms:
@@ -95,6 +99,8 @@ Checks:
 Run the same baseline checks CI runs:
 
 ```bash
+make frontend-workpages-smoke
+make frontend-ci
 make assurance-fast
 make contract
 make replay

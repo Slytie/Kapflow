@@ -6,7 +6,7 @@ Reduce the remaining accidental complexity in the post-EPIC-131 workpage system 
 This epic starts after EPIC-132 and assumes the repo has a clean, green settlement baseline.
 
 ## Status
-Proposed.
+Selected.
 
 ## First-principles objective
 A workpage is a server-authored projection:

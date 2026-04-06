@@ -13,7 +13,8 @@
     "preview": "vite preview",
     "typecheck": "tsc --noEmit -p tsconfig.app.json",
     "test": "vitest",
-    "test:run": "vitest run"
+    "test:run": "vitest run",
+    "test:workpages": "vitest run src/pages/logisticsScheduleWorkpagePage.test.tsx src/pages/dispatchReportWorkpagePage.test.tsx src/lib/repositories/workpagesRepository.test.ts"
   },
   "dependencies": {
     "@tanstack/react-query": "^5.90.2",

@@ -10,7 +10,7 @@ CLEAN_SOURCE_BUNDLE_OUTPUT ?= $(CURDIR)/.tmp/companyos-clean-source-bundle.zip
 RELEASE_SOURCE_BUNDLE_OUTPUT ?= $(CURDIR)/.tmp/companyos-release-source-bundle.zip
 HANDOFF_SOURCE_BUNDLE_OUTPUT ?= $(CURDIR)/.tmp/companyos-handoff-source-bundle.zip
 
-.PHONY: lint test assurance-fast schema-validate trace-validate unit contract replay acceptance runtime runtime-api workpage-mutation-smoke security property integration integration-openai integration-openai-weekly-stage04 logistics-weekly-stage04-pilot clean-source-bundle release-source-bundle handoff-source-bundle generated-check frontend-snapshots frontend-snapshots-check frontend-install frontend-typecheck frontend-test frontend-build ci-fast-backend ci-runtime-required ci-backend ci release-confidence release-confidence-validation release-confidence-demo-export release-confidence-projection-coherence release-confidence-logistics-weekly-live release-confidence-certification-manifest
+.PHONY: lint test assurance-fast schema-validate trace-validate unit contract replay acceptance runtime runtime-api workpage-mutation-smoke security property integration integration-openai integration-openai-weekly-stage04 logistics-weekly-stage04-pilot clean-source-bundle release-source-bundle handoff-source-bundle generated-check frontend-snapshots frontend-snapshots-check frontend-install frontend-typecheck frontend-test frontend-workpages-smoke frontend-build ci-fast-backend ci-runtime-required ci-backend ci release-confidence release-confidence-validation release-confidence-demo-export release-confidence-projection-coherence release-confidence-logistics-weekly-live release-confidence-certification-manifest
 .PHONY: doctor backend-lint python-lint frontend-ci
 
 doctor:
@@ -103,6 +103,9 @@ frontend-typecheck:
 
 frontend-test:
 	cd frontend && npm run test:run
+
+frontend-workpages-smoke:
+	cd frontend && npm run test:workpages
 
 frontend-build:
 	cd frontend && npm run build

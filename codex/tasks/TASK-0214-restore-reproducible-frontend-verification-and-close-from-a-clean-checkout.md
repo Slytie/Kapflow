@@ -2,7 +2,7 @@
 id: TASK-0214
 epic: EPIC-132
 title: "Restore reproducible frontend verification and close from a clean checkout"
-status: TODO
+status: DONE
 owners: ["frontend", "qa"]
 reviewers: ["architect"]
 depends_on: ["TASK-0212", "TASK-0213"]
@@ -49,3 +49,9 @@ Restore a documented, reproducible frontend verification path for the workpage t
 - Frontend workpage verification is reproducible from documented setup, not dependent on packaged local state.
 - The settlement branch is clean when the epic closes.
 - EPIC-132 leaves the repo in a trustworthy resting state.
+
+## Execution notes
+- Clean-checkout verification succeeded from a temporary detached git worktree at `/tmp/companyos-task0214.QLBtaK`, using Node `20.20.0`, npm `10.8.2`, `npm --prefix frontend ci`, and the targeted workpage frontend suite.
+- The targeted workpage suite is now first-class repo truth via `npm --prefix frontend run test:workpages` and `make frontend-workpages-smoke`.
+- The main GitHub Actions workflow now runs that slice as a dedicated `frontend / workpages-smoke` job while preserving the existing broader `frontend` job.
+- EPIC-132 closeout now depends on both targeted settlement lanes: backend `make PYTHON=python3.11 workpage-mutation-smoke` and frontend `make frontend-workpages-smoke`.

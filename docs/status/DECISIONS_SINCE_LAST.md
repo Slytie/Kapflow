@@ -2,6 +2,12 @@
 
 Record any decisions made since the last session so a fresh Codex run can rehydrate quickly.
 
+## 2026-04-06 (TASK-0214 frontend verification closeout and EPIC-132 completion)
+- Closeout-lane decision: `make frontend-workpages-smoke` is now the dedicated clean-install verification slice for the canonical workpage frontend, wrapping the schedule page, EOD page, and workpages repository tests under the committed Node `20` / `npm ci` baseline.
+- CI-truth decision: the main workflow now runs that slice as its own `frontend / workpages-smoke` job while keeping the broader `frontend` job for full typecheck/test/build coverage.
+- Epic-closeout decision: EPIC-132 is complete once both targeted closeout lanes are green from clean-checkout truth: `make PYTHON=python3.11 workpage-mutation-smoke` for backend mutation behavior and `make frontend-workpages-smoke` for frontend workpage verification.
+- Selection decision: with EPIC-132 closed on 2026-04-06, EPIC-133 is now the selected follow-on workpage tranche.
+
 ## 2026-04-06 (TASK-0213 canonical-only wording and compatibility-field sync)
 - Contract-copy decision: active canonical workpage docs, snapshots, and route tests now describe run-backed and artifact-backed projections rather than demo-query posture; example wording remains only when it refers to source material.
 - Compatibility-seam decision: inner `workpage.mode` and `workpage.source_examples` remain temporary legacy view-model fields during EPIC-132 settlement, but authoritative public posture comes from the canonical run/kind-scoped routes and the outer workpage contract wrapper.

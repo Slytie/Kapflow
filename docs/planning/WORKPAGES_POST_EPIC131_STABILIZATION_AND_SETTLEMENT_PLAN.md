@@ -8,6 +8,10 @@ The workpage architecture moved in the right direction during EPIC-131, but the 
 
 These epics supersede EPIC-126 as the active post-EPIC-131 settlement plan.
 
+Status on 2026-04-06:
+- `EPIC-132` is complete.
+- `EPIC-133` is now the selected follow-on tranche.
+
 ## Executive summary
 From first principles, the public workpage system is a family of server-authored resources:
 

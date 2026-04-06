@@ -130,6 +130,10 @@ def test_main_workflow_splits_fast_required_lanes_and_runtime_required() -> None
     assert isinstance(frontend, dict)
     assert frontend.get("name") == "frontend"
 
+    frontend_workpages_smoke = jobs.get("frontend-workpages-smoke")
+    assert isinstance(frontend_workpages_smoke, dict)
+    assert frontend_workpages_smoke.get("name") == "frontend / workpages-smoke"
+
     release_confidence = jobs.get("release-confidence")
     assert isinstance(release_confidence, dict)
     assert (
@@ -140,6 +144,7 @@ def test_main_workflow_splits_fast_required_lanes_and_runtime_required() -> None
     workflow_text = MAIN_WORKFLOW_PATH.read_text(encoding="utf-8")
     assert "make PYTHON=python ci-runtime-required" in workflow_text
     assert "make PYTHON=python ${{ matrix.make_target }}" in workflow_text
+    assert "make frontend-workpages-smoke" in workflow_text
     _assert_all_actions_are_sha_pinned(MAIN_WORKFLOW_PATH)
 
 
@@ -236,6 +241,8 @@ def test_makefile_exposes_fast_and_runtime_ci_slices() -> None:
     assert "schema-validate: assurance-fast" in makefile_text
     assert "$(VALIDATOR) --domain traces" in makefile_text
     assert "backend-lint: assurance-fast python-lint" in makefile_text
+    assert "frontend-workpages-smoke:" in makefile_text
+    assert "cd frontend && npm run test:workpages" in makefile_text
     assert "ci-fast-backend: backend-lint contract unit workpage-mutation-smoke security" in makefile_text
     assert (
         "ci-runtime-required: replay acceptance runtime frontend-snapshots-check"
