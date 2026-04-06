@@ -421,6 +421,20 @@ def test_artifact_backed_schedule_workpage_returns_projected_contract(tmp_path: 
             }
         ],
     }
+    assert payload["artifact_history"]["current_artifact_version_id"] == artifact_version_id
+    assert payload["artifact_history"]["latest_artifact_version_id"] == artifact_version_id
+    assert payload["artifact_history"]["previous_artifact_version_id"] is None
+    assert payload["artifact_history"]["next_artifact_version_id"] is None
+    assert len(payload["artifact_history"]["entries"]) == 1
+    assert payload["artifact_history"]["entries"][0]["artifact_version_id"] == artifact_version_id
+    assert payload["artifact_history"]["entries"][0]["workflow_run_id"] == workflow_run_id
+    assert payload["artifact_history"]["entries"][0]["artifact_kind"] == SCHEDULE_DATASET_KEY
+    assert payload["artifact_history"]["entries"][0]["created_at"]
+    assert payload["artifact_history"]["entries"][0]["lineage_note"]
+    assert payload["artifact_history"]["entries"][0]["supersedes_artifact_version_id"] is None
+    assert payload["artifact_history"]["entries"][0]["route"] == (
+        f"/runs/{workflow_run_id}/workpages/schedule-v0/artifacts/{artifact_version_id}"
+    )
     assert payload["accepted_series"] == {
         "series_key": "weekly_schedule_planning.v1:dvc4:pitt-meadows",
         "current_artifact_version_id": None,
@@ -633,6 +647,20 @@ def test_published_schedule_artifact_reads_under_schedule_workpage_kind(tmp_path
             "supersedes_artifact_version_id": None,
         }
     ]
+    assert payload["artifact_history"]["current_artifact_version_id"] == draft_artifact_version_id
+    assert payload["artifact_history"]["latest_artifact_version_id"] == draft_artifact_version_id
+    assert payload["artifact_history"]["previous_artifact_version_id"] is None
+    assert payload["artifact_history"]["next_artifact_version_id"] is None
+    assert len(payload["artifact_history"]["entries"]) == 1
+    assert payload["artifact_history"]["entries"][0]["artifact_version_id"] == draft_artifact_version_id
+    assert payload["artifact_history"]["entries"][0]["workflow_run_id"] == workflow_run_id
+    assert payload["artifact_history"]["entries"][0]["artifact_kind"] == SCHEDULE_DATASET_KEY
+    assert payload["artifact_history"]["entries"][0]["created_at"]
+    assert payload["artifact_history"]["entries"][0]["lineage_note"]
+    assert payload["artifact_history"]["entries"][0]["supersedes_artifact_version_id"] is None
+    assert payload["artifact_history"]["entries"][0]["route"] == (
+        f"/runs/{workflow_run_id}/workpages/schedule-v0/artifacts/{draft_artifact_version_id}"
+    )
     assert payload["accepted_series"]["series_key"]
     assert payload["accepted_series"]["current_artifact_version_id"] == published_artifact_version_id
     assert payload["accepted_series"]["entries"] == [
@@ -642,6 +670,10 @@ def test_published_schedule_artifact_reads_under_schedule_workpage_kind(tmp_path
             "partition_key": "PW-2026-W13",
             "logical_date": "2026-03-22",
             "artifact_kind": PUBLISHED_SCHEDULE_DATASET_KEY,
+            "route": (
+                f"/runs/{workflow_run_id}/workpages/schedule-v0/artifacts/"
+                f"{published_artifact_version_id}"
+            ),
         }
     ]
     assert payload["actions"] == [
@@ -754,6 +786,10 @@ def test_published_schedule_accepted_series_groups_same_key_only_with_scope_isol
             "partition_key": "PW-2026-W13",
             "logical_date": "2026-03-22",
             "artifact_kind": PUBLISHED_SCHEDULE_DATASET_KEY,
+            "route": (
+                f"/runs/{older['workflow_run_id']}/workpages/schedule-v0/artifacts/"
+                f"{older_published['artifact_version_id']}"
+            ),
         },
         {
             "artifact_version_id": current_published_artifact_version_id,
@@ -761,6 +797,10 @@ def test_published_schedule_accepted_series_groups_same_key_only_with_scope_isol
             "partition_key": "PW-2026-W13",
             "logical_date": "2026-03-22",
             "artifact_kind": PUBLISHED_SCHEDULE_DATASET_KEY,
+            "route": (
+                f"/runs/{current['workflow_run_id']}/workpages/schedule-v0/artifacts/"
+                f"{current_published_artifact_version_id}"
+            ),
         },
         {
             "artifact_version_id": str(newer_published["artifact_version_id"]),
@@ -768,6 +808,10 @@ def test_published_schedule_accepted_series_groups_same_key_only_with_scope_isol
             "partition_key": "PW-2026-W13",
             "logical_date": "2026-03-22",
             "artifact_kind": PUBLISHED_SCHEDULE_DATASET_KEY,
+            "route": (
+                f"/runs/{newer['workflow_run_id']}/workpages/schedule-v0/artifacts/"
+                f"{newer_published['artifact_version_id']}"
+            ),
         },
     ]
 

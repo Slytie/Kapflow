@@ -84,6 +84,7 @@ def test_route_demand_run_workpage_contract_returns_latest_route_demand_projecti
         "latest_artifact_version_id": latest_route_artifact_id,
         "accepted_artifact_version_id": None,
     }
+    assert payload["artifact_history"] is None
     assert payload["schedule_impact"] == {
         "latest_schedule_draft_artifact_version_id": None,
         "dependency_state": "no_draft",
@@ -127,6 +128,23 @@ def test_route_demand_artifact_workpage_uses_canonical_route_and_retires_alias(
     assert initial_payload["workpage"]["workpage_id"] == "route-demand-v0"
     assert initial_payload["artifact_state"]["editable"] is True
     assert initial_payload["artifact_state"]["current_artifact_version_id"] == route_artifact_id
+    assert initial_payload["artifact_history"]["current_artifact_version_id"] == route_artifact_id
+    assert initial_payload["artifact_history"]["latest_artifact_version_id"] == route_artifact_id
+    assert initial_payload["artifact_history"]["previous_artifact_version_id"] is None
+    assert initial_payload["artifact_history"]["next_artifact_version_id"] is None
+    assert initial_payload["artifact_history"]["entries"] == [
+        {
+            "artifact_version_id": route_artifact_id,
+            "workflow_run_id": workflow_run_id,
+            "artifact_kind": "planning.route_slot_requirements.workbook",
+            "created_at": route_artifact["created_at"],
+            "lineage_note": route_artifact["lineage_note"],
+            "supersedes_artifact_version_id": None,
+            "route": (
+                f"/runs/{workflow_run_id}/workpages/route-demand-v0/artifacts/{route_artifact_id}"
+            ),
+        }
+    ]
     assert initial_payload["actions"] == [
         {
             "action_id": "workpage.route-demand-v0.save",
@@ -168,6 +186,14 @@ def test_route_demand_artifact_workpage_uses_canonical_route_and_retires_alias(
         "latest_artifact_version_id": latest_route_artifact_id,
         "accepted_artifact_version_id": None,
     }
+    assert historical_payload["artifact_history"]["current_artifact_version_id"] == route_artifact_id
+    assert historical_payload["artifact_history"]["latest_artifact_version_id"] == latest_route_artifact_id
+    assert historical_payload["artifact_history"]["previous_artifact_version_id"] is None
+    assert historical_payload["artifact_history"]["next_artifact_version_id"] == latest_route_artifact_id
+    assert [entry["artifact_version_id"] for entry in historical_payload["artifact_history"]["entries"]] == [
+        latest_route_artifact_id,
+        route_artifact_id,
+    ]
     assert historical_payload["actions"] == [
         {
             "action_id": "workpage.route-demand-v0.save",

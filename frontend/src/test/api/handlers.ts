@@ -137,6 +137,41 @@ function sortArtifactRowsAscending(left: ArtifactVersionRow, right: ArtifactVers
   return left.artifact_version_id.localeCompare(right.artifact_version_id);
 }
 
+function sortArtifactRowsDescending(left: ArtifactVersionRow, right: ArtifactVersionRow): number {
+  return sortArtifactRowsAscending(right, left);
+}
+
+function buildArtifactHistoryPayload(
+  rows: ArtifactVersionRow[],
+  currentArtifactVersionId: string | null,
+  routeBuilder: (row: ArtifactVersionRow) => string
+): Record<string, unknown> {
+  const sortedRows = [...rows].sort(sortArtifactRowsDescending);
+  const currentIndex =
+    currentArtifactVersionId === null
+      ? -1
+      : sortedRows.findIndex((row) => row.artifact_version_id === currentArtifactVersionId);
+  return {
+    current_artifact_version_id: currentArtifactVersionId,
+    latest_artifact_version_id: sortedRows[0]?.artifact_version_id ?? null,
+    previous_artifact_version_id:
+      currentIndex >= 0 && currentIndex + 1 < sortedRows.length
+        ? sortedRows[currentIndex + 1]?.artifact_version_id ?? null
+        : null,
+    next_artifact_version_id:
+      currentIndex > 0 ? sortedRows[currentIndex - 1]?.artifact_version_id ?? null : null,
+    entries: sortedRows.map((row) => ({
+      artifact_version_id: row.artifact_version_id,
+      workflow_run_id: row.workflow_run_id,
+      artifact_kind: row.artifact_kind,
+      created_at: row.created_at,
+      lineage_note: row.lineage_note,
+      supersedes_artifact_version_id: row.supersedes_artifact_version_id,
+      route: routeBuilder(row)
+    }))
+  };
+}
+
 function eodArtifactFileName(artifactVersionId: string): string {
   return `dispatch_reporting_stage03_${artifactVersionId}.xlsx`;
 }
@@ -757,6 +792,16 @@ function buildEodArtifactPayload(input: {
   return payload;
 }
 
+function patchEodArtifactContractState(version: EodArtifactVersionState): void {
+  version.payload.artifact_history = buildArtifactHistoryPayload(
+    Array.from(eodArtifactVersions.values())
+      .filter((candidate) => candidate.workflowRunId === version.workflowRunId)
+      .map(eodArtifactVersionRow),
+    version.artifactVersionId,
+    (row) => artifactRoute(row.artifact_version_id, row.workflow_run_id)
+  );
+}
+
 function buildScheduleWorkbookPayload(
   assignmentRows?: Array<Record<string, unknown>>,
   reserveRows?: Array<Record<string, unknown>>
@@ -940,6 +985,12 @@ function patchScheduleArtifactContractState(version: ScheduleArtifactVersionStat
     draftLineage.recent_versions = recentVersions;
   }
 
+  payload.artifact_history = buildArtifactHistoryPayload(
+    scheduleVersionsForRun(version.workflowRunId).map(scheduleArtifactVersionRow),
+    version.artifactVersionId,
+    (row) => scheduleArtifactRoute(row.artifact_version_id, row.workflow_run_id)
+  );
+
   const acceptedSeries = asObject(payload.accepted_series);
   if (acceptedSeries) {
     acceptedSeries.current_artifact_version_id = null;
@@ -1073,6 +1124,7 @@ function addEodArtifactVersion(input: {
     latestInChainArtifactVersionId: input.latestInChainArtifactVersionId
   };
   eodArtifactVersions.set(version.artifactVersionId, version);
+  patchEodArtifactContractState(version);
   return version;
 }
 
@@ -1220,6 +1272,7 @@ function updateEodArtifactChainLatest(artifactVersionId: string, latestArtifactV
     }
     version.latestInChainArtifactVersionId = latestArtifactVersionId;
     patchArtifactPayloadLineage(version);
+    patchEodArtifactContractState(version);
     currentArtifactVersionId = version.supersedesArtifactVersionId;
   }
 }
@@ -1464,6 +1517,13 @@ function patchRouteDemandArtifactContractState(version: RouteDemandArtifactVersi
     latest_schedule_draft_artifact_version_id: latestScheduleVersion?.artifactVersionId ?? null,
     latest_route_demand_artifact_version_id: version.latestInChainArtifactVersionId
   };
+  payload.artifact_history = buildArtifactHistoryPayload(
+    Array.from(routeDemandArtifactVersions.values())
+      .filter((candidate) => candidate.workflowRunId === version.workflowRunId)
+      .map(routeDemandArtifactVersionRow),
+    version.artifactVersionId,
+    (row) => routeDemandArtifactRoute(row.artifact_version_id, row.workflow_run_id)
+  );
 }
 
 function buildRouteDemandArtifactPayload(input: {
@@ -1703,6 +1763,11 @@ function patchDriverPreferencesArtifactContractState(
     latest_schedule_draft_artifact_version_id: latestScheduleVersion?.artifactVersionId ?? null,
     latest_driver_preferences_artifact_version_id: version.latestInChainArtifactVersionId
   };
+  payload.artifact_history = buildArtifactHistoryPayload(
+    driverPreferencesVersionsForRun(version.workflowRunId).map(driverPreferencesArtifactVersionRow),
+    version.artifactVersionId,
+    (row) => driverPreferencesArtifactRoute(row.artifact_version_id, row.workflow_run_id)
+  );
 
   const workpage = asObject(payload.workpage);
   if (workpage) {

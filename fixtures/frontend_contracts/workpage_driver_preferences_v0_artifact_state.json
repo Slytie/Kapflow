@@ -27,6 +27,23 @@
       "supersedes_artifact_version_id": null,
       "workflow_run_id": "<workflow_run_id:1>"
     },
+    "artifact_history": {
+      "current_artifact_version_id": "<artifact_version_id:2>",
+      "entries": [
+        {
+          "artifact_kind": "planning.driver_shift_preferences.workbook",
+          "artifact_version_id": "<artifact_version_id:2>",
+          "created_at": "<ts:1>",
+          "lineage_note": "Created initial driver preferences snapshot.",
+          "route": "/runs/<workflow_run_id:1>/workpages/driver-preferences-v0/artifacts/<artifact_version_id:2>",
+          "supersedes_artifact_version_id": null,
+          "workflow_run_id": "<workflow_run_id:1>"
+        }
+      ],
+      "latest_artifact_version_id": "<artifact_version_id:2>",
+      "next_artifact_version_id": null,
+      "previous_artifact_version_id": null
+    },
     "artifact_state": {
       "accepted_artifact_version_id": null,
       "artifact_kind": "planning.driver_shift_preferences.workbook",
@@ -37,7 +54,7 @@
     },
     "command": "api.workpages.artifact",
     "freshness": {
-      "generated_at": "<ts:1>",
+      "generated_at": "<ts:2>",
       "source_kind": "artifact_version",
       "source_version": "<artifact_version_id:2>"
     },

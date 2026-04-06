@@ -13,8 +13,9 @@ import { apiConfig } from "@/lib/api/config";
 import { errorText } from "@/lib/api/errorText";
 import { workpagesRepository } from "@/lib/repositories";
 import { invalidateWorkspaceViews } from "@/lib/workspace/queryInvalidation";
-import type { ArtifactVersionRow, WorkpageContract } from "@/lib/types/contracts";
+import type { WorkpageContract } from "@/lib/types/contracts";
 import type {
+  WorkpageArtifactHistory,
   WorkpageDriverPreferencesAction,
   WorkpageDriverPreferencesDriverRow,
   WorkpageDriverPreferencesGrid,
@@ -33,10 +34,6 @@ const PREFERENCE_OPTIONS: Array<{ value: string; label: string }> = [
 
 function driverPreferencesLandingRoute(workflowRunId: string): string {
   return `/runs/${workflowRunId}/workpages/driver-preferences-v0`;
-}
-
-function driverPreferencesArtifactRoute(workflowRunId: string, artifactVersionId: string): string {
-  return `/runs/${workflowRunId}/workpages/driver-preferences-v0/artifacts/${artifactVersionId}`;
 }
 
 function scheduleLandingRoute(workflowRunId: string): string {
@@ -222,36 +219,35 @@ function DriverPreferencesScheduleImpactBanner({
 }
 
 function DriverPreferencesHistoryRail({
-  historyRows,
-  workflowRunId,
+  artifactHistory,
   currentArtifactVersionId
 }: {
-  historyRows: ArtifactVersionRow[];
-  workflowRunId: string;
+  artifactHistory: WorkpageArtifactHistory | null;
   currentArtifactVersionId?: string;
 }): JSX.Element {
+  const historyEntries = artifactHistory?.entries ?? [];
   return (
     <section className="workpage-panel" data-testid="driver-preferences-history-rail">
       <header className="workpage-panel__header">
         <h2>Recent preferences snapshots</h2>
-        <p>The history rail stays within immutable driver-preferences snapshots for this weekly run.</p>
+        <p>The history rail stays within backend-authored immutable driver-preferences snapshot lineage for this weekly run.</p>
       </header>
-      {historyRows.length > 0 ? (
+      {historyEntries.length > 0 ? (
         <div className="route-demand-history-list">
-          {historyRows.map((row) => {
-            const isCurrent = row.artifact_version_id === currentArtifactVersionId;
+          {historyEntries.map((entry) => {
+            const isCurrent = entry.artifact_version_id === currentArtifactVersionId;
             return (
               <Link
-                key={row.artifact_version_id}
+                key={entry.artifact_version_id}
                 className={`route-demand-history-list__item${
                   isCurrent ? " route-demand-history-list__item--current" : ""
                 }`}
-                data-testid={`driver-preferences-history-${row.artifact_version_id}`}
-                to={driverPreferencesArtifactRoute(workflowRunId, row.artifact_version_id)}
+                data-testid={`driver-preferences-history-${entry.artifact_version_id}`}
+                to={entry.route}
               >
-                <strong>{isCurrent ? "Current snapshot" : row.artifact_version_id}</strong>
-                <span>{row.created_at}</span>
-                <span>{row.lineage_note ?? "Driver-preferences snapshot"}</span>
+                <strong>{isCurrent ? "Current snapshot" : entry.artifact_version_id}</strong>
+                <span>{entry.created_at}</span>
+                <span>{entry.lineage_note ?? "Driver-preferences snapshot"}</span>
               </Link>
             );
           })}
@@ -483,12 +479,6 @@ export function LogisticsDriverPreferencesArtifactWorkpagePage(): JSX.Element {
     enabled: Boolean(workflowRunId && artifactVersionId),
     refetchInterval: apiConfig.pollIntervalMs
   });
-  const historyQuery = useQuery({
-    queryKey: ["workpages", "driver-preferences-v0", "history", workflowRunId],
-    queryFn: () => workpagesRepository.listDriverPreferencesHistory(workflowRunId ?? ""),
-    enabled: Boolean(workflowRunId),
-    refetchInterval: apiConfig.pollIntervalMs
-  });
   const contract = query.data;
   const saveAction = findDriverPreferencesAction(contract, (action) => action.kind === "save");
   const { driverRows, setDriverRows } = useEditableDriverPreferencesGrid(contract);
@@ -561,9 +551,8 @@ export function LogisticsDriverPreferencesArtifactWorkpagePage(): JSX.Element {
       freshness={contract.freshness}
       onRefresh={() => {
         void query.refetch();
-        void historyQuery.refetch();
       }}
-      isRefreshing={query.isFetching || historyQuery.isFetching || submitMutation.isPending}
+      isRefreshing={query.isFetching || submitMutation.isPending}
       pollIntervalMs={apiConfig.pollIntervalMs}
       testId="driver-preferences-artifact-workpage-page"
       metadataPresentation="dialog"
@@ -611,8 +600,7 @@ export function LogisticsDriverPreferencesArtifactWorkpagePage(): JSX.Element {
         readOnly={readOnly}
       />
       <DriverPreferencesHistoryRail
-        historyRows={historyQuery.data ?? []}
-        workflowRunId={workflowRunId}
+        artifactHistory={contract.artifact_history}
         currentArtifactVersionId={artifactVersionId}
       />
     </WorkpageFrame>

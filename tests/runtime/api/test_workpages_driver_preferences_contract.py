@@ -82,6 +82,7 @@ def test_driver_preferences_run_workpage_lands_on_create_snapshot_when_none_exis
         "latest_artifact_version_id": None,
         "accepted_artifact_version_id": None,
     }
+    assert payload["artifact_history"] is None
     assert payload["preference_grid"]["weekdays"] == [
         "sun",
         "mon",
@@ -157,6 +158,25 @@ def test_driver_preferences_create_route_returns_canonical_artifact_and_retires_
         "latest_artifact_version_id": artifact_version_id,
         "accepted_artifact_version_id": None,
     }
+    assert payload["artifact_history"]["current_artifact_version_id"] == artifact_version_id
+    assert payload["artifact_history"]["latest_artifact_version_id"] == artifact_version_id
+    assert payload["artifact_history"]["previous_artifact_version_id"] is None
+    assert payload["artifact_history"]["next_artifact_version_id"] is None
+    assert payload["artifact_history"]["entries"] == [
+        {
+            "artifact_version_id": artifact_version_id,
+            "workflow_run_id": workflow_run_id,
+            "artifact_kind": "planning.driver_shift_preferences.workbook",
+            "created_at": payload["artifact_history"]["entries"][0]["created_at"],
+            "lineage_note": "Created initial driver preferences snapshot.",
+            "supersedes_artifact_version_id": None,
+            "route": (
+                f"/runs/{workflow_run_id}/workpages/driver-preferences-v0/artifacts/"
+                f"{artifact_version_id}"
+            ),
+        }
+    ]
+    assert payload["artifact_history"]["entries"][0]["created_at"]
     assert _action_by_id(payload["actions"], "workpage.driver-preferences-v0.save") == {
         "action_id": "workpage.driver-preferences-v0.save",
         "kind": "save",
@@ -243,6 +263,17 @@ def test_driver_preferences_submit_creates_successor_and_historical_read_only(
         "latest_artifact_version_id": latest_artifact_version_id,
         "accepted_artifact_version_id": None,
     }
+    assert historical_payload["artifact_history"]["current_artifact_version_id"] == artifact_version_id
+    assert historical_payload["artifact_history"]["latest_artifact_version_id"] == latest_artifact_version_id
+    assert historical_payload["artifact_history"]["previous_artifact_version_id"] is None
+    assert historical_payload["artifact_history"]["next_artifact_version_id"] == latest_artifact_version_id
+    assert [
+        entry["artifact_version_id"]
+        for entry in historical_payload["artifact_history"]["entries"]
+    ] == [
+        latest_artifact_version_id,
+        artifact_version_id,
+    ]
     assert _action_by_id(
         historical_payload["actions"], "workpage.driver-preferences-v0.save"
     ) == {

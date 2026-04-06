@@ -364,6 +364,7 @@ def build_schedule_workflow_run_workpage_contract(
                 reserve_rows=[],
                 driver_preferences_projection=driver_preferences_projection,
             ),
+            "artifact_history": None,
             "draft_lineage": _empty_draft_lineage(),
             "accepted_series": accepted_series,
             "actions": _schedule_run_contract_actions(
@@ -439,6 +440,7 @@ def build_route_demand_workflow_run_workpage_contract(
         "artifact_state": _route_demand_run_artifact_state(latest_artifact=latest_artifact),
         "calculations": {"day_cards": day_cards},
         "schedule_impact": schedule_impact,
+        "artifact_history": None,
         "actions": [
             _route_demand_open_latest_contract_action(
                 workflow_run_id=workflow_run_id,
@@ -519,6 +521,7 @@ def build_driver_preferences_workflow_run_workpage_contract(
             artifacts=artifacts,
             latest_driver_preferences=latest_artifact,
         ),
+        "artifact_history": None,
         "actions": _driver_preferences_run_contract_actions(
             workflow_run_id=workflow_run_id,
             latest_artifact=latest_artifact,
@@ -718,55 +721,105 @@ def _empty_draft_lineage() -> dict[str, Any]:
     }
 
 
-def _schedule_draft_lineage(
+def _empty_artifact_history() -> dict[str, Any]:
+    return {
+        "current_artifact_version_id": None,
+        "latest_artifact_version_id": None,
+        "previous_artifact_version_id": None,
+        "next_artifact_version_id": None,
+        "entries": [],
+    }
+
+
+def _artifact_history_route(
+    *,
+    artifact_kind: str,
+    workflow_run_id: str,
+    artifact_version_id: str,
+) -> str:
+    if artifact_kind in {SCHEDULE_DRAFT_DATASET_KEY, SCHEDULE_PUBLISHED_ARTIFACT_KIND}:
+        return canonical_schedule_artifact_route(
+            workflow_run_id=workflow_run_id,
+            artifact_version_id=artifact_version_id,
+        )
+    if artifact_kind == _EOD_DRAFT_DATASET_KEY:
+        return canonical_eod_artifact_route(
+            workflow_run_id=workflow_run_id,
+            artifact_version_id=artifact_version_id,
+        )
+    if artifact_kind == ROUTE_DEMAND_DATASET_KEY:
+        return canonical_route_demand_artifact_route(
+            workflow_run_id=workflow_run_id,
+            artifact_version_id=artifact_version_id,
+        )
+    if artifact_kind == DRIVER_PREFERENCES_DATASET_KEY:
+        return canonical_driver_preferences_artifact_route(
+            workflow_run_id=workflow_run_id,
+            artifact_version_id=artifact_version_id,
+        )
+    raise ValueError(f"unsupported artifact history kind: {artifact_kind}")
+
+
+def _artifact_history_entry(artifact: Mapping[str, Any]) -> dict[str, Any]:
+    artifact_version_id = _require_text(artifact.get("artifact_version_id"))
+    workflow_run_id = _require_text(artifact.get("workflow_run_id"))
+    artifact_kind = _require_text(artifact.get("artifact_kind") or artifact.get("dataset_key"))
+    return {
+        "artifact_version_id": artifact_version_id,
+        "workflow_run_id": workflow_run_id,
+        "artifact_kind": artifact_kind,
+        "created_at": _require_text_or_default(artifact.get("created_at"), default=""),
+        "lineage_note": _require_text_or_default(artifact.get("lineage_note"), default="") or None,
+        "supersedes_artifact_version_id": _require_text_or_default(
+            artifact.get("supersedes_artifact_version_id"),
+            default="",
+        )
+        or None,
+        "route": _artifact_history_route(
+            artifact_kind=artifact_kind,
+            workflow_run_id=workflow_run_id,
+            artifact_version_id=artifact_version_id,
+        ),
+    }
+
+
+def _artifact_history_for_chain(
     connection: sqlite3.Connection,
     *,
-    artifact: Mapping[str, Any],
+    current_artifact: Mapping[str, Any] | None,
     artifacts: list[dict[str, Any]],
-    artifact_kind: str,
 ) -> dict[str, Any]:
-    artifact_version_id = _require_text(artifact.get("artifact_version_id"))
-    artifact_map = {
+    if current_artifact is None:
+        return _empty_artifact_history()
+
+    artifact_kind = _require_text(
+        current_artifact.get("artifact_kind") or current_artifact.get("dataset_key")
+    )
+    artifact_map: dict[str, Mapping[str, Any]] = {
         _require_text(item.get("artifact_version_id")): item
         for item in artifacts
         if item.get("artifact_version_id") is not None
+        and _require_text(item.get("artifact_kind") or item.get("dataset_key")) == artifact_kind
     }
-    if artifact_kind == SCHEDULE_DRAFT_DATASET_KEY:
-        current_artifact_version_id = artifact_version_id
-        latest_artifact_version_id = _latest_chain_artifact_version_id(
-            connection,
-            artifact_version_id=artifact_version_id,
-            default=artifact_version_id,
-        )
-        current = artifact
-    elif artifact_kind == SCHEDULE_PUBLISHED_ARTIFACT_KIND:
-        metadata_json = artifact.get("metadata_json")
-        if not isinstance(metadata_json, Mapping):
-            return _empty_draft_lineage()
-        anchor_artifact_version_id = _require_text_or_default(
-            metadata_json.get("published_from_artifact_version_id"),
-            default="",
-        )
-        if not anchor_artifact_version_id:
-            return _empty_draft_lineage()
-        current = artifact_map.get(anchor_artifact_version_id)
-        if current is None:
-            current = get_artifact_version(connection, anchor_artifact_version_id)
-        if current is None:
-            return _empty_draft_lineage()
-        current_artifact_version_id = anchor_artifact_version_id
-        latest_artifact_version_id = anchor_artifact_version_id
-    else:
-        return _empty_draft_lineage()
+    current_artifact_version_id = _require_text(current_artifact.get("artifact_version_id"))
+    artifact_map.setdefault(current_artifact_version_id, current_artifact)
 
-    previous_artifact_version_id = _require_text_or_default(
-        current.get("supersedes_artifact_version_id"),
-        default="",
+    latest_artifact_version_id = _latest_chain_artifact_version_id(
+        connection,
+        artifact_version_id=current_artifact_version_id,
+        default=current_artifact_version_id,
     )
-    recent_versions: list[dict[str, Any]] = []
-    cursor: Mapping[str, Any] | None = current
+    latest_artifact = artifact_map.get(latest_artifact_version_id)
+    if latest_artifact is None:
+        latest_artifact = get_artifact_version(connection, latest_artifact_version_id)
+        if latest_artifact is None:
+            latest_artifact = current_artifact
+        artifact_map[latest_artifact_version_id] = latest_artifact
+
+    entries: list[dict[str, Any]] = []
+    cursor: Mapping[str, Any] | None = latest_artifact
     seen_ids: set[str] = set()
-    while cursor is not None and len(recent_versions) < 5:
+    while cursor is not None:
         cursor_artifact_version_id = _require_text_or_default(
             cursor.get("artifact_version_id"),
             default="",
@@ -774,28 +827,154 @@ def _schedule_draft_lineage(
         if not cursor_artifact_version_id or cursor_artifact_version_id in seen_ids:
             break
         seen_ids.add(cursor_artifact_version_id)
-        recent_versions.append(
-            {
-                "artifact_version_id": cursor_artifact_version_id,
-                "supersedes_artifact_version_id": _require_text_or_default(
-                    cursor.get("supersedes_artifact_version_id"),
-                    default="",
-                )
-                or None,
-            }
-        )
+        entries.append(_artifact_history_entry(cursor))
         parent_artifact_version_id = _require_text_or_default(
             cursor.get("supersedes_artifact_version_id"),
             default="",
         )
-        cursor = artifact_map.get(parent_artifact_version_id) if parent_artifact_version_id else None
+        if not parent_artifact_version_id:
+            break
+        next_cursor = artifact_map.get(parent_artifact_version_id)
+        if next_cursor is None:
+            next_cursor = get_artifact_version(connection, parent_artifact_version_id)
+            if next_cursor is None:
+                break
+            if _require_text(next_cursor.get("artifact_kind") or next_cursor.get("dataset_key")) != artifact_kind:
+                break
+            artifact_map[parent_artifact_version_id] = next_cursor
+        cursor = next_cursor
 
+    current_index = next(
+        (
+            index
+            for index, entry in enumerate(entries)
+            if entry["artifact_version_id"] == current_artifact_version_id
+        ),
+        None,
+    )
+    if current_index is None:
+        entries.insert(0, _artifact_history_entry(current_artifact))
+        current_index = 0
+
+    previous_artifact_version_id = (
+        entries[current_index + 1]["artifact_version_id"]
+        if current_index + 1 < len(entries)
+        else None
+    )
+    next_artifact_version_id = (
+        entries[current_index - 1]["artifact_version_id"] if current_index > 0 else None
+    )
     return {
         "current_artifact_version_id": current_artifact_version_id,
         "latest_artifact_version_id": latest_artifact_version_id,
-        "previous_artifact_version_id": previous_artifact_version_id or None,
+        "previous_artifact_version_id": previous_artifact_version_id,
+        "next_artifact_version_id": next_artifact_version_id,
+        "entries": entries,
+    }
+
+
+def _draft_lineage_from_artifact_history(artifact_history: Mapping[str, Any]) -> dict[str, Any]:
+    current_artifact_version_id = _require_text_or_default(
+        artifact_history.get("current_artifact_version_id"),
+        default="",
+    )
+    if not current_artifact_version_id:
+        return _empty_draft_lineage()
+    entries = artifact_history.get("entries")
+    if not isinstance(entries, list):
+        return _empty_draft_lineage()
+    current_index = next(
+        (
+            index
+            for index, entry in enumerate(entries)
+            if isinstance(entry, Mapping)
+            and _require_text_or_default(entry.get("artifact_version_id"), default="")
+            == current_artifact_version_id
+        ),
+        None,
+    )
+    if current_index is None:
+        return _empty_draft_lineage()
+    current_to_older = entries[current_index:]
+    recent_versions = [
+        {
+            "artifact_version_id": _require_text(entry.get("artifact_version_id")),
+            "supersedes_artifact_version_id": _require_text_or_default(
+                entry.get("supersedes_artifact_version_id"),
+                default="",
+            )
+            or None,
+        }
+        for entry in current_to_older[:5]
+        if isinstance(entry, Mapping)
+    ]
+    return {
+        "current_artifact_version_id": current_artifact_version_id,
+        "latest_artifact_version_id": _require_text_or_default(
+            artifact_history.get("latest_artifact_version_id"),
+            default="",
+        )
+        or None,
+        "previous_artifact_version_id": _require_text_or_default(
+            artifact_history.get("previous_artifact_version_id"),
+            default="",
+        )
+        or None,
         "recent_versions": recent_versions,
     }
+
+
+def _schedule_draft_history_artifact(
+    connection: sqlite3.Connection,
+    *,
+    artifact: Mapping[str, Any],
+    artifacts: list[dict[str, Any]],
+    artifact_kind: str,
+) -> Mapping[str, Any] | None:
+    if artifact_kind == SCHEDULE_DRAFT_DATASET_KEY:
+        return artifact
+    if artifact_kind != SCHEDULE_PUBLISHED_ARTIFACT_KIND:
+        return None
+    metadata_json = artifact.get("metadata_json")
+    if not isinstance(metadata_json, Mapping):
+        return None
+    anchor_artifact_version_id = _require_text_or_default(
+        metadata_json.get("published_from_artifact_version_id"),
+        default="",
+    )
+    if not anchor_artifact_version_id:
+        return None
+    artifact_map = {
+        _require_text(item.get("artifact_version_id")): item
+        for item in artifacts
+        if item.get("artifact_version_id") is not None
+    }
+    current = artifact_map.get(anchor_artifact_version_id)
+    if current is not None:
+        return current
+    return get_artifact_version(connection, anchor_artifact_version_id)
+
+
+def _schedule_artifact_history(
+    connection: sqlite3.Connection,
+    *,
+    artifact: Mapping[str, Any],
+    artifacts: list[dict[str, Any]],
+    artifact_kind: str,
+) -> dict[str, Any]:
+    current = _schedule_draft_history_artifact(
+        connection,
+        artifact=artifact,
+        artifacts=artifacts,
+        artifact_kind=artifact_kind,
+    )
+    if current is None:
+        return _empty_artifact_history()
+    return _artifact_history_for_chain(
+        connection,
+        current_artifact=current,
+        artifacts=artifacts,
+    )
 
 
 def _build_schedule_accepted_series(
@@ -830,6 +1009,10 @@ def _build_schedule_accepted_series(
                 default="",
             ),
             "artifact_kind": _require_text(row.get("artifact_kind")),
+            "route": canonical_schedule_artifact_route(
+                workflow_run_id=_require_text(row.get("workflow_run_id")),
+                artifact_version_id=_require_text(row.get("artifact_version_id")),
+            ),
         }
         for row in rows
         if _schedule_artifact_accepted_series_key(row.get("metadata_json")) == series_key
@@ -1473,6 +1656,7 @@ def build_eod_workflow_run_workpage_contract(
             workflow_run_id=workflow_run_id,
             latest_draft=latest_draft,
         ),
+        "artifact_history": None,
     }
 
 
@@ -1578,20 +1762,47 @@ def _build_eod_landing_workpage_view_model(
 
 
 def build_eod_artifact_workpage_contract(
+    connection: sqlite3.Connection,
     *,
     artifact_version_id: str,
-    workflow_run_id: str,
-    supersedes_artifact_version_id: str | None,
-    superseded_by_artifact_version_id: str | None,
-    latest_in_chain_artifact_version_id: str,
+    artifact: Mapping[str, Any],
+    workflow_run: Mapping[str, Any],
+    artifacts: list[dict[str, Any]],
     download_path: str,
     projection: Mapping[str, Any],
     source_refs: list[str],
-    service_date: str = _EOD_SERVICE_DATE,
-    station_code: str = _EOD_STATION_CODE,
-    dsp_name: str = _EOD_DSP_NAME,
     generated_at: str | None = None,
 ) -> dict[str, Any]:
+    workflow_run_id = _require_text(workflow_run.get("workflow_run_id"))
+    supersedes_artifact_version_id = (
+        _require_text_or_default(artifact.get("supersedes_artifact_version_id"), default="")
+        or None
+    )
+    superseded_by_artifact_version_id = _latest_superseding_artifact_version_id(
+        artifact=artifact,
+        artifacts=artifacts,
+    )
+    latest_in_chain_artifact_version_id = _latest_chain_artifact_version_id(
+        connection,
+        artifact_version_id=artifact_version_id,
+        default=artifact_version_id,
+    )
+    metadata_json = artifact.get("metadata_json")
+    service_date = (
+        _require_text_or_default(metadata_json.get("service_date"), default=_EOD_SERVICE_DATE)
+        if isinstance(metadata_json, Mapping)
+        else _EOD_SERVICE_DATE
+    )
+    station_code = (
+        _require_text_or_default(metadata_json.get("station_code"), default=_EOD_STATION_CODE)
+        if isinstance(metadata_json, Mapping)
+        else _EOD_STATION_CODE
+    )
+    dsp_name = (
+        _require_text_or_default(metadata_json.get("dsp_name"), default=_EOD_DSP_NAME)
+        if isinstance(metadata_json, Mapping)
+        else _EOD_DSP_NAME
+    )
     route_rows = _projection_rows(projection, "route_actuals")
     manual_closeout_rows = _projection_rows(projection, "manual_closeout")
     checklist_rows = _projection_rows(projection, "upd_candidates")
@@ -1704,6 +1915,11 @@ def build_eod_artifact_workpage_contract(
             "latest_in_chain_artifact_version_id": latest_in_chain_artifact_version_id,
             "download_path": download_path,
         },
+        "artifact_history": _artifact_history_for_chain(
+            connection,
+            current_artifact=artifact,
+            artifacts=artifacts,
+        ),
     }
 
 
@@ -1792,6 +2008,11 @@ def build_route_demand_artifact_workpage_contract(
             )
         },
         "schedule_impact": schedule_impact,
+        "artifact_history": _artifact_history_for_chain(
+            connection,
+            current_artifact=artifact,
+            artifacts=artifacts,
+        ),
         "actions": _route_demand_artifact_contract_actions(
             workflow_run_id=workflow_run_id,
             artifact_version_id=artifact_version_id,
@@ -1869,6 +2090,11 @@ def build_driver_preferences_artifact_workpage_contract(
         "schedule_impact": _driver_preferences_schedule_impact(
             artifacts=artifacts,
             latest_driver_preferences=latest_driver_preferences_artifact(artifacts),
+        ),
+        "artifact_history": _artifact_history_for_chain(
+            connection,
+            current_artifact=artifact,
+            artifacts=artifacts,
         ),
         "actions": _driver_preferences_artifact_contract_actions(
             workflow_run_id=workflow_run_id,
@@ -3032,6 +3258,12 @@ def build_schedule_artifact_workpage_contract(
             artifact_version_id if artifact_kind == SCHEDULE_PUBLISHED_ARTIFACT_KIND else None
         ),
     )
+    artifact_history = _schedule_artifact_history(
+        connection,
+        artifact=artifact,
+        artifacts=artifacts,
+        artifact_kind=artifact_kind,
+    )
     contract.update(
         {
             "artifact_state": _schedule_artifact_state(
@@ -3069,12 +3301,8 @@ def build_schedule_artifact_workpage_contract(
                     )
                 )
             ),
-            "draft_lineage": _schedule_draft_lineage(
-                connection,
-                artifact=artifact,
-                artifacts=artifacts,
-                artifact_kind=artifact_kind,
-            ),
+            "artifact_history": artifact_history,
+            "draft_lineage": _draft_lineage_from_artifact_history(artifact_history),
             "accepted_series": accepted_series,
             "actions": _schedule_artifact_contract_actions(
                 workflow_run_id=workflow_run_id,

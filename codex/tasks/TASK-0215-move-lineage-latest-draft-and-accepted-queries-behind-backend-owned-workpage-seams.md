@@ -2,7 +2,7 @@
 id: TASK-0215
 epic: EPIC-133
 title: "Move lineage, latest-draft, and accepted queries behind backend-owned workpage seams"
-status: TODO
+status: DONE
 owners: ["backend", "frontend"]
 reviewers: ["architect"]
 depends_on: ["TASK-0214"]
@@ -48,3 +48,11 @@ Move core workpage history/latest/accepted queries behind backend-owned seams so
 ## Acceptance criteria
 - No primary workpage page depends on listing all workflow-run artifacts and filtering client-side to build its history rail.
 - Latest-draft and accepted-series truth are owned by backend workpage queries/contracts.
+
+## Execution notes
+- Added additive `artifact_history` contract data for artifact-backed schedule, EOD, route-demand, and driver-preferences workpages, while run-backed contracts now return `artifact_history: null`.
+- Schedule accepted-series entries now carry backend-authored `route` values, and the schedule artifact contract derives compatibility `draft_lineage` from the same backend-owned draft-history seam.
+- Canonical artifact pages now render draft and accepted rails from the fetched `WorkpageContract` instead of issuing a second client-side history query; the old repository list/filter helpers remain only for the inline demo shell debt deferred to `TASK-0217`.
+- Backend-owned frontend contract fixtures under `fixtures/frontend_contracts/` were refreshed for the touched workpage surfaces, and targeted builder comparisons confirmed the updated workpage snapshot files are in sync with the supported-env contract output.
+- Targeted frontend regression passed for the canonical schedule/EOD/route-demand/driver-preferences pages plus repository/API parsing.
+- Targeted backend contract verification passed in the supported Python `3.11` env at `/tmp/onetruth-py311-task0212`; the machine-local `python3.11` install in this workspace still lacks `openpyxl`, so unsupported-env EOD reads/submits can still surface `ModuleNotFoundError` if run outside that dependency-complete environment.

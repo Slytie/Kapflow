@@ -139,6 +139,7 @@ def test_eod_workflow_run_workpage_contract_returns_run_backed_landing_without_d
         "latest_artifact_version_id": None,
         "artifact_route": None,
     }
+    assert payload["artifact_history"] is None
 
 
 def test_eod_workflow_run_workpage_contract_returns_latest_draft_resolution(
@@ -176,6 +177,7 @@ def test_eod_workflow_run_workpage_contract_returns_latest_draft_resolution(
         f"/api/v1/artifacts/{seed['artifacts_by_kind']['reporting.actuals_normalized.workbook']['artifact_version_id']}",
         f"/api/v1/artifacts/{artifact_version_id}",
     ]
+    assert payload["artifact_history"] is None
 
 
 def test_eod_workflow_run_workpage_reads_are_stable_except_for_generated_at(

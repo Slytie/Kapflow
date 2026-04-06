@@ -357,33 +357,14 @@ def _artifact_workpage_contract(
     if descriptor.kind == EOD_WORKPAGE_KIND:
         metadata_json = artifact.get("metadata_json") or {}
         return build_eod_artifact_workpage_contract(
+            connection,
             artifact_version_id=artifact_version_id,
-            workflow_run_id=artifact_workflow_run_id,
-            supersedes_artifact_version_id=(
-                str(artifact["supersedes_artifact_version_id"])
-                if artifact.get("supersedes_artifact_version_id") is not None
-                else None
-            ),
-            superseded_by_artifact_version_id=_superseded_by_artifact_version_id(artifacts, artifact),
-            latest_in_chain_artifact_version_id=_latest_artifact_version_id(artifacts, artifact),
+            artifact=artifact,
+            workflow_run=workflow_run,
+            artifacts=artifacts,
             download_path=f"/api/v1/artifacts/{artifact_version_id}/download.bin",
             projection=project_upd_draft_workbook(workbook_bytes),
             source_refs=_artifact_source_refs(metadata_json),
-            service_date=_artifact_metadata_value(
-                metadata_json,
-                "service_date",
-                default="2026-03-16",
-            ),
-            station_code=_artifact_metadata_value(
-                metadata_json,
-                "station_code",
-                default="DVC4",
-            ),
-            dsp_name=_artifact_metadata_value(
-                metadata_json,
-                "dsp_name",
-                default="QDCI",
-            ),
         )
     if descriptor.kind == SCHEDULE_WORKPAGE_KIND:
         return build_schedule_artifact_workpage_contract(

@@ -35,6 +35,7 @@ import type {
 import type {
   WorkpageScheduleAcceptedSeries,
   WorkpageAction,
+  WorkpageArtifactHistory,
   WorkpageDriverPreferencesAction,
   WorkpageDriverPreferencesGrid,
   WorkpageDriverPreferencesScheduleImpact,
@@ -131,6 +132,7 @@ interface WorkpageEnvelope extends ListEnvelope {
   draft_resolution?: Record<string, unknown> | null;
   artifact_state?: Record<string, unknown> | null;
   calculations?: Record<string, unknown> | null;
+  artifact_history?: Record<string, unknown> | null;
   draft_lineage?: Record<string, unknown> | null;
   accepted_series?: Record<string, unknown> | null;
   schedule_impact?: Record<string, unknown> | null;
@@ -787,6 +789,10 @@ function normalizeWorkpageContract(payload: WorkpageEnvelope): WorkpageContract 
     payload.calculations === null || payload.calculations === undefined
       ? null
       : requiredObject(payload.calculations, "calculations");
+  const artifactHistory =
+    payload.artifact_history === null || payload.artifact_history === undefined
+      ? null
+      : requiredObject(payload.artifact_history, "artifact_history");
   const draftLineage =
     payload.draft_lineage === null || payload.draft_lineage === undefined
       ? null
@@ -885,6 +891,7 @@ function normalizeWorkpageContract(payload: WorkpageEnvelope): WorkpageContract 
     route_demand_calculations: normalizeRouteDemandCalculations(calculations),
     preference_grid: normalizeDriverPreferencesGrid(preferenceGrid),
     schedule_impact: normalizeScheduleImpact(scheduleImpact, asString(workpage.workpage_id)),
+    artifact_history: normalizeArtifactHistory(artifactHistory),
     draft_lineage: normalizeScheduleDraftLineage(draftLineage),
     accepted_series: normalizeScheduleAcceptedSeries(acceptedSeries),
     actions: normalizeWorkpageActionsForContract(payload.actions)
@@ -1081,6 +1088,29 @@ function normalizeScheduleDraftLineage(
   };
 }
 
+function normalizeArtifactHistory(
+  value: Record<string, unknown> | null
+): WorkpageArtifactHistory | null {
+  if (!value) {
+    return null;
+  }
+  return {
+    current_artifact_version_id: asStringOrNull(value.current_artifact_version_id),
+    latest_artifact_version_id: asStringOrNull(value.latest_artifact_version_id),
+    previous_artifact_version_id: asStringOrNull(value.previous_artifact_version_id),
+    next_artifact_version_id: asStringOrNull(value.next_artifact_version_id),
+    entries: asArray<Record<string, unknown>>(value.entries).map((item) => ({
+      artifact_version_id: asString(item.artifact_version_id),
+      workflow_run_id: asString(item.workflow_run_id),
+      artifact_kind: asString(item.artifact_kind),
+      created_at: asString(item.created_at),
+      lineage_note: asStringOrNull(item.lineage_note),
+      supersedes_artifact_version_id: asStringOrNull(item.supersedes_artifact_version_id),
+      route: asString(item.route)
+    }))
+  };
+}
+
 function normalizeScheduleAcceptedSeries(
   value: Record<string, unknown> | null
 ): WorkpageScheduleAcceptedSeries | null {
@@ -1097,7 +1127,8 @@ function normalizeScheduleAcceptedSeries(
       workflow_run_id: asString(item.workflow_run_id),
       partition_key: asString(item.partition_key),
       logical_date: asString(item.logical_date),
-      artifact_kind: asString(item.artifact_kind)
+      artifact_kind: asString(item.artifact_kind),
+      route: asString(item.route)
     }))
   };
 }

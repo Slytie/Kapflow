@@ -2,6 +2,11 @@
 
 Record any decisions made since the last session so a fresh Codex run can rehydrate quickly.
 
+## 2026-04-06 (TASK-0215 backend-owned workpage lineage and accepted navigation)
+- Contract-seam decision: canonical artifact-backed workpage GET payloads now own lineage/latest truth through additive `artifact_history`, while run-backed contracts return `artifact_history: null`.
+- Navigation decision: accepted schedule history is now fully server-authored per entry, including cross-run `route` values inside `accepted_series.entries[]`; canonical pages must not rebuild accepted-history URLs from the current run id.
+- Debt-boundary decision: client-side artifact list/filter helpers remain only as deferred inline demo-shell debt for `TASK-0217`; canonical schedule, EOD, route-demand, and driver-preferences pages no longer use them to build history rails.
+
 ## 2026-04-06 (TASK-0214 frontend verification closeout and EPIC-132 completion)
 - Closeout-lane decision: `make frontend-workpages-smoke` is now the dedicated clean-install verification slice for the canonical workpage frontend, wrapping the schedule page, EOD page, and workpages repository tests under the committed Node `20` / `npm ci` baseline.
 - CI-truth decision: the main workflow now runs that slice as its own `frontend / workpages-smoke` job while keeping the broader `frontend` job for full typecheck/test/build coverage.

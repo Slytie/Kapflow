@@ -214,6 +214,7 @@ def test_schedule_workflow_run_workpage_contract_returns_run_backed_projection(
         "previous_artifact_version_id": None,
         "recent_versions": [],
     }
+    assert payload["artifact_history"] is None
     assert payload["accepted_series"] == {
         "series_key": "weekly_schedule_planning.v1:dvc4:pitt-meadows",
         "current_artifact_version_id": None,

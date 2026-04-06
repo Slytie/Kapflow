@@ -6,6 +6,7 @@
     "workpage_id": "eod-v0"
   },
   "workpage_state": {
+    "artifact_history": null,
     "command": "api.workpages.workflow_run",
     "draft_resolution": {
       "artifact_route": "/runs/<workflow_run_id:1>/workpages/eod-v0/artifacts/<artifact_version_id:2>",

@@ -18,6 +18,7 @@
         "workpage_kind": "driver-preferences-v0"
       }
     ],
+    "artifact_history": null,
     "artifact_state": {
       "accepted_artifact_version_id": null,
       "artifact_kind": "planning.driver_shift_preferences.workbook",

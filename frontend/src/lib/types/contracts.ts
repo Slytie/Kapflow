@@ -1,5 +1,6 @@
 import type {
   WorkpageAction,
+  WorkpageArtifactHistory,
   WorkpageDriverPreferencesGrid,
   WorkpageDriverPreferencesScheduleImpact,
   WorkpageRouteDemandCalculations,
@@ -495,6 +496,7 @@ export interface WorkpageContract {
     | WorkpageRouteDemandScheduleImpact
     | WorkpageDriverPreferencesScheduleImpact
     | null;
+  artifact_history: WorkpageArtifactHistory | null;
   draft_lineage: WorkpageScheduleDraftLineage | null;
   accepted_series: WorkpageScheduleAcceptedSeries | null;
   actions: WorkpageAction[];

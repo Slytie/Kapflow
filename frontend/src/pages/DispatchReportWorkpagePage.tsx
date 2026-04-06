@@ -20,7 +20,7 @@ import { apiConfig } from "@/lib/api/config";
 import { errorText } from "@/lib/api/errorText";
 import { isApiClientError } from "@/lib/api/httpClient";
 import { workpagesRepository } from "@/lib/repositories";
-import type { ArtifactVersionRow, WorkpageContract } from "@/lib/types/contracts";
+import type { WorkpageContract } from "@/lib/types/contracts";
 import { invalidateWorkspaceViews } from "@/lib/workspace/queryInvalidation";
 import { resolveWorkpageSubjectContext } from "@/lib/workspace/workpageSubjectContext";
 import type {
@@ -48,10 +48,6 @@ function findTableSection(
 
 function eodLandingRoute(workflowRunId: string): string {
   return `/runs/${workflowRunId}/workpages/eod-v0`;
-}
-
-function artifactRoute(artifactVersionId: string, workflowRunId: string): string {
-  return `/runs/${workflowRunId}/workpages/eod-v0/artifacts/${artifactVersionId}`;
 }
 
 function workpageBackRoute(workflowRunId: string): { href: string; label: string } {
@@ -480,19 +476,6 @@ export function DispatchReportArtifactWorkpagePage(): JSX.Element {
     refetchInterval: apiConfig.pollIntervalMs
   });
   const artifactWorkflowRunId = workflowRunId;
-  const historyQuery = useQuery({
-    queryKey: [
-      "workpages",
-      "eod-v0",
-      "artifacts",
-      artifactVersionId,
-      "history",
-      artifactWorkflowRunId
-    ],
-    queryFn: () => workpagesRepository.listEodDraftHistory(artifactWorkflowRunId),
-    enabled: artifactWorkflowRunId.length > 0,
-    refetchInterval: apiConfig.pollIntervalMs
-  });
   const model = query.data?.workpage;
   const formSection = useMemo(
     () =>
@@ -562,9 +545,12 @@ export function DispatchReportArtifactWorkpagePage(): JSX.Element {
   const artifactContext = contract.artifact_context;
   const latestArtifactVersionId =
     artifactContext?.latest_in_chain_artifact_version_id ?? artifactVersionId;
-  const latestRoute = artifactRoute(latestArtifactVersionId, workflowRunId);
   const previousArtifactVersionId = artifactContext?.supersedes_artifact_version_id ?? null;
-  const recentDraftHistory: ArtifactVersionRow[] = historyQuery.data ?? [];
+  const artifactHistory = contract.artifact_history;
+  const recentDraftHistory = artifactHistory?.entries ?? [];
+  const latestRoute =
+    recentDraftHistory.find((artifact) => artifact.artifact_version_id === latestArtifactVersionId)
+      ?.route ?? null;
   const isStaleArtifact = latestArtifactVersionId !== artifactVersionId;
   const submitConflict = workpageConflictDetails(submitMutation.error);
   const staleOrConflictRoute = submitConflict?.route ?? (isStaleArtifact ? latestRoute : null);
@@ -607,13 +593,8 @@ export function DispatchReportArtifactWorkpagePage(): JSX.Element {
       }}
       onRefresh={() => {
         void query.refetch();
-        if (artifactWorkflowRunId.length > 0) {
-          void historyQuery.refetch();
-        }
       }}
-      isRefreshing={
-        query.isFetching || historyQuery.isFetching || submitMutation.isPending || downloadMutation.isPending
-      }
+      isRefreshing={query.isFetching || submitMutation.isPending || downloadMutation.isPending}
       heroTitleActions={
         <>
           <button
@@ -650,37 +631,19 @@ export function DispatchReportArtifactWorkpagePage(): JSX.Element {
             <header className="workpage-panel__header">
               <h2>Recent draft versions</h2>
               <p>
-                Recent immutable `reporting.upd_draft.workbook` versions for this reporting
-                workflow run. Use these links to reopen adjacent draft states without leaving the
-                EOD workpage surface.
+                Backend-authored immutable `reporting.upd_draft.workbook` lineage for this
+                reporting run. Use these links to reopen adjacent draft states without leaving the
+                canonical EOD workpage surface.
               </p>
             </header>
 
-            {historyQuery.isError ? (
-              <section className="workpage-panel workpage-panel--callout">
-                <header className="workpage-panel__header">
-                  <h2>Recent draft history unavailable</h2>
-                  <p>
-                    {errorText(
-                      historyQuery.error,
-                      "Unable to load recent artifact-backed EOD draft history."
-                    )}
-                  </p>
-                </header>
-              </section>
-            ) : null}
-
-            {!historyQuery.isError && historyQuery.isLoading ? (
-              <p className="workpage-history__empty">Loading recent draft history...</p>
-            ) : null}
-
-            {!historyQuery.isError && !historyQuery.isLoading && recentDraftHistory.length === 0 ? (
+            {recentDraftHistory.length === 0 ? (
               <p className="workpage-history__empty">
                 No recent draft history is available for this reporting run yet.
               </p>
             ) : null}
 
-            {!historyQuery.isError && recentDraftHistory.length > 0 ? (
+            {recentDraftHistory.length > 0 ? (
               <DraftVersionTimeline
                 ariaLabel="Recent reporting draft versions"
                 entries={recentDraftHistory.map((artifact) => ({
@@ -688,12 +651,15 @@ export function DispatchReportArtifactWorkpagePage(): JSX.Element {
                   createdAt: artifact.created_at,
                   label: draftVersionPrimaryLabel(artifact.artifact_version_id, {
                     currentArtifactVersionId: artifactVersionId,
-                    previousArtifactVersionId
+                    previousArtifactVersionId:
+                      artifactHistory?.previous_artifact_version_id ?? previousArtifactVersionId
                   }),
                   isCurrent: artifact.artifact_version_id === artifactVersionId,
-                  isLatest: artifact.artifact_version_id === latestArtifactVersionId,
+                  isLatest:
+                    artifact.artifact_version_id ===
+                    (artifactHistory?.latest_artifact_version_id ?? latestArtifactVersionId),
                   note: artifact.lineage_note,
-                  to: artifactRoute(artifact.artifact_version_id, workflowRunId)
+                  to: artifact.route
                 }))}
               />
             ) : null}

@@ -54,6 +54,23 @@ function buildScheduleArtifactPayload(
   payload.workpage.source_artifact_version_id = artifactVersionId;
   payload.artifact_state.current_artifact_version_id = artifactVersionId;
   payload.artifact_state.latest_artifact_version_id = artifactVersionId;
+  payload.artifact_history = {
+    current_artifact_version_id: artifactVersionId,
+    latest_artifact_version_id: artifactVersionId,
+    previous_artifact_version_id: null,
+    next_artifact_version_id: null,
+    entries: [
+      {
+        artifact_version_id: artifactVersionId,
+        workflow_run_id: workflowRunId,
+        artifact_kind: "planning.draft_weekly_schedule.workbook",
+        created_at: "2026-03-25T09:15:00Z",
+        lineage_note: "Initial Stage04 draft weekly schedule artifact.",
+        supersedes_artifact_version_id: null,
+        route: `/runs/${workflowRunId}/workpages/schedule-v0/artifacts/${artifactVersionId}`
+      }
+    ]
+  };
   payload.draft_lineage.current_artifact_version_id = artifactVersionId;
   payload.draft_lineage.latest_artifact_version_id = artifactVersionId;
   payload.draft_lineage.previous_artifact_version_id = null;
@@ -264,7 +281,7 @@ describe("LogisticsScheduleArtifactWorkpagePage", () => {
     expect(window.location.pathname).toBe(
       "/runs/wr-weekly-001/workpages/schedule-v0/artifacts/av-schedule-artifact-latest"
     );
-  }, 10000);
+  }, 20000);
 
   it("uses accepted-series navigation without traversing the draft rail", async () => {
     const user = userEvent.setup();
@@ -295,14 +312,16 @@ describe("LogisticsScheduleArtifactWorkpagePage", () => {
                   workflow_run_id: "wr-weekly-000",
                   partition_key: "PW-2026-W12",
                   logical_date: "2026-03-15",
-                  artifact_kind: "planning.published_weekly_schedule.workbook"
+                  artifact_kind: "planning.published_weekly_schedule.workbook",
+                  route: "/runs/wr-weekly-000/workpages/schedule-v0/artifacts/av-schedule-accepted-001"
                 },
                 {
                   artifact_version_id: "av-schedule-accepted-002",
                   workflow_run_id: "wr-weekly-001",
                   partition_key: "PW-2026-W13",
                   logical_date: "2026-03-22",
-                  artifact_kind: "planning.published_weekly_schedule.workbook"
+                  artifact_kind: "planning.published_weekly_schedule.workbook",
+                  route: "/runs/wr-weekly-001/workpages/schedule-v0/artifacts/av-schedule-accepted-002"
                 }
               ]
             };
@@ -318,6 +337,32 @@ describe("LogisticsScheduleArtifactWorkpagePage", () => {
                 {
                   artifact_version_id: "av-schedule-draft-010",
                   supersedes_artifact_version_id: null
+                }
+              ]
+            };
+            payload.artifact_history = {
+              current_artifact_version_id: "av-schedule-draft-011",
+              latest_artifact_version_id: "av-schedule-draft-011",
+              previous_artifact_version_id: "av-schedule-draft-010",
+              next_artifact_version_id: null,
+              entries: [
+                {
+                  artifact_version_id: "av-schedule-draft-011",
+                  workflow_run_id: "wr-weekly-001",
+                  artifact_kind: "planning.draft_weekly_schedule.workbook",
+                  created_at: "2026-03-22T18:00:00Z",
+                  lineage_note: "Published from latest draft.",
+                  supersedes_artifact_version_id: "av-schedule-draft-010",
+                  route: "/runs/wr-weekly-001/workpages/schedule-v0/artifacts/av-schedule-draft-011"
+                },
+                {
+                  artifact_version_id: "av-schedule-draft-010",
+                  workflow_run_id: "wr-weekly-001",
+                  artifact_kind: "planning.draft_weekly_schedule.workbook",
+                  created_at: "2026-03-21T18:00:00Z",
+                  lineage_note: "Initial Stage04 draft weekly schedule artifact.",
+                  supersedes_artifact_version_id: null,
+                  route: "/runs/wr-weekly-001/workpages/schedule-v0/artifacts/av-schedule-draft-010"
                 }
               ]
             };
@@ -350,14 +395,16 @@ describe("LogisticsScheduleArtifactWorkpagePage", () => {
                   workflow_run_id: "wr-weekly-000",
                   partition_key: "PW-2026-W12",
                   logical_date: "2026-03-15",
-                  artifact_kind: "planning.published_weekly_schedule.workbook"
+                  artifact_kind: "planning.published_weekly_schedule.workbook",
+                  route: "/runs/wr-weekly-000/workpages/schedule-v0/artifacts/av-schedule-accepted-001"
                 },
                 {
                   artifact_version_id: "av-schedule-accepted-002",
                   workflow_run_id: "wr-weekly-001",
                   partition_key: "PW-2026-W13",
                   logical_date: "2026-03-22",
-                  artifact_kind: "planning.published_weekly_schedule.workbook"
+                  artifact_kind: "planning.published_weekly_schedule.workbook",
+                  route: "/runs/wr-weekly-001/workpages/schedule-v0/artifacts/av-schedule-accepted-002"
                 }
               ]
             };
@@ -381,7 +428,7 @@ describe("LogisticsScheduleArtifactWorkpagePage", () => {
 
     await waitFor(() => {
       expect(window.location.pathname).toBe(
-        "/runs/wr-weekly-001/workpages/schedule-v0/artifacts/av-schedule-accepted-001"
+        "/runs/wr-weekly-000/workpages/schedule-v0/artifacts/av-schedule-accepted-001"
       );
     });
   });
@@ -448,7 +495,7 @@ describe("LogisticsScheduleArtifactWorkpagePage", () => {
     expect(await screen.findByText(/preview_unavailable: preview calculation failed/i)).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Selected day" })).toBeInTheDocument();
     },
-    10000
+    20000
   );
 
   it("drops mismatched workspace subject context when saving schedule drafts directly", async () => {

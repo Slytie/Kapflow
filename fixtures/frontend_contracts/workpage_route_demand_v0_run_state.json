@@ -17,6 +17,7 @@
         "workpage_kind": "route-demand-v0"
       }
     ],
+    "artifact_history": null,
     "artifact_state": {
       "accepted_artifact_version_id": null,
       "artifact_kind": "planning.route_slot_requirements.workbook",

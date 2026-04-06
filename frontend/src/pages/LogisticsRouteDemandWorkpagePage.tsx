@@ -14,9 +14,10 @@ import { errorText } from "@/lib/api/errorText";
 import { workpagesRepository } from "@/lib/repositories";
 import { invalidateWorkspaceViews } from "@/lib/workspace/queryInvalidation";
 import { resolveWorkpageSubjectContext } from "@/lib/workspace/workpageSubjectContext";
-import type { ArtifactVersionRow, WorkpageContract } from "@/lib/types/contracts";
+import type { WorkpageContract } from "@/lib/types/contracts";
 import type {
   WorkpageAction,
+  WorkpageArtifactHistory,
   WorkpageHistorySection as WorkpageHistorySectionModel,
   WorkpageNotePanelSection as WorkpageNotePanelSectionModel,
   WorkpageRouteDemandAction,
@@ -28,10 +29,6 @@ import type {
 
 function routeDemandLandingRoute(workflowRunId: string): string {
   return `/runs/${workflowRunId}/workpages/route-demand-v0`;
-}
-
-function routeDemandArtifactRoute(workflowRunId: string, artifactVersionId: string): string {
-  return `/runs/${workflowRunId}/workpages/route-demand-v0/artifacts/${artifactVersionId}`;
 }
 
 function scheduleLandingRoute(workflowRunId: string): string {
@@ -226,36 +223,35 @@ function RouteDemandScheduleImpactBanner({
 }
 
 function RouteDemandHistoryRail({
-  historyRows,
-  workflowRunId,
+  artifactHistory,
   currentArtifactVersionId
 }: {
-  historyRows: ArtifactVersionRow[];
-  workflowRunId: string;
+  artifactHistory: WorkpageArtifactHistory | null;
   currentArtifactVersionId?: string;
 }): JSX.Element {
+  const historyEntries = artifactHistory?.entries ?? [];
   return (
     <section className="workpage-panel" data-testid="route-demand-history-rail">
       <header className="workpage-panel__header">
         <h2>Recent route demand versions</h2>
-        <p>The history rail stays within immutable route-demand workbook versions for this weekly run.</p>
+        <p>The history rail stays within backend-authored immutable route-demand workbook lineage for this weekly run.</p>
       </header>
-      {historyRows.length > 0 ? (
+      {historyEntries.length > 0 ? (
         <div className="route-demand-history-list">
-          {historyRows.map((row) => {
-            const isCurrent = row.artifact_version_id === currentArtifactVersionId;
+          {historyEntries.map((entry) => {
+            const isCurrent = entry.artifact_version_id === currentArtifactVersionId;
             return (
               <Link
-                key={row.artifact_version_id}
+                key={entry.artifact_version_id}
                 className={`route-demand-history-list__item${
                   isCurrent ? " route-demand-history-list__item--current" : ""
                 }`}
-                data-testid={`route-demand-history-${row.artifact_version_id}`}
-                to={routeDemandArtifactRoute(workflowRunId, row.artifact_version_id)}
+                data-testid={`route-demand-history-${entry.artifact_version_id}`}
+                to={entry.route}
               >
-                <strong>{isCurrent ? "Current route demand" : row.artifact_version_id}</strong>
-                <span>{row.created_at}</span>
-                <span>{row.lineage_note ?? "Route-demand version"}</span>
+                <strong>{isCurrent ? "Current route demand" : entry.artifact_version_id}</strong>
+                <span>{entry.created_at}</span>
+                <span>{entry.lineage_note ?? "Route-demand version"}</span>
               </Link>
             );
           })}
@@ -372,14 +368,14 @@ function RouteDemandDayCards({
 function RouteDemandWorkpageBody({
   contract,
   workflowRunId,
-  historyRows,
+  artifactHistory,
   editableDayCards,
   onIncrement,
   onDecrement
 }: {
   contract: WorkpageContract;
   workflowRunId?: string;
-  historyRows?: ArtifactVersionRow[];
+  artifactHistory?: WorkpageArtifactHistory | null;
   editableDayCards?: WorkpageRouteDemandDayCard[];
   onIncrement?: (serviceDate: string) => void;
   onDecrement?: (serviceDate: string) => void;
@@ -401,10 +397,9 @@ function RouteDemandWorkpageBody({
         onIncrement={onIncrement}
         onDecrement={onDecrement}
       />
-      {historyRows && workflowRunId ? (
+      {artifactHistory && workflowRunId ? (
         <RouteDemandHistoryRail
-          historyRows={historyRows}
-          workflowRunId={workflowRunId}
+          artifactHistory={artifactHistory}
           currentArtifactVersionId={contract.artifact_context?.artifact_version_id ?? undefined}
         />
       ) : null}
@@ -543,12 +538,6 @@ export function LogisticsRouteDemandArtifactWorkpagePage(): JSX.Element {
     enabled: Boolean(workflowRunId && artifactVersionId),
     refetchInterval: apiConfig.pollIntervalMs
   });
-  const historyQuery = useQuery({
-    queryKey: ["workpages", "route-demand-v0", "history", workflowRunId],
-    queryFn: () => workpagesRepository.listRouteDemandHistory(workflowRunId ?? ""),
-    enabled: Boolean(workflowRunId),
-    refetchInterval: apiConfig.pollIntervalMs
-  });
   const { dayCards, setDayCards } = useEditableRouteDemandDayCards(query.data);
 
   const saveAction = findRouteDemandAction(query.data, (action) => action.kind === "save");
@@ -565,6 +554,10 @@ export function LogisticsRouteDemandArtifactWorkpagePage(): JSX.Element {
   const hasUnsavedEdits = baseSignature !== currentSignature;
   const latestArtifactVersionId =
     query.data?.artifact_context?.latest_in_chain_artifact_version_id ?? artifactVersionId ?? "";
+  const latestArtifactRoute =
+    query.data?.artifact_history?.entries.find(
+      (entry) => entry.artifact_version_id === latestArtifactVersionId
+    )?.route ?? null;
   const isStaleArtifact = Boolean(
     artifactVersionId && latestArtifactVersionId && latestArtifactVersionId !== artifactVersionId
   );
@@ -651,9 +644,8 @@ export function LogisticsRouteDemandArtifactWorkpagePage(): JSX.Element {
       freshness={query.data.freshness}
       onRefresh={() => {
         void query.refetch();
-        void historyQuery.refetch();
       }}
-      isRefreshing={query.isFetching || historyQuery.isFetching || submitMutation.isPending}
+      isRefreshing={query.isFetching || submitMutation.isPending}
       pollIntervalMs={apiConfig.pollIntervalMs}
       testId="route-demand-artifact-workpage-page"
       metadataPresentation="dialog"
@@ -689,7 +681,7 @@ export function LogisticsRouteDemandArtifactWorkpagePage(): JSX.Element {
       backLink={backRoute.href}
       backLabel={backRoute.label}
     >
-      {isStaleArtifact ? (
+      {isStaleArtifact && latestArtifactRoute ? (
         <section className="workpage-panel workpage-panel--callout">
           <header className="workpage-panel__header">
             <h2>Latest route demand available</h2>
@@ -699,7 +691,7 @@ export function LogisticsRouteDemandArtifactWorkpagePage(): JSX.Element {
             </p>
           </header>
           <div className="action-cluster">
-            <Link className="link-button" to={routeDemandArtifactRoute(workflowRunId, latestArtifactVersionId)}>
+            <Link className="link-button" to={latestArtifactRoute}>
               Open latest route demand
             </Link>
           </div>
@@ -716,7 +708,7 @@ export function LogisticsRouteDemandArtifactWorkpagePage(): JSX.Element {
       <RouteDemandWorkpageBody
         contract={query.data}
         workflowRunId={workflowRunId}
-        historyRows={historyQuery.data ?? []}
+        artifactHistory={query.data.artifact_history}
         editableDayCards={dayCards}
         onIncrement={(serviceDate) => {
           setDayCards((current) =>

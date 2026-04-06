@@ -218,12 +218,31 @@ export interface WorkpageScheduleDraftLineage {
   recent_versions: WorkpageScheduleDraftLineageEntry[];
 }
 
+export interface WorkpageArtifactHistoryEntry {
+  artifact_version_id: string;
+  workflow_run_id: string;
+  artifact_kind: string;
+  created_at: string;
+  lineage_note: string | null;
+  supersedes_artifact_version_id: string | null;
+  route: string;
+}
+
+export interface WorkpageArtifactHistory {
+  current_artifact_version_id: string | null;
+  latest_artifact_version_id: string | null;
+  previous_artifact_version_id: string | null;
+  next_artifact_version_id: string | null;
+  entries: WorkpageArtifactHistoryEntry[];
+}
+
 export interface WorkpageScheduleAcceptedSeriesEntry {
   artifact_version_id: string;
   workflow_run_id: string;
   partition_key: string;
   logical_date: string;
   artifact_kind: string;
+  route: string;
 }
 
 export interface WorkpageScheduleAcceptedSeries {

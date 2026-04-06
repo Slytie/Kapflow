@@ -451,6 +451,25 @@ def test_artifact_backed_eod_workpage_returns_projected_contract(tmp_path: Path)
         "latest_in_chain_artifact_version_id": artifact_version_id,
         "download_path": f"/api/v1/artifacts/{artifact_version_id}/download.bin",
     }
+    assert payload["artifact_history"]["current_artifact_version_id"] == artifact_version_id
+    assert payload["artifact_history"]["latest_artifact_version_id"] == artifact_version_id
+    assert payload["artifact_history"]["previous_artifact_version_id"] is None
+    assert payload["artifact_history"]["next_artifact_version_id"] is None
+    assert payload["artifact_history"]["entries"] == [
+        {
+            "artifact_version_id": artifact_version_id,
+            "workflow_run_id": created.payload["draft"]["workflow_run_id"],
+            "artifact_kind": "reporting.upd_draft.workbook",
+            "created_at": payload["artifact_history"]["entries"][0]["created_at"],
+            "lineage_note": "Initial artifact-backed EOD draft seeded from Stage03 template.",
+            "supersedes_artifact_version_id": None,
+            "route": (
+                f"/runs/{created.payload['draft']['workflow_run_id']}/workpages/eod-v0/artifacts/"
+                f"{artifact_version_id}"
+            ),
+        }
+    ]
+    assert payload["artifact_history"]["entries"][0]["created_at"]
 
 
 def test_submit_artifact_workpage_creates_superseding_version_and_updates_projection(

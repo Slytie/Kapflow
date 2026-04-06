@@ -53,6 +53,25 @@ export function buildEodArtifactWorkpageState(
       supersedes_artifact_version_id: supersedesArtifactVersionId,
       workflow_run_id: workflowRunId
     },
+    artifact_history: {
+      current_artifact_version_id: options.artifactVersionId,
+      latest_artifact_version_id: latestArtifactVersionId,
+      previous_artifact_version_id: supersedesArtifactVersionId,
+      next_artifact_version_id: null,
+      entries: [
+        {
+          artifact_version_id: options.artifactVersionId,
+          workflow_run_id: workflowRunId,
+          artifact_kind: "reporting.upd_draft.workbook",
+          created_at: generatedAt,
+          lineage_note: supersedesArtifactVersionId
+            ? "Submitted artifact-backed EOD draft version."
+            : "Initial artifact-backed EOD draft seeded from Stage03 template.",
+          supersedes_artifact_version_id: supersedesArtifactVersionId,
+          route: `/runs/${workflowRunId}/workpages/eod-v0/artifacts/${options.artifactVersionId}`
+        }
+      ]
+    },
     workpage: {
       dataset_key: "reporting.upd_draft.workbook",
       mode: "example",

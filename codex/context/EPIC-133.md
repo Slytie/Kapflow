@@ -21,7 +21,7 @@ Purpose:
 
 ## High-signal architectural debts to address
 ### 1. Client-owned lineage/history
-`frontend/src/lib/repositories/workpagesRepository.ts` still reconstructs history by fetching all artifacts for a run and filtering by kind.
+Canonical artifact-backed pages now consume backend-authored `artifact_history` and accepted-entry `route` values from the workpage GET contract. The remaining client-side list/filter history helpers in `frontend/src/lib/repositories/workpagesRepository.ts` are now explicit inline-demo debt for `TASK-0217`, not the canonical page path.
 
 ### 2. Client-owned workflow intent
 Frontend create/submit calls still pass raw `subject_link` values, and router state still influences workflow meaning.
