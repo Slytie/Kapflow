@@ -7,10 +7,6 @@ import { StatePanel } from "@/components/StatePanel";
 import { TaskDocumentCues } from "@/components/TaskDocumentCues";
 import { WorkflowGraph } from "@/components/WorkflowGraph";
 import { InfoDialog } from "@/components/InfoDialog";
-import {
-  InlineDispatchReportWorkpage,
-  InlineScheduleWorkpage
-} from "@/components/workpages/InlineLogisticsWorkpages";
 import { apiConfig } from "@/lib/api/config";
 import { errorText } from "@/lib/api/errorText";
 import {
@@ -24,7 +20,8 @@ import {
   moduleRunRefs,
   runRefSummary,
   runRowsForStory,
-  stateBadgeClass
+  stateBadgeClass,
+  workflowIdToModuleId
 } from "@/lib/logistics/familyStory";
 import { logisticsStoryRepository, workflowRunsRepository } from "@/lib/repositories";
 import { useDrawer } from "@/lib/state/drawerContext";
@@ -35,6 +32,121 @@ import {
   workspaceTab
 } from "@/lib/workspace/runWorkspaceGraph";
 import { buildTaskDocumentPreviewCues } from "@/lib/workspace/taskDocumentUi";
+
+function canonicalLauncherRoute(input: {
+  workflowId: string;
+  workflowRunId: string;
+}): string {
+  if (input.workflowId === "weekly_schedule_planning.v1") {
+    return `/runs/${input.workflowRunId}/workpages/schedule-v0`;
+  }
+  if (input.workflowId === "dispatch_reporting.v1") {
+    return `/runs/${input.workflowRunId}/workpages/eod-v0`;
+  }
+  return `/runs/${input.workflowRunId}/workspace`;
+}
+
+function launcherPrimaryLabel(workflowId: string): string {
+  if (workflowId === "weekly_schedule_planning.v1") {
+    return "Open schedule workpage";
+  }
+  if (workflowId === "dispatch_reporting.v1") {
+    return "Open EOD workpage";
+  }
+  return "Open full workspace";
+}
+
+function launcherDescription(module: LogisticsStoryFamilyModule): string {
+  if (module.workflow_id === "weekly_schedule_planning.v1") {
+    return "This demo shell now launches the canonical weekly schedule workpage for the selected run instead of editing drafts inline.";
+  }
+  if (module.workflow_id === "dispatch_reporting.v1") {
+    return "This demo shell now launches the canonical end-of-day workpage for the selected run instead of creating or submitting drafts inline.";
+  }
+  return "This family module stays workspace-first in the current slice. Use the canonical workspace and run detail for intake, review, and approval.";
+}
+
+function LogisticsModuleLauncherCard({
+  module,
+  workflowRunId,
+  runSummary,
+  runState,
+  partitionKey,
+  workflowVersion
+}: {
+  module: LogisticsStoryFamilyModule;
+  workflowRunId: string;
+  runSummary: string;
+  runState: string | null;
+  partitionKey: string | null;
+  workflowVersion: string | null;
+}): JSX.Element {
+  const moduleId = workflowIdToModuleId(module.workflow_id) ?? module.module_id;
+  const isWorkspaceFirst = module.workflow_id === "live_dispatch.v1";
+  return (
+    <section
+      className="workpage-panel workpage-panel--note"
+      data-testid={`logistics-module-launcher-${moduleId}`}
+    >
+      <header className="workpage-panel__header">
+        <p className="timeline-page__eyebrow">
+          {isWorkspaceFirst ? "Workspace-first launcher" : "Canonical launcher"}
+        </p>
+        <h2>{moduleDisplayLabel(module)}</h2>
+        <p>{launcherDescription(module)}</p>
+      </header>
+
+      <div className="logistics-demo-page__detail-kpis">
+        <span>{runSummary}</span>
+        {runState ? <span>{runState}</span> : null}
+        {partitionKey ? <span>{partitionKey}</span> : null}
+      </div>
+
+      {module.selection_summary.trim().length > 0 ? (
+        <p className="logistics-demo-page__dialog-summary-copy">{module.selection_summary}</p>
+      ) : null}
+
+      <dl className="logistics-demo-page__selection-fields logistics-demo-page__selection-fields--grid">
+        <div>
+          <dt>Workflow</dt>
+          <dd>{module.workflow_id}</dd>
+        </div>
+        <div>
+          <dt>Workflow run</dt>
+          <dd>{workflowRunId}</dd>
+        </div>
+        <div>
+          <dt>Status</dt>
+          <dd>{runState ?? module.status}</dd>
+        </div>
+        <div>
+          <dt>Version</dt>
+          <dd>{workflowVersion ?? "unknown"}</dd>
+        </div>
+      </dl>
+
+      <div className="action-cluster">
+        {isWorkspaceFirst ? null : (
+          <Link
+            className="link-button"
+            to={canonicalLauncherRoute({
+              workflowId: module.workflow_id,
+              workflowRunId
+            })}
+          >
+            {launcherPrimaryLabel(module.workflow_id)}
+          </Link>
+        )}
+        <Link className="link-button" to={`/runs/${workflowRunId}/workspace`}>
+          Open full workspace
+        </Link>
+        <Link className="link-button" to={`/runs/${workflowRunId}`}>
+          Open run detail (secondary)
+        </Link>
+      </div>
+    </section>
+  );
+}
 
 export function LogisticsDemoPage(): JSX.Element {
   const { open } = useDrawer();
@@ -399,7 +511,7 @@ export function LogisticsDemoPage(): JSX.Element {
                     <section className="workpage-panel workpage-panel--note">
                       <header className="workpage-panel__header">
                         <h2>Artifacts</h2>
-                        <p>Family-level artifacts stay available here without occupying the inline work surface.</p>
+                        <p>Family-level artifacts stay available here without occupying the launcher surface.</p>
                       </header>
                       <div className="logistics-demo-page__artifact-link-section">
                         {selectedModule.artifact_refs.length === 0 ? (
@@ -419,7 +531,7 @@ export function LogisticsDemoPage(): JSX.Element {
                     <section className="workpage-panel workpage-panel--note">
                       <header className="workpage-panel__header">
                         <h2>Workflow Run Drill-Down</h2>
-                        <p>Choose the linked workflow run that should drive the inline work surface and drill-down graph.</p>
+                        <p>Choose the linked workflow run that should drive the launcher surface and drill-down graph.</p>
                       </header>
                       <div className="logistics-demo-page__run-drilldown">
                         {selectedModuleRuns.length === 0 ? <p>No drill-down runs available.</p> : null}
@@ -475,28 +587,25 @@ export function LogisticsDemoPage(): JSX.Element {
                 <StatePanel
                   kind="empty"
                   title="Choose a workflow run"
-                  detail="Pick a linked run in the summary above to load the inline work surface here."
+                  detail="Pick a linked run in the summary above to load launcher links and drill-down here."
                 />
-              ) : selectedDrilldownWorkflowId === "weekly_schedule_planning.v1" ? (
-                <InlineScheduleWorkpage workflowRunId={selectedDrilldownRunId} />
-              ) : selectedDrilldownWorkflowId === "dispatch_reporting.v1" ? (
-                <InlineDispatchReportWorkpage workflowRunId={selectedDrilldownRunId} />
               ) : (
-                <section className="logistics-demo-page__inline-placeholder" data-testid="logistics-inline-live-placeholder">
-                  <p className="timeline-page__eyebrow">Live Dispatch</p>
-                  <h4>Workspace-first replan lane</h4>
-                  <p>
-                    This family module stays workspace-first in the current slice. Use the live-dispatch workspace and run detail for intake, review, and approval rather than an inline workpage.
-                  </p>
-                  <div className="action-cluster">
-                    <Link className="link-button" to={`/runs/${selectedDrilldownRunId}/workspace`}>
-                      Open full workspace
-                    </Link>
-                    <Link className="link-button" to={`/runs/${selectedDrilldownRunId}`}>
-                      Open run detail (secondary)
-                    </Link>
-                  </div>
-                </section>
+                <LogisticsModuleLauncherCard
+                  module={selectedModule}
+                  workflowRunId={selectedDrilldownRunId}
+                  runSummary={
+                    selectedDrilldownRun
+                      ? runRefSummary(selectedDrilldownRun.ref, selectedDrilldownRun.run)
+                      : selectedDrilldownRunId
+                  }
+                  runState={selectedDrilldownRun?.run?.state ?? null}
+                  partitionKey={
+                    selectedDrilldownRun?.run?.partition_key ??
+                    selectedDrilldownRun?.ref.partition_key ??
+                    null
+                  }
+                  workflowVersion={selectedDrilldownRun?.run?.workflow_version ?? null}
+                />
               )}
             </div>
           </div>

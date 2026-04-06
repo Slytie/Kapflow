@@ -90,6 +90,17 @@ function activeModuleIdForLocation(input: {
   return workflowId ? workflowIdToModuleId(workflowId) : null;
 }
 
+function workflowRunIdForLocation(input: {
+  pathname: string;
+  searchParams: URLSearchParams;
+}): string | null {
+  if (input.pathname === "/demo/logistics") {
+    return input.searchParams.get("workflow_run_id")?.trim() || null;
+  }
+  const runMatch = input.pathname.match(/^\/runs\/([^/]+)(?:\/.*)?$/);
+  return runMatch?.[1] ?? null;
+}
+
 function canonicalRouteForWorkflow(input: {
   workflowId: string;
   workflowRunId: string;
@@ -248,6 +259,24 @@ export function AppShell(): JSX.Element {
       }),
     [fallbackModuleId, location.pathname, runWorkflowById, selectedModuleId]
   );
+  const activeWorkflowRunId = useMemo(
+    () =>
+      workflowRunIdForLocation({
+        pathname: location.pathname,
+        searchParams: routeSearchParams
+      }),
+    [location.pathname, routeSearchParams]
+  );
+  const logisticsDemoRoute = useMemo(
+    () =>
+      buildLogisticsDemoRoute({
+        planningWeekId,
+        serviceDateId,
+        moduleId: activeModuleId,
+        workflowRunId: activeWorkflowRunId
+      }),
+    [activeModuleId, activeWorkflowRunId, planningWeekId, serviceDateId]
+  );
 
   const handleTaskSelect = (laneId: (typeof taskCards)[number]["lane_id"]): void => {
     const targetCard = taskCards.find((card) => card.lane_id === laneId);
@@ -325,7 +354,7 @@ export function AppShell(): JSX.Element {
     <div className={`app-shell ${isWorkspaceRoute ? "app-shell--workspace" : ""}`}>
       <aside className="app-shell__nav">
         <div className="app-shell__nav-meta">
-          <NavLink className="app-shell__brand" to="/demo/logistics">
+          <NavLink className="app-shell__brand" to={logisticsDemoRoute}>
             Logistics Demo
           </NavLink>
           <div

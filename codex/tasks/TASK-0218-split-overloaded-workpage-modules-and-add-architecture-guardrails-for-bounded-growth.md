@@ -27,7 +27,8 @@ Reduce concentration and add guardrails so new workpage kinds extend the system 
 ## Source files to read first
 - `src/onetruth/application/handlers/workpages.py`
 - `src/onetruth/application/services/logistics_workpages.py`
-- `frontend/src/components/workpages/InlineLogisticsWorkpages.tsx`
+- `frontend/src/components/WorkspaceTaskBoard.tsx`
+- `frontend/src/pages/LogisticsDemoPage.tsx`
 - `frontend/src/pages/LogisticsScheduleWorkpagePage.tsx`
 - existing route-registry/architecture-guardrail tests
 

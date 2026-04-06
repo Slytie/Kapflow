@@ -19,21 +19,22 @@ Purpose:
 - `docs/planning/epics/EPIC-131.md`
 - `codex/context/EPIC-131.md`
 
-## High-signal architectural debts to address
-### 1. Client-owned lineage/history
-Canonical artifact-backed pages now consume backend-authored `artifact_history` and accepted-entry `route` values from the workpage GET contract. The remaining client-side list/filter history helpers in `frontend/src/lib/repositories/workpagesRepository.ts` are now explicit inline-demo debt for `TASK-0217`, not the canonical page path.
+## High-signal architectural debts and status
+### 1. Backend-owned lineage/history
+This is complete for the canonical artifact-backed pages. Schedule, EOD, route-demand, and driver-preferences now consume backend-authored `artifact_history` and accepted-entry `route` values from the workpage GET contract instead of client-side artifact-list filtering.
 
-### 2. Client-owned workflow intent
-Canonical frontend create/submit flows now use server-authored `action_ref` values, and router state carries that bounded action handoff rather than raw subject meaning. Remaining raw `subject_link` behavior is compatibility/demo debt, not the canonical page path.
+### 2. Backend-owned workflow intent
+This is complete for the canonical create/submit flows. Canonical frontend navigation now carries server-authored `action_ref` values, and remaining raw `subject_link` behavior is compatibility-only rather than the primary page path.
 
-### 3. Dual mutation path
-`frontend/src/components/workpages/InlineLogisticsWorkpages.tsx` still acts like a second mutation engine inside the demo shell.
+### 3. Demo shell convergence
+This is complete for `/demo/logistics`. The demo shell is now launcher-only and no longer hosts an inline workpage mutation engine; create/submit/history behavior happens only on canonical workpage or workspace routes.
 
 ### 4. Large concentration files
 Current concentration points include:
 - `src/onetruth/application/handlers/workpages.py`
 - `src/onetruth/application/services/logistics_workpages.py`
-- `frontend/src/components/workpages/InlineLogisticsWorkpages.tsx`
+- `frontend/src/components/WorkspaceTaskBoard.tsx`
+- `frontend/src/pages/LogisticsDemoPage.tsx`
 - `frontend/src/pages/LogisticsScheduleWorkpagePage.tsx`
 
 ## Preferred architectural direction

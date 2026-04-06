@@ -2,6 +2,11 @@
 
 Record any decisions made since the last session so a fresh Codex run can rehydrate quickly.
 
+## 2026-04-06 (TASK-0217 demo shell launcher-only convergence)
+- Surface-boundary decision: `/demo/logistics` remains the logistics story shell, run chooser, family-artifact surface, and drill-down graph, but it no longer hosts editable workpages inline; all create/submit/history behavior now happens only on canonical `/runs/:workflowRunId/workpages/*` and `/runs/:workflowRunId/workspace` routes.
+- Navigation decision: the shell brand link now preserves derived logistics `module` and `workflow_run_id` context when returning from canonical logistics routes to `/demo/logistics`, so launcher state is restored instead of resetting to a blank shell.
+- Cleanup decision: the duplicate inline mutation engine and its inline-only workpage history repository helpers are retired; remaining EPIC-133 work now centers on concentration-file decomposition and guardrails in `TASK-0218`.
+
 ## 2026-04-06 (TASK-0215 backend-owned workpage lineage and accepted navigation)
 - Contract-seam decision: canonical artifact-backed workpage GET payloads now own lineage/latest truth through additive `artifact_history`, while run-backed contracts return `artifact_history: null`.
 - Navigation decision: accepted schedule history is now fully server-authored per entry, including cross-run `route` values inside `accepted_series.entries[]`; canonical pages must not rebuild accepted-history URLs from the current run id.

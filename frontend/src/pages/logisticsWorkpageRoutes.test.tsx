@@ -315,6 +315,26 @@ describe("logistics workpage routes", () => {
     );
   });
 
+  it("returns from canonical logistics workpages to the demo shell with preserved module and run context", async () => {
+    const user = userEvent.setup();
+    setFrontendOperatorContext();
+    window.history.pushState({}, "", "/runs/wr-weekly-001/workpages/schedule-v0");
+    render(<App />);
+
+    expect(await screen.findByTestId("schedule-workpage-page")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("link", { name: "Logistics Demo" }));
+
+    await waitFor(() => {
+      expect(window.location.pathname).toBe("/demo/logistics");
+    });
+    expect(window.location.search).toContain("module=weekly_schedule_planning");
+    expect(window.location.search).toContain("workflow_run_id=wr-weekly-001");
+    expect(
+      await screen.findByTestId("logistics-module-launcher-weekly_schedule_planning")
+    ).toBeInTheDocument();
+  });
+
   it("creates an editable EOD draft from the canonical run-backed landing under the shared shell", async () => {
     const user = userEvent.setup();
     setFrontendOperatorContext();

@@ -2,7 +2,6 @@ import { createIdempotencyKey } from "@/lib/api/idempotency";
 import { onetruthApi } from "@/lib/api/onetruthApi";
 import { downloadBinaryToFile } from "@/lib/repositories/artifactAttachments";
 import type {
-  ArtifactVersionRow,
   WorkpageContract,
   WorkpageCreateResponse,
   WorkpagePreviewResponse,
@@ -82,62 +81,6 @@ export const workpagesRepository = {
       workflowRunId,
       artifactVersionId
     );
-  },
-
-  async listEodDraftHistory(workflowRunId: string): Promise<ArtifactVersionRow[]> {
-    const artifacts = await onetruthApi.listWorkflowRunArtifacts(workflowRunId);
-    return artifacts
-      .filter((artifact) => artifact.artifact_kind === "reporting.upd_draft.workbook")
-      .sort((left, right) => {
-        const createdAtCompare = right.created_at.localeCompare(left.created_at);
-        if (createdAtCompare !== 0) {
-          return createdAtCompare;
-        }
-        return right.artifact_version_id.localeCompare(left.artifact_version_id);
-      })
-      .slice(0, 5);
-  },
-
-  async listScheduleDraftHistory(workflowRunId: string): Promise<ArtifactVersionRow[]> {
-    const artifacts = await onetruthApi.listWorkflowRunArtifacts(workflowRunId);
-    return artifacts
-      .filter((artifact) => artifact.artifact_kind === "planning.draft_weekly_schedule.workbook")
-      .sort((left, right) => {
-        const createdAtCompare = right.created_at.localeCompare(left.created_at);
-        if (createdAtCompare !== 0) {
-          return createdAtCompare;
-        }
-        return right.artifact_version_id.localeCompare(left.artifact_version_id);
-      })
-      .slice(0, 5);
-  },
-
-  async listRouteDemandHistory(workflowRunId: string): Promise<ArtifactVersionRow[]> {
-    const artifacts = await onetruthApi.listWorkflowRunArtifacts(workflowRunId);
-    return artifacts
-      .filter((artifact) => artifact.artifact_kind === "planning.route_slot_requirements.workbook")
-      .sort((left, right) => {
-        const createdAtCompare = right.created_at.localeCompare(left.created_at);
-        if (createdAtCompare !== 0) {
-          return createdAtCompare;
-        }
-        return right.artifact_version_id.localeCompare(left.artifact_version_id);
-      })
-      .slice(0, 5);
-  },
-
-  async listDriverPreferencesHistory(workflowRunId: string): Promise<ArtifactVersionRow[]> {
-    const artifacts = await onetruthApi.listWorkflowRunArtifacts(workflowRunId);
-    return artifacts
-      .filter((artifact) => artifact.artifact_kind === "planning.driver_shift_preferences.workbook")
-      .sort((left, right) => {
-        const createdAtCompare = right.created_at.localeCompare(left.created_at);
-        if (createdAtCompare !== 0) {
-          return createdAtCompare;
-        }
-        return right.artifact_version_id.localeCompare(left.artifact_version_id);
-      })
-      .slice(0, 5);
   },
 
   async submitEodArtifact(

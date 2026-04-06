@@ -8,7 +8,7 @@ This epic starts after EPIC-132 and assumes the repo has a clean, green settleme
 ## Status
 Selected.
 
-Progress note: `TASK-0215` and `TASK-0216` are complete. Canonical schedule, EOD, route-demand, and driver-preferences pages now consume backend-authored lineage/latest/accepted navigation and server-authored `action_ref` write intent from the workpage seams; the remaining inline demo-shell mutation debt is deferred to `TASK-0217`.
+Progress note: `TASK-0215`, `TASK-0216`, and `TASK-0217` are complete. Canonical schedule, EOD, route-demand, and driver-preferences pages now consume backend-authored lineage/latest/accepted navigation and server-authored `action_ref` write intent from the workpage seams, and `/demo/logistics` is now a launcher-only shell that hands off all mutation behavior to canonical routes. The remaining active work is `TASK-0218` concentration splitting and guardrails.
 
 ## First-principles objective
 A workpage is a server-authored projection:

@@ -446,11 +446,19 @@ export function LogisticsScheduleWorkpagePage(): JSX.Element {
     refetchInterval: apiConfig.pollIntervalMs
   });
   const createDriverPreferencesMutation = useMutation({
-    mutationFn: (createPath: string) => workpagesRepository.createWorkpage(createPath),
-    onSuccess: (created) => {
+    mutationFn: (payload: { createPath: string; actionRef: WorkpageDriverPreferencesAction["action_ref"] }) =>
+      workpagesRepository.createWorkpage(payload.createPath, payload.actionRef ?? undefined),
+    onSuccess: (created, payload) => {
       void queryClient.invalidateQueries({ queryKey: ["workpages"] });
       void invalidateWorkspaceViews(queryClient, created.workflow_run_id);
-      navigate(created.route, { state: location.state });
+      navigate(created.route, {
+        state: {
+          workpageActionRef: replaceWorkpageActionRefArtifactVersionId(
+            payload.actionRef ?? null,
+            created.artifact_version_id
+          )
+        }
+      });
     }
   });
 

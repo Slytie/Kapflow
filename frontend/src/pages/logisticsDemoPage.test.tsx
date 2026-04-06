@@ -2,15 +2,10 @@ import { HttpResponse, http } from "msw";
 import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
-import scheduleArtifactStateSnapshot from "@fixtures/workpage_schedule_v0_artifact_state.json";
 import { App } from "@/app/App";
 import { getApiRequestContextHeaders, setApiRequestContextHeaders } from "@/lib/api/config";
 import { mutationLog } from "@/test/api/handlers";
 import { server } from "@/test/api/server";
-
-const expectedInlineRouteAssignmentCount = String(
-  scheduleArtifactStateSnapshot.workpage_state.workpage.summary.route_assignment_count
-);
 
 function setFrontendOperatorContext(): void {
   const currentContext = getApiRequestContextHeaders();
@@ -37,46 +32,35 @@ describe("LogisticsDemoPage", () => {
     expect(within(detailPanel).queryByRole("heading", { name: "Family Node Detail" })).not.toBeInTheDocument();
     expect(
       within(detailPanel).queryByText(
-        /The shell nav drives workflow switching\. This page keeps the selected module context, run drill-down, and inline work surface together\./i
+        /The shell nav drives workflow switching\. This page keeps the selected module context, run drill-down, and launcher surface together\./i
       )
     ).not.toBeInTheDocument();
-    expect(within(detailPanel).getByRole("heading", { name: "Weekly Schedule Planning" })).toBeInTheDocument();
-
-    const inlineSchedule = await within(detailPanel).findByTestId("logistics-inline-schedule-artifact");
-    const inlineScheduleSummary = within(inlineSchedule).getByTestId("workpage-summary-section");
-    expect(
-      within(inlineScheduleSummary).getByRole("heading", { name: "Draft workbook summary" })
-    ).toBeInTheDocument();
-    expect(
-      within(inlineScheduleSummary).getByTestId("workpage-summary-card-route_assignment_count")
-    ).toHaveClass("workpage-summary-card");
-    expect(
-      within(
-        within(inlineScheduleSummary).getByTestId("workpage-summary-card-route_assignment_count")
-      ).getByText(expectedInlineRouteAssignmentCount)
-    ).toBeInTheDocument();
-    const inlineTitleBar = inlineSchedule.querySelector(".workpage-page__hero-title-bar");
-    const inlineHeroActions = inlineSchedule.querySelector(".workpage-page__hero-actions");
-    expect(inlineTitleBar).not.toBeNull();
-    expect(inlineTitleBar).toHaveClass("workpage-page__hero-title-bar--sticky");
-    expect(inlineHeroActions).not.toBeNull();
-    expect(
-      within(inlineTitleBar as HTMLElement).getByRole("button", { name: "Submit draft" })
-    ).toBeInTheDocument();
-    expect(
-      within(inlineTitleBar as HTMLElement).getByRole("button", { name: "Download draft JSON" })
-    ).toBeInTheDocument();
-    expect(
-      within(inlineHeroActions as HTMLElement).getByRole("link", { name: "Open full workpage" })
-    ).toHaveAttribute(
-      "href",
-      "/runs/wr-weekly-001/workpages/schedule-v0/artifacts/av-schedule-artifact-001"
+    const launcher = await within(detailPanel).findByTestId(
+      "logistics-module-launcher-weekly_schedule_planning"
     );
+    expect(within(detailPanel).getByRole("heading", { level: 4, name: "Weekly Schedule Planning" })).toBeInTheDocument();
+    expect(within(launcher).getByRole("heading", { level: 2, name: "Weekly Schedule Planning" })).toBeInTheDocument();
     expect(
-      within(inlineHeroActions as HTMLElement).queryByRole("button", { name: "Download draft JSON" })
+      within(launcher).getByText(/launches the canonical weekly schedule workpage/i)
+    ).toBeInTheDocument();
+    expect(within(launcher).getByRole("link", { name: "Open schedule workpage" })).toHaveAttribute(
+      "href",
+      "/runs/wr-weekly-001/workpages/schedule-v0"
+    );
+    expect(within(launcher).getByRole("link", { name: "Open full workspace" })).toHaveAttribute(
+      "href",
+      "/runs/wr-weekly-001/workspace"
+    );
+    expect(within(launcher).getByRole("link", { name: "Open run detail (secondary)" })).toHaveAttribute(
+      "href",
+      "/runs/wr-weekly-001"
+    );
+    expect(within(detailPanel).queryByRole("button", { name: "Submit draft" })).not.toBeInTheDocument();
+    expect(
+      within(detailPanel).queryByRole("button", { name: "Download draft JSON" })
     ).not.toBeInTheDocument();
-    expect(within(detailPanel).getByLabelText("Weekly draft versions timeline")).toBeInTheDocument();
-    expect(within(inlineSchedule).queryByRole("heading", { name: "Draft actions" })).not.toBeInTheDocument();
+    expect(within(detailPanel).queryByRole("link", { name: "Open full workpage" })).not.toBeInTheDocument();
+    expect(within(detailPanel).queryByLabelText("Weekly draft versions timeline")).not.toBeInTheDocument();
     expect(await within(page).findByTestId("logistics-demo-drilldown-graph")).toBeInTheDocument();
     expect(window.location.search).toContain("module=weekly_schedule_planning");
     expect(window.location.search).toContain("workflow_run_id=wr-weekly-001");
@@ -111,10 +95,10 @@ describe("LogisticsDemoPage", () => {
 
     const page = await screen.findByTestId("logistics-demo-page");
     const detailPanel = within(page).getByTestId("logistics-module-detail-panel");
-    expect(within(detailPanel).getByRole("heading", { name: "Dispatch Reporting" })).toBeInTheDocument();
-    expect(within(detailPanel).queryByText("dispatch_reporting.v1")).not.toBeInTheDocument();
+    expect(within(detailPanel).getByRole("heading", { level: 4, name: "Dispatch Reporting" })).toBeInTheDocument();
     expect(within(detailPanel).queryByText("View family node artifacts")).not.toBeInTheDocument();
     expect(within(detailPanel).queryByText("Workflow Run Drill-Down")).not.toBeInTheDocument();
+    expect(within(detailPanel).queryByRole("button", { name: "Create editable draft" })).not.toBeInTheDocument();
 
     await user.click(within(detailPanel).getByRole("button", { name: /Open info for Dispatch Reporting/i }));
 
@@ -125,49 +109,35 @@ describe("LogisticsDemoPage", () => {
     expect(within(infoDialog).getByText("workflow_run")).toBeInTheDocument();
   });
 
-  it("keeps inline EOD source grounding behind the workpage title info button", async () => {
-    const user = userEvent.setup();
+  it("renders dispatch reporting as a launcher-only surface from the demo shell", async () => {
     setFrontendOperatorContext();
     window.history.pushState({}, "", "/demo/logistics?planning_week_id=PW-2026-W10");
     render(<App />);
 
     const page = await screen.findByTestId("logistics-demo-page");
     const detailPanel = within(page).getByTestId("logistics-module-detail-panel");
-    const inlineEod = await within(detailPanel).findByTestId(/logistics-inline-eod-(landing|artifact)/);
-    const expectedDialogTitle =
-      inlineEod.getAttribute("data-testid") === "logistics-inline-eod-artifact"
-        ? "EOD draft context"
-        : "Dispatch reporting context";
-    const inlineEodSummary = within(inlineEod).getByTestId("workpage-summary-section");
-    expect(within(inlineEodSummary).getByRole("heading", { name: "Daily summary" })).toBeInTheDocument();
+    const launcher = await within(detailPanel).findByTestId(
+      "logistics-module-launcher-dispatch_reporting"
+    );
     expect(
-      within(inlineEodSummary).getByTestId("workpage-summary-card-packages_dispatched")
-    ).toHaveClass("workpage-summary-card");
-
-    expect(within(inlineEod).queryByRole("heading", { name: "Source grounding" })).not.toBeInTheDocument();
-    expect(within(inlineEod).queryByRole("heading", { name: "Formula-integrity warning" })).not.toBeInTheDocument();
-    expect(within(inlineEod).queryByRole("heading", { name: "Artifact-backed projection note" })).not.toBeInTheDocument();
-    if (inlineEod.getAttribute("data-testid") === "logistics-inline-eod-artifact") {
-      expect(within(detailPanel).getByLabelText("Reporting draft versions timeline")).toBeInTheDocument();
-    }
-
-    await user.click(within(inlineEod).getByRole("button", { name: /Open info for End-of-day report/i }));
-
-    const infoDialog = await screen.findByRole("dialog", { name: expectedDialogTitle });
-    expect(within(infoDialog).getByRole("heading", { name: "Source grounding" })).toBeInTheDocument();
-    expect(
-      within(infoDialog).queryByRole("heading", {
-        name: /Formula-integrity warning|Artifact-backed projection note/i
-      })
+      within(launcher).getByText(/launches the canonical end-of-day workpage/i)
     ).toBeInTheDocument();
-    expect(
-      within(infoDialog).getAllByText(
-        expectedDialogTitle === "EOD draft context"
-          ? /Artifact-backed projection of the immutable EOD draft workbook/i
-          : /Run-backed dispatch reporting landing surface for the selected module run/i
-      )
-    ).not.toHaveLength(0);
-    await user.click(screen.getByRole("button", { name: new RegExp(`Close ${expectedDialogTitle}`, "i") }));
+    expect(within(launcher).getByRole("link", { name: "Open EOD workpage" })).toHaveAttribute(
+      "href",
+      "/runs/wr-report-001/workpages/eod-v0"
+    );
+    expect(within(launcher).getByRole("link", { name: "Open full workspace" })).toHaveAttribute(
+      "href",
+      "/runs/wr-report-001/workspace"
+    );
+    expect(within(launcher).getByRole("link", { name: "Open run detail (secondary)" })).toHaveAttribute(
+      "href",
+      "/runs/wr-report-001"
+    );
+    expect(within(detailPanel).queryByRole("button", { name: "Create editable draft" })).not.toBeInTheDocument();
+    expect(within(detailPanel).queryByRole("button", { name: "Submit draft" })).not.toBeInTheDocument();
+    expect(within(detailPanel).queryByRole("button", { name: "Download workbook" })).not.toBeInTheDocument();
+    expect(within(detailPanel).queryByLabelText("Reporting draft versions timeline")).not.toBeInTheDocument();
   });
 
   it("requires explicit run selection when the selected module has multiple linked runs", async () => {
@@ -317,7 +287,7 @@ describe("LogisticsDemoPage", () => {
     const detailPanel = within(page).getByTestId("logistics-module-detail-panel");
     expect(within(detailPanel).getByRole("heading", { name: "Weekly Schedule Planning" })).toBeInTheDocument();
     expect(
-      within(detailPanel).getByText("Pick a linked run in the summary above to load the inline work surface here.")
+      within(detailPanel).getByText("Pick a linked run in the summary above to load launcher links and drill-down here.")
     ).toBeInTheDocument();
     expect(within(page).queryByTestId("logistics-demo-drilldown-graph")).not.toBeInTheDocument();
 
@@ -328,9 +298,11 @@ describe("LogisticsDemoPage", () => {
 
     await user.click(within(infoDialog).getByRole("button", { name: /wr-weekly-002/i }));
 
-    const inlineSchedule = await within(detailPanel).findByTestId("logistics-inline-schedule-landing");
+    const launcher = await within(detailPanel).findByTestId(
+      "logistics-module-launcher-weekly_schedule_planning"
+    );
     expect(
-      within(inlineSchedule).getByRole("link", { name: "Open full workpage" })
+      within(launcher).getByRole("link", { name: "Open schedule workpage" })
     ).toHaveAttribute("href", "/runs/wr-weekly-002/workpages/schedule-v0");
     expect(window.location.search).toContain("workflow_run_id=wr-weekly-002");
   });
@@ -384,7 +356,7 @@ describe("LogisticsDemoPage", () => {
   });
 
   it(
-    "switches weekly draft versions inline without leaving the logistics demo route",
+    "launches the canonical weekly schedule workpage from the demo-shell launcher",
     async () => {
       const user = userEvent.setup();
       setFrontendOperatorContext();
@@ -397,31 +369,16 @@ describe("LogisticsDemoPage", () => {
 
       const page = await screen.findByTestId("logistics-demo-page");
       const detailPanel = within(page).getByTestId("logistics-module-detail-panel");
-      const inlineSchedule = await within(detailPanel).findByTestId("logistics-inline-schedule-artifact");
-      expect(within(inlineSchedule).getByText("Artifact av-schedule-artifact-001")).toBeInTheDocument();
-
-      await user.click(within(inlineSchedule).getByRole("button", { name: "Submit draft" }));
-
       await waitFor(() => {
-        expect(mutationLog()).toContain(
-          "workpage-schedule-artifact-submit:av-schedule-artifact-001:av-schedule-artifact-002"
-        );
+        expect(
+          within(detailPanel).getByRole("link", { name: "Open schedule workpage" })
+        ).toHaveAttribute("href", "/runs/wr-weekly-001/workpages/schedule-v0");
       });
 
-      const refreshedInlineSchedule = await within(detailPanel).findByTestId(
-        "logistics-inline-schedule-artifact"
-      );
-      expect(within(refreshedInlineSchedule).getByText("Artifact av-schedule-artifact-002")).toBeInTheDocument();
+      await user.click(within(detailPanel).getByRole("link", { name: "Open schedule workpage" }));
 
-      const timeline = within(detailPanel).getByLabelText("Weekly draft versions timeline");
-      expect(within(timeline).getByText("Current draft")).toBeInTheDocument();
-      expect(within(timeline).getByText("Previous draft")).toBeInTheDocument();
-      await user.click(within(timeline).getByRole("button", { name: /Previous draft/i }));
-
-      await waitFor(() => {
-        expect(within(detailPanel).getByText("Artifact av-schedule-artifact-001")).toBeInTheDocument();
-      });
-      expect(window.location.pathname).toBe("/demo/logistics");
+      expect(await screen.findByTestId("schedule-workpage-page")).toBeInTheDocument();
+      expect(window.location.pathname).toBe("/runs/wr-weekly-001/workpages/schedule-v0");
     },
     10000
   );

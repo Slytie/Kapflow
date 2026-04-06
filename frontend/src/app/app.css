@@ -948,27 +948,6 @@
   margin-top: 6px;
 }
 
-.inline-workpage-shell {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 240px;
-  gap: 12px;
-  align-items: start;
-}
-
-.inline-workpage-shell__main {
-  min-width: 0;
-}
-
-.inline-workpage-shell__timeline {
-  position: sticky;
-  top: 12px;
-  border: 1px solid #ddd9d4;
-  border-radius: 14px;
-  background: #fcfbf8;
-  padding: 12px;
-}
-
-.inline-workpage-shell__timeline header h4,
 .draft-version-timeline__header h4 {
   margin: 0;
   color: #434a52;
@@ -2853,10 +2832,6 @@
     grid-template-columns: repeat(2, minmax(220px, 1fr));
   }
 
-  .inline-workpage-shell {
-    grid-template-columns: 1fr;
-  }
-
   .filter-bar {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -3368,7 +3343,6 @@
 .workpage-history__item,
 .workpage-checklist__item,
 .draft-version-timeline__entry,
-.inline-workpage-shell__timeline,
 .workspace-summary-bar,
 .workflow-graph,
 .workspace-action-panel,
@@ -3434,7 +3408,6 @@
 .workflow-graph > header h3,
 .workspace-action-panel > header h3,
 .draft-version-timeline__header h4,
-.inline-workpage-shell__timeline header h4,
 .state-panel strong {
   color: var(--ink);
   font-family: var(--font-display);
@@ -3714,19 +3687,9 @@
   margin-top: 2px;
 }
 
-.inline-workpage-shell {
-  gap: 16px;
-}
-
 .workpage-page__artifact-rail-panel {
   border-radius: 20px;
   background: linear-gradient(180deg, rgba(255, 255, 255, 0.82), rgba(244, 244, 240, 0.96));
-}
-
-.inline-workpage-shell__timeline {
-  top: 96px;
-  border-radius: 20px;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.8), rgba(244, 244, 240, 0.94));
 }
 
 .draft-version-timeline__list {
@@ -5105,10 +5068,6 @@
 
   .filter-bar {
     grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .inline-workpage-shell__timeline {
-    position: static;
   }
 
   .workpage-page__artifact-rail {

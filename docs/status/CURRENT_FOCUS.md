@@ -15,9 +15,10 @@ The just-completed workpage settlement closeout now leaves the repo with:
 - supported-environment verification truth anchored to Python `3.11` and Node `20` clean installs
 
 The next selected app-facing workpage tranche is **EPIC-133 - Workpage fragility reduction and extensibility hardening**:
-- move lineage/latest-draft/history queries behind backend-owned seams
-- promote server-authored action execution over raw client-carried mutation intent
-- converge the demo shell and split the remaining concentration files without changing the canonical public route posture
+- backend-owned lineage/latest-draft/history seams are complete for canonical workpage pages
+- server-authored action execution is complete for canonical create/submit flows
+- `/demo/logistics` is now a launcher-only shell that hands off to canonical workpage/workspace routes
+- the remaining active work is splitting the concentration files and adding guardrails without changing the canonical public route posture
 
 EPIC-126 remains completed cleanup history, but it is no longer the active post-EPIC-131 plan.
 

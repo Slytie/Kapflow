@@ -1,4 +1,4 @@
-import { render, screen, within } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { HttpResponse, http } from "msw";
 
@@ -149,6 +149,13 @@ describe("LogisticsScheduleWorkpagePage", () => {
           },
           {
             action_id: "workpage.driver-preferences-v0.create_snapshot",
+            action_ref: {
+              action_id: "workpage.driver-preferences-v0.create_snapshot",
+              artifact_version_id: null,
+              subject: null,
+              workflow_run_id: "wr-weekly-001",
+              workpage_kind: "driver-preferences-v0"
+            },
             artifact_version_id: null,
             create_path: "/api/v1/workpages/workflow-runs/wr-weekly-001/driver-preferences-v0/snapshots",
             kind: "create_snapshot",
@@ -235,9 +242,11 @@ describe("LogisticsScheduleWorkpagePage", () => {
 
     await user.click(screen.getByRole("button", { name: "Create preferences snapshot" }));
 
+    await waitFor(() => {
+      expect(window.location.pathname).toBe(
+        "/runs/wr-weekly-001/workpages/driver-preferences-v0/artifacts/av-driver-preferences-artifact-001"
+      );
+    });
     expect(await screen.findByTestId("driver-preferences-artifact-workpage-page")).toBeInTheDocument();
-    expect(window.location.pathname).toBe(
-      "/runs/wr-weekly-001/workpages/driver-preferences-v0/artifacts/av-driver-preferences-artifact-001"
-    );
   });
 });
