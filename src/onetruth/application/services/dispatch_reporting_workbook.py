@@ -28,6 +28,14 @@ class WorkbookTableSpec:
         return tuple(field_key for _, field_key in self.columns)
 
 
+@dataclass(frozen=True)
+class WorkbookRuntimeDependencyError(RuntimeError):
+    dependency: str
+
+    def __str__(self) -> str:
+        return f"required runtime dependency missing: {self.dependency}"
+
+
 TABLE_SPECS: tuple[WorkbookTableSpec, ...] = (
     WorkbookTableSpec(
         projection_key="route_actuals",
@@ -263,19 +271,34 @@ def _write_table_rows(workbook, spec: WorkbookTableSpec, rows: list[dict[str, An
 
 
 def _load_workbook_from_bytes(content: bytes):
-    from openpyxl import load_workbook
+    try:
+        from openpyxl import load_workbook
+    except ModuleNotFoundError as exc:
+        if _is_missing_openpyxl(exc):
+            raise WorkbookRuntimeDependencyError("openpyxl") from exc
+        raise
 
     return load_workbook(io.BytesIO(content))
 
 
 def _range_boundaries(reference: str) -> tuple[int, int, int, int]:
-    from openpyxl.utils import range_boundaries
+    try:
+        from openpyxl.utils import range_boundaries
+    except ModuleNotFoundError as exc:
+        if _is_missing_openpyxl(exc):
+            raise WorkbookRuntimeDependencyError("openpyxl") from exc
+        raise
 
     return range_boundaries(reference)
 
 
 def _get_column_letter(column_index: int) -> str:
-    from openpyxl.utils import get_column_letter
+    try:
+        from openpyxl.utils import get_column_letter
+    except ModuleNotFoundError as exc:
+        if _is_missing_openpyxl(exc):
+            raise WorkbookRuntimeDependencyError("openpyxl") from exc
+        raise
 
     return get_column_letter(column_index)
 
@@ -326,3 +349,8 @@ def _normalize_cell_value(value: Any) -> Any:
 
 def _row_is_blank(values: Sequence[Any]) -> bool:
     return all(str(value).strip() == "" for value in values)
+
+
+def _is_missing_openpyxl(exc: ModuleNotFoundError) -> bool:
+    missing_name = str(exc.name or "").split(".", 1)[0]
+    return missing_name == "openpyxl"

@@ -5,15 +5,16 @@ import json
 from pathlib import Path
 import sqlite3
 
-from tests.runtime.helpers.runtime_api import RuntimeApiClient
-from tests.runtime.helpers.runtime_cli import REPO_ROOT, run_cli, stdout_json
-
-
-EOS_SUPPORTED_WORKBOOK_PATH = (
-    REPO_ROOT
-    / "fixtures/workflows/dispatch_reporting/template_pack/Stage03_Threshold_Detection_and_Draft_Packet/Stage03_Threshold_Detection_and_Draft_Packet_upd_draft_Spreadsheet_Example_COMPLETED.xlsx"
+from onetruth.application.services.dispatch_reporting_workbook import (
+    WorkbookRuntimeDependencyError,
 )
-XLSX_MEDIA_TYPE = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+from tests.runtime.helpers.dispatch_reporting import (
+    SUPPORTED_REPORTING_WORKBOOK_PATH,
+    XLSX_MEDIA_TYPE,
+    reporting_workbook_upload_metadata,
+)
+from tests.runtime.helpers.runtime_api import RuntimeApiClient
+from tests.runtime.helpers.runtime_cli import run_cli, stdout_json
 
 
 def _db_url(tmp_path: Path) -> str:
@@ -209,6 +210,7 @@ def _upload_supported_eos_workbook(
     client: RuntimeApiClient,
     *,
     human_task_id: str,
+    service_date: str = "2026-03-16",
     idempotency_key: str,
 ) -> dict[str, object]:
     return _upload_binary_artifact(
@@ -216,14 +218,10 @@ def _upload_supported_eos_workbook(
         human_task_id=human_task_id,
         artifact_kind="reporting.eos_raw.workbook",
         artifact_role="official_input",
-        content=EOS_SUPPORTED_WORKBOOK_PATH.read_bytes(),
-        file_name=EOS_SUPPORTED_WORKBOOK_PATH.name,
+        content=SUPPORTED_REPORTING_WORKBOOK_PATH.read_bytes(),
+        file_name=SUPPORTED_REPORTING_WORKBOOK_PATH.name,
         media_type=XLSX_MEDIA_TYPE,
-        metadata_json={
-            "service_date": "2026-03-16",
-            "station_code": "DVC4",
-            "dsp_name": "QDCI",
-        },
+        metadata_json=reporting_workbook_upload_metadata(service_date),
         idempotency_key=idempotency_key,
     )
 
@@ -587,6 +585,65 @@ def test_dispatch_eos_intake_rejects_unsupported_workbook_shape_without_review_t
     )
     assert completed.status_code == 400
     assert completed.payload["error"]["code"] == "unsupported_eos_workbook_shape"
+
+    review_task_rows = _query_rows(
+        db_path,
+        """
+        SELECT human_task_id
+        FROM human_tasks
+        WHERE workflow_run_id = ? AND task_kind = 'final_packet_review'
+        """,
+        (str(workflow_run["workflow_run_id"]),),
+    )
+    assert review_task_rows == []
+
+
+def test_dispatch_eos_intake_reports_missing_runtime_dependency_without_review_task(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    db_path = tmp_path / "dependency-missing-runtime.db"
+    db_url = f"sqlite:///{db_path}"
+    workflow_run = _create_dispatch_run(db_url, run_tag="api:dispatch-dependency-missing")
+    created = _create_human_task(
+        db_url,
+        workflow_run_id=str(workflow_run["workflow_run_id"]),
+        stage_id="Stage01",
+        task_kind="eos_input_intake",
+        activation_key="api:dispatch-dependency-missing:stage01-intake",
+        actor_role="dispatch_supervisor",
+    )
+    intake_task_id = str(created["human_task"]["human_task_id"])
+    dispatcher_client = _client(
+        db_url=db_url,
+        actor_id="human:dispatch-supervisor-4",
+        actor_roles=["dispatch_supervisor"],
+    )
+    _claim_human_task(
+        dispatcher_client,
+        intake_task_id,
+        idempotency_key="api:dispatch-dependency-missing:claim-intake",
+    )
+    _upload_supported_eos_workbook(
+        dispatcher_client,
+        human_task_id=intake_task_id,
+        idempotency_key="api:dispatch-dependency-missing:upload-eos",
+    )
+    monkeypatch.setattr(
+        "onetruth.application.services.dispatch_reporting_build.project_upd_draft_workbook",
+        lambda _content: (_ for _ in ()).throw(WorkbookRuntimeDependencyError("openpyxl")),
+    )
+
+    completed = dispatcher_client.post(
+        f"/api/v1/human-tasks/{intake_task_id}/complete",
+        payload={
+            "outcome": "complete",
+            "idempotency_key": "api:dispatch-dependency-missing:complete-intake",
+        },
+    )
+    assert completed.status_code == 500
+    assert completed.payload["error"]["code"] == "runtime_dependency_missing"
+    assert completed.payload["error"]["details"]["dependency"] == "openpyxl"
 
     review_task_rows = _query_rows(
         db_path,

@@ -51,6 +51,9 @@ from onetruth.application.services.dispatch_reporting_build import (
     WORKFLOW_ID as DISPATCH_REPORTING_WORKFLOW_ID,
     build_dispatch_reporting_artifacts,
 )
+from onetruth.application.services.dispatch_reporting_workbook import (
+    WorkbookRuntimeDependencyError,
+)
 from onetruth.application.services.task_requirements import (
     REVIEW_CONFIRMATION_ARTIFACT_KIND,
     build_human_task_requirement_index,
@@ -1115,6 +1118,20 @@ def _apply_dispatch_reporting_completion_effects(
                 built_at=created_at,
                 actor_id=actor_id,
             )
+        except WorkbookRuntimeDependencyError as exc:
+            raise CommandError(
+                code="runtime_dependency_missing",
+                message=(
+                    "dispatch reporting intake cannot parse the uploaded workbook "
+                    "because a required runtime dependency is unavailable"
+                ),
+                details={
+                    "workflow_run_id": workflow_run_id,
+                    "artifact_version_id": str(eos_artifact["artifact_version_id"]),
+                    "artifact_kind": EOS_RAW_ARTIFACT_KIND,
+                    "dependency": exc.dependency,
+                },
+            ) from exc
         except DispatchReportingBuildError as exc:
             raise CommandError(
                 code="unsupported_eos_workbook_shape",

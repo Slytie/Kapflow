@@ -172,3 +172,7 @@ Note: `TASK-0087` / `TASK-0088` / `TASK-0089` were formerly duplicated as `TASK-
 | TASK-0158 | EPIC-126 | DONE | medium | Remove demo-era source drift and normalize active workpage action vocabulary |
 | TASK-0159 | EPIC-126 | DONE | medium | Harden canonical-route regressions, fixtures, and guardrails |
 | TASK-0160 | EPIC-126 | DONE | medium | Close Workpages v1 repo-truth and synchronize active docs |
+| TASK-0221 | EPIC-134 | DONE | low | Freeze the minimal workpage demo boundary, canonical-route posture, and no-new-demo-mode rule |
+| TASK-0222 | EPIC-134 | TODO | medium | Correct the weekly-first local demo smoke diagnosis and reporting-intake runtime-dependency truth |
+| TASK-0223 | EPIC-134 | TODO | medium | Add a one-command canonical workpage demo-prep script |
+| TASK-0224 | EPIC-134 | TODO | low | Add the demo runbook and a canonical workpage demo-prep regression |

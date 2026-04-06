@@ -45,6 +45,8 @@ def api_error_from_command(exc: CommandError) -> ApiError:
         status_code = 409
     elif code in {"tool_execution_denied", "tool_execution_requires_approval"}:
         status_code = 403
+    elif code == "runtime_dependency_missing":
+        status_code = 500
 
     return ApiError(
         status_code=status_code,

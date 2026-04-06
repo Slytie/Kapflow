@@ -5,6 +5,7 @@ from dataclasses import dataclass
 from typing import Any
 
 from onetruth.application.services.dispatch_reporting_workbook import (
+    WorkbookRuntimeDependencyError,
     project_upd_draft_workbook,
     seed_upd_draft_workbook,
 )
@@ -198,6 +199,8 @@ def build_dispatch_reporting_artifacts(
 def _project_supported_source_workbook(content: bytes) -> dict[str, Any]:
     try:
         projection = project_upd_draft_workbook(content)
+    except WorkbookRuntimeDependencyError:
+        raise
     except Exception as exc:
         raise DispatchReportingBuildError(
             "EOS workbook must match the supported dispatch-reporting workbook family"

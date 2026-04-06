@@ -2,6 +2,18 @@
 
 Record any decisions made since the last session so a fresh Codex run can rehydrate quickly.
 
+## 2026-04-06 (TASK-0222 supported-env reporting-intake truth correction)
+- Repro-source decision: for `TASK-0222`, the only authoritative repro surface is a clean Python `3.11` install bootstrapped with `python3.11 -m pip install -e ".[api,dev]"`; partial local Python `3.11` environments are not sufficient to diagnose the active blocker.
+- Scope-gate decision: supported-env verification is green for `tests/runtime/api/test_weekly_stage04_openai_agent_api.py`, `tests/runtime/api/test_dispatch_reporting_finalize_loop_api.py`, `tests/runtime/api/test_logistics_local_demo_smoke_api.py`, and `tests/unit/test_dispatch_reporting_workbook.py`, so Stage04 finalize repair is not the active `TASK-0222` target unless that repro goes red again.
+- Failure-classification decision: dispatch-reporting intake completion now treats missing workbook runtime support as `runtime_dependency_missing` with `dependency: openpyxl`; `unsupported_eos_workbook_shape` remains reserved for genuine workbook-family or shape failures after dependencies are available.
+- Repo-memory decision: EPIC-134 and `TASK-0222` should describe the remaining gap as reporting-intake dependency honesty and stale-diagnosis correction, not as a current Stage04 calculation-snapshot regression.
+
+## 2026-04-06 (TASK-0221 minimal canonical demo boundary freeze)
+- Selection decision: there is still no new app-facing product-expansion epic selected after EPIC-133; EPIC-134 is instead the active demo-enablement tranche for already-landed canonical workpage surfaces.
+- Validation-target decision: the demo validates canonical `/runs/:workflowRunId/workpages/*` routes for `schedule-v0`, `route-demand-v0`, `driver-preferences-v0`, and `eod-v0`; `/demo/logistics` may remain launcher/narrative context, but it is not the semantic validation surface.
+- Prep-path decision: the default demo-prep target is deterministic and idempotent, should not require OpenAI, and must reuse canonical truth objects rather than introducing a demo-only mode or API path.
+- Scope-boundary decision: multi-week accepted-history seeding, route-demand auto-drift seeding, and any second demo mode remain out of scope for the first demo-enablement tranche.
+
 ## 2026-04-06 (TASK-0218 workpage concentration split and guardrails)
 - Facade decision: the public workpage handler/service entrypoints now stay stable through thin facades at `src/onetruth/application/handlers/workpages.py` and `src/onetruth/application/services/logistics_workpages.py`, while extracted modules own the refactor-heavy internals.
 - Frontend-boundary decision: the public workspace board, schedule page, and logistics demo page exports now remain intentionally thin and source-budgeted; extracted model/presentational seams such as `taskBoardModel.ts`, `WorkspaceBoardCard.tsx`, `schedulePageModel.ts`, and `LogisticsScheduleWorkpageView.tsx` protect the moved logic.

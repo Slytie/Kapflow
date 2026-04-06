@@ -29,8 +29,11 @@ Current runtime/debug priority: **Schedule Planning**. Payroll remains the secon
 | EPIC-125 | Operational cadence demo (weekly planning + minimal daily replan + daily reporting first-user lane) | operational-cadence executive summary/plan, external cadence tick, weekly Friday intake + Stage04 build/review/publish loop, minimal manual live-dispatch delta loop, daily EOS->draft-review-finalize loop, local demo runbook, single-node production-shaped demo runbook | EPIC-124, EPIC-121, EPIC-122, EPIC-123, EPIC-030, EPIC-040, EPIC-100 |
 | EPIC-131 | Schedule heatmap recalculation, route-demand separation, and versioned workpage navigation | EPIC-131 brief/plan/context pack, corrected SME boundary freeze, descriptor-backed calculated schedule contracts, route-demand/editor separation, accepted-series navigation, soft preferences | EPIC-123, EPIC-124, EPIC-125, EPIC-030 |
 | EPIC-126 | Workpages v1 hardening and closeout | internal cleanup, canonical-route regression proof, fixture pruning, active-doc closeout, explicit Workpages v1 boundary and acceptance proof | EPIC-125, EPIC-131, EPIC-124, EPIC-100 |
+| EPIC-132 | Workpage reliability settlement and repo-truth closeout | settlement plan/context packs, clean-baseline reconciliation, mutation smoke gate, canonical-only docs/fixtures truth, reproducible frontend verification | EPIC-131, EPIC-124, EPIC-100 |
+| EPIC-133 | Workpage fragility reduction and extensibility hardening | backend-owned lineage/latest-draft/history seams, server-authored workpage actions, launcher-only demo-shell convergence, bounded-facade/source-budget guardrails | EPIC-132, EPIC-131, EPIC-124, EPIC-100 |
+| EPIC-134 | Minimal canonical workpage demo enablement | demo-enablement plan/context packs, supported-env reporting/demo-smoke truth correction, deterministic workpage demo-prep script, canonical demo runbook/regression | EPIC-125, EPIC-131, EPIC-133 |
 
-Status note (2026-04-05): EPIC-131 and the EPIC-126 cleanup trio are complete, the public workpage posture is canonical-only, and no new app-facing epic is selected yet.
+Status note (2026-04-06): EPIC-131, EPIC-132, and EPIC-133 are complete, the public workpage posture is canonical-only, no new app-facing product-expansion epic is selected, and EPIC-134 is the active demo-enablement tranche.
 
 ## Update rules
 - Keep epic files in `docs/planning/epics/`

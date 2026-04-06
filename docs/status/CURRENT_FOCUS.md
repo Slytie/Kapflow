@@ -20,10 +20,11 @@ The just-completed app-facing workpage tranche is **EPIC-133 - Workpage fragilit
 - `/demo/logistics` is now a launcher-only shell that hands off to canonical workpage/workspace routes
 - the former concentration files now resolve through thinner facades and explicit source-budget guardrails
 
-There is no new app-facing workpage epic selected after EPIC-133 closeout. Remaining near-term backlog returns to the broader Stage 4 runtime/debug surface:
-- `TASK-0154` - finish the bounded live-dispatch manual daily-replan closure
-- `TASK-0156` - add the external cadence tick and single-node production-shaped runbook
-- `TASK-0157` - capture post-demo feedback against the canonical Workpages v1 posture
+There is no new app-facing product-expansion epic selected after EPIC-133 closeout. EPIC-134 is the active demo-enablement tranche for the already-landed canonical workpage surfaces:
+- `TASK-0221` - freeze the minimal demo boundary, canonical-route posture, and no-new-demo-mode rule
+- `TASK-0222` - correct the weekly-first local demo smoke diagnosis and reporting-intake runtime-dependency truth
+- `TASK-0223` - add a one-command canonical workpage demo-prep script
+- `TASK-0224` - add the demo runbook and a canonical workpage demo-prep regression
 
 EPIC-126 remains completed cleanup history, but it is no longer the active post-EPIC-131 plan.
 
@@ -64,7 +65,7 @@ Still deferred beyond the completed Workpages v1 + EPIC-133 hardening tranche:
 - automatic agentic rescheduling after route-demand changes
 - broader feedback-driven hardening beyond the settlement tranche
 
-## Available backlog (not yet selected beyond EPIC-133)
+## Available broader backlog (after EPIC-134)
 1. `TASK-0154` - Finish the remaining bounded live-dispatch closure around the manual daily-replan lane.
 2. `TASK-0156` - Add the external cadence tick and single-node production-shaped runbook.
 3. `TASK-0157` - Capture post-demo feedback against the canonical Workpages v1 posture.
