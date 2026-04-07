@@ -561,7 +561,10 @@ def build_driver_preferences_workflow_run_workpage_contract(
         "artifact_state": _driver_preferences_run_artifact_state(
             latest_artifact=latest_artifact,
         ),
-        "preference_grid": _driver_preferences_grid(projection),
+        "preference_grid": _driver_preferences_grid(
+            workflow_run=workflow_run,
+            projection=projection,
+        ),
         "schedule_impact": _driver_preferences_schedule_impact(
             artifacts=artifacts,
             latest_driver_preferences=latest_artifact,
@@ -2330,7 +2333,10 @@ def build_driver_preferences_artifact_workpage_contract(
             latest_artifact_version_id=latest_in_chain_artifact_version_id,
             editable=editable,
         ),
-        "preference_grid": _driver_preferences_grid(projection),
+        "preference_grid": _driver_preferences_grid(
+            workflow_run=workflow_run,
+            projection=projection,
+        ),
         "schedule_impact": _driver_preferences_schedule_impact(
             artifacts=artifacts,
             latest_driver_preferences=latest_driver_preferences_artifact(artifacts),
@@ -2778,6 +2784,11 @@ def _initial_driver_preferences_projection(
     payload = build_initial_driver_preferences_workbook(bundle=bundle)
     return {
         "weekdays": list(payload.get("weekdays") or []),
+        "service_dates": [
+            dict(item)
+            for item in payload.get("service_dates", [])
+            if isinstance(item, Mapping)
+        ],
         "drivers": list(payload.get("drivers") or []),
     }
 
@@ -2933,6 +2944,8 @@ def _driver_preferences_summary(
 
 
 def _driver_preferences_grid(
+    *,
+    workflow_run: Mapping[str, Any],
     projection: Mapping[str, Any],
 ) -> dict[str, Any]:
     return {
@@ -2941,12 +2954,40 @@ def _driver_preferences_grid(
             for value in projection.get("weekdays", [])
             if str(value or "").strip()
         ],
+        "service_dates": _driver_preferences_service_dates(
+            workflow_run=workflow_run,
+            projection=projection,
+        ),
         "drivers": [
             dict(item)
             for item in projection.get("drivers", [])
             if isinstance(item, Mapping)
         ],
     }
+
+
+def _driver_preferences_service_dates(
+    *,
+    workflow_run: Mapping[str, Any],
+    projection: Mapping[str, Any],
+) -> list[dict[str, str]]:
+    projection_service_dates = [
+        {
+            "service_date": _require_text(item.get("service_date")),
+            "label": _require_text_or_default(item.get("label"), default=_require_text(item.get("service_date"))),
+            "weekday_label": _require_text_or_default(
+                item.get("weekday_label"),
+                default=_weekday_label(_require_text(item.get("service_date"))),
+            ),
+        }
+        for item in projection.get("service_dates", [])
+        if isinstance(item, Mapping) and str(item.get("service_date") or "").strip()
+    ]
+    if projection_service_dates:
+        return projection_service_dates
+    return _weekly_service_dates_from_start(
+        _require_text_or_default(workflow_run.get("logical_date"), default="")
+    )
 
 
 def _driver_preferences_run_artifact_state(
@@ -4864,6 +4905,25 @@ def _weekday_label(service_date: str) -> str:
     except ValueError:
         return service_date
     return date(year, month, day).strftime("%a")
+
+
+def _weekly_service_dates_from_start(scope_start: str) -> list[dict[str, str]]:
+    parts = scope_start.split("-")
+    if len(parts) != 3:
+        return []
+    try:
+        start_year, start_month, start_day = (int(part) for part in parts)
+        start_date = date(start_year, start_month, start_day)
+    except ValueError:
+        return []
+    return [
+        {
+            "service_date": service_day.isoformat(),
+            "label": service_day.isoformat(),
+            "weekday_label": service_day.strftime("%a"),
+        }
+        for service_day in (start_date.fromordinal(start_date.toordinal() + offset) for offset in range(7))
+    ]
 
 
 def _split_workbook_multivalue(value: Any) -> list[str]:

@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from datetime import date, timedelta
+import hashlib
 import json
 from typing import Any, Mapping, Sequence
 
@@ -23,11 +25,13 @@ def build_initial_driver_preferences_workbook(
     bundle: WeeklyScheduleControlBundle,
 ) -> dict[str, Any]:
     availability_by_driver = bundle.availability_by_driver
+    service_dates = _service_dates_for_bundle(bundle)
     return {
         "schema_version": "1.0",
         "kind": "driver_shift_preferences",
         "planning_week_id": bundle.planning_week_id,
         "weekdays": list(DRIVER_PREFERENCE_WEEKDAY_KEYS),
+        "service_dates": service_dates,
         "drivers": [
             {
                 "driver_id": driver.driver_id,
@@ -36,9 +40,11 @@ def build_initial_driver_preferences_workbook(
                 "on_call_eligible": bool(
                     getattr(availability_by_driver.get(driver.driver_id), "on_call_eligible", False)
                 ),
-                "preferences_by_weekday": {
-                    weekday: None for weekday in DRIVER_PREFERENCE_WEEKDAY_KEYS
-                },
+                "preferences_by_weekday": _seed_driver_preferences_by_weekday(
+                    bundle=bundle,
+                    driver_id=driver.driver_id,
+                    service_dates=service_dates,
+                ),
             }
             for driver in sorted(
                 bundle.drivers,
@@ -51,9 +57,11 @@ def build_initial_driver_preferences_workbook(
 def project_driver_preferences_workbook(workbook_bytes: bytes) -> dict[str, Any]:
     payload = _load_payload(workbook_bytes)
     weekdays = _require_weekdays(payload.get("weekdays"))
+    service_dates = _normalize_service_dates(payload.get("service_dates"))
     drivers = _normalize_driver_rows(payload.get("drivers"), weekdays=weekdays)
     return {
         "weekdays": weekdays,
+        "service_dates": service_dates,
         "drivers": drivers,
     }
 
@@ -119,6 +127,7 @@ def annotate_driver_preferences_projection(projection: Mapping[str, Any] | None)
     drivers = _projection_driver_rows(projection)
     return {
         "weekdays": _require_weekdays(projection.get("weekdays")),
+        "service_dates": _normalize_service_dates(projection.get("service_dates")),
         "drivers": drivers,
         "drivers_by_id": {
             str(row.get("driver_id") or ""): row
@@ -156,6 +165,46 @@ def _require_weekdays(raw_weekdays: Any) -> list[str]:
     if weekdays != list(DRIVER_PREFERENCE_WEEKDAY_KEYS):
         raise ValueError("driver preferences workbook weekdays must be sun..sat in canonical order")
     return weekdays
+
+
+def _normalize_service_dates(raw_service_dates: Any) -> list[dict[str, str]]:
+    if raw_service_dates is None:
+        return []
+    if not isinstance(raw_service_dates, Sequence) or isinstance(
+        raw_service_dates,
+        (str, bytes, bytearray),
+    ):
+        raise ValueError("driver preferences workbook service_dates must be a list")
+    normalized: list[dict[str, str]] = []
+    seen_service_dates: set[str] = set()
+    for index, entry in enumerate(raw_service_dates):
+        if not isinstance(entry, Mapping):
+            raise ValueError(f"driver preferences workbook service_dates[{index}] must be an object")
+        service_date = str(entry.get("service_date") or "").strip()
+        if not service_date:
+            raise ValueError(f"driver preferences workbook service_dates[{index}].service_date is required")
+        if service_date in seen_service_dates:
+            raise ValueError(
+                f"driver preferences workbook service_dates contains duplicate service_date: {service_date}"
+            )
+        seen_service_dates.add(service_date)
+        normalized.append(
+            {
+                "service_date": service_date,
+                "label": str(entry.get("label") or service_date).strip() or service_date,
+                "weekday_label": (
+                    str(entry.get("weekday_label") or _weekday_label(service_date)).strip()
+                    or _weekday_label(service_date)
+                ),
+            }
+        )
+    if normalized:
+        weekday_keys = [_weekday_key(entry["service_date"]) for entry in normalized]
+        if weekday_keys != list(DRIVER_PREFERENCE_WEEKDAY_KEYS):
+            raise ValueError(
+                "driver preferences workbook service_dates must align with sun..sat in canonical order"
+            )
+    return normalized
 
 
 def _normalize_driver_rows(raw_rows: Any, *, weekdays: Sequence[str]) -> list[dict[str, Any]]:
@@ -265,9 +314,109 @@ def _normalize_preferences_map(
     return normalized
 
 
+def _service_dates_for_bundle(
+    bundle: WeeklyScheduleControlBundle,
+) -> list[dict[str, str]]:
+    start_year, start_month, start_day = (int(part) for part in bundle.scope_start.split("-"))
+    start_date = date(start_year, start_month, start_day)
+    return [
+        _service_date_payload(start_date + timedelta(days=index))
+        for index in range(len(DRIVER_PREFERENCE_WEEKDAY_KEYS))
+    ]
+
+
+def _service_date_payload(service_day: date) -> dict[str, str]:
+    service_date = service_day.isoformat()
+    return {
+        "service_date": service_date,
+        "label": service_date,
+        "weekday_label": service_day.strftime("%a"),
+    }
+
+
+def _seed_driver_preferences_by_weekday(
+    *,
+    bundle: WeeklyScheduleControlBundle,
+    driver_id: str,
+    service_dates: Sequence[Mapping[str, str]],
+) -> dict[str, str]:
+    seed_scope = f"{bundle.planning_week_id}:{bundle.workflow_run_id}:{driver_id}"
+    open_target = 4 + (_stable_int(f"{seed_scope}:open-target") % 3)
+    unavailable_like_dates = _unavailable_like_service_dates(
+        bundle=bundle,
+        driver_id=driver_id,
+        service_dates=service_dates,
+    )
+    ranked_dates = sorted(
+        (str(entry.get("service_date") or "").strip() for entry in service_dates),
+        key=lambda service_date: (
+            1 if service_date in unavailable_like_dates else 0,
+            _stable_int(f"{seed_scope}:rank:{service_date}"),
+        ),
+    )
+    open_dates = set(ranked_dates[:open_target])
+    closed_dates = [service_date for service_date in ranked_dates if service_date not in open_dates]
+    hard_closed_dates = [service_date for service_date in closed_dates if service_date in unavailable_like_dates]
+    soft_closed_dates = [service_date for service_date in closed_dates if service_date not in unavailable_like_dates]
+    extra_hard_closed_dates: set[str] = set()
+    if not hard_closed_dates and len(closed_dates) >= 2 and soft_closed_dates:
+        extra_hard_closed_dates.add(
+            min(
+                soft_closed_dates,
+                key=lambda service_date: _stable_int(f"{seed_scope}:extra-hard:{service_date}"),
+            )
+        )
+
+    preferences_by_weekday: dict[str, str] = {}
+    for entry in service_dates:
+        service_date = str(entry.get("service_date") or "").strip()
+        weekday = _weekday_key(service_date)
+        if service_date in open_dates:
+            preferences_by_weekday[weekday] = "open_to_work"
+        elif service_date in unavailable_like_dates or service_date in extra_hard_closed_dates:
+            preferences_by_weekday[weekday] = "definitely_can_not_work"
+        else:
+            preferences_by_weekday[weekday] = "prefer_not_to_work"
+    return preferences_by_weekday
+
+
+def _unavailable_like_service_dates(
+    *,
+    bundle: WeeklyScheduleControlBundle,
+    driver_id: str,
+    service_dates: Sequence[Mapping[str, str]],
+) -> set[str]:
+    availability = bundle.availability_by_driver.get(driver_id)
+    if availability is None:
+        return set()
+    blocked_dates = {
+        service_date
+        for service_date in availability.approved_unavailable_dates
+        if service_date
+    }
+    if availability.emergency_only:
+        blocked_dates.update(
+            str(entry.get("service_date") or "").strip()
+            for entry in service_dates
+            if str(entry.get("service_date") or "").strip()
+        )
+    for day_state in availability.daily_states:
+        normalized_state = str(day_state.normalized_state or day_state.state or "").strip().lower()
+        if normalized_state in {"approved_unavailable", "pattern_off", "emergency_only"}:
+            blocked_dates.add(str(day_state.service_date or "").strip())
+    return {service_date for service_date in blocked_dates if service_date}
+
+
+def _stable_int(seed: str) -> int:
+    return int(hashlib.sha256(seed.encode("utf-8")).hexdigest()[:16], 16)
+
+
 def _weekday_key(service_date: str) -> str:
     year, month, day = (int(part) for part in service_date.split("-"))
-    import datetime as _datetime
-
-    weekday_index = _datetime.date(year, month, day).weekday()
+    weekday_index = date(year, month, day).weekday()
     return DRIVER_PREFERENCE_WEEKDAY_KEYS[(weekday_index + 1) % 7]
+
+
+def _weekday_label(service_date: str) -> str:
+    year, month, day = (int(part) for part in service_date.split("-"))
+    return date(year, month, day).strftime("%a")

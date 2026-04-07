@@ -108,11 +108,25 @@ def test_driver_preferences_run_workpage_lands_on_create_snapshot_when_none_exis
         "fri",
         "sat",
     ]
+    assert payload["preference_grid"]["service_dates"] == [
+        {"service_date": "2026-03-22", "label": "2026-03-22", "weekday_label": "Sun"},
+        {"service_date": "2026-03-23", "label": "2026-03-23", "weekday_label": "Mon"},
+        {"service_date": "2026-03-24", "label": "2026-03-24", "weekday_label": "Tue"},
+        {"service_date": "2026-03-25", "label": "2026-03-25", "weekday_label": "Wed"},
+        {"service_date": "2026-03-26", "label": "2026-03-26", "weekday_label": "Thu"},
+        {"service_date": "2026-03-27", "label": "2026-03-27", "weekday_label": "Fri"},
+        {"service_date": "2026-03-28", "label": "2026-03-28", "weekday_label": "Sat"},
+    ]
     assert payload["preference_grid"]["drivers"]
     assert all(
-        value is None
+        value is not None
         for value in payload["preference_grid"]["drivers"][0]["preferences_by_weekday"].values()
     )
+    assert 4 <= sum(
+        1
+        for value in payload["preference_grid"]["drivers"][0]["preferences_by_weekday"].values()
+        if value == "open_to_work"
+    ) <= 6
     assert payload["schedule_impact"] == {
         "latest_schedule_draft_artifact_version_id": schedule_draft_artifact_id,
         "latest_driver_preferences_artifact_version_id": None,
@@ -172,6 +186,19 @@ def test_driver_preferences_create_route_returns_canonical_artifact_and_retires_
         f"driver-preferences-v0/artifacts/{artifact_version_id}"
     ).payload
     assert payload["workpage"]["workpage_id"] == "driver-preferences-v0"
+    assert payload["preference_grid"]["service_dates"] == [
+        {"service_date": "2026-03-22", "label": "2026-03-22", "weekday_label": "Sun"},
+        {"service_date": "2026-03-23", "label": "2026-03-23", "weekday_label": "Mon"},
+        {"service_date": "2026-03-24", "label": "2026-03-24", "weekday_label": "Tue"},
+        {"service_date": "2026-03-25", "label": "2026-03-25", "weekday_label": "Wed"},
+        {"service_date": "2026-03-26", "label": "2026-03-26", "weekday_label": "Thu"},
+        {"service_date": "2026-03-27", "label": "2026-03-27", "weekday_label": "Fri"},
+        {"service_date": "2026-03-28", "label": "2026-03-28", "weekday_label": "Sat"},
+    ]
+    assert all(
+        value is not None
+        for value in payload["preference_grid"]["drivers"][0]["preferences_by_weekday"].values()
+    )
     assert payload["artifact_state"] == {
         "state_kind": "artifact_projection",
         "artifact_kind": "planning.driver_shift_preferences.workbook",

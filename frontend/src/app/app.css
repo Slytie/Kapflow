@@ -1601,6 +1601,49 @@
   box-shadow: none;
 }
 
+.driver-preferences-heatmap__legend-swatch--open_to_work {
+  background: linear-gradient(135deg, #d7ebd7, #74a676);
+}
+
+.driver-preferences-heatmap__legend-swatch--prefer_not_to_work {
+  background: linear-gradient(135deg, #f4e8bf, #c8a95a);
+}
+
+.driver-preferences-heatmap__legend-swatch--definitely_can_not_work {
+  background: linear-gradient(135deg, #f1d5cf, #bf6c5a);
+}
+
+.driver-preferences-heatmap__legend-swatch--unset {
+  background: linear-gradient(135deg, rgba(244, 244, 240, 0.9), rgba(219, 222, 225, 0.96));
+}
+
+.driver-preferences-heatmap__cell--open_to_work {
+  background: linear-gradient(160deg, rgba(232, 247, 232, 0.98), rgba(129, 177, 132, 0.9));
+  color: #214c26;
+}
+
+.driver-preferences-heatmap__cell--prefer_not_to_work {
+  background: linear-gradient(160deg, rgba(250, 240, 205, 0.98), rgba(217, 184, 96, 0.9));
+  color: #5c4816;
+}
+
+.driver-preferences-heatmap__cell--definitely_can_not_work {
+  background: linear-gradient(160deg, rgba(248, 227, 223, 0.98), rgba(199, 115, 96, 0.9));
+  color: #66281b;
+}
+
+.driver-preferences-heatmap__cell--unset {
+  background: linear-gradient(180deg, rgba(244, 244, 240, 0.9), rgba(255, 255, 255, 0.96));
+  color: #6b727b;
+}
+
+.driver-preferences-heatmap__cell--open_to_work.schedule-heatmap__cell--readonly,
+.driver-preferences-heatmap__cell--prefer_not_to_work.schedule-heatmap__cell--readonly,
+.driver-preferences-heatmap__cell--definitely_can_not_work.schedule-heatmap__cell--readonly,
+.driver-preferences-heatmap__cell--unset.schedule-heatmap__cell--readonly {
+  opacity: 1;
+}
+
 .schedule-workpage-surface__main,
 .schedule-workpage-surface__rail-stack {
   display: flex;

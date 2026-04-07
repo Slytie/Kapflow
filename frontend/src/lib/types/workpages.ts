@@ -364,6 +364,7 @@ export interface WorkpageDriverPreferencesDriverRow {
 }
 
 export interface WorkpageDriverPreferencesGrid {
+  service_dates: WorkpageScheduleHeatmapDate[];
   weekdays: Array<"sun" | "mon" | "tue" | "wed" | "thu" | "fri" | "sat">;
   drivers: WorkpageDriverPreferencesDriverRow[];
 }

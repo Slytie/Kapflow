@@ -23,15 +23,52 @@ import type {
   WorkpageDriverPreferencesScheduleImpact,
   WorkpageHistorySection as WorkpageHistorySectionModel,
   WorkpageNotePanelSection as WorkpageNotePanelSectionModel,
+  WorkpageScheduleHeatmapDate,
   WorkpageSummaryCardsSection as WorkpageSummaryCardsSectionModel
 } from "@/lib/types/workpages";
 
-const PREFERENCE_OPTIONS: Array<{ value: string; label: string }> = [
-  { value: "", label: "Unset" },
-  { value: "open_to_work", label: "Open to work" },
-  { value: "prefer_not_to_work", label: "Prefer not to work" },
-  { value: "definitely_can_not_work", label: "Definitely cannot work" }
+type DriverPreferenceState =
+  | "open_to_work"
+  | "prefer_not_to_work"
+  | "definitely_can_not_work"
+  | "unset";
+
+const PREFERENCE_STATE_CYCLE: DriverPreferenceState[] = [
+  "open_to_work",
+  "prefer_not_to_work",
+  "definitely_can_not_work",
+  "unset"
 ];
+
+const PREFERENCE_STATE_UI: Record<
+  DriverPreferenceState,
+  { label: string; shortLabel: string; toneClassName: string; legendSwatchClassName: string }
+> = {
+  open_to_work: {
+    label: "Open to work",
+    shortLabel: "Open",
+    toneClassName: "driver-preferences-heatmap__cell--open_to_work",
+    legendSwatchClassName: "driver-preferences-heatmap__legend-swatch--open_to_work"
+  },
+  prefer_not_to_work: {
+    label: "Prefer not to work",
+    shortLabel: "Prefer off",
+    toneClassName: "driver-preferences-heatmap__cell--prefer_not_to_work",
+    legendSwatchClassName: "driver-preferences-heatmap__legend-swatch--prefer_not_to_work"
+  },
+  definitely_can_not_work: {
+    label: "Definitely cannot work",
+    shortLabel: "Cannot",
+    toneClassName: "driver-preferences-heatmap__cell--definitely_can_not_work",
+    legendSwatchClassName: "driver-preferences-heatmap__legend-swatch--definitely_can_not_work"
+  },
+  unset: {
+    label: "Unset",
+    shortLabel: "Unset",
+    toneClassName: "driver-preferences-heatmap__cell--unset",
+    legendSwatchClassName: "driver-preferences-heatmap__legend-swatch--unset"
+  }
+};
 
 function driverPreferencesLandingRoute(workflowRunId: string): string {
   return `/runs/${workflowRunId}/workpages/driver-preferences-v0`;
@@ -128,6 +165,29 @@ function useEditableDriverPreferencesGrid(
   }, [contract, resetKey]);
 
   return { driverRows, setDriverRows };
+}
+
+function preferenceStateForWeekday(
+  row: WorkpageDriverPreferencesDriverRow,
+  weekday: WorkpageDriverPreferencesGrid["weekdays"][number]
+): DriverPreferenceState {
+  return (row.preferences_by_weekday[weekday] ?? "unset") as DriverPreferenceState;
+}
+
+function nextPreferenceValue(currentState: DriverPreferenceState): string | null {
+  const currentIndex = PREFERENCE_STATE_CYCLE.indexOf(currentState);
+  const nextState = PREFERENCE_STATE_CYCLE[(currentIndex + 1) % PREFERENCE_STATE_CYCLE.length];
+  return nextState === "unset" ? null : nextState;
+}
+
+function fallbackServiceDates(
+  weekdays: WorkpageDriverPreferencesGrid["weekdays"]
+): WorkpageScheduleHeatmapDate[] {
+  return weekdays.map((weekday) => ({
+    service_date: weekday,
+    label: weekday.toUpperCase(),
+    weekday_label: weekday.toUpperCase()
+  }));
 }
 
 function DriverPreferencesScheduleImpactBanner({
@@ -260,32 +320,51 @@ function DriverPreferencesHistoryRail({
   );
 }
 
-function DriverPreferencesGridEditor({
+function DriverPreferencesHeatmap({
+  serviceDates,
   weekdays,
   driverRows,
   setDriverRows,
   readOnly
 }: {
+  serviceDates: WorkpageScheduleHeatmapDate[];
   weekdays: WorkpageDriverPreferencesGrid["weekdays"];
   driverRows: WorkpageDriverPreferencesDriverRow[];
-  setDriverRows: Dispatch<SetStateAction<WorkpageDriverPreferencesDriverRow[]>>;
+  setDriverRows?: Dispatch<SetStateAction<WorkpageDriverPreferencesDriverRow[]>> | undefined;
   readOnly: boolean;
 }): JSX.Element {
   return (
     <section className="workpage-panel" data-testid="driver-preferences-grid">
-      <header className="workpage-panel__header">
-        <h2>Weekly preference grid</h2>
-        <p>Each cell captures weekly day-of-week guidance only. Unset means no recorded preference.</p>
+      <header className="workpage-panel__header schedule-heatmap__header">
+        <div>
+          <h2>Preference grid</h2>
+          <p>
+            {readOnly
+              ? "Read-only weekly advisory posture from the latest snapshot or the seeded initial projection."
+              : "Click a driver/day cell to cycle the advisory weekly posture for that service date."}
+          </p>
+        </div>
+        <div className="schedule-heatmap__legend" aria-label="Preference legend">
+          {PREFERENCE_STATE_CYCLE.map((state) => (
+            <span key={state} className="schedule-heatmap__legend-item">
+              <span
+                className={`schedule-heatmap__legend-swatch ${PREFERENCE_STATE_UI[state].legendSwatchClassName}`}
+              />
+              {PREFERENCE_STATE_UI[state].label}
+            </span>
+          ))}
+        </div>
       </header>
       {driverRows.length > 0 ? (
-        <div className="workpage-table__wrap">
-          <table className="workpage-table">
+        <div className="schedule-heatmap__wrap">
+          <table className="schedule-heatmap__table">
             <thead>
               <tr>
                 <th scope="col">Driver</th>
-                {weekdays.map((weekday) => (
-                  <th key={weekday} scope="col">
-                    {weekday.toUpperCase()}
+                {serviceDates.map((serviceDate) => (
+                  <th key={serviceDate.service_date} scope="col">
+                    <span>{serviceDate.weekday_label}</span>
+                    <strong>{serviceDate.label}</strong>
                   </th>
                 ))}
               </tr>
@@ -294,43 +373,59 @@ function DriverPreferencesGridEditor({
               {driverRows.map((row) => (
                 <tr key={row.driver_id}>
                   <td>
-                    <strong>{row.driver_name}</strong>
-                    <div className="schedule-driver-metrics__subtext">
-                      {row.driver_id} · {row.employment_type || "Unknown employment"}
+                    <div className="schedule-heatmap__person">
+                      <strong>{row.driver_name}</strong>
+                      <span>{row.driver_id}</span>
+                      <span>
+                        {row.employment_type || "Unknown employment"}
+                        {row.on_call_eligible ? " · On-call eligible" : ""}
+                      </span>
                     </div>
                   </td>
-                  {weekdays.map((weekday) => (
-                    <td key={`${row.driver_id}-${weekday}`}>
-                      <select
-                        aria-label={`${row.driver_name} ${weekday}`}
-                        className="workpage-form__control"
-                        disabled={readOnly}
-                        value={row.preferences_by_weekday[weekday] ?? ""}
-                        onChange={(event) => {
-                          const nextValue = event.target.value || null;
-                          setDriverRows((currentRows) =>
-                            currentRows.map((currentRow) =>
-                              currentRow.driver_id === row.driver_id
-                                ? {
-                                    ...currentRow,
-                                    preferences_by_weekday: {
-                                      ...currentRow.preferences_by_weekday,
-                                      [weekday]: nextValue
+                  {serviceDates.map((serviceDate, index) => {
+                    const weekday = weekdays[index];
+                    const state = weekday ? preferenceStateForWeekday(row, weekday) : "unset";
+                    const stateUi = PREFERENCE_STATE_UI[state];
+                    return (
+                      <td key={`${row.driver_id}-${serviceDate.service_date}`}>
+                        <button
+                          type="button"
+                          className={`schedule-heatmap__cell ${stateUi.toneClassName}${readOnly ? " schedule-heatmap__cell--readonly" : ""}`}
+                          data-testid={`driver-preferences-cell-${serviceDate.service_date}-${row.driver_id}`}
+                          aria-label={`${row.driver_name} on ${serviceDate.service_date}: ${stateUi.label}`}
+                          aria-disabled={readOnly}
+                          onClick={() => {
+                            if (readOnly || !weekday || !setDriverRows) {
+                              return;
+                            }
+                            setDriverRows((currentRows) =>
+                              currentRows.map((currentRow) =>
+                                currentRow.driver_id === row.driver_id
+                                  ? {
+                                      ...currentRow,
+                                      preferences_by_weekday: {
+                                        ...currentRow.preferences_by_weekday,
+                                        [weekday]: nextPreferenceValue(
+                                          preferenceStateForWeekday(currentRow, weekday)
+                                        )
+                                      }
                                     }
-                                  }
-                                : currentRow
-                            )
-                          );
-                        }}
-                      >
-                        {PREFERENCE_OPTIONS.map((option) => (
-                          <option key={option.label} value={option.value}>
-                            {option.label}
-                          </option>
-                        ))}
-                      </select>
-                    </td>
-                  ))}
+                                  : currentRow
+                              )
+                            );
+                          }}
+                        >
+                          <span className="schedule-heatmap__cell-top">
+                            <span className="schedule-heatmap__cell-state">{stateUi.shortLabel}</span>
+                            {!readOnly ? (
+                              <span className="schedule-heatmap__cell-chip">Click to cycle</span>
+                            ) : null}
+                          </span>
+                          <span className="schedule-heatmap__cell-meta">{stateUi.label}</span>
+                        </button>
+                      </td>
+                    );
+                  })}
                 </tr>
               ))}
             </tbody>
@@ -465,11 +560,23 @@ export function LogisticsDriverPreferencesWorkpagePage(): JSX.Element {
         scheduleImpact={contract.schedule_impact as WorkpageDriverPreferencesScheduleImpact | null}
         workflowRunId={workflowRunId}
       />
+      <DriverPreferencesHeatmap
+        serviceDates={
+          contract.preference_grid?.service_dates?.length
+            ? contract.preference_grid.service_dates
+            : fallbackServiceDates(
+                contract.preference_grid?.weekdays ?? ["sun", "mon", "tue", "wed", "thu", "fri", "sat"]
+              )
+        }
+        weekdays={contract.preference_grid?.weekdays ?? ["sun", "mon", "tue", "wed", "thu", "fri", "sat"]}
+        driverRows={contract.preference_grid?.drivers ?? []}
+        readOnly
+      />
       <section className="workpage-panel workpage-panel--callout">
         <header className="workpage-panel__header">
           <h2>Snapshot lifecycle</h2>
           <p>
-            The first snapshot is created explicitly on demand. New cells start unset and remain advisory only.
+            The first snapshot is created explicitly on demand. Seeded cells start with deterministic advisory posture and remain soft guidance only.
           </p>
         </header>
       </section>
@@ -613,7 +720,14 @@ export function LogisticsDriverPreferencesArtifactWorkpagePage(): JSX.Element {
         scheduleImpact={contract.schedule_impact as WorkpageDriverPreferencesScheduleImpact | null}
         workflowRunId={workflowRunId}
       />
-      <DriverPreferencesGridEditor
+      <DriverPreferencesHeatmap
+        serviceDates={
+          contract.preference_grid?.service_dates?.length
+            ? contract.preference_grid.service_dates
+            : fallbackServiceDates(
+                contract.preference_grid?.weekdays ?? ["sun", "mon", "tue", "wed", "thu", "fri", "sat"]
+              )
+        }
         weekdays={contract.preference_grid?.weekdays ?? ["sun", "mon", "tue", "wed", "thu", "fri", "sat"]}
         driverRows={driverRows}
         setDriverRows={setDriverRows}

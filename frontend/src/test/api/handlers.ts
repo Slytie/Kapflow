@@ -72,6 +72,7 @@ interface RouteDemandArtifactVersionState extends ArtifactWorkpageVersionState {
 
 interface DriverPreferencesArtifactVersionState extends ArtifactWorkpageVersionState {
   preferenceGrid: {
+    service_dates: Array<Record<string, unknown>>;
     weekdays: string[];
     drivers: Array<Record<string, unknown>>;
   };
@@ -294,6 +295,7 @@ function cloneDriverPreferenceGrid(
   value: DriverPreferencesArtifactVersionState["preferenceGrid"]
 ): DriverPreferencesArtifactVersionState["preferenceGrid"] {
   return {
+    service_dates: value.service_dates.map((serviceDate) => ({ ...serviceDate })),
     weekdays: [...value.weekdays],
     drivers: value.drivers.map((row) => ({
       ...row,
@@ -307,6 +309,7 @@ function buildDriverPreferencesGrid(
 ): DriverPreferencesArtifactVersionState["preferenceGrid"] {
   const baseGrid = cloneJson(
     (driverPreferencesArtifactStateSnapshot.workpage_state.preference_grid ?? {
+      service_dates: [],
       weekdays: ["sun", "mon", "tue", "wed", "thu", "fri", "sat"],
       drivers: []
     }) as DriverPreferencesArtifactVersionState["preferenceGrid"]

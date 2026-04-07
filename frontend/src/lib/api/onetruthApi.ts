@@ -1272,6 +1272,11 @@ function normalizeDriverPreferencesGrid(
     return null;
   }
   return {
+    service_dates: asArray<Record<string, unknown>>(value.service_dates).map((item) => ({
+      service_date: asString(item.service_date),
+      label: asString(item.label),
+      weekday_label: asString(item.weekday_label)
+    })),
     weekdays: asArray(value.weekdays)
       .map((item) => asString(item))
       .filter(Boolean) as WorkpageDriverPreferencesGrid["weekdays"],

@@ -48,14 +48,31 @@ def _actual_ops_bundle():
 
 
 def test_driver_preferences_workbook_builds_initial_snapshot_from_roster_scope() -> None:
-    workbook = build_initial_driver_preferences_workbook(bundle=_actual_ops_bundle())
+    bundle = _actual_ops_bundle()
+    workbook = build_initial_driver_preferences_workbook(bundle=bundle)
+    repeated = build_initial_driver_preferences_workbook(bundle=bundle)
 
     assert workbook["planning_week_id"] == "PW-2026-W13"
     assert workbook["weekdays"] == list(DRIVER_PREFERENCE_WEEKDAY_KEYS)
+    assert workbook["service_dates"] == [
+        {"service_date": "2026-03-22", "label": "2026-03-22", "weekday_label": "Sun"},
+        {"service_date": "2026-03-23", "label": "2026-03-23", "weekday_label": "Mon"},
+        {"service_date": "2026-03-24", "label": "2026-03-24", "weekday_label": "Tue"},
+        {"service_date": "2026-03-25", "label": "2026-03-25", "weekday_label": "Wed"},
+        {"service_date": "2026-03-26", "label": "2026-03-26", "weekday_label": "Thu"},
+        {"service_date": "2026-03-27", "label": "2026-03-27", "weekday_label": "Fri"},
+        {"service_date": "2026-03-28", "label": "2026-03-28", "weekday_label": "Sat"},
+    ]
+    assert workbook == repeated
     assert workbook["drivers"]
     first_driver = workbook["drivers"][0]
     assert set(first_driver["preferences_by_weekday"]) == set(DRIVER_PREFERENCE_WEEKDAY_KEYS)
-    assert all(value is None for value in first_driver["preferences_by_weekday"].values())
+    assert all(value is not None for value in first_driver["preferences_by_weekday"].values())
+    assert 4 <= sum(
+        1
+        for value in first_driver["preferences_by_weekday"].values()
+        if value == "open_to_work"
+    ) <= 6
 
 
 def test_driver_preferences_workbook_round_trips_projection_and_submit_values() -> None:
@@ -93,6 +110,7 @@ def test_driver_preferences_workbook_round_trips_projection_and_submit_values() 
     updated_by_id = {row["driver_id"]: row for row in updated_projection["drivers"]}
 
     assert updated_projection["weekdays"] == list(DRIVER_PREFERENCE_WEEKDAY_KEYS)
+    assert updated_projection["service_dates"] == initial["service_dates"]
     assert (
         updated_by_id[first_driver["driver_id"]]["preferences_by_weekday"]["mon"]
         == "open_to_work"
@@ -102,5 +120,6 @@ def test_driver_preferences_workbook_round_trips_projection_and_submit_values() 
         == "prefer_not_to_work"
     )
     assert (
-        updated_by_id[first_driver["driver_id"]]["preferences_by_weekday"]["sun"] is None
+        updated_by_id[first_driver["driver_id"]]["preferences_by_weekday"]["sun"]
+        == first_driver["preferences_by_weekday"]["sun"]
     )

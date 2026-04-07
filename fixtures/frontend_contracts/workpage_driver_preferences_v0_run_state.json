@@ -49,13 +49,13 @@
           "employment_type": "full_time",
           "on_call_eligible": true,
           "preferences_by_weekday": {
-            "fri": null,
-            "mon": null,
-            "sat": null,
-            "sun": null,
-            "thu": null,
-            "tue": null,
-            "wed": null
+            "fri": "open_to_work",
+            "mon": "open_to_work",
+            "sat": "definitely_can_not_work",
+            "sun": "open_to_work",
+            "thu": "open_to_work",
+            "tue": "open_to_work",
+            "wed": "open_to_work"
           }
         },
         {
@@ -64,13 +64,13 @@
           "employment_type": "full_time",
           "on_call_eligible": true,
           "preferences_by_weekday": {
-            "fri": null,
-            "mon": null,
-            "sat": null,
-            "sun": null,
-            "thu": null,
-            "tue": null,
-            "wed": null
+            "fri": "open_to_work",
+            "mon": "open_to_work",
+            "sat": "definitely_can_not_work",
+            "sun": "open_to_work",
+            "thu": "open_to_work",
+            "tue": "definitely_can_not_work",
+            "wed": "open_to_work"
           }
         },
         {
@@ -79,13 +79,13 @@
           "employment_type": "full_time",
           "on_call_eligible": true,
           "preferences_by_weekday": {
-            "fri": null,
-            "mon": null,
-            "sat": null,
-            "sun": null,
-            "thu": null,
-            "tue": null,
-            "wed": null
+            "fri": "open_to_work",
+            "mon": "open_to_work",
+            "sat": "open_to_work",
+            "sun": "prefer_not_to_work",
+            "thu": "open_to_work",
+            "tue": "open_to_work",
+            "wed": "open_to_work"
           }
         },
         {
@@ -94,13 +94,13 @@
           "employment_type": "part_time",
           "on_call_eligible": false,
           "preferences_by_weekday": {
-            "fri": null,
-            "mon": null,
-            "sat": null,
-            "sun": null,
-            "thu": null,
-            "tue": null,
-            "wed": null
+            "fri": "open_to_work",
+            "mon": "open_to_work",
+            "sat": "open_to_work",
+            "sun": "definitely_can_not_work",
+            "thu": "open_to_work",
+            "tue": "prefer_not_to_work",
+            "wed": "open_to_work"
           }
         },
         {
@@ -109,13 +109,13 @@
           "employment_type": "full_time",
           "on_call_eligible": true,
           "preferences_by_weekday": {
-            "fri": null,
-            "mon": null,
-            "sat": null,
-            "sun": null,
-            "thu": null,
-            "tue": null,
-            "wed": null
+            "fri": "definitely_can_not_work",
+            "mon": "open_to_work",
+            "sat": "prefer_not_to_work",
+            "sun": "open_to_work",
+            "thu": "open_to_work",
+            "tue": "open_to_work",
+            "wed": "open_to_work"
           }
         },
         {
@@ -124,13 +124,13 @@
           "employment_type": "full_time",
           "on_call_eligible": true,
           "preferences_by_weekday": {
-            "fri": null,
-            "mon": null,
-            "sat": null,
-            "sun": null,
-            "thu": null,
-            "tue": null,
-            "wed": null
+            "fri": "open_to_work",
+            "mon": "open_to_work",
+            "sat": "definitely_can_not_work",
+            "sun": "open_to_work",
+            "thu": "open_to_work",
+            "tue": "prefer_not_to_work",
+            "wed": "open_to_work"
           }
         },
         {
@@ -139,13 +139,13 @@
           "employment_type": "full_time",
           "on_call_eligible": true,
           "preferences_by_weekday": {
-            "fri": null,
-            "mon": null,
-            "sat": null,
-            "sun": null,
-            "thu": null,
-            "tue": null,
-            "wed": null
+            "fri": "open_to_work",
+            "mon": "open_to_work",
+            "sat": "prefer_not_to_work",
+            "sun": "open_to_work",
+            "thu": "open_to_work",
+            "tue": "open_to_work",
+            "wed": "open_to_work"
           }
         },
         {
@@ -154,13 +154,13 @@
           "employment_type": "full_time",
           "on_call_eligible": true,
           "preferences_by_weekday": {
-            "fri": null,
-            "mon": null,
-            "sat": null,
-            "sun": null,
-            "thu": null,
-            "tue": null,
-            "wed": null
+            "fri": "definitely_can_not_work",
+            "mon": "prefer_not_to_work",
+            "sat": "open_to_work",
+            "sun": "open_to_work",
+            "thu": "open_to_work",
+            "tue": "prefer_not_to_work",
+            "wed": "open_to_work"
           }
         },
         {
@@ -169,13 +169,13 @@
           "employment_type": "full_time",
           "on_call_eligible": true,
           "preferences_by_weekday": {
-            "fri": null,
-            "mon": null,
-            "sat": null,
-            "sun": null,
-            "thu": null,
-            "tue": null,
-            "wed": null
+            "fri": "definitely_can_not_work",
+            "mon": "prefer_not_to_work",
+            "sat": "open_to_work",
+            "sun": "open_to_work",
+            "thu": "open_to_work",
+            "tue": "open_to_work",
+            "wed": "prefer_not_to_work"
           }
         },
         {
@@ -184,13 +184,13 @@
           "employment_type": "part_time",
           "on_call_eligible": true,
           "preferences_by_weekday": {
-            "fri": null,
-            "mon": null,
-            "sat": null,
-            "sun": null,
-            "thu": null,
-            "tue": null,
-            "wed": null
+            "fri": "prefer_not_to_work",
+            "mon": "prefer_not_to_work",
+            "sat": "open_to_work",
+            "sun": "open_to_work",
+            "thu": "open_to_work",
+            "tue": "definitely_can_not_work",
+            "wed": "open_to_work"
           }
         },
         {
@@ -199,13 +199,13 @@
           "employment_type": "full_time",
           "on_call_eligible": true,
           "preferences_by_weekday": {
-            "fri": null,
-            "mon": null,
-            "sat": null,
-            "sun": null,
-            "thu": null,
-            "tue": null,
-            "wed": null
+            "fri": "open_to_work",
+            "mon": "open_to_work",
+            "sat": "definitely_can_not_work",
+            "sun": "open_to_work",
+            "thu": "open_to_work",
+            "tue": "open_to_work",
+            "wed": "open_to_work"
           }
         },
         {
@@ -214,13 +214,13 @@
           "employment_type": "part_time",
           "on_call_eligible": true,
           "preferences_by_weekday": {
-            "fri": null,
-            "mon": null,
-            "sat": null,
-            "sun": null,
-            "thu": null,
-            "tue": null,
-            "wed": null
+            "fri": "open_to_work",
+            "mon": "open_to_work",
+            "sat": "open_to_work",
+            "sun": "open_to_work",
+            "thu": "prefer_not_to_work",
+            "tue": "open_to_work",
+            "wed": "open_to_work"
           }
         },
         {
@@ -229,13 +229,13 @@
           "employment_type": "part_time",
           "on_call_eligible": false,
           "preferences_by_weekday": {
-            "fri": null,
-            "mon": null,
-            "sat": null,
-            "sun": null,
-            "thu": null,
-            "tue": null,
-            "wed": null
+            "fri": "open_to_work",
+            "mon": "prefer_not_to_work",
+            "sat": "open_to_work",
+            "sun": "open_to_work",
+            "thu": "open_to_work",
+            "tue": "open_to_work",
+            "wed": "open_to_work"
           }
         },
         {
@@ -244,13 +244,13 @@
           "employment_type": "full_time",
           "on_call_eligible": false,
           "preferences_by_weekday": {
-            "fri": null,
-            "mon": null,
-            "sat": null,
-            "sun": null,
-            "thu": null,
-            "tue": null,
-            "wed": null
+            "fri": "open_to_work",
+            "mon": "prefer_not_to_work",
+            "sat": "open_to_work",
+            "sun": "open_to_work",
+            "thu": "open_to_work",
+            "tue": "open_to_work",
+            "wed": "definitely_can_not_work"
           }
         },
         {
@@ -259,13 +259,13 @@
           "employment_type": "full_time",
           "on_call_eligible": true,
           "preferences_by_weekday": {
-            "fri": null,
-            "mon": null,
-            "sat": null,
-            "sun": null,
-            "thu": null,
-            "tue": null,
-            "wed": null
+            "fri": "open_to_work",
+            "mon": "open_to_work",
+            "sat": "open_to_work",
+            "sun": "open_to_work",
+            "thu": "definitely_can_not_work",
+            "tue": "open_to_work",
+            "wed": "open_to_work"
           }
         },
         {
@@ -274,13 +274,13 @@
           "employment_type": "part_time",
           "on_call_eligible": true,
           "preferences_by_weekday": {
-            "fri": null,
-            "mon": null,
-            "sat": null,
-            "sun": null,
-            "thu": null,
-            "tue": null,
-            "wed": null
+            "fri": "definitely_can_not_work",
+            "mon": "open_to_work",
+            "sat": "open_to_work",
+            "sun": "open_to_work",
+            "thu": "prefer_not_to_work",
+            "tue": "open_to_work",
+            "wed": "prefer_not_to_work"
           }
         },
         {
@@ -289,13 +289,13 @@
           "employment_type": "full_time",
           "on_call_eligible": true,
           "preferences_by_weekday": {
-            "fri": null,
-            "mon": null,
-            "sat": null,
-            "sun": null,
-            "thu": null,
-            "tue": null,
-            "wed": null
+            "fri": "open_to_work",
+            "mon": "open_to_work",
+            "sat": "definitely_can_not_work",
+            "sun": "open_to_work",
+            "thu": "prefer_not_to_work",
+            "tue": "open_to_work",
+            "wed": "open_to_work"
           }
         },
         {
@@ -304,13 +304,13 @@
           "employment_type": "part_time",
           "on_call_eligible": true,
           "preferences_by_weekday": {
-            "fri": null,
-            "mon": null,
-            "sat": null,
-            "sun": null,
-            "thu": null,
-            "tue": null,
-            "wed": null
+            "fri": "open_to_work",
+            "mon": "open_to_work",
+            "sat": "open_to_work",
+            "sun": "open_to_work",
+            "thu": "open_to_work",
+            "tue": "open_to_work",
+            "wed": "prefer_not_to_work"
           }
         },
         {
@@ -319,13 +319,13 @@
           "employment_type": "part_time",
           "on_call_eligible": false,
           "preferences_by_weekday": {
-            "fri": null,
-            "mon": null,
-            "sat": null,
-            "sun": null,
-            "thu": null,
-            "tue": null,
-            "wed": null
+            "fri": "definitely_can_not_work",
+            "mon": "open_to_work",
+            "sat": "prefer_not_to_work",
+            "sun": "open_to_work",
+            "thu": "open_to_work",
+            "tue": "open_to_work",
+            "wed": "open_to_work"
           }
         },
         {
@@ -334,13 +334,13 @@
           "employment_type": "full_time",
           "on_call_eligible": true,
           "preferences_by_weekday": {
-            "fri": null,
-            "mon": null,
-            "sat": null,
-            "sun": null,
-            "thu": null,
-            "tue": null,
-            "wed": null
+            "fri": "open_to_work",
+            "mon": "definitely_can_not_work",
+            "sat": "open_to_work",
+            "sun": "prefer_not_to_work",
+            "thu": "open_to_work",
+            "tue": "prefer_not_to_work",
+            "wed": "open_to_work"
           }
         },
         {
@@ -349,13 +349,13 @@
           "employment_type": "full_time",
           "on_call_eligible": true,
           "preferences_by_weekday": {
-            "fri": null,
-            "mon": null,
-            "sat": null,
-            "sun": null,
-            "thu": null,
-            "tue": null,
-            "wed": null
+            "fri": "open_to_work",
+            "mon": "open_to_work",
+            "sat": "open_to_work",
+            "sun": "prefer_not_to_work",
+            "thu": "open_to_work",
+            "tue": "open_to_work",
+            "wed": "open_to_work"
           }
         },
         {
@@ -364,13 +364,13 @@
           "employment_type": "full_time",
           "on_call_eligible": true,
           "preferences_by_weekday": {
-            "fri": null,
-            "mon": null,
-            "sat": null,
-            "sun": null,
-            "thu": null,
-            "tue": null,
-            "wed": null
+            "fri": "prefer_not_to_work",
+            "mon": "open_to_work",
+            "sat": "open_to_work",
+            "sun": "open_to_work",
+            "thu": "open_to_work",
+            "tue": "open_to_work",
+            "wed": "open_to_work"
           }
         },
         {
@@ -379,13 +379,13 @@
           "employment_type": "full_time",
           "on_call_eligible": true,
           "preferences_by_weekday": {
-            "fri": null,
-            "mon": null,
-            "sat": null,
-            "sun": null,
-            "thu": null,
-            "tue": null,
-            "wed": null
+            "fri": "open_to_work",
+            "mon": "prefer_not_to_work",
+            "sat": "open_to_work",
+            "sun": "definitely_can_not_work",
+            "thu": "open_to_work",
+            "tue": "open_to_work",
+            "wed": "prefer_not_to_work"
           }
         },
         {
@@ -394,13 +394,13 @@
           "employment_type": "part_time",
           "on_call_eligible": true,
           "preferences_by_weekday": {
-            "fri": null,
-            "mon": null,
-            "sat": null,
-            "sun": null,
-            "thu": null,
-            "tue": null,
-            "wed": null
+            "fri": "open_to_work",
+            "mon": "definitely_can_not_work",
+            "sat": "prefer_not_to_work",
+            "sun": "prefer_not_to_work",
+            "thu": "open_to_work",
+            "tue": "open_to_work",
+            "wed": "open_to_work"
           }
         },
         {
@@ -409,13 +409,13 @@
           "employment_type": "full_time",
           "on_call_eligible": true,
           "preferences_by_weekday": {
-            "fri": null,
-            "mon": null,
-            "sat": null,
-            "sun": null,
-            "thu": null,
-            "tue": null,
-            "wed": null
+            "fri": "prefer_not_to_work",
+            "mon": "open_to_work",
+            "sat": "definitely_can_not_work",
+            "sun": "open_to_work",
+            "thu": "open_to_work",
+            "tue": "open_to_work",
+            "wed": "open_to_work"
           }
         },
         {
@@ -424,13 +424,13 @@
           "employment_type": "part_time",
           "on_call_eligible": false,
           "preferences_by_weekday": {
-            "fri": null,
-            "mon": null,
-            "sat": null,
-            "sun": null,
-            "thu": null,
-            "tue": null,
-            "wed": null
+            "fri": "prefer_not_to_work",
+            "mon": "definitely_can_not_work",
+            "sat": "prefer_not_to_work",
+            "sun": "open_to_work",
+            "thu": "open_to_work",
+            "tue": "open_to_work",
+            "wed": "open_to_work"
           }
         },
         {
@@ -439,13 +439,13 @@
           "employment_type": "full_time",
           "on_call_eligible": true,
           "preferences_by_weekday": {
-            "fri": null,
-            "mon": null,
-            "sat": null,
-            "sun": null,
-            "thu": null,
-            "tue": null,
-            "wed": null
+            "fri": "open_to_work",
+            "mon": "open_to_work",
+            "sat": "prefer_not_to_work",
+            "sun": "open_to_work",
+            "thu": "definitely_can_not_work",
+            "tue": "open_to_work",
+            "wed": "open_to_work"
           }
         },
         {
@@ -454,13 +454,13 @@
           "employment_type": "full_time",
           "on_call_eligible": true,
           "preferences_by_weekday": {
-            "fri": null,
-            "mon": null,
-            "sat": null,
-            "sun": null,
-            "thu": null,
-            "tue": null,
-            "wed": null
+            "fri": "open_to_work",
+            "mon": "open_to_work",
+            "sat": "open_to_work",
+            "sun": "open_to_work",
+            "thu": "open_to_work",
+            "tue": "definitely_can_not_work",
+            "wed": "prefer_not_to_work"
           }
         },
         {
@@ -469,13 +469,13 @@
           "employment_type": "part_time",
           "on_call_eligible": false,
           "preferences_by_weekday": {
-            "fri": null,
-            "mon": null,
-            "sat": null,
-            "sun": null,
-            "thu": null,
-            "tue": null,
-            "wed": null
+            "fri": "open_to_work",
+            "mon": "prefer_not_to_work",
+            "sat": "open_to_work",
+            "sun": "open_to_work",
+            "thu": "open_to_work",
+            "tue": "open_to_work",
+            "wed": "open_to_work"
           }
         },
         {
@@ -484,13 +484,13 @@
           "employment_type": "full_time",
           "on_call_eligible": true,
           "preferences_by_weekday": {
-            "fri": null,
-            "mon": null,
-            "sat": null,
-            "sun": null,
-            "thu": null,
-            "tue": null,
-            "wed": null
+            "fri": "open_to_work",
+            "mon": "open_to_work",
+            "sat": "prefer_not_to_work",
+            "sun": "open_to_work",
+            "thu": "open_to_work",
+            "tue": "open_to_work",
+            "wed": "open_to_work"
           }
         },
         {
@@ -499,13 +499,13 @@
           "employment_type": "full_time",
           "on_call_eligible": true,
           "preferences_by_weekday": {
-            "fri": null,
-            "mon": null,
-            "sat": null,
-            "sun": null,
-            "thu": null,
-            "tue": null,
-            "wed": null
+            "fri": "prefer_not_to_work",
+            "mon": "open_to_work",
+            "sat": "open_to_work",
+            "sun": "prefer_not_to_work",
+            "thu": "definitely_can_not_work",
+            "tue": "open_to_work",
+            "wed": "open_to_work"
           }
         },
         {
@@ -514,13 +514,13 @@
           "employment_type": "full_time",
           "on_call_eligible": true,
           "preferences_by_weekday": {
-            "fri": null,
-            "mon": null,
-            "sat": null,
-            "sun": null,
-            "thu": null,
-            "tue": null,
-            "wed": null
+            "fri": "open_to_work",
+            "mon": "open_to_work",
+            "sat": "definitely_can_not_work",
+            "sun": "prefer_not_to_work",
+            "thu": "open_to_work",
+            "tue": "prefer_not_to_work",
+            "wed": "open_to_work"
           }
         },
         {
@@ -529,13 +529,13 @@
           "employment_type": "part_time",
           "on_call_eligible": false,
           "preferences_by_weekday": {
-            "fri": null,
-            "mon": null,
-            "sat": null,
-            "sun": null,
-            "thu": null,
-            "tue": null,
-            "wed": null
+            "fri": "open_to_work",
+            "mon": "prefer_not_to_work",
+            "sat": "open_to_work",
+            "sun": "open_to_work",
+            "thu": "open_to_work",
+            "tue": "open_to_work",
+            "wed": "open_to_work"
           }
         },
         {
@@ -544,13 +544,13 @@
           "employment_type": "full_time",
           "on_call_eligible": true,
           "preferences_by_weekday": {
-            "fri": null,
-            "mon": null,
-            "sat": null,
-            "sun": null,
-            "thu": null,
-            "tue": null,
-            "wed": null
+            "fri": "open_to_work",
+            "mon": "open_to_work",
+            "sat": "open_to_work",
+            "sun": "open_to_work",
+            "thu": "open_to_work",
+            "tue": "open_to_work",
+            "wed": "prefer_not_to_work"
           }
         },
         {
@@ -559,13 +559,13 @@
           "employment_type": "full_time",
           "on_call_eligible": true,
           "preferences_by_weekday": {
-            "fri": null,
-            "mon": null,
-            "sat": null,
-            "sun": null,
-            "thu": null,
-            "tue": null,
-            "wed": null
+            "fri": "prefer_not_to_work",
+            "mon": "open_to_work",
+            "sat": "definitely_can_not_work",
+            "sun": "open_to_work",
+            "thu": "open_to_work",
+            "tue": "open_to_work",
+            "wed": "open_to_work"
           }
         },
         {
@@ -574,13 +574,13 @@
           "employment_type": "full_time",
           "on_call_eligible": true,
           "preferences_by_weekday": {
-            "fri": null,
-            "mon": null,
-            "sat": null,
-            "sun": null,
-            "thu": null,
-            "tue": null,
-            "wed": null
+            "fri": "open_to_work",
+            "mon": "open_to_work",
+            "sat": "prefer_not_to_work",
+            "sun": "open_to_work",
+            "thu": "open_to_work",
+            "tue": "definitely_can_not_work",
+            "wed": "prefer_not_to_work"
           }
         },
         {
@@ -589,13 +589,13 @@
           "employment_type": "part_time",
           "on_call_eligible": true,
           "preferences_by_weekday": {
-            "fri": null,
-            "mon": null,
-            "sat": null,
-            "sun": null,
-            "thu": null,
-            "tue": null,
-            "wed": null
+            "fri": "open_to_work",
+            "mon": "open_to_work",
+            "sat": "definitely_can_not_work",
+            "sun": "open_to_work",
+            "thu": "open_to_work",
+            "tue": "prefer_not_to_work",
+            "wed": "prefer_not_to_work"
           }
         },
         {
@@ -604,13 +604,13 @@
           "employment_type": "full_time",
           "on_call_eligible": true,
           "preferences_by_weekday": {
-            "fri": null,
-            "mon": null,
-            "sat": null,
-            "sun": null,
-            "thu": null,
-            "tue": null,
-            "wed": null
+            "fri": "prefer_not_to_work",
+            "mon": "open_to_work",
+            "sat": "open_to_work",
+            "sun": "open_to_work",
+            "thu": "open_to_work",
+            "tue": "open_to_work",
+            "wed": "open_to_work"
           }
         },
         {
@@ -619,13 +619,13 @@
           "employment_type": "full_time",
           "on_call_eligible": true,
           "preferences_by_weekday": {
-            "fri": null,
-            "mon": null,
-            "sat": null,
-            "sun": null,
-            "thu": null,
-            "tue": null,
-            "wed": null
+            "fri": "open_to_work",
+            "mon": "prefer_not_to_work",
+            "sat": "open_to_work",
+            "sun": "open_to_work",
+            "thu": "definitely_can_not_work",
+            "tue": "open_to_work",
+            "wed": "open_to_work"
           }
         },
         {
@@ -634,13 +634,13 @@
           "employment_type": "full_time",
           "on_call_eligible": false,
           "preferences_by_weekday": {
-            "fri": null,
-            "mon": null,
-            "sat": null,
-            "sun": null,
-            "thu": null,
-            "tue": null,
-            "wed": null
+            "fri": "open_to_work",
+            "mon": "open_to_work",
+            "sat": "open_to_work",
+            "sun": "open_to_work",
+            "thu": "open_to_work",
+            "tue": "prefer_not_to_work",
+            "wed": "definitely_can_not_work"
           }
         },
         {
@@ -649,13 +649,13 @@
           "employment_type": "full_time",
           "on_call_eligible": true,
           "preferences_by_weekday": {
-            "fri": null,
-            "mon": null,
-            "sat": null,
-            "sun": null,
-            "thu": null,
-            "tue": null,
-            "wed": null
+            "fri": "open_to_work",
+            "mon": "prefer_not_to_work",
+            "sat": "open_to_work",
+            "sun": "open_to_work",
+            "thu": "open_to_work",
+            "tue": "open_to_work",
+            "wed": "open_to_work"
           }
         },
         {
@@ -664,13 +664,13 @@
           "employment_type": "full_time",
           "on_call_eligible": true,
           "preferences_by_weekday": {
-            "fri": null,
-            "mon": null,
-            "sat": null,
-            "sun": null,
-            "thu": null,
-            "tue": null,
-            "wed": null
+            "fri": "open_to_work",
+            "mon": "open_to_work",
+            "sat": "open_to_work",
+            "sun": "open_to_work",
+            "thu": "open_to_work",
+            "tue": "open_to_work",
+            "wed": "prefer_not_to_work"
           }
         },
         {
@@ -679,13 +679,13 @@
           "employment_type": "full_time",
           "on_call_eligible": true,
           "preferences_by_weekday": {
-            "fri": null,
-            "mon": null,
-            "sat": null,
-            "sun": null,
-            "thu": null,
-            "tue": null,
-            "wed": null
+            "fri": "prefer_not_to_work",
+            "mon": "open_to_work",
+            "sat": "definitely_can_not_work",
+            "sun": "open_to_work",
+            "thu": "open_to_work",
+            "tue": "open_to_work",
+            "wed": "prefer_not_to_work"
           }
         },
         {
@@ -694,13 +694,13 @@
           "employment_type": "full_time",
           "on_call_eligible": true,
           "preferences_by_weekday": {
-            "fri": null,
-            "mon": null,
-            "sat": null,
-            "sun": null,
-            "thu": null,
-            "tue": null,
-            "wed": null
+            "fri": "open_to_work",
+            "mon": "open_to_work",
+            "sat": "open_to_work",
+            "sun": "prefer_not_to_work",
+            "thu": "prefer_not_to_work",
+            "tue": "open_to_work",
+            "wed": "definitely_can_not_work"
           }
         },
         {
@@ -709,13 +709,13 @@
           "employment_type": "part_time",
           "on_call_eligible": true,
           "preferences_by_weekday": {
-            "fri": null,
-            "mon": null,
-            "sat": null,
-            "sun": null,
-            "thu": null,
-            "tue": null,
-            "wed": null
+            "fri": "prefer_not_to_work",
+            "mon": "definitely_can_not_work",
+            "sat": "open_to_work",
+            "sun": "open_to_work",
+            "thu": "open_to_work",
+            "tue": "open_to_work",
+            "wed": "prefer_not_to_work"
           }
         },
         {
@@ -724,13 +724,13 @@
           "employment_type": "part_time",
           "on_call_eligible": true,
           "preferences_by_weekday": {
-            "fri": null,
-            "mon": null,
-            "sat": null,
-            "sun": null,
-            "thu": null,
-            "tue": null,
-            "wed": null
+            "fri": "prefer_not_to_work",
+            "mon": "prefer_not_to_work",
+            "sat": "open_to_work",
+            "sun": "open_to_work",
+            "thu": "open_to_work",
+            "tue": "open_to_work",
+            "wed": "definitely_can_not_work"
           }
         },
         {
@@ -739,13 +739,13 @@
           "employment_type": "full_time",
           "on_call_eligible": true,
           "preferences_by_weekday": {
-            "fri": null,
-            "mon": null,
-            "sat": null,
-            "sun": null,
-            "thu": null,
-            "tue": null,
-            "wed": null
+            "fri": "open_to_work",
+            "mon": "open_to_work",
+            "sat": "open_to_work",
+            "sun": "prefer_not_to_work",
+            "thu": "open_to_work",
+            "tue": "open_to_work",
+            "wed": "open_to_work"
           }
         },
         {
@@ -754,13 +754,13 @@
           "employment_type": "part_time",
           "on_call_eligible": false,
           "preferences_by_weekday": {
-            "fri": null,
-            "mon": null,
-            "sat": null,
-            "sun": null,
-            "thu": null,
-            "tue": null,
-            "wed": null
+            "fri": "open_to_work",
+            "mon": "definitely_can_not_work",
+            "sat": "open_to_work",
+            "sun": "open_to_work",
+            "thu": "prefer_not_to_work",
+            "tue": "open_to_work",
+            "wed": "open_to_work"
           }
         },
         {
@@ -769,13 +769,13 @@
           "employment_type": "full_time",
           "on_call_eligible": true,
           "preferences_by_weekday": {
-            "fri": null,
-            "mon": null,
-            "sat": null,
-            "sun": null,
-            "thu": null,
-            "tue": null,
-            "wed": null
+            "fri": "prefer_not_to_work",
+            "mon": "open_to_work",
+            "sat": "open_to_work",
+            "sun": "open_to_work",
+            "thu": "definitely_can_not_work",
+            "tue": "prefer_not_to_work",
+            "wed": "open_to_work"
           }
         },
         {
@@ -784,13 +784,13 @@
           "employment_type": "full_time",
           "on_call_eligible": true,
           "preferences_by_weekday": {
-            "fri": null,
-            "mon": null,
-            "sat": null,
-            "sun": null,
-            "thu": null,
-            "tue": null,
-            "wed": null
+            "fri": "definitely_can_not_work",
+            "mon": "open_to_work",
+            "sat": "prefer_not_to_work",
+            "sun": "open_to_work",
+            "thu": "open_to_work",
+            "tue": "open_to_work",
+            "wed": "prefer_not_to_work"
           }
         },
         {
@@ -799,14 +799,51 @@
           "employment_type": "full_time",
           "on_call_eligible": false,
           "preferences_by_weekday": {
-            "fri": null,
-            "mon": null,
-            "sat": null,
-            "sun": null,
-            "thu": null,
-            "tue": null,
-            "wed": null
+            "fri": "open_to_work",
+            "mon": "prefer_not_to_work",
+            "sat": "open_to_work",
+            "sun": "open_to_work",
+            "thu": "definitely_can_not_work",
+            "tue": "open_to_work",
+            "wed": "open_to_work"
           }
+        }
+      ],
+      "service_dates": [
+        {
+          "label": "2026-03-22",
+          "service_date": "2026-03-22",
+          "weekday_label": "Sun"
+        },
+        {
+          "label": "2026-03-23",
+          "service_date": "2026-03-23",
+          "weekday_label": "Mon"
+        },
+        {
+          "label": "2026-03-24",
+          "service_date": "2026-03-24",
+          "weekday_label": "Tue"
+        },
+        {
+          "label": "2026-03-25",
+          "service_date": "2026-03-25",
+          "weekday_label": "Wed"
+        },
+        {
+          "label": "2026-03-26",
+          "service_date": "2026-03-26",
+          "weekday_label": "Thu"
+        },
+        {
+          "label": "2026-03-27",
+          "service_date": "2026-03-27",
+          "weekday_label": "Fri"
+        },
+        {
+          "label": "2026-03-28",
+          "service_date": "2026-03-28",
+          "weekday_label": "Sat"
         }
       ],
       "weekdays": [
@@ -871,12 +908,12 @@
             {
               "key": "explicit_preference_count",
               "label": "Recorded preferences",
-              "value": 0
+              "value": 357
             },
             {
               "key": "unset_preference_count",
               "label": "Unset cells",
-              "value": 357
+              "value": 0
             }
           ],
           "kind": "summary_cards",
@@ -910,10 +947,10 @@
       "source_examples": {},
       "summary": {
         "driver_count": 51,
-        "explicit_preference_count": 0,
+        "explicit_preference_count": 357,
         "on_call_eligible_count": 41,
         "planning_week_id": "PW-2026-W13",
-        "unset_preference_count": 357
+        "unset_preference_count": 0
       },
       "title": "Weekly driver preferences",
       "validation": {

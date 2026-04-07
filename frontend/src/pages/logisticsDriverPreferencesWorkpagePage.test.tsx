@@ -24,6 +24,10 @@ describe("LogisticsDriverPreferencesWorkpagePage", () => {
     render(<App />);
 
     const page = await screen.findByTestId("driver-preferences-workpage-page");
+    expect(within(page).getByRole("heading", { name: "Preference grid" })).toBeInTheDocument();
+    expect(
+      within(page).getByRole("button", { name: /Abhiraj Singh on 2026-03-23:/i })
+    ).toHaveAttribute("aria-disabled", "true");
     expect(within(page).getByRole("heading", { name: "Snapshot lifecycle" })).toBeInTheDocument();
     expect(
       within(page).getByRole("button", { name: "Create preferences snapshot" })
@@ -55,11 +59,26 @@ describe("LogisticsDriverPreferencesWorkpagePage", () => {
     const page = await screen.findByTestId("driver-preferences-artifact-workpage-page");
     expect(within(page).getByRole("button", { name: "Save snapshot" })).toBeDisabled();
     expect(within(page).getByTestId("driver-preferences-history-rail")).toBeInTheDocument();
+    const mondayCell = within(page).getByRole("button", {
+      name: /Abhiraj Singh on 2026-03-23:/i
+    });
+    expect(mondayCell).toHaveAttribute("aria-disabled", "false");
 
-    await user.selectOptions(
-      within(page).getByLabelText(/Abhiraj Singh mon/i),
-      "open_to_work"
-    );
+    const initialAriaLabel = mondayCell.getAttribute("aria-label") ?? "";
+    const initialState = initialAriaLabel.split(": ").at(-1) ?? "";
+    const nextStateLabel: Record<string, string> = {
+      "Open to work": "Prefer not to work",
+      "Prefer not to work": "Definitely cannot work",
+      "Definitely cannot work": "Unset",
+      Unset: "Open to work"
+    };
+    await user.click(mondayCell);
+    await waitFor(() => {
+      expect(mondayCell).toHaveAttribute(
+        "aria-label",
+        expect.stringContaining(nextStateLabel[initialState] ?? "Open to work")
+      );
+    });
     expect(within(page).getByRole("button", { name: "Save snapshot" })).toBeEnabled();
 
     await user.click(within(page).getByRole("button", { name: "Save snapshot" }));

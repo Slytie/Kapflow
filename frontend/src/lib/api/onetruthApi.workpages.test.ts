@@ -163,6 +163,8 @@ describe("onetruthApi workpage parsing", () => {
       "fri",
       "sat"
     ]);
+    expect(contract.preference_grid?.service_dates).toHaveLength(7);
+    expect(contract.preference_grid?.drivers[0]?.preferences_by_weekday.sun).not.toBeNull();
     expect(contract.schedule_impact).toMatchObject({
       schedule_state: "no_snapshot"
     });
@@ -186,6 +188,7 @@ describe("onetruthApi workpage parsing", () => {
     expect(contract.artifact_context?.artifact_kind).toBe(
       "planning.driver_shift_preferences.workbook"
     );
+    expect(contract.preference_grid?.service_dates).toHaveLength(7);
     expect(contract.preference_grid?.drivers.length).toBeGreaterThan(0);
     expect(contract.actions.map((action) => action.kind)).toEqual(["save"]);
   });
