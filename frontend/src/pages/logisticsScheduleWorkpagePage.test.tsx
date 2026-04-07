@@ -47,12 +47,30 @@ describe("LogisticsScheduleWorkpagePage", () => {
       expect(within(page).getByRole("heading", { name: "Selected day" })).toBeInTheDocument();
       expect(within(page).getByRole("heading", { name: "Dependency status" })).toBeInTheDocument();
       expect(within(page).getByRole("heading", { name: "Checks" })).toBeInTheDocument();
+      expect(within(page).getByRole("heading", { name: "Planned schedule heatmap" })).toBeInTheDocument();
       expect(within(page).getByRole("heading", { name: "Driver metrics" })).toBeInTheDocument();
       expect(within(page).getByRole("heading", { name: "Accepted history" })).toBeInTheDocument();
       expect(within(page).getByRole("heading", { name: "Draft lineage" })).toBeInTheDocument();
       expect(screen.queryByText("Scenario sick calls")).not.toBeInTheDocument();
       expect(screen.queryByRole("textbox", { name: /Planner note/i })).not.toBeInTheDocument();
       expect(screen.queryByRole("spinbutton", { name: /Scenario added routes/i })).not.toBeInTheDocument();
+      const dependencySection = within(page)
+        .getByRole("heading", { name: "Dependency status" })
+        .closest("section");
+      expect(dependencySection).not.toBeNull();
+      expect(within(dependencySection as HTMLElement).getByText("Route Slot Requirements")).toBeInTheDocument();
+      expect(
+        within(dependencySection as HTMLElement).queryByText("planning.route_slot_requirements.workbook")
+      ).not.toBeInTheDocument();
+      const checksSection = within(page).getByRole("heading", { name: "Checks" }).closest("section");
+      expect(checksSection).not.toBeNull();
+      expect(
+        within(checksSection as HTMLElement).getByText("Routes within scheduled capacity")
+      ).toBeInTheDocument();
+      expect(within(checksSection as HTMLElement).getAllByText("Blocking").length).toBeGreaterThan(0);
+      expect(within(checksSection as HTMLElement).queryByText(/^pass$/i)).not.toBeInTheDocument();
+      expect(within(checksSection as HTMLElement).queryByText(/^warn$/i)).not.toBeInTheDocument();
+      expect(within(checksSection as HTMLElement).queryByText(/^fail$/i)).not.toBeInTheDocument();
 
       expect(within(page).queryByText(/repo-native workflow example bundles/i)).not.toBeInTheDocument();
       await user.click(screen.getByRole("button", { name: "Open secondary detail routes" }));

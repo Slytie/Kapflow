@@ -13,9 +13,12 @@ from onetruth.application.handlers._shared.command_boundary import CommandError
 from onetruth.application.services.schedule_control import (
     WeeklyScheduleControlBundle,
     build_weekly_schedule_control_bundle,
+    run_weekly_stage04_deterministic_build,
 )
 from onetruth.application.services.schedule_control.draft_workbook import (
     SCHEDULE_DRAFT_DATASET_KEY,
+    draft_workbook_bytes_from_metadata_json,
+    project_stage04_draft_weekly_schedule_workbook,
 )
 from onetruth.application.services.schedule_control.driver_preferences_workbook import (
     DRIVER_PREFERENCES_DATASET_KEY,
@@ -68,6 +71,7 @@ from onetruth.application.services.workpage_descriptors import (
     get_workpage_descriptor,
 )
 from onetruth.infrastructure.events.event_store import utc_now_iso
+from onetruth.infrastructure.artifacts.storage import read_blob
 from onetruth.infrastructure.repositories.artifact_versions import (
     get_artifact_version,
     get_latest_artifact_version_in_chain,
@@ -362,6 +366,7 @@ def build_schedule_workflow_run_workpage_contract(
     contract = {
         **_build_schedule_workpage_contract(
             bundle=bundle,
+            latest_schedule_draft=latest_schedule_draft_artifact(artifacts),
             source_examples={},
             source_mode="run_projection",
             source_refs=source_refs,
@@ -381,6 +386,12 @@ def build_schedule_workflow_run_workpage_contract(
     driver_preferences_projection = _driver_preferences_projection_from_artifact(
         latest_driver_preferences
     )
+    schedule_projection = _schedule_run_projection(
+        bundle=bundle,
+        latest_schedule_draft=latest_schedule_draft,
+    )
+    assignment_rows = _projection_rows(schedule_projection, "rows")
+    reserve_rows = _projection_rows(schedule_projection, "reserve_rows")
     contract.update(
         {
             "artifact_state": _schedule_run_artifact_state(
@@ -394,8 +405,8 @@ def build_schedule_workflow_run_workpage_contract(
             ),
             "calculations": build_schedule_calculations(
                 bundle=bundle,
-                assignment_rows=[],
-                reserve_rows=[],
+                assignment_rows=assignment_rows,
+                reserve_rows=reserve_rows,
                 driver_preferences_projection=driver_preferences_projection,
             ),
             "artifact_history": None,
@@ -567,6 +578,7 @@ def build_driver_preferences_workflow_run_workpage_contract(
 def _build_schedule_workpage_contract(
     *,
     bundle: WeeklyScheduleControlBundle,
+    latest_schedule_draft: Mapping[str, Any] | None,
     source_examples: Mapping[str, str],
     source_mode: str,
     source_refs: list[str],
@@ -574,9 +586,18 @@ def _build_schedule_workpage_contract(
     freshness_source_version: str,
     validation_warnings: list[str],
 ) -> dict[str, Any]:
+    source_version = freshness_source_version
+    if latest_schedule_draft is not None:
+        latest_artifact_version_id = _require_text_or_default(
+            latest_schedule_draft.get("artifact_version_id"),
+            default="",
+        )
+        if latest_artifact_version_id:
+            source_version = latest_artifact_version_id
     return {
         "workpage": _build_schedule_workpage_view_model(
             bundle=bundle,
+            latest_schedule_draft=latest_schedule_draft,
             source_examples=source_examples,
             validation_warnings=validation_warnings,
         ),
@@ -590,7 +611,7 @@ def _build_schedule_workpage_contract(
         "freshness": {
             "generated_at": utc_now_iso(),
             "source_kind": freshness_source_kind,
-            "source_version": freshness_source_version,
+            "source_version": source_version,
         },
     }
 
@@ -1373,10 +1394,17 @@ def _schedule_artifact_source_dataset_keys(*, artifact_kind: str) -> list[str]:
 def _build_schedule_workpage_view_model(
     *,
     bundle: WeeklyScheduleControlBundle,
+    latest_schedule_draft: Mapping[str, Any] | None,
     source_examples: Mapping[str, str],
     validation_warnings: list[str],
 ) -> dict[str, Any]:
     primary_demand = _sorted_daily_demand(bundle)[0]
+    schedule_projection = _schedule_run_projection(
+        bundle=bundle,
+        latest_schedule_draft=latest_schedule_draft,
+    )
+    assignment_rows = _projection_rows(schedule_projection, "rows")
+    reserve_rows = _projection_rows(schedule_projection, "reserve_rows")
     return {
         "workpage_id": SCHEDULE_WORKPAGE_KIND,
         "version": 2,
@@ -1479,6 +1507,15 @@ def _build_schedule_workpage_view_model(
                 "rows": _driver_roster_rows(bundle),
             },
             {
+                "kind": "schedule_heatmap",
+                "title": "Planned schedule heatmap",
+                **_schedule_heatmap_payload(
+                    bundle=bundle,
+                    assignment_rows=assignment_rows,
+                    reserve_rows=reserve_rows,
+                ),
+            },
+            {
                 "kind": "note_panel",
                 "title": "Boundary note",
                 "body": (
@@ -1531,6 +1568,59 @@ def _build_schedule_workpage_view_model(
                 ],
             },
             {
+                "kind": "table",
+                "title": "Route assignments",
+                "table_id": "assignment_rows",
+                "columns": _schedule_table_columns(
+                    assignment_rows,
+                    preferred_order=[
+                        "service_date",
+                        "route_slot_id",
+                        "assigned_driver_id",
+                        "assignment_status",
+                        "projected_minutes",
+                        "baseline_template_state",
+                        "planned_driver_day_state",
+                        "new_agreement_required",
+                        "new_agreement_trigger_reason",
+                        "template_state_preservation_fit",
+                        "candidate_delta_id",
+                        "source_bundle_id",
+                        "iteration_index",
+                        "delta_kind",
+                        "previous_week_stability",
+                    ],
+                ),
+                "rows": _schedule_scalar_rows(assignment_rows),
+            },
+            {
+                "kind": "table",
+                "title": "Reserve posture",
+                "table_id": "reserve_rows",
+                "columns": _schedule_table_columns(
+                    reserve_rows,
+                    preferred_order=[
+                        "service_date",
+                        "route_slot_id",
+                        "route_id",
+                        "assigned_driver_id",
+                        "assignment_status",
+                        "phase",
+                        "projected_minutes",
+                        "availability_state",
+                        "baseline_template_state",
+                        "planned_driver_day_state",
+                        "new_agreement_required",
+                        "new_agreement_trigger_reason",
+                        "template_state_preservation_fit",
+                        "iteration_index",
+                        "rationale_code",
+                        "assignment_action",
+                    ],
+                ),
+                "rows": _schedule_scalar_rows(reserve_rows),
+            },
+            {
                 "kind": "history_stub",
                 "title": "History",
                 "entries": [
@@ -1562,6 +1652,30 @@ def _workflow_run_context(workflow_run: Mapping[str, Any]) -> dict[str, Any]:
         "activation_key": _require_text(workflow_run.get("activation_key")),
         "state": _require_text(workflow_run.get("state")),
     }
+
+
+def _schedule_run_projection(
+    *,
+    bundle: WeeklyScheduleControlBundle,
+    latest_schedule_draft: Mapping[str, Any] | None,
+) -> dict[str, Any]:
+    if latest_schedule_draft is not None:
+        return project_stage04_draft_weekly_schedule_workbook(
+            _schedule_draft_workbook_bytes_from_artifact(latest_schedule_draft)
+        )
+    deterministic_build = run_weekly_stage04_deterministic_build(bundle=bundle)
+    return project_stage04_draft_weekly_schedule_workbook(
+        draft_workbook_bytes_from_metadata_json(deterministic_build.draft_workbook_payload)
+    )
+
+
+def _schedule_draft_workbook_bytes_from_artifact(
+    artifact: Mapping[str, Any],
+) -> bytes:
+    storage_uri = str(artifact.get("storage_uri") or "")
+    if storage_uri.startswith("file:"):
+        return read_blob(storage_uri)
+    return draft_workbook_bytes_from_metadata_json(artifact.get("metadata_json"))
 
 
 def _schedule_runtime_source_refs(
@@ -2239,8 +2353,17 @@ def _route_demand_projection_from_artifact(
     artifact: Mapping[str, Any],
 ) -> dict[str, Any]:
     return project_route_demand_workbook(
-        route_demand_workbook_bytes_from_metadata_json(artifact.get("metadata_json"))
+        _route_demand_workbook_bytes_from_artifact(artifact)
     )
+
+
+def _route_demand_workbook_bytes_from_artifact(
+    artifact: Mapping[str, Any],
+) -> bytes:
+    storage_uri = str(artifact.get("storage_uri") or "")
+    if storage_uri.startswith("file:"):
+        return read_blob(storage_uri)
+    return route_demand_workbook_bytes_from_metadata_json(artifact.get("metadata_json"))
 
 
 def _build_route_demand_workpage_view_model(

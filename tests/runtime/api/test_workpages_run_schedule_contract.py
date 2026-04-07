@@ -6,7 +6,10 @@ from pathlib import Path
 
 from tests.runtime.helpers.runtime_api import RuntimeApiClient
 from tests.runtime.helpers.runtime_cli import run_cli, stdout_json
-from tests.runtime.helpers.workpage_runs import seed_actual_ops_weekly_schedule_run
+from tests.runtime.helpers.workpage_runs import (
+    seed_actual_ops_weekly_schedule_run,
+    seed_actual_ops_weekly_schedule_run_with_stage04_outputs,
+)
 
 
 EXPECTED_SOURCE_DATASET_KEYS = [
@@ -49,6 +52,17 @@ def _action_by_id(
     action_id: str,
 ) -> dict[str, object]:
     return next(action for action in actions if action["action_id"] == action_id)
+
+
+def _table_section_by_id(
+    sections: list[dict[str, object]],
+    table_id: str,
+) -> dict[str, object]:
+    return next(
+        section
+        for section in sections
+        if section.get("kind") == "table" and section.get("table_id") == table_id
+    )
 
 
 def test_schedule_workflow_run_workpage_contract_returns_run_backed_projection(
@@ -114,16 +128,26 @@ def test_schedule_workflow_run_workpage_contract_returns_run_backed_projection(
         "day_demand",
         "selected_day_preview",
         "driver_roster",
+        "assignment_rows",
+        "reserve_rows",
     ]
     assert [section["kind"] for section in sections] == [
         "summary_cards",
         "table",
         "table",
         "table",
+        "schedule_heatmap",
         "note_panel",
         "form",
+        "table",
+        "table",
         "history_stub",
     ]
+    heatmap_section = next(section for section in sections if section["kind"] == "schedule_heatmap")
+    assert heatmap_section["service_dates"]
+    assert heatmap_section["people"]
+    assert _table_section_by_id(sections, "assignment_rows")["rows"]
+    assert _table_section_by_id(sections, "reserve_rows")["rows"]
 
     summary = workpage["summary"]
     assert summary["planning_week_id"] == "PW-2026-W13"
@@ -195,6 +219,11 @@ def test_schedule_workflow_run_workpage_contract_returns_run_backed_projection(
     assert calculations["top_bar"]["days"]
     assert calculations["selected_day"]["service_date"] == "2026-03-24"
     assert calculations["driver_metrics"]
+    assert any((day.get("routes_scheduled") or 0) > 0 for day in calculations["top_bar"]["days"])
+    assert any(
+        (metric.get("scheduled_routes") or 0) > 0 or (metric.get("on_call_shifts") or 0) > 0
+        for metric in calculations["driver_metrics"]
+    )
     assert all(
         metric["preference_state"] == "unset" for metric in calculations["driver_metrics"]
     )
@@ -223,7 +252,8 @@ def test_schedule_workflow_run_workpage_contract_returns_run_backed_projection(
         "entries": [],
     }
     actions = payload["actions"]
-    assert _action_by_id(actions, "workpage.schedule-v0.open_latest_draft") == {
+    open_latest_draft = _action_by_id(actions, "workpage.schedule-v0.open_latest_draft")
+    assert open_latest_draft == {
         "action_id": "workpage.schedule-v0.open_latest_draft",
         "kind": "open_latest_draft",
         "label": "Open schedule draft",
@@ -231,8 +261,16 @@ def test_schedule_workflow_run_workpage_contract_returns_run_backed_projection(
         "workpage_kind": "schedule-v0",
         "artifact_version_id": None,
         "route": None,
+        "action_ref": {
+            "action_id": "workpage.schedule-v0.open_latest_draft",
+            "workpage_kind": "schedule-v0",
+            "workflow_run_id": workflow_run_id,
+            "artifact_version_id": None,
+            "subject": None,
+        },
     }
-    assert _action_by_id(actions, "workpage.route-demand-v0.open_latest") == {
+    open_route_demand = _action_by_id(actions, "workpage.route-demand-v0.open_latest")
+    assert open_route_demand == {
         "action_id": "workpage.route-demand-v0.open_latest",
         "kind": "open_latest",
         "label": "Open route demand",
@@ -243,8 +281,16 @@ def test_schedule_workflow_run_workpage_contract_returns_run_backed_projection(
             f"/runs/{workflow_run_id}/workpages/route-demand-v0/artifacts/"
             f"{seed['artifacts_by_kind']['planning.route_slot_requirements.workbook']['artifact_version_id']}"
         ),
+        "action_ref": {
+            "action_id": "workpage.route-demand-v0.open_latest",
+            "workpage_kind": "route-demand-v0",
+            "workflow_run_id": workflow_run_id,
+            "artifact_version_id": seed["artifacts_by_kind"]["planning.route_slot_requirements.workbook"]["artifact_version_id"],
+            "subject": None,
+        },
     }
-    assert _action_by_id(actions, "workpage.driver-preferences-v0.create_snapshot") == {
+    create_snapshot = _action_by_id(actions, "workpage.driver-preferences-v0.create_snapshot")
+    assert create_snapshot == {
         "action_id": "workpage.driver-preferences-v0.create_snapshot",
         "kind": "create_snapshot",
         "label": "Create preferences snapshot",
@@ -256,7 +302,58 @@ def test_schedule_workflow_run_workpage_contract_returns_run_backed_projection(
             f"/api/v1/workpages/workflow-runs/{workflow_run_id}/"
             "driver-preferences-v0/snapshots"
         ),
+        "action_ref": {
+            "action_id": "workpage.driver-preferences-v0.create_snapshot",
+            "workpage_kind": "driver-preferences-v0",
+            "workflow_run_id": workflow_run_id,
+            "artifact_version_id": None,
+            "subject": None,
+        },
     }
+
+
+def test_schedule_workflow_run_workpage_prefers_latest_draft_rows_when_present(
+    tmp_path: Path,
+) -> None:
+    seeded = seed_actual_ops_weekly_schedule_run_with_stage04_outputs(
+        db_url=_db_url(tmp_path),
+        tenant_id="tenant-a",
+        domain_id="domain-x",
+        run_tag="api:workpages:run-schedule:latest-draft",
+    )
+    workflow_run_id = str(seeded["workflow_run_id"])
+    latest_draft_artifact_id = str(
+        seeded["stage04_outputs"]["draft_workbook"]["artifact_version_id"]
+    )
+    client = _client(tmp_path)
+
+    response = client.get(f"/api/v1/workpages/workflow-runs/{workflow_run_id}/schedule-v0")
+    assert response.status_code == 200, response.payload
+
+    payload = response.payload
+    assert payload["freshness"]["source_version"] == latest_draft_artifact_id
+    assert payload["artifact_state"]["latest_artifact_version_id"] == latest_draft_artifact_id
+    assert _action_by_id(payload["actions"], "workpage.schedule-v0.open_latest_draft") == {
+        "action_id": "workpage.schedule-v0.open_latest_draft",
+        "kind": "open_latest_draft",
+        "label": "Open schedule draft",
+        "state": "available",
+        "workpage_kind": "schedule-v0",
+        "artifact_version_id": latest_draft_artifact_id,
+        "route": f"/runs/{workflow_run_id}/workpages/schedule-v0/artifacts/{latest_draft_artifact_id}",
+        "action_ref": {
+            "action_id": "workpage.schedule-v0.open_latest_draft",
+            "workpage_kind": "schedule-v0",
+            "workflow_run_id": workflow_run_id,
+            "artifact_version_id": latest_draft_artifact_id,
+            "subject": None,
+        },
+    }
+
+    sections = payload["workpage"]["sections"]
+    assert _table_section_by_id(sections, "assignment_rows")["rows"]
+    assert _table_section_by_id(sections, "reserve_rows")["rows"]
+    assert next(section for section in sections if section["kind"] == "schedule_heatmap")["people"]
 
 
 def test_schedule_workflow_run_workpage_reads_are_stable_except_for_generated_at(

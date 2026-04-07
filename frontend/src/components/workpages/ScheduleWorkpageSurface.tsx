@@ -82,6 +82,10 @@ function formatPreferenceLabel(state: string): string {
     .join(" ");
 }
 
+function statusChipTitle(label: string, state: string): string {
+  return `${label}: ${formatPreferenceLabel(state)}`;
+}
+
 function ScheduleVersionRail({
   rail
 }: {
@@ -324,12 +328,18 @@ export function ScheduleWorkpageSurface({
               <ul className="schedule-dependencies__list">
                 {dependencies.map((dependency) => (
                   <li key={dependency.dependency_key} className="schedule-dependencies__item">
-                    <div>
-                      <strong>{formatDependencyLabel(dependency.dependency_key)}</strong>
-                      <p>{dependency.artifact_kind}</p>
-                    </div>
-                    <span className={`schedule-pill schedule-pill--${pillToneForDependency(dependency.state)}`}>
-                      {dependency.state}
+                    <span
+                      className={`schedule-pill schedule-pill--label schedule-pill--${pillToneForDependency(dependency.state)}`}
+                      aria-label={statusChipTitle(
+                        formatDependencyLabel(dependency.dependency_key),
+                        dependency.state
+                      )}
+                      title={statusChipTitle(
+                        formatDependencyLabel(dependency.dependency_key),
+                        dependency.state
+                      )}
+                    >
+                      {formatDependencyLabel(dependency.dependency_key)}
                     </span>
                   </li>
                 ))}
@@ -348,13 +358,14 @@ export function ScheduleWorkpageSurface({
               <ul className="schedule-checks__list">
                 {calculations?.checks.map((check) => (
                   <li key={check.check_id} className="schedule-checks__item">
-                    <div>
-                      <strong>{check.label}</strong>
-                      <p>{check.blocking ? "Blocking" : "Advisory"}</p>
-                    </div>
-                    <span className={`schedule-pill schedule-pill--${pillToneForDriverState(check.state)}`}>
-                      {check.state}
+                    <span
+                      className={`schedule-pill schedule-pill--label schedule-pill--${pillToneForDriverState(check.state)}`}
+                      aria-label={statusChipTitle(check.label, check.state)}
+                      title={statusChipTitle(check.label, check.state)}
+                    >
+                      {check.label}
                     </span>
+                    <span className="schedule-status-meta">{check.blocking ? "Blocking" : "Advisory"}</span>
                   </li>
                 ))}
               </ul>

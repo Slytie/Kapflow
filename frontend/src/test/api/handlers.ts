@@ -1142,9 +1142,9 @@ function patchRunSchedulePayloadContractState(
     driverPreferencesDependency.state = latestDriverPreferencesVersion ? "resolved" : "not_available";
   }
 
-  updateScheduleCalculations(
+  applyScheduleArtifactEdits(
     payload,
-    scheduleWorkbookPayloadFromPayload(payload),
+    latestVersion?.workbookPayload ?? scheduleWorkbookPayloadFromPayload(payload),
     latestDriverPreferencesVersion?.preferenceGrid ?? null
   );
 }

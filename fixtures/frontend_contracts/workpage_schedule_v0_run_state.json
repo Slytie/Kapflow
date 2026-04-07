@@ -1202,6 +1202,102 @@
           "title": "Driver roster excerpt"
         },
         {
+          "kind": "schedule_heatmap",
+          "people": [
+            {
+              "availability_summary": "preferred 4 days; available 1 day; cannot 2 days",
+              "cells": [],
+              "driver_id": "A2TU4ZRI65E1H8",
+              "driver_name": "Abhiraj Singh",
+              "employment_type": "full_time",
+              "on_call_eligible": true,
+              "previous_week_minutes": 2220
+            },
+            {
+              "availability_summary": "preferred 3 days; on-call-only 1 day; avoid-if-possible 1 day; cannot 2 days",
+              "cells": [],
+              "driver_id": "A3M38Z4NGI9OR3",
+              "driver_name": "Akash",
+              "employment_type": "full_time",
+              "on_call_eligible": true,
+              "previous_week_minutes": 1710
+            },
+            {
+              "availability_summary": "preferred 4 days; available 1 day; on-call-only 1 day; avoid-if-possible 1 day",
+              "cells": [],
+              "driver_id": "A185MOPEG4MOST",
+              "driver_name": "Jaspreet Singh",
+              "employment_type": "full_time",
+              "on_call_eligible": true,
+              "previous_week_minutes": 2280
+            },
+            {
+              "availability_summary": "available 4 days; on-call-only 2 days; cannot 1 day",
+              "cells": [],
+              "driver_id": "A3OYGBYE20UA2R",
+              "driver_name": "Gurkaran Singh",
+              "employment_type": "part_time",
+              "on_call_eligible": true,
+              "previous_week_minutes": 540
+            },
+            {
+              "availability_summary": "available 5 days; avoid-if-possible 2 days",
+              "cells": [],
+              "driver_id": "A4KU9LEU82OTF",
+              "driver_name": "Harpreet Singh",
+              "employment_type": "part_time",
+              "on_call_eligible": true,
+              "previous_week_minutes": 360
+            }
+          ],
+          "service_dates": [
+            {
+              "is_selected_day": false,
+              "label": "2026-03-22",
+              "service_date": "2026-03-22",
+              "weekday_label": "Sun"
+            },
+            {
+              "is_selected_day": false,
+              "label": "2026-03-23",
+              "service_date": "2026-03-23",
+              "weekday_label": "Mon"
+            },
+            {
+              "is_selected_day": true,
+              "label": "2026-03-24",
+              "service_date": "2026-03-24",
+              "weekday_label": "Tue"
+            },
+            {
+              "is_selected_day": false,
+              "label": "2026-03-25",
+              "service_date": "2026-03-25",
+              "weekday_label": "Wed"
+            },
+            {
+              "is_selected_day": false,
+              "label": "2026-03-26",
+              "service_date": "2026-03-26",
+              "weekday_label": "Thu"
+            },
+            {
+              "is_selected_day": false,
+              "label": "2026-03-27",
+              "service_date": "2026-03-27",
+              "weekday_label": "Fri"
+            },
+            {
+              "is_selected_day": false,
+              "label": "2026-03-28",
+              "service_date": "2026-03-28",
+              "weekday_label": "Sat"
+            }
+          ],
+          "subtitle": "Server-authoritative weekly schedule projection available on the run landing before a draft is opened.",
+          "title": "Planned schedule heatmap"
+        },
+        {
           "body": "This page is a weekly-planning review surface. Any selected-day controls below are local what-if inputs for the prototype and do not replace live_dispatch.v1 day-of truth.",
           "kind": "note_panel",
           "title": "Boundary note"
@@ -1252,6 +1348,235 @@
           "form_id": "selected_day_what_if",
           "kind": "form",
           "title": "Selected-day what-if inputs"
+        },
+        {
+          "columns": [
+            {
+              "key": "service_date",
+              "label": "Service Date"
+            },
+            {
+              "key": "route_slot_id",
+              "label": "Route Slot Id"
+            },
+            {
+              "key": "assigned_driver_id",
+              "label": "Assigned Driver Id"
+            },
+            {
+              "key": "assignment_status",
+              "label": "Assignment Status"
+            },
+            {
+              "key": "projected_minutes",
+              "label": "Projected Minutes"
+            },
+            {
+              "key": "baseline_template_state",
+              "label": "Baseline Template State"
+            },
+            {
+              "key": "planned_driver_day_state",
+              "label": "Planned Driver Day State"
+            },
+            {
+              "key": "new_agreement_required",
+              "label": "New Agreement Required"
+            },
+            {
+              "key": "new_agreement_trigger_reason",
+              "label": "New Agreement Trigger Reason"
+            },
+            {
+              "key": "template_state_preservation_fit",
+              "label": "Template State Preservation Fit"
+            },
+            {
+              "key": "candidate_delta_id",
+              "label": "Candidate Delta Id"
+            },
+            {
+              "key": "source_bundle_id",
+              "label": "Source Bundle Id"
+            },
+            {
+              "key": "iteration_index",
+              "label": "Iteration Index"
+            },
+            {
+              "key": "delta_kind",
+              "label": "Delta Kind"
+            },
+            {
+              "key": "previous_week_stability",
+              "label": "Previous Week Stability"
+            }
+          ],
+          "kind": "table",
+          "rows": [
+            {
+              "assigned_driver_id": "A185MOPEG4MOST",
+              "assignment_status": "pass",
+              "baseline_template_state": "white_template",
+              "candidate_delta_id": "<candidate_delta_id:11>",
+              "delta_kind": "allocation",
+              "iteration_index": 7,
+              "new_agreement_required": true,
+              "new_agreement_trigger_reason": "white_template_to_assigned",
+              "planned_driver_day_state": "assigned",
+              "previous_week_stability": 0.08,
+              "projected_minutes": 510,
+              "route_slot_id": "slot-20260322-cycle1-standard#01",
+              "service_date": "2026-03-22",
+              "source_bundle_id": "<bundle_id:10>",
+              "template_state_preservation_fit": 0.38
+            },
+            {
+              "assigned_driver_id": "A2TU4ZRI65E1H8",
+              "assignment_status": "pass",
+              "baseline_template_state": "white_template",
+              "candidate_delta_id": "<candidate_delta_id:11>",
+              "delta_kind": "allocation",
+              "iteration_index": 8,
+              "new_agreement_required": true,
+              "new_agreement_trigger_reason": "white_template_to_assigned",
+              "planned_driver_day_state": "assigned",
+              "previous_week_stability": 0.08,
+              "projected_minutes": 510,
+              "route_slot_id": "slot-20260323-cycle1-standard#13",
+              "service_date": "2026-03-23",
+              "source_bundle_id": "<bundle_id:10>",
+              "template_state_preservation_fit": 0.38
+            },
+            {
+              "assigned_driver_id": "A3M38Z4NGI9OR3",
+              "assignment_status": "pass",
+              "baseline_template_state": "white_template",
+              "candidate_delta_id": "<candidate_delta_id:11>",
+              "delta_kind": "allocation",
+              "iteration_index": 9,
+              "new_agreement_required": true,
+              "new_agreement_trigger_reason": "white_template_to_assigned",
+              "planned_driver_day_state": "assigned",
+              "previous_week_stability": 0.12,
+              "projected_minutes": 510,
+              "route_slot_id": "slot-20260325-cycle1-standard#17",
+              "service_date": "2026-03-25",
+              "source_bundle_id": "<bundle_id:10>",
+              "template_state_preservation_fit": 0.38
+            }
+          ],
+          "table_id": "assignment_rows",
+          "title": "Route assignments"
+        },
+        {
+          "columns": [
+            {
+              "key": "service_date",
+              "label": "Service Date"
+            },
+            {
+              "key": "route_slot_id",
+              "label": "Route Slot Id"
+            },
+            {
+              "key": "route_id",
+              "label": "Route Id"
+            },
+            {
+              "key": "assigned_driver_id",
+              "label": "Assigned Driver Id"
+            },
+            {
+              "key": "assignment_status",
+              "label": "Assignment Status"
+            },
+            {
+              "key": "phase",
+              "label": "Phase"
+            },
+            {
+              "key": "projected_minutes",
+              "label": "Projected Minutes"
+            },
+            {
+              "key": "availability_state",
+              "label": "Availability State"
+            },
+            {
+              "key": "baseline_template_state",
+              "label": "Baseline Template State"
+            },
+            {
+              "key": "planned_driver_day_state",
+              "label": "Planned Driver Day State"
+            },
+            {
+              "key": "new_agreement_required",
+              "label": "New Agreement Required"
+            },
+            {
+              "key": "new_agreement_trigger_reason",
+              "label": "New Agreement Trigger Reason"
+            },
+            {
+              "key": "template_state_preservation_fit",
+              "label": "Template State Preservation Fit"
+            },
+            {
+              "key": "iteration_index",
+              "label": "Iteration Index"
+            },
+            {
+              "key": "rationale_code",
+              "label": "Rationale Code"
+            },
+            {
+              "key": "assignment_action",
+              "label": "Assignment Action"
+            }
+          ],
+          "kind": "table",
+          "rows": [
+            {
+              "assigned_driver_id": "A3OYGBYE20UA2R",
+              "assignment_action": "reserve",
+              "assignment_status": "reserve",
+              "availability_state": "AVAILABLE",
+              "baseline_template_state": "white_template",
+              "iteration_index": 23,
+              "new_agreement_required": true,
+              "new_agreement_trigger_reason": "white_template_to_on_call",
+              "phase": "reserve_buffer",
+              "planned_driver_day_state": "on_call",
+              "projected_minutes": 180,
+              "rationale_code": "reserve_fill_white_template",
+              "route_id": "ON_CALL",
+              "route_slot_id": "oncall-20260322#01",
+              "service_date": "2026-03-22",
+              "template_state_preservation_fit": 0.38
+            },
+            {
+              "assigned_driver_id": "A4KU9LEU82OTF",
+              "assignment_action": "reserve",
+              "assignment_status": "reserve",
+              "availability_state": "AVAILABLE",
+              "baseline_template_state": "white_template",
+              "iteration_index": 23,
+              "new_agreement_required": true,
+              "new_agreement_trigger_reason": "white_template_to_on_call",
+              "phase": "reserve_buffer",
+              "planned_driver_day_state": "on_call",
+              "projected_minutes": 180,
+              "rationale_code": "reserve_fill_white_template",
+              "route_id": "ON_CALL",
+              "route_slot_id": "oncall-20260324#02",
+              "service_date": "2026-03-24",
+              "template_state_preservation_fit": 0.38
+            }
+          ],
+          "table_id": "reserve_rows",
+          "title": "Reserve posture"
         },
         {
           "entries": [

@@ -1,8 +1,11 @@
 from __future__ import annotations
 
+import base64
 import json
 from pathlib import Path
 
+from onetruth.application.handlers.artifacts import ingest_artifact_document_command
+from onetruth.infrastructure.artifacts.storage import default_storage_root_for_db_url
 from onetruth.infrastructure.db.session import open_sqlite_connection
 from tests.runtime.helpers.runtime_api import RuntimeApiClient
 from tests.runtime.helpers.workpage_runs import (
@@ -60,6 +63,41 @@ def _route_demand_submit_rows(route_artifact: dict[str, object]) -> list[dict[st
             }
         )
     return rows
+
+
+def _ingest_file_backed_route_demand_artifact(
+    tmp_path: Path,
+    *,
+    workflow_run_id: str,
+    route_payload: dict[str, object],
+    idempotency_key: str,
+) -> dict[str, object]:
+    db_url = _db_url(tmp_path)
+    content = json.dumps(route_payload, separators=(",", ":"), sort_keys=True).encode("utf-8")
+    with open_sqlite_connection(db_url) as connection:
+        created = ingest_artifact_document_command(
+            connection,
+            {
+                "workflow_run_id": workflow_run_id,
+                "artifact_kind": "planning.route_slot_requirements.workbook",
+                "artifact_role": "official_input",
+                "file_name": "weekly_route_slot_requirements.json",
+                "media_type": "application/json",
+                "metadata_json": {
+                    "original_file_name": "weekly_route_slot_requirements.xlsx",
+                    "uploaded_via": "tests",
+                    "subject_kind": "human_task",
+                    "subject_id": "ht-tests-route-demand-upload",
+                },
+                "content_base64": base64.b64encode(content).decode("ascii"),
+                "idempotency_key": idempotency_key,
+                "actor_id": "human:ops-manager-2",
+                "actor_type": "human",
+            },
+            storage_root=default_storage_root_for_db_url(db_url),
+            include_receipt=True,
+        )
+    return created["result"]["artifact_version"]
 
 
 def test_route_demand_run_workpage_contract_returns_latest_route_demand_projection(
@@ -240,6 +278,58 @@ def test_route_demand_artifact_workpage_uses_canonical_route_and_retires_alias(
             "disabled_reason": "historical_artifact_read_only",
         }
     ]
+
+
+def test_route_demand_artifact_workpage_reloads_successor_for_file_backed_base_artifact(
+    tmp_path: Path,
+) -> None:
+    seeded = seed_actual_ops_weekly_schedule_run_with_stage04_outputs(
+        db_url=_db_url(tmp_path),
+        tenant_id="tenant-a",
+        domain_id="domain-x",
+        run_tag="api:workpages:route-demand:file-backed-base",
+    )
+    workflow_run_id = str(seeded["workflow_run_id"])
+    route_artifact = seeded["artifacts_by_kind"]["planning.route_slot_requirements.workbook"]
+    route_payload = route_artifact["metadata_json"]
+    assert isinstance(route_payload, dict)
+    file_backed_artifact = _ingest_file_backed_route_demand_artifact(
+        tmp_path,
+        workflow_run_id=workflow_run_id,
+        route_payload=route_payload,
+        idempotency_key="api:workpages:route-demand:file-backed-base:ingest",
+    )
+    base_artifact_version_id = str(file_backed_artifact["artifact_version_id"])
+    client = _client(tmp_path)
+
+    initial = client.get(
+        f"/api/v1/workpages/workflow-runs/{workflow_run_id}/"
+        f"route-demand-v0/artifacts/{base_artifact_version_id}"
+    )
+    assert initial.status_code == 200, initial.payload
+
+    submit_rows = _route_demand_submit_rows(route_artifact)
+    submit_rows[0]["planned_route_count"] = int(submit_rows[0]["planned_route_count"]) + 2
+    submitted = client.post(
+        f"/api/v1/workpages/workflow-runs/{workflow_run_id}/route-demand-v0/artifacts/{base_artifact_version_id}/submit",
+        payload={
+            "daily_demand_rows": submit_rows,
+            "idempotency_key": "api:workpages:route-demand:file-backed-base:submit",
+        },
+    )
+    assert submitted.status_code == 200, submitted.payload
+    latest_route_artifact_id = str(submitted.payload["submitted"]["artifact_version_id"])
+
+    latest = client.get(
+        f"/api/v1/workpages/workflow-runs/{workflow_run_id}/"
+        f"route-demand-v0/artifacts/{latest_route_artifact_id}"
+    )
+    assert latest.status_code == 200, latest.payload
+    day_cards = latest.payload["calculations"]["day_cards"]
+    assert day_cards
+    assert day_cards[0]["delta_from_previous_version"] == {
+        "planned_route_count_delta": 2,
+    }
 
 
 def test_route_demand_save_propagates_schedule_drift_and_creates_one_refresh_task(
