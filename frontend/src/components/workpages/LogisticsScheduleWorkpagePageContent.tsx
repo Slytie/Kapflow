@@ -491,6 +491,8 @@ export function LogisticsScheduleWorkpagePage(): JSX.Element {
   const routeDemandAction = findRouteDemandAction(query.data);
   const driverPreferencesAction = findDriverPreferencesAction(query.data);
   const backRoute = workpageBackRoute(workflowRunId);
+  const editableDraftRoute =
+    openLatestDraftAction?.state === "available" ? openLatestDraftAction.route : null;
 
   return (
     <LogisticsScheduleWorkpageView
@@ -504,89 +506,47 @@ export function LogisticsScheduleWorkpagePage(): JSX.Element {
         void query.refetch();
       }}
       isRefreshing={query.isFetching}
-      preContent={
-        openLatestDraftAction?.route && openLatestDraftAction.state === "available" ? (
-          <section className="workpage-panel workpage-panel--callout">
-            <header className="workpage-panel__header">
-              <h2>Editable draft available</h2>
-              <p>
-                This landing page stays read-only. Open the backend-selected latest draft when you
-                need live preview and save controls.
-              </p>
-            </header>
-            <div className="action-cluster">
-              <Link className="link-button" to={openLatestDraftAction.route}>
+      heroTitleActions={
+        editableDraftRoute || routeDemandAction?.route || driverPreferencesAction?.route || driverPreferencesAction?.create_path ? (
+          <>
+            {editableDraftRoute ? (
+              <Link className="action-btn action-btn--hero" to={editableDraftRoute}>
                 Open editable draft
               </Link>
-              {routeDemandAction?.route ? (
-                <Link className="link-button" to={routeDemandAction.route}>
-                  Open route demand
-                </Link>
-              ) : null}
-              {driverPreferencesAction?.route ? (
-                <Link className="link-button" to={driverPreferencesAction.route}>
-                  Open driver preferences
-                </Link>
-              ) : driverPreferencesAction?.create_path ? (
-                <button
-                  type="button"
-                  className="action-btn"
-                  disabled={createDriverPreferencesMutation.isPending}
-                  onClick={() =>
-                    createDriverPreferencesMutation.mutate({
-                      createPath: driverPreferencesAction.create_path ?? "",
-                      actionRef: driverPreferencesAction.action_ref
-                    })
-                  }
-                >
-                  {createDriverPreferencesMutation.isPending
-                    ? "Creating preferences snapshot..."
-                    : "Create preferences snapshot"}
-                </button>
-              ) : null}
-            </div>
-          </section>
-        ) : (
-          <section className="workpage-panel workpage-panel--callout">
-            <header className="workpage-panel__header">
-              <h2>No editable draft artifact yet</h2>
-              <p>
-                The Stage04 draft weekly schedule artifact is not available for this run yet. Stay
-                on the landing page until the canonical draft artifact exists.
-              </p>
-            </header>
-            {routeDemandAction?.route || driverPreferencesAction?.route || driverPreferencesAction?.create_path ? (
-              <div className="action-cluster">
-                {routeDemandAction?.route ? (
-                  <Link className="link-button" to={routeDemandAction.route}>
-                    Open route demand
-                  </Link>
-                ) : null}
-                {driverPreferencesAction?.route ? (
-                  <Link className="link-button" to={driverPreferencesAction.route}>
-                    Open driver preferences
-                  </Link>
-                ) : driverPreferencesAction?.create_path ? (
-                  <button
-                    type="button"
-                    className="action-btn"
-                    disabled={createDriverPreferencesMutation.isPending}
-                    onClick={() =>
-                      createDriverPreferencesMutation.mutate({
-                        createPath: driverPreferencesAction.create_path ?? "",
-                        actionRef: driverPreferencesAction.action_ref
-                      })
-                    }
-                  >
-                    {createDriverPreferencesMutation.isPending
-                      ? "Creating preferences snapshot..."
-                      : "Create preferences snapshot"}
-                  </button>
-                ) : null}
-              </div>
             ) : null}
-          </section>
-        )
+            {routeDemandAction?.route ? (
+              <Link className="action-btn action-btn--ghost" to={routeDemandAction.route}>
+                Open route demand
+              </Link>
+            ) : null}
+            {driverPreferencesAction?.route ? (
+              <Link className="action-btn action-btn--ghost" to={driverPreferencesAction.route}>
+                Open driver preferences
+              </Link>
+            ) : driverPreferencesAction?.create_path ? (
+              <button
+                type="button"
+                className="action-btn action-btn--ghost"
+                disabled={createDriverPreferencesMutation.isPending}
+                onClick={() =>
+                  createDriverPreferencesMutation.mutate({
+                    createPath: driverPreferencesAction.create_path ?? "",
+                    actionRef: driverPreferencesAction.action_ref
+                  })
+                }
+              >
+                {createDriverPreferencesMutation.isPending
+                  ? "Creating preferences snapshot..."
+                  : "Create preferences snapshot"}
+              </button>
+            ) : null}
+          </>
+        ) : undefined
+      }
+      heroSupportText={
+        editableDraftRoute
+          ? "This landing page stays read-only. Open the backend-selected latest draft when you need live preview and save controls."
+          : "This landing page stays read-only. The Stage04 draft weekly schedule artifact is not available for this run yet."
       }
     />
   );

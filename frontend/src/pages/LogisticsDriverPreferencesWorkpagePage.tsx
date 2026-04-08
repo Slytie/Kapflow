@@ -1,5 +1,12 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { type Dispatch, type SetStateAction, useEffect, useMemo, useState } from "react";
+import {
+  type Dispatch,
+  type SetStateAction,
+  useEffect,
+  useMemo,
+  useRef,
+  useState
+} from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 
 import { StatePanel } from "@/components/StatePanel";
@@ -11,6 +18,7 @@ import {
 } from "@/components/workpages/WorkpageContent";
 import { apiConfig } from "@/lib/api/config";
 import { errorText } from "@/lib/api/errorText";
+import { isApiClientError } from "@/lib/api/httpClient";
 import { workpagesRepository } from "@/lib/repositories";
 import { invalidateWorkspaceViews } from "@/lib/workspace/queryInvalidation";
 import { replaceWorkpageActionRefArtifactVersionId } from "@/lib/workspace/workpageActionRef";
@@ -140,6 +148,34 @@ function driverRowsSignature(rows: WorkpageDriverPreferencesDriverRow[]): string
   );
 }
 
+function asString(value: unknown): string | null {
+  return typeof value === "string" && value.trim().length > 0 ? value : null;
+}
+
+function workpageConflictDetails(error: unknown): {
+  artifactVersionId: string;
+  latestArtifactVersionId: string;
+  workflowRunId: string;
+  route: string;
+} | null {
+  if (!isApiClientError(error) || error.code !== "workpage_artifact_conflict" || !error.details) {
+    return null;
+  }
+  const artifactVersionId = asString(error.details.artifact_version_id);
+  const latestArtifactVersionId = asString(error.details.latest_artifact_version_id);
+  const workflowRunId = asString(error.details.workflow_run_id);
+  const route = asString(error.details.route);
+  if (!artifactVersionId || !latestArtifactVersionId || !workflowRunId || !route) {
+    return null;
+  }
+  return {
+    artifactVersionId,
+    latestArtifactVersionId,
+    workflowRunId,
+    route
+  };
+}
+
 function useEditableDriverPreferencesGrid(
   contract: WorkpageContract | undefined
 ): {
@@ -147,22 +183,33 @@ function useEditableDriverPreferencesGrid(
   setDriverRows: Dispatch<SetStateAction<WorkpageDriverPreferencesDriverRow[]>>;
 } {
   const [driverRows, setDriverRows] = useState<WorkpageDriverPreferencesDriverRow[]>([]);
+  const lastResetKeyRef = useRef<string | null>(null);
+  const sourceRows = contract?.preference_grid?.drivers ?? [];
   const resetKey = useMemo(
     () =>
       [
         contract?.freshness.source_version ?? "",
         contract?.artifact_context?.artifact_version_id ?? "",
-        driverRowsSignature(contract?.preference_grid?.drivers ?? [])
+        driverRowsSignature(sourceRows)
       ].join(":"),
-    [contract]
+    [contract?.freshness.source_version, contract?.artifact_context?.artifact_version_id, sourceRows]
   );
 
   useEffect(() => {
-    setDriverRows((contract?.preference_grid?.drivers ?? []).map((row) => ({
+    if (sourceRows.length === 0 && !contract) {
+      lastResetKeyRef.current = null;
+      setDriverRows([]);
+      return;
+    }
+    if (lastResetKeyRef.current === resetKey) {
+      return;
+    }
+    lastResetKeyRef.current = resetKey;
+    setDriverRows(sourceRows.map((row) => ({
       ...row,
       preferences_by_weekday: { ...row.preferences_by_weekday }
     })));
-  }, [contract, resetKey]);
+  }, [contract, resetKey, sourceRows]);
 
   return { driverRows, setDriverRows };
 }
@@ -661,7 +708,19 @@ export function LogisticsDriverPreferencesArtifactWorkpagePage(): JSX.Element {
   const noteSection = findNoteSection(contract.workpage.sections);
   const historySection = findHistorySection(contract.workpage.sections);
   const backRoute = workpageBackRoute(workflowRunId);
+  const artifactContext = contract.artifact_context;
+  const latestArtifactVersionId =
+    artifactContext?.latest_in_chain_artifact_version_id ?? artifactVersionId;
+  const latestRoute =
+    contract.artifact_history?.entries.find(
+      (entry) => entry.artifact_version_id === latestArtifactVersionId
+    )?.route ?? null;
+  const submitConflict = workpageConflictDetails(submitMutation.error);
+  const isStaleArtifact = latestArtifactVersionId !== artifactVersionId;
+  const staleOrConflictRoute = submitConflict?.route ?? (isStaleArtifact ? latestRoute : null);
   const readOnly = contract.artifact_state?.editable === false || saveAction?.state !== "available";
+  const saveDisabled =
+    readOnly || isStaleArtifact || submitConflict !== null || !hasUnsavedEdits || submitMutation.isPending;
 
   return (
     <WorkpageFrame
@@ -689,7 +748,7 @@ export function LogisticsDriverPreferencesArtifactWorkpagePage(): JSX.Element {
         <button
           type="button"
           className="action-btn action-btn--positive"
-          disabled={readOnly || !hasUnsavedEdits || submitMutation.isPending}
+          disabled={saveDisabled}
           onClick={() => submitMutation.mutate()}
         >
           {submitMutation.isPending ? "Saving snapshot..." : "Save snapshot"}
@@ -715,6 +774,51 @@ export function LogisticsDriverPreferencesArtifactWorkpagePage(): JSX.Element {
       backLink={backRoute.href}
       backLabel={backRoute.label}
     >
+      {submitConflict ? (
+        <section className="workpage-panel workpage-panel--callout">
+          <header className="workpage-panel__header">
+            <h2>Latest snapshot already exists</h2>
+            <p>
+              This base preferences snapshot has already been superseded. Keep your local edits for
+              now, then reopen the latest snapshot before saving again.
+            </p>
+          </header>
+          <div className="action-cluster">
+            <Link className="link-button" to={submitConflict.route}>
+              Open latest snapshot
+            </Link>
+          </div>
+        </section>
+      ) : null}
+
+      {!submitConflict && isStaleArtifact && staleOrConflictRoute ? (
+        <section className="workpage-panel workpage-panel--callout">
+          <header className="workpage-panel__header">
+            <h2>Latest snapshot available</h2>
+            <p>
+              This snapshot version is no longer the latest in the chain. Reopen the latest version
+              before saving more changes.
+            </p>
+          </header>
+          <div className="action-cluster">
+            <Link className="link-button" to={staleOrConflictRoute}>
+              Open latest snapshot
+            </Link>
+          </div>
+        </section>
+      ) : null}
+
+      {submitMutation.isError && !submitConflict ? (
+        <StatePanel
+          kind="error"
+          title="Snapshot save failed"
+          detail={errorText(
+            submitMutation.error,
+            "Unable to save the artifact-backed driver preferences snapshot."
+          )}
+        />
+      ) : null}
+
       {summarySection ? <WorkpageSummaryCardsSection section={summarySection} /> : null}
       <DriverPreferencesScheduleImpactBanner
         scheduleImpact={contract.schedule_impact as WorkpageDriverPreferencesScheduleImpact | null}

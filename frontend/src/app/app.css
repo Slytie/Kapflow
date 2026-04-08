@@ -1652,8 +1652,8 @@
 }
 
 .schedule-workpage-surface__overview {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  display: flex;
+  flex-direction: column;
   gap: 16px;
 }
 
@@ -2916,10 +2916,6 @@
 
   .workpage-page__artifact-rail {
     position: static;
-  }
-
-  .schedule-workpage-surface__overview {
-    grid-template-columns: 1fr;
   }
 
   .workpage-page__hero-title-bar--sticky {

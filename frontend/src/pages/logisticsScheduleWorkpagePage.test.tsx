@@ -18,6 +18,14 @@ function setFrontendOperatorContext(): void {
   });
 }
 
+function overviewHeadingOrder(container: HTMLElement): string[] {
+  const overview = container.querySelector(".schedule-workpage-surface__overview");
+  expect(overview).not.toBeNull();
+  return within(overview as HTMLElement)
+    .getAllByRole("heading", { level: 2 })
+    .map((heading) => heading.textContent ?? "");
+}
+
 describe("LogisticsScheduleWorkpagePage", () => {
   it(
     "renders the canonical run-backed surface as read-only and keeps metadata behind info",
@@ -39,15 +47,19 @@ describe("LogisticsScheduleWorkpagePage", () => {
       );
       setFrontendOperatorContext();
       window.history.pushState({}, "", "/runs/wr-weekly-001/workpages/schedule-v0");
-      render(<App />);
+    render(<App />);
 
-      const page = await screen.findByTestId("schedule-workpage-page");
-      expect(within(page).getByRole("heading", { name: "Weekly schedule review" })).toBeInTheDocument();
-      expect(within(page).getByRole("heading", { name: "Capacity bar" })).toBeInTheDocument();
-      expect(within(page).getByRole("heading", { name: "Selected day" })).toBeInTheDocument();
-      expect(within(page).getByRole("heading", { name: "Dependency status" })).toBeInTheDocument();
-      expect(within(page).getByRole("heading", { name: "Checks" })).toBeInTheDocument();
-      expect(within(page).getByRole("heading", { name: "Planned schedule heatmap" })).toBeInTheDocument();
+    const page = await screen.findByTestId("schedule-workpage-page");
+    const titleActions = page.querySelector(".workpage-page__hero-title-actions");
+    expect(titleActions).not.toBeNull();
+    expect(within(page).getByRole("heading", { name: "Weekly schedule review" })).toBeInTheDocument();
+    expect(within(page).queryByRole("heading", { name: "Editable draft available" })).not.toBeInTheDocument();
+    expect(within(page).getByRole("heading", { name: "Capacity bar" })).toBeInTheDocument();
+    expect(within(page).getByRole("heading", { name: "Selected day" })).toBeInTheDocument();
+    expect(within(page).getByRole("heading", { name: "Dependency status" })).toBeInTheDocument();
+    expect(within(page).getByRole("heading", { name: "Checks" })).toBeInTheDocument();
+    expect(overviewHeadingOrder(page)).toEqual(["Dependency status", "Checks", "Selected day"]);
+    expect(within(page).getByRole("heading", { name: "Planned schedule heatmap" })).toBeInTheDocument();
       expect(within(page).getByRole("heading", { name: "Driver metrics" })).toBeInTheDocument();
       expect(within(page).getByRole("heading", { name: "Accepted history" })).toBeInTheDocument();
       expect(within(page).getByRole("heading", { name: "Draft lineage" })).toBeInTheDocument();
@@ -71,6 +83,8 @@ describe("LogisticsScheduleWorkpagePage", () => {
       expect(within(checksSection as HTMLElement).queryByText(/^pass$/i)).not.toBeInTheDocument();
       expect(within(checksSection as HTMLElement).queryByText(/^warn$/i)).not.toBeInTheDocument();
       expect(within(checksSection as HTMLElement).queryByText(/^fail$/i)).not.toBeInTheDocument();
+      expect(within(titleActions as HTMLElement).getByRole("link", { name: "Open route demand" })).toBeInTheDocument();
+      expect(within(titleActions as HTMLElement).getByRole("button", { name: "Create preferences snapshot" })).toBeInTheDocument();
 
       expect(within(page).queryByText(/repo-native workflow example bundles/i)).not.toBeInTheDocument();
       await user.click(screen.getByRole("button", { name: "Open secondary detail routes" }));
@@ -191,16 +205,18 @@ describe("LogisticsScheduleWorkpagePage", () => {
     render(<App />);
 
     const page = await screen.findByTestId("schedule-workpage-page");
-    expect(within(page).getByRole("heading", { name: "Editable draft available" })).toBeInTheDocument();
-    expect(within(page).getByRole("link", { name: "Open editable draft" })).toHaveAttribute(
+    const titleActions = page.querySelector(".workpage-page__hero-title-actions");
+    expect(titleActions).not.toBeNull();
+    expect(within(page).queryByRole("heading", { name: "Editable draft available" })).not.toBeInTheDocument();
+    expect(within(titleActions as HTMLElement).getByRole("link", { name: "Open editable draft" })).toHaveAttribute(
       "href",
       "/runs/wr-weekly-001/workpages/schedule-v0/artifacts/av-schedule-artifact-001"
     );
-    expect(within(page).getByRole("link", { name: "Open route demand" })).toHaveAttribute(
+    expect(within(titleActions as HTMLElement).getByRole("link", { name: "Open route demand" })).toHaveAttribute(
       "href",
       "/runs/wr-weekly-001/workpages/route-demand-v0/artifacts/av-route-demand-artifact-001"
     );
-    expect(within(page).getByRole("button", { name: "Create preferences snapshot" })).toBeInTheDocument();
+    expect(within(titleActions as HTMLElement).getByRole("button", { name: "Create preferences snapshot" })).toBeInTheDocument();
     expect(screen.queryByText("Scenario sick calls")).not.toBeInTheDocument();
     expect(screen.queryByRole("textbox", { name: /Planner note/i })).not.toBeInTheDocument();
     expect(within(page).getByRole("heading", { name: "Capacity bar" })).toBeInTheDocument();
@@ -224,7 +240,7 @@ describe("LogisticsScheduleWorkpagePage", () => {
     render(<App />);
 
     expect(await screen.findByTestId("schedule-workpage-page")).toBeInTheDocument();
-    expect(await screen.findByRole("heading", { name: "Editable draft available" })).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Editable draft available" })).not.toBeInTheDocument();
 
     await user.click(screen.getByRole("link", { name: "Open editable draft" }));
 

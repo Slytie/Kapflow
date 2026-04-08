@@ -259,6 +259,61 @@ export function ScheduleWorkpageSurface({
         ) : null}
 
         <div className="schedule-workpage-surface__overview">
+          <section className="workpage-panel schedule-dependencies">
+            <header className="workpage-panel__header">
+              <h2>Dependency status</h2>
+              <p>Hard inputs stay visible so operators can see drift or missing baselines before save.</p>
+            </header>
+            {dependencies.length > 0 ? (
+              <ul className="schedule-dependencies__list">
+                {dependencies.map((dependency) => (
+                  <li key={dependency.dependency_key} className="schedule-dependencies__item">
+                    <span
+                      className={`schedule-pill schedule-pill--label schedule-pill--${pillToneForDependency(dependency.state)}`}
+                      aria-label={statusChipTitle(
+                        formatDependencyLabel(dependency.dependency_key),
+                        dependency.state
+                      )}
+                      title={statusChipTitle(
+                        formatDependencyLabel(dependency.dependency_key),
+                        dependency.state
+                      )}
+                    >
+                      {formatDependencyLabel(dependency.dependency_key)}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="workpage-history__empty">No dependency metadata available.</p>
+            )}
+          </section>
+
+          <section className="workpage-panel schedule-checks">
+            <header className="workpage-panel__header">
+              <h2>Checks</h2>
+              <p>Compliance and coverage checks stay visible while you review or preview changes.</p>
+            </header>
+            {(calculations?.checks ?? []).length > 0 ? (
+              <ul className="schedule-checks__list">
+                {calculations?.checks.map((check) => (
+                  <li key={check.check_id} className="schedule-checks__item">
+                    <span
+                      className={`schedule-pill schedule-pill--label schedule-pill--${pillToneForDriverState(check.state)}`}
+                      aria-label={statusChipTitle(check.label, check.state)}
+                      title={statusChipTitle(check.label, check.state)}
+                    >
+                      {check.label}
+                    </span>
+                    <span className="schedule-status-meta">{check.blocking ? "Blocking" : "Advisory"}</span>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="workpage-history__empty">No checks emitted for this surface yet.</p>
+            )}
+          </section>
+
           <section className="workpage-panel schedule-selected-day">
             <header className="workpage-panel__header">
               <h2>Selected day</h2>
@@ -316,61 +371,6 @@ export function ScheduleWorkpageSurface({
               </div>
             ) : (
               <p className="workpage-history__empty">No selected-day summary available.</p>
-            )}
-          </section>
-
-          <section className="workpage-panel schedule-dependencies">
-            <header className="workpage-panel__header">
-              <h2>Dependency status</h2>
-              <p>Hard inputs stay visible so operators can see drift or missing baselines before save.</p>
-            </header>
-            {dependencies.length > 0 ? (
-              <ul className="schedule-dependencies__list">
-                {dependencies.map((dependency) => (
-                  <li key={dependency.dependency_key} className="schedule-dependencies__item">
-                    <span
-                      className={`schedule-pill schedule-pill--label schedule-pill--${pillToneForDependency(dependency.state)}`}
-                      aria-label={statusChipTitle(
-                        formatDependencyLabel(dependency.dependency_key),
-                        dependency.state
-                      )}
-                      title={statusChipTitle(
-                        formatDependencyLabel(dependency.dependency_key),
-                        dependency.state
-                      )}
-                    >
-                      {formatDependencyLabel(dependency.dependency_key)}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <p className="workpage-history__empty">No dependency metadata available.</p>
-            )}
-          </section>
-
-          <section className="workpage-panel schedule-checks">
-            <header className="workpage-panel__header">
-              <h2>Checks</h2>
-              <p>Compliance and coverage checks stay visible while you review or preview changes.</p>
-            </header>
-            {(calculations?.checks ?? []).length > 0 ? (
-              <ul className="schedule-checks__list">
-                {calculations?.checks.map((check) => (
-                  <li key={check.check_id} className="schedule-checks__item">
-                    <span
-                      className={`schedule-pill schedule-pill--label schedule-pill--${pillToneForDriverState(check.state)}`}
-                      aria-label={statusChipTitle(check.label, check.state)}
-                      title={statusChipTitle(check.label, check.state)}
-                    >
-                      {check.label}
-                    </span>
-                    <span className="schedule-status-meta">{check.blocking ? "Blocking" : "Advisory"}</span>
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <p className="workpage-history__empty">No checks emitted for this surface yet.</p>
             )}
           </section>
         </div>

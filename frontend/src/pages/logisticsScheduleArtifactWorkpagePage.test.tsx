@@ -36,6 +36,14 @@ function personNameFromLabel(label: string): string {
   return label.split(" on ")[0] ?? label;
 }
 
+function overviewHeadingOrder(container: HTMLElement): string[] {
+  const overview = container.querySelector(".schedule-workpage-surface__overview");
+  expect(overview).not.toBeNull();
+  return within(overview as HTMLElement)
+    .getAllByRole("heading", { level: 2 })
+    .map((heading) => heading.textContent ?? "");
+}
+
 function buildScheduleArtifactPayload(
   artifactVersionId: string,
   workflowRunId = "wr-weekly-001",
@@ -152,6 +160,7 @@ describe("LogisticsScheduleArtifactWorkpagePage", () => {
       expect(within(artifactPage).getByRole("heading", { name: "Accepted history" })).toBeInTheDocument();
       expect(within(artifactPage).getByRole("heading", { name: "Draft lineage" })).toBeInTheDocument();
       expect(within(artifactPage).getByRole("heading", { name: "Live preview" })).toBeInTheDocument();
+      expect(overviewHeadingOrder(artifactPage)).toEqual(["Dependency status", "Checks", "Selected day"]);
       expect(within(artifactPage).getByText("No accepted schedule history is available for this surface yet.")).toBeInTheDocument();
 
       const heatmap = heatmapSection();
