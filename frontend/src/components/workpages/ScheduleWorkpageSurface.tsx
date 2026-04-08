@@ -86,18 +86,6 @@ function formatDependencyLabel(key: string): string {
     .join(" ");
 }
 
-function formatSelectedDayLabel(serviceDate: string): string {
-  const value = new Date(serviceDate);
-  if (Number.isNaN(value.getTime())) {
-    return serviceDate;
-  }
-  return value.toLocaleDateString(undefined, {
-    weekday: "long",
-    month: "short",
-    day: "numeric"
-  });
-}
-
 function isActionBlocked(action: WorkpageScheduleAction | null | undefined): boolean {
   return action?.state === "blocked" || action?.state === "unavailable";
 }
@@ -279,12 +267,6 @@ export function ScheduleWorkpageSurface({
   const selectedDay = calculations?.selected_day ?? null;
   const selectedServiceDate = selectedDay?.service_date ?? null;
   const availableDriverIds = selectedDay?.available_driver_ids ?? [];
-  const availablePreferenceBuckets = selectedDay?.available_preference_buckets ?? {
-    open_to_work: [],
-    prefer_not_to_work: [],
-    definitely_can_not_work: [],
-    unset: []
-  };
   const saveBlockedReason =
     isActionBlocked(saveAction) && saveAction?.disabled_reason ? saveAction.disabled_reason : null;
 
@@ -436,66 +418,6 @@ export function ScheduleWorkpageSurface({
               </ul>
             ) : (
               <p className="workpage-history__empty">No checks emitted for this surface yet.</p>
-            )}
-          </section>
-
-          <section className="workpage-panel schedule-selected-day">
-            <header className="workpage-panel__header">
-              <h2>Selected day</h2>
-              <p>Status and operator cues come directly from backend calculations.</p>
-            </header>
-            {selectedDay ? (
-              <div className="schedule-selected-day__content">
-                <div className="schedule-selected-day__summary">
-                  <strong>{formatSelectedDayLabel(selectedDay.service_date)}</strong>
-                  <span>{selectedDay.open_questions ?? "No open questions on this day."}</span>
-                </div>
-                <dl className="schedule-selected-day__stats">
-                  <div>
-                    <dt>Routes required</dt>
-                    <dd>{selectedDay.routes_required}</dd>
-                  </div>
-                  <div>
-                    <dt>Routes scheduled</dt>
-                    <dd>{selectedDay.routes_scheduled ?? "—"}</dd>
-                  </div>
-                  <div>
-                    <dt>On-call drivers</dt>
-                    <dd>{selectedDay.on_call_drivers ?? "—"}</dd>
-                  </div>
-                  <div>
-                    <dt>Available drivers</dt>
-                    <dd>{selectedDay.available_driver_count ?? selectedDay.drivers_available ?? "—"}</dd>
-                  </div>
-                </dl>
-                <div className="schedule-selected-day__chips">
-                  {availableDriverIds.map((driverId) => (
-                    <span key={driverId} className="schedule-pill schedule-pill--success">
-                      {driverId}
-                    </span>
-                  ))}
-                </div>
-                <div className="schedule-selected-day__preference-buckets">
-                  {Object.entries(availablePreferenceBuckets).map(([bucketKey, driverIds]) => (
-                    <article key={bucketKey} className="schedule-selected-day__preference-bucket">
-                      <strong>{formatPreferenceLabel(bucketKey)}</strong>
-                      <div className="schedule-selected-day__chips">
-                        {driverIds.length > 0 ? (
-                          driverIds.map((driverId) => (
-                            <span key={`${bucketKey}-${driverId}`} className="schedule-pill schedule-pill--neutral">
-                              {driverId}
-                            </span>
-                          ))
-                        ) : (
-                          <span className="schedule-selected-day__empty">None</span>
-                        )}
-                      </div>
-                    </article>
-                  ))}
-                </div>
-              </div>
-            ) : (
-              <p className="workpage-history__empty">No selected-day summary available.</p>
             )}
           </section>
         </div>

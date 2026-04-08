@@ -2001,31 +2001,27 @@
   text-transform: uppercase;
 }
 
-.schedule-capacity-bar__stats,
-.schedule-selected-day__stats {
+.schedule-capacity-bar__stats {
   margin: 0;
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 10px;
 }
 
-.schedule-capacity-bar__stats div,
-.schedule-selected-day__stats div {
+.schedule-capacity-bar__stats div {
   display: flex;
   flex-direction: column;
   gap: 4px;
 }
 
-.schedule-capacity-bar__stats dt,
-.schedule-selected-day__stats dt {
+.schedule-capacity-bar__stats dt {
   color: #707680;
   font-size: 11px;
   text-transform: uppercase;
   letter-spacing: 0.05em;
 }
 
-.schedule-capacity-bar__stats dd,
-.schedule-selected-day__stats dd {
+.schedule-capacity-bar__stats dd {
   margin: 0;
   color: #3d444c;
   font-family: var(--font-display);
@@ -2045,29 +2041,6 @@
 
 .schedule-preview-status__blocked {
   color: #70551f;
-}
-
-.schedule-selected-day__content,
-.schedule-selected-day__summary {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.schedule-selected-day__summary strong {
-  color: #3d444c;
-  font-family: var(--font-display);
-  font-size: 24px;
-}
-
-.schedule-selected-day__summary span {
-  color: #646b74;
-}
-
-.schedule-selected-day__chips {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
 }
 
 .schedule-dependencies__list,

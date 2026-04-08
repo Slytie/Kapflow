@@ -34,6 +34,25 @@ def run_logistics_workpage_demo_prep_script(
     return _run_script(args=args)
 
 
+def run_logistics_demo_frontend_launcher_script(
+    *,
+    demo_json_path: Path | None = None,
+    api_base_url: str = "http://127.0.0.1:8080/api/v1",
+    host: str = "127.0.0.1",
+) -> dict[str, Any]:
+    args = [
+        "scripts/run_logistics_demo_frontend.py",
+        "--api-base-url",
+        api_base_url,
+        "--host",
+        host,
+        "--print-launch-config",
+    ]
+    if demo_json_path is not None:
+        args.extend(["--demo-json", str(demo_json_path)])
+    return _run_script(args=args)
+
+
 def _run_script(*, args: list[str]) -> dict[str, Any]:
     env = os.environ.copy()
     existing_pythonpath = env.get("PYTHONPATH")

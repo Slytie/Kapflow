@@ -51,6 +51,14 @@ from onetruth.infrastructure.repositories.workflow_runs import get_workflow_run
 
 _PREP_ACTOR_ID = "system:logistics-workpage-demo-prep"
 _PREP_ACTOR_TYPE = "system"
+_FRONTEND_ACTOR_ID = "human:frontend-operator"
+_FRONTEND_ACTOR_TYPE = "human"
+_FRONTEND_ACTOR_ROLES: tuple[str, ...] = (
+    "dispatch_supervisor",
+    "schedule_planner",
+    "fleet_coordinator",
+    "operations_manager",
+)
 
 _STAGE04_INPUT_SPECS: tuple[tuple[str, str, str], ...] = (
     ("route_slot_requirements", "planning.route_slot_requirements.workbook", "route-slot-requirements"),
@@ -143,6 +151,13 @@ def prepare_logistics_workpage_demo(
         "recommended_story_url": str(seeded["recommended_story_url"]),
         "weekly_workspace_url": str(seeded["weekly_workspace_url"]),
         "reporting_workspace_url": str(seeded["reporting_workspace_url"]),
+        "frontend_request_context": {
+            "tenant_id": DEMO_TENANT_ID,
+            "domain_id": DEMO_DOMAIN_ID,
+            "actor_id": _FRONTEND_ACTOR_ID,
+            "actor_type": _FRONTEND_ACTOR_TYPE,
+            "actor_roles": list(_FRONTEND_ACTOR_ROLES),
+        },
         "schedule_workpage_url": canonical_workflow_run_workpage_route(
             workflow_run_id=weekly_run_id,
             workpage_kind=SCHEDULE_WORKPAGE_KIND,

@@ -22,12 +22,6 @@ PYTHONPATH=src onetruth-api \
   --api-boundary-profile local_dev
 ```
 
-Frontend terminal:
-```bash
-cd frontend
-VITE_ONETRUTH_API_BASE_URL=http://127.0.0.1:8080/api/v1 npm run dev
-```
-
 Seeder terminal:
 ```bash
 test -n "$OPENAI_API_KEY"
@@ -36,6 +30,15 @@ PYTHONPATH=src python3.11 scripts/run_logistics_local_demo.py \
   --output-json .tmp/logistics-local-demo.json
 cat .tmp/logistics-local-demo.json
 ```
+
+Frontend terminal:
+```bash
+PYTHONPATH=src python3.11 scripts/run_logistics_demo_frontend.py \
+  --demo-json .tmp/logistics-local-demo.json
+```
+
+The frontend launcher applies the canonical logistics local-dev request context so the seeded
+`tenant-logistics / domain-hub` runtime state is visible in the browser.
 
 Expected seeder output:
 - `recommended_story_url`

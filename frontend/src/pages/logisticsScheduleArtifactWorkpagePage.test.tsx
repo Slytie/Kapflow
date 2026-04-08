@@ -174,7 +174,7 @@ describe("LogisticsScheduleArtifactWorkpagePage", () => {
       expect(within(artifactPage).getByRole("heading", { name: "Accepted history" })).toBeInTheDocument();
       expect(within(artifactPage).getByRole("heading", { name: "Draft lineage" })).toBeInTheDocument();
       expect(within(artifactPage).getByRole("heading", { name: "Live preview" })).toBeInTheDocument();
-      expect(overviewHeadingOrder(artifactPage)).toEqual(["Dependency status", "Checks", "Selected day"]);
+      expect(overviewHeadingOrder(artifactPage)).toEqual(["Dependency status", "Checks"]);
       expect(within(artifactPage).queryByRole("heading", { name: "Driver metrics" })).not.toBeInTheDocument();
       expect(within(artifactPage).getByText("No accepted schedule history is available for this surface yet.")).toBeInTheDocument();
       const dependencySection = within(artifactPage)
@@ -220,6 +220,12 @@ describe("LogisticsScheduleArtifactWorkpagePage", () => {
       });
 
       const heatmap = heatmapSection();
+      const selectedCapacityDay = artifactPage.querySelector(".schedule-capacity-bar__day.is-selected");
+      expect(selectedCapacityDay).not.toBeNull();
+      expect(within(selectedCapacityDay as HTMLElement).getByText("2026-03-24")).toBeInTheDocument();
+      const selectedHeatmapDate = heatmap.querySelector(".schedule-heatmap__date-header--selected");
+      expect(selectedHeatmapDate).not.toBeNull();
+      expect(selectedHeatmapDate).toHaveTextContent("2026-03-24");
       const abhirajRow = driverHeatmapRow(heatmap, "Abhiraj Singh");
       expect(within(abhirajRow).getByText("25.5 h")).toBeInTheDocument();
       expect(within(abhirajRow).getByText("Pref Unset")).toBeInTheDocument();
@@ -600,7 +606,9 @@ describe("LogisticsScheduleArtifactWorkpagePage", () => {
       await user.click(secondTargetCell);
 
       expect(await screen.findByText(/preview_unavailable: preview calculation failed/i)).toBeInTheDocument();
-      expect(screen.getByRole("heading", { name: "Selected day" })).toBeInTheDocument();
+      const selectedHeatmapDate = heatmap.querySelector(".schedule-heatmap__date-header--selected");
+      expect(selectedHeatmapDate).not.toBeNull();
+      expect(selectedHeatmapDate).toHaveTextContent("2026-03-24");
     },
     50000
   );

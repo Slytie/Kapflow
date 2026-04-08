@@ -20,12 +20,6 @@ PYTHONPATH=src onetruth-api \
   --api-boundary-profile local_dev
 ```
 
-Frontend terminal:
-```bash
-cd frontend
-VITE_ONETRUTH_API_BASE_URL=http://127.0.0.1:8080/api/v1 npm run dev
-```
-
 Optional DB init:
 ```bash
 PYTHONPATH=src python3.11 -m onetruth.cli \
@@ -48,6 +42,7 @@ cat .tmp/logistics-canonical-workpage-demo.json
 ```
 
 Expected output fields:
+- `frontend_request_context`
 - `schedule_workpage_url`
 - `schedule_artifact_url`
 - `route_demand_workpage_url`
@@ -56,8 +51,19 @@ Expected output fields:
 - `driver_preferences_artifact_url`
 - `eod_workpage_url`
 
+Frontend terminal:
+```bash
+PYTHONPATH=src python3.11 scripts/run_logistics_demo_frontend.py \
+  --demo-json .tmp/logistics-canonical-workpage-demo.json
+```
+
+The launcher reads `frontend_request_context` from the prep JSON and injects the matching
+local-dev trusted headers so the browser sees the seeded `tenant-logistics / domain-hub`
+runtime state instead of the generic local frontend defaults.
+
 ## Walkthrough
-Prepend the frontend origin to each emitted route, for example `http://127.0.0.1:5173${schedule_workpage_url}`.
+The frontend launcher prints the active demo routes from the prep JSON as it starts. Use those
+route paths under the frontend origin, for example `http://127.0.0.1:5173${schedule_workpage_url}`.
 
 Recommended order:
 1. Open `schedule_workpage_url`.

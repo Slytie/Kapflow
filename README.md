@@ -328,6 +328,7 @@ The HITL frontend shell lives under `frontend/` as a contract-first SPA backed b
    - `VITE_ONETRUTH_ACTOR_ROLES` (default `dispatch_supervisor`, local-dev/demo only)
    - `VITE_ONETRUTH_POLL_INTERVAL_MS` (default `15000`)
    - In `shared_env`, the frontend bootstraps viewer identity from `GET /api/v1/viewer`; browser-set `VITE_ONETRUTH_*` actor headers are not the production/shared-env identity surface.
+   - For the logistics demo runbooks, prefer `PYTHONPATH=src python3.11 scripts/run_logistics_demo_frontend.py --demo-json <prep-json>` instead of the raw `npm run dev` example so local-dev trusted headers match the seeded `tenant-logistics / domain-hub` scope automatically.
 3. Run local frontend dev server:
    - `npm run dev`
 4. Run frontend verification:

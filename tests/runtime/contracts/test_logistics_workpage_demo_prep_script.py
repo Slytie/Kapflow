@@ -33,6 +33,18 @@ def test_logistics_workpage_demo_prep_script_emits_stable_canonical_urls_and_ids
     )
     assert written["weekly_workspace_url"] == f"/runs/{written['weekly_run_id']}/workspace"
     assert written["reporting_workspace_url"] == f"/runs/{written['reporting_run_id']}/workspace"
+    assert written["frontend_request_context"] == {
+        "tenant_id": "tenant-logistics",
+        "domain_id": "domain-hub",
+        "actor_id": "human:frontend-operator",
+        "actor_type": "human",
+        "actor_roles": [
+            "dispatch_supervisor",
+            "schedule_planner",
+            "fleet_coordinator",
+            "operations_manager",
+        ],
+    }
     assert written["schedule_workpage_url"] == (
         f"/runs/{written['weekly_run_id']}/workpages/schedule-v0"
     )

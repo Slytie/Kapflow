@@ -19,7 +19,10 @@ from onetruth.infrastructure.events.event_store import create_sqlite_substrate
 
 def _build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
-        description="Prepare canonical logistics workpage demo state and print canonical URLs.",
+        description=(
+            "Prepare canonical logistics workpage demo state and print canonical URLs plus "
+            "the frontend request context for local-dev launcher startup."
+        ),
     )
     parser.add_argument(
         "--db-url",

@@ -17,10 +17,12 @@ def test_canonical_workpage_demo_runbook_freezes_startup_and_url_contract() -> N
     assert "Node `20`" in runbook
     assert "cd frontend && npm ci" in runbook
     assert "PYTHONPATH=src onetruth-api \\" in runbook
-    assert "VITE_ONETRUTH_API_BASE_URL=http://127.0.0.1:8080/api/v1 npm run dev" in runbook
+    assert "scripts/run_logistics_demo_frontend.py" in runbook
+    assert "--demo-json .tmp/logistics-canonical-workpage-demo.json" in runbook
     assert "scripts/run_logistics_local_demo.py" in runbook
     assert "scripts/run_logistics_workpage_demo_prep.py" in runbook
     assert "No OpenAI required." in runbook
+    assert "frontend_request_context" in runbook
     assert "schedule_workpage_url" in runbook
     assert "schedule_artifact_url" in runbook
     assert "route_demand_workpage_url" in runbook
@@ -43,3 +45,5 @@ def test_canonical_workpage_demo_runbook_is_discoverable_and_legacy_runbook_poin
     assert "`logistics_canonical_workpage_demo.md`" in runbooks_readme
     assert "deterministic canonical-workpage validation path" in legacy_runbook
     assert "logistics_canonical_workpage_demo.md" in legacy_runbook
+    assert "scripts/run_logistics_demo_frontend.py" in legacy_runbook
+    assert "--demo-json .tmp/logistics-local-demo.json" in legacy_runbook

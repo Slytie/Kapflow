@@ -77,10 +77,9 @@ describe("LogisticsScheduleWorkpagePage", () => {
       expect(within(page).getByRole("heading", { name: "Weekly schedule review" })).toBeInTheDocument();
       expect(within(page).queryByRole("heading", { name: "Editable draft available" })).not.toBeInTheDocument();
       expect(within(page).getByRole("heading", { name: "Capacity bar" })).toBeInTheDocument();
-      expect(within(page).getByRole("heading", { name: "Selected day" })).toBeInTheDocument();
       expect(within(page).getByRole("heading", { name: "Dependency status" })).toBeInTheDocument();
       expect(within(page).getByRole("heading", { name: "Checks" })).toBeInTheDocument();
-      expect(overviewHeadingOrder(page)).toEqual(["Dependency status", "Checks", "Selected day"]);
+      expect(overviewHeadingOrder(page)).toEqual(["Dependency status", "Checks"]);
       expect(within(page).getByRole("heading", { name: "Planned schedule heatmap" })).toBeInTheDocument();
       expect(within(page).queryByRole("heading", { name: "Driver metrics" })).not.toBeInTheDocument();
       expect(within(page).getByRole("heading", { name: "Accepted history" })).toBeInTheDocument();
@@ -144,7 +143,13 @@ describe("LogisticsScheduleWorkpagePage", () => {
       });
       expect(within(titleActions as HTMLElement).getByRole("link", { name: "Open route demand" })).toBeInTheDocument();
       expect(within(titleActions as HTMLElement).getByRole("button", { name: "Create preferences snapshot" })).toBeInTheDocument();
+      const selectedCapacityDay = page.querySelector(".schedule-capacity-bar__day.is-selected");
+      expect(selectedCapacityDay).not.toBeNull();
+      expect(within(selectedCapacityDay as HTMLElement).getByText("2026-03-24")).toBeInTheDocument();
       const heatmap = heatmapSection(page);
+      const selectedHeatmapDate = heatmap.querySelector(".schedule-heatmap__date-header--selected");
+      expect(selectedHeatmapDate).not.toBeNull();
+      expect(selectedHeatmapDate).toHaveTextContent("2026-03-24");
       expect(within(heatmap).getByRole("columnheader", { name: /Hours/i })).toBeInTheDocument();
       expect(within(heatmap).getByRole("columnheader", { name: /Routes/i })).toBeInTheDocument();
       expect(within(heatmap).getByRole("columnheader", { name: /On call/i })).toBeInTheDocument();
@@ -316,7 +321,7 @@ describe("LogisticsScheduleWorkpagePage", () => {
       render(<App />);
 
       const page = await screen.findByTestId("schedule-workpage-page");
-      expect(within(page).getByText("Unset")).toBeInTheDocument();
+      expect(within(heatmapSection(page)).getAllByText("Pref Unset").length).toBeGreaterThan(0);
 
       await user.click(screen.getByRole("button", { name: "Create preferences snapshot" }));
 
