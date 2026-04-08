@@ -1,3 +1,4 @@
+import { useEffect, useId, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 
 import { DraftVersionTimeline, type DraftVersionTimelineEntry } from "@/components/workpages/DraftVersionTimeline";
@@ -24,6 +25,12 @@ export interface ScheduleVersionRailDefinition {
   previousLabel?: string;
   nextLabel?: string;
 }
+
+export const SCHEDULE_DEPENDENCY_STATUS_SUMMARY =
+  "Shows whether the schedule is grounded in the planning inputs it depends on. Use it to confirm that required baselines like route slot requirements, approved availability, driver capabilities, and recent actual hours are present and in sync before you review or save.";
+
+export const SCHEDULE_CHECKS_SUMMARY =
+  "Shows the validation results calculated from the current schedule and its dependencies, including capacity, on-call coverage, hard assignment rules, and preference alignment. Blocking checks need attention before the schedule is ready; advisory checks are review cues.";
 
 function pillToneForDependency(state: WorkpageScheduleDependency["state"]): string {
   if (state === "aligned" || state === "resolved") {
@@ -55,10 +62,6 @@ function formatDependencyLabel(key: string): string {
     .join(" ");
 }
 
-function formatDriverHours(hours: number): string {
-  return `${hours.toFixed(1)} h`;
-}
-
 function formatSelectedDayLabel(serviceDate: string): string {
   const value = new Date(serviceDate);
   if (Number.isNaN(value.getTime())) {
@@ -84,6 +87,87 @@ function formatPreferenceLabel(state: string): string {
 
 function statusChipTitle(label: string, state: string): string {
   return `${label}: ${formatPreferenceLabel(state)}`;
+}
+
+function ScheduleSectionHelp({
+  heading,
+  summary
+}: {
+  heading: string;
+  summary: string;
+}): JSX.Element {
+  const [isOpen, setIsOpen] = useState(false);
+  const containerRef = useRef<HTMLSpanElement | null>(null);
+  const triggerRef = useRef<HTMLButtonElement | null>(null);
+  const tooltipId = useId();
+
+  useEffect(() => {
+    if (!isOpen) {
+      return undefined;
+    }
+
+    const handlePointerDown = (event: MouseEvent | TouchEvent): void => {
+      if (!containerRef.current?.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+
+    const handleKeyDown = (event: KeyboardEvent): void => {
+      if (event.key === "Escape") {
+        setIsOpen(false);
+        triggerRef.current?.blur();
+      }
+    };
+
+    document.addEventListener("mousedown", handlePointerDown);
+    document.addEventListener("touchstart", handlePointerDown);
+    window.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      document.removeEventListener("mousedown", handlePointerDown);
+      document.removeEventListener("touchstart", handlePointerDown);
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [isOpen]);
+
+  return (
+    <span
+      ref={containerRef}
+      className="schedule-section-help"
+      onMouseEnter={() => {
+        setIsOpen(true);
+      }}
+      onMouseLeave={() => {
+        setIsOpen(false);
+      }}
+    >
+      <button
+        ref={triggerRef}
+        type="button"
+        className="info-button schedule-section-help__button"
+        aria-label={`Show summary for ${heading}`}
+        aria-describedby={isOpen ? tooltipId : undefined}
+        onFocus={() => {
+          setIsOpen(true);
+        }}
+        onBlur={(event) => {
+          if (!containerRef.current?.contains(event.relatedTarget as Node | null)) {
+            setIsOpen(false);
+          }
+        }}
+        onClick={() => {
+          setIsOpen((current) => !current);
+        }}
+      >
+        i
+      </button>
+      {isOpen ? (
+        <span id={tooltipId} role="tooltip" className="schedule-section-help__tooltip">
+          {summary}
+        </span>
+      ) : null}
+    </span>
+  );
 }
 
 function ScheduleVersionRail({
@@ -170,15 +254,6 @@ export function ScheduleWorkpageSurface({
     definitely_can_not_work: [],
     unset: []
   };
-  const driverStateById = Object.fromEntries(
-    (calculations?.driver_metrics ?? []).map((metric) => [
-      metric.driver_id,
-      {
-        availabilityState: metric.availability_state,
-        complianceState: metric.compliance_state
-      }
-    ])
-  );
   const saveBlockedReason =
     isActionBlocked(saveAction) && saveAction?.disabled_reason ? saveAction.disabled_reason : null;
 
@@ -261,7 +336,13 @@ export function ScheduleWorkpageSurface({
         <div className="schedule-workpage-surface__overview">
           <section className="workpage-panel schedule-dependencies">
             <header className="workpage-panel__header">
-              <h2>Dependency status</h2>
+              <div className="schedule-section-help__heading">
+                <h2>Dependency status</h2>
+                <ScheduleSectionHelp
+                  heading="Dependency status"
+                  summary={SCHEDULE_DEPENDENCY_STATUS_SUMMARY}
+                />
+              </div>
               <p>Hard inputs stay visible so operators can see drift or missing baselines before save.</p>
             </header>
             {dependencies.length > 0 ? (
@@ -291,7 +372,10 @@ export function ScheduleWorkpageSurface({
 
           <section className="workpage-panel schedule-checks">
             <header className="workpage-panel__header">
-              <h2>Checks</h2>
+              <div className="schedule-section-help__heading">
+                <h2>Checks</h2>
+                <ScheduleSectionHelp heading="Checks" summary={SCHEDULE_CHECKS_SUMMARY} />
+              </div>
               <p>Compliance and coverage checks stay visible while you review or preview changes.</p>
             </header>
             {(calculations?.checks ?? []).length > 0 ? (
@@ -384,85 +468,9 @@ export function ScheduleWorkpageSurface({
             readOnly={readOnly}
             selectedServiceDate={selectedServiceDate}
             availableDriverIds={availableDriverIds}
-            driverStateById={driverStateById}
+            driverMetrics={calculations?.driver_metrics ?? []}
           />
         ) : null}
-
-        <section className="workpage-panel schedule-driver-metrics">
-          <header className="workpage-panel__header">
-            <h2>Driver metrics</h2>
-            <p>Availability and compliance highlighting come from the backend preview or artifact contract.</p>
-          </header>
-          {(calculations?.driver_metrics ?? []).length > 0 ? (
-            <div className="workpage-table__wrap">
-              <table className="workpage-table schedule-driver-metrics__table">
-                <thead>
-                  <tr>
-                    <th scope="col">Driver</th>
-                    <th scope="col">Hours</th>
-                    <th scope="col">Routes</th>
-                    <th scope="col">On call</th>
-                    <th scope="col">Preference</th>
-                    <th scope="col">Availability</th>
-                    <th scope="col">Compliance</th>
-                    <th scope="col">Issues</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {calculations?.driver_metrics
-                    .slice()
-                    .sort((left, right) => {
-                      if (right.scheduled_routes !== left.scheduled_routes) {
-                        return right.scheduled_routes - left.scheduled_routes;
-                      }
-                      if (right.on_call_shifts !== left.on_call_shifts) {
-                        return right.on_call_shifts - left.on_call_shifts;
-                      }
-                      return left.driver_name.localeCompare(right.driver_name);
-                    })
-                    .map((metric) => (
-                      <tr
-                        key={metric.driver_id}
-                        className={
-                          metric.compliance_state === "fail"
-                            ? "schedule-driver-metrics__row schedule-driver-metrics__row--blocked"
-                            : metric.availability_state === "available"
-                              ? "schedule-driver-metrics__row schedule-driver-metrics__row--available"
-                              : "schedule-driver-metrics__row"
-                        }
-                      >
-                        <td>
-                          <strong>{metric.driver_name}</strong>
-                          <div className="schedule-driver-metrics__subtext">{metric.driver_id}</div>
-                        </td>
-                        <td>{formatDriverHours(metric.scheduled_hours)}</td>
-                        <td>{metric.scheduled_routes}</td>
-                        <td>{metric.on_call_shifts}</td>
-                        <td>
-                          <span className={`schedule-pill schedule-pill--${pillToneForDriverState(metric.preference_state)}`}>
-                            {metric.preference_state}
-                          </span>
-                        </td>
-                        <td>
-                          <span className={`schedule-pill schedule-pill--${pillToneForDriverState(metric.availability_state)}`}>
-                            {metric.availability_state}
-                          </span>
-                        </td>
-                        <td>
-                          <span className={`schedule-pill schedule-pill--${pillToneForDriverState(metric.compliance_state)}`}>
-                            {metric.compliance_state}
-                          </span>
-                        </td>
-                        <td>{metric.issues.length > 0 ? metric.issues.join(", ") : "—"}</td>
-                      </tr>
-                    ))}
-                </tbody>
-              </table>
-            </div>
-          ) : (
-            <p className="workpage-history__empty">No driver metrics are available on this surface yet.</p>
-          )}
-        </section>
       </div>
 
       <aside className="workpage-page__artifact-rail schedule-workpage-surface__rail">

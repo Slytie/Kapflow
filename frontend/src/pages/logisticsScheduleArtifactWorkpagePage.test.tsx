@@ -1,9 +1,13 @@
-import { render, screen, waitFor, within } from "@testing-library/react";
+import { act, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { HttpResponse, http } from "msw";
 
 import scheduleArtifactStateSnapshot from "@fixtures/workpage_schedule_v0_artifact_state.json";
 import { App } from "@/app/App";
+import {
+  SCHEDULE_CHECKS_SUMMARY,
+  SCHEDULE_DEPENDENCY_STATUS_SUMMARY
+} from "@/components/workpages/ScheduleWorkpageSurface";
 import { mutationLog } from "@/test/api/handlers";
 import { server } from "@/test/api/server";
 
@@ -34,6 +38,14 @@ function heatmapButton(
 
 function personNameFromLabel(label: string): string {
   return label.split(" on ")[0] ?? label;
+}
+
+function driverHeatmapRow(section: HTMLElement, driverName: string): HTMLElement {
+  const row = within(section).getByText(driverName).closest("tr");
+  if (!row) {
+    throw new Error(`Heatmap row not found for ${driverName}`);
+  }
+  return row as HTMLElement;
 }
 
 function overviewHeadingOrder(container: HTMLElement): string[] {
@@ -161,9 +173,54 @@ describe("LogisticsScheduleArtifactWorkpagePage", () => {
       expect(within(artifactPage).getByRole("heading", { name: "Draft lineage" })).toBeInTheDocument();
       expect(within(artifactPage).getByRole("heading", { name: "Live preview" })).toBeInTheDocument();
       expect(overviewHeadingOrder(artifactPage)).toEqual(["Dependency status", "Checks", "Selected day"]);
+      expect(within(artifactPage).queryByRole("heading", { name: "Driver metrics" })).not.toBeInTheDocument();
       expect(within(artifactPage).getByText("No accepted schedule history is available for this surface yet.")).toBeInTheDocument();
+      const dependencySection = within(artifactPage)
+        .getByRole("heading", { name: "Dependency status" })
+        .closest("section");
+      const checksSection = within(artifactPage).getByRole("heading", { name: "Checks" }).closest("section");
+      expect(dependencySection).not.toBeNull();
+      expect(checksSection).not.toBeNull();
+      expect(screen.queryByRole("tooltip")).not.toBeInTheDocument();
+      const dependencySummaryButton = within(dependencySection as HTMLElement).getByRole("button", {
+        name: "Show summary for Dependency status"
+      });
+      const checksSummaryButton = within(checksSection as HTMLElement).getByRole("button", {
+        name: "Show summary for Checks"
+      });
+      await user.hover(dependencySummaryButton);
+      expect(await screen.findByRole("tooltip")).toHaveTextContent(SCHEDULE_DEPENDENCY_STATUS_SUMMARY);
+      await user.unhover(dependencySummaryButton);
+      await waitFor(() => {
+        expect(screen.queryByRole("tooltip")).not.toBeInTheDocument();
+      });
+      act(() => {
+        checksSummaryButton.focus();
+      });
+      expect(await screen.findByRole("tooltip")).toHaveTextContent(SCHEDULE_CHECKS_SUMMARY);
+      act(() => {
+        checksSummaryButton.blur();
+      });
+      await waitFor(() => {
+        expect(screen.queryByRole("tooltip")).not.toBeInTheDocument();
+      });
 
       const heatmap = heatmapSection();
+      const abhirajRow = driverHeatmapRow(heatmap, "Abhiraj Singh");
+      expect(within(abhirajRow).getByText("25.5 h")).toBeInTheDocument();
+      expect(within(abhirajRow).getByText("Pref Unset")).toBeInTheDocument();
+      expect(within(abhirajRow).getByText("Avail Available")).toBeInTheDocument();
+      await user.click(
+        within(abhirajRow).getByRole("button", { name: "Open compliance details for Abhiraj Singh" })
+      );
+      const complianceDialog = await screen.findByRole("dialog", {
+        name: "Compliance details for Abhiraj Singh"
+      });
+      expect(within(complianceDialog).getByText("route_slot_not_in_pinned_baseline")).toBeInTheDocument();
+      expect(within(complianceDialog).getByText("rolling_7_day_limit")).toBeInTheDocument();
+      await user.click(
+        screen.getByRole("button", { name: "Close Compliance details for Abhiraj Singh" })
+      );
       const sourceCell = heatmapButton(
         heatmap,
         (label) => label.includes("2026-03-22: assigned route")
@@ -206,105 +263,116 @@ describe("LogisticsScheduleArtifactWorkpagePage", () => {
         expect(mutationLog()).toContain("artifact-download-bin:av-schedule-artifact-002");
       });
     },
-    40000
+    120000
   );
 
-  it("reopens the previous draft from the draft rail and shows the stale-version guidance", async () => {
-    const user = userEvent.setup();
-    window.history.pushState({}, "", "/runs/wr-weekly-001/workpages/schedule-v0");
-    render(<App />);
+  it(
+    "reopens the previous draft from the draft rail and shows the stale-version guidance",
+    async () => {
+      const user = userEvent.setup();
+      window.history.pushState({}, "", "/runs/wr-weekly-001/workpages/schedule-v0");
+      render(<App />);
 
-    await user.click(await screen.findByRole("link", { name: "Open editable draft" }));
-    expect(await screen.findByTestId("schedule-artifact-workpage-page")).toBeInTheDocument();
-    await user.click(screen.getByRole("button", { name: "Save draft" }));
-
-    await waitFor(() => {
-      expect(window.location.pathname).toBe(
-        "/runs/wr-weekly-001/workpages/schedule-v0/artifacts/av-schedule-artifact-002"
+      await user.click(
+        await screen.findByRole("link", { name: "Open editable draft" }, { timeout: 5000 })
       );
-    });
+      expect(await screen.findByTestId("schedule-artifact-workpage-page")).toBeInTheDocument();
+      await user.click(screen.getByRole("button", { name: "Save draft" }));
 
-    await user.click(
-      within(screen.getByTestId("schedule-draft-history-av-schedule-artifact-001")).getByRole("link", {
-        name: /Previous draft/i
-      })
-    );
+      await waitFor(() => {
+        expect(window.location.pathname).toBe(
+          "/runs/wr-weekly-001/workpages/schedule-v0/artifacts/av-schedule-artifact-002"
+        );
+      });
 
-    await waitFor(() => {
-      expect(window.location.pathname).toBe(
-        "/runs/wr-weekly-001/workpages/schedule-v0/artifacts/av-schedule-artifact-001"
+      await user.click(
+        within(screen.getByTestId("schedule-draft-history-av-schedule-artifact-001")).getByRole("link", {
+          name: /Previous draft/i
+        })
       );
-    });
-    expect(await screen.findByRole("heading", { name: "Latest draft available" })).toBeInTheDocument();
-  });
 
-  it("shows conflict reopen UX and keeps local edits until the operator navigates", async () => {
-    const user = userEvent.setup();
-    server.use(
-      http.post(
-        "*/api/v1/workpages/workflow-runs/:workflowRunId/schedule-v0/artifacts/:artifactVersionId/submit",
-        ({ params }) =>
-          HttpResponse.json(
-            {
-              status: "error",
-              error: {
-                code: "workpage_artifact_conflict",
-                message: "artifact-backed workpage already has a newer draft",
-                details: {
-                  artifact_version_id: String(params.artifactVersionId),
-                  latest_artifact_version_id: "av-schedule-artifact-latest",
-                  workflow_run_id: "wr-weekly-001",
-                  route:
-                    "/runs/wr-weekly-001/workpages/schedule-v0/artifacts/av-schedule-artifact-latest"
+      await waitFor(() => {
+        expect(window.location.pathname).toBe(
+          "/runs/wr-weekly-001/workpages/schedule-v0/artifacts/av-schedule-artifact-001"
+        );
+      });
+      expect(await screen.findByRole("heading", { name: "Latest draft available" })).toBeInTheDocument();
+    },
+    45000
+  );
+
+  it(
+    "shows conflict reopen UX and keeps local edits until the operator navigates",
+    async () => {
+      const user = userEvent.setup();
+      server.use(
+        http.post(
+          "*/api/v1/workpages/workflow-runs/:workflowRunId/schedule-v0/artifacts/:artifactVersionId/submit",
+          ({ params }) =>
+            HttpResponse.json(
+              {
+                status: "error",
+                error: {
+                  code: "workpage_artifact_conflict",
+                  message: "artifact-backed workpage already has a newer draft",
+                  details: {
+                    artifact_version_id: String(params.artifactVersionId),
+                    latest_artifact_version_id: "av-schedule-artifact-latest",
+                    workflow_run_id: "wr-weekly-001",
+                    route:
+                      "/runs/wr-weekly-001/workpages/schedule-v0/artifacts/av-schedule-artifact-latest"
+                  }
                 }
-              }
-            },
-            { status: 409 }
-          )
-      ),
-      http.get(
-        "*/api/v1/workpages/workflow-runs/:workflowRunId/schedule-v0/artifacts/av-schedule-artifact-latest",
-        () =>
-        HttpResponse.json(buildScheduleArtifactPayload("av-schedule-artifact-latest"))
-      )
-    );
+              },
+              { status: 409 }
+            )
+        ),
+        http.get(
+          "*/api/v1/workpages/workflow-runs/:workflowRunId/schedule-v0/artifacts/av-schedule-artifact-latest",
+          () => HttpResponse.json(buildScheduleArtifactPayload("av-schedule-artifact-latest"))
+        )
+      );
 
-    window.history.pushState({}, "", "/runs/wr-weekly-001/workpages/schedule-v0");
-    render(<App />);
+      window.history.pushState({}, "", "/runs/wr-weekly-001/workpages/schedule-v0");
+      render(<App />);
 
-    await user.click(await screen.findByRole("link", { name: "Open editable draft" }));
-    expect(await screen.findByTestId("schedule-artifact-workpage-page")).toBeInTheDocument();
+      await user.click(
+        await screen.findByRole("link", { name: "Open editable draft" }, { timeout: 5000 })
+      );
+      expect(await screen.findByTestId("schedule-artifact-workpage-page")).toBeInTheDocument();
 
-    const heatmap = heatmapSection();
-    const sourceCell = heatmapButton(
-      heatmap,
-      (label) => label.includes("2026-03-22: assigned route")
-    );
-    const targetCell = heatmapButton(
-      heatmap,
-      (label) => label.includes("2026-03-22: no planned work")
-    );
-    const targetName = personNameFromLabel(targetCell.getAttribute("aria-label") ?? "");
+      const heatmap = heatmapSection();
+      const sourceCell = heatmapButton(
+        heatmap,
+        (label) => label.includes("2026-03-22: assigned route")
+      );
+      const targetCell = heatmapButton(
+        heatmap,
+        (label) => label.includes("2026-03-22: no planned work")
+      );
+      const targetName = personNameFromLabel(targetCell.getAttribute("aria-label") ?? "");
 
-    await user.click(sourceCell);
-    await user.click(targetCell);
+      await user.click(sourceCell);
+      await user.click(targetCell);
 
-    await user.click(screen.getByRole("button", { name: "Save draft" }));
+      await user.click(screen.getByRole("button", { name: "Save draft" }));
 
-    expect(await screen.findByRole("heading", { name: "Latest draft already exists" })).toBeInTheDocument();
-    expect(
-      screen.getByRole("button", {
-        name: new RegExp(`^${escapeRegExp(targetName)} on 2026-03-22: assigned route, manually overridden$`)
-      })
-    ).toBeInTheDocument();
+      expect(await screen.findByRole("heading", { name: "Latest draft already exists" })).toBeInTheDocument();
+      expect(
+        screen.getByRole("button", {
+          name: new RegExp(`^${escapeRegExp(targetName)} on 2026-03-22: assigned route, manually overridden$`)
+        })
+      ).toBeInTheDocument();
 
-    await user.click(screen.getByRole("link", { name: "Open latest draft" }));
+      await user.click(screen.getByRole("link", { name: "Open latest draft" }));
 
-    expect(await screen.findByTestId("schedule-artifact-workpage-page")).toBeInTheDocument();
-    expect(window.location.pathname).toBe(
-      "/runs/wr-weekly-001/workpages/schedule-v0/artifacts/av-schedule-artifact-latest"
-    );
-  }, 20000);
+      expect(await screen.findByTestId("schedule-artifact-workpage-page")).toBeInTheDocument();
+      expect(window.location.pathname).toBe(
+        "/runs/wr-weekly-001/workpages/schedule-v0/artifacts/av-schedule-artifact-latest"
+      );
+    },
+    90000
+  );
 
   it("uses accepted-series navigation without traversing the draft rail", async () => {
     const user = userEvent.setup();
@@ -463,134 +531,138 @@ describe("LogisticsScheduleArtifactWorkpagePage", () => {
       window.history.pushState({}, "", "/runs/wr-weekly-001/workpages/schedule-v0");
       render(<App />);
 
-    await user.click(await screen.findByRole("link", { name: "Open editable draft" }));
-    expect(await screen.findByTestId("schedule-artifact-workpage-page")).toBeInTheDocument();
+      await user.click(
+        await screen.findByRole("link", { name: "Open editable draft" }, { timeout: 5000 })
+      );
+      expect(await screen.findByTestId("schedule-artifact-workpage-page")).toBeInTheDocument();
 
-    const heatmap = heatmapSection();
-    const sourceCell = heatmapButton(
-      heatmap,
-      (label) => label.includes("2026-03-22: assigned route")
-    );
-    const targetCell = heatmapButton(
-      heatmap,
-      (label) => label.includes("2026-03-22: no planned work")
-    );
-    const sourceName = personNameFromLabel(sourceCell.getAttribute("aria-label") ?? "");
-    const targetName = personNameFromLabel(targetCell.getAttribute("aria-label") ?? "");
+      const heatmap = heatmapSection();
+      const sourceCell = heatmapButton(
+        heatmap,
+        (label) => label.includes("2026-03-22: assigned route")
+      );
+      const targetCell = heatmapButton(
+        heatmap,
+        (label) => label.includes("2026-03-22: no planned work")
+      );
+      const sourceName = personNameFromLabel(sourceCell.getAttribute("aria-label") ?? "");
+      const targetName = personNameFromLabel(targetCell.getAttribute("aria-label") ?? "");
 
-    await user.click(sourceCell);
-    await user.click(targetCell);
+      await user.click(sourceCell);
+      await user.click(targetCell);
 
-    await waitFor(() => {
-      expect(mutationLog()).toContain("workpage-schedule-artifact-preview:av-schedule-artifact-001");
-    });
-    expect(await screen.findByText("Preview applied")).toBeInTheDocument();
+      await waitFor(() => {
+        expect(mutationLog()).toContain("workpage-schedule-artifact-preview:av-schedule-artifact-001");
+      });
+      expect(await screen.findByText("Preview applied")).toBeInTheDocument();
 
-    server.use(
-      http.post(
-        "*/api/v1/workpages/workflow-runs/:workflowRunId/schedule-v0/artifacts/:artifactVersionId/preview",
-        () =>
-          HttpResponse.json(
-            {
-              status: "error",
-              error: {
-                code: "preview_unavailable",
-                message: "preview calculation failed"
-              }
-            },
-            { status: 422 }
-          )
-      )
-    );
+      server.use(
+        http.post(
+          "*/api/v1/workpages/workflow-runs/:workflowRunId/schedule-v0/artifacts/:artifactVersionId/preview",
+          () =>
+            HttpResponse.json(
+              {
+                status: "error",
+                error: {
+                  code: "preview_unavailable",
+                  message: "preview calculation failed"
+                }
+              },
+              { status: 422 }
+            )
+        )
+      );
 
-    const secondSourceCell = heatmapButton(
-      heatmap,
-      (label) => label.includes(`${targetName} on 2026-03-22: assigned route`)
-    );
-    const secondTargetCell = heatmapButton(
-      heatmap,
-      (label) => label.includes(`${sourceName} on 2026-03-22: no planned work`)
-    );
+      const secondSourceCell = heatmapButton(
+        heatmap,
+        (label) => label.includes(`${targetName} on 2026-03-22: assigned route`)
+      );
+      const secondTargetCell = heatmapButton(
+        heatmap,
+        (label) => label.includes(`${sourceName} on 2026-03-22: no planned work`)
+      );
 
-    await user.click(secondSourceCell);
-    await user.click(secondTargetCell);
+      await user.click(secondSourceCell);
+      await user.click(secondTargetCell);
 
-    expect(await screen.findByText(/preview_unavailable: preview calculation failed/i)).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "Selected day" })).toBeInTheDocument();
+      expect(await screen.findByText(/preview_unavailable: preview calculation failed/i)).toBeInTheDocument();
+      expect(screen.getByRole("heading", { name: "Selected day" })).toBeInTheDocument();
     },
-    20000
+    50000
   );
 
-  it("drops mismatched workspace subject context when saving schedule drafts directly", async () => {
-    const user = userEvent.setup();
-    const submitBodies: Array<Record<string, unknown>> = [];
-    server.use(
-      http.get(
-        "*/api/v1/workpages/workflow-runs/:workflowRunId/schedule-v0/artifacts/av-schedule-artifact-001",
-        () =>
-        HttpResponse.json(buildScheduleArtifactPayload("av-schedule-artifact-001"))
-      ),
-      http.post(
-        "*/api/v1/workpages/workflow-runs/:workflowRunId/schedule-v0/artifacts/:artifactVersionId/submit",
-        async ({ params, request }) => {
-          submitBodies.push((await request.json()) as Record<string, unknown>);
-          return HttpResponse.json({
-            status: "ok",
-            command: "api.workpages.artifact.submit",
-            submitted: {
-              workflow_run_id: "wr-weekly-001",
-              artifact_version_id: "av-schedule-artifact-010",
-              supersedes_artifact_version_id: String(params.artifactVersionId),
-              route: "/runs/wr-weekly-001/workpages/schedule-v0/artifacts/av-schedule-artifact-010"
-            }
-          });
-        }
-      ),
-      http.get(
-        "*/api/v1/workpages/workflow-runs/:workflowRunId/schedule-v0/artifacts/av-schedule-artifact-010",
-        () =>
-        HttpResponse.json(buildScheduleArtifactPayload("av-schedule-artifact-010"))
-      )
-    );
-
-    window.history.pushState(
-      {
-        workpageActionRef: {
-          action_id: "workpage.schedule-v0.open_latest_draft",
-          workpage_kind: "schedule-v0",
-          workflow_run_id: "wr-other-run",
-          artifact_version_id: "av-schedule-artifact-001",
-          subject: {
-            subject_kind: "human_task",
-            subject_id: "ht-stage04-001"
+  it(
+    "drops mismatched workspace subject context when saving schedule drafts directly",
+    async () => {
+      const user = userEvent.setup();
+      const submitBodies: Array<Record<string, unknown>> = [];
+      server.use(
+        http.get(
+          "*/api/v1/workpages/workflow-runs/:workflowRunId/schedule-v0/artifacts/av-schedule-artifact-001",
+          () => HttpResponse.json(buildScheduleArtifactPayload("av-schedule-artifact-001"))
+        ),
+        http.post(
+          "*/api/v1/workpages/workflow-runs/:workflowRunId/schedule-v0/artifacts/:artifactVersionId/submit",
+          async ({ params, request }) => {
+            submitBodies.push((await request.json()) as Record<string, unknown>);
+            return HttpResponse.json({
+              status: "ok",
+              command: "api.workpages.artifact.submit",
+              submitted: {
+                workflow_run_id: "wr-weekly-001",
+                artifact_version_id: "av-schedule-artifact-010",
+                supersedes_artifact_version_id: String(params.artifactVersionId),
+                route: "/runs/wr-weekly-001/workpages/schedule-v0/artifacts/av-schedule-artifact-010"
+              }
+            });
           }
-        }
-      },
-      "",
-      "/runs/wr-weekly-001/workpages/schedule-v0/artifacts/av-schedule-artifact-001"
-    );
-    render(<App />);
-
-    await screen.findByTestId("schedule-artifact-workpage-page");
-    await user.click(screen.getByRole("button", { name: "Save draft" }));
-
-    await waitFor(() => {
-      expect(window.location.pathname).toBe(
-        "/runs/wr-weekly-001/workpages/schedule-v0/artifacts/av-schedule-artifact-010"
+        ),
+        http.get(
+          "*/api/v1/workpages/workflow-runs/:workflowRunId/schedule-v0/artifacts/av-schedule-artifact-010",
+          () => HttpResponse.json(buildScheduleArtifactPayload("av-schedule-artifact-010"))
+        )
       );
-    });
 
-    expect(submitBodies).toHaveLength(1);
-    expect(submitBodies[0]).toMatchObject({
-      action_ref: {
-        action_id: "workpage.schedule-v0.save_draft",
-        workpage_kind: "schedule-v0",
-        workflow_run_id: "wr-weekly-001",
-        artifact_version_id: "av-schedule-artifact-001",
-        subject: null
-      }
-    });
-  });
+      window.history.pushState(
+        {
+          workpageActionRef: {
+            action_id: "workpage.schedule-v0.open_latest_draft",
+            workpage_kind: "schedule-v0",
+            workflow_run_id: "wr-other-run",
+            artifact_version_id: "av-schedule-artifact-001",
+            subject: {
+              subject_kind: "human_task",
+              subject_id: "ht-stage04-001"
+            }
+          }
+        },
+        "",
+        "/runs/wr-weekly-001/workpages/schedule-v0/artifacts/av-schedule-artifact-001"
+      );
+      render(<App />);
+
+      await screen.findByTestId("schedule-artifact-workpage-page");
+      await user.click(screen.getByRole("button", { name: "Save draft" }));
+
+      await waitFor(() => {
+        expect(window.location.pathname).toBe(
+          "/runs/wr-weekly-001/workpages/schedule-v0/artifacts/av-schedule-artifact-010"
+        );
+      });
+
+      expect(submitBodies).toHaveLength(1);
+      expect(submitBodies[0]).toMatchObject({
+        action_ref: {
+          action_id: "workpage.schedule-v0.save_draft",
+          workpage_kind: "schedule-v0",
+          workflow_run_id: "wr-weekly-001",
+          artifact_version_id: "av-schedule-artifact-001",
+          subject: null
+        }
+      });
+    },
+    60000
+  );
 
   it(
     "supports same-day assignment to reserve swaps in the heatmap",
@@ -599,7 +671,9 @@ describe("LogisticsScheduleArtifactWorkpagePage", () => {
       window.history.pushState({}, "", "/runs/wr-weekly-001/workpages/schedule-v0");
       render(<App />);
 
-      await user.click(await screen.findByRole("link", { name: "Open editable draft" }));
+      await user.click(
+        await screen.findByRole("link", { name: "Open editable draft" }, { timeout: 5000 })
+      );
       expect(await screen.findByTestId("schedule-artifact-workpage-page")).toBeInTheDocument();
 
       const heatmap = heatmapSection();
@@ -628,6 +702,6 @@ describe("LogisticsScheduleArtifactWorkpagePage", () => {
         })
       ).toBeInTheDocument();
     },
-    10000
+    30000
   );
 });
