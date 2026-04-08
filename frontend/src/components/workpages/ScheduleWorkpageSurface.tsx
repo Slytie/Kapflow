@@ -32,6 +32,30 @@ export const SCHEDULE_DEPENDENCY_STATUS_SUMMARY =
 export const SCHEDULE_CHECKS_SUMMARY =
   "Shows the validation results calculated from the current schedule and its dependencies, including capacity, on-call coverage, hard assignment rules, and preference alignment. Blocking checks need attention before the schedule is ready; advisory checks are review cues.";
 
+export const SCHEDULE_DEPENDENCY_ITEM_SUMMARIES: Record<string, string> = {
+  route_slot_requirements:
+    "The required route slots and route counts for the planning week. This is the demand baseline the schedule is expected to cover.",
+  approved_availability:
+    "The approved can-work and cannot-work availability decisions for each driver. Only approved availability should shape the weekly plan.",
+  driver_capabilities:
+    "The driver qualification and eligibility baseline, including who can cover the route patterns or roles the week requires.",
+  actual_hours:
+    "Recent worked-hours truth carried forward from dispatch actuals so workload and WHC checks use real recent effort.",
+  driver_preferences:
+    "An advisory weekly preference snapshot showing where drivers want or do not want work. It supports review, but it is not hard scheduling truth."
+};
+
+export const SCHEDULE_CHECK_ITEM_SUMMARIES: Record<string, string> = {
+  scheduled_capacity:
+    "Confirms each service day has enough scheduled route assignments to cover the required route demand.",
+  on_call_buffer:
+    "Checks whether the planned on-call pool meets the reserve coverage target for the week.",
+  hard_constraint_compliance:
+    "Checks the draft against non-negotiable assignment rules such as availability, rolling-hours limits, and pinned-baseline constraints.",
+  driver_preferences_alignment:
+    "Highlights where the plan conflicts with driver preference signals. This is advisory guidance for review rather than a hard block."
+};
+
 function pillToneForDependency(state: WorkpageScheduleDependency["state"]): string {
   if (state === "aligned" || state === "resolved") {
     return "success";
@@ -87,6 +111,13 @@ function formatPreferenceLabel(state: string): string {
 
 function statusChipTitle(label: string, state: string): string {
   return `${label}: ${formatPreferenceLabel(state)}`;
+}
+
+function statusChipSummaryTitle(label: string, state: string, summary?: string): string {
+  if (!summary) {
+    return statusChipTitle(label, state);
+  }
+  return `${statusChipTitle(label, state)}. ${summary}`;
 }
 
 function ScheduleSectionHelp({
@@ -351,13 +382,15 @@ export function ScheduleWorkpageSurface({
                   <li key={dependency.dependency_key} className="schedule-dependencies__item">
                     <span
                       className={`schedule-pill schedule-pill--label schedule-pill--${pillToneForDependency(dependency.state)}`}
-                      aria-label={statusChipTitle(
+                      aria-label={statusChipSummaryTitle(
                         formatDependencyLabel(dependency.dependency_key),
-                        dependency.state
+                        dependency.state,
+                        SCHEDULE_DEPENDENCY_ITEM_SUMMARIES[dependency.dependency_key]
                       )}
-                      title={statusChipTitle(
+                      title={statusChipSummaryTitle(
                         formatDependencyLabel(dependency.dependency_key),
-                        dependency.state
+                        dependency.state,
+                        SCHEDULE_DEPENDENCY_ITEM_SUMMARIES[dependency.dependency_key]
                       )}
                     >
                       {formatDependencyLabel(dependency.dependency_key)}
@@ -384,8 +417,16 @@ export function ScheduleWorkpageSurface({
                   <li key={check.check_id} className="schedule-checks__item">
                     <span
                       className={`schedule-pill schedule-pill--label schedule-pill--${pillToneForDriverState(check.state)}`}
-                      aria-label={statusChipTitle(check.label, check.state)}
-                      title={statusChipTitle(check.label, check.state)}
+                      aria-label={statusChipSummaryTitle(
+                        check.label,
+                        check.state,
+                        SCHEDULE_CHECK_ITEM_SUMMARIES[check.check_id]
+                      )}
+                      title={statusChipSummaryTitle(
+                        check.label,
+                        check.state,
+                        SCHEDULE_CHECK_ITEM_SUMMARIES[check.check_id]
+                      )}
                     >
                       {check.label}
                     </span>

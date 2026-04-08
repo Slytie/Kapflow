@@ -6,6 +6,8 @@ import scheduleRunWorkpageStateSnapshot from "@fixtures/workpage_schedule_v0_run
 import { App } from "@/app/App";
 import {
   SCHEDULE_CHECKS_SUMMARY,
+  SCHEDULE_CHECK_ITEM_SUMMARIES,
+  SCHEDULE_DEPENDENCY_ITEM_SUMMARIES,
   SCHEDULE_DEPENDENCY_STATUS_SUMMARY
 } from "@/components/workpages/ScheduleWorkpageSurface";
 import { getApiRequestContextHeaders, setApiRequestContextHeaders } from "@/lib/api/config";
@@ -91,6 +93,12 @@ describe("LogisticsScheduleWorkpagePage", () => {
         .closest("section");
       expect(dependencySection).not.toBeNull();
       expect(within(dependencySection as HTMLElement).getByText("Route Slot Requirements")).toBeInTheDocument();
+      const routeSlotRequirementsChip = within(dependencySection as HTMLElement).getByText(
+        "Route Slot Requirements"
+      );
+      expect(routeSlotRequirementsChip.getAttribute("title")).toContain(
+        SCHEDULE_DEPENDENCY_ITEM_SUMMARIES.route_slot_requirements
+      );
       expect(
         within(dependencySection as HTMLElement).queryByText("planning.route_slot_requirements.workbook")
       ).not.toBeInTheDocument();
@@ -99,6 +107,12 @@ describe("LogisticsScheduleWorkpagePage", () => {
       expect(
         within(checksSection as HTMLElement).getByText("Routes within scheduled capacity")
       ).toBeInTheDocument();
+      const scheduledCapacityChip = within(checksSection as HTMLElement).getByText(
+        "Routes within scheduled capacity"
+      );
+      expect(scheduledCapacityChip.getAttribute("title")).toContain(
+        SCHEDULE_CHECK_ITEM_SUMMARIES.scheduled_capacity
+      );
       expect(within(checksSection as HTMLElement).getAllByText("Blocking").length).toBeGreaterThan(0);
       expect(within(checksSection as HTMLElement).queryByText(/^pass$/i)).not.toBeInTheDocument();
       expect(within(checksSection as HTMLElement).queryByText(/^warn$/i)).not.toBeInTheDocument();
@@ -131,10 +145,10 @@ describe("LogisticsScheduleWorkpagePage", () => {
       expect(within(titleActions as HTMLElement).getByRole("link", { name: "Open route demand" })).toBeInTheDocument();
       expect(within(titleActions as HTMLElement).getByRole("button", { name: "Create preferences snapshot" })).toBeInTheDocument();
       const heatmap = heatmapSection(page);
-      expect(within(heatmap).getByRole("columnheader", { name: "Hours" })).toBeInTheDocument();
-      expect(within(heatmap).getByRole("columnheader", { name: "Routes" })).toBeInTheDocument();
-      expect(within(heatmap).getByRole("columnheader", { name: "On call" })).toBeInTheDocument();
-      expect(within(heatmap).getByRole("columnheader", { name: "Compliance" })).toBeInTheDocument();
+      expect(within(heatmap).getByRole("columnheader", { name: /Hours/i })).toBeInTheDocument();
+      expect(within(heatmap).getByRole("columnheader", { name: /Routes/i })).toBeInTheDocument();
+      expect(within(heatmap).getByRole("columnheader", { name: /On call/i })).toBeInTheDocument();
+      expect(within(heatmap).getByRole("columnheader", { name: /Compliance/i })).toBeInTheDocument();
       const abhirajRow = driverHeatmapRow(heatmap, "Abhiraj Singh");
       expect(within(abhirajRow).getByText("25.5 h")).toBeInTheDocument();
       expect(within(abhirajRow).getByText("Pref Unset")).toBeInTheDocument();

@@ -6,6 +6,8 @@ import scheduleArtifactStateSnapshot from "@fixtures/workpage_schedule_v0_artifa
 import { App } from "@/app/App";
 import {
   SCHEDULE_CHECKS_SUMMARY,
+  SCHEDULE_CHECK_ITEM_SUMMARIES,
+  SCHEDULE_DEPENDENCY_ITEM_SUMMARIES,
   SCHEDULE_DEPENDENCY_STATUS_SUMMARY
 } from "@/components/workpages/ScheduleWorkpageSurface";
 import { mutationLog } from "@/test/api/handlers";
@@ -188,6 +190,18 @@ describe("LogisticsScheduleArtifactWorkpagePage", () => {
       const checksSummaryButton = within(checksSection as HTMLElement).getByRole("button", {
         name: "Show summary for Checks"
       });
+      const routeSlotRequirementsChip = within(dependencySection as HTMLElement).getByText(
+        "Route Slot Requirements"
+      );
+      expect(routeSlotRequirementsChip.getAttribute("title")).toContain(
+        SCHEDULE_DEPENDENCY_ITEM_SUMMARIES.route_slot_requirements
+      );
+      const scheduledCapacityChip = within(checksSection as HTMLElement).getByText(
+        "Routes within scheduled capacity"
+      );
+      expect(scheduledCapacityChip.getAttribute("title")).toContain(
+        SCHEDULE_CHECK_ITEM_SUMMARIES.scheduled_capacity
+      );
       await user.hover(dependencySummaryButton);
       expect(await screen.findByRole("tooltip")).toHaveTextContent(SCHEDULE_DEPENDENCY_STATUS_SUMMARY);
       await user.unhover(dependencySummaryButton);

@@ -248,7 +248,8 @@ export function ScheduleHeatmapEditor({
   return (
     <section className="workpage-panel schedule-heatmap">
       <header className="workpage-panel__header schedule-heatmap__header">
-        <div>
+        <div className="schedule-heatmap__header-copy">
+          <span className="schedule-heatmap__eyebrow">Weekly planning grid</span>
           <h2>{section.title}</h2>
           <p>
             {armedCell
@@ -259,49 +260,61 @@ export function ScheduleHeatmapEditor({
                   : "Click a filled cell to start moving planned work.")}
           </p>
         </div>
-        <div className="schedule-heatmap__legend" aria-label="Heatmap legend">
-          <span className="schedule-heatmap__legend-item">
-            <span className="schedule-heatmap__legend-swatch schedule-heatmap__legend-swatch--assigned" />
-            Assigned route
-          </span>
-          <span className="schedule-heatmap__legend-item">
-            <span className="schedule-heatmap__legend-swatch schedule-heatmap__legend-swatch--reserve" />
-            On call
-          </span>
-          <span className="schedule-heatmap__legend-item">
-            <span className="schedule-heatmap__legend-swatch schedule-heatmap__legend-swatch--empty" />
-            No planned work
-          </span>
-          <span className="schedule-heatmap__legend-item">
-            <span className="schedule-heatmap__legend-swatch schedule-heatmap__legend-swatch--manual" />
-            Manual override
-          </span>
+        <div className="schedule-heatmap__header-meta">
+          <span className="schedule-heatmap__legend-label">Legend</span>
+          <div className="schedule-heatmap__legend" aria-label="Heatmap legend">
+            <span className="schedule-heatmap__legend-item">
+              <span className="schedule-heatmap__legend-swatch schedule-heatmap__legend-swatch--assigned" />
+              Assigned route
+            </span>
+            <span className="schedule-heatmap__legend-item">
+              <span className="schedule-heatmap__legend-swatch schedule-heatmap__legend-swatch--reserve" />
+              On call
+            </span>
+            <span className="schedule-heatmap__legend-item">
+              <span className="schedule-heatmap__legend-swatch schedule-heatmap__legend-swatch--empty" />
+              No planned work
+            </span>
+            <span className="schedule-heatmap__legend-item">
+              <span className="schedule-heatmap__legend-swatch schedule-heatmap__legend-swatch--manual" />
+              Manual override
+            </span>
+          </div>
         </div>
       </header>
 
-      {statusMessage ? <p className="schedule-heatmap__status">{statusMessage}</p> : null}
+      {statusMessage ? (
+        <p className="schedule-heatmap__status" role="status">
+          {statusMessage}
+        </p>
+      ) : null}
 
       <div className="schedule-heatmap__wrap">
         <table className="schedule-heatmap__table">
           <thead>
             <tr>
               <th scope="col" className="schedule-heatmap__person-header">
-                People
+                <span aria-hidden="true">Roster</span>
+                <strong>People</strong>
               </th>
               <th scope="col" className="schedule-heatmap__metric-header schedule-heatmap__metric-header--hours">
-                Hours
+                <span aria-hidden="true">Metrics</span>
+                <strong>Hours</strong>
               </th>
               <th scope="col" className="schedule-heatmap__metric-header schedule-heatmap__metric-header--routes">
-                Routes
+                <span aria-hidden="true">Metrics</span>
+                <strong>Routes</strong>
               </th>
               <th scope="col" className="schedule-heatmap__metric-header schedule-heatmap__metric-header--on-call">
-                On call
+                <span aria-hidden="true">Metrics</span>
+                <strong>On call</strong>
               </th>
               <th
                 scope="col"
                 className="schedule-heatmap__metric-header schedule-heatmap__metric-header--compliance"
               >
-                Compliance
+                <span aria-hidden="true">Risk</span>
+                <strong>Compliance</strong>
               </th>
               {serviceDates.map((serviceDate) => (
                 <th
@@ -334,8 +347,10 @@ export function ScheduleHeatmapEditor({
                 <tr key={person.driver_id}>
                   <th scope="row" className={personCellClassName}>
                     <div className="schedule-heatmap__person">
-                      <strong>{person.driver_name}</strong>
-                      <span>
+                      <div className="schedule-heatmap__person-top">
+                        <strong>{person.driver_name}</strong>
+                      </div>
+                      <span className="schedule-heatmap__person-meta">
                         {[person.employment_type, person.on_call_eligible ? "on-call eligible" : ""]
                           .filter((value) => value.length > 0)
                           .join(" · ") || "planner roster"}
