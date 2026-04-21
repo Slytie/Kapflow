@@ -12,6 +12,12 @@ import {
 } from "@/components/workpages/ScheduleWorkpageSurface";
 import { mutationLog } from "@/test/api/handlers";
 import { server } from "@/test/api/server";
+import {
+  expectHeatmapHeaderStatusGroups,
+  expectHeatmapPreferenceBars,
+  expectSelectedDateHeaderStats,
+  scheduleHeatmapSectionIn as heatmapSectionIn
+} from "./logisticsScheduleTestHelpers";
 
 function escapeRegExp(value: string): string {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -19,16 +25,6 @@ function escapeRegExp(value: string): string {
 
 function heatmapSection(): HTMLElement {
   const section = screen.getByRole("heading", { name: "Planned schedule heatmap" }).closest("section");
-  if (!section) {
-    throw new Error("Heatmap section not found");
-  }
-  return section as HTMLElement;
-}
-
-function heatmapSectionIn(container: HTMLElement): HTMLElement {
-  const section = within(container)
-    .getByRole("heading", { name: "Planned schedule heatmap" })
-    .closest("section");
   if (!section) {
     throw new Error("Heatmap section not found");
   }
@@ -58,14 +54,6 @@ function driverHeatmapRow(section: HTMLElement, driverName: string): HTMLElement
     throw new Error(`Heatmap row not found for ${driverName}`);
   }
   return row as HTMLElement;
-}
-
-function overviewHeadingOrder(container: HTMLElement): string[] {
-  const overview = container.querySelector(".schedule-workpage-surface__overview");
-  expect(overview).not.toBeNull();
-  return within(overview as HTMLElement)
-    .getAllByRole("heading", { level: 2 })
-    .map((heading) => heading.textContent ?? "");
 }
 
 function buildScheduleArtifactPayload(
@@ -167,8 +155,49 @@ describe("LogisticsScheduleArtifactWorkpagePage", () => {
       await user.click(await screen.findByRole("button", { name: "Edit weekly schedule" }));
 
       const dialog = await screen.findByRole("dialog", { name: "Edit weekly schedule" });
+      expect(dialog).toHaveClass("schedule-quick-edit-modal");
       const editor = await within(dialog).findByTestId("schedule-quick-edit-editor");
+      expect(within(editor).getByRole("heading", { name: "Weekly Schedule Draft" })).toBeInTheDocument();
+      expect(within(editor).queryByText("Weekly Schedule Draft Artifact")).not.toBeInTheDocument();
+      expect(
+        within(editor).queryByText(
+          "Live preview recalculates in place. Save creates the next immutable draft in this weekly lineage."
+        )
+      ).not.toBeInTheDocument();
+      expect(
+        within(editor).queryByText(
+          "A bounded Stage04 draft workbook edit lane with live backend preview and explicit save into a new immutable draft version."
+        )
+      ).not.toBeInTheDocument();
+      expect(within(editor).queryByText(/^Week /)).not.toBeInTheDocument();
+      expect(within(editor).queryByText(/^Artifact /)).not.toBeInTheDocument();
+      expect(within(editor).queryByText("155 assignments")).not.toBeInTheDocument();
+      expect(within(editor).queryByText("<bundle_id:10>")).not.toBeInTheDocument();
+      expect(within(editor).queryByRole("heading", { name: "Capacity bar" })).not.toBeInTheDocument();
+      expectHeatmapHeaderStatusGroups(editor);
+      expect(within(editor).queryByRole("heading", { name: "Draft lineage" })).not.toBeInTheDocument();
       const heatmap = heatmapSectionIn(editor);
+      expectSelectedDateHeaderStats(editor);
+      expectHeatmapPreferenceBars(editor);
+      expect(heatmap).toHaveClass("schedule-heatmap--compact");
+      expect(within(heatmap).getByRole("columnheader", { name: "Hrs" })).toBeInTheDocument();
+      expect(within(heatmap).getByRole("columnheader", { name: "Rt" })).toBeInTheDocument();
+      expect(within(heatmap).getByRole("columnheader", { name: "OC" })).toBeInTheDocument();
+      expect(within(heatmap).getByRole("columnheader", { name: "Risk" })).toBeInTheDocument();
+      expect(within(heatmap).queryByText("Available on selected day")).not.toBeInTheDocument();
+
+      await user.click(within(editor).getByRole("button", { name: "History" }));
+      const historyDialog = await screen.findByRole("dialog", { name: "Draft lineage" });
+      expect(
+        within(historyDialog).getByText(
+          "Draft navigation stays within backend-authored draft lineage for this immutable schedule surface."
+        )
+      ).toBeInTheDocument();
+      await user.click(within(historyDialog).getByRole("button", { name: "Close" }));
+      await waitFor(() => {
+        expect(screen.queryByRole("dialog", { name: "Draft lineage" })).not.toBeInTheDocument();
+      });
+
       const sourceCell = heatmapButton(
         heatmap,
         (label) => label.includes("2026-03-22: assigned route")
@@ -200,15 +229,16 @@ describe("LogisticsScheduleArtifactWorkpagePage", () => {
   );
 
   it(
-    "opens the latest draft from the run-backed landing, auto-previews heatmap edits, saves a superseding version, and downloads JSON",
+    "opens the standalone latest draft artifact, auto-previews heatmap edits, saves a superseding version, and downloads JSON",
     async () => {
       const user = userEvent.setup();
-      window.history.pushState({}, "", "/runs/wr-weekly-001/workpages/schedule-v0");
+      window.history.pushState(
+        {},
+        "",
+        "/runs/wr-weekly-001/workpages/schedule-v0/artifacts/av-schedule-artifact-001"
+      );
       render(<App />);
 
-      await user.click(
-        await screen.findByRole("link", { name: "Open editable draft" }, { timeout: 5000 })
-      );
       const artifactPage = await screen.findByTestId("schedule-artifact-workpage-page");
       const artifactTitleBar = artifactPage.querySelector(".workpage-page__hero-title-bar");
       const artifactHeroActions = artifactPage.querySelector(".workpage-page__hero-actions");
@@ -227,31 +257,21 @@ describe("LogisticsScheduleArtifactWorkpagePage", () => {
       expect(within(artifactPage).getByRole("heading", { name: "Accepted history" })).toBeInTheDocument();
       expect(within(artifactPage).getByRole("heading", { name: "Draft lineage" })).toBeInTheDocument();
       expect(within(artifactPage).getByRole("heading", { name: "Live preview" })).toBeInTheDocument();
-      expect(overviewHeadingOrder(artifactPage)).toEqual(["Dependency status", "Checks"]);
+      const { dependencyGroup, checksGroup } = expectHeatmapHeaderStatusGroups(artifactPage);
       expect(within(artifactPage).queryByRole("heading", { name: "Driver metrics" })).not.toBeInTheDocument();
       expect(within(artifactPage).getByText("No accepted schedule history is available for this surface yet.")).toBeInTheDocument();
-      const dependencySection = within(artifactPage)
-        .getByRole("heading", { name: "Dependency status" })
-        .closest("section");
-      const checksSection = within(artifactPage).getByRole("heading", { name: "Checks" }).closest("section");
-      expect(dependencySection).not.toBeNull();
-      expect(checksSection).not.toBeNull();
       expect(screen.queryByRole("tooltip")).not.toBeInTheDocument();
-      const dependencySummaryButton = within(dependencySection as HTMLElement).getByRole("button", {
+      const dependencySummaryButton = within(dependencyGroup).getByRole("button", {
         name: "Show summary for Dependency status"
       });
-      const checksSummaryButton = within(checksSection as HTMLElement).getByRole("button", {
+      const checksSummaryButton = within(checksGroup).getByRole("button", {
         name: "Show summary for Checks"
       });
-      const routeSlotRequirementsChip = within(dependencySection as HTMLElement).getByText(
-        "Route Slot Requirements"
-      );
+      const routeSlotRequirementsChip = within(dependencyGroup).getByText("Route Slot Requirements");
       expect(routeSlotRequirementsChip.getAttribute("title")).toContain(
         SCHEDULE_DEPENDENCY_ITEM_SUMMARIES.route_slot_requirements
       );
-      const scheduledCapacityChip = within(checksSection as HTMLElement).getByText(
-        "Routes within scheduled capacity"
-      );
+      const scheduledCapacityChip = within(checksGroup).getByText("Routes within scheduled capacity");
       expect(scheduledCapacityChip.getAttribute("title")).toContain(
         SCHEDULE_CHECK_ITEM_SUMMARIES.scheduled_capacity
       );
@@ -273,19 +293,22 @@ describe("LogisticsScheduleArtifactWorkpagePage", () => {
       });
 
       const heatmap = heatmapSection();
-      const selectedCapacityDay = artifactPage.querySelector(".schedule-capacity-bar__day.is-selected");
-      expect(selectedCapacityDay).not.toBeNull();
-      expect(within(selectedCapacityDay as HTMLElement).getByText("2026-03-24")).toBeInTheDocument();
       const selectedHeatmapDate = heatmap.querySelector(".schedule-heatmap__date-header--selected");
       expect(selectedHeatmapDate).not.toBeNull();
       expect(selectedHeatmapDate).toHaveTextContent("2026-03-24");
+      expectSelectedDateHeaderStats(artifactPage);
+      expectHeatmapPreferenceBars(artifactPage);
       const abhirajRow = driverHeatmapRow(heatmap, "Abhiraj Singh");
       expect(within(abhirajRow).getByText("25.5 h")).toBeInTheDocument();
-      expect(within(abhirajRow).getByText("Pref Unset")).toBeInTheDocument();
-      expect(within(abhirajRow).getByText("Avail Available")).toBeInTheDocument();
-      await user.click(
-        within(abhirajRow).getByRole("button", { name: "Open compliance details for Abhiraj Singh" })
-      );
+      expect(within(abhirajRow).queryByText("Pref Unset")).not.toBeInTheDocument();
+      expect(within(abhirajRow).queryByText("Avail Available")).not.toBeInTheDocument();
+      const riskTrigger = within(abhirajRow).getByRole("button", {
+        name: "Open compliance details for Abhiraj Singh"
+      });
+      expect(riskTrigger).toHaveClass("schedule-heatmap__risk-trigger");
+      expect(riskTrigger).toHaveTextContent(/Pass|Warn|Fail/);
+      expect(riskTrigger).toHaveTextContent("i");
+      await user.click(riskTrigger);
       const complianceDialog = await screen.findByRole("dialog", {
         name: "Compliance details for Abhiraj Singh"
       });
@@ -343,12 +366,13 @@ describe("LogisticsScheduleArtifactWorkpagePage", () => {
     "reopens the previous draft from the draft rail and shows the stale-version guidance",
     async () => {
       const user = userEvent.setup();
-      window.history.pushState({}, "", "/runs/wr-weekly-001/workpages/schedule-v0");
+      window.history.pushState(
+        {},
+        "",
+        "/runs/wr-weekly-001/workpages/schedule-v0/artifacts/av-schedule-artifact-001"
+      );
       render(<App />);
 
-      await user.click(
-        await screen.findByRole("link", { name: "Open editable draft" }, { timeout: 5000 })
-      );
       expect(await screen.findByTestId("schedule-artifact-workpage-page")).toBeInTheDocument();
       await user.click(screen.getByRole("button", { name: "Save draft" }));
 
@@ -406,12 +430,13 @@ describe("LogisticsScheduleArtifactWorkpagePage", () => {
         )
       );
 
-      window.history.pushState({}, "", "/runs/wr-weekly-001/workpages/schedule-v0");
+      window.history.pushState(
+        {},
+        "",
+        "/runs/wr-weekly-001/workpages/schedule-v0/artifacts/av-schedule-artifact-001"
+      );
       render(<App />);
 
-      await user.click(
-        await screen.findByRole("link", { name: "Open editable draft" }, { timeout: 5000 })
-      );
       expect(await screen.findByTestId("schedule-artifact-workpage-page")).toBeInTheDocument();
 
       const heatmap = heatmapSection();
@@ -601,12 +626,13 @@ describe("LogisticsScheduleArtifactWorkpagePage", () => {
     "keeps the last successful preview visible when a later preview fails",
     async () => {
       const user = userEvent.setup();
-      window.history.pushState({}, "", "/runs/wr-weekly-001/workpages/schedule-v0");
+      window.history.pushState(
+        {},
+        "",
+        "/runs/wr-weekly-001/workpages/schedule-v0/artifacts/av-schedule-artifact-001"
+      );
       render(<App />);
 
-      await user.click(
-        await screen.findByRole("link", { name: "Open editable draft" }, { timeout: 5000 })
-      );
       expect(await screen.findByTestId("schedule-artifact-workpage-page")).toBeInTheDocument();
 
       const heatmap = heatmapSection();
@@ -743,12 +769,13 @@ describe("LogisticsScheduleArtifactWorkpagePage", () => {
     "supports same-day assignment to reserve swaps in the heatmap",
     async () => {
       const user = userEvent.setup();
-      window.history.pushState({}, "", "/runs/wr-weekly-001/workpages/schedule-v0");
+      window.history.pushState(
+        {},
+        "",
+        "/runs/wr-weekly-001/workpages/schedule-v0/artifacts/av-schedule-artifact-001"
+      );
       render(<App />);
 
-      await user.click(
-        await screen.findByRole("link", { name: "Open editable draft" }, { timeout: 5000 })
-      );
       expect(await screen.findByTestId("schedule-artifact-workpage-page")).toBeInTheDocument();
 
       const heatmap = heatmapSection();

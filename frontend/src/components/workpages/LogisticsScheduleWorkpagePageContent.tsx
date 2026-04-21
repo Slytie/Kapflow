@@ -13,6 +13,7 @@ import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 
 import { StatePanel } from "@/components/StatePanel";
 import {
+  DraftVersionTimeline,
   DraftVersionTimelineEntry,
   draftVersionPrimaryLabel
 } from "@/components/workpages/DraftVersionTimeline";
@@ -295,6 +296,84 @@ function buildDraftRail(contract: WorkpageContract): ScheduleVersionRailDefiniti
   };
 }
 
+function ScheduleDraftHistoryDialog({
+  rail,
+  onClose
+}: {
+  rail: ScheduleVersionRailDefinition;
+  onClose: () => void;
+}): JSX.Element {
+  const titleId = useId();
+
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent): void => {
+      if (event.key === "Escape") {
+        onClose();
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [onClose]);
+
+  return (
+    <div
+      className="schedule-draft-history-dialog-backdrop"
+      onMouseDown={(event) => {
+        if (event.target === event.currentTarget) {
+          onClose();
+        }
+      }}
+    >
+      <section
+        className="schedule-draft-history-dialog"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+      >
+        <header className="schedule-draft-history-dialog__header">
+          <div>
+            <p className="timeline-page__eyebrow">{rail.eyebrow}</p>
+            <h2 id={titleId}>{rail.title}</h2>
+          </div>
+          <button type="button" className="action-btn" onClick={onClose}>
+            Close
+          </button>
+        </header>
+        <div className="schedule-draft-history-dialog__body">
+          <p className="schedule-draft-history-dialog__description">{rail.description}</p>
+          <div className="schedule-version-rail__controls">
+            {rail.previousRoute ? (
+              <Link className="link-button" to={rail.previousRoute}>
+                {rail.previousLabel ?? "Previous"}
+              </Link>
+            ) : (
+              <span className="schedule-version-rail__hint" aria-disabled="true">
+                {rail.previousLabel ?? "Previous unavailable"}
+              </span>
+            )}
+            {rail.nextRoute ? (
+              <Link className="link-button" to={rail.nextRoute}>
+                {rail.nextLabel ?? "Next"}
+              </Link>
+            ) : (
+              <span className="schedule-version-rail__hint" aria-disabled="true">
+                {rail.nextLabel ?? "Next unavailable"}
+              </span>
+            )}
+          </div>
+          {rail.entries.length > 0 ? (
+            <DraftVersionTimeline ariaLabel={rail.title} entries={rail.entries} />
+          ) : (
+            <p className="workpage-history__empty">{rail.emptyText}</p>
+          )}
+        </div>
+      </section>
+    </div>
+  );
+}
+
 const EMPTY_WORKPAGE_MODEL = {
   sections: []
 } as unknown as WorkpageContract["workpage"];
@@ -351,6 +430,7 @@ interface LogisticsScheduleWorkpageViewProps {
   heroTitleActions?: ReactNode;
   heroSupportText?: ReactNode;
   heroActions?: ReactNode;
+  showHero?: boolean;
   stickyTitleBar?: boolean;
   preContent?: ReactNode;
   onRefresh: () => void;
@@ -367,6 +447,7 @@ function LogisticsScheduleWorkpageView({
   heroTitleActions,
   heroSupportText,
   heroActions,
+  showHero = true,
   stickyTitleBar = false,
   preContent,
   onRefresh,
@@ -402,6 +483,7 @@ function LogisticsScheduleWorkpageView({
       heroTitleActions={heroTitleActions}
       heroSupportText={heroSupportText}
       heroActions={heroActions}
+      showHero={showHero}
       stickyTitleBar={stickyTitleBar}
       infoDialogContent={
         <>
@@ -454,6 +536,9 @@ export function ScheduleQuickEditModal({
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent): void => {
       if (event.key === "Escape") {
+        if (document.querySelector(".schedule-draft-history-dialog")) {
+          return;
+        }
         onClose();
       }
     };
@@ -473,7 +558,7 @@ export function ScheduleQuickEditModal({
       }}
     >
       <section
-        className="quick-edit-modal route-demand-quick-edit-modal"
+        className="quick-edit-modal route-demand-quick-edit-modal schedule-quick-edit-modal"
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
@@ -642,6 +727,7 @@ export function LogisticsScheduleWorkpagePage(): JSX.Element {
         void query.refetch();
       }}
       isRefreshing={query.isFetching}
+      showHero={false}
       heroTitleActions={
         editableDraftRoute || routeDemandAction?.route || driverPreferencesAction?.route || driverPreferencesAction?.create_path ? (
           <>
@@ -711,6 +797,7 @@ function ScheduleArtifactEditor({
     useState<WorkpagePreviewResponse["preview"] | null>(null);
   const [previewErrorMessage, setPreviewErrorMessage] = useState<string | null>(null);
   const [isPreviewPending, setIsPreviewPending] = useState(false);
+  const [isDraftHistoryOpen, setIsDraftHistoryOpen] = useState(false);
   const query = useQuery({
     queryKey: ["workpages", "schedule-v0", "artifacts", workflowRunId, artifactVersionId],
     queryFn: () => workpagesRepository.scheduleArtifact(workflowRunId, artifactVersionId),
@@ -939,7 +1026,9 @@ function ScheduleArtifactEditor({
   const submitConflict = workpageConflictDetails(submitMutation.error);
   const staleOrConflictRoute = submitConflict?.route ?? (isStaleArtifact ? latestRoute : null);
   const backRoute = workpageBackRoute(workflowRunId);
-  const versionRails = [buildAcceptedRail(contract), buildDraftRail(contract)];
+  const draftRail = buildDraftRail(contract);
+  const versionRails = [buildAcceptedRail(contract), draftRail];
+  const isEmbedded = layout === "embedded";
   const previewBlockedReason =
     hasUnsavedEdits && previewAction?.state !== "available"
       ? previewAction?.disabled_reason ?? "Preview recalculation is unavailable for this draft."
@@ -972,8 +1061,20 @@ function ScheduleArtifactEditor({
       metadataPresentation="dialog"
       infoDialogTitle="Schedule draft context"
       sourceDescription="Artifact-backed projection of an immutable Stage04 draft weekly schedule workbook. Save creates a new superseding draft artifact version without publishing."
+      heroTitle={isEmbedded ? "Weekly Schedule Draft" : undefined}
       heroTitleActions={
         <>
+          {isEmbedded ? (
+            <button
+              type="button"
+              className="action-btn"
+              onClick={() => {
+                setIsDraftHistoryOpen(true);
+              }}
+            >
+              History
+            </button>
+          ) : null}
           <button
             type="button"
             className="action-btn action-btn--positive"
@@ -993,6 +1094,7 @@ function ScheduleArtifactEditor({
         </>
       }
       heroSupportText="Live preview recalculates in place. Save creates the next immutable draft in this weekly lineage."
+      heroPresentation={isEmbedded ? "title_only" : "default"}
       heroActions={
         layout === "page" ? (
           <>
@@ -1043,6 +1145,10 @@ function ScheduleArtifactEditor({
       backLabel={backRoute.label}
       layout={layout}
     >
+      {isEmbedded && isDraftHistoryOpen ? (
+        <ScheduleDraftHistoryDialog rail={draftRail} onClose={() => setIsDraftHistoryOpen(false)} />
+      ) : null}
+
       {submitConflict ? (
         <section className="workpage-panel workpage-panel--callout">
           <header className="workpage-panel__header">
@@ -1113,6 +1219,7 @@ function ScheduleArtifactEditor({
           blockedReason: previewBlockedReason
         }}
         saveAction={saveAction}
+        presentation={isEmbedded ? "quick_edit" : "default"}
       />
     </WorkpageFrame>
   );

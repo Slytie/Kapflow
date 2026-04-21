@@ -2,6 +2,7 @@ import type {
   WorkpageAction,
   WorkpageActionRef,
   WorkpageArtifactHistory,
+  WorkpageDriverAvailabilityExceptions,
   WorkpageDriverPreferencesGrid,
   WorkpageDriverPreferencesScheduleImpact,
   WorkpageRouteDemandCalculations,
@@ -496,6 +497,7 @@ export interface WorkpageContract {
   calculations: WorkpageScheduleCalculations | null;
   route_demand_calculations: WorkpageRouteDemandCalculations | null;
   preference_grid: WorkpageDriverPreferencesGrid | null;
+  driver_availability_exceptions: WorkpageDriverAvailabilityExceptions | null;
   schedule_impact:
     | WorkpageRouteDemandScheduleImpact
     | WorkpageDriverPreferencesScheduleImpact

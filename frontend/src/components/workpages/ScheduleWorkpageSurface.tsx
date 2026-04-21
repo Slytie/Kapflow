@@ -90,7 +90,7 @@ function isActionBlocked(action: WorkpageScheduleAction | null | undefined): boo
   return action?.state === "blocked" || action?.state === "unavailable";
 }
 
-function formatPreferenceLabel(state: string): string {
+function formatStatusLabel(state: string): string {
   return state
     .split("_")
     .map((segment) => segment.charAt(0).toUpperCase() + segment.slice(1))
@@ -98,7 +98,7 @@ function formatPreferenceLabel(state: string): string {
 }
 
 function statusChipTitle(label: string, state: string): string {
-  return `${label}: ${formatPreferenceLabel(state)}`;
+  return `${label}: ${formatStatusLabel(state)}`;
 }
 
 function statusChipSummaryTitle(label: string, state: string, summary?: string): string {
@@ -234,6 +234,90 @@ function ScheduleVersionRail({
   );
 }
 
+function ScheduleHeatmapStatusHeaderExtras({
+  dependencies,
+  checks
+}: {
+  dependencies: WorkpageScheduleDependency[];
+  checks: WorkpageScheduleCalculations["checks"];
+}): JSX.Element {
+  return (
+    <>
+      <section className="schedule-heatmap__header-group" aria-label="Dependency status">
+        <div className="schedule-section-help__heading schedule-heatmap__header-group-heading">
+          <h3>Dependency status</h3>
+          <ScheduleSectionHelp
+            heading="Dependency status"
+            summary={SCHEDULE_DEPENDENCY_STATUS_SUMMARY}
+          />
+        </div>
+        {dependencies.length > 0 ? (
+          <ul className="schedule-dependencies__list schedule-heatmap__chip-list">
+            {dependencies.map((dependency) => (
+              <li key={dependency.dependency_key} className="schedule-dependencies__item">
+                <span
+                  className={`schedule-pill schedule-pill--label schedule-pill--${pillToneForDependency(dependency.state)}`}
+                  aria-label={statusChipSummaryTitle(
+                    formatDependencyLabel(dependency.dependency_key),
+                    dependency.state,
+                    SCHEDULE_DEPENDENCY_ITEM_SUMMARIES[dependency.dependency_key]
+                  )}
+                  title={statusChipSummaryTitle(
+                    formatDependencyLabel(dependency.dependency_key),
+                    dependency.state,
+                    SCHEDULE_DEPENDENCY_ITEM_SUMMARIES[dependency.dependency_key]
+                  )}
+                >
+                  {formatDependencyLabel(dependency.dependency_key)}
+                </span>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="workpage-history__empty schedule-heatmap__header-empty">
+            No dependency metadata available.
+          </p>
+        )}
+      </section>
+
+      <section className="schedule-heatmap__header-group" aria-label="Checks">
+        <div className="schedule-section-help__heading schedule-heatmap__header-group-heading">
+          <h3>Checks</h3>
+          <ScheduleSectionHelp heading="Checks" summary={SCHEDULE_CHECKS_SUMMARY} />
+        </div>
+        {checks.length > 0 ? (
+          <ul className="schedule-checks__list schedule-heatmap__chip-list">
+            {checks.map((check) => (
+              <li key={check.check_id} className="schedule-checks__item">
+                <span
+                  className={`schedule-pill schedule-pill--label schedule-pill--${pillToneForDriverState(check.state)}`}
+                  aria-label={statusChipSummaryTitle(
+                    check.label,
+                    check.state,
+                    SCHEDULE_CHECK_ITEM_SUMMARIES[check.check_id]
+                  )}
+                  title={statusChipSummaryTitle(
+                    check.label,
+                    check.state,
+                    SCHEDULE_CHECK_ITEM_SUMMARIES[check.check_id]
+                  )}
+                >
+                  {check.label}
+                  <span className="schedule-pill__meta">{check.blocking ? "Blocking" : "Advisory"}</span>
+                </span>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="workpage-history__empty schedule-heatmap__header-empty">
+            No checks emitted yet.
+          </p>
+        )}
+      </section>
+    </>
+  );
+}
+
 export function ScheduleWorkpageSurface({
   summarySection,
   heatmapSection,
@@ -245,7 +329,8 @@ export function ScheduleWorkpageSurface({
   versionRails,
   readOnly,
   previewStatus,
-  saveAction
+  saveAction,
+  presentation = "default"
 }: {
   summarySection: WorkpageSummaryCardsSectionModel | null;
   heatmapSection: WorkpageScheduleHeatmapSection | null;
@@ -263,63 +348,50 @@ export function ScheduleWorkpageSurface({
     blockedReason?: string | null;
   };
   saveAction?: WorkpageScheduleAction | null;
+  presentation?: "default" | "quick_edit";
 }): JSX.Element {
   const selectedDay = calculations?.selected_day ?? null;
   const selectedServiceDate = selectedDay?.service_date ?? null;
   const availableDriverIds = selectedDay?.available_driver_ids ?? [];
+  const isQuickEdit = presentation === "quick_edit";
   const saveBlockedReason =
     isActionBlocked(saveAction) && saveAction?.disabled_reason ? saveAction.disabled_reason : null;
+  const checks = calculations?.checks ?? [];
+  const showQuickEditPreviewStatus =
+    isQuickEdit &&
+    Boolean(
+      previewStatus?.isDirty ||
+        previewStatus?.isPending ||
+        previewStatus?.error ||
+        previewStatus?.blockedReason ||
+        saveBlockedReason
+    );
+  const heatmap = heatmapSection ? (
+    <ScheduleHeatmapEditor
+      section={heatmapSection}
+      assignmentRows={assignmentRows}
+      reserveRows={reserveRows}
+      onRowsChange={onRowsChange}
+      readOnly={readOnly}
+      selectedServiceDate={selectedServiceDate}
+      availableDriverIds={availableDriverIds}
+      driverMetrics={calculations?.driver_metrics ?? []}
+      topBarDays={calculations?.top_bar.days ?? []}
+      density={isQuickEdit ? "compact" : "default"}
+      headerExtras={<ScheduleHeatmapStatusHeaderExtras dependencies={dependencies} checks={checks} />}
+    />
+  ) : null;
 
   return (
-    <div className="workpage-page__artifact-layout schedule-workpage-surface">
+    <div
+      className={`workpage-page__artifact-layout schedule-workpage-surface${
+        isQuickEdit ? " schedule-workpage-surface--quick-edit" : ""
+      }`}
+    >
       <div className="workpage-page__artifact-main schedule-workpage-surface__main">
-        {summarySection ? <WorkpageSummaryCardsSection section={summarySection} /> : null}
+        {!isQuickEdit && summarySection ? <WorkpageSummaryCardsSection section={summarySection} /> : null}
 
-        <section className="workpage-panel schedule-capacity-bar">
-          <header className="workpage-panel__header">
-            <h2>Capacity bar</h2>
-            <p>Server-calculated route, on-call, and staffing posture across the planning week.</p>
-          </header>
-          {calculations?.top_bar.days.length ? (
-            <div className="schedule-capacity-bar__days">
-              {calculations.top_bar.days.map((day) => (
-                <article
-                  key={day.service_date}
-                  className={`schedule-capacity-bar__day schedule-capacity-bar__day--${day.capacity_state ?? "neutral"}${
-                    selectedServiceDate === day.service_date ? " is-selected" : ""
-                  }`}
-                >
-                  <span className="schedule-capacity-bar__label">{day.weekday_label}</span>
-                  <strong>{day.service_date}</strong>
-                  <dl className="schedule-capacity-bar__stats">
-                    <div>
-                      <dt>Required</dt>
-                      <dd>{day.routes_required}</dd>
-                    </div>
-                    <div>
-                      <dt>Scheduled</dt>
-                      <dd>{day.routes_scheduled ?? "—"}</dd>
-                    </div>
-                    <div>
-                      <dt>On call</dt>
-                      <dd>
-                        {day.on_call_drivers ?? "—"} / {day.on_call_target}
-                      </dd>
-                    </div>
-                    <div>
-                      <dt>Available</dt>
-                      <dd>{day.available_driver_count ?? "—"}</dd>
-                    </div>
-                  </dl>
-                </article>
-              ))}
-            </div>
-          ) : (
-            <p className="workpage-history__empty">No capacity calculations available yet.</p>
-          )}
-        </section>
-
-        {previewStatus ? (
+        {previewStatus && !isQuickEdit ? (
           <section className="workpage-panel schedule-preview-status">
             <header className="workpage-panel__header">
               <h2>Live preview</h2>
@@ -346,103 +418,39 @@ export function ScheduleWorkpageSurface({
           </section>
         ) : null}
 
-        <div className="schedule-workpage-surface__overview">
-          <section className="workpage-panel schedule-dependencies">
-            <header className="workpage-panel__header">
-              <div className="schedule-section-help__heading">
-                <h2>Dependency status</h2>
-                <ScheduleSectionHelp
-                  heading="Dependency status"
-                  summary={SCHEDULE_DEPENDENCY_STATUS_SUMMARY}
-                />
-              </div>
-              <p>Hard inputs stay visible so operators can see drift or missing baselines before save.</p>
-            </header>
-            {dependencies.length > 0 ? (
-              <ul className="schedule-dependencies__list">
-                {dependencies.map((dependency) => (
-                  <li key={dependency.dependency_key} className="schedule-dependencies__item">
-                    <span
-                      className={`schedule-pill schedule-pill--label schedule-pill--${pillToneForDependency(dependency.state)}`}
-                      aria-label={statusChipSummaryTitle(
-                        formatDependencyLabel(dependency.dependency_key),
-                        dependency.state,
-                        SCHEDULE_DEPENDENCY_ITEM_SUMMARIES[dependency.dependency_key]
-                      )}
-                      title={statusChipSummaryTitle(
-                        formatDependencyLabel(dependency.dependency_key),
-                        dependency.state,
-                        SCHEDULE_DEPENDENCY_ITEM_SUMMARIES[dependency.dependency_key]
-                      )}
-                    >
-                      {formatDependencyLabel(dependency.dependency_key)}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <p className="workpage-history__empty">No dependency metadata available.</p>
-            )}
+        {showQuickEditPreviewStatus && previewStatus ? (
+          <section className="schedule-preview-status schedule-preview-status--compact" aria-label="Preview status">
+            <span className={`schedule-pill schedule-pill--${previewStatus.isPending ? "warn" : previewStatus.isDirty ? "success" : "neutral"}`}>
+              {previewStatus.isPending
+                ? "Recalculating"
+                : previewStatus.isDirty
+                  ? "Preview applied"
+                  : "No unsaved preview"}
+            </span>
+            {saveBlockedReason ? (
+              <span className="schedule-pill schedule-pill--danger">{saveBlockedReason}</span>
+            ) : null}
+            {previewStatus.error ? (
+              <span className="schedule-preview-status__error">{previewStatus.error}</span>
+            ) : null}
+            {!previewStatus.error && previewStatus.blockedReason ? (
+              <span className="schedule-preview-status__blocked">{previewStatus.blockedReason}</span>
+            ) : null}
           </section>
-
-          <section className="workpage-panel schedule-checks">
-            <header className="workpage-panel__header">
-              <div className="schedule-section-help__heading">
-                <h2>Checks</h2>
-                <ScheduleSectionHelp heading="Checks" summary={SCHEDULE_CHECKS_SUMMARY} />
-              </div>
-              <p>Compliance and coverage checks stay visible while you review or preview changes.</p>
-            </header>
-            {(calculations?.checks ?? []).length > 0 ? (
-              <ul className="schedule-checks__list">
-                {calculations?.checks.map((check) => (
-                  <li key={check.check_id} className="schedule-checks__item">
-                    <span
-                      className={`schedule-pill schedule-pill--label schedule-pill--${pillToneForDriverState(check.state)}`}
-                      aria-label={statusChipSummaryTitle(
-                        check.label,
-                        check.state,
-                        SCHEDULE_CHECK_ITEM_SUMMARIES[check.check_id]
-                      )}
-                      title={statusChipSummaryTitle(
-                        check.label,
-                        check.state,
-                        SCHEDULE_CHECK_ITEM_SUMMARIES[check.check_id]
-                      )}
-                    >
-                      {check.label}
-                    </span>
-                    <span className="schedule-status-meta">{check.blocking ? "Blocking" : "Advisory"}</span>
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <p className="workpage-history__empty">No checks emitted for this surface yet.</p>
-            )}
-          </section>
-        </div>
-
-        {heatmapSection ? (
-          <ScheduleHeatmapEditor
-            section={heatmapSection}
-            assignmentRows={assignmentRows}
-            reserveRows={reserveRows}
-            onRowsChange={onRowsChange}
-            readOnly={readOnly}
-            selectedServiceDate={selectedServiceDate}
-            availableDriverIds={availableDriverIds}
-            driverMetrics={calculations?.driver_metrics ?? []}
-          />
         ) : null}
+
+        {heatmap}
       </div>
 
-      <aside className="workpage-page__artifact-rail schedule-workpage-surface__rail">
-        <div className="schedule-workpage-surface__rail-stack">
-          {versionRails.map((rail) => (
-            <ScheduleVersionRail key={rail.testId} rail={rail} />
-          ))}
-        </div>
-      </aside>
+      {!isQuickEdit ? (
+        <aside className="workpage-page__artifact-rail schedule-workpage-surface__rail">
+          <div className="schedule-workpage-surface__rail-stack">
+            {versionRails.map((rail) => (
+              <ScheduleVersionRail key={rail.testId} rail={rail} />
+            ))}
+          </div>
+        </aside>
+      ) : null}
     </div>
   );
 }

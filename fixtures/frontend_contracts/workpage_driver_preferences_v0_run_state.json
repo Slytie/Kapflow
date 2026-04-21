@@ -23,6 +23,23 @@
         "route": null,
         "state": "available",
         "workpage_kind": "driver-preferences-v0"
+      },
+      {
+        "action_id": "workpage.driver-preferences-v0.add_availability_exception",
+        "action_ref": {
+          "action_id": "workpage.driver-preferences-v0.add_availability_exception",
+          "artifact_version_id": null,
+          "subject": null,
+          "workflow_run_id": "<workflow_run_id:1>",
+          "workpage_kind": "driver-preferences-v0"
+        },
+        "artifact_version_id": null,
+        "create_path": "/api/v1/workpages/workflow-runs/<workflow_run_id:1>/driver-preferences-v0/availability-exceptions",
+        "disabled_reason": null,
+        "kind": "add_availability_exception",
+        "label": "Add availability exception",
+        "state": "available",
+        "workpage_kind": "driver-preferences-v0"
       }
     ],
     "artifact_history": null,
@@ -36,6 +53,9 @@
     },
     "command": "api.workpages.workflow_run",
     "draft_resolution": null,
+    "driver_availability_exceptions": {
+      "items": []
+    },
     "freshness": {
       "generated_at": "<ts:1>",
       "source_kind": "workflow_run_projection",
@@ -49,8 +69,8 @@
           "employment_type": "full_time",
           "on_call_eligible": true,
           "preferences_by_weekday": {
-            "fri": "open_to_work",
-            "mon": "open_to_work",
+            "fri": "definitely_can_not_work",
+            "mon": "prefer_not_to_work",
             "sat": "definitely_can_not_work",
             "sun": "open_to_work",
             "thu": "open_to_work",
@@ -80,9 +100,9 @@
           "on_call_eligible": true,
           "preferences_by_weekday": {
             "fri": "open_to_work",
-            "mon": "open_to_work",
+            "mon": "prefer_not_to_work",
             "sat": "open_to_work",
-            "sun": "prefer_not_to_work",
+            "sun": "open_to_work",
             "thu": "open_to_work",
             "tue": "open_to_work",
             "wed": "open_to_work"
@@ -97,9 +117,9 @@
             "fri": "open_to_work",
             "mon": "open_to_work",
             "sat": "open_to_work",
-            "sun": "definitely_can_not_work",
+            "sun": "prefer_not_to_work",
             "thu": "open_to_work",
-            "tue": "prefer_not_to_work",
+            "tue": "open_to_work",
             "wed": "open_to_work"
           }
         },
@@ -111,10 +131,10 @@
           "preferences_by_weekday": {
             "fri": "definitely_can_not_work",
             "mon": "open_to_work",
-            "sat": "prefer_not_to_work",
+            "sat": "open_to_work",
             "sun": "open_to_work",
             "thu": "open_to_work",
-            "tue": "open_to_work",
+            "tue": "prefer_not_to_work",
             "wed": "open_to_work"
           }
         },
@@ -124,12 +144,12 @@
           "employment_type": "full_time",
           "on_call_eligible": true,
           "preferences_by_weekday": {
-            "fri": "open_to_work",
+            "fri": "prefer_not_to_work",
             "mon": "open_to_work",
-            "sat": "definitely_can_not_work",
-            "sun": "open_to_work",
+            "sat": "open_to_work",
+            "sun": "definitely_can_not_work",
             "thu": "open_to_work",
-            "tue": "prefer_not_to_work",
+            "tue": "open_to_work",
             "wed": "open_to_work"
           }
         },
@@ -141,11 +161,11 @@
           "preferences_by_weekday": {
             "fri": "open_to_work",
             "mon": "open_to_work",
-            "sat": "prefer_not_to_work",
-            "sun": "open_to_work",
+            "sat": "open_to_work",
+            "sun": "definitely_can_not_work",
             "thu": "open_to_work",
             "tue": "open_to_work",
-            "wed": "open_to_work"
+            "wed": "prefer_not_to_work"
           }
         },
         {
@@ -154,12 +174,12 @@
           "employment_type": "full_time",
           "on_call_eligible": true,
           "preferences_by_weekday": {
-            "fri": "definitely_can_not_work",
-            "mon": "prefer_not_to_work",
-            "sat": "open_to_work",
+            "fri": "open_to_work",
+            "mon": "open_to_work",
+            "sat": "definitely_can_not_work",
             "sun": "open_to_work",
-            "thu": "open_to_work",
-            "tue": "prefer_not_to_work",
+            "thu": "prefer_not_to_work",
+            "tue": "open_to_work",
             "wed": "open_to_work"
           }
         },
@@ -169,13 +189,13 @@
           "employment_type": "full_time",
           "on_call_eligible": true,
           "preferences_by_weekday": {
-            "fri": "definitely_can_not_work",
-            "mon": "prefer_not_to_work",
-            "sat": "open_to_work",
-            "sun": "open_to_work",
+            "fri": "open_to_work",
+            "mon": "open_to_work",
+            "sat": "prefer_not_to_work",
+            "sun": "definitely_can_not_work",
             "thu": "open_to_work",
             "tue": "open_to_work",
-            "wed": "prefer_not_to_work"
+            "wed": "open_to_work"
           }
         },
         {
@@ -184,12 +204,12 @@
           "employment_type": "part_time",
           "on_call_eligible": true,
           "preferences_by_weekday": {
-            "fri": "prefer_not_to_work",
+            "fri": "open_to_work",
             "mon": "prefer_not_to_work",
-            "sat": "open_to_work",
+            "sat": "definitely_can_not_work",
             "sun": "open_to_work",
             "thu": "open_to_work",
-            "tue": "definitely_can_not_work",
+            "tue": "open_to_work",
             "wed": "open_to_work"
           }
         },
@@ -200,10 +220,10 @@
           "on_call_eligible": true,
           "preferences_by_weekday": {
             "fri": "open_to_work",
-            "mon": "open_to_work",
+            "mon": "prefer_not_to_work",
             "sat": "definitely_can_not_work",
             "sun": "open_to_work",
-            "thu": "open_to_work",
+            "thu": "prefer_not_to_work",
             "tue": "open_to_work",
             "wed": "open_to_work"
           }
@@ -218,9 +238,9 @@
             "mon": "open_to_work",
             "sat": "open_to_work",
             "sun": "open_to_work",
-            "thu": "prefer_not_to_work",
+            "thu": "definitely_can_not_work",
             "tue": "open_to_work",
-            "wed": "open_to_work"
+            "wed": "prefer_not_to_work"
           }
         },
         {
@@ -230,11 +250,11 @@
           "on_call_eligible": false,
           "preferences_by_weekday": {
             "fri": "open_to_work",
-            "mon": "prefer_not_to_work",
+            "mon": "open_to_work",
             "sat": "open_to_work",
             "sun": "open_to_work",
-            "thu": "open_to_work",
-            "tue": "open_to_work",
+            "thu": "definitely_can_not_work",
+            "tue": "prefer_not_to_work",
             "wed": "open_to_work"
           }
         },
@@ -244,13 +264,13 @@
           "employment_type": "full_time",
           "on_call_eligible": false,
           "preferences_by_weekday": {
-            "fri": "open_to_work",
-            "mon": "prefer_not_to_work",
+            "fri": "prefer_not_to_work",
+            "mon": "open_to_work",
             "sat": "open_to_work",
             "sun": "open_to_work",
-            "thu": "open_to_work",
-            "tue": "open_to_work",
-            "wed": "definitely_can_not_work"
+            "thu": "prefer_not_to_work",
+            "tue": "definitely_can_not_work",
+            "wed": "open_to_work"
           }
         },
         {
@@ -262,7 +282,7 @@
             "fri": "open_to_work",
             "mon": "open_to_work",
             "sat": "open_to_work",
-            "sun": "open_to_work",
+            "sun": "definitely_can_not_work",
             "thu": "definitely_can_not_work",
             "tue": "open_to_work",
             "wed": "open_to_work"
@@ -274,13 +294,13 @@
           "employment_type": "part_time",
           "on_call_eligible": true,
           "preferences_by_weekday": {
-            "fri": "definitely_can_not_work",
+            "fri": "prefer_not_to_work",
             "mon": "open_to_work",
             "sat": "open_to_work",
             "sun": "open_to_work",
-            "thu": "prefer_not_to_work",
-            "tue": "open_to_work",
-            "wed": "prefer_not_to_work"
+            "thu": "open_to_work",
+            "tue": "definitely_can_not_work",
+            "wed": "open_to_work"
           }
         },
         {
@@ -290,8 +310,8 @@
           "on_call_eligible": true,
           "preferences_by_weekday": {
             "fri": "open_to_work",
-            "mon": "open_to_work",
-            "sat": "definitely_can_not_work",
+            "mon": "definitely_can_not_work",
+            "sat": "prefer_not_to_work",
             "sun": "open_to_work",
             "thu": "prefer_not_to_work",
             "tue": "open_to_work",
@@ -307,10 +327,10 @@
             "fri": "open_to_work",
             "mon": "open_to_work",
             "sat": "open_to_work",
-            "sun": "open_to_work",
+            "sun": "prefer_not_to_work",
             "thu": "open_to_work",
             "tue": "open_to_work",
-            "wed": "prefer_not_to_work"
+            "wed": "open_to_work"
           }
         },
         {
@@ -319,12 +339,12 @@
           "employment_type": "part_time",
           "on_call_eligible": false,
           "preferences_by_weekday": {
-            "fri": "definitely_can_not_work",
+            "fri": "prefer_not_to_work",
             "mon": "open_to_work",
-            "sat": "prefer_not_to_work",
+            "sat": "open_to_work",
             "sun": "open_to_work",
             "thu": "open_to_work",
-            "tue": "open_to_work",
+            "tue": "definitely_can_not_work",
             "wed": "open_to_work"
           }
         },
@@ -336,10 +356,10 @@
           "preferences_by_weekday": {
             "fri": "open_to_work",
             "mon": "definitely_can_not_work",
-            "sat": "open_to_work",
-            "sun": "prefer_not_to_work",
+            "sat": "prefer_not_to_work",
+            "sun": "open_to_work",
             "thu": "open_to_work",
-            "tue": "prefer_not_to_work",
+            "tue": "open_to_work",
             "wed": "open_to_work"
           }
         },
@@ -349,13 +369,13 @@
           "employment_type": "full_time",
           "on_call_eligible": true,
           "preferences_by_weekday": {
-            "fri": "open_to_work",
+            "fri": "definitely_can_not_work",
             "mon": "open_to_work",
             "sat": "open_to_work",
-            "sun": "prefer_not_to_work",
-            "thu": "open_to_work",
+            "sun": "open_to_work",
+            "thu": "prefer_not_to_work",
             "tue": "open_to_work",
-            "wed": "open_to_work"
+            "wed": "prefer_not_to_work"
           }
         },
         {
@@ -364,13 +384,13 @@
           "employment_type": "full_time",
           "on_call_eligible": true,
           "preferences_by_weekday": {
-            "fri": "prefer_not_to_work",
+            "fri": "open_to_work",
             "mon": "open_to_work",
             "sat": "open_to_work",
             "sun": "open_to_work",
-            "thu": "open_to_work",
+            "thu": "prefer_not_to_work",
             "tue": "open_to_work",
-            "wed": "open_to_work"
+            "wed": "definitely_can_not_work"
           }
         },
         {
@@ -380,12 +400,12 @@
           "on_call_eligible": true,
           "preferences_by_weekday": {
             "fri": "open_to_work",
-            "mon": "prefer_not_to_work",
+            "mon": "open_to_work",
             "sat": "open_to_work",
-            "sun": "definitely_can_not_work",
-            "thu": "open_to_work",
+            "sun": "open_to_work",
+            "thu": "prefer_not_to_work",
             "tue": "open_to_work",
-            "wed": "prefer_not_to_work"
+            "wed": "open_to_work"
           }
         },
         {
@@ -395,12 +415,12 @@
           "on_call_eligible": true,
           "preferences_by_weekday": {
             "fri": "open_to_work",
-            "mon": "definitely_can_not_work",
-            "sat": "prefer_not_to_work",
-            "sun": "prefer_not_to_work",
+            "mon": "open_to_work",
+            "sat": "open_to_work",
+            "sun": "open_to_work",
             "thu": "open_to_work",
             "tue": "open_to_work",
-            "wed": "open_to_work"
+            "wed": "prefer_not_to_work"
           }
         },
         {
@@ -409,13 +429,13 @@
           "employment_type": "full_time",
           "on_call_eligible": true,
           "preferences_by_weekday": {
-            "fri": "prefer_not_to_work",
+            "fri": "open_to_work",
             "mon": "open_to_work",
-            "sat": "definitely_can_not_work",
+            "sat": "open_to_work",
             "sun": "open_to_work",
             "thu": "open_to_work",
             "tue": "open_to_work",
-            "wed": "open_to_work"
+            "wed": "prefer_not_to_work"
           }
         },
         {
@@ -424,13 +444,13 @@
           "employment_type": "part_time",
           "on_call_eligible": false,
           "preferences_by_weekday": {
-            "fri": "prefer_not_to_work",
-            "mon": "definitely_can_not_work",
-            "sat": "prefer_not_to_work",
+            "fri": "open_to_work",
+            "mon": "open_to_work",
+            "sat": "open_to_work",
             "sun": "open_to_work",
             "thu": "open_to_work",
             "tue": "open_to_work",
-            "wed": "open_to_work"
+            "wed": "prefer_not_to_work"
           }
         },
         {
@@ -441,9 +461,9 @@
           "preferences_by_weekday": {
             "fri": "open_to_work",
             "mon": "open_to_work",
-            "sat": "prefer_not_to_work",
-            "sun": "open_to_work",
-            "thu": "definitely_can_not_work",
+            "sat": "open_to_work",
+            "sun": "prefer_not_to_work",
+            "thu": "open_to_work",
             "tue": "open_to_work",
             "wed": "open_to_work"
           }
@@ -454,13 +474,13 @@
           "employment_type": "full_time",
           "on_call_eligible": true,
           "preferences_by_weekday": {
-            "fri": "open_to_work",
+            "fri": "prefer_not_to_work",
             "mon": "open_to_work",
             "sat": "open_to_work",
             "sun": "open_to_work",
-            "thu": "open_to_work",
+            "thu": "prefer_not_to_work",
             "tue": "definitely_can_not_work",
-            "wed": "prefer_not_to_work"
+            "wed": "open_to_work"
           }
         },
         {
@@ -470,10 +490,10 @@
           "on_call_eligible": false,
           "preferences_by_weekday": {
             "fri": "open_to_work",
-            "mon": "prefer_not_to_work",
+            "mon": "open_to_work",
             "sat": "open_to_work",
-            "sun": "open_to_work",
-            "thu": "open_to_work",
+            "sun": "definitely_can_not_work",
+            "thu": "prefer_not_to_work",
             "tue": "open_to_work",
             "wed": "open_to_work"
           }
@@ -488,7 +508,7 @@
             "mon": "open_to_work",
             "sat": "prefer_not_to_work",
             "sun": "open_to_work",
-            "thu": "open_to_work",
+            "thu": "definitely_can_not_work",
             "tue": "open_to_work",
             "wed": "open_to_work"
           }
@@ -499,11 +519,11 @@
           "employment_type": "full_time",
           "on_call_eligible": true,
           "preferences_by_weekday": {
-            "fri": "prefer_not_to_work",
-            "mon": "open_to_work",
-            "sat": "open_to_work",
+            "fri": "open_to_work",
+            "mon": "definitely_can_not_work",
+            "sat": "prefer_not_to_work",
             "sun": "prefer_not_to_work",
-            "thu": "definitely_can_not_work",
+            "thu": "open_to_work",
             "tue": "open_to_work",
             "wed": "open_to_work"
           }
@@ -514,12 +534,12 @@
           "employment_type": "full_time",
           "on_call_eligible": true,
           "preferences_by_weekday": {
-            "fri": "open_to_work",
-            "mon": "open_to_work",
-            "sat": "definitely_can_not_work",
+            "fri": "definitely_can_not_work",
+            "mon": "prefer_not_to_work",
+            "sat": "open_to_work",
             "sun": "prefer_not_to_work",
             "thu": "open_to_work",
-            "tue": "prefer_not_to_work",
+            "tue": "open_to_work",
             "wed": "open_to_work"
           }
         },
@@ -528,6 +548,21 @@
           "driver_name": "Rahul Bajaj",
           "employment_type": "part_time",
           "on_call_eligible": false,
+          "preferences_by_weekday": {
+            "fri": "prefer_not_to_work",
+            "mon": "open_to_work",
+            "sat": "open_to_work",
+            "sun": "open_to_work",
+            "thu": "prefer_not_to_work",
+            "tue": "definitely_can_not_work",
+            "wed": "open_to_work"
+          }
+        },
+        {
+          "driver_id": "AKF1ZEB0TWD96",
+          "driver_name": "Rahul mannan",
+          "employment_type": "full_time",
+          "on_call_eligible": true,
           "preferences_by_weekday": {
             "fri": "open_to_work",
             "mon": "prefer_not_to_work",
@@ -539,8 +574,8 @@
           }
         },
         {
-          "driver_id": "AKF1ZEB0TWD96",
-          "driver_name": "Rahul mannan",
+          "driver_id": "A52BQ5U4SHE8W",
+          "driver_name": "Rajveer Singh",
           "employment_type": "full_time",
           "on_call_eligible": true,
           "preferences_by_weekday": {
@@ -549,22 +584,7 @@
             "sat": "open_to_work",
             "sun": "open_to_work",
             "thu": "open_to_work",
-            "tue": "open_to_work",
-            "wed": "prefer_not_to_work"
-          }
-        },
-        {
-          "driver_id": "A52BQ5U4SHE8W",
-          "driver_name": "Rajveer Singh",
-          "employment_type": "full_time",
-          "on_call_eligible": true,
-          "preferences_by_weekday": {
-            "fri": "prefer_not_to_work",
-            "mon": "open_to_work",
-            "sat": "definitely_can_not_work",
-            "sun": "open_to_work",
-            "thu": "open_to_work",
-            "tue": "open_to_work",
+            "tue": "prefer_not_to_work",
             "wed": "open_to_work"
           }
         },
@@ -574,13 +594,13 @@
           "employment_type": "full_time",
           "on_call_eligible": true,
           "preferences_by_weekday": {
-            "fri": "open_to_work",
+            "fri": "prefer_not_to_work",
             "mon": "open_to_work",
-            "sat": "prefer_not_to_work",
+            "sat": "open_to_work",
             "sun": "open_to_work",
-            "thu": "open_to_work",
-            "tue": "definitely_can_not_work",
-            "wed": "prefer_not_to_work"
+            "thu": "definitely_can_not_work",
+            "tue": "open_to_work",
+            "wed": "open_to_work"
           }
         },
         {
@@ -591,10 +611,10 @@
           "preferences_by_weekday": {
             "fri": "open_to_work",
             "mon": "open_to_work",
-            "sat": "definitely_can_not_work",
-            "sun": "open_to_work",
-            "thu": "open_to_work",
-            "tue": "prefer_not_to_work",
+            "sat": "open_to_work",
+            "sun": "prefer_not_to_work",
+            "thu": "definitely_can_not_work",
+            "tue": "open_to_work",
             "wed": "prefer_not_to_work"
           }
         },
@@ -620,11 +640,11 @@
           "on_call_eligible": true,
           "preferences_by_weekday": {
             "fri": "open_to_work",
-            "mon": "prefer_not_to_work",
-            "sat": "open_to_work",
+            "mon": "open_to_work",
+            "sat": "prefer_not_to_work",
             "sun": "open_to_work",
-            "thu": "definitely_can_not_work",
-            "tue": "open_to_work",
+            "thu": "open_to_work",
+            "tue": "definitely_can_not_work",
             "wed": "open_to_work"
           }
         },
@@ -638,9 +658,9 @@
             "mon": "open_to_work",
             "sat": "open_to_work",
             "sun": "open_to_work",
-            "thu": "open_to_work",
-            "tue": "prefer_not_to_work",
-            "wed": "definitely_can_not_work"
+            "thu": "prefer_not_to_work",
+            "tue": "definitely_can_not_work",
+            "wed": "prefer_not_to_work"
           }
         },
         {
@@ -650,11 +670,11 @@
           "on_call_eligible": true,
           "preferences_by_weekday": {
             "fri": "open_to_work",
-            "mon": "prefer_not_to_work",
+            "mon": "open_to_work",
             "sat": "open_to_work",
             "sun": "open_to_work",
-            "thu": "open_to_work",
-            "tue": "open_to_work",
+            "thu": "prefer_not_to_work",
+            "tue": "definitely_can_not_work",
             "wed": "open_to_work"
           }
         },
@@ -666,8 +686,8 @@
           "preferences_by_weekday": {
             "fri": "open_to_work",
             "mon": "open_to_work",
-            "sat": "open_to_work",
-            "sun": "open_to_work",
+            "sat": "prefer_not_to_work",
+            "sun": "definitely_can_not_work",
             "thu": "open_to_work",
             "tue": "open_to_work",
             "wed": "prefer_not_to_work"
@@ -679,13 +699,13 @@
           "employment_type": "full_time",
           "on_call_eligible": true,
           "preferences_by_weekday": {
-            "fri": "prefer_not_to_work",
+            "fri": "open_to_work",
             "mon": "open_to_work",
-            "sat": "definitely_can_not_work",
+            "sat": "open_to_work",
             "sun": "open_to_work",
-            "thu": "open_to_work",
+            "thu": "prefer_not_to_work",
             "tue": "open_to_work",
-            "wed": "prefer_not_to_work"
+            "wed": "open_to_work"
           }
         },
         {
@@ -697,7 +717,7 @@
             "fri": "open_to_work",
             "mon": "open_to_work",
             "sat": "open_to_work",
-            "sun": "prefer_not_to_work",
+            "sun": "open_to_work",
             "thu": "prefer_not_to_work",
             "tue": "open_to_work",
             "wed": "definitely_can_not_work"
@@ -709,13 +729,13 @@
           "employment_type": "part_time",
           "on_call_eligible": true,
           "preferences_by_weekday": {
-            "fri": "prefer_not_to_work",
+            "fri": "open_to_work",
             "mon": "definitely_can_not_work",
             "sat": "open_to_work",
             "sun": "open_to_work",
-            "thu": "open_to_work",
+            "thu": "prefer_not_to_work",
             "tue": "open_to_work",
-            "wed": "prefer_not_to_work"
+            "wed": "open_to_work"
           }
         },
         {
@@ -725,12 +745,12 @@
           "on_call_eligible": true,
           "preferences_by_weekday": {
             "fri": "prefer_not_to_work",
-            "mon": "prefer_not_to_work",
+            "mon": "open_to_work",
             "sat": "open_to_work",
             "sun": "open_to_work",
             "thu": "open_to_work",
             "tue": "open_to_work",
-            "wed": "definitely_can_not_work"
+            "wed": "open_to_work"
           }
         },
         {
@@ -740,12 +760,12 @@
           "on_call_eligible": true,
           "preferences_by_weekday": {
             "fri": "open_to_work",
-            "mon": "open_to_work",
+            "mon": "prefer_not_to_work",
             "sat": "open_to_work",
-            "sun": "prefer_not_to_work",
+            "sun": "open_to_work",
             "thu": "open_to_work",
             "tue": "open_to_work",
-            "wed": "open_to_work"
+            "wed": "definitely_can_not_work"
           }
         },
         {
@@ -755,10 +775,10 @@
           "on_call_eligible": false,
           "preferences_by_weekday": {
             "fri": "open_to_work",
-            "mon": "definitely_can_not_work",
+            "mon": "prefer_not_to_work",
             "sat": "open_to_work",
-            "sun": "open_to_work",
-            "thu": "prefer_not_to_work",
+            "sun": "definitely_can_not_work",
+            "thu": "open_to_work",
             "tue": "open_to_work",
             "wed": "open_to_work"
           }
@@ -773,8 +793,8 @@
             "mon": "open_to_work",
             "sat": "open_to_work",
             "sun": "open_to_work",
-            "thu": "definitely_can_not_work",
-            "tue": "prefer_not_to_work",
+            "thu": "open_to_work",
+            "tue": "open_to_work",
             "wed": "open_to_work"
           }
         },
@@ -784,13 +804,13 @@
           "employment_type": "full_time",
           "on_call_eligible": true,
           "preferences_by_weekday": {
-            "fri": "definitely_can_not_work",
+            "fri": "open_to_work",
             "mon": "open_to_work",
-            "sat": "prefer_not_to_work",
+            "sat": "open_to_work",
             "sun": "open_to_work",
-            "thu": "open_to_work",
+            "thu": "prefer_not_to_work",
             "tue": "open_to_work",
-            "wed": "prefer_not_to_work"
+            "wed": "open_to_work"
           }
         },
         {
@@ -800,11 +820,11 @@
           "on_call_eligible": false,
           "preferences_by_weekday": {
             "fri": "open_to_work",
-            "mon": "prefer_not_to_work",
+            "mon": "open_to_work",
             "sat": "open_to_work",
             "sun": "open_to_work",
             "thu": "definitely_can_not_work",
-            "tue": "open_to_work",
+            "tue": "prefer_not_to_work",
             "wed": "open_to_work"
           }
         }

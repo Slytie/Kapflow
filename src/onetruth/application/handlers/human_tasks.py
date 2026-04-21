@@ -15,6 +15,9 @@ from onetruth.application.handlers.approvals import (
     _request_approval_effects,
     _reviewed_artifact_id_from_confirmation,
 )
+from onetruth.application.handlers.availability_exceptions import (
+    materialize_weekly_approved_availability_exceptions,
+)
 from onetruth.application.handlers.pointers import _promote_pointer_effects
 from onetruth.application.handlers._shared.command_boundary import (
     CommandError,
@@ -664,6 +667,7 @@ def complete_human_task_command(
             ),
             parent_completion_event_id=parent_completion_event_id,
             created_at=now,
+            storage_root=storage_root,
         )
         dispatch_effects = _apply_dispatch_reporting_completion_effects(
             connection,
@@ -768,6 +772,7 @@ def _apply_weekly_completion_effects(
     receipt_event_idempotency_base: str | None,
     parent_completion_event_id: str,
     created_at: str,
+    storage_root: Path | None,
 ) -> dict[str, list[dict[str, Any]]]:
     if str(workflow_run.get("workflow_id") or "") != WEEKLY_WORKFLOW_ID:
         return {"spawned_children": [], "requested_approvals": []}
@@ -780,6 +785,15 @@ def _apply_weekly_completion_effects(
         completion_outcome,
     )
     if surface == ("Stage04", "weekly_input_intake", "inputs_ready"):
+        if storage_root is not None:
+            materialize_weekly_approved_availability_exceptions(
+                connection,
+                workflow_run=workflow_run,
+                storage_root=storage_root,
+                actor_id=actor_id,
+                actor_type=actor_type,
+                receipt_event_idempotency_base=receipt_event_idempotency_base,
+            )
         build_task = _ensure_weekly_child_human_task(
             connection,
             workflow_run_id=workflow_run_id,

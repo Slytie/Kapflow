@@ -83,6 +83,31 @@ export const workpagesRepository = {
     );
   },
 
+  async addDriverAvailabilityException(
+    workflowRunId: string,
+    payload: {
+      driverId: string;
+      startDate: string;
+      endDate: string;
+      reasonCode: string;
+      reasonNote: string;
+    },
+    actionRef?: WorkpageActionRef
+  ): Promise<Record<string, unknown>> {
+    return onetruthApi.addWorkflowRunDriverAvailabilityException(workflowRunId, {
+      driver_id: payload.driverId,
+      start_date: payload.startDate,
+      end_date: payload.endDate,
+      reason_code: payload.reasonCode,
+      reason_note: payload.reasonNote,
+      action_ref: actionRef,
+      idempotency_key: createIdempotencyKey(
+        "workpage-driver-availability-exception-add",
+        `${workflowRunId}:${payload.driverId}:${payload.startDate}:${payload.endDate}:${payload.reasonCode}:${payload.reasonNote}`
+      )
+    });
+  },
+
   async submitEodArtifact(
     workflowRunId: string,
     artifactVersionId: string,

@@ -162,7 +162,12 @@ def test_route_demand_run_workpage_contract_returns_latest_route_demand_projecti
             ),
         }
     ]
-    assert payload["calculations"]["day_cards"]
+    day_cards = payload["calculations"]["day_cards"]
+    assert len(day_cards) == 14
+    assert day_cards[0]["service_date"] == "2026-03-22"
+    assert day_cards[-1]["service_date"] == "2026-04-04"
+    assert payload["workpage"]["summary"]["service_day_count"] == 14
+    assert payload["workpage"]["summary"]["planned_route_total"] == 268
 
 
 def test_route_demand_artifact_workpage_uses_canonical_route_and_retires_alias(
@@ -186,6 +191,11 @@ def test_route_demand_artifact_workpage_uses_canonical_route_and_retires_alias(
     assert initial.status_code == 200, initial.payload
     initial_payload = initial.payload
     assert initial_payload["workpage"]["workpage_id"] == "route-demand-v0"
+    assert initial_payload["workpage"]["summary"]["service_day_count"] == 14
+    assert initial_payload["workpage"]["summary"]["planned_route_total"] == 268
+    assert len(initial_payload["calculations"]["day_cards"]) == 14
+    assert initial_payload["calculations"]["day_cards"][0]["service_date"] == "2026-03-22"
+    assert initial_payload["calculations"]["day_cards"][-1]["service_date"] == "2026-04-04"
     assert initial_payload["artifact_state"]["editable"] is True
     assert initial_payload["artifact_state"]["current_artifact_version_id"] == route_artifact_id
     assert initial_payload["artifact_history"]["current_artifact_version_id"] == route_artifact_id

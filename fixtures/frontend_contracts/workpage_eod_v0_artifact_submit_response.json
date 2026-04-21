@@ -6,13 +6,13 @@
     "workpage_id": "eod-v0"
   },
   "submit_response": {
-    "command": "api.workpages.artifact.submit",
-    "status": "ok",
-    "submitted": {
-      "artifact_version_id": "<artifact_version_id:2>",
-      "route": "/runs/<workflow_run_id:1>/workpages/eod-v0/artifacts/<artifact_version_id:2>",
-      "supersedes_artifact_version_id": "<supersedes_artifact_version_id:3>",
-      "workflow_run_id": "<workflow_run_id:1>"
-    }
+    "error": {
+      "code": "internal_error",
+      "details": {
+        "exception": "WorkbookRuntimeDependencyError"
+      },
+      "message": "unhandled server error"
+    },
+    "status": "error"
   }
 }

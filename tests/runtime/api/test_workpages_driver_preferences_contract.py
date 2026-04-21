@@ -2,7 +2,14 @@ from __future__ import annotations
 
 from copy import deepcopy
 from pathlib import Path
+import sqlite3
 
+from onetruth.application.services.schedule_control import build_weekly_schedule_control_bundle
+from onetruth.application.services.schedule_control.validation import evaluate_hard_constraints
+from onetruth.infrastructure.repositories.artifact_versions import (
+    list_artifact_versions_for_workflow_run,
+)
+from onetruth.infrastructure.repositories.workflow_runs import get_workflow_run
 from tests.runtime.helpers.runtime_api import RuntimeApiClient
 from tests.runtime.helpers.workpage_runs import (
     create_driver_preferences_snapshot,
@@ -46,6 +53,31 @@ def _action_ref(
         "artifact_version_id": artifact_version_id,
         "subject": None,
     }
+
+
+def _runtime_connection(tmp_path: Path) -> sqlite3.Connection:
+    connection = sqlite3.connect(tmp_path / "runtime.db")
+    connection.row_factory = sqlite3.Row
+    return connection
+
+
+def _latest_artifact_for_kind(
+    artifacts: list[dict[str, object]],
+    artifact_kind: str,
+) -> dict[str, object]:
+    matches = [
+        artifact
+        for artifact in artifacts
+        if artifact.get("artifact_kind") == artifact_kind
+    ]
+    assert matches
+    return sorted(
+        matches,
+        key=lambda item: (
+            str(item.get("created_at") or ""),
+            str(item.get("artifact_version_id") or ""),
+        ),
+    )[-1]
 
 
 def _schedule_submit_rows(
@@ -118,6 +150,8 @@ def test_driver_preferences_run_workpage_lands_on_create_snapshot_when_none_exis
         {"service_date": "2026-03-28", "label": "2026-03-28", "weekday_label": "Sat"},
     ]
     assert payload["preference_grid"]["drivers"]
+    assert payload["driver_availability_exceptions"] == {"items": []}
+    assert "driver_availability_exceptions" not in payload["preference_grid"]
     assert all(
         value is not None
         for value in payload["preference_grid"]["drivers"][0]["preferences_by_weekday"].values()
@@ -352,6 +386,170 @@ def test_driver_preferences_submit_creates_successor_and_historical_read_only(
     }
 
 
+def test_driver_preferences_availability_exception_creates_approved_hard_block(
+    tmp_path: Path,
+) -> None:
+    seeded = seed_actual_ops_weekly_schedule_run_with_stage04_outputs(
+        db_url=_db_url(tmp_path),
+        tenant_id="tenant-a",
+        domain_id="domain-x",
+        run_tag="api:workpages:driver-preferences:availability-exception",
+    )
+    workflow_run_id = str(seeded["workflow_run_id"])
+    client = _client(tmp_path)
+
+    before = client.get(
+        f"/api/v1/workpages/workflow-runs/{workflow_run_id}/driver-preferences-v0"
+    )
+    assert before.status_code == 200, before.payload
+    preference_grid_before = deepcopy(before.payload["preference_grid"])
+    driver = preference_grid_before["drivers"][0]
+    driver_id = str(driver["driver_id"])
+    driver_name = str(driver["driver_name"])
+    action_ref = _action_ref(
+        action_id="workpage.driver-preferences-v0.add_availability_exception",
+        workpage_kind="driver-preferences-v0",
+        workflow_run_id=workflow_run_id,
+        artifact_version_id=None,
+    )
+
+    created = client.post(
+        f"/api/v1/workpages/workflow-runs/{workflow_run_id}/"
+        "driver-preferences-v0/availability-exceptions",
+        payload={
+            "driver_id": driver_id,
+            "start_date": "2026-03-24",
+            "end_date": "2026-03-25",
+            "reason_code": "wedding",
+            "reason_note": "Family wedding",
+            "action_ref": action_ref,
+            "idempotency_key": "api:workpages:driver-preferences:availability-exception:add",
+        },
+    )
+    assert created.status_code == 200, created.payload
+    created_again = client.post(
+        f"/api/v1/workpages/workflow-runs/{workflow_run_id}/"
+        "driver-preferences-v0/availability-exceptions",
+        payload={
+            "driver_id": driver_id,
+            "start_date": "2026-03-24",
+            "end_date": "2026-03-25",
+            "reason_code": "wedding",
+            "reason_note": "Family wedding",
+            "action_ref": action_ref,
+            "idempotency_key": "api:workpages:driver-preferences:availability-exception:add",
+        },
+    )
+    assert created_again.status_code == 200, created_again.payload
+    assert created_again.payload["created"] == created.payload["created"]
+
+    exception = created.payload["created"]["exception"]
+    assert exception == {
+        "exception_id": exception["exception_id"],
+        "driver_id": driver_id,
+        "driver_name": driver_name,
+        "start_date": "2026-03-24",
+        "end_date": "2026-03-25",
+        "reason_code": "wedding",
+        "reason_note": "Family wedding",
+        "status": "approved",
+        "source_workflow_run_id": exception["source_workflow_run_id"],
+        "source_artifact_version_id": exception["source_artifact_version_id"],
+        "affected_planning_week_ids": ["PW-2026-W13"],
+    }
+    assert created.payload["created"]["affected_service_dates"] == [
+        "2026-03-24",
+        "2026-03-25",
+    ]
+
+    after = client.get(
+        f"/api/v1/workpages/workflow-runs/{workflow_run_id}/driver-preferences-v0"
+    )
+    assert after.status_code == 200, after.payload
+    assert after.payload["preference_grid"] == preference_grid_before
+    assert after.payload["driver_availability_exceptions"]["items"] == [exception]
+
+    with _runtime_connection(tmp_path) as connection:
+        workflow_run = get_workflow_run(connection, workflow_run_id)
+        assert workflow_run is not None
+        artifacts = list_artifact_versions_for_workflow_run(connection, workflow_run_id)
+        latest_availability = _latest_artifact_for_kind(
+            artifacts,
+            "planning.approved_availability.workbook",
+        )
+        metadata = latest_availability["metadata_json"]
+        columns = list(metadata["columns"])
+        rows = [
+            dict(zip(columns, row, strict=False))
+            for row in metadata["rows"]
+        ]
+        affected_rows = [
+            row
+            for row in rows
+            if row.get("driver_id") == driver_id
+            and row.get("service_date") in {"2026-03-24", "2026-03-25"}
+        ]
+        assert [row["service_date"] for row in affected_rows] == [
+            "2026-03-24",
+            "2026-03-25",
+        ]
+        assert all(row["availability_state"] == "CANNOT" for row in affected_rows)
+        assert all(row["locked_by_manager"] == "yes" for row in affected_rows)
+        assert all(row["source_exception_id"] == exception["exception_id"] for row in affected_rows)
+
+        artifacts_by_kind = {
+            str(artifact["artifact_kind"]): artifact
+            for artifact in artifacts
+        }
+        artifacts_by_kind["planning.approved_availability.workbook"] = latest_availability
+        bundle = build_weekly_schedule_control_bundle(
+            workflow_run=workflow_run,
+            route_slot_requirements_artifact=artifacts_by_kind[
+                "planning.route_slot_requirements.workbook"
+            ],
+            driver_capabilities_artifact=artifacts_by_kind[
+                "planning.driver_capabilities.workbook"
+            ],
+            approved_availability_artifact=latest_availability,
+            actual_hours_artifact=artifacts_by_kind[
+                "planning.actual_hours_snapshot.workbook"
+            ],
+        )
+        route_slot = next(
+            slot for slot in bundle.route_slots if slot.service_date == "2026-03-24"
+        )
+        bundle_driver = next(item for item in bundle.drivers if item.driver_id == driver_id)
+        validation = evaluate_hard_constraints(
+            bundle=bundle,
+            route_slot=route_slot,
+            driver=bundle_driver,
+        )
+        assert validation.driver_day_availability_state == "CANNOT"
+        assert "driver_unavailable" in validation.reasons
+
+    other_client = RuntimeApiClient(
+        db_url=_db_url(tmp_path),
+        tenant_id="tenant-b",
+        domain_id="domain-x",
+        actor_id="human:ops-manager-2",
+        actor_type="human",
+        actor_roles=["operations_manager"],
+    )
+    denied = other_client.post(
+        f"/api/v1/workpages/workflow-runs/{workflow_run_id}/"
+        "driver-preferences-v0/availability-exceptions",
+        payload={
+            "driver_id": driver_id,
+            "start_date": "2026-03-24",
+            "end_date": "2026-03-24",
+            "reason_code": "wedding",
+            "reason_note": "Cross tenant",
+            "idempotency_key": "api:workpages:driver-preferences:availability-exception:denied",
+        },
+    )
+    assert denied.status_code == 404
+
+
 def test_schedule_contracts_use_latest_preferences_softly_and_keep_pinned_drafts_saveable(
     tmp_path: Path,
 ) -> None:
@@ -457,6 +655,19 @@ def test_schedule_contracts_use_latest_preferences_softly_and_keep_pinned_drafts
         and metric["preference_state"] == "definitely_can_not_work"
         for metric in aligned_schedule_payload["calculations"]["driver_metrics"]
     )
+    aligned_heatmap = next(
+        section
+        for section in aligned_schedule_payload["workpage"]["sections"]
+        if section["kind"] == "schedule_heatmap"
+    )
+    conflict_heatmap_cell = next(
+        cell
+        for person in aligned_heatmap["people"]
+        if person["driver_id"] == conflict_driver_id
+        for cell in person["cells"]
+        if cell["service_date"] == selected_date
+    )
+    assert conflict_heatmap_cell["preference_state"] == "definitely_can_not_work"
     assert any(
         check["check_id"] == "driver_preferences_alignment"
         and check["blocking"] is False

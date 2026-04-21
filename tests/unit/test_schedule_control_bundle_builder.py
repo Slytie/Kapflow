@@ -236,6 +236,10 @@ def test_build_weekly_schedule_control_bundle_parses_actual_ops_v3_policy_ranges
         "partition_key": "PW-2026-W13",
     }
     fixture = build_actual_ops_weekly_stage04_fixture_payloads()
+    route_demand_rows = fixture["route_slot_requirements"]["daily_demand_rows"]
+    assert len(route_demand_rows) == 14
+    assert route_demand_rows[0][0] == "2026-03-22"
+    assert route_demand_rows[-1][0] == "2026-04-04"
 
     bundle = build_weekly_schedule_control_bundle(
         workflow_run=workflow_run,
@@ -390,6 +394,7 @@ def test_build_weekly_schedule_control_bundle_resolves_actual_ops_explicit_scope
 
     assert bundle.scope_start == "2026-03-22"
     assert bundle.scope_end_exclusive == "2026-03-29"
+    assert "2026-04-04" not in bundle.daily_demand_by_service_date
     assert bundle.availability_by_driver["A11X1NH2FPH5RV"].previous_week_states[0].service_date == "2026-03-15"
     assert bundle.availability_by_driver["A11X1NH2FPH5RV"].previous_week_states[-1].service_date == "2026-03-21"
     assert len(bundle.drivers) == 51

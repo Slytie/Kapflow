@@ -9,6 +9,7 @@ from onetruth.infrastructure.db.session import open_sqlite_connection
 from tests.runtime.helpers.runtime_api import RuntimeApiClient
 from tests.runtime.helpers.runtime_cli import run_cli, stdout_json
 from tests.runtime.helpers.workpage_runs import (
+    create_driver_preferences_snapshot,
     seed_actual_ops_weekly_schedule_run_with_stage04_outputs,
     seed_dispatch_reporting_workpage_run,
 )
@@ -374,6 +375,12 @@ def test_artifact_backed_schedule_workpage_returns_projected_contract(tmp_path: 
     assert heatmap_section["people"]
     assert heatmap_section["people"][0]["driver_name"]
     assert len(heatmap_section["people"][0]["cells"]) == len(heatmap_section["service_dates"])
+    heatmap_preference_states = {
+        cell["preference_state"]
+        for person in heatmap_section["people"]
+        for cell in person["cells"]
+    }
+    assert heatmap_preference_states == {"unset"}
     assert assignment_rows[0]["assigned_driver_id"]
     assert assignment_rows[0]["assignment_status"]
     assert reserve_rows[0]["assignment_status"]
@@ -552,6 +559,47 @@ def test_artifact_backed_schedule_workpage_returns_projected_contract(tmp_path: 
     assert parsed_download["columns"]
     assert parsed_download["rows"]
     assert parsed_download["dependency_manifest"]
+
+
+def test_artifact_backed_schedule_workpage_uses_latest_driver_preferences_for_heatmap(
+    tmp_path: Path,
+) -> None:
+    seeded = seed_actual_ops_weekly_schedule_run_with_stage04_outputs(
+        db_url=_db_url(tmp_path),
+        tenant_id="tenant-a",
+        domain_id="domain-x",
+        run_tag="api:workpages:artifact-schedule:latest-preferences",
+    )
+    workflow_run_id = str(seeded["workflow_run_id"])
+    artifact_version_id = str(seeded["stage04_outputs"]["draft_workbook"]["artifact_version_id"])
+    create_driver_preferences_snapshot(
+        db_url=_db_url(tmp_path),
+        tenant_id="tenant-a",
+        domain_id="domain-x",
+        workflow_run_id=workflow_run_id,
+        run_tag="api:workpages:artifact-schedule:latest-preferences",
+    )
+    client = _client(tmp_path)
+
+    response = client.get(_artifact_path(workflow_run_id, artifact_version_id))
+    assert response.status_code == 200, response.payload
+
+    heatmap_section = next(
+        section
+        for section in response.payload["workpage"]["sections"]
+        if section["kind"] == "schedule_heatmap"
+    )
+    heatmap_preference_states = {
+        cell["preference_state"]
+        for person in heatmap_section["people"]
+        for cell in person["cells"]
+    }
+    assert heatmap_preference_states & {
+        "open_to_work",
+        "prefer_not_to_work",
+        "definitely_can_not_work",
+    }
+    assert heatmap_preference_states != {"unset"}
 
 
 def test_artifact_backed_schedule_workpage_reads_are_stable_except_for_generated_at(

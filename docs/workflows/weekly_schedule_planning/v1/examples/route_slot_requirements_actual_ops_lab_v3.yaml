@@ -266,8 +266,123 @@ daily_demand_rows:
   - manager-schedule-pdf-2026-03-22-to-2026-03-28
   - manager_schedule_pdf_route_totals_only
   - holdout_route_total_override
+- - '2026-03-29'
+  - 16
+  - 4
+  - 3
+  - 4
+  - 5
+  - 3
+  - 2
+  - 3
+  - 5
+  - 16
+  - 0
+  - 0
+  - copied-current-week-route-demand-horizon
+  - future_week_route_demand_seed
+  - copied_from_current_week_horizon_seed
+- - '2026-03-30'
+  - 23
+  - 4
+  - 3
+  - 4
+  - 5
+  - 3
+  - 2
+  - 3
+  - 5
+  - 23
+  - 0
+  - 0
+  - copied-current-week-route-demand-horizon
+  - future_week_route_demand_seed
+  - copied_from_current_week_horizon_seed
+- - '2026-03-31'
+  - 20
+  - 4
+  - 3
+  - 4
+  - 5
+  - 3
+  - 2
+  - 3
+  - 5
+  - 20
+  - 0
+  - 0
+  - copied-current-week-route-demand-horizon
+  - future_week_route_demand_seed
+  - copied_from_current_week_horizon_seed
+- - '2026-04-01'
+  - 19
+  - 4
+  - 3
+  - 4
+  - 5
+  - 3
+  - 2
+  - 3
+  - 5
+  - 19
+  - 0
+  - 0
+  - copied-current-week-route-demand-horizon
+  - future_week_route_demand_seed
+  - copied_from_current_week_horizon_seed
+- - '2026-04-02'
+  - 21
+  - 4
+  - 3
+  - 4
+  - 5
+  - 3
+  - 2
+  - 3
+  - 5
+  - 21
+  - 0
+  - 0
+  - copied-current-week-route-demand-horizon
+  - future_week_route_demand_seed
+  - copied_from_current_week_horizon_seed
+- - '2026-04-03'
+  - 18
+  - 4
+  - 3
+  - 4
+  - 5
+  - 3
+  - 2
+  - 3
+  - 5
+  - 18
+  - 0
+  - 0
+  - copied-current-week-route-demand-horizon
+  - future_week_route_demand_seed
+  - copied_from_current_week_horizon_seed
+- - '2026-04-04'
+  - 17
+  - 4
+  - 3
+  - 4
+  - 5
+  - 3
+  - 2
+  - 3
+  - 5
+  - 17
+  - 0
+  - 0
+  - copied-current-week-route-demand-horizon
+  - future_week_route_demand_seed
+  - copied_from_current_week_horizon_seed
 planner_notes:
 - Route counts for 2026-03-22..2026-03-28 come only from Schedule March 22 to March 28.pdf.
+- Route-demand workpage rows intentionally extend through 2026-04-04 by copying the
+  current-week route-count pattern for future planning; route-slot rows and schedule
+  construction scope remain bounded to 2026-03-22..2026-03-28.
 - Staffing cells, staffing patterns, and richer route mix data from that holdout schedule are
   intentionally excluded from this lab-normalized package.
 - The deterministic planner should cover required routes first, then fill at least three

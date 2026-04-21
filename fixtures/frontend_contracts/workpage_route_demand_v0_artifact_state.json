@@ -151,6 +151,97 @@
           "standard_late_slot_count": 0,
           "standard_slot_count": 17,
           "weekday_label": "Sat"
+        },
+        {
+          "delta_from_previous_version": null,
+          "excess_capacity_target": 3,
+          "on_call_target": 4,
+          "overflow_slot_count": 0,
+          "planned_route_count": 16,
+          "rescue_slot_count": 0,
+          "service_date": "2026-03-29",
+          "standard_early_slot_count": 0,
+          "standard_late_slot_count": 0,
+          "standard_slot_count": 16,
+          "weekday_label": "Sun"
+        },
+        {
+          "delta_from_previous_version": null,
+          "excess_capacity_target": 3,
+          "on_call_target": 4,
+          "overflow_slot_count": 0,
+          "planned_route_count": 23,
+          "rescue_slot_count": 0,
+          "service_date": "2026-03-30",
+          "standard_early_slot_count": 0,
+          "standard_late_slot_count": 0,
+          "standard_slot_count": 23,
+          "weekday_label": "Mon"
+        },
+        {
+          "delta_from_previous_version": null,
+          "excess_capacity_target": 3,
+          "on_call_target": 4,
+          "overflow_slot_count": 0,
+          "planned_route_count": 20,
+          "rescue_slot_count": 0,
+          "service_date": "2026-03-31",
+          "standard_early_slot_count": 0,
+          "standard_late_slot_count": 0,
+          "standard_slot_count": 20,
+          "weekday_label": "Tue"
+        },
+        {
+          "delta_from_previous_version": null,
+          "excess_capacity_target": 3,
+          "on_call_target": 4,
+          "overflow_slot_count": 0,
+          "planned_route_count": 19,
+          "rescue_slot_count": 0,
+          "service_date": "2026-04-01",
+          "standard_early_slot_count": 0,
+          "standard_late_slot_count": 0,
+          "standard_slot_count": 19,
+          "weekday_label": "Wed"
+        },
+        {
+          "delta_from_previous_version": null,
+          "excess_capacity_target": 3,
+          "on_call_target": 4,
+          "overflow_slot_count": 0,
+          "planned_route_count": 21,
+          "rescue_slot_count": 0,
+          "service_date": "2026-04-02",
+          "standard_early_slot_count": 0,
+          "standard_late_slot_count": 0,
+          "standard_slot_count": 21,
+          "weekday_label": "Thu"
+        },
+        {
+          "delta_from_previous_version": null,
+          "excess_capacity_target": 3,
+          "on_call_target": 4,
+          "overflow_slot_count": 0,
+          "planned_route_count": 18,
+          "rescue_slot_count": 0,
+          "service_date": "2026-04-03",
+          "standard_early_slot_count": 0,
+          "standard_late_slot_count": 0,
+          "standard_slot_count": 18,
+          "weekday_label": "Fri"
+        },
+        {
+          "delta_from_previous_version": null,
+          "excess_capacity_target": 3,
+          "on_call_target": 4,
+          "overflow_slot_count": 0,
+          "planned_route_count": 17,
+          "rescue_slot_count": 0,
+          "service_date": "2026-04-04",
+          "standard_early_slot_count": 0,
+          "standard_late_slot_count": 0,
+          "standard_slot_count": 17,
+          "weekday_label": "Sat"
         }
       ]
     },
@@ -193,12 +284,12 @@
             {
               "key": "service_day_count",
               "label": "Service days",
-              "value": 7
+              "value": 14
             },
             {
               "key": "planned_route_total",
               "label": "Planned routes",
-              "value": 134
+              "value": 268
             },
             {
               "key": "station_code",
@@ -314,6 +405,69 @@
               "rescue_slot_count": 0,
               "service_date": "2026-03-28",
               "standard_slot_count": 17
+            },
+            {
+              "excess_capacity_target": 3,
+              "on_call_target": 4,
+              "overflow_slot_count": 0,
+              "planned_route_count": 16,
+              "rescue_slot_count": 0,
+              "service_date": "2026-03-29",
+              "standard_slot_count": 16
+            },
+            {
+              "excess_capacity_target": 3,
+              "on_call_target": 4,
+              "overflow_slot_count": 0,
+              "planned_route_count": 23,
+              "rescue_slot_count": 0,
+              "service_date": "2026-03-30",
+              "standard_slot_count": 23
+            },
+            {
+              "excess_capacity_target": 3,
+              "on_call_target": 4,
+              "overflow_slot_count": 0,
+              "planned_route_count": 20,
+              "rescue_slot_count": 0,
+              "service_date": "2026-03-31",
+              "standard_slot_count": 20
+            },
+            {
+              "excess_capacity_target": 3,
+              "on_call_target": 4,
+              "overflow_slot_count": 0,
+              "planned_route_count": 19,
+              "rescue_slot_count": 0,
+              "service_date": "2026-04-01",
+              "standard_slot_count": 19
+            },
+            {
+              "excess_capacity_target": 3,
+              "on_call_target": 4,
+              "overflow_slot_count": 0,
+              "planned_route_count": 21,
+              "rescue_slot_count": 0,
+              "service_date": "2026-04-02",
+              "standard_slot_count": 21
+            },
+            {
+              "excess_capacity_target": 3,
+              "on_call_target": 4,
+              "overflow_slot_count": 0,
+              "planned_route_count": 18,
+              "rescue_slot_count": 0,
+              "service_date": "2026-04-03",
+              "standard_slot_count": 18
+            },
+            {
+              "excess_capacity_target": 3,
+              "on_call_target": 4,
+              "overflow_slot_count": 0,
+              "planned_route_count": 17,
+              "rescue_slot_count": 0,
+              "service_date": "2026-04-04",
+              "standard_slot_count": 17
             }
           ],
           "table_id": "route_demand_daily_rows",
@@ -342,10 +496,10 @@
       "source_examples": {},
       "summary": {
         "operational_week_start": "2026-03-22",
-        "planned_route_total": 134,
+        "planned_route_total": 268,
         "planning_week_id": "PW-2026-W13",
         "service_area": "Pitt Meadows",
-        "service_day_count": 7,
+        "service_day_count": 14,
         "station_code": "DVC4"
       },
       "title": "Weekly route demand editor",

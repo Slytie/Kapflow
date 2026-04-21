@@ -35,8 +35,21 @@ describe("LogisticsDriverPreferencesWorkpagePage", () => {
       await user.click(driversButton);
 
       const dialog = await screen.findByRole("dialog", { name: "Drivers" });
+      expect(dialog).toHaveClass("driver-preferences-quick-edit-modal");
       await user.click(within(dialog).getByRole("button", { name: "Create preferences snapshot" }));
       const editor = await within(dialog).findByTestId("driver-preferences-quick-edit-editor");
+      expect(
+        within(editor).getByRole("heading", { name: "Driver Preferences Snapshot" })
+      ).toBeInTheDocument();
+      expect(
+        within(editor).queryByText(/Saving creates the next immutable driver-preferences snapshot/i)
+      ).not.toBeInTheDocument();
+      expect(
+        within(editor).queryByText(/artifact-backed weekly advisory snapshot lane/i)
+      ).not.toBeInTheDocument();
+      expect(within(editor).queryByText(/^Week /i)).not.toBeInTheDocument();
+      expect(within(editor).queryByText(/^Artifact /i)).not.toBeInTheDocument();
+      expect(within(editor).queryByText(/Editable snapshot/i)).not.toBeInTheDocument();
       const mondayCell = within(editor).getByRole("button", {
         name: /Abhiraj Singh on 2026-03-23:/i
       });
@@ -248,6 +261,57 @@ describe("LogisticsDriverPreferencesWorkpagePage", () => {
       })
     ).toHaveAttribute("aria-label", expect.stringContaining("Prefer not to work"));
     expect(screen.getByRole("button", { name: "Save snapshot" })).toBeEnabled();
+  }, 30000);
+
+  it("adds an availability exception from the driver drawer without clearing unsaved grid edits", async () => {
+    const user = userEvent.setup();
+    setFrontendOperatorContext();
+    await workpagesRepository.createWorkpage(
+      "/api/v1/workpages/workflow-runs/wr-weekly-001/driver-preferences-v0/snapshots"
+    );
+    window.history.pushState(
+      {},
+      "",
+      "/runs/wr-weekly-001/workpages/driver-preferences-v0/artifacts/av-driver-preferences-artifact-001"
+    );
+    render(<App />);
+
+    const page = await screen.findByTestId("driver-preferences-artifact-workpage-page");
+    const mondayCell = within(page).getByRole("button", {
+      name: /Abhiraj Singh on 2026-03-23:/i
+    });
+    await user.click(mondayCell);
+    await waitFor(() => {
+      expect(mondayCell).toHaveAttribute(
+        "aria-label",
+        expect.stringContaining("Prefer not to work")
+      );
+    });
+    expect(within(page).getByRole("button", { name: "Save snapshot" })).toBeEnabled();
+
+    await user.click(within(page).getAllByRole("button", { name: "Details" })[0]);
+    const drawer = within(page).getByTestId("driver-availability-exceptions-drawer");
+    await user.clear(within(drawer).getByLabelText("Start date"));
+    await user.type(within(drawer).getByLabelText("Start date"), "2026-03-24");
+    await user.clear(within(drawer).getByLabelText("End date"));
+    await user.type(within(drawer).getByLabelText("End date"), "2026-03-24");
+    await user.type(within(drawer).getByLabelText("Note"), "Family wedding");
+    await user.click(within(drawer).getByRole("button", { name: "Save exception" }));
+
+    await waitFor(() => {
+      expect(mutationLog()).toContain(
+        "workpage-driver-availability-exception-create:wr-weekly-001:ae-driver-availability-001"
+      );
+    });
+    const refreshedPage = await screen.findByTestId("driver-preferences-artifact-workpage-page");
+    const refreshedDrawer = within(refreshedPage).getByTestId("driver-availability-exceptions-drawer");
+    expect(within(refreshedDrawer).getByText("Family wedding")).toBeInTheDocument();
+    expect(
+      within(refreshedPage).getByRole("button", {
+        name: /Abhiraj Singh on 2026-03-23: Prefer not to work/i
+      })
+    ).toBeInTheDocument();
+    expect(within(refreshedPage).getByRole("button", { name: "Save snapshot" })).toBeEnabled();
   }, 30000);
 
   it("shows conflict recovery guidance and keeps local edits visible until the operator opens the latest snapshot", async () => {

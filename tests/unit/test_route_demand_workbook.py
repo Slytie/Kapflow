@@ -59,6 +59,71 @@ def test_route_demand_workbook_updates_single_standard_row_days() -> None:
     ]
 
 
+def test_route_demand_workbook_saves_two_week_daily_horizon_without_expanding_slot_rows() -> None:
+    workbook = {
+        "columns": [
+            "service_date",
+            "route_slot_id",
+            "route_slot_class",
+            "required_count",
+        ],
+        "rows": [
+            ["2026-03-22", "slot-20260322-standard", "cycle1_standard", 16],
+        ],
+        "daily_demand_columns": [
+            "service_date",
+            "planned_route_count",
+            "standard_slot_count",
+            "rescue_slot_count",
+            "overflow_slot_count",
+        ],
+        "daily_demand_rows": [
+            ["2026-03-22", 16, 16, 0, 0],
+            ["2026-03-23", 23, 23, 0, 0],
+            ["2026-03-24", 20, 20, 0, 0],
+            ["2026-03-25", 19, 19, 0, 0],
+            ["2026-03-26", 21, 21, 0, 0],
+            ["2026-03-27", 18, 18, 0, 0],
+            ["2026-03-28", 17, 17, 0, 0],
+            ["2026-03-29", 16, 16, 0, 0],
+            ["2026-03-30", 23, 23, 0, 0],
+            ["2026-03-31", 20, 20, 0, 0],
+            ["2026-04-01", 19, 19, 0, 0],
+            ["2026-04-02", 21, 21, 0, 0],
+            ["2026-04-03", 18, 18, 0, 0],
+            ["2026-04-04", 17, 17, 0, 0],
+        ],
+    }
+    submitted_rows = [
+        {"service_date": str(row[0]), "planned_route_count": int(row[1])}
+        for row in workbook["daily_demand_rows"]
+    ]
+    submitted_rows[-1]["planned_route_count"] = 18
+
+    updated = materialize_route_demand_workbook(
+        route_demand_workbook_bytes_from_metadata_json(workbook),
+        daily_demand_rows=submitted_rows,
+    )
+    projection = project_route_demand_workbook(updated)
+
+    assert len(projection["daily_demand_rows"]) == 14
+    assert projection["daily_demand_rows"][-1] == {
+        "service_date": "2026-04-04",
+        "planned_route_count": 18,
+        "standard_slot_count": 18,
+        "rescue_slot_count": 0,
+        "overflow_slot_count": 0,
+    }
+    assert projection["rows"] == [
+        {
+            "service_date": "2026-03-22",
+            "route_slot_id": "slot-20260322-standard",
+            "route_slot_class": "cycle1_standard",
+            "required_count": 16,
+        }
+    ]
+
+
 def test_route_demand_workbook_preserves_non_standard_buckets_and_split_ratio() -> None:
     workbook = {
         "columns": [

@@ -10,6 +10,9 @@ from typing import Any, Mapping
 import yaml
 
 from onetruth.application.handlers._shared.command_boundary import CommandError
+from onetruth.application.services.availability_exceptions import (
+    driver_availability_exceptions_for_workflow_run,
+)
 from onetruth.application.services.schedule_control import (
     WeeklyScheduleControlBundle,
     build_weekly_schedule_control_bundle,
@@ -22,7 +25,9 @@ from onetruth.application.services.schedule_control.draft_workbook import (
 )
 from onetruth.application.services.schedule_control.driver_preferences_workbook import (
     DRIVER_PREFERENCES_DATASET_KEY,
+    annotate_driver_preferences_projection,
     build_initial_driver_preferences_workbook,
+    driver_preference_value_for_service_date,
     driver_preferences_workbook_bytes_from_metadata_json,
     project_driver_preferences_workbook,
 )
@@ -236,6 +241,13 @@ def canonical_driver_preferences_snapshot_create_path(*, workflow_run_id: str) -
     )
 
 
+def canonical_driver_availability_exception_create_path(*, workflow_run_id: str) -> str:
+    return (
+        f"/api/v1/workpages/workflow-runs/{workflow_run_id}/"
+        f"{DRIVER_PREFERENCES_WORKPAGE_KIND}/availability-exceptions"
+    )
+
+
 def build_workpage_action_ref(
     *,
     action_id: str,
@@ -347,13 +359,19 @@ def build_schedule_workflow_run_workpage_contract(
             message=f"workflow-run-backed schedule workpage is unavailable: {exc}",
         ) from exc
 
+    latest_schedule_draft = latest_schedule_draft_artifact(artifacts)
+    latest_route_demand = latest_route_demand_artifact(artifacts)
+    latest_driver_preferences = latest_driver_preferences_artifact(artifacts)
+    driver_preferences_projection = _driver_preferences_projection_from_artifact(
+        latest_driver_preferences
+    )
     source_refs = _schedule_runtime_source_refs(
         resolved_inputs=resolved_inputs,
         input_bundle_artifact=_latest_artifact_for_dataset_key(
             artifacts,
             dataset_key=_INPUT_BUNDLE_DATASET_KEY,
         ),
-        latest_driver_preferences=latest_driver_preferences_artifact(artifacts),
+        latest_driver_preferences=latest_driver_preferences,
     )
     accepted_series = _build_schedule_accepted_series(
         connection,
@@ -376,16 +394,11 @@ def build_schedule_workflow_run_workpage_contract(
                 "This workflow-run-backed schedule projection is built from canonical weekly-planning input artifacts for the selected run.",
                 "Selected-day controls are local what-if inputs only and do not claim ownership of live dispatch truth.",
             ],
+            driver_preferences_projection=driver_preferences_projection,
         ),
         "run_context": _workflow_run_context(workflow_run),
         "draft_resolution": None,
     }
-    latest_schedule_draft = latest_schedule_draft_artifact(artifacts)
-    latest_route_demand = latest_route_demand_artifact(artifacts)
-    latest_driver_preferences = latest_driver_preferences_artifact(artifacts)
-    driver_preferences_projection = _driver_preferences_projection_from_artifact(
-        latest_driver_preferences
-    )
     schedule_projection = _schedule_run_projection(
         bundle=bundle,
         latest_schedule_draft=latest_schedule_draft,
@@ -565,6 +578,10 @@ def build_driver_preferences_workflow_run_workpage_contract(
             workflow_run=workflow_run,
             projection=projection,
         ),
+        "driver_availability_exceptions": driver_availability_exceptions_for_workflow_run(
+            connection,
+            workflow_run=workflow_run,
+        ),
         "schedule_impact": _driver_preferences_schedule_impact(
             artifacts=artifacts,
             latest_driver_preferences=latest_artifact,
@@ -588,6 +605,7 @@ def _build_schedule_workpage_contract(
     freshness_source_kind: str,
     freshness_source_version: str,
     validation_warnings: list[str],
+    driver_preferences_projection: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     source_version = freshness_source_version
     if latest_schedule_draft is not None:
@@ -603,6 +621,7 @@ def _build_schedule_workpage_contract(
             latest_schedule_draft=latest_schedule_draft,
             source_examples=source_examples,
             validation_warnings=validation_warnings,
+            driver_preferences_projection=driver_preferences_projection,
         ),
         "source": {
             "mode": source_mode,
@@ -1400,6 +1419,7 @@ def _build_schedule_workpage_view_model(
     latest_schedule_draft: Mapping[str, Any] | None,
     source_examples: Mapping[str, str],
     validation_warnings: list[str],
+    driver_preferences_projection: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     primary_demand = _sorted_daily_demand(bundle)[0]
     schedule_projection = _schedule_run_projection(
@@ -1516,6 +1536,7 @@ def _build_schedule_workpage_view_model(
                     bundle=bundle,
                     assignment_rows=assignment_rows,
                     reserve_rows=reserve_rows,
+                    driver_preferences_projection=driver_preferences_projection,
                 ),
             },
             {
@@ -2337,6 +2358,10 @@ def build_driver_preferences_artifact_workpage_contract(
             workflow_run=workflow_run,
             projection=projection,
         ),
+        "driver_availability_exceptions": driver_availability_exceptions_for_workflow_run(
+            connection,
+            workflow_run=workflow_run,
+        ),
         "schedule_impact": _driver_preferences_schedule_impact(
             artifacts=artifacts,
             latest_driver_preferences=latest_driver_preferences_artifact(artifacts),
@@ -3030,6 +3055,9 @@ def _driver_preferences_run_contract_actions(
     workflow_run_id: str,
     latest_artifact: Mapping[str, Any] | None,
 ) -> list[dict[str, Any]]:
+    add_exception_action = _driver_preferences_add_exception_contract_action(
+        workflow_run_id=workflow_run_id,
+    )
     if latest_artifact is not None:
         artifact_version_id = _require_text_or_default(
             latest_artifact.get("artifact_version_id"),
@@ -3054,7 +3082,8 @@ def _driver_preferences_run_contract_actions(
                         workflow_run_id=workflow_run_id,
                         artifact_version_id=artifact_version_id,
                     ),
-                }
+                },
+                add_exception_action,
             ]
     return [
         {
@@ -3074,7 +3103,8 @@ def _driver_preferences_run_contract_actions(
                 workflow_run_id=workflow_run_id,
                 artifact_version_id=None,
             ),
-        }
+        },
+        add_exception_action,
     ]
 
 
@@ -3103,8 +3133,35 @@ def _driver_preferences_artifact_contract_actions(
                 artifact_version_id=artifact_version_id,
             ),
             "disabled_reason": None if editable else "historical_artifact_read_only",
-        }
+        },
+        _driver_preferences_add_exception_contract_action(
+            workflow_run_id=workflow_run_id,
+        ),
     ]
+
+
+def _driver_preferences_add_exception_contract_action(
+    *,
+    workflow_run_id: str,
+) -> dict[str, Any]:
+    return {
+        "action_id": "workpage.driver-preferences-v0.add_availability_exception",
+        "kind": "add_availability_exception",
+        "label": "Add availability exception",
+        "state": "available",
+        "workpage_kind": DRIVER_PREFERENCES_WORKPAGE_KIND,
+        "artifact_version_id": None,
+        "create_path": canonical_driver_availability_exception_create_path(
+            workflow_run_id=workflow_run_id,
+        ),
+        "action_ref": build_workpage_action_ref(
+            action_id="workpage.driver-preferences-v0.add_availability_exception",
+            workpage_kind=DRIVER_PREFERENCES_WORKPAGE_KIND,
+            workflow_run_id=workflow_run_id,
+            artifact_version_id=None,
+        ),
+        "disabled_reason": None,
+    }
 
 
 def _driver_preferences_schedule_impact(
@@ -3304,6 +3361,7 @@ def build_schedule_artifact_workpage_contract(
     )
     driver_preferences_projection = _driver_preferences_projection_from_artifact(
         dependency_artifacts.get("driver_preferences")
+        or latest_driver_preferences_artifact(artifacts)
     )
     try:
         bundle = build_schedule_bundle_from_dependencies(
@@ -3377,6 +3435,7 @@ def build_schedule_artifact_workpage_contract(
                         bundle=bundle,
                         assignment_rows=assignment_rows,
                         reserve_rows=reserve_rows,
+                        driver_preferences_projection=driver_preferences_projection,
                     ),
                 },
                 {
@@ -3931,7 +3990,11 @@ def _schedule_heatmap_payload(
     bundle: WeeklyScheduleControlBundle | None,
     assignment_rows: list[dict[str, Any]],
     reserve_rows: list[dict[str, Any]],
+    driver_preferences_projection: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
+    preferences_projection = annotate_driver_preferences_projection(
+        driver_preferences_projection
+    )
     service_dates = _schedule_heatmap_service_dates(
         bundle=bundle,
         assignment_rows=assignment_rows,
@@ -3954,8 +4017,10 @@ def _schedule_heatmap_payload(
                 **person,
                 "cells": [
                     _schedule_heatmap_cell_payload(
+                        driver_id=person["driver_id"],
                         service_date=item["service_date"],
                         row=cell_map.get((person["driver_id"], item["service_date"])),
+                        driver_preferences_projection=preferences_projection,
                     )
                     for item in service_dates
                 ],
@@ -4105,9 +4170,16 @@ def _schedule_heatmap_cell_map(
 
 def _schedule_heatmap_cell_payload(
     *,
+    driver_id: str,
     service_date: str,
     row: dict[str, Any] | None,
+    driver_preferences_projection: Mapping[str, Any] | None,
 ) -> dict[str, Any]:
+    preference_state = driver_preference_value_for_service_date(
+        projection=driver_preferences_projection,
+        driver_id=driver_id,
+        service_date=service_date,
+    )
     if row is None:
         return {
             "service_date": service_date,
@@ -4118,6 +4190,7 @@ def _schedule_heatmap_cell_payload(
             "assignment_status": None,
             "planned_driver_day_state": None,
             "manual_override": False,
+            "preference_state": preference_state,
         }
     source_row = _require_mapping(row.get("row"), field_name="row")
     row_kind = str(row.get("row_kind") or "").strip() or None
@@ -4134,6 +4207,7 @@ def _schedule_heatmap_cell_payload(
         "assignment_status": assignment_status,
         "planned_driver_day_state": planned_state or None,
         "manual_override": assignment_status == "manual_override",
+        "preference_state": preference_state,
     }
 
 

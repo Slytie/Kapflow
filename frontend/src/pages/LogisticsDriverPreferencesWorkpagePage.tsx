@@ -26,6 +26,7 @@ import { replaceWorkpageActionRefArtifactVersionId } from "@/lib/workspace/workp
 import type { WorkpageContract } from "@/lib/types/contracts";
 import type {
   WorkpageArtifactHistory,
+  WorkpageDriverAvailabilityException,
   WorkpageDriverPreferencesAction,
   WorkpageDriverPreferencesDriverRow,
   WorkpageDriverPreferencesGrid,
@@ -49,6 +50,14 @@ const PREFERENCE_STATE_CYCLE: DriverPreferenceState[] = [
   "unset"
 ];
 const EMPTY_DRIVER_PREFERENCE_ROWS: WorkpageDriverPreferencesDriverRow[] = [];
+const AVAILABILITY_EXCEPTION_REASONS: Array<WorkpageDriverAvailabilityException["reason_code"]> = [
+  "wedding",
+  "vacation",
+  "medical",
+  "family",
+  "appointment",
+  "other"
+];
 
 const PREFERENCE_STATE_UI: Record<
   DriverPreferenceState,
@@ -152,6 +161,10 @@ function driverRowsSignature(rows: WorkpageDriverPreferencesDriverRow[]): string
 
 function asString(value: unknown): string | null {
   return typeof value === "string" && value.trim().length > 0 ? value : null;
+}
+
+function formatReasonCode(reasonCode: string): string {
+  return reasonCode.replace(/_/g, " ").replace(/^\w/, (letter) => letter.toUpperCase());
 }
 
 function workpageConflictDetails(error: unknown): {
@@ -374,13 +387,17 @@ function DriverPreferencesHeatmap({
   weekdays,
   driverRows,
   setDriverRows,
-  readOnly
+  readOnly,
+  selectedDriverId,
+  onSelectDriver
 }: {
   serviceDates: WorkpageScheduleHeatmapDate[];
   weekdays: WorkpageDriverPreferencesGrid["weekdays"];
   driverRows: WorkpageDriverPreferencesDriverRow[];
   setDriverRows?: Dispatch<SetStateAction<WorkpageDriverPreferencesDriverRow[]>> | undefined;
   readOnly: boolean;
+  selectedDriverId?: string | null;
+  onSelectDriver?: (driver: WorkpageDriverPreferencesDriverRow) => void;
 }): JSX.Element {
   return (
     <section className="workpage-panel" data-testid="driver-preferences-grid">
@@ -429,6 +446,16 @@ function DriverPreferencesHeatmap({
                         {row.employment_type || "Unknown employment"}
                         {row.on_call_eligible ? " · On-call eligible" : ""}
                       </span>
+                      {onSelectDriver ? (
+                        <button
+                          type="button"
+                          className="driver-preferences-heatmap__details-button"
+                          aria-pressed={selectedDriverId === row.driver_id}
+                          onClick={() => onSelectDriver(row)}
+                        >
+                          Details
+                        </button>
+                      ) : null}
                     </div>
                   </td>
                   {serviceDates.map((serviceDate, index) => {
@@ -483,6 +510,183 @@ function DriverPreferencesHeatmap({
       ) : (
         <p className="workpage-history__empty">No drivers are available in this weekly preferences scope yet.</p>
       )}
+    </section>
+  );
+}
+
+interface DriverAvailabilityExceptionDrawerProps {
+  workflowRunId: string;
+  driver: WorkpageDriverPreferencesDriverRow | null;
+  serviceDates: WorkpageScheduleHeatmapDate[];
+  exceptions: WorkpageDriverAvailabilityException[];
+  addAction: WorkpageDriverPreferencesAction | null;
+  hasUnsavedGridEdits: boolean;
+}
+
+function DriverAvailabilityExceptionDrawer({
+  workflowRunId,
+  driver,
+  serviceDates,
+  exceptions,
+  addAction,
+  hasUnsavedGridEdits
+}: DriverAvailabilityExceptionDrawerProps): JSX.Element {
+  const queryClient = useQueryClient();
+  const defaultServiceDate = serviceDates[0]?.service_date ?? "";
+  const [startDate, setStartDate] = useState(defaultServiceDate);
+  const [endDate, setEndDate] = useState(defaultServiceDate);
+  const [reasonCode, setReasonCode] =
+    useState<WorkpageDriverAvailabilityException["reason_code"]>("wedding");
+  const [reasonNote, setReasonNote] = useState("");
+  const driverExceptions = useMemo(
+    () =>
+      exceptions
+        .filter((item) => item.driver_id === driver?.driver_id)
+        .sort((left, right) => left.start_date.localeCompare(right.start_date)),
+    [driver?.driver_id, exceptions]
+  );
+  useEffect(() => {
+    setStartDate(defaultServiceDate);
+    setEndDate(defaultServiceDate);
+    setReasonCode("wedding");
+    setReasonNote("");
+  }, [defaultServiceDate, driver?.driver_id]);
+
+  const addMutation = useMutation({
+    mutationFn: () => {
+      if (!driver) {
+        throw new Error("Select a driver before adding an exception.");
+      }
+      return workpagesRepository.addDriverAvailabilityException(
+        workflowRunId,
+        {
+          driverId: driver.driver_id,
+          startDate,
+          endDate,
+          reasonCode,
+          reasonNote
+        },
+        addAction?.action_ref ?? undefined
+      );
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["workpages"] });
+      void invalidateWorkspaceViews(queryClient, workflowRunId);
+      setReasonNote("");
+    }
+  });
+  const saveDisabled =
+    !driver ||
+    !startDate ||
+    !endDate ||
+    addAction?.state !== "available" ||
+    addMutation.isPending;
+
+  return (
+    <section className="workpage-panel driver-availability-drawer" data-testid="driver-availability-exceptions-drawer">
+      <header className="workpage-panel__header">
+        <div>
+          <h2>Availability exceptions</h2>
+          <p>
+            {driver
+              ? `${driver.driver_name} · ${driver.driver_id}`
+              : "Select a driver from the grid."}
+          </p>
+        </div>
+      </header>
+
+      {driver ? (
+        <div className="driver-availability-drawer__layout">
+          <div className="driver-availability-drawer__list">
+            <h3>Upcoming approved</h3>
+            {driverExceptions.length > 0 ? (
+              <ul>
+                {driverExceptions.map((item) => (
+                  <li key={item.exception_id}>
+                    <strong>
+                      {item.start_date === item.end_date
+                        ? item.start_date
+                        : `${item.start_date} to ${item.end_date}`}
+                    </strong>
+                    <span>{formatReasonCode(item.reason_code)}</span>
+                    {item.reason_note ? <p>{item.reason_note}</p> : null}
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="workpage-history__empty">No approved exceptions for this driver.</p>
+            )}
+          </div>
+
+          <form
+            className="driver-availability-drawer__form"
+            onSubmit={(event) => {
+              event.preventDefault();
+              addMutation.mutate();
+            }}
+          >
+            <h3>Add exception</h3>
+            <label>
+              <span>Start date</span>
+              <input
+                type="date"
+                value={startDate}
+                required
+                onChange={(event) => setStartDate(event.target.value)}
+              />
+            </label>
+            <label>
+              <span>End date</span>
+              <input
+                type="date"
+                value={endDate}
+                required
+                onChange={(event) => setEndDate(event.target.value)}
+              />
+            </label>
+            <label>
+              <span>Reason</span>
+              <select
+                value={reasonCode}
+                onChange={(event) =>
+                  setReasonCode(
+                    event.target.value as WorkpageDriverAvailabilityException["reason_code"]
+                  )
+                }
+              >
+                {AVAILABILITY_EXCEPTION_REASONS.map((reason) => (
+                  <option key={reason} value={reason}>
+                    {formatReasonCode(reason)}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label>
+              <span>Note</span>
+              <textarea
+                value={reasonNote}
+                rows={3}
+                onChange={(event) => setReasonNote(event.target.value)}
+              />
+            </label>
+            {hasUnsavedGridEdits ? (
+              <p className="driver-availability-drawer__hint">Unsaved grid edits remain local.</p>
+            ) : null}
+            {addMutation.isError ? (
+              <StatePanel
+                kind="error"
+                title="Exception save failed"
+                detail={errorText(addMutation.error, "Unable to add availability exception.")}
+              />
+            ) : null}
+            <div className="action-cluster">
+              <button type="submit" className="action-btn action-btn--positive" disabled={saveDisabled}>
+                {addMutation.isPending ? "Saving exception..." : "Save exception"}
+              </button>
+            </div>
+          </form>
+        </div>
+      ) : null}
     </section>
   );
 }
@@ -702,7 +906,7 @@ export function DriverPreferencesQuickEditModal({
       }}
     >
       <section
-        className="quick-edit-modal route-demand-quick-edit-modal"
+        className="quick-edit-modal route-demand-quick-edit-modal driver-preferences-quick-edit-modal"
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
@@ -839,7 +1043,23 @@ function DriverPreferencesArtifactEditor({
   });
   const contract = query.data;
   const saveAction = findDriverPreferencesAction(contract, (action) => action.kind === "save");
+  const addExceptionAction = findDriverPreferencesAction(
+    contract,
+    (action) => action.kind === "add_availability_exception"
+  );
   const { driverRows, setDriverRows } = useEditableDriverPreferencesGrid(contract);
+  const [selectedDriverId, setSelectedDriverId] = useState<string | null>(null);
+  useEffect(() => {
+    if (driverRows.length === 0) {
+      setSelectedDriverId(null);
+      return;
+    }
+    if (!selectedDriverId || !driverRows.some((row) => row.driver_id === selectedDriverId)) {
+      setSelectedDriverId(driverRows[0].driver_id);
+    }
+  }, [driverRows, selectedDriverId]);
+  const selectedDriver =
+    driverRows.find((row) => row.driver_id === selectedDriverId) ?? driverRows[0] ?? null;
   const baseSignature = useMemo(
     () => driverRowsSignature(contract?.preference_grid?.drivers ?? []),
     [contract]
@@ -977,6 +1197,8 @@ function DriverPreferencesArtifactEditor({
       backLink={backRoute.href}
       backLabel={backRoute.label}
       layout={layout}
+      heroTitle={layout === "embedded" ? "Driver Preferences Snapshot" : undefined}
+      heroPresentation={layout === "embedded" ? "title_only" : "default"}
     >
       {submitConflict ? (
         <section className="workpage-panel workpage-panel--callout">
@@ -1040,6 +1262,22 @@ function DriverPreferencesArtifactEditor({
         driverRows={driverRows}
         setDriverRows={setDriverRows}
         readOnly={readOnly}
+        selectedDriverId={selectedDriver?.driver_id ?? null}
+        onSelectDriver={(driver) => setSelectedDriverId(driver.driver_id)}
+      />
+      <DriverAvailabilityExceptionDrawer
+        workflowRunId={workflowRunId}
+        driver={selectedDriver}
+        serviceDates={
+          contract.preference_grid?.service_dates?.length
+            ? contract.preference_grid.service_dates
+            : fallbackServiceDates(
+                contract.preference_grid?.weekdays ?? ["sun", "mon", "tue", "wed", "thu", "fri", "sat"]
+              )
+        }
+        exceptions={contract.driver_availability_exceptions?.items ?? []}
+        addAction={addExceptionAction}
+        hasUnsavedGridEdits={hasUnsavedEdits}
       />
       <DriverPreferencesHistoryRail
         artifactHistory={contract.artifact_history}

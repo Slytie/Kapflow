@@ -34,7 +34,7 @@ import {
 } from "@/lib/api/config";
 import { ACTOR_PROFILES } from "@/lib/actors";
 import { useDrawer } from "@/lib/state/drawerContext";
-import type { WorkpageContract } from "@/lib/types/contracts";
+import type { LogisticsStoryBoardWorkItem, WorkpageContract } from "@/lib/types/contracts";
 import type {
   WorkpageDriverPreferencesAction,
   WorkpageRouteDemandAction,
@@ -444,12 +444,8 @@ export function AppShell(): JSX.Element {
     setIsRouteDemandQuickEditOpen(false);
   }, [activeWorkflowRunId]);
 
-  const handleTaskSelect = (laneId: (typeof taskCards)[number]["lane_id"]): void => {
-    const targetCard = taskCards.find((card) => card.lane_id === laneId);
-    if (!targetCard?.top_item) {
-      return;
-    }
-    open(buildBoardItemDrawerPayload(targetCard.top_item));
+  const handleTaskSelect = (item: LogisticsStoryBoardWorkItem): void => {
+    open(buildBoardItemDrawerPayload(item));
   };
 
   const handleNodeSelect = (nodeId: string): void => {

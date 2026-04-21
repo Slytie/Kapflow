@@ -36,8 +36,11 @@ interface WorkpageFrameProps {
   pollIntervalMs?: number | false;
   sourceDescription?: string;
   heroTitleActions?: ReactNode;
+  heroTitle?: string;
   heroSupportText?: ReactNode;
   heroActions?: ReactNode;
+  showHero?: boolean;
+  heroPresentation?: "default" | "title_only";
   stickyTitleBar?: boolean;
   backLink?: string;
   backLabel?: string;
@@ -62,8 +65,11 @@ export function WorkpageFrame({
   pollIntervalMs,
   sourceDescription = "Canonical workpage projection served from backend-owned workflow artifacts and runtime truth.",
   heroTitleActions,
+  heroTitle,
   heroSupportText,
   heroActions,
+  showHero = true,
+  heroPresentation = "default",
   stickyTitleBar = false,
   backLink = "/demo/logistics",
   backLabel = "Back to logistics demo",
@@ -78,10 +84,12 @@ export function WorkpageFrame({
   const sourceExampleEntries = Object.entries(model.source_examples);
   const showSourceRefs = sourceExampleEntries.length === 0 && source.source_refs.length > 0;
   const isEmbedded = layout === "embedded";
+  const isTitleOnlyHero = heroPresentation === "title_only";
   const showMetadataDialog = metadataPresentation === "dialog";
   const showHeroTools = !isEmbedded || !showMetadataDialog;
-  const titleHeading = isEmbedded ? <h2>{model.title}</h2> : <h1>{model.title}</h1>;
-  const metadataInfoDialog = showMetadataDialog ? (
+  const titleText = heroTitle ?? model.title;
+  const titleHeading = isEmbedded ? <h2>{titleText}</h2> : <h1>{titleText}</h1>;
+  const metadataInfoDialog = showMetadataDialog && !isTitleOnlyHero ? (
     <InfoDialog
       triggerLabel={`Open info for ${model.title}`}
       dialogTitle={infoDialogTitle}
@@ -157,61 +165,65 @@ export function WorkpageFrame({
       className={`workpage-page${isEmbedded ? " workpage-page--embedded" : ""}`}
       data-testid={testId}
     >
-      <header
-        className={`workpage-page__hero${isEmbedded ? " workpage-page__hero--embedded" : ""}${
-          stickyTitleBar ? " workpage-page__hero--sticky-title" : ""
-        }`}
-      >
-        <div
-          className={`workpage-page__hero-title-bar${
-            stickyTitleBar ? " workpage-page__hero-title-bar--sticky" : ""
+      {showHero ? (
+        <header
+          className={`workpage-page__hero${isEmbedded ? " workpage-page__hero--embedded" : ""}${
+            stickyTitleBar ? " workpage-page__hero--sticky-title" : ""
           }`}
         >
-          <div className="workpage-page__hero-title-row">
-            <div className="workpage-page__hero-title-main">
-              {titleHeading}
-              {metadataInfoDialog}
-            </div>
-            {heroTitleActions ? (
-              <div className="workpage-page__hero-title-actions">{heroTitleActions}</div>
-            ) : null}
-          </div>
-        </div>
-
-        <div className="workpage-page__hero-body">
-          <div className="workpage-page__hero-copy">
-            <p className="timeline-page__eyebrow">{eyebrow}</p>
-            {heroSupportText ? <p className="workpage-page__hero-support">{heroSupportText}</p> : null}
-            <p>{description}</p>
-            <div className="timeline-page__summary">
-              {summaryItems.map((item) => (
-                <span key={item}>{item}</span>
-              ))}
-            </div>
-          </div>
           <div
-            className={`workpage-page__hero-links${isEmbedded ? " workpage-page__hero-links--embedded" : ""}`}
+            className={`workpage-page__hero-title-bar${
+              stickyTitleBar ? " workpage-page__hero-title-bar--sticky" : ""
+            }`}
           >
-            {showHeroTools ? (
-              <div className="workpage-page__hero-tools">
-                {!isEmbedded ? (
-                  <Link className="link-button" to={backLink}>
-                    {backLabel}
-                  </Link>
-                ) : null}
-                {!showMetadataDialog ? (
-                  <>
-                    <p>{model.workflow_id}</p>
-                    <p>{model.dataset_key}</p>
-                    <p>Mode: {model.mode}</p>
-                  </>
-                ) : null}
+            <div className="workpage-page__hero-title-row">
+              <div className="workpage-page__hero-title-main">
+                {titleHeading}
+                {metadataInfoDialog}
               </div>
-            ) : null}
-            {heroActions ? <div className="workpage-page__hero-actions">{heroActions}</div> : null}
+              {heroTitleActions ? (
+                <div className="workpage-page__hero-title-actions">{heroTitleActions}</div>
+              ) : null}
+            </div>
           </div>
-        </div>
-      </header>
+
+          {!isTitleOnlyHero ? (
+            <div className="workpage-page__hero-body">
+              <div className="workpage-page__hero-copy">
+                <p className="timeline-page__eyebrow">{eyebrow}</p>
+                {heroSupportText ? <p className="workpage-page__hero-support">{heroSupportText}</p> : null}
+                <p>{description}</p>
+                <div className="timeline-page__summary">
+                  {summaryItems.map((item) => (
+                    <span key={item}>{item}</span>
+                  ))}
+                </div>
+              </div>
+              <div
+                className={`workpage-page__hero-links${isEmbedded ? " workpage-page__hero-links--embedded" : ""}`}
+              >
+                {showHeroTools ? (
+                  <div className="workpage-page__hero-tools">
+                    {!isEmbedded ? (
+                      <Link className="link-button" to={backLink}>
+                        {backLabel}
+                      </Link>
+                    ) : null}
+                    {!showMetadataDialog ? (
+                      <>
+                        <p>{model.workflow_id}</p>
+                        <p>{model.dataset_key}</p>
+                        <p>Mode: {model.mode}</p>
+                      </>
+                    ) : null}
+                  </div>
+                ) : null}
+                {heroActions ? <div className="workpage-page__hero-actions">{heroActions}</div> : null}
+              </div>
+            </div>
+          ) : null}
+        </header>
+      ) : null}
 
       {!showMetadataDialog ? (
         <section className="workpage-panel">

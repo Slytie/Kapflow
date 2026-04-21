@@ -227,6 +227,8 @@ def build_weekly_schedule_control_bundle(
     daily_demand_by_service_date = _parse_daily_demand_summary(
         route_slot_requirements_artifact=route_slot_requirements_artifact,
         route_slots=route_slots,
+        scope_start=scope_start_date,
+        scope_end_exclusive=scope_end_exclusive_date,
     )
     planning_policy = _parse_planning_policy(route_slot_requirements_artifact)
     policy_signals_by_driver = _build_policy_signals(
@@ -742,6 +744,8 @@ def _parse_daily_demand_summary(
     *,
     route_slot_requirements_artifact: Mapping[str, Any],
     route_slots: tuple[RouteSlotRequirement, ...],
+    scope_start: date,
+    scope_end_exclusive: date,
 ) -> dict[str, DailyDemandSummary]:
     metadata = _metadata_json(route_slot_requirements_artifact)
     columns, rows = _extract_table(
@@ -753,6 +757,12 @@ def _parse_daily_demand_summary(
     for row in _rows_to_dicts(columns=columns, rows=rows):
         service_date = str(row.get("service_date") or "").strip()
         if not service_date:
+            continue
+        if not _service_date_in_scope(
+            service_date,
+            scope_start=scope_start,
+            scope_end_exclusive=scope_end_exclusive,
+        ):
             continue
         source_message_ids = _csv_tokens(row.get("source_message_id"))
         if not source_message_ids and str(row.get("source_message_id") or "").strip():

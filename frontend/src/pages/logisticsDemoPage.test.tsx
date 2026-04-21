@@ -87,6 +87,31 @@ describe("LogisticsDemoPage", () => {
     expect(within(page).getByLabelText("Waiting Review")).toBeInTheDocument();
   });
 
+  it("shows every active task in the shell task strip with urgent nonzero counts", async () => {
+    setFrontendOperatorContext();
+    window.history.pushState({}, "", "/demo/logistics?planning_week_id=PW-2026-W10");
+    render(<App />);
+
+    await screen.findByTestId("logistics-demo-page");
+    const strip = await screen.findByTestId("logistics-task-strip");
+    const todoCard = within(strip).getByTestId("logistics-task-strip-card-todo");
+    const todoCount = within(todoCard).getByTestId("logistics-task-strip-count-todo");
+    const weeklyTask = within(todoCard).getByTestId(
+      "logistics-task-strip-task-todo-ht-weekly-001"
+    );
+    const reportingTask = within(todoCard).getByTestId(
+      "logistics-task-strip-task-todo-ht-reporting-001"
+    );
+
+    expect(todoCount).toHaveTextContent("2");
+    expect(todoCount).toHaveClass("has-items");
+    expect(weeklyTask).toHaveTextContent("Weekly Scheduling Plan Inputs");
+    expect(reportingTask).toHaveTextContent("End of Day Dispatch Report");
+    expect(weeklyTask).toHaveClass("is-urgent");
+    expect(reportingTask).toHaveClass("is-urgent");
+    expect(within(todoCard).queryByText("+1")).not.toBeInTheDocument();
+  });
+
   it("keeps node metadata behind the info dialog instead of in the main detail panel", async () => {
     const user = userEvent.setup();
     setFrontendOperatorContext();
@@ -390,7 +415,9 @@ describe("LogisticsDemoPage", () => {
     render(<App />);
 
     await screen.findByTestId("logistics-demo-page");
-    await user.click(screen.getByTestId("logistics-task-strip-card-todo"));
+    await user.click(
+      await screen.findByTestId("logistics-task-strip-task-todo-ht-weekly-001")
+    );
 
     expect(window.location.pathname).toBe("/demo/logistics");
     const taskModal = await screen.findByRole("dialog", {
@@ -405,6 +432,28 @@ describe("LogisticsDemoPage", () => {
     expect(within(taskModal).getByRole("link", { name: "Open run detail (secondary)" })).toHaveAttribute(
       "href",
       "/runs/wr-weekly-001"
+    );
+  });
+
+  it("opens the exact task selected from the multi-task shell strip", async () => {
+    const user = userEvent.setup();
+    setFrontendOperatorContext();
+    window.history.pushState({}, "", "/demo/logistics?planning_week_id=PW-2026-W10");
+    render(<App />);
+
+    await screen.findByTestId("logistics-demo-page");
+    await user.click(
+      await screen.findByTestId("logistics-task-strip-task-todo-ht-reporting-001")
+    );
+
+    expect(window.location.pathname).toBe("/demo/logistics");
+    const taskModal = await screen.findByRole("dialog", {
+      name: "Stage01 · End of Day Dispatch Report"
+    });
+    expect(taskModal).toBeInTheDocument();
+    expect(within(taskModal).getByRole("link", { name: "Open Workspace" })).toHaveAttribute(
+      "href",
+      "/runs/wr-report-001/workspace"
     );
   });
 

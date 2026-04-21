@@ -146,6 +146,14 @@ def test_schedule_workflow_run_workpage_contract_returns_run_backed_projection(
     heatmap_section = next(section for section in sections if section["kind"] == "schedule_heatmap")
     assert heatmap_section["service_dates"]
     assert heatmap_section["people"]
+    heatmap_cells = [
+        cell
+        for person in heatmap_section["people"]
+        for cell in person["cells"]
+    ]
+    assert heatmap_cells
+    assert all("preference_state" in cell for cell in heatmap_cells)
+    assert {cell["preference_state"] for cell in heatmap_cells} == {"unset"}
     assert _table_section_by_id(sections, "assignment_rows")["rows"]
     assert _table_section_by_id(sections, "reserve_rows")["rows"]
 

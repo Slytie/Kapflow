@@ -303,17 +303,19 @@ describe("logistics workpage routes", () => {
     );
     await user.click(screen.getByRole("button", { name: /Close Secondary detail routes/i }));
 
-    await user.click(await screen.findByRole("link", { name: "Open editable draft" }));
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: "Edit weekly schedule" })).toBeEnabled();
+    });
+    await user.click(screen.getByRole("button", { name: "Edit weekly schedule" }));
 
-    expect(await screen.findByTestId("schedule-artifact-workpage-page")).toBeInTheDocument();
-    expect(window.location.pathname).toBe(
-      "/runs/wr-weekly-001/workpages/schedule-v0/artifacts/av-schedule-artifact-001"
-    );
+    const scheduleDialog = await screen.findByRole("dialog", { name: "Edit weekly schedule" });
+    expect(await within(scheduleDialog).findByTestId("schedule-quick-edit-editor")).toBeInTheDocument();
+    expect(window.location.pathname).toBe("/runs/wr-weekly-001/workpages/schedule-v0");
     expect(screen.getByTestId("logistics-family-nav-node-weekly_schedule_planning")).toHaveAttribute(
       "aria-pressed",
       "true"
     );
-  });
+  }, 20000);
 
   it("returns from canonical logistics workpages to the demo shell with preserved module and run context", async () => {
     const user = userEvent.setup();

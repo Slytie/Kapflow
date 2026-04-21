@@ -71,6 +71,7 @@ export interface WorkpageScheduleHeatmapCell {
   assignment_status: string | null;
   planned_driver_day_state: string | null;
   manual_override: boolean;
+  preference_state?: string;
 }
 
 export interface WorkpageScheduleHeatmapPerson {
@@ -376,7 +377,29 @@ export interface WorkpageDriverPreferencesScheduleImpact {
   schedule_state: string;
 }
 
-export type WorkpageDriverPreferencesActionKind = "open_latest" | "create_snapshot" | "save";
+export interface WorkpageDriverAvailabilityException {
+  exception_id: string;
+  driver_id: string;
+  driver_name: string;
+  start_date: string;
+  end_date: string;
+  reason_code: "wedding" | "vacation" | "medical" | "family" | "appointment" | "other";
+  reason_note: string;
+  status: "approved";
+  source_workflow_run_id: string;
+  source_artifact_version_id: string;
+  affected_planning_week_ids: string[];
+}
+
+export interface WorkpageDriverAvailabilityExceptions {
+  items: WorkpageDriverAvailabilityException[];
+}
+
+export type WorkpageDriverPreferencesActionKind =
+  | "open_latest"
+  | "create_snapshot"
+  | "save"
+  | "add_availability_exception";
 
 export interface WorkpageDriverPreferencesAction {
   action_id: string;

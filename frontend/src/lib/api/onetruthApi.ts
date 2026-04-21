@@ -37,6 +37,7 @@ import type {
   WorkpageAction,
   WorkpageActionRef,
   WorkpageArtifactHistory,
+  WorkpageDriverAvailabilityException,
   WorkpageDriverPreferencesAction,
   WorkpageEodAction,
   WorkpageDriverPreferencesGrid,
@@ -139,12 +140,17 @@ interface WorkpageEnvelope extends ListEnvelope {
   accepted_series?: Record<string, unknown> | null;
   schedule_impact?: Record<string, unknown> | null;
   preference_grid?: Record<string, unknown> | null;
+  driver_availability_exceptions?: Record<string, unknown> | null;
   dependencies?: Array<Record<string, unknown>> | null;
   actions?: Array<Record<string, unknown>> | null;
 }
 
 interface WorkpageCreateEnvelope extends ListEnvelope {
   draft?: Record<string, unknown>;
+  created?: Record<string, unknown>;
+}
+
+interface DriverAvailabilityExceptionCreateEnvelope extends ListEnvelope {
   created?: Record<string, unknown>;
 }
 
@@ -837,6 +843,14 @@ function normalizeWorkpageContract(payload: WorkpageEnvelope): WorkpageContract 
     payload.preference_grid === null || payload.preference_grid === undefined
       ? null
       : requiredObject(payload.preference_grid, "preference_grid");
+  const driverAvailabilityExceptions =
+    payload.driver_availability_exceptions === null ||
+    payload.driver_availability_exceptions === undefined
+      ? null
+      : requiredObject(
+          payload.driver_availability_exceptions,
+          "driver_availability_exceptions"
+        );
 
   if (!Array.isArray(workpage.sections)) {
     throw new Error("Invalid API response: expected array at 'workpage.sections'.");
@@ -920,6 +934,9 @@ function normalizeWorkpageContract(payload: WorkpageEnvelope): WorkpageContract 
     calculations: normalizeScheduleCalculations(calculations),
     route_demand_calculations: normalizeRouteDemandCalculations(calculations),
     preference_grid: normalizeDriverPreferencesGrid(preferenceGrid),
+    driver_availability_exceptions: normalizeDriverAvailabilityExceptions(
+      driverAvailabilityExceptions
+    ),
     schedule_impact: normalizeScheduleImpact(scheduleImpact, asString(workpage.workpage_id)),
     artifact_history: normalizeArtifactHistory(artifactHistory),
     draft_lineage: normalizeScheduleDraftLineage(draftLineage),
@@ -1298,6 +1315,31 @@ function normalizeDriverPreferencesGrid(
         }
       };
     })
+  };
+}
+
+function normalizeDriverAvailabilityExceptions(
+  value: Record<string, unknown> | null
+): WorkpageContract["driver_availability_exceptions"] {
+  if (!value) {
+    return null;
+  }
+  return {
+    items: asArray<Record<string, unknown>>(value.items).map((item) => ({
+      exception_id: asString(item.exception_id),
+      driver_id: asString(item.driver_id),
+      driver_name: asString(item.driver_name),
+      start_date: asString(item.start_date),
+      end_date: asString(item.end_date),
+      reason_code: asString(item.reason_code, "other") as WorkpageDriverAvailabilityException["reason_code"],
+      reason_note: asString(item.reason_note),
+      status: "approved",
+      source_workflow_run_id: asString(item.source_workflow_run_id),
+      source_artifact_version_id: asString(item.source_artifact_version_id),
+      affected_planning_week_ids: asArray(item.affected_planning_week_ids)
+        .map((weekId) => asString(weekId))
+        .filter(Boolean)
+    }))
   };
 }
 
@@ -1749,6 +1791,28 @@ export const onetruthApi = {
       body: payload
     });
     return normalizeWorkpageCreateResponse(result);
+  },
+
+  async addWorkflowRunDriverAvailabilityException(
+    workflowRunId: string,
+    payload: {
+      driver_id: string;
+      start_date: string;
+      end_date: string;
+      reason_code: string;
+      reason_note: string;
+      idempotency_key: string;
+      action_ref?: WorkpageActionRef;
+    }
+  ): Promise<Record<string, unknown>> {
+    const result = await requestJson<DriverAvailabilityExceptionCreateEnvelope>(
+      `/workpages/workflow-runs/${encodeURIComponent(workflowRunId)}/driver-preferences-v0/availability-exceptions`,
+      {
+        method: "POST",
+        body: payload
+      }
+    );
+    return requiredObject(result.created, "created");
   },
 
   async submitWorkflowRunScheduleArtifactWorkpage(

@@ -45,8 +45,7 @@ export interface LogisticsTaskStripCardModel {
   lane_id: EditorialBoardLane["id"];
   title: string;
   count: number;
-  top_item: LogisticsStoryBoardWorkItem | null;
-  extra_count: number;
+  items: LogisticsStoryBoardWorkItem[];
 }
 
 export function normalizeStatus(input: string): string {
@@ -299,8 +298,7 @@ export function logisticsTaskStripCards(
     lane_id: lane.id,
     title: lane.title,
     count: lane.items.length,
-    top_item: lane.items[0] ?? null,
-    extra_count: Math.max(0, lane.items.length - 1)
+    items: lane.items
   }));
 }
 

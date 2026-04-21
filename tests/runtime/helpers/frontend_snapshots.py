@@ -610,9 +610,9 @@ def _build_route_demand_artifact_submit_snapshot(*, tmp_path: Path) -> dict[str,
         f"route-demand-v0/artifacts/{artifact_version_id}"
     ).payload
     day_cards = list(current["calculations"]["day_cards"])
-    day_cards[0] = {
-        **day_cards[0],
-        "planned_route_count": int(day_cards[0]["planned_route_count"]) + 2,
+    day_cards[-1] = {
+        **day_cards[-1],
+        "planned_route_count": int(day_cards[-1]["planned_route_count"]) + 2,
     }
     payload = client.post(
         f"/api/v1/workpages/workflow-runs/{workflow_run_id}/"

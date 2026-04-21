@@ -271,19 +271,23 @@ function RouteDemandDayCards({
   dayCards,
   editable,
   onIncrement,
-  onDecrement
+  onDecrement,
+  showHeader = true
 }: {
   dayCards: WorkpageRouteDemandDayCard[];
   editable: boolean;
   onIncrement?: (serviceDate: string) => void;
   onDecrement?: (serviceDate: string) => void;
+  showHeader?: boolean;
 }): JSX.Element {
   return (
     <section className="workpage-panel" data-testid="route-demand-day-cards">
-      <header className="workpage-panel__header">
-        <h2>Daily route demand</h2>
-        <p>Route-demand edits change final planned daily route counts only. Rescue, overflow, and buffer posture stay server-managed.</p>
-      </header>
+      {showHeader ? (
+        <header className="workpage-panel__header">
+          <h2>Daily route demand</h2>
+          <p>Route-demand edits change final planned daily route counts only. Rescue, overflow, and buffer posture stay server-managed.</p>
+        </header>
+      ) : null}
       <div className="route-demand-day-grid">
         {dayCards.map((card) => (
           <article key={card.service_date} className="route-demand-day-card">
@@ -375,7 +379,8 @@ function RouteDemandWorkpageBody({
   artifactHistory,
   editableDayCards,
   onIncrement,
-  onDecrement
+  onDecrement,
+  presentation = "full"
 }: {
   contract: WorkpageContract;
   workflowRunId?: string;
@@ -383,6 +388,7 @@ function RouteDemandWorkpageBody({
   editableDayCards?: WorkpageRouteDemandDayCard[];
   onIncrement?: (serviceDate: string) => void;
   onDecrement?: (serviceDate: string) => void;
+  presentation?: "full" | "daily_only";
 }): JSX.Element {
   const summarySection = findSummarySection(contract.workpage.sections);
   const noteSection = findNoteSection(contract.workpage.sections);
@@ -390,6 +396,18 @@ function RouteDemandWorkpageBody({
   const editable = Boolean(contract.artifact_state?.editable);
   const dayCards = editableDayCards ?? contract.route_demand_calculations?.day_cards ?? [];
   const rawDailyTable = findTableSection(contract.workpage.sections, "route_demand_daily_rows");
+
+  if (presentation === "daily_only") {
+    return (
+      <RouteDemandDayCards
+        dayCards={dayCards}
+        editable={editable}
+        onIncrement={onIncrement}
+        onDecrement={onDecrement}
+        showHeader={false}
+      />
+    );
+  }
 
   return (
     <>
@@ -669,6 +687,8 @@ function RouteDemandArtifactEditor({
       metadataPresentation="dialog"
       infoDialogTitle="Route demand artifact context"
       sourceDescription="Artifact-backed route-demand projection served from an immutable Stage04 route-demand workbook version."
+      heroTitle={layout === "embedded" ? "Daily route demand" : undefined}
+      heroPresentation={layout === "embedded" ? "title_only" : "default"}
       heroTitleActions={
         <button
           type="button"
@@ -731,6 +751,7 @@ function RouteDemandArtifactEditor({
         workflowRunId={workflowRunId}
         artifactHistory={query.data.artifact_history}
         editableDayCards={dayCards}
+        presentation={layout === "embedded" ? "daily_only" : "full"}
         onIncrement={(serviceDate) => {
           setDayCards((current) =>
             current.map((card) =>

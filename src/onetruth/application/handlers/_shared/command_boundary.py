@@ -218,6 +218,14 @@ def _public_command_scope_key(command_name: str, payload: dict[str, Any]) -> str
                 payload.get("workpage_id"),
             )
         )
+    if command_name == "workpages.driver-preferences.availability-exceptions.add":
+        return _command_scope_key(
+            (
+                payload.get("workflow_run_id"),
+                payload.get("workflow_id"),
+                payload.get("workpage_id"),
+            )
+        )
     if command_name == "workpages.artifact.submit":
         return _command_scope_key((payload.get("artifact_version_id"),))
     if command_name == "artifacts.seed-corpus":

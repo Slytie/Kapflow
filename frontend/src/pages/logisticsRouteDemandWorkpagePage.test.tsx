@@ -20,6 +20,8 @@ function setFrontendOperatorContext(): void {
 }
 
 describe("LogisticsRouteDemandWorkpagePage", () => {
+  const futureHorizonDate = "2026-04-04";
+
   it("shows the top chrome weekly actions in operator order on weekly schedule routes", async () => {
     setFrontendOperatorContext();
     window.history.pushState({}, "", "/runs/wr-weekly-001/workpages/schedule-v0");
@@ -78,17 +80,37 @@ describe("LogisticsRouteDemandWorkpagePage", () => {
     await user.click(await screen.findByRole("button", { name: "Edit route demand" }));
 
     const dialog = await screen.findByRole("dialog", { name: "Edit route demand" });
-    expect(await within(dialog).findByTestId("route-demand-quick-edit-editor")).toBeInTheDocument();
+    const editor = await within(dialog).findByTestId("route-demand-quick-edit-editor");
+    expect(within(editor).getByRole("heading", { name: "Daily route demand" })).toBeInTheDocument();
+    expect(within(editor).queryByText("Route Demand Artifact")).not.toBeInTheDocument();
+    expect(
+      within(editor).queryByText(/Plus\/minus controls adjust backend-owned daily route counts/i)
+    ).not.toBeInTheDocument();
+    expect(
+      within(editor).queryByText(/bounded route-demand editor over immutable weekly route-demand workbooks/i)
+    ).not.toBeInTheDocument();
+    expect(within(editor).queryByText(/^Week /i)).not.toBeInTheDocument();
+    expect(within(editor).queryByText(/^Artifact /i)).not.toBeInTheDocument();
+    expect(within(editor).queryByText(/^\d+ planned routes$/i)).not.toBeInTheDocument();
+    expect(within(editor).queryByTestId("route-demand-schedule-impact")).not.toBeInTheDocument();
+    expect(within(editor).queryByTestId("workpage-summary-section")).not.toBeInTheDocument();
+    expect(within(editor).queryByTestId("route-demand-history-rail")).not.toBeInTheDocument();
+    expect(within(editor).queryByText("Raw route-demand table")).not.toBeInTheDocument();
     expect(within(dialog).getByRole("button", { name: "Save route demand" })).toBeDisabled();
+    expect(within(dialog).getByTestId(`route-demand-count-${futureHorizonDate}`)).toHaveTextContent(
+      "17"
+    );
     const initialCount = Number(
-      within(dialog).getByTestId("route-demand-count-2026-03-22").textContent ?? "0"
+      within(dialog).getByTestId(`route-demand-count-${futureHorizonDate}`).textContent ?? "0"
     );
 
     await user.click(
-      within(dialog).getByRole("button", { name: "Increase planned routes for 2026-03-22" })
+      within(dialog).getByRole("button", {
+        name: `Increase planned routes for ${futureHorizonDate}`
+      })
     );
 
-    expect(within(dialog).getByTestId("route-demand-count-2026-03-22")).toHaveTextContent(
+    expect(within(dialog).getByTestId(`route-demand-count-${futureHorizonDate}`)).toHaveTextContent(
       String(initialCount + 1)
     );
     expect(within(dialog).getByRole("button", { name: "Save route demand" })).toBeEnabled();
@@ -147,6 +169,9 @@ describe("LogisticsRouteDemandWorkpagePage", () => {
     expect(within(page).getByRole("heading", { name: "Editable route demand available" })).toBeInTheDocument();
     expect(within(page).getByRole("heading", { name: "Schedule impact" })).toBeInTheDocument();
     expect(within(page).getByRole("heading", { name: "Daily route demand" })).toBeInTheDocument();
+    expect(within(page).getByTestId(`route-demand-count-${futureHorizonDate}`)).toHaveTextContent(
+      "17"
+    );
     expect(
       within(page).getByRole("link", { name: "Open route demand editor" })
     ).toHaveAttribute(
@@ -174,15 +199,20 @@ describe("LogisticsRouteDemandWorkpagePage", () => {
 
     const page = await screen.findByTestId("route-demand-artifact-workpage-page");
     expect(within(page).getByRole("button", { name: "Save route demand" })).toBeDisabled();
+    expect(within(page).getByTestId(`route-demand-count-${futureHorizonDate}`)).toHaveTextContent(
+      "17"
+    );
     const initialCount = Number(
-      within(page).getByTestId("route-demand-count-2026-03-22").textContent ?? "0"
+      within(page).getByTestId(`route-demand-count-${futureHorizonDate}`).textContent ?? "0"
     );
 
     await user.click(
-      within(page).getByRole("button", { name: "Increase planned routes for 2026-03-22" })
+      within(page).getByRole("button", {
+        name: `Increase planned routes for ${futureHorizonDate}`
+      })
     );
 
-    expect(within(page).getByTestId("route-demand-count-2026-03-22")).toHaveTextContent(
+    expect(within(page).getByTestId(`route-demand-count-${futureHorizonDate}`)).toHaveTextContent(
       String(initialCount + 1)
     );
     expect(within(page).getByRole("button", { name: "Save route demand" })).toBeEnabled();
@@ -196,6 +226,9 @@ describe("LogisticsRouteDemandWorkpagePage", () => {
     });
 
     expect(await screen.findByTestId("route-demand-artifact-workpage-page")).toBeInTheDocument();
+    expect(screen.getByTestId(`route-demand-count-${futureHorizonDate}`)).toHaveTextContent(
+      String(initialCount + 1)
+    );
     expect(screen.getByText("Refresh follow-up is open")).toBeInTheDocument();
     expect(screen.getAllByRole("link", { name: "Open latest schedule draft" })[0]).toHaveAttribute(
       "href",

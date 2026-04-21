@@ -4,6 +4,7 @@ import sqlite3
 
 from onetruth.application.handlers._shared.command_boundary import CommandError
 from onetruth.application.handlers.workpages import (
+    add_driver_availability_exception_command,
     create_workflow_run_driver_preferences_snapshot_command,
     create_workflow_run_eod_draft_command,
     preview_schedule_artifact_workpage_command,
@@ -257,6 +258,46 @@ def create_workflow_run_driver_preferences_snapshot_endpoint(
         raise api_error_from_command(exc) from exc
     return {
         "command": "api.workpages.driver_preferences.snapshots.create",
+        **result,
+    }
+
+
+def add_workflow_run_driver_availability_exception_endpoint(
+    connection: sqlite3.Connection,
+    *,
+    context: RequestContext,
+    db_url: str,
+    workflow_run_id: str,
+    payload: dict[str, object],
+) -> dict[str, object]:
+    workflow_run = scoped_workflow_run(connection, context, workflow_run_id)
+    if str(workflow_run.get("workflow_id") or "") != "weekly_schedule_planning.v1":
+        raise ApiError(
+            status_code=404,
+            code="workpage_not_found",
+            message="workpage not found",
+            details={
+                "workflow_run_id": workflow_run_id,
+                "workpage_id": DRIVER_PREFERENCES_WORKPAGE_KIND,
+            },
+        )
+    try:
+        result = add_driver_availability_exception_command(
+            connection,
+            workflow_run,
+            {
+                **payload,
+                "tenant_id": context.tenant_id,
+                "domain_id": context.domain_id,
+                "actor_id": context.actor_id,
+                "actor_type": context.actor_type,
+            },
+            storage_root=default_storage_root_for_db_url(db_url),
+        )
+    except CommandError as exc:
+        raise api_error_from_command(exc) from exc
+    return {
+        "command": "api.workpages.driver_preferences.availability_exceptions.add",
         **result,
     }
 

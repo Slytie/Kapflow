@@ -35,10 +35,12 @@ let eodArtifactVersionCounter = 0;
 let scheduleArtifactVersionCounter = 0;
 let routeDemandArtifactVersionCounter = 0;
 let driverPreferencesArtifactVersionCounter = 0;
+let driverAvailabilityExceptionCounter = 0;
 const eodArtifactVersions = new Map<string, EodArtifactVersionState>();
 const scheduleArtifactVersions = new Map<string, ScheduleArtifactVersionState>();
 const routeDemandArtifactVersions = new Map<string, RouteDemandArtifactVersionState>();
 const driverPreferencesArtifactVersions = new Map<string, DriverPreferencesArtifactVersionState>();
+const driverAvailabilityExceptions = new Map<string, DriverAvailabilityExceptionState>();
 const EOD_WORKFLOW_RUN_ID = "wr-eod-artifact-001";
 const SCHEDULE_WORKFLOW_RUN_ID = "wr-weekly-001";
 
@@ -79,6 +81,20 @@ interface DriverPreferencesArtifactVersionState extends ArtifactWorkpageVersionS
   scheduleImpact: Record<string, unknown>;
 }
 
+interface DriverAvailabilityExceptionState {
+  exception_id: string;
+  driver_id: string;
+  driver_name: string;
+  start_date: string;
+  end_date: string;
+  reason_code: string;
+  reason_note: string;
+  status: "approved";
+  source_workflow_run_id: string;
+  source_artifact_version_id: string;
+  affected_planning_week_ids: string[];
+}
+
 function nowIso(): string {
   return new Date().toISOString();
 }
@@ -105,6 +121,11 @@ function nextRouteDemandArtifactVersionId(): string {
 function nextDriverPreferencesArtifactVersionId(): string {
   driverPreferencesArtifactVersionCounter += 1;
   return `av-driver-preferences-artifact-${String(driverPreferencesArtifactVersionCounter).padStart(3, "0")}`;
+}
+
+function nextDriverAvailabilityExceptionId(): string {
+  driverAvailabilityExceptionCounter += 1;
+  return `ae-driver-availability-${String(driverAvailabilityExceptionCounter).padStart(3, "0")}`;
 }
 
 function artifactRoute(artifactVersionId: string, workflowRunId: string): string {
@@ -425,6 +446,40 @@ function buildDriverPreferencesScheduleAction(
       workpageKind: "driver-preferences-v0",
       workflowRunId,
       artifactVersionId: null
+    })
+  };
+}
+
+function driverAvailabilityExceptionCreatePath(workflowRunId: string): string {
+  return `/api/v1/workpages/workflow-runs/${workflowRunId}/driver-preferences-v0/availability-exceptions`;
+}
+
+function buildDriverAvailabilityExceptionAction(workflowRunId: string): Record<string, unknown> {
+  return {
+    action_id: "workpage.driver-preferences-v0.add_availability_exception",
+    artifact_version_id: null,
+    kind: "add_availability_exception",
+    label: "Add availability exception",
+    create_path: driverAvailabilityExceptionCreatePath(workflowRunId),
+    state: "available",
+    workpage_kind: "driver-preferences-v0",
+    action_ref: buildWorkpageActionRef({
+      actionId: "workpage.driver-preferences-v0.add_availability_exception",
+      workpageKind: "driver-preferences-v0",
+      workflowRunId,
+      artifactVersionId: null
+    })
+  };
+}
+
+function buildDriverAvailabilityExceptionsPayload(): Record<string, unknown> {
+  return {
+    items: Array.from(driverAvailabilityExceptions.values()).sort((left, right) => {
+      const dateCompare = left.start_date.localeCompare(right.start_date);
+      if (dateCompare !== 0) {
+        return dateCompare;
+      }
+      return left.driver_name.localeCompare(right.driver_name);
     })
   };
 }
@@ -1800,8 +1855,8 @@ function patchDriverPreferencesArtifactContractState(
       return action;
     }
     const record = { ...(action as Record<string, unknown>) };
-    record.artifact_version_id = version.artifactVersionId;
     if (asString(record.kind) === "save") {
+      record.artifact_version_id = version.artifactVersionId;
       record.submit_path =
         `/api/v1/workpages/workflow-runs/${version.workflowRunId}/driver-preferences-v0/artifacts/` +
         `${version.artifactVersionId}/submit`;
@@ -1820,6 +1875,13 @@ function patchDriverPreferencesArtifactContractState(
     }
     return record;
   });
+  if (
+    !payload.actions.some(
+      (action) => asString((action as Record<string, unknown>)?.kind) === "add_availability_exception"
+    )
+  ) {
+    payload.actions.push(buildDriverAvailabilityExceptionAction(version.workflowRunId));
+  }
 
   const artifactState = asObject(payload.artifact_state);
   if (artifactState) {
@@ -1830,6 +1892,7 @@ function patchDriverPreferencesArtifactContractState(
   }
 
   payload.preference_grid = cloneDriverPreferenceGrid(version.preferenceGrid);
+  payload.driver_availability_exceptions = buildDriverAvailabilityExceptionsPayload();
   payload.schedule_impact = {
     ...version.scheduleImpact,
     latest_schedule_draft_artifact_version_id: latestScheduleVersion?.artifactVersionId ?? null,
@@ -1909,6 +1972,7 @@ function buildDriverPreferencesArtifactPayload(input: {
   payload.source = source;
   payload.freshness = freshness;
   payload.artifact_context = artifactContext;
+  payload.driver_availability_exceptions = buildDriverAvailabilityExceptionsPayload();
 
   const version: DriverPreferencesArtifactVersionState = {
     artifactVersionId: input.artifactVersionId,
@@ -2083,43 +2147,49 @@ function buildRunDriverPreferencesWorkpagePayload(workflowRunId: string): Record
         dependency_state: "no_snapshot",
         schedule_state: "no_snapshot"
       };
-  payload.actions = [latestVersion
-    ? {
-        action_id: "workpage.driver-preferences-v0.open_latest",
-        artifact_version_id: latestVersion.artifactVersionId,
-        kind: "open_latest",
-        label: "Open latest snapshot",
-        route: driverPreferencesArtifactRoute(latestVersion.artifactVersionId, workflowRunId),
-        state: "available",
-        workpage_kind: "driver-preferences-v0",
-        action_ref: buildWorkpageActionRef({
-          actionId: "workpage.driver-preferences-v0.open_latest",
-          workpageKind: "driver-preferences-v0",
-          workflowRunId,
-          artifactVersionId: latestVersion.artifactVersionId
-        })
-      }
-    : {
-        action_id: "workpage.driver-preferences-v0.create_snapshot",
-        artifact_version_id: null,
-        kind: "create_snapshot",
-        label: "Create preferences snapshot",
-        create_path: driverPreferencesSnapshotCreatePath(workflowRunId),
-        state: "available",
-        workpage_kind: "driver-preferences-v0",
-        action_ref: buildWorkpageActionRef({
-          actionId: "workpage.driver-preferences-v0.create_snapshot",
-          workpageKind: "driver-preferences-v0",
-          workflowRunId,
-          artifactVersionId: null
-        })
-      }];
+  payload.driver_availability_exceptions = buildDriverAvailabilityExceptionsPayload();
+  payload.actions = [
+    latestVersion
+      ? {
+          action_id: "workpage.driver-preferences-v0.open_latest",
+          artifact_version_id: latestVersion.artifactVersionId,
+          kind: "open_latest",
+          label: "Open latest snapshot",
+          route: driverPreferencesArtifactRoute(latestVersion.artifactVersionId, workflowRunId),
+          state: "available",
+          workpage_kind: "driver-preferences-v0",
+          action_ref: buildWorkpageActionRef({
+            actionId: "workpage.driver-preferences-v0.open_latest",
+            workpageKind: "driver-preferences-v0",
+            workflowRunId,
+            artifactVersionId: latestVersion.artifactVersionId
+          })
+        }
+      : {
+          action_id: "workpage.driver-preferences-v0.create_snapshot",
+          artifact_version_id: null,
+          kind: "create_snapshot",
+          label: "Create preferences snapshot",
+          create_path: driverPreferencesSnapshotCreatePath(workflowRunId),
+          state: "available",
+          workpage_kind: "driver-preferences-v0",
+          action_ref: buildWorkpageActionRef({
+            actionId: "workpage.driver-preferences-v0.create_snapshot",
+            workpageKind: "driver-preferences-v0",
+            workflowRunId,
+            artifactVersionId: null
+          })
+        },
+    buildDriverAvailabilityExceptionAction(workflowRunId)
+  ];
   return payload;
 }
 
 function resetDriverPreferencesArtifactVersions(): void {
   driverPreferencesArtifactVersionCounter = 0;
   driverPreferencesArtifactVersions.clear();
+  driverAvailabilityExceptionCounter = 0;
+  driverAvailabilityExceptions.clear();
 }
 
 function driverPreferencesArtifactCreateResponse(
@@ -3651,6 +3721,72 @@ function createDriverPreferencesSnapshotResponse(workflowRunId: string, request:
   });
 }
 
+async function createDriverAvailabilityExceptionResponse(
+  workflowRunId: string,
+  request: Request
+): Promise<Response> {
+  if (!inScope(request)) {
+    return forbiddenWorkflowRun();
+  }
+  const body = (await request.json()) as {
+    driver_id?: string;
+    start_date?: string;
+    end_date?: string;
+    reason_code?: string;
+    reason_note?: string;
+  };
+  const latestVersion = latestDriverPreferencesArtifactForRun(workflowRunId);
+  const grid = latestVersion?.preferenceGrid ?? buildDriverPreferencesGrid();
+  const driver = grid.drivers.find((row) => asString(row.driver_id) === asString(body.driver_id));
+  if (!driver) {
+    return HttpResponse.json(
+      {
+        status: "error",
+        error: {
+          code: "invalid_driver_id",
+          message: "driver_id is not available in this weekly planning run",
+          details: { driver_id: body.driver_id ?? null }
+        }
+      },
+      { status: 400 }
+    );
+  }
+  const exceptionId = nextDriverAvailabilityExceptionId();
+  const item: DriverAvailabilityExceptionState = {
+    exception_id: exceptionId,
+    driver_id: asString(driver.driver_id),
+    driver_name: asString(driver.driver_name),
+    start_date: asString(body.start_date),
+    end_date: asString(body.end_date),
+    reason_code: asString(body.reason_code) || "other",
+    reason_note: asString(body.reason_note),
+    status: "approved",
+    source_workflow_run_id: `wr-availability-request-${exceptionId}`,
+    source_artifact_version_id: `av-availability-approved-plan-${exceptionId}`,
+    affected_planning_week_ids: ["PW-2026-W13"]
+  };
+  driverAvailabilityExceptions.set(exceptionId, item);
+  for (const version of driverPreferencesVersionsForRun(workflowRunId)) {
+    version.payload.driver_availability_exceptions = buildDriverAvailabilityExceptionsPayload();
+  }
+  state.audit.mutations.push(
+    `workpage-driver-availability-exception-create:${workflowRunId}:${exceptionId}`
+  );
+  return ok({
+    command: "api.workpages.driver_preferences.availability_exceptions.add",
+    created: {
+      exception: item,
+      availability_request_workflow_run_id: item.source_workflow_run_id,
+      source_artifact_version_id: item.source_artifact_version_id,
+      weekly_approved_availability_artifact_version_ids: [
+        `av-planning-approved-availability-${exceptionId}`
+      ],
+      affected_planning_week_ids: item.affected_planning_week_ids,
+      affected_service_dates: [item.start_date, item.end_date]
+    }
+  });
+}
+
 async function handleDriverPreferencesArtifactSubmitRequest(
   artifactVersionId: string,
   request: Request
@@ -3763,6 +3899,11 @@ export const handlers = [
   http.post(
     "*/api/v1/workpages/workflow-runs/:workflowRunId/driver-preferences-v0/snapshots",
     ({ params, request }) => createDriverPreferencesSnapshotResponse(String(params.workflowRunId), request)
+  ),
+  http.post(
+    "*/api/v1/workpages/workflow-runs/:workflowRunId/driver-preferences-v0/availability-exceptions",
+    ({ params, request }) =>
+      createDriverAvailabilityExceptionResponse(String(params.workflowRunId), request)
   ),
   http.get("*/api/v1/workpages/workflow-runs/:workflowRunId/route-demand-v0", ({ params, request }) => {
     if (!inScope(request)) {

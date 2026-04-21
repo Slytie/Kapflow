@@ -6,6 +6,7 @@ interface InfoDialogProps {
   dialogDescription?: string;
   children: ReactNode;
   className?: string;
+  triggerContent?: ReactNode;
 }
 
 export function InfoDialog({
@@ -13,7 +14,8 @@ export function InfoDialog({
   dialogTitle,
   dialogDescription,
   children,
-  className
+  className,
+  triggerContent
 }: InfoDialogProps): JSX.Element {
   const [isOpen, setIsOpen] = useState(false);
   const titleId = useId();
@@ -44,7 +46,7 @@ export function InfoDialog({
           setIsOpen(true);
         }}
       >
-        i
+        {triggerContent ?? "i"}
       </button>
       {isOpen ? (
         <div

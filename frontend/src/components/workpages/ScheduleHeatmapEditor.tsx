@@ -1,7 +1,8 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 
 import { InfoDialog } from "@/components/InfoDialog";
 import type {
+  WorkpageScheduleCalculationTopBarDay,
   WorkpageScheduleDriverMetric,
   WorkpageScheduleHeatmapDate,
   WorkpageScheduleHeatmapPerson,
@@ -10,6 +11,11 @@ import type {
 } from "@/lib/types/workpages";
 
 type EditableRowKind = "assignment" | "reserve";
+type DriverPreferenceState =
+  | "open_to_work"
+  | "prefer_not_to_work"
+  | "definitely_can_not_work"
+  | "unset";
 
 interface DerivedHeatmapCell {
   driverId: string;
@@ -144,6 +150,21 @@ function buildCellMap(
   return cellMap;
 }
 
+function buildPreferenceStateMap(
+  people: WorkpageScheduleHeatmapPerson[]
+): Map<string, DriverPreferenceState> {
+  const stateMap = new Map<string, DriverPreferenceState>();
+  for (const person of people) {
+    for (const cell of person.cells) {
+      stateMap.set(
+        `${cell.service_date}:${person.driver_id}`,
+        normalizePreferenceState(cell.preference_state)
+      );
+    }
+  }
+  return stateMap;
+}
+
 function cloneRows(rows: WorkpageTableRow[]): WorkpageTableRow[] {
   return rows.map((row) => ({ ...row }));
 }
@@ -193,6 +214,31 @@ function formatStateLabel(state: string | null | undefined): string {
     .join(" ");
 }
 
+function normalizePreferenceState(state: string | null | undefined): DriverPreferenceState {
+  const value = asText(state);
+  if (
+    value === "open_to_work" ||
+    value === "prefer_not_to_work" ||
+    value === "definitely_can_not_work"
+  ) {
+    return value;
+  }
+  return "unset";
+}
+
+function formatPreferenceStateLabel(state: DriverPreferenceState): string {
+  if (state === "open_to_work") {
+    return "Open to work";
+  }
+  if (state === "prefer_not_to_work") {
+    return "Prefer not to work";
+  }
+  if (state === "definitely_can_not_work") {
+    return "Cannot work";
+  }
+  return "Unset";
+}
+
 function pillToneForState(state: string | null | undefined): string {
   if (state === "pass" || state === "available") {
     return "success";
@@ -214,7 +260,10 @@ export function ScheduleHeatmapEditor({
   readOnly = false,
   selectedServiceDate = null,
   availableDriverIds = [],
-  driverMetrics = []
+  driverMetrics = [],
+  topBarDays = [],
+  density = "default",
+  headerExtras = null
 }: {
   section: WorkpageScheduleHeatmapSection;
   assignmentRows: WorkpageTableRow[];
@@ -224,9 +273,13 @@ export function ScheduleHeatmapEditor({
   selectedServiceDate?: string | null;
   availableDriverIds?: string[];
   driverMetrics?: WorkpageScheduleDriverMetric[];
+  topBarDays?: WorkpageScheduleCalculationTopBarDay[];
+  density?: "default" | "compact";
+  headerExtras?: ReactNode;
 }): JSX.Element {
   const [armedCell, setArmedCell] = useState<ArmedCell | null>(null);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
+  const isCompact = density === "compact";
 
   const serviceDates = useMemo(
     () => buildServiceDates(section, assignmentRows, reserveRows),
@@ -240,45 +293,60 @@ export function ScheduleHeatmapEditor({
     () => buildCellMap(assignmentRows, reserveRows),
     [assignmentRows, reserveRows]
   );
+  const preferenceStateByCell = useMemo(() => buildPreferenceStateMap(people), [people]);
   const driverMetricById = useMemo(
     () => new Map(driverMetrics.map((metric) => [metric.driver_id, metric])),
     [driverMetrics]
   );
+  const topBarDayByServiceDate = useMemo(
+    () => new Map(topBarDays.map((day) => [day.service_date, day])),
+    [topBarDays]
+  );
 
   return (
-    <section className="workpage-panel schedule-heatmap">
+    <section className={`workpage-panel schedule-heatmap${isCompact ? " schedule-heatmap--compact" : ""}`}>
       <header className="workpage-panel__header schedule-heatmap__header">
         <div className="schedule-heatmap__header-copy">
           <span className="schedule-heatmap__eyebrow">Weekly planning grid</span>
           <h2>{section.title}</h2>
-          <p>
-            {armedCell
-              ? `Moving ${armedCell.driverName}. Pick another cell on ${armedCell.serviceDate} to move or swap it.`
-              : section.subtitle ??
-                (readOnly
-                  ? "Server-authoritative schedule heatmap. Edit controls stay on draft artifact pages."
-                  : "Click a filled cell to start moving planned work.")}
-          </p>
+          {!isCompact || armedCell ? (
+            <p>
+              {armedCell
+                ? `Moving ${armedCell.driverName}. Pick another cell on ${armedCell.serviceDate} to move or swap it.`
+                : section.subtitle ??
+                  (readOnly
+                    ? "Server-authoritative schedule heatmap. Edit controls stay on draft artifact pages."
+                    : "Click a filled cell to start moving planned work.")}
+            </p>
+          ) : null}
         </div>
         <div className="schedule-heatmap__header-meta">
-          <span className="schedule-heatmap__legend-label">Legend</span>
-          <div className="schedule-heatmap__legend" aria-label="Heatmap legend">
-            <span className="schedule-heatmap__legend-item">
-              <span className="schedule-heatmap__legend-swatch schedule-heatmap__legend-swatch--assigned" />
-              Assigned route
-            </span>
-            <span className="schedule-heatmap__legend-item">
-              <span className="schedule-heatmap__legend-swatch schedule-heatmap__legend-swatch--reserve" />
-              On call
-            </span>
-            <span className="schedule-heatmap__legend-item">
-              <span className="schedule-heatmap__legend-swatch schedule-heatmap__legend-swatch--empty" />
-              No planned work
-            </span>
-            <span className="schedule-heatmap__legend-item">
-              <span className="schedule-heatmap__legend-swatch schedule-heatmap__legend-swatch--manual" />
-              Manual override
-            </span>
+          <div className="schedule-heatmap__header-toolbar">
+            <section
+              className="schedule-heatmap__header-group schedule-heatmap__header-group--legend"
+              aria-label="Heatmap legend"
+            >
+              <span className="schedule-heatmap__legend-label">Legend</span>
+              <div className="schedule-heatmap__legend">
+                <span className="schedule-heatmap__legend-item">
+                  <span className="schedule-heatmap__legend-swatch schedule-heatmap__legend-swatch--assigned" />
+                  Assigned route
+                </span>
+                <span className="schedule-heatmap__legend-item">
+                  <span className="schedule-heatmap__legend-swatch schedule-heatmap__legend-swatch--reserve" />
+                  On call
+                </span>
+                <span className="schedule-heatmap__legend-item">
+                  <span className="schedule-heatmap__legend-swatch schedule-heatmap__legend-swatch--empty" />
+                  No planned work
+                </span>
+                <span className="schedule-heatmap__legend-item">
+                  <span className="schedule-heatmap__legend-swatch schedule-heatmap__legend-swatch--manual" />
+                  Manual override
+                </span>
+              </div>
+            </section>
+            {headerExtras}
           </div>
         </div>
       </header>
@@ -299,37 +367,65 @@ export function ScheduleHeatmapEditor({
               </th>
               <th scope="col" className="schedule-heatmap__metric-header schedule-heatmap__metric-header--hours">
                 <span aria-hidden="true">Metrics</span>
-                <strong>Hours</strong>
+                <strong>{isCompact ? "Hrs" : "Hours"}</strong>
               </th>
               <th scope="col" className="schedule-heatmap__metric-header schedule-heatmap__metric-header--routes">
                 <span aria-hidden="true">Metrics</span>
-                <strong>Routes</strong>
+                <strong>{isCompact ? "Rt" : "Routes"}</strong>
               </th>
               <th scope="col" className="schedule-heatmap__metric-header schedule-heatmap__metric-header--on-call">
                 <span aria-hidden="true">Metrics</span>
-                <strong>On call</strong>
+                <strong>{isCompact ? "OC" : "On call"}</strong>
               </th>
               <th
                 scope="col"
                 className="schedule-heatmap__metric-header schedule-heatmap__metric-header--compliance"
               >
                 <span aria-hidden="true">Risk</span>
-                <strong>Compliance</strong>
+                <strong>{isCompact ? "Risk" : "Compliance"}</strong>
               </th>
-              {serviceDates.map((serviceDate) => (
-                <th
-                  key={serviceDate.service_date}
-                  scope="col"
-                  className={
-                    selectedServiceDate === serviceDate.service_date
-                      ? "schedule-heatmap__date-header schedule-heatmap__date-header--selected"
-                      : "schedule-heatmap__date-header"
-                  }
-                >
-                  <span>{serviceDate.weekday_label}</span>
-                  <strong>{serviceDate.label}</strong>
-                </th>
-              ))}
+              {serviceDates.map((serviceDate) => {
+                const dayStats = topBarDayByServiceDate.get(serviceDate.service_date) ?? null;
+                return (
+                  <th
+                    key={serviceDate.service_date}
+                    scope="col"
+                    className={
+                      selectedServiceDate === serviceDate.service_date
+                        ? "schedule-heatmap__date-header schedule-heatmap__date-header--selected"
+                        : "schedule-heatmap__date-header"
+                    }
+                  >
+                    <span>{serviceDate.weekday_label}</span>
+                    <strong>{serviceDate.label}</strong>
+                    {dayStats ? (
+                      <dl
+                        className="schedule-heatmap__date-stats"
+                        aria-label={`Daily stats for ${serviceDate.label}`}
+                      >
+                        <div>
+                          <dt>Req</dt>
+                          <dd>{dayStats.routes_required}</dd>
+                        </div>
+                        <div>
+                          <dt>Sched</dt>
+                          <dd>{dayStats.routes_scheduled ?? "—"}</dd>
+                        </div>
+                        <div>
+                          <dt>OC</dt>
+                          <dd>
+                            {dayStats.on_call_drivers ?? "—"} / {dayStats.on_call_target}
+                          </dd>
+                        </div>
+                        <div>
+                          <dt>Avail</dt>
+                          <dd>{dayStats.available_driver_count ?? "—"}</dd>
+                        </div>
+                      </dl>
+                    ) : null}
+                  </th>
+                );
+              })}
             </tr>
           </thead>
           <tbody>
@@ -347,31 +443,15 @@ export function ScheduleHeatmapEditor({
                 <tr key={person.driver_id}>
                   <th scope="row" className={personCellClassName}>
                     <div className="schedule-heatmap__person">
-                      <div className="schedule-heatmap__person-top">
-                        <strong>{person.driver_name}</strong>
-                      </div>
-                      <span className="schedule-heatmap__person-meta">
-                        {[person.employment_type, person.on_call_eligible ? "on-call eligible" : ""]
-                          .filter((value) => value.length > 0)
-                          .join(" · ") || "planner roster"}
-                      </span>
-                      <div className="schedule-heatmap__person-tags">
-                        <span
-                          className={`schedule-pill schedule-pill--${pillToneForState(
-                            metric?.preference_state
-                          )} schedule-heatmap__person-tag`}
-                        >
-                          {`Pref ${formatStateLabel(metric?.preference_state)}`}
+                      <strong>{person.driver_name}</strong>
+                      {!isCompact ? (
+                        <span className="schedule-heatmap__person-meta">
+                          {[person.employment_type, person.on_call_eligible ? "on-call eligible" : ""]
+                            .filter((value) => value.length > 0)
+                            .join(" · ") || "planner roster"}
                         </span>
-                        <span
-                          className={`schedule-pill schedule-pill--${pillToneForState(
-                            metric?.availability_state
-                          )} schedule-heatmap__person-tag`}
-                        >
-                          {`Avail ${formatStateLabel(metric?.availability_state)}`}
-                        </span>
-                      </div>
-                      {selectedServiceDate ? (
+                      ) : null}
+                      {!isCompact && selectedServiceDate ? (
                         <span className="schedule-heatmap__person-cues">
                           {isAvailableOnSelectedDay ? "Available on selected day" : "Scheduled on selected day"}
                           {metric?.compliance_state === "fail" ? " · Compliance watch" : ""}
@@ -397,21 +477,24 @@ export function ScheduleHeatmapEditor({
                   <td className="schedule-heatmap__metric-cell schedule-heatmap__metric-cell--compliance">
                     {metric ? (
                       <div className="schedule-heatmap__compliance-cell">
-                        <span
-                          className={`schedule-pill schedule-pill--${pillToneForState(
-                            metric.compliance_state
-                          )}`}
-                        >
-                          {formatStateLabel(metric.compliance_state)}
-                        </span>
                         {metric.issues.length > 0 ? (
                           <InfoDialog
-                            className="schedule-heatmap__info-button"
+                            className={`schedule-pill schedule-pill--${pillToneForState(
+                              metric.compliance_state
+                            )} schedule-heatmap__risk-trigger`}
                             triggerLabel={`Open compliance details for ${person.driver_name}`}
                             dialogTitle={`Compliance details for ${person.driver_name}`}
                             dialogDescription={`${formatStateLabel(
                               metric.compliance_state
                             )} status from backend schedule calculations.`}
+                            triggerContent={
+                              <>
+                                <span>{formatStateLabel(metric.compliance_state)}</span>
+                                <span className="schedule-heatmap__risk-trigger-icon" aria-hidden="true">
+                                  i
+                                </span>
+                              </>
+                            }
                           >
                             <div className="schedule-heatmap__issue-panel">
                               <p className="schedule-heatmap__issue-description">
@@ -437,7 +520,15 @@ export function ScheduleHeatmapEditor({
                               </ul>
                             </div>
                           </InfoDialog>
-                        ) : null}
+                        ) : (
+                          <span
+                            className={`schedule-pill schedule-pill--${pillToneForState(
+                              metric.compliance_state
+                            )}`}
+                          >
+                            {formatStateLabel(metric.compliance_state)}
+                          </span>
+                        )}
                       </div>
                     ) : (
                       <span className="schedule-heatmap__metric-value">—</span>
@@ -445,6 +536,10 @@ export function ScheduleHeatmapEditor({
                   </td>
                   {serviceDates.map((serviceDate) => {
                     const cell = cellMap.get(`${serviceDate.service_date}:${person.driver_id}`) ?? null;
+                    const preferenceState =
+                      preferenceStateByCell.get(`${serviceDate.service_date}:${person.driver_id}`) ??
+                      "unset";
+                    const preferenceLabel = formatPreferenceStateLabel(preferenceState);
                     const isArmed =
                       armedCell?.serviceDate === serviceDate.service_date &&
                       armedCell.driverId === person.driver_id;
@@ -589,6 +684,12 @@ export function ScheduleHeatmapEditor({
                           <span className="schedule-heatmap__cell-meta">
                             {cell?.projectedMinutes ? `${cell.projectedMinutes} min` : "—"}
                           </span>
+                          <span
+                            className={`schedule-heatmap__preference-bar schedule-heatmap__preference-bar--${preferenceState}`}
+                            data-testid={`schedule-heatmap-preference-${serviceDate.service_date}-${person.driver_id}`}
+                            aria-label={`Preference: ${preferenceLabel}`}
+                            title={`Preference: ${preferenceLabel}`}
+                          />
                         </button>
                       </td>
                     );

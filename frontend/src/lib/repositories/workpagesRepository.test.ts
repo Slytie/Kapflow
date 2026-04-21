@@ -174,15 +174,19 @@ describe("workpagesRepository", () => {
     );
     const saveAction = artifact.actions.find((action) => action.kind === "save");
     const firstDay = artifact.route_demand_calculations?.day_cards[0];
+    const dayCards = artifact.route_demand_calculations?.day_cards ?? [];
+    const futureDay = dayCards[dayCards.length - 1];
     const submitted = await workpagesRepository.submitRouteDemandArtifactAtPath(
       saveAction?.submit_path ?? "",
       "av-route-demand-artifact-001",
       {
         dailyDemandRows: [
-          ...(artifact.route_demand_calculations?.day_cards ?? []).map((card, index) => ({
+          ...dayCards.map((card) => ({
             service_date: card.service_date,
             planned_route_count:
-              index === 0 ? card.planned_route_count + 2 : card.planned_route_count
+              card.service_date === futureDay?.service_date
+                ? card.planned_route_count + 2
+                : card.planned_route_count
           }))
         ]
       }
@@ -194,11 +198,16 @@ describe("workpagesRepository", () => {
 
     expect(routeDemandLanding.source.mode).toBe("run_projection");
     expect(routeDemandLanding.workpage.workpage_id).toBe("route-demand-v0");
+    expect(routeDemandLanding.route_demand_calculations?.day_cards).toHaveLength(14);
+    expect(routeDemandLanding.route_demand_calculations?.day_cards[13]?.service_date).toBe(
+      "2026-04-04"
+    );
     expect(routeDemandLanding.actions.map((action) => action.kind)).toEqual(["open_latest"]);
     expect(artifact.source.mode).toBe("artifact_projection");
     expect(artifact.route_demand_calculations?.day_cards[0]?.service_date).toBe(
       firstDay?.service_date
     );
+    expect(futureDay?.service_date).toBe("2026-04-04");
     expect(artifact.artifact_history?.entries.map((entry) => entry.artifact_version_id)).toEqual([
       "av-route-demand-artifact-001"
     ]);
@@ -211,6 +220,11 @@ describe("workpagesRepository", () => {
       "av-route-demand-artifact-002",
       "av-route-demand-artifact-001"
     ]);
+    expect(
+      submittedArtifact.route_demand_calculations?.day_cards.find(
+        (card) => card.service_date === futureDay?.service_date
+      )?.planned_route_count
+    ).toBe((futureDay?.planned_route_count ?? 0) + 2);
     expect(mutationLog()).toContain(
       "workpage-route-demand-artifact-submit:av-route-demand-artifact-001:av-route-demand-artifact-002"
     );
