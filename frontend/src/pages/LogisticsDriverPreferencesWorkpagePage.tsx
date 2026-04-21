@@ -3,6 +3,7 @@ import {
   type Dispatch,
   type SetStateAction,
   useEffect,
+  useId,
   useMemo,
   useRef,
   useState
@@ -47,6 +48,7 @@ const PREFERENCE_STATE_CYCLE: DriverPreferenceState[] = [
   "definitely_can_not_work",
   "unset"
 ];
+const EMPTY_DRIVER_PREFERENCE_ROWS: WorkpageDriverPreferencesDriverRow[] = [];
 
 const PREFERENCE_STATE_UI: Record<
   DriverPreferenceState,
@@ -184,7 +186,7 @@ function useEditableDriverPreferencesGrid(
 } {
   const [driverRows, setDriverRows] = useState<WorkpageDriverPreferencesDriverRow[]>([]);
   const lastResetKeyRef = useRef<string | null>(null);
-  const sourceRows = contract?.preference_grid?.drivers ?? [];
+  const sourceRows = contract?.preference_grid?.drivers ?? EMPTY_DRIVER_PREFERENCE_ROWS;
   const resetKey = useMemo(
     () =>
       [
@@ -196,9 +198,9 @@ function useEditableDriverPreferencesGrid(
   );
 
   useEffect(() => {
-    if (sourceRows.length === 0 && !contract) {
+    if (!contract) {
       lastResetKeyRef.current = null;
-      setDriverRows([]);
+      setDriverRows((currentRows) => (currentRows.length > 0 ? [] : currentRows));
       return;
     }
     if (lastResetKeyRef.current === resetKey) {
@@ -631,17 +633,207 @@ export function LogisticsDriverPreferencesWorkpagePage(): JSX.Element {
   );
 }
 
-export function LogisticsDriverPreferencesArtifactWorkpagePage(): JSX.Element {
-  const navigate = useNavigate();
+export function DriverPreferencesQuickEditModal({
+  workflowRunId,
+  onClose
+}: {
+  workflowRunId: string;
+  onClose: () => void;
+}): JSX.Element {
+  const titleId = useId();
+  const descriptionId = useId();
   const queryClient = useQueryClient();
+  const [createdArtifactVersionId, setCreatedArtifactVersionId] = useState<string | null>(null);
+  const query = useQuery({
+    queryKey: ["workpages", "driver-preferences-v0", "run", workflowRunId],
+    queryFn: () => workpagesRepository.driverPreferencesForRun(workflowRunId),
+    enabled: Boolean(workflowRunId),
+    refetchInterval: apiConfig.pollIntervalMs
+  });
+  const openLatestAction = findDriverPreferencesAction(
+    query.data,
+    (action) =>
+      action.kind === "open_latest" &&
+      action.state === "available" &&
+      Boolean(action.artifact_version_id)
+  );
+  const createAction = findDriverPreferencesAction(
+    query.data,
+    (action) =>
+      action.kind === "create_snapshot" &&
+      action.state === "available" &&
+      Boolean(action.create_path)
+  );
+  const artifactVersionId = createdArtifactVersionId ?? openLatestAction?.artifact_version_id ?? null;
+  const createMutation = useMutation({
+    mutationFn: (payload: { createPath: string; actionRef: WorkpageDriverPreferencesAction["action_ref"] }) =>
+      workpagesRepository.createWorkpage(payload.createPath, payload.actionRef ?? undefined),
+    onSuccess: (created) => {
+      setCreatedArtifactVersionId(created.artifact_version_id);
+      void queryClient.invalidateQueries({ queryKey: ["workpages"] });
+      void queryClient.invalidateQueries({ queryKey: ["logistics-demo-story"] });
+      void invalidateWorkspaceViews(queryClient, created.workflow_run_id);
+    }
+  });
+
+  useEffect(() => {
+    setCreatedArtifactVersionId(null);
+  }, [workflowRunId]);
+
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent): void => {
+      if (event.key === "Escape") {
+        onClose();
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [onClose]);
+
+  return (
+    <div
+      className="quick-edit-backdrop route-demand-quick-edit-backdrop"
+      onMouseDown={(event) => {
+        if (event.target === event.currentTarget) {
+          onClose();
+        }
+      }}
+    >
+      <section
+        className="quick-edit-modal route-demand-quick-edit-modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+        aria-describedby={descriptionId}
+      >
+        <header className="quick-edit-modal__header route-demand-quick-edit-modal__header">
+          <div>
+            <p className="timeline-page__eyebrow">Quick edit</p>
+            <h2 id={titleId}>Drivers</h2>
+            <p id={descriptionId}>
+              Edit the current weekly driver-preferences snapshot without leaving this page.
+            </p>
+          </div>
+          <button type="button" className="action-btn" onClick={onClose}>
+            Close
+          </button>
+        </header>
+        <div className="quick-edit-modal__body route-demand-quick-edit-modal__body">
+          {query.isLoading ? (
+            <StatePanel
+              kind="loading"
+              title="Loading driver preferences"
+              detail="Resolving the latest driver-preferences snapshot for this weekly run."
+            />
+          ) : query.isError ? (
+            <StatePanel
+              kind="error"
+              title="Driver preferences failed to load"
+              detail={errorText(query.error, "Unable to resolve the latest driver preferences snapshot.")}
+              onRetry={() => {
+                void query.refetch();
+              }}
+            />
+          ) : artifactVersionId ? (
+            <DriverPreferencesArtifactEditor
+              workflowRunId={workflowRunId}
+              artifactVersionId={artifactVersionId}
+              layout="embedded"
+              afterSave="close"
+              onClose={onClose}
+            />
+          ) : createAction?.create_path ? (
+            <section className="workpage-panel workpage-panel--callout">
+              <header className="workpage-panel__header">
+                <h2>Create the first preferences snapshot</h2>
+                <p>
+                  Driver editing starts by creating the immutable weekly preferences snapshot for
+                  this run. Add-driver support is intentionally deferred to the next driver task.
+                </p>
+              </header>
+              {createMutation.isError ? (
+                <StatePanel
+                  kind="error"
+                  title="Snapshot create failed"
+                  detail={errorText(createMutation.error, "Unable to create driver preferences snapshot.")}
+                />
+              ) : null}
+              <div className="action-cluster">
+                <button
+                  type="button"
+                  className="action-btn action-btn--positive"
+                  disabled={createMutation.isPending}
+                  onClick={() =>
+                    createMutation.mutate({
+                      createPath: createAction.create_path ?? "",
+                      actionRef: createAction.action_ref
+                    })
+                  }
+                >
+                  {createMutation.isPending ? "Creating snapshot..." : "Create preferences snapshot"}
+                </button>
+              </div>
+            </section>
+          ) : (
+            <StatePanel
+              kind="error"
+              title="Driver preferences are unavailable"
+              detail="No editable driver-preferences snapshot is available for this weekly run yet."
+            />
+          )}
+        </div>
+      </section>
+    </div>
+  );
+}
+
+export function LogisticsDriverPreferencesArtifactWorkpagePage(): JSX.Element {
   const { workflowRunId, artifactVersionId } = useParams<{
     workflowRunId: string;
     artifactVersionId: string;
   }>();
+
+  if (!workflowRunId || !artifactVersionId) {
+    return (
+      <StatePanel
+        kind="error"
+        title="Driver preferences snapshot route is incomplete"
+        detail="Both the workflow run id and artifact version id are required."
+      />
+    );
+  }
+
+  return (
+    <DriverPreferencesArtifactEditor
+      workflowRunId={workflowRunId}
+      artifactVersionId={artifactVersionId}
+    />
+  );
+}
+
+interface DriverPreferencesArtifactEditorProps {
+  workflowRunId: string;
+  artifactVersionId: string;
+  layout?: "page" | "embedded";
+  afterSave?: "navigate" | "close";
+  onClose?: () => void;
+}
+
+function DriverPreferencesArtifactEditor({
+  workflowRunId,
+  artifactVersionId,
+  layout = "page",
+  afterSave = "navigate",
+  onClose
+}: DriverPreferencesArtifactEditorProps): JSX.Element {
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const query = useQuery({
     queryKey: ["workpages", "driver-preferences-v0", "artifacts", workflowRunId, artifactVersionId],
     queryFn: () =>
-      workpagesRepository.driverPreferencesArtifact(workflowRunId ?? "", artifactVersionId ?? ""),
+      workpagesRepository.driverPreferencesArtifact(workflowRunId, artifactVersionId),
     enabled: Boolean(workflowRunId && artifactVersionId),
     refetchInterval: apiConfig.pollIntervalMs
   });
@@ -658,7 +850,7 @@ export function LogisticsDriverPreferencesArtifactWorkpagePage(): JSX.Element {
     mutationFn: () =>
       workpagesRepository.submitDriverPreferencesArtifactAtPath(
         saveAction?.submit_path ?? "",
-        artifactVersionId ?? "",
+        artifactVersionId,
         {
             driverRows: driverRows.map((row) => ({
               driver_id: row.driver_id,
@@ -669,7 +861,12 @@ export function LogisticsDriverPreferencesArtifactWorkpagePage(): JSX.Element {
       ),
     onSuccess: (submitted) => {
       void queryClient.invalidateQueries({ queryKey: ["workpages"] });
+      void queryClient.invalidateQueries({ queryKey: ["logistics-demo-story"] });
       void invalidateWorkspaceViews(queryClient, submitted.workflow_run_id);
+      if (afterSave === "close") {
+        onClose?.();
+        return;
+      }
       navigate(submitted.route, {
         state: {
           workpageActionRef: replaceWorkpageActionRefArtifactVersionId(
@@ -691,7 +888,7 @@ export function LogisticsDriverPreferencesArtifactWorkpagePage(): JSX.Element {
     );
   }
 
-  if (query.isError || !contract || !workflowRunId || !artifactVersionId) {
+  if (query.isError || !contract) {
     return (
       <StatePanel
         kind="error"
@@ -740,7 +937,11 @@ export function LogisticsDriverPreferencesArtifactWorkpagePage(): JSX.Element {
       }}
       isRefreshing={query.isFetching || submitMutation.isPending}
       pollIntervalMs={apiConfig.pollIntervalMs}
-      testId="driver-preferences-artifact-workpage-page"
+      testId={
+        layout === "embedded"
+          ? "driver-preferences-quick-edit-editor"
+          : "driver-preferences-artifact-workpage-page"
+      }
       metadataPresentation="dialog"
       infoDialogTitle="Driver preferences snapshot context"
       sourceDescription="Artifact-backed projection of an immutable weekly advisory preferences snapshot."
@@ -756,14 +957,16 @@ export function LogisticsDriverPreferencesArtifactWorkpagePage(): JSX.Element {
       }
       heroSupportText="Saving creates the next immutable driver-preferences snapshot and leaves schedule truth untouched."
       heroActions={
-        <div className="action-cluster">
-          <Link className="link-button" to={driverPreferencesLandingRoute(workflowRunId)}>
-            Back to preferences landing
-          </Link>
-          <Link className="link-button" to={scheduleLandingRoute(workflowRunId)}>
-            Open schedule landing
-          </Link>
-        </div>
+        layout === "page" ? (
+          <div className="action-cluster">
+            <Link className="link-button" to={driverPreferencesLandingRoute(workflowRunId)}>
+              Back to preferences landing
+            </Link>
+            <Link className="link-button" to={scheduleLandingRoute(workflowRunId)}>
+              Open schedule landing
+            </Link>
+          </div>
+        ) : undefined
       }
       infoDialogContent={
         <>
@@ -773,6 +976,7 @@ export function LogisticsDriverPreferencesArtifactWorkpagePage(): JSX.Element {
       }
       backLink={backRoute.href}
       backLabel={backRoute.label}
+      layout={layout}
     >
       {submitConflict ? (
         <section className="workpage-panel workpage-panel--callout">

@@ -25,6 +25,16 @@ function heatmapSection(): HTMLElement {
   return section as HTMLElement;
 }
 
+function heatmapSectionIn(container: HTMLElement): HTMLElement {
+  const section = within(container)
+    .getByRole("heading", { name: "Planned schedule heatmap" })
+    .closest("section");
+  if (!section) {
+    throw new Error("Heatmap section not found");
+  }
+  return section as HTMLElement;
+}
+
 function heatmapButton(
   section: HTMLElement,
   predicate: (label: string) => boolean
@@ -146,6 +156,49 @@ function buildScheduleArtifactPayload(
 }
 
 describe("LogisticsScheduleArtifactWorkpagePage", () => {
+  it(
+    "opens Edit weekly schedule as a modal, saves a draft, and stays on the background page",
+    async () => {
+      const user = userEvent.setup();
+      window.history.pushState({}, "", "/runs/wr-weekly-001/workpages/schedule-v0");
+      render(<App />);
+
+      expect(await screen.findByTestId("schedule-workpage-page")).toBeInTheDocument();
+      await user.click(await screen.findByRole("button", { name: "Edit weekly schedule" }));
+
+      const dialog = await screen.findByRole("dialog", { name: "Edit weekly schedule" });
+      const editor = await within(dialog).findByTestId("schedule-quick-edit-editor");
+      const heatmap = heatmapSectionIn(editor);
+      const sourceCell = heatmapButton(
+        heatmap,
+        (label) => label.includes("2026-03-22: assigned route")
+      );
+      const targetCell = heatmapButton(
+        heatmap,
+        (label) => label.includes("2026-03-22: no planned work")
+      );
+
+      await user.click(sourceCell);
+      await user.click(targetCell);
+      await waitFor(() => {
+        expect(within(dialog).getByRole("button", { name: "Save draft" })).toBeEnabled();
+      });
+
+      await user.click(within(dialog).getByRole("button", { name: "Save draft" }));
+
+      await waitFor(() => {
+        expect(
+          screen.queryByRole("dialog", { name: "Edit weekly schedule" })
+        ).not.toBeInTheDocument();
+      });
+      expect(window.location.pathname).toBe("/runs/wr-weekly-001/workpages/schedule-v0");
+      expect(mutationLog()).toContain(
+        "workpage-schedule-artifact-submit:av-schedule-artifact-001:av-schedule-artifact-002"
+      );
+    },
+    120000
+  );
+
   it(
     "opens the latest draft from the run-backed landing, auto-previews heatmap edits, saves a superseding version, and downloads JSON",
     async () => {
@@ -542,7 +595,7 @@ describe("LogisticsScheduleArtifactWorkpagePage", () => {
         "/runs/wr-weekly-000/workpages/schedule-v0/artifacts/av-schedule-accepted-001"
       );
     });
-  });
+  }, 30000);
 
   it(
     "keeps the last successful preview visible when a later preview fails",

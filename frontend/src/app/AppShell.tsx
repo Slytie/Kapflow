@@ -8,6 +8,9 @@ import { FreshnessBanner } from "@/components/FreshnessBanner";
 import { InfoDialog } from "@/components/InfoDialog";
 import { LogisticsFamilyNav } from "@/components/LogisticsFamilyNav";
 import { StatePanel } from "@/components/StatePanel";
+import { ScheduleQuickEditModal } from "@/pages/LogisticsScheduleWorkpagePage";
+import { DriverPreferencesQuickEditModal } from "@/pages/LogisticsDriverPreferencesWorkpagePage";
+import { RouteDemandQuickEditModal } from "@/pages/LogisticsRouteDemandWorkpagePage";
 import { useShellFilters } from "@/app/useShellFilters";
 import { onetruthApi } from "@/lib/api/onetruthApi";
 import { errorText } from "@/lib/api/errorText";
@@ -21,7 +24,7 @@ import {
   runRowsForStory,
   workflowIdToModuleId
 } from "@/lib/logistics/familyStory";
-import { logisticsStoryRepository } from "@/lib/repositories";
+import { logisticsStoryRepository, workpagesRepository } from "@/lib/repositories";
 import {
   apiConfig,
   getApiRequestContextHeaders,
@@ -31,6 +34,12 @@ import {
 } from "@/lib/api/config";
 import { ACTOR_PROFILES } from "@/lib/actors";
 import { useDrawer } from "@/lib/state/drawerContext";
+import type { WorkpageContract } from "@/lib/types/contracts";
+import type {
+  WorkpageDriverPreferencesAction,
+  WorkpageRouteDemandAction,
+  WorkpageScheduleAction
+} from "@/lib/types/workpages";
 
 const UTILITY_LINKS = [
   { to: "/my-work", label: "My Work" },
@@ -114,6 +123,60 @@ function canonicalRouteForWorkflow(input: {
   return `/runs/${input.workflowRunId}/workspace`;
 }
 
+function routeDemandOpenLatestAction(
+  contract: WorkpageContract | undefined
+): WorkpageRouteDemandAction | null {
+  return (
+    contract?.actions.find(
+      (action): action is WorkpageRouteDemandAction =>
+        action.workpage_kind === "route-demand-v0" &&
+        action.kind === "open_latest" &&
+        action.state === "available" &&
+        Boolean(action.artifact_version_id)
+    ) ?? null
+  );
+}
+
+function scheduleOpenLatestDraftAction(
+  contract: WorkpageContract | undefined
+): WorkpageScheduleAction | null {
+  return (
+    contract?.actions.find(
+      (action): action is WorkpageScheduleAction =>
+        action.workpage_kind === "schedule-v0" &&
+        action.kind === "open_latest_draft" &&
+        action.state === "available" &&
+        Boolean(action.artifact_version_id)
+    ) ?? null
+  );
+}
+
+function driverPreferencesAction(
+  contract: WorkpageContract | undefined,
+  matcher: (action: WorkpageDriverPreferencesAction) => boolean
+): WorkpageDriverPreferencesAction | null {
+  return (
+    contract?.actions.find(
+      (action): action is WorkpageDriverPreferencesAction =>
+        action.workpage_kind === "driver-preferences-v0" &&
+        matcher(action as WorkpageDriverPreferencesAction)
+    ) ?? null
+  );
+}
+
+function actorInitials(label: string): string {
+  const normalized = label
+    .replace(/^(human|agent|service|system):/i, "")
+    .replace(/[-_.]+/g, " ")
+    .trim();
+  const parts = normalized.split(/\s+/).filter(Boolean);
+  const initials = parts
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase() ?? "")
+    .join("");
+  return initials || "U";
+}
+
 export function AppShell(): JSX.Element {
   const location = useLocation();
   const navigate = useNavigate();
@@ -126,12 +189,20 @@ export function AppShell(): JSX.Element {
   );
   const [lastRefreshedAt, setLastRefreshedAt] = useState<string | null>(null);
   const [isUtilityMenuOpen, setIsUtilityMenuOpen] = useState(false);
+  const [isActorMenuOpen, setIsActorMenuOpen] = useState(false);
+  const [isDriversQuickEditOpen, setIsDriversQuickEditOpen] = useState(false);
+  const [isScheduleQuickEditOpen, setIsScheduleQuickEditOpen] = useState(false);
+  const [isRouteDemandQuickEditOpen, setIsRouteDemandQuickEditOpen] = useState(false);
   const isWorkspaceRoute = /^\/runs\/[^/]+\/workspace$/.test(location.pathname);
   const isTimelineRoute = location.pathname === "/timeline";
   const isDemoLogisticsRoute =
     location.pathname === "/demo/logistics" ||
     location.pathname.startsWith("/demo/logistics/");
   const isRunWorkpageRoute = /^\/runs\/[^/]+\/workpages(?:\/.*)?$/.test(location.pathname);
+  const isWeeklyPlanningWorkpageRoute =
+    /^\/runs\/[^/]+\/workpages\/(?:schedule-v0|route-demand-v0|driver-preferences-v0)(?:\/.*)?$/.test(
+      location.pathname
+    );
   const isWorkpageFullPageRoute = isDemoLogisticsRoute || isRunWorkpageRoute;
   const routeSearchParams = useMemo(
     () => new URLSearchParams(location.search),
@@ -165,10 +236,17 @@ export function AppShell(): JSX.Element {
         profile.actorRoles === actorRoles
     ) ?? null;
   const activeActorKey = activeActor?.key ?? ACTOR_PROFILES[0].key;
+  const activeActorLabel = activeActor?.label ?? viewerSession?.actor_id ?? "Unknown user";
+  const activeActorInitials = actorInitials(activeActorLabel);
+  const activeActorRoleLabel =
+    viewerSession?.actor_roles
+      .map((role) => role.replace(/_/g, " "))
+      .join(", ") || viewerSession?.actor_type || "user";
   const logisticsStory = logisticsStoryQuery.data;
 
   useEffect(() => {
     setIsUtilityMenuOpen(false);
+    setIsActorMenuOpen(false);
   }, [location.pathname, location.search]);
 
   useEffect(() => {
@@ -222,6 +300,7 @@ export function AppShell(): JSX.Element {
     };
     setApiViewerSession(nextViewerSession);
     queryClient.setQueryData(["viewer-session"], nextViewerSession);
+    setIsActorMenuOpen(false);
     void queryClient.invalidateQueries({
       predicate: (query) => query.queryKey[0] !== "viewer-session"
     });
@@ -277,6 +356,93 @@ export function AppShell(): JSX.Element {
       }),
     [activeModuleId, activeWorkflowRunId, planningWeekId, serviceDateId]
   );
+  const activeWorkflowId = activeWorkflowRunId
+    ? runWorkflowById.get(activeWorkflowRunId) ?? null
+    : null;
+  const isWeeklyPlanningContext = Boolean(
+    activeWorkflowRunId &&
+      (activeWorkflowId === "weekly_schedule_planning.v1" ||
+        activeModuleId === "weekly_schedule_planning" ||
+        isWeeklyPlanningWorkpageRoute)
+  );
+  const scheduleQuickEditQuery = useQuery({
+    queryKey: ["workpages", "schedule-v0", "landing", activeWorkflowRunId],
+    queryFn: () => workpagesRepository.scheduleForRun(activeWorkflowRunId ?? ""),
+    enabled: Boolean(activeWorkflowRunId && isWeeklyPlanningContext),
+    refetchInterval: apiConfig.pollIntervalMs
+  });
+  const driverPreferencesQuickEditQuery = useQuery({
+    queryKey: ["workpages", "driver-preferences-v0", "run", activeWorkflowRunId],
+    queryFn: () => workpagesRepository.driverPreferencesForRun(activeWorkflowRunId ?? ""),
+    enabled: Boolean(activeWorkflowRunId && isWeeklyPlanningContext),
+    refetchInterval: apiConfig.pollIntervalMs
+  });
+  const routeDemandQuickEditQuery = useQuery({
+    queryKey: ["workpages", "route-demand-v0", "run", activeWorkflowRunId],
+    queryFn: () => workpagesRepository.routeDemandForRun(activeWorkflowRunId ?? ""),
+    enabled: Boolean(activeWorkflowRunId && isWeeklyPlanningContext),
+    refetchInterval: apiConfig.pollIntervalMs
+  });
+  const scheduleQuickEditAction = scheduleOpenLatestDraftAction(scheduleQuickEditQuery.data);
+  const driverPreferencesOpenAction = driverPreferencesAction(
+    driverPreferencesQuickEditQuery.data,
+    (action) =>
+      action.kind === "open_latest" &&
+      action.state === "available" &&
+      Boolean(action.artifact_version_id)
+  );
+  const driverPreferencesCreateAction = driverPreferencesAction(
+    driverPreferencesQuickEditQuery.data,
+    (action) =>
+      action.kind === "create_snapshot" &&
+      action.state === "available" &&
+      Boolean(action.create_path)
+  );
+  const routeDemandQuickEditAction = routeDemandOpenLatestAction(routeDemandQuickEditQuery.data);
+  const canOpenDriversQuickEdit = Boolean(
+    activeWorkflowRunId && (driverPreferencesOpenAction || driverPreferencesCreateAction)
+  );
+  const canOpenScheduleQuickEdit = Boolean(activeWorkflowRunId && scheduleQuickEditAction);
+  const canOpenRouteDemandQuickEdit = Boolean(activeWorkflowRunId && routeDemandQuickEditAction);
+  const weeklyActionUnavailableReason = !activeWorkflowRunId
+    ? "No active workflow run is selected."
+    : !isWeeklyPlanningContext
+      ? "This action is available on weekly planning runs."
+      : "The latest editable artifact is still resolving or unavailable.";
+  const driversQuickEditUnavailableReason =
+    activeWorkflowRunId && isWeeklyPlanningContext && driverPreferencesQuickEditQuery.isError
+      ? "Driver preferences could not be loaded."
+      : activeWorkflowRunId &&
+          isWeeklyPlanningContext &&
+          driverPreferencesQuickEditQuery.isSuccess &&
+          !driverPreferencesOpenAction &&
+          !driverPreferencesCreateAction
+        ? "No editable driver preferences snapshot is available."
+        : weeklyActionUnavailableReason;
+  const scheduleQuickEditUnavailableReason =
+    activeWorkflowRunId && isWeeklyPlanningContext && scheduleQuickEditQuery.isError
+      ? "Weekly schedule could not be loaded."
+      : activeWorkflowRunId &&
+          isWeeklyPlanningContext &&
+          scheduleQuickEditQuery.isSuccess &&
+          !scheduleQuickEditAction
+        ? "No editable weekly schedule draft is available."
+        : weeklyActionUnavailableReason;
+  const routeDemandQuickEditUnavailableReason =
+    activeWorkflowRunId && isWeeklyPlanningContext && routeDemandQuickEditQuery.isError
+      ? "Route demand could not be loaded."
+      : activeWorkflowRunId &&
+          isWeeklyPlanningContext &&
+          routeDemandQuickEditQuery.isSuccess &&
+          !routeDemandQuickEditAction
+        ? "No latest route demand artifact is available."
+        : weeklyActionUnavailableReason;
+
+  useEffect(() => {
+    setIsDriversQuickEditOpen(false);
+    setIsScheduleQuickEditOpen(false);
+    setIsRouteDemandQuickEditOpen(false);
+  }, [activeWorkflowRunId]);
 
   const handleTaskSelect = (laneId: (typeof taskCards)[number]["lane_id"]): void => {
     const targetCard = taskCards.find((card) => card.lane_id === laneId);
@@ -354,41 +520,59 @@ export function AppShell(): JSX.Element {
     <div className={`app-shell ${isWorkspaceRoute ? "app-shell--workspace" : ""}`}>
       <aside className="app-shell__nav">
         <div className="app-shell__nav-meta">
-          <NavLink className="app-shell__brand" to={logisticsDemoRoute}>
-            Logistics Demo
-          </NavLink>
           <div
-            className="app-shell__actor-switcher"
+            className="app-shell__identity"
             data-testid={
               viewerSession.actor_switching_allowed
                 ? "actor-switcher"
                 : "viewer-session-panel"
             }
           >
-            {viewerSession.actor_switching_allowed ? (
-              <>
-                <label htmlFor="actor-switcher">Active user</label>
-                <select
-                  id="actor-switcher"
-                  value={activeActorKey}
-                  onChange={(event) => handleActorChange(event.currentTarget.value)}
-                >
-                  {ACTOR_PROFILES.map((profile) => (
-                    <option key={profile.key} value={profile.key}>
-                      {profile.label}
-                    </option>
-                  ))}
-                </select>
-                <p>{activeActor?.actorId ?? viewerSession.actor_id}</p>
-              </>
-            ) : (
-              <div data-testid="viewer-session">
+            <button
+              type="button"
+              className="app-shell__identity-chip"
+              aria-expanded={isActorMenuOpen}
+              aria-label={`Current user ${activeActorLabel}. Open actor switcher`}
+              onClick={() => {
+                setIsActorMenuOpen((current) => !current);
+              }}
+            >
+              <span className="app-shell__identity-avatar" aria-hidden="true">
+                {activeActorInitials}
+              </span>
+              <span className="app-shell__identity-copy">
+                <strong>{activeActorLabel}</strong>
+                <span>{activeActorRoleLabel}</span>
+              </span>
+            </button>
+            {!viewerSession.actor_switching_allowed ? (
+              <div className="app-shell__identity-static" data-testid="viewer-session">
                 <strong>Viewer session</strong>
                 <p>{viewerSession.actor_id}</p>
                 <p>{viewerSession.boundary_profile}</p>
               </div>
-            )}
+            ) : null}
+            {isActorMenuOpen && viewerSession.actor_switching_allowed ? (
+              <div className="app-shell__identity-popover" role="menu">
+                {ACTOR_PROFILES.map((profile) => (
+                  <button
+                    key={profile.key}
+                    type="button"
+                    role="menuitemradio"
+                    aria-checked={profile.key === activeActorKey}
+                    className={profile.key === activeActorKey ? "is-active" : ""}
+                    onClick={() => handleActorChange(profile.key)}
+                  >
+                    <span>{profile.label}</span>
+                    <small>{profile.actorRoles.replace(/_/g, " ")}</small>
+                  </button>
+                ))}
+              </div>
+            ) : null}
           </div>
+          <NavLink className="app-shell__brand" to={logisticsDemoRoute}>
+            Logistics Demo
+          </NavLink>
         </div>
 
         <div className="app-shell__nav-primary">
@@ -411,26 +595,56 @@ export function AppShell(): JSX.Element {
             )}
 
             <div className="app-shell__nav-actions" data-testid="app-shell-nav-actions">
-              {isWorkpageFullPageRoute ? (
-                <InfoDialog
-                  triggerLabel="Open secondary detail routes"
-                  dialogTitle="Secondary detail routes"
-                  dialogDescription="Open secondary logistics detail destinations without taking extra header space."
-                  className="app-shell__secondary-info-button"
-                >
-                  <div className="app-shell__secondary-links-dialog">
-                    {SECONDARY_LINKS.map((link) => (
-                      <NavLink
-                        key={link.to}
-                        to={link.to}
-                        className={({ isActive }) => `link-button${isActive ? " active" : ""}`}
-                      >
-                        {link.label}
-                      </NavLink>
-                    ))}
-                  </div>
-                </InfoDialog>
-              ) : null}
+              <button
+                type="button"
+                className="action-btn app-shell__quick-action"
+                disabled={!canOpenDriversQuickEdit}
+                title={canOpenDriversQuickEdit ? undefined : driversQuickEditUnavailableReason}
+                aria-label={
+                  canOpenDriversQuickEdit
+                    ? "Drivers"
+                    : `Drivers unavailable: ${driversQuickEditUnavailableReason}`
+                }
+                onClick={() => {
+                  setIsDriversQuickEditOpen(true);
+                }}
+              >
+                Drivers
+              </button>
+
+              <button
+                type="button"
+                className="action-btn app-shell__quick-action"
+                disabled={!canOpenScheduleQuickEdit}
+                title={canOpenScheduleQuickEdit ? undefined : scheduleQuickEditUnavailableReason}
+                aria-label={
+                  canOpenScheduleQuickEdit
+                    ? "Edit weekly schedule"
+                    : `Edit weekly schedule unavailable: ${scheduleQuickEditUnavailableReason}`
+                }
+                onClick={() => {
+                  setIsScheduleQuickEditOpen(true);
+                }}
+              >
+                Edit weekly schedule
+              </button>
+
+              <button
+                type="button"
+                className="action-btn app-shell__quick-action app-shell__route-demand-edit"
+                disabled={!canOpenRouteDemandQuickEdit}
+                title={canOpenRouteDemandQuickEdit ? undefined : routeDemandQuickEditUnavailableReason}
+                aria-label={
+                  canOpenRouteDemandQuickEdit
+                    ? "Edit route demand"
+                    : `Edit route demand unavailable: ${routeDemandQuickEditUnavailableReason}`
+                }
+                onClick={() => {
+                  setIsRouteDemandQuickEditOpen(true);
+                }}
+              >
+                Edit route demand
+              </button>
 
               <div className="app-shell__utility-menu">
                 <button
@@ -459,6 +673,27 @@ export function AppShell(): JSX.Element {
                   </div>
                 ) : null}
               </div>
+
+              {isWorkpageFullPageRoute ? (
+                <InfoDialog
+                  triggerLabel="Open secondary detail routes"
+                  dialogTitle="Secondary detail routes"
+                  dialogDescription="Open secondary logistics detail destinations without taking extra header space."
+                  className="app-shell__secondary-info-button"
+                >
+                  <div className="app-shell__secondary-links-dialog">
+                    {SECONDARY_LINKS.map((link) => (
+                      <NavLink
+                        key={link.to}
+                        to={link.to}
+                        className={({ isActive }) => `link-button${isActive ? " active" : ""}`}
+                      >
+                        {link.label}
+                      </NavLink>
+                    ))}
+                  </div>
+                </InfoDialog>
+              ) : null}
             </div>
           </div>
         </div>
@@ -489,6 +724,30 @@ export function AppShell(): JSX.Element {
         </div>
       </section>
 
+      {isDriversQuickEditOpen && activeWorkflowRunId ? (
+        <DriverPreferencesQuickEditModal
+          workflowRunId={activeWorkflowRunId}
+          onClose={() => {
+            setIsDriversQuickEditOpen(false);
+          }}
+        />
+      ) : null}
+      {isScheduleQuickEditOpen && activeWorkflowRunId ? (
+        <ScheduleQuickEditModal
+          workflowRunId={activeWorkflowRunId}
+          onClose={() => {
+            setIsScheduleQuickEditOpen(false);
+          }}
+        />
+      ) : null}
+      {isRouteDemandQuickEditOpen && activeWorkflowRunId ? (
+        <RouteDemandQuickEditModal
+          workflowRunId={activeWorkflowRunId}
+          onClose={() => {
+            setIsRouteDemandQuickEditOpen(false);
+          }}
+        />
+      ) : null}
       <DetailDrawer payload={payload} onClose={close} />
     </div>
   );

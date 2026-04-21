@@ -2242,6 +2242,70 @@
   gap: 14px;
 }
 
+.route-demand-quick-edit-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: rgba(36, 39, 43, 0.52);
+  backdrop-filter: blur(12px);
+}
+
+.route-demand-quick-edit-modal {
+  width: min(1120px, calc(100vw - 32px));
+  max-height: calc(100vh - 32px);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid rgba(236, 219, 208, 0.92);
+  border-radius: 28px;
+  background:
+    radial-gradient(circle at top left, rgba(255, 230, 215, 0.95), transparent 34%),
+    linear-gradient(180deg, rgba(255, 252, 247, 0.99), rgba(245, 244, 239, 0.99));
+  box-shadow: 0 32px 80px rgba(24, 27, 30, 0.34);
+}
+
+.route-demand-quick-edit-modal__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 22px 24px 14px;
+  border-bottom: 1px solid rgba(214, 207, 198, 0.72);
+}
+
+.route-demand-quick-edit-modal__header h2,
+.route-demand-quick-edit-modal__header p {
+  margin: 0;
+}
+
+.route-demand-quick-edit-modal__header h2 {
+  margin-top: 4px;
+  font-family: var(--font-display);
+  font-size: clamp(24px, 3vw, 34px);
+}
+
+.route-demand-quick-edit-modal__header p:not(.timeline-page__eyebrow) {
+  margin-top: 6px;
+  color: var(--ink-soft);
+}
+
+.route-demand-quick-edit-modal__body {
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 18px 22px 22px;
+}
+
+.route-demand-quick-edit-modal .workpage-page__hero {
+  background: rgba(255, 255, 255, 0.72);
+}
+
 .workpage-form {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
@@ -3383,9 +3447,143 @@
 }
 
 .app-shell__nav-meta {
+  position: relative;
   display: flex;
   flex-direction: column;
   gap: 12px;
+}
+
+.app-shell__identity {
+  position: relative;
+  min-width: 0;
+}
+
+.app-shell__identity-chip {
+  width: 100%;
+  border: 1px solid rgba(42, 45, 48, 0.14);
+  border-radius: 999px;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.92), rgba(244, 241, 234, 0.96));
+  box-shadow: 0 14px 28px rgba(35, 38, 35, 0.08);
+  color: var(--ink);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 12px 7px 7px;
+  text-align: left;
+}
+
+.app-shell__identity-chip:focus-visible,
+.app-shell__identity-popover button:focus-visible,
+.app-shell__quick-action:focus-visible,
+.app-shell__utility-menu > .action-btn:focus-visible {
+  outline: 2px solid rgba(180, 35, 24, 0.32);
+  outline-offset: 2px;
+}
+
+.app-shell__identity-avatar {
+  flex: 0 0 auto;
+  width: 38px;
+  height: 38px;
+  border-radius: 999px;
+  background: #111;
+  color: #fff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-display);
+  font-size: 13px;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+}
+
+.app-shell__identity-copy {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.app-shell__identity-copy strong,
+.app-shell__identity-copy span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.app-shell__identity-copy strong {
+  color: #2e3438;
+  font-size: 13px;
+}
+
+.app-shell__identity-copy span {
+  color: #697079;
+  font-size: 11px;
+  text-transform: capitalize;
+}
+
+.app-shell__identity-static {
+  margin-top: 8px;
+  border: 1px solid rgba(175, 179, 174, 0.18);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.58);
+  padding: 10px 12px;
+  color: #616870;
+  font-size: 12px;
+}
+
+.app-shell__identity-static strong,
+.app-shell__identity-static p {
+  margin: 0;
+}
+
+.app-shell__identity-static p {
+  overflow-wrap: anywhere;
+}
+
+.app-shell__identity-popover {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  z-index: 20;
+  width: min(320px, calc(100vw - 32px));
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  border: 1px solid var(--ghost-border-strong);
+  border-radius: 18px;
+  background: rgba(251, 250, 247, 0.98);
+  box-shadow: 0 24px 44px rgba(32, 37, 34, 0.16);
+  padding: 10px;
+  backdrop-filter: blur(14px);
+}
+
+.app-shell__identity-popover button {
+  border: 1px solid transparent;
+  border-radius: 14px;
+  background: transparent;
+  color: #424950;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 10px 12px;
+  text-align: left;
+}
+
+.app-shell__identity-popover button:hover,
+.app-shell__identity-popover button.is-active {
+  border-color: rgba(166, 59, 0, 0.12);
+  background: rgba(255, 243, 237, 0.78);
+}
+
+.app-shell__identity-popover button span {
+  font-weight: 800;
+}
+
+.app-shell__identity-popover button small {
+  color: #70777f;
+  line-height: 1.35;
 }
 
 .app-shell__brand {
@@ -3428,7 +3626,39 @@
   display: inline-flex;
   align-items: center;
   justify-content: flex-end;
+  flex-wrap: wrap;
   gap: 10px;
+}
+
+.app-shell__quick-action {
+  min-width: 116px;
+  border-color: rgba(180, 35, 24, 0.16);
+  background: linear-gradient(135deg, rgba(255, 244, 237, 0.98), rgba(244, 225, 213, 0.98));
+  box-shadow: 0 12px 24px rgba(92, 79, 68, 0.08);
+  color: #6f2c14;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  white-space: nowrap;
+  transition:
+    transform 140ms ease,
+    box-shadow 140ms ease,
+    background 140ms ease;
+}
+
+.app-shell__quick-action:hover:not(:disabled) {
+  background: linear-gradient(135deg, rgba(255, 239, 229, 1), rgba(239, 210, 193, 1));
+  box-shadow: 0 16px 28px rgba(92, 79, 68, 0.12);
+  transform: translateY(-1px);
+}
+
+.app-shell__quick-action:disabled {
+  border-color: rgba(175, 179, 174, 0.24);
+  background: linear-gradient(135deg, rgba(238, 237, 232, 0.86), rgba(246, 244, 239, 0.92));
+  box-shadow: none;
+  color: #7f858a;
+  opacity: 0.78;
 }
 
 .app-shell__secondary-links-dialog {
@@ -3449,6 +3679,44 @@
 
 .app-shell__utility-menu .action-btn {
   min-width: 108px;
+}
+
+.app-shell__utility-menu > .action-btn {
+  border-color: rgba(82, 87, 92, 0.16);
+  background: linear-gradient(135deg, rgba(244, 244, 240, 0.98), rgba(232, 231, 225, 0.98));
+  color: #3e454c;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  box-shadow: 0 10px 22px rgba(47, 52, 48, 0.08);
+}
+
+.app-shell__utility-menu > .action-btn:hover {
+  background: linear-gradient(135deg, rgba(250, 249, 246, 1), rgba(224, 223, 216, 1));
+}
+
+.app-shell__route-demand-edit {
+  min-width: 148px;
+  border-color: transparent;
+  background: linear-gradient(135deg, #b42318, #d65f35);
+  color: #fff8f1;
+  font-weight: 800;
+  white-space: nowrap;
+  box-shadow: 0 14px 28px rgba(180, 35, 24, 0.22);
+}
+
+.app-shell__route-demand-edit:hover:not(:disabled) {
+  background: linear-gradient(135deg, #9f2017, #c34f2c);
+  color: #fff8f1;
+  transform: translateY(-1px);
+}
+
+.app-shell__route-demand-edit:disabled {
+  border-color: rgba(175, 179, 174, 0.24);
+  background: linear-gradient(135deg, rgba(238, 237, 232, 0.86), rgba(246, 244, 239, 0.92));
+  box-shadow: none;
+  color: #7f858a;
 }
 
 .app-shell__utility-menu-popover {
@@ -5371,6 +5639,10 @@
     gap: 12px;
   }
 
+  .app-shell__nav-meta {
+    max-width: 420px;
+  }
+
   .app-shell__nav-tools {
     grid-template-columns: 1fr;
   }
@@ -5447,6 +5719,22 @@
     width: auto;
   }
 
+  .app-shell__identity-chip {
+    width: 100%;
+  }
+
+  .app-shell__identity-popover {
+    width: 100%;
+  }
+
+  .app-shell__quick-action {
+    min-width: 0;
+  }
+
+  .app-shell__route-demand-edit {
+    min-width: 0;
+  }
+
   .workpage-page__hero-title-actions {
     width: 100%;
     justify-content: flex-start;
@@ -5508,6 +5796,27 @@
     width: 100vw;
     max-height: calc(100vh - 12px);
     border-radius: 24px 24px 0 0;
+  }
+
+  .route-demand-quick-edit-backdrop {
+    align-items: flex-end;
+    padding: 0;
+  }
+
+  .route-demand-quick-edit-modal {
+    width: 100vw;
+    max-height: calc(100vh - 12px);
+    border-radius: 24px 24px 0 0;
+  }
+
+  .route-demand-quick-edit-modal__header {
+    flex-direction: column;
+    align-items: stretch;
+    padding: 18px;
+  }
+
+  .route-demand-quick-edit-modal__body {
+    padding: 14px;
   }
 
   .task-modal__summary-grid,

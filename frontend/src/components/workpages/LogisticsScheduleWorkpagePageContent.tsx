@@ -4,6 +4,7 @@ import {
   type ReactNode,
   type SetStateAction,
   useEffect,
+  useId,
   useMemo,
   useRef,
   useState
@@ -426,6 +427,141 @@ function LogisticsScheduleWorkpageView({
   );
 }
 
+export function ScheduleQuickEditModal({
+  workflowRunId,
+  onClose
+}: {
+  workflowRunId: string;
+  onClose: () => void;
+}): JSX.Element {
+  const titleId = useId();
+  const descriptionId = useId();
+  const query = useQuery({
+    queryKey: ["workpages", "schedule-v0", "landing", workflowRunId],
+    queryFn: () => workpagesRepository.scheduleForRun(workflowRunId),
+    enabled: Boolean(workflowRunId),
+    refetchInterval: apiConfig.pollIntervalMs
+  });
+  const openLatestDraftAction = findScheduleAction(
+    query.data,
+    (action) =>
+      action.kind === "open_latest_draft" &&
+      action.state === "available" &&
+      Boolean(action.artifact_version_id)
+  );
+  const artifactVersionId = openLatestDraftAction?.artifact_version_id ?? null;
+
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent): void => {
+      if (event.key === "Escape") {
+        onClose();
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [onClose]);
+
+  return (
+    <div
+      className="quick-edit-backdrop route-demand-quick-edit-backdrop"
+      onMouseDown={(event) => {
+        if (event.target === event.currentTarget) {
+          onClose();
+        }
+      }}
+    >
+      <section
+        className="quick-edit-modal route-demand-quick-edit-modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+        aria-describedby={descriptionId}
+      >
+        <header className="quick-edit-modal__header route-demand-quick-edit-modal__header">
+          <div>
+            <p className="timeline-page__eyebrow">Quick edit</p>
+            <h2 id={titleId}>Edit weekly schedule</h2>
+            <p id={descriptionId}>
+              Move weekly assignments in a modal while staying in the current planning context.
+            </p>
+          </div>
+          <button type="button" className="action-btn" onClick={onClose}>
+            Close
+          </button>
+        </header>
+        <div className="quick-edit-modal__body route-demand-quick-edit-modal__body">
+          {query.isLoading ? (
+            <StatePanel
+              kind="loading"
+              title="Loading weekly schedule editor"
+              detail="Resolving the latest editable schedule draft for this weekly run."
+            />
+          ) : query.isError ? (
+            <StatePanel
+              kind="error"
+              title="Weekly schedule editor failed to load"
+              detail={errorText(query.error, "Unable to resolve the latest schedule draft.")}
+              onRetry={() => {
+                void query.refetch();
+              }}
+            />
+          ) : artifactVersionId ? (
+            <ScheduleArtifactEditor
+              workflowRunId={workflowRunId}
+              artifactVersionId={artifactVersionId}
+              layout="embedded"
+              afterSave="close"
+              onClose={onClose}
+            />
+          ) : (
+            <StatePanel
+              kind="error"
+              title="Weekly schedule editor is unavailable"
+              detail="No editable schedule draft is available for this weekly run yet."
+            />
+          )}
+        </div>
+      </section>
+    </div>
+  );
+}
+
+export function LogisticsScheduleArtifactWorkpagePage(): JSX.Element {
+  const { artifactVersionId, workflowRunId } = useParams<{
+    artifactVersionId: string;
+    workflowRunId: string;
+  }>();
+
+  if (!workflowRunId) {
+    return (
+      <StatePanel
+        kind="error"
+        title="Schedule draft route is unavailable"
+        detail="Open schedule drafts from a canonical workflow-run route."
+      />
+    );
+  }
+
+  if (!artifactVersionId) {
+    return (
+      <StatePanel
+        kind="error"
+        title="Schedule draft route is incomplete"
+        detail="An artifact version id is required for schedule draft workpages."
+      />
+    );
+  }
+
+  return (
+    <ScheduleArtifactEditor
+      workflowRunId={workflowRunId}
+      artifactVersionId={artifactVersionId}
+    />
+  );
+}
+
 export function LogisticsScheduleWorkpagePage(): JSX.Element {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -552,7 +688,21 @@ export function LogisticsScheduleWorkpagePage(): JSX.Element {
   );
 }
 
-export function LogisticsScheduleArtifactWorkpagePage(): JSX.Element {
+interface ScheduleArtifactEditorProps {
+  workflowRunId: string;
+  artifactVersionId: string;
+  layout?: "page" | "embedded";
+  afterSave?: "navigate" | "close";
+  onClose?: () => void;
+}
+
+function ScheduleArtifactEditor({
+  workflowRunId,
+  artifactVersionId,
+  layout = "page",
+  afterSave = "navigate",
+  onClose
+}: ScheduleArtifactEditorProps): JSX.Element {
   const navigate = useNavigate();
   const location = useLocation();
   const queryClient = useQueryClient();
@@ -561,22 +711,9 @@ export function LogisticsScheduleArtifactWorkpagePage(): JSX.Element {
     useState<WorkpagePreviewResponse["preview"] | null>(null);
   const [previewErrorMessage, setPreviewErrorMessage] = useState<string | null>(null);
   const [isPreviewPending, setIsPreviewPending] = useState(false);
-  const { artifactVersionId, workflowRunId } = useParams<{
-    artifactVersionId: string;
-    workflowRunId: string;
-  }>();
-  if (!workflowRunId) {
-    return (
-      <StatePanel
-        kind="error"
-        title="Schedule draft route is unavailable"
-        detail="Open schedule drafts from a canonical workflow-run route."
-      />
-    );
-  }
   const query = useQuery({
     queryKey: ["workpages", "schedule-v0", "artifacts", workflowRunId, artifactVersionId],
-    queryFn: () => workpagesRepository.scheduleArtifact(workflowRunId, artifactVersionId ?? ""),
+    queryFn: () => workpagesRepository.scheduleArtifact(workflowRunId, artifactVersionId),
     enabled: Boolean(artifactVersionId && workflowRunId),
     refetchInterval: apiConfig.pollIntervalMs
   });
@@ -622,7 +759,7 @@ export function LogisticsScheduleArtifactWorkpagePage(): JSX.Element {
       const carriedActionRef = resolveWorkpageActionRef(location.state, {
         workflowRunId: artifactWorkflowRunId,
         workpageKind: "schedule-v0",
-        artifactVersionId: artifactVersionId ?? ""
+        artifactVersionId
       });
       const actionRef = mergeWorkpageActionRef(
         saveAction?.action_ref ?? null,
@@ -631,7 +768,7 @@ export function LogisticsScheduleArtifactWorkpagePage(): JSX.Element {
       if (saveAction?.submit_path) {
         return workpagesRepository.submitScheduleArtifactAtPath(
           saveAction.submit_path,
-          artifactVersionId ?? "",
+          artifactVersionId,
           {
             rows: assignmentRows,
             reserveRows
@@ -641,7 +778,7 @@ export function LogisticsScheduleArtifactWorkpagePage(): JSX.Element {
       }
       return workpagesRepository.submitScheduleArtifact(
         artifactWorkflowRunId,
-        artifactVersionId ?? "",
+        artifactVersionId,
         {
           rows: assignmentRows,
           reserveRows
@@ -651,11 +788,16 @@ export function LogisticsScheduleArtifactWorkpagePage(): JSX.Element {
     },
     onSuccess: (submitted) => {
       void queryClient.invalidateQueries({ queryKey: ["workpages"] });
+      void queryClient.invalidateQueries({ queryKey: ["logistics-demo-story"] });
       void invalidateWorkspaceViews(queryClient, submitted.workflow_run_id);
+      if (afterSave === "close") {
+        onClose?.();
+        return;
+      }
       const carriedActionRef = resolveWorkpageActionRef(location.state, {
         workflowRunId: artifactWorkflowRunId,
         workpageKind: "schedule-v0",
-        artifactVersionId: artifactVersionId ?? ""
+        artifactVersionId
       });
       navigate(submitted.route, {
         state: {
@@ -826,7 +968,7 @@ export function LogisticsScheduleArtifactWorkpagePage(): JSX.Element {
       }}
       isRefreshing={query.isFetching || submitMutation.isPending || downloadMutation.isPending}
       pollIntervalMs={apiConfig.pollIntervalMs}
-      testId="schedule-artifact-workpage-page"
+      testId={layout === "embedded" ? "schedule-quick-edit-editor" : "schedule-artifact-workpage-page"}
       metadataPresentation="dialog"
       infoDialogTitle="Schedule draft context"
       sourceDescription="Artifact-backed projection of an immutable Stage04 draft weekly schedule workbook. Save creates a new superseding draft artifact version without publishing."
@@ -852,37 +994,39 @@ export function LogisticsScheduleArtifactWorkpagePage(): JSX.Element {
       }
       heroSupportText="Live preview recalculates in place. Save creates the next immutable draft in this weekly lineage."
       heroActions={
-        <>
-          <Link className="link-button" to={scheduleLandingRoute(workflowRunId)}>
-            Back to query landing
-          </Link>
-          {routeDemandAction?.route ? (
-            <Link className="link-button" to={routeDemandAction.route}>
-              Open route demand
+        layout === "page" ? (
+          <>
+            <Link className="link-button" to={scheduleLandingRoute(workflowRunId)}>
+              Back to query landing
             </Link>
-          ) : null}
-          {driverPreferencesAction?.route ? (
-            <Link className="link-button" to={driverPreferencesAction.route}>
-              Open driver preferences
-            </Link>
-          ) : driverPreferencesAction?.create_path ? (
-            <button
-              type="button"
-              className="action-btn"
-              disabled={createDriverPreferencesMutation.isPending}
-              onClick={() =>
-                createDriverPreferencesMutation.mutate({
-                  createPath: driverPreferencesAction.create_path ?? "",
-                  actionRef: driverPreferencesAction.action_ref
-                })
-              }
-            >
-              {createDriverPreferencesMutation.isPending
-                ? "Creating preferences snapshot..."
-                : "Create preferences snapshot"}
-            </button>
-          ) : null}
-        </>
+            {routeDemandAction?.route ? (
+              <Link className="link-button" to={routeDemandAction.route}>
+                Open route demand
+              </Link>
+            ) : null}
+            {driverPreferencesAction?.route ? (
+              <Link className="link-button" to={driverPreferencesAction.route}>
+                Open driver preferences
+              </Link>
+            ) : driverPreferencesAction?.create_path ? (
+              <button
+                type="button"
+                className="action-btn"
+                disabled={createDriverPreferencesMutation.isPending}
+                onClick={() =>
+                  createDriverPreferencesMutation.mutate({
+                    createPath: driverPreferencesAction.create_path ?? "",
+                    actionRef: driverPreferencesAction.action_ref
+                  })
+                }
+              >
+                {createDriverPreferencesMutation.isPending
+                  ? "Creating preferences snapshot..."
+                  : "Create preferences snapshot"}
+              </button>
+            ) : null}
+          </>
+        ) : undefined
       }
       stickyTitleBar
       infoDialogContent={
@@ -897,6 +1041,7 @@ export function LogisticsScheduleArtifactWorkpagePage(): JSX.Element {
       }
       backLink={backRoute.href}
       backLabel={backRoute.label}
+      layout={layout}
     >
       {submitConflict ? (
         <section className="workpage-panel workpage-panel--callout">

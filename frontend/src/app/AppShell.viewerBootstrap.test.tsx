@@ -55,8 +55,9 @@ describe("AppShell viewer bootstrap", () => {
     render(<App />);
 
     const viewerPanel = await screen.findByTestId("viewer-session-panel");
+    const viewerSession = within(viewerPanel).getByTestId("viewer-session");
     expect(within(viewerPanel).getByText("Viewer session")).toBeInTheDocument();
-    expect(within(viewerPanel).getByText("service:shared-gateway")).toBeInTheDocument();
+    expect(within(viewerSession).getByText("service:shared-gateway")).toBeInTheDocument();
     expect(screen.queryByLabelText("Active user")).not.toBeInTheDocument();
     expect(await screen.findByText(/No runs in scope/i)).toBeInTheDocument();
 

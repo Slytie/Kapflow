@@ -1,4 +1,5 @@
 export {
   LogisticsScheduleArtifactWorkpagePage,
-  LogisticsScheduleWorkpagePage
+  LogisticsScheduleWorkpagePage,
+  ScheduleQuickEditModal
 } from "@/components/workpages/LogisticsScheduleWorkpagePageContent";

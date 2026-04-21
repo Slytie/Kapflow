@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { type Dispatch, type SetStateAction, useEffect, useMemo, useState } from "react";
+import { type Dispatch, type SetStateAction, useEffect, useId, useMemo, useState } from "react";
 import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 
 import { StatePanel } from "@/components/StatePanel";
@@ -526,18 +526,28 @@ export function LogisticsRouteDemandWorkpagePage(): JSX.Element {
   );
 }
 
-export function LogisticsRouteDemandArtifactWorkpagePage(): JSX.Element {
+interface RouteDemandArtifactEditorProps {
+  workflowRunId: string;
+  artifactVersionId: string;
+  layout?: "page" | "embedded";
+  afterSave?: "navigate" | "close";
+  onClose?: () => void;
+}
+
+function RouteDemandArtifactEditor({
+  workflowRunId,
+  artifactVersionId,
+  layout = "page",
+  afterSave = "navigate",
+  onClose
+}: RouteDemandArtifactEditorProps): JSX.Element {
   const navigate = useNavigate();
   const location = useLocation();
   const queryClient = useQueryClient();
-  const { artifactVersionId, workflowRunId } = useParams<{
-    artifactVersionId: string;
-    workflowRunId: string;
-  }>();
   const query = useQuery({
     queryKey: ["workpages", "route-demand-v0", "artifacts", workflowRunId, artifactVersionId],
     queryFn: () =>
-      workpagesRepository.routeDemandArtifact(workflowRunId ?? "", artifactVersionId ?? ""),
+      workpagesRepository.routeDemandArtifact(workflowRunId, artifactVersionId),
     enabled: Boolean(workflowRunId && artifactVersionId),
     refetchInterval: apiConfig.pollIntervalMs
   });
@@ -547,7 +557,7 @@ export function LogisticsRouteDemandArtifactWorkpagePage(): JSX.Element {
   const scheduleAction = query.data?.schedule_impact?.latest_schedule_draft_artifact_version_id
     ? {
         route: scheduleArtifactRoute(
-          workflowRunId ?? "",
+          workflowRunId,
           query.data.schedule_impact.latest_schedule_draft_artifact_version_id
         )
       }
@@ -556,20 +566,20 @@ export function LogisticsRouteDemandArtifactWorkpagePage(): JSX.Element {
   const currentSignature = routeDemandDayCardSignature(dayCards);
   const hasUnsavedEdits = baseSignature !== currentSignature;
   const latestArtifactVersionId =
-    query.data?.artifact_context?.latest_in_chain_artifact_version_id ?? artifactVersionId ?? "";
+    query.data?.artifact_context?.latest_in_chain_artifact_version_id ?? artifactVersionId;
   const latestArtifactRoute =
     query.data?.artifact_history?.entries.find(
       (entry) => entry.artifact_version_id === latestArtifactVersionId
     )?.route ?? null;
   const isStaleArtifact = Boolean(
-    artifactVersionId && latestArtifactVersionId && latestArtifactVersionId !== artifactVersionId
+    latestArtifactVersionId && latestArtifactVersionId !== artifactVersionId
   );
   const submitMutation = useMutation({
     mutationFn: () => {
       const carriedActionRef = resolveWorkpageActionRef(location.state, {
-        workflowRunId: workflowRunId ?? "",
+        workflowRunId,
         workpageKind: "route-demand-v0",
-        artifactVersionId: artifactVersionId ?? ""
+        artifactVersionId
       });
       const actionRef = mergeWorkpageActionRef(
         saveAction?.action_ref ?? null,
@@ -577,7 +587,7 @@ export function LogisticsRouteDemandArtifactWorkpagePage(): JSX.Element {
       );
       return workpagesRepository.submitRouteDemandArtifactAtPath(
         saveAction?.submit_path ?? "",
-        artifactVersionId ?? "",
+        artifactVersionId,
         {
           dailyDemandRows: dayCards.map((card) => ({
             service_date: card.service_date,
@@ -589,11 +599,16 @@ export function LogisticsRouteDemandArtifactWorkpagePage(): JSX.Element {
     },
     onSuccess: (submitted) => {
       void queryClient.invalidateQueries({ queryKey: ["workpages"] });
+      void queryClient.invalidateQueries({ queryKey: ["logistics-demo-story"] });
       void invalidateWorkspaceViews(queryClient, submitted.workflow_run_id);
+      if (afterSave === "close") {
+        onClose?.();
+        return;
+      }
       const carriedActionRef = resolveWorkpageActionRef(location.state, {
-        workflowRunId: workflowRunId ?? "",
+        workflowRunId,
         workpageKind: "route-demand-v0",
-        artifactVersionId: artifactVersionId ?? ""
+        artifactVersionId
       });
       navigate(submitted.route, {
         state: {
@@ -605,16 +620,6 @@ export function LogisticsRouteDemandArtifactWorkpagePage(): JSX.Element {
       });
     }
   });
-
-  if (!workflowRunId || !artifactVersionId) {
-    return (
-      <StatePanel
-        kind="error"
-        title="Route demand artifact route is incomplete"
-        detail="Both the workflow run id and artifact version id are required."
-      />
-    );
-  }
 
   if (query.isLoading) {
     return (
@@ -660,7 +665,7 @@ export function LogisticsRouteDemandArtifactWorkpagePage(): JSX.Element {
       }}
       isRefreshing={query.isFetching || submitMutation.isPending}
       pollIntervalMs={apiConfig.pollIntervalMs}
-      testId="route-demand-artifact-workpage-page"
+      testId={layout === "embedded" ? "route-demand-quick-edit-editor" : "route-demand-artifact-workpage-page"}
       metadataPresentation="dialog"
       infoDialogTitle="Route demand artifact context"
       sourceDescription="Artifact-backed route-demand projection served from an immutable Stage04 route-demand workbook version."
@@ -676,23 +681,26 @@ export function LogisticsRouteDemandArtifactWorkpagePage(): JSX.Element {
       }
       heroSupportText="Plus/minus controls adjust backend-owned daily route counts. Save creates a new route-demand artifact version and leaves schedule artifacts untouched."
       heroActions={
-        <>
-          <Link className="link-button" to={routeDemandLandingRoute(workflowRunId)}>
-            Back to route demand landing
-          </Link>
-          {scheduleAction?.route ? (
-            <Link className="link-button" to={scheduleAction.route}>
-              Open latest schedule draft
+        layout === "page" ? (
+          <>
+            <Link className="link-button" to={routeDemandLandingRoute(workflowRunId)}>
+              Back to route demand landing
             </Link>
-          ) : (
-            <Link className="link-button" to={scheduleLandingRoute(workflowRunId)}>
-              Open schedule landing
-            </Link>
-          )}
-        </>
+            {scheduleAction?.route ? (
+              <Link className="link-button" to={scheduleAction.route}>
+                Open latest schedule draft
+              </Link>
+            ) : (
+              <Link className="link-button" to={scheduleLandingRoute(workflowRunId)}>
+                Open schedule landing
+              </Link>
+            )}
+          </>
+        ) : undefined
       }
       backLink={backRoute.href}
       backLabel={backRoute.label}
+      layout={layout}
     >
       {isStaleArtifact && latestArtifactRoute ? (
         <section className="workpage-panel workpage-panel--callout">
@@ -746,5 +754,127 @@ export function LogisticsRouteDemandArtifactWorkpagePage(): JSX.Element {
         }}
       />
     </WorkpageFrame>
+  );
+}
+
+export function RouteDemandQuickEditModal({
+  workflowRunId,
+  onClose
+}: {
+  workflowRunId: string;
+  onClose: () => void;
+}): JSX.Element {
+  const titleId = useId();
+  const descriptionId = useId();
+  const query = useQuery({
+    queryKey: ["workpages", "route-demand-v0", "run", workflowRunId],
+    queryFn: () => workpagesRepository.routeDemandForRun(workflowRunId),
+    enabled: Boolean(workflowRunId),
+    refetchInterval: apiConfig.pollIntervalMs
+  });
+  const openLatestAction = findRouteDemandAction(
+    query.data,
+    (action) => action.kind === "open_latest" && action.state === "available"
+  );
+  const artifactVersionId = openLatestAction?.artifact_version_id ?? null;
+
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent): void => {
+      if (event.key === "Escape") {
+        onClose();
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [onClose]);
+
+  return (
+    <div
+      className="route-demand-quick-edit-backdrop"
+      onMouseDown={(event) => {
+        if (event.target === event.currentTarget) {
+          onClose();
+        }
+      }}
+    >
+      <section
+        className="route-demand-quick-edit-modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+        aria-describedby={descriptionId}
+      >
+        <header className="route-demand-quick-edit-modal__header">
+          <div>
+            <p className="timeline-page__eyebrow">Quick edit</p>
+            <h2 id={titleId}>Edit route demand</h2>
+            <p id={descriptionId}>
+              Adjust planned daily route counts without leaving the current workpage.
+            </p>
+          </div>
+          <button type="button" className="action-btn" onClick={onClose}>
+            Close
+          </button>
+        </header>
+        <div className="route-demand-quick-edit-modal__body">
+          {query.isLoading ? (
+            <StatePanel
+              kind="loading"
+              title="Loading route demand editor"
+              detail="Resolving the latest route-demand artifact for this weekly run."
+            />
+          ) : query.isError ? (
+            <StatePanel
+              kind="error"
+              title="Route demand editor failed to load"
+              detail={errorText(query.error, "Unable to resolve the latest route-demand artifact.")}
+              onRetry={() => {
+                void query.refetch();
+              }}
+            />
+          ) : artifactVersionId ? (
+            <RouteDemandArtifactEditor
+              workflowRunId={workflowRunId}
+              artifactVersionId={artifactVersionId}
+              layout="embedded"
+              afterSave="close"
+              onClose={onClose}
+            />
+          ) : (
+            <StatePanel
+              kind="error"
+              title="Route demand editor is unavailable"
+              detail="No editable route-demand artifact is available for this weekly run yet."
+            />
+          )}
+        </div>
+      </section>
+    </div>
+  );
+}
+
+export function LogisticsRouteDemandArtifactWorkpagePage(): JSX.Element {
+  const { artifactVersionId, workflowRunId } = useParams<{
+    artifactVersionId: string;
+    workflowRunId: string;
+  }>();
+
+  if (!workflowRunId || !artifactVersionId) {
+    return (
+      <StatePanel
+        kind="error"
+        title="Route demand artifact route is incomplete"
+        detail="Both the workflow run id and artifact version id are required."
+      />
+    );
+  }
+
+  return (
+    <RouteDemandArtifactEditor
+      workflowRunId={workflowRunId}
+      artifactVersionId={artifactVersionId}
+    />
   );
 }

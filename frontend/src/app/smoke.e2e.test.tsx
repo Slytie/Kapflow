@@ -12,7 +12,17 @@ describe("App smoke", () => {
     render(<App />);
 
     expect(await screen.findByTestId("board-page")).toBeInTheDocument();
-    await user.selectOptions(screen.getByLabelText("Active user"), "dispatch-supervisor");
+    await user.click(
+      await screen.findByRole("button", {
+        name: /Current user Frontend Operator\. Open actor switcher/i
+      })
+    );
+    const actorMenu = within(await screen.findByTestId("actor-switcher")).getByRole("menu");
+    const dispatchSupervisorOption = within(actorMenu)
+      .getAllByRole("menuitemradio")
+      .find((option) => within(option).queryByText("Dispatch Supervisor"));
+    expect(dispatchSupervisorOption).toBeDefined();
+    await user.click(dispatchSupervisorOption as HTMLElement);
 
     const needsInformationLane = screen.getByLabelText("Needs Information");
     await user.click(within(needsInformationLane).getAllByRole("button", { name: "Details" })[0]);

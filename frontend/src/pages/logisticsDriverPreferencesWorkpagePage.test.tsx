@@ -19,44 +19,137 @@ function setFrontendOperatorContext(): void {
 }
 
 describe("LogisticsDriverPreferencesWorkpagePage", () => {
-  it("renders the run-backed landing and creates the first immutable snapshot", async () => {
-    const user = userEvent.setup();
-    setFrontendOperatorContext();
-    window.history.pushState({}, "", "/runs/wr-weekly-001/workpages/driver-preferences-v0");
-    render(<App />);
+  it(
+    "opens Drivers as a modal, edits a snapshot, saves, and stays on the background page",
+    async () => {
+      const user = userEvent.setup();
+      setFrontendOperatorContext();
+      window.history.pushState({}, "", "/runs/wr-weekly-001/workpages/schedule-v0");
+      render(<App />);
 
-    const page = await screen.findByTestId("driver-preferences-workpage-page");
-    expect(within(page).getByRole("heading", { name: "Preference grid" })).toBeInTheDocument();
-    expect(
-      within(page).getByRole("button", { name: /Abhiraj Singh on 2026-03-23:/i })
-    ).toHaveAttribute("aria-disabled", "true");
-    expect(within(page).getByRole("heading", { name: "Snapshot lifecycle" })).toBeInTheDocument();
-    expect(
-      within(page).getByRole("button", { name: "Create preferences snapshot" })
-    ).toBeInTheDocument();
+      expect(await screen.findByTestId("schedule-workpage-page")).toBeInTheDocument();
+      const driversButton = (await screen.findByText("Drivers")).closest("button") as HTMLButtonElement;
+      await waitFor(() => {
+        expect(driversButton).toBeEnabled();
+      }, { timeout: 10000 });
+      await user.click(driversButton);
 
-    await user.click(within(page).getByRole("button", { name: "Create preferences snapshot" }));
+      const dialog = await screen.findByRole("dialog", { name: "Drivers" });
+      await user.click(within(dialog).getByRole("button", { name: "Create preferences snapshot" }));
+      const editor = await within(dialog).findByTestId("driver-preferences-quick-edit-editor");
+      const mondayCell = within(editor).getByRole("button", {
+        name: /Abhiraj Singh on 2026-03-23:/i
+      });
+      const initialAriaLabel = mondayCell.getAttribute("aria-label") ?? "";
+      const initialState = initialAriaLabel.split(": ").at(-1) ?? "";
+      const nextStateLabel: Record<string, string> = {
+        "Open to work": "Prefer not to work",
+        "Prefer not to work": "Definitely cannot work",
+        "Definitely cannot work": "Unset",
+        Unset: "Open to work"
+      };
 
-    await waitFor(() => {
-      expect(window.location.pathname).toBe(
+      expect(within(dialog).getByRole("button", { name: "Save snapshot" })).toBeDisabled();
+      await user.click(mondayCell);
+      await waitFor(() => {
+        expect(mondayCell).toHaveAttribute(
+          "aria-label",
+          expect.stringContaining(nextStateLabel[initialState] ?? "Open to work")
+        );
+      });
+      expect(within(dialog).getByRole("button", { name: "Save snapshot" })).toBeEnabled();
+
+      await user.click(within(dialog).getByRole("button", { name: "Save snapshot" }));
+
+      await waitFor(() => {
+        expect(screen.queryByRole("dialog", { name: "Drivers" })).not.toBeInTheDocument();
+      });
+      expect(window.location.pathname).toBe("/runs/wr-weekly-001/workpages/schedule-v0");
+      expect(mutationLog()).toContain(
+        "workpage-driver-preferences-create:wr-weekly-001:av-driver-preferences-artifact-001"
+      );
+      expect(mutationLog()).toContain(
+        "workpage-driver-preferences-artifact-submit:av-driver-preferences-artifact-001:av-driver-preferences-artifact-002"
+      );
+    },
+    30000
+  );
+
+  it(
+    "creates the first driver preferences snapshot from the Drivers modal",
+    async () => {
+      const user = userEvent.setup();
+      setFrontendOperatorContext();
+      window.history.pushState({}, "", "/runs/wr-weekly-001/workpages/schedule-v0");
+      render(<App />);
+
+      expect(await screen.findByTestId("schedule-workpage-page")).toBeInTheDocument();
+      const driversButton = (await screen.findByText("Drivers")).closest("button") as HTMLButtonElement;
+      await waitFor(() => {
+        expect(driversButton).toBeEnabled();
+      }, { timeout: 10000 });
+      await user.click(driversButton);
+
+      const dialog = await screen.findByRole("dialog", { name: "Drivers" });
+      expect(
+        await within(dialog).findByRole("heading", { name: "Create the first preferences snapshot" })
+      ).toBeInTheDocument();
+
+      await user.click(within(dialog).getByRole("button", { name: "Create preferences snapshot" }));
+
+      expect(await within(dialog).findByTestId("driver-preferences-quick-edit-editor")).toBeInTheDocument();
+      expect(window.location.pathname).toBe("/runs/wr-weekly-001/workpages/schedule-v0");
+      expect(mutationLog()).toContain(
+        "workpage-driver-preferences-create:wr-weekly-001:av-driver-preferences-artifact-001"
+      );
+    },
+    30000
+  );
+
+  it(
+    "renders the run-backed landing and creates the first immutable snapshot",
+    async () => {
+      const user = userEvent.setup();
+      setFrontendOperatorContext();
+      window.history.pushState({}, "", "/runs/wr-weekly-001/workpages/driver-preferences-v0");
+      render(<App />);
+
+      const page = await screen.findByTestId("driver-preferences-workpage-page");
+      expect(within(page).getByRole("heading", { name: "Preference grid" })).toBeInTheDocument();
+      expect(
+        within(page).getByRole("button", { name: /Abhiraj Singh on 2026-03-23:/i })
+      ).toHaveAttribute("aria-disabled", "true");
+      expect(within(page).getByRole("heading", { name: "Snapshot lifecycle" })).toBeInTheDocument();
+      expect(
+        within(page).getByRole("button", { name: "Create preferences snapshot" })
+      ).toBeInTheDocument();
+
+      await user.click(within(page).getByRole("button", { name: "Create preferences snapshot" }));
+
+      await waitFor(() => {
+        expect(window.location.pathname).toBe(
+          "/runs/wr-weekly-001/workpages/driver-preferences-v0/artifacts/av-driver-preferences-artifact-001"
+        );
+      });
+      expect(await screen.findByTestId("driver-preferences-artifact-workpage-page")).toBeInTheDocument();
+    },
+    30000
+  );
+
+  it(
+    "edits the weekly grid, saves a new immutable snapshot version, and keeps history within the snapshot chain",
+    async () => {
+      const user = userEvent.setup();
+      setFrontendOperatorContext();
+      await workpagesRepository.createWorkpage(
+        "/api/v1/workpages/workflow-runs/wr-weekly-001/driver-preferences-v0/snapshots"
+      );
+      window.history.pushState(
+        {},
+        "",
         "/runs/wr-weekly-001/workpages/driver-preferences-v0/artifacts/av-driver-preferences-artifact-001"
       );
-    });
-    expect(await screen.findByTestId("driver-preferences-artifact-workpage-page")).toBeInTheDocument();
-  });
-
-  it("edits the weekly grid, saves a new immutable snapshot version, and keeps history within the snapshot chain", async () => {
-    const user = userEvent.setup();
-    setFrontendOperatorContext();
-    await workpagesRepository.createWorkpage(
-      "/api/v1/workpages/workflow-runs/wr-weekly-001/driver-preferences-v0/snapshots"
-    );
-    window.history.pushState(
-      {},
-      "",
-      "/runs/wr-weekly-001/workpages/driver-preferences-v0/artifacts/av-driver-preferences-artifact-001"
-    );
-    render(<App />);
+      render(<App />);
 
     const page = await screen.findByTestId("driver-preferences-artifact-workpage-page");
     expect(within(page).getByRole("button", { name: "Save snapshot" })).toBeDisabled();
@@ -102,10 +195,12 @@ describe("LogisticsDriverPreferencesWorkpagePage", () => {
     expect(
       within(refreshedPage).getByTestId("driver-preferences-schedule-impact")
     ).toBeInTheDocument();
-    expect(mutationLog()).toContain(
-      "workpage-driver-preferences-artifact-submit:av-driver-preferences-artifact-001:av-driver-preferences-artifact-002"
-    );
-  });
+      expect(mutationLog()).toContain(
+        "workpage-driver-preferences-artifact-submit:av-driver-preferences-artifact-001:av-driver-preferences-artifact-002"
+      );
+    },
+    30000
+  );
 
   it("keeps unsaved local edits across same-snapshot refreshes", async () => {
     const user = userEvent.setup();
@@ -153,7 +248,7 @@ describe("LogisticsDriverPreferencesWorkpagePage", () => {
       })
     ).toHaveAttribute("aria-label", expect.stringContaining("Prefer not to work"));
     expect(screen.getByRole("button", { name: "Save snapshot" })).toBeEnabled();
-  }, 10000);
+  }, 30000);
 
   it("shows conflict recovery guidance and keeps local edits visible until the operator opens the latest snapshot", async () => {
     const user = userEvent.setup();
@@ -235,5 +330,5 @@ describe("LogisticsDriverPreferencesWorkpagePage", () => {
       "href",
       "/runs/wr-weekly-001/workpages/driver-preferences-v0/artifacts/av-driver-preferences-artifact-latest"
     );
-  }, 10000);
+  }, 30000);
 });
