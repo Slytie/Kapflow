@@ -401,6 +401,9 @@ def _unavailable_like_service_dates(
             if str(entry.get("service_date") or "").strip()
         )
     for day_state in availability.daily_states:
+        source_ref = str(getattr(day_state, "source_ref", "") or "").strip()
+        if source_ref.startswith("availability_exception:"):
+            continue
         normalized_state = str(day_state.normalized_state or day_state.state or "").strip().lower()
         if normalized_state in {"approved_unavailable", "pattern_off", "emergency_only"}:
             blocked_dates.add(str(day_state.service_date or "").strip())

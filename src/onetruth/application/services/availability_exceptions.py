@@ -12,7 +12,7 @@ AVAILABILITY_REQUEST_WORKFLOW_ID = "availability_request.v1"
 AVAILABILITY_APPROVED_PLAN_DATASET_KEY = "availability.approved_plan.workbook"
 PLANNING_APPROVED_AVAILABILITY_DATASET_KEY = "planning.approved_availability.workbook"
 SUPPORTED_AVAILABILITY_EXCEPTION_REASONS = frozenset(
-    {"wedding", "vacation", "medical", "family", "appointment", "other"}
+    {"wedding", "vacation", "medical", "family", "appointment", "sick_no_show", "other"}
 )
 
 

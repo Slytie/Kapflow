@@ -2,7 +2,10 @@ import { useEffect, useId, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 
 import { DraftVersionTimeline, type DraftVersionTimelineEntry } from "@/components/workpages/DraftVersionTimeline";
-import { ScheduleHeatmapEditor } from "@/components/workpages/ScheduleHeatmapEditor";
+import {
+  ScheduleHeatmapEditor,
+  type ScheduleSickNoShowTarget
+} from "@/components/workpages/ScheduleHeatmapEditor";
 import { WorkpageSummaryCardsSection } from "@/components/workpages/WorkpageContent";
 import type {
   WorkpageScheduleAction,
@@ -330,7 +333,10 @@ export function ScheduleWorkpageSurface({
   readOnly,
   previewStatus,
   saveAction,
-  presentation = "default"
+  presentation = "default",
+  onMarkSickNoShow,
+  sickNoShowDisabled = false,
+  sickNoShowPendingKey = null
 }: {
   summarySection: WorkpageSummaryCardsSectionModel | null;
   heatmapSection: WorkpageScheduleHeatmapSection | null;
@@ -349,6 +355,9 @@ export function ScheduleWorkpageSurface({
   };
   saveAction?: WorkpageScheduleAction | null;
   presentation?: "default" | "quick_edit";
+  onMarkSickNoShow?: (target: ScheduleSickNoShowTarget) => void;
+  sickNoShowDisabled?: boolean;
+  sickNoShowPendingKey?: string | null;
 }): JSX.Element {
   const selectedDay = calculations?.selected_day ?? null;
   const selectedServiceDate = selectedDay?.service_date ?? null;
@@ -379,6 +388,9 @@ export function ScheduleWorkpageSurface({
       topBarDays={calculations?.top_bar.days ?? []}
       density={isQuickEdit ? "compact" : "default"}
       headerExtras={<ScheduleHeatmapStatusHeaderExtras dependencies={dependencies} checks={checks} />}
+      onMarkSickNoShow={onMarkSickNoShow}
+      sickNoShowDisabled={sickNoShowDisabled}
+      sickNoShowPendingKey={sickNoShowPendingKey}
     />
   ) : null;
 

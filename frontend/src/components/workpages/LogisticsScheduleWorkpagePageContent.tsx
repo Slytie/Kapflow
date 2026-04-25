@@ -18,6 +18,7 @@ import {
   draftVersionPrimaryLabel
 } from "@/components/workpages/DraftVersionTimeline";
 import { ScheduleArtifactAdvancedInfo } from "@/components/workpages/ScheduleArtifactAdvancedInfo";
+import type { ScheduleSickNoShowTarget } from "@/components/workpages/ScheduleHeatmapEditor";
 import {
   ScheduleWorkpageSurface,
   type ScheduleVersionRailDefinition
@@ -532,6 +533,15 @@ export function ScheduleQuickEditModal({
       Boolean(action.artifact_version_id)
   );
   const artifactVersionId = openLatestDraftAction?.artifact_version_id ?? null;
+  const [activeArtifactVersionId, setActiveArtifactVersionId] = useState<string | null>(null);
+  useEffect(() => {
+    if (artifactVersionId && !activeArtifactVersionId) {
+      setActiveArtifactVersionId(artifactVersionId);
+    }
+  }, [activeArtifactVersionId, artifactVersionId]);
+  useEffect(() => {
+    setActiveArtifactVersionId(null);
+  }, [workflowRunId]);
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent): void => {
@@ -567,9 +577,9 @@ export function ScheduleQuickEditModal({
         <header className="quick-edit-modal__header route-demand-quick-edit-modal__header">
           <div>
             <p className="timeline-page__eyebrow">Quick edit</p>
-            <h2 id={titleId}>Edit weekly schedule</h2>
+            <h2 id={titleId}>Edit Weekly Schedule</h2>
             <p id={descriptionId}>
-              Move weekly assignments in a modal while staying in the current planning context.
+              Fine-tune route assignments and on-call coverage without leaving the weekly planning view.
             </p>
           </div>
           <button type="button" className="action-btn" onClick={onClose}>
@@ -595,10 +605,12 @@ export function ScheduleQuickEditModal({
           ) : artifactVersionId ? (
             <ScheduleArtifactEditor
               workflowRunId={workflowRunId}
-              artifactVersionId={artifactVersionId}
+              artifactVersionId={activeArtifactVersionId ?? artifactVersionId}
               layout="embedded"
               afterSave="close"
               onClose={onClose}
+              enableSickNoShow
+              onArtifactVersionChange={setActiveArtifactVersionId}
             />
           ) : (
             <StatePanel
@@ -780,6 +792,8 @@ interface ScheduleArtifactEditorProps {
   layout?: "page" | "embedded";
   afterSave?: "navigate" | "close";
   onClose?: () => void;
+  enableSickNoShow?: boolean;
+  onArtifactVersionChange?: (artifactVersionId: string) => void;
 }
 
 function ScheduleArtifactEditor({
@@ -787,17 +801,24 @@ function ScheduleArtifactEditor({
   artifactVersionId,
   layout = "page",
   afterSave = "navigate",
-  onClose
+  onClose,
+  enableSickNoShow = false,
+  onArtifactVersionChange
 }: ScheduleArtifactEditorProps): JSX.Element {
   const navigate = useNavigate();
   const location = useLocation();
   const queryClient = useQueryClient();
   const previewRequestSequenceRef = useRef(0);
+  const sickNoShowTitleId = useId();
+  const sickNoShowDescriptionId = useId();
   const [previewResponse, setPreviewResponse] =
     useState<WorkpagePreviewResponse["preview"] | null>(null);
   const [previewErrorMessage, setPreviewErrorMessage] = useState<string | null>(null);
   const [isPreviewPending, setIsPreviewPending] = useState(false);
   const [isDraftHistoryOpen, setIsDraftHistoryOpen] = useState(false);
+  const [sickNoShowTarget, setSickNoShowTarget] =
+    useState<ScheduleSickNoShowTarget | null>(null);
+  const [sickNoShowReasonNote, setSickNoShowReasonNote] = useState("");
   const query = useQuery({
     queryKey: ["workpages", "schedule-v0", "artifacts", workflowRunId, artifactVersionId],
     queryFn: () => workpagesRepository.scheduleArtifact(workflowRunId, artifactVersionId),
@@ -826,6 +847,12 @@ function ScheduleArtifactEditor({
   const saveAction = findScheduleAction(
     contract,
     (action) => action.kind === "submit_artifact" || action.action_id === "workpage.schedule-v0.save_draft"
+  );
+  const sickNoShowAction = findScheduleAction(
+    contract,
+    (action) =>
+      action.kind === "mark_sick_no_show" ||
+      action.action_id === "workpage.schedule-v0.mark_sick_no_show"
   );
   const routeDemandAction = findRouteDemandAction(contract);
   const driverPreferencesAction = findDriverPreferencesAction(contract);
@@ -896,6 +923,38 @@ function ScheduleArtifactEditor({
       });
     }
   });
+  const sickNoShowMutation = useMutation({
+    mutationFn: (target: ScheduleSickNoShowTarget) => {
+      if (!sickNoShowAction?.sick_no_show_path || sickNoShowAction.state !== "available") {
+        throw new Error(
+          sickNoShowAction?.disabled_reason || "Sick / No Show is unavailable for this draft."
+        );
+      }
+      return workpagesRepository.markScheduleSickNoShowAtPath(
+        sickNoShowAction.sick_no_show_path,
+        artifactVersionId,
+        {
+          driverId: target.driverId,
+          serviceDate: target.serviceDate,
+          reasonNote: sickNoShowReasonNote,
+          rows: assignmentRows,
+          reserveRows
+        },
+        sickNoShowAction.action_ref ?? undefined
+      );
+    },
+    onSuccess: (submitted) => {
+      void queryClient.invalidateQueries({ queryKey: ["workpages"] });
+      void queryClient.invalidateQueries({ queryKey: ["logistics-demo-story"] });
+      void invalidateWorkspaceViews(queryClient, submitted.workflow_run_id);
+      setSickNoShowTarget(null);
+      setSickNoShowReasonNote("");
+      onArtifactVersionChange?.(submitted.artifact_version_id);
+      if (!onArtifactVersionChange && layout === "page") {
+        navigate(submitted.route);
+      }
+    }
+  });
   const downloadMutation = useMutation({
     mutationFn: (currentArtifactVersionId: string) =>
       workpagesRepository.downloadScheduleArtifactJson(currentArtifactVersionId)
@@ -921,6 +980,8 @@ function ScheduleArtifactEditor({
     setPreviewResponse(null);
     setPreviewErrorMessage(null);
     setIsPreviewPending(false);
+    setSickNoShowTarget(null);
+    setSickNoShowReasonNote("");
     previewRequestSequenceRef.current += 1;
   }, [artifactVersionId]);
 
@@ -1199,6 +1260,66 @@ function ScheduleArtifactEditor({
         />
       ) : null}
 
+      {sickNoShowTarget ? (
+        <div className="schedule-sick-no-show-dialog-backdrop">
+          <section
+            className="schedule-sick-no-show-dialog"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby={sickNoShowTitleId}
+            aria-describedby={sickNoShowDescriptionId}
+          >
+            <header>
+              <p className="timeline-page__eyebrow">Driver status</p>
+              <h2 id={sickNoShowTitleId}>Mark Sick / No Show</h2>
+              <p id={sickNoShowDescriptionId}>
+                {`${sickNoShowTarget.driverName} will be marked unavailable on ${sickNoShowTarget.serviceDateLabel}. Any route or on-call assignment for that day will be cleared from this draft.`}
+              </p>
+            </header>
+            <label>
+              <span>Optional note</span>
+              <textarea
+                rows={3}
+                value={sickNoShowReasonNote}
+                onChange={(event) => setSickNoShowReasonNote(event.target.value)}
+                placeholder="Add context for the operations log."
+              />
+            </label>
+            {sickNoShowMutation.isError ? (
+              <StatePanel
+                kind="error"
+                title="Sick / No Show failed"
+                detail={errorText(
+                  sickNoShowMutation.error,
+                  "Unable to mark the driver Sick / No Show."
+                )}
+              />
+            ) : null}
+            <div className="action-cluster">
+              <button
+                type="button"
+                className="action-btn"
+                disabled={sickNoShowMutation.isPending}
+                onClick={() => {
+                  setSickNoShowTarget(null);
+                  setSickNoShowReasonNote("");
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="action-btn action-btn--danger"
+                disabled={sickNoShowMutation.isPending}
+                onClick={() => sickNoShowMutation.mutate(sickNoShowTarget)}
+              >
+                {sickNoShowMutation.isPending ? "Marking..." : "Confirm Sick / No Show"}
+              </button>
+            </div>
+          </section>
+        </div>
+      ) : null}
+
       <ScheduleWorkpageSurface
         summarySection={summarySection}
         heatmapSection={heatmapSection}
@@ -1220,6 +1341,20 @@ function ScheduleArtifactEditor({
         }}
         saveAction={saveAction}
         presentation={isEmbedded ? "quick_edit" : "default"}
+        onMarkSickNoShow={
+          enableSickNoShow && sickNoShowAction?.state === "available"
+            ? (target) => {
+                setSickNoShowTarget(target);
+                setSickNoShowReasonNote("");
+              }
+            : undefined
+        }
+        sickNoShowDisabled={sickNoShowMutation.isPending}
+        sickNoShowPendingKey={
+          sickNoShowMutation.isPending && sickNoShowTarget
+            ? `${sickNoShowTarget.serviceDate}:${sickNoShowTarget.driverId}`
+            : null
+        }
       />
     </WorkpageFrame>
   );

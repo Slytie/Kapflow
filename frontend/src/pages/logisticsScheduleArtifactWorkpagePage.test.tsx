@@ -1,7 +1,8 @@
-import { act, render, screen, waitFor, within } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { HttpResponse, http } from "msw";
 
+import appCss from "@/app/app.css?raw";
 import scheduleArtifactStateSnapshot from "@fixtures/workpage_schedule_v0_artifact_state.json";
 import { App } from "@/app/App";
 import {
@@ -154,7 +155,7 @@ describe("LogisticsScheduleArtifactWorkpagePage", () => {
       expect(await screen.findByTestId("schedule-workpage-page")).toBeInTheDocument();
       await user.click(await screen.findByRole("button", { name: "Edit weekly schedule" }));
 
-      const dialog = await screen.findByRole("dialog", { name: "Edit weekly schedule" });
+      const dialog = await screen.findByRole("dialog", { name: "Edit Weekly Schedule" });
       expect(dialog).toHaveClass("schedule-quick-edit-modal");
       const editor = await within(dialog).findByTestId("schedule-quick-edit-editor");
       expect(within(editor).getByRole("heading", { name: "Weekly Schedule Draft" })).toBeInTheDocument();
@@ -217,7 +218,7 @@ describe("LogisticsScheduleArtifactWorkpagePage", () => {
 
       await waitFor(() => {
         expect(
-          screen.queryByRole("dialog", { name: "Edit weekly schedule" })
+          screen.queryByRole("dialog", { name: "Edit Weekly Schedule" })
         ).not.toBeInTheDocument();
       });
       expect(window.location.pathname).toBe("/runs/wr-weekly-001/workpages/schedule-v0");
@@ -227,6 +228,69 @@ describe("LogisticsScheduleArtifactWorkpagePage", () => {
     },
     120000
   );
+
+  it(
+    "marks a driver Sick / No Show from the weekly schedule quick-edit heatmap",
+    async () => {
+      const user = userEvent.setup();
+      window.history.pushState({}, "", "/runs/wr-weekly-001/workpages/schedule-v0");
+      render(<App />);
+
+      expect(await screen.findByTestId("schedule-workpage-page")).toBeInTheDocument();
+      await user.click(await screen.findByRole("button", { name: "Edit weekly schedule" }));
+
+      const dialog = await screen.findByRole("dialog", { name: "Edit Weekly Schedule" });
+      const editor = await within(dialog).findByTestId("schedule-quick-edit-editor");
+      const heatmap = heatmapSectionIn(editor);
+      const assignedCell = heatmapButton(
+        heatmap,
+        (label) => label.includes("2026-03-22: assigned route")
+      );
+      const assignedLabel = assignedCell.getAttribute("aria-label") ?? "";
+      const driverName = personNameFromLabel(assignedLabel);
+      const cellContainer = assignedCell.closest("td");
+      expect(cellContainer).not.toBeNull();
+      const sickButton = within(cellContainer as HTMLElement).getByRole("button", {
+        name: `Mark Sick / No Show: ${driverName} on 2026-03-22`
+      });
+      expect(sickButton).toBeInTheDocument();
+      fireEvent.click(sickButton);
+
+      const confirmDialog = await screen.findByRole("dialog", { name: "Mark Sick / No Show" });
+      expect(confirmDialog).toHaveTextContent(
+        `${driverName} will be marked unavailable on 2026-03-22`
+      );
+      await user.type(within(confirmDialog).getByLabelText("Optional note"), "Called in sick");
+      await user.click(within(confirmDialog).getByRole("button", { name: "Confirm Sick / No Show" }));
+
+      await waitFor(() => {
+        expect(mutationLog().some((entry) => entry.includes("workpage-schedule-sick-no-show"))).toBe(
+          true
+        );
+      });
+      expect(screen.getByRole("dialog", { name: "Edit Weekly Schedule" })).toBeInTheDocument();
+      const sickCell = await within(dialog).findByRole("button", {
+        name: `Sick / No Show: ${driverName} on 2026-03-22`
+      });
+      expect(sickCell).toHaveClass("schedule-heatmap__cell--sick-no-show");
+      expect(sickCell).not.toHaveTextContent("Route");
+      expect(sickCell).not.toHaveTextContent("On call");
+      expectHeatmapPreferenceBars(dialog);
+    },
+    120000
+  );
+
+  it("reveals the Sick action only for the hovered or focused heatmap cell", () => {
+    expect(appCss).toMatch(
+      /\.schedule-heatmap__sick-button\s*{[\s\S]*?opacity:\s*0;[\s\S]*?pointer-events:\s*none;[\s\S]*?transform:\s*translateY\(-2px\);/
+    );
+    expect(appCss).toMatch(
+      /\.schedule-heatmap__cell-wrap:hover \.schedule-heatmap__sick-button:not\(:disabled\),\s*\.schedule-heatmap__cell-wrap:focus-within \.schedule-heatmap__sick-button:not\(:disabled\),\s*\.schedule-heatmap__sick-button:focus-visible\s*{[\s\S]*?opacity:\s*1;[\s\S]*?pointer-events:\s*auto;[\s\S]*?transform:\s*translateY\(0\);/
+    );
+    expect(appCss).toMatch(
+      /\.schedule-heatmap__sick-button:disabled\s*{[\s\S]*?opacity:\s*0;[\s\S]*?pointer-events:\s*none;/
+    );
+  });
 
   it(
     "opens the standalone latest draft artifact, auto-previews heatmap edits, saves a superseding version, and downloads JSON",

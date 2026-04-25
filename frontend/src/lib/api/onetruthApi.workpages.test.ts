@@ -168,7 +168,10 @@ describe("onetruthApi workpage parsing", () => {
     expect(contract.schedule_impact).toMatchObject({
       schedule_state: "no_snapshot"
     });
-    expect(contract.actions.map((action) => action.kind)).toEqual(["create_snapshot"]);
+    expect(contract.actions.map((action) => action.kind)).toEqual([
+      "create_snapshot",
+      "add_availability_exception"
+    ]);
   });
 
   it("parses the artifact-backed driver-preferences workpage wrapper including canonical save action", async () => {
@@ -190,7 +193,10 @@ describe("onetruthApi workpage parsing", () => {
     );
     expect(contract.preference_grid?.service_dates).toHaveLength(7);
     expect(contract.preference_grid?.drivers.length).toBeGreaterThan(0);
-    expect(contract.actions.map((action) => action.kind)).toEqual(["save"]);
+    expect(contract.actions.map((action) => action.kind)).toEqual([
+      "save",
+      "add_availability_exception"
+    ]);
   });
 
   it("parses the artifact-backed route-demand workpage wrapper including canonical save action", async () => {

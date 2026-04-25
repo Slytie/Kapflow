@@ -89,7 +89,14 @@ describe("LogisticsRouteDemandWorkpagePage", () => {
     expect(
       within(editor).queryByText(/bounded route-demand editor over immutable weekly route-demand workbooks/i)
     ).not.toBeInTheDocument();
-    expect(within(editor).queryByText(/^Week /i)).not.toBeInTheDocument();
+    expect(within(editor).getByTestId("route-demand-horizon-summary")).toHaveTextContent(
+      "14 service days"
+    );
+    expect(within(editor).getByTestId("route-demand-horizon-summary")).toHaveTextContent(
+      "2026-03-22 to 2026-04-04"
+    );
+    expect(within(editor).getByRole("heading", { name: "Week 1" })).toBeInTheDocument();
+    expect(within(editor).getByRole("heading", { name: "Week 2" })).toBeInTheDocument();
     expect(within(editor).queryByText(/^Artifact /i)).not.toBeInTheDocument();
     expect(within(editor).queryByText(/^\d+ planned routes$/i)).not.toBeInTheDocument();
     expect(within(editor).queryByTestId("route-demand-schedule-impact")).not.toBeInTheDocument();

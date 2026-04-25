@@ -259,7 +259,10 @@ describe("workpagesRepository", () => {
       submitted.artifact_version_id
     );
 
-    expect(landingBeforeCreate.actions.map((action) => action.kind)).toEqual(["create_snapshot"]);
+    expect(landingBeforeCreate.actions.map((action) => action.kind)).toEqual([
+      "create_snapshot",
+      "add_availability_exception"
+    ]);
     expect(created.route).toBe(
       "/runs/wr-weekly-001/workpages/driver-preferences-v0/artifacts/av-driver-preferences-artifact-001"
     );

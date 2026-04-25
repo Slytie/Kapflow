@@ -472,6 +472,27 @@ function buildDriverAvailabilityExceptionAction(workflowRunId: string): Record<s
   };
 }
 
+function buildScheduleSickNoShowAction(
+  workflowRunId: string,
+  artifactVersionId: string
+): Record<string, unknown> {
+  return {
+    action_id: "workpage.schedule-v0.mark_sick_no_show",
+    artifact_version_id: artifactVersionId,
+    kind: "mark_sick_no_show",
+    label: "Mark Sick / No Show",
+    sick_no_show_path: `/api/v1/workpages/workflow-runs/${workflowRunId}/schedule-v0/artifacts/${artifactVersionId}/sick-no-show`,
+    state: "available",
+    workpage_kind: "schedule-v0",
+    action_ref: buildWorkpageActionRef({
+      actionId: "workpage.schedule-v0.mark_sick_no_show",
+      workpageKind: "schedule-v0",
+      workflowRunId,
+      artifactVersionId
+    })
+  };
+}
+
 function buildDriverAvailabilityExceptionsPayload(): Record<string, unknown> {
   return {
     items: Array.from(driverAvailabilityExceptions.values()).sort((left, right) => {
@@ -964,6 +985,47 @@ function applyScheduleArtifactEdits(
   updateScheduleCalculations(payload, workbookPayload, preferenceGrid);
 }
 
+function markSchedulePayloadSickNoShow(
+  payload: Record<string, unknown>,
+  {
+    driverId,
+    serviceDate,
+  }: {
+    driverId: string;
+    serviceDate: string;
+  }
+): void {
+  const heatmapSection = findSectionByKind(payload, "schedule_heatmap");
+  const people = asObjectArray(heatmapSection?.people);
+  people.forEach((person) => {
+    if (asString(person.driver_id) !== driverId) {
+      return;
+    }
+    asObjectArray(person.cells).forEach((cell) => {
+      if (asString(cell.service_date) !== serviceDate) {
+        return;
+      }
+      cell.availability_state = "approved_unavailable";
+      cell.availability_reason_code = "sick_no_show";
+      cell.availability_source_ref = `availability_exception:${driverId}:${serviceDate}`;
+    });
+  });
+
+  const calculations = asObject(payload.calculations);
+  const selectedDay = asObject(calculations?.selected_day);
+  if (selectedDay && asString(selectedDay.service_date) === serviceDate) {
+    selectedDay.available_driver_ids = (Array.isArray(selectedDay.available_driver_ids)
+      ? selectedDay.available_driver_ids
+      : []
+    )
+      .map((item) => asString(item))
+      .filter((item) => item && item !== driverId);
+    selectedDay.available_driver_count = Array.isArray(selectedDay.available_driver_ids)
+      ? selectedDay.available_driver_ids.length
+      : asNumber(selectedDay.available_driver_count);
+  }
+}
+
 function buildScheduleArtifactPayload(input: {
   artifactVersionId: string;
   workflowRunId: string;
@@ -1048,6 +1110,16 @@ function patchScheduleArtifactContractState(version: ScheduleArtifactVersionStat
         artifactVersionId: version.artifactVersionId
       });
     }
+    if (kind === "mark_sick_no_show") {
+      record.sick_no_show_path =
+        `/api/v1/workpages/workflow-runs/${version.workflowRunId}/schedule-v0/artifacts/${version.artifactVersionId}/sick-no-show`;
+      record.action_ref = buildWorkpageActionRef({
+        actionId: asString(record.action_id),
+        workpageKind: "schedule-v0",
+        workflowRunId: version.workflowRunId,
+        artifactVersionId: version.artifactVersionId
+      });
+    }
     if (record.workpage_kind === "route-demand-v0" && kind === "open_latest") {
       record.artifact_version_id = latestRouteDemandVersion?.artifactVersionId ?? null;
       record.route = latestRouteDemandVersion
@@ -1063,7 +1135,13 @@ function patchScheduleArtifactContractState(version: ScheduleArtifactVersionStat
     }
     return record;
   });
-  payload.actions = [...mappedActions, buildDriverPreferencesScheduleAction(version.workflowRunId)];
+  payload.actions = [
+    ...mappedActions,
+    ...(mappedActions.some((action) => asObject(action)?.kind === "mark_sick_no_show")
+      ? []
+      : [buildScheduleSickNoShowAction(version.workflowRunId, version.artifactVersionId)]),
+    buildDriverPreferencesScheduleAction(version.workflowRunId)
+  ];
 
   const artifactState = asObject(payload.artifact_state);
   if (artifactState) {
@@ -1850,7 +1928,7 @@ function patchDriverPreferencesArtifactContractState(
   const payload = version.payload;
   const latestScheduleVersion = latestScheduleArtifactForRun(version.workflowRunId);
   const actions = Array.isArray(payload.actions) ? payload.actions : [];
-  payload.actions = actions.map((action) => {
+  const patchedActions = actions.map((action) => {
     if (!action || typeof action !== "object" || Array.isArray(action)) {
       return action;
     }
@@ -1875,12 +1953,13 @@ function patchDriverPreferencesArtifactContractState(
     }
     return record;
   });
+  payload.actions = patchedActions;
   if (
-    !payload.actions.some(
+    !patchedActions.some(
       (action) => asString((action as Record<string, unknown>)?.kind) === "add_availability_exception"
     )
   ) {
-    payload.actions.push(buildDriverAvailabilityExceptionAction(version.workflowRunId));
+    patchedActions.push(buildDriverAvailabilityExceptionAction(version.workflowRunId));
   }
 
   const artifactState = asObject(payload.artifact_state);
@@ -3601,6 +3680,89 @@ async function handleScheduleArtifactSubmitRequest(
   });
 }
 
+async function handleScheduleSickNoShowRequest(
+  artifactVersionId: string,
+  request: Request
+): Promise<Response> {
+  if (!inScope(request)) {
+    return scheduleArtifactNotFoundResponse(artifactVersionId);
+  }
+
+  const scheduleBaseVersion = scheduleArtifactVersions.get(artifactVersionId);
+  if (!scheduleBaseVersion) {
+    return scheduleArtifactNotFoundResponse(artifactVersionId);
+  }
+
+  if (scheduleBaseVersion.supersededByArtifactVersionId) {
+    return HttpResponse.json(
+      {
+        status: "error",
+        error: {
+          code: "workpage_artifact_conflict",
+          message: "artifact-backed workpage already has a newer draft",
+          details: {
+            artifact_version_id: artifactVersionId,
+            latest_artifact_version_id: scheduleBaseVersion.latestInChainArtifactVersionId,
+            workflow_run_id: scheduleBaseVersion.workflowRunId,
+            route: scheduleArtifactRoute(
+              scheduleBaseVersion.latestInChainArtifactVersionId,
+              scheduleBaseVersion.workflowRunId
+            )
+          }
+        }
+      },
+      { status: 409 }
+    );
+  }
+
+  const body = (await request.json()) as {
+    driver_id?: string;
+    service_date?: string;
+    reason_note?: string;
+    rows?: Array<Record<string, unknown>>;
+    reserve_rows?: Array<Record<string, unknown>>;
+  };
+  const driverId = asString(body.driver_id);
+  const serviceDate = asString(body.service_date);
+  const assignmentRows = (Array.isArray(body.rows) ? body.rows : scheduleAssignmentRows(scheduleBaseVersion.workbookPayload))
+    .map((row) =>
+      asString(row.assigned_driver_id) === driverId && asString(row.service_date) === serviceDate
+        ? { ...row, assigned_driver_id: "", assignment_status: "manual_override" }
+        : { ...row }
+    );
+  const reserveRows = (Array.isArray(body.reserve_rows) ? body.reserve_rows : scheduleBaseVersion.workbookPayload.reserve_rows)
+    .map((row) =>
+      asString(row.assigned_driver_id) === driverId && asString(row.service_date) === serviceDate
+        ? { ...row, assigned_driver_id: "", assignment_status: "manual_override" }
+        : { ...row }
+    );
+  const submittedArtifactVersionId = nextScheduleArtifactVersionId();
+  const submittedVersion = addScheduleArtifactVersion({
+    artifactVersionId: submittedArtifactVersionId,
+    workflowRunId: scheduleBaseVersion.workflowRunId,
+    supersedesArtifactVersionId: artifactVersionId,
+    latestInChainArtifactVersionId: submittedArtifactVersionId,
+    assignmentRows,
+    reserveRows
+  });
+  markSchedulePayloadSickNoShow(submittedVersion.payload, {
+    driverId,
+    serviceDate
+  });
+  scheduleBaseVersion.supersededByArtifactVersionId = submittedArtifactVersionId;
+  patchArtifactPayloadLineage(scheduleBaseVersion);
+  updateScheduleArtifactChainLatest(submittedArtifactVersionId, submittedArtifactVersionId);
+
+  state.audit.mutations.push(
+    `workpage-schedule-sick-no-show:${artifactVersionId}:${submittedArtifactVersionId}:${driverId}:${serviceDate}`
+  );
+  return ok({
+    command: "api.workpages.schedule.sick_no_show",
+    submitted: (scheduleArtifactSubmitResponse(submittedVersion, artifactVersionId)
+      .submitted as Record<string, unknown>) ?? {}
+  });
+}
+
 async function handleRouteDemandArtifactSubmitRequest(
   artifactVersionId: string,
   request: Request
@@ -4008,6 +4170,11 @@ export const handlers = [
     "*/api/v1/workpages/workflow-runs/:workflowRunId/schedule-v0/artifacts/:artifactVersionId/submit",
     async ({ params, request }) =>
       handleScheduleArtifactSubmitRequest(String(params.artifactVersionId), request)
+  ),
+  http.post(
+    "*/api/v1/workpages/workflow-runs/:workflowRunId/schedule-v0/artifacts/:artifactVersionId/sick-no-show",
+    async ({ params, request }) =>
+      handleScheduleSickNoShowRequest(String(params.artifactVersionId), request)
   ),
   http.post(
     "*/api/v1/workpages/workflow-runs/:workflowRunId/route-demand-v0/artifacts/:artifactVersionId/submit",

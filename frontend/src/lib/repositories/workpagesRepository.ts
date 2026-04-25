@@ -176,6 +176,32 @@ export const workpagesRepository = {
     });
   },
 
+  async markScheduleSickNoShowAtPath(
+    sickNoShowPath: string,
+    artifactVersionId: string,
+    payload: {
+      driverId: string;
+      serviceDate: string;
+      reasonNote: string;
+      rows: Array<Record<string, unknown>>;
+      reserveRows: Array<Record<string, unknown>>;
+    },
+    actionRef?: WorkpageActionRef
+  ): Promise<WorkpageSubmittedResponse> {
+    return onetruthApi.markScheduleSickNoShowAtPath(sickNoShowPath, {
+      driver_id: payload.driverId,
+      service_date: payload.serviceDate,
+      reason_note: payload.reasonNote,
+      rows: payload.rows,
+      reserve_rows: payload.reserveRows,
+      action_ref: actionRef,
+      idempotency_key: createIdempotencyKey(
+        "workpage-schedule-sick-no-show",
+        `${artifactVersionId}:${payload.driverId}:${payload.serviceDate}:${payload.reasonNote}`
+      )
+    });
+  },
+
   async submitRouteDemandArtifactAtPath(
     submitPath: string,
     artifactVersionId: string,

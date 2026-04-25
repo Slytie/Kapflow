@@ -1191,6 +1191,7 @@ function normalizeScheduleActions(value: unknown): WorkpageScheduleAction[] {
     route: asStringOrNull(action.route),
     preview_path: asStringOrNull(action.preview_path),
     submit_path: asStringOrNull(action.submit_path),
+    sick_no_show_path: asStringOrNull(action.sick_no_show_path),
     action_ref: normalizeWorkpageActionRef(action.action_ref),
     disabled_reason: asStringOrNull(action.disabled_reason)
   }));
@@ -1833,6 +1834,25 @@ export const onetruthApi = {
         body: payload
       }
     );
+    return normalizeWorkpageSubmittedResponse(result);
+  },
+
+  async markScheduleSickNoShowAtPath(
+    sickNoShowPath: string,
+    payload: {
+      driver_id: string;
+      service_date: string;
+      reason_note?: string;
+      rows: Array<Record<string, unknown>>;
+      reserve_rows: Array<Record<string, unknown>>;
+      action_ref?: WorkpageActionRef;
+      idempotency_key: string;
+    }
+  ): Promise<WorkpageSubmittedResponse> {
+    const result = await requestJson<WorkpageSubmitEnvelope>(normalizeApiPath(sickNoShowPath), {
+      method: "POST",
+      body: payload
+    });
     return normalizeWorkpageSubmittedResponse(result);
   },
 

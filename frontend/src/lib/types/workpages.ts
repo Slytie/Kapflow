@@ -72,6 +72,9 @@ export interface WorkpageScheduleHeatmapCell {
   planned_driver_day_state: string | null;
   manual_override: boolean;
   preference_state?: string;
+  availability_state?: string | null;
+  availability_reason_code?: string | null;
+  availability_source_ref?: string | null;
 }
 
 export interface WorkpageScheduleHeatmapPerson {
@@ -270,7 +273,8 @@ export interface WorkpageActionRef {
 export type WorkpageScheduleActionKind =
   | "open_latest_draft"
   | "preview_recalc"
-  | "submit_artifact";
+  | "submit_artifact"
+  | "mark_sick_no_show";
 
 export interface WorkpageScheduleAction {
   action_id: string;
@@ -282,6 +286,7 @@ export interface WorkpageScheduleAction {
   route?: string | null;
   preview_path?: string | null;
   submit_path?: string | null;
+  sick_no_show_path?: string | null;
   action_ref: WorkpageActionRef | null;
   disabled_reason?: string | null;
 }
@@ -383,7 +388,14 @@ export interface WorkpageDriverAvailabilityException {
   driver_name: string;
   start_date: string;
   end_date: string;
-  reason_code: "wedding" | "vacation" | "medical" | "family" | "appointment" | "other";
+  reason_code:
+    | "wedding"
+    | "vacation"
+    | "medical"
+    | "family"
+    | "appointment"
+    | "sick_no_show"
+    | "other";
   reason_note: string;
   status: "approved";
   source_workflow_run_id: string;

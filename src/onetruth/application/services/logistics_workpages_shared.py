@@ -248,6 +248,17 @@ def canonical_driver_availability_exception_create_path(*, workflow_run_id: str)
     )
 
 
+def canonical_schedule_sick_no_show_path(
+    *,
+    workflow_run_id: str,
+    artifact_version_id: str,
+) -> str:
+    return (
+        f"/api/v1/workpages/workflow-runs/{workflow_run_id}/"
+        f"{SCHEDULE_WORKPAGE_KIND}/artifacts/{artifact_version_id}/sick-no-show"
+    )
+
+
 def build_workpage_action_ref(
     *,
     action_id: str,
@@ -1369,6 +1380,25 @@ def _schedule_artifact_contract_actions(
                         artifact_version_id=artifact_version_id,
                     ),
                     "disabled_reason": save_disabled_reason,
+                },
+                {
+                    "action_id": "workpage.schedule-v0.mark_sick_no_show",
+                    "kind": "mark_sick_no_show",
+                    "label": "Mark Sick / No Show",
+                    "state": "blocked" if preview_disabled_reason else "available",
+                    "workpage_kind": SCHEDULE_WORKPAGE_KIND,
+                    "artifact_version_id": artifact_version_id,
+                    "sick_no_show_path": canonical_schedule_sick_no_show_path(
+                        workflow_run_id=workflow_run_id,
+                        artifact_version_id=artifact_version_id,
+                    ),
+                    "action_ref": build_workpage_action_ref(
+                        action_id="workpage.schedule-v0.mark_sick_no_show",
+                        workpage_kind=SCHEDULE_WORKPAGE_KIND,
+                        workflow_run_id=workflow_run_id,
+                        artifact_version_id=artifact_version_id,
+                    ),
+                    "disabled_reason": preview_disabled_reason,
                 },
             ]
         )
@@ -4020,6 +4050,7 @@ def _schedule_heatmap_payload(
                         driver_id=person["driver_id"],
                         service_date=item["service_date"],
                         row=cell_map.get((person["driver_id"], item["service_date"])),
+                        bundle=bundle,
                         driver_preferences_projection=preferences_projection,
                     )
                     for item in service_dates
@@ -4173,10 +4204,16 @@ def _schedule_heatmap_cell_payload(
     driver_id: str,
     service_date: str,
     row: dict[str, Any] | None,
+    bundle: WeeklyScheduleControlBundle | None,
     driver_preferences_projection: Mapping[str, Any] | None,
 ) -> dict[str, Any]:
     preference_state = driver_preference_value_for_service_date(
         projection=driver_preferences_projection,
+        driver_id=driver_id,
+        service_date=service_date,
+    )
+    availability_metadata = _schedule_heatmap_availability_metadata(
+        bundle=bundle,
         driver_id=driver_id,
         service_date=service_date,
     )
@@ -4191,6 +4228,7 @@ def _schedule_heatmap_cell_payload(
             "planned_driver_day_state": None,
             "manual_override": False,
             "preference_state": preference_state,
+            **availability_metadata,
         }
     source_row = _require_mapping(row.get("row"), field_name="row")
     row_kind = str(row.get("row_kind") or "").strip() or None
@@ -4208,6 +4246,41 @@ def _schedule_heatmap_cell_payload(
         "planned_driver_day_state": planned_state or None,
         "manual_override": assignment_status == "manual_override",
         "preference_state": preference_state,
+        **availability_metadata,
+    }
+
+
+def _schedule_heatmap_availability_metadata(
+    *,
+    bundle: WeeklyScheduleControlBundle | None,
+    driver_id: str,
+    service_date: str,
+) -> dict[str, str | None]:
+    if bundle is None:
+        return {
+            "availability_state": None,
+            "availability_reason_code": None,
+            "availability_source_ref": None,
+        }
+    availability = bundle.availability_by_driver.get(driver_id)
+    if availability is None:
+        return {
+            "availability_state": "unknown",
+            "availability_reason_code": None,
+            "availability_source_ref": None,
+        }
+    for day_state in availability.daily_states:
+        if day_state.service_date != service_date:
+            continue
+        return {
+            "availability_state": str(day_state.normalized_state or day_state.state or "").strip() or "unknown",
+            "availability_reason_code": str(getattr(day_state, "reason_code", "") or "").strip() or None,
+            "availability_source_ref": str(day_state.source_ref or "").strip() or None,
+        }
+    return {
+        "availability_state": "unknown",
+        "availability_reason_code": None,
+        "availability_source_ref": None,
     }
 
 

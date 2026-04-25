@@ -1,11 +1,14 @@
 from __future__ import annotations
 
 import json
+from datetime import date, timedelta
 from typing import Any, Mapping, Sequence
 
 
 ROUTE_DEMAND_DATASET_KEY = "planning.route_slot_requirements.workbook"
 _STANDARD_BAND_KEYS = ("standard_early_slot_count", "standard_late_slot_count")
+_WORKPAGE_HORIZON_DAY_COUNT = 14
+_WEEK_DAY_COUNT = 7
 
 
 def project_route_demand_workbook(workbook_bytes: bytes) -> dict[str, Any]:
@@ -15,15 +18,18 @@ def project_route_demand_workbook(workbook_bytes: bytes) -> dict[str, Any]:
         payload.get("daily_demand_columns"),
         label="daily_demand_columns",
     )
+    daily_demand_rows = _normalize_daily_demand_horizon(
+        _decode_table_rows(
+            payload.get("daily_demand_rows"),
+            daily_demand_columns,
+            label="daily_demand_rows",
+        )
+    )
     return {
         "columns": columns,
         "rows": _decode_table_rows(payload.get("rows"), columns, label="rows"),
         "daily_demand_columns": daily_demand_columns,
-        "daily_demand_rows": _decode_table_rows(
-            payload.get("daily_demand_rows"),
-            daily_demand_columns,
-            label="daily_demand_rows",
-        ),
+        "daily_demand_rows": daily_demand_rows,
     }
 
 
@@ -39,10 +45,12 @@ def materialize_route_demand_workbook(
         label="daily_demand_columns",
     )
     base_rows = _decode_table_rows(base_payload.get("rows"), columns, label="rows")
-    base_daily_rows = _decode_table_rows(
-        base_payload.get("daily_demand_rows"),
-        daily_demand_columns,
-        label="daily_demand_rows",
+    base_daily_rows = _normalize_daily_demand_horizon(
+        _decode_table_rows(
+            base_payload.get("daily_demand_rows"),
+            daily_demand_columns,
+            label="daily_demand_rows",
+        )
     )
     submitted_daily_rows = _normalize_submitted_daily_demand_rows(daily_demand_rows)
     next_daily_rows = _validated_merged_daily_rows(
@@ -117,6 +125,40 @@ def _decode_table_rows(raw_rows: Any, columns: list[str], *, label: str) -> list
             )
         decoded.append({column: row[column_index] for column_index, column in enumerate(columns)})
     return decoded
+
+
+def _normalize_daily_demand_horizon(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    if len(rows) != _WEEK_DAY_COUNT:
+        return rows
+    service_dates: list[date] = []
+    for row in rows:
+        service_date = str(row.get("service_date") or "").strip()
+        try:
+            service_dates.append(date.fromisoformat(service_date))
+        except ValueError:
+            return rows
+
+    if service_dates != sorted(service_dates) or len(set(service_dates)) != len(service_dates):
+        return rows
+    if any(
+        current_date + timedelta(days=1) != next_date
+        for current_date, next_date in zip(service_dates, service_dates[1:])
+    ):
+        return rows
+
+    expanded_rows = [dict(row) for row in rows]
+    for row, service_date in zip(rows, service_dates):
+        copied_row = dict(row)
+        copied_row["service_date"] = (service_date + timedelta(days=_WEEK_DAY_COUNT)).isoformat()
+        if "source_kind" in copied_row:
+            copied_row["source_kind"] = "future_week_route_demand_seed"
+        if "source_message_id" in copied_row:
+            copied_row["source_message_id"] = "copied-current-week-route-demand-horizon"
+        if "change_kind" in copied_row:
+            copied_row["change_kind"] = "copied_from_current_week_horizon_seed"
+        expanded_rows.append(copied_row)
+
+    return expanded_rows[:_WORKPAGE_HORIZON_DAY_COUNT]
 
 
 def _normalize_submitted_daily_demand_rows(raw_rows: Any) -> list[dict[str, Any]]:

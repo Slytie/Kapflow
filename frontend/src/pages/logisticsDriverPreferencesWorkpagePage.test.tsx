@@ -263,7 +263,7 @@ describe("LogisticsDriverPreferencesWorkpagePage", () => {
     expect(screen.getByRole("button", { name: "Save snapshot" })).toBeEnabled();
   }, 30000);
 
-  it("adds an availability exception from the driver drawer without clearing unsaved grid edits", async () => {
+  it("adds an availability exception from the availability panel without clearing unsaved grid edits", async () => {
     const user = userEvent.setup();
     setFrontendOperatorContext();
     await workpagesRepository.createWorkpage(
@@ -289,14 +289,18 @@ describe("LogisticsDriverPreferencesWorkpagePage", () => {
     });
     expect(within(page).getByRole("button", { name: "Save snapshot" })).toBeEnabled();
 
-    await user.click(within(page).getAllByRole("button", { name: "Details" })[0]);
-    const drawer = within(page).getByTestId("driver-availability-exceptions-drawer");
-    await user.clear(within(drawer).getByLabelText("Start date"));
-    await user.type(within(drawer).getByLabelText("Start date"), "2026-03-24");
-    await user.clear(within(drawer).getByLabelText("End date"));
-    await user.type(within(drawer).getByLabelText("End date"), "2026-03-24");
-    await user.type(within(drawer).getByLabelText("Note"), "Family wedding");
-    await user.click(within(drawer).getByRole("button", { name: "Save exception" }));
+    const panel = within(page).getByTestId("driver-availability-exceptions-panel");
+    const grid = within(page).getByTestId("driver-preferences-grid");
+    expect(Boolean(panel.compareDocumentPosition(grid) & Node.DOCUMENT_POSITION_FOLLOWING)).toBe(
+      true
+    );
+    expect(within(panel).getByRole("combobox", { name: "Driver" })).toBeInTheDocument();
+    await user.clear(within(panel).getByLabelText("Start date"));
+    await user.type(within(panel).getByLabelText("Start date"), "2026-03-24");
+    await user.clear(within(panel).getByLabelText("End date"));
+    await user.type(within(panel).getByLabelText("End date"), "2026-03-24");
+    await user.type(within(panel).getByLabelText("Note"), "Family wedding");
+    await user.click(within(panel).getByRole("button", { name: "Save exception" }));
 
     await waitFor(() => {
       expect(mutationLog()).toContain(
@@ -304,8 +308,10 @@ describe("LogisticsDriverPreferencesWorkpagePage", () => {
       );
     });
     const refreshedPage = await screen.findByTestId("driver-preferences-artifact-workpage-page");
-    const refreshedDrawer = within(refreshedPage).getByTestId("driver-availability-exceptions-drawer");
-    expect(within(refreshedDrawer).getByText("Family wedding")).toBeInTheDocument();
+    const refreshedPanel = within(refreshedPage).getByTestId("driver-availability-exceptions-panel");
+    const approvedList = within(refreshedPanel).getByRole("list");
+    expect(within(refreshedPanel).getByText("Family wedding")).toBeInTheDocument();
+    expect(within(approvedList).getByText(/Abhiraj Singh/i)).toBeInTheDocument();
     expect(
       within(refreshedPage).getByRole("button", {
         name: /Abhiraj Singh on 2026-03-23: Prefer not to work/i

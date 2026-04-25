@@ -14,6 +14,7 @@ from onetruth.api.routes.workpages import (
     add_workflow_run_driver_availability_exception_endpoint,
     create_workflow_run_driver_preferences_snapshot_endpoint,
     create_workflow_run_eod_draft_endpoint,
+    mark_schedule_sick_no_show_endpoint,
     preview_workflow_run_artifact_workpage_endpoint,
     submit_workflow_run_artifact_workpage_endpoint,
     workflow_run_artifact_workpage_endpoint,
@@ -112,6 +113,21 @@ def _dispatch_workflow_run_artifact_preview(execution, raw_value: str):
     )
 
 
+def _dispatch_schedule_sick_no_show(execution, raw_value: str):
+    workflow_run_id, workpage_kind, artifact_version_id = _split_workflow_run_artifact_path(
+        raw_value
+    )
+    return mark_schedule_sick_no_show_endpoint(
+        require_connection(execution.connection),
+        context=require_request_context(execution.context),
+        db_url=execution.db_url,
+        workflow_run_id=workflow_run_id,
+        workpage_kind=workpage_kind,
+        artifact_version_id=artifact_version_id,
+        payload=_require_payload(execution.payload),
+    )
+
+
 WORKPAGE_ROUTE_SPECS: tuple[RouteSpec, ...] = (
     RouteSpec(
         name="workpages.workflow_run.artifact.preview",
@@ -161,6 +177,23 @@ WORKPAGE_ROUTE_SPECS: tuple[RouteSpec, ...] = (
         dispatch=lambda execution, params: _dispatch_workflow_run_artifact_submit(
             execution,
             params["workflow_run_artifact_submit"],
+        ),
+    ),
+    RouteSpec(
+        name="workpages.workflow_run.schedule.sick_no_show",
+        method="POST",
+        pattern=_param(
+            "/api/v1/workpages/workflow-runs/",
+            param_name="workflow_run_schedule_sick_no_show",
+            suffix="/sick-no-show",
+            allow_slash=True,
+            required_substring="/artifacts/",
+        ),
+        body_policy=JSON_COMMAND_BODY,
+        needs_page=False,
+        dispatch=lambda execution, params: _dispatch_schedule_sick_no_show(
+            execution,
+            params["workflow_run_schedule_sick_no_show"],
         ),
     ),
     RouteSpec(

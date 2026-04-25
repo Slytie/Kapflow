@@ -228,6 +228,8 @@ def _public_command_scope_key(command_name: str, payload: dict[str, Any]) -> str
         )
     if command_name == "workpages.artifact.submit":
         return _command_scope_key((payload.get("artifact_version_id"),))
+    if command_name == "workpages.schedule.sick_no_show":
+        return _command_scope_key((payload.get("artifact_version_id"),))
     if command_name == "artifacts.seed-corpus":
         return _command_scope_key(
             (

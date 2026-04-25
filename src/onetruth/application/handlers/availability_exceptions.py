@@ -124,99 +124,22 @@ def add_driver_availability_exception_command(
     )
 
     def _operation() -> dict[str, Any]:
-        workflow_artifacts = list_artifact_versions_for_workflow_run(connection, workflow_run_id)
-        driver_details = _require_driver_details(
-            workflow_artifacts,
+        return create_approved_driver_availability_exception(
+            connection,
+            workflow_run=workflow_run,
+            storage_root=storage_root,
+            tenant_id=tenant_id,
+            domain_id=domain_id,
+            actor_id=actor_id,
+            actor_type=actor_type,
             driver_id=driver_id,
-        )
-        service_dates = date_range_inclusive(start_date, end_date)
-        affected_weekly_runs = _affected_weekly_runs(
-            connection,
-            tenant_id=tenant_id,
-            domain_id=domain_id,
-            service_dates=service_dates,
-        )
-        affected_planning_week_ids = [
-            str(row.get("partition_key") or "")
-            for row in affected_weekly_runs
-            if str(row.get("partition_key") or "").strip()
-        ]
-        exception_id = f"ae-{uuid4()}"
-        availability_request_workflow_run_id = f"wr-{uuid4()}"
-        availability_partition_key = _availability_request_partition_key(
             start_date=start_date,
-            exception_id=exception_id,
-        )
-        _create_availability_request_run(
-            connection,
-            workflow_run_id=availability_request_workflow_run_id,
-            tenant_id=tenant_id,
-            domain_id=domain_id,
-            partition_key=availability_partition_key,
-            logical_date=start_date.isoformat(),
-            activation_key=f"driver-availability-exception:{exception_id}",
-            actor_id=actor_id,
-            actor_type=actor_type,
-            event_idempotency=_receipt_event_idempotency_key(
-                receipt,
-                "availability-exception.workflow.run.created",
-            ),
-        )
-
-        base_exception_item = {
-            "exception_id": exception_id,
-            "driver_id": driver_id,
-            "driver_name": driver_details["driver_name"],
-            "start_date": start_date.isoformat(),
-            "end_date": end_date.isoformat(),
-            "reason_code": reason_code,
-            "reason_note": reason_note,
-            "status": "approved",
-            "source_workflow_run_id": availability_request_workflow_run_id,
-            "source_artifact_version_id": None,
-            "affected_planning_week_ids": affected_planning_week_ids,
-        }
-        artifacts = _create_availability_request_artifacts(
-            connection,
-            storage_root=storage_root,
-            availability_request_workflow_run_id=availability_request_workflow_run_id,
-            source_weekly_workflow_run_id=workflow_run_id,
-            exception_item=base_exception_item,
-            driver_details=driver_details,
-            service_dates=service_dates,
-            actor_id=actor_id,
-            actor_type=actor_type,
+            end_date=end_date,
+            reason_code=reason_code,
+            reason_note=reason_note,
+            receipt=receipt,
             event_idempotency_prefix="availability-exception",
-            receipt=receipt,
         )
-        approved_plan_artifact_version_id = str(
-            artifacts["approved_plan"]["artifact_version_id"]
-        )
-        exception_item = {
-            **base_exception_item,
-            "source_artifact_version_id": approved_plan_artifact_version_id,
-        }
-        weekly_artifacts = _materialize_exception_for_weekly_runs(
-            connection,
-            storage_root=storage_root,
-            weekly_runs=affected_weekly_runs,
-            exception_items=[exception_item],
-            actor_id=actor_id,
-            actor_type=actor_type,
-            receipt=receipt,
-        )
-        return {
-            "created": {
-                "exception": exception_item,
-                "availability_request_workflow_run_id": availability_request_workflow_run_id,
-                "source_artifact_version_id": approved_plan_artifact_version_id,
-                "weekly_approved_availability_artifact_version_ids": [
-                    str(item["artifact_version_id"]) for item in weekly_artifacts
-                ],
-                "affected_planning_week_ids": affected_planning_week_ids,
-                "affected_service_dates": service_dates,
-            }
-        }
 
     result, replay = _execute_with_command_receipt(
         connection,
@@ -229,6 +152,120 @@ def add_driver_availability_exception_command(
         replay=replay,
         include_receipt=include_receipt,
     )
+
+
+def create_approved_driver_availability_exception(
+    connection: sqlite3.Connection,
+    *,
+    workflow_run: Mapping[str, Any],
+    storage_root: Path,
+    tenant_id: str,
+    domain_id: str,
+    actor_id: str,
+    actor_type: str,
+    driver_id: str,
+    start_date: date,
+    end_date: date,
+    reason_code: str,
+    reason_note: str,
+    receipt: Any,
+    event_idempotency_prefix: str,
+) -> dict[str, Any]:
+    workflow_run_id = _require_non_empty_string(
+        workflow_run.get("workflow_run_id"),
+        field_name="workflow_run_id",
+    )
+    workflow_artifacts = list_artifact_versions_for_workflow_run(connection, workflow_run_id)
+    driver_details = _require_driver_details(
+        workflow_artifacts,
+        driver_id=driver_id,
+    )
+    service_dates = date_range_inclusive(start_date, end_date)
+    affected_weekly_runs = _affected_weekly_runs(
+        connection,
+        tenant_id=tenant_id,
+        domain_id=domain_id,
+        service_dates=service_dates,
+    )
+    affected_planning_week_ids = [
+        str(row.get("partition_key") or "")
+        for row in affected_weekly_runs
+        if str(row.get("partition_key") or "").strip()
+    ]
+    exception_id = f"ae-{uuid4()}"
+    availability_request_workflow_run_id = f"wr-{uuid4()}"
+    availability_partition_key = _availability_request_partition_key(
+        start_date=start_date,
+        exception_id=exception_id,
+    )
+    _create_availability_request_run(
+        connection,
+        workflow_run_id=availability_request_workflow_run_id,
+        tenant_id=tenant_id,
+        domain_id=domain_id,
+        partition_key=availability_partition_key,
+        logical_date=start_date.isoformat(),
+        activation_key=f"driver-availability-exception:{exception_id}",
+        actor_id=actor_id,
+        actor_type=actor_type,
+        event_idempotency=_receipt_event_idempotency_key(
+            receipt,
+            f"{event_idempotency_prefix}.workflow.run.created",
+        ),
+    )
+
+    base_exception_item = {
+        "exception_id": exception_id,
+        "driver_id": driver_id,
+        "driver_name": driver_details["driver_name"],
+        "start_date": start_date.isoformat(),
+        "end_date": end_date.isoformat(),
+        "reason_code": reason_code,
+        "reason_note": reason_note,
+        "status": "approved",
+        "source_workflow_run_id": availability_request_workflow_run_id,
+        "source_artifact_version_id": None,
+        "affected_planning_week_ids": affected_planning_week_ids,
+    }
+    artifacts = _create_availability_request_artifacts(
+        connection,
+        storage_root=storage_root,
+        availability_request_workflow_run_id=availability_request_workflow_run_id,
+        source_weekly_workflow_run_id=workflow_run_id,
+        exception_item=base_exception_item,
+        driver_details=driver_details,
+        service_dates=service_dates,
+        actor_id=actor_id,
+        actor_type=actor_type,
+        event_idempotency_prefix=event_idempotency_prefix,
+        receipt=receipt,
+    )
+    approved_plan_artifact_version_id = str(artifacts["approved_plan"]["artifact_version_id"])
+    exception_item = {
+        **base_exception_item,
+        "source_artifact_version_id": approved_plan_artifact_version_id,
+    }
+    weekly_artifacts = _materialize_exception_for_weekly_runs(
+        connection,
+        storage_root=storage_root,
+        weekly_runs=affected_weekly_runs,
+        exception_items=[exception_item],
+        actor_id=actor_id,
+        actor_type=actor_type,
+        receipt=receipt,
+    )
+    return {
+        "created": {
+            "exception": exception_item,
+            "availability_request_workflow_run_id": availability_request_workflow_run_id,
+            "source_artifact_version_id": approved_plan_artifact_version_id,
+            "weekly_approved_availability_artifact_version_ids": [
+                str(item["artifact_version_id"]) for item in weekly_artifacts
+            ],
+            "affected_planning_week_ids": affected_planning_week_ids,
+            "affected_service_dates": service_dates,
+        }
+    }
 
 
 def materialize_weekly_approved_availability_exceptions(

@@ -6,12 +6,12 @@ from pathlib import Path
 import sqlite3
 
 from onetruth.application.services.logistics_local_demo import (
+    UPLOAD_PACK_ROOT,
     seed_weekly_first_logistics_local_demo,
 )
 from onetruth.application.services.logistics_weekly_agent_pilot import (
     _APPROVED_AVAILABILITY_METADATA,
     _DRIVER_CAPABILITIES_METADATA,
-    _ROUTE_SLOT_REQUIREMENTS_METADATA,
 )
 from onetruth.infrastructure.db.session import open_sqlite_connection
 from tests.runtime.api.test_weekly_stage04_openai_agent_api import (
@@ -45,6 +45,10 @@ def _client(*, db_url: str) -> RuntimeApiClient:
         actor_type="human",
         actor_roles=["schedule_planner", "dispatch_supervisor", "operations_manager"],
     )
+
+
+def _upload_pack_json(relative_path: str) -> dict[str, object]:
+    return json.loads((UPLOAD_PACK_ROOT / relative_path).read_text(encoding="utf-8"))
 
 
 def _claim_human_task(client: RuntimeApiClient, human_task_id: str, *, idempotency_key: str) -> None:
@@ -196,8 +200,9 @@ def test_weekly_first_local_demo_seed_smoke_path_walks_weekly_live_and_reporting
         weekly_intake_task_id,
         idempotency_key="api:local-demo:weekly-intake-claim",
     )
+    route_slot_requirements = _upload_pack_json("weekly/weekly_route_slot_requirements.xlsx")
     for artifact_kind, payload in (
-        ("planning.route_slot_requirements.workbook", _ROUTE_SLOT_REQUIREMENTS_METADATA),
+        ("planning.route_slot_requirements.workbook", route_slot_requirements),
         ("planning.approved_availability.workbook", _APPROVED_AVAILABILITY_METADATA),
         ("planning.driver_capabilities.workbook", _DRIVER_CAPABILITIES_METADATA),
     ):
@@ -217,6 +222,19 @@ def test_weekly_first_local_demo_seed_smoke_path_walks_weekly_live_and_reporting
         },
     )
     assert intake_complete.status_code == 200, intake_complete.payload
+
+    route_demand = client.get(
+        f"/api/v1/workpages/workflow-runs/{weekly_run_id}/route-demand-v0"
+    )
+    assert route_demand.status_code == 200, route_demand.payload
+    route_demand_payload = route_demand.payload
+    day_cards = route_demand_payload["calculations"]["day_cards"]
+    assert len(day_cards) == 14
+    assert day_cards[0]["service_date"] == "2026-03-22"
+    assert day_cards[-1]["service_date"] == "2026-04-04"
+    assert route_demand_payload["workpage"]["summary"]["service_day_count"] == 14
+    assert route_demand_payload["workpage"]["summary"]["planned_route_total"] == 268
+
     weekly_build_task_id = str(intake_complete.payload["result"]["spawned_children"][0]["human_task_id"])
 
     _claim_human_task(

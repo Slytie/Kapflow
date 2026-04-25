@@ -36,6 +36,50 @@
   gap: 18px;
 }
 
+.route-demand-horizon-summary {
+  align-items: center;
+  background: rgba(255, 255, 255, 0.78);
+  border: 1px solid rgba(126, 137, 128, 0.2);
+  border-radius: 8px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  justify-content: space-between;
+  margin-bottom: 18px;
+  padding: 10px 12px;
+}
+
+.route-demand-horizon-summary strong,
+.route-demand-week-group__header h3 {
+  color: #232824;
+  font-family: var(--font-display);
+  font-size: 0.95rem;
+  font-weight: 800;
+  line-height: 1.25;
+  margin: 0;
+}
+
+.route-demand-horizon-summary span,
+.route-demand-week-group__header span {
+  color: rgba(83, 91, 85, 0.78);
+  font-size: 0.9rem;
+  line-height: 1.4;
+}
+
+.route-demand-week-groups {
+  display: grid;
+  gap: 22px;
+}
+
+.route-demand-week-group__header {
+  align-items: baseline;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 12px;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
 .route-demand-day-card {
   border-radius: 22px;
   border: 1px solid rgba(175, 179, 174, 0.18);
@@ -476,6 +520,12 @@
 .action-btn--negative {
   border-color: #e4a0a0;
   color: var(--danger);
+}
+
+.action-btn--danger {
+  border-color: rgba(165, 54, 50, 0.72);
+  background: #a53632;
+  color: #fff;
 }
 
 .action-btn:disabled,
@@ -1803,6 +1853,11 @@
   line-height: 1.5;
 }
 
+.schedule-heatmap__cell-wrap {
+  position: relative;
+  min-width: 100%;
+}
+
 .schedule-heatmap__cell {
   width: 100%;
   min-height: 56px;
@@ -1854,6 +1909,14 @@
 .schedule-heatmap__cell--on_call {
   background: linear-gradient(180deg, rgba(207, 226, 250, 0.98), rgba(96, 146, 205, 0.92));
   color: #183e68;
+}
+
+.schedule-heatmap__cell--sick-no-show {
+  background: linear-gradient(180deg, rgba(255, 228, 226, 0.98), rgba(173, 58, 54, 0.92));
+  color: #5c1512;
+  box-shadow:
+    inset 0 0 0 2px rgba(255, 255, 255, 0.76),
+    inset 0 0 0 1px rgba(143, 32, 30, 0.28);
 }
 
 .schedule-heatmap__cell--manual {
@@ -1937,6 +2000,55 @@
 
 .schedule-heatmap__preference-bar--unset {
   background: linear-gradient(90deg, rgba(134, 140, 134, 0.34), rgba(189, 194, 188, 0.52));
+}
+
+.schedule-heatmap__sick-button {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  max-width: calc(100% - 8px);
+  border: 1px solid rgba(136, 35, 32, 0.34);
+  border-radius: 999px;
+  background: rgba(255, 246, 245, 0.92);
+  color: #8e2824;
+  cursor: pointer;
+  font-size: 8px;
+  font-weight: 900;
+  letter-spacing: 0.06em;
+  line-height: 1;
+  padding: 3px 5px;
+  text-transform: uppercase;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(-2px);
+  transition:
+    opacity 140ms ease,
+    transform 140ms ease,
+    background 140ms ease;
+}
+
+.schedule-heatmap__cell-wrap:hover .schedule-heatmap__sick-button:not(:disabled),
+.schedule-heatmap__cell-wrap:focus-within .schedule-heatmap__sick-button:not(:disabled),
+.schedule-heatmap__sick-button:focus-visible {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateY(0);
+}
+
+.schedule-heatmap__sick-button:hover:not(:disabled) {
+  background: #a53632;
+  color: #fff;
+}
+
+.schedule-heatmap__sick-button:disabled {
+  cursor: not-allowed;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.schedule-heatmap__cell--sick-no-show + .schedule-heatmap__sick-button {
+  background: #8f2421;
+  color: #fff;
 }
 
 .schedule-heatmap__date-header--selected {
@@ -2166,46 +2278,26 @@
   opacity: 1;
 }
 
-.driver-preferences-heatmap__details-button {
-  align-self: flex-start;
-  border: 1px solid rgba(89, 98, 109, 0.24);
-  border-radius: 6px;
-  background: #ffffff;
-  color: #2f3430;
-  cursor: pointer;
-  font: inherit;
-  font-size: 0.78rem;
-  font-weight: 700;
-  line-height: 1;
-  padding: 6px 8px;
-}
-
-.driver-preferences-heatmap__details-button[aria-pressed="true"] {
-  border-color: rgba(62, 120, 138, 0.72);
-  background: #e6f3f5;
-  color: #164d5a;
-}
-
-.driver-availability-drawer__layout {
+.driver-availability-panel__layout {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(260px, 360px);
   gap: 18px;
 }
 
-.driver-availability-drawer__list,
-.driver-availability-drawer__form {
+.driver-availability-panel__list,
+.driver-availability-panel__form {
   display: flex;
   flex-direction: column;
   gap: 12px;
 }
 
-.driver-availability-drawer h3 {
+.driver-availability-panel h3 {
   margin: 0;
   color: #2f3430;
   font-size: 0.98rem;
 }
 
-.driver-availability-drawer__list ul {
+.driver-availability-panel__list ul {
   display: grid;
   gap: 10px;
   list-style: none;
@@ -2213,33 +2305,39 @@
   padding: 0;
 }
 
-.driver-availability-drawer__list li {
+.driver-availability-panel__list li {
   border: 1px solid rgba(89, 98, 109, 0.16);
   border-radius: 8px;
   background: #ffffff;
   padding: 10px;
 }
 
-.driver-availability-drawer__list li strong,
-.driver-availability-drawer__list li span,
-.driver-availability-drawer__list li p {
+.driver-availability-panel__list li strong,
+.driver-availability-panel__list li span,
+.driver-availability-panel__list li p {
   display: block;
 }
 
-.driver-availability-drawer__list li span {
+.driver-availability-panel__list li span {
   margin-top: 4px;
   color: #5c4816;
   font-weight: 700;
 }
 
-.driver-availability-drawer__list li p,
-.driver-availability-drawer__hint {
+.driver-availability-panel__list li p,
+.driver-availability-panel__hint {
   margin: 6px 0 0;
   color: #686f69;
   font-size: 0.88rem;
 }
 
-.driver-availability-drawer__form label {
+.driver-availability-panel__form-grid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.driver-availability-panel__form label {
   display: grid;
   gap: 6px;
   color: #4d554f;
@@ -2247,9 +2345,9 @@
   font-weight: 700;
 }
 
-.driver-availability-drawer__form input,
-.driver-availability-drawer__form select,
-.driver-availability-drawer__form textarea {
+.driver-availability-panel__form input,
+.driver-availability-panel__form select,
+.driver-availability-panel__form textarea {
   width: 100%;
   border: 1px solid rgba(89, 98, 109, 0.22);
   border-radius: 8px;
@@ -2260,7 +2358,8 @@
 }
 
 @media (max-width: 760px) {
-  .driver-availability-drawer__layout {
+  .driver-availability-panel__layout,
+  .driver-availability-panel__form-grid {
     grid-template-columns: 1fr;
   }
 }
@@ -2642,6 +2741,68 @@
 
 .route-demand-quick-edit-modal .workpage-page__hero {
   background: rgba(255, 255, 255, 0.72);
+}
+
+.schedule-sick-no-show-dialog-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 120;
+  display: grid;
+  place-items: center;
+  background: rgba(47, 52, 48, 0.42);
+  padding: 24px;
+}
+
+.schedule-sick-no-show-dialog {
+  width: min(520px, 100%);
+  border: 1px solid rgba(143, 32, 30, 0.18);
+  border-radius: 22px;
+  background: linear-gradient(180deg, #fffaf7, #fff);
+  box-shadow: 0 30px 80px rgba(47, 52, 48, 0.22);
+  display: grid;
+  gap: 16px;
+  padding: 22px;
+}
+
+.schedule-sick-no-show-dialog header,
+.schedule-sick-no-show-dialog label {
+  display: grid;
+  gap: 8px;
+}
+
+.schedule-sick-no-show-dialog h2,
+.schedule-sick-no-show-dialog p {
+  margin: 0;
+}
+
+.schedule-sick-no-show-dialog h2 {
+  color: #2f3430;
+  font-family: var(--font-display);
+  font-size: clamp(1.4rem, 3vw, 2rem);
+}
+
+.schedule-sick-no-show-dialog p {
+  color: #5e6560;
+  line-height: 1.5;
+}
+
+.schedule-sick-no-show-dialog label span {
+  color: #4c5550;
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.schedule-sick-no-show-dialog textarea {
+  width: 100%;
+  border: 1px solid rgba(89, 98, 109, 0.22);
+  border-radius: 12px;
+  background: #fff;
+  color: #2f3430;
+  font: inherit;
+  padding: 10px 12px;
+  resize: vertical;
 }
 
 .schedule-draft-history-dialog-backdrop {

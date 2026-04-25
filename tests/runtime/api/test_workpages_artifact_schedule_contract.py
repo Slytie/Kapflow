@@ -177,6 +177,10 @@ def _preview_path(workflow_run_id: str, artifact_version_id: str) -> str:
     return f"{_artifact_path(workflow_run_id, artifact_version_id)}/preview"
 
 
+def _sick_no_show_path(workflow_run_id: str, artifact_version_id: str) -> str:
+    return f"{_artifact_path(workflow_run_id, artifact_version_id)}/sick-no-show"
+
+
 def _load_artifact_version(
     tmp_path: Path,
     *,
@@ -506,6 +510,25 @@ def test_artifact_backed_schedule_workpage_returns_projected_contract(tmp_path: 
         ),
         "action_ref": _action_ref(
             action_id="workpage.schedule-v0.save_draft",
+            workpage_kind="schedule-v0",
+            workflow_run_id=workflow_run_id,
+            artifact_version_id=artifact_version_id,
+        ),
+        "disabled_reason": None,
+    }
+    assert _action_by_id(actions, "workpage.schedule-v0.mark_sick_no_show") == {
+        "action_id": "workpage.schedule-v0.mark_sick_no_show",
+        "kind": "mark_sick_no_show",
+        "label": "Mark Sick / No Show",
+        "state": "available",
+        "workpage_kind": "schedule-v0",
+        "artifact_version_id": artifact_version_id,
+        "sick_no_show_path": (
+            f"/api/v1/workpages/workflow-runs/{workflow_run_id}/"
+            f"schedule-v0/artifacts/{artifact_version_id}/sick-no-show"
+        ),
+        "action_ref": _action_ref(
+            action_id="workpage.schedule-v0.mark_sick_no_show",
             workpage_kind="schedule-v0",
             workflow_run_id=workflow_run_id,
             artifact_version_id=artifact_version_id,
@@ -1180,6 +1203,125 @@ def test_schedule_artifact_submit_creates_superseding_version_and_replays_idempo
     ]
 
 
+def test_schedule_sick_no_show_creates_availability_exception_and_successor_draft(
+    tmp_path: Path,
+) -> None:
+    seeded = seed_actual_ops_weekly_schedule_run_with_stage04_outputs(
+        db_url=_db_url(tmp_path),
+        tenant_id="tenant-a",
+        domain_id="domain-x",
+        run_tag="api:workpages:artifact-schedule:sick-no-show",
+    )
+    workflow_run_id = str(seeded["workflow_run_id"])
+    artifact_version_id = str(seeded["stage04_outputs"]["draft_workbook"]["artifact_version_id"])
+    client = _client(tmp_path)
+
+    base = client.get(_artifact_path(workflow_run_id, artifact_version_id)).payload
+    assignment_rows = deepcopy(
+        next(
+            section["rows"]
+            for section in base["workpage"]["sections"]
+            if section.get("table_id") == "assignment_rows"
+        )
+    )
+    reserve_rows = deepcopy(
+        next(
+            section["rows"]
+            for section in base["workpage"]["sections"]
+            if section.get("table_id") == "reserve_rows"
+        )
+    )
+    selected_service_date = str(base["calculations"]["selected_day"]["service_date"])
+    target_row = next(
+        (
+            row
+            for row in assignment_rows
+            if str(row.get("service_date") or "") == selected_service_date
+            and str(row.get("assigned_driver_id") or "")
+        ),
+        next(row for row in assignment_rows if str(row.get("assigned_driver_id") or "")),
+    )
+    driver_id = str(target_row["assigned_driver_id"])
+    service_date = str(target_row["service_date"])
+    route_slot_id = str(target_row["route_slot_id"])
+    action = _action_by_id(base["actions"], "workpage.schedule-v0.mark_sick_no_show")
+
+    payload = {
+        "driver_id": driver_id,
+        "service_date": service_date,
+        "reason_note": "Called in during demo",
+        "rows": assignment_rows,
+        "reserve_rows": reserve_rows,
+        "action_ref": action["action_ref"],
+        "idempotency_key": "api:workpages:artifact-schedule:sick-no-show:001",
+    }
+    first = client.post(
+        _sick_no_show_path(workflow_run_id, artifact_version_id),
+        payload=payload,
+    )
+    second = client.post(
+        _sick_no_show_path(workflow_run_id, artifact_version_id),
+        payload=payload,
+    )
+    assert first.status_code == 200, first.payload
+    assert second.status_code == 200, second.payload
+    assert second.payload == first.payload
+
+    submitted = first.payload["submitted"]
+    submitted_artifact_version_id = str(submitted["artifact_version_id"])
+    assert submitted["supersedes_artifact_version_id"] == artifact_version_id
+    assert first.payload["sick_no_show"]["driver_id"] == driver_id
+    assert first.payload["sick_no_show"]["service_date"] == service_date
+    assert first.payload["sick_no_show"]["reason_code"] == "sick_no_show"
+    assert first.payload["sick_no_show"]["cleared_assignment_count"] >= 1
+
+    approved_availability_artifact = _load_artifact_version(
+        tmp_path,
+        artifact_version_id=str(
+            first.payload["sick_no_show"]["approved_availability_artifact_version_id"]
+        ),
+    )
+    metadata = approved_availability_artifact["metadata_json"]
+    columns = list(metadata["columns"])
+    rows = [dict(zip(columns, row, strict=False)) for row in metadata["rows"]]
+    affected_rows = [
+        row
+        for row in rows
+        if row.get("driver_id") == driver_id and row.get("service_date") == service_date
+    ]
+    assert affected_rows
+    assert affected_rows[-1]["availability_state"] == "CANNOT"
+    assert affected_rows[-1]["locked_by_manager"] == "yes"
+    assert affected_rows[-1]["reason_code"] == "sick_no_show"
+
+    refreshed = client.get(_artifact_path(workflow_run_id, submitted_artifact_version_id))
+    assert refreshed.status_code == 200, refreshed.payload
+    refreshed_assignment_rows = next(
+        section["rows"]
+        for section in refreshed.payload["workpage"]["sections"]
+        if section.get("table_id") == "assignment_rows"
+    )
+    cleared_route = next(
+        row for row in refreshed_assignment_rows if str(row.get("route_slot_id") or "") == route_slot_id
+    )
+    assert cleared_route["assigned_driver_id"] == ""
+    assert cleared_route["assignment_status"] == "manual_override"
+
+    heatmap = next(
+        section
+        for section in refreshed.payload["workpage"]["sections"]
+        if section.get("kind") == "schedule_heatmap"
+    )
+    person = next(person for person in heatmap["people"] if person["driver_id"] == driver_id)
+    sick_cell = next(cell for cell in person["cells"] if cell["service_date"] == service_date)
+    assert sick_cell["state"] == "empty"
+    assert sick_cell["availability_state"] == "approved_unavailable"
+    assert sick_cell["availability_reason_code"] == "sick_no_show"
+    assert str(sick_cell["availability_source_ref"]).startswith("availability_exception:")
+    if service_date == selected_service_date:
+        assert driver_id not in refreshed.payload["calculations"]["selected_day"]["available_driver_ids"]
+
+
 def test_schedule_artifact_submit_links_response_to_supported_human_task_surface(
     tmp_path: Path,
 ) -> None:
@@ -1513,6 +1655,22 @@ def test_schedule_artifact_hard_dependency_drift_surfaces_and_blocks_save(
         ),
         "disabled_reason": "dependency_drift_detected",
     }
+    assert _action_by_id(actions, "workpage.schedule-v0.mark_sick_no_show") == {
+        "action_id": "workpage.schedule-v0.mark_sick_no_show",
+        "kind": "mark_sick_no_show",
+        "label": "Mark Sick / No Show",
+        "state": "available",
+        "workpage_kind": "schedule-v0",
+        "artifact_version_id": artifact_version_id,
+        "sick_no_show_path": _sick_no_show_path(workflow_run_id, artifact_version_id),
+        "action_ref": _action_ref(
+            action_id="workpage.schedule-v0.mark_sick_no_show",
+            workpage_kind="schedule-v0",
+            workflow_run_id=workflow_run_id,
+            artifact_version_id=artifact_version_id,
+        ),
+        "disabled_reason": None,
+    }
     assert _action_by_id(actions, "workpage.route-demand-v0.open_latest")["state"] == "available"
     assert _action_by_id(actions, "workpage.driver-preferences-v0.create_snapshot")["state"] == "available"
 
@@ -1538,6 +1696,48 @@ def test_schedule_artifact_hard_dependency_drift_surfaces_and_blocks_save(
     )
     assert denied.status_code == 400
     assert denied.payload["error"]["code"] == "dependency_drift_detected"
+
+    target_row = next(
+        row
+        for row in assignment_rows
+        if str(row.get("assigned_driver_id") or "")
+    )
+    sick_response = client.post(
+        _sick_no_show_path(workflow_run_id, artifact_version_id),
+        payload={
+            "driver_id": str(target_row["assigned_driver_id"]),
+            "service_date": str(target_row["service_date"]),
+            "rows": assignment_rows,
+            "reserve_rows": reserve_rows,
+            "action_ref": _action_ref(
+                action_id="workpage.schedule-v0.mark_sick_no_show",
+                workpage_kind="schedule-v0",
+                workflow_run_id=workflow_run_id,
+                artifact_version_id=artifact_version_id,
+            ),
+            "idempotency_key": "api:workpages:artifact-schedule:dependency-drift:sick-no-show",
+        },
+    )
+    assert sick_response.status_code == 200, sick_response.payload
+    successor_payload = client.get(
+        _artifact_path(
+            workflow_run_id,
+            str(sick_response.payload["submitted"]["artifact_version_id"]),
+        )
+    ).payload
+    heatmap = next(
+        section
+        for section in successor_payload["workpage"]["sections"]
+        if section.get("kind") == "schedule_heatmap"
+    )
+    sick_cell = next(
+        cell
+        for person in heatmap["people"]
+        if person["driver_id"] == str(target_row["assigned_driver_id"])
+        for cell in person["cells"]
+        if cell["service_date"] == str(target_row["service_date"])
+    )
+    assert sick_cell["availability_reason_code"] == "sick_no_show"
 
 
 def test_schedule_artifact_without_pinned_manifest_remains_readable_but_blocks_preview_and_save(

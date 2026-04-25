@@ -272,7 +272,7 @@ describe("LogisticsScheduleWorkpagePage", () => {
     });
     await user.click(screen.getByRole("button", { name: "Edit weekly schedule" }));
 
-    const dialog = await screen.findByRole("dialog", { name: "Edit weekly schedule" });
+    const dialog = await screen.findByRole("dialog", { name: "Edit Weekly Schedule" });
     expect(dialog).toHaveClass("schedule-quick-edit-modal");
     const editor = await within(dialog).findByTestId("schedule-quick-edit-editor");
     expect(within(editor).getByRole("heading", { name: "Weekly Schedule Draft" })).toBeInTheDocument();

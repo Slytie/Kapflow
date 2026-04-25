@@ -38,6 +38,20 @@ interface ArmedCell {
   rowIndex: number;
 }
 
+interface AvailabilityCellState {
+  state: string | null;
+  reasonCode: string | null;
+  sourceRef: string | null;
+}
+
+export interface ScheduleSickNoShowTarget {
+  driverId: string;
+  driverName: string;
+  serviceDate: string;
+  serviceDateLabel: string;
+  currentState: "assigned" | "on_call" | "empty";
+}
+
 function asText(value: unknown): string {
   return typeof value === "string" ? value.trim() : String(value ?? "").trim();
 }
@@ -165,6 +179,22 @@ function buildPreferenceStateMap(
   return stateMap;
 }
 
+function buildAvailabilityStateMap(
+  people: WorkpageScheduleHeatmapPerson[]
+): Map<string, AvailabilityCellState> {
+  const stateMap = new Map<string, AvailabilityCellState>();
+  for (const person of people) {
+    for (const cell of person.cells) {
+      stateMap.set(`${cell.service_date}:${person.driver_id}`, {
+        state: cell.availability_state ?? null,
+        reasonCode: cell.availability_reason_code ?? null,
+        sourceRef: cell.availability_source_ref ?? null
+      });
+    }
+  }
+  return stateMap;
+}
+
 function cloneRows(rows: WorkpageTableRow[]): WorkpageTableRow[] {
   return rows.map((row) => ({ ...row }));
 }
@@ -239,6 +269,10 @@ function formatPreferenceStateLabel(state: DriverPreferenceState): string {
   return "Unset";
 }
 
+function isSickNoShowAvailability(availability: AvailabilityCellState | null | undefined): boolean {
+  return availability?.reasonCode === "sick_no_show";
+}
+
 function pillToneForState(state: string | null | undefined): string {
   if (state === "pass" || state === "available") {
     return "success";
@@ -263,7 +297,10 @@ export function ScheduleHeatmapEditor({
   driverMetrics = [],
   topBarDays = [],
   density = "default",
-  headerExtras = null
+  headerExtras = null,
+  onMarkSickNoShow,
+  sickNoShowDisabled = false,
+  sickNoShowPendingKey = null
 }: {
   section: WorkpageScheduleHeatmapSection;
   assignmentRows: WorkpageTableRow[];
@@ -276,6 +313,9 @@ export function ScheduleHeatmapEditor({
   topBarDays?: WorkpageScheduleCalculationTopBarDay[];
   density?: "default" | "compact";
   headerExtras?: ReactNode;
+  onMarkSickNoShow?: (target: ScheduleSickNoShowTarget) => void;
+  sickNoShowDisabled?: boolean;
+  sickNoShowPendingKey?: string | null;
 }): JSX.Element {
   const [armedCell, setArmedCell] = useState<ArmedCell | null>(null);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
@@ -294,6 +334,7 @@ export function ScheduleHeatmapEditor({
     [assignmentRows, reserveRows]
   );
   const preferenceStateByCell = useMemo(() => buildPreferenceStateMap(people), [people]);
+  const availabilityStateByCell = useMemo(() => buildAvailabilityStateMap(people), [people]);
   const driverMetricById = useMemo(
     () => new Map(driverMetrics.map((metric) => [metric.driver_id, metric])),
     [driverMetrics]
@@ -535,34 +576,44 @@ export function ScheduleHeatmapEditor({
                     )}
                   </td>
                   {serviceDates.map((serviceDate) => {
-                    const cell = cellMap.get(`${serviceDate.service_date}:${person.driver_id}`) ?? null;
+                    const cellKey = `${serviceDate.service_date}:${person.driver_id}`;
+                    const cell = cellMap.get(cellKey) ?? null;
                     const preferenceState =
-                      preferenceStateByCell.get(`${serviceDate.service_date}:${person.driver_id}`) ??
-                      "unset";
+                      preferenceStateByCell.get(cellKey) ?? "unset";
+                    const availabilityState = availabilityStateByCell.get(cellKey) ?? null;
+                    const isSickNoShow = isSickNoShowAvailability(availabilityState);
                     const preferenceLabel = formatPreferenceStateLabel(preferenceState);
                     const isArmed =
                       armedCell?.serviceDate === serviceDate.service_date &&
                       armedCell.driverId === person.driver_id;
                     const isSelectedDay = selectedServiceDate === serviceDate.service_date;
                     const isAvailableCell = isSelectedDay && availableDriverIds.includes(person.driver_id);
+                    const sickNoShowPending = sickNoShowPendingKey === cellKey;
+                    const sickNoShowActionDisabled =
+                      sickNoShowDisabled || sickNoShowPending || isSickNoShow;
                     return (
                       <td key={`${person.driver_id}:${serviceDate.service_date}`}>
-                        <button
-                          type="button"
-                          className={`schedule-heatmap__cell schedule-heatmap__cell--${
-                            cell?.state ?? "empty"
-                          }${cell?.manualOverride ? " schedule-heatmap__cell--manual" : ""}${
-                            isArmed ? " is-armed" : ""
-                          }${isSelectedDay ? " schedule-heatmap__cell--selected-day" : ""}${
-                            isAvailableCell ? " schedule-heatmap__cell--available" : ""
-                          }${metric?.compliance_state === "fail" ? " schedule-heatmap__cell--blocked" : ""}${
-                            readOnly ? " schedule-heatmap__cell--readonly" : ""
-                          }`}
-                          data-testid={`schedule-heatmap-cell-${serviceDate.service_date}-${person.driver_id}`}
-                          aria-label={buildCellLabel(person, serviceDate, cell)}
-                          aria-pressed={isArmed}
-                          aria-disabled={readOnly}
-                          onClick={() => {
+                        <div className="schedule-heatmap__cell-wrap">
+                          <button
+                            type="button"
+                            className={`schedule-heatmap__cell schedule-heatmap__cell--${
+                              cell?.state ?? "empty"
+                            }${cell?.manualOverride ? " schedule-heatmap__cell--manual" : ""}${
+                              isArmed ? " is-armed" : ""
+                            }${isSelectedDay ? " schedule-heatmap__cell--selected-day" : ""}${
+                              isAvailableCell ? " schedule-heatmap__cell--available" : ""
+                            }${metric?.compliance_state === "fail" ? " schedule-heatmap__cell--blocked" : ""}${
+                              isSickNoShow ? " schedule-heatmap__cell--sick-no-show" : ""
+                            }${readOnly ? " schedule-heatmap__cell--readonly" : ""}`}
+                            data-testid={`schedule-heatmap-cell-${serviceDate.service_date}-${person.driver_id}`}
+                            aria-label={
+                              isSickNoShow
+                                ? `Sick / No Show: ${person.driver_name} on ${serviceDate.label}`
+                                : buildCellLabel(person, serviceDate, cell)
+                            }
+                            aria-pressed={isArmed}
+                            aria-disabled={readOnly}
+                            onClick={() => {
                             if (readOnly || !onRowsChange) {
                               setStatusMessage(
                                 "This view is read-only. Open a draft artifact to move schedule cells."
@@ -690,7 +741,35 @@ export function ScheduleHeatmapEditor({
                             aria-label={`Preference: ${preferenceLabel}`}
                             title={`Preference: ${preferenceLabel}`}
                           />
-                        </button>
+                          </button>
+                          {onMarkSickNoShow ? (
+                            <button
+                              type="button"
+                              className="schedule-heatmap__sick-button"
+                              disabled={sickNoShowActionDisabled}
+                              aria-label={`Mark Sick / No Show: ${person.driver_name} on ${serviceDate.label}`}
+                              title={
+                                isSickNoShow
+                                  ? `${person.driver_name} is already Sick / No Show on ${serviceDate.label}`
+                                  : `Mark ${person.driver_name} Sick / No Show on ${serviceDate.label}`
+                              }
+                              onClick={() => {
+                                if (sickNoShowActionDisabled) {
+                                  return;
+                                }
+                                onMarkSickNoShow({
+                                  driverId: person.driver_id,
+                                  driverName: person.driver_name,
+                                  serviceDate: serviceDate.service_date,
+                                  serviceDateLabel: serviceDate.label,
+                                  currentState: cell?.state ?? "empty"
+                                });
+                              }}
+                            >
+                              {sickNoShowPending ? "..." : isSickNoShow ? "Sick / No Show" : "Sick"}
+                            </button>
+                          ) : null}
+                        </div>
                       </td>
                     );
                   })}

@@ -50,6 +50,8 @@ class DriverServiceDayState:
     call_in_sick_flag: bool = False
     cancellation_flag: bool = False
     non_working_day_flag: bool = False
+    reason_code: str = ""
+    reason_note: str = ""
 
 
 @dataclass(frozen=True)
@@ -430,6 +432,7 @@ def _parse_explicit_driver_day_availability(
             continue
         raw_state = str(row.get("availability_state") or "").strip().upper()
         normalized_state = _normalized_availability_state(raw_state)
+        source_exception_id = str(row.get("source_exception_id") or "").strip()
         record = grouped.setdefault(
             driver_id,
             {
@@ -447,7 +450,7 @@ def _parse_explicit_driver_day_availability(
             },
         )
 
-        if normalized_state == "approved_unavailable":
+        if normalized_state == "approved_unavailable" and not source_exception_id:
             record["approved_unavailable_dates"].append(service_date)
         elif normalized_state != "pattern_off":
             record["regular_pattern"].append(_weekday_token(date.fromisoformat(service_date)))
@@ -469,7 +472,11 @@ def _parse_explicit_driver_day_availability(
                 blocked_reasons=_blocked_reasons_for_normalized_state(normalized_state),
                 actual_minutes=0,
                 route_id="",
-                source_ref=f"availability:{driver_id}:{service_date}",
+                source_ref=(
+                    f"availability_exception:{source_exception_id}"
+                    if source_exception_id
+                    else f"availability:{driver_id}:{service_date}"
+                ),
                 preferred_route_slot_classes=_csv_tokens(row.get("preferred_route_slot_classes")),
                 avoid_route_slot_classes=_csv_tokens(row.get("avoid_route_slot_classes")),
                 preferred_shift_band=str(row.get("preferred_shift_band") or "").strip(),
@@ -477,6 +484,8 @@ def _parse_explicit_driver_day_availability(
                     row.get("previous_week_state") or row.get("previous_week_same_day_state")
                 ),
                 locked_by_manager=_coerce_bool(row.get("locked_by_manager")),
+                reason_code=str(row.get("reason_code") or "").strip(),
+                reason_note=str(row.get("reason_note") or "").strip(),
             )
         )
 

@@ -5,6 +5,7 @@ from onetruth.application.handlers.workpage_reporting_commands import (
     submit_eod_artifact_workpage_command,
 )
 from onetruth.application.handlers.workpage_schedule_commands import (
+    mark_schedule_sick_no_show_command,
     preview_schedule_artifact_workpage_command,
     submit_schedule_artifact_workpage_command,
 )
@@ -21,6 +22,7 @@ __all__ = [
     "add_driver_availability_exception_command",
     "create_workflow_run_driver_preferences_snapshot_command",
     "create_workflow_run_eod_draft_command",
+    "mark_schedule_sick_no_show_command",
     "preview_schedule_artifact_workpage_command",
     "submit_driver_preferences_artifact_workpage_command",
     "submit_eod_artifact_workpage_command",

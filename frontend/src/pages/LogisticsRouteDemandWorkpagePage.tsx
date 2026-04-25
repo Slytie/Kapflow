@@ -280,6 +280,10 @@ function RouteDemandDayCards({
   onDecrement?: (serviceDate: string) => void;
   showHeader?: boolean;
 }): JSX.Element {
+  const dayCardGroups = useMemo(() => groupRouteDemandDayCards(dayCards), [dayCards]);
+  const firstServiceDate = dayCards[0]?.service_date ?? null;
+  const lastServiceDate = dayCards[dayCards.length - 1]?.service_date ?? null;
+
   return (
     <section className="workpage-panel" data-testid="route-demand-day-cards">
       {showHeader ? (
@@ -288,89 +292,140 @@ function RouteDemandDayCards({
           <p>Route-demand edits change final planned daily route counts only. Rescue, overflow, and buffer posture stay server-managed.</p>
         </header>
       ) : null}
-      <div className="route-demand-day-grid">
-        {dayCards.map((card) => (
-          <article key={card.service_date} className="route-demand-day-card">
-            <header className="route-demand-day-card__header">
-              <div>
-                <p className="route-demand-day-card__eyebrow">{card.weekday_label}</p>
-                <h3>{card.service_date}</h3>
-              </div>
-              {card.delta_from_previous_version ? (
-                <span
-                  className={`route-demand-day-card__delta${
-                    card.delta_from_previous_version.planned_route_count_delta === 0
-                      ? " route-demand-day-card__delta--neutral"
-                      : card.delta_from_previous_version.planned_route_count_delta > 0
-                        ? " route-demand-day-card__delta--up"
-                        : " route-demand-day-card__delta--down"
-                  }`}
-                >
-                  {card.delta_from_previous_version.planned_route_count_delta >= 0 ? "+" : ""}
-                  {card.delta_from_previous_version.planned_route_count_delta}
-                </span>
-              ) : null}
-            </header>
-            <div className="route-demand-day-card__count">
-              <strong>Planned routes</strong>
-              <div className="route-demand-stepper">
-                {editable ? (
-                  <button
-                    type="button"
-                    className="action-btn"
-                    aria-label={`Decrease planned routes for ${card.service_date}`}
-                    onClick={() => onDecrement?.(card.service_date)}
-                    disabled={card.planned_route_count <= 0}
-                  >
-                    -
-                  </button>
-                ) : null}
-                <span data-testid={`route-demand-count-${card.service_date}`}>
-                  {card.planned_route_count}
-                </span>
-                {editable ? (
-                  <button
-                    type="button"
-                    className="action-btn"
-                    aria-label={`Increase planned routes for ${card.service_date}`}
-                    onClick={() => onIncrement?.(card.service_date)}
-                  >
-                    +
-                  </button>
-                ) : null}
-              </div>
+      {firstServiceDate && lastServiceDate ? (
+        <div className="route-demand-horizon-summary" data-testid="route-demand-horizon-summary">
+          <strong>{dayCards.length} service days</strong>
+          <span>{firstServiceDate} to {lastServiceDate}</span>
+        </div>
+      ) : null}
+      <div className="route-demand-week-groups">
+        {dayCardGroups.map((group) => (
+          <section
+            key={group.key}
+            className="route-demand-week-group"
+            aria-label={`${group.label}: ${group.dateRange}`}
+          >
+            {dayCardGroups.length > 1 ? (
+              <header className="route-demand-week-group__header">
+                <h3>{group.label}</h3>
+                <span>{group.dateRange}</span>
+              </header>
+            ) : null}
+            <div className="route-demand-day-grid">
+              {group.dayCards.map((card) => (
+                <article key={card.service_date} className="route-demand-day-card">
+                  <header className="route-demand-day-card__header">
+                    <div>
+                      <p className="route-demand-day-card__eyebrow">{card.weekday_label}</p>
+                      <h3>{card.service_date}</h3>
+                    </div>
+                    {card.delta_from_previous_version ? (
+                      <span
+                        className={`route-demand-day-card__delta${
+                          card.delta_from_previous_version.planned_route_count_delta === 0
+                            ? " route-demand-day-card__delta--neutral"
+                            : card.delta_from_previous_version.planned_route_count_delta > 0
+                              ? " route-demand-day-card__delta--up"
+                              : " route-demand-day-card__delta--down"
+                        }`}
+                      >
+                        {card.delta_from_previous_version.planned_route_count_delta >= 0 ? "+" : ""}
+                        {card.delta_from_previous_version.planned_route_count_delta}
+                      </span>
+                    ) : null}
+                  </header>
+                  <div className="route-demand-day-card__count">
+                    <strong>Planned routes</strong>
+                    <div className="route-demand-stepper">
+                      {editable ? (
+                        <button
+                          type="button"
+                          className="action-btn"
+                          aria-label={`Decrease planned routes for ${card.service_date}`}
+                          onClick={() => onDecrement?.(card.service_date)}
+                          disabled={card.planned_route_count <= 0}
+                        >
+                          -
+                        </button>
+                      ) : null}
+                      <span data-testid={`route-demand-count-${card.service_date}`}>
+                        {card.planned_route_count}
+                      </span>
+                      {editable ? (
+                        <button
+                          type="button"
+                          className="action-btn"
+                          aria-label={`Increase planned routes for ${card.service_date}`}
+                          onClick={() => onIncrement?.(card.service_date)}
+                        >
+                          +
+                        </button>
+                      ) : null}
+                    </div>
+                  </div>
+                  <dl className="route-demand-day-card__stats">
+                    <div>
+                      <dt>Standard</dt>
+                      <dd>{card.standard_slot_count}</dd>
+                    </div>
+                    <div>
+                      <dt>Early / late</dt>
+                      <dd>
+                        {card.standard_early_slot_count} / {card.standard_late_slot_count}
+                      </dd>
+                    </div>
+                    <div>
+                      <dt>Rescue / overflow</dt>
+                      <dd>
+                        {card.rescue_slot_count} / {card.overflow_slot_count}
+                      </dd>
+                    </div>
+                    <div>
+                      <dt>On-call target</dt>
+                      <dd>{card.on_call_target}</dd>
+                    </div>
+                    <div>
+                      <dt>Excess capacity target</dt>
+                      <dd>{card.excess_capacity_target}</dd>
+                    </div>
+                  </dl>
+                </article>
+              ))}
             </div>
-            <dl className="route-demand-day-card__stats">
-              <div>
-                <dt>Standard</dt>
-                <dd>{card.standard_slot_count}</dd>
-              </div>
-              <div>
-                <dt>Early / late</dt>
-                <dd>
-                  {card.standard_early_slot_count} / {card.standard_late_slot_count}
-                </dd>
-              </div>
-              <div>
-                <dt>Rescue / overflow</dt>
-                <dd>
-                  {card.rescue_slot_count} / {card.overflow_slot_count}
-                </dd>
-              </div>
-              <div>
-                <dt>On-call target</dt>
-                <dd>{card.on_call_target}</dd>
-              </div>
-              <div>
-                <dt>Excess capacity target</dt>
-                <dd>{card.excess_capacity_target}</dd>
-              </div>
-            </dl>
-          </article>
+          </section>
         ))}
       </div>
     </section>
   );
+}
+
+type RouteDemandDayCardGroup = {
+  key: string;
+  label: string;
+  dateRange: string;
+  dayCards: WorkpageRouteDemandDayCard[];
+};
+
+function groupRouteDemandDayCards(
+  dayCards: WorkpageRouteDemandDayCard[]
+): RouteDemandDayCardGroup[] {
+  const groups: RouteDemandDayCardGroup[] = [];
+  for (let index = 0; index < dayCards.length; index += 7) {
+    const groupDayCards = dayCards.slice(index, index + 7);
+    const firstServiceDate = groupDayCards[0]?.service_date ?? "";
+    const lastServiceDate =
+      groupDayCards[groupDayCards.length - 1]?.service_date ?? firstServiceDate;
+    groups.push({
+      key: `${firstServiceDate}-${lastServiceDate}`,
+      label: `Week ${Math.floor(index / 7) + 1}`,
+      dateRange:
+        firstServiceDate === lastServiceDate
+          ? firstServiceDate
+          : `${firstServiceDate} to ${lastServiceDate}`,
+      dayCards: groupDayCards
+    });
+  }
+  return groups;
 }
 
 function RouteDemandWorkpageBody({
