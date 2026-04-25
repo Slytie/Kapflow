@@ -2,6 +2,14 @@
 
 Record any decisions made since the last session so a fresh Codex run can rehydrate quickly.
 
+## 2026-04-25 (EPIC-135 unified replan popup and dynamic scheduling activation selection)
+- Selection decision: EPIC-135 is now the selected next app-facing workpage/product tranche after EPIC-134, and the repo now tracks it through `TASK-0225` through `TASK-0232`.
+- Lifecycle decision: the shared `Edit Weekly Schedule` popup is the selected operator surface both before and after publish, but backend ownership stays split by lifecycle state: `weekly_schedule_planning.v1` before publish and `live_dispatch.v1` after publish.
+- Trigger decision: in-scope route-demand transitions from `0 -> N` now define the selected greenfield auto-scheduling trigger; the old operator-facing manual scheduler task/action is planned for removal from the to-do UX, but canonical task/execution/input truth remains required.
+- Ranking decision: EPIC-135 defaults to deterministic candidate generation and scoring first, with on-call priority only among hard-pass candidates; agent escalation remains bounded and secondary except for greenfield auto-run.
+- Status decision: “agent is working” for the popup must be projected from canonical `task_run`, `human_task`, `execution_session`, and `tool_execution` truth rather than popup-local timers or mutation state.
+- Contact decision: driver phone numbers must land in a separate canonical contact authority (`planning.driver_contact_directory.workbook`) rather than inside driver capabilities or frontend-local state.
+
 ## 2026-04-06 (TASK-0157 EPIC-125 closeout and first-demo feedback truth)
 - Epic-closeout decision: EPIC-125 is now complete; `TASK-0151` through `TASK-0157` should be treated as completed history rather than as an active operator-loop backlog.
 - Reconciliation decision: `TASK-0154` is marked `DONE` from existing live-dispatch runtime truth already visible in handlers, runtime proof, the weekly-first local demo smoke, and the operator runbooks; `TASK-0157` does not add new runtime behavior.

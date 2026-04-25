@@ -176,3 +176,11 @@ Note: `TASK-0087` / `TASK-0088` / `TASK-0089` were formerly duplicated as `TASK-
 | TASK-0222 | EPIC-134 | DONE | medium | Correct the weekly-first local demo smoke diagnosis and reporting-intake runtime-dependency truth |
 | TASK-0223 | EPIC-134 | DONE | medium | Add a one-command canonical workpage demo-prep script |
 | TASK-0224 | EPIC-134 | DONE | low | Add the demo runbook and a canonical workpage demo-prep regression |
+| TASK-0225 | EPIC-135 | TODO | medium | Freeze the unified schedule replan boundary, lifecycle split, prerequisite truth, and repo memory |
+| TASK-0226 | EPIC-135 | TODO | high | Add shared replan contract blocks and canonical runtime-status projection |
+| TASK-0227 | EPIC-135 | TODO | high | Add driver-contact authority and deterministic replan candidate/compliance projection |
+| TASK-0228 | EPIC-135 | TODO | high | Implement the pre-publish weekly-backed replan adapter and in-scope greenfield trigger |
+| TASK-0229 | EPIC-135 | TODO | high | Implement the post-publish live-dispatch replan adapter over base-seed plus delta truth |
+| TASK-0230 | EPIC-135 | TODO | high | Add the live-dispatch agent runtime for greenfield auto-run and bounded brownfield escalation |
+| TASK-0231 | EPIC-135 | TODO | high | Redesign Edit Weekly Schedule into the shared replan popup |
+| TASK-0232 | EPIC-135 | TODO | medium | Close EPIC-135 by retiring the manual scheduler UX and updating canonical demo truth |

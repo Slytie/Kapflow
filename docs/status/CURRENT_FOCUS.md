@@ -20,7 +20,7 @@ The just-completed app-facing workpage tranche is **EPIC-133 - Workpage fragilit
 - `/demo/logistics` is now a launcher-only shell that hands off to canonical workpage/workspace routes
 - the former concentration files now resolve through thinner facades and explicit source-budget guardrails
 
-There is no new app-facing product-expansion epic selected after EPIC-133 closeout. The just-completed demo-enablement tranche is **EPIC-134 - Minimal canonical workpage demo enablement**:
+The just-completed demo-enablement tranche is **EPIC-134 - Minimal canonical workpage demo enablement**:
 - supported-environment truth is corrected for the weekly-first local demo smoke and reporting-intake dependency classification
 - `scripts/run_logistics_workpage_demo_prep.py` provides a deterministic, idempotent canonical workpage prep path with machine-readable route output
 - `docs/ops/runbooks/logistics_canonical_workpage_demo.md` now documents the supported canonical workpage walkthrough without requiring OpenAI
@@ -29,6 +29,12 @@ There is no new app-facing product-expansion epic selected after EPIC-133 closeo
 The just-completed production-shaped cadence milestone is **TASK-0156 - External cadence tick and single-node logistics operator runbook**:
 - `onetruthctl cadence tick-logistics` now ensures due weekly/reporting state and prepares live dispatch once weekly publish truth exists
 - `docs/ops/runbooks/logistics_single_node_cadence.md` documents the bounded continuous single-node operator posture over the existing release/deploy topology
+
+The selected next app-facing product-expansion epic is **EPIC-135 - Unified schedule replan popup and dynamic scheduling activation**:
+- the shared `Edit Weekly Schedule` popup is now the frozen operator-surface direction for both pre-publish weekly proposals and post-publish live-dispatch replans
+- in-scope `0 -> N` route additions are the selected auto-agent trigger instead of a manual scheduler to-do action
+- canonical runtime-backed execution status and separate driver-contact truth are required parts of the tranche
+- no EPIC-135 runtime code is landed yet in this doc-selection change set; the repo now contains the plan, epic, context, and task stack
 
 EPIC-125 is now completed history:
 - `TASK-0154` is reconciled to `DONE` from the already-landed live-dispatch delta lane exercised by runtime handlers, the local demo smoke, and the operator runbooks
@@ -69,15 +75,15 @@ Frozen product boundary:
 - `driver-preferences-v0` = soft/advisory weekly snapshot
 - accepted history and draft lineage remain separate
 
-Still deferred beyond the completed Workpages v1 + EPIC-133 hardening tranche:
-- date-specific driver exceptions
-- automatic agentic rescheduling after route-demand changes
-- broader feedback-driven hardening beyond the settlement tranche
+Still deferred beyond the currently implemented baseline:
+- contact-data authoring surfaces
+- generalized live-dispatch workpage productization beyond the shared schedule popup
+- broader feedback-driven operator hardening beyond EPIC-135
 
 ## Available broader backlog (after EPIC-134)
 No EPIC-125 carry-forward backlog item remains open.
-No new app-facing product-expansion epic is selected after EPIC-134.
-Future selection should be deliberate from deferred items and later feedback, not implied by stale EPIC-125 task state.
+EPIC-135 is now the selected next app-facing product-expansion epic after EPIC-134.
+Future selection beyond EPIC-135 should still be deliberate from later feedback and deferred items, not implied by stale task state.
 
 ## Test-first working mode
 Before adding runtime services or API surfaces:

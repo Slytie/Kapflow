@@ -32,8 +32,9 @@ Current runtime/debug priority: **Schedule Planning**. Payroll remains the secon
 | EPIC-132 | Workpage reliability settlement and repo-truth closeout | settlement plan/context packs, clean-baseline reconciliation, mutation smoke gate, canonical-only docs/fixtures truth, reproducible frontend verification | EPIC-131, EPIC-124, EPIC-100 |
 | EPIC-133 | Workpage fragility reduction and extensibility hardening | backend-owned lineage/latest-draft/history seams, server-authored workpage actions, launcher-only demo-shell convergence, bounded-facade/source-budget guardrails | EPIC-132, EPIC-131, EPIC-124, EPIC-100 |
 | EPIC-134 | Minimal canonical workpage demo enablement | demo-enablement plan/context packs, supported-env reporting/demo-smoke truth correction, deterministic workpage demo-prep script, canonical demo runbook/regression | EPIC-125, EPIC-131, EPIC-133 |
+| EPIC-135 | Unified schedule replan popup and dynamic scheduling activation | unified replan plan/context packs, shared popup proposal/runtime-status contract, separate contact authority, weekly/live replan adapters, live-dispatch agent runtime, popup redesign, demo truth refresh | EPIC-125, EPIC-131, EPIC-133, EPIC-134, EPIC-070 |
 
-Status note (2026-04-06): EPIC-131, EPIC-132, and EPIC-133 are complete, the public workpage posture is canonical-only, no new app-facing product-expansion epic is selected, and EPIC-134 is the active demo-enablement tranche.
+Status note (2026-04-25): EPIC-131, EPIC-132, EPIC-133, and EPIC-134 are complete, the public workpage posture is canonical-only, and EPIC-135 is now the selected next app-facing product-expansion tranche.
 
 ## Update rules
 - Keep epic files in `docs/planning/epics/`

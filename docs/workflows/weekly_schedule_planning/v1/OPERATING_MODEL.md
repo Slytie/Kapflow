@@ -11,6 +11,11 @@ This pack models the **pre-week / Friday** planning loop:
 
 Day-of replan is **not** owned by this workflow. The handoff is `live_dispatch.v1`.
 
+Selected operator-surface direction:
+- the app-facing `Edit Weekly Schedule` popup may be reused before and after publish,
+- but before publish that popup still remains weekly-backed draft/build truth,
+- and UI reuse must not be interpreted as ownership of post-publish day-of replan.
+
 ## First-principles formalism
 Let:
 - `D` be drivers,

@@ -8,6 +8,11 @@ This pack models the **day-of** loop after the base schedule is already publishe
 - sick calls and no-shows,
 - rescue / crash-sort style recovery work.
 
+Selected operator-surface direction:
+- after weekly publish truth exists, the app may open the same shared schedule popup for issue-scoped repair and replan review,
+- but that UI reuse does not move ownership back into weekly planning,
+- `live_dispatch.v1` remains the owner of post-publish sick/no-show and route-change resolution.
+
 ## State model
 Let:
 - `B_t` be the immutable base schedule seed for service date `t`,
