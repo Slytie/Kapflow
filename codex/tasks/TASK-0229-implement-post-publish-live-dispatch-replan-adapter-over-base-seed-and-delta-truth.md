@@ -25,6 +25,8 @@ Project post-publish repair and replan work through `live_dispatch.v1` while kee
 - mutation of the published weekly base schedule
 
 ## Source files to read first
+- `docs/workflows/live_dispatch/v1/WORKFLOW_CONTRACT.yaml`
+- `docs/workflows/live_dispatch/v1/ARTIFACT_MAP.yaml`
 - `docs/workflows/live_dispatch/v1/OPERATING_MODEL.md`
 - `src/onetruth/application/handlers/logistics_handoff.py`
 - `src/onetruth/application/handlers/human_tasks.py`
@@ -41,8 +43,10 @@ Project post-publish repair and replan work through `live_dispatch.v1` while kee
 1. Reuse the existing live-dispatch seed activation and official delta posture from `TASK-0154`.
 2. Express post-publish sick/no-show and route-demand increases as issue-scoped live-dispatch replan work over:
    - immutable `dispatch.base_schedule_seed.workbook`
-   - draft delta/replan truth
-3. Keep official delta promotion separate from proposal review and apply/ignore actions.
+   - `dispatch.route_delta_intake.workbook`
+   - `dispatch.replan_candidate.workbook`
+   - `dispatch.candidate_schedule_delta.workbook`
+3. Keep official delta promotion separate from proposal review and `Apply` / `Ignore` actions, which operate on candidate or draft delta context rather than the immutable base seed.
 4. Project the live-dispatch replan context back into the shared schedule popup so the operator does not need a separate day-of page to review the proposal.
 5. Preserve the current direct weekly-draft sick/no-show action only as temporary compatibility fallback while the shared replan path lands.
 
@@ -52,6 +56,6 @@ Project post-publish repair and replan work through `live_dispatch.v1` while kee
 - tests proving proposal/apply state flows through live-dispatch-backed context instead of weekly-draft mutation
 
 ## Acceptance criteria
-- Post-publish sick/no-show and route-demand increases create or reuse issue-scoped live-dispatch replan truth.
+- Post-publish sick/no-show and route-demand increases create or reuse issue-scoped live-dispatch replan truth over the existing route-delta / candidate / delta artifact families.
 - The shared popup can review post-publish live-dispatch proposals without widening weekly ownership.
 - Base weekly seed truth remains immutable.

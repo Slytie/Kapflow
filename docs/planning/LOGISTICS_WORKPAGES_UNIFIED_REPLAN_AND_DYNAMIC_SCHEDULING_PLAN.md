@@ -16,7 +16,7 @@ The current repo now has enough weekly/live runtime truth, workpage seams, and d
 
 `shared schedule popup surface -> weekly-backed proposal/build before publish -> live-dispatch-backed repair/replan after publish`
 
-This plan freezes that architecture before implementation begins.
+This plan freezes that architecture before implementation begins and corrects the initial EPIC-135 task stack to match the authored workflow packs and runtime seams.
 
 ## Repo-grounded current state
 
@@ -50,28 +50,33 @@ The next tranche should reuse that shell posture instead of adding a second oper
 
 That is a truthful bounded weekly-draft implementation for the current popup, but it is not the right long-term owner for post-publish day-of control.
 
-### 4. Route-demand saves still create drift/refresh follow-up, not proposal/replan work
+### 4. Route-demand saves still create refresh-task follow-up truth
 `route-demand-v0` currently:
 - saves immutable successors for `planning.route_slot_requirements.workbook`
 - keeps schedule artifacts pinned to their own baseline
-- creates or reopens schedule refresh follow-up truth when demand drifts from the current schedule draft baseline
+- creates or reopens a Stage04 refresh task when route-demand truth drifts from the current schedule draft baseline
 
-That is still correct for the current v1 boundary, but it is not yet the selected greenfield scheduling trigger model.
+That path is repo-truthful today, but EPIC-135 cannot simply hide its UI affordance. The pre-publish replan adapter must replace this creation path before the scheduler CTA is retired.
 
 ### 5. The only mature scheduler agent runtime today is the weekly Stage04 human-task path
 `src/onetruth/application/services/weekly_stage04_openai_agent.py` and the current API surface provide a bounded runtime only for:
 - a claimed Stage04 `work_item` human task
+- claimed by the requesting actor
 - backed by canonical `task_run`, `execution_session`, `tool_execution`, and policy evidence
 
 This runtime is not a generic “run scheduler” button. EPIC-135 must reuse that truth before publish rather than bypassing it.
 
-### 6. Stage04 input truth is explicit and cannot be silently removed
-`src/onetruth/application/services/schedule_control/stage04_input_registry.py` and
-`src/onetruth/application/services/task_requirements.py` show that the weekly scheduler depends on canonical input bindings, especially:
+### 6. Stage04 input truth and actionability truth are explicit and cannot be silently removed
+`src/onetruth/application/services/schedule_control/stage04_input_registry.py`,
+`src/onetruth/application/services/task_requirements.py`, and
+`src/onetruth/application/services/task_actionability.py` show that the weekly scheduler depends on canonical input bindings and existing blocker semantics, especially:
 - `planning.route_slot_requirements.workbook`
 - `planning.driver_capabilities.workbook`
 - operationally also `planning.approved_availability.workbook`
 - operationally also `planning.actual_hours_snapshot.workbook`
+- claim/assignee state
+- missing uploads / missing required inputs
+- policy decision state
 
 Removing the visible scheduler task from the operator to-do flow does not remove those prerequisites.
 
@@ -89,6 +94,7 @@ The current schedule-control stack already has:
 - hard-filter candidate generation
 - deterministic scoring
 - schedule checks and driver metrics
+- rolling-7 compliance payloads
 
 So the next tranche should default to:
 - deterministic ranking first
@@ -96,9 +102,14 @@ So the next tranche should default to:
 - agent escalation second for harder brownfield repair
 
 ### 9. There is no canonical driver-contact authority yet
-The current weekly examples, workpage projections, and scheduling artifacts do not carry driver phone numbers.
+The current weekly/live artifacts and workpage projections do not carry driver phone numbers.
 
-EPIC-135 must add a new read-side contact authority rather than storing contact data inside driver capabilities or local demo-only UI state.
+EPIC-135 therefore needs explicit mirrored weekly/live contact bridge inputs rather than a planning-only contact file or frontend-local state.
+
+### 10. Live-dispatch bounded runtime is not authored yet
+The live-dispatch execution profile allows bounded Stage02 issue-loop work and narrow LLM help, but the repo does not yet expose a live-dispatch runtime/actionability surface equivalent to the weekly Stage04 runtime.
+
+That means the popup redesign should not be blocked on `TASK-0230`, and `TASK-0230` must first author that runtime surface in the workflow pack and capability/actionability layer before any endpoint is added.
 
 ## Architecture frozen for EPIC-135
 
@@ -116,15 +127,16 @@ Before weekly publish truth exists:
 - the popup remains a weekly-backed surface
 - `0 -> N` route additions inside the active weekly scope auto-trigger scheduling
 - the trigger must create or reuse canonical weekly task/execution context
-- the existing weekly Stage04 agent runtime remains the agent path
+- the existing weekly Stage04 agent runtime remains the only agent path
+- the legacy route-demand refresh-task creation path must be replaced rather than layered
 - brownfield pre-publish changes use deterministic proposal generation first
 
 ### 3. Post-publish lane: live-dispatch-backed repair and replan
 After weekly publish truth exists:
 - sick/no-show and route-demand increases move into issue-scoped live-dispatch replan work
 - the base weekly seed stays immutable
-- the popup becomes a projection over live-dispatch draft/issue state
-- proposal apply/ignore flows operate on live-dispatch replan truth, not direct weekly-draft mutation
+- the popup becomes a projection over existing live-dispatch issue/candidate/delta truth
+- proposal `Apply` / `Ignore` flows operate on live-dispatch candidate or draft delta context, not direct weekly-draft mutation
 
 ### 4. Greenfield vs brownfield
 Use one shared repair vocabulary:
@@ -145,23 +157,27 @@ Auto-scheduling only fires when:
 
 Out-of-scope future dates still save as route-demand truth, but they do not auto-open replanning.
 
-### 6. Canonical agent-working status is runtime truth, not UI inference
-The popup’s progress/status surface must be backed by canonical runtime objects:
+### 6. Canonical runtime status is existing repo truth, not popup inference
+The popup’s status surface must be a projection over:
 - `task_run`
 - `human_task`
+- `requirement_state`
+- `policy_decision`
 - `execution_session`
 - `tool_execution`
 
-The popup must not derive “agent is working” from local mutation state, timers, or optimistic heuristics.
+The popup must not derive “agent is working” from local mutation state, timers, or optimistic heuristics, and it must reuse the existing missing-input / actionability semantics where they already exist.
 
-### 7. Separate contact authority
-Add one new canonical contact artifact family:
+### 7. Mirrored contact bridge inputs
+Add mirrored canonical contact workbook inputs:
 - `planning.driver_contact_directory.workbook`
+- `dispatch.driver_contact_directory.workbook`
 
-This artifact:
-- stays separate from driver capabilities
-- is read-side only in this epic
-- is joined into weekly/live replan projections so the popup can show phone numbers for top picks and all other eligible drivers
+These inputs:
+- stay separate from driver capabilities
+- remain workbook-only in this epic
+- are read-side only for popup contact/candidate projection
+- do not become hard eligibility truth
 
 ## Public interface changes to freeze early
 
@@ -194,10 +210,13 @@ proposal_state:
 execution_status:
   task_run_id
   human_task_id
-  execution_session_id
+  requirement_state
+  policy_decision_id | null
+  execution_session_id | null
+  tool_execution_id | null
   current_state
   phase_label
-  started_at
+  started_at | null
   updated_at
   blocking_reason_code | null
   failure_reason | null
@@ -226,35 +245,26 @@ On-call priority applies only after hard-filter pass.
 Current direct actions such as `workpage.schedule-v0.mark_sick_no_show` may remain temporarily as fallback compatibility affordances, but the primary operator path moves to the shared replan/proposal contract.
 
 ## Implementation order
+- `TASK-0225` -> `TASK-0226`, `TASK-0227`
+- `TASK-0226`, `TASK-0227` -> `TASK-0228`, `TASK-0229`
+- `TASK-0228`, `TASK-0229` -> `TASK-0231`
+- `TASK-0229` -> `TASK-0230`
+- `TASK-0231`, `TASK-0230` -> `TASK-0232`
 
-### TASK-0225
-Freeze the unified replan boundary, lifecycle split, prerequisite truth, and repo memory.
-
-### TASK-0226
-Add shared replan contract blocks and canonical runtime-status projection.
-
-### TASK-0227
-Add driver-contact authority and deterministic candidate/compliance projection.
-
-### TASK-0228
-Implement the pre-publish weekly-backed replan adapter and in-scope `0 -> N` route-demand trigger.
-
-### TASK-0229
-Implement the post-publish live-dispatch replan adapter over base-seed plus delta truth.
-
-### TASK-0230
-Add the live-dispatch agent runtime for greenfield auto-run and bounded brownfield escalation.
-
-### TASK-0231
-Redesign `Edit Weekly Schedule` into the shared proposal-review and manual-override popup.
-
-### TASK-0232
-Remove the operator-facing manual scheduler UX, update demo truth, and close the epic with regressions and repo-memory sync.
+Task intent:
+- `TASK-0225`: freeze the corrected architecture, workflow-pack implications, ADR, and repo memory
+- `TASK-0226`: add shared replan contract blocks and canonical runtime-status/actionability projection
+- `TASK-0227`: add mirrored contact bridge inputs and deterministic candidate/compliance projection
+- `TASK-0228`: replace the current pre-publish route-demand refresh-task path with weekly-backed replan activation
+- `TASK-0229`: anchor post-publish popup truth to existing live-dispatch issue/candidate/delta artifacts
+- `TASK-0230`: author the live-dispatch runtime/actionability surface before adding bounded agent execution
+- `TASK-0231`: redesign the popup over weekly + live deterministic truth without waiting on `TASK-0230`
+- `TASK-0232`: retire the old manual scheduler CTA only after the replacement flow, popup recovery surface, and canonical runtime truth exist
 
 ## Verification themes
 - contract tests for proposal, candidate, contact, and execution-status blocks
-- weekly pre-publish tests for Stage04 prerequisite blocking and in-scope `0 -> N` activation
-- live-dispatch tests for post-publish sick/no-show and route-increase issue-scoped replan truth
+- weekly pre-publish tests for Stage04 prerequisite blocking, claim/actionability blocking, and in-scope `0 -> N` activation
+- live-dispatch tests for post-publish sick/no-show and route-increase issue-scoped replan truth over existing candidate/delta artifacts
 - frontend popup tests for greenfield/brownfield shared rendering, stacked-modal launch, and canonical status surfaces
 - canonical demo verification for greenfield activation, brownfield absence replacement, phone-number display, and agent-working visibility
 

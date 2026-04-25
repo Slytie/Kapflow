@@ -287,6 +287,12 @@ datasets:
   partitioned_by:
   - ServiceDateID
   sensitivity: confidential
+- key: dispatch.driver_contact_directory.workbook
+  description: Service-day driver contact directory workbook for operator callback projection
+  kind: spreadsheet
+  partitioned_by:
+  - ServiceDateID
+  sensitivity: confidential
 - key: dispatch.dispatcher_review.doc
   description: Dispatcher review document
   kind: document
@@ -403,6 +409,12 @@ datasets:
   sensitivity: confidential
 - key: planning.driver_capabilities.workbook
   description: Weekly driver capability matrix workbook for route-slot hard-rule checks
+  kind: spreadsheet
+  partitioned_by:
+  - PlanningWeekID
+  sensitivity: confidential
+- key: planning.driver_contact_directory.workbook
+  description: Weekly driver contact directory workbook for operator callback projection
   kind: spreadsheet
   partitioned_by:
   - PlanningWeekID

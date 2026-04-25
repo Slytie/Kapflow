@@ -17,7 +17,7 @@ patterns: []
 The shared popup cannot support greenfield and brownfield replanning until the backend can project proposal, candidate, and runtime-status truth through one additive contract instead of the current weekly-draft-only shape.
 
 ## Objective
-Add server-authored replan contract blocks for the schedule popup and drive “agent is working” state from canonical runtime objects rather than local mutation heuristics.
+Add server-authored replan contract blocks for the schedule popup and drive “agent is working” state from canonical requirement/actionability/runtime truth rather than local mutation heuristics.
 
 ## Non-goals
 - adding driver phone numbers
@@ -28,6 +28,8 @@ Add server-authored replan contract blocks for the schedule popup and drive “a
 ## Source files to read first
 - `src/onetruth/application/services/logistics_workpages_shared.py`
 - `src/onetruth/application/read_commands/runtime_views.py`
+- `src/onetruth/application/services/task_actionability.py`
+- `src/onetruth/application/services/task_requirements.py`
 - `frontend/src/lib/types/workpages.ts`
 - `frontend/src/lib/types/contracts.ts`
 - `frontend/src/components/workpages/LogisticsScheduleWorkpagePageContent.tsx`
@@ -41,13 +43,16 @@ Add server-authored replan contract blocks for the schedule popup and drive “a
 
 ## Plan
 1. Extend schedule-related workpage contracts with additive `replan_context`, `proposal_state`, `proposal`, candidate-group placeholders, and `execution_status`.
-2. Build `execution_status` from canonical `task_run`, `human_task`, `execution_session`, and `tool_execution` truth for the active replan context.
+2. Build `execution_status` from canonical `task_run`, `human_task`, `requirement_state`, `policy_decision`, `execution_session`, and `tool_execution` truth for the active replan context.
 3. Surface blocked states for:
-   - missing Stage04 inputs before publish
+   - missing uploads / missing required inputs before publish
    - missing published live-dispatch seed prerequisites after publish
-   - claimed/running task contexts that cannot be reused safely
-4. Update frontend workpage types and repository parsing so the popup can render the new blocks without client-side reconstruction.
-5. Add backend-owned snapshots and mock/test handlers that preserve the same contract shape in loading, blocked, running, ready, and failed states.
+   - claim-required / claimed-by-other contexts
+   - policy pending / approval-gated contexts
+   - duplicate or already-running execution contexts
+4. Reuse existing task actionability and missing-input semantics where they already exist instead of inventing a second popup-only status vocabulary.
+5. Update frontend workpage types and repository parsing so the popup can render the new blocks without client-side reconstruction.
+6. Add backend-owned snapshots and mock/test handlers that preserve the same contract shape in loading, blocked, running, ready, and failed states.
 
 ## Verification
 - backend workpage contract tests for proposal/runtime-status blocks
@@ -57,5 +62,5 @@ Add server-authored replan contract blocks for the schedule popup and drive “a
 
 ## Acceptance criteria
 - The schedule popup contract now carries additive server-authored replan and runtime-status blocks.
-- “Agent is working” can be rendered from canonical runtime truth alone.
+- “Agent is working” can be rendered from canonical requirement/actionability/runtime truth alone.
 - Missing prerequisite states fail closed through explicit contract state rather than silent disabled buttons or local-only messages.

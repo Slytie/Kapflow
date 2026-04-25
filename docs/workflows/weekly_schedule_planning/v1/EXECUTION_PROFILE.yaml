@@ -94,10 +94,16 @@ profile:
       - Stage04 bridge payloads may include driver-by-day availability, prior-week
         operating state, rolling-7 compliance snapshots, and policy metadata; treat
         those as canonical planning inputs when present.
+      - "`planning.driver_contact_directory.workbook` may be resolved for operator contact
+        projection, but it is not hard eligibility truth and does not replace capability
+        or availability validation."
       - Objective is driver-to-route assignment, not vehicle routing. Use hard filters
         first, then rank by fairness and stability.
       - Candidate and validation outputs must stay machine-checkable and reviewable;
         official weekly truth is still produced only at Stage06 pointer promotion.
+      - If pre-publish route-demand greenfield activation reuses Stage04, it must do so
+        through canonical Stage04 task/execution truth and preserve existing claim and
+        policy semantics.
   - stage_id: Stage05
     execution_pattern: linear_chain
     allowed_tool_classes:

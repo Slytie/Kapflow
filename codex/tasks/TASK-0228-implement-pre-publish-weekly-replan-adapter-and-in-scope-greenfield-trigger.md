@@ -28,7 +28,9 @@ Add a weekly-backed replan adapter that can create or reuse canonical weekly tas
 - `src/onetruth/application/services/weekly_stage04_openai_agent.py`
 - `src/onetruth/application/services/schedule_control/stage04_input_registry.py`
 - `src/onetruth/application/services/task_requirements.py`
+- `src/onetruth/application/services/task_actionability.py`
 - `src/onetruth/application/handlers/workpage_command_support.py`
+- `src/onetruth/application/handlers/workpage_weekly_control_commands.py`
 - `src/onetruth/application/services/logistics_workpages_shared.py`
 - `frontend/src/pages/LogisticsRouteDemandWorkpagePage.tsx`
 
@@ -39,23 +41,28 @@ Add a weekly-backed replan adapter that can create or reuse canonical weekly tas
 - backend tests for trigger and prerequisite handling
 
 ## Plan
-1. Detect route-demand transitions from `0 -> N` on service dates inside the active weekly planning scope during route-demand save.
-2. Resolve or create the weekly-backed replan context using canonical Stage04 truth rather than popup-local state.
-3. Reuse the existing weekly Stage04 human-task/agent runtime for greenfield activation:
+1. Replace the current route-demand refresh-task creation path instead of layering on top of it.
+2. Detect route-demand transitions from `0 -> N` on service dates inside the active weekly planning scope during route-demand save.
+3. Resolve or create the weekly-backed replan context using canonical Stage04 truth rather than popup-local state.
+4. Reuse the existing weekly Stage04 human-task/agent runtime for greenfield activation only when the current claim/actionability rules allow it:
    - create or reuse the bounded Stage04 work item context
    - preserve required-input gating
+   - preserve claim/assignee constraints
    - expose blocked runtime status when prerequisites are missing or task reuse is unsafe
-4. Keep brownfield pre-publish changes deterministic-first:
+5. Keep brownfield pre-publish changes deterministic-first through the same replan context:
    - generate proposal/candidate truth
    - do not auto-run the agent unless explicitly escalated later
-5. Preserve the two-week route-demand horizon but suppress auto-triggering for out-of-scope future dates.
+6. Preserve the two-week route-demand horizon but suppress auto-triggering for out-of-scope future dates.
 
 ## Verification
 - tests proving in-scope `0 -> N` route additions auto-trigger scheduling before publish
 - tests proving missing Stage04 inputs block cleanly
+- tests proving claim-required / claimed-by-other contexts surface blocked popup truth rather than hidden task creation
+- tests proving route-demand save no longer emits the legacy generic refresh-task path
 - tests proving out-of-scope future dates still save route-demand truth without auto-opening replanning
 
 ## Acceptance criteria
 - Pre-publish `0 -> N` route additions inside active scope create or reuse canonical weekly replan work and auto-start scheduling.
 - Brownfield pre-publish changes stay deterministic-first.
+- No hidden legacy refresh-task path remains for the new pre-publish replan flow.
 - The old manual scheduler click is no longer required for the greenfield pre-publish path.

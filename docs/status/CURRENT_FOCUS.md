@@ -33,8 +33,10 @@ The just-completed production-shaped cadence milestone is **TASK-0156 - External
 The selected next app-facing product-expansion epic is **EPIC-135 - Unified schedule replan popup and dynamic scheduling activation**:
 - the shared `Edit Weekly Schedule` popup is now the frozen operator-surface direction for both pre-publish weekly proposals and post-publish live-dispatch replans
 - in-scope `0 -> N` route additions are the selected auto-agent trigger instead of a manual scheduler to-do action
-- canonical runtime-backed execution status and separate driver-contact truth are required parts of the tranche
-- no EPIC-135 runtime code is landed yet in this doc-selection change set; the repo now contains the plan, epic, context, and task stack
+- canonical runtime-backed execution status must reuse existing requirement/actionability/runtime truth rather than inventing popup-local status semantics
+- mirrored weekly/live driver-contact bridge inputs are required; phone numbers must not be carried inside driver capabilities
+- the current route-demand refresh-task spawn path must be replaced before the old scheduler CTA is retired
+- no EPIC-135 runtime code is landed yet; the current repo change set corrects the plan, epic, context, task stack, and workflow-pack truth before implementation starts
 
 EPIC-125 is now completed history:
 - `TASK-0154` is reconciled to `DONE` from the already-landed live-dispatch delta lane exercised by runtime handlers, the local demo smoke, and the operator runbooks

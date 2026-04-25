@@ -12,6 +12,8 @@ Selected operator-surface direction:
 - after weekly publish truth exists, the app may open the same shared schedule popup for issue-scoped repair and replan review,
 - but that UI reuse does not move ownership back into weekly planning,
 - `live_dispatch.v1` remains the owner of post-publish sick/no-show and route-change resolution.
+- operator contact data may be joined from a separate contact-directory bridge input,
+  but that metadata is not hard eligibility truth.
 
 ## State model
 Let:
@@ -46,6 +48,8 @@ rank remaining drivers by
 - stability of already-communicated assignments.
 
 Hard filters are deterministic code. LLM help, if used at all, is bounded to short rationale or packet drafting.
+Any future bounded runtime surface must remain issue-scoped and attach to canonical
+task/actionability/execution truth.
 
 ## Major-change boundary
 Small changes may finish after required review confirmation.

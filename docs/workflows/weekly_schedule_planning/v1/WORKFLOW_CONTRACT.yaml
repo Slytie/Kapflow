@@ -91,6 +91,9 @@ stages:
   - dataset_key: planning.driver_capabilities.workbook
     kind: spreadsheet
     role: official_input
+  - dataset_key: planning.driver_contact_directory.workbook
+    kind: spreadsheet
+    role: official_input
   - dataset_key: planning.input_bundle.doc
     kind: document
     role: official_input
@@ -124,17 +127,23 @@ stages:
     and recent actual hours.
   - Route-slot requirements and driver capabilities are canonical bridge inputs for
     deterministic Stage04 schedule-control candidate generation.
+  - "`planning.driver_contact_directory.workbook` is a separate operator-contact bridge
+    input for candidate/replan projection; it must not become hard eligibility truth."
   - Driver shift preferences may exist as an optional weekly advisory snapshot for
     workpage-level schedule cues and operator review, but they do not become hard
     scheduling truth in this workflow version.
-  - Those same Stage04 bridge artifact kinds now carry richer day-resolution planning
-    payloads, including daily demand summaries, driver-day availability states, prior-week
-    day state, rolling-7 compliance inputs, and policy signals without introducing
-    new artifact kinds or a second truth path.
+  - Most Stage04 bridge inputs continue to carry richer day-resolution planning payloads
+    inside the existing artifact kinds, including daily demand summaries, driver-day
+    availability states, prior-week day state, rolling-7 compliance inputs, and policy
+    signals. The separate contact directory input is the only additional bridge artifact
+    in this tranche, and it is for operator contact projection only.
   - Candidate deltas and validation summaries are machine-checkable planning artifacts
     for review; they are not official published schedule truth.
   - This stage may use deterministic code plus narrowly-scoped LLM drafting for the
     ops packet, but not for official publication.
+  - If route-demand-triggered pre-publish greenfield activation reuses Stage04, it must
+    still create or reuse canonical Stage04 task/execution truth rather than a hidden
+    popup-local scheduler path.
 - id: Stage05
   name: Manager_Review_Edit
   in_scope_mvp: true

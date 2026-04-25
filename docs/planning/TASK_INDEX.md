@@ -169,6 +169,14 @@ Note: `TASK-0087` / `TASK-0088` / `TASK-0089` were formerly duplicated as `TASK-
 | TASK-0205 | EPIC-131 | DONE | high | Implement route-demand-v0 operational editor and propagate route-demand changes into schedule drift |
 | TASK-0206 | EPIC-131 | DONE | medium | Add driver-preferences-v0 and integrate it as a soft advisory schedule input |
 | TASK-0207 | EPIC-131 | DONE | medium | Close the epic with regressions, docs, compatibility cleanup, and deferred-item markers |
+| TASK-0211 | EPIC-132 | DONE | high | Freeze the workpage settlement baseline and reconcile historical findings against live repo truth |
+| TASK-0212 | EPIC-132 | DONE | high | Restore green workpage mutation flows and add the shared smoke gate |
+| TASK-0213 | EPIC-132 | DONE | medium | Finish canonical-only docs, fixtures, and contract-truth synchronization |
+| TASK-0214 | EPIC-132 | DONE | medium | Restore reproducible frontend verification and close from a clean checkout |
+| TASK-0215 | EPIC-133 | DONE | medium | Move lineage, latest-draft, and accepted queries behind backend-owned workpage seams |
+| TASK-0216 | EPIC-133 | DONE | high | Promote server-authored workpage action execution and deprecate raw subject-link writes |
+| TASK-0217 | EPIC-133 | DONE | medium | Converge the demo shell onto canonical workpage hosts and retire inline mutation logic |
+| TASK-0218 | EPIC-133 | DONE | medium | Split overloaded workpage modules and add architecture guardrails for bounded growth |
 | TASK-0158 | EPIC-126 | DONE | medium | Remove demo-era source drift and normalize active workpage action vocabulary |
 | TASK-0159 | EPIC-126 | DONE | medium | Harden canonical-route regressions, fixtures, and guardrails |
 | TASK-0160 | EPIC-126 | DONE | medium | Close Workpages v1 repo-truth and synchronize active docs |

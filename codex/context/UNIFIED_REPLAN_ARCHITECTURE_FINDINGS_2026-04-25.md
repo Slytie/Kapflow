@@ -37,11 +37,13 @@ That is valid for the current pre-publish bounded surface but not the right long
 - does not auto-run scheduling
 
 Moving from “refresh follow-up” to “dynamic greenfield activation” is therefore a real architecture change, not a UI wiring tweak.
+The current refresh-task creation path must be replaced before the scheduler CTA is retired, or the repo will create hidden `OPEN` work with no operator recovery surface.
 
 ### 5. The weekly scheduler agent is tied to Stage04 human-task truth
 The existing agent runtime:
 - runs only through the weekly Stage04 human-task endpoint
 - depends on canonical input bindings
+- requires a claimed Stage04 `work_item` task claimed by the requesting actor
 - emits canonical execution/policy evidence
 
 This confirms that pre-publish automation should reuse that path rather than inventing a popup-local scheduler command.
@@ -63,17 +65,24 @@ This supports the “deterministic first, agent second” design and avoids maki
 
 ### 8. Driver phone numbers are missing from canonical truth
 No current scheduling artifact/projection contains contact data.
-Adding phone numbers therefore requires a new authority/artifact family rather than a frontend-only embellishment.
+Adding phone numbers therefore requires new weekly/live contact bridge inputs rather than a planning-only contact file or a frontend-only embellishment.
 
 ### 9. Runtime status can be made canonical without a new system
 The repo already has:
 - `task_run`
 - `human_task`
+- requirement and actionability state
+- `policy_decision`
 - `execution_session`
 - `tool_execution`
 - existing timeline/subgraph patterns on task/detail surfaces
 
 The popup should project those objects rather than inventing a separate status model.
+
+### 10. Live dispatch does not yet have an authored bounded runtime surface
+The live-dispatch pack already allows deterministic Stage02 issue loops and narrow LLM help in the execution profile, but there is no current live-dispatch equivalent of the weekly Stage04 runtime/actionability surface.
+
+That means the popup redesign should not depend on a future live-dispatch runtime task, and any post-publish agent surface must first be authored in the workflow pack and capability/actionability layer.
 
 ## Consequences for EPIC-135
 - one shared `Edit Weekly Schedule` popup surface
@@ -81,5 +90,7 @@ The popup should project those objects rather than inventing a separate status m
 - live-dispatch-backed behavior after publish
 - deterministic ranking first
 - greenfield `0 -> N` auto-agent trigger
-- separate contact authority
-- canonical runtime-backed status
+- mirrored weekly/live contact bridge inputs
+- canonical runtime-backed status over existing requirement/actionability/runtime truth
+- refresh-task replacement before CTA removal
+- popup redesign before the later live-dispatch runtime task

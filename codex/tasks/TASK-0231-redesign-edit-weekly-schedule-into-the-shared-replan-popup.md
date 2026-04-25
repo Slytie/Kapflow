@@ -5,7 +5,7 @@ title: "Redesign Edit Weekly Schedule into the shared replan popup"
 status: TODO
 owners: ["backend", "frontend"]
 reviewers: ["architect", "qa"]
-depends_on: ["TASK-0228", "TASK-0230"]
+depends_on: ["TASK-0228", "TASK-0229"]
 risk: high
 context_packs:
   - "codex/context/EPIC-135.md"
@@ -48,7 +48,7 @@ Turn `Edit Weekly Schedule` into one shared popup shell that can render weekly-b
 2. For brownfield repair, render proposed changes above the current schedule with `Apply` and `Ignore` actions.
 3. For greenfield activation, open the popup immediately with canonical runtime status while the proposal is being built.
 4. Keep the heatmap/manual-override surface below the proposal layer so operators can still choose their own edits.
-5. Support stacked-modal launch when the flow begins from the route-demand popup.
+5. Support stacked-modal launch when the flow begins from the route-demand popup, but implement it as one shared popup component over one contract rather than a second proposal system.
 6. Migrate the primary Sick / No Show operator path into the shared proposal flow while keeping the direct action only as temporary compatibility fallback.
 
 ## Verification
@@ -59,6 +59,6 @@ Turn `Edit Weekly Schedule` into one shared popup shell that can render weekly-b
 - `npm --prefix frontend run typecheck`
 
 ## Acceptance criteria
-- One popup handles weekly-backed and live-dispatch-backed replanning.
+- One popup handles weekly-backed and live-dispatch-backed deterministic replanning without waiting on the later live-dispatch runtime task.
 - Brownfield proposals render above the existing schedule and can be applied or ignored.
 - Operators can still make informed manual overrides with the same popup open.

@@ -76,6 +76,9 @@ stages:
   - dataset_key: dispatch.issue_board.doc
     kind: document
     role: evidence
+  - dataset_key: dispatch.driver_contact_directory.workbook
+    kind: spreadsheet
+    role: official_input
   - dataset_key: dispatch.replan_candidate.workbook
     kind: spreadsheet
     role: official_input
@@ -133,10 +136,14 @@ stages:
   notes:
   - Hard filters use approved availability, actual hours, rest, consecutive-day, and
     rolling-7-day limits before any ranking.
+  - "`dispatch.driver_contact_directory.workbook` is separate operator-contact metadata
+    for candidate/replan projection and must not become hard eligibility truth."
   - Current open exceptions are sourced from canonical flags; no peer exception store
     is authoritative.
   - Soft ranking favors on-call coverage, fewer assigned shifts, and drivers who recently
     lost work due to route cancellation.
+  - Any future bounded live-dispatch runtime surface must remain issue-scoped and attach
+    to canonical task/execution evidence rather than becoming a popup-local execution path.
 - id: Stage03
   name: Dispatcher_Review
   in_scope_mvp: true

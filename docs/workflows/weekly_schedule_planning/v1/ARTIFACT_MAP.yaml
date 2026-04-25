@@ -29,6 +29,8 @@ artifact_sets:
     role: official_input
   - key: planning.driver_capabilities.workbook
     role: official_input
+  - key: planning.driver_contact_directory.workbook
+    role: official_input
   - key: planning.input_bundle.doc
     role: official_input
   - key: planning.candidate_schedule_delta.workbook

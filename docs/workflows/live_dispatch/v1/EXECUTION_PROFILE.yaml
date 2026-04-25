@@ -51,10 +51,15 @@ profile:
       guidance:
       - Filter deterministically first. Ranking may use code plus a narrow LLM rationale
         helper, but not unconstrained branching.
+      - "`dispatch.driver_contact_directory.workbook` may be joined for operator contact
+        projection, but it is not hard eligibility truth."
       - Open-exception views must resolve from canonical flags; do not introduce a
         peer exception authority packet.
       - Candidate deltas are review artifacts for ordered promotion, not a new full-schedule
         truth object.
+      - Any future bounded live-dispatch runtime surface for greenfield activation or
+        escalated brownfield repair must remain issue-scoped and reuse canonical
+        task/actionability/execution truth.
   - stage_id: Stage03
     execution_pattern: linear_chain
     allowed_tool_classes:

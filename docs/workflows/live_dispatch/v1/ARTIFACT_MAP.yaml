@@ -25,6 +25,8 @@ artifact_sets:
   - key: dispatch.issue_board.doc
     role: evidence
     template_source: Stage02_Issue_Triage_and_Candidate_Generation/Stage02_Issue_Triage_and_Candidate_Generation_issue_board_Document_Template_EMPTY.docx
+  - key: dispatch.driver_contact_directory.workbook
+    role: official_input
   - key: dispatch.replan_candidate.workbook
     role: official_input
     template_source: Stage02_Issue_Triage_and_Candidate_Generation/Stage02_Issue_Triage_and_Candidate_Generation_replan_candidate_Spreadsheet_Template_EMPTY.xlsx

@@ -9,9 +9,10 @@ Purpose:
 - `weekly_schedule_planning.v1` owns pre-publish schedule build/review truth.
 - `live_dispatch.v1` owns post-publish sick/no-show and day-of route-change resolution truth.
 - One shared popup surface must not collapse those ownership boundaries.
-- Scheduler “working” status must come from canonical runtime objects, not popup-local inference.
-- Phone numbers must live in a separate contact authority, not in driver capabilities.
+- Scheduler “working” status must come from canonical runtime objects plus existing requirement/actionability truth, not popup-local inference.
+- Phone numbers must live in mirrored weekly/live contact bridge inputs, not in driver capabilities.
 - The published weekly base schedule remains immutable after handoff.
+- The old route-demand refresh-task spawn path must be replaced before the manual scheduler CTA is retired.
 
 ## Authoritative docs
 - `docs/planning/epics/EPIC-135.md`
@@ -28,17 +29,19 @@ Purpose:
 ## Repo-grounded findings
 1. `AppShell` already owns the top-chrome quick-edit modal posture for schedule, route demand, and drivers.
 2. The current schedule popup is weekly-draft-centric and currently owns direct Sick / No Show mutation.
-3. Route-demand saves still create schedule refresh follow-up truth rather than proposal/replan truth.
-4. The weekly Stage04 human-task endpoint is the only mature scheduler agent runtime today.
-5. Stage04 required-input truth is explicit and cannot be bypassed when the manual scheduler task CTA is removed.
+3. Route-demand saves still create a Stage04 refresh-task follow-up path that must be replaced, not hidden.
+4. The weekly Stage04 human-task endpoint is the only mature scheduler agent runtime today and it requires a claimed Stage04 `work_item`.
+5. Stage04 required-input truth plus requirement/actionability truth are explicit and cannot be bypassed when the manual scheduler CTA is removed.
 6. Live dispatch requires published weekly seed truth and therefore cannot own the pre-publish lane.
 7. Deterministic candidate generation/scoring/validation already exists and should be reused first.
-8. There is no canonical driver-contact authority yet.
+8. There is no canonical driver-contact authority yet, and a planning-only contact dataset would be insufficient for the post-publish lane.
+9. There is no authored live-dispatch agent/runtime surface yet; popup work should not wait on it.
 
 ## Preferred implementation shape
 - freeze the shared popup contract and lifecycle split first
 - add canonical runtime-status and candidate/contact projection before redesigning the popup UI
-- reuse the existing weekly agent runtime before publish
+- reuse the existing weekly agent runtime before publish and replace the current refresh-task creation path during that work
+- ship the shared popup over weekly/live deterministic truth before the later live-dispatch agent/runtime task
 - add the live-dispatch agent/runtime as a later explicit task instead of pretending it already exists
 - keep demo truth canonical and route-scoped; do not add a second demo mode
 
@@ -47,4 +50,5 @@ Purpose:
 - no popup-only spinner/timer progress
 - no long-term weekly-draft mutation path for post-publish repair
 - no phone numbers in driver capabilities
+- no planning-only contact dataset for a weekly/live popup surface
 - no silent removal of Stage04 prerequisite gates

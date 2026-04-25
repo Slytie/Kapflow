@@ -5,7 +5,7 @@ title: "Close EPIC-135 by retiring the manual scheduler UX and updating canonica
 status: TODO
 owners: ["architect", "qa"]
 reviewers: ["pm"]
-depends_on: ["TASK-0231"]
+depends_on: ["TASK-0231", "TASK-0230"]
 risk: medium
 context_packs:
   - "codex/context/EPIC-135.md"
@@ -43,10 +43,15 @@ The epic is not complete until the operator-facing to-do UX, canonical demo, and
 - regression tests and snapshots
 
 ## Plan
-1. Remove the old manual scheduler CTA from operator-facing to-do/task surfaces while leaving backend task/execution truth intact for status projection and auditability.
-2. Seed canonical demo contact data plus one greenfield and one brownfield replan path.
-3. Update the canonical demo runbook to validate the shared popup, candidate list, phone numbers, and runtime status.
-4. Close EPIC-135 with updated status/index memory and regression proof.
+1. Retire the old manual scheduler CTA from operator-facing to-do/task surfaces only after:
+   - `TASK-0228` has replaced the current refresh-task creation path
+   - `TASK-0226` exposes blocked / claim / running truth in the popup
+   - `TASK-0231` provides the shared popup recovery/resume surface
+   - `TASK-0230` has landed the later live-dispatch runtime surface if that task remains in-scope for the epic closeout
+2. Leave backend task/execution truth intact for status projection and auditability.
+3. Seed canonical demo contact data plus one greenfield and one brownfield replan path only after the corrected contract and popup behavior exist.
+4. Update the canonical demo runbook to validate the shared popup, candidate list, phone numbers, and runtime status.
+5. Close EPIC-135 with updated status/index memory and regression proof.
 
 ## Verification
 - canonical demo prep regression
@@ -56,5 +61,6 @@ The epic is not complete until the operator-facing to-do UX, canonical demo, and
 
 ## Acceptance criteria
 - Operators no longer use a manual scheduler task/button to start the new flow.
+- The old scheduler CTA is removed only after the replacement route-demand/replan path and popup recovery surface exist.
 - The canonical demo proves greenfield activation, brownfield replacement, phone-number display, and runtime status.
 - Repo-native epic/task/status truth is synchronized on closeout.

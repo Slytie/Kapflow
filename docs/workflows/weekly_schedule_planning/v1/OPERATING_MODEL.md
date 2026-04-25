@@ -15,6 +15,8 @@ Selected operator-surface direction:
 - the app-facing `Edit Weekly Schedule` popup may be reused before and after publish,
 - but before publish that popup still remains weekly-backed draft/build truth,
 - and UI reuse must not be interpreted as ownership of post-publish day-of replan.
+- operator contact data may be joined from a separate contact-directory bridge input,
+  but that metadata is not scheduling eligibility truth.
 
 ## First-principles formalism
 Let:
