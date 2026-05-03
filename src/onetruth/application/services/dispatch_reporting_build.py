@@ -4,9 +4,12 @@ from collections.abc import Mapping
 from dataclasses import dataclass
 from typing import Any
 
+from onetruth.application.services.dispatch_reporting_raw_eos import (
+    RAW_EOS_WORKBOOK_FAMILY,
+    project_raw_eos_workbook,
+)
 from onetruth.application.services.dispatch_reporting_workbook import (
     WorkbookRuntimeDependencyError,
-    project_upd_draft_workbook,
     seed_upd_draft_workbook,
 )
 
@@ -22,7 +25,7 @@ REVIEW_TASK_KIND = "final_packet_review"
 REVIEW_APPROVAL_ACTION = "confirm_dispatch_reporting_packet"
 REVIEW_APPROVAL_SCOPE_REF = "Stage04"
 REPORTING_TO_PLANNING_EDGE_ID = "reporting_actuals_to_future_planning"
-SUPPORTED_SOURCE_WORKBOOK_FAMILY = "dispatch_reporting.stage03.upd_draft.workbook"
+SUPPORTED_SOURCE_WORKBOOK_FAMILY = RAW_EOS_WORKBOOK_FAMILY
 DEFAULT_STATION_CODE = "DVC4"
 DEFAULT_DSP_NAME = "QDCI"
 
@@ -51,18 +54,24 @@ def build_dispatch_reporting_artifacts(
     eos_workbook_bytes: bytes,
     draft_template_bytes: bytes,
     source_metadata_json: Mapping[str, Any] | None = None,
+    source_file_name: str | None = None,
+    fallback_service_date: str | None = None,
     built_at: str,
     actor_id: str,
 ) -> DispatchReportingBuildOutput:
-    projection = _project_supported_source_workbook(eos_workbook_bytes)
-    route_rows = _normalize_route_actual_rows(projection.get("route_actuals"))
-    quality_warning_rows = _normalize_quality_warning_rows(projection.get("quality_warnings"))
-    manual_closeout_rows = _normalize_manual_closeout_rows(projection.get("manual_closeout"))
+    projection = _project_supported_source_workbook(
+        eos_workbook_bytes,
+        source_metadata_json=source_metadata_json,
+        source_file_name=source_file_name,
+        fallback_service_date=fallback_service_date,
+    )
+    route_rows = projection.route_rows
+    quality_warning_rows = projection.quality_warning_rows
+    manual_closeout_rows = _build_manual_closeout_rows(route_rows)
 
-    metadata = dict(source_metadata_json) if isinstance(source_metadata_json, Mapping) else {}
-    service_date = _resolve_service_date(route_rows, metadata)
-    station_code = _resolve_text(metadata.get("station_code"), fallback=DEFAULT_STATION_CODE)
-    dsp_name = _resolve_text(metadata.get("dsp_name"), fallback=DEFAULT_DSP_NAME)
+    service_date = projection.service_date
+    station_code = projection.station_code
+    dsp_name = projection.dsp_name
 
     formula_integrity_warning = bool(quality_warning_rows)
     warning_message = (
@@ -155,6 +164,14 @@ def build_dispatch_reporting_artifacts(
         "formula_integrity_warning": formula_integrity_warning,
         "quality_warnings": quality_warning_rows,
         "rows": normalized_rows,
+        "break_tracker": {
+            "sheet_present": projection.break_tracker_sheet_present,
+            "rows": projection.break_tracker_rows,
+        },
+        "route_adherence": {
+            "sheet_present": projection.route_adherence_sheet_present,
+            "cycles": projection.route_adherence_cycles,
+        },
         "totals": {
             "route_count": len(normalized_rows),
             "upd_candidate_count": sum(1 for row in normalized_rows if bool(row["upd_candidate"])),
@@ -196,81 +213,40 @@ def build_dispatch_reporting_artifacts(
     )
 
 
-def _project_supported_source_workbook(content: bytes) -> dict[str, Any]:
+def _project_supported_source_workbook(
+    content: bytes,
+    *,
+    source_metadata_json: Mapping[str, Any] | None = None,
+    source_file_name: str | None = None,
+    fallback_service_date: str | None = None,
+):
     try:
-        projection = project_upd_draft_workbook(content)
+        projection = project_raw_eos_workbook(
+            content,
+            source_metadata_json=source_metadata_json,
+            source_file_name=source_file_name,
+            fallback_service_date=fallback_service_date,
+            fallback_station_code=DEFAULT_STATION_CODE,
+            fallback_dsp_name=DEFAULT_DSP_NAME,
+        )
     except WorkbookRuntimeDependencyError:
         raise
     except Exception as exc:
         raise DispatchReportingBuildError(
             "EOS workbook must match the supported dispatch-reporting workbook family"
         ) from exc
-    if str(projection.get("workflow_id") or "") != WORKFLOW_ID:
-        raise DispatchReportingBuildError(
-            "EOS workbook must belong to the dispatch-reporting workbook family"
-        )
     return projection
 
 
-def _normalize_route_actual_rows(raw_rows: Any) -> list[dict[str, Any]]:
-    if not isinstance(raw_rows, list):
-        raise DispatchReportingBuildError("supported EOS workbook is missing route_actuals rows")
-    normalized: list[dict[str, Any]] = []
-    for index, row in enumerate(raw_rows):
-        if not isinstance(row, Mapping):
-            raise DispatchReportingBuildError(
-                f"route_actuals[{index}] must be an object in the supported EOS workbook"
-            )
-        normalized.append(dict(row))
-    return normalized
-
-
-def _normalize_quality_warning_rows(raw_rows: Any) -> list[dict[str, Any]]:
-    if raw_rows is None:
-        return []
-    if not isinstance(raw_rows, list):
-        raise DispatchReportingBuildError("quality_warnings must be a list in the supported EOS workbook")
-    normalized: list[dict[str, Any]] = []
-    for index, row in enumerate(raw_rows):
-        if not isinstance(row, Mapping):
-            raise DispatchReportingBuildError(
-                f"quality_warnings[{index}] must be an object in the supported EOS workbook"
-            )
-        normalized.append(
-            {
-                "row_id": _resolve_text(row.get("row_id"), fallback=f"warning-{index + 1:03d}"),
-                "warning_code": _resolve_text(row.get("warning_code"), fallback="formula_integrity_warning"),
-                "severity": _resolve_text(row.get("severity"), fallback="warning"),
-                "message": _resolve_text(
-                    row.get("message"),
-                    fallback="Source workbook had broken summary formulas.",
-                ),
-                "source_sheet": _resolve_text(row.get("source_sheet"), fallback="Summary"),
-            }
-        )
-    return normalized
-
-
-def _normalize_manual_closeout_rows(raw_rows: Any) -> list[dict[str, Any]]:
-    if isinstance(raw_rows, list) and raw_rows:
-        row = raw_rows[0]
-        if not isinstance(row, Mapping):
-            raise DispatchReportingBuildError(
-                "manual_closeout must contain one object row in the supported EOS workbook"
-            )
-        return [
-            {
-                "row_id": _resolve_text(row.get("row_id"), fallback="manual-closeout"),
-                "sick_calls": _resolve_text(row.get("sick_calls"), fallback=""),
-                "unavailable_drivers": _resolve_text(row.get("unavailable_drivers"), fallback=""),
-                "working_devices": _resolve_text(row.get("working_devices"), fallback=""),
-                "rescues": _resolve_text(row.get("rescues"), fallback=""),
-                "incidents": _resolve_text(row.get("incidents"), fallback=""),
-                "last_driver_clockout": _resolve_text(row.get("last_driver_clockout"), fallback=""),
-                "dispatcher_comment": _resolve_text(row.get("dispatcher_comment"), fallback=""),
-                "manager_note": _resolve_text(row.get("manager_note"), fallback=""),
-            }
-        ]
+def _build_manual_closeout_rows(route_rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    latest_finish = max(
+        (
+            _resolve_text(row.get("actual_finish"), fallback="")
+            for row in route_rows
+            if _resolve_text(row.get("actual_finish"), fallback="")
+        ),
+        default="",
+    )
     return [
         {
             "row_id": "manual-closeout",
@@ -279,22 +255,11 @@ def _normalize_manual_closeout_rows(raw_rows: Any) -> list[dict[str, Any]]:
             "working_devices": "",
             "rescues": "",
             "incidents": "",
-            "last_driver_clockout": "",
+            "last_driver_clockout": latest_finish,
             "dispatcher_comment": "",
             "manager_note": "",
         }
     ]
-
-
-def _resolve_service_date(
-    route_rows: list[dict[str, Any]],
-    metadata: Mapping[str, Any],
-) -> str:
-    for row in route_rows:
-        candidate = _resolve_text(row.get("service_date"), fallback="")
-        if candidate:
-            return candidate
-    return _resolve_text(metadata.get("service_date"), fallback="")
 
 
 def _resolve_text(value: Any, *, fallback: str) -> str:

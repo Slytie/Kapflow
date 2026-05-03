@@ -1,14 +1,18 @@
 from __future__ import annotations
 
 import json
+import re
 from datetime import date, timedelta
 from typing import Any, Mapping, Sequence
+
+from onetruth.domain.partition_codec import service_day_to_future_planning_week
 
 
 ROUTE_DEMAND_DATASET_KEY = "planning.route_slot_requirements.workbook"
 _STANDARD_BAND_KEYS = ("standard_early_slot_count", "standard_late_slot_count")
 _WORKPAGE_HORIZON_DAY_COUNT = 14
 _WEEK_DAY_COUNT = 7
+_DATE_TOKEN_PATTERN = re.compile(r"\d{4}-\d{2}-\d{2}|\d{8}")
 
 
 def project_route_demand_workbook(workbook_bytes: bytes) -> dict[str, Any]:
@@ -30,6 +34,10 @@ def project_route_demand_workbook(workbook_bytes: bytes) -> dict[str, Any]:
         "rows": _decode_table_rows(payload.get("rows"), columns, label="rows"),
         "daily_demand_columns": daily_demand_columns,
         "daily_demand_rows": daily_demand_rows,
+        "planning_week_id": payload.get("planning_week_id"),
+        "scope_start": payload.get("scope_start"),
+        "scope_end_exclusive": payload.get("scope_end_exclusive"),
+        "operational_week_start": payload.get("operational_week_start"),
     }
 
 
@@ -83,6 +91,87 @@ def route_demand_workbook_bytes_from_metadata_json(metadata_json: object) -> byt
         return json.dumps(dict(metadata_json), indent=2, sort_keys=True).encode("utf-8")
     except TypeError as exc:
         raise ValueError("route demand workbook metadata must be JSON-serializable") from exc
+
+
+def seed_future_week_route_demand_workbook(
+    base_workbook_bytes: bytes,
+    *,
+    service_date_shift_days: int = _WEEK_DAY_COUNT,
+) -> bytes:
+    base_payload = _load_payload(base_workbook_bytes)
+    columns = _require_columns(base_payload.get("columns"), label="columns")
+    daily_demand_columns = _require_columns(
+        base_payload.get("daily_demand_columns"),
+        label="daily_demand_columns",
+    )
+    base_rows = _decode_table_rows(base_payload.get("rows"), columns, label="rows")
+    base_daily_rows = _normalize_daily_demand_horizon(
+        _decode_table_rows(
+            base_payload.get("daily_demand_rows"),
+            daily_demand_columns,
+            label="daily_demand_rows",
+        )
+    )
+    current_week_service_dates = sorted(
+        {
+            str(row.get("service_date") or "").strip()
+            for row in base_rows
+            if str(row.get("service_date") or "").strip()
+        }
+    )
+    if not current_week_service_dates:
+        raise ValueError("route demand workbook must contain current-week route slot rows")
+    current_week_daily_rows = [
+        row
+        for row in base_daily_rows
+        if str(row.get("service_date") or "").strip() in set(current_week_service_dates)
+    ]
+    if not current_week_daily_rows:
+        raise ValueError("route demand workbook must contain current-week daily demand rows")
+
+    next_rows = [
+        _shift_route_slot_row(row, service_date_shift_days=service_date_shift_days)
+        for row in base_rows
+        if str(row.get("service_date") or "").strip() in set(current_week_service_dates)
+    ]
+    next_daily_rows = [
+        _shift_daily_demand_row(row, service_date_shift_days=service_date_shift_days)
+        for row in current_week_daily_rows
+    ]
+
+    next_payload = dict(base_payload)
+    shifted_scope_start = _shift_optional_iso_service_date(
+        base_payload.get("scope_start"),
+        service_date_shift_days=service_date_shift_days,
+    )
+    shifted_scope_end_exclusive = _shift_optional_iso_service_date(
+        base_payload.get("scope_end_exclusive"),
+        service_date_shift_days=service_date_shift_days,
+    )
+    shifted_operational_week_start = _shift_optional_iso_service_date(
+        base_payload.get("operational_week_start"),
+        service_date_shift_days=service_date_shift_days,
+    )
+    if shifted_scope_start is not None:
+        next_payload["scope_start"] = shifted_scope_start
+    if shifted_scope_end_exclusive is not None:
+        next_payload["scope_end_exclusive"] = shifted_scope_end_exclusive
+    if shifted_operational_week_start is not None:
+        next_payload["operational_week_start"] = shifted_operational_week_start
+    planning_week_scope_start = shifted_scope_start or shifted_operational_week_start
+    if planning_week_scope_start is not None and "planning_week_id" in next_payload:
+        planning_week_monday = date.fromisoformat(planning_week_scope_start) + timedelta(days=1)
+        next_payload["planning_week_id"] = service_day_to_future_planning_week(
+            f"SD-{planning_week_monday.isoformat()}"
+        )
+    next_payload["columns"] = list(columns)
+    next_payload["rows"] = [[row.get(column) for column in columns] for row in next_rows]
+    next_payload["daily_demand_columns"] = list(daily_demand_columns)
+    next_payload["daily_demand_rows"] = [
+        [row.get(column) for column in daily_demand_columns]
+        for row in next_daily_rows
+    ]
+    return json.dumps(next_payload, indent=2, sort_keys=True).encode("utf-8")
 
 
 def _load_payload(workbook_bytes: bytes) -> dict[str, Any]:
@@ -189,6 +278,56 @@ def _normalize_submitted_daily_demand_rows(raw_rows: Any) -> list[dict[str, Any]
     return normalized
 
 
+def _shift_route_slot_row(
+    row: Mapping[str, Any],
+    *,
+    service_date_shift_days: int,
+) -> dict[str, Any]:
+    shifted = {
+        key: _shift_value_date_tokens(value, service_date_shift_days=service_date_shift_days)
+        for key, value in row.items()
+    }
+    shifted["service_date"] = _shift_iso_service_date(
+        str(row.get("service_date") or "").strip(),
+        service_date_shift_days=service_date_shift_days,
+    )
+    shifted["required_count"] = 0
+    if "source_kind" in shifted:
+        shifted["source_kind"] = "future_week_zero_seed"
+    return shifted
+
+
+def _shift_daily_demand_row(
+    row: Mapping[str, Any],
+    *,
+    service_date_shift_days: int,
+) -> dict[str, Any]:
+    shifted = dict(row)
+    shifted["service_date"] = _shift_iso_service_date(
+        str(row.get("service_date") or "").strip(),
+        service_date_shift_days=service_date_shift_days,
+    )
+    for key in (
+        "planned_route_count",
+        "standard_slot_count",
+        "standard_early_slot_count",
+        "standard_late_slot_count",
+        "rescue_slot_count",
+        "overflow_slot_count",
+        "on_call_target",
+        "excess_capacity_target",
+    ):
+        if key in shifted:
+            shifted[key] = 0
+    if "source_kind" in shifted:
+        shifted["source_kind"] = "future_week_zero_seed"
+    if "source_message_id" in shifted:
+        shifted["source_message_id"] = "future-week-zero-seed"
+    if "change_kind" in shifted:
+        shifted["change_kind"] = "future_week_added_seed"
+    return shifted
+
+
 def _validated_merged_daily_rows(
     *,
     base_daily_rows: list[dict[str, Any]],
@@ -223,6 +362,49 @@ def _validated_merged_daily_rows(
                     next_row[key] = value
         next_daily_rows.append(next_row)
     return next_daily_rows
+
+
+def _shift_value_date_tokens(
+    value: Any,
+    *,
+    service_date_shift_days: int,
+) -> Any:
+    if not isinstance(value, str):
+        return value
+    return _DATE_TOKEN_PATTERN.sub(
+        lambda match: _shift_date_token(
+            match.group(0),
+            service_date_shift_days=service_date_shift_days,
+        ),
+        value,
+    )
+
+
+def _shift_optional_iso_service_date(
+    raw_value: Any,
+    *,
+    service_date_shift_days: int,
+) -> str | None:
+    text = str(raw_value or "").strip()
+    if not text:
+        return None
+    return _shift_iso_service_date(
+        text,
+        service_date_shift_days=service_date_shift_days,
+    )
+
+
+def _shift_date_token(token: str, *, service_date_shift_days: int) -> str:
+    if len(token) == 8 and token.isdigit():
+        parsed = date(int(token[0:4]), int(token[4:6]), int(token[6:8]))
+        shifted = parsed + timedelta(days=service_date_shift_days)
+        return shifted.strftime("%Y%m%d")
+    return _shift_iso_service_date(token, service_date_shift_days=service_date_shift_days)
+
+
+def _shift_iso_service_date(service_date: str, *, service_date_shift_days: int) -> str:
+    shifted = date.fromisoformat(service_date) + timedelta(days=service_date_shift_days)
+    return shifted.isoformat()
 
 
 def _apply_daily_route_demand_to_slot_rows(

@@ -790,6 +790,7 @@ def _build_driver_preferences_artifact_submit_snapshot(*, tmp_path: Path) -> dic
             "driver_rows": [
                 {
                     "driver_id": row["driver_id"],
+                    "driver_quality": row["driver_quality"],
                     "preferences_by_weekday": row["preferences_by_weekday"],
                 }
                 for row in driver_rows

@@ -9,6 +9,7 @@ from onetruth.application.services.dispatch_reporting_workbook import (
     WorkbookRuntimeDependencyError,
 )
 from tests.runtime.helpers.dispatch_reporting import (
+    REALISTIC_REPORTING_SERVICE_DATE,
     SUPPORTED_REPORTING_WORKBOOK_PATH,
     XLSX_MEDIA_TYPE,
     reporting_workbook_upload_metadata,
@@ -35,19 +36,28 @@ def _client(
     *,
     db_url: str,
     actor_id: str,
+    tenant_id: str = "tenant-a",
+    domain_id: str = "domain-x",
     actor_roles: list[str],
 ) -> RuntimeApiClient:
     return RuntimeApiClient(
         db_url=db_url,
-        tenant_id="tenant-a",
-        domain_id="domain-x",
+        tenant_id=tenant_id,
+        domain_id=domain_id,
         actor_id=actor_id,
         actor_type="human",
         actor_roles=actor_roles,
     )
 
 
-def _create_dispatch_run(db_url: str, *, run_tag: str) -> dict[str, object]:
+def _create_dispatch_run(
+    db_url: str,
+    *,
+    run_tag: str,
+    service_date: str = REALISTIC_REPORTING_SERVICE_DATE,
+    tenant_id: str = "tenant-a",
+    domain_id: str = "domain-x",
+) -> dict[str, object]:
     run_cli("--db-url", db_url, "init-db")
     created = run_cli(
         "--db-url",
@@ -59,10 +69,10 @@ def _create_dispatch_run(db_url: str, *, run_tag: str) -> dict[str, object]:
             {
                 "workflow_id": "dispatch_reporting.v1",
                 "workflow_version": "v1",
-                "tenant_id": "tenant-a",
-                "domain_id": "domain-x",
-                "partition_key": "SD-2026-03-16",
-                "logical_date": "2026-03-16",
+                "tenant_id": tenant_id,
+                "domain_id": domain_id,
+                "partition_key": f"SD-{service_date}",
+                "logical_date": service_date,
                 "activation_key": f"{run_tag}:dispatch-run",
                 "idempotency_key": f"{run_tag}:runs.create",
             },
@@ -210,7 +220,7 @@ def _upload_supported_eos_workbook(
     client: RuntimeApiClient,
     *,
     human_task_id: str,
-    service_date: str = "2026-03-16",
+    service_date: str = REALISTIC_REPORTING_SERVICE_DATE,
     idempotency_key: str,
 ) -> dict[str, object]:
     return _upload_binary_artifact(
@@ -294,6 +304,292 @@ def test_dispatch_eos_intake_contract_uses_official_input_role_and_blocks_comple
     )
     assert denied.status_code == 400
     assert denied.payload["error"]["code"] == "task_requirements_not_satisfied"
+
+
+def test_eod_intake_task_endpoint_reuses_open_task_and_creates_new_generation_after_completion(
+    tmp_path: Path,
+) -> None:
+    db_url = _db_url(tmp_path)
+    workflow_run = _create_dispatch_run(db_url, run_tag="api:dispatch-intake-ensure")
+    workflow_run_id = str(workflow_run["workflow_run_id"])
+    created = _create_human_task(
+        db_url,
+        workflow_run_id=workflow_run_id,
+        stage_id="Stage01",
+        task_kind="eos_input_intake",
+        activation_key="api:dispatch-intake-ensure:stage01-intake",
+        actor_role="dispatch_supervisor",
+    )
+    human_task_id = str(created["human_task"]["human_task_id"])
+    client = _client(
+        db_url=db_url,
+        actor_id="human:dispatch-supervisor-1",
+        actor_roles=["dispatch_supervisor"],
+    )
+
+    first = client.post(
+        f"/api/v1/workpages/workflow-runs/{workflow_run_id}/eod-v0/intake-task",
+        payload={"idempotency_key": "api:dispatch-intake-ensure:first"},
+    )
+    assert first.status_code == 200, first.payload
+    assert first.payload["intake_task"] == {
+        "workflow_run_id": workflow_run_id,
+        "task_run_id": str(created["task_run"]["task_run_id"]),
+        "human_task_id": human_task_id,
+        "stage_id": "Stage01",
+        "task_kind": "eos_input_intake",
+        "task_run_state": "READY",
+        "human_task_state": "OPEN",
+        "activation_key": "api:dispatch-intake-ensure:stage01-intake",
+        "generation": 0,
+        "created": False,
+        "service_date": REALISTIC_REPORTING_SERVICE_DATE,
+        "target_workflow_run_id": workflow_run_id,
+        "target_route": f"/runs/{workflow_run_id}/workpages/eod-v0",
+        "created_workflow_run": False,
+    }
+
+    _claim_human_task(
+        client,
+        human_task_id,
+        idempotency_key="api:dispatch-intake-ensure:claim",
+    )
+    _upload_supported_eos_workbook(
+        client,
+        human_task_id=human_task_id,
+        idempotency_key="api:dispatch-intake-ensure:upload",
+    )
+    completed = client.post(
+        f"/api/v1/human-tasks/{human_task_id}/complete",
+        payload={
+            "outcome": "complete",
+            "idempotency_key": "api:dispatch-intake-ensure:complete",
+        },
+    )
+    assert completed.status_code == 200, completed.payload
+
+    second = client.post(
+        f"/api/v1/workpages/workflow-runs/{workflow_run_id}/eod-v0/intake-task",
+        payload={"idempotency_key": "api:dispatch-intake-ensure:second"},
+    )
+    assert second.status_code == 200, second.payload
+    intake_task = second.payload["intake_task"]
+    assert intake_task["workflow_run_id"] == workflow_run_id
+    assert intake_task["human_task_id"] != human_task_id
+    assert intake_task["stage_id"] == "Stage01"
+    assert intake_task["task_kind"] == "eos_input_intake"
+    assert intake_task["task_run_state"] == "READY"
+    assert intake_task["human_task_state"] == "OPEN"
+    assert intake_task["generation"] == 1
+    assert intake_task["created"] is True
+    assert str(intake_task["activation_key"]).endswith(":generation:1")
+    assert intake_task["service_date"] == REALISTIC_REPORTING_SERVICE_DATE
+    assert intake_task["target_workflow_run_id"] == workflow_run_id
+    assert intake_task["target_route"] == f"/runs/{workflow_run_id}/workpages/eod-v0"
+    assert intake_task["created_workflow_run"] is False
+
+
+def test_eod_intake_task_endpoint_resolves_existing_matching_service_date_run(
+    tmp_path: Path,
+) -> None:
+    db_url = _db_url(tmp_path)
+    source_run = _create_dispatch_run(db_url, run_tag="api:dispatch-intake-target-source")
+    target_run = _create_dispatch_run(
+        db_url,
+        run_tag="api:dispatch-intake-target-existing",
+        service_date="2026-03-25",
+    )
+    target_created = _create_human_task(
+        db_url,
+        workflow_run_id=str(target_run["workflow_run_id"]),
+        stage_id="Stage01",
+        task_kind="eos_input_intake",
+        activation_key="api:dispatch-intake-target-existing:stage01-intake",
+        actor_role="dispatch_supervisor",
+    )
+    client = _client(
+        db_url=db_url,
+        actor_id="human:dispatch-supervisor-1",
+        actor_roles=["dispatch_supervisor"],
+    )
+
+    response = client.post(
+        f"/api/v1/workpages/workflow-runs/{source_run['workflow_run_id']}/eod-v0/intake-task",
+        payload={
+            "service_date": "2026-03-25",
+            "idempotency_key": "api:dispatch-intake-target-existing:ensure",
+        },
+    )
+    assert response.status_code == 200, response.payload
+    assert response.payload["intake_task"] == {
+        "workflow_run_id": str(target_run["workflow_run_id"]),
+        "task_run_id": str(target_created["task_run"]["task_run_id"]),
+        "human_task_id": str(target_created["human_task"]["human_task_id"]),
+        "stage_id": "Stage01",
+        "task_kind": "eos_input_intake",
+        "task_run_state": "READY",
+        "human_task_state": "OPEN",
+        "activation_key": "api:dispatch-intake-target-existing:stage01-intake",
+        "generation": 0,
+        "created": False,
+        "service_date": "2026-03-25",
+        "target_workflow_run_id": str(target_run["workflow_run_id"]),
+        "target_route": f"/runs/{target_run['workflow_run_id']}/workpages/eod-v0",
+        "created_workflow_run": False,
+    }
+
+
+def test_eod_intake_task_endpoint_creates_matching_service_date_run_when_missing(
+    tmp_path: Path,
+) -> None:
+    db_path = tmp_path / "runtime.db"
+    db_url = f"sqlite:///{db_path}"
+    source_run = _create_dispatch_run(db_url, run_tag="api:dispatch-intake-target-create")
+    client = _client(
+        db_url=db_url,
+        actor_id="human:dispatch-supervisor-1",
+        actor_roles=["dispatch_supervisor"],
+    )
+
+    response = client.post(
+        f"/api/v1/workpages/workflow-runs/{source_run['workflow_run_id']}/eod-v0/intake-task",
+        payload={
+            "service_date": "2026-03-25",
+            "idempotency_key": "api:dispatch-intake-target-create:ensure",
+        },
+    )
+    assert response.status_code == 200, response.payload
+    intake_task = response.payload["intake_task"]
+    assert intake_task["workflow_run_id"] != str(source_run["workflow_run_id"])
+    assert intake_task["workflow_run_id"] == intake_task["target_workflow_run_id"]
+    assert intake_task["service_date"] == "2026-03-25"
+    assert intake_task["created"] is True
+    assert intake_task["created_workflow_run"] is True
+    assert intake_task["target_route"] == (
+        f"/runs/{intake_task['target_workflow_run_id']}/workpages/eod-v0"
+    )
+
+    created_runs = _query_rows(
+        db_path,
+        """
+        SELECT workflow_run_id, workflow_id, tenant_id, domain_id, partition_key, logical_date
+        FROM workflow_runs
+        WHERE partition_key = 'SD-2026-03-25'
+        """,
+    )
+    assert created_runs == [
+        {
+            "workflow_run_id": intake_task["target_workflow_run_id"],
+            "workflow_id": "dispatch_reporting.v1",
+            "tenant_id": "tenant-a",
+            "domain_id": "domain-x",
+            "partition_key": "SD-2026-03-25",
+            "logical_date": "2026-03-25",
+        }
+    ]
+
+
+def test_eod_intake_task_endpoint_rejects_invalid_service_date(
+    tmp_path: Path,
+) -> None:
+    db_url = _db_url(tmp_path)
+    source_run = _create_dispatch_run(db_url, run_tag="api:dispatch-intake-invalid-date")
+    client = _client(
+        db_url=db_url,
+        actor_id="human:dispatch-supervisor-1",
+        actor_roles=["dispatch_supervisor"],
+    )
+
+    response = client.post(
+        f"/api/v1/workpages/workflow-runs/{source_run['workflow_run_id']}/eod-v0/intake-task",
+        payload={
+            "service_date": "03/25/2026",
+            "idempotency_key": "api:dispatch-intake-invalid-date:ensure",
+        },
+    )
+    assert response.status_code == 400
+    assert response.payload["error"]["code"] == "invalid_service_date"
+    assert response.payload["error"]["details"]["service_date"] == "03/25/2026"
+
+
+def test_eod_intake_task_endpoint_respects_scope_when_resolving_service_date_runs(
+    tmp_path: Path,
+) -> None:
+    db_path = tmp_path / "runtime.db"
+    db_url = f"sqlite:///{db_path}"
+    source_run = _create_dispatch_run(db_url, run_tag="api:dispatch-intake-scope-source")
+    _create_dispatch_run(
+        db_url,
+        run_tag="api:dispatch-intake-scope-other",
+        service_date="2026-03-25",
+        tenant_id="tenant-b",
+        domain_id="domain-y",
+    )
+    client = _client(
+        db_url=db_url,
+        actor_id="human:dispatch-supervisor-1",
+        actor_roles=["dispatch_supervisor"],
+    )
+
+    response = client.post(
+        f"/api/v1/workpages/workflow-runs/{source_run['workflow_run_id']}/eod-v0/intake-task",
+        payload={
+            "service_date": "2026-03-25",
+            "idempotency_key": "api:dispatch-intake-scope-source:ensure",
+        },
+    )
+    assert response.status_code == 200, response.payload
+    target_workflow_run_id = str(response.payload["intake_task"]["target_workflow_run_id"])
+
+    created_rows = _query_rows(
+        db_path,
+        """
+        SELECT tenant_id, domain_id, workflow_run_id
+        FROM workflow_runs
+        WHERE partition_key = 'SD-2026-03-25' AND tenant_id = 'tenant-a' AND domain_id = 'domain-x'
+        """,
+    )
+    assert len(created_rows) == 1
+    assert str(created_rows[0]["workflow_run_id"]) == target_workflow_run_id
+
+
+def test_eod_intake_task_endpoint_rejects_task_claimed_by_other_actor(
+    tmp_path: Path,
+) -> None:
+    db_url = _db_url(tmp_path)
+    workflow_run = _create_dispatch_run(db_url, run_tag="api:dispatch-intake-ensure-claimed")
+    workflow_run_id = str(workflow_run["workflow_run_id"])
+    created = _create_human_task(
+        db_url,
+        workflow_run_id=workflow_run_id,
+        stage_id="Stage01",
+        task_kind="eos_input_intake",
+        activation_key="api:dispatch-intake-ensure-claimed:stage01-intake",
+        actor_role="dispatch_supervisor",
+    )
+    human_task_id = str(created["human_task"]["human_task_id"])
+    claimant = _client(
+        db_url=db_url,
+        actor_id="human:dispatch-supervisor-1",
+        actor_roles=["dispatch_supervisor"],
+    )
+    other_actor = _client(
+        db_url=db_url,
+        actor_id="human:dispatch-supervisor-2",
+        actor_roles=["dispatch_supervisor"],
+    )
+    _claim_human_task(
+        claimant,
+        human_task_id,
+        idempotency_key="api:dispatch-intake-ensure-claimed:claim",
+    )
+
+    response = other_actor.post(
+        f"/api/v1/workpages/workflow-runs/{workflow_run_id}/eod-v0/intake-task",
+        payload={"idempotency_key": "api:dispatch-intake-ensure-claimed:ensure"},
+    )
+    assert response.status_code == 409
+    assert response.payload["error"]["code"] == "task_not_claimable"
 
 
 def test_dispatch_reporting_happy_path_builds_review_finalizes_and_handoffs(
@@ -539,6 +835,160 @@ def test_dispatch_reporting_happy_path_builds_review_finalizes_and_handoffs(
     )
 
 
+def test_dispatch_reporting_date_selected_import_runs_finalize_loop_on_target_service_date_run(
+    tmp_path: Path,
+) -> None:
+    db_path = tmp_path / "target-date-runtime.db"
+    db_url = f"sqlite:///{db_path}"
+    source_run = _create_dispatch_run(
+        db_url,
+        run_tag="api:dispatch-target-date-source",
+        service_date="2026-03-24",
+    )
+    dispatcher_client = _client(
+        db_url=db_url,
+        actor_id="human:dispatch-supervisor-2",
+        actor_roles=["dispatch_supervisor"],
+    )
+
+    ensured = dispatcher_client.post(
+        f"/api/v1/workpages/workflow-runs/{source_run['workflow_run_id']}/eod-v0/intake-task",
+        payload={
+            "service_date": "2026-03-25",
+            "idempotency_key": "api:dispatch-target-date:ensure",
+        },
+    )
+    assert ensured.status_code == 200, ensured.payload
+    intake_task = ensured.payload["intake_task"]
+    target_workflow_run_id = str(intake_task["target_workflow_run_id"])
+    assert target_workflow_run_id != str(source_run["workflow_run_id"])
+    assert intake_task["service_date"] == "2026-03-25"
+
+    _claim_human_task(
+        dispatcher_client,
+        str(intake_task["human_task_id"]),
+        idempotency_key="api:dispatch-target-date:claim-intake",
+    )
+    _upload_supported_eos_workbook(
+        dispatcher_client,
+        human_task_id=str(intake_task["human_task_id"]),
+        service_date="2026-03-25",
+        idempotency_key="api:dispatch-target-date:upload-eos",
+    )
+
+    completed_intake = dispatcher_client.post(
+        f"/api/v1/human-tasks/{intake_task['human_task_id']}/complete",
+        payload={
+            "outcome": "complete",
+            "idempotency_key": "api:dispatch-target-date:complete-intake",
+        },
+    )
+    assert completed_intake.status_code == 200, completed_intake.payload
+    review_task_id = str(completed_intake.payload["result"]["spawned_children"][0]["human_task_id"])
+    latest_draft_artifact_id = _latest_artifact_id(
+        db_path,
+        workflow_run_id=target_workflow_run_id,
+        artifact_kind="reporting.upd_draft.workbook",
+    )
+
+    _claim_human_task(
+        dispatcher_client,
+        review_task_id,
+        idempotency_key="api:dispatch-target-date:claim-review",
+    )
+    _upload_binary_artifact(
+        dispatcher_client,
+        human_task_id=review_task_id,
+        artifact_kind="reporting.manager_review.doc",
+        artifact_role="evidence",
+        content=b"Reviewed for target-date finalization.",
+        file_name="target-date-manager-review.txt",
+        media_type="text/plain",
+        metadata_json={"review_summary": "Looks good"},
+        idempotency_key="api:dispatch-target-date:upload-manager-review",
+    )
+    confirmed = dispatcher_client.post(
+        f"/api/v1/human-tasks/{review_task_id}/confirm-review",
+        payload={
+            "reviewed_artifact_version_ids": [latest_draft_artifact_id],
+            "idempotency_key": "api:dispatch-target-date:confirm-review",
+        },
+    )
+    assert confirmed.status_code == 200, confirmed.payload
+    completed_review = dispatcher_client.post(
+        f"/api/v1/human-tasks/{review_task_id}/complete",
+        payload={
+            "outcome": "complete",
+            "idempotency_key": "api:dispatch-target-date:complete-review",
+        },
+    )
+    assert completed_review.status_code == 200, completed_review.payload
+    approval_id = _review_approval_id(db_path, workflow_run_id=target_workflow_run_id)
+
+    manager_client = _client(
+        db_url=db_url,
+        actor_id="human:operations-manager-1",
+        actor_roles=["operations_manager"],
+    )
+    approved = manager_client.post(
+        f"/api/v1/approvals/{approval_id}/respond",
+        payload={
+            "response_kind": "approve",
+            "idempotency_key": "api:dispatch-target-date:approve",
+        },
+    )
+    assert approved.status_code == 200, approved.payload
+
+    target_final_rows = _query_rows(
+        db_path,
+        """
+        SELECT artifact_kind
+        FROM artifact_versions
+        WHERE workflow_run_id = ? AND artifact_kind = 'reporting.final_packet.workbook'
+        """,
+        (target_workflow_run_id,),
+    )
+    assert len(target_final_rows) == 1
+
+    source_final_rows = _query_rows(
+        db_path,
+        """
+        SELECT artifact_kind
+        FROM artifact_versions
+        WHERE workflow_run_id = ? AND artifact_kind = 'reporting.final_packet.workbook'
+        """,
+        (str(source_run["workflow_run_id"]),),
+    )
+    assert source_final_rows == []
+
+    target_edge_rows = _query_rows(
+        db_path,
+        """
+        SELECT edge_id, status
+        FROM edge_executions
+        WHERE source_workflow_run_id = ? AND edge_id = 'reporting_actuals_to_future_planning'
+        """,
+        (target_workflow_run_id,),
+    )
+    assert target_edge_rows == [
+        {
+            "edge_id": "reporting_actuals_to_future_planning",
+            "status": "prepared",
+        }
+    ]
+
+    source_edge_rows = _query_rows(
+        db_path,
+        """
+        SELECT edge_id
+        FROM edge_executions
+        WHERE source_workflow_run_id = ? AND edge_id = 'reporting_actuals_to_future_planning'
+        """,
+        (str(source_run["workflow_run_id"]),),
+    )
+    assert source_edge_rows == []
+
+
 def test_dispatch_eos_intake_rejects_unsupported_workbook_shape_without_review_task(
     tmp_path: Path,
 ) -> None:
@@ -572,7 +1022,7 @@ def test_dispatch_eos_intake_rejects_unsupported_workbook_shape_without_review_t
         content=b"not-a-valid-workbook",
         file_name="unsupported-eos.xlsx",
         media_type=XLSX_MEDIA_TYPE,
-        metadata_json={"service_date": "2026-03-16"},
+        metadata_json={"service_date": REALISTIC_REPORTING_SERVICE_DATE},
         idempotency_key="api:dispatch-unsupported:upload-eos",
     )
 
@@ -630,8 +1080,10 @@ def test_dispatch_eos_intake_reports_missing_runtime_dependency_without_review_t
         idempotency_key="api:dispatch-dependency-missing:upload-eos",
     )
     monkeypatch.setattr(
-        "onetruth.application.services.dispatch_reporting_build.project_upd_draft_workbook",
-        lambda _content: (_ for _ in ()).throw(WorkbookRuntimeDependencyError("openpyxl")),
+        "onetruth.application.services.dispatch_reporting_build.project_raw_eos_workbook",
+        lambda *_args, **_kwargs: (_ for _ in ()).throw(
+            WorkbookRuntimeDependencyError("openpyxl")
+        ),
     )
 
     completed = dispatcher_client.post(

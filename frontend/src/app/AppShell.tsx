@@ -11,6 +11,7 @@ import { StatePanel } from "@/components/StatePanel";
 import { ScheduleQuickEditModal } from "@/pages/LogisticsScheduleWorkpagePage";
 import { DriverPreferencesQuickEditModal } from "@/pages/LogisticsDriverPreferencesWorkpagePage";
 import { RouteDemandQuickEditModal } from "@/pages/LogisticsRouteDemandWorkpagePage";
+import { DispatchReportCloseoutModal } from "@/pages/DispatchReportWorkpagePage";
 import { useShellFilters } from "@/app/useShellFilters";
 import { onetruthApi } from "@/lib/api/onetruthApi";
 import { errorText } from "@/lib/api/errorText";
@@ -193,6 +194,7 @@ export function AppShell(): JSX.Element {
   const [isDriversQuickEditOpen, setIsDriversQuickEditOpen] = useState(false);
   const [isScheduleQuickEditOpen, setIsScheduleQuickEditOpen] = useState(false);
   const [isRouteDemandQuickEditOpen, setIsRouteDemandQuickEditOpen] = useState(false);
+  const [isDispatchCloseoutOpen, setIsDispatchCloseoutOpen] = useState(false);
   const isWorkspaceRoute = /^\/runs\/[^/]+\/workspace$/.test(location.pathname);
   const isTimelineRoute = location.pathname === "/timeline";
   const isDemoLogisticsRoute =
@@ -359,6 +361,12 @@ export function AppShell(): JSX.Element {
   const activeWorkflowId = activeWorkflowRunId
     ? runWorkflowById.get(activeWorkflowRunId) ?? null
     : null;
+  const isDispatchReportingContext = Boolean(
+    activeWorkflowRunId &&
+      (activeWorkflowId === "dispatch_reporting.v1" ||
+        activeModuleId === "dispatch_reporting" ||
+        /^\/runs\/[^/]+\/workpages\/eod-v0(?:\/.*)?$/.test(location.pathname))
+  );
   const isWeeklyPlanningContext = Boolean(
     activeWorkflowRunId &&
       (activeWorkflowId === "weekly_schedule_planning.v1" ||
@@ -404,11 +412,17 @@ export function AppShell(): JSX.Element {
   );
   const canOpenScheduleQuickEdit = Boolean(activeWorkflowRunId && scheduleQuickEditAction);
   const canOpenRouteDemandQuickEdit = Boolean(activeWorkflowRunId && routeDemandQuickEditAction);
+  const canOpenDispatchCloseout = Boolean(activeWorkflowRunId && isDispatchReportingContext);
   const weeklyActionUnavailableReason = !activeWorkflowRunId
     ? "No active workflow run is selected."
     : !isWeeklyPlanningContext
       ? "This action is available on weekly planning runs."
       : "The latest editable artifact is still resolving or unavailable.";
+  const dispatchCloseoutUnavailableReason = !activeWorkflowRunId
+    ? "No active workflow run is selected."
+    : !isDispatchReportingContext
+      ? "This action is available on dispatch reporting runs."
+      : "The dispatch reporting closeout flow is still resolving.";
   const driversQuickEditUnavailableReason =
     activeWorkflowRunId && isWeeklyPlanningContext && driverPreferencesQuickEditQuery.isError
       ? "Driver preferences could not be loaded."
@@ -443,6 +457,40 @@ export function AppShell(): JSX.Element {
     setIsScheduleQuickEditOpen(false);
     setIsRouteDemandQuickEditOpen(false);
   }, [activeWorkflowRunId]);
+
+  useEffect(() => {
+    if (activeWorkflowRunId && isDispatchReportingContext) {
+      return;
+    }
+    setIsDispatchCloseoutOpen(false);
+  }, [activeWorkflowRunId, isDispatchReportingContext]);
+
+  useEffect(() => {
+    const routeState =
+      location.state && typeof location.state === "object"
+        ? (location.state as Record<string, unknown>)
+        : null;
+    if (!routeState?.openScheduleQuickEdit || !activeWorkflowRunId) {
+      return;
+    }
+    if (!/^\/runs\/[^/]+\/workpages\/schedule-v0(?:\/.*)?$/.test(location.pathname)) {
+      return;
+    }
+    setIsScheduleQuickEditOpen(true);
+    const nextState = { ...routeState };
+    delete nextState.openScheduleQuickEdit;
+    delete nextState.targetScheduleArtifactVersionId;
+    navigate(
+      {
+        pathname: location.pathname,
+        search: location.search
+      },
+      {
+        replace: true,
+        state: Object.keys(nextState).length > 0 ? nextState : null
+      }
+    );
+  }, [activeWorkflowRunId, location.pathname, location.search, location.state, navigate]);
 
   const handleTaskSelect = (item: LogisticsStoryBoardWorkItem): void => {
     open(buildBoardItemDrawerPayload(item));
@@ -642,6 +690,25 @@ export function AppShell(): JSX.Element {
                 Edit route demand
               </button>
 
+              {isDispatchReportingContext ? (
+                <button
+                  type="button"
+                  className="action-btn app-shell__quick-action"
+                  disabled={!canOpenDispatchCloseout}
+                  title={canOpenDispatchCloseout ? undefined : dispatchCloseoutUnavailableReason}
+                  aria-label={
+                    canOpenDispatchCloseout
+                      ? "Upload route activity"
+                      : `Upload route activity unavailable: ${dispatchCloseoutUnavailableReason}`
+                  }
+                  onClick={() => {
+                    setIsDispatchCloseoutOpen(true);
+                  }}
+                >
+                  Upload route activity
+                </button>
+              ) : null}
+
               <div className="app-shell__utility-menu">
                 <button
                   type="button"
@@ -741,6 +808,14 @@ export function AppShell(): JSX.Element {
           workflowRunId={activeWorkflowRunId}
           onClose={() => {
             setIsRouteDemandQuickEditOpen(false);
+          }}
+        />
+      ) : null}
+      {isDispatchCloseoutOpen && activeWorkflowRunId ? (
+        <DispatchReportCloseoutModal
+          workflowRunId={activeWorkflowRunId}
+          onClose={() => {
+            setIsDispatchCloseoutOpen(false);
           }}
         />
       ) : null}

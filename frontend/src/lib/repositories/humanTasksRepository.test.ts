@@ -47,4 +47,60 @@ describe("humanTasksRepository", () => {
 
     uploadSpy.mockRestore();
   });
+
+  it("merges optional upload metadata into required-response attachment calls", async () => {
+    const uploadSpy = vi
+      .spyOn(artifactAttachments, "uploadAttachmentForSubject")
+      .mockResolvedValue({
+        artifact_version_id: "av-uploaded-002",
+        workflow_run_id: "wr-test-002",
+        task_run_id: null,
+        artifact_kind: "reporting.eos_raw.workbook",
+        artifact_role: "official_input",
+        media_type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        storage_uri: "memory://av-uploaded-002",
+        content_digest: "sha256:test",
+        byte_size: 7,
+        metadata_json: {},
+        parent_artifact_version_id: null,
+        supersedes_artifact_version_id: null,
+        lineage_note: null,
+        created_at: "2026-03-31T12:00:00Z"
+      });
+
+    const file = new File(["fixture"], "2026-03-25.xlsx", {
+      type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    });
+    await humanTasksRepository.uploadRequiredResponse(
+      "ht-reporting-intake-001",
+      {
+        dataset_key: "reporting.eos_raw.workbook",
+        template_id: null,
+        artifact_kind: "reporting.eos_raw.workbook",
+        artifact_role: "official_input",
+        required_count: 1,
+        current_count: 0,
+        status: "missing"
+      },
+      file,
+      {
+        metadataJson: {
+          service_date: "2026-03-25"
+        }
+      }
+    );
+
+    expect(uploadSpy).toHaveBeenCalledWith({
+      subjectKind: "human_task",
+      subjectId: "ht-reporting-intake-001",
+      file,
+      artifactKind: "reporting.eos_raw.workbook",
+      artifactRole: "official_input",
+      metadataJson: {
+        service_date: "2026-03-25"
+      }
+    });
+
+    uploadSpy.mockRestore();
+  });
 });

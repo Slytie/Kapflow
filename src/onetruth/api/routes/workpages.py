@@ -6,9 +6,12 @@ from onetruth.application.handlers._shared.command_boundary import CommandError
 from onetruth.application.handlers.workpages import (
     add_driver_availability_exception_command,
     create_workflow_run_driver_preferences_snapshot_command,
+    create_workflow_run_route_demand_next_week_command,
     create_workflow_run_eod_draft_command,
+    ensure_workflow_run_eod_intake_task_command,
     mark_schedule_sick_no_show_command,
     preview_schedule_artifact_workpage_command,
+    save_and_run_route_demand_artifact_workpage_command,
     submit_driver_preferences_artifact_workpage_command,
     submit_route_demand_artifact_workpage_command,
     submit_eod_artifact_workpage_command,
@@ -61,6 +64,10 @@ from onetruth.infrastructure.artifacts.storage import (
     ArtifactStorageError,
     default_storage_root_for_db_url,
     read_blob,
+)
+from onetruth.integrations.openai import (
+    OpenAIConfigError,
+    OpenAIResponsesError,
 )
 
 
@@ -292,6 +299,45 @@ def create_workflow_run_eod_draft_endpoint(
     }
 
 
+def ensure_workflow_run_eod_intake_task_endpoint(
+    connection: sqlite3.Connection,
+    *,
+    context: RequestContext,
+    workflow_run_id: str,
+    payload: dict[str, object],
+) -> dict[str, object]:
+    workflow_run = scoped_workflow_run(connection, context, workflow_run_id)
+    if str(workflow_run.get("workflow_id") or "") != EOD_WORKFLOW_ID:
+        raise ApiError(
+            status_code=404,
+            code="workpage_not_found",
+            message="workpage not found",
+            details={
+                "workflow_run_id": workflow_run_id,
+                "workpage_id": "eod-v0",
+            },
+        )
+    try:
+        result = ensure_workflow_run_eod_intake_task_command(
+            connection,
+            workflow_run,
+            {
+                **payload,
+                "tenant_id": context.tenant_id,
+                "domain_id": context.domain_id,
+                "actor_id": context.actor_id,
+                "actor_type": context.actor_type,
+                "actor_roles": list(context.actor_roles),
+            },
+        )
+    except CommandError as exc:
+        raise api_error_from_command(exc) from exc
+    return {
+        "command": "api.workpages.eod_intake_task.ensure",
+        **result,
+    }
+
+
 def create_workflow_run_driver_preferences_snapshot_endpoint(
     connection: sqlite3.Connection,
     *,
@@ -328,6 +374,124 @@ def create_workflow_run_driver_preferences_snapshot_endpoint(
         raise api_error_from_command(exc) from exc
     return {
         "command": "api.workpages.driver_preferences.snapshots.create",
+        **result,
+    }
+
+
+def create_workflow_run_route_demand_next_week_endpoint(
+    connection: sqlite3.Connection,
+    *,
+    context: RequestContext,
+    db_url: str,
+    workflow_run_id: str,
+    payload: dict[str, object],
+) -> dict[str, object]:
+    workflow_run = scoped_workflow_run(connection, context, workflow_run_id)
+    if str(workflow_run.get("workflow_id") or "") != "weekly_schedule_planning.v1":
+        raise ApiError(
+            status_code=404,
+            code="workpage_not_found",
+            message="workpage not found",
+            details={
+                "workflow_run_id": workflow_run_id,
+                "workpage_id": ROUTE_DEMAND_WORKPAGE_KIND,
+            },
+        )
+    try:
+        result = create_workflow_run_route_demand_next_week_command(
+            connection,
+            workflow_run,
+            {
+                **payload,
+                "tenant_id": context.tenant_id,
+                "domain_id": context.domain_id,
+                "actor_id": context.actor_id,
+                "actor_type": context.actor_type,
+            },
+            storage_root=default_storage_root_for_db_url(db_url),
+        )
+    except CommandError as exc:
+        raise api_error_from_command(exc) from exc
+    return {
+        "command": "api.workpages.route_demand.next_week.create",
+        **result,
+    }
+
+
+def save_and_run_route_demand_artifact_workpage_endpoint(
+    connection: sqlite3.Connection,
+    *,
+    context: RequestContext,
+    db_url: str,
+    workflow_run_id: str,
+    artifact_version_id: str,
+    payload: dict[str, object],
+) -> dict[str, object]:
+    try:
+        artifact = show_artifact_version_command(connection, artifact_version_id)
+    except CommandError as exc:
+        raise api_error_from_command(exc) from exc
+
+    artifact_workflow_run_id = str(artifact["workflow_run_id"])
+    if artifact_workflow_run_id != workflow_run_id:
+        raise ApiError(
+            status_code=404,
+            code="workpage_artifact_not_found",
+            message="artifact-backed workpage not found",
+            details={"artifact_version_id": artifact_version_id},
+        )
+    workflow_run = _scoped_workflow_run_for_artifact(
+        connection,
+        context=context,
+        workflow_run_id=artifact_workflow_run_id,
+        artifact=artifact,
+        artifact_version_id=artifact_version_id,
+    )
+    descriptor = _resolve_public_artifact_descriptor(
+        workflow_id=str(workflow_run["workflow_id"]),
+        artifact=artifact,
+        artifact_version_id=artifact_version_id,
+        workpage_kind=ROUTE_DEMAND_WORKPAGE_KIND,
+    )
+    artifact_kind = str(artifact.get("artifact_kind") or artifact.get("dataset_key") or "")
+    if not descriptor.supports_editable_artifact_kind(artifact_kind):
+        raise ApiError(
+            status_code=404,
+            code="workpage_artifact_not_found",
+            message="artifact-backed workpage not found",
+            details={"artifact_version_id": artifact_version_id},
+        )
+    try:
+        result = save_and_run_route_demand_artifact_workpage_command(
+            connection,
+            {
+                **payload,
+                "artifact_version_id": artifact_version_id,
+                "actor_id": context.actor_id,
+                "actor_type": context.actor_type,
+                "actor_roles": list(context.actor_roles),
+            },
+            storage_root=default_storage_root_for_db_url(db_url),
+        )
+    except CommandError as exc:
+        raise api_error_from_command(exc) from exc
+    except OpenAIConfigError as exc:
+        raise ApiError(
+            status_code=503,
+            code=exc.code,
+            message=str(exc),
+            details={},
+        ) from exc
+    except OpenAIResponsesError as exc:
+        status_code = 503 if exc.retryable else 502
+        raise ApiError(
+            status_code=status_code,
+            code=exc.code,
+            message=str(exc),
+            details=exc.details,
+        ) from exc
+    return {
+        "command": "api.workpages.route_demand.artifact.save_and_run",
         **result,
     }
 
@@ -795,6 +959,14 @@ def _artifact_source_refs(metadata_json: object) -> list[str]:
         text = str(value).strip()
         if text and text not in source_refs:
             source_refs.append(text)
+    for key in ("source_eos_artifact_version_id", "normalized_artifact_version_id"):
+        value = metadata_json.get(key)
+        if value is None:
+            continue
+        text = str(value).strip()
+        ref = f"/api/v1/artifacts/{text}" if text else ""
+        if ref and ref not in source_refs:
+            source_refs.append(ref)
     return source_refs
 
 

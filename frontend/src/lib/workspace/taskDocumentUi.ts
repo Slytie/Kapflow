@@ -16,6 +16,7 @@ const FRIENDLY_DOCUMENT_LABELS: Record<string, string> = {
   "reporting.eos_raw.workbook": "EOS Raw Workbook",
   "reporting.actuals_normalized.workbook": "Normalized Actuals",
   "reporting.upd_draft.workbook": "UPD Draft Workbook",
+  "reporting.manager_review.doc": "Manager Review Packet",
   "reporting.final_packet.workbook": "Final Packet Workbook"
 };
 

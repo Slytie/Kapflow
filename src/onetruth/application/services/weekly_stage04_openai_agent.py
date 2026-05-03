@@ -59,7 +59,9 @@ from onetruth.infrastructure.repositories.human_tasks import get_human_task
 from onetruth.infrastructure.repositories.task_runs import get_task_run
 from onetruth.infrastructure.repositories.workflow_runs import get_workflow_run
 from onetruth.integrations.openai import (
+    OpenAIConfigError,
     OpenAIResponsesFunctionCallingRunner,
+    OpenAIResponsesError,
     ResponsesFunctionToolSpec,
     build_openai_function_calling_runner_from_env,
 )
@@ -266,60 +268,9 @@ def run_weekly_stage04_openai_agent(
             },
         )
 
-    stage04_inputs = _resolve_stage04_input_artifacts(
-        artifacts=list_artifact_versions_for_workflow_run(connection, str(human_task["workflow_run_id"])),
-        stage_spec=stage_spec,
-    )
-    bundle = build_weekly_schedule_control_bundle(
-        workflow_run=workflow_run,
-        route_slot_requirements_artifact=stage04_inputs["route_slot_requirements"],
-        driver_capabilities_artifact=stage04_inputs["driver_capabilities"],
-        approved_availability_artifact=stage04_inputs.get("approved_availability"),
-        actual_hours_artifact=stage04_inputs.get("actual_hours"),
-        route_horizon_artifact=stage04_inputs.get("route_horizon"),
-    )
-    context_pack = _build_context_pack(
-        workflow_run=workflow_run,
-        task_run=task_run,
-        human_task=human_task,
-        stage_spec=stage_spec,
-        bundle=bundle,
-        input_artifacts=stage04_inputs,
-    )
-    tool_specs = _stage04_tool_specs(stage_spec)
-    tooling = _Stage04DeterministicTooling(
-        connection=connection,
-        workflow_run=workflow_run,
-        workflow_run_id=str(human_task["workflow_run_id"]),
-        bundle=bundle,
-        stage04_inputs=stage04_inputs,
-        context_pack=context_pack,
-        idempotency_prefix=f"{base_idempotency_key}:deterministic",
-    )
-
-    context_pack_artifact = persist_prepared_execution_evidence_artifacts(
-        connection=connection,
-        workflow_run_id=str(human_task["workflow_run_id"]),
-        task_run_id=str(human_task["task_run_id"]),
-        actor_id=actor_id,
-        actor_type=actor_type,
-        idempotency_prefix=f"{base_idempotency_key}:runtime-evidence",
-        artifacts=[
-            prepare_runtime_json_evidence_artifact(
-                artifact_kind=RUNTIME_CONTEXT_PACK_ARTIFACT_KIND,
-                file_name=f"runtime-context-pack-{execution_session_id}.json",
-                execution_session_id=execution_session_id,
-                tool_execution_id=tool_execution_id,
-                policy_decision_id=policy_decision_id,
-                relation_kind="stage04_context_pack",
-                payload_json=context_pack,
-                idempotency_suffix="context-pack",
-            )
-        ],
-        storage_root=artifact_root,
-    )[0]
-
-    stop_policy = _stage04_stop_policy_from_stage_spec(stage_spec)
+    stage04_inputs: dict[str, dict[str, Any] | None] | None = None
+    tooling: _Stage04DeterministicTooling | None = None
+    context_pack_artifact: dict[str, Any] | None = None
     runtime_evidence_artifacts: list[dict[str, Any]] = []
     runtime_turn_evidence: list[dict[str, Any]] = []
     agent_result_payload: dict[str, Any] | None = None
@@ -391,6 +342,58 @@ def run_weekly_stage04_openai_agent(
         )
 
     try:
+        stage04_inputs = _resolve_stage04_input_artifacts(
+            artifacts=list_artifact_versions_for_workflow_run(connection, str(human_task["workflow_run_id"])),
+            stage_spec=stage_spec,
+        )
+        bundle = build_weekly_schedule_control_bundle(
+            workflow_run=workflow_run,
+            route_slot_requirements_artifact=stage04_inputs["route_slot_requirements"],
+            driver_capabilities_artifact=stage04_inputs["driver_capabilities"],
+            approved_availability_artifact=stage04_inputs.get("approved_availability"),
+            actual_hours_artifact=stage04_inputs.get("actual_hours"),
+            route_horizon_artifact=stage04_inputs.get("route_horizon"),
+        )
+        context_pack = _build_context_pack(
+            workflow_run=workflow_run,
+            task_run=task_run,
+            human_task=human_task,
+            stage_spec=stage_spec,
+            bundle=bundle,
+            input_artifacts=stage04_inputs,
+        )
+        tool_specs = _stage04_tool_specs(stage_spec)
+        tooling = _Stage04DeterministicTooling(
+            connection=connection,
+            workflow_run=workflow_run,
+            workflow_run_id=str(human_task["workflow_run_id"]),
+            bundle=bundle,
+            stage04_inputs=stage04_inputs,
+            context_pack=context_pack,
+            idempotency_prefix=f"{base_idempotency_key}:deterministic",
+        )
+        context_pack_artifact = persist_prepared_execution_evidence_artifacts(
+            connection=connection,
+            workflow_run_id=str(human_task["workflow_run_id"]),
+            task_run_id=str(human_task["task_run_id"]),
+            actor_id=actor_id,
+            actor_type=actor_type,
+            idempotency_prefix=f"{base_idempotency_key}:runtime-evidence",
+            artifacts=[
+                prepare_runtime_json_evidence_artifact(
+                    artifact_kind=RUNTIME_CONTEXT_PACK_ARTIFACT_KIND,
+                    file_name=f"runtime-context-pack-{execution_session_id}.json",
+                    execution_session_id=execution_session_id,
+                    tool_execution_id=tool_execution_id,
+                    policy_decision_id=policy_decision_id,
+                    relation_kind="stage04_context_pack",
+                    payload_json=context_pack,
+                    idempotency_suffix="context-pack",
+                )
+            ],
+            storage_root=artifact_root,
+        )[0]
+        stop_policy = _stage04_stop_policy_from_stage_spec(stage_spec)
         selected_runner = runner or build_weekly_stage04_openai_agent_runner_from_env()
         agent_result = selected_runner.run_function_calling_loop(
             initial_input=_initial_model_input(
@@ -477,32 +480,38 @@ def run_weekly_stage04_openai_agent(
         )
         runtime_evidence_artifacts.append(trace_artifact)
     except Exception as exc:
+        normalized_exc = _normalize_stage04_execution_exception(
+            exc,
+            execution_session_id=execution_session_id,
+            tool_execution_id=tool_execution_id,
+        )
         try:
-            trace_artifact = _persist_stage04_execution_trace(
-                connection=connection,
-                workflow_run_id=str(human_task["workflow_run_id"]),
-                task_run_id=str(human_task["task_run_id"]),
-                actor_id=actor_id,
-                actor_type=actor_type,
-                idempotency_prefix=f"{base_idempotency_key}:runtime-evidence",
-                storage_root=artifact_root,
-                execution_session_id=execution_session_id,
-                tool_execution_id=tool_execution_id,
-                policy_decision_id=policy_decision_id,
-                context_pack_artifact=context_pack_artifact,
-                runtime_turn_evidence=runtime_turn_evidence,
-                planner_state=tooling.planner_state_snapshot(),
-                agent_result=agent_result_payload,
-                stage04_build_result=stage04_build_result,
-                execution_outcome="failed",
-                error_code=str(getattr(exc, "code", exc.__class__.__name__)),
-                error_details=(
-                    dict(getattr(exc, "details"))
-                    if isinstance(getattr(exc, "details", None), dict)
-                    else None
-                ),
-            )
-            runtime_evidence_artifacts.append(trace_artifact)
+            if context_pack_artifact is not None and tooling is not None:
+                trace_artifact = _persist_stage04_execution_trace(
+                    connection=connection,
+                    workflow_run_id=str(human_task["workflow_run_id"]),
+                    task_run_id=str(human_task["task_run_id"]),
+                    actor_id=actor_id,
+                    actor_type=actor_type,
+                    idempotency_prefix=f"{base_idempotency_key}:runtime-evidence",
+                    storage_root=artifact_root,
+                    execution_session_id=execution_session_id,
+                    tool_execution_id=tool_execution_id,
+                    policy_decision_id=policy_decision_id,
+                    context_pack_artifact=context_pack_artifact,
+                    runtime_turn_evidence=runtime_turn_evidence,
+                    planner_state=tooling.planner_state_snapshot(),
+                    agent_result=agent_result_payload,
+                    stage04_build_result=stage04_build_result,
+                    execution_outcome="failed",
+                    error_code=str(getattr(normalized_exc, "code", normalized_exc.__class__.__name__)),
+                    error_details=(
+                        dict(getattr(normalized_exc, "details"))
+                        if isinstance(getattr(normalized_exc, "details", None), dict)
+                        else None
+                    ),
+                )
+                runtime_evidence_artifacts.append(trace_artifact)
         except Exception:
             pass
         _record_tool_and_session_failure(
@@ -512,9 +521,9 @@ def run_weekly_stage04_openai_agent(
             actor_id=actor_id,
             actor_type=actor_type,
             idempotency_base=base_idempotency_key,
-            error_code=str(getattr(exc, "code", exc.__class__.__name__)),
+            error_code=str(getattr(normalized_exc, "code", normalized_exc.__class__.__name__)),
         )
-        raise
+        raise normalized_exc
 
     runtime_evidence_ids = [str(context_pack_artifact["artifact_version_id"])]
     runtime_evidence_ids.extend(
@@ -2013,6 +2022,36 @@ def _require_fields(payload: dict[str, Any], fields: list[str]) -> None:
             message=f"missing required fields: {', '.join(missing)}",
             details={"missing_fields": missing},
         )
+
+
+def _normalize_stage04_execution_exception(
+    exc: Exception,
+    *,
+    execution_session_id: str,
+    tool_execution_id: str,
+) -> Exception:
+    if isinstance(exc, CommandError):
+        return exc
+    if isinstance(exc, (OpenAIConfigError, OpenAIResponsesError)):
+        return exc
+    if isinstance(exc, ValueError):
+        message = str(exc)
+        details = {
+            "execution_session_id": execution_session_id,
+            "tool_execution_id": tool_execution_id,
+        }
+        if "conflicting explicit scope bounds" in message:
+            return CommandError(
+                code="stage04_input_scope_mismatch",
+                message=message,
+                details=details,
+            )
+        return CommandError(
+            code="stage04_input_bundle_invalid",
+            message=message,
+            details=details,
+        )
+    return exc
 
 
 def _record_tool_and_session_failure(

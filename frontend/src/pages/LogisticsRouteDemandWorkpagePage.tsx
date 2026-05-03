@@ -115,6 +115,33 @@ function routeDemandDayCardSignature(dayCards: WorkpageRouteDemandDayCard[]): st
   );
 }
 
+function visibleRouteDemandDayCards(
+  dayCards: WorkpageRouteDemandDayCard[]
+): WorkpageRouteDemandDayCard[] {
+  return dayCards.slice(0, 7);
+}
+
+function routeDemandDisabledReasonText(reason: string | null | undefined): string | null {
+  if (!reason) {
+    return null;
+  }
+  if (reason === "continue_from_schedule") {
+    return "This future week already has weekly schedule draft truth. Continue from the schedule workpage instead of editing route demand here.";
+  }
+  if (reason === "historical_artifact_read_only") {
+    return "This route-demand version is historical and can no longer be edited.";
+  }
+  return reason;
+}
+
+function routeDemandMutationErrorDetail(
+  actionLabel: string,
+  error: unknown,
+  fallback: string
+): string {
+  return `${actionLabel} failed. ${errorText(error, fallback)}`;
+}
+
 function useEditableRouteDemandDayCards(
   contract: WorkpageContract | undefined
 ): {
@@ -449,7 +476,9 @@ function RouteDemandWorkpageBody({
   const noteSection = findNoteSection(contract.workpage.sections);
   const historySection = findHistorySection(contract.workpage.sections);
   const editable = Boolean(contract.artifact_state?.editable);
-  const dayCards = editableDayCards ?? contract.route_demand_calculations?.day_cards ?? [];
+  const dayCards = visibleRouteDemandDayCards(
+    editableDayCards ?? contract.route_demand_calculations?.day_cards ?? []
+  );
   const rawDailyTable = findTableSection(contract.workpage.sections, "route_demand_daily_rows");
 
   if (presentation === "daily_only") {
@@ -508,12 +537,30 @@ function RouteDemandWorkpageBody({
 
 export function LogisticsRouteDemandWorkpagePage(): JSX.Element {
   const { workflowRunId } = useParams<{ workflowRunId: string }>();
+  const navigate = useNavigate();
+  const location = useLocation();
+  const queryClient = useQueryClient();
+  const [createNextWeekErrorMessage, setCreateNextWeekErrorMessage] = useState<string | null>(
+    null
+  );
   const query = useQuery({
     queryKey: ["workpages", "route-demand-v0", "run", workflowRunId],
     queryFn: () => workpagesRepository.routeDemandForRun(workflowRunId ?? ""),
     enabled: Boolean(workflowRunId),
     refetchInterval: apiConfig.pollIntervalMs
   });
+  const createNextWeekMutation = useMutation({
+    mutationFn: (input: { createPath: string; actionRef: WorkpageRouteDemandAction["action_ref"] }) =>
+      workpagesRepository.createRouteDemandNextWeekAtPath(
+        input.createPath,
+        workflowRunId ?? "",
+        input.actionRef ?? undefined
+      )
+  });
+
+  useEffect(() => {
+    setCreateNextWeekErrorMessage(null);
+  }, [workflowRunId, query.data?.freshness.generated_at]);
 
   if (!workflowRunId) {
     return (
@@ -552,7 +599,50 @@ export function LogisticsRouteDemandWorkpagePage(): JSX.Element {
     query.data,
     (action) => action.kind === "open_latest"
   );
+  const addNextWeekAction = findRouteDemandAction(
+    query.data,
+    (action) => action.kind === "add_next_week"
+  );
   const backRoute = workpageBackRoute(workflowRunId);
+
+  async function handleAddNextWeekFromLanding(): Promise<void> {
+    if (!addNextWeekAction?.create_path) {
+      return;
+    }
+    setCreateNextWeekErrorMessage(null);
+    try {
+      const carriedActionRef = resolveWorkpageActionRef(location.state, {
+        workflowRunId,
+        workpageKind: "route-demand-v0",
+        artifactVersionId: null
+      });
+      const actionRef = mergeWorkpageActionRef(
+        addNextWeekAction.action_ref ?? null,
+        carriedActionRef ?? null
+      );
+      const created = await createNextWeekMutation.mutateAsync({
+        createPath: addNextWeekAction.create_path,
+        actionRef: actionRef ?? null
+      });
+      await queryClient.invalidateQueries({ queryKey: ["workpages"] });
+      await queryClient.invalidateQueries({ queryKey: ["logistics-demo-story"] });
+      await invalidateWorkspaceViews(queryClient, created.workflow_run_id);
+      setCreateNextWeekErrorMessage(null);
+      navigate(created.route, {
+        state: {
+          workpageActionRef: actionRef
+        }
+      });
+    } catch (error) {
+      setCreateNextWeekErrorMessage(
+        routeDemandMutationErrorDetail(
+          "Add a week",
+          error,
+          "Unable to create the next weekly route-demand surface."
+        )
+      );
+    }
+  }
 
   return (
     <WorkpageFrame
@@ -569,7 +659,7 @@ export function LogisticsRouteDemandWorkpagePage(): JSX.Element {
       onRefresh={() => {
         void query.refetch();
       }}
-      isRefreshing={query.isFetching}
+      isRefreshing={query.isFetching || createNextWeekMutation.isPending}
       pollIntervalMs={apiConfig.pollIntervalMs}
       testId="route-demand-workpage-page"
       metadataPresentation="dialog"
@@ -577,7 +667,32 @@ export function LogisticsRouteDemandWorkpagePage(): JSX.Element {
       sourceDescription="Workflow-run-backed route-demand projection served from the latest canonical Stage04 route-demand artifact for this weekly run."
       backLink={backRoute.href}
       backLabel={backRoute.label}
+      heroActions={
+        addNextWeekAction?.create_path ? (
+          <button
+            type="button"
+            className="action-btn action-btn--positive"
+            disabled={addNextWeekAction.state !== "available" || createNextWeekMutation.isPending}
+            onClick={() => {
+              void handleAddNextWeekFromLanding();
+            }}
+          >
+            {createNextWeekMutation.isPending ? "Adding week..." : "Add a week"}
+          </button>
+        ) : undefined
+      }
     >
+      {createNextWeekErrorMessage ? (
+        <section
+          className="workpage-panel workpage-panel--callout"
+          data-testid="route-demand-mutation-error"
+        >
+          <header className="workpage-panel__header">
+            <h2>Action failed</h2>
+            <p>{createNextWeekErrorMessage}</p>
+          </header>
+        </section>
+      ) : null}
       {openLatestAction?.route ? (
         <section className="workpage-panel workpage-panel--callout">
           <header className="workpage-panel__header">
@@ -603,8 +718,13 @@ interface RouteDemandArtifactEditorProps {
   workflowRunId: string;
   artifactVersionId: string;
   layout?: "page" | "embedded";
-  afterSave?: "navigate" | "close";
+  afterSave?: "navigate" | "close" | "stay";
   onClose?: () => void;
+  onArtifactContextChange?: (input: {
+    workflowRunId: string;
+    artifactVersionId: string;
+    afterSave: "navigate" | "close" | "stay";
+  }) => void;
 }
 
 function RouteDemandArtifactEditor({
@@ -612,7 +732,8 @@ function RouteDemandArtifactEditor({
   artifactVersionId,
   layout = "page",
   afterSave = "navigate",
-  onClose
+  onClose,
+  onArtifactContextChange
 }: RouteDemandArtifactEditorProps): JSX.Element {
   const navigate = useNavigate();
   const location = useLocation();
@@ -625,8 +746,17 @@ function RouteDemandArtifactEditor({
     refetchInterval: apiConfig.pollIntervalMs
   });
   const { dayCards, setDayCards } = useEditableRouteDemandDayCards(query.data);
+  const [mutationErrorMessage, setMutationErrorMessage] = useState<string | null>(null);
 
   const saveAction = findRouteDemandAction(query.data, (action) => action.kind === "save");
+  const addNextWeekAction = findRouteDemandAction(
+    query.data,
+    (action) => action.kind === "add_next_week"
+  );
+  const saveAndRunAction = findRouteDemandAction(
+    query.data,
+    (action) => action.kind === "save_and_run"
+  );
   const scheduleAction = query.data?.schedule_impact?.latest_schedule_draft_artifact_version_id
     ? {
         route: scheduleArtifactRoute(
@@ -647,19 +777,15 @@ function RouteDemandArtifactEditor({
   const isStaleArtifact = Boolean(
     latestArtifactVersionId && latestArtifactVersionId !== artifactVersionId
   );
+  const futureWeekOption = query.data?.future_week_options[0] ?? null;
+  const futureWeekActivation = query.data?.future_week_activation ?? null;
   const submitMutation = useMutation({
-    mutationFn: () => {
-      const carriedActionRef = resolveWorkpageActionRef(location.state, {
-        workflowRunId,
-        workpageKind: "route-demand-v0",
-        artifactVersionId
-      });
-      const actionRef = mergeWorkpageActionRef(
-        saveAction?.action_ref ?? null,
-        carriedActionRef ?? null
-      );
-      return workpagesRepository.submitRouteDemandArtifactAtPath(
-        saveAction?.submit_path ?? "",
+    mutationFn: (input: {
+      submitPath: string;
+      actionRef: WorkpageRouteDemandAction["action_ref"];
+    }) =>
+      workpagesRepository.submitRouteDemandArtifactAtPath(
+        input.submitPath,
         artifactVersionId,
         {
           dailyDemandRows: dayCards.map((card) => ({
@@ -667,32 +793,41 @@ function RouteDemandArtifactEditor({
             planned_route_count: card.planned_route_count
           }))
         },
-        actionRef
-      );
-    },
-    onSuccess: (submitted) => {
-      void queryClient.invalidateQueries({ queryKey: ["workpages"] });
-      void queryClient.invalidateQueries({ queryKey: ["logistics-demo-story"] });
-      void invalidateWorkspaceViews(queryClient, submitted.workflow_run_id);
-      if (afterSave === "close") {
-        onClose?.();
-        return;
-      }
-      const carriedActionRef = resolveWorkpageActionRef(location.state, {
-        workflowRunId,
-        workpageKind: "route-demand-v0",
-        artifactVersionId
-      });
-      navigate(submitted.route, {
-        state: {
-          workpageActionRef: replaceWorkpageActionRefArtifactVersionId(
-            mergeWorkpageActionRef(saveAction?.action_ref ?? null, carriedActionRef ?? null),
-            submitted.artifact_version_id
-          )
-        }
-      });
-    }
+        input.actionRef ?? undefined
+      )
   });
+  const createNextWeekMutation = useMutation({
+    mutationFn: (input: {
+      createPath: string;
+      actionRef: WorkpageRouteDemandAction["action_ref"];
+    }) =>
+      workpagesRepository.createRouteDemandNextWeekAtPath(
+        input.createPath,
+        workflowRunId,
+        input.actionRef ?? undefined
+      )
+  });
+  const saveAndRunMutation = useMutation({
+    mutationFn: (input: {
+      submitPath: string;
+      actionRef: WorkpageRouteDemandAction["action_ref"];
+    }) =>
+      workpagesRepository.saveAndRunRouteDemandArtifactAtPath(
+        input.submitPath,
+        artifactVersionId,
+        {
+          dailyDemandRows: dayCards.map((card) => ({
+            service_date: card.service_date,
+            planned_route_count: card.planned_route_count
+          }))
+        },
+        input.actionRef ?? undefined
+      )
+  });
+
+  useEffect(() => {
+    setMutationErrorMessage(null);
+  }, [workflowRunId, artifactVersionId, query.data?.freshness.generated_at]);
 
   if (query.isLoading) {
     return (
@@ -719,7 +854,170 @@ function RouteDemandArtifactEditor({
 
   const editable = Boolean(query.data.artifact_state?.editable);
   const canSave = editable && !isStaleArtifact && saveAction?.state === "available";
+  const canAddNextWeek =
+    !isStaleArtifact &&
+    addNextWeekAction?.state === "available" &&
+    Boolean(addNextWeekAction.create_path);
+  const canSaveAndRun =
+    !isStaleArtifact &&
+    saveAndRunAction?.state === "available" &&
+    Boolean(saveAndRunAction.submit_path);
   const backRoute = workpageBackRoute(workflowRunId);
+  const isMutationPending =
+    submitMutation.isPending || createNextWeekMutation.isPending || saveAndRunMutation.isPending;
+  const futureWeekStatusText =
+    saveAndRunMutation.isPending || futureWeekActivation?.state === "running"
+      ? "Agent working"
+      : futureWeekActivation?.status_label ?? null;
+
+  function routeDemandActionRef(
+    action: WorkpageRouteDemandAction | null,
+    targetArtifactVersionId: string | null
+  ): WorkpageRouteDemandAction["action_ref"] {
+    const carriedActionRef = resolveWorkpageActionRef(location.state, {
+      workflowRunId,
+      workpageKind: "route-demand-v0",
+      artifactVersionId: targetArtifactVersionId
+    });
+    return mergeWorkpageActionRef(action?.action_ref ?? null, carriedActionRef ?? null) ?? null;
+  }
+
+  async function invalidateRouteDemandState(targetWorkflowRunId: string): Promise<void> {
+    await queryClient.invalidateQueries({ queryKey: ["workpages"] });
+    await queryClient.invalidateQueries({ queryKey: ["logistics-demo-story"] });
+    await invalidateWorkspaceViews(queryClient, targetWorkflowRunId);
+  }
+
+  async function handleSaveRouteDemand(
+    nextAfterSave: "navigate" | "close" | "stay"
+  ): Promise<boolean> {
+    if (!saveAction?.submit_path) {
+      return false;
+    }
+    setMutationErrorMessage(null);
+    try {
+      const actionRef = routeDemandActionRef(saveAction, artifactVersionId);
+      const submitted = await submitMutation.mutateAsync({
+        submitPath: saveAction.submit_path,
+        actionRef
+      });
+      await invalidateRouteDemandState(submitted.workflow_run_id);
+      setMutationErrorMessage(null);
+      if (nextAfterSave === "close") {
+        onClose?.();
+        return true;
+      }
+      if (nextAfterSave === "stay") {
+        onArtifactContextChange?.({
+          workflowRunId: submitted.workflow_run_id,
+          artifactVersionId: submitted.artifact_version_id,
+          afterSave: "stay"
+        });
+        return true;
+      }
+      navigate(submitted.route, {
+        state: {
+          workpageActionRef: replaceWorkpageActionRefArtifactVersionId(
+            actionRef,
+            submitted.artifact_version_id
+          )
+        }
+      });
+      return true;
+    } catch (error) {
+      setMutationErrorMessage(
+        routeDemandMutationErrorDetail(
+          "Save route demand",
+          error,
+          "Unable to save the latest route-demand changes."
+        )
+      );
+      return false;
+    }
+  }
+
+  async function handleAddNextWeek(): Promise<void> {
+    if (!addNextWeekAction?.create_path) {
+      return;
+    }
+    if (hasUnsavedEdits) {
+      const shouldSaveFirst = window.confirm(
+        "Save current route-demand changes before switching to the next week? Press Cancel to discard the current edits and continue."
+      );
+      if (shouldSaveFirst) {
+        const saved = await handleSaveRouteDemand("stay");
+        if (!saved) {
+          return;
+        }
+      }
+    }
+    setMutationErrorMessage(null);
+    try {
+      const actionRef = routeDemandActionRef(addNextWeekAction, null);
+      const created = await createNextWeekMutation.mutateAsync({
+        createPath: addNextWeekAction.create_path,
+        actionRef
+      });
+      await invalidateRouteDemandState(created.workflow_run_id);
+      setMutationErrorMessage(null);
+      if (layout === "embedded" && onArtifactContextChange) {
+        onArtifactContextChange({
+          workflowRunId: created.workflow_run_id,
+          artifactVersionId: created.artifact_version_id,
+          afterSave: "stay"
+        });
+        return;
+      }
+      navigate(created.route, {
+        state: {
+          workpageActionRef: actionRef
+        }
+      });
+    } catch (error) {
+      setMutationErrorMessage(
+        routeDemandMutationErrorDetail(
+          "Add a week",
+          error,
+          "Unable to create the next weekly route-demand surface."
+        )
+      );
+    }
+  }
+
+  async function handleSaveAndRun(): Promise<void> {
+    if (!saveAndRunAction?.submit_path) {
+      return;
+    }
+    setMutationErrorMessage(null);
+    try {
+      const actionRef = routeDemandActionRef(saveAndRunAction, artifactVersionId);
+      const submitted = await saveAndRunMutation.mutateAsync({
+        submitPath: saveAndRunAction.submit_path,
+        actionRef
+      });
+      const targetWorkflowRunId = submitted.target_workflow_run_id ?? submitted.workflow_run_id;
+      const targetScheduleRoute =
+        submitted.target_schedule_route ?? scheduleLandingRoute(targetWorkflowRunId);
+      await invalidateRouteDemandState(targetWorkflowRunId);
+      setMutationErrorMessage(null);
+      onClose?.();
+      navigate(targetScheduleRoute, {
+        state: {
+          openScheduleQuickEdit: true,
+          targetScheduleArtifactVersionId:
+            submitted.target_schedule_artifact_version_id ?? null
+        }
+      });
+    } catch (error) {
+      setMutationErrorMessage(
+        routeDemandMutationErrorDetail(
+          "Save and run scheduling agent",
+          error,
+          "Unable to start the weekly scheduling agent from route demand."
+        )
+      );
+    }
+  }
 
   return (
     <WorkpageFrame
@@ -736,7 +1034,7 @@ function RouteDemandArtifactEditor({
       onRefresh={() => {
         void query.refetch();
       }}
-      isRefreshing={query.isFetching || submitMutation.isPending}
+      isRefreshing={query.isFetching || isMutationPending}
       pollIntervalMs={apiConfig.pollIntervalMs}
       testId={layout === "embedded" ? "route-demand-quick-edit-editor" : "route-demand-artifact-workpage-page"}
       metadataPresentation="dialog"
@@ -745,14 +1043,33 @@ function RouteDemandArtifactEditor({
       heroTitle={layout === "embedded" ? "Daily route demand" : undefined}
       heroPresentation={layout === "embedded" ? "title_only" : "default"}
       heroTitleActions={
-        <button
-          type="button"
-          className="action-btn action-btn--positive"
-          disabled={!canSave || !hasUnsavedEdits || !saveAction?.submit_path || submitMutation.isPending}
-          onClick={() => submitMutation.mutate()}
-        >
-          {submitMutation.isPending ? "Saving route demand..." : "Save route demand"}
-        </button>
+        <div className="action-cluster">
+          {futureWeekStatusText ? (
+            <span className="schedule-pill schedule-pill--warn">{futureWeekStatusText}</span>
+          ) : null}
+          <button
+            type="button"
+            className="action-btn action-btn--positive"
+            disabled={!canSave || !hasUnsavedEdits || !saveAction?.submit_path || isMutationPending}
+            onClick={() => {
+              void handleSaveRouteDemand(afterSave);
+            }}
+          >
+            {submitMutation.isPending ? "Saving route demand..." : "Save route demand"}
+          </button>
+          {saveAndRunAction ? (
+            <button
+              type="button"
+              className="action-btn action-btn--positive"
+              disabled={!canSaveAndRun || isMutationPending}
+              onClick={() => {
+                void handleSaveAndRun();
+              }}
+            >
+              {saveAndRunMutation.isPending ? "Agent working" : "Save and run scheduling agent"}
+            </button>
+          ) : null}
+        </div>
       }
       heroSupportText="Plus/minus controls adjust backend-owned daily route counts. Save creates a new route-demand artifact version and leaves schedule artifacts untouched."
       heroActions={
@@ -777,6 +1094,56 @@ function RouteDemandArtifactEditor({
       backLabel={backRoute.label}
       layout={layout}
     >
+      {mutationErrorMessage ? (
+        <section
+          className="workpage-panel workpage-panel--callout"
+          data-testid="route-demand-mutation-error"
+        >
+          <header className="workpage-panel__header">
+            <h2>Action failed</h2>
+            <p>{mutationErrorMessage}</p>
+          </header>
+        </section>
+      ) : null}
+      {futureWeekActivation?.state === "failed" ? (
+        <section
+          className="workpage-panel workpage-panel--callout"
+          data-testid="route-demand-activation-failed"
+        >
+          <header className="workpage-panel__header">
+            <h2>Scheduling agent failed</h2>
+            <p>
+              {futureWeekActivation.error_message ??
+                futureWeekActivation.error_code ??
+                futureWeekActivation.status_label ??
+                "The weekly scheduling agent failed before producing a draft schedule."}
+            </p>
+          </header>
+        </section>
+      ) : null}
+      {futureWeekOption && addNextWeekAction?.create_path ? (
+        <section className="workpage-panel workpage-panel--callout">
+          <header className="workpage-panel__header">
+            <h2>Next addable week</h2>
+            <p>
+              {futureWeekOption.label} ({futureWeekOption.date_range_label}) is the next
+              operational week available for route-demand activation.
+            </p>
+          </header>
+          <div className="action-cluster">
+            <button
+              type="button"
+              className="action-btn action-btn--positive"
+              disabled={!canAddNextWeek || isMutationPending}
+              onClick={() => {
+                void handleAddNextWeek();
+              }}
+            >
+              {createNextWeekMutation.isPending ? "Adding week..." : "Add a week"}
+            </button>
+          </div>
+        </section>
+      ) : null}
       {isStaleArtifact && latestArtifactRoute ? (
         <section className="workpage-panel workpage-panel--callout">
           <header className="workpage-panel__header">
@@ -793,12 +1160,24 @@ function RouteDemandArtifactEditor({
           </div>
         </section>
       ) : null}
-      {saveAction?.state === "blocked" && saveAction.disabled_reason ? (
+      {(saveAction?.state === "blocked" && saveAction.disabled_reason) ||
+      (saveAndRunAction?.state === "blocked" && saveAndRunAction.disabled_reason) ? (
         <section className="workpage-panel workpage-panel--callout">
           <header className="workpage-panel__header">
-            <h2>Save is currently blocked</h2>
-            <p>{saveAction.disabled_reason}</p>
+            <h2>Editing is currently blocked</h2>
+            <p>
+              {routeDemandDisabledReasonText(
+                saveAndRunAction?.disabled_reason ?? saveAction?.disabled_reason
+              )}
+            </p>
           </header>
+          {query.data.future_week_activation?.target_schedule_route ? (
+            <div className="action-cluster">
+              <Link className="link-button" to={query.data.future_week_activation.target_schedule_route}>
+                Continue from schedule
+              </Link>
+            </div>
+          ) : null}
         </section>
       ) : null}
       <RouteDemandWorkpageBody
@@ -842,17 +1221,31 @@ export function RouteDemandQuickEditModal({
 }): JSX.Element {
   const titleId = useId();
   const descriptionId = useId();
+  const [activeWorkflowRunId, setActiveWorkflowRunId] = useState(workflowRunId);
+  const [activeArtifactVersionId, setActiveArtifactVersionId] = useState<string | null>(null);
+  const [activeAfterSave, setActiveAfterSave] = useState<"close" | "stay">("close");
   const query = useQuery({
-    queryKey: ["workpages", "route-demand-v0", "run", workflowRunId],
-    queryFn: () => workpagesRepository.routeDemandForRun(workflowRunId),
-    enabled: Boolean(workflowRunId),
+    queryKey: ["workpages", "route-demand-v0", "run", activeWorkflowRunId],
+    queryFn: () => workpagesRepository.routeDemandForRun(activeWorkflowRunId),
+    enabled: Boolean(activeWorkflowRunId),
     refetchInterval: apiConfig.pollIntervalMs
   });
   const openLatestAction = findRouteDemandAction(
     query.data,
     (action) => action.kind === "open_latest" && action.state === "available"
   );
-  const artifactVersionId = openLatestAction?.artifact_version_id ?? null;
+
+  useEffect(() => {
+    setActiveWorkflowRunId(workflowRunId);
+    setActiveArtifactVersionId(null);
+    setActiveAfterSave("close");
+  }, [workflowRunId]);
+
+  useEffect(() => {
+    if (!activeArtifactVersionId && openLatestAction?.artifact_version_id) {
+      setActiveArtifactVersionId(openLatestAction.artifact_version_id);
+    }
+  }, [activeArtifactVersionId, openLatestAction?.artifact_version_id]);
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent): void => {
@@ -910,13 +1303,18 @@ export function RouteDemandQuickEditModal({
                 void query.refetch();
               }}
             />
-          ) : artifactVersionId ? (
+          ) : activeArtifactVersionId ? (
             <RouteDemandArtifactEditor
-              workflowRunId={workflowRunId}
-              artifactVersionId={artifactVersionId}
+              workflowRunId={activeWorkflowRunId}
+              artifactVersionId={activeArtifactVersionId}
               layout="embedded"
-              afterSave="close"
+              afterSave={activeAfterSave}
               onClose={onClose}
+              onArtifactContextChange={({ workflowRunId: nextWorkflowRunId, artifactVersionId: nextArtifactVersionId, afterSave: nextAfterSave }) => {
+                setActiveWorkflowRunId(nextWorkflowRunId);
+                setActiveArtifactVersionId(nextArtifactVersionId);
+                setActiveAfterSave(nextAfterSave === "navigate" ? "stay" : nextAfterSave);
+              }}
             />
           ) : (
             <StatePanel

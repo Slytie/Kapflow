@@ -90,6 +90,7 @@
         {
           "driver_id": "A2TU4ZRI65E1H8",
           "driver_name": "Abhiraj Singh",
+          "driver_quality": "medium",
           "employment_type": "full_time",
           "on_call_eligible": true,
           "preferences_by_weekday": {
@@ -105,6 +106,7 @@
         {
           "driver_id": "A3M38Z4NGI9OR3",
           "driver_name": "Akash",
+          "driver_quality": "medium",
           "employment_type": "full_time",
           "on_call_eligible": true,
           "preferences_by_weekday": {
@@ -120,56 +122,12 @@
         {
           "driver_id": "A1JSQIK4OD79DV",
           "driver_name": "Amritpal Singh",
-          "employment_type": "full_time",
-          "on_call_eligible": true,
-          "preferences_by_weekday": {
-            "fri": "prefer_not_to_work",
-            "mon": "open_to_work",
-            "sat": "open_to_work",
-            "sun": "prefer_not_to_work",
-            "thu": "open_to_work",
-            "tue": "open_to_work",
-            "wed": "definitely_can_not_work"
-          }
-        },
-        {
-          "driver_id": "A149421ZGG7QED",
-          "driver_name": "Balwinder Singh",
-          "employment_type": "part_time",
-          "on_call_eligible": false,
-          "preferences_by_weekday": {
-            "fri": "open_to_work",
-            "mon": "open_to_work",
-            "sat": "open_to_work",
-            "sun": "definitely_can_not_work",
-            "thu": "open_to_work",
-            "tue": "prefer_not_to_work",
-            "wed": "open_to_work"
-          }
-        },
-        {
-          "driver_id": "A1P1CDL949GCH7",
-          "driver_name": "Brahmvir Singh",
+          "driver_quality": "medium",
           "employment_type": "full_time",
           "on_call_eligible": true,
           "preferences_by_weekday": {
             "fri": "open_to_work",
-            "mon": "open_to_work",
-            "sat": "open_to_work",
-            "sun": "prefer_not_to_work",
-            "thu": "open_to_work",
-            "tue": "open_to_work",
-            "wed": "open_to_work"
-          }
-        },
-        {
-          "driver_id": "ATBR9WDPPKXCM",
-          "driver_name": "Chanpreet Singh Rai",
-          "employment_type": "full_time",
-          "on_call_eligible": true,
-          "preferences_by_weekday": {
-            "fri": "open_to_work",
-            "mon": "open_to_work",
+            "mon": "definitely_can_not_work",
             "sat": "open_to_work",
             "sun": "open_to_work",
             "thu": "open_to_work",
@@ -178,29 +136,79 @@
           }
         },
         {
-          "driver_id": "A1S1XUJABAWLGR",
-          "driver_name": "Charanjit Singh",
+          "driver_id": "A149421ZGG7QED",
+          "driver_name": "Balwinder Singh",
+          "driver_quality": "medium",
+          "employment_type": "part_time",
+          "on_call_eligible": false,
+          "preferences_by_weekday": {
+            "fri": "definitely_can_not_work",
+            "mon": "open_to_work",
+            "sat": "prefer_not_to_work",
+            "sun": "open_to_work",
+            "thu": "open_to_work",
+            "tue": "open_to_work",
+            "wed": "prefer_not_to_work"
+          }
+        },
+        {
+          "driver_id": "A1P1CDL949GCH7",
+          "driver_name": "Brahmvir Singh",
+          "driver_quality": "medium",
           "employment_type": "full_time",
           "on_call_eligible": true,
           "preferences_by_weekday": {
-            "fri": "open_to_work",
+            "fri": "prefer_not_to_work",
             "mon": "open_to_work",
             "sat": "open_to_work",
-            "sun": "prefer_not_to_work",
-            "thu": "open_to_work",
+            "sun": "open_to_work",
+            "thu": "prefer_not_to_work",
             "tue": "definitely_can_not_work",
             "wed": "open_to_work"
           }
         },
         {
-          "driver_id": "A2S2SO4XUULX7H",
-          "driver_name": "Ekjot Singh",
+          "driver_id": "ATBR9WDPPKXCM",
+          "driver_name": "Chanpreet Singh Rai",
+          "driver_quality": "medium",
+          "employment_type": "full_time",
+          "on_call_eligible": true,
+          "preferences_by_weekday": {
+            "fri": "open_to_work",
+            "mon": "definitely_can_not_work",
+            "sat": "open_to_work",
+            "sun": "open_to_work",
+            "thu": "open_to_work",
+            "tue": "prefer_not_to_work",
+            "wed": "open_to_work"
+          }
+        },
+        {
+          "driver_id": "A1S1XUJABAWLGR",
+          "driver_name": "Charanjit Singh",
+          "driver_quality": "medium",
           "employment_type": "full_time",
           "on_call_eligible": true,
           "preferences_by_weekday": {
             "fri": "definitely_can_not_work",
             "mon": "open_to_work",
             "sat": "prefer_not_to_work",
+            "sun": "open_to_work",
+            "thu": "open_to_work",
+            "tue": "open_to_work",
+            "wed": "open_to_work"
+          }
+        },
+        {
+          "driver_id": "A2S2SO4XUULX7H",
+          "driver_name": "Ekjot Singh",
+          "driver_quality": "medium",
+          "employment_type": "full_time",
+          "on_call_eligible": true,
+          "preferences_by_weekday": {
+            "fri": "prefer_not_to_work",
+            "mon": "open_to_work",
+            "sat": "open_to_work",
             "sun": "open_to_work",
             "thu": "open_to_work",
             "tue": "open_to_work",
@@ -210,12 +218,13 @@
         {
           "driver_id": "A3959UPAEK7B1W",
           "driver_name": "Gagandeep Singh Singh",
+          "driver_quality": "medium",
           "employment_type": "full_time",
           "on_call_eligible": true,
           "preferences_by_weekday": {
             "fri": "open_to_work",
-            "mon": "prefer_not_to_work",
-            "sat": "open_to_work",
+            "mon": "open_to_work",
+            "sat": "prefer_not_to_work",
             "sun": "open_to_work",
             "thu": "open_to_work",
             "tue": "open_to_work",
@@ -225,128 +234,57 @@
         {
           "driver_id": "A3OYGBYE20UA2R",
           "driver_name": "Gaganpreet Singh Dhindsa",
+          "driver_quality": "medium",
           "employment_type": "part_time",
-          "on_call_eligible": true,
-          "preferences_by_weekday": {
-            "fri": "prefer_not_to_work",
-            "mon": "open_to_work",
-            "sat": "open_to_work",
-            "sun": "open_to_work",
-            "thu": "definitely_can_not_work",
-            "tue": "open_to_work",
-            "wed": "prefer_not_to_work"
-          }
-        },
-        {
-          "driver_id": "AGOU3M5WUIHWC",
-          "driver_name": "Gurdas Singh Sidhu",
-          "employment_type": "full_time",
-          "on_call_eligible": true,
-          "preferences_by_weekday": {
-            "fri": "open_to_work",
-            "mon": "prefer_not_to_work",
-            "sat": "definitely_can_not_work",
-            "sun": "open_to_work",
-            "thu": "open_to_work",
-            "tue": "open_to_work",
-            "wed": "prefer_not_to_work"
-          }
-        },
-        {
-          "driver_id": "AHRF1Y9PK4GXB",
-          "driver_name": "Hamant Kumar",
-          "employment_type": "part_time",
-          "on_call_eligible": true,
-          "preferences_by_weekday": {
-            "fri": "definitely_can_not_work",
-            "mon": "open_to_work",
-            "sat": "open_to_work",
-            "sun": "prefer_not_to_work",
-            "thu": "open_to_work",
-            "tue": "open_to_work",
-            "wed": "open_to_work"
-          }
-        },
-        {
-          "driver_id": "A3BQS4NVAKL2HQ",
-          "driver_name": "Harkirpal Singh Sidhu",
-          "employment_type": "part_time",
-          "on_call_eligible": false,
-          "preferences_by_weekday": {
-            "fri": "definitely_can_not_work",
-            "mon": "prefer_not_to_work",
-            "sat": "open_to_work",
-            "sun": "open_to_work",
-            "thu": "open_to_work",
-            "tue": "open_to_work",
-            "wed": "prefer_not_to_work"
-          }
-        },
-        {
-          "driver_id": "AHJWCXI2ORDJY",
-          "driver_name": "Harmanpreet Singh",
-          "employment_type": "full_time",
-          "on_call_eligible": false,
-          "preferences_by_weekday": {
-            "fri": "open_to_work",
-            "mon": "open_to_work",
-            "sat": "definitely_can_not_work",
-            "sun": "prefer_not_to_work",
-            "thu": "prefer_not_to_work",
-            "tue": "open_to_work",
-            "wed": "open_to_work"
-          }
-        },
-        {
-          "driver_id": "A3M45AZWH3K5F3",
-          "driver_name": "Harnamanpreet SIngh",
-          "employment_type": "full_time",
           "on_call_eligible": true,
           "preferences_by_weekday": {
             "fri": "open_to_work",
             "mon": "open_to_work",
             "sat": "open_to_work",
             "sun": "definitely_can_not_work",
-            "thu": "open_to_work",
-            "tue": "open_to_work",
+            "thu": "prefer_not_to_work",
+            "tue": "prefer_not_to_work",
             "wed": "open_to_work"
           }
         },
         {
-          "driver_id": "A1TJRL0G751SZK",
-          "driver_name": "Harvinder SIngh",
-          "employment_type": "part_time",
-          "on_call_eligible": true,
-          "preferences_by_weekday": {
-            "fri": "open_to_work",
-            "mon": "prefer_not_to_work",
-            "sat": "open_to_work",
-            "sun": "open_to_work",
-            "thu": "open_to_work",
-            "tue": "open_to_work",
-            "wed": "open_to_work"
-          }
-        },
-        {
-          "driver_id": "A2WDUOOWN1ORVL",
-          "driver_name": "Iqbal Singh",
+          "driver_id": "AGOU3M5WUIHWC",
+          "driver_name": "Gurdas Singh Sidhu",
+          "driver_quality": "medium",
           "employment_type": "full_time",
           "on_call_eligible": true,
           "preferences_by_weekday": {
             "fri": "open_to_work",
             "mon": "open_to_work",
-            "sat": "open_to_work",
+            "sat": "definitely_can_not_work",
             "sun": "open_to_work",
             "thu": "open_to_work",
             "tue": "open_to_work",
-            "wed": "prefer_not_to_work"
+            "wed": "open_to_work"
           }
         },
         {
-          "driver_id": "A3NLLQPB0L46N9",
-          "driver_name": "Jagraj Singh",
+          "driver_id": "AHRF1Y9PK4GXB",
+          "driver_name": "Hamant Kumar",
+          "driver_quality": "medium",
           "employment_type": "part_time",
           "on_call_eligible": true,
+          "preferences_by_weekday": {
+            "fri": "open_to_work",
+            "mon": "open_to_work",
+            "sat": "open_to_work",
+            "sun": "prefer_not_to_work",
+            "thu": "prefer_not_to_work",
+            "tue": "definitely_can_not_work",
+            "wed": "open_to_work"
+          }
+        },
+        {
+          "driver_id": "A3BQS4NVAKL2HQ",
+          "driver_name": "Harkirpal Singh Sidhu",
+          "driver_quality": "medium",
+          "employment_type": "part_time",
+          "on_call_eligible": false,
           "preferences_by_weekday": {
             "fri": "open_to_work",
             "mon": "open_to_work",
@@ -358,31 +296,113 @@
           }
         },
         {
-          "driver_id": "A1HIH95LQQ9EQE",
-          "driver_name": "Jasdeep Sidhu",
-          "employment_type": "part_time",
+          "driver_id": "AHJWCXI2ORDJY",
+          "driver_name": "Harmanpreet Singh",
+          "driver_quality": "medium",
+          "employment_type": "full_time",
           "on_call_eligible": false,
+          "preferences_by_weekday": {
+            "fri": "prefer_not_to_work",
+            "mon": "definitely_can_not_work",
+            "sat": "open_to_work",
+            "sun": "open_to_work",
+            "thu": "open_to_work",
+            "tue": "prefer_not_to_work",
+            "wed": "open_to_work"
+          }
+        },
+        {
+          "driver_id": "A3M45AZWH3K5F3",
+          "driver_name": "Harnamanpreet SIngh",
+          "driver_quality": "medium",
+          "employment_type": "full_time",
+          "on_call_eligible": true,
           "preferences_by_weekday": {
             "fri": "open_to_work",
             "mon": "open_to_work",
             "sat": "open_to_work",
-            "sun": "prefer_not_to_work",
+            "sun": "open_to_work",
+            "thu": "definitely_can_not_work",
+            "tue": "open_to_work",
+            "wed": "definitely_can_not_work"
+          }
+        },
+        {
+          "driver_id": "A1TJRL0G751SZK",
+          "driver_name": "Harvinder SIngh",
+          "driver_quality": "medium",
+          "employment_type": "part_time",
+          "on_call_eligible": true,
+          "preferences_by_weekday": {
+            "fri": "open_to_work",
+            "mon": "open_to_work",
+            "sat": "prefer_not_to_work",
+            "sun": "open_to_work",
             "thu": "open_to_work",
             "tue": "open_to_work",
             "wed": "open_to_work"
           }
         },
         {
+          "driver_id": "A2WDUOOWN1ORVL",
+          "driver_name": "Iqbal Singh",
+          "driver_quality": "medium",
+          "employment_type": "full_time",
+          "on_call_eligible": true,
+          "preferences_by_weekday": {
+            "fri": "prefer_not_to_work",
+            "mon": "open_to_work",
+            "sat": "open_to_work",
+            "sun": "open_to_work",
+            "thu": "open_to_work",
+            "tue": "definitely_can_not_work",
+            "wed": "prefer_not_to_work"
+          }
+        },
+        {
+          "driver_id": "A3NLLQPB0L46N9",
+          "driver_name": "Jagraj Singh",
+          "driver_quality": "medium",
+          "employment_type": "part_time",
+          "on_call_eligible": true,
+          "preferences_by_weekday": {
+            "fri": "open_to_work",
+            "mon": "open_to_work",
+            "sat": "open_to_work",
+            "sun": "open_to_work",
+            "thu": "open_to_work",
+            "tue": "prefer_not_to_work",
+            "wed": "open_to_work"
+          }
+        },
+        {
+          "driver_id": "A1HIH95LQQ9EQE",
+          "driver_name": "Jasdeep Sidhu",
+          "driver_quality": "medium",
+          "employment_type": "part_time",
+          "on_call_eligible": false,
+          "preferences_by_weekday": {
+            "fri": "definitely_can_not_work",
+            "mon": "open_to_work",
+            "sat": "open_to_work",
+            "sun": "open_to_work",
+            "thu": "prefer_not_to_work",
+            "tue": "open_to_work",
+            "wed": "prefer_not_to_work"
+          }
+        },
+        {
           "driver_id": "AXBXED50KRZYC",
           "driver_name": "Jiwanpreet Singh",
+          "driver_quality": "medium",
           "employment_type": "full_time",
           "on_call_eligible": true,
           "preferences_by_weekday": {
             "fri": "open_to_work",
-            "mon": "prefer_not_to_work",
+            "mon": "definitely_can_not_work",
             "sat": "open_to_work",
             "sun": "open_to_work",
-            "thu": "definitely_can_not_work",
+            "thu": "open_to_work",
             "tue": "open_to_work",
             "wed": "prefer_not_to_work"
           }
@@ -390,13 +410,14 @@
         {
           "driver_id": "A34WEHEN1XXRKR",
           "driver_name": "Karanveer Singh",
+          "driver_quality": "medium",
           "employment_type": "full_time",
           "on_call_eligible": true,
           "preferences_by_weekday": {
             "fri": "open_to_work",
-            "mon": "open_to_work",
+            "mon": "prefer_not_to_work",
             "sat": "open_to_work",
-            "sun": "prefer_not_to_work",
+            "sun": "open_to_work",
             "thu": "open_to_work",
             "tue": "open_to_work",
             "wed": "open_to_work"
@@ -405,6 +426,7 @@
         {
           "driver_id": "A2KXEYK2UAQ1SX",
           "driver_name": "Khushdeep Singh Cheema",
+          "driver_quality": "medium",
           "employment_type": "full_time",
           "on_call_eligible": true,
           "preferences_by_weekday": {
@@ -420,14 +442,15 @@
         {
           "driver_id": "A2SCS728PUCGTE",
           "driver_name": "Lovepreet Bassi",
+          "driver_quality": "medium",
           "employment_type": "full_time",
           "on_call_eligible": true,
           "preferences_by_weekday": {
             "fri": "open_to_work",
-            "mon": "prefer_not_to_work",
+            "mon": "open_to_work",
             "sat": "open_to_work",
-            "sun": "open_to_work",
-            "thu": "open_to_work",
+            "sun": "definitely_can_not_work",
+            "thu": "prefer_not_to_work",
             "tue": "open_to_work",
             "wed": "open_to_work"
           }
@@ -435,12 +458,13 @@
         {
           "driver_id": "A7IT4OGI9NGQX",
           "driver_name": "Lovepreet Gill",
+          "driver_quality": "medium",
           "employment_type": "part_time",
           "on_call_eligible": true,
           "preferences_by_weekday": {
             "fri": "open_to_work",
-            "mon": "prefer_not_to_work",
-            "sat": "definitely_can_not_work",
+            "mon": "definitely_can_not_work",
+            "sat": "open_to_work",
             "sun": "open_to_work",
             "thu": "prefer_not_to_work",
             "tue": "open_to_work",
@@ -450,36 +474,39 @@
         {
           "driver_id": "AZULSLRV35N5I",
           "driver_name": "Lovepreet Singh",
+          "driver_quality": "medium",
           "employment_type": "full_time",
           "on_call_eligible": true,
           "preferences_by_weekday": {
             "fri": "definitely_can_not_work",
-            "mon": "open_to_work",
-            "sat": "prefer_not_to_work",
+            "mon": "prefer_not_to_work",
+            "sat": "open_to_work",
             "sun": "open_to_work",
             "thu": "open_to_work",
-            "tue": "open_to_work",
+            "tue": "prefer_not_to_work",
             "wed": "open_to_work"
           }
         },
         {
           "driver_id": "A4RCGY31PTY9M",
           "driver_name": "Maninder Pal Singh",
+          "driver_quality": "medium",
           "employment_type": "part_time",
           "on_call_eligible": false,
           "preferences_by_weekday": {
-            "fri": "open_to_work",
+            "fri": "definitely_can_not_work",
             "mon": "open_to_work",
             "sat": "open_to_work",
-            "sun": "prefer_not_to_work",
+            "sun": "open_to_work",
             "thu": "open_to_work",
-            "tue": "open_to_work",
+            "tue": "prefer_not_to_work",
             "wed": "open_to_work"
           }
         },
         {
           "driver_id": "A2VHAFSZ54XXA8",
           "driver_name": "Manpreet",
+          "driver_quality": "medium",
           "employment_type": "full_time",
           "on_call_eligible": true,
           "preferences_by_weekday": {
@@ -495,25 +522,27 @@
         {
           "driver_id": "A3RO6BBCA3NOYM",
           "driver_name": "Mehakpreet Singh",
+          "driver_quality": "medium",
           "employment_type": "full_time",
           "on_call_eligible": true,
           "preferences_by_weekday": {
             "fri": "open_to_work",
             "mon": "open_to_work",
             "sat": "open_to_work",
-            "sun": "definitely_can_not_work",
+            "sun": "open_to_work",
             "thu": "open_to_work",
-            "tue": "prefer_not_to_work",
-            "wed": "open_to_work"
+            "tue": "open_to_work",
+            "wed": "prefer_not_to_work"
           }
         },
         {
           "driver_id": "A185MOPEG4MOST",
           "driver_name": "Navjot Singh",
+          "driver_quality": "medium",
           "employment_type": "part_time",
           "on_call_eligible": false,
           "preferences_by_weekday": {
-            "fri": "open_to_work",
+            "fri": "definitely_can_not_work",
             "mon": "open_to_work",
             "sat": "open_to_work",
             "sun": "open_to_work",
@@ -525,81 +554,23 @@
         {
           "driver_id": "A1NJLYPMMEKHLK",
           "driver_name": "Paramjit Gherha",
+          "driver_quality": "medium",
           "employment_type": "full_time",
           "on_call_eligible": true,
           "preferences_by_weekday": {
             "fri": "open_to_work",
             "mon": "open_to_work",
             "sat": "open_to_work",
-            "sun": "open_to_work",
-            "thu": "prefer_not_to_work",
-            "tue": "prefer_not_to_work",
+            "sun": "prefer_not_to_work",
+            "thu": "open_to_work",
+            "tue": "open_to_work",
             "wed": "definitely_can_not_work"
           }
         },
         {
           "driver_id": "A11X1NH2FPH5RV",
           "driver_name": "Parampreet Singh",
-          "employment_type": "full_time",
-          "on_call_eligible": true,
-          "preferences_by_weekday": {
-            "fri": "open_to_work",
-            "mon": "open_to_work",
-            "sat": "open_to_work",
-            "sun": "open_to_work",
-            "thu": "open_to_work",
-            "tue": "prefer_not_to_work",
-            "wed": "open_to_work"
-          }
-        },
-        {
-          "driver_id": "AU6YIGC7GXQGA",
-          "driver_name": "Pardeep Singh",
-          "employment_type": "full_time",
-          "on_call_eligible": true,
-          "preferences_by_weekday": {
-            "fri": "open_to_work",
-            "mon": "open_to_work",
-            "sat": "open_to_work",
-            "sun": "open_to_work",
-            "thu": "prefer_not_to_work",
-            "tue": "open_to_work",
-            "wed": "open_to_work"
-          }
-        },
-        {
-          "driver_id": "A3TPKATQLBDJG",
-          "driver_name": "Rahul Bajaj",
-          "employment_type": "part_time",
-          "on_call_eligible": false,
-          "preferences_by_weekday": {
-            "fri": "open_to_work",
-            "mon": "open_to_work",
-            "sat": "open_to_work",
-            "sun": "open_to_work",
-            "thu": "prefer_not_to_work",
-            "tue": "open_to_work",
-            "wed": "open_to_work"
-          }
-        },
-        {
-          "driver_id": "AKF1ZEB0TWD96",
-          "driver_name": "Rahul mannan",
-          "employment_type": "full_time",
-          "on_call_eligible": true,
-          "preferences_by_weekday": {
-            "fri": "open_to_work",
-            "mon": "prefer_not_to_work",
-            "sat": "open_to_work",
-            "sun": "open_to_work",
-            "thu": "open_to_work",
-            "tue": "open_to_work",
-            "wed": "open_to_work"
-          }
-        },
-        {
-          "driver_id": "A52BQ5U4SHE8W",
-          "driver_name": "Rajveer Singh",
+          "driver_quality": "medium",
           "employment_type": "full_time",
           "on_call_eligible": true,
           "preferences_by_weekday": {
@@ -613,8 +584,105 @@
           }
         },
         {
+          "driver_id": "AU6YIGC7GXQGA",
+          "driver_name": "Pardeep Singh",
+          "driver_quality": "medium",
+          "employment_type": "full_time",
+          "on_call_eligible": true,
+          "preferences_by_weekday": {
+            "fri": "open_to_work",
+            "mon": "open_to_work",
+            "sat": "open_to_work",
+            "sun": "prefer_not_to_work",
+            "thu": "open_to_work",
+            "tue": "open_to_work",
+            "wed": "open_to_work"
+          }
+        },
+        {
+          "driver_id": "A3TPKATQLBDJG",
+          "driver_name": "Rahul Bajaj",
+          "driver_quality": "medium",
+          "employment_type": "part_time",
+          "on_call_eligible": false,
+          "preferences_by_weekday": {
+            "fri": "prefer_not_to_work",
+            "mon": "open_to_work",
+            "sat": "open_to_work",
+            "sun": "open_to_work",
+            "thu": "open_to_work",
+            "tue": "open_to_work",
+            "wed": "open_to_work"
+          }
+        },
+        {
+          "driver_id": "AKF1ZEB0TWD96",
+          "driver_name": "Rahul mannan",
+          "driver_quality": "medium",
+          "employment_type": "full_time",
+          "on_call_eligible": true,
+          "preferences_by_weekday": {
+            "fri": "open_to_work",
+            "mon": "open_to_work",
+            "sat": "open_to_work",
+            "sun": "definitely_can_not_work",
+            "thu": "open_to_work",
+            "tue": "prefer_not_to_work",
+            "wed": "open_to_work"
+          }
+        },
+        {
+          "driver_id": "A52BQ5U4SHE8W",
+          "driver_name": "Rajveer Singh",
+          "driver_quality": "medium",
+          "employment_type": "full_time",
+          "on_call_eligible": true,
+          "preferences_by_weekday": {
+            "fri": "open_to_work",
+            "mon": "open_to_work",
+            "sat": "open_to_work",
+            "sun": "open_to_work",
+            "thu": "prefer_not_to_work",
+            "tue": "open_to_work",
+            "wed": "open_to_work"
+          }
+        },
+        {
           "driver_id": "A3QZ9AS16464VX",
           "driver_name": "Ravdeep Singh",
+          "driver_quality": "medium",
+          "employment_type": "full_time",
+          "on_call_eligible": true,
+          "preferences_by_weekday": {
+            "fri": "open_to_work",
+            "mon": "open_to_work",
+            "sat": "open_to_work",
+            "sun": "open_to_work",
+            "thu": "open_to_work",
+            "tue": "open_to_work",
+            "wed": "prefer_not_to_work"
+          }
+        },
+        {
+          "driver_id": "A1ARZD44V26ZMJ",
+          "driver_name": "Ravinderpreet Singh",
+          "driver_quality": "medium",
+          "employment_type": "part_time",
+          "on_call_eligible": true,
+          "preferences_by_weekday": {
+            "fri": "open_to_work",
+            "mon": "open_to_work",
+            "sat": "open_to_work",
+            "sun": "prefer_not_to_work",
+            "thu": "definitely_can_not_work",
+            "tue": "prefer_not_to_work",
+            "wed": "open_to_work"
+          }
+        },
+        {
+          "driver_id": "A3QZGAMB5M5IK0",
+          "driver_name": "Rompal Singh Hayer",
+          "driver_quality": "medium",
           "employment_type": "full_time",
           "on_call_eligible": true,
           "preferences_by_weekday": {
@@ -623,36 +691,6 @@
             "sat": "open_to_work",
             "sun": "open_to_work",
             "thu": "open_to_work",
-            "tue": "definitely_can_not_work",
-            "wed": "open_to_work"
-          }
-        },
-        {
-          "driver_id": "A1ARZD44V26ZMJ",
-          "driver_name": "Ravinderpreet Singh",
-          "employment_type": "part_time",
-          "on_call_eligible": true,
-          "preferences_by_weekday": {
-            "fri": "open_to_work",
-            "mon": "prefer_not_to_work",
-            "sat": "open_to_work",
-            "sun": "prefer_not_to_work",
-            "thu": "open_to_work",
-            "tue": "definitely_can_not_work",
-            "wed": "open_to_work"
-          }
-        },
-        {
-          "driver_id": "A3QZGAMB5M5IK0",
-          "driver_name": "Rompal Singh Hayer",
-          "employment_type": "full_time",
-          "on_call_eligible": true,
-          "preferences_by_weekday": {
-            "fri": "open_to_work",
-            "mon": "prefer_not_to_work",
-            "sat": "open_to_work",
-            "sun": "definitely_can_not_work",
-            "thu": "open_to_work",
             "tue": "open_to_work",
             "wed": "open_to_work"
           }
@@ -660,12 +698,13 @@
         {
           "driver_id": "A2FC17ONJKWXTE",
           "driver_name": "Sachin Goyal",
+          "driver_quality": "medium",
           "employment_type": "full_time",
           "on_call_eligible": true,
           "preferences_by_weekday": {
             "fri": "open_to_work",
             "mon": "prefer_not_to_work",
-            "sat": "open_to_work",
+            "sat": "definitely_can_not_work",
             "sun": "open_to_work",
             "thu": "open_to_work",
             "tue": "open_to_work",
@@ -675,12 +714,13 @@
         {
           "driver_id": "A3E56T6T8L9V8J",
           "driver_name": "Shafahad Ali Shah",
+          "driver_quality": "medium",
           "employment_type": "full_time",
           "on_call_eligible": false,
           "preferences_by_weekday": {
-            "fri": "prefer_not_to_work",
+            "fri": "open_to_work",
             "mon": "open_to_work",
-            "sat": "open_to_work",
+            "sat": "prefer_not_to_work",
             "sun": "open_to_work",
             "thu": "open_to_work",
             "tue": "open_to_work",
@@ -690,6 +730,7 @@
         {
           "driver_id": "A4KU9LEU82OTF",
           "driver_name": "Sikander Singh",
+          "driver_quality": "medium",
           "employment_type": "full_time",
           "on_call_eligible": true,
           "preferences_by_weekday": {
@@ -697,65 +738,21 @@
             "mon": "open_to_work",
             "sat": "open_to_work",
             "sun": "open_to_work",
-            "thu": "definitely_can_not_work",
-            "tue": "prefer_not_to_work",
+            "thu": "open_to_work",
+            "tue": "definitely_can_not_work",
             "wed": "prefer_not_to_work"
           }
         },
         {
           "driver_id": "AIFFWKTFS3ZPS",
           "driver_name": "Sukhmanpreet Singh",
+          "driver_quality": "medium",
           "employment_type": "full_time",
           "on_call_eligible": true,
           "preferences_by_weekday": {
             "fri": "open_to_work",
             "mon": "open_to_work",
             "sat": "open_to_work",
-            "sun": "open_to_work",
-            "thu": "open_to_work",
-            "tue": "prefer_not_to_work",
-            "wed": "open_to_work"
-          }
-        },
-        {
-          "driver_id": "AYLV43T35EAIN",
-          "driver_name": "Sukhwinder Singh",
-          "employment_type": "full_time",
-          "on_call_eligible": true,
-          "preferences_by_weekday": {
-            "fri": "open_to_work",
-            "mon": "open_to_work",
-            "sat": "open_to_work",
-            "sun": "open_to_work",
-            "thu": "open_to_work",
-            "tue": "prefer_not_to_work",
-            "wed": "open_to_work"
-          }
-        },
-        {
-          "driver_id": "A1NQEGRS26IBJA",
-          "driver_name": "Suraj Pratap Singh",
-          "employment_type": "full_time",
-          "on_call_eligible": true,
-          "preferences_by_weekday": {
-            "fri": "definitely_can_not_work",
-            "mon": "open_to_work",
-            "sat": "prefer_not_to_work",
-            "sun": "open_to_work",
-            "thu": "prefer_not_to_work",
-            "tue": "open_to_work",
-            "wed": "open_to_work"
-          }
-        },
-        {
-          "driver_id": "A5DRVS25INNWR",
-          "driver_name": "Syed Kamran Shah",
-          "employment_type": "part_time",
-          "on_call_eligible": true,
-          "preferences_by_weekday": {
-            "fri": "open_to_work",
-            "mon": "definitely_can_not_work",
-            "sat": "prefer_not_to_work",
             "sun": "prefer_not_to_work",
             "thu": "open_to_work",
             "tue": "open_to_work",
@@ -763,23 +760,25 @@
           }
         },
         {
-          "driver_id": "A2GJBFCCI1VYRB",
-          "driver_name": "Tanveer Singh",
-          "employment_type": "part_time",
+          "driver_id": "AYLV43T35EAIN",
+          "driver_name": "Sukhwinder Singh",
+          "driver_quality": "medium",
+          "employment_type": "full_time",
           "on_call_eligible": true,
           "preferences_by_weekday": {
-            "fri": "definitely_can_not_work",
-            "mon": "prefer_not_to_work",
-            "sat": "prefer_not_to_work",
-            "sun": "open_to_work",
+            "fri": "prefer_not_to_work",
+            "mon": "open_to_work",
+            "sat": "open_to_work",
+            "sun": "prefer_not_to_work",
             "thu": "open_to_work",
-            "tue": "open_to_work",
+            "tue": "definitely_can_not_work",
             "wed": "open_to_work"
           }
         },
         {
-          "driver_id": "A33HB7XV71IC7T",
-          "driver_name": "Tarandeep Singh",
+          "driver_id": "A1NQEGRS26IBJA",
+          "driver_name": "Suraj Pratap Singh",
+          "driver_quality": "medium",
           "employment_type": "full_time",
           "on_call_eligible": true,
           "preferences_by_weekday": {
@@ -793,29 +792,95 @@
           }
         },
         {
+          "driver_id": "A5DRVS25INNWR",
+          "driver_name": "Syed Kamran Shah",
+          "driver_quality": "medium",
+          "employment_type": "part_time",
+          "on_call_eligible": true,
+          "preferences_by_weekday": {
+            "fri": "prefer_not_to_work",
+            "mon": "open_to_work",
+            "sat": "open_to_work",
+            "sun": "open_to_work",
+            "thu": "open_to_work",
+            "tue": "open_to_work",
+            "wed": "definitely_can_not_work"
+          }
+        },
+        {
+          "driver_id": "A2GJBFCCI1VYRB",
+          "driver_name": "Tanveer Singh",
+          "driver_quality": "medium",
+          "employment_type": "part_time",
+          "on_call_eligible": true,
+          "preferences_by_weekday": {
+            "fri": "open_to_work",
+            "mon": "open_to_work",
+            "sat": "open_to_work",
+            "sun": "open_to_work",
+            "thu": "open_to_work",
+            "tue": "prefer_not_to_work",
+            "wed": "open_to_work"
+          }
+        },
+        {
+          "driver_id": "A33HB7XV71IC7T",
+          "driver_name": "Tarandeep Singh",
+          "driver_quality": "medium",
+          "employment_type": "full_time",
+          "on_call_eligible": true,
+          "preferences_by_weekday": {
+            "fri": "open_to_work",
+            "mon": "open_to_work",
+            "sat": "open_to_work",
+            "sun": "open_to_work",
+            "thu": "prefer_not_to_work",
+            "tue": "open_to_work",
+            "wed": "open_to_work"
+          }
+        },
+        {
           "driver_id": "A1BWWMZFC5PAMI",
           "driver_name": "Veerdevinder Singh",
+          "driver_quality": "medium",
           "employment_type": "part_time",
           "on_call_eligible": false,
           "preferences_by_weekday": {
-            "fri": "open_to_work",
-            "mon": "prefer_not_to_work",
+            "fri": "prefer_not_to_work",
+            "mon": "open_to_work",
             "sat": "prefer_not_to_work",
             "sun": "open_to_work",
-            "thu": "open_to_work",
-            "tue": "definitely_can_not_work",
+            "thu": "definitely_can_not_work",
+            "tue": "open_to_work",
             "wed": "open_to_work"
           }
         },
         {
           "driver_id": "A2YLZCTDXK95J",
           "driver_name": "Vishal Bhagat",
+          "driver_quality": "medium",
+          "employment_type": "full_time",
+          "on_call_eligible": true,
+          "preferences_by_weekday": {
+            "fri": "prefer_not_to_work",
+            "mon": "open_to_work",
+            "sat": "open_to_work",
+            "sun": "open_to_work",
+            "thu": "definitely_can_not_work",
+            "tue": "open_to_work",
+            "wed": "open_to_work"
+          }
+        },
+        {
+          "driver_id": "A7FWBKAGXA5LK",
+          "driver_name": "Vishal Chaudhary",
+          "driver_quality": "medium",
           "employment_type": "full_time",
           "on_call_eligible": true,
           "preferences_by_weekday": {
             "fri": "open_to_work",
-            "mon": "open_to_work",
-            "sat": "prefer_not_to_work",
+            "mon": "prefer_not_to_work",
+            "sat": "open_to_work",
             "sun": "prefer_not_to_work",
             "thu": "open_to_work",
             "tue": "definitely_can_not_work",
@@ -823,10 +888,11 @@
           }
         },
         {
-          "driver_id": "A7FWBKAGXA5LK",
-          "driver_name": "Vishal Chaudhary",
+          "driver_id": "A1A7SAPA6J2ZJJ",
+          "driver_name": "Yong-Kyoon Kim",
+          "driver_quality": "medium",
           "employment_type": "full_time",
-          "on_call_eligible": true,
+          "on_call_eligible": false,
           "preferences_by_weekday": {
             "fri": "open_to_work",
             "mon": "open_to_work",
@@ -834,22 +900,7 @@
             "sun": "prefer_not_to_work",
             "thu": "definitely_can_not_work",
             "tue": "open_to_work",
-            "wed": "open_to_work"
-          }
-        },
-        {
-          "driver_id": "A1A7SAPA6J2ZJJ",
-          "driver_name": "Yong-Kyoon Kim",
-          "employment_type": "full_time",
-          "on_call_eligible": false,
-          "preferences_by_weekday": {
-            "fri": "open_to_work",
-            "mon": "prefer_not_to_work",
-            "sat": "open_to_work",
-            "sun": "open_to_work",
-            "thu": "open_to_work",
-            "tue": "open_to_work",
-            "wed": "definitely_can_not_work"
+            "wed": "prefer_not_to_work"
           }
         }
       ],

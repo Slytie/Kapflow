@@ -4,6 +4,7 @@ import { downloadBinaryToFile } from "@/lib/repositories/artifactAttachments";
 import type {
   WorkpageContract,
   WorkpageCreateResponse,
+  WorkpageEodIntakeTask,
   WorkpagePreviewResponse,
   WorkpageSubmittedResponse
 } from "@/lib/types/contracts";
@@ -53,6 +54,19 @@ export const workpagesRepository = {
     return onetruthApi.createWorkflowRunEodDraft(workflowRunId, {
       idempotency_key: createIdempotencyKey("workpage-eod-draft-create", workflowRunId),
       action_ref: actionRef
+    });
+  },
+
+  async ensureEodIntakeTaskForRun(
+    workflowRunId: string,
+    options?: { serviceDate?: string }
+  ): Promise<WorkpageEodIntakeTask> {
+    return onetruthApi.ensureWorkflowRunEodIntakeTask(workflowRunId, {
+      idempotency_key: createIdempotencyKey(
+        "workpage-eod-intake-ensure",
+        `${workflowRunId}:${options?.serviceDate ?? "current"}`
+      ),
+      service_date: options?.serviceDate
     });
   },
 
@@ -220,12 +234,42 @@ export const workpagesRepository = {
     });
   },
 
+  async createRouteDemandNextWeekAtPath(
+    createPath: string,
+    workflowRunId: string,
+    actionRef?: WorkpageActionRef
+  ): Promise<WorkpageCreateResponse> {
+    return onetruthApi.createWorkpageAtPath(createPath, {
+      idempotency_key: createIdempotencyKey("workpage-route-demand-next-week-create", workflowRunId),
+      action_ref: actionRef
+    });
+  },
+
+  async saveAndRunRouteDemandArtifactAtPath(
+    submitPath: string,
+    artifactVersionId: string,
+    payload: {
+      dailyDemandRows: Array<{
+        service_date: string;
+        planned_route_count: number;
+      }>;
+    },
+    actionRef?: WorkpageActionRef
+  ): Promise<WorkpageSubmittedResponse> {
+    return onetruthApi.submitArtifactWorkpageAtPath(submitPath, {
+      daily_demand_rows: payload.dailyDemandRows,
+      action_ref: actionRef,
+      idempotency_key: createIdempotencyKey("workpage-route-demand-save-and-run", artifactVersionId)
+    });
+  },
+
   async submitDriverPreferencesArtifactAtPath(
     submitPath: string,
     artifactVersionId: string,
     payload: {
       driverRows: Array<{
         driver_id: string;
+        driver_quality: "high" | "medium" | "low";
         preferences_by_weekday: Record<string, string | null>;
       }>;
     },

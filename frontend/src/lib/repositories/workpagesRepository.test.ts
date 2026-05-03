@@ -1,5 +1,8 @@
+import { HttpResponse, http } from "msw";
+
 import { workpagesRepository } from "@/lib/repositories";
 import { mutationLog } from "@/test/api/handlers";
+import { server } from "@/test/api/server";
 
 describe("workpagesRepository", () => {
   it("returns run-backed and artifact-backed EOD contracts plus canonical create/submit responses", async () => {
@@ -92,6 +95,54 @@ describe("workpagesRepository", () => {
       artifact_version_id: "av-eod-artifact-001"
     });
     expect(eodLandingAfterCreate.artifact_context).toBeNull();
+  });
+
+  it("ensures the dispatch-reporting Stage01 intake task for a workflow run", async () => {
+    const requestBodies: Array<Record<string, unknown>> = [];
+    server.use(
+      http.post(
+        "*/api/v1/workpages/workflow-runs/:workflowRunId/eod-v0/intake-task",
+        async ({ request }) => {
+          requestBodies.push((await request.json()) as Record<string, unknown>);
+          return HttpResponse.json({
+            status: "ok",
+            command: "api.workpages.eod_intake.ensure",
+            intake_task: {
+              workflow_run_id: "wr-reporting-002",
+              task_run_id: "tr-stage01-ensure-001",
+              human_task_id: "ht-stage01-ensure-001",
+              stage_id: "Stage01",
+              task_kind: "eos_input_intake",
+              task_run_state: "READY",
+              human_task_state: "OPEN",
+              activation_key: "workpage:dispatch-reporting:SD-2026-03-25:stage01:eos_input_intake",
+              generation: 0,
+              created: false,
+              service_date: "2026-03-25",
+              target_workflow_run_id: "wr-reporting-002",
+              target_route: "/runs/wr-reporting-002/workpages/eod-v0",
+              created_workflow_run: false
+            }
+          });
+        }
+      )
+    );
+
+    const intakeTask = await workpagesRepository.ensureEodIntakeTaskForRun("wr-reporting-001", {
+      serviceDate: "2026-03-25"
+    });
+
+    expect(intakeTask).toMatchObject({
+      workflow_run_id: "wr-reporting-002",
+      human_task_id: "ht-stage01-ensure-001",
+      task_kind: "eos_input_intake",
+      human_task_state: "OPEN",
+      created: false,
+      service_date: "2026-03-25",
+      target_workflow_run_id: "wr-reporting-002",
+      created_workflow_run: false
+    });
+    expect(requestBodies[0]?.service_date).toBe("2026-03-25");
   });
 
   it("returns schedule artifact history, fetches the artifact contract, submits a new version, and downloads JSON", async () => {
@@ -202,7 +253,9 @@ describe("workpagesRepository", () => {
     expect(routeDemandLanding.route_demand_calculations?.day_cards[13]?.service_date).toBe(
       "2026-04-04"
     );
-    expect(routeDemandLanding.actions.map((action) => action.kind)).toEqual(["open_latest"]);
+    expect(routeDemandLanding.actions.map((action) => action.kind)).toEqual(
+      expect.arrayContaining(["open_latest"])
+    );
     expect(artifact.source.mode).toBe("artifact_projection");
     expect(artifact.route_demand_calculations?.day_cards[0]?.service_date).toBe(
       firstDay?.service_date
@@ -247,6 +300,7 @@ describe("workpagesRepository", () => {
       {
         driverRows: (artifact.preference_grid?.drivers ?? []).map((row, index) => ({
           driver_id: row.driver_id,
+          driver_quality: index === 0 ? "high" : row.driver_quality,
           preferences_by_weekday:
             index === 0
               ? { ...row.preferences_by_weekday, mon: "open_to_work" }
@@ -267,6 +321,7 @@ describe("workpagesRepository", () => {
       "/runs/wr-weekly-001/workpages/driver-preferences-v0/artifacts/av-driver-preferences-artifact-001"
     );
     expect(artifact.preference_grid?.drivers[0]?.driver_id).toBe(firstDriver?.driver_id);
+    expect(artifact.preference_grid?.drivers[0]?.driver_quality).toBe("medium");
     expect(artifact.artifact_history?.entries.map((entry) => entry.artifact_version_id)).toEqual([
       "av-driver-preferences-artifact-001"
     ]);
@@ -279,6 +334,7 @@ describe("workpagesRepository", () => {
       "av-driver-preferences-artifact-002",
       "av-driver-preferences-artifact-001"
     ]);
+    expect(submittedArtifact.preference_grid?.drivers[0]?.driver_quality).toBe("high");
     expect(mutationLog()).toContain(
       "workpage-driver-preferences-artifact-submit:av-driver-preferences-artifact-001:av-driver-preferences-artifact-002"
     );

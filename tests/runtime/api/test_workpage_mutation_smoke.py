@@ -400,7 +400,7 @@ def test_workpage_mutation_smoke_schedule_submit_replay_creates_one_successor(
     ) == 1
 
 
-def test_workpage_mutation_smoke_route_demand_submit_replay_keeps_one_refresh_task(
+def test_workpage_mutation_smoke_route_demand_submit_replay_keeps_no_refresh_task(
     tmp_path: Path,
 ) -> None:
     db_url = _db_url(tmp_path)
@@ -461,8 +461,7 @@ def test_workpage_mutation_smoke_route_demand_submit_replay_keeps_one_refresh_ta
         for row in refresh_rows
         if str(row["activation_key"]).startswith("workpage.route-demand-v0.schedule-refresh:")
     ]
-    assert len(refresh_rows) == 1
-    assert refresh_rows[0]["state"] == "OPEN"
+    assert refresh_rows == []
 
 
 def test_workpage_mutation_smoke_driver_preferences_create_and_submit_replay(
@@ -513,6 +512,7 @@ def test_workpage_mutation_smoke_driver_preferences_create_and_submit_replay(
         "driver_rows": [
             {
                 "driver_id": row["driver_id"],
+                "driver_quality": row["driver_quality"],
                 "preferences_by_weekday": row["preferences_by_weekday"],
             }
             for row in driver_rows

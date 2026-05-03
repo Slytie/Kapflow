@@ -699,6 +699,42 @@ def _weekly_run_service_dates(
             dates = {item for item in dates if item}
             if dates:
                 return dates
+    route_demand = _latest_artifact_for_kind(
+        artifacts,
+        "planning.route_slot_requirements.workbook",
+    )
+    if route_demand is not None:
+        metadata = route_demand.get("metadata_json")
+        if isinstance(metadata, Mapping):
+            scope_start = _optional_iso_date(metadata.get("scope_start"))
+            scope_end_exclusive = _optional_iso_date(metadata.get("scope_end_exclusive"))
+            if (
+                scope_start is not None
+                and scope_end_exclusive is not None
+                and scope_end_exclusive > scope_start
+            ):
+                dates: set[str] = set()
+                cursor = scope_start
+                while cursor < scope_end_exclusive:
+                    dates.add(cursor.isoformat())
+                    cursor += timedelta(days=1)
+                if dates:
+                    return dates
+            daily_demand_rows = list(metadata.get("daily_demand_rows") or [])
+            route_dates: list[str] = []
+            for row in daily_demand_rows:
+                service_date = ""
+                if isinstance(row, Mapping):
+                    service_date = str(row.get("service_date") or "").strip()
+                elif isinstance(row, list) and row:
+                    service_date = str(row[0] or "").strip()
+                if not service_date:
+                    continue
+                route_dates.append(service_date)
+                if len(route_dates) == 7:
+                    break
+            if route_dates:
+                return set(route_dates)
     try:
         logical_date = parse_iso_service_date(
             workflow_run.get("logical_date"),
@@ -707,6 +743,16 @@ def _weekly_run_service_dates(
     except ValueError:
         return set()
     return {(logical_date + timedelta(days=offset)).isoformat() for offset in range(7)}
+
+
+def _optional_iso_date(value: Any) -> date | None:
+    text = str(value or "").strip()
+    if not text:
+        return None
+    try:
+        return date.fromisoformat(text)
+    except ValueError:
+        return None
 
 
 def _require_driver_details(

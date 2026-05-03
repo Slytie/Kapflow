@@ -172,8 +172,8 @@
           "occurred_at": "<ts:6>",
           "payload": {
             "activation_key": "snapshot:workspace-eod-action-create:dispatch-reporting-workpage",
-            "logical_date": "2026-03-16",
-            "partition_key": "SD-2026-03-16",
+            "logical_date": "2026-03-24",
+            "partition_key": "SD-2026-03-24",
             "workflow_id": "dispatch_reporting.v1"
           },
           "recorded_at": "<ts:7>",
@@ -359,8 +359,8 @@
       "active_issue_count": 0,
       "created_at": "<ts:14>",
       "domain_id": "domain-x",
-      "logical_date": "2026-03-16",
-      "partition_key": "SD-2026-03-16",
+      "logical_date": "2026-03-24",
+      "partition_key": "SD-2026-03-24",
       "state": "OPEN",
       "tenant_id": "tenant-a",
       "updated_at": "<ts:15>",

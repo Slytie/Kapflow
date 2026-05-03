@@ -5,9 +5,10 @@ from .runtime_cli import REPO_ROOT
 
 SUPPORTED_REPORTING_WORKBOOK_PATH = (
     REPO_ROOT
-    / "fixtures/workflows/dispatch_reporting/template_pack/Stage03_Threshold_Detection_and_Draft_Packet/Stage03_Threshold_Detection_and_Draft_Packet_upd_draft_Spreadsheet_Example_COMPLETED.xlsx"
+    / "fixtures/workflows/dispatch_reporting/template_pack/Stage01_EOS_Intake/Stage01_EOS_Intake_eos_raw_Spreadsheet_Example_COMPLETED.xlsx"
 )
 XLSX_MEDIA_TYPE = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+REALISTIC_REPORTING_SERVICE_DATE = "2026-03-24"
 
 
 def reporting_workbook_upload_metadata(service_date: str) -> dict[str, object]:

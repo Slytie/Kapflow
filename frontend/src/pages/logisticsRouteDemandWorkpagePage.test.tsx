@@ -20,7 +20,8 @@ function setFrontendOperatorContext(): void {
 }
 
 describe("LogisticsRouteDemandWorkpagePage", () => {
-  const futureHorizonDate = "2026-04-04";
+  const visibleWeekDate = "2026-03-28";
+  const futureVisibleWeekDate = "2026-03-29";
 
   it("shows the top chrome weekly actions in operator order on weekly schedule routes", async () => {
     setFrontendOperatorContext();
@@ -90,13 +91,13 @@ describe("LogisticsRouteDemandWorkpagePage", () => {
       within(editor).queryByText(/bounded route-demand editor over immutable weekly route-demand workbooks/i)
     ).not.toBeInTheDocument();
     expect(within(editor).getByTestId("route-demand-horizon-summary")).toHaveTextContent(
-      "14 service days"
+      "7 service days"
     );
     expect(within(editor).getByTestId("route-demand-horizon-summary")).toHaveTextContent(
-      "2026-03-22 to 2026-04-04"
+      "2026-03-22 to 2026-03-28"
     );
-    expect(within(editor).getByRole("heading", { name: "Week 1" })).toBeInTheDocument();
-    expect(within(editor).getByRole("heading", { name: "Week 2" })).toBeInTheDocument();
+    expect(within(editor).queryByRole("heading", { name: "Week 1" })).not.toBeInTheDocument();
+    expect(within(editor).queryByRole("heading", { name: "Week 2" })).not.toBeInTheDocument();
     expect(within(editor).queryByText(/^Artifact /i)).not.toBeInTheDocument();
     expect(within(editor).queryByText(/^\d+ planned routes$/i)).not.toBeInTheDocument();
     expect(within(editor).queryByTestId("route-demand-schedule-impact")).not.toBeInTheDocument();
@@ -104,20 +105,20 @@ describe("LogisticsRouteDemandWorkpagePage", () => {
     expect(within(editor).queryByTestId("route-demand-history-rail")).not.toBeInTheDocument();
     expect(within(editor).queryByText("Raw route-demand table")).not.toBeInTheDocument();
     expect(within(dialog).getByRole("button", { name: "Save route demand" })).toBeDisabled();
-    expect(within(dialog).getByTestId(`route-demand-count-${futureHorizonDate}`)).toHaveTextContent(
+    expect(within(dialog).getByTestId(`route-demand-count-${visibleWeekDate}`)).toHaveTextContent(
       "17"
     );
     const initialCount = Number(
-      within(dialog).getByTestId(`route-demand-count-${futureHorizonDate}`).textContent ?? "0"
+      within(dialog).getByTestId(`route-demand-count-${visibleWeekDate}`).textContent ?? "0"
     );
 
     await user.click(
       within(dialog).getByRole("button", {
-        name: `Increase planned routes for ${futureHorizonDate}`
+        name: `Increase planned routes for ${visibleWeekDate}`
       })
     );
 
-    expect(within(dialog).getByTestId(`route-demand-count-${futureHorizonDate}`)).toHaveTextContent(
+    expect(within(dialog).getByTestId(`route-demand-count-${visibleWeekDate}`)).toHaveTextContent(
       String(initialCount + 1)
     );
     expect(within(dialog).getByRole("button", { name: "Save route demand" })).toBeEnabled();
@@ -176,7 +177,8 @@ describe("LogisticsRouteDemandWorkpagePage", () => {
     expect(within(page).getByRole("heading", { name: "Editable route demand available" })).toBeInTheDocument();
     expect(within(page).getByRole("heading", { name: "Schedule impact" })).toBeInTheDocument();
     expect(within(page).getByRole("heading", { name: "Daily route demand" })).toBeInTheDocument();
-    expect(within(page).getByTestId(`route-demand-count-${futureHorizonDate}`)).toHaveTextContent(
+    expect(within(page).getByRole("button", { name: "Add a week" })).toBeInTheDocument();
+    expect(within(page).getByTestId(`route-demand-count-${visibleWeekDate}`)).toHaveTextContent(
       "17"
     );
     expect(
@@ -206,20 +208,21 @@ describe("LogisticsRouteDemandWorkpagePage", () => {
 
     const page = await screen.findByTestId("route-demand-artifact-workpage-page");
     expect(within(page).getByRole("button", { name: "Save route demand" })).toBeDisabled();
-    expect(within(page).getByTestId(`route-demand-count-${futureHorizonDate}`)).toHaveTextContent(
+    expect(within(page).getByRole("button", { name: "Add a week" })).toBeInTheDocument();
+    expect(within(page).getByTestId(`route-demand-count-${visibleWeekDate}`)).toHaveTextContent(
       "17"
     );
     const initialCount = Number(
-      within(page).getByTestId(`route-demand-count-${futureHorizonDate}`).textContent ?? "0"
+      within(page).getByTestId(`route-demand-count-${visibleWeekDate}`).textContent ?? "0"
     );
 
     await user.click(
       within(page).getByRole("button", {
-        name: `Increase planned routes for ${futureHorizonDate}`
+        name: `Increase planned routes for ${visibleWeekDate}`
       })
     );
 
-    expect(within(page).getByTestId(`route-demand-count-${futureHorizonDate}`)).toHaveTextContent(
+    expect(within(page).getByTestId(`route-demand-count-${visibleWeekDate}`)).toHaveTextContent(
       String(initialCount + 1)
     );
     expect(within(page).getByRole("button", { name: "Save route demand" })).toBeEnabled();
@@ -233,10 +236,10 @@ describe("LogisticsRouteDemandWorkpagePage", () => {
     });
 
     expect(await screen.findByTestId("route-demand-artifact-workpage-page")).toBeInTheDocument();
-    expect(screen.getByTestId(`route-demand-count-${futureHorizonDate}`)).toHaveTextContent(
+    expect(screen.getByTestId(`route-demand-count-${visibleWeekDate}`)).toHaveTextContent(
       String(initialCount + 1)
     );
-    expect(screen.getByText("Refresh follow-up is open")).toBeInTheDocument();
+    expect(screen.getByText("Latest schedule draft is stale")).toBeInTheDocument();
     expect(screen.getAllByRole("link", { name: "Open latest schedule draft" })[0]).toHaveAttribute(
       "href",
       "/runs/wr-weekly-001/workpages/schedule-v0/artifacts/av-schedule-artifact-001"
@@ -245,4 +248,138 @@ describe("LogisticsRouteDemandWorkpagePage", () => {
       "workpage-route-demand-artifact-submit:av-route-demand-artifact-001:av-route-demand-artifact-002"
     );
   });
+
+  it("adds the next week, posts save-and-run to /save-and-run, and opens the weekly schedule quick edit", async () => {
+    const user = userEvent.setup();
+    const requestedSaveAndRunPaths: string[] = [];
+    server.use(
+      http.post(
+        "*/api/v1/workpages/workflow-runs/:workflowRunId/route-demand-v0/artifacts/:artifactVersionId/save-and-run",
+        async ({ request, params }) => {
+          requestedSaveAndRunPaths.push(new URL(request.url).pathname);
+          await new Promise((resolve) => setTimeout(resolve, 50));
+          return HttpResponse.json({
+            status: "ok",
+            command: "api.workpages.route_demand.save_and_run",
+            submitted: {
+              artifact_version_id: "av-route-demand-artifact-003",
+              supersedes_artifact_version_id: String(params.artifactVersionId),
+              workflow_run_id: String(params.workflowRunId),
+              route:
+                "/runs/wr-weekly-002/workpages/route-demand-v0/artifacts/av-route-demand-artifact-003",
+              target_workflow_run_id: "wr-weekly-002",
+              target_schedule_route: "/runs/wr-weekly-002/workpages/schedule-v0",
+              target_schedule_artifact_version_id: null
+            }
+          });
+        }
+      )
+    );
+
+    setFrontendOperatorContext();
+    window.history.pushState(
+      {},
+      "",
+      "/runs/wr-weekly-001/workpages/route-demand-v0/artifacts/av-route-demand-artifact-001"
+    );
+    render(<App />);
+
+    const currentPage = await screen.findByTestId("route-demand-artifact-workpage-page");
+    await user.click(within(currentPage).getByRole("button", { name: "Add a week" }));
+
+    await waitFor(() => {
+      expect(window.location.pathname).toBe(
+        "/runs/wr-weekly-002/workpages/route-demand-v0/artifacts/av-route-demand-artifact-002"
+      );
+    });
+
+    const futurePage = await screen.findByTestId("route-demand-artifact-workpage-page");
+    expect(within(futurePage).getByTestId(`route-demand-count-${futureVisibleWeekDate}`)).toHaveTextContent(
+      "0"
+    );
+
+    await user.click(
+      within(futurePage).getByRole("button", {
+        name: `Increase planned routes for ${futureVisibleWeekDate}`
+      })
+    );
+
+    await user.click(
+      within(futurePage).getByRole("button", { name: "Save and run scheduling agent" })
+    );
+
+    await waitFor(() => {
+      expect(screen.getAllByText("Agent working").length).toBeGreaterThan(0);
+    });
+
+    await waitFor(() => {
+      expect(window.location.pathname).toBe("/runs/wr-weekly-002/workpages/schedule-v0");
+    });
+
+    expect(
+      await screen.findByRole("dialog", { name: "Edit Weekly Schedule" })
+    ).toBeInTheDocument();
+    expect(requestedSaveAndRunPaths).toEqual([
+      "/api/v1/workpages/workflow-runs/wr-weekly-002/route-demand-v0/artifacts/av-route-demand-artifact-002/save-and-run"
+    ]);
+    expect(
+      mutationLog().some((entry) => entry.startsWith("workpage-route-demand-artifact-submit:"))
+    ).toBe(false);
+  }, 30000);
+
+  it("shows an inline error when save-and-run fails and stays on the future route-demand artifact", async () => {
+    const user = userEvent.setup();
+    server.use(
+      http.post(
+        "*/api/v1/workpages/workflow-runs/:workflowRunId/route-demand-v0/artifacts/:artifactVersionId/save-and-run",
+        () =>
+          HttpResponse.json(
+            {
+              status: "error",
+              error: {
+                code: "stage04_claimed_by_other",
+                message: "Stage04 is currently claimed by another actor."
+              }
+            },
+            { status: 409 }
+          )
+      )
+    );
+
+    setFrontendOperatorContext();
+    window.history.pushState(
+      {},
+      "",
+      "/runs/wr-weekly-001/workpages/route-demand-v0/artifacts/av-route-demand-artifact-001"
+    );
+    render(<App />);
+
+    const currentPage = await screen.findByTestId("route-demand-artifact-workpage-page");
+    await user.click(within(currentPage).getByRole("button", { name: "Add a week" }));
+
+    await waitFor(() => {
+      expect(window.location.pathname).toBe(
+        "/runs/wr-weekly-002/workpages/route-demand-v0/artifacts/av-route-demand-artifact-002"
+      );
+    });
+
+    const futurePage = await screen.findByTestId("route-demand-artifact-workpage-page");
+    await user.click(
+      within(futurePage).getByRole("button", {
+        name: `Increase planned routes for ${futureVisibleWeekDate}`
+      })
+    );
+    await user.click(
+      within(futurePage).getByRole("button", { name: "Save and run scheduling agent" })
+    );
+
+    const errorPanel = await screen.findByTestId("route-demand-mutation-error");
+    expect(errorPanel).toHaveTextContent("Action failed");
+    expect(errorPanel).toHaveTextContent("Stage04 is currently claimed by another actor.");
+    expect(window.location.pathname).toBe(
+      "/runs/wr-weekly-002/workpages/route-demand-v0/artifacts/av-route-demand-artifact-002"
+    );
+    expect(screen.getByTestId("route-demand-artifact-workpage-page")).toBeInTheDocument();
+    expect(screen.queryByRole("dialog", { name: "Edit Weekly Schedule" })).not.toBeInTheDocument();
+  }, 30000);
 });

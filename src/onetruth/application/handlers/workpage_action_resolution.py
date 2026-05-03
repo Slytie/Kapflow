@@ -50,6 +50,7 @@ def _resolve_workpage_action_subject(
     artifact_version_id: str | None,
     raw_action_ref: Any,
     raw_subject_link: Any,
+    expected_action_id: str | None = None,
 ) -> tuple[dict[str, str] | None, dict[str, Any] | None]:
     if raw_action_ref is not None and raw_subject_link is not None:
         raise CommandError(
@@ -66,6 +67,7 @@ def _resolve_workpage_action_subject(
             flow_kind=flow_kind,
             artifact_version_id=artifact_version_id,
             raw_action_ref=raw_action_ref,
+            expected_action_id=expected_action_id,
         )
         subject = action_ref.get("subject")
         if isinstance(subject, Mapping):
@@ -93,6 +95,7 @@ def _resolve_workpage_action_ref(
     flow_kind: str,
     artifact_version_id: str | None,
     raw_action_ref: Any,
+    expected_action_id: str | None = None,
 ) -> dict[str, Any]:
     if not isinstance(raw_action_ref, Mapping):
         raise _invalid_workpage_action_ref(
@@ -140,14 +143,18 @@ def _resolve_workpage_action_ref(
             workpage_kind=workpage_kind,
             flow_kind=flow_kind,
         )
-    expected_action_id = _expected_action_id_for_workpage_flow(descriptor, flow_kind=flow_kind)
-    if action_id != expected_action_id:
+    resolved_expected_action_id = (
+        str(expected_action_id)
+        if expected_action_id is not None
+        else _expected_action_id_for_workpage_flow(descriptor, flow_kind=flow_kind)
+    )
+    if action_id != resolved_expected_action_id:
         raise _invalid_workpage_action_ref(
             message="action_ref action_id does not match the requested workpage flow",
             workpage_kind=workpage_kind,
             flow_kind=flow_kind,
             action_id=action_id,
-            expected_action_id=expected_action_id,
+            expected_action_id=resolved_expected_action_id,
         )
     normalized_artifact_version_id = _normalize_action_ref_artifact_version_id(
         raw_action_ref.get("artifact_version_id")

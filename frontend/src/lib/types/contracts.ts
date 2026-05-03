@@ -6,6 +6,8 @@ import type {
   WorkpageDriverPreferencesGrid,
   WorkpageDriverPreferencesScheduleImpact,
   WorkpageRouteDemandCalculations,
+  WorkpageRouteDemandFutureWeekActivation,
+  WorkpageRouteDemandFutureWeekOption,
   WorkpageRouteDemandScheduleImpact,
   WorkpageScheduleAcceptedSeries,
   WorkpageScheduleArtifactState,
@@ -470,15 +472,38 @@ export interface WorkpageCreateResponse {
   workflow_run_id: string;
   artifact_version_id: string;
   route: string;
+  target_workflow_run_id?: string | null;
+  target_schedule_route?: string | null;
+  target_schedule_artifact_version_id?: string | null;
 }
 
 export type WorkpageDraftResponse = WorkpageCreateResponse;
+
+export interface WorkpageEodIntakeTask {
+  workflow_run_id: string;
+  task_run_id: string;
+  human_task_id: string;
+  stage_id: string;
+  task_kind: string;
+  task_run_state: string;
+  human_task_state: string;
+  activation_key: string;
+  generation: number;
+  created: boolean;
+  service_date: string;
+  target_workflow_run_id: string;
+  target_route: string;
+  created_workflow_run: boolean;
+}
 
 export interface WorkpageSubmittedResponse {
   workflow_run_id: string;
   artifact_version_id: string;
   supersedes_artifact_version_id: string;
   route: string;
+  target_workflow_run_id?: string | null;
+  target_schedule_route?: string | null;
+  target_schedule_artifact_version_id?: string | null;
 }
 
 export interface WorkpagePreviewResponse {
@@ -496,6 +521,8 @@ export interface WorkpageContract {
   dependencies: WorkpageScheduleDependency[];
   calculations: WorkpageScheduleCalculations | null;
   route_demand_calculations: WorkpageRouteDemandCalculations | null;
+  future_week_options: WorkpageRouteDemandFutureWeekOption[];
+  future_week_activation: WorkpageRouteDemandFutureWeekActivation | null;
   preference_grid: WorkpageDriverPreferencesGrid | null;
   driver_availability_exceptions: WorkpageDriverAvailabilityExceptions | null;
   schedule_impact:

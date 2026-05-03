@@ -83,7 +83,7 @@ from onetruth.infrastructure.repositories.human_tasks import (
 from onetruth.infrastructure.repositories.task_runs import create_task_run, get_task_run
 from onetruth.infrastructure.repositories.workflow_runs import get_workflow_run
 
-EOD_DEFAULT_SERVICE_DATE = "2026-03-16"
+EOD_DEFAULT_SERVICE_DATE = "2026-03-24"
 EOD_DEFAULT_STATION_CODE = "DVC4"
 EOD_DEFAULT_DSP_NAME = "QDCI"
 EOD_TEMPLATE_ID = "dispatch_reporting.stage03.upd_draft.workbook.empty.v1"
@@ -893,7 +893,7 @@ def _canonical_driver_preferences_ui_route(
     )
 
 def _draft_file_name() -> str:
-    return "dispatch_reporting_eod_v0_2026-03-16_qdci_dvc4_upd_draft.xlsx"
+    return "dispatch_reporting_eod_v0_2026-03-24_qdci_dvc4_upd_draft.xlsx"
 
 def _schedule_draft_file_name(base_artifact: Mapping[str, Any]) -> str:
     return _metadata_string(

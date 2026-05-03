@@ -127,6 +127,8 @@ def expand_route_slot_requirements(
 
 
 def _required_count_for_slot(slot: RouteSlotRequirement, *, default_required_count: int) -> int:
+    if slot.required_count <= 0:
+        return 0
     if slot.required_count > 1:
         return int(slot.required_count)
     # Allow count suffixes such as route-slot-id*3 while keeping the base id deterministic.
@@ -138,9 +140,10 @@ def _required_count_for_slot(slot: RouteSlotRequirement, *, default_required_cou
 
 
 def _required_count_from_row(raw: dict[str, Any]) -> int:
-    explicit = _coerce_int(raw.get("required_count"), default=0)
-    if explicit > 0:
-        return explicit
+    explicit_raw = raw.get("required_count")
+    explicit = _coerce_int(explicit_raw, default=0)
+    if explicit_raw is not None:
+        return max(explicit, 0)
     route_slot_id = str(raw.get("route_slot_id") or "").strip()
     if "*" not in route_slot_id:
         return 1

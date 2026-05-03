@@ -13,9 +13,12 @@ from onetruth.api.route_specs._core import (
 from onetruth.api.routes.workpages import (
     add_workflow_run_driver_availability_exception_endpoint,
     create_workflow_run_driver_preferences_snapshot_endpoint,
+    create_workflow_run_route_demand_next_week_endpoint,
     create_workflow_run_eod_draft_endpoint,
+    ensure_workflow_run_eod_intake_task_endpoint,
     mark_schedule_sick_no_show_endpoint,
     preview_workflow_run_artifact_workpage_endpoint,
+    save_and_run_route_demand_artifact_workpage_endpoint,
     submit_workflow_run_artifact_workpage_endpoint,
     workflow_run_artifact_workpage_endpoint,
     workflow_run_workpage_endpoint,
@@ -99,6 +102,20 @@ def _dispatch_workflow_run_artifact_submit(execution, raw_value: str):
     )
 
 
+def _dispatch_workflow_run_artifact_save_and_run(execution, raw_value: str):
+    workflow_run_id, _workpage_kind, artifact_version_id = _split_workflow_run_artifact_path(
+        raw_value
+    )
+    return save_and_run_route_demand_artifact_workpage_endpoint(
+        require_connection(execution.connection),
+        context=require_request_context(execution.context),
+        db_url=execution.db_url,
+        workflow_run_id=workflow_run_id,
+        artifact_version_id=artifact_version_id,
+        payload=_require_payload(execution.payload),
+    )
+
+
 def _dispatch_workflow_run_artifact_preview(execution, raw_value: str):
     workflow_run_id, workpage_kind, artifact_version_id = _split_workflow_run_artifact_path(
         raw_value
@@ -144,6 +161,23 @@ WORKPAGE_ROUTE_SPECS: tuple[RouteSpec, ...] = (
         dispatch=lambda execution, params: _dispatch_workflow_run_artifact_preview(
             execution,
             params["workflow_run_artifact_preview"],
+        ),
+    ),
+    RouteSpec(
+        name="workpages.workflow_run.route_demand.artifact.save_and_run",
+        method="POST",
+        pattern=_param(
+            "/api/v1/workpages/workflow-runs/",
+            param_name="workflow_run_artifact_save_and_run",
+            suffix="/save-and-run",
+            allow_slash=True,
+            required_substring="/artifacts/",
+        ),
+        body_policy=JSON_COMMAND_BODY,
+        needs_page=False,
+        dispatch=lambda execution, params: _dispatch_workflow_run_artifact_save_and_run(
+            execution,
+            params["workflow_run_artifact_save_and_run"],
         ),
     ),
     RouteSpec(
@@ -225,6 +259,41 @@ WORKPAGE_ROUTE_SPECS: tuple[RouteSpec, ...] = (
             require_connection(execution.connection),
             context=require_request_context(execution.context),
             db_url=execution.db_url,
+            workflow_run_id=params["workflow_run_id"],
+            payload=_require_payload(execution.payload),
+        ),
+    ),
+    RouteSpec(
+        name="workpages.workflow_run.route_demand.next_week.create",
+        method="POST",
+        pattern=_param(
+            "/api/v1/workpages/workflow-runs/",
+            param_name="workflow_run_id",
+            suffix="/route-demand-v0/next-week",
+        ),
+        body_policy=JSON_COMMAND_BODY,
+        needs_page=False,
+        dispatch=lambda execution, params: create_workflow_run_route_demand_next_week_endpoint(
+            require_connection(execution.connection),
+            context=require_request_context(execution.context),
+            db_url=execution.db_url,
+            workflow_run_id=params["workflow_run_id"],
+            payload=_require_payload(execution.payload),
+        ),
+    ),
+    RouteSpec(
+        name="workpages.workflow_run.eod_intake.ensure",
+        method="POST",
+        pattern=_param(
+            "/api/v1/workpages/workflow-runs/",
+            param_name="workflow_run_id",
+            suffix="/eod-v0/intake-task",
+        ),
+        body_policy=JSON_COMMAND_BODY,
+        needs_page=False,
+        dispatch=lambda execution, params: ensure_workflow_run_eod_intake_task_endpoint(
+            require_connection(execution.connection),
+            context=require_request_context(execution.context),
             workflow_run_id=params["workflow_run_id"],
             payload=_require_payload(execution.payload),
         ),

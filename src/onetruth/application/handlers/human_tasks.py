@@ -1129,6 +1129,16 @@ def _apply_dispatch_reporting_completion_effects(
                     if isinstance(eos_artifact.get("metadata_json"), dict)
                     else None
                 ),
+                source_file_name=(
+                    str(eos_artifact.get("file_name"))
+                    if eos_artifact.get("file_name") is not None
+                    else None
+                ),
+                fallback_service_date=(
+                    str(workflow_run.get("logical_date"))
+                    if workflow_run.get("logical_date") is not None
+                    else None
+                ),
                 built_at=created_at,
                 actor_id=actor_id,
             )

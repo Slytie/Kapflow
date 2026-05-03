@@ -2,6 +2,18 @@
 
 Record any decisions made since the last session so a fresh Codex run can rehydrate quickly.
 
+## 2026-05-03 (dispatch-reporting service-date-selectable closeout import)
+- Date-authority decision: the `Upload route activity` popup now treats the operator-selected service date as canonical upload truth; explicit `metadata_json.service_date` outranks filename-derived dates and run fallback during EOS import.
+- Run-alignment decision: if the selected service date differs from the current `dispatch_reporting.v1` run `logical_date`, the workpage closeout flow must resolve or create the matching same-scope reporting run and continue review/finalize work there instead of importing mismatched daily truth into the current run.
+- API decision: `POST /api/v1/workpages/workflow-runs/{workflow_run_id}/eod-v0/intake-task` now accepts optional `service_date` and returns the resolved `target_workflow_run_id`, `target_route`, and `created_workflow_run` fields so the frontend can switch onto the canonical daily run before draft review and approval.
+
+## 2026-05-03 (route-demand week-by-week future-run activation)
+- Surface decision: `route-demand-v0` now presents a single visible operational week at a time; the copied second-week horizon remains an internal compatibility detail and is no longer treated as user-facing editable truth.
+- Creation decision: `Add a week` now creates or reuses the real next weekly-planning workflow run and seeds an empty future-week route-demand artifact there instead of editing synthetic future rows inside the current run.
+- Trigger decision: `Save and run scheduling agent` is now the explicit greenfield future-week scheduling trigger from route demand; plain route-demand save no longer spawns the legacy refresh task.
+- Runtime decision: the future-week activation path must auto-claim the canonical Stage04 work, reuse the existing weekly Stage04 agent runtime, auto-complete Stage04 on success, and hand off to the canonical `schedule-v0` route with the existing quick-edit popup entrypoint.
+- Safety decision: `dispatch_reporting.v1` and `eod-v0` remain behaviorally unchanged by this slice except for additive shared typing/test fallout needed to keep the repo compiling.
+
 ## 2026-04-25 (EPIC-135 unified replan popup and dynamic scheduling activation correction tranche)
 - Selection decision: EPIC-135 is now the selected next app-facing workpage/product tranche after EPIC-134, and the repo now tracks it through `TASK-0225` through `TASK-0232`.
 - Lifecycle decision: the shared `Edit Weekly Schedule` popup is the selected operator surface both before and after publish, but backend ownership stays split by lifecycle state: `weekly_schedule_planning.v1` before publish and `live_dispatch.v1` after publish.

@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import base64
 import json
+import sqlite3
 from typing import Any
 
 import yaml
@@ -9,6 +11,12 @@ from onetruth.application.services.logistics_weekly_agent_pilot import (
     build_actual_ops_weekly_stage04_fixture_payloads,
 )
 
+from .dispatch_reporting import (
+    REALISTIC_REPORTING_SERVICE_DATE,
+    SUPPORTED_REPORTING_WORKBOOK_PATH,
+    XLSX_MEDIA_TYPE,
+    reporting_workbook_upload_metadata,
+)
 from .runtime_api import RuntimeApiClient
 from .runtime_cli import REPO_ROOT, run_cli, stdout_json
 
@@ -182,8 +190,8 @@ def seed_dispatch_reporting_workpage_run(
                 "workflow_version": "v1",
                 "tenant_id": tenant_id,
                 "domain_id": domain_id,
-                "partition_key": "SD-2026-03-16",
-                "logical_date": "2026-03-16",
+                "partition_key": f"SD-{REALISTIC_REPORTING_SERVICE_DATE}",
+                "logical_date": REALISTIC_REPORTING_SERVICE_DATE,
                 "activation_key": f"{run_tag}:dispatch-reporting-workpage",
                 "idempotency_key": f"{run_tag}:runs.create",
             },
@@ -211,7 +219,7 @@ def seed_dispatch_reporting_workpage_run(
                         "storage_uri": f"inmem://workpages/{run_tag}/{artifact_kind}",
                         "content_digest": f"sha256:{run_tag}:{artifact_kind}",
                         "metadata_json": {
-                            "service_date": "2026-03-16",
+                            "service_date": REALISTIC_REPORTING_SERVICE_DATE,
                             "workpage_seed": "dispatch-reporting-run",
                         },
                         "idempotency_key": f"{run_tag}:artifacts.create:{artifact_kind}",
@@ -225,6 +233,130 @@ def seed_dispatch_reporting_workpage_run(
         "workflow_run": workflow_run,
         "workflow_run_id": workflow_run_id,
         "artifacts_by_kind": artifacts_by_kind,
+    }
+
+
+def seed_imported_dispatch_reporting_workpage_run(
+    *,
+    db_url: str,
+    tenant_id: str,
+    domain_id: str,
+    run_tag: str,
+    service_date: str = REALISTIC_REPORTING_SERVICE_DATE,
+) -> dict[str, Any]:
+    run_cli("--db-url", db_url, "init-db")
+    created_run = run_cli(
+        "--db-url",
+        db_url,
+        "runs",
+        "create",
+        "--json",
+        json.dumps(
+            {
+                "workflow_id": "dispatch_reporting.v1",
+                "workflow_version": "v1",
+                "tenant_id": tenant_id,
+                "domain_id": domain_id,
+                "partition_key": f"SD-{service_date}",
+                "logical_date": service_date,
+                "activation_key": f"{run_tag}:dispatch-reporting-imported",
+                "idempotency_key": f"{run_tag}:runs.create",
+            },
+            separators=(",", ":"),
+        ),
+    )
+    workflow_run = stdout_json(created_run)["workflow_run"]
+    workflow_run_id = str(workflow_run["workflow_run_id"])
+    created_task = run_cli(
+        "--db-url",
+        db_url,
+        "tasks",
+        "create",
+        "--json",
+        json.dumps(
+            {
+                "workflow_run_id": workflow_run_id,
+                "stage_id": "Stage01",
+                "task_kind": "eos_input_intake",
+                "activation_key": f"{run_tag}:stage01:eos_input_intake",
+                "create_human_task": True,
+                "candidate_roles": ["dispatch_supervisor"],
+                "owner_role": "dispatch_supervisor",
+                "idempotency_key": f"{run_tag}:tasks.create",
+            },
+            separators=(",", ":"),
+        ),
+    )
+    intake_human_task_id = str(
+        stdout_json(created_task)["result"]["human_task"]["human_task_id"]
+    )
+    client = RuntimeApiClient(
+        db_url=db_url,
+        tenant_id=tenant_id,
+        domain_id=domain_id,
+        actor_id="human:dispatch-supervisor-seed",
+        actor_type="human",
+        actor_roles=["dispatch_supervisor", "operations_manager", "schedule_planner"],
+    )
+    claimed = client.post(
+        f"/api/v1/human-tasks/{intake_human_task_id}/claim",
+        payload={
+            "lease_seconds": 300,
+            "idempotency_key": f"{run_tag}:claim",
+        },
+    )
+    assert claimed.status_code == 200, claimed.payload
+    uploaded = client.post(
+        f"/api/v1/human-tasks/{intake_human_task_id}/artifacts/upload",
+        payload={
+            "artifact_kind": "reporting.eos_raw.workbook",
+            "artifact_role": "official_input",
+            "media_type": XLSX_MEDIA_TYPE,
+            "file_name": f"{service_date}.xlsx",
+            "metadata_json": reporting_workbook_upload_metadata(service_date),
+            "content_base64": base64.b64encode(
+                SUPPORTED_REPORTING_WORKBOOK_PATH.read_bytes()
+            ).decode("ascii"),
+            "idempotency_key": f"{run_tag}:upload",
+        },
+    )
+    assert uploaded.status_code == 200, uploaded.payload
+    completed = client.post(
+        f"/api/v1/human-tasks/{intake_human_task_id}/complete",
+        payload={
+            "outcome": "complete",
+            "idempotency_key": f"{run_tag}:complete",
+        },
+    )
+    assert completed.status_code == 200, completed.payload
+
+    connection = sqlite3.connect(db_url.removeprefix("sqlite:///"))
+    connection.row_factory = sqlite3.Row
+    try:
+        rows = connection.execute(
+            """
+            SELECT artifact_version_id, artifact_kind
+            FROM artifact_versions
+            WHERE workflow_run_id = ?
+            ORDER BY created_at ASC, artifact_version_id ASC
+            """,
+            (workflow_run_id,),
+        ).fetchall()
+        artifacts_by_kind = {
+            str(row["artifact_kind"]): {
+                "artifact_version_id": str(row["artifact_version_id"]),
+                "artifact_kind": str(row["artifact_kind"]),
+            }
+            for row in rows
+        }
+    finally:
+        connection.close()
+
+    return {
+        "workflow_run": workflow_run,
+        "workflow_run_id": workflow_run_id,
+        "artifacts_by_kind": artifacts_by_kind,
+        "intake_human_task_id": intake_human_task_id,
     }
 
 

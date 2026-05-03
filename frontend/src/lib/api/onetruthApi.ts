@@ -18,6 +18,7 @@ import type {
   TimelineEvent,
   WorkpageCreateResponse,
   WorkpageContract,
+  WorkpageEodIntakeTask,
   WorkpagePreviewResponse,
   WorkpageSubmittedResponse,
   WorkflowRunDetailContract,
@@ -39,6 +40,7 @@ import type {
   WorkpageArtifactHistory,
   WorkpageDriverAvailabilityException,
   WorkpageDriverPreferencesAction,
+  WorkpageDriverQuality,
   WorkpageEodAction,
   WorkpageDriverPreferencesGrid,
   WorkpageDriverPreferencesScheduleImpact,
@@ -51,6 +53,8 @@ import type {
   WorkpageRouteDemandAction,
   WorkpageRouteDemandCalculations,
   WorkpageRouteDemandDayCard,
+  WorkpageRouteDemandFutureWeekActivation,
+  WorkpageRouteDemandFutureWeekOption,
   WorkpageRouteDemandRefreshTask,
   WorkpageRouteDemandScheduleImpact
 } from "@/lib/types/workpages";
@@ -139,6 +143,8 @@ interface WorkpageEnvelope extends ListEnvelope {
   draft_lineage?: Record<string, unknown> | null;
   accepted_series?: Record<string, unknown> | null;
   schedule_impact?: Record<string, unknown> | null;
+  future_week_activation?: Record<string, unknown> | null;
+  future_week_options?: Array<Record<string, unknown>> | null;
   preference_grid?: Record<string, unknown> | null;
   driver_availability_exceptions?: Record<string, unknown> | null;
   dependencies?: Array<Record<string, unknown>> | null;
@@ -148,6 +154,10 @@ interface WorkpageEnvelope extends ListEnvelope {
 interface WorkpageCreateEnvelope extends ListEnvelope {
   draft?: Record<string, unknown>;
   created?: Record<string, unknown>;
+}
+
+interface WorkpageEodIntakeEnvelope extends ListEnvelope {
+  intake_task?: Record<string, unknown>;
 }
 
 interface DriverAvailabilityExceptionCreateEnvelope extends ListEnvelope {
@@ -839,6 +849,10 @@ function normalizeWorkpageContract(payload: WorkpageEnvelope): WorkpageContract 
     payload.schedule_impact === null || payload.schedule_impact === undefined
       ? null
       : requiredObject(payload.schedule_impact, "schedule_impact");
+  const futureWeekActivation =
+    payload.future_week_activation === null || payload.future_week_activation === undefined
+      ? null
+      : requiredObject(payload.future_week_activation, "future_week_activation");
   const preferenceGrid =
     payload.preference_grid === null || payload.preference_grid === undefined
       ? null
@@ -933,6 +947,8 @@ function normalizeWorkpageContract(payload: WorkpageEnvelope): WorkpageContract 
     dependencies: normalizeScheduleDependencies(payload.dependencies),
     calculations: normalizeScheduleCalculations(calculations),
     route_demand_calculations: normalizeRouteDemandCalculations(calculations),
+    future_week_options: normalizeRouteDemandFutureWeekOptions(payload.future_week_options),
+    future_week_activation: normalizeRouteDemandFutureWeekActivation(futureWeekActivation),
     preference_grid: normalizeDriverPreferencesGrid(preferenceGrid),
     driver_availability_exceptions: normalizeDriverAvailabilityExceptions(
       driverAvailabilityExceptions
@@ -950,7 +966,12 @@ function normalizeWorkpageCreateResponse(payload: WorkpageCreateEnvelope): Workp
   return {
     workflow_run_id: asString(created.workflow_run_id),
     artifact_version_id: asString(created.artifact_version_id),
-    route: asString(created.route)
+    route: asString(created.route),
+    target_workflow_run_id: asStringOrNull(created.target_workflow_run_id),
+    target_schedule_route: asStringOrNull(created.target_schedule_route),
+    target_schedule_artifact_version_id: asStringOrNull(
+      created.target_schedule_artifact_version_id
+    )
   };
 }
 
@@ -962,7 +983,12 @@ function normalizeWorkpageSubmittedResponse(
     workflow_run_id: asString(submitted.workflow_run_id),
     artifact_version_id: asString(submitted.artifact_version_id),
     supersedes_artifact_version_id: asString(submitted.supersedes_artifact_version_id),
-    route: asString(submitted.route)
+    route: asString(submitted.route),
+    target_workflow_run_id: asStringOrNull(submitted.target_workflow_run_id),
+    target_schedule_route: asStringOrNull(submitted.target_schedule_route),
+    target_schedule_artifact_version_id: asStringOrNull(
+      submitted.target_schedule_artifact_version_id
+    )
   };
 }
 
@@ -1283,6 +1309,55 @@ function normalizeRouteDemandScheduleImpact(
   };
 }
 
+function normalizeRouteDemandFutureWeekOption(
+  value: Record<string, unknown>
+): WorkpageRouteDemandFutureWeekOption {
+  return {
+    option_id: asString(value.option_id),
+    label: asString(value.label),
+    planning_week_id: asString(value.planning_week_id),
+    start_date: asString(value.start_date),
+    end_date: asString(value.end_date),
+    date_range_label: asString(value.date_range_label)
+  };
+}
+
+function normalizeRouteDemandFutureWeekOptions(
+  value: unknown
+): WorkpageRouteDemandFutureWeekOption[] {
+  return asArray<Record<string, unknown>>(value).map(normalizeRouteDemandFutureWeekOption);
+}
+
+function normalizeRouteDemandFutureWeekActivation(
+  value: Record<string, unknown> | null
+): WorkpageRouteDemandFutureWeekActivation | null {
+  if (!value) {
+    return null;
+  }
+  return {
+    state: asString(value.state, "idle") as WorkpageRouteDemandFutureWeekActivation["state"],
+    status_label: asStringOrNull(value.status_label),
+    human_task_id: asStringOrNull(value.human_task_id),
+    task_run_id: asStringOrNull(value.task_run_id),
+    blocked_reason: asStringOrNull(value.blocked_reason),
+    target_workflow_run_id: asStringOrNull(value.target_workflow_run_id),
+    target_schedule_route: asStringOrNull(value.target_schedule_route),
+    target_schedule_artifact_version_id: asStringOrNull(
+      value.target_schedule_artifact_version_id
+    ),
+    error_code: asStringOrNull(value.error_code),
+    error_message: asStringOrNull(value.error_message)
+  };
+}
+
+function normalizeDriverQuality(value: unknown): WorkpageDriverQuality {
+  const normalized = asString(value).trim().toLowerCase();
+  if (normalized === "high" || normalized === "low") {
+    return normalized;
+  }
+  return "medium";
+}
+
 function normalizeDriverPreferencesGrid(
   value: Record<string, unknown> | null
 ): WorkpageDriverPreferencesGrid | null {
@@ -1305,6 +1380,7 @@ function normalizeDriverPreferencesGrid(
         driver_name: asString(item.driver_name),
         employment_type: asString(item.employment_type),
         on_call_eligible: Boolean(item.on_call_eligible),
+        driver_quality: normalizeDriverQuality(item.driver_quality),
         preferences_by_weekday: {
           sun: asStringOrNull(preferences.sun),
           mon: asStringOrNull(preferences.mon),
@@ -1417,7 +1493,12 @@ function normalizeWorkpageActionsForContract(value: unknown): WorkpageAction[] {
     if (workpageKind === "driver-preferences-v0") {
       return normalizeDriverPreferencesAction(action);
     }
-    if (kind === "open_latest" || kind === "save") {
+    if (
+      kind === "open_latest" ||
+      kind === "save" ||
+      kind === "add_next_week" ||
+      kind === "save_and_run"
+    ) {
       const routeDemandAction: WorkpageRouteDemandAction = {
         action_id: asString(action.action_id),
         kind: kind as WorkpageRouteDemandAction["kind"],
@@ -1426,6 +1507,7 @@ function normalizeWorkpageActionsForContract(value: unknown): WorkpageAction[] {
         workpage_kind: asString(action.workpage_kind),
         artifact_version_id: asStringOrNull(action.artifact_version_id),
         route: asStringOrNull(action.route),
+        create_path: asStringOrNull(action.create_path),
         submit_path: asStringOrNull(action.submit_path),
         action_ref: normalizeWorkpageActionRef(action.action_ref),
         disabled_reason: asStringOrNull(action.disabled_reason)
@@ -1737,6 +1819,20 @@ export const onetruthApi = {
       }
     );
     return normalizeWorkpageCreateResponse(result);
+  },
+
+  async ensureWorkflowRunEodIntakeTask(
+    workflowRunId: string,
+    payload: { idempotency_key: string; service_date?: string }
+  ): Promise<WorkpageEodIntakeTask> {
+    const result = await requestJson<WorkpageEodIntakeEnvelope>(
+      `/workpages/workflow-runs/${encodeURIComponent(workflowRunId)}/eod-v0/intake-task`,
+      {
+        method: "POST",
+        body: payload
+      }
+    );
+    return requiredObject(result.intake_task, "intake_task") as unknown as WorkpageEodIntakeTask;
   },
 
   async getWorkflowRunScheduleArtifactWorkpage(

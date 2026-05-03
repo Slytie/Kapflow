@@ -101,14 +101,18 @@ export const humanTasksRepository = {
   async uploadRequiredResponse(
     humanTaskId: string,
     requirement: WorkflowWorkspaceRequiredUpload,
-    file: File
+    file: File,
+    options?: {
+      metadataJson?: Record<string, unknown>;
+    }
   ): Promise<void> {
     await uploadAttachmentForSubject({
       subjectKind: "human_task",
       subjectId: humanTaskId,
       file,
       artifactKind: requirement.artifact_kind || requirement.dataset_key,
-      artifactRole: requirement.artifact_role || "evidence"
+      artifactRole: requirement.artifact_role || "evidence",
+      metadataJson: options?.metadataJson
     });
   },
 

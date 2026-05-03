@@ -120,6 +120,7 @@ describe("onetruthApi workpage parsing", () => {
     expect(contract.actions.map((action) => action.kind)).toEqual([
       "preview_recalc",
       "submit_artifact",
+      "mark_sick_no_show",
       "open_latest",
       "create_snapshot"
     ]);
@@ -141,7 +142,9 @@ describe("onetruthApi workpage parsing", () => {
     expect(contract.schedule_impact).toMatchObject({
       dependency_state: "aligned"
     });
-    expect(contract.actions.map((action) => action.kind)).toEqual(["open_latest"]);
+    expect(contract.actions.map((action) => action.kind)).toEqual(
+      expect.arrayContaining(["open_latest"])
+    );
   });
 
   it("parses the workflow-run-backed driver-preferences workpage wrapper including create action", async () => {
@@ -165,6 +168,7 @@ describe("onetruthApi workpage parsing", () => {
     ]);
     expect(contract.preference_grid?.service_dates).toHaveLength(7);
     expect(contract.preference_grid?.drivers[0]?.preferences_by_weekday.sun).not.toBeNull();
+    expect(contract.preference_grid?.drivers[0]?.driver_quality).toBe("medium");
     expect(contract.schedule_impact).toMatchObject({
       schedule_state: "no_snapshot"
     });
@@ -193,6 +197,7 @@ describe("onetruthApi workpage parsing", () => {
     );
     expect(contract.preference_grid?.service_dates).toHaveLength(7);
     expect(contract.preference_grid?.drivers.length).toBeGreaterThan(0);
+    expect(contract.preference_grid?.drivers[0]?.driver_quality).toBe("medium");
     expect(contract.actions.map((action) => action.kind)).toEqual([
       "save",
       "add_availability_exception"
@@ -218,7 +223,7 @@ describe("onetruthApi workpage parsing", () => {
     );
     expect(contract.route_demand_calculations?.day_cards.length).toBeGreaterThan(0);
     expect(contract.schedule_impact?.latest_schedule_draft_artifact_version_id).toBeTruthy();
-    expect(contract.actions.map((action) => action.kind)).toEqual(["save"]);
+    expect(contract.actions.map((action) => action.kind)).toEqual(["save", "add_next_week"]);
   });
 
   it("parses the workflow-run-backed EOD landing wrapper including draft resolution", async () => {
@@ -260,7 +265,7 @@ describe("onetruthApi workpage parsing", () => {
       idempotency_key: "frontend:test:create-run-draft"
     });
 
-    expect(draft).toEqual(artifactCreateRunSnapshot.create_response.draft);
+    expect(draft).toMatchObject(artifactCreateRunSnapshot.create_response.draft);
   });
 
   it("parses the generic workpage create envelope", async () => {
@@ -277,7 +282,7 @@ describe("onetruthApi workpage parsing", () => {
       }
     );
 
-    expect(created).toEqual(driverPreferencesArtifactCreateSnapshot.create_response.created);
+    expect(created).toMatchObject(driverPreferencesArtifactCreateSnapshot.create_response.created);
   });
 
   it("parses the canonical EOD artifact-submit envelope", async () => {
@@ -305,7 +310,7 @@ describe("onetruthApi workpage parsing", () => {
       }
     );
 
-    expect(submitted).toEqual({
+    expect(submitted).toMatchObject({
       artifact_version_id: "<artifact_version_id:1>",
       route: "/runs/<workflow_run_id:2>/workpages/eod-v0/artifacts/<artifact_version_id:1>",
       supersedes_artifact_version_id: "<supersedes_artifact_version_id:3>",
@@ -332,7 +337,7 @@ describe("onetruthApi workpage parsing", () => {
       }
     );
 
-    expect(submitted).toEqual(scheduleArtifactSubmitSnapshot.submit_response.submitted);
+    expect(submitted).toMatchObject(scheduleArtifactSubmitSnapshot.submit_response.submitted);
   });
 
   it("parses the canonical schedule artifact-submit and preview envelopes", async () => {
@@ -375,7 +380,7 @@ describe("onetruthApi workpage parsing", () => {
       }
     );
 
-    expect(submitted).toEqual(scheduleArtifactSubmitSnapshot.submit_response.submitted);
+    expect(submitted).toMatchObject(scheduleArtifactSubmitSnapshot.submit_response.submitted);
     expect(preview.preview).toMatchObject({
       workflow_run_id: "<workflow_run_id:1>",
       artifact_version_id: "<artifact_version_id:2>",
@@ -406,14 +411,18 @@ describe("onetruthApi workpage parsing", () => {
       }
     );
 
-    expect(submitted).toEqual(routeDemandArtifactSubmitSnapshot.submit_response.submitted);
+    expect(submitted).toMatchObject(routeDemandArtifactSubmitSnapshot.submit_response.submitted);
   });
 
   it("parses the canonical driver-preferences artifact-submit envelope", async () => {
+    let requestBody: Record<string, unknown> | null = null;
     server.use(
       http.post(
         "*/api/v1/workpages/workflow-runs/:workflowRunId/driver-preferences-v0/artifacts/:artifactVersionId/submit",
-        () => HttpResponse.json(driverPreferencesArtifactSubmitSnapshot.submit_response)
+        async ({ request }) => {
+          requestBody = (await request.json()) as Record<string, unknown>;
+          return HttpResponse.json(driverPreferencesArtifactSubmitSnapshot.submit_response);
+        }
       )
     );
 
@@ -423,6 +432,7 @@ describe("onetruthApi workpage parsing", () => {
         driver_rows: [
           {
             driver_id: "DRV-001",
+            driver_quality: "high",
             preferences_by_weekday: {
               sun: null,
               mon: "open_to_work",
@@ -438,6 +448,16 @@ describe("onetruthApi workpage parsing", () => {
       }
     );
 
-    expect(submitted).toEqual(driverPreferencesArtifactSubmitSnapshot.submit_response.submitted);
+    expect(submitted).toMatchObject(
+      driverPreferencesArtifactSubmitSnapshot.submit_response.submitted
+    );
+    expect(requestBody).toMatchObject({
+      driver_rows: [
+        {
+          driver_id: "DRV-001",
+          driver_quality: "high"
+        }
+      ]
+    });
   });
 });

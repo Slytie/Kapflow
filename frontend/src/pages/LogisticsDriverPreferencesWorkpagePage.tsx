@@ -30,6 +30,7 @@ import type {
   WorkpageDriverPreferencesAction,
   WorkpageDriverPreferencesDriverRow,
   WorkpageDriverPreferencesGrid,
+  WorkpageDriverQuality,
   WorkpageDriverPreferencesScheduleImpact,
   WorkpageHistorySection as WorkpageHistorySectionModel,
   WorkpageNotePanelSection as WorkpageNotePanelSectionModel,
@@ -59,6 +60,25 @@ const AVAILABILITY_EXCEPTION_REASONS: Array<WorkpageDriverAvailabilityException[
   "sick_no_show",
   "other"
 ];
+const DRIVER_QUALITY_OPTIONS: WorkpageDriverQuality[] = ["high", "medium", "low"];
+
+const DRIVER_QUALITY_UI: Record<
+  WorkpageDriverQuality,
+  { label: string; badgeClassName: string }
+> = {
+  high: {
+    label: "High",
+    badgeClassName: "driver-quality-badge--high"
+  },
+  medium: {
+    label: "Medium",
+    badgeClassName: "driver-quality-badge--medium"
+  },
+  low: {
+    label: "Low",
+    badgeClassName: "driver-quality-badge--low"
+  }
+};
 
 const PREFERENCE_STATE_UI: Record<
   DriverPreferenceState,
@@ -155,6 +175,7 @@ function driverRowsSignature(rows: WorkpageDriverPreferencesDriverRow[]): string
   return JSON.stringify(
     rows.map((row) => ({
       driver_id: row.driver_id,
+      driver_quality: row.driver_quality,
       preferences_by_weekday: row.preferences_by_weekday
     }))
   );
@@ -251,6 +272,10 @@ function fallbackServiceDates(
     label: weekday.toUpperCase(),
     weekday_label: weekday.toUpperCase()
   }));
+}
+
+function driverQualityLabel(driverQuality: WorkpageDriverQuality): string {
+  return DRIVER_QUALITY_UI[driverQuality].label;
 }
 
 function DriverPreferencesScheduleImpactBanner({
@@ -443,6 +468,43 @@ function DriverPreferencesHeatmap({
                         {row.employment_type || "Unknown employment"}
                         {row.on_call_eligible ? " · On-call eligible" : ""}
                       </span>
+                      {readOnly ? (
+                        <span
+                          className={`driver-quality-badge ${DRIVER_QUALITY_UI[row.driver_quality].badgeClassName}`}
+                        >
+                          Quality: {driverQualityLabel(row.driver_quality)}
+                        </span>
+                      ) : (
+                        <label className="driver-preferences-quality-field">
+                          <span className="driver-preferences-quality-field__label">Quality</span>
+                          <select
+                            aria-label={`${row.driver_name} quality`}
+                            value={row.driver_quality}
+                            onChange={(event) => {
+                              if (!setDriverRows) {
+                                return;
+                              }
+                              const nextQuality = event.target.value as WorkpageDriverQuality;
+                              setDriverRows((currentRows) =>
+                                currentRows.map((currentRow) =>
+                                  currentRow.driver_id === row.driver_id
+                                    ? {
+                                        ...currentRow,
+                                        driver_quality: nextQuality
+                                      }
+                                    : currentRow
+                                )
+                              );
+                            }}
+                          >
+                            {DRIVER_QUALITY_OPTIONS.map((quality) => (
+                              <option key={quality} value={quality}>
+                                {driverQualityLabel(quality)}
+                              </option>
+                            ))}
+                          </select>
+                        </label>
+                      )}
                     </div>
                   </td>
                   {serviceDates.map((serviceDate, index) => {
@@ -1086,6 +1148,7 @@ function DriverPreferencesArtifactEditor({
         {
             driverRows: driverRows.map((row) => ({
               driver_id: row.driver_id,
+              driver_quality: row.driver_quality,
               preferences_by_weekday: row.preferences_by_weekday
             }))
         },

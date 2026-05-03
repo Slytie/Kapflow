@@ -6,6 +6,7 @@ import hashlib
 import json
 import sqlite3
 from typing import Any, Callable
+from uuid import uuid4
 
 from onetruth.infrastructure.events.event_store import (
     DuplicateIdempotencyKeyError,
@@ -38,6 +39,11 @@ class CommandReceiptContext:
     tenant_id: str | None
     domain_id: str | None
     workflow_run_id: str | None
+
+
+@dataclass(frozen=True)
+class _TransactionFrame:
+    savepoint_name: str | None
 
 
 def _normalize_actor_roles(
@@ -109,8 +115,34 @@ def _forbidden_command_error(
     )
 
 
-def _begin_transaction(connection: sqlite3.Connection) -> None:
+def _begin_transaction(connection: sqlite3.Connection) -> _TransactionFrame:
+    if connection.in_transaction:
+        savepoint_name = f"sp_{uuid4().hex}"
+        connection.execute(f"SAVEPOINT {savepoint_name}")
+        return _TransactionFrame(savepoint_name=savepoint_name)
     connection.execute("BEGIN IMMEDIATE")
+    return _TransactionFrame(savepoint_name=None)
+
+
+def _commit_transaction(
+    connection: sqlite3.Connection,
+    frame: _TransactionFrame,
+) -> None:
+    if frame.savepoint_name is None:
+        connection.commit()
+        return
+    connection.execute(f"RELEASE SAVEPOINT {frame.savepoint_name}")
+
+
+def _rollback_transaction(
+    connection: sqlite3.Connection,
+    frame: _TransactionFrame,
+) -> None:
+    if frame.savepoint_name is None:
+        connection.rollback()
+        return
+    connection.execute(f"ROLLBACK TO SAVEPOINT {frame.savepoint_name}")
+    connection.execute(f"RELEASE SAVEPOINT {frame.savepoint_name}")
 
 
 def _normalize_command_idempotency_key(
@@ -210,7 +242,23 @@ def _public_command_scope_key(command_name: str, payload: dict[str, Any]) -> str
                 payload.get("workpage_id"),
             )
         )
+    if command_name == "workpages.eod-intake.ensure":
+        return _command_scope_key(
+            (
+                payload.get("workflow_run_id"),
+                payload.get("workflow_id"),
+                payload.get("workpage_id"),
+            )
+        )
     if command_name == "workpages.driver-preferences.snapshots.create":
+        return _command_scope_key(
+            (
+                payload.get("workflow_run_id"),
+                payload.get("workflow_id"),
+                payload.get("workpage_id"),
+            )
+        )
+    if command_name == "workpages.route-demand.next-week.create":
         return _command_scope_key(
             (
                 payload.get("workflow_run_id"),
@@ -226,6 +274,8 @@ def _public_command_scope_key(command_name: str, payload: dict[str, Any]) -> str
                 payload.get("workpage_id"),
             )
         )
+    if command_name == "workpages.route-demand.save-and-run":
+        return _command_scope_key((payload.get("artifact_version_id"),))
     if command_name == "workpages.artifact.submit":
         return _command_scope_key((payload.get("artifact_version_id"),))
     if command_name == "workpages.schedule.sick_no_show":
@@ -384,7 +434,7 @@ def _execute_with_command_receipt(
     receipt: CommandReceiptContext | None,
     operation: Callable[[], dict[str, Any]],
 ) -> tuple[dict[str, Any], bool]:
-    _begin_transaction(connection)
+    frame = _begin_transaction(connection)
     try:
         if receipt is not None:
             existing = get_command_receipt(
@@ -404,7 +454,7 @@ def _execute_with_command_receipt(
                             "idempotency_key": receipt.idempotency_key,
                         },
                     )
-                connection.rollback()
+                _rollback_transaction(connection, frame)
                 return dict(existing["result_json"]), True
 
         result = operation()
@@ -420,10 +470,10 @@ def _execute_with_command_receipt(
                 domain_id=receipt.domain_id,
                 workflow_run_id=receipt.workflow_run_id,
             )
-        connection.commit()
+        _commit_transaction(connection, frame)
         return result, False
     except sqlite3.IntegrityError:
-        connection.rollback()
+        _rollback_transaction(connection, frame)
         if receipt is not None:
             existing = get_command_receipt(
                 connection,
@@ -435,7 +485,7 @@ def _execute_with_command_receipt(
                 return dict(existing["result_json"]), True
         raise
     except Exception:
-        connection.rollback()
+        _rollback_transaction(connection, frame)
         raise
 
 

@@ -150,6 +150,10 @@ def test_driver_preferences_run_workpage_lands_on_create_snapshot_when_none_exis
         {"service_date": "2026-03-28", "label": "2026-03-28", "weekday_label": "Sat"},
     ]
     assert payload["preference_grid"]["drivers"]
+    assert all(
+        row["driver_quality"] == "medium"
+        for row in payload["preference_grid"]["drivers"]
+    )
     assert payload["driver_availability_exceptions"] == {"items": []}
     assert "driver_availability_exceptions" not in payload["preference_grid"]
     assert all(
@@ -233,6 +237,7 @@ def test_driver_preferences_create_route_returns_canonical_artifact_and_retires_
         value is not None
         for value in payload["preference_grid"]["drivers"][0]["preferences_by_weekday"].values()
     )
+    assert payload["preference_grid"]["drivers"][0]["driver_quality"] == "medium"
     assert payload["artifact_state"] == {
         "state_kind": "artifact_projection",
         "artifact_kind": "planning.driver_shift_preferences.workbook",
@@ -311,6 +316,7 @@ def test_driver_preferences_submit_creates_successor_and_historical_read_only(
     assert current.status_code == 200, current.payload
     driver_rows = deepcopy(current.payload["preference_grid"]["drivers"])
     driver_rows[0]["preferences_by_weekday"]["mon"] = "open_to_work"
+    driver_rows[0]["driver_quality"] = "high"
 
     submitted = client.post(
         f"/api/v1/workpages/workflow-runs/{workflow_run_id}/"
@@ -319,6 +325,7 @@ def test_driver_preferences_submit_creates_successor_and_historical_read_only(
             "driver_rows": [
                 {
                     "driver_id": row["driver_id"],
+                    "driver_quality": row["driver_quality"],
                     "preferences_by_weekday": row["preferences_by_weekday"],
                 }
                 for row in driver_rows
@@ -363,6 +370,15 @@ def test_driver_preferences_submit_creates_successor_and_historical_read_only(
         latest_artifact_version_id,
         artifact_version_id,
     ]
+    latest_payload = client.get(
+        f"/api/v1/workpages/workflow-runs/{workflow_run_id}/"
+        f"driver-preferences-v0/artifacts/{latest_artifact_version_id}"
+    ).payload
+    updated_by_id = {
+        row["driver_id"]: row
+        for row in latest_payload["preference_grid"]["drivers"]
+    }
+    assert updated_by_id[driver_rows[0]["driver_id"]]["driver_quality"] == "high"
     assert _action_by_id(
         historical_payload["actions"], "workpage.driver-preferences-v0.save"
     ) == {
@@ -617,6 +633,7 @@ def test_schedule_contracts_use_latest_preferences_softly_and_keep_pinned_drafts
             "driver_rows": [
                 {
                     "driver_id": row["driver_id"],
+                    "driver_quality": row["driver_quality"],
                     "preferences_by_weekday": row["preferences_by_weekday"],
                 }
                 for row in driver_rows
@@ -685,6 +702,7 @@ def test_schedule_contracts_use_latest_preferences_softly_and_keep_pinned_drafts
             "driver_rows": [
                 {
                     "driver_id": row["driver_id"],
+                    "driver_quality": row["driver_quality"],
                     "preferences_by_weekday": row["preferences_by_weekday"],
                 }
                 for row in driver_rows

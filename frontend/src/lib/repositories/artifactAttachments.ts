@@ -77,9 +77,10 @@ export async function uploadAttachmentForSubject(
     file: File;
     artifactKind: string;
     artifactRole: string;
+    metadataJson?: Record<string, unknown>;
   }
 ): Promise<ArtifactVersionRow> {
-  const { subjectKind, subjectId, file, artifactKind, artifactRole } = params;
+  const { subjectKind, subjectId, file, artifactKind, artifactRole, metadataJson } = params;
   const payload: ArtifactUploadPayload = {
     artifact_kind: artifactKind,
     artifact_role: artifactRole,
@@ -90,7 +91,8 @@ export async function uploadAttachmentForSubject(
       original_file_name: file.name,
       uploaded_via: "frontend_inline_attachment",
       subject_kind: subjectKind,
-      subject_id: subjectId
+      subject_id: subjectId,
+      ...(metadataJson ?? {})
     },
     idempotency_key: createIdempotencyKey(`${subjectKind}-upload`, `${subjectId}:${file.name}`),
   };

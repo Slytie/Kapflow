@@ -57,6 +57,10 @@ PYTHONPATH=src python3.11 scripts/run_logistics_demo_frontend.py \
   --demo-json .tmp/logistics-canonical-workpage-demo.json
 ```
 
+Restart note:
+- After changing workpage API routes, action wiring, or frontend workpage code, restart both the backend and frontend processes before validating the live demo again.
+- A stale local backend or stale frontend bundle can make route-demand actions appear to save while never reaching the current `/save-and-run` route.
+
 The launcher reads `frontend_request_context` from the prep JSON and injects the matching
 local-dev trusted headers so the browser sees the seeded `tenant-logistics / domain-hub`
 runtime state instead of the generic local frontend defaults.
@@ -77,9 +81,29 @@ Recommended order:
 Optional launcher context:
 - `/demo/logistics` can still be opened as narrative/launcher context, but it is not the validation surface for this runbook.
 
+### Optional Future-Week Scheduling Demo
+- This path is optional and extends the base deterministic walkthrough. It requires a configured weekly Stage04 agent runner.
+- Open `route_demand_artifact_url`.
+- Confirm only the current operational week is visible.
+- Use `Add a week` and choose the offered next week option.
+- On the future-week artifact, add at least one `0 -> N` route change.
+- Use `Save route demand` for persistence-only validation, or `Save and run scheduling agent` to trigger the weekly Stage04 agent from route demand.
+- While the scheduling run is active, the route-demand surface should show `Agent working`.
+- On success, the app should navigate to the future run’s canonical `schedule-v0` route and auto-open the existing quick-edit popup on the newest draft.
+
+Recovery note:
+- If a prior future-week scheduling attempt stays stuck on `Agent working`, reconcile stale execution sessions before retrying:
+```bash
+PYTHONPATH=src python3.11 -m onetruth.cli \
+  --db-url sqlite:///./.tmp/logistics-canonical-workpage-demo.db \
+  maintenance reconcile-executions \
+  --json '{"stale_seconds":0}'
+```
+- Reconciliation marks the stale execution session failed, but it does not make an already-used idempotent `save-and-run` request retryable. After reconciling, use a fresh future route-demand artifact version or reseed the local demo before retrying.
+
 ## Intentionally Not Pre-Seeded
 - multi-week accepted history
 - route-demand auto-drift seed
 - live-dispatch completion lane
 - pre-created EOD draft artifact
-- OpenAI-backed Stage04 execution
+- mandatory OpenAI-backed Stage04 execution for the base walkthrough

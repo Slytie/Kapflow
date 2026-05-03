@@ -1,8 +1,9 @@
 from __future__ import annotations
 
 from collections import Counter
-from datetime import date
+from datetime import date, timedelta
 from functools import lru_cache
+import json
 from pathlib import Path
 import sqlite3
 from typing import Any, Mapping
@@ -49,6 +50,9 @@ from onetruth.application.services.schedule_control.workpage_calculations import
 from onetruth.application.services.schedule_control.stage04_input_registry import (
     resolve_weekly_stage04_input_artifacts,
 )
+from onetruth.application.services.dispatch_reporting_workbook import (
+    project_upd_draft_workbook,
+)
 from onetruth.application.services.workpage_descriptors import (
     DRIVER_PREFERENCES_ARTIFACT_KIND,
     DRIVER_PREFERENCES_WORKPAGE_KIND,
@@ -67,14 +71,17 @@ from onetruth.application.services.workpage_descriptors import (
     canonical_eod_artifact_route as descriptor_eod_artifact_route,
     canonical_eod_artifact_submit_path,
     canonical_eod_draft_create_path as descriptor_eod_draft_create_path,
+    canonical_route_demand_artifact_save_and_run_path,
     canonical_route_demand_artifact_route as descriptor_route_demand_artifact_route,
     canonical_route_demand_artifact_submit_path,
+    canonical_route_demand_next_week_create_path,
     canonical_schedule_artifact_route as descriptor_schedule_artifact_route,
     canonical_schedule_artifact_preview_path,
     canonical_schedule_artifact_submit_path,
     canonical_workflow_run_workpage_route as descriptor_workflow_run_workpage_route,
     get_workpage_descriptor,
 )
+from onetruth.domain.partition_codec import service_day_to_future_planning_week
 from onetruth.infrastructure.events.event_store import utc_now_iso
 from onetruth.infrastructure.artifacts.storage import read_blob
 from onetruth.infrastructure.repositories.artifact_versions import (
@@ -82,11 +89,17 @@ from onetruth.infrastructure.repositories.artifact_versions import (
     get_latest_artifact_version_in_chain,
     list_artifact_versions_for_scope_and_kind,
 )
+from onetruth.infrastructure.repositories.execution_sessions import (
+    list_execution_sessions_for_workflow_run,
+)
 from onetruth.infrastructure.repositories.human_tasks import (
     list_human_tasks_for_workflow_run,
 )
 from onetruth.infrastructure.repositories.task_runs import (
     get_task_run,
+)
+from onetruth.infrastructure.repositories.tool_executions import (
+    list_tool_executions_for_session,
 )
 
 
@@ -102,19 +115,17 @@ _PLANNER_NOTE = (
 _SELECTED_DAY_OPEN_QUESTION = (
     "Confirm late requests and final on-call posture before day-of handoff."
 )
-_EOD_SERVICE_DATE = "2026-03-16"
+_EOD_SERVICE_DATE = "2026-03-24"
 _EOD_STATION_CODE = "DVC4"
 _EOD_DSP_NAME = "QDCI"
 _EOD_WARNING_NOTE = (
-    "This EOD projection is built from canonical dispatch-reporting artifacts sourced from an "
-    "intentionally partial 2026-03-16 QDCI / DVC4 example family. Row-level actuals remain the primary truth "
-    "because the source workbook summary tabs contained broken formulas."
+    "This EOD projection is built from canonical dispatch-reporting artifacts. "
+    "Row-level route actuals remain the primary truth when summary sheets contain broken formulas."
 )
 _EOD_NOTE_PANEL_BODY = (
-    "This run-backed EOD landing is generated from canonical dispatch-reporting artifacts sourced "
-    "from intentionally partial 2026-03-16 example material. Source workbook summary tabs showed "
-    "formula failures, so row-level actuals remain the primary truth and the landing surfaces a "
-    "warning instead of reproducing broken formulas."
+    "This run-backed EOD landing is generated from canonical dispatch-reporting artifacts. "
+    "When the imported workbook includes broken summary formulas, the page preserves the warning "
+    "and continues to ground itself in row-level route actuals."
 )
 
 _ROUTE_SLOT_DATASET_KEY = "planning.route_slot_requirements.workbook"
@@ -159,9 +170,9 @@ _EOD_SOURCE_EXAMPLES = {
 }
 
 _EOD_VALIDATION_WARNINGS = [
-    "This run-backed EOD landing is generated from canonical dispatch-reporting artifacts sourced from an intentionally partial 2026-03-16 example family.",
-    "Workbook summary formulas were broken in the source material, so row-level actuals remain the primary truth for this projection.",
-    "Create draft opens the immutable reporting workbook edit lane, and submit creates a new superseding workbook artifact version.",
+    "This run-backed EOD landing is generated from canonical dispatch-reporting artifacts.",
+    "Workbook summary formulas may be broken in the source material, so row-level actuals remain the primary truth for this projection.",
+    "Submit creates a new immutable superseding reporting workbook artifact version.",
 ]
 
 _ROSTER_TARGET_NAMES = (
@@ -175,6 +186,7 @@ _FORM_ON_CALL_OPTIONS = (
     "Brahmvir Singh",
     "Sachin Goyal",
 )
+_ROUTE_DEMAND_VISIBLE_WEEK_DAY_COUNT = 7
 
 
 class WorkpageProjectionUnavailableError(RuntimeError):
@@ -477,6 +489,21 @@ def build_route_demand_workflow_run_workpage_contract(
         ),
         latest_schedule_draft=latest_schedule_draft,
     )
+    latest_artifact_is_future_seed = _route_demand_is_future_week_seed_artifact(
+        latest_artifact
+    )
+    actions = [
+        _route_demand_open_latest_contract_action(
+            workflow_run_id=workflow_run_id,
+            latest_artifact=latest_artifact,
+        )
+    ]
+    if not latest_artifact_is_future_seed:
+        actions.append(
+            _route_demand_add_next_week_contract_action(
+                workflow_run_id=workflow_run_id,
+            )
+        )
     contract = {
         "workpage": _build_route_demand_workpage_view_model(
             workflow_run=workflow_run,
@@ -509,13 +536,18 @@ def build_route_demand_workflow_run_workpage_contract(
         "artifact_state": _route_demand_run_artifact_state(latest_artifact=latest_artifact),
         "calculations": {"day_cards": day_cards},
         "schedule_impact": schedule_impact,
+        "future_week_options": _route_demand_future_week_options(
+            projection=projection,
+            enabled=not latest_artifact_is_future_seed,
+        ),
+        "future_week_activation": _route_demand_future_week_activation(
+            connection,
+            workflow_run_id=workflow_run_id,
+            artifact=latest_artifact,
+            latest_schedule_draft=latest_schedule_draft,
+        ),
         "artifact_history": None,
-        "actions": [
-            _route_demand_open_latest_contract_action(
-                workflow_run_id=workflow_run_id,
-                latest_artifact=latest_artifact,
-            )
-        ],
+        "actions": actions,
     }
     return contract
 
@@ -1901,19 +1933,32 @@ def build_eod_workflow_run_workpage_contract(
 ) -> dict[str, Any]:
     workflow_run_id = _require_text(workflow_run.get("workflow_run_id"))
     latest_draft = _latest_compatible_eod_draft_artifact(artifacts)
+    runtime_projection = _runtime_eod_projection(artifacts)
+    if runtime_projection is None:
+        workpage = _build_eod_empty_landing_workpage_view_model(workflow_run=workflow_run)
+        freshness_source_version = workflow_run_id
+    else:
+        workpage = _build_runtime_eod_landing_workpage_view_model(
+            runtime_projection=runtime_projection
+        )
+        freshness_source_version = _require_text(
+            runtime_projection.get("source_version") or workflow_run_id
+        )
 
     return {
-        **_build_eod_landing_contract(
-            source_examples={},
-            source_mode="run_projection",
-            source_refs=_eod_runtime_source_refs(artifacts),
-            freshness_source_kind="workflow_run_projection",
-            freshness_source_version=(
-                _require_text(latest_draft.get("artifact_version_id"))
-                if latest_draft is not None
-                else workflow_run_id
-            ),
-        ),
+        "workpage": workpage,
+        "source": {
+            "mode": "run_projection",
+            "primary_dataset_key": _EOD_DRAFT_DATASET_KEY,
+            "source_dataset_keys": [dataset_key for _, dataset_key in _EOD_SOURCE_DATASETS],
+            "source_artifact_version_id": None,
+            "source_refs": _eod_runtime_source_refs(artifacts),
+        },
+        "freshness": {
+            "generated_at": utc_now_iso(),
+            "source_kind": "workflow_run_projection",
+            "source_version": freshness_source_version,
+        },
         "run_context": _workflow_run_context(workflow_run),
         "draft_resolution": _eod_draft_resolution(
             workflow_run_id=workflow_run_id,
@@ -1922,41 +1967,116 @@ def build_eod_workflow_run_workpage_contract(
         "artifact_history": None,
     }
 
-
-def _build_eod_landing_contract(
+def _build_runtime_eod_landing_workpage_view_model(
     *,
-    source_examples: Mapping[str, str],
-    source_mode: str,
-    source_refs: list[str],
-    freshness_source_kind: str,
-    freshness_source_version: str,
+    runtime_projection: Mapping[str, Any],
 ) -> dict[str, Any]:
-    return {
-        "workpage": _build_eod_landing_workpage_view_model(
-            source_examples=source_examples,
+    route_rows = _projection_rows(runtime_projection, "route_rows")
+    manual_closeout_rows = _projection_rows(runtime_projection, "manual_closeout_rows")
+    checklist_rows = _projection_rows(runtime_projection, "checklist_rows")
+    quality_warning_rows = _projection_rows(runtime_projection, "quality_warning_rows")
+    summary = _artifact_eod_summary(
+        route_rows=route_rows,
+        quality_warning_rows=quality_warning_rows,
+        service_date=_require_text_or_default(
+            runtime_projection.get("service_date"),
+            default=_EOD_SERVICE_DATE,
         ),
-        "source": {
-            "mode": source_mode,
-            "primary_dataset_key": _EOD_DRAFT_DATASET_KEY,
-            "source_dataset_keys": [dataset_key for _, dataset_key in _EOD_SOURCE_DATASETS],
-            "source_artifact_version_id": None,
-            "source_refs": source_refs,
+        station_code=_require_text_or_default(
+            runtime_projection.get("station_code"),
+            default=_EOD_STATION_CODE,
+        ),
+        dsp_name=_require_text_or_default(
+            runtime_projection.get("dsp_name"),
+            default=_EOD_DSP_NAME,
+        ),
+    )
+    sections: list[dict[str, Any]] = [
+        {
+            "kind": "summary_cards",
+            "title": "Daily summary",
+            "cards": _artifact_eod_summary_cards(summary),
         },
-        "freshness": {
-            "generated_at": utc_now_iso(),
-            "source_kind": freshness_source_kind,
-            "source_version": freshness_source_version,
+        {
+            "kind": "note_panel",
+            "title": "Import status",
+            "body": _runtime_eod_note_body(quality_warning_rows),
         },
-    }
-
-
-def _build_eod_landing_workpage_view_model(
-    *,
-    source_examples: Mapping[str, str],
-) -> dict[str, Any]:
-    route_rows = _load_eod_route_rows()
-    normalized_rows = _load_eod_normalized_actuals()
-    upd_rows = _load_eod_upd_candidates()
+        {
+            "kind": "table",
+            "title": "Route actuals",
+            "table_id": "route_actuals",
+            "columns": [
+                {"key": "route_id", "label": "Route"},
+                {"key": "driver_name", "label": "Driver"},
+                {"key": "packages_dispatched", "label": "Dispatched"},
+                {"key": "packages_delivered", "label": "Delivered"},
+                {"key": "planned_window", "label": "Planned"},
+                {"key": "actual_window", "label": "Actual"},
+                {"key": "actual_minutes", "label": "Minutes"},
+                {"key": "returns", "label": "Returns"},
+                {"key": "return_reasons", "label": "Return reasons"},
+                {"key": "upd_candidate", "label": "UPD?"},
+            ],
+            "rows": _artifact_eod_route_actual_rows(route_rows),
+        },
+    ]
+    sections.extend(
+        _build_eod_companion_sections(
+            break_tracker_rows=_projection_rows(runtime_projection, "break_tracker_rows"),
+            break_tracker_sheet_present=bool(
+                runtime_projection.get("break_tracker_sheet_present")
+            ),
+            route_adherence_cycles=_projection_rows(
+                runtime_projection,
+                "route_adherence_cycles",
+            ),
+            route_adherence_sheet_present=bool(
+                runtime_projection.get("route_adherence_sheet_present")
+            ),
+        )
+    )
+    sections.append(
+        {
+            "kind": "form",
+            "title": "Manual closeout",
+            "form_id": "closeout_details",
+            "fields": _artifact_eod_form_fields(
+                route_rows=route_rows,
+                manual_closeout_rows=manual_closeout_rows,
+            ),
+        }
+    )
+    sections.append(
+        {
+            "kind": "checklist",
+            "title": "UPD candidate review",
+            "checklist_id": "upd_candidates",
+            "items": _artifact_eod_checklist_items(checklist_rows),
+        }
+    )
+    sections.append(
+        {
+            "kind": "history_stub",
+            "title": "History",
+            "entries": [
+                {
+                    "label": "Latest normalized artifact",
+                    "value": _require_text_or_default(
+                        runtime_projection.get("normalized_artifact_version_id"),
+                        default="Not imported",
+                    ),
+                },
+                {
+                    "label": "Latest draft artifact",
+                    "value": _require_text_or_default(
+                        runtime_projection.get("latest_draft_artifact_version_id"),
+                        default="No draft generated",
+                    ),
+                },
+            ],
+        }
+    )
     return {
         "workpage_id": EOD_WORKPAGE_KIND,
         "version": 2,
@@ -1965,63 +2085,472 @@ def _build_eod_landing_workpage_view_model(
         "workflow_id": _EOD_WORKFLOW_ID,
         "dataset_key": _EOD_DRAFT_DATASET_KEY,
         "source_artifact_version_id": None,
-        "source_examples": dict(source_examples),
-        "summary": _eod_summary(route_rows, normalized_rows),
+        "source_examples": {},
+        "summary": summary,
+        "sections": sections,
+        "validation": {
+            "status": "informational",
+            "warnings": _runtime_eod_validation_warnings(quality_warning_rows),
+        },
+    }
+
+
+def _build_eod_empty_landing_workpage_view_model(
+    *,
+    workflow_run: Mapping[str, Any],
+) -> dict[str, Any]:
+    service_date = _require_text_or_default(workflow_run.get("logical_date"), default=_EOD_SERVICE_DATE)
+    summary = {
+        "service_date": service_date,
+        "station_code": _EOD_STATION_CODE,
+        "dsp_name": _EOD_DSP_NAME,
+        "total_routes_actual": 0,
+        "packages_dispatched": 0,
+        "actual_dispatched": 0,
+        "packages_delivered": 0,
+        "packages_returned": 0,
+        "delivered_pct": 0.0,
+        "return_pct": 0.0,
+        "average_route_time": "0:00:00",
+        "formula_integrity_warning": False,
+        "warning_note": "Upload route activity to import EOS data and generate the latest EOD draft.",
+    }
+    return {
+        "workpage_id": EOD_WORKPAGE_KIND,
+        "version": 2,
+        "title": "End-of-day report",
+        "mode": "example",
+        "workflow_id": _EOD_WORKFLOW_ID,
+        "dataset_key": _EOD_DRAFT_DATASET_KEY,
+        "source_artifact_version_id": None,
+        "source_examples": {},
+        "summary": summary,
         "sections": [
             {
                 "kind": "summary_cards",
                 "title": "Daily summary",
-                "cards": _eod_summary_cards(route_rows, normalized_rows),
+                "cards": _artifact_eod_summary_cards(summary),
             },
             {
                 "kind": "note_panel",
-                "title": "Formula-integrity warning",
-                "body": _EOD_NOTE_PANEL_BODY,
-            },
-            {
-                "kind": "table",
-                "title": "Route actuals",
-                "table_id": "route_actuals",
-                "columns": [
-                    {"key": "route_id", "label": "Route"},
-                    {"key": "driver_name", "label": "Driver"},
-                    {"key": "packages_dispatched", "label": "Dispatched"},
-                    {"key": "packages_delivered", "label": "Delivered"},
-                    {"key": "planned_window", "label": "Planned"},
-                    {"key": "actual_window", "label": "Actual"},
-                    {"key": "actual_minutes", "label": "Minutes"},
-                    {"key": "returns", "label": "Returns"},
-                    {"key": "return_reasons", "label": "Return reasons"},
-                    {"key": "upd_candidate", "label": "UPD?"},
-                ],
-                "rows": _eod_route_actual_rows(route_rows, normalized_rows),
-            },
-            {
-                "kind": "form",
-                "title": "Manual closeout",
-                "form_id": "closeout_details",
-                "fields": _eod_form_fields(route_rows),
-            },
-            {
-                "kind": "checklist",
-                "title": "UPD candidate review",
-                "checklist_id": "upd_candidates",
-                "items": _eod_checklist_items(upd_rows),
+                "title": "Import required",
+                "body": "Upload route activity to import the daily EOS workbook, generate normalized actuals, and open the latest EOD draft.",
             },
             {
                 "kind": "history_stub",
                 "title": "History",
                 "entries": [
-                    {"label": "Previous daily reports", "value": "future slice"},
-                    {"label": "Weekly / monthly summaries", "value": "future slice"},
+                    {"label": "Latest normalized artifact", "value": "Not imported"},
+                    {"label": "Latest draft artifact", "value": "No draft generated"},
                 ],
             },
         ],
         "validation": {
             "status": "informational",
-            "warnings": list(_EOD_VALIDATION_WARNINGS),
+            "warnings": [
+                "Upload route activity to import EOS data and generate the latest EOD draft.",
+            ],
         },
     }
+
+
+def _runtime_eod_projection(artifacts: list[dict[str, Any]]) -> dict[str, Any] | None:
+    latest_draft = _latest_compatible_eod_draft_artifact(artifacts)
+    normalized_artifact = _latest_artifact_for_dataset_key(
+        artifacts,
+        dataset_key=_EOD_NORMALIZED_DATASET_KEY,
+    )
+    draft_projection: Mapping[str, Any] | None = None
+    if latest_draft is not None:
+        draft_bytes = _artifact_blob_bytes_or_none(latest_draft)
+        if draft_bytes is not None:
+            draft_projection = project_upd_draft_workbook(draft_bytes)
+    normalized_payload = _read_eod_normalized_payload(normalized_artifact)
+    if draft_projection is None and normalized_payload is None:
+        return None
+
+    route_rows = (
+        _projection_rows(draft_projection or {}, "route_actuals")
+        if draft_projection is not None
+        else _runtime_route_rows_from_normalized(normalized_payload or {})
+    )
+    manual_closeout_rows = (
+        _projection_rows(draft_projection or {}, "manual_closeout")
+        if draft_projection is not None
+        else _runtime_manual_closeout_rows(route_rows)
+    )
+    checklist_rows = (
+        _projection_rows(draft_projection or {}, "upd_candidates")
+        if draft_projection is not None
+        else _runtime_upd_candidates_from_normalized(normalized_payload or {})
+    )
+    quality_warning_rows = _projection_rows(draft_projection or {}, "quality_warnings")
+    if not quality_warning_rows:
+        quality_warning_rows = _normalized_projection_rows(
+            normalized_payload,
+            "quality_warnings",
+        )
+
+    metadata_json = latest_draft.get("metadata_json") if latest_draft is not None else None
+    return {
+        "service_date": _require_text_or_default(
+            _metadata_value(metadata_json, "service_date")
+            or _normalized_text(normalized_payload, "service_date"),
+            default=_EOD_SERVICE_DATE,
+        ),
+        "station_code": _require_text_or_default(
+            _metadata_value(metadata_json, "station_code")
+            or _normalized_text(normalized_payload, "station_code"),
+            default=_EOD_STATION_CODE,
+        ),
+        "dsp_name": _require_text_or_default(
+            _metadata_value(metadata_json, "dsp_name")
+            or _normalized_text(normalized_payload, "dsp_name"),
+            default=_EOD_DSP_NAME,
+        ),
+        "route_rows": route_rows,
+        "manual_closeout_rows": manual_closeout_rows,
+        "checklist_rows": checklist_rows,
+        "quality_warning_rows": quality_warning_rows,
+        "break_tracker_rows": _normalized_break_tracker_rows(normalized_payload),
+        "break_tracker_sheet_present": bool(
+            _normalized_nested_value(normalized_payload, "break_tracker", "sheet_present")
+        ),
+        "route_adherence_cycles": _normalized_route_adherence_cycles(normalized_payload),
+        "route_adherence_sheet_present": bool(
+            _normalized_nested_value(normalized_payload, "route_adherence", "sheet_present")
+        ),
+        "normalized_artifact_version_id": (
+            _require_text_or_default(
+                normalized_artifact.get("artifact_version_id"),
+                default="",
+            )
+            if normalized_artifact is not None
+            else ""
+        ),
+        "latest_draft_artifact_version_id": (
+            _require_text_or_default(
+                latest_draft.get("artifact_version_id"),
+                default="",
+            )
+            if latest_draft is not None
+            else ""
+        ),
+        "source_version": (
+            _require_text_or_default(latest_draft.get("artifact_version_id"), default="")
+            if latest_draft is not None
+            else _require_text_or_default(
+                normalized_artifact.get("artifact_version_id"),
+                default="",
+            )
+            if normalized_artifact is not None
+            else ""
+        ),
+    }
+
+
+def _artifact_blob_bytes_or_none(artifact: Mapping[str, Any] | None) -> bytes | None:
+    if artifact is None:
+        return None
+    storage_uri = str(artifact.get("storage_uri") or "").strip()
+    if not storage_uri or storage_uri.startswith("inmem://"):
+        return None
+    return read_blob(storage_uri)
+
+
+def _read_eod_normalized_payload(
+    artifact: Mapping[str, Any] | None,
+) -> Mapping[str, Any] | None:
+    content = _artifact_blob_bytes_or_none(artifact)
+    if content is None:
+        return None
+    try:
+        loaded = json.loads(content.decode("utf-8"))
+    except (UnicodeDecodeError, json.JSONDecodeError):
+        return None
+    if not isinstance(loaded, Mapping):
+        return None
+    return loaded
+
+
+def _artifact_eod_normalized_payload(
+    *,
+    artifacts: list[dict[str, Any]],
+    artifact: Mapping[str, Any],
+) -> Mapping[str, Any] | None:
+    metadata_json = artifact.get("metadata_json")
+    normalized_artifact_version_id = (
+        _require_text_or_default(
+            metadata_json.get("normalized_artifact_version_id"),
+            default="",
+        )
+        if isinstance(metadata_json, Mapping)
+        else ""
+    )
+    normalized_artifact = None
+    if normalized_artifact_version_id:
+        normalized_artifact = next(
+            (
+                item
+                for item in artifacts
+                if _require_text_or_default(item.get("artifact_version_id"), default="")
+                == normalized_artifact_version_id
+            ),
+            None,
+        )
+    if normalized_artifact is None:
+        normalized_artifact = _latest_artifact_for_dataset_key(
+            artifacts,
+            dataset_key=_EOD_NORMALIZED_DATASET_KEY,
+        )
+    return _read_eod_normalized_payload(normalized_artifact)
+
+
+def _normalized_projection_rows(
+    projection: Mapping[str, Any] | None,
+    key: str,
+) -> list[dict[str, Any]]:
+    if projection is None:
+        return []
+    return _projection_rows(projection, key)
+
+
+def _normalized_break_tracker_rows(
+    projection: Mapping[str, Any] | None,
+) -> list[dict[str, Any]]:
+    break_tracker = _normalized_nested_mapping(projection, "break_tracker")
+    return _projection_rows(break_tracker, "rows")
+
+
+def _normalized_route_adherence_cycles(
+    projection: Mapping[str, Any] | None,
+) -> list[dict[str, Any]]:
+    route_adherence = _normalized_nested_mapping(projection, "route_adherence")
+    return _projection_rows(route_adherence, "cycles")
+
+
+def _normalized_nested_mapping(
+    projection: Mapping[str, Any] | None,
+    key: str,
+) -> Mapping[str, Any]:
+    if projection is None:
+        return {}
+    value = projection.get(key)
+    if isinstance(value, Mapping):
+        return value
+    return {}
+
+
+def _normalized_nested_value(
+    projection: Mapping[str, Any] | None,
+    key: str,
+    nested_key: str,
+) -> Any:
+    nested = _normalized_nested_mapping(projection, key)
+    return nested.get(nested_key)
+
+
+def _normalized_text(
+    projection: Mapping[str, Any] | None,
+    key: str,
+) -> str:
+    if projection is None:
+        return ""
+    value = projection.get(key)
+    return _require_text_or_default(value, default="")
+
+
+def _metadata_value(metadata_json: object, key: str) -> str:
+    if not isinstance(metadata_json, Mapping):
+        return ""
+    return _require_text_or_default(metadata_json.get(key), default="")
+
+
+def _runtime_route_rows_from_normalized(
+    projection: Mapping[str, Any],
+) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+    for row in _normalized_projection_rows(projection, "rows"):
+        rows.append(
+            {
+                "row_id": _require_text_or_default(row.get("row_id"), default=""),
+                "service_date": _require_text_or_default(
+                    row.get("service_date"),
+                    default=_normalized_text(projection, "service_date"),
+                ),
+                "route_id": _require_text_or_default(row.get("route_id"), default=""),
+                "driver_name": _require_text_or_default(row.get("driver_name"), default=""),
+                "packages_dispatched": 0,
+                "packages_delivered": 0,
+                "planned_start": "",
+                "planned_finish": "",
+                "actual_start": "",
+                "actual_finish": "",
+                "actual_minutes": _int_or_zero(row.get("actual_minutes")),
+                "returns": _int_or_zero(row.get("returned_packages")),
+                "return_reasons": _require_text_or_default(row.get("return_reasons"), default=""),
+                "upd_candidate": bool(row.get("upd_candidate")),
+            }
+        )
+    return rows
+
+
+def _runtime_manual_closeout_rows(route_rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    if not route_rows:
+        return []
+    return [
+        {
+            "row_id": "manual-closeout",
+            "sick_calls": "",
+            "unavailable_drivers": "",
+            "working_devices": "",
+            "rescues": "",
+            "incidents": "",
+            "last_driver_clockout": max(
+                (
+                    _require_text_or_default(row.get("actual_finish"), default="")
+                    for row in route_rows
+                    if _require_text_or_default(row.get("actual_finish"), default="")
+                ),
+                default="",
+            ),
+            "dispatcher_comment": "",
+            "manager_note": "",
+        }
+    ]
+
+
+def _runtime_upd_candidates_from_normalized(
+    projection: Mapping[str, Any],
+) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+    for row in _normalized_projection_rows(projection, "rows"):
+        route_id = _require_text_or_default(row.get("route_id"), default="")
+        if not route_id:
+            continue
+        actual_minutes = _int_or_zero(row.get("actual_minutes"))
+        selected = bool(row.get("upd_candidate"))
+        rows.append(
+            {
+                "row_id": f"upd-{route_id.lower()}",
+                "service_date": _require_text_or_default(
+                    row.get("service_date"),
+                    default=_normalized_text(projection, "service_date"),
+                ),
+                "route_id": route_id,
+                "driver_name": _require_text_or_default(row.get("driver_name"), default=""),
+                "actual_minutes": actual_minutes,
+                "selected": selected,
+                "reason": ">600 minutes actual time" if selected else "Below 600 minutes",
+                "manager_note": "",
+            }
+        )
+    return rows
+
+
+def _runtime_eod_note_body(quality_warning_rows: list[dict[str, Any]]) -> str:
+    if not quality_warning_rows:
+        return (
+            "This run-backed EOD landing is generated from canonical dispatch-reporting artifacts. "
+            "Route actuals, closeout details, and UPD review stay grounded in the latest immutable draft."
+        )
+    warning_messages = [
+        _require_text(row.get("message"))
+        for row in quality_warning_rows
+        if str(row.get("message") or "").strip()
+    ]
+    joined = "; ".join(warning_messages[:2])
+    if not joined:
+        return _EOD_NOTE_PANEL_BODY
+    return (
+        "This run-backed EOD landing is generated from canonical dispatch-reporting artifacts. "
+        f"Workbook warnings remain visible instead of being recomputed: {joined}"
+    )
+
+
+def _runtime_eod_validation_warnings(
+    quality_warning_rows: list[dict[str, Any]],
+) -> list[str]:
+    warnings = [_EOD_VALIDATION_WARNINGS[0], _EOD_VALIDATION_WARNINGS[2]]
+    if quality_warning_rows:
+        warnings.insert(1, _EOD_VALIDATION_WARNINGS[1])
+    return warnings
+
+
+def _build_eod_companion_sections(
+    *,
+    break_tracker_rows: list[dict[str, Any]],
+    break_tracker_sheet_present: bool,
+    route_adherence_cycles: list[dict[str, Any]],
+    route_adherence_sheet_present: bool,
+) -> list[dict[str, Any]]:
+    sections: list[dict[str, Any]] = []
+    if break_tracker_sheet_present or break_tracker_rows:
+        sections.append(
+            {
+                "kind": "table",
+                "title": "Break Tracker",
+                "table_id": "break_tracker",
+                "empty_message": "Break Tracker was present in the workbook, but there were no usable break rows.",
+                "columns": [
+                    {"key": "cycle", "label": "Cycle"},
+                    {"key": "route_id", "label": "Route"},
+                    {"key": "driver_name", "label": "Driver"},
+                    {"key": "first_break_type", "label": "First break"},
+                    {"key": "first_break_duration", "label": "First duration"},
+                    {"key": "second_break_type", "label": "Second break"},
+                    {"key": "second_break_duration", "label": "Second duration"},
+                ],
+                "rows": [
+                    {
+                        "cycle": _require_text_or_default(row.get("cycle"), default=""),
+                        "route_id": _require_text_or_default(row.get("route_id"), default=""),
+                        "driver_name": _require_text_or_default(row.get("driver_name"), default=""),
+                        "first_break_type": _require_text_or_default(
+                            row.get("first_break_type"),
+                            default="",
+                        ),
+                        "first_break_duration": _require_text_or_default(
+                            row.get("first_break_duration"),
+                            default="",
+                        ),
+                        "second_break_type": _require_text_or_default(
+                            row.get("second_break_type"),
+                            default="",
+                        ),
+                        "second_break_duration": _require_text_or_default(
+                            row.get("second_break_duration"),
+                            default="",
+                        ),
+                    }
+                    for row in break_tracker_rows
+                ],
+            }
+        )
+    if route_adherence_sheet_present or route_adherence_cycles:
+        for index, cycle in enumerate(route_adherence_cycles or [{"cycle_label": "Route Adherence", "columns": [], "rows": []}], start=1):
+            columns = _projection_rows(cycle, "columns")
+            cycle_rows = _projection_rows(cycle, "rows")
+            sections.append(
+                {
+                    "kind": "table",
+                    "title": _require_text_or_default(
+                        cycle.get("cycle_label"),
+                        default=f"Route Adherence Cycle {index}",
+                    ),
+                    "table_id": f"route_adherence_cycle_{index}",
+                    "empty_message": "Route Adherence was present in the workbook, but there were no usable adherence rows.",
+                    "columns": [
+                        {
+                            "key": _require_text_or_default(column.get("key"), default=f"column_{column_index}"),
+                            "label": _require_text_or_default(column.get("label"), default=f"Column {column_index}"),
+                        }
+                        for column_index, column in enumerate(columns, start=1)
+                    ],
+                    "rows": cycle_rows,
+                }
+            )
+    return sections
 
 
 def _eod_artifact_contract_actions(
@@ -2100,6 +2629,10 @@ def build_eod_artifact_workpage_contract(
     manual_closeout_rows = _projection_rows(projection, "manual_closeout")
     checklist_rows = _projection_rows(projection, "upd_candidates")
     quality_warning_rows = _projection_rows(projection, "quality_warnings")
+    normalized_payload = _artifact_eod_normalized_payload(
+        artifacts=artifacts,
+        artifact=artifact,
+    )
 
     summary = _artifact_eod_summary(
         route_rows=route_rows,
@@ -2107,6 +2640,85 @@ def build_eod_artifact_workpage_contract(
         service_date=service_date,
         station_code=station_code,
         dsp_name=dsp_name,
+    )
+    sections: list[dict[str, Any]] = [
+        {
+            "kind": "summary_cards",
+            "title": "Daily summary",
+            "cards": _artifact_eod_summary_cards(summary),
+        },
+        {
+            "kind": "note_panel",
+            "title": "Artifact-backed projection note",
+            "body": _artifact_eod_note_body(quality_warning_rows),
+        },
+        {
+            "kind": "table",
+            "title": "Route actuals",
+            "table_id": "route_actuals",
+            "columns": [
+                {"key": "route_id", "label": "Route"},
+                {"key": "driver_name", "label": "Driver"},
+                {"key": "packages_dispatched", "label": "Dispatched"},
+                {"key": "packages_delivered", "label": "Delivered"},
+                {"key": "planned_window", "label": "Planned"},
+                {"key": "actual_window", "label": "Actual"},
+                {"key": "actual_minutes", "label": "Minutes"},
+                {"key": "returns", "label": "Returns"},
+                {"key": "return_reasons", "label": "Return reasons"},
+                {"key": "upd_candidate", "label": "UPD?"},
+            ],
+            "rows": _artifact_eod_route_actual_rows(route_rows),
+        },
+    ]
+    sections.extend(
+        _build_eod_companion_sections(
+            break_tracker_rows=_normalized_break_tracker_rows(normalized_payload),
+            break_tracker_sheet_present=bool(
+                _normalized_nested_value(normalized_payload, "break_tracker", "sheet_present")
+            ),
+            route_adherence_cycles=_normalized_route_adherence_cycles(normalized_payload),
+            route_adherence_sheet_present=bool(
+                _normalized_nested_value(normalized_payload, "route_adherence", "sheet_present")
+            ),
+        )
+    )
+    sections.extend(
+        [
+            {
+                "kind": "form",
+                "title": "Manual closeout",
+                "form_id": "closeout_details",
+                "fields": _artifact_eod_form_fields(
+                    route_rows=route_rows,
+                    manual_closeout_rows=manual_closeout_rows,
+                ),
+            },
+            {
+                "kind": "checklist",
+                "title": "UPD candidate review",
+                "checklist_id": "upd_candidates",
+                "items": _artifact_eod_checklist_items(checklist_rows),
+            },
+            {
+                "kind": "history_stub",
+                "title": "History",
+                "entries": [
+                    {
+                        "label": "Current artifact version",
+                        "value": artifact_version_id,
+                    },
+                    {
+                        "label": "Supersedes",
+                        "value": supersedes_artifact_version_id or "Initial draft",
+                    },
+                    {
+                        "label": "Latest draft in chain",
+                        "value": latest_in_chain_artifact_version_id,
+                    },
+                ],
+            },
+        ]
     )
     return {
         "workpage": {
@@ -2119,69 +2731,7 @@ def build_eod_artifact_workpage_contract(
             "source_artifact_version_id": artifact_version_id,
             "source_examples": {},
             "summary": summary,
-            "sections": [
-                {
-                    "kind": "summary_cards",
-                    "title": "Daily summary",
-                    "cards": _artifact_eod_summary_cards(summary),
-                },
-                {
-                    "kind": "note_panel",
-                    "title": "Artifact-backed projection note",
-                    "body": _artifact_eod_note_body(quality_warning_rows),
-                },
-                {
-                    "kind": "table",
-                    "title": "Route actuals",
-                    "table_id": "route_actuals",
-                    "columns": [
-                        {"key": "route_id", "label": "Route"},
-                        {"key": "driver_name", "label": "Driver"},
-                        {"key": "packages_dispatched", "label": "Dispatched"},
-                        {"key": "packages_delivered", "label": "Delivered"},
-                        {"key": "planned_window", "label": "Planned"},
-                        {"key": "actual_window", "label": "Actual"},
-                        {"key": "actual_minutes", "label": "Minutes"},
-                        {"key": "returns", "label": "Returns"},
-                        {"key": "return_reasons", "label": "Return reasons"},
-                        {"key": "upd_candidate", "label": "UPD?"},
-                    ],
-                    "rows": _artifact_eod_route_actual_rows(route_rows),
-                },
-                {
-                    "kind": "form",
-                    "title": "Manual closeout",
-                    "form_id": "closeout_details",
-                    "fields": _artifact_eod_form_fields(
-                        route_rows=route_rows,
-                        manual_closeout_rows=manual_closeout_rows,
-                    ),
-                },
-                {
-                    "kind": "checklist",
-                    "title": "UPD candidate review",
-                    "checklist_id": "upd_candidates",
-                    "items": _artifact_eod_checklist_items(checklist_rows),
-                },
-                {
-                    "kind": "history_stub",
-                    "title": "History",
-                    "entries": [
-                        {
-                            "label": "Current artifact version",
-                            "value": artifact_version_id,
-                        },
-                        {
-                            "label": "Supersedes",
-                            "value": supersedes_artifact_version_id or "Initial draft",
-                        },
-                        {
-                            "label": "Latest draft in chain",
-                            "value": latest_in_chain_artifact_version_id,
-                        },
-                    ],
-                },
-            ],
+            "sections": sections,
             "validation": {
                 "status": "informational",
                 "warnings": _artifact_eod_validation_warnings(quality_warning_rows),
@@ -2190,7 +2740,11 @@ def build_eod_artifact_workpage_contract(
         "source": {
             "mode": "artifact_projection",
             "primary_dataset_key": _EOD_DRAFT_DATASET_KEY,
-            "source_dataset_keys": [_EOD_DRAFT_DATASET_KEY],
+            "source_dataset_keys": (
+                [_EOD_DRAFT_DATASET_KEY, _EOD_NORMALIZED_DATASET_KEY]
+                if normalized_payload is not None
+                else [_EOD_DRAFT_DATASET_KEY]
+            ),
             "source_artifact_version_id": artifact_version_id,
             "source_refs": source_refs,
         },
@@ -2242,12 +2796,21 @@ def build_route_demand_artifact_workpage_contract(
         artifact_version_id=artifact_version_id,
         default=artifact_version_id,
     )
-    editable = artifact_version_id == latest_in_chain_artifact_version_id
+    latest_schedule_draft = latest_schedule_draft_artifact(artifacts)
+    future_week_seed = _route_demand_is_future_week_seed_artifact(artifact)
+    future_run_already_scheduled = future_week_seed and latest_schedule_draft is not None
+    editable = (
+        artifact_version_id == latest_in_chain_artifact_version_id
+        and not future_run_already_scheduled
+    )
     previous_projection = _route_demand_previous_projection(
         artifacts=artifacts,
         supersedes_artifact_version_id=supersedes_artifact_version_id,
     )
-    latest_schedule_draft = latest_schedule_draft_artifact(artifacts)
+    artifact_day_cards = _route_demand_day_cards(
+        projection=projection,
+        previous_projection=previous_projection,
+    )
     schedule_impact = _route_demand_schedule_impact(
         connection,
         workflow_run_id=workflow_run_id,
@@ -2300,12 +2863,23 @@ def build_route_demand_artifact_workpage_contract(
             editable=editable,
         ),
         "calculations": {
-            "day_cards": _route_demand_day_cards(
-                projection=projection,
-                previous_projection=previous_projection,
+            "day_cards": (
+                _route_demand_visible_day_cards(artifact_day_cards)
+                if future_week_seed
+                else artifact_day_cards
             )
         },
         "schedule_impact": schedule_impact,
+        "future_week_options": _route_demand_future_week_options(
+            projection=projection,
+            enabled=editable and not future_week_seed,
+        ),
+        "future_week_activation": _route_demand_future_week_activation(
+            connection,
+            workflow_run_id=workflow_run_id,
+            artifact=artifact,
+            latest_schedule_draft=latest_schedule_draft,
+        ),
         "artifact_history": _artifact_history_for_chain(
             connection,
             current_artifact=artifact,
@@ -2315,6 +2889,8 @@ def build_route_demand_artifact_workpage_contract(
             workflow_run_id=workflow_run_id,
             artifact_version_id=artifact_version_id,
             editable=editable,
+            artifact=artifact,
+            future_run_already_scheduled=future_run_already_scheduled,
         ),
     }
     return contract
@@ -2455,6 +3031,12 @@ def _build_route_demand_workpage_view_model(
             "value": latest_in_chain_artifact_version_id or "Unavailable",
         },
     ]
+    visible_day_cards = _route_demand_visible_day_cards(
+        _route_demand_day_cards(
+            projection=projection,
+            previous_projection=None,
+        )
+    )
     return {
         "workpage_id": ROUTE_DEMAND_WORKPAGE_KIND,
         "version": 1,
@@ -2532,10 +3114,7 @@ def _build_route_demand_workpage_view_model(
                         "on_call_target": item.get("on_call_target"),
                         "excess_capacity_target": item.get("excess_capacity_target"),
                     }
-                    for item in _route_demand_day_cards(
-                        projection=projection,
-                        previous_projection=None,
-                    )
+                    for item in visible_day_cards
                 ],
             },
             {
@@ -2556,9 +3135,11 @@ def _route_demand_summary(
     workflow_run: Mapping[str, Any],
     projection: Mapping[str, Any],
 ) -> dict[str, Any]:
-    day_cards = _route_demand_day_cards(
-        projection=projection,
-        previous_projection=None,
+    day_cards = _route_demand_visible_day_cards(
+        _route_demand_day_cards(
+            projection=projection,
+            previous_projection=None,
+        )
     )
     station_code = ""
     service_area = ""
@@ -2573,9 +3154,20 @@ def _route_demand_summary(
             service_area = service_area or _require_text_or_default(row.get("service_area"), default="")
             if station_code and service_area:
                 break
+    derived_planning_week_id = ""
+    if day_cards:
+        try:
+            planning_week_monday = date.fromisoformat(day_cards[0]["service_date"]) + timedelta(days=1)
+            derived_planning_week_id = service_day_to_future_planning_week(
+                f"SD-{planning_week_monday.isoformat()}"
+            )
+        except ValueError:
+            derived_planning_week_id = ""
     return {
         "planning_week_id": _require_text_or_default(
-            workflow_run.get("partition_key") or projection.get("planning_week_id"),
+            projection.get("planning_week_id")
+            or derived_planning_week_id
+            or workflow_run.get("partition_key"),
             default="unknown",
         ),
         "operational_week_start": (
@@ -2652,6 +3244,155 @@ def _route_demand_day_cards(
             }
         )
     return cards
+
+
+def _route_demand_visible_day_cards(
+    day_cards: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    return [dict(item) for item in day_cards[:_ROUTE_DEMAND_VISIBLE_WEEK_DAY_COUNT]]
+
+
+def _route_demand_is_future_week_seed_artifact(artifact: Mapping[str, Any] | None) -> bool:
+    if artifact is None:
+        return False
+    metadata = artifact.get("metadata_json")
+    return isinstance(metadata, Mapping) and bool(metadata.get("future_week_seed"))
+
+
+def _route_demand_future_week_options(
+    *,
+    projection: Mapping[str, Any],
+    enabled: bool,
+) -> list[dict[str, Any]]:
+    if not enabled:
+        return []
+    visible_day_cards = _route_demand_visible_day_cards(
+        _route_demand_day_cards(
+            projection=projection,
+            previous_projection=None,
+        )
+    )
+    current_start_text = visible_day_cards[0]["service_date"] if visible_day_cards else ""
+    if not current_start_text:
+        return []
+    try:
+        current_start = date.fromisoformat(current_start_text)
+    except ValueError:
+        return []
+    next_start = current_start + timedelta(days=7)
+    next_end = next_start + timedelta(days=6)
+    next_monday = next_start + timedelta(days=1)
+    return [
+        {
+            "option_id": "next_week",
+            "label": "Week 2",
+            "planning_week_id": service_day_to_future_planning_week(
+                f"SD-{next_monday.isoformat()}"
+            ),
+            "start_date": next_start.isoformat(),
+            "end_date": next_end.isoformat(),
+            "date_range_label": f"{next_start.isoformat()} to {next_end.isoformat()}",
+        }
+    ]
+
+
+def _route_demand_future_week_activation(
+    connection: sqlite3.Connection,
+    *,
+    workflow_run_id: str,
+    artifact: Mapping[str, Any] | None,
+    latest_schedule_draft: Mapping[str, Any] | None,
+) -> dict[str, Any]:
+    if latest_schedule_draft is not None and _route_demand_is_future_week_seed_artifact(artifact):
+        return {
+            "state": "succeeded",
+            "status_label": "Draft ready",
+            "human_task_id": None,
+            "task_run_id": None,
+            "blocked_reason": None,
+            "target_workflow_run_id": workflow_run_id,
+            "target_schedule_route": canonical_workflow_run_workpage_route(
+                workflow_run_id=workflow_run_id,
+                workpage_kind=SCHEDULE_WORKPAGE_KIND,
+            ),
+            "target_schedule_artifact_version_id": _require_text(
+                latest_schedule_draft.get("artifact_version_id")
+            ),
+            "error_code": None,
+            "error_message": None,
+        }
+    latest_stage04_execution = _route_demand_latest_stage04_execution_summary(
+        connection,
+        workflow_run_id=workflow_run_id,
+    )
+    if latest_stage04_execution is not None and _route_demand_is_future_week_seed_artifact(artifact):
+        session_state = str(latest_stage04_execution.get("execution_session_state") or "")
+        tool_state = str(latest_stage04_execution.get("tool_execution_state") or "")
+        error_code = _require_text_or_default(
+            latest_stage04_execution.get("error_code"),
+            default="",
+        ) or None
+        if session_state == "FAILED" or tool_state == "FAILED":
+            return {
+                "state": "failed",
+                "status_label": "Scheduling failed",
+                "human_task_id": latest_stage04_execution["human_task_id"],
+                "task_run_id": latest_stage04_execution["task_run_id"],
+                "blocked_reason": error_code or "stage04_run_failed",
+                "target_workflow_run_id": workflow_run_id,
+                "target_schedule_route": None,
+                "target_schedule_artifact_version_id": None,
+                "error_code": error_code,
+                "error_message": _route_demand_future_week_activation_error_message(error_code),
+            }
+        if session_state in {"CREATED", "RUNNING", "WAITING_POLICY", "WAITING_APPROVAL"}:
+            return {
+                "state": "running",
+                "status_label": "Agent working",
+                "human_task_id": latest_stage04_execution["human_task_id"],
+                "task_run_id": latest_stage04_execution["task_run_id"],
+                "blocked_reason": None,
+                "target_workflow_run_id": workflow_run_id,
+                "target_schedule_route": canonical_workflow_run_workpage_route(
+                    workflow_run_id=workflow_run_id,
+                    workpage_kind=SCHEDULE_WORKPAGE_KIND,
+                ),
+                "target_schedule_artifact_version_id": None,
+                "error_code": None,
+                "error_message": None,
+            }
+    active_stage04_task = _route_demand_active_stage04_task_summary(
+        connection,
+        workflow_run_id=workflow_run_id,
+    )
+    if active_stage04_task is not None and _route_demand_is_future_week_seed_artifact(artifact):
+        return {
+            "state": "running",
+            "status_label": "Agent working",
+            "human_task_id": active_stage04_task["human_task_id"],
+            "task_run_id": active_stage04_task["task_run_id"],
+            "blocked_reason": None,
+            "target_workflow_run_id": workflow_run_id,
+            "target_schedule_route": canonical_workflow_run_workpage_route(
+                workflow_run_id=workflow_run_id,
+                workpage_kind=SCHEDULE_WORKPAGE_KIND,
+            ),
+            "target_schedule_artifact_version_id": None,
+            "error_code": None,
+            "error_message": None,
+        }
+    return {
+        "state": "idle",
+        "status_label": None,
+        "human_task_id": None,
+        "task_run_id": None,
+        "blocked_reason": None,
+        "target_workflow_run_id": workflow_run_id,
+        "target_schedule_route": None,
+        "target_schedule_artifact_version_id": None,
+        "error_code": None,
+        "error_message": None,
+    }
 
 
 def _route_demand_previous_projection(
@@ -2739,18 +3480,51 @@ def _route_demand_open_latest_contract_action(
     }
 
 
+def _route_demand_add_next_week_contract_action(
+    *,
+    workflow_run_id: str,
+) -> dict[str, Any]:
+    return {
+        "action_id": "workpage.route-demand-v0.add_next_week",
+        "kind": "add_next_week",
+        "label": "Add a week",
+        "state": "available",
+        "workpage_kind": ROUTE_DEMAND_WORKPAGE_KIND,
+        "artifact_version_id": None,
+        "create_path": canonical_route_demand_next_week_create_path(
+            workflow_run_id=workflow_run_id
+        ),
+        "action_ref": build_workpage_action_ref(
+            action_id="workpage.route-demand-v0.add_next_week",
+            workpage_kind=ROUTE_DEMAND_WORKPAGE_KIND,
+            workflow_run_id=workflow_run_id,
+            artifact_version_id=None,
+        ),
+        "disabled_reason": None,
+    }
+
+
 def _route_demand_artifact_contract_actions(
     *,
     workflow_run_id: str,
     artifact_version_id: str,
     editable: bool,
+    artifact: Mapping[str, Any],
+    future_run_already_scheduled: bool,
 ) -> list[dict[str, Any]]:
-    return [
+    future_week_seed = _route_demand_is_future_week_seed_artifact(artifact)
+    mutation_blocked_reason = None
+    if future_run_already_scheduled:
+        mutation_blocked_reason = "continue_from_schedule"
+    elif not editable:
+        mutation_blocked_reason = "historical_artifact_read_only"
+
+    actions: list[dict[str, Any]] = [
         {
             "action_id": "workpage.route-demand-v0.save",
             "kind": "save",
             "label": "Save route demand",
-            "state": "available" if editable else "blocked",
+            "state": "available" if mutation_blocked_reason is None else "blocked",
             "workpage_kind": ROUTE_DEMAND_WORKPAGE_KIND,
             "artifact_version_id": artifact_version_id,
             "submit_path": canonical_route_demand_artifact_submit_path(
@@ -2763,9 +3537,38 @@ def _route_demand_artifact_contract_actions(
                 workflow_run_id=workflow_run_id,
                 artifact_version_id=artifact_version_id,
             ),
-            "disabled_reason": None if editable else "historical_artifact_read_only",
+            "disabled_reason": mutation_blocked_reason,
         }
     ]
+    if not future_week_seed and editable:
+        actions.append(
+            _route_demand_add_next_week_contract_action(
+                workflow_run_id=workflow_run_id,
+            )
+        )
+    if future_week_seed:
+        actions.append(
+            {
+                "action_id": "workpage.route-demand-v0.save_and_run",
+                "kind": "save_and_run",
+                "label": "Save and run scheduling agent",
+                "state": "available" if mutation_blocked_reason is None else "blocked",
+                "workpage_kind": ROUTE_DEMAND_WORKPAGE_KIND,
+                "artifact_version_id": artifact_version_id,
+                "submit_path": canonical_route_demand_artifact_save_and_run_path(
+                    workflow_run_id=workflow_run_id,
+                    artifact_version_id=artifact_version_id,
+                ),
+                "action_ref": build_workpage_action_ref(
+                    action_id="workpage.route-demand-v0.save_and_run",
+                    workpage_kind=ROUTE_DEMAND_WORKPAGE_KIND,
+                    workflow_run_id=workflow_run_id,
+                    artifact_version_id=artifact_version_id,
+                ),
+                "disabled_reason": mutation_blocked_reason,
+            }
+        )
+    return actions
 
 
 def _build_driver_preferences_bundle_for_run(
@@ -2988,7 +3791,7 @@ def _driver_preferences_summary(
                 unset_preference_count += 1
     return {
         "planning_week_id": _require_text_or_default(
-            workflow_run.get("partition_key") or projection.get("planning_week_id"),
+            projection.get("planning_week_id") or workflow_run.get("partition_key"),
             default="unknown",
         ),
         "driver_count": len(drivers),
@@ -3304,6 +4107,124 @@ def _route_demand_schedule_impact(
         "refresh_task": refresh_task,
         "latest_route_demand_artifact_version_id": latest_route_demand_artifact_version_id,
     }
+
+
+def _route_demand_active_stage04_task_summary(
+    connection: sqlite3.Connection,
+    *,
+    workflow_run_id: str,
+) -> dict[str, Any] | None:
+    for task in reversed(list_human_tasks_for_workflow_run(connection, workflow_run_id)):
+        task_run = get_task_run(connection, str(task.get("task_run_id") or ""))
+        if task_run is None:
+            continue
+        if _require_text(task_run.get("stage_id")) != "Stage04":
+            continue
+        task_kind = _require_text(task.get("task_kind"))
+        if task_kind not in {"weekly_input_intake", "work_item"}:
+            continue
+        task_state = _require_text_or_default(task.get("state"), default="")
+        if task_state not in {"OPEN", "CLAIMED"}:
+            continue
+        if task_kind == "weekly_input_intake" and task_state != "CLAIMED":
+            continue
+        return {
+            "human_task_id": _require_text(task.get("human_task_id")),
+            "task_run_id": _require_text(task.get("task_run_id")),
+            "task_kind": task_kind,
+            "state": task_state,
+            "owner_role": _require_text_or_default(task.get("owner_role"), default="") or None,
+            "activation_key": _require_text_or_default(
+                task_run.get("activation_key"),
+                default="",
+            ),
+            "blocked_on_kind": _require_text_or_default(
+                task_run.get("blocked_on_kind"),
+                default="",
+            )
+            or None,
+            "blocked_on_ref": _require_text_or_default(
+                task_run.get("blocked_on_ref"),
+                default="",
+            )
+            or None,
+        }
+    return None
+
+
+def _route_demand_latest_stage04_execution_summary(
+    connection: sqlite3.Connection,
+    *,
+    workflow_run_id: str,
+) -> dict[str, Any] | None:
+    human_tasks_by_task_run_id = {
+        _require_text(task.get("task_run_id")): task
+        for task in list_human_tasks_for_workflow_run(connection, workflow_run_id)
+        if _require_text_or_default(task.get("task_run_id"), default="")
+    }
+    for session in reversed(list_execution_sessions_for_workflow_run(connection, workflow_run_id)):
+        task_run_id = _require_text_or_default(session.get("task_run_id"), default="")
+        if not task_run_id:
+            continue
+        task_run = get_task_run(connection, task_run_id)
+        if task_run is None:
+            continue
+        if _require_text_or_default(task_run.get("stage_id"), default="") != "Stage04":
+            continue
+        if _require_text_or_default(task_run.get("task_kind"), default="") != "work_item":
+            continue
+        latest_tool_execution = None
+        tool_executions = list_tool_executions_for_session(
+            connection,
+            _require_text(session.get("execution_session_id")),
+        )
+        if tool_executions:
+            latest_tool_execution = tool_executions[-1]
+        human_task = human_tasks_by_task_run_id.get(task_run_id)
+        return {
+            "human_task_id": (
+                _require_text_or_default(human_task.get("human_task_id"), default="")
+                if human_task is not None
+                else None
+            ),
+            "task_run_id": task_run_id,
+            "execution_session_id": _require_text(session.get("execution_session_id")),
+            "execution_session_state": _require_text_or_default(session.get("state"), default=""),
+            "tool_execution_id": (
+                _require_text_or_default(latest_tool_execution.get("tool_execution_id"), default="")
+                if latest_tool_execution is not None
+                else None
+            ),
+            "tool_execution_state": (
+                _require_text_or_default(latest_tool_execution.get("state"), default="")
+                if latest_tool_execution is not None
+                else None
+            ),
+            "error_code": (
+                _require_text_or_default(latest_tool_execution.get("error_code"), default="")
+                if latest_tool_execution is not None
+                else None
+            ),
+        }
+    return None
+
+
+def _route_demand_future_week_activation_error_message(error_code: str | None) -> str | None:
+    if not error_code:
+        return None
+    if error_code == "stage04_input_scope_mismatch":
+        return (
+            "The weekly scheduling inputs point at different week scopes. Create a fresh future-week "
+            "artifact or reseed the local demo before retrying."
+        )
+    if error_code == "stage04_input_bundle_invalid":
+        return "The weekly scheduling inputs could not be compiled into a valid Stage04 bundle."
+    if error_code == "duplicate_execution_request":
+        return (
+            "This future-week scheduling run already has an execution session. Reconcile the stale "
+            "execution or use a fresh artifact version before retrying."
+        )
+    return error_code.replace("_", " ")
 
 
 def _route_demand_active_refresh_task_summary(

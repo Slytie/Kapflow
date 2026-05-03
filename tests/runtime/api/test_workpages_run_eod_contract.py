@@ -8,6 +8,7 @@ from tests.runtime.helpers.runtime_api import RuntimeApiClient
 from tests.runtime.helpers.workpage_runs import (
     seed_actual_ops_weekly_schedule_run,
     seed_dispatch_reporting_workpage_run,
+    seed_imported_dispatch_reporting_workpage_run,
 )
 
 
@@ -18,9 +19,9 @@ EXPECTED_SOURCE_DATASET_KEYS = [
 ]
 
 EXPECTED_VALIDATION_WARNINGS = [
-    "This run-backed EOD landing is generated from canonical dispatch-reporting artifacts sourced from an intentionally partial 2026-03-16 example family.",
-    "Workbook summary formulas were broken in the source material, so row-level actuals remain the primary truth for this projection.",
-    "Create draft opens the immutable reporting workbook edit lane, and submit creates a new superseding workbook artifact version.",
+    "This run-backed EOD landing is generated from canonical dispatch-reporting artifacts.",
+    "Workbook summary formulas may be broken in the source material, so row-level actuals remain the primary truth for this projection.",
+    "Submit creates a new immutable superseding reporting workbook artifact version.",
 ]
 
 
@@ -58,6 +59,7 @@ def test_eod_workflow_run_workpage_contract_returns_run_backed_landing_without_d
         tenant_id="tenant-a",
         domain_id="domain-x",
         run_tag="api:workpages:run-eod:no-draft",
+        include_source_artifacts=False,
     )
     workflow_run_id = str(seed["workflow_run_id"])
     client = _client(tmp_path)
@@ -80,44 +82,35 @@ def test_eod_workflow_run_workpage_contract_returns_run_backed_landing_without_d
     assert workpage["source_artifact_version_id"] is None
     assert workpage["source_examples"] == {}
     assert workpage["summary"] == {
-        "service_date": "2026-03-16",
+        "service_date": "2026-03-24",
         "station_code": "DVC4",
         "dsp_name": "QDCI",
-        "total_routes_actual": 3,
-        "packages_dispatched": 786,
-        "actual_dispatched": 786,
-        "packages_delivered": 783,
-        "packages_returned": 3,
-        "delivered_pct": 99.62,
-        "return_pct": 0.38,
-        "average_route_time": "9:47:00",
-        "formula_integrity_warning": True,
-        "warning_note": (
-            "This EOD projection is built from canonical dispatch-reporting artifacts sourced from "
-            "an intentionally partial 2026-03-16 QDCI / DVC4 example family. Row-level actuals "
-            "remain the primary truth because the source workbook summary tabs contained broken "
-            "formulas."
-        ),
+        "total_routes_actual": 0,
+        "packages_dispatched": 0,
+        "actual_dispatched": 0,
+        "packages_delivered": 0,
+        "packages_returned": 0,
+        "delivered_pct": 0.0,
+        "return_pct": 0.0,
+        "average_route_time": "0:00:00",
+        "formula_integrity_warning": False,
+        "warning_note": "Upload route activity to import EOS data and generate the latest EOD draft.",
     }
     assert [section["kind"] for section in workpage["sections"]] == [
         "summary_cards",
         "note_panel",
-        "table",
-        "form",
-        "checklist",
         "history_stub",
     ]
-    assert workpage["validation"]["warnings"] == EXPECTED_VALIDATION_WARNINGS
+    assert workpage["validation"]["warnings"] == [
+        "Upload route activity to import EOS data and generate the latest EOD draft.",
+    ]
 
     source = payload["source"]
     assert source["mode"] == "run_projection"
     assert source["primary_dataset_key"] == "reporting.upd_draft.workbook"
     assert source["source_dataset_keys"] == EXPECTED_SOURCE_DATASET_KEYS
     assert source["source_artifact_version_id"] is None
-    assert source["source_refs"] == [
-        f"/api/v1/artifacts/{seed['artifacts_by_kind']['reporting.eos_raw.workbook']['artifact_version_id']}",
-        f"/api/v1/artifacts/{seed['artifacts_by_kind']['reporting.actuals_normalized.workbook']['artifact_version_id']}",
-    ]
+    assert source["source_refs"] == []
 
     freshness = payload["freshness"]
     assert freshness["source_kind"] == "workflow_run_projection"
@@ -129,8 +122,8 @@ def test_eod_workflow_run_workpage_contract_returns_run_backed_landing_without_d
         "workflow_run_id": workflow_run_id,
         "workflow_id": "dispatch_reporting.v1",
         "workflow_version": "v1",
-        "partition_key": "SD-2026-03-16",
-        "logical_date": "2026-03-16",
+        "partition_key": "SD-2026-03-24",
+        "logical_date": "2026-03-24",
         "activation_key": "api:workpages:run-eod:no-draft:dispatch-reporting-workpage",
         "state": "OPEN",
     }
@@ -153,7 +146,7 @@ def test_eod_workflow_run_workpage_contract_returns_run_backed_landing_without_d
 def test_eod_workflow_run_workpage_contract_returns_latest_draft_resolution(
     tmp_path: Path,
 ) -> None:
-    seed = seed_dispatch_reporting_workpage_run(
+    seed = seed_imported_dispatch_reporting_workpage_run(
         db_url=_db_url(tmp_path),
         tenant_id="tenant-a",
         domain_id="domain-x",
@@ -161,12 +154,9 @@ def test_eod_workflow_run_workpage_contract_returns_latest_draft_resolution(
     )
     workflow_run_id = str(seed["workflow_run_id"])
     client = _client(tmp_path)
-
-    created = client.post(
-        f"/api/v1/workpages/workflow-runs/{workflow_run_id}/eod-v0/drafts",
-        payload={"idempotency_key": "api:workpages:run-eod:latest-draft:create"},
+    artifact_version_id = str(
+        seed["artifacts_by_kind"]["reporting.upd_draft.workbook"]["artifact_version_id"]
     )
-    artifact_version_id = str(created.payload["draft"]["artifact_version_id"])
 
     response = client.get(f"/api/v1/workpages/workflow-runs/{workflow_run_id}/eod-v0")
     assert response.status_code == 200
@@ -187,6 +177,37 @@ def test_eod_workflow_run_workpage_contract_returns_latest_draft_resolution(
         },
         "create_action_ref": None,
     }
+    workpage = payload["workpage"]
+    assert workpage["summary"] == {
+        "service_date": "2026-03-24",
+        "station_code": "DVC4",
+        "dsp_name": "QDCI",
+        "total_routes_actual": 18,
+        "packages_dispatched": 5032,
+        "actual_dispatched": 5032,
+        "packages_delivered": 4973,
+        "packages_returned": 59,
+        "delivered_pct": 98.83,
+        "return_pct": 1.17,
+        "average_route_time": "9:40:00",
+        "formula_integrity_warning": True,
+        "warning_note": (
+            "This EOD projection is built from canonical dispatch-reporting artifacts. "
+            "Row-level route actuals remain the primary truth when summary sheets contain broken formulas."
+        ),
+    }
+    assert [section["kind"] for section in workpage["sections"]] == [
+        "summary_cards",
+        "note_panel",
+        "table",
+        "table",
+        "table",
+        "table",
+        "form",
+        "checklist",
+        "history_stub",
+    ]
+    assert workpage["validation"]["warnings"] == EXPECTED_VALIDATION_WARNINGS
     assert payload["freshness"]["source_version"] == artifact_version_id
     assert payload["source"]["source_refs"] == [
         f"/api/v1/artifacts/{seed['artifacts_by_kind']['reporting.eos_raw.workbook']['artifact_version_id']}",
@@ -199,7 +220,7 @@ def test_eod_workflow_run_workpage_contract_returns_latest_draft_resolution(
 def test_eod_workflow_run_workpage_reads_are_stable_except_for_generated_at(
     tmp_path: Path,
 ) -> None:
-    seed = seed_dispatch_reporting_workpage_run(
+    seed = seed_imported_dispatch_reporting_workpage_run(
         db_url=_db_url(tmp_path),
         tenant_id="tenant-a",
         domain_id="domain-x",

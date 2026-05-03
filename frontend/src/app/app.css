@@ -2278,6 +2278,58 @@
   opacity: 1;
 }
 
+.driver-quality-badge {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  border-radius: 999px;
+  padding: 3px 8px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+}
+
+.driver-quality-badge--high {
+  background: rgba(122, 159, 91, 0.16);
+  color: #2f5a1c;
+}
+
+.driver-quality-badge--medium {
+  background: rgba(212, 176, 93, 0.18);
+  color: #725214;
+}
+
+.driver-quality-badge--low {
+  background: rgba(196, 114, 93, 0.16);
+  color: #7a3323;
+}
+
+.driver-preferences-quality-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 2px;
+}
+
+.driver-preferences-quality-field__label {
+  color: var(--schedule-heatmap-muted);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.driver-preferences-quality-field select {
+  min-height: 32px;
+  border: 1px solid rgba(98, 110, 125, 0.22);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.96);
+  color: var(--schedule-heatmap-ink);
+  font-size: 12px;
+  font-weight: 600;
+  padding: 0 10px;
+}
+
 .driver-availability-panel__layout {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(260px, 360px);

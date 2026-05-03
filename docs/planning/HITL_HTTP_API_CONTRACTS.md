@@ -626,6 +626,25 @@ Rules:
 - storage-root selection is server-owned on shared HTTP,
 - scope checks apply to subject and workflow ownership before upload.
 
+### 4.4a Ensure dispatch-reporting EOD intake task
+Endpoint:
+- `POST /api/v1/workpages/workflow-runs/{workflow_run_id}/eod-v0/intake-task`
+
+Body:
+- `idempotency_key`
+- `service_date` (optional ISO date in `YYYY-MM-DD`)
+
+Response:
+- `{"status":"ok","command":"api.workpages.eod_intake_task.ensure","intake_task":{"workflow_run_id":"...","task_run_id":"...","human_task_id":"...","stage_id":"Stage01","task_kind":"eos_input_intake","task_run_state":"...","human_task_state":"...","activation_key":"...","generation":0,"created":false,"service_date":"2026-03-25","target_workflow_run_id":"...","target_route":"/runs/{workflow_run_id}/workpages/eod-v0","created_workflow_run":false}}`
+
+Rules:
+- if `service_date` is omitted, the current reporting run `logical_date` remains the target date,
+- if `service_date` matches the current run date, the endpoint reuses the current run and applies the existing Stage01 intake-task reuse / re-import rules,
+- if `service_date` differs, the endpoint resolves or creates the same-tenant/same-domain `dispatch_reporting.v1` run with partition key `SD-{service_date}` and ensures the Stage01 intake task there,
+- the returned `workflow_run_id` and `target_workflow_run_id` identify the canonical reporting run that should receive the workbook upload and all later closeout work,
+- invalid date values fail closed,
+- cross-scope resolution remains forbidden.
+
 ### 4.5 Create artifact-backed EOD draft
 Endpoint:
 - `POST /api/v1/workpages/workflow-runs/{workflow_run_id}/eod-v0/drafts`

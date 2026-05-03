@@ -30,13 +30,17 @@ The just-completed production-shaped cadence milestone is **TASK-0156 - External
 - `onetruthctl cadence tick-logistics` now ensures due weekly/reporting state and prepares live dispatch once weekly publish truth exists
 - `docs/ops/runbooks/logistics_single_node_cadence.md` documents the bounded continuous single-node operator posture over the existing release/deploy topology
 
-The selected next app-facing product-expansion epic is **EPIC-135 - Unified schedule replan popup and dynamic scheduling activation**:
-- the shared `Edit Weekly Schedule` popup is now the frozen operator-surface direction for both pre-publish weekly proposals and post-publish live-dispatch replans
-- in-scope `0 -> N` route additions are the selected auto-agent trigger instead of a manual scheduler to-do action
-- canonical runtime-backed execution status must reuse existing requirement/actionability/runtime truth rather than inventing popup-local status semantics
-- mirrored weekly/live driver-contact bridge inputs are required; phone numbers must not be carried inside driver capabilities
-- the current route-demand refresh-task spawn path must be replaced before the old scheduler CTA is retired
-- no EPIC-135 runtime code is landed yet; the current repo change set corrects the plan, epic, context, task stack, and workflow-pack truth before implementation starts
+The current demo-facing weekly-planning enhancement is the landed **route-demand week-by-week future-run activation** slice:
+- `route-demand-v0` now shows one editable operational week at a time
+- `Add a week` creates or reopens the real next weekly run and seeds an empty future-week route-demand artifact there
+- `Save and run scheduling agent` is now the explicit greenfield scheduling trigger from future-week route demand
+- plain route-demand save no longer spawns the legacy refresh task
+- successful future-week scheduling activation hands off to the canonical `schedule-v0` route and reuses the existing quick-edit popup entrypoint
+
+The current dispatch-reporting operator enhancement is the landed **service-date-selectable route-activity upload** slice:
+- the `Upload route activity` popup now lets operators pick the reporting service date after choosing the workbook
+- the selected service date is authoritative upload metadata, ahead of filename-derived dates
+- when the selected date differs from the current EOD run, the popup resolves or creates the matching `dispatch_reporting.v1` run and continues closeout there
 
 EPIC-125 is now completed history:
 - `TASK-0154` is reconciled to `DONE` from the already-landed live-dispatch delta lane exercised by runtime handlers, the local demo smoke, and the operator runbooks
@@ -47,7 +51,7 @@ EPIC-126 remains completed cleanup history, but it is no longer the active post-
 
 ## Current implemented baseline
 - weekly schedule landing, artifact editor, live preview, pinned dependency baselines, accepted-series navigation, and draft-lineage navigation on canonical schedule routes
-- `route-demand-v0` run landing plus artifact-backed immutable day-count editor
+- `route-demand-v0` run landing plus artifact-backed immutable day-count editor with next-week activation and explicit save-and-run scheduling handoff
 - `driver-preferences-v0` run landing, snapshot creation, artifact-backed editor/history, and soft advisory schedule integration
 - `eod-v0` run landing plus canonical artifact-backed immutable workbook editing
 - backend workspace workpage actions with active vocabulary `open_route | create_then_open`
@@ -80,12 +84,11 @@ Frozen product boundary:
 Still deferred beyond the currently implemented baseline:
 - contact-data authoring surfaces
 - generalized live-dispatch workpage productization beyond the shared schedule popup
-- broader feedback-driven operator hardening beyond EPIC-135
+- broader feedback-driven operator hardening beyond the current route-demand future-run activation slice
 
 ## Available broader backlog (after EPIC-134)
 No EPIC-125 carry-forward backlog item remains open.
-EPIC-135 is now the selected next app-facing product-expansion epic after EPIC-134.
-Future selection beyond EPIC-135 should still be deliberate from later feedback and deferred items, not implied by stale task state.
+Future app-facing product expansion after this landed route-demand slice should still be selected deliberately from later feedback and deferred items, not implied by stale task state.
 
 ## Test-first working mode
 Before adding runtime services or API surfaces:

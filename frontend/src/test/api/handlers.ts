@@ -43,6 +43,7 @@ const driverPreferencesArtifactVersions = new Map<string, DriverPreferencesArtif
 const driverAvailabilityExceptions = new Map<string, DriverAvailabilityExceptionState>();
 const EOD_WORKFLOW_RUN_ID = "wr-eod-artifact-001";
 const SCHEDULE_WORKFLOW_RUN_ID = "wr-weekly-001";
+const FUTURE_ROUTE_DEMAND_WORKFLOW_RUN_ID = "wr-weekly-002";
 
 interface ArtifactWorkpageVersionState {
   artifactVersionId: string;
@@ -70,6 +71,7 @@ interface ScheduleArtifactVersionState extends ArtifactWorkpageVersionState {
 interface RouteDemandArtifactVersionState extends ArtifactWorkpageVersionState {
   dayCards: Array<Record<string, unknown>>;
   scheduleImpact: Record<string, unknown>;
+  futureWeekSeed?: boolean;
 }
 
 interface DriverPreferencesArtifactVersionState extends ArtifactWorkpageVersionState {
@@ -1627,39 +1629,164 @@ function buildRouteDemandDayCards(
   }));
 }
 
+function visibleRouteDemandDayCards(
+  dayCards: Array<Record<string, unknown>>
+): Array<Record<string, unknown>> {
+  return dayCards.slice(0, 7);
+}
+
+function shiftIsoDate(date: string, days: number): string {
+  const shifted = new Date(`${date}T00:00:00Z`);
+  shifted.setUTCDate(shifted.getUTCDate() + days);
+  return shifted.toISOString().slice(0, 10);
+}
+
+function zeroRouteDemandDayCard(
+  card: Record<string, unknown>,
+  serviceDate: string
+): Record<string, unknown> {
+  return {
+    ...card,
+    service_date: serviceDate,
+    planned_route_count: 0,
+    standard_slot_count: 0,
+    standard_early_slot_count: 0,
+    standard_late_slot_count: 0,
+    rescue_slot_count: 0,
+    overflow_slot_count: 0,
+    on_call_target: 0,
+    excess_capacity_target: 0,
+    delta_from_previous_version: null
+  };
+}
+
+function buildFutureRouteDemandSeedDayCards(
+  sourceDayCards: Array<Record<string, unknown>>
+): Array<Record<string, unknown>> {
+  const currentVisibleWeek = visibleRouteDemandDayCards(sourceDayCards);
+  const nextVisibleWeek =
+    sourceDayCards.length >= 14
+      ? sourceDayCards.slice(7, 14)
+      : currentVisibleWeek.map((card) => ({
+          ...card,
+          service_date: shiftIsoDate(asString(card.service_date), 7)
+        }));
+  const hiddenHorizonWeek = nextVisibleWeek.map((card) => ({
+    ...card,
+    service_date: shiftIsoDate(asString(card.service_date), 7)
+  }));
+  return [
+    ...nextVisibleWeek.map((card) => zeroRouteDemandDayCard(card, asString(card.service_date))),
+    ...hiddenHorizonWeek.map((card) => zeroRouteDemandDayCard(card, asString(card.service_date)))
+  ];
+}
+
+function buildRouteDemandFutureWeekOptions(workflowRunId: string): Array<Record<string, unknown>> {
+  void workflowRunId;
+  return [
+    {
+      option_id: "next_week",
+      label: "Week 2",
+      planning_week_id: "PW-2026-W14",
+      start_date: "2026-03-29",
+      end_date: "2026-04-04",
+      date_range_label: "2026-03-29 to 2026-04-04"
+    }
+  ];
+}
+
+function buildRouteDemandFutureWeekActivation(input?: {
+  workflowRunId?: string;
+  state?: "idle" | "running" | "succeeded";
+  targetScheduleArtifactVersionId?: string | null;
+}): Record<string, unknown> {
+  return {
+    state: input?.state ?? "idle",
+    status_label:
+      input?.state === "running"
+        ? "Agent working"
+        : input?.state === "succeeded"
+          ? "Draft ready"
+          : null,
+    human_task_id: null,
+    task_run_id: null,
+    blocked_reason: null,
+    target_workflow_run_id: input?.workflowRunId ?? null,
+    target_schedule_route: input?.workflowRunId
+      ? `/runs/${input.workflowRunId}/workpages/schedule-v0`
+      : null,
+    target_schedule_artifact_version_id: input?.targetScheduleArtifactVersionId ?? null
+  };
+}
+
 function patchRouteDemandArtifactContractState(version: RouteDemandArtifactVersionState): void {
   const payload = version.payload;
   const latestScheduleVersion = latestScheduleArtifactForRun(version.workflowRunId);
-  const actions = Array.isArray(payload.actions) ? payload.actions : [];
-  payload.actions = actions.map((action) => {
-    if (!action || typeof action !== "object" || Array.isArray(action)) {
-      return action;
-    }
-    const record = { ...(action as Record<string, unknown>) };
-    record.artifact_version_id = version.artifactVersionId;
-    if (asString(record.kind) === "save") {
-      record.submit_path = `/api/v1/workpages/workflow-runs/${version.workflowRunId}/route-demand-v0/artifacts/${version.artifactVersionId}/submit`;
-      record.state =
-        version.latestInChainArtifactVersionId === version.artifactVersionId ? "available" : "blocked";
-      record.disabled_reason =
-        version.latestInChainArtifactVersionId === version.artifactVersionId
-          ? null
-          : "historical_artifact_read_only";
-      record.action_ref = buildWorkpageActionRef({
-        actionId: asString(record.action_id),
+  const visibleDayCards = visibleRouteDemandDayCards(version.dayCards);
+  const editable = version.latestInChainArtifactVersionId === version.artifactVersionId;
+  payload.actions = [
+    {
+      action_id: "workpage.route-demand-v0.save",
+      kind: "save",
+      label: "Save route demand",
+      state: editable ? "available" : "blocked",
+      workpage_kind: "route-demand-v0",
+      artifact_version_id: version.artifactVersionId,
+      submit_path: `/api/v1/workpages/workflow-runs/${version.workflowRunId}/route-demand-v0/artifacts/${version.artifactVersionId}/submit`,
+      action_ref: buildWorkpageActionRef({
+        actionId: "workpage.route-demand-v0.save",
         workpageKind: "route-demand-v0",
         workflowRunId: version.workflowRunId,
         artifactVersionId: version.artifactVersionId
-      });
-    }
-    return record;
-  });
+      }),
+      disabled_reason: editable ? null : "historical_artifact_read_only"
+    },
+    ...(version.futureWeekSeed
+      ? [
+          {
+            action_id: "workpage.route-demand-v0.save_and_run",
+            kind: "save_and_run",
+            label: "Save and run scheduling agent",
+            state: editable ? "available" : "blocked",
+            workpage_kind: "route-demand-v0",
+            artifact_version_id: version.artifactVersionId,
+            submit_path: `/api/v1/workpages/workflow-runs/${version.workflowRunId}/route-demand-v0/artifacts/${version.artifactVersionId}/save-and-run`,
+            action_ref: buildWorkpageActionRef({
+              actionId: "workpage.route-demand-v0.save_and_run",
+              workpageKind: "route-demand-v0",
+              workflowRunId: version.workflowRunId,
+              artifactVersionId: version.artifactVersionId
+            }),
+            disabled_reason: editable ? null : "historical_artifact_read_only"
+          }
+        ]
+      : editable
+        ? [
+            {
+              action_id: "workpage.route-demand-v0.add_next_week",
+              kind: "add_next_week",
+              label: "Add a week",
+              state: "available",
+              workpage_kind: "route-demand-v0",
+              artifact_version_id: null,
+              create_path: `/api/v1/workpages/workflow-runs/${version.workflowRunId}/route-demand-v0/next-week`,
+              action_ref: buildWorkpageActionRef({
+                actionId: "workpage.route-demand-v0.add_next_week",
+                workpageKind: "route-demand-v0",
+                workflowRunId: version.workflowRunId,
+                artifactVersionId: null
+              }),
+              disabled_reason: null
+            }
+          ]
+        : [])
+  ];
 
   const artifactState = asObject(payload.artifact_state);
   if (artifactState) {
     artifactState.current_artifact_version_id = version.artifactVersionId;
     artifactState.latest_artifact_version_id = version.latestInChainArtifactVersionId;
-    artifactState.editable = version.latestInChainArtifactVersionId === version.artifactVersionId;
+    artifactState.editable = editable;
     artifactState.state_kind = "artifact_projection";
   }
 
@@ -1672,8 +1799,8 @@ function patchRouteDemandArtifactContractState(version: RouteDemandArtifactVersi
   if (workpage) {
     const summary = asObject(workpage.summary);
     if (summary) {
-      summary.service_day_count = version.dayCards.length;
-      summary.planned_route_total = version.dayCards.reduce(
+      summary.service_day_count = visibleDayCards.length;
+      summary.planned_route_total = visibleDayCards.reduce(
         (total, card) => total + asNumber(card.planned_route_count),
         0
       );
@@ -1682,7 +1809,7 @@ function patchRouteDemandArtifactContractState(version: RouteDemandArtifactVersi
 
   const dailyRowsSection = findTableSectionById(payload, "route_demand_daily_rows");
   if (dailyRowsSection) {
-    dailyRowsSection.rows = version.dayCards.map((card) => ({
+    dailyRowsSection.rows = visibleDayCards.map((card) => ({
       service_date: asString(card.service_date),
       planned_route_count: asNumber(card.planned_route_count),
       standard_slot_count: asNumber(card.standard_slot_count),
@@ -1716,6 +1843,13 @@ function patchRouteDemandArtifactContractState(version: RouteDemandArtifactVersi
     latest_schedule_draft_artifact_version_id: latestScheduleVersion?.artifactVersionId ?? null,
     latest_route_demand_artifact_version_id: version.latestInChainArtifactVersionId
   };
+  payload.future_week_options = version.futureWeekSeed
+    ? []
+    : buildRouteDemandFutureWeekOptions(version.workflowRunId);
+  payload.future_week_activation = buildRouteDemandFutureWeekActivation({
+    workflowRunId: version.workflowRunId,
+    targetScheduleArtifactVersionId: latestScheduleVersion?.artifactVersionId ?? null
+  });
   payload.artifact_history = buildArtifactHistoryPayload(
     Array.from(routeDemandArtifactVersions.values())
       .filter((candidate) => candidate.workflowRunId === version.workflowRunId)
@@ -1733,6 +1867,7 @@ function buildRouteDemandArtifactPayload(input: {
   latestInChainArtifactVersionId: string;
   dayCards: Array<Record<string, unknown>>;
   scheduleImpact: Record<string, unknown>;
+  futureWeekSeed?: boolean;
 }): Record<string, unknown> {
   const payload = cloneJson(routeDemandArtifactStateSnapshot.workpage_state) as Record<string, unknown>;
   const workpage = asObject(payload.workpage) ?? {};
@@ -1755,6 +1890,12 @@ function buildRouteDemandArtifactPayload(input: {
   payload.source = source;
   payload.freshness = freshness;
   payload.artifact_context = artifactContext;
+  payload.future_week_options = input.futureWeekSeed
+    ? []
+    : buildRouteDemandFutureWeekOptions(input.workflowRunId);
+  payload.future_week_activation = buildRouteDemandFutureWeekActivation({
+    workflowRunId: input.workflowRunId
+  });
 
   const version: RouteDemandArtifactVersionState = {
     artifactVersionId: input.artifactVersionId,
@@ -1767,6 +1908,7 @@ function buildRouteDemandArtifactPayload(input: {
     payload,
     dayCards: input.dayCards.map((card) => ({ ...card })),
     scheduleImpact: { ...input.scheduleImpact },
+    futureWeekSeed: Boolean(input.futureWeekSeed),
     supersedesArtifactVersionId: input.supersedesArtifactVersionId,
     supersededByArtifactVersionId: input.supersededByArtifactVersionId,
     latestInChainArtifactVersionId: input.latestInChainArtifactVersionId
@@ -1785,6 +1927,7 @@ function addRouteDemandArtifactVersion(input: {
   latestInChainArtifactVersionId: string;
   dayCards?: Array<Record<string, unknown>>;
   scheduleImpact?: Record<string, unknown>;
+  futureWeekSeed?: boolean;
 }): RouteDemandArtifactVersionState {
   const createdAt = nowIso();
   const dayCards = buildRouteDemandDayCards(input.dayCards);
@@ -1806,10 +1949,12 @@ function addRouteDemandArtifactVersion(input: {
       supersededByArtifactVersionId: input.supersededByArtifactVersionId ?? null,
       latestInChainArtifactVersionId: input.latestInChainArtifactVersionId,
       dayCards,
-      scheduleImpact
+      scheduleImpact,
+      futureWeekSeed: input.futureWeekSeed
     }),
     dayCards,
     scheduleImpact,
+    futureWeekSeed: Boolean(input.futureWeekSeed),
     supersedesArtifactVersionId: input.supersedesArtifactVersionId,
     supersededByArtifactVersionId: input.supersededByArtifactVersionId ?? null,
     latestInChainArtifactVersionId: input.latestInChainArtifactVersionId
@@ -1900,6 +2045,25 @@ function ensureRouteDemandArtifactDraft(
   });
 }
 
+function ensureFutureRouteDemandArtifactDraft(
+  sourceWorkflowRunId: string
+): RouteDemandArtifactVersionState {
+  const existing = latestRouteDemandArtifactForRun(FUTURE_ROUTE_DEMAND_WORKFLOW_RUN_ID);
+  if (existing) {
+    return existing;
+  }
+  const sourceVersion = ensureRouteDemandArtifactDraft(sourceWorkflowRunId);
+  const artifactVersionId = nextRouteDemandArtifactVersionId();
+  return addRouteDemandArtifactVersion({
+    artifactVersionId,
+    workflowRunId: FUTURE_ROUTE_DEMAND_WORKFLOW_RUN_ID,
+    supersedesArtifactVersionId: null,
+    latestInChainArtifactVersionId: artifactVersionId,
+    dayCards: buildFutureRouteDemandSeedDayCards(sourceVersion.dayCards),
+    futureWeekSeed: true
+  });
+}
+
 function routeDemandArtifactSubmitResponse(
   version: RouteDemandArtifactVersionState,
   supersedesArtifactVersionId: string
@@ -1914,6 +2078,18 @@ function routeDemandArtifactSubmitResponse(
     workflow_run_id: version.workflowRunId
   };
   return payload;
+}
+
+function routeDemandArtifactCreateResponse(
+  version: RouteDemandArtifactVersionState
+): Record<string, unknown> {
+  return {
+    created: {
+      artifact_version_id: version.artifactVersionId,
+      route: routeDemandArtifactRoute(version.artifactVersionId, version.workflowRunId),
+      workflow_run_id: version.workflowRunId
+    }
+  };
 }
 
 function latestDriverPreferencesArtifactForRun(
@@ -2304,6 +2480,7 @@ function driverPreferencesArtifactSubmitResponse(
 function buildRunRouteDemandWorkpagePayload(workflowRunId: string): Record<string, unknown> {
   const latestScheduleVersion = ensureScheduleArtifactDraft(workflowRunId);
   const latestVersion = ensureRouteDemandArtifactDraft(workflowRunId);
+  const visibleDayCards = visibleRouteDemandDayCards(latestVersion.dayCards);
   const payload = cloneJson(routeDemandRunWorkpageStateSnapshot.workpage_state) as Record<string, unknown>;
   const runContext = asObject(payload.run_context) ?? {};
   const freshness = asObject(payload.freshness) ?? {};
@@ -2321,15 +2498,15 @@ function buildRunRouteDemandWorkpagePayload(workflowRunId: string): Record<strin
   artifactState.latest_artifact_version_id = latestVersion.artifactVersionId;
   artifactState.current_artifact_version_id = null;
   artifactState.editable = false;
-  summary.service_day_count = latestVersion.dayCards.length;
-  summary.planned_route_total = latestVersion.dayCards.reduce(
+  summary.service_day_count = visibleDayCards.length;
+  summary.planned_route_total = visibleDayCards.reduce(
     (total, card) => total + asNumber(card.planned_route_count),
     0
   );
 
   const dailyRowsSection = findTableSectionById(payload, "route_demand_daily_rows");
   if (dailyRowsSection) {
-    dailyRowsSection.rows = latestVersion.dayCards.map((card) => ({
+    dailyRowsSection.rows = visibleDayCards.map((card) => ({
       service_date: asString(card.service_date),
       planned_route_count: asNumber(card.planned_route_count),
       standard_slot_count: asNumber(card.standard_slot_count),
@@ -2354,22 +2531,44 @@ function buildRunRouteDemandWorkpagePayload(workflowRunId: string): Record<strin
     latest_schedule_draft_artifact_version_id: latestScheduleVersion.artifactVersionId,
     latest_route_demand_artifact_version_id: latestVersion.artifactVersionId
   };
-  payload.actions = actions.map((action) => {
-    if (!action || typeof action !== "object" || Array.isArray(action)) {
-      return action;
-    }
-    const record = { ...(action as Record<string, unknown>) };
-    record.artifact_version_id = latestVersion.artifactVersionId;
-    record.route = routeDemandArtifactRoute(latestVersion.artifactVersionId, workflowRunId);
-    record.state = "available";
-    record.action_ref = buildWorkpageActionRef({
-      actionId: asString(record.action_id),
-      workpageKind: "route-demand-v0",
-      workflowRunId,
-      artifactVersionId: latestVersion.artifactVersionId
-    });
-    return record;
+  payload.future_week_options = buildRouteDemandFutureWeekOptions(workflowRunId);
+  payload.future_week_activation = buildRouteDemandFutureWeekActivation({
+    workflowRunId,
+    targetScheduleArtifactVersionId: latestScheduleVersion.artifactVersionId
   });
+  void actions;
+  payload.actions = [
+    {
+      action_id: "workpage.route-demand-v0.open_latest",
+      kind: "open_latest",
+      label: "Open route demand",
+      state: "available",
+      workpage_kind: "route-demand-v0",
+      artifact_version_id: latestVersion.artifactVersionId,
+      route: routeDemandArtifactRoute(latestVersion.artifactVersionId, workflowRunId),
+      action_ref: buildWorkpageActionRef({
+        actionId: "workpage.route-demand-v0.open_latest",
+        workpageKind: "route-demand-v0",
+        workflowRunId,
+        artifactVersionId: latestVersion.artifactVersionId
+      })
+    },
+    {
+      action_id: "workpage.route-demand-v0.add_next_week",
+      kind: "add_next_week",
+      label: "Add a week",
+      state: "available",
+      workpage_kind: "route-demand-v0",
+      artifact_version_id: null,
+      create_path: `/api/v1/workpages/workflow-runs/${workflowRunId}/route-demand-v0/next-week`,
+      action_ref: buildWorkpageActionRef({
+        actionId: "workpage.route-demand-v0.add_next_week",
+        workpageKind: "route-demand-v0",
+        workflowRunId,
+        artifactVersionId: null
+      })
+    }
+  ];
   return payload;
 }
 
@@ -3814,17 +4013,10 @@ async function handleRouteDemandArtifactSubmitRequest(
     scheduleImpact: {
       ...baseVersion.scheduleImpact,
       dependency_state: "drifted",
-      schedule_state: "awaiting_refresh",
-      refresh_task: {
-        human_task_id: "ht-route-demand-refresh-001",
-        task_run_id: "tr-route-demand-refresh-001",
-        state: "OPEN",
-        owner_role: "schedule_planner",
-        activation_key: `workpage.route-demand-v0.schedule-refresh:${submittedArtifactVersionId}`,
-        blocked_on_kind: "artifact_version",
-        blocked_on_ref: submittedArtifactVersionId
-      }
-    }
+      schedule_state: "drifted",
+      refresh_task: null
+    },
+    futureWeekSeed: baseVersion.futureWeekSeed
   });
   baseVersion.supersededByArtifactVersionId = submittedArtifactVersionId;
   patchArtifactPayloadLineage(baseVersion);
@@ -3838,6 +4030,101 @@ async function handleRouteDemandArtifactSubmitRequest(
     command: "api.workpages.artifact.submit",
     submitted: (routeDemandArtifactSubmitResponse(submittedVersion, artifactVersionId)
       .submitted as Record<string, unknown>) ?? {}
+  });
+}
+
+function createRouteDemandNextWeekResponse(
+  workflowRunId: string,
+  request: Request
+): Response {
+  if (!inScope(request)) {
+    return forbiddenWorkflowRun();
+  }
+  const createdVersion = ensureFutureRouteDemandArtifactDraft(workflowRunId);
+  state.audit.mutations.push(
+    `workpage-route-demand-next-week-create:${workflowRunId}:${createdVersion.workflowRunId}:${createdVersion.artifactVersionId}`
+  );
+  return ok({
+    command: "api.workpages.route_demand.next_week.create",
+    created:
+      (routeDemandArtifactCreateResponse(createdVersion).created as Record<string, unknown>) ?? {}
+  });
+}
+
+async function handleRouteDemandSaveAndRunRequest(
+  artifactVersionId: string,
+  request: Request
+): Promise<Response> {
+  if (!inScope(request)) {
+    return scheduleArtifactNotFoundResponse(artifactVersionId);
+  }
+
+  const baseVersion = routeDemandArtifactVersions.get(artifactVersionId);
+  if (!baseVersion) {
+    return scheduleArtifactNotFoundResponse(artifactVersionId);
+  }
+
+  const body = (await request.json()) as {
+    daily_demand_rows?: Array<{
+      service_date?: string;
+      planned_route_count?: number;
+    }>;
+  };
+  const requestedCounts = new Map(
+    (body.daily_demand_rows ?? []).map((row) => [
+      asString(row.service_date),
+      asNumber(row.planned_route_count)
+    ])
+  );
+  const nextDayCards = baseVersion.dayCards.map((card) => {
+    const serviceDate = asString(card.service_date);
+    const currentCount = asNumber(card.planned_route_count);
+    const nextCount = serviceDate && requestedCounts.has(serviceDate)
+      ? Math.max(asNumber(requestedCounts.get(serviceDate)), 0)
+      : currentCount;
+    const delta = nextCount - currentCount;
+    return {
+      ...card,
+      planned_route_count: nextCount,
+      standard_slot_count: Math.max(asNumber(card.standard_slot_count) + delta, 0),
+      delta_from_previous_version: {
+        planned_route_count_delta: delta
+      }
+    };
+  });
+  const submittedArtifactVersionId = nextRouteDemandArtifactVersionId();
+  const submittedVersion = addRouteDemandArtifactVersion({
+    artifactVersionId: submittedArtifactVersionId,
+    workflowRunId: baseVersion.workflowRunId,
+    supersedesArtifactVersionId: artifactVersionId,
+    latestInChainArtifactVersionId: submittedArtifactVersionId,
+    dayCards: nextDayCards,
+    scheduleImpact: {
+      ...baseVersion.scheduleImpact,
+      dependency_state: "aligned",
+      schedule_state: "aligned",
+      refresh_task: null
+    },
+    futureWeekSeed: baseVersion.futureWeekSeed
+  });
+  baseVersion.supersededByArtifactVersionId = submittedArtifactVersionId;
+  patchArtifactPayloadLineage(baseVersion);
+  patchRouteDemandArtifactContractState(baseVersion);
+  updateRouteDemandArtifactChainLatest(submittedArtifactVersionId, submittedArtifactVersionId);
+
+  const latestScheduleVersion = ensureScheduleArtifactDraft(baseVersion.workflowRunId);
+  state.audit.mutations.push(
+    `workpage-route-demand-save-and-run:${artifactVersionId}:${submittedArtifactVersionId}:${baseVersion.workflowRunId}`
+  );
+  return ok({
+    command: "api.workpages.route_demand.save_and_run",
+    submitted: {
+      ...((routeDemandArtifactSubmitResponse(submittedVersion, artifactVersionId)
+        .submitted as Record<string, unknown>) ?? {}),
+      target_workflow_run_id: baseVersion.workflowRunId,
+      target_schedule_route: `/runs/${baseVersion.workflowRunId}/workpages/schedule-v0`,
+      target_schedule_artifact_version_id: latestScheduleVersion.artifactVersionId
+    }
   });
 }
 
@@ -3987,21 +4274,28 @@ async function handleDriverPreferencesArtifactSubmitRequest(
   const body = (await request.json()) as {
     driver_rows?: Array<{
       driver_id?: string;
+      driver_quality?: string;
       preferences_by_weekday?: Record<string, unknown>;
     }>;
   };
   const requestedRows = Array.isArray(body.driver_rows) ? body.driver_rows : [];
-  const requestedByDriverId = new Map(
-    requestedRows.map((row) => [asString(row.driver_id), asObject(row.preferences_by_weekday)])
-  );
+  const requestedByDriverId = new Map(requestedRows.map((row) => [asString(row.driver_id), row]));
   const nextPreferenceGrid = cloneDriverPreferenceGrid(baseVersion.preferenceGrid);
   nextPreferenceGrid.drivers = nextPreferenceGrid.drivers.map((row) => {
-    const requestedPreferences = requestedByDriverId.get(asString(row.driver_id));
-    if (!requestedPreferences) {
+    const requestedRow = requestedByDriverId.get(asString(row.driver_id));
+    if (!requestedRow) {
       return row;
     }
+    const requestedPreferences = asObject(requestedRow.preferences_by_weekday) ?? {};
+    const requestedDriverQuality = asString(requestedRow.driver_quality).trim().toLowerCase();
     return {
       ...row,
+      driver_quality:
+        requestedDriverQuality === "high" ||
+        requestedDriverQuality === "medium" ||
+        requestedDriverQuality === "low"
+          ? requestedDriverQuality
+          : asString(row.driver_quality).trim().toLowerCase() || "medium",
       preferences_by_weekday: {
         ...asObject(row.preferences_by_weekday),
         sun: asStringOrNull(requestedPreferences.sun),
@@ -4074,6 +4368,11 @@ export const handlers = [
     ensureScheduleArtifactDraft(String(params.workflowRunId));
     return HttpResponse.json(buildRunRouteDemandWorkpagePayload(String(params.workflowRunId)));
   }),
+  http.post(
+    "*/api/v1/workpages/workflow-runs/:workflowRunId/route-demand-v0/next-week",
+    ({ params, request }) =>
+      createRouteDemandNextWeekResponse(String(params.workflowRunId), request)
+  ),
   http.get("*/api/v1/workpages/workflow-runs/:workflowRunId/eod-v0", ({ params, request }) => {
     if (!inScope(request)) {
       return forbiddenWorkflowRun();
@@ -4180,6 +4479,11 @@ export const handlers = [
     "*/api/v1/workpages/workflow-runs/:workflowRunId/route-demand-v0/artifacts/:artifactVersionId/submit",
     async ({ params, request }) =>
       handleRouteDemandArtifactSubmitRequest(String(params.artifactVersionId), request)
+  ),
+  http.post(
+    "*/api/v1/workpages/workflow-runs/:workflowRunId/route-demand-v0/artifacts/:artifactVersionId/save-and-run",
+    async ({ params, request }) =>
+      handleRouteDemandSaveAndRunRequest(String(params.artifactVersionId), request)
   ),
   http.post(
     "*/api/v1/workpages/workflow-runs/:workflowRunId/driver-preferences-v0/artifacts/:artifactVersionId/submit",

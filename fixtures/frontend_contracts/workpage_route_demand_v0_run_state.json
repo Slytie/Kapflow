@@ -22,6 +22,23 @@
         "route": "/runs/<workflow_run_id:1>/workpages/route-demand-v0/artifacts/<artifact_version_id:2>",
         "state": "available",
         "workpage_kind": "route-demand-v0"
+      },
+      {
+        "action_id": "workpage.route-demand-v0.add_next_week",
+        "action_ref": {
+          "action_id": "workpage.route-demand-v0.add_next_week",
+          "artifact_version_id": null,
+          "subject": null,
+          "workflow_run_id": "<workflow_run_id:1>",
+          "workpage_kind": "route-demand-v0"
+        },
+        "artifact_version_id": null,
+        "create_path": "/api/v1/workpages/workflow-runs/<workflow_run_id:1>/route-demand-v0/next-week",
+        "disabled_reason": null,
+        "kind": "add_next_week",
+        "label": "Add a week",
+        "state": "available",
+        "workpage_kind": "route-demand-v0"
       }
     ],
     "artifact_history": null,
@@ -226,6 +243,26 @@
       "source_kind": "workflow_run_projection",
       "source_version": "<artifact_version_id:2>"
     },
+    "future_week_activation": {
+      "blocked_reason": null,
+      "human_task_id": null,
+      "state": "idle",
+      "status_label": null,
+      "target_schedule_artifact_version_id": null,
+      "target_schedule_route": null,
+      "target_workflow_run_id": "<workflow_run_id:1>",
+      "task_run_id": null
+    },
+    "future_week_options": [
+      {
+        "date_range_label": "2026-03-29 to 2026-04-04",
+        "end_date": "2026-04-04",
+        "label": "Week 2",
+        "option_id": "next_week",
+        "planning_week_id": "PW-2026-W14",
+        "start_date": "2026-03-29"
+      }
+    ],
     "run_context": {
       "activation_key": "snapshot:workpage-route-demand-v0-run:weekly-schedule-workpage",
       "logical_date": "2026-03-22",
@@ -268,12 +305,12 @@
             {
               "key": "service_day_count",
               "label": "Service days",
-              "value": 14
+              "value": 7
             },
             {
               "key": "planned_route_total",
               "label": "Planned routes",
-              "value": 268
+              "value": 134
             },
             {
               "key": "station_code",
@@ -389,69 +426,6 @@
               "rescue_slot_count": 0,
               "service_date": "2026-03-28",
               "standard_slot_count": 17
-            },
-            {
-              "excess_capacity_target": 3,
-              "on_call_target": 4,
-              "overflow_slot_count": 0,
-              "planned_route_count": 16,
-              "rescue_slot_count": 0,
-              "service_date": "2026-03-29",
-              "standard_slot_count": 16
-            },
-            {
-              "excess_capacity_target": 3,
-              "on_call_target": 4,
-              "overflow_slot_count": 0,
-              "planned_route_count": 23,
-              "rescue_slot_count": 0,
-              "service_date": "2026-03-30",
-              "standard_slot_count": 23
-            },
-            {
-              "excess_capacity_target": 3,
-              "on_call_target": 4,
-              "overflow_slot_count": 0,
-              "planned_route_count": 20,
-              "rescue_slot_count": 0,
-              "service_date": "2026-03-31",
-              "standard_slot_count": 20
-            },
-            {
-              "excess_capacity_target": 3,
-              "on_call_target": 4,
-              "overflow_slot_count": 0,
-              "planned_route_count": 19,
-              "rescue_slot_count": 0,
-              "service_date": "2026-04-01",
-              "standard_slot_count": 19
-            },
-            {
-              "excess_capacity_target": 3,
-              "on_call_target": 4,
-              "overflow_slot_count": 0,
-              "planned_route_count": 21,
-              "rescue_slot_count": 0,
-              "service_date": "2026-04-02",
-              "standard_slot_count": 21
-            },
-            {
-              "excess_capacity_target": 3,
-              "on_call_target": 4,
-              "overflow_slot_count": 0,
-              "planned_route_count": 18,
-              "rescue_slot_count": 0,
-              "service_date": "2026-04-03",
-              "standard_slot_count": 18
-            },
-            {
-              "excess_capacity_target": 3,
-              "on_call_target": 4,
-              "overflow_slot_count": 0,
-              "planned_route_count": 17,
-              "rescue_slot_count": 0,
-              "service_date": "2026-04-04",
-              "standard_slot_count": 17
             }
           ],
           "table_id": "route_demand_daily_rows",
@@ -480,10 +454,10 @@
       "source_examples": {},
       "summary": {
         "operational_week_start": "2026-03-22",
-        "planned_route_total": 268,
+        "planned_route_total": 134,
         "planning_week_id": "PW-2026-W13",
         "service_area": "Pitt Meadows",
-        "service_day_count": 14,
+        "service_day_count": 7,
         "station_code": "DVC4"
       },
       "title": "Weekly route demand review",

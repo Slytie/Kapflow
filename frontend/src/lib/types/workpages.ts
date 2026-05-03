@@ -51,6 +51,7 @@ export interface WorkpageTableSection {
   table_id: string;
   columns: WorkpageTableColumn[];
   rows: WorkpageTableRow[];
+  empty_message?: string;
 }
 
 export type WorkpageScheduleHeatmapCellState = "assigned" | "on_call" | "empty";
@@ -338,7 +339,33 @@ export interface WorkpageRouteDemandScheduleImpact {
   refresh_task: WorkpageRouteDemandRefreshTask | null;
 }
 
-export type WorkpageRouteDemandActionKind = "open_latest" | "save";
+export interface WorkpageRouteDemandFutureWeekOption {
+  option_id: string;
+  label: string;
+  planning_week_id: string;
+  start_date: string;
+  end_date: string;
+  date_range_label: string;
+}
+
+export interface WorkpageRouteDemandFutureWeekActivation {
+  state: "idle" | "blocked" | "running" | "succeeded" | "failed";
+  status_label: string | null;
+  human_task_id: string | null;
+  task_run_id: string | null;
+  blocked_reason: string | null;
+  target_workflow_run_id: string | null;
+  target_schedule_route: string | null;
+  target_schedule_artifact_version_id: string | null;
+  error_code?: string | null;
+  error_message?: string | null;
+}
+
+export type WorkpageRouteDemandActionKind =
+  | "open_latest"
+  | "save"
+  | "add_next_week"
+  | "save_and_run";
 
 export interface WorkpageRouteDemandAction {
   action_id: string;
@@ -348,16 +375,20 @@ export interface WorkpageRouteDemandAction {
   workpage_kind: string;
   artifact_version_id: string | null;
   route?: string | null;
+  create_path?: string | null;
   submit_path?: string | null;
   action_ref: WorkpageActionRef | null;
   disabled_reason?: string | null;
 }
+
+export type WorkpageDriverQuality = "high" | "medium" | "low";
 
 export interface WorkpageDriverPreferencesDriverRow {
   driver_id: string;
   driver_name: string;
   employment_type: string;
   on_call_eligible: boolean;
+  driver_quality: WorkpageDriverQuality;
   preferences_by_weekday: {
     sun: string | null;
     mon: string | null;

@@ -50,25 +50,14 @@ describe("LogisticsDriverPreferencesWorkpagePage", () => {
       expect(within(editor).queryByText(/^Week /i)).not.toBeInTheDocument();
       expect(within(editor).queryByText(/^Artifact /i)).not.toBeInTheDocument();
       expect(within(editor).queryByText(/Editable snapshot/i)).not.toBeInTheDocument();
-      const mondayCell = within(editor).getByRole("button", {
-        name: /Abhiraj Singh on 2026-03-23:/i
+      const qualitySelect = within(editor).getByRole("combobox", {
+        name: "Abhiraj Singh quality"
       });
-      const initialAriaLabel = mondayCell.getAttribute("aria-label") ?? "";
-      const initialState = initialAriaLabel.split(": ").at(-1) ?? "";
-      const nextStateLabel: Record<string, string> = {
-        "Open to work": "Prefer not to work",
-        "Prefer not to work": "Definitely cannot work",
-        "Definitely cannot work": "Unset",
-        Unset: "Open to work"
-      };
 
       expect(within(dialog).getByRole("button", { name: "Save snapshot" })).toBeDisabled();
-      await user.click(mondayCell);
+      await user.selectOptions(qualitySelect, "high");
       await waitFor(() => {
-        expect(mondayCell).toHaveAttribute(
-          "aria-label",
-          expect.stringContaining(nextStateLabel[initialState] ?? "Open to work")
-        );
+        expect(qualitySelect).toHaveValue("high");
       });
       expect(within(dialog).getByRole("button", { name: "Save snapshot" })).toBeEnabled();
 
@@ -132,6 +121,8 @@ describe("LogisticsDriverPreferencesWorkpagePage", () => {
       expect(
         within(page).getByRole("button", { name: /Abhiraj Singh on 2026-03-23:/i })
       ).toHaveAttribute("aria-disabled", "true");
+      expect(within(page).queryByRole("combobox", { name: "Abhiraj Singh quality" })).not.toBeInTheDocument();
+      expect(within(page).getAllByText("Quality: Medium").length).toBeGreaterThan(0);
       expect(within(page).getByRole("heading", { name: "Snapshot lifecycle" })).toBeInTheDocument();
       expect(
         within(page).getByRole("button", { name: "Create preferences snapshot" })
@@ -214,6 +205,45 @@ describe("LogisticsDriverPreferencesWorkpagePage", () => {
     },
     30000
   );
+
+  it("treats a quality-only change as dirty and persists it on the artifact page", async () => {
+    const user = userEvent.setup();
+    setFrontendOperatorContext();
+    await workpagesRepository.createWorkpage(
+      "/api/v1/workpages/workflow-runs/wr-weekly-001/driver-preferences-v0/snapshots"
+    );
+    window.history.pushState(
+      {},
+      "",
+      "/runs/wr-weekly-001/workpages/driver-preferences-v0/artifacts/av-driver-preferences-artifact-001"
+    );
+    render(<App />);
+
+    const page = await screen.findByTestId("driver-preferences-artifact-workpage-page");
+    const qualitySelect = within(page).getByRole("combobox", {
+      name: "Abhiraj Singh quality"
+    });
+
+    expect(within(page).getByRole("button", { name: "Save snapshot" })).toBeDisabled();
+    await user.selectOptions(qualitySelect, "high");
+    await waitFor(() => {
+      expect(qualitySelect).toHaveValue("high");
+    });
+    expect(within(page).getByRole("button", { name: "Save snapshot" })).toBeEnabled();
+
+    await user.click(within(page).getByRole("button", { name: "Save snapshot" }));
+
+    await waitFor(() => {
+      expect(window.location.pathname).toBe(
+        "/runs/wr-weekly-001/workpages/driver-preferences-v0/artifacts/av-driver-preferences-artifact-002"
+      );
+    });
+
+    const refreshedPage = await screen.findByTestId("driver-preferences-artifact-workpage-page");
+    expect(
+      within(refreshedPage).getByRole("combobox", { name: "Abhiraj Singh quality" })
+    ).toHaveValue("high");
+  }, 30000);
 
   it("keeps unsaved local edits across same-snapshot refreshes", async () => {
     const user = userEvent.setup();

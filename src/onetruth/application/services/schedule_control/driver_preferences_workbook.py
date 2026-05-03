@@ -10,6 +10,7 @@ from .bundle_builder import WeeklyScheduleControlBundle
 
 DRIVER_PREFERENCES_DATASET_KEY = "planning.driver_shift_preferences.workbook"
 DRIVER_PREFERENCE_WEEKDAY_KEYS = ("sun", "mon", "tue", "wed", "thu", "fri", "sat")
+DRIVER_QUALITY_DEFAULT = "medium"
 _ALLOWED_PREFERENCE_VALUES = frozenset(
     {
         "definitely_can_not_work",
@@ -18,6 +19,7 @@ _ALLOWED_PREFERENCE_VALUES = frozenset(
         None,
     }
 )
+_ALLOWED_DRIVER_QUALITY_VALUES = frozenset({"high", DRIVER_QUALITY_DEFAULT, "low"})
 
 
 def build_initial_driver_preferences_workbook(
@@ -40,6 +42,7 @@ def build_initial_driver_preferences_workbook(
                 "on_call_eligible": bool(
                     getattr(availability_by_driver.get(driver.driver_id), "on_call_eligible", False)
                 ),
+                "driver_quality": DRIVER_QUALITY_DEFAULT,
                 "preferences_by_weekday": _seed_driver_preferences_by_weekday(
                     bundle=bundle,
                     driver_id=driver.driver_id,
@@ -232,6 +235,10 @@ def _normalize_driver_rows(raw_rows: Any, *, weekdays: Sequence[str]) -> list[di
                 "driver_name": str(row.get("driver_name") or driver_id).strip(),
                 "employment_type": str(row.get("employment_type") or "").strip(),
                 "on_call_eligible": bool(row.get("on_call_eligible")),
+                "driver_quality": _normalize_driver_quality(
+                    row.get("driver_quality"),
+                    label=f"drivers[{index}].driver_quality",
+                ),
                 "preferences_by_weekday": preferences,
             }
         )
@@ -248,16 +255,20 @@ def _normalize_submitted_driver_rows(raw_rows: Any, *, weekdays: Sequence[str]) 
         driver_id = str(row.get("driver_id") or "").strip()
         if not driver_id:
             raise ValueError(f"driver_rows[{index}].driver_id is required")
-        rows.append(
-            {
-                "driver_id": driver_id,
-                "preferences_by_weekday": _normalize_preferences_map(
-                    row.get("preferences_by_weekday"),
-                    weekdays=weekdays,
-                    label=f"driver_rows[{index}].preferences_by_weekday",
-                ),
-            }
-        )
+        normalized_row = {
+            "driver_id": driver_id,
+            "preferences_by_weekday": _normalize_preferences_map(
+                row.get("preferences_by_weekday"),
+                weekdays=weekdays,
+                label=f"driver_rows[{index}].preferences_by_weekday",
+            ),
+        }
+        if "driver_quality" in row:
+            normalized_row["driver_quality"] = _normalize_driver_quality(
+                row.get("driver_quality"),
+                label=f"driver_rows[{index}].driver_quality",
+            )
+        rows.append(normalized_row)
     return rows
 
 
@@ -280,6 +291,17 @@ def _validated_merged_driver_rows(
         merged.append(
             {
                 **base_row,
+                "driver_quality": (
+                    _normalize_driver_quality(
+                        submitted_row.get("driver_quality"),
+                        label=f"driver_rows[{index}].driver_quality",
+                    )
+                    if "driver_quality" in submitted_row
+                    else _normalize_driver_quality(
+                        base_row.get("driver_quality"),
+                        label=f"base_drivers[{index}].driver_quality",
+                    )
+                ),
                 "preferences_by_weekday": _normalize_preferences_map(
                     submitted_row.get("preferences_by_weekday"),
                     weekdays=weekdays,
@@ -314,6 +336,19 @@ def _normalize_preferences_map(
     return normalized
 
 
+def _normalize_driver_quality(
+    raw_driver_quality: Any,
+    *,
+    label: str,
+) -> str:
+    normalized_driver_quality = (
+        str(raw_driver_quality).strip().lower() if raw_driver_quality is not None else ""
+    ) or DRIVER_QUALITY_DEFAULT
+    if normalized_driver_quality not in _ALLOWED_DRIVER_QUALITY_VALUES:
+        raise ValueError(f"{label} must be one of high, medium, or low")
+    return normalized_driver_quality
+
+
 def _service_dates_for_bundle(
     bundle: WeeklyScheduleControlBundle,
 ) -> list[dict[str, str]]:
@@ -340,7 +375,9 @@ def _seed_driver_preferences_by_weekday(
     driver_id: str,
     service_dates: Sequence[Mapping[str, str]],
 ) -> dict[str, str]:
-    seed_scope = f"{bundle.planning_week_id}:{bundle.workflow_run_id}:{driver_id}"
+    # Keep seeded demo preferences stable across regenerated workflow runs for the
+    # same planning week so frontend snapshot exports remain deterministic.
+    seed_scope = f"{bundle.planning_week_id}:{bundle.scope_start}:{driver_id}"
     open_target = 4 + (_stable_int(f"{seed_scope}:open-target") % 3)
     unavailable_like_dates = _unavailable_like_service_dates(
         bundle=bundle,

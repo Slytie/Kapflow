@@ -5,6 +5,7 @@ import sqlite3
 from typing import Any, Mapping
 
 from onetruth.infrastructure.repositories.artifact_versions import (
+    list_artifact_versions_for_workflow_run,
     list_artifact_versions_for_scope_and_kind,
 )
 
@@ -23,7 +24,10 @@ def driver_availability_exceptions_for_workflow_run(
 ) -> dict[str, Any]:
     tenant_id = str(workflow_run.get("tenant_id") or "")
     domain_id = str(workflow_run.get("domain_id") or "")
-    lower_bound = _optional_iso_date(workflow_run.get("logical_date"))
+    target_service_dates = _workflow_run_service_dates(
+        connection,
+        workflow_run=workflow_run,
+    )
     artifacts = list_artifact_versions_for_scope_and_kind(
         connection,
         tenant_id=tenant_id,
@@ -38,8 +42,20 @@ def driver_availability_exceptions_for_workflow_run(
             exception_id = str(item.get("exception_id") or "").strip()
             if not exception_id or exception_id in seen:
                 continue
-            end_date = _optional_iso_date(item.get("end_date"))
-            if lower_bound is not None and end_date is not None and end_date < lower_bound:
+            if target_service_dates:
+                start_date = _optional_iso_date(item.get("start_date"))
+                end_date = _optional_iso_date(item.get("end_date"))
+                if start_date is None or end_date is None:
+                    continue
+                exception_service_dates = set(date_range_inclusive(start_date, end_date))
+                if not exception_service_dates.intersection(target_service_dates):
+                    continue
+            else:
+                lower_bound = _optional_iso_date(workflow_run.get("logical_date"))
+                end_date = _optional_iso_date(item.get("end_date"))
+                if lower_bound is not None and end_date is not None and end_date < lower_bound:
+                    continue
+            if exception_id in seen:
                 continue
             seen.add(exception_id)
             items.append(item)
@@ -212,6 +228,116 @@ def _optional_iso_date(value: Any) -> date | None:
         return date.fromisoformat(text)
     except ValueError:
         return None
+
+
+def _workflow_run_service_dates(
+    connection: sqlite3.Connection,
+    *,
+    workflow_run: Mapping[str, Any],
+) -> set[str]:
+    workflow_run_id = str(workflow_run.get("workflow_run_id") or "").strip()
+    if workflow_run_id:
+        artifacts = list_artifact_versions_for_workflow_run(connection, workflow_run_id)
+        approved_availability = _latest_artifact_for_kind(
+            artifacts,
+            PLANNING_APPROVED_AVAILABILITY_DATASET_KEY,
+        )
+        approved_availability_dates = _service_dates_from_artifact_rows(approved_availability)
+        if approved_availability_dates:
+            return approved_availability_dates
+        route_demand = _latest_artifact_for_kind(
+            artifacts,
+            "planning.route_slot_requirements.workbook",
+        )
+        route_demand_dates = _service_dates_from_route_demand_artifact(route_demand)
+        if route_demand_dates:
+            return route_demand_dates
+    logical_date = _optional_iso_date(workflow_run.get("logical_date"))
+    if logical_date is None:
+        return set()
+    return {(logical_date + timedelta(days=offset)).isoformat() for offset in range(7)}
+
+
+def _service_dates_from_artifact_rows(artifact: Mapping[str, Any] | None) -> set[str]:
+    if artifact is None:
+        return set()
+    metadata = artifact.get("metadata_json")
+    if not isinstance(metadata, Mapping):
+        return set()
+    _columns, rows = table_rows_from_metadata(metadata)
+    return {
+        str(row.get("service_date") or "").strip()
+        for row in rows
+        if str(row.get("service_date") or "").strip()
+    }
+
+
+def _service_dates_from_route_demand_artifact(artifact: Mapping[str, Any] | None) -> set[str]:
+    if artifact is None:
+        return set()
+    metadata = artifact.get("metadata_json")
+    if not isinstance(metadata, Mapping):
+        return set()
+    explicit_scope_dates = _service_dates_from_explicit_scope(metadata)
+    if explicit_scope_dates:
+        return explicit_scope_dates
+    _columns, rows = table_rows_from_metadata(metadata)
+    row_dates = {
+        str(row.get("service_date") or "").strip()
+        for row in rows
+        if str(row.get("service_date") or "").strip()
+    }
+    if row_dates:
+        return row_dates
+    raw_daily_rows = metadata.get("daily_demand_rows")
+    if not isinstance(raw_daily_rows, list):
+        return set()
+    dates: list[str] = []
+    for row in raw_daily_rows:
+        service_date = ""
+        if isinstance(row, Mapping):
+            service_date = str(row.get("service_date") or "").strip()
+        elif isinstance(row, list) and row:
+            service_date = str(row[0] or "").strip()
+        if not service_date:
+            continue
+        dates.append(service_date)
+        if len(dates) == 7:
+            break
+    return set(dates)
+
+
+def _service_dates_from_explicit_scope(metadata: Mapping[str, Any]) -> set[str]:
+    scope_start = _optional_iso_date(metadata.get("scope_start"))
+    scope_end_exclusive = _optional_iso_date(metadata.get("scope_end_exclusive"))
+    if scope_start is None or scope_end_exclusive is None or scope_end_exclusive <= scope_start:
+        return set()
+    dates: set[str] = set()
+    cursor = scope_start
+    while cursor < scope_end_exclusive:
+        dates.add(cursor.isoformat())
+        cursor += timedelta(days=1)
+    return dates
+
+
+def _latest_artifact_for_kind(
+    artifacts: list[Mapping[str, Any]],
+    artifact_kind: str,
+) -> Mapping[str, Any] | None:
+    matches = [
+        artifact
+        for artifact in artifacts
+        if str(artifact.get("artifact_kind") or "") == artifact_kind
+    ]
+    if not matches:
+        return None
+    return sorted(
+        matches,
+        key=lambda artifact: (
+            str(artifact.get("created_at") or ""),
+            str(artifact.get("artifact_version_id") or ""),
+        ),
+    )[-1]
 
 
 def _string_list(value: Any) -> list[str]:

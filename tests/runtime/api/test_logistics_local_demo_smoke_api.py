@@ -232,8 +232,52 @@ def test_weekly_first_local_demo_seed_smoke_path_walks_weekly_live_and_reporting
     assert len(day_cards) == 14
     assert day_cards[0]["service_date"] == "2026-03-22"
     assert day_cards[-1]["service_date"] == "2026-04-04"
-    assert route_demand_payload["workpage"]["summary"]["service_day_count"] == 14
-    assert route_demand_payload["workpage"]["summary"]["planned_route_total"] == 268
+    assert route_demand_payload["workpage"]["summary"]["planning_week_id"] == "PW-2026-W13"
+    assert route_demand_payload["workpage"]["summary"]["service_day_count"] == 7
+    assert route_demand_payload["workpage"]["summary"]["planned_route_total"] == 134
+    assert route_demand_payload["future_week_options"] == [
+        {
+            "option_id": "next_week",
+            "label": "Week 2",
+            "planning_week_id": "PW-2026-W14",
+            "start_date": "2026-03-29",
+            "end_date": "2026-04-04",
+            "date_range_label": "2026-03-29 to 2026-04-04",
+        }
+    ]
+
+    created_next_week = client.post(
+        f"/api/v1/workpages/workflow-runs/{weekly_run_id}/route-demand-v0/next-week",
+        payload={"idempotency_key": "api:local-demo:route-demand:add-next-week"},
+    )
+    assert created_next_week.status_code == 200, created_next_week.payload
+    future_workflow_run_id = str(created_next_week.payload["created"]["workflow_run_id"])
+    future_artifact_version_id = str(created_next_week.payload["created"]["artifact_version_id"])
+    future_run_rows = _query_rows(
+        db_path,
+        """
+        SELECT partition_key, logical_date
+        FROM workflow_runs
+        WHERE workflow_run_id = ?
+        """,
+        (future_workflow_run_id,),
+    )
+    assert future_run_rows == [
+        {
+            "partition_key": "PW-2026-W14",
+            "logical_date": "2026-03-30",
+        }
+    ]
+    future_route_demand = client.get(
+        f"/api/v1/workpages/workflow-runs/{future_workflow_run_id}/"
+        f"route-demand-v0/artifacts/{future_artifact_version_id}"
+    )
+    assert future_route_demand.status_code == 200, future_route_demand.payload
+    future_day_cards = future_route_demand.payload["calculations"]["day_cards"]
+    assert len(future_day_cards) == 7
+    assert future_day_cards[0]["service_date"] == "2026-03-29"
+    assert future_day_cards[-1]["service_date"] == "2026-04-04"
+    assert all(int(card["planned_route_count"]) == 0 for card in future_day_cards)
 
     weekly_build_task_id = str(intake_complete.payload["result"]["spawned_children"][0]["human_task_id"])
 

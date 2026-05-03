@@ -28,8 +28,8 @@
     },
     "run_context": {
       "activation_key": "snapshot:workpage-eod-v0-run:dispatch-reporting-workpage",
-      "logical_date": "2026-03-16",
-      "partition_key": "SD-2026-03-16",
+      "logical_date": "2026-03-24",
+      "partition_key": "SD-2026-03-24",
       "state": "OPEN",
       "workflow_id": "dispatch_reporting.v1",
       "workflow_run_id": "<workflow_run_id:1>",
@@ -60,41 +60,41 @@
             {
               "key": "total_routes",
               "label": "Total routes actual",
-              "value": 3
+              "value": 0
             },
             {
               "key": "packages_dispatched",
               "label": "Packages dispatched",
-              "value": 786
+              "value": 0
             },
             {
               "key": "packages_delivered",
               "label": "Packages delivered",
-              "value": 783
+              "value": 0
             },
             {
               "key": "packages_returned",
               "label": "Packages returned",
-              "value": 3
+              "value": 0
             },
             {
               "key": "delivered_pct",
               "label": "Delivered %",
-              "value": "99.62%"
+              "value": "0.00%"
             },
             {
               "key": "average_route_time",
               "label": "Average route time",
-              "value": "9:47:00"
+              "value": "0:00:00"
             }
           ],
           "kind": "summary_cards",
           "title": "Daily summary"
         },
         {
-          "body": "This run-backed EOD landing is generated from canonical dispatch-reporting artifacts sourced from intentionally partial 2026-03-16 example material. Source workbook summary tabs showed formula failures, so row-level actuals remain the primary truth and the landing surfaces a warning instead of reproducing broken formulas.",
+          "body": "This run-backed EOD landing is generated from canonical dispatch-reporting artifacts. Route actuals, closeout details, and UPD review stay grounded in the latest immutable draft.",
           "kind": "note_panel",
-          "title": "Formula-integrity warning"
+          "title": "Import status"
         },
         {
           "columns": [
@@ -140,44 +140,7 @@
             }
           ],
           "kind": "table",
-          "rows": [
-            {
-              "actual_minutes": 637,
-              "actual_window": "11:50 - 22:27",
-              "driver_name": "Brahamvir Singh",
-              "packages_delivered": 286,
-              "packages_dispatched": 286,
-              "planned_window": "11:50 - 18:40",
-              "return_reasons": "",
-              "returns": 0,
-              "route_id": "CX100",
-              "upd_candidate": true
-            },
-            {
-              "actual_minutes": 587,
-              "actual_window": "11:50 - 21:37",
-              "driver_name": "Tarandeep Singh",
-              "packages_delivered": 290,
-              "packages_dispatched": 292,
-              "planned_window": "11:50 - 18:20",
-              "return_reasons": "BC,FDD",
-              "returns": 2,
-              "route_id": "CX95",
-              "upd_candidate": false
-            },
-            {
-              "actual_minutes": 537,
-              "actual_window": "11:55 - 20:52",
-              "driver_name": "Yong-Kyoon Kim",
-              "packages_delivered": 207,
-              "packages_dispatched": 208,
-              "planned_window": "11:55 - 18:30",
-              "return_reasons": "NSL",
-              "returns": 1,
-              "route_id": "CX99",
-              "upd_candidate": false
-            }
-          ],
+          "rows": [],
           "table_id": "route_actuals",
           "title": "Route actuals"
         },
@@ -187,22 +150,14 @@
               "input": "multi_select",
               "key": "sick_calls",
               "label": "Sick calls",
-              "options": [
-                "Brahamvir Singh",
-                "Tarandeep Singh",
-                "Yong-Kyoon Kim"
-              ],
+              "options": [],
               "value": []
             },
             {
               "input": "multi_select",
               "key": "unavailable_drivers",
               "label": "Not available",
-              "options": [
-                "Brahamvir Singh",
-                "Tarandeep Singh",
-                "Yong-Kyoon Kim"
-              ],
+              "options": [],
               "value": []
             },
             {
@@ -227,7 +182,7 @@
               "input": "time",
               "key": "last_driver_clockout",
               "label": "Last driver clock-out",
-              "value": "22:27"
+              "value": ""
             },
             {
               "input": "textarea",
@@ -248,40 +203,19 @@
         },
         {
           "checklist_id": "upd_candidates",
-          "items": [
-            {
-              "detail": ">600 minutes actual time",
-              "item_id": "upd-candidate-cx100",
-              "note": "",
-              "selected": false,
-              "tags": [
-                "637 minutes"
-              ],
-              "title": "Brahamvir Singh \u00b7 CX100"
-            },
-            {
-              "detail": "Below 600 minutes",
-              "item_id": "upd-candidate-cx95",
-              "note": "",
-              "selected": false,
-              "tags": [
-                "587 minutes"
-              ],
-              "title": "Tarandeep Singh \u00b7 CX95"
-            }
-          ],
+          "items": [],
           "kind": "checklist",
           "title": "UPD candidate review"
         },
         {
           "entries": [
             {
-              "label": "Previous daily reports",
-              "value": "future slice"
+              "label": "Latest normalized artifact",
+              "value": "<artifact_version_id:4>"
             },
             {
-              "label": "Weekly / monthly summaries",
-              "value": "future slice"
+              "label": "Latest draft artifact",
+              "value": "<artifact_version_id:2>"
             }
           ],
           "kind": "history_stub",
@@ -291,27 +225,26 @@
       "source_artifact_version_id": null,
       "source_examples": {},
       "summary": {
-        "actual_dispatched": 786,
-        "average_route_time": "9:47:00",
-        "delivered_pct": 99.62,
+        "actual_dispatched": 0,
+        "average_route_time": "0:00:00",
+        "delivered_pct": 0.0,
         "dsp_name": "QDCI",
-        "formula_integrity_warning": true,
-        "packages_delivered": 783,
-        "packages_dispatched": 786,
-        "packages_returned": 3,
-        "return_pct": 0.38,
-        "service_date": "2026-03-16",
+        "formula_integrity_warning": false,
+        "packages_delivered": 0,
+        "packages_dispatched": 0,
+        "packages_returned": 0,
+        "return_pct": 0.0,
+        "service_date": "2026-03-24",
         "station_code": "DVC4",
-        "total_routes_actual": 3,
-        "warning_note": "This EOD projection is built from canonical dispatch-reporting artifacts sourced from an intentionally partial 2026-03-16 QDCI / DVC4 example family. Row-level actuals remain the primary truth because the source workbook summary tabs contained broken formulas."
+        "total_routes_actual": 0,
+        "warning_note": "This EOD projection is built from canonical dispatch-reporting artifacts. Row-level route actuals remain the primary truth when summary sheets contain broken formulas."
       },
       "title": "End-of-day report",
       "validation": {
         "status": "informational",
         "warnings": [
-          "This run-backed EOD landing is generated from canonical dispatch-reporting artifacts sourced from an intentionally partial 2026-03-16 example family.",
-          "Workbook summary formulas were broken in the source material, so row-level actuals remain the primary truth for this projection.",
-          "Create draft opens the immutable reporting workbook edit lane, and submit creates a new superseding workbook artifact version."
+          "This run-backed EOD landing is generated from canonical dispatch-reporting artifacts.",
+          "Submit creates a new immutable superseding reporting workbook artifact version."
         ]
       },
       "version": 2,

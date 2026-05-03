@@ -15,10 +15,10 @@ from onetruth.application.services.schedule_control.driver_preferences_workbook 
 )
 
 
-def _actual_ops_bundle():
+def _actual_ops_bundle(*, workflow_run_id: str = "wr-driver-preferences-001"):
     fixture_payloads = build_actual_ops_weekly_stage04_fixture_payloads()
     workflow_run = {
-        "workflow_run_id": "wr-driver-preferences-001",
+        "workflow_run_id": workflow_run_id,
         "partition_key": "PW-2026-W13",
         "logical_date": "2026-03-22",
     }
@@ -66,6 +66,7 @@ def test_driver_preferences_workbook_builds_initial_snapshot_from_roster_scope()
     assert workbook == repeated
     assert workbook["drivers"]
     first_driver = workbook["drivers"][0]
+    assert first_driver["driver_quality"] == "medium"
     assert set(first_driver["preferences_by_weekday"]) == set(DRIVER_PREFERENCE_WEEKDAY_KEYS)
     assert all(value is not None for value in first_driver["preferences_by_weekday"].values())
     assert 4 <= sum(
@@ -73,6 +74,17 @@ def test_driver_preferences_workbook_builds_initial_snapshot_from_roster_scope()
         for value in first_driver["preferences_by_weekday"].values()
         if value == "open_to_work"
     ) <= 6
+
+
+def test_driver_preferences_workbook_seed_is_stable_across_workflow_runs() -> None:
+    first = build_initial_driver_preferences_workbook(
+        bundle=_actual_ops_bundle(workflow_run_id="wr-driver-preferences-001")
+    )
+    second = build_initial_driver_preferences_workbook(
+        bundle=_actual_ops_bundle(workflow_run_id="wr-driver-preferences-002")
+    )
+
+    assert first["drivers"] == second["drivers"]
 
 
 def test_driver_preferences_workbook_round_trips_projection_and_submit_values() -> None:
@@ -85,6 +97,13 @@ def test_driver_preferences_workbook_round_trips_projection_and_submit_values() 
     submitted_rows = [
         {
             "driver_id": row["driver_id"],
+            "driver_quality": (
+                "high"
+                if row["driver_id"] == first_driver["driver_id"]
+                else "low"
+                if row["driver_id"] == second_driver["driver_id"]
+                else row["driver_quality"]
+            ),
             "preferences_by_weekday": {
                 **row["preferences_by_weekday"],
                 "mon": (
@@ -111,6 +130,8 @@ def test_driver_preferences_workbook_round_trips_projection_and_submit_values() 
 
     assert updated_projection["weekdays"] == list(DRIVER_PREFERENCE_WEEKDAY_KEYS)
     assert updated_projection["service_dates"] == initial["service_dates"]
+    assert updated_by_id[first_driver["driver_id"]]["driver_quality"] == "high"
+    assert updated_by_id[second_driver["driver_id"]]["driver_quality"] == "low"
     assert (
         updated_by_id[first_driver["driver_id"]]["preferences_by_weekday"]["mon"]
         == "open_to_work"
@@ -122,4 +143,44 @@ def test_driver_preferences_workbook_round_trips_projection_and_submit_values() 
     assert (
         updated_by_id[first_driver["driver_id"]]["preferences_by_weekday"]["sun"]
         == first_driver["preferences_by_weekday"]["sun"]
+    )
+
+
+def test_driver_preferences_workbook_defaults_missing_quality_to_medium() -> None:
+    initial = build_initial_driver_preferences_workbook(bundle=_actual_ops_bundle())
+    for row in initial["drivers"]:
+        row.pop("driver_quality", None)
+
+    projection = project_driver_preferences_workbook(
+        driver_preferences_workbook_bytes_from_metadata_json(initial)
+    )
+
+    assert projection["drivers"]
+    assert all(row["driver_quality"] == "medium" for row in projection["drivers"])
+
+
+def test_driver_preferences_workbook_preserves_base_quality_when_submit_omits_it() -> None:
+    initial = build_initial_driver_preferences_workbook(bundle=_actual_ops_bundle())
+    first_driver_id = str(initial["drivers"][0]["driver_id"])
+    initial["drivers"][0]["driver_quality"] = "high"
+    initial_bytes = driver_preferences_workbook_bytes_from_metadata_json(initial)
+    projection = project_driver_preferences_workbook(initial_bytes)
+
+    updated_bytes = materialize_driver_preferences_workbook(
+        initial_bytes,
+        driver_rows=[
+            {
+                "driver_id": row["driver_id"],
+                "preferences_by_weekday": row["preferences_by_weekday"],
+            }
+            for row in projection["drivers"]
+        ],
+    )
+    updated_projection = project_driver_preferences_workbook(updated_bytes)
+    updated_by_id = {row["driver_id"]: row for row in updated_projection["drivers"]}
+
+    assert updated_by_id[first_driver_id]["driver_quality"] == "high"
+    assert all(
+        row["driver_quality"] in {"high", "medium", "low"}
+        for row in updated_projection["drivers"]
     )

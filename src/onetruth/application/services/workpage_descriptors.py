@@ -179,6 +179,24 @@ def canonical_route_demand_artifact_submit_path(
     )
 
 
+def canonical_route_demand_next_week_create_path(*, workflow_run_id: str) -> str:
+    return (
+        f"/api/v1/workpages/workflow-runs/{workflow_run_id}/"
+        f"{ROUTE_DEMAND_WORKPAGE_KIND}/next-week"
+    )
+
+
+def canonical_route_demand_artifact_save_and_run_path(
+    *,
+    workflow_run_id: str,
+    artifact_version_id: str,
+) -> str:
+    return (
+        f"/api/v1/workpages/workflow-runs/{workflow_run_id}/"
+        f"{ROUTE_DEMAND_WORKPAGE_KIND}/artifacts/{artifact_version_id}/save-and-run"
+    )
+
+
 def canonical_driver_preferences_artifact_submit_path(
     *,
     workflow_run_id: str,
@@ -341,16 +359,18 @@ _DESCRIPTORS: tuple[WorkpageDescriptor, ...] = (
             artifact_version_id=artifact_version_id,
         ),
         backend_artifact_preview_path_builder=None,
-        create_path_builder=None,
+        create_path_builder=lambda workflow_run_id: canonical_route_demand_next_week_create_path(
+            workflow_run_id=workflow_run_id
+        ),
         open_action_id="workpage.route-demand-v0.open_latest",
         open_action_label="Open route demand",
-        create_action_id=None,
-        create_action_label=None,
+        create_action_id="workpage.route-demand-v0.add_next_week",
+        create_action_label="Add a week",
         submit_action_id="workpage.route-demand-v0.save",
         submit_action_label="Save route demand",
         preview_action_id=None,
         preview_action_label=None,
-        create_relation_kind=None,
+        create_relation_kind="response",
         submit_relation_kind="response",
     ),
     WorkpageDescriptor(

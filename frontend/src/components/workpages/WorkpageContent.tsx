@@ -323,33 +323,38 @@ export function WorkpageTableSection({
   section: WorkpageTableSection;
   className?: string;
 }): JSX.Element {
+  const hasRows = section.rows.length > 0;
   return (
     <section className={`workpage-panel${className ? ` ${className}` : ""}`}>
       <header className="workpage-panel__header">
         <h2>{section.title}</h2>
       </header>
-      <div className="workpage-table__wrap">
-        <table className="workpage-table" data-testid={section.table_id}>
-          <thead>
-            <tr>
-              {section.columns.map((column) => (
-                <th key={column.key} scope="col">
-                  {column.label}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {section.rows.map((row, index) => (
-              <tr key={`${section.table_id}-${index}`}>
+      {hasRows ? (
+        <div className="workpage-table__wrap">
+          <table className="workpage-table" data-testid={section.table_id}>
+            <thead>
+              <tr>
                 {section.columns.map((column) => (
-                  <td key={column.key}>{formatWorkpageValue(row[column.key] ?? null)}</td>
+                  <th key={column.key} scope="col">
+                    {column.label}
+                  </th>
                 ))}
               </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+            </thead>
+            <tbody>
+              {section.rows.map((row, index) => (
+                <tr key={`${section.table_id}-${index}`}>
+                  {section.columns.map((column) => (
+                    <td key={column.key}>{formatWorkpageValue(row[column.key] ?? null)}</td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      ) : section.empty_message ? (
+        <p className="workpage-history__empty">{section.empty_message}</p>
+      ) : null}
     </section>
   );
 }
