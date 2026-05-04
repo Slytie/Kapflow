@@ -2,6 +2,8 @@ import { act, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { HttpResponse, http } from "msw";
 
+import routeDemandRunWorkpageStateSnapshot from "@fixtures/workpage_route_demand_v0_run_state.json";
+import scheduleArtifactStateSnapshot from "@fixtures/workpage_schedule_v0_artifact_state.json";
 import scheduleRunWorkpageStateSnapshot from "@fixtures/workpage_schedule_v0_run_state.json";
 import { App } from "@/app/App";
 import {
@@ -258,38 +260,512 @@ describe("LogisticsScheduleWorkpagePage", () => {
     60000
   );
 
-  it("opens the latest Stage04 draft from the top chrome quick-edit action", async () => {
+  it(
+    "opens the latest Stage04 draft from the top chrome quick-edit action",
+    async () => {
+      const user = userEvent.setup();
+      setFrontendOperatorContext();
+      window.history.pushState({}, "", "/runs/wr-weekly-001/workpages/schedule-v0");
+      render(<App />);
+
+      expect(await screen.findByTestId("schedule-workpage-page")).toBeInTheDocument();
+      expect(
+        screen.queryByRole("heading", { name: "Editable draft available" })
+      ).not.toBeInTheDocument();
+
+      await waitFor(() => {
+        expect(screen.getByRole("button", { name: "Edit weekly schedule" })).toBeEnabled();
+      });
+      await user.click(screen.getByRole("button", { name: "Edit weekly schedule" }));
+
+      const dialog = await screen.findByRole("dialog", { name: "Edit Weekly Schedule" });
+      expect(dialog).toHaveClass("schedule-quick-edit-modal");
+      const editor = await within(dialog).findByTestId("schedule-quick-edit-editor");
+      expect(within(editor).getByRole("heading", { name: "Weekly Schedule Draft" })).toBeInTheDocument();
+      expect(within(editor).queryByText("Weekly Schedule Draft Artifact")).not.toBeInTheDocument();
+      expect(within(editor).queryByRole("heading", { name: "Capacity bar" })).not.toBeInTheDocument();
+      expect(within(editor).queryByRole("heading", { name: "Draft lineage" })).not.toBeInTheDocument();
+      expectHeatmapHeaderStatusGroups(editor);
+      expect(heatmapSection(editor)).toHaveClass("schedule-heatmap--compact");
+      expectSelectedDateHeaderStats(editor);
+      expect(window.location.pathname).toBe("/runs/wr-weekly-001/workpages/schedule-v0");
+    },
+    30000
+  );
+
+  it("shows current and next week choices and opens the next-week draft from the shell action", async () => {
     const user = userEvent.setup();
+    server.use(
+      http.get("*/api/v1/stories/logistics-three-workflow", () =>
+        HttpResponse.json({
+          status: "ok",
+          command: "api.stories.logistics_three_workflow",
+          story: {
+            story_id: "logistics_three_workflow_demo.v1",
+            family: {
+              family_id: "logistics_ops_family.v1",
+              family_version: 1,
+              contract_version: 1
+            },
+            partitions: {
+              planning_week_id: "PW-2026-W10",
+              service_date_ids: ["SD-2026-03-06"]
+            },
+            family_graph: {
+              family_id: "logistics_ops_family.v1",
+              family_version: 1,
+              modules: [
+                {
+                  module_id: "dispatch_reporting",
+                  workflow_id: "dispatch_reporting.v1",
+                  partition_kind: "ServiceDateID",
+                  activation_policy: "manual_or_event",
+                  status: "active",
+                  node_kind: "module",
+                  drilldown_kind: "workflow_run",
+                  drilldown_refs: [
+                    {
+                      workflow_run_id: "wr-report-001",
+                      workflow_id: "dispatch_reporting.v1",
+                      partition_key: "SD-2026-03-06"
+                    }
+                  ],
+                  artifact_refs: [],
+                  selection_summary: "1 linked run, 0 downloadable artifacts"
+                },
+                {
+                  module_id: "weekly_schedule_planning",
+                  workflow_id: "weekly_schedule_planning.v1",
+                  partition_kind: "PlanningWeekID",
+                  activation_policy: "manual_or_event",
+                  status: "active",
+                  node_kind: "module",
+                  drilldown_kind: "run_group",
+                  drilldown_refs: [
+                    {
+                      workflow_run_id: "wr-weekly-001",
+                      workflow_id: "weekly_schedule_planning.v1",
+                      partition_key: "PW-2026-W10"
+                    },
+                    {
+                      workflow_run_id: "wr-weekly-002",
+                      workflow_id: "weekly_schedule_planning.v1",
+                      partition_key: "PW-2026-W14"
+                    }
+                  ],
+                  artifact_refs: [],
+                  selection_summary: "2 linked runs, 0 downloadable artifacts"
+                },
+                {
+                  module_id: "live_dispatch",
+                  workflow_id: "live_dispatch.v1",
+                  partition_kind: "ServiceDateID",
+                  activation_policy: "event_driven",
+                  status: "ready",
+                  node_kind: "module",
+                  drilldown_kind: "none",
+                  drilldown_refs: [],
+                  artifact_refs: [],
+                  selection_summary: "0 linked runs, prepare service day after weekly publish"
+                }
+              ],
+              edges: [
+                {
+                  edge_id: "reporting_actuals_to_future_planning",
+                  source_module_id: "dispatch_reporting",
+                  target_module_id: "weekly_schedule_planning",
+                  handoff_mode: "notify_only"
+                },
+                {
+                  edge_id: "weekly_seed_to_live_dispatch",
+                  source_module_id: "weekly_schedule_planning",
+                  target_module_id: "live_dispatch",
+                  handoff_mode: "artifact_handoff"
+                }
+              ]
+            },
+            linked_workflow_runs: {
+              weekly_schedule_planning: [
+                {
+                  workflow_run_id: "wr-weekly-001",
+                  workflow_id: "weekly_schedule_planning.v1",
+                  workflow_version: "v1",
+                  tenant_id: "tenant-a",
+                  domain_id: "domain-x",
+                  partition_key: "PW-2026-W10",
+                  logical_date: "PW-2026-W10",
+                  activation_key: "weekly_schedule_planning.v1:PW-2026-W10",
+                  state: "OPEN",
+                  active_issue_count: 1,
+                  created_at: "2026-03-25T08:00:00Z",
+                  updated_at: "2026-03-25T08:00:00Z"
+                },
+                {
+                  workflow_run_id: "wr-weekly-002",
+                  workflow_id: "weekly_schedule_planning.v1",
+                  workflow_version: "v1",
+                  tenant_id: "tenant-a",
+                  domain_id: "domain-x",
+                  partition_key: "PW-2026-W14",
+                  logical_date: "PW-2026-W14",
+                  activation_key: "weekly_schedule_planning.v1:PW-2026-W14",
+                  state: "OPEN",
+                  active_issue_count: 0,
+                  created_at: "2026-03-25T08:00:00Z",
+                  updated_at: "2026-03-25T08:00:00Z"
+                }
+              ],
+              live_dispatch: [],
+              dispatch_reporting: [],
+              summary: {
+                weekly_schedule_planning_count: 2,
+                live_dispatch_count: 0,
+                dispatch_reporting_count: 0
+              }
+            },
+            handoff_activity: {
+              edges: [],
+              summary: {
+                edge_execution_count: 0,
+                coherence_failed_count: 0
+              }
+            },
+            board: {
+              lanes: [],
+              work_items: [],
+              page: { limit: 100, offset: 0 },
+              summary: {
+                work_item_count: 0,
+                human_task_count: 0,
+                approval_count: 0,
+                flag_count: 0,
+                primary_actionable_count: 0,
+                workflow_item_counts: {}
+              }
+            },
+            official_outputs: {
+              pointers: [],
+              pointer_outputs: [],
+              official_output_artifacts: [],
+              coherence: {},
+              summary: {
+                pointer_count: 0,
+                pointer_output_count: 0,
+                official_output_artifact_count: 0,
+                artifact_kind_counts: {}
+              }
+            },
+            freshness: {
+              latest_event_sequence: null,
+              latest_event_recorded_at: "2026-03-25T08:00:00Z",
+              max_workflow_run_updated_at: "2026-03-25T08:00:00Z",
+              generated_at: "2026-03-25T08:00:00Z"
+            },
+            coherence: {
+              official_outputs: {},
+              handoff_edges: []
+            }
+          }
+        })
+      ),
+      http.get("*/api/v1/workpages/workflow-runs/wr-weekly-002/schedule-v0", () => {
+        const payload = structuredClone(scheduleRunWorkpageStateSnapshot.workpage_state) as Record<
+          string,
+          any
+        >;
+        payload.run_context.workflow_run_id = "wr-weekly-002";
+        payload.actions = [
+          {
+            action_id: "workpage.schedule-v0.open_latest_draft",
+            artifact_version_id: "av-schedule-artifact-002",
+            kind: "open_latest_draft",
+            label: "Open schedule draft",
+            route: "/runs/wr-weekly-002/workpages/schedule-v0/artifacts/av-schedule-artifact-002",
+            state: "available",
+            workpage_kind: "schedule-v0"
+          }
+        ];
+        return HttpResponse.json(payload);
+      }),
+      http.get("*/api/v1/workpages/workflow-runs/wr-weekly-002/route-demand-v0", () => {
+        const payload = structuredClone(routeDemandRunWorkpageStateSnapshot.workpage_state) as Record<
+          string,
+          any
+        >;
+        payload.run_context.workflow_run_id = "wr-weekly-002";
+        const futureServiceDates = [
+          "2026-03-29",
+          "2026-03-30",
+          "2026-03-31",
+          "2026-04-01",
+          "2026-04-02",
+          "2026-04-03",
+          "2026-04-04"
+        ];
+        payload.calculations.day_cards = payload.calculations.day_cards.map(
+          (card: Record<string, unknown>, index: number) => ({
+            ...card,
+            service_date: futureServiceDates[index] ?? card.service_date,
+            weekday_label:
+              ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"][index] ?? card.weekday_label
+          })
+        );
+        return HttpResponse.json(payload);
+      }),
+      http.get(
+        "*/api/v1/workpages/workflow-runs/wr-weekly-002/schedule-v0/artifacts/av-schedule-artifact-002",
+        () => {
+          const payload = structuredClone(scheduleArtifactStateSnapshot.workpage_state) as Record<
+            string,
+            any
+          >;
+          payload.artifact_context.workflow_run_id = "wr-weekly-002";
+          payload.artifact_context.artifact_version_id = "av-schedule-artifact-002";
+          payload.artifact_context.latest_in_chain_artifact_version_id =
+            "av-schedule-artifact-002";
+          payload.freshness.source_version = "av-schedule-artifact-002";
+          payload.workpage.source_artifact_version_id = "av-schedule-artifact-002";
+          payload.source.source_artifact_version_id = "av-schedule-artifact-002";
+          return HttpResponse.json(payload);
+        }
+      )
+    );
     setFrontendOperatorContext();
     window.history.pushState({}, "", "/runs/wr-weekly-001/workpages/schedule-v0");
     render(<App />);
 
     expect(await screen.findByTestId("schedule-workpage-page")).toBeInTheDocument();
-    expect(screen.queryByRole("heading", { name: "Editable draft available" })).not.toBeInTheDocument();
-
     await waitFor(() => {
       expect(screen.getByRole("button", { name: "Edit weekly schedule" })).toBeEnabled();
     });
     await user.click(screen.getByRole("button", { name: "Edit weekly schedule" }));
 
-    const dialog = await screen.findByRole("dialog", { name: "Edit Weekly Schedule" });
-    expect(dialog).toHaveClass("schedule-quick-edit-modal");
-    const editor = await within(dialog).findByTestId("schedule-quick-edit-editor");
-    expect(within(editor).getByRole("heading", { name: "Weekly Schedule Draft" })).toBeInTheDocument();
-    expect(within(editor).queryByText("Weekly Schedule Draft Artifact")).not.toBeInTheDocument();
-    expect(within(editor).queryByRole("heading", { name: "Capacity bar" })).not.toBeInTheDocument();
-    expect(within(editor).queryByRole("heading", { name: "Draft lineage" })).not.toBeInTheDocument();
-    expectHeatmapHeaderStatusGroups(editor);
-    expect(heatmapSection(editor)).toHaveClass("schedule-heatmap--compact");
-    expectSelectedDateHeaderStats(editor);
-    expect(window.location.pathname).toBe("/runs/wr-weekly-001/workpages/schedule-v0");
-  });
+    const chooser = await screen.findByRole("dialog", { name: "Choose weekly schedule" });
+    expect(within(chooser).getByRole("button", { name: /Current week/i })).toBeInTheDocument();
+    expect(within(chooser).getByText("2026-03-22 to 2026-03-28")).toBeInTheDocument();
+    expect(within(chooser).getByRole("button", { name: /Next week/i })).toBeInTheDocument();
+    expect(within(chooser).getByText("2026-03-29 to 2026-04-04")).toBeInTheDocument();
 
-  it("opens route-demand editing from the top chrome without client-derived routing", async () => {
+    await waitFor(() => {
+      expect(within(chooser).getByRole("button", { name: /Next week/i })).toBeEnabled();
+    });
+    await user.click(within(chooser).getByRole("button", { name: /Next week/i }));
+
+    await waitFor(() => {
+      expect(window.location.pathname).toBe("/runs/wr-weekly-002/workpages/schedule-v0");
+    });
+    expect(await screen.findByRole("dialog", { name: "Edit Weekly Schedule" })).toBeInTheDocument();
+  }, 30000);
+
+  it("shows next week as unavailable in the chooser when no editable draft exists yet", async () => {
     const user = userEvent.setup();
+    server.use(
+      http.get("*/api/v1/stories/logistics-three-workflow", () =>
+        HttpResponse.json({
+          status: "ok",
+          command: "api.stories.logistics_three_workflow",
+          story: {
+            story_id: "logistics_three_workflow_demo.v1",
+            family: {
+              family_id: "logistics_ops_family.v1",
+              family_version: 1,
+              contract_version: 1
+            },
+            partitions: {
+              planning_week_id: "PW-2026-W10",
+              service_date_ids: ["SD-2026-03-06"]
+            },
+            family_graph: {
+              family_id: "logistics_ops_family.v1",
+              family_version: 1,
+              modules: [
+                {
+                  module_id: "dispatch_reporting",
+                  workflow_id: "dispatch_reporting.v1",
+                  partition_kind: "ServiceDateID",
+                  activation_policy: "manual_or_event",
+                  status: "active",
+                  node_kind: "module",
+                  drilldown_kind: "workflow_run",
+                  drilldown_refs: [],
+                  artifact_refs: [],
+                  selection_summary: ""
+                },
+                {
+                  module_id: "weekly_schedule_planning",
+                  workflow_id: "weekly_schedule_planning.v1",
+                  partition_kind: "PlanningWeekID",
+                  activation_policy: "manual_or_event",
+                  status: "active",
+                  node_kind: "module",
+                  drilldown_kind: "run_group",
+                  drilldown_refs: [
+                    {
+                      workflow_run_id: "wr-weekly-001",
+                      workflow_id: "weekly_schedule_planning.v1",
+                      partition_key: "PW-2026-W10"
+                    },
+                    {
+                      workflow_run_id: "wr-weekly-002",
+                      workflow_id: "weekly_schedule_planning.v1",
+                      partition_key: "PW-2026-W14"
+                    }
+                  ],
+                  artifact_refs: [],
+                  selection_summary: "2 linked runs"
+                },
+                {
+                  module_id: "live_dispatch",
+                  workflow_id: "live_dispatch.v1",
+                  partition_kind: "ServiceDateID",
+                  activation_policy: "event_driven",
+                  status: "ready",
+                  node_kind: "module",
+                  drilldown_kind: "none",
+                  drilldown_refs: [],
+                  artifact_refs: [],
+                  selection_summary: ""
+                }
+              ],
+              edges: []
+            },
+            linked_workflow_runs: {
+              weekly_schedule_planning: [
+                {
+                  workflow_run_id: "wr-weekly-001",
+                  workflow_id: "weekly_schedule_planning.v1",
+                  workflow_version: "v1",
+                  tenant_id: "tenant-a",
+                  domain_id: "domain-x",
+                  partition_key: "PW-2026-W10",
+                  logical_date: "PW-2026-W10",
+                  activation_key: "weekly_schedule_planning.v1:PW-2026-W10",
+                  state: "OPEN",
+                  active_issue_count: 1,
+                  created_at: "2026-03-25T08:00:00Z",
+                  updated_at: "2026-03-25T08:00:00Z"
+                },
+                {
+                  workflow_run_id: "wr-weekly-002",
+                  workflow_id: "weekly_schedule_planning.v1",
+                  workflow_version: "v1",
+                  tenant_id: "tenant-a",
+                  domain_id: "domain-x",
+                  partition_key: "PW-2026-W14",
+                  logical_date: "PW-2026-W14",
+                  activation_key: "weekly_schedule_planning.v1:PW-2026-W14",
+                  state: "OPEN",
+                  active_issue_count: 0,
+                  created_at: "2026-03-25T08:00:00Z",
+                  updated_at: "2026-03-25T08:00:00Z"
+                }
+              ],
+              live_dispatch: [],
+              dispatch_reporting: [],
+              summary: {
+                weekly_schedule_planning_count: 2,
+                live_dispatch_count: 0,
+                dispatch_reporting_count: 0
+              }
+            },
+            handoff_activity: { edges: [], summary: { edge_execution_count: 0, coherence_failed_count: 0 } },
+            board: {
+              lanes: [],
+              work_items: [],
+              page: { limit: 100, offset: 0 },
+              summary: {
+                work_item_count: 0,
+                human_task_count: 0,
+                approval_count: 0,
+                flag_count: 0,
+                primary_actionable_count: 0,
+                workflow_item_counts: {}
+              }
+            },
+            official_outputs: {
+              pointers: [],
+              pointer_outputs: [],
+              official_output_artifacts: [],
+              coherence: {},
+              summary: {
+                pointer_count: 0,
+                pointer_output_count: 0,
+                official_output_artifact_count: 0,
+                artifact_kind_counts: {}
+              }
+            },
+            freshness: {
+              latest_event_sequence: null,
+              latest_event_recorded_at: "2026-03-25T08:00:00Z",
+              max_workflow_run_updated_at: "2026-03-25T08:00:00Z",
+              generated_at: "2026-03-25T08:00:00Z"
+            },
+            coherence: {
+              official_outputs: {},
+              handoff_edges: []
+            }
+          }
+        })
+      ),
+      http.get("*/api/v1/workpages/workflow-runs/wr-weekly-002/schedule-v0", () => {
+        const payload = structuredClone(scheduleRunWorkpageStateSnapshot.workpage_state) as Record<
+          string,
+          any
+        >;
+        payload.run_context.workflow_run_id = "wr-weekly-002";
+        payload.actions = payload.actions.filter(
+          (action: Record<string, unknown>) => action.kind !== "open_latest_draft"
+        );
+        payload.artifact_state.latest_artifact_version_id = null;
+        return HttpResponse.json(payload);
+      }),
+      http.get("*/api/v1/workpages/workflow-runs/wr-weekly-002/route-demand-v0", () => {
+        const payload = structuredClone(routeDemandRunWorkpageStateSnapshot.workpage_state) as Record<
+          string,
+          any
+        >;
+        payload.run_context.workflow_run_id = "wr-weekly-002";
+        payload.calculations.day_cards = payload.calculations.day_cards.map(
+          (card: Record<string, unknown>, index: number) => ({
+            ...card,
+            service_date:
+              [
+                "2026-03-29",
+                "2026-03-30",
+                "2026-03-31",
+                "2026-04-01",
+                "2026-04-02",
+                "2026-04-03",
+                "2026-04-04"
+              ][index] ?? card.service_date
+          })
+        );
+        return HttpResponse.json(payload);
+      })
+    );
     setFrontendOperatorContext();
     window.history.pushState({}, "", "/runs/wr-weekly-001/workpages/schedule-v0");
     render(<App />);
+
+    expect(await screen.findByTestId("schedule-workpage-page")).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: "Edit weekly schedule" })).toBeEnabled();
+    });
+    await user.click(screen.getByRole("button", { name: "Edit weekly schedule" }));
+
+    const chooser = await screen.findByRole("dialog", { name: "Choose weekly schedule" });
+    const nextWeekButton = within(chooser).getByRole("button", { name: /Next week/i });
+    expect(nextWeekButton).toBeDisabled();
+    expect(within(chooser).getByText("No draft yet")).toBeInTheDocument();
+  }, 30000);
+
+  it(
+    "opens route-demand editing from the top chrome without client-derived routing",
+    async () => {
+      const user = userEvent.setup();
+      setFrontendOperatorContext();
+      window.history.pushState({}, "", "/runs/wr-weekly-001/workpages/schedule-v0");
+      render(<App />);
 
     expect(await screen.findByTestId("schedule-workpage-page")).toBeInTheDocument();
     await waitFor(() => {
@@ -299,8 +775,10 @@ describe("LogisticsScheduleWorkpagePage", () => {
 
     const dialog = await screen.findByRole("dialog", { name: "Edit route demand" });
     expect(await within(dialog).findByTestId("route-demand-quick-edit-editor")).toBeInTheDocument();
-    expect(window.location.pathname).toBe("/runs/wr-weekly-001/workpages/schedule-v0");
-  });
+      expect(window.location.pathname).toBe("/runs/wr-weekly-001/workpages/schedule-v0");
+    },
+    30000
+  );
 
   it(
     "opens driver preferences from the top chrome without inline preference pills",

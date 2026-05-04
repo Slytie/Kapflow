@@ -284,6 +284,154 @@ def _mock_stage04_runner_with_finalize_repair() -> OpenAIResponsesFunctionCallin
     )
 
 
+def _mock_stage04_runner_with_planner_incomplete_finalize_repair() -> OpenAIResponsesFunctionCallingRunner:
+    call_count = {"value": 0}
+
+    def transport(payload, _timeout):
+        call_count["value"] += 1
+        if call_count["value"] == 1:
+            return (
+                200,
+                {
+                    "id": "resp_stage04_1",
+                    "model": "gpt-4.1-mini",
+                    "usage": {"input_tokens": 50, "output_tokens": 20},
+                    "output": [
+                        {
+                            "type": "function_call",
+                            "call_id": "call_context",
+                            "name": "get_stage04_context",
+                            "arguments": "{}",
+                        },
+                        {
+                            "type": "function_call",
+                            "call_id": "call_preview",
+                            "name": "preview_stage04_next_iteration",
+                            "arguments": "{}",
+                        },
+                    ],
+                },
+                "req_stage04_1",
+            )
+        assert payload.get("previous_response_id") == f"resp_stage04_{call_count['value'] - 1}"
+        outputs = [
+            json.loads(str(item.get("output") or "{}"))
+            for item in payload.get("input", [])
+            if isinstance(item, dict) and str(item.get("type") or "") == "function_call_output"
+        ]
+        if any(isinstance(item, dict) and item.get("stage04_build_result") for item in outputs):
+            return (
+                200,
+                {
+                    "id": f"resp_stage04_{call_count['value']}",
+                    "model": "gpt-4.1-mini",
+                    "usage": {"input_tokens": 15, "output_tokens": 10},
+                    "output_text": (
+                        '{"summary":"Draft weekly schedule prepared after continuation repair.",'
+                        '"selected_candidate_count":2,'
+                        '"recommended_action":"forward_to_stage05_manager_review",'
+                        '"warnings":[]}'
+                    ),
+                },
+                f"req_stage04_{call_count['value']}",
+            )
+        if any(
+            isinstance(item, dict)
+            and item.get("finalize_blocked_reason") == "planner_incomplete"
+            for item in outputs
+        ):
+            return (
+                200,
+                {
+                    "id": f"resp_stage04_{call_count['value']}",
+                    "model": "gpt-4.1-mini",
+                    "usage": {"input_tokens": 18, "output_tokens": 8},
+                    "output": [
+                        {
+                            "type": "function_call",
+                            "call_id": "call_apply_repair",
+                            "name": "apply_stage04_next_iteration",
+                            "arguments": "{}",
+                        }
+                    ],
+                },
+                f"req_stage04_{call_count['value']}",
+            )
+        if any(
+            isinstance(item, dict)
+            and item.get("planner_complete") is True
+            and item.get("iteration_result")
+            for item in outputs
+        ):
+            return (
+                200,
+                {
+                    "id": f"resp_stage04_{call_count['value']}",
+                    "model": "gpt-4.1-mini",
+                    "usage": {"input_tokens": 40, "output_tokens": 15},
+                    "output": [
+                        {
+                            "type": "function_call",
+                            "call_id": "call_validation_after_repair",
+                            "name": "get_stage04_validation_summary",
+                            "arguments": "{}",
+                        },
+                        {
+                            "type": "function_call",
+                            "call_id": "call_finalize_after_repair",
+                            "name": "finalize_weekly_stage04_draft_outputs",
+                            "arguments": "{}",
+                        },
+                    ],
+                },
+                f"req_stage04_{call_count['value']}",
+            )
+        if call_count["value"] == 3:
+            return (
+                200,
+                {
+                    "id": "resp_stage04_3",
+                    "model": "gpt-4.1-mini",
+                    "usage": {"input_tokens": 20, "output_tokens": 8},
+                    "output": [
+                        {
+                            "type": "function_call",
+                            "call_id": "call_finalize_early",
+                            "name": "finalize_weekly_stage04_draft_outputs",
+                            "arguments": "{}",
+                        }
+                    ],
+                },
+                "req_stage04_3",
+            )
+        return (
+            200,
+            {
+                "id": f"resp_stage04_{call_count['value']}",
+                "model": "gpt-4.1-mini",
+                "usage": {"input_tokens": 17, "output_tokens": 8},
+                "output": [
+                    {
+                        "type": "function_call",
+                        "call_id": "call_apply",
+                        "name": "apply_stage04_next_iteration",
+                        "arguments": "{}",
+                    }
+                ],
+            },
+            f"req_stage04_{call_count['value']}",
+        )
+
+    return OpenAIResponsesFunctionCallingRunner(
+        api_key="sk-test",
+        model="gpt-4.1-mini",
+        base_url="https://api.openai.test/v1",
+        timeout_seconds=5.0,
+        max_retries=0,
+        transport=transport,
+    )
+ 
+
 def _mock_stage04_runner_with_unrepaired_finalize_omission() -> OpenAIResponsesFunctionCallingRunner:
     call_count = {"value": 0}
 
@@ -421,6 +569,28 @@ def test_weekly_stage04_openai_agent_endpoint_recovers_missing_finalize_with_rep
     result = response.payload["result"]
     assert result["agent_result"]["repair_attempted"] is True
     assert len(result["runtime_turn_evidence"]) == 5
+    assert result["stage04_build_result"]["selected_candidate_count"] == 2
+
+
+def test_weekly_stage04_openai_agent_endpoint_continues_after_planner_incomplete_finalize(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    harness, client, human_task_id = _prepare_claimed_stage04_task(tmp_path)
+    monkeypatch.setattr(
+        "onetruth.application.services.weekly_stage04_openai_agent.build_weekly_stage04_openai_agent_runner_from_env",
+        lambda: _mock_stage04_runner_with_planner_incomplete_finalize_repair(),
+    )
+    monkeypatch.setenv("ONETRUTH_ARTIFACT_ROOT", str(tmp_path / "artifacts"))
+
+    response = client.post(
+        f"/api/v1/human-tasks/{human_task_id}/weekly-stage04-openai-agent",
+        payload={"idempotency_key": f"api:{harness.scenario_id}:stage04-openai-agent-continue"},
+    )
+    assert response.status_code == 200, response.payload
+    result = response.payload["result"]
+    assert result["execution_session"]["state"] == "SUCCEEDED"
+    assert result["tool_execution"]["state"] == "COMPLETED"
     assert result["stage04_build_result"]["selected_candidate_count"] == 2
 
 

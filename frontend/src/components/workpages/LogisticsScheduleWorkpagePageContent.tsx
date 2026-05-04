@@ -512,9 +512,11 @@ function LogisticsScheduleWorkpageView({
 
 export function ScheduleQuickEditModal({
   workflowRunId,
+  targetArtifactVersionId = null,
   onClose
 }: {
   workflowRunId: string;
+  targetArtifactVersionId?: string | null;
   onClose: () => void;
 }): JSX.Element {
   const titleId = useId();
@@ -535,13 +537,17 @@ export function ScheduleQuickEditModal({
   const artifactVersionId = openLatestDraftAction?.artifact_version_id ?? null;
   const [activeArtifactVersionId, setActiveArtifactVersionId] = useState<string | null>(null);
   useEffect(() => {
+    if (targetArtifactVersionId) {
+      setActiveArtifactVersionId(targetArtifactVersionId);
+      return;
+    }
     if (artifactVersionId && !activeArtifactVersionId) {
       setActiveArtifactVersionId(artifactVersionId);
     }
-  }, [activeArtifactVersionId, artifactVersionId]);
+  }, [activeArtifactVersionId, artifactVersionId, targetArtifactVersionId]);
   useEffect(() => {
-    setActiveArtifactVersionId(null);
-  }, [workflowRunId]);
+    setActiveArtifactVersionId(targetArtifactVersionId ?? null);
+  }, [workflowRunId, targetArtifactVersionId]);
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent): void => {
@@ -587,7 +593,17 @@ export function ScheduleQuickEditModal({
           </button>
         </header>
         <div className="quick-edit-modal__body route-demand-quick-edit-modal__body">
-          {query.isLoading ? (
+          {activeArtifactVersionId ? (
+            <ScheduleArtifactEditor
+              workflowRunId={workflowRunId}
+              artifactVersionId={activeArtifactVersionId}
+              layout="embedded"
+              afterSave="close"
+              onClose={onClose}
+              enableSickNoShow
+              onArtifactVersionChange={setActiveArtifactVersionId}
+            />
+          ) : query.isLoading ? (
             <StatePanel
               kind="loading"
               title="Loading weekly schedule editor"
@@ -601,16 +617,6 @@ export function ScheduleQuickEditModal({
               onRetry={() => {
                 void query.refetch();
               }}
-            />
-          ) : artifactVersionId ? (
-            <ScheduleArtifactEditor
-              workflowRunId={workflowRunId}
-              artifactVersionId={activeArtifactVersionId ?? artifactVersionId}
-              layout="embedded"
-              afterSave="close"
-              onClose={onClose}
-              enableSickNoShow
-              onArtifactVersionChange={setActiveArtifactVersionId}
             />
           ) : (
             <StatePanel

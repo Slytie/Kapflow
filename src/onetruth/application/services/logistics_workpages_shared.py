@@ -3303,31 +3303,28 @@ def _route_demand_future_week_activation(
     artifact: Mapping[str, Any] | None,
     latest_schedule_draft: Mapping[str, Any] | None,
 ) -> dict[str, Any]:
-    if latest_schedule_draft is not None and _route_demand_is_future_week_seed_artifact(artifact):
-        return {
-            "state": "succeeded",
-            "status_label": "Draft ready",
-            "human_task_id": None,
-            "task_run_id": None,
-            "blocked_reason": None,
-            "target_workflow_run_id": workflow_run_id,
-            "target_schedule_route": canonical_workflow_run_workpage_route(
-                workflow_run_id=workflow_run_id,
-                workpage_kind=SCHEDULE_WORKPAGE_KIND,
-            ),
-            "target_schedule_artifact_version_id": _require_text(
-                latest_schedule_draft.get("artifact_version_id")
-            ),
-            "error_code": None,
-            "error_message": None,
-        }
+    future_week_seed = _route_demand_is_future_week_seed_artifact(artifact)
+    target_schedule_route = (
+        canonical_workflow_run_workpage_route(
+            workflow_run_id=workflow_run_id,
+            workpage_kind=SCHEDULE_WORKPAGE_KIND,
+        )
+        if latest_schedule_draft is not None
+        else None
+    )
+    target_schedule_artifact_version_id = (
+        _require_text(latest_schedule_draft.get("artifact_version_id"))
+        if latest_schedule_draft is not None
+        else None
+    )
     latest_stage04_execution = _route_demand_latest_stage04_execution_summary(
         connection,
         workflow_run_id=workflow_run_id,
     )
-    if latest_stage04_execution is not None and _route_demand_is_future_week_seed_artifact(artifact):
+    if latest_stage04_execution is not None and future_week_seed:
         session_state = str(latest_stage04_execution.get("execution_session_state") or "")
         tool_state = str(latest_stage04_execution.get("tool_execution_state") or "")
+        task_run_state = str(latest_stage04_execution.get("task_run_state") or "")
         error_code = _require_text_or_default(
             latest_stage04_execution.get("error_code"),
             default="",
@@ -3340,8 +3337,8 @@ def _route_demand_future_week_activation(
                 "task_run_id": latest_stage04_execution["task_run_id"],
                 "blocked_reason": error_code or "stage04_run_failed",
                 "target_workflow_run_id": workflow_run_id,
-                "target_schedule_route": None,
-                "target_schedule_artifact_version_id": None,
+                "target_schedule_route": target_schedule_route,
+                "target_schedule_artifact_version_id": target_schedule_artifact_version_id,
                 "error_code": error_code,
                 "error_message": _route_demand_future_week_activation_error_message(error_code),
             }
@@ -3361,11 +3358,28 @@ def _route_demand_future_week_activation(
                 "error_code": None,
                 "error_message": None,
             }
+        if (
+            latest_schedule_draft is not None
+            and session_state == "SUCCEEDED"
+            and task_run_state == "COMPLETED"
+        ):
+            return {
+                "state": "succeeded",
+                "status_label": "Draft ready",
+                "human_task_id": latest_stage04_execution["human_task_id"],
+                "task_run_id": latest_stage04_execution["task_run_id"],
+                "blocked_reason": None,
+                "target_workflow_run_id": workflow_run_id,
+                "target_schedule_route": target_schedule_route,
+                "target_schedule_artifact_version_id": target_schedule_artifact_version_id,
+                "error_code": None,
+                "error_message": None,
+            }
     active_stage04_task = _route_demand_active_stage04_task_summary(
         connection,
         workflow_run_id=workflow_run_id,
     )
-    if active_stage04_task is not None and _route_demand_is_future_week_seed_artifact(artifact):
+    if active_stage04_task is not None and future_week_seed:
         return {
             "state": "running",
             "status_label": "Agent working",
@@ -4188,6 +4202,12 @@ def _route_demand_latest_stage04_execution_summary(
                 else None
             ),
             "task_run_id": task_run_id,
+            "task_run_state": _require_text_or_default(task_run.get("state"), default=""),
+            "human_task_state": (
+                _require_text_or_default(human_task.get("state"), default="")
+                if human_task is not None
+                else None
+            ),
             "execution_session_id": _require_text(session.get("execution_session_id")),
             "execution_session_state": _require_text_or_default(session.get("state"), default=""),
             "tool_execution_id": (

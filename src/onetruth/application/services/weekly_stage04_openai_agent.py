@@ -413,13 +413,61 @@ def run_weekly_stage04_openai_agent(
         stage04_build_result = tooling.finalized_build_result() or _extract_finalized_build_result_from_turns(
             agent_result_payload
         )
+        remaining_turn_budget = _remaining_stage04_turn_budget(
+            stop_policy=stop_policy,
+            used_turns=len(tuple(agent_result.turns or ())),
+        )
+        latest_finalize_output = _latest_finalize_output_from_turns(agent_result_payload)
+        if (
+            stage04_build_result is None
+            and latest_final_response_id is not None
+            and isinstance(latest_finalize_output, dict)
+            and str(latest_finalize_output.get("finalize_blocked_reason") or "") == "planner_incomplete"
+            and not tooling.planner_complete()
+            and remaining_turn_budget > 0
+        ):
+            repair_attempted = True
+            repair_turn_index_offset = len(tuple(agent_result.turns or ()))
+            continuation_agent_result = selected_runner.run_function_calling_loop(
+                initial_input=_stage04_finalize_continuation_repair_input(
+                    context_pack=context_pack,
+                    planner_state=tooling.planner_state_snapshot(),
+                ),
+                tools=tool_specs,
+                execute_function=tooling.execute,
+                max_turns=remaining_turn_budget,
+                no_progress_limit=int(stop_policy["no_progress_ticks"]),
+                previous_response_id=latest_final_response_id,
+                model_output_serializer=tooling.model_output_payload,
+                on_turn_complete=lambda turn: _persist_turn_evidence(
+                    turn,
+                    turn_index_offset=repair_turn_index_offset,
+                ),
+            )
+            latest_final_response_id = (
+                str(continuation_agent_result.final_response_id or "") or latest_final_response_id
+            )
+            agent_result_payload = _merge_agent_result_payloads(
+                agent_result_payload,
+                continuation_agent_result.as_dict(),
+                turn_index_offset=repair_turn_index_offset,
+            )
+            stage04_build_result = (
+                tooling.finalized_build_result()
+                or _extract_finalized_build_result_from_turns(agent_result_payload)
+            )
+            remaining_turn_budget = _remaining_stage04_turn_budget(
+                stop_policy=stop_policy,
+                used_turns=len(_agent_result_turns(agent_result_payload)),
+            )
         if (
             stage04_build_result is None
             and tooling.planner_complete()
             and latest_final_response_id is not None
+            and remaining_turn_budget > 0
         ):
             repair_attempted = True
-            repair_turn_index_offset = len(tuple(agent_result.turns or ()))
+            repair_turn_index_offset = len(_agent_result_turns(agent_result_payload))
             repair_agent_result = selected_runner.run_function_calling_loop(
                 initial_input=_stage04_finalize_repair_input(
                     context_pack=context_pack,
@@ -427,7 +475,7 @@ def run_weekly_stage04_openai_agent(
                 ),
                 tools=_stage04_finalize_only_tool_specs(tool_specs),
                 execute_function=tooling.execute,
-                max_turns=2,
+                max_turns=min(2, remaining_turn_budget),
                 previous_response_id=latest_final_response_id,
                 model_output_serializer=tooling.model_output_payload,
                 on_turn_complete=lambda turn: _persist_turn_evidence(
@@ -459,6 +507,10 @@ def run_weekly_stage04_openai_agent(
                     "final_response_id": latest_final_response_id,
                 },
             )
+        if isinstance(agent_result_payload, dict):
+            repair_recovered_in_loop = _turns_contain_planner_incomplete_finalize(agent_result_payload)
+            if repair_attempted or repair_recovered_in_loop:
+                agent_result_payload["repair_attempted"] = True
 
         trace_artifact = _persist_stage04_execution_trace(
             connection=connection,
@@ -846,6 +898,37 @@ def _stage04_finalize_repair_input(
     user_payload = {
         "task": "Recover the Stage04 run by explicitly finalizing the already-complete deterministic planner outputs.",
         "required_tool": "finalize_weekly_stage04_draft_outputs",
+        "workflow_run_id": context_pack.get("workflow_run_id"),
+        "human_task_id": context_pack.get("human_task_id"),
+        "planner_state": _compact_stage04_planner_state(planner_state),
+    }
+    return [
+        {
+            "role": "system",
+            "content": [{"type": "input_text", "text": system_prompt}],
+        },
+        {
+            "role": "user",
+            "content": [{"type": "input_text", "text": json.dumps(user_payload, separators=(",", ":"))}],
+        },
+    ]
+
+
+def _stage04_finalize_continuation_repair_input(
+    *,
+    context_pack: dict[str, Any],
+    planner_state: dict[str, Any],
+) -> list[dict[str, Any]]:
+    system_prompt = (
+        "The previous response attempted to finalize Stage04 before the deterministic planner was complete. "
+        "Continue the bounded deterministic loop with the provided tools only. "
+        "Prefer apply_stage04_next_iteration until the planner is complete, then validate and explicitly call "
+        "finalize_weekly_stage04_draft_outputs before any textual completion. "
+        "Do not return text until after a successful finalize tool call."
+    )
+    user_payload = {
+        "task": "Continue deterministic Stage04 improvement work after an early finalize attempt, then validate and finalize canonically.",
+        "required_end_state": "planner_complete_then_finalize_weekly_stage04_draft_outputs",
         "workflow_run_id": context_pack.get("workflow_run_id"),
         "human_task_id": context_pack.get("human_task_id"),
         "planner_state": _compact_stage04_planner_state(planner_state),
@@ -1565,6 +1648,62 @@ def _extract_finalized_build_result_from_turns(agent_result: Any) -> dict[str, A
             if isinstance(stage04_build_result, dict):
                 return stage04_build_result
     return None
+
+
+def _latest_finalize_output_from_turns(agent_result: Any) -> dict[str, Any] | None:
+    for turn in reversed(_agent_result_turns(agent_result)):
+        for function_call in reversed(_turn_function_calls(turn)):
+            function_name = (
+                str(function_call.get("name") or "")
+                if isinstance(function_call, dict)
+                else str(getattr(function_call, "name", "") or "")
+            )
+            if function_name != "finalize_weekly_stage04_draft_outputs":
+                continue
+            if isinstance(function_call, dict):
+                raw_output = function_call.get("evidence_output_json") or function_call.get("output_json") or ""
+            else:
+                raw_output = getattr(
+                    function_call,
+                    "evidence_output_json",
+                    getattr(function_call, "output_json", ""),
+                )
+            parsed_output = _parse_runtime_output_json(raw_output)
+            if isinstance(parsed_output, dict):
+                return parsed_output
+    return None
+
+
+def _turns_contain_planner_incomplete_finalize(agent_result: Any) -> bool:
+    for turn in _agent_result_turns(agent_result):
+        for function_call in _turn_function_calls(turn):
+            function_name = (
+                str(function_call.get("name") or "")
+                if isinstance(function_call, dict)
+                else str(getattr(function_call, "name", "") or "")
+            )
+            if function_name != "finalize_weekly_stage04_draft_outputs":
+                continue
+            if isinstance(function_call, dict):
+                raw_output = function_call.get("evidence_output_json") or function_call.get("output_json") or ""
+            else:
+                raw_output = getattr(
+                    function_call,
+                    "evidence_output_json",
+                    getattr(function_call, "output_json", ""),
+                )
+            parsed_output = _parse_runtime_output_json(raw_output)
+            if (
+                isinstance(parsed_output, dict)
+                and str(parsed_output.get("finalize_blocked_reason") or "") == "planner_incomplete"
+            ):
+                return True
+    return False
+
+
+def _remaining_stage04_turn_budget(*, stop_policy: dict[str, int | str], used_turns: int) -> int:
+    max_tool_calls = int(stop_policy.get("max_tool_calls") or 0)
+    return max(max_tool_calls - int(used_turns), 0)
 
 
 def _build_context_pack(

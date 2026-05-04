@@ -44,6 +44,8 @@ const driverAvailabilityExceptions = new Map<string, DriverAvailabilityException
 const EOD_WORKFLOW_RUN_ID = "wr-eod-artifact-001";
 const SCHEDULE_WORKFLOW_RUN_ID = "wr-weekly-001";
 const FUTURE_ROUTE_DEMAND_WORKFLOW_RUN_ID = "wr-weekly-002";
+const CURRENT_WEEKLY_PLANNING_WEEK_ID = "PW-2026-W10";
+const FUTURE_WEEKLY_PLANNING_WEEK_ID = "PW-2026-W14";
 
 interface ArtifactWorkpageVersionState {
   artifactVersionId: string;
@@ -1526,6 +1528,7 @@ function ensureEodArtifactDraft(workflowRunId = EOD_WORKFLOW_RUN_ID): EodArtifac
 function ensureScheduleArtifactDraft(
   workflowRunId = SCHEDULE_WORKFLOW_RUN_ID
 ): ScheduleArtifactVersionState {
+  ensureWeeklyPlanningRunState(workflowRunId);
   const existing = latestScheduleArtifactForRun(workflowRunId);
   if (existing) {
     return existing;
@@ -1537,6 +1540,19 @@ function ensureScheduleArtifactDraft(
     supersedesArtifactVersionId: null,
     latestInChainArtifactVersionId: artifactVersionId
   });
+}
+
+function latestOrSeedScheduleArtifactForRun(
+  workflowRunId: string
+): ScheduleArtifactVersionState | null {
+  const existing = latestScheduleArtifactForRun(workflowRunId);
+  if (existing) {
+    return existing;
+  }
+  if (workflowRunId === SCHEDULE_WORKFLOW_RUN_ID) {
+    return ensureScheduleArtifactDraft(workflowRunId);
+  }
+  return null;
 }
 
 function eodArtifactCreateResponse(
@@ -1697,8 +1713,10 @@ function buildRouteDemandFutureWeekOptions(workflowRunId: string): Array<Record<
 
 function buildRouteDemandFutureWeekActivation(input?: {
   workflowRunId?: string;
-  state?: "idle" | "running" | "succeeded";
+  state?: "idle" | "running" | "succeeded" | "failed";
   targetScheduleArtifactVersionId?: string | null;
+  errorCode?: string | null;
+  errorMessage?: string | null;
 }): Record<string, unknown> {
   return {
     state: input?.state ?? "idle",
@@ -1707,15 +1725,19 @@ function buildRouteDemandFutureWeekActivation(input?: {
         ? "Agent working"
         : input?.state === "succeeded"
           ? "Draft ready"
+          : input?.state === "failed"
+            ? "Scheduling failed"
           : null,
     human_task_id: null,
     task_run_id: null,
-    blocked_reason: null,
+    blocked_reason: input?.state === "failed" ? input?.errorCode ?? "stage04_run_failed" : null,
     target_workflow_run_id: input?.workflowRunId ?? null,
     target_schedule_route: input?.workflowRunId
       ? `/runs/${input.workflowRunId}/workpages/schedule-v0`
       : null,
-    target_schedule_artifact_version_id: input?.targetScheduleArtifactVersionId ?? null
+    target_schedule_artifact_version_id: input?.targetScheduleArtifactVersionId ?? null,
+    error_code: input?.errorCode ?? null,
+    error_message: input?.errorMessage ?? null
   };
 }
 
@@ -2032,6 +2054,7 @@ function latestRouteDemandArtifactForRun(workflowRunId: string): RouteDemandArti
 function ensureRouteDemandArtifactDraft(
   workflowRunId = SCHEDULE_WORKFLOW_RUN_ID
 ): RouteDemandArtifactVersionState {
+  ensureWeeklyPlanningRunState(workflowRunId);
   const existing = latestRouteDemandArtifactForRun(workflowRunId);
   if (existing) {
     return existing;
@@ -2048,6 +2071,8 @@ function ensureRouteDemandArtifactDraft(
 function ensureFutureRouteDemandArtifactDraft(
   sourceWorkflowRunId: string
 ): RouteDemandArtifactVersionState {
+  ensureWeeklyPlanningRunState(sourceWorkflowRunId);
+  ensureWeeklyPlanningRunState(FUTURE_ROUTE_DEMAND_WORKFLOW_RUN_ID);
   const existing = latestRouteDemandArtifactForRun(FUTURE_ROUTE_DEMAND_WORKFLOW_RUN_ID);
   if (existing) {
     return existing;
@@ -2090,6 +2115,41 @@ function routeDemandArtifactCreateResponse(
       workflow_run_id: version.workflowRunId
     }
   };
+}
+
+function ensureWeeklyPlanningRunState(workflowRunId: string): void {
+  if (
+    state.workflowRuns.some(
+      (run) =>
+        run.workflow_run_id === workflowRunId &&
+        run.workflow_id === "weekly_schedule_planning.v1"
+    )
+  ) {
+    return;
+  }
+  if (workflowRunId === SCHEDULE_WORKFLOW_RUN_ID) {
+    state.workflowRuns.push(
+      buildStoryRun({
+        workflowRunId,
+        workflowId: "weekly_schedule_planning.v1",
+        partitionKey: CURRENT_WEEKLY_PLANNING_WEEK_ID,
+        state: "OPEN",
+        activeIssueCount: 1
+      })
+    );
+    return;
+  }
+  if (workflowRunId === FUTURE_ROUTE_DEMAND_WORKFLOW_RUN_ID) {
+    state.workflowRuns.push(
+      buildStoryRun({
+        workflowRunId,
+        workflowId: "weekly_schedule_planning.v1",
+        partitionKey: FUTURE_WEEKLY_PLANNING_WEEK_ID,
+        state: "OPEN",
+        activeIssueCount: 0
+      })
+    );
+  }
 }
 
 function latestDriverPreferencesArtifactForRun(
@@ -2478,7 +2538,7 @@ function driverPreferencesArtifactSubmitResponse(
 }
 
 function buildRunRouteDemandWorkpagePayload(workflowRunId: string): Record<string, unknown> {
-  const latestScheduleVersion = ensureScheduleArtifactDraft(workflowRunId);
+  const latestScheduleVersion = latestOrSeedScheduleArtifactForRun(workflowRunId);
   const latestVersion = ensureRouteDemandArtifactDraft(workflowRunId);
   const visibleDayCards = visibleRouteDemandDayCards(latestVersion.dayCards);
   const payload = cloneJson(routeDemandRunWorkpageStateSnapshot.workpage_state) as Record<string, unknown>;
@@ -2528,13 +2588,13 @@ function buildRunRouteDemandWorkpagePayload(workflowRunId: string): Record<strin
   };
   payload.schedule_impact = {
     ...latestVersion.scheduleImpact,
-    latest_schedule_draft_artifact_version_id: latestScheduleVersion.artifactVersionId,
+    latest_schedule_draft_artifact_version_id: latestScheduleVersion?.artifactVersionId ?? null,
     latest_route_demand_artifact_version_id: latestVersion.artifactVersionId
   };
   payload.future_week_options = buildRouteDemandFutureWeekOptions(workflowRunId);
   payload.future_week_activation = buildRouteDemandFutureWeekActivation({
     workflowRunId,
-    targetScheduleArtifactVersionId: latestScheduleVersion.artifactVersionId
+    targetScheduleArtifactVersionId: latestScheduleVersion?.artifactVersionId ?? null
   });
   void actions;
   payload.actions = [
@@ -2573,7 +2633,6 @@ function buildRunRouteDemandWorkpagePayload(workflowRunId: string): Record<strin
 }
 
 function buildRunScheduleWorkpagePayload(workflowRunId: string): Record<string, unknown> {
-  ensureScheduleArtifactDraft(workflowRunId);
   const payload = cloneJson(scheduleRunWorkpageStateSnapshot.workpage_state) as Record<string, unknown>;
   const runContext = payload.run_context as Record<string, unknown>;
   runContext.workflow_run_id = workflowRunId;
@@ -3256,11 +3315,13 @@ function buildStoryRun(
 function buildLogisticsStoryPayload(planningWeekId: string, request: Request, serviceDateId?: string) {
   const now = new Date().toISOString();
   const currentServiceDateId = serviceDateId ?? "SD-2026-03-06";
+  ensureWeeklyPlanningRunState(SCHEDULE_WORKFLOW_RUN_ID);
+  const weeklyRuns = state.workflowRuns
+    .filter((run) => run.workflow_id === "weekly_schedule_planning.v1")
+    .sort((left, right) => left.partition_key.localeCompare(right.partition_key));
   const weeklyRun =
-    state.workflowRuns.find(
-      (run) =>
-        run.workflow_id === "weekly_schedule_planning.v1" && run.partition_key === planningWeekId
-    ) ??
+    weeklyRuns.find((run) => run.partition_key === planningWeekId) ??
+    weeklyRuns[0] ??
     buildStoryRun({
       workflowRunId: "wr-weekly-001",
       workflowId: "weekly_schedule_planning.v1",
@@ -3480,14 +3541,12 @@ function buildLogisticsStoryPayload(planningWeekId: string, request: Request, se
           activation_policy: "manual_or_event",
           status: "active",
           node_kind: "module",
-          drilldown_kind: "workflow_run",
-          drilldown_refs: [
-            {
-              workflow_run_id: weeklyRun.workflow_run_id,
-              workflow_id: weeklyRun.workflow_id,
-              partition_key: weeklyRun.partition_key
-            }
-          ],
+          drilldown_kind: weeklyRuns.length > 1 ? "run_group" : "workflow_run",
+          drilldown_refs: weeklyRuns.map((run) => ({
+            workflow_run_id: run.workflow_run_id,
+            workflow_id: run.workflow_id,
+            partition_key: run.partition_key
+          })),
           artifact_refs: weeklyPublishedArtifact
             ? [
                 {
@@ -3502,8 +3561,8 @@ function buildLogisticsStoryPayload(planningWeekId: string, request: Request, se
               ]
             : [],
           selection_summary: weeklyPublishedArtifact
-            ? "1 linked run, 1 downloadable artifact"
-            : "1 linked run, 0 downloadable artifacts"
+            ? `${weeklyRuns.length} linked run${weeklyRuns.length === 1 ? "" : "s"}, 1 downloadable artifact`
+            : `${weeklyRuns.length} linked run${weeklyRuns.length === 1 ? "" : "s"}, 0 downloadable artifacts`
         },
         {
           module_id: "live_dispatch",
@@ -3558,11 +3617,11 @@ function buildLogisticsStoryPayload(planningWeekId: string, request: Request, se
       ]
     },
     linked_workflow_runs: {
-      weekly_schedule_planning: [weeklyRun],
+      weekly_schedule_planning: weeklyRuns,
       live_dispatch: liveRun ? [liveRun] : [],
       dispatch_reporting: [reportingRun],
       summary: {
-        weekly_schedule_planning_count: 1,
+        weekly_schedule_planning_count: weeklyRuns.length,
         live_dispatch_count: liveRun ? 1 : 0,
         dispatch_reporting_count: 1
       }

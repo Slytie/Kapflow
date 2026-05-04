@@ -3,6 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { HttpResponse, http } from "msw";
 
 import routeDemandRunWorkpageStateSnapshot from "@fixtures/workpage_route_demand_v0_run_state.json";
+import scheduleArtifactStateSnapshot from "@fixtures/workpage_schedule_v0_artifact_state.json";
 import scheduleRunWorkpageStateSnapshot from "@fixtures/workpage_schedule_v0_run_state.json";
 import { App } from "@/app/App";
 import { getApiRequestContextHeaders, setApiRequestContextHeaders } from "@/lib/api/config";
@@ -253,6 +254,35 @@ describe("LogisticsRouteDemandWorkpagePage", () => {
     const user = userEvent.setup();
     const requestedSaveAndRunPaths: string[] = [];
     server.use(
+      http.get("*/api/v1/workpages/workflow-runs/wr-weekly-002/schedule-v0", () => {
+        const payload = structuredClone(scheduleRunWorkpageStateSnapshot.workpage_state) as Record<
+          string,
+          any
+        >;
+        payload.run_context.workflow_run_id = "wr-weekly-002";
+        payload.actions = payload.actions.filter(
+          (action: Record<string, unknown>) => action.kind !== "open_latest_draft"
+        );
+        payload.artifact_state.latest_artifact_version_id = null;
+        return HttpResponse.json(payload);
+      }),
+      http.get(
+        "*/api/v1/workpages/workflow-runs/wr-weekly-002/schedule-v0/artifacts/av-schedule-artifact-target",
+        () => {
+          const payload = structuredClone(scheduleArtifactStateSnapshot.workpage_state) as Record<
+            string,
+            any
+          >;
+          payload.artifact_context.workflow_run_id = "wr-weekly-002";
+          payload.artifact_context.artifact_version_id = "av-schedule-artifact-target";
+          payload.artifact_context.latest_in_chain_artifact_version_id =
+            "av-schedule-artifact-target";
+          payload.freshness.source_version = "av-schedule-artifact-target";
+          payload.workpage.source_artifact_version_id = "av-schedule-artifact-target";
+          payload.source.source_artifact_version_id = "av-schedule-artifact-target";
+          return HttpResponse.json(payload);
+        }
+      ),
       http.post(
         "*/api/v1/workpages/workflow-runs/:workflowRunId/route-demand-v0/artifacts/:artifactVersionId/save-and-run",
         async ({ request, params }) => {
@@ -269,7 +299,7 @@ describe("LogisticsRouteDemandWorkpagePage", () => {
                 "/runs/wr-weekly-002/workpages/route-demand-v0/artifacts/av-route-demand-artifact-003",
               target_workflow_run_id: "wr-weekly-002",
               target_schedule_route: "/runs/wr-weekly-002/workpages/schedule-v0",
-              target_schedule_artifact_version_id: null
+              target_schedule_artifact_version_id: "av-schedule-artifact-target"
             }
           });
         }
@@ -325,6 +355,37 @@ describe("LogisticsRouteDemandWorkpagePage", () => {
     expect(
       mutationLog().some((entry) => entry.startsWith("workpage-route-demand-artifact-submit:"))
     ).toBe(false);
+  }, 30000);
+
+  it("closes the route-demand popup and automatically opens the future weekly schedule popup after canonical save-and-run success", async () => {
+    const user = userEvent.setup();
+    setFrontendOperatorContext();
+    window.history.pushState({}, "", "/runs/wr-weekly-001/workpages/schedule-v0");
+    render(<App />);
+
+    expect(await screen.findByTestId("schedule-workpage-page")).toBeInTheDocument();
+    await user.click(await screen.findByRole("button", { name: "Edit route demand" }));
+
+    const routeDemandDialog = await screen.findByRole("dialog", { name: "Edit route demand" });
+    await user.click(within(routeDemandDialog).getByRole("button", { name: "Add a week" }));
+
+    const futureEditor = await screen.findByTestId("route-demand-quick-edit-editor");
+    await user.click(
+      within(futureEditor).getByRole("button", {
+        name: `Increase planned routes for ${futureVisibleWeekDate}`
+      })
+    );
+    await user.click(
+      within(futureEditor).getByRole("button", { name: "Save and run scheduling agent" })
+    );
+
+    await waitFor(() => {
+      expect(screen.queryByRole("dialog", { name: "Edit route demand" })).not.toBeInTheDocument();
+    });
+    expect(
+      await screen.findByRole("dialog", { name: "Edit Weekly Schedule" })
+    ).toBeInTheDocument();
+    expect(window.location.pathname).toBe("/runs/wr-weekly-002/workpages/schedule-v0");
   }, 30000);
 
   it("shows an inline error when save-and-run fails and stays on the future route-demand artifact", async () => {

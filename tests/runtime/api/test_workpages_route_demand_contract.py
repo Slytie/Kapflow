@@ -1020,3 +1020,98 @@ def test_route_demand_save_and_run_marks_failed_future_week_activation_when_stag
     assert "different week scopes" in str(
         latest_route_contract.payload["future_week_activation"]["error_message"]
     )
+
+
+def test_route_demand_future_week_activation_stays_failed_when_failed_stage04_already_left_a_draft(
+    tmp_path: Path,
+) -> None:
+    seeded = seed_actual_ops_weekly_schedule_run_with_stage04_outputs(
+        db_url=_db_url(tmp_path),
+        tenant_id="tenant-a",
+        domain_id="domain-x",
+        run_tag="api:workpages:route-demand:save-and-run:failed-draft-precedence",
+    )
+    workflow_run_id = str(seeded["workflow_run_id"])
+    client = _client(tmp_path)
+
+    created = client.post(
+        f"/api/v1/workpages/workflow-runs/{workflow_run_id}/route-demand-v0/next-week",
+        payload={"idempotency_key": "api:workpages:route-demand:failed-draft-precedence:create"},
+    )
+    assert created.status_code == 200, created.payload
+    future_workflow_run_id = str(created.payload["created"]["workflow_run_id"])
+    future_artifact_version_id = str(created.payload["created"]["artifact_version_id"])
+
+    conflicting_availability_payload = dict(
+        seeded["artifacts_by_kind"]["planning.approved_availability.workbook"]["metadata_json"]
+    )
+    conflicting_availability_payload["scope_start"] = "2026-03-09"
+    conflicting_availability_payload["scope_end_exclusive"] = "2026-03-16"
+    _ingest_json_artifact(
+        tmp_path,
+        workflow_run_id=future_workflow_run_id,
+        artifact_kind="planning.approved_availability.workbook",
+        artifact_role="official_input",
+        metadata_json=conflicting_availability_payload,
+        idempotency_key="api:workpages:route-demand:failed-draft-precedence:approved-availability",
+    )
+
+    future_contract = client.get(
+        f"/api/v1/workpages/workflow-runs/{future_workflow_run_id}/"
+        f"route-demand-v0/artifacts/{future_artifact_version_id}"
+    )
+    assert future_contract.status_code == 200, future_contract.payload
+    submit_rows = _route_demand_submit_rows_from_contract(future_contract.payload)
+    submit_rows[0]["planned_route_count"] = 4
+
+    saved_and_ran = client.post(
+        f"/api/v1/workpages/workflow-runs/{future_workflow_run_id}/"
+        f"route-demand-v0/artifacts/{future_artifact_version_id}/save-and-run",
+        payload={
+            "daily_demand_rows": submit_rows,
+            "idempotency_key": "api:workpages:route-demand:failed-draft-precedence:run",
+        },
+    )
+    assert saved_and_ran.status_code == 409, saved_and_ran.payload
+
+    _ingest_json_artifact(
+        tmp_path,
+        workflow_run_id=future_workflow_run_id,
+        artifact_kind="planning.draft_weekly_schedule.workbook",
+        artifact_role="draft_output",
+        metadata_json={
+            "week_start": "2026-03-29",
+            "week_end_exclusive": "2026-04-05",
+            "source": "tests",
+        },
+        idempotency_key="api:workpages:route-demand:failed-draft-precedence:schedule-draft",
+    )
+
+    latest_route_artifact_rows = _query_rows(
+        _db_url(tmp_path),
+        """
+        SELECT artifact_version_id
+        FROM artifact_versions
+        WHERE workflow_run_id = ?
+          AND artifact_kind = 'planning.route_slot_requirements.workbook'
+        ORDER BY created_at DESC, artifact_version_id DESC
+        LIMIT 1
+        """,
+        (future_workflow_run_id,),
+    )
+    latest_route_artifact_id = str(latest_route_artifact_rows[0]["artifact_version_id"])
+    latest_route_contract = client.get(
+        f"/api/v1/workpages/workflow-runs/{future_workflow_run_id}/"
+        f"route-demand-v0/artifacts/{latest_route_artifact_id}"
+    )
+    assert latest_route_contract.status_code == 200, latest_route_contract.payload
+    assert latest_route_contract.payload["future_week_activation"]["state"] == "failed"
+    assert latest_route_contract.payload["future_week_activation"]["error_code"] == (
+        "stage04_input_scope_mismatch"
+    )
+    assert latest_route_contract.payload["future_week_activation"]["target_schedule_route"] == (
+        f"/runs/{future_workflow_run_id}/workpages/schedule-v0"
+    )
+    assert latest_route_contract.payload["future_week_activation"][
+        "target_schedule_artifact_version_id"
+    ]
