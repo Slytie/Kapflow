@@ -1401,8 +1401,8 @@ function normalizeDriverAvailabilityExceptions(
   if (!value) {
     return null;
   }
-  return {
-    items: asArray<Record<string, unknown>>(value.items).map((item) => ({
+  const normalizeItems = (rawItems: unknown): WorkpageDriverAvailabilityException[] =>
+    asArray<Record<string, unknown>>(rawItems).map((item) => ({
       exception_id: asString(item.exception_id),
       driver_id: asString(item.driver_id),
       driver_name: asString(item.driver_name),
@@ -1416,7 +1416,10 @@ function normalizeDriverAvailabilityExceptions(
       affected_planning_week_ids: asArray(item.affected_planning_week_ids)
         .map((weekId) => asString(weekId))
         .filter(Boolean)
-    }))
+    }));
+  return {
+    items: normalizeItems(value.items),
+    future_items: normalizeItems(value.future_items)
   };
 }
 

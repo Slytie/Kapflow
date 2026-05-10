@@ -350,6 +350,63 @@ describe("LogisticsDriverPreferencesWorkpagePage", () => {
     expect(within(refreshedPage).getByRole("button", { name: "Save snapshot" })).toBeEnabled();
   }, 30000);
 
+  it("shows later out-of-scope exceptions under Future approved without clearing unsaved grid edits", async () => {
+    const user = userEvent.setup();
+    setFrontendOperatorContext();
+    await workpagesRepository.createWorkpage(
+      "/api/v1/workpages/workflow-runs/wr-weekly-001/driver-preferences-v0/snapshots"
+    );
+    window.history.pushState(
+      {},
+      "",
+      "/runs/wr-weekly-001/workpages/driver-preferences-v0/artifacts/av-driver-preferences-artifact-001"
+    );
+    render(<App />);
+
+    const page = await screen.findByTestId("driver-preferences-artifact-workpage-page");
+    const mondayCell = within(page).getByRole("button", {
+      name: /Abhiraj Singh on 2026-03-23:/i
+    });
+    await user.click(mondayCell);
+    await waitFor(() => {
+      expect(mondayCell).toHaveAttribute(
+        "aria-label",
+        expect.stringContaining("Prefer not to work")
+      );
+    });
+
+    const panel = within(page).getByTestId("driver-availability-exceptions-panel");
+    await user.clear(within(panel).getByLabelText("Start date"));
+    await user.type(within(panel).getByLabelText("Start date"), "2026-04-30");
+    await user.clear(within(panel).getByLabelText("End date"));
+    await user.type(within(panel).getByLabelText("End date"), "2026-05-14");
+    await user.click(within(panel).getByRole("button", { name: "Save exception" }));
+
+    await waitFor(() => {
+      expect(mutationLog()).toContain(
+        "workpage-driver-availability-exception-create:wr-weekly-001:ae-driver-availability-001"
+      );
+    });
+
+    const refreshedPage = await screen.findByTestId("driver-preferences-artifact-workpage-page");
+    const refreshedPanel = within(refreshedPage).getByTestId("driver-availability-exceptions-panel");
+    expect(
+      within(refreshedPanel).getByText("Saved for a later week. Find it under Future approved.")
+    ).toBeInTheDocument();
+    expect(
+      within(refreshedPanel).getByRole("button", { name: "Future approved (1)" })
+    ).toHaveAttribute("aria-expanded", "true");
+    expect(within(refreshedPanel).getByText("2026-04-30 to 2026-05-14")).toBeInTheDocument();
+    expect(within(refreshedPanel).getByText("Not yet attached to a weekly run")).toBeInTheDocument();
+    expect(within(refreshedPanel).queryByText("Family wedding")).not.toBeInTheDocument();
+    expect(
+      within(refreshedPage).getByRole("button", {
+        name: /Abhiraj Singh on 2026-03-23: Prefer not to work/i
+      })
+    ).toBeInTheDocument();
+    expect(within(refreshedPage).getByRole("button", { name: "Save snapshot" })).toBeEnabled();
+  }, 30000);
+
   it("shows conflict recovery guidance and keeps local edits visible until the operator opens the latest snapshot", async () => {
     const user = userEvent.setup();
     setFrontendOperatorContext();

@@ -339,4 +339,56 @@ describe("workpagesRepository", () => {
       "workpage-driver-preferences-artifact-submit:av-driver-preferences-artifact-001:av-driver-preferences-artifact-002"
     );
   });
+
+  it("uses a deterministic idempotency key for repeated driver availability exception saves", async () => {
+    const requestBodies: Array<Record<string, unknown>> = [];
+    server.use(
+      http.post(
+        "*/api/v1/workpages/workflow-runs/:workflowRunId/driver-preferences-v0/availability-exceptions",
+        async ({ request }) => {
+          requestBodies.push((await request.json()) as Record<string, unknown>);
+          return HttpResponse.json({
+            status: "ok",
+            command: "api.workpages.driver_preferences.availability_exceptions.add",
+            created: {
+              exception: {
+                exception_id: "ae-driver-availability-001",
+                driver_id: "driver-001",
+                driver_name: "Driver One",
+                start_date: "2026-04-30",
+                end_date: "2026-04-30",
+                reason_code: "wedding",
+                reason_note: "Family wedding",
+                status: "approved",
+                source_workflow_run_id: "wr-availability-request-ae-driver-availability-001",
+                source_artifact_version_id: "av-availability-approved-plan-ae-driver-availability-001",
+                affected_planning_week_ids: []
+              }
+            }
+          });
+        }
+      )
+    );
+
+    await workpagesRepository.addDriverAvailabilityException("wr-weekly-001", {
+      driverId: "driver-001",
+      startDate: "2026-04-30",
+      endDate: "2026-04-30",
+      reasonCode: "wedding",
+      reasonNote: "Family wedding"
+    });
+    await workpagesRepository.addDriverAvailabilityException("wr-weekly-001", {
+      driverId: "driver-001",
+      startDate: "2026-04-30",
+      endDate: "2026-04-30",
+      reasonCode: "wedding",
+      reasonNote: "  Family   wedding  "
+    });
+
+    expect(requestBodies).toHaveLength(2);
+    expect(requestBodies[0]?.idempotency_key).toBe(requestBodies[1]?.idempotency_key);
+    expect(requestBodies[0]?.idempotency_key).toBe(
+      "frontend:workpage-driver-availability-exception-add:wr-weekly-001:driver-001:2026-04-30:2026-04-30:wedding:Family%20wedding"
+    );
+  });
 });

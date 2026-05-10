@@ -115,9 +115,9 @@ export const workpagesRepository = {
       reason_code: payload.reasonCode,
       reason_note: payload.reasonNote,
       action_ref: actionRef,
-      idempotency_key: createIdempotencyKey(
-        "workpage-driver-availability-exception-add",
-        `${workflowRunId}:${payload.driverId}:${payload.startDate}:${payload.endDate}:${payload.reasonCode}:${payload.reasonNote}`
+      idempotency_key: driverAvailabilityExceptionIdempotencyKey(
+        workflowRunId,
+        payload
       )
     });
   },
@@ -295,3 +295,26 @@ export const workpagesRepository = {
     downloadBinaryToFile(downloaded, `${artifactVersionId}.json`);
   }
 };
+
+function driverAvailabilityExceptionIdempotencyKey(
+  workflowRunId: string,
+  payload: {
+    driverId: string;
+    startDate: string;
+    endDate: string;
+    reasonCode: string;
+    reasonNote: string;
+  }
+): string {
+  const normalizedReasonNote = payload.reasonNote.trim().replace(/\s+/g, " ");
+  return [
+    "frontend",
+    "workpage-driver-availability-exception-add",
+    workflowRunId,
+    payload.driverId,
+    payload.startDate,
+    payload.endDate,
+    payload.reasonCode,
+    encodeURIComponent(normalizedReasonNote)
+  ].join(":");
+}

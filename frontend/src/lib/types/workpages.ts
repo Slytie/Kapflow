@@ -436,6 +436,7 @@ export interface WorkpageDriverAvailabilityException {
 
 export interface WorkpageDriverAvailabilityExceptions {
   items: WorkpageDriverAvailabilityException[];
+  future_items: WorkpageDriverAvailabilityException[];
 }
 
 export type WorkpageDriverPreferencesActionKind =

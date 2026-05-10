@@ -35,30 +35,47 @@ def driver_availability_exceptions_for_workflow_run(
         artifact_kind=AVAILABILITY_APPROVED_PLAN_DATASET_KEY,
         workflow_id=AVAILABILITY_REQUEST_WORKFLOW_ID,
     )
+    workflow_run_id = str(workflow_run.get("workflow_run_id") or "").strip()
+    window_start, window_end = _workflow_run_service_date_bounds(
+        workflow_run=workflow_run,
+        target_service_dates=target_service_dates,
+    )
     items: list[dict[str, Any]] = []
-    seen: set[str] = set()
+    future_items: list[dict[str, Any]] = []
+    seen_items: set[str] = set()
+    seen_future_items: set[str] = set()
     for artifact in artifacts:
+        source_weekly_workflow_run_id = _source_weekly_workflow_run_id_from_approved_plan_artifact(
+            artifact
+        )
         for item in availability_exception_items_from_approved_plan_artifact(artifact):
             exception_id = str(item.get("exception_id") or "").strip()
-            if not exception_id or exception_id in seen:
+            if not exception_id:
                 continue
-            if target_service_dates:
-                start_date = _optional_iso_date(item.get("start_date"))
-                end_date = _optional_iso_date(item.get("end_date"))
-                if start_date is None or end_date is None:
-                    continue
-                exception_service_dates = set(date_range_inclusive(start_date, end_date))
-                if not exception_service_dates.intersection(target_service_dates):
-                    continue
-            else:
-                lower_bound = _optional_iso_date(workflow_run.get("logical_date"))
-                end_date = _optional_iso_date(item.get("end_date"))
-                if lower_bound is not None and end_date is not None and end_date < lower_bound:
-                    continue
-            if exception_id in seen:
+            start_date = _optional_iso_date(item.get("start_date"))
+            end_date = _optional_iso_date(item.get("end_date"))
+            if start_date is None or end_date is None:
                 continue
-            seen.add(exception_id)
-            items.append(item)
+            bucket = _availability_exception_bucket_for_workflow_run(
+                workflow_run_id=workflow_run_id,
+                source_weekly_workflow_run_id=source_weekly_workflow_run_id,
+                target_service_dates=target_service_dates,
+                window_start=window_start,
+                window_end=window_end,
+                start_date=start_date,
+                end_date=end_date,
+            )
+            if bucket == "items":
+                if exception_id in seen_items:
+                    continue
+                seen_items.add(exception_id)
+                items.append(item)
+                continue
+            if bucket == "future_items":
+                if exception_id in seen_items or exception_id in seen_future_items:
+                    continue
+                seen_future_items.add(exception_id)
+                future_items.append(item)
     items.sort(
         key=lambda item: (
             str(item.get("start_date") or ""),
@@ -66,7 +83,14 @@ def driver_availability_exceptions_for_workflow_run(
             str(item.get("exception_id") or ""),
         )
     )
-    return {"items": items}
+    future_items.sort(
+        key=lambda item: (
+            str(item.get("start_date") or ""),
+            str(item.get("driver_name") or ""),
+            str(item.get("exception_id") or ""),
+        )
+    )
+    return {"items": items, "future_items": future_items}
 
 
 def availability_exception_items_from_approved_plan_artifact(
@@ -258,6 +282,49 @@ def _workflow_run_service_dates(
     return {(logical_date + timedelta(days=offset)).isoformat() for offset in range(7)}
 
 
+def _workflow_run_service_date_bounds(
+    *,
+    workflow_run: Mapping[str, Any],
+    target_service_dates: set[str],
+) -> tuple[date | None, date | None]:
+    parsed_dates = sorted(
+        parsed
+        for parsed in (_optional_iso_date(service_date) for service_date in target_service_dates)
+        if parsed is not None
+    )
+    if parsed_dates:
+        return parsed_dates[0], parsed_dates[-1]
+    logical_date = _optional_iso_date(workflow_run.get("logical_date"))
+    if logical_date is None:
+        return None, None
+    return logical_date, logical_date + timedelta(days=6)
+
+
+def _availability_exception_bucket_for_workflow_run(
+    *,
+    workflow_run_id: str,
+    source_weekly_workflow_run_id: str,
+    target_service_dates: set[str],
+    window_start: date | None,
+    window_end: date | None,
+    start_date: date,
+    end_date: date,
+) -> str | None:
+    if target_service_dates:
+        exception_service_dates = set(date_range_inclusive(start_date, end_date))
+        if exception_service_dates.intersection(target_service_dates):
+            return "items"
+    if window_start is not None and end_date < window_start:
+        return None
+    if (
+        window_end is not None
+        and start_date > window_end
+        and source_weekly_workflow_run_id == workflow_run_id
+    ):
+        return "future_items"
+    return None
+
+
 def _service_dates_from_artifact_rows(artifact: Mapping[str, Any] | None) -> set[str]:
     if artifact is None:
         return set()
@@ -318,6 +385,26 @@ def _service_dates_from_explicit_scope(metadata: Mapping[str, Any]) -> set[str]:
         dates.add(cursor.isoformat())
         cursor += timedelta(days=1)
     return dates
+
+
+def _source_weekly_workflow_run_id_from_approved_plan_artifact(
+    artifact: Mapping[str, Any],
+) -> str:
+    metadata = artifact.get("metadata_json")
+    if not isinstance(metadata, Mapping):
+        return ""
+    top_level_value = str(metadata.get("source_weekly_workflow_run_id") or "").strip()
+    if top_level_value:
+        return top_level_value
+    _columns, rows = table_rows_from_metadata(metadata)
+    source_weekly_workflow_run_ids = {
+        str(row.get("source_weekly_workflow_run_id") or "").strip()
+        for row in rows
+        if str(row.get("source_weekly_workflow_run_id") or "").strip()
+    }
+    if len(source_weekly_workflow_run_ids) == 1:
+        return next(iter(source_weekly_workflow_run_ids))
+    return ""
 
 
 def _latest_artifact_for_kind(

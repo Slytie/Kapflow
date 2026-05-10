@@ -568,6 +568,7 @@ interface DriverAvailabilityExceptionsPanelProps {
   driverRows: WorkpageDriverPreferencesDriverRow[];
   serviceDates: WorkpageScheduleHeatmapDate[];
   exceptions: WorkpageDriverAvailabilityException[];
+  futureExceptions: WorkpageDriverAvailabilityException[];
   addAction: WorkpageDriverPreferencesAction | null;
   hasUnsavedGridEdits: boolean;
 }
@@ -577,6 +578,7 @@ function DriverAvailabilityExceptionsPanel({
   driverRows,
   serviceDates,
   exceptions,
+  futureExceptions,
   addAction,
   hasUnsavedGridEdits
 }: DriverAvailabilityExceptionsPanelProps): JSX.Element {
@@ -589,6 +591,8 @@ function DriverAvailabilityExceptionsPanel({
   const [reasonCode, setReasonCode] =
     useState<WorkpageDriverAvailabilityException["reason_code"]>("wedding");
   const [reasonNote, setReasonNote] = useState("");
+  const [saveFeedback, setSaveFeedback] = useState<string | null>(null);
+  const [futureExpanded, setFutureExpanded] = useState(false);
   const effectiveDriverId = driverRows.some((row) => row.driver_id === driverId)
     ? driverId
     : defaultDriverId;
@@ -606,6 +610,19 @@ function DriverAvailabilityExceptionsPanel({
         ),
     [exceptions]
   );
+  const futureApprovedExceptions = useMemo(
+    () =>
+      futureExceptions
+        .slice()
+        .sort(
+          (left, right) =>
+            left.start_date.localeCompare(right.start_date) ||
+            left.driver_name.localeCompare(right.driver_name) ||
+            left.exception_id.localeCompare(right.exception_id)
+        ),
+    [futureExceptions]
+  );
+  const lastServiceDate = serviceDates[serviceDates.length - 1]?.service_date ?? "";
 
   useEffect(() => {
     if (!driverId || !driverRows.some((row) => row.driver_id === driverId)) {
@@ -620,7 +637,14 @@ function DriverAvailabilityExceptionsPanel({
     setReasonNote("");
   }, [defaultServiceDate]);
 
+  useEffect(() => {
+    setSaveFeedback(null);
+  }, [effectiveDriverId, startDate, endDate, reasonCode]);
+
   const addMutation = useMutation({
+    onMutate: () => {
+      setSaveFeedback(null);
+    },
     mutationFn: () => {
       if (!selectedDriver) {
         throw new Error("Choose a driver before adding an exception.");
@@ -637,10 +661,22 @@ function DriverAvailabilityExceptionsPanel({
         addAction?.action_ref ?? undefined
       );
     },
-    onSuccess: () => {
+    onSuccess: (created) => {
       void queryClient.invalidateQueries({ queryKey: ["workpages"] });
       void invalidateWorkspaceViews(queryClient, workflowRunId);
       setReasonNote("");
+      const rawException = created.exception;
+      if (
+        rawException &&
+        typeof rawException === "object" &&
+        !Array.isArray(rawException)
+      ) {
+        const exceptionStartDate = asString((rawException as Record<string, unknown>).start_date);
+        if (exceptionStartDate && lastServiceDate && exceptionStartDate > lastServiceDate) {
+          setSaveFeedback("Saved for a later week. Find it under Future approved.");
+          setFutureExpanded(true);
+        }
+      }
     }
   });
   const saveDisabled =
@@ -733,6 +769,9 @@ function DriverAvailabilityExceptionsPanel({
           {hasUnsavedGridEdits ? (
             <p className="driver-availability-panel__hint">Unsaved grid edits remain local.</p>
           ) : null}
+          {saveFeedback ? (
+            <p className="driver-availability-panel__hint">{saveFeedback}</p>
+          ) : null}
           {addMutation.isError ? (
             <StatePanel
               kind="error"
@@ -771,6 +810,44 @@ function DriverAvailabilityExceptionsPanel({
           ) : (
             <p className="workpage-history__empty">No approved availability exceptions yet.</p>
           )}
+          {futureApprovedExceptions.length > 0 ? (
+            <div
+              className="driver-availability-panel__future"
+              data-testid="driver-availability-future-approved"
+            >
+              <button
+                type="button"
+                className="link-button"
+                aria-expanded={futureExpanded}
+                onClick={() => setFutureExpanded((current) => !current)}
+              >
+                Future approved ({futureApprovedExceptions.length})
+              </button>
+              {futureExpanded ? (
+                <ul>
+                  {futureApprovedExceptions.map((item) => (
+                    <li key={item.exception_id}>
+                      <strong>
+                        {item.start_date === item.end_date
+                          ? item.start_date
+                          : `${item.start_date} to ${item.end_date}`}
+                      </strong>
+                      <span>
+                        {item.driver_name} - {item.driver_id}
+                      </span>
+                      <span>{formatReasonCode(item.reason_code)}</span>
+                      <span>
+                        {item.affected_planning_week_ids.length > 0
+                          ? `Planning weeks: ${item.affected_planning_week_ids.join(", ")}`
+                          : "Not yet attached to a weekly run"}
+                      </span>
+                      {item.reason_note ? <p>{item.reason_note}</p> : null}
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
+            </div>
+          ) : null}
         </div>
       </div>
     </section>
@@ -1335,6 +1412,7 @@ function DriverPreferencesArtifactEditor({
         driverRows={driverRows}
         serviceDates={serviceDates}
         exceptions={contract.driver_availability_exceptions?.items ?? []}
+        futureExceptions={contract.driver_availability_exceptions?.future_items ?? []}
         addAction={addExceptionAction}
         hasUnsavedGridEdits={hasUnsavedEdits}
       />
