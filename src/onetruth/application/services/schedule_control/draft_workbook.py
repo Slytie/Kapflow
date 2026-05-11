@@ -61,6 +61,39 @@ def materialize_stage04_draft_weekly_schedule_workbook(
     return json.dumps(next_payload, indent=2, sort_keys=True).encode("utf-8")
 
 
+def append_stage04_draft_weekly_schedule_assignment_rows(
+    base_workbook_bytes: bytes,
+    *,
+    rows: Any,
+    reserve_rows: Any,
+    appended_rows: Sequence[Mapping[str, Any]],
+) -> bytes:
+    validated_bytes = materialize_stage04_draft_weekly_schedule_workbook(
+        base_workbook_bytes,
+        rows=rows,
+        reserve_rows=reserve_rows,
+    )
+    payload = _load_payload(validated_bytes)
+    columns = _require_columns(payload.get("columns"))
+    assignment_rows = _decode_assignment_rows(payload.get("rows"), columns)
+    reserve_payload_rows = _normalize_mapping_rows(payload.get("reserve_rows"), label="reserve_rows")
+    next_appended_rows = _normalize_appended_rows(
+        appended_rows=appended_rows,
+        base_rows=assignment_rows,
+        columns=columns,
+    )
+    payload["rows"] = [
+        [row[column] for column in columns]
+        for row in [*assignment_rows, *next_appended_rows]
+    ]
+    payload["reserve_rows"] = reserve_payload_rows
+    payload["iteration_deltas"] = _normalize_mapping_rows(
+        payload.get("iteration_deltas"),
+        label="iteration_deltas",
+    )
+    return json.dumps(payload, indent=2, sort_keys=True).encode("utf-8")
+
+
 def draft_workbook_bytes_from_metadata_json(metadata_json: object) -> bytes:
     if not isinstance(metadata_json, Mapping):
         raise ValueError("schedule draft workbook metadata must be an object")
@@ -131,6 +164,42 @@ def _normalize_submitted_rows(raw_rows: Any, *, label: str) -> list[dict[str, An
         for key in EDITABLE_SCHEDULE_DRAFT_FIELDS:
             row[key] = _normalize_editable_value(row.get(key))
     return rows
+
+
+def _normalize_appended_rows(
+    *,
+    appended_rows: Sequence[Mapping[str, Any]],
+    base_rows: list[dict[str, Any]],
+    columns: list[str],
+) -> list[dict[str, Any]]:
+    existing_identities = {_row_identity(row) for row in base_rows}
+    appended_identities: set[tuple[str, str]] = set()
+    normalized: list[dict[str, Any]] = []
+    for index, appended_row in enumerate(appended_rows):
+        if not isinstance(appended_row, Mapping):
+            raise ValueError(f"appended_rows[{index}] must be an object")
+        service_date = str(appended_row.get("service_date") or "").strip()
+        route_slot_id = str(appended_row.get("route_slot_id") or "").strip()
+        if not service_date:
+            raise ValueError(f"appended_rows[{index}].service_date is required")
+        if not route_slot_id:
+            raise ValueError(f"appended_rows[{index}].route_slot_id is required")
+        identity = (service_date, route_slot_id)
+        if identity in existing_identities or identity in appended_identities:
+            raise ValueError(
+                f"appended_rows[{index}] duplicates existing row identity {identity}"
+            )
+        appended_identities.add(identity)
+        full_row = {
+            column: appended_row.get(column, "")
+            for column in columns
+        }
+        for key in ("service_date", "route_slot_id"):
+            full_row[key] = str(full_row.get(key) or "").strip()
+        for key in EDITABLE_SCHEDULE_DRAFT_FIELDS:
+            full_row[key] = _normalize_editable_value(full_row.get(key))
+        normalized.append(full_row)
+    return normalized
 
 
 def _validated_merged_rows(

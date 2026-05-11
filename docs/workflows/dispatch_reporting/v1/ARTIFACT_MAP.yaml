@@ -14,10 +14,7 @@ artifact_sets:
   - key: reporting.upd_draft.workbook
     role: official_input
     template_source: Stage03_Threshold_Detection_and_Draft_Packet/Stage03_Threshold_Detection_and_Draft_Packet_upd_draft_Spreadsheet_Template_EMPTY.xlsx
-  Stage04:
-  - key: reporting.manager_review.doc
-    role: evidence
-    template_source: Stage04_Manager_Review_Confirm/Stage04_Manager_Review_Confirm_manager_review_Document_Template_EMPTY.docx
+  Stage04: []
   Stage05:
   - key: reporting.final_packet.workbook
     role: official_output

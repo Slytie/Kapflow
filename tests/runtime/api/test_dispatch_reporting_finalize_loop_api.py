@@ -719,17 +719,6 @@ def test_dispatch_reporting_happy_path_builds_review_finalizes_and_handoffs(
     assert submitted.status_code == 200, submitted.payload
     latest_draft_artifact_id = str(submitted.payload["submitted"]["artifact_version_id"])
 
-    _upload_binary_artifact(
-        dispatcher_client,
-        human_task_id=review_task_id,
-        artifact_kind="reporting.manager_review.doc",
-        artifact_role="evidence",
-        content=b"Reviewed for finalization.",
-        file_name="reporting-manager-review.txt",
-        media_type="text/plain",
-        metadata_json={"review_summary": "Looks good"},
-        idempotency_key="api:dispatch-happy:upload-manager-review",
-    )
     confirmed = dispatcher_client.post(
         f"/api/v1/human-tasks/{review_task_id}/confirm-review",
         payload={
@@ -895,17 +884,6 @@ def test_dispatch_reporting_date_selected_import_runs_finalize_loop_on_target_se
         dispatcher_client,
         review_task_id,
         idempotency_key="api:dispatch-target-date:claim-review",
-    )
-    _upload_binary_artifact(
-        dispatcher_client,
-        human_task_id=review_task_id,
-        artifact_kind="reporting.manager_review.doc",
-        artifact_role="evidence",
-        content=b"Reviewed for target-date finalization.",
-        file_name="target-date-manager-review.txt",
-        media_type="text/plain",
-        metadata_json={"review_summary": "Looks good"},
-        idempotency_key="api:dispatch-target-date:upload-manager-review",
     )
     confirmed = dispatcher_client.post(
         f"/api/v1/human-tasks/{review_task_id}/confirm-review",
@@ -1165,7 +1143,6 @@ def test_dispatch_review_completion_requires_manager_review_and_latest_confirmat
     assert denied.status_code == 400
     assert denied.payload["error"]["code"] == "task_requirements_not_satisfied"
     assert denied.payload["error"]["details"]["blocking_reason_codes"] == [
-        "required_upload_missing:reporting.manager_review.doc",
         "required_review_confirmation_missing:reporting.upd_draft.workbook",
     ]
 
@@ -1218,17 +1195,6 @@ def test_dispatch_finalize_fails_closed_when_reviewed_draft_is_stale(tmp_path: P
         dispatcher_client,
         review_task_id,
         idempotency_key="api:dispatch-stale:claim-review",
-    )
-    _upload_binary_artifact(
-        dispatcher_client,
-        human_task_id=review_task_id,
-        artifact_kind="reporting.manager_review.doc",
-        artifact_role="evidence",
-        content=b"Reviewed before stale approval check.",
-        file_name="stale-manager-review.txt",
-        media_type="text/plain",
-        metadata_json={"review_summary": "Looks good"},
-        idempotency_key="api:dispatch-stale:upload-manager-review",
     )
     confirmed = dispatcher_client.post(
         f"/api/v1/human-tasks/{review_task_id}/confirm-review",

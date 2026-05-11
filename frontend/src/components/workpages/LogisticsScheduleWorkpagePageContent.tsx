@@ -18,7 +18,10 @@ import {
   draftVersionPrimaryLabel
 } from "@/components/workpages/DraftVersionTimeline";
 import { ScheduleArtifactAdvancedInfo } from "@/components/workpages/ScheduleArtifactAdvancedInfo";
-import type { ScheduleSickNoShowTarget } from "@/components/workpages/ScheduleHeatmapEditor";
+import type {
+  ScheduleRouteDemandPendingCell,
+  ScheduleSickNoShowTarget
+} from "@/components/workpages/ScheduleHeatmapEditor";
 import {
   ScheduleWorkpageSurface,
   type ScheduleVersionRailDefinition
@@ -32,7 +35,11 @@ import { apiConfig } from "@/lib/api/config";
 import { errorText } from "@/lib/api/errorText";
 import { isApiClientError } from "@/lib/api/httpClient";
 import { workpagesRepository } from "@/lib/repositories";
-import type { WorkpageContract, WorkpagePreviewResponse } from "@/lib/types/contracts";
+import type {
+  WorkpageContract,
+  WorkpagePreviewResponse,
+  WorkpageScheduleRouteDemandCoverageRecommendationsResponse
+} from "@/lib/types/contracts";
 import { invalidateWorkspaceViews } from "@/lib/workspace/queryInvalidation";
 import {
   mergeWorkpageActionRef,
@@ -46,6 +53,11 @@ import type {
   WorkpageRouteDemandAction,
   WorkpageScheduleAction,
   WorkpageScheduleHeatmapSection as WorkpageScheduleHeatmapSectionModel,
+  WorkpageScheduleRouteDemandCoverageCandidate,
+  WorkpageScheduleRouteDemandCoverageCandidateGroup,
+  WorkpageScheduleRouteDemandCoverageContext,
+  WorkpageScheduleRouteDemandCoverageRecommendations,
+  WorkpageScheduleRouteDemandCoverageSelection,
   WorkpageSummaryCardsSection as WorkpageSummaryCardsSectionModel,
   WorkpageTableRow,
   WorkpageTableSection as WorkpageTableSectionModel
@@ -96,6 +108,499 @@ function asString(value: unknown): string | null {
 
 function rowsSignature(rows: WorkpageTableRow[]): string {
   return JSON.stringify(rows);
+}
+
+function routeDemandCoverageSelectionMap(
+  selections: WorkpageScheduleRouteDemandCoverageSelection[]
+): Record<string, WorkpageScheduleRouteDemandCoverageSelection> {
+  return selections.reduce<Record<string, WorkpageScheduleRouteDemandCoverageSelection>>(
+    (accumulator, selection) => {
+      accumulator[selection.target_id] = selection;
+      return accumulator;
+    },
+    {}
+  );
+}
+
+type RouteDemandCoverageDayRow = {
+  target: WorkpageScheduleRouteDemandCoverageCandidateGroup["target"];
+  candidate: WorkpageScheduleRouteDemandCoverageCandidate;
+};
+
+type RouteDemandCoverageDayGroupViewModel = {
+  serviceDate: string;
+  targetGroups: WorkpageScheduleRouteDemandCoverageCandidateGroup[];
+  inlineRows: RouteDemandCoverageDayRow[];
+  overflowRows: RouteDemandCoverageDayRow[];
+};
+
+type RouteDemandCoverageTargetById = Record<
+  string,
+  WorkpageScheduleRouteDemandCoverageCandidateGroup["target"]
+>;
+
+function coverageCandidateSelectable(
+  candidate: WorkpageScheduleRouteDemandCoverageCandidate
+): boolean {
+  return candidate.selection_state === "selectable" && candidate.hard_filter_status === "pass";
+}
+
+function coverageRecommendationReason(
+  candidate: WorkpageScheduleRouteDemandCoverageCandidate
+): string {
+  const reasons: string[] = [];
+  if (candidate.assignment_action === "promote_reserve" || candidate.clear_same_day_on_call_reserve) {
+    reasons.push("promotes same-day reserve");
+  }
+  if (candidate.evaluation_kind) {
+    reasons.push(candidate.evaluation_kind.replace(/_/g, " "));
+  }
+  if (candidate.availability_state) {
+    reasons.push(`availability ${candidate.availability_state.toLowerCase()}`);
+  }
+  if (candidate.score_bucket) {
+    reasons.push(`score ${candidate.score_bucket.replace(/_/g, " ")}`);
+  }
+  if (candidate.template_state_preservation_fit > 0) {
+    reasons.push(`template fit ${candidate.template_state_preservation_fit.toFixed(2)}`);
+  }
+  return reasons.length > 0 ? reasons.join(" · ") : "backend-ranked coverage option";
+}
+
+function coverageCandidateMatchesSelection(
+  candidate: WorkpageScheduleRouteDemandCoverageCandidate,
+  selection: WorkpageScheduleRouteDemandCoverageSelection
+): boolean {
+  return (
+    candidate.route_slot_id === selection.route_slot_id && candidate.driver_id === selection.driver_id
+  );
+}
+
+function buildRouteDemandCoverageTargetById(
+  recommendations: WorkpageScheduleRouteDemandCoverageRecommendations | null
+): RouteDemandCoverageTargetById {
+  if (!recommendations) {
+    return {};
+  }
+  return recommendations.candidate_groups.reduce<RouteDemandCoverageTargetById>((accumulator, group) => {
+    accumulator[group.target.target_id] = group.target;
+    return accumulator;
+  }, {});
+}
+
+function routeDemandCoverageGroupHasSelectableSelection(
+  group: WorkpageScheduleRouteDemandCoverageCandidateGroup,
+  selection: WorkpageScheduleRouteDemandCoverageSelection
+): boolean {
+  return group.candidates.some(
+    (candidate) =>
+      coverageCandidateMatchesSelection(candidate, selection) &&
+      coverageCandidateSelectable(candidate)
+  );
+}
+
+function normalizeRouteDemandCoverageSelections(
+  recommendations: WorkpageScheduleRouteDemandCoverageRecommendations | null,
+  currentSelections: Record<string, WorkpageScheduleRouteDemandCoverageSelection>,
+  options: { applyDefaults?: boolean } = {}
+): Record<string, WorkpageScheduleRouteDemandCoverageSelection> {
+  if (!recommendations) {
+    return {};
+  }
+
+  const applyDefaults = options.applyDefaults ?? true;
+  const defaultsByTarget = routeDemandCoverageSelectionMap(recommendations.selected_defaults);
+  const nextSelections: Record<string, WorkpageScheduleRouteDemandCoverageSelection> = {};
+  const usedDriverIdsByServiceDate = new Map<string, Set<string>>();
+
+  const tryAssignSelection = (
+    group: WorkpageScheduleRouteDemandCoverageCandidateGroup,
+    selection: WorkpageScheduleRouteDemandCoverageSelection | null | undefined
+  ): boolean => {
+    if (!selection || !routeDemandCoverageGroupHasSelectableSelection(group, selection)) {
+      return false;
+    }
+    const serviceDate = group.target.service_date;
+    const usedDriverIds = usedDriverIdsByServiceDate.get(serviceDate) ?? new Set<string>();
+    if (usedDriverIds.has(selection.driver_id)) {
+      return false;
+    }
+    usedDriverIds.add(selection.driver_id);
+    usedDriverIdsByServiceDate.set(serviceDate, usedDriverIds);
+    nextSelections[group.target.target_id] = selection;
+    return true;
+  };
+
+  recommendations.candidate_groups.forEach((group) => {
+    tryAssignSelection(group, currentSelections[group.target.target_id]);
+  });
+
+  if (!applyDefaults) {
+    return nextSelections;
+  }
+
+  recommendations.candidate_groups.forEach((group) => {
+    if (nextSelections[group.target.target_id]) {
+      return;
+    }
+    tryAssignSelection(group, defaultsByTarget[group.target.target_id]);
+  });
+
+  recommendations.candidate_groups.forEach((group) => {
+    if (nextSelections[group.target.target_id]) {
+      return;
+    }
+    const fallbackCandidate = group.candidates.find(
+      (candidate) =>
+        coverageCandidateSelectable(candidate) &&
+        !(usedDriverIdsByServiceDate.get(group.target.service_date) ?? new Set<string>()).has(
+          candidate.driver_id
+        )
+    );
+    if (!fallbackCandidate) {
+      return;
+    }
+    tryAssignSelection(group, {
+      target_id: group.target.target_id,
+      route_slot_id: fallbackCandidate.route_slot_id,
+      driver_id: fallbackCandidate.driver_id,
+      row_kind: "assignment"
+    });
+  });
+
+  return nextSelections;
+}
+
+function routeDemandCoverageSelectionsComplete(
+  recommendations: WorkpageScheduleRouteDemandCoverageRecommendations | null,
+  selections: Record<string, WorkpageScheduleRouteDemandCoverageSelection>
+): boolean {
+  if (!recommendations) {
+    return false;
+  }
+  const usedDriverIdsByServiceDate = new Map<string, Set<string>>();
+  for (const group of recommendations.candidate_groups) {
+    const selection = selections[group.target.target_id];
+    if (!selection || !routeDemandCoverageGroupHasSelectableSelection(group, selection)) {
+      return false;
+    }
+    const serviceDate = group.target.service_date;
+    const usedDriverIds = usedDriverIdsByServiceDate.get(serviceDate) ?? new Set<string>();
+    if (usedDriverIds.has(selection.driver_id)) {
+      return false;
+    }
+    usedDriverIds.add(selection.driver_id);
+    usedDriverIdsByServiceDate.set(serviceDate, usedDriverIds);
+  }
+  return true;
+}
+
+function buildRouteDemandCoverageUnresolvedCountsByServiceDate(
+  recommendations: WorkpageScheduleRouteDemandCoverageRecommendations | null,
+  selections: Record<string, WorkpageScheduleRouteDemandCoverageSelection>
+): Record<string, number> {
+  if (!recommendations) {
+    return {};
+  }
+  const normalizedSelections = normalizeRouteDemandCoverageSelections(
+    recommendations,
+    selections,
+    { applyDefaults: false }
+  );
+  return recommendations.candidate_groups.reduce<Record<string, number>>((accumulator, group) => {
+    if (normalizedSelections[group.target.target_id]) {
+      return accumulator;
+    }
+    accumulator[group.target.service_date] =
+      (accumulator[group.target.service_date] ?? 0) + 1;
+    return accumulator;
+  }, {});
+}
+
+function buildRouteDemandCoverageFallbackCountsByServiceDate(
+  context: WorkpageScheduleRouteDemandCoverageContext | null | undefined
+): Record<string, number> {
+  if (!context) {
+    return {};
+  }
+  if (context.deltas.length > 0) {
+    return context.deltas.reduce<Record<string, number>>((accumulator, delta) => {
+      if (delta.delta > 0) {
+        accumulator[delta.service_date] = delta.delta;
+      }
+      return accumulator;
+    }, {});
+  }
+  if (context.service_dates.length === 1 && context.added_route_count > 0) {
+    return {
+      [context.service_dates[0]]: context.added_route_count
+    };
+  }
+  return {};
+}
+
+function buildRouteDemandCoveragePendingCells(
+  recommendations: WorkpageScheduleRouteDemandCoverageRecommendations | null,
+  selections: Record<string, WorkpageScheduleRouteDemandCoverageSelection>
+): Record<string, ScheduleRouteDemandPendingCell> {
+  if (!recommendations) {
+    return {};
+  }
+  const normalizedSelections = normalizeRouteDemandCoverageSelections(
+    recommendations,
+    selections,
+    { applyDefaults: false }
+  );
+  const pendingCells: Record<string, ScheduleRouteDemandPendingCell> = {};
+  recommendations.candidate_groups.forEach((group) => {
+    const selection = normalizedSelections[group.target.target_id];
+    if (!selection) {
+      return;
+    }
+    const candidate = group.candidates.find((item) =>
+      coverageCandidateMatchesSelection(item, selection)
+    );
+    if (!candidate) {
+      return;
+    }
+    pendingCells[`${group.target.service_date}:${candidate.driver_id}`] = {
+      targetId: group.target.target_id,
+      routeId: group.target.route_id,
+      driverId: candidate.driver_id,
+      driverName: candidate.driver_name,
+      serviceDate: group.target.service_date,
+      projectedMinutes: candidate.projected_minutes ?? null
+    };
+  });
+  return pendingCells;
+}
+
+function selectRouteDemandCoverageHeatmapCell(
+  recommendations: WorkpageScheduleRouteDemandCoverageRecommendations | null,
+  currentSelections: Record<string, WorkpageScheduleRouteDemandCoverageSelection>,
+  targetById: RouteDemandCoverageTargetById,
+  options: {
+    serviceDate: string;
+    driverId: string;
+  }
+): {
+  nextSelections: Record<string, WorkpageScheduleRouteDemandCoverageSelection>;
+  message: string;
+} {
+  const { serviceDate, driverId } = options;
+  if (!recommendations) {
+    return {
+      nextSelections: {},
+      message: "Route-demand recovery is unavailable for this draft."
+    };
+  }
+  const normalizedSelections = normalizeRouteDemandCoverageSelections(
+    recommendations,
+    currentSelections,
+    { applyDefaults: false }
+  );
+  const pendingCells = buildRouteDemandCoveragePendingCells(recommendations, normalizedSelections);
+  const activePendingCell = pendingCells[`${serviceDate}:${driverId}`];
+  if (activePendingCell) {
+    const nextSelections = { ...normalizedSelections };
+    delete nextSelections[activePendingCell.targetId];
+    return {
+      nextSelections,
+      message: `Pending route add cleared for ${activePendingCell.routeId}.`
+    };
+  }
+  for (const group of recommendations.candidate_groups) {
+    if (group.target.service_date !== serviceDate) {
+      continue;
+    }
+    if (normalizedSelections[group.target.target_id]) {
+      continue;
+    }
+    const candidate = group.candidates.find(
+      (item) =>
+        item.driver_id === driverId &&
+        coverageCandidateSelectable(item) &&
+        !coverageCandidateLocalConflictReason(
+          item,
+          group.target,
+          normalizedSelections,
+          targetById
+        )
+    );
+    if (!candidate) {
+      continue;
+    }
+    return {
+      nextSelections: {
+        ...normalizedSelections,
+        [group.target.target_id]: {
+          target_id: group.target.target_id,
+          route_slot_id: candidate.route_slot_id,
+          driver_id: candidate.driver_id,
+          row_kind: "assignment"
+        }
+      },
+      message: `Pending route add selected for ${group.target.route_id}.`
+    };
+  }
+  return {
+    nextSelections: normalizedSelections,
+    message: `No uncovered added route is available for that driver on ${serviceDate}.`
+  };
+}
+
+function coverageCandidateLocalConflictReason(
+  candidate: WorkpageScheduleRouteDemandCoverageCandidate,
+  target: WorkpageScheduleRouteDemandCoverageCandidateGroup["target"],
+  selections: Record<string, WorkpageScheduleRouteDemandCoverageSelection>,
+  targetById: RouteDemandCoverageTargetById
+): string | null {
+  for (const [otherTargetId, selection] of Object.entries(selections)) {
+    if (otherTargetId === target.target_id) {
+      continue;
+    }
+    const otherTarget = targetById[otherTargetId];
+    if (!otherTarget || otherTarget.service_date !== target.service_date) {
+      continue;
+    }
+    if (selection.driver_id !== candidate.driver_id) {
+      continue;
+    }
+    return `Already selected for ${otherTarget.route_id}`;
+  }
+  return null;
+}
+
+function resolveRouteDemandCoverageInlineCandidate(
+  group: WorkpageScheduleRouteDemandCoverageCandidateGroup,
+  selections: Record<string, WorkpageScheduleRouteDemandCoverageSelection>
+): WorkpageScheduleRouteDemandCoverageCandidate | null {
+  const currentSelection = selections[group.target.target_id];
+  if (currentSelection) {
+    const selectedCandidate = group.candidates.find((candidate) =>
+      coverageCandidateMatchesSelection(candidate, currentSelection)
+    );
+    if (selectedCandidate) {
+      return selectedCandidate;
+    }
+  }
+
+  return group.candidates[0] ?? null;
+}
+
+function buildRouteDemandCoverageDayGroups(
+  recommendations: WorkpageScheduleRouteDemandCoverageRecommendations | null,
+  selections: Record<string, WorkpageScheduleRouteDemandCoverageSelection>
+): RouteDemandCoverageDayGroupViewModel[] {
+  if (!recommendations) {
+    return [];
+  }
+  const groupsByServiceDate = new Map<string, RouteDemandCoverageDayGroupViewModel>();
+
+  recommendations.candidate_groups.forEach((group) => {
+    const serviceDate = group.target.service_date;
+    let dayGroup = groupsByServiceDate.get(serviceDate);
+    if (!dayGroup) {
+      dayGroup = {
+        serviceDate,
+        targetGroups: [],
+        inlineRows: [],
+        overflowRows: []
+      };
+      groupsByServiceDate.set(serviceDate, dayGroup);
+    }
+
+    dayGroup.targetGroups.push(group);
+    const inlineCandidate = resolveRouteDemandCoverageInlineCandidate(group, selections);
+    if (inlineCandidate) {
+      dayGroup.inlineRows.push({
+        target: group.target,
+        candidate: inlineCandidate
+      });
+    }
+
+    group.candidates.forEach((candidate) => {
+      if (
+        inlineCandidate &&
+        coverageCandidateMatchesSelection(candidate, {
+          target_id: group.target.target_id,
+          route_slot_id: inlineCandidate.route_slot_id,
+          driver_id: inlineCandidate.driver_id,
+          row_kind: "assignment"
+        })
+      ) {
+        return;
+      }
+      dayGroup.overflowRows.push({
+        target: group.target,
+        candidate
+      });
+    });
+  });
+
+  return Array.from(groupsByServiceDate.values());
+}
+
+function coverageCandidateStateSummary(
+  candidate: WorkpageScheduleRouteDemandCoverageCandidate,
+  localConflictReason: string | null = null
+): string {
+  if (localConflictReason) {
+    return `${candidate.availability_state || "UNKNOWN"} · taken`;
+  }
+  return `${candidate.availability_state || "UNKNOWN"} · ${
+    candidate.hard_filter_status === "pass" ? "pass" : "blocked"
+  }`;
+}
+
+function coverageCandidateLoadSummary(
+  candidate: WorkpageScheduleRouteDemandCoverageCandidate
+): string {
+  return `${candidate.current_week_shift_count} wk · ${candidate.projected_rolling7_minutes} r7 · ${candidate.remaining_rolling7_minutes} rem`;
+}
+
+function coverageCandidateReserveSummary(
+  candidate: WorkpageScheduleRouteDemandCoverageCandidate
+): string {
+  return candidate.clear_same_day_on_call_reserve ? "Consumes reserve" : "—";
+}
+
+function coverageCandidateScoreSummary(
+  candidate: WorkpageScheduleRouteDemandCoverageCandidate,
+  localConflictReason: string | null = null
+): string {
+  if (localConflictReason) {
+    return localConflictReason;
+  }
+  if (coverageCandidateSelectable(candidate)) {
+    return candidate.soft_score_total.toFixed(2);
+  }
+  return candidate.hard_filter_reasons.join(", ") || candidate.hard_filter_status;
+}
+
+function coverageOverflowSummaryLabel(
+  rows: RouteDemandCoverageDayRow[]
+): string {
+  const blockedCount = rows.filter((row) => !coverageCandidateSelectable(row.candidate)).length;
+  const routeCount = new Set(rows.map((row) => row.target.target_id)).size;
+  const routeLabel = routeCount === 1 ? "route" : "routes";
+  if (blockedCount > 0) {
+    return `Show ${rows.length} more options across ${routeCount} ${routeLabel} (${blockedCount} blocked)`;
+  }
+  return `Show ${rows.length} more options across ${routeCount} ${routeLabel}`;
+}
+
+function coverageDayDeltaSummary(
+  serviceDate: string,
+  context: WorkpageScheduleRouteDemandCoverageContext | null
+): string | null {
+  const delta = context?.deltas?.find((candidate) => candidate.service_date === serviceDate);
+  if (!delta) {
+    return null;
+  }
+  return `${delta.previous_planned_route_count} -> ${delta.planned_route_count} (${
+    delta.delta >= 0 ? "+" : ""
+  }${delta.delta})`;
 }
 
 function findScheduleAction(
@@ -436,6 +941,7 @@ interface LogisticsScheduleWorkpageViewProps {
   preContent?: ReactNode;
   onRefresh: () => void;
   isRefreshing: boolean;
+  routeDemandUnresolvedCountsByServiceDate?: Record<string, number>;
 }
 
 function LogisticsScheduleWorkpageView({
@@ -452,7 +958,8 @@ function LogisticsScheduleWorkpageView({
   stickyTitleBar = false,
   preContent,
   onRefresh,
-  isRefreshing
+  isRefreshing,
+  routeDemandUnresolvedCountsByServiceDate = {}
 }: LogisticsScheduleWorkpageViewProps): JSX.Element {
   const { summarySection, noteSection, historySection, heatmapSection, assignmentSection, reserveSection } =
     useScheduleSections(contract);
@@ -505,6 +1012,7 @@ function LogisticsScheduleWorkpageView({
         dependencies={contract.dependencies}
         versionRails={versionRails}
         readOnly
+        routeDemandUnresolvedCountsByServiceDate={routeDemandUnresolvedCountsByServiceDate}
       />
     </WorkpageFrame>
   );
@@ -513,10 +1021,12 @@ function LogisticsScheduleWorkpageView({
 export function ScheduleQuickEditModal({
   workflowRunId,
   targetArtifactVersionId = null,
+  routeDemandCoverageContext = null,
   onClose
 }: {
   workflowRunId: string;
   targetArtifactVersionId?: string | null;
+  routeDemandCoverageContext?: WorkpageScheduleRouteDemandCoverageContext | null;
   onClose: () => void;
 }): JSX.Element {
   const titleId = useId();
@@ -538,7 +1048,6 @@ export function ScheduleQuickEditModal({
   const [activeArtifactVersionId, setActiveArtifactVersionId] = useState<string | null>(null);
   useEffect(() => {
     if (targetArtifactVersionId) {
-      setActiveArtifactVersionId(targetArtifactVersionId);
       return;
     }
     if (artifactVersionId && !activeArtifactVersionId) {
@@ -602,6 +1111,7 @@ export function ScheduleQuickEditModal({
               onClose={onClose}
               enableSickNoShow
               onArtifactVersionChange={setActiveArtifactVersionId}
+              routeDemandCoverageContext={routeDemandCoverageContext}
             />
           ) : query.isLoading ? (
             <StatePanel
@@ -683,6 +1193,34 @@ export function LogisticsScheduleWorkpagePage(): JSX.Element {
     queryFn: () => workpagesRepository.scheduleForRun(workflowRunId),
     refetchInterval: apiConfig.pollIntervalMs
   });
+  const { assignmentSection, reserveSection } = useScheduleSections(query.data);
+  const runCoverageContext = query.data?.route_demand_coverage_context ?? null;
+  const runCoverageRecommendationsQuery = useQuery({
+    queryKey: [
+      "workpages",
+      "schedule-v0",
+      "landing",
+      workflowRunId,
+      "route-demand-coverage",
+      runCoverageContext?.schedule_artifact_version_id ?? null,
+      runCoverageContext?.route_demand_artifact_version_id ?? null,
+      rowsSignature(assignmentSection?.rows ?? []),
+      rowsSignature(reserveSection?.rows ?? [])
+    ],
+    enabled: Boolean(runCoverageContext),
+    queryFn: () =>
+      workpagesRepository.getScheduleRouteDemandCoverageCandidatesAtPath(
+        runCoverageContext?.coverage_candidates_path ?? "",
+        {
+          routeDemandArtifactVersionId:
+            runCoverageContext?.route_demand_artifact_version_id ?? "",
+          serviceDates: runCoverageContext?.service_dates ?? [],
+          rows: assignmentSection?.rows ?? [],
+          reserveRows: reserveSection?.rows ?? [],
+          maxCandidates: 8
+        }
+      )
+  });
   const createDriverPreferencesMutation = useMutation({
     mutationFn: (payload: { createPath: string; actionRef: WorkpageDriverPreferencesAction["action_ref"] }) =>
       workpagesRepository.createWorkpage(payload.createPath, payload.actionRef ?? undefined),
@@ -732,6 +1270,56 @@ export function LogisticsScheduleWorkpagePage(): JSX.Element {
   const backRoute = workpageBackRoute(workflowRunId);
   const editableDraftRoute =
     openLatestDraftAction?.state === "available" ? openLatestDraftAction.route : null;
+  const runCoverageRecommendations =
+    runCoverageRecommendationsQuery.data?.route_demand_coverage_recommendations ?? null;
+  const runCoverageUnresolvedCountsByServiceDate =
+    runCoverageRecommendations
+      ? buildRouteDemandCoverageUnresolvedCountsByServiceDate(runCoverageRecommendations, {})
+      : buildRouteDemandCoverageFallbackCountsByServiceDate(runCoverageContext);
+  const runCoverageUnresolvedCount = Object.values(runCoverageUnresolvedCountsByServiceDate).reduce(
+    (total, count) => total + count,
+    0
+  );
+  const runCoverageCallout = runCoverageContext ? (
+    runCoverageRecommendationsQuery.isError ? (
+      <StatePanel
+        kind="error"
+        title="Uncovered route recovery failed"
+        detail={errorText(
+          runCoverageRecommendationsQuery.error,
+          "Unable to load uncovered route additions for the latest draft."
+        )}
+      />
+    ) : runCoverageRecommendationsQuery.isLoading && !runCoverageRecommendations ? (
+      <StatePanel
+        kind="loading"
+        title="Loading uncovered route recovery"
+        detail="Checking whether the latest route-demand changes still need driver coverage in the current draft."
+      />
+    ) : runCoverageUnresolvedCount > 0 ? (
+      <section
+        className="workpage-panel workpage-panel--callout"
+        data-testid="schedule-route-demand-recovery-callout"
+      >
+        <header className="workpage-panel__header">
+          <h2>Uncovered route additions</h2>
+          <p>
+            {runCoverageUnresolvedCount} added{" "}
+            {runCoverageUnresolvedCount === 1 ? "route is" : "routes are"} still
+            uncovered in the latest schedule draft for{" "}
+            {(runCoverageContext.service_dates ?? []).join(", ")}.
+          </p>
+        </header>
+        {editableDraftRoute ? (
+          <div className="action-cluster">
+            <Link className="link-button" to={editableDraftRoute}>
+              Open editable draft
+            </Link>
+          </div>
+        ) : null}
+      </section>
+    ) : null
+  ) : null;
 
   return (
     <LogisticsScheduleWorkpageView
@@ -741,10 +1329,12 @@ export function LogisticsScheduleWorkpagePage(): JSX.Element {
       summaryLabel="Run-backed review"
       backLink={backRoute.href}
       backLabel={backRoute.label}
+      preContent={runCoverageCallout}
       onRefresh={() => {
         void query.refetch();
       }}
       isRefreshing={query.isFetching}
+      routeDemandUnresolvedCountsByServiceDate={runCoverageUnresolvedCountsByServiceDate}
       showHero={false}
       heroTitleActions={
         editableDraftRoute || routeDemandAction?.route || driverPreferencesAction?.route || driverPreferencesAction?.create_path ? (
@@ -800,6 +1390,12 @@ interface ScheduleArtifactEditorProps {
   onClose?: () => void;
   enableSickNoShow?: boolean;
   onArtifactVersionChange?: (artifactVersionId: string) => void;
+  routeDemandCoverageContext?: WorkpageScheduleRouteDemandCoverageContext | null;
+}
+
+interface PendingRouteDemandCoverageIntent {
+  driverId: string;
+  serviceDate: string;
 }
 
 function ScheduleArtifactEditor({
@@ -809,7 +1405,8 @@ function ScheduleArtifactEditor({
   afterSave = "navigate",
   onClose,
   enableSickNoShow = false,
-  onArtifactVersionChange
+  onArtifactVersionChange,
+  routeDemandCoverageContext = null
 }: ScheduleArtifactEditorProps): JSX.Element {
   const navigate = useNavigate();
   const location = useLocation();
@@ -825,6 +1422,22 @@ function ScheduleArtifactEditor({
   const [sickNoShowTarget, setSickNoShowTarget] =
     useState<ScheduleSickNoShowTarget | null>(null);
   const [sickNoShowReasonNote, setSickNoShowReasonNote] = useState("");
+  const routeDemandCoverageRequestSequenceRef = useRef(0);
+  const [
+    routeDemandCoverageRecommendations,
+    setRouteDemandCoverageRecommendations
+  ] = useState<WorkpageScheduleRouteDemandCoverageRecommendations | null>(null);
+  const [routeDemandCoverageErrorMessage, setRouteDemandCoverageErrorMessage] =
+    useState<string | null>(null);
+  const [isRouteDemandCoveragePending, setIsRouteDemandCoveragePending] = useState(false);
+  const [routeDemandCoverageSelections, setRouteDemandCoverageSelections] = useState<
+    Record<string, WorkpageScheduleRouteDemandCoverageSelection>
+  >({});
+  const [routeDemandCoveragePendingIntent, setRouteDemandCoveragePendingIntent] =
+    useState<PendingRouteDemandCoverageIntent | null>(null);
+  const [routeDemandCoverageOverflowOpen, setRouteDemandCoverageOverflowOpen] = useState<
+    Record<string, boolean>
+  >({});
   const query = useQuery({
     queryKey: ["workpages", "schedule-v0", "artifacts", workflowRunId, artifactVersionId],
     queryFn: () => workpagesRepository.scheduleArtifact(workflowRunId, artifactVersionId),
@@ -874,6 +1487,58 @@ function ScheduleArtifactEditor({
   const reserveSignature = useMemo(() => rowsSignature(reserveRows), [reserveRows]);
   const hasUnsavedEdits =
     assignmentSignature !== baseAssignmentSignature || reserveSignature !== baseReserveSignature;
+  const explicitRouteDemandCoverageContext =
+    routeDemandCoverageContext &&
+    routeDemandCoverageContext.schedule_artifact_version_id === artifactVersionId
+      ? routeDemandCoverageContext
+      : null;
+  const contractRouteDemandCoverageContext =
+    contract?.route_demand_coverage_context &&
+    contract.route_demand_coverage_context.schedule_artifact_version_id === artifactVersionId
+      ? contract.route_demand_coverage_context
+      : null;
+  const activeRouteDemandCoverageContext =
+    explicitRouteDemandCoverageContext ?? contractRouteDemandCoverageContext;
+  const routeDemandCoverageMode =
+    explicitRouteDemandCoverageContext
+      ? "explicit"
+      : contractRouteDemandCoverageContext
+        ? "recovery"
+        : null;
+  const routeDemandCoverageTargetById = useMemo(
+    () => buildRouteDemandCoverageTargetById(routeDemandCoverageRecommendations),
+    [routeDemandCoverageRecommendations]
+  );
+  const routeDemandCoverageDayGroups = useMemo(
+    () =>
+      buildRouteDemandCoverageDayGroups(
+        routeDemandCoverageRecommendations,
+        routeDemandCoverageSelections
+      ),
+    [routeDemandCoverageRecommendations, routeDemandCoverageSelections]
+  );
+  const routeDemandCoverageUnresolvedCountsByServiceDate = useMemo(
+    () =>
+      routeDemandCoverageRecommendations
+        ? buildRouteDemandCoverageUnresolvedCountsByServiceDate(
+            routeDemandCoverageRecommendations,
+            routeDemandCoverageSelections
+          )
+        : buildRouteDemandCoverageFallbackCountsByServiceDate(activeRouteDemandCoverageContext),
+    [
+      activeRouteDemandCoverageContext,
+      routeDemandCoverageRecommendations,
+      routeDemandCoverageSelections
+    ]
+  );
+  const routeDemandCoveragePendingCells = useMemo(
+    () =>
+      buildRouteDemandCoveragePendingCells(
+        routeDemandCoverageRecommendations,
+        routeDemandCoverageSelections
+      ),
+    [routeDemandCoverageRecommendations, routeDemandCoverageSelections]
+  );
   const submitMutation = useMutation({
     mutationFn: () => {
       const carriedActionRef = resolveWorkpageActionRef(location.state, {
@@ -927,6 +1592,44 @@ function ScheduleArtifactEditor({
           )
         }
       });
+    }
+  });
+  const routeDemandCoverageApplyMutation = useMutation({
+    mutationFn: () => {
+      if (!activeRouteDemandCoverageContext) {
+        throw new Error("Route-demand coverage context is unavailable for this draft.");
+      }
+      return workpagesRepository.applyScheduleRouteDemandCoverageAtPath(
+        activeRouteDemandCoverageContext.coverage_apply_path,
+        artifactVersionId,
+        {
+          routeDemandArtifactVersionId:
+            activeRouteDemandCoverageContext.route_demand_artifact_version_id,
+          serviceDates: activeRouteDemandCoverageContext.service_dates,
+          rows: assignmentRows,
+          reserveRows,
+          selections: Object.values(routeDemandCoverageSelections).map((selection) => ({
+            target_id: selection.target_id,
+            route_slot_id: selection.route_slot_id,
+            driver_id: selection.driver_id,
+            row_kind: selection.row_kind
+          })),
+          maxCandidates: routeDemandCoverageRecommendations?.max_candidates ?? 8
+        }
+      );
+    },
+    onSuccess: (submitted) => {
+      void queryClient.invalidateQueries({ queryKey: ["workpages"] });
+      void queryClient.invalidateQueries({ queryKey: ["logistics-demo-story"] });
+      void invalidateWorkspaceViews(queryClient, submitted.workflow_run_id);
+      setRouteDemandCoverageRecommendations(null);
+      setRouteDemandCoverageErrorMessage(null);
+      setRouteDemandCoverageSelections({});
+      setRouteDemandCoverageOverflowOpen({});
+      onArtifactVersionChange?.(submitted.artifact_version_id);
+      if (!onArtifactVersionChange && layout === "page") {
+        navigate(submitted.route);
+      }
     }
   });
   const sickNoShowMutation = useMutation({
@@ -989,7 +1692,136 @@ function ScheduleArtifactEditor({
     setSickNoShowTarget(null);
     setSickNoShowReasonNote("");
     previewRequestSequenceRef.current += 1;
+    routeDemandCoverageRequestSequenceRef.current += 1;
+    setRouteDemandCoverageRecommendations(null);
+    setRouteDemandCoverageErrorMessage(null);
+    setIsRouteDemandCoveragePending(false);
+    setRouteDemandCoverageSelections({});
+    setRouteDemandCoveragePendingIntent(null);
+    setRouteDemandCoverageOverflowOpen({});
   }, [artifactVersionId]);
+
+  useEffect(() => {
+    if (!activeRouteDemandCoverageContext) {
+      routeDemandCoverageRequestSequenceRef.current += 1;
+      setRouteDemandCoverageRecommendations(null);
+      setRouteDemandCoverageErrorMessage(null);
+      setIsRouteDemandCoveragePending(false);
+      setRouteDemandCoverageSelections({});
+      setRouteDemandCoveragePendingIntent(null);
+      setRouteDemandCoverageOverflowOpen({});
+    }
+  }, [activeRouteDemandCoverageContext]);
+
+  useEffect(() => {
+    if (!routeDemandCoverageDayGroups.length) {
+      setRouteDemandCoverageOverflowOpen({});
+      return;
+    }
+    setRouteDemandCoverageOverflowOpen((current) => {
+      const next = { ...current };
+      const validServiceDates = new Set(
+        routeDemandCoverageDayGroups
+          .filter((group) => group.overflowRows.length > 0)
+          .map((group) => group.serviceDate)
+      );
+
+      Object.keys(next).forEach((serviceDate) => {
+        if (!validServiceDates.has(serviceDate)) {
+          delete next[serviceDate];
+        }
+      });
+
+      const currentKeys = Object.keys(current);
+      const nextKeys = Object.keys(next);
+      const changed =
+        currentKeys.length !== nextKeys.length ||
+        nextKeys.some((key) => current[key] !== next[key]);
+      return changed ? next : current;
+    });
+  }, [routeDemandCoverageDayGroups]);
+
+  useEffect(() => {
+    if (!activeRouteDemandCoverageContext) {
+      return;
+    }
+    routeDemandCoverageRequestSequenceRef.current += 1;
+    const requestToken = routeDemandCoverageRequestSequenceRef.current;
+    const timer = window.setTimeout(() => {
+      setIsRouteDemandCoveragePending(true);
+      void workpagesRepository
+        .getScheduleRouteDemandCoverageCandidatesAtPath(
+          activeRouteDemandCoverageContext.coverage_candidates_path,
+          {
+            routeDemandArtifactVersionId:
+              activeRouteDemandCoverageContext.route_demand_artifact_version_id,
+            serviceDates: activeRouteDemandCoverageContext.service_dates,
+            rows: assignmentRows,
+            reserveRows,
+            maxCandidates: 8
+          }
+        )
+        .then((response: WorkpageScheduleRouteDemandCoverageRecommendationsResponse) => {
+          if (routeDemandCoverageRequestSequenceRef.current !== requestToken) {
+            return;
+          }
+          const recommendations = response.route_demand_coverage_recommendations;
+          setRouteDemandCoverageRecommendations(recommendations);
+          setRouteDemandCoverageErrorMessage(null);
+          setRouteDemandCoverageSelections((currentSelections) =>
+            normalizeRouteDemandCoverageSelections(recommendations, currentSelections, {
+              applyDefaults: routeDemandCoverageMode === "explicit"
+            })
+          );
+        })
+        .catch((error) => {
+          if (routeDemandCoverageRequestSequenceRef.current !== requestToken) {
+            return;
+          }
+          setRouteDemandCoverageRecommendations(null);
+          setRouteDemandCoverageSelections({});
+          setRouteDemandCoveragePendingIntent(null);
+          setRouteDemandCoverageErrorMessage(
+            errorText(error, "Unable to load route-demand coverage recommendations.")
+          );
+        })
+        .finally(() => {
+          if (routeDemandCoverageRequestSequenceRef.current === requestToken) {
+            setIsRouteDemandCoveragePending(false);
+          }
+        });
+    }, 300);
+
+    return () => {
+      window.clearTimeout(timer);
+    };
+  }, [
+    activeRouteDemandCoverageContext,
+    assignmentRows,
+    assignmentSignature,
+    routeDemandCoverageMode,
+    reserveRows,
+    reserveSignature
+  ]);
+
+  useEffect(() => {
+    if (!routeDemandCoveragePendingIntent || !routeDemandCoverageRecommendations) {
+      return;
+    }
+    const result = selectRouteDemandCoverageHeatmapCell(
+      routeDemandCoverageRecommendations,
+      routeDemandCoverageSelections,
+      routeDemandCoverageTargetById,
+      routeDemandCoveragePendingIntent
+    );
+    setRouteDemandCoverageSelections(result.nextSelections);
+    setRouteDemandCoveragePendingIntent(null);
+  }, [
+    routeDemandCoveragePendingIntent,
+    routeDemandCoverageRecommendations,
+    routeDemandCoverageSelections,
+    routeDemandCoverageTargetById
+  ]);
 
   useEffect(() => {
     previewRequestSequenceRef.current += 1;
@@ -1105,6 +1937,102 @@ function ScheduleArtifactEditor({
     isStaleArtifact ||
     saveAction?.state !== "available" ||
     !artifactVersionId;
+  const showRouteDemandCoveragePanel = Boolean(
+    activeRouteDemandCoverageContext && !submitConflict && !isStaleArtifact
+  );
+  const selectedRouteDemandCoverageCount = Object.keys(routeDemandCoverageSelections).length;
+  const routeDemandCoverageApplyDisabled =
+    routeDemandCoverageApplyMutation.isPending ||
+    !routeDemandCoverageSelectionsComplete(
+      routeDemandCoverageRecommendations,
+      routeDemandCoverageSelections
+    );
+  const routeDemandCoverageApplyLabel =
+    routeDemandCoverageMode === "recovery"
+      ? `Apply ${selectedRouteDemandCoverageCount} route ${
+          selectedRouteDemandCoverageCount === 1 ? "addition" : "additions"
+        }`
+      : `Apply ${selectedRouteDemandCoverageCount} coverage ${
+          selectedRouteDemandCoverageCount === 1 ? "selection" : "selections"
+        }`;
+  const renderRouteDemandCoverageCandidateRow = (
+    candidate: WorkpageScheduleRouteDemandCoverageCandidate,
+    target: WorkpageScheduleRouteDemandCoverageCandidateGroup["target"]
+  ): JSX.Element => {
+    const targetId = target.target_id;
+    const selection = routeDemandCoverageSelections[targetId];
+    const checked =
+      selection?.driver_id === candidate.driver_id &&
+      selection?.route_slot_id === candidate.route_slot_id;
+    const localConflictReason = coverageCandidateLocalConflictReason(
+      candidate,
+      target,
+      routeDemandCoverageSelections,
+      routeDemandCoverageTargetById
+    );
+    const selectable = coverageCandidateSelectable(candidate) && !localConflictReason;
+    const reason = coverageRecommendationReason(candidate);
+
+    return (
+      <tr
+        key={`${candidate.route_slot_id}:${candidate.driver_id}`}
+        className={`route-demand-coverage-panel__candidate-row${
+          checked ? " route-demand-coverage-panel__candidate-row--selected" : ""
+        }${selectable ? "" : " route-demand-coverage-panel__candidate-row--blocked"}`}
+      >
+        <td className="route-demand-coverage-panel__cell route-demand-coverage-panel__cell--route">
+          <strong>{target.route_id}</strong>
+          <span className="route-demand-coverage-panel__route-slot">{target.route_slot_id}</span>
+        </td>
+        <td className="route-demand-coverage-panel__cell route-demand-coverage-panel__cell--pick">
+          <input
+            type="radio"
+            className="route-demand-coverage-panel__radio"
+            name={`route-demand-coverage-${targetId}`}
+            aria-label={`Select ${candidate.driver_name} for ${target.route_id} on ${candidate.service_date}`}
+            checked={checked}
+            disabled={!selectable}
+            onChange={() => {
+              setRouteDemandCoverageSelections((current) => ({
+                ...current,
+                [targetId]: {
+                  target_id: targetId,
+                  route_slot_id: candidate.route_slot_id,
+                  driver_id: candidate.driver_id,
+                  row_kind: "assignment"
+                }
+              }));
+            }}
+          />
+        </td>
+        <td className="route-demand-coverage-panel__cell route-demand-coverage-panel__cell--driver">
+          <strong>{candidate.driver_name}</strong>
+        </td>
+        <td className="route-demand-coverage-panel__cell">
+          {coverageCandidateStateSummary(candidate, localConflictReason)}
+        </td>
+        <td className="route-demand-coverage-panel__cell">
+          {coverageCandidateLoadSummary(candidate)}
+        </td>
+        <td className="route-demand-coverage-panel__cell">
+          {coverageCandidateReserveSummary(candidate)}
+        </td>
+        <td className="route-demand-coverage-panel__cell route-demand-coverage-panel__cell--why">
+          <span className="route-demand-coverage-panel__truncate" title={reason}>
+            {reason}
+          </span>
+        </td>
+        <td className="route-demand-coverage-panel__cell route-demand-coverage-panel__cell--score">
+          <span
+            className="route-demand-coverage-panel__truncate"
+            title={coverageCandidateScoreSummary(candidate, localConflictReason)}
+          >
+            {coverageCandidateScoreSummary(candidate, localConflictReason)}
+          </span>
+        </td>
+      </tr>
+    );
+  };
 
   return (
     <WorkpageFrame
@@ -1326,6 +2254,192 @@ function ScheduleArtifactEditor({
         </div>
       ) : null}
 
+      {showRouteDemandCoveragePanel ? (
+        <section
+          className="workpage-panel workpage-panel--callout"
+          data-testid="route-demand-coverage-panel"
+        >
+          <header className="workpage-panel__header">
+            <h2>Route-demand coverage recommendations</h2>
+            <p>
+              The added route demand was saved separately. Use empty heatmap cells or choose a
+              backend-ranked driver option for each new target route slot, then apply to create
+              the next schedule draft.
+            </p>
+          </header>
+          <div className="route-demand-coverage-panel__summary">
+            <p>
+              {routeDemandCoverageRecommendations?.added_route_count ??
+                activeRouteDemandCoverageContext?.added_route_count ??
+                0}{" "}
+              added routes across {(activeRouteDemandCoverageContext?.service_dates ?? []).join(", ")}
+            </p>
+            {activeRouteDemandCoverageContext?.deltas?.length ? (
+              <p>
+                {activeRouteDemandCoverageContext.deltas
+                  .map(
+                    (delta) =>
+                      `${delta.service_date}: ${delta.previous_planned_route_count} -> ${delta.planned_route_count} (${delta.delta >= 0 ? "+" : ""}${delta.delta})`
+                  )
+                  .join(" · ")}
+              </p>
+            ) : null}
+          </div>
+          {routeDemandCoverageErrorMessage ? (
+            <StatePanel
+              kind="error"
+              title="Coverage recommendations failed"
+              detail={routeDemandCoverageErrorMessage}
+            />
+          ) : isRouteDemandCoveragePending && !routeDemandCoverageRecommendations ? (
+            <StatePanel
+              kind="loading"
+              title="Loading coverage recommendations"
+              detail="Evaluating backend-ranked driver options for the added route demand."
+            />
+          ) : routeDemandCoverageRecommendations ? (
+            <>
+              {routeDemandCoverageDayGroups.map((dayGroup) => {
+                const isOverflowOpen = Boolean(
+                  routeDemandCoverageOverflowOpen[dayGroup.serviceDate]
+                );
+                const dayDeltaSummary = coverageDayDeltaSummary(
+                  dayGroup.serviceDate,
+                  activeRouteDemandCoverageContext
+                );
+
+                return (
+                  <section
+                    key={dayGroup.serviceDate}
+                    className="route-demand-coverage-panel__day"
+                    data-testid={`route-demand-coverage-day-${dayGroup.serviceDate}`}
+                  >
+                    <header className="route-demand-coverage-panel__day-header">
+                      <div className="route-demand-coverage-panel__day-heading">
+                        <h3>{dayGroup.serviceDate}</h3>
+                      </div>
+                      <div className="route-demand-coverage-panel__meta">
+                        <span>
+                          {dayGroup.targetGroups.length} added{" "}
+                          {dayGroup.targetGroups.length === 1 ? "route" : "routes"}
+                        </span>
+                        {dayDeltaSummary ? <span>{dayDeltaSummary}</span> : null}
+                      </div>
+                    </header>
+
+                    <div
+                      className="route-demand-coverage-panel__table-wrap"
+                      data-testid={`route-demand-coverage-day-table-${dayGroup.serviceDate}`}
+                    >
+                      <table className="route-demand-coverage-panel__table">
+                        <thead>
+                          <tr>
+                            <th>Route</th>
+                            <th>Pick</th>
+                            <th>Driver</th>
+                            <th>State</th>
+                            <th>Load</th>
+                            <th>Reserve</th>
+                            <th>Why</th>
+                            <th>Score</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {dayGroup.inlineRows.length > 0 ? (
+                            dayGroup.inlineRows.map((row) =>
+                              renderRouteDemandCoverageCandidateRow(row.candidate, row.target)
+                            )
+                          ) : (
+                            <tr className="route-demand-coverage-panel__empty-row">
+                              <td colSpan={8}>
+                                No route-level inline recommendations are available for this day.
+                              </td>
+                            </tr>
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+
+                    {dayGroup.overflowRows.length > 0 ? (
+                      <details
+                        className="route-demand-coverage-panel__overflow"
+                        data-testid={`route-demand-coverage-day-overflow-${dayGroup.serviceDate}`}
+                        open={isOverflowOpen}
+                        onToggle={(event) => {
+                          const isOpen = (event.currentTarget as HTMLDetailsElement).open;
+                          setRouteDemandCoverageOverflowOpen((current) => {
+                            const next = { ...current };
+                            if (isOpen) {
+                              next[dayGroup.serviceDate] = true;
+                            } else {
+                              delete next[dayGroup.serviceDate];
+                            }
+                            return next;
+                          });
+                        }}
+                      >
+                        <summary>{coverageOverflowSummaryLabel(dayGroup.overflowRows)}</summary>
+                        <div className="route-demand-coverage-panel__table-wrap">
+                          <table className="route-demand-coverage-panel__table">
+                            <thead>
+                              <tr>
+                                <th>Route</th>
+                                <th>Pick</th>
+                                <th>Driver</th>
+                                <th>State</th>
+                                <th>Load</th>
+                                <th>Reserve</th>
+                                <th>Why</th>
+                                <th>Score</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {dayGroup.overflowRows.map((row) =>
+                                renderRouteDemandCoverageCandidateRow(row.candidate, row.target)
+                              )}
+                            </tbody>
+                          </table>
+                        </div>
+                      </details>
+                    ) : null}
+                  </section>
+                );
+              })}
+              {routeDemandCoverageApplyMutation.isError ? (
+                <StatePanel
+                  kind="error"
+                  title="Coverage apply failed"
+                  detail={errorText(
+                    routeDemandCoverageApplyMutation.error,
+                    "Unable to apply the selected route-demand coverage options."
+                  )}
+                />
+              ) : null}
+              <div className="action-cluster route-demand-coverage-panel__footer">
+                <button
+                  type="button"
+                  className="action-btn action-btn--positive"
+                  disabled={routeDemandCoverageApplyDisabled}
+                  onClick={() => routeDemandCoverageApplyMutation.mutate()}
+                >
+                  {routeDemandCoverageApplyMutation.isPending
+                    ? routeDemandCoverageMode === "recovery"
+                      ? "Applying route additions..."
+                      : "Applying coverage..."
+                    : routeDemandCoverageApplyLabel}
+                </button>
+              </div>
+            </>
+          ) : (
+            <StatePanel
+              kind="empty"
+              title="No coverage recommendations yet"
+              detail="The backend did not return any added route-demand targets for this draft."
+            />
+          )}
+        </section>
+      ) : null}
+
       <ScheduleWorkpageSurface
         summarySection={summarySection}
         heatmapSection={heatmapSection}
@@ -1347,6 +2461,32 @@ function ScheduleArtifactEditor({
         }}
         saveAction={saveAction}
         presentation={isEmbedded ? "quick_edit" : "default"}
+        routeDemandUnresolvedCountsByServiceDate={routeDemandCoverageUnresolvedCountsByServiceDate}
+        routeDemandPendingCells={routeDemandCoveragePendingCells}
+        onRouteDemandCellToggle={
+          showRouteDemandCoveragePanel
+            ? ({ driverId, serviceDate }) => {
+                if (!routeDemandCoverageRecommendations) {
+                  setRouteDemandCoveragePendingIntent({
+                    driverId,
+                    serviceDate
+                  });
+                  return "Loading uncovered route options for that driver.";
+                }
+                const result = selectRouteDemandCoverageHeatmapCell(
+                  routeDemandCoverageRecommendations,
+                  routeDemandCoverageSelections,
+                  routeDemandCoverageTargetById,
+                  {
+                    driverId,
+                    serviceDate
+                  }
+                );
+                setRouteDemandCoverageSelections(result.nextSelections);
+                return result.message;
+              }
+            : undefined
+        }
         onMarkSickNoShow={
           enableSickNoShow && sickNoShowAction?.state === "available"
             ? (target) => {

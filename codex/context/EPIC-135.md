@@ -4,6 +4,12 @@ Purpose:
 - Rehydrate the selected next app-facing workpage epic after EPIC-134.
 - Keep the implementation grounded in the existing weekly/live authority model instead of widening the weekly popup ad hoc.
 
+## Current landed subset (2026-05-10)
+- A bounded pre-publish weekly-draft route-demand coverage slice is now implemented.
+- Existing-week positive route-count increases can hand off from `route-demand-v0` into the shared `schedule-v0` quick-edit popup with backend recommend/apply coverage actions.
+- Future-week `Save and run scheduling agent` remains the separate weekly Stage04 greenfield activation path.
+- This does not imply that the later live-dispatch-backed replan lane, canonical runtime-status projection, driver-contact bridge, or manual scheduler CTA retirement are complete.
+
 ## Non-negotiable invariants
 - One truth system: workpages remain projections over canonical workflow/task/event/artifact/pointer truth.
 - `weekly_schedule_planning.v1` owns pre-publish schedule build/review truth.
@@ -29,7 +35,7 @@ Purpose:
 ## Repo-grounded findings
 1. `AppShell` already owns the top-chrome quick-edit modal posture for schedule, route demand, and drivers.
 2. The current schedule popup is weekly-draft-centric and currently owns direct Sick / No Show mutation.
-3. Route-demand saves still create a Stage04 refresh-task follow-up path that must be replaced, not hidden.
+3. Existing-week positive route-count increases now hand off into pre-publish weekly-draft coverage recommendations, while the later live-dispatch-backed replan/runtime-status/contact-data/manual-CTA work remains open.
 4. The weekly Stage04 human-task endpoint is the only mature scheduler agent runtime today and it requires a claimed Stage04 `work_item`.
 5. Stage04 required-input truth plus requirement/actionability truth are explicit and cannot be bypassed when the manual scheduler CTA is removed.
 6. Live dispatch requires published weekly seed truth and therefore cannot own the pre-publish lane.

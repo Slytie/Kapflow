@@ -338,10 +338,124 @@ def test_route_demand_artifact_workpage_uses_canonical_route_and_retires_alias(
             ),
             "disabled_reason": None,
         },
+        {
+            "action_id": "workpage.route-demand-v0.save_and_run",
+            "kind": "save_and_run",
+            "label": "Run coverage agent",
+            "state": "available",
+            "workpage_kind": "route-demand-v0",
+            "artifact_version_id": route_artifact_id,
+            "submit_path": (
+                f"/api/v1/workpages/workflow-runs/{workflow_run_id}/route-demand-v0/"
+                f"artifacts/{route_artifact_id}/save-and-run"
+            ),
+            "action_ref": _action_ref(
+                action_id="workpage.route-demand-v0.save_and_run",
+                workpage_kind="route-demand-v0",
+                workflow_run_id=workflow_run_id,
+                artifact_version_id=route_artifact_id,
+            ),
+            "disabled_reason": None,
+        },
     ]
     alias_read = client.get(f"/api/v1/workpages/artifacts/{route_artifact_id}")
     assert alias_read.status_code == 404
     assert alias_read.payload["error"]["code"] == "not_found"
+
+
+def test_route_demand_existing_week_save_and_run_requires_positive_delta_and_returns_coverage_context(
+    tmp_path: Path,
+) -> None:
+    seeded = seed_actual_ops_weekly_schedule_run_with_stage04_outputs(
+        db_url=_db_url(tmp_path),
+        tenant_id="tenant-a",
+        domain_id="domain-x",
+        run_tag="api:workpages:route-demand:existing-week-coverage",
+    )
+    workflow_run_id = str(seeded["workflow_run_id"])
+    route_artifact_id = str(
+        seeded["artifacts_by_kind"]["planning.route_slot_requirements.workbook"][
+            "artifact_version_id"
+        ]
+    )
+    schedule_artifact_id = str(seeded["stage04_outputs"]["draft_workbook"]["artifact_version_id"])
+    client = _client(tmp_path)
+    contract = client.get(
+        f"/api/v1/workpages/workflow-runs/{workflow_run_id}/"
+        f"route-demand-v0/artifacts/{route_artifact_id}"
+    )
+    assert contract.status_code == 200, contract.payload
+    submit_rows = _route_demand_submit_rows_from_contract(contract.payload)
+
+    unchanged = client.post(
+        f"/api/v1/workpages/workflow-runs/{workflow_run_id}/"
+        f"route-demand-v0/artifacts/{route_artifact_id}/save-and-run",
+        payload={
+            "daily_demand_rows": submit_rows,
+            "idempotency_key": "api:workpages:route-demand:existing-week-coverage:unchanged",
+        },
+    )
+    assert unchanged.status_code == 400, unchanged.payload
+    assert unchanged.payload["error"]["code"] == "route_demand_increase_required"
+
+    submit_rows[0]["planned_route_count"] = int(submit_rows[0]["planned_route_count"]) + 1
+    saved_and_ran = client.post(
+        f"/api/v1/workpages/workflow-runs/{workflow_run_id}/"
+        f"route-demand-v0/artifacts/{route_artifact_id}/save-and-run",
+        payload={
+            "daily_demand_rows": submit_rows,
+            "idempotency_key": "api:workpages:route-demand:existing-week-coverage:increase",
+        },
+    )
+    assert saved_and_ran.status_code == 200, saved_and_ran.payload
+    assert saved_and_ran.payload["submitted"]["target_workflow_run_id"] == workflow_run_id
+    assert saved_and_ran.payload["submitted"]["target_schedule_route"] == (
+        f"/runs/{workflow_run_id}/workpages/schedule-v0"
+    )
+    assert saved_and_ran.payload["submitted"]["target_schedule_artifact_version_id"] == (
+        schedule_artifact_id
+    )
+    coverage_context = saved_and_ran.payload["route_demand_coverage_context"]
+    assert saved_and_ran.payload["submitted"]["route_demand_coverage_context"] == coverage_context
+    assert coverage_context == {
+        "workflow_run_id": workflow_run_id,
+        "schedule_artifact_version_id": schedule_artifact_id,
+        "route_demand_artifact_version_id": saved_and_ran.payload["submitted"][
+            "artifact_version_id"
+        ],
+        "coverage_candidates_path": (
+            f"/api/v1/workpages/workflow-runs/{workflow_run_id}/schedule-v0/"
+            f"artifacts/{schedule_artifact_id}/route-demand-coverage-candidates"
+        ),
+        "coverage_apply_path": (
+            f"/api/v1/workpages/workflow-runs/{workflow_run_id}/schedule-v0/"
+            f"artifacts/{schedule_artifact_id}/route-demand-coverage"
+        ),
+        "service_dates": [submit_rows[0]["service_date"]],
+        "added_route_count": 1,
+        "deltas": [
+            {
+                "service_date": submit_rows[0]["service_date"],
+                "previous_planned_route_count": int(submit_rows[0]["planned_route_count"]) - 1,
+                "planned_route_count": int(submit_rows[0]["planned_route_count"]),
+                "delta": 1,
+            }
+        ],
+    }
+
+def test_route_demand_historical_artifact_becomes_read_only_after_successor_save(
+    tmp_path: Path,
+) -> None:
+    seeded = seed_actual_ops_weekly_schedule_run_with_stage04_outputs(
+        db_url=_db_url(tmp_path),
+        tenant_id="tenant-a",
+        domain_id="domain-x",
+        run_tag="api:workpages:route-demand:artifact-history",
+    )
+    workflow_run_id = str(seeded["workflow_run_id"])
+    route_artifact = seeded["artifacts_by_kind"]["planning.route_slot_requirements.workbook"]
+    route_artifact_id = str(route_artifact["artifact_version_id"])
+    client = _client(tmp_path)
 
     submit_rows = _route_demand_submit_rows(route_artifact)
     submit_rows[0]["planned_route_count"] = int(submit_rows[0]["planned_route_count"]) + 2

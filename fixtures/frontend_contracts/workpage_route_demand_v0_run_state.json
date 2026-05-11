@@ -245,6 +245,8 @@
     },
     "future_week_activation": {
       "blocked_reason": null,
+      "error_code": null,
+      "error_message": null,
       "human_task_id": null,
       "state": "idle",
       "status_label": null,

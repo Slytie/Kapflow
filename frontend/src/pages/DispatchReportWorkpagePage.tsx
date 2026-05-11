@@ -111,11 +111,11 @@ function requiredUpload(
     dataset_key: artifactKind,
     template_id: null,
     artifact_kind: artifactKind,
-  artifact_role: artifactRole,
-  required: true,
-  required_count: 1,
-  current_count: 0,
-  status: "missing"
+    artifact_role: artifactRole,
+    required: true,
+    required_count: 1,
+    current_count: 0,
+    status: "missing"
   };
 }
 
@@ -136,14 +136,6 @@ function latestEodDraftArtifactVersionId(contract: WorkpageContract | undefined)
 function reviewConfirmed(task: HumanTaskRow | null): boolean {
   const pendingReviews = task?.required_reviews?.filter((review) => review.status !== "confirmed") ?? [];
   return pendingReviews.length === 0 && Boolean(task?.can_confirm_review === false || task?.state === "COMPLETED" || task?.required_reviews?.length);
-}
-
-function missingUploadKinds(task: HumanTaskRow | null): Set<string> {
-  return new Set(
-    (task?.missing_required_inputs ?? []).filter(
-      (value): value is string => typeof value === "string" && value.trim().length > 0
-    )
-  );
 }
 
 function latestDispatchReviewTask(tasks: HumanTaskRow[]): HumanTaskRow | null {
@@ -921,7 +913,6 @@ export function DispatchReportCloseoutModal({
   const [activeWorkflowRunId, setActiveWorkflowRunId] = useState(workflowRunId);
   const [selectedWorkbookFile, setSelectedWorkbookFile] = useState<File | null>(null);
   const [selectedServiceDate, setSelectedServiceDate] = useState("");
-  const [selectedManagerReviewFile, setSelectedManagerReviewFile] = useState<File | null>(null);
   const [activeArtifactVersionId, setActiveArtifactVersionId] = useState<string | null>(null);
   const [approvalReason, setApprovalReason] = useState("");
   const [finalizedMessage, setFinalizedMessage] = useState<string | null>(null);
@@ -948,8 +939,6 @@ export function DispatchReportCloseoutModal({
   const latestDraftArtifactVersionId = latestEodDraftArtifactVersionId(landingQuery.data);
   const reviewTask = latestDispatchReviewTask(tasksQuery.data ?? []);
   const approval = pendingDispatchApproval(approvalsQuery.data ?? []);
-  const reviewMissingInputs = missingUploadKinds(reviewTask);
-  const managerReviewMissing = reviewMissingInputs.has("reporting.manager_review.doc");
   const canRespondApproval = approval ? hasActorRole(approval.required_role) : false;
   const activeRunLogicalDate = landingQuery.data?.run_context?.logical_date ?? "";
   const selectedWorkbookFileDate = fileNameServiceDate(selectedWorkbookFile?.name);
@@ -1077,7 +1066,6 @@ export function DispatchReportCloseoutModal({
       setSelectedWorkbookFile(null);
       setSelectedServiceDate("");
       setFinalizedMessage(null);
-      setSelectedManagerReviewFile(null);
       if (nextWorkflowRunId !== activeWorkflowRunId) {
         setActiveArtifactVersionId(null);
         setActiveWorkflowRunId(nextWorkflowRunId);
@@ -1089,27 +1077,6 @@ export function DispatchReportCloseoutModal({
       if (window.location.pathname !== nextRoute) {
         navigate(nextRoute);
       }
-    }
-  });
-
-  const uploadManagerReviewMutation = useMutation({
-    mutationFn: async (): Promise<void> => {
-      if (!reviewTask) {
-        throw new Error("The Stage04 review task is not available yet.");
-      }
-      if (!selectedManagerReviewFile) {
-        throw new Error("Choose a manager review file before uploading.");
-      }
-      const claimedTask = await ensureClaimedTask(reviewTask);
-      await humanTasksRepository.uploadRequiredResponse(
-        claimedTask.human_task_id,
-        requiredUpload("reporting.manager_review.doc", "evidence"),
-        selectedManagerReviewFile
-      );
-    },
-    onSuccess: async () => {
-      setSelectedManagerReviewFile(null);
-      await refreshCloseoutQueries();
     }
   });
 
@@ -1186,8 +1153,8 @@ export function DispatchReportCloseoutModal({
             <p className="timeline-page__eyebrow">Dispatch closeout</p>
             <h2 id={titleId}>Upload route activity</h2>
             <p id={descriptionId}>
-              Import the daily workbook, review the generated EOD draft, attach manager evidence,
-              and complete the canonical approval loop without leaving the workpage.
+              Import the daily workbook, review the generated EOD draft, confirm the latest draft
+              review, and complete the canonical approval loop without leaving the workpage.
             </p>
           </div>
           <button type="button" className="action-btn" onClick={onClose}>
@@ -1299,10 +1266,10 @@ export function DispatchReportCloseoutModal({
 
           <section className="workpage-panel" data-testid="dispatch-closeout-review-panel">
             <header className="workpage-panel__header">
-              <h2>3. Complete review packet handoff</h2>
+              <h2>3. Complete draft review handoff</h2>
               <p>
-                Attach the manager review packet, confirm the latest draft review, and then complete
-                the Stage04 review task to request manager approval.
+                Confirm the latest draft review, then complete the Stage04 review task to request
+                manager approval.
               </p>
             </header>
             {tasksQuery.isLoading && !reviewTask ? (
@@ -1317,34 +1284,10 @@ export function DispatchReportCloseoutModal({
                   Review task status: <strong>{reviewTask.state}</strong>
                 </p>
                 <p>
-                  Manager review upload:{" "}
-                  <strong>{managerReviewMissing ? "Required" : "Attached or no longer required"}</strong>
-                </p>
-                <p>
                   Draft review confirmation:{" "}
                   <strong>{reviewConfirmed(reviewTask) ? "Confirmed" : "Still required"}</strong>
                 </p>
-                <label className="workpage-form__field">
-                  <span>Manager review file</span>
-                  <input
-                    type="file"
-                    accept=".doc,.docx,.pdf,.txt"
-                    onChange={(event) => {
-                      setSelectedManagerReviewFile(event.target.files?.[0] ?? null);
-                    }}
-                  />
-                </label>
                 <div className="action-cluster">
-                  <button
-                    type="button"
-                    className="action-btn"
-                    disabled={!selectedManagerReviewFile || uploadManagerReviewMutation.isPending}
-                    onClick={() => uploadManagerReviewMutation.mutate()}
-                  >
-                    {uploadManagerReviewMutation.isPending
-                      ? "Uploading review..."
-                      : "Attach manager review"}
-                  </button>
                   <button
                     type="button"
                     className="action-btn"
@@ -1366,16 +1309,6 @@ export function DispatchReportCloseoutModal({
                       : "Complete review task"}
                   </button>
                 </div>
-                {uploadManagerReviewMutation.isError ? (
-                  <StatePanel
-                    kind="error"
-                    title="Manager review upload failed"
-                    detail={errorText(
-                      uploadManagerReviewMutation.error,
-                      "Unable to upload the manager review artifact."
-                    )}
-                  />
-                ) : null}
                 {confirmReviewMutation.isError ? (
                   <StatePanel
                     kind="error"

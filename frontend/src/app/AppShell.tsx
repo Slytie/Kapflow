@@ -39,7 +39,8 @@ import type { LogisticsStoryBoardWorkItem, WorkpageContract } from "@/lib/types/
 import type {
   WorkpageDriverPreferencesAction,
   WorkpageRouteDemandAction,
-  WorkpageScheduleAction
+  WorkpageScheduleAction,
+  WorkpageScheduleRouteDemandCoverageContext
 } from "@/lib/types/workpages";
 
 const UTILITY_LINKS = [
@@ -54,6 +55,7 @@ const SECONDARY_LINKS = [{ to: "/runs", label: "Run Details" }];
 type ScheduleQuickEditTarget = {
   workflowRunId: string;
   artifactVersionId: string | null;
+  routeDemandCoverageContext: WorkpageScheduleRouteDemandCoverageContext | null;
 };
 
 type ScheduleWeekChoice = {
@@ -65,6 +67,53 @@ type ScheduleWeekChoice = {
   available: boolean;
   disabledReason: string | null;
 };
+
+function scheduleRouteDemandCoverageContextFromState(
+  value: unknown
+): WorkpageScheduleRouteDemandCoverageContext | null {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return null;
+  }
+  const record = value as Record<string, unknown>;
+  if (
+    typeof record.workflow_run_id !== "string" ||
+    typeof record.schedule_artifact_version_id !== "string" ||
+    typeof record.route_demand_artifact_version_id !== "string" ||
+    typeof record.coverage_candidates_path !== "string" ||
+    typeof record.coverage_apply_path !== "string"
+  ) {
+    return null;
+  }
+  return {
+    workflow_run_id: record.workflow_run_id,
+    schedule_artifact_version_id: record.schedule_artifact_version_id,
+    route_demand_artifact_version_id: record.route_demand_artifact_version_id,
+    coverage_candidates_path: record.coverage_candidates_path,
+    coverage_apply_path: record.coverage_apply_path,
+    service_dates: Array.isArray(record.service_dates)
+      ? record.service_dates.filter((item): item is string => typeof item === "string")
+      : [],
+    added_route_count:
+      typeof record.added_route_count === "number" ? record.added_route_count : 0,
+    deltas: Array.isArray(record.deltas)
+      ? record.deltas
+          .filter(
+            (item): item is Record<string, unknown> =>
+              Boolean(item) && typeof item === "object" && !Array.isArray(item)
+          )
+          .map((item) => ({
+            service_date: typeof item.service_date === "string" ? item.service_date : "",
+            previous_planned_route_count:
+              typeof item.previous_planned_route_count === "number"
+                ? item.previous_planned_route_count
+                : 0,
+            planned_route_count:
+              typeof item.planned_route_count === "number" ? item.planned_route_count : 0,
+            delta: typeof item.delta === "number" ? item.delta : 0
+          }))
+      : []
+  };
+}
 
 function buildLogisticsDemoRoute(input: {
   planningWeekId: string;
@@ -624,12 +673,16 @@ export function AppShell(): JSX.Element {
       artifactVersionId:
         typeof routeState.targetScheduleArtifactVersionId === "string"
           ? routeState.targetScheduleArtifactVersionId
-          : null
+          : null,
+      routeDemandCoverageContext: scheduleRouteDemandCoverageContextFromState(
+        routeState.routeDemandCoverageContext
+      )
     });
     setIsScheduleWeekPickerOpen(false);
     const nextState = { ...routeState };
     delete nextState.openScheduleQuickEdit;
     delete nextState.targetScheduleArtifactVersionId;
+    delete nextState.routeDemandCoverageContext;
     navigate(
       {
         pathname: location.pathname,
@@ -684,14 +737,16 @@ export function AppShell(): JSX.Element {
     ) {
       setScheduleQuickEditTarget({
         workflowRunId: selection.workflowRunId,
-        artifactVersionId: selection.artifactVersionId
+        artifactVersionId: selection.artifactVersionId,
+        routeDemandCoverageContext: null
       });
       return;
     }
     navigate(targetRoute, {
       state: {
         openScheduleQuickEdit: true,
-        targetScheduleArtifactVersionId: selection.artifactVersionId
+        targetScheduleArtifactVersionId: selection.artifactVersionId,
+        routeDemandCoverageContext: null
       }
     });
   };
@@ -847,7 +902,8 @@ export function AppShell(): JSX.Element {
                   }
                   setScheduleQuickEditTarget({
                     workflowRunId: activeWorkflowRunId,
-                    artifactVersionId: scheduleQuickEditAction?.artifact_version_id ?? null
+                    artifactVersionId: scheduleQuickEditAction?.artifact_version_id ?? null,
+                    routeDemandCoverageContext: null
                   });
                 }}
               >
@@ -1039,6 +1095,7 @@ export function AppShell(): JSX.Element {
         <ScheduleQuickEditModal
           workflowRunId={scheduleQuickEditTarget.workflowRunId}
           targetArtifactVersionId={scheduleQuickEditTarget.artifactVersionId}
+          routeDemandCoverageContext={scheduleQuickEditTarget.routeDemandCoverageContext}
           onClose={() => {
             setScheduleQuickEditTarget(null);
           }}

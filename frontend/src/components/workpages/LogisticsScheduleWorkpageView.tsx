@@ -28,6 +28,7 @@ interface LogisticsScheduleWorkpageViewProps {
   onRefresh: () => void;
   isRefreshing: boolean;
   versionRails?: ScheduleVersionRailDefinition[];
+  routeDemandUnresolvedCountsByServiceDate?: Record<string, number>;
 }
 
 export function LogisticsScheduleWorkpageView({
@@ -44,7 +45,8 @@ export function LogisticsScheduleWorkpageView({
   preContent,
   onRefresh,
   isRefreshing,
-  versionRails
+  versionRails,
+  routeDemandUnresolvedCountsByServiceDate = {}
 }: LogisticsScheduleWorkpageViewProps): JSX.Element {
   const { summarySection, noteSection, historySection, heatmapSection, assignmentSection, reserveSection } =
     useScheduleSections(contract);
@@ -96,6 +98,7 @@ export function LogisticsScheduleWorkpageView({
         dependencies={contract.dependencies}
         versionRails={resolvedVersionRails}
         readOnly
+        routeDemandUnresolvedCountsByServiceDate={routeDemandUnresolvedCountsByServiceDate}
       />
     </WorkpageFrame>
   );

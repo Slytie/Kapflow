@@ -2,6 +2,17 @@
 
 Record any decisions made since the last session so a fresh Codex run can rehydrate quickly.
 
+## 2026-05-11 (dispatch-reporting workbook-only Stage04 review handoff)
+- Evidence decision: `dispatch_reporting.v1` `Stage04/final_packet_review` no longer requires a separate `reporting.manager_review.doc` upload; review confirmation on the latest `reporting.upd_draft.workbook` is now the only pre-approval evidence gate for the first operator lane.
+- UI decision: the canonical EOD closeout flow now treats Step 3 as workbook-only review confirmation plus task completion, rather than a separate manager-review file upload flow.
+- Safety decision: dispatch-reporting finalize still fails closed unless a current draft exists, the confirmed reviewed draft exists, and that reviewed draft remains the latest draft for the run at approval time.
+
+## 2026-05-10 (bounded pre-publish route-demand coverage landing)
+- Existing-week decision: editable existing-week `route-demand-v0` artifacts may now expose the existing `workpage.route-demand-v0.save_and_run` action as `Run coverage agent` when a latest weekly draft exists and the visible route-demand edit introduces a positive route-count increase.
+- Handoff decision: existing-week `save-and-run` now saves or reuses the successor route-demand artifact, returns backend-authored `route_demand_coverage_context`, and hands off into the canonical `schedule-v0` quick-edit popup without creating a schedule successor at route-demand save time.
+- API decision: `schedule-v0` now exposes backend-owned route-demand coverage recommend/apply routes over the current weekly draft; recommend remains read-only, while apply revalidates candidate selections, creates the successor schedule draft, and explicitly repins the new route-demand artifact in the successor dependency manifest.
+- Scope decision: this is a bounded pre-publish weekly-draft subset of EPIC-135 only; no live-dispatch-backed replan lane, canonical runtime-status projection, driver-contact bridge, or manual scheduler CTA retirement is implied by this landing.
+
 ## 2026-05-03 (dispatch-reporting service-date-selectable closeout import)
 - Date-authority decision: the `Upload route activity` popup now treats the operator-selected service date as canonical upload truth; explicit `metadata_json.service_date` outranks filename-derived dates and run fallback during EOS import.
 - Run-alignment decision: if the selected service date differs from the current `dispatch_reporting.v1` run `logical_date`, the workpage closeout flow must resolve or create the matching same-scope reporting run and continue review/finalize work there instead of importing mismatched daily truth into the current run.

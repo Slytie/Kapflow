@@ -157,6 +157,40 @@ def canonical_schedule_artifact_preview_path(
     )
 
 
+def canonical_schedule_route_demand_coverage_candidates_path(
+    *,
+    workflow_run_id: str,
+    artifact_version_id: str,
+) -> str:
+    return (
+        f"/api/v1/workpages/workflow-runs/{workflow_run_id}/"
+        f"{SCHEDULE_WORKPAGE_KIND}/artifacts/{artifact_version_id}/"
+        "route-demand-coverage-candidates"
+    )
+
+
+def canonical_schedule_route_demand_coverage_path(
+    *,
+    workflow_run_id: str,
+    artifact_version_id: str,
+) -> str:
+    return (
+        f"/api/v1/workpages/workflow-runs/{workflow_run_id}/"
+        f"{SCHEDULE_WORKPAGE_KIND}/artifacts/{artifact_version_id}/route-demand-coverage"
+    )
+
+
+def canonical_schedule_route_demand_coverage_apply_path(
+    *,
+    workflow_run_id: str,
+    artifact_version_id: str,
+) -> str:
+    return canonical_schedule_route_demand_coverage_path(
+        workflow_run_id=workflow_run_id,
+        artifact_version_id=artifact_version_id,
+    )
+
+
 def canonical_eod_artifact_submit_path(
     *,
     workflow_run_id: str,

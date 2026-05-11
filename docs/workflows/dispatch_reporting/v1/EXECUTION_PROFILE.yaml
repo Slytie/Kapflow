@@ -72,7 +72,6 @@ profile:
     - projection.render
     side_effect_policy: commit_requires_business_decision
     required_evidence_keys:
-    - reporting.manager_review.doc
     - reporting.upd_draft.workbook
     decision_refs:
     - reporting.stage04.confirm_reporting_packet
@@ -84,7 +83,7 @@ profile:
     - reporting.stage04.review_packet
     extensions:
       guidance:
-      - Approval records the review boundary for the workbook-backed packet and triggers the bounded finalize path on approve.
+      - Approval records the review-confirmation boundary for the workbook-backed packet and triggers the bounded finalize path on approve.
   - stage_id: Stage05
     execution_pattern: linear_chain
     allowed_tool_classes:

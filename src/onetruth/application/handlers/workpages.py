@@ -6,8 +6,10 @@ from onetruth.application.handlers.workpage_reporting_commands import (
     submit_eod_artifact_workpage_command,
 )
 from onetruth.application.handlers.workpage_schedule_commands import (
+    apply_schedule_route_demand_coverage_command,
     mark_schedule_sick_no_show_command,
     preview_schedule_artifact_workpage_command,
+    recommend_schedule_route_demand_coverage_command,
     submit_schedule_artifact_workpage_command,
 )
 from onetruth.application.handlers.workpage_weekly_control_commands import (
@@ -23,12 +25,14 @@ from onetruth.application.handlers.availability_exceptions import (
 
 __all__ = [
     "add_driver_availability_exception_command",
+    "apply_schedule_route_demand_coverage_command",
     "create_workflow_run_driver_preferences_snapshot_command",
     "create_workflow_run_route_demand_next_week_command",
     "create_workflow_run_eod_draft_command",
     "ensure_workflow_run_eod_intake_task_command",
     "mark_schedule_sick_no_show_command",
     "preview_schedule_artifact_workpage_command",
+    "recommend_schedule_route_demand_coverage_command",
     "save_and_run_route_demand_artifact_workpage_command",
     "submit_driver_preferences_artifact_workpage_command",
     "submit_eod_artifact_workpage_command",

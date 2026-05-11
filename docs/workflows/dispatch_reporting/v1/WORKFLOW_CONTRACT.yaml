@@ -86,12 +86,10 @@ stages:
     required: true
     group: operations_manager
     action: confirm_dispatch_reporting_packet
-  artifacts:
-  - dataset_key: reporting.manager_review.doc
-    kind: document
-    role: evidence
+  artifacts: []
   notes:
   - A `Stage04/final_packet_review` human task owns the draft review workpage before the manager approval gate is requested.
+  - Review confirmation on the latest `reporting.upd_draft.workbook` records the bounded Stage04 review boundary for the first operator lane.
   - Manager confirmation is required before any reporting packet becomes official.
 - id: Stage05
   name: Finalize_Reporting_Packet

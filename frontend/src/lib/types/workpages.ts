@@ -301,6 +301,115 @@ export interface WorkpageSchedulePreview {
   calculations: WorkpageScheduleCalculations;
 }
 
+export interface WorkpageScheduleRouteDemandCoverageDelta {
+  service_date: string;
+  previous_planned_route_count: number;
+  planned_route_count: number;
+  delta: number;
+}
+
+export interface WorkpageScheduleRouteDemandCoverageContext {
+  workflow_run_id: string;
+  schedule_artifact_version_id: string;
+  route_demand_artifact_version_id: string;
+  coverage_candidates_path: string;
+  coverage_apply_path: string;
+  service_dates: string[];
+  added_route_count: number;
+  deltas: WorkpageScheduleRouteDemandCoverageDelta[];
+}
+
+export interface WorkpageScheduleRouteDemandCoverageTarget {
+  target_id: string;
+  route_slot_id: string;
+  route_id: string;
+  service_date: string;
+  route_slot_class: string;
+  station_code: string;
+  service_area: string;
+  shift_start: string;
+  shift_end: string;
+  projected_minutes: number;
+  required_skill: string;
+  vehicle_type: string;
+}
+
+export interface WorkpageScheduleRouteDemandCoverageCandidate {
+  recommendation_rank: number;
+  target_id: string;
+  route_slot_id: string;
+  route_id: string;
+  row_kind: "assignment";
+  service_date: string;
+  driver_id: string;
+  driver_name: string;
+  selection_state: "selectable" | "blocked";
+  hard_filter_status: string;
+  hard_filter_reasons: string[];
+  score_bucket: string;
+  soft_score_total: number;
+  projected_minutes: number;
+  availability_state: string;
+  current_week_shift_count: number;
+  projected_rolling7_minutes: number;
+  remaining_rolling7_minutes: number;
+  fairness_balance: number;
+  target_shift_gap: number;
+  preference_fit: number;
+  preferred_shift_band_fit: number;
+  preferred_route_slot_class_fit: number;
+  seniority_preference_fit: number;
+  reliability_score: number;
+  previous_week_stability: number;
+  baseline_template_state: string;
+  planned_driver_day_state: string;
+  new_agreement_required: boolean;
+  new_agreement_trigger_reason: string;
+  template_state_preservation_fit: number;
+  clear_same_day_on_call_reserve: boolean;
+  reserve_route_slot_id: string | null;
+  reserve_route_id: string | null;
+  assignment_action: string;
+  evaluation_kind: string;
+}
+
+export interface WorkpageScheduleRouteDemandCoverageCandidateGroup {
+  target: WorkpageScheduleRouteDemandCoverageTarget;
+  candidate_count: number;
+  pass_candidate_count: number;
+  candidates: WorkpageScheduleRouteDemandCoverageCandidate[];
+}
+
+export interface WorkpageScheduleRouteDemandCoverageSelection {
+  target_id: string;
+  route_slot_id: string;
+  driver_id: string;
+  row_kind: "assignment";
+}
+
+export interface WorkpageScheduleRouteDemandCoverageRecommendations {
+  workflow_run_id: string;
+  artifact_version_id: string;
+  route_demand_artifact_version_id: string;
+  dependency_state: string;
+  dependencies: WorkpageScheduleDependency[];
+  added_route_count: number;
+  target_count: number;
+  max_candidates: number;
+  targets: WorkpageScheduleRouteDemandCoverageTarget[];
+  candidate_groups: WorkpageScheduleRouteDemandCoverageCandidateGroup[];
+  selected_defaults: WorkpageScheduleRouteDemandCoverageSelection[];
+  diagnostic_reason?: string | null;
+}
+
+export interface WorkpageScheduleRouteDemandCoverageApplyResult {
+  route_demand_artifact_version_id: string;
+  assigned_count: number;
+  appended_assignment_count: number;
+  cleared_same_day_reserve_count: number;
+  selected: WorkpageScheduleRouteDemandCoverageCandidate[];
+}
+
 export interface WorkpageRouteDemandDayCard {
   service_date: string;
   weekday_label: string;

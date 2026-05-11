@@ -121,6 +121,22 @@ function visibleRouteDemandDayCards(
   return dayCards.slice(0, 7);
 }
 
+function positiveRouteDemandIncreaseCount(
+  baseDayCards: WorkpageRouteDemandDayCard[],
+  currentDayCards: WorkpageRouteDemandDayCard[]
+): number {
+  const currentByDate = new Map(
+    visibleRouteDemandDayCards(currentDayCards).map((card) => [card.service_date, card])
+  );
+  return visibleRouteDemandDayCards(baseDayCards).reduce((total, card) => {
+    const current = currentByDate.get(card.service_date);
+    if (!current) {
+      return total;
+    }
+    return total + Math.max(current.planned_route_count - card.planned_route_count, 0);
+  }, 0);
+}
+
 function routeDemandDisabledReasonText(reason: string | null | undefined): string | null {
   if (!reason) {
     return null;
@@ -768,6 +784,10 @@ function RouteDemandArtifactEditor({
   const baseSignature = routeDemandDayCardSignature(query.data?.route_demand_calculations?.day_cards ?? []);
   const currentSignature = routeDemandDayCardSignature(dayCards);
   const hasUnsavedEdits = baseSignature !== currentSignature;
+  const positiveIncreaseCount = positiveRouteDemandIncreaseCount(
+    query.data?.route_demand_calculations?.day_cards ?? [],
+    dayCards
+  );
   const latestArtifactVersionId =
     query.data?.artifact_context?.latest_in_chain_artifact_version_id ?? artifactVersionId;
   const latestArtifactRoute =
@@ -861,7 +881,9 @@ function RouteDemandArtifactEditor({
   const canSaveAndRun =
     !isStaleArtifact &&
     saveAndRunAction?.state === "available" &&
-    Boolean(saveAndRunAction.submit_path);
+    Boolean(saveAndRunAction.submit_path) &&
+    hasUnsavedEdits &&
+    positiveIncreaseCount > 0;
   const backRoute = workpageBackRoute(workflowRunId);
   const isMutationPending =
     submitMutation.isPending || createNextWeekMutation.isPending || saveAndRunMutation.isPending;
@@ -1005,15 +1027,16 @@ function RouteDemandArtifactEditor({
         state: {
           openScheduleQuickEdit: true,
           targetScheduleArtifactVersionId:
-            submitted.target_schedule_artifact_version_id ?? null
+            submitted.target_schedule_artifact_version_id ?? null,
+          routeDemandCoverageContext: submitted.route_demand_coverage_context ?? null
         }
       });
     } catch (error) {
       setMutationErrorMessage(
         routeDemandMutationErrorDetail(
-          "Save and run scheduling agent",
+          saveAndRunAction?.label ?? "Run coverage agent",
           error,
-          "Unable to start the weekly scheduling agent from route demand."
+          "Unable to continue from route demand into weekly schedule coverage."
         )
       );
     }
@@ -1066,7 +1089,9 @@ function RouteDemandArtifactEditor({
                 void handleSaveAndRun();
               }}
             >
-              {saveAndRunMutation.isPending ? "Agent working" : "Save and run scheduling agent"}
+              {saveAndRunMutation.isPending
+                ? "Agent working"
+                : saveAndRunAction.label}
             </button>
           ) : null}
         </div>

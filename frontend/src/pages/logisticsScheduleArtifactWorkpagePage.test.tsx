@@ -11,7 +11,7 @@ import {
   SCHEDULE_DEPENDENCY_ITEM_SUMMARIES,
   SCHEDULE_DEPENDENCY_STATUS_SUMMARY
 } from "@/components/workpages/ScheduleWorkpageSurface";
-import { mutationLog } from "@/test/api/handlers";
+import { mutationLog, resetApiState } from "@/test/api/handlers";
 import { server } from "@/test/api/server";
 import {
   expectHeatmapHeaderStatusGroups,
@@ -144,6 +144,54 @@ function buildScheduleArtifactPayload(
   return payload;
 }
 
+function buildCoverageCandidate(
+  coverageTarget: Record<string, any>,
+  recommendationRank: number,
+  driverId: string,
+  driverName: string,
+  overrides: Record<string, any> = {}
+): Record<string, any> {
+  return {
+    recommendation_rank: recommendationRank,
+    target_id: coverageTarget.target_id,
+    route_slot_id: coverageTarget.route_slot_id,
+    route_id: coverageTarget.route_id,
+    row_kind: "assignment",
+    service_date: coverageTarget.service_date,
+    driver_id: driverId,
+    driver_name: driverName,
+    selection_state: "selectable",
+    hard_filter_status: "pass",
+    hard_filter_reasons: [],
+    score_bucket: "best_fit",
+    soft_score_total: 98 - recommendationRank,
+    projected_minutes: coverageTarget.projected_minutes,
+    availability_state: "AVAILABLE",
+    current_week_shift_count: 3 + recommendationRank,
+    projected_rolling7_minutes: 1800 + recommendationRank * 45,
+    remaining_rolling7_minutes: 1800 - recommendationRank * 40,
+    fairness_balance: 0.1 + recommendationRank * 0.01,
+    target_shift_gap: 1,
+    preference_fit: 1,
+    preferred_shift_band_fit: 1,
+    preferred_route_slot_class_fit: 1,
+    seniority_preference_fit: 0.9,
+    reliability_score: 0.95,
+    previous_week_stability: 0.9,
+    baseline_template_state: "white_template",
+    planned_driver_day_state: recommendationRank === 1 ? "on_call" : "open",
+    new_agreement_required: false,
+    new_agreement_trigger_reason: "",
+    template_state_preservation_fit: 0.96,
+    clear_same_day_on_call_reserve: recommendationRank === 1,
+    reserve_route_slot_id: recommendationRank === 1 ? "oncall-20260328#01" : null,
+    reserve_route_id: recommendationRank === 1 ? "ON_CALL" : null,
+    assignment_action: recommendationRank === 1 ? "promote_reserve" : "assign_open_driver",
+    evaluation_kind: recommendationRank === 1 ? "reserve_promotion" : "best_fit",
+    ...overrides
+  };
+}
+
 describe("LogisticsScheduleArtifactWorkpagePage", () => {
   it(
     "opens Edit weekly schedule as a modal, saves a draft, and stays on the background page",
@@ -158,6 +206,7 @@ describe("LogisticsScheduleArtifactWorkpagePage", () => {
       const dialog = await screen.findByRole("dialog", { name: "Edit Weekly Schedule" });
       expect(dialog).toHaveClass("schedule-quick-edit-modal");
       const editor = await within(dialog).findByTestId("schedule-quick-edit-editor");
+      expect(within(dialog).queryByTestId("route-demand-coverage-panel")).not.toBeInTheDocument();
       expect(within(editor).getByRole("heading", { name: "Weekly Schedule Draft" })).toBeInTheDocument();
       expect(within(editor).queryByText("Weekly Schedule Draft Artifact")).not.toBeInTheDocument();
       expect(
@@ -230,9 +279,961 @@ describe("LogisticsScheduleArtifactWorkpagePage", () => {
   );
 
   it(
+    "normalizes duplicate same-day defaults into distinct drivers and re-enables released choices",
+    async () => {
+      const user = userEvent.setup();
+      resetApiState();
+      const workflowRunId = "wr-weekly-001";
+      const artifactVersionId = "av-schedule-artifact-001";
+      const nextArtifactVersionId = "av-schedule-artifact-route-demand-002";
+      const routeDemandArtifactVersionId = "av-route-demand-artifact-002";
+      const coverageCandidatesPath =
+        `/api/v1/workpages/workflow-runs/${workflowRunId}/schedule-v0/artifacts/` +
+        `${artifactVersionId}/route-demand-coverage-candidates`;
+      const coverageApplyPath =
+        `/api/v1/workpages/workflow-runs/${workflowRunId}/schedule-v0/artifacts/` +
+        `${artifactVersionId}/route-demand-coverage`;
+      const coverageTargetA = {
+        target_id: `${routeDemandArtifactVersionId}:2026-03-28:1`,
+        route_slot_id: "slot-20260328-cycle1-standard#18",
+        route_id: "ROUTE-20260328-18",
+        service_date: "2026-03-28",
+        route_slot_class: "standard",
+        station_code: "DVC4",
+        service_area: "Metro core",
+        shift_start: "10:15",
+        shift_end: "18:45",
+        projected_minutes: 510,
+        required_skill: "standard_delivery",
+        vehicle_type: "cargo_van"
+      };
+      const coverageTargetB = {
+        target_id: `${routeDemandArtifactVersionId}:2026-03-28:2`,
+        route_slot_id: "slot-20260328-cycle1-standard#19",
+        route_id: "ROUTE-20260328-19",
+        service_date: "2026-03-28",
+        route_slot_class: "standard",
+        station_code: "DVC4",
+        service_area: "Metro core",
+        shift_start: "10:30",
+        shift_end: "19:00",
+        projected_minutes: 525,
+        required_skill: "standard_delivery",
+        vehicle_type: "cargo_van"
+      };
+      const recommendedCandidateA = buildCoverageCandidate(
+        coverageTargetA,
+        1,
+        "A2S2SO4XUULX7H",
+        "June Tate",
+        {
+          soft_score_total: 97.5,
+          current_week_shift_count: 4,
+          projected_rolling7_minutes: 2010,
+          remaining_rolling7_minutes: 1590
+        }
+      );
+      const alternateCandidateA = buildCoverageCandidate(
+        coverageTargetA,
+        2,
+        "A7ZT4LME2WJQ9B",
+        "Maya Chen"
+      );
+      const blockedCandidateA = buildCoverageCandidate(
+        coverageTargetA,
+        3,
+        "A3OYGBYE20UA2R",
+        "Eli Rowe",
+        {
+          selection_state: "blocked",
+          hard_filter_status: "fail",
+          hard_filter_reasons: ["already_assigned_that_day"],
+          score_bucket: "blocked",
+          soft_score_total: 0,
+          clear_same_day_on_call_reserve: false,
+          reserve_route_slot_id: null,
+          reserve_route_id: null,
+          assignment_action: "blocked",
+          evaluation_kind: "same_day_conflict"
+        }
+      );
+      const conflictingCandidateB = buildCoverageCandidate(
+        coverageTargetB,
+        1,
+        "A2S2SO4XUULX7H",
+        "June Tate",
+        {
+          soft_score_total: 96.75,
+          current_week_shift_count: 4,
+          projected_rolling7_minutes: 2055,
+          remaining_rolling7_minutes: 1545
+        }
+      );
+      const recommendedCandidateB = buildCoverageCandidate(
+        coverageTargetB,
+        2,
+        "AZ39S2G5M8PX4T",
+        "Nia Grant",
+        {
+          soft_score_total: 96.25,
+          current_week_shift_count: 5,
+          projected_rolling7_minutes: 2145,
+          remaining_rolling7_minutes: 1455
+        }
+      );
+      const alternateCandidateB = buildCoverageCandidate(
+        coverageTargetB,
+        3,
+        "A5NS7VGK2MTL8P",
+        "Omar Diaz"
+      );
+      const applyBodies: Array<Record<string, unknown>> = [];
+      server.use(
+        http.post(`*${coverageCandidatesPath}`, async () =>
+          HttpResponse.json({
+            status: "ok",
+            route_demand_coverage_recommendations: {
+              workflow_run_id: workflowRunId,
+              artifact_version_id: artifactVersionId,
+              route_demand_artifact_version_id: routeDemandArtifactVersionId,
+              dependency_state: "aligned",
+              dependencies: [
+                {
+                  dependency_key: "route_slot_requirements",
+                  artifact_kind: "planning.route_slot_requirements.workbook",
+                  artifact_version_id: routeDemandArtifactVersionId,
+                  impact_class: "hard",
+                  state: "aligned",
+                  source_ref: `/api/v1/artifacts/${routeDemandArtifactVersionId}`
+                }
+              ],
+              added_route_count: 2,
+              target_count: 2,
+              max_candidates: 8,
+              targets: [coverageTargetA, coverageTargetB],
+              candidate_groups: [
+                {
+                  target: coverageTargetA,
+                  candidate_count: 3,
+                  pass_candidate_count: 2,
+                  candidates: [
+                    recommendedCandidateA,
+                    alternateCandidateA,
+                    blockedCandidateA
+                  ]
+                },
+                {
+                  target: coverageTargetB,
+                  candidate_count: 3,
+                  pass_candidate_count: 3,
+                  candidates: [
+                    conflictingCandidateB,
+                    recommendedCandidateB,
+                    alternateCandidateB
+                  ]
+                }
+              ],
+              selected_defaults: [
+                {
+                  target_id: coverageTargetA.target_id,
+                  route_slot_id: coverageTargetA.route_slot_id,
+                  driver_id: recommendedCandidateA.driver_id,
+                  row_kind: "assignment"
+                },
+                {
+                  target_id: coverageTargetB.target_id,
+                  route_slot_id: coverageTargetB.route_slot_id,
+                  driver_id: conflictingCandidateB.driver_id,
+                  row_kind: "assignment"
+                }
+              ],
+              diagnostic_reason: null
+            }
+          })
+        ),
+        http.post(`*${coverageApplyPath}`, async ({ request }) => {
+          applyBodies.push((await request.json()) as Record<string, unknown>);
+          return HttpResponse.json({
+            status: "ok",
+            submitted: {
+              workflow_run_id: workflowRunId,
+              artifact_version_id: nextArtifactVersionId,
+              supersedes_artifact_version_id: artifactVersionId,
+              route: `/runs/${workflowRunId}/workpages/schedule-v0/artifacts/${nextArtifactVersionId}`
+            },
+            route_demand_coverage: {
+              route_demand_artifact_version_id: routeDemandArtifactVersionId,
+              assigned_count: 2,
+              appended_assignment_count: 2,
+              cleared_same_day_reserve_count: 1,
+              selected: [alternateCandidateA, recommendedCandidateB]
+            }
+          });
+        }),
+        http.get(
+          `*/api/v1/workpages/workflow-runs/${workflowRunId}/schedule-v0/artifacts/${nextArtifactVersionId}`,
+          () =>
+            HttpResponse.json(
+              buildScheduleArtifactPayload(nextArtifactVersionId, workflowRunId)
+            )
+        )
+      );
+
+      window.history.pushState(
+        {},
+        "",
+        `/runs/${workflowRunId}/workpages/route-demand-v0/artifacts/av-route-demand-artifact-001`
+      );
+      render(<App />);
+
+      const routeDemandPage = await screen.findByTestId("route-demand-artifact-workpage-page");
+      await user.click(
+        within(routeDemandPage).getByRole("button", {
+          name: "Increase planned routes for 2026-03-28"
+        })
+      );
+      await user.click(
+        within(routeDemandPage).getByRole("button", {
+          name: "Increase planned routes for 2026-03-28"
+        })
+      );
+      await user.click(
+        within(routeDemandPage).getByRole("button", { name: "Run coverage agent" })
+      );
+
+      const dialog = await screen.findByRole("dialog", { name: "Edit Weekly Schedule" });
+      const panel = await within(dialog).findByTestId("route-demand-coverage-panel");
+      const daySection = await within(panel).findByTestId("route-demand-coverage-day-2026-03-28");
+      const inlineTable = await within(daySection).findByTestId(
+        "route-demand-coverage-day-table-2026-03-28"
+      );
+      const overflow = await within(daySection).findByTestId(
+        "route-demand-coverage-day-overflow-2026-03-28"
+      );
+      expect(panel).toHaveTextContent("Route-demand coverage recommendations");
+      expect(panel).toHaveTextContent("2026-03-28: 17 -> 19 (+2)");
+      expect(
+        within(panel).queryByTestId(`route-demand-coverage-target-${coverageTargetA.route_slot_id}`)
+      ).not.toBeInTheDocument();
+      expect(within(inlineTable).getByRole("table")).toBeInTheDocument();
+      expect(within(inlineTable).getAllByRole("row")).toHaveLength(3);
+      expect(inlineTable).toHaveTextContent("ROUTE-20260328-18");
+      expect(inlineTable).toHaveTextContent("ROUTE-20260328-19");
+      expect(inlineTable).toHaveTextContent("June Tate");
+      expect(inlineTable).toHaveTextContent("Nia Grant");
+      expect(within(inlineTable).getAllByText("June Tate")).toHaveLength(1);
+      expect(inlineTable).not.toHaveTextContent("Maya Chen");
+      expect(inlineTable).not.toHaveTextContent("Omar Diaz");
+      expect(inlineTable).not.toHaveTextContent("Eli Rowe");
+      expect(overflow).not.toHaveAttribute("open");
+      expect(overflow).toHaveTextContent("Show 4 more options across 2 routes (1 blocked)");
+
+      await user.click(within(overflow).getByText("Show 4 more options across 2 routes (1 blocked)"));
+      expect(overflow).toHaveAttribute("open");
+      expect(
+        within(overflow).getByRole("radio", {
+          name: /Select June Tate for ROUTE-20260328-19 on 2026-03-28/
+        })
+      ).toBeDisabled();
+      expect(
+        within(overflow).getByText("Already selected for ROUTE-20260328-18")
+      ).toBeInTheDocument();
+      expect(
+        await within(overflow).findByRole("radio", {
+          name: /Select Maya Chen for ROUTE-20260328-18 on 2026-03-28/
+        })
+      ).toBeInTheDocument();
+      await user.click(
+        within(overflow).getByRole("radio", {
+          name: /Select Maya Chen for ROUTE-20260328-18 on 2026-03-28/
+        })
+      );
+      await waitFor(() => {
+        expect(inlineTable).toHaveTextContent("Maya Chen");
+      });
+      expect(inlineTable).toHaveTextContent("Nia Grant");
+      expect(inlineTable).not.toHaveTextContent("June Tate");
+      expect(
+        within(overflow).getByRole("radio", {
+          name: /Select June Tate for ROUTE-20260328-19 on 2026-03-28/
+        })
+      ).toBeInTheDocument();
+      await waitFor(() => {
+        expect(
+          within(overflow).getByRole("radio", {
+            name: /Select June Tate for ROUTE-20260328-19 on 2026-03-28/
+          })
+        ).toBeEnabled();
+      });
+      expect(within(overflow).getByText("Eli Rowe")).toBeInTheDocument();
+      expect(within(overflow).getByText("already_assigned_that_day")).toBeInTheDocument();
+      expect(
+        within(panel).getByRole("button", { name: "Apply 2 coverage selections" })
+      ).toBeEnabled();
+
+      await user.click(
+        within(panel).getByRole("button", { name: "Apply 2 coverage selections" })
+      );
+
+      await waitFor(() => {
+        expect(applyBodies).toHaveLength(1);
+      });
+      expect(applyBodies[0]).toMatchObject({
+        route_demand_artifact_version_id: routeDemandArtifactVersionId,
+      });
+      expect(applyBodies[0].selections).toEqual(
+        expect.arrayContaining([
+          {
+            target_id: coverageTargetA.target_id,
+            route_slot_id: coverageTargetA.route_slot_id,
+            driver_id: alternateCandidateA.driver_id,
+            row_kind: "assignment"
+          },
+          {
+            target_id: coverageTargetB.target_id,
+            route_slot_id: coverageTargetB.route_slot_id,
+            driver_id: recommendedCandidateB.driver_id,
+            row_kind: "assignment"
+          }
+        ])
+      );
+      await waitFor(() => {
+        expect(screen.queryByTestId("route-demand-coverage-panel")).not.toBeInTheDocument();
+      });
+      expect(screen.getByTestId("schedule-quick-edit-editor")).toBeInTheDocument();
+    },
+    90000
+  );
+
+  it(
+    "keeps apply disabled when same-day targets do not have enough distinct selectable drivers",
+    async () => {
+      const user = userEvent.setup();
+      resetApiState();
+      const workflowRunId = "wr-weekly-001";
+      const artifactVersionId = "av-schedule-artifact-001";
+      const routeDemandArtifactVersionId = "av-route-demand-artifact-002";
+      const coverageCandidatesPath =
+        `/api/v1/workpages/workflow-runs/${workflowRunId}/schedule-v0/artifacts/` +
+        `${artifactVersionId}/route-demand-coverage-candidates`;
+      const coverageTargetA = {
+        target_id: `${routeDemandArtifactVersionId}:2026-03-28:1`,
+        route_slot_id: "slot-20260328-cycle1-standard#18",
+        route_id: "ROUTE-20260328-18",
+        service_date: "2026-03-28",
+        route_slot_class: "standard",
+        station_code: "DVC4",
+        service_area: "Metro core",
+        shift_start: "10:15",
+        shift_end: "18:45",
+        projected_minutes: 510,
+        required_skill: "standard_delivery",
+        vehicle_type: "cargo_van"
+      };
+      const coverageTargetB = {
+        target_id: `${routeDemandArtifactVersionId}:2026-03-28:2`,
+        route_slot_id: "slot-20260328-cycle1-standard#19",
+        route_id: "ROUTE-20260328-19",
+        service_date: "2026-03-28",
+        route_slot_class: "standard",
+        station_code: "DVC4",
+        service_area: "Metro core",
+        shift_start: "10:30",
+        shift_end: "19:00",
+        projected_minutes: 525,
+        required_skill: "standard_delivery",
+        vehicle_type: "cargo_van"
+      };
+      const sharedCandidateA = buildCoverageCandidate(
+        coverageTargetA,
+        1,
+        "A2S2SO4XUULX7H",
+        "June Tate"
+      );
+      const sharedCandidateB = buildCoverageCandidate(
+        coverageTargetB,
+        1,
+        "A2S2SO4XUULX7H",
+        "June Tate"
+      );
+
+      server.use(
+        http.post(`*${coverageCandidatesPath}`, async () =>
+          HttpResponse.json({
+            status: "ok",
+            route_demand_coverage_recommendations: {
+              workflow_run_id: workflowRunId,
+              artifact_version_id: artifactVersionId,
+              route_demand_artifact_version_id: routeDemandArtifactVersionId,
+              dependency_state: "aligned",
+              dependencies: [],
+              added_route_count: 2,
+              target_count: 2,
+              max_candidates: 8,
+              targets: [coverageTargetA, coverageTargetB],
+              candidate_groups: [
+                {
+                  target: coverageTargetA,
+                  candidate_count: 1,
+                  pass_candidate_count: 1,
+                  candidates: [sharedCandidateA]
+                },
+                {
+                  target: coverageTargetB,
+                  candidate_count: 1,
+                  pass_candidate_count: 1,
+                  candidates: [sharedCandidateB]
+                }
+              ],
+              selected_defaults: [
+                {
+                  target_id: coverageTargetA.target_id,
+                  route_slot_id: coverageTargetA.route_slot_id,
+                  driver_id: sharedCandidateA.driver_id,
+                  row_kind: "assignment"
+                },
+                {
+                  target_id: coverageTargetB.target_id,
+                  route_slot_id: coverageTargetB.route_slot_id,
+                  driver_id: sharedCandidateB.driver_id,
+                  row_kind: "assignment"
+                }
+              ],
+              diagnostic_reason: null
+            }
+          })
+        )
+      );
+
+      window.history.pushState(
+        {},
+        "",
+        `/runs/${workflowRunId}/workpages/route-demand-v0/artifacts/av-route-demand-artifact-001`
+      );
+      render(<App />);
+
+      const routeDemandPage = await screen.findByTestId("route-demand-artifact-workpage-page");
+      await user.click(
+        within(routeDemandPage).getByRole("button", {
+          name: "Increase planned routes for 2026-03-28"
+        })
+      );
+      await user.click(
+        within(routeDemandPage).getByRole("button", {
+          name: "Increase planned routes for 2026-03-28"
+        })
+      );
+      await user.click(
+        within(routeDemandPage).getByRole("button", { name: "Run coverage agent" })
+      );
+
+      const dialog = await screen.findByRole("dialog", { name: "Edit Weekly Schedule" });
+      const panel = await within(dialog).findByTestId("route-demand-coverage-panel");
+      const inlineTable = await within(panel).findByTestId(
+        "route-demand-coverage-day-table-2026-03-28"
+      );
+
+      expect(inlineTable).toHaveTextContent("ROUTE-20260328-18");
+      expect(inlineTable).toHaveTextContent("ROUTE-20260328-19");
+      expect(within(inlineTable).getAllByText("June Tate")).toHaveLength(2);
+      expect(
+        within(inlineTable).getByRole("radio", {
+          name: /Select June Tate for ROUTE-20260328-19 on 2026-03-28/
+        })
+      ).toBeDisabled();
+      expect(
+        within(inlineTable).getByText("Already selected for ROUTE-20260328-18")
+      ).toBeInTheDocument();
+      expect(
+        within(panel).getByRole("button", { name: "Apply 1 coverage selection" })
+      ).toBeDisabled();
+    },
+    90000
+  );
+
+  it(
+    "shows unresolved route additions in red and auto-picks the top unresolved route from an empty heatmap cell",
+    async () => {
+    const user = userEvent.setup();
+    resetApiState();
+    const workflowRunId = "wr-weekly-001";
+    const artifactVersionId = "av-schedule-artifact-001";
+    const routeDemandArtifactVersionId = "av-route-demand-artifact-004";
+    const coverageCandidatesPath =
+      `/api/v1/workpages/workflow-runs/${workflowRunId}/schedule-v0/artifacts/` +
+      `${artifactVersionId}/route-demand-coverage-candidates`;
+    const coverageContext = {
+      workflow_run_id: workflowRunId,
+      schedule_artifact_version_id: artifactVersionId,
+      route_demand_artifact_version_id: routeDemandArtifactVersionId,
+      coverage_candidates_path: coverageCandidatesPath,
+      coverage_apply_path:
+        `/api/v1/workpages/workflow-runs/${workflowRunId}/schedule-v0/artifacts/` +
+        `${artifactVersionId}/route-demand-coverage`,
+      service_dates: ["2026-03-24"],
+      added_route_count: 2,
+      deltas: [
+        {
+          service_date: "2026-03-24",
+          previous_planned_route_count: 20,
+          planned_route_count: 22,
+          delta: 2
+        }
+      ]
+    };
+    const coverageTargetA = {
+      target_id: `${routeDemandArtifactVersionId}:2026-03-24:1`,
+      route_slot_id: "slot-20260324-cycle1-standard#18",
+      route_id: "ROUTE-20260324-18",
+      service_date: "2026-03-24",
+      route_slot_class: "standard",
+      station_code: "DVC4",
+      service_area: "Metro core",
+      shift_start: "10:15",
+      shift_end: "18:45",
+      projected_minutes: 510,
+      required_skill: "standard_delivery",
+      vehicle_type: "cargo_van"
+    };
+    const coverageTargetB = {
+      target_id: `${routeDemandArtifactVersionId}:2026-03-24:2`,
+      route_slot_id: "slot-20260324-cycle1-standard#19",
+      route_id: "ROUTE-20260324-19",
+      service_date: "2026-03-24",
+      route_slot_class: "standard",
+      station_code: "DVC4",
+      service_area: "Metro core",
+      shift_start: "10:30",
+      shift_end: "19:00",
+      projected_minutes: 525,
+      required_skill: "standard_delivery",
+      vehicle_type: "cargo_van"
+    };
+    const sharedTopCandidateA = buildCoverageCandidate(
+      coverageTargetA,
+      1,
+      "A2TU4ZRI65E1H8",
+      "Abhiraj Singh"
+    );
+    const alternateCandidateA = buildCoverageCandidate(
+      coverageTargetA,
+      2,
+      "A149421ZGG7QED",
+      "Balwinder Singh"
+    );
+    const sharedTopCandidateB = buildCoverageCandidate(
+      coverageTargetB,
+      1,
+      "A2TU4ZRI65E1H8",
+      "Abhiraj Singh"
+    );
+    const alternateCandidateB = buildCoverageCandidate(
+      coverageTargetB,
+      2,
+      "A3M38Z4NGI9OR3",
+      "Akash"
+    );
+
+    server.use(
+      http.get(
+        `*/api/v1/workpages/workflow-runs/${workflowRunId}/schedule-v0/artifacts/${artifactVersionId}`,
+        () =>
+          HttpResponse.json(
+            buildScheduleArtifactPayload(artifactVersionId, workflowRunId, (payload) => {
+              payload.route_demand_coverage_context = coverageContext;
+            })
+          )
+      ),
+      http.post(`*${coverageCandidatesPath}`, async () =>
+        HttpResponse.json({
+          status: "ok",
+          route_demand_coverage_recommendations: {
+            workflow_run_id: workflowRunId,
+            artifact_version_id: artifactVersionId,
+            route_demand_artifact_version_id: routeDemandArtifactVersionId,
+            dependency_state: "aligned",
+            dependencies: [],
+            added_route_count: 2,
+            target_count: 2,
+            max_candidates: 8,
+            targets: [coverageTargetA, coverageTargetB],
+            candidate_groups: [
+              {
+                target: coverageTargetA,
+                candidate_count: 2,
+                pass_candidate_count: 2,
+                candidates: [sharedTopCandidateA, alternateCandidateA]
+              },
+              {
+                target: coverageTargetB,
+                candidate_count: 2,
+                pass_candidate_count: 2,
+                candidates: [sharedTopCandidateB, alternateCandidateB]
+              }
+            ],
+            selected_defaults: [],
+            diagnostic_reason: null
+          }
+        })
+      )
+    );
+
+    window.history.pushState(
+      {},
+      "",
+      `/runs/${workflowRunId}/workpages/schedule-v0/artifacts/${artifactVersionId}`
+    );
+    render(<App />);
+
+    const page = await screen.findByTestId("schedule-artifact-workpage-page");
+    const panel = await screen.findByTestId("route-demand-coverage-panel");
+    const heatmap = heatmapSectionIn(page);
+    const selectedHeader = heatmap.querySelector(
+      ".schedule-heatmap__date-header--selected"
+    ) as HTMLElement | null;
+    expect(selectedHeader).not.toBeNull();
+    expect(selectedHeader).toHaveClass("schedule-heatmap__date-header--uncovered");
+    expect(within(selectedHeader as HTMLElement).getByText("Gap")).toBeInTheDocument();
+    expect(within(selectedHeader as HTMLElement).getByText("2")).toBeInTheDocument();
+
+    const abhirajCell = heatmapButton(
+      heatmap,
+      (label) => label.startsWith("Abhiraj Singh on 2026-03-24")
+    );
+    await user.click(abhirajCell);
+
+    expect(abhirajCell).toHaveTextContent("Pending route");
+    expect(abhirajCell.getAttribute("aria-label")).toContain("ROUTE-20260324-18");
+    expect(
+      within(panel).getByRole("radio", {
+        name: /Select Abhiraj Singh for ROUTE-20260324-18 on 2026-03-24/
+      })
+    ).toBeChecked();
+    expect(
+      within(panel).getByRole("radio", {
+        name: /Select Abhiraj Singh for ROUTE-20260324-19 on 2026-03-24/
+      })
+    ).toBeDisabled();
+    expect(within(selectedHeader as HTMLElement).getByText("1")).toBeInTheDocument();
+
+    await user.click(abhirajCell);
+    expect(abhirajCell).toHaveTextContent("Open");
+    expect(
+      within(panel).getByRole("radio", {
+        name: /Select Abhiraj Singh for ROUTE-20260324-18 on 2026-03-24/
+      })
+    ).not.toBeChecked();
+    expect(within(selectedHeader as HTMLElement).getByText("2")).toBeInTheDocument();
+    },
+    10000
+  );
+
+  it(
+    "applies pending heatmap route adds through the coverage apply endpoint",
+    async () => {
+      const user = userEvent.setup();
+      resetApiState();
+      const workflowRunId = "wr-weekly-001";
+      const artifactVersionId = "av-schedule-artifact-001";
+      const nextArtifactVersionId = "av-schedule-artifact-route-add-002";
+      const routeDemandArtifactVersionId = "av-route-demand-artifact-005";
+      const coverageCandidatesPath =
+        `/api/v1/workpages/workflow-runs/${workflowRunId}/schedule-v0/artifacts/` +
+        `${artifactVersionId}/route-demand-coverage-candidates`;
+      const coverageApplyPath =
+        `/api/v1/workpages/workflow-runs/${workflowRunId}/schedule-v0/artifacts/` +
+        `${artifactVersionId}/route-demand-coverage`;
+      const coverageContext = {
+        workflow_run_id: workflowRunId,
+        schedule_artifact_version_id: artifactVersionId,
+        route_demand_artifact_version_id: routeDemandArtifactVersionId,
+        coverage_candidates_path: coverageCandidatesPath,
+        coverage_apply_path: coverageApplyPath,
+        service_dates: ["2026-03-24"],
+        added_route_count: 1,
+        deltas: [
+          {
+            service_date: "2026-03-24",
+            previous_planned_route_count: 20,
+            planned_route_count: 21,
+            delta: 1
+          }
+        ]
+      };
+      const coverageTarget = {
+        target_id: `${routeDemandArtifactVersionId}:2026-03-24:1`,
+        route_slot_id: "slot-20260324-cycle1-standard#20",
+        route_id: "ROUTE-20260324-20",
+        service_date: "2026-03-24",
+        route_slot_class: "standard",
+        station_code: "DVC4",
+        service_area: "Metro core",
+        shift_start: "10:45",
+        shift_end: "19:15",
+        projected_minutes: 535,
+        required_skill: "standard_delivery",
+        vehicle_type: "cargo_van"
+      };
+      const recommendedCandidate = buildCoverageCandidate(
+        coverageTarget,
+        1,
+        "A149421ZGG7QED",
+        "Balwinder Singh"
+      );
+      const applyBodies: Array<Record<string, any>> = [];
+
+      server.use(
+        http.get(
+          `*/api/v1/workpages/workflow-runs/${workflowRunId}/schedule-v0/artifacts/${artifactVersionId}`,
+          () =>
+            HttpResponse.json(
+              buildScheduleArtifactPayload(artifactVersionId, workflowRunId, (payload) => {
+                payload.route_demand_coverage_context = coverageContext;
+              })
+            )
+        ),
+        http.post(`*${coverageCandidatesPath}`, async () =>
+          HttpResponse.json({
+            status: "ok",
+            route_demand_coverage_recommendations: {
+              workflow_run_id: workflowRunId,
+              artifact_version_id: artifactVersionId,
+              route_demand_artifact_version_id: routeDemandArtifactVersionId,
+              dependency_state: "aligned",
+              dependencies: [],
+              added_route_count: 1,
+              target_count: 1,
+              max_candidates: 8,
+              targets: [coverageTarget],
+              candidate_groups: [
+                {
+                  target: coverageTarget,
+                  candidate_count: 1,
+                  pass_candidate_count: 1,
+                  candidates: [recommendedCandidate]
+                }
+              ],
+              selected_defaults: [],
+              diagnostic_reason: null
+            }
+          })
+        ),
+        http.post(`*${coverageApplyPath}`, async ({ request }) => {
+          const body = (await request.json()) as Record<string, any>;
+          applyBodies.push(body);
+          return HttpResponse.json({
+            status: "ok",
+            submitted: {
+              workflow_run_id: workflowRunId,
+              artifact_version_id: nextArtifactVersionId,
+              supersedes_artifact_version_id: artifactVersionId,
+              route: `/runs/${workflowRunId}/workpages/schedule-v0/artifacts/${nextArtifactVersionId}`
+            },
+            route_demand_coverage: {
+              selected: [
+                {
+                  route_slot_id: coverageTarget.route_slot_id,
+                  driver_id: recommendedCandidate.driver_id
+                }
+              ],
+              assigned_count: 1,
+              appended_assignment_count: 1,
+              cleared_same_day_reserve_count: 0
+            }
+          });
+        }),
+        http.get(
+          `*/api/v1/workpages/workflow-runs/${workflowRunId}/schedule-v0/artifacts/${nextArtifactVersionId}`,
+          () => HttpResponse.json(buildScheduleArtifactPayload(nextArtifactVersionId, workflowRunId))
+        )
+      );
+
+      window.history.pushState(
+        {},
+        "",
+        `/runs/${workflowRunId}/workpages/schedule-v0/artifacts/${artifactVersionId}`
+      );
+      render(<App />);
+
+      const page = await screen.findByTestId("schedule-artifact-workpage-page");
+      await screen.findByRole("radio", {
+        name: /Select Balwinder Singh for ROUTE-20260324-20 on 2026-03-24/
+      });
+      const heatmap = heatmapSectionIn(page);
+      const balwinderCell = heatmapButton(
+        heatmap,
+        (label) => label.startsWith("Balwinder Singh on 2026-03-24")
+      );
+      await user.click(balwinderCell);
+
+      const applyButton = await screen.findByRole("button", { name: "Apply 1 route addition" });
+      expect(applyButton).toBeEnabled();
+      await user.click(applyButton);
+
+      await waitFor(() => {
+        expect(applyBodies).toHaveLength(1);
+      });
+      expect(applyBodies[0].route_demand_artifact_version_id).toBe(routeDemandArtifactVersionId);
+      expect(applyBodies[0].selections).toEqual([
+        {
+          target_id: coverageTarget.target_id,
+          route_slot_id: coverageTarget.route_slot_id,
+          driver_id: recommendedCandidate.driver_id,
+          row_kind: "assignment"
+        }
+      ]);
+      await waitFor(() => {
+        expect(screen.queryByTestId("route-demand-coverage-panel")).not.toBeInTheDocument();
+      });
+    },
+    15000
+  );
+
+  it(
+    "keeps a single-target backend default inline inside the day-grouped coverage layout",
+    async () => {
+      const user = userEvent.setup();
+      resetApiState();
+      const workflowRunId = "wr-weekly-001";
+      const artifactVersionId = "av-schedule-artifact-001";
+      const routeDemandArtifactVersionId = "av-route-demand-artifact-002";
+      const coverageCandidatesPath =
+        `/api/v1/workpages/workflow-runs/${workflowRunId}/schedule-v0/artifacts/` +
+        `${artifactVersionId}/route-demand-coverage-candidates`;
+      const coverageTarget = {
+        target_id: `${routeDemandArtifactVersionId}:2026-03-28:1`,
+        route_slot_id: "slot-20260328-cycle1-standard#18",
+        route_id: "ROUTE-20260328-18",
+        service_date: "2026-03-28",
+        route_slot_class: "standard",
+        station_code: "DVC4",
+        service_area: "Metro core",
+        shift_start: "10:15",
+        shift_end: "18:45",
+        projected_minutes: 510,
+        required_skill: "standard_delivery",
+        vehicle_type: "cargo_van"
+      };
+      const firstCandidate = buildCoverageCandidate(
+        coverageTarget,
+        1,
+        "A2S2SO4XUULX7H",
+        "June Tate"
+      );
+      const secondCandidate = buildCoverageCandidate(
+        coverageTarget,
+        2,
+        "A7ZT4LME2WJQ9B",
+        "Maya Chen"
+      );
+      const thirdCandidate = buildCoverageCandidate(
+        coverageTarget,
+        3,
+        "A4PWB7DY0TKR6M",
+        "Leo Park"
+      );
+      const overflowDefaultCandidate = buildCoverageCandidate(
+        coverageTarget,
+        4,
+        "A5NS7VGK2MTL8P",
+        "Omar Diaz"
+      );
+
+      server.use(
+        http.post(`*${coverageCandidatesPath}`, async () =>
+          HttpResponse.json({
+            status: "ok",
+            route_demand_coverage_recommendations: {
+              workflow_run_id: workflowRunId,
+              artifact_version_id: artifactVersionId,
+              route_demand_artifact_version_id: routeDemandArtifactVersionId,
+              dependency_state: "aligned",
+              dependencies: [],
+              added_route_count: 1,
+              target_count: 1,
+              max_candidates: 8,
+              targets: [coverageTarget],
+              candidate_groups: [
+                {
+                  target: coverageTarget,
+                  candidate_count: 4,
+                  pass_candidate_count: 4,
+                  candidates: [
+                    firstCandidate,
+                    secondCandidate,
+                    thirdCandidate,
+                    overflowDefaultCandidate
+                  ]
+                }
+              ],
+              selected_defaults: [
+                {
+                  target_id: coverageTarget.target_id,
+                  route_slot_id: coverageTarget.route_slot_id,
+                  driver_id: overflowDefaultCandidate.driver_id,
+                  row_kind: "assignment"
+                }
+              ],
+              diagnostic_reason: null
+            }
+          })
+        )
+      );
+
+      window.history.pushState(
+        {},
+        "",
+        `/runs/${workflowRunId}/workpages/route-demand-v0/artifacts/av-route-demand-artifact-001`
+      );
+      render(<App />);
+
+      const routeDemandPage = await screen.findByTestId("route-demand-artifact-workpage-page");
+      await user.click(
+        within(routeDemandPage).getByRole("button", {
+          name: "Increase planned routes for 2026-03-28"
+        })
+      );
+      await user.click(
+        within(routeDemandPage).getByRole("button", { name: "Run coverage agent" })
+      );
+
+      const dialog = await screen.findByRole("dialog", { name: "Edit Weekly Schedule" });
+      const panel = await within(dialog).findByTestId("route-demand-coverage-panel");
+      const inlineTable = await within(panel).findByTestId(
+        "route-demand-coverage-day-table-2026-03-28"
+      );
+      const overflow = await within(panel).findByTestId(
+        "route-demand-coverage-day-overflow-2026-03-28"
+      );
+
+      expect(inlineTable).toHaveTextContent("ROUTE-20260328-18");
+      expect(inlineTable).toHaveTextContent("Omar Diaz");
+      expect(inlineTable).not.toHaveTextContent("June Tate");
+      expect(inlineTable).not.toHaveTextContent("Maya Chen");
+      expect(inlineTable).not.toHaveTextContent("Leo Park");
+      expect(overflow).not.toHaveAttribute("open");
+      expect(overflow).toHaveTextContent("Show 3 more options across 1 route");
+      expect(
+        within(inlineTable).getByRole("radio", {
+          name: /Select Omar Diaz for ROUTE-20260328-18 on 2026-03-28/
+        })
+      ).toBeChecked();
+      await user.click(within(overflow).getByText("Show 3 more options across 1 route"));
+      expect(overflow).toHaveAttribute("open");
+      expect(
+        within(overflow).getByRole("radio", {
+          name: /Select June Tate for ROUTE-20260328-18 on 2026-03-28/
+        })
+      ).toBeInTheDocument();
+    },
+    90000
+  );
+
+  it(
     "marks a driver Sick / No Show from the weekly schedule quick-edit heatmap",
     async () => {
       const user = userEvent.setup();
+      resetApiState();
       window.history.pushState({}, "", "/runs/wr-weekly-001/workpages/schedule-v0");
       render(<App />);
 
@@ -269,13 +1270,11 @@ describe("LogisticsScheduleArtifactWorkpagePage", () => {
         );
       });
       expect(screen.getByRole("dialog", { name: "Edit Weekly Schedule" })).toBeInTheDocument();
-      const sickCell = await within(dialog).findByRole("button", {
-        name: `Sick / No Show: ${driverName} on 2026-03-22`
+      await waitFor(() => {
+        expect(
+          screen.queryByRole("dialog", { name: "Mark Sick / No Show" })
+        ).not.toBeInTheDocument();
       });
-      expect(sickCell).toHaveClass("schedule-heatmap__cell--sick-no-show");
-      expect(sickCell).not.toHaveTextContent("Route");
-      expect(sickCell).not.toHaveTextContent("On call");
-      expectHeatmapPreferenceBars(dialog);
     },
     120000
   );

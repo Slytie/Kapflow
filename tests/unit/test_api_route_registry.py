@@ -61,11 +61,18 @@ def test_route_registry_preserves_exact_global_route_order() -> None:
         "board.schedule_planning",
         "stories.logistics_three_workflow",
         "workpages.workflow_run.artifact.preview",
+        "workpages.workflow_run.route_demand.artifact.save_and_run",
+        "workpages.workflow_run.schedule.sick_no_show",
+        "workpages.workflow_run.schedule.route_demand_coverage_candidates",
+        "workpages.workflow_run.schedule.route_demand_coverage",
         "workpages.workflow_run.artifact.detail",
         "workpages.workflow_run.artifact.submit",
         "workpages.workflow_run.detail",
         "workpages.workflow_run.eod_drafts.create",
+        "workpages.workflow_run.route_demand.next_week.create",
+        "workpages.workflow_run.eod_intake.ensure",
         "workpages.workflow_run.driver_preferences.snapshots.create",
+        "workpages.workflow_run.driver_preferences.availability_exceptions.add",
     ]
 
 
@@ -132,6 +139,62 @@ def test_route_registry_matches_representative_exact_and_parameterized_routes() 
         "workflow_run_artifact_submit": "wr-001/schedule-v0/artifacts/av-001"
     }
 
+    workflow_run_route_demand_save_and_run_match = match_route(
+        "POST",
+        "/api/v1/workpages/workflow-runs/wr-001/route-demand-v0/artifacts/av-001/save-and-run",
+    )
+    assert workflow_run_route_demand_save_and_run_match is not None
+    assert (
+        workflow_run_route_demand_save_and_run_match.route.name
+        == "workpages.workflow_run.route_demand.artifact.save_and_run"
+    )
+    assert workflow_run_route_demand_save_and_run_match.params == {
+        "workflow_run_artifact_save_and_run": "wr-001/route-demand-v0/artifacts/av-001"
+    }
+
+    workflow_run_schedule_sick_no_show_match = match_route(
+        "POST",
+        "/api/v1/workpages/workflow-runs/wr-001/schedule-v0/artifacts/av-001/sick-no-show",
+    )
+    assert workflow_run_schedule_sick_no_show_match is not None
+    assert (
+        workflow_run_schedule_sick_no_show_match.route.name
+        == "workpages.workflow_run.schedule.sick_no_show"
+    )
+    assert workflow_run_schedule_sick_no_show_match.params == {
+        "workflow_run_schedule_sick_no_show": "wr-001/schedule-v0/artifacts/av-001"
+    }
+
+    workflow_run_schedule_route_demand_coverage_candidates_match = match_route(
+        "POST",
+        "/api/v1/workpages/workflow-runs/wr-001/schedule-v0/artifacts/av-001/route-demand-coverage-candidates",
+    )
+    assert workflow_run_schedule_route_demand_coverage_candidates_match is not None
+    assert (
+        workflow_run_schedule_route_demand_coverage_candidates_match.route.name
+        == "workpages.workflow_run.schedule.route_demand_coverage_candidates"
+    )
+    assert workflow_run_schedule_route_demand_coverage_candidates_match.params == {
+        "workflow_run_schedule_route_demand_coverage_candidates": (
+            "wr-001/schedule-v0/artifacts/av-001"
+        )
+    }
+
+    workflow_run_schedule_route_demand_coverage_match = match_route(
+        "POST",
+        "/api/v1/workpages/workflow-runs/wr-001/schedule-v0/artifacts/av-001/route-demand-coverage",
+    )
+    assert workflow_run_schedule_route_demand_coverage_match is not None
+    assert (
+        workflow_run_schedule_route_demand_coverage_match.route.name
+        == "workpages.workflow_run.schedule.route_demand_coverage"
+    )
+    assert workflow_run_schedule_route_demand_coverage_match.params == {
+        "workflow_run_schedule_route_demand_coverage": (
+            "wr-001/schedule-v0/artifacts/av-001"
+        )
+    }
+
     workflow_run_eod_draft_match = match_route(
         "POST",
         "/api/v1/workpages/workflow-runs/wr-001/eod-v0/drafts",
@@ -139,6 +202,25 @@ def test_route_registry_matches_representative_exact_and_parameterized_routes() 
     assert workflow_run_eod_draft_match is not None
     assert workflow_run_eod_draft_match.route.name == "workpages.workflow_run.eod_drafts.create"
     assert workflow_run_eod_draft_match.params == {"workflow_run_id": "wr-001"}
+
+    workflow_run_route_demand_next_week_match = match_route(
+        "POST",
+        "/api/v1/workpages/workflow-runs/wr-001/route-demand-v0/next-week",
+    )
+    assert workflow_run_route_demand_next_week_match is not None
+    assert (
+        workflow_run_route_demand_next_week_match.route.name
+        == "workpages.workflow_run.route_demand.next_week.create"
+    )
+    assert workflow_run_route_demand_next_week_match.params == {"workflow_run_id": "wr-001"}
+
+    workflow_run_eod_intake_match = match_route(
+        "POST",
+        "/api/v1/workpages/workflow-runs/wr-001/eod-v0/intake-task",
+    )
+    assert workflow_run_eod_intake_match is not None
+    assert workflow_run_eod_intake_match.route.name == "workpages.workflow_run.eod_intake.ensure"
+    assert workflow_run_eod_intake_match.params == {"workflow_run_id": "wr-001"}
 
     workflow_run_driver_preferences_snapshot_match = match_route(
         "POST",
@@ -150,6 +232,19 @@ def test_route_registry_matches_representative_exact_and_parameterized_routes() 
         == "workpages.workflow_run.driver_preferences.snapshots.create"
     )
     assert workflow_run_driver_preferences_snapshot_match.params == {
+        "workflow_run_id": "wr-001"
+    }
+
+    workflow_run_driver_availability_exception_match = match_route(
+        "POST",
+        "/api/v1/workpages/workflow-runs/wr-001/driver-preferences-v0/availability-exceptions",
+    )
+    assert workflow_run_driver_availability_exception_match is not None
+    assert (
+        workflow_run_driver_availability_exception_match.route.name
+        == "workpages.workflow_run.driver_preferences.availability_exceptions.add"
+    )
+    assert workflow_run_driver_availability_exception_match.params == {
         "workflow_run_id": "wr-001"
     }
 
@@ -199,6 +294,33 @@ def test_route_registry_preserves_suffix_precedence_over_detail_routes() -> None
     assert artifact_binary_download is not None
     assert artifact_binary_download.route.name == "artifacts.download.binary"
 
+    schedule_sick_no_show = match_route(
+        "POST",
+        "/api/v1/workpages/workflow-runs/wr-001/schedule-v0/artifacts/av-001/sick-no-show",
+    )
+    assert schedule_sick_no_show is not None
+    assert schedule_sick_no_show.route.name == "workpages.workflow_run.schedule.sick_no_show"
+
+    schedule_route_demand_coverage_candidates = match_route(
+        "POST",
+        "/api/v1/workpages/workflow-runs/wr-001/schedule-v0/artifacts/av-001/route-demand-coverage-candidates",
+    )
+    assert schedule_route_demand_coverage_candidates is not None
+    assert (
+        schedule_route_demand_coverage_candidates.route.name
+        == "workpages.workflow_run.schedule.route_demand_coverage_candidates"
+    )
+
+    schedule_route_demand_coverage = match_route(
+        "POST",
+        "/api/v1/workpages/workflow-runs/wr-001/schedule-v0/artifacts/av-001/route-demand-coverage",
+    )
+    assert schedule_route_demand_coverage is not None
+    assert (
+        schedule_route_demand_coverage.route.name
+        == "workpages.workflow_run.schedule.route_demand_coverage"
+    )
+
 
 def test_route_registry_exposes_representative_metadata() -> None:
     routes_by_name = {route.name: route for route in ROUTES}
@@ -239,6 +361,37 @@ def test_route_registry_exposes_representative_metadata() -> None:
         is True
     )
     assert routes_by_name["workpages.workflow_run.artifact.submit"].needs_db_connection is True
+
+    assert (
+        routes_by_name["workpages.workflow_run.schedule.route_demand_coverage_candidates"].needs_page
+        is False
+    )
+    assert (
+        routes_by_name["workpages.workflow_run.schedule.route_demand_coverage_candidates"].body_policy
+        == JSON_COMMAND_BODY
+    )
+    assert (
+        routes_by_name["workpages.workflow_run.schedule.route_demand_coverage_candidates"].requires_request_context
+        is True
+    )
+    assert (
+        routes_by_name["workpages.workflow_run.schedule.route_demand_coverage_candidates"].needs_db_connection
+        is True
+    )
+
+    assert routes_by_name["workpages.workflow_run.schedule.route_demand_coverage"].needs_page is False
+    assert (
+        routes_by_name["workpages.workflow_run.schedule.route_demand_coverage"].body_policy
+        == JSON_COMMAND_BODY
+    )
+    assert (
+        routes_by_name["workpages.workflow_run.schedule.route_demand_coverage"].requires_request_context
+        is True
+    )
+    assert (
+        routes_by_name["workpages.workflow_run.schedule.route_demand_coverage"].needs_db_connection
+        is True
+    )
 
     assert routes_by_name["workpages.workflow_run.detail"].needs_page is False
     assert routes_by_name["workpages.workflow_run.detail"].body_policy == NO_BODY

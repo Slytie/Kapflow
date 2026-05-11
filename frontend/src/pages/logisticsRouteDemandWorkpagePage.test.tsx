@@ -250,6 +250,67 @@ describe("LogisticsRouteDemandWorkpagePage", () => {
     );
   });
 
+  it("runs existing-week coverage from route-demand and opens the schedule quick edit with recommendations", async () => {
+    const user = userEvent.setup();
+    setFrontendOperatorContext();
+    window.history.pushState(
+      {},
+      "",
+      "/runs/wr-weekly-001/workpages/route-demand-v0/artifacts/av-route-demand-artifact-001"
+    );
+    render(<App />);
+
+    const page = await screen.findByTestId("route-demand-artifact-workpage-page");
+    expect(within(page).getByRole("button", { name: "Run coverage agent" })).toBeDisabled();
+
+    await user.click(
+      within(page).getByRole("button", {
+        name: `Increase planned routes for ${visibleWeekDate}`
+      })
+    );
+
+    const runCoverageButton = within(page).getByRole("button", { name: "Run coverage agent" });
+    expect(runCoverageButton).toBeEnabled();
+    await user.click(runCoverageButton);
+
+    await waitFor(() => {
+      expect(window.location.pathname).toBe("/runs/wr-weekly-001/workpages/schedule-v0");
+    });
+    const dialog = await screen.findByRole("dialog", { name: "Edit Weekly Schedule" });
+    const panel = await within(dialog).findByTestId("route-demand-coverage-panel");
+    expect(panel).toHaveTextContent("Route-demand coverage recommendations");
+    expect(panel).toHaveTextContent("added routes");
+    expect(mutationLog()).toContain(
+      "workpage-route-demand-save-and-run:av-route-demand-artifact-001:av-route-demand-artifact-002:wr-weekly-001"
+    );
+  });
+
+  it("closes the embedded route-demand popup before opening existing-week schedule coverage quick edit", async () => {
+    const user = userEvent.setup();
+    setFrontendOperatorContext();
+    window.history.pushState({}, "", "/runs/wr-weekly-001/workpages/schedule-v0");
+    render(<App />);
+
+    expect(await screen.findByTestId("schedule-workpage-page")).toBeInTheDocument();
+    await user.click(await screen.findByRole("button", { name: "Edit route demand" }));
+
+    const routeDemandDialog = await screen.findByRole("dialog", { name: "Edit route demand" });
+    await user.click(
+      within(routeDemandDialog).getByRole("button", {
+        name: `Increase planned routes for ${visibleWeekDate}`
+      })
+    );
+    await user.click(within(routeDemandDialog).getByRole("button", { name: "Run coverage agent" }));
+
+    await waitFor(() => {
+      expect(screen.queryByRole("dialog", { name: "Edit route demand" })).not.toBeInTheDocument();
+    });
+    const scheduleDialog = await screen.findByRole("dialog", { name: "Edit Weekly Schedule" });
+    expect(
+      await within(scheduleDialog).findByTestId("route-demand-coverage-panel")
+    ).toBeInTheDocument();
+  }, 30000);
+
   it("adds the next week, posts save-and-run to /save-and-run, and opens the weekly schedule quick edit", async () => {
     const user = userEvent.setup();
     const requestedSaveAndRunPaths: string[] = [];
@@ -346,9 +407,9 @@ describe("LogisticsRouteDemandWorkpagePage", () => {
       expect(window.location.pathname).toBe("/runs/wr-weekly-002/workpages/schedule-v0");
     });
 
-    expect(
-      await screen.findByRole("dialog", { name: "Edit Weekly Schedule" })
-    ).toBeInTheDocument();
+    const scheduleDialog = await screen.findByRole("dialog", { name: "Edit Weekly Schedule" });
+    expect(scheduleDialog).toBeInTheDocument();
+    expect(within(scheduleDialog).queryByTestId("route-demand-coverage-panel")).not.toBeInTheDocument();
     expect(requestedSaveAndRunPaths).toEqual([
       "/api/v1/workpages/workflow-runs/wr-weekly-002/route-demand-v0/artifacts/av-route-demand-artifact-002/save-and-run"
     ]);
@@ -382,9 +443,9 @@ describe("LogisticsRouteDemandWorkpagePage", () => {
     await waitFor(() => {
       expect(screen.queryByRole("dialog", { name: "Edit route demand" })).not.toBeInTheDocument();
     });
-    expect(
-      await screen.findByRole("dialog", { name: "Edit Weekly Schedule" })
-    ).toBeInTheDocument();
+    const scheduleDialog = await screen.findByRole("dialog", { name: "Edit Weekly Schedule" });
+    expect(scheduleDialog).toBeInTheDocument();
+    expect(within(scheduleDialog).queryByTestId("route-demand-coverage-panel")).not.toBeInTheDocument();
     expect(window.location.pathname).toBe("/runs/wr-weekly-002/workpages/schedule-v0");
   }, 30000);
 

@@ -9,6 +9,9 @@ import type {
   WorkpageRouteDemandFutureWeekActivation,
   WorkpageRouteDemandFutureWeekOption,
   WorkpageRouteDemandScheduleImpact,
+  WorkpageScheduleRouteDemandCoverageApplyResult,
+  WorkpageScheduleRouteDemandCoverageContext,
+  WorkpageScheduleRouteDemandCoverageRecommendations,
   WorkpageScheduleAcceptedSeries,
   WorkpageScheduleArtifactState,
   WorkpageScheduleCalculations,
@@ -504,10 +507,20 @@ export interface WorkpageSubmittedResponse {
   target_workflow_run_id?: string | null;
   target_schedule_route?: string | null;
   target_schedule_artifact_version_id?: string | null;
+  route_demand_coverage_context?: WorkpageScheduleRouteDemandCoverageContext | null;
 }
 
 export interface WorkpagePreviewResponse {
   preview: WorkpageSchedulePreview;
+}
+
+export interface WorkpageScheduleRouteDemandCoverageRecommendationsResponse {
+  route_demand_coverage_recommendations: WorkpageScheduleRouteDemandCoverageRecommendations;
+}
+
+export interface WorkpageScheduleRouteDemandCoverageApplyResponse
+  extends WorkpageSubmittedResponse {
+  route_demand_coverage: WorkpageScheduleRouteDemandCoverageApplyResult;
 }
 
 export interface WorkpageContract {
@@ -529,6 +542,7 @@ export interface WorkpageContract {
     | WorkpageRouteDemandScheduleImpact
     | WorkpageDriverPreferencesScheduleImpact
     | null;
+  route_demand_coverage_context?: WorkpageScheduleRouteDemandCoverageContext | null;
   artifact_history: WorkpageArtifactHistory | null;
   draft_lineage: WorkpageScheduleDraftLineage | null;
   accepted_series: WorkpageScheduleAcceptedSeries | null;

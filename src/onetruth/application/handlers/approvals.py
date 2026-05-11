@@ -30,7 +30,6 @@ from onetruth.application.handlers.logistics_handoff import notify_only_handoff_
 from onetruth.application.services.dispatch_reporting_build import (
     FINAL_PACKET_ARTIFACT_KIND as DISPATCH_FINAL_PACKET_ARTIFACT_KIND,
     FINAL_PACKET_POINTER_KEY as DISPATCH_FINAL_PACKET_POINTER_KEY,
-    MANAGER_REVIEW_ARTIFACT_KIND as DISPATCH_MANAGER_REVIEW_ARTIFACT_KIND,
     REPORTING_TO_PLANNING_EDGE_ID as DISPATCH_REPORTING_TO_PLANNING_EDGE_ID,
     REVIEW_APPROVAL_ACTION as DISPATCH_REVIEW_APPROVAL_ACTION,
     REVIEW_APPROVAL_SCOPE_REF as DISPATCH_REVIEW_APPROVAL_SCOPE_REF,
@@ -876,20 +875,6 @@ def _maybe_finalize_dispatch_reporting_approval(
         ],
         artifact_versions=artifacts,
     ).get(str(human_task["human_task_id"]), {})
-    manager_review_requirement = _required_upload_for_kind(
-        requirement_state=requirement_state,
-        artifact_kind=DISPATCH_MANAGER_REVIEW_ARTIFACT_KIND,
-    )
-    if manager_review_requirement is None or str(manager_review_requirement.get("status") or "") == "missing":
-        raise CommandError(
-            code="dispatch_reporting_finalize_requirements_not_satisfied",
-            message="dispatch reporting finalize requires the manager review attachment",
-            details={
-                "approval_id": str(approval["approval_id"]),
-                "human_task_id": str(human_task["human_task_id"]),
-                "artifact_kind": DISPATCH_MANAGER_REVIEW_ARTIFACT_KIND,
-            },
-        )
 
     review_confirmation = _latest_review_confirmation_for_human_task(
         artifacts=artifacts,

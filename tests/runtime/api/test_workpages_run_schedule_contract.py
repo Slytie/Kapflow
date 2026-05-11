@@ -65,6 +65,59 @@ def _table_section_by_id(
     )
 
 
+def _route_demand_artifact_path(workflow_run_id: str, artifact_version_id: str) -> str:
+    return (
+        f"/api/v1/workpages/workflow-runs/{workflow_run_id}/route-demand-v0/"
+        f"artifacts/{artifact_version_id}"
+    )
+
+
+def _route_demand_save_and_run_path(workflow_run_id: str, artifact_version_id: str) -> str:
+    return f"{_route_demand_artifact_path(workflow_run_id, artifact_version_id)}/save-and-run"
+
+
+def _route_demand_submit_rows_from_contract(
+    payload: dict[str, object],
+) -> list[dict[str, int | str]]:
+    day_cards = payload["calculations"]["day_cards"]
+    assert isinstance(day_cards, list)
+    return [
+        {
+            "service_date": str(row["service_date"]),
+            "planned_route_count": int(row["planned_route_count"]),
+        }
+        for row in day_cards
+    ]
+
+
+def _prepare_existing_week_route_demand_coverage(
+    *,
+    workflow_run_id: str,
+    route_demand_artifact_version_id: str,
+    client: RuntimeApiClient,
+    route_count_delta: int = 1,
+) -> dict[str, object]:
+    contract = client.get(
+        _route_demand_artifact_path(workflow_run_id, route_demand_artifact_version_id)
+    )
+    assert contract.status_code == 200, contract.payload
+    submit_rows = _route_demand_submit_rows_from_contract(contract.payload)
+    submit_rows[0]["planned_route_count"] = (
+        int(submit_rows[0]["planned_route_count"]) + route_count_delta
+    )
+    saved_and_ran = client.post(
+        _route_demand_save_and_run_path(workflow_run_id, route_demand_artifact_version_id),
+        payload={
+            "daily_demand_rows": submit_rows,
+            "idempotency_key": "api:workpages:run-schedule:route-demand-coverage:prepare",
+        },
+    )
+    assert saved_and_ran.status_code == 200, saved_and_ran.payload
+    coverage_context = saved_and_ran.payload["route_demand_coverage_context"]
+    assert isinstance(coverage_context, dict)
+    return coverage_context
+
+
 def test_schedule_workflow_run_workpage_contract_returns_run_backed_projection(
     tmp_path: Path,
 ) -> None:
@@ -252,6 +305,7 @@ def test_schedule_workflow_run_workpage_contract_returns_run_backed_projection(
         "recent_versions": [],
     }
     assert payload["artifact_history"] is None
+    assert payload.get("route_demand_coverage_context") is None
     assert payload["accepted_series"] == {
         "series_key": "weekly_schedule_planning.v1:dvc4:pitt-meadows",
         "current_artifact_version_id": None,
@@ -362,6 +416,34 @@ def test_schedule_workflow_run_workpage_prefers_latest_draft_rows_when_present(
     assert _table_section_by_id(sections, "assignment_rows")["rows"]
     assert _table_section_by_id(sections, "reserve_rows")["rows"]
     assert next(section for section in sections if section["kind"] == "schedule_heatmap")["people"]
+
+
+def test_schedule_workflow_run_workpage_returns_route_demand_coverage_context_when_latest_draft_is_behind(
+    tmp_path: Path,
+) -> None:
+    seeded = seed_actual_ops_weekly_schedule_run_with_stage04_outputs(
+        db_url=_db_url(tmp_path),
+        tenant_id="tenant-a",
+        domain_id="domain-x",
+        run_tag="api:workpages:run-schedule:route-demand-recovery",
+    )
+    workflow_run_id = str(seeded["workflow_run_id"])
+    route_demand_artifact_version_id = str(
+        seeded["artifacts_by_kind"]["planning.route_slot_requirements.workbook"][
+            "artifact_version_id"
+        ]
+    )
+    client = _client(tmp_path)
+    expected_context = _prepare_existing_week_route_demand_coverage(
+        workflow_run_id=workflow_run_id,
+        route_demand_artifact_version_id=route_demand_artifact_version_id,
+        client=client,
+        route_count_delta=2,
+    )
+
+    response = client.get(f"/api/v1/workpages/workflow-runs/{workflow_run_id}/schedule-v0")
+    assert response.status_code == 200, response.payload
+    assert response.payload["route_demand_coverage_context"] == expected_context
 
 
 def test_schedule_workflow_run_workpage_reads_are_stable_except_for_generated_at(

@@ -54,6 +54,7 @@
     "command": "api.workpages.workflow_run",
     "draft_resolution": null,
     "driver_availability_exceptions": {
+      "future_items": [],
       "items": []
     },
     "freshness": {

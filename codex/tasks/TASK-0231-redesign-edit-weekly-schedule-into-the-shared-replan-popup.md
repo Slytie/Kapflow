@@ -62,3 +62,17 @@ Turn `Edit Weekly Schedule` into one shared popup shell that can render weekly-b
 - One popup handles weekly-backed and live-dispatch-backed deterministic replanning without waiting on the later live-dispatch runtime task.
 - Brownfield proposals render above the existing schedule and can be applied or ignored.
 - Operators can still make informed manual overrides with the same popup open.
+
+## 2026-05-10 implementation note
+Landed subset:
+- the shared quick-edit shell can now launch from route demand into the existing weekly-draft schedule popup
+- the popup can render backend-owned route-demand coverage recommendations above the existing heatmap/manual-edit surface
+- stacked-modal route-demand launch and successor-draft handoff are covered for the pre-publish weekly-draft lane
+
+Remaining before this task can honestly move to `DONE`:
+- canonical runtime-status rendering while proposals are building is still not landed
+- driver phone-number/contact rendering is still not landed
+- richer top-3 versus broader proposal grouping remains open
+- ignore-action/full brownfield proposal shell behavior remains open
+- live-dispatch-backed proposal rendering remains open
+- full sick/no-show migration into the shared proposal flow remains open

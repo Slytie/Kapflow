@@ -78,6 +78,7 @@
     },
     "command": "api.workpages.artifact",
     "driver_availability_exceptions": {
+      "future_items": [],
       "items": []
     },
     "freshness": {

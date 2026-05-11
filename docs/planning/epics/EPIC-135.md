@@ -10,7 +10,10 @@ Selected on `2026-04-25`. Corrected on `2026-04-25` after repo-level review agai
 
 Current state:
 - `TASK-0225` through `TASK-0232` are the selected bounded tranche.
-- No EPIC-135 runtime code is landed yet; the current repo change set corrects the epic/task/workflow-pack truth before implementation starts.
+- A bounded pre-publish weekly-draft route-demand coverage subset is now landed:
+  - future-week `Save and run scheduling agent` remains the greenfield weekly Stage04 activation path from route demand
+  - existing-week positive route-count increases can use `Run coverage agent` to hand off into backend-owned schedule coverage recommend/apply over the current weekly draft
+- Later EPIC-135 items remain open: live-dispatch-backed replan truth, canonical runtime-status projection, driver-contact bridge inputs, and manual scheduler CTA retirement are not completed by this subset.
 
 ## First-principles objective
 Use one operator-facing popup surface:

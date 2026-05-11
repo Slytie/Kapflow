@@ -14,7 +14,6 @@ catalog:
     evidence_requirements:
       artifact_keys:
       - reporting.upd_draft.workbook
-      - reporting.manager_review.doc
       projection_id: reporting.stage04.review_packet
     sla:
       due_in_minutes: 120

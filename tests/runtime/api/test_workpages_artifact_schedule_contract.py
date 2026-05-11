@@ -181,6 +181,82 @@ def _sick_no_show_path(workflow_run_id: str, artifact_version_id: str) -> str:
     return f"{_artifact_path(workflow_run_id, artifact_version_id)}/sick-no-show"
 
 
+def _route_demand_artifact_path(workflow_run_id: str, artifact_version_id: str) -> str:
+    return (
+        f"/api/v1/workpages/workflow-runs/{workflow_run_id}/"
+        f"route-demand-v0/artifacts/{artifact_version_id}"
+    )
+
+
+def _route_demand_save_and_run_path(workflow_run_id: str, artifact_version_id: str) -> str:
+    return f"{_route_demand_artifact_path(workflow_run_id, artifact_version_id)}/save-and-run"
+
+
+def _route_demand_submit_rows_from_contract(
+    contract_payload: dict[str, object],
+) -> list[dict[str, object]]:
+    day_cards = contract_payload["calculations"]["day_cards"]
+    assert isinstance(day_cards, list)
+    return [
+        {
+            "service_date": str(item["service_date"]),
+            "planned_route_count": int(item["planned_route_count"]),
+        }
+        for item in day_cards
+    ]
+
+
+def _artifact_version_count(
+    tmp_path: Path,
+    *,
+    workflow_run_id: str,
+    artifact_kind: str,
+) -> int:
+    with open_sqlite_connection(_db_url(tmp_path)) as connection:
+        row = connection.execute(
+            """
+            SELECT COUNT(*) AS artifact_count
+            FROM artifact_versions
+            WHERE workflow_run_id = ?
+              AND artifact_kind = ?
+            """,
+            (workflow_run_id, artifact_kind),
+        ).fetchone()
+    assert row is not None
+    return int(row["artifact_count"])
+
+
+def _prepare_existing_week_route_demand_coverage(
+    tmp_path: Path,
+    *,
+    workflow_run_id: str,
+    route_demand_artifact_version_id: str,
+    client: RuntimeApiClient,
+    route_count_delta: int = 1,
+) -> dict[str, object]:
+    contract = client.get(
+        _route_demand_artifact_path(workflow_run_id, route_demand_artifact_version_id)
+    )
+    assert contract.status_code == 200, contract.payload
+    submit_rows = _route_demand_submit_rows_from_contract(contract.payload)
+    submit_rows[0]["planned_route_count"] = (
+        int(submit_rows[0]["planned_route_count"]) + route_count_delta
+    )
+    saved_and_ran = client.post(
+        _route_demand_save_and_run_path(workflow_run_id, route_demand_artifact_version_id),
+        payload={
+            "daily_demand_rows": submit_rows,
+            "idempotency_key": (
+                "api:workpages:artifact-schedule:route-demand-coverage:prepare"
+            ),
+        },
+    )
+    assert saved_and_ran.status_code == 200, saved_and_ran.payload
+    coverage_context = saved_and_ran.payload["route_demand_coverage_context"]
+    assert isinstance(coverage_context, dict)
+    return coverage_context
+
+
 def _load_artifact_version(
     tmp_path: Path,
     *,
@@ -470,6 +546,7 @@ def test_artifact_backed_schedule_workpage_returns_projected_contract(tmp_path: 
     assert payload["artifact_history"]["entries"][0]["route"] == (
         f"/runs/{workflow_run_id}/workpages/schedule-v0/artifacts/{artifact_version_id}"
     )
+    assert payload.get("route_demand_coverage_context") is None
     assert payload["accepted_series"] == {
         "series_key": "weekly_schedule_planning.v1:dvc4:pitt-meadows",
         "current_artifact_version_id": None,
@@ -582,6 +659,36 @@ def test_artifact_backed_schedule_workpage_returns_projected_contract(tmp_path: 
     assert parsed_download["columns"]
     assert parsed_download["rows"]
     assert parsed_download["dependency_manifest"]
+
+
+def test_editable_schedule_artifact_contract_returns_route_demand_coverage_context_when_draft_is_behind_latest_route_demand(
+    tmp_path: Path,
+) -> None:
+    seeded = seed_actual_ops_weekly_schedule_run_with_stage04_outputs(
+        db_url=_db_url(tmp_path),
+        tenant_id="tenant-a",
+        domain_id="domain-x",
+        run_tag="api:workpages:artifact-schedule:route-demand-recovery-context",
+    )
+    workflow_run_id = str(seeded["workflow_run_id"])
+    artifact_version_id = str(seeded["stage04_outputs"]["draft_workbook"]["artifact_version_id"])
+    route_demand_artifact_version_id = str(
+        seeded["artifacts_by_kind"]["planning.route_slot_requirements.workbook"][
+            "artifact_version_id"
+        ]
+    )
+    client = _client(tmp_path)
+    expected_context = _prepare_existing_week_route_demand_coverage(
+        tmp_path,
+        workflow_run_id=workflow_run_id,
+        route_demand_artifact_version_id=route_demand_artifact_version_id,
+        client=client,
+        route_count_delta=2,
+    )
+
+    response = client.get(_artifact_path(workflow_run_id, artifact_version_id))
+    assert response.status_code == 200, response.payload
+    assert response.payload["route_demand_coverage_context"] == expected_context
 
 
 def test_artifact_backed_schedule_workpage_uses_latest_driver_preferences_for_heatmap(
@@ -1320,6 +1427,263 @@ def test_schedule_sick_no_show_creates_availability_exception_and_successor_draf
     assert str(sick_cell["availability_source_ref"]).startswith("availability_exception:")
     if service_date == selected_service_date:
         assert driver_id not in refreshed.payload["calculations"]["selected_day"]["available_driver_ids"]
+
+
+def test_schedule_route_demand_coverage_candidates_return_grouped_recommendations_without_mutation(
+    tmp_path: Path,
+) -> None:
+    seeded = seed_actual_ops_weekly_schedule_run_with_stage04_outputs(
+        db_url=_db_url(tmp_path),
+        tenant_id="tenant-a",
+        domain_id="domain-x",
+        run_tag="api:workpages:artifact-schedule:route-demand-coverage-candidates",
+    )
+    workflow_run_id = str(seeded["workflow_run_id"])
+    schedule_artifact_version_id = str(
+        seeded["stage04_outputs"]["draft_workbook"]["artifact_version_id"]
+    )
+    route_demand_artifact_version_id = str(
+        seeded["artifacts_by_kind"]["planning.route_slot_requirements.workbook"][
+            "artifact_version_id"
+        ]
+    )
+    client = _client(tmp_path)
+    coverage_context = _prepare_existing_week_route_demand_coverage(
+        tmp_path,
+        workflow_run_id=workflow_run_id,
+        route_demand_artifact_version_id=route_demand_artifact_version_id,
+        client=client,
+        route_count_delta=2,
+    )
+    assignment_rows, reserve_rows = _schedule_submit_rows(
+        client,
+        workflow_run_id,
+        schedule_artifact_version_id,
+    )
+    schedule_artifact_count_before = _artifact_version_count(
+        tmp_path,
+        workflow_run_id=workflow_run_id,
+        artifact_kind=SCHEDULE_DATASET_KEY,
+    )
+
+    response = client.post(
+        str(coverage_context["coverage_candidates_path"]),
+        payload={
+            "route_demand_artifact_version_id": str(
+                coverage_context["route_demand_artifact_version_id"]
+            ),
+            "service_dates": list(coverage_context["service_dates"]),
+            "rows": assignment_rows,
+            "reserve_rows": reserve_rows,
+            "max_candidates": 20,
+        },
+    )
+    assert response.status_code == 200, response.payload
+    schedule_artifact_count_after = _artifact_version_count(
+        tmp_path,
+        workflow_run_id=workflow_run_id,
+        artifact_kind=SCHEDULE_DATASET_KEY,
+    )
+    assert schedule_artifact_count_after == schedule_artifact_count_before
+
+    recommendations = response.payload["route_demand_coverage_recommendations"]
+    assert recommendations["artifact_version_id"] == schedule_artifact_version_id
+    assert recommendations["route_demand_artifact_version_id"] == str(
+        coverage_context["route_demand_artifact_version_id"]
+    )
+    assert recommendations["added_route_count"] >= 2
+    assert recommendations["candidate_groups"]
+    assert recommendations["selected_defaults"]
+    selectable_driver_ids_by_service_date: dict[str, set[str]] = {}
+    target_count_by_service_date: dict[str, int] = {}
+    for candidate_group in recommendations["candidate_groups"]:
+        service_date = str(candidate_group["target"]["service_date"])
+        target_count_by_service_date[service_date] = (
+            target_count_by_service_date.get(service_date, 0) + 1
+        )
+        driver_ids = selectable_driver_ids_by_service_date.setdefault(service_date, set())
+        for candidate in candidate_group["candidates"]:
+            if (
+                candidate["selection_state"] == "selectable"
+                and candidate["hard_filter_status"] == "pass"
+            ):
+                driver_ids.add(str(candidate["driver_id"]))
+    default_driver_ids_by_service_date: dict[str, list[str]] = {}
+    target_service_date_by_id = {
+        str(target["target_id"]): str(target["service_date"])
+        for target in recommendations["targets"]
+    }
+    for selection in recommendations["selected_defaults"]:
+        service_date = target_service_date_by_id[str(selection["target_id"])]
+        default_driver_ids_by_service_date.setdefault(service_date, []).append(
+            str(selection["driver_id"])
+        )
+    for service_date, driver_ids in selectable_driver_ids_by_service_date.items():
+        selected_driver_ids = default_driver_ids_by_service_date.get(service_date, [])
+        assert len(selected_driver_ids) == len(set(selected_driver_ids))
+        if len(driver_ids) >= target_count_by_service_date[service_date]:
+            assert len(selected_driver_ids) == target_count_by_service_date[service_date]
+    dependencies = {
+        item["dependency_key"]: item for item in recommendations["dependencies"]
+    }
+    assert dependencies["route_slot_requirements"]["artifact_version_id"] == str(
+        coverage_context["route_demand_artifact_version_id"]
+    )
+
+
+def test_schedule_route_demand_coverage_apply_creates_successor_and_repins_dependency(
+    tmp_path: Path,
+) -> None:
+    seeded = seed_actual_ops_weekly_schedule_run_with_stage04_outputs(
+        db_url=_db_url(tmp_path),
+        tenant_id="tenant-a",
+        domain_id="domain-x",
+        run_tag="api:workpages:artifact-schedule:route-demand-coverage-apply",
+    )
+    workflow_run_id = str(seeded["workflow_run_id"])
+    schedule_artifact_version_id = str(
+        seeded["stage04_outputs"]["draft_workbook"]["artifact_version_id"]
+    )
+    route_demand_artifact_version_id = str(
+        seeded["artifacts_by_kind"]["planning.route_slot_requirements.workbook"][
+            "artifact_version_id"
+        ]
+    )
+    client = _client(tmp_path)
+    coverage_context = _prepare_existing_week_route_demand_coverage(
+        tmp_path,
+        workflow_run_id=workflow_run_id,
+        route_demand_artifact_version_id=route_demand_artifact_version_id,
+        client=client,
+    )
+    assignment_rows, reserve_rows = _schedule_submit_rows(
+        client,
+        workflow_run_id,
+        schedule_artifact_version_id,
+    )
+    recommendations = client.post(
+        str(coverage_context["coverage_candidates_path"]),
+        payload={
+            "route_demand_artifact_version_id": str(
+                coverage_context["route_demand_artifact_version_id"]
+            ),
+            "service_dates": list(coverage_context["service_dates"]),
+            "rows": assignment_rows,
+            "reserve_rows": reserve_rows,
+            "max_candidates": 20,
+        },
+    )
+    assert recommendations.status_code == 200, recommendations.payload
+    recommendation_payload = recommendations.payload["route_demand_coverage_recommendations"]
+
+    applied = client.post(
+        str(coverage_context["coverage_apply_path"]),
+        payload={
+            "route_demand_artifact_version_id": str(
+                coverage_context["route_demand_artifact_version_id"]
+            ),
+            "service_dates": list(coverage_context["service_dates"]),
+            "rows": assignment_rows,
+            "reserve_rows": reserve_rows,
+            "selections": recommendation_payload["selected_defaults"],
+            "max_candidates": 8,
+            "idempotency_key": "api:workpages:artifact-schedule:route-demand-coverage:apply",
+        },
+    )
+    assert applied.status_code == 200, applied.payload
+    submitted_artifact_version_id = str(applied.payload["submitted"]["artifact_version_id"])
+    assert submitted_artifact_version_id != schedule_artifact_version_id
+    assert applied.payload["submitted"]["supersedes_artifact_version_id"] == (
+        schedule_artifact_version_id
+    )
+    assert applied.payload["route_demand_coverage"]["assigned_count"] == len(
+        recommendation_payload["selected_defaults"]
+    )
+
+    refreshed = client.get(
+        _artifact_path(workflow_run_id, submitted_artifact_version_id)
+    )
+    assert refreshed.status_code == 200, refreshed.payload
+    dependencies = {
+        item["dependency_key"]: item for item in refreshed.payload["dependencies"]
+    }
+    assert dependencies["route_slot_requirements"]["artifact_version_id"] == str(
+        coverage_context["route_demand_artifact_version_id"]
+    )
+    assert refreshed.payload["artifact_history"]["current_artifact_version_id"] == (
+        submitted_artifact_version_id
+    )
+
+
+def test_schedule_route_demand_coverage_apply_rejects_invalid_selection(
+    tmp_path: Path,
+) -> None:
+    seeded = seed_actual_ops_weekly_schedule_run_with_stage04_outputs(
+        db_url=_db_url(tmp_path),
+        tenant_id="tenant-a",
+        domain_id="domain-x",
+        run_tag="api:workpages:artifact-schedule:route-demand-coverage-invalid",
+    )
+    workflow_run_id = str(seeded["workflow_run_id"])
+    schedule_artifact_version_id = str(
+        seeded["stage04_outputs"]["draft_workbook"]["artifact_version_id"]
+    )
+    route_demand_artifact_version_id = str(
+        seeded["artifacts_by_kind"]["planning.route_slot_requirements.workbook"][
+            "artifact_version_id"
+        ]
+    )
+    client = _client(tmp_path)
+    coverage_context = _prepare_existing_week_route_demand_coverage(
+        tmp_path,
+        workflow_run_id=workflow_run_id,
+        route_demand_artifact_version_id=route_demand_artifact_version_id,
+        client=client,
+    )
+    assignment_rows, reserve_rows = _schedule_submit_rows(
+        client,
+        workflow_run_id,
+        schedule_artifact_version_id,
+    )
+    recommendations = client.post(
+        str(coverage_context["coverage_candidates_path"]),
+        payload={
+            "route_demand_artifact_version_id": str(
+                coverage_context["route_demand_artifact_version_id"]
+            ),
+            "service_dates": list(coverage_context["service_dates"]),
+            "rows": assignment_rows,
+            "reserve_rows": reserve_rows,
+            "max_candidates": 20,
+        },
+    )
+    assert recommendations.status_code == 200, recommendations.payload
+    target = recommendations.payload["route_demand_coverage_recommendations"]["targets"][0]
+
+    applied = client.post(
+        str(coverage_context["coverage_apply_path"]),
+        payload={
+            "route_demand_artifact_version_id": str(
+                coverage_context["route_demand_artifact_version_id"]
+            ),
+            "service_dates": list(coverage_context["service_dates"]),
+            "rows": assignment_rows,
+            "reserve_rows": reserve_rows,
+            "selections": [
+                {
+                    "route_slot_id": str(target["route_slot_id"]),
+                    "driver_id": "DRV-NOT-THERE",
+                    "row_kind": "assignment",
+                }
+            ],
+            "max_candidates": 8,
+            "idempotency_key": (
+                "api:workpages:artifact-schedule:route-demand-coverage:invalid-selection"
+            ),
+        },
+    )
+    assert applied.status_code == 400, applied.payload
+    assert applied.payload["error"]["code"] == "route_demand_coverage_candidate_unavailable"
 
 
 def test_schedule_artifact_submit_links_response_to_supported_human_task_surface(

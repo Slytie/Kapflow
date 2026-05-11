@@ -1584,6 +1584,10 @@
   box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.82);
 }
 
+.schedule-heatmap__legend-swatch--pending {
+  background: linear-gradient(180deg, rgba(255, 232, 209, 0.98), rgba(212, 116, 34, 0.92));
+}
+
 .schedule-heatmap__header-group {
   display: flex;
   flex-wrap: wrap;
@@ -1906,6 +1910,11 @@
   color: #173c21;
 }
 
+.schedule-heatmap__cell--pending {
+  background: linear-gradient(180deg, rgba(255, 233, 214, 0.98), rgba(214, 122, 43, 0.92));
+  color: #5d2d08;
+}
+
 .schedule-heatmap__cell--on_call {
   background: linear-gradient(180deg, rgba(207, 226, 250, 0.98), rgba(96, 146, 205, 0.92));
   color: #183e68;
@@ -2055,6 +2064,14 @@
   background: rgba(255, 239, 228, 0.9);
 }
 
+.schedule-heatmap__date-header--uncovered {
+  background:
+    linear-gradient(180deg, rgba(255, 237, 235, 0.98), rgba(253, 245, 241, 0.98));
+  box-shadow:
+    inset 0 0 0 1px rgba(177, 60, 48, 0.14),
+    inset 0 -2px 0 rgba(177, 60, 48, 0.2);
+}
+
 .schedule-heatmap__date-stats {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -2083,6 +2100,13 @@
   font-size: 14px;
   font-weight: 800;
   font-variant-numeric: tabular-nums;
+}
+
+.schedule-heatmap__date-stat--uncovered dt,
+.schedule-heatmap__date-stat--uncovered dd,
+.schedule-heatmap__date-header--uncovered .schedule-heatmap__date-stats dt,
+.schedule-heatmap__date-header--uncovered .schedule-heatmap__date-stats dd {
+  color: #a43f36;
 }
 
 .schedule-heatmap--compact .schedule-heatmap__date-stats {
@@ -2855,6 +2879,227 @@
   font: inherit;
   padding: 10px 12px;
   resize: vertical;
+}
+
+.route-demand-coverage-panel__summary {
+  display: grid;
+  gap: 4px;
+}
+
+.route-demand-coverage-panel__summary p {
+  margin: 0;
+  color: var(--ink-soft);
+  font-size: 13px;
+}
+
+.route-demand-coverage-panel__day {
+  display: grid;
+  gap: 10px;
+  padding: 14px 16px;
+  border: 1px solid rgba(208, 199, 190, 0.7);
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.route-demand-coverage-panel__day-header {
+  display: grid;
+  gap: 8px;
+}
+
+.route-demand-coverage-panel__day-header h3,
+.route-demand-coverage-panel__day-header p {
+  margin: 0;
+}
+
+.route-demand-coverage-panel__day-heading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.route-demand-coverage-panel__day-heading h3 {
+  color: var(--ink);
+  font-family: var(--font-display);
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.route-demand-coverage-panel__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.route-demand-coverage-panel__meta span {
+  display: inline-flex;
+  align-items: center;
+  min-height: 26px;
+  padding: 4px 8px;
+  border: 1px solid rgba(197, 188, 179, 0.75);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.8);
+  color: var(--ink-soft);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  white-space: nowrap;
+}
+
+.route-demand-coverage-panel__table-wrap {
+  overflow-x: auto;
+  border: 1px solid rgba(208, 199, 190, 0.72);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.88);
+}
+
+.route-demand-coverage-panel__table {
+  width: 100%;
+  min-width: 920px;
+  border-collapse: collapse;
+}
+
+.route-demand-coverage-panel__table th,
+.route-demand-coverage-panel__table td {
+  padding: 7px 8px;
+  border-bottom: 1px solid rgba(210, 203, 196, 0.72);
+  text-align: left;
+  vertical-align: middle;
+}
+
+.route-demand-coverage-panel__table th {
+  color: var(--ink-muted);
+  background: rgba(244, 244, 240, 0.84);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.route-demand-coverage-panel__cell {
+  color: var(--ink);
+  font-size: 12px;
+  line-height: 1.3;
+  white-space: nowrap;
+}
+
+.route-demand-coverage-panel__cell--route {
+  min-width: 220px;
+}
+
+.route-demand-coverage-panel__cell--pick {
+  width: 52px;
+}
+
+.route-demand-coverage-panel__cell--route strong {
+  display: block;
+  font-size: 12px;
+}
+
+.route-demand-coverage-panel__route-slot {
+  display: block;
+  color: var(--ink-soft);
+  font-size: 11px;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+
+.route-demand-coverage-panel__cell--pick {
+  text-align: center;
+}
+
+.route-demand-coverage-panel__cell--driver strong {
+  font-size: 13px;
+}
+
+.route-demand-coverage-panel__cell--why {
+  max-width: 240px;
+}
+
+.route-demand-coverage-panel__cell--score {
+  max-width: 180px;
+}
+
+.route-demand-coverage-panel__truncate {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.route-demand-coverage-panel__radio {
+  margin: 0;
+}
+
+.route-demand-coverage-panel__candidate-row:nth-child(even) {
+  background: rgba(244, 244, 240, 0.4);
+}
+
+.route-demand-coverage-panel__candidate-row--selected {
+  background: rgba(230, 246, 236, 0.72);
+}
+
+.route-demand-coverage-panel__candidate-row--blocked {
+  color: var(--ink-soft);
+  background: rgba(248, 241, 238, 0.8);
+}
+
+.route-demand-coverage-panel__candidate-row--blocked .route-demand-coverage-panel__cell {
+  color: var(--ink-soft);
+}
+
+.route-demand-coverage-panel__empty-row td {
+  color: var(--ink-soft);
+  font-size: 12px;
+}
+
+.route-demand-coverage-panel__overflow {
+  border: 1px solid rgba(208, 199, 190, 0.72);
+  border-radius: 16px;
+  background: rgba(250, 249, 245, 0.92);
+}
+
+.route-demand-coverage-panel__overflow[open] {
+  padding-bottom: 10px;
+}
+
+.route-demand-coverage-panel__overflow summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  cursor: pointer;
+  list-style: none;
+  padding: 10px 12px;
+  color: var(--ink);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+}
+
+.route-demand-coverage-panel__overflow summary::-webkit-details-marker {
+  display: none;
+}
+
+.route-demand-coverage-panel__overflow summary::after {
+  content: "+";
+  color: var(--ink-soft);
+  font-size: 16px;
+  line-height: 1;
+}
+
+.route-demand-coverage-panel__overflow[open] summary::after {
+  content: "−";
+}
+
+.route-demand-coverage-panel__overflow .route-demand-coverage-panel__table-wrap {
+  margin: 0 10px;
+}
+
+.route-demand-coverage-panel__footer {
+  justify-content: flex-end;
 }
 
 .schedule-draft-history-dialog-backdrop {

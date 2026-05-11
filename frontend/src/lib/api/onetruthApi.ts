@@ -20,6 +20,8 @@ import type {
   WorkpageContract,
   WorkpageEodIntakeTask,
   WorkpagePreviewResponse,
+  WorkpageScheduleRouteDemandCoverageApplyResponse,
+  WorkpageScheduleRouteDemandCoverageRecommendationsResponse,
   WorkpageSubmittedResponse,
   WorkflowRunDetailContract,
   WorkflowRunWorkspaceContract,
@@ -56,7 +58,15 @@ import type {
   WorkpageRouteDemandFutureWeekActivation,
   WorkpageRouteDemandFutureWeekOption,
   WorkpageRouteDemandRefreshTask,
-  WorkpageRouteDemandScheduleImpact
+  WorkpageRouteDemandScheduleImpact,
+  WorkpageScheduleRouteDemandCoverageApplyResult,
+  WorkpageScheduleRouteDemandCoverageCandidate,
+  WorkpageScheduleRouteDemandCoverageCandidateGroup,
+  WorkpageScheduleRouteDemandCoverageContext,
+  WorkpageScheduleRouteDemandCoverageDelta,
+  WorkpageScheduleRouteDemandCoverageRecommendations,
+  WorkpageScheduleRouteDemandCoverageSelection,
+  WorkpageScheduleRouteDemandCoverageTarget
 } from "@/lib/types/workpages";
 
 interface PageEnvelope {
@@ -147,6 +157,7 @@ interface WorkpageEnvelope extends ListEnvelope {
   future_week_options?: Array<Record<string, unknown>> | null;
   preference_grid?: Record<string, unknown> | null;
   driver_availability_exceptions?: Record<string, unknown> | null;
+  route_demand_coverage_context?: Record<string, unknown> | null;
   dependencies?: Array<Record<string, unknown>> | null;
   actions?: Array<Record<string, unknown>> | null;
 }
@@ -166,10 +177,16 @@ interface DriverAvailabilityExceptionCreateEnvelope extends ListEnvelope {
 
 interface WorkpageSubmitEnvelope extends ListEnvelope {
   submitted?: Record<string, unknown>;
+  route_demand_coverage_context?: Record<string, unknown> | null;
+  route_demand_coverage?: Record<string, unknown> | null;
 }
 
 interface WorkpagePreviewEnvelope extends ListEnvelope {
   preview?: Record<string, unknown>;
+}
+
+interface WorkpageRouteDemandCoverageRecommendationsEnvelope extends ListEnvelope {
+  route_demand_coverage_recommendations?: Record<string, unknown>;
 }
 
 interface PointersEnvelope extends ListEnvelope {
@@ -954,6 +971,9 @@ function normalizeWorkpageContract(payload: WorkpageEnvelope): WorkpageContract 
       driverAvailabilityExceptions
     ),
     schedule_impact: normalizeScheduleImpact(scheduleImpact, asString(workpage.workpage_id)),
+    route_demand_coverage_context: normalizeScheduleRouteDemandCoverageContext(
+      payload.route_demand_coverage_context ?? null
+    ),
     artifact_history: normalizeArtifactHistory(artifactHistory),
     draft_lineage: normalizeScheduleDraftLineage(draftLineage),
     accepted_series: normalizeScheduleAcceptedSeries(acceptedSeries),
@@ -979,6 +999,7 @@ function normalizeWorkpageSubmittedResponse(
   payload: WorkpageSubmitEnvelope
 ): WorkpageSubmittedResponse {
   const submitted = requiredObject(payload.submitted, "submitted");
+  const submittedCoverageContext = submitted.route_demand_coverage_context;
   return {
     workflow_run_id: asString(submitted.workflow_run_id),
     artifact_version_id: asString(submitted.artifact_version_id),
@@ -988,6 +1009,201 @@ function normalizeWorkpageSubmittedResponse(
     target_schedule_route: asStringOrNull(submitted.target_schedule_route),
     target_schedule_artifact_version_id: asStringOrNull(
       submitted.target_schedule_artifact_version_id
+    ),
+    route_demand_coverage_context: normalizeScheduleRouteDemandCoverageContext(
+      submittedCoverageContext ??
+        payload.route_demand_coverage_context ??
+        null
+    )
+  };
+}
+
+function normalizeScheduleRouteDemandCoverageDelta(
+  value: Record<string, unknown>
+): WorkpageScheduleRouteDemandCoverageDelta {
+  return {
+    service_date: asString(value.service_date),
+    previous_planned_route_count: asNumber(value.previous_planned_route_count),
+    planned_route_count: asNumber(value.planned_route_count),
+    delta: asNumber(value.delta)
+  };
+}
+
+function normalizeScheduleRouteDemandCoverageContext(
+  value: unknown
+): WorkpageScheduleRouteDemandCoverageContext | null {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return null;
+  }
+  const record = value as Record<string, unknown>;
+  return {
+    workflow_run_id: asString(record.workflow_run_id),
+    schedule_artifact_version_id: asString(record.schedule_artifact_version_id),
+    route_demand_artifact_version_id: asString(record.route_demand_artifact_version_id),
+    coverage_candidates_path: asString(record.coverage_candidates_path),
+    coverage_apply_path: asString(record.coverage_apply_path),
+    service_dates: asArray(record.service_dates).map((item) => asString(item)).filter(Boolean),
+    added_route_count: asNumber(record.added_route_count),
+    deltas: asArray<Record<string, unknown>>(record.deltas).map(
+      normalizeScheduleRouteDemandCoverageDelta
+    )
+  };
+}
+
+function normalizeScheduleRouteDemandCoverageTarget(
+  value: Record<string, unknown>
+): WorkpageScheduleRouteDemandCoverageTarget {
+  return {
+    target_id: asString(value.target_id),
+    route_slot_id: asString(value.route_slot_id),
+    route_id: asString(value.route_id),
+    service_date: asString(value.service_date),
+    route_slot_class: asString(value.route_slot_class),
+    station_code: asString(value.station_code),
+    service_area: asString(value.service_area),
+    shift_start: asString(value.shift_start),
+    shift_end: asString(value.shift_end),
+    projected_minutes: asNumber(value.projected_minutes),
+    required_skill: asString(value.required_skill),
+    vehicle_type: asString(value.vehicle_type)
+  };
+}
+
+function normalizeScheduleRouteDemandCoverageCandidate(
+  value: Record<string, unknown>
+): WorkpageScheduleRouteDemandCoverageCandidate {
+  return {
+    recommendation_rank: asNumber(value.recommendation_rank),
+    target_id: asString(value.target_id),
+    route_slot_id: asString(value.route_slot_id),
+    route_id: asString(value.route_id),
+    row_kind: "assignment",
+    service_date: asString(value.service_date),
+    driver_id: asString(value.driver_id),
+    driver_name: asString(value.driver_name),
+    selection_state:
+      asString(value.selection_state) === "blocked" ? "blocked" : "selectable",
+    hard_filter_status: asString(value.hard_filter_status),
+    hard_filter_reasons: asArray(value.hard_filter_reasons)
+      .map((item) => asString(item))
+      .filter(Boolean),
+    score_bucket: asString(value.score_bucket),
+    soft_score_total: asNumber(value.soft_score_total),
+    projected_minutes: asNumber(value.projected_minutes),
+    availability_state: asString(value.availability_state),
+    current_week_shift_count: asNumber(value.current_week_shift_count),
+    projected_rolling7_minutes: asNumber(value.projected_rolling7_minutes),
+    remaining_rolling7_minutes: asNumber(value.remaining_rolling7_minutes),
+    fairness_balance: asNumber(value.fairness_balance),
+    target_shift_gap: asNumber(value.target_shift_gap),
+    preference_fit: asNumber(value.preference_fit),
+    preferred_shift_band_fit: asNumber(value.preferred_shift_band_fit),
+    preferred_route_slot_class_fit: asNumber(value.preferred_route_slot_class_fit),
+    seniority_preference_fit: asNumber(value.seniority_preference_fit),
+    reliability_score: asNumber(value.reliability_score),
+    previous_week_stability: asNumber(value.previous_week_stability),
+    baseline_template_state: asString(value.baseline_template_state),
+    planned_driver_day_state: asString(value.planned_driver_day_state),
+    new_agreement_required: Boolean(value.new_agreement_required),
+    new_agreement_trigger_reason: asString(value.new_agreement_trigger_reason),
+    template_state_preservation_fit: asNumber(value.template_state_preservation_fit),
+    clear_same_day_on_call_reserve: Boolean(value.clear_same_day_on_call_reserve),
+    reserve_route_slot_id: asStringOrNull(value.reserve_route_slot_id),
+    reserve_route_id: asStringOrNull(value.reserve_route_id),
+    assignment_action: asString(value.assignment_action),
+    evaluation_kind: asString(value.evaluation_kind)
+  };
+}
+
+function normalizeScheduleRouteDemandCoverageCandidateGroup(
+  value: Record<string, unknown>
+): WorkpageScheduleRouteDemandCoverageCandidateGroup {
+  return {
+    target: normalizeScheduleRouteDemandCoverageTarget(
+      requiredObject(value.target, "route_demand_coverage_recommendations.target")
+    ),
+    candidate_count: asNumber(value.candidate_count),
+    pass_candidate_count: asNumber(value.pass_candidate_count),
+    candidates: asArray<Record<string, unknown>>(value.candidates).map(
+      normalizeScheduleRouteDemandCoverageCandidate
+    )
+  };
+}
+
+function normalizeScheduleRouteDemandCoverageSelection(
+  value: Record<string, unknown>
+): WorkpageScheduleRouteDemandCoverageSelection {
+  return {
+    target_id: asString(value.target_id),
+    route_slot_id: asString(value.route_slot_id),
+    driver_id: asString(value.driver_id),
+    row_kind: "assignment"
+  };
+}
+
+function normalizeScheduleRouteDemandCoverageRecommendations(
+  value: Record<string, unknown>
+): WorkpageScheduleRouteDemandCoverageRecommendations {
+  return {
+    workflow_run_id: asString(value.workflow_run_id),
+    artifact_version_id: asString(value.artifact_version_id),
+    route_demand_artifact_version_id: asString(value.route_demand_artifact_version_id),
+    dependency_state: asString(value.dependency_state),
+    dependencies: normalizeScheduleDependencies(value.dependencies),
+    added_route_count: asNumber(value.added_route_count),
+    target_count: asNumber(value.target_count),
+    max_candidates: asNumber(value.max_candidates),
+    targets: asArray<Record<string, unknown>>(value.targets).map(
+      normalizeScheduleRouteDemandCoverageTarget
+    ),
+    candidate_groups: asArray<Record<string, unknown>>(value.candidate_groups).map(
+      normalizeScheduleRouteDemandCoverageCandidateGroup
+    ),
+    selected_defaults: asArray<Record<string, unknown>>(value.selected_defaults).map(
+      normalizeScheduleRouteDemandCoverageSelection
+    ),
+    diagnostic_reason: asStringOrNull(value.diagnostic_reason)
+  };
+}
+
+function normalizeScheduleRouteDemandCoverageApplyResult(
+  value: Record<string, unknown>
+): WorkpageScheduleRouteDemandCoverageApplyResult {
+  return {
+    route_demand_artifact_version_id: asString(value.route_demand_artifact_version_id),
+    assigned_count: asNumber(value.assigned_count),
+    appended_assignment_count: asNumber(value.appended_assignment_count),
+    cleared_same_day_reserve_count: asNumber(value.cleared_same_day_reserve_count),
+    selected: asArray<Record<string, unknown>>(value.selected).map(
+      normalizeScheduleRouteDemandCoverageCandidate
+    )
+  };
+}
+
+function normalizeScheduleRouteDemandCoverageRecommendationsResponse(
+  payload: WorkpageRouteDemandCoverageRecommendationsEnvelope
+): WorkpageScheduleRouteDemandCoverageRecommendationsResponse {
+  const recommendations = requiredObject(
+    payload.route_demand_coverage_recommendations,
+    "route_demand_coverage_recommendations"
+  );
+  return {
+    route_demand_coverage_recommendations:
+      normalizeScheduleRouteDemandCoverageRecommendations(recommendations)
+  };
+}
+
+function normalizeScheduleRouteDemandCoverageApplyResponse(
+  payload: WorkpageSubmitEnvelope
+): WorkpageScheduleRouteDemandCoverageApplyResponse {
+  const routeDemandCoverage = requiredObject(
+    payload.route_demand_coverage,
+    "route_demand_coverage"
+  );
+  return {
+    ...normalizeWorkpageSubmittedResponse(payload),
+    route_demand_coverage: normalizeScheduleRouteDemandCoverageApplyResult(
+      routeDemandCoverage
     )
   };
 }
@@ -1953,6 +2169,45 @@ export const onetruthApi = {
       body: payload
     });
     return normalizeWorkpageSubmittedResponse(result);
+  },
+
+  async getScheduleRouteDemandCoverageCandidatesAtPath(
+    coverageCandidatesPath: string,
+    payload: {
+      route_demand_artifact_version_id: string;
+      service_dates?: string[];
+      rows: Array<Record<string, unknown>>;
+      reserve_rows: Array<Record<string, unknown>>;
+      max_candidates?: number;
+    }
+  ): Promise<WorkpageScheduleRouteDemandCoverageRecommendationsResponse> {
+    const result = await requestJson<WorkpageRouteDemandCoverageRecommendationsEnvelope>(
+      normalizeApiPath(coverageCandidatesPath),
+      {
+        method: "POST",
+        body: payload
+      }
+    );
+    return normalizeScheduleRouteDemandCoverageRecommendationsResponse(result);
+  },
+
+  async applyScheduleRouteDemandCoverageAtPath(
+    coverageApplyPath: string,
+    payload: {
+      route_demand_artifact_version_id: string;
+      service_dates?: string[];
+      rows: Array<Record<string, unknown>>;
+      reserve_rows: Array<Record<string, unknown>>;
+      selections: Array<Record<string, unknown>>;
+      max_candidates?: number;
+      idempotency_key: string;
+    }
+  ): Promise<WorkpageScheduleRouteDemandCoverageApplyResponse> {
+    const result = await requestJson<WorkpageSubmitEnvelope>(normalizeApiPath(coverageApplyPath), {
+      method: "POST",
+      body: payload
+    });
+    return normalizeScheduleRouteDemandCoverageApplyResponse(result);
   },
 
   async submitWorkflowRunEodArtifactWorkpage(

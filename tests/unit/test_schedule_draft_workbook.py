@@ -5,6 +5,7 @@ import json
 import pytest
 
 from onetruth.application.services.schedule_control.draft_workbook import (
+    append_stage04_draft_weekly_schedule_assignment_rows,
     draft_workbook_bytes_from_metadata_json,
     materialize_stage04_draft_weekly_schedule_workbook,
     project_stage04_draft_weekly_schedule_workbook,
@@ -112,6 +113,65 @@ def test_materialize_stage04_draft_weekly_schedule_workbook_preserves_extra_top_
     assert json.loads(updated_bytes.decode("utf-8"))["accepted_series_key"] == (
         "weekly_schedule_planning.v1:dvc4:pitt-meadows"
     )
+
+
+def test_append_stage04_draft_weekly_schedule_assignment_rows_appends_new_rows_after_validation() -> None:
+    projection = project_stage04_draft_weekly_schedule_workbook(_base_workbook_bytes())
+    rows = [dict(row) for row in projection["rows"]]
+    reserve_rows = [dict(row) for row in projection["reserve_rows"]]
+    rows[0]["assigned_driver_id"] = "DRV-77"
+    rows[0]["assignment_status"] = "manual_override"
+    reserve_rows[0]["assigned_driver_id"] = "DRV-88"
+    reserve_rows[0]["assignment_status"] = "manual_override"
+
+    updated_bytes = append_stage04_draft_weekly_schedule_assignment_rows(
+        _base_workbook_bytes(),
+        rows=rows,
+        reserve_rows=reserve_rows,
+        appended_rows=[
+            {
+                "service_date": "2026-03-24",
+                "route_slot_id": "slot-003",
+                "assigned_driver_id": "DRV-99",
+                "assignment_status": "manual_override",
+                "projected_minutes": 525,
+                "candidate_delta_id": "cand-777",
+            }
+        ],
+    )
+    updated = project_stage04_draft_weekly_schedule_workbook(updated_bytes)
+
+    assert updated["rows"][-1] == {
+        "service_date": "2026-03-24",
+        "route_slot_id": "slot-003",
+        "assigned_driver_id": "DRV-99",
+        "assignment_status": "manual_override",
+        "projected_minutes": 525,
+        "candidate_delta_id": "cand-777",
+    }
+    assert updated["rows"][0]["assigned_driver_id"] == "DRV-77"
+    assert updated["reserve_rows"][0]["assigned_driver_id"] == "DRV-88"
+
+
+def test_append_stage04_draft_weekly_schedule_assignment_rows_rejects_duplicate_identity() -> None:
+    projection = project_stage04_draft_weekly_schedule_workbook(_base_workbook_bytes())
+
+    with pytest.raises(ValueError, match="duplicates existing row identity"):
+        append_stage04_draft_weekly_schedule_assignment_rows(
+            _base_workbook_bytes(),
+            rows=projection["rows"],
+            reserve_rows=projection["reserve_rows"],
+            appended_rows=[
+                {
+                    "service_date": "2026-03-22",
+                    "route_slot_id": "slot-001",
+                    "assigned_driver_id": "DRV-99",
+                    "assignment_status": "manual_override",
+                    "projected_minutes": 525,
+                    "candidate_delta_id": "cand-777",
+                }
+            ],
+        )
 
 
 def test_materialize_stage04_draft_weekly_schedule_workbook_rejects_row_count_changes() -> None:

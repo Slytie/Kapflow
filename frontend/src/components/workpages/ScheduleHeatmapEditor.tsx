@@ -44,6 +44,15 @@ interface AvailabilityCellState {
   sourceRef: string | null;
 }
 
+export interface ScheduleRouteDemandPendingCell {
+  targetId: string;
+  routeId: string;
+  driverId: string;
+  driverName: string;
+  serviceDate: string;
+  projectedMinutes: number | null;
+}
+
 export interface ScheduleSickNoShowTarget {
   driverId: string;
   driverName: string;
@@ -300,7 +309,10 @@ export function ScheduleHeatmapEditor({
   headerExtras = null,
   onMarkSickNoShow,
   sickNoShowDisabled = false,
-  sickNoShowPendingKey = null
+  sickNoShowPendingKey = null,
+  routeDemandUnresolvedCounts = {},
+  routeDemandPendingCells = {},
+  onRouteDemandCellToggle
 }: {
   section: WorkpageScheduleHeatmapSection;
   assignmentRows: WorkpageTableRow[];
@@ -316,6 +328,14 @@ export function ScheduleHeatmapEditor({
   onMarkSickNoShow?: (target: ScheduleSickNoShowTarget) => void;
   sickNoShowDisabled?: boolean;
   sickNoShowPendingKey?: string | null;
+  routeDemandUnresolvedCounts?: Record<string, number>;
+  routeDemandPendingCells?: Record<string, ScheduleRouteDemandPendingCell>;
+  onRouteDemandCellToggle?: (target: {
+    driverId: string;
+    driverName: string;
+    serviceDate: string;
+    serviceDateLabel: string;
+  }) => string | null;
 }): JSX.Element {
   const [armedCell, setArmedCell] = useState<ArmedCell | null>(null);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
@@ -385,6 +405,10 @@ export function ScheduleHeatmapEditor({
                   <span className="schedule-heatmap__legend-swatch schedule-heatmap__legend-swatch--manual" />
                   Manual override
                 </span>
+                <span className="schedule-heatmap__legend-item">
+                  <span className="schedule-heatmap__legend-swatch schedule-heatmap__legend-swatch--pending" />
+                  Pending route add
+                </span>
               </div>
             </section>
             {headerExtras}
@@ -427,15 +451,22 @@ export function ScheduleHeatmapEditor({
               </th>
               {serviceDates.map((serviceDate) => {
                 const dayStats = topBarDayByServiceDate.get(serviceDate.service_date) ?? null;
+                const unresolvedCount =
+                  routeDemandUnresolvedCounts[serviceDate.service_date] ?? 0;
+                const dateHeaderClassName = [
+                  "schedule-heatmap__date-header",
+                  selectedServiceDate === serviceDate.service_date
+                    ? "schedule-heatmap__date-header--selected"
+                    : "",
+                  unresolvedCount > 0 ? "schedule-heatmap__date-header--uncovered" : ""
+                ]
+                  .filter(Boolean)
+                  .join(" ");
                 return (
                   <th
                     key={serviceDate.service_date}
                     scope="col"
-                    className={
-                      selectedServiceDate === serviceDate.service_date
-                        ? "schedule-heatmap__date-header schedule-heatmap__date-header--selected"
-                        : "schedule-heatmap__date-header"
-                    }
+                    className={dateHeaderClassName}
                   >
                     <span>{serviceDate.weekday_label}</span>
                     <strong>{serviceDate.label}</strong>
@@ -462,6 +493,12 @@ export function ScheduleHeatmapEditor({
                           <dt>Avail</dt>
                           <dd>{dayStats.available_driver_count ?? "—"}</dd>
                         </div>
+                        {unresolvedCount > 0 ? (
+                          <div className="schedule-heatmap__date-stat--uncovered">
+                            <dt>Gap</dt>
+                            <dd>{unresolvedCount}</dd>
+                          </div>
+                        ) : null}
                       </dl>
                     ) : null}
                   </th>
@@ -578,6 +615,7 @@ export function ScheduleHeatmapEditor({
                   {serviceDates.map((serviceDate) => {
                     const cellKey = `${serviceDate.service_date}:${person.driver_id}`;
                     const cell = cellMap.get(cellKey) ?? null;
+                    const pendingRouteDemandCell = routeDemandPendingCells[cellKey] ?? null;
                     const preferenceState =
                       preferenceStateByCell.get(cellKey) ?? "unset";
                     const availabilityState = availabilityStateByCell.get(cellKey) ?? null;
@@ -591,13 +629,22 @@ export function ScheduleHeatmapEditor({
                     const sickNoShowPending = sickNoShowPendingKey === cellKey;
                     const sickNoShowActionDisabled =
                       sickNoShowDisabled || sickNoShowPending || isSickNoShow;
+                    const visualCellState = pendingRouteDemandCell ? "pending" : cell?.state ?? "empty";
+                    const cellStateLabel =
+                      visualCellState === "pending"
+                        ? "Pending route"
+                        : cell?.state === "assigned"
+                          ? "Route"
+                          : cell?.state === "on_call"
+                            ? "On call"
+                            : "Open";
                     return (
                       <td key={`${person.driver_id}:${serviceDate.service_date}`}>
                         <div className="schedule-heatmap__cell-wrap">
                           <button
                             type="button"
                             className={`schedule-heatmap__cell schedule-heatmap__cell--${
-                              cell?.state ?? "empty"
+                              visualCellState
                             }${cell?.manualOverride ? " schedule-heatmap__cell--manual" : ""}${
                               isArmed ? " is-armed" : ""
                             }${isSelectedDay ? " schedule-heatmap__cell--selected-day" : ""}${
@@ -609,7 +656,9 @@ export function ScheduleHeatmapEditor({
                             aria-label={
                               isSickNoShow
                                 ? `Sick / No Show: ${person.driver_name} on ${serviceDate.label}`
-                                : buildCellLabel(person, serviceDate, cell)
+                                : pendingRouteDemandCell
+                                  ? `${person.driver_name} on ${serviceDate.label}: pending route add for ${pendingRouteDemandCell.routeId}`
+                                  : buildCellLabel(person, serviceDate, cell)
                             }
                             aria-pressed={isArmed}
                             aria-disabled={readOnly}
@@ -622,6 +671,17 @@ export function ScheduleHeatmapEditor({
                             }
                             if (!armedCell) {
                               if (!cell) {
+                                if (onRouteDemandCellToggle) {
+                                  setStatusMessage(
+                                    onRouteDemandCellToggle({
+                                      driverId: person.driver_id,
+                                      driverName: person.driver_name,
+                                      serviceDate: serviceDate.service_date,
+                                      serviceDateLabel: serviceDate.label
+                                    })
+                                  );
+                                  return;
+                                }
                                 setStatusMessage(
                                   "Pick a planned cell first, then move it to another person on the same day."
                                 );
@@ -722,18 +782,20 @@ export function ScheduleHeatmapEditor({
                         >
                           <span className="schedule-heatmap__cell-top">
                             <span className="schedule-heatmap__cell-state">
-                              {cell?.state === "assigned"
-                                ? "Route"
-                                : cell?.state === "on_call"
-                                  ? "On call"
-                                  : "Open"}
+                              {cellStateLabel}
                             </span>
-                            {cell?.manualOverride ? (
+                            {pendingRouteDemandCell ? (
+                              <span className="schedule-heatmap__cell-chip">Pending</span>
+                            ) : cell?.manualOverride ? (
                               <span className="schedule-heatmap__cell-chip">Edited</span>
                             ) : null}
                           </span>
                           <span className="schedule-heatmap__cell-meta">
-                            {cell?.projectedMinutes ? `${cell.projectedMinutes} min` : "—"}
+                            {pendingRouteDemandCell?.projectedMinutes
+                              ? `${pendingRouteDemandCell.projectedMinutes} min`
+                              : cell?.projectedMinutes
+                                ? `${cell.projectedMinutes} min`
+                                : "—"}
                           </span>
                           <span
                             className={`schedule-heatmap__preference-bar schedule-heatmap__preference-bar--${preferenceState}`}

@@ -40,6 +40,23 @@
         "label": "Add a week",
         "state": "available",
         "workpage_kind": "route-demand-v0"
+      },
+      {
+        "action_id": "workpage.route-demand-v0.save_and_run",
+        "action_ref": {
+          "action_id": "workpage.route-demand-v0.save_and_run",
+          "artifact_version_id": "<artifact_version_id:2>",
+          "subject": null,
+          "workflow_run_id": "<workflow_run_id:1>",
+          "workpage_kind": "route-demand-v0"
+        },
+        "artifact_version_id": "<artifact_version_id:2>",
+        "disabled_reason": null,
+        "kind": "save_and_run",
+        "label": "Run coverage agent",
+        "state": "available",
+        "submit_path": "/api/v1/workpages/workflow-runs/<workflow_run_id:1>/route-demand-v0/artifacts/<artifact_version_id:2>/save-and-run",
+        "workpage_kind": "route-demand-v0"
       }
     ],
     "artifact_context": {
@@ -270,6 +287,8 @@
     },
     "future_week_activation": {
       "blocked_reason": null,
+      "error_code": null,
+      "error_message": null,
       "human_task_id": null,
       "state": "idle",
       "status_label": null,

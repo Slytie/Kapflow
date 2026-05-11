@@ -45,6 +45,8 @@ from onetruth.application.handlers.workflow_task_lifecycle import (
     create_workflow_run_command,
 )
 from onetruth.application.services.logistics_workpages import (
+    canonical_schedule_route_demand_coverage_apply_path,
+    canonical_schedule_route_demand_coverage_candidates_path,
     canonical_route_demand_artifact_route,
     latest_driver_preferences_artifact,
     latest_route_demand_artifact,
@@ -574,209 +576,40 @@ def save_and_run_route_demand_artifact_workpage_command(
                 message="workflow run not found for route-demand save-and-run",
                 details={"workflow_run_id": workflow_run_id},
             )
-        if not _artifact_is_future_week_seed(base_artifact):
-            raise CommandError(
-                code="route_demand_save_and_run_unavailable",
-                message="save and run scheduling agent is only available on future-week route demand artifacts",
-                details={
-                    "workflow_run_id": workflow_run_id,
-                    "artifact_version_id": artifact_version_id,
-                },
-            )
-
         base_projection = project_route_demand_workbook(
             _read_route_demand_artifact_bytes(base_artifact)
         )
         normalized_submitted_rows = _normalize_submitted_route_demand_rows(
             payload.get("daily_demand_rows")
         )
-        visible_base_rows = _visible_route_demand_rows_for_comparison(base_projection)
-        visible_submitted_rows = _visible_submitted_route_demand_rows(
-            visible_base_rows=visible_base_rows,
-            submitted_rows=normalized_submitted_rows,
-        )
-        _assert_visible_zero_to_n_change(
-            base_rows=visible_base_rows,
-            submitted_rows=visible_submitted_rows,
-            workflow_run_id=workflow_run_id,
-            artifact_version_id=artifact_version_id,
-        )
-
-        current_artifacts = list_artifact_versions_for_workflow_run(connection, workflow_run_id)
-        if _future_run_has_schedule_truth(current_artifacts):
-            raise _future_run_already_scheduled_error(
+        if _artifact_is_future_week_seed(base_artifact):
+            return _save_and_run_future_week_route_demand(
+                connection,
+                storage_root=storage_root,
+                base_artifact=base_artifact,
+                base_projection=base_projection,
+                normalized_submitted_rows=normalized_submitted_rows,
+                workflow_run=workflow_run,
                 workflow_run_id=workflow_run_id,
+                artifact_version_id=artifact_version_id,
+                actor_id=actor_id,
+                actor_type=actor_type,
+                actor_roles=actor_roles,
+                artifact_event_idempotency=artifact_event_idempotency,
+                receipt=receipt,
             )
-
-        source_workflow_run_id = _future_week_source_workflow_run_id(base_artifact)
-        source_workflow_run = get_workflow_run(connection, source_workflow_run_id)
-        if source_workflow_run is None:
-            raise CommandError(
-                code="workflow_run_not_found",
-                message="source workflow run not found for future-week carry-forward",
-                details={"workflow_run_id": source_workflow_run_id},
-            )
-        source_artifacts = list_artifact_versions_for_workflow_run(connection, source_workflow_run_id)
-
-        target_route_demand_artifact = _save_route_demand_if_needed(
+        return _save_and_prepare_existing_week_route_demand_coverage(
             connection,
             storage_root=storage_root,
             base_artifact=base_artifact,
-            submitted_rows=normalized_submitted_rows,
             base_projection=base_projection,
-            actor_id=actor_id,
-            actor_type=actor_type,
-            event_idempotency=artifact_event_idempotency,
-        )
-        target_route_demand_artifact_version_id = _require_non_empty_string(
-            target_route_demand_artifact.get("artifact_version_id"),
-            field_name="artifact_version_id",
-        )
-
-        intake_task = _ensure_weekly_input_intake_task(
-            connection,
+            normalized_submitted_rows=normalized_submitted_rows,
             workflow_run_id=workflow_run_id,
+            artifact_version_id=artifact_version_id,
             actor_id=actor_id,
             actor_type=actor_type,
+            artifact_event_idempotency=artifact_event_idempotency,
         )
-        intake_human_task_id = _require_non_empty_string(
-            intake_task.get("human_task_id"),
-            field_name="human_task_id",
-        )
-        _attach_existing_artifact_to_human_task(
-            connection,
-            workflow_run_id=workflow_run_id,
-            artifact_version_id=target_route_demand_artifact_version_id,
-            human_task_id=intake_human_task_id,
-            actor_id=actor_id,
-            actor_type=actor_type,
-        )
-        _provision_future_week_stage04_inputs(
-            connection,
-            storage_root=storage_root,
-            workflow_run=workflow_run,
-            route_demand_artifact=target_route_demand_artifact,
-            source_artifacts=source_artifacts,
-            intake_human_task_id=intake_human_task_id,
-            actor_id=actor_id,
-            actor_type=actor_type,
-            idempotency_base=_receipt_event_idempotency_key(
-                receipt,
-                "workpages.route-demand.save-and-run.input-provision",
-            ),
-        )
-        materialize_weekly_approved_availability_exceptions(
-            connection,
-            workflow_run=workflow_run,
-            storage_root=storage_root,
-            actor_id=actor_id,
-            actor_type=actor_type,
-            receipt_event_idempotency_base=_receipt_event_idempotency_key(
-                receipt,
-                "workpages.route-demand.save-and-run.approved-availability-overlay",
-            ),
-        )
-        latest_run_artifacts = list_artifact_versions_for_workflow_run(connection, workflow_run_id)
-        latest_approved_availability = _latest_artifact_for_kind(
-            latest_run_artifacts,
-            "planning.approved_availability.workbook",
-        )
-        if latest_approved_availability is not None:
-            _attach_existing_artifact_to_human_task(
-                connection,
-                workflow_run_id=workflow_run_id,
-                artifact_version_id=_require_non_empty_string(
-                    latest_approved_availability.get("artifact_version_id"),
-                    field_name="artifact_version_id",
-                ),
-                human_task_id=intake_human_task_id,
-                actor_id=actor_id,
-                actor_type=actor_type,
-            )
-
-        _claim_human_task_if_needed(
-            connection,
-            human_task_id=intake_human_task_id,
-            actor_id=actor_id,
-            actor_type=actor_type,
-            actor_roles=actor_roles,
-            idempotency_key_suffix=f"{artifact_version_id}:intake:claim",
-        )
-        completed_intake = complete_human_task_command(
-            connection,
-            {
-                "human_task_id": intake_human_task_id,
-                "outcome": "complete",
-                "idempotency_key": f"{artifact_version_id}:intake:complete",
-                "actor_id": actor_id,
-                "actor_type": actor_type,
-                "actor_roles": actor_roles,
-            },
-            storage_root=storage_root,
-        )
-        build_human_task_id = _spawned_weekly_stage04_build_human_task_id(completed_intake)
-        _claim_human_task_if_needed(
-            connection,
-            human_task_id=build_human_task_id,
-            actor_id=actor_id,
-            actor_type=actor_type,
-            actor_roles=actor_roles,
-            idempotency_key_suffix=f"{artifact_version_id}:build:claim",
-        )
-        run_weekly_stage04_openai_agent(
-            connection,
-            {
-                "human_task_id": build_human_task_id,
-                "actor_id": actor_id,
-                "actor_type": actor_type,
-                "actor_roles": actor_roles,
-                "idempotency_key": f"{artifact_version_id}:stage04:run",
-            },
-        )
-        complete_human_task_command(
-            connection,
-            {
-                "human_task_id": build_human_task_id,
-                "outcome": "complete",
-                "idempotency_key": f"{artifact_version_id}:stage04:complete",
-                "actor_id": actor_id,
-                "actor_type": actor_type,
-                "actor_roles": actor_roles,
-            },
-            storage_root=storage_root,
-        )
-
-        final_artifacts = list_artifact_versions_for_workflow_run(connection, workflow_run_id)
-        latest_schedule_draft = latest_schedule_draft_artifact(final_artifacts)
-        if latest_schedule_draft is None:
-            raise CommandError(
-                code="required_artifact_missing",
-                message="weekly Stage04 agent did not produce a draft weekly schedule artifact",
-                details={
-                    "workflow_run_id": workflow_run_id,
-                    "artifact_kind": "planning.draft_weekly_schedule.workbook",
-                },
-            )
-        return {
-            "submitted": {
-                "workflow_run_id": workflow_run_id,
-                "artifact_version_id": target_route_demand_artifact_version_id,
-                "supersedes_artifact_version_id": artifact_version_id,
-                "route": _canonical_route_demand_ui_route(
-                    workflow_run_id=workflow_run_id,
-                    artifact_version_id=target_route_demand_artifact_version_id,
-                ),
-                "target_workflow_run_id": workflow_run_id,
-                "target_schedule_route": canonical_workflow_run_workpage_route(
-                    workflow_run_id=workflow_run_id,
-                    workpage_kind="schedule-v0",
-                ),
-                "target_schedule_artifact_version_id": _require_non_empty_string(
-                    latest_schedule_draft.get("artifact_version_id"),
-                    field_name="artifact_version_id",
-                ),
-            }
-        }
 
     result, replay = _execute_with_command_receipt(
         connection,
@@ -789,6 +622,310 @@ def save_and_run_route_demand_artifact_workpage_command(
         replay=replay,
         include_receipt=include_receipt,
     )
+
+
+def _save_and_run_future_week_route_demand(
+    connection: sqlite3.Connection,
+    *,
+    storage_root: Path,
+    base_artifact: Mapping[str, Any],
+    base_projection: Mapping[str, Any],
+    normalized_submitted_rows: list[dict[str, int | str]],
+    workflow_run: Mapping[str, Any],
+    workflow_run_id: str,
+    artifact_version_id: str,
+    actor_id: str,
+    actor_type: str,
+    actor_roles: list[str],
+    artifact_event_idempotency: str | None,
+    receipt: Mapping[str, Any],
+) -> dict[str, Any]:
+    visible_base_rows = _visible_route_demand_rows_for_comparison(base_projection)
+    visible_submitted_rows = _visible_submitted_route_demand_rows(
+        visible_base_rows=visible_base_rows,
+        submitted_rows=normalized_submitted_rows,
+    )
+    _assert_visible_zero_to_n_change(
+        base_rows=visible_base_rows,
+        submitted_rows=visible_submitted_rows,
+        workflow_run_id=workflow_run_id,
+        artifact_version_id=artifact_version_id,
+    )
+
+    current_artifacts = list_artifact_versions_for_workflow_run(connection, workflow_run_id)
+    if _future_run_has_schedule_truth(current_artifacts):
+        raise _future_run_already_scheduled_error(
+            workflow_run_id=workflow_run_id,
+        )
+
+    source_workflow_run_id = _future_week_source_workflow_run_id(base_artifact)
+    source_workflow_run = get_workflow_run(connection, source_workflow_run_id)
+    if source_workflow_run is None:
+        raise CommandError(
+            code="workflow_run_not_found",
+            message="source workflow run not found for future-week carry-forward",
+            details={"workflow_run_id": source_workflow_run_id},
+        )
+    source_artifacts = list_artifact_versions_for_workflow_run(connection, source_workflow_run_id)
+
+    target_route_demand_artifact = _save_route_demand_if_needed(
+        connection,
+        storage_root=storage_root,
+        base_artifact=base_artifact,
+        submitted_rows=normalized_submitted_rows,
+        base_projection=base_projection,
+        actor_id=actor_id,
+        actor_type=actor_type,
+        event_idempotency=artifact_event_idempotency,
+    )
+    target_route_demand_artifact_version_id = _require_non_empty_string(
+        target_route_demand_artifact.get("artifact_version_id"),
+        field_name="artifact_version_id",
+    )
+
+    intake_task = _ensure_weekly_input_intake_task(
+        connection,
+        workflow_run_id=workflow_run_id,
+        actor_id=actor_id,
+        actor_type=actor_type,
+    )
+    intake_human_task_id = _require_non_empty_string(
+        intake_task.get("human_task_id"),
+        field_name="human_task_id",
+    )
+    _attach_existing_artifact_to_human_task(
+        connection,
+        workflow_run_id=workflow_run_id,
+        artifact_version_id=target_route_demand_artifact_version_id,
+        human_task_id=intake_human_task_id,
+        actor_id=actor_id,
+        actor_type=actor_type,
+    )
+    _provision_future_week_stage04_inputs(
+        connection,
+        storage_root=storage_root,
+        workflow_run=workflow_run,
+        route_demand_artifact=target_route_demand_artifact,
+        source_artifacts=source_artifacts,
+        intake_human_task_id=intake_human_task_id,
+        actor_id=actor_id,
+        actor_type=actor_type,
+        idempotency_base=_receipt_event_idempotency_key(
+            receipt,
+            "workpages.route-demand.save-and-run.input-provision",
+        ),
+    )
+    materialize_weekly_approved_availability_exceptions(
+        connection,
+        workflow_run=workflow_run,
+        storage_root=storage_root,
+        actor_id=actor_id,
+        actor_type=actor_type,
+        receipt_event_idempotency_base=_receipt_event_idempotency_key(
+            receipt,
+            "workpages.route-demand.save-and-run.approved-availability-overlay",
+        ),
+    )
+    latest_run_artifacts = list_artifact_versions_for_workflow_run(connection, workflow_run_id)
+    latest_approved_availability = _latest_artifact_for_kind(
+        latest_run_artifacts,
+        "planning.approved_availability.workbook",
+    )
+    if latest_approved_availability is not None:
+        _attach_existing_artifact_to_human_task(
+            connection,
+            workflow_run_id=workflow_run_id,
+            artifact_version_id=_require_non_empty_string(
+                latest_approved_availability.get("artifact_version_id"),
+                field_name="artifact_version_id",
+            ),
+            human_task_id=intake_human_task_id,
+            actor_id=actor_id,
+            actor_type=actor_type,
+        )
+
+    _claim_human_task_if_needed(
+        connection,
+        human_task_id=intake_human_task_id,
+        actor_id=actor_id,
+        actor_type=actor_type,
+        actor_roles=actor_roles,
+        idempotency_key_suffix=f"{artifact_version_id}:intake:claim",
+    )
+    completed_intake = complete_human_task_command(
+        connection,
+        {
+            "human_task_id": intake_human_task_id,
+            "outcome": "complete",
+            "idempotency_key": f"{artifact_version_id}:intake:complete",
+            "actor_id": actor_id,
+            "actor_type": actor_type,
+            "actor_roles": actor_roles,
+        },
+        storage_root=storage_root,
+    )
+    build_human_task_id = _spawned_weekly_stage04_build_human_task_id(completed_intake)
+    _claim_human_task_if_needed(
+        connection,
+        human_task_id=build_human_task_id,
+        actor_id=actor_id,
+        actor_type=actor_type,
+        actor_roles=actor_roles,
+        idempotency_key_suffix=f"{artifact_version_id}:build:claim",
+    )
+    run_weekly_stage04_openai_agent(
+        connection,
+        {
+            "human_task_id": build_human_task_id,
+            "actor_id": actor_id,
+            "actor_type": actor_type,
+            "actor_roles": actor_roles,
+            "idempotency_key": f"{artifact_version_id}:stage04:run",
+        },
+    )
+    complete_human_task_command(
+        connection,
+        {
+            "human_task_id": build_human_task_id,
+            "outcome": "complete",
+            "idempotency_key": f"{artifact_version_id}:stage04:complete",
+            "actor_id": actor_id,
+            "actor_type": actor_type,
+            "actor_roles": actor_roles,
+        },
+        storage_root=storage_root,
+    )
+
+    final_artifacts = list_artifact_versions_for_workflow_run(connection, workflow_run_id)
+    latest_schedule_draft = latest_schedule_draft_artifact(final_artifacts)
+    if latest_schedule_draft is None:
+        raise CommandError(
+            code="required_artifact_missing",
+            message="weekly Stage04 agent did not produce a draft weekly schedule artifact",
+            details={
+                "workflow_run_id": workflow_run_id,
+                "artifact_kind": "planning.draft_weekly_schedule.workbook",
+            },
+        )
+    return {
+        "submitted": {
+            "workflow_run_id": workflow_run_id,
+            "artifact_version_id": target_route_demand_artifact_version_id,
+            "supersedes_artifact_version_id": artifact_version_id,
+            "route": _canonical_route_demand_ui_route(
+                workflow_run_id=workflow_run_id,
+                artifact_version_id=target_route_demand_artifact_version_id,
+            ),
+            "target_workflow_run_id": workflow_run_id,
+            "target_schedule_route": canonical_workflow_run_workpage_route(
+                workflow_run_id=workflow_run_id,
+                workpage_kind="schedule-v0",
+            ),
+            "target_schedule_artifact_version_id": _require_non_empty_string(
+                latest_schedule_draft.get("artifact_version_id"),
+                field_name="artifact_version_id",
+            ),
+        }
+    }
+
+
+def _save_and_prepare_existing_week_route_demand_coverage(
+    connection: sqlite3.Connection,
+    *,
+    storage_root: Path,
+    base_artifact: Mapping[str, Any],
+    base_projection: Mapping[str, Any],
+    normalized_submitted_rows: list[dict[str, int | str]],
+    workflow_run_id: str,
+    artifact_version_id: str,
+    actor_id: str,
+    actor_type: str,
+    artifact_event_idempotency: str | None,
+) -> dict[str, Any]:
+    visible_base_rows = _visible_route_demand_rows_for_comparison(base_projection)
+    visible_submitted_rows = _visible_submitted_route_demand_rows(
+        visible_base_rows=visible_base_rows,
+        submitted_rows=normalized_submitted_rows,
+    )
+    positive_delta_summary = _route_demand_positive_delta_summary(
+        base_rows=visible_base_rows,
+        submitted_rows=visible_submitted_rows,
+    )
+    if int(positive_delta_summary["added_route_count"]) <= 0:
+        raise CommandError(
+            code="route_demand_increase_required",
+            message="running the coverage agent requires at least one increased planned route count",
+            details={
+                "workflow_run_id": workflow_run_id,
+                "artifact_version_id": artifact_version_id,
+                **positive_delta_summary,
+            },
+        )
+    current_artifacts = list_artifact_versions_for_workflow_run(connection, workflow_run_id)
+    latest_schedule_draft = latest_schedule_draft_artifact(current_artifacts)
+    if latest_schedule_draft is None:
+        raise CommandError(
+            code="schedule_draft_required",
+            message="route-demand coverage recommendations require an existing draft weekly schedule",
+            details={
+                "workflow_run_id": workflow_run_id,
+                "artifact_version_id": artifact_version_id,
+            },
+        )
+    target_route_demand_artifact = _save_route_demand_if_needed(
+        connection,
+        storage_root=storage_root,
+        base_artifact=base_artifact,
+        submitted_rows=normalized_submitted_rows,
+        base_projection=base_projection,
+        actor_id=actor_id,
+        actor_type=actor_type,
+        event_idempotency=artifact_event_idempotency,
+        lineage_note="Submitted route-demand version for existing-week coverage recommendations.",
+    )
+    target_route_demand_artifact_version_id = _require_non_empty_string(
+        target_route_demand_artifact.get("artifact_version_id"),
+        field_name="artifact_version_id",
+    )
+    latest_schedule_draft_artifact_version_id = _require_non_empty_string(
+        latest_schedule_draft.get("artifact_version_id"),
+        field_name="artifact_version_id",
+    )
+    coverage_context = {
+        "workflow_run_id": workflow_run_id,
+        "schedule_artifact_version_id": latest_schedule_draft_artifact_version_id,
+        "route_demand_artifact_version_id": target_route_demand_artifact_version_id,
+        "coverage_candidates_path": canonical_schedule_route_demand_coverage_candidates_path(
+            workflow_run_id=workflow_run_id,
+            artifact_version_id=latest_schedule_draft_artifact_version_id,
+        ),
+        "coverage_apply_path": canonical_schedule_route_demand_coverage_apply_path(
+            workflow_run_id=workflow_run_id,
+            artifact_version_id=latest_schedule_draft_artifact_version_id,
+        ),
+        "service_dates": list(positive_delta_summary["service_dates"]),
+        "added_route_count": int(positive_delta_summary["added_route_count"]),
+        "deltas": list(positive_delta_summary["deltas"]),
+    }
+    return {
+        "submitted": {
+            "workflow_run_id": workflow_run_id,
+            "artifact_version_id": target_route_demand_artifact_version_id,
+            "supersedes_artifact_version_id": artifact_version_id,
+            "route": _canonical_route_demand_ui_route(
+                workflow_run_id=workflow_run_id,
+                artifact_version_id=target_route_demand_artifact_version_id,
+            ),
+            "target_workflow_run_id": workflow_run_id,
+            "target_schedule_route": canonical_workflow_run_workpage_route(
+                workflow_run_id=workflow_run_id,
+                workpage_kind="schedule-v0",
+            ),
+            "target_schedule_artifact_version_id": latest_schedule_draft_artifact_version_id,
+            "route_demand_coverage_context": coverage_context,
+        },
+        "route_demand_coverage_context": coverage_context,
+    }
 
 def submit_driver_preferences_artifact_workpage_command(
     connection: sqlite3.Connection,
@@ -1245,6 +1382,44 @@ def _assert_visible_zero_to_n_change(
     )
 
 
+def _route_demand_positive_delta_summary(
+    *,
+    base_rows: list[dict[str, Any]],
+    submitted_rows: list[dict[str, int | str]],
+) -> dict[str, Any]:
+    submitted_by_date = {
+        str(row["service_date"]): int(row["planned_route_count"])
+        for row in submitted_rows
+    }
+    deltas: list[dict[str, int | str]] = []
+    service_dates: list[str] = []
+    added_route_count = 0
+    for base_row in base_rows:
+        service_date = str(base_row.get("service_date") or "").strip()
+        if not service_date or service_date not in submitted_by_date:
+            continue
+        previous_planned_route_count = max(int(base_row.get("planned_route_count") or 0), 0)
+        planned_route_count = max(submitted_by_date[service_date], 0)
+        delta = planned_route_count - previous_planned_route_count
+        if delta <= 0:
+            continue
+        service_dates.append(service_date)
+        added_route_count += delta
+        deltas.append(
+            {
+                "service_date": service_date,
+                "previous_planned_route_count": previous_planned_route_count,
+                "planned_route_count": planned_route_count,
+                "delta": delta,
+            }
+        )
+    return {
+        "service_dates": service_dates,
+        "added_route_count": added_route_count,
+        "deltas": deltas,
+    }
+
+
 def _save_route_demand_if_needed(
     connection: sqlite3.Connection,
     *,
@@ -1255,6 +1430,7 @@ def _save_route_demand_if_needed(
     actor_id: str,
     actor_type: str,
     event_idempotency: str | None,
+    lineage_note: str = "Submitted future-week route demand version for scheduling activation.",
 ) -> Mapping[str, Any]:
     materialization_rows = _route_demand_rows_for_materialization(
         base_projection=base_projection,
@@ -1299,7 +1475,7 @@ def _save_route_demand_if_needed(
             base_artifact.get("artifact_version_id"),
             field_name="artifact_version_id",
         ),
-        lineage_note="Submitted future-week route demand version for scheduling activation.",
+        lineage_note=lineage_note,
         actor_id=actor_id,
         actor_type=actor_type,
         event_idempotency=event_idempotency,

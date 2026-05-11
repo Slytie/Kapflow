@@ -1830,6 +1830,28 @@ function patchRouteDemandArtifactContractState(version: RouteDemandArtifactVersi
         ]
       : editable
         ? [
+            ...(latestScheduleVersion
+              ? [
+                  {
+                    action_id: "workpage.route-demand-v0.save_and_run",
+                    kind: "save_and_run",
+                    label: "Run coverage agent",
+                    state: "available",
+                    workpage_kind: "route-demand-v0",
+                    artifact_version_id: version.artifactVersionId,
+                    submit_path:
+                      `/api/v1/workpages/workflow-runs/${version.workflowRunId}/route-demand-v0/artifacts/` +
+                      `${version.artifactVersionId}/save-and-run`,
+                    action_ref: buildWorkpageActionRef({
+                      actionId: "workpage.route-demand-v0.save_and_run",
+                      workpageKind: "route-demand-v0",
+                      workflowRunId: version.workflowRunId,
+                      artifactVersionId: version.artifactVersionId
+                    }),
+                    disabled_reason: null
+                  }
+                ]
+              : []),
             {
               action_id: "workpage.route-demand-v0.add_next_week",
               kind: "add_next_week",
@@ -2149,6 +2171,547 @@ function routeDemandArtifactSubmitResponse(
     workflow_run_id: version.workflowRunId
   };
   return payload;
+}
+
+function routeDemandCoverageCandidatesPath(
+  workflowRunId: string,
+  artifactVersionId: string
+): string {
+  return (
+    `/api/v1/workpages/workflow-runs/${workflowRunId}/schedule-v0/artifacts/` +
+    `${artifactVersionId}/route-demand-coverage-candidates`
+  );
+}
+
+function routeDemandCoverageApplyPath(
+  workflowRunId: string,
+  artifactVersionId: string
+): string {
+  return (
+    `/api/v1/workpages/workflow-runs/${workflowRunId}/schedule-v0/artifacts/` +
+    `${artifactVersionId}/route-demand-coverage`
+  );
+}
+
+function buildRouteDemandDayCardsFromRequestedCounts(
+  dayCards: Array<Record<string, unknown>>,
+  dailyDemandRows?: Array<{
+    service_date?: string;
+    planned_route_count?: number;
+  }>
+): Array<Record<string, unknown>> {
+  const requestedCounts = new Map(
+    (dailyDemandRows ?? []).map((row) => [
+      asString(row.service_date),
+      asNumber(row.planned_route_count)
+    ])
+  );
+  return dayCards.map((card) => {
+    const serviceDate = asString(card.service_date);
+    const currentCount = asNumber(card.planned_route_count);
+    const nextCount = serviceDate && requestedCounts.has(serviceDate)
+      ? Math.max(asNumber(requestedCounts.get(serviceDate)), 0)
+      : currentCount;
+    const delta = nextCount - currentCount;
+    return {
+      ...card,
+      planned_route_count: nextCount,
+      standard_slot_count: Math.max(asNumber(card.standard_slot_count) + delta, 0),
+      delta_from_previous_version: {
+        planned_route_count_delta: delta
+      }
+    };
+  });
+}
+
+function routeDemandCoverageDeltas(
+  version: RouteDemandArtifactVersionState,
+  requestedServiceDates?: string[]
+): Array<{
+  service_date: string;
+  previous_planned_route_count: number;
+  planned_route_count: number;
+  delta: number;
+}> {
+  const previousVersion = version.supersedesArtifactVersionId
+    ? routeDemandArtifactVersions.get(version.supersedesArtifactVersionId) ?? null
+    : null;
+  const previousByDate = new Map(
+    visibleRouteDemandDayCards(previousVersion?.dayCards ?? []).map((card) => [
+      asString(card.service_date),
+      asNumber(card.planned_route_count)
+    ])
+  );
+  const requestedDates =
+    requestedServiceDates && requestedServiceDates.length > 0
+      ? new Set(requestedServiceDates)
+      : null;
+  return visibleRouteDemandDayCards(version.dayCards).reduce<
+    Array<{
+      service_date: string;
+      previous_planned_route_count: number;
+      planned_route_count: number;
+      delta: number;
+    }>
+  >((accumulator, card) => {
+    const serviceDate = asString(card.service_date);
+    if (!serviceDate || (requestedDates && !requestedDates.has(serviceDate))) {
+      return accumulator;
+    }
+    const previousCount = previousByDate.get(serviceDate) ?? asNumber(card.planned_route_count);
+    const currentCount = asNumber(card.planned_route_count);
+    const delta = Math.max(currentCount - previousCount, 0);
+    if (delta <= 0) {
+      return accumulator;
+    }
+    accumulator.push({
+      service_date: serviceDate,
+      previous_planned_route_count: previousCount,
+      planned_route_count: currentCount,
+      delta
+    });
+    return accumulator;
+  }, []);
+}
+
+function buildRouteDemandCoverageContext(
+  routeDemandVersion: RouteDemandArtifactVersionState,
+  scheduleArtifactVersionId: string,
+  requestedServiceDates?: string[]
+): Record<string, unknown> {
+  const deltas = routeDemandCoverageDeltas(routeDemandVersion, requestedServiceDates);
+  return {
+    workflow_run_id: routeDemandVersion.workflowRunId,
+    schedule_artifact_version_id: scheduleArtifactVersionId,
+    route_demand_artifact_version_id: routeDemandVersion.artifactVersionId,
+    coverage_candidates_path: routeDemandCoverageCandidatesPath(
+      routeDemandVersion.workflowRunId,
+      scheduleArtifactVersionId
+    ),
+    coverage_apply_path: routeDemandCoverageApplyPath(
+      routeDemandVersion.workflowRunId,
+      scheduleArtifactVersionId
+    ),
+    service_dates: deltas.map((item) => item.service_date),
+    added_route_count: deltas.reduce((total, item) => total + item.delta, 0),
+    deltas
+  };
+}
+
+function scheduleDriverNameMap(payload: Record<string, unknown>): Map<string, string> {
+  const map = new Map<string, string>();
+  scheduleHeatmapPeople(payload).forEach((person) => {
+    if (person.driver_id) {
+      map.set(person.driver_id, person.driver_name);
+    }
+  });
+  asObjectArray(asObject(payload.calculations)?.driver_metrics).forEach((metric) => {
+    const driverId = asString(metric.driver_id);
+    const driverName = asString(metric.driver_name);
+    if (driverId && driverName) {
+      map.set(driverId, driverName);
+    }
+  });
+  return map;
+}
+
+function clampRouteDemandCoverageMaxCandidates(value: unknown): number {
+  const requested = asNumber(value);
+  if (requested <= 0) {
+    return 8;
+  }
+  return Math.min(requested, 20);
+}
+
+function routeDemandCoverageTargetSuffix(serviceDate: string, slotNumber: number): string {
+  return `${serviceDate.replaceAll("-", "")}-cycle1-standard#${String(slotNumber).padStart(2, "0")}`;
+}
+
+function patchScheduleRouteDemandDependency(
+  payload: Record<string, unknown>,
+  routeDemandArtifactVersionId: string
+): void {
+  const routeDemandDependency = asObjectArray(payload.dependencies).find(
+    (row) => asString(row.dependency_key) === "route_slot_requirements"
+  );
+  if (!routeDemandDependency) {
+    return;
+  }
+  routeDemandDependency.artifact_version_id = routeDemandArtifactVersionId;
+  routeDemandDependency.source_ref = `/api/v1/artifacts/${routeDemandArtifactVersionId}`;
+  routeDemandDependency.state = "aligned";
+}
+
+function buildRouteDemandCoverageRecommendations(input: {
+  scheduleVersion: ScheduleArtifactVersionState;
+  routeDemandVersion: RouteDemandArtifactVersionState;
+  assignmentRows: Array<Record<string, unknown>>;
+  reserveRows: Array<Record<string, unknown>>;
+  serviceDates?: string[];
+  maxCandidates?: number;
+}): Record<string, unknown> {
+  const maxCandidates = clampRouteDemandCoverageMaxCandidates(input.maxCandidates);
+  const deltas = routeDemandCoverageDeltas(input.routeDemandVersion, input.serviceDates);
+  const driverNames = scheduleDriverNameMap(input.scheduleVersion.payload);
+  const workloadRows = [...input.assignmentRows, ...input.reserveRows];
+  const driverMetricsById = new Map(
+    asObjectArray(asObject(input.scheduleVersion.payload.calculations)?.driver_metrics).map(
+      (metric) => [asString(metric.driver_id), metric]
+    )
+  );
+  const targets: Array<Record<string, unknown>> = [];
+  const candidateGroups: Array<Record<string, unknown>> = [];
+
+  for (const delta of deltas) {
+    const reserveRowsForDate = input.reserveRows.filter(
+      (row) =>
+        asString(row.service_date) === delta.service_date &&
+        asString(row.assigned_driver_id).trim().length > 0
+    );
+    const assignedRowsForDate = input.assignmentRows.filter(
+      (row) =>
+        asString(row.service_date) === delta.service_date &&
+        asString(row.assigned_driver_id).trim().length > 0
+    );
+    for (let offset = 1; offset <= delta.delta; offset += 1) {
+      const slotNumber = delta.previous_planned_route_count + offset;
+      const routeSlotId = `slot-${routeDemandCoverageTargetSuffix(delta.service_date, slotNumber)}`;
+      const routeId =
+        `ROUTE-${delta.service_date.replaceAll("-", "")}-` +
+        `${String(slotNumber).padStart(2, "0")}`;
+      const targetId = `${input.routeDemandVersion.artifactVersionId}:${delta.service_date}:${offset}`;
+      const target = {
+        target_id: targetId,
+        route_slot_id: routeSlotId,
+        route_id: routeId,
+        service_date: delta.service_date,
+        route_slot_class: "standard",
+        station_code: "DVC4",
+        service_area: "Metro core",
+        shift_start: "10:15",
+        shift_end: "18:45",
+        projected_minutes: 510,
+        required_skill: "standard_delivery",
+        vehicle_type: "cargo_van"
+      };
+      targets.push(target);
+
+      const candidates: Array<Record<string, unknown>> = [];
+      const selectableSources =
+        reserveRowsForDate.length > 0
+          ? reserveRowsForDate.slice(0, maxCandidates)
+          : input.assignmentRows
+              .filter(
+                (row) =>
+                  asString(row.service_date) !== delta.service_date &&
+                  asString(row.assigned_driver_id).trim().length > 0
+              )
+              .slice(0, maxCandidates);
+      selectableSources.forEach((row, sourceIndex) => {
+        const driverId = asString(row.assigned_driver_id);
+        const metric = driverMetricsById.get(driverId);
+        const totalMinutes = workloadRows
+          .filter((candidateRow) => asString(candidateRow.assigned_driver_id) === driverId)
+          .reduce((total, candidateRow) => total + asNumber(candidateRow.projected_minutes), 0);
+        const clearReserve =
+          asString(row.assignment_status) === "reserve" ||
+          asString(row.assignment_action) === "reserve" ||
+          asString(row.route_id) === "ON_CALL";
+        candidates.push({
+          recommendation_rank: candidates.length + 1,
+          target_id: targetId,
+          route_slot_id: target.route_slot_id,
+          route_id: target.route_id,
+          service_date: target.service_date,
+          driver_id: driverId,
+          driver_name: driverNames.get(driverId) ?? driverId,
+          selection_state: "selectable",
+          hard_filter_status: "pass",
+          hard_filter_reasons: [],
+          score_bucket: sourceIndex === 0 ? "best_fit" : "good_fit",
+          soft_score_total: Number((98 - sourceIndex * 4.5).toFixed(2)),
+          projected_minutes: target.projected_minutes,
+          availability_state:
+            asString(metric?.availability_state) ||
+            asString(row.availability_state) ||
+            "AVAILABLE",
+          current_week_shift_count: workloadRows.filter(
+            (candidateRow) => asString(candidateRow.assigned_driver_id) === driverId
+          ).length,
+          projected_rolling7_minutes: totalMinutes + target.projected_minutes,
+          remaining_rolling7_minutes: Math.max(
+            3600 - (totalMinutes + target.projected_minutes),
+            0
+          ),
+          fairness_balance: 0.12 + sourceIndex * 0.03,
+          target_shift_gap: Math.max(5 - sourceIndex, 0),
+          preference_fit: sourceIndex === 0 ? 1 : 0.82,
+          preferred_shift_band_fit: sourceIndex === 0 ? 1 : 0.9,
+          preferred_route_slot_class_fit: 1,
+          seniority_preference_fit: 0.88,
+          reliability_score: 0.95 - sourceIndex * 0.04,
+          previous_week_stability: 0.9 - sourceIndex * 0.03,
+          baseline_template_state:
+            asString(row.baseline_template_state) || "white_template",
+          planned_driver_day_state: clearReserve
+            ? "on_call"
+            : asString(row.planned_driver_day_state) || "assigned",
+          new_agreement_required: Boolean(row.new_agreement_required),
+          new_agreement_trigger_reason: asString(row.new_agreement_trigger_reason),
+          template_state_preservation_fit:
+            asNumber(row.template_state_preservation_fit) || 0.92,
+          clear_same_day_on_call_reserve: clearReserve,
+          reserve_route_slot_id: clearReserve ? asString(row.route_slot_id) : null,
+          reserve_route_id: clearReserve ? asString(row.route_id) : null,
+          assignment_action: clearReserve ? "promote_reserve" : "assign",
+          evaluation_kind: clearReserve ? "reserve_promotion" : "cross_day_assignment"
+        });
+      });
+
+      const blockedSource = assignedRowsForDate[0];
+      if (blockedSource && candidates.length < maxCandidates) {
+        const driverId = asString(blockedSource.assigned_driver_id);
+        const totalMinutes = workloadRows
+          .filter((candidateRow) => asString(candidateRow.assigned_driver_id) === driverId)
+          .reduce((total, candidateRow) => total + asNumber(candidateRow.projected_minutes), 0);
+        candidates.push({
+          recommendation_rank: candidates.length + 1,
+          target_id: targetId,
+          route_slot_id: target.route_slot_id,
+          route_id: target.route_id,
+          service_date: target.service_date,
+          driver_id: driverId,
+          driver_name: driverNames.get(driverId) ?? driverId,
+          selection_state: "blocked",
+          hard_filter_status: "fail",
+          hard_filter_reasons: ["already_assigned_that_day"],
+          score_bucket: "blocked",
+          soft_score_total: 0,
+          projected_minutes: target.projected_minutes,
+          availability_state:
+            asString(driverMetricsById.get(driverId)?.availability_state) || "scheduled",
+          current_week_shift_count: workloadRows.filter(
+            (candidateRow) => asString(candidateRow.assigned_driver_id) === driverId
+          ).length,
+          projected_rolling7_minutes: totalMinutes + target.projected_minutes,
+          remaining_rolling7_minutes: Math.max(
+            3600 - (totalMinutes + target.projected_minutes),
+            0
+          ),
+          fairness_balance: 0,
+          target_shift_gap: 0,
+          preference_fit: 0,
+          preferred_shift_band_fit: 0,
+          preferred_route_slot_class_fit: 0,
+          seniority_preference_fit: 0,
+          reliability_score: 0.6,
+          previous_week_stability: 0.5,
+          baseline_template_state:
+            asString(blockedSource.baseline_template_state) || "assigned_template",
+          planned_driver_day_state: "assigned",
+          new_agreement_required: false,
+          new_agreement_trigger_reason: "",
+          template_state_preservation_fit: 0,
+          clear_same_day_on_call_reserve: false,
+          reserve_route_slot_id: null,
+          reserve_route_id: null,
+          assignment_action: "blocked",
+          evaluation_kind: "same_day_conflict"
+        });
+      }
+
+      candidateGroups.push({
+        target,
+        candidate_count: candidates.length,
+        pass_candidate_count: candidates.filter(
+          (candidate) =>
+            asString(candidate.selection_state) === "selectable" &&
+            asString(candidate.hard_filter_status) === "pass"
+        ).length,
+        candidates
+      });
+    }
+  }
+  const selectedDefaults = buildDistinctCoverageSelectedDefaults(candidateGroups);
+
+  const dependencies = cloneJson(
+    input.scheduleVersion.payload.dependencies
+  ) as Array<Record<string, unknown>>;
+  patchScheduleRouteDemandDependency(
+    { dependencies },
+    input.routeDemandVersion.artifactVersionId
+  );
+  return {
+    workflow_run_id: input.scheduleVersion.workflowRunId,
+    artifact_version_id: input.scheduleVersion.artifactVersionId,
+    route_demand_artifact_version_id: input.routeDemandVersion.artifactVersionId,
+    dependency_state: "aligned",
+    dependencies,
+    added_route_count: deltas.reduce((total, item) => total + item.delta, 0),
+    target_count: targets.length,
+    max_candidates: maxCandidates,
+    targets,
+    candidate_groups: candidateGroups,
+    selected_defaults: selectedDefaults,
+    diagnostic_reason: targets.length > 0 ? null : "no_positive_route_demand_increase"
+  };
+}
+
+function isSelectableCoverageCandidate(candidate: Record<string, unknown>): boolean {
+  return (
+    asString(candidate.selection_state) === "selectable" &&
+    asString(candidate.hard_filter_status) === "pass"
+  );
+}
+
+function buildDistinctCoverageSelectedDefaults(
+  candidateGroups: Array<Record<string, unknown>>
+): Array<Record<string, unknown>> {
+  const groupsByServiceDate = new Map<string, Array<Record<string, unknown>>>();
+  candidateGroups.forEach((group) => {
+    const target = asObject(group.target);
+    const serviceDate = asString(target?.service_date);
+    if (!serviceDate) {
+      return;
+    }
+    const dayGroups = groupsByServiceDate.get(serviceDate) ?? [];
+    dayGroups.push(group);
+    groupsByServiceDate.set(serviceDate, dayGroups);
+  });
+
+  return Array.from(groupsByServiceDate.entries())
+    .sort(([left], [right]) => left.localeCompare(right))
+    .flatMap(([, dayGroups]) => bestDistinctCoverageDefaultsForServiceDate(dayGroups));
+}
+
+function bestDistinctCoverageDefaultsForServiceDate(
+  candidateGroups: Array<Record<string, unknown>>
+): Array<Record<string, unknown>> {
+  const selectableOptions = candidateGroups.map((group) =>
+    asObjectArray(group.candidates)
+      .map((candidate, candidateIndex) => ({ candidate, candidateIndex }))
+      .filter(({ candidate }) => isSelectableCoverageCandidate(candidate))
+  );
+  const driverMaskById = new Map<string, bigint>();
+  selectableOptions.forEach((options) => {
+    options.forEach(({ candidate }) => {
+      const driverId = asString(candidate.driver_id);
+      if (!driverId || driverMaskById.has(driverId)) {
+        return;
+      }
+      driverMaskById.set(driverId, 1n << BigInt(driverMaskById.size));
+    });
+  });
+  const skipOrderIndex = 99;
+  const cache = new Map<
+    string,
+    {
+      count: number;
+      score: number;
+      rankSum: number;
+      orderKey: number[];
+      assignments: Array<{ groupIndex: number; candidateIndex: number }>;
+    }
+  >();
+
+  const better = (
+    candidateSolution: {
+      count: number;
+      score: number;
+      rankSum: number;
+      orderKey: number[];
+      assignments: Array<{ groupIndex: number; candidateIndex: number }>;
+    },
+    currentSolution: {
+      count: number;
+      score: number;
+      rankSum: number;
+      orderKey: number[];
+      assignments: Array<{ groupIndex: number; candidateIndex: number }>;
+    }
+  ): boolean => {
+    if (candidateSolution.count !== currentSolution.count) {
+      return candidateSolution.count > currentSolution.count;
+    }
+    if (candidateSolution.score !== currentSolution.score) {
+      return candidateSolution.score > currentSolution.score;
+    }
+    if (candidateSolution.rankSum !== currentSolution.rankSum) {
+      return candidateSolution.rankSum < currentSolution.rankSum;
+    }
+    return candidateSolution.orderKey.join(",") < currentSolution.orderKey.join(",");
+  };
+
+  const solve = (
+    groupIndex: number,
+    usedDriverMask: bigint
+  ): {
+    count: number;
+    score: number;
+    rankSum: number;
+    orderKey: number[];
+    assignments: Array<{ groupIndex: number; candidateIndex: number }>;
+  } => {
+    if (groupIndex >= candidateGroups.length) {
+      return {
+        count: 0,
+        score: 0,
+        rankSum: 0,
+        orderKey: [],
+        assignments: []
+      };
+    }
+    const cacheKey = `${groupIndex}:${usedDriverMask.toString()}`;
+    const cached = cache.get(cacheKey);
+    if (cached) {
+      return cached;
+    }
+
+    const nextSolution = solve(groupIndex + 1, usedDriverMask);
+    let bestSolution = {
+      count: nextSolution.count,
+      score: nextSolution.score,
+      rankSum: nextSolution.rankSum,
+      orderKey: [skipOrderIndex, ...nextSolution.orderKey],
+      assignments: nextSolution.assignments
+    };
+
+    selectableOptions[groupIndex].forEach(({ candidate, candidateIndex }) => {
+      const driverId = asString(candidate.driver_id);
+      const driverMask = driverMaskById.get(driverId);
+      if (!driverId || driverMask == null || (usedDriverMask & driverMask) !== 0n) {
+        return;
+      }
+      const childSolution = solve(groupIndex + 1, usedDriverMask | driverMask);
+      const candidateSolution = {
+        count: childSolution.count + 1,
+        score: childSolution.score + asNumber(candidate.soft_score_total),
+        rankSum:
+          childSolution.rankSum +
+          (asNumber(candidate.recommendation_rank) || candidateIndex + 1),
+        orderKey: [candidateIndex, ...childSolution.orderKey],
+        assignments: [{ groupIndex, candidateIndex }, ...childSolution.assignments]
+      };
+      if (better(candidateSolution, bestSolution)) {
+        bestSolution = candidateSolution;
+      }
+    });
+
+    cache.set(cacheKey, bestSolution);
+    return bestSolution;
+  };
+
+  return solve(0, 0n).assignments.map(({ groupIndex, candidateIndex }) => {
+    const group = candidateGroups[groupIndex];
+    const target = asObject(group.target) ?? {};
+    const candidate = asObjectArray(group.candidates)[candidateIndex];
+    return {
+      target_id: asString(target.target_id),
+      route_slot_id: asString(target.route_slot_id),
+      driver_id: asString(candidate.driver_id),
+      row_kind: "assignment"
+    };
+  });
 }
 
 function routeDemandArtifactCreateResponse(
@@ -4092,28 +4655,10 @@ async function handleRouteDemandArtifactSubmitRequest(
       planned_route_count?: number;
     }>;
   };
-  const requestedCounts = new Map(
-    (body.daily_demand_rows ?? []).map((row) => [
-      asString(row.service_date),
-      asNumber(row.planned_route_count)
-    ])
+  const nextDayCards = buildRouteDemandDayCardsFromRequestedCounts(
+    baseVersion.dayCards,
+    body.daily_demand_rows
   );
-  const nextDayCards = baseVersion.dayCards.map((card) => {
-    const serviceDate = asString(card.service_date);
-    const currentCount = asNumber(card.planned_route_count);
-    const nextCount = serviceDate && requestedCounts.has(serviceDate)
-      ? Math.max(asNumber(requestedCounts.get(serviceDate)), 0)
-      : currentCount;
-    const delta = nextCount - currentCount;
-    return {
-      ...card,
-      planned_route_count: nextCount,
-      standard_slot_count: Math.max(asNumber(card.standard_slot_count) + delta, 0),
-      delta_from_previous_version: {
-        planned_route_count_delta: delta
-      }
-    };
-  });
   const submittedArtifactVersionId = nextRouteDemandArtifactVersionId();
   const submittedVersion = addRouteDemandArtifactVersion({
     artifactVersionId: submittedArtifactVersionId,
@@ -4181,28 +4726,10 @@ async function handleRouteDemandSaveAndRunRequest(
       planned_route_count?: number;
     }>;
   };
-  const requestedCounts = new Map(
-    (body.daily_demand_rows ?? []).map((row) => [
-      asString(row.service_date),
-      asNumber(row.planned_route_count)
-    ])
+  const nextDayCards = buildRouteDemandDayCardsFromRequestedCounts(
+    baseVersion.dayCards,
+    body.daily_demand_rows
   );
-  const nextDayCards = baseVersion.dayCards.map((card) => {
-    const serviceDate = asString(card.service_date);
-    const currentCount = asNumber(card.planned_route_count);
-    const nextCount = serviceDate && requestedCounts.has(serviceDate)
-      ? Math.max(asNumber(requestedCounts.get(serviceDate)), 0)
-      : currentCount;
-    const delta = nextCount - currentCount;
-    return {
-      ...card,
-      planned_route_count: nextCount,
-      standard_slot_count: Math.max(asNumber(card.standard_slot_count) + delta, 0),
-      delta_from_previous_version: {
-        planned_route_count_delta: delta
-      }
-    };
-  });
   const submittedArtifactVersionId = nextRouteDemandArtifactVersionId();
   const submittedVersion = addRouteDemandArtifactVersion({
     artifactVersionId: submittedArtifactVersionId,
@@ -4212,8 +4739,8 @@ async function handleRouteDemandSaveAndRunRequest(
     dayCards: nextDayCards,
     scheduleImpact: {
       ...baseVersion.scheduleImpact,
-      dependency_state: "aligned",
-      schedule_state: "aligned",
+      dependency_state: baseVersion.futureWeekSeed ? "aligned" : "drifted",
+      schedule_state: baseVersion.futureWeekSeed ? "aligned" : "drifted",
       refresh_task: null
     },
     futureWeekSeed: baseVersion.futureWeekSeed
@@ -4224,6 +4751,10 @@ async function handleRouteDemandSaveAndRunRequest(
   updateRouteDemandArtifactChainLatest(submittedArtifactVersionId, submittedArtifactVersionId);
 
   const latestScheduleVersion = ensureScheduleArtifactDraft(baseVersion.workflowRunId);
+  const coverageContext = buildRouteDemandCoverageContext(
+    submittedVersion,
+    latestScheduleVersion.artifactVersionId
+  );
   state.audit.mutations.push(
     `workpage-route-demand-save-and-run:${artifactVersionId}:${submittedArtifactVersionId}:${baseVersion.workflowRunId}`
   );
@@ -4234,7 +4765,311 @@ async function handleRouteDemandSaveAndRunRequest(
         .submitted as Record<string, unknown>) ?? {}),
       target_workflow_run_id: baseVersion.workflowRunId,
       target_schedule_route: `/runs/${baseVersion.workflowRunId}/workpages/schedule-v0`,
-      target_schedule_artifact_version_id: latestScheduleVersion.artifactVersionId
+      target_schedule_artifact_version_id: latestScheduleVersion.artifactVersionId,
+      route_demand_coverage_context: baseVersion.futureWeekSeed ? null : coverageContext
+    },
+    route_demand_coverage_context: baseVersion.futureWeekSeed ? null : coverageContext
+  });
+}
+
+async function handleScheduleRouteDemandCoverageCandidatesRequest(
+  artifactVersionId: string,
+  request: Request
+): Promise<Response> {
+  if (!inScope(request)) {
+    return scheduleArtifactNotFoundResponse(artifactVersionId);
+  }
+
+  const scheduleVersion = scheduleArtifactVersions.get(artifactVersionId);
+  if (!scheduleVersion) {
+    return scheduleArtifactNotFoundResponse(artifactVersionId);
+  }
+
+  const body = (await request.json()) as {
+    route_demand_artifact_version_id?: string;
+    service_dates?: string[];
+    rows?: Array<Record<string, unknown>>;
+    reserve_rows?: Array<Record<string, unknown>>;
+    max_candidates?: number;
+  };
+  const routeDemandArtifactVersionId = asString(body.route_demand_artifact_version_id);
+  const routeDemandVersion = routeDemandArtifactVersions.get(routeDemandArtifactVersionId);
+  if (!routeDemandVersion || routeDemandVersion.workflowRunId !== scheduleVersion.workflowRunId) {
+    return HttpResponse.json(
+      {
+        status: "error",
+        error: {
+          code: "workpage_artifact_not_found",
+          message: "route-demand coverage artifact not found",
+          details: {
+            artifact_version_id: routeDemandArtifactVersionId
+          }
+        }
+      },
+      { status: 404 }
+    );
+  }
+
+  const recommendations = buildRouteDemandCoverageRecommendations({
+    scheduleVersion,
+    routeDemandVersion,
+    assignmentRows: Array.isArray(body.rows)
+      ? body.rows.map((row) => ({ ...row }))
+      : scheduleAssignmentRows(scheduleVersion.workbookPayload),
+    reserveRows: Array.isArray(body.reserve_rows)
+      ? body.reserve_rows.map((row) => ({ ...row }))
+      : scheduleVersion.workbookPayload.reserve_rows.map((row) => ({ ...row })),
+    serviceDates: Array.isArray(body.service_dates)
+      ? body.service_dates.map((value) => asString(value)).filter(Boolean)
+      : undefined,
+    maxCandidates: body.max_candidates
+  });
+
+  return ok({
+    command: "api.workpages.schedule.route_demand_coverage.candidates",
+    route_demand_coverage_recommendations: recommendations
+  });
+}
+
+async function handleScheduleRouteDemandCoverageApplyRequest(
+  artifactVersionId: string,
+  request: Request
+): Promise<Response> {
+  if (!inScope(request)) {
+    return scheduleArtifactNotFoundResponse(artifactVersionId);
+  }
+
+  const scheduleBaseVersion = scheduleArtifactVersions.get(artifactVersionId);
+  if (!scheduleBaseVersion) {
+    return scheduleArtifactNotFoundResponse(artifactVersionId);
+  }
+  if (scheduleBaseVersion.supersededByArtifactVersionId) {
+    return HttpResponse.json(
+      {
+        status: "error",
+        error: {
+          code: "workpage_artifact_conflict",
+          message: "artifact-backed workpage already has a newer draft",
+          details: {
+            artifact_version_id: artifactVersionId,
+            latest_artifact_version_id: scheduleBaseVersion.latestInChainArtifactVersionId,
+            workflow_run_id: scheduleBaseVersion.workflowRunId,
+            route: scheduleArtifactRoute(
+              scheduleBaseVersion.latestInChainArtifactVersionId,
+              scheduleBaseVersion.workflowRunId
+            )
+          }
+        }
+      },
+      { status: 409 }
+    );
+  }
+
+  const body = (await request.json()) as {
+    route_demand_artifact_version_id?: string;
+    service_dates?: string[];
+    rows?: Array<Record<string, unknown>>;
+    reserve_rows?: Array<Record<string, unknown>>;
+    selections?: Array<Record<string, unknown>>;
+    max_candidates?: number;
+  };
+  const routeDemandArtifactVersionId = asString(body.route_demand_artifact_version_id);
+  const routeDemandVersion = routeDemandArtifactVersions.get(routeDemandArtifactVersionId);
+  if (!routeDemandVersion || routeDemandVersion.workflowRunId !== scheduleBaseVersion.workflowRunId) {
+    return HttpResponse.json(
+      {
+        status: "error",
+        error: {
+          code: "workpage_artifact_not_found",
+          message: "route-demand coverage artifact not found",
+          details: {
+            artifact_version_id: routeDemandArtifactVersionId
+          }
+        }
+      },
+      { status: 404 }
+    );
+  }
+
+  const assignmentRows = Array.isArray(body.rows)
+    ? body.rows.map((row) => ({ ...row }))
+    : scheduleAssignmentRows(scheduleBaseVersion.workbookPayload);
+  const reserveRows = Array.isArray(body.reserve_rows)
+    ? body.reserve_rows.map((row) => ({ ...row }))
+    : scheduleBaseVersion.workbookPayload.reserve_rows.map((row) => ({ ...row }));
+  const recommendations = buildRouteDemandCoverageRecommendations({
+    scheduleVersion: scheduleBaseVersion,
+    routeDemandVersion,
+    assignmentRows,
+    reserveRows,
+    serviceDates: Array.isArray(body.service_dates)
+      ? body.service_dates.map((value) => asString(value)).filter(Boolean)
+      : undefined,
+    maxCandidates: body.max_candidates
+  });
+  const selectableCandidateByKey = new Map<string, Record<string, unknown>>();
+  asObjectArray(recommendations.candidate_groups).forEach((group) => {
+    asObjectArray(group.candidates).forEach((candidate) => {
+      if (
+        asString(candidate.selection_state) !== "selectable" ||
+        asString(candidate.hard_filter_status) !== "pass"
+      ) {
+        return;
+      }
+      selectableCandidateByKey.set(
+        [
+          asString(candidate.target_id),
+          asString(candidate.route_slot_id),
+          asString(candidate.driver_id)
+        ].join("|"),
+        candidate
+      );
+    });
+  });
+  const targetById = new Map(
+    asObjectArray(recommendations.targets).map((target) => [asString(target.target_id), target])
+  );
+  const requestedSelections = Array.isArray(body.selections)
+    ? body.selections.map((selection) => ({
+        target_id: asString(selection.target_id),
+        route_slot_id: asString(selection.route_slot_id),
+        driver_id: asString(selection.driver_id)
+      }))
+    : [];
+  const hasDuplicateSameDayDriverSelection = requestedSelections.some((selection, index) => {
+    const target = targetById.get(selection.target_id);
+    const serviceDate = asString(target?.service_date);
+    if (!serviceDate || !selection.driver_id) {
+      return false;
+    }
+    return requestedSelections.slice(0, index).some((otherSelection) => {
+      if (otherSelection.driver_id !== selection.driver_id) {
+        return false;
+      }
+      const otherTarget = targetById.get(otherSelection.target_id);
+      return asString(otherTarget?.service_date) === serviceDate;
+    });
+  });
+  if (hasDuplicateSameDayDriverSelection) {
+    return HttpResponse.json(
+      {
+        status: "error",
+        error: {
+          code: "route_demand_coverage_candidate_blocked",
+          message: "selected route-demand coverage candidate is blocked",
+          details: {
+            artifact_version_id: artifactVersionId,
+            route_demand_artifact_version_id: routeDemandArtifactVersionId
+          }
+        }
+      },
+      { status: 400 }
+    );
+  }
+  const selectedCandidates = requestedSelections.map((selection) =>
+    selectableCandidateByKey.get(
+      [selection.target_id, selection.route_slot_id, selection.driver_id].join("|")
+    )
+  );
+  if (
+    requestedSelections.length === 0 ||
+    selectedCandidates.some((candidate) => candidate == null)
+  ) {
+    return HttpResponse.json(
+      {
+        status: "error",
+        error: {
+          code: "route_demand_coverage_candidate_unavailable",
+          message: "selected route-demand coverage candidate is unavailable",
+          details: {
+            artifact_version_id: artifactVersionId,
+            route_demand_artifact_version_id: routeDemandArtifactVersionId
+          }
+        }
+      },
+      { status: 400 }
+    );
+  }
+
+  const selected = selectedCandidates.filter(
+    (candidate): candidate is Record<string, unknown> => candidate != null
+  );
+  const reserveKeysToClear = new Set(
+    selected
+      .filter((candidate) => Boolean(candidate.clear_same_day_on_call_reserve))
+      .map((candidate) =>
+        [
+          asString(candidate.service_date),
+          asString(candidate.reserve_route_slot_id),
+          asString(candidate.driver_id)
+        ].join("|")
+      )
+  );
+  const nextReserveRows = reserveRows.filter(
+    (row) =>
+      !reserveKeysToClear.has(
+        [
+          asString(row.service_date),
+          asString(row.route_slot_id),
+          asString(row.assigned_driver_id)
+        ].join("|")
+      )
+  );
+  const appendedRows = selected.map((candidate) => {
+    const target = targetById.get(asString(candidate.target_id));
+    return {
+      service_date: asString(candidate.service_date),
+      route_slot_id: asString(candidate.route_slot_id),
+      route_id: asString(candidate.route_id),
+      assigned_driver_id: asString(candidate.driver_id),
+      assignment_status: "assigned",
+      phase: "route_demand_coverage",
+      projected_minutes: asNumber(candidate.projected_minutes),
+      availability_state: asString(candidate.availability_state) || "AVAILABLE",
+      baseline_template_state:
+        asString(candidate.baseline_template_state) || "white_template",
+      planned_driver_day_state: "assigned",
+      new_agreement_required: Boolean(candidate.new_agreement_required),
+      new_agreement_trigger_reason: asString(candidate.new_agreement_trigger_reason),
+      template_state_preservation_fit: asNumber(candidate.template_state_preservation_fit),
+      iteration_index: 24,
+      rationale_code: Boolean(candidate.clear_same_day_on_call_reserve)
+        ? "route_demand_promote_reserve"
+        : "route_demand_assign",
+      assignment_action: asString(candidate.assignment_action) || "assign",
+      route_slot_class: asString(target?.route_slot_class)
+    };
+  });
+  const submittedArtifactVersionId = nextScheduleArtifactVersionId();
+  const submittedVersion = addScheduleArtifactVersion({
+    artifactVersionId: submittedArtifactVersionId,
+    workflowRunId: scheduleBaseVersion.workflowRunId,
+    supersedesArtifactVersionId: artifactVersionId,
+    latestInChainArtifactVersionId: submittedArtifactVersionId,
+    assignmentRows: [...assignmentRows, ...appendedRows],
+    reserveRows: nextReserveRows
+  });
+  patchScheduleRouteDemandDependency(
+    submittedVersion.payload,
+    routeDemandArtifactVersionId
+  );
+  scheduleBaseVersion.supersededByArtifactVersionId = submittedArtifactVersionId;
+  patchArtifactPayloadLineage(scheduleBaseVersion);
+  updateScheduleArtifactChainLatest(submittedArtifactVersionId, submittedArtifactVersionId);
+
+  state.audit.mutations.push(
+    `workpage-schedule-route-demand-coverage:${artifactVersionId}:${submittedArtifactVersionId}`
+  );
+  return ok({
+    command: "api.workpages.schedule.route_demand_coverage.apply",
+    submitted: (scheduleArtifactSubmitResponse(submittedVersion, artifactVersionId)
+      .submitted as Record<string, unknown>) ?? {},
+    route_demand_coverage: {
+      route_demand_artifact_version_id: routeDemandArtifactVersionId,
+      assigned_count: selected.length,
+      appended_assignment_count: appendedRows.length,
+      cleared_same_day_reserve_count: reserveRows.length - nextReserveRows.length,
+      selected
     }
   });
 }
@@ -4590,6 +5425,22 @@ export const handlers = [
     "*/api/v1/workpages/workflow-runs/:workflowRunId/schedule-v0/artifacts/:artifactVersionId/sick-no-show",
     async ({ params, request }) =>
       handleScheduleSickNoShowRequest(String(params.artifactVersionId), request)
+  ),
+  http.post(
+    "*/api/v1/workpages/workflow-runs/:workflowRunId/schedule-v0/artifacts/:artifactVersionId/route-demand-coverage-candidates",
+    async ({ params, request }) =>
+      handleScheduleRouteDemandCoverageCandidatesRequest(
+        String(params.artifactVersionId),
+        request
+      )
+  ),
+  http.post(
+    "*/api/v1/workpages/workflow-runs/:workflowRunId/schedule-v0/artifacts/:artifactVersionId/route-demand-coverage",
+    async ({ params, request }) =>
+      handleScheduleRouteDemandCoverageApplyRequest(
+        String(params.artifactVersionId),
+        request
+      )
   ),
   http.post(
     "*/api/v1/workpages/workflow-runs/:workflowRunId/route-demand-v0/artifacts/:artifactVersionId/submit",

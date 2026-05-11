@@ -40,6 +40,54 @@ function driverHeatmapRow(section: HTMLElement, driverName: string): HTMLElement
   return row as HTMLElement;
 }
 
+function buildCoverageCandidate(
+  coverageTarget: Record<string, any>,
+  recommendationRank: number,
+  driverId: string,
+  driverName: string,
+  overrides: Record<string, any> = {}
+): Record<string, any> {
+  return {
+    recommendation_rank: recommendationRank,
+    target_id: coverageTarget.target_id,
+    route_slot_id: coverageTarget.route_slot_id,
+    route_id: coverageTarget.route_id,
+    row_kind: "assignment",
+    service_date: coverageTarget.service_date,
+    driver_id: driverId,
+    driver_name: driverName,
+    selection_state: "selectable",
+    hard_filter_status: "pass",
+    hard_filter_reasons: [],
+    score_bucket: "best_fit",
+    soft_score_total: 98 - recommendationRank,
+    projected_minutes: coverageTarget.projected_minutes,
+    availability_state: "AVAILABLE",
+    current_week_shift_count: 3 + recommendationRank,
+    projected_rolling7_minutes: 1800 + recommendationRank * 45,
+    remaining_rolling7_minutes: 1800 - recommendationRank * 40,
+    fairness_balance: 0.1 + recommendationRank * 0.01,
+    target_shift_gap: 1,
+    preference_fit: 1,
+    preferred_shift_band_fit: 1,
+    preferred_route_slot_class_fit: 1,
+    seniority_preference_fit: 0.9,
+    reliability_score: 0.95,
+    previous_week_stability: 0.9,
+    baseline_template_state: "white_template",
+    planned_driver_day_state: recommendationRank === 1 ? "on_call" : "open",
+    new_agreement_required: false,
+    new_agreement_trigger_reason: "",
+    template_state_preservation_fit: 0.96,
+    clear_same_day_on_call_reserve: recommendationRank === 1,
+    reserve_route_slot_id: recommendationRank === 1 ? "oncall-20260324#01" : null,
+    reserve_route_id: recommendationRank === 1 ? "ON_CALL" : null,
+    assignment_action: recommendationRank === 1 ? "promote_reserve" : "assign_open_driver",
+    evaluation_kind: recommendationRank === 1 ? "reserve_promotion" : "best_fit",
+    ...overrides
+  };
+}
+
 describe("LogisticsScheduleWorkpagePage", () => {
   it(
     "renders the canonical run-backed surface without the redundant landing hero",
@@ -150,6 +198,142 @@ describe("LogisticsScheduleWorkpagePage", () => {
     },
     90000
   );
+
+  it("shows uncovered route additions in red on the main schedule when latest route demand is ahead of the draft", async () => {
+    const workflowRunId = "wr-weekly-001";
+    const draftArtifactVersionId = "av-schedule-artifact-001";
+    const routeDemandArtifactVersionId = "av-route-demand-artifact-002";
+    const coverageCandidatesPath =
+      `/api/v1/workpages/workflow-runs/${workflowRunId}/schedule-v0/artifacts/` +
+      `${draftArtifactVersionId}/route-demand-coverage-candidates`;
+    const coverageTargetA = {
+      target_id: `${routeDemandArtifactVersionId}:2026-03-24:1`,
+      route_slot_id: "slot-20260324-cycle1-standard#18",
+      route_id: "ROUTE-20260324-18",
+      service_date: "2026-03-24",
+      route_slot_class: "standard",
+      station_code: "DVC4",
+      service_area: "Metro core",
+      shift_start: "10:15",
+      shift_end: "18:45",
+      projected_minutes: 510,
+      required_skill: "standard_delivery",
+      vehicle_type: "cargo_van"
+    };
+    const coverageTargetB = {
+      target_id: `${routeDemandArtifactVersionId}:2026-03-24:2`,
+      route_slot_id: "slot-20260324-cycle1-standard#19",
+      route_id: "ROUTE-20260324-19",
+      service_date: "2026-03-24",
+      route_slot_class: "standard",
+      station_code: "DVC4",
+      service_area: "Metro core",
+      shift_start: "10:30",
+      shift_end: "19:00",
+      projected_minutes: 525,
+      required_skill: "standard_delivery",
+      vehicle_type: "cargo_van"
+    };
+    server.use(
+      http.get("*/api/v1/workpages/workflow-runs/:workflowRunId/schedule-v0", ({ params }) => {
+        const payload = structuredClone(scheduleRunWorkpageStateSnapshot.workpage_state) as Record<
+          string,
+          any
+        >;
+        payload.run_context.workflow_run_id = String(params.workflowRunId);
+        payload.route_demand_coverage_context = {
+          workflow_run_id: workflowRunId,
+          schedule_artifact_version_id: draftArtifactVersionId,
+          route_demand_artifact_version_id: routeDemandArtifactVersionId,
+          coverage_candidates_path: coverageCandidatesPath,
+          coverage_apply_path:
+            `/api/v1/workpages/workflow-runs/${workflowRunId}/schedule-v0/artifacts/` +
+            `${draftArtifactVersionId}/route-demand-coverage`,
+          service_dates: ["2026-03-24"],
+          added_route_count: 2,
+          deltas: [
+            {
+              service_date: "2026-03-24",
+              previous_planned_route_count: 20,
+              planned_route_count: 22,
+              delta: 2
+            }
+          ]
+        };
+        payload.actions = payload.actions.map((action: Record<string, unknown>) =>
+          action.kind === "open_latest_draft"
+            ? {
+                ...action,
+                state: "available",
+                artifact_version_id: draftArtifactVersionId,
+                route: `/runs/${workflowRunId}/workpages/schedule-v0/artifacts/${draftArtifactVersionId}`
+              }
+            : action
+        );
+        return HttpResponse.json(payload);
+      }),
+      http.post(`*${coverageCandidatesPath}`, () =>
+        HttpResponse.json({
+          status: "ok",
+          route_demand_coverage_recommendations: {
+            workflow_run_id: workflowRunId,
+            artifact_version_id: draftArtifactVersionId,
+            route_demand_artifact_version_id: routeDemandArtifactVersionId,
+            dependency_state: "aligned",
+            dependencies: [],
+            added_route_count: 2,
+            target_count: 2,
+            max_candidates: 8,
+            targets: [coverageTargetA, coverageTargetB],
+            candidate_groups: [
+              {
+                target: coverageTargetA,
+                candidate_count: 1,
+                pass_candidate_count: 1,
+                candidates: [
+                  buildCoverageCandidate(
+                    coverageTargetA,
+                    1,
+                    "A2TU4ZRI65E1H8",
+                    "Abhiraj Singh"
+                  )
+                ]
+              },
+              {
+                target: coverageTargetB,
+                candidate_count: 1,
+                pass_candidate_count: 1,
+                candidates: [
+                  buildCoverageCandidate(coverageTargetB, 1, "A3M38Z4NGI9OR3", "Akash")
+                ]
+              }
+            ],
+            selected_defaults: [],
+            diagnostic_reason: null
+          }
+        })
+      )
+    );
+    setFrontendOperatorContext();
+    window.history.pushState({}, "", "/runs/wr-weekly-001/workpages/schedule-v0");
+    render(<App />);
+
+    const callout = await screen.findByTestId("schedule-route-demand-recovery-callout");
+    expect(callout).toHaveTextContent("2 added routes are still uncovered");
+    expect(within(callout).getByRole("link", { name: "Open editable draft" })).toHaveAttribute(
+      "href",
+      `/runs/${workflowRunId}/workpages/schedule-v0/artifacts/${draftArtifactVersionId}`
+    );
+
+    const heatmap = heatmapSection(await screen.findByTestId("schedule-workpage-page"));
+    const selectedHeader = heatmap.querySelector(
+      ".schedule-heatmap__date-header--selected"
+    ) as HTMLElement | null;
+    expect(selectedHeader).not.toBeNull();
+    expect(selectedHeader).toHaveClass("schedule-heatmap__date-header--uncovered");
+    expect(within(selectedHeader as HTMLElement).getByText("Gap")).toBeInTheDocument();
+    expect(within(selectedHeader as HTMLElement).getByText("2")).toBeInTheDocument();
+  });
 
   it("shows an error state and retries the canonical run-backed query", async () => {
     const user = userEvent.setup();

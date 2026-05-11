@@ -564,7 +564,7 @@ def test_dispatch_stage01_eos_input_intake_requirements_expose_official_input_ro
     ]
 
 
-def test_dispatch_stage04_final_packet_review_requires_manager_review_and_latest_review_confirmation() -> None:
+def test_dispatch_stage04_final_packet_review_requires_latest_review_confirmation() -> None:
     connection = _connection()
     workflow_run_id = "wr-dispatch-stage04-review"
     human_task_id = "ht-dispatch-stage04-review"
@@ -590,10 +590,9 @@ def test_dispatch_stage04_final_packet_review_requires_manager_review_and_latest
         task_kind="final_packet_review",
     )
     assert initial_state["required_reviews"] == []
-    assert initial_state["missing_required_inputs"] == ["reporting.manager_review.doc"]
-    assert initial_state["blocking_reason_codes"] == [
-        "required_upload_missing:reporting.manager_review.doc"
-    ]
+    assert initial_state["required_uploads"] == []
+    assert initial_state["missing_required_inputs"] == []
+    assert initial_state["blocking_reason_codes"] == []
 
     create_artifact_version_command(
         connection,
@@ -613,19 +612,7 @@ def test_dispatch_stage04_final_packet_review_requires_manager_review_and_latest
         stage_id="Stage04",
         task_kind="final_packet_review",
     )
-    assert draft_state["required_uploads"] == [
-        {
-            "dataset_key": "reporting.manager_review.doc",
-            "template_id": None,
-            "artifact_kind": "reporting.manager_review.doc",
-            "artifact_role": "evidence",
-            "required": True,
-            "required_count": 1,
-            "current_count": 0,
-            "linked_count": 0,
-            "status": "missing",
-        }
-    ]
+    assert draft_state["required_uploads"] == []
     assert draft_state["required_reviews"] == [
         {
             "dataset_key": "reporting.upd_draft.workbook",
@@ -636,33 +623,10 @@ def test_dispatch_stage04_final_packet_review_requires_manager_review_and_latest
             "status": "pending_confirmation",
         }
     ]
-    assert draft_state["missing_required_inputs"] == [
-        "reporting.manager_review.doc",
-        "reporting.upd_draft.workbook",
-    ]
+    assert draft_state["missing_required_inputs"] == ["reporting.upd_draft.workbook"]
     assert draft_state["blocking_reason_codes"] == [
-        "required_upload_missing:reporting.manager_review.doc",
         "required_review_confirmation_missing:reporting.upd_draft.workbook",
     ]
-
-    create_artifact_version_command(
-        connection,
-        _artifact_payload(
-            workflow_run_id,
-            artifact_version_id="av-dispatch-manager-review",
-            artifact_kind="reporting.manager_review.doc",
-            artifact_role="evidence",
-            relation_kind="attachment",
-            subject_id=human_task_id,
-            links=[
-                {
-                    "subject_kind": "human_task",
-                    "subject_id": human_task_id,
-                    "relation_kind": "attachment",
-                }
-            ],
-        ),
-    )
     create_artifact_version_command(
         connection,
         _artifact_payload(

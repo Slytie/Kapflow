@@ -91,6 +91,16 @@ Optional launcher context:
 - While the scheduling run is active, the route-demand surface should show `Agent working`.
 - On success, the app should navigate to the future run’s canonical `schedule-v0` route and auto-open the existing quick-edit popup on the newest draft.
 
+### Optional Existing-Week Coverage Demo
+- This path is optional and stays entirely in the pre-publish weekly-draft lane. It does not use live dispatch.
+- Open `route_demand_artifact_url`.
+- Increase one or more visible planned route counts on the current operational week.
+- Use `Run coverage agent`.
+- The route-demand popup should close, the app should navigate to the canonical `schedule-v0` artifact route for the current weekly draft, and the existing quick-edit popup should open automatically.
+- Review the backend-ranked coverage recommendation panel above the normal schedule edit surface.
+- Apply a selectable recommendation.
+- On success, the popup should remain on the successor schedule draft created by the backend apply path.
+
 Recovery note:
 - If a prior future-week scheduling attempt stays stuck on `Agent working`, reconcile stale execution sessions before retrying:
 ```bash

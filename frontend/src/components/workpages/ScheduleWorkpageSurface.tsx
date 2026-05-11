@@ -4,6 +4,7 @@ import { Link } from "react-router-dom";
 import { DraftVersionTimeline, type DraftVersionTimelineEntry } from "@/components/workpages/DraftVersionTimeline";
 import {
   ScheduleHeatmapEditor,
+  type ScheduleRouteDemandPendingCell,
   type ScheduleSickNoShowTarget
 } from "@/components/workpages/ScheduleHeatmapEditor";
 import { WorkpageSummaryCardsSection } from "@/components/workpages/WorkpageContent";
@@ -336,7 +337,10 @@ export function ScheduleWorkpageSurface({
   presentation = "default",
   onMarkSickNoShow,
   sickNoShowDisabled = false,
-  sickNoShowPendingKey = null
+  sickNoShowPendingKey = null,
+  routeDemandUnresolvedCountsByServiceDate = {},
+  routeDemandPendingCells = {},
+  onRouteDemandCellToggle
 }: {
   summarySection: WorkpageSummaryCardsSectionModel | null;
   heatmapSection: WorkpageScheduleHeatmapSection | null;
@@ -358,6 +362,14 @@ export function ScheduleWorkpageSurface({
   onMarkSickNoShow?: (target: ScheduleSickNoShowTarget) => void;
   sickNoShowDisabled?: boolean;
   sickNoShowPendingKey?: string | null;
+  routeDemandUnresolvedCountsByServiceDate?: Record<string, number>;
+  routeDemandPendingCells?: Record<string, ScheduleRouteDemandPendingCell>;
+  onRouteDemandCellToggle?: (target: {
+    driverId: string;
+    driverName: string;
+    serviceDate: string;
+    serviceDateLabel: string;
+  }) => string | null;
 }): JSX.Element {
   const selectedDay = calculations?.selected_day ?? null;
   const selectedServiceDate = selectedDay?.service_date ?? null;
@@ -391,6 +403,9 @@ export function ScheduleWorkpageSurface({
       onMarkSickNoShow={onMarkSickNoShow}
       sickNoShowDisabled={sickNoShowDisabled}
       sickNoShowPendingKey={sickNoShowPendingKey}
+      routeDemandUnresolvedCounts={routeDemandUnresolvedCountsByServiceDate}
+      routeDemandPendingCells={routeDemandPendingCells}
+      onRouteDemandCellToggle={onRouteDemandCellToggle}
     />
   ) : null;
 

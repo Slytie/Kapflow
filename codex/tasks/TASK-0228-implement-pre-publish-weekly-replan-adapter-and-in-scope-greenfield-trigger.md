@@ -66,3 +66,15 @@ Add a weekly-backed replan adapter that can create or reuse canonical weekly tas
 - Brownfield pre-publish changes stay deterministic-first.
 - No hidden legacy refresh-task path remains for the new pre-publish replan flow.
 - The old manual scheduler click is no longer required for the greenfield pre-publish path.
+
+## 2026-05-10 implementation note
+Landed subset:
+- future-week `Save and run scheduling agent` remains intact as the greenfield weekly Stage04 activation path
+- existing-week positive route-count increases now support a deterministic-first pre-publish weekly-draft coverage handoff over the current draft schedule via backend recommend/apply
+- the legacy plain route-demand save refresh-task path is no longer the active mechanism for this existing-week coverage slice
+
+Remaining before this task can honestly move to `DONE`:
+- auto-trigger from in-scope `0 -> N` route additions without a manual click is not completed by this landing
+- canonical runtime-status and actionability projection are not surfaced yet as the shared EPIC-135 contract
+- post-publish live-dispatch-backed repair remains out of scope here
+- driver-contact/phone projection is still not landed

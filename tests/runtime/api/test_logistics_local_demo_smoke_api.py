@@ -468,14 +468,6 @@ def test_weekly_first_local_demo_seed_smoke_path_walks_weekly_live_and_reporting
         workflow_run_id=reporting_run_id,
         artifact_kind="reporting.upd_draft.workbook",
     )
-    _upload_json_artifact(
-        client,
-        human_task_id=reporting_review_task_id,
-        artifact_kind="reporting.manager_review.doc",
-        artifact_role="evidence",
-        metadata_json={"status": "approved_for_finalize"},
-        idempotency_key="api:local-demo:reporting-review-doc-upload",
-    )
     reporting_confirmed = client.post(
         f"/api/v1/human-tasks/{reporting_review_task_id}/confirm-review",
         payload={

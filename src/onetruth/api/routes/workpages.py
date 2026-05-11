@@ -5,12 +5,14 @@ import sqlite3
 from onetruth.application.handlers._shared.command_boundary import CommandError
 from onetruth.application.handlers.workpages import (
     add_driver_availability_exception_command,
+    apply_schedule_route_demand_coverage_command,
     create_workflow_run_driver_preferences_snapshot_command,
     create_workflow_run_route_demand_next_week_command,
     create_workflow_run_eod_draft_command,
     ensure_workflow_run_eod_intake_task_command,
     mark_schedule_sick_no_show_command,
     preview_schedule_artifact_workpage_command,
+    recommend_schedule_route_demand_coverage_command,
     save_and_run_route_demand_artifact_workpage_command,
     submit_driver_preferences_artifact_workpage_command,
     submit_route_demand_artifact_workpage_command,
@@ -255,6 +257,74 @@ def mark_schedule_sick_no_show_endpoint(
         raise api_error_from_command(exc) from exc
     return {
         "command": "api.workpages.schedule.sick_no_show",
+        **result,
+    }
+
+
+def recommend_schedule_route_demand_coverage_endpoint(
+    connection: sqlite3.Connection,
+    *,
+    context: RequestContext,
+    workflow_run_id: str,
+    workpage_kind: str,
+    artifact_version_id: str,
+    payload: dict[str, object],
+) -> dict[str, object]:
+    _editable_schedule_artifact_endpoint_context(
+        connection,
+        context=context,
+        workflow_run_id=workflow_run_id,
+        workpage_kind=workpage_kind,
+        artifact_version_id=artifact_version_id,
+    )
+    try:
+        result = recommend_schedule_route_demand_coverage_command(
+            connection,
+            {
+                **payload,
+                "artifact_version_id": artifact_version_id,
+            },
+        )
+    except CommandError as exc:
+        raise api_error_from_command(exc) from exc
+    return {
+        "command": "api.workpages.schedule.route_demand_coverage_candidates",
+        **result,
+    }
+
+
+def apply_schedule_route_demand_coverage_endpoint(
+    connection: sqlite3.Connection,
+    *,
+    context: RequestContext,
+    db_url: str,
+    workflow_run_id: str,
+    workpage_kind: str,
+    artifact_version_id: str,
+    payload: dict[str, object],
+) -> dict[str, object]:
+    _editable_schedule_artifact_endpoint_context(
+        connection,
+        context=context,
+        workflow_run_id=workflow_run_id,
+        workpage_kind=workpage_kind,
+        artifact_version_id=artifact_version_id,
+    )
+    try:
+        result = apply_schedule_route_demand_coverage_command(
+            connection,
+            {
+                **payload,
+                "artifact_version_id": artifact_version_id,
+                "actor_id": context.actor_id,
+                "actor_type": context.actor_type,
+            },
+            storage_root=default_storage_root_for_db_url(db_url),
+        )
+    except CommandError as exc:
+        raise api_error_from_command(exc) from exc
+    return {
+        "command": "api.workpages.schedule.route_demand_coverage",
         **result,
     }
 
@@ -868,6 +938,57 @@ def _resolve_public_artifact_descriptor(
             details={"artifact_version_id": artifact_version_id},
         )
     return descriptor
+
+
+def _editable_schedule_artifact_endpoint_context(
+    connection: sqlite3.Connection,
+    *,
+    context: RequestContext,
+    workflow_run_id: str,
+    workpage_kind: str,
+    artifact_version_id: str,
+) -> tuple[dict[str, object], WorkpageDescriptor]:
+    if workpage_kind != SCHEDULE_WORKPAGE_KIND:
+        raise ApiError(
+            status_code=404,
+            code="workpage_artifact_not_found",
+            message="artifact-backed workpage not found",
+            details={"artifact_version_id": artifact_version_id},
+        )
+    try:
+        artifact = show_artifact_version_command(connection, artifact_version_id)
+    except CommandError as exc:
+        raise api_error_from_command(exc) from exc
+    artifact_workflow_run_id = str(artifact["workflow_run_id"])
+    if artifact_workflow_run_id != workflow_run_id:
+        raise ApiError(
+            status_code=404,
+            code="workpage_artifact_not_found",
+            message="artifact-backed workpage not found",
+            details={"artifact_version_id": artifact_version_id},
+        )
+    workflow_run = _scoped_workflow_run_for_artifact(
+        connection,
+        context=context,
+        workflow_run_id=artifact_workflow_run_id,
+        artifact=artifact,
+        artifact_version_id=artifact_version_id,
+    )
+    descriptor = _resolve_public_artifact_descriptor(
+        workflow_id=str(workflow_run["workflow_id"]),
+        artifact=artifact,
+        artifact_version_id=artifact_version_id,
+        workpage_kind=workpage_kind,
+    )
+    artifact_kind = str(artifact.get("artifact_kind") or artifact.get("dataset_key") or "")
+    if not descriptor.supports_editable_artifact_kind(artifact_kind):
+        raise ApiError(
+            status_code=404,
+            code="workpage_artifact_not_found",
+            message="artifact-backed workpage not found",
+            details={"artifact_version_id": artifact_version_id},
+        )
+    return workflow_run, descriptor
 
 
 def _scoped_workflow_run_for_artifact(

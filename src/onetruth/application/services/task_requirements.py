@@ -160,14 +160,7 @@ _REQUIRED_UPLOAD_SPECS: dict[tuple[str, str, str], tuple[dict[str, Any], ...]] =
         "dispatch_reporting.v1",
         "Stage04",
         "final_packet_review",
-    ): (
-        {
-            "dataset_key": "reporting.manager_review.doc",
-            "artifact_kind": "reporting.manager_review.doc",
-            "artifact_role": "evidence",
-            "allowed_relation_kinds": ("attachment",),
-        },
-    ),
+    ): (),
     (
         "live_dispatch.v1",
         "Stage01",

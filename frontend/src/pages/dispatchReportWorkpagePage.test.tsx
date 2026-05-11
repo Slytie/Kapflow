@@ -309,7 +309,6 @@ describe("DispatchReportWorkpagePage", () => {
     let intakeWorkbookUploaded = false;
     let intakeCompleted = false;
     let reviewClaimed = false;
-    let managerReviewUploaded = false;
     let reviewIsConfirmed = false;
     let reviewCompleted = false;
     let approvalRequested = false;
@@ -429,19 +428,8 @@ describe("DispatchReportWorkpagePage", () => {
         blocked_on_ref: null,
         spawned_from_flag_id: null,
         can_confirm_review: !reviewCompleted && !reviewIsConfirmed,
-        missing_required_inputs: managerReviewUploaded ? [] : ["reporting.manager_review.doc"],
-        required_uploads: [
-          {
-            dataset_key: "reporting.manager_review.doc",
-            template_id: null,
-            artifact_kind: "reporting.manager_review.doc",
-            artifact_role: "evidence",
-            required: true,
-            required_count: 1,
-            current_count: managerReviewUploaded ? 1 : 0,
-            status: managerReviewUploaded ? "satisfied" : "missing"
-          }
-        ],
+        missing_required_inputs: [],
+        required_uploads: [],
         required_reviews: [
           {
             dataset_key: "reporting.upd_draft.workbook",
@@ -544,22 +532,15 @@ describe("DispatchReportWorkpagePage", () => {
           intakeWorkbookUploaded = true;
           intakeUploadBodies.push((await request.json()) as Record<string, unknown>);
         }
-        if (String(params.humanTaskId) === "ht-stage04-closeout") {
-          managerReviewUploaded = true;
-        }
         return HttpResponse.json({
           status: "ok",
           command: "api.human_tasks.artifacts.upload",
           artifact_version: {
             artifact_version_id: "av-upload-closeout",
             workflow_run_id: "wr-reporting-001",
-            task_run_id: String(params.humanTaskId) === "ht-stage01-closeout"
-              ? "tr-stage01-closeout"
-              : "tr-stage04-closeout",
-            artifact_kind: String(params.humanTaskId) === "ht-stage01-closeout"
-              ? "reporting.eos_raw.workbook"
-              : "reporting.manager_review.doc",
-            artifact_role: "evidence",
+            task_run_id: "tr-stage01-closeout",
+            artifact_kind: "reporting.eos_raw.workbook",
+            artifact_role: "official_input",
             media_type: "application/octet-stream",
             storage_uri: "memory://upload",
             content_digest: "sha256:test",
@@ -660,17 +641,13 @@ describe("DispatchReportWorkpagePage", () => {
     expect(within(dialog).getByTestId("dispatch-closeout-latest-draft")).toHaveTextContent(
       "av-closeout-draft-001"
     );
+    expect(within(dialog).queryByLabelText("Manager review file")).not.toBeInTheDocument();
 
     await user.click(within(dialog).getByRole("button", { name: "Submit draft" }));
     await waitFor(() => {
       expect(submittedDraftCount).toBe(1);
     });
 
-    await user.upload(
-      within(dialog).getByLabelText("Manager review file"),
-      new File(["manager review"], "manager-review.txt", { type: "text/plain" })
-    );
-    await user.click(within(dialog).getByRole("button", { name: "Attach manager review" }));
     await user.click(within(dialog).getByRole("button", { name: "Confirm latest draft review" }));
     await user.click(within(dialog).getByRole("button", { name: "Complete review task" }));
 

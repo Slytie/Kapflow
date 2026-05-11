@@ -29,4 +29,5 @@ The draft packet remains draft-only until manager confirmation.
 Finalized output must link to:
 - the raw EOS upload,
 - the normalized actuals,
-- the review evidence.
+- the reviewed draft workbook,
+- the review confirmation evidence.

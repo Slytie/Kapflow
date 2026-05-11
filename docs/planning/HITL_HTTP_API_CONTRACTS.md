@@ -230,7 +230,7 @@ Weekly workspace-specific notes:
 
 Dispatch-reporting workspace-specific notes:
 - `dispatch_reporting.v1` `Stage01/eos_input_intake` required uploads now include explicit `artifact_role`; `reporting.eos_raw.workbook` is required `official_input`, while `reporting.eos_raw.doc` remains optional `evidence`.
-- `dispatch_reporting.v1` `Stage04/final_packet_review` requires `reporting.manager_review.doc` plus review confirmation on the latest `reporting.upd_draft.workbook`.
+- `dispatch_reporting.v1` `Stage04/final_packet_review` requires review confirmation on the latest `reporting.upd_draft.workbook` and no longer requires a separate manager-review upload.
 - `dispatch_reporting.v1` `Stage04/final_packet_review` work items may expose the canonical `eod-v0` `open_route` workpage action against the latest draft workbook.
 
 Stage-linked workpage action shape (`workpage_actions[]`, extended in `TASK-0216`):
@@ -574,7 +574,7 @@ Weekly completion semantics:
 
 Dispatch-reporting completion semantics:
 - `dispatch_reporting.v1` `Stage01/eos_input_intake` keeps `outcome=complete` at the API boundary, but the backend maps it to `eos_inputs_ready`; completion fails closed unless the run has a latest `reporting.eos_raw.workbook`, and success deterministically creates `reporting.actuals_normalized.workbook`, seeds `reporting.upd_draft.workbook`, and upserts one `Stage04/final_packet_review` task keyed to that draft version.
-- `dispatch_reporting.v1` `Stage04/final_packet_review` keeps `outcome=complete`, but the backend maps it to `draft_ready_for_manager_confirmation`; completion fails closed unless `reporting.manager_review.doc` is attached and review confirmation covers the latest draft workbook, and success requests one `Stage04` approval for `confirm_dispatch_reporting_packet`.
+- `dispatch_reporting.v1` `Stage04/final_packet_review` keeps `outcome=complete`, but the backend maps it to `draft_ready_for_manager_confirmation`; completion fails closed unless review confirmation covers the latest draft workbook, and success requests one `Stage04` approval for `confirm_dispatch_reporting_packet`.
 
 ### 4.3 Respond approval
 Endpoint:

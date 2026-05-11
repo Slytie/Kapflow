@@ -12,12 +12,14 @@ from onetruth.api.route_specs._core import (
 )
 from onetruth.api.routes.workpages import (
     add_workflow_run_driver_availability_exception_endpoint,
+    apply_schedule_route_demand_coverage_endpoint,
     create_workflow_run_driver_preferences_snapshot_endpoint,
     create_workflow_run_route_demand_next_week_endpoint,
     create_workflow_run_eod_draft_endpoint,
     ensure_workflow_run_eod_intake_task_endpoint,
     mark_schedule_sick_no_show_endpoint,
     preview_workflow_run_artifact_workpage_endpoint,
+    recommend_schedule_route_demand_coverage_endpoint,
     save_and_run_route_demand_artifact_workpage_endpoint,
     submit_workflow_run_artifact_workpage_endpoint,
     workflow_run_artifact_workpage_endpoint,
@@ -145,6 +147,35 @@ def _dispatch_schedule_sick_no_show(execution, raw_value: str):
     )
 
 
+def _dispatch_schedule_route_demand_coverage_candidates(execution, raw_value: str):
+    workflow_run_id, workpage_kind, artifact_version_id = _split_workflow_run_artifact_path(
+        raw_value
+    )
+    return recommend_schedule_route_demand_coverage_endpoint(
+        require_connection(execution.connection),
+        context=require_request_context(execution.context),
+        workflow_run_id=workflow_run_id,
+        workpage_kind=workpage_kind,
+        artifact_version_id=artifact_version_id,
+        payload=_require_payload(execution.payload),
+    )
+
+
+def _dispatch_schedule_route_demand_coverage(execution, raw_value: str):
+    workflow_run_id, workpage_kind, artifact_version_id = _split_workflow_run_artifact_path(
+        raw_value
+    )
+    return apply_schedule_route_demand_coverage_endpoint(
+        require_connection(execution.connection),
+        context=require_request_context(execution.context),
+        db_url=execution.db_url,
+        workflow_run_id=workflow_run_id,
+        workpage_kind=workpage_kind,
+        artifact_version_id=artifact_version_id,
+        payload=_require_payload(execution.payload),
+    )
+
+
 WORKPAGE_ROUTE_SPECS: tuple[RouteSpec, ...] = (
     RouteSpec(
         name="workpages.workflow_run.artifact.preview",
@@ -181,6 +212,57 @@ WORKPAGE_ROUTE_SPECS: tuple[RouteSpec, ...] = (
         ),
     ),
     RouteSpec(
+        name="workpages.workflow_run.schedule.sick_no_show",
+        method="POST",
+        pattern=_param(
+            "/api/v1/workpages/workflow-runs/",
+            param_name="workflow_run_schedule_sick_no_show",
+            suffix="/sick-no-show",
+            allow_slash=True,
+            required_substring="/artifacts/",
+        ),
+        body_policy=JSON_COMMAND_BODY,
+        needs_page=False,
+        dispatch=lambda execution, params: _dispatch_schedule_sick_no_show(
+            execution,
+            params["workflow_run_schedule_sick_no_show"],
+        ),
+    ),
+    RouteSpec(
+        name="workpages.workflow_run.schedule.route_demand_coverage_candidates",
+        method="POST",
+        pattern=_param(
+            "/api/v1/workpages/workflow-runs/",
+            param_name="workflow_run_schedule_route_demand_coverage_candidates",
+            suffix="/route-demand-coverage-candidates",
+            allow_slash=True,
+            required_substring="/artifacts/",
+        ),
+        body_policy=JSON_COMMAND_BODY,
+        needs_page=False,
+        dispatch=lambda execution, params: _dispatch_schedule_route_demand_coverage_candidates(
+            execution,
+            params["workflow_run_schedule_route_demand_coverage_candidates"],
+        ),
+    ),
+    RouteSpec(
+        name="workpages.workflow_run.schedule.route_demand_coverage",
+        method="POST",
+        pattern=_param(
+            "/api/v1/workpages/workflow-runs/",
+            param_name="workflow_run_schedule_route_demand_coverage",
+            suffix="/route-demand-coverage",
+            allow_slash=True,
+            required_substring="/artifacts/",
+        ),
+        body_policy=JSON_COMMAND_BODY,
+        needs_page=False,
+        dispatch=lambda execution, params: _dispatch_schedule_route_demand_coverage(
+            execution,
+            params["workflow_run_schedule_route_demand_coverage"],
+        ),
+    ),
+    RouteSpec(
         name="workpages.workflow_run.artifact.detail",
         method="GET",
         pattern=_param(
@@ -211,23 +293,6 @@ WORKPAGE_ROUTE_SPECS: tuple[RouteSpec, ...] = (
         dispatch=lambda execution, params: _dispatch_workflow_run_artifact_submit(
             execution,
             params["workflow_run_artifact_submit"],
-        ),
-    ),
-    RouteSpec(
-        name="workpages.workflow_run.schedule.sick_no_show",
-        method="POST",
-        pattern=_param(
-            "/api/v1/workpages/workflow-runs/",
-            param_name="workflow_run_schedule_sick_no_show",
-            suffix="/sick-no-show",
-            allow_slash=True,
-            required_substring="/artifacts/",
-        ),
-        body_policy=JSON_COMMAND_BODY,
-        needs_page=False,
-        dispatch=lambda execution, params: _dispatch_schedule_sick_no_show(
-            execution,
-            params["workflow_run_schedule_sick_no_show"],
         ),
     ),
     RouteSpec(

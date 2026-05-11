@@ -6,6 +6,8 @@ import type {
   WorkpageCreateResponse,
   WorkpageEodIntakeTask,
   WorkpagePreviewResponse,
+  WorkpageScheduleRouteDemandCoverageApplyResponse,
+  WorkpageScheduleRouteDemandCoverageRecommendationsResponse,
   WorkpageSubmittedResponse
 } from "@/lib/types/contracts";
 import type { WorkpageActionRef } from "@/lib/types/workpages";
@@ -212,6 +214,54 @@ export const workpagesRepository = {
       idempotency_key: createIdempotencyKey(
         "workpage-schedule-sick-no-show",
         `${artifactVersionId}:${payload.driverId}:${payload.serviceDate}:${payload.reasonNote}`
+      )
+    });
+  },
+
+  async getScheduleRouteDemandCoverageCandidatesAtPath(
+    coverageCandidatesPath: string,
+    payload: {
+      routeDemandArtifactVersionId: string;
+      serviceDates?: string[];
+      rows: Array<Record<string, unknown>>;
+      reserveRows: Array<Record<string, unknown>>;
+      maxCandidates?: number;
+    }
+  ): Promise<WorkpageScheduleRouteDemandCoverageRecommendationsResponse> {
+    return onetruthApi.getScheduleRouteDemandCoverageCandidatesAtPath(
+      coverageCandidatesPath,
+      {
+        route_demand_artifact_version_id: payload.routeDemandArtifactVersionId,
+        service_dates: payload.serviceDates,
+        rows: payload.rows,
+        reserve_rows: payload.reserveRows,
+        max_candidates: payload.maxCandidates
+      }
+    );
+  },
+
+  async applyScheduleRouteDemandCoverageAtPath(
+    coverageApplyPath: string,
+    artifactVersionId: string,
+    payload: {
+      routeDemandArtifactVersionId: string;
+      serviceDates?: string[];
+      rows: Array<Record<string, unknown>>;
+      reserveRows: Array<Record<string, unknown>>;
+      selections: Array<Record<string, unknown>>;
+      maxCandidates?: number;
+    }
+  ): Promise<WorkpageScheduleRouteDemandCoverageApplyResponse> {
+    return onetruthApi.applyScheduleRouteDemandCoverageAtPath(coverageApplyPath, {
+      route_demand_artifact_version_id: payload.routeDemandArtifactVersionId,
+      service_dates: payload.serviceDates,
+      rows: payload.rows,
+      reserve_rows: payload.reserveRows,
+      selections: payload.selections,
+      max_candidates: payload.maxCandidates,
+      idempotency_key: createIdempotencyKey(
+        "workpage-schedule-route-demand-coverage",
+        `${artifactVersionId}:${payload.routeDemandArtifactVersionId}`
       )
     });
   },

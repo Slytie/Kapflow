@@ -36,7 +36,7 @@ The daily reporting lane is the authoritative source of actual-routes truth and 
    - required `reporting.eos_raw.workbook` as `official_input`
    - optional `reporting.eos_raw.doc` as `evidence`
 3. Complete the intake task with the existing `outcome=complete`; backend maps it to `eos_inputs_ready`, validates the EOS workbook, deterministically creates `reporting.actuals_normalized.workbook`, seeds `reporting.upd_draft.workbook`, and upserts one `Stage04/final_packet_review` human task keyed to that draft version.
-4. Review/edit through the existing `eod-v0` artifact-backed workpage, upload `reporting.manager_review.doc`, confirm review against the latest draft workbook, and complete the review task; backend requests one `Stage04` approval for `confirm_dispatch_reporting_packet`.
+4. Review/edit through the existing `eod-v0` artifact-backed workpage, confirm review against the latest draft workbook, and complete the review task; backend requests one `Stage04` approval for `confirm_dispatch_reporting_packet`.
 5. Approve the Stage04 approval through `POST /api/v1/approvals/{approval_id}/respond`; the approval response auto-finalizes daily truth by creating `reporting.final_packet.workbook`, promoting `official:reporting.final_packet.workbook`, and invoking the existing `reporting_actuals_to_future_planning` notify-only handoff.
 
 ## Stop lines kept
