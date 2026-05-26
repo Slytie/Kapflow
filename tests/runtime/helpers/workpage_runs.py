@@ -44,6 +44,7 @@ def seed_actual_ops_weekly_schedule_run(
     tenant_id: str,
     domain_id: str,
     run_tag: str,
+    include_actual_hours: bool = True,
 ) -> dict[str, Any]:
     source_material = _load_actual_ops_source_material()
     fixture_payloads = build_actual_ops_weekly_stage04_fixture_payloads()
@@ -74,6 +75,8 @@ def seed_actual_ops_weekly_schedule_run(
 
     artifacts_by_kind: dict[str, dict[str, Any]] = {}
     for artifact_kind, payload_key in _DATASET_PAYLOAD_KEYS:
+        if not include_actual_hours and artifact_kind == "planning.actual_hours_snapshot.workbook":
+            continue
         created_artifact = run_cli(
             "--db-url",
             db_url,
@@ -110,12 +113,18 @@ def seed_actual_ops_weekly_schedule_run_with_stage04_outputs(
     tenant_id: str,
     domain_id: str,
     run_tag: str,
+    include_actual_hours: bool = True,
 ) -> dict[str, Any]:
+    if not include_actual_hours:
+        raise ValueError(
+            "seed_actual_ops_weekly_schedule_run_with_stage04_outputs requires actual_hours input"
+        )
     seeded = seed_actual_ops_weekly_schedule_run(
         db_url=db_url,
         tenant_id=tenant_id,
         domain_id=domain_id,
         run_tag=run_tag,
+        include_actual_hours=include_actual_hours,
     )
     workflow_run_id = str(seeded["workflow_run_id"])
     artifacts_by_kind = seeded["artifacts_by_kind"]

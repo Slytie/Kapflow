@@ -20,6 +20,7 @@ import type {
   WorkpageContract,
   WorkpageEodIntakeTask,
   WorkpagePreviewResponse,
+  SchedulePreviousWeekRealityContract,
   WorkpageScheduleRouteDemandCoverageApplyResponse,
   WorkpageScheduleRouteDemandCoverageRecommendationsResponse,
   WorkpageSubmittedResponse,
@@ -52,6 +53,11 @@ import type {
   WorkpageScheduleCheck,
   WorkpageScheduleDependency,
   WorkpageScheduleDraftLineage,
+  WorkpageSchedulePreviousWeekReality,
+  WorkpageSchedulePreviousWeekRealityActivityRow,
+  WorkpageSchedulePreviousWeekRealityCell,
+  WorkpageSchedulePreviousWeekRealityDaySummary,
+  WorkpageSchedulePreviousWeekRealityDriver,
   WorkpageRouteDemandAction,
   WorkpageRouteDemandCalculations,
   WorkpageRouteDemandDayCard,
@@ -160,6 +166,13 @@ interface WorkpageEnvelope extends ListEnvelope {
   route_demand_coverage_context?: Record<string, unknown> | null;
   dependencies?: Array<Record<string, unknown>> | null;
   actions?: Array<Record<string, unknown>> | null;
+}
+
+interface SchedulePreviousWeekRealityEnvelope extends ListEnvelope {
+  artifact_context?: Record<string, unknown> | null;
+  source?: Record<string, unknown>;
+  freshness?: Record<string, unknown>;
+  previous_week_reality?: Record<string, unknown> | null;
 }
 
 interface WorkpageCreateEnvelope extends ListEnvelope {
@@ -981,6 +994,50 @@ function normalizeWorkpageContract(payload: WorkpageEnvelope): WorkpageContract 
   };
 }
 
+function normalizeSchedulePreviousWeekRealityContract(
+  payload: SchedulePreviousWeekRealityEnvelope
+): SchedulePreviousWeekRealityContract {
+  const artifactContext = requiredObject(payload.artifact_context, "artifact_context");
+  const source = requiredObject(payload.source, "source");
+  const freshness = requiredObject(payload.freshness, "freshness");
+  const previousWeekReality = requiredObject(
+    payload.previous_week_reality,
+    "previous_week_reality"
+  );
+  return {
+    artifact_context: {
+      artifact_version_id: asString(artifactContext.artifact_version_id),
+      workflow_run_id: asString(artifactContext.workflow_run_id),
+      artifact_kind: asString(artifactContext.artifact_kind),
+      supersedes_artifact_version_id: asStringOrNull(
+        artifactContext.supersedes_artifact_version_id
+      ),
+      superseded_by_artifact_version_id: asStringOrNull(
+        artifactContext.superseded_by_artifact_version_id
+      ),
+      latest_in_chain_artifact_version_id: asString(
+        artifactContext.latest_in_chain_artifact_version_id
+      ),
+      download_path: asString(artifactContext.download_path)
+    },
+    source: {
+      mode: asString(source.mode),
+      primary_dataset_key: asStringOrNull(source.primary_dataset_key),
+      source_dataset_keys: asArray(source.source_dataset_keys)
+        .map((item) => asString(item))
+        .filter(Boolean),
+      source_artifact_version_id: asStringOrNull(source.source_artifact_version_id),
+      source_refs: asArray(source.source_refs).map((item) => asString(item)).filter(Boolean)
+    },
+    freshness: {
+      generated_at: asString(freshness.generated_at),
+      source_kind: asString(freshness.source_kind),
+      source_version: asString(freshness.source_version)
+    },
+    previous_week_reality: normalizeSchedulePreviousWeekReality(previousWeekReality)
+  };
+}
+
 function normalizeWorkpageCreateResponse(payload: WorkpageCreateEnvelope): WorkpageCreateResponse {
   const created = requiredObject(payload.created ?? payload.draft, "created");
   return {
@@ -1357,6 +1414,103 @@ function normalizeScheduleCalculations(
       issues: asArray(item.issues).map((issue) => asString(issue)).filter(Boolean)
     })),
     checks: asArray<Record<string, unknown>>(value.checks).map(normalizeScheduleCheck)
+  };
+}
+
+function normalizeSchedulePreviousWeekRealityCell(
+  value: Record<string, unknown>
+): WorkpageSchedulePreviousWeekRealityCell {
+  return {
+    service_date: asString(value.service_date),
+    state: asString(value.state),
+    normalized_state: asString(value.normalized_state),
+    blocked_reasons: asArray(value.blocked_reasons).map((item) => asString(item)).filter(Boolean),
+    actual_minutes: asNumber(value.actual_minutes),
+    cumulative_week_minutes: asNumber(value.cumulative_week_minutes),
+    route_id: asString(value.route_id, ""),
+    route_slot_class: asString(value.route_slot_class, ""),
+    source_ref: asString(value.source_ref, ""),
+    call_in_sick_flag: Boolean(value.call_in_sick_flag),
+    cancellation_flag: Boolean(value.cancellation_flag),
+    non_working_day_flag: Boolean(value.non_working_day_flag)
+  };
+}
+
+function normalizeSchedulePreviousWeekRealityDaySummary(
+  value: Record<string, unknown>
+): WorkpageSchedulePreviousWeekRealityDaySummary {
+  return {
+    service_date: asString(value.service_date),
+    weekday_label: asString(value.weekday_label),
+    worked_driver_days: asNumber(value.worked_driver_days),
+    blocked_driver_days: asNumber(value.blocked_driver_days),
+    worked_route_count: asNumber(value.worked_route_count),
+    total_minutes: asNumber(value.total_minutes)
+  };
+}
+
+function normalizeSchedulePreviousWeekRealityDriver(
+  value: Record<string, unknown>
+): WorkpageSchedulePreviousWeekRealityDriver {
+  return {
+    driver_id: asString(value.driver_id),
+    driver_name: asString(value.driver_name),
+    employment_type: asString(value.employment_type, ""),
+    on_call_eligible: Boolean(value.on_call_eligible),
+    availability_summary: asString(value.availability_summary, ""),
+    previous_week_minutes: asNumber(value.previous_week_minutes),
+    cells: asArray<Record<string, unknown>>(value.cells).map(
+      normalizeSchedulePreviousWeekRealityCell
+    )
+  };
+}
+
+function normalizeSchedulePreviousWeekRealityActivityRow(
+  value: Record<string, unknown>
+): WorkpageSchedulePreviousWeekRealityActivityRow {
+  return {
+    driver_id: asString(value.driver_id),
+    driver_name: asString(value.driver_name),
+    service_date: asString(value.service_date),
+    weekday_label: asString(value.weekday_label),
+    normalized_state: asString(value.normalized_state),
+    state: asString(value.state),
+    actual_minutes: asNumber(value.actual_minutes),
+    route_id: asString(value.route_id, ""),
+    route_slot_class: asString(value.route_slot_class, ""),
+    source_ref: asString(value.source_ref, ""),
+    call_in_sick_flag: Boolean(value.call_in_sick_flag),
+    cancellation_flag: Boolean(value.cancellation_flag),
+    non_working_day_flag: Boolean(value.non_working_day_flag)
+  };
+}
+
+function normalizeSchedulePreviousWeekReality(
+  value: Record<string, unknown>
+): WorkpageSchedulePreviousWeekReality {
+  return {
+    workflow_run_id: asString(value.workflow_run_id),
+    schedule_artifact_version_id: asString(value.schedule_artifact_version_id),
+    actual_hours_artifact_version_id: asString(value.actual_hours_artifact_version_id),
+    planning_week_id: asString(value.planning_week_id),
+    operational_week_start: asString(value.operational_week_start),
+    previous_week_start: asString(value.previous_week_start),
+    previous_week_end: asString(value.previous_week_end),
+    service_dates: asArray<Record<string, unknown>>(value.service_dates).map((item) => ({
+      service_date: asString(item.service_date),
+      label: asString(item.label),
+      weekday_label: asString(item.weekday_label)
+    })),
+    day_summaries: asArray<Record<string, unknown>>(value.day_summaries).map(
+      normalizeSchedulePreviousWeekRealityDaySummary
+    ),
+    drivers: asArray<Record<string, unknown>>(value.drivers).map(
+      normalizeSchedulePreviousWeekRealityDriver
+    ),
+    activity_rows: asArray<Record<string, unknown>>(value.activity_rows).map(
+      normalizeSchedulePreviousWeekRealityActivityRow
+    ),
+    note: asString(value.note)
   };
 }
 
@@ -2062,6 +2216,16 @@ export const onetruthApi = {
       `/workpages/workflow-runs/${encodeURIComponent(workflowRunId)}/schedule-v0/artifacts/${encodeURIComponent(artifactVersionId)}`
     );
     return normalizeWorkpageContract(payload);
+  },
+
+  async getWorkflowRunScheduleArtifactPreviousWeekReality(
+    workflowRunId: string,
+    artifactVersionId: string
+  ): Promise<SchedulePreviousWeekRealityContract> {
+    const payload = await requestJson<SchedulePreviousWeekRealityEnvelope>(
+      `/workpages/workflow-runs/${encodeURIComponent(workflowRunId)}/schedule-v0/artifacts/${encodeURIComponent(artifactVersionId)}/reality/previous-week`
+    );
+    return normalizeSchedulePreviousWeekRealityContract(payload);
   },
 
   async getWorkflowRunEodArtifactWorkpage(

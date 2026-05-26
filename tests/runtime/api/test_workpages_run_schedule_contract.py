@@ -85,6 +85,7 @@ def _route_demand_submit_rows_from_contract(
         {
             "service_date": str(row["service_date"]),
             "planned_route_count": int(row["planned_route_count"]),
+            "on_call_target": int(row["on_call_target"]),
         }
         for row in day_cards
     ]

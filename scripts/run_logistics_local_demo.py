@@ -9,7 +9,7 @@ import sys
 from onetruth.application.services.logistics_local_demo import (
     DEFAULT_PLANNING_WEEK_ID,
     DEFAULT_SERVICE_DATE_ID,
-    seed_weekly_first_logistics_local_demo,
+    seed_combined_logistics_local_demo,
 )
 from onetruth.infrastructure.db.session import DEFAULT_DB_URL, open_sqlite_connection
 from onetruth.infrastructure.events.event_store import create_sqlite_substrate
@@ -17,7 +17,7 @@ from onetruth.infrastructure.events.event_store import create_sqlite_substrate
 
 def _build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
-        description="Seed the weekly-first local logistics demo and print stable URLs.",
+        description="Seed the combined local logistics demo and print stable URLs.",
     )
     parser.add_argument(
         "--db-url",
@@ -47,7 +47,7 @@ def main(argv: list[str] | None = None) -> int:
     connection = open_sqlite_connection(str(args.db_url))
     try:
         create_sqlite_substrate(connection)
-        seeded = seed_weekly_first_logistics_local_demo(
+        seeded = seed_combined_logistics_local_demo(
             connection,
             db_url=str(args.db_url),
             planning_week_id=str(args.planning_week_id),

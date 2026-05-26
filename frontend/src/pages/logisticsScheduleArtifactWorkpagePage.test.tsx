@@ -1,9 +1,12 @@
 import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { HttpResponse, http } from "msw";
+import { useState } from "react";
+import { afterEach, beforeEach, vi } from "vitest";
 
 import appCss from "@/app/app.css?raw";
 import scheduleArtifactStateSnapshot from "@fixtures/workpage_schedule_v0_artifact_state.json";
+import scheduleRunWorkpageStateSnapshot from "@fixtures/workpage_schedule_v0_run_state.json";
 import { App } from "@/app/App";
 import {
   SCHEDULE_CHECKS_SUMMARY,
@@ -11,12 +14,15 @@ import {
   SCHEDULE_DEPENDENCY_ITEM_SUMMARIES,
   SCHEDULE_DEPENDENCY_STATUS_SUMMARY
 } from "@/components/workpages/ScheduleWorkpageSurface";
+import { ScheduleQuickEditModal } from "@/pages/LogisticsScheduleWorkpagePage";
 import { mutationLog, resetApiState } from "@/test/api/handlers";
+import { renderRoute } from "@/test/renderRoute";
 import { server } from "@/test/api/server";
 import {
   expectHeatmapHeaderStatusGroups,
   expectHeatmapPreferenceBars,
-  expectSelectedDateHeaderStats,
+  expectHeatmapSummaryRailLabels,
+  expectSelectedDateHeaderValues,
   scheduleHeatmapSectionIn as heatmapSectionIn
 } from "./logisticsScheduleTestHelpers";
 
@@ -47,6 +53,26 @@ function heatmapButton(
 
 function personNameFromLabel(label: string): string {
   return label.split(" on ")[0] ?? label;
+}
+
+function setupUser() {
+  return userEvent.setup();
+}
+
+function setTestCurrentServiceDate(serviceDate: string | null): void {
+  if (serviceDate) {
+    (
+      globalThis as {
+        __COMPANYOS_TEST_CURRENT_SERVICE_DATE__?: string;
+      }
+    ).__COMPANYOS_TEST_CURRENT_SERVICE_DATE__ = serviceDate;
+    return;
+  }
+  delete (
+    globalThis as {
+      __COMPANYOS_TEST_CURRENT_SERVICE_DATE__?: string;
+    }
+  ).__COMPANYOS_TEST_CURRENT_SERVICE_DATE__;
 }
 
 function driverHeatmapRow(section: HTMLElement, driverName: string): HTMLElement {
@@ -130,6 +156,20 @@ function buildScheduleArtifactPayload(
         }
       };
     }
+    if (action.kind === "open_previous_week_reality") {
+      return {
+        ...action,
+        artifact_version_id: artifactVersionId,
+        route: `/runs/${workflowRunId}/workpages/schedule-v0/artifacts/${artifactVersionId}/reality/previous-week`,
+        action_ref: {
+          action_id: String(action.action_id),
+          workpage_kind: "schedule-v0",
+          workflow_run_id: workflowRunId,
+          artifact_version_id: artifactVersionId,
+          subject: null
+        }
+      };
+    }
     return action;
   });
   const history = payload.workpage.sections.find(
@@ -142,6 +182,72 @@ function buildScheduleArtifactPayload(
   ];
   customize?.(payload);
   return payload;
+}
+
+function buildScheduleRunPayload(
+  workflowRunId = "wr-weekly-001",
+  customize?: (payload: Record<string, any>) => void
+): Record<string, unknown> {
+  const payload = structuredClone(scheduleRunWorkpageStateSnapshot.workpage_state) as Record<string, any>;
+  payload.run_context.workflow_run_id = workflowRunId;
+  payload.run_context.activation_key = `snapshot:${workflowRunId}:weekly-schedule-workpage`;
+  customize?.(payload);
+  return payload;
+}
+
+function mockScheduleRunLatestDraftAvailable(
+  workflowRunId: string,
+  artifactVersionId = "av-schedule-artifact-001"
+): void {
+  server.use(
+    http.get("*/api/v1/workpages/workflow-runs/:workflowRunId/schedule-v0", ({ params }) =>
+      HttpResponse.json(
+        buildScheduleRunPayload(String(params.workflowRunId), (payload) => {
+          payload.actions = payload.actions.map((action: Record<string, unknown>) =>
+            action.kind === "open_latest_draft"
+              ? {
+                  ...action,
+                  state: "available",
+                  artifact_version_id: artifactVersionId,
+                  route: `/runs/${workflowRunId}/workpages/schedule-v0/artifacts/${artifactVersionId}`,
+                  action_ref: {
+                    action_id: String(action.action_id),
+                    workpage_kind: "schedule-v0",
+                    workflow_run_id: workflowRunId,
+                    artifact_version_id: artifactVersionId,
+                    subject: null
+                  }
+                }
+              : action
+          );
+        })
+      )
+    )
+  );
+}
+
+function ScheduleQuickEditModalHarness({
+  workflowRunId,
+  targetArtifactVersionId = "av-schedule-artifact-001"
+}: {
+  workflowRunId: string;
+  targetArtifactVersionId?: string;
+}): JSX.Element {
+  const [isOpen, setIsOpen] = useState(true);
+  return (
+    <>
+      <section data-testid="schedule-workpage-page" />
+      {isOpen ? (
+        <ScheduleQuickEditModal
+          workflowRunId={workflowRunId}
+          targetArtifactVersionId={targetArtifactVersionId}
+          onClose={() => {
+            setIsOpen(false);
+          }}
+        />
+      ) : null}
+    </>
+  );
 }
 
 function buildCoverageCandidate(
@@ -193,16 +299,25 @@ function buildCoverageCandidate(
 }
 
 describe("LogisticsScheduleArtifactWorkpagePage", () => {
+  beforeEach(() => {
+    setTestCurrentServiceDate("2026-05-26");
+  });
+
+  afterEach(() => {
+    setTestCurrentServiceDate(null);
+    vi.restoreAllMocks();
+  });
+
   it(
-    "opens Edit weekly schedule as a modal, saves a draft, and stays on the background page",
+    "saves a quick-edit schedule draft and closes back to the background page",
     async () => {
-      const user = userEvent.setup();
-      window.history.pushState({}, "", "/runs/wr-weekly-001/workpages/schedule-v0");
-      render(<App />);
+      const user = setupUser();
+      renderRoute(<ScheduleQuickEditModalHarness workflowRunId="wr-weekly-001" />, {
+        route: "/runs/wr-weekly-001/workpages/schedule-v0",
+        path: "/runs/:workflowRunId/workpages/schedule-v0"
+      });
 
       expect(await screen.findByTestId("schedule-workpage-page")).toBeInTheDocument();
-      await user.click(await screen.findByRole("button", { name: "Edit weekly schedule" }));
-
       const dialog = await screen.findByRole("dialog", { name: "Edit Weekly Schedule" });
       expect(dialog).toHaveClass("schedule-quick-edit-modal");
       const editor = await within(dialog).findByTestId("schedule-quick-edit-editor");
@@ -226,8 +341,18 @@ describe("LogisticsScheduleArtifactWorkpagePage", () => {
       expect(within(editor).queryByRole("heading", { name: "Capacity bar" })).not.toBeInTheDocument();
       expectHeatmapHeaderStatusGroups(editor);
       expect(within(editor).queryByRole("heading", { name: "Draft lineage" })).not.toBeInTheDocument();
+      expect(
+        within(editor).getByRole("link", { name: "Open previous-week reality" })
+      ).toHaveAttribute(
+        "href",
+        "/runs/wr-weekly-001/workpages/schedule-v0/artifacts/av-schedule-artifact-001/reality/previous-week"
+      );
+      expect(
+        within(editor).getByRole("link", { name: "Open previous-week reality" })
+      ).toHaveAttribute("target", "_blank");
       const heatmap = heatmapSectionIn(editor);
-      expectSelectedDateHeaderStats(editor);
+      expectHeatmapSummaryRailLabels(editor);
+      expectSelectedDateHeaderValues(editor);
       expectHeatmapPreferenceBars(editor);
       expect(heatmap).toHaveClass("schedule-heatmap--compact");
       expect(within(heatmap).getByRole("columnheader", { name: "Hrs" })).toBeInTheDocument();
@@ -270,7 +395,6 @@ describe("LogisticsScheduleArtifactWorkpagePage", () => {
           screen.queryByRole("dialog", { name: "Edit Weekly Schedule" })
         ).not.toBeInTheDocument();
       });
-      expect(window.location.pathname).toBe("/runs/wr-weekly-001/workpages/schedule-v0");
       expect(mutationLog()).toContain(
         "workpage-schedule-artifact-submit:av-schedule-artifact-001:av-schedule-artifact-002"
       );
@@ -281,7 +405,7 @@ describe("LogisticsScheduleArtifactWorkpagePage", () => {
   it(
     "normalizes duplicate same-day defaults into distinct drivers and re-enables released choices",
     async () => {
-      const user = userEvent.setup();
+      const user = setupUser();
       resetApiState();
       const workflowRunId = "wr-weekly-001";
       const artifactVersionId = "av-schedule-artifact-001";
@@ -302,8 +426,8 @@ describe("LogisticsScheduleArtifactWorkpagePage", () => {
         station_code: "DVC4",
         service_area: "Metro core",
         shift_start: "10:15",
-        shift_end: "18:45",
-        projected_minutes: 510,
+        shift_end: "16:15",
+        projected_minutes: 360,
         required_skill: "standard_delivery",
         vehicle_type: "cargo_van"
       };
@@ -316,8 +440,8 @@ describe("LogisticsScheduleArtifactWorkpagePage", () => {
         station_code: "DVC4",
         service_area: "Metro core",
         shift_start: "10:30",
-        shift_end: "19:00",
-        projected_minutes: 525,
+        shift_end: "16:30",
+        projected_minutes: 360,
         required_skill: "standard_delivery",
         vehicle_type: "cargo_van"
       };
@@ -608,7 +732,7 @@ describe("LogisticsScheduleArtifactWorkpagePage", () => {
   it(
     "keeps apply disabled when same-day targets do not have enough distinct selectable drivers",
     async () => {
-      const user = userEvent.setup();
+      const user = setupUser();
       resetApiState();
       const workflowRunId = "wr-weekly-001";
       const artifactVersionId = "av-schedule-artifact-001";
@@ -625,8 +749,8 @@ describe("LogisticsScheduleArtifactWorkpagePage", () => {
         station_code: "DVC4",
         service_area: "Metro core",
         shift_start: "10:15",
-        shift_end: "18:45",
-        projected_minutes: 510,
+        shift_end: "16:15",
+        projected_minutes: 360,
         required_skill: "standard_delivery",
         vehicle_type: "cargo_van"
       };
@@ -639,8 +763,8 @@ describe("LogisticsScheduleArtifactWorkpagePage", () => {
         station_code: "DVC4",
         service_area: "Metro core",
         shift_start: "10:30",
-        shift_end: "19:00",
-        projected_minutes: 525,
+        shift_end: "16:30",
+        projected_minutes: 360,
         required_skill: "standard_delivery",
         vehicle_type: "cargo_van"
       };
@@ -754,7 +878,7 @@ describe("LogisticsScheduleArtifactWorkpagePage", () => {
   it(
     "shows unresolved route additions in red and auto-picks the top unresolved route from an empty heatmap cell",
     async () => {
-    const user = userEvent.setup();
+    const user = setupUser();
     resetApiState();
     const workflowRunId = "wr-weekly-001";
     const artifactVersionId = "av-schedule-artifact-001";
@@ -790,8 +914,8 @@ describe("LogisticsScheduleArtifactWorkpagePage", () => {
       station_code: "DVC4",
       service_area: "Metro core",
       shift_start: "10:15",
-      shift_end: "18:45",
-      projected_minutes: 510,
+      shift_end: "16:15",
+      projected_minutes: 360,
       required_skill: "standard_delivery",
       vehicle_type: "cargo_van"
     };
@@ -804,8 +928,8 @@ describe("LogisticsScheduleArtifactWorkpagePage", () => {
       station_code: "DVC4",
       service_area: "Metro core",
       shift_start: "10:30",
-      shift_end: "19:00",
-      projected_minutes: 525,
+      shift_end: "16:30",
+      projected_minutes: 360,
       required_skill: "standard_delivery",
       vehicle_type: "cargo_van"
     };
@@ -893,7 +1017,7 @@ describe("LogisticsScheduleArtifactWorkpagePage", () => {
     ) as HTMLElement | null;
     expect(selectedHeader).not.toBeNull();
     expect(selectedHeader).toHaveClass("schedule-heatmap__date-header--uncovered");
-    expect(within(selectedHeader as HTMLElement).getByText("Gap")).toBeInTheDocument();
+    expectHeatmapSummaryRailLabels(page, { includesGap: true });
     expect(within(selectedHeader as HTMLElement).getByText("2")).toBeInTheDocument();
 
     const abhirajCell = heatmapButton(
@@ -914,6 +1038,7 @@ describe("LogisticsScheduleArtifactWorkpagePage", () => {
         name: /Select Abhiraj Singh for ROUTE-20260324-19 on 2026-03-24/
       })
     ).toBeDisabled();
+    expectHeatmapSummaryRailLabels(page, { includesGap: true });
     expect(within(selectedHeader as HTMLElement).getByText("1")).toBeInTheDocument();
 
     await user.click(abhirajCell);
@@ -923,6 +1048,7 @@ describe("LogisticsScheduleArtifactWorkpagePage", () => {
         name: /Select Abhiraj Singh for ROUTE-20260324-18 on 2026-03-24/
       })
     ).not.toBeChecked();
+    expectHeatmapSummaryRailLabels(page, { includesGap: true });
     expect(within(selectedHeader as HTMLElement).getByText("2")).toBeInTheDocument();
     },
     10000
@@ -931,7 +1057,7 @@ describe("LogisticsScheduleArtifactWorkpagePage", () => {
   it(
     "applies pending heatmap route adds through the coverage apply endpoint",
     async () => {
-      const user = userEvent.setup();
+      const user = setupUser();
       resetApiState();
       const workflowRunId = "wr-weekly-001";
       const artifactVersionId = "av-schedule-artifact-001";
@@ -969,8 +1095,8 @@ describe("LogisticsScheduleArtifactWorkpagePage", () => {
         station_code: "DVC4",
         service_area: "Metro core",
         shift_start: "10:45",
-        shift_end: "19:15",
-        projected_minutes: 535,
+        shift_end: "16:45",
+        projected_minutes: 360,
         required_skill: "standard_delivery",
         vehicle_type: "cargo_van"
       };
@@ -1092,7 +1218,7 @@ describe("LogisticsScheduleArtifactWorkpagePage", () => {
   it(
     "keeps a single-target backend default inline inside the day-grouped coverage layout",
     async () => {
-      const user = userEvent.setup();
+      const user = setupUser();
       resetApiState();
       const workflowRunId = "wr-weekly-001";
       const artifactVersionId = "av-schedule-artifact-001";
@@ -1109,8 +1235,8 @@ describe("LogisticsScheduleArtifactWorkpagePage", () => {
         station_code: "DVC4",
         service_area: "Metro core",
         shift_start: "10:15",
-        shift_end: "18:45",
-        projected_minutes: 510,
+        shift_end: "16:15",
+        projected_minutes: 360,
         required_skill: "standard_delivery",
         vehicle_type: "cargo_van"
       };
@@ -1232,14 +1358,14 @@ describe("LogisticsScheduleArtifactWorkpagePage", () => {
   it(
     "marks a driver Sick / No Show from the weekly schedule quick-edit heatmap",
     async () => {
-      const user = userEvent.setup();
+      const user = setupUser();
       resetApiState();
-      window.history.pushState({}, "", "/runs/wr-weekly-001/workpages/schedule-v0");
-      render(<App />);
+      renderRoute(<ScheduleQuickEditModalHarness workflowRunId="wr-weekly-001" />, {
+        route: "/runs/wr-weekly-001/workpages/schedule-v0",
+        path: "/runs/:workflowRunId/workpages/schedule-v0"
+      });
 
       expect(await screen.findByTestId("schedule-workpage-page")).toBeInTheDocument();
-      await user.click(await screen.findByRole("button", { name: "Edit weekly schedule" }));
-
       const dialog = await screen.findByRole("dialog", { name: "Edit Weekly Schedule" });
       const editor = await within(dialog).findByTestId("schedule-quick-edit-editor");
       const heatmap = heatmapSectionIn(editor);
@@ -1291,10 +1417,22 @@ describe("LogisticsScheduleArtifactWorkpagePage", () => {
     );
   });
 
+  it("styles heatmap summary metrics with larger black type while preserving uncovered warning red", () => {
+    expect(appCss).toMatch(
+      /\.schedule-heatmap__summary-row--label\s*{[\s\S]*?color:\s*#000000;[\s\S]*?font-size:\s*12px;[\s\S]*?letter-spacing:\s*0\.05em;/
+    );
+    expect(appCss).toMatch(
+      /\.schedule-heatmap__summary-value\s*{[\s\S]*?color:\s*#000000;[\s\S]*?font-size:\s*22px;[\s\S]*?line-height:\s*1;/
+    );
+    expect(appCss).toMatch(
+      /\.schedule-heatmap__date-header--uncovered \.schedule-heatmap__summary-value\s*{[\s\S]*?color:\s*#a43f36;/
+    );
+  });
+
   it(
     "opens the standalone latest draft artifact, auto-previews heatmap edits, saves a superseding version, and downloads JSON",
     async () => {
-      const user = userEvent.setup();
+      const user = setupUser();
       window.history.pushState(
         {},
         "",
@@ -1317,12 +1455,23 @@ describe("LogisticsScheduleArtifactWorkpagePage", () => {
       expect(
         within(artifactHeroActions as HTMLElement).getByRole("link", { name: "Back to query landing" })
       ).toBeInTheDocument();
-      expect(within(artifactPage).getByRole("heading", { name: "Accepted history" })).toBeInTheDocument();
-      expect(within(artifactPage).getByRole("heading", { name: "Draft lineage" })).toBeInTheDocument();
+      expect(
+        within(artifactPage).queryByRole("heading", { name: "Accepted history" })
+      ).not.toBeInTheDocument();
+      expect(within(artifactPage).queryByRole("heading", { name: "Draft lineage" })).not.toBeInTheDocument();
       expect(within(artifactPage).getByRole("heading", { name: "Live preview" })).toBeInTheDocument();
       const { dependencyGroup, checksGroup } = expectHeatmapHeaderStatusGroups(artifactPage);
       expect(within(artifactPage).queryByRole("heading", { name: "Driver metrics" })).not.toBeInTheDocument();
-      expect(within(artifactPage).getByText("No accepted schedule history is available for this surface yet.")).toBeInTheDocument();
+      expect(
+        within(artifactPage).queryByText(
+          "Accepted navigation stays on accepted weekly history only and never traverses draft lineage."
+        )
+      ).not.toBeInTheDocument();
+      expect(
+        within(artifactPage).queryByText(
+          "Draft navigation stays within backend-authored draft lineage for this immutable schedule surface."
+        )
+      ).not.toBeInTheDocument();
       expect(screen.queryByRole("tooltip")).not.toBeInTheDocument();
       const dependencySummaryButton = within(dependencyGroup).getByRole("button", {
         name: "Show summary for Dependency status"
@@ -1359,10 +1508,11 @@ describe("LogisticsScheduleArtifactWorkpagePage", () => {
       const selectedHeatmapDate = heatmap.querySelector(".schedule-heatmap__date-header--selected");
       expect(selectedHeatmapDate).not.toBeNull();
       expect(selectedHeatmapDate).toHaveTextContent("2026-03-24");
-      expectSelectedDateHeaderStats(artifactPage);
+      expectHeatmapSummaryRailLabels(artifactPage);
+      expectSelectedDateHeaderValues(artifactPage);
       expectHeatmapPreferenceBars(artifactPage);
       const abhirajRow = driverHeatmapRow(heatmap, "Abhiraj Singh");
-      expect(within(abhirajRow).getByText("25.5 h")).toBeInTheDocument();
+      expect(within(abhirajRow).getByText("18.0 h")).toBeInTheDocument();
       expect(within(abhirajRow).queryByText("Pref Unset")).not.toBeInTheDocument();
       expect(within(abhirajRow).queryByText("Avail Available")).not.toBeInTheDocument();
       const riskTrigger = within(abhirajRow).getByRole("button", {
@@ -1413,9 +1563,7 @@ describe("LogisticsScheduleArtifactWorkpagePage", () => {
       });
 
       expect(await screen.findByTestId("schedule-artifact-workpage-page")).toBeInTheDocument();
-      const historyPanel = screen.getByTestId("schedule-draft-history-rail");
-      expect(within(historyPanel as HTMLElement).getByText("Current draft")).toBeInTheDocument();
-      expect(within(historyPanel as HTMLElement).getAllByText("Previous draft").length).toBeGreaterThan(0);
+      expect(screen.queryByTestId("schedule-draft-history-rail")).not.toBeInTheDocument();
 
       await user.click(screen.getByRole("button", { name: "Download draft JSON" }));
       await waitFor(() => {
@@ -1426,15 +1574,15 @@ describe("LogisticsScheduleArtifactWorkpagePage", () => {
   );
 
   it(
-    "reopens the previous draft from the draft rail and shows the stale-version guidance",
+    "shows stale-version guidance when an older draft route is reopened directly",
     async () => {
-      const user = userEvent.setup();
+      const user = setupUser();
       window.history.pushState(
         {},
         "",
         "/runs/wr-weekly-001/workpages/schedule-v0/artifacts/av-schedule-artifact-001"
       );
-      render(<App />);
+      const { unmount } = render(<App />);
 
       expect(await screen.findByTestId("schedule-artifact-workpage-page")).toBeInTheDocument();
       await user.click(screen.getByRole("button", { name: "Save draft" }));
@@ -1445,17 +1593,18 @@ describe("LogisticsScheduleArtifactWorkpagePage", () => {
         );
       });
 
-      await user.click(
-        within(screen.getByTestId("schedule-draft-history-av-schedule-artifact-001")).getByRole("link", {
-          name: /Previous draft/i
-        })
+      unmount();
+      window.history.pushState(
+        {},
+        "",
+        "/runs/wr-weekly-001/workpages/schedule-v0/artifacts/av-schedule-artifact-001"
       );
+      render(<App />);
 
-      await waitFor(() => {
-        expect(window.location.pathname).toBe(
-          "/runs/wr-weekly-001/workpages/schedule-v0/artifacts/av-schedule-artifact-001"
-        );
-      });
+      expect(await screen.findByTestId("schedule-artifact-workpage-page")).toBeInTheDocument();
+      expect(window.location.pathname).toBe(
+        "/runs/wr-weekly-001/workpages/schedule-v0/artifacts/av-schedule-artifact-001"
+      );
       expect(await screen.findByRole("heading", { name: "Latest draft available" })).toBeInTheDocument();
     },
     45000
@@ -1464,7 +1613,7 @@ describe("LogisticsScheduleArtifactWorkpagePage", () => {
   it(
     "shows conflict reopen UX and keeps local edits until the operator navigates",
     async () => {
-      const user = userEvent.setup();
+      const user = setupUser();
       server.use(
         http.post(
           "*/api/v1/workpages/workflow-runs/:workflowRunId/schedule-v0/artifacts/:artifactVersionId/submit",
@@ -1535,8 +1684,7 @@ describe("LogisticsScheduleArtifactWorkpagePage", () => {
     90000
   );
 
-  it("uses accepted-series navigation without traversing the draft rail", async () => {
-    const user = userEvent.setup();
+  it("hides accepted and draft history side rails on accepted artifact pages", async () => {
     server.use(
       http.get(
         "*/api/v1/workpages/workflow-runs/:workflowRunId/schedule-v0/artifacts/av-schedule-accepted-002",
@@ -1673,22 +1821,15 @@ describe("LogisticsScheduleArtifactWorkpagePage", () => {
     render(<App />);
 
     expect(await screen.findByTestId("schedule-artifact-workpage-page")).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "Accepted history" })).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "Draft lineage" })).toBeInTheDocument();
-
-    await user.click(screen.getByRole("link", { name: "Previous accepted" }));
-
-    await waitFor(() => {
-      expect(window.location.pathname).toBe(
-        "/runs/wr-weekly-000/workpages/schedule-v0/artifacts/av-schedule-accepted-001"
-      );
-    });
+    expect(screen.queryByRole("heading", { name: "Accepted history" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Draft lineage" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Previous accepted" })).not.toBeInTheDocument();
   }, 30000);
 
   it(
     "keeps the last successful preview visible when a later preview fails",
     async () => {
-      const user = userEvent.setup();
+      const user = setupUser();
       window.history.pushState(
         {},
         "",
@@ -1758,7 +1899,7 @@ describe("LogisticsScheduleArtifactWorkpagePage", () => {
   it(
     "drops mismatched workspace subject context when saving schedule drafts directly",
     async () => {
-      const user = userEvent.setup();
+      const user = setupUser();
       const submitBodies: Array<Record<string, unknown>> = [];
       server.use(
         http.get(
@@ -1831,7 +1972,7 @@ describe("LogisticsScheduleArtifactWorkpagePage", () => {
   it(
     "supports same-day assignment to reserve swaps in the heatmap",
     async () => {
-      const user = userEvent.setup();
+      const user = setupUser();
       window.history.pushState(
         {},
         "",
@@ -1868,5 +2009,213 @@ describe("LogisticsScheduleArtifactWorkpagePage", () => {
       ).toBeInTheDocument();
     },
     30000
+  );
+
+  it(
+    "replaces elapsed columns with previous-week reality on the full artifact page",
+    async () => {
+      const workflowRunId = "wr-weekly-inline-001";
+      setTestCurrentServiceDate("2026-03-25");
+      window.history.pushState(
+        {},
+        "",
+        `/runs/${workflowRunId}/workpages/schedule-v0/artifacts/av-schedule-artifact-001`
+      );
+      render(<App />);
+
+      expect(await screen.findByTestId("schedule-artifact-workpage-page")).toBeInTheDocument();
+      const heatmap = heatmapSection();
+      expect(within(heatmap).getAllByText("Read-only prior week")).toHaveLength(3);
+      expect(within(heatmap).getByText("2026-03-15")).toBeInTheDocument();
+      expect(within(heatmap).getByText("2026-03-16")).toBeInTheDocument();
+      expect(within(heatmap).getByText("2026-03-17")).toBeInTheDocument();
+      expect(
+        within(heatmap).queryByRole("button", {
+          name: /on 2026-03-15:/i
+        })
+      ).not.toBeInTheDocument();
+      const selectedHeatmapDate = heatmap.querySelector(".schedule-heatmap__date-header--selected");
+      expect(selectedHeatmapDate).not.toBeNull();
+      const selectedHeader = selectedHeatmapDate as HTMLElement;
+      expect(selectedHeader).toHaveTextContent("2026-03-25");
+      expect(within(selectedHeader).getByText("19")).toBeInTheDocument();
+      expect(within(selectedHeader).getByText("22")).toBeInTheDocument();
+      expect(within(selectedHeader).getByText("4 / 4")).toBeInTheDocument();
+      expect(within(selectedHeader).getByText("25")).toBeInTheDocument();
+    },
+    30000
+  );
+
+  it(
+    "shows the same previous-week reality comparison inside the quick edit modal",
+    async () => {
+      const workflowRunId = "wr-weekly-inline-modal-001";
+      setTestCurrentServiceDate("2026-03-25");
+      mockScheduleRunLatestDraftAvailable(workflowRunId);
+      renderRoute(<ScheduleQuickEditModal workflowRunId={workflowRunId} onClose={vi.fn()} />, {
+        route: `/runs/${workflowRunId}/workpages/schedule-v0`,
+        path: "/runs/:workflowRunId/workpages/schedule-v0"
+      });
+      const dialog = await screen.findByRole("dialog", { name: "Edit Weekly Schedule" });
+      const editor = await within(dialog).findByTestId("schedule-quick-edit-editor");
+      const heatmap = heatmapSectionIn(editor);
+      expect(within(heatmap).getAllByText("Read-only prior week")).toHaveLength(3);
+      expect(within(heatmap).getByText("2026-03-15")).toBeInTheDocument();
+      expect(
+        within(heatmap).queryByRole("button", {
+          name: /on 2026-03-15:/i
+        })
+      ).not.toBeInTheDocument();
+      const selectedHeatmapDate = heatmap.querySelector(".schedule-heatmap__date-header--selected");
+      expect(selectedHeatmapDate).not.toBeNull();
+      expect(selectedHeatmapDate).toHaveTextContent("2026-03-25");
+    },
+    30000
+  );
+
+  it(
+    "falls back to the planned grid with a warning when previous-week reality fails to load",
+    async () => {
+      setTestCurrentServiceDate("2026-03-25");
+      server.use(
+        http.get(
+          "*/api/v1/workpages/workflow-runs/:workflowRunId/schedule-v0/artifacts/:artifactVersionId/reality/previous-week",
+          () =>
+            HttpResponse.json(
+              {
+                status: "error",
+                error: {
+                  code: "workpage_projection_unavailable",
+                  message: "reality temporarily unavailable"
+                }
+              },
+              { status: 409 }
+            )
+        )
+      );
+      window.history.pushState(
+        {},
+        "",
+        "/runs/wr-weekly-001/workpages/schedule-v0/artifacts/av-schedule-artifact-001"
+      );
+      render(<App />);
+
+      expect(await screen.findByTestId("schedule-artifact-workpage-page")).toBeInTheDocument();
+      expect(await screen.findByRole("heading", { name: "Previous-week reality unavailable" })).toBeInTheDocument();
+      const heatmap = heatmapSection();
+      expect(within(heatmap).queryByText("Read-only prior week")).not.toBeInTheDocument();
+      expect(within(heatmap).queryByText("2026-03-15")).not.toBeInTheDocument();
+      const selectedHeatmapDate = heatmap.querySelector(".schedule-heatmap__date-header--selected");
+      expect(selectedHeatmapDate).not.toBeNull();
+      expect(selectedHeatmapDate).toHaveTextContent("2026-03-24");
+    },
+    30000
+  );
+
+  it(
+    "shows the previous-week reality new-tab action on the full artifact page",
+    async () => {
+      window.history.pushState(
+        {},
+        "",
+        "/runs/wr-weekly-001/workpages/schedule-v0/artifacts/av-schedule-artifact-001"
+      );
+      render(<App />);
+
+      expect(await screen.findByTestId("schedule-artifact-workpage-page")).toBeInTheDocument();
+      expect(screen.getByRole("link", { name: "Open previous-week reality" })).toHaveAttribute(
+        "href",
+        "/runs/wr-weekly-001/workpages/schedule-v0/artifacts/av-schedule-artifact-001/reality/previous-week"
+      );
+      expect(screen.getByRole("link", { name: "Open previous-week reality" })).toHaveAttribute(
+        "target",
+        "_blank"
+      );
+    },
+    20000
+  );
+
+  it(
+    "renders the dedicated previous-week reality page",
+    async () => {
+      window.history.pushState(
+        {},
+        "",
+        "/runs/wr-weekly-001/workpages/schedule-v0/artifacts/av-schedule-artifact-001/reality/previous-week"
+      );
+      render(<App />);
+
+      expect(await screen.findByTestId("schedule-previous-week-reality-page")).toBeInTheDocument();
+      expect(screen.getByText("Previous-week reality")).toBeInTheDocument();
+      expect(screen.getByTestId("schedule-previous-week-reality-layout")).toBeInTheDocument();
+      expect(screen.getByTestId("schedule-previous-week-reality-rail-summary")).toBeInTheDocument();
+      expect(screen.getByText("Daily summary")).toBeInTheDocument();
+      expect(screen.getByTestId("schedule-previous-week-reality-grid")).toBeInTheDocument();
+      expect(screen.queryByText("Previous-week summary")).not.toBeInTheDocument();
+      expect(screen.queryByText("Previous-Week Reality Artifact")).not.toBeInTheDocument();
+      expect(
+        screen.queryByText(
+          "This surface stays read-only and pinned to the same actual-hours dependency the draft used when weekly scheduling was built."
+        )
+      ).not.toBeInTheDocument();
+      expect(
+        screen.queryByText(
+          "A read-only artifact lane for the pinned prior-week actual-hours snapshot that grounded this weekly schedule draft."
+        )
+      ).not.toBeInTheDocument();
+      expect(screen.queryByText("cycle1_standard")).not.toBeInTheDocument();
+      expect(screen.queryByText("Raw: WORKED")).not.toBeInTheDocument();
+      expect(screen.queryByText(/Ref:\s*compat-package/)).not.toBeInTheDocument();
+      expect(screen.queryByText("HIST-20260315-E1H8")).not.toBeInTheDocument();
+      expect(screen.queryByText("No route")).not.toBeInTheDocument();
+      expect(
+        screen.getAllByText((_content, element) => element?.textContent === "8h [8h]").length
+      ).toBeGreaterThan(0);
+      expect(
+        screen.getAllByText((_content, element) => element?.textContent === "0m [8h]").length
+      ).toBeGreaterThan(0);
+      expect(screen.getByText("Material prior-week activity")).toBeInTheDocument();
+    },
+    20000
+  );
+
+  it(
+    "shows a clear error state when previous-week reality is unavailable",
+    async () => {
+      server.use(
+        http.get(
+          "*/api/v1/workpages/workflow-runs/:workflowRunId/schedule-v0/artifacts/:artifactVersionId/reality/previous-week",
+          () =>
+            HttpResponse.json(
+              {
+                status: "error",
+                error: {
+                  code: "workpage_projection_unavailable",
+                  message:
+                    "previous-week reality is unavailable until this draft resolves a pinned actual-hours snapshot"
+                }
+              },
+              { status: 409 }
+            )
+        )
+      );
+
+      window.history.pushState(
+        {},
+        "",
+        "/runs/wr-weekly-001/workpages/schedule-v0/artifacts/av-schedule-artifact-001/reality/previous-week"
+      );
+      render(<App />);
+
+      await waitFor(() => {
+        expect(screen.getByText("Previous-week reality failed to load")).toBeInTheDocument();
+      });
+      expect(
+        screen.getByText(
+          "This draft does not have a pinned actual-hours snapshot, so previous-week reality is unavailable."
+        )
+      ).toBeInTheDocument();
+    },
+    20000
   );
 });

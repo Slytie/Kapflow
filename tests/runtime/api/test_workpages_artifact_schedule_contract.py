@@ -5,11 +5,21 @@ import json
 from pathlib import Path
 from typing import Any
 
+from onetruth.application.services.dispatch_reporting_raw_eos import (
+    project_raw_eos_workbook,
+)
 from onetruth.infrastructure.db.session import open_sqlite_connection
+from tests.runtime.helpers.dispatch_reporting import (
+    REAL_ZIP_WEEK_EXPECTED_DAY_TOTALS,
+    REAL_ZIP_WEEK_SAMPLE_ROW,
+    REAL_ZIP_WEEK_SERVICE_DATES,
+    real_zip_week_workbook_path,
+)
 from tests.runtime.helpers.runtime_api import RuntimeApiClient
 from tests.runtime.helpers.runtime_cli import run_cli, stdout_json
 from tests.runtime.helpers.workpage_runs import (
     create_driver_preferences_snapshot,
+    seed_actual_ops_weekly_schedule_run,
     seed_actual_ops_weekly_schedule_run_with_stage04_outputs,
     seed_dispatch_reporting_workpage_run,
 )
@@ -177,6 +187,10 @@ def _preview_path(workflow_run_id: str, artifact_version_id: str) -> str:
     return f"{_artifact_path(workflow_run_id, artifact_version_id)}/preview"
 
 
+def _previous_week_reality_path(workflow_run_id: str, artifact_version_id: str) -> str:
+    return f"{_artifact_path(workflow_run_id, artifact_version_id)}/reality/previous-week"
+
+
 def _sick_no_show_path(workflow_run_id: str, artifact_version_id: str) -> str:
     return f"{_artifact_path(workflow_run_id, artifact_version_id)}/sick-no-show"
 
@@ -201,6 +215,7 @@ def _route_demand_submit_rows_from_contract(
         {
             "service_date": str(item["service_date"]),
             "planned_route_count": int(item["planned_route_count"]),
+            "on_call_target": int(item["on_call_target"]),
         }
         for item in day_cards
     ]
@@ -382,6 +397,156 @@ def _update_artifact_metadata_json(
             (json.dumps(metadata_json, separators=(",", ":")), artifact_version_id),
         )
         connection.commit()
+
+
+def _assert_no_zero_minute_worked_like_cells(reality: dict[str, Any]) -> None:
+    bad_cells = [
+        {
+            "driver_id": str(driver["driver_id"]),
+            "driver_name": str(driver["driver_name"]),
+            "service_date": str(cell["service_date"]),
+            "state": str(cell["state"]),
+            "normalized_state": str(cell["normalized_state"]),
+            "actual_minutes": int(cell["actual_minutes"]),
+        }
+        for driver in reality["drivers"]
+        for cell in driver["cells"]
+        if int(cell["actual_minutes"]) == 0
+        and (
+            str(cell["state"]).upper() in {"WORKED", "ON_CALL", "DISPATCH"}
+            or str(cell["normalized_state"]) == "worked"
+        )
+    ]
+    assert not bad_cells, bad_cells
+
+
+def _normalized_reporting_payload_from_real_workbook(service_date: str) -> dict[str, Any]:
+    workbook_path = real_zip_week_workbook_path(service_date)
+    projection = project_raw_eos_workbook(
+        workbook_path.read_bytes(),
+        source_metadata_json={"service_date": service_date},
+        source_file_name=workbook_path.name,
+    )
+    rows = []
+    for row in projection.route_rows:
+        rows.append(
+            {
+                "row_id": str(row.get("row_id") or ""),
+                "service_date": str(row.get("service_date") or service_date),
+                "route_id": str(row.get("route_id") or ""),
+                "driver_id": str(row.get("driver_id") or ""),
+                "driver_name": str(row.get("driver_name") or ""),
+                "actual_minutes": int(row.get("actual_minutes") or 0),
+                "returned_packages": int(row.get("returns") or 0),
+                "return_reasons": str(row.get("return_reasons") or ""),
+                "upd_candidate": False,
+                "formula_integrity_warning": "",
+            }
+        )
+    return {
+        "schema_version": "1.0",
+        "kind": "dispatch_reporting.actuals_normalized",
+        "service_date": service_date,
+        "station_code": projection.station_code,
+        "dsp_name": projection.dsp_name,
+        "rows": rows,
+        "quality_warnings": projection.quality_warning_rows,
+        "break_tracker": {
+            "sheet_present": projection.break_tracker_sheet_present,
+            "rows": projection.break_tracker_rows,
+        },
+        "route_adherence": {
+            "sheet_present": projection.route_adherence_sheet_present,
+            "cycles": projection.route_adherence_cycles,
+        },
+        "totals": {
+            "route_count": len(rows),
+            "upd_candidate_count": 0,
+        },
+    }
+
+
+def _seed_real_reporting_feedback(tmp_path: Path, *, service_date: str) -> dict[str, Any]:
+    created_run = run_cli(
+        "--db-url",
+        _db_url(tmp_path),
+        "runs",
+        "create",
+        "--json",
+        json.dumps(
+            {
+                "workflow_id": "dispatch_reporting.v1",
+                "workflow_version": "v1",
+                "tenant_id": "tenant-a",
+                "domain_id": "domain-x",
+                "partition_key": f"SD-{service_date}",
+                "logical_date": service_date,
+                "activation_key": f"api:workpages:previous-week-real:{service_date}:run",
+                "idempotency_key": f"api:workpages:previous-week-real:{service_date}:runs.create",
+            },
+            separators=(",", ":"),
+        ),
+    )
+    workflow_run = stdout_json(created_run)["workflow_run"]
+    workflow_run_id = str(workflow_run["workflow_run_id"])
+    normalized_artifact = _create_artifact_version(
+        tmp_path,
+        workflow_run_id=workflow_run_id,
+        artifact_kind="reporting.actuals_normalized.workbook",
+        metadata_json=_normalized_reporting_payload_from_real_workbook(service_date),
+        idempotency_key=f"api:workpages:previous-week-real:{service_date}:normalized",
+    )
+    final_packet = run_cli(
+        "--db-url",
+        _db_url(tmp_path),
+        "artifacts",
+        "create-version",
+        "--json",
+        json.dumps(
+            {
+                "workflow_run_id": workflow_run_id,
+                "artifact_kind": "reporting.final_packet.workbook",
+                "artifact_role": "official_output",
+                "media_type": "application/octet-stream",
+                "storage_uri": f"inmem://workpages/real-previous-week/{service_date}/final-packet",
+                "content_digest": (
+                    f"sha256:api:workpages:previous-week-real:{service_date}:final-packet"
+                ),
+                "metadata_json": {
+                    "normalized_artifact_version_id": str(
+                        normalized_artifact["artifact_version_id"]
+                    ),
+                },
+                "canonical_partition_kind": "ServiceDateID",
+                "canonical_partition_key": f"SD-{service_date}",
+                "idempotency_key": f"api:workpages:previous-week-real:{service_date}:final-packet",
+            },
+            separators=(",", ":"),
+        ),
+    )
+    final_packet_artifact = stdout_json(final_packet)["artifact_version"]
+    notified = run_cli(
+        "--db-url",
+        _db_url(tmp_path),
+        "handoffs",
+        "notify-only",
+        "--json",
+        json.dumps(
+            {
+                "edge_id": "reporting_actuals_to_future_planning",
+                "source_workflow_run_id": workflow_run_id,
+                "source_artifact_version_id": str(final_packet_artifact["artifact_version_id"]),
+                "idempotency_key": f"api:workpages:previous-week-real:{service_date}:notify",
+            },
+            separators=(",", ":"),
+        ),
+    )
+    return {
+        "workflow_run": workflow_run,
+        "normalized_artifact": normalized_artifact,
+        "final_packet_artifact": final_packet_artifact,
+        "notify_result": stdout_json(notified)["result"],
+    }
 
 
 def test_artifact_backed_schedule_workpage_returns_projected_contract(tmp_path: Path) -> None:
@@ -593,6 +758,25 @@ def test_artifact_backed_schedule_workpage_returns_projected_contract(tmp_path: 
         ),
         "disabled_reason": None,
     }
+    assert _action_by_id(actions, "workpage.schedule-v0.open_previous_week_reality") == {
+        "action_id": "workpage.schedule-v0.open_previous_week_reality",
+        "kind": "open_previous_week_reality",
+        "label": "Open previous-week reality",
+        "state": "available",
+        "workpage_kind": "schedule-v0",
+        "artifact_version_id": artifact_version_id,
+        "route": (
+            f"/runs/{workflow_run_id}/workpages/schedule-v0/artifacts/"
+            f"{artifact_version_id}/reality/previous-week"
+        ),
+        "action_ref": _action_ref(
+            action_id="workpage.schedule-v0.open_previous_week_reality",
+            workpage_kind="schedule-v0",
+            workflow_run_id=workflow_run_id,
+            artifact_version_id=artifact_version_id,
+        ),
+        "disabled_reason": None,
+    }
     assert _action_by_id(actions, "workpage.schedule-v0.mark_sick_no_show") == {
         "action_id": "workpage.schedule-v0.mark_sick_no_show",
         "kind": "mark_sick_no_show",
@@ -659,6 +843,392 @@ def test_artifact_backed_schedule_workpage_returns_projected_contract(tmp_path: 
     assert parsed_download["columns"]
     assert parsed_download["rows"]
     assert parsed_download["dependency_manifest"]
+
+
+def test_schedule_artifact_previous_week_reality_returns_pinned_actual_hours_projection(
+    tmp_path: Path,
+) -> None:
+    seeded = seed_actual_ops_weekly_schedule_run_with_stage04_outputs(
+        db_url=_db_url(tmp_path),
+        tenant_id="tenant-a",
+        domain_id="domain-x",
+        run_tag="api:workpages:artifact-schedule:previous-week-reality",
+    )
+    workflow_run_id = str(seeded["workflow_run_id"])
+    artifact_version_id = str(seeded["stage04_outputs"]["draft_workbook"]["artifact_version_id"])
+    actual_hours_artifact_version_id = str(
+        seeded["artifacts_by_kind"]["planning.actual_hours_snapshot.workbook"][
+            "artifact_version_id"
+        ]
+    )
+    client = _client(tmp_path)
+
+    artifact_payload = client.get(_artifact_path(workflow_run_id, artifact_version_id)).payload
+    artifact_people = next(
+        section["people"]
+        for section in artifact_payload["workpage"]["sections"]
+        if section["kind"] == "schedule_heatmap"
+    )
+    response = client.get(_previous_week_reality_path(workflow_run_id, artifact_version_id))
+    assert response.status_code == 200, response.payload
+
+    payload = response.payload
+    assert payload["status"] == "ok"
+    assert payload["command"] == "api.workpages.schedule.previous_week_reality"
+    assert payload["artifact_context"]["artifact_version_id"] == artifact_version_id
+    assert payload["artifact_context"]["workflow_run_id"] == workflow_run_id
+    assert payload["source"] == {
+        "mode": "artifact_projection",
+        "primary_dataset_key": "planning.actual_hours_snapshot.workbook",
+        "source_dataset_keys": [
+            "planning.actual_hours_snapshot.workbook",
+            "planning.draft_weekly_schedule.workbook",
+        ],
+        "source_artifact_version_id": actual_hours_artifact_version_id,
+        "source_refs": [
+            f"/api/v1/artifacts/{actual_hours_artifact_version_id}",
+            f"/api/v1/artifacts/{artifact_version_id}",
+        ],
+    }
+    reality = payload["previous_week_reality"]
+    assert reality["workflow_run_id"] == workflow_run_id
+    assert reality["schedule_artifact_version_id"] == artifact_version_id
+    assert reality["actual_hours_artifact_version_id"] == actual_hours_artifact_version_id
+    assert reality["planning_week_id"] == "PW-2026-W13"
+    assert reality["operational_week_start"] == "2026-03-22"
+    assert reality["previous_week_start"] == "2026-03-15"
+    assert reality["previous_week_end"] == "2026-03-21"
+    assert [item["service_date"] for item in reality["service_dates"]] == [
+        "2026-03-15",
+        "2026-03-16",
+        "2026-03-17",
+        "2026-03-18",
+        "2026-03-19",
+        "2026-03-20",
+        "2026-03-21",
+    ]
+    assert len(reality["day_summaries"]) == 7
+    assert len(reality["drivers"]) == len(artifact_people)
+    assert [driver["driver_id"] for driver in reality["drivers"][:5]] == [
+        person["driver_id"] for person in artifact_people[:5]
+    ]
+    assert all(len(driver["cells"]) == 7 for driver in reality["drivers"])
+    example_driver = next(
+        driver
+        for driver in reality["drivers"]
+        if str(driver["driver_id"]) == "A11X1NH2FPH5RV"
+    )
+    assert [int(cell["cumulative_week_minutes"]) for cell in example_driver["cells"]] == [
+        0,
+        510,
+        690,
+        690,
+        690,
+        1200,
+        1710,
+    ]
+    assert int(example_driver["cells"][3]["actual_minutes"]) == 0
+    assert int(example_driver["cells"][3]["cumulative_week_minutes"]) == 690
+    assert reality["activity_rows"]
+    assert "normalized or proxy-shaped" in reality["note"]
+    _assert_no_zero_minute_worked_like_cells(reality)
+
+
+def test_schedule_artifact_previous_week_reality_uses_pinned_actual_hours_not_latest_in_run(
+    tmp_path: Path,
+) -> None:
+    seeded = seed_actual_ops_weekly_schedule_run_with_stage04_outputs(
+        db_url=_db_url(tmp_path),
+        tenant_id="tenant-a",
+        domain_id="domain-x",
+        run_tag="api:workpages:artifact-schedule:previous-week-pinned",
+    )
+    workflow_run_id = str(seeded["workflow_run_id"])
+    artifact_version_id = str(seeded["stage04_outputs"]["draft_workbook"]["artifact_version_id"])
+    pinned_actual_hours_artifact_id = str(
+        seeded["artifacts_by_kind"]["planning.actual_hours_snapshot.workbook"][
+            "artifact_version_id"
+        ]
+    )
+    pinned_actual_hours = _load_artifact_version(
+        tmp_path,
+        artifact_version_id=pinned_actual_hours_artifact_id,
+    )
+    latest_actual_hours = _create_artifact_version(
+        tmp_path,
+        workflow_run_id=workflow_run_id,
+        artifact_kind="planning.actual_hours_snapshot.workbook",
+        metadata_json=dict(pinned_actual_hours["metadata_json"]),
+        idempotency_key="api:workpages:artifact-schedule:previous-week-pinned:new-actual-hours",
+    )
+    client = _client(tmp_path)
+
+    artifact_payload = client.get(_artifact_path(workflow_run_id, artifact_version_id)).payload
+    dependencies = {row["dependency_key"]: row for row in artifact_payload["dependencies"]}
+    assert dependencies["actual_hours"]["artifact_version_id"] == pinned_actual_hours_artifact_id
+    assert dependencies["actual_hours"]["state"] == "drifted"
+
+    response = client.get(_previous_week_reality_path(workflow_run_id, artifact_version_id))
+    assert response.status_code == 200, response.payload
+    assert response.payload["source"]["source_artifact_version_id"] == pinned_actual_hours_artifact_id
+    assert (
+        response.payload["previous_week_reality"]["actual_hours_artifact_version_id"]
+        == pinned_actual_hours_artifact_id
+    )
+    assert latest_actual_hours["artifact_version_id"] != pinned_actual_hours_artifact_id
+
+
+def test_schedule_artifact_previous_week_reality_reflects_real_zip_week_feedback(
+    tmp_path: Path,
+) -> None:
+    seeded = seed_actual_ops_weekly_schedule_run(
+        db_url=_db_url(tmp_path),
+        tenant_id="tenant-a",
+        domain_id="domain-x",
+        run_tag="api:workpages:artifact-schedule:previous-week-real",
+        include_actual_hours=False,
+    )
+    workflow_run_id = str(seeded["workflow_run_id"])
+
+    for service_date in REAL_ZIP_WEEK_SERVICE_DATES:
+        _seed_real_reporting_feedback(tmp_path, service_date=service_date)
+
+    with open_sqlite_connection(_db_url(tmp_path)) as connection:
+        binding_row = connection.execute(
+            """
+            SELECT artifact_version_id
+            FROM workflow_run_inputs
+            WHERE workflow_run_id = ?
+              AND binding_key = 'stage03.actual_hours_snapshot'
+            """,
+            (workflow_run_id,),
+        ).fetchone()
+    assert binding_row is not None
+    actual_hours_artifact_version_id = str(binding_row["artifact_version_id"])
+
+    built = run_cli(
+        "--db-url",
+        _db_url(tmp_path),
+        "schedule-control",
+        "build-weekly",
+        "--json",
+        json.dumps(
+            {
+                "workflow_run_id": workflow_run_id,
+                "route_slot_requirements_artifact_version_id": str(
+                    seeded["artifacts_by_kind"]["planning.route_slot_requirements.workbook"][
+                        "artifact_version_id"
+                    ]
+                ),
+                "driver_capabilities_artifact_version_id": str(
+                    seeded["artifacts_by_kind"]["planning.driver_capabilities.workbook"][
+                        "artifact_version_id"
+                    ]
+                ),
+                "approved_availability_artifact_version_id": str(
+                    seeded["artifacts_by_kind"]["planning.approved_availability.workbook"][
+                        "artifact_version_id"
+                    ]
+                ),
+                "actual_hours_artifact_version_id": actual_hours_artifact_version_id,
+                "idempotency_key": (
+                    "api:workpages:artifact-schedule:previous-week-real:build-weekly"
+                ),
+            },
+            separators=(",", ":"),
+        ),
+    )
+    artifact_version_id = str(
+        stdout_json(built)["result"]["artifacts"]["draft_workbook"]["artifact_version_id"]
+    )
+    client = _client(tmp_path)
+
+    response = client.get(_previous_week_reality_path(workflow_run_id, artifact_version_id))
+    assert response.status_code == 200, response.payload
+    reality = response.payload["previous_week_reality"]
+    assert reality["actual_hours_artifact_version_id"] == actual_hours_artifact_version_id
+
+    actual_day_summaries = {
+        str(item["service_date"]): (
+            int(item["worked_route_count"]),
+            int(item["total_minutes"]),
+        )
+        for item in reality["day_summaries"]
+    }
+    assert actual_day_summaries == REAL_ZIP_WEEK_EXPECTED_DAY_TOTALS
+
+    sample_driver = next(
+        driver
+        for driver in reality["drivers"]
+        if str(driver["driver_id"]) == REAL_ZIP_WEEK_SAMPLE_ROW["driver_id"]
+    )
+    sample_cell = next(
+        cell
+        for cell in sample_driver["cells"]
+        if str(cell["service_date"]) == REAL_ZIP_WEEK_SAMPLE_ROW["service_date"]
+    )
+    sample_cumulative_by_service_date = {
+        str(cell["service_date"]): int(cell["cumulative_week_minutes"])
+        for cell in sample_driver["cells"]
+    }
+    assert sample_driver["driver_name"] == REAL_ZIP_WEEK_SAMPLE_ROW["driver_name"]
+    assert sample_cell["route_id"] == REAL_ZIP_WEEK_SAMPLE_ROW["route_id"]
+    assert sample_cell["actual_minutes"] == REAL_ZIP_WEEK_SAMPLE_ROW["actual_minutes"]
+    assert sample_cell["normalized_state"] == "worked"
+    assert sample_cumulative_by_service_date == {
+        "2026-03-15": 536,
+        "2026-03-16": 1076,
+        "2026-03-17": 1076,
+        "2026-03-18": 1076,
+        "2026-03-19": 1076,
+        "2026-03-20": 1617,
+        "2026-03-21": 2194,
+    }
+    _assert_no_zero_minute_worked_like_cells(reality)
+
+
+def test_schedule_artifact_previous_week_reality_missing_actual_rows_falls_back_without_synthesizing_work(
+    tmp_path: Path,
+) -> None:
+    seeded = seed_actual_ops_weekly_schedule_run(
+        db_url=_db_url(tmp_path),
+        tenant_id="tenant-a",
+        domain_id="domain-x",
+        run_tag="api:workpages:artifact-schedule:previous-week-sparse-actuals",
+    )
+    workflow_run_id = str(seeded["workflow_run_id"])
+    actual_hours_artifact_version_id = str(
+        seeded["artifacts_by_kind"]["planning.actual_hours_snapshot.workbook"][
+            "artifact_version_id"
+        ]
+    )
+    actual_hours_artifact = _load_artifact_version(
+        tmp_path,
+        artifact_version_id=actual_hours_artifact_version_id,
+    )
+    metadata_json = dict(actual_hours_artifact["metadata_json"])
+    rows = list(metadata_json.get("rows") or [])
+    target_driver_id = "A2TU4ZRI65E1H8"
+    metadata_json["rows"] = [
+        row for row in rows if str(row[1] or "") != target_driver_id
+    ]
+    _update_artifact_metadata_json(
+        tmp_path,
+        artifact_version_id=actual_hours_artifact_version_id,
+        metadata_json=metadata_json,
+    )
+
+    built = run_cli(
+        "--db-url",
+        _db_url(tmp_path),
+        "schedule-control",
+        "build-weekly",
+        "--json",
+        json.dumps(
+            {
+                "workflow_run_id": workflow_run_id,
+                "route_slot_requirements_artifact_version_id": str(
+                    seeded["artifacts_by_kind"]["planning.route_slot_requirements.workbook"][
+                        "artifact_version_id"
+                    ]
+                ),
+                "driver_capabilities_artifact_version_id": str(
+                    seeded["artifacts_by_kind"]["planning.driver_capabilities.workbook"][
+                        "artifact_version_id"
+                    ]
+                ),
+                "approved_availability_artifact_version_id": str(
+                    seeded["artifacts_by_kind"]["planning.approved_availability.workbook"][
+                        "artifact_version_id"
+                    ]
+                ),
+                "actual_hours_artifact_version_id": actual_hours_artifact_version_id,
+                "idempotency_key": (
+                    "api:workpages:artifact-schedule:previous-week-sparse-actuals:build"
+                ),
+            },
+            separators=(",", ":"),
+        ),
+    )
+    artifact_version_id = str(
+        stdout_json(built)["result"]["artifacts"]["draft_workbook"]["artifact_version_id"]
+    )
+    client = _client(tmp_path)
+
+    response = client.get(_previous_week_reality_path(workflow_run_id, artifact_version_id))
+    assert response.status_code == 200, response.payload
+    reality = response.payload["previous_week_reality"]
+    target_driver = next(
+        driver for driver in reality["drivers"] if str(driver["driver_id"]) == target_driver_id
+    )
+
+    assert target_driver["driver_name"] == "Abhiraj Singh"
+    assert int(target_driver["previous_week_minutes"]) == 0
+    assert {
+        str(cell["service_date"]): (
+            str(cell["state"]),
+            str(cell["normalized_state"]),
+            int(cell["actual_minutes"]),
+            int(cell["cumulative_week_minutes"]),
+        )
+        for cell in target_driver["cells"]
+    } == {
+        "2026-03-15": ("available_not_assigned", "available_not_assigned", 0, 0),
+        "2026-03-16": ("available_not_assigned", "available_not_assigned", 0, 0),
+        "2026-03-17": ("available_not_assigned", "available_not_assigned", 0, 0),
+        "2026-03-18": ("NA", "pattern_off", 0, 0),
+        "2026-03-19": ("NA", "pattern_off", 0, 0),
+        "2026-03-20": ("pattern_off", "pattern_off", 0, 0),
+        "2026-03-21": ("pattern_off", "pattern_off", 0, 0),
+    }
+    assert not any(
+        str(row["driver_id"]) == target_driver_id for row in reality["activity_rows"]
+    )
+    _assert_no_zero_minute_worked_like_cells(reality)
+
+
+def test_schedule_artifact_previous_week_reality_missing_actual_hours_returns_409(
+    tmp_path: Path,
+) -> None:
+    seeded = seed_actual_ops_weekly_schedule_run_with_stage04_outputs(
+        db_url=_db_url(tmp_path),
+        tenant_id="tenant-a",
+        domain_id="domain-x",
+        run_tag="api:workpages:artifact-schedule:previous-week-missing-actual-hours",
+    )
+    workflow_run_id = str(seeded["workflow_run_id"])
+    artifact_version_id = str(seeded["stage04_outputs"]["draft_workbook"]["artifact_version_id"])
+    artifact = _load_artifact_version(tmp_path, artifact_version_id=artifact_version_id)
+    metadata_json = dict(artifact["metadata_json"])
+    dependency_manifest = list(metadata_json.get("dependency_manifest") or [])
+    for row in dependency_manifest:
+        if str(row.get("dependency_key") or "") == "actual_hours":
+            row["artifact_version_id"] = None
+            row["source_ref"] = None
+    metadata_json["dependency_manifest"] = dependency_manifest
+    _update_artifact_metadata_json(
+        tmp_path,
+        artifact_version_id=artifact_version_id,
+        metadata_json=metadata_json,
+    )
+    client = _client(tmp_path)
+
+    artifact_payload = client.get(_artifact_path(workflow_run_id, artifact_version_id)).payload
+    previous_week_action = _action_by_id(
+        artifact_payload["actions"],
+        "workpage.schedule-v0.open_previous_week_reality",
+    )
+    assert previous_week_action["state"] == "blocked"
+    assert previous_week_action["disabled_reason"] == "actual_hours_dependency_unavailable"
+
+    response = client.get(_previous_week_reality_path(workflow_run_id, artifact_version_id))
+    assert response.status_code == 409
+    assert response.payload["error"]["code"] == "workpage_projection_unavailable"
+    assert response.payload["error"]["details"] == {
+        "workflow_run_id": workflow_run_id,
+        "workpage_id": "schedule-v0.previous-week-reality",
+        "missing_dataset_keys": ["planning.actual_hours_snapshot.workbook"],
+    }
 
 
 def test_editable_schedule_artifact_contract_returns_route_demand_coverage_context_when_draft_is_behind_latest_route_demand(
@@ -811,6 +1381,15 @@ def test_artifact_backed_schedule_workpage_cross_scope_access_fails_closed(tmp_p
     assert response.status_code == 404
     assert response.payload["error"]["code"] == "workpage_artifact_not_found"
     assert response.payload["error"]["details"] == {"artifact_version_id": artifact_version_id}
+
+    previous_week_reality = client.get(
+        _previous_week_reality_path(workflow_run_id, artifact_version_id)
+    )
+    assert previous_week_reality.status_code == 404
+    assert previous_week_reality.payload["error"]["code"] == "workpage_artifact_not_found"
+    assert previous_week_reality.payload["error"]["details"] == {
+        "artifact_version_id": artifact_version_id
+    }
 
 
 def test_published_schedule_artifact_reads_under_schedule_workpage_kind(tmp_path: Path) -> None:
@@ -2019,6 +2598,25 @@ def test_schedule_artifact_hard_dependency_drift_surfaces_and_blocks_save(
         ),
         "disabled_reason": "dependency_drift_detected",
     }
+    assert _action_by_id(actions, "workpage.schedule-v0.open_previous_week_reality") == {
+        "action_id": "workpage.schedule-v0.open_previous_week_reality",
+        "kind": "open_previous_week_reality",
+        "label": "Open previous-week reality",
+        "state": "available",
+        "workpage_kind": "schedule-v0",
+        "artifact_version_id": artifact_version_id,
+        "route": (
+            f"/runs/{workflow_run_id}/workpages/schedule-v0/artifacts/"
+            f"{artifact_version_id}/reality/previous-week"
+        ),
+        "action_ref": _action_ref(
+            action_id="workpage.schedule-v0.open_previous_week_reality",
+            workpage_kind="schedule-v0",
+            workflow_run_id=workflow_run_id,
+            artifact_version_id=artifact_version_id,
+        ),
+        "disabled_reason": None,
+    }
     assert _action_by_id(actions, "workpage.schedule-v0.mark_sick_no_show") == {
         "action_id": "workpage.schedule-v0.mark_sick_no_show",
         "kind": "mark_sick_no_show",
@@ -2169,6 +2767,25 @@ def test_schedule_artifact_without_pinned_manifest_remains_readable_but_blocks_p
             artifact_version_id=artifact_version_id,
         ),
         "disabled_reason": "dependency_baseline_unavailable",
+    }
+    assert _action_by_id(actions, "workpage.schedule-v0.open_previous_week_reality") == {
+        "action_id": "workpage.schedule-v0.open_previous_week_reality",
+        "kind": "open_previous_week_reality",
+        "label": "Open previous-week reality",
+        "state": "blocked",
+        "workpage_kind": "schedule-v0",
+        "artifact_version_id": artifact_version_id,
+        "route": (
+            f"/runs/{workflow_run_id}/workpages/schedule-v0/artifacts/"
+            f"{artifact_version_id}/reality/previous-week"
+        ),
+        "action_ref": _action_ref(
+            action_id="workpage.schedule-v0.open_previous_week_reality",
+            workpage_kind="schedule-v0",
+            workflow_run_id=workflow_run_id,
+            artifact_version_id=artifact_version_id,
+        ),
+        "disabled_reason": "actual_hours_dependency_unavailable",
     }
     assert _action_by_id(actions, "workpage.route-demand-v0.open_latest")["state"] == "available"
     assert _action_by_id(actions, "workpage.driver-preferences-v0.create_snapshot")["state"] == "available"

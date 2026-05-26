@@ -37,8 +37,6 @@ import { ACTOR_PROFILES } from "@/lib/actors";
 import { useDrawer } from "@/lib/state/drawerContext";
 import type { LogisticsStoryBoardWorkItem, WorkpageContract } from "@/lib/types/contracts";
 import type {
-  WorkpageDriverPreferencesAction,
-  WorkpageRouteDemandAction,
   WorkpageScheduleAction,
   WorkpageScheduleRouteDemandCoverageContext
 } from "@/lib/types/workpages";
@@ -188,20 +186,6 @@ function canonicalRouteForWorkflow(input: {
   return `/runs/${input.workflowRunId}/workspace`;
 }
 
-function routeDemandOpenLatestAction(
-  contract: WorkpageContract | undefined
-): WorkpageRouteDemandAction | null {
-  return (
-    contract?.actions.find(
-      (action): action is WorkpageRouteDemandAction =>
-        action.workpage_kind === "route-demand-v0" &&
-        action.kind === "open_latest" &&
-        action.state === "available" &&
-        Boolean(action.artifact_version_id)
-    ) ?? null
-  );
-}
-
 function scheduleOpenLatestDraftAction(
   contract: WorkpageContract | undefined
 ): WorkpageScheduleAction | null {
@@ -230,19 +214,6 @@ function routeDemandVisibleWeekDateRange(
     endDate,
     label: startDate === endDate ? startDate : `${startDate} to ${endDate}`
   };
-}
-
-function driverPreferencesAction(
-  contract: WorkpageContract | undefined,
-  matcher: (action: WorkpageDriverPreferencesAction) => boolean
-): WorkpageDriverPreferencesAction | null {
-  return (
-    contract?.actions.find(
-      (action): action is WorkpageDriverPreferencesAction =>
-        action.workpage_kind === "driver-preferences-v0" &&
-        matcher(action as WorkpageDriverPreferencesAction)
-    ) ?? null
-  );
 }
 
 function actorInitials(label: string): string {
@@ -287,6 +258,8 @@ export function AppShell(): JSX.Element {
     /^\/runs\/[^/]+\/workpages\/(?:schedule-v0|route-demand-v0|driver-preferences-v0)(?:\/.*)?$/.test(
       location.pathname
     );
+  const isDispatchReportingWorkpageRoute =
+    /^\/runs\/[^/]+\/workpages\/eod-v0(?:\/.*)?$/.test(location.pathname);
   const isWorkpageFullPageRoute = isDemoLogisticsRoute || isRunWorkpageRoute;
   const routeSearchParams = useMemo(
     () => new URLSearchParams(location.search),
@@ -296,6 +269,11 @@ export function AppShell(): JSX.Element {
     routeSearchParams.get("planning_week_id")?.trim() || DEFAULT_LOGISTICS_PLANNING_WEEK_ID;
   const serviceDateId = routeSearchParams.get("service_date_id")?.trim() || undefined;
   const selectedModuleId = routeSearchParams.get("module")?.trim() || null;
+  const shouldFetchLogisticsStory =
+    isDemoLogisticsRoute ||
+    isWorkspaceRoute ||
+    isWeeklyPlanningWorkpageRoute ||
+    isDispatchReportingWorkpageRoute;
 
   const viewerQuery = useQuery({
     queryKey: ["viewer-session"],
@@ -308,7 +286,8 @@ export function AppShell(): JSX.Element {
         planningWeekId,
         serviceDateId
       }),
-    refetchInterval: apiConfig.pollIntervalMs
+    enabled: shouldFetchLogisticsStory,
+    refetchInterval: isDemoLogisticsRoute ? apiConfig.pollIntervalMs : false
   });
   const viewerSession = viewerQuery.data ?? getApiViewerSession();
   const actorRoles = viewerSession?.actor_roles.join(",") ?? "";
@@ -466,79 +445,61 @@ export function AppShell(): JSX.Element {
         activeModuleId === "weekly_schedule_planning" ||
         isWeeklyPlanningWorkpageRoute)
   );
-  const scheduleQuickEditQuery = useQuery({
-    queryKey: ["workpages", "schedule-v0", "landing", activeWorkflowRunId],
-    queryFn: () => workpagesRepository.scheduleForRun(activeWorkflowRunId ?? ""),
-    enabled: Boolean(activeWorkflowRunId && isWeeklyPlanningContext),
-    refetchInterval: apiConfig.pollIntervalMs
-  });
-  const driverPreferencesQuickEditQuery = useQuery({
-    queryKey: ["workpages", "driver-preferences-v0", "run", activeWorkflowRunId],
-    queryFn: () => workpagesRepository.driverPreferencesForRun(activeWorkflowRunId ?? ""),
-    enabled: Boolean(activeWorkflowRunId && isWeeklyPlanningContext),
-    refetchInterval: apiConfig.pollIntervalMs
-  });
-  const routeDemandQuickEditQuery = useQuery({
-    queryKey: ["workpages", "route-demand-v0", "run", activeWorkflowRunId],
-    queryFn: () => workpagesRepository.routeDemandForRun(activeWorkflowRunId ?? ""),
-    enabled: Boolean(activeWorkflowRunId && isWeeklyPlanningContext),
-    refetchInterval: apiConfig.pollIntervalMs
-  });
   const secondaryWeeklyRunId = useMemo(() => {
     if (!activeWorkflowRunId) {
       return null;
     }
     return weeklyModuleRunIds.find((workflowRunId) => workflowRunId !== activeWorkflowRunId) ?? null;
   }, [activeWorkflowRunId, weeklyModuleRunIds]);
-  const [secondaryScheduleQuickEditQuery, secondaryRouteDemandQuickEditQuery] = useQueries({
+  const shouldLoadScheduleWeekChoices = Boolean(
+    isScheduleWeekPickerOpen && activeWorkflowRunId && isWeeklyPlanningContext
+  );
+  const [currentScheduleWeekChoiceQuery, currentRouteDemandWeekChoiceQuery] = useQueries({
     queries: [
       {
-        queryKey: ["workpages", "schedule-v0", "landing", secondaryWeeklyRunId],
-        queryFn: () => workpagesRepository.scheduleForRun(secondaryWeeklyRunId ?? ""),
-        enabled: Boolean(secondaryWeeklyRunId && isWeeklyPlanningContext),
-        refetchInterval: apiConfig.pollIntervalMs
+        queryKey: ["workpages", "schedule-v0", "landing", activeWorkflowRunId, "week-picker"],
+        queryFn: () => workpagesRepository.scheduleForRun(activeWorkflowRunId ?? ""),
+        enabled: shouldLoadScheduleWeekChoices,
+        refetchInterval: false
       },
       {
-        queryKey: ["workpages", "route-demand-v0", "run", secondaryWeeklyRunId],
-        queryFn: () => workpagesRepository.routeDemandForRun(secondaryWeeklyRunId ?? ""),
-        enabled: Boolean(secondaryWeeklyRunId && isWeeklyPlanningContext),
-        refetchInterval: apiConfig.pollIntervalMs
+        queryKey: ["workpages", "route-demand-v0", "run", activeWorkflowRunId, "week-picker"],
+        queryFn: () => workpagesRepository.routeDemandForRun(activeWorkflowRunId ?? ""),
+        enabled: shouldLoadScheduleWeekChoices,
+        refetchInterval: false
       }
     ]
   });
-  const scheduleQuickEditAction = scheduleOpenLatestDraftAction(scheduleQuickEditQuery.data);
-  const secondaryScheduleQuickEditAction = scheduleOpenLatestDraftAction(
-    secondaryScheduleQuickEditQuery.data
-  );
-  const driverPreferencesOpenAction = driverPreferencesAction(
-    driverPreferencesQuickEditQuery.data,
-    (action) =>
-      action.kind === "open_latest" &&
-      action.state === "available" &&
-      Boolean(action.artifact_version_id)
-  );
-  const driverPreferencesCreateAction = driverPreferencesAction(
-    driverPreferencesQuickEditQuery.data,
-    (action) =>
-      action.kind === "create_snapshot" &&
-      action.state === "available" &&
-      Boolean(action.create_path)
-  );
-  const routeDemandQuickEditAction = routeDemandOpenLatestAction(routeDemandQuickEditQuery.data);
-  const canOpenDriversQuickEdit = Boolean(
-    activeWorkflowRunId && (driverPreferencesOpenAction || driverPreferencesCreateAction)
-  );
+  const [secondaryScheduleWeekChoiceQuery, secondaryRouteDemandWeekChoiceQuery] = useQueries({
+    queries: [
+      {
+        queryKey: ["workpages", "schedule-v0", "landing", secondaryWeeklyRunId, "week-picker"],
+        queryFn: () => workpagesRepository.scheduleForRun(secondaryWeeklyRunId ?? ""),
+        enabled: Boolean(shouldLoadScheduleWeekChoices && secondaryWeeklyRunId),
+        refetchInterval: false
+      },
+      {
+        queryKey: ["workpages", "route-demand-v0", "run", secondaryWeeklyRunId, "week-picker"],
+        queryFn: () => workpagesRepository.routeDemandForRun(secondaryWeeklyRunId ?? ""),
+        enabled: Boolean(shouldLoadScheduleWeekChoices && secondaryWeeklyRunId),
+        refetchInterval: false
+      }
+    ]
+  });
+  const canOpenDriversQuickEdit = Boolean(activeWorkflowRunId && isWeeklyPlanningContext);
   const scheduleWeekChoices = useMemo((): ScheduleWeekChoice[] => {
     const candidates = [
       {
         workflowRunId: activeWorkflowRunId,
-        scheduleContract: scheduleQuickEditQuery.data,
-        routeDemandContract: routeDemandQuickEditQuery.data
+        scheduleContract: currentScheduleWeekChoiceQuery.data,
+        routeDemandContract: currentRouteDemandWeekChoiceQuery.data,
+        scheduleError: currentScheduleWeekChoiceQuery.isError
       },
       {
         workflowRunId: secondaryWeeklyRunId,
-        scheduleContract: secondaryScheduleQuickEditQuery.data,
-        routeDemandContract: secondaryRouteDemandQuickEditQuery.data
+        scheduleContract: secondaryScheduleWeekChoiceQuery.data,
+        routeDemandContract: secondaryRouteDemandWeekChoiceQuery.data,
+        scheduleError: secondaryScheduleWeekChoiceQuery.isError
       }
     ]
       .filter(
@@ -546,14 +507,12 @@ export function AppShell(): JSX.Element {
           workflowRunId: string;
           scheduleContract: WorkpageContract | undefined;
           routeDemandContract: WorkpageContract | undefined;
+          scheduleError: boolean;
         } => Boolean(candidate.workflowRunId)
       )
       .map((candidate) => {
         const openAction = scheduleOpenLatestDraftAction(candidate.scheduleContract);
         const dateRange = routeDemandVisibleWeekDateRange(candidate.routeDemandContract);
-        const scheduleError = secondaryWeeklyRunId === candidate.workflowRunId
-          ? secondaryScheduleQuickEditQuery.isError
-          : scheduleQuickEditQuery.isError;
         return {
           workflowRunId: candidate.workflowRunId,
           artifactVersionId: openAction?.artifact_version_id ?? null,
@@ -562,7 +521,7 @@ export function AppShell(): JSX.Element {
           available: Boolean(openAction),
           disabledReason: openAction
             ? null
-            : scheduleError
+            : candidate.scheduleError
               ? "Weekly schedule could not be loaded."
               : "No draft yet"
         };
@@ -579,69 +538,35 @@ export function AppShell(): JSX.Element {
     }));
   }, [
     activeWorkflowRunId,
-    routeDemandQuickEditQuery.data,
-    routeDemandQuickEditQuery.isError,
-    scheduleQuickEditQuery.data,
-    scheduleQuickEditQuery.isError,
-    secondaryRouteDemandQuickEditQuery.data,
-    secondaryScheduleQuickEditQuery.data,
-    secondaryScheduleQuickEditQuery.isError,
+    currentRouteDemandWeekChoiceQuery.data,
+    currentScheduleWeekChoiceQuery.data,
+    currentScheduleWeekChoiceQuery.isError,
+    secondaryRouteDemandWeekChoiceQuery.data,
+    secondaryScheduleWeekChoiceQuery.data,
+    secondaryScheduleWeekChoiceQuery.isError,
     secondaryWeeklyRunId
   ]);
-  const hasScheduleWeekPicker = scheduleWeekChoices.length > 1;
+  const hasScheduleWeekPicker = isWeeklyPlanningContext && weeklyModuleRunIds.length > 1;
   const canOpenScheduleQuickEdit = Boolean(
     activeWorkflowRunId &&
-      (scheduleQuickEditAction ||
-        secondaryScheduleQuickEditAction ||
-        (!hasScheduleWeekPicker && scheduleQuickEditAction))
+      isWeeklyPlanningContext &&
+      (!shouldFetchLogisticsStory || Boolean(logisticsStory) || logisticsStoryQuery.isError)
   );
-  const canOpenRouteDemandQuickEdit = Boolean(activeWorkflowRunId && routeDemandQuickEditAction);
+  const canOpenRouteDemandQuickEdit = Boolean(activeWorkflowRunId && isWeeklyPlanningContext);
   const canOpenDispatchCloseout = Boolean(activeWorkflowRunId && isDispatchReportingContext);
   const weeklyActionUnavailableReason = !activeWorkflowRunId
     ? "No active workflow run is selected."
     : !isWeeklyPlanningContext
       ? "This action is available on weekly planning runs."
-      : "The latest editable artifact is still resolving or unavailable.";
+      : "Open a weekly planning route to use this action.";
   const dispatchCloseoutUnavailableReason = !activeWorkflowRunId
     ? "No active workflow run is selected."
     : !isDispatchReportingContext
       ? "This action is available on dispatch reporting runs."
       : "The dispatch reporting closeout flow is still resolving.";
-  const driversQuickEditUnavailableReason =
-    activeWorkflowRunId && isWeeklyPlanningContext && driverPreferencesQuickEditQuery.isError
-      ? "Driver preferences could not be loaded."
-      : activeWorkflowRunId &&
-          isWeeklyPlanningContext &&
-          driverPreferencesQuickEditQuery.isSuccess &&
-          !driverPreferencesOpenAction &&
-          !driverPreferencesCreateAction
-        ? "No editable driver preferences snapshot is available."
-        : weeklyActionUnavailableReason;
-  const scheduleQuickEditUnavailableReason =
-    activeWorkflowRunId && isWeeklyPlanningContext && scheduleQuickEditQuery.isError
-      ? "Weekly schedule could not be loaded."
-      : activeWorkflowRunId &&
-          isWeeklyPlanningContext &&
-          ((hasScheduleWeekPicker &&
-            scheduleQuickEditQuery.isSuccess &&
-            secondaryScheduleQuickEditQuery.isSuccess &&
-            scheduleWeekChoices.every((choice) => !choice.available)) ||
-            (!hasScheduleWeekPicker &&
-              scheduleQuickEditQuery.isSuccess &&
-              !scheduleQuickEditAction))
-        ? hasScheduleWeekPicker
-          ? "No editable weekly schedule draft is available for the current or next week."
-          : "No editable weekly schedule draft is available."
-        : weeklyActionUnavailableReason;
-  const routeDemandQuickEditUnavailableReason =
-    activeWorkflowRunId && isWeeklyPlanningContext && routeDemandQuickEditQuery.isError
-      ? "Route demand could not be loaded."
-      : activeWorkflowRunId &&
-          isWeeklyPlanningContext &&
-          routeDemandQuickEditQuery.isSuccess &&
-          !routeDemandQuickEditAction
-        ? "No latest route demand artifact is available."
-        : weeklyActionUnavailableReason;
+  const driversQuickEditUnavailableReason = weeklyActionUnavailableReason;
+  const scheduleQuickEditUnavailableReason = weeklyActionUnavailableReason;
+  const routeDemandQuickEditUnavailableReason = weeklyActionUnavailableReason;
 
   useEffect(() => {
     setIsDriversQuickEditOpen(false);
@@ -858,7 +783,9 @@ export function AppShell(): JSX.Element {
               />
             ) : (
               <div className="app-shell__nav-loading" data-testid="logistics-family-nav-fallback">
-                {logisticsStoryQuery.isError
+                {!shouldFetchLogisticsStory
+                  ? "Logistics family nav unavailable on this route."
+                  : logisticsStoryQuery.isError
                   ? "Logistics family nav unavailable."
                   : "Loading logistics family nav..."}
               </div>
@@ -902,7 +829,7 @@ export function AppShell(): JSX.Element {
                   }
                   setScheduleQuickEditTarget({
                     workflowRunId: activeWorkflowRunId,
-                    artifactVersionId: scheduleQuickEditAction?.artifact_version_id ?? null,
+                    artifactVersionId: null,
                     routeDemandCoverageContext: null
                   });
                 }}
@@ -1069,23 +996,49 @@ export function AppShell(): JSX.Element {
                   <h2>Editable weeks</h2>
                   <p>The schedule editor supports the current week and immediate next week in this demo flow.</p>
                 </header>
-                <div className="route-demand-history-list">
-                  {scheduleWeekChoices.map((choice) => (
-                    <button
-                      key={choice.workflowRunId}
-                      type="button"
-                      className="route-demand-history-list__item"
-                      disabled={!choice.available}
-                      onClick={() => {
-                        openScheduleQuickEditForSelection(choice);
-                      }}
-                    >
-                      <strong>{choice.label}</strong>
-                      <span>{choice.dateRangeLabel}</span>
-                      <span>{choice.available ? "Draft available" : choice.disabledReason ?? "Unavailable"}</span>
-                    </button>
-                  ))}
-                </div>
+                {currentScheduleWeekChoiceQuery.isLoading ||
+                currentRouteDemandWeekChoiceQuery.isLoading ||
+                secondaryScheduleWeekChoiceQuery.isLoading ||
+                secondaryRouteDemandWeekChoiceQuery.isLoading ? (
+                  <StatePanel
+                    kind="loading"
+                    title="Loading editable weeks"
+                    detail="Resolving the current and next weekly schedule drafts."
+                  />
+                ) : currentScheduleWeekChoiceQuery.isError ||
+                  currentRouteDemandWeekChoiceQuery.isError ||
+                  secondaryScheduleWeekChoiceQuery.isError ||
+                  secondaryRouteDemandWeekChoiceQuery.isError ? (
+                  <StatePanel
+                    kind="error"
+                    title="Weekly schedule chooser failed to load"
+                    detail="Unable to resolve the current and next weekly schedule drafts."
+                    onRetry={() => {
+                      void currentScheduleWeekChoiceQuery.refetch();
+                      void currentRouteDemandWeekChoiceQuery.refetch();
+                      void secondaryScheduleWeekChoiceQuery.refetch();
+                      void secondaryRouteDemandWeekChoiceQuery.refetch();
+                    }}
+                  />
+                ) : (
+                  <div className="route-demand-history-list">
+                    {scheduleWeekChoices.map((choice) => (
+                      <button
+                        key={choice.workflowRunId}
+                        type="button"
+                        className="route-demand-history-list__item"
+                        disabled={!choice.available}
+                        onClick={() => {
+                          openScheduleQuickEditForSelection(choice);
+                        }}
+                      >
+                        <strong>{choice.label}</strong>
+                        <span>{choice.dateRangeLabel}</span>
+                        <span>{choice.available ? "Draft available" : choice.disabledReason ?? "Unavailable"}</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
               </section>
             </div>
           </section>

@@ -27,13 +27,28 @@ def test_logistics_reporting_to_planning_notify_only_golden_slice_materializes_f
 
     assert edge_execution["edge_id"] == "reporting_actuals_to_future_planning"
     assert edge_execution["target_partition_kind"] == "PlanningWeekID"
-    assert edge_execution["target_partition_key"] == "PW-2026-W10"
+    assert edge_execution["target_partition_key"] == "PW-2026-W11"
     assert target_workflow_run["workflow_id"] == "weekly_schedule_planning.v1"
-    assert target_workflow_run["partition_key"] == "PW-2026-W10"
+    assert target_workflow_run["partition_key"] == "PW-2026-W11"
     assert target_input_artifact["artifact_kind"] == "planning.actual_hours_snapshot.workbook"
     assert str(target_input_artifact["parent_artifact_version_id"]) == str(
         final_packet["artifact_version_id"]
     )
+    assert target_input_artifact["metadata_json"]["rows"] == [
+        [
+            "2026-03-06",
+            "A1NQEGRS26IBJA",
+            "Suraj Pratap Singh",
+            "WORKED",
+            540,
+            "CX93",
+            "",
+            0,
+            0,
+            0,
+            target_input_artifact["metadata_json"]["rows"][0][10],
+        ]
+    ]
     assert (
         retry["edge_executions"][0]["edge_execution_id"]
         == edge_execution["edge_execution_id"]
@@ -53,7 +68,7 @@ def test_logistics_reporting_to_planning_notify_only_golden_slice_materializes_f
         SELECT workflow_run_id, workflow_id, partition_key
         FROM workflow_runs
         WHERE workflow_id = 'weekly_schedule_planning.v1'
-          AND partition_key = 'PW-2026-W10'
+          AND partition_key = 'PW-2026-W11'
         """
     )
     assert len(target_run_rows) == 1

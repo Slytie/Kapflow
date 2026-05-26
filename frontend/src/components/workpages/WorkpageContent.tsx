@@ -190,9 +190,9 @@ export function WorkpageFrame({
           {!isTitleOnlyHero ? (
             <div className="workpage-page__hero-body">
               <div className="workpage-page__hero-copy">
-                <p className="timeline-page__eyebrow">{eyebrow}</p>
+                {eyebrow ? <p className="timeline-page__eyebrow">{eyebrow}</p> : null}
                 {heroSupportText ? <p className="workpage-page__hero-support">{heroSupportText}</p> : null}
-                <p>{description}</p>
+                {description ? <p>{description}</p> : null}
                 <div className="timeline-page__summary">
                   {summaryItems.map((item) => (
                     <span key={item}>{item}</span>

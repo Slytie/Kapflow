@@ -8,6 +8,7 @@ import {
   type ScheduleSickNoShowTarget
 } from "@/components/workpages/ScheduleHeatmapEditor";
 import { WorkpageSummaryCardsSection } from "@/components/workpages/WorkpageContent";
+import type { ScheduleHybridHeatmapSection } from "@/lib/workpages/scheduleHybridReality";
 import type {
   WorkpageScheduleAction,
   WorkpageScheduleCalculations,
@@ -331,6 +332,8 @@ export function ScheduleWorkpageSurface({
   calculations,
   dependencies,
   versionRails,
+  selectedServiceDateOverride = null,
+  showVersionRails = true,
   readOnly,
   previewStatus,
   saveAction,
@@ -343,13 +346,15 @@ export function ScheduleWorkpageSurface({
   onRouteDemandCellToggle
 }: {
   summarySection: WorkpageSummaryCardsSectionModel | null;
-  heatmapSection: WorkpageScheduleHeatmapSection | null;
+  heatmapSection: WorkpageScheduleHeatmapSection | ScheduleHybridHeatmapSection | null;
   assignmentRows: WorkpageTableRow[];
   reserveRows: WorkpageTableRow[];
   onRowsChange?: (next: { assignmentRows: WorkpageTableRow[]; reserveRows: WorkpageTableRow[] }) => void;
   calculations: WorkpageScheduleCalculations | null;
   dependencies: WorkpageScheduleDependency[];
   versionRails: ScheduleVersionRailDefinition[];
+  selectedServiceDateOverride?: string | null;
+  showVersionRails?: boolean;
   readOnly: boolean;
   previewStatus?: {
     isDirty: boolean;
@@ -394,6 +399,7 @@ export function ScheduleWorkpageSurface({
       reserveRows={reserveRows}
       onRowsChange={onRowsChange}
       readOnly={readOnly}
+      selectedServiceDateOverride={selectedServiceDateOverride}
       selectedServiceDate={selectedServiceDate}
       availableDriverIds={availableDriverIds}
       driverMetrics={calculations?.driver_metrics ?? []}
@@ -469,7 +475,7 @@ export function ScheduleWorkpageSurface({
         {heatmap}
       </div>
 
-      {!isQuickEdit ? (
+      {!isQuickEdit && showVersionRails && versionRails.length > 0 ? (
         <aside className="workpage-page__artifact-rail schedule-workpage-surface__rail">
           <div className="schedule-workpage-surface__rail-stack">
             {versionRails.map((rail) => (

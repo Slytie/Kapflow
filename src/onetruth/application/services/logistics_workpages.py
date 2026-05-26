@@ -6,6 +6,7 @@ from onetruth.application.services.logistics_workpages_reporting import (
 )
 from onetruth.application.services.logistics_workpages_schedule import (
     build_schedule_artifact_workpage_contract,
+    build_schedule_previous_week_reality_contract,
     build_schedule_workflow_run_workpage_contract,
 )
 from onetruth.application.services.logistics_workpages_shared import (
@@ -45,6 +46,7 @@ __all__ = [
     "build_route_demand_refresh_activation_key",
     "build_route_demand_workflow_run_workpage_contract",
     "build_schedule_artifact_workpage_contract",
+    "build_schedule_previous_week_reality_contract",
     "build_schedule_workflow_run_workpage_contract",
     "build_workpage_action_ref",
     "canonical_driver_preferences_artifact_route",

@@ -10,6 +10,11 @@ from onetruth.domain.partition_codec import service_day_to_future_planning_week
 
 ROUTE_DEMAND_DATASET_KEY = "planning.route_slot_requirements.workbook"
 _STANDARD_BAND_KEYS = ("standard_early_slot_count", "standard_late_slot_count")
+_ON_CALL_TARGET_RANGE_KEYS = (
+    "on_call_min_target",
+    "on_call_preferred_target",
+    "on_call_max_target",
+)
 _WORKPAGE_HORIZON_DAY_COUNT = 14
 _WEEK_DAY_COUNT = 7
 _DATE_TOKEN_PATTERN = re.compile(r"\d{4}-\d{2}-\d{2}|\d{8}")
@@ -269,10 +274,16 @@ def _normalize_submitted_daily_demand_rows(raw_rows: Any) -> list[dict[str, Any]
             raise ValueError(
                 f"daily_demand_rows[{index}].planned_route_count must be a non-negative integer"
             )
+        on_call_target = _coerce_int(row.get("on_call_target"), default=-1)
+        if on_call_target < 0:
+            raise ValueError(
+                f"daily_demand_rows[{index}].on_call_target must be a non-negative integer"
+            )
         normalized.append(
             {
                 "service_date": service_date,
                 "planned_route_count": planned_route_count,
+                "on_call_target": on_call_target,
             }
         )
     return normalized
@@ -315,6 +326,7 @@ def _shift_daily_demand_row(
         "rescue_slot_count",
         "overflow_slot_count",
         "on_call_target",
+        *_ON_CALL_TARGET_RANGE_KEYS,
         "excess_capacity_target",
     ):
         if key in shifted:
@@ -349,10 +361,18 @@ def _validated_merged_daily_rows(
             )
         next_row = dict(base_row)
         planned_route_count = int(submitted_row["planned_route_count"])
+        on_call_target = int(submitted_row["on_call_target"])
         rescue_slot_count = max(_coerce_int(base_row.get("rescue_slot_count"), default=0), 0)
         overflow_slot_count = max(_coerce_int(base_row.get("overflow_slot_count"), default=0), 0)
         standard_total = max(planned_route_count - rescue_slot_count - overflow_slot_count, 0)
         next_row["planned_route_count"] = planned_route_count
+        if "on_call_target" in next_row or any(
+            key in next_row for key in _ON_CALL_TARGET_RANGE_KEYS
+        ):
+            next_row["on_call_target"] = on_call_target
+            for key in _ON_CALL_TARGET_RANGE_KEYS:
+                if key in next_row:
+                    next_row[key] = on_call_target
         if "standard_slot_count" in next_row:
             next_row["standard_slot_count"] = standard_total
         if any(key in next_row for key in _STANDARD_BAND_KEYS):

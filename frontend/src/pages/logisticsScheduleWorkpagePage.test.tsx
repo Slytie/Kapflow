@@ -2,6 +2,8 @@ import { act, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { HttpResponse, http } from "msw";
 
+import driverPreferencesRunWorkpageStateSnapshot from "@fixtures/workpage_driver_preferences_v0_run_state.json";
+import routeDemandArtifactStateSnapshot from "@fixtures/workpage_route_demand_v0_artifact_state.json";
 import routeDemandRunWorkpageStateSnapshot from "@fixtures/workpage_route_demand_v0_run_state.json";
 import scheduleArtifactStateSnapshot from "@fixtures/workpage_schedule_v0_artifact_state.json";
 import scheduleRunWorkpageStateSnapshot from "@fixtures/workpage_schedule_v0_run_state.json";
@@ -18,7 +20,8 @@ import { mutationLog } from "@/test/api/handlers";
 import {
   expectHeatmapHeaderStatusGroups,
   expectHeatmapPreferenceBars,
-  expectSelectedDateHeaderStats,
+  expectHeatmapSummaryRailLabels,
+  expectSelectedDateHeaderValues,
   scheduleHeatmapSectionIn as heatmapSection
 } from "./logisticsScheduleTestHelpers";
 
@@ -133,8 +136,18 @@ describe("LogisticsScheduleWorkpagePage", () => {
       const { dependencyGroup, checksGroup } = expectHeatmapHeaderStatusGroups(page);
       expect(within(page).getByRole("heading", { name: "Planned schedule heatmap" })).toBeInTheDocument();
       expect(within(page).queryByRole("heading", { name: "Driver metrics" })).not.toBeInTheDocument();
-      expect(within(page).getByRole("heading", { name: "Accepted history" })).toBeInTheDocument();
-      expect(within(page).getByRole("heading", { name: "Draft lineage" })).toBeInTheDocument();
+      expect(within(page).queryByRole("heading", { name: "Accepted history" })).not.toBeInTheDocument();
+      expect(within(page).queryByRole("heading", { name: "Draft lineage" })).not.toBeInTheDocument();
+      expect(
+        within(page).queryByText(
+          "Accepted navigation stays on accepted weekly history only and never traverses draft lineage."
+        )
+      ).not.toBeInTheDocument();
+      expect(
+        within(page).queryByText(
+          "Draft navigation stays within backend-authored draft lineage for this immutable schedule surface."
+        )
+      ).not.toBeInTheDocument();
       expect(screen.queryByText("Scenario sick calls")).not.toBeInTheDocument();
       expect(screen.queryByRole("textbox", { name: /Planner note/i })).not.toBeInTheDocument();
       expect(screen.queryByRole("spinbutton", { name: /Scenario added routes/i })).not.toBeInTheDocument();
@@ -179,14 +192,15 @@ describe("LogisticsScheduleWorkpagePage", () => {
         expect(screen.queryByRole("tooltip")).not.toBeInTheDocument();
       });
       const heatmap = heatmapSection(page);
-      expectSelectedDateHeaderStats(page);
+      expectHeatmapSummaryRailLabels(page);
+      expectSelectedDateHeaderValues(page);
       expectHeatmapPreferenceBars(page);
       expect(within(heatmap).getByRole("columnheader", { name: /Hours/i })).toBeInTheDocument();
       expect(within(heatmap).getByRole("columnheader", { name: /Routes/i })).toBeInTheDocument();
       expect(within(heatmap).getByRole("columnheader", { name: /On call/i })).toBeInTheDocument();
       expect(within(heatmap).getByRole("columnheader", { name: /Compliance/i })).toBeInTheDocument();
       const abhirajRow = driverHeatmapRow(heatmap, "Abhiraj Singh");
-      expect(within(abhirajRow).getByText("25.5 h")).toBeInTheDocument();
+      expect(within(abhirajRow).getByText("18.0 h")).toBeInTheDocument();
       expect(within(abhirajRow).queryByText("Pref Unset")).not.toBeInTheDocument();
       expect(within(abhirajRow).queryByText("Avail Available")).not.toBeInTheDocument();
       const riskTrigger = within(abhirajRow).getByRole("button", {
@@ -215,8 +229,8 @@ describe("LogisticsScheduleWorkpagePage", () => {
       station_code: "DVC4",
       service_area: "Metro core",
       shift_start: "10:15",
-      shift_end: "18:45",
-      projected_minutes: 510,
+      shift_end: "16:15",
+      projected_minutes: 360,
       required_skill: "standard_delivery",
       vehicle_type: "cargo_van"
     };
@@ -229,8 +243,8 @@ describe("LogisticsScheduleWorkpagePage", () => {
       station_code: "DVC4",
       service_area: "Metro core",
       shift_start: "10:30",
-      shift_end: "19:00",
-      projected_minutes: 525,
+      shift_end: "16:30",
+      projected_minutes: 360,
       required_skill: "standard_delivery",
       vehicle_type: "cargo_van"
     };
@@ -331,7 +345,9 @@ describe("LogisticsScheduleWorkpagePage", () => {
     ) as HTMLElement | null;
     expect(selectedHeader).not.toBeNull();
     expect(selectedHeader).toHaveClass("schedule-heatmap__date-header--uncovered");
-    expect(within(selectedHeader as HTMLElement).getByText("Gap")).toBeInTheDocument();
+    expectHeatmapSummaryRailLabels(await screen.findByTestId("schedule-workpage-page"), {
+      includesGap: true
+    });
     expect(within(selectedHeader as HTMLElement).getByText("2")).toBeInTheDocument();
   });
 
@@ -438,14 +454,14 @@ describe("LogisticsScheduleWorkpagePage", () => {
       expect(screen.queryByText("Scenario sick calls")).not.toBeInTheDocument();
       expect(screen.queryByRole("textbox", { name: /Planner note/i })).not.toBeInTheDocument();
       expect(within(page).queryByRole("heading", { name: "Capacity bar" })).not.toBeInTheDocument();
-      expect(within(page).getByRole("heading", { name: "Draft lineage" })).toBeInTheDocument();
+      expect(within(page).queryByRole("heading", { name: "Draft lineage" })).not.toBeInTheDocument();
 
     },
     60000
   );
 
   it(
-    "opens the latest Stage04 draft from the top chrome quick-edit action",
+    "opens the weekly schedule quick-edit modal from the top chrome action",
     async () => {
       const user = userEvent.setup();
       setFrontendOperatorContext();
@@ -464,14 +480,9 @@ describe("LogisticsScheduleWorkpagePage", () => {
 
       const dialog = await screen.findByRole("dialog", { name: "Edit Weekly Schedule" });
       expect(dialog).toHaveClass("schedule-quick-edit-modal");
-      const editor = await within(dialog).findByTestId("schedule-quick-edit-editor");
-      expect(within(editor).getByRole("heading", { name: "Weekly Schedule Draft" })).toBeInTheDocument();
-      expect(within(editor).queryByText("Weekly Schedule Draft Artifact")).not.toBeInTheDocument();
-      expect(within(editor).queryByRole("heading", { name: "Capacity bar" })).not.toBeInTheDocument();
-      expect(within(editor).queryByRole("heading", { name: "Draft lineage" })).not.toBeInTheDocument();
-      expectHeatmapHeaderStatusGroups(editor);
-      expect(heatmapSection(editor)).toHaveClass("schedule-heatmap--compact");
-      expectSelectedDateHeaderStats(editor);
+      expect(
+        within(dialog).getByText("No editable schedule draft is available for this weekly run yet.")
+      ).toBeInTheDocument();
       expect(window.location.pathname).toBe("/runs/wr-weekly-001/workpages/schedule-v0");
     },
     30000
@@ -479,6 +490,9 @@ describe("LogisticsScheduleWorkpagePage", () => {
 
   it("shows current and next week choices and opens the next-week draft from the shell action", async () => {
     const user = userEvent.setup();
+    let currentRouteDemandRequests = 0;
+    let secondaryScheduleRequests = 0;
+    let secondaryRouteDemandRequests = 0;
     server.use(
       http.get("*/api/v1/stories/logistics-three-workflow", () =>
         HttpResponse.json({
@@ -653,6 +667,7 @@ describe("LogisticsScheduleWorkpagePage", () => {
         })
       ),
       http.get("*/api/v1/workpages/workflow-runs/wr-weekly-002/schedule-v0", () => {
+        secondaryScheduleRequests += 1;
         const payload = structuredClone(scheduleRunWorkpageStateSnapshot.workpage_state) as Record<
           string,
           any
@@ -672,6 +687,7 @@ describe("LogisticsScheduleWorkpagePage", () => {
         return HttpResponse.json(payload);
       }),
       http.get("*/api/v1/workpages/workflow-runs/wr-weekly-002/route-demand-v0", () => {
+        secondaryRouteDemandRequests += 1;
         const payload = structuredClone(routeDemandRunWorkpageStateSnapshot.workpage_state) as Record<
           string,
           any
@@ -694,6 +710,15 @@ describe("LogisticsScheduleWorkpagePage", () => {
               ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"][index] ?? card.weekday_label
           })
         );
+        return HttpResponse.json(payload);
+      }),
+      http.get("*/api/v1/workpages/workflow-runs/wr-weekly-001/route-demand-v0", () => {
+        currentRouteDemandRequests += 1;
+        const payload = structuredClone(routeDemandRunWorkpageStateSnapshot.workpage_state) as Record<
+          string,
+          any
+        >;
+        payload.run_context.workflow_run_id = "wr-weekly-001";
         return HttpResponse.json(payload);
       }),
       http.get(
@@ -719,6 +744,9 @@ describe("LogisticsScheduleWorkpagePage", () => {
     render(<App />);
 
     expect(await screen.findByTestId("schedule-workpage-page")).toBeInTheDocument();
+    expect(currentRouteDemandRequests).toBe(0);
+    expect(secondaryScheduleRequests).toBe(0);
+    expect(secondaryRouteDemandRequests).toBe(0);
     await waitFor(() => {
       expect(screen.getByRole("button", { name: "Edit weekly schedule" })).toBeEnabled();
     });
@@ -729,6 +757,9 @@ describe("LogisticsScheduleWorkpagePage", () => {
     expect(within(chooser).getByText("2026-03-22 to 2026-03-28")).toBeInTheDocument();
     expect(within(chooser).getByRole("button", { name: /Next week/i })).toBeInTheDocument();
     expect(within(chooser).getByText("2026-03-29 to 2026-04-04")).toBeInTheDocument();
+    expect(currentRouteDemandRequests).toBe(1);
+    expect(secondaryScheduleRequests).toBe(1);
+    expect(secondaryRouteDemandRequests).toBe(1);
 
     await waitFor(() => {
       expect(within(chooser).getByRole("button", { name: /Next week/i })).toBeEnabled();
@@ -940,25 +971,69 @@ describe("LogisticsScheduleWorkpagePage", () => {
     const chooser = await screen.findByRole("dialog", { name: "Choose weekly schedule" });
     const nextWeekButton = within(chooser).getByRole("button", { name: /Next week/i });
     expect(nextWeekButton).toBeDisabled();
-    expect(within(chooser).getByText("No draft yet")).toBeInTheDocument();
+    expect(within(chooser).getAllByText("No draft yet")).toHaveLength(2);
   }, 30000);
 
   it(
     "opens route-demand editing from the top chrome without client-derived routing",
     async () => {
       const user = userEvent.setup();
+      let routeDemandRequests = 0;
+      server.use(
+        http.get("*/api/v1/workpages/workflow-runs/wr-weekly-001/route-demand-v0", () => {
+          routeDemandRequests += 1;
+          const payload = structuredClone(routeDemandRunWorkpageStateSnapshot.workpage_state) as any;
+          payload.run_context.workflow_run_id = "wr-weekly-001";
+          payload.actions = payload.actions.map((action: Record<string, unknown>) =>
+            action.kind === "open_latest"
+              ? {
+                  ...action,
+                  artifact_version_id: "av-route-demand-artifact-001",
+                  route:
+                    "/runs/wr-weekly-001/workpages/route-demand-v0/artifacts/av-route-demand-artifact-001",
+                  action_ref: {
+                    ...(action.action_ref as Record<string, unknown>),
+                    artifact_version_id: "av-route-demand-artifact-001",
+                    workflow_run_id: "wr-weekly-001"
+                  }
+                }
+              : action
+          );
+          return HttpResponse.json(payload);
+        })
+      );
+      server.use(
+        http.get(
+          "*/api/v1/workpages/workflow-runs/wr-weekly-001/route-demand-v0/artifacts/av-route-demand-artifact-001",
+          () => {
+            const payload = structuredClone(routeDemandArtifactStateSnapshot.workpage_state) as any;
+            payload.artifact_context.workflow_run_id = "wr-weekly-001";
+            payload.artifact_context.artifact_version_id = "av-route-demand-artifact-001";
+            payload.artifact_context.latest_in_chain_artifact_version_id =
+              "av-route-demand-artifact-001";
+            payload.freshness.source_version = "av-route-demand-artifact-001";
+            payload.workpage.source_artifact_version_id =
+              "av-route-demand-artifact-001";
+            payload.source.source_artifact_version_id =
+              "av-route-demand-artifact-001";
+            return HttpResponse.json(payload);
+          }
+        )
+      );
       setFrontendOperatorContext();
       window.history.pushState({}, "", "/runs/wr-weekly-001/workpages/schedule-v0");
       render(<App />);
 
-    expect(await screen.findByTestId("schedule-workpage-page")).toBeInTheDocument();
-    await waitFor(() => {
-      expect(screen.getByRole("button", { name: "Edit route demand" })).toBeEnabled();
-    });
-    await user.click(screen.getByRole("button", { name: "Edit route demand" }));
+      expect(await screen.findByTestId("schedule-workpage-page")).toBeInTheDocument();
+      expect(routeDemandRequests).toBe(0);
+      await waitFor(() => {
+        expect(screen.getByRole("button", { name: "Edit route demand" })).toBeEnabled();
+      });
+      await user.click(screen.getByRole("button", { name: "Edit route demand" }));
 
-    const dialog = await screen.findByRole("dialog", { name: "Edit route demand" });
-    expect(await within(dialog).findByTestId("route-demand-quick-edit-editor")).toBeInTheDocument();
+      const dialog = await screen.findByRole("dialog", { name: "Edit route demand" });
+      expect(await within(dialog).findByTestId("route-demand-quick-edit-editor")).toBeInTheDocument();
+      expect(routeDemandRequests).toBe(1);
       expect(window.location.pathname).toBe("/runs/wr-weekly-001/workpages/schedule-v0");
     },
     30000
@@ -968,6 +1043,20 @@ describe("LogisticsScheduleWorkpagePage", () => {
     "opens driver preferences from the top chrome without inline preference pills",
     async () => {
       const user = userEvent.setup();
+      let driverPreferencesRequests = 0;
+      server.use(
+        http.get(
+          "*/api/v1/workpages/workflow-runs/wr-weekly-001/driver-preferences-v0",
+          () => {
+            driverPreferencesRequests += 1;
+            const payload = structuredClone(
+              driverPreferencesRunWorkpageStateSnapshot.workpage_state
+            ) as Record<string, any>;
+            payload.run_context.workflow_run_id = "wr-weekly-001";
+            return HttpResponse.json(payload);
+          }
+        )
+      );
       setFrontendOperatorContext();
       window.history.pushState({}, "", "/runs/wr-weekly-001/workpages/schedule-v0");
       render(<App />);
@@ -976,6 +1065,7 @@ describe("LogisticsScheduleWorkpagePage", () => {
       expect(within(heatmapSection(page)).queryByText("Pref Unset")).not.toBeInTheDocument();
       expect(within(heatmapSection(page)).getByText("Abhiraj Singh")).toBeInTheDocument();
       expectHeatmapPreferenceBars(page);
+      expect(driverPreferencesRequests).toBe(0);
 
       await waitFor(() => {
         expect(screen.getByRole("button", { name: "Drivers" })).toBeEnabled();
@@ -983,9 +1073,12 @@ describe("LogisticsScheduleWorkpagePage", () => {
       await user.click(screen.getByRole("button", { name: "Drivers" }));
 
       const dialog = await screen.findByRole("dialog", { name: "Drivers" });
-      await user.click(within(dialog).getByRole("button", { name: "Create preferences snapshot" }));
-
-      expect(await within(dialog).findByTestId("driver-preferences-quick-edit-editor")).toBeInTheDocument();
+      expect(
+        await within(dialog).findByRole("heading", {
+          name: "Create the first preferences snapshot"
+        })
+      ).toBeInTheDocument();
+      expect(driverPreferencesRequests).toBe(1);
       expect(window.location.pathname).toBe("/runs/wr-weekly-001/workpages/schedule-v0");
     },
     25000

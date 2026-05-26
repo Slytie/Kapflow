@@ -73,6 +73,7 @@ from onetruth.application.services.weekly_stage04_openai_agent import (
     run_weekly_stage04_openai_agent,
 )
 from onetruth.domain.partition_codec import service_day_to_future_planning_week
+from onetruth.infrastructure.artifacts.storage import read_blob
 from onetruth.infrastructure.events.event_store import utc_now_iso
 from onetruth.infrastructure.repositories.artifact_links import create_artifact_link
 from onetruth.infrastructure.repositories.artifact_versions import (
@@ -285,7 +286,7 @@ def submit_route_demand_artifact_workpage_command(
         except (CommandError, ValueError) as exc:
             raise CommandError(
                 code="invalid_payload",
-                message=str(exc),
+                message=exc.message if isinstance(exc, CommandError) else str(exc),
                 details={},
             ) from exc
 
@@ -852,15 +853,45 @@ def _save_and_prepare_existing_week_route_demand_coverage(
         submitted_rows=visible_submitted_rows,
     )
     if int(positive_delta_summary["added_route_count"]) <= 0:
-        raise CommandError(
-            code="route_demand_increase_required",
-            message="running the coverage agent requires at least one increased planned route count",
-            details={
-                "workflow_run_id": workflow_run_id,
-                "artifact_version_id": artifact_version_id,
-                **positive_delta_summary,
-            },
+        target_route_demand_artifact = _save_route_demand_if_needed(
+            connection,
+            storage_root=storage_root,
+            base_artifact=base_artifact,
+            submitted_rows=normalized_submitted_rows,
+            base_projection=base_projection,
+            actor_id=actor_id,
+            actor_type=actor_type,
+            event_idempotency=artifact_event_idempotency,
+            lineage_note=(
+                "Submitted route-demand version without planned-route coverage changes."
+            ),
         )
+        target_route_demand_artifact_version_id = _require_non_empty_string(
+            target_route_demand_artifact.get("artifact_version_id"),
+            field_name="artifact_version_id",
+        )
+        if target_route_demand_artifact_version_id == artifact_version_id:
+            raise CommandError(
+                code="route_demand_increase_required",
+                message="running the coverage agent requires at least one increased planned route count",
+                details={
+                    "workflow_run_id": workflow_run_id,
+                    "artifact_version_id": artifact_version_id,
+                    **positive_delta_summary,
+                },
+            )
+        return {
+            "submitted": {
+                "workflow_run_id": workflow_run_id,
+                "artifact_version_id": target_route_demand_artifact_version_id,
+                "supersedes_artifact_version_id": artifact_version_id,
+                "route": _canonical_route_demand_ui_route(
+                    workflow_run_id=workflow_run_id,
+                    artifact_version_id=target_route_demand_artifact_version_id,
+                ),
+            },
+            "route_demand_coverage_context": None,
+        }
     current_artifacts = list_artifact_versions_for_workflow_run(connection, workflow_run_id)
     latest_schedule_draft = latest_schedule_draft_artifact(current_artifacts)
     if latest_schedule_draft is None:
@@ -1054,9 +1085,7 @@ def _route_demand_operational_week_context(
         current_end_exclusive = current_start + timedelta(days=len(visible_service_dates))
         current_monday = current_start + timedelta(days=1)
         return {
-            "planning_week_id": service_day_to_future_planning_week(
-                f"SD-{current_monday.isoformat()}"
-            ),
+            "planning_week_id": _planning_week_id_for_operational_week_start(current_start),
             "operational_week_start": current_start.isoformat(),
             "operational_week_end_exclusive": current_end_exclusive.isoformat(),
             "operational_week_end": (current_end_exclusive - timedelta(days=1)).isoformat(),
@@ -1067,9 +1096,7 @@ def _route_demand_operational_week_context(
     current_end_exclusive = date.fromisoformat(scope_end_exclusive)
     current_monday = current_start + timedelta(days=1)
     return {
-        "planning_week_id": service_day_to_future_planning_week(
-            f"SD-{current_monday.isoformat()}"
-        ),
+        "planning_week_id": _planning_week_id_for_operational_week_start(current_start),
         "operational_week_start": current_start.isoformat(),
         "operational_week_end_exclusive": current_end_exclusive.isoformat(),
         "operational_week_end": (current_end_exclusive - timedelta(days=1)).isoformat(),
@@ -1082,7 +1109,7 @@ def _next_operational_week_context(current_operational_week_start: str) -> dict[
     next_start = current_start + timedelta(days=7)
     next_end_exclusive = next_start + timedelta(days=7)
     next_monday = next_start + timedelta(days=1)
-    planning_week_id = service_day_to_future_planning_week(f"SD-{next_monday.isoformat()}")
+    planning_week_id = _planning_week_id_for_operational_week_start(next_start)
     return {
         "planning_week_id": planning_week_id,
         "operational_week_start": next_start.isoformat(),
@@ -1260,10 +1287,25 @@ def _normalize_submitted_route_demand_rows(raw_rows: Any) -> list[dict[str, int 
                 message=f"daily_demand_rows[{index}].planned_route_count must be non-negative",
                 details={},
             )
+        try:
+            on_call_target = int(row.get("on_call_target"))
+        except (TypeError, ValueError) as exc:
+            raise CommandError(
+                code="invalid_payload",
+                message=f"daily_demand_rows[{index}].on_call_target must be an integer",
+                details={},
+            ) from exc
+        if on_call_target < 0:
+            raise CommandError(
+                code="invalid_payload",
+                message=f"daily_demand_rows[{index}].on_call_target must be non-negative",
+                details={},
+            )
         normalized.append(
             {
                 "service_date": service_date,
                 "planned_route_count": planned_route_count,
+                "on_call_target": on_call_target,
             }
         )
     return normalized
@@ -1299,6 +1341,7 @@ def _route_demand_rows_for_materialization(
         {
             "service_date": str(row.get("service_date") or "").strip(),
             "planned_route_count": int(row.get("planned_route_count") or 0),
+            "on_call_target": int(row.get("on_call_target") or 0),
         }
         for row in list(base_projection.get("daily_demand_rows") or [])
         if isinstance(row, Mapping)
@@ -1331,6 +1374,7 @@ def _route_demand_rows_for_materialization(
             {
                 "service_date": str(base_row.get("service_date") or "").strip(),
                 "planned_route_count": int(base_row.get("planned_route_count") or 0),
+                "on_call_target": int(base_row.get("on_call_target") or 0),
             },
         )
         for base_row in base_rows
@@ -1368,13 +1412,17 @@ def _assert_visible_zero_to_n_change(
     artifact_version_id: str,
 ) -> None:
     for base_row, submitted_row in zip(base_rows, submitted_rows):
-        base_count = max(int(base_row.get("planned_route_count") or 0), 0)
-        next_count = int(submitted_row["planned_route_count"])
-        if base_count == 0 and next_count > 0:
+        base_route_count = max(int(base_row.get("planned_route_count") or 0), 0)
+        next_route_count = int(submitted_row["planned_route_count"])
+        base_on_call_target = max(int(base_row.get("on_call_target") or 0), 0)
+        next_on_call_target = int(submitted_row["on_call_target"])
+        if (base_route_count == 0 and next_route_count > 0) or (
+            base_on_call_target == 0 and next_on_call_target > 0
+        ):
             return
     raise CommandError(
         code="route_demand_run_requires_new_routes",
-        message="save and run scheduling agent requires at least one visible future-week day to move from 0 to more than 0 routes",
+        message="save and run scheduling agent requires at least one visible future-week day to move from 0 to positive route demand or on-call target",
         details={
             "workflow_run_id": workflow_run_id,
             "artifact_version_id": artifact_version_id,
@@ -1440,6 +1488,7 @@ def _save_route_demand_if_needed(
         {
             "service_date": str(row.get("service_date") or "").strip(),
             "planned_route_count": int(row.get("planned_route_count") or 0),
+            "on_call_target": int(row.get("on_call_target") or 0),
         }
         for row in list(base_projection.get("daily_demand_rows") or [])
         if isinstance(row, Mapping)
@@ -1491,14 +1540,22 @@ def _route_demand_rows_match(
     if len(base_rows) != len(submitted_rows):
         return False
     submitted_by_date = {
-        str(row["service_date"]): int(row["planned_route_count"])
+        str(row["service_date"]): {
+            "planned_route_count": int(row["planned_route_count"]),
+            "on_call_target": int(row["on_call_target"]),
+        }
         for row in submitted_rows
     }
     for row in base_rows:
         service_date = str(row.get("service_date") or "").strip()
         if service_date not in submitted_by_date:
             return False
-        if int(row.get("planned_route_count") or 0) != submitted_by_date[service_date]:
+        if (
+            int(row.get("planned_route_count") or 0)
+            != submitted_by_date[service_date]["planned_route_count"]
+        ):
+            return False
+        if int(row.get("on_call_target") or 0) != submitted_by_date[service_date]["on_call_target"]:
             return False
     return True
 
@@ -1703,6 +1760,11 @@ def _copy_json_artifact_to_workflow_run(
                 "artifact_version_id": str(source_artifact.get("artifact_version_id") or ""),
             },
         )
+    storage_uri = str(source_artifact.get("storage_uri") or "").strip()
+    if storage_uri.startswith("file:"):
+        artifact_bytes = read_blob(storage_uri)
+    else:
+        artifact_bytes = json.dumps(dict(metadata), indent=2, sort_keys=True).encode("utf-8")
     return _create_workbook_artifact_version(
         connection,
         storage_root=storage_root,
@@ -1711,7 +1773,7 @@ def _copy_json_artifact_to_workflow_run(
             source_artifact.get("artifact_kind"),
             field_name="artifact_kind",
         ),
-        artifact_bytes=json.dumps(dict(metadata), indent=2, sort_keys=True).encode("utf-8"),
+        artifact_bytes=artifact_bytes,
         artifact_role=str(source_artifact.get("artifact_role") or "official_input"),
         file_name=_file_name_from_artifact(source_artifact, default="artifact.json"),
         media_type=str(source_artifact.get("media_type") or "application/json"),
@@ -1857,8 +1919,13 @@ def _route_demand_planning_week_id_from_metadata(metadata: Mapping[str, Any]) ->
     scope_start = str(metadata.get("scope_start") or "").strip()
     if not scope_start:
         return None
-    planning_week_monday = date.fromisoformat(scope_start) + timedelta(days=1)
-    return service_day_to_future_planning_week(f"SD-{planning_week_monday.isoformat()}")
+    return _planning_week_id_for_operational_week_start(date.fromisoformat(scope_start))
+
+
+def _planning_week_id_for_operational_week_start(operational_week_start: date) -> str:
+    label_monday = operational_week_start + timedelta(days=1)
+    iso_year, iso_week, _ = label_monday.isocalendar()
+    return f"PW-{iso_year:04d}-W{iso_week:02d}"
 
 
 def _file_name_from_artifact(artifact: Mapping[str, Any], *, default: str) -> str:

@@ -16,6 +16,7 @@ describe("AppShell viewer bootstrap", () => {
           actorRoles: string | null;
         }
       | null = null;
+    let logisticsStoryRequests = 0;
 
     server.use(
       http.get("*/api/v1/viewer", () =>
@@ -48,6 +49,14 @@ describe("AppShell viewer bootstrap", () => {
           workflow_runs: [],
           page: { limit: 100, offset: 0 }
         });
+      }),
+      http.get("*/api/v1/stories/logistics-three-workflow", () => {
+        logisticsStoryRequests += 1;
+        return HttpResponse.json({
+          status: "ok",
+          command: "api.stories.logistics_three_workflow",
+          story: {}
+        });
       })
     );
 
@@ -71,6 +80,7 @@ describe("AppShell viewer bootstrap", () => {
       actorType: null,
       actorRoles: null
     });
+    expect(logisticsStoryRequests).toBe(0);
   });
 
   it("keeps the shell full width and opens task details as a centered modal", async () => {

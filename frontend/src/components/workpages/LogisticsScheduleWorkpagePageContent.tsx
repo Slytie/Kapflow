@@ -35,6 +35,12 @@ import { apiConfig } from "@/lib/api/config";
 import { errorText } from "@/lib/api/errorText";
 import { isApiClientError } from "@/lib/api/httpClient";
 import { workpagesRepository } from "@/lib/repositories";
+import {
+  buildHybridScheduleReality,
+  currentServiceDateInTimeZone,
+  elapsedCurrentWeekServiceDates,
+  SCHEDULE_SERVICE_TIMEZONE
+} from "@/lib/workpages/scheduleHybridReality";
 import type {
   WorkpageContract,
   WorkpagePreviewResponse,
@@ -1011,6 +1017,7 @@ function LogisticsScheduleWorkpageView({
         calculations={contract.calculations}
         dependencies={contract.dependencies}
         versionRails={versionRails}
+        showVersionRails={false}
         readOnly
         routeDemandUnresolvedCountsByServiceDate={routeDemandUnresolvedCountsByServiceDate}
       />
@@ -1473,6 +1480,47 @@ function ScheduleArtifactEditor({
       action.kind === "mark_sick_no_show" ||
       action.action_id === "workpage.schedule-v0.mark_sick_no_show"
   );
+  const previousWeekRealityAction = findScheduleAction(
+    contract,
+    (action) =>
+      action.kind === "open_previous_week_reality" ||
+      action.action_id === "workpage.schedule-v0.open_previous_week_reality"
+  );
+  const operationalWeekStart = asString(contract?.workpage.summary.operational_week_start);
+  const comparisonCurrentServiceDate = useMemo(
+    () => currentServiceDateInTimeZone(new Date(), SCHEDULE_SERVICE_TIMEZONE),
+    []
+  );
+  const comparisonElapsedServiceDates = useMemo(
+    () =>
+      operationalWeekStart
+        ? elapsedCurrentWeekServiceDates({
+            operationalWeekStart,
+            currentServiceDate: comparisonCurrentServiceDate
+          })
+        : [],
+    [comparisonCurrentServiceDate, operationalWeekStart]
+  );
+  const shouldLoadPreviousWeekReality =
+    Boolean(workflowRunId && artifactVersionId) &&
+    Boolean(previousWeekRealityAction?.state === "available") &&
+    comparisonElapsedServiceDates.length > 0;
+  const previousWeekRealityQuery = useQuery({
+    queryKey: [
+      "workpages",
+      "schedule-v0",
+      "artifacts",
+      workflowRunId,
+      artifactVersionId,
+      "reality",
+      "hybrid"
+    ],
+    queryFn: () =>
+      workpagesRepository.scheduleArtifactPreviousWeekReality(workflowRunId, artifactVersionId),
+    enabled: shouldLoadPreviousWeekReality,
+    retry: (failureCount) => failureCount < 1,
+    refetchInterval: apiConfig.pollIntervalMs
+  });
   const routeDemandAction = findRouteDemandAction(contract);
   const driverPreferencesAction = findDriverPreferencesAction(contract);
   const baseAssignmentSignature = useMemo(
@@ -1921,6 +1969,14 @@ function ScheduleArtifactEditor({
     )?.route ?? null;
   const currentCalculations = previewResponse?.calculations ?? contract.calculations;
   const currentDependencies = previewResponse?.dependencies ?? contract.dependencies;
+  const hybridReality = buildHybridScheduleReality({
+    calculations: currentCalculations,
+    heatmapSection,
+    operationalWeekStart,
+    reality: previousWeekRealityQuery.data ?? null
+  });
+  const effectiveHeatmapSection = hybridReality?.heatmapSection ?? heatmapSection;
+  const selectedServiceDateOverride = hybridReality?.selectedServiceDateOverride ?? null;
   const isStaleArtifact = latestArtifactVersionId !== artifactVersionId;
   const submitConflict = workpageConflictDetails(submitMutation.error);
   const staleOrConflictRoute = submitConflict?.route ?? (isStaleArtifact ? latestRoute : null);
@@ -2070,6 +2126,28 @@ function ScheduleArtifactEditor({
               History
             </button>
           ) : null}
+          {previousWeekRealityAction?.route && previousWeekRealityAction.state === "available" ? (
+            <Link
+              className="link-button"
+              to={previousWeekRealityAction.route}
+              target="_blank"
+              rel="noreferrer"
+            >
+              Open previous-week reality
+            </Link>
+          ) : previousWeekRealityAction ? (
+            <button
+              type="button"
+              className="action-btn"
+              disabled
+              title={
+                previousWeekRealityAction.disabled_reason ??
+                "Previous-week reality is unavailable for this draft."
+              }
+            >
+              Open previous-week reality
+            </button>
+          ) : null}
           <button
             type="button"
             className="action-btn action-btn--positive"
@@ -2184,6 +2262,24 @@ function ScheduleArtifactEditor({
           title="Draft save failed"
           detail={errorText(submitMutation.error, "Unable to save the artifact-backed schedule draft.")}
         />
+      ) : null}
+
+      {shouldLoadPreviousWeekReality && previousWeekRealityQuery.isError ? (
+        <section className="workpage-panel workpage-panel--callout">
+          <header className="workpage-panel__header">
+            <h2>Previous-week reality unavailable</h2>
+            <p>
+              Comparison stayed on the current planned grid because the pinned prior-week reality
+              snapshot could not be loaded.
+            </p>
+          </header>
+          <p>
+            {errorText(
+              previousWeekRealityQuery.error,
+              "The editable weekly schedule remains available without the inline reality comparison."
+            )}
+          </p>
+        </section>
       ) : null}
 
       {downloadMutation.isError ? (
@@ -2442,7 +2538,7 @@ function ScheduleArtifactEditor({
 
       <ScheduleWorkpageSurface
         summarySection={summarySection}
-        heatmapSection={heatmapSection}
+        heatmapSection={effectiveHeatmapSection}
         assignmentRows={assignmentRows}
         reserveRows={reserveRows}
         onRowsChange={({ assignmentRows: nextAssignmentRows, reserveRows: nextReserveRows }) => {
@@ -2452,6 +2548,7 @@ function ScheduleArtifactEditor({
         calculations={currentCalculations}
         dependencies={currentDependencies}
         versionRails={versionRails}
+        selectedServiceDateOverride={selectedServiceDateOverride}
         readOnly={false}
         previewStatus={{
           isDirty: hasUnsavedEdits,
@@ -2461,6 +2558,7 @@ function ScheduleArtifactEditor({
         }}
         saveAction={saveAction}
         presentation={isEmbedded ? "quick_edit" : "default"}
+        showVersionRails={false}
         routeDemandUnresolvedCountsByServiceDate={routeDemandCoverageUnresolvedCountsByServiceDate}
         routeDemandPendingCells={routeDemandCoveragePendingCells}
         onRouteDemandCellToggle={

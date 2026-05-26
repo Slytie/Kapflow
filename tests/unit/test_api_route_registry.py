@@ -65,6 +65,7 @@ def test_route_registry_preserves_exact_global_route_order() -> None:
         "workpages.workflow_run.schedule.sick_no_show",
         "workpages.workflow_run.schedule.route_demand_coverage_candidates",
         "workpages.workflow_run.schedule.route_demand_coverage",
+        "workpages.workflow_run.schedule.previous_week_reality",
         "workpages.workflow_run.artifact.detail",
         "workpages.workflow_run.artifact.submit",
         "workpages.workflow_run.detail",
@@ -114,6 +115,21 @@ def test_route_registry_matches_representative_exact_and_parameterized_routes() 
     assert workflow_run_artifact_match.route.name == "workpages.workflow_run.artifact.detail"
     assert workflow_run_artifact_match.params == {
         "workflow_run_artifact": "wr-001/schedule-v0/artifacts/av-001"
+    }
+
+    workflow_run_previous_week_reality_match = match_route(
+        "GET",
+        "/api/v1/workpages/workflow-runs/wr-001/schedule-v0/artifacts/av-001/reality/previous-week",
+    )
+    assert workflow_run_previous_week_reality_match is not None
+    assert (
+        workflow_run_previous_week_reality_match.route.name
+        == "workpages.workflow_run.schedule.previous_week_reality"
+    )
+    assert workflow_run_previous_week_reality_match.params == {
+        "workflow_run_schedule_previous_week_reality": (
+            "wr-001/schedule-v0/artifacts/av-001"
+        )
     }
 
     workflow_run_artifact_preview_match = match_route(
@@ -321,6 +337,16 @@ def test_route_registry_preserves_suffix_precedence_over_detail_routes() -> None
         == "workpages.workflow_run.schedule.route_demand_coverage"
     )
 
+    schedule_previous_week_reality = match_route(
+        "GET",
+        "/api/v1/workpages/workflow-runs/wr-001/schedule-v0/artifacts/av-001/reality/previous-week",
+    )
+    assert schedule_previous_week_reality is not None
+    assert (
+        schedule_previous_week_reality.route.name
+        == "workpages.workflow_run.schedule.previous_week_reality"
+    )
+
 
 def test_route_registry_exposes_representative_metadata() -> None:
     routes_by_name = {route.name: route for route in ROUTES}
@@ -376,6 +402,23 @@ def test_route_registry_exposes_representative_metadata() -> None:
     )
     assert (
         routes_by_name["workpages.workflow_run.schedule.route_demand_coverage_candidates"].needs_db_connection
+        is True
+    )
+
+    assert (
+        routes_by_name["workpages.workflow_run.schedule.previous_week_reality"].needs_page
+        is False
+    )
+    assert (
+        routes_by_name["workpages.workflow_run.schedule.previous_week_reality"].body_policy
+        == NO_BODY
+    )
+    assert (
+        routes_by_name["workpages.workflow_run.schedule.previous_week_reality"].requires_request_context
+        is True
+    )
+    assert (
+        routes_by_name["workpages.workflow_run.schedule.previous_week_reality"].needs_db_connection
         is True
     )
 

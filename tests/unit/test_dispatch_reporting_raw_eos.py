@@ -16,3 +16,4 @@ def test_project_raw_eos_workbook_prefers_explicit_metadata_service_date() -> No
 
     assert projection.service_date == "2026-03-25"
     assert {row["service_date"] for row in projection.route_rows} == {"2026-03-25"}
+    assert any(str(row.get("driver_id") or "").strip() for row in projection.route_rows)

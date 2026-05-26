@@ -10,8 +10,15 @@ from typing import Any
 from uuid import uuid4
 
 from onetruth.application.handlers._shared.command_boundary import CommandError, _event_envelope
+from onetruth.application.services.dispatch_reporting_build import (
+    PLANNING_ACTUAL_HOURS_ARTIFACT_KIND,
+    REPORTING_TO_PLANNING_EDGE_ID,
+    build_planning_actual_hours_snapshot_payload,
+    merge_planning_actual_hours_snapshot_payloads,
+)
 from onetruth.application.services.logistics_handoff_runtime import apply_partition_transform_by_id
 from onetruth.domain.partition_codec import validate_partition_key
+from onetruth.infrastructure.artifacts.storage import ArtifactStorageError, read_blob
 from onetruth.infrastructure.definitions.family_compiler import (
     DefinitionCompileError,
     compile_workflow_family,
@@ -932,43 +939,23 @@ def notify_only_handoff_command(
                 created_at=now,
             )
             target_workflow_run_id = str(target_workflow_run["workflow_run_id"])
-
-            target_input_artifact = _create_or_load_artifact_version(
-                connection,
-                artifact_version_id=_stable_notify_input_artifact_id(
+            target_input_artifact, binding_metadata_json, additional_provenance_input_ids = (
+                _materialize_notify_only_target_input_artifact(
+                    connection,
                     edge_id=edge_id,
+                    source_workflow_run_id=source_workflow_run_id,
+                    source_partition_key=source_partition_key,
+                    source_artifact=source_artifact,
                     source_artifact_version_id=source_artifact_version_id,
+                    source_scope=source_scope,
+                    target_workflow_run_id=target_workflow_run_id,
                     target_partition_key=target_partition_key,
+                    target_binding_key=target_binding_key,
                     target_dataset_key=edge_descriptor["target_dataset_key"],
-                ),
-                workflow_run_id=target_workflow_run_id,
-                tenant_id=source_scope["tenant_id"],
-                domain_id=source_scope["domain_id"],
-                dataset_key=edge_descriptor["target_dataset_key"],
-                partition_kind=edge_descriptor["target_partition_kind"],
-                partition_key=target_partition_key,
-                artifact_kind=edge_descriptor["target_dataset_key"],
-                artifact_role="official_input",
-                media_type=str(source_artifact.get("media_type") or "application/octet-stream"),
-                storage_uri=(
-                    "inmem://handoff/"
-                    f"{target_workflow_run_id}/{edge_descriptor['target_dataset_key']}/{source_artifact_version_id}"
-                ),
-                content_digest=f"sha256:{_digest('notify-input', edge_id, source_artifact_version_id, target_partition_key)}",
-                metadata_json={
-                    "handoff_edge_id": edge_id,
-                    "handoff_mode": NOTIFY_ONLY_MODE,
-                    "source_workflow_run_id": source_workflow_run_id,
-                    "source_artifact_version_id": source_artifact_version_id,
-                    "source_partition_key": source_partition_key,
-                    "target_partition_key": target_partition_key,
-                    "target_input_dataset_key": edge_descriptor["target_dataset_key"],
-                    "materialize_idempotency_key": idempotency_key,
-                },
-                parent_artifact_version_id=source_artifact_version_id,
-                supersedes_artifact_version_id=None,
-                lineage_note="notify_only_handoff_input",
-                created_at=now,
+                    target_partition_kind=edge_descriptor["target_partition_kind"],
+                    idempotency_key=idempotency_key,
+                    created_at=now,
+                )
             )
             _create_or_ignore_provenance_edge(
                 connection,
@@ -988,17 +975,36 @@ def notify_only_handoff_command(
                     "target_partition_key": target_partition_key,
                 },
             )
+            for edge_order, provenance_input_artifact_id in enumerate(
+                additional_provenance_input_ids,
+                start=1,
+            ):
+                _create_or_ignore_provenance_edge(
+                    connection,
+                    output_artifact_version_id=str(target_input_artifact["artifact_version_id"]),
+                    input_artifact_version_id=provenance_input_artifact_id,
+                    edge_type="derives_from",
+                    workflow_run_id=target_workflow_run_id,
+                    edge_order=edge_order,
+                    created_at=now,
+                    edge_id=(
+                        "ape-"
+                        f"{_digest('notify-provenance-merged', edge_id, str(target_input_artifact['artifact_version_id']), provenance_input_artifact_id)}"
+                    ),
+                    metadata_json={
+                        "edge_id": edge_id,
+                        "handoff_mode": NOTIFY_ONLY_MODE,
+                        "target_partition_key": target_partition_key,
+                        "merge_input_artifact_version_id": provenance_input_artifact_id,
+                    },
+                )
             _create_or_ignore_workflow_input_binding(
                 connection,
                 workflow_run_id=target_workflow_run_id,
                 binding_key=target_binding_key,
                 source_ref=source_artifact_version_id,
                 artifact_version_id=str(target_input_artifact["artifact_version_id"]),
-                metadata_json={
-                    "edge_id": edge_id,
-                    "handoff_mode": NOTIFY_ONLY_MODE,
-                    "target_dataset_key": edge_descriptor["target_dataset_key"],
-                },
+                metadata_json=binding_metadata_json,
                 captured_at=now,
                 replace_on_conflict=True,
             )
@@ -1442,6 +1448,229 @@ def _logical_date_from_partition_key(*, partition_kind: str, partition_key: str)
         week_start = date.fromisocalendar(int(year_text), int(week_text), 1)
         return week_start.isoformat()
     return partition_key
+
+
+def _materialize_notify_only_target_input_artifact(
+    connection: sqlite3.Connection,
+    *,
+    edge_id: str,
+    source_workflow_run_id: str,
+    source_partition_key: str,
+    source_artifact: dict[str, Any],
+    source_artifact_version_id: str,
+    source_scope: dict[str, str],
+    target_workflow_run_id: str,
+    target_partition_key: str,
+    target_binding_key: str,
+    target_dataset_key: str,
+    target_partition_kind: str,
+    idempotency_key: str,
+    created_at: str,
+) -> tuple[dict[str, Any], dict[str, Any], tuple[str, ...]]:
+    base_artifact_metadata = {
+        "handoff_edge_id": edge_id,
+        "handoff_mode": NOTIFY_ONLY_MODE,
+        "source_workflow_run_id": source_workflow_run_id,
+        "source_artifact_version_id": source_artifact_version_id,
+        "source_partition_key": source_partition_key,
+        "target_partition_key": target_partition_key,
+        "target_input_dataset_key": target_dataset_key,
+        "materialize_idempotency_key": idempotency_key,
+    }
+    if edge_id != REPORTING_TO_PLANNING_EDGE_ID:
+        target_input_artifact = _create_or_load_artifact_version(
+            connection,
+            artifact_version_id=_stable_notify_input_artifact_id(
+                edge_id=edge_id,
+                source_artifact_version_id=source_artifact_version_id,
+                target_partition_key=target_partition_key,
+                target_dataset_key=target_dataset_key,
+            ),
+            workflow_run_id=target_workflow_run_id,
+            tenant_id=source_scope["tenant_id"],
+            domain_id=source_scope["domain_id"],
+            dataset_key=target_dataset_key,
+            partition_kind=target_partition_kind,
+            partition_key=target_partition_key,
+            artifact_kind=target_dataset_key,
+            artifact_role="official_input",
+            media_type=str(source_artifact.get("media_type") or "application/octet-stream"),
+            storage_uri=(
+                "inmem://handoff/"
+                f"{target_workflow_run_id}/{target_dataset_key}/{source_artifact_version_id}"
+            ),
+            content_digest=(
+                "sha256:"
+                f"{_digest('notify-input', edge_id, source_artifact_version_id, target_partition_key)}"
+            ),
+            metadata_json=base_artifact_metadata,
+            parent_artifact_version_id=source_artifact_version_id,
+            supersedes_artifact_version_id=None,
+            lineage_note="notify_only_handoff_input",
+            created_at=created_at,
+        )
+        return (
+            target_input_artifact,
+            {
+                "edge_id": edge_id,
+                "handoff_mode": NOTIFY_ONLY_MODE,
+                "target_dataset_key": target_dataset_key,
+            },
+            (),
+        )
+
+    incoming_payload, normalized_artifact_version_id = _reporting_to_planning_actual_hours_payload(
+        connection,
+        source_artifact=source_artifact,
+        source_artifact_version_id=source_artifact_version_id,
+    )
+    existing_binding = _get_workflow_run_input_binding(
+        connection,
+        workflow_run_id=target_workflow_run_id,
+        binding_key=target_binding_key,
+    )
+    superseded_artifact_version_id = (
+        str(existing_binding.get("artifact_version_id") or "")
+        if existing_binding is not None
+        else ""
+    )
+    current_payload = None
+    if superseded_artifact_version_id:
+        current_payload = _actual_hours_snapshot_payload_from_artifact(
+            _require_artifact(connection, superseded_artifact_version_id)
+        )
+    merged_payload = merge_planning_actual_hours_snapshot_payloads(
+        current_payload=current_payload,
+        incoming_payload=incoming_payload,
+    )
+    merged_payload.update(base_artifact_metadata)
+    merged_payload["source_reporting_artifact_version_id"] = source_artifact_version_id
+    merged_payload["normalized_artifact_version_id"] = normalized_artifact_version_id
+    if superseded_artifact_version_id:
+        merged_payload["merged_from_artifact_version_id"] = superseded_artifact_version_id
+
+    payload_bytes = json.dumps(
+        merged_payload,
+        separators=(",", ":"),
+        sort_keys=True,
+    ).encode("utf-8")
+    target_input_artifact = _create_or_load_artifact_version(
+        connection,
+        artifact_version_id=_stable_notify_input_artifact_id(
+            edge_id=edge_id,
+            source_artifact_version_id=source_artifact_version_id,
+            target_partition_key=target_partition_key,
+            target_dataset_key=target_dataset_key,
+        ),
+        workflow_run_id=target_workflow_run_id,
+        tenant_id=source_scope["tenant_id"],
+        domain_id=source_scope["domain_id"],
+        dataset_key=target_dataset_key,
+        partition_kind=target_partition_kind,
+        partition_key=target_partition_key,
+        artifact_kind=PLANNING_ACTUAL_HOURS_ARTIFACT_KIND,
+        artifact_role="official_input",
+        media_type="application/json",
+        storage_uri=(
+            "inmem://handoff/"
+            f"{target_workflow_run_id}/{target_dataset_key}/{source_artifact_version_id}.json"
+        ),
+        content_digest=f"sha256:{hashlib.sha256(payload_bytes).hexdigest()}",
+        metadata_json=merged_payload,
+        parent_artifact_version_id=source_artifact_version_id,
+        supersedes_artifact_version_id=superseded_artifact_version_id or None,
+        lineage_note="notify_only_handoff_input_dispatch_reporting_merge",
+        created_at=created_at,
+    )
+    binding_metadata_json = {
+        "edge_id": edge_id,
+        "handoff_mode": NOTIFY_ONLY_MODE,
+        "target_dataset_key": target_dataset_key,
+        "normalized_artifact_version_id": normalized_artifact_version_id,
+    }
+    if superseded_artifact_version_id:
+        binding_metadata_json["merged_from_artifact_version_id"] = (
+            superseded_artifact_version_id
+        )
+    return (
+        target_input_artifact,
+        binding_metadata_json,
+        (superseded_artifact_version_id,) if superseded_artifact_version_id else (),
+    )
+
+
+def _reporting_to_planning_actual_hours_payload(
+    connection: sqlite3.Connection,
+    *,
+    source_artifact: dict[str, Any],
+    source_artifact_version_id: str,
+) -> tuple[dict[str, Any], str]:
+    metadata_json = source_artifact.get("metadata_json")
+    normalized_artifact_version_id = (
+        str(metadata_json.get("normalized_artifact_version_id") or "")
+        if isinstance(metadata_json, dict)
+        else ""
+    )
+    if not normalized_artifact_version_id:
+        raise CommandError(
+            code="dispatch_reporting_normalized_artifact_missing",
+            message="dispatch reporting handoff requires normalized_artifact_version_id on the finalized packet",
+            details={
+                "artifact_version_id": source_artifact_version_id,
+                "artifact_kind": str(source_artifact.get("artifact_kind") or ""),
+            },
+        )
+    normalized_artifact = _require_artifact(connection, normalized_artifact_version_id)
+    normalized_payload = _dispatch_reporting_normalized_payload_from_artifact(normalized_artifact)
+    if normalized_payload is None:
+        raise CommandError(
+            code="dispatch_reporting_normalized_payload_invalid",
+            message="dispatch reporting handoff could not load normalized rows from the referenced artifact",
+            details={
+                "artifact_version_id": normalized_artifact_version_id,
+                "source_artifact_version_id": source_artifact_version_id,
+            },
+        )
+    return (
+        build_planning_actual_hours_snapshot_payload(
+            normalized_payload=normalized_payload,
+            source_artifact_version_id=source_artifact_version_id,
+        ),
+        normalized_artifact_version_id,
+    )
+
+
+def _dispatch_reporting_normalized_payload_from_artifact(
+    artifact: dict[str, Any],
+) -> dict[str, Any] | None:
+    metadata_json = artifact.get("metadata_json")
+    if isinstance(metadata_json, dict) and isinstance(metadata_json.get("rows"), list):
+        return dict(metadata_json)
+    storage_uri = str(artifact.get("storage_uri") or "").strip()
+    if not storage_uri or storage_uri.startswith("inmem://"):
+        return None
+    try:
+        content = read_blob(storage_uri)
+    except ArtifactStorageError:
+        return None
+    try:
+        payload = json.loads(content.decode("utf-8"))
+    except (UnicodeDecodeError, json.JSONDecodeError):
+        return None
+    return dict(payload) if isinstance(payload, dict) else None
+
+
+def _actual_hours_snapshot_payload_from_artifact(
+    artifact: dict[str, Any],
+) -> dict[str, Any] | None:
+    metadata_json = artifact.get("metadata_json")
+    if not isinstance(metadata_json, dict):
+        return None
+    columns = metadata_json.get("columns")
+    rows = metadata_json.get("rows")
+    if not isinstance(columns, list) or not isinstance(rows, list):
+        return None
+    return dict(metadata_json)
 
 
 def _create_or_load_artifact_version(

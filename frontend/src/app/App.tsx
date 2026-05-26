@@ -27,6 +27,7 @@ import {
 } from "@/pages/LogisticsRouteDemandWorkpagePage";
 import {
   LogisticsScheduleArtifactWorkpagePage,
+  LogisticsSchedulePreviousWeekRealityPage,
   LogisticsScheduleWorkpagePage
 } from "@/pages/LogisticsScheduleWorkpagePage";
 import { WorkspaceHomePage } from "@/pages/WorkspaceHomePage";
@@ -70,6 +71,10 @@ export function App(): JSX.Element {
               <Route
                 path="/runs/:workflowRunId/workpages/schedule-v0/artifacts/:artifactVersionId"
                 element={<LogisticsScheduleArtifactWorkpagePage />}
+              />
+              <Route
+                path="/runs/:workflowRunId/workpages/schedule-v0/artifacts/:artifactVersionId/reality/previous-week"
+                element={<LogisticsSchedulePreviousWeekRealityPage />}
               />
               <Route
                 path="/runs/:workflowRunId/workpages/route-demand-v0/artifacts/:artifactVersionId"

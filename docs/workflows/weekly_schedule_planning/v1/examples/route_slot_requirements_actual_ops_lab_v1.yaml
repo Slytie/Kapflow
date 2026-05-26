@@ -29,8 +29,8 @@ rows:
   - parcel_delivery
   - XL_van
   - '11:30'
-  - '20:00'
-  - 8.5
+  - '17:30'
+  - 6.0
   - 18
   - CYC0322
   - amazon-route-email-2026-03-20
@@ -44,8 +44,8 @@ rows:
   - parcel_delivery
   - XL_van
   - '11:30'
-  - '20:00'
-  - 8.5
+  - '17:30'
+  - 6.0
   - 23
   - CYC0323
   - amazon-route-email-2026-03-20
@@ -59,8 +59,8 @@ rows:
   - parcel_delivery
   - XL_van
   - '11:30'
-  - '20:00'
-  - 8.5
+  - '17:30'
+  - 6.0
   - 20
   - CYC0324
   - amazon-route-email-2026-03-20
@@ -74,8 +74,8 @@ rows:
   - parcel_delivery
   - XL_van
   - '11:30'
-  - '20:00'
-  - 8.5
+  - '17:30'
+  - 6.0
   - 20
   - CYC0325
   - amazon-route-email-2026-03-20
@@ -89,8 +89,8 @@ rows:
   - parcel_delivery
   - XL_van
   - '11:30'
-  - '20:00'
-  - 8.5
+  - '17:30'
+  - 6.0
   - 20
   - CYC0326
   - amazon-route-email-2026-03-20
@@ -104,8 +104,8 @@ rows:
   - parcel_delivery
   - XL_van
   - '11:30'
-  - '20:00'
-  - 8.5
+  - '17:30'
+  - 6.0
   - 20
   - CYC0327
   - amazon-route-email-2026-03-20
@@ -119,8 +119,8 @@ rows:
   - parcel_delivery
   - XL_van
   - '11:30'
-  - '20:00'
-  - 8.5
+  - '17:30'
+  - 6.0
   - 18
   - CYC0328
   - amazon-route-email-2026-03-20

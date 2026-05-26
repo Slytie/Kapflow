@@ -100,6 +100,21 @@ interface DriverAvailabilityExceptionState {
   source_weekly_workflow_run_id: string;
 }
 
+interface PreviousWeekRealityCellState {
+  service_date: string;
+  state: string;
+  normalized_state: string;
+  blocked_reasons: string[];
+  actual_minutes: number;
+  route_id: string;
+  route_slot_class: string;
+  source_ref: string;
+  call_in_sick_flag: boolean;
+  cancellation_flag: boolean;
+  non_working_day_flag: boolean;
+  cumulative_week_minutes: number;
+}
+
 function nowIso(): string {
   return new Date().toISOString();
 }
@@ -139,6 +154,13 @@ function artifactRoute(artifactVersionId: string, workflowRunId: string): string
 
 function scheduleArtifactRoute(artifactVersionId: string, workflowRunId: string): string {
   return `/runs/${workflowRunId}/workpages/schedule-v0/artifacts/${artifactVersionId}`;
+}
+
+function schedulePreviousWeekRealityRoute(
+  artifactVersionId: string,
+  workflowRunId: string
+): string {
+  return `${scheduleArtifactRoute(artifactVersionId, workflowRunId)}/reality/previous-week`;
 }
 
 function routeDemandArtifactRoute(artifactVersionId: string, workflowRunId: string): string {
@@ -495,6 +517,29 @@ function buildScheduleSickNoShowAction(
       workflowRunId,
       artifactVersionId
     })
+  };
+}
+
+function buildSchedulePreviousWeekRealityAction(
+  workflowRunId: string,
+  artifactVersionId: string,
+  options?: { state?: "available" | "blocked"; disabledReason?: string | null }
+): Record<string, unknown> {
+  return {
+    action_id: "workpage.schedule-v0.open_previous_week_reality",
+    artifact_version_id: artifactVersionId,
+    kind: "open_previous_week_reality",
+    label: "Open previous-week reality",
+    route: schedulePreviousWeekRealityRoute(artifactVersionId, workflowRunId),
+    state: options?.state ?? "available",
+    workpage_kind: "schedule-v0",
+    action_ref: buildWorkpageActionRef({
+      actionId: "workpage.schedule-v0.open_previous_week_reality",
+      workpageKind: "schedule-v0",
+      workflowRunId,
+      artifactVersionId
+    }),
+    disabled_reason: options?.disabledReason ?? null
   };
 }
 
@@ -1124,6 +1169,14 @@ function patchScheduleArtifactContractState(version: ScheduleArtifactVersionStat
   ensureRouteDemandArtifactDraft(version.workflowRunId);
   const latestRouteDemandVersion = latestRouteDemandArtifactForRun(version.workflowRunId);
   const latestDriverPreferencesVersion = latestDriverPreferencesArtifactForRun(version.workflowRunId);
+  const actualHoursDependency = asObjectArray(payload.dependencies).find(
+    (row) => asString(row.dependency_key) === "actual_hours"
+  );
+  const actualHoursArtifactVersionId = asStringOrNull(actualHoursDependency?.artifact_version_id);
+  const previousWeekRealityActionState = actualHoursArtifactVersionId ? "available" : "blocked";
+  const previousWeekRealityDisabledReason = actualHoursArtifactVersionId
+    ? null
+    : "actual_hours_dependency_unavailable";
   const actions = Array.isArray(payload.actions) ? payload.actions : [];
   const mappedActions = actions
     .filter((action) => asObject(action)?.workpage_kind !== "driver-preferences-v0")
@@ -1170,6 +1223,20 @@ function patchScheduleArtifactContractState(version: ScheduleArtifactVersionStat
         artifactVersionId: version.artifactVersionId
       });
     }
+    if (kind === "open_previous_week_reality") {
+      record.route = schedulePreviousWeekRealityRoute(
+        version.artifactVersionId,
+        version.workflowRunId
+      );
+      record.state = previousWeekRealityActionState;
+      record.disabled_reason = previousWeekRealityDisabledReason;
+      record.action_ref = buildWorkpageActionRef({
+        actionId: asString(record.action_id),
+        workpageKind: "schedule-v0",
+        workflowRunId: version.workflowRunId,
+        artifactVersionId: version.artifactVersionId
+      });
+    }
     if (record.workpage_kind === "route-demand-v0" && kind === "open_latest") {
       record.artifact_version_id = latestRouteDemandVersion?.artifactVersionId ?? null;
       record.route = latestRouteDemandVersion
@@ -1187,6 +1254,18 @@ function patchScheduleArtifactContractState(version: ScheduleArtifactVersionStat
   });
   payload.actions = [
     ...mappedActions,
+    ...(mappedActions.some((action) => asObject(action)?.kind === "open_previous_week_reality")
+      ? []
+      : [
+          buildSchedulePreviousWeekRealityAction(
+            version.workflowRunId,
+            version.artifactVersionId,
+            {
+              state: previousWeekRealityActionState,
+              disabledReason: previousWeekRealityDisabledReason
+            }
+          )
+        ]),
     ...(mappedActions.some((action) => asObject(action)?.kind === "mark_sick_no_show")
       ? []
       : [buildScheduleSickNoShowAction(version.workflowRunId, version.artifactVersionId)]),
@@ -1260,6 +1339,181 @@ function patchScheduleArtifactContractState(version: ScheduleArtifactVersionStat
         )?.preferenceGrid ?? null
       : null;
   applyScheduleArtifactEdits(payload, version.workbookPayload, effectivePreferenceGrid);
+}
+
+function buildSchedulePreviousWeekRealityPayload(
+  version: ScheduleArtifactVersionState
+): Record<string, unknown> {
+  const actualHoursDependency = asObjectArray(version.payload.dependencies).find(
+    (row) => asString(row.dependency_key) === "actual_hours"
+  );
+  const actualHoursArtifactVersionId = asString(actualHoursDependency?.artifact_version_id);
+  const heatmapSection = findSectionByKind(version.payload, "schedule_heatmap");
+  const heatmapPeople = asObjectArray(heatmapSection?.people);
+  const drivers = heatmapPeople.slice(0, 8).map((person, index) => {
+    const driverId = asString(person.driver_id);
+    const driverName = asString(person.driver_name);
+    const employmentType = asString(person.employment_type);
+    const onCallEligible = Boolean(person.on_call_eligible);
+    const availabilitySummary = asString(person.availability_summary);
+    const previousWeekMinutes = asNumber(person.previous_week_minutes);
+    let cumulativeWeekMinutes = 0;
+    const cells: PreviousWeekRealityCellState[] = [
+      "2026-03-15",
+      "2026-03-16",
+      "2026-03-17",
+      "2026-03-18",
+      "2026-03-19",
+      "2026-03-20",
+      "2026-03-21"
+    ].map((serviceDate, offset) => {
+      let cell: Omit<PreviousWeekRealityCellState, "cumulative_week_minutes">;
+      if (offset === index % 4) {
+        cell = {
+          service_date: serviceDate,
+          state: "WORKED",
+          normalized_state: "worked",
+          blocked_reasons: [],
+          actual_minutes: 480 + (index % 2) * 60,
+          route_id: `R-${String(index + 1).padStart(2, "0")}`,
+          route_slot_class: "cycle1_standard",
+          source_ref: `actual-hours:${driverId}:${serviceDate}`,
+          call_in_sick_flag: false,
+          cancellation_flag: false,
+          non_working_day_flag: false
+        };
+      } else if (offset === (index + 2) % 7) {
+        cell = {
+          service_date: serviceDate,
+          state: "SICK_CALL",
+          normalized_state: "blocked_previous_week",
+          blocked_reasons: ["previous_week_blocked"],
+          actual_minutes: 0,
+          route_id: "",
+          route_slot_class: "",
+          source_ref: `actual-hours:${driverId}:${serviceDate}`,
+          call_in_sick_flag: true,
+          cancellation_flag: false,
+          non_working_day_flag: false
+        };
+      } else {
+        cell = {
+          service_date: serviceDate,
+          state: "NA",
+          normalized_state: offset % 2 === 0 ? "available_not_assigned" : "pattern_off",
+          blocked_reasons: offset % 2 === 0 ? [] : ["pattern_off"],
+          actual_minutes: 0,
+          route_id: "",
+          route_slot_class: "",
+          source_ref: `actual-hours:${driverId}:${serviceDate}`,
+          call_in_sick_flag: false,
+          cancellation_flag: false,
+          non_working_day_flag: offset % 2 !== 0
+        };
+      }
+      cumulativeWeekMinutes += asNumber(cell.actual_minutes);
+      return {
+        ...cell,
+        cumulative_week_minutes: cumulativeWeekMinutes
+      };
+    });
+    return {
+      driver_id: driverId,
+      driver_name: driverName,
+      employment_type: employmentType,
+      on_call_eligible: onCallEligible,
+      availability_summary: availabilitySummary,
+      previous_week_minutes: previousWeekMinutes,
+      cells
+    };
+  });
+  const serviceDates = [
+    { service_date: "2026-03-15", label: "2026-03-15", weekday_label: "Sun" },
+    { service_date: "2026-03-16", label: "2026-03-16", weekday_label: "Mon" },
+    { service_date: "2026-03-17", label: "2026-03-17", weekday_label: "Tue" },
+    { service_date: "2026-03-18", label: "2026-03-18", weekday_label: "Wed" },
+    { service_date: "2026-03-19", label: "2026-03-19", weekday_label: "Thu" },
+    { service_date: "2026-03-20", label: "2026-03-20", weekday_label: "Fri" },
+    { service_date: "2026-03-21", label: "2026-03-21", weekday_label: "Sat" }
+  ];
+  const daySummaries = serviceDates.map((serviceDate) => {
+    const cells = drivers.flatMap((driver) =>
+      driver.cells.filter((cell) => cell.service_date === serviceDate.service_date)
+    );
+    return {
+      service_date: serviceDate.service_date,
+      weekday_label: serviceDate.weekday_label,
+      worked_driver_days: cells.filter((cell) => cell.normalized_state === "worked").length,
+      blocked_driver_days: cells.filter(
+        (cell) => cell.normalized_state === "blocked_previous_week"
+      ).length,
+      worked_route_count: cells.filter((cell) => Boolean(cell.route_id)).length,
+      total_minutes: cells.reduce((sum, cell) => sum + asNumber(cell.actual_minutes), 0)
+    };
+  });
+  const activityRows = drivers.flatMap((driver) =>
+    driver.cells
+      .filter(
+        (cell) =>
+          cell.normalized_state === "worked" ||
+          cell.normalized_state === "blocked_previous_week"
+      )
+      .map((cell) => ({
+        driver_id: driver.driver_id,
+        driver_name: driver.driver_name,
+        service_date: cell.service_date,
+        weekday_label:
+          serviceDates.find((item) => item.service_date === cell.service_date)?.weekday_label ??
+          "",
+        normalized_state: cell.normalized_state,
+        state: cell.state,
+        actual_minutes: cell.actual_minutes,
+        route_id: cell.route_id,
+        route_slot_class: cell.route_slot_class,
+        source_ref: cell.source_ref,
+        call_in_sick_flag: cell.call_in_sick_flag,
+        cancellation_flag: cell.cancellation_flag,
+        non_working_day_flag: cell.non_working_day_flag
+      }))
+  );
+  return {
+    status: "ok",
+    command: "api.workpages.schedule.previous_week_reality",
+    artifact_context: cloneJson(version.payload.artifact_context),
+    source: {
+      mode: "artifact_projection",
+      primary_dataset_key: "planning.actual_hours_snapshot.workbook",
+      source_dataset_keys: [
+        "planning.actual_hours_snapshot.workbook",
+        "planning.draft_weekly_schedule.workbook"
+      ],
+      source_artifact_version_id: actualHoursArtifactVersionId,
+      source_refs: [
+        `/api/v1/artifacts/${actualHoursArtifactVersionId}`,
+        `/api/v1/artifacts/${version.artifactVersionId}`
+      ]
+    },
+    freshness: {
+      generated_at: nowIso(),
+      source_kind: "artifact_version",
+      source_version: actualHoursArtifactVersionId
+    },
+    previous_week_reality: {
+      workflow_run_id: version.workflowRunId,
+      schedule_artifact_version_id: version.artifactVersionId,
+      actual_hours_artifact_version_id: actualHoursArtifactVersionId,
+      planning_week_id: CURRENT_WEEKLY_PLANNING_WEEK_ID,
+      operational_week_start: "2026-03-22",
+      previous_week_start: "2026-03-15",
+      previous_week_end: "2026-03-21",
+      service_dates: serviceDates,
+      day_summaries: daySummaries,
+      drivers,
+      activity_rows: activityRows,
+      note:
+        "This view shows the pinned actual-hours snapshot used by weekly scheduling. The snapshot may be normalized or proxy-shaped and should be read as the schedule's canonical prior-week reality input, not raw EOS workbook detail."
+    }
+  };
 }
 
 function patchRunSchedulePayloadContractState(
@@ -2198,24 +2452,34 @@ function buildRouteDemandDayCardsFromRequestedCounts(
   dailyDemandRows?: Array<{
     service_date?: string;
     planned_route_count?: number;
+    on_call_target?: number;
   }>
 ): Array<Record<string, unknown>> {
   const requestedCounts = new Map(
     (dailyDemandRows ?? []).map((row) => [
       asString(row.service_date),
-      asNumber(row.planned_route_count)
+      {
+        planned_route_count: asNumber(row.planned_route_count),
+        on_call_target: asNumber(row.on_call_target)
+      }
     ])
   );
   return dayCards.map((card) => {
     const serviceDate = asString(card.service_date);
     const currentCount = asNumber(card.planned_route_count);
-    const nextCount = serviceDate && requestedCounts.has(serviceDate)
-      ? Math.max(asNumber(requestedCounts.get(serviceDate)), 0)
+    const requested = serviceDate ? requestedCounts.get(serviceDate) : undefined;
+    const nextCount = requested
+      ? Math.max(asNumber(requested.planned_route_count), 0)
       : currentCount;
+    const currentOnCallTarget = asNumber(card.on_call_target);
+    const nextOnCallTarget = requested
+      ? Math.max(asNumber(requested.on_call_target), 0)
+      : currentOnCallTarget;
     const delta = nextCount - currentCount;
     return {
       ...card,
       planned_route_count: nextCount,
+      on_call_target: nextOnCallTarget,
       standard_slot_count: Math.max(asNumber(card.standard_slot_count) + delta, 0),
       delta_from_previous_version: {
         planned_route_count_delta: delta
@@ -2389,8 +2653,8 @@ function buildRouteDemandCoverageRecommendations(input: {
         station_code: "DVC4",
         service_area: "Metro core",
         shift_start: "10:15",
-        shift_end: "18:45",
-        projected_minutes: 510,
+        shift_end: "16:15",
+        projected_minutes: 360,
         required_skill: "standard_delivery",
         vehicle_type: "cargo_van"
       };
@@ -4653,6 +4917,7 @@ async function handleRouteDemandArtifactSubmitRequest(
     daily_demand_rows?: Array<{
       service_date?: string;
       planned_route_count?: number;
+      on_call_target?: number;
     }>;
   };
   const nextDayCards = buildRouteDemandDayCardsFromRequestedCounts(
@@ -4724,12 +4989,39 @@ async function handleRouteDemandSaveAndRunRequest(
     daily_demand_rows?: Array<{
       service_date?: string;
       planned_route_count?: number;
+      on_call_target?: number;
     }>;
   };
   const nextDayCards = buildRouteDemandDayCardsFromRequestedCounts(
     baseVersion.dayCards,
     body.daily_demand_rows
   );
+  const hasAnyChanges = nextDayCards.some((card, index) => {
+    const previousCard = baseVersion.dayCards[index];
+    return (
+      asNumber(card.planned_route_count) !== asNumber(previousCard?.planned_route_count) ||
+      asNumber(card.on_call_target) !== asNumber(previousCard?.on_call_target)
+    );
+  });
+  if (!baseVersion.futureWeekSeed && !hasAnyChanges) {
+    return HttpResponse.json(
+      {
+        status: "error",
+        error: {
+          code: "route_demand_increase_required",
+          message: "running the coverage agent requires at least one increased planned route count",
+          details: {
+            workflow_run_id: baseVersion.workflowRunId,
+            artifact_version_id: artifactVersionId,
+            service_dates: [],
+            added_route_count: 0,
+            deltas: []
+          }
+        }
+      },
+      { status: 400 }
+    );
+  }
   const submittedArtifactVersionId = nextRouteDemandArtifactVersionId();
   const submittedVersion = addRouteDemandArtifactVersion({
     artifactVersionId: submittedArtifactVersionId,
@@ -4755,6 +5047,17 @@ async function handleRouteDemandSaveAndRunRequest(
     submittedVersion,
     latestScheduleVersion.artifactVersionId
   );
+  if (!baseVersion.futureWeekSeed && asNumber(coverageContext.added_route_count) <= 0) {
+    state.audit.mutations.push(
+      `workpage-route-demand-save-and-run:${artifactVersionId}:${submittedArtifactVersionId}:${baseVersion.workflowRunId}`
+    );
+    return ok({
+      command: "api.workpages.route_demand.save_and_run",
+      submitted: (routeDemandArtifactSubmitResponse(submittedVersion, artifactVersionId)
+        .submitted as Record<string, unknown>) ?? {},
+      route_demand_coverage_context: null
+    });
+  }
   state.audit.mutations.push(
     `workpage-route-demand-save-and-run:${artifactVersionId}:${submittedArtifactVersionId}:${baseVersion.workflowRunId}`
   );
@@ -5349,6 +5652,44 @@ export const handlers = [
     "*/api/v1/workpages/workflow-runs/:workflowRunId/schedule-v0/artifacts/:artifactVersionId/preview",
     async ({ params, request }) =>
       handleScheduleArtifactPreviewRequest(String(params.artifactVersionId), request)
+  ),
+  http.get(
+    "*/api/v1/workpages/workflow-runs/:workflowRunId/schedule-v0/artifacts/:artifactVersionId/reality/previous-week",
+    ({ params, request }) => {
+      if (!inScope(request)) {
+        return scheduleArtifactNotFoundResponse(String(params.artifactVersionId));
+      }
+      ensureScheduleArtifactDraft(String(params.workflowRunId));
+      const artifactVersionId = String(params.artifactVersionId);
+      const version = scheduleArtifactVersions.get(artifactVersionId);
+      if (!version) {
+        return scheduleArtifactNotFoundResponse(artifactVersionId);
+      }
+      const actualHoursDependency = asObjectArray(version.payload.dependencies).find(
+        (row) => asString(row.dependency_key) === "actual_hours"
+      );
+      if (!asStringOrNull(actualHoursDependency?.artifact_version_id)) {
+        return HttpResponse.json(
+          {
+            status: "error",
+            error: {
+              code: "workpage_projection_unavailable",
+              message:
+                "previous-week reality is unavailable until this draft resolves a pinned actual-hours snapshot",
+              details: {
+                workflow_run_id: version.workflowRunId,
+                workpage_id: "schedule-v0.previous-week-reality",
+                missing_dataset_keys: ["planning.actual_hours_snapshot.workbook"]
+              }
+            }
+          },
+          { status: 409 }
+        );
+      }
+      patchArtifactPayloadLineage(version);
+      patchScheduleArtifactContractState(version);
+      return HttpResponse.json(buildSchedulePreviousWeekRealityPayload(version));
+    }
   ),
   http.get(
     "*/api/v1/workpages/workflow-runs/:workflowRunId/schedule-v0/artifacts/:artifactVersionId",

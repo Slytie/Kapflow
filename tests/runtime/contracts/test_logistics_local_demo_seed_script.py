@@ -70,12 +70,40 @@ def test_logistics_local_demo_seed_script_emits_stable_urls_and_ids_and_truthful
     assert written["prepare_live_dispatch_path"] == (
         f"/api/v1/workflow-runs/{written['weekly_run_id']}/prepare-live-dispatch-day"
     )
+    assert written["review_ready_weekly_workspace_url"] == (
+        f"/runs/{written['review_ready_weekly_run_id']}/workspace"
+    )
+    assert written["review_ready_reporting_workspace_url"] == (
+        f"/runs/{written['review_ready_reporting_run_id']}/workspace"
+    )
+    assert written["review_ready_schedule_workpage_url"] == (
+        f"/runs/{written['review_ready_weekly_run_id']}/workpages/schedule-v0"
+    )
+    assert written["review_ready_route_demand_workpage_url"] == (
+        f"/runs/{written['review_ready_weekly_run_id']}/workpages/route-demand-v0"
+    )
+    assert written["review_ready_driver_preferences_workpage_url"] == (
+        f"/runs/{written['review_ready_weekly_run_id']}/workpages/driver-preferences-v0"
+    )
+    assert written["review_ready_eod_workpage_url"] == (
+        f"/runs/{written['review_ready_reporting_run_id']}/workpages/eod-v0"
+    )
     assert written["upload_pack_root"].endswith("fixtures/logistics/local_demo_upload_pack")
     assert written["openai_api_key_present"] is False
 
     assert first["weekly_run_id"] == second["weekly_run_id"] == written["weekly_run_id"]
     assert first["reporting_run_id"] == second["reporting_run_id"] == written["reporting_run_id"]
     assert first["prior_reporting_run_id"] == second["prior_reporting_run_id"]
+    assert (
+        first["review_ready_weekly_run_id"]
+        == second["review_ready_weekly_run_id"]
+        == written["review_ready_weekly_run_id"]
+    )
+    assert (
+        first["review_ready_reporting_run_id"]
+        == second["review_ready_reporting_run_id"]
+        == written["review_ready_reporting_run_id"]
+    )
 
     with_key = json.loads(_run_script(args=args, openai_api_key="sk-demo-local").stdout)
     assert with_key["openai_api_key_present"] is True

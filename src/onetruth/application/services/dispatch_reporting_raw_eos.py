@@ -24,6 +24,8 @@ _ROUTE_ID_PATTERN = re.compile(r"^[A-Z]{1,5}\d{1,4}[A-Z]?$")
 _SERVICE_DATE_PATTERN = re.compile(r"(?P<date>\d{4}-\d{2}-\d{2})")
 _STATION_CODE_PATTERN = re.compile(r"\bDVC\s*(?P<digits>\d+)\b", re.IGNORECASE)
 _BROKEN_FORMULA_PATTERN = re.compile(r"#REF!|#VALUE!|#NAME\?|#N/A", re.IGNORECASE)
+_DRIVER_ID_IN_PARENS_PATTERN = re.compile(r"\((?P<driver_id>[A-Z0-9]+)\)")
+_DRIVER_ID_TRAILING_PATTERN = re.compile(r"/\s*(?P<driver_id>[A-Z0-9]+)\s*$")
 
 _RETURN_REASON_COLUMNS: tuple[tuple[str, int], ...] = (
     ("UTA", 9),
@@ -140,6 +142,7 @@ def _parse_route_rows(sheet) -> list[dict[str, Any]]:
                 "row_id": f"route-{route_id.lower()}",
                 "service_date": "",
                 "route_id": route_id,
+                "driver_id": _extract_driver_id(driver_raw),
                 "driver_name": _normalize_driver_display_name(driver_raw),
                 "driver_name_raw": driver_raw,
                 "packages_dispatched": packages_dispatched,
@@ -370,6 +373,16 @@ def _normalize_driver_display_name(value: str) -> str:
     if "(" in head:
         head = head.split("(", 1)[0].strip()
     return head
+
+
+def _extract_driver_id(value: str) -> str:
+    parens_match = _DRIVER_ID_IN_PARENS_PATTERN.search(value)
+    if parens_match is not None:
+        return str(parens_match.group("driver_id")).strip()
+    trailing_match = _DRIVER_ID_TRAILING_PATTERN.search(value)
+    if trailing_match is not None:
+        return str(trailing_match.group("driver_id")).strip()
+    return ""
 
 
 def _header_label(value: Any) -> str:

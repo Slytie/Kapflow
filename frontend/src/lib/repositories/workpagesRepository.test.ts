@@ -151,6 +151,10 @@ describe("workpagesRepository", () => {
       "wr-weekly-001",
       "av-schedule-artifact-001"
     );
+    const previousWeekReality = await workpagesRepository.scheduleArtifactPreviousWeekReality(
+      "wr-weekly-001",
+      "av-schedule-artifact-001"
+    );
     const previewAction = artifact.actions.find(
       (action): action is typeof artifact.actions[number] & { preview_path: string } =>
         action.kind === "preview_recalc" && typeof action.preview_path === "string"
@@ -197,6 +201,11 @@ describe("workpagesRepository", () => {
     expect(artifact.artifact_history?.entries.map((entry) => entry.artifact_version_id)).toEqual([
       "av-schedule-artifact-001"
     ]);
+    expect(previousWeekReality.previous_week_reality.service_dates).toHaveLength(7);
+    expect(previousWeekReality.previous_week_reality.drivers.length).toBeGreaterThan(0);
+    expect(
+      previousWeekReality.previous_week_reality.drivers[0]?.cells[0]?.cumulative_week_minutes
+    ).toBe(480);
     expect(artifact.source.mode).toBe("artifact_projection");
     expect(artifact.artifact_context?.artifact_kind).toBe("planning.draft_weekly_schedule.workbook");
     expect(preview.preview.artifact_version_id).toBe("av-schedule-artifact-001");
@@ -237,7 +246,11 @@ describe("workpagesRepository", () => {
             planned_route_count:
               card.service_date === futureDay?.service_date
                 ? card.planned_route_count + 2
-                : card.planned_route_count
+                : card.planned_route_count,
+            on_call_target:
+              card.service_date === firstDay?.service_date
+                ? card.on_call_target + 1
+                : card.on_call_target
           }))
         ]
       }
@@ -278,6 +291,11 @@ describe("workpagesRepository", () => {
         (card) => card.service_date === futureDay?.service_date
       )?.planned_route_count
     ).toBe((futureDay?.planned_route_count ?? 0) + 2);
+    expect(
+      submittedArtifact.route_demand_calculations?.day_cards.find(
+        (card) => card.service_date === firstDay?.service_date
+      )?.on_call_target
+    ).toBe((firstDay?.on_call_target ?? 0) + 1);
     expect(mutationLog()).toContain(
       "workpage-route-demand-artifact-submit:av-route-demand-artifact-001:av-route-demand-artifact-002"
     );

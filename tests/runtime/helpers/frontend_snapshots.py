@@ -622,6 +622,7 @@ def _build_route_demand_artifact_submit_snapshot(*, tmp_path: Path) -> dict[str,
                 {
                     "service_date": item["service_date"],
                     "planned_route_count": item["planned_route_count"],
+                    "on_call_target": item["on_call_target"],
                 }
                 for item in day_cards
             ],

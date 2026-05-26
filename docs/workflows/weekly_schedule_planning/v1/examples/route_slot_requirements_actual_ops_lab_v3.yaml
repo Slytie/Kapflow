@@ -37,8 +37,8 @@ rows:
   - parcel_delivery
   - XL_van
   - '11:30'
-  - '20:00'
-  - 8.5
+  - '17:30'
+  - 6.0
   - 16
   - CYC0322
   - manager-schedule-pdf-2026-03-22-to-2026-03-28
@@ -52,8 +52,8 @@ rows:
   - parcel_delivery
   - XL_van
   - '11:30'
-  - '20:00'
-  - 8.5
+  - '17:30'
+  - 6.0
   - 23
   - CYC0323
   - manager-schedule-pdf-2026-03-22-to-2026-03-28
@@ -67,8 +67,8 @@ rows:
   - parcel_delivery
   - XL_van
   - '11:30'
-  - '20:00'
-  - 8.5
+  - '17:30'
+  - 6.0
   - 20
   - CYC0324
   - manager-schedule-pdf-2026-03-22-to-2026-03-28
@@ -82,8 +82,8 @@ rows:
   - parcel_delivery
   - XL_van
   - '11:30'
-  - '20:00'
-  - 8.5
+  - '17:30'
+  - 6.0
   - 19
   - CYC0325
   - manager-schedule-pdf-2026-03-22-to-2026-03-28
@@ -97,8 +97,8 @@ rows:
   - parcel_delivery
   - XL_van
   - '11:30'
-  - '20:00'
-  - 8.5
+  - '17:30'
+  - 6.0
   - 21
   - CYC0326
   - manager-schedule-pdf-2026-03-22-to-2026-03-28
@@ -112,8 +112,8 @@ rows:
   - parcel_delivery
   - XL_van
   - '11:30'
-  - '20:00'
-  - 8.5
+  - '17:30'
+  - 6.0
   - 18
   - CYC0327
   - manager-schedule-pdf-2026-03-22-to-2026-03-28
@@ -127,8 +127,8 @@ rows:
   - parcel_delivery
   - XL_van
   - '11:30'
-  - '20:00'
-  - 8.5
+  - '17:30'
+  - 6.0
   - 17
   - CYC0328
   - manager-schedule-pdf-2026-03-22-to-2026-03-28

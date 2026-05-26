@@ -79,6 +79,8 @@ from onetruth.application.services.workpage_descriptors import (
     canonical_route_demand_artifact_submit_path,
     canonical_route_demand_next_week_create_path,
     canonical_schedule_artifact_route as descriptor_schedule_artifact_route,
+    canonical_schedule_previous_week_reality_path as descriptor_schedule_previous_week_reality_path,
+    canonical_schedule_previous_week_reality_route as descriptor_schedule_previous_week_reality_route,
     canonical_schedule_route_demand_coverage_apply_path as descriptor_schedule_route_demand_coverage_apply_path,
     canonical_schedule_route_demand_coverage_candidates_path as descriptor_schedule_route_demand_coverage_candidates_path,
     canonical_schedule_artifact_preview_path,
@@ -211,6 +213,28 @@ class WorkpageProjectionUnavailableError(RuntimeError):
 
 def canonical_schedule_artifact_route(*, workflow_run_id: str, artifact_version_id: str) -> str:
     return descriptor_schedule_artifact_route(
+        workflow_run_id=workflow_run_id,
+        artifact_version_id=artifact_version_id,
+    )
+
+
+def canonical_schedule_previous_week_reality_route(
+    *,
+    workflow_run_id: str,
+    artifact_version_id: str,
+) -> str:
+    return descriptor_schedule_previous_week_reality_route(
+        workflow_run_id=workflow_run_id,
+        artifact_version_id=artifact_version_id,
+    )
+
+
+def canonical_schedule_previous_week_reality_path(
+    *,
+    workflow_run_id: str,
+    artifact_version_id: str,
+) -> str:
+    return descriptor_schedule_previous_week_reality_path(
         workflow_run_id=workflow_run_id,
         artifact_version_id=artifact_version_id,
     )
@@ -1408,6 +1432,9 @@ def _schedule_artifact_contract_actions(
         descriptor = get_workpage_descriptor(SCHEDULE_WORKPAGE_KIND)
         preview_disabled_reason = schedule_preview_disabled_reason(dependencies)
         save_disabled_reason = schedule_save_disabled_reason(dependencies)
+        previous_week_reality_disabled_reason = _schedule_previous_week_reality_disabled_reason(
+            dependencies
+        )
         actions.extend(
             [
                 {
@@ -1449,6 +1476,29 @@ def _schedule_artifact_contract_actions(
                     "disabled_reason": save_disabled_reason,
                 },
                 {
+                    "action_id": "workpage.schedule-v0.open_previous_week_reality",
+                    "kind": "open_previous_week_reality",
+                    "label": "Open previous-week reality",
+                    "state": (
+                        "blocked"
+                        if previous_week_reality_disabled_reason
+                        else "available"
+                    ),
+                    "workpage_kind": SCHEDULE_WORKPAGE_KIND,
+                    "artifact_version_id": artifact_version_id,
+                    "route": canonical_schedule_previous_week_reality_route(
+                        workflow_run_id=workflow_run_id,
+                        artifact_version_id=artifact_version_id,
+                    ),
+                    "action_ref": build_workpage_action_ref(
+                        action_id="workpage.schedule-v0.open_previous_week_reality",
+                        workpage_kind=SCHEDULE_WORKPAGE_KIND,
+                        workflow_run_id=workflow_run_id,
+                        artifact_version_id=artifact_version_id,
+                    ),
+                    "disabled_reason": previous_week_reality_disabled_reason,
+                },
+                {
                     "action_id": "workpage.schedule-v0.mark_sick_no_show",
                     "kind": "mark_sick_no_show",
                     "label": "Mark Sick / No Show",
@@ -1483,6 +1533,32 @@ def _schedule_artifact_contract_actions(
         )
     )
     return actions
+
+
+def _schedule_previous_week_reality_disabled_reason(
+    dependencies: list[dict[str, Any]],
+) -> str | None:
+    actual_hours_dependency = next(
+        (
+            row
+            for row in dependencies
+            if str(row.get("dependency_key") or "") == "actual_hours"
+        ),
+        None,
+    )
+    artifact_version_id = (
+        str(actual_hours_dependency.get("artifact_version_id") or "").strip()
+        if actual_hours_dependency is not None
+        else ""
+    )
+    state = (
+        str(actual_hours_dependency.get("state") or "").strip()
+        if actual_hours_dependency is not None
+        else ""
+    )
+    if artifact_version_id and state not in {"missing", "not_pinned", "not_available"}:
+        return None
+    return "actual_hours_dependency_unavailable"
 
 
 def _schedule_artifact_note_body(*, editable: bool) -> str:
@@ -3368,13 +3444,12 @@ def _route_demand_future_week_options(
     next_start = current_start + timedelta(days=7)
     next_end = next_start + timedelta(days=6)
     next_monday = next_start + timedelta(days=1)
+    iso_year, iso_week, _ = next_monday.isocalendar()
     return [
         {
             "option_id": "next_week",
             "label": "Week 2",
-            "planning_week_id": service_day_to_future_planning_week(
-                f"SD-{next_monday.isoformat()}"
-            ),
+            "planning_week_id": f"PW-{iso_year:04d}-W{iso_week:02d}",
             "start_date": next_start.isoformat(),
             "end_date": next_end.isoformat(),
             "date_range_label": f"{next_start.isoformat()} to {next_end.isoformat()}",
@@ -4905,6 +4980,205 @@ def build_schedule_artifact_workpage_contract(
     )
     return contract
 
+
+def build_schedule_previous_week_reality_contract(
+    connection: sqlite3.Connection,
+    *,
+    artifact_version_id: str,
+    artifact: Mapping[str, Any],
+    workflow_run: Mapping[str, Any],
+    artifacts: list[dict[str, Any]],
+    projection: Mapping[str, Any],
+    download_path: str,
+    generated_at: str | None = None,
+) -> dict[str, Any]:
+    workflow_run_id = _require_text(workflow_run.get("workflow_run_id"))
+    artifact_kind = _require_text(
+        artifact.get("artifact_kind") or artifact.get("dataset_key")
+    )
+    metadata_json = artifact.get("metadata_json")
+    dependency_manifest = _schedule_artifact_dependency_manifest(metadata_json)
+    dependency_projection = project_schedule_dependency_state(
+        dependency_manifest=dependency_manifest,
+        artifacts=artifacts,
+    )
+    dependency_artifacts = resolve_schedule_dependency_artifacts(
+        workflow_run_id=workflow_run_id,
+        artifacts=artifacts,
+        dependency_manifest=dependency_manifest,
+    )
+    actual_hours_artifact = dependency_artifacts.get("actual_hours")
+    if actual_hours_artifact is None:
+        raise WorkpageProjectionUnavailableError(
+            workflow_run_id=workflow_run_id,
+            workpage_id="schedule-v0.previous-week-reality",
+            message=(
+                "previous-week reality is unavailable until this draft resolves a pinned "
+                "actual-hours snapshot"
+            ),
+            missing_dataset_keys=[_ACTUAL_HOURS_DATASET_KEY],
+        )
+    try:
+        bundle = build_schedule_bundle_from_dependencies(
+            workflow_run=workflow_run,
+            dependency_artifacts_by_key=dependency_artifacts,
+        )
+    except ValueError as exc:
+        raise WorkpageProjectionUnavailableError(
+            workflow_run_id=workflow_run_id,
+            workpage_id="schedule-v0.previous-week-reality",
+            message=str(exc),
+            missing_dataset_keys=_missing_schedule_dependency_dataset_keys(
+                dependency_projection.dependencies
+            ),
+        ) from exc
+
+    assignment_rows = _projection_rows(projection, "assignment_rows")
+    reserve_rows = _projection_rows(projection, "reserve_rows")
+    service_dates = _previous_week_service_dates_from_start(bundle.scope_start)
+    ordered_people = _schedule_heatmap_people(
+        bundle=bundle,
+        assignment_rows=assignment_rows,
+        reserve_rows=reserve_rows,
+        service_dates=service_dates,
+    )
+    driver_payloads: list[dict[str, Any]] = []
+    flattened_activity_rows: list[dict[str, Any]] = []
+
+    for person in ordered_people:
+        driver_id = str(person.get("driver_id") or "")
+        availability = bundle.availability_by_driver.get(driver_id)
+        cell_payloads = (
+            [
+                _previous_week_state_payload(item)
+                for item in availability.previous_week_states
+            ]
+            if availability is not None and availability.previous_week_states
+            else [
+                _missing_previous_week_state_payload(
+                    driver_id=driver_id,
+                    service_date=str(service_date.get("service_date") or ""),
+                )
+                for service_date in service_dates
+            ]
+        )
+        cell_payloads = _with_cumulative_week_minutes(cell_payloads)
+        previous_week_minutes = sum(
+            _int_or_zero(cell.get("actual_minutes")) for cell in cell_payloads
+        )
+        driver_payload = {
+            "driver_id": driver_id,
+            "driver_name": str(person.get("driver_name") or driver_id),
+            "employment_type": str(person.get("employment_type") or ""),
+            "on_call_eligible": bool(person.get("on_call_eligible")),
+            "availability_summary": str(person.get("availability_summary") or ""),
+            "previous_week_minutes": previous_week_minutes,
+            "cells": cell_payloads,
+        }
+        driver_payloads.append(driver_payload)
+        for cell in cell_payloads:
+            if not _previous_week_activity_row_material(cell):
+                continue
+            flattened_activity_rows.append(
+                {
+                    "driver_id": driver_id,
+                    "driver_name": driver_payload["driver_name"],
+                    "service_date": str(cell.get("service_date") or ""),
+                    "weekday_label": _weekday_label(str(cell.get("service_date") or "")),
+                    "normalized_state": str(cell.get("normalized_state") or ""),
+                    "state": str(cell.get("state") or ""),
+                    "actual_minutes": _int_or_zero(cell.get("actual_minutes")),
+                    "route_id": str(cell.get("route_id") or ""),
+                    "route_slot_class": str(cell.get("route_slot_class") or ""),
+                    "source_ref": str(cell.get("source_ref") or ""),
+                    "call_in_sick_flag": bool(cell.get("call_in_sick_flag")),
+                    "cancellation_flag": bool(cell.get("cancellation_flag")),
+                    "non_working_day_flag": bool(cell.get("non_working_day_flag")),
+                }
+            )
+
+    previous_week_start = (
+        str(service_dates[0].get("service_date") or "")
+        if service_dates
+        else bundle.scope_start
+    )
+    previous_week_end = (
+        str(service_dates[-1].get("service_date") or "")
+        if service_dates
+        else bundle.scope_start
+    )
+    current_artifact = dict(artifact)
+    supersedes_artifact_version_id = (
+        _require_text_or_default(
+            current_artifact.get("supersedes_artifact_version_id"),
+            default="",
+        )
+        or None
+    )
+    superseded_by_artifact_version_id = _latest_superseding_artifact_version_id(
+        artifact=current_artifact,
+        artifacts=artifacts,
+    )
+    latest_in_chain_artifact_version_id = _latest_chain_artifact_version_id(
+        connection,
+        artifact_version_id=artifact_version_id,
+        default=artifact_version_id,
+    )
+    actual_hours_artifact_version_id = _require_text(
+        actual_hours_artifact.get("artifact_version_id")
+    )
+    day_summaries = _previous_week_day_summaries(
+        service_dates=service_dates,
+        drivers=driver_payloads,
+    )
+    return {
+        "artifact_context": {
+            "artifact_version_id": artifact_version_id,
+            "workflow_run_id": workflow_run_id,
+            "artifact_kind": artifact_kind,
+            "supersedes_artifact_version_id": supersedes_artifact_version_id,
+            "superseded_by_artifact_version_id": superseded_by_artifact_version_id,
+            "latest_in_chain_artifact_version_id": latest_in_chain_artifact_version_id,
+            "download_path": download_path,
+        },
+        "source": {
+            "mode": "artifact_projection",
+            "primary_dataset_key": _ACTUAL_HOURS_DATASET_KEY,
+            "source_dataset_keys": [
+                _ACTUAL_HOURS_DATASET_KEY,
+                artifact_kind,
+            ],
+            "source_artifact_version_id": actual_hours_artifact_version_id,
+            "source_refs": [
+                f"/api/v1/artifacts/{actual_hours_artifact_version_id}",
+                f"/api/v1/artifacts/{artifact_version_id}",
+            ],
+        },
+        "freshness": {
+            "generated_at": generated_at or utc_now_iso(),
+            "source_kind": "artifact_version",
+            "source_version": actual_hours_artifact_version_id,
+        },
+        "previous_week_reality": {
+            "workflow_run_id": workflow_run_id,
+            "schedule_artifact_version_id": artifact_version_id,
+            "actual_hours_artifact_version_id": actual_hours_artifact_version_id,
+            "planning_week_id": _require_text(workflow_run.get("partition_key")),
+            "operational_week_start": bundle.scope_start,
+            "previous_week_start": previous_week_start,
+            "previous_week_end": previous_week_end,
+            "service_dates": service_dates,
+            "day_summaries": day_summaries,
+            "drivers": driver_payloads,
+            "activity_rows": flattened_activity_rows,
+            "note": (
+                "This view shows the pinned actual-hours snapshot used by weekly scheduling. "
+                "The snapshot may be normalized or proxy-shaped and should be read as the "
+                "schedule's canonical prior-week reality input, not raw EOS workbook detail."
+            ),
+        },
+    }
+
 def _sorted_daily_demand(bundle: WeeklyScheduleControlBundle) -> list[Any]:
     return sorted(
         bundle.daily_demand_by_service_date.values(),
@@ -6275,6 +6549,173 @@ def _weekly_service_dates_from_start(scope_start: str) -> list[dict[str, str]]:
         }
         for service_day in (start_date.fromordinal(start_date.toordinal() + offset) for offset in range(7))
     ]
+
+
+def _previous_week_service_dates_from_start(scope_start: str) -> list[dict[str, str]]:
+    parts = scope_start.split("-")
+    if len(parts) != 3:
+        return []
+    try:
+        start_year, start_month, start_day = (int(part) for part in parts)
+        start_date = date(start_year, start_month, start_day)
+    except ValueError:
+        return []
+    previous_week_start = start_date - timedelta(days=7)
+    return [
+        {
+            "service_date": service_day.isoformat(),
+            "label": service_day.isoformat(),
+            "weekday_label": service_day.strftime("%a"),
+        }
+        for service_day in (
+            previous_week_start.fromordinal(previous_week_start.toordinal() + offset)
+            for offset in range(7)
+        )
+    ]
+
+
+def _previous_week_state_payload(item: Any) -> dict[str, Any]:
+    return {
+        "service_date": str(item.service_date),
+        "state": str(item.state),
+        "normalized_state": str(item.normalized_state),
+        "blocked_reasons": list(item.blocked_reasons),
+        "actual_minutes": int(item.actual_minutes),
+        "route_id": str(item.route_id),
+        "route_slot_class": str(item.route_slot_class),
+        "source_ref": str(item.source_ref),
+        "call_in_sick_flag": bool(item.call_in_sick_flag),
+        "cancellation_flag": bool(item.cancellation_flag),
+        "non_working_day_flag": bool(item.non_working_day_flag),
+    }
+
+
+def _with_cumulative_week_minutes(
+    cell_payloads: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    """Annotate displayed-week running minutes for previous-week reality cells.
+
+    This is the cumulative total within the visible prior-week grid through the current
+    service date, not a cross-week rolling window.
+    """
+
+    running_total = 0
+    annotated: list[dict[str, Any]] = []
+    for cell in cell_payloads:
+        running_total += _int_or_zero(cell.get("actual_minutes"))
+        annotated.append(
+            {
+                **cell,
+                "cumulative_week_minutes": running_total,
+            }
+        )
+    return annotated
+
+
+def _missing_previous_week_state_payload(
+    *,
+    driver_id: str,
+    service_date: str,
+) -> dict[str, Any]:
+    return {
+        "service_date": service_date,
+        "state": "",
+        "normalized_state": "missing",
+        "blocked_reasons": ["driver_not_in_pinned_roster"],
+        "actual_minutes": 0,
+        "route_id": "",
+        "route_slot_class": "",
+        "source_ref": f"draft-only-driver:{driver_id}:{service_date}",
+        "call_in_sick_flag": False,
+        "cancellation_flag": False,
+        "non_working_day_flag": False,
+    }
+
+
+def _missing_schedule_dependency_dataset_keys(
+    dependencies: list[dict[str, Any]],
+) -> list[str]:
+    missing = [
+        str(row.get("artifact_kind") or "")
+        for row in dependencies
+        if str(row.get("impact_class") or "") == "hard"
+        and str(row.get("state") or "") in {"missing", "not_pinned"}
+        and str(row.get("artifact_kind") or "").strip()
+    ]
+    return list(dict.fromkeys(missing))
+
+
+def _previous_week_activity_row_material(cell: Mapping[str, Any]) -> bool:
+    actual_minutes = _int_or_zero(cell.get("actual_minutes"))
+    raw_state = str(cell.get("state") or "").upper()
+    normalized_state = str(cell.get("normalized_state") or "")
+    if actual_minutes > 0:
+        return True
+    if raw_state in {"WORKED", "ON_CALL", "DISPATCH", "SICK_CALL", "CANCELLED"}:
+        return True
+    if normalized_state == "blocked_previous_week":
+        return True
+    return bool(cell.get("call_in_sick_flag") or cell.get("cancellation_flag"))
+
+
+def _previous_week_cell_is_worked(cell: Mapping[str, Any]) -> bool:
+    actual_minutes = _int_or_zero(cell.get("actual_minutes"))
+    raw_state = str(cell.get("state") or "").upper()
+    normalized_state = str(cell.get("normalized_state") or "")
+    return (
+        actual_minutes > 0
+        or normalized_state == "worked"
+        or raw_state in {"WORKED", "ON_CALL", "DISPATCH"}
+    )
+
+
+def _previous_week_cell_is_blocked(cell: Mapping[str, Any]) -> bool:
+    raw_state = str(cell.get("state") or "").upper()
+    normalized_state = str(cell.get("normalized_state") or "")
+    return (
+        bool(cell.get("call_in_sick_flag"))
+        or bool(cell.get("cancellation_flag"))
+        or normalized_state == "blocked_previous_week"
+        or raw_state in {"SICK_CALL", "CANCELLED"}
+    )
+
+
+def _previous_week_day_summaries(
+    *,
+    service_dates: list[dict[str, str]],
+    drivers: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    day_summaries: list[dict[str, Any]] = []
+    for service_date in service_dates:
+        service_date_text = str(service_date.get("service_date") or "")
+        cells = [
+            cell
+            for driver in drivers
+            for cell in list(driver.get("cells") or [])
+            if str(cell.get("service_date") or "") == service_date_text
+        ]
+        day_summaries.append(
+            {
+                "service_date": service_date_text,
+                "weekday_label": str(service_date.get("weekday_label") or ""),
+                "worked_driver_days": sum(
+                    1 for cell in cells if _previous_week_cell_is_worked(cell)
+                ),
+                "blocked_driver_days": sum(
+                    1 for cell in cells if _previous_week_cell_is_blocked(cell)
+                ),
+                "worked_route_count": sum(
+                    1
+                    for cell in cells
+                    if _previous_week_cell_is_worked(cell)
+                    and str(cell.get("route_id") or "").strip()
+                ),
+                "total_minutes": sum(
+                    _int_or_zero(cell.get("actual_minutes")) for cell in cells
+                ),
+            }
+        )
+    return day_summaries
 
 
 def _split_workbook_multivalue(value: Any) -> list[str]:

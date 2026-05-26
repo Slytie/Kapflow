@@ -120,12 +120,135 @@ describe("onetruthApi workpage parsing", () => {
     expect(contract.actions.map((action) => action.kind)).toEqual([
       "preview_recalc",
       "submit_artifact",
+      "open_previous_week_reality",
       "mark_sick_no_show",
       "open_latest",
       "create_snapshot"
     ]);
     expect(contract.run_context).toBeNull();
     expect(contract.draft_resolution).toBeNull();
+  });
+
+  it("parses the dedicated previous-week reality contract", async () => {
+    server.use(
+      http.get(
+        "*/api/v1/workpages/workflow-runs/:workflowRunId/schedule-v0/artifacts/:artifactVersionId/reality/previous-week",
+        () =>
+          HttpResponse.json({
+            status: "ok",
+            command: "api.workpages.schedule.previous_week_reality",
+            artifact_context: scheduleArtifactStateSnapshot.workpage_state.artifact_context,
+            source: {
+              mode: "artifact_projection",
+              primary_dataset_key: "planning.actual_hours_snapshot.workbook",
+              source_dataset_keys: [
+                "planning.actual_hours_snapshot.workbook",
+                "planning.draft_weekly_schedule.workbook"
+              ],
+              source_artifact_version_id: "<artifact_version_id:6>",
+              source_refs: [
+                "/api/v1/artifacts/<artifact_version_id:6>",
+                "/api/v1/artifacts/<artifact_version_id:2>"
+              ]
+            },
+            freshness: {
+              generated_at: "2026-03-25T09:15:00Z",
+              source_kind: "artifact_version",
+              source_version: "<artifact_version_id:6>"
+            },
+            previous_week_reality: {
+              workflow_run_id: "<workflow_run_id:1>",
+              schedule_artifact_version_id: "<artifact_version_id:2>",
+              actual_hours_artifact_version_id: "<artifact_version_id:6>",
+              planning_week_id: "PW-2026-W13",
+              operational_week_start: "2026-03-22",
+              previous_week_start: "2026-03-15",
+              previous_week_end: "2026-03-21",
+              service_dates: [
+                {
+                  service_date: "2026-03-15",
+                  label: "2026-03-15",
+                  weekday_label: "Sun"
+                }
+              ],
+              day_summaries: [
+                {
+                  service_date: "2026-03-15",
+                  weekday_label: "Sun",
+                  worked_driver_days: 4,
+                  blocked_driver_days: 1,
+                  worked_route_count: 4,
+                  total_minutes: 2040
+                }
+              ],
+              drivers: [
+                {
+                  driver_id: "DRV-001",
+                  driver_name: "Driver One",
+                  employment_type: "full_time",
+                  on_call_eligible: true,
+                  availability_summary: "preferred 4 days",
+                  previous_week_minutes: 540,
+                  cells: [
+                    {
+                      service_date: "2026-03-15",
+                      state: "WORKED",
+                      normalized_state: "worked",
+                      blocked_reasons: [],
+                      actual_minutes: 540,
+                      cumulative_week_minutes: 540,
+                      route_id: "R-01",
+                      route_slot_class: "cycle1_standard",
+                      source_ref: "actual-hours:DRV-001:2026-03-15",
+                      call_in_sick_flag: false,
+                      cancellation_flag: false,
+                      non_working_day_flag: false
+                    }
+                  ]
+                }
+              ],
+              activity_rows: [
+                {
+                  driver_id: "DRV-001",
+                  driver_name: "Driver One",
+                  service_date: "2026-03-15",
+                  weekday_label: "Sun",
+                  normalized_state: "worked",
+                  state: "WORKED",
+                  actual_minutes: 540,
+                  route_id: "R-01",
+                  route_slot_class: "cycle1_standard",
+                  source_ref: "actual-hours:DRV-001:2026-03-15",
+                  call_in_sick_flag: false,
+                  cancellation_flag: false,
+                  non_working_day_flag: false
+                }
+              ],
+              note:
+                "This view shows the pinned actual-hours snapshot used by weekly scheduling."
+            }
+          })
+      )
+    );
+
+    const contract = await onetruthApi.getWorkflowRunScheduleArtifactPreviousWeekReality(
+      "wr-weekly-001",
+      "av-schedule-artifact-001"
+    );
+
+    expect(contract.source.primary_dataset_key).toBe("planning.actual_hours_snapshot.workbook");
+    expect(contract.previous_week_reality.actual_hours_artifact_version_id).toBe(
+      "<artifact_version_id:6>"
+    );
+    expect(contract.previous_week_reality.day_summaries[0]).toMatchObject({
+      service_date: "2026-03-15",
+      worked_driver_days: 4
+    });
+    expect(contract.previous_week_reality.drivers[0]?.cells[0]).toMatchObject({
+      normalized_state: "worked",
+      route_id: "R-01",
+      cumulative_week_minutes: 540
+    });
   });
 
   it("parses the workflow-run-backed route-demand workpage wrapper including schedule impact", async () => {
@@ -223,7 +346,11 @@ describe("onetruthApi workpage parsing", () => {
     );
     expect(contract.route_demand_calculations?.day_cards.length).toBeGreaterThan(0);
     expect(contract.schedule_impact?.latest_schedule_draft_artifact_version_id).toBeTruthy();
-    expect(contract.actions.map((action) => action.kind)).toEqual(["save", "add_next_week"]);
+    expect(contract.actions.map((action) => action.kind)).toEqual([
+      "save",
+      "add_next_week",
+      "save_and_run",
+    ]);
   });
 
   it("parses the workflow-run-backed EOD landing wrapper including draft resolution", async () => {
@@ -404,7 +531,8 @@ describe("onetruthApi workpage parsing", () => {
         daily_demand_rows: [
           {
             service_date: "2026-03-22",
-            planned_route_count: 24
+            planned_route_count: 24,
+            on_call_target: 4
           }
         ],
         idempotency_key: "frontend:test:submit-route-demand-canonical"

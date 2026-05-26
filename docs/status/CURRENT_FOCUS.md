@@ -34,6 +34,8 @@ The current demo-facing weekly-planning enhancement is the landed **route-demand
 - `route-demand-v0` now shows one editable operational week at a time
 - `Add a week` creates or reopens the real next weekly run and seeds an empty future-week route-demand artifact there
 - future-week `Save and run scheduling agent` remains the explicit greenfield scheduling trigger from route demand
+- the shared route-demand editor now lets operators edit both planned route counts and on-call targets in the popup and full-page artifact view
+- future-week scheduling activation now treats positive on-call target demand the same as positive route demand, while existing-week coverage remains route-increase-only
 - existing-week positive route-count increases can use `Run coverage agent` to save or reuse successor route-demand truth, then hand off into the canonical `schedule-v0` quick-edit popup with backend-ranked coverage recommendations
 - plain route-demand save no longer spawns the legacy refresh task
 - successful future-week scheduling activation still hands off to the canonical `schedule-v0` route and reuses the existing quick-edit popup entrypoint
@@ -52,7 +54,7 @@ EPIC-125 is now completed history:
 EPIC-126 remains completed cleanup history, but it is no longer the active post-EPIC-131 plan.
 
 ## Current implemented baseline
-- weekly schedule landing, artifact editor, live preview, pinned dependency baselines, accepted-series navigation, draft-lineage navigation, and backend-ranked route-demand coverage handoff on canonical schedule routes
+- weekly schedule landing, artifact editor, live preview, pinned dependency baselines, backend-authored accepted/draft lineage metadata, and backend-ranked route-demand coverage handoff on canonical schedule routes
 - `route-demand-v0` run landing plus artifact-backed immutable day-count editor with next-week activation, existing-week coverage handoff, and explicit save-and-run scheduling paths
 - `driver-preferences-v0` run landing, snapshot creation, artifact-backed editor/history, and soft advisory schedule integration
 - `eod-v0` run landing plus canonical artifact-backed immutable workbook editing

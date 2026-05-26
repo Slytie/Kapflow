@@ -2,6 +2,7 @@ import { createIdempotencyKey } from "@/lib/api/idempotency";
 import { onetruthApi } from "@/lib/api/onetruthApi";
 import { downloadBinaryToFile } from "@/lib/repositories/artifactAttachments";
 import type {
+  SchedulePreviousWeekRealityContract,
   WorkpageContract,
   WorkpageCreateResponse,
   WorkpageEodIntakeTask,
@@ -37,6 +38,16 @@ export const workpagesRepository = {
     artifactVersionId: string
   ): Promise<WorkpageContract> {
     return onetruthApi.getWorkflowRunScheduleArtifactWorkpage(workflowRunId, artifactVersionId);
+  },
+
+  async scheduleArtifactPreviousWeekReality(
+    workflowRunId: string,
+    artifactVersionId: string
+  ): Promise<SchedulePreviousWeekRealityContract> {
+    return onetruthApi.getWorkflowRunScheduleArtifactPreviousWeekReality(
+      workflowRunId,
+      artifactVersionId
+    );
   },
 
   async routeDemandArtifact(
@@ -273,6 +284,7 @@ export const workpagesRepository = {
       dailyDemandRows: Array<{
         service_date: string;
         planned_route_count: number;
+        on_call_target: number;
       }>;
     },
     actionRef?: WorkpageActionRef
@@ -302,6 +314,7 @@ export const workpagesRepository = {
       dailyDemandRows: Array<{
         service_date: string;
         planned_route_count: number;
+        on_call_target: number;
       }>;
     },
     actionRef?: WorkpageActionRef

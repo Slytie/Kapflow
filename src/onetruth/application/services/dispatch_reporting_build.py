@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 from dataclasses import dataclass
+import hashlib
+import json
 from typing import Any
 
 from onetruth.application.services.dispatch_reporting_raw_eos import (
@@ -28,6 +30,20 @@ REPORTING_TO_PLANNING_EDGE_ID = "reporting_actuals_to_future_planning"
 SUPPORTED_SOURCE_WORKBOOK_FAMILY = RAW_EOS_WORKBOOK_FAMILY
 DEFAULT_STATION_CODE = "DVC4"
 DEFAULT_DSP_NAME = "QDCI"
+PLANNING_ACTUAL_HOURS_ARTIFACT_KIND = "planning.actual_hours_snapshot.workbook"
+PLANNING_ACTUAL_HOURS_COLUMNS: tuple[str, ...] = (
+    "service_date",
+    "driver_id",
+    "driver_name",
+    "historical_state",
+    "actual_minutes",
+    "route_id",
+    "route_slot_class",
+    "call_in_sick_flag",
+    "cancellation_flag",
+    "non_working_day_flag",
+    "source_snapshot_row_ref",
+)
 
 
 class DispatchReportingBuildError(ValueError):
@@ -105,6 +121,7 @@ def build_dispatch_reporting_artifacts(
                 "row_id": row_id,
                 "service_date": _resolve_text(row.get("service_date"), fallback=service_date),
                 "route_id": route_id,
+                "driver_id": _resolve_text(row.get("driver_id"), fallback=""),
                 "driver_name": _resolve_text(row.get("driver_name"), fallback=""),
                 "actual_minutes": actual_minutes,
                 "returned_packages": returned_packages,
@@ -213,6 +230,131 @@ def build_dispatch_reporting_artifacts(
     )
 
 
+def build_planning_actual_hours_snapshot_payload(
+    *,
+    normalized_payload: Mapping[str, Any],
+    source_artifact_version_id: str,
+) -> dict[str, Any]:
+    aggregated: dict[tuple[str, str], dict[str, Any]] = {}
+    for index, row in enumerate(_normalized_route_rows(normalized_payload)):
+        driver_id = _resolve_text(row.get("driver_id"), fallback="")
+        service_date = _resolve_text(row.get("service_date"), fallback="")
+        if not driver_id or not service_date:
+            continue
+        actual_minutes = max(
+            _coerce_int(
+                row.get("actual_minutes"),
+                field_name=f"normalized_rows[{index}].actual_minutes",
+            ),
+            0,
+        )
+        route_id = _resolve_text(row.get("route_id"), fallback="")
+        key = (service_date, driver_id)
+        aggregate = aggregated.setdefault(
+            key,
+            {
+                "service_date": service_date,
+                "driver_id": driver_id,
+                "driver_name": _resolve_text(row.get("driver_name"), fallback=driver_id),
+                "actual_minutes": 0,
+                "route_ids": set(),
+            },
+        )
+        aggregate["actual_minutes"] += actual_minutes
+        if route_id:
+            aggregate["route_ids"].add(route_id)
+        if not aggregate["driver_name"]:
+            aggregate["driver_name"] = _resolve_text(row.get("driver_name"), fallback=driver_id)
+
+    rows: list[list[Any]] = []
+    for service_date, driver_id in sorted(aggregated.keys(), key=lambda item: (item[0], item[1])):
+        aggregate = aggregated[(service_date, driver_id)]
+        route_id = ",".join(sorted(str(item) for item in aggregate["route_ids"]))
+        rows.append(
+            [
+                service_date,
+                driver_id,
+                str(aggregate["driver_name"]),
+                "WORKED",
+                int(aggregate["actual_minutes"]),
+                route_id,
+                "",
+                0,
+                0,
+                0,
+                _actual_hours_source_snapshot_row_ref(
+                    source_artifact_version_id=source_artifact_version_id,
+                    service_date=service_date,
+                    driver_id=driver_id,
+                    route_id=route_id,
+                ),
+            ]
+        )
+
+    return {
+        "schema_version": "1.0",
+        "artifact_kind": PLANNING_ACTUAL_HOURS_ARTIFACT_KIND,
+        "shape": "previous_week_driver_day_history_rows",
+        "columns": list(PLANNING_ACTUAL_HOURS_COLUMNS),
+        "rows": rows,
+        "source_reporting_artifact_version_id": source_artifact_version_id,
+    }
+
+
+def merge_planning_actual_hours_snapshot_payloads(
+    *,
+    current_payload: Mapping[str, Any] | None,
+    incoming_payload: Mapping[str, Any],
+) -> dict[str, Any]:
+    merged_by_key: dict[tuple[str, str], dict[str, Any]] = {}
+    for row in _planning_actual_hours_row_dicts(current_payload):
+        key = (_resolve_text(row.get("service_date"), fallback=""), _resolve_text(row.get("driver_id"), fallback=""))
+        if not key[0] or not key[1]:
+            continue
+        merged_by_key[key] = row
+    for row in _planning_actual_hours_row_dicts(incoming_payload):
+        key = (_resolve_text(row.get("service_date"), fallback=""), _resolve_text(row.get("driver_id"), fallback=""))
+        if not key[0] or not key[1]:
+            continue
+        merged_by_key[key] = row
+
+    rows = [
+        [
+            str(row.get("service_date") or ""),
+            str(row.get("driver_id") or ""),
+            str(row.get("driver_name") or ""),
+            str(row.get("historical_state") or ""),
+            _coerce_int(row.get("actual_minutes"), field_name="actual_hours.actual_minutes"),
+            str(row.get("route_id") or ""),
+            str(row.get("route_slot_class") or ""),
+            1 if _coerce_bool(row.get("call_in_sick_flag")) else 0,
+            1 if _coerce_bool(row.get("cancellation_flag")) else 0,
+            1 if _coerce_bool(row.get("non_working_day_flag")) else 0,
+            str(row.get("source_snapshot_row_ref") or ""),
+        ]
+        for _, row in sorted(
+            merged_by_key.items(),
+            key=lambda item: (
+                str(item[1].get("service_date") or ""),
+                str(item[1].get("driver_id") or ""),
+                str(item[1].get("route_id") or ""),
+            ),
+        )
+    ]
+
+    merged_payload = dict(current_payload) if isinstance(current_payload, Mapping) else {}
+    merged_payload.update(
+        {
+            "schema_version": "1.0",
+            "artifact_kind": PLANNING_ACTUAL_HOURS_ARTIFACT_KIND,
+            "shape": "previous_week_driver_day_history_rows",
+            "columns": list(PLANNING_ACTUAL_HOURS_COLUMNS),
+            "rows": rows,
+        }
+    )
+    return merged_payload
+
+
 def _project_supported_source_workbook(
     content: bytes,
     *,
@@ -236,6 +378,60 @@ def _project_supported_source_workbook(
             "EOS workbook must match the supported dispatch-reporting workbook family"
         ) from exc
     return projection
+
+
+def _normalized_route_rows(normalized_payload: Mapping[str, Any]) -> list[Mapping[str, Any]]:
+    rows = normalized_payload.get("rows")
+    if not isinstance(rows, list):
+        raise DispatchReportingBuildError("dispatch reporting normalized payload must contain rows")
+    normalized_rows: list[Mapping[str, Any]] = []
+    for row in rows:
+        if isinstance(row, Mapping):
+            normalized_rows.append(row)
+    return normalized_rows
+
+
+def _planning_actual_hours_row_dicts(
+    payload: Mapping[str, Any] | None,
+) -> list[dict[str, Any]]:
+    if not isinstance(payload, Mapping):
+        return []
+    columns = payload.get("columns")
+    rows = payload.get("rows")
+    if not isinstance(columns, list) or not isinstance(rows, list):
+        return []
+    column_names = [str(item) for item in columns]
+    row_dicts: list[dict[str, Any]] = []
+    for row in rows:
+        if not isinstance(row, list):
+            continue
+        row_dicts.append(dict(zip(column_names, row)))
+    return row_dicts
+
+
+def _actual_hours_source_snapshot_row_ref(
+    *,
+    source_artifact_version_id: str,
+    service_date: str,
+    driver_id: str,
+    route_id: str,
+) -> str:
+    route_token = route_id or "no-route"
+    digest = json.dumps(
+        {
+            "source_artifact_version_id": source_artifact_version_id,
+            "service_date": service_date,
+            "driver_id": driver_id,
+            "route_id": route_token,
+        },
+        separators=(",", ":"),
+        sort_keys=True,
+    )
+    return f"dispatch-reporting:{_stable_hash(digest)}"
+
+
+def _stable_hash(payload: str) -> str:
+    return hashlib.sha256(payload.encode("utf-8")).hexdigest()[:32]
 
 
 def _build_manual_closeout_rows(route_rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
@@ -281,3 +477,12 @@ def _coerce_int(value: Any, *, field_name: str) -> int:
         return int(float(text))
     except ValueError as exc:
         raise DispatchReportingBuildError(f"{field_name} must be numeric") from exc
+
+
+def _coerce_bool(value: Any) -> bool:
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, int):
+        return value != 0
+    text = str(value or "").strip().lower()
+    return text in {"1", "true", "yes", "y"}

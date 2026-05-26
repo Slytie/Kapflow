@@ -325,12 +325,93 @@ export function artifactLabel(
     : artifactRef.artifact_version_id;
 }
 
+function logisticsDemoRunRole(run: WorkflowRunRow | null): "current" | "review_ready" | "feedback" | null {
+  const activationKey = String(run?.activation_key ?? "").toLowerCase();
+  if (!activationKey) {
+    return null;
+  }
+  if (activationKey.includes(":review-ready:")) {
+    return "review_ready";
+  }
+  if (activationKey.includes(":feedback:")) {
+    return "feedback";
+  }
+  if (activationKey.includes(":current:")) {
+    return "current";
+  }
+  return null;
+}
+
+function logisticsDemoRunLabel(run: WorkflowRunRow): string | null {
+  const role = logisticsDemoRunRole(run);
+  if (role === "feedback") {
+    return "Prior feedback";
+  }
+  if (role === "current") {
+    return "Current walkthrough";
+  }
+  if (role === "review_ready" && run.workflow_id === "weekly_schedule_planning.v1") {
+    return "Review-ready weekly";
+  }
+  if (role === "review_ready" && run.workflow_id === "dispatch_reporting.v1") {
+    return "Review-ready reporting";
+  }
+  if (role === "review_ready") {
+    return "Review-ready";
+  }
+  return null;
+}
+
+export function preferredLogisticsDemoRunId(
+  runs: Array<{
+    ref: LogisticsStoryModuleDrilldownRef;
+    run: WorkflowRunRow | null;
+  }>
+): string | null {
+  const currentRun = runs.find(({ run }) => logisticsDemoRunRole(run) === "current");
+  if (currentRun) {
+    return currentRun.ref.workflow_run_id;
+  }
+  return runs[0]?.ref.workflow_run_id ?? null;
+}
+
+export function normalizedLogisticsDemoRunId(
+  module: LogisticsStoryFamilyModule | null,
+  runs: Array<{
+    ref: LogisticsStoryModuleDrilldownRef;
+    run: WorkflowRunRow | null;
+  }>,
+  requestedRunId: string | null
+): string | null {
+  const requestedRun = requestedRunId
+    ? runs.find(({ ref }) => ref.workflow_run_id === requestedRunId) ?? null
+    : null;
+  const candidateRunId = requestedRun?.ref.workflow_run_id ?? preferredLogisticsDemoRunId(runs);
+  if (!candidateRunId || module?.workflow_id !== "weekly_schedule_planning.v1") {
+    return candidateRunId;
+  }
+
+  const reviewReadyRun = runs.find(({ run }) => logisticsDemoRunRole(run) === "review_ready");
+  if (!reviewReadyRun) {
+    return candidateRunId;
+  }
+
+  const candidateRun =
+    runs.find(({ ref }) => ref.workflow_run_id === candidateRunId) ?? null;
+  if (logisticsDemoRunRole(candidateRun?.run ?? null) === "current") {
+    return reviewReadyRun.ref.workflow_run_id;
+  }
+  return candidateRunId;
+}
+
 export function runRefSummary(
   ref: LogisticsStoryModuleDrilldownRef,
   run: WorkflowRunRow | null
 ): string {
   if (run) {
-    return `${run.workflow_run_id} · ${run.state} · ${run.partition_key}`;
+    const runLabel = logisticsDemoRunLabel(run);
+    const prefix = runLabel ? `${runLabel} · ` : "";
+    return `${prefix}${run.workflow_run_id} · ${run.state} · ${run.partition_key}`;
   }
   return `${ref.workflow_run_id} · ${ref.partition_key}`;
 }

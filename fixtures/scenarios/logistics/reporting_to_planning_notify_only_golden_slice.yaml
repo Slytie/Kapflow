@@ -7,6 +7,44 @@ scope:
   tenant_id: tenant-logistics
   domain_id: domain-hub
 steps:
+  - id: create_reporting_normalized_payload
+    action: artifacts.create-version
+    payload:
+      workflow_run_id: "{{workflow_run.workflow_run_id}}"
+      artifact_kind: reporting.actuals_normalized.workbook
+      artifact_role: official_input
+      media_type: application/json
+      storage_uri: inmem://scenario/logistics/reporting-normalized
+      content_digest: sha256:logistics-reporting-normalized
+      metadata_json:
+        schema_version: "1.0"
+        kind: dispatch_reporting.actuals_normalized
+        service_date: "2026-03-06"
+        station_code: DVC4
+        dsp_name: QDCI
+        rows:
+          - row_id: sample-2026-03-06
+            service_date: "2026-03-06"
+            route_id: CX93
+            driver_id: A1NQEGRS26IBJA
+            driver_name: Suraj Pratap Singh
+            actual_minutes: 540
+            returned_packages: 0
+            return_reasons: ""
+            upd_candidate: false
+            formula_integrity_warning: ""
+        quality_warnings: []
+        break_tracker:
+          sheet_present: false
+          rows: []
+        route_adherence:
+          sheet_present: false
+          cycles: []
+        totals:
+          route_count: 1
+          upd_candidate_count: 0
+      idempotency_key: scenario:logistics_reporting_to_planning_notify_only_golden_slice:normalized
+    save_as: normalized_payload
   - id: create_reporting_final_packet
     action: artifacts.create-version
     payload:
@@ -20,6 +58,7 @@ steps:
       canonical_partition_key: SD-2026-03-06
       metadata_json:
         scenario_id: logistics_reporting_to_planning_notify_only_golden_slice
+        normalized_artifact_version_id: "{{normalized_payload.artifact_version.artifact_version_id}}"
       idempotency_key: scenario:logistics_reporting_to_planning_notify_only_golden_slice:final-packet
     save_as: final_packet
   - id: notify_planning_feedback

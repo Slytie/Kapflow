@@ -61,6 +61,7 @@ def _route_demand_submit_rows(route_artifact: dict[str, object]) -> list[dict[st
             {
                 "service_date": str(item[0]),
                 "planned_route_count": int(item[1]),
+                "on_call_target": int(item[2]),
             }
         )
     return rows
@@ -75,9 +76,21 @@ def _route_demand_submit_rows_from_contract(
         {
             "service_date": str(item["service_date"]),
             "planned_route_count": int(item["planned_route_count"]),
+            "on_call_target": int(item["on_call_target"]),
         }
         for item in day_cards
     ]
+
+
+def _daily_demand_rows_by_service_date(
+    metadata_json: dict[str, object],
+) -> dict[str, dict[str, object]]:
+    columns = [str(value) for value in metadata_json["daily_demand_columns"]]
+    rows_by_service_date: dict[str, dict[str, object]] = {}
+    for raw_row in metadata_json["daily_demand_rows"]:
+        row = {column: raw_row[index] for index, column in enumerate(columns)}
+        rows_by_service_date[str(row["service_date"])] = row
+    return rows_by_service_date
 
 
 def _action_by_kind(
@@ -443,6 +456,120 @@ def test_route_demand_existing_week_save_and_run_requires_positive_delta_and_ret
         ],
     }
 
+
+def test_route_demand_submit_rejects_missing_negative_and_non_integer_on_call_target(
+    tmp_path: Path,
+) -> None:
+    seeded = seed_actual_ops_weekly_schedule_run_with_stage04_outputs(
+        db_url=_db_url(tmp_path),
+        tenant_id="tenant-a",
+        domain_id="domain-x",
+        run_tag="api:workpages:route-demand:on-call-target-validation",
+    )
+    workflow_run_id = str(seeded["workflow_run_id"])
+    route_artifact_id = str(
+        seeded["artifacts_by_kind"]["planning.route_slot_requirements.workbook"][
+            "artifact_version_id"
+        ]
+    )
+    client = _client(tmp_path)
+    base_rows = _route_demand_submit_rows(
+        seeded["artifacts_by_kind"]["planning.route_slot_requirements.workbook"]
+    )
+
+    invalid_cases = [
+        (
+            "missing",
+            [{k: v for k, v in row.items() if k != "on_call_target"} for row in base_rows],
+            "daily_demand_rows[0].on_call_target must be an integer",
+        ),
+        (
+            "negative",
+            [
+                {
+                    **row,
+                    "on_call_target": -1 if index == 0 else row["on_call_target"],
+                }
+                for index, row in enumerate(base_rows)
+            ],
+            "daily_demand_rows[0].on_call_target must be non-negative",
+        ),
+        (
+            "non-integer",
+            [
+                {
+                    **row,
+                    "on_call_target": "nope" if index == 0 else row["on_call_target"],
+                }
+                for index, row in enumerate(base_rows)
+            ],
+            "daily_demand_rows[0].on_call_target must be an integer",
+        ),
+    ]
+
+    for case_id, rows, expected_message in invalid_cases:
+        response = client.post(
+            f"/api/v1/workpages/workflow-runs/{workflow_run_id}/route-demand-v0/artifacts/{route_artifact_id}/submit",
+            payload={
+                "daily_demand_rows": rows,
+                "idempotency_key": f"api:workpages:route-demand:on-call-target-validation:{case_id}",
+            },
+        )
+        assert response.status_code == 400, response.payload
+        assert response.payload["error"]["code"] == "invalid_payload"
+        assert response.payload["error"]["message"] == expected_message
+
+
+def test_route_demand_existing_week_save_and_run_saves_on_call_only_changes_without_coverage_context(
+    tmp_path: Path,
+) -> None:
+    seeded = seed_actual_ops_weekly_schedule_run_with_stage04_outputs(
+        db_url=_db_url(tmp_path),
+        tenant_id="tenant-a",
+        domain_id="domain-x",
+        run_tag="api:workpages:route-demand:existing-week-on-call-only",
+    )
+    workflow_run_id = str(seeded["workflow_run_id"])
+    route_artifact_id = str(
+        seeded["artifacts_by_kind"]["planning.route_slot_requirements.workbook"][
+            "artifact_version_id"
+        ]
+    )
+    client = _client(tmp_path)
+    contract = client.get(
+        f"/api/v1/workpages/workflow-runs/{workflow_run_id}/"
+        f"route-demand-v0/artifacts/{route_artifact_id}"
+    )
+    assert contract.status_code == 200, contract.payload
+    submit_rows = _route_demand_submit_rows_from_contract(contract.payload)
+    submit_rows[0]["on_call_target"] = int(submit_rows[0]["on_call_target"]) + 1
+
+    saved_and_ran = client.post(
+        f"/api/v1/workpages/workflow-runs/{workflow_run_id}/"
+        f"route-demand-v0/artifacts/{route_artifact_id}/save-and-run",
+        payload={
+            "daily_demand_rows": submit_rows,
+            "idempotency_key": "api:workpages:route-demand:existing-week-on-call-only:save",
+        },
+    )
+    assert saved_and_ran.status_code == 200, saved_and_ran.payload
+    submitted = saved_and_ran.payload["submitted"]
+    assert submitted["workflow_run_id"] == workflow_run_id
+    assert submitted["supersedes_artifact_version_id"] == route_artifact_id
+    assert saved_and_ran.payload["route_demand_coverage_context"] is None
+    assert submitted.get("route_demand_coverage_context") is None
+    assert submitted.get("target_schedule_route") is None
+    latest_route_artifact_id = str(submitted["artifact_version_id"])
+    latest_route_contract = client.get(
+        f"/api/v1/workpages/workflow-runs/{workflow_run_id}/"
+        f"route-demand-v0/artifacts/{latest_route_artifact_id}"
+    )
+    assert latest_route_contract.status_code == 200, latest_route_contract.payload
+    assert latest_route_contract.payload["calculations"]["day_cards"][0]["on_call_target"] == (
+        submit_rows[0]["on_call_target"]
+    )
+
+
 def test_route_demand_historical_artifact_becomes_read_only_after_successor_save(
     tmp_path: Path,
 ) -> None:
@@ -581,7 +708,7 @@ def test_route_demand_save_propagates_schedule_drift_without_creating_refresh_ta
     client = _client(tmp_path)
 
     submit_rows = _route_demand_submit_rows(route_artifact)
-    submit_rows[0]["planned_route_count"] = int(submit_rows[0]["planned_route_count"]) + 2
+    submit_rows[0]["on_call_target"] = int(submit_rows[0]["on_call_target"]) + 2
     submitted = client.post(
         f"/api/v1/workpages/workflow-runs/{workflow_run_id}/route-demand-v0/artifacts/{route_artifact_id}/submit",
         payload={
@@ -655,10 +782,19 @@ def test_route_demand_save_propagates_schedule_drift_without_creating_refresh_ta
         (latest_route_artifact_id,),
     )[0]
     metadata_json = json.loads(str(latest_artifact["metadata_json"]))
+    latest_daily_demand_rows = _daily_demand_rows_by_service_date(metadata_json)
+    latest_first_row = latest_daily_demand_rows[str(submit_rows[0]["service_date"])]
+    assert int(latest_first_row["on_call_target"]) == int(submit_rows[0]["on_call_target"])
+    assert int(latest_first_row["on_call_min_target"]) == int(submit_rows[0]["on_call_target"])
+    assert int(latest_first_row["on_call_preferred_target"]) == int(
+        submit_rows[0]["on_call_target"]
+    )
+    assert int(latest_first_row["on_call_max_target"]) == int(submit_rows[0]["on_call_target"])
     second_submit_rows = [
         {
             "service_date": str(item[0]),
-            "planned_route_count": int(item[1]) + (1 if index == 1 else 0),
+            "planned_route_count": int(item[1]),
+            "on_call_target": int(item[2]) + (1 if index == 1 else 0),
         }
         for index, item in enumerate(metadata_json["daily_demand_rows"])
     ]
@@ -790,6 +926,7 @@ def test_route_demand_add_next_week_reuses_future_run_and_seeds_zero_count_artif
     assert day_cards[0]["service_date"] == "2026-03-29"
     assert day_cards[-1]["service_date"] == "2026-04-04"
     assert all(int(card["planned_route_count"]) == 0 for card in day_cards)
+    assert all(int(card["on_call_target"]) == 0 for card in day_cards)
     assert payload["actions"] == [
         {
             "action_id": "workpage.route-demand-v0.save",
@@ -832,6 +969,24 @@ def test_route_demand_add_next_week_reuses_future_run_and_seeds_zero_count_artif
     assert created_again.status_code == 200, created_again.payload
     assert created_again.payload["created"]["workflow_run_id"] == future_workflow_run_id
     assert created_again.payload["created"]["artifact_version_id"] == future_artifact_version_id
+    seeded_metadata_json = json.loads(
+        str(
+            _query_rows(
+                _db_url(tmp_path),
+                """
+                SELECT metadata_json
+                FROM artifact_versions
+                WHERE artifact_version_id = ?
+                """,
+                (future_artifact_version_id,),
+            )[0]["metadata_json"]
+        )
+    )
+    seeded_rows = _daily_demand_rows_by_service_date(seeded_metadata_json)
+    assert all(int(row["on_call_target"]) == 0 for row in seeded_rows.values())
+    assert all(int(row["on_call_min_target"]) == 0 for row in seeded_rows.values())
+    assert all(int(row["on_call_preferred_target"]) == 0 for row in seeded_rows.values())
+    assert all(int(row["on_call_max_target"]) == 0 for row in seeded_rows.values())
 
 
 def test_route_demand_save_and_run_creates_future_schedule_and_locks_future_seed(
@@ -892,7 +1047,7 @@ def test_route_demand_save_and_run_creates_future_schedule_and_locks_future_seed
     )
     assert future_contract.status_code == 200, future_contract.payload
     submit_rows = _route_demand_submit_rows_from_contract(future_contract.payload)
-    submit_rows[0]["planned_route_count"] = 4
+    submit_rows[0]["on_call_target"] = 1
 
     saved_and_ran = client.post(
         f"/api/v1/workpages/workflow-runs/{future_workflow_run_id}/"
@@ -916,6 +1071,8 @@ def test_route_demand_save_and_run_creates_future_schedule_and_locks_future_seed
     )
     assert latest_route_contract.status_code == 200, latest_route_contract.payload
     payload = latest_route_contract.payload
+    assert payload["calculations"]["day_cards"][0]["planned_route_count"] == 0
+    assert payload["calculations"]["day_cards"][0]["on_call_target"] == 1
     assert payload["artifact_state"]["editable"] is False
     assert payload["future_week_activation"]["state"] == "succeeded"
     assert payload["future_week_activation"]["target_schedule_route"] == (

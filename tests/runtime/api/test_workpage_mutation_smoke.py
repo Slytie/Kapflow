@@ -168,6 +168,7 @@ def _route_demand_submit_rows(route_artifact: dict[str, object]) -> list[dict[st
             {
                 "service_date": str(item[0]),
                 "planned_route_count": int(item[1]),
+                "on_call_target": int(item[2]),
             }
         )
     return rows

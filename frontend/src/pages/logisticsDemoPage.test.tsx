@@ -1,9 +1,11 @@
 import { HttpResponse, http } from "msw";
 import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { vi } from "vitest";
 
 import { App } from "@/app/App";
 import { getApiRequestContextHeaders, setApiRequestContextHeaders } from "@/lib/api/config";
+import { workpagesRepository } from "@/lib/repositories/workpagesRepository";
 import { mutationLog } from "@/test/api/handlers";
 import { server } from "@/test/api/server";
 
@@ -165,7 +167,7 @@ describe("LogisticsDemoPage", () => {
     expect(within(detailPanel).queryByLabelText("Reporting draft versions timeline")).not.toBeInTheDocument();
   });
 
-  it("requires explicit run selection when the selected module has multiple linked runs", async () => {
+  it("defaults the weekly module to the review-ready run when a current walkthrough companion exists", async () => {
     const user = userEvent.setup();
     setFrontendOperatorContext();
 
@@ -225,7 +227,7 @@ describe("LogisticsDemoPage", () => {
                   domain_id: "domain-x",
                   partition_key: "PW-2026-W10",
                   logical_date: "PW-2026-W10",
-                  activation_key: "weekly_schedule_planning.v1:PW-2026-W10",
+                  activation_key: "logistics-demo:weekly:current:PW-2026-W10",
                   state: "OPEN",
                   active_issue_count: 1,
                   created_at: "2026-03-09T00:00:00Z",
@@ -239,7 +241,7 @@ describe("LogisticsDemoPage", () => {
                   domain_id: "domain-x",
                   partition_key: "PW-2026-W11",
                   logical_date: "PW-2026-W11",
-                  activation_key: "weekly_schedule_planning.v1:PW-2026-W11",
+                  activation_key: "logistics-demo:weekly:review-ready:PW-2026-W11",
                   state: "READY",
                   active_issue_count: 0,
                   created_at: "2026-03-10T00:00:00Z",
@@ -304,32 +306,229 @@ describe("LogisticsDemoPage", () => {
     window.history.pushState(
       {},
       "",
-      "/demo/logistics?planning_week_id=PW-2026-W10&module=weekly_schedule_planning"
+      "/demo/logistics?planning_week_id=PW-2026-W10&module=weekly_schedule_planning&workflow_run_id=wr-weekly-001"
     );
     render(<App />);
 
     const page = await screen.findByTestId("logistics-demo-page");
     const detailPanel = within(page).getByTestId("logistics-module-detail-panel");
-    expect(within(detailPanel).getByRole("heading", { name: "Weekly Schedule Planning" })).toBeInTheDocument();
     expect(
-      within(detailPanel).getByText("Pick a linked run in the summary above to load launcher links and drill-down here.")
+      within(detailPanel).getByRole("heading", {
+        level: 4,
+        name: "Weekly Schedule Planning"
+      })
     ).toBeInTheDocument();
-    expect(within(page).queryByTestId("logistics-demo-drilldown-graph")).not.toBeInTheDocument();
-
-    await user.click(within(detailPanel).getByRole("button", { name: /Open info for Weekly Schedule Planning/i }));
-    const infoDialog = await screen.findByRole("dialog", { name: "Weekly Schedule Planning info" });
-    expect(within(infoDialog).getByText("2 linked runs, choose one")).toBeInTheDocument();
-    expect(within(infoDialog).getByText(/Choose the linked workflow run/i)).toBeInTheDocument();
-
-    await user.click(within(infoDialog).getByRole("button", { name: /wr-weekly-002/i }));
-
     const launcher = await within(detailPanel).findByTestId(
       "logistics-module-launcher-weekly_schedule_planning"
     );
     expect(
       within(launcher).getByRole("link", { name: "Open schedule workpage" })
     ).toHaveAttribute("href", "/runs/wr-weekly-002/workpages/schedule-v0");
+    await waitFor(() =>
+      expect(window.location.search).toContain("workflow_run_id=wr-weekly-002")
+    );
+
+    await user.click(within(detailPanel).getByRole("button", { name: /Open info for Weekly Schedule Planning/i }));
+    const infoDialog = await screen.findByRole("dialog", { name: "Weekly Schedule Planning info" });
+    expect(within(infoDialog).getByText("2 linked runs, choose one")).toBeInTheDocument();
+    expect(
+      within(infoDialog).getByText(/Weekly workpages switch to the review-ready run/i)
+    ).toBeInTheDocument();
+    expect(within(infoDialog).getByRole("button", { name: /Current walkthrough · wr-weekly-001/i })).toBeInTheDocument();
+    expect(within(infoDialog).getByRole("button", { name: /Review-ready weekly · wr-weekly-002/i })).toBeInTheDocument();
+
+    await user.click(within(infoDialog).getByRole("button", { name: /Current walkthrough · wr-weekly-001/i }));
+
+    expect(
+      within(launcher).getByRole("link", { name: "Open schedule workpage" })
+    ).toHaveAttribute("href", "/runs/wr-weekly-002/workpages/schedule-v0");
     expect(window.location.search).toContain("workflow_run_id=wr-weekly-002");
+  });
+
+  it("keeps dispatch reporting on the current run when reporting companions exist", async () => {
+    setFrontendOperatorContext();
+
+    server.use(
+      http.get("*/api/v1/stories/logistics-three-workflow", () =>
+        HttpResponse.json({
+          status: "ok",
+          command: "api.stories.logistics_three_workflow",
+          story: {
+            story_id: "logistics_three_workflow_demo.v1",
+            family: {
+              family_id: "logistics_ops_family.v1",
+              family_version: 1,
+              contract_version: 1
+            },
+            partitions: {
+              planning_week_id: "PW-2026-W10",
+              service_date_ids: ["SD-2026-03-06"]
+            },
+            family_graph: {
+              family_id: "logistics_ops_family.v1",
+              family_version: 1,
+              modules: [
+                {
+                  module_id: "dispatch_reporting",
+                  workflow_id: "dispatch_reporting.v1",
+                  partition_kind: "ServiceDateID",
+                  activation_policy: "manual_or_event",
+                  status: "active",
+                  node_kind: "module",
+                  drilldown_kind: "run_group",
+                  drilldown_refs: [
+                    {
+                      workflow_run_id: "wr-report-001",
+                      workflow_id: "dispatch_reporting.v1",
+                      partition_key: "SD-2026-03-06"
+                    },
+                    {
+                      workflow_run_id: "wr-report-002",
+                      workflow_id: "dispatch_reporting.v1",
+                      partition_key: "SD-2026-03-06"
+                    }
+                  ],
+                  artifact_refs: [],
+                  selection_summary: "2 linked runs, choose one"
+                }
+              ],
+              edges: []
+            },
+            linked_workflow_runs: {
+              weekly_schedule_planning: [],
+              live_dispatch: [],
+              dispatch_reporting: [
+                {
+                  workflow_run_id: "wr-report-001",
+                  workflow_id: "dispatch_reporting.v1",
+                  workflow_version: "v1",
+                  tenant_id: "tenant-a",
+                  domain_id: "domain-x",
+                  partition_key: "SD-2026-03-06",
+                  logical_date: "SD-2026-03-06",
+                  activation_key: "logistics-demo:reporting:current:SD-2026-03-06",
+                  state: "OPEN",
+                  active_issueCount: 1,
+                  active_issue_count: 1,
+                  created_at: "2026-03-09T00:00:00Z",
+                  updated_at: "2026-03-09T00:00:00Z"
+                },
+                {
+                  workflow_run_id: "wr-report-002",
+                  workflow_id: "dispatch_reporting.v1",
+                  workflow_version: "v1",
+                  tenant_id: "tenant-a",
+                  domain_id: "domain-x",
+                  partition_key: "SD-2026-03-06",
+                  logical_date: "SD-2026-03-06",
+                  activation_key: "logistics-demo:reporting:review-ready:SD-2026-03-06",
+                  state: "READY",
+                  active_issueCount: 0,
+                  active_issue_count: 0,
+                  created_at: "2026-03-10T00:00:00Z",
+                  updated_at: "2026-03-10T00:00:00Z"
+                }
+              ],
+              summary: {
+                weekly_schedule_planning_count: 0,
+                live_dispatch_count: 0,
+                dispatch_reporting_count: 2
+              }
+            },
+            handoff_activity: {
+              edges: [],
+              summary: {
+                edge_execution_count: 0,
+                coherence_failed_count: 0
+              }
+            },
+            board: {
+              lanes: [],
+              work_items: [],
+              page: { limit: 100, offset: 0 },
+              summary: {
+                work_item_count: 0,
+                human_task_count: 0,
+                approval_count: 0,
+                flag_count: 0,
+                primary_actionable_count: 0,
+                workflow_item_counts: {}
+              }
+            },
+            official_outputs: {
+              pointers: [],
+              pointer_outputs: [],
+              official_output_artifacts: [],
+              coherence: {},
+              summary: {
+                pointer_count: 0,
+                pointer_output_count: 0,
+                official_output_artifact_count: 0,
+                artifact_kind_counts: {}
+              }
+            },
+            freshness: {
+              latest_event_sequence: null,
+              latest_event_recorded_at: "2026-03-09T00:00:00Z",
+              max_workflow_run_updated_at: "2026-03-09T00:00:00Z",
+              generated_at: "2026-03-09T00:00:00Z"
+            },
+            coherence: {
+              official_outputs: {},
+              handoff_edges: []
+            }
+          }
+        })
+      )
+    );
+
+    window.history.pushState(
+      {},
+      "",
+      "/demo/logistics?planning_week_id=PW-2026-W10&module=dispatch_reporting"
+    );
+    render(<App />);
+
+    const page = await screen.findByTestId("logistics-demo-page");
+    const detailPanel = within(page).getByTestId("logistics-module-detail-panel");
+    const launcher = await within(detailPanel).findByTestId(
+      "logistics-module-launcher-dispatch_reporting"
+    );
+    expect(
+      within(launcher).getByRole("link", { name: "Open EOD workpage" })
+    ).toHaveAttribute("href", "/runs/wr-report-001/workpages/eod-v0");
+    await waitFor(() =>
+      expect(window.location.search).toContain("workflow_run_id=wr-report-001")
+    );
+  });
+
+  it("does not fetch weekly workpages while the dispatch reporting demo shell is open", async () => {
+    const scheduleSpy = vi.spyOn(workpagesRepository, "scheduleForRun");
+    const routeDemandSpy = vi.spyOn(workpagesRepository, "routeDemandForRun");
+    const driverPreferencesSpy = vi.spyOn(workpagesRepository, "driverPreferencesForRun");
+    setFrontendOperatorContext();
+    window.history.pushState(
+      {},
+      "",
+      "/demo/logistics?planning_week_id=PW-2026-W10&service_date_id=SD-2026-03-06&module=dispatch_reporting&workflow_run_id=wr-report-001"
+    );
+
+    try {
+      render(<App />);
+
+      const page = await screen.findByTestId("logistics-demo-page");
+      const detailPanel = within(page).getByTestId("logistics-module-detail-panel");
+      expect(
+        await within(detailPanel).findByTestId("logistics-module-launcher-dispatch_reporting")
+      ).toBeInTheDocument();
+      expect(scheduleSpy).not.toHaveBeenCalled();
+      expect(routeDemandSpy).not.toHaveBeenCalled();
+      expect(driverPreferencesSpy).not.toHaveBeenCalled();
+    } finally {
+      scheduleSpy.mockRestore();
+      routeDemandSpy.mockRestore();
+      driverPreferencesSpy.mockRestore();
+    }
   });
 
   it(

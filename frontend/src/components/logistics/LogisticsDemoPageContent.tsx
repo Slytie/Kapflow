@@ -18,6 +18,7 @@ import {
   editorialBoard,
   moduleDisplayLabel,
   moduleRunRefs,
+  normalizedLogisticsDemoRunId,
   runRefSummary,
   runRowsForStory,
   stateBadgeClass,
@@ -58,7 +59,7 @@ function launcherPrimaryLabel(workflowId: string): string {
 
 function launcherDescription(module: LogisticsStoryFamilyModule): string {
   if (module.workflow_id === "weekly_schedule_planning.v1") {
-    return "This demo shell now launches the canonical weekly schedule workpage for the selected run instead of editing drafts inline.";
+    return "This demo shell launches the canonical weekly schedule workpage. If the walkthrough run is still at intake, the shell switches to the review-ready weekly run for schedule and route-demand editing.";
   }
   if (module.workflow_id === "dispatch_reporting.v1") {
     return "This demo shell now launches the canonical end-of-day workpage for the selected run instead of creating or submitting drafts inline.";
@@ -209,19 +210,12 @@ export function LogisticsDemoPage(): JSX.Element {
   );
 
   const selectedDrilldownRunId = useMemo(() => {
-    if (selectedModuleRuns.length === 1) {
-      return selectedModuleRuns[0]?.ref.workflow_run_id ?? null;
-    }
-    if (
-      selectedRunIdParam &&
-      selectedModuleRuns.some(
-        ({ ref }) => ref.workflow_run_id === selectedRunIdParam
-      )
-    ) {
-      return selectedRunIdParam;
-    }
-    return null;
-  }, [selectedModuleRuns, selectedRunIdParam]);
+    return normalizedLogisticsDemoRunId(
+      selectedModule,
+      selectedModuleRuns,
+      selectedRunIdParam
+    );
+  }, [selectedModule, selectedModuleRuns, selectedRunIdParam]);
 
   useEffect(() => {
     if (!story || !selectedModule) {
@@ -298,23 +292,35 @@ export function LogisticsDemoPage(): JSX.Element {
   );
 
   const prefetchDrilldown = (workflowRunId: string): void => {
+    if (!selectedModuleRuns.some(({ ref }) => ref.workflow_run_id === workflowRunId)) {
+      return;
+    }
+    const targetWorkflowRunId =
+      normalizedLogisticsDemoRunId(selectedModule, selectedModuleRuns, workflowRunId) ??
+      workflowRunId;
     void queryClient.prefetchQuery({
-      queryKey: ["logistics-drilldown-workspace", workflowRunId],
-      queryFn: () => workflowRunsRepository.workspace(workflowRunId)
+      queryKey: ["logistics-drilldown-workspace", targetWorkflowRunId],
+      queryFn: () => workflowRunsRepository.workspace(targetWorkflowRunId)
     });
     void queryClient.prefetchQuery({
-      queryKey: ["logistics-drilldown-detail", workflowRunId],
-      queryFn: () => workflowRunsRepository.detail(workflowRunId)
+      queryKey: ["logistics-drilldown-detail", targetWorkflowRunId],
+      queryFn: () => workflowRunsRepository.detail(targetWorkflowRunId)
     });
   };
 
   const selectDrilldownRun = (workflowRunId: string): void => {
+    if (!selectedModuleRuns.some(({ ref }) => ref.workflow_run_id === workflowRunId)) {
+      return;
+    }
+    const targetWorkflowRunId =
+      normalizedLogisticsDemoRunId(selectedModule, selectedModuleRuns, workflowRunId) ??
+      workflowRunId;
     const nextParams = new URLSearchParams(searchParams);
     nextParams.set("planning_week_id", planningWeekId);
     if (selectedModule) {
       nextParams.set("module", selectedModule.module_id);
     }
-    nextParams.set("workflow_run_id", workflowRunId);
+    nextParams.set("workflow_run_id", targetWorkflowRunId);
     setSearchParams(nextParams);
   };
 
@@ -540,7 +546,11 @@ export function LogisticsDemoPage(): JSX.Element {
                         ) : null}
                         {selectedModuleRuns.length > 1 ? (
                           <div className="logistics-demo-page__run-chooser" aria-label="Run chooser">
-                            <p>Choose a workflow run to open drill-down.</p>
+                            <p>
+                              {selectedModule.workflow_id === "weekly_schedule_planning.v1"
+                                ? "Choose a workflow run to inspect. Weekly workpages switch to the review-ready run until the walkthrough run has Stage04 outputs."
+                                : "Choose a workflow run to open drill-down."}
+                            </p>
                             {selectedModuleRuns.map(({ ref, run }) => (
                               <button
                                 key={ref.workflow_run_id}

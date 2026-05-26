@@ -69,6 +69,17 @@ def canonical_schedule_artifact_route(*, workflow_run_id: str, artifact_version_
     )
 
 
+def canonical_schedule_previous_week_reality_route(
+    *,
+    workflow_run_id: str,
+    artifact_version_id: str,
+) -> str:
+    return (
+        f"/runs/{workflow_run_id}/workpages/"
+        f"{SCHEDULE_WORKPAGE_KIND}/artifacts/{artifact_version_id}/reality/previous-week"
+    )
+
+
 def canonical_workflow_run_workpage_route(*, workflow_run_id: str, workpage_kind: str) -> str:
     return f"/runs/{workflow_run_id}/workpages/{workpage_kind}"
 
@@ -103,6 +114,17 @@ def canonical_schedule_artifact_path(*, workflow_run_id: str, artifact_version_i
     return (
         f"/api/v1/workpages/workflow-runs/{workflow_run_id}/"
         f"{SCHEDULE_WORKPAGE_KIND}/artifacts/{artifact_version_id}"
+    )
+
+
+def canonical_schedule_previous_week_reality_path(
+    *,
+    workflow_run_id: str,
+    artifact_version_id: str,
+) -> str:
+    return (
+        f"/api/v1/workpages/workflow-runs/{workflow_run_id}/"
+        f"{SCHEDULE_WORKPAGE_KIND}/artifacts/{artifact_version_id}/reality/previous-week"
     )
 
 

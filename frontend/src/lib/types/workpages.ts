@@ -211,6 +211,78 @@ export interface WorkpageScheduleCalculations {
   checks: WorkpageScheduleCheck[];
 }
 
+export interface WorkpageSchedulePreviousWeekRealityServiceDate {
+  service_date: string;
+  label: string;
+  weekday_label: string;
+}
+
+export interface WorkpageSchedulePreviousWeekRealityDaySummary {
+  service_date: string;
+  weekday_label: string;
+  worked_driver_days: number;
+  blocked_driver_days: number;
+  worked_route_count: number;
+  total_minutes: number;
+}
+
+export interface WorkpageSchedulePreviousWeekRealityCell {
+  service_date: string;
+  state: string;
+  normalized_state: string;
+  blocked_reasons: string[];
+  actual_minutes: number;
+  /** Displayed-week running accumulation through this day, not a cross-week rolling window. */
+  cumulative_week_minutes: number;
+  route_id: string;
+  route_slot_class: string;
+  source_ref: string;
+  call_in_sick_flag: boolean;
+  cancellation_flag: boolean;
+  non_working_day_flag: boolean;
+}
+
+export interface WorkpageSchedulePreviousWeekRealityDriver {
+  driver_id: string;
+  driver_name: string;
+  employment_type: string;
+  on_call_eligible: boolean;
+  availability_summary: string;
+  previous_week_minutes: number;
+  cells: WorkpageSchedulePreviousWeekRealityCell[];
+}
+
+export interface WorkpageSchedulePreviousWeekRealityActivityRow {
+  driver_id: string;
+  driver_name: string;
+  service_date: string;
+  weekday_label: string;
+  normalized_state: string;
+  state: string;
+  actual_minutes: number;
+  route_id: string;
+  route_slot_class: string;
+  source_ref: string;
+  call_in_sick_flag: boolean;
+  cancellation_flag: boolean;
+  non_working_day_flag: boolean;
+}
+
+export interface WorkpageSchedulePreviousWeekReality {
+  workflow_run_id: string;
+  schedule_artifact_version_id: string;
+  actual_hours_artifact_version_id: string;
+  planning_week_id: string;
+  operational_week_start: string;
+  previous_week_start: string;
+  previous_week_end: string;
+  service_dates: WorkpageSchedulePreviousWeekRealityServiceDate[];
+  day_summaries: WorkpageSchedulePreviousWeekRealityDaySummary[];
+  drivers: WorkpageSchedulePreviousWeekRealityDriver[];
+  activity_rows: WorkpageSchedulePreviousWeekRealityActivityRow[];
+  note: string;
+}
+
 export interface WorkpageScheduleDraftLineageEntry {
   artifact_version_id: string;
   supersedes_artifact_version_id: string | null;
@@ -275,6 +347,7 @@ export type WorkpageScheduleActionKind =
   | "open_latest_draft"
   | "preview_recalc"
   | "submit_artifact"
+  | "open_previous_week_reality"
   | "mark_sick_no_show";
 
 export interface WorkpageScheduleAction {

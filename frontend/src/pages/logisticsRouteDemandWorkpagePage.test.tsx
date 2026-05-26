@@ -109,19 +109,23 @@ describe("LogisticsRouteDemandWorkpagePage", () => {
     expect(within(dialog).getByTestId(`route-demand-count-${visibleWeekDate}`)).toHaveTextContent(
       "17"
     );
-    const initialCount = Number(
-      within(dialog).getByTestId(`route-demand-count-${visibleWeekDate}`).textContent ?? "0"
+    expect(
+      within(dialog).getByTestId(`route-demand-on-call-target-${visibleWeekDate}`)
+    ).toHaveTextContent("4");
+    const initialOnCallTarget = Number(
+      within(dialog).getByTestId(`route-demand-on-call-target-${visibleWeekDate}`).textContent ??
+        "0"
     );
 
     await user.click(
       within(dialog).getByRole("button", {
-        name: `Increase planned routes for ${visibleWeekDate}`
+        name: `Increase on-call target for ${visibleWeekDate}`
       })
     );
 
-    expect(within(dialog).getByTestId(`route-demand-count-${visibleWeekDate}`)).toHaveTextContent(
-      String(initialCount + 1)
-    );
+    expect(
+      within(dialog).getByTestId(`route-demand-on-call-target-${visibleWeekDate}`)
+    ).toHaveTextContent(String(initialOnCallTarget + 1));
     expect(within(dialog).getByRole("button", { name: "Save route demand" })).toBeEnabled();
 
     await user.click(within(dialog).getByRole("button", { name: "Save route demand" }));
@@ -213,19 +217,23 @@ describe("LogisticsRouteDemandWorkpagePage", () => {
     expect(within(page).getByTestId(`route-demand-count-${visibleWeekDate}`)).toHaveTextContent(
       "17"
     );
-    const initialCount = Number(
-      within(page).getByTestId(`route-demand-count-${visibleWeekDate}`).textContent ?? "0"
+    expect(
+      within(page).getByTestId(`route-demand-on-call-target-${visibleWeekDate}`)
+    ).toHaveTextContent("4");
+    const initialOnCallTarget = Number(
+      within(page).getByTestId(`route-demand-on-call-target-${visibleWeekDate}`).textContent ??
+        "0"
     );
 
     await user.click(
       within(page).getByRole("button", {
-        name: `Increase planned routes for ${visibleWeekDate}`
+        name: `Increase on-call target for ${visibleWeekDate}`
       })
     );
 
-    expect(within(page).getByTestId(`route-demand-count-${visibleWeekDate}`)).toHaveTextContent(
-      String(initialCount + 1)
-    );
+    expect(
+      within(page).getByTestId(`route-demand-on-call-target-${visibleWeekDate}`)
+    ).toHaveTextContent(String(initialOnCallTarget + 1));
     expect(within(page).getByRole("button", { name: "Save route demand" })).toBeEnabled();
 
     await user.click(within(page).getByRole("button", { name: "Save route demand" }));
@@ -237,8 +245,8 @@ describe("LogisticsRouteDemandWorkpagePage", () => {
     });
 
     expect(await screen.findByTestId("route-demand-artifact-workpage-page")).toBeInTheDocument();
-    expect(screen.getByTestId(`route-demand-count-${visibleWeekDate}`)).toHaveTextContent(
-      String(initialCount + 1)
+    expect(screen.getByTestId(`route-demand-on-call-target-${visibleWeekDate}`)).toHaveTextContent(
+      String(initialOnCallTarget + 1)
     );
     expect(screen.getByText("Latest schedule draft is stale")).toBeInTheDocument();
     expect(screen.getAllByRole("link", { name: "Open latest schedule draft" })[0]).toHaveAttribute(
@@ -283,6 +291,30 @@ describe("LogisticsRouteDemandWorkpagePage", () => {
     expect(mutationLog()).toContain(
       "workpage-route-demand-save-and-run:av-route-demand-artifact-001:av-route-demand-artifact-002:wr-weekly-001"
     );
+  });
+
+  it("keeps existing-week on-call-only edits saveable without enabling coverage", async () => {
+    const user = userEvent.setup();
+    setFrontendOperatorContext();
+    window.history.pushState(
+      {},
+      "",
+      "/runs/wr-weekly-001/workpages/route-demand-v0/artifacts/av-route-demand-artifact-001"
+    );
+    render(<App />);
+
+    const page = await screen.findByTestId("route-demand-artifact-workpage-page");
+    expect(within(page).getByRole("button", { name: "Save route demand" })).toBeDisabled();
+    expect(within(page).getByRole("button", { name: "Run coverage agent" })).toBeDisabled();
+
+    await user.click(
+      within(page).getByRole("button", {
+        name: `Increase on-call target for ${visibleWeekDate}`
+      })
+    );
+
+    expect(within(page).getByRole("button", { name: "Save route demand" })).toBeEnabled();
+    expect(within(page).getByRole("button", { name: "Run coverage agent" })).toBeDisabled();
   });
 
   it("closes the embedded route-demand popup before opening existing-week schedule coverage quick edit", async () => {
@@ -388,10 +420,13 @@ describe("LogisticsRouteDemandWorkpagePage", () => {
     expect(within(futurePage).getByTestId(`route-demand-count-${futureVisibleWeekDate}`)).toHaveTextContent(
       "0"
     );
+    expect(
+      within(futurePage).getByTestId(`route-demand-on-call-target-${futureVisibleWeekDate}`)
+    ).toHaveTextContent("0");
 
     await user.click(
       within(futurePage).getByRole("button", {
-        name: `Increase planned routes for ${futureVisibleWeekDate}`
+        name: `Increase on-call target for ${futureVisibleWeekDate}`
       })
     );
 
@@ -433,7 +468,7 @@ describe("LogisticsRouteDemandWorkpagePage", () => {
     const futureEditor = await screen.findByTestId("route-demand-quick-edit-editor");
     await user.click(
       within(futureEditor).getByRole("button", {
-        name: `Increase planned routes for ${futureVisibleWeekDate}`
+        name: `Increase on-call target for ${futureVisibleWeekDate}`
       })
     );
     await user.click(
@@ -488,7 +523,7 @@ describe("LogisticsRouteDemandWorkpagePage", () => {
     const futurePage = await screen.findByTestId("route-demand-artifact-workpage-page");
     await user.click(
       within(futurePage).getByRole("button", {
-        name: `Increase planned routes for ${futureVisibleWeekDate}`
+        name: `Increase on-call target for ${futureVisibleWeekDate}`
       })
     );
     await user.click(

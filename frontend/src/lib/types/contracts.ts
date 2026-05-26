@@ -17,6 +17,7 @@ import type {
   WorkpageScheduleCalculations,
   WorkpageScheduleDependency,
   WorkpageScheduleDraftLineage,
+  WorkpageSchedulePreviousWeekReality,
   WorkpageSchedulePreview,
   WorkpageViewModel
 } from "@/lib/types/workpages";
@@ -547,6 +548,13 @@ export interface WorkpageContract {
   draft_lineage: WorkpageScheduleDraftLineage | null;
   accepted_series: WorkpageScheduleAcceptedSeries | null;
   actions: WorkpageAction[];
+}
+
+export interface SchedulePreviousWeekRealityContract {
+  artifact_context: WorkpageArtifactContext;
+  source: WorkpageSourceMetadata;
+  freshness: WorkpageFreshness;
+  previous_week_reality: WorkpageSchedulePreviousWeekReality;
 }
 
 export type LogisticsStoryFamilyNodeKind = "module";

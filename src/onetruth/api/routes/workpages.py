@@ -32,6 +32,7 @@ from onetruth.application.services.logistics_workpages import (
     build_driver_preferences_workflow_run_workpage_contract,
     build_eod_workflow_run_workpage_contract,
     build_route_demand_artifact_workpage_contract,
+    build_schedule_previous_week_reality_contract,
     build_route_demand_workflow_run_workpage_contract,
     build_schedule_artifact_workpage_contract,
     build_schedule_workflow_run_workpage_contract,
@@ -140,6 +141,62 @@ def workflow_run_artifact_workpage_endpoint(
     )
     return {
         "command": "api.workpages.artifact",
+        **contract,
+    }
+
+
+def schedule_artifact_previous_week_reality_endpoint(
+    connection: sqlite3.Connection,
+    *,
+    context: RequestContext,
+    workflow_run_id: str,
+    workpage_kind: str,
+    artifact_version_id: str,
+) -> dict[str, object]:
+    artifact, workflow_run, _descriptor = _editable_schedule_artifact_projection_context(
+        connection,
+        context=context,
+        workflow_run_id=workflow_run_id,
+        workpage_kind=workpage_kind,
+        artifact_version_id=artifact_version_id,
+    )
+    artifacts = list_artifacts_for_workflow_run_command(connection, workflow_run_id)
+    try:
+        workbook_bytes = _artifact_workpage_bytes(
+            artifact=artifact,
+            descriptor=_descriptor,
+            artifact_version_id=artifact_version_id,
+        )
+    except ArtifactStorageError as exc:
+        raise ApiError(
+            status_code=500,
+            code="workpage_artifact_unavailable",
+            message="artifact-backed workpage storage is unavailable",
+            details={"artifact_version_id": artifact_version_id},
+        ) from exc
+    try:
+        contract = build_schedule_previous_week_reality_contract(
+            connection,
+            artifact_version_id=artifact_version_id,
+            artifact=artifact,
+            workflow_run=workflow_run,
+            artifacts=artifacts,
+            projection=project_stage04_draft_weekly_schedule_workbook(workbook_bytes),
+            download_path=f"/api/v1/artifacts/{artifact_version_id}/download.bin",
+        )
+    except WorkpageProjectionUnavailableError as exc:
+        raise ApiError(
+            status_code=409,
+            code="workpage_projection_unavailable",
+            message=str(exc),
+            details={
+                "workflow_run_id": exc.workflow_run_id,
+                "workpage_id": exc.workpage_id,
+                "missing_dataset_keys": exc.missing_dataset_keys,
+            },
+        ) from exc
+    return {
+        "command": "api.workpages.schedule.previous_week_reality",
         **contract,
     }
 
@@ -948,6 +1005,24 @@ def _editable_schedule_artifact_endpoint_context(
     workpage_kind: str,
     artifact_version_id: str,
 ) -> tuple[dict[str, object], WorkpageDescriptor]:
+    _artifact, workflow_run, descriptor = _editable_schedule_artifact_projection_context(
+        connection,
+        context=context,
+        workflow_run_id=workflow_run_id,
+        workpage_kind=workpage_kind,
+        artifact_version_id=artifact_version_id,
+    )
+    return workflow_run, descriptor
+
+
+def _editable_schedule_artifact_projection_context(
+    connection: sqlite3.Connection,
+    *,
+    context: RequestContext,
+    workflow_run_id: str,
+    workpage_kind: str,
+    artifact_version_id: str,
+) -> tuple[dict[str, object], dict[str, object], WorkpageDescriptor]:
     if workpage_kind != SCHEDULE_WORKPAGE_KIND:
         raise ApiError(
             status_code=404,
@@ -988,7 +1063,7 @@ def _editable_schedule_artifact_endpoint_context(
             message="artifact-backed workpage not found",
             details={"artifact_version_id": artifact_version_id},
         )
-    return workflow_run, descriptor
+    return artifact, workflow_run, descriptor
 
 
 def _scoped_workflow_run_for_artifact(

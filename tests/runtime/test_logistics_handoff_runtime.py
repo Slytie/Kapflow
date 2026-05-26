@@ -14,6 +14,7 @@ from tests.runtime.helpers.runtime_cli import run_cli, stderr_json, stdout_json
 
 
 PLANNING_WEEK_ID = "PW-2026-W10"
+FUTURE_PLANNING_WEEK_ID = "PW-2026-W11"
 SERVICE_DATE_ID = "SD-2026-03-06"
 
 
@@ -225,17 +226,90 @@ def _setup_reporting_with_final_packet(
         partition_key=SERVICE_DATE_ID,
         logical_date="2026-03-06",
     )
-    final_packet = _create_artifact_version(
+    _, final_packet = _create_reporting_feedback_artifacts(
         db_url,
         workflow_run_id=str(reporting_run["workflow_run_id"]),
-        artifact_kind="reporting.final_packet.workbook",
-        idempotency_key="idem:artifact:reporting-final-packet",
-        artifact_role="official_output",
-        media_type="application/octet-stream",
-        canonical_partition_kind="ServiceDateID",
-        canonical_partition_key=SERVICE_DATE_ID,
+        service_date="2026-03-06",
+        idempotency_suffix="reporting-final-packet",
     )
     return db_url, db_path, reporting_run, final_packet
+
+
+def _normalized_reporting_payload(
+    *,
+    service_date: str,
+    driver_id: str,
+    driver_name: str,
+    route_id: str,
+    actual_minutes: int,
+) -> dict[str, Any]:
+    return {
+        "schema_version": "1.0",
+        "kind": "dispatch_reporting.actuals_normalized",
+        "service_date": service_date,
+        "station_code": "DVC4",
+        "dsp_name": "QDCI",
+        "rows": [
+            {
+                "row_id": f"{driver_id}:{service_date}",
+                "service_date": service_date,
+                "route_id": route_id,
+                "driver_id": driver_id,
+                "driver_name": driver_name,
+                "actual_minutes": actual_minutes,
+                "returned_packages": 0,
+                "return_reasons": "",
+                "upd_candidate": False,
+                "formula_integrity_warning": "",
+            }
+        ],
+        "quality_warnings": [],
+        "break_tracker": {"sheet_present": False, "rows": []},
+        "route_adherence": {"sheet_present": False, "cycles": []},
+        "totals": {"route_count": 1, "upd_candidate_count": 0},
+    }
+
+
+def _create_reporting_feedback_artifacts(
+    db_url: str,
+    *,
+    workflow_run_id: str,
+    service_date: str,
+    idempotency_suffix: str,
+    driver_id: str = "A1NQEGRS26IBJA",
+    driver_name: str = "Suraj Pratap Singh",
+    route_id: str = "CX93",
+    actual_minutes: int = 540,
+) -> tuple[dict[str, Any], dict[str, Any]]:
+    normalized = _create_artifact_version(
+        db_url,
+        workflow_run_id=workflow_run_id,
+        artifact_kind="reporting.actuals_normalized.workbook",
+        idempotency_key=f"idem:artifact:{idempotency_suffix}:normalized",
+        artifact_role="official_input",
+        media_type="application/json",
+        metadata_json=_normalized_reporting_payload(
+            service_date=service_date,
+            driver_id=driver_id,
+            driver_name=driver_name,
+            route_id=route_id,
+            actual_minutes=actual_minutes,
+        ),
+    )
+    final_packet = _create_artifact_version(
+        db_url,
+        workflow_run_id=workflow_run_id,
+        artifact_kind="reporting.final_packet.workbook",
+        idempotency_key=f"idem:artifact:{idempotency_suffix}:final",
+        artifact_role="official_output",
+        media_type="application/octet-stream",
+        metadata_json={
+            "normalized_artifact_version_id": str(normalized["artifact_version_id"]),
+        },
+        canonical_partition_kind="ServiceDateID",
+        canonical_partition_key=f"SD-{service_date}",
+    )
+    return normalized, final_packet
 
 
 def test_handoff_record_creation_is_explicit_and_idempotent(tmp_path: Path) -> None:
@@ -1400,11 +1474,27 @@ def test_notify_only_handoff_dispatches_over_compiled_reporting_edge_and_materia
     assert edge["edge_id"] == "reporting_actuals_to_future_planning"
     assert edge["target_workflow_id"] == "weekly_schedule_planning.v1"
     assert edge["target_partition_kind"] == "PlanningWeekID"
-    assert edge["target_partition_key"] == "PW-2026-W10"
+    assert edge["target_partition_key"] == FUTURE_PLANNING_WEEK_ID
     assert str(edge["target_workflow_run_id"]) == str(target_run["workflow_run_id"])
-    assert target_run["partition_key"] == "PW-2026-W10"
+    assert target_run["partition_key"] == FUTURE_PLANNING_WEEK_ID
     assert target_input["artifact_kind"] == "planning.actual_hours_snapshot.workbook"
     assert str(target_input["parent_artifact_version_id"]) == str(final_packet["artifact_version_id"])
+    assert target_input["metadata_json"]["columns"][0] == "service_date"
+    assert target_input["metadata_json"]["rows"] == [
+        [
+            "2026-03-06",
+            "A1NQEGRS26IBJA",
+            "Suraj Pratap Singh",
+            "WORKED",
+            540,
+            "CX93",
+            "",
+            0,
+            0,
+            0,
+            target_input["metadata_json"]["rows"][0][10],
+        ]
+    ]
 
     input_rows = _query_rows(
         db_path,
@@ -1472,8 +1562,9 @@ def test_notify_only_handoff_is_idempotent_for_target_run_resolution_and_edge_re
         SELECT workflow_run_id
         FROM workflow_runs
         WHERE workflow_id = 'weekly_schedule_planning.v1'
-          AND partition_key = 'PW-2026-W10'
+          AND partition_key = ?
         """,
+        (FUTURE_PLANNING_WEEK_ID,),
     )
     assert len(run_rows) == 1
 
@@ -1514,15 +1605,13 @@ def test_notify_only_handoff_refreshes_weekly_actual_hours_binding_for_newer_fee
         activation_key="dispatch_reporting.v1:SD-2026-03-05:first",
         idempotency_key="idem:runs.create:dispatch_reporting.v1:SD-2026-03-05:first",
     )
-    first_final_packet = _create_artifact_version(
+    _, first_final_packet = _create_reporting_feedback_artifacts(
         db_url,
         workflow_run_id=str(first_reporting_run["workflow_run_id"]),
-        artifact_kind="reporting.final_packet.workbook",
-        idempotency_key="idem:artifact:reporting-final-packet:first",
-        artifact_role="official_output",
-        media_type="application/octet-stream",
-        canonical_partition_kind="ServiceDateID",
-        canonical_partition_key="SD-2026-03-05",
+        service_date="2026-03-05",
+        idempotency_suffix="reporting-first-feedback",
+        route_id="CX90",
+        actual_minutes=480,
     )
     first = _notify_only_handoff(
         db_url,
@@ -1540,15 +1629,13 @@ def test_notify_only_handoff_refreshes_weekly_actual_hours_binding_for_newer_fee
         activation_key="dispatch_reporting.v1:SD-2026-03-06:second",
         idempotency_key="idem:runs.create:dispatch_reporting.v1:SD-2026-03-06:second",
     )
-    second_final_packet = _create_artifact_version(
+    _, second_final_packet = _create_reporting_feedback_artifacts(
         db_url,
         workflow_run_id=str(second_reporting_run["workflow_run_id"]),
-        artifact_kind="reporting.final_packet.workbook",
-        idempotency_key="idem:artifact:reporting-final-packet:second",
-        artifact_role="official_output",
-        media_type="application/octet-stream",
-        canonical_partition_kind="ServiceDateID",
-        canonical_partition_key="SD-2026-03-06",
+        service_date="2026-03-06",
+        idempotency_suffix="reporting-second-feedback",
+        route_id="CX93",
+        actual_minutes=540,
     )
     second = _notify_only_handoff(
         db_url,
@@ -1578,6 +1665,51 @@ def test_notify_only_handoff_refreshes_weekly_actual_hours_binding_for_newer_fee
             "source_ref": str(second_final_packet["artifact_version_id"]),
             "artifact_version_id": str(second["target_input_artifacts"][0]["artifact_version_id"]),
         }
+    ]
+
+    artifact_rows = _query_rows(
+        db_path,
+        """
+        SELECT artifact_version_id, supersedes_artifact_version_id, metadata_json
+        FROM artifact_versions
+        WHERE workflow_run_id = ?
+          AND artifact_kind = 'planning.actual_hours_snapshot.workbook'
+        ORDER BY created_at ASC
+        """,
+        (str(second["target_workflow_runs"][0]["workflow_run_id"]),),
+    )
+    assert len(artifact_rows) == 2
+    assert artifact_rows[0]["supersedes_artifact_version_id"] is None
+    assert artifact_rows[1]["supersedes_artifact_version_id"] == artifact_rows[0]["artifact_version_id"]
+
+    latest_payload = json.loads(str(artifact_rows[1]["metadata_json"]))
+    assert latest_payload["rows"] == [
+        [
+            "2026-03-05",
+            "A1NQEGRS26IBJA",
+            "Suraj Pratap Singh",
+            "WORKED",
+            480,
+            "CX90",
+            "",
+            0,
+            0,
+            0,
+            latest_payload["rows"][0][10],
+        ],
+        [
+            "2026-03-06",
+            "A1NQEGRS26IBJA",
+            "Suraj Pratap Singh",
+            "WORKED",
+            540,
+            "CX93",
+            "",
+            0,
+            0,
+            0,
+            latest_payload["rows"][1][10],
+        ],
     ]
 
     edge_rows = _query_rows(

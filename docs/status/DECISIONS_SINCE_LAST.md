@@ -2,6 +2,16 @@
 
 Record any decisions made since the last session so a fresh Codex run can rehydrate quickly.
 
+## 2026-05-25 (schedule main-view history rail removal)
+- UI decision: the canonical `schedule-v0` run page and full artifact page no longer render the accepted-series / draft-lineage side rail on the main surface.
+- Boundary decision: accepted history and draft lineage remain separate backend-authored metadata, but they should not compete with the main weekly schedule review/edit surface.
+- Workflow decision: the embedded quick-edit draft dialog keeps its explicit draft-history affordance; only the full-page side rail is removed.
+
+## 2026-05-19 (route-demand on-call target editing and existing-week coverage boundary)
+- Editing decision: the shared `route-demand-v0` editor now treats `on_call_target` as operator-editable truth alongside `planned_route_count` in both the quick-edit popup and the full-page artifact editor.
+- Future-week trigger decision: `Save and run scheduling agent` for future-week route-demand seeds now activates when any visible day moves to positive planned-route demand or positive on-call target demand.
+- Existing-week boundary decision: on-call-only existing-week route-demand changes are saveable, but they do not unlock or return route-demand coverage recommendations; existing-week coverage remains a positive planned-route-delta tool only.
+
 ## 2026-05-11 (dispatch-reporting workbook-only Stage04 review handoff)
 - Evidence decision: `dispatch_reporting.v1` `Stage04/final_packet_review` no longer requires a separate `reporting.manager_review.doc` upload; review confirmation on the latest `reporting.upd_draft.workbook` is now the only pre-approval evidence gate for the first operator lane.
 - UI decision: the canonical EOD closeout flow now treats Step 3 as workbook-only review confirmation plus task completion, rather than a separate manager-review file upload flow.

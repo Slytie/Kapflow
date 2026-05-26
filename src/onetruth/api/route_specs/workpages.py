@@ -20,6 +20,7 @@ from onetruth.api.routes.workpages import (
     mark_schedule_sick_no_show_endpoint,
     preview_workflow_run_artifact_workpage_endpoint,
     recommend_schedule_route_demand_coverage_endpoint,
+    schedule_artifact_previous_week_reality_endpoint,
     save_and_run_route_demand_artifact_workpage_endpoint,
     submit_workflow_run_artifact_workpage_endpoint,
     workflow_run_artifact_workpage_endpoint,
@@ -81,6 +82,19 @@ def _dispatch_workflow_run_artifact_workpage(execution, raw_value: str):
         raw_value
     )
     return workflow_run_artifact_workpage_endpoint(
+        require_connection(execution.connection),
+        context=require_request_context(execution.context),
+        workflow_run_id=workflow_run_id,
+        workpage_kind=workpage_kind,
+        artifact_version_id=artifact_version_id,
+    )
+
+
+def _dispatch_schedule_previous_week_reality(execution, raw_value: str):
+    workflow_run_id, workpage_kind, artifact_version_id = _split_workflow_run_artifact_path(
+        raw_value
+    )
+    return schedule_artifact_previous_week_reality_endpoint(
         require_connection(execution.connection),
         context=require_request_context(execution.context),
         workflow_run_id=workflow_run_id,
@@ -260,6 +274,23 @@ WORKPAGE_ROUTE_SPECS: tuple[RouteSpec, ...] = (
         dispatch=lambda execution, params: _dispatch_schedule_route_demand_coverage(
             execution,
             params["workflow_run_schedule_route_demand_coverage"],
+        ),
+    ),
+    RouteSpec(
+        name="workpages.workflow_run.schedule.previous_week_reality",
+        method="GET",
+        pattern=_param(
+            "/api/v1/workpages/workflow-runs/",
+            param_name="workflow_run_schedule_previous_week_reality",
+            suffix="/reality/previous-week",
+            allow_slash=True,
+            required_substring="/artifacts/",
+        ),
+        body_policy=NO_BODY,
+        needs_page=False,
+        dispatch=lambda execution, params: _dispatch_schedule_previous_week_reality(
+            execution,
+            params["workflow_run_schedule_previous_week_reality"],
         ),
     ),
     RouteSpec(

@@ -46,20 +46,42 @@ export function expectHeatmapHeaderStatusGroups(container: HTMLElement): {
   };
 }
 
-export function expectSelectedDateHeaderStats(container: HTMLElement): void {
+export function expectHeatmapSummaryRailLabels(
+  container: HTMLElement,
+  options: { includesGap?: boolean } = {}
+): void {
+  const { includesGap = false } = options;
+  const heatmap = scheduleHeatmapSectionIn(container);
+  const rail = heatmap.querySelector(".schedule-heatmap__summary-rail-header");
+  expect(rail).not.toBeNull();
+  const summaryRail = rail as HTMLElement;
+  expect(within(heatmap).getByRole("columnheader", { name: "Day summary metrics" })).toBe(summaryRail);
+  expect(within(summaryRail).getByText("Req")).toBeInTheDocument();
+  expect(within(summaryRail).getByText("Sched")).toBeInTheDocument();
+  expect(within(summaryRail).getByText("OC")).toBeInTheDocument();
+  expect(within(summaryRail).getByText("Avail")).toBeInTheDocument();
+  if (includesGap) {
+    expect(within(summaryRail).getByText("Gap")).toBeInTheDocument();
+  } else {
+    expect(within(summaryRail).queryByText("Gap")).not.toBeInTheDocument();
+  }
+}
+
+export function expectSelectedDateHeaderValues(container: HTMLElement): void {
   const heatmap = scheduleHeatmapSectionIn(container);
   const selectedHeatmapDate = heatmap.querySelector(".schedule-heatmap__date-header--selected");
   expect(selectedHeatmapDate).not.toBeNull();
   const selectedHeader = selectedHeatmapDate as HTMLElement;
   expect(selectedHeader).toHaveTextContent("2026-03-24");
-  expect(within(selectedHeader).getByText("Req")).toBeInTheDocument();
+  expect(within(selectedHeader).queryByText("Req")).not.toBeInTheDocument();
+  expect(within(selectedHeader).queryByText("Sched")).not.toBeInTheDocument();
+  expect(within(selectedHeader).queryByText("OC")).not.toBeInTheDocument();
+  expect(within(selectedHeader).queryByText("Avail")).not.toBeInTheDocument();
+  expect(within(selectedHeader).queryByText("Gap")).not.toBeInTheDocument();
   expect(within(selectedHeader).getByText("20")).toBeInTheDocument();
-  expect(within(selectedHeader).getByText("Sched")).toBeInTheDocument();
   expect(within(selectedHeader).getAllByText("23").length).toBeGreaterThan(0);
-  expect(within(selectedHeader).getByText("OC")).toBeInTheDocument();
   expect(within(selectedHeader).getByText("4 / 4")).toBeInTheDocument();
-  expect(within(selectedHeader).getByText("Avail")).toBeInTheDocument();
-  expect(selectedHeader.textContent ?? "").toMatch(/Avail(\d+|—)/);
+  expect(selectedHeader.querySelectorAll(".schedule-heatmap__summary-value")).toHaveLength(4);
 }
 
 export function expectHeatmapPreferenceBars(container: HTMLElement): void {

@@ -110,7 +110,8 @@ function routeDemandDayCardSignature(dayCards: WorkpageRouteDemandDayCard[]): st
   return JSON.stringify(
     dayCards.map((card) => ({
       service_date: card.service_date,
-      planned_route_count: card.planned_route_count
+      planned_route_count: card.planned_route_count,
+      on_call_target: card.on_call_target
     }))
   );
 }
@@ -135,6 +136,12 @@ function positiveRouteDemandIncreaseCount(
     }
     return total + Math.max(current.planned_route_count - card.planned_route_count, 0);
   }, 0);
+}
+
+function hasPositiveFutureWeekDemand(dayCards: WorkpageRouteDemandDayCard[]): boolean {
+  return visibleRouteDemandDayCards(dayCards).some(
+    (card) => card.planned_route_count > 0 || card.on_call_target > 0
+  );
 }
 
 function routeDemandDisabledReasonText(reason: string | null | undefined): string | null {
@@ -315,12 +322,16 @@ function RouteDemandDayCards({
   editable,
   onIncrement,
   onDecrement,
+  onIncrementOnCall,
+  onDecrementOnCall,
   showHeader = true
 }: {
   dayCards: WorkpageRouteDemandDayCard[];
   editable: boolean;
   onIncrement?: (serviceDate: string) => void;
   onDecrement?: (serviceDate: string) => void;
+  onIncrementOnCall?: (serviceDate: string) => void;
+  onDecrementOnCall?: (serviceDate: string) => void;
   showHeader?: boolean;
 }): JSX.Element {
   const dayCardGroups = useMemo(() => groupRouteDemandDayCards(dayCards), [dayCards]);
@@ -332,7 +343,10 @@ function RouteDemandDayCards({
       {showHeader ? (
         <header className="workpage-panel__header">
           <h2>Daily route demand</h2>
-          <p>Route-demand edits change final planned daily route counts only. Rescue, overflow, and buffer posture stay server-managed.</p>
+          <p>
+            Route-demand edits change planned daily route counts and on-call targets only.
+            Rescue, overflow, and excess-capacity posture stay server-managed.
+          </p>
         </header>
       ) : null}
       {firstServiceDate && lastServiceDate ? (
@@ -425,7 +439,36 @@ function RouteDemandDayCards({
                     </div>
                     <div>
                       <dt>On-call target</dt>
-                      <dd>{card.on_call_target}</dd>
+                      <dd>
+                        {editable ? (
+                          <div className="route-demand-stepper">
+                            <button
+                              type="button"
+                              className="action-btn"
+                              aria-label={`Decrease on-call target for ${card.service_date}`}
+                              onClick={() => onDecrementOnCall?.(card.service_date)}
+                              disabled={card.on_call_target <= 0}
+                            >
+                              -
+                            </button>
+                            <span data-testid={`route-demand-on-call-target-${card.service_date}`}>
+                              {card.on_call_target}
+                            </span>
+                            <button
+                              type="button"
+                              className="action-btn"
+                              aria-label={`Increase on-call target for ${card.service_date}`}
+                              onClick={() => onIncrementOnCall?.(card.service_date)}
+                            >
+                              +
+                            </button>
+                          </div>
+                        ) : (
+                          <span data-testid={`route-demand-on-call-target-${card.service_date}`}>
+                            {card.on_call_target}
+                          </span>
+                        )}
+                      </dd>
                     </div>
                     <div>
                       <dt>Excess capacity target</dt>
@@ -478,6 +521,8 @@ function RouteDemandWorkpageBody({
   editableDayCards,
   onIncrement,
   onDecrement,
+  onIncrementOnCall,
+  onDecrementOnCall,
   presentation = "full"
 }: {
   contract: WorkpageContract;
@@ -486,6 +531,8 @@ function RouteDemandWorkpageBody({
   editableDayCards?: WorkpageRouteDemandDayCard[];
   onIncrement?: (serviceDate: string) => void;
   onDecrement?: (serviceDate: string) => void;
+  onIncrementOnCall?: (serviceDate: string) => void;
+  onDecrementOnCall?: (serviceDate: string) => void;
   presentation?: "full" | "daily_only";
 }): JSX.Element {
   const summarySection = findSummarySection(contract.workpage.sections);
@@ -504,6 +551,8 @@ function RouteDemandWorkpageBody({
         editable={editable}
         onIncrement={onIncrement}
         onDecrement={onDecrement}
+        onIncrementOnCall={onIncrementOnCall}
+        onDecrementOnCall={onDecrementOnCall}
         showHeader={false}
       />
     );
@@ -518,6 +567,8 @@ function RouteDemandWorkpageBody({
         editable={editable}
         onIncrement={onIncrement}
         onDecrement={onDecrement}
+        onIncrementOnCall={onIncrementOnCall}
+        onDecrementOnCall={onDecrementOnCall}
       />
       {artifactHistory && workflowRunId ? (
         <RouteDemandHistoryRail
@@ -788,6 +839,7 @@ function RouteDemandArtifactEditor({
     query.data?.route_demand_calculations?.day_cards ?? [],
     dayCards
   );
+  const futureWeekDemandAvailable = hasPositiveFutureWeekDemand(dayCards);
   const latestArtifactVersionId =
     query.data?.artifact_context?.latest_in_chain_artifact_version_id ?? artifactVersionId;
   const latestArtifactRoute =
@@ -799,6 +851,7 @@ function RouteDemandArtifactEditor({
   );
   const futureWeekOption = query.data?.future_week_options[0] ?? null;
   const futureWeekActivation = query.data?.future_week_activation ?? null;
+  const isFutureWeekArtifact = !futureWeekOption;
   const submitMutation = useMutation({
     mutationFn: (input: {
       submitPath: string;
@@ -810,7 +863,8 @@ function RouteDemandArtifactEditor({
         {
           dailyDemandRows: dayCards.map((card) => ({
             service_date: card.service_date,
-            planned_route_count: card.planned_route_count
+            planned_route_count: card.planned_route_count,
+            on_call_target: card.on_call_target
           }))
         },
         input.actionRef ?? undefined
@@ -838,7 +892,8 @@ function RouteDemandArtifactEditor({
         {
           dailyDemandRows: dayCards.map((card) => ({
             service_date: card.service_date,
-            planned_route_count: card.planned_route_count
+            planned_route_count: card.planned_route_count,
+            on_call_target: card.on_call_target
           }))
         },
         input.actionRef ?? undefined
@@ -883,7 +938,7 @@ function RouteDemandArtifactEditor({
     saveAndRunAction?.state === "available" &&
     Boolean(saveAndRunAction.submit_path) &&
     hasUnsavedEdits &&
-    positiveIncreaseCount > 0;
+    (isFutureWeekArtifact ? futureWeekDemandAvailable : positiveIncreaseCount > 0);
   const backRoute = workpageBackRoute(workflowRunId);
   const isMutationPending =
     submitMutation.isPending || createNextWeekMutation.isPending || saveAndRunMutation.isPending;
@@ -1096,7 +1151,7 @@ function RouteDemandArtifactEditor({
           ) : null}
         </div>
       }
-      heroSupportText="Plus/minus controls adjust backend-owned daily route counts. Save creates a new route-demand artifact version and leaves schedule artifacts untouched."
+      heroSupportText="Plus/minus controls adjust backend-owned daily route counts and on-call targets. Save creates a new route-demand artifact version and leaves schedule artifacts untouched."
       heroActions={
         layout === "page" ? (
           <>
@@ -1232,6 +1287,24 @@ function RouteDemandArtifactEditor({
             )
           );
         }}
+        onIncrementOnCall={(serviceDate) => {
+          setDayCards((current) =>
+            current.map((card) =>
+              card.service_date === serviceDate
+                ? { ...card, on_call_target: card.on_call_target + 1 }
+                : card
+            )
+          );
+        }}
+        onDecrementOnCall={(serviceDate) => {
+          setDayCards((current) =>
+            current.map((card) =>
+              card.service_date === serviceDate
+                ? { ...card, on_call_target: Math.max(card.on_call_target - 1, 0) }
+                : card
+            )
+          );
+        }}
       />
     </WorkpageFrame>
   );
@@ -1305,7 +1378,8 @@ export function RouteDemandQuickEditModal({
             <p className="timeline-page__eyebrow">Quick edit</p>
             <h2 id={titleId}>Edit route demand</h2>
             <p id={descriptionId}>
-              Adjust planned daily route counts without leaving the current workpage.
+              Adjust planned daily route counts and on-call targets without leaving the current
+              workpage.
             </p>
           </div>
           <button type="button" className="action-btn" onClick={onClose}>

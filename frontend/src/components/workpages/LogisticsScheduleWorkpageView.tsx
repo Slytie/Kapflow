@@ -97,6 +97,7 @@ export function LogisticsScheduleWorkpageView({
         calculations={contract.calculations}
         dependencies={contract.dependencies}
         versionRails={resolvedVersionRails}
+        showVersionRails={false}
         readOnly
         routeDemandUnresolvedCountsByServiceDate={routeDemandUnresolvedCountsByServiceDate}
       />

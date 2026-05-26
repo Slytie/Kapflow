@@ -9,6 +9,10 @@ from onetruth.application.services.dispatch_reporting_workbook import (
     WorkbookRuntimeDependencyError,
 )
 from tests.runtime.helpers.dispatch_reporting import (
+    REAL_ZIP_WEEK_EXPECTED_DAY_TOTALS,
+    REAL_ZIP_WEEK_SAMPLE_ROW,
+    REAL_ZIP_WEEK_SERVICE_DATES,
+    real_zip_week_workbook_path,
     REALISTIC_REPORTING_SERVICE_DATE,
     SUPPORTED_REPORTING_WORKBOOK_PATH,
     XLSX_MEDIA_TYPE,
@@ -234,6 +238,167 @@ def _upload_supported_eos_workbook(
         metadata_json=reporting_workbook_upload_metadata(service_date),
         idempotency_key=idempotency_key,
     )
+
+
+def _upload_eos_workbook_from_path(
+    client: RuntimeApiClient,
+    *,
+    human_task_id: str,
+    service_date: str,
+    workbook_path: Path,
+    idempotency_key: str,
+) -> dict[str, object]:
+    return _upload_binary_artifact(
+        client,
+        human_task_id=human_task_id,
+        artifact_kind="reporting.eos_raw.workbook",
+        artifact_role="official_input",
+        content=workbook_path.read_bytes(),
+        file_name=workbook_path.name,
+        media_type=XLSX_MEDIA_TYPE,
+        metadata_json=reporting_workbook_upload_metadata(service_date),
+        idempotency_key=idempotency_key,
+    )
+
+
+def _latest_planning_actual_hours_artifact_id(db_path: Path, *, workflow_run_id: str) -> str:
+    return _latest_artifact_id(
+        db_path,
+        workflow_run_id=workflow_run_id,
+        artifact_kind="planning.actual_hours_snapshot.workbook",
+    )
+
+
+def _run_dispatch_finalize_loop(
+    *,
+    db_url: str,
+    db_path: Path,
+    run_tag: str,
+    service_date: str,
+    workbook_path: Path,
+    tenant_id: str = "tenant-a",
+    domain_id: str = "domain-x",
+) -> dict[str, object]:
+    workflow_run = _create_dispatch_run(
+        db_url,
+        run_tag=run_tag,
+        service_date=service_date,
+        tenant_id=tenant_id,
+        domain_id=domain_id,
+    )
+    workflow_run_id = str(workflow_run["workflow_run_id"])
+    created = _create_human_task(
+        db_url,
+        workflow_run_id=workflow_run_id,
+        stage_id="Stage01",
+        task_kind="eos_input_intake",
+        activation_key=f"{run_tag}:stage01-intake",
+        actor_role="dispatch_supervisor",
+    )
+    intake_task_id = str(created["human_task"]["human_task_id"])
+    dispatcher_client = _client(
+        db_url=db_url,
+        actor_id=f"human:dispatch-supervisor:{service_date}",
+        tenant_id=tenant_id,
+        domain_id=domain_id,
+        actor_roles=["dispatch_supervisor"],
+    )
+    _claim_human_task(
+        dispatcher_client,
+        intake_task_id,
+        idempotency_key=f"{run_tag}:claim-intake",
+    )
+    _upload_eos_workbook_from_path(
+        dispatcher_client,
+        human_task_id=intake_task_id,
+        service_date=service_date,
+        workbook_path=workbook_path,
+        idempotency_key=f"{run_tag}:upload-eos",
+    )
+
+    completed_intake = dispatcher_client.post(
+        f"/api/v1/human-tasks/{intake_task_id}/complete",
+        payload={
+            "outcome": "complete",
+            "idempotency_key": f"{run_tag}:complete-intake",
+        },
+    )
+    assert completed_intake.status_code == 200, completed_intake.payload
+    review_task_id = str(completed_intake.payload["result"]["spawned_children"][0]["human_task_id"])
+    draft_artifact_id = _latest_artifact_id(
+        db_path,
+        workflow_run_id=workflow_run_id,
+        artifact_kind="reporting.upd_draft.workbook",
+    )
+    _claim_human_task(
+        dispatcher_client,
+        review_task_id,
+        idempotency_key=f"{run_tag}:claim-review",
+    )
+    submitted = dispatcher_client.post(
+        f"/api/v1/workpages/workflow-runs/{workflow_run_id}/"
+        f"eod-v0/artifacts/{draft_artifact_id}/submit",
+        payload={
+            "form_values": {
+                "dispatcher_comment": f"Reviewed dispatch draft for {service_date}.",
+            },
+            "checklist_values": [],
+            "action_ref": _action_ref(
+                action_id="workpage.eod-v0.submit_draft",
+                workflow_run_id=workflow_run_id,
+                artifact_version_id=draft_artifact_id,
+                subject_kind="human_task",
+                subject_id=review_task_id,
+            ),
+            "idempotency_key": f"{run_tag}:submit-review",
+        },
+    )
+    assert submitted.status_code == 200, submitted.payload
+    latest_draft_artifact_id = str(submitted.payload["submitted"]["artifact_version_id"])
+
+    confirmed = dispatcher_client.post(
+        f"/api/v1/human-tasks/{review_task_id}/confirm-review",
+        payload={
+            "reviewed_artifact_version_ids": [latest_draft_artifact_id],
+            "idempotency_key": f"{run_tag}:confirm-review",
+        },
+    )
+    assert confirmed.status_code == 200, confirmed.payload
+
+    completed_review = dispatcher_client.post(
+        f"/api/v1/human-tasks/{review_task_id}/complete",
+        payload={
+            "outcome": "complete",
+            "idempotency_key": f"{run_tag}:complete-review",
+        },
+    )
+    assert completed_review.status_code == 200, completed_review.payload
+
+    approval_id = _review_approval_id(db_path, workflow_run_id=workflow_run_id)
+    manager_client = _client(
+        db_url=db_url,
+        actor_id=f"human:operations-manager:{service_date}",
+        tenant_id=tenant_id,
+        domain_id=domain_id,
+        actor_roles=["operations_manager"],
+    )
+    approved = manager_client.post(
+        f"/api/v1/approvals/{approval_id}/respond",
+        payload={
+            "response_kind": "approve",
+            "idempotency_key": f"{run_tag}:approve",
+        },
+    )
+    assert approved.status_code == 200, approved.payload
+
+    return {
+        "workflow_run": workflow_run,
+        "workflow_run_id": workflow_run_id,
+        "review_task_id": review_task_id,
+        "approval_id": approval_id,
+        "manager_client": manager_client,
+        "dispatcher_client": dispatcher_client,
+    }
 
 
 def test_dispatch_eos_intake_contract_uses_official_input_role_and_blocks_completion(
@@ -822,6 +987,94 @@ def test_dispatch_reporting_happy_path_builds_review_finalizes_and_handoffs(
         for output in workspace_after_approve.payload["official_outputs"]["outputs"]
         if isinstance(output.get("artifact_version"), dict)
     )
+
+
+def test_dispatch_reporting_finalize_loop_merges_real_zip_week_into_single_weekly_actual_hours_snapshot(
+    tmp_path: Path,
+) -> None:
+    db_path = tmp_path / "real-zip-week-runtime.db"
+    db_url = f"sqlite:///{db_path}"
+
+    for service_date in REAL_ZIP_WEEK_SERVICE_DATES:
+        _run_dispatch_finalize_loop(
+            db_url=db_url,
+            db_path=db_path,
+            run_tag=f"api:dispatch-real-week:{service_date}",
+            service_date=service_date,
+            workbook_path=real_zip_week_workbook_path(service_date),
+        )
+
+    edge_rows = _query_rows(
+        db_path,
+        """
+        SELECT target_workflow_run_id, target_partition_key
+        FROM edge_executions
+        WHERE edge_id = 'reporting_actuals_to_future_planning'
+        ORDER BY created_at ASC
+        """,
+    )
+    assert len(edge_rows) == len(REAL_ZIP_WEEK_SERVICE_DATES)
+    assert {str(row["target_partition_key"]) for row in edge_rows} == {"PW-2026-W13"}
+    weekly_run_ids = {str(row["target_workflow_run_id"]) for row in edge_rows}
+    assert len(weekly_run_ids) == 1
+    weekly_run_id = weekly_run_ids.pop()
+
+    binding_rows = _query_rows(
+        db_path,
+        """
+        SELECT binding_key, source_ref, artifact_version_id
+        FROM workflow_run_inputs
+        WHERE workflow_run_id = ?
+        """,
+        (weekly_run_id,),
+    )
+    assert len(binding_rows) == 1
+    assert binding_rows[0]["binding_key"] == "stage03.actual_hours_snapshot"
+
+    artifact_rows = _query_rows(
+        db_path,
+        """
+        SELECT artifact_version_id, supersedes_artifact_version_id, metadata_json
+        FROM artifact_versions
+        WHERE workflow_run_id = ?
+          AND artifact_kind = 'planning.actual_hours_snapshot.workbook'
+        ORDER BY created_at ASC
+        """,
+        (weekly_run_id,),
+    )
+    assert len(artifact_rows) == len(REAL_ZIP_WEEK_SERVICE_DATES)
+    assert binding_rows[0]["artifact_version_id"] == artifact_rows[-1]["artifact_version_id"]
+    for index, row in enumerate(artifact_rows):
+        if index == 0:
+            assert row["supersedes_artifact_version_id"] is None
+        else:
+            assert row["supersedes_artifact_version_id"] == artifact_rows[index - 1]["artifact_version_id"]
+
+    merged_payload = json.loads(str(artifact_rows[-1]["metadata_json"]))
+    merged_rows = list(merged_payload["rows"])
+    assert len(merged_rows) == sum(
+        route_count for route_count, _ in REAL_ZIP_WEEK_EXPECTED_DAY_TOTALS.values()
+    )
+    assert len({str(row[1]) for row in merged_rows}) == 39
+
+    day_totals: dict[str, tuple[int, int]] = {}
+    for service_date in REAL_ZIP_WEEK_SERVICE_DATES:
+        matching_rows = [row for row in merged_rows if str(row[0]) == service_date]
+        day_totals[service_date] = (
+            len(matching_rows),
+            sum(int(row[4]) for row in matching_rows),
+        )
+    assert day_totals == REAL_ZIP_WEEK_EXPECTED_DAY_TOTALS
+
+    sample_row = next(
+        row
+        for row in merged_rows
+        if str(row[0]) == REAL_ZIP_WEEK_SAMPLE_ROW["service_date"]
+        and str(row[1]) == REAL_ZIP_WEEK_SAMPLE_ROW["driver_id"]
+    )
+    assert sample_row[2] == REAL_ZIP_WEEK_SAMPLE_ROW["driver_name"]
+    assert sample_row[4] == REAL_ZIP_WEEK_SAMPLE_ROW["actual_minutes"]
+    assert sample_row[5] == REAL_ZIP_WEEK_SAMPLE_ROW["route_id"]
 
 
 def test_dispatch_reporting_date_selected_import_runs_finalize_loop_on_target_service_date_run(

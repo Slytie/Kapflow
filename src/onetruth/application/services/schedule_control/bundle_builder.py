@@ -669,7 +669,11 @@ def _derive_previous_week_states(
             call_in_sick_flag = entry.call_in_sick_flag
             cancellation_flag = entry.cancellation_flag
             non_working_day_flag = entry.non_working_day_flag
-        elif explicit_source_state:
+        elif explicit_source_state and _normalized_previous_week_state_label(
+            explicit_source_state
+        ) in {"NA", "SICK_CALL", "CANCELLED"}:
+            # Worked-like prior-week history must be backed by the pinned actual-hours
+            # snapshot; only explicit non-work states are safe to reuse without a row.
             state = explicit_source_state
             normalized_state = _normalized_previous_week_state(
                 raw_state=state,

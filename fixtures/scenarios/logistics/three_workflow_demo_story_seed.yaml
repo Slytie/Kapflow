@@ -1,12 +1,50 @@
 scenario_id: logistics_three_workflow_demo_story_seed
 workflow_id: dispatch_reporting.v1
 workflow_version: v1
-partition_key: SD-2026-03-06
-logical_date: "2026-03-06"
+partition_key: SD-2026-02-28
+logical_date: "2026-02-28"
 scope:
   tenant_id: tenant-logistics
   domain_id: domain-hub
 steps:
+  - id: create_reporting_normalized_payload
+    action: artifacts.create-version
+    payload:
+      workflow_run_id: "{{workflow_run.workflow_run_id}}"
+      artifact_kind: reporting.actuals_normalized.workbook
+      artifact_role: official_input
+      media_type: application/json
+      storage_uri: inmem://scenario/logistics/three-workflow/reporting-normalized
+      content_digest: sha256:logistics-three-workflow-reporting-normalized
+      metadata_json:
+        schema_version: "1.0"
+        kind: dispatch_reporting.actuals_normalized
+        service_date: "2026-02-28"
+        station_code: DVC4
+        dsp_name: QDCI
+        rows:
+          - row_id: sample-2026-02-28
+            service_date: "2026-02-28"
+            route_id: DEMO-001
+            driver_id: D-DEMO-001
+            driver_name: Demo Driver
+            actual_minutes: 540
+            returned_packages: 0
+            return_reasons: ""
+            upd_candidate: false
+            formula_integrity_warning: ""
+        quality_warnings: []
+        break_tracker:
+          sheet_present: false
+          rows: []
+        route_adherence:
+          sheet_present: false
+          cycles: []
+        totals:
+          route_count: 1
+          upd_candidate_count: 0
+      idempotency_key: scenario:logistics_three_workflow_demo_story_seed:reporting-normalized
+    save_as: reporting_normalized
   - id: create_reporting_final_packet
     action: artifacts.create-version
     payload:
@@ -17,9 +55,10 @@ steps:
       storage_uri: inmem://scenario/logistics/three-workflow/reporting-final-packet
       content_digest: sha256:logistics-three-workflow-reporting-final-packet
       canonical_partition_kind: ServiceDateID
-      canonical_partition_key: SD-2026-03-06
+      canonical_partition_key: SD-2026-02-28
       metadata_json:
         scenario_id: logistics_three_workflow_demo_story_seed
+        normalized_artifact_version_id: "{{reporting_normalized.artifact_version.artifact_version_id}}"
       idempotency_key: scenario:logistics_three_workflow_demo_story_seed:reporting-final-packet
     save_as: reporting_final_packet
   - id: notify_planning_feedback

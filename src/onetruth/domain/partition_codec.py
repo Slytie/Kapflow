@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import date
+from datetime import date, timedelta
 import re
 
 
@@ -105,7 +105,11 @@ def service_day_to_pay_period(service_date_id: str) -> str:
 
 def service_day_to_future_planning_week(service_date_id: str) -> str:
     service_date = _parse_service_date(service_date_id)
-    iso_year, iso_week, _ = service_date.isocalendar()
+    sunday_offset = (service_date.weekday() + 1) % 7
+    current_operational_week_start = service_date - timedelta(days=sunday_offset)
+    future_operational_week_start = current_operational_week_start + timedelta(days=7)
+    label_monday = future_operational_week_start + timedelta(days=1)
+    iso_year, iso_week, _ = label_monday.isocalendar()
     return f"PW-{iso_year:04d}-W{iso_week:02d}"
 
 

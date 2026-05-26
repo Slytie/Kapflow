@@ -276,10 +276,13 @@ def run_weekly_stage04_openai_agent(
     agent_result_payload: dict[str, Any] | None = None
     stage04_build_result: dict[str, Any] | None = None
     latest_final_response_id: str | None = None
+    latest_turn_response_id: str | None = None
     repair_attempted = False
 
     def _persist_turn_evidence(turn: Any, *, turn_index_offset: int = 0) -> None:
+        nonlocal latest_turn_response_id
         turn_record = _rebase_turn_record(turn, turn_index_offset=turn_index_offset)
+        latest_turn_response_id = str(turn_record.response_id or "") or latest_turn_response_id
         request_artifact, result_artifact = persist_prepared_execution_evidence_artifacts(
             connection=connection,
             workflow_run_id=str(human_task["workflow_run_id"]),
@@ -395,29 +398,50 @@ def run_weekly_stage04_openai_agent(
         )[0]
         stop_policy = _stage04_stop_policy_from_stage_spec(stage_spec)
         selected_runner = runner or build_weekly_stage04_openai_agent_runner_from_env()
-        agent_result = selected_runner.run_function_calling_loop(
-            initial_input=_initial_model_input(
-                context_pack=context_pack,
-                stage_spec=stage_spec,
-                initial_planner_state=tooling.planner_state_snapshot(),
-            ),
-            tools=tool_specs,
-            execute_function=tooling.execute,
-            max_turns=int(stop_policy["max_tool_calls"]),
-            no_progress_limit=int(stop_policy["no_progress_ticks"]),
-            model_output_serializer=tooling.model_output_payload,
-            on_turn_complete=_persist_turn_evidence,
-        )
-        latest_final_response_id = str(agent_result.final_response_id or "") or None
-        agent_result_payload = agent_result.as_dict()
-        stage04_build_result = tooling.finalized_build_result() or _extract_finalized_build_result_from_turns(
-            agent_result_payload
-        )
-        remaining_turn_budget = _remaining_stage04_turn_budget(
-            stop_policy=stop_policy,
-            used_turns=len(tuple(agent_result.turns or ())),
-        )
-        latest_finalize_output = _latest_finalize_output_from_turns(agent_result_payload)
+        try:
+            agent_result = selected_runner.run_function_calling_loop(
+                initial_input=_initial_model_input(
+                    context_pack=context_pack,
+                    stage_spec=stage_spec,
+                    initial_planner_state=tooling.planner_state_snapshot(),
+                ),
+                tools=tool_specs,
+                execute_function=tooling.execute,
+                max_turns=int(stop_policy["max_tool_calls"]),
+                no_progress_limit=int(stop_policy["no_progress_ticks"]),
+                model_output_serializer=tooling.model_output_payload,
+                on_turn_complete=_persist_turn_evidence,
+            )
+            latest_final_response_id = str(agent_result.final_response_id or "") or None
+            agent_result_payload = agent_result.as_dict()
+            stage04_build_result = (
+                tooling.finalized_build_result()
+                or _extract_finalized_build_result_from_turns(agent_result_payload)
+            )
+            remaining_turn_budget = _remaining_stage04_turn_budget(
+                stop_policy=stop_policy,
+                used_turns=len(tuple(agent_result.turns or ())),
+            )
+            latest_finalize_output = _latest_finalize_output_from_turns(agent_result_payload)
+        except OpenAIResponsesError as exc:
+            if (
+                exc.code not in {"openai_tool_no_progress", "openai_tool_loop_exhausted"}
+                or not tooling.planner_complete()
+            ):
+                raise
+            repair_attempted = True
+            latest_final_response_id = latest_turn_response_id
+            latest_finalize_output = tooling.finalize_outputs()
+            stage04_build_result = tooling.finalized_build_result()
+            agent_result_payload = {
+                "turns": [],
+                "repair_strategy": "deterministic_finalize_after_planner_complete",
+                "recovered_runner_error": {
+                    "code": exc.code,
+                    "message": str(exc),
+                    "details": dict(exc.details),
+                },
+            }
         if (
             stage04_build_result is None
             and latest_final_response_id is not None
