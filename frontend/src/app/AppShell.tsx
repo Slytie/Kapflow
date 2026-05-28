@@ -662,6 +662,19 @@ export function AppShell(): JSX.Element {
     if (!module) {
       return;
     }
+    if (
+      module.workflow_id === "weekly_schedule_planning.v1" &&
+      weeklyActionRunId
+    ) {
+      const targetRoute = canonicalRouteForWorkflow({
+        workflowId: module.workflow_id,
+        workflowRunId: weeklyActionRunId
+      });
+      if (targetRoute) {
+        navigate(targetRoute);
+        return;
+      }
+    }
     const refs = moduleRunRefs(module);
     if (refs.length === 1) {
       const targetRoute = canonicalRouteForWorkflow({
@@ -823,7 +836,10 @@ export function AppShell(): JSX.Element {
                   setIsDriversQuickEditOpen(true);
                 }}
               >
-                Drivers
+                <span className="app-shell__quick-action-copy">
+                  <span className="app-shell__quick-action-title">Drivers</span>
+                  <span className="app-shell__quick-action-detail">Availability and preferences</span>
+                </span>
               </button>
 
               <button
@@ -852,7 +868,10 @@ export function AppShell(): JSX.Element {
                   });
                 }}
               >
-                Edit weekly schedule
+                <span className="app-shell__quick-action-copy">
+                  <span className="app-shell__quick-action-title">Edit weekly schedule</span>
+                  <span className="app-shell__quick-action-detail">Open the latest draft</span>
+                </span>
               </button>
 
               <button
@@ -869,7 +888,10 @@ export function AppShell(): JSX.Element {
                   setIsRouteDemandQuickEditOpen(true);
                 }}
               >
-                Edit route demand
+                <span className="app-shell__quick-action-copy">
+                  <span className="app-shell__quick-action-title">Edit route demand</span>
+                  <span className="app-shell__quick-action-detail">Adjust weekly volume inputs</span>
+                </span>
               </button>
 
               <button
@@ -886,7 +908,10 @@ export function AppShell(): JSX.Element {
                   setIsDispatchCloseoutOpen(true);
                 }}
               >
-                Upload route activity
+                <span className="app-shell__quick-action-copy">
+                  <span className="app-shell__quick-action-title">Upload route activity</span>
+                  <span className="app-shell__quick-action-detail">Import daily closeout data</span>
+                </span>
               </button>
 
               {isWorkpageFullPageRoute ? (

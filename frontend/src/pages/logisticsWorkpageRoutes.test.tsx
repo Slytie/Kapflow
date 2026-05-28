@@ -443,7 +443,7 @@ describe("logistics workpage routes", () => {
     );
   });
 
-  it("routes multi-run modules back to the logistics home with the module selected", async () => {
+  it("routes the multi-run weekly module to the preferred canonical schedule workpage", async () => {
     const user = userEvent.setup();
     setFrontendOperatorContext();
 
@@ -540,7 +540,7 @@ describe("logistics workpage routes", () => {
                   domain_id: "domain-x",
                   partition_key: "PW-2026-W10",
                   logical_date: "PW-2026-W10",
-                  activation_key: "weekly_schedule_planning.v1:PW-2026-W10",
+                  activation_key: "logistics-demo:weekly:current:PW-2026-W10",
                   state: "OPEN",
                   active_issue_count: 1,
                   created_at: "2026-03-09T00:00:00Z",
@@ -554,7 +554,7 @@ describe("logistics workpage routes", () => {
                   domain_id: "domain-x",
                   partition_key: "PW-2026-W11",
                   logical_date: "PW-2026-W11",
-                  activation_key: "weekly_schedule_planning.v1:PW-2026-W11",
+                  activation_key: "logistics-demo:weekly:review-ready:PW-2026-W11",
                   state: "READY",
                   active_issue_count: 0,
                   created_at: "2026-03-10T00:00:00Z",
@@ -623,13 +623,9 @@ describe("logistics workpage routes", () => {
     await user.click(screen.getByTestId("logistics-family-nav-node-weekly_schedule_planning"));
 
     await waitFor(() => {
-      expect(window.location.pathname).toBe("/demo/logistics");
+      expect(window.location.pathname).toBe("/runs/wr-weekly-002/workpages/schedule-v0");
     });
-    expect(window.location.search).toContain("module=weekly_schedule_planning");
-
-    const detailPanel = await screen.findByTestId("logistics-module-detail-panel");
-    await user.click(within(detailPanel).getByRole("button", { name: /Open info for Weekly Schedule Planning/i }));
-    const infoDialog = await screen.findByRole("dialog", { name: "Weekly Schedule Planning info" });
-    expect(within(infoDialog).getByText(/Choose the linked workflow run/i)).toBeInTheDocument();
+    expect(window.location.search).toBe("");
+    expect(await screen.findByTestId("schedule-workpage-page")).toBeInTheDocument();
   });
 });

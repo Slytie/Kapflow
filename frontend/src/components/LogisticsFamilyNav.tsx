@@ -7,6 +7,16 @@ interface LogisticsFamilyNavProps {
   onNodeSelect: (nodeId: string) => void;
 }
 
+function nodeEyebrow(node: WorkflowWorkspaceGraphNode): string {
+  if (node.stage_id === "weekly_schedule_planning.v1") {
+    return "Planning workflow";
+  }
+  if (node.stage_id === "dispatch_reporting.v1") {
+    return "Reporting workflow";
+  }
+  return "Workflow module";
+}
+
 function nodeStatusClass(status: WorkflowWorkspaceGraphNode["status"]): string {
   if (status === "completed") {
     return "is-completed";
@@ -48,6 +58,7 @@ export function LogisticsFamilyNav({
       >
         {orderedNodes.map((node, index) => {
           const isActive = node.node_id === activeNodeId;
+          const eyebrow = nodeEyebrow(node);
           const previousNode = orderedNodes[index - 1];
           const edgeId = previousNode
             ? edgeLookup.get(`${previousNode.node_id}->${node.node_id}`) ??
@@ -80,7 +91,13 @@ export function LogisticsFamilyNav({
                   className={`logistics-family-nav__dot ${nodeStatusClass(node.status)}`}
                   aria-hidden="true"
                 />
-                <span className="logistics-family-nav__label">{node.label}</span>
+                <span className="logistics-family-nav__copy">
+                  <span className="logistics-family-nav__eyebrow">{eyebrow}</span>
+                  <span className="logistics-family-nav__label">{node.label}</span>
+                </span>
+                {node.responsibility_summary ? (
+                  <span className="logistics-family-nav__summary">{node.responsibility_summary}</span>
+                ) : null}
               </button>
             </div>
           );
