@@ -65,9 +65,11 @@ export function RunsPage(): JSX.Element {
               }
             />
             <div className="run-links">
-              <Link className="link-button" to={`/runs/${run.workflow_run_id}/workspace`}>
-                Open workspace
-              </Link>
+              {run.workflow_id === "live_dispatch.v1" ? null : (
+                <Link className="link-button" to={`/runs/${run.workflow_run_id}/workspace`}>
+                  Open workspace
+                </Link>
+              )}
               <Link className="link-button" to={`/runs/${run.workflow_run_id}`}>
                 View run detail
               </Link>

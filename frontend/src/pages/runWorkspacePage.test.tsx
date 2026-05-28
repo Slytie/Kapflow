@@ -13,6 +13,7 @@ import type {
 import { RunWorkspacePage } from "@/pages/RunWorkspacePage";
 import { mutationLog } from "@/test/api/handlers";
 import {
+  buildWorkflowRunDetail,
   buildWorkflowRunWorkspace,
   createContractState
 } from "@/test/api/contractState";
@@ -571,6 +572,47 @@ describe("RunWorkspacePage", () => {
     render(<App />);
 
     expect(await screen.findByTestId("run-workspace-page")).toBeInTheDocument();
+  });
+
+  it("blocks live-dispatch runs from loading the shared workspace surface", async () => {
+    let workspaceRequested = false;
+    const liveDispatchState = createContractState();
+    liveDispatchState.workflowRuns = [
+      {
+        ...liveDispatchState.workflowRuns[0],
+        workflow_run_id: "wr-live-001",
+        workflow_id: "live_dispatch.v1",
+        partition_key: "SD-2026-03-06",
+        logical_date: "2026-03-06",
+        activation_key: "live_dispatch.v1:SD-2026-03-06"
+      }
+    ];
+    server.use(
+      http.get("*/api/v1/workflow-runs/:workflowRunId", () =>
+        HttpResponse.json({
+          status: "ok",
+          command: "api.workflow_runs.get",
+          ...buildWorkflowRunDetail(liveDispatchState, "wr-live-001")
+        })
+      ),
+      http.get("*/api/v1/workflow-runs/:workflowRunId/workspace", () => {
+        workspaceRequested = true;
+        return HttpResponse.json({
+          status: "ok",
+          command: "api.workflow_runs.workspace",
+          workspace: buildWorkflowRunWorkspace(createContractState(), "wr-test-001")
+        });
+      })
+    );
+
+    renderRoute(<RunWorkspacePage />, {
+      route: "/runs/wr-live-001/workspace",
+      path: "/runs/:workflowRunId/workspace"
+    });
+
+    expect(await screen.findByText(/Live Dispatch workspace removed/i)).toBeInTheDocument();
+    expect(screen.queryByTestId("run-workspace-page")).not.toBeInTheDocument();
+    expect(workspaceRequested).toBe(false);
   });
 
   it("opens logistics demo by default from app root route", async () => {

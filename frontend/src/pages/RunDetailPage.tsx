@@ -75,6 +75,8 @@ export function RunDetailPage(): JSX.Element {
     return <StatePanel kind="empty" title="No run detail available" />;
   }
 
+  const hasWorkspaceSurface = detail.workflow_run.workflow_id !== "live_dispatch.v1";
+
   return (
     <section data-testid="run-detail-page">
       <LegacyScheduleNotice surface="Run detail" />
@@ -85,9 +87,11 @@ export function RunDetailPage(): JSX.Element {
           <Link className="link-button" to="/demo/logistics">
             Open logistics demo
           </Link>
-          <Link className="link-button" to={`/runs/${workflowRunId}/workspace`}>
-            Open workspace
-          </Link>
+          {hasWorkspaceSurface ? (
+            <Link className="link-button" to={`/runs/${workflowRunId}/workspace`}>
+              Open workspace
+            </Link>
+          ) : null}
           <Link className="link-button" to="/official-outputs">
             Open official outputs
           </Link>

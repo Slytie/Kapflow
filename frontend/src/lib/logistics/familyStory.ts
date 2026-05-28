@@ -35,16 +35,11 @@ export const LOGISTICS_MODULE_LAYOUT: Record<
   }
 };
 
+const HIDDEN_LOGISTICS_SHELL_WORKFLOW_IDS = new Set(["live_dispatch.v1"]);
+
 export interface EditorialBoardLane {
   id: "todo" | "in_progress" | "waiting_review";
   title: string;
-  items: LogisticsStoryBoardWorkItem[];
-}
-
-export interface LogisticsTaskStripCardModel {
-  lane_id: EditorialBoardLane["id"];
-  title: string;
-  count: number;
   items: LogisticsStoryBoardWorkItem[];
 }
 
@@ -92,10 +87,15 @@ export function workflowIdToModuleId(workflowId: string): string | null {
   if (workflowId === "dispatch_reporting.v1") {
     return "dispatch_reporting";
   }
-  if (workflowId === "live_dispatch.v1") {
-    return "live_dispatch";
-  }
   return null;
+}
+
+export function visibleLogisticsFamilyModules(
+  story: LogisticsThreeWorkflowStoryContract
+): LogisticsStoryFamilyModule[] {
+  return story.family_graph.modules.filter(
+    (module) => !HIDDEN_LOGISTICS_SHELL_WORKFLOW_IDS.has(module.workflow_id)
+  );
 }
 
 export function runRowsForStory(story: LogisticsThreeWorkflowStoryContract): WorkflowRunRow[] {
@@ -123,7 +123,7 @@ export function logisticsFamilyGraphNodes(
 ): WorkflowWorkspaceGraphNode[] {
   const storyRuns = runRowsForStory(story);
   const runById = new Map(storyRuns.map((run) => [run.workflow_run_id, run]));
-  return story.family_graph.modules.map((module, index) => {
+  return visibleLogisticsFamilyModules(story).map((module, index) => {
     const moduleLayout = LOGISTICS_MODULE_LAYOUT[module.module_id] ?? {
       row: 0,
       column: index,
@@ -161,13 +161,22 @@ export function logisticsFamilyGraphNodes(
 export function logisticsFamilyGraphEdges(
   story: LogisticsThreeWorkflowStoryContract
 ): WorkflowWorkspaceGraphEdge[] {
-  return story.family_graph.edges.map((edge) => ({
+  const visibleModuleIds = new Set(
+    visibleLogisticsFamilyModules(story).map((module) => module.module_id)
+  );
+  return story.family_graph.edges
+    .filter(
+      (edge) =>
+        visibleModuleIds.has(edge.source_module_id) &&
+        visibleModuleIds.has(edge.target_module_id)
+    )
+    .map((edge) => ({
     edge_id: edge.edge_id,
     from_node_id: edge.source_module_id,
     to_node_id: edge.target_module_id,
     edge_kind: edge.handoff_mode === "notify_only" ? "branch" : "linear",
     label: edge.handoff_mode
-  }));
+    }));
 }
 
 export function storyFreshness(
@@ -289,17 +298,6 @@ export function editorialBoard(story: LogisticsThreeWorkflowStoryContract): {
   }
 
   return { lanes, flags };
-}
-
-export function logisticsTaskStripCards(
-  story: LogisticsThreeWorkflowStoryContract
-): LogisticsTaskStripCardModel[] {
-  return editorialBoard(story).lanes.map((lane) => ({
-    lane_id: lane.id,
-    title: lane.title,
-    count: lane.items.length,
-    items: lane.items
-  }));
 }
 
 export function boardItemSupportText(item: LogisticsStoryBoardWorkItem): string | null {

@@ -4583,8 +4583,7 @@
 
 .app-shell__identity-chip:focus-visible,
 .app-shell__identity-popover button:focus-visible,
-.app-shell__quick-action:focus-visible,
-.app-shell__utility-menu > .action-btn:focus-visible {
+.app-shell__quick-action:focus-visible {
   outline: 2px solid rgba(180, 35, 24, 0.32);
   outline-offset: 2px;
 }
@@ -4779,31 +4778,6 @@
   align-self: flex-start;
 }
 
-.app-shell__utility-menu {
-  position: relative;
-  display: flex;
-  justify-content: flex-end;
-}
-
-.app-shell__utility-menu .action-btn {
-  min-width: 108px;
-}
-
-.app-shell__utility-menu > .action-btn {
-  border-color: rgba(82, 87, 92, 0.16);
-  background: linear-gradient(135deg, rgba(244, 244, 240, 0.98), rgba(232, 231, 225, 0.98));
-  color: #3e454c;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: 800;
-  box-shadow: 0 10px 22px rgba(47, 52, 48, 0.08);
-}
-
-.app-shell__utility-menu > .action-btn:hover {
-  background: linear-gradient(135deg, rgba(250, 249, 246, 1), rgba(224, 223, 216, 1));
-}
-
 .app-shell__route-demand-edit {
   min-width: 148px;
   border-color: transparent;
@@ -4827,134 +4801,10 @@
   color: #7f858a;
 }
 
-.app-shell__utility-menu-popover {
-  position: absolute;
-  top: calc(100% + 8px);
-  right: 0;
-  z-index: 5;
-  min-width: 220px;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  padding: 10px;
-  border: 1px solid var(--ghost-border-strong);
-  border-radius: 16px;
-  background: rgba(251, 250, 247, 0.96);
-  box-shadow: 0 22px 40px rgba(32, 37, 34, 0.12);
-  backdrop-filter: blur(14px);
-}
-
-.app-shell__utility-menu-popover a {
-  justify-content: flex-start;
-}
-
 .logistics-family-nav {
   min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 10px;
-}
-
-.logistics-family-nav__tasks {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 10px;
-}
-
-.logistics-family-nav__task-card {
-  min-width: 0;
-  border: 1px solid var(--ghost-border);
-  border-radius: 18px;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.82), rgba(244, 244, 240, 0.94));
-  color: var(--ink);
-  padding: 12px 14px;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  text-align: left;
-  box-shadow: var(--shadow-ambient);
-}
-
-.logistics-family-nav__task-card.has-items {
-  border-color: rgba(159, 64, 61, 0.32);
-}
-
-.logistics-family-nav__task-card.is-empty {
-  opacity: 0.72;
-}
-
-.logistics-family-nav__task-card-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-}
-
-.logistics-family-nav__task-card-header strong {
-  font-family: var(--font-display);
-  font-size: 12px;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
-}
-
-.logistics-family-nav__task-count {
-  display: inline-flex;
-  min-width: 28px;
-  justify-content: center;
-  align-items: center;
-  border-radius: 999px;
-  background: rgba(229, 231, 224, 0.92);
-  color: var(--ink-soft);
-  padding: 2px 8px;
-  font-size: 12px;
-}
-
-.logistics-family-nav__task-count.has-items {
-  border: 1px solid rgba(159, 64, 61, 0.24);
-  background: var(--error-soft);
-  color: var(--error);
-  font-weight: 800;
-}
-
-.logistics-family-nav__task-card-title {
-  color: var(--ink);
-  font-size: 13px;
-}
-
-.logistics-family-nav__task-card-title.is-empty-message {
-  color: var(--ink-soft);
-  font-size: 12px;
-}
-
-.logistics-family-nav__task-list {
-  display: grid;
-  gap: 6px;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.logistics-family-nav__task-item {
-  width: 100%;
-  border: 0;
-  border-radius: 8px;
-  background: rgba(159, 64, 61, 0.08);
-  color: var(--error);
-  padding: 6px 8px 6px 10px;
-  box-shadow: inset 3px 0 0 var(--error);
-  font-size: 13px;
-  font-weight: 800;
-  line-height: 1.25;
-  overflow-wrap: anywhere;
-  text-align: left;
-  white-space: normal;
-}
-
-.logistics-family-nav__task-item:hover,
-.logistics-family-nav__task-item:focus-visible {
-  background: rgba(159, 64, 61, 0.14);
-  outline: 2px solid rgba(159, 64, 61, 0.28);
-  outline-offset: 2px;
 }
 
 .logistics-family-nav__graph {
@@ -6794,10 +6644,6 @@
     justify-content: flex-start;
   }
 
-  .logistics-family-nav__tasks {
-    grid-template-columns: 1fr;
-  }
-
   .filter-bar {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -6906,16 +6752,6 @@
   .logistics-family-nav__node {
     width: 100%;
     justify-content: flex-start;
-  }
-
-  .app-shell__utility-menu {
-    width: 100%;
-  }
-
-  .app-shell__utility-menu-popover {
-    left: 0;
-    right: 0;
-    min-width: 0;
   }
 
   .queue-row {

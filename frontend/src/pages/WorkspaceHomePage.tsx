@@ -34,8 +34,8 @@ export function WorkspaceHomePage(): JSX.Element {
     );
   }
 
-  const runs = query.data ?? [];
-  if (runs.length === 0) {
+  const workspaceRuns = (query.data ?? []).filter((run) => run.workflow_id !== "live_dispatch.v1");
+  if (workspaceRuns.length === 0) {
     return (
       <StatePanel
         kind="empty"
@@ -45,5 +45,5 @@ export function WorkspaceHomePage(): JSX.Element {
     );
   }
 
-  return <Navigate to={`/runs/${runs[0].workflow_run_id}/workspace`} replace />;
+  return <Navigate to={`/runs/${workspaceRuns[0].workflow_run_id}/workspace`} replace />;
 }

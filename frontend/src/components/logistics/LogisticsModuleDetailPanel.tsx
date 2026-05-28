@@ -13,24 +13,24 @@ import type { LogisticsStoryFamilyModule } from "@/lib/types/contracts";
 function canonicalLauncherRoute(input: {
   workflowId: string;
   workflowRunId: string;
-}): string {
+}): string | null {
   if (input.workflowId === "weekly_schedule_planning.v1") {
     return `/runs/${input.workflowRunId}/workpages/schedule-v0`;
   }
   if (input.workflowId === "dispatch_reporting.v1") {
     return `/runs/${input.workflowRunId}/workpages/eod-v0`;
   }
-  return `/runs/${input.workflowRunId}/workspace`;
+  return null;
 }
 
-function launcherPrimaryLabel(workflowId: string): string {
+function launcherPrimaryLabel(workflowId: string): string | null {
   if (workflowId === "weekly_schedule_planning.v1") {
     return "Open schedule workpage";
   }
   if (workflowId === "dispatch_reporting.v1") {
     return "Open EOD workpage";
   }
-  return "Open full workspace";
+  return null;
 }
 
 function launcherDescription(module: LogisticsStoryFamilyModule): string {
@@ -40,7 +40,7 @@ function launcherDescription(module: LogisticsStoryFamilyModule): string {
   if (module.workflow_id === "dispatch_reporting.v1") {
     return "This demo shell now launches the canonical end-of-day workpage for the selected run instead of creating or submitting drafts inline.";
   }
-  return "This family module stays workspace-first in the current slice. Use the canonical workspace and run detail for intake, review, and approval.";
+  return "Live Dispatch no longer has a dedicated workspace surface in this demo shell. Use run detail for reference only.";
 }
 
 export function LogisticsModuleLauncherCard({
@@ -59,7 +59,12 @@ export function LogisticsModuleLauncherCard({
   workflowVersion: string | null;
 }): JSX.Element {
   const moduleId = workflowIdToModuleId(module.workflow_id) ?? module.module_id;
-  const isWorkspaceFirst = module.workflow_id === "live_dispatch.v1";
+  const isReferenceOnlyModule = module.workflow_id === "live_dispatch.v1";
+  const primaryRoute = canonicalLauncherRoute({
+    workflowId: module.workflow_id,
+    workflowRunId
+  });
+  const primaryLabel = launcherPrimaryLabel(module.workflow_id);
   return (
     <section
       className="workpage-panel workpage-panel--note"
@@ -67,7 +72,7 @@ export function LogisticsModuleLauncherCard({
     >
       <header className="workpage-panel__header">
         <p className="timeline-page__eyebrow">
-          {isWorkspaceFirst ? "Workspace-first launcher" : "Canonical launcher"}
+          {isReferenceOnlyModule ? "Reference-only module" : "Canonical launcher"}
         </p>
         <h2>{moduleDisplayLabel(module)}</h2>
         <p>{launcherDescription(module)}</p>
@@ -103,20 +108,19 @@ export function LogisticsModuleLauncherCard({
       </dl>
 
       <div className="action-cluster">
-        {isWorkspaceFirst ? null : (
+        {primaryRoute && primaryLabel ? (
           <Link
             className="link-button"
-            to={canonicalLauncherRoute({
-              workflowId: module.workflow_id,
-              workflowRunId
-            })}
+            to={primaryRoute}
           >
-            {launcherPrimaryLabel(module.workflow_id)}
+            {primaryLabel}
+          </Link>
+        ) : null}
+        {isReferenceOnlyModule ? null : (
+          <Link className="link-button" to={`/runs/${workflowRunId}/workspace`}>
+            Open full workspace
           </Link>
         )}
-        <Link className="link-button" to={`/runs/${workflowRunId}/workspace`}>
-          Open full workspace
-        </Link>
         <Link className="link-button" to={`/runs/${workflowRunId}`}>
           Open run detail (secondary)
         </Link>

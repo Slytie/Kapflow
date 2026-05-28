@@ -2,26 +2,20 @@ import { useEffect, useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useSearchParams } from "react-router-dom";
 
-import { LaneColumn } from "@/components/LaneColumn";
 import { StatePanel } from "@/components/StatePanel";
-import { TaskDocumentCues } from "@/components/TaskDocumentCues";
 import { WorkflowGraph } from "@/components/WorkflowGraph";
 import { InfoDialog } from "@/components/InfoDialog";
 import { apiConfig } from "@/lib/api/config";
 import { errorText } from "@/lib/api/errorText";
 import {
   artifactLabel,
-  boardItemMeta,
-  boardItemSupportText,
-  buildBoardItemDrawerPayload,
   DEFAULT_LOGISTICS_PLANNING_WEEK_ID,
-  editorialBoard,
   moduleDisplayLabel,
   moduleRunRefs,
   normalizedLogisticsDemoRunId,
   runRefSummary,
   runRowsForStory,
-  stateBadgeClass,
+  visibleLogisticsFamilyModules,
   workflowIdToModuleId
 } from "@/lib/logistics/familyStory";
 import { logisticsStoryRepository, workflowRunsRepository } from "@/lib/repositories";
@@ -32,29 +26,28 @@ import {
   graphNodesWithResponsibility,
   workspaceTab
 } from "@/lib/workspace/runWorkspaceGraph";
-import { buildTaskDocumentPreviewCues } from "@/lib/workspace/taskDocumentUi";
 
 function canonicalLauncherRoute(input: {
   workflowId: string;
   workflowRunId: string;
-}): string {
+}): string | null {
   if (input.workflowId === "weekly_schedule_planning.v1") {
     return `/runs/${input.workflowRunId}/workpages/schedule-v0`;
   }
   if (input.workflowId === "dispatch_reporting.v1") {
     return `/runs/${input.workflowRunId}/workpages/eod-v0`;
   }
-  return `/runs/${input.workflowRunId}/workspace`;
+  return null;
 }
 
-function launcherPrimaryLabel(workflowId: string): string {
+function launcherPrimaryLabel(workflowId: string): string | null {
   if (workflowId === "weekly_schedule_planning.v1") {
     return "Open schedule workpage";
   }
   if (workflowId === "dispatch_reporting.v1") {
     return "Open EOD workpage";
   }
-  return "Open full workspace";
+  return null;
 }
 
 function launcherDescription(module: LogisticsStoryFamilyModule): string {
@@ -64,7 +57,7 @@ function launcherDescription(module: LogisticsStoryFamilyModule): string {
   if (module.workflow_id === "dispatch_reporting.v1") {
     return "This demo shell now launches the canonical end-of-day workpage for the selected run instead of creating or submitting drafts inline.";
   }
-  return "This family module stays workspace-first in the current slice. Use the canonical workspace and run detail for intake, review, and approval.";
+  return "This demo shell now launches the canonical workpage for the selected run.";
 }
 
 function LogisticsModuleLauncherCard({
@@ -83,16 +76,18 @@ function LogisticsModuleLauncherCard({
   workflowVersion: string | null;
 }): JSX.Element {
   const moduleId = workflowIdToModuleId(module.workflow_id) ?? module.module_id;
-  const isWorkspaceFirst = module.workflow_id === "live_dispatch.v1";
+  const primaryRoute = canonicalLauncherRoute({
+    workflowId: module.workflow_id,
+    workflowRunId
+  });
+  const primaryLabel = launcherPrimaryLabel(module.workflow_id);
   return (
     <section
       className="workpage-panel workpage-panel--note"
       data-testid={`logistics-module-launcher-${moduleId}`}
     >
       <header className="workpage-panel__header">
-        <p className="timeline-page__eyebrow">
-          {isWorkspaceFirst ? "Workspace-first launcher" : "Canonical launcher"}
-        </p>
+        <p className="timeline-page__eyebrow">Canonical launcher</p>
         <h2>{moduleDisplayLabel(module)}</h2>
         <p>{launcherDescription(module)}</p>
       </header>
@@ -127,17 +122,14 @@ function LogisticsModuleLauncherCard({
       </dl>
 
       <div className="action-cluster">
-        {isWorkspaceFirst ? null : (
+        {primaryRoute && primaryLabel ? (
           <Link
             className="link-button"
-            to={canonicalLauncherRoute({
-              workflowId: module.workflow_id,
-              workflowRunId
-            })}
+            to={primaryRoute}
           >
-            {launcherPrimaryLabel(module.workflow_id)}
+            {primaryLabel}
           </Link>
-        )}
+        ) : null}
         <Link className="link-button" to={`/runs/${workflowRunId}/workspace`}>
           Open full workspace
         </Link>
@@ -157,7 +149,6 @@ export function LogisticsDemoPage(): JSX.Element {
     searchParams.get("planning_week_id")?.trim() || DEFAULT_LOGISTICS_PLANNING_WEEK_ID;
   const serviceDateId = searchParams.get("service_date_id")?.trim() || undefined;
   const [selectedDrilldownNodeId, setSelectedDrilldownNodeId] = useState<string | null>(null);
-  const [isBoardExpanded, setIsBoardExpanded] = useState(false);
   const selectedModuleIdParam = searchParams.get("module")?.trim() || null;
   const selectedRunIdParam = searchParams.get("workflow_run_id")?.trim() || null;
 
@@ -178,6 +169,10 @@ export function LogisticsDemoPage(): JSX.Element {
     }
     return new Map(runRowsForStory(story).map((run) => [run.workflow_run_id, run]));
   }, [story]);
+  const visibleModules = useMemo(
+    () => (story ? visibleLogisticsFamilyModules(story) : []),
+    [story]
+  );
 
   const selectedModule = useMemo(() => {
     if (!story) {
@@ -185,15 +180,15 @@ export function LogisticsDemoPage(): JSX.Element {
     }
     if (selectedModuleIdParam) {
       return (
-        story.family_graph.modules.find(
+        visibleModules.find(
           (module) => module.module_id === selectedModuleIdParam
         ) ??
-        story.family_graph.modules[0] ??
+        visibleModules[0] ??
         null
       );
     }
-    return story.family_graph.modules[0] ?? null;
-  }, [selectedModuleIdParam, story]);
+    return visibleModules[0] ?? null;
+  }, [selectedModuleIdParam, story, visibleModules]);
 
   const selectedModuleRefs = useMemo(
     () => (selectedModule ? moduleRunRefs(selectedModule) : []),
@@ -286,10 +281,6 @@ export function LogisticsDemoPage(): JSX.Element {
         : null,
     [selectedDrilldownRunId, selectedModuleRuns]
   );
-  const boardPresentation = useMemo(
-    () => (story ? editorialBoard(story) : { lanes: [], flags: [] }),
-    [story]
-  );
 
   const prefetchDrilldown = (workflowRunId: string): void => {
     if (!selectedModuleRuns.some(({ ref }) => ref.workflow_run_id === workflowRunId)) {
@@ -322,12 +313,6 @@ export function LogisticsDemoPage(): JSX.Element {
     }
     nextParams.set("workflow_run_id", targetWorkflowRunId);
     setSearchParams(nextParams);
-  };
-
-  const openBoardItemDetail = (
-    item: Parameters<typeof buildBoardItemDrawerPayload>[0]
-  ): void => {
-    open(buildBoardItemDrawerPayload(item));
   };
 
   const openFamilyArtifactDrawer = (module: LogisticsStoryFamilyModule): void => {
@@ -377,82 +362,18 @@ export function LogisticsDemoPage(): JSX.Element {
     return <StatePanel kind="empty" title="No logistics story payload available" />;
   }
 
+  if (visibleModules.length === 0) {
+    return (
+      <StatePanel
+        kind="empty"
+        title="No logistics demo modules available"
+        detail="Weekly Schedule Planning and Dispatch Reporting are the only remaining shell modules."
+      />
+    );
+  }
+
   return (
     <section className="logistics-demo-page" data-testid="logistics-demo-page">
-      <section
-        className="logistics-demo-page__panel logistics-demo-page__panel--task-board"
-        data-testid="logistics-task-board-panel"
-        data-expanded={isBoardExpanded}
-      >
-        <header className="logistics-demo-page__panel-header">
-          <div>
-            <h3>Editorial Task Board</h3>
-            <p>
-              {boardPresentation.lanes.reduce((count, lane) => count + lane.items.length, 0)} active
-              tasks and approvals across weekly, live, and reporting work
-            </p>
-          </div>
-          <button
-            type="button"
-            className="action-btn"
-            aria-expanded={isBoardExpanded}
-            onClick={() => {
-              setIsBoardExpanded((current) => !current);
-            }}
-          >
-            {isBoardExpanded ? "Hide task board" : "Show task board"}
-          </button>
-        </header>
-        {isBoardExpanded ? (
-          <div className="logistics-demo-page__task-board-shell">
-            <div className="board-grid board-grid--story">
-              {boardPresentation.lanes.map((lane) => (
-                <LaneColumn key={lane.id} title={lane.title} count={lane.items.length}>
-                  {lane.items.length === 0 ? (
-                    <p className="logistics-demo-page__empty-lane">No active work in lane.</p>
-                  ) : null}
-                  {lane.items.map((item) => (
-                    <article
-                      key={item.item_id}
-                      className={`logistics-demo-page__board-item logistics-demo-page__board-item--${item.item_type}`}
-                    >
-                      <button
-                        type="button"
-                        className="logistics-demo-page__board-item-trigger"
-                        onClick={() => openBoardItemDetail(item)}
-                      >
-                        <header>
-                          <div>
-                            <p className="logistics-demo-page__board-item-kicker">
-                              {item.item_type === "human_task"
-                                ? "Task"
-                                : item.item_type === "approval"
-                                  ? "Approval"
-                                  : "Flag"}
-                            </p>
-                            <h4>{item.title}</h4>
-                          </div>
-                          <span className={stateBadgeClass(item.state)}>{item.state}</span>
-                        </header>
-                        <p>{boardItemMeta(item)}</p>
-                        <p>{item.workflow_id}</p>
-                        {boardItemSupportText(item) ? <p>{boardItemSupportText(item)}</p> : null}
-                        <TaskDocumentCues cues={buildTaskDocumentPreviewCues(item)} compact />
-                      </button>
-                    </article>
-                  ))}
-                </LaneColumn>
-              ))}
-            </div>
-          </div>
-        ) : (
-          <p className="logistics-demo-page__board-collapsed-copy">
-            The compact task strip stays pinned in the shell. Expand this board when you need the
-            full lane view.
-          </p>
-        )}
-      </section>
-
       <section className="logistics-demo-page__panel" data-testid="logistics-module-detail-panel">
         {selectedModule ? (
           <div className="logistics-demo-page__detail-stack">

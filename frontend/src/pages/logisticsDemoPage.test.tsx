@@ -68,50 +68,15 @@ describe("LogisticsDemoPage", () => {
     expect(window.location.search).toContain("workflow_run_id=wr-weekly-001");
   });
 
-  it("keeps the full editorial board collapsed by default while the shell task strip stays visible", async () => {
-    const user = userEvent.setup();
+  it("does not render the editorial task board panel or its expander", async () => {
     setFrontendOperatorContext();
     window.history.pushState({}, "", "/demo/logistics?planning_week_id=PW-2026-W10");
     render(<App />);
 
     const page = await screen.findByTestId("logistics-demo-page");
-    const boardPanel = within(page).getByTestId("logistics-task-board-panel");
-    expect(boardPanel).toHaveAttribute("data-expanded", "false");
-    expect(within(boardPanel).getByText(/The compact task strip stays pinned in the shell/i)).toBeInTheDocument();
-    expect(screen.getByTestId("logistics-task-strip")).toBeInTheDocument();
-    expect(within(page).queryByLabelText("To Do")).not.toBeInTheDocument();
-
-    await user.click(within(boardPanel).getByRole("button", { name: "Show task board" }));
-
-    expect(boardPanel).toHaveAttribute("data-expanded", "true");
-    expect(within(page).getByLabelText("To Do")).toBeInTheDocument();
-    expect(within(page).getByLabelText("In Progress")).toBeInTheDocument();
-    expect(within(page).getByLabelText("Waiting Review")).toBeInTheDocument();
-  });
-
-  it("shows every active task in the shell task strip with urgent nonzero counts", async () => {
-    setFrontendOperatorContext();
-    window.history.pushState({}, "", "/demo/logistics?planning_week_id=PW-2026-W10");
-    render(<App />);
-
-    await screen.findByTestId("logistics-demo-page");
-    const strip = await screen.findByTestId("logistics-task-strip");
-    const todoCard = within(strip).getByTestId("logistics-task-strip-card-todo");
-    const todoCount = within(todoCard).getByTestId("logistics-task-strip-count-todo");
-    const weeklyTask = within(todoCard).getByTestId(
-      "logistics-task-strip-task-todo-ht-weekly-001"
-    );
-    const reportingTask = within(todoCard).getByTestId(
-      "logistics-task-strip-task-todo-ht-reporting-001"
-    );
-
-    expect(todoCount).toHaveTextContent("2");
-    expect(todoCount).toHaveClass("has-items");
-    expect(weeklyTask).toHaveTextContent("Weekly Scheduling Plan Inputs");
-    expect(reportingTask).toHaveTextContent("End of Day Dispatch Report");
-    expect(weeklyTask).toHaveClass("is-urgent");
-    expect(reportingTask).toHaveClass("is-urgent");
-    expect(within(todoCard).queryByText("+1")).not.toBeInTheDocument();
+    expect(within(page).queryByTestId("logistics-task-board-panel")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Show task board" })).not.toBeInTheDocument();
+    expect(screen.queryByTestId("logistics-task-strip")).not.toBeInTheDocument();
   });
 
   it("keeps node metadata behind the info dialog instead of in the main detail panel", async () => {
@@ -165,6 +130,180 @@ describe("LogisticsDemoPage", () => {
     expect(within(detailPanel).queryByRole("button", { name: "Submit draft" })).not.toBeInTheDocument();
     expect(within(detailPanel).queryByRole("button", { name: "Download workbook" })).not.toBeInTheDocument();
     expect(within(detailPanel).queryByLabelText("Reporting draft versions timeline")).not.toBeInTheDocument();
+  });
+
+  it("removes live dispatch from the demo shell and normalizes stale deep links", async () => {
+    setFrontendOperatorContext();
+
+    server.use(
+      http.get("*/api/v1/stories/logistics-three-workflow", () =>
+        HttpResponse.json({
+          status: "ok",
+          command: "api.stories.logistics_three_workflow",
+          story: {
+            story_id: "logistics_three_workflow_demo.v1",
+            family: {
+              family_id: "logistics_ops_family.v1",
+              family_version: 1,
+              contract_version: 1
+            },
+            partitions: {
+              planning_week_id: "PW-2026-W10",
+              service_date_ids: ["SD-2026-03-06"]
+            },
+            family_graph: {
+              family_id: "logistics_ops_family.v1",
+              family_version: 1,
+              modules: [
+                {
+                  module_id: "dispatch_reporting",
+                  workflow_id: "dispatch_reporting.v1",
+                  partition_kind: "ServiceDateID",
+                  activation_policy: "manual_or_event",
+                  status: "active",
+                  node_kind: "module",
+                  drilldown_kind: "workflow_run",
+                  drilldown_refs: [
+                    {
+                      workflow_run_id: "wr-report-001",
+                      workflow_id: "dispatch_reporting.v1",
+                      partition_key: "SD-2026-03-06"
+                    }
+                  ],
+                  artifact_refs: [],
+                  selection_summary: "1 linked run"
+                },
+                {
+                  module_id: "live_dispatch",
+                  workflow_id: "live_dispatch.v1",
+                  partition_kind: "ServiceDateID",
+                  activation_policy: "event_driven",
+                  status: "active",
+                  node_kind: "module",
+                  drilldown_kind: "workflow_run",
+                  drilldown_refs: [
+                    {
+                      workflow_run_id: "wr-live-001",
+                      workflow_id: "live_dispatch.v1",
+                      partition_key: "SD-2026-03-06"
+                    }
+                  ],
+                  artifact_refs: [],
+                  selection_summary: "1 linked run"
+                }
+              ],
+              edges: []
+            },
+            linked_workflow_runs: {
+              dispatch_reporting: [
+                {
+                  workflow_run_id: "wr-report-001",
+                  workflow_id: "dispatch_reporting.v1",
+                  workflow_version: "v1",
+                  tenant_id: "tenant-a",
+                  domain_id: "domain-x",
+                  partition_key: "SD-2026-03-06",
+                  logical_date: "2026-03-06",
+                  activation_key: "dispatch_reporting.v1:SD-2026-03-06",
+                  state: "OPEN",
+                  active_issue_count: 0,
+                  created_at: "2026-03-09T00:00:00Z",
+                  updated_at: "2026-03-09T00:00:00Z"
+                }
+              ],
+              weekly_schedule_planning: [],
+              live_dispatch: [
+                {
+                  workflow_run_id: "wr-live-001",
+                  workflow_id: "live_dispatch.v1",
+                  workflow_version: "v1",
+                  tenant_id: "tenant-a",
+                  domain_id: "domain-x",
+                  partition_key: "SD-2026-03-06",
+                  logical_date: "2026-03-06",
+                  activation_key: "live_dispatch.v1:SD-2026-03-06",
+                  state: "OPEN",
+                  active_issue_count: 1,
+                  created_at: "2026-03-09T00:00:00Z",
+                  updated_at: "2026-03-09T00:00:00Z"
+                }
+              ],
+              summary: {
+                weekly_schedule_planning_count: 0,
+                live_dispatch_count: 1,
+                dispatch_reporting_count: 1
+              }
+            },
+            handoff_activity: {
+              edges: [],
+              summary: {
+                edge_execution_count: 0,
+                coherence_failed_count: 0
+              }
+            },
+            board: {
+              lanes: [],
+              work_items: [],
+              page: { limit: 100, offset: 0 },
+              summary: {
+                work_item_count: 0,
+                human_task_count: 0,
+                approval_count: 0,
+                flag_count: 0,
+                primary_actionable_count: 0,
+                workflow_item_counts: {}
+              }
+            },
+            official_outputs: {
+              pointers: [],
+              pointer_outputs: [],
+              official_output_artifacts: [],
+              coherence: {},
+              summary: {
+                pointer_count: 0,
+                pointer_output_count: 0,
+                official_output_artifact_count: 0,
+                artifact_kind_counts: {}
+              }
+            },
+            freshness: {
+              latest_event_sequence: null,
+              latest_event_recorded_at: "2026-03-09T00:00:00Z",
+              max_workflow_run_updated_at: "2026-03-09T00:00:00Z",
+              generated_at: "2026-03-09T00:00:00Z"
+            },
+            coherence: {
+              official_outputs: {},
+              handoff_edges: []
+            }
+          }
+        })
+      )
+    );
+
+    window.history.pushState(
+      {},
+      "",
+      "/demo/logistics?planning_week_id=PW-2026-W10&module=live_dispatch&workflow_run_id=wr-live-001"
+    );
+    render(<App />);
+
+    const page = await screen.findByTestId("logistics-demo-page");
+    await waitFor(() => {
+      expect(window.location.search).toContain("module=dispatch_reporting");
+    });
+    expect(window.location.search).toContain("workflow_run_id=wr-report-001");
+    expect(window.location.search).not.toContain("module=live_dispatch");
+    expect(window.location.search).not.toContain("workflow_run_id=wr-live-001");
+    expect(screen.queryByTestId("logistics-family-nav-node-live_dispatch")).not.toBeInTheDocument();
+    const detailPanel = within(page).getByTestId("logistics-module-detail-panel");
+    const launcher = await within(detailPanel).findByTestId("logistics-module-launcher-dispatch_reporting");
+    expect(within(detailPanel).getByRole("heading", { level: 4, name: "Dispatch Reporting" })).toBeInTheDocument();
+    expect(within(launcher).getByRole("link", { name: "Open run detail (secondary)" })).toHaveAttribute(
+      "href",
+      "/runs/wr-report-001"
+    );
+    expect(within(page).queryByTestId("logistics-module-launcher-live_dispatch")).not.toBeInTheDocument();
   });
 
   it("defaults the weekly module to the review-ready run when a current walkthrough companion exists", async () => {
@@ -607,82 +746,4 @@ describe("LogisticsDemoPage", () => {
     10000
   );
 
-  it("opens a task modal from the shell task strip without leaving the logistics demo route", async () => {
-    const user = userEvent.setup();
-    setFrontendOperatorContext();
-    window.history.pushState({}, "", "/demo/logistics?planning_week_id=PW-2026-W10");
-    render(<App />);
-
-    await screen.findByTestId("logistics-demo-page");
-    await user.click(
-      await screen.findByTestId("logistics-task-strip-task-todo-ht-weekly-001")
-    );
-
-    expect(window.location.pathname).toBe("/demo/logistics");
-    const taskModal = await screen.findByRole("dialog", {
-      name: "Stage04 · Weekly Scheduling Plan Inputs"
-    });
-    expect(taskModal).toBeInTheDocument();
-    expect(await screen.findByRole("button", { name: "Claim" })).toBeInTheDocument();
-    expect(within(taskModal).getByRole("link", { name: "Open Workspace" })).toHaveAttribute(
-      "href",
-      "/runs/wr-weekly-001/workspace"
-    );
-    expect(within(taskModal).getByRole("link", { name: "Open run detail (secondary)" })).toHaveAttribute(
-      "href",
-      "/runs/wr-weekly-001"
-    );
-  });
-
-  it("opens the exact task selected from the multi-task shell strip", async () => {
-    const user = userEvent.setup();
-    setFrontendOperatorContext();
-    window.history.pushState({}, "", "/demo/logistics?planning_week_id=PW-2026-W10");
-    render(<App />);
-
-    await screen.findByTestId("logistics-demo-page");
-    await user.click(
-      await screen.findByTestId("logistics-task-strip-task-todo-ht-reporting-001")
-    );
-
-    expect(window.location.pathname).toBe("/demo/logistics");
-    const taskModal = await screen.findByRole("dialog", {
-      name: "Stage01 · End of Day Dispatch Report"
-    });
-    expect(taskModal).toBeInTheDocument();
-    expect(within(taskModal).getByRole("link", { name: "Open Workspace" })).toHaveAttribute(
-      "href",
-      "/runs/wr-report-001/workspace"
-    );
-  });
-
-  it("runs task actions from the expanded board and refreshes the lane contents", async () => {
-    const user = userEvent.setup();
-    setFrontendOperatorContext();
-    window.history.pushState({}, "", "/demo/logistics?planning_week_id=PW-2026-W10");
-    render(<App />);
-
-    const page = await screen.findByTestId("logistics-demo-page");
-    await user.click(within(page).getByRole("button", { name: "Show task board" }));
-
-    const openTasksLane = within(page).getByLabelText("To Do");
-    await user.click(
-      within(openTasksLane).getByRole("button", { name: /Weekly Scheduling Plan Inputs/i })
-    );
-
-    await user.click(await screen.findByRole("button", { name: "Claim" }));
-
-    await waitFor(() => {
-      expect(mutationLog()).toContain("claim:ht-weekly-001");
-    });
-    await waitFor(() => {
-      expect(
-        within(within(page).getByLabelText("To Do")).queryByText(/Weekly Scheduling Plan Inputs/i)
-      ).not.toBeInTheDocument();
-      expect(
-        within(within(page).getByLabelText("In Progress")).getByText(/Weekly Scheduling Plan Inputs/i)
-      ).toBeInTheDocument();
-    });
-    expect(await screen.findByRole("button", { name: "Complete Task" })).toBeInTheDocument();
-  });
 });

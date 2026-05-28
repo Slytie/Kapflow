@@ -64,8 +64,7 @@ describe("logistics workpage routes", () => {
     });
   });
 
-  it("navigates from the shell graph to the live-dispatch workspace", async () => {
-    const user = userEvent.setup();
+  it("removes live dispatch from the shell graph and normalizes stale shell links", async () => {
     setFrontendOperatorContext();
 
     server.use(
@@ -96,9 +95,15 @@ describe("logistics workpage routes", () => {
                   status: "active",
                   node_kind: "module",
                   drilldown_kind: "workflow_run",
-                  drilldown_refs: [],
+                  drilldown_refs: [
+                    {
+                      workflow_run_id: "wr-report-001",
+                      workflow_id: "dispatch_reporting.v1",
+                      partition_key: "SD-2026-03-06"
+                    }
+                  ],
                   artifact_refs: [],
-                  selection_summary: ""
+                  selection_summary: "1 linked run"
                 },
                 {
                   module_id: "weekly_schedule_planning",
@@ -164,11 +169,26 @@ describe("logistics workpage routes", () => {
                   updated_at: "2026-03-09T00:00:00Z"
                 }
               ],
-              dispatch_reporting: [],
+              dispatch_reporting: [
+                {
+                  workflow_run_id: "wr-report-001",
+                  workflow_id: "dispatch_reporting.v1",
+                  workflow_version: "v1",
+                  tenant_id: "tenant-a",
+                  domain_id: "domain-x",
+                  partition_key: "SD-2026-03-06",
+                  logical_date: "2026-03-06",
+                  activation_key: "dispatch_reporting.v1:SD-2026-03-06",
+                  state: "OPEN",
+                  active_issue_count: 0,
+                  created_at: "2026-03-09T00:00:00Z",
+                  updated_at: "2026-03-09T00:00:00Z"
+                }
+              ],
               summary: {
                 weekly_schedule_planning_count: 0,
                 live_dispatch_count: 1,
-                dispatch_reporting_count: 0
+                dispatch_reporting_count: 1
               }
             },
             handoff_activity: {
@@ -218,35 +238,54 @@ describe("logistics workpage routes", () => {
       )
     );
 
-    window.history.pushState({}, "", "/demo/logistics?planning_week_id=PW-2026-W10");
+    window.history.pushState(
+      {},
+      "",
+      "/demo/logistics?planning_week_id=PW-2026-W10&module=live_dispatch&workflow_run_id=wr-live-001"
+    );
     render(<App />);
 
     await screen.findByTestId("logistics-family-nav");
-    await user.click(screen.getByTestId("logistics-family-nav-node-live_dispatch"));
+    await waitFor(() => {
+      expect(window.location.pathname).toBe("/demo/logistics");
+      expect(window.location.search).not.toContain("module=live_dispatch");
+      expect(window.location.search).not.toContain("workflow_run_id=wr-live-001");
+    });
+    expect(screen.queryByTestId("logistics-family-nav-node-live_dispatch")).not.toBeInTheDocument();
+    expect(
+      screen.queryByTestId("logistics-family-nav-edge-weekly_seed_to_live_dispatch")
+    ).not.toBeInTheDocument();
 
-    expect(await screen.findByText("Loading run workspace")).toBeInTheDocument();
-    expect(window.location.pathname).toBe("/runs/wr-live-001/workspace");
+    const detailPanel = await screen.findByTestId("logistics-module-detail-panel");
+    expect(within(detailPanel).queryByTestId("logistics-module-launcher-live_dispatch")).not.toBeInTheDocument();
+    const launcher = await within(detailPanel).findByTestId("logistics-module-launcher-dispatch_reporting");
+    expect(within(launcher).getByRole("link", { name: "Open run detail (secondary)" })).toHaveAttribute(
+      "href",
+      "/runs/wr-report-001"
+    );
   });
 
-  it("keeps utility destinations in the hamburger menu instead of the primary shell rail", async () => {
-    const user = userEvent.setup();
+  it("removes the legacy utility menu from the top shell", async () => {
     setFrontendOperatorContext();
     window.history.pushState({}, "", "/demo/logistics?planning_week_id=PW-2026-W10");
     render(<App />);
 
-    await screen.findByRole("button", { name: "Open utility menu" });
+    await screen.findByTestId("logistics-family-nav");
+    expect(screen.queryByRole("button", { name: "Open utility menu" })).not.toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "My Work" })).not.toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "Approvals" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Exceptions" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Official Outputs" })).not.toBeInTheDocument();
+  });
 
-    await user.click(screen.getByRole("button", { name: "Open utility menu" }));
+  it("does not render the legacy utility menu on run-backed workpage routes", async () => {
+    setFrontendOperatorContext();
+    window.history.pushState({}, "", "/runs/wr-weekly-001/workpages/schedule-v0");
+    render(<App />);
 
-    expect(screen.getByRole("menuitem", { name: "My Work" })).toHaveAttribute("href", "/my-work");
-    expect(screen.getByRole("menuitem", { name: "Approvals" })).toHaveAttribute("href", "/approvals");
-    expect(screen.getByRole("menuitem", { name: "Exceptions" })).toHaveAttribute("href", "/exceptions");
-    expect(screen.getByRole("menuitem", { name: "Official Outputs" })).toHaveAttribute(
-      "href",
-      "/official-outputs"
-    );
+    expect(await screen.findByTestId("schedule-workpage-page")).toBeInTheDocument();
+    const navActions = screen.getByTestId("app-shell-nav-actions");
+    expect(within(navActions).queryByRole("button", { name: "Open utility menu" })).not.toBeInTheDocument();
   });
 
   it("shows a neutral graph on non-logistics routes and lets node clicks enter the logistics flow", async () => {
@@ -256,6 +295,14 @@ describe("logistics workpage routes", () => {
     render(<App />);
 
     expect(await screen.findByText("My Work Queue")).toBeInTheDocument();
+    const navActions = await screen.findByTestId("app-shell-nav-actions");
+    await waitFor(() => {
+      expect(within(navActions).getByRole("button", { name: "Drivers" })).toBeEnabled();
+      expect(within(navActions).getByRole("button", { name: "Edit weekly schedule" })).toBeEnabled();
+      expect(within(navActions).getByRole("button", { name: "Edit route demand" })).toBeEnabled();
+      expect(within(navActions).getByRole("button", { name: "Upload route activity" })).toBeEnabled();
+    });
+    expect(await screen.findByTestId("logistics-family-nav")).toBeInTheDocument();
     expect(screen.getByTestId("logistics-family-nav-node-dispatch_reporting")).toHaveAttribute(
       "aria-pressed",
       "false"
@@ -264,10 +311,7 @@ describe("logistics workpage routes", () => {
       "aria-pressed",
       "false"
     );
-    expect(screen.getByTestId("logistics-family-nav-node-live_dispatch")).toHaveAttribute(
-      "aria-pressed",
-      "false"
-    );
+    expect(screen.queryByTestId("logistics-family-nav-node-live_dispatch")).not.toBeInTheDocument();
 
     await user.click(screen.getByTestId("logistics-family-nav-node-weekly_schedule_planning"));
 
@@ -284,7 +328,7 @@ describe("logistics workpage routes", () => {
     expect(await screen.findByTestId("schedule-workpage-page")).toBeInTheDocument();
     const navActions = screen.getByTestId("app-shell-nav-actions");
     expect(within(navActions).getByRole("button", { name: "Open secondary detail routes" })).toBeInTheDocument();
-    expect(within(navActions).getByRole("button", { name: "Open utility menu" })).toBeInTheDocument();
+    expect(within(navActions).queryByRole("button", { name: "Open utility menu" })).not.toBeInTheDocument();
     expect(screen.queryByText("Secondary detail routes")).not.toBeInTheDocument();
     expect(screen.getByTestId("logistics-family-nav-node-weekly_schedule_planning")).toHaveAttribute(
       "aria-pressed",

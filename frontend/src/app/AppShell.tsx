@@ -16,13 +16,13 @@ import { useShellFilters } from "@/app/useShellFilters";
 import { onetruthApi } from "@/lib/api/onetruthApi";
 import { errorText } from "@/lib/api/errorText";
 import {
-  buildBoardItemDrawerPayload,
   DEFAULT_LOGISTICS_PLANNING_WEEK_ID,
   logisticsFamilyGraphEdges,
   logisticsFamilyGraphNodes,
-  logisticsTaskStripCards,
   moduleRunRefs,
+  normalizedLogisticsDemoRunId,
   runRowsForStory,
+  visibleLogisticsFamilyModules,
   workflowIdToModuleId
 } from "@/lib/logistics/familyStory";
 import { logisticsStoryRepository, workpagesRepository } from "@/lib/repositories";
@@ -35,18 +35,11 @@ import {
 } from "@/lib/api/config";
 import { ACTOR_PROFILES } from "@/lib/actors";
 import { useDrawer } from "@/lib/state/drawerContext";
-import type { LogisticsStoryBoardWorkItem, WorkpageContract } from "@/lib/types/contracts";
+import type { WorkpageContract, WorkflowRunRow } from "@/lib/types/contracts";
 import type {
   WorkpageScheduleAction,
   WorkpageScheduleRouteDemandCoverageContext
 } from "@/lib/types/workpages";
-
-const UTILITY_LINKS = [
-  { to: "/my-work", label: "My Work" },
-  { to: "/approvals", label: "Approvals" },
-  { to: "/exceptions", label: "Exceptions" },
-  { to: "/official-outputs", label: "Official Outputs" }
-];
 
 const SECONDARY_LINKS = [{ to: "/runs", label: "Run Details" }];
 
@@ -137,11 +130,15 @@ function buildLogisticsDemoRoute(input: {
 function activeModuleIdForLocation(input: {
   pathname: string;
   selectedModuleId: string | null;
+  visibleModuleIds: Set<string>;
   runWorkflowById: Map<string, string>;
   fallbackModuleId: string | null;
 }): string | null {
   if (input.pathname === "/demo/logistics") {
-    return input.selectedModuleId ?? input.fallbackModuleId;
+    if (input.selectedModuleId && input.visibleModuleIds.has(input.selectedModuleId)) {
+      return input.selectedModuleId;
+    }
+    return input.fallbackModuleId;
   }
   if (/^\/runs\/[^/]+\/workpages\/schedule-v0(?:\/.*)?$/.test(input.pathname)) {
     return "weekly_schedule_planning";
@@ -177,14 +174,14 @@ function workflowRunIdForLocation(input: {
 function canonicalRouteForWorkflow(input: {
   workflowId: string;
   workflowRunId: string;
-}): string {
+}): string | null {
   if (input.workflowId === "weekly_schedule_planning.v1") {
     return `/runs/${input.workflowRunId}/workpages/schedule-v0`;
   }
   if (input.workflowId === "dispatch_reporting.v1") {
     return `/runs/${input.workflowRunId}/workpages/eod-v0`;
   }
-  return `/runs/${input.workflowRunId}/workspace`;
+  return null;
 }
 
 function scheduleOpenLatestDraftAction(
@@ -236,12 +233,11 @@ export function AppShell(): JSX.Element {
   const queryClient = useQueryClient();
   const isFetching = useIsFetching();
   const { filters, setFilters } = useShellFilters();
-  const { payload, close, open } = useDrawer();
+  const { payload, close } = useDrawer();
   const [viewerBootstrapReady, setViewerBootstrapReady] = useState(
     () => getApiViewerSession() !== null
   );
   const [lastRefreshedAt, setLastRefreshedAt] = useState<string | null>(null);
-  const [isUtilityMenuOpen, setIsUtilityMenuOpen] = useState(false);
   const [isActorMenuOpen, setIsActorMenuOpen] = useState(false);
   const [isDriversQuickEditOpen, setIsDriversQuickEditOpen] = useState(false);
   const [scheduleQuickEditTarget, setScheduleQuickEditTarget] =
@@ -255,12 +251,6 @@ export function AppShell(): JSX.Element {
     location.pathname === "/demo/logistics" ||
     location.pathname.startsWith("/demo/logistics/");
   const isRunWorkpageRoute = /^\/runs\/[^/]+\/workpages(?:\/.*)?$/.test(location.pathname);
-  const isWeeklyPlanningWorkpageRoute =
-    /^\/runs\/[^/]+\/workpages\/(?:schedule-v0|route-demand-v0|driver-preferences-v0)(?:\/.*)?$/.test(
-      location.pathname
-    );
-  const isDispatchReportingWorkpageRoute =
-    /^\/runs\/[^/]+\/workpages\/eod-v0(?:\/.*)?$/.test(location.pathname);
   const isWorkpageFullPageRoute = isDemoLogisticsRoute || isRunWorkpageRoute;
   const routeSearchParams = useMemo(
     () => new URLSearchParams(location.search),
@@ -270,11 +260,7 @@ export function AppShell(): JSX.Element {
     routeSearchParams.get("planning_week_id")?.trim() || DEFAULT_LOGISTICS_PLANNING_WEEK_ID;
   const serviceDateId = routeSearchParams.get("service_date_id")?.trim() || undefined;
   const selectedModuleId = routeSearchParams.get("module")?.trim() || null;
-  const shouldFetchLogisticsStory =
-    isDemoLogisticsRoute ||
-    isWorkspaceRoute ||
-    isWeeklyPlanningWorkpageRoute ||
-    isDispatchReportingWorkpageRoute;
+  const shouldFetchLogisticsStory = true;
 
   const viewerQuery = useQuery({
     queryKey: ["viewer-session"],
@@ -309,7 +295,6 @@ export function AppShell(): JSX.Element {
   const logisticsStory = logisticsStoryQuery.data;
 
   useEffect(() => {
-    setIsUtilityMenuOpen(false);
     setIsActorMenuOpen(false);
   }, [location.pathname, location.search]);
 
@@ -378,6 +363,12 @@ export function AppShell(): JSX.Element {
       runRowsForStory(logisticsStory).map((run) => [run.workflow_run_id, run.workflow_id])
     );
   }, [logisticsStory]);
+  const runRowById = useMemo(() => {
+    if (!logisticsStory) {
+      return new Map<string, WorkflowRunRow>();
+    }
+    return new Map(runRowsForStory(logisticsStory).map((run) => [run.workflow_run_id, run]));
+  }, [logisticsStory]);
 
   const familyNavNodes = useMemo(
     () => (logisticsStory ? logisticsFamilyGraphNodes(logisticsStory) : []),
@@ -387,20 +378,25 @@ export function AppShell(): JSX.Element {
     () => (logisticsStory ? logisticsFamilyGraphEdges(logisticsStory) : []),
     [logisticsStory]
   );
-  const taskCards = useMemo(
-    () => (logisticsStory ? logisticsTaskStripCards(logisticsStory) : []),
+  const visibleModules = useMemo(
+    () => (logisticsStory ? visibleLogisticsFamilyModules(logisticsStory) : []),
     [logisticsStory]
   );
-  const fallbackModuleId = logisticsStory?.family_graph.modules[0]?.module_id ?? null;
+  const visibleModuleIds = useMemo(
+    () => new Set(visibleModules.map((module) => module.module_id)),
+    [visibleModules]
+  );
+  const fallbackModuleId = visibleModules[0]?.module_id ?? null;
   const activeModuleId = useMemo(
     () =>
       activeModuleIdForLocation({
         pathname: location.pathname,
         selectedModuleId,
+        visibleModuleIds,
         runWorkflowById,
         fallbackModuleId
       }),
-    [fallbackModuleId, location.pathname, runWorkflowById, selectedModuleId]
+    [fallbackModuleId, location.pathname, runWorkflowById, selectedModuleId, visibleModuleIds]
   );
   const activeWorkflowRunId = useMemo(
     () =>
@@ -416,56 +412,87 @@ export function AppShell(): JSX.Element {
         planningWeekId,
         serviceDateId,
         moduleId: activeModuleId,
-        workflowRunId: activeWorkflowRunId
+        workflowRunId: activeModuleId ? activeWorkflowRunId : null
       }),
     [activeModuleId, activeWorkflowRunId, planningWeekId, serviceDateId]
   );
   const activeWorkflowId = activeWorkflowRunId
     ? runWorkflowById.get(activeWorkflowRunId) ?? null
     : null;
+  const weeklyModule = useMemo(
+    () => visibleModules.find((module) => module.module_id === "weekly_schedule_planning") ?? null,
+    [visibleModules]
+  );
+  const dispatchModule = useMemo(
+    () => visibleModules.find((module) => module.module_id === "dispatch_reporting") ?? null,
+    [visibleModules]
+  );
+  const weeklyModuleRuns = useMemo(
+    () =>
+      weeklyModule
+        ? moduleRunRefs(weeklyModule).map((ref) => ({
+            ref,
+            run: runRowById.get(ref.workflow_run_id) ?? null
+          }))
+        : [],
+    [runRowById, weeklyModule]
+  );
+  const dispatchModuleRuns = useMemo(
+    () =>
+      dispatchModule
+        ? moduleRunRefs(dispatchModule).map((ref) => ({
+            ref,
+            run: runRowById.get(ref.workflow_run_id) ?? null
+          }))
+        : [],
+    [dispatchModule, runRowById]
+  );
+  const weeklyActionRunId = useMemo(
+    () =>
+      normalizedLogisticsDemoRunId(
+        weeklyModule,
+        weeklyModuleRuns,
+        activeWorkflowId === "weekly_schedule_planning.v1" ? activeWorkflowRunId : null
+      ),
+    [activeWorkflowId, activeWorkflowRunId, weeklyModule, weeklyModuleRuns]
+  );
+  const dispatchActionRunId = useMemo(
+    () =>
+      normalizedLogisticsDemoRunId(
+        dispatchModule,
+        dispatchModuleRuns,
+        activeWorkflowId === "dispatch_reporting.v1" ? activeWorkflowRunId : null
+      ),
+    [activeWorkflowId, activeWorkflowRunId, dispatchModule, dispatchModuleRuns]
+  );
   const weeklyModuleRunIds = useMemo(() => {
-    const weeklyModule = logisticsStory?.family_graph.modules.find(
-      (module) => module.module_id === "weekly_schedule_planning"
-    );
     if (!weeklyModule) {
       return [];
     }
     return moduleRunRefs(weeklyModule)
       .map((ref) => ref.workflow_run_id)
       .filter(Boolean);
-  }, [logisticsStory]);
-  const isDispatchReportingContext = Boolean(
-    activeWorkflowRunId &&
-      (activeWorkflowId === "dispatch_reporting.v1" ||
-        activeModuleId === "dispatch_reporting" ||
-        /^\/runs\/[^/]+\/workpages\/eod-v0(?:\/.*)?$/.test(location.pathname))
-  );
-  const isWeeklyPlanningContext = Boolean(
-    activeWorkflowRunId &&
-      (activeWorkflowId === "weekly_schedule_planning.v1" ||
-        activeModuleId === "weekly_schedule_planning" ||
-        isWeeklyPlanningWorkpageRoute)
-  );
+  }, [weeklyModule]);
   const secondaryWeeklyRunId = useMemo(() => {
-    if (!activeWorkflowRunId) {
+    if (!weeklyActionRunId) {
       return null;
     }
-    return weeklyModuleRunIds.find((workflowRunId) => workflowRunId !== activeWorkflowRunId) ?? null;
-  }, [activeWorkflowRunId, weeklyModuleRunIds]);
+    return weeklyModuleRunIds.find((workflowRunId) => workflowRunId !== weeklyActionRunId) ?? null;
+  }, [weeklyActionRunId, weeklyModuleRunIds]);
   const shouldLoadScheduleWeekChoices = Boolean(
-    isScheduleWeekPickerOpen && activeWorkflowRunId && isWeeklyPlanningContext
+    isScheduleWeekPickerOpen && weeklyActionRunId
   );
   const [currentScheduleWeekChoiceQuery, currentRouteDemandWeekChoiceQuery] = useQueries({
     queries: [
       {
-        queryKey: ["workpages", "schedule-v0", "landing", activeWorkflowRunId, "week-picker"],
-        queryFn: () => workpagesRepository.scheduleForRun(activeWorkflowRunId ?? ""),
+        queryKey: ["workpages", "schedule-v0", "landing", weeklyActionRunId, "week-picker"],
+        queryFn: () => workpagesRepository.scheduleForRun(weeklyActionRunId ?? ""),
         enabled: shouldLoadScheduleWeekChoices,
         refetchInterval: false
       },
       {
-        queryKey: ["workpages", "route-demand-v0", "run", activeWorkflowRunId, "week-picker"],
-        queryFn: () => workpagesRepository.routeDemandForRun(activeWorkflowRunId ?? ""),
+        queryKey: ["workpages", "route-demand-v0", "run", weeklyActionRunId, "week-picker"],
+        queryFn: () => workpagesRepository.routeDemandForRun(weeklyActionRunId ?? ""),
         enabled: shouldLoadScheduleWeekChoices,
         refetchInterval: false
       }
@@ -487,11 +514,11 @@ export function AppShell(): JSX.Element {
       }
     ]
   });
-  const canOpenDriversQuickEdit = Boolean(activeWorkflowRunId && isWeeklyPlanningContext);
+  const canOpenDriversQuickEdit = Boolean(weeklyActionRunId);
   const scheduleWeekChoices = useMemo((): ScheduleWeekChoice[] => {
     const candidates = [
       {
-        workflowRunId: activeWorkflowRunId,
+        workflowRunId: weeklyActionRunId,
         scheduleContract: currentScheduleWeekChoiceQuery.data,
         routeDemandContract: currentRouteDemandWeekChoiceQuery.data,
         scheduleError: currentScheduleWeekChoiceQuery.isError
@@ -538,33 +565,34 @@ export function AppShell(): JSX.Element {
       disabledReason: candidate.disabledReason
     }));
   }, [
-    activeWorkflowRunId,
     currentRouteDemandWeekChoiceQuery.data,
     currentScheduleWeekChoiceQuery.data,
     currentScheduleWeekChoiceQuery.isError,
     secondaryRouteDemandWeekChoiceQuery.data,
     secondaryScheduleWeekChoiceQuery.data,
     secondaryScheduleWeekChoiceQuery.isError,
-    secondaryWeeklyRunId
+    secondaryWeeklyRunId,
+    weeklyActionRunId
   ]);
-  const hasScheduleWeekPicker = isWeeklyPlanningContext && weeklyModuleRunIds.length > 1;
+  const hasScheduleWeekPicker = weeklyModuleRunIds.length > 1;
   const canOpenScheduleQuickEdit = Boolean(
-    activeWorkflowRunId &&
-      isWeeklyPlanningContext &&
+    weeklyActionRunId &&
       (!shouldFetchLogisticsStory || Boolean(logisticsStory) || logisticsStoryQuery.isError)
   );
-  const canOpenRouteDemandQuickEdit = Boolean(activeWorkflowRunId && isWeeklyPlanningContext);
-  const canOpenDispatchCloseout = Boolean(activeWorkflowRunId && isDispatchReportingContext);
-  const weeklyActionUnavailableReason = !activeWorkflowRunId
-    ? "No active workflow run is selected."
-    : !isWeeklyPlanningContext
-      ? "This action is available on weekly planning runs."
-      : "Open a weekly planning route to use this action.";
-  const dispatchCloseoutUnavailableReason = !activeWorkflowRunId
-    ? "No active workflow run is selected."
-    : !isDispatchReportingContext
-      ? "This action is available on dispatch reporting runs."
-      : "The dispatch reporting closeout flow is still resolving.";
+  const canOpenRouteDemandQuickEdit = Boolean(weeklyActionRunId);
+  const canOpenDispatchCloseout = Boolean(dispatchActionRunId);
+  const weeklyActionUnavailableReason =
+    !logisticsStory && !logisticsStoryQuery.isError
+      ? "Weekly planning context is still loading."
+      : !weeklyActionRunId
+        ? "No weekly planning run is available."
+        : "Weekly planning context unavailable.";
+  const dispatchCloseoutUnavailableReason =
+    !logisticsStory && !logisticsStoryQuery.isError
+      ? "Dispatch reporting context is still loading."
+      : !dispatchActionRunId
+        ? "No dispatch reporting run is available."
+        : "Dispatch reporting context unavailable.";
   const driversQuickEditUnavailableReason = weeklyActionUnavailableReason;
   const scheduleQuickEditUnavailableReason = weeklyActionUnavailableReason;
   const routeDemandQuickEditUnavailableReason = weeklyActionUnavailableReason;
@@ -574,14 +602,14 @@ export function AppShell(): JSX.Element {
     setScheduleQuickEditTarget(null);
     setIsScheduleWeekPickerOpen(false);
     setIsRouteDemandQuickEditOpen(false);
-  }, [activeWorkflowRunId]);
+  }, [weeklyActionRunId]);
 
   useEffect(() => {
-    if (activeWorkflowRunId && isDispatchReportingContext) {
+    if (dispatchActionRunId) {
       return;
     }
     setIsDispatchCloseoutOpen(false);
-  }, [activeWorkflowRunId, isDispatchReportingContext]);
+  }, [dispatchActionRunId]);
 
   useEffect(() => {
     const routeState =
@@ -624,15 +652,11 @@ export function AppShell(): JSX.Element {
     );
   }, [activeWorkflowRunId, location.pathname, location.search, location.state, navigate]);
 
-  const handleTaskSelect = (item: LogisticsStoryBoardWorkItem): void => {
-    open(buildBoardItemDrawerPayload(item));
-  };
-
   const handleNodeSelect = (nodeId: string): void => {
     if (!logisticsStory) {
       return;
     }
-    const module = logisticsStory.family_graph.modules.find(
+    const module = visibleModules.find(
       (candidate) => candidate.module_id === nodeId
     );
     if (!module) {
@@ -640,45 +664,34 @@ export function AppShell(): JSX.Element {
     }
     const refs = moduleRunRefs(module);
     if (refs.length === 1) {
-      navigate(
-        canonicalRouteForWorkflow({
-          workflowId: refs[0]?.workflow_id ?? module.workflow_id,
-          workflowRunId: refs[0]?.workflow_run_id ?? ""
-        })
-      );
-      return;
+      const targetRoute = canonicalRouteForWorkflow({
+        workflowId: refs[0]?.workflow_id ?? module.workflow_id,
+        workflowRunId: refs[0]?.workflow_run_id ?? ""
+      });
+      if (targetRoute) {
+        navigate(
+          targetRoute
+        );
+        return;
+      }
     }
     navigate(
       buildLogisticsDemoRoute({
         planningWeekId,
         serviceDateId,
-        moduleId: module.module_id
+        moduleId: module.module_id,
+        workflowRunId: refs[0]?.workflow_run_id ?? null
       })
     );
   };
 
   const openScheduleQuickEditForSelection = (selection: ScheduleWeekChoice): void => {
     setIsScheduleWeekPickerOpen(false);
-    const targetRoute = `/runs/${selection.workflowRunId}/workpages/schedule-v0`;
-    if (
-      location.pathname === targetRoute &&
-      activeWorkflowRunId === selection.workflowRunId
-    ) {
-      setScheduleQuickEditTarget({
-        workflowRunId: selection.workflowRunId,
-        artifactVersionId: selection.artifactVersionId,
-        routeDemandCoverageContext: null,
-        comparisonModeHint: selection.key === "next" ? "future_week" : null
-      });
-      return;
-    }
-    navigate(targetRoute, {
-      state: {
-        openScheduleQuickEdit: true,
-        targetScheduleArtifactVersionId: selection.artifactVersionId,
-        routeDemandCoverageContext: null,
-        scheduleComparisonModeHint: selection.key === "next" ? "future_week" : null
-      }
+    setScheduleQuickEditTarget({
+      workflowRunId: selection.workflowRunId,
+      artifactVersionId: selection.artifactVersionId,
+      routeDemandCoverageContext: null,
+      comparisonModeHint: selection.key === "next" ? "future_week" : null
     });
   };
 
@@ -783,9 +796,7 @@ export function AppShell(): JSX.Element {
                 nodes={familyNavNodes}
                 edges={familyNavEdges}
                 activeNodeId={activeModuleId}
-                taskCards={taskCards}
                 onNodeSelect={handleNodeSelect}
-                onTaskSelect={handleTaskSelect}
               />
             ) : (
               <div className="app-shell__nav-loading" data-testid="logistics-family-nav-fallback">
@@ -830,11 +841,11 @@ export function AppShell(): JSX.Element {
                     setIsScheduleWeekPickerOpen(true);
                     return;
                   }
-                  if (!activeWorkflowRunId) {
+                  if (!weeklyActionRunId) {
                     return;
                   }
                   setScheduleQuickEditTarget({
-                    workflowRunId: activeWorkflowRunId,
+                    workflowRunId: weeklyActionRunId,
                     artifactVersionId: null,
                     routeDemandCoverageContext: null,
                     comparisonModeHint: null
@@ -861,52 +872,22 @@ export function AppShell(): JSX.Element {
                 Edit route demand
               </button>
 
-              {isDispatchReportingContext ? (
-                <button
-                  type="button"
-                  className="action-btn app-shell__quick-action"
-                  disabled={!canOpenDispatchCloseout}
-                  title={canOpenDispatchCloseout ? undefined : dispatchCloseoutUnavailableReason}
-                  aria-label={
-                    canOpenDispatchCloseout
-                      ? "Upload route activity"
-                      : `Upload route activity unavailable: ${dispatchCloseoutUnavailableReason}`
-                  }
-                  onClick={() => {
-                    setIsDispatchCloseoutOpen(true);
-                  }}
-                >
-                  Upload route activity
-                </button>
-              ) : null}
-
-              <div className="app-shell__utility-menu">
-                <button
-                  type="button"
-                  className="action-btn"
-                  aria-expanded={isUtilityMenuOpen}
-                  aria-label="Open utility menu"
-                  onClick={() => {
-                    setIsUtilityMenuOpen((current) => !current);
-                  }}
-                >
-                  Menu
-                </button>
-                {isUtilityMenuOpen ? (
-                  <div className="app-shell__utility-menu-popover" role="menu">
-                    {UTILITY_LINKS.map((link) => (
-                      <NavLink
-                        key={link.to}
-                        to={link.to}
-                        role="menuitem"
-                        className={({ isActive }) => (isActive ? "active" : "")}
-                      >
-                        {link.label}
-                      </NavLink>
-                    ))}
-                  </div>
-                ) : null}
-              </div>
+              <button
+                type="button"
+                className="action-btn app-shell__quick-action"
+                disabled={!canOpenDispatchCloseout}
+                title={canOpenDispatchCloseout ? undefined : dispatchCloseoutUnavailableReason}
+                aria-label={
+                  canOpenDispatchCloseout
+                    ? "Upload route activity"
+                    : `Upload route activity unavailable: ${dispatchCloseoutUnavailableReason}`
+                }
+                onClick={() => {
+                  setIsDispatchCloseoutOpen(true);
+                }}
+              >
+                Upload route activity
+              </button>
 
               {isWorkpageFullPageRoute ? (
                 <InfoDialog
@@ -958,9 +939,9 @@ export function AppShell(): JSX.Element {
         </div>
       </section>
 
-      {isDriversQuickEditOpen && activeWorkflowRunId ? (
+      {isDriversQuickEditOpen && weeklyActionRunId ? (
         <DriverPreferencesQuickEditModal
-          workflowRunId={activeWorkflowRunId}
+          workflowRunId={weeklyActionRunId}
           onClose={() => {
             setIsDriversQuickEditOpen(false);
           }}
@@ -1062,17 +1043,17 @@ export function AppShell(): JSX.Element {
           }}
         />
       ) : null}
-      {isRouteDemandQuickEditOpen && activeWorkflowRunId ? (
+      {isRouteDemandQuickEditOpen && weeklyActionRunId ? (
         <RouteDemandQuickEditModal
-          workflowRunId={activeWorkflowRunId}
+          workflowRunId={weeklyActionRunId}
           onClose={() => {
             setIsRouteDemandQuickEditOpen(false);
           }}
         />
       ) : null}
-      {isDispatchCloseoutOpen && activeWorkflowRunId ? (
+      {isDispatchCloseoutOpen && dispatchActionRunId ? (
         <DispatchReportCloseoutModal
-          workflowRunId={activeWorkflowRunId}
+          workflowRunId={dispatchActionRunId}
           onClose={() => {
             setIsDispatchCloseoutOpen(false);
           }}

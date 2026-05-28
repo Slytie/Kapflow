@@ -39,18 +39,21 @@ describe("LogisticsRouteDemandWorkpagePage", () => {
     const editButton = await within(navActions).findByRole("button", {
       name: "Edit route demand"
     });
+    const uploadButton = within(navActions).getByRole("button", {
+      name: "Upload route activity"
+    });
     const buttons = within(navActions).getAllByRole("button");
     const driversIndex = buttons.indexOf(driversButton);
     const scheduleIndex = buttons.indexOf(scheduleButton);
     const routeDemandIndex = buttons.indexOf(editButton);
-    const menuIndex = buttons.findIndex(
-      (button) => button.getAttribute("aria-label") === "Open utility menu"
-    );
+    const uploadIndex = buttons.indexOf(uploadButton);
 
     expect(driversButton).toHaveClass("app-shell__quick-action");
     expect(scheduleButton).toHaveClass("app-shell__quick-action");
     expect(editButton).toHaveClass("app-shell__route-demand-edit");
-    expect([driversIndex, scheduleIndex, routeDemandIndex, menuIndex]).toEqual([0, 1, 2, 3]);
+    expect(uploadButton).toHaveClass("app-shell__quick-action");
+    expect(uploadButton).toBeEnabled();
+    expect([driversIndex, scheduleIndex, routeDemandIndex, uploadIndex]).toEqual([0, 1, 2, 3]);
   });
 
   it("edits route demand in a modal, saves through the existing endpoint, and refreshes the schedule page", async () => {
