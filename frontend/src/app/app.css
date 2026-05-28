@@ -1461,6 +1461,13 @@
   --schedule-heatmap-on-call-width: 64px;
   --schedule-heatmap-compliance-width: 120px;
   --schedule-heatmap-summary-rail-width: 84px;
+  --schedule-heatmap-scheduled-surface: rgba(238, 244, 236, 0.98);
+  --schedule-heatmap-scheduled-surface-raised: rgba(245, 249, 243, 0.98);
+  --schedule-heatmap-scheduled-border: #111111;
+  --schedule-heatmap-group-header-height: 60px;
+  --schedule-heatmap-cell-min-height: 76px;
+  --schedule-heatmap-cell-min-height-compact: 58px;
+  --schedule-heatmap-cell-min-height-mobile: 62px;
   border: none;
   border-radius: 26px;
   background:
@@ -1477,6 +1484,7 @@
   --schedule-heatmap-on-call-width: 48px;
   --schedule-heatmap-compliance-width: 86px;
   --schedule-heatmap-summary-rail-width: 72px;
+  --schedule-heatmap-group-header-height: 48px;
   border-radius: 18px;
   padding: 12px;
 }
@@ -1717,6 +1725,58 @@
   padding: 6px 6px 8px;
 }
 
+.schedule-heatmap__group-header-row th {
+  top: 0;
+  z-index: 6;
+  padding: 12px 10px 14px;
+}
+
+.schedule-heatmap--compact .schedule-heatmap__group-header-row th {
+  padding: 9px 8px 10px;
+}
+
+.schedule-heatmap__column-header-row th {
+  top: var(--schedule-heatmap-group-header-height);
+}
+
+.schedule-heatmap__group-header {
+  text-align: center;
+  backdrop-filter: blur(14px);
+}
+
+.schedule-heatmap__group-header--spacer {
+  background: rgba(250, 249, 246, 0.9);
+}
+
+.schedule-heatmap__group-header--reality {
+  background:
+    linear-gradient(180deg, rgba(244, 239, 224, 0.98), rgba(251, 248, 239, 0.98));
+}
+
+.schedule-heatmap__group-header--scheduled {
+  background:
+    linear-gradient(
+      180deg,
+      var(--schedule-heatmap-scheduled-surface-raised),
+      var(--schedule-heatmap-scheduled-surface)
+    );
+}
+
+.schedule-heatmap__group-title {
+  display: block;
+  color: #050505;
+  font-family: var(--font-display);
+  font-size: 24px;
+  font-weight: 900;
+  letter-spacing: 0.01em;
+  line-height: 1.05;
+  text-transform: none;
+}
+
+.schedule-heatmap--compact .schedule-heatmap__group-title {
+  font-size: 18px;
+}
+
 .schedule-heatmap__person-header,
 .schedule-heatmap__person-cell {
   left: 0;
@@ -1733,7 +1793,7 @@
 .schedule-heatmap__metric-cell {
   position: sticky;
   z-index: 2;
-  background: rgba(244, 244, 240, 0.96);
+  background: var(--schedule-heatmap-scheduled-surface);
   box-shadow: inset -1px 0 0 rgba(175, 179, 174, 0.08);
 }
 
@@ -1792,7 +1852,7 @@
   width: var(--schedule-heatmap-summary-rail-width);
   min-width: var(--schedule-heatmap-summary-rail-width);
   max-width: var(--schedule-heatmap-summary-rail-width);
-  background: rgba(244, 244, 240, 0.96);
+  background: var(--schedule-heatmap-scheduled-surface);
   box-shadow: inset -1px 0 0 rgba(175, 179, 174, 0.08);
 }
 
@@ -1806,7 +1866,43 @@
   z-index: 2;
   padding: 0;
   vertical-align: top;
-  background: linear-gradient(180deg, rgba(244, 244, 240, 0.98), rgba(255, 255, 255, 0.92));
+  background: linear-gradient(
+    180deg,
+    var(--schedule-heatmap-scheduled-surface),
+    var(--schedule-heatmap-scheduled-surface-raised)
+  );
+  border-bottom: 2px solid var(--schedule-heatmap-scheduled-border);
+}
+
+.schedule-heatmap__metric-header,
+.schedule-heatmap__summary-rail-header,
+.schedule-heatmap__date-header--scheduled {
+  border-top: 2px solid var(--schedule-heatmap-scheduled-border);
+}
+
+.schedule-heatmap__metric-header--hours,
+.schedule-heatmap__metric-cell--hours {
+  box-shadow:
+    inset 2px 0 0 var(--schedule-heatmap-scheduled-border),
+    inset -1px 0 0 rgba(175, 179, 174, 0.08);
+}
+
+.schedule-heatmap__date-header--scheduled,
+.schedule-heatmap__scheduled-column-cell {
+  background: linear-gradient(
+    180deg,
+    var(--schedule-heatmap-scheduled-surface-raised),
+    var(--schedule-heatmap-scheduled-surface)
+  );
+}
+
+.schedule-heatmap__date-header--scheduled-end,
+.schedule-heatmap__scheduled-column-cell--end {
+  border-right: 2px solid var(--schedule-heatmap-scheduled-border);
+}
+
+.schedule-heatmap__scheduled-region-cell--bottom {
+  border-bottom: 2px solid var(--schedule-heatmap-scheduled-border);
 }
 
 .schedule-heatmap__table thead th span,
@@ -1898,7 +1994,7 @@
 
 .schedule-heatmap__cell {
   width: 100%;
-  min-height: 56px;
+  min-height: var(--schedule-heatmap-cell-min-height);
   border: none;
   border-radius: 14px;
   padding: 8px 9px;
@@ -1916,7 +2012,7 @@
 }
 
 .schedule-heatmap--compact .schedule-heatmap__cell {
-  min-height: 36px;
+  min-height: var(--schedule-heatmap-cell-min-height-compact);
   border-radius: 10px;
   padding: 5px 6px;
   gap: 3px;
@@ -2032,9 +2128,39 @@
   opacity: 0.78;
 }
 
+.schedule-heatmap__cell-meta--reality {
+  display: flex;
+  align-items: baseline;
+  gap: 5px;
+  flex-wrap: wrap;
+  opacity: 1;
+}
+
+.schedule-heatmap__reality-primary-metric {
+  font-size: 10px;
+  font-weight: 700;
+  opacity: 0.78;
+}
+
+.schedule-heatmap__reality-secondary-metric {
+  font-family: var(--font-display);
+  font-size: 19px;
+  font-weight: 800;
+  letter-spacing: 0.01em;
+  line-height: 0.95;
+}
+
 .schedule-heatmap--compact .schedule-heatmap__cell-meta,
 .schedule-heatmap--compact .schedule-heatmap__cell-chip {
   font-size: 8px;
+}
+
+.schedule-heatmap--compact .schedule-heatmap__reality-primary-metric {
+  font-size: 8px;
+}
+
+.schedule-heatmap--compact .schedule-heatmap__reality-secondary-metric {
+  font-size: 15px;
 }
 
 .schedule-heatmap__preference-bar {
@@ -2125,6 +2251,14 @@
   box-shadow:
     inset 0 0 0 1px rgba(149, 133, 77, 0.12),
     inset 0 -2px 0 rgba(149, 133, 77, 0.14);
+}
+
+.schedule-heatmap__date-header--planned-readonly {
+  background:
+    linear-gradient(180deg, rgba(241, 239, 234, 0.98), rgba(250, 249, 246, 0.98));
+  box-shadow:
+    inset 0 0 0 1px rgba(112, 112, 104, 0.1),
+    inset 0 -2px 0 rgba(112, 112, 104, 0.14);
 }
 
 .schedule-heatmap__date-header--uncovered {
@@ -2299,6 +2433,13 @@
   box-shadow: inset 0 0 0 1px rgba(175, 179, 174, 0.14);
 }
 
+.schedule-heatmap__cell--planned-readonly {
+  filter: saturate(0.82);
+  box-shadow:
+    inset 0 0 0 2px rgba(255, 255, 255, 0.58),
+    inset 0 0 0 1px rgba(116, 119, 114, 0.18);
+}
+
 .schedule-heatmap__reality-flags {
   color: inherit;
   font-size: 9px;
@@ -2371,7 +2512,7 @@
   }
 
   .schedule-heatmap__cell {
-    min-height: 44px;
+    min-height: var(--schedule-heatmap-cell-min-height-mobile);
     padding: 6px;
   }
 }

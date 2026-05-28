@@ -41,6 +41,7 @@ interface DerivedHeatmapCell {
   previousWeekBlockedReasons: string[];
   previousWeekActualMinutes: number | null;
   previousWeekCumulativeWeekMinutes: number | null;
+  realitySummaryMinutes: number | null;
   previousWeekRouteId: string | null;
   previousWeekRouteSlotClass: string | null;
   previousWeekSourceRef: string | null;
@@ -165,6 +166,15 @@ function isHybridRealityDate(
   );
 }
 
+function isHybridReadOnlyDate(
+  serviceDate: WorkpageScheduleHeatmapDate | ScheduleHybridHeatmapDate
+): serviceDate is ScheduleHybridHeatmapDate {
+  return (
+    typeof (serviceDate as ScheduleHybridHeatmapDate).read_only === "boolean" &&
+    (serviceDate as ScheduleHybridHeatmapDate).read_only
+  );
+}
+
 function buildCellMap(
   people: WorkpageScheduleHeatmapPerson[],
   assignmentRows: WorkpageTableRow[],
@@ -194,6 +204,7 @@ function buildCellMap(
         previousWeekBlockedReasons: cell.previous_week_blocked_reasons ?? [],
         previousWeekActualMinutes: cell.previous_week_actual_minutes ?? null,
         previousWeekCumulativeWeekMinutes: cell.previous_week_cumulative_week_minutes ?? null,
+        realitySummaryMinutes: cell.reality_summary_minutes ?? null,
         previousWeekRouteId: cell.previous_week_route_id ?? null,
         previousWeekRouteSlotClass: cell.previous_week_route_slot_class ?? null,
         previousWeekSourceRef: cell.previous_week_source_ref ?? null,
@@ -230,6 +241,7 @@ function buildCellMap(
       previousWeekBlockedReasons: [],
       previousWeekActualMinutes: null,
       previousWeekCumulativeWeekMinutes: null,
+      realitySummaryMinutes: null,
       previousWeekRouteId: null,
       previousWeekRouteSlotClass: null,
       previousWeekSourceRef: null,
@@ -266,6 +278,7 @@ function buildCellMap(
       previousWeekBlockedReasons: [],
       previousWeekActualMinutes: null,
       previousWeekCumulativeWeekMinutes: null,
+      realitySummaryMinutes: null,
       previousWeekRouteId: null,
       previousWeekRouteSlotClass: null,
       previousWeekSourceRef: null,
@@ -528,6 +541,57 @@ function realityFlagsLabel(cell: DerivedHeatmapCell | null): string {
     .join(", ");
 }
 
+function renderRealityCell(input: {
+  personName: string;
+  serviceDateLabel: string;
+  cell: DerivedHeatmapCell | null;
+  testId: string;
+  badgeLabel: string;
+  ariaPrefix: string;
+  selectedDay?: boolean;
+  useRollingSummary?: boolean;
+}): JSX.Element {
+  const realityTone = previousWeekRealityTone(input.cell?.previousWeekNormalizedState);
+  const realityFlags = realityFlagsLabel(input.cell);
+  return (
+    <div
+      className={`schedule-heatmap__cell schedule-heatmap__cell--readonly schedule-heatmap__cell--reality-${realityTone}${
+        input.selectedDay ? " schedule-heatmap__cell--selected-day" : ""
+      }`}
+      data-testid={input.testId}
+      aria-label={`${input.personName} on ${input.serviceDateLabel}: ${input.ariaPrefix} ${formatPreviousWeekRealityState(
+        input.cell?.previousWeekNormalizedState
+      ).toLowerCase()}`}
+    >
+      <span className="schedule-heatmap__cell-top">
+        <span className="schedule-heatmap__cell-state">
+          {formatPreviousWeekRealityState(input.cell?.previousWeekNormalizedState)}
+        </span>
+        <span className="schedule-heatmap__cell-chip">{input.badgeLabel}</span>
+      </span>
+      <span className="schedule-heatmap__cell-meta schedule-heatmap__cell-meta--reality">
+        <span className="schedule-heatmap__reality-primary-metric">
+          {formatMinutes(input.cell?.previousWeekActualMinutes)}
+        </span>
+        <span className="schedule-heatmap__reality-secondary-metric">
+          [{formatMinutes(
+            input.useRollingSummary
+              ? input.cell?.realitySummaryMinutes
+              : input.cell?.previousWeekCumulativeWeekMinutes
+          )}]
+        </span>
+      </span>
+      {realityFlags ? (
+        <span className="schedule-heatmap__reality-flags">{realityFlags}</span>
+      ) : (
+        <span className="schedule-heatmap__reality-flags schedule-heatmap__reality-flags--empty">
+          No flags
+        </span>
+      )}
+    </div>
+  );
+}
+
 function isAvailableSelectedDayState(state: string | null | undefined): boolean {
   const value = asText(state).toLowerCase();
   return value === "available" || value === "avoid_if_possible" || value === "on_call_only";
@@ -624,6 +688,15 @@ export function ScheduleHeatmapEditor({
     () => buildHeaderMetricRows(serviceDates, routeDemandUnresolvedCounts),
     [routeDemandUnresolvedCounts, serviceDates]
   );
+  const previousWeekServiceDates = useMemo(
+    () => serviceDates.filter((serviceDate) => isHybridRealityDate(serviceDate)),
+    [serviceDates]
+  );
+  const currentWeekServiceDates = useMemo(
+    () => serviceDates.filter((serviceDate) => !isHybridRealityDate(serviceDate)),
+    [serviceDates]
+  );
+  const scheduledRegionColumnSpan = 5 + currentWeekServiceDates.length;
   const effectiveSelectedServiceDate = selectedServiceDateOverride ?? selectedServiceDate;
   const effectiveAvailableDriverIds = useMemo(() => {
     if (!selectedServiceDateOverride) {
@@ -643,24 +716,24 @@ export function ScheduleHeatmapEditor({
     people,
     selectedServiceDateOverride
   ]);
+  const headerDescription =
+    !isCompact || armedCell
+      ? armedCell
+        ? `Moving ${armedCell.driverName}. Pick another cell on ${armedCell.serviceDate} to move or swap it.`
+        : section.subtitle ??
+          (readOnly
+            ? "Server-authoritative schedule heatmap. Edit controls stay on draft artifact pages."
+            : "Click a filled cell to start moving planned work.")
+      : null;
 
   return (
     <section className={`workpage-panel schedule-heatmap${isCompact ? " schedule-heatmap--compact" : ""}`}>
       <header className="workpage-panel__header schedule-heatmap__header">
-        <div className="schedule-heatmap__header-copy">
-          <span className="schedule-heatmap__eyebrow">Weekly planning grid</span>
-          <h2>{section.title}</h2>
-          {!isCompact || armedCell ? (
-            <p>
-              {armedCell
-                ? `Moving ${armedCell.driverName}. Pick another cell on ${armedCell.serviceDate} to move or swap it.`
-                : section.subtitle ??
-                  (readOnly
-                    ? "Server-authoritative schedule heatmap. Edit controls stay on draft artifact pages."
-                    : "Click a filled cell to start moving planned work.")}
-            </p>
-          ) : null}
-        </div>
+        {headerDescription ? (
+          <div className="schedule-heatmap__header-copy">
+            <p>{headerDescription}</p>
+          </div>
+        ) : null}
         <div className="schedule-heatmap__header-meta">
           <div className="schedule-heatmap__header-toolbar">
             <section
@@ -709,11 +782,58 @@ export function ScheduleHeatmapEditor({
       <div className="schedule-heatmap__wrap">
         <table className="schedule-heatmap__table">
           <thead>
-            <tr>
+            <tr className="schedule-heatmap__group-header-row">
+              <th scope="col" className="schedule-heatmap__group-header schedule-heatmap__group-header--spacer" />
+              {previousWeekServiceDates.length > 0 ? (
+                <th
+                  scope="colgroup"
+                  colSpan={previousWeekServiceDates.length}
+                  className="schedule-heatmap__group-header schedule-heatmap__group-header--reality"
+                >
+                  <span className="schedule-heatmap__group-title">Dispatch Reports</span>
+                </th>
+              ) : null}
+              <th
+                scope="colgroup"
+                colSpan={scheduledRegionColumnSpan}
+                className="schedule-heatmap__group-header schedule-heatmap__group-header--scheduled"
+              >
+                <span className="schedule-heatmap__group-title">Scheduled Routes</span>
+              </th>
+            </tr>
+            <tr className="schedule-heatmap__column-header-row">
               <th scope="col" className="schedule-heatmap__person-header">
                 <span aria-hidden="true">Roster</span>
                 <strong>People</strong>
               </th>
+              {previousWeekServiceDates.map((serviceDate) => {
+                const unresolvedCount =
+                  routeDemandUnresolvedCounts[serviceDate.service_date] ?? 0;
+                const dateHeaderClassName = [
+                  "schedule-heatmap__date-header",
+                  effectiveSelectedServiceDate === serviceDate.service_date
+                    ? "schedule-heatmap__date-header--selected"
+                    : "",
+                  "schedule-heatmap__date-header--comparison",
+                  unresolvedCount > 0 ? "schedule-heatmap__date-header--uncovered" : ""
+                ]
+                  .filter(Boolean)
+                  .join(" ");
+                return (
+                  <th
+                    key={serviceDate.service_date}
+                    scope="col"
+                    className={dateHeaderClassName}
+                  >
+                    <span>{serviceDate.weekday_label}</span>
+                    <strong>{serviceDate.label}</strong>
+                    <div className="schedule-heatmap__comparison-column-copy">
+                      <span className="schedule-heatmap__comparison-badge">Reality</span>
+                      <small>Read-only prior week</small>
+                    </div>
+                  </th>
+                );
+              })}
               <th scope="col" className="schedule-heatmap__metric-header schedule-heatmap__metric-header--hours">
                 <span aria-hidden="true">Metrics</span>
                 <strong>{isCompact ? "Hrs" : "Hours"}</strong>
@@ -752,17 +872,24 @@ export function ScheduleHeatmapEditor({
                   ))}
                 </div>
               </th>
-              {serviceDates.map((serviceDate) => {
-                const isComparisonColumn = isHybridRealityDate(serviceDate);
+              {currentWeekServiceDates.map((serviceDate, currentWeekIndex) => {
+                const isReadOnlyCurrentWeekColumn =
+                  isHybridReadOnlyDate(serviceDate);
                 const dayStats = topBarDayByServiceDate.get(serviceDate.service_date) ?? null;
                 const unresolvedCount =
                   routeDemandUnresolvedCounts[serviceDate.service_date] ?? 0;
                 const dateHeaderClassName = [
                   "schedule-heatmap__date-header",
+                  "schedule-heatmap__date-header--scheduled",
                   effectiveSelectedServiceDate === serviceDate.service_date
                     ? "schedule-heatmap__date-header--selected"
                     : "",
-                  isComparisonColumn ? "schedule-heatmap__date-header--comparison" : "",
+                  isReadOnlyCurrentWeekColumn
+                    ? "schedule-heatmap__date-header--planned-readonly"
+                    : "",
+                  currentWeekIndex === currentWeekServiceDates.length - 1
+                    ? "schedule-heatmap__date-header--scheduled-end"
+                    : "",
                   unresolvedCount > 0 ? "schedule-heatmap__date-header--uncovered" : ""
                 ]
                   .filter(Boolean)
@@ -775,41 +902,34 @@ export function ScheduleHeatmapEditor({
                   >
                     <span>{serviceDate.weekday_label}</span>
                     <strong>{serviceDate.label}</strong>
-                    {isComparisonColumn ? (
-                      <div className="schedule-heatmap__comparison-column-copy">
-                        <span className="schedule-heatmap__comparison-badge">Reality</span>
-                        <small>Read-only prior week</small>
-                      </div>
-                    ) : (
-                      <div
-                        className="schedule-heatmap__summary-stack"
-                        role="list"
-                        aria-label={`Daily stats for ${serviceDate.label}`}
-                      >
-                        {headerMetricRows.map((row) => {
-                          const metricValue = formatHeaderMetricValue(row, dayStats, unresolvedCount);
-                          return (
-                            <div
-                              key={`${serviceDate.service_date}:${row.key}`}
-                              className="schedule-heatmap__summary-row"
-                              role="listitem"
+                    <div
+                      className="schedule-heatmap__summary-stack"
+                      role="list"
+                      aria-label={`Daily stats for ${serviceDate.label}`}
+                    >
+                      {headerMetricRows.map((row) => {
+                        const metricValue = formatHeaderMetricValue(row, dayStats, unresolvedCount);
+                        return (
+                          <div
+                            key={`${serviceDate.service_date}:${row.key}`}
+                            className="schedule-heatmap__summary-row"
+                            role="listitem"
+                          >
+                            <span className="visually-hidden">
+                              {`${row.accessibilityLabel} for ${serviceDate.label}: ${metricValue.spokenValue}`}
+                            </span>
+                            <span
+                              aria-hidden="true"
+                              className={`schedule-heatmap__summary-value${
+                                metricValue.isBlank ? " schedule-heatmap__summary-value--blank" : ""
+                              }`}
                             >
-                              <span className="visually-hidden">
-                                {`${row.accessibilityLabel} for ${serviceDate.label}: ${metricValue.spokenValue}`}
-                              </span>
-                              <span
-                                aria-hidden="true"
-                                className={`schedule-heatmap__summary-value${
-                                  metricValue.isBlank ? " schedule-heatmap__summary-value--blank" : ""
-                                }`}
-                              >
-                                {metricValue.visibleValue}
-                              </span>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    )}
+                              {metricValue.visibleValue}
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
                   </th>
                 );
               })}
@@ -846,22 +966,65 @@ export function ScheduleHeatmapEditor({
                       ) : null}
                     </div>
                   </th>
-                  <td className="schedule-heatmap__metric-cell schedule-heatmap__metric-cell--hours">
+                  {previousWeekServiceDates.map((serviceDate) => {
+                    const cellKey = `${serviceDate.service_date}:${person.driver_id}`;
+                    const cell = cellMap.get(cellKey) ?? null;
+                    return (
+                      <td key={`${person.driver_id}:${serviceDate.service_date}`}>
+                        <div className="schedule-heatmap__cell-wrap">
+                          {renderRealityCell({
+                            personName: person.driver_name,
+                            serviceDateLabel: serviceDate.label,
+                            cell,
+                            testId: `schedule-heatmap-cell-${serviceDate.service_date}-${person.driver_id}`,
+                            badgeLabel: "Reality",
+                            ariaPrefix: "previous-week reality",
+                            useRollingSummary: false
+                          })}
+                        </div>
+                      </td>
+                    );
+                  })}
+                  <td
+                    className={`schedule-heatmap__metric-cell schedule-heatmap__metric-cell--hours${
+                      personIndex === people.length - 1
+                        ? " schedule-heatmap__scheduled-region-cell--bottom"
+                        : ""
+                    }`}
+                  >
                     <span className="schedule-heatmap__metric-value">
                       {formatDriverHours(metric?.scheduled_hours)}
                     </span>
                   </td>
-                  <td className="schedule-heatmap__metric-cell schedule-heatmap__metric-cell--routes">
+                  <td
+                    className={`schedule-heatmap__metric-cell schedule-heatmap__metric-cell--routes${
+                      personIndex === people.length - 1
+                        ? " schedule-heatmap__scheduled-region-cell--bottom"
+                        : ""
+                    }`}
+                  >
                     <span className="schedule-heatmap__metric-value">
                       {metric ? String(metric.scheduled_routes) : "—"}
                     </span>
                   </td>
-                  <td className="schedule-heatmap__metric-cell schedule-heatmap__metric-cell--on-call">
+                  <td
+                    className={`schedule-heatmap__metric-cell schedule-heatmap__metric-cell--on-call${
+                      personIndex === people.length - 1
+                        ? " schedule-heatmap__scheduled-region-cell--bottom"
+                        : ""
+                    }`}
+                  >
                     <span className="schedule-heatmap__metric-value">
                       {metric ? String(metric.on_call_shifts) : "—"}
                     </span>
                   </td>
-                  <td className="schedule-heatmap__metric-cell schedule-heatmap__metric-cell--compliance">
+                  <td
+                    className={`schedule-heatmap__metric-cell schedule-heatmap__metric-cell--compliance${
+                      personIndex === people.length - 1
+                        ? " schedule-heatmap__scheduled-region-cell--bottom"
+                        : ""
+                    }`}
+                  >
                     {metric ? (
                       <div className="schedule-heatmap__compliance-cell">
                         {metric.issues.length > 0 ? (
@@ -928,7 +1091,7 @@ export function ScheduleHeatmapEditor({
                       className="schedule-heatmap__summary-rail-spacer"
                     />
                   ) : null}
-                  {serviceDates.map((serviceDate) => {
+                  {currentWeekServiceDates.map((serviceDate, currentWeekIndex) => {
                     const cellKey = `${serviceDate.service_date}:${person.driver_id}`;
                     const cell = cellMap.get(cellKey) ?? null;
                     const pendingRouteDemandCell = routeDemandPendingCells[cellKey] ?? null;
@@ -944,9 +1107,15 @@ export function ScheduleHeatmapEditor({
                     const isSelectedDay = effectiveSelectedServiceDate === serviceDate.service_date;
                     const isAvailableCell =
                       isSelectedDay && effectiveAvailableDriverIds.includes(person.driver_id);
+                    const isCurrentWeekReadOnlyCell =
+                      !isComparisonCell && isHybridReadOnlyDate(serviceDate);
+                    const isCellReadOnly = readOnly || isCurrentWeekReadOnlyCell || isComparisonCell;
                     const sickNoShowPending = sickNoShowPendingKey === cellKey;
                     const sickNoShowActionDisabled =
-                      sickNoShowDisabled || sickNoShowPending || isSickNoShow;
+                      sickNoShowDisabled ||
+                      sickNoShowPending ||
+                      isSickNoShow ||
+                      isCellReadOnly;
                     const visualCellState = pendingRouteDemandCell ? "pending" : cell?.state ?? "empty";
                     const cellStateLabel =
                       visualCellState === "pending"
@@ -956,122 +1125,142 @@ export function ScheduleHeatmapEditor({
                           : cell?.state === "on_call"
                             ? "On call"
                             : "Open";
-                    const realityTone = previousWeekRealityTone(cell?.previousWeekNormalizedState);
-                    const realityFlags = realityFlagsLabel(cell);
-                    if (isComparisonCell) {
-                      return (
-                        <td key={`${person.driver_id}:${serviceDate.service_date}`}>
-                          <div className="schedule-heatmap__cell-wrap">
-                            <div
-                              className={`schedule-heatmap__cell schedule-heatmap__cell--readonly schedule-heatmap__cell--reality-${realityTone}`}
-                              data-testid={`schedule-heatmap-cell-${serviceDate.service_date}-${person.driver_id}`}
-                              aria-label={`${person.driver_name} on ${serviceDate.label}: previous-week reality ${formatPreviousWeekRealityState(
-                                cell?.previousWeekNormalizedState
-                              ).toLowerCase()}`}
-                            >
-                              <span className="schedule-heatmap__cell-top">
-                                <span className="schedule-heatmap__cell-state">
-                                  {formatPreviousWeekRealityState(cell?.previousWeekNormalizedState)}
-                                </span>
-                                <span className="schedule-heatmap__cell-chip">Reality</span>
-                              </span>
-                              <span className="schedule-heatmap__cell-meta">
-                                {`${formatMinutes(cell?.previousWeekActualMinutes)} [${formatMinutes(
-                                  cell?.previousWeekCumulativeWeekMinutes
-                                )}]`}
-                              </span>
-                              {realityFlags ? (
-                                <span className="schedule-heatmap__reality-flags">{realityFlags}</span>
-                              ) : (
-                                <span className="schedule-heatmap__reality-flags schedule-heatmap__reality-flags--empty">
-                                  No flags
-                                </span>
-                              )}
-                            </div>
-                          </div>
-                        </td>
-                      );
-                    }
+                    const scheduledColumnCellClassName = [
+                      "schedule-heatmap__scheduled-column-cell",
+                      personIndex === people.length - 1
+                        ? "schedule-heatmap__scheduled-region-cell--bottom"
+                        : "",
+                      currentWeekIndex === currentWeekServiceDates.length - 1
+                        ? "schedule-heatmap__scheduled-column-cell--end"
+                        : ""
+                    ]
+                      .filter(Boolean)
+                      .join(" ");
                     return (
-                      <td key={`${person.driver_id}:${serviceDate.service_date}`}>
+                      <td
+                        key={`${person.driver_id}:${serviceDate.service_date}`}
+                        className={scheduledColumnCellClassName}
+                      >
                         <div className="schedule-heatmap__cell-wrap">
-                          <button
-                            type="button"
-                            className={`schedule-heatmap__cell schedule-heatmap__cell--${
-                              visualCellState
-                            }${cell?.manualOverride ? " schedule-heatmap__cell--manual" : ""}${
-                              isArmed ? " is-armed" : ""
-                            }${isSelectedDay ? " schedule-heatmap__cell--selected-day" : ""}${
-                              isAvailableCell ? " schedule-heatmap__cell--available" : ""
-                            }${metric?.compliance_state === "fail" ? " schedule-heatmap__cell--blocked" : ""}${
-                              isSickNoShow ? " schedule-heatmap__cell--sick-no-show" : ""
-                            }${readOnly ? " schedule-heatmap__cell--readonly" : ""}`}
-                            data-testid={`schedule-heatmap-cell-${serviceDate.service_date}-${person.driver_id}`}
-                            aria-label={
-                              isSickNoShow
-                                ? `Sick / No Show: ${person.driver_name} on ${serviceDate.label}`
-                                : pendingRouteDemandCell
-                                  ? `${person.driver_name} on ${serviceDate.label}: pending route add for ${pendingRouteDemandCell.routeId}`
-                                  : buildCellLabel(person, serviceDate, cell)
-                            }
-                            aria-pressed={isArmed}
-                            aria-disabled={readOnly}
-                            onClick={() => {
-                              if (readOnly || !onRowsChange) {
-                                setStatusMessage(
-                                  "This view is read-only. Open a draft artifact to move schedule cells."
-                                );
-                                return;
+                          {isComparisonCell ? (
+                            renderRealityCell({
+                              personName: person.driver_name,
+                              serviceDateLabel: serviceDate.label,
+                              cell,
+                              testId: `schedule-heatmap-cell-${serviceDate.service_date}-${person.driver_id}`,
+                              badgeLabel: "Report",
+                              ariaPrefix: "dispatch report",
+                              selectedDay: isSelectedDay,
+                              useRollingSummary: true
+                            })
+                          ) : (
+                            <button
+                              type="button"
+                              className={`schedule-heatmap__cell schedule-heatmap__cell--${
+                                visualCellState
+                              }${cell?.manualOverride ? " schedule-heatmap__cell--manual" : ""}${
+                                isArmed ? " is-armed" : ""
+                              }${isSelectedDay ? " schedule-heatmap__cell--selected-day" : ""}${
+                                isAvailableCell ? " schedule-heatmap__cell--available" : ""
+                              }${metric?.compliance_state === "fail" ? " schedule-heatmap__cell--blocked" : ""}${
+                                isSickNoShow ? " schedule-heatmap__cell--sick-no-show" : ""
+                              }${isCellReadOnly ? " schedule-heatmap__cell--readonly" : ""}${
+                                isCurrentWeekReadOnlyCell
+                                  ? " schedule-heatmap__cell--planned-readonly"
+                                  : ""
+                              }`}
+                              data-testid={`schedule-heatmap-cell-${serviceDate.service_date}-${person.driver_id}`}
+                              aria-label={
+                                isSickNoShow
+                                  ? `Sick / No Show: ${person.driver_name} on ${serviceDate.label}`
+                                  : pendingRouteDemandCell
+                                    ? `${person.driver_name} on ${serviceDate.label}: pending route add for ${pendingRouteDemandCell.routeId}`
+                                    : buildCellLabel(person, serviceDate, cell)
                               }
-                              if (!armedCell) {
-                                if (!cell) {
-                                  if (onRouteDemandCellToggle) {
-                                    setStatusMessage(
-                                      onRouteDemandCellToggle({
-                                        driverId: person.driver_id,
-                                        driverName: person.driver_name,
-                                        serviceDate: serviceDate.service_date,
-                                        serviceDateLabel: serviceDate.label
-                                      })
-                                    );
-                                    return;
-                                  }
+                              aria-pressed={isArmed}
+                              aria-disabled={isCellReadOnly}
+                              onClick={() => {
+                                if (isCellReadOnly || !onRowsChange) {
                                   setStatusMessage(
-                                    "Pick a planned cell first, then move it to another person on the same day."
+                                    isCurrentWeekReadOnlyCell
+                                      ? "Past current-week days are read-only in this comparison view."
+                                      : "This view is read-only. Open a draft artifact to move schedule cells."
                                   );
                                   return;
                                 }
-                                setArmedCell({
-                                  driverId: person.driver_id,
-                                  driverName: person.driver_name,
-                                  serviceDate: serviceDate.service_date,
-                                  rowKind: cell.rowKind as EditableRowKind,
-                                  rowIndex: cell.rowIndex as number
-                                });
-                                setStatusMessage(null);
-                                return;
-                              }
+                                if (!armedCell) {
+                                  if (!cell) {
+                                    if (onRouteDemandCellToggle) {
+                                      setStatusMessage(
+                                        onRouteDemandCellToggle({
+                                          driverId: person.driver_id,
+                                          driverName: person.driver_name,
+                                          serviceDate: serviceDate.service_date,
+                                          serviceDateLabel: serviceDate.label
+                                        })
+                                      );
+                                      return;
+                                    }
+                                    setStatusMessage(
+                                      "Pick a planned cell first, then move it to another person on the same day."
+                                    );
+                                    return;
+                                  }
+                                  setArmedCell({
+                                    driverId: person.driver_id,
+                                    driverName: person.driver_name,
+                                    serviceDate: serviceDate.service_date,
+                                    rowKind: cell.rowKind as EditableRowKind,
+                                    rowIndex: cell.rowIndex as number
+                                  });
+                                  setStatusMessage(null);
+                                  return;
+                                }
 
-                              if (
-                                armedCell.driverId === person.driver_id &&
-                                armedCell.serviceDate === serviceDate.service_date
-                              ) {
-                                setArmedCell(null);
-                                setStatusMessage("Move cleared.");
-                                return;
-                              }
+                                if (
+                                  armedCell.driverId === person.driver_id &&
+                                  armedCell.serviceDate === serviceDate.service_date
+                                ) {
+                                  setArmedCell(null);
+                                  setStatusMessage("Move cleared.");
+                                  return;
+                                }
 
-                              if (armedCell.serviceDate !== serviceDate.service_date) {
-                                setStatusMessage("Moves stay within the same service day.");
-                                return;
-                              }
+                                if (armedCell.serviceDate !== serviceDate.service_date) {
+                                  setStatusMessage("Moves stay within the same service day.");
+                                  return;
+                                }
 
-                              let nextAssignmentRows = cloneRows(assignmentRows);
-                              let nextReserveRows = cloneRows(reserveRows);
+                                let nextAssignmentRows = cloneRows(assignmentRows);
+                                let nextReserveRows = cloneRows(reserveRows);
 
-                              const sourceDriverId = armedCell.driverId;
+                                const sourceDriverId = armedCell.driverId;
 
-                              if (!cell) {
+                                if (!cell) {
+                                  if (armedCell.rowKind === "assignment") {
+                                    nextAssignmentRows = setManualOverride(
+                                      nextAssignmentRows,
+                                      armedCell.rowIndex,
+                                      person.driver_id
+                                    );
+                                  } else {
+                                    nextReserveRows = setManualOverride(
+                                      nextReserveRows,
+                                      armedCell.rowIndex,
+                                      person.driver_id
+                                    );
+                                  }
+                                  onRowsChange({
+                                    assignmentRows: nextAssignmentRows,
+                                    reserveRows: nextReserveRows
+                                  });
+                                  setArmedCell(null);
+                                  setStatusMessage(
+                                    `${armedCell.driverName} moved to ${person.driver_name} on ${serviceDate.service_date}.`
+                                  );
+                                  return;
+                                }
+
                                 if (armedCell.rowKind === "assignment") {
                                   nextAssignmentRows = setManualOverride(
                                     nextAssignmentRows,
@@ -1085,80 +1274,57 @@ export function ScheduleHeatmapEditor({
                                     person.driver_id
                                   );
                                 }
+
+                                if (cell.rowKind === "assignment") {
+                                  nextAssignmentRows = setManualOverride(
+                                    nextAssignmentRows,
+                                    cell.rowIndex as number,
+                                    sourceDriverId
+                                  );
+                                } else {
+                                  nextReserveRows = setManualOverride(
+                                    nextReserveRows,
+                                    cell.rowIndex as number,
+                                    sourceDriverId
+                                  );
+                                }
+
                                 onRowsChange({
                                   assignmentRows: nextAssignmentRows,
                                   reserveRows: nextReserveRows
                                 });
                                 setArmedCell(null);
                                 setStatusMessage(
-                                  `${armedCell.driverName} moved to ${person.driver_name} on ${serviceDate.service_date}.`
+                                  `${armedCell.driverName} and ${person.driver_name} swapped on ${serviceDate.service_date}.`
                                 );
-                                return;
-                              }
-
-                              if (armedCell.rowKind === "assignment") {
-                                nextAssignmentRows = setManualOverride(
-                                  nextAssignmentRows,
-                                  armedCell.rowIndex,
-                                  person.driver_id
-                                );
-                              } else {
-                                nextReserveRows = setManualOverride(
-                                  nextReserveRows,
-                                  armedCell.rowIndex,
-                                  person.driver_id
-                                );
-                              }
-
-                              if (cell.rowKind === "assignment") {
-                                nextAssignmentRows = setManualOverride(
-                                  nextAssignmentRows,
-                                  cell.rowIndex as number,
-                                  sourceDriverId
-                                );
-                              } else {
-                                nextReserveRows = setManualOverride(
-                                  nextReserveRows,
-                                  cell.rowIndex as number,
-                                  sourceDriverId
-                                );
-                              }
-
-                              onRowsChange({
-                                assignmentRows: nextAssignmentRows,
-                                reserveRows: nextReserveRows
-                              });
-                              setArmedCell(null);
-                              setStatusMessage(
-                                `${armedCell.driverName} and ${person.driver_name} swapped on ${serviceDate.service_date}.`
-                              );
-                            }}
-                          >
-                            <span className="schedule-heatmap__cell-top">
-                              <span className="schedule-heatmap__cell-state">
-                                {cellStateLabel}
+                              }}
+                            >
+                              <span className="schedule-heatmap__cell-top">
+                                <span className="schedule-heatmap__cell-state">
+                                  {cellStateLabel}
+                                </span>
+                                {pendingRouteDemandCell ? (
+                                  <span className="schedule-heatmap__cell-chip">Pending</span>
+                                ) : cell?.manualOverride ? (
+                                  <span className="schedule-heatmap__cell-chip">Edited</span>
+                                ) : null}
                               </span>
-                              {pendingRouteDemandCell ? (
-                                <span className="schedule-heatmap__cell-chip">Pending</span>
-                              ) : cell?.manualOverride ? (
-                                <span className="schedule-heatmap__cell-chip">Edited</span>
-                              ) : null}
-                            </span>
-                            <span className="schedule-heatmap__cell-meta">
-                              {pendingRouteDemandCell?.projectedMinutes
-                                ? `${pendingRouteDemandCell.projectedMinutes} min`
-                                : cell?.projectedMinutes
-                                  ? `${cell.projectedMinutes} min`
-                                  : "—"}
-                            </span>
-                            <span
-                              className={`schedule-heatmap__preference-bar schedule-heatmap__preference-bar--${preferenceState}`}
-                              data-testid={`schedule-heatmap-preference-${serviceDate.service_date}-${person.driver_id}`}
-                              aria-label={`Preference: ${preferenceLabel}`}
-                              title={`Preference: ${preferenceLabel}`}
-                            />
-                          </button>
-                          {onMarkSickNoShow ? (
+                              <span className="schedule-heatmap__cell-meta">
+                                {pendingRouteDemandCell?.projectedMinutes
+                                  ? `${pendingRouteDemandCell.projectedMinutes} min`
+                                  : cell?.projectedMinutes
+                                    ? `${cell.projectedMinutes} min`
+                                    : "—"}
+                              </span>
+                              <span
+                                className={`schedule-heatmap__preference-bar schedule-heatmap__preference-bar--${preferenceState}`}
+                                data-testid={`schedule-heatmap-preference-${serviceDate.service_date}-${person.driver_id}`}
+                                aria-label={`Preference: ${preferenceLabel}`}
+                                title={`Preference: ${preferenceLabel}`}
+                              />
+                            </button>
+                          )}
+                          {onMarkSickNoShow && !isComparisonCell ? (
                             <button
                               type="button"
                               className="schedule-heatmap__sick-button"

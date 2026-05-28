@@ -1,9 +1,11 @@
 import { within } from "@testing-library/react";
 
 export function scheduleHeatmapSectionIn(container: HTMLElement): HTMLElement {
-  const section = within(container)
-    .getByRole("heading", { name: "Planned schedule heatmap" })
-    .closest("section");
+  const section =
+    container.querySelector("section.schedule-heatmap") ??
+    within(container)
+      .queryByRole("heading", { name: "Planned schedule heatmap" })
+      ?.closest("section");
   if (!section) {
     throw new Error("Heatmap section not found");
   }

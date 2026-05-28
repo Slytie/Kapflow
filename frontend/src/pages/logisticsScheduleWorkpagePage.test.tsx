@@ -1,6 +1,7 @@
 import { act, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { HttpResponse, http } from "msw";
+import { afterEach, vi } from "vitest";
 
 import driverPreferencesRunWorkpageStateSnapshot from "@fixtures/workpage_driver_preferences_v0_run_state.json";
 import routeDemandArtifactStateSnapshot from "@fixtures/workpage_route_demand_v0_artifact_state.json";
@@ -15,6 +16,7 @@ import {
   SCHEDULE_DEPENDENCY_STATUS_SUMMARY
 } from "@/components/workpages/ScheduleWorkpageSurface";
 import { getApiRequestContextHeaders, setApiRequestContextHeaders } from "@/lib/api/config";
+import { workpagesRepository } from "@/lib/repositories";
 import { server } from "@/test/api/server";
 import { mutationLog } from "@/test/api/handlers";
 import {
@@ -42,6 +44,156 @@ function driverHeatmapRow(section: HTMLElement, driverName: string): HTMLElement
   }
   return row as HTMLElement;
 }
+
+function setTestCurrentServiceDate(serviceDate: string | null): void {
+  if (serviceDate) {
+    (
+      globalThis as {
+        __COMPANYOS_TEST_CURRENT_SERVICE_DATE__?: string;
+      }
+    ).__COMPANYOS_TEST_CURRENT_SERVICE_DATE__ = serviceDate;
+    return;
+  }
+  delete (
+    globalThis as {
+      __COMPANYOS_TEST_CURRENT_SERVICE_DATE__?: string;
+    }
+  ).__COMPANYOS_TEST_CURRENT_SERVICE_DATE__;
+}
+
+function shiftIsoDate(isoDate: string, days: number): string {
+  const date = new Date(`${isoDate}T00:00:00Z`);
+  date.setUTCDate(date.getUTCDate() + days);
+  return date.toISOString().slice(0, 10);
+}
+
+function replaceMappedDateStrings(value: unknown, replacements: Map<string, string>): unknown {
+  if (Array.isArray(value)) {
+    return value.map((item) => replaceMappedDateStrings(item, replacements));
+  }
+  if (value && typeof value === "object") {
+    return Object.fromEntries(
+      Object.entries(value as Record<string, unknown>).map(([key, entryValue]) => [
+        key,
+        replaceMappedDateStrings(entryValue, replacements)
+      ])
+    );
+  }
+  if (typeof value !== "string") {
+    return value;
+  }
+  let nextValue = value;
+  for (const [from, to] of replacements) {
+    nextValue = nextValue.split(from).join(to);
+  }
+  return nextValue;
+}
+
+function buildFutureScheduleArtifactPayload(
+  artifactVersionId: string,
+  workflowRunId: string
+): Record<string, unknown> {
+  const payload = structuredClone(scheduleArtifactStateSnapshot.workpage_state) as Record<string, any>;
+  const replacements = new Map<string, string>();
+  for (let offset = 0; offset < 7; offset += 1) {
+    const fromDate = shiftIsoDate("2026-03-22", offset);
+    const toDate = shiftIsoDate("2026-03-29", offset);
+    replacements.set(fromDate, toDate);
+    replacements.set(fromDate.replaceAll("-", ""), toDate.replaceAll("-", ""));
+  }
+  const shifted = replaceMappedDateStrings(payload, replacements) as Record<string, any>;
+  shifted.freshness.source_version = artifactVersionId;
+  shifted.source.source_artifact_version_id = artifactVersionId;
+  shifted.artifact_context.workflow_run_id = workflowRunId;
+  shifted.artifact_context.artifact_version_id = artifactVersionId;
+  shifted.artifact_context.latest_in_chain_artifact_version_id = artifactVersionId;
+  shifted.workpage.source_artifact_version_id = artifactVersionId;
+  shifted.workpage.summary.operational_week_start = "2026-03-29";
+  shifted.calculations.selected_day.service_date = "2026-03-31";
+  return shifted;
+}
+
+function buildFutureRollingRealityContract(
+  workflowRunId: string,
+  artifactVersionId: string
+): Record<string, unknown> {
+  const previousWeekStart = "2026-03-22";
+  return {
+    artifact_context: {
+      artifact_version_id: artifactVersionId,
+      workflow_run_id: workflowRunId,
+      artifact_kind: "planning.draft_weekly_schedule.workbook",
+      supersedes_artifact_version_id: null,
+      superseded_by_artifact_version_id: null,
+      latest_in_chain_artifact_version_id: artifactVersionId,
+      download_path: `/api/v1/artifacts/${artifactVersionId}/download.bin`
+    },
+    source: {
+      mode: "artifact_projection",
+      primary_dataset_key: "planning.actual_hours_snapshot.workbook",
+      source_dataset_keys: ["planning.actual_hours_snapshot.workbook"],
+      source_artifact_version_id: "av-actual-hours-001",
+      source_refs: ["/api/v1/artifacts/av-actual-hours-001"]
+    },
+    freshness: {
+      generated_at: "2026-03-25T09:15:00Z",
+      source_kind: "frontend-test",
+      source_version: "rolling-reality-fixture-future"
+    },
+    previous_week_reality: {
+      workflow_run_id: workflowRunId,
+      schedule_artifact_version_id: artifactVersionId,
+      actual_hours_artifact_version_id: "av-actual-hours-001",
+      planning_week_id: "2026-W14",
+      operational_week_start: "2026-03-29",
+      previous_week_start: previousWeekStart,
+      previous_week_end: "2026-03-28",
+      service_dates: ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((weekdayLabel, index) => {
+        const serviceDate = shiftIsoDate(previousWeekStart, index);
+        return {
+          service_date: serviceDate,
+          label: serviceDate,
+          weekday_label: weekdayLabel
+        };
+      }),
+      drivers: [
+        {
+          driver_id: "A2TU4ZRI65E1H8",
+          driver_name: "Abhiraj Singh",
+          employment_type: "FT",
+          on_call_eligible: true,
+          availability_summary: "Available",
+          previous_week_minutes: 1680,
+          cells: Array.from({ length: 7 }, (_, index) => {
+            const serviceDate = shiftIsoDate(previousWeekStart, index);
+            return {
+              service_date: serviceDate,
+              state: "WORKED",
+              normalized_state: "worked",
+              blocked_reasons: [],
+              actual_minutes: 60 * (index + 1),
+              cumulative_week_minutes: ((index + 1) * (index + 2) * 60) / 2,
+              route_id: `prev-route-${index + 1}`,
+              route_slot_class: "AM",
+              source_ref: `reality:${index + 1}`,
+              call_in_sick_flag: false,
+              cancellation_flag: false,
+              non_working_day_flag: false
+            };
+          })
+        }
+      ],
+      day_summaries: [],
+      activity_rows: [],
+      note: "Pinned previous-week reality snapshot."
+    }
+  };
+}
+
+afterEach(() => {
+  setTestCurrentServiceDate(null);
+  vi.restoreAllMocks();
+});
 
 function buildCoverageCandidate(
   coverageTarget: Record<string, any>,
@@ -493,6 +645,10 @@ describe("LogisticsScheduleWorkpagePage", () => {
     let currentRouteDemandRequests = 0;
     let secondaryScheduleRequests = 0;
     let secondaryRouteDemandRequests = 0;
+    setTestCurrentServiceDate("2026-05-26");
+    vi.spyOn(workpagesRepository, "scheduleArtifactPreviousWeekReality").mockResolvedValue(
+      buildFutureRollingRealityContract("wr-weekly-002", "av-schedule-artifact-002") as never
+    );
     server.use(
       http.get("*/api/v1/stories/logistics-three-workflow", () =>
         HttpResponse.json({
@@ -724,18 +880,9 @@ describe("LogisticsScheduleWorkpagePage", () => {
       http.get(
         "*/api/v1/workpages/workflow-runs/wr-weekly-002/schedule-v0/artifacts/av-schedule-artifact-002",
         () => {
-          const payload = structuredClone(scheduleArtifactStateSnapshot.workpage_state) as Record<
-            string,
-            any
-          >;
-          payload.artifact_context.workflow_run_id = "wr-weekly-002";
-          payload.artifact_context.artifact_version_id = "av-schedule-artifact-002";
-          payload.artifact_context.latest_in_chain_artifact_version_id =
-            "av-schedule-artifact-002";
-          payload.freshness.source_version = "av-schedule-artifact-002";
-          payload.workpage.source_artifact_version_id = "av-schedule-artifact-002";
-          payload.source.source_artifact_version_id = "av-schedule-artifact-002";
-          return HttpResponse.json(payload);
+          return HttpResponse.json(
+            buildFutureScheduleArtifactPayload("av-schedule-artifact-002", "wr-weekly-002")
+          );
         }
       )
     );
@@ -769,7 +916,32 @@ describe("LogisticsScheduleWorkpagePage", () => {
     await waitFor(() => {
       expect(window.location.pathname).toBe("/runs/wr-weekly-002/workpages/schedule-v0");
     });
-    expect(await screen.findByRole("dialog", { name: "Edit Weekly Schedule" })).toBeInTheDocument();
+    const dialog = await screen.findByRole("dialog", { name: "Edit Weekly Schedule" });
+    const heatmap = heatmapSection(dialog);
+    const futureSundayButton = within(heatmap)
+      .getAllByRole("button")
+      .find((button) => (button.getAttribute("aria-label") ?? "").includes("2026-03-29: assigned route"));
+    const futureTuesdayButton = within(heatmap)
+      .getAllByRole("button")
+      .find((button) => (button.getAttribute("aria-label") ?? "").includes("2026-03-31: assigned route"));
+    expect(within(heatmap).getAllByText("Read-only prior week")).toHaveLength(7);
+    expect(
+      within(heatmap).queryByText("2026-03-29: dispatch report", {
+        exact: false
+      })
+    ).not.toBeInTheDocument();
+    expect(
+      within(heatmap).queryByText("2026-03-30: dispatch report", {
+        exact: false
+      })
+    ).not.toBeInTheDocument();
+    expect(futureSundayButton).toBeDefined();
+    expect(futureSundayButton).toHaveAttribute("aria-disabled", "false");
+    expect(futureTuesdayButton).toBeDefined();
+    expect(futureTuesdayButton).toHaveAttribute("aria-disabled", "false");
+    expect(
+      heatmap.querySelector(".schedule-heatmap__date-header--selected")
+    ).toHaveTextContent("2026-03-31");
   }, 30000);
 
   it("shows next week as unavailable in the chooser when no editable draft exists yet", async () => {

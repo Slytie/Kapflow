@@ -14,6 +14,7 @@ import {
   SCHEDULE_DEPENDENCY_ITEM_SUMMARIES,
   SCHEDULE_DEPENDENCY_STATUS_SUMMARY
 } from "@/components/workpages/ScheduleWorkpageSurface";
+import { workpagesRepository } from "@/lib/repositories";
 import { ScheduleQuickEditModal } from "@/pages/LogisticsScheduleWorkpagePage";
 import { mutationLog, resetApiState } from "@/test/api/handlers";
 import { renderRoute } from "@/test/renderRoute";
@@ -31,7 +32,9 @@ function escapeRegExp(value: string): string {
 }
 
 function heatmapSection(): HTMLElement {
-  const section = screen.getByRole("heading", { name: "Planned schedule heatmap" }).closest("section");
+  const section =
+    document.querySelector("section.schedule-heatmap") ??
+    screen.queryByRole("heading", { name: "Planned schedule heatmap" })?.closest("section");
   if (!section) {
     throw new Error("Heatmap section not found");
   }
@@ -49,6 +52,29 @@ function heatmapButton(
     throw new Error("Matching heatmap cell not found");
   }
   return button as HTMLButtonElement;
+}
+
+function queryHeatmapCellElement(
+  section: HTMLElement,
+  predicate: (label: string) => boolean
+): HTMLElement | null {
+  return (
+    Array.from(section.querySelectorAll<HTMLElement>("[data-testid^='schedule-heatmap-cell-']")).find(
+      (candidate) => predicate(candidate.getAttribute("aria-label") ?? "")
+    ) ?? null
+  );
+}
+
+function heatmapDateHeaderLabels(section: HTMLElement): string[] {
+  return Array.from(section.querySelectorAll(".schedule-heatmap__date-header strong")).map(
+    (element) => element.textContent?.trim() ?? ""
+  );
+}
+
+function heatmapPrimaryHeaderLabels(section: HTMLElement): string[] {
+  return Array.from(section.querySelectorAll("thead th > strong")).map(
+    (element) => element.textContent?.trim() ?? ""
+  );
 }
 
 function personNameFromLabel(label: string): string {
@@ -73,6 +99,49 @@ function setTestCurrentServiceDate(serviceDate: string | null): void {
       __COMPANYOS_TEST_CURRENT_SERVICE_DATE__?: string;
     }
   ).__COMPANYOS_TEST_CURRENT_SERVICE_DATE__;
+}
+
+function shiftIsoDate(isoDate: string, days: number): string {
+  const date = new Date(`${isoDate}T00:00:00Z`);
+  date.setUTCDate(date.getUTCDate() + days);
+  return date.toISOString().slice(0, 10);
+}
+
+function replaceMappedDateStrings(value: unknown, replacements: Map<string, string>): unknown {
+  if (Array.isArray(value)) {
+    return value.map((item) => replaceMappedDateStrings(item, replacements));
+  }
+  if (value && typeof value === "object") {
+    return Object.fromEntries(
+      Object.entries(value as Record<string, unknown>).map(([key, entryValue]) => [
+        key,
+        replaceMappedDateStrings(entryValue, replacements)
+      ])
+    );
+  }
+  if (typeof value !== "string") {
+    return value;
+  }
+  let nextValue = value;
+  for (const [from, to] of replacements) {
+    nextValue = nextValue.split(from).join(to);
+  }
+  return nextValue;
+}
+
+function shiftWeekDateStrings(value: Record<string, any>, fromWeekStart: string, toWeekStart: string): void {
+  const replacements = new Map<string, string>();
+  for (let offset = 0; offset < 7; offset += 1) {
+    const fromDate = shiftIsoDate(fromWeekStart, offset);
+    const toDate = shiftIsoDate(toWeekStart, offset);
+    replacements.set(fromDate, toDate);
+    replacements.set(fromDate.replaceAll("-", ""), toDate.replaceAll("-", ""));
+  }
+  const shifted = replaceMappedDateStrings(value, replacements) as Record<string, any>;
+  Object.keys(value).forEach((key) => {
+    delete value[key];
+  });
+  Object.assign(value, shifted);
 }
 
 function driverHeatmapRow(section: HTMLElement, driverName: string): HTMLElement {
@@ -195,6 +264,183 @@ function buildScheduleRunPayload(
   return payload;
 }
 
+function buildRollingRealityContract(
+  workflowRunId = "wr-weekly-001",
+  artifactVersionId = "av-schedule-artifact-001",
+  options?: {
+    operationalWeekStart?: string;
+    previousWeekStart?: string;
+  }
+): Record<string, unknown> {
+  const operationalWeekStart = options?.operationalWeekStart ?? "2026-03-22";
+  const previousWeekStart = options?.previousWeekStart ?? shiftIsoDate(operationalWeekStart, -7);
+  return {
+    artifact_context: {
+      artifact_version_id: artifactVersionId,
+      workflow_run_id: workflowRunId,
+      artifact_kind: "planning.draft_weekly_schedule.workbook",
+      supersedes_artifact_version_id: null,
+      superseded_by_artifact_version_id: null,
+      latest_in_chain_artifact_version_id: artifactVersionId,
+      download_path: `/api/v1/artifacts/${artifactVersionId}/download.bin`
+    },
+    source: {
+      mode: "artifact_projection",
+      primary_dataset_key: "planning.actual_hours_snapshot.workbook",
+      source_dataset_keys: ["planning.actual_hours_snapshot.workbook"],
+      source_artifact_version_id: "av-actual-hours-001",
+      source_refs: ["/api/v1/artifacts/av-actual-hours-001"]
+    },
+    freshness: {
+      generated_at: "2026-03-25T09:15:00Z",
+      source_kind: "frontend-test",
+      source_version: "rolling-reality-fixture"
+    },
+    previous_week_reality: {
+      workflow_run_id: workflowRunId,
+      schedule_artifact_version_id: artifactVersionId,
+      actual_hours_artifact_version_id: "av-actual-hours-001",
+      planning_week_id: "2026-W13",
+      operational_week_start: operationalWeekStart,
+      previous_week_start: previousWeekStart,
+      previous_week_end: shiftIsoDate(previousWeekStart, 6),
+      service_dates: [
+        { service_date: shiftIsoDate(previousWeekStart, 0), label: shiftIsoDate(previousWeekStart, 0), weekday_label: "Sun" },
+        { service_date: shiftIsoDate(previousWeekStart, 1), label: shiftIsoDate(previousWeekStart, 1), weekday_label: "Mon" },
+        { service_date: shiftIsoDate(previousWeekStart, 2), label: shiftIsoDate(previousWeekStart, 2), weekday_label: "Tue" },
+        { service_date: shiftIsoDate(previousWeekStart, 3), label: shiftIsoDate(previousWeekStart, 3), weekday_label: "Wed" },
+        { service_date: shiftIsoDate(previousWeekStart, 4), label: shiftIsoDate(previousWeekStart, 4), weekday_label: "Thu" },
+        { service_date: shiftIsoDate(previousWeekStart, 5), label: shiftIsoDate(previousWeekStart, 5), weekday_label: "Fri" },
+        { service_date: shiftIsoDate(previousWeekStart, 6), label: shiftIsoDate(previousWeekStart, 6), weekday_label: "Sat" }
+      ],
+      drivers: [
+        {
+          driver_id: "A2TU4ZRI65E1H8",
+          driver_name: "Abhiraj Singh",
+          employment_type: "FT",
+          on_call_eligible: true,
+          availability_summary: "Available",
+          previous_week_minutes: 1680,
+          cells: [
+            {
+              service_date: shiftIsoDate(previousWeekStart, 0),
+              state: "WORKED",
+              normalized_state: "worked",
+              blocked_reasons: [],
+              actual_minutes: 60,
+              cumulative_week_minutes: 60,
+              route_id: "prev-route-1",
+              route_slot_class: "AM",
+              source_ref: "reality:1",
+              call_in_sick_flag: false,
+              cancellation_flag: false,
+              non_working_day_flag: false
+            },
+            {
+              service_date: shiftIsoDate(previousWeekStart, 1),
+              state: "WORKED",
+              normalized_state: "worked",
+              blocked_reasons: [],
+              actual_minutes: 120,
+              cumulative_week_minutes: 180,
+              route_id: "prev-route-2",
+              route_slot_class: "AM",
+              source_ref: "reality:2",
+              call_in_sick_flag: false,
+              cancellation_flag: false,
+              non_working_day_flag: false
+            },
+            {
+              service_date: shiftIsoDate(previousWeekStart, 2),
+              state: "WORKED",
+              normalized_state: "worked",
+              blocked_reasons: [],
+              actual_minutes: 180,
+              cumulative_week_minutes: 360,
+              route_id: "prev-route-3",
+              route_slot_class: "AM",
+              source_ref: "reality:3",
+              call_in_sick_flag: false,
+              cancellation_flag: false,
+              non_working_day_flag: false
+            },
+            {
+              service_date: shiftIsoDate(previousWeekStart, 3),
+              state: "WORKED",
+              normalized_state: "worked",
+              blocked_reasons: [],
+              actual_minutes: 240,
+              cumulative_week_minutes: 600,
+              route_id: "prev-route-4",
+              route_slot_class: "AM",
+              source_ref: "reality:4",
+              call_in_sick_flag: false,
+              cancellation_flag: false,
+              non_working_day_flag: false
+            },
+            {
+              service_date: shiftIsoDate(previousWeekStart, 4),
+              state: "WORKED",
+              normalized_state: "worked",
+              blocked_reasons: [],
+              actual_minutes: 300,
+              cumulative_week_minutes: 900,
+              route_id: "prev-route-5",
+              route_slot_class: "AM",
+              source_ref: "reality:5",
+              call_in_sick_flag: false,
+              cancellation_flag: false,
+              non_working_day_flag: false
+            },
+            {
+              service_date: shiftIsoDate(previousWeekStart, 5),
+              state: "WORKED",
+              normalized_state: "worked",
+              blocked_reasons: [],
+              actual_minutes: 360,
+              cumulative_week_minutes: 1260,
+              route_id: "prev-route-6",
+              route_slot_class: "AM",
+              source_ref: "reality:6",
+              call_in_sick_flag: false,
+              cancellation_flag: false,
+              non_working_day_flag: false
+            },
+            {
+              service_date: shiftIsoDate(previousWeekStart, 6),
+              state: "WORKED",
+              normalized_state: "worked",
+              blocked_reasons: [],
+              actual_minutes: 420,
+              cumulative_week_minutes: 1680,
+              route_id: "prev-route-7",
+              route_slot_class: "AM",
+              source_ref: "reality:7",
+              call_in_sick_flag: false,
+              cancellation_flag: false,
+              non_working_day_flag: false
+            }
+          ]
+        }
+      ],
+      day_summaries: [],
+      activity_rows: [],
+      note: "Pinned previous-week reality snapshot."
+    }
+  };
+}
+
+function buildFutureScheduleArtifactPayload(
+  artifactVersionId: string,
+  workflowRunId = "wr-weekly-future-001"
+): Record<string, unknown> {
+  return buildScheduleArtifactPayload(artifactVersionId, workflowRunId, (payload) => {
+    shiftWeekDateStrings(payload, "2026-03-22", "2026-03-29");
+    payload.workpage.summary.operational_week_start = "2026-03-29";
+    payload.calculations.selected_day.service_date = "2026-03-31";
+  });
+}
+
 function mockScheduleRunLatestDraftAvailable(
   workflowRunId: string,
   artifactVersionId = "av-schedule-artifact-001"
@@ -300,7 +546,7 @@ function buildCoverageCandidate(
 
 describe("LogisticsScheduleArtifactWorkpagePage", () => {
   beforeEach(() => {
-    setTestCurrentServiceDate("2026-05-26");
+    setTestCurrentServiceDate("2026-03-22");
   });
 
   afterEach(() => {
@@ -2012,10 +2258,13 @@ describe("LogisticsScheduleArtifactWorkpagePage", () => {
   );
 
   it(
-    "replaces elapsed columns with previous-week reality on the full artifact page",
+    "renders the chronological previous-week comparison on the full artifact page",
     async () => {
       const workflowRunId = "wr-weekly-inline-001";
       setTestCurrentServiceDate("2026-03-25");
+      vi.spyOn(workpagesRepository, "scheduleArtifactPreviousWeekReality").mockResolvedValue(
+        buildRollingRealityContract(workflowRunId, "av-schedule-artifact-001") as never
+      );
       window.history.pushState(
         {},
         "",
@@ -2025,23 +2274,92 @@ describe("LogisticsScheduleArtifactWorkpagePage", () => {
 
       expect(await screen.findByTestId("schedule-artifact-workpage-page")).toBeInTheDocument();
       const heatmap = heatmapSection();
-      expect(within(heatmap).getAllByText("Read-only prior week")).toHaveLength(3);
-      expect(within(heatmap).getByText("2026-03-15")).toBeInTheDocument();
-      expect(within(heatmap).getByText("2026-03-16")).toBeInTheDocument();
-      expect(within(heatmap).getByText("2026-03-17")).toBeInTheDocument();
+      expect(within(heatmap).getByText("Dispatch Reports")).toBeInTheDocument();
+      expect(within(heatmap).getByText("Scheduled Routes")).toBeInTheDocument();
+      expect(within(heatmap).getAllByText("Read-only prior week")).toHaveLength(7);
+      expect(heatmapPrimaryHeaderLabels(heatmap)).toEqual([
+        "People",
+        "2026-03-15",
+        "2026-03-16",
+        "2026-03-17",
+        "2026-03-18",
+        "2026-03-19",
+        "2026-03-20",
+        "2026-03-21",
+        "Hours",
+        "Routes",
+        "On call",
+        "Compliance",
+        "Metrics",
+        "2026-03-22",
+        "2026-03-23",
+        "2026-03-24",
+        "2026-03-25",
+        "2026-03-26",
+        "2026-03-27",
+        "2026-03-28"
+      ]);
+      expect(heatmapDateHeaderLabels(heatmap)).toEqual([
+        "2026-03-15",
+        "2026-03-16",
+        "2026-03-17",
+        "2026-03-18",
+        "2026-03-19",
+        "2026-03-20",
+        "2026-03-21",
+        "2026-03-22",
+        "2026-03-23",
+        "2026-03-24",
+        "2026-03-25",
+        "2026-03-26",
+        "2026-03-27",
+        "2026-03-28"
+      ]);
       expect(
         within(heatmap).queryByRole("button", {
           name: /on 2026-03-15:/i
         })
       ).not.toBeInTheDocument();
+      expect(
+        heatmapButton(heatmap, (label) => label.includes("2026-03-25: assigned route"))
+      ).toHaveAttribute("aria-disabled", "false");
+      expect(
+        within(heatmap).queryByRole("button", {
+          name: /on 2026-03-22:/i
+        })
+      ).not.toBeInTheDocument();
+      expect(
+        within(heatmap).queryByRole("button", {
+          name: /on 2026-03-24:/i
+        })
+      ).not.toBeInTheDocument();
+      expect(
+        queryHeatmapCellElement(heatmap, (label) => label.includes("2026-03-22: dispatch report"))
+      ).not.toBeNull();
+      expect(
+        queryHeatmapCellElement(heatmap, (label) => label.includes("2026-03-24: dispatch report"))
+      ).not.toBeNull();
+      expect(
+        within(
+          queryHeatmapCellElement(
+            heatmap,
+            (label) => label.includes("Abhiraj Singh on 2026-03-15: previous-week reality")
+          ) as HTMLElement
+        ).getByText("[1h]")
+      ).toBeInTheDocument();
+      expect(
+        within(
+          queryHeatmapCellElement(
+            heatmap,
+            (label) => label.includes("Abhiraj Singh on 2026-03-22: dispatch report")
+          ) as HTMLElement
+        ).getByText("[28h]")
+      ).toBeInTheDocument();
       const selectedHeatmapDate = heatmap.querySelector(".schedule-heatmap__date-header--selected");
       expect(selectedHeatmapDate).not.toBeNull();
       const selectedHeader = selectedHeatmapDate as HTMLElement;
-      expect(selectedHeader).toHaveTextContent("2026-03-25");
-      expect(within(selectedHeader).getByText("19")).toBeInTheDocument();
-      expect(within(selectedHeader).getByText("22")).toBeInTheDocument();
-      expect(within(selectedHeader).getByText("4 / 4")).toBeInTheDocument();
-      expect(within(selectedHeader).getByText("25")).toBeInTheDocument();
+      expect(selectedHeader).toHaveTextContent("2026-03-24");
+      expect(heatmap.querySelector(".schedule-heatmap__reality-secondary-metric")).not.toBeNull();
     },
     30000
   );
@@ -2051,6 +2369,9 @@ describe("LogisticsScheduleArtifactWorkpagePage", () => {
     async () => {
       const workflowRunId = "wr-weekly-inline-modal-001";
       setTestCurrentServiceDate("2026-03-25");
+      vi.spyOn(workpagesRepository, "scheduleArtifactPreviousWeekReality").mockResolvedValue(
+        buildRollingRealityContract(workflowRunId, "av-schedule-artifact-001") as never
+      );
       mockScheduleRunLatestDraftAvailable(workflowRunId);
       renderRoute(<ScheduleQuickEditModal workflowRunId={workflowRunId} onClose={vi.fn()} />, {
         route: `/runs/${workflowRunId}/workpages/schedule-v0`,
@@ -2059,16 +2380,265 @@ describe("LogisticsScheduleArtifactWorkpagePage", () => {
       const dialog = await screen.findByRole("dialog", { name: "Edit Weekly Schedule" });
       const editor = await within(dialog).findByTestId("schedule-quick-edit-editor");
       const heatmap = heatmapSectionIn(editor);
-      expect(within(heatmap).getAllByText("Read-only prior week")).toHaveLength(3);
-      expect(within(heatmap).getByText("2026-03-15")).toBeInTheDocument();
+      expect(within(heatmap).getByText("Dispatch Reports")).toBeInTheDocument();
+      expect(within(heatmap).getByText("Scheduled Routes")).toBeInTheDocument();
+      expect(within(heatmap).getAllByText("Read-only prior week")).toHaveLength(7);
+      expect(heatmapPrimaryHeaderLabels(heatmap)).toEqual([
+        "People",
+        "2026-03-15",
+        "2026-03-16",
+        "2026-03-17",
+        "2026-03-18",
+        "2026-03-19",
+        "2026-03-20",
+        "2026-03-21",
+        "Hrs",
+        "Rt",
+        "OC",
+        "Risk",
+        "Metrics",
+        "2026-03-22",
+        "2026-03-23",
+        "2026-03-24",
+        "2026-03-25",
+        "2026-03-26",
+        "2026-03-27",
+        "2026-03-28"
+      ]);
+      expect(heatmapDateHeaderLabels(heatmap)).toEqual([
+        "2026-03-15",
+        "2026-03-16",
+        "2026-03-17",
+        "2026-03-18",
+        "2026-03-19",
+        "2026-03-20",
+        "2026-03-21",
+        "2026-03-22",
+        "2026-03-23",
+        "2026-03-24",
+        "2026-03-25",
+        "2026-03-26",
+        "2026-03-27",
+        "2026-03-28"
+      ]);
       expect(
         within(heatmap).queryByRole("button", {
           name: /on 2026-03-15:/i
         })
       ).not.toBeInTheDocument();
+      expect(
+        heatmapButton(heatmap, (label) => label.includes("2026-03-25: assigned route"))
+      ).toHaveAttribute("aria-disabled", "false");
+      expect(
+        within(heatmap).queryByRole("button", {
+          name: /on 2026-03-23:/i
+        })
+      ).not.toBeInTheDocument();
+      expect(
+        queryHeatmapCellElement(heatmap, (label) => label.includes("2026-03-23: dispatch report"))
+      ).not.toBeNull();
+      expect(
+        within(
+          queryHeatmapCellElement(
+            heatmap,
+            (label) => label.includes("Abhiraj Singh on 2026-03-16: previous-week reality")
+          ) as HTMLElement
+        ).getByText("[3h]")
+      ).toBeInTheDocument();
+      expect(
+        within(
+          queryHeatmapCellElement(
+            heatmap,
+            (label) => label.includes("Abhiraj Singh on 2026-03-23: dispatch report")
+          ) as HTMLElement
+        ).getByText("[28h]")
+      ).toBeInTheDocument();
       const selectedHeatmapDate = heatmap.querySelector(".schedule-heatmap__date-header--selected");
       expect(selectedHeatmapDate).not.toBeNull();
-      expect(selectedHeatmapDate).toHaveTextContent("2026-03-25");
+      expect(selectedHeatmapDate).toHaveTextContent("2026-03-24");
+      expect(heatmap.querySelector(".schedule-heatmap__reality-secondary-metric")).not.toBeNull();
+    },
+    30000
+  );
+
+  it(
+    "uses the artifact-selected day as the comparison anchor when today's date is outside the artifact week",
+    async () => {
+      setTestCurrentServiceDate("2026-05-26");
+      renderRoute(<ScheduleQuickEditModalHarness workflowRunId="wr-weekly-001" />, {
+        route: "/runs/wr-weekly-001/workpages/schedule-v0",
+        path: "/runs/:workflowRunId/workpages/schedule-v0"
+      });
+
+      const dialog = await screen.findByRole("dialog", { name: "Edit Weekly Schedule" });
+      const editor = await within(dialog).findByTestId("schedule-quick-edit-editor");
+      const heatmap = heatmapSectionIn(editor);
+      expect(within(heatmap).getAllByText("Read-only prior week")).toHaveLength(7);
+      expect(heatmapDateHeaderLabels(heatmap)).toEqual([
+        "2026-03-15",
+        "2026-03-16",
+        "2026-03-17",
+        "2026-03-18",
+        "2026-03-19",
+        "2026-03-20",
+        "2026-03-21",
+        "2026-03-22",
+        "2026-03-23",
+        "2026-03-24",
+        "2026-03-25",
+        "2026-03-26",
+        "2026-03-27",
+        "2026-03-28"
+      ]);
+      expect(
+        heatmapButton(heatmap, (label) => label.includes("2026-03-24: assigned route"))
+      ).toHaveAttribute("aria-disabled", "false");
+      expect(
+        within(heatmap).queryByRole("button", {
+          name: /on 2026-03-22:/i
+        })
+      ).not.toBeInTheDocument();
+      expect(
+        within(heatmap).queryByRole("button", {
+          name: /on 2026-03-23:/i
+        })
+      ).not.toBeInTheDocument();
+      expect(
+        queryHeatmapCellElement(heatmap, (label) => label.includes("2026-03-22: dispatch report"))
+      ).not.toBeNull();
+      expect(
+        queryHeatmapCellElement(heatmap, (label) => label.includes("2026-03-23: dispatch report"))
+      ).not.toBeNull();
+      const selectedHeatmapDate = heatmap.querySelector(".schedule-heatmap__date-header--selected");
+      expect(selectedHeatmapDate).not.toBeNull();
+      expect(selectedHeatmapDate).toHaveTextContent("2026-03-24");
+    },
+    30000
+  );
+
+  it(
+    "keeps future scheduled weeks editable while still showing the previous-week comparison block",
+    async () => {
+      const workflowRunId = "wr-weekly-future-001";
+      const artifactVersionId = "av-schedule-artifact-future-001";
+      setTestCurrentServiceDate("2026-03-25");
+      vi.spyOn(workpagesRepository, "scheduleArtifactPreviousWeekReality").mockResolvedValue(
+        buildRollingRealityContract(workflowRunId, artifactVersionId, {
+          operationalWeekStart: "2026-03-29",
+          previousWeekStart: "2026-03-22"
+        }) as never
+      );
+      mockScheduleRunLatestDraftAvailable(workflowRunId, artifactVersionId);
+      server.use(
+        http.get(
+          `*/api/v1/workpages/workflow-runs/${workflowRunId}/schedule-v0/artifacts/${artifactVersionId}`,
+          () => HttpResponse.json(buildFutureScheduleArtifactPayload(artifactVersionId, workflowRunId))
+        )
+      );
+
+      renderRoute(<ScheduleQuickEditModal workflowRunId={workflowRunId} onClose={vi.fn()} />, {
+        route: `/runs/${workflowRunId}/workpages/schedule-v0`,
+        path: "/runs/:workflowRunId/workpages/schedule-v0"
+      });
+
+      const dialog = await screen.findByRole("dialog", { name: "Edit Weekly Schedule" });
+      const editor = await within(dialog).findByTestId("schedule-quick-edit-editor");
+      const heatmap = heatmapSectionIn(editor);
+      expect(within(heatmap).getAllByText("Read-only prior week")).toHaveLength(7);
+      expect(heatmapDateHeaderLabels(heatmap)).toEqual([
+        "2026-03-22",
+        "2026-03-23",
+        "2026-03-24",
+        "2026-03-25",
+        "2026-03-26",
+        "2026-03-27",
+        "2026-03-28",
+        "2026-03-29",
+        "2026-03-30",
+        "2026-03-31",
+        "2026-04-01",
+        "2026-04-02",
+        "2026-04-03",
+        "2026-04-04"
+      ]);
+      expect(
+        queryHeatmapCellElement(heatmap, (label) => label.includes("2026-03-22: previous-week reality"))
+      ).not.toBeNull();
+      expect(
+        queryHeatmapCellElement(heatmap, (label) => label.includes("2026-03-29: dispatch report"))
+      ).toBeNull();
+      expect(
+        queryHeatmapCellElement(heatmap, (label) => label.includes("2026-03-30: dispatch report"))
+      ).toBeNull();
+      expect(
+        heatmapButton(heatmap, (label) => label.includes("2026-03-29: assigned route"))
+      ).toHaveAttribute("aria-disabled", "false");
+      expect(
+        heatmapButton(heatmap, (label) => label.includes("2026-03-31: assigned route"))
+      ).toHaveAttribute("aria-disabled", "false");
+      const selectedHeatmapDate = heatmap.querySelector(".schedule-heatmap__date-header--selected");
+      expect(selectedHeatmapDate).not.toBeNull();
+      expect(selectedHeatmapDate).toHaveTextContent("2026-03-31");
+    },
+    30000
+  );
+
+  it(
+    "uses the visible heatmap week when the artifact summary operational week is stale",
+    async () => {
+      const workflowRunId = "wr-weekly-inline-stale-week-001";
+      setTestCurrentServiceDate("2026-05-26");
+      mockScheduleRunLatestDraftAvailable(workflowRunId);
+      server.use(
+        http.get(
+          `*/api/v1/workpages/workflow-runs/${workflowRunId}/schedule-v0/artifacts/av-schedule-artifact-001`,
+          () =>
+            HttpResponse.json(
+              buildScheduleArtifactPayload("av-schedule-artifact-001", workflowRunId, (payload) => {
+                payload.workpage.summary.operational_week_start = "2026-03-02";
+              })
+            )
+        )
+      );
+      renderRoute(<ScheduleQuickEditModal workflowRunId={workflowRunId} onClose={vi.fn()} />, {
+        route: `/runs/${workflowRunId}/workpages/schedule-v0`,
+        path: "/runs/:workflowRunId/workpages/schedule-v0"
+      });
+
+      const dialog = await screen.findByRole("dialog", { name: "Edit Weekly Schedule" });
+      const editor = await within(dialog).findByTestId("schedule-quick-edit-editor");
+      const heatmap = heatmapSectionIn(editor);
+      expect(within(heatmap).getAllByText("Read-only prior week")).toHaveLength(7);
+      expect(heatmapDateHeaderLabels(heatmap)).toEqual([
+        "2026-03-15",
+        "2026-03-16",
+        "2026-03-17",
+        "2026-03-18",
+        "2026-03-19",
+        "2026-03-20",
+        "2026-03-21",
+        "2026-03-22",
+        "2026-03-23",
+        "2026-03-24",
+        "2026-03-25",
+        "2026-03-26",
+        "2026-03-27",
+        "2026-03-28"
+      ]);
+      expect(
+        heatmapButton(heatmap, (label) => label.includes("2026-03-24: assigned route"))
+      ).toHaveAttribute("aria-disabled", "false");
+      expect(
+        within(heatmap).queryByRole("button", {
+          name: /on 2026-03-22:/i
+        })
+      ).not.toBeInTheDocument();
+      expect(
+        queryHeatmapCellElement(heatmap, (label) => label.includes("2026-03-22: dispatch report"))
+      ).not.toBeNull();
+      const selectedHeatmapDate = heatmap.querySelector(".schedule-heatmap__date-header--selected");
+      expect(selectedHeatmapDate).not.toBeNull();
+      expect(selectedHeatmapDate).toHaveTextContent("2026-03-24");
     },
     30000
   );
@@ -2076,32 +2646,26 @@ describe("LogisticsScheduleArtifactWorkpagePage", () => {
   it(
     "falls back to the planned grid with a warning when previous-week reality fails to load",
     async () => {
+      const workflowRunId = "wr-weekly-inline-error-001";
       setTestCurrentServiceDate("2026-03-25");
-      server.use(
-        http.get(
-          "*/api/v1/workpages/workflow-runs/:workflowRunId/schedule-v0/artifacts/:artifactVersionId/reality/previous-week",
-          () =>
-            HttpResponse.json(
-              {
-                status: "error",
-                error: {
-                  code: "workpage_projection_unavailable",
-                  message: "reality temporarily unavailable"
-                }
-              },
-              { status: 409 }
-            )
-        )
+      vi.spyOn(workpagesRepository, "scheduleArtifactPreviousWeekReality").mockRejectedValue(
+        new Error("reality temporarily unavailable")
       );
       window.history.pushState(
         {},
         "",
-        "/runs/wr-weekly-001/workpages/schedule-v0/artifacts/av-schedule-artifact-001"
+        `/runs/${workflowRunId}/workpages/schedule-v0/artifacts/av-schedule-artifact-001`
       );
       render(<App />);
 
       expect(await screen.findByTestId("schedule-artifact-workpage-page")).toBeInTheDocument();
-      expect(await screen.findByRole("heading", { name: "Previous-week reality unavailable" })).toBeInTheDocument();
+      expect(
+        await screen.findByRole(
+          "heading",
+          { name: "Previous-week reality unavailable" },
+          { timeout: 5000 }
+        )
+      ).toBeInTheDocument();
       const heatmap = heatmapSection();
       expect(within(heatmap).queryByText("Read-only prior week")).not.toBeInTheDocument();
       expect(within(heatmap).queryByText("2026-03-15")).not.toBeInTheDocument();

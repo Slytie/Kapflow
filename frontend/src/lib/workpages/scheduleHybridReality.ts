@@ -16,6 +16,7 @@ export type ScheduleHybridColumnProvenance =
 export interface ScheduleHybridHeatmapDate extends WorkpageScheduleHeatmapDate {
   column_provenance: ScheduleHybridColumnProvenance;
   source_service_date: string;
+  read_only: boolean;
 }
 
 export interface ScheduleHybridHeatmapCell extends WorkpageScheduleHeatmapCell {
@@ -26,6 +27,7 @@ export interface ScheduleHybridHeatmapCell extends WorkpageScheduleHeatmapCell {
   previous_week_blocked_reasons?: string[];
   previous_week_actual_minutes?: number | null;
   previous_week_cumulative_week_minutes?: number | null;
+  reality_summary_minutes?: number | null;
   previous_week_route_id?: string | null;
   previous_week_route_slot_class?: string | null;
   previous_week_source_ref?: string | null;
@@ -49,6 +51,41 @@ export interface ScheduleHybridRealityResult {
   heatmapSection: ScheduleHybridHeatmapSection;
   selectedServiceDateOverride: string | null;
   elapsedCurrentWeekServiceDates: string[];
+}
+
+export type ScheduleDisplayedWeekRelation =
+  | "no_visible_week"
+  | "current_week"
+  | "historical_demo_week"
+  | "future_week";
+
+export interface ScheduleComparisonContext {
+  operationalWeekStart: string | null;
+  displayedWeekRelation: ScheduleDisplayedWeekRelation;
+  comparisonServiceDate: string | null;
+  shouldShowPreviousWeekComparison: boolean;
+}
+
+function plannedHybridSection(
+  heatmapSection: WorkpageScheduleHeatmapSection
+): ScheduleHybridHeatmapSection {
+  return {
+    ...heatmapSection,
+    service_dates: heatmapSection.service_dates.map((serviceDate) => ({
+      ...serviceDate,
+      column_provenance: "planned_current_week",
+      source_service_date: serviceDate.service_date,
+      read_only: false
+    })),
+    people: heatmapSection.people.map((person) => ({
+      ...person,
+      cells: person.cells.map((cell) => ({
+        ...cell,
+        cell_provenance: "planned_current_week",
+        source_service_date: cell.service_date
+      }))
+    }))
+  };
 }
 
 function testCurrentServiceDateOverride(): string | null {
@@ -85,6 +122,63 @@ function operationalWeekServiceDates(operationalWeekStart: string): string[] {
     dates.push(serviceDate);
   }
   return dates;
+}
+
+function applyDisplayedRollingRealitySummaries(input: {
+  cells: ScheduleHybridHeatmapCell[];
+  serviceDates: ScheduleHybridHeatmapDate[];
+}): ScheduleHybridHeatmapCell[] {
+  return input.cells.map((cell, index) => {
+    const serviceDate = input.serviceDates[index] ?? null;
+    if (
+      !serviceDate ||
+      serviceDate.column_provenance !== "planned_current_week" ||
+      !serviceDate.read_only ||
+      cell.cell_provenance !== "previous_week_reality"
+    ) {
+      return cell;
+    }
+
+    let total = 0;
+    let includedCount = 0;
+    for (let cursor = index; cursor >= 0 && includedCount < 7; cursor -= 1) {
+      const candidate = input.cells[cursor];
+      if (candidate?.cell_provenance !== "previous_week_reality") {
+        continue;
+      }
+      total += candidate.previous_week_actual_minutes ?? 0;
+      includedCount += 1;
+    }
+
+    return {
+      ...cell,
+      reality_summary_minutes: total
+    };
+  });
+}
+
+function visibleServiceDates(
+  heatmapSection: WorkpageScheduleHeatmapSection | null | undefined
+): string[] {
+  return (heatmapSection?.service_dates ?? [])
+    .map((serviceDate) => serviceDate.service_date)
+    .filter((serviceDate) => /^\d{4}-\d{2}-\d{2}$/.test(serviceDate));
+}
+
+function serviceDateWithinOperationalWeek(
+  operationalWeekStart: string,
+  serviceDate: string | null | undefined
+): boolean {
+  if (!serviceDate) {
+    return false;
+  }
+  const weekDates = operationalWeekServiceDates(operationalWeekStart);
+  const weekStart = weekDates[0] ?? null;
+  const weekEnd = weekDates[weekDates.length - 1] ?? null;
+  if (!weekStart || !weekEnd) {
+    return false;
+  }
+  return serviceDate.localeCompare(weekStart) >= 0 && serviceDate.localeCompare(weekEnd) <= 0;
 }
 
 function serviceDateFormatter(timeZone: string): Intl.DateTimeFormat {
@@ -134,6 +228,104 @@ export function elapsedCurrentWeekServiceDates(input: {
   return weekDates.filter((serviceDate) => serviceDate.localeCompare(input.currentServiceDate) < 0);
 }
 
+export function resolveOperationalWeekStart(input: {
+  summaryOperationalWeekStart?: string | null;
+  heatmapSection?: WorkpageScheduleHeatmapSection | null;
+}): string | null {
+  const summaryOperationalWeekStart = input.summaryOperationalWeekStart ?? null;
+  const heatmapServiceDates = visibleServiceDates(input.heatmapSection);
+  const visibleWeekStart = heatmapServiceDates[0] ?? null;
+  if (!summaryOperationalWeekStart) {
+    return visibleWeekStart;
+  }
+  if (!visibleWeekStart) {
+    return summaryOperationalWeekStart;
+  }
+  const summaryWeekDates = new Set(operationalWeekServiceDates(summaryOperationalWeekStart));
+  const visibleDatesMatchSummaryWeek = heatmapServiceDates.every((serviceDate) =>
+    summaryWeekDates.has(serviceDate)
+  );
+  return visibleDatesMatchSummaryWeek ? summaryOperationalWeekStart : visibleWeekStart;
+}
+
+function resolveDisplayedWeekRelation(input: {
+  operationalWeekStart: string | null | undefined;
+  currentServiceDate: string;
+}): ScheduleDisplayedWeekRelation {
+  if (!input.operationalWeekStart) {
+    return "no_visible_week";
+  }
+  if (serviceDateWithinOperationalWeek(input.operationalWeekStart, input.currentServiceDate)) {
+    return "current_week";
+  }
+  const weekDates = operationalWeekServiceDates(input.operationalWeekStart);
+  const weekStart = weekDates[0] ?? null;
+  const weekEnd = weekDates[weekDates.length - 1] ?? null;
+  if (!weekStart || !weekEnd) {
+    return "no_visible_week";
+  }
+  if (weekEnd.localeCompare(input.currentServiceDate) < 0) {
+    return "historical_demo_week";
+  }
+  if (weekStart.localeCompare(input.currentServiceDate) > 0) {
+    return "future_week";
+  }
+  return "no_visible_week";
+}
+
+export function resolveScheduleComparisonContext(input: {
+  summaryOperationalWeekStart?: string | null;
+  heatmapSection?: WorkpageScheduleHeatmapSection | null;
+  currentServiceDate: string;
+  fallbackServiceDate?: string | null;
+}): ScheduleComparisonContext {
+  const operationalWeekStart = resolveOperationalWeekStart({
+    summaryOperationalWeekStart: input.summaryOperationalWeekStart,
+    heatmapSection: input.heatmapSection
+  });
+  const displayedWeekRelation = resolveDisplayedWeekRelation({
+    operationalWeekStart,
+    currentServiceDate: input.currentServiceDate
+  });
+  const fallbackInWeek = serviceDateWithinOperationalWeek(
+    operationalWeekStart ?? "",
+    input.fallbackServiceDate
+  );
+  const comparisonServiceDate =
+    displayedWeekRelation === "current_week"
+      ? input.currentServiceDate
+      : displayedWeekRelation === "historical_demo_week" && fallbackInWeek
+        ? input.fallbackServiceDate ?? null
+        : null;
+  return {
+    operationalWeekStart,
+    displayedWeekRelation,
+    comparisonServiceDate,
+    shouldShowPreviousWeekComparison: operationalWeekStart !== null
+  };
+}
+
+export function resolveComparisonServiceDate(input: {
+  operationalWeekStart: string | null | undefined;
+  currentServiceDate: string;
+  fallbackServiceDate?: string | null;
+}): string | null {
+  const displayedWeekRelation = resolveDisplayedWeekRelation({
+    operationalWeekStart: input.operationalWeekStart,
+    currentServiceDate: input.currentServiceDate
+  });
+  if (displayedWeekRelation === "current_week") {
+    return input.currentServiceDate;
+  }
+  if (
+    displayedWeekRelation === "historical_demo_week" &&
+    serviceDateWithinOperationalWeek(input.operationalWeekStart ?? "", input.fallbackServiceDate)
+  ) {
+    return input.fallbackServiceDate ?? null;
+  }
+  return null;
+}
+
 export function previousWeekRealityDateByCurrentWeekDate(input: {
   operationalWeekStart: string;
   currentWeekServiceDates: string[];
@@ -158,13 +350,15 @@ function realityCellFromContract(input: {
   driverId: string;
   realityServiceDate: string;
   sourceServiceDate: string;
+  displayServiceDate?: string;
+  plannedCell?: WorkpageScheduleHeatmapCell | null;
 }): ScheduleHybridHeatmapCell {
   const driver =
     input.reality.previous_week_reality.drivers.find((item) => item.driver_id === input.driverId) ??
     null;
   const cell = driver?.cells.find((item) => item.service_date === input.realityServiceDate) ?? null;
   return {
-    service_date: input.realityServiceDate,
+    service_date: input.displayServiceDate ?? input.realityServiceDate,
     state: "empty",
     row_kind: null,
     route_slot_id: null,
@@ -172,10 +366,10 @@ function realityCellFromContract(input: {
     assignment_status: null,
     planned_driver_day_state: null,
     manual_override: false,
-    preference_state: undefined,
-    availability_state: null,
-    availability_reason_code: null,
-    availability_source_ref: null,
+    preference_state: input.plannedCell?.preference_state,
+    availability_state: input.plannedCell?.availability_state ?? null,
+    availability_reason_code: input.plannedCell?.availability_reason_code ?? null,
+    availability_source_ref: input.plannedCell?.availability_source_ref ?? null,
     cell_provenance: "previous_week_reality",
     source_service_date: input.sourceServiceDate,
     reality_service_date: input.realityServiceDate,
@@ -183,6 +377,7 @@ function realityCellFromContract(input: {
     previous_week_blocked_reasons: cell?.blocked_reasons ?? [],
     previous_week_actual_minutes: cell?.actual_minutes ?? 0,
     previous_week_cumulative_week_minutes: cell?.cumulative_week_minutes ?? 0,
+    reality_summary_minutes: null,
     previous_week_route_id: cell?.route_id ?? null,
     previous_week_route_slot_class: cell?.route_slot_class ?? null,
     previous_week_source_ref: cell?.source_ref ?? null,
@@ -192,23 +387,17 @@ function realityCellFromContract(input: {
   };
 }
 
-function shiftSelectedServiceDate(input: {
+function resolveSelectedServiceDateOverride(input: {
   calculations: WorkpageScheduleCalculations | null;
   heatmapSection: WorkpageScheduleHeatmapSection | null;
-  elapsedCurrentWeekServiceDates: string[];
 }): string | null {
   const selectedServiceDate = input.calculations?.selected_day.service_date ?? null;
-  if (!selectedServiceDate || !input.elapsedCurrentWeekServiceDates.includes(selectedServiceDate)) {
-    return selectedServiceDate;
-  }
   const serviceDates = input.heatmapSection?.service_dates ?? [];
-  const firstEditableVisibleDay =
-    serviceDates.find(
-      (serviceDate) =>
-        !input.elapsedCurrentWeekServiceDates.includes(serviceDate.service_date)
-    )?.service_date ?? null;
-  if (firstEditableVisibleDay) {
-    return firstEditableVisibleDay;
+  if (!selectedServiceDate) {
+    return serviceDates[0]?.service_date ?? null;
+  }
+  if (serviceDates.some((serviceDate) => serviceDate.service_date === selectedServiceDate)) {
+    return selectedServiceDate;
   }
   return serviceDates[0]?.service_date ?? null;
 }
@@ -218,6 +407,8 @@ export function buildHybridScheduleReality(input: {
   heatmapSection: WorkpageScheduleHeatmapSection | null;
   operationalWeekStart: string | null | undefined;
   reality: SchedulePreviousWeekRealityContract | null;
+  comparisonMode?: ScheduleDisplayedWeekRelation | null;
+  comparisonServiceDate?: string | null;
   now?: Date;
   timeZone?: string;
 }): ScheduleHybridRealityResult | null {
@@ -225,76 +416,92 @@ export function buildHybridScheduleReality(input: {
     return null;
   }
 
-  const currentServiceDate = currentServiceDateInTimeZone(
-    input.now ?? new Date(),
-    input.timeZone ?? SCHEDULE_SERVICE_TIMEZONE
-  );
-  const elapsedServiceDates = elapsedCurrentWeekServiceDates({
-    operationalWeekStart: input.operationalWeekStart,
-    currentServiceDate
+  const selectedServiceDateOverride = resolveSelectedServiceDateOverride({
+    calculations: input.calculations,
+    heatmapSection: input.heatmapSection
   });
+  const currentServiceDate =
+    input.comparisonServiceDate ??
+    currentServiceDateInTimeZone(input.now ?? new Date(), input.timeZone ?? SCHEDULE_SERVICE_TIMEZONE);
+  const shouldSubstituteElapsedCurrentWeekDays =
+    input.comparisonMode === "current_week" || input.comparisonMode === "historical_demo_week";
+  const readOnlyCurrentWeekServiceDates =
+    shouldSubstituteElapsedCurrentWeekDays && input.comparisonServiceDate
+      ? elapsedCurrentWeekServiceDates({
+          operationalWeekStart: input.operationalWeekStart,
+          currentServiceDate
+        })
+      : [];
   const reality = input.reality;
 
-  if (elapsedServiceDates.length === 0 || !reality) {
+  if (!reality) {
     return {
-      heatmapSection: {
-        ...input.heatmapSection,
-        service_dates: input.heatmapSection.service_dates.map((serviceDate) => ({
-          ...serviceDate,
-          column_provenance: "planned_current_week",
-          source_service_date: serviceDate.service_date
-        })),
-        people: input.heatmapSection.people.map((person) => ({
-          ...person,
-          cells: person.cells.map((cell) => ({
-            ...cell,
-            cell_provenance: "planned_current_week",
-            source_service_date: cell.service_date
-          }))
-        }))
-      },
-      selectedServiceDateOverride: input.calculations?.selected_day.service_date ?? null,
+      heatmapSection: plannedHybridSection(input.heatmapSection),
+      selectedServiceDateOverride,
       elapsedCurrentWeekServiceDates: []
     };
   }
 
+  const currentWeekDates = input.heatmapSection.service_dates;
   const previousWeekRealityDates = previousWeekRealityDateByCurrentWeekDate({
     operationalWeekStart: input.operationalWeekStart,
-    currentWeekServiceDates: elapsedServiceDates
+    currentWeekServiceDates: currentWeekDates.map((serviceDate) => serviceDate.service_date)
   });
-  const serviceDates: ScheduleHybridHeatmapDate[] = input.heatmapSection.service_dates.map(
-    (serviceDate) => {
+  const previousWeekColumns: ScheduleHybridHeatmapDate[] = currentWeekDates.flatMap((serviceDate) => {
     const previousWeekServiceDate = previousWeekRealityDates[serviceDate.service_date];
     if (!previousWeekServiceDate) {
-      return {
-        ...serviceDate,
-        column_provenance: "planned_current_week" as const,
-        source_service_date: serviceDate.service_date
-      };
+      return [];
     }
     const realityDate =
       reality.previous_week_reality.service_dates.find(
         (item) => item.service_date === previousWeekServiceDate
       ) ?? null;
-    return {
-      ...serviceDate,
-      service_date: previousWeekServiceDate,
-      label: realityDate?.label ?? previousWeekServiceDate,
-      weekday_label: realityDate?.weekday_label ?? serviceDate.weekday_label,
-      is_selected_day: false,
+    return [
+      {
+        ...serviceDate,
+        service_date: previousWeekServiceDate,
+        label: realityDate?.label ?? previousWeekServiceDate,
+        weekday_label: realityDate?.weekday_label ?? serviceDate.weekday_label,
+        is_selected_day: false,
         column_provenance: "previous_week_reality" as const,
-        source_service_date: serviceDate.service_date
-      };
-    }
-  );
+        source_service_date: serviceDate.service_date,
+        read_only: true
+      }
+    ];
+  });
+  const currentWeekColumns: ScheduleHybridHeatmapDate[] = currentWeekDates.map((serviceDate) => ({
+    ...serviceDate,
+    column_provenance: "planned_current_week" as const,
+    source_service_date: serviceDate.service_date,
+    read_only: readOnlyCurrentWeekServiceDates.includes(serviceDate.service_date)
+  }));
+  const serviceDates: ScheduleHybridHeatmapDate[] = [
+    ...previousWeekColumns,
+    ...currentWeekColumns
+  ];
 
   const people: ScheduleHybridHeatmapPerson[] = input.heatmapSection.people.map((person) => {
     const cellsBySourceServiceDate = new Map(
       person.cells.map((cell) => [cell.service_date, cell])
     );
-    const cells: ScheduleHybridHeatmapCell[] = serviceDates.map((serviceDate) => {
+    const cells = serviceDates.map((serviceDate) => {
+      const plannedCell = cellsBySourceServiceDate.get(serviceDate.source_service_date) ?? null;
+      const realityServiceDate = previousWeekRealityDates[serviceDate.source_service_date] ?? null;
+      if (
+        serviceDate.column_provenance === "planned_current_week" &&
+        serviceDate.read_only &&
+        realityServiceDate
+      ) {
+        return realityCellFromContract({
+          reality,
+          driverId: person.driver_id,
+          realityServiceDate,
+          sourceServiceDate: serviceDate.source_service_date,
+          displayServiceDate: serviceDate.service_date,
+          plannedCell
+        });
+      }
       if (serviceDate.column_provenance !== "previous_week_reality") {
-        const plannedCell = cellsBySourceServiceDate.get(serviceDate.source_service_date);
         return {
           ...(plannedCell ?? {
             service_date: serviceDate.service_date,
@@ -319,12 +526,16 @@ export function buildHybridScheduleReality(input: {
         reality,
         driverId: person.driver_id,
         realityServiceDate: serviceDate.service_date,
-        sourceServiceDate: serviceDate.source_service_date
+        sourceServiceDate: serviceDate.source_service_date,
+        displayServiceDate: serviceDate.service_date
       });
     });
     return {
       ...person,
-      cells
+      cells: applyDisplayedRollingRealitySummaries({
+        cells,
+        serviceDates
+      })
     };
   });
 
@@ -334,11 +545,7 @@ export function buildHybridScheduleReality(input: {
       service_dates: serviceDates,
       people
     },
-    selectedServiceDateOverride: shiftSelectedServiceDate({
-      calculations: input.calculations,
-      heatmapSection: input.heatmapSection,
-      elapsedCurrentWeekServiceDates: elapsedServiceDates
-    }),
-    elapsedCurrentWeekServiceDates: elapsedServiceDates
+    selectedServiceDateOverride,
+    elapsedCurrentWeekServiceDates: readOnlyCurrentWeekServiceDates
   };
 }

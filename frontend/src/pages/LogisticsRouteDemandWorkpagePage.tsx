@@ -1083,7 +1083,8 @@ function RouteDemandArtifactEditor({
           openScheduleQuickEdit: true,
           targetScheduleArtifactVersionId:
             submitted.target_schedule_artifact_version_id ?? null,
-          routeDemandCoverageContext: submitted.route_demand_coverage_context ?? null
+          routeDemandCoverageContext: submitted.route_demand_coverage_context ?? null,
+          scheduleComparisonModeHint: isFutureWeekArtifact ? "future_week" : null
         }
       });
     } catch (error) {

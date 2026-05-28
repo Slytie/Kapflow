@@ -38,7 +38,7 @@ import { workpagesRepository } from "@/lib/repositories";
 import {
   buildHybridScheduleReality,
   currentServiceDateInTimeZone,
-  elapsedCurrentWeekServiceDates,
+  resolveScheduleComparisonContext,
   SCHEDULE_SERVICE_TIMEZONE
 } from "@/lib/workpages/scheduleHybridReality";
 import type {
@@ -1029,11 +1029,13 @@ export function ScheduleQuickEditModal({
   workflowRunId,
   targetArtifactVersionId = null,
   routeDemandCoverageContext = null,
+  comparisonModeHint = null,
   onClose
 }: {
   workflowRunId: string;
   targetArtifactVersionId?: string | null;
   routeDemandCoverageContext?: WorkpageScheduleRouteDemandCoverageContext | null;
+  comparisonModeHint?: "future_week" | null;
   onClose: () => void;
 }): JSX.Element {
   const titleId = useId();
@@ -1119,6 +1121,7 @@ export function ScheduleQuickEditModal({
               enableSickNoShow
               onArtifactVersionChange={setActiveArtifactVersionId}
               routeDemandCoverageContext={routeDemandCoverageContext}
+              comparisonModeHint={comparisonModeHint}
             />
           ) : query.isLoading ? (
             <StatePanel
@@ -1398,6 +1401,7 @@ interface ScheduleArtifactEditorProps {
   enableSickNoShow?: boolean;
   onArtifactVersionChange?: (artifactVersionId: string) => void;
   routeDemandCoverageContext?: WorkpageScheduleRouteDemandCoverageContext | null;
+  comparisonModeHint?: "future_week" | null;
 }
 
 interface PendingRouteDemandCoverageIntent {
@@ -1413,7 +1417,8 @@ function ScheduleArtifactEditor({
   onClose,
   enableSickNoShow = false,
   onArtifactVersionChange,
-  routeDemandCoverageContext = null
+  routeDemandCoverageContext = null,
+  comparisonModeHint = null
 }: ScheduleArtifactEditorProps): JSX.Element {
   const navigate = useNavigate();
   const location = useLocation();
@@ -1486,25 +1491,42 @@ function ScheduleArtifactEditor({
       action.kind === "open_previous_week_reality" ||
       action.action_id === "workpage.schedule-v0.open_previous_week_reality"
   );
-  const operationalWeekStart = asString(contract?.workpage.summary.operational_week_start);
-  const comparisonCurrentServiceDate = useMemo(
+  const selectedServiceDate = asString(contract?.calculations?.selected_day.service_date);
+  const actualCurrentServiceDate = useMemo(
     () => currentServiceDateInTimeZone(new Date(), SCHEDULE_SERVICE_TIMEZONE),
     []
   );
-  const comparisonElapsedServiceDates = useMemo(
-    () =>
-      operationalWeekStart
-        ? elapsedCurrentWeekServiceDates({
-            operationalWeekStart,
-            currentServiceDate: comparisonCurrentServiceDate
-          })
-        : [],
-    [comparisonCurrentServiceDate, operationalWeekStart]
+  const comparisonContext = useMemo(
+    () => {
+      const resolvedContext = resolveScheduleComparisonContext({
+        summaryOperationalWeekStart: asString(contract?.workpage.summary.operational_week_start),
+        heatmapSection,
+        currentServiceDate: actualCurrentServiceDate,
+        fallbackServiceDate: selectedServiceDate
+      });
+      if (comparisonModeHint !== "future_week" || !resolvedContext.operationalWeekStart) {
+        return resolvedContext;
+      }
+      return {
+        ...resolvedContext,
+        displayedWeekRelation: "future_week" as const,
+        comparisonServiceDate: null
+      };
+    },
+    [
+      actualCurrentServiceDate,
+      comparisonModeHint,
+      contract?.workpage.summary.operational_week_start,
+      heatmapSection,
+      selectedServiceDate
+    ]
   );
+  const operationalWeekStart = comparisonContext.operationalWeekStart;
+  const comparisonCurrentServiceDate = comparisonContext.comparisonServiceDate;
   const shouldLoadPreviousWeekReality =
     Boolean(workflowRunId && artifactVersionId) &&
     Boolean(previousWeekRealityAction?.state === "available") &&
-    comparisonElapsedServiceDates.length > 0;
+    comparisonContext.shouldShowPreviousWeekComparison;
   const previousWeekRealityQuery = useQuery({
     queryKey: [
       "workpages",
@@ -1973,7 +1995,9 @@ function ScheduleArtifactEditor({
     calculations: currentCalculations,
     heatmapSection,
     operationalWeekStart,
-    reality: previousWeekRealityQuery.data ?? null
+    reality: previousWeekRealityQuery.data ?? null,
+    comparisonMode: comparisonContext.displayedWeekRelation,
+    comparisonServiceDate: comparisonCurrentServiceDate
   });
   const effectiveHeatmapSection = hybridReality?.heatmapSection ?? heatmapSection;
   const selectedServiceDateOverride = hybridReality?.selectedServiceDateOverride ?? null;

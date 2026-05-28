@@ -54,6 +54,7 @@ type ScheduleQuickEditTarget = {
   workflowRunId: string;
   artifactVersionId: string | null;
   routeDemandCoverageContext: WorkpageScheduleRouteDemandCoverageContext | null;
+  comparisonModeHint: "future_week" | null;
 };
 
 type ScheduleWeekChoice = {
@@ -601,13 +602,16 @@ export function AppShell(): JSX.Element {
           : null,
       routeDemandCoverageContext: scheduleRouteDemandCoverageContextFromState(
         routeState.routeDemandCoverageContext
-      )
+      ),
+      comparisonModeHint:
+        routeState.scheduleComparisonModeHint === "future_week" ? "future_week" : null
     });
     setIsScheduleWeekPickerOpen(false);
     const nextState = { ...routeState };
     delete nextState.openScheduleQuickEdit;
     delete nextState.targetScheduleArtifactVersionId;
     delete nextState.routeDemandCoverageContext;
+    delete nextState.scheduleComparisonModeHint;
     navigate(
       {
         pathname: location.pathname,
@@ -663,7 +667,8 @@ export function AppShell(): JSX.Element {
       setScheduleQuickEditTarget({
         workflowRunId: selection.workflowRunId,
         artifactVersionId: selection.artifactVersionId,
-        routeDemandCoverageContext: null
+        routeDemandCoverageContext: null,
+        comparisonModeHint: selection.key === "next" ? "future_week" : null
       });
       return;
     }
@@ -671,7 +676,8 @@ export function AppShell(): JSX.Element {
       state: {
         openScheduleQuickEdit: true,
         targetScheduleArtifactVersionId: selection.artifactVersionId,
-        routeDemandCoverageContext: null
+        routeDemandCoverageContext: null,
+        scheduleComparisonModeHint: selection.key === "next" ? "future_week" : null
       }
     });
   };
@@ -830,7 +836,8 @@ export function AppShell(): JSX.Element {
                   setScheduleQuickEditTarget({
                     workflowRunId: activeWorkflowRunId,
                     artifactVersionId: null,
-                    routeDemandCoverageContext: null
+                    routeDemandCoverageContext: null,
+                    comparisonModeHint: null
                   });
                 }}
               >
@@ -1049,6 +1056,7 @@ export function AppShell(): JSX.Element {
           workflowRunId={scheduleQuickEditTarget.workflowRunId}
           targetArtifactVersionId={scheduleQuickEditTarget.artifactVersionId}
           routeDemandCoverageContext={scheduleQuickEditTarget.routeDemandCoverageContext}
+          comparisonModeHint={scheduleQuickEditTarget.comparisonModeHint}
           onClose={() => {
             setScheduleQuickEditTarget(null);
           }}

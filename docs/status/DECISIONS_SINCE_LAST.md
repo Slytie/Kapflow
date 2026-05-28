@@ -2,6 +2,12 @@
 
 Record any decisions made since the last session so a fresh Codex run can rehydrate quickly.
 
+## 2026-05-26 (schedule comparison mode split and shortcut capture)
+- Comparison-mode decision: the editable `schedule-v0` surfaces now distinguish `current_week`, `historical_demo_week`, and `future_week` from the displayed schedule week versus the real `America/Vancouver` service date instead of treating any selected in-week day as an elapsed-day anchor.
+- Future-week decision: future weekly drafts keep the previous-week comparison block when pinned reality exists, but all seven scheduled-week columns stay on planned schedule truth with no synthesized dispatch-report substitution or elapsed-day lockout.
+- Demo-compat decision: the selected-day fallback remains intentionally enabled only for historical demo weeks so fixture-backed March demos still show inline dispatch-report comparison until a backend-authored comparison mode replaces the frontend inference.
+- Follow-up decision: the currently accepted shortcuts for this comparison slice are now tracked in `docs/planning/LOGISTICS_WORKPAGES_SCHEDULE_COMPARISON_SHORTCUTS_NOTE.md` for later cleanup rather than remaining implicit in the UI implementation.
+
 ## 2026-05-25 (schedule main-view history rail removal)
 - UI decision: the canonical `schedule-v0` run page and full artifact page no longer render the accepted-series / draft-lineage side rail on the main surface.
 - Boundary decision: accepted history and draft lineage remain separate backend-authored metadata, but they should not compete with the main weekly schedule review/edit surface.
