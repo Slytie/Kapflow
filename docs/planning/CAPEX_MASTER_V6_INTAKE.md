@@ -52,12 +52,26 @@
 - Evidence: transaction composition regressions passed on 2026-06-02, including outer-transaction execution and outer rollback of nested effects.
 - Closeout posture: `MP-PR003` is closed as a repo runtime safety gate; this is not CAPEX production activation.
 
+## TASK-0237 closeout evidence
+- CAPEX invariant audit registry and CLI report resolved safety invariants as `hard_gate` and known CAPEX gaps as non-failing `known_gap` rows.
+- Initial audit passed on 2026-06-02 with 4 hard gates green and 4 known gaps recorded.
+- Evidence: focused invariant audit tests and direct `scripts/run_capex_invariant_audit.py` run passed.
+- Closeout posture: `MP-PR004` is closed as a repo platform-readiness gate; this is not CAPEX production activation.
+
+## TASK-0238 closeout evidence
+- Shared generated-artifact helper canonicalizes JSON bytes, enforces expected digest and canonical partition validation, writes through root-confined blob storage, and emits canonical `artifact.version.created` events through existing artifact effects.
+- Existing explicit artifact rows replay only when workflow, kind, digest, byte size, media type, role, and canonical partition fields match; conflicts raise `generated_artifact_conflict`.
+- Evidence: focused generated-artifact helper tests passed on 2026-06-02.
+- Closeout posture: `MP-PR005` is closed as a repo platform-readiness helper; broad generated-artifact migration remains later CAPEX scope.
+
 ## Current-code blocker mappings
 | Blocker | CAPEX task refs | Current repo surface |
 |---|---|---|
 | Approval response domain coupling | `TASK-0257`, `TASK-0561`, `TASK-0576` | `src/onetruth/application/handlers/approvals.py` |
 | Artifact auth-before-read and storage confinement | `TASK-0235`, `TASK-0562`, `TASK-0577` | `src/onetruth/api/routes/artifacts.py`, `src/onetruth/application/handlers/artifacts.py`, `src/onetruth/infrastructure/artifacts/storage.py` |
 | Transaction composition safety | `TASK-0236` | `src/onetruth/application/handlers/schedule_control.py`, `src/onetruth/application/handlers/logistics_handoff.py` |
+| Invariant audit harness | `TASK-0237` | `src/onetruth/application/services/capex_invariant_audit.py`, `scripts/run_capex_invariant_audit.py` |
+| Canonical generated-artifact helper | `TASK-0238` | `src/onetruth/application/handlers/_shared/artifact_effects.py` |
 | CAPEX project membership runtime | `TASK-0261`..`TASK-0263`, `TASK-0385`, `TASK-0386`, `TASK-0563` | future CAPEX project scope runtime |
 | Source occurrence / SourceRef | `TASK-0268`, `TASK-0391`, `TASK-0407`, `TASK-0428`, `TASK-0564`, `TASK-0578` | future source occurrence and evidence resolver |
 

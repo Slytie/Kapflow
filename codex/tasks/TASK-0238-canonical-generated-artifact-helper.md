@@ -2,7 +2,7 @@
 id: TASK-0238
 epic: EPIC-137
 title: "Canonical generated-artifact helper"
-status: TODO
+status: DONE
 owners: ["platform"]
 reviewers: ["architect", "qa"]
 depends_on: ["TASK-0235", "TASK-0236", "TASK-0237"]
@@ -60,3 +60,10 @@ Add persist_generated_artifact_effects, canonical_json_bytes, existing-row valid
 
 ## Notes / decisions
 - Raw project corpora remain off-repo; use only sanitized fixtures, manifests, hashes, and aggregate evidence approved by the relevant fixture/governance task.
+
+## Closeout evidence
+- Added `canonical_json_bytes(value)` for deterministic compact ASCII JSON bytes.
+- Added `persist_generated_artifact_effects(...)` in the shared artifact-effects layer, using root-confined blob writes and existing canonical artifact-version/event/provenance effects.
+- Helper validates optional expected digest, canonical partition override pairs, existing explicit artifact rows, and conflict cases before duplicate events are emitted.
+- Focused generated-artifact helper tests cover creation, event/provenance emission, replay without duplicate events, digest mismatch, conflict detection, root-confined storage, and partition validation.
+- This closes `MP-PR005` as a repo platform-readiness helper only; broad generated-artifact migration remains later CAPEX scope.

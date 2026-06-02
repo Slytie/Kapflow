@@ -964,3 +964,9 @@ Record any decisions made since the last session so a fresh Codex run can rehydr
 - Shared-env decision: authoritative artifact download rejects `inmem://` storage in `shared_env` instead of treating memory-backed blobs as downloadable production-like truth.
 - Transaction decision: command handlers that may compose under an outer transaction use the shared savepoint-aware `command_transaction(connection)` helper rather than local `BEGIN` helpers.
 - Activation decision: `TASK-0235` and `TASK-0236` close repo runtime safety gates only; CAPEX production-like activation remains blocked by the imported gate set.
+
+## 2026-06-02 (CAPEX PR004/PR005 platform-readiness gates)
+- Audit decision: CAPEX invariant audit entries use `hard_gate`, `known_gap`, and `advisory` modes; only resolved P0 safety invariants hard-fail, while known imported gaps are reported without permanently red CI.
+- Generated-artifact decision: new generated artifacts should use deterministic `canonical_json_bytes` plus `persist_generated_artifact_effects(...)` when a task needs canonical JSON bytes, root-confined storage, digest validation, and canonical `artifact.version.created` emission.
+- Migration decision: broad generated-artifact call-site migration is deferred to later CAPEX generated-artifact tasks; `TASK-0238` adds the foundation helper and focused proof only.
+- Activation decision: `TASK-0237` and `TASK-0238` close repo platform-readiness gates only; CAPEX production-like activation remains blocked by the imported gate set.

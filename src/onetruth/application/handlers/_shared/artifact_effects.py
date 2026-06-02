@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import hashlib
+import json
 from pathlib import Path
 import sqlite3
 from typing import Any
@@ -215,6 +216,275 @@ def _create_artifact_version_effects(
         artifact_version_id=artifact_version_id,
     )
     return artifact_version
+
+
+def canonical_json_bytes(value: Any) -> bytes:
+    return json.dumps(
+        value,
+        separators=(",", ":"),
+        sort_keys=True,
+        ensure_ascii=True,
+        allow_nan=False,
+    ).encode("utf-8")
+
+
+def persist_generated_artifact_effects(
+    connection: sqlite3.Connection,
+    *,
+    storage_root: Path,
+    workflow_run_id: str,
+    artifact_kind: str,
+    artifact_role: str | None,
+    media_type: str,
+    file_name: str,
+    payload: Any,
+    metadata_json: dict[str, Any] | None = None,
+    actor_id: str = "system:runtime",
+    actor_type: str = "system",
+    artifact_version_id: str | None = None,
+    task_run_id: str | None = None,
+    parent_artifact_version_id: str | None = None,
+    supersedes_artifact_version_id: str | None = None,
+    lineage_note: str | None = None,
+    links: list[dict[str, Any]] | None = None,
+    canonical_partition_kind: str | None = None,
+    canonical_partition_key: str | None = None,
+    expected_content_digest: str | None = None,
+    event_idempotency: str | None = None,
+) -> dict[str, Any]:
+    has_partition_kind_override = canonical_partition_kind is not None
+    has_partition_key_override = canonical_partition_key is not None
+    if has_partition_kind_override != has_partition_key_override:
+        raise CommandError(
+            code="invalid_payload",
+            message="canonical_partition_kind and canonical_partition_key must be provided together",
+            details={},
+        )
+    if metadata_json is None:
+        metadata_json = {}
+    if not isinstance(metadata_json, dict):
+        raise CommandError(
+            code="invalid_metadata_json",
+            message="metadata_json must be a JSON object",
+            details={},
+        )
+    try:
+        json.dumps(
+            metadata_json,
+            separators=(",", ":"),
+            sort_keys=True,
+            ensure_ascii=True,
+            allow_nan=False,
+        )
+    except (TypeError, ValueError) as exc:
+        raise CommandError(
+            code="invalid_metadata_json",
+            message="metadata_json must be JSON-serializable",
+            details={},
+        ) from exc
+
+    try:
+        content = canonical_json_bytes(payload)
+    except (TypeError, ValueError) as exc:
+        raise CommandError(
+            code="invalid_generated_artifact_payload",
+            message="generated artifact payload must be JSON-serializable",
+            details={},
+        ) from exc
+
+    content_digest = _generated_content_digest(content)
+    byte_size = len(content)
+    normalized_expected_digest = _normalize_expected_content_digest(expected_content_digest)
+    if normalized_expected_digest is not None and normalized_expected_digest != content_digest:
+        raise CommandError(
+            code="generated_artifact_digest_mismatch",
+            message="generated artifact digest did not match expected digest",
+            details={
+                "expected_content_digest": normalized_expected_digest,
+                "actual_content_digest": content_digest,
+            },
+        )
+
+    expected_scope = _expected_generated_artifact_scope(
+        connection,
+        workflow_run_id=workflow_run_id,
+        artifact_kind=artifact_kind,
+        canonical_partition_kind=canonical_partition_kind,
+        canonical_partition_key=canonical_partition_key,
+    )
+    if artifact_version_id is not None:
+        existing = get_artifact_version(connection, artifact_version_id)
+        if existing is not None:
+            _validate_existing_generated_artifact(
+                existing,
+                workflow_run_id=workflow_run_id,
+                task_run_id=task_run_id,
+                artifact_kind=artifact_kind,
+                artifact_role=artifact_role,
+                media_type=media_type,
+                content_digest=content_digest,
+                byte_size=byte_size,
+                expected_scope=expected_scope,
+            )
+            existing["links"] = list_artifact_links_for_artifact(
+                connection,
+                artifact_version_id=artifact_version_id,
+            )
+            return {
+                "artifact_version": existing,
+                "generated": {
+                    "file_name": file_name,
+                    "media_type": media_type,
+                    "byte_size": byte_size,
+                    "content_digest": content_digest,
+                    "storage_uri": str(existing["storage_uri"]),
+                },
+                "replay": True,
+            }
+
+    try:
+        storage_uri, stored_digest, stored_byte_size = write_blob(
+            storage_root=storage_root,
+            workflow_run_id=workflow_run_id,
+            file_name=file_name,
+            content=content,
+        )
+    except ArtifactStorageError as exc:
+        raise CommandError(
+            code="generated_artifact_storage_failed",
+            message=str(exc),
+            details={},
+        ) from exc
+    if stored_digest != content_digest or stored_byte_size != byte_size:
+        raise CommandError(
+            code="generated_artifact_storage_failed",
+            message="generated artifact storage digest or size mismatch",
+            details={
+                "expected_content_digest": content_digest,
+                "stored_content_digest": stored_digest,
+                "expected_byte_size": byte_size,
+                "stored_byte_size": stored_byte_size,
+            },
+        )
+
+    artifact_version = _create_artifact_version_effects(
+        connection,
+        {
+            "artifact_version_id": artifact_version_id,
+            "workflow_run_id": workflow_run_id,
+            "task_run_id": task_run_id,
+            "artifact_kind": artifact_kind,
+            "artifact_role": artifact_role,
+            "media_type": media_type,
+            "storage_uri": storage_uri,
+            "content_digest": content_digest,
+            "byte_size": byte_size,
+            "metadata_json": metadata_json,
+            "parent_artifact_version_id": parent_artifact_version_id,
+            "supersedes_artifact_version_id": supersedes_artifact_version_id,
+            "lineage_note": lineage_note,
+            "links": links,
+            "actor_id": actor_id,
+            "actor_type": actor_type,
+            "canonical_partition_kind": canonical_partition_kind,
+            "canonical_partition_key": canonical_partition_key,
+        },
+        event_idempotency=event_idempotency,
+    )
+    return {
+        "artifact_version": artifact_version,
+        "generated": {
+            "file_name": file_name,
+            "media_type": media_type,
+            "byte_size": byte_size,
+            "content_digest": content_digest,
+            "storage_uri": storage_uri,
+        },
+        "replay": False,
+    }
+
+
+def _generated_content_digest(content: bytes) -> str:
+    return f"sha256:{hashlib.sha256(content).hexdigest()}"
+
+
+def _normalize_expected_content_digest(raw_digest: str | None) -> str | None:
+    if raw_digest is None:
+        return None
+    digest = str(raw_digest).strip()
+    if not digest:
+        raise CommandError(
+            code="invalid_payload",
+            message="expected_content_digest must not be empty",
+            details={},
+        )
+    if digest.startswith("sha256:"):
+        return digest
+    return f"sha256:{digest}"
+
+
+def _expected_generated_artifact_scope(
+    connection: sqlite3.Connection,
+    *,
+    workflow_run_id: str,
+    artifact_kind: str,
+    canonical_partition_kind: str | None,
+    canonical_partition_key: str | None,
+) -> dict[str, str | None]:
+    workflow_scope = _workflow_scope(connection, workflow_run_id)
+    expected_scope = _canonical_artifact_scope_fields(
+        tenant_id=workflow_scope["tenant_id"],
+        domain_id=workflow_scope["domain_id"],
+        workflow_partition_key=workflow_scope["partition_key"],
+        artifact_kind=artifact_kind,
+    )
+    if canonical_partition_kind is not None and canonical_partition_key is not None:
+        expected_scope["partition_kind"] = canonical_partition_kind
+        expected_scope["partition_key"] = canonical_partition_key
+    return expected_scope
+
+
+def _validate_existing_generated_artifact(
+    existing: dict[str, Any],
+    *,
+    workflow_run_id: str,
+    task_run_id: str | None,
+    artifact_kind: str,
+    artifact_role: str | None,
+    media_type: str,
+    content_digest: str,
+    byte_size: int,
+    expected_scope: dict[str, str | None],
+) -> None:
+    expected_fields: dict[str, object] = {
+        "workflow_run_id": workflow_run_id,
+        "artifact_kind": artifact_kind,
+        "artifact_role": artifact_role,
+        "media_type": media_type,
+        "content_digest": content_digest,
+        "byte_size": byte_size,
+        "tenant_id": expected_scope["tenant_id"],
+        "domain_id": expected_scope["domain_id"],
+        "dataset_key": expected_scope["dataset_key"],
+        "partition_kind": expected_scope["partition_kind"],
+        "partition_key": expected_scope["partition_key"],
+    }
+    if task_run_id is not None:
+        expected_fields["task_run_id"] = task_run_id
+    mismatches = {
+        field: {"expected": expected, "actual": existing.get(field)}
+        for field, expected in expected_fields.items()
+        if existing.get(field) != expected
+    }
+    if mismatches:
+        raise CommandError(
+            code="generated_artifact_conflict",
+            message="existing generated artifact row does not match requested content",
+            details={
+                "artifact_version_id": existing.get("artifact_version_id"),
+                "mismatches": mismatches,
+            },
+        )
 
 
 def _ingest_artifact_document_effects(

@@ -197,8 +197,8 @@ Note: `TASK-0087` / `TASK-0088` / `TASK-0089` were formerly duplicated as `TASK-
 | TASK-0234 | EPIC-137 | DONE | high | Release-bundle cleanliness + Cloud Build PR skeleton |
 | TASK-0235 | EPIC-137 | DONE | high | Artifact storage safety |
 | TASK-0236 | EPIC-137 | DONE | high | Transaction composition safety |
-| TASK-0237 | EPIC-137 | TODO | high | Invariant audit harness and demo audit fixture |
-| TASK-0238 | EPIC-137 | TODO | high | Canonical generated-artifact helper |
+| TASK-0237 | EPIC-137 | DONE | high | Invariant audit harness and demo audit fixture |
+| TASK-0238 | EPIC-137 | DONE | high | Canonical generated-artifact helper |
 | TASK-0239 | EPIC-137 | TODO | high | Shared run/input/edge effect helpers + LogisticsRunResolver |
 | TASK-0240 | EPIC-137 | TODO | high | Platform Foundation v0 declaration and branch gate |
 | TASK-0241 | EPIC-138 | TODO | high | Release build pipeline |
