@@ -64,6 +64,18 @@
 - Evidence: focused generated-artifact helper tests passed on 2026-06-02.
 - Closeout posture: `MP-PR005` is closed as a repo platform-readiness helper; broad generated-artifact migration remains later CAPEX scope.
 
+## TASK-0239 closeout evidence
+- Shared run/input/edge effect helpers centralize workflow-run resolution, workflow artifact input binding replay/conflict/replace semantics, and edge execution replay validation.
+- `LogisticsRunResolver` rejects same-scope, same-partition activation-key drift before logistics handoff mutates target inputs or edge activation state.
+- Evidence: focused helper tests, notify-only idempotency regression, and live-dispatch activation-key drift regression passed on 2026-06-02.
+- Closeout posture: `MP-PR006` is closed as a repo platform-readiness/runtime safety gate; this is not CAPEX production activation.
+
+## TASK-0240 closeout evidence
+- `docs/planning/CAPEX_PLATFORM_FOUNDATION_V0.md` declares PF0 for repo platform readiness only and records the `foundation/ip5` branch gate matrix.
+- PF0 keeps CAPEX runtime integration, raw corpus use, release/deploy work, project membership runtime, and SourceRef/source-occurrence runtime blocked until later gates close or receive explicit waivers.
+- CAPEX invariant audit now reports six hard gates green and four known gaps without turning known gaps permanently red.
+- Closeout posture: `MP-PR007` is closed as a repo platform-readiness declaration; this is not CAPEX production activation, pilot readiness, or deployment approval.
+
 ## Current-code blocker mappings
 | Blocker | CAPEX task refs | Current repo surface |
 |---|---|---|
@@ -72,6 +84,8 @@
 | Transaction composition safety | `TASK-0236` | `src/onetruth/application/handlers/schedule_control.py`, `src/onetruth/application/handlers/logistics_handoff.py` |
 | Invariant audit harness | `TASK-0237` | `src/onetruth/application/services/capex_invariant_audit.py`, `scripts/run_capex_invariant_audit.py` |
 | Canonical generated-artifact helper | `TASK-0238` | `src/onetruth/application/handlers/_shared/artifact_effects.py` |
+| Shared run/input/edge helpers and logistics run resolver | `TASK-0239` | `src/onetruth/application/handlers/_shared/runtime_effects.py`, `src/onetruth/application/services/logistics_run_resolver.py` |
+| Platform Foundation v0 declaration and branch gate | `TASK-0240` | `docs/planning/CAPEX_PLATFORM_FOUNDATION_V0.md` |
 | CAPEX project membership runtime | `TASK-0261`..`TASK-0263`, `TASK-0385`, `TASK-0386`, `TASK-0563` | future CAPEX project scope runtime |
 | Source occurrence / SourceRef | `TASK-0268`, `TASK-0391`, `TASK-0407`, `TASK-0428`, `TASK-0564`, `TASK-0578` | future source occurrence and evidence resolver |
 

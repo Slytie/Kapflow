@@ -61,6 +61,22 @@ CAPEX_INVARIANT_REGISTRY: tuple[CapexInvariant, ...] = (
         evaluator=lambda repo_root: _check_command_transaction_source(repo_root),
     ),
     CapexInvariant(
+        invariant_id="capex.pr006.run_input_edge_helpers",
+        title="Shared run/input/edge helpers and logistics resolver are present",
+        gate_mode="hard_gate",
+        task_refs=("TASK-0239",),
+        description="Shared runtime effects and LogisticsRunResolver must reject activation-key drift.",
+        evaluator=lambda repo_root: _check_run_input_edge_helper_source(repo_root),
+    ),
+    CapexInvariant(
+        invariant_id="capex.pr007.platform_foundation_v0",
+        title="Platform Foundation v0 declaration is recorded",
+        gate_mode="hard_gate",
+        task_refs=("TASK-0240",),
+        description="PF0 branch-gate matrix must record allowed scope and blocked activation paths.",
+        evaluator=lambda repo_root: _check_platform_foundation_v0_source(repo_root),
+    ),
+    CapexInvariant(
         invariant_id="capex.known_gap.approval_side_effect_coupling",
         title="Approval response domain side-effect coupling",
         gate_mode="known_gap",
@@ -321,6 +337,71 @@ def _check_command_transaction_source(repo_root: Path) -> AuditEvaluation:
         "handoff_no_local_begin": 'connection.execute("BEGIN' not in handoff_text,
     }
     missing = [key for key, present in required_markers.items() if not present]
+    return AuditEvaluation(
+        passed=not missing,
+        details={"missing_markers": missing},
+    )
+
+
+def _check_run_input_edge_helper_source(repo_root: Path) -> AuditEvaluation:
+    helper_text = (
+        repo_root / "src/onetruth/application/handlers/_shared/runtime_effects.py"
+    ).read_text(encoding="utf-8")
+    resolver_text = (
+        repo_root / "src/onetruth/application/services/logistics_run_resolver.py"
+    ).read_text(encoding="utf-8")
+    handoff_text = (
+        repo_root / "src/onetruth/application/handlers/logistics_handoff.py"
+    ).read_text(encoding="utf-8")
+    test_text = (repo_root / "tests/unit/test_runtime_effect_helpers.py").read_text(
+        encoding="utf-8"
+    )
+    required_markers = {
+        "run_helper": "def resolve_or_create_workflow_run_effects(" in helper_text,
+        "input_helper": "def create_or_validate_workflow_artifact_input_effects(" in helper_text,
+        "edge_helper": "def create_or_reuse_edge_execution_effects(" in helper_text,
+        "activation_drift_error": "activation_key_drift_detected" in helper_text,
+        "edge_replay_conflict": "edge_execution_replay_conflict" in helper_text,
+        "resolver_class": "class LogisticsRunResolver" in resolver_text,
+        "handoff_uses_resolver": "_LOGISTICS_RUN_RESOLVER.resolve_or_create" in handoff_text,
+        "handoff_uses_input_helper": "create_or_validate_workflow_artifact_input_effects(" in handoff_text,
+        "handoff_uses_edge_helper": "create_or_reuse_edge_execution_effects(" in handoff_text,
+        "helper_tests": "test_edge_execution_helper_reuses_correlation" in test_text,
+    }
+    missing = [key for key, present in required_markers.items() if not present]
+    return AuditEvaluation(
+        passed=not missing,
+        details={"missing_markers": missing},
+    )
+
+
+def _check_platform_foundation_v0_source(repo_root: Path) -> AuditEvaluation:
+    path = repo_root / "docs/planning/CAPEX_PLATFORM_FOUNDATION_V0.md"
+    if not path.exists():
+        return AuditEvaluation(
+            passed=False,
+            details={"missing_path": "docs/planning/CAPEX_PLATFORM_FOUNDATION_V0.md"},
+        )
+    text = path.read_text(encoding="utf-8")
+    required = (
+        "DECLARED_FOR_REPO_PLATFORM_READINESS",
+        "PR000",
+        "PR001",
+        "PR002",
+        "PR003",
+        "PR004",
+        "PR005",
+        "PR006",
+        "PR007",
+        "foundation/ip5",
+        "CAPEX production activation and pilot readiness claims remain blocked",
+        "Raw K12, K3, and blind-validation corpus files",
+        "Release/deploy work",
+        "CAPEX project membership runtime remains blocked",
+        "Source occurrence and SourceRef runtime remain blocked",
+        "external/operator-managed",
+    )
+    missing = [item for item in required if item not in text]
     return AuditEvaluation(
         passed=not missing,
         details={"missing_markers": missing},

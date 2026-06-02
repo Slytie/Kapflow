@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from datetime import date
 from functools import lru_cache
 import hashlib
 import json
@@ -14,6 +13,11 @@ from onetruth.application.handlers._shared.command_boundary import (
     _event_envelope,
     command_transaction,
 )
+from onetruth.application.handlers._shared.runtime_effects import (
+    create_or_reuse_edge_execution_effects,
+    create_or_validate_workflow_artifact_input_effects,
+    get_workflow_artifact_input_effects,
+)
 from onetruth.application.services.dispatch_reporting_build import (
     PLANNING_ACTUAL_HOURS_ARTIFACT_KIND,
     REPORTING_TO_PLANNING_EDGE_ID,
@@ -21,6 +25,7 @@ from onetruth.application.services.dispatch_reporting_build import (
     merge_planning_actual_hours_snapshot_payloads,
 )
 from onetruth.application.services.logistics_handoff_runtime import apply_partition_transform_by_id
+from onetruth.application.services.logistics_run_resolver import LogisticsRunResolver
 from onetruth.domain.partition_codec import validate_partition_key
 from onetruth.infrastructure.artifacts.storage import ArtifactStorageError, read_blob
 from onetruth.infrastructure.definitions.family_compiler import (
@@ -34,15 +39,9 @@ from onetruth.infrastructure.repositories.artifact_versions import (
     get_artifact_version,
 )
 from onetruth.infrastructure.repositories.edge_executions import (
-    create_edge_execution,
     get_edge_execution,
-    get_edge_execution_by_correlation,
     list_edge_executions,
     update_edge_execution_activation,
-)
-from onetruth.infrastructure.repositories.input_bindings import (
-    InputBindingConflictError,
-    create_workflow_run_input,
 )
 from onetruth.infrastructure.repositories.human_tasks import (
     create_human_task,
@@ -52,11 +51,7 @@ from onetruth.infrastructure.repositories.task_runs import (
     create_task_run,
     get_task_run_by_activation_key,
 )
-from onetruth.infrastructure.repositories.workflow_runs import (
-    create_workflow_run,
-    get_workflow_run,
-    list_workflow_runs,
-)
+from onetruth.infrastructure.repositories.workflow_runs import get_workflow_run
 
 
 EDGE_ID_WEEKLY_TO_LIVE = "weekly_seed_to_live_dispatch"
@@ -78,6 +73,7 @@ _LOGISTICS_FAMILY_PATH = (
 _LOGISTICS_TRANSFORMS_PATH = (
     _REPO_ROOT / "docs" / "workflows" / "logistics_ops_family" / "v1" / "PARTITION_TRANSFORMS.yaml"
 )
+_LOGISTICS_RUN_RESOLVER = LogisticsRunResolver()
 
 
 def materialize_weekly_seeds_command(
@@ -159,23 +155,6 @@ def materialize_weekly_seeds_command(
                 source_artifact_version_id=published_artifact_version_id,
                 target_partition_key=service_date_id,
             )
-            existing = get_edge_execution_by_correlation(
-                connection,
-                edge_id=EDGE_ID_WEEKLY_TO_LIVE,
-                correlation_key=correlation_key,
-            )
-            if existing is not None:
-                seed_artifact_id = str(existing.get("seed_artifact_version_id") or "")
-                seed_artifact = (
-                    _require_artifact(connection, seed_artifact_id)
-                    if seed_artifact_id
-                    else None
-                )
-                edge_rows.append(existing)
-                if seed_artifact is not None:
-                    seed_rows.append(seed_artifact)
-                continue
-
             now = utc_now_iso()
             seed_artifact_version_id = _stable_seed_artifact_id(
                 workflow_run_id=workflow_run_id,
@@ -221,7 +200,7 @@ def materialize_weekly_seeds_command(
             )
 
             edge_execution_id = f"ee-{uuid4()}"
-            create_edge_execution(
+            edge = create_or_reuse_edge_execution_effects(
                 connection,
                 edge_execution_id=edge_execution_id,
                 edge_id=EDGE_ID_WEEKLY_TO_LIVE,
@@ -253,7 +232,6 @@ def materialize_weekly_seeds_command(
                 activated_at=None,
                 created_at=now,
             )
-            edge = _require_edge_execution(connection, edge_execution_id)
             edge_rows.append(edge)
             seed_rows.append(seed_artifact)
 
@@ -400,10 +378,11 @@ def activate_live_dispatch_command(
 
     with command_transaction(connection):
         now = utc_now_iso()
-        target_workflow_run = _resolve_or_create_live_dispatch_run(
+        target_workflow_run = _LOGISTICS_RUN_RESOLVER.resolve_or_create_live_dispatch(
             connection,
             tenant_id=source_scope["tenant_id"],
             domain_id=source_scope["domain_id"],
+            workflow_id=LIVE_WORKFLOW_ID,
             service_date_id=service_date_id,
             activation_key=str(edge.get("target_activation_key") or f"{LIVE_WORKFLOW_ID}:{service_date_id}"),
             created_at=now,
@@ -517,7 +496,7 @@ def activate_live_dispatch_command(
             metadata_json={"edge_execution_id": edge_execution_id},
         )
 
-        _create_or_ignore_workflow_input_binding(
+        create_or_validate_workflow_artifact_input_effects(
             connection,
             workflow_run_id=target_workflow_run_id,
             binding_key="stage01.base_seed",
@@ -526,7 +505,7 @@ def activate_live_dispatch_command(
             metadata_json={"edge_execution_id": edge_execution_id, "kind": LIVE_SEED_KIND},
             captured_at=now,
         )
-        _create_or_ignore_workflow_input_binding(
+        create_or_validate_workflow_artifact_input_effects(
             connection,
             workflow_run_id=target_workflow_run_id,
             binding_key="stage01.route_delta_intake",
@@ -535,7 +514,7 @@ def activate_live_dispatch_command(
             metadata_json={"edge_execution_id": edge_execution_id, "kind": LIVE_ROUTE_DELTA_KIND},
             captured_at=now,
         )
-        _create_or_ignore_workflow_input_binding(
+        create_or_validate_workflow_artifact_input_effects(
             connection,
             workflow_run_id=target_workflow_run_id,
             binding_key="stage01.actual_hours_snapshot",
@@ -678,10 +657,11 @@ def prepare_live_dispatch_day_command(
     edge_execution_id = str(edge["edge_execution_id"])
     with command_transaction(connection):
         now = utc_now_iso()
-        target_workflow_run = _resolve_or_create_live_dispatch_run(
+        target_workflow_run = _LOGISTICS_RUN_RESOLVER.resolve_or_create_live_dispatch(
             connection,
             tenant_id=scope["tenant_id"],
             domain_id=scope["domain_id"],
+            workflow_id=LIVE_WORKFLOW_ID,
             service_date_id=service_date_id,
             activation_key=str(edge.get("target_activation_key") or f"{LIVE_WORKFLOW_ID}:{service_date_id}"),
             created_at=now,
@@ -727,7 +707,7 @@ def prepare_live_dispatch_day_command(
             ),
             metadata_json={"edge_execution_id": edge_execution_id},
         )
-        _create_or_ignore_workflow_input_binding(
+        create_or_validate_workflow_artifact_input_effects(
             connection,
             workflow_run_id=target_workflow_run_id,
             binding_key="stage01.base_seed",
@@ -894,26 +874,8 @@ def notify_only_handoff_command(
                 source_artifact_version_id=source_artifact_version_id,
                 target_partition_key=target_partition_key,
             )
-            existing = get_edge_execution_by_correlation(
-                connection,
-                edge_id=edge_id,
-                correlation_key=correlation_key,
-            )
-            if existing is not None:
-                edge_rows.append(existing)
-                existing_target_run_id = str(existing.get("target_workflow_run_id") or "")
-                if existing_target_run_id:
-                    target_run = _require_workflow_run(connection, existing_target_run_id)
-                    target_workflow_runs.append(target_run)
-                existing_target_input_artifact_id = _target_input_artifact_id_from_edge(existing)
-                if existing_target_input_artifact_id is not None:
-                    target_input_artifacts.append(
-                        _require_artifact(connection, existing_target_input_artifact_id)
-                    )
-                continue
-
             now = utc_now_iso()
-            target_workflow_run = _resolve_or_create_workflow_run(
+            target_workflow_run = _LOGISTICS_RUN_RESOLVER.resolve_or_create(
                 connection,
                 workflow_id=edge_descriptor["target_workflow_id"],
                 tenant_id=source_scope["tenant_id"],
@@ -983,7 +945,7 @@ def notify_only_handoff_command(
                         "merge_input_artifact_version_id": provenance_input_artifact_id,
                     },
                 )
-            _create_or_ignore_workflow_input_binding(
+            create_or_validate_workflow_artifact_input_effects(
                 connection,
                 workflow_run_id=target_workflow_run_id,
                 binding_key=target_binding_key,
@@ -995,7 +957,7 @@ def notify_only_handoff_command(
             )
 
             edge_execution_id = f"ee-{uuid4()}"
-            create_edge_execution(
+            edge = create_or_reuse_edge_execution_effects(
                 connection,
                 edge_execution_id=edge_execution_id,
                 edge_id=edge_id,
@@ -1035,7 +997,7 @@ def notify_only_handoff_command(
                 activated_at=None,
                 created_at=now,
             )
-            edge_rows.append(_require_edge_execution(connection, edge_execution_id))
+            edge_rows.append(edge)
             target_workflow_runs.append(target_workflow_run)
             target_input_artifacts.append(target_input_artifact)
 
@@ -1177,89 +1139,6 @@ def _require_notify_only_edge_descriptor(edge_id: str) -> dict[str, str]:
             },
         )
     return descriptor
-
-
-def _resolve_or_create_workflow_run(
-    connection: sqlite3.Connection,
-    *,
-    workflow_id: str,
-    tenant_id: str,
-    domain_id: str,
-    partition_kind: str,
-    partition_key: str,
-    activation_key: str,
-    created_at: str,
-) -> dict[str, Any]:
-    existing_runs = list_workflow_runs(
-        connection,
-        workflow_id=workflow_id,
-        tenant_id=tenant_id,
-        domain_id=domain_id,
-        state=None,
-    )
-    for run in existing_runs:
-        if str(run["partition_key"]) == partition_key:
-            return run
-
-    workflow_run_id = f"wr-{uuid4()}"
-    try:
-        create_workflow_run(
-            connection,
-            workflow_run_id=workflow_run_id,
-            workflow_id=workflow_id,
-            workflow_version="v1",
-            tenant_id=tenant_id,
-            domain_id=domain_id,
-            partition_key=partition_key,
-            logical_date=_logical_date_from_partition_key(
-                partition_kind=partition_kind,
-                partition_key=partition_key,
-            ),
-            activation_key=activation_key,
-            state="OPEN",
-            created_at=created_at,
-        )
-    except sqlite3.IntegrityError:
-        refreshed = list_workflow_runs(
-            connection,
-            workflow_id=workflow_id,
-            tenant_id=tenant_id,
-            domain_id=domain_id,
-            state=None,
-        )
-        for run in refreshed:
-            if str(run["partition_key"]) == partition_key:
-                return run
-        raise
-    created = get_workflow_run(connection, workflow_run_id)
-    if created is None:
-        raise CommandError(
-            code="workflow_run_not_found",
-            message="workflow run not found after creation",
-            details={"workflow_run_id": workflow_run_id},
-        )
-    return created
-
-
-def _resolve_or_create_live_dispatch_run(
-    connection: sqlite3.Connection,
-    *,
-    tenant_id: str,
-    domain_id: str,
-    service_date_id: str,
-    activation_key: str,
-    created_at: str,
-) -> dict[str, Any]:
-    return _resolve_or_create_workflow_run(
-        connection,
-        workflow_id=LIVE_WORKFLOW_ID,
-        tenant_id=tenant_id,
-        domain_id=domain_id,
-        partition_kind="ServiceDateID",
-        partition_key=service_date_id,
-        activation_key=activation_key,
-        created_at=created_at,
-    )
 
 
 def _ensure_live_dispatch_seed_intake_task(
@@ -1409,26 +1288,6 @@ def _ensure_live_dispatch_seed_intake_task(
     }
 
 
-def _logical_date_from_service_date_id(service_date_id: str) -> str:
-    validate_partition_key("ServiceDateID", service_date_id)
-    return service_date_id.removeprefix("SD-")
-
-
-def _logical_date_from_partition_key(*, partition_kind: str, partition_key: str) -> str:
-    validate_partition_key(partition_kind, partition_key)
-    if partition_kind == "ServiceDateID":
-        return _logical_date_from_service_date_id(partition_key)
-    if partition_kind in {"PlanningWeekID", "PayPeriodID"}:
-        if partition_kind == "PlanningWeekID":
-            token = partition_key.removeprefix("PW-")
-        else:
-            token = partition_key.removeprefix("PP-")
-        year_text, week_text = token.split("-W", maxsplit=1)
-        week_start = date.fromisocalendar(int(year_text), int(week_text), 1)
-        return week_start.isoformat()
-    return partition_key
-
-
 def _materialize_notify_only_target_input_artifact(
     connection: sqlite3.Connection,
     *,
@@ -1503,7 +1362,13 @@ def _materialize_notify_only_target_input_artifact(
         source_artifact=source_artifact,
         source_artifact_version_id=source_artifact_version_id,
     )
-    existing_binding = _get_workflow_run_input_binding(
+    target_artifact_version_id = _stable_notify_input_artifact_id(
+        edge_id=edge_id,
+        source_artifact_version_id=source_artifact_version_id,
+        target_partition_key=target_partition_key,
+        target_dataset_key=target_dataset_key,
+    )
+    existing_binding = get_workflow_artifact_input_effects(
         connection,
         workflow_run_id=target_workflow_run_id,
         binding_key=target_binding_key,
@@ -1513,6 +1378,21 @@ def _materialize_notify_only_target_input_artifact(
         if existing_binding is not None
         else ""
     )
+    if (
+        superseded_artifact_version_id == target_artifact_version_id
+        and existing_binding is not None
+        and str(existing_binding.get("source_ref") or "") == source_artifact_version_id
+    ):
+        return (
+            _require_artifact(connection, target_artifact_version_id),
+            {
+                "edge_id": edge_id,
+                "handoff_mode": NOTIFY_ONLY_MODE,
+                "target_dataset_key": target_dataset_key,
+                "normalized_artifact_version_id": normalized_artifact_version_id,
+            },
+            (),
+        )
     current_payload = None
     if superseded_artifact_version_id:
         current_payload = _actual_hours_snapshot_payload_from_artifact(
@@ -1535,12 +1415,7 @@ def _materialize_notify_only_target_input_artifact(
     ).encode("utf-8")
     target_input_artifact = _create_or_load_artifact_version(
         connection,
-        artifact_version_id=_stable_notify_input_artifact_id(
-            edge_id=edge_id,
-            source_artifact_version_id=source_artifact_version_id,
-            target_partition_key=target_partition_key,
-            target_dataset_key=target_dataset_key,
-        ),
+        artifact_version_id=target_artifact_version_id,
         workflow_run_id=target_workflow_run_id,
         tenant_id=source_scope["tenant_id"],
         domain_id=source_scope["domain_id"],
@@ -1736,138 +1611,6 @@ def _create_or_ignore_provenance_edge(
         return
 
 
-def _create_or_ignore_workflow_input_binding(
-    connection: sqlite3.Connection,
-    *,
-    workflow_run_id: str,
-    binding_key: str,
-    source_ref: str,
-    artifact_version_id: str,
-    metadata_json: dict[str, Any],
-    captured_at: str,
-    replace_on_conflict: bool = False,
-) -> None:
-    try:
-        create_workflow_run_input(
-            connection,
-            workflow_run_id=workflow_run_id,
-            binding_key=binding_key,
-            source_kind="artifact_version",
-            source_ref=source_ref,
-            artifact_version_id=artifact_version_id,
-            pointer_key=None,
-            pointer_generation=None,
-            pointer_artifact_version_id=None,
-            captured_by_task_run_id=None,
-            captured_at=captured_at,
-            metadata_json=metadata_json,
-        )
-    except InputBindingConflictError:
-        existing = _get_workflow_run_input_binding(
-            connection,
-            workflow_run_id=workflow_run_id,
-            binding_key=binding_key,
-        )
-        if (
-            existing is not None
-            and str(existing.get("source_ref") or "") == source_ref
-            and str(existing.get("artifact_version_id") or "") == artifact_version_id
-        ):
-            return
-        if replace_on_conflict and existing is not None:
-            _update_workflow_run_input_binding(
-                connection,
-                workflow_run_id=workflow_run_id,
-                binding_key=binding_key,
-                source_ref=source_ref,
-                artifact_version_id=artifact_version_id,
-                metadata_json=metadata_json,
-                captured_at=captured_at,
-            )
-            return
-        raise CommandError(
-            code="handoff_input_binding_conflict",
-            message="existing workflow input binding conflicts with handoff replay inputs",
-            details={
-                "workflow_run_id": workflow_run_id,
-                "binding_key": binding_key,
-                "expected_source_ref": source_ref,
-                "expected_artifact_version_id": artifact_version_id,
-                "existing_source_ref": (
-                    str(existing.get("source_ref"))
-                    if existing is not None and existing.get("source_ref") is not None
-                    else None
-                ),
-                "existing_artifact_version_id": (
-                    str(existing.get("artifact_version_id"))
-                    if existing is not None and existing.get("artifact_version_id") is not None
-                    else None
-                ),
-            },
-        )
-
-
-def _update_workflow_run_input_binding(
-    connection: sqlite3.Connection,
-    *,
-    workflow_run_id: str,
-    binding_key: str,
-    source_ref: str,
-    artifact_version_id: str,
-    metadata_json: dict[str, Any],
-    captured_at: str,
-) -> None:
-    connection.execute(
-        """
-        UPDATE workflow_run_inputs
-        SET
-            source_kind = 'artifact_version',
-            source_ref = ?,
-            artifact_version_id = ?,
-            pointer_key = NULL,
-            pointer_generation = NULL,
-            pointer_artifact_version_id = NULL,
-            captured_by_task_run_id = NULL,
-            captured_at = ?,
-            metadata_json = ?
-        WHERE workflow_run_id = ? AND binding_key = ?
-        """,
-        (
-            source_ref,
-            artifact_version_id,
-            captured_at,
-            json.dumps(metadata_json, separators=(",", ":")),
-            workflow_run_id,
-            binding_key,
-        ),
-    )
-
-
-def _get_workflow_run_input_binding(
-    connection: sqlite3.Connection,
-    *,
-    workflow_run_id: str,
-    binding_key: str,
-) -> dict[str, Any] | None:
-    row = connection.execute(
-        """
-        SELECT
-            workflow_run_id,
-            binding_key,
-            source_kind,
-            source_ref,
-            artifact_version_id
-        FROM workflow_run_inputs
-        WHERE workflow_run_id = ? AND binding_key = ?
-        LIMIT 1
-        """,
-        (workflow_run_id, binding_key),
-    ).fetchone()
-    if row is None:
-        return None
-    return dict(row)
-
-
 def _assert_activation_replay_input_matches(
     connection: sqlite3.Connection,
     *,
@@ -1887,14 +1630,14 @@ def _assert_activation_replay_input_matches(
     expected_route = str(bindings.get("route_delta_source_artifact_version_id") or "")
     expected_actual_hours = str(bindings.get("actual_hours_source_artifact_version_id") or "")
     if not expected_route:
-        route_binding = _get_workflow_run_input_binding(
+        route_binding = get_workflow_artifact_input_effects(
             connection,
             workflow_run_id=target_workflow_run_id,
             binding_key="stage01.route_delta_intake",
         )
         expected_route = str(route_binding.get("source_ref") or "") if route_binding is not None else ""
     if not expected_actual_hours:
-        hours_binding = _get_workflow_run_input_binding(
+        hours_binding = get_workflow_artifact_input_effects(
             connection,
             workflow_run_id=target_workflow_run_id,
             binding_key="stage01.actual_hours_snapshot",
@@ -2018,16 +1761,6 @@ def _workflow_input_binding_key(*, stage_id: str, dataset_key: str) -> str:
     if dataset_tail.endswith(".doc"):
         dataset_tail = dataset_tail[: -len(".doc")]
     return f"{stage_token}.{dataset_tail}"
-
-
-def _target_input_artifact_id_from_edge(edge_execution: dict[str, Any]) -> str | None:
-    bindings = edge_execution.get("input_bindings")
-    if not isinstance(bindings, dict):
-        return None
-    target_input_artifact_id = bindings.get("target_input_artifact_version_id")
-    if target_input_artifact_id is None:
-        return None
-    return str(target_input_artifact_id)
 
 
 def _correlation_key(

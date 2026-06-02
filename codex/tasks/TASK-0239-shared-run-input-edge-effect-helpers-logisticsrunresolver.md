@@ -2,7 +2,7 @@
 id: TASK-0239
 epic: EPIC-137
 title: "Shared run/input/edge effect helpers + LogisticsRunResolver"
-status: TODO
+status: DONE
 owners: ["platform"]
 reviewers: ["architect", "qa"]
 depends_on: ["TASK-0238"]
@@ -60,3 +60,10 @@ Implement shared helpers for run/input/edge creation and stable logistics run re
 
 ## Notes / decisions
 - Raw project corpora remain off-repo; use only sanitized fixtures, manifests, hashes, and aggregate evidence approved by the relevant fixture/governance task.
+
+## Closeout evidence
+- Shared run/input/edge helpers live under `src/onetruth/application/handlers/_shared/runtime_effects.py`.
+- `LogisticsRunResolver` resolves logistics target runs and rejects same-scope, same-partition activation-key drift before handoff mutation.
+- Logistics handoff target-run, workflow-input, and edge creation paths now use the shared helpers while preserving idempotent replay.
+- Evidence: focused helper tests and live-dispatch activation-key drift regression passed on 2026-06-02.
+- Closeout posture: `MP-PR006` is closed as a repo platform-readiness/runtime safety gate; this is not CAPEX production activation.

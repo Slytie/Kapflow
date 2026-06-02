@@ -970,3 +970,9 @@ Record any decisions made since the last session so a fresh Codex run can rehydr
 - Generated-artifact decision: new generated artifacts should use deterministic `canonical_json_bytes` plus `persist_generated_artifact_effects(...)` when a task needs canonical JSON bytes, root-confined storage, digest validation, and canonical `artifact.version.created` emission.
 - Migration decision: broad generated-artifact call-site migration is deferred to later CAPEX generated-artifact tasks; `TASK-0238` adds the foundation helper and focused proof only.
 - Activation decision: `TASK-0237` and `TASK-0238` close repo platform-readiness gates only; CAPEX production-like activation remains blocked by the imported gate set.
+
+## 2026-06-02 (CAPEX PR006/PR007 Platform Foundation v0)
+- Shared-effect decision: workflow-run resolution, workflow artifact input binding replay/conflict/replace behavior, and edge execution replay validation now live in shared runtime effects instead of private logistics-only helper code.
+- Drift decision: logistics target-run resolution fails closed with `activation_key_drift_detected` when an existing same-scope, same-partition run has a different activation key.
+- Branch-gate decision: `docs/planning/CAPEX_PLATFORM_FOUNDATION_V0.md` declares PF0 for repo platform readiness only and records `foundation/ip5` as the platform-foundation branch class.
+- Activation decision: PF0 does not activate CAPEX production-like runtime, pilot readiness, raw corpus use, release/deploy work, project membership runtime, or SourceRef/source-occurrence runtime.

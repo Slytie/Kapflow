@@ -1126,6 +1126,79 @@ def test_live_replan_delta_promotion_is_ordered_and_immutable(tmp_path: Path) ->
     }
 
 
+def test_live_dispatch_activation_rejects_existing_target_run_activation_key_drift(
+    tmp_path: Path,
+) -> None:
+    db_url, db_path, weekly_run, published = _setup_weekly_with_publish(tmp_path)
+    weekly_run_id = str(weekly_run["workflow_run_id"])
+    materialized = _materialize_handoff(
+        db_url,
+        workflow_run_id=weekly_run_id,
+        published_artifact_version_id=str(published["artifact_version_id"]),
+        service_date_id=SERVICE_DATE_ID,
+        idempotency_key="idem:handoff:activation-key-drift:materialize",
+    )
+    edge_execution = materialized["edge_executions"][0]
+    route_delta = _create_artifact_version(
+        db_url,
+        workflow_run_id=weekly_run_id,
+        artifact_kind="dispatch.route_delta_intake.workbook",
+        idempotency_key="idem:artifact:activation-key-drift:route-delta",
+        canonical_partition_kind="ServiceDateID",
+        canonical_partition_key=SERVICE_DATE_ID,
+    )
+    actual_hours = _create_artifact_version(
+        db_url,
+        workflow_run_id=weekly_run_id,
+        artifact_kind="planning.actual_hours_snapshot.workbook",
+        idempotency_key="idem:artifact:activation-key-drift:actual-hours",
+    )
+    drifted_live_run = _create_workflow_run(
+        db_url,
+        workflow_id="live_dispatch.v1",
+        partition_key=SERVICE_DATE_ID,
+        logical_date="2026-03-06",
+        activation_key=f"live_dispatch.v1:{SERVICE_DATE_ID}:drifted",
+        idempotency_key="idem:runs.create:activation-key-drift",
+    )
+
+    failed = run_cli(
+        "--db-url",
+        db_url,
+        "handoffs",
+        "activate-live-dispatch",
+        "--json",
+        json.dumps(
+            {
+                "edge_execution_id": str(edge_execution["edge_execution_id"]),
+                "route_delta_source_artifact_version_id": str(route_delta["artifact_version_id"]),
+                "actual_hours_source_artifact_version_id": str(actual_hours["artifact_version_id"]),
+                "idempotency_key": "idem:handoff:activation-key-drift:activate",
+            },
+            separators=(",", ":"),
+        ),
+        expect_ok=False,
+    )
+
+    assert stderr_json(failed)["error_code"] == "activation_key_drift_detected"
+    edge_rows = _query_rows(
+        db_path,
+        """
+        SELECT status, target_workflow_run_id
+        FROM edge_executions
+        WHERE edge_execution_id = ?
+        """,
+        (str(edge_execution["edge_execution_id"]),),
+    )
+    assert edge_rows == [{"status": "prepared", "target_workflow_run_id": None}]
+    input_rows = _query_rows(
+        db_path,
+        "SELECT binding_key FROM workflow_run_inputs WHERE workflow_run_id = ?",
+        (str(drifted_live_run["workflow_run_id"]),),
+    )
+    assert input_rows == []
+
+
 def test_weekly_to_live_dispatch_first_golden_slice_end_to_end(tmp_path: Path) -> None:
     db_url, db_path, weekly_run, published = _setup_weekly_with_publish(tmp_path)
     weekly_run_id = str(weekly_run["workflow_run_id"])

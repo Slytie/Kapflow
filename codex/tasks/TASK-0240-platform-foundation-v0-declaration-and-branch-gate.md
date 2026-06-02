@@ -2,7 +2,7 @@
 id: TASK-0240
 epic: EPIC-137
 title: "Platform Foundation v0 declaration and branch gate"
-status: TODO
+status: DONE
 owners: ["platform"]
 reviewers: ["architect", "qa"]
 depends_on: ["TASK-0234", "TASK-0235", "TASK-0236", "TASK-0237", "TASK-0238", "TASK-0239"]
@@ -60,3 +60,10 @@ Declare PF0 only if PR001-006 pass; open engineering runtime only within allowed
 
 ## Notes / decisions
 - Raw project corpora remain off-repo; use only sanitized fixtures, manifests, hashes, and aggregate evidence approved by the relevant fixture/governance task.
+
+## Closeout evidence
+- `docs/planning/CAPEX_PLATFORM_FOUNDATION_V0.md` declares PF0 for repo platform-readiness only after PR001-PR006 evidence is present.
+- The PF0 branch-gate matrix records `foundation/ip5` as the platform-foundation branch class and keeps CAPEX runtime integration, raw corpus use, release/deploy work, project membership runtime, and SourceRef/source-occurrence runtime blocked.
+- CAPEX invariant audit now includes hard gates for PR006 and PR007 while keeping known gaps non-failing.
+- Evidence: PF0 branch-gate contract checks and direct CAPEX invariant audit passed on 2026-06-02.
+- Closeout posture: `MP-PR007` is closed as a repo platform-readiness declaration; this is not CAPEX production activation, pilot readiness, or deployment approval.
