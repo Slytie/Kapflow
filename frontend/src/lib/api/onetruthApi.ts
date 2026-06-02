@@ -12,6 +12,8 @@ import type {
   LogisticsStoryFamilyEdge,
   LogisticsStoryFamilyModule,
   LogisticsThreeWorkflowStoryContract,
+  OperatorHomeContract,
+  OperatorHomeFinding,
   PointerRow,
   TemplateRecord,
   TemplateRegistryMetadata,
@@ -245,6 +247,10 @@ interface TemplateListEnvelope extends ListEnvelope {
 
 interface ViewerSessionEnvelope extends ListEnvelope {
   viewer_session: Record<string, unknown>;
+}
+
+interface OperatorHomeEnvelope extends ListEnvelope {
+  operator_home: Record<string, unknown>;
 }
 
 const GRAPH_LAYOUT: Record<string, { row: number; column: number }> = {
@@ -836,6 +842,64 @@ function normalizeViewerSession(session: unknown): ViewerSession {
     request_context_mode:
       requestContextMode === "trusted_headers" ? "trusted_headers" : "server_derived",
     actor_switching_allowed: Boolean(record.actor_switching_allowed)
+  };
+}
+
+function normalizeOperatorHomeFinding(value: unknown): OperatorHomeFinding {
+  const record = asRecord(value);
+  const severity = asString(record.severity, "info");
+  const boundaryProfile = asString(record.boundary_profile);
+  return {
+    finding_id: asString(record.finding_id),
+    code: asString(record.code, "unknown"),
+    severity:
+      severity === "error" || severity === "warning" || severity === "info"
+        ? severity
+        : "info",
+    subject: asRecord(record.subject),
+    expected: asRecord(record.expected),
+    observed: asRecord(record.observed),
+    message: asString(record.message),
+    mode: "dry_run",
+    mutates: Boolean(record.mutates),
+    repair_hint: asString(record.repair_hint),
+    conflict_code: asStringOrNull(record.conflict_code) ?? undefined,
+    boundary_profile:
+      boundaryProfile === "local_dev" ||
+      boundaryProfile === "ci_test" ||
+      boundaryProfile === "shared_env"
+        ? boundaryProfile
+        : undefined
+  };
+}
+
+function normalizeOperatorHome(payload: unknown): OperatorHomeContract {
+  const record = asRecord(payload);
+  const status = asString(record.status, "clear") === "attention" ? "attention" : "clear";
+  const failureState = asRecord(record.failure_state);
+  const summary = asRecord(failureState.summary);
+  return {
+    schema_version: "operator_home.v1",
+    status,
+    viewer: normalizeViewerSession(record.viewer),
+    failure_state: {
+      schema_version: asString(failureState.schema_version, "logistics_reconciler_dry_run.v1"),
+      mode: "dry_run",
+      summary: {
+        finding_count: asNumber(summary.finding_count, 0),
+        error_count: asNumber(summary.error_count, 0),
+        warning_count: asNumber(summary.warning_count, 0),
+        info_count: asNumber(summary.info_count, 0),
+        mutations_performed: asNumber(summary.mutations_performed, 0),
+        code_counts: Object.fromEntries(
+          Object.entries(asRecord(summary.code_counts)).map(([key, value]) => [
+            key,
+            asNumber(value, 0)
+          ])
+        )
+      },
+      findings: asArray(failureState.findings).map(normalizeOperatorHomeFinding)
+    }
   };
 }
 
@@ -1960,6 +2024,11 @@ export const onetruthApi = {
   async getViewerSession(): Promise<ViewerSession> {
     const payload = await requestJson<ViewerSessionEnvelope>("/viewer");
     return normalizeViewerSession(payload.viewer_session);
+  },
+
+  async getOperatorHome(): Promise<OperatorHomeContract> {
+    const payload = await requestJson<OperatorHomeEnvelope>("/operator/home");
+    return normalizeOperatorHome(payload.operator_home);
   },
 
   async listHumanTasks(query: {

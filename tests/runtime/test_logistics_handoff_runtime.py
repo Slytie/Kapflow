@@ -1,15 +1,22 @@
 from __future__ import annotations
 
+import hashlib
 import json
 from pathlib import Path
 import sqlite3
 from typing import Any
+from urllib.parse import urlparse
 
+import pytest
+
+from onetruth.application.handlers._shared.command_boundary import CommandError
+from onetruth.application.handlers.logistics_handoff import prepare_live_dispatch_day_command
 from onetruth.application.services.logistics_handoff_runtime import (
     MajorReplanPolicy,
     deterministic_rank_candidates,
     should_escalate_major_replan,
 )
+from onetruth.infrastructure.db.session import open_sqlite_connection
 from tests.runtime.helpers.runtime_cli import run_cli, stderr_json, stdout_json
 
 
@@ -199,6 +206,42 @@ def _execute_sql(db_path: Path, sql: str, params: tuple[Any, ...] = ()) -> None:
         connection.close()
 
 
+def _runtime_truth_counts(db_path: Path) -> dict[str, int]:
+    tables = [
+        "workflow_runs",
+        "artifact_versions",
+        "edge_executions",
+        "workflow_run_inputs",
+        "artifact_provenance_edges",
+        "artifact_pointers",
+        "task_runs",
+        "human_tasks",
+        "timeline_events",
+    ]
+    return {
+        table: int(_query_rows(db_path, f"SELECT COUNT(*) AS count FROM {table}")[0]["count"])
+        for table in tables
+    }
+
+
+def _reconcile_handoffs_dry_run(
+    db_url: str,
+    *,
+    boundary_profile: str | None = None,
+) -> dict[str, Any]:
+    args = [
+        "--db-url",
+        db_url,
+        "handoffs",
+        "reconcile-dry-run",
+    ]
+    if boundary_profile is not None:
+        args.extend(["--boundary-profile", boundary_profile])
+    args.append("--json")
+    result = run_cli(*args)
+    return stdout_json(result)["report"]
+
+
 def _setup_weekly_with_publish(tmp_path: Path) -> tuple[str, Path, dict[str, Any], dict[str, Any]]:
     db_url, db_path = _init_db(tmp_path)
     weekly_run = _create_workflow_run(
@@ -333,6 +376,28 @@ def test_handoff_record_creation_is_explicit_and_idempotent(tmp_path: Path) -> N
     assert len(first["seed_artifacts"]) == 1
     assert first["edge_executions"][0]["status"] == "prepared"
     assert first["edge_executions"][0]["edge_execution_id"] == second["edge_executions"][0]["edge_execution_id"]
+    handoff_scope = first["edge_executions"][0]["input_bindings"]["handoff_scope"]
+    assert handoff_scope == first["seed_artifacts"][0]["metadata_json"]["handoff_scope"]
+    assert handoff_scope["target_partition"] == {
+        "partition_kind": "ServiceDateID",
+        "partition_key": SERVICE_DATE_ID,
+    }
+    assert handoff_scope["policy_version"] == "logistics_handoff_policy.v0"
+    assert handoff_scope["policy_context"] == {
+        "handoff_policy": "weekly_planning_week_to_service_day_seed.v1",
+        "policy_id": "logistics_calendar_policy.v1",
+        "service_date_id": SERVICE_DATE_ID,
+        "source_planning_week_id": PLANNING_WEEK_ID,
+        "source_relation": "service_date_in_source_planning_week",
+    }
+    assert handoff_scope["source_truth"] == [
+        {
+            "workflow_run_id": str(weekly_run["workflow_run_id"]),
+            "artifact_version_id": str(published["artifact_version_id"]),
+            "artifact_kind": "planning.published_weekly_schedule.workbook",
+            "content_digest": str(published["content_digest"]),
+        }
+    ]
 
     edge_rows = _query_rows(
         db_path,
@@ -374,6 +439,16 @@ def test_duplicate_logical_materialize_request_reuses_same_edge_with_new_idempot
     )
     assert len(rows) == 1
     assert rows[0]["materialize_idempotency_key"] == "idem:handoff:materialize:logical:first"
+    seed_event_rows = _query_rows(
+        db_path,
+        """
+        SELECT payload
+        FROM timeline_events
+        WHERE event_type = 'artifact.version.created'
+          AND payload LIKE '%planning.daily_dispatch_seed.workbook%'
+        """,
+    )
+    assert len(seed_event_rows) == 1
 
 
 def test_retry_after_daily_seed_exists_reuses_seed_without_duplication(tmp_path: Path) -> None:
@@ -449,7 +524,14 @@ def test_stage07_seed_materialization_is_one_logical_seed_per_service_day(tmp_pa
     artifact_rows = _query_rows(
         db_path,
         """
-        SELECT artifact_version_id, partition_kind, partition_key
+        SELECT
+            artifact_version_id,
+            partition_kind,
+            partition_key,
+            storage_uri,
+            content_digest,
+            byte_size,
+            metadata_json
         FROM artifact_versions
         WHERE workflow_run_id = ? AND artifact_kind = 'planning.daily_dispatch_seed.workbook'
         ORDER BY artifact_version_id ASC
@@ -459,6 +541,72 @@ def test_stage07_seed_materialization_is_one_logical_seed_per_service_day(tmp_pa
     assert len(artifact_rows) == 7
     assert all(row["partition_kind"] == "ServiceDateID" for row in artifact_rows)
     assert sorted(str(row["partition_key"]) for row in artifact_rows) == sorted(seed_days)
+    artifact_root = (db_path.parent / "artifact_store").resolve()
+    for row in artifact_rows:
+        parsed_uri = urlparse(str(row["storage_uri"]))
+        assert parsed_uri.scheme == "file"
+        blob_path = Path(parsed_uri.path).resolve()
+        blob_path.relative_to(artifact_root)
+        blob_bytes = blob_path.read_bytes()
+        assert row["byte_size"] == len(blob_bytes)
+        assert row["content_digest"] == "sha256:" + hashlib.sha256(blob_bytes).hexdigest()
+        metadata = json.loads(str(row["metadata_json"]))
+        assert metadata["service_date_id"] == row["partition_key"]
+        assert metadata["handoff_scope"]["target_partition"] == {
+            "partition_kind": "ServiceDateID",
+            "partition_key": row["partition_key"],
+        }
+    seed_event_rows = _query_rows(
+        db_path,
+        """
+        SELECT payload
+        FROM timeline_events
+        WHERE event_type = 'artifact.version.created'
+          AND payload LIKE '%planning.daily_dispatch_seed.workbook%'
+        """,
+    )
+    assert len(seed_event_rows) == 7
+
+
+def test_reconciler_dry_run_reports_missing_weekly_seed_edge_without_mutation(
+    tmp_path: Path,
+) -> None:
+    db_url, db_path, weekly_run, published = _setup_weekly_with_publish(tmp_path)
+    result = _materialize_handoff(
+        db_url,
+        workflow_run_id=str(weekly_run["workflow_run_id"]),
+        published_artifact_version_id=str(published["artifact_version_id"]),
+        idempotency_key="idem:handoff:materialize:reconcile-clean",
+    )
+    clean_report = _reconcile_handoffs_dry_run(db_url)
+    assert clean_report["schema_version"] == "logistics_reconciler_dry_run.v1"
+    assert clean_report["mode"] == "dry_run"
+    assert clean_report["summary"]["finding_count"] == 0
+    assert clean_report["summary"]["mutations_performed"] == 0
+
+    missing_edge = next(
+        edge
+        for edge in result["edge_executions"]
+        if str(edge["target_partition_key"]) == SERVICE_DATE_ID
+    )
+    _execute_sql(
+        db_path,
+        "DELETE FROM edge_executions WHERE edge_execution_id = ?",
+        (str(missing_edge["edge_execution_id"]),),
+    )
+    counts_before = _runtime_truth_counts(db_path)
+
+    report = _reconcile_handoffs_dry_run(db_url)
+
+    assert _runtime_truth_counts(db_path) == counts_before
+    assert report["observed_table_counts"] == counts_before
+    assert report["summary"]["mutations_performed"] == 0
+    findings_by_code = {item["code"]: item for item in report["findings"]}
+    assert "weekly_seed_edge_missing" in findings_by_code
+    finding = findings_by_code["weekly_seed_edge_missing"]
+    assert finding["mutates"] is False
+    assert finding["subject"]["service_date_id"] == SERVICE_DATE_ID
+    assert finding["expected"]["edge_id"] == "weekly_seed_to_live_dispatch"
 
 
 def test_lazy_live_activation_captures_exact_input_bindings_and_replay_is_safe(tmp_path: Path) -> None:
@@ -526,6 +674,19 @@ def test_lazy_live_activation_captures_exact_input_bindings_and_replay_is_safe(t
     assert activated["edge_execution"]["trigger_ref"] == str(route_delta["artifact_version_id"])
     assert activated["edge_execution"]["target_workflow_run_id"] == str(live_run["workflow_run_id"])
     assert replay["target_workflow_run"]["workflow_run_id"] == live_run["workflow_run_id"]
+    activation_scope = activated["edge_execution"]["input_bindings"]["handoff_scope"]
+    assert activation_scope["target_partition"] == {
+        "partition_kind": "ServiceDateID",
+        "partition_key": SERVICE_DATE_ID,
+    }
+    assert activation_scope["policy_version"] == "logistics_handoff_policy.v0"
+    assert {
+        item["artifact_version_id"] for item in activation_scope["source_truth"]
+    } == {
+        str(seed_artifact["artifact_version_id"]),
+        str(route_delta["artifact_version_id"]),
+        str(actual_hours["artifact_version_id"]),
+    }
 
     input_rows = _query_rows(
         db_path,
@@ -546,7 +707,7 @@ def test_lazy_live_activation_captures_exact_input_bindings_and_replay_is_safe(t
     live_input_rows = _query_rows(
         db_path,
         """
-        SELECT artifact_kind, parent_artifact_version_id
+        SELECT artifact_kind, parent_artifact_version_id, metadata_json
         FROM artifact_versions
         WHERE workflow_run_id = ?
         ORDER BY artifact_kind ASC
@@ -554,9 +715,17 @@ def test_lazy_live_activation_captures_exact_input_bindings_and_replay_is_safe(t
         (str(live_run["workflow_run_id"]),),
     )
     by_kind = {str(row["artifact_kind"]): str(row["parent_artifact_version_id"]) for row in live_input_rows}
+    by_kind_metadata = {
+        str(row["artifact_kind"]): json.loads(str(row["metadata_json"]))
+        for row in live_input_rows
+    }
     assert by_kind["dispatch.base_schedule_seed.workbook"] == str(seed_artifact["artifact_version_id"])
     assert by_kind["dispatch.route_delta_intake.workbook"] == str(route_delta["artifact_version_id"])
     assert by_kind["dispatch.actual_hours_snapshot.workbook"] == str(actual_hours["artifact_version_id"])
+    assert {
+        metadata["handoff_scope"]["scope_key"]
+        for metadata in by_kind_metadata.values()
+    } == {activation_scope["scope_key"]}
     assert len(live_input_rows) == 3
 
     edge_rows = _query_rows(
@@ -782,12 +951,188 @@ def test_activation_replay_requires_exact_canonical_input_bindings(tmp_path: Pat
     error = stderr_json(failed)
     assert error["error_code"] == "handoff_activation_input_mismatch"
 
-    binding_rows = _query_rows(
-        db_path,
-        "SELECT binding_key FROM workflow_run_inputs WHERE workflow_run_id = ?",
-        (live_run_id,),
+
+def test_live_dispatch_activation_marks_prepared_edge_stale_after_weekly_republish(
+    tmp_path: Path,
+) -> None:
+    db_url, db_path, weekly_run, published = _setup_weekly_with_publish(tmp_path)
+    materialized = _materialize_handoff(
+        db_url,
+        workflow_run_id=str(weekly_run["workflow_run_id"]),
+        published_artifact_version_id=str(published["artifact_version_id"]),
+        service_date_id=SERVICE_DATE_ID,
+        idempotency_key="idem:handoff:republish-after-edge-prep:materialize",
     )
-    assert len(binding_rows) == 3
+    edge_execution = materialized["edge_executions"][0]
+    republished = _create_artifact_version(
+        db_url,
+        workflow_run_id=str(weekly_run["workflow_run_id"]),
+        artifact_kind="planning.published_weekly_schedule.workbook",
+        idempotency_key="idem:artifact:weekly-republish-before-activation",
+        supersedes_artifact_version_id=str(published["artifact_version_id"]),
+    )
+    route_delta = _create_artifact_version(
+        db_url,
+        workflow_run_id=str(weekly_run["workflow_run_id"]),
+        artifact_kind="dispatch.route_delta_intake.workbook",
+        idempotency_key="idem:artifact:republish-after-edge-prep:route-delta",
+        canonical_partition_kind="ServiceDateID",
+        canonical_partition_key=SERVICE_DATE_ID,
+    )
+    actual_hours = _create_artifact_version(
+        db_url,
+        workflow_run_id=str(weekly_run["workflow_run_id"]),
+        artifact_kind="planning.actual_hours_snapshot.workbook",
+        idempotency_key="idem:artifact:republish-after-edge-prep:actual-hours",
+    )
+
+    failed = run_cli(
+        "--db-url",
+        db_url,
+        "handoffs",
+        "activate-live-dispatch",
+        "--json",
+        json.dumps(
+            {
+                "edge_execution_id": str(edge_execution["edge_execution_id"]),
+                "route_delta_source_artifact_version_id": str(route_delta["artifact_version_id"]),
+                "actual_hours_source_artifact_version_id": str(actual_hours["artifact_version_id"]),
+                "idempotency_key": "idem:handoff:republish-after-edge-prep:activate",
+            },
+            separators=(",", ":"),
+        ),
+        expect_ok=False,
+    )
+
+    error = stderr_json(failed)
+    assert error["error_code"] == "live_dispatch_base_seed_republish_after_prepare"
+    assert error["details"]["policy_id"] == "late_weekly_republish_after_live_prepare.v1"
+    assert error["details"]["policy_state"] == "late_weekly_republish_after_live_prepare"
+    assert error["details"]["superseding_published_artifact_version_id"] == str(
+        republished["artifact_version_id"]
+    )
+
+    edge_rows = _query_rows(
+        db_path,
+        """
+        SELECT status, cursor_state_json, compensation_state_json, input_bindings_json
+        FROM edge_executions
+        WHERE edge_execution_id = ?
+        """,
+        (str(edge_execution["edge_execution_id"]),),
+    )
+    assert edge_rows[0]["status"] == "stale"
+    cursor_state = json.loads(str(edge_rows[0]["cursor_state_json"]))
+    compensation_state = json.loads(str(edge_rows[0]["compensation_state_json"]))
+    input_bindings = json.loads(str(edge_rows[0]["input_bindings_json"]))
+    assert cursor_state["policy_state"] == "late_weekly_republish_after_live_prepare"
+    assert compensation_state["state"] == "policy_blocked"
+    assert input_bindings["policy_state"]["policy_id"] == (
+        "late_weekly_republish_after_live_prepare.v1"
+    )
+    assert input_bindings["policy_state"]["superseding_published_artifact_version_id"] == str(
+        republished["artifact_version_id"]
+    )
+    assert _query_rows(
+        db_path,
+        "SELECT * FROM workflow_run_inputs WHERE binding_key = 'stage01.base_seed'",
+    ) == []
+
+
+def test_prepare_live_dispatch_records_policy_state_for_republish_after_base_seed_bound(
+    tmp_path: Path,
+) -> None:
+    db_url, db_path, weekly_run, published = _setup_weekly_with_publish(tmp_path)
+    connection = open_sqlite_connection(db_url)
+    try:
+        prepared = prepare_live_dispatch_day_command(
+            connection,
+            {
+                "workflow_run_id": str(weekly_run["workflow_run_id"]),
+                "published_artifact_version_id": str(published["artifact_version_id"]),
+                "service_date_id": SERVICE_DATE_ID,
+                "idempotency_key": "idem:handoff:republish-after-live-prepare:first",
+            },
+        )
+    finally:
+        connection.close()
+    live_run_id = str(prepared["target_workflow_run"]["workflow_run_id"])
+    original_seed_artifact_id = str(prepared["edge_execution"]["seed_artifact_version_id"])
+    republished = _create_artifact_version(
+        db_url,
+        workflow_run_id=str(weekly_run["workflow_run_id"]),
+        artifact_kind="planning.published_weekly_schedule.workbook",
+        idempotency_key="idem:artifact:weekly-republish-after-live-prepare",
+        supersedes_artifact_version_id=str(published["artifact_version_id"]),
+    )
+
+    materialized_republish = _materialize_handoff(
+        db_url,
+        workflow_run_id=str(weekly_run["workflow_run_id"]),
+        published_artifact_version_id=str(republished["artifact_version_id"]),
+        service_date_id=SERVICE_DATE_ID,
+        idempotency_key="idem:handoff:republish-after-live-prepare:materialize-new",
+    )
+    stale_edge = materialized_republish["edge_executions"][0]
+    candidate_seed_artifact_id = str(stale_edge["seed_artifact_version_id"])
+    assert stale_edge["status"] == "stale"
+    assert stale_edge["target_workflow_run_id"] == live_run_id
+    assert stale_edge["input_bindings"]["policy_state"]["policy_state"] == (
+        "late_weekly_republish_after_live_prepare"
+    )
+    assert stale_edge["input_bindings"]["policy_state"]["policy_id"] == (
+        "late_weekly_republish_after_live_prepare.v1"
+    )
+    assert stale_edge["input_bindings"]["policy_state"][
+        "existing_base_seed_source_artifact_version_id"
+    ] == original_seed_artifact_id
+    assert stale_edge["input_bindings"]["policy_state"][
+        "candidate_base_seed_source_artifact_version_id"
+    ] == candidate_seed_artifact_id
+
+    connection = open_sqlite_connection(db_url)
+    try:
+        with pytest.raises(CommandError) as exc_info:
+            prepare_live_dispatch_day_command(
+                connection,
+                {
+                    "workflow_run_id": str(weekly_run["workflow_run_id"]),
+                    "published_artifact_version_id": str(republished["artifact_version_id"]),
+                    "service_date_id": SERVICE_DATE_ID,
+                    "idempotency_key": "idem:handoff:republish-after-live-prepare:retry",
+                },
+            )
+    finally:
+        connection.close()
+    assert exc_info.value.code == "live_dispatch_base_seed_republish_after_prepare"
+    assert exc_info.value.details["policy_id"] == "late_weekly_republish_after_live_prepare.v1"
+    assert exc_info.value.details["policy_state"] == "late_weekly_republish_after_live_prepare"
+
+    base_seed_bindings = _query_rows(
+        db_path,
+        """
+        SELECT workflow_run_id, source_ref
+        FROM workflow_run_inputs
+        WHERE binding_key = 'stage01.base_seed'
+        """,
+    )
+    assert base_seed_bindings == [
+        {
+            "workflow_run_id": live_run_id,
+            "source_ref": original_seed_artifact_id,
+        }
+    ]
+    edge_rows = _query_rows(
+        db_path,
+        """
+        SELECT status, target_workflow_run_id
+        FROM edge_executions
+        WHERE edge_id = 'weekly_seed_to_live_dispatch'
+        ORDER BY created_at ASC
+        """,
+    )
+    assert [row["status"] for row in edge_rows] == ["activated", "stale"]
+    assert str(edge_rows[1]["target_workflow_run_id"]) == live_run_id
 
 
 def test_activation_rejects_superseded_route_delta_source(tmp_path: Path) -> None:
@@ -1552,6 +1897,52 @@ def test_notify_only_handoff_dispatches_over_compiled_reporting_edge_and_materia
     assert target_run["partition_key"] == FUTURE_PLANNING_WEEK_ID
     assert target_input["artifact_kind"] == "planning.actual_hours_snapshot.workbook"
     assert str(target_input["parent_artifact_version_id"]) == str(final_packet["artifact_version_id"])
+    target_input_uri = str(target_input["storage_uri"])
+    parsed_uri = urlparse(target_input_uri)
+    assert parsed_uri.scheme == "file"
+    target_input_path = Path(parsed_uri.path)
+    assert target_input_path.resolve().is_relative_to((db_path.parent / "artifact_store").resolve())
+    target_input_bytes = target_input_path.read_bytes()
+    assert int(target_input["byte_size"]) == len(target_input_bytes)
+    assert str(target_input["content_digest"]) == (
+        f"sha256:{hashlib.sha256(target_input_bytes).hexdigest()}"
+    )
+    target_input_payload = json.loads(target_input_bytes.decode("utf-8"))
+    assert target_input_payload["schema_version"] == "notify_only_handoff_manifest.v1"
+    assert "materialize_idempotency_key" not in target_input_payload
+    notify_scope = edge["input_bindings"]["handoff_scope"]
+    assert target_input["metadata_json"]["handoff_scope"] == notify_scope
+    assert notify_scope["target_partition"] == {
+        "partition_kind": "PlanningWeekID",
+        "partition_key": FUTURE_PLANNING_WEEK_ID,
+    }
+    assert notify_scope["policy_version"] == "logistics_handoff_policy.v0"
+    assert notify_scope["policy_context"] == {
+        "calendar_policy_id": "logistics_calendar_policy.v1",
+        "edge_id": "reporting_actuals_to_future_planning",
+        "future_planning_week_id": FUTURE_PLANNING_WEEK_ID,
+        "policy_id": "reporting_actuals_to_next_planning_week.v1",
+        "relation_names": {
+            "deprecated_same_week_relation": "same_week",
+            "future_week_relation": "next_iso_planning_week",
+            "same_week_relation": "same_iso_planning_week",
+        },
+        "same_week_planning_week_id": PLANNING_WEEK_ID,
+        "source_partition": {
+            "partition_kind": "ServiceDateID",
+            "partition_key": SERVICE_DATE_ID,
+        },
+        "target_planning_week_id": FUTURE_PLANNING_WEEK_ID,
+        "target_relation": "next_iso_planning_week",
+    }
+    assert notify_scope["source_truth"] == [
+        {
+            "workflow_run_id": str(reporting_run["workflow_run_id"]),
+            "artifact_version_id": str(final_packet["artifact_version_id"]),
+            "artifact_kind": "reporting.final_packet.workbook",
+            "content_digest": str(final_packet["content_digest"]),
+        }
+    ]
     assert target_input["metadata_json"]["columns"][0] == "service_date"
     assert target_input["metadata_json"]["rows"] == [
         [
@@ -1575,6 +1966,7 @@ def test_notify_only_handoff_dispatches_over_compiled_reporting_edge_and_materia
         SELECT binding_key, source_ref, artifact_version_id
         FROM workflow_run_inputs
         WHERE workflow_run_id = ?
+          AND binding_key = 'stage03.actual_hours_snapshot'
         ORDER BY binding_key ASC
         """,
         (str(target_run["workflow_run_id"]),),
@@ -1658,6 +2050,7 @@ def test_notify_only_handoff_is_idempotent_for_target_run_resolution_and_edge_re
         SELECT binding_key, source_ref
         FROM workflow_run_inputs
         WHERE workflow_run_id = ?
+          AND binding_key = 'stage03.actual_hours_snapshot'
         """,
         (str(first["target_workflow_runs"][0]["workflow_run_id"]),),
     )
@@ -1666,9 +2059,95 @@ def test_notify_only_handoff_is_idempotent_for_target_run_resolution_and_edge_re
     assert binding_rows[0]["source_ref"] == str(final_packet["artifact_version_id"])
 
 
-def test_notify_only_handoff_refreshes_weekly_actual_hours_binding_for_newer_feedback(
+def test_reconciler_dry_run_reports_stale_notify_edge_and_missing_binding_without_mutation(
     tmp_path: Path,
 ) -> None:
+    db_url, db_path, reporting_run, final_packet = _setup_reporting_with_final_packet(tmp_path)
+    notified = _notify_only_handoff(
+        db_url,
+        edge_id="reporting_actuals_to_future_planning",
+        source_workflow_run_id=str(reporting_run["workflow_run_id"]),
+        source_artifact_version_id=str(final_packet["artifact_version_id"]),
+        idempotency_key="idem:handoff:notify:reporting:reconcile-drift",
+    )
+    edge = notified["edge_executions"][0]
+    target_run = notified["target_workflow_runs"][0]
+    _execute_sql(
+        db_path,
+        "UPDATE edge_executions SET status = 'stale' WHERE edge_execution_id = ?",
+        (str(edge["edge_execution_id"]),),
+    )
+    _execute_sql(
+        db_path,
+        """
+        DELETE FROM workflow_run_inputs
+        WHERE workflow_run_id = ?
+          AND binding_key = 'stage03.actual_hours_snapshot'
+        """,
+        (str(target_run["workflow_run_id"]),),
+    )
+    counts_before = _runtime_truth_counts(db_path)
+
+    report = _reconcile_handoffs_dry_run(db_url)
+
+    assert _runtime_truth_counts(db_path) == counts_before
+    assert report["summary"]["mutations_performed"] == 0
+    codes = {item["code"] for item in report["findings"]}
+    assert "stale_edge_execution" in codes
+    assert "notify_only_target_input_binding_missing" in codes
+    stale = next(item for item in report["findings"] if item["code"] == "stale_edge_execution")
+    assert stale["observed"]["status"] == "stale"
+    binding = next(
+        item
+        for item in report["findings"]
+        if item["code"] == "notify_only_target_input_binding_missing"
+    )
+    assert binding["subject"]["binding_key"] == "stage03.actual_hours_snapshot"
+    assert binding["expected"]["source_ref"] == str(final_packet["artifact_version_id"])
+
+
+def test_notify_only_handoff_targets_next_iso_planning_week_at_year_rollover(
+    tmp_path: Path,
+) -> None:
+    db_url, _ = _init_db(tmp_path)
+    reporting_run = _create_workflow_run(
+        db_url,
+        workflow_id="dispatch_reporting.v1",
+        partition_key="SD-2027-01-03",
+        logical_date="2027-01-03",
+        activation_key="dispatch_reporting.v1:SD-2027-01-03",
+        idempotency_key="idem:runs.create:dispatch_reporting.v1:SD-2027-01-03",
+    )
+    _, final_packet = _create_reporting_feedback_artifacts(
+        db_url,
+        workflow_run_id=str(reporting_run["workflow_run_id"]),
+        service_date="2027-01-03",
+        idempotency_suffix="reporting-iso-rollover",
+    )
+
+    notified = _notify_only_handoff(
+        db_url,
+        edge_id="reporting_actuals_to_future_planning",
+        source_workflow_run_id=str(reporting_run["workflow_run_id"]),
+        source_artifact_version_id=str(final_packet["artifact_version_id"]),
+        idempotency_key="idem:handoff:notify:reporting:iso-rollover",
+    )
+
+    edge = notified["edge_executions"][0]
+    target_run = notified["target_workflow_runs"][0]
+    policy_context = edge["input_bindings"]["handoff_scope"]["policy_context"]
+    assert edge["target_partition_key"] == "PW-2027-W01"
+    assert target_run["partition_key"] == "PW-2027-W01"
+    assert policy_context["same_week_planning_week_id"] == "PW-2026-W53"
+    assert policy_context["target_planning_week_id"] == "PW-2027-W01"
+    assert policy_context["target_relation"] == "next_iso_planning_week"
+
+
+def test_notify_only_handoff_blocks_late_reporting_replace_in_shared_env(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("ONETRUTH_API_BOUNDARY_PROFILE", "shared_env")
     db_url, db_path = _init_db(tmp_path)
     first_reporting_run = _create_workflow_run(
         db_url,
@@ -1693,6 +2172,7 @@ def test_notify_only_handoff_refreshes_weekly_actual_hours_binding_for_newer_fee
         source_artifact_version_id=str(first_final_packet["artifact_version_id"]),
         idempotency_key="idem:handoff:notify:reporting:first-feedback",
     )
+    target_run_id = str(first["target_workflow_runs"][0]["workflow_run_id"])
 
     second_reporting_run = _create_workflow_run(
         db_url,
@@ -1707,6 +2187,186 @@ def test_notify_only_handoff_refreshes_weekly_actual_hours_binding_for_newer_fee
         workflow_run_id=str(second_reporting_run["workflow_run_id"]),
         service_date="2026-03-06",
         idempotency_suffix="reporting-second-feedback",
+        route_id="CX93",
+        actual_minutes=540,
+    )
+    failed = run_cli(
+        "--db-url",
+        db_url,
+        "handoffs",
+        "notify-only",
+        "--json",
+        json.dumps(
+            {
+                "edge_id": "reporting_actuals_to_future_planning",
+                "source_workflow_run_id": str(second_reporting_run["workflow_run_id"]),
+                "source_artifact_version_id": str(second_final_packet["artifact_version_id"]),
+                "idempotency_key": "idem:handoff:notify:reporting:second-feedback",
+            },
+            separators=(",", ":"),
+        ),
+        expect_ok=False,
+    )
+
+    error = stderr_json(failed)
+    assert error["error_code"] == "late_reporting_handoff_conflict"
+    assert error["details"]["policy_id"] == "late_reporting_to_planning_input.v1"
+    assert error["details"]["boundary_profile"] == "shared_env"
+    assert error["details"]["replace_on_conflict_allowed"] is False
+    assert error["details"]["conflict_code"] == "late_reporting_handoff_conflict"
+    assert error["details"]["existing_source_artifact_version_id"] == str(
+        first_final_packet["artifact_version_id"]
+    )
+    assert error["details"]["incoming_source_artifact_version_id"] == str(
+        second_final_packet["artifact_version_id"]
+    )
+
+    binding_rows = _query_rows(
+        db_path,
+        """
+        SELECT binding_key, source_ref, artifact_version_id
+        FROM workflow_run_inputs
+        WHERE workflow_run_id = ?
+          AND binding_key = 'stage03.actual_hours_snapshot'
+        """,
+        (target_run_id,),
+    )
+    assert binding_rows == [
+        {
+            "binding_key": "stage03.actual_hours_snapshot",
+            "source_ref": str(first_final_packet["artifact_version_id"]),
+            "artifact_version_id": str(first["target_input_artifacts"][0]["artifact_version_id"]),
+        }
+    ]
+    artifact_rows = _query_rows(
+        db_path,
+        """
+        SELECT artifact_version_id
+        FROM artifact_versions
+        WHERE workflow_run_id = ?
+          AND artifact_kind = 'planning.actual_hours_snapshot.workbook'
+        """,
+        (target_run_id,),
+    )
+    edge_rows = _query_rows(
+        db_path,
+        """
+        SELECT edge_execution_id
+        FROM edge_executions
+        WHERE edge_id = 'reporting_actuals_to_future_planning'
+        """,
+    )
+    assert len(artifact_rows) == 1
+    assert len(edge_rows) == 1
+
+
+def test_reconciler_dry_run_reports_late_reporting_conflict_without_mutation(
+    tmp_path: Path,
+) -> None:
+    db_url, db_path = _init_db(tmp_path)
+    first_reporting_run = _create_workflow_run(
+        db_url,
+        workflow_id="dispatch_reporting.v1",
+        partition_key="SD-2026-03-05",
+        logical_date="2026-03-05",
+        activation_key="dispatch_reporting.v1:SD-2026-03-05:first",
+        idempotency_key="idem:runs.create:dispatch_reporting.v1:SD-2026-03-05:first",
+    )
+    _, first_final_packet = _create_reporting_feedback_artifacts(
+        db_url,
+        workflow_run_id=str(first_reporting_run["workflow_run_id"]),
+        service_date="2026-03-05",
+        idempotency_suffix="reporting-reconcile-first-feedback",
+        route_id="CX90",
+        actual_minutes=480,
+    )
+    _notify_only_handoff(
+        db_url,
+        edge_id="reporting_actuals_to_future_planning",
+        source_workflow_run_id=str(first_reporting_run["workflow_run_id"]),
+        source_artifact_version_id=str(first_final_packet["artifact_version_id"]),
+        idempotency_key="idem:handoff:notify:reporting:reconcile-first-feedback",
+    )
+    second_reporting_run = _create_workflow_run(
+        db_url,
+        workflow_id="dispatch_reporting.v1",
+        partition_key="SD-2026-03-06",
+        logical_date="2026-03-06",
+        activation_key="dispatch_reporting.v1:SD-2026-03-06:second",
+        idempotency_key="idem:runs.create:dispatch_reporting.v1:SD-2026-03-06:second",
+    )
+    _, second_final_packet = _create_reporting_feedback_artifacts(
+        db_url,
+        workflow_run_id=str(second_reporting_run["workflow_run_id"]),
+        service_date="2026-03-06",
+        idempotency_suffix="reporting-reconcile-second-feedback",
+        route_id="CX93",
+        actual_minutes=540,
+    )
+    counts_before = _runtime_truth_counts(db_path)
+
+    report = _reconcile_handoffs_dry_run(db_url, boundary_profile="shared_env")
+
+    assert _runtime_truth_counts(db_path) == counts_before
+    assert report["summary"]["mutations_performed"] == 0
+    codes = {item["code"] for item in report["findings"]}
+    assert "late_reporting_input_conflict" in codes
+    assert "reporting_notify_edge_missing" in codes
+    conflict = next(
+        item for item in report["findings"] if item["code"] == "late_reporting_input_conflict"
+    )
+    assert conflict["conflict_code"] == "late_reporting_handoff_conflict"
+    assert conflict["boundary_profile"] == "shared_env"
+    assert conflict["expected"]["source_ref"] == str(second_final_packet["artifact_version_id"])
+    assert conflict["observed"]["existing_source_ref"] == str(
+        first_final_packet["artifact_version_id"]
+    )
+    assert conflict["mutates"] is False
+
+
+def test_notify_only_handoff_refreshes_weekly_actual_hours_binding_for_newer_feedback_in_local_dev(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("ONETRUTH_API_BOUNDARY_PROFILE", "local_dev")
+    db_url, db_path = _init_db(tmp_path)
+    first_reporting_run = _create_workflow_run(
+        db_url,
+        workflow_id="dispatch_reporting.v1",
+        partition_key="SD-2026-03-05",
+        logical_date="2026-03-05",
+        activation_key="dispatch_reporting.v1:SD-2026-03-05:first",
+        idempotency_key="idem:runs.create:dispatch_reporting.v1:SD-2026-03-05:first",
+    )
+    _, first_final_packet = _create_reporting_feedback_artifacts(
+        db_url,
+        workflow_run_id=str(first_reporting_run["workflow_run_id"]),
+        service_date="2026-03-05",
+        idempotency_suffix="reporting-first-feedback-local-dev",
+        route_id="CX90",
+        actual_minutes=480,
+    )
+    first = _notify_only_handoff(
+        db_url,
+        edge_id="reporting_actuals_to_future_planning",
+        source_workflow_run_id=str(first_reporting_run["workflow_run_id"]),
+        source_artifact_version_id=str(first_final_packet["artifact_version_id"]),
+        idempotency_key="idem:handoff:notify:reporting:first-feedback:local-dev",
+    )
+
+    second_reporting_run = _create_workflow_run(
+        db_url,
+        workflow_id="dispatch_reporting.v1",
+        partition_key="SD-2026-03-06",
+        logical_date="2026-03-06",
+        activation_key="dispatch_reporting.v1:SD-2026-03-06:second",
+        idempotency_key="idem:runs.create:dispatch_reporting.v1:SD-2026-03-06:second",
+    )
+    _, second_final_packet = _create_reporting_feedback_artifacts(
+        db_url,
+        workflow_run_id=str(second_reporting_run["workflow_run_id"]),
+        service_date="2026-03-06",
+        idempotency_suffix="reporting-second-feedback-local-dev",
         route_id="CX93",
         actual_minutes=540,
     )
@@ -1729,6 +2389,7 @@ def test_notify_only_handoff_refreshes_weekly_actual_hours_binding_for_newer_fee
         SELECT binding_key, source_ref, artifact_version_id
         FROM workflow_run_inputs
         WHERE workflow_run_id = ?
+          AND binding_key = 'stage03.actual_hours_snapshot'
         """,
         (str(second["target_workflow_runs"][0]["workflow_run_id"]),),
     )

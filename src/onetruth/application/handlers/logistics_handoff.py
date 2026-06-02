@@ -3,6 +3,7 @@ from __future__ import annotations
 from functools import lru_cache
 import hashlib
 import json
+import os
 from pathlib import Path
 import sqlite3
 from typing import Any
@@ -13,10 +14,15 @@ from onetruth.application.handlers._shared.command_boundary import (
     _event_envelope,
     command_transaction,
 )
+from onetruth.application.handlers._shared.artifact_effects import (
+    persist_generated_artifact_effects,
+)
 from onetruth.application.handlers._shared.runtime_effects import (
+    build_handoff_effect_scope,
     create_or_reuse_edge_execution_effects,
     create_or_validate_workflow_artifact_input_effects,
     get_workflow_artifact_input_effects,
+    handoff_artifact_source_truth,
 )
 from onetruth.application.services.dispatch_reporting_build import (
     PLANNING_ACTUAL_HOURS_ARTIFACT_KIND,
@@ -24,8 +30,20 @@ from onetruth.application.services.dispatch_reporting_build import (
     build_planning_actual_hours_snapshot_payload,
     merge_planning_actual_hours_snapshot_payloads,
 )
+from onetruth.application.services.execution_evidence import (
+    EXECUTION_ARTIFACT_ROOT_ENV_VAR,
+    resolve_execution_artifact_root,
+)
 from onetruth.application.services.logistics_handoff_runtime import apply_partition_transform_by_id
 from onetruth.application.services.logistics_run_resolver import LogisticsRunResolver
+from onetruth.domain.logistics_calendar import (
+    LATE_REPORTING_CONFLICT_CODE,
+    LATE_WEEKLY_REPUBLISH_POLICY_ID,
+    LATE_WEEKLY_REPUBLISH_POLICY_STATE,
+    LogisticsCalendarPolicy,
+    late_reporting_policy_for_boundary,
+    late_weekly_republish_policy_state,
+)
 from onetruth.domain.partition_codec import validate_partition_key
 from onetruth.infrastructure.artifacts.storage import ArtifactStorageError, read_blob
 from onetruth.infrastructure.definitions.family_compiler import (
@@ -42,6 +60,7 @@ from onetruth.infrastructure.repositories.edge_executions import (
     get_edge_execution,
     list_edge_executions,
     update_edge_execution_activation,
+    update_edge_execution_cursor,
 )
 from onetruth.infrastructure.repositories.human_tasks import (
     create_human_task,
@@ -65,6 +84,8 @@ LIVE_ACTUAL_HOURS_KIND = "dispatch.actual_hours_snapshot.workbook"
 LIVE_STAGE01_TASK_KIND = "dispatch_seed_intake"
 NOTIFY_ONLY_MODE = "notify_only"
 WRITER_MODE_SOURCE_ONLY = "source_only"
+LATE_WEEKLY_REPUBLISH_ERROR_CODE = "live_dispatch_base_seed_republish_after_prepare"
+API_BOUNDARY_PROFILE_ENV_VAR = "ONETRUTH_API_BOUNDARY_PROFILE"
 
 _REPO_ROOT = Path(__file__).resolve().parents[4]
 _LOGISTICS_FAMILY_PATH = (
@@ -74,6 +95,7 @@ _LOGISTICS_TRANSFORMS_PATH = (
     _REPO_ROOT / "docs" / "workflows" / "logistics_ops_family" / "v1" / "PARTITION_TRANSFORMS.yaml"
 )
 _LOGISTICS_RUN_RESOLVER = LogisticsRunResolver()
+_LOGISTICS_CALENDAR_POLICY = LogisticsCalendarPolicy()
 
 
 def materialize_weekly_seeds_command(
@@ -146,6 +168,7 @@ def materialize_weekly_seeds_command(
 
     edge_rows: list[dict[str, Any]] = []
     seed_rows: list[dict[str, Any]] = []
+    storage_root = _handoff_artifact_root(connection)
 
     with command_transaction(connection):
         for service_date_id in sorted(service_dates):
@@ -156,37 +179,62 @@ def materialize_weekly_seeds_command(
                 target_partition_key=service_date_id,
             )
             now = utc_now_iso()
+            seed_calendar_policy = _weekly_seed_calendar_policy_context(
+                planning_week_id=planning_week_id,
+                service_date_id=service_date_id,
+            )
+            handoff_scope = _handoff_scope_for_artifacts(
+                edge_id=EDGE_ID_WEEKLY_TO_LIVE,
+                source_artifacts=[published_artifact],
+                target_partition_kind="ServiceDateID",
+                target_partition_key=service_date_id,
+                policy_context=seed_calendar_policy,
+            )
             seed_artifact_version_id = _stable_seed_artifact_id(
                 workflow_run_id=workflow_run_id,
                 published_artifact_version_id=published_artifact_version_id,
                 service_date_id=service_date_id,
             )
-            seed_artifact = _create_or_load_artifact_version(
+            seed_payload = {
+                "schema_version": "weekly_daily_dispatch_seed.v1",
+                "handoff_edge_id": EDGE_ID_WEEKLY_TO_LIVE,
+                "planning_week_id": planning_week_id,
+                "service_date_id": service_date_id,
+                "published_artifact_version_id": published_artifact_version_id,
+                "published_artifact_content_digest": str(published_artifact["content_digest"]),
+                "target_workflow_id": LIVE_WORKFLOW_ID,
+                "target_stage_id": "Stage01",
+                "target_partition_kind": "ServiceDateID",
+                "target_partition_key": service_date_id,
+                "handoff_scope": handoff_scope,
+            }
+            seed_metadata = {
+                **seed_payload,
+                "materialize_idempotency_key": idempotency_key,
+            }
+            seed_result = persist_generated_artifact_effects(
                 connection,
+                storage_root=storage_root,
                 artifact_version_id=seed_artifact_version_id,
                 workflow_run_id=workflow_run_id,
-                tenant_id=str(source_workflow_run["tenant_id"]),
-                domain_id=str(source_workflow_run["domain_id"]),
-                dataset_key=WEEKLY_DAILY_SEED_KIND,
-                partition_kind="ServiceDateID",
-                partition_key=service_date_id,
                 artifact_kind=WEEKLY_DAILY_SEED_KIND,
                 artifact_role="official_output",
-                media_type="application/octet-stream",
-                storage_uri=f"inmem://handoff/{workflow_run_id}/{service_date_id}/seed",
-                content_digest=f"sha256:{_digest('weekly-seed', workflow_run_id, service_date_id)}",
-                metadata_json={
-                    "handoff_edge_id": EDGE_ID_WEEKLY_TO_LIVE,
-                    "planning_week_id": planning_week_id,
-                    "service_date_id": service_date_id,
-                    "published_artifact_version_id": published_artifact_version_id,
-                    "materialize_idempotency_key": idempotency_key,
-                },
+                media_type="application/json",
+                file_name=f"weekly_daily_dispatch_seed_{service_date_id}.json",
+                payload=seed_payload,
+                metadata_json=seed_metadata,
                 parent_artifact_version_id=published_artifact_version_id,
                 supersedes_artifact_version_id=None,
                 lineage_note="weekly_to_live_handoff_seed",
-                created_at=now,
+                actor_id="system:logistics-handoff",
+                actor_type="system",
+                canonical_partition_kind="ServiceDateID",
+                canonical_partition_key=service_date_id,
+                event_idempotency=(
+                    f"handoff-weekly-seed:{seed_artifact_version_id}:artifact.version.created"
+                ),
             )
+            seed_artifact = dict(seed_result["artifact_version"])
             _create_or_ignore_provenance_edge(
                 connection,
                 output_artifact_version_id=str(seed_artifact["artifact_version_id"]),
@@ -199,7 +247,61 @@ def materialize_weekly_seeds_command(
                 metadata_json={"edge_id": EDGE_ID_WEEKLY_TO_LIVE, "service_date_id": service_date_id},
             )
 
+            late_republish_policy = _late_republish_policy_for_candidate_seed(
+                connection,
+                tenant_id=str(source_workflow_run["tenant_id"]),
+                domain_id=str(source_workflow_run["domain_id"]),
+                service_date_id=service_date_id,
+                candidate_seed_artifact_version_id=str(seed_artifact["artifact_version_id"]),
+                candidate_published_artifact_version_id=published_artifact_version_id,
+            )
             edge_execution_id = f"ee-{uuid4()}"
+            if late_republish_policy is not None:
+                edge = create_or_reuse_edge_execution_effects(
+                    connection,
+                    edge_execution_id=edge_execution_id,
+                    edge_id=EDGE_ID_WEEKLY_TO_LIVE,
+                    source_workflow_run_id=workflow_run_id,
+                    source_stage_id="Stage07",
+                    source_artifact_version_id=str(seed_artifact["artifact_version_id"]),
+                    source_activation_key=str(source_workflow_run["activation_key"]),
+                    target_workflow_id=LIVE_WORKFLOW_ID,
+                    target_stage_id="Stage01",
+                    target_partition_kind="ServiceDateID",
+                    target_partition_key=service_date_id,
+                    target_activation_key=f"{LIVE_WORKFLOW_ID}:{service_date_id}",
+                    correlation_key=correlation_key,
+                    materialize_idempotency_key=idempotency_key,
+                    status="stale",
+                    cursor_state={
+                        "phase": "late_weekly_republish_blocked",
+                        "service_date_id": service_date_id,
+                        "planning_week_id": planning_week_id,
+                        "policy_state": LATE_WEEKLY_REPUBLISH_POLICY_STATE,
+                        "handoff_scope_key": handoff_scope["scope_key"],
+                        "handoff_policy_version": handoff_scope["policy_version"],
+                    },
+                    compensation_state={
+                        "mode": "mark_stale",
+                        "state": "policy_blocked",
+                        "policy_state": LATE_WEEKLY_REPUBLISH_POLICY_STATE,
+                    },
+                    input_bindings={
+                        "published_artifact_version_id": published_artifact_version_id,
+                        "seed_artifact_version_id": str(seed_artifact["artifact_version_id"]),
+                        "handoff_scope": handoff_scope,
+                        "policy_state": late_republish_policy,
+                    },
+                    trigger_ref=None,
+                    seed_artifact_version_id=str(seed_artifact["artifact_version_id"]),
+                    target_workflow_run_id=str(late_republish_policy["target_workflow_run_id"]),
+                    activated_at=None,
+                    created_at=now,
+                )
+                edge_rows.append(edge)
+                seed_rows.append(seed_artifact)
+                continue
+
             edge = create_or_reuse_edge_execution_effects(
                 connection,
                 edge_execution_id=edge_execution_id,
@@ -220,11 +322,14 @@ def materialize_weekly_seeds_command(
                     "phase": "prepared",
                     "service_date_id": service_date_id,
                     "planning_week_id": planning_week_id,
+                    "handoff_scope_key": handoff_scope["scope_key"],
+                    "handoff_policy_version": handoff_scope["policy_version"],
                 },
                 compensation_state={"mode": "mark_stale", "state": "none"},
                 input_bindings={
                     "published_artifact_version_id": published_artifact_version_id,
                     "seed_artifact_version_id": str(seed_artifact["artifact_version_id"]),
+                    "handoff_scope": handoff_scope,
                 },
                 trigger_ref=None,
                 seed_artifact_version_id=str(seed_artifact["artifact_version_id"]),
@@ -268,6 +373,8 @@ def activate_live_dispatch_command(
     }
 
     edge_status = str(edge.get("status") or "")
+    if edge_status == "stale" and _edge_has_late_republish_policy_state(edge):
+        _raise_late_republish_policy_error(edge=edge)
     if edge_status not in {"prepared", "activated"}:
         raise CommandError(
             code="edge_execution_status_transition_invalid",
@@ -304,6 +411,7 @@ def activate_live_dispatch_command(
         }
 
     seed_artifact = _require_artifact(connection, str(edge["seed_artifact_version_id"]))
+    _assert_seed_source_not_late_republished(connection, edge=edge, seed_artifact=seed_artifact)
     _assert_same_scope_artifact(
         connection,
         artifact_version_id=str(seed_artifact["artifact_version_id"]),
@@ -354,6 +462,12 @@ def activate_live_dispatch_command(
     )
 
     service_date_id = str(edge["target_partition_key"])
+    handoff_scope = _handoff_scope_for_artifacts(
+        edge_id=str(edge["edge_id"]),
+        source_artifacts=[seed_artifact, route_delta_source, actual_hours_source],
+        target_partition_kind="ServiceDateID",
+        target_partition_key=service_date_id,
+    )
     route_delta_partition = route_delta_source.get("partition_key")
     route_delta_partition_kind = route_delta_source.get("partition_kind")
     if route_delta_partition is not None and str(route_delta_partition) != service_date_id:
@@ -407,6 +521,7 @@ def activate_live_dispatch_command(
                 "edge_execution_id": edge_execution_id,
                 "source_artifact_version_id": str(seed_artifact["artifact_version_id"]),
                 "service_date_id": service_date_id,
+                "handoff_scope": handoff_scope,
             },
             parent_artifact_version_id=str(seed_artifact["artifact_version_id"]),
             supersedes_artifact_version_id=None,
@@ -431,6 +546,7 @@ def activate_live_dispatch_command(
                 "edge_execution_id": edge_execution_id,
                 "source_artifact_version_id": route_delta_source_artifact_version_id,
                 "service_date_id": service_date_id,
+                "handoff_scope": handoff_scope,
             },
             parent_artifact_version_id=route_delta_source_artifact_version_id,
             supersedes_artifact_version_id=None,
@@ -455,6 +571,7 @@ def activate_live_dispatch_command(
                 "edge_execution_id": edge_execution_id,
                 "source_artifact_version_id": actual_hours_source_artifact_version_id,
                 "service_date_id": service_date_id,
+                "handoff_scope": handoff_scope,
             },
             parent_artifact_version_id=actual_hours_source_artifact_version_id,
             supersedes_artifact_version_id=None,
@@ -502,7 +619,11 @@ def activate_live_dispatch_command(
             binding_key="stage01.base_seed",
             source_ref=str(seed_artifact["artifact_version_id"]),
             artifact_version_id=str(live_seed["artifact_version_id"]),
-            metadata_json={"edge_execution_id": edge_execution_id, "kind": LIVE_SEED_KIND},
+            metadata_json={
+                "edge_execution_id": edge_execution_id,
+                "kind": LIVE_SEED_KIND,
+                "handoff_scope": handoff_scope,
+            },
             captured_at=now,
         )
         create_or_validate_workflow_artifact_input_effects(
@@ -511,7 +632,11 @@ def activate_live_dispatch_command(
             binding_key="stage01.route_delta_intake",
             source_ref=route_delta_source_artifact_version_id,
             artifact_version_id=str(live_route_delta["artifact_version_id"]),
-            metadata_json={"edge_execution_id": edge_execution_id, "kind": LIVE_ROUTE_DELTA_KIND},
+            metadata_json={
+                "edge_execution_id": edge_execution_id,
+                "kind": LIVE_ROUTE_DELTA_KIND,
+                "handoff_scope": handoff_scope,
+            },
             captured_at=now,
         )
         create_or_validate_workflow_artifact_input_effects(
@@ -520,7 +645,11 @@ def activate_live_dispatch_command(
             binding_key="stage01.actual_hours_snapshot",
             source_ref=actual_hours_source_artifact_version_id,
             artifact_version_id=str(live_actual_hours["artifact_version_id"]),
-            metadata_json={"edge_execution_id": edge_execution_id, "kind": LIVE_ACTUAL_HOURS_KIND},
+            metadata_json={
+                "edge_execution_id": edge_execution_id,
+                "kind": LIVE_ACTUAL_HOURS_KIND,
+                "handoff_scope": handoff_scope,
+            },
             captured_at=now,
         )
 
@@ -535,12 +664,15 @@ def activate_live_dispatch_command(
                 "phase": "activated",
                 "service_date_id": service_date_id,
                 "trigger_ref": route_delta_source_artifact_version_id,
+                "handoff_scope_key": handoff_scope["scope_key"],
+                "handoff_policy_version": handoff_scope["policy_version"],
             },
             compensation_state={"mode": "mark_stale", "state": "none"},
             input_bindings={
                 "base_seed_source_artifact_version_id": str(seed_artifact["artifact_version_id"]),
                 "route_delta_source_artifact_version_id": route_delta_source_artifact_version_id,
                 "actual_hours_source_artifact_version_id": actual_hours_source_artifact_version_id,
+                "handoff_scope": handoff_scope,
                 "live_input_artifact_version_ids": {
                     LIVE_SEED_KIND: str(live_seed["artifact_version_id"]),
                     LIVE_ROUTE_DELTA_KIND: str(live_route_delta["artifact_version_id"]),
@@ -614,6 +746,8 @@ def prepare_live_dispatch_day_command(
     }
 
     edge_status = str(edge.get("status") or "")
+    if edge_status == "stale" and _edge_has_late_republish_policy_state(edge):
+        _raise_late_republish_policy_error(edge=edge)
     if edge_status == "activated":
         target_workflow_run_id = str(edge.get("target_workflow_run_id") or "").strip()
         if not target_workflow_run_id:
@@ -657,6 +791,12 @@ def prepare_live_dispatch_day_command(
     edge_execution_id = str(edge["edge_execution_id"])
     with command_transaction(connection):
         now = utc_now_iso()
+        handoff_scope = _handoff_scope_for_artifacts(
+            edge_id=str(edge["edge_id"]),
+            source_artifacts=[seed_artifact],
+            target_partition_kind="ServiceDateID",
+            target_partition_key=service_date_id,
+        )
         target_workflow_run = _LOGISTICS_RUN_RESOLVER.resolve_or_create_live_dispatch(
             connection,
             tenant_id=scope["tenant_id"],
@@ -687,6 +827,7 @@ def prepare_live_dispatch_day_command(
                 "source_artifact_version_id": str(seed_artifact["artifact_version_id"]),
                 "service_date_id": service_date_id,
                 "prepared_via": "prepare_live_dispatch_day",
+                "handoff_scope": handoff_scope,
             },
             parent_artifact_version_id=str(seed_artifact["artifact_version_id"]),
             supersedes_artifact_version_id=None,
@@ -713,7 +854,11 @@ def prepare_live_dispatch_day_command(
             binding_key="stage01.base_seed",
             source_ref=str(seed_artifact["artifact_version_id"]),
             artifact_version_id=str(live_seed["artifact_version_id"]),
-            metadata_json={"edge_execution_id": edge_execution_id, "kind": LIVE_SEED_KIND},
+            metadata_json={
+                "edge_execution_id": edge_execution_id,
+                "kind": LIVE_SEED_KIND,
+                "handoff_scope": handoff_scope,
+            },
             captured_at=now,
         )
 
@@ -728,10 +873,13 @@ def prepare_live_dispatch_day_command(
                 "phase": "seed_prepared",
                 "service_date_id": service_date_id,
                 "trigger_ref": str(seed_artifact["artifact_version_id"]),
+                "handoff_scope_key": handoff_scope["scope_key"],
+                "handoff_policy_version": handoff_scope["policy_version"],
             },
             compensation_state={"mode": "mark_stale", "state": "none"},
             input_bindings={
                 "base_seed_source_artifact_version_id": str(seed_artifact["artifact_version_id"]),
+                "handoff_scope": handoff_scope,
                 "live_input_artifact_version_ids": {
                     LIVE_SEED_KIND: str(live_seed["artifact_version_id"]),
                 },
@@ -864,6 +1012,7 @@ def notify_only_handoff_command(
         stage_id=edge_descriptor["target_stage_id"],
         dataset_key=edge_descriptor["target_dataset_key"],
     )
+    storage_root = _handoff_artifact_root(connection)
 
     with command_transaction(connection):
         for target_partition_key in target_partition_keys:
@@ -875,6 +1024,18 @@ def notify_only_handoff_command(
                 target_partition_key=target_partition_key,
             )
             now = utc_now_iso()
+            partition_policy_context = _notify_only_partition_policy_context(
+                edge_id=edge_id,
+                source_partition_key=source_partition_key,
+                target_partition_key=target_partition_key,
+            )
+            handoff_scope = _handoff_scope_for_artifacts(
+                edge_id=edge_id,
+                source_artifacts=[source_artifact],
+                target_partition_kind=edge_descriptor["target_partition_kind"],
+                target_partition_key=target_partition_key,
+                policy_context=partition_policy_context,
+            )
             target_workflow_run = _LOGISTICS_RUN_RESOLVER.resolve_or_create(
                 connection,
                 workflow_id=edge_descriptor["target_workflow_id"],
@@ -894,14 +1055,14 @@ def notify_only_handoff_command(
                     source_partition_key=source_partition_key,
                     source_artifact=source_artifact,
                     source_artifact_version_id=source_artifact_version_id,
-                    source_scope=source_scope,
+                    storage_root=storage_root,
                     target_workflow_run_id=target_workflow_run_id,
                     target_partition_key=target_partition_key,
                     target_binding_key=target_binding_key,
                     target_dataset_key=edge_descriptor["target_dataset_key"],
                     target_partition_kind=edge_descriptor["target_partition_kind"],
                     idempotency_key=idempotency_key,
-                    created_at=now,
+                    handoff_scope=handoff_scope,
                 )
             )
             _create_or_ignore_provenance_edge(
@@ -953,7 +1114,7 @@ def notify_only_handoff_command(
                 artifact_version_id=str(target_input_artifact["artifact_version_id"]),
                 metadata_json=binding_metadata_json,
                 captured_at=now,
-                replace_on_conflict=True,
+                replace_on_conflict=_notify_only_input_replace_on_conflict_allowed(),
             )
 
             edge_execution_id = f"ee-{uuid4()}"
@@ -978,6 +1139,8 @@ def notify_only_handoff_command(
                     "handoff_mode": NOTIFY_ONLY_MODE,
                     "source_partition_key": source_partition_key,
                     "target_partition_key": target_partition_key,
+                    "handoff_scope_key": handoff_scope["scope_key"],
+                    "handoff_policy_version": handoff_scope["policy_version"],
                 },
                 compensation_state={
                     "mode": edge_descriptor["compensation_mode"],
@@ -990,6 +1153,7 @@ def notify_only_handoff_command(
                         target_input_artifact["artifact_version_id"]
                     ),
                     "target_binding_key": target_binding_key,
+                    "handoff_scope": handoff_scope,
                 },
                 trigger_ref=source_artifact_version_id,
                 seed_artifact_version_id=None,
@@ -1296,16 +1460,17 @@ def _materialize_notify_only_target_input_artifact(
     source_partition_key: str,
     source_artifact: dict[str, Any],
     source_artifact_version_id: str,
-    source_scope: dict[str, str],
+    storage_root: Path,
     target_workflow_run_id: str,
     target_partition_key: str,
     target_binding_key: str,
     target_dataset_key: str,
     target_partition_kind: str,
     idempotency_key: str,
-    created_at: str,
+    handoff_scope: dict[str, Any],
 ) -> tuple[dict[str, Any], dict[str, Any], tuple[str, ...]]:
     base_artifact_metadata = {
+        "schema_version": "notify_only_handoff_manifest.v1",
         "handoff_edge_id": edge_id,
         "handoff_mode": NOTIFY_ONLY_MODE,
         "source_workflow_run_id": source_workflow_run_id,
@@ -1313,46 +1478,54 @@ def _materialize_notify_only_target_input_artifact(
         "source_partition_key": source_partition_key,
         "target_partition_key": target_partition_key,
         "target_input_dataset_key": target_dataset_key,
+        "handoff_scope": handoff_scope,
+    }
+    artifact_metadata = {
+        **base_artifact_metadata,
         "materialize_idempotency_key": idempotency_key,
     }
     if edge_id != REPORTING_TO_PLANNING_EDGE_ID:
-        target_input_artifact = _create_or_load_artifact_version(
+        target_artifact_version_id = _stable_notify_input_artifact_id(
+            edge_id=edge_id,
+            source_artifact_version_id=source_artifact_version_id,
+            target_partition_key=target_partition_key,
+            target_dataset_key=target_dataset_key,
+        )
+        target_input_result = persist_generated_artifact_effects(
             connection,
-            artifact_version_id=_stable_notify_input_artifact_id(
+            storage_root=storage_root,
+            artifact_version_id=target_artifact_version_id,
+            workflow_run_id=target_workflow_run_id,
+            artifact_kind=target_dataset_key,
+            artifact_role="official_input",
+            media_type="application/json",
+            file_name=_notify_only_manifest_file_name(
                 edge_id=edge_id,
                 source_artifact_version_id=source_artifact_version_id,
                 target_partition_key=target_partition_key,
                 target_dataset_key=target_dataset_key,
             ),
-            workflow_run_id=target_workflow_run_id,
-            tenant_id=source_scope["tenant_id"],
-            domain_id=source_scope["domain_id"],
-            dataset_key=target_dataset_key,
-            partition_kind=target_partition_kind,
-            partition_key=target_partition_key,
-            artifact_kind=target_dataset_key,
-            artifact_role="official_input",
-            media_type=str(source_artifact.get("media_type") or "application/octet-stream"),
-            storage_uri=(
-                "inmem://handoff/"
-                f"{target_workflow_run_id}/{target_dataset_key}/{source_artifact_version_id}"
-            ),
-            content_digest=(
-                "sha256:"
-                f"{_digest('notify-input', edge_id, source_artifact_version_id, target_partition_key)}"
-            ),
-            metadata_json=base_artifact_metadata,
+            payload=base_artifact_metadata,
+            metadata_json=artifact_metadata,
             parent_artifact_version_id=source_artifact_version_id,
             supersedes_artifact_version_id=None,
             lineage_note="notify_only_handoff_input",
-            created_at=created_at,
+            actor_id="system:logistics-handoff",
+            actor_type="system",
+            canonical_partition_kind=target_partition_kind,
+            canonical_partition_key=target_partition_key,
+            event_idempotency=(
+                f"handoff-notify:{target_artifact_version_id}:artifact.version.created"
+            ),
         )
+        target_input_artifact = dict(target_input_result["artifact_version"])
         return (
             target_input_artifact,
             {
                 "edge_id": edge_id,
                 "handoff_mode": NOTIFY_ONLY_MODE,
                 "target_dataset_key": target_dataset_key,
+                "handoff_scope": handoff_scope,
             },
             (),
         )
@@ -1390,8 +1563,30 @@ def _materialize_notify_only_target_input_artifact(
                 "handoff_mode": NOTIFY_ONLY_MODE,
                 "target_dataset_key": target_dataset_key,
                 "normalized_artifact_version_id": normalized_artifact_version_id,
+                "handoff_scope": handoff_scope,
             },
             (),
+        )
+    if (
+        existing_binding is not None
+        and str(existing_binding.get("source_ref") or "") != source_artifact_version_id
+        and not _notify_only_input_replace_on_conflict_allowed()
+    ):
+        late_report_policy = late_reporting_policy_for_boundary(_notify_only_boundary_profile())
+        raise CommandError(
+            code=LATE_REPORTING_CONFLICT_CODE,
+            message="late reporting handoff cannot replace an existing weekly actual-hours input in this boundary profile",
+            details={
+                "edge_id": edge_id,
+                "target_workflow_run_id": target_workflow_run_id,
+                "target_binding_key": target_binding_key,
+                "existing_source_artifact_version_id": str(
+                    existing_binding.get("source_ref") or ""
+                ),
+                "incoming_source_artifact_version_id": source_artifact_version_id,
+                "existing_target_input_artifact_version_id": superseded_artifact_version_id,
+                **late_report_policy.as_policy_context(),
+            },
         )
     current_payload = None
     if superseded_artifact_version_id:
@@ -1407,40 +1602,45 @@ def _materialize_notify_only_target_input_artifact(
     merged_payload["normalized_artifact_version_id"] = normalized_artifact_version_id
     if superseded_artifact_version_id:
         merged_payload["merged_from_artifact_version_id"] = superseded_artifact_version_id
+    artifact_metadata = {
+        **merged_payload,
+        "materialize_idempotency_key": idempotency_key,
+    }
 
-    payload_bytes = json.dumps(
-        merged_payload,
-        separators=(",", ":"),
-        sort_keys=True,
-    ).encode("utf-8")
-    target_input_artifact = _create_or_load_artifact_version(
+    target_input_result = persist_generated_artifact_effects(
         connection,
+        storage_root=storage_root,
         artifact_version_id=target_artifact_version_id,
         workflow_run_id=target_workflow_run_id,
-        tenant_id=source_scope["tenant_id"],
-        domain_id=source_scope["domain_id"],
-        dataset_key=target_dataset_key,
-        partition_kind=target_partition_kind,
-        partition_key=target_partition_key,
         artifact_kind=PLANNING_ACTUAL_HOURS_ARTIFACT_KIND,
         artifact_role="official_input",
         media_type="application/json",
-        storage_uri=(
-            "inmem://handoff/"
-            f"{target_workflow_run_id}/{target_dataset_key}/{source_artifact_version_id}.json"
+        file_name=_notify_only_manifest_file_name(
+            edge_id=edge_id,
+            source_artifact_version_id=source_artifact_version_id,
+            target_partition_key=target_partition_key,
+            target_dataset_key=target_dataset_key,
         ),
-        content_digest=f"sha256:{hashlib.sha256(payload_bytes).hexdigest()}",
-        metadata_json=merged_payload,
+        payload=merged_payload,
+        metadata_json=artifact_metadata,
         parent_artifact_version_id=source_artifact_version_id,
         supersedes_artifact_version_id=superseded_artifact_version_id or None,
         lineage_note="notify_only_handoff_input_dispatch_reporting_merge",
-        created_at=created_at,
+        actor_id="system:logistics-handoff",
+        actor_type="system",
+        canonical_partition_kind=target_partition_kind,
+        canonical_partition_key=target_partition_key,
+        event_idempotency=(
+            f"handoff-notify:{target_artifact_version_id}:artifact.version.created"
+        ),
     )
+    target_input_artifact = dict(target_input_result["artifact_version"])
     binding_metadata_json = {
         "edge_id": edge_id,
         "handoff_mode": NOTIFY_ONLY_MODE,
         "target_dataset_key": target_dataset_key,
         "normalized_artifact_version_id": normalized_artifact_version_id,
+        "handoff_scope": handoff_scope,
     }
     if superseded_artifact_version_id:
         binding_metadata_json["merged_from_artifact_version_id"] = (
@@ -1670,6 +1870,165 @@ def _assert_activation_replay_input_matches(
     )
 
 
+def _late_republish_policy_for_candidate_seed(
+    connection: sqlite3.Connection,
+    *,
+    tenant_id: str,
+    domain_id: str,
+    service_date_id: str,
+    candidate_seed_artifact_version_id: str,
+    candidate_published_artifact_version_id: str,
+) -> dict[str, Any] | None:
+    target_workflow_run = _LOGISTICS_RUN_RESOLVER.find_live_dispatch(
+        connection,
+        tenant_id=tenant_id,
+        domain_id=domain_id,
+        workflow_id=LIVE_WORKFLOW_ID,
+        service_date_id=service_date_id,
+    )
+    if target_workflow_run is None:
+        return None
+    binding = get_workflow_artifact_input_effects(
+        connection,
+        workflow_run_id=str(target_workflow_run["workflow_run_id"]),
+        binding_key="stage01.base_seed",
+    )
+    if binding is None:
+        return None
+    existing_source_ref = str(binding.get("source_ref") or "")
+    if existing_source_ref == candidate_seed_artifact_version_id:
+        return None
+    return late_weekly_republish_policy_state(
+        reason="live_dispatch_base_seed_already_bound",
+        target_workflow_run_id=str(target_workflow_run["workflow_run_id"]),
+        service_date_id=service_date_id,
+        existing_base_seed_source_artifact_version_id=existing_source_ref,
+        existing_base_seed_live_artifact_version_id=(
+            str(binding.get("artifact_version_id") or "")
+            if binding.get("artifact_version_id") is not None
+            else None
+        ),
+        candidate_base_seed_source_artifact_version_id=candidate_seed_artifact_version_id,
+        candidate_published_artifact_version_id=candidate_published_artifact_version_id,
+        required_action="resolve weekly republish policy before rebinding live dispatch base seed",
+    )
+
+
+def _assert_seed_source_not_late_republished(
+    connection: sqlite3.Connection,
+    *,
+    edge: dict[str, Any],
+    seed_artifact: dict[str, Any],
+) -> None:
+    published_artifact_version_id = str(seed_artifact.get("parent_artifact_version_id") or "").strip()
+    if not published_artifact_version_id:
+        return
+    superseding_artifact_version_id = _find_superseding_artifact_version_id(
+        connection,
+        artifact_version_id=published_artifact_version_id,
+    )
+    if superseding_artifact_version_id is None:
+        return
+
+    policy_state = late_weekly_republish_policy_state(
+        reason="weekly_published_artifact_superseded_after_seed_prepare",
+        edge_execution_id=str(edge.get("edge_execution_id") or ""),
+        service_date_id=str(edge.get("target_partition_key") or ""),
+        existing_base_seed_source_artifact_version_id=str(
+            seed_artifact["artifact_version_id"]
+        ),
+        existing_published_artifact_version_id=published_artifact_version_id,
+        superseding_published_artifact_version_id=superseding_artifact_version_id,
+        required_action="resolve weekly republish policy before activating live dispatch",
+    )
+    with command_transaction(connection):
+        stale_edge = _mark_edge_late_republish_policy_state(
+            connection,
+            edge=edge,
+            policy_state=policy_state,
+        )
+    _raise_late_republish_policy_error(edge=stale_edge)
+
+
+def _mark_edge_late_republish_policy_state(
+    connection: sqlite3.Connection,
+    *,
+    edge: dict[str, Any],
+    policy_state: dict[str, Any],
+) -> dict[str, Any]:
+    edge_execution_id = str(edge.get("edge_execution_id") or "")
+    cursor_state = dict(edge.get("cursor_state") or {})
+    cursor_state.update(
+        {
+            "phase": "late_weekly_republish_blocked",
+            "policy_state": LATE_WEEKLY_REPUBLISH_POLICY_STATE,
+        }
+    )
+    compensation_state = dict(edge.get("compensation_state") or {})
+    compensation_state.update(
+        {
+            "mode": "mark_stale",
+            "state": "policy_blocked",
+            "policy_state": LATE_WEEKLY_REPUBLISH_POLICY_STATE,
+        }
+    )
+    input_bindings = dict(edge.get("input_bindings") or {})
+    input_bindings["policy_state"] = policy_state
+    updated = update_edge_execution_cursor(
+        connection,
+        edge_execution_id=edge_execution_id,
+        status="stale",
+        cursor_state=cursor_state,
+        compensation_state=compensation_state,
+        input_bindings=input_bindings,
+        updated_at=utc_now_iso(),
+    )
+    if updated is None:
+        raise CommandError(
+            code="edge_execution_not_found",
+            message="edge execution not found while recording late-republish policy state",
+            details={"edge_execution_id": edge_execution_id},
+        )
+    return updated
+
+
+def _raise_late_republish_policy_error(*, edge: dict[str, Any]) -> None:
+    input_bindings = edge.get("input_bindings")
+    policy_state = (
+        input_bindings.get("policy_state")
+        if isinstance(input_bindings, dict)
+        else None
+    )
+    details: dict[str, Any] = {
+        "edge_execution_id": str(edge.get("edge_execution_id") or ""),
+        "edge_status": str(edge.get("status") or ""),
+        "policy_id": LATE_WEEKLY_REPUBLISH_POLICY_ID,
+        "policy_state": LATE_WEEKLY_REPUBLISH_POLICY_STATE,
+    }
+    if isinstance(policy_state, dict):
+        details.update(policy_state)
+    raise CommandError(
+        code=LATE_WEEKLY_REPUBLISH_ERROR_CODE,
+        message="live dispatch base seed is already bound and the weekly source was republished",
+        details=details,
+    )
+
+
+def _edge_has_late_republish_policy_state(edge: dict[str, Any]) -> bool:
+    input_bindings = edge.get("input_bindings")
+    if isinstance(input_bindings, dict):
+        policy_state = input_bindings.get("policy_state")
+        if isinstance(policy_state, dict):
+            return str(policy_state.get("policy_state") or "") == LATE_WEEKLY_REPUBLISH_POLICY_STATE
+        if str(policy_state or "") == LATE_WEEKLY_REPUBLISH_POLICY_STATE:
+            return True
+    cursor_state = edge.get("cursor_state")
+    return (
+        isinstance(cursor_state, dict)
+        and str(cursor_state.get("policy_state") or "") == LATE_WEEKLY_REPUBLISH_POLICY_STATE
+    )
+
+
 def _assert_handoff_source_not_superseded(
     connection: sqlite3.Connection,
     *,
@@ -1677,6 +2036,29 @@ def _assert_handoff_source_not_superseded(
     artifact_version_id: str,
     artifact_kind: str,
 ) -> None:
+    superseding_artifact_version_id = _find_superseding_artifact_version_id(
+        connection,
+        artifact_version_id=artifact_version_id,
+    )
+    if superseding_artifact_version_id is None:
+        return
+    raise CommandError(
+        code="handoff_source_artifact_superseded",
+        message="handoff activation input references a superseded source artifact version",
+        details={
+            "edge_execution_id": edge_execution_id,
+            "artifact_version_id": artifact_version_id,
+            "artifact_kind": artifact_kind,
+            "superseding_artifact_version_id": superseding_artifact_version_id,
+        },
+    )
+
+
+def _find_superseding_artifact_version_id(
+    connection: sqlite3.Connection,
+    *,
+    artifact_version_id: str,
+) -> str | None:
     superseding = connection.execute(
         """
         SELECT artifact_version_id
@@ -1688,17 +2070,8 @@ def _assert_handoff_source_not_superseded(
         (artifact_version_id,),
     ).fetchone()
     if superseding is None:
-        return
-    raise CommandError(
-        code="handoff_source_artifact_superseded",
-        message="handoff activation input references a superseded source artifact version",
-        details={
-            "edge_execution_id": edge_execution_id,
-            "artifact_version_id": artifact_version_id,
-            "artifact_kind": artifact_kind,
-            "superseding_artifact_version_id": str(superseding["artifact_version_id"]),
-        },
-    )
+        return None
+    return str(superseding["artifact_version_id"])
 
 
 def _assert_same_scope_artifact(
@@ -1753,6 +2126,91 @@ def _stable_notify_input_artifact_id(
     )
 
 
+def _notify_only_manifest_file_name(
+    *,
+    edge_id: str,
+    source_artifact_version_id: str,
+    target_partition_key: str,
+    target_dataset_key: str,
+) -> str:
+    return (
+        "notify_only_"
+        f"{_sanitize_file_token(edge_id)}_"
+        f"{_sanitize_file_token(target_partition_key)}_"
+        f"{_digest('notify-file', source_artifact_version_id, target_dataset_key)}.json"
+    )
+
+
+def _sanitize_file_token(raw: str) -> str:
+    token = "".join(ch if ch.isalnum() or ch in {"-", "_"} else "_" for ch in raw.strip())
+    return token or "unknown"
+
+
+def _notify_only_boundary_profile() -> str:
+    profile = os.environ.get(API_BOUNDARY_PROFILE_ENV_VAR, "shared_env").strip()
+    return profile or "shared_env"
+
+
+def _notify_only_input_replace_on_conflict_allowed() -> bool:
+    return late_reporting_policy_for_boundary(
+        _notify_only_boundary_profile(),
+    ).replace_on_conflict_allowed
+
+
+def _weekly_seed_calendar_policy_context(
+    *,
+    planning_week_id: str,
+    service_date_id: str,
+) -> dict[str, Any]:
+    service_dates = _LOGISTICS_CALENDAR_POLICY.planning_week_service_dates(planning_week_id)
+    if service_date_id not in service_dates:
+        raise CommandError(
+            code="planning_cycle_policy_mismatch",
+            message="weekly seed service date is outside the source planning week policy window",
+            details={
+                "planning_week_id": planning_week_id,
+                "service_date_id": service_date_id,
+                "calendar_policy_id": _LOGISTICS_CALENDAR_POLICY.policy_id,
+            },
+        )
+    return {
+        "policy_id": _LOGISTICS_CALENDAR_POLICY.policy_id,
+        "handoff_policy": "weekly_planning_week_to_service_day_seed.v1",
+        "source_planning_week_id": planning_week_id,
+        "service_date_id": service_date_id,
+        "source_relation": "service_date_in_source_planning_week",
+    }
+
+
+def _notify_only_partition_policy_context(
+    *,
+    edge_id: str,
+    source_partition_key: str,
+    target_partition_key: str,
+) -> dict[str, Any] | None:
+    if edge_id != REPORTING_TO_PLANNING_EDGE_ID:
+        return None
+    planning_cycle = _LOGISTICS_CALENDAR_POLICY.planning_cycle_for_service_date(
+        source_partition_key,
+    )
+    if planning_cycle.target_planning_week_id != target_partition_key:
+        raise CommandError(
+            code="planning_cycle_policy_mismatch",
+            message="notify-only target partition does not match the logistics calendar policy",
+            details={
+                "edge_id": edge_id,
+                "source_partition_key": source_partition_key,
+                "target_partition_key": target_partition_key,
+                "expected_target_partition_key": planning_cycle.target_planning_week_id,
+                "policy_id": planning_cycle.policy_id,
+            },
+        )
+    return {
+        "edge_id": edge_id,
+        **planning_cycle.as_policy_context(),
+    }
+
+
 def _workflow_input_binding_key(*, stage_id: str, dataset_key: str) -> str:
     stage_token = stage_id.strip().lower()
     dataset_tail = dataset_key.strip().split(".", maxsplit=1)[-1]
@@ -1761,6 +2219,46 @@ def _workflow_input_binding_key(*, stage_id: str, dataset_key: str) -> str:
     if dataset_tail.endswith(".doc"):
         dataset_tail = dataset_tail[: -len(".doc")]
     return f"{stage_token}.{dataset_tail}"
+
+
+def _handoff_scope_for_artifacts(
+    *,
+    edge_id: str,
+    source_artifacts: list[dict[str, Any]],
+    target_partition_kind: str,
+    target_partition_key: str,
+    policy_context: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    return build_handoff_effect_scope(
+        edge_id=edge_id,
+        source_truth=[
+            handoff_artifact_source_truth(
+                workflow_run_id=str(artifact["workflow_run_id"]),
+                artifact=artifact,
+            )
+            for artifact in source_artifacts
+        ],
+        target_partition_kind=target_partition_kind,
+        target_partition_key=target_partition_key,
+        policy_context=policy_context,
+    )
+
+
+def _handoff_artifact_root(connection: sqlite3.Connection) -> Path:
+    configured_root = os.environ.get(EXECUTION_ARTIFACT_ROOT_ENV_VAR)
+    if isinstance(configured_root, str) and configured_root.strip():
+        return resolve_execution_artifact_root()
+    row = connection.execute("PRAGMA database_list").fetchone()
+    if row is not None:
+        try:
+            db_path = str(row["file"]).strip()
+        except (KeyError, IndexError, TypeError):
+            db_path = str(row[2]).strip()
+        if db_path:
+            root = Path(db_path).expanduser().resolve().parent / "artifact_store"
+            root.mkdir(parents=True, exist_ok=True)
+            return root
+    return resolve_execution_artifact_root()
 
 
 def _correlation_key(

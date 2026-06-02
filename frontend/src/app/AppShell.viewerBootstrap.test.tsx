@@ -68,6 +68,7 @@ describe("AppShell viewer bootstrap", () => {
     expect(within(viewerPanel).getByText("Viewer session")).toBeInTheDocument();
     expect(within(viewerSession).getByText("service:shared-gateway")).toBeInTheDocument();
     expect(screen.queryByLabelText("Active user")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText(/Open actor switcher/i)).not.toBeInTheDocument();
     expect(await screen.findByText(/No runs in scope/i)).toBeInTheDocument();
 
     await waitFor(() => {

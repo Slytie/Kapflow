@@ -7,8 +7,11 @@ import pytest
 
 from onetruth.application.handlers._shared.command_boundary import CommandError
 from onetruth.application.handlers._shared.runtime_effects import (
+    DEFAULT_HANDOFF_POLICY_VERSION,
+    build_handoff_effect_scope,
     create_or_reuse_edge_execution_effects,
     create_or_validate_workflow_artifact_input_effects,
+    handoff_artifact_source_truth,
     resolve_or_create_workflow_run_effects,
 )
 from onetruth.infrastructure.events.event_store import create_sqlite_substrate
@@ -111,6 +114,72 @@ def test_resolve_or_create_workflow_run_creates_and_reuses_matching_activation_k
 
     assert created["workflow_run_id"] == "wr-created"
     assert replay["workflow_run_id"] == "wr-created"
+
+
+def test_handoff_effect_scope_records_source_truth_target_partition_and_policy() -> None:
+    source_truth = handoff_artifact_source_truth(
+        workflow_run_id="wr-source",
+        artifact={
+            "artifact_version_id": "av-source",
+            "artifact_kind": "planning.published_weekly_schedule.workbook",
+            "content_digest": "sha256:source",
+        },
+    )
+
+    scope = build_handoff_effect_scope(
+        edge_id="weekly_seed_to_live_dispatch",
+        source_truth=[source_truth],
+        target_partition_kind="ServiceDateID",
+        target_partition_key="SD-2026-03-06",
+    )
+    replay = build_handoff_effect_scope(
+        edge_id="weekly_seed_to_live_dispatch",
+        source_truth=[source_truth],
+        target_partition_kind="ServiceDateID",
+        target_partition_key="SD-2026-03-06",
+    )
+    changed_policy = build_handoff_effect_scope(
+        edge_id="weekly_seed_to_live_dispatch",
+        source_truth=[source_truth],
+        target_partition_kind="ServiceDateID",
+        target_partition_key="SD-2026-03-06",
+        policy_version="logistics_handoff_policy.v1",
+    )
+    with_policy_context = build_handoff_effect_scope(
+        edge_id="weekly_seed_to_live_dispatch",
+        source_truth=[source_truth],
+        target_partition_kind="ServiceDateID",
+        target_partition_key="SD-2026-03-06",
+        policy_context={
+            "policy_id": "logistics_calendar_policy.v1",
+            "source_relation": "service_date_in_source_planning_week",
+        },
+    )
+    replay_with_policy_context = build_handoff_effect_scope(
+        edge_id="weekly_seed_to_live_dispatch",
+        source_truth=[source_truth],
+        target_partition_kind="ServiceDateID",
+        target_partition_key="SD-2026-03-06",
+        policy_context={
+            "source_relation": "service_date_in_source_planning_week",
+            "policy_id": "logistics_calendar_policy.v1",
+        },
+    )
+
+    assert scope["scope_key"] == replay["scope_key"]
+    assert scope["scope_key"] != changed_policy["scope_key"]
+    assert with_policy_context["scope_key"] == replay_with_policy_context["scope_key"]
+    assert scope["scope_key"] != with_policy_context["scope_key"]
+    assert with_policy_context["policy_context"] == {
+        "policy_id": "logistics_calendar_policy.v1",
+        "source_relation": "service_date_in_source_planning_week",
+    }
+    assert scope["policy_version"] == DEFAULT_HANDOFF_POLICY_VERSION
+    assert scope["source_truth"] == [source_truth]
+    assert scope["target_partition"] == {
+        "partition_kind": "ServiceDateID",
+        "partition_key": "SD-2026-03-06",
+    }
 
 
 def test_resolve_or_create_workflow_run_rejects_activation_key_drift() -> None:

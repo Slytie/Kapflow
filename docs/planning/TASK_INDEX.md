@@ -205,19 +205,19 @@ Note: `TASK-0087` / `TASK-0088` / `TASK-0089` were formerly duplicated as `TASK-
 | TASK-0242 | EPIC-138 | DONE | high | Backup manifest schema + predeploy backup skeleton |
 | TASK-0243 | EPIC-138 | DONE | high | Lab-only pilot auth prototype |
 | TASK-0244 | EPIC-138 | BLOCKED | high | Lab VM deploy pipeline |
-| TASK-0245 | EPIC-139 | TODO | high | Schedule-control hardening |
-| TASK-0246 | EPIC-139 | TODO | high | Handoff scaffold and command scopes |
-| TASK-0247 | EPIC-139 | TODO | high | Weekly seed materialization hardening |
-| TASK-0248 | EPIC-139 | TODO | high | Live dispatch prepare/activate hardening + republish guard |
-| TASK-0249 | EPIC-139 | TODO | high | Notify-only/reporting handoff guard |
-| TASK-0250 | EPIC-139 | TODO | high | Planning-cycle, republish, late-report policy objects |
-| TASK-0251 | EPIC-139 | TODO | high | Weekly-to-weekly carry-forward |
-| TASK-0252 | EPIC-139 | TODO | high | Reconciler dry-run only |
-| TASK-0253 | EPIC-139 | TODO | high | Operator home failure-state surface |
+| TASK-0245 | EPIC-139 | DONE | high | Schedule-control hardening |
+| TASK-0246 | EPIC-139 | DONE | high | Handoff scaffold and command scopes |
+| TASK-0247 | EPIC-139 | DONE | high | Weekly seed materialization hardening |
+| TASK-0248 | EPIC-139 | DONE | high | Live dispatch prepare/activate hardening + republish guard |
+| TASK-0249 | EPIC-139 | DONE | high | Notify-only/reporting handoff guard |
+| TASK-0250 | EPIC-139 | DONE | high | Planning-cycle, republish, late-report policy objects |
+| TASK-0251 | EPIC-139 | DONE | high | Weekly-to-weekly carry-forward |
+| TASK-0252 | EPIC-139 | DONE | high | Reconciler dry-run only |
+| TASK-0253 | EPIC-139 | DONE | high | Operator home failure-state surface |
 | TASK-0254 | EPIC-138 | TODO | high | Restore rehearsal automation |
 | TASK-0255 | EPIC-138 | TODO | high | Reconciler apply mode under role/policy gate |
 | TASK-0256 | EPIC-138 | TODO | high | Pilot deployment gate |
-| TASK-0257 | EPIC-139 | TODO | high | Extract logistics side effects from generic approval.respond |
+| TASK-0257 | EPIC-139 | DONE | high | Extract logistics side effects from generic approval.respond |
 | TASK-0258 | EPIC-139 | TODO | high | Create domain workpage/action descriptor registry |
 | TASK-0259 | EPIC-139 | TODO | medium | Classify and restructure logistics docs |
 | TASK-0260 | EPIC-139 | TODO | high | Split platform tests from logistics regression tests |

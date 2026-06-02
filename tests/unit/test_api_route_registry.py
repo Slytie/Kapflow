@@ -20,6 +20,7 @@ def test_route_registry_preserves_exact_global_route_order() -> None:
         "ops.readiness",
         "ops.metrics",
         "viewer.bootstrap",
+        "operator.home",
         "human_tasks.list",
         "human_tasks.detail",
         "human_tasks.subgraph",
@@ -96,6 +97,11 @@ def test_route_registry_matches_representative_exact_and_parameterized_routes() 
     story_match = match_route("GET", "/api/v1/stories/logistics-three-workflow")
     assert story_match is not None
     assert story_match.route.name == "stories.logistics_three_workflow"
+
+    operator_home_match = match_route("GET", "/api/v1/operator/home")
+    assert operator_home_match is not None
+    assert operator_home_match.route.name == "operator.home"
+    assert operator_home_match.params == {}
 
     workflow_run_workpage_match = match_route(
         "GET",
@@ -355,6 +361,11 @@ def test_route_registry_exposes_representative_metadata() -> None:
     assert routes_by_name["ops.health"].body_policy == NO_BODY
     assert routes_by_name["ops.health"].requires_request_context is False
     assert routes_by_name["ops.health"].needs_db_connection is False
+
+    assert routes_by_name["operator.home"].needs_page is False
+    assert routes_by_name["operator.home"].body_policy == NO_BODY
+    assert routes_by_name["operator.home"].requires_request_context is True
+    assert routes_by_name["operator.home"].needs_db_connection is True
 
     assert routes_by_name["workflow_runs.list"].needs_page is True
     assert routes_by_name["workflow_runs.list"].body_policy == NO_BODY

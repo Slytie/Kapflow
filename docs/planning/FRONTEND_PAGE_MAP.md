@@ -1,11 +1,12 @@
 # FRONTEND_PAGE_MAP.md
 
-The inventory below lists the active implemented routes. Workpage posture is canonical-only: `/demo/logistics` remains the shell entrypoint, and all workpage pages now live under `/runs/:workflowRunId/workpages/*`.
+The inventory below lists the active implemented routes. Workpage posture is canonical-only: `/` is the shared-env-safe operator home, `/demo/logistics` remains the logistics demo shell, and all workpage pages now live under `/runs/:workflowRunId/workpages/*`.
 
 ## Page inventory
 
 | Page | Purpose | Primary user action | Primary data source | Cards/Rows | Detail model |
 |---|---|---|---|---|---|
+| `/` | Operator home and failure-state posture surface | Inspect current server-derived session posture and dry-run reconciler findings before opening work queues or demo flows | `GET /api/v1/operator/home` plus viewer bootstrap | Runtime posture cards + reconciler finding groups | Full page under `AppShell` |
 | `/demo/logistics` | Primary three-workflow logistics shell plus canonical workpage discovery point | Select workflow-family context, inspect linked runs, and launch canonical workpage pages for weekly planning and dispatch reporting | `GET /api/v1/stories/logistics-three-workflow` plus run/workspace/task detail endpoints | Family graph + selected-node detail + unified board + canonical workpage launch actions | Drawer-first task actions + selected-node panel |
 | `/runs/:workflowRunId/workpages/schedule-v0` | Canonical weekly-planning landing page | Open the current weekly schedule surface for one run and follow backend handoff actions to the latest draft, route-demand, or driver-preferences surfaces | `GET /api/v1/workpages/workflow-runs/{workflow_run_id}/schedule-v0` | Summary cards + schedule heatmap + dependency/check header status + selected-day detail | Full page under `AppShell` |
 | `/runs/:workflowRunId/workpages/schedule-v0/artifacts/:artifactVersionId` | Canonical artifact-backed schedule editor/history page | Edit bounded reassignment/on-call rows, review or apply route-demand coverage recommendations when present, preview recalculation, and save a superseding draft | `GET /api/v1/workpages/workflow-runs/{workflow_run_id}/schedule-v0/artifacts/{artifact_version_id}` + schedule preview/save + route-demand coverage recommend/apply + workflow-run artifact history | Coverage recommendation panel + schedule surface + heatmap editor + advanced artifact info | Full page under `AppShell` |

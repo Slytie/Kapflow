@@ -2,7 +2,7 @@
 id: TASK-0247
 epic: EPIC-139
 title: "Weekly seed materialization hardening"
-status: TODO
+status: DONE
 owners: ["platform"]
 reviewers: ["architect", "qa"]
 depends_on: ["TASK-0238", "TASK-0239", "TASK-0246"]
@@ -60,3 +60,9 @@ Weekly published artifact -> seven file-backed seed manifests/artifacts with cre
 
 ## Notes / decisions
 - Raw project corpora remain off-repo; use only sanitized fixtures, manifests, hashes, and aggregate evidence approved by the relevant fixture/governance task.
+
+## Closeout evidence
+- Weekly seed materialization now creates one canonical generated seed manifest artifact per service date through `persist_generated_artifact_effects`.
+- Full-week materialization creates seven file-backed `planning.daily_dispatch_seed.workbook` artifacts with byte sizes, content digests, `artifact.version.created` events, parent/provenance links, and matching EdgeExecution rows.
+- Seed artifact content excludes volatile materialization idempotency keys, so logical retries reuse the same seed artifact without digest conflicts or duplicate seed events.
+- Focused verification passed on 2026-06-02: `tests/unit/test_runtime_effect_helpers.py` and `tests/runtime/test_logistics_handoff_runtime.py`.

@@ -50,7 +50,8 @@
 - Push channels (websocket/SSE) remain out of scope for this slice.
 
 11. Legacy schedule surfaces are secondary.
-- `/demo/logistics` is the primary operator/demo entrypoint and app-root redirect target.
+- `/` is the operator home and failure-state posture surface in shared-env-like profiles.
+- `/demo/logistics` remains the primary logistics demo launcher, not the app-root redirect target.
 - Schedule-era routes (for example `/board`, `/runs`, `/timeline`, `/workspace`) remain regression/supporting surfaces and are not primary navigation entrypoints.
 
 12. Workpage editing surfaces are full pages.

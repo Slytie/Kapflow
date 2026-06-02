@@ -2,7 +2,7 @@
 id: TASK-0257
 epic: EPIC-139
 title: "Extract logistics side effects from generic approval.respond"
-status: TODO
+status: DONE
 owners: ["platform"]
 reviewers: ["architect", "qa"]
 depends_on: ["TASK-0236"]
@@ -61,3 +61,6 @@ Generic approval transition emits event only; logistics finalization moves to do
 
 ## Notes / decisions
 - Raw project corpora remain off-repo; use only sanitized fixtures, manifests, hashes, and aggregate evidence approved by the relevant fixture/governance task.
+- Closed on 2026-06-02 by adding the explicit approval-response hook registry, moving weekly publish and dispatch-reporting finalize behavior into logistics hooks, and recording ADR-005.
+- Focused evidence: hook registry unit tests, handler import-boundary contract, CAPEX invariant audit contract, approval CLI/API regressions, weekly publish approve/stale regressions, and dispatch-reporting finalize approve/stale regressions passed.
+- Rollback posture: removing the hook registry would intentionally fail the CAPEX invariant audit and boundary contract before generic approval domain coupling can silently return.

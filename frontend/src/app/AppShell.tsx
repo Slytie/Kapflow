@@ -729,23 +729,38 @@ export function AppShell(): JSX.Element {
                 : "viewer-session-panel"
             }
           >
-            <button
-              type="button"
-              className="app-shell__identity-chip"
-              aria-expanded={isActorMenuOpen}
-              aria-label={`Current user ${activeActorLabel}. Open actor switcher`}
-              onClick={() => {
-                setIsActorMenuOpen((current) => !current);
-              }}
-            >
-              <span className="app-shell__identity-avatar" aria-hidden="true">
-                {activeActorInitials}
-              </span>
-              <span className="app-shell__identity-copy">
-                <strong>{activeActorLabel}</strong>
-                <span>{activeActorRoleLabel}</span>
-              </span>
-            </button>
+            {viewerSession.actor_switching_allowed ? (
+              <button
+                type="button"
+                className="app-shell__identity-chip"
+                aria-expanded={isActorMenuOpen}
+                aria-label={`Current user ${activeActorLabel}. Open actor switcher`}
+                onClick={() => {
+                  setIsActorMenuOpen((current) => !current);
+                }}
+              >
+                <span className="app-shell__identity-avatar" aria-hidden="true">
+                  {activeActorInitials}
+                </span>
+                <span className="app-shell__identity-copy">
+                  <strong>{activeActorLabel}</strong>
+                  <span>{activeActorRoleLabel}</span>
+                </span>
+              </button>
+            ) : (
+              <div
+                className="app-shell__identity-chip app-shell__identity-chip--static"
+                aria-label={`Current viewer ${activeActorLabel}`}
+              >
+                <span className="app-shell__identity-avatar" aria-hidden="true">
+                  {activeActorInitials}
+                </span>
+                <span className="app-shell__identity-copy">
+                  <strong>{activeActorLabel}</strong>
+                  <span>{activeActorRoleLabel}</span>
+                </span>
+              </div>
+            )}
             {!viewerSession.actor_switching_allowed ? (
               <div className="app-shell__identity-static" data-testid="viewer-session">
                 <strong>Viewer session</strong>

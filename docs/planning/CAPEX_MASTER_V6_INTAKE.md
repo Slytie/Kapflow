@@ -102,10 +102,86 @@
 - CAPEX invariant audit reports PR011 pipeline implementation separately from live evidence: `live_deploy_evidence_recorded=false`.
 - Blocker: no operator-supplied lab GCP project/zone/instance/remote paths/token env were available in this session, so no live lab VM execute-and-smoke run was performed. `MP-PR011` remains `BLOCKED` until that evidence exists.
 
+## TASK-0245 closeout evidence
+- `schedule-control.build-weekly` now uses the shared command receipt path with a workflow-run scope key, so identical requests replay from command receipt truth instead of mutating Stage04 outputs again.
+- Weekly Stage04 output persistence now writes all six generated outputs through the canonical generated-artifact helper, producing root-confined `file://` storage URIs, byte sizes, content digests, and `artifact.version.created` events.
+- Existing Stage04 provenance is preserved: every output links back to source input artifacts, and non-bundle outputs link back to the generated input bundle through explicit bundle-lowering edges.
+- Evidence: focused schedule-control hardening and transaction composition regressions passed on 2026-06-02.
+- Closeout posture: `MP-PR012` is closed as logistics domain/runtime safety hardening; this is not CAPEX production activation, raw-corpus use, or deployment approval.
+
+## TASK-0246 closeout evidence
+- Shared runtime effects now include a deterministic handoff effect scope with source artifact truth, target partition, policy version, and a stable scope key.
+- Weekly seed materialization, live-dispatch activation/preparation, and notify-only handoff paths attach that scope metadata to edge execution state, workflow input binding metadata, and generated handoff artifact metadata.
+- Evidence: focused runtime-effect helper tests and logistics handoff runtime regressions passed on 2026-06-02.
+- Closeout posture: `MP-PR013` is closed as handoff scaffold/command-scope auditability only; behavior-complete weekly seed hardening, republish policy, and notify-only conflict tightening remain later EPIC-139 tasks.
+
+## TASK-0247 closeout evidence
+- Weekly seed materialization now writes service-day seed manifests through the canonical generated-artifact helper instead of authoritative `inmem://` seed rows.
+- Full-week materialization creates seven `planning.daily_dispatch_seed.workbook` artifacts exactly once, with file-backed storage URIs, byte sizes, content digests, `artifact.version.created` events, parent/provenance links, handoff scope metadata, and EdgeExecution rows.
+- Seed manifest content excludes volatile materialization idempotency keys so logical retries reuse the existing seed artifact and edge without digest conflicts.
+- Evidence: focused runtime-effect helper tests and logistics handoff runtime regressions passed on 2026-06-02.
+- Closeout posture: `MP-PR014` is closed as weekly seed materialization hardening; this is not CAPEX production activation, live deployment, or broader live-dispatch hardening.
+
+## TASK-0248 closeout evidence
+- Live-dispatch activation now detects when the weekly published artifact backing a prepared base seed has been superseded, records the edge as `stale`, and returns `live_dispatch_base_seed_republish_after_prepare` with `policy_state=late_weekly_republish_after_live_prepare`.
+- Live-day preparation after `stage01.base_seed` is already bound now materializes the candidate seed and a stale policy edge instead of attempting to rebind the live input or falling through to `workflow_input_binding_conflict`.
+- Target live-run lookup for the republish guard uses the logistics run resolver layer through `LogisticsRunResolver.find_live_dispatch(...)`.
+- Evidence: focused logistics handoff runtime regressions passed on 2026-06-02.
+- Closeout posture: `MP-PR015` is closed as live-dispatch republish hardening only; this is not CAPEX production activation, deployment approval, or broader planning-cycle policy completion.
+
+## TASK-0249 closeout evidence
+- Notify-only target input artifacts now write file-backed generated JSON manifests through the canonical generated-artifact helper rather than authoritative `inmem://` handoff rows.
+- Reporting-to-planning late feedback in the default/shared-env path now fails closed with `late_reporting_handoff_conflict` before it can replace an existing weekly `stage03.actual_hours_snapshot` binding.
+- Local compatibility merge-and-replace remains explicit to `ONETRUTH_API_BOUNDARY_PROFILE=local_dev` or `ci_test`; the safe/default path has `replace_on_conflict` disabled.
+- Evidence: focused logistics handoff runtime regressions passed on 2026-06-02.
+- Closeout posture: `MP-PR016` is closed as notify-only/reporting handoff hardening only; this is not CAPEX production activation, deployment approval, or planning-cycle policy completion.
+
+## TASK-0250 closeout evidence
+- `LogisticsCalendarPolicy` now defines same-week as `same_iso_planning_week`, records the deprecated `same_week` label as compatibility metadata, and maps reporting actuals to the next ISO planning week.
+- The existing `service_day_to_future_planning_week` transform ID remains available but now resolves through the explicit calendar policy, including Sunday/year-end ISO rollover cases.
+- Weekly seed and reporting-to-planning handoff scopes can carry deterministic `policy_context`; generated seed/notify artifacts and edge bindings record the relevant calendar policy evidence.
+- Late weekly republish and late reporting decisions now carry named policy IDs while preserving their prior fail-closed error codes and compatibility `policy_state` values.
+- Evidence: focused logistics calendar policy, handoff runtime, and runtime-effect helper regressions passed on 2026-06-02.
+- Closeout posture: `MP-PR017` is closed as planning-cycle policy hardening only; this is not CAPEX production activation, deployment approval, raw-corpus use, or reconciler apply authorization.
+
+## TASK-0251 closeout evidence
+- Add-next-week route-demand workpage calls now route through canonical weekly-to-weekly carry-forward logic.
+- Carry-forward creates or reuses the target weekly run once, ensures only `weekly_input_intake`, creates or reuses the target route-demand seed artifact, attaches it to intake, binds it as `stage04.route_slot_requirements`, records artifact provenance, and records a `weekly_to_weekly_carry_forward` EdgeExecution.
+- The target seed payload is aligned to the target workflow run planning week, and weekly target run reuse now fails closed on activation-key drift.
+- Regression coverage asserts there is no Stage04 work-item auto-spawn, execution session, or approval side effect during carry-forward.
+- Evidence: focused add-next-week regression and full route-demand workpage API contract suite passed on 2026-06-02.
+- Closeout posture: `MP-PR018` is closed as weekly-to-weekly input carry-forward only; this is not Stage04 auto-run, approval, CAPEX production activation, deployment approval, or reconciler apply authorization.
+
+## TASK-0252 closeout evidence
+- Added `logistics_reconciler_dry_run.v1`, a deterministic read-only report over weekly seed materialization, handoff edge integrity, notify-only target inputs, live target input bindings, and late reporting conflicts.
+- Added CLI entrypoint `handoffs reconcile-dry-run`, which opens SQLite in read-only mode and exposes no apply/repair option.
+- Findings include missing weekly daily seed artifacts/edges, stale edge executions, missing or drifted target run/input/artifact rows, and safe-profile late reporting input conflicts.
+- Regression coverage snapshots canonical runtime table counts before and after dry runs and proves the missing-edge, stale-edge/missing-binding, and late-report conflict cases report findings without mutation.
+- Evidence: focused reconciler regressions and the full logistics handoff runtime suite passed on 2026-06-02.
+- Closeout posture: `MP-PR019` is closed as dry-run reporting only; this is not reconciler apply mode, CAPEX production activation, deployment approval, target-side repair authorization, or raw-corpus use.
+
+## TASK-0253 closeout evidence
+- App root `/` now renders an operator home surface instead of redirecting to `/demo/logistics`.
+- Added `GET /api/v1/operator/home`, scoped by server-derived request context, to expose current viewer posture and the logistics reconciler dry-run failure-state report.
+- Shared-env viewer posture now hides actor-switching controls entirely when `actor_switching_allowed=false`.
+- The reconciler now reports missing file-backed artifact blobs without exposing local blob paths in findings.
+- Failure-state fixtures cover missing seed, missing blob, late reporting conflict, and stale edge groups on the operator home surface.
+- Evidence: focused backend operator-home/route-registry tests and frontend operator-home/viewer-bootstrap/root-route tests passed on 2026-06-02.
+- Closeout posture: `MP-PR020` is closed as shared-env-safe operator visibility only; this is not CAPEX production activation, deployment approval, reconciler apply mode, target-side repair authorization, or raw-corpus use.
+
+## TASK-0257 closeout evidence
+- Generic `approval.respond` now records the approval row transition and emits `approval.responded`, then invokes the explicit approval-response hook registry.
+- Weekly publish and dispatch-reporting finalize behavior moved to logistics hooks registered in `src/onetruth/application/services/approval_response_hooks.py` and implemented in `src/onetruth/application/services/logistics_approval_response_hooks.py`.
+- `src/onetruth/application/handlers/approvals.py` no longer imports logistics handoff/build modules, artifact-version effect helpers, pointer-promotion effect helpers, or logistics publish/finalize constants.
+- ADR-005 records the approval-response domain-hook boundary and rollback posture.
+- CAPEX invariant audit now treats approval-response hook extraction as a hard gate instead of a known gap.
+- Evidence: approval hook unit tests, handler import-boundary contract, CAPEX audit contract, approval CLI/API regressions, weekly publish approve/stale regressions, and dispatch-reporting finalize approve/stale regressions passed on 2026-06-02.
+- Closeout posture: `CLEAN-001` is closed as domain-boundary cleanup only; this is not CAPEX production activation, deployment approval, raw-corpus use, or new CAPEX runtime behavior.
+
 ## Current-code blocker mappings
 | Blocker | CAPEX task refs | Current repo surface |
 |---|---|---|
-| Approval response domain coupling | `TASK-0257`, `TASK-0561`, `TASK-0576` | `src/onetruth/application/handlers/approvals.py` |
+| Approval response domain-hook extraction | `TASK-0257`, `TASK-0561`, `TASK-0576` | `src/onetruth/application/services/approval_response_hooks.py`, `src/onetruth/application/services/logistics_approval_response_hooks.py`, `docs/adr/ADR-005-approval-response-domain-hooks.md` |
 | Artifact auth-before-read and storage confinement | `TASK-0235`, `TASK-0562`, `TASK-0577` | `src/onetruth/api/routes/artifacts.py`, `src/onetruth/application/handlers/artifacts.py`, `src/onetruth/infrastructure/artifacts/storage.py` |
 | Transaction composition safety | `TASK-0236` | `src/onetruth/application/handlers/schedule_control.py`, `src/onetruth/application/handlers/logistics_handoff.py` |
 | Invariant audit harness | `TASK-0237` | `src/onetruth/application/services/capex_invariant_audit.py`, `scripts/run_capex_invariant_audit.py` |
@@ -116,6 +192,13 @@
 | Validate-only predeploy backup manifest skeleton | `TASK-0242` | `scripts/prepare_predeploy_backup.py`, `schemas/ops/backup_manifest.schema.json` |
 | Lab-only shared-env JWT viewer smoke | `TASK-0243` | `scripts/run_lab_auth_smoke.py`, `schemas/ops/lab_auth_smoke_report.schema.json` |
 | Lab VM deploy pipeline implemented; live evidence pending | `TASK-0244` | `scripts/deploy_lab_vm.py`, `schemas/ops/lab_vm_deploy_report.schema.json`, `docs/ops/runbooks/lab_auth_and_vm_deploy.md` |
+| Weekly Stage04 generated output hardening | `TASK-0245` | `src/onetruth/application/handlers/schedule_control.py`, `tests/runtime/test_schedule_control_hardening.py` |
+| Handoff effect scopes with source truth/target partition/policy version | `TASK-0246` | `src/onetruth/application/handlers/_shared/runtime_effects.py`, `src/onetruth/application/handlers/logistics_handoff.py` |
+| File-backed weekly seed materialization | `TASK-0247` | `src/onetruth/application/handlers/logistics_handoff.py`, `tests/runtime/test_logistics_handoff_runtime.py` |
+| Live-dispatch republish-after-prepare policy guard | `TASK-0248` | `src/onetruth/application/handlers/logistics_handoff.py`, `src/onetruth/application/services/logistics_run_resolver.py`, `tests/runtime/test_logistics_handoff_runtime.py` |
+| File-backed notify-only manifests and shared-env late-report guard | `TASK-0249` | `src/onetruth/application/handlers/logistics_handoff.py`, `tests/runtime/test_logistics_handoff_runtime.py` |
+| Logistics reconciler dry-run report | `TASK-0252` | `src/onetruth/application/services/logistics_reconciler.py`, `src/onetruth/cli/__main__.py`, `tests/runtime/test_logistics_handoff_runtime.py` |
+| Operator home failure-state surface | `TASK-0253` | `src/onetruth/api/routes/operator_home.py`, `frontend/src/pages/OperatorHomePage.tsx`, `frontend/src/app/AppShell.tsx` |
 | CAPEX project membership runtime | `TASK-0261`..`TASK-0263`, `TASK-0385`, `TASK-0386`, `TASK-0563` | future CAPEX project scope runtime |
 | Source occurrence / SourceRef | `TASK-0268`, `TASK-0391`, `TASK-0407`, `TASK-0428`, `TASK-0564`, `TASK-0578` | future source occurrence and evidence resolver |
 

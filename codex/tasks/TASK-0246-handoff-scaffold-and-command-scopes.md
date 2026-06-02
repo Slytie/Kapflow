@@ -2,7 +2,7 @@
 id: TASK-0246
 epic: EPIC-139
 title: "Handoff scaffold and command scopes"
-status: TODO
+status: DONE
 owners: ["platform"]
 reviewers: ["architect", "qa"]
 depends_on: ["TASK-0239", "TASK-0240"]
@@ -60,3 +60,9 @@ Add handoff effect scaffold, command scopes, no behavior-complete claims; prepar
 
 ## Notes / decisions
 - Raw project corpora remain off-repo; use only sanitized fixtures, manifests, hashes, and aggregate evidence approved by the relevant fixture/governance task.
+
+## Closeout evidence
+- Added shared handoff effect-scope scaffolding that deterministically records source artifact truth, target partition, and handoff policy version.
+- Weekly seed materialization, live-dispatch activation/preparation, and notify-only handoff paths now attach the scope metadata to edge execution cursor/input state, workflow input bindings, and generated handoff artifact metadata.
+- This closes command/effect scope auditability only; behavior-complete weekly seed hardening, republish policy, and notify-only conflict tightening remain later EPIC-139 tasks.
+- Focused verification passed on 2026-06-02: `tests/unit/test_runtime_effect_helpers.py` and `tests/runtime/test_logistics_handoff_runtime.py`.

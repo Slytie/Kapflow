@@ -2,7 +2,7 @@
 id: TASK-0251
 epic: EPIC-139
 title: "Weekly-to-weekly carry-forward"
-status: TODO
+status: DONE
 owners: ["platform"]
 reviewers: ["architect", "qa"]
 depends_on: ["TASK-0239", "TASK-0250"]
@@ -60,3 +60,11 @@ Canonical W_k -> W_{k+1}; target run/task/inputs/provenance/EdgeExecution; workp
 
 ## Notes / decisions
 - Raw project corpora remain off-repo; use only sanitized fixtures, manifests, hashes, and aggregate evidence approved by the relevant fixture/governance task.
+
+## Closeout evidence
+- Added canonical weekly-to-weekly route-demand carry-forward behind the existing add-next-week workpage action.
+- Carry-forward now creates or reuses the target weekly run once, ensures only the `weekly_input_intake` task, seeds/reuses the target `planning.route_slot_requirements.workbook`, attaches it to the intake task, binds it as `stage04.route_slot_requirements`, records explicit provenance, and writes a `weekly_to_weekly_carry_forward` EdgeExecution.
+- Target run activation-key drift now fails closed for weekly run reuse instead of silently attaching carry-forward truth to a differently activated run.
+- Workpage add-next-week calls the canonical carry-forward helper and preserves the public `created` response shape while adding carry-forward evidence.
+- Evidence: focused add-next-week regression and full route-demand workpage API contract suite passed on 2026-06-02.
+- Closeout posture: `MP-PR018` is closed as weekly-to-weekly input carry-forward only; this does not auto-run Stage04, complete intake, request approvals, activate CAPEX production, deploy, or authorize reconciler apply mode.

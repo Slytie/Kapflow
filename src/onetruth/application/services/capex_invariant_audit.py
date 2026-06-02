@@ -109,11 +109,12 @@ CAPEX_INVARIANT_REGISTRY: tuple[CapexInvariant, ...] = (
         evaluator=lambda repo_root: _check_lab_vm_deploy_pipeline_source(repo_root),
     ),
     CapexInvariant(
-        invariant_id="capex.known_gap.approval_side_effect_coupling",
-        title="Approval response domain side-effect coupling",
-        gate_mode="known_gap",
+        invariant_id="capex.clean001.approval_response_hooks_domain_neutral",
+        title="Approval response side effects are explicit domain hooks",
+        gate_mode="hard_gate",
         task_refs=("TASK-0257", "TASK-0561", "TASK-0576"),
-        description="Tracked in CAPEX intake; not closed by TASK-0237/TASK-0238.",
+        description="Generic approval.response records only the approval transition/event and invokes registered domain hooks for logistics effects.",
+        evaluator=lambda repo_root: _check_approval_response_hook_source(repo_root),
     ),
     CapexInvariant(
         invariant_id="capex.known_gap.project_membership_runtime",
@@ -552,6 +553,64 @@ def _check_lab_auth_smoke_source(repo_root: Path) -> AuditEvaluation:
     return AuditEvaluation(
         passed=not missing,
         details={"missing_markers": missing},
+    )
+
+
+def _check_approval_response_hook_source(repo_root: Path) -> AuditEvaluation:
+    approvals_text = (
+        repo_root / "src/onetruth/application/handlers/approvals.py"
+    ).read_text(encoding="utf-8")
+    hook_registry_text = (
+        repo_root / "src/onetruth/application/services/approval_response_hooks.py"
+    ).read_text(encoding="utf-8")
+    logistics_hook_text = (
+        repo_root / "src/onetruth/application/services/logistics_approval_response_hooks.py"
+    ).read_text(encoding="utf-8")
+    boundary_test_text = (
+        repo_root / "tests/contract/test_handler_import_boundaries.py"
+    ).read_text(encoding="utf-8")
+    unit_test_text = (
+        repo_root / "tests/unit/test_approval_response_hooks.py"
+    ).read_text(encoding="utf-8")
+    respond_body = approvals_text.split("def respond_approval_command", 1)[-1]
+    forbidden_generic_markers = (
+        "notify_only_handoff_command",
+        "dispatch_reporting_build",
+        "DISPATCH_REPORTING_WORKFLOW_ID",
+        "WEEKLY_WORKFLOW_ID",
+        "_maybe_auto_publish_weekly_approval",
+        "_maybe_finalize_dispatch_reporting_approval",
+        "_create_artifact_version_effects",
+        "_promote_pointer_effects",
+        "weekly-publish.",
+        "dispatch-reporting.final-packet.",
+    )
+    generic_hits = [
+        marker for marker in forbidden_generic_markers if marker in approvals_text
+    ]
+    required_markers = {
+        "handler_runs_registry": "run_registered_approval_response_hooks(" in respond_body
+        and "ApprovalResponseHookContext(" in respond_body,
+        "handler_no_direct_logistics": not generic_hits,
+        "generic_registry_exists": "DEFAULT_APPROVAL_RESPONSE_HOOKS" in hook_registry_text
+        and "ApprovalResponseHookContext" in hook_registry_text,
+        "logistics_hooks_registered": "LOGISTICS_APPROVAL_RESPONSE_HOOKS" in logistics_hook_text
+        and "weekly_publish_approval_hook" in logistics_hook_text
+        and "dispatch_reporting_finalize_approval_hook" in logistics_hook_text,
+        "boundary_test_exists": "test_approval_respond_side_effects_are_registered_domain_hooks"
+        in boundary_test_text,
+        "unit_tests_exist": "test_default_approval_response_hooks_are_logistics_registry_entries"
+        in unit_test_text
+        and "test_logistics_approval_hooks_ignore_non_approved_responses_before_db_reads"
+        in unit_test_text,
+    }
+    missing = [key for key, present in required_markers.items() if not present]
+    return AuditEvaluation(
+        passed=not missing,
+        details={
+            "missing_markers": missing,
+            "generic_handler_forbidden_hits": generic_hits,
+        },
     )
 
 

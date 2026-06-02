@@ -63,9 +63,37 @@ Concrete first-slice transform:
 - `planning_week_to_service_days`
 - deterministic expansion to ISO week service-day IDs (`Mon..Sun`).
 
+Reporting-to-planning compatibility transform:
+- `service_day_to_future_planning_week` remains the compiled transform ID.
+- Runtime resolution is policy-backed by `LogisticsCalendarPolicy`.
+- `same_week` is deprecated as an ambiguous label; use `same_iso_planning_week` for the service date's current ISO planning week.
+- Reporting actuals target the next ISO planning week (`next_iso_planning_week`), including Sunday and ISO year rollover cases.
+
 Materialization rule:
 - Stage07 daily seeds are emitted as one logical seed per transformed `ServiceDateID`,
 - each seed carries deterministic linkage back to the same published weekly schedule artifact version.
+
+## Weekly-to-weekly carry-forward
+The route-demand `add next week` workpage action uses canonical carry-forward:
+- source: latest `planning.route_slot_requirements.workbook` on weekly run `W_k`,
+- target: weekly run `W_{k+1}` with `weekly_input_intake` only,
+- target input binding: `stage04.route_slot_requirements`,
+- edge execution: `weekly_to_weekly_carry_forward`,
+- provenance: target route-demand seed derives from the source route-demand artifact.
+
+Carry-forward prepares input truth only. It must not complete intake, spawn Stage04 work,
+run a scheduling agent, create approvals, or change official schedule truth.
+
+## Reconciler dry-run
+The logistics reconciler dry run emits `logistics_reconciler_dry_run.v1` reports from
+canonical runtime rows only:
+- weekly published schedule runs to daily seed artifacts and seed edges,
+- handoff edge source/seed/target references,
+- notify-only and live target input bindings,
+- stale edge state and safe-profile late reporting input conflicts.
+
+The CLI entrypoint is `handoffs reconcile-dry-run`. It opens SQLite read-only, reports
+findings, and has no apply or repair argument in this tranche.
 
 ## Lazy live-dispatch activation
 First-slice activation policy is `lazy` for `live_dispatch.v1`:
@@ -93,6 +121,8 @@ Input-binding rule:
 - live operational truth: ordered immutable delta history
 - candidate ranking: deterministic ordering only (optional LLM rationale stays non-authoritative/off by default)
 - major-replan threshold: policy-configured conservative defaults
+- late weekly republish: record named stale policy state instead of rebinding live base seed
+- late reporting feedback: default/shared-env path fails closed before replacing an existing weekly actual-hours input
 - connectors: fixture-only
 
 ## Non-goals

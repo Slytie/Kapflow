@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import date, timedelta
+import hashlib
 import json
 from pathlib import Path
 import sqlite3
@@ -13,6 +14,10 @@ from onetruth.application.handlers._shared.command_boundary import (
     _execute_with_command_receipt,
     _prepare_command_receipt,
     _receipt_event_idempotency_key,
+)
+from onetruth.application.handlers._shared.runtime_effects import (
+    create_or_reuse_edge_execution_effects,
+    create_or_validate_workflow_artifact_input_effects,
 )
 from onetruth.application.handlers.availability_exceptions import (
     materialize_weekly_approved_availability_exceptions,
@@ -76,6 +81,9 @@ from onetruth.domain.partition_codec import service_day_to_future_planning_week
 from onetruth.infrastructure.artifacts.storage import read_blob
 from onetruth.infrastructure.events.event_store import utc_now_iso
 from onetruth.infrastructure.repositories.artifact_links import create_artifact_link
+from onetruth.infrastructure.repositories.artifact_provenance import (
+    create_artifact_provenance_edge,
+)
 from onetruth.infrastructure.repositories.artifact_versions import (
     list_artifact_versions_for_workflow_run,
 )
@@ -90,6 +98,11 @@ from onetruth.infrastructure.repositories.workflow_runs import (
     get_workflow_run,
     list_workflow_runs,
 )
+
+
+WEEKLY_TO_WEEKLY_CARRY_FORWARD_EDGE_ID = "weekly_to_weekly_carry_forward"
+WEEKLY_CARRY_FORWARD_BINDING_KEY = "stage04.route_slot_requirements"
+WEEKLY_CARRY_FORWARD_POLICY_ID = "weekly_to_weekly_carry_forward.v1"
 
 
 def create_workflow_run_driver_preferences_snapshot_command(
@@ -395,106 +408,17 @@ def create_workflow_run_route_demand_next_week_command(
     )
 
     def _operation() -> dict[str, Any]:
-        source_artifacts = list_artifact_versions_for_workflow_run(connection, workflow_run_id)
-        latest_source_route_demand = latest_route_demand_artifact(source_artifacts)
-        if latest_source_route_demand is None:
-            raise CommandError(
-                code="workpage_projection_unavailable",
-                message="route demand source artifact is unavailable for next-week creation",
-                details={
-                    "workflow_run_id": workflow_run_id,
-                    "workpage_id": ROUTE_DEMAND_WORKPAGE_KIND,
-                    "missing_dataset_keys": [ROUTE_DEMAND_DATASET_KEY],
-                },
-            )
-        source_projection = project_route_demand_workbook(
-            _read_route_demand_artifact_bytes(latest_source_route_demand)
-        )
-        current_week = _route_demand_operational_week_context(
-            artifact=latest_source_route_demand,
-            projection=source_projection,
-        )
-        next_week = _next_operational_week_context(current_week["operational_week_start"])
-        target_workflow_run, _created = _ensure_weekly_workflow_run(
+        return carry_forward_weekly_route_demand_command(
             connection,
+            workflow_run=workflow_run,
+            storage_root=storage_root,
             tenant_id=tenant_id,
             domain_id=domain_id,
-            planning_week_id=next_week["planning_week_id"],
-            logical_date=next_week["workflow_run_logical_date"],
             actor_id=actor_id,
             actor_type=actor_type,
+            idempotency_key=str(payload.get("idempotency_key") or ""),
+            artifact_event_idempotency=artifact_event_idempotency,
         )
-        _ensure_weekly_input_intake_task(
-            connection,
-            workflow_run_id=str(target_workflow_run["workflow_run_id"]),
-            actor_id=actor_id,
-            actor_type=actor_type,
-        )
-        target_workflow_run_id = str(target_workflow_run["workflow_run_id"])
-        target_artifacts = list_artifact_versions_for_workflow_run(connection, target_workflow_run_id)
-        existing_target_route_demand = latest_route_demand_artifact(target_artifacts)
-        if existing_target_route_demand is not None:
-            target_artifact_version_id = _require_non_empty_string(
-                existing_target_route_demand.get("artifact_version_id"),
-                field_name="artifact_version_id",
-            )
-            return {
-                "created": {
-                    "workflow_run_id": target_workflow_run_id,
-                    "artifact_version_id": target_artifact_version_id,
-                    "route": canonical_route_demand_artifact_route(
-                        workflow_run_id=target_workflow_run_id,
-                        artifact_version_id=target_artifact_version_id,
-                    ),
-                }
-            }
-
-        seeded_bytes = seed_future_week_route_demand_workbook(
-            _read_route_demand_artifact_bytes(latest_source_route_demand)
-        )
-        seeded_metadata = _route_demand_submitted_metadata(seeded_bytes)
-        seeded_metadata["future_week_seed"] = True
-        seeded_metadata["future_week_planning_week_id"] = _route_demand_planning_week_id_from_metadata(
-            seeded_metadata
-        ) or next_week["planning_week_id"]
-        seeded_metadata["future_week_source_workflow_run_id"] = workflow_run_id
-        seeded_metadata["future_week_source_artifact_version_id"] = _require_non_empty_string(
-            latest_source_route_demand.get("artifact_version_id"),
-            field_name="artifact_version_id",
-        )
-
-        created_artifact = _create_workbook_artifact_version(
-            connection,
-            storage_root=storage_root,
-            workflow_run_id=target_workflow_run_id,
-            artifact_kind=ROUTE_DEMAND_DATASET_KEY,
-            artifact_bytes=seeded_bytes,
-            artifact_role=str(latest_source_route_demand.get("artifact_role") or "official_input"),
-            file_name=_route_demand_file_name(latest_source_route_demand),
-            media_type=str(latest_source_route_demand.get("media_type") or "application/json"),
-            metadata_json=seeded_metadata,
-            parent_artifact_version_id=None,
-            supersedes_artifact_version_id=None,
-            lineage_note="Created future-week route demand seed artifact.",
-            actor_id=actor_id,
-            actor_type=actor_type,
-            event_idempotency=artifact_event_idempotency,
-            links=None,
-        )
-        created_artifact_version_id = _require_non_empty_string(
-            created_artifact.get("artifact_version_id"),
-            field_name="artifact_version_id",
-        )
-        return {
-            "created": {
-                "workflow_run_id": target_workflow_run_id,
-                "artifact_version_id": created_artifact_version_id,
-                "route": canonical_route_demand_artifact_route(
-                    workflow_run_id=target_workflow_run_id,
-                    artifact_version_id=created_artifact_version_id,
-                ),
-            }
-        }
 
     result, replay = _execute_with_command_receipt(
         connection,
@@ -507,6 +431,253 @@ def create_workflow_run_route_demand_next_week_command(
         replay=replay,
         include_receipt=include_receipt,
     )
+
+
+def carry_forward_weekly_route_demand_command(
+    connection: sqlite3.Connection,
+    *,
+    workflow_run: Mapping[str, Any],
+    storage_root: Path,
+    tenant_id: str,
+    domain_id: str,
+    actor_id: str,
+    actor_type: str,
+    idempotency_key: str,
+    artifact_event_idempotency: str | None,
+) -> dict[str, Any]:
+    source_workflow_run_id = _require_non_empty_string(
+        workflow_run.get("workflow_run_id"),
+        field_name="workflow_run_id",
+    )
+    if str(workflow_run.get("workflow_id") or "") != SCHEDULE_WORKFLOW_ID:
+        raise CommandError(
+            code="invalid_source_workflow",
+            message="weekly-to-weekly carry-forward requires weekly_schedule_planning.v1",
+            details={
+                "workflow_run_id": source_workflow_run_id,
+                "workflow_id": str(workflow_run.get("workflow_id") or ""),
+            },
+        )
+    source_artifacts = list_artifact_versions_for_workflow_run(
+        connection,
+        source_workflow_run_id,
+    )
+    source_route_demand = latest_route_demand_artifact(source_artifacts)
+    if source_route_demand is None:
+        raise CommandError(
+            code="workpage_projection_unavailable",
+            message="route demand source artifact is unavailable for next-week creation",
+            details={
+                "workflow_run_id": source_workflow_run_id,
+                "workpage_id": ROUTE_DEMAND_WORKPAGE_KIND,
+                "missing_dataset_keys": [ROUTE_DEMAND_DATASET_KEY],
+            },
+        )
+    source_route_demand_id = _require_non_empty_string(
+        source_route_demand.get("artifact_version_id"),
+        field_name="artifact_version_id",
+    )
+    source_projection = project_route_demand_workbook(
+        _read_route_demand_artifact_bytes(source_route_demand)
+    )
+    current_week = _route_demand_operational_week_context(
+        artifact=source_route_demand,
+        projection=source_projection,
+    )
+    next_week = _next_operational_week_context(current_week["operational_week_start"])
+    target_workflow_run, _created = _ensure_weekly_workflow_run(
+        connection,
+        tenant_id=tenant_id,
+        domain_id=domain_id,
+        planning_week_id=next_week["planning_week_id"],
+        logical_date=next_week["workflow_run_logical_date"],
+        actor_id=actor_id,
+        actor_type=actor_type,
+    )
+    target_workflow_run_id = _require_non_empty_string(
+        target_workflow_run.get("workflow_run_id"),
+        field_name="target_workflow_run_id",
+    )
+    intake_task = _ensure_weekly_input_intake_task(
+        connection,
+        workflow_run_id=target_workflow_run_id,
+        actor_id=actor_id,
+        actor_type=actor_type,
+    )
+    intake_human_task_id = _require_non_empty_string(
+        intake_task.get("human_task_id"),
+        field_name="human_task_id",
+    )
+    target_artifacts = list_artifact_versions_for_workflow_run(
+        connection,
+        target_workflow_run_id,
+    )
+    target_route_demand = latest_route_demand_artifact(target_artifacts)
+    if target_route_demand is None:
+        seeded_bytes = seed_future_week_route_demand_workbook(
+            _read_route_demand_artifact_bytes(source_route_demand)
+        )
+        seeded_metadata = _route_demand_submitted_metadata(seeded_bytes)
+        seeded_metadata["planning_week_id"] = next_week["planning_week_id"]
+        seeded_metadata["future_week_seed"] = True
+        seeded_metadata["future_week_planning_week_id"] = next_week["planning_week_id"]
+        seeded_metadata["future_week_source_workflow_run_id"] = source_workflow_run_id
+        seeded_metadata["future_week_source_artifact_version_id"] = source_route_demand_id
+        seeded_metadata["carry_forward_policy_id"] = WEEKLY_CARRY_FORWARD_POLICY_ID
+        seeded_metadata["carry_forward_edge_id"] = WEEKLY_TO_WEEKLY_CARRY_FORWARD_EDGE_ID
+        seeded_metadata["carry_forward_source_planning_week_id"] = current_week[
+            "planning_week_id"
+        ]
+        seeded_metadata["carry_forward_target_planning_week_id"] = next_week[
+            "planning_week_id"
+        ]
+        seeded_bytes = json.dumps(seeded_metadata, indent=2, sort_keys=True).encode(
+            "utf-8"
+        )
+        target_route_demand = _create_workbook_artifact_version(
+            connection,
+            storage_root=storage_root,
+            workflow_run_id=target_workflow_run_id,
+            artifact_kind=ROUTE_DEMAND_DATASET_KEY,
+            artifact_bytes=seeded_bytes,
+            artifact_role=str(source_route_demand.get("artifact_role") or "official_input"),
+            file_name=_route_demand_file_name(source_route_demand),
+            media_type=str(source_route_demand.get("media_type") or "application/json"),
+            metadata_json=seeded_metadata,
+            parent_artifact_version_id=source_route_demand_id,
+            supersedes_artifact_version_id=None,
+            lineage_note="Created weekly-to-weekly route demand carry-forward seed.",
+            actor_id=actor_id,
+            actor_type=actor_type,
+            event_idempotency=artifact_event_idempotency,
+            links=[
+                {
+                    "subject_kind": "human_task",
+                    "subject_id": intake_human_task_id,
+                    "relation_kind": "attachment",
+                }
+            ],
+        )
+    else:
+        _attach_existing_artifact_to_human_task(
+            connection,
+            workflow_run_id=target_workflow_run_id,
+            artifact_version_id=_require_non_empty_string(
+                target_route_demand.get("artifact_version_id"),
+                field_name="artifact_version_id",
+            ),
+            human_task_id=intake_human_task_id,
+            actor_id=actor_id,
+            actor_type=actor_type,
+        )
+    target_route_demand_id = _require_non_empty_string(
+        target_route_demand.get("artifact_version_id"),
+        field_name="artifact_version_id",
+    )
+    now = utc_now_iso()
+    _create_or_ignore_weekly_carry_forward_provenance(
+        connection,
+        output_artifact_version_id=target_route_demand_id,
+        input_artifact_version_id=source_route_demand_id,
+        workflow_run_id=target_workflow_run_id,
+        created_at=now,
+        metadata_json={
+            "edge_id": WEEKLY_TO_WEEKLY_CARRY_FORWARD_EDGE_ID,
+            "policy_id": WEEKLY_CARRY_FORWARD_POLICY_ID,
+            "source_planning_week_id": current_week["planning_week_id"],
+            "target_planning_week_id": next_week["planning_week_id"],
+        },
+    )
+    binding_result = create_or_validate_workflow_artifact_input_effects(
+        connection,
+        workflow_run_id=target_workflow_run_id,
+        binding_key=WEEKLY_CARRY_FORWARD_BINDING_KEY,
+        source_ref=source_route_demand_id,
+        artifact_version_id=target_route_demand_id,
+        metadata_json={
+            "edge_id": WEEKLY_TO_WEEKLY_CARRY_FORWARD_EDGE_ID,
+            "policy_id": WEEKLY_CARRY_FORWARD_POLICY_ID,
+            "source_workflow_run_id": source_workflow_run_id,
+            "source_artifact_version_id": source_route_demand_id,
+            "target_dataset_key": ROUTE_DEMAND_DATASET_KEY,
+            "source_planning_week_id": current_week["planning_week_id"],
+            "target_planning_week_id": next_week["planning_week_id"],
+        },
+        captured_at=now,
+        replace_on_conflict=False,
+    )
+    correlation_key = _weekly_carry_forward_correlation_key(
+        source_workflow_run_id=source_workflow_run_id,
+        source_artifact_version_id=source_route_demand_id,
+        target_planning_week_id=next_week["planning_week_id"],
+    )
+    edge = create_or_reuse_edge_execution_effects(
+        connection,
+        edge_execution_id=f"ee-{_short_digest('weekly-carry-edge', correlation_key)}",
+        edge_id=WEEKLY_TO_WEEKLY_CARRY_FORWARD_EDGE_ID,
+        source_workflow_run_id=source_workflow_run_id,
+        source_stage_id="Stage04",
+        source_artifact_version_id=source_route_demand_id,
+        source_activation_key=_require_non_empty_string(
+            workflow_run.get("activation_key"),
+            field_name="source_activation_key",
+        ),
+        target_workflow_id=SCHEDULE_WORKFLOW_ID,
+        target_stage_id="Stage04",
+        target_partition_kind="PlanningWeekID",
+        target_partition_key=next_week["planning_week_id"],
+        target_activation_key=_require_non_empty_string(
+            target_workflow_run.get("activation_key"),
+            field_name="target_activation_key",
+        ),
+        correlation_key=correlation_key,
+        materialize_idempotency_key=idempotency_key,
+        status="prepared",
+        cursor_state={
+            "phase": "route_demand_carried_forward",
+            "policy_id": WEEKLY_CARRY_FORWARD_POLICY_ID,
+            "source_planning_week_id": current_week["planning_week_id"],
+            "target_planning_week_id": next_week["planning_week_id"],
+        },
+        compensation_state={"mode": "none", "state": "none"},
+        input_bindings={
+            "binding_key": WEEKLY_CARRY_FORWARD_BINDING_KEY,
+            "source_artifact_version_id": source_route_demand_id,
+            "target_input_artifact_version_id": target_route_demand_id,
+            "target_human_task_id": intake_human_task_id,
+            "policy_id": WEEKLY_CARRY_FORWARD_POLICY_ID,
+        },
+        trigger_ref=source_route_demand_id,
+        seed_artifact_version_id=target_route_demand_id,
+        target_workflow_run_id=target_workflow_run_id,
+        activated_at=None,
+        created_at=now,
+    )
+    return {
+        "created": {
+            "workflow_run_id": target_workflow_run_id,
+            "artifact_version_id": target_route_demand_id,
+            "route": canonical_route_demand_artifact_route(
+                workflow_run_id=target_workflow_run_id,
+                artifact_version_id=target_route_demand_id,
+            ),
+        },
+        "carry_forward": {
+            "edge_execution_id": str(edge["edge_execution_id"]),
+            "edge_id": WEEKLY_TO_WEEKLY_CARRY_FORWARD_EDGE_ID,
+            "status": str(edge["status"]),
+            "source_workflow_run_id": source_workflow_run_id,
+            "source_artifact_version_id": source_route_demand_id,
+            "target_workflow_run_id": target_workflow_run_id,
+            "target_artifact_version_id": target_route_demand_id,
+            "target_human_task_id": intake_human_task_id,
+            "binding_key": WEEKLY_CARRY_FORWARD_BINDING_KEY,
+            "binding_effect": str(binding_result["effect"]),
+            "source_planning_week_id": current_week["planning_week_id"],
+            "target_planning_week_id": next_week["planning_week_id"],
+            "policy_id": WEEKLY_CARRY_FORWARD_POLICY_ID,
+        },
+    }
 
 
 def save_and_run_route_demand_artifact_workpage_command(
@@ -1129,6 +1300,7 @@ def _ensure_weekly_workflow_run(
     actor_id: str,
     actor_type: str,
 ) -> tuple[dict[str, Any], bool]:
+    expected_activation_key = f"logistics-cadence:weekly:{planning_week_id}"
     existing = _find_weekly_workflow_run(
         connection,
         tenant_id=tenant_id,
@@ -1136,6 +1308,21 @@ def _ensure_weekly_workflow_run(
         planning_week_id=planning_week_id,
     )
     if existing is not None:
+        if str(existing.get("activation_key") or "") != expected_activation_key:
+            raise CommandError(
+                code="activation_key_drift_detected",
+                message="existing weekly workflow run partition uses a different activation key",
+                details={
+                    "tenant_id": tenant_id,
+                    "domain_id": domain_id,
+                    "workflow_id": SCHEDULE_WORKFLOW_ID,
+                    "partition_kind": "PlanningWeekID",
+                    "partition_key": planning_week_id,
+                    "expected_activation_key": expected_activation_key,
+                    "existing_activation_key": str(existing.get("activation_key") or ""),
+                    "existing_workflow_run_id": str(existing.get("workflow_run_id") or ""),
+                },
+            )
         return existing, False
     created = create_workflow_run_command(
         connection,
@@ -1146,7 +1333,7 @@ def _ensure_weekly_workflow_run(
             "domain_id": domain_id,
             "partition_key": planning_week_id,
             "logical_date": logical_date,
-            "activation_key": f"logistics-cadence:weekly:{planning_week_id}",
+            "activation_key": expected_activation_key,
             "actor_id": actor_id,
             "actor_type": actor_type,
         },
@@ -1233,6 +1420,49 @@ def _ensure_weekly_input_intake_task(
             details={"workflow_run_id": workflow_run_id},
         )
     return dict(human_task)
+
+
+def _weekly_carry_forward_correlation_key(
+    *,
+    source_workflow_run_id: str,
+    source_artifact_version_id: str,
+    target_planning_week_id: str,
+) -> str:
+    return "weekly-carry:" + _short_digest(
+        source_workflow_run_id,
+        source_artifact_version_id,
+        target_planning_week_id,
+    )
+
+
+def _create_or_ignore_weekly_carry_forward_provenance(
+    connection: sqlite3.Connection,
+    *,
+    output_artifact_version_id: str,
+    input_artifact_version_id: str,
+    workflow_run_id: str,
+    created_at: str,
+    metadata_json: dict[str, Any],
+) -> None:
+    try:
+        create_artifact_provenance_edge(
+            connection,
+            edge_id=f"ape-{_short_digest('weekly-carry-provenance', output_artifact_version_id, input_artifact_version_id)}",
+            output_artifact_version_id=output_artifact_version_id,
+            input_artifact_version_id=input_artifact_version_id,
+            edge_type="derives_from",
+            workflow_run_id=workflow_run_id,
+            edge_order=0,
+            metadata_json=metadata_json,
+            created_at=created_at,
+        )
+    except sqlite3.IntegrityError:
+        return
+
+
+def _short_digest(*parts: str) -> str:
+    body = "\x1f".join(str(part) for part in parts)
+    return hashlib.sha256(body.encode("utf-8")).hexdigest()[:32]
 
 
 def _artifact_is_future_week_seed(artifact: Mapping[str, Any]) -> bool:

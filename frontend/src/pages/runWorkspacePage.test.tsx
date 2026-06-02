@@ -573,11 +573,11 @@ describe("RunWorkspacePage", () => {
     expect(await screen.findByTestId("run-workspace-page")).toBeInTheDocument();
   });
 
-  it("opens logistics demo by default from app root route", async () => {
+  it("opens operator home by default from app root route", async () => {
     window.history.pushState({}, "", "/");
     render(<App />);
 
-    expect(await screen.findByTestId("logistics-demo-page")).toBeInTheDocument();
+    expect(await screen.findByTestId("operator-home-page")).toBeInTheDocument();
   });
 
   it("shows loading, error, and empty states", async () => {

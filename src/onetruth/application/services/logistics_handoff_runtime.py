@@ -8,13 +8,18 @@ from onetruth.application.services.schedule_control import (
 )
 from onetruth.domain.partition_codec import (
     planning_week_to_service_days,
-    service_day_to_future_planning_week,
 )
+from onetruth.domain.logistics_calendar import LogisticsCalendarPolicy
+
+
+_LOGISTICS_CALENDAR_POLICY = LogisticsCalendarPolicy()
 
 
 _PARTITION_TRANSFORMS: dict[str, Any] = {
     "planning_week_to_service_days": planning_week_to_service_days,
-    "service_day_to_future_planning_week": service_day_to_future_planning_week,
+    "service_day_to_future_planning_week": (
+        _LOGISTICS_CALENDAR_POLICY.reporting_actuals_target_planning_week
+    ),
 }
 
 __all__ = [

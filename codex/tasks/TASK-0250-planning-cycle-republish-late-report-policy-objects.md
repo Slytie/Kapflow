@@ -2,7 +2,7 @@
 id: TASK-0250
 epic: EPIC-139
 title: "Planning-cycle, republish, late-report policy objects"
-status: TODO
+status: DONE
 owners: ["platform"]
 reviewers: ["architect", "qa"]
 depends_on: ["TASK-0248", "TASK-0249"]
@@ -60,3 +60,11 @@ Add LogisticsCalendarPolicy, same-week rename/deprecation, next-week transform, 
 
 ## Notes / decisions
 - Raw project corpora remain off-repo; use only sanitized fixtures, manifests, hashes, and aggregate evidence approved by the relevant fixture/governance task.
+
+## Closeout evidence
+- Added `LogisticsCalendarPolicy` with explicit same-week relation naming (`same_iso_planning_week`), deprecated same-week label metadata, next ISO planning-week targeting, and ISO rollover tests.
+- Updated the existing `service_day_to_future_planning_week` transform path to resolve through the policy-backed next-planning-week rule while preserving the transform ID for compiled handoff contracts.
+- Added named late weekly republish and late reporting policy objects; handoff errors now include policy IDs while preserving prior error codes and compatibility `policy_state` values.
+- Handoff scopes now optionally carry deterministic `policy_context`, and weekly seed plus reporting-to-planning notify-only paths persist the relevant calendar policy context in edge/artifact metadata.
+- Evidence: focused policy/helper/logistics handoff tests passed on 2026-06-02.
+- Closeout posture: `MP-PR017` is closed as planning-cycle policy hardening only; this is not CAPEX production activation, deployment approval, raw-corpus use, or reconciler apply authorization.

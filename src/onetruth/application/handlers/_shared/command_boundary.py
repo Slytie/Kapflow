@@ -303,6 +303,8 @@ def _public_command_scope_key(command_name: str, payload: dict[str, Any]) -> str
                 payload.get("manifest_path") or "default_manifest",
             )
         )
+    if command_name == "schedule-control.build-weekly":
+        return _command_scope_key((payload.get("workflow_run_id"),))
     if command_name == "pointers.promote":
         return _command_scope_key(
             (

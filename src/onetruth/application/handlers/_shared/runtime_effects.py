@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import json
 import sqlite3
 from typing import Any
@@ -22,6 +23,78 @@ from onetruth.infrastructure.repositories.workflow_runs import (
     get_workflow_run,
     list_workflow_runs,
 )
+
+
+DEFAULT_HANDOFF_POLICY_VERSION = "logistics_handoff_policy.v0"
+HANDOFF_EFFECT_SCOPE_SCHEMA_VERSION = "handoff_effect_scope.v1"
+
+
+def handoff_artifact_source_truth(
+    *,
+    workflow_run_id: str,
+    artifact: dict[str, Any],
+) -> dict[str, str]:
+    return {
+        "workflow_run_id": _required_text(workflow_run_id, field_name="workflow_run_id"),
+        "artifact_version_id": _required_text(
+            artifact.get("artifact_version_id"),
+            field_name="artifact_version_id",
+        ),
+        "artifact_kind": _required_text(
+            artifact.get("artifact_kind"),
+            field_name="artifact_kind",
+        ),
+        "content_digest": _required_text(
+            artifact.get("content_digest"),
+            field_name="content_digest",
+        ),
+    }
+
+
+def build_handoff_effect_scope(
+    *,
+    edge_id: str,
+    source_truth: list[dict[str, Any]] | tuple[dict[str, Any], ...],
+    target_partition_kind: str,
+    target_partition_key: str,
+    policy_version: str = DEFAULT_HANDOFF_POLICY_VERSION,
+    policy_context: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    normalized_source_truth = [
+        _normalize_handoff_source_truth(item, index=index)
+        for index, item in enumerate(source_truth)
+    ]
+    if not normalized_source_truth:
+        raise CommandError(
+            code="invalid_handoff_effect_scope",
+            message="handoff effect scope requires at least one source truth record",
+            details={},
+        )
+    scope_body = {
+        "schema_version": HANDOFF_EFFECT_SCOPE_SCHEMA_VERSION,
+        "edge_id": _required_text(edge_id, field_name="edge_id"),
+        "source_truth": normalized_source_truth,
+        "target_partition": {
+            "partition_kind": _required_text(
+                target_partition_kind,
+                field_name="target_partition_kind",
+            ),
+            "partition_key": _required_text(
+                target_partition_key,
+                field_name="target_partition_key",
+            ),
+        },
+        "policy_version": _required_text(policy_version, field_name="policy_version"),
+    }
+    if policy_context is not None:
+        scope_body["policy_context"] = _normalize_json_object(
+            policy_context,
+            field_name="policy_context",
+        )
+    return {
+        "scope_key": _stable_handoff_scope_key(scope_body),
+        **scope_body,
+    }
 
 
 def resolve_or_create_workflow_run_effects(
@@ -374,6 +447,82 @@ def _workflow_artifact_binding_matches(
         and str(existing.get("source_kind") or "") == "artifact_version"
         and str(existing.get("source_ref") or "") == source_ref
         and str(existing.get("artifact_version_id") or "") == artifact_version_id
+    )
+
+
+def _normalize_handoff_source_truth(
+    raw: dict[str, Any],
+    *,
+    index: int,
+) -> dict[str, str]:
+    if not isinstance(raw, dict):
+        raise CommandError(
+            code="invalid_handoff_effect_scope",
+            message="source truth entries must be objects",
+            details={"index": index},
+        )
+    return {
+        "workflow_run_id": _required_text(
+            raw.get("workflow_run_id"),
+            field_name=f"source_truth[{index}].workflow_run_id",
+        ),
+        "artifact_version_id": _required_text(
+            raw.get("artifact_version_id"),
+            field_name=f"source_truth[{index}].artifact_version_id",
+        ),
+        "artifact_kind": _required_text(
+            raw.get("artifact_kind"),
+            field_name=f"source_truth[{index}].artifact_kind",
+        ),
+        "content_digest": _required_text(
+            raw.get("content_digest"),
+            field_name=f"source_truth[{index}].content_digest",
+        ),
+    }
+
+
+def _stable_handoff_scope_key(scope_body: dict[str, Any]) -> str:
+    body = json.dumps(
+        scope_body,
+        separators=(",", ":"),
+        sort_keys=True,
+        ensure_ascii=True,
+    )
+    return f"handoff-scope:{hashlib.sha256(body.encode('utf-8')).hexdigest()[:32]}"
+
+
+def _normalize_json_object(value: dict[str, Any], *, field_name: str) -> dict[str, Any]:
+    try:
+        encoded = json.dumps(
+            value,
+            separators=(",", ":"),
+            sort_keys=True,
+            ensure_ascii=True,
+        )
+    except (TypeError, ValueError) as exc:
+        raise CommandError(
+            code="invalid_handoff_effect_scope",
+            message=f"{field_name} must be JSON-serializable",
+            details={"field_name": field_name},
+        ) from exc
+    decoded = json.loads(encoded)
+    if not isinstance(decoded, dict):
+        raise CommandError(
+            code="invalid_handoff_effect_scope",
+            message=f"{field_name} must be a JSON object",
+            details={"field_name": field_name},
+        )
+    return decoded
+
+
+def _required_text(value: Any, *, field_name: str) -> str:
+    text = str(value or "").strip()
+    if text:
+        return text
+    raise CommandError(
+        code="invalid_handoff_effect_scope",
+        message="handoff effect scope field must be a non-empty string",
+        details={"field_name": field_name},
     )
 
 

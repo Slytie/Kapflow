@@ -2,7 +2,7 @@
 id: TASK-0249
 epic: EPIC-139
 title: "Notify-only/reporting handoff guard"
-status: TODO
+status: DONE
 owners: ["platform"]
 reviewers: ["architect", "qa"]
 depends_on: ["TASK-0246", "TASK-0247"]
@@ -60,3 +60,10 @@ File-backed notify manifests; block late reporting from mutating published weekl
 
 ## Notes / decisions
 - Raw project corpora remain off-repo; use only sanitized fixtures, manifests, hashes, and aggregate evidence approved by the relevant fixture/governance task.
+
+## Closeout evidence
+- Notify-only target input artifacts now persist as file-backed generated JSON manifests through the canonical generated-artifact helper instead of authoritative `inmem://` handoff rows.
+- Reporting-to-planning late feedback in the default/shared-env boundary profile now fails closed with `late_reporting_handoff_conflict` before replacing the existing `stage03.actual_hours_snapshot` input binding.
+- Legacy merge-and-replace behavior remains available only when `ONETRUTH_API_BOUNDARY_PROFILE` is explicitly `local_dev` or `ci_test`.
+- Focused verification: `PYTHONPYCACHEPREFIX=/private/tmp/kapflow-pyc pytest tests/runtime/test_logistics_handoff_runtime.py -q` passed.
+- Closeout posture: `MP-PR016` is closed as notify-only/reporting handoff hardening only; it is not CAPEX production activation, deployment, or planning-cycle policy completion.

@@ -42,6 +42,14 @@ def test_typed_partition_transform_registry_maps_service_day_to_future_planning_
     assert planning_weeks == ["PW-2026-W11"]
 
 
+def test_future_planning_week_transform_handles_sunday_iso_rollover() -> None:
+    planning_weeks = apply_partition_transform_by_id(
+        transform_id="service_day_to_future_planning_week",
+        source_partition_key="SD-2027-01-03",
+    )
+    assert planning_weeks == ["PW-2027-W01"]
+
+
 def test_deterministic_candidate_ranking_is_stable_and_tie_broken() -> None:
     ranked = deterministic_rank_candidates(
         [

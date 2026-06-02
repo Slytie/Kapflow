@@ -2,7 +2,7 @@
 id: TASK-0245
 epic: EPIC-139
 title: "Schedule-control hardening"
-status: TODO
+status: DONE
 owners: ["platform"]
 reviewers: ["architect", "qa"]
 depends_on: ["TASK-0238", "TASK-0240"]
@@ -60,3 +60,9 @@ Stage04 outputs file-backed, evented, provenance-linked, receipt-scoped using ge
 
 ## Notes / decisions
 - Raw project corpora remain off-repo; use only sanitized fixtures, manifests, hashes, and aggregate evidence approved by the relevant fixture/governance task.
+
+## Closeout evidence
+- `schedule-control.build-weekly` is receipt-scoped through the shared command-boundary receipt path using workflow-run command scope.
+- Weekly Stage04 output persistence now writes all six generated outputs through `persist_generated_artifact_effects`, producing root-confined file URIs, byte sizes, content digests, and canonical `artifact.version.created` events.
+- Stage04 outputs retain explicit provenance from source input artifacts, and non-bundle outputs retain bundle-lowering provenance from the generated input bundle.
+- Focused verification passed on 2026-06-02: `tests/runtime/test_schedule_control_hardening.py` and `tests/runtime/test_transaction_composition_safety.py`.

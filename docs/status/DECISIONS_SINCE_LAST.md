@@ -2,6 +2,43 @@
 
 Record any decisions made since the last session so a fresh Codex run can rehydrate quickly.
 
+## 2026-06-02 (CAPEX PR012 schedule-control hardening)
+- Stage04 output decision: weekly schedule-control generated outputs now persist through the canonical generated-artifact helper instead of direct `inmem://` artifact rows.
+- Receipt decision: `schedule-control.build-weekly` uses workflow-run-scoped command receipts, so idempotent command replay returns stored command truth and does not duplicate Stage04 artifact events.
+- Boundary decision: `TASK-0245` closes logistics domain/runtime safety posture only; it does not activate CAPEX production-like runs, raw corpus use, deployment, or broader generated-artifact migration.
+
+## 2026-06-02 (CAPEX PR013 handoff scope scaffold)
+- Handoff-scope decision: logistics handoff effects now carry a deterministic scope object containing source artifact truth, target partition, policy version, and a stable scope key.
+- Scaffold decision: weekly seed materialization, live-dispatch activation/preparation, and notify-only handoff paths record that scope in metadata, but this does not yet claim behavior-complete seed hardening, republish policy, or notify-only conflict tightening.
+- Boundary decision: `TASK-0246` closes auditability of command/effect scopes only; CAPEX production-like activation, raw corpus use, release/deploy work, and later EPIC-139 handoff policies remain blocked.
+
+## 2026-06-02 (CAPEX PR014 weekly seed materialization hardening)
+- Seed-storage decision: weekly-to-live daily seed artifacts are now generated, file-backed JSON manifests persisted through the canonical generated-artifact helper rather than authoritative `inmem://` seed rows.
+- Replay decision: seed manifest content excludes volatile materialization idempotency keys so retries with a different command key reuse the same immutable seed artifact and EdgeExecution without digest conflicts.
+- Boundary decision: `TASK-0247` closes weekly seed materialization hardening only; live-dispatch republish guards, notify-only late-report policy, CAPEX production activation, and deployment remain later gated work.
+
+## 2026-06-02 (CAPEX PR015 live-dispatch republish guard)
+- Base-seed decision: once `live_dispatch.v1` has `stage01.base_seed` bound for a service day, later weekly republish attempts must surface explicit stale policy state instead of rebinding that input.
+- Activation decision: activating a prepared weekly-to-live edge after its weekly published source is superseded now records `status=stale` with `policy_state=late_weekly_republish_after_live_prepare` and fails closed with `live_dispatch_base_seed_republish_after_prepare`.
+- Boundary decision: `TASK-0248` closes the republish-after-prepare guard only; same-week/future-week planning-cycle policy, notify-only late-report policy, CAPEX production activation, and deployment remain gated work.
+
+## 2026-06-02 (CAPEX PR016 notify-only/reporting guard)
+- Storage decision: notify-only target input artifacts now use file-backed generated JSON manifests through the canonical generated-artifact helper rather than authoritative `inmem://` handoff rows.
+- Late-report decision: reporting-to-planning late feedback cannot replace an existing weekly `stage03.actual_hours_snapshot` binding in the default/shared-env path; it fails closed with `late_reporting_handoff_conflict`.
+- Compatibility decision: merge-and-replace for newer reporting feedback remains available only when `ONETRUTH_API_BOUNDARY_PROFILE` is explicitly `local_dev` or `ci_test`; this is local/test compatibility, not production posture.
+- Boundary decision: `TASK-0249` closes notify-only/reporting handoff hardening only; planning-cycle policy, CAPEX production activation, and deployment remain gated work.
+
+## 2026-06-02 (CAPEX PR017 planning-cycle policy objects)
+- Calendar-policy decision: logistics same-week now means `same_iso_planning_week`, the older `same_week` label is recorded only as deprecated compatibility metadata, and reporting actuals target the next ISO planning week.
+- Transform decision: the existing `service_day_to_future_planning_week` transform ID remains stable, but it now resolves through `LogisticsCalendarPolicy`, including Sunday and ISO-year rollover behavior.
+- Policy-evidence decision: weekly seed and reporting-to-planning handoff scopes may carry deterministic `policy_context`, and late weekly republish/late reporting errors now include named policy IDs while preserving existing error codes.
+- Boundary decision: `TASK-0250` closes planning-cycle policy hardening only; CAPEX production activation, deployment, raw-corpus use, and reconciler apply authorization remain gated work.
+
+## 2026-06-02 (CAPEX PR018 weekly-to-weekly carry-forward)
+- Carry-forward decision: route-demand add-next-week now goes through canonical weekly-to-weekly carry-forward that records target run, intake task, target route-demand input binding, artifact provenance, and a `weekly_to_weekly_carry_forward` EdgeExecution.
+- Target-run decision: weekly target run reuse fails closed on activation-key drift, and the target seed payload is aligned to the target workflow run planning week.
+- Boundary decision: carry-forward prepares target weekly input truth only; it does not complete intake, spawn Stage04 work, run scheduling agents, request approvals, deploy, activate CAPEX production, or authorize reconciler apply mode.
+
 ## 2026-06-02 (CAPEX PR010/PR011 lab auth and VM lane)
 - Lab-auth decision: `TASK-0243` is closed with a local lab-only `/api/v1/viewer` smoke using the existing `shared_env` RS256 JWT resolver; this tranche intentionally does not add JWKS lookup or pilot-password fallback.
 - Identity-boundary decision: lab viewer smoke must prove server-derived JWT identity wins over conflicting browser identity headers and that actor switching remains disabled under `shared_env`.
@@ -988,3 +1025,22 @@ Record any decisions made since the last session so a fresh Codex run can rehydr
 - Deploy-boundary decision: the pushed API image is release evidence/build output only; `release_source_bundle` remains the deploy input until later release/deploy gates explicitly change the operator contract.
 - Backup-skeleton decision: `scripts/prepare_predeploy_backup.py` writes validate-only `backup_manifest.json` evidence for the DB/artifact/release tuple and secret/config references, without copying live state or claiming restore proof.
 - Activation decision: `TASK-0241` and `TASK-0242` close release/backup readiness gates only; CAPEX production-like activation, pilot readiness, deployment approval, raw corpus use, and restore proof remain blocked.
+
+## 2026-06-02 (CAPEX PR019 reconciler dry-run)
+- Reconciler decision: logistics reconciliation is introduced as `logistics_reconciler_dry_run.v1`, a deterministic read-only report over canonical workflow runs, artifact versions, edge executions, and workflow input bindings.
+- CLI decision: `handoffs reconcile-dry-run` opens SQLite in read-only mode and exposes no apply or repair option in this tranche.
+- Boundary decision: missing seed/run/input findings, late reporting conflicts, and stale/drifted handoff rows are reported without mutation; repair/apply mode remains deferred to the later gated reconciler-apply task.
+- Activation decision: `TASK-0252` closes dry-run reporting only; it does not authorize CAPEX production activation, deployment approval, raw corpus use, or target-side repair.
+
+## 2026-06-02 (CAPEX PR020 operator home)
+- Root-route decision: `/` now renders the operator home posture surface instead of redirecting to `/demo/logistics`; the demo route remains an explicit launcher.
+- Operator-visibility decision: `GET /api/v1/operator/home` exposes current server-derived viewer posture plus the logistics reconciler dry-run failure-state report scoped to the request tenant/domain.
+- Shared-env decision: when `actor_switching_allowed=false`, the frontend hides actor-switching controls and the switcher affordance entirely.
+- Boundary decision: operator-home findings show missing seeds, stale edges, late reports, drift, and missing blobs without applying repairs or exposing local blob paths.
+- Activation decision: `TASK-0253` closes operator visibility only; it does not authorize CAPEX production activation, deployment approval, raw corpus use, or reconciler apply mode.
+
+## 2026-06-02 (CAPEX CLEAN-001 approval response hooks)
+- Boundary decision: generic `approval.respond` records the approval transition and emits `approval.responded`; domain-specific logistics publish/finalize consequences live in registered approval-response hooks.
+- ADR decision: `docs/adr/ADR-005-approval-response-domain-hooks.md` records the hook boundary, generic-handler forbidden imports, and transactional rollback posture.
+- Audit decision: CAPEX invariant audit now hard-gates approval-response hook extraction instead of reporting approval side-effect coupling as a known gap.
+- Activation decision: `TASK-0257` closes approval domain-boundary cleanup only; it does not authorize CAPEX production activation, deployment approval, raw corpus use, or new CAPEX runtime behavior.

@@ -39,6 +39,40 @@ export interface ViewerSession {
   actor_switching_allowed: boolean;
 }
 
+export interface OperatorHomeFinding {
+  finding_id: string;
+  code: string;
+  severity: "error" | "warning" | "info";
+  subject: Record<string, unknown>;
+  expected: Record<string, unknown>;
+  observed: Record<string, unknown>;
+  message: string;
+  mode: "dry_run";
+  mutates: boolean;
+  repair_hint: string;
+  conflict_code?: string;
+  boundary_profile?: BoundaryProfile;
+}
+
+export interface OperatorHomeContract {
+  schema_version: "operator_home.v1";
+  status: "clear" | "attention";
+  viewer: ViewerSession;
+  failure_state: {
+    schema_version: string;
+    mode: "dry_run";
+    summary: {
+      finding_count: number;
+      error_count: number;
+      warning_count: number;
+      info_count: number;
+      mutations_performed: number;
+      code_counts: Record<string, number>;
+    };
+    findings: OperatorHomeFinding[];
+  };
+}
+
 export interface HumanTaskSubgraphRef {
   human_task_id: string;
   endpoint: string;

@@ -2,7 +2,7 @@
 id: TASK-0253
 epic: EPIC-139
 title: "Operator home failure-state surface"
-status: TODO
+status: DONE
 owners: ["platform"]
 reviewers: ["architect", "qa"]
 depends_on: ["TASK-0243", "TASK-0252"]
@@ -60,3 +60,12 @@ Production root/operator page shows current state plus missing seeds, stale edge
 
 ## Notes / decisions
 - Raw project corpora remain off-repo; use only sanitized fixtures, manifests, hashes, and aggregate evidence approved by the relevant fixture/governance task.
+
+## Closeout evidence
+- Replaced the app-root demo redirect with a real `OperatorHomePage` at `/`.
+- Added `GET /api/v1/operator/home`, scoped by server-derived request context, backed by the `logistics_reconciler_dry_run.v1` report.
+- Extended the reconciler to report missing file-backed artifact blobs without exposing local blob paths in findings.
+- Shared-env viewer sessions now render static identity posture; the actor-switcher affordance is hidden when `actor_switching_allowed=false`.
+- Failure-state fixtures cover missing seed, missing blob, late report, and stale edge groups on the operator home surface.
+- Evidence: focused backend operator-home/route-registry tests and frontend operator-home/viewer-bootstrap/root-route tests passed on 2026-06-02.
+- Closeout posture: `MP-PR020` is closed as operator visibility and shared-env root hardening only; this is not CAPEX production activation, deployment approval, reconciler apply mode, or raw-corpus use.

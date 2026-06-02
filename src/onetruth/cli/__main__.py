@@ -74,6 +74,9 @@ from onetruth.application.handlers.schedule_control import (
 from onetruth.application.services.logistics_operational_cadence import (
     tick_logistics_operational_cadence,
 )
+from onetruth.application.services.logistics_reconciler import (
+    run_logistics_reconciler_dry_run,
+)
 from onetruth.application.projections.coherence_harness import (
     COHERENCE_POLICY_WARN_VISIBLE,
     COHERENCE_STATUS_FAILED,
@@ -89,7 +92,11 @@ from onetruth.infrastructure.artifacts.storage import (
     encode_base64_content,
     storage_root_for_db_url,
 )
-from onetruth.infrastructure.db.session import DEFAULT_DB_URL, open_sqlite_connection
+from onetruth.infrastructure.db.session import (
+    DEFAULT_DB_URL,
+    open_read_only_sqlite_connection,
+    open_sqlite_connection,
+)
 from onetruth.infrastructure.events.event_store import (
     DuplicateEventIdError,
     DuplicateIdempotencyKeyError,
@@ -311,6 +318,15 @@ def _build_parser() -> argparse.ArgumentParser:
     handoffs_list.add_argument("--status", default=None)
     handoffs_list.add_argument("--json", dest="json_output", required=True, action="store_true")
     handoffs_list.set_defaults(handler=_handle_handoffs_list)
+    handoffs_reconcile = handoffs_sub.add_parser(
+        "reconcile-dry-run",
+        help="Report logistics handoff reconciliation findings without mutating runtime truth.",
+    )
+    handoffs_reconcile.add_argument("--tenant-id", default=None)
+    handoffs_reconcile.add_argument("--domain-id", default=None)
+    handoffs_reconcile.add_argument("--boundary-profile", default=None)
+    handoffs_reconcile.add_argument("--json", dest="json_output", required=True, action="store_true")
+    handoffs_reconcile.set_defaults(handler=_handle_handoffs_reconcile_dry_run)
 
     schedule_control = subparsers.add_parser(
         "schedule-control",
@@ -1695,6 +1711,34 @@ def _handle_handoffs_list(args: argparse.Namespace) -> int:
             "command": "handoffs.list",
             "edge_executions": edge_executions,
             "coherence_failures": coherence_failures,
+        }
+    )
+    return 0
+
+
+def _handle_handoffs_reconcile_dry_run(args: argparse.Namespace) -> int:
+    try:
+        connection = open_read_only_sqlite_connection(args.db_url)
+    except (FileNotFoundError, NotADirectoryError, sqlite3.Error, ValueError) as exc:
+        return _emit_error(
+            code="db_read_only_open_failed",
+            message="failed to open sqlite database for read-only reconciliation",
+            details={"db_url": args.db_url, "error": str(exc)},
+        )
+    try:
+        report = run_logistics_reconciler_dry_run(
+            connection,
+            tenant_id=args.tenant_id,
+            domain_id=args.domain_id,
+            boundary_profile=args.boundary_profile,
+        )
+    finally:
+        connection.close()
+    _json_print(
+        {
+            "status": "ok",
+            "command": "handoffs.reconcile-dry-run",
+            "report": report,
         }
     )
     return 0

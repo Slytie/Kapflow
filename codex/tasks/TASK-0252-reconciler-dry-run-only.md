@@ -2,7 +2,7 @@
 id: TASK-0252
 epic: EPIC-139
 title: "Reconciler dry-run only"
-status: TODO
+status: DONE
 owners: ["platform"]
 reviewers: ["architect", "qa"]
 depends_on: ["TASK-0247", "TASK-0249", "TASK-0250"]
@@ -60,3 +60,11 @@ Read-only reconciliation report for missing seeds/runs/late reports/stale edges;
 
 ## Notes / decisions
 - Raw project corpora remain off-repo; use only sanitized fixtures, manifests, hashes, and aggregate evidence approved by the relevant fixture/governance task.
+
+## Closeout evidence
+- Added a read-only logistics handoff reconciler report with schema `logistics_reconciler_dry_run.v1` and CLI entrypoint `handoffs reconcile-dry-run`.
+- The reconciler reports missing weekly seed artifacts/edges, stale handoff edges, notify-only target run/input/artifact drift, live target input drift, and late reporting input conflicts.
+- The CLI opens SQLite through the read-only connection path and exposes no apply/repair argument.
+- Regression coverage snapshots canonical runtime table counts before and after dry runs and proves missing-edge, stale-edge/missing-binding, and late-report conflict findings do not mutate runtime truth.
+- Evidence: focused reconciler regressions and the full logistics handoff runtime suite passed on 2026-06-02.
+- Closeout posture: `MP-PR019` is closed as dry-run reporting only; this is not reconciler apply mode, CAPEX production activation, deployment approval, or target-side repair authorization.

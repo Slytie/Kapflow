@@ -2,7 +2,8 @@ import { http, HttpResponse } from "msw";
 import type {
   ArtifactVersionRow,
   HumanTaskRow,
-  HumanTaskSubgraph
+  HumanTaskSubgraph,
+  OperatorHomeFinding
 } from "@/lib/types/contracts";
 import eodRunArtifactCreateResponseSnapshot from "@fixtures/workpage_eod_v0_run_artifact_create_response.json";
 import eodRunWorkpageStateSnapshot from "@fixtures/workpage_eod_v0_run_state.json";
@@ -3655,6 +3656,41 @@ function viewerSessionFromRequest(request: Request): Record<string, unknown> {
   };
 }
 
+function operatorHomeFromRequest(
+  request: Request,
+  findings: OperatorHomeFinding[] = []
+): Record<string, unknown> {
+  const severityCounts = findings.reduce(
+    (counts, finding) => {
+      counts[finding.severity] += 1;
+      return counts;
+    },
+    { error: 0, warning: 0, info: 0 }
+  );
+  const codeCounts = findings.reduce<Record<string, number>>((counts, finding) => {
+    counts[finding.code] = (counts[finding.code] ?? 0) + 1;
+    return counts;
+  }, {});
+  return {
+    schema_version: "operator_home.v1",
+    status: findings.length > 0 ? "attention" : "clear",
+    viewer: viewerSessionFromRequest(request),
+    failure_state: {
+      schema_version: "logistics_reconciler_dry_run.v1",
+      mode: "dry_run",
+      summary: {
+        finding_count: findings.length,
+        error_count: severityCounts.error,
+        warning_count: severityCounts.warning,
+        info_count: severityCounts.info,
+        mutations_performed: 0,
+        code_counts: codeCounts
+      },
+      findings
+    }
+  };
+}
+
 function inScope(request: Request): boolean {
   const tenant = request.headers.get("x-onetruth-tenant-id");
   const domain = request.headers.get("x-onetruth-domain-id");
@@ -5892,6 +5928,12 @@ export const handlers = [
     ok({
       command: "api.viewer.bootstrap",
       viewer_session: viewerSessionFromRequest(request)
+    })
+  ),
+  http.get("*/api/v1/operator/home", ({ request }) =>
+    ok({
+      command: "api.operator.home",
+      operator_home: operatorHomeFromRequest(request)
     })
   ),
 

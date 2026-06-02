@@ -26,7 +26,11 @@ def _memory_connection() -> sqlite3.Connection:
     return connection
 
 
-def test_schedule_control_outputs_can_run_inside_outer_transaction_and_rollback() -> None:
+def test_schedule_control_outputs_can_run_inside_outer_transaction_and_rollback(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    monkeypatch.setenv("ONETRUTH_ARTIFACT_ROOT", str(tmp_path / "artifact-root"))
     connection = _memory_connection()
     workflow_run = create_workflow_run_command(
         connection,

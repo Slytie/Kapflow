@@ -9,6 +9,7 @@ from onetruth.application.handlers._shared.runtime_effects import (
     resolve_or_create_workflow_run_effects,
 )
 from onetruth.domain.partition_codec import validate_partition_key
+from onetruth.infrastructure.repositories.workflow_runs import list_workflow_runs
 
 
 @dataclass(frozen=True)
@@ -65,6 +66,27 @@ class LogisticsRunResolver:
             activation_key=activation_key,
             created_at=created_at,
         )
+
+    def find_live_dispatch(
+        self,
+        connection: sqlite3.Connection,
+        *,
+        tenant_id: str,
+        domain_id: str,
+        workflow_id: str,
+        service_date_id: str,
+    ) -> dict[str, Any] | None:
+        validate_partition_key("ServiceDateID", service_date_id)
+        for run in list_workflow_runs(
+            connection,
+            workflow_id=workflow_id,
+            tenant_id=tenant_id,
+            domain_id=domain_id,
+            state=None,
+        ):
+            if str(run["partition_key"]) == service_date_id:
+                return run
+        return None
 
 
 def logistics_logical_date_from_partition_key(

@@ -5,6 +5,7 @@ Current ADRs:
 - `ADR-002-generated-agentic-derivatives.md`
 - `ADR-003-stage4-runtime-architecture.md`
 - `ADR-004-first-user-production-lab-topology.md`
+- `ADR-005-approval-response-domain-hooks.md`
 
 Use ADRs when changing:
 - authority chain

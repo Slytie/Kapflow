@@ -97,20 +97,28 @@ def planning_week_to_service_days(planning_week_id: str) -> list[str]:
     ]
 
 
+def planning_week_id_for_date(value: date) -> str:
+    iso_year, iso_week, _ = value.isocalendar()
+    return f"PW-{iso_year:04d}-W{iso_week:02d}"
+
+
+def service_day_to_planning_week(service_date_id: str) -> str:
+    return planning_week_id_for_date(parse_service_date_id(service_date_id))
+
+
 def service_day_to_pay_period(service_date_id: str) -> str:
-    service_date = _parse_service_date(service_date_id)
+    service_date = parse_service_date_id(service_date_id)
     iso_year, iso_week, _ = service_date.isocalendar()
     return f"PP-{iso_year:04d}-W{iso_week:02d}"
 
 
 def service_day_to_future_planning_week(service_date_id: str) -> str:
-    service_date = _parse_service_date(service_date_id)
-    sunday_offset = (service_date.weekday() + 1) % 7
-    current_operational_week_start = service_date - timedelta(days=sunday_offset)
-    future_operational_week_start = current_operational_week_start + timedelta(days=7)
-    label_monday = future_operational_week_start + timedelta(days=1)
-    iso_year, iso_week, _ = label_monday.isocalendar()
-    return f"PW-{iso_year:04d}-W{iso_week:02d}"
+    return service_day_to_next_planning_week(service_date_id)
+
+
+def service_day_to_next_planning_week(service_date_id: str) -> str:
+    service_date = parse_service_date_id(service_date_id)
+    return planning_week_id_for_date(service_date + timedelta(days=7))
 
 
 def availability_dates_to_planning_weeks(*, dates: list[str]) -> list[str]:
@@ -124,7 +132,7 @@ def availability_dates_to_planning_weeks(*, dates: list[str]) -> list[str]:
     return sorted(weeks)
 
 
-def _parse_service_date(service_date_id: str) -> date:
+def parse_service_date_id(service_date_id: str) -> date:
     validate_partition_key("ServiceDateID", service_date_id)
     match = PARTITION_PATTERNS["ServiceDateID"].match(service_date_id)
     assert match is not None

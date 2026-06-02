@@ -11,9 +11,7 @@ from onetruth.application.handlers._shared.artifact_effects import (
     _ingest_artifact_document_effects,
 )
 from onetruth.application.handlers.approvals import (
-    _latest_review_confirmation_for_human_task,
     _request_approval_effects,
-    _reviewed_artifact_id_from_confirmation,
 )
 from onetruth.application.handlers.availability_exceptions import (
     materialize_weekly_approved_availability_exceptions,
@@ -56,6 +54,10 @@ from onetruth.application.services.dispatch_reporting_build import (
 )
 from onetruth.application.services.dispatch_reporting_workbook import (
     WorkbookRuntimeDependencyError,
+)
+from onetruth.application.services.review_confirmation import (
+    latest_review_confirmation_for_human_task,
+    reviewed_artifact_id_from_confirmation,
 )
 from onetruth.application.services.task_requirements import (
     REVIEW_CONFIRMATION_ARTIFACT_KIND,
@@ -1601,11 +1603,11 @@ def _apply_live_dispatch_completion_effects(
                     "artifact_kind": LIVE_ROUTE_DELTA_ARTIFACT_KIND,
                 },
             )
-        review_confirmation = _latest_review_confirmation_for_human_task(
+        review_confirmation = latest_review_confirmation_for_human_task(
             artifacts=artifacts,
             human_task_id=human_task_id,
         )
-        reviewed_route_delta_artifact_version_id = _reviewed_artifact_id_from_confirmation(
+        reviewed_route_delta_artifact_version_id = reviewed_artifact_id_from_confirmation(
             artifacts=artifacts,
             review_confirmation=review_confirmation,
             artifact_kind=LIVE_ROUTE_DELTA_ARTIFACT_KIND,

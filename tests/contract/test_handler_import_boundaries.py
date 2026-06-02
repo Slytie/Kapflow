@@ -10,6 +10,9 @@ TARGET_MODULE = "onetruth.application.handlers.workflow_task_lifecycle"
 API_DIR = REPO_ROOT / "src" / "onetruth" / "api"
 SERVICES_DIR = REPO_ROOT / "src" / "onetruth" / "application" / "services"
 CLI_MAIN = REPO_ROOT / "src" / "onetruth" / "cli" / "__main__.py"
+APPROVALS_HANDLER = HANDLERS_DIR / "approvals.py"
+APPROVAL_RESPONSE_HOOKS = SERVICES_DIR / "approval_response_hooks.py"
+LOGISTICS_APPROVAL_RESPONSE_HOOKS = SERVICES_DIR / "logistics_approval_response_hooks.py"
 
 _BANNED_LEGACY_SURFACES = {
     "CommandError",
@@ -107,6 +110,41 @@ def test_api_and_service_layers_do_not_import_legacy_read_or_error_surfaces() ->
             )
 
     assert not violations, "api/service import boundary violations:\n" + "\n".join(violations)
+
+
+def test_approval_respond_side_effects_are_registered_domain_hooks() -> None:
+    approvals_text = APPROVALS_HANDLER.read_text(encoding="utf-8")
+    hook_registry_text = APPROVAL_RESPONSE_HOOKS.read_text(encoding="utf-8")
+    logistics_hook_text = LOGISTICS_APPROVAL_RESPONSE_HOOKS.read_text(encoding="utf-8")
+    respond_body = approvals_text.split("def respond_approval_command", 1)[1]
+
+    assert "run_registered_approval_response_hooks(" in respond_body
+    assert "ApprovalResponseHookContext(" in respond_body
+
+    forbidden_in_generic_handler = (
+        "notify_only_handoff_command",
+        "dispatch_reporting_build",
+        "DISPATCH_REPORTING_WORKFLOW_ID",
+        "WEEKLY_WORKFLOW_ID",
+        "_maybe_auto_publish_weekly_approval",
+        "_maybe_finalize_dispatch_reporting_approval",
+        "_create_artifact_version_effects",
+        "_promote_pointer_effects",
+        "weekly-publish.",
+        "dispatch-reporting.final-packet.",
+    )
+    violations = [
+        marker
+        for marker in forbidden_in_generic_handler
+        if marker in approvals_text
+    ]
+    assert not violations, "generic approval handler has domain coupling: " + ", ".join(violations)
+
+    assert "DEFAULT_APPROVAL_RESPONSE_HOOKS" in hook_registry_text
+    assert "LOGISTICS_APPROVAL_RESPONSE_HOOKS" in hook_registry_text
+    assert "LOGISTICS_APPROVAL_RESPONSE_HOOKS" in logistics_hook_text
+    assert "weekly_publish_approval_hook" in logistics_hook_text
+    assert "dispatch_reporting_finalize_approval_hook" in logistics_hook_text
 
 
 def _package_parts_for_file(path: Path) -> tuple[str, ...]:

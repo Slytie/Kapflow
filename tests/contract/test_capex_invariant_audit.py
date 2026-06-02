@@ -22,8 +22,8 @@ def test_capex_invariant_registry_has_expected_gate_modes() -> None:
     modes = {entry.gate_mode for entry in CAPEX_INVARIANT_REGISTRY}
 
     assert modes == {"hard_gate", "known_gap"}
-    assert sum(1 for entry in CAPEX_INVARIANT_REGISTRY if entry.gate_mode == "hard_gate") == 10
-    assert sum(1 for entry in CAPEX_INVARIANT_REGISTRY if entry.gate_mode == "known_gap") == 4
+    assert sum(1 for entry in CAPEX_INVARIANT_REGISTRY if entry.gate_mode == "hard_gate") == 11
+    assert sum(1 for entry in CAPEX_INVARIANT_REGISTRY if entry.gate_mode == "known_gap") == 3
     assert all(entry.task_refs for entry in CAPEX_INVARIANT_REGISTRY)
 
 
@@ -40,13 +40,13 @@ def test_capex_invariant_audit_report_records_known_gaps_without_failing(
     assert capex_invariant_audit_exit_code(manifest) == 0
     assert manifest["summary"] == {
         "total": 14,
-        "hard_gate_passed": 10,
+        "hard_gate_passed": 11,
         "hard_gate_failed": 0,
-        "known_gaps": 4,
+        "known_gaps": 3,
         "advisory": 0,
     }
     statuses = {check["invariant_id"]: check["status"] for check in manifest["checks"]}
-    assert statuses["capex.known_gap.approval_side_effect_coupling"] == "known_gap"
+    assert statuses["capex.clean001.approval_response_hooks_domain_neutral"] == "passed"
     assert statuses["capex.pr002.artifact_storage_root_confined"] == "passed"
     assert statuses["capex.pr006.run_input_edge_helpers"] == "passed"
     assert statuses["capex.pr007.platform_foundation_v0"] == "passed"

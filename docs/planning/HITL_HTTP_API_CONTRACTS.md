@@ -589,14 +589,17 @@ Response:
 - `{"status":"ok","command":"api.approvals.respond","approval_id":"...","approval":{...}}`
 
 Weekly approval side effect:
-- approving `weekly_schedule_planning.v1` `Stage06` `publish_weekly_base_schedule` now auto-runs the bounded weekly publish command inside the canonical approval-response path.
+- approving `weekly_schedule_planning.v1` `Stage06` `publish_weekly_base_schedule` now auto-runs the bounded weekly publish command through the registered logistics approval-response hook.
 - that side effect creates `planning.publish_packet.doc`, creates `planning.published_weekly_schedule.workbook`, and promotes `official:planning.published_weekly_schedule.workbook`.
 - the publish side effect fails closed with `stable_base_schedule_required` if the reviewed draft is no longer the latest draft workbook for the run.
 
 Dispatch-reporting approval side effect:
-- approving `dispatch_reporting.v1` `Stage04` `confirm_dispatch_reporting_packet` now auto-runs the bounded finalize path inside the canonical approval-response path.
+- approving `dispatch_reporting.v1` `Stage04` `confirm_dispatch_reporting_packet` now auto-runs the bounded finalize path through the registered logistics approval-response hook.
 - that side effect creates `reporting.final_packet.workbook`, promotes `official:reporting.final_packet.workbook`, and invokes the existing `reporting_actuals_to_future_planning` `notify_only` handoff.
 - the finalize side effect fails closed with `stable_base_schedule_required` if the reviewed draft is no longer the latest draft workbook for the run.
+
+Generic approval boundary:
+- `approval.respond` itself records the approval row transition and emits `approval.responded`; domain mutation belongs to explicit approval-response hooks per `docs/adr/ADR-005-approval-response-domain-hooks.md`.
 
 ### 4.4 Upload artifact/document attachment
 Endpoints:

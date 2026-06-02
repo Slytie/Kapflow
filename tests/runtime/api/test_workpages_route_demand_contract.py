@@ -910,6 +910,125 @@ def test_route_demand_add_next_week_reuses_future_run_and_seeds_zero_count_artif
             "logical_date": "2026-03-30",
         }
     ]
+    source_route_demand_id = str(
+        _query_rows(
+            _db_url(tmp_path),
+            """
+            SELECT artifact_version_id
+            FROM artifact_versions
+            WHERE workflow_run_id = ?
+              AND artifact_kind = 'planning.route_slot_requirements.workbook'
+            ORDER BY created_at DESC, artifact_version_id DESC
+            LIMIT 1
+            """,
+            (workflow_run_id,),
+        )[0]["artifact_version_id"]
+    )
+    assert created.payload["carry_forward"] == {
+        "edge_execution_id": created.payload["carry_forward"]["edge_execution_id"],
+        "edge_id": "weekly_to_weekly_carry_forward",
+        "status": "prepared",
+        "source_workflow_run_id": workflow_run_id,
+        "source_artifact_version_id": source_route_demand_id,
+        "target_workflow_run_id": future_workflow_run_id,
+        "target_artifact_version_id": future_artifact_version_id,
+        "target_human_task_id": created.payload["carry_forward"]["target_human_task_id"],
+        "binding_key": "stage04.route_slot_requirements",
+        "binding_effect": "created",
+        "source_planning_week_id": "PW-2026-W13",
+        "target_planning_week_id": "PW-2026-W14",
+        "policy_id": "weekly_to_weekly_carry_forward.v1",
+    }
+    carry_forward_edge_rows = _query_rows(
+        _db_url(tmp_path),
+        """
+        SELECT
+            edge_id,
+            status,
+            source_workflow_run_id,
+            source_artifact_version_id,
+            target_workflow_run_id,
+            target_partition_kind,
+            target_partition_key,
+            seed_artifact_version_id,
+            input_bindings_json
+        FROM edge_executions
+        WHERE edge_id = 'weekly_to_weekly_carry_forward'
+        """,
+    )
+    assert len(carry_forward_edge_rows) == 1
+    carry_forward_edge = carry_forward_edge_rows[0]
+    assert carry_forward_edge["status"] == "prepared"
+    assert carry_forward_edge["source_workflow_run_id"] == workflow_run_id
+    assert carry_forward_edge["source_artifact_version_id"] == source_route_demand_id
+    assert carry_forward_edge["target_workflow_run_id"] == future_workflow_run_id
+    assert carry_forward_edge["target_partition_kind"] == "PlanningWeekID"
+    assert carry_forward_edge["target_partition_key"] == "PW-2026-W14"
+    assert carry_forward_edge["seed_artifact_version_id"] == future_artifact_version_id
+    edge_bindings = json.loads(str(carry_forward_edge["input_bindings_json"]))
+    assert edge_bindings["binding_key"] == "stage04.route_slot_requirements"
+    assert edge_bindings["target_input_artifact_version_id"] == future_artifact_version_id
+
+    target_input_rows = _query_rows(
+        _db_url(tmp_path),
+        """
+        SELECT binding_key, source_ref, artifact_version_id, metadata_json
+        FROM workflow_run_inputs
+        WHERE workflow_run_id = ?
+          AND binding_key = 'stage04.route_slot_requirements'
+        """,
+        (future_workflow_run_id,),
+    )
+    assert len(target_input_rows) == 1
+    assert target_input_rows[0]["source_ref"] == source_route_demand_id
+    assert target_input_rows[0]["artifact_version_id"] == future_artifact_version_id
+    input_metadata = json.loads(str(target_input_rows[0]["metadata_json"]))
+    assert input_metadata["policy_id"] == "weekly_to_weekly_carry_forward.v1"
+    assert input_metadata["source_planning_week_id"] == "PW-2026-W13"
+    assert input_metadata["target_planning_week_id"] == "PW-2026-W14"
+
+    provenance_rows = _query_rows(
+        _db_url(tmp_path),
+        """
+        SELECT input_artifact_version_id, edge_type, metadata_json
+        FROM artifact_provenance_edges
+        WHERE output_artifact_version_id = ?
+          AND edge_order = 0
+        """,
+        (future_artifact_version_id,),
+    )
+    assert provenance_rows == [
+        {
+            "input_artifact_version_id": source_route_demand_id,
+            "edge_type": "derives_from",
+            "metadata_json": provenance_rows[0]["metadata_json"],
+        }
+    ]
+    assert json.loads(str(provenance_rows[0]["metadata_json"]))["policy_id"] == (
+        "weekly_to_weekly_carry_forward.v1"
+    )
+
+    task_rows = _query_rows(
+        _db_url(tmp_path),
+        """
+        SELECT task_kind
+        FROM human_tasks
+        WHERE workflow_run_id = ?
+        ORDER BY task_kind
+        """,
+        (future_workflow_run_id,),
+    )
+    assert task_rows == [{"task_kind": "weekly_input_intake"}]
+    assert _query_rows(
+        _db_url(tmp_path),
+        "SELECT COUNT(*) AS count FROM approvals WHERE workflow_run_id = ?",
+        (future_workflow_run_id,),
+    )[0]["count"] == 0
+    assert _query_rows(
+        _db_url(tmp_path),
+        "SELECT COUNT(*) AS count FROM execution_sessions WHERE workflow_run_id = ?",
+        (future_workflow_run_id,),
+    )[0]["count"] == 0
 
     future_contract = client.get(
         f"/api/v1/workpages/workflow-runs/{future_workflow_run_id}/"
@@ -969,6 +1088,16 @@ def test_route_demand_add_next_week_reuses_future_run_and_seeds_zero_count_artif
     assert created_again.status_code == 200, created_again.payload
     assert created_again.payload["created"]["workflow_run_id"] == future_workflow_run_id
     assert created_again.payload["created"]["artifact_version_id"] == future_artifact_version_id
+    assert created_again.payload["carry_forward"]["edge_execution_id"] == (
+        created.payload["carry_forward"]["edge_execution_id"]
+    )
+    assert created_again.payload["carry_forward"]["binding_effect"] == "replay"
+    assert len(
+        _query_rows(
+            _db_url(tmp_path),
+            "SELECT edge_execution_id FROM edge_executions WHERE edge_id = 'weekly_to_weekly_carry_forward'",
+        )
+    ) == 1
     seeded_metadata_json = json.loads(
         str(
             _query_rows(

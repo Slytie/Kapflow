@@ -1,6 +1,6 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useState } from "react";
-import { Navigate, Route, BrowserRouter as Router, Routes } from "react-router-dom";
+import { Route, BrowserRouter as Router, Routes } from "react-router-dom";
 
 import { AppShell } from "@/app/AppShell";
 import { BoardPage } from "@/pages/BoardPage";
@@ -12,6 +12,7 @@ import {
 import { ExceptionsPage } from "@/pages/ExceptionsPage";
 import { MyWorkPage } from "@/pages/MyWorkPage";
 import { OfficialOutputsPage } from "@/pages/OfficialOutputsPage";
+import { OperatorHomePage } from "@/pages/OperatorHomePage";
 import { RunDetailPage } from "@/pages/RunDetailPage";
 import { RunWorkspacePage } from "@/pages/RunWorkspacePage";
 import { RunsPage } from "@/pages/RunsPage";
@@ -53,8 +54,8 @@ export function App(): JSX.Element {
       <Router>
         <DrawerProvider>
           <Routes>
-            <Route path="/" element={<Navigate to="/demo/logistics" replace />} />
             <Route element={<AppShell />}>
+              <Route path="/" element={<OperatorHomePage />} />
               <Route path="/demo/logistics" element={<LogisticsDemoPage />} />
               <Route
                 path="/runs/:workflowRunId/workpages/schedule-v0"

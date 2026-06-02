@@ -2,7 +2,7 @@
 id: TASK-0248
 epic: EPIC-139
 title: "Live dispatch prepare/activate hardening + republish guard"
-status: TODO
+status: DONE
 owners: ["platform"]
 reviewers: ["architect", "qa"]
 depends_on: ["TASK-0246", "TASK-0247"]
@@ -60,3 +60,11 @@ Target live run/input via helpers; base seed bound once; late republish yields e
 
 ## Notes / decisions
 - Raw project corpora remain off-repo; use only sanitized fixtures, manifests, hashes, and aggregate evidence approved by the relevant fixture/governance task.
+
+## Closeout evidence
+- Implemented live-dispatch republish guards in `src/onetruth/application/handlers/logistics_handoff.py`.
+- Activation of a prepared weekly-to-live edge now records `status=stale` plus `policy_state=late_weekly_republish_after_live_prepare` when the weekly published artifact backing the base seed has been superseded.
+- Re-preparing a live service day from a later weekly publish after `stage01.base_seed` is already bound now records a stale policy edge and raises `live_dispatch_base_seed_republish_after_prepare` instead of falling through to `workflow_input_binding_conflict`.
+- Added `LogisticsRunResolver.find_live_dispatch(...)` so target live-run lookup stays in the shared resolver layer.
+- Focused verification: `PYTHONPYCACHEPREFIX=/private/tmp/kapflow-pyc pytest tests/runtime/test_logistics_handoff_runtime.py -q` passed.
+- Closeout posture: `MP-PR015` is closed as logistics handoff republish hardening only; it is not CAPEX production activation, deployment, or project-corpus activation.

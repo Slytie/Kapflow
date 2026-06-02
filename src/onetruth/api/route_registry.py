@@ -19,6 +19,7 @@ from onetruth.api.route_specs.board import BOARD_ROUTE_SPECS
 from onetruth.api.route_specs.flags import FLAG_ROUTE_SPECS
 from onetruth.api.route_specs.human_tasks import HUMAN_TASK_ROUTE_SPECS
 from onetruth.api.route_specs.logistics_story import LOGISTICS_STORY_ROUTE_SPECS
+from onetruth.api.route_specs.operator_home import OPERATOR_HOME_ROUTE_SPECS
 from onetruth.api.route_specs.ops import OPS_ROUTE_SPECS
 from onetruth.api.route_specs.pointers import POINTER_ROUTE_SPECS
 from onetruth.api.route_specs.templates import TEMPLATE_ROUTE_SPECS
@@ -30,6 +31,7 @@ from onetruth.api.route_specs.workflow_runs import WORKFLOW_RUN_ROUTE_SPECS
 ROUTES: tuple[RouteSpec, ...] = (
     *OPS_ROUTE_SPECS,
     *VIEWER_ROUTE_SPECS,
+    *OPERATOR_HOME_ROUTE_SPECS,
     *HUMAN_TASK_ROUTE_SPECS,
     *APPROVAL_ROUTE_SPECS,
     *FLAG_ROUTE_SPECS,

@@ -87,6 +87,7 @@ Typical lifecycle:
 
 Approvals do not themselves mutate official business state. They authorize another recorded action to do so.
 They also do not create hidden queue side effects: if an approval response requires more work, that work must appear through `task.run.created` / `task.created` events in the same truth system.
+Domain-specific approval consequences must be registered through explicit approval-response hooks, not embedded in the generic approval handler. See `docs/adr/ADR-005-approval-response-domain-hooks.md`.
 
 ### Timeline events
 Approvals must emit through the canonical timeline:
