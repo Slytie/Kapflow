@@ -15,8 +15,8 @@ This repo keeps source-of-truth artifacts in Git and excludes local machine/runt
   - local SQLite runtime/test databases and journal/WAL sidecars.
 - `codex_handoff_packet_*.zip`
   - local handoff/export bundles; regenerate outside Git when needed. These are review/handoff snapshots, not release artifacts.
-- `frontend/node_modules/`, `frontend/dist/`, `frontend/.vite/`, `frontend/coverage/`
-  - dependency installs and generated frontend build/test outputs.
+- `node_modules/`, `frontend/dist/`, `frontend/.vite/`, `frontend/coverage/`
+  - dependency installs and generated frontend build/test outputs. Any `node_modules` directory is local dependency cache, even if it appears at the repo root or under generated review/build folders.
 - `*.log`
   - transient local logs.
 - `.env*`, `.codex.env` (except `.env.example` / `.env.sample`)
@@ -55,3 +55,7 @@ If runtime evidence should become a reusable golden artifact, move it into an ex
   - decide whether Git history rewrite is justified,
   - enable hosted GitHub secret scanning push protection or related org/repo settings when available.
 - These operator-only actions are not routine Codex code tasks and should be tracked/documented explicitly rather than silently implied by repo changes.
+
+## PR Validation Skeleton
+- `cloudbuild.pr.yaml` is a PR-validation skeleton only. It runs dependency installation, repo validation, and schema validation without production secrets, live OpenAI keys, deployment commands, or artifact-root mutation.
+- Hosted branch-protection and required-check wiring remains external/operator-managed; this repo records the expected posture but does not encode hosted settings as source truth.

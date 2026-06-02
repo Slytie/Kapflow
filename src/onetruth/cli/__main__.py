@@ -87,6 +87,7 @@ from onetruth.application.services.example_document_corpus import (
 from onetruth.infrastructure.artifacts.storage import (
     default_storage_root_for_db_url,
     encode_base64_content,
+    storage_root_for_db_url,
 )
 from onetruth.infrastructure.db.session import DEFAULT_DB_URL, open_sqlite_connection
 from onetruth.infrastructure.events.event_store import (
@@ -1268,7 +1269,11 @@ def _handle_artifacts_download(args: argparse.Namespace) -> int:
     if isinstance(connection, int):
         return connection
     try:
-        result = download_artifact_blob_command(connection, args.artifact_version_id)
+        result = download_artifact_blob_command(
+            connection,
+            args.artifact_version_id,
+            storage_root=storage_root_for_db_url(args.db_url),
+        )
     except CommandError as exc:
         return _emit_error(code=exc.code, message=exc.message, details=exc.details)
     finally:

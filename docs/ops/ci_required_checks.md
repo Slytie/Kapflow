@@ -91,6 +91,7 @@ The release-confidence gate is a targeted regression tripwire, not a deployment 
 - `codeql` runs on pull requests, pushes to `main`, and a lightweight schedule
 - `agent_api` remains mock-only for scheduled/manual routine coverage
 - `agent_api_live` is manual-only and holds the gated real OpenAI path
+- `cloudbuild.pr.yaml` is available as a no-secret PR validation skeleton that runs repo/schema validation only
 - hosted GitHub required-check / branch-protection settings are verified manually outside repo source
 
 Compatibility note:

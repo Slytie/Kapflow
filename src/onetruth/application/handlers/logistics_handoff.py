@@ -9,7 +9,11 @@ import sqlite3
 from typing import Any
 from uuid import uuid4
 
-from onetruth.application.handlers._shared.command_boundary import CommandError, _event_envelope
+from onetruth.application.handlers._shared.command_boundary import (
+    CommandError,
+    _event_envelope,
+    command_transaction,
+)
 from onetruth.application.services.dispatch_reporting_build import (
     PLANNING_ACTUAL_HOURS_ARTIFACT_KIND,
     REPORTING_TO_PLANNING_EDGE_ID,
@@ -103,7 +107,6 @@ def materialize_weekly_seeds_command(
                 "workflow_id": str(source_workflow_run["workflow_id"]),
             },
         )
-
     published_artifact = _require_artifact(connection, published_artifact_version_id)
     if str(published_artifact["workflow_run_id"]) != workflow_run_id:
         raise CommandError(
@@ -148,8 +151,7 @@ def materialize_weekly_seeds_command(
     edge_rows: list[dict[str, Any]] = []
     seed_rows: list[dict[str, Any]] = []
 
-    _begin_transaction(connection)
-    try:
+    with command_transaction(connection):
         for service_date_id in sorted(service_dates):
             correlation_key = _correlation_key(
                 edge_id=EDGE_ID_WEEKLY_TO_LIVE,
@@ -254,10 +256,6 @@ def materialize_weekly_seeds_command(
             edge = _require_edge_execution(connection, edge_execution_id)
             edge_rows.append(edge)
             seed_rows.append(seed_artifact)
-    except Exception:
-        connection.rollback()
-        raise
-    connection.commit()
 
     return {
         "edge_executions": edge_rows,
@@ -400,8 +398,7 @@ def activate_live_dispatch_command(
             },
         )
 
-    _begin_transaction(connection)
-    try:
+    with command_transaction(connection):
         now = utc_now_iso()
         target_workflow_run = _resolve_or_create_live_dispatch_run(
             connection,
@@ -580,10 +577,6 @@ def activate_live_dispatch_command(
                 message="edge execution not found during activation update",
                 details={"edge_execution_id": edge_execution_id},
             )
-    except Exception:
-        connection.rollback()
-        raise
-    connection.commit()
 
     return {
         "edge_execution": updated_edge,
@@ -683,8 +676,7 @@ def prepare_live_dispatch_day_command(
         )
 
     edge_execution_id = str(edge["edge_execution_id"])
-    _begin_transaction(connection)
-    try:
+    with command_transaction(connection):
         now = utc_now_iso()
         target_workflow_run = _resolve_or_create_live_dispatch_run(
             connection,
@@ -784,10 +776,6 @@ def prepare_live_dispatch_day_command(
             },
             created_at=now,
         )
-    except Exception:
-        connection.rollback()
-        raise
-    connection.commit()
 
     return {
         "edge_execution": updated_edge,
@@ -897,10 +885,7 @@ def notify_only_handoff_command(
         dataset_key=edge_descriptor["target_dataset_key"],
     )
 
-    started_transaction = not connection.in_transaction
-    if started_transaction:
-        _begin_transaction(connection)
-    try:
+    with command_transaction(connection):
         for target_partition_key in target_partition_keys:
             validate_partition_key(edge_descriptor["target_partition_kind"], target_partition_key)
             correlation_key = _correlation_key(
@@ -1053,12 +1038,6 @@ def notify_only_handoff_command(
             edge_rows.append(_require_edge_execution(connection, edge_execution_id))
             target_workflow_runs.append(target_workflow_run)
             target_input_artifacts.append(target_input_artifact)
-    except Exception:
-        if started_transaction:
-            connection.rollback()
-        raise
-    if started_transaction:
-        connection.commit()
 
     return {
         "edge_executions": edge_rows,
@@ -2107,7 +2086,3 @@ def _require_fields(payload: dict[str, Any], fields: list[str]) -> None:
             message=f"missing required fields: {', '.join(missing)}",
             details={"missing_fields": missing},
         )
-
-
-def _begin_transaction(connection: sqlite3.Connection) -> None:
-    connection.execute("BEGIN IMMEDIATE")

@@ -4,7 +4,7 @@ import hashlib
 import sqlite3
 from typing import Any
 
-from onetruth.application.handlers._shared.command_boundary import CommandError
+from onetruth.application.handlers._shared.command_boundary import CommandError, command_transaction
 from onetruth.application.services.schedule_control import (
     build_weekly_schedule_control_bundle,
     run_weekly_stage04_deterministic_build,
@@ -174,8 +174,7 @@ def persist_weekly_stage04_output_payloads(
         bundle_id=bundle_id,
         candidate_delta_id=candidate_delta_id,
     )
-    _begin_transaction(connection)
-    try:
+    with command_transaction(connection):
         for artifact_kind, artifact_role in STAGE04_OUTPUT_SPECS:
             artifact_id = _stable_output_artifact_id(
                 workflow_run_id=workflow_run_id,
@@ -251,10 +250,6 @@ def persist_weekly_stage04_output_payloads(
                     "lineage_class": "bundle_lowering",
                 },
             )
-    except Exception:
-        connection.rollback()
-        raise
-    connection.commit()
     return created_outputs
 
 
@@ -266,10 +261,6 @@ def _require_fields(payload: dict[str, Any], fields: list[str]) -> None:
             message="required fields are missing",
             details={"missing_fields": missing},
         )
-
-
-def _begin_transaction(connection: sqlite3.Connection) -> None:
-    connection.execute("BEGIN")
 
 
 def _require_workflow_run(connection: sqlite3.Connection, workflow_run_id: str) -> dict[str, Any]:

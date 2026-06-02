@@ -1,0 +1,22 @@
+steps:
+  - id: install-validation-deps
+    name: python:3.11-bookworm
+    entrypoint: bash
+    args:
+      - -lc
+      - python3 -m pip install -e ".[api,dev]"
+  - id: repo-validation
+    name: python:3.11-bookworm
+    entrypoint: bash
+    args:
+      - -lc
+      - python3 scripts/validate_repo.py
+  - id: schema-validation
+    name: python:3.11-bookworm
+    entrypoint: bash
+    args:
+      - -lc
+      - make schema-validate
+options:
+  logging: CLOUD_LOGGING_ONLY
+timeout: 1800s

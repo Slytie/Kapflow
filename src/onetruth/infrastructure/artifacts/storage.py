@@ -20,6 +20,10 @@ class ArtifactStorageError(ValueError):
     pass
 
 
+class ArtifactStorageRootError(ArtifactStorageError):
+    pass
+
+
 @dataclass(frozen=True)
 class ArtifactIngressDescriptor:
     ingress_kind: ArtifactIngressKind
@@ -176,25 +180,30 @@ def write_blob(
     content: bytes,
 ) -> tuple[str, str, int]:
     digest = hashlib.sha256(content).hexdigest()
+    root = storage_root.expanduser().resolve()
+    safe_workflow_run_id = _sanitize_path_segment(workflow_run_id, fallback="workflow-run")
     safe_file_name = _sanitize_file_name(file_name)
     target = (
-        storage_root
-        / workflow_run_id
+        root
+        / safe_workflow_run_id
         / digest[:2]
         / digest
         / safe_file_name
-    )
+    ).resolve()
+    _require_under_root(target, root)
     target.parent.mkdir(parents=True, exist_ok=True)
     if not target.exists():
         target.write_bytes(content)
-    return target.resolve().as_uri(), f"sha256:{digest}", len(content)
+    return target.as_uri(), f"sha256:{digest}", len(content)
 
 
-def read_blob(storage_uri: str) -> bytes:
+def read_blob(storage_uri: str, *, storage_root: Path | None = None) -> bytes:
     parsed = urlparse(storage_uri)
     if parsed.scheme != "file":
         raise ArtifactStorageError(f"unsupported storage_uri scheme: {parsed.scheme}")
-    path = Path(parsed.path)
+    path = Path(parsed.path).resolve()
+    if storage_root is not None:
+        _require_under_root(path, storage_root.expanduser().resolve())
     if not path.exists() or not path.is_file():
         raise ArtifactStorageError(f"artifact blob not found: {storage_uri}")
     return path.read_bytes()
@@ -202,10 +211,23 @@ def read_blob(storage_uri: str) -> bytes:
 
 def _sanitize_file_name(file_name: str) -> str:
     raw = file_name.strip().replace("\\", "/")
+    return _sanitize_path_segment(Path(raw).name, fallback="artifact.bin")
+
+
+def _sanitize_path_segment(value: str, *, fallback: str) -> str:
+    raw = value.strip().replace("\\", "/")
     candidate = Path(raw).name
-    if not candidate:
-        candidate = "artifact.bin"
-    return "".join(char if _is_safe(char) else "_" for char in candidate)
+    if not candidate or candidate in {".", ".."}:
+        candidate = fallback
+    sanitized = "".join(char if _is_safe(char) else "_" for char in candidate)
+    return sanitized or fallback
+
+
+def _require_under_root(path: Path, root: Path) -> None:
+    try:
+        path.relative_to(root)
+    except ValueError as exc:
+        raise ArtifactStorageRootError("artifact blob path escapes storage root") from exc
 
 
 def _is_safe(char: str) -> bool:

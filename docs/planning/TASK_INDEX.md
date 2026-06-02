@@ -64,7 +64,7 @@
 | TASK-0060 | EPIC-025 | DONE | high | Logistics family definitions and deterministic fail-closed compiler |
 | TASK-0061 | EPIC-025 | DONE | high | Logistics control layer and pinned method packages over canonical runtime activations |
 | TASK-0062 | EPIC-025 | DONE | high | Weekly to live handoff runtime and first logistics golden slice |
-| TASK-0063 | EPIC-025 | DONE | high | Reporting→planning feedback slice, canonical three-workflow story contract, and backend story query seam |
+| TASK-0063 | EPIC-025 | DONE | high | Reporting->planning feedback slice, canonical three-workflow story contract, and backend story query seam |
 | TASK-0064 | EPIC-080 | DONE | high | Three-workflow logistics demo shell, primary route switch, and schedule-only legacy demotion |
 | TASK-0065 | EPIC-070 | DONE | high | Logistics-first Codex routing, tracked-secret hygiene, and weekly-agent env-gate posture |
 | TASK-0066 | EPIC-070 | DONE | high | Execution-runtime hardening for compiled agent control, pinned semantics evidence, and execution-facet trace linkage |
@@ -192,3 +192,378 @@ Note: `TASK-0087` / `TASK-0088` / `TASK-0089` were formerly duplicated as `TASK-
 | TASK-0230 | EPIC-135 | TODO | high | Add the live-dispatch agent runtime for greenfield auto-run and bounded brownfield escalation |
 | TASK-0231 | EPIC-135 | TODO | high | Redesign Edit Weekly Schedule into the shared replan popup |
 | TASK-0232 | EPIC-135 | TODO | medium | Close EPIC-135 by retiring the manual scheduler UX and updating canonical demo truth |
+
+| TASK-0233 | EPIC-136 | DONE | high | Red-team integration update |
+| TASK-0234 | EPIC-137 | DONE | high | Release-bundle cleanliness + Cloud Build PR skeleton |
+| TASK-0235 | EPIC-137 | DONE | high | Artifact storage safety |
+| TASK-0236 | EPIC-137 | DONE | high | Transaction composition safety |
+| TASK-0237 | EPIC-137 | TODO | high | Invariant audit harness and demo audit fixture |
+| TASK-0238 | EPIC-137 | TODO | high | Canonical generated-artifact helper |
+| TASK-0239 | EPIC-137 | TODO | high | Shared run/input/edge effect helpers + LogisticsRunResolver |
+| TASK-0240 | EPIC-137 | TODO | high | Platform Foundation v0 declaration and branch gate |
+| TASK-0241 | EPIC-138 | TODO | high | Release build pipeline |
+| TASK-0242 | EPIC-138 | TODO | high | Backup manifest schema + predeploy backup skeleton |
+| TASK-0243 | EPIC-138 | TODO | high | Lab-only pilot auth prototype |
+| TASK-0244 | EPIC-138 | TODO | high | Lab VM deploy pipeline |
+| TASK-0245 | EPIC-139 | TODO | high | Schedule-control hardening |
+| TASK-0246 | EPIC-139 | TODO | high | Handoff scaffold and command scopes |
+| TASK-0247 | EPIC-139 | TODO | high | Weekly seed materialization hardening |
+| TASK-0248 | EPIC-139 | TODO | high | Live dispatch prepare/activate hardening + republish guard |
+| TASK-0249 | EPIC-139 | TODO | high | Notify-only/reporting handoff guard |
+| TASK-0250 | EPIC-139 | TODO | high | Planning-cycle, republish, late-report policy objects |
+| TASK-0251 | EPIC-139 | TODO | high | Weekly-to-weekly carry-forward |
+| TASK-0252 | EPIC-139 | TODO | high | Reconciler dry-run only |
+| TASK-0253 | EPIC-139 | TODO | high | Operator home failure-state surface |
+| TASK-0254 | EPIC-138 | TODO | high | Restore rehearsal automation |
+| TASK-0255 | EPIC-138 | TODO | high | Reconciler apply mode under role/policy gate |
+| TASK-0256 | EPIC-138 | TODO | high | Pilot deployment gate |
+| TASK-0257 | EPIC-139 | TODO | high | Extract logistics side effects from generic approval.respond |
+| TASK-0258 | EPIC-139 | TODO | high | Create domain workpage/action descriptor registry |
+| TASK-0259 | EPIC-139 | TODO | medium | Classify and restructure logistics docs |
+| TASK-0260 | EPIC-139 | TODO | high | Split platform tests from logistics regression tests |
+| TASK-0261 | EPIC-140 | TODO | high | Decide and implement CAPEX project anchor schema |
+| TASK-0262 | EPIC-140 | TODO | high | Implement project_membership and project roles |
+| TASK-0263 | EPIC-140 | TODO | high | Project-scoped artifact/task/flag/approval/pointer APIs |
+| TASK-0264 | EPIC-140 | TODO | medium | Project selector/dashboard for max-five active projects per user |
+| TASK-0265 | EPIC-140 | TODO | high | Project-scoped official pointer families |
+| TASK-0266 | EPIC-141 | TODO | high | Design bulk/staged corpus ingest architecture |
+| TASK-0267 | EPIC-141 | TODO | high | Implement digest, dedupe and source inventory pipeline |
+| TASK-0268 | EPIC-141 | TODO | high | Implement source occurrence register |
+| TASK-0269 | EPIC-141 | TODO | high | Implement role assignment and packet register artifacts |
+| TASK-0270 | EPIC-141 | TODO | high | Document manifest and extraction-state artifact |
+| TASK-0271 | EPIC-141 | TODO | high | Text extraction and page manifest contracts |
+| TASK-0272 | EPIC-141 | TODO | high | Chunk/search/evidence-binding index |
+| TASK-0273 | EPIC-141 | TODO | high | Batch artifact link/provenance hydration |
+| TASK-0274 | EPIC-141 | TODO | high | Async job runtime for document processing |
+| TASK-0275 | EPIC-148 | TODO | high | Storage quota, backup and restore gate |
+| TASK-0276 | EPIC-142 | TODO | high | Implement generated artifact envelope and canonical naming |
+| TASK-0277 | EPIC-151 | TODO | high | Add ceo_transparency_snapshot schema and decision |
+| TASK-0278 | EPIC-142 | TODO | high | Implement schema and bundle validators |
+| TASK-0279 | EPIC-142 | TODO | high | Implement meaningful source_refs/evidence_refs policy |
+| TASK-0280 | EPIC-142 | TODO | high | Implement pointer promotion request and policy checks |
+| TASK-0281 | EPIC-142 | TODO | high | Implement stale/reopen register and rules |
+| TASK-0282 | EPIC-144 | TODO | medium | Implement projection consistency test manifest |
+| TASK-0283 | EPIC-143 | TODO | high | Project Intake Router workflow |
+| TASK-0284 | EPIC-143 | TODO | high | Corpus Baseline workflow |
+| TASK-0285 | EPIC-143 | TODO | medium | Lifecycle Stage State workflow |
+| TASK-0286 | EPIC-143 | TODO | high | Governance / Commitment Chain workflow |
+| TASK-0287 | EPIC-143 | TODO | high | Assumption Closure workflow |
+| TASK-0288 | EPIC-143 | TODO | high | Owner Interface Resolution workflow |
+| TASK-0289 | EPIC-143 | TODO | high | Project State Snapshot workflow |
+| TASK-0290 | EPIC-151 | TODO | high | Risk and CEO Transparency workflow |
+| TASK-0291 | EPIC-144 | TODO | high | CAPEX project dashboard and shell |
+| TASK-0292 | EPIC-144 | TODO | high | Project Intake workpage |
+| TASK-0293 | EPIC-144 | TODO | high | Corpus Baseline / Packet Review workpage |
+| TASK-0294 | EPIC-144 | TODO | high | Commitment Chain workpage |
+| TASK-0295 | EPIC-144 | TODO | high | Assumption Closure workpage |
+| TASK-0296 | EPIC-144 | TODO | high | Interface Resolution workpage |
+| TASK-0297 | EPIC-144 | TODO | high | Flags / Tasks / Review Queue workpage |
+| TASK-0298 | EPIC-144 | TODO | high | Pointer Promotion workpage |
+| TASK-0299 | EPIC-144 | TODO | high | Risk / Stale / CEO Cockpit |
+| TASK-0300 | EPIC-145 | TODO | high | Raw K12 quarantine and sensitivity manifest |
+| TASK-0301 | EPIC-145 | TODO | high | Sanitized K12 fixture extraction |
+| TASK-0302 | EPIC-145 | TODO | high | K12 expected-output manifest |
+| TASK-0303 | EPIC-145 | TODO | high | K12 mid-project import demo script |
+| TASK-0304 | EPIC-149 | TODO | high | Consolidated acceptance matrix implementation mapping |
+| TASK-0305 | EPIC-149 | TODO | high | No-false-closure negative test suite |
+| TASK-0306 | EPIC-148 | TODO | high | Scale benchmark harness and CI/manual gates |
+| TASK-0307 | EPIC-149 | TODO | high | Projection consistency and no-hidden-truth tests |
+| TASK-0308 | EPIC-150 | TODO | high | Restructure documentation tree |
+| TASK-0309 | EPIC-150 | TODO | high | Development flow and task template adoption |
+| TASK-0310 | EPIC-150 | TODO | high | Code review and refactor gate adoption |
+| TASK-0311 | EPIC-138 | TODO | high | Storage/DB decision before controlled pilot |
+| TASK-0312 | EPIC-138 | TODO | high | Pilot readiness and rollback gate |
+| TASK-0313 | EPIC-145 | TODO | high | Safety Pass A: raw K12 verification and sanitization QA |
+| TASK-0314 | EPIC-150 | TODO | high | Safety Pass B: deployment roadmap/branch collision review |
+| TASK-0315 | EPIC-145 | TODO | high | Generalize fixture governance from K12-only to all real project corpora |
+| TASK-0316 | EPIC-145 | TODO | high | Implement source triage state model |
+| TASK-0317 | EPIC-145 | TODO | medium | Add split/nested archive handling with provenance |
+| TASK-0318 | EPIC-145 | TODO | medium | Add shortcut reference policy |
+| TASK-0319 | EPIC-145 | TODO | medium | Reserve K3 authority/lifecycle module contracts |
+| TASK-0320 | EPIC-145 | TODO | medium | Create K3 shadow-regression plan |
+| TASK-0321 | EPIC-145 | TODO | high | Add K3 negative guardrail tests |
+| TASK-0322 | EPIC-145 | TODO | high | Run post-research formalism regression before adopting external architecture patterns |
+| TASK-0323 | EPIC-138 | TODO | high | Run full deployment and branch collision review when roadmap is supplied |
+| TASK-0324 | EPIC-148 | TODO | high | Run full real-corpus capacity, backup, and restore rehearsal before pilot readiness |
+| TASK-0325 | EPIC-149 | TODO | high | Install conservative PR/task templates |
+| TASK-0326 | EPIC-149 | TODO | high | Define review tiers and specialist map |
+| TASK-0327 | EPIC-149 | TODO | high | Add code review policy to master docs |
+| TASK-0328 | EPIC-149 | TODO | high | Add refactor policy to master docs |
+| TASK-0329 | EPIC-149 | TODO | medium | Add PR-size and scope check script as advisory |
+| TASK-0330 | EPIC-149 | TODO | medium | Add architecture boundary forbidden-pattern checks |
+| TASK-0331 | EPIC-149 | TODO | medium | Create review metrics register |
+| TASK-0332 | EPIC-149 | TODO | medium | Create phase closeout template |
+| TASK-0333 | EPIC-149 | TODO | high | P2 phase preflight quality review |
+| TASK-0334 | EPIC-149 | TODO | high | P2 stabilization/refactor pass |
+| TASK-0335 | EPIC-149 | TODO | high | P2 phase closeout evidence |
+| TASK-0336 | EPIC-149 | TODO | high | P3 phase preflight quality review |
+| TASK-0337 | EPIC-149 | TODO | high | P3 stabilization/refactor pass |
+| TASK-0338 | EPIC-149 | TODO | high | P3 phase closeout evidence |
+| TASK-0339 | EPIC-149 | TODO | high | P4 phase preflight quality review |
+| TASK-0340 | EPIC-149 | TODO | medium | P4 stabilization/refactor pass |
+| TASK-0341 | EPIC-149 | TODO | high | P4 phase closeout evidence |
+| TASK-0342 | EPIC-149 | TODO | medium | P4A phase preflight quality review |
+| TASK-0343 | EPIC-149 | TODO | medium | P4A stabilization/refactor pass |
+| TASK-0344 | EPIC-149 | TODO | medium | P4A phase closeout evidence |
+| TASK-0345 | EPIC-149 | TODO | high | P5 phase preflight quality review |
+| TASK-0346 | EPIC-149 | TODO | high | P5 stabilization/refactor pass |
+| TASK-0347 | EPIC-149 | TODO | high | P5 phase closeout evidence |
+| TASK-0348 | EPIC-149 | TODO | high | P6 phase preflight quality review |
+| TASK-0349 | EPIC-149 | TODO | high | P6 stabilization/refactor pass |
+| TASK-0350 | EPIC-149 | TODO | high | P6 phase closeout evidence |
+| TASK-0351 | EPIC-149 | TODO | medium | P7 phase preflight quality review |
+| TASK-0352 | EPIC-149 | TODO | medium | P7 stabilization/refactor pass |
+| TASK-0353 | EPIC-149 | TODO | high | P7 phase closeout evidence |
+| TASK-0354 | EPIC-149 | TODO | medium | P8 phase preflight quality review |
+| TASK-0355 | EPIC-149 | TODO | high | P8 stabilization/refactor pass |
+| TASK-0356 | EPIC-149 | TODO | high | P8 phase closeout evidence |
+| TASK-0357 | EPIC-149 | TODO | medium | P9 phase preflight quality review |
+| TASK-0358 | EPIC-149 | TODO | high | P9 stabilization/refactor pass |
+| TASK-0359 | EPIC-149 | TODO | high | P9 phase closeout evidence |
+| TASK-0360 | EPIC-149 | TODO | medium | P10 phase preflight quality review |
+| TASK-0361 | EPIC-149 | TODO | medium | P10 stabilization/refactor pass |
+| TASK-0362 | EPIC-149 | TODO | high | P10 phase closeout evidence |
+| TASK-0363 | EPIC-149 | TODO | medium | P11 phase preflight quality review |
+| TASK-0364 | EPIC-149 | TODO | medium | P11 stabilization/refactor pass |
+| TASK-0365 | EPIC-149 | TODO | medium | P11 phase closeout evidence |
+| TASK-0366 | EPIC-149 | TODO | medium | P12 phase preflight quality review |
+| TASK-0367 | EPIC-149 | TODO | medium | P12 stabilization/refactor pass |
+| TASK-0368 | EPIC-149 | TODO | medium | P12 phase closeout evidence |
+| TASK-0369 | EPIC-139 | TODO | high | Approval side-effect extraction |
+| TASK-0370 | EPIC-139 | TODO | medium | Domain workpage descriptor registry |
+| TASK-0371 | EPIC-140 | TODO | high | Project-scope query helper |
+| TASK-0372 | EPIC-141 | TODO | high | Artifact list pagination adapter |
+| TASK-0373 | EPIC-141 | TODO | high | Batch relation hydration |
+| TASK-0374 | EPIC-141 | TODO | high | Bulk ingest adapter seam |
+| TASK-0375 | EPIC-142 | TODO | high | Generated artifact helper migration |
+| TASK-0376 | EPIC-142 | TODO | high | Pointer promotion validator isolation |
+| TASK-0377 | EPIC-144 | TODO | high | Workpage projection/command split |
+| TASK-0378 | EPIC-145 | TODO | high | Fixture quarantine utility |
+| TASK-0379 | EPIC-150 | TODO | medium | Feature flag retirement register |
+| TASK-0380 | EPIC-150 | TODO | medium | Docs route/status cleanup |
+| TASK-0381 | EPIC-140 | TODO | high | Create capex_platform/domain_runtime skeleton |
+| TASK-0382 | EPIC-140 | TODO | high | Inventory logistics domain manifest in ready state |
+| TASK-0383 | EPIC-140 | TODO | high | Create CAPEX domain manifest in not-ready/incubation state |
+| TASK-0384 | EPIC-140 | TODO | high | Extract generic approval side effects behind registry in shadow mode |
+| TASK-0385 | EPIC-140 | TODO | high | Design capex_project and membership schema CED |
+| TASK-0386 | EPIC-140 | TODO | high | Implement AuthorizedProjectsQuery prototype and tests |
+| TASK-0387 | EPIC-140 | TODO | high | Design storage/blob custody schema CED |
+| TASK-0388 | EPIC-140 | TODO | high | Create pilot storage gate checklist |
+| TASK-0389 | EPIC-140 | TODO | high | Add architecture snippets and code pattern register |
+| TASK-0390 | EPIC-140 | TODO | high | W1 closeout review and old-decision update |
+| TASK-0391 | EPIC-141 | TODO | high | Create content_identity and capex_source_occurrence runtime schema |
+| TASK-0392 | EPIC-141 | TODO | high | Add source_occurrence_relation with duplicate/archive/derivative/redaction relation types |
+| TASK-0393 | EPIC-141 | TODO | high | Add ingest_batch, ingest_job, ingest_attempt, ingest_job_log state model |
+| TASK-0394 | EPIC-141 | TODO | high | Add archive lineage support and nested-archive extraction metadata contract |
+| TASK-0395 | EPIC-141 | TODO | medium | Add manifest_generation attestation model for generated corpus registers |
+| TASK-0396 | EPIC-141 | TODO | high | Implement CommandReceipt canonical input hash and corrupted-idempotency rejection |
+| TASK-0397 | EPIC-141 | TODO | high | Implement EffectLedger and guarded mutation helper |
+| TASK-0398 | EPIC-141 | TODO | high | Split ToolExecution from ToolExecutionAttempt with lease-token stale completion rejection |
+| TASK-0399 | EPIC-141 | TODO | high | Add ProjectConcurrencyPolicy and ProjectRuntimeSlot minimal implementation |
+| TASK-0400 | EPIC-141 | TODO | medium | Add RuntimeOutbox after-commit dispatch scaffold |
+| TASK-0401 | EPIC-141 | TODO | high | Define ArtifactVersionIdentityContract and add identity fields |
+| TASK-0402 | EPIC-141 | TODO | high | Harden ArtifactProvenanceEdge as runtime-computed immutable typed edge |
+| TASK-0403 | EPIC-141 | TODO | high | Define ArtifactPointerEvent and PointerFamilyPolicy minimal schema |
+| TASK-0404 | EPIC-141 | TODO | high | Implement PointerPromotionService guarded transaction |
+| TASK-0405 | EPIC-141 | TODO | high | Define SubmittedGeneratedArtifact and RuntimeGeneratedArtifactView schemas |
+| TASK-0406 | EPIC-141 | TODO | high | Implement ValidationRun / ValidationItem vector contract |
+| TASK-0407 | EPIC-141 | TODO | high | Implement sourceRef resolver and edge-emission contract |
+| TASK-0408 | EPIC-141 | TODO | high | Add canonicalization profile and hash test vectors |
+| TASK-0409 | EPIC-141 | TODO | high | Create Wave 2 crash/stale-basis test suite |
+| TASK-0410 | EPIC-141 | TODO | medium | Wave 2 docs/catalog/refactor closeout |
+| TASK-0411 | EPIC-141 | TODO | high | Design extraction_run physical schema |
+| TASK-0412 | EPIC-141 | TODO | high | Implement parser_config_hash helper |
+| TASK-0413 | EPIC-141 | TODO | high | Extraction state machine |
+| TASK-0414 | EPIC-141 | TODO | high | Extraction asset bundle manifest |
+| TASK-0415 | EPIC-141 | TODO | high | Source occurrence locator union |
+| TASK-0416 | EPIC-141 | TODO | high | Source occurrence resolver adapter |
+| TASK-0417 | EPIC-141 | TODO | high | Chunk projection generation schema |
+| TASK-0418 | EPIC-141 | TODO | high | Search projection generation schema |
+| TASK-0419 | EPIC-141 | TODO | high | Retrieval candidate persistence |
+| TASK-0420 | EPIC-141 | TODO | high | Evidence binding schema/status model |
+| TASK-0421 | EPIC-141 | TODO | high | Evidence review task command |
+| TASK-0422 | EPIC-141 | TODO | high | Partial extraction policy gate |
+| TASK-0423 | EPIC-141 | TODO | high | Fuzzy grounding candidate gate |
+| TASK-0424 | EPIC-141 | TODO | high | Projection rebuild invariance test suite |
+| TASK-0425 | EPIC-141 | TODO | high | Evidence side-panel projection contract |
+| TASK-0426 | EPIC-141 | TODO | high | Sanitized fixture evidence-lineage enforcement |
+| TASK-0427 | EPIC-141 | TODO | high | Extraction QA report artifact |
+| TASK-0428 | EPIC-141 | TODO | high | SourceRef resolution validation vector |
+| TASK-0429 | EPIC-142 | TODO | high | Create CED and schema draft for ApprovalResponse and approval.respond domain neutrality. |
+| TASK-0430 | EPIC-142 | TODO | high | Implement ApprovalResponse append-only record and TimelineEvent emission. |
+| TASK-0431 | EPIC-142 | TODO | high | Extract generic approval side-effect hooks into explicit domain hook registry with capability allowlist. |
+| TASK-0432 | EPIC-142 | TODO | high | Implement Waiver object and lifecycle. |
+| TASK-0433 | EPIC-142 | TODO | high | Implement waiver scope matcher and expiry/revocation checks. |
+| TASK-0434 | EPIC-142 | TODO | high | Implement PolicyDecision and PolicyDecisionRuleResult with severity/mode and satisfied_by_waiver. |
+| TASK-0435 | EPIC-142 | TODO | high | Implement local policy evaluator trace with input digest and redacted snapshot references. |
+| TASK-0436 | EPIC-142 | TODO | high | Implement ClosureGateEvaluation object. |
+| TASK-0437 | EPIC-142 | TODO | high | Implement closure evaluator for initial K12 dimensions. |
+| TASK-0438 | EPIC-142 | TODO | high | Implement ClosureSnapshot append-only record with basis_version_vector. |
+| TASK-0439 | EPIC-142 | TODO | high | Implement close command chain from PolicyDecision to ClosureSnapshot. |
+| TASK-0440 | EPIC-142 | TODO | high | Implement force_close_with_residuals path. |
+| TASK-0441 | EPIC-142 | TODO | high | Implement ClosureBasisRef for delayed callbacks and workpage commands. |
+| TASK-0442 | EPIC-142 | TODO | high | Implement stale callback rejection and rebase task creation. |
+| TASK-0443 | EPIC-142 | TODO | high | Implement StaleReopenRuleRegistry schema and action precedence. |
+| TASK-0444 | EPIC-142 | TODO | high | Implement stale/reopen evaluator and dependency lookup over closure basis. |
+| TASK-0445 | EPIC-142 | TODO | high | Add workpage command envelope validation for closure/reopen/promote commands. |
+| TASK-0446 | EPIC-142 | TODO | high | Add no-false-closure acceptance matrix. |
+| TASK-0447 | EPIC-142 | TODO | high | Patch architecture docs and code review checklist with W4 governance checks. |
+| TASK-0448 | EPIC-142 | TODO | high | Remove/retire any generic approval handler domain side effects after hook registry migration. |
+| TASK-0449 | EPIC-144 | TODO | high | Projection table design note and CED approval |
+| TASK-0450 | EPIC-144 | TODO | high | Projection invalidation table migration draft |
+| TASK-0451 | EPIC-144 | TODO | high | Projection snapshot/row schema draft |
+| TASK-0452 | EPIC-144 | TODO | high | Projection job token-guard prototype |
+| TASK-0453 | EPIC-144 | TODO | high | Signed cursor codec prototype |
+| TASK-0454 | EPIC-144 | TODO | high | Workpage read API contract |
+| TASK-0455 | EPIC-144 | TODO | high | Batch hydration service skeleton |
+| TASK-0456 | EPIC-144 | TODO | high | Project dashboard projection family |
+| TASK-0457 | EPIC-144 | TODO | high | Artifact packet review projection family |
+| TASK-0458 | EPIC-144 | TODO | high | Flag/task queue projection family |
+| TASK-0459 | EPIC-144 | TODO | high | Approval/waiver queue projection family |
+| TASK-0460 | EPIC-144 | TODO | high | Workpage command envelope schema |
+| TASK-0461 | EPIC-144 | TODO | high | Command dispatch skeleton |
+| TASK-0462 | EPIC-144 | TODO | high | Stale command rejection tests |
+| TASK-0463 | EPIC-144 | TODO | high | ProjectWorkpageProvider frontend skeleton |
+| TASK-0464 | EPIC-144 | TODO | high | Query performance battery harness |
+| TASK-0465 | EPIC-144 | TODO | high | No generic status command lint/test rule |
+| TASK-0466 | EPIC-144 | TODO | high | Workpage family registry |
+| TASK-0467 | EPIC-144 | TODO | high | Projection observability/admin view design |
+| TASK-0468 | EPIC-144 | TODO | high | Wave 5 refactor/closeout pass |
+| TASK-0469 | EPIC-145 | TODO | high | Add fixture compiler architecture CED and schema skeletons |
+| TASK-0470 | EPIC-145 | TODO | high | Define capex.sensitivity_manifest.v1 schema |
+| TASK-0471 | EPIC-145 | TODO | high | Define capex.redaction_manifest.v1 schema |
+| TASK-0472 | EPIC-145 | TODO | high | Define approved redaction operator registry |
+| TASK-0473 | EPIC-145 | TODO | high | Define fixture_generation_run and expected_output_manifest schemas |
+| TASK-0474 | EPIC-145 | TODO | high | Define leak_scan_report and fixture_release_manifest schemas |
+| TASK-0475 | EPIC-145 | TODO | high | Implement leak-scan wrapper contract, no scanner engine yet |
+| TASK-0476 | EPIC-145 | TODO | high | Create K12 fixture release gate checklist |
+| TASK-0477 | EPIC-145 | TODO | high | Define UntrustedDocumentRailBundle schema |
+| TASK-0478 | EPIC-145 | TODO | high | Define RailVerdict and SecurityRailRejection schemas |
+| TASK-0479 | EPIC-145 | TODO | high | Implement mandatory rail bundle validator |
+| TASK-0480 | EPIC-145 | TODO | high | Define ToolProposal schema and state machine |
+| TASK-0481 | EPIC-145 | TODO | high | Define ToolExecutionCommand guard |
+| TASK-0482 | EPIC-145 | TODO | high | Define static action registry interface |
+| TASK-0483 | EPIC-145 | TODO | high | Define ToolResultIngestPolicy |
+| TASK-0484 | EPIC-145 | TODO | high | Add AI draft artifact status model |
+| TASK-0485 | EPIC-145 | TODO | high | Add content-safe telemetry policy |
+| TASK-0486 | EPIC-145 | TODO | high | Add no raw prompt/completion in normal traces tests |
+| TASK-0487 | EPIC-145 | TODO | high | Add stream buffering rule for sensitive workflows |
+| TASK-0488 | EPIC-145 | TODO | high | Add expected-output no-raw-excerpt test pattern |
+| TASK-0489 | EPIC-145 | TODO | high | Update workpage family catalog for fixture release and AI draft review |
+| TASK-0490 | EPIC-145 | TODO | high | Prepare Wave 6 master patch instructions |
+| TASK-0491 | EPIC-149 | TODO | high | Define CAPEX invariant test catalog |
+| TASK-0492 | EPIC-149 | TODO | high | Add test suite markers and CI stages |
+| TASK-0493 | EPIC-149 | TODO | high | Create fixture manifest schemas |
+| TASK-0494 | EPIC-149 | TODO | high | Create K12 sanitized scenario slice 0 |
+| TASK-0495 | EPIC-149 | TODO | high | Create K12 commitment/assumption scenario tests |
+| TASK-0496 | EPIC-149 | TODO | high | Create K12 no-false-closure scenario tests |
+| TASK-0497 | EPIC-149 | TODO | high | Create K3 mini-fixture design tests |
+| TASK-0498 | EPIC-149 | TODO | high | Create validation-project blind baseline protocol |
+| TASK-0499 | EPIC-149 | TODO | high | Add logistics characterization tests |
+| TASK-0500 | EPIC-149 | TODO | high | Add AI-agent task contract schema |
+| TASK-0501 | EPIC-149 | TODO | high | Build thin agent eval harness |
+| TASK-0502 | EPIC-149 | TODO | high | Add false-closure agent evals |
+| TASK-0503 | EPIC-149 | TODO | high | Add raw-data leak evals |
+| TASK-0504 | EPIC-149 | TODO | high | Add tool-proposal eval tests |
+| TASK-0505 | EPIC-149 | TODO | high | Add workpage stale-command tests |
+| TASK-0506 | EPIC-149 | TODO | high | Add effect-safety crash tests |
+| TASK-0507 | EPIC-149 | TODO | high | Add projection rebuild invariance tests |
+| TASK-0508 | EPIC-149 | TODO | high | Add performance smoke tests |
+| TASK-0509 | EPIC-149 | TODO | high | Add TDD metrics dashboard draft |
+| TASK-0510 | EPIC-149 | TODO | high | Add Lab promotion gate |
+| TASK-0511 | EPIC-149 | TODO | high | Add reviewer test-first checklist |
+| TASK-0512 | EPIC-149 | TODO | high | Add flake quarantine policy |
+| TASK-0513 | EPIC-150 | TODO | high | Branch class manifest and classifier |
+| TASK-0514 | EPIC-150 | TODO | high | Release bundle manifest schema |
+| TASK-0515 | EPIC-150 | TODO | high | Migration lane manifest schema |
+| TASK-0516 | EPIC-150 | TODO | high | Migration compatibility test scaffold |
+| TASK-0517 | EPIC-150 | TODO | high | Feature gate manifest and activation model |
+| TASK-0518 | EPIC-150 | TODO | high | Activation guard helper |
+| TASK-0519 | EPIC-150 | TODO | high | Compensation plan schema |
+| TASK-0520 | EPIC-150 | TODO | high | Docs authority schema |
+| TASK-0521 | EPIC-150 | TODO | high | Docs authority linter |
+| TASK-0522 | EPIC-150 | TODO | high | CED template and lifecycle metadata |
+| TASK-0523 | EPIC-150 | TODO | high | Semantic task template |
+| TASK-0524 | EPIC-150 | TODO | high | Semantic MR evidence bundle |
+| TASK-0525 | EPIC-150 | TODO | high | Semantic CODEOWNERS sketch |
+| TASK-0526 | EPIC-150 | TODO | high | Path-based semantic merge gate |
+| TASK-0527 | EPIC-150 | TODO | high | Forbidden state transition lint rules |
+| TASK-0528 | EPIC-150 | TODO | high | Fixture leakage release gate |
+| TASK-0529 | EPIC-150 | TODO | high | AI assistance declaration in MR |
+| TASK-0530 | EPIC-150 | TODO | high | Release readiness gate script |
+| TASK-0531 | EPIC-150 | TODO | high | Activation approval record |
+| TASK-0532 | EPIC-150 | TODO | high | Post-activation smoke evidence |
+| TASK-0533 | EPIC-150 | TODO | high | Quality metrics dashboard spec |
+| TASK-0534 | EPIC-150 | TODO | high | Refactor work item register integration |
+| TASK-0535 | EPIC-150 | TODO | high | Implementation history check |
+| TASK-0536 | EPIC-150 | TODO | high | Wave 7 integration QA |
+| TASK-0537 | EPIC-151 | TODO | high | Define reviewed_state_graph contract |
+| TASK-0538 | EPIC-151 | TODO | high | Implement SnapshotBuildRun skeleton |
+| TASK-0539 | EPIC-151 | TODO | high | Add RiskSignal contract |
+| TASK-0540 | EPIC-151 | TODO | high | Add ceo_transparency_snapshot schema |
+| TASK-0541 | EPIC-151 | TODO | high | Add ProjectCorpusDocument/Blob/Version design |
+| TASK-0542 | EPIC-151 | TODO | high | Add metadata type/value contract |
+| TASK-0543 | EPIC-151 | TODO | high | Define packet requirement/member/evaluation schema |
+| TASK-0544 | EPIC-151 | TODO | high | Define ArtifactPointerPromotion service contract |
+| TASK-0545 | EPIC-151 | TODO | high | Add hold/freeze minimal blocker model |
+| TASK-0546 | EPIC-151 | TODO | high | Add AuditExportArtifact contract |
+| TASK-0547 | EPIC-151 | TODO | high | Add ExternalSystem schema |
+| TASK-0548 | EPIC-151 | TODO | high | Add ExternalProjectBinding schema |
+| TASK-0549 | EPIC-151 | TODO | high | Add ExternalObjectPointer schema |
+| TASK-0550 | EPIC-151 | TODO | high | Add ExternalObjectSnapshot / SyncObservation |
+| TASK-0551 | EPIC-151 | TODO | high | Rename/constrain expenditure ledger |
+| TASK-0552 | EPIC-151 | TODO | high | Add raw-file/AI/external-status exclusion tests |
+| TASK-0553 | EPIC-151 | TODO | high | Add dossier/promotion negative tests |
+| TASK-0554 | EPIC-151 | TODO | high | Add ERP/DMS boundary failure tests |
+| TASK-0555 | EPIC-151 | TODO | high | Add snapshot freshness to executive views |
+| TASK-0556 | EPIC-151 | TODO | high | Add external observation review queue |
+| TASK-0557 | EPIC-151 | TODO | high | Add K12/K3/validation fixture expected outputs |
+| TASK-0558 | EPIC-151 | TODO | high | Update architecture docs with W8 terms |
+| TASK-0559 | EPIC-151 | TODO | high | Add W8 feature gate/migration lane entries |
+| TASK-0560 | EPIC-151 | TODO | high | Run Waves 1-8 formalism regression |
+| TASK-0561 | EPIC-139 | TODO | high | Extract logistics side effects from approval.respond |
+| TASK-0562 | EPIC-137 | TODO | high | Fix artifact download auth-before-read |
+| TASK-0563 | EPIC-140 | TODO | high | Add CAPEX project/membership/authorization runtime state |
+| TASK-0564 | EPIC-141 | TODO | high | Add physical source_occurrence and sourceRef resolver |
+| TASK-0565 | EPIC-142 | TODO | high | Add ClosureGateEvaluation, ClosureSnapshot, Waiver, lifecycle recurrence stale rules |
+| TASK-0566 | EPIC-143 | TODO | high | Implement workflow handoff manifest contract |
+| TASK-0567 | EPIC-144 | TODO | high | Add CAPEX projection snapshot and stale-command test harness |
+| TASK-0568 | EPIC-149 | TODO | high | Add CAPEX semantic test suite and CODEOWNERS gates |
+| TASK-0569 | EPIC-151 | TODO | medium | Add interface-burden conservation policy and tests |
+| TASK-0570 | EPIC-142 | TODO | medium | Add non-commutative artifact sequence tests |
+| TASK-0571 | EPIC-143 | TODO | medium | Add procurement/task escalation workflow proposal to workflow catalog |
+| TASK-0572 | EPIC-142 | TODO | high | Patch master architecture: reality vs representation |
+| TASK-0573 | EPIC-142 | TODO | high | Add canonical relation_kind vocabulary |
+| TASK-0574 | EPIC-143 | TODO | high | Define feasibility-set workflow semantics |
+| TASK-0575 | EPIC-142 | TODO | high | Define issue/hypothesis graph guardrails |
+| TASK-0576 | EPIC-139 | TODO | high | Fix approval.respond domain coupling |
+| TASK-0577 | EPIC-137 | TODO | high | Fix artifact auth-before-read |
+| TASK-0578 | EPIC-141 | TODO | high | Add SourceRef resolution contract/tests |
+| TASK-0579 | EPIC-136 | TODO | high | Add Product Goal and metric stack |
+| TASK-0580 | EPIC-136 | TODO | high | Add vertical-slice ladder and dependency register |
+| TASK-0581 | EPIC-143 | TODO | medium | Define workflow handoff manifest |
+| TASK-0582 | EPIC-136 | TODO | high | Define CAPEX Product Goal and metric stack |
+| TASK-0583 | EPIC-136 | TODO | high | Create CAPEX vertical-slice ladder |
+| TASK-0584 | EPIC-136 | TODO | high | Add dependency register and risk-based milestone overlay |
+| TASK-0585 | EPIC-136 | TODO | medium | Add backlog hierarchy and story decomposition templates |
+| TASK-0586 | EPIC-136 | TODO | medium | Define delivery operating cadence |
+| TASK-0587 | EPIC-136 | TODO | medium | Add first-90-days execution overlay |
+| TASK-0588 | EPIC-136 | TODO | medium | Add Definition of Ready / Done for CAPEX task classes |
+| TASK-0589 | EPIC-146 | TODO | high | Create three-project fixture governance runbook |
+| TASK-0590 | EPIC-146 | TODO | high | Build K12 expected-output manifest from pass11 artifacts |
+| TASK-0591 | EPIC-146 | TODO | medium | Build K3 mini-fixture expectation catalog from pass11 artifacts |
+| TASK-0592 | EPIC-147 | TODO | high | Define blind validation freeze protocol |
+| TASK-0593 | EPIC-147 | TODO | high | Create cross-project invariant scorecard |
+| TASK-0594 | EPIC-147 | TODO | high | Wire agent Lab eval matrix to K12/K3/blind fixture tiers |
+| TASK-0595 | EPIC-148 | TODO | high | Add full-project off-repo runbook for Codex |
+| TASK-0596 | EPIC-147 | TODO | medium | Add no-overfitting review checkpoint after blind baseline |
+| TASK-0597 | EPIC-146 | TODO | medium | Add project-oracle manifest format |
+| TASK-0598 | EPIC-147 | TODO | high | Add fixture tier policy to CI planning |
+| TASK-0599 | EPIC-152 | TODO | high | Run production preflight readiness review |
+| TASK-0600 | EPIC-152 | TODO | high | Verify P0 activation blockers are closed or explicitly waived |
+| TASK-0601 | EPIC-152 | TODO | high | Verify three-project evidence package |
+| TASK-0602 | EPIC-152 | TODO | high | Verify raw-data quarantine and leak-scan evidence |
+| TASK-0603 | EPIC-152 | TODO | high | Verify capacity, backup, restore, and off-repo full-corpus run evidence |
+| TASK-0604 | EPIC-152 | TODO | high | Verify release bundle, migration lanes, activation gates, and rollback/compensation evidence |
+| TASK-0605 | EPIC-152 | TODO | high | Verify semantic MR, CODEOWNERS, review-tier, and CI gates are active |
+| TASK-0606 | EPIC-152 | TODO | high | Produce production preflight go/no-go memorandum |

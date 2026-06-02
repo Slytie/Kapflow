@@ -29,13 +29,13 @@ DEFAULT_EXCLUDED_DIR_NAMES = frozenset(
         ".pytest_cache",
         ".idea",
         ".mypy_cache",
+        "node_modules",
         ".ruff_cache",
     }
 )
 DEFAULT_EXCLUDED_ROOT_PREFIXES = (
     "artifacts/",
     ".onetruth_artifacts/",
-    "frontend/node_modules/",
     "frontend/dist/",
     "frontend/.vite/",
     "frontend/coverage/",

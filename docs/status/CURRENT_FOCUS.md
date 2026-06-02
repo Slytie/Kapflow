@@ -107,3 +107,9 @@ Default verification loop:
 - `make replay`
 - `make acceptance`
 - `make security`
+
+## CAPEX v6 imported planning backlog
+- CAPEX v6 is imported as gated planning backlog only: `TASK-0233` through `TASK-0606`, with `TASK-0233` through `TASK-0236` completed as prerequisite planning/platform hygiene and runtime safety hardening.
+- `TASK-0235` closes artifact storage confinement and auth-before-read as repo runtime safety posture; `TASK-0236` closes transaction composition safety for schedule-control and logistics-handoff handlers.
+- CAPEX runtime activation remains blocked until imported P0, three-project, data-governance, capacity/restore, release, and production-preflight gates close or receive explicit waivers.
+- Logistics weekly/live/workpages remain the current implementation focus unless a CAPEX task explicitly changes shared platform semantics.

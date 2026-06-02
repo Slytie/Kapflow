@@ -5,7 +5,8 @@ from datetime import datetime, timedelta, timezone
 import hashlib
 import json
 import sqlite3
-from typing import Any, Callable
+from contextlib import contextmanager
+from typing import Any, Callable, Iterator
 from uuid import uuid4
 
 from onetruth.infrastructure.events.event_store import (
@@ -143,6 +144,18 @@ def _rollback_transaction(
         return
     connection.execute(f"ROLLBACK TO SAVEPOINT {frame.savepoint_name}")
     connection.execute(f"RELEASE SAVEPOINT {frame.savepoint_name}")
+
+
+@contextmanager
+def command_transaction(connection: sqlite3.Connection) -> Iterator[None]:
+    """Commit a command transaction, or a savepoint when already in one."""
+    frame = _begin_transaction(connection)
+    try:
+        yield
+    except Exception:
+        _rollback_transaction(connection, frame)
+        raise
+    _commit_transaction(connection, frame)
 
 
 def _normalize_command_idempotency_key(

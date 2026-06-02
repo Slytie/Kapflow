@@ -23,6 +23,7 @@ from onetruth.application.read_commands import show_artifact_version_command
 from onetruth.infrastructure.artifacts.storage import (
     ArtifactIngressDescriptor,
     ArtifactStorageError,
+    ArtifactStorageRootError,
     infer_media_type,
     read_blob,
     resolve_artifact_ingress,
@@ -277,11 +278,22 @@ def ingest_artifact_document_command(
 def download_artifact_blob_command(
     connection: sqlite3.Connection,
     artifact_version_id: str,
+    *,
+    storage_root: Path | None = None,
 ) -> dict[str, Any]:
     artifact = show_artifact_version_command(connection, artifact_version_id)
     storage_uri = str(artifact["storage_uri"])
     try:
-        content = read_blob(storage_uri)
+        content = read_blob(storage_uri, storage_root=storage_root)
+    except ArtifactStorageRootError as exc:
+        raise CommandError(
+            code="artifact_blob_forbidden",
+            message=str(exc),
+            details={
+                "artifact_version_id": artifact_version_id,
+                "storage_uri": storage_uri,
+            },
+        ) from exc
     except ArtifactStorageError as exc:
         if str(artifact.get("artifact_kind") or "") == "planning.draft_weekly_schedule.workbook":
             from onetruth.application.services.schedule_control.draft_workbook import (

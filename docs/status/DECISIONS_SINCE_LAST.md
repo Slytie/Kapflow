@@ -46,7 +46,7 @@ Record any decisions made since the last session so a fresh Codex run can rehydr
 - Lifecycle decision: the shared `Edit Weekly Schedule` popup is the selected operator surface both before and after publish, but backend ownership stays split by lifecycle state: `weekly_schedule_planning.v1` before publish and `live_dispatch.v1` after publish.
 - Trigger decision: in-scope route-demand transitions from `0 -> N` now define the selected greenfield auto-scheduling trigger; the old operator-facing manual scheduler task/action may be retired only after the current route-demand refresh-task creation path is replaced and the popup exposes recovery/resume truth.
 - Ranking decision: EPIC-135 defaults to deterministic candidate generation and scoring first, with on-call priority only among hard-pass candidates; agent escalation remains bounded and secondary except for greenfield auto-run.
-- Status decision: “agent is working” for the popup must be projected from canonical `task_run`, `human_task`, `requirement_state`, `policy_decision`, `execution_session`, and `tool_execution` truth rather than popup-local timers or mutation state.
+- Status decision: "agent is working" for the popup must be projected from canonical `task_run`, `human_task`, `requirement_state`, `policy_decision`, `execution_session`, and `tool_execution` truth rather than popup-local timers or mutation state.
 - Contact decision: driver phone numbers must land in mirrored canonical bridge inputs (`planning.driver_contact_directory.workbook` and `dispatch.driver_contact_directory.workbook`) rather than inside driver capabilities or frontend-local state.
 - Sequencing decision: the shared popup redesign should land over weekly/live deterministic truth first; the later live-dispatch agent/runtime task remains explicit work and must author its runtime/actionability surface before any endpoint is added.
 
@@ -467,7 +467,7 @@ Record any decisions made since the last session so a fresh Codex run can rehydr
 - Operator-boundary decision: secret revocation confirmation, Git history rewrite, and hosted GitHub push-protection/settings changes remain operator/admin follow-ups and must not be treated as Codex code-task completion.
 
 ## 2026-03-14 (TASK-0090 bootstrap/install truth closure and tracked build-artifact ban)
-- Baseline decision: the repo’s validated package metadata now matches the established dev/CI baseline exactly, so `pyproject.toml` requires Python `>=3.11,<3.12` instead of claiming a broader support floor.
+- Baseline decision: the repo's validated package metadata now matches the established dev/CI baseline exactly, so `pyproject.toml` requires Python `>=3.11,<3.12` instead of claiming a broader support floor.
 - Install-path decision: local bootstrap guidance, CI workflows, and the compatibility `requirements.txt` shim now all converge on one authoritative backend install path: `python3.11 -m pip install -e ".[api,dev]"`.
 - Source-boundary decision: tracked `*.egg-info` content is now explicitly forbidden by repo validation and excluded from release source bundles, while intentionally tracked generated outputs under `build/generated/` remain unchanged.
 
@@ -909,7 +909,7 @@ Record any decisions made since the last session so a fresh Codex run can rehydr
 - Generated runbook packs, tool matrices, approval logs, and CompanyOS IR are treated as generated derivatives, not authoritative source.
 - Business execution and agentic execution will share one event system, one approval model, and one run model.
 
-## 2026-03-14 — Planned next package after TASK-0101
+## 2026-03-14 - Planned next package after TASK-0101
 - We are treating the next tranche as a **centrality + operability** package, not another trust-semantics package.
 - Primary next risks are now:
   - residual centrality around `workflow_task_lifecycle.py`,
@@ -953,3 +953,14 @@ Record any decisions made since the last session so a fresh Codex run can rehydr
 - Planner decision: Stage04 on-call demand is now allocated through the same deterministic candidate-generation, hard-validation, and ranking path as route demand, with an internal demand-kind marker rather than authored fixture-schema changes.
 - Fairness decision: post-coverage soft-improvement moves now account for zero-shift drivers so the deterministic allocator does not trade away a driver's only shift to gain a small soft-score bump.
 - Runtime-budget decision: the authored weekly Stage04 stop policy now allows `28` tool turns so the actual-ops mock/runtime slice can complete the longer deterministic rerun, finalize outputs, and return a final response without exhausting the control-plane budget.
+
+## 2026-06-01 (CAPEX v6 planning import)
+- Source decision: `CAPEX_Master_Plan_Three_Project_Testing_Production_Preflight_Final_v6.zip` is the active CAPEX planning baseline; v5 and earlier packages are superseded history.
+- Boundary decision: raw K12/K3/blind project corpora remain off-repo; only ZIP basenames, hashes, aggregate counts, fixture-role labels, and repo-native planning artifacts may be committed.
+- Activation decision: imported CAPEX tasks do not activate runtime behavior until the relevant gates close or are explicitly waived.
+
+## 2026-06-02 (CAPEX PR002/PR003 safety hardening)
+- Artifact safety decision: authoritative artifact downloads must authorize by DB metadata and workflow-run scope before blob reads, and file-backed blob reads/writes must remain confined to the configured artifact root.
+- Shared-env decision: authoritative artifact download rejects `inmem://` storage in `shared_env` instead of treating memory-backed blobs as downloadable production-like truth.
+- Transaction decision: command handlers that may compose under an outer transaction use the shared savepoint-aware `command_transaction(connection)` helper rather than local `BEGIN` helpers.
+- Activation decision: `TASK-0235` and `TASK-0236` close repo runtime safety gates only; CAPEX production-like activation remains blocked by the imported gate set.

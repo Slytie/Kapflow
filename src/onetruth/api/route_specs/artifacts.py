@@ -57,6 +57,8 @@ ARTIFACT_ROUTE_SPECS: tuple[RouteSpec, ...] = (
         dispatch=lambda execution, params: download_artifact_binary_endpoint(
             execution.connection,
             context=execution.context,
+            boundary_profile=execution.boundary_profile,
+            db_url=execution.db_url,
             artifact_version_id=params["artifact_version_id"],
         ),
     ),
@@ -73,6 +75,8 @@ ARTIFACT_ROUTE_SPECS: tuple[RouteSpec, ...] = (
         dispatch=lambda execution, params: download_artifact_endpoint(
             execution.connection,
             context=execution.context,
+            boundary_profile=execution.boundary_profile,
+            db_url=execution.db_url,
             artifact_version_id=params["artifact_version_id"],
         ),
     ),

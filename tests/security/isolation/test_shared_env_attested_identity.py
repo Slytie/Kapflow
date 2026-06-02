@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import time
 from pathlib import Path
 
@@ -102,3 +103,59 @@ def test_shared_env_uses_attested_identity_and_ignores_trusted_headers(
     assert domain_denied.payload["error"]["code"] == "scope_filter_denied"
     assert domain_denied.payload["error"]["details"]["domain_id"] == "domain-y"
     assert domain_denied.payload["error"]["details"]["context_domain_id"] == "domain-x"
+
+
+def test_shared_env_rejects_authoritative_inmem_artifact_download(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    _configure_shared_env_jwt(monkeypatch)
+    db_url = _initialized_db_url(tmp_path, "shared-env-inmem-download")
+    workflow_payload = {
+        "workflow_run_id": "wr-shared-env-inmem-download",
+        "workflow_id": "schedule_planning.v1",
+        "workflow_version": "v1",
+        "tenant_id": "tenant-a",
+        "domain_id": "domain-x",
+        "partition_key": "SD-2026-03-13",
+        "logical_date": "2026-03-13",
+        "activation_key": "shared-env-inmem-download",
+        "idempotency_key": "idem:shared-env-inmem-download:run",
+    }
+    run_cli("--db-url", db_url, "runs", "create", "--json", json.dumps(workflow_payload))
+    artifact_payload = {
+        "artifact_version_id": "av-shared-env-inmem-download",
+        "workflow_run_id": "wr-shared-env-inmem-download",
+        "artifact_kind": "schedule.supervisor_review.doc",
+        "artifact_role": "evidence",
+        "media_type": "application/octet-stream",
+        "storage_uri": "inmem://shared-env/download/probe",
+        "content_digest": "sha256:" + ("b" * 64),
+        "metadata_json": {"probe": "shared-env-inmem"},
+        "idempotency_key": "idem:shared-env-inmem-download:artifact",
+    }
+    run_cli(
+        "--db-url",
+        db_url,
+        "artifacts",
+        "create-version",
+        "--json",
+        json.dumps(artifact_payload),
+    )
+    client = RuntimeApiClient(
+        db_url=db_url,
+        tenant_id="tenant-a",
+        domain_id="domain-x",
+        actor_id="human:ignored-header-actor",
+        actor_type="human",
+        actor_roles=["dispatch_supervisor"],
+        boundary_profile="shared_env",
+    )
+
+    response = client.get(
+        "/api/v1/artifacts/av-shared-env-inmem-download/download",
+        headers={"authorization": f"Bearer {_jwt_token()}"},
+    )
+
+    assert response.status_code == 403
+    assert response.payload["error"]["code"] == "artifact_storage_forbidden"

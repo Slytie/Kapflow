@@ -170,6 +170,72 @@ def test_subject_upload_accepts_request_bytes(tmp_path: Path) -> None:
     assert base64.b64decode(downloaded.payload["content_base64"]) == STAGE06_DOC.read_bytes()
 
 
+def test_cross_scope_artifact_download_authorizes_before_blob_read(tmp_path: Path) -> None:
+    harness = RuntimeScenarioHarness.from_yaml(ATTACHMENT_SCENARIO_PATH, tmp_path).prepare()
+    missing_blob = tmp_path / "artifact-root" / "missing.bin"
+    created = harness.run_action(
+        action="artifacts.create-version",
+        payload={
+            "artifact_version_id": "av-cross-scope-missing-blob",
+            "workflow_run_id": harness.workflow_run_id,
+            "artifact_kind": "schedule.supervisor_review.doc",
+            "artifact_role": "evidence",
+            "media_type": "application/octet-stream",
+            "storage_uri": missing_blob.resolve().as_uri(),
+            "content_digest": "sha256:" + ("a" * 64),
+            "metadata_json": {"probe": "auth-before-read"},
+            "idempotency_key": f"api:{harness.scenario_id}:artifact:create-missing-blob",
+        },
+    )["artifact_version"]
+    artifact_version_id = str(created["artifact_version_id"])
+    cross_scope_client = RuntimeApiClient(
+        db_url=harness.db_url,
+        tenant_id="tenant-other",
+        domain_id="domain-x",
+        actor_id="human:outsider",
+        actor_type="human",
+        actor_roles=["dispatch_supervisor"],
+    )
+
+    response = cross_scope_client.get(
+        f"/api/v1/artifacts/{artifact_version_id}/download"
+    )
+
+    assert response.status_code == 404
+    assert response.payload["error"]["code"] == "workflow_run_not_found"
+
+
+def test_same_scope_artifact_download_rejects_out_of_root_before_draft_fallback(
+    tmp_path: Path,
+) -> None:
+    harness = RuntimeScenarioHarness.from_yaml(ATTACHMENT_SCENARIO_PATH, tmp_path).prepare()
+    outside_blob = tmp_path / "outside-root" / "draft.json"
+    outside_blob.parent.mkdir()
+    outside_blob.write_text("{}", encoding="utf-8")
+    created = harness.run_action(
+        action="artifacts.create-version",
+        payload={
+            "artifact_version_id": "av-same-scope-out-of-root-draft",
+            "workflow_run_id": harness.workflow_run_id,
+            "artifact_kind": "planning.draft_weekly_schedule.workbook",
+            "artifact_role": "candidate",
+            "media_type": "application/json",
+            "storage_uri": outside_blob.resolve().as_uri(),
+            "content_digest": "sha256:" + ("c" * 64),
+            "metadata_json": {"would": "fallback-without-root-error"},
+            "idempotency_key": f"api:{harness.scenario_id}:artifact:create-out-of-root-draft",
+        },
+    )["artifact_version"]
+    client = _api_client(harness)
+
+    response = client.get(
+        f"/api/v1/artifacts/{created['artifact_version_id']}/download"
+    )
+
+    assert response.status_code == 403
+    assert response.payload["error"]["code"] == "artifact_blob_forbidden"
+
+
 def test_artifact_ingress_rejects_oversize_request_without_side_effects(tmp_path: Path) -> None:
     harness = RuntimeScenarioHarness.from_yaml(ATTACHMENT_SCENARIO_PATH, tmp_path).prepare()
     client = _api_client(harness)

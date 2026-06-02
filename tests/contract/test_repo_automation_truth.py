@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import re
 from pathlib import Path
+import subprocess
 
 import yaml
 
@@ -16,6 +17,7 @@ AGENT_API_WORKFLOW_PATH = REPO_ROOT / ".github" / "workflows" / "agent_api.yml"
 AGENT_API_LIVE_WORKFLOW_PATH = REPO_ROOT / ".github" / "workflows" / "agent_api_live.yml"
 DEPENDENCY_REVIEW_WORKFLOW_PATH = REPO_ROOT / ".github" / "workflows" / "dependency_review.yml"
 CODEQL_WORKFLOW_PATH = REPO_ROOT / ".github" / "workflows" / "codeql.yml"
+CLOUD_BUILD_PR_PATH = REPO_ROOT / "cloudbuild.pr.yaml"
 MAKEFILE_PATH = REPO_ROOT / "Makefile"
 
 
@@ -231,6 +233,37 @@ def test_all_checked_workflows_exist() -> None:
     }.issubset(workflow_names)
 
 
+def test_cloud_build_pr_validation_skeleton_is_secretless_and_non_deploying() -> None:
+    assert CLOUD_BUILD_PR_PATH.exists()
+    loaded = _load_yaml(CLOUD_BUILD_PR_PATH)
+    assert "availableSecrets" not in loaded
+
+    steps = loaded.get("steps")
+    assert isinstance(steps, list)
+    step_ids = {str(step.get("id")) for step in steps if isinstance(step, dict)}
+    assert {"install-validation-deps", "repo-validation", "schema-validation"}.issubset(step_ids)
+
+    text = CLOUD_BUILD_PR_PATH.read_text(encoding="utf-8")
+    assert "secretEnv" not in text
+    assert "availableSecrets" not in text
+    assert "OPENAI_API_KEY" not in text
+    assert "PRODUCTION_DB_URL" not in text
+    assert "ONETRUTH_ARTIFACT_ROOT" not in text
+    assert "gcloud run" not in text
+    assert "kubectl" not in text
+    assert "terraform" not in text
+    assert "python3 scripts/validate_repo.py" in text
+    assert "make schema-validate" in text
+
+
+def test_no_active_tracked_git_path_contains_node_modules() -> None:
+    tracked = _git_lines("ls-files")
+    pending_deleted = set(_git_lines("ls-files", "--deleted"))
+    active_tracked = [path for path in tracked if path not in pending_deleted]
+    offenders = [path for path in active_tracked if "node_modules" in Path(path).parts]
+    assert offenders == []
+
+
 def test_makefile_exposes_fast_and_runtime_ci_slices() -> None:
     makefile_text = MAKEFILE_PATH.read_text(encoding="utf-8")
     assert "assurance-fast:" in makefile_text
@@ -249,3 +282,15 @@ def test_makefile_exposes_fast_and_runtime_ci_slices() -> None:
         in makefile_text
     )
     assert "ci-backend: ci-fast-backend ci-runtime-required" in makefile_text
+
+
+def _git_lines(*args: str) -> list[str]:
+    result = subprocess.run(
+        ["git", *args],
+        cwd=REPO_ROOT,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    assert result.returncode == 0, result.stderr
+    return [line for line in result.stdout.splitlines() if line]

@@ -20,12 +20,13 @@ from onetruth.infrastructure.artifacts.storage import (
     ArtifactIngressDescriptor,
     default_storage_root_for_db_url,
     encode_base64_content,
+    storage_root_for_db_url,
 )
 from onetruth.infrastructure.events.event_store import DuplicateIdempotencyKeyError
 from onetruth.infrastructure.repositories.artifact_links import list_artifact_links_for_artifact
 
-from onetruth.api.dependencies import Page, RequestContext, scoped_workflow_run
-from onetruth.api.errors import api_error_from_command, api_error_from_duplicate_idempotency
+from onetruth.api.dependencies import BoundaryProfile, Page, RequestContext, scoped_workflow_run
+from onetruth.api.errors import ApiError, api_error_from_command, api_error_from_duplicate_idempotency
 from onetruth.api.responses import BinaryResponse, sanitize_download_filename
 
 
@@ -163,11 +164,15 @@ def download_artifact_endpoint(
     connection: sqlite3.Connection,
     *,
     context: RequestContext,
+    boundary_profile: BoundaryProfile,
+    db_url: str,
     artifact_version_id: str,
 ) -> dict[str, Any]:
     downloaded = _download_artifact_for_context(
         connection,
         context=context,
+        boundary_profile=boundary_profile,
+        db_url=db_url,
         artifact_version_id=artifact_version_id,
     )
     artifact = downloaded["artifact_version"]
@@ -184,11 +189,15 @@ def download_artifact_binary_endpoint(
     connection: sqlite3.Connection,
     *,
     context: RequestContext,
+    boundary_profile: BoundaryProfile,
+    db_url: str,
     artifact_version_id: str,
 ) -> BinaryResponse:
     downloaded = _download_artifact_for_context(
         connection,
         context=context,
+        boundary_profile=boundary_profile,
+        db_url=db_url,
         artifact_version_id=artifact_version_id,
     )
     artifact = downloaded["artifact_version"]
@@ -212,15 +221,32 @@ def _download_artifact_for_context(
     connection: sqlite3.Connection,
     *,
     context: RequestContext,
+    boundary_profile: BoundaryProfile,
+    db_url: str,
     artifact_version_id: str,
 ) -> dict[str, Any]:
     try:
-        downloaded = download_artifact_blob_command(connection, artifact_version_id)
+        artifact = show_artifact_version_command(connection, artifact_version_id)
     except CommandError as exc:
         raise api_error_from_command(exc) from exc
 
-    artifact = downloaded["artifact_version"]
     scoped_workflow_run(connection, context, str(artifact["workflow_run_id"]))
+    storage_uri = str(artifact.get("storage_uri") or "")
+    if boundary_profile == "shared_env" and storage_uri.startswith("inmem://"):
+        raise ApiError(
+            status_code=403,
+            code="artifact_storage_forbidden",
+            message="shared_env artifact downloads require authoritative blob storage",
+            details={"artifact_version_id": artifact_version_id},
+        )
+    try:
+        downloaded = download_artifact_blob_command(
+            connection,
+            artifact_version_id,
+            storage_root=storage_root_for_db_url(db_url),
+        )
+    except CommandError as exc:
+        raise api_error_from_command(exc) from exc
     return downloaded
 
 
