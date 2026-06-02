@@ -42,6 +42,8 @@ def test_release_source_bundle_exports_clean_tracked_commit_snapshot(tmp_path: P
     assert f"{archive_root}/docs/notes.md" in names
     assert f"{archive_root}/pyproject.toml" in names
     assert f"{archive_root}/.env.example" in names
+    assert f"{archive_root}/node_modules/.vite/results.json" not in names
+    assert f"{archive_root}/build/reviews/node_modules/pkg/index.js" not in names
     assert f"{archive_root}/codex/tasks/TASK-9999.md" not in names
     assert manifest == {
         "manifest_version": 1,
@@ -91,6 +93,7 @@ def _build_committed_fixture_repo(repo_root: Path) -> Path:
             [
                 ".tmp/",
                 ".venv/",
+                "node_modules/",
                 "frontend/node_modules/",
                 "frontend/dist/",
                 "frontend/.vite/",
@@ -111,6 +114,11 @@ def _build_committed_fixture_repo(repo_root: Path) -> Path:
     _write_text(repo_root / "pyproject.toml", "[project]\nname = 'fixture-repo'\nversion = '0.1.0'\n")
     _write_text(repo_root / ".env.example", "EXAMPLE=1\n")
     _write_text(repo_root / "codex" / "tasks" / "TASK-9999.md", "untracked source file\n")
+    _write_text(repo_root / "node_modules" / ".vite" / "results.json", "{}\n")
+    _write_text(
+        repo_root / "build" / "reviews" / "node_modules" / "pkg" / "index.js",
+        "module.exports = {};\n",
+    )
 
     _git(repo_root, "init")
     _git(repo_root, "config", "user.email", "test@example.com")
@@ -124,6 +132,13 @@ def _build_committed_fixture_repo(repo_root: Path) -> Path:
         "docs/notes.md",
         "pyproject.toml",
         ".env.example",
+    )
+    _git(
+        repo_root,
+        "add",
+        "-f",
+        "node_modules/.vite/results.json",
+        "build/reviews/node_modules/pkg/index.js",
     )
     _git(repo_root, "commit", "-m", "fixture commit")
     return repo_root

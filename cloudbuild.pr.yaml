@@ -1,0 +1,33 @@
+# PR validation skeleton only. This file must not deploy, mutate production
+# state, request production secrets, or run live-network OpenAI checks.
+timeout: 1800s
+options:
+  logging: CLOUD_LOGGING_ONLY
+steps:
+  - id: repo-assurance
+    name: python:3.11-bookworm
+    entrypoint: bash
+    args:
+      - -ceu
+      - |
+        apt-get update
+        apt-get install -y --no-install-recommends git make
+        python -m pip install --upgrade pip
+        python -m pip install -e ".[api,dev]"
+        python scripts/validate_repo.py --domain schema --domain governance --domain metadata --domain release --domain secrets
+        python scripts/import_capex_v6_plan.py check
+  - id: focused-contracts
+    name: python:3.11-bookworm
+    entrypoint: bash
+    args:
+      - -ceu
+      - |
+        apt-get update
+        apt-get install -y --no-install-recommends git
+        python -m pip install --upgrade pip
+        python -m pip install -e ".[api,dev]"
+        python -m pytest -q \
+          tests/contract/test_clean_source_bundle_export.py \
+          tests/contract/test_release_source_bundle_export.py \
+          tests/contract/test_repo_automation_truth.py \
+          tests/contract/test_source_bundle_distribution_truth.py

@@ -30,6 +30,7 @@ DEFAULT_EXCLUDED_DIR_NAMES = frozenset(
         ".idea",
         ".mypy_cache",
         ".ruff_cache",
+        "node_modules",
     }
 )
 DEFAULT_EXCLUDED_ROOT_PREFIXES = (

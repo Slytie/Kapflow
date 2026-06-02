@@ -53,6 +53,19 @@ EPIC-125 is now completed history:
 
 EPIC-126 remains completed cleanup history, but it is no longer the active post-EPIC-131 plan.
 
+
+## CAPEX v6 planning import
+Imported on `2026-06-01` as gated backlog memory only:
+- source package: `CAPEX_Master_Plan_Three_Project_Testing_Production_Preflight_Final_v6.zip`
+- repo-native task range: `TASK-0233` through `TASK-0606`
+- repo-native epic range: `EPIC-136` through `EPIC-152`
+- all converted tasks start as `TODO`
+- no runtime behavior, API, schema, DB, workpage, or production activation changed in the import
+- raw K12, K3, and blind-validation project ZIPs remain off-repo; only hashes, aggregate ZIP metadata, sanitized fixtures, and approved evidence may enter repo truth
+- `TASK-0233` and `TASK-0234` are complete as planning/platform hygiene only; they do not activate CAPEX runtime truth
+
+The current logistics weekly/live implementation focus remains intact. CAPEX work should be selected deliberately from the imported backlog and must respect the production/lab, raw-data, and one-truth gates recorded in `docs/planning/CAPEX_MASTER_V6_INTAKE.md`.
+
 ## Current implemented baseline
 - weekly schedule landing, artifact editor, live preview, pinned dependency baselines, backend-authored accepted/draft lineage metadata, and backend-ranked route-demand coverage handoff on canonical schedule routes
 - `route-demand-v0` run landing plus artifact-backed immutable day-count editor with next-week activation, existing-week coverage handoff, and explicit save-and-run scheduling paths

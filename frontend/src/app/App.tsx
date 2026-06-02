@@ -4,6 +4,9 @@ import { Navigate, Route, BrowserRouter as Router, Routes } from "react-router-d
 
 import { AppShell } from "@/app/AppShell";
 import { BoardPage } from "@/pages/BoardPage";
+import { CapxCeoCockpitAccessGate } from "@/pages/capx-ceo-cockpit-demo/CapxCeoCockpitAccessGate";
+import { CapxCeoCockpitOverviewPage } from "@/pages/capx-ceo-cockpit-demo/CapxCeoCockpitOverviewPage";
+import { CapxCeoCockpitProjectPage } from "@/pages/capx-ceo-cockpit-demo/CapxCeoCockpitProjectPage";
 import { ApprovalsPage } from "@/pages/ApprovalsPage";
 import {
   DispatchReportArtifactWorkpagePage,
@@ -54,6 +57,22 @@ export function App(): JSX.Element {
         <DrawerProvider>
           <Routes>
             <Route path="/" element={<Navigate to="/demo/logistics" replace />} />
+            <Route
+              path="/demo/capx/ceo-cockpit"
+              element={
+                <CapxCeoCockpitAccessGate>
+                  <CapxCeoCockpitOverviewPage />
+                </CapxCeoCockpitAccessGate>
+              }
+            />
+            <Route
+              path="/demo/capx/ceo-cockpit/projects/:projectId"
+              element={
+                <CapxCeoCockpitAccessGate>
+                  <CapxCeoCockpitProjectPage />
+                </CapxCeoCockpitAccessGate>
+              }
+            />
             <Route element={<AppShell />}>
               <Route path="/demo/logistics" element={<LogisticsDemoPage />} />
               <Route

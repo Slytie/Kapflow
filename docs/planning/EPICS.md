@@ -33,8 +33,27 @@ Current runtime/debug priority: **Schedule Planning**. Payroll remains the secon
 | EPIC-133 | Workpage fragility reduction and extensibility hardening | backend-owned lineage/latest-draft/history seams, server-authored workpage actions, launcher-only demo-shell convergence, bounded-facade/source-budget guardrails | EPIC-132, EPIC-131, EPIC-124, EPIC-100 |
 | EPIC-134 | Minimal canonical workpage demo enablement | demo-enablement plan/context packs, supported-env reporting/demo-smoke truth correction, deterministic workpage demo-prep script, canonical demo runbook/regression | EPIC-125, EPIC-131, EPIC-133 |
 | EPIC-135 | Unified schedule replan popup and dynamic scheduling activation | unified replan plan/context packs, shared popup proposal/runtime-status contract, mirrored weekly/live contact bridge inputs, refresh-path replacement, weekly/live replan adapters, authored live-dispatch runtime surface, popup redesign, demo truth refresh | EPIC-125, EPIC-131, EPIC-133, EPIC-134, EPIC-070 |
+| EPIC-136 | CAPEX v6 intake, provenance, and delivery controls | CAPEX intake, conversion map, delivery cadence, product goal, source freeze | EPIC-015, EPIC-080 |
+| EPIC-137 | CAPEX activation blockers and platform readiness | platform readiness tasks, generated-artifact helpers, invariant harnesses | EPIC-015, EPIC-030, EPIC-040, EPIC-080 |
+| EPIC-138 | CAPEX production, lab, release, and deployment hardening | release pipeline, lab pilot auth, backup/restore, deployment gates | EPIC-100, EPIC-110, EPIC-137 |
+| EPIC-139 | CAPEX domain cleanup and shared-platform extraction | approval side-effect extraction, domain descriptor registry, logistics hardening | EPIC-135, EPIC-137 |
+| EPIC-140 | CAPEX project access, membership, and scoped APIs | project schema, membership, scoped query/API helpers | EPIC-010, EPIC-137 |
+| EPIC-141 | CAPEX corpus ingest, source occurrence, evidence, and search | ingest architecture, source occurrence, SourceRef resolver, extraction/search evidence | EPIC-030, EPIC-040, EPIC-140 |
+| EPIC-142 | CAPEX generated artifacts, promotion, closure, and stale governance | artifact envelope, pointer policy, closure/waiver state, stale command rules | EPIC-030, EPIC-060, EPIC-139, EPIC-141 |
+| EPIC-143 | CAPEX workflow family and handoff manifests | CAPEX workflow catalog, handoff manifest, router and lifecycle workflows | EPIC-040, EPIC-050, EPIC-142 |
+| EPIC-144 | CAPEX workpages, projections, and stale command guards | workpage families, projection snapshots, stale-command harnesses | EPIC-120, EPIC-143, EPIC-142 |
+| EPIC-145 | CAPEX K12/K3 fixture governance and data quarantine | fixture compiler, sensitivity/redaction manifests, K12/K3 quarantine policy | EPIC-141, EPIC-149 |
+| EPIC-146 | CAPEX three-project oracle fixtures and expected-output manifests | three-project fixture runbook, expected-output manifests, oracle catalog | EPIC-145 |
+| EPIC-147 | CAPEX cross-project invariants, blind validation, and agent lab evaluation | blind freeze protocol, invariant scorecard, agent-lab eval matrix | EPIC-110, EPIC-146 |
+| EPIC-148 | CAPEX off-repo full-corpus, capacity, backup, and restore readiness | full-corpus runbook, capacity benchmark, backup/restore rehearsal | EPIC-138, EPIC-141, EPIC-147 |
+| EPIC-149 | CAPEX QA, semantic tests, and TDD overlay | semantic tests, phase quality gates, CODEOWNERS/review checks | EPIC-080, EPIC-145 |
+| EPIC-150 | CAPEX release governance, documentation, and repo hygiene | release manifests, docs authority, semantic MR evidence, refactor register | EPIC-138, EPIC-149 |
+| EPIC-151 | CAPEX snapshots, CEO transparency, external boundary, and interface burden | snapshot contracts, external bindings, transparency views, interface policy | EPIC-142, EPIC-143, EPIC-144 |
+| EPIC-152 | CAPEX production preflight go/no-go | production preflight checklist, evidence package, go/no-go memo | EPIC-136..EPIC-151 |
 
 Status note (2026-04-25): EPIC-131, EPIC-132, EPIC-133, and EPIC-134 are complete, the public workpage posture is canonical-only, and EPIC-135 is now the selected next app-facing product-expansion tranche.
+
+Status note (2026-06-01): CAPEX v6 is imported as a gated planning backlog in EPIC-136 through EPIC-152 and TASK-0233 through TASK-0606. This import does not supersede the current logistics weekly/live implementation focus and does not activate CAPEX runtime truth mutation.
 
 ## Update rules
 - Keep epic files in `docs/planning/epics/`

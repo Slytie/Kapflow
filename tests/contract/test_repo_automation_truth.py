@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import re
+import subprocess
 from pathlib import Path
 
 import yaml
@@ -17,6 +18,7 @@ AGENT_API_LIVE_WORKFLOW_PATH = REPO_ROOT / ".github" / "workflows" / "agent_api_
 DEPENDENCY_REVIEW_WORKFLOW_PATH = REPO_ROOT / ".github" / "workflows" / "dependency_review.yml"
 CODEQL_WORKFLOW_PATH = REPO_ROOT / ".github" / "workflows" / "codeql.yml"
 MAKEFILE_PATH = REPO_ROOT / "Makefile"
+CLOUD_BUILD_PR_PATH = REPO_ROOT / "cloudbuild.pr.yaml"
 
 
 def _load_yaml(path: Path) -> dict[str, object]:
@@ -229,6 +231,52 @@ def test_all_checked_workflows_exist() -> None:
         "dependency_review.yml",
         "codeql.yml",
     }.issubset(workflow_names)
+
+
+def test_cloudbuild_pr_skeleton_is_validation_only() -> None:
+    assert CLOUD_BUILD_PR_PATH.exists()
+    loaded = _load_yaml(CLOUD_BUILD_PR_PATH)
+    steps = loaded.get("steps")
+    assert isinstance(steps, list)
+    step_ids = {str(step.get("id")) for step in steps if isinstance(step, dict)}
+    assert {"repo-assurance", "focused-contracts"}.issubset(step_ids)
+
+    cloudbuild_text = CLOUD_BUILD_PR_PATH.read_text(encoding="utf-8")
+    assert "python scripts/validate_repo.py --domain schema --domain governance --domain metadata --domain release --domain secrets" in cloudbuild_text
+    assert "python scripts/import_capex_v6_plan.py check" in cloudbuild_text
+    assert "tests/contract/test_clean_source_bundle_export.py" in cloudbuild_text
+    assert "tests/contract/test_release_source_bundle_export.py" in cloudbuild_text
+    assert "tests/contract/test_repo_automation_truth.py" in cloudbuild_text
+
+    forbidden_tokens = {
+        "availableSecrets",
+        "secretEnv",
+        "OPENAI_API_KEY",
+        "ONETRUTH_DB_URL",
+        "ONETRUTH_ARTIFACT_ROOT",
+        "gcloud run",
+        "gcloud deploy",
+        "kubectl",
+        "docker push",
+    }
+    for token in forbidden_tokens:
+        assert token not in cloudbuild_text
+
+
+def test_no_node_modules_paths_are_tracked() -> None:
+    result = subprocess.run(
+        ["git", "ls-files"],
+        cwd=REPO_ROOT,
+        text=True,
+        capture_output=True,
+        check=True,
+    )
+    tracked_node_modules = [
+        path
+        for path in result.stdout.splitlines()
+        if "node_modules" in Path(path).parts
+    ]
+    assert tracked_node_modules == []
 
 
 def test_makefile_exposes_fast_and_runtime_ci_slices() -> None:

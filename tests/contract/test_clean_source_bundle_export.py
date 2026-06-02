@@ -44,6 +44,8 @@ def test_clean_source_bundle_exports_source_and_excludes_clutter(tmp_path: Path)
     assert f"{archive_root}/.tmp/runtime.json" not in names
     assert f"{archive_root}/.onetruth_artifacts/run-123/artifact.json" not in names
     assert f"{archive_root}/artifacts/run/output.json" not in names
+    assert f"{archive_root}/node_modules/pkg/index.js" not in names
+    assert f"{archive_root}/build/reviews/node_modules/pkg/index.js" not in names
     assert f"{archive_root}/frontend/dist/app.js" not in names
     assert f"{archive_root}/frontend/node_modules/pkg/index.js" not in names
     assert f"{archive_root}/frontend/.vite/deps.js" not in names
@@ -93,6 +95,7 @@ def _build_fixture_repo(repo_root: Path) -> Path:
             [
                 ".tmp/",
                 ".venv/",
+                "node_modules/",
                 "frontend/node_modules/",
                 "frontend/dist/",
                 "frontend/.vite/",
@@ -119,6 +122,14 @@ def _build_fixture_repo(repo_root: Path) -> Path:
     _write_text(repo_root / ".tmp" / "runtime.json", "{}\n")
     _write_text(repo_root / ".onetruth_artifacts" / "run-123" / "artifact.json", "{}\n")
     _write_text(repo_root / "artifacts" / "run" / "output.json", "{}\n")
+    _write_text(
+        repo_root / "node_modules" / "pkg" / "index.js",
+        "module.exports = {};\n",
+    )
+    _write_text(
+        repo_root / "build" / "reviews" / "node_modules" / "pkg" / "index.js",
+        "module.exports = {};\n",
+    )
     _write_text(repo_root / "frontend" / "dist" / "app.js", "console.log('dist')\n")
     _write_text(
         repo_root / "frontend" / "node_modules" / "pkg" / "index.js",

@@ -2,6 +2,19 @@
 
 Record any decisions made since the last session so a fresh Codex run can rehydrate quickly.
 
+## 2026-06-01 (CAPEX TASK-0233 and TASK-0234 closeout)
+- Source-freeze decision: `TASK-0233` is complete once CAPEX v6 provenance, row counts, gate/risk/decision preservation, and current-code blocker mappings are recorded in the intake doc.
+- Release-hygiene decision: `TASK-0234` removes tracked `node_modules` residue, treats any `node_modules` directory as source-bundle clutter, and adds `cloudbuild.pr.yaml` as a PR validation skeleton only.
+- Activation decision: neither task changes runtime behavior, schemas, APIs, DB state, workpages, production secrets, deployment posture, or CAPEX truth activation.
+
+## 2026-06-01 (CAPEX v6 planning import and gated backlog conversion)
+- Source decision: `CAPEX_Master_Plan_Three_Project_Testing_Production_Preflight_Final_v6.zip` is the active CAPEX planning baseline; v5 and earlier packages are superseded for future conversion work.
+- Backlog decision: all 374 v6 source task rows are converted to repo-native TODO tasks `TASK-0233` through `TASK-0606` and grouped under `EPIC-136` through `EPIC-152`.
+- Boundary decision: this import is planning-only and does not change runtime behavior, schemas, APIs, DB state, workpages, or production/lab activation.
+- Data-governance decision: the K12, K3, and blind-validation project ZIPs remain off-repo; repo truth may include only ZIP-level hashes/aggregate metadata, sanitized fixtures, manifests, and approved evidence.
+- Activation decision: CAPEX production-like activation remains blocked until P0, three-project, raw-data governance, capacity/restore, release, and production-preflight gates close or receive explicit waivers.
+
+
 ## 2026-05-26 (schedule comparison mode split and shortcut capture)
 - Comparison-mode decision: the editable `schedule-v0` surfaces now distinguish `current_week`, `historical_demo_week`, and `future_week` from the displayed schedule week versus the real `America/Vancouver` service date instead of treating any selected in-week day as an elapsed-day anchor.
 - Future-week decision: future weekly drafts keep the previous-week comparison block when pinned reality exists, but all seven scheduled-week columns stay on planned schedule truth with no synthesized dispatch-report substitution or elapsed-day lockout.

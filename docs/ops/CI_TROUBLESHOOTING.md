@@ -7,6 +7,9 @@ This note covers common CI issues for the GitHub Actions workflows:
 - `dependency_review` (`.github/workflows/dependency_review.yml`)
 - `codeql` (`.github/workflows/codeql.yml`)
 
+It also covers the non-deploying Cloud Build PR skeleton:
+- `cloudbuild.pr.yaml`
+
 ## Common failures
 
 ### Python dependency install failures
@@ -85,6 +88,19 @@ Checks:
 - inspect the dependency delta in the PR and the dependency-review job summary.
 - confirm the PR is not introducing vulnerabilities above the configured threshold.
 - if a dependency update is intentional, land the safer version or document the hosted GitHub review decision outside repo source.
+
+### Cloud Build PR skeleton failures
+Symptoms:
+- `cloudbuild.pr.yaml` fails while installing dependencies or running validation.
+
+Checks:
+- confirm the job is using the PR skeleton, not a deployment trigger.
+- rerun the same checks locally:
+  - `python3 scripts/validate_repo.py --domain schema --domain governance --domain metadata --domain release --domain secrets`
+  - `python3 scripts/import_capex_v6_plan.py check`
+  - `pytest -q tests/contract/test_clean_source_bundle_export.py tests/contract/test_release_source_bundle_export.py tests/contract/test_repo_automation_truth.py tests/contract/test_source_bundle_distribution_truth.py`
+- do not add production secrets, live OpenAI keys, production DB URLs, artifact-root mutation, or deployment commands to make the PR skeleton pass.
+- hosted Cloud Build triggers and branch protections remain operator-managed outside repo source.
 
 ### CodeQL failures
 Symptoms:

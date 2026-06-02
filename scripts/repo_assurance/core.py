@@ -41,6 +41,7 @@ SOURCE_BUNDLE_EXCLUDED_DIR_NAMES = frozenset(
         ".mypy_cache",
         ".ruff_cache",
         "__pycache__",
+        "node_modules",
     }
 )
 SOURCE_BUNDLE_EXCLUDED_FILE_PATTERNS = (

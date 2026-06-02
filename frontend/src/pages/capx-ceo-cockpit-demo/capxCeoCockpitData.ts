@@ -1,0 +1,372 @@
+import type { CapxDemoState, CapxProjectDetail, CapxProjectOverview } from "./capxCeoCockpitTypes";
+
+const projects: CapxProjectOverview[] = [
+  {
+    id: "P-104",
+    code: "P-104",
+    name: "Orion Facility",
+    subtitle: "New Production Line",
+    projectManager: "A. Tanaka",
+    stage: "Execute",
+    status: "critical",
+    riskMode: "Schedule slippage",
+    exposureAtRiskMillions: 24.6,
+    opportunityCostPerWeekThousands: 430,
+    probableDelayPercent: 74,
+    budgetVariancePercent: 12.4,
+    scheduleVariancePercent: 11.2,
+    evidenceFreshnessDays: 18,
+    boardImpact: "High",
+    trend: [42, 38, 44, 37, 35, 31],
+    lastUpdate: "19 May 09:30"
+  },
+  {
+    id: "P-087",
+    code: "P-087",
+    name: "Helios Platform West",
+    subtitle: "Offshore Utility Upgrade",
+    projectManager: "M. Rhodes",
+    stage: "Execute",
+    status: "watch",
+    riskMode: "Budget creep",
+    exposureAtRiskMillions: 18.9,
+    opportunityCostPerWeekThousands: 305,
+    probableDelayPercent: 45,
+    budgetVariancePercent: 6.1,
+    scheduleVariancePercent: 2.4,
+    evidenceFreshnessDays: 7,
+    boardImpact: "High",
+    trend: [25, 28, 31, 29, 34, 32],
+    lastUpdate: "19 May 08:55"
+  },
+  {
+    id: "P-091",
+    code: "P-091",
+    name: "Vega Subsea Compression",
+    subtitle: "Compression Package",
+    projectManager: "N. Okafor",
+    stage: "Execute",
+    status: "critical",
+    riskMode: "Supplier assumption",
+    exposureAtRiskMillions: 15.2,
+    opportunityCostPerWeekThousands: 280,
+    probableDelayPercent: 62,
+    budgetVariancePercent: 1.3,
+    scheduleVariancePercent: 9.8,
+    evidenceFreshnessDays: 21,
+    boardImpact: "Medium",
+    trend: [39, 37, 34, 33, 29, 27],
+    lastUpdate: "19 May 08:40"
+  },
+  {
+    id: "P-068",
+    code: "P-068",
+    name: "Atlas FPSO Upgrade",
+    subtitle: "Controls Refresh",
+    projectManager: "L. Santos",
+    stage: "Execute",
+    status: "watch",
+    riskMode: "Quote / order churn",
+    exposureAtRiskMillions: 12.7,
+    opportunityCostPerWeekThousands: 246,
+    probableDelayPercent: 38,
+    budgetVariancePercent: 3.2,
+    scheduleVariancePercent: 1.5,
+    evidenceFreshnessDays: 5,
+    boardImpact: "Medium",
+    trend: [22, 24, 27, 25, 29, 33],
+    lastUpdate: "19 May 08:16"
+  },
+  {
+    id: "P-067",
+    code: "P-067",
+    name: "Nova Onshore Gas Plant",
+    subtitle: "Compression Expansion",
+    projectManager: "E. Novak",
+    stage: "Execute",
+    status: "verified",
+    riskMode: "Stable",
+    exposureAtRiskMillions: 8.4,
+    opportunityCostPerWeekThousands: 120,
+    probableDelayPercent: 18,
+    budgetVariancePercent: -0.8,
+    scheduleVariancePercent: -1.2,
+    evidenceFreshnessDays: 2,
+    boardImpact: "Low",
+    trend: [12, 14, 16, 18, 21, 24],
+    lastUpdate: "19 May 07:58"
+  },
+  {
+    id: "P-094",
+    code: "P-094",
+    name: "Kepler Terminal Expansion",
+    subtitle: "Storage Loop",
+    projectManager: "D. Mercer",
+    stage: "Execute",
+    status: "watch",
+    riskMode: "Schedule slippage",
+    exposureAtRiskMillions: 7.9,
+    opportunityCostPerWeekThousands: 150,
+    probableDelayPercent: 33,
+    budgetVariancePercent: 2.0,
+    scheduleVariancePercent: 3.6,
+    evidenceFreshnessDays: 9,
+    boardImpact: "Medium",
+    trend: [19, 21, 20, 24, 23, 28],
+    lastUpdate: "19 May 07:32"
+  },
+  {
+    id: "P-110",
+    code: "P-110",
+    name: "Mira Utilities Reopener",
+    subtitle: "Tie-in Readiness",
+    projectManager: "S. Imani",
+    stage: "Plan",
+    status: "verified",
+    riskMode: "Stable",
+    exposureAtRiskMillions: 5.1,
+    opportunityCostPerWeekThousands: 56,
+    probableDelayPercent: 12,
+    budgetVariancePercent: -1.1,
+    scheduleVariancePercent: -0.5,
+    evidenceFreshnessDays: 1,
+    boardImpact: "Low",
+    trend: [8, 10, 13, 12, 15, 19],
+    lastUpdate: "19 May 07:12"
+  },
+  {
+    id: "P-071",
+    code: "P-071",
+    name: "Lyra Tank Farm Modernisation",
+    subtitle: "Tank Integrity",
+    projectManager: "R. Mehta",
+    stage: "Execute",
+    status: "watch",
+    riskMode: "Budget creep",
+    exposureAtRiskMillions: 4.3,
+    opportunityCostPerWeekThousands: 70,
+    probableDelayPercent: 27,
+    budgetVariancePercent: 2.6,
+    scheduleVariancePercent: 2.1,
+    evidenceFreshnessDays: 6,
+    boardImpact: "Low",
+    trend: [11, 13, 16, 15, 18, 21],
+    lastUpdate: "19 May 06:48"
+  },
+  {
+    id: "P-088",
+    code: "P-088",
+    name: "Aster Warehouse Automation",
+    subtitle: "Robotics Pilot",
+    projectManager: "C. Bell",
+    stage: "Plan",
+    status: "verified",
+    riskMode: "Stable",
+    exposureAtRiskMillions: 3.6,
+    opportunityCostPerWeekThousands: 48,
+    probableDelayPercent: 15,
+    budgetVariancePercent: -0.3,
+    scheduleVariancePercent: -0.7,
+    evidenceFreshnessDays: 1,
+    boardImpact: "Low",
+    trend: [6, 8, 10, 12, 14, 18],
+    lastUpdate: "19 May 06:20"
+  },
+  {
+    id: "P-119",
+    code: "P-119",
+    name: "Pulse Digital Twin Programme",
+    subtitle: "Simulation Model",
+    projectManager: "J. Vale",
+    stage: "Concept",
+    status: "verified",
+    riskMode: "Stable",
+    exposureAtRiskMillions: 2.1,
+    opportunityCostPerWeekThousands: 48,
+    probableDelayPercent: 8,
+    budgetVariancePercent: -0.5,
+    scheduleVariancePercent: -0.3,
+    evidenceFreshnessDays: 1,
+    boardImpact: "Low",
+    trend: [4, 5, 8, 10, 12, 15],
+    lastUpdate: "19 May 06:04"
+  },
+  {
+    id: "P-103",
+    code: "P-103",
+    name: "Sierra Control System Upgrade",
+    subtitle: "Safety PLC Migration",
+    projectManager: "P. Laurent",
+    stage: "Plan",
+    status: "watch",
+    riskMode: "Schedule slippage",
+    exposureAtRiskMillions: 2.1,
+    opportunityCostPerWeekThousands: 28,
+    probableDelayPercent: 22,
+    budgetVariancePercent: 1.4,
+    scheduleVariancePercent: 1.0,
+    evidenceFreshnessDays: 3,
+    boardImpact: "Low",
+    trend: [9, 12, 10, 14, 11, 15],
+    lastUpdate: "19 May 05:36"
+  },
+  {
+    id: "P-045",
+    code: "P-045",
+    name: "Borealis Infrastructure Refresh",
+    subtitle: "Site Network",
+    projectManager: "I. Chen",
+    stage: "Concept",
+    status: "verified",
+    riskMode: "Stable",
+    exposureAtRiskMillions: 0.9,
+    opportunityCostPerWeekThousands: 10,
+    probableDelayPercent: 5,
+    budgetVariancePercent: -0.2,
+    scheduleVariancePercent: -0.1,
+    evidenceFreshnessDays: 1,
+    boardImpact: "Low",
+    trend: [2, 4, 3, 6, 5, 8],
+    lastUpdate: "19 May 05:12"
+  }
+];
+
+const orionDetail: CapxProjectDetail = {
+  ...projects[0],
+  criticality: "critical",
+  delayExposurePerWeekThousands: 430,
+  probableDelayLabel: "3 - 5 wks",
+  worstPlausibleExposureMillions: 31.2,
+  whyStatus:
+    "Extended delay risk is driven by supplier delivery slip and an unresolved utility interface approval. The recovery plan exists, but expedited budget and interface ownership are not committed.",
+  ceoNextAction: "Approve recovery plan and additional expedite budget request.",
+  owners: [
+    { role: "Project Manager", name: "A. Tanaka" },
+    { role: "Engineering Lead", name: "R. Suzuki" },
+    { role: "Commercial Lead", name: "M. Sato" },
+    { role: "Site Lead", name: "T. Nakamura" },
+    { role: "Finance Partner", name: "K. Yamamoto" }
+  ],
+  currentStageIndex: 5,
+  stageLabels: ["Initiation", "Feasibility", "Design", "Procurement", "Construction", "Commissioning", "Handover"],
+  milestones: [
+    { label: "Site Mobilization", baseline: "Feb 10, 2025", forecast: "Feb 12, 2025", variance: "+2 days", status: "verified" },
+    { label: "Equipment Delivery", baseline: "Apr 15, 2025", forecast: "May 20, 2025", variance: "+5 wks", status: "critical" },
+    { label: "Mechanical Completion", baseline: "Jun 30, 2025", forecast: "Jul 21, 2025", variance: "+3 wks", status: "critical" },
+    { label: "Cold Commissioning", baseline: "Aug 15, 2025", forecast: "Sep 5, 2025", variance: "+3 wks", status: "critical" },
+    { label: "Performance Test", baseline: "Aug 31, 2025", forecast: "Sep 24, 2025", variance: "+3.5 wks", status: "watch" },
+    { label: "Production Start", baseline: "Sep 10, 2025", forecast: "Oct 8, 2025", variance: "+4 wks", status: "critical" }
+  ],
+  topRisks: [
+    { label: "Supplier delivery slip", severity: "critical" },
+    { label: "Utility interface approval", severity: "watch" },
+    { label: "Budget overrun risk", severity: "watch" },
+    { label: "Commissioning resource gap", severity: "watch" },
+    { label: "Quality risk - unknown", severity: "neutral" }
+  ],
+  delayImpactTrend: [
+    { label: "Apr 28", value: 310 },
+    { label: "May 2", value: 395 },
+    { label: "May 6", value: 360 },
+    { label: "May 9", value: 455 },
+    { label: "May 13", value: 420 },
+    { label: "May 16", value: 500 },
+    { label: "May 19", value: 430 }
+  ],
+  budgetTrend: [
+    { label: "Feb", value: 5 },
+    { label: "Apr", value: 12 },
+    { label: "Jun", value: 22 },
+    { label: "Aug", value: 38 },
+    { label: "Oct", value: 45 }
+  ],
+  latestUpdateBullets: [
+    "Supplier confirmed delivery slip of the critical line item to May 20.",
+    "Utility tie-in design change still pending owner approval.",
+    "Recovery plan drafted by project manager and requires CEO approval for expedite budget.",
+    "Daily burn-rate impact is estimated at $430K per week."
+  ],
+  flags: [
+    {
+      type: "Supplier delivery slip",
+      description: "Critical item delayed to May 20",
+      severity: "critical",
+      raised: "May 12, 2025",
+      owner: "M. Sato",
+      state: "Open"
+    },
+    {
+      type: "Interface approval pending",
+      description: "Utility design change awaiting owner approval",
+      severity: "watch",
+      raised: "May 14, 2025",
+      owner: "T. Nakamura",
+      state: "Open"
+    },
+    {
+      type: "Re-review trigger",
+      description: "Baseline schedule changed by three weeks",
+      severity: "watch",
+      raised: "May 15, 2025",
+      owner: "A. Tanaka",
+      state: "Open"
+    },
+    {
+      type: "Budget exception",
+      description: "Expedite budget request submitted",
+      severity: "watch",
+      raised: "May 18, 2025",
+      owner: "K. Yamamoto",
+      state: "Pending approval"
+    }
+  ],
+  evidenceSections: [
+    {
+      title: "Evidence",
+      items: ["Recovery basis dated May 19", "Supplier commit log", "Interface owner note", "Budget exception memo"]
+    },
+    {
+      title: "Assumptions",
+      items: ["Expedite crew available within five business days", "Utility shutdown window remains open", "No additional quality hold"]
+    },
+    {
+      title: "Interfaces",
+      items: ["Utility tie-in", "Control-room commissioning", "Supplier factory acceptance closeout"]
+    }
+  ]
+};
+
+export const capxDemoState: CapxDemoState = {
+  generatedAt: "19 May 2025 09:30",
+  portfolioRisk: {
+    exposureAtRiskMillions: 128.4,
+    opportunityCostPerWeekMillions: 2.37,
+    projectsAtRisk: 7,
+    totalProjects: 18,
+    overdueApprovals: 5,
+    staleEvidence: 12,
+    boardDriftOverTenK: 4,
+    supplierAssumptionsHighRisk: 6,
+    interfaceIssuesOpen: 5,
+    forecastConfidencePercent: 63
+  },
+  actions: [
+    { id: "A-001", title: "Approve recovery plan", projectId: "P-104", projectCode: "P-104", lane: "due_today", status: "critical", owner: "A. Morgan" },
+    { id: "A-002", title: "Escalate interface issue", projectId: "P-091", projectCode: "P-091", lane: "due_today", status: "watch", owner: "A. Morgan" },
+    { id: "A-003", title: "Approve variation V-12", projectId: "P-071", projectCode: "P-071", lane: "due_today", status: "watch", owner: "A. Morgan" },
+    { id: "A-004", title: "Milestone budget review", projectId: "P-103", projectCode: "P-103", lane: "this_week", status: "watch", owner: "Finance" },
+    { id: "A-005", title: "Milestone acceptance gate", projectId: "P-067", projectCode: "P-067", lane: "this_week", status: "verified", owner: "PMO" },
+    { id: "A-006", title: "Review board brief", projectId: "P-110", projectCode: "P-110", lane: "this_week", status: "neutral", owner: "PMO" },
+    { id: "A-007", title: "Approve commercial order", projectId: "P-087", projectCode: "P-087", lane: "this_week", status: "watch", owner: "Commercial" },
+    { id: "A-008", title: "Contract variation - beta", projectId: "P-068", projectCode: "P-068", lane: "next_two_weeks", status: "watch", owner: "Commercial" },
+    { id: "A-009", title: "Approve forecast rebase", projectId: "P-104", projectCode: "P-104", lane: "next_two_weeks", status: "critical", owner: "PMO" },
+    { id: "A-010", title: "Milestone acceptance gate", projectId: "P-094", projectCode: "P-094", lane: "next_two_weeks", status: "watch", owner: "PMO" },
+    { id: "A-011", title: "Strategy decision", projectId: "P-119", projectCode: "P-119", lane: "later", status: "neutral", owner: "Strategy" },
+    { id: "A-012", title: "Review make vs buy", projectId: "P-088", projectCode: "P-088", lane: "later", status: "neutral", owner: "Procurement" },
+    { id: "A-013", title: "Board refresh", projectId: "P-067", projectCode: "P-067", lane: "later", status: "verified", owner: "PMO" }
+  ],
+  projects,
+  projectDetails: {
+    [orionDetail.id]: orionDetail
+  }
+};

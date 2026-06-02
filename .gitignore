@@ -20,6 +20,7 @@ codex_handoff_packet_*.zip
 *.log
 
 # Frontend local artifacts
+node_modules/
 frontend/node_modules/
 frontend/dist/
 frontend/.vite/

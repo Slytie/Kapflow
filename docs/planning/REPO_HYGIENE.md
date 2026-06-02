@@ -15,7 +15,7 @@ This repo keeps source-of-truth artifacts in Git and excludes local machine/runt
   - local SQLite runtime/test databases and journal/WAL sidecars.
 - `codex_handoff_packet_*.zip`
   - local handoff/export bundles; regenerate outside Git when needed. These are review/handoff snapshots, not release artifacts.
-- `frontend/node_modules/`, `frontend/dist/`, `frontend/.vite/`, `frontend/coverage/`
+- `node_modules/`, `frontend/node_modules/`, `frontend/dist/`, `frontend/.vite/`, `frontend/coverage/`
   - dependency installs and generated frontend build/test outputs.
 - `*.log`
   - transient local logs.
@@ -44,6 +44,11 @@ If runtime evidence should become a reusable golden artifact, move it into an ex
   - run inspection/evidence bundle exported by `scripts/export_run_workspace_bundle.py`; it is derived from canonical runtime projections and is not source/release packaging.
 - raw workspace archives or manual ad hoc zips
   - non-release/internal only; they do not carry endorsed provenance and must not be presented as operator distribution artifacts.
+
+## PR validation skeletons
+- `cloudbuild.pr.yaml`
+  - PR validation only; it runs repo assurance and focused contract tests without production secrets, deployment commands, live OpenAI keys, production DB URLs, or artifact-root mutation.
+  - Hosted Cloud Build triggers, branch protections, and required-check settings are operator-managed outside repo source.
 
 ## Secret Hygiene Follow-Ups
 - Repo-enforceable actions:

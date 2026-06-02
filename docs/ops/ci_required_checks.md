@@ -91,7 +91,11 @@ The release-confidence gate is a targeted regression tripwire, not a deployment 
 - `codeql` runs on pull requests, pushes to `main`, and a lightweight schedule
 - `agent_api` remains mock-only for scheduled/manual routine coverage
 - `agent_api_live` is manual-only and holds the gated real OpenAI path
+- `cloudbuild.pr.yaml` remains a PR-validation skeleton only; it must not request production secrets, run deployment commands, use live OpenAI keys, or mutate production DB/artifact roots
 - hosted GitHub required-check / branch-protection settings are verified manually outside repo source
+
+## Cloud Build PR skeleton
+`cloudbuild.pr.yaml` is intentionally non-deploying. It should run repo assurance and focused contract tests only. Cloud Build trigger wiring, branch rules, required checks, and any hosted policy gates remain external/operator-managed configuration and are not completed merely by editing repo source.
 
 Compatibility note:
 - `make schema-validate` remains available as an alias to `make assurance-fast` in this tranche.
