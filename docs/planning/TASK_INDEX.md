@@ -201,10 +201,10 @@ Note: `TASK-0087` / `TASK-0088` / `TASK-0089` were formerly duplicated as `TASK-
 | TASK-0238 | EPIC-137 | DONE | high | Canonical generated-artifact helper |
 | TASK-0239 | EPIC-137 | DONE | high | Shared run/input/edge effect helpers + LogisticsRunResolver |
 | TASK-0240 | EPIC-137 | DONE | high | Platform Foundation v0 declaration and branch gate |
-| TASK-0241 | EPIC-138 | TODO | high | Release build pipeline |
-| TASK-0242 | EPIC-138 | TODO | high | Backup manifest schema + predeploy backup skeleton |
-| TASK-0243 | EPIC-138 | TODO | high | Lab-only pilot auth prototype |
-| TASK-0244 | EPIC-138 | TODO | high | Lab VM deploy pipeline |
+| TASK-0241 | EPIC-138 | DONE | high | Release build pipeline |
+| TASK-0242 | EPIC-138 | DONE | high | Backup manifest schema + predeploy backup skeleton |
+| TASK-0243 | EPIC-138 | DONE | high | Lab-only pilot auth prototype |
+| TASK-0244 | EPIC-138 | BLOCKED | high | Lab VM deploy pipeline |
 | TASK-0245 | EPIC-139 | TODO | high | Schedule-control hardening |
 | TASK-0246 | EPIC-139 | TODO | high | Handoff scaffold and command scopes |
 | TASK-0247 | EPIC-139 | TODO | high | Weekly seed materialization hardening |

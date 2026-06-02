@@ -14,6 +14,11 @@ One recoverable backup set is one environment-specific tuple:
 Prod and lab backup sets are not interchangeable.
 Do not treat tenant/domain separation inside one runtime as a substitute for separate prod-vs-lab recovery sets.
 
+## Predeploy manifest skeleton
+`scripts/prepare_predeploy_backup.py` and `make predeploy-backup-manifest` provide a validation-only predeploy backup skeleton.
+It validates and records the DB/artifact/release tuple in `backup_manifest.json`, records secret/config references without secret values, and does not copy live state, archive artifact files, upload backups, restore data, or mutate the target environment.
+This manifest is not restore proof; restore rehearsal remains a later gate.
+
 ## What must be backed up
 1. The SQLite DB file for that environment.
 2. The full artifact root for that environment.

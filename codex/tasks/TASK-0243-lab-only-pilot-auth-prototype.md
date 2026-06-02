@@ -2,7 +2,7 @@
 id: TASK-0243
 epic: EPIC-138
 title: "Lab-only pilot auth prototype"
-status: TODO
+status: DONE
 owners: ["platform"]
 reviewers: ["architect", "qa"]
 depends_on: ["TASK-0235", "TASK-0236", "TASK-0241"]
@@ -60,3 +60,10 @@ Implement Identity Platform/JWKS or explicit pilot-password fallback in lab; map
 
 ## Notes / decisions
 - Raw project corpora remain off-repo; use only sanitized fixtures, manifests, hashes, and aggregate evidence approved by the relevant fixture/governance task.
+
+## Closeout evidence
+- Added `scripts/run_lab_auth_smoke.py` for a lab-only `/api/v1/viewer` smoke using the existing `shared_env` RS256 JWT resolver and conflicting browser identity headers.
+- Added `schemas/ops/lab_auth_smoke_report.schema.json` and `make lab-auth-smoke`; the report records server-derived identity posture without printing bearer tokens or public key material.
+- Focused auth smoke tests passed on 2026-06-02, covering valid JWT, missing/invalid bearer token, spoofed browser-header identity ignored, and no token leakage.
+- CAPEX invariant audit now includes `capex.pr010.lab_auth_smoke` as a passing hard gate.
+- Closeout posture: `MP-PR010` is closed as lab-auth prototype/readiness evidence only; this is not CAPEX production activation, pilot approval, or raw corpus authorization.

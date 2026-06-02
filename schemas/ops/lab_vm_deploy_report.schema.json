@@ -1,0 +1,253 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kapflow.local/schemas/ops/lab_vm_deploy_report.schema.json",
+  "title": "Lab VM deploy report",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "manifest_version",
+    "command",
+    "generated_at",
+    "status",
+    "environment",
+    "execution",
+    "live_deploy_evidence_recorded",
+    "live_deploy_evidence_required_for_task_done",
+    "gcp",
+    "release",
+    "remote",
+    "secret_refs",
+    "commands",
+    "forbidden_tooling_policy",
+    "smoke_checks"
+  ],
+  "properties": {
+    "manifest_version": {
+      "const": 1
+    },
+    "command": {
+      "const": "lab.vm.deploy"
+    },
+    "generated_at": {
+      "type": "string",
+      "minLength": 1
+    },
+    "status": {
+      "enum": ["planned", "executed"]
+    },
+    "environment": {
+      "const": "lab"
+    },
+    "execution": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "execute_requested",
+        "confirm_lab_target",
+        "confirm_no_real_users"
+      ],
+      "properties": {
+        "execute_requested": {
+          "type": "boolean"
+        },
+        "confirm_lab_target": {
+          "type": "boolean"
+        },
+        "confirm_no_real_users": {
+          "type": "boolean"
+        }
+      }
+    },
+    "live_deploy_evidence_recorded": {
+      "type": "boolean"
+    },
+    "live_deploy_evidence_required_for_task_done": {
+      "const": true
+    },
+    "gcp": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["project", "zone", "instance"],
+      "properties": {
+        "project": {
+          "type": "string",
+          "minLength": 1
+        },
+        "zone": {
+          "type": "string",
+          "minLength": 1
+        },
+        "instance": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "release": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "manifest_path",
+        "manifest_sha256",
+        "git_commit",
+        "release_source_bundle_path",
+        "release_source_bundle_sha256",
+        "image_digest_ref"
+      ],
+      "properties": {
+        "manifest_path": {
+          "type": "string",
+          "minLength": 1
+        },
+        "manifest_sha256": {
+          "$ref": "#/$defs/sha256_hex"
+        },
+        "git_commit": {
+          "type": "string",
+          "minLength": 7
+        },
+        "release_source_bundle_path": {
+          "type": "string",
+          "minLength": 1
+        },
+        "release_source_bundle_sha256": {
+          "$ref": "#/$defs/sha256_hex"
+        },
+        "image_digest_ref": {
+          "type": "string",
+          "pattern": "@sha256:[0-9a-f]{64}$"
+        }
+      }
+    },
+    "remote": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "release_root",
+        "staging_dir",
+        "release_dir",
+        "db_url",
+        "artifact_root",
+        "service_name",
+        "viewer_token_env",
+        "port"
+      ],
+      "properties": {
+        "release_root": {
+          "type": "string",
+          "minLength": 1
+        },
+        "staging_dir": {
+          "type": "string",
+          "minLength": 1
+        },
+        "release_dir": {
+          "type": "string",
+          "minLength": 1
+        },
+        "db_url": {
+          "type": "string",
+          "pattern": "^sqlite:////"
+        },
+        "artifact_root": {
+          "type": "string",
+          "minLength": 1
+        },
+        "service_name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "viewer_token_env": {
+          "type": "string",
+          "pattern": "^[A-Z_][A-Z0-9_]*$"
+        },
+        "port": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 65535
+        }
+      }
+    },
+    "secret_refs": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      },
+      "uniqueItems": true
+    },
+    "commands": {
+      "type": "array",
+      "minItems": 3,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["kind", "tool", "argv"],
+        "properties": {
+          "kind": {
+            "type": "string",
+            "minLength": 1
+          },
+          "tool": {
+            "enum": ["gcloud_compute_ssh", "gcloud_compute_scp"]
+          },
+          "argv": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "minItems": 3
+          }
+        }
+      }
+    },
+    "forbidden_tooling_policy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "allowed_gcloud_compute_subcommands",
+        "cloud_run",
+        "kubernetes",
+        "terraform",
+        "production_targets"
+      ],
+      "properties": {
+        "allowed_gcloud_compute_subcommands": {
+          "const": ["scp", "ssh"]
+        },
+        "cloud_run": {
+          "const": false
+        },
+        "kubernetes": {
+          "const": false
+        },
+        "terraform": {
+          "const": false
+        },
+        "production_targets": {
+          "const": false
+        }
+      }
+    },
+    "smoke_checks": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      },
+      "contains": {
+        "const": "/api/v1/viewer"
+      }
+    },
+    "report_path": {
+      "type": "string",
+      "minLength": 1
+    }
+  },
+  "$defs": {
+    "sha256_hex": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    }
+  }
+}

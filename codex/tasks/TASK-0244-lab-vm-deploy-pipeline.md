@@ -2,7 +2,7 @@
 id: TASK-0244
 epic: EPIC-138
 title: "Lab VM deploy pipeline"
-status: TODO
+status: BLOCKED
 owners: ["platform"]
 reviewers: ["architect", "qa"]
 depends_on: ["TASK-0235", "TASK-0236", "TASK-0241", "TASK-0242", "TASK-0243"]
@@ -60,3 +60,12 @@ Deploy to lab VM only after PR002/003/009/010; smoke health/readiness/viewer/art
 
 ## Notes / decisions
 - Raw project corpora remain off-repo; use only sanitized fixtures, manifests, hashes, and aggregate evidence approved by the relevant fixture/governance task.
+
+## Blocked closeout evidence
+- Added `scripts/deploy_lab_vm.py` with dry-run planning by default and execution gated by `--execute --confirm-lab-target --confirm-no-real-users`.
+- Added `schemas/ops/lab_vm_deploy_report.schema.json`, `make lab-vm-deploy-plan`, and `make lab-vm-deploy`.
+- The deploy lane validates `release_manifest.json`, matching `release_source_bundle`, lab SQLite/artifact-root arguments, and secret references; planned commands are limited to `gcloud compute scp` and `gcloud compute ssh`.
+- Remote execute path runs the validate-only predeploy backup manifest, installs `.[api]`, builds frontend assets, restarts the lab service, and smokes health/readiness/viewer/artifact-root posture.
+- Focused deploy-lane tests passed on 2026-06-02 with stubbed `gcloud`, including dry-run plan, command order, lab-only enforcement, confirmation requirements, secret-value rejection, and smoke command shape.
+- CAPEX invariant audit now includes `capex.pr011.lab_vm_deploy_pipeline` as a passing hard gate for pipeline implementation while explicitly reporting `live_deploy_evidence_recorded=false`.
+- Blocker: actual operator-supplied GCP lab VM coordinates and a real execute-and-smoke run are not available in this repo session. Per task acceptance, `MP-PR011` remains `BLOCKED` until that live lab evidence is recorded.

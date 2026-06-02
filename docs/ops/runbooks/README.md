@@ -7,6 +7,7 @@ Current runbooks:
 - `stuck_workflow_or_task.md`
 - `backup_and_restore.md` - environment-state backup, restore, and rehearsal basis for the first-user single-node production/lab reference
 - `rollback_and_deploy.md` - release-bundle deploy and rollback for the first-user single-node production/lab reference
+- `lab_auth_and_vm_deploy.md` - lab-only shared-env JWT smoke and GCP VM deploy plan/execute lane; actual execute-and-smoke evidence is required before claiming lab deploy closure
 - `generated_artifact_drift.md`
 - `logistics_single_node_cadence.md` - external cadence tick and bounded continuous logistics operator runbook for the first-user single-node lane
 - `logistics_local_demo_beginner.md` - primary beginner-friendly local logistics demo guide; OpenAI-backed `/demo/logistics` setup, seeding, reset, and troubleshooting over the combined seeded story

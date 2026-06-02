@@ -2,7 +2,7 @@
 id: TASK-0241
 epic: EPIC-138
 title: "Release build pipeline"
-status: TODO
+status: DONE
 owners: ["platform"]
 reviewers: ["architect", "qa"]
 depends_on: ["TASK-0234", "TASK-0240"]
@@ -60,3 +60,10 @@ Dockerfile, release_manifest.json, Artifact Registry image by digest, provenance
 
 ## Notes / decisions
 - Raw project corpora remain off-repo; use only sanitized fixtures, manifests, hashes, and aggregate evidence approved by the relevant fixture/governance task.
+
+## Closeout evidence
+- Added a secretless API-runtime `Dockerfile` for `onetruth-api` that defaults to `shared_env` and contains no production DB, artifact-root, OpenAI, deploy, or registry secrets.
+- Added `scripts/build_release_image.py`, which builds from a canonical `release_source_bundle`, optionally pushes to an operator-supplied image ref, records a digest-addressed image reference, and writes `release_manifest.json`.
+- Added `schemas/release/release_manifest.schema.json` plus focused release-image unit and contract tests.
+- CAPEX invariant audit now includes a PR008 hard gate for release image/manifest posture.
+- Closeout posture: `MP-PR008` is closed as release-readiness build evidence only; this is not deployment approval or CAPEX production activation.

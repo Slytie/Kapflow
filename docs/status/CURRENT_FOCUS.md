@@ -109,8 +109,9 @@ Default verification loop:
 - `make security`
 
 ## CAPEX v6 imported planning backlog
-- CAPEX v6 is imported as gated planning backlog only: `TASK-0233` through `TASK-0606`, with `TASK-0233` through `TASK-0240` completed as prerequisite planning/platform hygiene, runtime safety hardening, and PF0 repo-readiness declaration.
+- CAPEX v6 is imported as gated planning backlog only: `TASK-0233` through `TASK-0606`, with `TASK-0233` through `TASK-0243` completed as prerequisite planning/platform hygiene, runtime safety hardening, PF0 repo-readiness declaration, release/backup readiness evidence, and lab-only auth smoke readiness.
 - `TASK-0235` closes artifact storage confinement and auth-before-read as repo runtime safety posture; `TASK-0236` closes transaction composition safety for schedule-control and logistics-handoff handlers.
-- `TASK-0237` adds a non-permanent-red CAPEX invariant audit over resolved safety gates and known gaps; `TASK-0238` adds the canonical generated-artifact helper foundation; `TASK-0239` adds shared run/input/edge helpers plus activation-key drift detection; `TASK-0240` declares PF0 for repo platform readiness only.
+- `TASK-0237` adds a non-permanent-red CAPEX invariant audit over resolved safety gates and known gaps; `TASK-0238` adds the canonical generated-artifact helper foundation; `TASK-0239` adds shared run/input/edge helpers plus activation-key drift detection; `TASK-0240` declares PF0 for repo platform readiness only; `TASK-0241` adds digest-addressed API image release evidence; `TASK-0242` adds validate-only predeploy backup manifest evidence; `TASK-0243` adds a lab-only shared-env JWT viewer smoke.
+- `TASK-0244` is implemented as a lab VM deploy plan/execute lane but remains `BLOCKED` until an operator supplies live lab GCP target details and a real execute-and-smoke run records evidence.
 - CAPEX runtime activation remains blocked until imported P0, three-project, data-governance, capacity/restore, release, and production-preflight gates close or receive explicit waivers.
 - Logistics weekly/live/workpages remain the current implementation focus unless a CAPEX task explicitly changes shared platform semantics.

@@ -22,7 +22,7 @@ def test_capex_invariant_registry_has_expected_gate_modes() -> None:
     modes = {entry.gate_mode for entry in CAPEX_INVARIANT_REGISTRY}
 
     assert modes == {"hard_gate", "known_gap"}
-    assert sum(1 for entry in CAPEX_INVARIANT_REGISTRY if entry.gate_mode == "hard_gate") == 6
+    assert sum(1 for entry in CAPEX_INVARIANT_REGISTRY if entry.gate_mode == "hard_gate") == 10
     assert sum(1 for entry in CAPEX_INVARIANT_REGISTRY if entry.gate_mode == "known_gap") == 4
     assert all(entry.task_refs for entry in CAPEX_INVARIANT_REGISTRY)
 
@@ -39,8 +39,8 @@ def test_capex_invariant_audit_report_records_known_gaps_without_failing(
     assert manifest["status"] == "passed"
     assert capex_invariant_audit_exit_code(manifest) == 0
     assert manifest["summary"] == {
-        "total": 10,
-        "hard_gate_passed": 6,
+        "total": 14,
+        "hard_gate_passed": 10,
         "hard_gate_failed": 0,
         "known_gaps": 4,
         "advisory": 0,
@@ -50,6 +50,19 @@ def test_capex_invariant_audit_report_records_known_gaps_without_failing(
     assert statuses["capex.pr002.artifact_storage_root_confined"] == "passed"
     assert statuses["capex.pr006.run_input_edge_helpers"] == "passed"
     assert statuses["capex.pr007.platform_foundation_v0"] == "passed"
+    assert statuses["capex.pr008.release_image_manifest"] == "passed"
+    assert statuses["capex.pr009.backup_manifest_skeleton"] == "passed"
+    assert statuses["capex.pr010.lab_auth_smoke"] == "passed"
+    assert statuses["capex.pr011.lab_vm_deploy_pipeline"] == "passed"
+    details = {
+        check["invariant_id"]: check["details"] for check in manifest["checks"]
+    }
+    assert details["capex.pr011.lab_vm_deploy_pipeline"][
+        "live_deploy_evidence_recorded"
+    ] is False
+    assert details["capex.pr011.lab_vm_deploy_pipeline"][
+        "task_closeout_status"
+    ] == "BLOCKED_PENDING_LIVE_GCP_EVIDENCE"
 
     report_paths = manifest["report_paths"]
     json_report = Path(str(report_paths["json"]))

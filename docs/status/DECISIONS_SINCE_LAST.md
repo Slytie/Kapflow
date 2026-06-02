@@ -2,6 +2,12 @@
 
 Record any decisions made since the last session so a fresh Codex run can rehydrate quickly.
 
+## 2026-06-02 (CAPEX PR010/PR011 lab auth and VM lane)
+- Lab-auth decision: `TASK-0243` is closed with a local lab-only `/api/v1/viewer` smoke using the existing `shared_env` RS256 JWT resolver; this tranche intentionally does not add JWKS lookup or pilot-password fallback.
+- Identity-boundary decision: lab viewer smoke must prove server-derived JWT identity wins over conflicting browser identity headers and that actor switching remains disabled under `shared_env`.
+- Lab-deploy decision: `TASK-0244` now has an operator-gated GCP VM plan/execute lane limited to `gcloud compute scp` and `gcloud compute ssh`; it is lab-only, no-real-users, no production target, no raw corpus, and no CAPEX activation.
+- Closeout decision: `TASK-0244` remains `BLOCKED` until actual operator-supplied lab GCP coordinates and a successful live execute-and-smoke run are recorded; stubbed tests and dry-run planning are implementation evidence only.
+
 ## 2026-05-26 (schedule comparison mode split and shortcut capture)
 - Comparison-mode decision: the editable `schedule-v0` surfaces now distinguish `current_week`, `historical_demo_week`, and `future_week` from the displayed schedule week versus the real `America/Vancouver` service date instead of treating any selected in-week day as an elapsed-day anchor.
 - Future-week decision: future weekly drafts keep the previous-week comparison block when pinned reality exists, but all seven scheduled-week columns stay on planned schedule truth with no synthesized dispatch-report substitution or elapsed-day lockout.
@@ -976,3 +982,9 @@ Record any decisions made since the last session so a fresh Codex run can rehydr
 - Drift decision: logistics target-run resolution fails closed with `activation_key_drift_detected` when an existing same-scope, same-partition run has a different activation key.
 - Branch-gate decision: `docs/planning/CAPEX_PLATFORM_FOUNDATION_V0.md` declares PF0 for repo platform readiness only and records `foundation/ip5` as the platform-foundation branch class.
 - Activation decision: PF0 does not activate CAPEX production-like runtime, pilot readiness, raw corpus use, release/deploy work, project membership runtime, or SourceRef/source-occurrence runtime.
+
+## 2026-06-02 (CAPEX PR008/PR009 release and backup readiness)
+- Release-build decision: `scripts/build_release_image.py` builds an API-runtime image from the canonical `release_source_bundle`, can push to operator-supplied registry coordinates, and records digest-addressed release evidence in `release_manifest.json`.
+- Deploy-boundary decision: the pushed API image is release evidence/build output only; `release_source_bundle` remains the deploy input until later release/deploy gates explicitly change the operator contract.
+- Backup-skeleton decision: `scripts/prepare_predeploy_backup.py` writes validate-only `backup_manifest.json` evidence for the DB/artifact/release tuple and secret/config references, without copying live state or claiming restore proof.
+- Activation decision: `TASK-0241` and `TASK-0242` close release/backup readiness gates only; CAPEX production-like activation, pilot readiness, deployment approval, raw corpus use, and restore proof remain blocked.

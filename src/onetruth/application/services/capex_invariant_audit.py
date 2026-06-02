@@ -77,6 +77,38 @@ CAPEX_INVARIANT_REGISTRY: tuple[CapexInvariant, ...] = (
         evaluator=lambda repo_root: _check_platform_foundation_v0_source(repo_root),
     ),
     CapexInvariant(
+        invariant_id="capex.pr008.release_image_manifest",
+        title="Release image build lane records digest manifest without deploy",
+        gate_mode="hard_gate",
+        task_refs=("TASK-0241",),
+        description="Release build must produce API image evidence and release_manifest.json without deployment posture.",
+        evaluator=lambda repo_root: _check_release_image_manifest_source(repo_root),
+    ),
+    CapexInvariant(
+        invariant_id="capex.pr009.backup_manifest_skeleton",
+        title="Predeploy backup manifest skeleton is validate-only",
+        gate_mode="hard_gate",
+        task_refs=("TASK-0242",),
+        description="Backup skeleton must validate DB/artifact/release tuple without copying or restoring state.",
+        evaluator=lambda repo_root: _check_backup_manifest_skeleton_source(repo_root),
+    ),
+    CapexInvariant(
+        invariant_id="capex.pr010.lab_auth_smoke",
+        title="Lab-only shared-env JWT viewer smoke is present",
+        gate_mode="hard_gate",
+        task_refs=("TASK-0243",),
+        description="Lab auth smoke must use the existing RS256 shared_env resolver and reject browser-header identity spoofing.",
+        evaluator=lambda repo_root: _check_lab_auth_smoke_source(repo_root),
+    ),
+    CapexInvariant(
+        invariant_id="capex.pr011.lab_vm_deploy_pipeline",
+        title="Lab VM deploy pipeline is implemented and live evidence remains explicit",
+        gate_mode="hard_gate",
+        task_refs=("TASK-0244",),
+        description="Lab deploy lane must be operator-gated, GCP VM only, and distinguish implementation from live execute-and-smoke evidence.",
+        evaluator=lambda repo_root: _check_lab_vm_deploy_pipeline_source(repo_root),
+    ),
+    CapexInvariant(
         invariant_id="capex.known_gap.approval_side_effect_coupling",
         title="Approval response domain side-effect coupling",
         gate_mode="known_gap",
@@ -405,6 +437,176 @@ def _check_platform_foundation_v0_source(repo_root: Path) -> AuditEvaluation:
     return AuditEvaluation(
         passed=not missing,
         details={"missing_markers": missing},
+    )
+
+
+def _check_release_image_manifest_source(repo_root: Path) -> AuditEvaluation:
+    dockerfile_text = (repo_root / "Dockerfile").read_text(encoding="utf-8")
+    build_script_text = (repo_root / "scripts/build_release_image.py").read_text(
+        encoding="utf-8"
+    )
+    schema_text = (
+        repo_root / "schemas/release/release_manifest.schema.json"
+    ).read_text(encoding="utf-8")
+    makefile_text = (repo_root / "Makefile").read_text(encoding="utf-8")
+    deploy_runbook = (
+        repo_root / "docs/ops/runbooks/rollback_and_deploy.md"
+    ).read_text(encoding="utf-8")
+    test_text = (repo_root / "tests/unit/test_release_image_build.py").read_text(
+        encoding="utf-8"
+    )
+    required_markers = {
+        "dockerfile_api_runtime": "onetruth-api" in dockerfile_text
+        and "ONETRUTH_API_BOUNDARY_PROFILE=shared_env" in dockerfile_text,
+        "dockerfile_no_secret": "OPENAI_API_KEY" not in dockerfile_text
+        and "PRODUCTION_DB_URL" not in dockerfile_text,
+        "script_exists": "def build_release_image(" in build_script_text,
+        "script_push_capable": '"push"' in build_script_text
+        and "registry_push" in build_script_text,
+        "script_no_deploy_manifest": '"performed": False' in build_script_text,
+        "schema_exists": '"release.image.build"' in schema_text
+        and '"digest_ref"' in schema_text,
+        "make_target": "release-image:" in makefile_text
+        and "scripts/build_release_image.py" in makefile_text,
+        "runbook_boundary": "release_source_bundle remains the only deploy input"
+        in deploy_runbook
+        and "not deployment approval" in deploy_runbook,
+        "tests_exist": "test_release_image_push_records_registry_digest" in test_text,
+    }
+    missing = [key for key, present in required_markers.items() if not present]
+    return AuditEvaluation(
+        passed=not missing,
+        details={"missing_markers": missing},
+    )
+
+
+def _check_backup_manifest_skeleton_source(repo_root: Path) -> AuditEvaluation:
+    backup_script_text = (
+        repo_root / "scripts/prepare_predeploy_backup.py"
+    ).read_text(encoding="utf-8")
+    schema_text = (repo_root / "schemas/ops/backup_manifest.schema.json").read_text(
+        encoding="utf-8"
+    )
+    makefile_text = (repo_root / "Makefile").read_text(encoding="utf-8")
+    backup_runbook = (
+        repo_root / "docs/ops/runbooks/backup_and_restore.md"
+    ).read_text(encoding="utf-8")
+    test_text = (
+        repo_root / "tests/unit/test_predeploy_backup_manifest.py"
+    ).read_text(encoding="utf-8")
+    required_markers = {
+        "script_exists": "def prepare_predeploy_backup_manifest(" in backup_script_text,
+        "script_validate_only": '"validate_only"' in backup_script_text
+        and '"state_copy_performed": False' in backup_script_text
+        and '"restore_proof": False' in backup_script_text,
+        "script_secret_refs_only": "_validate_secret_refs" in backup_script_text
+        and "not a secret value" in backup_script_text,
+        "schema_exists": '"predeploy.backup_manifest.prepare"' in schema_text
+        and '"state_copy_performed"' in schema_text,
+        "make_target": "predeploy-backup-manifest:" in makefile_text
+        and "scripts/prepare_predeploy_backup.py" in makefile_text,
+        "runbook_boundary": "validation-only predeploy backup skeleton" in backup_runbook
+        and "does not copy live state" in backup_runbook
+        and "not restore proof" in backup_runbook,
+        "tests_exist": "test_predeploy_backup_manifest_validates_tuple_without_copying_state"
+        in test_text,
+    }
+    missing = [key for key, present in required_markers.items() if not present]
+    return AuditEvaluation(
+        passed=not missing,
+        details={"missing_markers": missing},
+    )
+
+
+def _check_lab_auth_smoke_source(repo_root: Path) -> AuditEvaluation:
+    script_text = (repo_root / "scripts/run_lab_auth_smoke.py").read_text(
+        encoding="utf-8"
+    )
+    schema_text = (
+        repo_root / "schemas/ops/lab_auth_smoke_report.schema.json"
+    ).read_text(encoding="utf-8")
+    makefile_text = (repo_root / "Makefile").read_text(encoding="utf-8")
+    runbook_text = (
+        repo_root / "docs/ops/runbooks/lab_auth_and_vm_deploy.md"
+    ).read_text(encoding="utf-8")
+    test_text = (repo_root / "tests/unit/test_lab_auth_smoke.py").read_text(
+        encoding="utf-8"
+    )
+    required_markers = {
+        "script_exists": "def run_lab_auth_smoke(" in script_text,
+        "uses_existing_resolver": "build_shared_env_jwt_principal_resolver" in script_text,
+        "viewer_smoke": 'path="/api/v1/viewer"' in script_text,
+        "spoof_assertion": "spoofed_headers_ignored" in script_text,
+        "no_token_record": '"token_value_recorded": False' in script_text,
+        "schema_exists": '"lab.auth.smoke"' in schema_text
+        and '"token_value_recorded"' in schema_text,
+        "make_target": "lab-auth-smoke:" in makefile_text
+        and "scripts/run_lab_auth_smoke.py" in makefile_text,
+        "runbook_boundary": "existing `shared_env` RS256 JWT resolver" in runbook_text
+        and "does not add JWKS" in runbook_text
+        and "must not print or persist bearer token values" in runbook_text,
+        "tests_exist": "test_lab_auth_smoke_accepts_jwt" in test_text
+        and "test_lab_auth_smoke_reports_invalid_bearer_token" in test_text,
+    }
+    missing = [key for key, present in required_markers.items() if not present]
+    return AuditEvaluation(
+        passed=not missing,
+        details={"missing_markers": missing},
+    )
+
+
+def _check_lab_vm_deploy_pipeline_source(repo_root: Path) -> AuditEvaluation:
+    script_text = (repo_root / "scripts/deploy_lab_vm.py").read_text(
+        encoding="utf-8"
+    )
+    schema_text = (
+        repo_root / "schemas/ops/lab_vm_deploy_report.schema.json"
+    ).read_text(encoding="utf-8")
+    makefile_text = (repo_root / "Makefile").read_text(encoding="utf-8")
+    runbook_text = (
+        repo_root / "docs/ops/runbooks/lab_auth_and_vm_deploy.md"
+    ).read_text(encoding="utf-8")
+    test_text = (repo_root / "tests/unit/test_lab_vm_deploy.py").read_text(
+        encoding="utf-8"
+    )
+    required_markers = {
+        "script_exists": "def deploy_lab_vm(" in script_text
+        and "def plan_lab_vm_deploy(" in script_text,
+        "lab_only": 'choices=["lab"]' in script_text
+        and "supports --environment lab only" in script_text,
+        "operator_confirmations": "--confirm-lab-target" in script_text
+        and "--confirm-no-real-users" in script_text,
+        "gcp_vm_only": '"compute"' in script_text
+        and '"scp"' in script_text
+        and '"ssh"' in script_text
+        and "allowed_gcloud_compute_subcommands" in script_text,
+        "backup_and_smoke": "prepare_predeploy_backup.py" in script_text
+        and "/api/v1/ops/health" in script_text
+        and "/api/v1/ops/readiness" in script_text
+        and "/api/v1/viewer" in script_text,
+        "live_evidence_distinction": "live_deploy_evidence_recorded" in script_text
+        and "live_deploy_evidence_required_for_task_done" in script_text,
+        "schema_exists": '"lab.vm.deploy"' in schema_text
+        and '"live_deploy_evidence_recorded"' in schema_text,
+        "make_targets": "lab-vm-deploy-plan:" in makefile_text
+        and "lab-vm-deploy:" in makefile_text
+        and "scripts/deploy_lab_vm.py" in makefile_text,
+        "runbook_boundary": "lab-only VM lane" in runbook_text
+        and "actual operator-supplied lab VM execute-and-smoke evidence" in runbook_text
+        and "not CAPEX activation" in runbook_text,
+        "tests_exist": "test_lab_vm_deploy_execute_runs_gcloud_commands_in_order"
+        in test_text
+        and "test_lab_vm_deploy_rejects_non_lab_or_production_targets" in test_text,
+    }
+    missing = [key for key, present in required_markers.items() if not present]
+    return AuditEvaluation(
+        passed=not missing,
+        details={
+            "missing_markers": missing,
+            "pipeline_implemented": not missing,
+            "live_deploy_evidence_recorded": False,
+            "task_closeout_status": "BLOCKED_PENDING_LIVE_GCP_EVIDENCE",
+        },
     )
 
 

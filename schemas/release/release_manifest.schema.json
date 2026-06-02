@@ -1,0 +1,153 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kapflow.local/schemas/release/release_manifest.schema.json",
+  "title": "Release image manifest",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "manifest_version",
+    "command",
+    "created_at",
+    "git_commit",
+    "build_mode",
+    "deployment",
+    "release_source_bundle",
+    "dockerfile",
+    "image",
+    "manifest_path"
+  ],
+  "properties": {
+    "manifest_version": {
+      "const": 1
+    },
+    "command": {
+      "const": "release.image.build"
+    },
+    "created_at": {
+      "type": "string",
+      "minLength": 1
+    },
+    "git_commit": {
+      "type": "string",
+      "minLength": 7
+    },
+    "build_mode": {
+      "enum": ["local", "push"]
+    },
+    "deployment": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["performed", "commands"],
+      "properties": {
+        "performed": {
+          "const": false
+        },
+        "commands": {
+          "type": "array",
+          "maxItems": 0
+        }
+      }
+    },
+    "release_source_bundle": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "path",
+        "sha256",
+        "size_bytes",
+        "archive_root",
+        "bundle_kind",
+        "provenance_path"
+      ],
+      "properties": {
+        "path": {
+          "type": "string",
+          "minLength": 1
+        },
+        "sha256": {
+          "$ref": "#/$defs/sha256_hex"
+        },
+        "size_bytes": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "archive_root": {
+          "type": "string",
+          "minLength": 1
+        },
+        "bundle_kind": {
+          "const": "release_source_bundle"
+        },
+        "provenance_path": {
+          "const": "release_provenance.json"
+        }
+      }
+    },
+    "dockerfile": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "sha256"],
+      "properties": {
+        "path": {
+          "const": "Dockerfile"
+        },
+        "sha256": {
+          "$ref": "#/$defs/sha256_hex"
+        }
+      }
+    },
+    "image": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "ref",
+        "repository",
+        "tag",
+        "digest",
+        "digest_ref",
+        "digest_source",
+        "pushed"
+      ],
+      "properties": {
+        "ref": {
+          "type": "string",
+          "minLength": 1
+        },
+        "repository": {
+          "type": "string",
+          "minLength": 1
+        },
+        "tag": {
+          "type": ["string", "null"]
+        },
+        "digest": {
+          "$ref": "#/$defs/sha256_digest"
+        },
+        "digest_ref": {
+          "type": "string",
+          "pattern": "@sha256:[0-9a-f]{64}$"
+        },
+        "digest_source": {
+          "enum": ["local_image_id", "registry_push"]
+        },
+        "pushed": {
+          "type": "boolean"
+        }
+      }
+    },
+    "manifest_path": {
+      "type": "string",
+      "minLength": 1
+    }
+  },
+  "$defs": {
+    "sha256_hex": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "sha256_digest": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    }
+  }
+}

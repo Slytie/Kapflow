@@ -13,6 +13,13 @@ This runbook applies to the first-user production/lab topology in [docs/ops/prod
 4. Confirm no open authority-model migration or substrate change is being introduced without an ADR / sign-off.
 5. Confirm the shared environment will run with `ONETRUTH_API_BOUNDARY_PROFILE=shared_env`.
 
+## Release image evidence
+release_source_bundle remains the only deploy input until later release/deploy gates explicitly change this contract.
+`scripts/build_release_image.py` and `make release-image` may build an API-runtime image from that bundle and write `release_manifest.json`.
+When an operator supplies registry coordinates and opts into push, the API image is release evidence/build output by digest, not deployment approval and not a command to mutate production or lab state.
+
+The lab-only VM lane in [docs/ops/runbooks/lab_auth_and_vm_deploy.md](./lab_auth_and_vm_deploy.md) is a separate operator-gated procedure. It may use only `gcloud compute scp` and `gcloud compute ssh`, requires explicit no-real-users confirmation, and does not authorize production deployment or CAPEX activation.
+
 ## Deploy from release_source_bundle
 1. Extract the new `release_source_bundle` into a clean versioned directory.
 2. Create or refresh a Python 3.11 environment and install `python3.11 -m pip install -e ".[api]"`.

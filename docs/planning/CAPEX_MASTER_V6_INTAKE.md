@@ -73,8 +73,34 @@
 ## TASK-0240 closeout evidence
 - `docs/planning/CAPEX_PLATFORM_FOUNDATION_V0.md` declares PF0 for repo platform readiness only and records the `foundation/ip5` branch gate matrix.
 - PF0 keeps CAPEX runtime integration, raw corpus use, release/deploy work, project membership runtime, and SourceRef/source-occurrence runtime blocked until later gates close or receive explicit waivers.
-- CAPEX invariant audit now reports six hard gates green and four known gaps without turning known gaps permanently red.
+- CAPEX invariant audit now reports ten hard gates green and four known gaps without turning known gaps permanently red.
 - Closeout posture: `MP-PR007` is closed as a repo platform-readiness declaration; this is not CAPEX production activation, pilot readiness, or deployment approval.
+
+## TASK-0241 closeout evidence
+- Added an API-runtime `Dockerfile` for `onetruth-api` that defaults to `shared_env`, exposes `8080`, and carries no production secrets or deploy commands.
+- `scripts/build_release_image.py` builds from `release_source_bundle`, optionally pushes to an operator-supplied image ref, records the digest-addressed image reference, and writes `release_manifest.json`.
+- `schemas/release/release_manifest.schema.json` validates release image build evidence; focused release-image tests and release-readiness contract tests passed on 2026-06-02.
+- Closeout posture: `MP-PR008` is closed as release-readiness build evidence only; this is not CAPEX production activation, pilot readiness, or deployment approval.
+
+## TASK-0242 closeout evidence
+- `scripts/prepare_predeploy_backup.py` validates the environment class, local SQLite DB, artifact root, release manifest, and secret-reference tuple before writing `backup_manifest.json`.
+- The predeploy backup skeleton is `validate_only`; it records DB/artifact/release tuple evidence and secret/config references but does not copy live state, upload backups, restore data, or mutate runtime paths.
+- `schemas/ops/backup_manifest.schema.json` validates backup manifest evidence; focused backup-manifest tests and release-readiness contract tests passed on 2026-06-02.
+- Closeout posture: `MP-PR009` is closed as predeploy backup-manifest readiness only; restore proof and pilot readiness remain later CAPEX gates.
+
+## TASK-0243 closeout evidence
+- `scripts/run_lab_auth_smoke.py` runs a lab-only `/api/v1/viewer` smoke through the existing `shared_env` RS256 JWT resolver and sends conflicting browser identity headers.
+- The smoke asserts server-derived identity wins, `request_context_mode=server_derived`, and `actor_switching_allowed=false`.
+- `schemas/ops/lab_auth_smoke_report.schema.json` validates smoke evidence; focused auth-smoke tests and lab readiness contract tests passed on 2026-06-02.
+- Closeout posture: `MP-PR010` is closed as lab-auth prototype readiness only; this is not CAPEX production activation, pilot approval, JWKS expansion, or pilot-password fallback.
+
+## TASK-0244 blocked evidence
+- `scripts/deploy_lab_vm.py` implements a lab-only GCP VM deploy plan/execute lane. Dry-run planning is default; execution requires `--execute --confirm-lab-target --confirm-no-real-users`.
+- The lane validates release manifest/bundle coherence, lab SQLite/artifact-root arguments, and secret references, then permits only `gcloud compute scp` and `gcloud compute ssh`.
+- Remote execute shape runs the validation-only predeploy backup manifest, installs `.[api]`, builds frontend assets, restarts the lab service, and smokes health/readiness/viewer/artifact-root posture.
+- `schemas/ops/lab_vm_deploy_report.schema.json` validates deploy evidence; focused deploy-lane tests and lab readiness contract tests passed on 2026-06-02 with stubbed `gcloud`.
+- CAPEX invariant audit reports PR011 pipeline implementation separately from live evidence: `live_deploy_evidence_recorded=false`.
+- Blocker: no operator-supplied lab GCP project/zone/instance/remote paths/token env were available in this session, so no live lab VM execute-and-smoke run was performed. `MP-PR011` remains `BLOCKED` until that evidence exists.
 
 ## Current-code blocker mappings
 | Blocker | CAPEX task refs | Current repo surface |
@@ -86,6 +112,10 @@
 | Canonical generated-artifact helper | `TASK-0238` | `src/onetruth/application/handlers/_shared/artifact_effects.py` |
 | Shared run/input/edge helpers and logistics run resolver | `TASK-0239` | `src/onetruth/application/handlers/_shared/runtime_effects.py`, `src/onetruth/application/services/logistics_run_resolver.py` |
 | Platform Foundation v0 declaration and branch gate | `TASK-0240` | `docs/planning/CAPEX_PLATFORM_FOUNDATION_V0.md` |
+| Release image and manifest build evidence | `TASK-0241` | `scripts/build_release_image.py`, `schemas/release/release_manifest.schema.json`, `Dockerfile` |
+| Validate-only predeploy backup manifest skeleton | `TASK-0242` | `scripts/prepare_predeploy_backup.py`, `schemas/ops/backup_manifest.schema.json` |
+| Lab-only shared-env JWT viewer smoke | `TASK-0243` | `scripts/run_lab_auth_smoke.py`, `schemas/ops/lab_auth_smoke_report.schema.json` |
+| Lab VM deploy pipeline implemented; live evidence pending | `TASK-0244` | `scripts/deploy_lab_vm.py`, `schemas/ops/lab_vm_deploy_report.schema.json`, `docs/ops/runbooks/lab_auth_and_vm_deploy.md` |
 | CAPEX project membership runtime | `TASK-0261`..`TASK-0263`, `TASK-0385`, `TASK-0386`, `TASK-0563` | future CAPEX project scope runtime |
 | Source occurrence / SourceRef | `TASK-0268`, `TASK-0391`, `TASK-0407`, `TASK-0428`, `TASK-0564`, `TASK-0578` | future source occurrence and evidence resolver |
 

@@ -1,0 +1,146 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kapflow.local/schemas/ops/lab_auth_smoke_report.schema.json",
+  "title": "Lab auth smoke report",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "manifest_version",
+    "command",
+    "generated_at",
+    "status",
+    "status_code",
+    "token_source",
+    "token_value_recorded",
+    "public_key_value_recorded",
+    "conflicting_browser_identity_headers_sent"
+  ],
+  "properties": {
+    "manifest_version": {
+      "const": 1
+    },
+    "command": {
+      "const": "lab.auth.smoke"
+    },
+    "generated_at": {
+      "type": "string",
+      "minLength": 1
+    },
+    "status": {
+      "enum": ["passed", "failed"]
+    },
+    "status_code": {
+      "type": "integer",
+      "minimum": 100,
+      "maximum": 599
+    },
+    "token_source": {
+      "type": "string",
+      "minLength": 1
+    },
+    "token_value_recorded": {
+      "const": false
+    },
+    "public_key_value_recorded": {
+      "const": false
+    },
+    "conflicting_browser_identity_headers_sent": {
+      "const": true
+    },
+    "failure_code": {
+      "type": "string",
+      "minLength": 1
+    },
+    "failure_message": {
+      "type": "string",
+      "minLength": 1
+    },
+    "boundary_profile": {
+      "const": "shared_env"
+    },
+    "request_context_mode": {
+      "const": "server_derived"
+    },
+    "actor_switching_allowed": {
+      "const": false
+    },
+    "spoofed_headers_ignored": {
+      "type": "boolean"
+    },
+    "viewer_session": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "tenant_id",
+        "domain_id",
+        "actor_id",
+        "actor_type",
+        "actor_roles"
+      ],
+      "properties": {
+        "tenant_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "domain_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "actor_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "actor_type": {
+          "type": "string",
+          "minLength": 1
+        },
+        "actor_roles": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    },
+    "assertions": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "boolean"
+      }
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "status": {
+            "const": "passed"
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "boundary_profile",
+          "request_context_mode",
+          "actor_switching_allowed",
+          "spoofed_headers_ignored",
+          "viewer_session",
+          "assertions"
+        ]
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "status": {
+            "const": "failed"
+          }
+        }
+      },
+      "then": {
+        "required": ["failure_code", "failure_message"]
+      }
+    }
+  ]
+}

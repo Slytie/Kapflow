@@ -2,7 +2,7 @@
 id: TASK-0242
 epic: EPIC-138
 title: "Backup manifest schema + predeploy backup skeleton"
-status: TODO
+status: DONE
 owners: ["platform"]
 reviewers: ["architect", "qa"]
 depends_on: ["TASK-0241"]
@@ -60,3 +60,10 @@ Define backup tuple schema; add predeploy backup script skeleton; no restore pro
 
 ## Notes / decisions
 - Raw project corpora remain off-repo; use only sanitized fixtures, manifests, hashes, and aggregate evidence approved by the relevant fixture/governance task.
+
+## Closeout evidence
+- Added `scripts/prepare_predeploy_backup.py`, which validates the local SQLite DB, artifact root, release manifest, and secret-reference tuple and writes `backup_manifest.json` in `validate_only` mode.
+- Added `schemas/ops/backup_manifest.schema.json` plus focused backup-manifest unit and contract tests.
+- The skeleton records secret/config references only, rejects obvious secret values, and does not copy, archive, upload, restore, or mutate runtime state.
+- CAPEX invariant audit now includes a PR009 hard gate for validate-only backup manifest posture.
+- Closeout posture: `MP-PR009` is closed as predeploy backup-manifest readiness only; restore proof and pilot readiness remain later gates.
