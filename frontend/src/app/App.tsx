@@ -18,6 +18,7 @@ import { RunWorkspacePage } from "@/pages/RunWorkspacePage";
 import { RunsPage } from "@/pages/RunsPage";
 import { TimelinePage } from "@/pages/TimelinePage";
 import { LogisticsDemoPage } from "@/pages/LogisticsDemoPage";
+import { CapexEpicProgressPage } from "@/pages/CapexEpicProgressPage";
 import {
   LogisticsDriverPreferencesArtifactWorkpagePage,
   LogisticsDriverPreferencesWorkpagePage
@@ -54,6 +55,7 @@ export function App(): JSX.Element {
       <Router>
         <DrawerProvider>
           <Routes>
+            <Route path="/demo/capex/epic-progress" element={<CapexEpicProgressPage />} />
             <Route element={<AppShell />}>
               <Route path="/" element={<OperatorHomePage />} />
               <Route path="/demo/logistics" element={<LogisticsDemoPage />} />

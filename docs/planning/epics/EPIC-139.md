@@ -46,7 +46,9 @@ Context pack:
 - `TASK-0369` (`RF-001`) - Approval side-effect extraction
 - `TASK-0370` (`RF-002`) - Domain workpage descriptor registry
 - `TASK-0561` (`NU-CB-P0-001`) - Extract logistics side effects from approval.respond
-- `TASK-0576` (`V5-TASK-005`) - Fix approval.respond domain coupling
+
+## Historical/reconciled aliases
+- `TASK-0576` (`V5-TASK-005`) -> `TASK-0257`, `TASK-0561` - Fix approval.respond domain coupling
 
 ## Acceptance criteria
 - Every listed task preserves its v6 source row, acceptance gate, dependency notes, and raw-data boundary.

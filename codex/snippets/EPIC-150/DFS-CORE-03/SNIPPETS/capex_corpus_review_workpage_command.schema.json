@@ -1,0 +1,122 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "CAPEX Corpus Review Workpage Command",
+  "type": "object",
+  "required": [
+    "command_id",
+    "project_id",
+    "projection_snapshot_id",
+    "idempotency_key",
+    "command_type",
+    "selected_items",
+    "selection_assertions",
+    "reason"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "command_id": {
+      "type": "string"
+    },
+    "project_id": {
+      "type": "string"
+    },
+    "projection_snapshot_id": {
+      "type": "string"
+    },
+    "idempotency_key": {
+      "type": "string"
+    },
+    "command_type": {
+      "enum": [
+        "accept_proposal",
+        "correct_proposal",
+        "reject_proposal",
+        "defer_proposal",
+        "bulk_accept_low_risk",
+        "confirm_duplicate_relationship",
+        "reject_duplicate_relationship",
+        "create_review_task"
+      ]
+    },
+    "selected_items": {
+      "type": "object",
+      "required": [
+        "all",
+        "included",
+        "excluded"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "all": {
+          "type": "boolean"
+        },
+        "included": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "excluded": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "selection_assertions": {
+      "type": "object",
+      "required": [
+        "visible_row_count",
+        "filter_hash",
+        "ordering_hash",
+        "visible_columns_hash"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "visible_row_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "filter_hash": {
+          "type": "string"
+        },
+        "ordering_hash": {
+          "type": "string"
+        },
+        "visible_columns_hash": {
+          "type": "string"
+        }
+      }
+    },
+    "risk_policy": {
+      "type": "object",
+      "properties": {
+        "max_risk_class": {
+          "enum": [
+            "low",
+            "medium",
+            "high",
+            "blocked"
+          ]
+        },
+        "allow_warnings": {
+          "type": "boolean"
+        },
+        "allow_conflicts": {
+          "type": "boolean"
+        }
+      }
+    },
+    "target_versions": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "string"
+      }
+    },
+    "reason": {
+      "type": "string",
+      "minLength": 1
+    }
+  }
+}

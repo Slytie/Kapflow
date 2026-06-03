@@ -3,6 +3,7 @@ id: TASK-XXXX
 epic: EPIC-XXX
 title: "Task title"
 status: TODO
+completed_at: ""
 owners: ["platform"]
 reviewers: ["qa"]
 depends_on: []
@@ -42,6 +43,9 @@ Commands, checks, or review steps that prove the task is complete.
 
 ## Acceptance criteria
 Definition of Done.
+
+## Completion evidence
+When changing `status` to `DONE`, set `completed_at` in ISO 8601 timezone form, for example `2026-06-03T14:25:00Z`, and record concise evidence here.
 
 ## Notes / decisions
 Record useful context for future runs.

@@ -1,0 +1,36 @@
+source_root_policy:
+  version: 1
+  source_root_id: "src_..."
+  selected_root_local_alias: "pm_selected_root_1"
+
+  allow:
+    - operation: stat
+      scope: selected_root_recursive
+    - operation: lstat
+      scope: selected_root_recursive
+    - operation: read
+      scope: selected_root_recursive
+    - operation: watch
+      scope: selected_root_recursive
+
+  deny:
+    - operation: write
+      scope: selected_root_recursive
+    - operation: remove
+      scope: selected_root_recursive
+    - operation: rename
+      scope: selected_root_recursive
+    - operation: truncate
+      scope: selected_root_recursive
+    - operation: shell_execute
+      scope: selected_root_recursive
+    - operation: upload_raw
+      scope: selected_root_recursive
+    - operation: reveal_in_file_explorer
+      scope: selected_root_recursive
+
+  externalization:
+    raw_path_to_frontend: false
+    raw_path_to_server: false
+    raw_filename_to_server_default: false
+    raw_content_to_ai_before_review: false

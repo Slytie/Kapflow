@@ -39,8 +39,10 @@ Context pack:
 - `TASK-0289` (`WFLOW-007`) - Project State Snapshot workflow
 - `TASK-0566` (`NU-CB-P0-006`) - Implement workflow handoff manifest contract
 - `TASK-0571` (`NU-CB-P1-011`) - Add procurement/task escalation workflow proposal to workflow catalog
-- `TASK-0574` (`V5-TASK-003`) - Define feasibility-set workflow semantics
-- `TASK-0581` (`V5-TASK-010`) - Define workflow handoff manifest
+
+## Historical/reconciled aliases
+- `TASK-0574` (`V5-TASK-003`) -> `TASK-0565` - Define feasibility-set workflow semantics
+- `TASK-0581` (`V5-TASK-010`) -> `TASK-0566` - Define workflow handoff manifest
 
 ## Acceptance criteria
 - Every listed task preserves its v6 source row, acceptance gate, dependency notes, and raw-data boundary.

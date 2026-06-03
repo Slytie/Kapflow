@@ -1,0 +1,93 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://capex.local/schemas/source_occurrence.schema.json",
+  "title": "SourceOccurrence",
+  "type": "object",
+  "required": [
+    "id",
+    "project_id",
+    "source_root_id",
+    "observed_at",
+    "sync_event_id",
+    "relative_path_hash",
+    "filename_display",
+    "filename_policy",
+    "extension_hint",
+    "content_digest",
+    "local_status",
+    "quarantine_state",
+    "review_state"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "id": {
+      "type": "string"
+    },
+    "project_id": {
+      "type": "string"
+    },
+    "source_root_id": {
+      "type": "string"
+    },
+    "observed_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "sync_event_id": {
+      "type": "string"
+    },
+    "relative_path_hash": {
+      "type": "string"
+    },
+    "parent_path_hash": {
+      "type": "string"
+    },
+    "filename_display": {
+      "type": "string"
+    },
+    "filename_policy": {
+      "type": "string"
+    },
+    "extension_hint": {
+      "type": "string"
+    },
+    "content_digest": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "duplicate_cluster_id": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "local_status": {
+      "type": "string",
+      "enum": [
+        "present",
+        "missing",
+        "moved_or_renamed",
+        "unknown"
+      ]
+    },
+    "quarantine_state": {
+      "type": "string",
+      "enum": [
+        "pending",
+        "cleared",
+        "blocked",
+        "requires_security_review"
+      ]
+    },
+    "review_state": {
+      "type": "string",
+      "enum": [
+        "unreviewed",
+        "pm_reviewed_for_ai",
+        "baseline_candidate",
+        "reviewed_baseline",
+        "rejected"
+      ]
+    }
+  }
+}

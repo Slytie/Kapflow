@@ -1,0 +1,119 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "CAPEX Proposed Corpus Structure Item",
+  "type": "object",
+  "required": [
+    "proposal_id",
+    "proposal_run_id",
+    "project_id",
+    "proposal_type",
+    "proposed_value",
+    "confidence",
+    "risk_class",
+    "model_version",
+    "input_snapshot_id",
+    "folder_snapshot_id",
+    "proposal_status",
+    "raw_data_access_policy"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "proposal_id": {
+      "type": "string"
+    },
+    "proposal_run_id": {
+      "type": "string"
+    },
+    "project_id": {
+      "type": "string"
+    },
+    "source_occurrence_id": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "occurrence_group_id": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "proposal_type": {
+      "enum": [
+        "source_role",
+        "packet_membership",
+        "duplicate_group",
+        "warning",
+        "review_task"
+      ]
+    },
+    "proposed_value": {
+      "type": "object"
+    },
+    "confidence": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1
+    },
+    "risk_class": {
+      "enum": [
+        "low",
+        "medium",
+        "high",
+        "blocked"
+      ]
+    },
+    "warning_count": {
+      "type": "integer",
+      "minimum": 0,
+      "default": 0
+    },
+    "conflict_count": {
+      "type": "integer",
+      "minimum": 0,
+      "default": 0
+    },
+    "model_name": {
+      "type": "string"
+    },
+    "model_version": {
+      "type": "string"
+    },
+    "input_snapshot_id": {
+      "type": "string"
+    },
+    "folder_snapshot_id": {
+      "type": "string"
+    },
+    "proposal_status": {
+      "enum": [
+        "draft",
+        "validating",
+        "ready_for_pm_review",
+        "partial_failed",
+        "failed",
+        "superseded",
+        "withdrawn",
+        "rejected_by_system"
+      ]
+    },
+    "raw_data_access_policy": {
+      "enum": [
+        "metadata_only",
+        "excerpt_allowed",
+        "full_content_allowed"
+      ]
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "superseded_by_proposal_id": {
+      "type": [
+        "string",
+        "null"
+      ]
+    }
+  }
+}

@@ -1055,3 +1055,8 @@ Record any decisions made since the last session so a fresh Codex run can rehydr
 - ADR decision: `docs/adr/ADR-005-approval-response-domain-hooks.md` records the hook boundary, generic-handler forbidden imports, and transactional rollback posture.
 - Audit decision: CAPEX invariant audit now hard-gates approval-response hook extraction instead of reporting approval side-effect coupling as a known gap.
 - Activation decision: `TASK-0257` closes approval domain-boundary cleanup only; it does not authorize CAPEX production activation, deployment approval, raw corpus use, or new CAPEX runtime behavior.
+
+## 2026-06-03 (CAPEX v5 carry-forward reconciliation)
+- Source-lineage decision: `V5-TASK-*` rows embedded in the CAPEX v6 planning package are preserved as historical aliases only; they are not active backlog under the v6 baseline.
+- Backlog decision: `TASK-0572` through `TASK-0581` are closed as reconciled v5 carry-forward aliases, with canonical remaining work owned by the v6/native task refs recorded in `canonical_task_refs`.
+- Gate-map decision: `V5-GATE-*`, `V5-RISK-*`, and `V5-OD-*` rows remain in the gate/risk/decision map as `historical_reference` provenance, not independent activation gates.

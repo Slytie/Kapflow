@@ -7,6 +7,11 @@ Purpose:
 ## Imported source rows
 ART-001, ART-003, ART-004, ART-005, ART-006, RF-007, RF-008, ARCH-W4-S01, ... (32 tasks total)
 
+## Historical/reconciled aliases
+- `V5-TASK-001` is a reconciled v5 historical alias for `TASK-0447`, `TASK-0565`, `TASK-0305`.
+- `V5-TASK-002` is a reconciled v5 historical alias for `TASK-0392`, `TASK-0373`.
+- `V5-TASK-004` is a reconciled v5 historical alias for `TASK-0305`, `TASK-0565`.
+
 ## Load first
 - `docs/planning/epics/EPIC-142.md`
 - `docs/planning/CAPEX_MASTER_V6_INTAKE.md`

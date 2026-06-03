@@ -7,6 +7,10 @@ Purpose:
 ## Imported source rows
 WFLOW-001, WFLOW-002, WFLOW-003, WFLOW-004, WFLOW-005, WFLOW-006, WFLOW-007, NU-CB-P0-006, ... (11 tasks total)
 
+## Historical/reconciled aliases
+- `V5-TASK-003` is a reconciled v5 historical alias for `TASK-0565`.
+- `V5-TASK-010` is a reconciled v5 historical alias for `TASK-0566`.
+
 ## Load first
 - `docs/planning/epics/EPIC-143.md`
 - `docs/planning/CAPEX_MASTER_V6_INTAKE.md`

@@ -38,7 +38,9 @@ Context pack:
 - `TASK-0239` (`MP-PR006`) - Shared run/input/edge effect helpers + LogisticsRunResolver
 - `TASK-0240` (`MP-PR007`) - Platform Foundation v0 declaration and branch gate
 - `TASK-0562` (`NU-CB-P0-002`) - Fix artifact download auth-before-read
-- `TASK-0577` (`V5-TASK-006`) - Fix artifact auth-before-read
+
+## Historical/reconciled aliases
+- `TASK-0577` (`V5-TASK-006`) -> `TASK-0235`, `TASK-0562` - Fix artifact auth-before-read
 
 ## Acceptance criteria
 - Every listed task preserves its v6 source row, acceptance gate, dependency notes, and raw-data boundary.

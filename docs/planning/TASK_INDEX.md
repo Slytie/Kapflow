@@ -532,16 +532,16 @@ Note: `TASK-0087` / `TASK-0088` / `TASK-0089` were formerly duplicated as `TASK-
 | TASK-0569 | EPIC-151 | TODO | medium | Add interface-burden conservation policy and tests |
 | TASK-0570 | EPIC-142 | TODO | medium | Add non-commutative artifact sequence tests |
 | TASK-0571 | EPIC-143 | TODO | medium | Add procurement/task escalation workflow proposal to workflow catalog |
-| TASK-0572 | EPIC-142 | TODO | high | Patch master architecture: reality vs representation |
-| TASK-0573 | EPIC-142 | TODO | high | Add canonical relation_kind vocabulary |
-| TASK-0574 | EPIC-143 | TODO | high | Define feasibility-set workflow semantics |
-| TASK-0575 | EPIC-142 | TODO | high | Define issue/hypothesis graph guardrails |
-| TASK-0576 | EPIC-139 | TODO | high | Fix approval.respond domain coupling |
-| TASK-0577 | EPIC-137 | TODO | high | Fix artifact auth-before-read |
-| TASK-0578 | EPIC-141 | TODO | high | Add SourceRef resolution contract/tests |
-| TASK-0579 | EPIC-136 | TODO | high | Add Product Goal and metric stack |
-| TASK-0580 | EPIC-136 | TODO | high | Add vertical-slice ladder and dependency register |
-| TASK-0581 | EPIC-143 | TODO | medium | Define workflow handoff manifest |
+| TASK-0572 | EPIC-142 | DONE | high | Patch master architecture: reality vs representation |
+| TASK-0573 | EPIC-142 | DONE | high | Add canonical relation_kind vocabulary |
+| TASK-0574 | EPIC-143 | DONE | high | Define feasibility-set workflow semantics |
+| TASK-0575 | EPIC-142 | DONE | high | Define issue/hypothesis graph guardrails |
+| TASK-0576 | EPIC-139 | DONE | high | Fix approval.respond domain coupling |
+| TASK-0577 | EPIC-137 | DONE | high | Fix artifact auth-before-read |
+| TASK-0578 | EPIC-141 | DONE | high | Add SourceRef resolution contract/tests |
+| TASK-0579 | EPIC-136 | DONE | high | Add Product Goal and metric stack |
+| TASK-0580 | EPIC-136 | DONE | high | Add vertical-slice ladder and dependency register |
+| TASK-0581 | EPIC-143 | DONE | medium | Define workflow handoff manifest |
 | TASK-0582 | EPIC-136 | TODO | high | Define CAPEX Product Goal and metric stack |
 | TASK-0583 | EPIC-136 | TODO | high | Create CAPEX vertical-slice ladder |
 | TASK-0584 | EPIC-136 | TODO | high | Add dependency register and risk-based milestone overlay |
@@ -567,3 +567,39 @@ Note: `TASK-0087` / `TASK-0088` / `TASK-0089` were formerly duplicated as `TASK-
 | TASK-0604 | EPIC-152 | TODO | high | Verify release bundle, migration lanes, activation gates, and rollback/compensation evidence |
 | TASK-0605 | EPIC-152 | TODO | high | Verify semantic MR, CODEOWNERS, review-tier, and CI gates are active |
 | TASK-0606 | EPIC-152 | TODO | high | Produce production preflight go/no-go memorandum |
+| TASK-0607 | EPIC-150 | TODO | high | Freeze EPIC-150 stage model and MVP/non-MVP boundary |
+| TASK-0608 | EPIC-150 | TODO | high | Define SourceRootBinding, FolderTreeSnapshot, SyncRun, and source-root state model |
+| TASK-0609 | EPIC-150 | TODO | medium | Specify browser folder / ZIP import MVP protocol |
+| TASK-0610 | EPIC-150 | TODO | high | Specify manual resync and snapshot/delta reconciliation |
+| TASK-0611 | EPIC-150 | TODO | high | Define watcher-as-hint semantics and deferred desktop-agent contract |
+| TASK-0612 | EPIC-150 | TODO | high | Define local deletion and missing-source evidence semantics |
+| TASK-0613 | EPIC-150 | TODO | high | Define local path redaction and privacy policy |
+| TASK-0614 | EPIC-150 | TODO | high | Bind BlobRef and SourceOccurrence separation to desktop roots |
+| TASK-0615 | EPIC-150 | TODO | high | Define manifest-first auth-before-blob-upload flow |
+| TASK-0616 | EPIC-150 | TODO | high | Define source-root permissions, consent, and re-selection semantics |
+| TASK-0617 | EPIC-150 | TODO | high | Define ProposedCorpusStructure AI draft contract |
+| TASK-0618 | EPIC-150 | TODO | high | Define AI proposal provenance, confidence, and SourceRef requirements |
+| TASK-0619 | EPIC-150 | TODO | high | Specify Corpus Structure Review Workpage |
+| TASK-0620 | EPIC-150 | TODO | high | Specify corpus structure review task and blocking semantics |
+| TASK-0621 | EPIC-150 | TODO | medium | Define constrained bulk-accept rules for low-risk corpus proposals |
+| TASK-0622 | EPIC-150 | TODO | high | Define sensitive, licensed, personal, unsupported, and quarantine triage |
+| TASK-0623 | EPIC-150 | TODO | high | Define sync conflict review and stale/reopen propagation |
+| TASK-0624 | EPIC-150 | TODO | high | Specify projection freshness and stale-command guards for sync review |
+| TASK-0625 | EPIC-150 | TODO | high | Add duplicate digest / multiple occurrence tests |
+| TASK-0626 | EPIC-150 | TODO | high | Add AI proposal cannot create reviewed baseline tests |
+| TASK-0627 | EPIC-150 | TODO | high | Add local deletion does not delete evidence tests |
+| TASK-0628 | EPIC-150 | TODO | high | Add path redaction and leak-sentinel tests |
+| TASK-0629 | EPIC-150 | TODO | high | Add watcher failure and observation completeness tests |
+| TASK-0630 | EPIC-150 | TODO | high | Add modified/moved/renamed conflict tests |
+| TASK-0631 | EPIC-150 | TODO | high | Add content-safe logging and telemetry policy hooks |
+| TASK-0632 | EPIC-150 | TODO | high | Add leak-scan surfaces for exports, screenshots, generated packs, and CI artifacts |
+| TASK-0633 | EPIC-150 | TODO | medium | Run desktop-agent feasibility spike and activation-gate design |
+| TASK-0634 | EPIC-150 | TODO | high | Define desktop-agent signing, update, support, permission, and endpoint-security gates |
+| TASK-0635 | EPIC-150 | TODO | medium | Evaluate cloud/server connector path as alternative to desktop agent |
+| TASK-0636 | EPIC-150 | TODO | high | Add K12/K3/blind validation coverage for desktop source-root behavior |
+| TASK-0637 | EPIC-150 | TODO | high | Add CODEOWNERS / specialist review gates for desktop source-root code |
+| TASK-0638 | EPIC-150 | TODO | medium | Curate and annotate desktop-sync snippet usage for Codex |
+| TASK-0639 | EPIC-150 | TODO | medium | Define performance and scale smoke tests for source-root snapshot/resync |
+| TASK-0640 | EPIC-150 | TODO | high | Add overkill guards: no bidirectional sync, no writeback, no full DMS/sync-platform adoption |
+| TASK-0641 | EPIC-150 | TODO | medium | Refine PM UX for Source Roots, Sync Monitor, and Review Queue |
+| TASK-0642 | EPIC-150 | TODO | high | Define EPIC-150 to EPIC-141 handoff for SourceRef resolution |

@@ -32,6 +32,42 @@ INITIAL_DONE_SOURCE_TASKS = {"MP-PR000", "MP-PR001"}
 CAPEX_TASK_ROW = re.compile(r"^\| TASK-0(2[3-9]\d|[3-5]\d\d|60[0-6]) \| EPIC-1(3[6-9]|4\d|5[0-2]) \| ")
 CAPEX_EPIC_ROW = re.compile(r"^\| EPIC-1(3[6-9]|4\d|5[0-2]) \| ")
 
+V5_CARRY_FORWARD_RECONCILIATION: dict[str, tuple[str, ...]] = {
+    "V5-TASK-001": ("TASK-0447", "TASK-0565", "TASK-0305"),
+    "V5-TASK-002": ("TASK-0392", "TASK-0373"),
+    "V5-TASK-003": ("TASK-0565",),
+    "V5-TASK-004": ("TASK-0305", "TASK-0565"),
+    "V5-TASK-005": ("TASK-0257", "TASK-0561"),
+    "V5-TASK-006": ("TASK-0235", "TASK-0562"),
+    "V5-TASK-007": ("TASK-0564", "TASK-0428"),
+    "V5-TASK-008": ("TASK-0582",),
+    "V5-TASK-009": ("TASK-0583", "TASK-0584"),
+    "V5-TASK-010": ("TASK-0566",),
+}
+
+V5_GATE_TO_TASK: dict[str, str] = {
+    "V5-GATE-001": "V5-TASK-005",
+    "V5-GATE-002": "V5-TASK-006",
+    "V5-GATE-003": "V5-TASK-001",
+    "V5-GATE-004": "V5-TASK-002",
+    "V5-GATE-005": "V5-TASK-003",
+    "V5-GATE-006": "V5-TASK-004",
+    "V5-GATE-007": "V5-TASK-007",
+    "V5-GATE-008": "V5-TASK-008",
+    "V5-GATE-009": "V5-TASK-009",
+    "V5-GATE-010": "V5-TASK-010",
+}
+
+V5_RISK_RECONCILIATION: dict[str, tuple[str, ...]] = {
+    "V5-RISK-001": ("TASK-0447", "TASK-0565", "TASK-0305"),
+    "V5-RISK-002": ("TASK-0257", "TASK-0561"),
+    "V5-RISK-003": ("TASK-0235", "TASK-0562"),
+    "V5-RISK-004": ("TASK-0565",),
+    "V5-RISK-005": ("TASK-0305", "TASK-0565"),
+    "V5-RISK-006": ("TASK-0566",),
+    "V5-RISK-007": ("TASK-0582", "TASK-0583", "TASK-0584"),
+}
+
 ASCII_TRANSLATION = str.maketrans(
     {
         0x2013: "-",
@@ -419,7 +455,54 @@ def build_task_records(rows: list[dict[str, str]]) -> list[dict[str, object]]:
 
 
 def task_status(source_id: str) -> str:
-    return "DONE" if source_id in INITIAL_DONE_SOURCE_TASKS else "TODO"
+    if (
+        source_id in INITIAL_DONE_SOURCE_TASKS
+        or source_id in V5_CARRY_FORWARD_RECONCILIATION
+    ):
+        return "DONE"
+    return "TODO"
+
+
+def source_lineage(source_id: str) -> str:
+    if source_id in V5_CARRY_FORWARD_RECONCILIATION:
+        return "v5_carried_forward"
+    return "capex_v6"
+
+
+def active_disposition(source_id: str) -> str:
+    if source_id in V5_CARRY_FORWARD_RECONCILIATION:
+        return "historical_alias"
+    return "active_task"
+
+
+def canonical_task_refs(source_id: str) -> tuple[str, ...]:
+    return V5_CARRY_FORWARD_RECONCILIATION.get(source_id, ())
+
+
+def source_metadata_frontmatter(source_id: str) -> str:
+    refs = canonical_task_refs(source_id)
+    if not refs:
+        return ""
+    return (
+        f"source_lineage: {source_lineage(source_id)}\n"
+        f"active_disposition: {active_disposition(source_id)}\n"
+        f"canonical_task_refs: {json.dumps(list(refs))}\n"
+    )
+
+
+def record_metadata(source_id: str) -> dict[str, str]:
+    canonical_refs: tuple[str, ...] = ()
+    if source_id in V5_GATE_TO_TASK:
+        canonical_refs = canonical_task_refs(V5_GATE_TO_TASK[source_id])
+    elif source_id in V5_RISK_RECONCILIATION:
+        canonical_refs = V5_RISK_RECONCILIATION[source_id]
+
+    is_v5_reference = source_id.startswith("V5-")
+    return {
+        "source_lineage": "v5_carried_forward" if is_v5_reference else "capex_v6",
+        "active_disposition": "historical_reference" if is_v5_reference else "reference",
+        "canonical_task_refs": ";".join(canonical_refs),
+    }
 
 
 def write_text(path: Path, text: str) -> None:
@@ -447,8 +530,10 @@ def task_body(record: dict[str, object]) -> str:
     assert isinstance(row, dict)
     task_id = str(record["repo_task_id"])
     epic_id = str(record["epic_id"])
-    status = task_status(row["task_id"])
+    source_task_id = row["task_id"]
+    status = task_status(source_task_id)
     context_pack = f"codex/context/{epic_id}.md"
+    source_metadata = source_metadata_frontmatter(source_task_id)
     dependency_note = ""
     if record["unresolved_depends_on"]:
         dependency_note = f"- Source-only dependency notes: `{record['unresolved_depends_on']}`\n"
@@ -467,12 +552,20 @@ def task_body(record: dict[str, object]) -> str:
 - Cloud Build PR validation skeleton was added as a no-secret, no-deploy validation lane.
 - Tracked `node_modules` residue was removed from repo truth before this task was closed.
 """
+    elif source_task_id in V5_CARRY_FORWARD_RECONCILIATION:
+        refs = ", ".join(f"`{ref}`" for ref in canonical_task_refs(source_task_id))
+        closeout = f"""
+## Reconciliation closeout evidence
+- This source row is carried forward from v5 inside the CAPEX v6 package and is closed as a historical alias, not as independent active backlog.
+- Canonical active work remains on {refs}; this closeout does not mark those target tasks complete unless their own task files record completion.
+- CAPEX v6 remains the active planning baseline; v5 and earlier packages remain superseded history.
+"""
     return f"""---
 id: {task_id}
 epic: {epic_id}
 title: {yaml_quote(row["title"])}
 status: {status}
-owners: {json.dumps(record["owners"])}
+{source_metadata}owners: {json.dumps(record["owners"])}
 reviewers: {json.dumps(record["reviewers"])}
 depends_on: {json.dumps(record["depends_on"])}
 risk: {record["risk"]}
@@ -551,6 +644,9 @@ def conversion_rows(records: list[dict[str, object]]) -> list[dict[str, str]]:
                 "unresolved_dependency_notes": str(record["unresolved_depends_on"]),
                 "acceptance_gate": row["acceptance_gate"],
                 "source_title": row["title"],
+                "source_lineage": source_lineage(row["task_id"]),
+                "active_disposition": active_disposition(row["task_id"]),
+                "canonical_task_refs": ";".join(canonical_task_refs(row["task_id"])),
             }
         )
     return rows
@@ -584,6 +680,7 @@ def gate_risk_decision_rows(
                 "status_or_priority": gate.get("priority", ""),
                 "summary": gate.get("pass_condition", ""),
                 "evidence_or_owner": gate.get("required_evidence", ""),
+                **record_metadata(gate.get("gate_id", "")),
             }
         )
     for risk in risks:
@@ -598,6 +695,7 @@ def gate_risk_decision_rows(
                 "status_or_priority": risk.get("severity", risk.get("priority", "")),
                 "summary": risk.get("risk_statement", risk.get("description", "")),
                 "evidence_or_owner": risk.get("mitigation", risk.get("owner", "")),
+                **record_metadata(risk.get("risk_id", "")),
             }
         )
     for decision in decisions:
@@ -612,6 +710,7 @@ def gate_risk_decision_rows(
                 "status_or_priority": decision.get("status", decision.get("priority", "")),
                 "summary": decision.get("question", decision.get("summary", "")),
                 "evidence_or_owner": decision.get("owner", decision.get("needed_by", "")),
+                **record_metadata(decision.get("decision_id", "")),
             }
         )
     return rows
@@ -652,6 +751,12 @@ def intake_doc(
 | MASTER_Risk_Register.csv | {len(risk_rows)} | reference map only |
 | MASTER_Open_Decisions_Register.csv | {len(decision_rows)} | reference map only |
 
+## v5 carry-forward reconciliation
+- CAPEX v6 is the active planning baseline; v5 and earlier source packages remain superseded history.
+- `V5-TASK-*` rows embedded in the v6 task table are preserved as source-provenance rows only, not active backlog.
+- Reconciled v5 rows are marked `DONE` with `source_lineage=v5_carried_forward`, `active_disposition=historical_alias`, and `canonical_task_refs` pointing at the v6/native task refs that own the remaining work.
+- `V5-GATE-*`, `V5-RISK-*`, and `V5-OD-*` entries in the gate/risk/decision map are marked `historical_reference`.
+
 ## Raw-data boundary
 - Raw K12, K3, and blind-validation corpora are not committed to the repo.
 - Approved repo records are ZIP basenames, hashes, aggregate counts, fixture-role labels, quarantine policy, and derived planning tasks.
@@ -675,11 +780,11 @@ def intake_doc(
 ## Current-code blocker mappings
 | Blocker | CAPEX task refs | Current repo surface |
 |---|---|---|
-| Approval response domain coupling | `TASK-0257`, `TASK-0561`, `TASK-0576` | `src/onetruth/application/handlers/approvals.py` |
-| Artifact auth-before-read and storage confinement | `TASK-0235`, `TASK-0562`, `TASK-0577` | `src/onetruth/api/routes/artifacts.py`, `src/onetruth/application/handlers/artifacts.py`, `src/onetruth/infrastructure/artifacts/storage.py` |
+| Approval response domain coupling | `TASK-0257`, `TASK-0561` | `src/onetruth/application/handlers/approvals.py` |
+| Artifact auth-before-read and storage confinement | `TASK-0235`, `TASK-0562` | `src/onetruth/api/routes/artifacts.py`, `src/onetruth/application/handlers/artifacts.py`, `src/onetruth/infrastructure/artifacts/storage.py` |
 | Transaction composition safety | `TASK-0236` | `src/onetruth/application/handlers/schedule_control.py`, `src/onetruth/application/handlers/logistics_handoff.py` |
 | CAPEX project membership runtime | `TASK-0261`..`TASK-0263`, `TASK-0385`, `TASK-0386`, `TASK-0563` | future CAPEX project scope runtime |
-| Source occurrence / SourceRef | `TASK-0268`, `TASK-0391`, `TASK-0407`, `TASK-0428`, `TASK-0564`, `TASK-0578` | future source occurrence and evidence resolver |
+| Source occurrence / SourceRef | `TASK-0268`, `TASK-0391`, `TASK-0407`, `TASK-0428`, `TASK-0564` | future source occurrence and evidence resolver |
 
 ## Verification commands
 - `python3 scripts/import_capex_v6_plan.py check --master-zip <CAPEX_v6_master_zip>`
@@ -690,9 +795,23 @@ def intake_doc(
 
 
 def epic_doc(epic: EpicDefinition, records: list[dict[str, object]]) -> str:
+    active_records = [
+        record
+        for record in records
+        if str(record["source"]["task_id"]) not in V5_CARRY_FORWARD_RECONCILIATION  # type: ignore[index]
+    ]
+    historical_records = [
+        record
+        for record in records
+        if str(record["source"]["task_id"]) in V5_CARRY_FORWARD_RECONCILIATION  # type: ignore[index]
+    ]
     task_lines = [
         f"- `{record['repo_task_id']}` (`{record['source']['task_id']}`) - {record['source']['title']}"  # type: ignore[index]
-        for record in records
+        for record in active_records
+    ]
+    historical_lines = [
+        f"- `{record['repo_task_id']}` (`{record['source']['task_id']}`) -> {', '.join(canonical_task_refs(str(record['source']['task_id'])))} - {record['source']['title']}"  # type: ignore[index]
+        for record in historical_records
     ]
     families = Counter(str(record["source"]["task_id"]).split("-")[0] for record in records)  # type: ignore[index]
     family_text = ", ".join(f"{key}:{value}" for key, value in sorted(families.items()))
@@ -730,6 +849,9 @@ Context pack:
 ## Task stack
 {chr(10).join(task_lines)}
 
+## Historical/reconciled aliases
+{chr(10).join(historical_lines) if historical_lines else "- None."}
+
 ## Acceptance criteria
 - Every listed task preserves its v6 source row, acceptance gate, dependency notes, and raw-data boundary.
 - Implementation tasks update authoritative repo source before generated derivatives.
@@ -742,6 +864,11 @@ def context_doc(epic: EpicDefinition, records: list[dict[str, object]]) -> str:
     source_ranges = ", ".join(source_ids[:8])
     if len(source_ids) > 8:
         source_ranges += f", ... ({len(source_ids)} tasks total)"
+    historical_rows = [
+        f"- `{record['source']['task_id']}` is a reconciled v5 historical alias for {', '.join(canonical_task_refs(str(record['source']['task_id'])))}."  # type: ignore[index]
+        for record in records
+        if str(record["source"]["task_id"]) in V5_CARRY_FORWARD_RECONCILIATION  # type: ignore[index]
+    ]
     return f"""# {epic.epic_id} Context Pack - {epic.title}
 
 Purpose:
@@ -750,6 +877,9 @@ Purpose:
 
 ## Imported source rows
 {source_ranges or "No source rows assigned."}
+
+## Historical/reconciled aliases
+{chr(10).join(historical_rows) if historical_rows else "- None."}
 
 ## Load first
 - `docs/planning/epics/{epic.epic_id}.md`
@@ -906,10 +1036,21 @@ def check(args: argparse.Namespace) -> int:
     for row in rows:
         task_id = row.get("repo_task_id", "")
         epic_id = row.get("epic_id", "")
+        source_id = row.get("source_task_id", "")
         status = row.get("status", "")
         if status not in {"TODO", "DONE", "BLOCKED"}:
             errors.append(f"conversion map has invalid status for {task_id}: {status}")
             continue
+        if source_id in V5_CARRY_FORWARD_RECONCILIATION:
+            expected_refs = ";".join(canonical_task_refs(source_id))
+            if status != "DONE":
+                errors.append(f"{source_id} must be DONE as a reconciled historical alias")
+            if row.get("source_lineage") != "v5_carried_forward":
+                errors.append(f"{source_id} missing v5_carried_forward lineage")
+            if row.get("active_disposition") != "historical_alias":
+                errors.append(f"{source_id} missing historical_alias disposition")
+            if row.get("canonical_task_refs") != expected_refs:
+                errors.append(f"{source_id} canonical task refs mismatch")
         matches = list((ROOT / "codex/tasks").glob(f"{task_id}-*.md"))
         if len(matches) != 1:
             errors.append(f"expected one task file for {task_id}, found {len(matches)}")
@@ -921,6 +1062,11 @@ def check(args: argparse.Namespace) -> int:
             errors.append(f"task file {matches[0]} missing epic front matter")
         if frontmatter.get("status") != status:
             errors.append(f"task file {matches[0]} status does not match conversion map")
+        if source_id in V5_CARRY_FORWARD_RECONCILIATION:
+            if frontmatter.get("source_lineage") != "v5_carried_forward":
+                errors.append(f"task file {matches[0]} missing v5 lineage")
+            if frontmatter.get("active_disposition") != "historical_alias":
+                errors.append(f"task file {matches[0]} missing historical alias disposition")
         if f"| {task_id} | {epic_id} | {status} |" not in task_index:
             errors.append(f"TASK_INDEX.md status row missing for {task_id}")
 
@@ -937,6 +1083,15 @@ def check(args: argparse.Namespace) -> int:
         counts = Counter(row["record_type"] for row in gate_rows)
         if counts != {"gate": 270, "risk": 222, "decision": 23}:
             errors.append(f"unexpected gate/risk/decision counts: {dict(counts)}")
+        for row in gate_rows:
+            source_id = row.get("source_id", "")
+            if not source_id.startswith("V5-"):
+                continue
+            expected = record_metadata(source_id)
+            if row.get("source_lineage") != expected["source_lineage"]:
+                errors.append(f"{source_id} missing v5 reference lineage")
+            if row.get("active_disposition") != expected["active_disposition"]:
+                errors.append(f"{source_id} missing historical reference disposition")
     else:
         errors.append("missing CAPEX_V6_GATE_RISK_DECISION_MAP.csv")
 

@@ -59,9 +59,11 @@ Context pack:
 - `TASK-0448` (`ARCH-W4-S20`) - Remove/retire any generic approval handler domain side effects after hook registry migration.
 - `TASK-0565` (`NU-CB-P0-005`) - Add ClosureGateEvaluation, ClosureSnapshot, Waiver, lifecycle recurrence stale rules
 - `TASK-0570` (`NU-CB-P1-010`) - Add non-commutative artifact sequence tests
-- `TASK-0572` (`V5-TASK-001`) - Patch master architecture: reality vs representation
-- `TASK-0573` (`V5-TASK-002`) - Add canonical relation_kind vocabulary
-- `TASK-0575` (`V5-TASK-004`) - Define issue/hypothesis graph guardrails
+
+## Historical/reconciled aliases
+- `TASK-0572` (`V5-TASK-001`) -> `TASK-0447`, `TASK-0565`, `TASK-0305` - Patch master architecture: reality vs representation
+- `TASK-0573` (`V5-TASK-002`) -> `TASK-0392`, `TASK-0373` - Add canonical relation_kind vocabulary
+- `TASK-0575` (`V5-TASK-004`) -> `TASK-0305`, `TASK-0565` - Define issue/hypothesis graph guardrails
 
 ## Acceptance criteria
 - Every listed task preserves its v6 source row, acceptance gate, dependency notes, and raw-data boundary.

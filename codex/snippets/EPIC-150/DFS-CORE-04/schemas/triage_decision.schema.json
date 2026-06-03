@@ -1,0 +1,34 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://capex.local/schemas/triage_decision.schema.json",
+  "title": "TriageDecision",
+  "type": "object",
+  "required": [
+    "state",
+    "reason_code",
+    "fail_closed"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "state": {
+      "type": "string",
+      "enum": [
+        "evidence_candidate",
+        "system_or_transient_file",
+        "shortcut_reference",
+        "nested_archive_container",
+        "licensed_reference_document",
+        "personal_admin_sensitive",
+        "media_evidence",
+        "ignored_or_non_project",
+        "requires_security_review"
+      ]
+    },
+    "reason_code": {
+      "type": "string"
+    },
+    "fail_closed": {
+      "type": "boolean"
+    }
+  }
+}

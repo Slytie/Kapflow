@@ -81,7 +81,9 @@ Context pack:
 - `TASK-0427` (`ARCH-W3-S017`) - Extraction QA report artifact
 - `TASK-0428` (`ARCH-W3-S018`) - SourceRef resolution validation vector
 - `TASK-0564` (`NU-CB-P0-004`) - Add physical source_occurrence and sourceRef resolver
-- `TASK-0578` (`V5-TASK-007`) - Add SourceRef resolution contract/tests
+
+## Historical/reconciled aliases
+- `TASK-0578` (`V5-TASK-007`) -> `TASK-0564`, `TASK-0428` - Add SourceRef resolution contract/tests
 
 ## Acceptance criteria
 - Every listed task preserves its v6 source row, acceptance gate, dependency notes, and raw-data boundary.

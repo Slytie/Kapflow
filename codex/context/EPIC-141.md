@@ -7,6 +7,9 @@ Purpose:
 ## Imported source rows
 INGEST-001, INGEST-002, INGEST-003, INGEST-004, INGEST-005, INGEST-006, INGEST-007, INGEST-008, ... (52 tasks total)
 
+## Historical/reconciled aliases
+- `V5-TASK-007` is a reconciled v5 historical alias for `TASK-0564`, `TASK-0428`.
+
 ## Load first
 - `docs/planning/epics/EPIC-141.md`
 - `docs/planning/CAPEX_MASTER_V6_INTAKE.md`

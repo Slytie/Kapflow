@@ -31,8 +31,6 @@ Context pack:
 
 ## Task stack
 - `TASK-0233` (`MP-PR000`) - Red-team integration update
-- `TASK-0579` (`V5-TASK-008`) - Add Product Goal and metric stack
-- `TASK-0580` (`V5-TASK-009`) - Add vertical-slice ladder and dependency register
 - `TASK-0582` (`SD-TASK-001`) - Define CAPEX Product Goal and metric stack
 - `TASK-0583` (`SD-TASK-002`) - Create CAPEX vertical-slice ladder
 - `TASK-0584` (`SD-TASK-003`) - Add dependency register and risk-based milestone overlay
@@ -40,6 +38,10 @@ Context pack:
 - `TASK-0586` (`SD-TASK-005`) - Define delivery operating cadence
 - `TASK-0587` (`SD-TASK-006`) - Add first-90-days execution overlay
 - `TASK-0588` (`SD-TASK-007`) - Add Definition of Ready / Done for CAPEX task classes
+
+## Historical/reconciled aliases
+- `TASK-0579` (`V5-TASK-008`) -> `TASK-0582` - Add Product Goal and metric stack
+- `TASK-0580` (`V5-TASK-009`) -> `TASK-0583`, `TASK-0584` - Add vertical-slice ladder and dependency register
 
 ## Acceptance criteria
 - Every listed task preserves its v6 source row, acceptance gate, dependency notes, and raw-data boundary.

@@ -17,6 +17,12 @@
 | MASTER_Risk_Register.csv | 222 | reference map only |
 | MASTER_Open_Decisions_Register.csv | 23 | reference map only |
 
+## v5 carry-forward reconciliation
+- CAPEX v6 is the active planning baseline; v5 and earlier source packages remain superseded history.
+- `V5-TASK-*` rows embedded in the v6 task table are preserved as source-provenance rows only, not active backlog.
+- Reconciled v5 rows are marked `DONE` with `source_lineage=v5_carried_forward`, `active_disposition=historical_alias`, and `canonical_task_refs` pointing at the v6/native task refs that own the remaining work.
+- `V5-GATE-*`, `V5-RISK-*`, and `V5-OD-*` entries in the gate/risk/decision map are marked `historical_reference`.
+
 ## Raw-data boundary
 - Raw K12, K3, and blind-validation corpora are not committed to the repo.
 - Approved repo records are ZIP basenames, hashes, aggregate counts, fixture-role labels, quarantine policy, and derived planning tasks.
@@ -181,8 +187,8 @@
 ## Current-code blocker mappings
 | Blocker | CAPEX task refs | Current repo surface |
 |---|---|---|
-| Approval response domain-hook extraction | `TASK-0257`, `TASK-0561`, `TASK-0576` | `src/onetruth/application/services/approval_response_hooks.py`, `src/onetruth/application/services/logistics_approval_response_hooks.py`, `docs/adr/ADR-005-approval-response-domain-hooks.md` |
-| Artifact auth-before-read and storage confinement | `TASK-0235`, `TASK-0562`, `TASK-0577` | `src/onetruth/api/routes/artifacts.py`, `src/onetruth/application/handlers/artifacts.py`, `src/onetruth/infrastructure/artifacts/storage.py` |
+| Approval response domain-hook extraction | `TASK-0257`, `TASK-0561` | `src/onetruth/application/services/approval_response_hooks.py`, `src/onetruth/application/services/logistics_approval_response_hooks.py`, `docs/adr/ADR-005-approval-response-domain-hooks.md` |
+| Artifact auth-before-read and storage confinement | `TASK-0235`, `TASK-0562` | `src/onetruth/api/routes/artifacts.py`, `src/onetruth/application/handlers/artifacts.py`, `src/onetruth/infrastructure/artifacts/storage.py` |
 | Transaction composition safety | `TASK-0236` | `src/onetruth/application/handlers/schedule_control.py`, `src/onetruth/application/handlers/logistics_handoff.py` |
 | Invariant audit harness | `TASK-0237` | `src/onetruth/application/services/capex_invariant_audit.py`, `scripts/run_capex_invariant_audit.py` |
 | Canonical generated-artifact helper | `TASK-0238` | `src/onetruth/application/handlers/_shared/artifact_effects.py` |
@@ -200,7 +206,7 @@
 | Logistics reconciler dry-run report | `TASK-0252` | `src/onetruth/application/services/logistics_reconciler.py`, `src/onetruth/cli/__main__.py`, `tests/runtime/test_logistics_handoff_runtime.py` |
 | Operator home failure-state surface | `TASK-0253` | `src/onetruth/api/routes/operator_home.py`, `frontend/src/pages/OperatorHomePage.tsx`, `frontend/src/app/AppShell.tsx` |
 | CAPEX project membership runtime | `TASK-0261`..`TASK-0263`, `TASK-0385`, `TASK-0386`, `TASK-0563` | future CAPEX project scope runtime |
-| Source occurrence / SourceRef | `TASK-0268`, `TASK-0391`, `TASK-0407`, `TASK-0428`, `TASK-0564`, `TASK-0578` | future source occurrence and evidence resolver |
+| Source occurrence / SourceRef | `TASK-0268`, `TASK-0391`, `TASK-0407`, `TASK-0428`, `TASK-0564` | future source occurrence and evidence resolver |
 
 ## Verification commands
 - `python3 scripts/import_capex_v6_plan.py check --master-zip <CAPEX_v6_master_zip>`

@@ -2,7 +2,10 @@
 id: TASK-0576
 epic: EPIC-139
 title: "Fix approval.respond domain coupling"
-status: TODO
+status: DONE
+source_lineage: v5_carried_forward
+active_disposition: historical_alias
+canonical_task_refs: ["TASK-0257", "TASK-0561"]
 owners: ["platform"]
 reviewers: ["architect", "qa"]
 depends_on: []
@@ -60,3 +63,8 @@ Extract logistics side effects to registered domain hooks
 
 ## Notes / decisions
 - Raw project corpora remain off-repo; use only sanitized fixtures, manifests, hashes, and aggregate evidence approved by the relevant fixture/governance task.
+
+## Reconciliation closeout evidence
+- This source row is carried forward from v5 inside the CAPEX v6 package and is closed as a historical alias, not as independent active backlog.
+- Canonical active work remains on `TASK-0257`, `TASK-0561`; this closeout does not mark those target tasks complete unless their own task files record completion.
+- CAPEX v6 remains the active planning baseline; v5 and earlier packages remain superseded history.

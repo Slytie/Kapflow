@@ -1,0 +1,97 @@
+{
+  "meta": {
+    "title": "CAPEX Epic Progress",
+    "subtitle": "Plain-language roadmap for the repo-native CAPEX planning backlog.",
+    "lastUpdated": "2026-06-03",
+    "localOnly": true,
+    "sourceNote": "Generated from docs/planning/epics and codex/tasks with curated review-posture overrides.",
+    "codexRule": "When a CAPEX task is completed, set status: DONE, add completed_at in ISO 8601 timezone form, add completion/closeout evidence, and regenerate this progress data in the same change."
+  },
+  "historicalCompletionTimestampExceptions": [
+    "TASK-0233",
+    "TASK-0234",
+    "TASK-0235",
+    "TASK-0236",
+    "TASK-0237",
+    "TASK-0238",
+    "TASK-0239",
+    "TASK-0240",
+    "TASK-0241",
+    "TASK-0242",
+    "TASK-0243",
+    "TASK-0245",
+    "TASK-0246",
+    "TASK-0247",
+    "TASK-0248",
+    "TASK-0249",
+    "TASK-0250",
+    "TASK-0251",
+    "TASK-0252",
+    "TASK-0253",
+    "TASK-0257",
+    "TASK-0258",
+    "TASK-0259"
+  ],
+  "epicOverrides": {
+    "EPIC-139": {
+      "reviewPosture": "Fresh check completed from task files, TASK_INDEX, CURRENT_FOCUS, and closeout decisions: twelve EPIC-139 tasks are accepted as done; TASK-0260 is the next open cleanup task."
+    },
+    "EPIC-140": {
+      "displayStatus": "blocked",
+      "reviewPosture": "Project-scoped APIs, project selector/dashboard activation, and project-scoped official selections are still gating work."
+    },
+    "EPIC-144": {
+      "displayStatus": "blocked",
+      "reviewPosture": "CAPEX review screens remain blocked until project-scoped foundations and risk/CEO workflow dependencies are ready."
+    },
+    "EPIC-152": {
+      "displayStatus": "blocked",
+      "reviewPosture": "Production preflight cannot pass until P0 blockers, three-project evidence, raw-data quarantine, restore, release, and review gates are proven."
+    }
+  },
+  "epicTaskRules": [],
+  "taskOverrides": {
+    "TASK-0244": {
+      "displayStatus": "blocked",
+      "statusReason": "The deploy lane exists, but live lab VM execute-and-smoke evidence is still missing."
+    },
+    "TASK-0273": {
+      "displayStatus": "needs_review",
+      "statusReason": "Needs fresh check because it depends on unfinished project-scoped API foundations."
+    },
+    "TASK-0280": {
+      "displayStatus": "needs_review",
+      "statusReason": "Needs fresh check because project-scoped official selection behavior is still gated."
+    },
+    "TASK-0291": {
+      "displayStatus": "needs_review",
+      "statusReason": "Needs fresh check because the project dashboard shell depends on project selector and access foundations."
+    },
+    "TASK-0299": {
+      "displayStatus": "needs_review",
+      "statusReason": "Needs fresh check because the risk/CEO view must not look product-ready before the risk workflow closes."
+    }
+  },
+  "activationBlockers": [
+    {
+      "id": "P2-001",
+      "plain": "Repeated button presses can accidentally do the same work twice.",
+      "action": "Check whether the action was already recorded before doing the work again."
+    },
+    {
+      "id": "P2-002",
+      "plain": "A document history link can point to the wrong project.",
+      "action": "Confirm the document and project belong together before saving the link."
+    },
+    {
+      "id": "P2-003",
+      "plain": "An official-selection history entry can point to a document from another project.",
+      "action": "Confirm the selected document and the project match before recording the selection."
+    },
+    {
+      "id": "P3-001",
+      "plain": "The risk/CEO view can look finished before the risk workflow is ready.",
+      "action": "Show it as blocked until the risk workflow closes."
+    }
+  ]
+}

@@ -7,6 +7,9 @@ Purpose:
 ## Imported source rows
 MP-PR001, MP-PR002, MP-PR003, MP-PR004, MP-PR005, MP-PR006, MP-PR007, NU-CB-P0-002, ... (9 tasks total)
 
+## Historical/reconciled aliases
+- `V5-TASK-006` is a reconciled v5 historical alias for `TASK-0235`, `TASK-0562`.
+
 ## Load first
 - `docs/planning/epics/EPIC-137.md`
 - `docs/planning/CAPEX_MASTER_V6_INTAKE.md`

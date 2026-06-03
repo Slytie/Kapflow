@@ -1,0 +1,54 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://capex.local/schemas/redacted_path_ref.schema.json",
+  "title": "RedactedPathRef",
+  "type": "object",
+  "required": [
+    "source_root_id",
+    "occurrence_id",
+    "relative_path_hash",
+    "parent_path_hash",
+    "extension_hint",
+    "filename_display",
+    "filename_policy",
+    "salt_version"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "source_root_id": {
+      "type": "string"
+    },
+    "occurrence_id": {
+      "type": "string"
+    },
+    "relative_path_hash": {
+      "type": "string",
+      "pattern": "^(hmac-sha256|sha256):[0-9a-f]{64}$"
+    },
+    "parent_path_hash": {
+      "type": "string",
+      "pattern": "^(hmac-sha256|sha256):[0-9a-f]{64}$"
+    },
+    "extension_hint": {
+      "type": "string",
+      "maxLength": 32
+    },
+    "filename_display": {
+      "type": "string",
+      "maxLength": 256
+    },
+    "filename_policy": {
+      "type": "string",
+      "enum": [
+        "extension_only",
+        "generated_label",
+        "raw_allowed",
+        "pm_display_only"
+      ]
+    },
+    "salt_version": {
+      "type": "string",
+      "maxLength": 64
+    }
+  }
+}
