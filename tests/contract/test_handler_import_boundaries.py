@@ -15,6 +15,10 @@ APPROVAL_RESPONSE_HOOKS = SERVICES_DIR / "approval_response_hooks.py"
 LOGISTICS_APPROVAL_RESPONSE_HOOKS = SERVICES_DIR / "logistics_approval_response_hooks.py"
 WORKPAGE_ACTION_PROJECTION = SERVICES_DIR / "workpage_action_projection.py"
 LOGISTICS_WORKPAGE_ACTION_REGISTRY = SERVICES_DIR / "logistics_workpage_action_registry.py"
+WORKPAGE_DESCRIPTORS = SERVICES_DIR / "workpage_descriptors.py"
+LOGISTICS_WORKPAGE_DESCRIPTORS = SERVICES_DIR / "logistics_workpage_descriptors.py"
+WORKPAGE_DESCRIPTOR_REGISTRY_DEFAULTS = SERVICES_DIR / "workpage_descriptor_registry_defaults.py"
+WORKPAGE_ACTION_RESOLUTION = HANDLERS_DIR / "workpage_action_resolution.py"
 
 _BANNED_LEGACY_SURFACES = {
     "CommandError",
@@ -177,6 +181,40 @@ def test_generic_workpage_projection_does_not_hard_code_logistics_action_rules()
     assert "dispatch_reporting.v1" in logistics_registry_text
     assert "schedule_draft_unavailable" in logistics_registry_text
     assert "eod_draft_unavailable" in logistics_registry_text
+
+
+def test_generic_workpage_descriptors_delegate_to_domain_descriptor_registry() -> None:
+    descriptor_text = WORKPAGE_DESCRIPTORS.read_text(encoding="utf-8")
+    logistics_descriptor_text = LOGISTICS_WORKPAGE_DESCRIPTORS.read_text(encoding="utf-8")
+    descriptor_defaults_text = WORKPAGE_DESCRIPTOR_REGISTRY_DEFAULTS.read_text(encoding="utf-8")
+    action_resolution_text = WORKPAGE_ACTION_RESOLUTION.read_text(encoding="utf-8")
+
+    assert "default_workpage_descriptor_registry()" in descriptor_text
+    assert "DEFAULT_WORKPAGE_DESCRIPTOR_REGISTRY" in descriptor_text
+    assert "WorkpageDescriptor(\n" not in descriptor_text
+    assert "_DESCRIPTORS_BY_KIND" not in descriptor_text
+
+    assert "LOGISTICS_WORKPAGE_DESCRIPTOR_PACK" in logistics_descriptor_text
+    assert "_LOGISTICS_DESCRIPTORS" in logistics_descriptor_text
+    assert "WorkpageDescriptor(" in logistics_descriptor_text
+
+    assert "DEFAULT_WORKPAGE_DESCRIPTOR_REGISTRY" in descriptor_defaults_text
+    assert "LOGISTICS_WORKPAGE_DESCRIPTOR_PACK" in descriptor_defaults_text
+
+    forbidden_subject_matrices = (
+        "SCHEDULE_WORKPAGE_SUPPORTED_TASK_SURFACES",
+        "SCHEDULE_WORKPAGE_SUPPORTED_APPROVAL_SCOPE_REFS",
+        "EOD_WORKPAGE_SUPPORTED_TASK_SURFACES",
+        "EOD_WORKPAGE_SUPPORTED_APPROVAL_SCOPE_REFS",
+    )
+    violations = [
+        marker
+        for marker in forbidden_subject_matrices
+        if marker in action_resolution_text
+    ]
+    assert not violations, "workpage action resolution has local domain surface matrices: " + ", ".join(violations)
+    assert "DEFAULT_WORKPAGE_ACTION_REGISTRY.supports_human_task_subject(" in action_resolution_text
+    assert "DEFAULT_WORKPAGE_ACTION_REGISTRY.supports_approval_subject(" in action_resolution_text
 
 
 def _package_parts_for_file(path: Path) -> tuple[str, ...]:

@@ -7,15 +7,10 @@ from onetruth.application.handlers._shared.artifact_effects import (
     _validate_artifact_link_subject,
 )
 from onetruth.application.handlers._shared.command_boundary import CommandError
-from onetruth.application.services.dispatch_reporting_workbook import (
-    WORKFLOW_ID as EOD_WORKFLOW_ID,
-)
-from onetruth.application.services.schedule_control.draft_workbook import (
-    SCHEDULE_WORKFLOW_ID,
+from onetruth.application.services.workpage_action_registry_defaults import (
+    DEFAULT_WORKPAGE_ACTION_REGISTRY,
 )
 from onetruth.application.services.workpage_descriptors import (
-    EOD_WORKPAGE_KIND,
-    SCHEDULE_WORKPAGE_KIND,
     WorkpageDescriptor,
     require_workpage_descriptor,
 )
@@ -28,16 +23,6 @@ WORKPAGE_ACTION_REF_FIELDS = frozenset(
     {"action_id", "workpage_kind", "workflow_run_id", "artifact_version_id", "subject"}
 )
 WORKPAGE_ACTION_REF_SUBJECT_FIELDS = frozenset({"subject_kind", "subject_id"})
-SCHEDULE_WORKPAGE_SUPPORTED_TASK_SURFACES = frozenset(
-    {
-        ("Stage04", "work_item"),
-        ("Stage05", "information_request"),
-        ("Stage05", "final_review"),
-    }
-)
-SCHEDULE_WORKPAGE_SUPPORTED_APPROVAL_SCOPE_REFS = frozenset({"Stage06"})
-EOD_WORKPAGE_SUPPORTED_TASK_SURFACES = frozenset({("Stage04", "final_packet_review")})
-EOD_WORKPAGE_SUPPORTED_APPROVAL_SCOPE_REFS = frozenset({"Stage04"})
 
 
 def _resolve_workpage_action_subject(
@@ -322,30 +307,45 @@ def _validate_workpage_subject(
         subject_kind=subject_kind,
         subject_id=subject_id,
     )
-    if (
-        workflow_id == SCHEDULE_WORKFLOW_ID
-        and workpage_kind == SCHEDULE_WORKPAGE_KIND
-        and flow_kind == "submit"
-    ):
-        _validate_schedule_workpage_subject_link(
+    descriptor = require_workpage_descriptor(workpage_kind)
+    if flow_kind == "create" and descriptor.create_action_id is None:
+        raise _invalid_workpage_subject_link(
+            message="subject_link is unsupported for this workpage flow",
+            workflow_id=workflow_id,
+            workpage_kind=workpage_kind,
+            flow_kind=flow_kind,
+            subject_kind=subject_kind,
+            subject_id=subject_id,
+        )
+    if flow_kind == "submit" and descriptor.submit_action_id is None:
+        raise _invalid_workpage_subject_link(
+            message="subject_link is unsupported for this workpage flow",
+            workflow_id=workflow_id,
+            workpage_kind=workpage_kind,
+            flow_kind=flow_kind,
+            subject_kind=subject_kind,
+            subject_id=subject_id,
+        )
+    if subject_kind == "human_task":
+        _validate_human_task_workpage_subject_link(
             connection,
             workflow_run_id=workflow_run_id,
-            subject_link=subject_link,
+            workflow_id=workflow_id,
+            workpage_kind=workpage_kind,
+            subject_id=subject_id,
         )
         return
-    if (
-        workflow_id == EOD_WORKFLOW_ID
-        and workpage_kind == EOD_WORKPAGE_KIND
-        and flow_kind in {"create", "submit"}
-    ):
-        _validate_eod_workpage_subject_link(
+    if subject_kind == "approval":
+        _validate_approval_workpage_subject_link(
             connection,
             workflow_run_id=workflow_run_id,
-            subject_link=subject_link,
+            workflow_id=workflow_id,
+            workpage_kind=workpage_kind,
+            subject_id=subject_id,
         )
         return
     raise _invalid_workpage_subject_link(
-        message="subject_link is unsupported for this workpage flow",
+        message="unsupported subject_kind for workpage subject_link",
         workflow_id=workflow_id,
         workpage_kind=workpage_kind,
         flow_kind=flow_kind,
@@ -353,134 +353,87 @@ def _validate_workpage_subject(
         subject_id=subject_id,
     )
 
-def _validate_schedule_workpage_subject_link(
-    connection: sqlite3.Connection,
-    *,
-    workflow_run_id: str,
-    subject_link: Mapping[str, str],
-) -> None:
-    subject_kind = str(subject_link["subject_kind"])
-    subject_id = str(subject_link["subject_id"])
-    if subject_kind == "human_task":
-        human_task = get_human_task(connection, subject_id)
-        if human_task is None:
-            raise _invalid_workpage_subject_link(
-                message="human task not found for schedule workpage subject_link",
-                workflow_run_id=workflow_run_id,
-                subject_kind=subject_kind,
-                subject_id=subject_id,
-            )
-        task_run = get_task_run(connection, str(human_task["task_run_id"]))
-        if task_run is None:
-            raise _invalid_workpage_subject_link(
-                message="human task stage could not be resolved for schedule workpage subject_link",
-                workflow_run_id=workflow_run_id,
-                subject_kind=subject_kind,
-                subject_id=subject_id,
-            )
-        stage_id = str(task_run.get("stage_id") or "")
-        task_kind = str(human_task.get("task_kind") or "")
-        if (stage_id, task_kind) not in SCHEDULE_WORKPAGE_SUPPORTED_TASK_SURFACES:
-            raise _invalid_workpage_subject_link(
-                message="human task is not a supported schedule workpage surface",
-                workflow_run_id=workflow_run_id,
-                subject_kind=subject_kind,
-                subject_id=subject_id,
-                stage_id=stage_id,
-                task_kind=task_kind,
-            )
-        return
-    if subject_kind == "approval":
-        approval = get_approval(connection, subject_id)
-        if approval is None:
-            raise _invalid_workpage_subject_link(
-                message="approval not found for schedule workpage subject_link",
-                workflow_run_id=workflow_run_id,
-                subject_kind=subject_kind,
-                subject_id=subject_id,
-            )
-        scope_kind = str(approval.get("scope_kind") or "")
-        scope_ref = str(approval.get("scope_ref") or "")
-        if scope_kind != "stage" or scope_ref not in SCHEDULE_WORKPAGE_SUPPORTED_APPROVAL_SCOPE_REFS:
-            raise _invalid_workpage_subject_link(
-                message="approval is not a supported schedule workpage surface",
-                workflow_run_id=workflow_run_id,
-                subject_kind=subject_kind,
-                subject_id=subject_id,
-                scope_kind=scope_kind,
-                scope_ref=scope_ref,
-            )
-        return
-    raise _invalid_workpage_subject_link(
-        message="unsupported subject_kind for schedule workpage subject_link",
-        workflow_run_id=workflow_run_id,
-        subject_kind=subject_kind,
-        subject_id=subject_id,
-    )
 
-def _validate_eod_workpage_subject_link(
+def _validate_human_task_workpage_subject_link(
     connection: sqlite3.Connection,
     *,
     workflow_run_id: str,
-    subject_link: Mapping[str, str],
+    workflow_id: str,
+    workpage_kind: str,
+    subject_id: str,
 ) -> None:
-    subject_kind = str(subject_link["subject_kind"])
-    subject_id = str(subject_link["subject_id"])
-    if subject_kind == "human_task":
-        human_task = get_human_task(connection, subject_id)
-        if human_task is None:
-            raise _invalid_workpage_subject_link(
-                message="human task not found for EOD workpage subject_link",
-                workflow_run_id=workflow_run_id,
-                subject_kind=subject_kind,
-                subject_id=subject_id,
-            )
-        task_run = get_task_run(connection, str(human_task["task_run_id"]))
-        if task_run is None:
-            raise _invalid_workpage_subject_link(
-                message="human task stage could not be resolved for EOD workpage subject_link",
-                workflow_run_id=workflow_run_id,
-                subject_kind=subject_kind,
-                subject_id=subject_id,
-            )
-        stage_id = str(task_run.get("stage_id") or "")
-        task_kind = str(human_task.get("task_kind") or "")
-        if (stage_id, task_kind) not in EOD_WORKPAGE_SUPPORTED_TASK_SURFACES:
-            raise _invalid_workpage_subject_link(
-                message="human task is not a supported EOD workpage surface",
-                workflow_run_id=workflow_run_id,
-                subject_kind=subject_kind,
-                subject_id=subject_id,
-                stage_id=stage_id,
-                task_kind=task_kind,
-            )
-        return
-    if subject_kind != "approval":
+    human_task = get_human_task(connection, subject_id)
+    if human_task is None:
         raise _invalid_workpage_subject_link(
-            message="only approval or supported human-task subjects are allowed for EOD workpage subject_link",
+            message="human task not found for workpage subject_link",
             workflow_run_id=workflow_run_id,
-            subject_kind=subject_kind,
+            subject_kind="human_task",
             subject_id=subject_id,
         )
+    task_run = get_task_run(connection, str(human_task["task_run_id"]))
+    if task_run is None:
+        raise _invalid_workpage_subject_link(
+            message="human task stage could not be resolved for workpage subject_link",
+            workflow_run_id=workflow_run_id,
+            subject_kind="human_task",
+            subject_id=subject_id,
+        )
+    stage_id = str(task_run.get("stage_id") or "")
+    task_kind = str(human_task.get("task_kind") or "")
+    if DEFAULT_WORKPAGE_ACTION_REGISTRY.supports_human_task_subject(
+        workflow_id=workflow_id,
+        workpage_kind=workpage_kind,
+        stage_id=stage_id,
+        task_kind=task_kind,
+    ):
+        return
+    raise _invalid_workpage_subject_link(
+        message="human task is not a supported workpage surface",
+        workflow_run_id=workflow_run_id,
+        workflow_id=workflow_id,
+        workpage_kind=workpage_kind,
+        subject_kind="human_task",
+        subject_id=subject_id,
+        stage_id=stage_id,
+        task_kind=task_kind,
+    )
+
+
+def _validate_approval_workpage_subject_link(
+    connection: sqlite3.Connection,
+    *,
+    workflow_run_id: str,
+    workflow_id: str,
+    workpage_kind: str,
+    subject_id: str,
+) -> None:
     approval = get_approval(connection, subject_id)
     if approval is None:
         raise _invalid_workpage_subject_link(
-            message="approval not found for EOD workpage subject_link",
+            message="approval not found for workpage subject_link",
             workflow_run_id=workflow_run_id,
-            subject_kind=subject_kind,
+            subject_kind="approval",
             subject_id=subject_id,
         )
     scope_kind = str(approval.get("scope_kind") or "")
     scope_ref = str(approval.get("scope_ref") or "")
-    if scope_kind != "stage" or scope_ref not in EOD_WORKPAGE_SUPPORTED_APPROVAL_SCOPE_REFS:
-        raise _invalid_workpage_subject_link(
-            message="approval is not a supported EOD workpage surface",
-            workflow_run_id=workflow_run_id,
-            subject_kind=subject_kind,
-            subject_id=subject_id,
-            scope_kind=scope_kind,
-            scope_ref=scope_ref,
-        )
+    if DEFAULT_WORKPAGE_ACTION_REGISTRY.supports_approval_subject(
+        workflow_id=workflow_id,
+        workpage_kind=workpage_kind,
+        scope_kind=scope_kind,
+        scope_ref=scope_ref,
+    ):
+        return
+    raise _invalid_workpage_subject_link(
+        message="approval is not a supported workpage surface",
+        workflow_run_id=workflow_run_id,
+        workflow_id=workflow_id,
+        workpage_kind=workpage_kind,
+        subject_kind="approval",
+        subject_id=subject_id,
+        scope_kind=scope_kind,
+        scope_ref=scope_ref,
+    )
 
 def _invalid_workpage_subject_link(
     *,

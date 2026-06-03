@@ -330,7 +330,7 @@ Note: `TASK-0087` / `TASK-0088` / `TASK-0089` were formerly duplicated as `TASK-
 | TASK-0367 | EPIC-149 | TODO | medium | P12 stabilization/refactor pass |
 | TASK-0368 | EPIC-149 | TODO | medium | P12 phase closeout evidence |
 | TASK-0369 | EPIC-139 | DONE | high | Approval side-effect extraction |
-| TASK-0370 | EPIC-139 | TODO | medium | Domain workpage descriptor registry |
+| TASK-0370 | EPIC-139 | DONE | medium | Domain workpage descriptor registry |
 | TASK-0371 | EPIC-140 | TODO | high | Project-scope query helper |
 | TASK-0372 | EPIC-141 | TODO | high | Artifact list pagination adapter |
 | TASK-0373 | EPIC-141 | TODO | high | Batch relation hydration |
@@ -521,7 +521,7 @@ Note: `TASK-0087` / `TASK-0088` / `TASK-0089` were formerly duplicated as `TASK-
 | TASK-0558 | EPIC-151 | TODO | high | Update architecture docs with W8 terms |
 | TASK-0559 | EPIC-151 | TODO | high | Add W8 feature gate/migration lane entries |
 | TASK-0560 | EPIC-151 | TODO | high | Run Waves 1-8 formalism regression |
-| TASK-0561 | EPIC-139 | TODO | high | Extract logistics side effects from approval.respond |
+| TASK-0561 | EPIC-139 | DONE | high | Extract logistics side effects from approval.respond |
 | TASK-0562 | EPIC-137 | TODO | high | Fix artifact download auth-before-read |
 | TASK-0563 | EPIC-140 | TODO | high | Add CAPEX project/membership/authorization runtime state |
 | TASK-0564 | EPIC-141 | TODO | high | Add physical source_occurrence and sourceRef resolver |

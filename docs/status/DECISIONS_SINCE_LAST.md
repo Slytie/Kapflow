@@ -2,10 +2,16 @@
 
 Record any decisions made since the last session so a fresh Codex run can rehydrate quickly.
 
+## 2026-06-03 (CAPEX RF-002/NU-CB-P0-001 descriptor registry and approval duplicate closeout)
+- Descriptor-boundary decision: `TASK-0370` moves active logistics workpage descriptor registrations behind `WorkpageDescriptorRegistry`; the existing descriptor lookup helpers remain compatibility facades and public workpage routes/actions stay unchanged.
+- Subject-surface decision: workpage `subject_link` validation now uses the registered workpage action rules for supported human-task and approval surfaces instead of local schedule/EOD matrices in the action-resolution handler.
+- Reconciliation decision: `TASK-0561` is closed against the existing `ADR-005` approval-response hook evidence from `TASK-0257`/`TASK-0369`; no new approval handler behavior was added.
+- Activation decision: EPIC-139 domain-boundary cleanup is closed without CAPEX runtime/product activation, raw corpus use, production deployment, or new public workpage routes.
+
 ## 2026-06-03 (CAPEX CLEAN-004/RF-001 test split and approval extraction reconciliation)
 - Test-split decision: `TASK-0260` adds a minimal EPIC-139 `logistics_regression` pytest marker manifest and visible Make/GitHub lanes for `platform-substrate-tests` and `logistics-regression-tests`; this does not replace the broader future marker taxonomy planned under `TASK-0492`.
 - Platform-boundary decision: platform substrate coverage may still inspect logistics symbols when proving generic/domain extraction, but tests that depend on logistics fixture roots must live in the logistics regression lane.
-- Reconciliation decision: `TASK-0369` is closed against existing `ADR-005` approval-response hook evidence from `TASK-0257`; no new approval handler behavior was added, and `TASK-0561` remains untouched as a later imported duplicate row.
+- Reconciliation decision: `TASK-0369` is closed against existing `ADR-005` approval-response hook evidence from `TASK-0257`; no new approval handler behavior was added. `TASK-0561` was still untouched in that pass and is now reconciled separately above.
 - Activation decision: these closeouts do not activate CAPEX runtime/product behavior, raw corpus use, production deployment, or new approval semantics.
 
 ## 2026-06-03 (CAPEX CLEAN-002/CLEAN-003 workpage registry and logistics docs classification)

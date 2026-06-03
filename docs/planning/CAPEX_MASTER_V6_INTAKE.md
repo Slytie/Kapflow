@@ -195,13 +195,28 @@
 - Reconciled `RF-001` to the already-landed approval-response hook extraction from `TASK-0257`.
 - Generic `approval.respond` remains limited to approval transition and event emission before registered domain hooks run in the same transaction.
 - Evidence remains anchored in `ADR-005`, `src/onetruth/application/services/approval_response_hooks.py`, `src/onetruth/application/services/logistics_approval_response_hooks.py`, `tests/contract/test_handler_import_boundaries.py`, and `tests/unit/test_approval_response_hooks.py`.
-- No new approval handler behavior was added for this reconciliation; `TASK-0561` remains a later imported duplicate row unless separately reconciled.
+- No new approval handler behavior was added for this reconciliation; `TASK-0561` is reconciled separately below.
 - Closeout posture: `RF-001` is closed as duplicate-intent reconciliation only; this is not new CAPEX approval semantics or product activation.
+
+## TASK-0370 closeout evidence
+- Added a domain-neutral `WorkpageDescriptorRegistry` and `WorkpageDescriptorPack`.
+- The active logistics schedule/EOD/route-demand/driver-preferences descriptor registrations now live in `LOGISTICS_WORKPAGE_DESCRIPTOR_PACK`; existing descriptor lookup helpers remain stable facades over the default registry.
+- Workpage action subject-surface validation now consults registered workpage action rules for human-task and approval subjects instead of local schedule/EOD matrices.
+- Evidence: descriptor registry unit tests, workpage action registry support checks, handler import-boundary contract, and workspace workpage action API regression passed on 2026-06-03.
+- Closeout posture: `RF-002` is closed as domain-boundary extraction only; this is not a new public workpage API, CAPEX runtime activation, or product-route expansion.
+
+## TASK-0561 closeout evidence
+- Reconciled `NU-CB-P0-001` to the approval-response hook extraction already closed by `TASK-0257`, `TASK-0369`, and historical alias `TASK-0576`.
+- Generic `approval.respond` remains limited to canonical approval transition and `approval.responded` event emission before registered domain hooks run in the same transaction.
+- Evidence remains anchored in `ADR-005`, `src/onetruth/application/services/approval_response_hooks.py`, `src/onetruth/application/services/logistics_approval_response_hooks.py`, `tests/contract/test_handler_import_boundaries.py`, and `tests/unit/test_approval_response_hooks.py`.
+- Focused approval-hook evidence passed again on 2026-06-03; no new approval handler behavior was added.
+- Closeout posture: `NU-CB-P0-001` is closed as imported duplicate reconciliation only; this is not new CAPEX approval semantics, product activation, or deployment approval.
 
 ## Current-code blocker mappings
 | Blocker | CAPEX task refs | Current repo surface |
 |---|---|---|
 | Approval response domain-hook extraction | `TASK-0257`, `TASK-0369`, `TASK-0561` | `src/onetruth/application/services/approval_response_hooks.py`, `src/onetruth/application/services/logistics_approval_response_hooks.py`, `docs/adr/ADR-005-approval-response-domain-hooks.md` |
+| Workpage descriptor/action domain boundary | `TASK-0258`, `TASK-0370` | `src/onetruth/application/services/workpage_action_registry.py`, `src/onetruth/application/services/workpage_descriptor_registry.py`, `src/onetruth/application/services/logistics_workpage_descriptors.py` |
 | Platform/logistics test split | `TASK-0260` | `tests/helpers/suite_markers.py`, `tests/contract/test_platform_logistics_test_split.py`, `Makefile`, `.github/workflows/main.yml` |
 | Artifact auth-before-read and storage confinement | `TASK-0235`, `TASK-0562` | `src/onetruth/api/routes/artifacts.py`, `src/onetruth/application/handlers/artifacts.py`, `src/onetruth/infrastructure/artifacts/storage.py` |
 | Transaction composition safety | `TASK-0236` | `src/onetruth/application/handlers/schedule_control.py`, `src/onetruth/application/handlers/logistics_handoff.py` |

@@ -132,6 +132,39 @@ class WorkpageActionRegistry:
             )
         return actions
 
+    def supports_human_task_subject(
+        self,
+        *,
+        workflow_id: str,
+        workpage_kind: str,
+        stage_id: str,
+        task_kind: str,
+    ) -> bool:
+        surface = (stage_id, task_kind)
+        return any(
+            rule.workflow_id == workflow_id
+            and rule.workpage_kind == workpage_kind
+            and surface in rule.surfaces
+            for rule in self._human_task_rules()
+        )
+
+    def supports_approval_subject(
+        self,
+        *,
+        workflow_id: str,
+        workpage_kind: str,
+        scope_kind: str,
+        scope_ref: str,
+    ) -> bool:
+        if scope_kind != "stage":
+            return False
+        return any(
+            rule.workflow_id == workflow_id
+            and rule.workpage_kind == workpage_kind
+            and scope_ref in rule.scope_refs
+            for rule in self._approval_rules()
+        )
+
     def _human_task_rules(self) -> tuple[HumanTaskWorkpageActionRule, ...]:
         rules: list[HumanTaskWorkpageActionRule] = []
         for pack in self.packs:

@@ -2,7 +2,8 @@
 id: TASK-0561
 epic: EPIC-139
 title: "Extract logistics side effects from approval.respond"
-status: TODO
+status: DONE
+completed_at: "2026-06-03T16:12:50+02:00"
 owners: ["platform"]
 reviewers: ["architect", "qa"]
 depends_on: ["TASK-0233", "TASK-0234", "TASK-0235", "TASK-0236", "TASK-0237", "TASK-0238", "TASK-0239", "TASK-0240"]
@@ -60,3 +61,7 @@ Make approval response domain-neutral; logistics publish/finalize/handoff move t
 
 ## Notes / decisions
 - Raw project corpora remain off-repo; use only sanitized fixtures, manifests, hashes, and aggregate evidence approved by the relevant fixture/governance task.
+- Reconciled on 2026-06-03 to the already-landed approval-response hook extraction from `TASK-0257`, `TASK-0369`, and historical alias `TASK-0576`.
+- Generic `approval.respond` remains limited to canonical approval transition and `approval.responded` event emission before registered domain hooks run in the same transaction.
+- Evidence remains anchored in `ADR-005`, `src/onetruth/application/services/approval_response_hooks.py`, `src/onetruth/application/services/logistics_approval_response_hooks.py`, `tests/contract/test_handler_import_boundaries.py`, and `tests/unit/test_approval_response_hooks.py`.
+- No new approval handler behavior was added for this reconciliation.

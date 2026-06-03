@@ -34,7 +34,7 @@
   ],
   "epicOverrides": {
     "EPIC-139": {
-      "reviewPosture": "Fresh check completed from task files, TASK_INDEX, CURRENT_FOCUS, and closeout decisions: fourteen EPIC-139 tasks are accepted as done; TASK-0370 is the next open cleanup task, while TASK-0561 remains a later imported duplicate approval-response row."
+      "reviewPosture": "Fresh check completed from task files, TASK_INDEX, CURRENT_FOCUS, and closeout decisions: all imported EPIC-139 domain-boundary cleanup tasks are accepted as done; TASK-0370 closed the descriptor registry extraction and TASK-0561 closed the remaining approval-response duplicate reconciliation."
     },
     "EPIC-140": {
       "displayStatus": "blocked",

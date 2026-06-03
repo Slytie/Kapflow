@@ -2,7 +2,8 @@
 id: TASK-0370
 epic: EPIC-139
 title: "Domain workpage descriptor registry"
-status: TODO
+status: DONE
+completed_at: "2026-06-03T16:12:50+02:00"
 owners: ["platform"]
 reviewers: ["architect", "qa"]
 depends_on: []
@@ -61,3 +62,7 @@ Move logistics workpage descriptors/actions behind domain registry.
 
 ## Notes / decisions
 - Raw project corpora remain off-repo; use only sanitized fixtures, manifests, hashes, and aggregate evidence approved by the relevant fixture/governance task.
+- Closed on 2026-06-03 by adding a domain-neutral `WorkpageDescriptorRegistry` and moving the active logistics schedule/EOD/route-demand/driver-preferences descriptor table into `LOGISTICS_WORKPAGE_DESCRIPTOR_PACK`.
+- Existing descriptor lookup helpers, public workpage routes, action IDs, `workpage_actions[]`, `action_ref`, and `subject_link` shapes remain compatibility-preserved.
+- Focused evidence: descriptor registry unit tests, workpage action registry support checks, handler import-boundary contract, and workspace workpage action API regression passed.
+- Rollback posture: removing the descriptor registry boundary should fail the descriptor boundary contract before future CAPEX or non-logistics descriptor tables can be added to the generic facade.

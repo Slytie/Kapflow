@@ -11,23 +11,23 @@
   "summary": {
     "epicCount": 17,
     "taskCount": 364,
-    "done": 25,
+    "done": 27,
     "in_progress": 0,
-    "not_started": 334,
+    "not_started": 332,
     "blocked": 1,
     "needs_review": 4,
     "total": 364,
     "estimate": {
-      "percentComplete": 6.9,
-      "completedTasks": 25,
-      "remainingTasks": 339,
+      "percentComplete": 7.4,
+      "completedTasks": 27,
+      "remainingTasks": 337,
       "remainingBlockedOrReviewTasks": 5,
-      "completedWithTimestamps": 2,
-      "completionTimestampCoverage": 8.0,
-      "etaDate": null,
-      "etaConfidence": "insufficient_history",
-      "etaSource": "none",
-      "label": "ETA needs completion timestamp history",
+      "completedWithTimestamps": 4,
+      "completionTimestampCoverage": 14.8,
+      "etaDate": "2026-08-26",
+      "etaConfidence": "medium",
+      "etaSource": "epic_completed_at",
+      "label": "ETA 2026-08-26",
       "caveat": "5 blocked or needs-review task(s) remain."
     }
   },
@@ -1832,8 +1832,8 @@
       "id": "EPIC-139",
       "title": "CAPEX domain-boundary cleanup",
       "plainPurpose": "Separate logistics-specific behavior from shared platform semantics before CAPEX surfaces are introduced.",
-      "displayStatus": "in_progress",
-      "reviewPosture": "Fresh check completed from task files, TASK_INDEX, CURRENT_FOCUS, and closeout decisions: fourteen EPIC-139 tasks are accepted as done; TASK-0370 is the next open cleanup task, while TASK-0561 remains a later imported duplicate approval-response row.",
+      "displayStatus": "done",
+      "reviewPosture": "Fresh check completed from task files, TASK_INDEX, CURRENT_FOCUS, and closeout decisions: all imported EPIC-139 domain-boundary cleanup tasks are accepted as done; TASK-0370 closed the descriptor registry extraction and TASK-0561 closed the remaining approval-response duplicate reconciliation.",
       "dependencies": [
         "EPIC-137",
         "EPIC-139"
@@ -1854,9 +1854,9 @@
         "docs/planning/CAPEX_V6_GATE_RISK_DECISION_MAP.csv"
       ],
       "counts": {
-        "done": 14,
+        "done": 16,
         "in_progress": 0,
-        "not_started": 2,
+        "not_started": 0,
         "blocked": 0,
         "needs_review": 0,
         "total": 16
@@ -2733,9 +2733,9 @@
           "epicId": "EPIC-139",
           "title": "Domain workpage descriptor registry",
           "plainPurpose": "Move logistics workpage descriptors/actions behind domain registry.",
-          "sourceStatus": "TODO",
-          "displayStatus": "not_started",
-          "statusReason": "Task is still planned backlog work.",
+          "sourceStatus": "DONE",
+          "displayStatus": "done",
+          "statusReason": "Task frontmatter records DONE status.",
           "why": [
             "Imported from CAPEX v6 source task RF-002 so future work can be executed from repo-native backlog memory without loading the full master package."
           ],
@@ -2780,18 +2780,18 @@
           },
           "evidence": [],
           "taskPath": "codex/tasks/TASK-0370-domain-workpage-descriptor-registry.md",
-          "completedAt": null,
-          "completionTimestampStatus": "not_applicable",
-          "completionTimestampSource": "not_completed"
+          "completedAt": "2026-06-03T16:12:50+02:00",
+          "completionTimestampStatus": "recorded",
+          "completionTimestampSource": "task_frontmatter"
         },
         {
           "id": "TASK-0561",
           "epicId": "EPIC-139",
           "title": "Extract logistics side effects from approval.respond",
           "plainPurpose": "Make approval response domain-neutral; logistics publish/finalize/handoff move to domain hook registry.",
-          "sourceStatus": "TODO",
-          "displayStatus": "not_started",
-          "statusReason": "Task is still planned backlog work.",
+          "sourceStatus": "DONE",
+          "displayStatus": "done",
+          "statusReason": "Task frontmatter records DONE status.",
           "why": [
             "Imported from CAPEX v6 source task NU-CB-P0-001 so future work can be executed from repo-native backlog memory without loading the full master package."
           ],
@@ -2844,23 +2844,23 @@
           },
           "evidence": [],
           "taskPath": "codex/tasks/TASK-0561-extract-logistics-side-effects-from-approval-respond.md",
-          "completedAt": null,
-          "completionTimestampStatus": "not_applicable",
-          "completionTimestampSource": "not_completed"
+          "completedAt": "2026-06-03T16:12:50+02:00",
+          "completionTimestampStatus": "recorded",
+          "completionTimestampSource": "task_frontmatter"
         }
       ],
       "estimate": {
-        "percentComplete": 87.5,
-        "completedTasks": 14,
-        "remainingTasks": 2,
+        "percentComplete": 100.0,
+        "completedTasks": 16,
+        "remainingTasks": 0,
         "remainingBlockedOrReviewTasks": 0,
-        "completedWithTimestamps": 2,
-        "completionTimestampCoverage": 14.3,
+        "completedWithTimestamps": 4,
+        "completionTimestampCoverage": 25.0,
         "etaDate": null,
-        "etaConfidence": "insufficient_history",
+        "etaConfidence": "complete",
         "etaSource": "none",
-        "label": "ETA needs completion timestamp history",
-        "caveat": "Estimate is based on remaining current-scope task count."
+        "label": "Complete",
+        "caveat": "No remaining current-scope tasks."
       }
     },
     {
