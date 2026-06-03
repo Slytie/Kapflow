@@ -3,6 +3,7 @@ id: TASK-0576
 epic: EPIC-139
 title: "Fix approval.respond domain coupling"
 status: DONE
+completed_at: "2026-06-03T16:25:23+02:00"
 source_lineage: v5_carried_forward
 active_disposition: historical_alias
 canonical_task_refs: ["TASK-0257", "TASK-0561"]

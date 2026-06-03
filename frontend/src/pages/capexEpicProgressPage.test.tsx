@@ -22,15 +22,27 @@ describe("CapexEpicProgressPage", () => {
     expect(within(page).getByRole("heading", { name: "CAPEX Epic Progress" })).toBeInTheDocument();
     const summary = screen.getByRole("region", { name: "CAPEX progress summary" });
     expect(within(summary).getByText("374")).toBeInTheDocument();
-    expect(within(summary).getByText("6.1%")).toBeInTheDocument();
-    expect(within(summary).getByText("351")).toBeInTheDocument();
+    expect(within(summary).getByText("9.9%")).toBeInTheDocument();
+    expect(within(summary).getByText("337")).toBeInTheDocument();
 
     const timeline = screen.getByTestId("capex-epic-timeline");
     expect(within(timeline).getByRole("button", { name: /EPIC-136/i })).toBeInTheDocument();
     expect(within(timeline).getByRole("button", { name: /EPIC-152/i })).toBeInTheDocument();
     expect(
       within(timeline).getAllByText("ETA needs completion timestamp history")
-    ).toHaveLength(17);
+    ).toHaveLength(16);
+    expect(within(timeline).getByRole("button", { name: /EPIC-139.*Done/i })).toBeInTheDocument();
+  });
+
+  it("shows EPIC-139 as complete after the fresh task-progress update", () => {
+    renderCapexProgress("/demo/capex/epic-progress?epic=EPIC-139");
+
+    expect(screen.getByRole("heading", { name: "CAPEX domain-boundary cleanup" })).toBeInTheDocument();
+    const epicEstimate = screen.getByRole("region", { name: "EPIC-139 completion estimate" });
+    expect(epicEstimate).toHaveTextContent("Complete");
+    expect(epicEstimate).toHaveTextContent("100%");
+    expect(epicEstimate).toHaveTextContent("Remaining0");
+    expect(epicEstimate).toHaveTextContent("No remaining current-scope tasks.");
   });
 
   it("drills from an epic into task detail", async () => {

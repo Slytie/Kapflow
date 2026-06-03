@@ -47,9 +47,14 @@ def test_capex_epic_progress_data_uses_v2_estimates() -> None:
 
     assert data["schemaVersion"] == "capex.epic_progress.v2"
     assert data["summary"]["estimate"]["remainingTasks"] == 337
-    assert data["summary"]["estimate"]["etaDate"] == "2026-08-26"
-    assert data["summary"]["estimate"]["label"] == "ETA 2026-08-26"
+    assert data["summary"]["estimate"]["etaDate"] == "2026-08-09"
+    assert data["summary"]["estimate"]["label"] == "ETA 2026-08-09"
     assert all("estimate" in epic for epic in data["epics"])
+
+    epic139 = next(epic for epic in data["epics"] if epic["id"] == "EPIC-139")
+    assert epic139["displayStatus"] == "done"
+    assert epic139["counts"]["done"] == 17
+    assert epic139["estimate"]["label"] == "Complete"
 
 
 def test_historical_done_tasks_report_missing_completion_timestamps() -> None:

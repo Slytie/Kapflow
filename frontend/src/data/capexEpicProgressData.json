@@ -10,24 +10,24 @@
   },
   "summary": {
     "epicCount": 17,
-    "taskCount": 364,
-    "done": 27,
+    "taskCount": 374,
+    "done": 37,
     "in_progress": 0,
     "not_started": 332,
     "blocked": 1,
     "needs_review": 4,
-    "total": 364,
+    "total": 374,
     "estimate": {
-      "percentComplete": 7.4,
-      "completedTasks": 27,
+      "percentComplete": 9.9,
+      "completedTasks": 37,
       "remainingTasks": 337,
       "remainingBlockedOrReviewTasks": 5,
-      "completedWithTimestamps": 4,
-      "completionTimestampCoverage": 14.8,
-      "etaDate": "2026-08-26",
+      "completedWithTimestamps": 5,
+      "completionTimestampCoverage": 13.5,
+      "etaDate": "2026-08-09",
       "etaConfidence": "medium",
       "etaSource": "epic_completed_at",
-      "label": "ETA 2026-08-26",
+      "label": "ETA 2026-08-09",
       "caveat": "5 blocked or needs-review task(s) remain."
     }
   },
@@ -80,14 +80,14 @@
         "docs/planning/CAPEX_V6_GATE_RISK_DECISION_MAP.csv"
       ],
       "counts": {
-        "done": 1,
+        "done": 3,
         "in_progress": 0,
         "not_started": 7,
         "blocked": 0,
         "needs_review": 0,
-        "total": 8
+        "total": 10
       },
-      "taskCount": 8,
+      "taskCount": 10,
       "epicPath": "docs/planning/epics/EPIC-136.md",
       "tasks": [
         {
@@ -145,6 +145,116 @@
             "No runtime/API/schema/DB/workpage or activation behavior changed for this task."
           ],
           "taskPath": "codex/tasks/TASK-0233-red-team-integration-update.md",
+          "completedAt": null,
+          "completionTimestampStatus": "missing_historical",
+          "completionTimestampSource": "grandfathered_missing"
+        },
+        {
+          "id": "TASK-0579",
+          "epicId": "EPIC-136",
+          "title": "Add Product Goal and metric stack",
+          "plainPurpose": "Create one-page goal and metrics with signoff",
+          "sourceStatus": "DONE",
+          "displayStatus": "done",
+          "statusReason": "Task frontmatter records DONE status.",
+          "why": [
+            "Imported from CAPEX v6 source task V5-TASK-008 so future work can be executed from repo-native backlog memory without loading the full master package."
+          ],
+          "scope": [
+            "Create one-page goal and metrics with signoff"
+          ],
+          "outOfScope": [
+            "Runtime or production activation beyond this task's explicit source scope.",
+            "Copying raw K12, K3, or blind-validation project files into the repository.",
+            "Treating generated artifacts, lab reports, or AI outputs as canonical authority."
+          ],
+          "dependsOn": [],
+          "owners": [
+            "architect"
+          ],
+          "reviewers": [
+            "platform",
+            "qa"
+          ],
+          "risk": "high",
+          "verification": [
+            "Source required tests: none specified in v6 source row",
+            "Acceptance gate: V5-GATE-008",
+            "Run the smallest relevant repo checks for changed code.",
+            "Run python3 scripts/validate_repo.py and git diff --check before closing the task."
+          ],
+          "acceptanceCriteria": [
+            "Source output satisfied: V5-GATE-008",
+            "Review focus covered: normal code/document review",
+            "Refactor focus covered: none specified",
+            "Docs requirement covered: none specified",
+            "Rollback/recovery posture recorded: documented if production-facing"
+          ],
+          "sourceRow": {
+            "source_task_id": "V5-TASK-008",
+            "source_phase": "not specified",
+            "source_priority": "P0",
+            "source_area": "delivery/docs",
+            "original_depends_on": "none",
+            "recommended_source_branch": "not specified"
+          },
+          "evidence": [],
+          "taskPath": "codex/tasks/TASK-0579-add-product-goal-and-metric-stack.md",
+          "completedAt": null,
+          "completionTimestampStatus": "missing_historical",
+          "completionTimestampSource": "grandfathered_missing"
+        },
+        {
+          "id": "TASK-0580",
+          "epicId": "EPIC-136",
+          "title": "Add vertical-slice ladder and dependency register",
+          "plainPurpose": "Define VS-00..VS-05 plus dependency owners/needed-by/mitigation",
+          "sourceStatus": "DONE",
+          "displayStatus": "done",
+          "statusReason": "Task frontmatter records DONE status.",
+          "why": [
+            "Imported from CAPEX v6 source task V5-TASK-009 so future work can be executed from repo-native backlog memory without loading the full master package."
+          ],
+          "scope": [
+            "Define VS-00..VS-05 plus dependency owners/needed-by/mitigation"
+          ],
+          "outOfScope": [
+            "Runtime or production activation beyond this task's explicit source scope.",
+            "Copying raw K12, K3, or blind-validation project files into the repository.",
+            "Treating generated artifacts, lab reports, or AI outputs as canonical authority."
+          ],
+          "dependsOn": [],
+          "owners": [
+            "architect"
+          ],
+          "reviewers": [
+            "platform",
+            "qa"
+          ],
+          "risk": "high",
+          "verification": [
+            "Source required tests: none specified in v6 source row",
+            "Acceptance gate: V5-GATE-009",
+            "Run the smallest relevant repo checks for changed code.",
+            "Run python3 scripts/validate_repo.py and git diff --check before closing the task."
+          ],
+          "acceptanceCriteria": [
+            "Source output satisfied: V5-GATE-009",
+            "Review focus covered: normal code/document review",
+            "Refactor focus covered: none specified",
+            "Docs requirement covered: none specified",
+            "Rollback/recovery posture recorded: documented if production-facing"
+          ],
+          "sourceRow": {
+            "source_task_id": "V5-TASK-009",
+            "source_phase": "not specified",
+            "source_priority": "P0",
+            "source_area": "delivery/docs",
+            "original_depends_on": "none",
+            "recommended_source_branch": "not specified"
+          },
+          "evidence": [],
+          "taskPath": "codex/tasks/TASK-0580-add-vertical-slice-ladder-and-dependency-register.md",
           "completedAt": null,
           "completionTimestampStatus": "missing_historical",
           "completionTimestampSource": "grandfathered_missing"
@@ -552,8 +662,8 @@
         }
       ],
       "estimate": {
-        "percentComplete": 12.5,
-        "completedTasks": 1,
+        "percentComplete": 30.0,
+        "completedTasks": 3,
         "remainingTasks": 7,
         "remainingBlockedOrReviewTasks": 0,
         "completedWithTimestamps": 0,
@@ -593,14 +703,14 @@
         "docs/planning/CAPEX_V6_GATE_RISK_DECISION_MAP.csv"
       ],
       "counts": {
-        "done": 7,
+        "done": 8,
         "in_progress": 0,
         "not_started": 1,
         "blocked": 0,
         "needs_review": 0,
-        "total": 8
+        "total": 9
       },
-      "taskCount": 8,
+      "taskCount": 9,
       "epicPath": "docs/planning/epics/EPIC-137.md",
       "tasks": [
         {
@@ -1109,11 +1219,67 @@
           "completedAt": null,
           "completionTimestampStatus": "not_applicable",
           "completionTimestampSource": "not_completed"
+        },
+        {
+          "id": "TASK-0577",
+          "epicId": "EPIC-137",
+          "title": "Fix artifact auth-before-read",
+          "plainPurpose": "Authorize project/workflow/blob access before reading artifact content",
+          "sourceStatus": "DONE",
+          "displayStatus": "done",
+          "statusReason": "Task frontmatter records DONE status.",
+          "why": [
+            "Imported from CAPEX v6 source task V5-TASK-006 so future work can be executed from repo-native backlog memory without loading the full master package."
+          ],
+          "scope": [
+            "Authorize project/workflow/blob access before reading artifact content"
+          ],
+          "outOfScope": [
+            "Runtime or production activation beyond this task's explicit source scope.",
+            "Copying raw K12, K3, or blind-validation project files into the repository.",
+            "Treating generated artifacts, lab reports, or AI outputs as canonical authority."
+          ],
+          "dependsOn": [],
+          "owners": [
+            "platform",
+            "security"
+          ],
+          "reviewers": [
+            "architect",
+            "qa"
+          ],
+          "risk": "high",
+          "verification": [
+            "Source required tests: none specified in v6 source row",
+            "Acceptance gate: V5-GATE-002",
+            "Run the smallest relevant repo checks for changed code.",
+            "Run python3 scripts/validate_repo.py and git diff --check before closing the task."
+          ],
+          "acceptanceCriteria": [
+            "Source output satisfied: V5-GATE-002",
+            "Review focus covered: normal code/document review",
+            "Refactor focus covered: none specified",
+            "Docs requirement covered: none specified",
+            "Rollback/recovery posture recorded: documented if production-facing"
+          ],
+          "sourceRow": {
+            "source_task_id": "V5-TASK-006",
+            "source_phase": "not specified",
+            "source_priority": "P0",
+            "source_area": "code/security",
+            "original_depends_on": "none",
+            "recommended_source_branch": "not specified"
+          },
+          "evidence": [],
+          "taskPath": "codex/tasks/TASK-0577-fix-artifact-auth-before-read.md",
+          "completedAt": null,
+          "completionTimestampStatus": "missing_historical",
+          "completionTimestampSource": "grandfathered_missing"
         }
       ],
       "estimate": {
-        "percentComplete": 87.5,
-        "completedTasks": 7,
+        "percentComplete": 88.9,
+        "completedTasks": 8,
         "remainingTasks": 1,
         "remainingBlockedOrReviewTasks": 0,
         "completedWithTimestamps": 0,
@@ -1854,14 +2020,14 @@
         "docs/planning/CAPEX_V6_GATE_RISK_DECISION_MAP.csv"
       ],
       "counts": {
-        "done": 16,
+        "done": 17,
         "in_progress": 0,
         "not_started": 0,
         "blocked": 0,
         "needs_review": 0,
-        "total": 16
+        "total": 17
       },
-      "taskCount": 16,
+      "taskCount": 17,
       "epicPath": "docs/planning/epics/EPIC-139.md",
       "tasks": [
         {
@@ -2847,15 +3013,70 @@
           "completedAt": "2026-06-03T16:12:50+02:00",
           "completionTimestampStatus": "recorded",
           "completionTimestampSource": "task_frontmatter"
+        },
+        {
+          "id": "TASK-0576",
+          "epicId": "EPIC-139",
+          "title": "Fix approval.respond domain coupling",
+          "plainPurpose": "Extract logistics side effects to registered domain hooks",
+          "sourceStatus": "DONE",
+          "displayStatus": "done",
+          "statusReason": "Task frontmatter records DONE status.",
+          "why": [
+            "Imported from CAPEX v6 source task V5-TASK-005 so future work can be executed from repo-native backlog memory without loading the full master package."
+          ],
+          "scope": [
+            "Extract logistics side effects to registered domain hooks"
+          ],
+          "outOfScope": [
+            "Runtime or production activation beyond this task's explicit source scope.",
+            "Copying raw K12, K3, or blind-validation project files into the repository.",
+            "Treating generated artifacts, lab reports, or AI outputs as canonical authority."
+          ],
+          "dependsOn": [],
+          "owners": [
+            "platform"
+          ],
+          "reviewers": [
+            "architect",
+            "qa"
+          ],
+          "risk": "high",
+          "verification": [
+            "Source required tests: none specified in v6 source row",
+            "Acceptance gate: V5-GATE-001",
+            "Run the smallest relevant repo checks for changed code.",
+            "Run python3 scripts/validate_repo.py and git diff --check before closing the task."
+          ],
+          "acceptanceCriteria": [
+            "Source output satisfied: V5-GATE-001",
+            "Review focus covered: normal code/document review",
+            "Refactor focus covered: none specified",
+            "Docs requirement covered: none specified",
+            "Rollback/recovery posture recorded: documented if production-facing"
+          ],
+          "sourceRow": {
+            "source_task_id": "V5-TASK-005",
+            "source_phase": "not specified",
+            "source_priority": "P0",
+            "source_area": "code/refactor",
+            "original_depends_on": "none",
+            "recommended_source_branch": "not specified"
+          },
+          "evidence": [],
+          "taskPath": "codex/tasks/TASK-0576-fix-approval-respond-domain-coupling.md",
+          "completedAt": "2026-06-03T16:25:23+02:00",
+          "completionTimestampStatus": "recorded",
+          "completionTimestampSource": "task_frontmatter"
         }
       ],
       "estimate": {
         "percentComplete": 100.0,
-        "completedTasks": 16,
+        "completedTasks": 17,
         "remainingTasks": 0,
         "remainingBlockedOrReviewTasks": 0,
-        "completedWithTimestamps": 4,
-        "completionTimestampCoverage": 25.0,
+        "completedWithTimestamps": 5,
+        "completionTimestampCoverage": 29.4,
         "etaDate": null,
         "etaConfidence": "complete",
         "etaSource": "none",
@@ -3903,14 +4124,14 @@
         "docs/planning/CAPEX_V6_GATE_RISK_DECISION_MAP.csv"
       ],
       "counts": {
-        "done": 0,
+        "done": 1,
         "in_progress": 0,
         "not_started": 50,
         "blocked": 0,
         "needs_review": 1,
-        "total": 51
+        "total": 52
       },
-      "taskCount": 51,
+      "taskCount": 52,
       "epicPath": "docs/planning/epics/EPIC-141.md",
       "tasks": [
         {
@@ -6792,11 +7013,66 @@
           "completedAt": null,
           "completionTimestampStatus": "not_applicable",
           "completionTimestampSource": "not_completed"
+        },
+        {
+          "id": "TASK-0578",
+          "epicId": "EPIC-141",
+          "title": "Add SourceRef resolution contract/tests",
+          "plainPurpose": "Distinguish declaration from resolved runtime support",
+          "sourceStatus": "DONE",
+          "displayStatus": "done",
+          "statusReason": "Task frontmatter records DONE status.",
+          "why": [
+            "Imported from CAPEX v6 source task V5-TASK-007 so future work can be executed from repo-native backlog memory without loading the full master package."
+          ],
+          "scope": [
+            "Distinguish declaration from resolved runtime support"
+          ],
+          "outOfScope": [
+            "Runtime or production activation beyond this task's explicit source scope.",
+            "Copying raw K12, K3, or blind-validation project files into the repository.",
+            "Treating generated artifacts, lab reports, or AI outputs as canonical authority."
+          ],
+          "dependsOn": [],
+          "owners": [
+            "platform"
+          ],
+          "reviewers": [
+            "architect",
+            "qa"
+          ],
+          "risk": "high",
+          "verification": [
+            "Source required tests: none specified in v6 source row",
+            "Acceptance gate: V5-GATE-007",
+            "Run the smallest relevant repo checks for changed code.",
+            "Run python3 scripts/validate_repo.py and git diff --check before closing the task."
+          ],
+          "acceptanceCriteria": [
+            "Source output satisfied: V5-GATE-007",
+            "Review focus covered: normal code/document review",
+            "Refactor focus covered: none specified",
+            "Docs requirement covered: none specified",
+            "Rollback/recovery posture recorded: documented if production-facing"
+          ],
+          "sourceRow": {
+            "source_task_id": "V5-TASK-007",
+            "source_phase": "not specified",
+            "source_priority": "P0",
+            "source_area": "code/tests",
+            "original_depends_on": "none",
+            "recommended_source_branch": "not specified"
+          },
+          "evidence": [],
+          "taskPath": "codex/tasks/TASK-0578-add-sourceref-resolution-contract-tests.md",
+          "completedAt": null,
+          "completionTimestampStatus": "missing_historical",
+          "completionTimestampSource": "grandfathered_missing"
         }
       ],
       "estimate": {
-        "percentComplete": 0.0,
-        "completedTasks": 0,
+        "percentComplete": 1.9,
+        "completedTasks": 1,
         "remainingTasks": 51,
         "remainingBlockedOrReviewTasks": 1,
         "completedWithTimestamps": 0,
@@ -6834,14 +7110,14 @@
         "docs/planning/CAPEX_V6_GATE_RISK_DECISION_MAP.csv"
       ],
       "counts": {
-        "done": 0,
+        "done": 3,
         "in_progress": 0,
         "not_started": 28,
         "blocked": 0,
         "needs_review": 1,
-        "total": 29
+        "total": 32
       },
-      "taskCount": 29,
+      "taskCount": 32,
       "epicPath": "docs/planning/epics/EPIC-142.md",
       "tasks": [
         {
@@ -8477,11 +8753,176 @@
           "completedAt": null,
           "completionTimestampStatus": "not_applicable",
           "completionTimestampSource": "not_completed"
+        },
+        {
+          "id": "TASK-0572",
+          "epicId": "EPIC-142",
+          "title": "Patch master architecture: reality vs representation",
+          "plainPurpose": "Add R_t/M_t language and engineering project state vector interpretation",
+          "sourceStatus": "DONE",
+          "displayStatus": "done",
+          "statusReason": "Task frontmatter records DONE status.",
+          "why": [
+            "Imported from CAPEX v6 source task V5-TASK-001 so future work can be executed from repo-native backlog memory without loading the full master package."
+          ],
+          "scope": [
+            "Add R_t/M_t language and engineering project state vector interpretation"
+          ],
+          "outOfScope": [
+            "Runtime or production activation beyond this task's explicit source scope.",
+            "Copying raw K12, K3, or blind-validation project files into the repository.",
+            "Treating generated artifacts, lab reports, or AI outputs as canonical authority."
+          ],
+          "dependsOn": [],
+          "owners": [
+            "architect"
+          ],
+          "reviewers": [
+            "platform",
+            "qa"
+          ],
+          "risk": "high",
+          "verification": [
+            "Source required tests: none specified in v6 source row",
+            "Acceptance gate: V5-GATE-003",
+            "Run the smallest relevant repo checks for changed code.",
+            "Run python3 scripts/validate_repo.py and git diff --check before closing the task."
+          ],
+          "acceptanceCriteria": [
+            "Source output satisfied: V5-GATE-003",
+            "Review focus covered: normal code/document review",
+            "Refactor focus covered: none specified",
+            "Docs requirement covered: none specified",
+            "Rollback/recovery posture recorded: documented if production-facing"
+          ],
+          "sourceRow": {
+            "source_task_id": "V5-TASK-001",
+            "source_phase": "not specified",
+            "source_priority": "P0",
+            "source_area": "docs/architecture",
+            "original_depends_on": "none",
+            "recommended_source_branch": "not specified"
+          },
+          "evidence": [],
+          "taskPath": "codex/tasks/TASK-0572-patch-master-architecture-reality-vs-representation.md",
+          "completedAt": null,
+          "completionTimestampStatus": "missing_historical",
+          "completionTimestampSource": "grandfathered_missing"
+        },
+        {
+          "id": "TASK-0573",
+          "epicId": "EPIC-142",
+          "title": "Add canonical relation_kind vocabulary",
+          "plainPurpose": "Define and register canonical evidence/provenance/workflow relation kinds",
+          "sourceStatus": "DONE",
+          "displayStatus": "done",
+          "statusReason": "Task frontmatter records DONE status.",
+          "why": [
+            "Imported from CAPEX v6 source task V5-TASK-002 so future work can be executed from repo-native backlog memory without loading the full master package."
+          ],
+          "scope": [
+            "Define and register canonical evidence/provenance/workflow relation kinds"
+          ],
+          "outOfScope": [
+            "Runtime or production activation beyond this task's explicit source scope.",
+            "Copying raw K12, K3, or blind-validation project files into the repository.",
+            "Treating generated artifacts, lab reports, or AI outputs as canonical authority."
+          ],
+          "dependsOn": [],
+          "owners": [
+            "platform"
+          ],
+          "reviewers": [
+            "architect",
+            "qa"
+          ],
+          "risk": "high",
+          "verification": [
+            "Source required tests: none specified in v6 source row",
+            "Acceptance gate: V5-GATE-004",
+            "Run the smallest relevant repo checks for changed code.",
+            "Run python3 scripts/validate_repo.py and git diff --check before closing the task."
+          ],
+          "acceptanceCriteria": [
+            "Source output satisfied: V5-GATE-004",
+            "Review focus covered: normal code/document review",
+            "Refactor focus covered: none specified",
+            "Docs requirement covered: none specified",
+            "Rollback/recovery posture recorded: documented if production-facing"
+          ],
+          "sourceRow": {
+            "source_task_id": "V5-TASK-002",
+            "source_phase": "not specified",
+            "source_priority": "P0",
+            "source_area": "schema/catalog",
+            "original_depends_on": "none",
+            "recommended_source_branch": "not specified"
+          },
+          "evidence": [],
+          "taskPath": "codex/tasks/TASK-0573-add-canonical-relation-kind-vocabulary.md",
+          "completedAt": null,
+          "completionTimestampStatus": "missing_historical",
+          "completionTimestampSource": "grandfathered_missing"
+        },
+        {
+          "id": "TASK-0575",
+          "epicId": "EPIC-142",
+          "title": "Define issue/hypothesis graph guardrails",
+          "plainPurpose": "Prevent premature RCA closure from sparse evidence",
+          "sourceStatus": "DONE",
+          "displayStatus": "done",
+          "statusReason": "Task frontmatter records DONE status.",
+          "why": [
+            "Imported from CAPEX v6 source task V5-TASK-004 so future work can be executed from repo-native backlog memory without loading the full master package."
+          ],
+          "scope": [
+            "Prevent premature RCA closure from sparse evidence"
+          ],
+          "outOfScope": [
+            "Runtime or production activation beyond this task's explicit source scope.",
+            "Copying raw K12, K3, or blind-validation project files into the repository.",
+            "Treating generated artifacts, lab reports, or AI outputs as canonical authority."
+          ],
+          "dependsOn": [],
+          "owners": [
+            "platform"
+          ],
+          "reviewers": [
+            "architect",
+            "qa"
+          ],
+          "risk": "high",
+          "verification": [
+            "Source required tests: none specified in v6 source row",
+            "Acceptance gate: V5-GATE-006",
+            "Run the smallest relevant repo checks for changed code.",
+            "Run python3 scripts/validate_repo.py and git diff --check before closing the task."
+          ],
+          "acceptanceCriteria": [
+            "Source output satisfied: V5-GATE-006",
+            "Review focus covered: normal code/document review",
+            "Refactor focus covered: none specified",
+            "Docs requirement covered: none specified",
+            "Rollback/recovery posture recorded: documented if production-facing"
+          ],
+          "sourceRow": {
+            "source_task_id": "V5-TASK-004",
+            "source_phase": "not specified",
+            "source_priority": "P0",
+            "source_area": "task/evidence",
+            "original_depends_on": "none",
+            "recommended_source_branch": "not specified"
+          },
+          "evidence": [],
+          "taskPath": "codex/tasks/TASK-0575-define-issue-hypothesis-graph-guardrails.md",
+          "completedAt": null,
+          "completionTimestampStatus": "missing_historical",
+          "completionTimestampSource": "grandfathered_missing"
         }
       ],
       "estimate": {
-        "percentComplete": 0.0,
-        "completedTasks": 0,
+        "percentComplete": 9.4,
+        "completedTasks": 3,
         "remainingTasks": 29,
         "remainingBlockedOrReviewTasks": 1,
         "completedWithTimestamps": 0,
@@ -8497,7 +8938,7 @@
       "id": "EPIC-143",
       "title": "CAPEX workflow catalog",
       "plainPurpose": "Define CAPEX workflow slices for intake, baseline, lifecycle, commitments, assumptions, interfaces, snapshots, and risk.",
-      "displayStatus": "not_started",
+      "displayStatus": "in_progress",
       "reviewPosture": "Review posture follows task evidence and curated blocker overrides.",
       "dependencies": [
         "EPIC-140",
@@ -8520,14 +8961,14 @@
         "docs/planning/CAPEX_V6_GATE_RISK_DECISION_MAP.csv"
       ],
       "counts": {
-        "done": 0,
+        "done": 2,
         "in_progress": 0,
         "not_started": 9,
         "blocked": 0,
         "needs_review": 0,
-        "total": 9
+        "total": 11
       },
-      "taskCount": 9,
+      "taskCount": 11,
       "epicPath": "docs/planning/epics/EPIC-143.md",
       "tasks": [
         {
@@ -9047,11 +9488,121 @@
           "completedAt": null,
           "completionTimestampStatus": "not_applicable",
           "completionTimestampSource": "not_completed"
+        },
+        {
+          "id": "TASK-0574",
+          "epicId": "EPIC-143",
+          "title": "Define feasibility-set workflow semantics",
+          "plainPurpose": "Define direct conformance, replacement equivalence, waiver, residual risk, open issue branches",
+          "sourceStatus": "DONE",
+          "displayStatus": "done",
+          "statusReason": "Task frontmatter records DONE status.",
+          "why": [
+            "Imported from CAPEX v6 source task V5-TASK-003 so future work can be executed from repo-native backlog memory without loading the full master package."
+          ],
+          "scope": [
+            "Define direct conformance, replacement equivalence, waiver, residual risk, open issue branches"
+          ],
+          "outOfScope": [
+            "Runtime or production activation beyond this task's explicit source scope.",
+            "Copying raw K12, K3, or blind-validation project files into the repository.",
+            "Treating generated artifacts, lab reports, or AI outputs as canonical authority."
+          ],
+          "dependsOn": [],
+          "owners": [
+            "platform"
+          ],
+          "reviewers": [
+            "architect",
+            "qa"
+          ],
+          "risk": "high",
+          "verification": [
+            "Source required tests: none specified in v6 source row",
+            "Acceptance gate: V5-GATE-005",
+            "Run the smallest relevant repo checks for changed code.",
+            "Run python3 scripts/validate_repo.py and git diff --check before closing the task."
+          ],
+          "acceptanceCriteria": [
+            "Source output satisfied: V5-GATE-005",
+            "Review focus covered: normal code/document review",
+            "Refactor focus covered: none specified",
+            "Docs requirement covered: none specified",
+            "Rollback/recovery posture recorded: documented if production-facing"
+          ],
+          "sourceRow": {
+            "source_task_id": "V5-TASK-003",
+            "source_phase": "not specified",
+            "source_priority": "P0",
+            "source_area": "workflow/catalog",
+            "original_depends_on": "none",
+            "recommended_source_branch": "not specified"
+          },
+          "evidence": [],
+          "taskPath": "codex/tasks/TASK-0574-define-feasibility-set-workflow-semantics.md",
+          "completedAt": null,
+          "completionTimestampStatus": "missing_historical",
+          "completionTimestampSource": "grandfathered_missing"
+        },
+        {
+          "id": "TASK-0581",
+          "epicId": "EPIC-143",
+          "title": "Define workflow handoff manifest",
+          "plainPurpose": "Bind version, pointer generation, validation, stale basis, open issue status",
+          "sourceStatus": "DONE",
+          "displayStatus": "done",
+          "statusReason": "Task frontmatter records DONE status.",
+          "why": [
+            "Imported from CAPEX v6 source task V5-TASK-010 so future work can be executed from repo-native backlog memory without loading the full master package."
+          ],
+          "scope": [
+            "Bind version, pointer generation, validation, stale basis, open issue status"
+          ],
+          "outOfScope": [
+            "Runtime or production activation beyond this task's explicit source scope.",
+            "Copying raw K12, K3, or blind-validation project files into the repository.",
+            "Treating generated artifacts, lab reports, or AI outputs as canonical authority."
+          ],
+          "dependsOn": [],
+          "owners": [
+            "platform"
+          ],
+          "reviewers": [
+            "architect",
+            "qa"
+          ],
+          "risk": "medium",
+          "verification": [
+            "Source required tests: none specified in v6 source row",
+            "Acceptance gate: V5-GATE-010",
+            "Run the smallest relevant repo checks for changed code.",
+            "Run python3 scripts/validate_repo.py and git diff --check before closing the task."
+          ],
+          "acceptanceCriteria": [
+            "Source output satisfied: V5-GATE-010",
+            "Review focus covered: normal code/document review",
+            "Refactor focus covered: none specified",
+            "Docs requirement covered: none specified",
+            "Rollback/recovery posture recorded: documented if production-facing"
+          ],
+          "sourceRow": {
+            "source_task_id": "V5-TASK-010",
+            "source_phase": "not specified",
+            "source_priority": "P1",
+            "source_area": "runtime/catalog",
+            "original_depends_on": "none",
+            "recommended_source_branch": "not specified"
+          },
+          "evidence": [],
+          "taskPath": "codex/tasks/TASK-0581-define-workflow-handoff-manifest.md",
+          "completedAt": null,
+          "completionTimestampStatus": "missing_historical",
+          "completionTimestampSource": "grandfathered_missing"
         }
       ],
       "estimate": {
-        "percentComplete": 0.0,
-        "completedTasks": 0,
+        "percentComplete": 18.2,
+        "completedTasks": 2,
         "remainingTasks": 9,
         "remainingBlockedOrReviewTasks": 0,
         "completedWithTimestamps": 0,

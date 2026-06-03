@@ -118,6 +118,22 @@ def _mapping(section: str) -> dict[str, str]:
     return result
 
 
+def _task_ids_from_epic_sections(sections: dict[str, str], text: str) -> list[str]:
+    task_ids: list[str] = []
+    source_sections = [
+        sections.get("Task stack", ""),
+        sections.get("Historical/reconciled aliases", ""),
+    ]
+    if not any(source_sections):
+        source_sections = [text]
+    for section in source_sections:
+        for line in _plain_lines(section):
+            match = TASK_ID_RE.search(line)
+            if match:
+                task_ids.append(match.group(0))
+    return sorted(set(task_ids))
+
+
 def _first_sentence(section: str) -> str:
     for line in _plain_lines(section):
         return line
@@ -377,7 +393,7 @@ def build_data(overrides_path: Path = DEFAULT_OVERRIDES_PATH) -> dict[str, Any]:
         epic_id = title_match.group(1)
         title = title_match.group(2)
         sections = _sections(text)
-        task_ids = sorted(set(TASK_ID_RE.findall(sections.get("Task stack", text))))
+        task_ids = _task_ids_from_epic_sections(sections, text)
         tasks = [
             _task_record(
                 task_id,
