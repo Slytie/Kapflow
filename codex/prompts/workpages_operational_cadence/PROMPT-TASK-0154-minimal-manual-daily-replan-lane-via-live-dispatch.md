@@ -12,10 +12,10 @@ Use this section in **Ask mode** first. Do not edit code yet.
 - `codex/tasks/TASK-0154-minimal-manual-daily-replan-lane-via-live-dispatch.md`
 - `docs/planning/epics/EPIC-125.md`
 - `codex/context/EPIC-125.md`
-- `docs/planning/LOGISTICS_WORKPAGES_OPERATIONAL_CADENCE_PLAN.md`
-- `docs/planning/LOGISTICS_WORKPAGES_OPERATIONAL_CADENCE_EXEC_SUMMARY.md`
+- `docs/domains/logistics/archive/LOGISTICS_WORKPAGES_OPERATIONAL_CADENCE_PLAN.md`
+- `docs/domains/logistics/archive/LOGISTICS_WORKPAGES_OPERATIONAL_CADENCE_EXEC_SUMMARY.md`
 - `docs/workflows/live_dispatch/v1/WORKFLOW_CONTRACT.yaml`
-- `docs/planning/LOGISTICS_WEEKLY_TO_LIVE_HANDOFF_RUNTIME.md`
+- `docs/domains/logistics/current-state/LOGISTICS_WEEKLY_TO_LIVE_HANDOFF_RUNTIME.md`
 - `src/onetruth/application/handlers/logistics_handoff.py`
 - `tests/runtime/test_logistics_handoff_runtime.py`
 
@@ -46,9 +46,9 @@ Use this section only after the Ask-mode plan is reviewed and approved.
 - `codex/tasks/TASK-0154-minimal-manual-daily-replan-lane-via-live-dispatch.md`
 - `docs/planning/epics/EPIC-125.md`
 - `codex/context/EPIC-125.md`
-- `docs/planning/LOGISTICS_WORKPAGES_OPERATIONAL_CADENCE_PLAN.md`
+- `docs/domains/logistics/archive/LOGISTICS_WORKPAGES_OPERATIONAL_CADENCE_PLAN.md`
 - `docs/workflows/live_dispatch/v1/WORKFLOW_CONTRACT.yaml`
-- `docs/planning/LOGISTICS_WEEKLY_TO_LIVE_HANDOFF_RUNTIME.md`
+- `docs/domains/logistics/current-state/LOGISTICS_WEEKLY_TO_LIVE_HANDOFF_RUNTIME.md`
 - `src/onetruth/application/handlers/logistics_handoff.py`
 - relevant live-dispatch runtime tests
 

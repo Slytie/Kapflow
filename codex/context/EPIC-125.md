@@ -16,8 +16,8 @@ Purpose:
 - Update repo-native docs, task files, and status memory in the same change set whenever the operator-loop truth changes.
 
 ## Contracts and docs to treat as authoritative
-- `docs/planning/LOGISTICS_WORKPAGES_OPERATIONAL_CADENCE_EXEC_SUMMARY.md`
-- `docs/planning/LOGISTICS_WORKPAGES_OPERATIONAL_CADENCE_PLAN.md`
+- `docs/domains/logistics/archive/LOGISTICS_WORKPAGES_OPERATIONAL_CADENCE_EXEC_SUMMARY.md`
+- `docs/domains/logistics/archive/LOGISTICS_WORKPAGES_OPERATIONAL_CADENCE_PLAN.md`
 - `docs/planning/epics/EPIC-125.md`
 - `codex/context/EPIC-125.md`
 - `docs/workflows/weekly_schedule_planning/v1/WORKFLOW_CONTRACT.yaml`
@@ -45,7 +45,7 @@ Purpose:
 - `TASK-0152`, `TASK-0153`, and `TASK-0155` are now complete, so EPIC-125 already has the weekly operator lane, the daily reporting lane, and the weekly-first local demo surface.
 - `TASK-0156` is now complete, so EPIC-125 also has the external cadence tick plus the first continuous single-node operator runbook.
 - `TASK-0154` and `TASK-0157` are now complete, so EPIC-125 is closed as completed history.
-- The first-demo feedback handoff is frozen in `docs/planning/LOGISTICS_WORKPAGES_EPIC125_CLOSEOUT_AND_FEEDBACK_NOTE.md`, and the downstream work is already reflected in completed EPIC-126 cleanup history plus the landed EPIC-131, EPIC-132, EPIC-133, and EPIC-134 tranches.
+- The first-demo feedback handoff is frozen in `docs/domains/logistics/archive/LOGISTICS_WORKPAGES_EPIC125_CLOSEOUT_AND_FEEDBACK_NOTE.md`, and the downstream work is already reflected in completed EPIC-126 cleanup history plus the landed EPIC-131, EPIC-132, EPIC-133, and EPIC-134 tranches.
 
 ## Historical implementation order inside this epic
 1. `TASK-0151` - Freeze operator-loop contract, authoritative inputs, and milestones
@@ -63,8 +63,8 @@ Purpose:
 - Do not add raw-email parser ownership, live-dispatch algorithmics, schedule Stage06/Stage07 widening, or an embedded scheduler in this epic.
 
 ## Smallest context set if work revisits this historical operator-loop tranche
-- `docs/planning/LOGISTICS_WORKPAGES_OPERATIONAL_CADENCE_PLAN.md`
-- `docs/planning/LOGISTICS_WORKPAGES_OPERATIONAL_CADENCE_EXEC_SUMMARY.md`
+- `docs/domains/logistics/archive/LOGISTICS_WORKPAGES_OPERATIONAL_CADENCE_PLAN.md`
+- `docs/domains/logistics/archive/LOGISTICS_WORKPAGES_OPERATIONAL_CADENCE_EXEC_SUMMARY.md`
 - `docs/planning/epics/EPIC-125.md`
 - `docs/workflows/live_dispatch/v1/WORKFLOW_CONTRACT.yaml`
 - `docs/workflows/live_dispatch/v1/OPERATING_MODEL.md`

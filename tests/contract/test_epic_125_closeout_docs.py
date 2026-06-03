@@ -14,7 +14,7 @@ TASK_0158_PATH = REPO_ROOT / "codex/tasks/TASK-0158-triage-first-demo-feedback-a
 TASK_0159_PATH = REPO_ROOT / "codex/tasks/TASK-0159-harden-regression-observability-and-failure-state-truth-for-weekly-daily-operator-loops.md"
 TASK_0160_PATH = REPO_ROOT / "codex/tasks/TASK-0160-freeze-workpages-v1-boundary-clean-up-route-posture-and-close-doc-truth.md"
 FEEDBACK_NOTE_PATH = (
-    REPO_ROOT / "docs/planning/LOGISTICS_WORKPAGES_EPIC125_CLOSEOUT_AND_FEEDBACK_NOTE.md"
+    REPO_ROOT / "docs/domains/logistics/archive/LOGISTICS_WORKPAGES_EPIC125_CLOSEOUT_AND_FEEDBACK_NOTE.md"
 )
 
 

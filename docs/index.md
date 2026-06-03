@@ -28,12 +28,15 @@
 - `docs/planning/STEP_RUN_SCENARIO_HARNESS.md`
 - `docs/planning/EPICS.md`
 - `docs/planning/TASK_INDEX.md`
-- `docs/planning/LOGISTICS_WORKPAGES_V0_PLAN.md`
-- `docs/planning/LOGISTICS_WORKPAGES_V0_PRODUCT_BRIEF.md`
+- `docs/planning/WORKPAGE_DEVELOPMENT_GUIDE.md`
 - `docs/planning/TEST_STRATEGY.md`
 - `docs/planning/TEST_MATRIX.md`
 - `docs/planning/TDD_IMPLEMENTATION_PLAN.md`
 - `docs/planning/MERGER_BACKLOG.md`
+
+## Domains
+- `docs/domains/logistics/README.md`
+- `docs/domains/logistics/DOC_INVENTORY.yaml`
 
 ## Architecture
 - `docs/architecture/AUTHORITY_MODEL.md`
@@ -55,6 +58,10 @@
 
 ## Workflows
 - `docs/workflows/README.md`
+- `docs/workflows/logistics_ops_family/v1/`
+- `docs/workflows/weekly_schedule_planning/v1/`
+- `docs/workflows/live_dispatch/v1/`
+- `docs/workflows/dispatch_reporting/v1/`
 - `docs/workflows/payroll/v1/`
 - `docs/workflows/schedule_planning/v1/`
 

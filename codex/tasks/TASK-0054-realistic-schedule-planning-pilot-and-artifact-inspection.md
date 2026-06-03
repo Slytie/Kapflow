@@ -43,7 +43,7 @@ This is an experiential/operator-inspection milestone and the first realistic pi
 - `src/onetruth/application/services/stage06_openai_sandbox.py`
 
 ## Source Files To Change
-- `docs/planning/REALISTIC_SCHEDULE_PLANNING_PILOT.md`
+- `docs/domains/logistics/current-state/REALISTIC_SCHEDULE_PLANNING_PILOT.md`
 - `src/onetruth/application/services/realistic_schedule_planning_pilot.py`
 - `scripts/run_schedule_planning_pilot.py`
 - `tests/runtime/test_realistic_schedule_planning_pilot.py`
@@ -84,7 +84,7 @@ This is an experiential/operator-inspection milestone and the first realistic pi
 - `src/onetruth/application/services/realistic_schedule_planning_pilot.py`
 - `scripts/run_schedule_planning_pilot.py`
 - `tests/runtime/test_realistic_schedule_planning_pilot.py`
-- `docs/planning/REALISTIC_SCHEDULE_PLANNING_PILOT.md`
+- `docs/domains/logistics/current-state/REALISTIC_SCHEDULE_PLANNING_PILOT.md`
 - `README.md`
 - `docs/planning/FIRST_RUNTIME_SLICE.md`
 - `docs/planning/TEST_MATRIX.md`

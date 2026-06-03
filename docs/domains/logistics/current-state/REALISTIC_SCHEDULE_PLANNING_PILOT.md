@@ -1,3 +1,5 @@
+> Document classification: descriptive logistics current-state source. See `docs/domains/logistics/DOC_INVENTORY.yaml`.
+
 # REALISTIC_SCHEDULE_PLANNING_PILOT.md
 
 ## Purpose

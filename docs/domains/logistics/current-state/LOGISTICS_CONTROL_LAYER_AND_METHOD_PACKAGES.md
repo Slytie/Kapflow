@@ -1,3 +1,5 @@
+> Document classification: normative logistics current-state source. See `docs/domains/logistics/DOC_INVENTORY.yaml`.
+
 # LOGISTICS_CONTROL_LAYER_AND_METHOD_PACKAGES.md
 
 ## Purpose

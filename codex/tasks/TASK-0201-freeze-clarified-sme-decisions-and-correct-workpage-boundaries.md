@@ -47,7 +47,7 @@ The earlier operator-workpages packet encoded a materially wrong assumption: it 
 
 ## Source files changed
 - `docs/planning/epics/EPIC-131.md`
-- `docs/planning/LOGISTICS_WORKPAGES_V1_HEATMAP_RECALC_ROUTE_DEMAND_AND_VERSIONING_PLAN.md`
+- `docs/domains/logistics/archive/LOGISTICS_WORKPAGES_V1_HEATMAP_RECALC_ROUTE_DEMAND_AND_VERSIONING_PLAN.md`
 - `codex/context/EPIC-131.md`
 - `codex/context/SME-DECISIONS-AND-GREY-AREAS-2026-04-04.md`
 - `codex/context/WORKPAGE-DEPENDENCY-AND-CALCULATION-RATIONALE.md`
@@ -69,7 +69,7 @@ The earlier operator-workpages packet encoded a materially wrong assumption: it 
 ## Verification
 - `make schema-validate`
 - `make contract`
-- `rg -n "schedule-v0|route-demand-v0|driver-preferences-v0|accepted" docs/planning/epics/EPIC-131.md docs/planning/LOGISTICS_WORKPAGES_V1_HEATMAP_RECALC_ROUTE_DEMAND_AND_VERSIONING_PLAN.md codex/context/EPIC-131.md codex/context/SME-DECISIONS-AND-GREY-AREAS-2026-04-04.md codex/context/WORKPAGE-DEPENDENCY-AND-CALCULATION-RATIONALE.md codex/tasks/TASK-0201-freeze-clarified-sme-decisions-and-correct-workpage-boundaries.md codex/tasks/TASK-0202-add-backend-workpage-descriptors-calculated-contract-blocks-and-accepted-series-queries.md codex/tasks/TASK-0203-implement-schedule-preview-recalculation-pinned-baselines-and-companion-calculation-evidence.md codex/tasks/TASK-0204-redesign-schedule-v0-frontend-for-live-heatmap-recalc-driver-metrics-and-version-rails.md codex/tasks/TASK-0205-implement-route-demand-v0-operational-editor-and-schedule-drift-propagation.md codex/tasks/TASK-0206-add-driver-preferences-v0-and-soft-advisory-integration.md codex/tasks/TASK-0207-close-epic-with-regressions-docs-compatibility-cleanup-and-deferred-item-markers.md`
+- `rg -n "schedule-v0|route-demand-v0|driver-preferences-v0|accepted" docs/planning/epics/EPIC-131.md docs/domains/logistics/archive/LOGISTICS_WORKPAGES_V1_HEATMAP_RECALC_ROUTE_DEMAND_AND_VERSIONING_PLAN.md codex/context/EPIC-131.md codex/context/SME-DECISIONS-AND-GREY-AREAS-2026-04-04.md codex/context/WORKPAGE-DEPENDENCY-AND-CALCULATION-RATIONALE.md codex/tasks/TASK-0201-freeze-clarified-sme-decisions-and-correct-workpage-boundaries.md codex/tasks/TASK-0202-add-backend-workpage-descriptors-calculated-contract-blocks-and-accepted-series-queries.md codex/tasks/TASK-0203-implement-schedule-preview-recalculation-pinned-baselines-and-companion-calculation-evidence.md codex/tasks/TASK-0204-redesign-schedule-v0-frontend-for-live-heatmap-recalc-driver-metrics-and-version-rails.md codex/tasks/TASK-0205-implement-route-demand-v0-operational-editor-and-schedule-drift-propagation.md codex/tasks/TASK-0206-add-driver-preferences-v0-and-soft-advisory-integration.md codex/tasks/TASK-0207-close-epic-with-regressions-docs-compatibility-cleanup-and-deferred-item-markers.md`
 
 ## Outcome
 - EPIC-131 now has standard repo entrypoints under `docs/planning/epics/` and `codex/context/`.

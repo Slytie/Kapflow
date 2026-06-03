@@ -36,9 +36,9 @@ Freeze the first schedule artifact-backed workpage contract and route posture, i
 - `docs/planning/TASK_INDEX.md`
 - `docs/planning/epics/EPIC-123.md`
 - `codex/context/EPIC-123.md`
-- `docs/planning/LOGISTICS_WORKPAGES_SCHEDULE_ARTIFACT_PATH_BRIEF.md`
-- `docs/planning/LOGISTICS_WORKPAGES_SCHEDULE_ARTIFACT_PATH_PLAN.md`
-- `docs/planning/CONTINUOUS_SCHEDULE_CONTROL_ARTIFACTS.md`
+- `docs/domains/logistics/archive/LOGISTICS_WORKPAGES_SCHEDULE_ARTIFACT_PATH_BRIEF.md`
+- `docs/domains/logistics/archive/LOGISTICS_WORKPAGES_SCHEDULE_ARTIFACT_PATH_PLAN.md`
+- `docs/domains/logistics/current-state/CONTINUOUS_SCHEDULE_CONTROL_ARTIFACTS.md`
 - `docs/planning/HITL_HTTP_API_CONTRACTS.md`
 - `docs/planning/FRONTEND_PAGE_MAP.md`
 - `docs/planning/CURRENT_CAPABILITY_AND_CERTIFICATION_MATRIX.md`

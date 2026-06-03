@@ -29,7 +29,7 @@ Close EPIC-123 by synchronizing repo memory and operator-facing docs with the im
 - `docs/planning/TASK_INDEX.md`
 - `docs/planning/epics/EPIC-123.md`
 - `codex/context/EPIC-123.md`
-- `docs/planning/LOGISTICS_WORKPAGES_SCHEDULE_ARTIFACT_PATH_PLAN.md`
+- `docs/domains/logistics/archive/LOGISTICS_WORKPAGES_SCHEDULE_ARTIFACT_PATH_PLAN.md`
 - `docs/planning/FRONTEND_PAGE_MAP.md`
 - `docs/planning/HITL_HTTP_API_CONTRACTS.md`
 - `docs/planning/CURRENT_CAPABILITY_AND_CERTIFICATION_MATRIX.md`

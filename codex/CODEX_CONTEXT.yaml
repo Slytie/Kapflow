@@ -163,8 +163,8 @@ gated_context:
   logistics_workpages_fe_pack:
     load_when: Task touches EPIC-120 or fixture-backed logistics workpage surfaces under /demo/logistics/workpages/*.
     files:
-      - docs/planning/LOGISTICS_WORKPAGES_V0_PLAN.md
-      - docs/planning/LOGISTICS_WORKPAGES_V0_PRODUCT_BRIEF.md
+      - docs/domains/logistics/archive/LOGISTICS_WORKPAGES_V0_PLAN.md
+      - docs/domains/logistics/archive/LOGISTICS_WORKPAGES_V0_PRODUCT_BRIEF.md
       - docs/planning/epics/EPIC-120.md
       - codex/context/EPIC-120.md
       - docs/workflows/weekly_schedule_planning/v1/OPERATING_MODEL.md
@@ -179,8 +179,8 @@ gated_context:
   logistics_workpages_run_surfaces_pack:
     load_when: Task touches EPIC-122 or workflow-run-backed workpage surfaces under /runs/:workflowRunId/workpages/*.
     files:
-      - docs/planning/LOGISTICS_WORKPAGES_RUN_SURFACES_PLAN.md
-      - docs/planning/LOGISTICS_WORKPAGES_RUN_SURFACES_BRIEF.md
+      - docs/domains/logistics/archive/LOGISTICS_WORKPAGES_RUN_SURFACES_PLAN.md
+      - docs/domains/logistics/archive/LOGISTICS_WORKPAGES_RUN_SURFACES_BRIEF.md
       - docs/planning/epics/EPIC-122.md
       - codex/context/EPIC-122.md
       - docs/planning/HITL_HTTP_API_CONTRACTS.md

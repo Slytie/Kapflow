@@ -12,8 +12,8 @@ Use this section in **Ask mode** first. Do not edit code yet.
 - `codex/tasks/TASK-0151-freeze-operational-cadence-contract-authoritative-input-policy-and-local-demo-milestone.md`
 - `docs/planning/epics/EPIC-125.md`
 - `codex/context/EPIC-125.md`
-- `docs/planning/LOGISTICS_WORKPAGES_OPERATIONAL_CADENCE_PLAN.md`
-- `docs/planning/LOGISTICS_WORKPAGES_OPERATIONAL_CADENCE_EXEC_SUMMARY.md`
+- `docs/domains/logistics/archive/LOGISTICS_WORKPAGES_OPERATIONAL_CADENCE_PLAN.md`
+- `docs/domains/logistics/archive/LOGISTICS_WORKPAGES_OPERATIONAL_CADENCE_EXEC_SUMMARY.md`
 - `docs/workflows/weekly_schedule_planning/v1/WORKFLOW_CONTRACT.yaml`
 - `docs/workflows/live_dispatch/v1/WORKFLOW_CONTRACT.yaml`
 - `docs/workflows/dispatch_reporting/v1/WORKFLOW_CONTRACT.yaml`
@@ -47,7 +47,7 @@ Use this section only after the Ask-mode plan is reviewed and approved.
 - `codex/tasks/TASK-0151-freeze-operational-cadence-contract-authoritative-input-policy-and-local-demo-milestone.md`
 - `docs/planning/epics/EPIC-125.md`
 - `codex/context/EPIC-125.md`
-- `docs/planning/LOGISTICS_WORKPAGES_OPERATIONAL_CADENCE_PLAN.md`
+- `docs/domains/logistics/archive/LOGISTICS_WORKPAGES_OPERATIONAL_CADENCE_PLAN.md`
 - `docs/workflows/weekly_schedule_planning/v1/WORKFLOW_CONTRACT.yaml`
 - `docs/workflows/live_dispatch/v1/WORKFLOW_CONTRACT.yaml`
 - `docs/workflows/dispatch_reporting/v1/WORKFLOW_CONTRACT.yaml`

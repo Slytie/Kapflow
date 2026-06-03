@@ -1,3 +1,5 @@
+> Document classification: historical logistics context. See `docs/domains/logistics/DOC_INVENTORY.yaml` for current authority.
+
 # Logistics Workpages - operational cadence plan (red-team revised)
 
 Status note (2026-04-06):

@@ -14,7 +14,7 @@ Use this section in **Ask mode** first. Do not edit code yet.
 - `docs/planning/HITL_HTTP_API_CONTRACTS.md`
 - `docs/planning/epics/EPIC-122.md`
 - `codex/context/EPIC-122.md`
-- `docs/planning/LOGISTICS_WORKPAGES_RUN_SURFACES_PLAN.md`
+- `docs/domains/logistics/archive/LOGISTICS_WORKPAGES_RUN_SURFACES_PLAN.md`
 - `docs/workflows/dispatch_reporting/v1/WORKFLOW_CONTRACT.yaml`
 - `docs/workflows/dispatch_reporting/v1/OPERATING_MODEL.md`
 - `src/onetruth/api/routes/workpages.py`

@@ -47,6 +47,10 @@ This file prevents stale guidance by classifying major documents and directories
 | `docs/planning/TDD_IMPLEMENTATION_PLAN.md` | AUTHORITATIVE SOURCE | implementation working mode and test-first rules |
 | `docs/planning/MERGER_BACKLOG.md` | BACKLOG / DEFERRED | preserves deferred CompanyOS ideas and caveats |
 | `docs/planning/epics/*.md` | AUTHORITATIVE SOURCE | active epic definitions |
+| `docs/planning/WORKPAGE_DEVELOPMENT_GUIDE.md` | AUTHORITATIVE SOURCE | workpage registry and extension-point guidance |
+| `docs/domains/logistics/DOC_INVENTORY.yaml` | AUTHORITATIVE SOURCE | logistics document classification and routing inventory |
+| `docs/domains/logistics/current-state/*.md` | AUTHORITATIVE SOURCE | logistics current-state docs; subordinate to workflow packs and schemas if conflicts arise |
+| `docs/domains/logistics/archive/*.md` | HISTORICAL RATIONALE | preserved logistics plans, briefs, audits, and closeout notes |
 | `docs/workflows/*/v1/WORKFLOW_CONTRACT.yaml` | AUTHORITATIVE SOURCE | workflow semantics |
 | `docs/workflows/*/v1/ARTIFACT_MAP.yaml` | AUTHORITATIVE SOURCE | official artifact surfaces |
 | `docs/workflows/*/v1/DECISION_CATALOG.yaml` | AUTHORITATIVE SOURCE | canonical decisions |

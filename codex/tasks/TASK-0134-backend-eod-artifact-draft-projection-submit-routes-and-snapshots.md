@@ -31,7 +31,7 @@ Implement the backend routes that make the first artifact-backed EOD slice real:
 
 ## Source files to read first
 - `docs/planning/HITL_HTTP_API_CONTRACTS.md`
-- `docs/planning/LOGISTICS_WORKPAGES_ARTIFACT_PATH_PLAN.md`
+- `docs/domains/logistics/archive/LOGISTICS_WORKPAGES_ARTIFACT_PATH_PLAN.md`
 - `docs/planning/epics/EPIC-121.md`
 - `src/onetruth/api/route_registry.py`
 - `src/onetruth/api/routes/artifacts.py`

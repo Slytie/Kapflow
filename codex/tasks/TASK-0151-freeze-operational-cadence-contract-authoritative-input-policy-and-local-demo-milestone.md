@@ -26,8 +26,8 @@ Freeze the bounded EPIC-125 operator-loop contract, authoritative inputs, and mi
 - `docs/status/CURRENT_FOCUS.md`
 - `docs/planning/TASK_INDEX.md`
 - `docs/planning/epics/EPIC-124.md`
-- `docs/planning/LOGISTICS_WORKPAGES_OPERATIONAL_CADENCE_PLAN.md`
-- `docs/planning/LOGISTICS_WORKPAGES_OPERATIONAL_CADENCE_EXEC_SUMMARY.md`
+- `docs/domains/logistics/archive/LOGISTICS_WORKPAGES_OPERATIONAL_CADENCE_PLAN.md`
+- `docs/domains/logistics/archive/LOGISTICS_WORKPAGES_OPERATIONAL_CADENCE_EXEC_SUMMARY.md`
 - `docs/workflows/weekly_schedule_planning/v1/WORKFLOW_CONTRACT.yaml`
 - `docs/workflows/live_dispatch/v1/WORKFLOW_CONTRACT.yaml`
 - `docs/workflows/dispatch_reporting/v1/WORKFLOW_CONTRACT.yaml`
@@ -42,8 +42,8 @@ Freeze the bounded EPIC-125 operator-loop contract, authoritative inputs, and mi
 - `docs/planning/TASK_INDEX.md`
 - `docs/status/CURRENT_FOCUS.md`
 - `docs/status/DECISIONS_SINCE_LAST.md`
-- `docs/planning/LOGISTICS_WORKPAGES_OPERATIONAL_CADENCE_PLAN.md`
-- `docs/planning/LOGISTICS_WORKPAGES_OPERATIONAL_CADENCE_EXEC_SUMMARY.md`
+- `docs/domains/logistics/archive/LOGISTICS_WORKPAGES_OPERATIONAL_CADENCE_PLAN.md`
+- `docs/domains/logistics/archive/LOGISTICS_WORKPAGES_OPERATIONAL_CADENCE_EXEC_SUMMARY.md`
 - `docs/planning/epics/EPIC-125.md`
 - `docs/planning/epics/EPIC-126.md`
 - `codex/context/EPIC-125.md`

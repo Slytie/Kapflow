@@ -17,7 +17,7 @@ Status:
 
 ## Authoritative docs
 - `docs/planning/epics/EPIC-134.md`
-- `docs/planning/LOGISTICS_WORKPAGE_DEMO_ENABLEMENT_PLAN.md`
+- `docs/domains/logistics/archive/LOGISTICS_WORKPAGE_DEMO_ENABLEMENT_PLAN.md`
 - `codex/context/WORKPAGE_DEMO_GAP_FINDINGS_2026-04-06.md`
 - `docs/status/CURRENT_FOCUS.md`
 - `docs/status/DECISIONS_SINCE_LAST.md`

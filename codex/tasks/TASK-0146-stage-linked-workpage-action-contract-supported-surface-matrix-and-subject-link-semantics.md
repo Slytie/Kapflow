@@ -30,8 +30,8 @@ Freeze the stage-linked workpage action contract, the first supported logistics-
 - `codex/tasks/TASK-0146-stage-linked-workpage-action-contract-supported-surface-matrix-and-subject-link-semantics.md`
 - `docs/planning/epics/EPIC-124.md`
 - `codex/context/EPIC-124.md`
-- `docs/planning/LOGISTICS_WORKPAGES_STAGE_LINKED_PLAN.md`
-- `docs/planning/LOGISTICS_WORKPAGES_STAGE_LINKED_BRIEF.md`
+- `docs/domains/logistics/archive/LOGISTICS_WORKPAGES_STAGE_LINKED_PLAN.md`
+- `docs/domains/logistics/archive/LOGISTICS_WORKPAGES_STAGE_LINKED_BRIEF.md`
 - `docs/planning/EPICS.md`
 - `docs/planning/TASK_INDEX.md`
 - `docs/planning/HITL_HTTP_API_CONTRACTS.md`
@@ -40,8 +40,8 @@ Freeze the stage-linked workpage action contract, the first supported logistics-
 - `docs/status/DECISIONS_SINCE_LAST.md`
 
 ## Source files to read first
-- `docs/planning/LOGISTICS_WORKPAGES_STAGE_LINKED_PLAN.md`
-- `docs/planning/LOGISTICS_WORKPAGES_STAGE_LINKED_BRIEF.md`
+- `docs/domains/logistics/archive/LOGISTICS_WORKPAGES_STAGE_LINKED_PLAN.md`
+- `docs/domains/logistics/archive/LOGISTICS_WORKPAGES_STAGE_LINKED_BRIEF.md`
 - `docs/planning/epics/EPIC-124.md`
 - `docs/planning/HITL_HTTP_API_CONTRACTS.md`
 - `docs/planning/FRONTEND_PAGE_MAP.md`

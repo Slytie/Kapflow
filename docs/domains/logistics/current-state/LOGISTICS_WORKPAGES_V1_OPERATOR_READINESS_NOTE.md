@@ -1,3 +1,5 @@
+> Document classification: descriptive logistics current-state source. See `docs/domains/logistics/DOC_INVENTORY.yaml`.
+
 # LOGISTICS_WORKPAGES_V1_OPERATOR_READINESS_NOTE.md
 
 ## Purpose

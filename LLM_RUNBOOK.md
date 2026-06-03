@@ -25,7 +25,7 @@ Baseline reads (always):
 - the task file you are executing (`codex/tasks/TASK-*.md`)
 - the relevant epic file (`docs/planning/epics/EPIC-*.md`) if applicable
 - the relevant workflow pack (default for new agentic scheduling work: logistics weekly/live via `docs/workflows/logistics_ops_family/v1/`, `docs/workflows/weekly_schedule_planning/v1/`, and `docs/workflows/live_dispatch/v1/`; treat `schedule_planning.v1` as regression/reference-only unless explicitly needed)
-- for workpage FE tasks, also load `docs/planning/LOGISTICS_WORKPAGES_V0_PLAN.md`, `docs/planning/LOGISTICS_WORKPAGES_V0_PRODUCT_BRIEF.md`, `docs/workflows/weekly_schedule_planning/v1/OPERATING_MODEL.md`, `docs/workflows/live_dispatch/v1/OPERATING_MODEL.md`, `docs/workflows/dispatch_reporting/v1/WORKFLOW_CONTRACT.yaml`, `docs/workflows/dispatch_reporting/v1/OPERATING_MODEL.md`, `docs/workflows/dispatch_reporting/v1/examples/*`, `fixtures/frontend_contracts/README.md`, and `fixtures/logistics/workpages/*`
+- for workpage FE tasks, also load `docs/domains/logistics/archive/LOGISTICS_WORKPAGES_V0_PLAN.md`, `docs/domains/logistics/archive/LOGISTICS_WORKPAGES_V0_PRODUCT_BRIEF.md`, `docs/workflows/weekly_schedule_planning/v1/OPERATING_MODEL.md`, `docs/workflows/live_dispatch/v1/OPERATING_MODEL.md`, `docs/workflows/dispatch_reporting/v1/WORKFLOW_CONTRACT.yaml`, `docs/workflows/dispatch_reporting/v1/OPERATING_MODEL.md`, `docs/workflows/dispatch_reporting/v1/examples/*`, `fixtures/frontend_contracts/README.md`, and `fixtures/logistics/workpages/*`
 
 Only when needed:
 - Authority chain / source-of-truth changes:

@@ -15,7 +15,7 @@ Use this section in **Ask mode** first. Do not edit code yet.
 - `docs/planning/FRONTEND_PAGE_MAP.md`
 - `docs/planning/epics/EPIC-122.md`
 - `codex/context/EPIC-122.md`
-- `docs/planning/LOGISTICS_WORKPAGES_RUN_SURFACES_PLAN.md`
+- `docs/domains/logistics/archive/LOGISTICS_WORKPAGES_RUN_SURFACES_PLAN.md`
 - generated snapshots from `TASK-0138` and `TASK-0139`
 - `frontend/src/lib/api/onetruthApi.ts`
 - `frontend/src/lib/repositories/workpagesRepository.ts`

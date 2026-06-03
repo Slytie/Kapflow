@@ -53,7 +53,7 @@ Success is demonstrated by:
 - `docs/examples/logistics_definitions/README.md`
 - `docs/workflows/logistics_ops_family/v1/README.md`
 - `docs/workflows/README.md`
-- `docs/planning/LOGISTICS_CONTROL_LAYER_AND_METHOD_PACKAGES.md`
+- `docs/domains/logistics/current-state/LOGISTICS_CONTROL_LAYER_AND_METHOD_PACKAGES.md`
 - `codex/tasks/TASK-0061-logistics-control-layer-and-method-packages.md`
 - `docs/planning/TASK_INDEX.md`
 - `docs/status/CURRENT_FOCUS.md`

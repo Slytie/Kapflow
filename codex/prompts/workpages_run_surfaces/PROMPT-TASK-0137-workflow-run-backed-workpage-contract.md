@@ -13,8 +13,8 @@ Use this section in **Ask mode** first. Do not edit code yet.
 - `codex/tasks/TASK-0137-workflow-run-backed-workpage-contract-alias-posture-and-draft-resolution.md`
 - `docs/planning/epics/EPIC-122.md`
 - `codex/context/EPIC-122.md`
-- `docs/planning/LOGISTICS_WORKPAGES_RUN_SURFACES_PLAN.md`
-- `docs/planning/LOGISTICS_WORKPAGES_RUN_SURFACES_BRIEF.md`
+- `docs/domains/logistics/archive/LOGISTICS_WORKPAGES_RUN_SURFACES_PLAN.md`
+- `docs/domains/logistics/archive/LOGISTICS_WORKPAGES_RUN_SURFACES_BRIEF.md`
 - `docs/planning/HITL_HTTP_API_CONTRACTS.md`
 - `docs/planning/FRONTEND_PAGE_MAP.md`
 - `frontend/src/app/App.tsx`
@@ -54,7 +54,7 @@ Use this section only after the Ask-mode plan is reviewed and approved.
 - `codex/tasks/TASK-0137-workflow-run-backed-workpage-contract-alias-posture-and-draft-resolution.md`
 - `docs/planning/epics/EPIC-122.md`
 - `codex/context/EPIC-122.md`
-- `docs/planning/LOGISTICS_WORKPAGES_RUN_SURFACES_PLAN.md`
+- `docs/domains/logistics/archive/LOGISTICS_WORKPAGES_RUN_SURFACES_PLAN.md`
 - `docs/planning/HITL_HTTP_API_CONTRACTS.md`
 
 ### Implementation rules

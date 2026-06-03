@@ -1,3 +1,5 @@
+> Document classification: normative logistics current-state source. See `docs/domains/logistics/DOC_INVENTORY.yaml`.
+
 # LOGISTICS_WEEKLY_TO_LIVE_HANDOFF_RUNTIME.md
 
 ## Purpose

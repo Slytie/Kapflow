@@ -24,7 +24,7 @@ Implement relation-kind-aware requirement counting and the bounded backend linki
 
 ## Source files to read first
 - `docs/planning/HITL_HTTP_API_CONTRACTS.md`
-- `docs/planning/LOGISTICS_WORKPAGES_STAGE_LINKED_PLAN.md`
+- `docs/domains/logistics/archive/LOGISTICS_WORKPAGES_STAGE_LINKED_PLAN.md`
 - `docs/planning/epics/EPIC-124.md`
 - `src/onetruth/application/services/task_requirements.py`
 - `src/onetruth/application/services/task_actionability.py`

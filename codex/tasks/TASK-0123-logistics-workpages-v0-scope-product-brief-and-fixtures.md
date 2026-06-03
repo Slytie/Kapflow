@@ -37,8 +37,8 @@ Freeze the first workpage package in repo-native form so future Codex runs can s
 - `PATTERN-009`
 
 ## Source files changed
-- `docs/planning/LOGISTICS_WORKPAGES_V0_PLAN.md`
-- `docs/planning/LOGISTICS_WORKPAGES_V0_PRODUCT_BRIEF.md`
+- `docs/domains/logistics/archive/LOGISTICS_WORKPAGES_V0_PLAN.md`
+- `docs/domains/logistics/archive/LOGISTICS_WORKPAGES_V0_PRODUCT_BRIEF.md`
 - `docs/planning/epics/EPIC-120.md`
 - `codex/context/EPIC-120.md`
 - `fixtures/logistics/workpages/*`

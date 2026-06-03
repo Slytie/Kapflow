@@ -15,8 +15,8 @@ Choose the next bounded task in EPIC-125 and confirm that the repo really matche
 - `docs/planning/epics/EPIC-124.md`
 - `docs/planning/epics/EPIC-125.md`
 - `codex/context/EPIC-125.md`
-- `docs/planning/LOGISTICS_WORKPAGES_OPERATIONAL_CADENCE_EXEC_SUMMARY.md`
-- `docs/planning/LOGISTICS_WORKPAGES_OPERATIONAL_CADENCE_PLAN.md`
+- `docs/domains/logistics/archive/LOGISTICS_WORKPAGES_OPERATIONAL_CADENCE_EXEC_SUMMARY.md`
+- `docs/domains/logistics/archive/LOGISTICS_WORKPAGES_OPERATIONAL_CADENCE_PLAN.md`
 - `docs/workflows/weekly_schedule_planning/v1/WORKFLOW_CONTRACT.yaml`
 - `docs/workflows/live_dispatch/v1/WORKFLOW_CONTRACT.yaml`
 - `docs/workflows/dispatch_reporting/v1/WORKFLOW_CONTRACT.yaml`

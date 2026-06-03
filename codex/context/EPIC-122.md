@@ -17,10 +17,10 @@
 
 ## Contracts / docs to treat as authoritative
 - `docs/architecture/AUTHORITY_MODEL.md`
-- `docs/planning/LOGISTICS_WORKPAGES_V0_PLAN.md`
-- `docs/planning/LOGISTICS_WORKPAGES_ARTIFACT_PATH_PLAN.md`
-- `docs/planning/LOGISTICS_WORKPAGES_RUN_SURFACES_PLAN.md`
-- `docs/planning/LOGISTICS_WORKPAGES_RUN_SURFACES_BRIEF.md`
+- `docs/domains/logistics/archive/LOGISTICS_WORKPAGES_V0_PLAN.md`
+- `docs/domains/logistics/archive/LOGISTICS_WORKPAGES_ARTIFACT_PATH_PLAN.md`
+- `docs/domains/logistics/archive/LOGISTICS_WORKPAGES_RUN_SURFACES_PLAN.md`
+- `docs/domains/logistics/archive/LOGISTICS_WORKPAGES_RUN_SURFACES_BRIEF.md`
 - `docs/planning/epics/EPIC-122.md`
 - `docs/planning/HITL_HTTP_API_CONTRACTS.md`
 - `docs/planning/FRONTEND_PAGE_MAP.md`
@@ -64,7 +64,7 @@
 ## Preflight questions for future runs
 - Does the repo still contain the expected post-`TASK-0136` baseline before you start backend/frontend implementation?
 - Does the repo still contain the expected post-`TASK-0141` baseline before you start any new workpage epic that assumes canonical run-backed discovery is already in place?
-- Does the route family in `docs/planning/HITL_HTTP_API_CONTRACTS.md` still match `docs/planning/FRONTEND_PAGE_MAP.md` and `docs/planning/LOGISTICS_WORKPAGES_RUN_SURFACES_PLAN.md`?
+- Does the route family in `docs/planning/HITL_HTTP_API_CONTRACTS.md` still match `docs/planning/FRONTEND_PAGE_MAP.md` and `docs/domains/logistics/archive/LOGISTICS_WORKPAGES_RUN_SURFACES_PLAN.md`?
 - Is schedule still treated as composite/query-backed rather than one-artifact/write-backed?
 - Does the EOD run-backed landing route clearly hand off to the existing artifact-backed edit route rather than duplicating write semantics?
 - Are demo aliases and generated snapshots still aligned with the canonical route posture, with `/demo/logistics` advertising canonical `/runs/.../workpages/*` routes as primary?

@@ -15,8 +15,8 @@ Purpose:
 
 ## Authoritative docs
 - `docs/planning/epics/EPIC-131.md`
-- `docs/planning/LOGISTICS_WORKPAGES_V1_HEATMAP_RECALC_ROUTE_DEMAND_AND_VERSIONING_PLAN.md`
-- `docs/planning/LOGISTICS_WORKPAGES_V1_OPERATOR_READINESS_NOTE.md`
+- `docs/domains/logistics/archive/LOGISTICS_WORKPAGES_V1_HEATMAP_RECALC_ROUTE_DEMAND_AND_VERSIONING_PLAN.md`
+- `docs/domains/logistics/current-state/LOGISTICS_WORKPAGES_V1_OPERATOR_READINESS_NOTE.md`
 - `docs/status/CURRENT_FOCUS.md`
 - `docs/status/DECISIONS_SINCE_LAST.md`
 

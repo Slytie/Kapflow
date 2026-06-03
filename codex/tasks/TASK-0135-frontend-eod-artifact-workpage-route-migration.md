@@ -25,7 +25,7 @@ Add the artifact-backed EOD route and migrate the active editable EOD experience
 
 ## Source files to read first
 - `docs/planning/HITL_HTTP_API_CONTRACTS.md`
-- `docs/planning/LOGISTICS_WORKPAGES_ARTIFACT_PATH_PLAN.md`
+- `docs/domains/logistics/archive/LOGISTICS_WORKPAGES_ARTIFACT_PATH_PLAN.md`
 - generated snapshots from `TASK-0134`
 - `frontend/src/lib/api/onetruthApi.ts`
 - `frontend/src/lib/repositories/`

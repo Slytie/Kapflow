@@ -60,7 +60,7 @@ Success is demonstrated by:
 - `scripts/validate_repo.py`
 - `tests/contract/test_logistics_definition_contracts.py`
 - `tests/unit/test_logistics_definition_compiler.py`
-- `docs/planning/LOGISTICS_FAMILY_DEFINITIONS_AND_COMPILATION.md`
+- `docs/domains/logistics/current-state/LOGISTICS_FAMILY_DEFINITIONS_AND_COMPILATION.md`
 - `docs/planning/TASK_INDEX.md`
 - `docs/status/CURRENT_FOCUS.md`
 - `codex/tasks/TASK-0060-logistics-family-definitions-and-compiler.md`

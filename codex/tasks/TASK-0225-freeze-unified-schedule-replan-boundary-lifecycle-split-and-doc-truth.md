@@ -32,7 +32,7 @@ The next tranche crosses weekly planning, live dispatch, workpages, and agent-ru
 - popup redesign work
 
 ## Source files to read first
-- `docs/planning/LOGISTICS_WORKPAGES_UNIFIED_REPLAN_AND_DYNAMIC_SCHEDULING_PLAN.md`
+- `docs/domains/logistics/archive/LOGISTICS_WORKPAGES_UNIFIED_REPLAN_AND_DYNAMIC_SCHEDULING_PLAN.md`
 - `docs/workflows/weekly_schedule_planning/v1/WORKFLOW_CONTRACT.yaml`
 - `docs/workflows/weekly_schedule_planning/v1/ARTIFACT_MAP.yaml`
 - `docs/workflows/weekly_schedule_planning/v1/EXECUTION_PROFILE.yaml`

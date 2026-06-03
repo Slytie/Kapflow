@@ -1,3 +1,5 @@
+> Document classification: normative logistics current-state source. See `docs/domains/logistics/DOC_INVENTORY.yaml`.
+
 # CONTINUOUS_SCHEDULE_CONTROL_ARTIFACTS.md
 
 ## Purpose

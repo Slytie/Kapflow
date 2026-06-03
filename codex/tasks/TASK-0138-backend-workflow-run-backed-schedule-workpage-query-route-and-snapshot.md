@@ -25,7 +25,7 @@ Implement the backend workflow-run-backed schedule workpage query route and gene
 
 ## Source files to read first
 - `docs/planning/HITL_HTTP_API_CONTRACTS.md`
-- `docs/planning/LOGISTICS_WORKPAGES_RUN_SURFACES_PLAN.md`
+- `docs/domains/logistics/archive/LOGISTICS_WORKPAGES_RUN_SURFACES_PLAN.md`
 - `docs/planning/epics/EPIC-122.md`
 - `docs/workflows/weekly_schedule_planning/v1/OPERATING_MODEL.md`
 - `docs/workflows/live_dispatch/v1/OPERATING_MODEL.md`

@@ -26,8 +26,8 @@ Freeze the canonical workflow-run-backed workpage route family, the relationship
 
 ## Source files to read first
 - `docs/planning/HITL_HTTP_API_CONTRACTS.md`
-- `docs/planning/LOGISTICS_WORKPAGES_RUN_SURFACES_PLAN.md`
-- `docs/planning/LOGISTICS_WORKPAGES_RUN_SURFACES_BRIEF.md`
+- `docs/domains/logistics/archive/LOGISTICS_WORKPAGES_RUN_SURFACES_PLAN.md`
+- `docs/domains/logistics/archive/LOGISTICS_WORKPAGES_RUN_SURFACES_BRIEF.md`
 - `docs/planning/epics/EPIC-121.md`
 - `docs/planning/epics/EPIC-122.md`
 - `frontend/src/app/App.tsx`
@@ -40,8 +40,8 @@ Freeze the canonical workflow-run-backed workpage route family, the relationship
 - `docs/planning/EPICS.md`
 - `docs/planning/TASK_INDEX.md`
 - `docs/planning/epics/EPIC-122.md`
-- `docs/planning/LOGISTICS_WORKPAGES_RUN_SURFACES_PLAN.md`
-- `docs/planning/LOGISTICS_WORKPAGES_RUN_SURFACES_BRIEF.md`
+- `docs/domains/logistics/archive/LOGISTICS_WORKPAGES_RUN_SURFACES_PLAN.md`
+- `docs/domains/logistics/archive/LOGISTICS_WORKPAGES_RUN_SURFACES_BRIEF.md`
 - `docs/planning/HITL_HTTP_API_CONTRACTS.md`
 - `docs/planning/FRONTEND_PAGE_MAP.md`
 - `docs/status/CURRENT_FOCUS.md`

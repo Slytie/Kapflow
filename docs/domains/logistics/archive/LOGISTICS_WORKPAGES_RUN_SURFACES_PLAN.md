@@ -1,3 +1,5 @@
+> Document classification: historical logistics context. See `docs/domains/logistics/DOC_INVENTORY.yaml` for current authority.
+
 # Logistics workpages run surfaces - repo-grounded implementation plan
 
 ## Why this exists

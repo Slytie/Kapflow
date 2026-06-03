@@ -1,3 +1,5 @@
+> Document classification: historical logistics context. See `docs/domains/logistics/DOC_INVENTORY.yaml` for current authority.
+
 # Logistics Workpages - EPIC-125 Closeout and First-Demo Feedback Note
 
 ## Purpose

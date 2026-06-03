@@ -12,8 +12,8 @@ Use this section in **Ask mode** first. Do not edit code yet.
 - `codex/tasks/TASK-0152-weekly-friday-intake-and-stage04-build-review-publish-loop.md`
 - `docs/planning/epics/EPIC-125.md`
 - `codex/context/EPIC-125.md`
-- `docs/planning/LOGISTICS_WORKPAGES_OPERATIONAL_CADENCE_PLAN.md`
-- `docs/planning/LOGISTICS_WORKPAGES_OPERATIONAL_CADENCE_EXEC_SUMMARY.md`
+- `docs/domains/logistics/archive/LOGISTICS_WORKPAGES_OPERATIONAL_CADENCE_PLAN.md`
+- `docs/domains/logistics/archive/LOGISTICS_WORKPAGES_OPERATIONAL_CADENCE_EXEC_SUMMARY.md`
 - `docs/workflows/weekly_schedule_planning/v1/WORKFLOW_CONTRACT.yaml`
 - `src/onetruth/application/services/weekly_stage04_openai_agent.py`
 - `src/onetruth/application/handlers/workpages.py`
@@ -46,7 +46,7 @@ Use this section only after the Ask-mode plan is reviewed and approved.
 - `codex/tasks/TASK-0152-weekly-friday-intake-and-stage04-build-review-publish-loop.md`
 - `docs/planning/epics/EPIC-125.md`
 - `codex/context/EPIC-125.md`
-- `docs/planning/LOGISTICS_WORKPAGES_OPERATIONAL_CADENCE_PLAN.md`
+- `docs/domains/logistics/archive/LOGISTICS_WORKPAGES_OPERATIONAL_CADENCE_PLAN.md`
 - `docs/workflows/weekly_schedule_planning/v1/WORKFLOW_CONTRACT.yaml`
 - `src/onetruth/application/services/weekly_stage04_openai_agent.py`
 - `src/onetruth/application/handlers/workpages.py`

@@ -24,7 +24,7 @@ Add backend-projected workpage actions to the supported logistics workspace surf
 
 ## Source files to read first
 - `docs/planning/HITL_HTTP_API_CONTRACTS.md`
-- `docs/planning/LOGISTICS_WORKPAGES_STAGE_LINKED_PLAN.md`
+- `docs/domains/logistics/archive/LOGISTICS_WORKPAGES_STAGE_LINKED_PLAN.md`
 - `docs/planning/epics/EPIC-124.md`
 - `src/onetruth/api/routes/workflow_runs.py`
 - `src/onetruth/application/services/task_actionability.py`

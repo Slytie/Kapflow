@@ -24,8 +24,8 @@ Keep the default context small. Only load deeper docs when the task actually tou
   - `docs/workflows/live_dispatch/v1/WORKFLOW_CONTRACT.yaml`
 
 - Workpage FE v0 tasks (`EPIC-120`):
-  - `docs/planning/LOGISTICS_WORKPAGES_V0_PLAN.md`
-  - `docs/planning/LOGISTICS_WORKPAGES_V0_PRODUCT_BRIEF.md`
+  - `docs/domains/logistics/archive/LOGISTICS_WORKPAGES_V0_PLAN.md`
+  - `docs/domains/logistics/archive/LOGISTICS_WORKPAGES_V0_PRODUCT_BRIEF.md`
   - `docs/workflows/weekly_schedule_planning/v1/OPERATING_MODEL.md`
   - `docs/workflows/live_dispatch/v1/OPERATING_MODEL.md` (boundary check only; do not drift into live dispatch)
   - `docs/workflows/weekly_schedule_planning/v1/examples/*`

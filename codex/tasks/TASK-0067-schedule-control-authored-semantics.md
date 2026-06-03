@@ -38,7 +38,7 @@ Land the authored semantics for schedule-control as the first serious agentic lo
 - `tests/unit/test_logistics_definition_compiler.py`
 - `tests/unit/test_logistics_control_layer.py`
 - `docs/examples/logistics_definitions/ACTIVATION_REQUEST.example.yaml`
-- `docs/planning/CONTINUOUS_SCHEDULE_CONTROL_ARTIFACTS.md`
+- `docs/domains/logistics/current-state/CONTINUOUS_SCHEDULE_CONTROL_ARTIFACTS.md`
 - `docs/planning/TASK_INDEX.md`
 - `docs/status/CURRENT_FOCUS.md`
 - `docs/status/DECISIONS_SINCE_LAST.md`
@@ -59,5 +59,5 @@ All commands passed on 2026-03-12.
 
 ## Completion Notes (2026-03-12)
 - Added canonical bridge artifacts and Stage04/Stage02 schedule-control semantics to weekly/live contracts, artifact maps, execution profiles, dataset registry, and examples.
-- Added an explicit planning artifact-classification note (`docs/planning/CONTINUOUS_SCHEDULE_CONTROL_ARTIFACTS.md`) to lock canonical vs derived vs evidence vs prohibited surfaces.
+- Added an explicit planning artifact-classification note (`docs/domains/logistics/current-state/CONTINUOUS_SCHEDULE_CONTROL_ARTIFACTS.md`) to lock canonical vs derived vs evidence vs prohibited surfaces.
 - Updated contract/compiler/control-layer tests and activation request example to reflect expanded canonical bridge inputs while preserving one truth system invariants.

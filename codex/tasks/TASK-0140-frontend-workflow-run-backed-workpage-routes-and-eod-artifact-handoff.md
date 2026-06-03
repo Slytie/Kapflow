@@ -26,7 +26,7 @@ Add workflow-run-backed frontend routes and repositories, preserve the validated
 ## Source files to read first
 - `docs/planning/HITL_HTTP_API_CONTRACTS.md`
 - `docs/planning/FRONTEND_PAGE_MAP.md`
-- `docs/planning/LOGISTICS_WORKPAGES_RUN_SURFACES_PLAN.md`
+- `docs/domains/logistics/archive/LOGISTICS_WORKPAGES_RUN_SURFACES_PLAN.md`
 - generated snapshots from `TASK-0138` and `TASK-0139`
 - `frontend/src/lib/api/onetruthApi.ts`
 - `frontend/src/lib/repositories/workpagesRepository.ts`

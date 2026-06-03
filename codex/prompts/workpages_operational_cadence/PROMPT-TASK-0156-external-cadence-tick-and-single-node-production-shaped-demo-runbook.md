@@ -12,8 +12,8 @@ Use this section in **Ask mode** first. Do not edit code yet.
 - `codex/tasks/TASK-0156-external-cadence-tick-and-single-node-production-shaped-demo-runbook.md`
 - `docs/planning/epics/EPIC-125.md`
 - `codex/context/EPIC-125.md`
-- `docs/planning/LOGISTICS_WORKPAGES_OPERATIONAL_CADENCE_PLAN.md`
-- `docs/planning/LOGISTICS_WORKPAGES_OPERATIONAL_CADENCE_EXEC_SUMMARY.md`
+- `docs/domains/logistics/archive/LOGISTICS_WORKPAGES_OPERATIONAL_CADENCE_PLAN.md`
+- `docs/domains/logistics/archive/LOGISTICS_WORKPAGES_OPERATIONAL_CADENCE_EXEC_SUMMARY.md`
 - `src/onetruth/cli/__main__.py`
 - `docs/planning/epics/EPIC-100.md`
 - deploy/runbook docs under `docs/` and scripts relevant to single-node production posture
@@ -45,7 +45,7 @@ Use this section only after the Ask-mode plan is reviewed and approved.
 - `codex/tasks/TASK-0156-external-cadence-tick-and-single-node-production-shaped-demo-runbook.md`
 - `docs/planning/epics/EPIC-125.md`
 - `codex/context/EPIC-125.md`
-- `docs/planning/LOGISTICS_WORKPAGES_OPERATIONAL_CADENCE_PLAN.md`
+- `docs/domains/logistics/archive/LOGISTICS_WORKPAGES_OPERATIONAL_CADENCE_PLAN.md`
 - existing CLI entrypoints under `src/onetruth/cli`
 - workflow-run/task/approval handlers
 - deploy/runbook docs from EPIC-100

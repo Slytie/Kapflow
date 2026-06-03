@@ -1,3 +1,5 @@
+> Document classification: historical logistics context. See `docs/domains/logistics/DOC_INVENTORY.yaml` for current authority.
+
 # Logistics Stale Content Audit
 
 Date: 2026-05-18

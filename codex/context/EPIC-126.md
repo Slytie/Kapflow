@@ -17,7 +17,7 @@ Purpose:
 - `docs/status/DECISIONS_SINCE_LAST.md`
 - `docs/planning/FRONTEND_PAGE_MAP.md`
 - `docs/planning/HITL_HTTP_API_CONTRACTS.md`
-- `docs/planning/LOGISTICS_WORKPAGES_V1_OPERATOR_READINESS_NOTE.md`
+- `docs/domains/logistics/current-state/LOGISTICS_WORKPAGES_V1_OPERATOR_READINESS_NOTE.md`
 
 ## Delivered sequence
 1. `TASK-0158` - internal cleanup and vocabulary normalization

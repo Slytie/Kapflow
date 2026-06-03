@@ -2,6 +2,17 @@
 
 Record any decisions made since the last session so a fresh Codex run can rehydrate quickly.
 
+## 2026-06-03 (CAPEX CLEAN-002/CLEAN-003 workpage registry and logistics docs classification)
+- Workpage-boundary decision: generic workpage action projection now delegates to a domain-neutral `WorkpageActionRegistry`; logistics workflow IDs, stage/task surfaces, approval scope refs, projection keys, and unavailable-reason strings live in the logistics action pack.
+- Payload-compatibility decision: `TASK-0258` preserves the existing public `workpage_actions` wire shape while adding an explicit extension point for future domain packs such as CAPEX.
+- Docs-classification decision: logistics-specific planning docs now live under `docs/domains/logistics/`, with `DOC_INVENTORY.yaml` recording normative, descriptive, and historical classifications; workflow packs and operator runbooks remain in their existing authoritative/runbook locations and are inventory-listed.
+- Activation decision: `TASK-0258` and `TASK-0259` close domain-boundary and documentation cleanup only; they do not activate CAPEX runtime behavior, raw corpus use, production deployment, or new public workpage routes.
+
+## 2026-06-03 (EPIC-150 desktop source-root pack integration)
+- EPIC-150 integration decision: the existing CAPEX release-governance EPIC-150 tranche remains intact, and the separate desktop folder source-root/sync pack is imported as an EPIC-150 draft planning addendum rather than replacing or orphaning the release-governance task stack.
+- Task-numbering decision: the pack's proposed `TASK-0589..TASK-0624` range collided with existing repo tasks, so the desktop source-root/sync tasks are renumbered to `TASK-0607..TASK-0642`; generated registers and task briefs record that remap.
+- Authority-boundary decision: desktop source-root sync remains observation -> AI proposal -> PM review, snippets under `codex/snippets/EPIC-150/` are context-only references, and no CAPEX runtime/product activation, raw corpus import, local path authority, watcher-event authority, or evidence deletion authority is implied by the planning import.
+
 ## 2026-06-02 (CAPEX PR012 schedule-control hardening)
 - Stage04 output decision: weekly schedule-control generated outputs now persist through the canonical generated-artifact helper instead of direct `inmem://` artifact rows.
 - Receipt decision: `schedule-control.build-weekly` uses workflow-run-scoped command receipts, so idempotent command replay returns stored command truth and does not duplicate Stage04 artifact events.
@@ -49,7 +60,7 @@ Record any decisions made since the last session so a fresh Codex run can rehydr
 - Comparison-mode decision: the editable `schedule-v0` surfaces now distinguish `current_week`, `historical_demo_week`, and `future_week` from the displayed schedule week versus the real `America/Vancouver` service date instead of treating any selected in-week day as an elapsed-day anchor.
 - Future-week decision: future weekly drafts keep the previous-week comparison block when pinned reality exists, but all seven scheduled-week columns stay on planned schedule truth with no synthesized dispatch-report substitution or elapsed-day lockout.
 - Demo-compat decision: the selected-day fallback remains intentionally enabled only for historical demo weeks so fixture-backed March demos still show inline dispatch-report comparison until a backend-authored comparison mode replaces the frontend inference.
-- Follow-up decision: the currently accepted shortcuts for this comparison slice are now tracked in `docs/planning/LOGISTICS_WORKPAGES_SCHEDULE_COMPARISON_SHORTCUTS_NOTE.md` for later cleanup rather than remaining implicit in the UI implementation.
+- Follow-up decision: the currently accepted shortcuts for this comparison slice are now tracked in `docs/domains/logistics/archive/LOGISTICS_WORKPAGES_SCHEDULE_COMPARISON_SHORTCUTS_NOTE.md` for later cleanup rather than remaining implicit in the UI implementation.
 
 ## 2026-05-25 (schedule main-view history rail removal)
 - UI decision: the canonical `schedule-v0` run page and full artifact page no longer render the accepted-series / draft-lineage side rail on the main surface.

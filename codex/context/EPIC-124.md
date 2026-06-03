@@ -18,8 +18,8 @@ Purpose:
 - Update repo-native docs, status, and task memory in the same change set whenever stage-linked action truth changes.
 
 ## Contracts and docs to treat as authoritative
-- `docs/planning/LOGISTICS_WORKPAGES_STAGE_LINKED_BRIEF.md`
-- `docs/planning/LOGISTICS_WORKPAGES_STAGE_LINKED_PLAN.md`
+- `docs/domains/logistics/archive/LOGISTICS_WORKPAGES_STAGE_LINKED_BRIEF.md`
+- `docs/domains/logistics/archive/LOGISTICS_WORKPAGES_STAGE_LINKED_PLAN.md`
 - `docs/planning/epics/EPIC-124.md`
 - `codex/context/EPIC-124.md`
 - `docs/planning/HITL_HTTP_API_CONTRACTS.md`
@@ -64,8 +64,8 @@ Purpose:
 - The next app-facing epic remains intentionally unselected after closeout.
 
 ## Smallest context set for the next tasks
-- `docs/planning/LOGISTICS_WORKPAGES_STAGE_LINKED_PLAN.md`
-- `docs/planning/LOGISTICS_WORKPAGES_STAGE_LINKED_BRIEF.md`
+- `docs/domains/logistics/archive/LOGISTICS_WORKPAGES_STAGE_LINKED_PLAN.md`
+- `docs/domains/logistics/archive/LOGISTICS_WORKPAGES_STAGE_LINKED_BRIEF.md`
 - `docs/planning/HITL_HTTP_API_CONTRACTS.md`
 - `docs/planning/FRONTEND_PAGE_MAP.md`
 - `src/onetruth/application/services/task_requirements.py`

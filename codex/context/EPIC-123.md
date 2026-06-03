@@ -16,13 +16,13 @@
 - Update repo-native docs/status/task memory in the same change set when the schedule artifact boundary changes.
 
 ## Contracts / docs to treat as authoritative
-- `docs/planning/LOGISTICS_WORKPAGES_SCHEDULE_ARTIFACT_PATH_BRIEF.md`
-- `docs/planning/LOGISTICS_WORKPAGES_SCHEDULE_ARTIFACT_PATH_PLAN.md`
+- `docs/domains/logistics/archive/LOGISTICS_WORKPAGES_SCHEDULE_ARTIFACT_PATH_BRIEF.md`
+- `docs/domains/logistics/archive/LOGISTICS_WORKPAGES_SCHEDULE_ARTIFACT_PATH_PLAN.md`
 - `docs/planning/epics/EPIC-123.md`
 - `docs/planning/HITL_HTTP_API_CONTRACTS.md`
 - `docs/planning/FRONTEND_PAGE_MAP.md`
 - `docs/planning/CURRENT_CAPABILITY_AND_CERTIFICATION_MATRIX.md`
-- `docs/planning/CONTINUOUS_SCHEDULE_CONTROL_ARTIFACTS.md`
+- `docs/domains/logistics/current-state/CONTINUOUS_SCHEDULE_CONTROL_ARTIFACTS.md`
 - `docs/workflows/weekly_schedule_planning/v1/WORKFLOW_CONTRACT.yaml`
 - `docs/workflows/weekly_schedule_planning/v1/OPERATING_MODEL.md`
 - `src/onetruth/api/routes/workpages.py`
@@ -51,7 +51,7 @@
 
 ## Preflight questions for future runs
 - Does the repo still contain the post-`TASK-0142` freeze that anchors the schedule artifact slice to `planning.draft_weekly_schedule.workbook`?
-- Do `docs/planning/HITL_HTTP_API_CONTRACTS.md`, `docs/planning/FRONTEND_PAGE_MAP.md`, and `docs/planning/CONTINUOUS_SCHEDULE_CONTROL_ARTIFACTS.md` still agree that there is no `schedule-v0/drafts` create route?
+- Do `docs/planning/HITL_HTTP_API_CONTRACTS.md`, `docs/planning/FRONTEND_PAGE_MAP.md`, and `docs/domains/logistics/current-state/CONTINUOUS_SCHEDULE_CONTROL_ARTIFACTS.md` still agree that there is no `schedule-v0/drafts` create route?
 - Does the repo still keep `planning.manager_review.doc` as evidence only and `planning.published_weekly_schedule.workbook` as the first official weekly truth?
 - Is the schedule landing still separate from live-dispatch day-of control semantics?
 

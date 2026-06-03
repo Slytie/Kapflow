@@ -10,8 +10,18 @@ ACTIVE_DOC_FILES = (
     REPO_ROOT / "docs" / "planning" / "HITL_HTTP_API_CONTRACTS.md",
     REPO_ROOT / "docs" / "planning" / "FRONTEND_ARCHITECTURE.md",
     REPO_ROOT / "docs" / "planning" / "CURRENT_CAPABILITY_AND_CERTIFICATION_MATRIX.md",
-    REPO_ROOT / "docs" / "planning" / "CONTINUOUS_SCHEDULE_CONTROL_ARTIFACTS.md",
-    REPO_ROOT / "docs" / "planning" / "LOGISTICS_WORKPAGES_V1_OPERATOR_READINESS_NOTE.md",
+    REPO_ROOT
+    / "docs"
+    / "domains"
+    / "logistics"
+    / "current-state"
+    / "CONTINUOUS_SCHEDULE_CONTROL_ARTIFACTS.md",
+    REPO_ROOT
+    / "docs"
+    / "domains"
+    / "logistics"
+    / "current-state"
+    / "LOGISTICS_WORKPAGES_V1_OPERATOR_READINESS_NOTE.md",
     REPO_ROOT / "fixtures" / "frontend_contracts" / "README.md",
     REPO_ROOT / "tests" / "runtime" / "helpers" / "frontend_snapshots.py",
 )

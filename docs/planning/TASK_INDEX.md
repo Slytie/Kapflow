@@ -218,8 +218,8 @@ Note: `TASK-0087` / `TASK-0088` / `TASK-0089` were formerly duplicated as `TASK-
 | TASK-0255 | EPIC-138 | TODO | high | Reconciler apply mode under role/policy gate |
 | TASK-0256 | EPIC-138 | TODO | high | Pilot deployment gate |
 | TASK-0257 | EPIC-139 | DONE | high | Extract logistics side effects from generic approval.respond |
-| TASK-0258 | EPIC-139 | TODO | high | Create domain workpage/action descriptor registry |
-| TASK-0259 | EPIC-139 | TODO | medium | Classify and restructure logistics docs |
+| TASK-0258 | EPIC-139 | DONE | high | Create domain workpage/action descriptor registry |
+| TASK-0259 | EPIC-139 | DONE | medium | Classify and restructure logistics docs |
 | TASK-0260 | EPIC-139 | TODO | high | Split platform tests from logistics regression tests |
 | TASK-0261 | EPIC-140 | TODO | high | Decide and implement CAPEX project anchor schema |
 | TASK-0262 | EPIC-140 | TODO | high | Implement project_membership and project roles |

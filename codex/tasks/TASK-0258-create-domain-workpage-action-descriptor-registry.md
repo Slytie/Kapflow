@@ -2,7 +2,7 @@
 id: TASK-0258
 epic: EPIC-139
 title: "Create domain workpage/action descriptor registry"
-status: TODO
+status: DONE
 owners: ["frontend"]
 reviewers: ["platform", "qa"]
 depends_on: ["TASK-0257"]
@@ -60,3 +60,6 @@ Separate generic route contract from schedule/EOD/route/driver action dispatcher
 
 ## Notes / decisions
 - Raw project corpora remain off-repo; use only sanitized fixtures, manifests, hashes, and aggregate evidence approved by the relevant fixture/governance task.
+- Closed on 2026-06-03 by adding a domain-neutral `WorkpageActionRegistry`, registering logistics as the only active action pack, and keeping the public `workpage_actions` payload stable through existing workspace action API regressions.
+- Focused evidence: registry unit smoke tests, generic-projection boundary contract, logistics docs inventory contract, and workspace workpage action API regression passed.
+- Rollback posture: removing the registry boundary should fail the generic projection boundary test before logistics workflow IDs, stage IDs, or unavailable-reason strings can return to the generic projection facade.

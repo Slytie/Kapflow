@@ -22,7 +22,7 @@ Purpose:
 
 ## Authoritative docs
 - `docs/planning/epics/EPIC-135.md`
-- `docs/planning/LOGISTICS_WORKPAGES_UNIFIED_REPLAN_AND_DYNAMIC_SCHEDULING_PLAN.md`
+- `docs/domains/logistics/archive/LOGISTICS_WORKPAGES_UNIFIED_REPLAN_AND_DYNAMIC_SCHEDULING_PLAN.md`
 - `codex/context/UNIFIED_REPLAN_ARCHITECTURE_FINDINGS_2026-04-25.md`
 - `docs/workflows/weekly_schedule_planning/v1/OPERATING_MODEL.md`
 - `docs/workflows/live_dispatch/v1/OPERATING_MODEL.md`

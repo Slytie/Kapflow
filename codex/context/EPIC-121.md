@@ -20,9 +20,9 @@
 ## Contracts / docs to treat as authoritative
 - `docs/architecture/AUTHORITY_MODEL.md`
 - `docs/planning/ARTIFACT_STORE_DESIGN.md`
-- `docs/planning/LOGISTICS_WORKPAGES_V0_PLAN.md`
-- `docs/planning/LOGISTICS_WORKPAGES_ARTIFACT_PATH_PLAN.md`
-- `docs/planning/LOGISTICS_WORKPAGES_ARTIFACT_PATH_BRIEF.md`
+- `docs/domains/logistics/archive/LOGISTICS_WORKPAGES_V0_PLAN.md`
+- `docs/domains/logistics/archive/LOGISTICS_WORKPAGES_ARTIFACT_PATH_PLAN.md`
+- `docs/domains/logistics/archive/LOGISTICS_WORKPAGES_ARTIFACT_PATH_BRIEF.md`
 - `docs/planning/epics/EPIC-121.md`
 - `docs/planning/HITL_HTTP_API_CONTRACTS.md`
 - `docs/planning/FRONTEND_ARCHITECTURE.md`

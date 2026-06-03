@@ -1,3 +1,5 @@
+> Document classification: historical logistics context. See `docs/domains/logistics/DOC_INVENTORY.yaml` for current authority.
+
 # LOGISTICS_WORKPAGES_STAGE_LINKED_BRIEF.md
 
 ## Executive summary

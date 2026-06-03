@@ -35,8 +35,8 @@ Freeze the first artifact-backed workpage contract and route family for the EOD 
 - `docs/planning/TASK_INDEX.md`
 - `docs/planning/epics/EPIC-121.md`
 - `codex/context/EPIC-121.md`
-- `docs/planning/LOGISTICS_WORKPAGES_ARTIFACT_PATH_PLAN.md`
-- `docs/planning/LOGISTICS_WORKPAGES_ARTIFACT_PATH_BRIEF.md`
+- `docs/domains/logistics/archive/LOGISTICS_WORKPAGES_ARTIFACT_PATH_PLAN.md`
+- `docs/domains/logistics/archive/LOGISTICS_WORKPAGES_ARTIFACT_PATH_BRIEF.md`
 - `docs/planning/HITL_HTTP_API_CONTRACTS.md`
 - `docs/status/CURRENT_FOCUS.md`
 - `docs/status/DECISIONS_SINCE_LAST.md`

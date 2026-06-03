@@ -38,7 +38,7 @@ We want a demo quickly, but we do not want a new product-development stream disg
 
 ## Source files changed
 - `docs/planning/epics/EPIC-134.md`
-- `docs/planning/LOGISTICS_WORKPAGE_DEMO_ENABLEMENT_PLAN.md`
+- `docs/domains/logistics/archive/LOGISTICS_WORKPAGE_DEMO_ENABLEMENT_PLAN.md`
 - `codex/context/EPIC-134.md`
 - `codex/context/WORKPAGE_DEMO_GAP_FINDINGS_2026-04-06.md`
 - `codex/tasks/TASK-0221-freeze-minimal-demo-boundary-canonical-routes-and-no-new-demo-mode.md`
@@ -51,7 +51,7 @@ We want a demo quickly, but we do not want a new product-development stream disg
 - `docs/planning/TASK_INDEX.md`
 
 ## Verification
-- `rg -n "EPIC-134|canonical /runs/:workflowRunId/workpages/\\*|deterministic|idempotent|OpenAI|no second demo mode|accepted-history" docs/planning/epics/EPIC-134.md docs/planning/LOGISTICS_WORKPAGE_DEMO_ENABLEMENT_PLAN.md codex/context/EPIC-134.md codex/context/WORKPAGE_DEMO_GAP_FINDINGS_2026-04-06.md codex/tasks/TASK-0221-freeze-minimal-demo-boundary-canonical-routes-and-no-new-demo-mode.md`
+- `rg -n "EPIC-134|canonical /runs/:workflowRunId/workpages/\\*|deterministic|idempotent|OpenAI|no second demo mode|accepted-history" docs/planning/epics/EPIC-134.md docs/domains/logistics/archive/LOGISTICS_WORKPAGE_DEMO_ENABLEMENT_PLAN.md codex/context/EPIC-134.md codex/context/WORKPAGE_DEMO_GAP_FINDINGS_2026-04-06.md codex/tasks/TASK-0221-freeze-minimal-demo-boundary-canonical-routes-and-no-new-demo-mode.md`
 - `rg -n "EPIC-134|demo-enablement|product-expansion epic" docs/status/CURRENT_FOCUS.md docs/status/DECISIONS_SINCE_LAST.md docs/planning/EPICS.md docs/planning/TASK_INDEX.md`
 - `git diff --check`
 

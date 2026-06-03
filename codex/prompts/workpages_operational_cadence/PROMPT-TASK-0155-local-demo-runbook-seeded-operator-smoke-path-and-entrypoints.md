@@ -12,8 +12,8 @@ Use this section in **Ask mode** first. Do not edit code yet.
 - `codex/tasks/TASK-0155-local-demo-runbook-seeded-operator-smoke-path-and-entrypoints.md`
 - `docs/planning/epics/EPIC-125.md`
 - `codex/context/EPIC-125.md`
-- `docs/planning/LOGISTICS_WORKPAGES_OPERATIONAL_CADENCE_PLAN.md`
-- `docs/planning/LOGISTICS_WORKPAGES_OPERATIONAL_CADENCE_EXEC_SUMMARY.md`
+- `docs/domains/logistics/archive/LOGISTICS_WORKPAGES_OPERATIONAL_CADENCE_PLAN.md`
+- `docs/domains/logistics/archive/LOGISTICS_WORKPAGES_OPERATIONAL_CADENCE_EXEC_SUMMARY.md`
 - `frontend/src/app/App.tsx`
 - `frontend/src/pages/LogisticsDemoPage.tsx`
 - `docs/planning/THREE_WORKFLOW_DEMO_STORY.yaml`
@@ -46,7 +46,7 @@ Use this section only after the Ask-mode plan is reviewed and approved.
 - `codex/tasks/TASK-0155-local-demo-runbook-seeded-operator-smoke-path-and-entrypoints.md`
 - `docs/planning/epics/EPIC-125.md`
 - `codex/context/EPIC-125.md`
-- `docs/planning/LOGISTICS_WORKPAGES_OPERATIONAL_CADENCE_PLAN.md`
+- `docs/domains/logistics/archive/LOGISTICS_WORKPAGES_OPERATIONAL_CADENCE_PLAN.md`
 - `frontend/src/app/App.tsx`
 - `frontend/src/pages/LogisticsDemoPage.tsx`
 - local runbook/deploy docs under docs/ and scripts/ if present

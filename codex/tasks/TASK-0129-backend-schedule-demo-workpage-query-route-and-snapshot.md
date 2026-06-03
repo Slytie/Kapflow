@@ -26,7 +26,7 @@ Add the first backend demo workpage query surface for the schedule page, backed 
 
 ## Source files to read first
 - `docs/planning/HITL_HTTP_API_CONTRACTS.md`
-- `docs/planning/LOGISTICS_WORKPAGES_V0_PLAN.md`
+- `docs/domains/logistics/archive/LOGISTICS_WORKPAGES_V0_PLAN.md`
 - `docs/workflows/weekly_schedule_planning/v1/OPERATING_MODEL.md`
 - `docs/workflows/live_dispatch/v1/OPERATING_MODEL.md`
 - `docs/workflows/weekly_schedule_planning/v1/examples/*`

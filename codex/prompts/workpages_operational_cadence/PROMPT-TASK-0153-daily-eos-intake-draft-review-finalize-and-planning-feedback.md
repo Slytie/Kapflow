@@ -12,8 +12,8 @@ Use this section in **Ask mode** first. Do not edit code yet.
 - `codex/tasks/TASK-0153-daily-eos-intake-draft-review-finalize-and-planning-feedback.md`
 - `docs/planning/epics/EPIC-125.md`
 - `codex/context/EPIC-125.md`
-- `docs/planning/LOGISTICS_WORKPAGES_OPERATIONAL_CADENCE_PLAN.md`
-- `docs/planning/LOGISTICS_WORKPAGES_OPERATIONAL_CADENCE_EXEC_SUMMARY.md`
+- `docs/domains/logistics/archive/LOGISTICS_WORKPAGES_OPERATIONAL_CADENCE_PLAN.md`
+- `docs/domains/logistics/archive/LOGISTICS_WORKPAGES_OPERATIONAL_CADENCE_EXEC_SUMMARY.md`
 - `docs/workflows/dispatch_reporting/v1/WORKFLOW_CONTRACT.yaml`
 - `src/onetruth/application/handlers/workpages.py`
 - `src/onetruth/application/services/dispatch_reporting_workbook.py`
@@ -46,7 +46,7 @@ Use this section only after the Ask-mode plan is reviewed and approved.
 - `codex/tasks/TASK-0153-daily-eos-intake-draft-review-finalize-and-planning-feedback.md`
 - `docs/planning/epics/EPIC-125.md`
 - `codex/context/EPIC-125.md`
-- `docs/planning/LOGISTICS_WORKPAGES_OPERATIONAL_CADENCE_PLAN.md`
+- `docs/domains/logistics/archive/LOGISTICS_WORKPAGES_OPERATIONAL_CADENCE_PLAN.md`
 - `docs/workflows/dispatch_reporting/v1/WORKFLOW_CONTRACT.yaml`
 - `src/onetruth/application/handlers/workpages.py`
 - `src/onetruth/application/services/dispatch_reporting_workbook.py`

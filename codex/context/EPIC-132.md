@@ -13,7 +13,7 @@ Purpose:
 
 ## Authoritative docs
 - `docs/planning/epics/EPIC-132.md`
-- `docs/planning/WORKPAGES_POST_EPIC131_STABILIZATION_AND_SETTLEMENT_PLAN.md`
+- `docs/domains/logistics/archive/WORKPAGES_POST_EPIC131_STABILIZATION_AND_SETTLEMENT_PLAN.md`
 - `codex/context/WORKPAGE_FORMAL_MODEL_AND_SETTLEMENT_RATIONALE.md`
 - `codex/context/WORKPAGE_STABILITY_FINDINGS_2026-04-05.md`
 - `docs/planning/epics/EPIC-131.md`

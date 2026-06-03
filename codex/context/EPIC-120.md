@@ -23,8 +23,8 @@
 - `docs/status/CURRENT_FOCUS.md`
 - `docs/status/DECISIONS_SINCE_LAST.md`
 - `docs/planning/epics/EPIC-120.md`
-- `docs/planning/LOGISTICS_WORKPAGES_V0_PLAN.md`
-- `docs/planning/LOGISTICS_WORKPAGES_V0_PRODUCT_BRIEF.md`
+- `docs/domains/logistics/archive/LOGISTICS_WORKPAGES_V0_PLAN.md`
+- `docs/domains/logistics/archive/LOGISTICS_WORKPAGES_V0_PRODUCT_BRIEF.md`
 - `docs/planning/FRONTEND_ARCHITECTURE.md`
 - `docs/planning/FRONTEND_INTERACTION_RULES.md`
 - `docs/planning/FRONTEND_PAGE_MAP.md`

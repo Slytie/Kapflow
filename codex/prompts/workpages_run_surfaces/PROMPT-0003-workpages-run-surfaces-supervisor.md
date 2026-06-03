@@ -17,8 +17,8 @@ Choose the next bounded task in EPIC-122 and confirm that the repo really matche
 - `docs/planning/epics/EPIC-121.md`
 - `docs/planning/epics/EPIC-122.md`
 - `codex/context/EPIC-122.md`
-- `docs/planning/LOGISTICS_WORKPAGES_RUN_SURFACES_PLAN.md`
-- `docs/planning/LOGISTICS_WORKPAGES_RUN_SURFACES_BRIEF.md`
+- `docs/domains/logistics/archive/LOGISTICS_WORKPAGES_RUN_SURFACES_PLAN.md`
+- `docs/domains/logistics/archive/LOGISTICS_WORKPAGES_RUN_SURFACES_BRIEF.md`
 - `docs/planning/HITL_HTTP_API_CONTRACTS.md`
 - `frontend/src/app/App.tsx`
 - `frontend/src/app/AppShell.tsx`

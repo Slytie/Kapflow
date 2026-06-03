@@ -2,7 +2,7 @@
 id: TASK-0259
 epic: EPIC-139
 title: "Classify and restructure logistics docs"
-status: TODO
+status: DONE
 owners: ["architect"]
 reviewers: ["platform", "qa"]
 depends_on: []
@@ -61,3 +61,6 @@ Move logistics docs to domain archive/current-state; mark normative/descriptive/
 
 ## Notes / decisions
 - Raw project corpora remain off-repo; use only sanitized fixtures, manifests, hashes, and aggregate evidence approved by the relevant fixture/governance task.
+- Closed on 2026-06-03 by moving logistics-specific planning docs under `docs/domains/logistics/`, adding `DOC_INVENTORY.yaml`, and classifying current-state versus archive docs as normative, descriptive, or historical.
+- Authoritative workflow packs remain under `docs/workflows/*/v1/`; operator runbooks remain under `docs/ops/runbooks/` and are inventory-listed instead of moved.
+- Focused evidence: logistics docs inventory contract, active workpage source guardrail, and schema validation passed.

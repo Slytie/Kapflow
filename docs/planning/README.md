@@ -13,6 +13,7 @@ Key files:
 - `STEP_RUN_SCENARIO_HARNESS.md`
 - `EPICS.md`
 - `TASK_INDEX.md`
+- `WORKPAGE_DEVELOPMENT_GUIDE.md`
 - `TEST_STRATEGY.md`
 - `TEST_MATRIX.md`
 - `TDD_IMPLEMENTATION_PLAN.md`
@@ -23,6 +24,7 @@ Practical routing:
 - `FIRST_RUNTIME_SLICE.md` answers what should be written first, where it should live, and what should wait.
 - `STEP_RUN_SCENARIO_HARNESS.md` answers how agent-executed step tests should be structured once runtime code exists.
 - `TDD_IMPLEMENTATION_PLAN.md` answers how to use schemas, traces, pytest oracles, and synthetic example artifacts while implementing.
+- Logistics-specific docs are classified under `docs/domains/logistics/`; use `DOC_INVENTORY.yaml` before treating a logistics doc as current.
 
 For fresh-session execution:
 - use `codex/context/` for short epic context packs,

@@ -1,0 +1,110 @@
+domain: logistics
+inventory_version: 1
+classification_values:
+  - normative
+  - descriptive
+  - historical
+entries:
+  - path: docs/workflows/logistics_ops_family/v1/README.md
+    classification: normative
+    location: workflow_pack
+  - path: docs/workflows/weekly_schedule_planning/v1/WORKFLOW_CONTRACT.yaml
+    classification: normative
+    location: workflow_pack
+  - path: docs/workflows/live_dispatch/v1/WORKFLOW_CONTRACT.yaml
+    classification: normative
+    location: workflow_pack
+  - path: docs/workflows/dispatch_reporting/v1/WORKFLOW_CONTRACT.yaml
+    classification: normative
+    location: workflow_pack
+  - path: docs/domains/logistics/current-state/CONTINUOUS_SCHEDULE_CONTROL_ARTIFACTS.md
+    classification: normative
+    location: current-state
+  - path: docs/domains/logistics/current-state/LOGISTICS_CONTROL_LAYER_AND_METHOD_PACKAGES.md
+    classification: normative
+    location: current-state
+  - path: docs/domains/logistics/current-state/LOGISTICS_FAMILY_DEFINITIONS_AND_COMPILATION.md
+    classification: normative
+    location: current-state
+  - path: docs/domains/logistics/current-state/LOGISTICS_WEEKLY_TO_LIVE_HANDOFF_RUNTIME.md
+    classification: normative
+    location: current-state
+  - path: docs/domains/logistics/current-state/LOGISTICS_WORKPAGES_V1_OPERATOR_READINESS_NOTE.md
+    classification: descriptive
+    location: current-state
+  - path: docs/domains/logistics/current-state/REALISTIC_SCHEDULE_PLANNING_PILOT.md
+    classification: descriptive
+    location: current-state
+  - path: docs/ops/runbooks/logistics_canonical_workpage_demo.md
+    classification: descriptive
+    location: runbook
+  - path: docs/ops/runbooks/logistics_single_node_cadence.md
+    classification: descriptive
+    location: runbook
+  - path: docs/ops/runbooks/logistics_local_demo_beginner.md
+    classification: descriptive
+    location: runbook
+  - path: docs/ops/runbooks/logistics_local_demo_weekly_first.md
+    classification: descriptive
+    location: runbook
+  - path: docs/domains/logistics/archive/LOGISTICS_STALE_CONTENT_AUDIT.md
+    classification: historical
+    location: archive
+  - path: docs/domains/logistics/archive/LOGISTICS_STALE_CONTENT_AUDIT_COPY.md
+    classification: historical
+    location: archive
+  - path: docs/domains/logistics/archive/LOGISTICS_WORKPAGE_DEMO_ENABLEMENT_PLAN.md
+    classification: historical
+    location: archive
+  - path: docs/domains/logistics/archive/LOGISTICS_WORKPAGES_ARTIFACT_PATH_BRIEF.md
+    classification: historical
+    location: archive
+  - path: docs/domains/logistics/archive/LOGISTICS_WORKPAGES_ARTIFACT_PATH_PLAN.md
+    classification: historical
+    location: archive
+  - path: docs/domains/logistics/archive/LOGISTICS_WORKPAGES_EPIC125_CLOSEOUT_AND_FEEDBACK_NOTE.md
+    classification: historical
+    location: archive
+  - path: docs/domains/logistics/archive/LOGISTICS_WORKPAGES_OPERATIONAL_CADENCE_EXEC_SUMMARY.md
+    classification: historical
+    location: archive
+  - path: docs/domains/logistics/archive/LOGISTICS_WORKPAGES_OPERATIONAL_CADENCE_PLAN.md
+    classification: historical
+    location: archive
+  - path: docs/domains/logistics/archive/LOGISTICS_WORKPAGES_RUN_SURFACES_BRIEF.md
+    classification: historical
+    location: archive
+  - path: docs/domains/logistics/archive/LOGISTICS_WORKPAGES_RUN_SURFACES_PLAN.md
+    classification: historical
+    location: archive
+  - path: docs/domains/logistics/archive/LOGISTICS_WORKPAGES_SCHEDULE_ARTIFACT_PATH_BRIEF.md
+    classification: historical
+    location: archive
+  - path: docs/domains/logistics/archive/LOGISTICS_WORKPAGES_SCHEDULE_ARTIFACT_PATH_PLAN.md
+    classification: historical
+    location: archive
+  - path: docs/domains/logistics/archive/LOGISTICS_WORKPAGES_SCHEDULE_COMPARISON_SHORTCUTS_NOTE.md
+    classification: historical
+    location: archive
+  - path: docs/domains/logistics/archive/LOGISTICS_WORKPAGES_STAGE_LINKED_BRIEF.md
+    classification: historical
+    location: archive
+  - path: docs/domains/logistics/archive/LOGISTICS_WORKPAGES_STAGE_LINKED_PLAN.md
+    classification: historical
+    location: archive
+  - path: docs/domains/logistics/archive/LOGISTICS_WORKPAGES_UNIFIED_REPLAN_AND_DYNAMIC_SCHEDULING_PLAN.md
+    classification: historical
+    location: archive
+  - path: docs/domains/logistics/archive/LOGISTICS_WORKPAGES_V0_PLAN.md
+    classification: historical
+    location: archive
+  - path: docs/domains/logistics/archive/LOGISTICS_WORKPAGES_V0_PRODUCT_BRIEF.md
+    classification: historical
+    location: archive
+  - path: docs/domains/logistics/archive/LOGISTICS_WORKPAGES_V1_HEATMAP_RECALC_ROUTE_DEMAND_AND_VERSIONING_PLAN.md
+    classification: historical
+    location: archive
+  - path: docs/domains/logistics/archive/WORKPAGES_POST_EPIC131_STABILIZATION_AND_SETTLEMENT_PLAN.md
+    classification: historical
+    location: archive
+

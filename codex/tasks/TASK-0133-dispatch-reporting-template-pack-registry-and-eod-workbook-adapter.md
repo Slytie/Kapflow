@@ -28,7 +28,7 @@ Add the bounded template-pack/registry/workbook-adapter foundation required for 
 
 ## Source files to read first
 - `docs/planning/HITL_HTTP_API_CONTRACTS.md`
-- `docs/planning/LOGISTICS_WORKPAGES_ARTIFACT_PATH_PLAN.md`
+- `docs/domains/logistics/archive/LOGISTICS_WORKPAGES_ARTIFACT_PATH_PLAN.md`
 - `docs/workflows/dispatch_reporting/v1/ARTIFACT_MAP.yaml`
 - `docs/workflows/dispatch_reporting/v1/WORKFLOW_CONTRACT.yaml`
 - `docs/workflows/dispatch_reporting/v1/OPERATING_MODEL.md`

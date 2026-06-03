@@ -14,7 +14,7 @@ Completed on 2026-04-06. `TASK-0151` through `TASK-0157` are now complete. `TASK
 Closeout note:
 - EPIC-125 is now completed history rather than an active implementation epic.
 - The downstream feedback-consuming work is already reflected in completed EPIC-126 cleanup history plus the landed EPIC-131, EPIC-132, EPIC-133, and EPIC-134 tranches.
-- First-demo feedback themes are frozen in `docs/planning/LOGISTICS_WORKPAGES_EPIC125_CLOSEOUT_AND_FEEDBACK_NOTE.md`.
+- First-demo feedback themes are frozen in `docs/domains/logistics/archive/LOGISTICS_WORKPAGES_EPIC125_CLOSEOUT_AND_FEEDBACK_NOTE.md`.
 
 ## Key goal
 Prove the following operator loop end to end:

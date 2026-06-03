@@ -54,7 +54,7 @@ Success is demonstrated by:
 - `tests/runtime/test_logistics_handoff_runtime.py`
 - `tests/runtime/scenarios/test_logistics_weekly_to_live_golden_slice.py`
 - `fixtures/scenarios/logistics/weekly_to_live_golden_slice.yaml`
-- `docs/planning/LOGISTICS_WEEKLY_TO_LIVE_HANDOFF_RUNTIME.md`
+- `docs/domains/logistics/current-state/LOGISTICS_WEEKLY_TO_LIVE_HANDOFF_RUNTIME.md`
 - `docs/examples/logistics_definitions/*`
 - status/task index docs
 
