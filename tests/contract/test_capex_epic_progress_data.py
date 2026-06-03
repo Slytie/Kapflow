@@ -46,7 +46,7 @@ def test_capex_epic_progress_data_uses_v2_estimates() -> None:
     data = _load_data()
 
     assert data["schemaVersion"] == "capex.epic_progress.v2"
-    assert data["summary"]["estimate"]["remainingTasks"] == 351
+    assert data["summary"]["estimate"]["remainingTasks"] == 339
     assert data["summary"]["estimate"]["etaDate"] is None
     assert data["summary"]["estimate"]["label"] == "ETA needs completion timestamp history"
     assert all("estimate" in epic for epic in data["epics"])

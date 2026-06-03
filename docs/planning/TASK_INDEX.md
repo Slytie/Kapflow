@@ -220,7 +220,7 @@ Note: `TASK-0087` / `TASK-0088` / `TASK-0089` were formerly duplicated as `TASK-
 | TASK-0257 | EPIC-139 | DONE | high | Extract logistics side effects from generic approval.respond |
 | TASK-0258 | EPIC-139 | DONE | high | Create domain workpage/action descriptor registry |
 | TASK-0259 | EPIC-139 | DONE | medium | Classify and restructure logistics docs |
-| TASK-0260 | EPIC-139 | TODO | high | Split platform tests from logistics regression tests |
+| TASK-0260 | EPIC-139 | DONE | high | Split platform tests from logistics regression tests |
 | TASK-0261 | EPIC-140 | TODO | high | Decide and implement CAPEX project anchor schema |
 | TASK-0262 | EPIC-140 | TODO | high | Implement project_membership and project roles |
 | TASK-0263 | EPIC-140 | TODO | high | Project-scoped artifact/task/flag/approval/pointer APIs |
@@ -329,7 +329,7 @@ Note: `TASK-0087` / `TASK-0088` / `TASK-0089` were formerly duplicated as `TASK-
 | TASK-0366 | EPIC-149 | TODO | medium | P12 phase preflight quality review |
 | TASK-0367 | EPIC-149 | TODO | medium | P12 stabilization/refactor pass |
 | TASK-0368 | EPIC-149 | TODO | medium | P12 phase closeout evidence |
-| TASK-0369 | EPIC-139 | TODO | high | Approval side-effect extraction |
+| TASK-0369 | EPIC-139 | DONE | high | Approval side-effect extraction |
 | TASK-0370 | EPIC-139 | TODO | medium | Domain workpage descriptor registry |
 | TASK-0371 | EPIC-140 | TODO | high | Project-scope query helper |
 | TASK-0372 | EPIC-141 | TODO | high | Artifact list pagination adapter |

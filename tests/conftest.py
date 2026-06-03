@@ -13,6 +13,7 @@ if str(SRC_ROOT) not in sys.path:
 from tests.helpers.reference_model import reduce_events
 from tests.helpers.repo_paths import REPO_ROOT as TEST_REPO_ROOT
 from tests.helpers.scenario_catalog import SCENARIO_CATALOG
+from tests.helpers.suite_markers import is_logistics_regression_test_path
 from tests.helpers.trace_loader import load_trace
 
 
@@ -34,3 +35,15 @@ def trace_loader():
 @pytest.fixture()
 def reducer():
     return reduce_events
+
+
+@pytest.hookimpl(tryfirst=True)
+def pytest_collection_modifyitems(config, items):
+    del config
+    for item in items:
+        item_raw_path = getattr(item, "path", None)
+        if item_raw_path is None:
+            item_raw_path = item.fspath
+        item_path = Path(str(item_raw_path))
+        if is_logistics_regression_test_path(item_path, repo_root=REPO_ROOT):
+            item.add_marker(pytest.mark.logistics_regression)

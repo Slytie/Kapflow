@@ -34,7 +34,7 @@
   ],
   "epicOverrides": {
     "EPIC-139": {
-      "reviewPosture": "Fresh check completed from task files, TASK_INDEX, CURRENT_FOCUS, and closeout decisions: twelve EPIC-139 tasks are accepted as done; TASK-0260 is the next open cleanup task."
+      "reviewPosture": "Fresh check completed from task files, TASK_INDEX, CURRENT_FOCUS, and closeout decisions: fourteen EPIC-139 tasks are accepted as done; TASK-0370 is the next open cleanup task, while TASK-0561 remains a later imported duplicate approval-response row."
     },
     "EPIC-140": {
       "displayStatus": "blocked",

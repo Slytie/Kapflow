@@ -55,6 +55,17 @@ This must validate at least:
 - artifact lineage acyclicity
 - replay determinism over the trace corpus
 
+## Domain-boundary test split
+Run:
+- `make platform-substrate-tests`
+- `make logistics-regression-tests`
+
+This split is intentionally narrower than the future full marker taxonomy:
+- `platform-substrate-tests` runs backend/platform coverage with `-m "not logistics_regression"` so platform semantics are not protected only by logistics fixtures.
+- `logistics-regression-tests` runs a stable marked subset over current logistics contracts, golden handoff scenarios, handoff runtime, and cross-scope handoff isolation.
+- The marker manifest may classify broader logistics tests than this stable lane; those remain directly runnable by file path or `-m logistics_regression` during focused domain work.
+- Platform boundary tests may still mention logistics symbols when proving generic/domain extraction, but tests that depend on logistics fixture roots belong in the logistics regression lane.
+
 ## Release-confidence gate (current hardening slices)
 This gate is intentionally narrow and should stay focused on currently implemented hardening slices.
 

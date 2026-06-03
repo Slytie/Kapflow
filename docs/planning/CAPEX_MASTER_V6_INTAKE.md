@@ -184,10 +184,25 @@
 - Evidence: approval hook unit tests, handler import-boundary contract, CAPEX audit contract, approval CLI/API regressions, weekly publish approve/stale regressions, and dispatch-reporting finalize approve/stale regressions passed on 2026-06-02.
 - Closeout posture: `CLEAN-001` is closed as domain-boundary cleanup only; this is not CAPEX production activation, deployment approval, raw-corpus use, or new CAPEX runtime behavior.
 
+## TASK-0260 closeout evidence
+- Added a repo-native `logistics_regression` pytest marker with classification truth in `tests/helpers/suite_markers.py`.
+- `tests/conftest.py` applies the marker from the manifest at collection time, and `Makefile` exposes `platform-substrate-tests` plus `logistics-regression-tests`.
+- `.github/workflows/main.yml` now surfaces both lanes as a visible `domain-boundary` CI matrix without weakening the existing broad required checks.
+- Evidence: `tests/contract/test_platform_logistics_test_split.py` proves manifest coverage, logistics fixture-root classification, and Make/GitHub lane exposure.
+- Closeout posture: `CLEAN-004` is closed as test/CI domain-boundary cleanup only; this is not broader `TASK-0492` marker taxonomy work and does not activate CAPEX runtime behavior.
+
+## TASK-0369 closeout evidence
+- Reconciled `RF-001` to the already-landed approval-response hook extraction from `TASK-0257`.
+- Generic `approval.respond` remains limited to approval transition and event emission before registered domain hooks run in the same transaction.
+- Evidence remains anchored in `ADR-005`, `src/onetruth/application/services/approval_response_hooks.py`, `src/onetruth/application/services/logistics_approval_response_hooks.py`, `tests/contract/test_handler_import_boundaries.py`, and `tests/unit/test_approval_response_hooks.py`.
+- No new approval handler behavior was added for this reconciliation; `TASK-0561` remains a later imported duplicate row unless separately reconciled.
+- Closeout posture: `RF-001` is closed as duplicate-intent reconciliation only; this is not new CAPEX approval semantics or product activation.
+
 ## Current-code blocker mappings
 | Blocker | CAPEX task refs | Current repo surface |
 |---|---|---|
-| Approval response domain-hook extraction | `TASK-0257`, `TASK-0561` | `src/onetruth/application/services/approval_response_hooks.py`, `src/onetruth/application/services/logistics_approval_response_hooks.py`, `docs/adr/ADR-005-approval-response-domain-hooks.md` |
+| Approval response domain-hook extraction | `TASK-0257`, `TASK-0369`, `TASK-0561` | `src/onetruth/application/services/approval_response_hooks.py`, `src/onetruth/application/services/logistics_approval_response_hooks.py`, `docs/adr/ADR-005-approval-response-domain-hooks.md` |
+| Platform/logistics test split | `TASK-0260` | `tests/helpers/suite_markers.py`, `tests/contract/test_platform_logistics_test_split.py`, `Makefile`, `.github/workflows/main.yml` |
 | Artifact auth-before-read and storage confinement | `TASK-0235`, `TASK-0562` | `src/onetruth/api/routes/artifacts.py`, `src/onetruth/application/handlers/artifacts.py`, `src/onetruth/infrastructure/artifacts/storage.py` |
 | Transaction composition safety | `TASK-0236` | `src/onetruth/application/handlers/schedule_control.py`, `src/onetruth/application/handlers/logistics_handoff.py` |
 | Invariant audit harness | `TASK-0237` | `src/onetruth/application/services/capex_invariant_audit.py`, `scripts/run_capex_invariant_audit.py` |

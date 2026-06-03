@@ -2,6 +2,12 @@
 
 Record any decisions made since the last session so a fresh Codex run can rehydrate quickly.
 
+## 2026-06-03 (CAPEX CLEAN-004/RF-001 test split and approval extraction reconciliation)
+- Test-split decision: `TASK-0260` adds a minimal EPIC-139 `logistics_regression` pytest marker manifest and visible Make/GitHub lanes for `platform-substrate-tests` and `logistics-regression-tests`; this does not replace the broader future marker taxonomy planned under `TASK-0492`.
+- Platform-boundary decision: platform substrate coverage may still inspect logistics symbols when proving generic/domain extraction, but tests that depend on logistics fixture roots must live in the logistics regression lane.
+- Reconciliation decision: `TASK-0369` is closed against existing `ADR-005` approval-response hook evidence from `TASK-0257`; no new approval handler behavior was added, and `TASK-0561` remains untouched as a later imported duplicate row.
+- Activation decision: these closeouts do not activate CAPEX runtime/product behavior, raw corpus use, production deployment, or new approval semantics.
+
 ## 2026-06-03 (CAPEX CLEAN-002/CLEAN-003 workpage registry and logistics docs classification)
 - Workpage-boundary decision: generic workpage action projection now delegates to a domain-neutral `WorkpageActionRegistry`; logistics workflow IDs, stage/task surfaces, approval scope refs, projection keys, and unavailable-reason strings live in the logistics action pack.
 - Payload-compatibility decision: `TASK-0258` preserves the existing public `workpage_actions` wire shape while adding an explicit extension point for future domain packs such as CAPEX.

@@ -2,7 +2,8 @@
 id: TASK-0369
 epic: EPIC-139
 title: "Approval side-effect extraction"
-status: TODO
+status: DONE
+completed_at: "2026-06-03T12:00:00+02:00"
 owners: ["platform"]
 reviewers: ["architect", "qa"]
 depends_on: []
@@ -61,3 +62,7 @@ Extract logistics publish/dispatch/reporting effects from generic approval.respo
 
 ## Notes / decisions
 - Raw project corpora remain off-repo; use only sanitized fixtures, manifests, hashes, and aggregate evidence approved by the relevant fixture/governance task.
+- Closed on 2026-06-03 as a reconciliation task against already-landed approval-response domain-hook extraction.
+- Evidence is the same canonical hook boundary closed under `TASK-0257`: `ADR-005`, `src/onetruth/application/services/approval_response_hooks.py`, `src/onetruth/application/services/logistics_approval_response_hooks.py`, `tests/contract/test_handler_import_boundaries.py`, and `tests/unit/test_approval_response_hooks.py`.
+- No new approval handler behavior was added for this reconciliation; generic `approval.respond` remains responsible only for canonical approval transition and event emission before registered domain hooks run inside the same transaction.
+- `TASK-0561` remains untouched as a later imported duplicate row unless a future backlog reconciliation explicitly closes it.

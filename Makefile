@@ -35,7 +35,7 @@ LAB_VM_REMOTE_VIEWER_TOKEN_ENV ?= LAB_VIEWER_SMOKE_TOKEN
 LAB_VM_DEPLOY_OUTPUT ?= $(CURDIR)/.tmp/lab-vm-deploy/lab_vm_deploy_report.json
 LAB_VM_DEPLOY_SECRET_REF_ARGS ?=
 
-.PHONY: lint test assurance-fast schema-validate trace-validate unit contract replay acceptance runtime runtime-api workpage-mutation-smoke security property integration integration-openai integration-openai-weekly-stage04 logistics-weekly-stage04-pilot clean-source-bundle release-source-bundle handoff-source-bundle release-image predeploy-backup-manifest lab-auth-smoke lab-vm-deploy-plan lab-vm-deploy generated-check frontend-snapshots frontend-snapshots-check frontend-install frontend-typecheck frontend-test frontend-workpages-smoke frontend-build ci-fast-backend ci-runtime-required ci-backend ci release-confidence release-confidence-validation release-confidence-demo-export release-confidence-projection-coherence release-confidence-logistics-weekly-live release-confidence-certification-manifest
+.PHONY: lint test assurance-fast schema-validate trace-validate unit contract replay acceptance runtime runtime-api platform-substrate-tests logistics-regression-tests workpage-mutation-smoke security property integration integration-openai integration-openai-weekly-stage04 logistics-weekly-stage04-pilot clean-source-bundle release-source-bundle handoff-source-bundle release-image predeploy-backup-manifest lab-auth-smoke lab-vm-deploy-plan lab-vm-deploy generated-check frontend-snapshots frontend-snapshots-check frontend-install frontend-typecheck frontend-test frontend-workpages-smoke frontend-build ci-fast-backend ci-runtime-required ci-backend ci release-confidence release-confidence-validation release-confidence-demo-export release-confidence-projection-coherence release-confidence-logistics-weekly-live release-confidence-certification-manifest
 .PHONY: doctor backend-lint python-lint frontend-ci
 
 doctor:
@@ -75,6 +75,12 @@ runtime:
 
 runtime-api:
 	PYTHONPATH=src $(PYTEST) tests/runtime/api
+
+platform-substrate-tests:
+	PYTHONPATH=src $(PYTEST) -m "not logistics_regression" tests/contract tests/unit tests/runtime/test_cli_timeline_smoke.py tests/runtime/test_workflow_task_core_cli.py tests/runtime/test_approvals_artifacts_pointers_cli.py tests/runtime/test_execution_session_runtime.py tests/runtime/test_projection_coherence.py tests/runtime/test_example_document_corpus_ingress.py tests/runtime/api/test_approval_respond_via_api.py tests/runtime/api/test_human_task_claim_via_api.py tests/runtime/api/test_human_task_complete_via_api.py tests/runtime/api/test_cross_scope_api_denial.py tests/security tests/property tests/integration
+
+logistics-regression-tests:
+	PYTHONPATH=src $(PYTEST) -m logistics_regression tests/contract/test_logistics_control_layer_contracts.py tests/contract/test_logistics_definition_contracts.py tests/contract/test_logistics_docs_inventory.py tests/contract/test_logistics_operational_cadence_runbook_docs.py tests/contract/test_logistics_workpage_demo_runbook_docs.py tests/runtime/scenarios/test_logistics_weekly_to_live_golden_slice.py tests/runtime/scenarios/test_logistics_three_workflow_demo_story_seed.py tests/runtime/test_logistics_handoff_runtime.py tests/security/isolation/test_logistics_handoff_cross_scope_runtime.py
 
 workpage-mutation-smoke:
 	@$(PYTHON) -c "import importlib.util, sys; modules = ('openpyxl', 'sqlalchemy', 'yaml'); missing = [name for name in modules if importlib.util.find_spec(name) is None]; sys.exit('Missing required runtime dependencies for workpage mutation smoke: ' + ', '.join(missing) if missing else 0)"

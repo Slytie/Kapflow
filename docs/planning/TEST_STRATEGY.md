@@ -106,6 +106,7 @@ The repo now includes an initial executable TDD harness:
 - `tests/replay/` - replay and final-state oracles
 - `tests/acceptance/` - acceptance evidence checks
 - `tests/security/` - cross-scope and policy-gate negatives
+- `tests/helpers/suite_markers.py` - repo-native logistics regression marker manifest used by `platform-substrate-tests` and `logistics-regression-tests`
 
 Use `docs/planning/TDD_IMPLEMENTATION_PLAN.md` for the repo-native working order and commands.
 
@@ -116,6 +117,7 @@ Use `docs/planning/TDD_IMPLEMENTATION_PLAN.md` for the repo-native working order
 - Schema validation (events/artifacts/policy/workflow packs)
 - Contract tests (where applicable)
 - "Replay smoke": small set of golden histories for changed workflow logic
+- Domain-boundary grouping: platform substrate tests must be runnable separately from logistics regression tests.
 
 ### Post-merge (slower)
 - Integration tests with real deps

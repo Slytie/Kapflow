@@ -2,7 +2,8 @@
 id: TASK-0260
 epic: EPIC-139
 title: "Split platform tests from logistics regression tests"
-status: TODO
+status: DONE
+completed_at: "2026-06-03T12:00:00+02:00"
 owners: ["platform"]
 reviewers: ["architect", "qa"]
 depends_on: []
@@ -61,3 +62,6 @@ Separate platform substrate tests from logistics domain fixtures.
 
 ## Notes / decisions
 - Raw project corpora remain off-repo; use only sanitized fixtures, manifests, hashes, and aggregate evidence approved by the relevant fixture/governance task.
+- Closed on 2026-06-03 by adding the repo-native `logistics_regression` pytest marker manifest, auto-marking logistics regression tests at collection time, and exposing `platform-substrate-tests` plus `logistics-regression-tests` Make/CI lanes.
+- Focused evidence: `tests/contract/test_platform_logistics_test_split.py` proves the manifest covers real tests, logistics fixture roots stay in the logistics lane, and Make/GitHub expose both groups.
+- Rollback posture: removing the split should fail the platform/logistics split contract before platform coverage can silently depend on logistics fixture examples again.

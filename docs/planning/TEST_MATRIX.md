@@ -133,6 +133,13 @@ Current implemented runtime command-boundary coverage:
 - `tests/runtime/scenarios/test_weekly_stage04_openai_agent_mocked_slice.py`
 - `tests/integration_openai/test_stage06_openai_real_e2e.py` (gated/opt-in)
 
+Current domain-boundary split coverage:
+- `tests/helpers/suite_markers.py` records the repo-native `logistics_regression` manifest.
+- `tests/contract/test_platform_logistics_test_split.py` proves manifest globs match real tests, logistics fixture roots are classified as logistics regressions, and Make/GitHub expose both lanes.
+- `make platform-substrate-tests` runs `-m "not logistics_regression"` over explicit platform substrate files.
+- `make logistics-regression-tests` runs `-m logistics_regression` over the stable logistics contract/golden handoff subset; broader marked logistics tests remain runnable by file path or marker during focused domain work.
+- This is a minimal EPIC-139 split and does not replace the future broader marker taxonomy planned under `TASK-0492`.
+
 Current runtime tests assert:
 - canonical row creation for `workflow_runs`, `task_runs`, `human_tasks`
 - lifecycle transitions for claim and completion
