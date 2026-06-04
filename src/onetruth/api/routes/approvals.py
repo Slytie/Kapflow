@@ -38,6 +38,7 @@ def list_approvals_endpoint(
         approval_kind=query.get("approval_kind"),
         required_role=query.get("required_role"),
         page=page,
+        project_id=query.get("project_id"),
     )
     return {
         "command": "api.approvals.list",

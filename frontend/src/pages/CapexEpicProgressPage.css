@@ -30,6 +30,7 @@
 .capex-progress-page__header,
 .capex-controls,
 .capex-blockers,
+.capex-roadmap-progress,
 .capex-progress-page__footer {
   border: 1px solid rgba(128, 208, 80, 0.22);
   background: rgba(7, 16, 9, 0.88);
@@ -106,6 +107,66 @@
   font-size: 2rem;
   line-height: 1.1;
   margin-top: 6px;
+}
+
+.capex-roadmap-progress {
+  display: grid;
+  gap: 12px;
+  padding: 16px;
+}
+
+.capex-roadmap-progress__header {
+  align-items: end;
+  display: flex;
+  gap: 14px;
+  justify-content: space-between;
+}
+
+.capex-roadmap-progress__header h2 {
+  color: var(--capex-text);
+  font-family: var(--font-display);
+  font-size: clamp(2rem, 5vw, 3.5rem);
+  letter-spacing: 0;
+  line-height: 1;
+  margin: 4px 0 0;
+}
+
+.capex-roadmap-progress__header span {
+  border: 1px solid rgba(255, 176, 32, 0.32);
+  color: var(--capex-watch);
+  font-weight: 800;
+  padding: 8px 10px;
+  text-align: right;
+}
+
+.capex-roadmap-progress__bar {
+  background: rgba(109, 168, 109, 0.18);
+  border: 1px solid rgba(128, 208, 80, 0.22);
+  height: 18px;
+  overflow: hidden;
+}
+
+.capex-roadmap-progress__bar span {
+  background: linear-gradient(90deg, var(--capex-done), var(--capex-watch));
+  display: block;
+  height: 100%;
+}
+
+.capex-roadmap-progress__facts {
+  color: var(--capex-muted);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.capex-roadmap-progress__facts span {
+  border: 1px solid rgba(128, 208, 80, 0.18);
+  padding: 6px 8px;
+}
+
+.capex-roadmap-progress p {
+  color: var(--capex-muted);
+  margin: 0;
 }
 
 .capex-controls {

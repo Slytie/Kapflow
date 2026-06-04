@@ -35,6 +35,7 @@ def list_flags_endpoint(
         severity=query.get("severity"),
         assigned_group=query.get("assigned_group"),
         page=page,
+        project_id=query.get("project_id"),
     )
     return {
         "command": "api.flags.list",

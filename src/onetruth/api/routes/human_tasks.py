@@ -129,6 +129,7 @@ def list_human_tasks_endpoint(
         assignee_actor_id=query.get("assignee_actor_id"),
         owner_role=query.get("owner_role"),
         page=page,
+        project_id=query.get("project_id"),
     )
     rows = _enrich_human_tasks_with_actionability(
         connection,

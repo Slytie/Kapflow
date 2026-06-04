@@ -323,6 +323,174 @@
   text-transform: uppercase;
 }
 
+.capex-projects-page {
+  display: grid;
+  gap: 18px;
+  padding: 22px;
+  width: 100%;
+}
+
+.capex-projects-page__header {
+  align-items: flex-start;
+  border-bottom: 1px solid rgba(83, 91, 85, 0.2);
+  display: flex;
+  gap: 18px;
+  justify-content: space-between;
+  padding-bottom: 16px;
+}
+
+.capex-projects-page__header h1 {
+  color: #232824;
+  font-family: var(--font-display);
+  font-size: 1.9rem;
+  line-height: 1.15;
+  margin: 4px 0 6px;
+}
+
+.capex-projects-page__header p {
+  color: var(--ink-muted);
+  margin: 0;
+}
+
+.capex-projects-page__role {
+  background: rgba(18, 109, 92, 0.1);
+  border: 1px solid rgba(18, 109, 92, 0.24);
+  border-radius: 8px;
+  color: #126d5c;
+  padding: 8px 10px;
+  text-transform: capitalize;
+}
+
+.capex-projects-page__selector {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+}
+
+.capex-projects-page__selector a,
+.capex-projects-page__counts article,
+.capex-projects-page__queues > section,
+.capex-projects-page__rows article {
+  background: rgba(255, 255, 255, 0.86);
+  border: 1px solid rgba(126, 137, 128, 0.18);
+  border-radius: 8px;
+}
+
+.capex-projects-page__selector a {
+  color: inherit;
+  display: grid;
+  gap: 5px;
+  padding: 12px;
+  text-decoration: none;
+}
+
+.capex-projects-page__selector a.is-active {
+  border-color: rgba(18, 109, 92, 0.36);
+  box-shadow: inset 0 0 0 1px rgba(18, 109, 92, 0.1);
+}
+
+.capex-projects-page__selector span,
+.capex-projects-page__selector small,
+.capex-projects-page__counts span,
+.capex-projects-page__rows span,
+.capex-projects-page__rows small {
+  color: var(--ink-muted);
+  font-size: 0.8rem;
+}
+
+.capex-projects-page__selector strong,
+.capex-projects-page__rows strong {
+  color: #232824;
+  line-height: 1.25;
+}
+
+.capex-projects-page__counts {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+}
+
+.capex-projects-page__counts article {
+  display: grid;
+  gap: 6px;
+  min-height: 86px;
+  padding: 12px;
+}
+
+.capex-projects-page__counts strong {
+  color: #232824;
+  font-family: var(--font-display);
+  font-size: 1.7rem;
+  line-height: 1.1;
+}
+
+.capex-projects-page__queues {
+  display: grid;
+  gap: 14px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.capex-projects-page__queues > section {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+  padding: 14px;
+}
+
+.capex-projects-page__queues header,
+.capex-projects-page__rows article {
+  align-items: center;
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+}
+
+.capex-projects-page__queues h2 {
+  color: #232824;
+  font-size: 1rem;
+  margin: 0;
+}
+
+.capex-projects-page__queues a,
+.capex-projects-page__row-actions a,
+.capex-projects-page__rows article > a {
+  color: #245d8a;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.capex-projects-page__rows {
+  display: grid;
+  gap: 8px;
+}
+
+.capex-projects-page__rows article {
+  padding: 10px;
+}
+
+.capex-projects-page__rows article div:first-child {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.capex-projects-page__rows strong,
+.capex-projects-page__rows small {
+  overflow-wrap: anywhere;
+}
+
+.capex-projects-page__row-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.capex-projects-page__empty {
+  color: var(--ink-muted);
+  margin: 0;
+}
+
 .app-shell__nav {
   grid-column: 1 / -1;
   grid-row: 1;
@@ -335,6 +503,19 @@
   flex-direction: row;
   align-items: center;
   gap: 18px;
+}
+
+@media (max-width: 900px) {
+  .capex-projects-page__header,
+  .capex-projects-page__queues header,
+  .capex-projects-page__rows article {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .capex-projects-page__queues {
+    grid-template-columns: 1fr;
+  }
 }
 
 .app-shell__actor-switcher {

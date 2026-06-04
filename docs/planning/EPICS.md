@@ -40,7 +40,7 @@ Status note (2026-04-25): EPIC-131, EPIC-132, EPIC-133, and EPIC-134 are complet
 | EPIC-137 | CAPEX activation blockers and platform readiness | storage safety, transaction safety, invariant audit, readiness closeouts | EPIC-136, EPIC-080, EPIC-100 |
 | EPIC-138 | CAPEX production/lab separation and deploy readiness | deploy gates, backup/restore evidence, branch rules | EPIC-137, EPIC-100 |
 | EPIC-139 | CAPEX domain-boundary cleanup | domain manifests, approval side-effect cleanup, workpage descriptor registry | EPIC-137 |
-| EPIC-140 | CAPEX project access and membership | project schema decisions, authorization helpers, project dashboard scope | EPIC-137, EPIC-139 |
+| EPIC-140 | CAPEX project access and membership | project schema decisions, direct memberships, project child APIs, selector/dashboard scope | EPIC-137, EPIC-139 |
 | EPIC-141 | CAPEX source occurrence and evidence | source occurrence register, extraction state, evidence refs | EPIC-140 |
 | EPIC-142 | CAPEX artifact promotion and governance | artifact envelopes, promotion validators, closure and waiver models | EPIC-141 |
 | EPIC-143 | CAPEX workflow catalog | workflow contracts, operating models, acceptance matrices | EPIC-140, EPIC-142 |

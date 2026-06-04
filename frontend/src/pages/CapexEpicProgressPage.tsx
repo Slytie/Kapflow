@@ -173,6 +173,10 @@ function formatPercent(value: number): string {
   return `${Number.isInteger(value) ? value.toFixed(0) : value.toFixed(1)}%`;
 }
 
+function progressWidth(value: number): string {
+  return `${Math.min(Math.max(value, 0), 100)}%`;
+}
+
 function completionTimestampLabel(task: CapexTask): string {
   if (task.completedAt) {
     return task.completedAt;
@@ -229,6 +233,37 @@ function EstimateStrip({ estimate }: { estimate: CapexEstimate }): JSX.Element {
       <span>{estimate.remainingTasks} remaining</span>
       <span>{estimate.label}</span>
     </div>
+  );
+}
+
+function RoadmapProgress({ estimate }: { estimate: CapexEstimate }): JSX.Element {
+  return (
+    <section className="capex-roadmap-progress" aria-label="CAPEX roadmap progress">
+      <div className="capex-roadmap-progress__header">
+        <div>
+          <p className="capex-progress-page__eyebrow">Roadmap completion</p>
+          <h2>{formatPercent(estimate.percentComplete)}</h2>
+        </div>
+        <span>{estimate.label}</span>
+      </div>
+      <div
+        className="capex-roadmap-progress__bar"
+        role="progressbar"
+        aria-label="CAPEX roadmap completion"
+        aria-valuemin={0}
+        aria-valuemax={100}
+        aria-valuenow={estimate.percentComplete}
+        aria-valuetext={`${formatPercent(estimate.percentComplete)} complete, ${estimate.remainingTasks} remaining`}
+      >
+        <span style={{ width: progressWidth(estimate.percentComplete) }} />
+      </div>
+      <div className="capex-roadmap-progress__facts">
+        <span>{estimate.completedTasks} completed</span>
+        <span>{estimate.remainingTasks} remaining</span>
+        <span>{estimate.remainingBlockedOrReviewTasks} blocked / review</span>
+      </div>
+      <p>{estimate.caveat}</p>
+    </section>
   );
 }
 
@@ -321,6 +356,8 @@ export function CapexEpicProgressPage(): JSX.Element {
         </article>
       </section>
 
+      <RoadmapProgress estimate={progressData.summary.estimate} />
+
       <section className="capex-controls" aria-label="CAPEX filters">
         <label>
           <span>Search</span>
@@ -408,9 +445,13 @@ export function CapexEpicProgressPage(): JSX.Element {
             </div>
             <div
               className="capex-estimate-bar"
+              role="progressbar"
               aria-label={`${formatPercent(selectedEpic.estimate.percentComplete)} complete`}
+              aria-valuemin={0}
+              aria-valuemax={100}
+              aria-valuenow={selectedEpic.estimate.percentComplete}
             >
-              <span style={{ width: `${selectedEpic.estimate.percentComplete}%` }} />
+              <span style={{ width: progressWidth(selectedEpic.estimate.percentComplete) }} />
             </div>
             <dl className="capex-estimate-facts">
               <div>

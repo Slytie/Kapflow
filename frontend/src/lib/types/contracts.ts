@@ -27,6 +27,7 @@ export type ApprovalState = "PENDING" | "RESPONDED";
 export type HumanTaskExpansionKind = "none" | "task_subgraph";
 export type BoundaryProfile = "local_dev" | "ci_test" | "shared_env";
 export type RequestContextMode = "trusted_headers" | "server_derived";
+export type CapexProjectRole = "project_viewer" | "project_contributor" | "project_admin";
 
 export interface ViewerSession {
   tenant_id: string;
@@ -37,6 +38,36 @@ export interface ViewerSession {
   boundary_profile: BoundaryProfile;
   request_context_mode: RequestContextMode;
   actor_switching_allowed: boolean;
+}
+
+export interface CapexProject {
+  project_id: string;
+  tenant_id: string;
+  domain_id: string;
+  project_key: string;
+  name: string;
+  state: "active" | "archived" | string;
+  metadata_json: Record<string, unknown>;
+  created_by_actor_id: string;
+  created_by_actor_type: string;
+  created_at: string;
+  updated_at: string;
+  caller_role?: CapexProjectRole | null;
+}
+
+export interface ProjectMembership {
+  project_membership_id: string;
+  project_id: string;
+  tenant_id: string;
+  domain_id: string;
+  actor_type: string;
+  actor_id: string;
+  role: CapexProjectRole;
+  state: "active" | string;
+  granted_by_actor_id: string;
+  granted_by_actor_type: string;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface OperatorHomeFinding {
@@ -115,6 +146,7 @@ export interface HumanTaskSubgraph {
 export interface HumanTaskRow {
   human_task_id: string;
   workflow_run_id: string;
+  project_id?: string | null;
   task_run_id: string;
   task_kind: string;
   state: HumanTaskState;
@@ -153,6 +185,7 @@ export interface HumanTaskRow {
 export interface ApprovalRow {
   approval_id: string;
   workflow_run_id: string;
+  project_id?: string | null;
   task_run_id: string;
   approval_kind: string;
   scope_kind: string;
@@ -175,6 +208,7 @@ export interface ApprovalRow {
 export interface FlagRow {
   flag_id: string;
   workflow_run_id: string;
+  project_id?: string | null;
   tenant_id: string;
   domain_id: string;
   workflow_id: string;
@@ -196,6 +230,7 @@ export interface FlagRow {
 
 export interface WorkflowRunRow {
   workflow_run_id: string;
+  project_id?: string | null;
   workflow_id: string;
   workflow_version: string;
   tenant_id: string;
@@ -210,7 +245,16 @@ export interface WorkflowRunRow {
 }
 
 export interface PointerRow {
+  pointer_id?: string;
   workflow_run_id: string;
+  project_id?: string | null;
+  tenant_id?: string;
+  domain_id?: string;
+  dataset_key?: string | null;
+  partition_kind?: string | null;
+  partition_key?: string | null;
+  stream_key?: string | null;
+  registry_kind?: string | null;
   pointer_key: string;
   scope_kind: string;
   scope_ref: string;
@@ -226,6 +270,7 @@ export interface PointerRow {
 export interface ArtifactVersionRow {
   artifact_version_id: string;
   workflow_run_id: string;
+  project_id?: string | null;
   task_run_id: string | null;
   artifact_kind: string;
   artifact_role: string;
@@ -263,6 +308,31 @@ export interface TimelineEvent {
   payload: Record<string, unknown>;
   actor: { id: string; type: string };
   links: Array<{ id: string; rel: string; type: string }>;
+}
+
+export interface CapexProjectDashboardCounts {
+  workflow_run_count: number;
+  open_human_task_count: number;
+  pending_approval_count: number;
+  active_flag_count: number;
+  artifact_version_count: number;
+  pointer_count: number;
+  timeline_event_count: number;
+}
+
+export interface CapexProjectDashboard {
+  schema_version: "capex_project_dashboard.v1";
+  project: CapexProject;
+  caller_role: CapexProjectRole | null;
+  counts: CapexProjectDashboardCounts;
+  workflow_runs: WorkflowRunRow[];
+  human_tasks: HumanTaskRow[];
+  approvals: ApprovalRow[];
+  flags: FlagRow[];
+  artifact_versions: ArtifactVersionRow[];
+  pointers: PointerRow[];
+  timeline_events: TimelineEvent[];
+  page: { limit: number; offset: number };
 }
 
 export interface BoardCard {

@@ -44,8 +44,40 @@ def test_route_registry_preserves_exact_global_route_order() -> None:
         "capex.projects.list",
         "capex.projects.create",
         "capex.projects.memberships.list",
+        "capex.projects.dashboard",
         "capex.projects.memberships.grant",
+        "capex.projects.workflow_runs.list",
         "capex.projects.workflow_runs.create",
+        "capex.projects.workflow_runs.artifacts.list",
+        "capex.projects.workflow_runs.artifacts.upload",
+        "capex.projects.workflow_runs.timeline",
+        "capex.projects.workflow_runs.workspace",
+        "capex.projects.workflow_runs.detail",
+        "capex.projects.human_tasks.list",
+        "capex.projects.human_tasks.subgraph",
+        "capex.projects.human_tasks.artifacts.list",
+        "capex.projects.human_tasks.artifacts.upload",
+        "capex.projects.human_tasks.claim",
+        "capex.projects.human_tasks.complete",
+        "capex.projects.human_tasks.confirm_review",
+        "capex.projects.human_tasks.detail",
+        "capex.projects.approvals.list",
+        "capex.projects.approvals.artifacts.list",
+        "capex.projects.approvals.artifacts.upload",
+        "capex.projects.approvals.respond",
+        "capex.projects.approvals.detail",
+        "capex.projects.flags.list",
+        "capex.projects.flags.artifacts.list",
+        "capex.projects.flags.artifacts.upload",
+        "capex.projects.flags.transition",
+        "capex.projects.flags.detail",
+        "capex.projects.artifacts.list",
+        "capex.projects.artifacts.download.binary",
+        "capex.projects.artifacts.download",
+        "capex.projects.artifacts.detail",
+        "capex.projects.pointers.list",
+        "capex.projects.pointers.detail",
+        "capex.projects.timeline_events.list",
         "capex.projects.detail",
         "workflow_runs.list",
         "workflow_runs.artifacts.list",
@@ -107,6 +139,26 @@ def test_route_registry_matches_representative_exact_and_parameterized_routes() 
     assert capex_membership_match is not None
     assert capex_membership_match.route.name == "capex.projects.memberships.grant"
     assert capex_membership_match.params == {"project_id": "cp-001"}
+
+    capex_dashboard_match = match_route("GET", "/api/v1/capex/projects/cp-001/dashboard")
+    assert capex_dashboard_match is not None
+    assert capex_dashboard_match.route.name == "capex.projects.dashboard"
+    assert capex_dashboard_match.params == {"project_id": "cp-001"}
+
+    capex_task_match = match_route(
+        "POST",
+        "/api/v1/capex/projects/cp-001/human-tasks/ht-001/claim",
+    )
+    assert capex_task_match is not None
+    assert capex_task_match.route.name == "capex.projects.human_tasks.claim"
+    assert capex_task_match.params == {"project_human_task": "cp-001/human-tasks/ht-001"}
+
+    capex_pointer_match = match_route(
+        "GET",
+        "/api/v1/capex/projects/cp-001/pointers/ptr%2Fv1%2Ftenant-a%2Fdomain-x%2Fdataset%2Fkind%2Fvalue",
+    )
+    assert capex_pointer_match is not None
+    assert capex_pointer_match.route.name == "capex.projects.pointers.detail"
 
     detail_match = match_route("GET", "/api/v1/artifacts/art-001")
     assert detail_match is not None

@@ -129,7 +129,7 @@ CAPEX_INVARIANT_REGISTRY: tuple[CapexInvariant, ...] = (
         title="CAPEX project child APIs and authorization projections",
         gate_mode="known_gap",
         task_refs=("TASK-0263", "TASK-0385", "TASK-0386", "TASK-0563"),
-        description="The durable project anchor and direct memberships exist, but project-scoped child APIs, authorization projections, selector UX, and activation remain blocked.",
+        description="The durable project anchor, direct memberships, first project child APIs, and selector/dashboard slice exist, but authorization projections, official pointer families, source governance dependencies, richer CAPEX workpages, and activation remain blocked.",
     ),
     CapexInvariant(
         invariant_id="capex.known_gap.source_occurrence_sourceref",

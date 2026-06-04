@@ -12,7 +12,14 @@ Record any decisions made since the last session so a fresh Codex run can rehydr
 - Event-scope decision: `timeline_events.project_id` is nullable and derived from explicit `capex_project` event links or linked project-bound workflow runs so broad timeline reads can enforce project visibility.
 - Membership decision: `TASK-0262` adds direct `project_memberships` with roles `project_viewer`, `project_contributor`, and `project_admin`; direct membership is separate from later authorization projections.
 - API decision: the minimal CAPEX project API surface supports project list/create/detail, admin-only membership list/grant, and project-bound workflow-run creation while preserving existing no-project logistics/runtime behavior.
-- Boundary decision: project-bound workflow runs and shared read-model rows are hidden from same-tenant non-members; later EPIC-140 tasks still own richer project-scoped child APIs, authorization projections, selector UX, official pointer families, and CAPEX activation.
+- Boundary decision: project-bound workflow runs and shared read-model rows are hidden from same-tenant non-members; subsequent EPIC-140 work closes the first child-route and selector/dashboard slice, while authorization projections, official pointer families, richer CAPEX workpages, and CAPEX activation remain separate.
+
+## 2026-06-04 (EPIC-140 project child APIs and selector/dashboard)
+- Child-route decision: `TASK-0263` adds project-scoped child routes under `/api/v1/capex/projects/{project_id}` that reuse existing global row shapes and command handlers while adding project-scoped command names and `project_id` to project-route rows.
+- Guard decision: project child reads require project membership before delegation, verify each child row belongs to the path project, and return not-found style denial for non-members, missing rows, or project mismatches to avoid existence leaks.
+- Dashboard decision: `TASK-0264` adds `GET /api/v1/capex/projects/{project_id}/dashboard` as a derived, non-authoritative projection over canonical workflow/task/approval/flag/artifact/pointer/timeline state with `caller_role`, counts, and small excerpts.
+- UX decision: `/capex/projects` and `/capex/projects/:projectId` show up to five active assigned projects, display caller role, and link to existing run/work/task queues without root redirects, logistics route changes, raw-corpus use, or CAPEX runtime/product activation.
+- Index decision: this tranche does not add a migration; project-route filtering relies on the existing `workflow_runs.project_id`, `timeline_events.project_id`, and child `workflow_run_id` index coverage, with schema parity tests recording that evidence.
 
 ## 2026-06-03 (CAPEX RF-002/NU-CB-P0-001 descriptor registry and approval duplicate closeout)
 - Descriptor-boundary decision: `TASK-0370` moves active logistics workpage descriptor registrations behind `WorkpageDescriptorRegistry`; the existing descriptor lookup helpers remain compatibility facades and public workpage routes/actions stay unchanged.

@@ -56,6 +56,7 @@ def query_human_tasks(
     assignee_actor_id: str | None,
     owner_role: str | None,
     page: Page,
+    project_id: str | None = None,
 ) -> list[dict[str, Any]]:
     if workflow_run_id is not None:
         scoped_workflow_run(connection, context, workflow_run_id)
@@ -104,6 +105,9 @@ def query_human_tasks(
     if workflow_run_id is not None:
         query += " AND ht.workflow_run_id = ?"
         params.append(workflow_run_id)
+    if project_id is not None:
+        query += " AND wr.project_id = ?"
+        params.append(project_id)
     if state is not None:
         query += " AND ht.state = ?"
         params.append(state)
@@ -152,6 +156,7 @@ def query_approvals(
     approval_kind: str | None,
     required_role: str | None,
     page: Page,
+    project_id: str | None = None,
 ) -> list[dict[str, Any]]:
     if workflow_run_id is not None:
         scoped_workflow_run(connection, context, workflow_run_id)
@@ -194,6 +199,9 @@ def query_approvals(
     if workflow_run_id is not None:
         query += " AND ap.workflow_run_id = ?"
         params.append(workflow_run_id)
+    if project_id is not None:
+        query += " AND wr.project_id = ?"
+        params.append(project_id)
     if state is not None:
         query += " AND ap.state = ?"
         params.append(state)
@@ -232,6 +240,7 @@ def query_flags(
     severity: str | None,
     assigned_group: str | None,
     page: Page,
+    project_id: str | None = None,
 ) -> list[dict[str, Any]]:
     if workflow_run_id is not None:
         scoped_workflow_run(connection, context, workflow_run_id)
@@ -274,6 +283,9 @@ def query_flags(
     if workflow_run_id is not None:
         query += " AND f.workflow_run_id = ?"
         params.append(workflow_run_id)
+    if project_id is not None:
+        query += " AND wr.project_id = ?"
+        params.append(project_id)
     if state is not None:
         query += " AND f.state = ?"
         params.append(state)
@@ -335,6 +347,7 @@ def query_pointers(
     scope_ref: str | None,
     artifact_kind: str | None,
     page: Page,
+    project_id: str | None = None,
 ) -> list[dict[str, Any]]:
     compatibility_partition_key: str | None = None
     if workflow_run_id is not None:
@@ -402,6 +415,9 @@ def query_pointers(
         query += " AND (ap.workflow_run_id = ? OR ap.partition_key = ?)"
         params.append(workflow_run_id)
         params.append(compatibility_partition_key)
+    if project_id is not None:
+        query += " AND wr.project_id = ?"
+        params.append(project_id)
     if scope_kind is not None:
         query += " AND ap.scope_kind = ?"
         params.append(scope_kind)

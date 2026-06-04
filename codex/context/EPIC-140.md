@@ -27,6 +27,10 @@ PROJ-001, PROJ-002, PROJ-003, PROJ-004, PROJ-005, RF-003, ARCH-W1-T001, ARCH-W1-
 - Keep implementation PRs small enough to review against the source row and acceptance gate.
 - Preserve logistics weekly/live current focus unless a CAPEX task explicitly changes shared semantics.
 
+## Current status
+- `TASK-0261` through `TASK-0264` are closed: durable project anchor, direct membership roles, project-bound workflow-run creation, project-scoped child APIs, and the first max-five assigned-project selector/dashboard slice.
+- Remaining EPIC-140 gates include authorization projections, official project pointer families, richer CAPEX workpage/projection posture, raw-corpus governance dependencies, and CAPEX runtime activation.
+
 ## Stop line
 - Do not import raw project corpus content.
 - Do not activate CAPEX runtime/product behavior merely because a planning task exists.

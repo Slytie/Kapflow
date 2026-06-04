@@ -29,6 +29,7 @@ def list_pointers_endpoint(
         scope_ref=query.get("scope_ref"),
         artifact_kind=query.get("artifact_kind"),
         page=page,
+        project_id=query.get("project_id"),
     )
     return {
         "command": "api.pointers.list",

@@ -19,8 +19,16 @@ def list_timeline_events_endpoint(
     page: Page,
 ) -> dict[str, Any]:
     workflow_run_id = query.get("workflow_run_id")
+    workflow_run = None
     if workflow_run_id is not None:
-        scoped_workflow_run(connection, context, workflow_run_id)
+        workflow_run = scoped_workflow_run(connection, context, workflow_run_id)
+    project_id = query.get("project_id")
+    if workflow_run is not None and project_id is not None and workflow_run.get("project_id") != project_id:
+        return {
+            "command": "api.timeline_events.list",
+            "events": [],
+            "page": {"limit": page.limit, "offset": page.offset},
+        }
     event_type = query.get("event_type")
     rows = query_timeline_events(
         connection,
@@ -29,6 +37,7 @@ def list_timeline_events_endpoint(
         actor_type=context.actor_type,
         actor_id=context.actor_id,
         workflow_run_id=workflow_run_id,
+        project_id=project_id,
         event_type=event_type,
         page=page,
     )
@@ -47,6 +56,7 @@ def query_timeline_events(
     actor_type: str,
     actor_id: str,
     workflow_run_id: str | None,
+    project_id: str | None,
     event_type: str | None,
     page: Page,
 ) -> list[dict[str, Any]]:
@@ -86,6 +96,9 @@ def query_timeline_events(
     if workflow_run_id is not None:
         query += " AND te.workflow_run_id = ?"
         params.append(workflow_run_id)
+    if project_id is not None:
+        query += " AND COALESCE(te.project_id, wr.project_id) = ?"
+        params.append(project_id)
     if event_type is not None:
         query += " AND te.event_type = ?"
         params.append(event_type)

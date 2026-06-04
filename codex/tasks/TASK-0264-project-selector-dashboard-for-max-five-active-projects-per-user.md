@@ -2,7 +2,8 @@
 id: TASK-0264
 epic: EPIC-140
 title: "Project selector/dashboard for max-five active projects per user"
-status: TODO
+status: DONE
+completed_at: "2026-06-04T14:50:10+02:00"
 owners: ["frontend"]
 reviewers: ["platform", "qa"]
 depends_on: ["TASK-0262"]
@@ -60,3 +61,8 @@ Create project selector optimized for about five active assigned projects.
 
 ## Notes / decisions
 - Raw project corpora remain off-repo; use only sanitized fixtures, manifests, hashes, and aggregate evidence approved by the relevant fixture/governance task.
+- Closed by adding `caller_role` to project list/detail payloads, a project dashboard projection at `GET /api/v1/capex/projects/{project_id}/dashboard`, and frontend CAPEX project API/repository methods.
+- The dashboard projection is derived from canonical runtime objects and returns project metadata, caller role, counts, and small paged excerpts for recent runs and active work.
+- The frontend adds quiet operational routes at `/capex/projects` and `/capex/projects/:projectId`, shows up to five active assigned projects by default, displays caller role, and links to existing run/work/task queues.
+- No root redirects, logistics route changes, CAPEX production activation, raw corpus use, or official pointer-family behavior are implied by this selector/dashboard slice.
+- Evidence: `tests/runtime/api/test_capex_project_child_apis.py`, `frontend/src/pages/capexProjectDashboardPage.test.tsx`, `frontend/src/lib/api/onetruthApi.capexProjects.test.ts`, `npm --prefix frontend run typecheck`, and `npm --prefix frontend run test:run -- src/pages/capexProjectDashboardPage.test.tsx src/lib/api/onetruthApi.capexProjects.test.ts`.

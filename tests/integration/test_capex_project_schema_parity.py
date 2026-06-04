@@ -56,6 +56,14 @@ def _index_names(connection: sqlite3.Connection, table_name: str) -> set[str]:
     }
 
 
+def _index_column_sets(connection: sqlite3.Connection, table_name: str) -> set[tuple[str, ...]]:
+    column_sets: set[tuple[str, ...]] = set()
+    for index in connection.execute(f"PRAGMA index_list('{table_name}')").fetchall():
+        columns = connection.execute(f"PRAGMA index_info('{index['name']}')").fetchall()
+        column_sets.add(tuple(str(column["name"]) for column in columns))
+    return column_sets
+
+
 def _primary_key_columns(connection: sqlite3.Connection, table_name: str) -> set[str]:
     rows = connection.execute(f"PRAGMA table_info('{table_name}')").fetchall()
     return {str(row["name"]) for row in rows if int(row["pk"]) > 0}
@@ -92,6 +100,23 @@ def test_capex_project_bootstrap_and_migration_schema_parity(tmp_path: Path) -> 
             assert "project_id" in _column_names(migrated, table_name)
             assert index_name in _index_names(bootstrap, table_name)
             assert index_name in _index_names(migrated, table_name)
+
+        for table_name in [
+            "human_tasks",
+            "approvals",
+            "flags",
+            "artifact_versions",
+            "artifact_links",
+            "artifact_pointers",
+        ]:
+            assert any(
+                columns and columns[0] == "workflow_run_id"
+                for columns in _index_column_sets(bootstrap, table_name)
+            )
+            assert any(
+                columns and columns[0] == "workflow_run_id"
+                for columns in _index_column_sets(migrated, table_name)
+            )
     finally:
         bootstrap.close()
         migrated.close()

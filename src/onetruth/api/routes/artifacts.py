@@ -55,7 +55,13 @@ def list_artifacts_endpoint(
                     details={},
                 )
             )
-        scoped_workflow_run(connection, context, workflow_run_id)
+        workflow_run = scoped_workflow_run(connection, context, workflow_run_id)
+        _assert_optional_project_match(
+            workflow_run,
+            project_id=query.get("project_id"),
+            not_found_code="workflow_run_not_found",
+            details={"workflow_run_id": workflow_run_id},
+        )
         rows = list_artifacts_for_subject_command(
             connection,
             workflow_run_id=workflow_run_id,
@@ -63,7 +69,13 @@ def list_artifacts_endpoint(
             subject_id=subject_id,
         )
     elif workflow_run_id is not None:
-        scoped_workflow_run(connection, context, workflow_run_id)
+        workflow_run = scoped_workflow_run(connection, context, workflow_run_id)
+        _assert_optional_project_match(
+            workflow_run,
+            project_id=query.get("project_id"),
+            not_found_code="workflow_run_not_found",
+            details={"workflow_run_id": workflow_run_id},
+        )
         rows = list_artifacts_for_workflow_run_command(connection, workflow_run_id)
     else:
         rows = query_artifacts_in_scope(
@@ -71,6 +83,7 @@ def list_artifacts_endpoint(
             context=context,
             artifact_kind=artifact_kind,
             page=page,
+            project_id=query.get("project_id"),
         )
         return {
             "command": "api.artifacts.list",
@@ -474,6 +487,7 @@ def query_artifacts_in_scope(
     context: RequestContext,
     artifact_kind: str | None,
     page: Page,
+    project_id: str | None = None,
 ) -> list[dict[str, Any]]:
     query = """
         SELECT
@@ -508,6 +522,9 @@ def query_artifacts_in_scope(
     if artifact_kind is not None:
         query += " AND av.artifact_kind = ?"
         params.append(artifact_kind)
+    if project_id is not None:
+        query += " AND wr.project_id = ?"
+        params.append(project_id)
     query += " ORDER BY av.created_at DESC, av.artifact_version_id ASC LIMIT ? OFFSET ?"
     params.extend([page.limit, page.offset])
 
@@ -624,4 +641,23 @@ def _shared_http_request_bytes_descriptor(
 
     return ArtifactIngressDescriptor.request_bytes(
         content_base64=str(content_base64)
+    )
+
+
+def _assert_optional_project_match(
+    workflow_run: dict[str, Any],
+    *,
+    project_id: str | None,
+    not_found_code: str,
+    details: dict[str, Any],
+) -> None:
+    if project_id is None:
+        return
+    if workflow_run.get("project_id") == project_id:
+        return
+    raise ApiError(
+        status_code=404,
+        code=not_found_code,
+        message="resource not found",
+        details=details,
     )

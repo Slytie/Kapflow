@@ -19,6 +19,7 @@ import { RunsPage } from "@/pages/RunsPage";
 import { TimelinePage } from "@/pages/TimelinePage";
 import { LogisticsDemoPage } from "@/pages/LogisticsDemoPage";
 import { CapexEpicProgressPage } from "@/pages/CapexEpicProgressPage";
+import { CapexProjectDashboardPage } from "@/pages/CapexProjectDashboardPage";
 import {
   LogisticsDriverPreferencesArtifactWorkpagePage,
   LogisticsDriverPreferencesWorkpagePage
@@ -59,6 +60,8 @@ export function App(): JSX.Element {
             <Route element={<AppShell />}>
               <Route path="/" element={<OperatorHomePage />} />
               <Route path="/demo/logistics" element={<LogisticsDemoPage />} />
+              <Route path="/capex/projects" element={<CapexProjectDashboardPage />} />
+              <Route path="/capex/projects/:projectId" element={<CapexProjectDashboardPage />} />
               <Route
                 path="/runs/:workflowRunId/workpages/schedule-v0"
                 element={<LogisticsScheduleWorkpagePage />}

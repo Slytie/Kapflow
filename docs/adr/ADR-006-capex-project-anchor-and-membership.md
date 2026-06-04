@@ -13,7 +13,7 @@ Direct project membership is represented by `project_memberships`, with one acti
 - `project_contributor`
 - `project_admin`
 
-These direct memberships are the narrow runtime foundation for EPIC-140. They are separate from later authorization projections, project selector UX, richer child-object APIs, official pointer families, and CAPEX activation.
+These direct memberships are the narrow runtime foundation for EPIC-140. They are separate from authorization projections, official pointer families, richer CAPEX workpage/projection APIs, production dashboard posture, and CAPEX activation. The first project child API and selector/dashboard slice is implemented later in `TASK-0263` and `TASK-0264` against this foundation.
 
 ## Why
 CAPEX work needs a durable root that can contain multiple workflow runs and remain stable across project lifecycle events. Using `workflow_run_id` as project identity would collapse project scope into one execution instance and make project-level membership, audit, and future dashboard behavior ambiguous.
@@ -29,5 +29,5 @@ Direct membership gives the runtime a minimal auth-before-read boundary now:
 - Project-bound workflow runs and timeline rows must be hidden from same-tenant actors who do not have direct project membership.
 - Project creation emits `capex.project.created` and grants the creator `project_admin` through an audited `capex.project_membership.granted` event.
 - Membership grants are admin-only and emit `capex.project_membership.granted`.
-- Generic project-scoped artifact/task/flag/approval/pointer APIs remain future EPIC-140 work.
-- Authorization projections, max-five project selector UX, official project pointer families, data-governance gates, release/deploy work, and CAPEX runtime activation remain separately blocked.
+- Generic project-scoped artifact/task/flag/approval/pointer APIs and the max-five project selector/dashboard slice are follow-on EPIC-140 work that must preserve the same direct-membership read boundary.
+- Authorization projections, official project pointer families, data-governance gates, release/deploy work, and CAPEX runtime activation remain separately blocked.

@@ -6,7 +6,7 @@ Define project anchors, membership, roles, and project-scoped APIs without cross
 This epic was imported from CAPEX v6 on `2026-06-01` as planning backlog only. It does not activate CAPEX runtime behavior by itself.
 
 ## Status
-Active gated backlog. `TASK-0261` and `TASK-0262` are closed as the durable project-anchor/direct-membership foundation; later project-scoped child APIs, authorization projections, dashboards, pointer families, and activation remain gated.
+Active gated backlog. `TASK-0261` through `TASK-0264` are closed as the durable project-anchor/direct-membership foundation plus the first project-scoped child API and selector/dashboard slice; authorization projections, official pointer families, raw-corpus governance, richer CAPEX workpages, and activation remain gated.
 
 ## In scope
 - Source task families/counts: ARCH:10, NU:1, PROJ:5, RF:1.
@@ -32,8 +32,8 @@ Context pack:
 ## Task stack
 - `TASK-0261` (`PROJ-001`) - DONE - Decide and implement CAPEX project anchor schema
 - `TASK-0262` (`PROJ-002`) - DONE - Implement project_membership and project roles
-- `TASK-0263` (`PROJ-003`) - Project-scoped artifact/task/flag/approval/pointer APIs
-- `TASK-0264` (`PROJ-004`) - Project selector/dashboard for max-five active projects per user
+- `TASK-0263` (`PROJ-003`) - DONE - Project-scoped artifact/task/flag/approval/pointer APIs
+- `TASK-0264` (`PROJ-004`) - DONE - Project selector/dashboard for max-five active projects per user
 - `TASK-0265` (`PROJ-005`) - Project-scoped official pointer families
 - `TASK-0371` (`RF-003`) - Project-scope query helper
 - `TASK-0381` (`ARCH-W1-T001`) - Create capex_platform/domain_runtime skeleton

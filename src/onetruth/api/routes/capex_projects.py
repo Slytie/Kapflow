@@ -15,6 +15,7 @@ from onetruth.application.handlers.workflow_task_lifecycle import (
     create_workflow_run_command,
 )
 from onetruth.infrastructure.events.event_store import DuplicateIdempotencyKeyError
+from onetruth.infrastructure.repositories.capex_projects import get_project_membership_for_actor
 
 from onetruth.api.dependencies import Page, RequestContext
 from onetruth.api.errors import api_error_from_command, api_error_from_duplicate_idempotency
@@ -91,9 +92,16 @@ def get_capex_project_endpoint(
         )
     except CommandError as exc:
         raise api_error_from_command(exc) from exc
+    membership = get_project_membership_for_actor(
+        connection,
+        project_id=project_id,
+        actor_type=context.actor_type,
+        actor_id=context.actor_id,
+    )
+    caller_role = str(membership["role"]) if membership is not None else None
     return {
         "command": "api.capex.projects.detail",
-        "project": project,
+        "project": {**project, "caller_role": caller_role},
     }
 
 

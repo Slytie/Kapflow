@@ -4,7 +4,7 @@
 - Status: `DECLARED_FOR_REPO_PLATFORM_READINESS`
 - Declaration date: `2026-06-02`
 - Scope: CAPEX `PR000` through `PR007` platform-readiness gates are closed for repo engineering runtime work.
-- This declaration is not CAPEX production activation, pilot approval, release/deploy approval, raw-corpus approval, project-scoped child API approval, authorization-projection approval, or project selector UX approval.
+- This declaration is not CAPEX production activation, pilot approval, release/deploy approval, raw-corpus approval, authorization-projection approval, official pointer-family approval, or richer CAPEX workpage approval.
 
 ## PR000-PR007 Evidence Matrix
 | Gate | Repo task | Status | Evidence |
@@ -30,7 +30,7 @@
 - CAPEX production activation and pilot readiness claims remain blocked.
 - Raw K12, K3, and blind-validation corpus files, extracted filenames, screenshots, embedded text, OCR, and search output remain off-repo and out of CI.
 - Release/deploy work, production secrets, production DB URLs, and production artifact-root mutation remain out of scope.
-- CAPEX project child APIs, authorization projections, project selector UX, and runtime activation remain blocked until later project/access tasks close.
+- CAPEX project child APIs, authorization projections: the first project child API and selector/dashboard slice is closed, while authorization projections, official pointer families, richer CAPEX workpages/projections, raw-corpus governance dependencies, and runtime activation remain blocked until later project/access and governance tasks close.
 - Source occurrence and SourceRef runtime remain blocked until corpus/evidence resolver tasks close.
 - Hosted branch-protection settings remain external/operator-managed; this repo records expected posture but does not claim hosted settings are configured.
 

@@ -2,7 +2,8 @@
 id: TASK-0263
 epic: EPIC-140
 title: "Project-scoped artifact/task/flag/approval/pointer APIs"
-status: TODO
+status: DONE
+completed_at: "2026-06-04T14:50:10+02:00"
 owners: ["platform"]
 reviewers: ["architect", "qa"]
 depends_on: ["TASK-0261", "TASK-0262"]
@@ -60,3 +61,9 @@ Every CAPEX list/detail/action is project-scoped and paginated.
 
 ## Notes / decisions
 - Raw project corpora remain off-repo; use only sanitized fixtures, manifests, hashes, and aggregate evidence approved by the relevant fixture/governance task.
+- Closed by adding project-scoped child route wrappers under `/api/v1/capex/projects/{project_id}` for workflow runs, workspaces, timeline events, human tasks, approvals, flags, artifacts, and pointers.
+- Project child reads require project membership before delegation, assert child rows belong to the path project, and return not-found style denial for non-members or project mismatches.
+- Shared read helpers now accept optional `project_id` filters before pagination for workflow runs, tasks, approvals, flags, pointers, artifacts, and timeline events.
+- Existing global routes and row payloads remain compatible; project routes add project-scoped command names and `project_id` on returned child rows.
+- No new schema migration was required; existing `workflow_runs.project_id`, `timeline_events.project_id`, and child `workflow_run_id` index coverage are documented and covered by schema parity tests.
+- Evidence: `tests/runtime/api/test_capex_project_child_apis.py`, `tests/runtime/api/test_capex_project_access_api.py`, `tests/unit/test_api_route_registry.py`, `tests/contract/test_route_registry_framework_fitness.py`, and `tests/integration/test_capex_project_schema_parity.py`.

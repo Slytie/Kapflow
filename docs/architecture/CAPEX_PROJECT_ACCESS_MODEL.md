@@ -4,9 +4,9 @@
 Accepted foundation, inactive CAPEX runtime.
 
 ## Scope
-This document records the narrow EPIC-140 foundation implemented by `TASK-0261` and `TASK-0262`.
+This document records the narrow EPIC-140 foundation implemented by `TASK-0261` through `TASK-0264`.
 
-It does not activate CAPEX production-like runtime behavior, raw corpus use, project dashboards, authorization projections, official project pointer families, or richer project-scoped child APIs.
+It does not activate CAPEX production-like runtime behavior, raw corpus use, authorization projections, official project pointer families, richer CAPEX workpages, or production dashboards.
 
 ## Project Anchor
 `capex_projects.project_id` is the durable project identity.
@@ -25,8 +25,8 @@ Roles are ordered:
 
 Non-members receive not-found style denial for project reads to avoid project existence leaks. Members who lack the required write role receive a forbidden denial.
 
-## Current API Surface
-The current project API surface is intentionally minimal:
+## Project API Surface
+The current project API surface includes the durable anchor, direct membership, and project-bound run creation:
 - `GET /api/v1/capex/projects`
 - `POST /api/v1/capex/projects`
 - `GET /api/v1/capex/projects/{project_id}`
@@ -35,6 +35,62 @@ The current project API surface is intentionally minimal:
 - `POST /api/v1/capex/projects/{project_id}/workflow-runs`
 
 Project creation creates the project and grants the creator `project_admin`. Membership grants are admin-only.
+
+Project list/detail payloads expose `caller_role` from the caller's active direct membership.
+
+## Project Child API Surface
+Project-scoped child routes live below `/api/v1/capex/projects/{project_id}`. They preserve the existing global row and action payload shapes, add project-scoped command names where command responses are returned, and stamp returned child rows with `project_id`.
+
+Workflow run routes:
+- `GET /workflow-runs`
+- `GET /workflow-runs/{workflow_run_id}`
+- `GET /workflow-runs/{workflow_run_id}/workspace`
+- `GET /workflow-runs/{workflow_run_id}/timeline`
+- `GET /workflow-runs/{workflow_run_id}/artifacts`
+- `POST /workflow-runs/{workflow_run_id}/artifacts/upload`
+
+Human task routes:
+- `GET /human-tasks`
+- `GET /human-tasks/{human_task_id}`
+- `GET /human-tasks/{human_task_id}/subgraph`
+- `POST /human-tasks/{human_task_id}/claim`
+- `POST /human-tasks/{human_task_id}/complete`
+- `POST /human-tasks/{human_task_id}/confirm-review`
+- `GET /human-tasks/{human_task_id}/artifacts`
+- `POST /human-tasks/{human_task_id}/artifacts/upload`
+
+Approval routes:
+- `GET /approvals`
+- `GET /approvals/{approval_id}`
+- `POST /approvals/{approval_id}/respond`
+- `GET /approvals/{approval_id}/artifacts`
+- `POST /approvals/{approval_id}/artifacts/upload`
+
+Flag routes:
+- `GET /flags`
+- `GET /flags/{flag_id}`
+- `POST /flags/{flag_id}/transition`
+- `GET /flags/{flag_id}/artifacts`
+- `POST /flags/{flag_id}/artifacts/upload`
+
+Artifact, pointer, and timeline routes:
+- `GET /artifacts`
+- `GET /artifacts/{artifact_version_id}`
+- `GET /artifacts/{artifact_version_id}/download`
+- `GET /artifacts/{artifact_version_id}/download.bin`
+- `GET /pointers`
+- `GET /pointers/{pointer_id}`
+- `GET /timeline-events`
+
+Every project child read first requires project viewer membership, then verifies that the child row belongs to the path project before delegating to the existing handler. Missing projects, non-members, missing children, and project mismatches use not-found style denial to avoid existence leaks.
+
+## Dashboard and Selector
+`GET /api/v1/capex/projects/{project_id}/dashboard` returns a derived, non-authoritative dashboard projection:
+- `project` and `caller_role`
+- counts for workflow runs, open human tasks, pending approvals, active flags, artifact versions, pointers, and timeline events
+- small paged excerpts for recent runs and active work
+
+The frontend selector lives at `/capex/projects` and `/capex/projects/:projectId`. It shows up to five active assigned projects by default, displays caller role visibly, and links selected project rows to existing run/work/task queues. It does not redirect the app root, alter logistics routes, or imply CAPEX runtime activation.
 
 ## Shared Read Paths
 Same-tenant non-members must not see project-bound rows through broad list/detail helpers. The current enforced surfaces include:
@@ -45,10 +101,17 @@ Same-tenant non-members must not see project-bound rows through broad list/detai
 
 No-project rows remain readable by the existing tenant/domain boundary.
 
+## Index Coverage
+This tranche adds no new database migration. Project child route filtering uses:
+- `workflow_runs.project_id` for project-bound run selection
+- `timeline_events.project_id`, falling back through linked `workflow_runs.project_id`, for project timeline reads
+- existing child `workflow_run_id` index coverage for human tasks, approvals, flags, artifact versions, artifact links, and artifact pointers
+
+`tests/integration/test_capex_project_schema_parity.py` records the schema/index parity evidence.
+
 ## Future Work
 Later EPIC-140 tasks own:
-- project-scoped artifact/task/flag/approval/pointer APIs
 - authorization projections and policy dependency expansion
-- max-five project selector/dashboard UX
 - project-scoped official pointer families
-- CAPEX runtime activation and production gates
+- richer CAPEX workpages/projections and production dashboard posture
+- CAPEX runtime activation, raw-corpus governance, and production gates

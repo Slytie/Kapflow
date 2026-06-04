@@ -45,7 +45,8 @@ const UTILITY_LINKS = [
   { to: "/my-work", label: "My Work" },
   { to: "/approvals", label: "Approvals" },
   { to: "/exceptions", label: "Exceptions" },
-  { to: "/official-outputs", label: "Official Outputs" }
+  { to: "/official-outputs", label: "Official Outputs" },
+  { to: "/capex/projects", label: "CAPEX Projects" }
 ];
 
 const SECONDARY_LINKS = [{ to: "/runs", label: "Run Details" }];

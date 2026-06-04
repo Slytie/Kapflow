@@ -3,6 +3,8 @@ import { apiConfig } from "@/lib/api/config";
 import type {
   ApprovalRow,
   BoardContract,
+  CapexProject,
+  CapexProjectDashboard,
   FlagRow,
   HumanTaskRow,
   HumanTaskSubgraph,
@@ -113,6 +115,19 @@ interface FlagsEnvelope extends ListEnvelope {
 
 interface WorkflowRunsEnvelope extends ListEnvelope {
   workflow_runs: WorkflowRunRow[];
+}
+
+interface CapexProjectsEnvelope extends ListEnvelope {
+  projects: CapexProject[];
+}
+
+interface CapexProjectEnvelope extends ListEnvelope {
+  project: CapexProject;
+}
+
+interface CapexProjectDashboardEnvelope extends ListEnvelope {
+  project_id: string;
+  dashboard: CapexProjectDashboard;
 }
 
 interface WorkflowRunDetailEnvelope extends ListEnvelope {
@@ -2171,11 +2186,54 @@ export const onetruthApi = {
 
   async listWorkflowRuns(query: {
     workflow_id?: string;
+    project_id?: string;
     state?: string;
     limit?: number;
     offset?: number;
   }): Promise<WorkflowRunRow[]> {
     const payload = await requestJson<WorkflowRunsEnvelope>("/workflow-runs", { query });
+    return requiredArray<WorkflowRunRow>(payload.workflow_runs, "workflow_runs");
+  },
+
+  async listCapexProjects(query: {
+    limit?: number;
+    offset?: number;
+  } = {}): Promise<CapexProject[]> {
+    const payload = await requestJson<CapexProjectsEnvelope>("/capex/projects", { query });
+    return requiredArray<CapexProject>(payload.projects, "projects");
+  },
+
+  async getCapexProject(projectId: string): Promise<CapexProject> {
+    const payload = await requestJson<CapexProjectEnvelope>(
+      `/capex/projects/${encodeURIComponent(projectId)}`
+    );
+    return payload.project;
+  },
+
+  async getCapexProjectDashboard(
+    projectId: string,
+    query: { limit?: number; offset?: number } = {}
+  ): Promise<CapexProjectDashboard> {
+    const payload = await requestJson<CapexProjectDashboardEnvelope>(
+      `/capex/projects/${encodeURIComponent(projectId)}/dashboard`,
+      { query }
+    );
+    return payload.dashboard;
+  },
+
+  async listCapexProjectWorkflowRuns(
+    projectId: string,
+    query: {
+      workflow_id?: string;
+      state?: string;
+      limit?: number;
+      offset?: number;
+    } = {}
+  ): Promise<WorkflowRunRow[]> {
+    const payload = await requestJson<WorkflowRunsEnvelope>(
+      `/capex/projects/${encodeURIComponent(projectId)}/workflow-runs`,
+      { query }
+    );
     return requiredArray<WorkflowRunRow>(payload.workflow_runs, "workflow_runs");
   },
 

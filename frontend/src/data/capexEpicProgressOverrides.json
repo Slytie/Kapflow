@@ -47,7 +47,7 @@
     },
     "EPIC-140": {
       "displayStatus": "blocked",
-      "reviewPosture": "Project-scoped APIs, project selector/dashboard activation, and project-scoped official selections are still gating work."
+      "reviewPosture": "Project-scoped APIs now include the first project child-route and selector/dashboard slice; authorization projections, project-scoped official selections, raw-corpus governance dependencies, and CAPEX activation are still gating work."
     },
     "EPIC-144": {
       "displayStatus": "blocked",
@@ -66,7 +66,7 @@
     },
     "TASK-0273": {
       "displayStatus": "needs_review",
-      "statusReason": "Needs fresh check because it depends on unfinished project-scoped API foundations."
+      "statusReason": "Needs fresh check because the first project-scoped API foundation is closed and this task can now be reassessed against batch artifact provenance scope."
     },
     "TASK-0280": {
       "displayStatus": "needs_review",
@@ -74,7 +74,7 @@
     },
     "TASK-0291": {
       "displayStatus": "needs_review",
-      "statusReason": "Needs fresh check because the project dashboard shell depends on project selector and access foundations."
+      "statusReason": "Needs fresh check because the selector/dashboard slice is closed, while richer CAPEX workpages and route-tree shell scope remain later EPIC-144 work."
     },
     "TASK-0299": {
       "displayStatus": "needs_review",

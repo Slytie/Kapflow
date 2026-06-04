@@ -138,7 +138,8 @@ def list_capex_projects_for_actor(
             cp.created_by_actor_id,
             cp.created_by_actor_type,
             cp.created_at,
-            cp.updated_at
+            cp.updated_at,
+            pm.role AS caller_role
         FROM capex_projects cp
         JOIN project_memberships pm
           ON pm.project_id = cp.project_id
