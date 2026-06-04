@@ -46,31 +46,38 @@ def test_capex_epic_progress_data_uses_v2_estimates() -> None:
     data = _load_data()
 
     assert data["schemaVersion"] == "capex.epic_progress.v2"
-    assert data["summary"]["estimate"]["remainingTasks"] == 336
-    assert data["summary"]["estimate"]["etaDate"] == "2026-08-27"
-    assert data["summary"]["estimate"]["label"] == "ETA 2026-08-27"
+    assert data["summary"]["estimate"]["remainingTasks"] == 335
+    assert data["summary"]["estimate"]["etaDate"] == "2026-07-30"
+    assert data["summary"]["estimate"]["label"] == "ETA 2026-07-30"
     assert all("estimate" in epic for epic in data["epics"])
 
     epic139 = next(epic for epic in data["epics"] if epic["id"] == "EPIC-139")
-    assert epic139["displayStatus"] == "needs_review"
-    assert epic139["counts"]["done"] == 18
-    assert epic139["counts"]["needs_review"] == 1
-    assert epic139["estimate"]["label"] == "ETA 2026-06-05"
+    assert epic139["displayStatus"] == "done"
+    assert epic139["counts"]["done"] == 22
+    assert epic139["counts"]["needs_review"] == 0
+    assert epic139["estimate"]["label"] == "Complete"
 
 
-def test_epic139_redo_control_plane_gates_downstream_work() -> None:
+def test_epic139_redo_final_acceptance_releases_red_interlocks() -> None:
     data = _load_data()
     epics = {epic["id"]: epic for epic in data["epics"]}
 
     epic139 = epics["EPIC-139"]
-    assert epic139["displayStatus"] != "done"
+    assert epic139["displayStatus"] == "done"
+    assert "State C / repaired" in epic139["reviewPosture"]
     task_statuses = {task["id"]: task["displayStatus"] for task in epic139["tasks"]}
     assert task_statuses["TASK-0576"] == "done"
-    assert task_statuses["TASK-0643"] == "needs_review"
+    assert task_statuses["TASK-0643"] == "done"
     assert task_statuses["TASK-0644"] == "done"
+    assert task_statuses["TASK-0645"] == "done"
+    assert task_statuses["TASK-0646"] == "done"
+    assert task_statuses["TASK-0647"] == "done"
 
+    assert epics["EPIC-143"]["displayStatus"] == "in_progress"
+    assert epics["EPIC-150"]["displayStatus"] == "not_started"
+    assert epics["EPIC-151"]["displayStatus"] == "not_started"
     for epic_id in ("EPIC-143", "EPIC-150", "EPIC-151"):
-        assert epics[epic_id]["displayStatus"] in {"blocked", "needs_review"}
+        assert "Gated while EPIC-139 remains RED" not in epics[epic_id]["reviewPosture"]
 
     epic150_text = (ROOT / "docs/planning/epics/EPIC-150.md").read_text(
         encoding="utf-8"

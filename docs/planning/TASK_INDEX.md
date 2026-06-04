@@ -603,5 +603,8 @@ Note: `TASK-0087` / `TASK-0088` / `TASK-0089` were formerly duplicated as `TASK-
 | TASK-0640 | EPIC-150 | TODO | high | Add overkill guards: no bidirectional sync, no writeback, no full DMS/sync-platform adoption |
 | TASK-0641 | EPIC-150 | TODO | medium | Refine PM UX for Source Roots, Sync Monitor, and Review Queue |
 | TASK-0642 | EPIC-150 | TODO | high | Define EPIC-150 to EPIC-141 handoff for SourceRef resolution |
-| TASK-0643 | EPIC-139 | IN_PROGRESS | high | EPIC-139 redo neutral platform defaults |
+| TASK-0643 | EPIC-139 | DONE | high | EPIC-139 redo neutral platform defaults |
 | TASK-0644 | EPIC-139 | DONE | high | EPIC-139 redo downstream interlocks and EPIC-150 dependency correction |
+| TASK-0645 | EPIC-139 | DONE | high | EPIC-139 redo final supported-environment acceptance |
+| TASK-0646 | EPIC-139 | DONE | high | EPIC-139 redo task-by-task reclose ledger |
+| TASK-0647 | EPIC-139 | DONE | medium | EPIC-139 redo closure handoff and next-tranche guard |

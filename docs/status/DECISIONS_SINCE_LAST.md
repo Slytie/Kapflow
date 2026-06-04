@@ -2,6 +2,11 @@
 
 Record any decisions made since the last session so a fresh Codex run can rehydrate quickly.
 
+## 2026-06-04 (EPIC-139 redo closure handoff)
+- Closure decision: `TASK-0647` records EPIC-139 as State C / repaired after the redo package, with `TASK-0643` through `TASK-0646` as the package repair/reclose chain and `TASK-0647` as post-package handoff evidence only.
+- Matrix-boundary decision: `docs/planning/EPIC139_REDO_RECLOSE_MATRIX.md` remains bounded to original EPIC-139 package/source rows, the `TASK-0576` historical alias, and redo package tasks `TASK-0643` through `TASK-0646`; future follow-ups must not be added to that matrix merely because they occur later.
+- Next-tranche decision: EPIC-140 is the next gated CAPEX project/access tranche, while CAPEX runtime activation remains blocked by later project/data-governance/capacity/release/production-preflight gates or explicit waivers.
+
 ## 2026-06-04 (EPIC-140 project anchor and direct membership foundation)
 - Project-anchor decision: `TASK-0261` introduces durable `capex_projects.project_id` as the CAPEX project root; `workflow_run_id` remains an execution identity and is only optionally linked through nullable `workflow_runs.project_id`.
 - Event-scope decision: `timeline_events.project_id` is nullable and derived from explicit `capex_project` event links or linked project-bound workflow runs so broad timeline reads can enforce project visibility.

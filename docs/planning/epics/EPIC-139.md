@@ -6,9 +6,9 @@ Separate logistics-specific behavior from shared platform semantics before CAPEX
 This epic was imported from CAPEX v6 on `2026-06-01` as planning backlog only. It does not activate CAPEX runtime behavior by itself.
 
 ## Status
-Reopened as RED/active by the EPIC-139 redo package on `2026-06-04`.
+Redo accepted on `2026-06-04` after final supported-environment validation.
 
-The original imported EPIC-139 closeouts remain historical evidence. `TASK-0643` tracks the neutral-default repair after the redo package found State B: platform hook/registry seams existed, but default modules still loaded logistics packs.
+The redo package originally classified this checkout as State B: platform hook/registry seams existed, but default modules still loaded logistics packs. `TASK-0643` repaired the neutral-default behavior, `TASK-0644` corrected downstream control-plane/docs posture, `TASK-0645` records final Python 3.11 / Node 20 acceptance, `TASK-0646` records the task-by-task reclose ledger, and `TASK-0647` records the closure handoff to EPIC-140 gated project/access work. The original imported EPIC-139 closeouts remain historical evidence.
 
 ## In scope
 - Source task families/counts: CLEAN:4, MP:9, NU:1, RF:2, V5:1.
@@ -50,6 +50,9 @@ Context pack:
 - `TASK-0561` (`NU-CB-P0-001`) - Extract logistics side effects from approval.respond
 - `TASK-0643` (`EPIC-139-REDO`) - Neutral platform defaults with explicit logistics activation
 - `TASK-0644` (`EPIC-139-REDO`) - Downstream interlocks and EPIC-150 dependency correction
+- `TASK-0645` (`EPIC-139-REDO`) - Final supported-environment acceptance
+- `TASK-0646` (`EPIC-139-REDO`) - Task-by-task reclose ledger
+- `TASK-0647` (`EPIC-139-REDO`) - Closure handoff and next-tranche guard
 
 ## Historical/reconciled aliases
 - `TASK-0576` (`V5-TASK-005`) -> `TASK-0257`, `TASK-0561` - Fix approval.respond domain coupling

@@ -2,7 +2,8 @@
 id: TASK-0643
 epic: EPIC-139
 title: EPIC-139 redo neutral platform defaults
-status: IN_PROGRESS
+status: DONE
+completed_at: "2026-06-04T11:37:57Z"
 owners: ["platform"]
 reviewers: ["architect", "qa"]
 depends_on: ["TASK-0257", "TASK-0258", "TASK-0370", "TASK-0561"]
@@ -79,5 +80,13 @@ Make approval-response hooks and workpage descriptor/action defaults platform-ne
 
 ## Notes / decisions
 
-- Keep the task active/RED until the reopened EPIC-139 gate receives architecture/QA review and follow-up acceptance.
-- EPIC-150 wording correction and final supported-environment acceptance remain follow-up work.
+- Final supported-environment acceptance is recorded in `TASK-0645`; this task remains the implementation evidence for the neutral-default repair.
+- EPIC-150 wording correction is recorded separately in `TASK-0644`.
+
+## Closeout evidence
+
+- Approval defaults are neutral: `DEFAULT_APPROVAL_RESPONSE_HOOKS == ()`, and logistics hooks are selected only through explicit workflow-aware activation.
+- Workpage descriptor/action defaults are empty, and logistics descriptor/action packs are loaded only by explicit logistics call sites.
+- CAPEX invariant audit now rejects default modules that import or load logistics hooks or workpage packs.
+- Unknown/CAPEX workflows resolve no logistics approval hooks, workpage descriptors, or workpage actions by default.
+- Explicit logistics regression coverage still publishes weekly schedules and finalizes dispatch reporting.
