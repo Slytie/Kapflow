@@ -10,7 +10,7 @@ import { CapxPmStepIntakePage } from "./CapxPmStepIntakePage";
 import { CapxPmStepInterfacesPage } from "./CapxPmStepInterfacesPage";
 import { CapxPmStepLifecyclePage } from "./CapxPmStepLifecyclePage";
 import { CapxPmStepSnapshotPage } from "./CapxPmStepSnapshotPage";
-import { getCapxPmEvidenceStatus } from "./capxPmProjectStatus";
+import { capxPmStatusRank, getCapxPmEvidenceStatus } from "./capxPmProjectStatus";
 import {
   buildCapxPmStepHref,
   buildCapxPmWorkspaceViewModel,
@@ -92,6 +92,9 @@ export function CapxPmProjectWorkspacePage(): JSX.Element {
   }
 
   const viewModel = buildCapxPmWorkspaceViewModel(project, stepId);
+  const priorityTask = [...viewModel.stepState.tasks].sort(
+    (left, right) => capxPmStatusRank(left.status) - capxPmStatusRank(right.status)
+  )[0];
 
   return (
     <CapxPmProjectShell title={`${project.code} ${project.name}`} updatedAt={viewModel.generatedAt}>
@@ -139,6 +142,33 @@ export function CapxPmProjectWorkspacePage(): JSX.Element {
               <dd>{project.snapshotReadiness}</dd>
             </div>
           </dl>
+        </section>
+
+        <section className="capx-pm-mobile-priority" aria-label="Mobile PM priority">
+          <article>
+            <p className="capx-pm-eyebrow">Urgent blocker</p>
+            <div>
+              <CapxPmStatusChip status={project.status} />
+              <strong>{project.blockerSummary}</strong>
+            </div>
+          </article>
+          <article>
+            <p className="capx-pm-eyebrow">Next PM task</p>
+            {priorityTask ? (
+              <div>
+                <CapxPmStatusChip status={priorityTask.status} />
+                <span>
+                  <strong>{priorityTask.title}</strong>
+                  {priorityTask.owner} / {priorityTask.due}
+                </span>
+              </div>
+            ) : (
+              <div>
+                <CapxPmStatusChip status="neutral" />
+                <strong>No active PM task in this mock step.</strong>
+              </div>
+            )}
+          </article>
         </section>
 
         <CapxPmProjectStepRail steps={viewModel.steps} />

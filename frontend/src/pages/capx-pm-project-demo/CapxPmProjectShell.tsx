@@ -1,7 +1,12 @@
 import { Link, NavLink } from "react-router-dom";
+import { useState } from "react";
 import type { ReactNode } from "react";
 
 import "./capxPmProjectWorkflow.css";
+
+type CapxPmTheme = "terminal" | "light";
+
+const THEME_KEY = "capx-pm-project-demo-theme";
 
 interface CapxPmProjectShellProps {
   children: ReactNode;
@@ -9,13 +14,42 @@ interface CapxPmProjectShellProps {
   updatedAt: string;
 }
 
+function readTheme(): CapxPmTheme {
+  try {
+    return window.sessionStorage.getItem(THEME_KEY) === "light" ? "light" : "terminal";
+  } catch {
+    return "terminal";
+  }
+}
+
+function writeTheme(theme: CapxPmTheme): void {
+  try {
+    window.sessionStorage.setItem(THEME_KEY, theme);
+  } catch {
+    // Session storage can be unavailable in private or restricted browser modes.
+  }
+}
+
 export function CapxPmProjectShell({
   children,
   title = "PM Project Workflow",
   updatedAt
 }: CapxPmProjectShellProps): JSX.Element {
+  const [theme, setTheme] = useState(readTheme);
+  const isLight = theme === "light";
+
+  function toggleTheme(): void {
+    const nextTheme: CapxPmTheme = isLight ? "terminal" : "light";
+    writeTheme(nextTheme);
+    setTheme(nextTheme);
+  }
+
   return (
-    <div className="capx-pm-project-demo" data-testid="capx-pm-project-shell">
+    <div
+      className={`capx-pm-project-demo ${isLight ? "capx-pm-project-demo--light" : ""}`}
+      data-testid="capx-pm-project-shell"
+      data-theme={theme}
+    >
       <aside className="capx-pm-shell-nav" aria-label="CAPX PM demo navigation">
         <Link className="capx-pm-shell-nav__brand" to="/demo/capx/pm/projects" aria-label="CAPX PM project index">
           CAPX PM
@@ -39,6 +73,9 @@ export function CapxPmProjectShell({
             <span>Updated {updatedAt}</span>
             <span className="capx-pm-live-dot" aria-label="static mock data indicator" />
             <span>PM review workspace</span>
+            <button type="button" className="capx-pm-theme-toggle" aria-pressed={isLight} onClick={toggleTheme}>
+              {isLight ? "Terminal theme" : "Light theme"}
+            </button>
           </div>
         </header>
         {children}

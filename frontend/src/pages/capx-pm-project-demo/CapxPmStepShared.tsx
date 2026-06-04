@@ -124,6 +124,30 @@ export function CapxPmStepMatrix({
           </tbody>
         </table>
       </div>
+      <div className="capx-pm-mobile-record-list" data-testid="capx-pm-mobile-matrix-cards">
+        {rows.map((row) => (
+          <article key={`mobile-${row.label}`} className={`capx-pm-mobile-record capx-pm-mobile-record--${row.status}`}>
+            <div>
+              <strong>{row.label}</strong>
+              <CapxPmStatusChip status={row.status} />
+            </div>
+            <dl>
+              <div>
+                <dt>{columns.current}</dt>
+                <dd>{row.current}</dd>
+              </div>
+              <div>
+                <dt>{columns.owner}</dt>
+                <dd>{row.owner}</dd>
+              </div>
+              <div>
+                <dt>{columns.basis}</dt>
+                <dd>{row.basis}</dd>
+              </div>
+            </dl>
+          </article>
+        ))}
+      </div>
     </section>
   );
 }
@@ -186,6 +210,33 @@ export function CapxPmStepRegisterTable({ stepState, label = "Projection registe
           </tbody>
         </table>
       </div>
+      <div className="capx-pm-mobile-record-list" data-testid="capx-pm-mobile-register-cards">
+        {stepState.registerRows.map((registerRow) => (
+          <article
+            key={`mobile-${registerRow.id}`}
+            className={`capx-pm-mobile-record capx-pm-mobile-record--${registerRow.status}`}
+          >
+            <div>
+              <strong>{registerRow.primary}</strong>
+              <CapxPmStatusChip status={registerRow.status} />
+            </div>
+            <dl>
+              <div>
+                <dt>State / issue</dt>
+                <dd>{registerRow.secondary}</dd>
+              </div>
+              <div>
+                <dt>Owner</dt>
+                <dd>{registerRow.owner}</dd>
+              </div>
+              <div>
+                <dt>Evidence basis</dt>
+                <dd>{registerRow.basis}</dd>
+              </div>
+            </dl>
+          </article>
+        ))}
+      </div>
     </section>
   );
 }
@@ -196,7 +247,7 @@ export function CapxPmMockActionNotice({ label }: { label: string }): JSX.Elemen
       <button type="button" disabled>
         {label}
       </button>
-      <p>Mock control only. This route cannot approve, close, promote, publish, or create official CAPX truth.</p>
+      <p>Mock/no official truth control. This route cannot approve, close, promote, publish, or create CAPX truth.</p>
     </div>
   );
 }

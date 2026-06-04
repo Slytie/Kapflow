@@ -1,3 +1,5 @@
+/// <reference types="vite/client" />
+
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, vi } from "vitest";
@@ -6,6 +8,11 @@ import { App } from "@/app/App";
 import { resetCapxPmProjectAcknowledgementForTest } from "./CapxPmProjectAccessGate";
 
 const ACKNOWLEDGEMENT_KEY = "capx-pm-project-demo-acknowledged";
+const demoSourceModules = import.meta.glob("./*.{css,ts,tsx}", {
+  eager: true,
+  import: "default",
+  query: "?raw"
+}) as Record<string, string>;
 
 async function renderUnlockedCapxPmRoute(route: string) {
   const user = userEvent.setup();
@@ -62,6 +69,25 @@ describe("CAPX PM Project Workflow demo", () => {
     expect(projectLinks.length).toBeGreaterThanOrEqual(1);
   });
 
+  it("toggles the isolated PM shell theme with session-only UI state", async () => {
+    const { user } = await renderUnlockedCapxPmRoute("/demo/capx/pm/projects");
+
+    const shell = await screen.findByTestId("capx-pm-project-shell");
+    expect(shell).toHaveAttribute("data-theme", "terminal");
+    expect(shell).not.toHaveClass("capx-pm-project-demo--light");
+
+    await user.click(screen.getByRole("button", { name: "Light theme" }));
+
+    expect(shell).toHaveAttribute("data-theme", "light");
+    expect(shell).toHaveClass("capx-pm-project-demo--light");
+    expect(window.sessionStorage.getItem("capx-pm-project-demo-theme")).toBe("light");
+
+    await user.click(screen.getByRole("button", { name: "Terminal theme" }));
+
+    expect(shell).toHaveAttribute("data-theme", "terminal");
+    expect(shell).not.toHaveClass("capx-pm-project-demo--light");
+  });
+
   it("defaults a known project route to its active workflow step", async () => {
     await renderUnlockedCapxPmRoute("/demo/capx/pm/projects/PM-204");
 
@@ -76,11 +102,23 @@ describe("CAPX PM Project Workflow demo", () => {
 
     expect(await screen.findByTestId("capx-pm-workspace-page")).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Owner Interface Resolution" })).toBeInTheDocument();
-    expect(screen.getByText("Assign utility tie-in provider and receiver")).toBeInTheDocument();
+    expect(screen.getAllByText("Assign utility tie-in provider and receiver").length).toBeGreaterThanOrEqual(1);
     expect(screen.getByRole("link", { name: /Corpus WFLOW-002/i })).toHaveAttribute(
       "href",
       "/demo/capx/pm/projects/PM-204/steps/corpus"
     );
+  });
+
+  it("renders mobile card fallbacks for step matrix and register content", async () => {
+    await renderUnlockedCapxPmRoute("/demo/capx/pm/projects/PM-204/steps/snapshot");
+
+    const matrixCards = await screen.findByTestId("capx-pm-mobile-matrix-cards");
+    const registerCards = await screen.findByTestId("capx-pm-mobile-register-cards");
+
+    expect(within(matrixCards).getByText("Corpus packet")).toBeInTheDocument();
+    expect(within(matrixCards).getByText("blocked by SourceRef")).toBeInTheDocument();
+    expect(within(registerCards).getByText("Reviewed inputs")).toBeInTheDocument();
+    expect(within(registerCards).getByText("Five of seven step packets included")).toBeInTheDocument();
   });
 
   it.each([
@@ -139,7 +177,7 @@ describe("CAPX PM Project Workflow demo", () => {
       expect(screen.getAllByText(concept, { exact: false }).length).toBeGreaterThanOrEqual(1);
     }
     expect(screen.getByRole("button", { name: /simulated/i })).toBeDisabled();
-    expect(screen.getByText(/cannot approve, close, promote, publish, or create official CAPX truth/i)).toBeInTheDocument();
+    expect(screen.getByText(/mock\/no official truth control/i)).toBeInTheDocument();
   });
 
   it("renders bounded not-found states for unknown project and step IDs", async () => {
@@ -183,5 +221,17 @@ describe("CAPX PM Project Workflow demo", () => {
 
     expect(await screen.findByTestId("capx-pm-workspace-page")).toBeInTheDocument();
     expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("does not include browser-bundled sensitive-token patterns in PM demo source", () => {
+    const vitePrefix = "VITE_.*";
+    const credentialWord = `${"pass"}${"word"}`;
+    const sensitiveWord = `${"sec"}${"ret"}`;
+    const forbiddenPattern = new RegExp(`${vitePrefix}${"PASS"}${"WORD"}|${credentialWord}|${sensitiveWord}`, "i");
+    const matches = Object.entries(demoSourceModules)
+      .filter(([path]) => !path.endsWith("capx-pm-project-demo.test.tsx"))
+      .flatMap(([path, text]) => (forbiddenPattern.test(text) ? [path] : []));
+
+    expect(matches).toEqual([]);
   });
 });
