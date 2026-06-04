@@ -7,6 +7,9 @@ import { BoardPage } from "@/pages/BoardPage";
 import { CapxCeoCockpitAccessGate } from "@/pages/capx-ceo-cockpit-demo/CapxCeoCockpitAccessGate";
 import { CapxCeoCockpitOverviewPage } from "@/pages/capx-ceo-cockpit-demo/CapxCeoCockpitOverviewPage";
 import { CapxCeoCockpitProjectPage } from "@/pages/capx-ceo-cockpit-demo/CapxCeoCockpitProjectPage";
+import { CapxPmProjectAccessGate } from "@/pages/capx-pm-project-demo/CapxPmProjectAccessGate";
+import { CapxPmProjectIndexPage } from "@/pages/capx-pm-project-demo/CapxPmProjectIndexPage";
+import { CapxPmProjectWorkspacePage } from "@/pages/capx-pm-project-demo/CapxPmProjectWorkspacePage";
 import { ApprovalsPage } from "@/pages/ApprovalsPage";
 import {
   DispatchReportArtifactWorkpagePage,
@@ -71,6 +74,30 @@ export function App(): JSX.Element {
                 <CapxCeoCockpitAccessGate>
                   <CapxCeoCockpitProjectPage />
                 </CapxCeoCockpitAccessGate>
+              }
+            />
+            <Route
+              path="/demo/capx/pm/projects"
+              element={
+                <CapxPmProjectAccessGate>
+                  <CapxPmProjectIndexPage />
+                </CapxPmProjectAccessGate>
+              }
+            />
+            <Route
+              path="/demo/capx/pm/projects/:projectId"
+              element={
+                <CapxPmProjectAccessGate>
+                  <CapxPmProjectWorkspacePage />
+                </CapxPmProjectAccessGate>
+              }
+            />
+            <Route
+              path="/demo/capx/pm/projects/:projectId/steps/:stepId"
+              element={
+                <CapxPmProjectAccessGate>
+                  <CapxPmProjectWorkspacePage />
+                </CapxPmProjectAccessGate>
               }
             />
             <Route element={<AppShell />}>
