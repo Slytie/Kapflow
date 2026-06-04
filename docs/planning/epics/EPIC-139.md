@@ -6,7 +6,9 @@ Separate logistics-specific behavior from shared platform semantics before CAPEX
 This epic was imported from CAPEX v6 on `2026-06-01` as planning backlog only. It does not activate CAPEX runtime behavior by itself.
 
 ## Status
-Imported as TODO backlog unless an individual task records completed repo evidence.
+Reopened as RED/active by the EPIC-139 redo package on `2026-06-04`.
+
+The original imported EPIC-139 closeouts remain historical evidence. `TASK-0643` tracks the neutral-default repair after the redo package found State B: platform hook/registry seams existed, but default modules still loaded logistics packs.
 
 ## In scope
 - Source task families/counts: CLEAN:4, MP:9, NU:1, RF:2, V5:1.
@@ -46,6 +48,8 @@ Context pack:
 - `TASK-0369` (`RF-001`) - Approval side-effect extraction
 - `TASK-0370` (`RF-002`) - Domain workpage descriptor registry
 - `TASK-0561` (`NU-CB-P0-001`) - Extract logistics side effects from approval.respond
+- `TASK-0643` (`EPIC-139-REDO`) - Neutral platform defaults with explicit logistics activation
+- `TASK-0644` (`EPIC-139-REDO`) - Downstream interlocks and EPIC-150 dependency correction
 
 ## Historical/reconciled aliases
 - `TASK-0576` (`V5-TASK-005`) -> `TASK-0257`, `TASK-0561` - Fix approval.respond domain coupling

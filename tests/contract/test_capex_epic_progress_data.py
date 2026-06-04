@@ -46,15 +46,46 @@ def test_capex_epic_progress_data_uses_v2_estimates() -> None:
     data = _load_data()
 
     assert data["schemaVersion"] == "capex.epic_progress.v2"
-    assert data["summary"]["estimate"]["remainingTasks"] == 335
-    assert data["summary"]["estimate"]["etaDate"] == "2026-07-22"
-    assert data["summary"]["estimate"]["label"] == "ETA 2026-07-22"
+    assert data["summary"]["estimate"]["remainingTasks"] == 336
+    assert data["summary"]["estimate"]["etaDate"] == "2026-08-27"
+    assert data["summary"]["estimate"]["label"] == "ETA 2026-08-27"
     assert all("estimate" in epic for epic in data["epics"])
 
     epic139 = next(epic for epic in data["epics"] if epic["id"] == "EPIC-139")
-    assert epic139["displayStatus"] == "done"
-    assert epic139["counts"]["done"] == 17
-    assert epic139["estimate"]["label"] == "Complete"
+    assert epic139["displayStatus"] == "needs_review"
+    assert epic139["counts"]["done"] == 18
+    assert epic139["counts"]["needs_review"] == 1
+    assert epic139["estimate"]["label"] == "ETA 2026-06-05"
+
+
+def test_epic139_redo_control_plane_gates_downstream_work() -> None:
+    data = _load_data()
+    epics = {epic["id"]: epic for epic in data["epics"]}
+
+    epic139 = epics["EPIC-139"]
+    assert epic139["displayStatus"] != "done"
+    task_statuses = {task["id"]: task["displayStatus"] for task in epic139["tasks"]}
+    assert task_statuses["TASK-0576"] == "done"
+    assert task_statuses["TASK-0643"] == "needs_review"
+    assert task_statuses["TASK-0644"] == "done"
+
+    for epic_id in ("EPIC-143", "EPIC-150", "EPIC-151"):
+        assert epics[epic_id]["displayStatus"] in {"blocked", "needs_review"}
+
+    epic150_text = (ROOT / "docs/planning/epics/EPIC-150.md").read_text(
+        encoding="utf-8"
+    )
+    epic150_context = (ROOT / "codex/context/EPIC-150.md").read_text(
+        encoding="utf-8"
+    )
+    assert "EPIC-139 - artifact/blob custody and auth-before-read" not in epic150_text
+    assert (
+        "EPIC-139 - domain-boundary cleanup and approval/workpage neutrality"
+        in epic150_text
+    )
+    assert "EPIC-139 approval/workpage domain neutrality is accepted" in epic150_context
+    assert "platform artifact/blob auth-before-read is resolved" in epic150_context
+    assert "EPIC-141 SourceRefs are meaningful and resolved" in epic150_context
 
 
 def test_historical_done_tasks_report_missing_completion_timestamps() -> None:

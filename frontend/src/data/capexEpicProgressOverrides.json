@@ -2,7 +2,7 @@
   "meta": {
     "title": "CAPEX Epic Progress",
     "subtitle": "Plain-language roadmap for the repo-native CAPEX planning backlog.",
-    "lastUpdated": "2026-06-03",
+    "lastUpdated": "2026-06-04",
     "localOnly": true,
     "sourceNote": "Generated from docs/planning/epics and codex/tasks with curated review-posture overrides.",
     "codexRule": "When a CAPEX task is completed, set status: DONE, add completed_at in ISO 8601 timezone form, add completion/closeout evidence, and regenerate this progress data in the same change."
@@ -43,15 +43,28 @@
   ],
   "epicOverrides": {
     "EPIC-139": {
-      "reviewPosture": "Fresh check completed from task files, TASK_INDEX, CURRENT_FOCUS, and closeout decisions: all imported EPIC-139 domain-boundary cleanup tasks are accepted as done; TASK-0370 closed the descriptor registry extraction and TASK-0561 closed the remaining approval-response duplicate reconciliation."
+      "displayStatus": "needs_review",
+      "reviewPosture": "RED/active after the 2026-06-04 EPIC-139 redo package classified this checkout as State B: hook/registry seams existed, but platform defaults still loaded logistics packs. Old task closeouts remain historical evidence; TASK-0643 tracks the neutral-default repair and review gate."
     },
     "EPIC-140": {
       "displayStatus": "blocked",
       "reviewPosture": "Project-scoped APIs, project selector/dashboard activation, and project-scoped official selections are still gating work."
     },
+    "EPIC-143": {
+      "displayStatus": "needs_review",
+      "reviewPosture": "Gated while EPIC-139 remains RED/needs-review: reporting, routing, and downstream CAPEX workflow selection must wait for neutral-default acceptance."
+    },
     "EPIC-144": {
       "displayStatus": "blocked",
       "reviewPosture": "CAPEX review screens remain blocked until project-scoped foundations and risk/CEO workflow dependencies are ready."
+    },
+    "EPIC-150": {
+      "displayStatus": "needs_review",
+      "reviewPosture": "Gated while EPIC-139 remains RED/needs-review: release/source-root governance cannot be selected as safe follow-on work until approval/workpage neutrality is accepted."
+    },
+    "EPIC-151": {
+      "displayStatus": "needs_review",
+      "reviewPosture": "Gated while EPIC-139 remains RED/needs-review: downstream implementation remains in review posture until neutral platform defaults are accepted."
     },
     "EPIC-152": {
       "displayStatus": "blocked",
@@ -63,6 +76,10 @@
     "TASK-0244": {
       "displayStatus": "blocked",
       "statusReason": "The deploy lane exists, but live lab VM execute-and-smoke evidence is still missing."
+    },
+    "TASK-0643": {
+      "displayStatus": "needs_review",
+      "statusReason": "Active EPIC-139 redo gate: neutral platform defaults are implemented here, but architecture/QA acceptance is still required before EPIC-139 returns to green."
     },
     "TASK-0273": {
       "displayStatus": "needs_review",

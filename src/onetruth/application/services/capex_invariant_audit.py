@@ -112,9 +112,17 @@ CAPEX_INVARIANT_REGISTRY: tuple[CapexInvariant, ...] = (
         invariant_id="capex.clean001.approval_response_hooks_domain_neutral",
         title="Approval response side effects are explicit domain hooks",
         gate_mode="hard_gate",
-        task_refs=("TASK-0257", "TASK-0561", "TASK-0576"),
+        task_refs=("TASK-0257", "TASK-0561", "TASK-0576", "TASK-0643"),
         description="Generic approval.response records only the approval transition/event and invokes registered domain hooks for logistics effects.",
         evaluator=lambda repo_root: _check_approval_response_hook_source(repo_root),
+    ),
+    CapexInvariant(
+        invariant_id="capex.clean002.workpage_defaults_domain_neutral",
+        title="Workpage defaults are neutral with explicit logistics activation",
+        gate_mode="hard_gate",
+        task_refs=("TASK-0258", "TASK-0561", "TASK-0643"),
+        description="Generic workpage descriptor/action defaults must not import logistics packs; logistics workpages activate their packs explicitly.",
+        evaluator=lambda repo_root: _check_workpage_default_registry_source(repo_root),
     ),
     CapexInvariant(
         invariant_id="capex.known_gap.project_child_apis_authorization_projections",
@@ -560,6 +568,9 @@ def _check_approval_response_hook_source(repo_root: Path) -> AuditEvaluation:
     approvals_text = (
         repo_root / "src/onetruth/application/handlers/approvals.py"
     ).read_text(encoding="utf-8")
+    approvals_route_text = (
+        repo_root / "src/onetruth/api/routes/approvals.py"
+    ).read_text(encoding="utf-8")
     hook_registry_text = (
         repo_root / "src/onetruth/application/services/approval_response_hooks.py"
     ).read_text(encoding="utf-8")
@@ -588,18 +599,38 @@ def _check_approval_response_hook_source(repo_root: Path) -> AuditEvaluation:
     generic_hits = [
         marker for marker in forbidden_generic_markers if marker in approvals_text
     ]
+    hook_registry_forbidden_hits = [
+        marker
+        for marker in (
+            "LOGISTICS_APPROVAL_RESPONSE_HOOKS",
+            "logistics_approval_response_hooks",
+            "weekly_publish_approval_hook",
+            "dispatch_reporting_finalize_approval_hook",
+        )
+        if marker in hook_registry_text
+    ]
     required_markers = {
         "handler_runs_registry": "run_registered_approval_response_hooks(" in respond_body
         and "ApprovalResponseHookContext(" in respond_body,
         "handler_no_direct_logistics": not generic_hits,
-        "generic_registry_exists": "DEFAULT_APPROVAL_RESPONSE_HOOKS" in hook_registry_text
-        and "ApprovalResponseHookContext" in hook_registry_text,
+        "handler_accepts_explicit_hooks": "approval_response_hooks:" in respond_body
+        and "hooks=approval_response_hooks" in respond_body,
+        "generic_registry_neutral": "DEFAULT_APPROVAL_RESPONSE_HOOKS" in hook_registry_text
+        and "ApprovalResponseHookContext" in hook_registry_text
+        and "DEFAULT_APPROVAL_RESPONSE_HOOKS: tuple[ApprovalResponseHook, ...] = ()"
+        in hook_registry_text
+        and not hook_registry_forbidden_hits,
         "logistics_hooks_registered": "LOGISTICS_APPROVAL_RESPONSE_HOOKS" in logistics_hook_text
         and "weekly_publish_approval_hook" in logistics_hook_text
-        and "dispatch_reporting_finalize_approval_hook" in logistics_hook_text,
+        and "dispatch_reporting_finalize_approval_hook" in logistics_hook_text
+        and "logistics_approval_response_hooks_for_workflow" in logistics_hook_text,
+        "api_activates_logistics_hooks_explicitly": "approval_response_hooks=logistics_approval_response_hooks_for_workflow("
+        in approvals_route_text,
         "boundary_test_exists": "test_approval_respond_side_effects_are_registered_domain_hooks"
         in boundary_test_text,
-        "unit_tests_exist": "test_default_approval_response_hooks_are_logistics_registry_entries"
+        "unit_tests_exist": "test_default_approval_response_hooks_are_platform_neutral"
+        in unit_test_text
+        and "test_logistics_approval_response_hooks_are_explicitly_selected_by_workflow"
         in unit_test_text
         and "test_logistics_approval_hooks_ignore_non_approved_responses_before_db_reads"
         in unit_test_text,
@@ -610,6 +641,121 @@ def _check_approval_response_hook_source(repo_root: Path) -> AuditEvaluation:
         details={
             "missing_markers": missing,
             "generic_handler_forbidden_hits": generic_hits,
+            "generic_registry_forbidden_hits": hook_registry_forbidden_hits,
+        },
+    )
+
+
+def _check_workpage_default_registry_source(repo_root: Path) -> AuditEvaluation:
+    descriptor_defaults_text = (
+        repo_root
+        / "src/onetruth/application/services/workpage_descriptor_registry_defaults.py"
+    ).read_text(encoding="utf-8")
+    action_defaults_text = (
+        repo_root
+        / "src/onetruth/application/services/workpage_action_registry_defaults.py"
+    ).read_text(encoding="utf-8")
+    projection_text = (
+        repo_root / "src/onetruth/application/services/workpage_action_projection.py"
+    ).read_text(encoding="utf-8")
+    action_resolution_text = (
+        repo_root / "src/onetruth/application/handlers/workpage_action_resolution.py"
+    ).read_text(encoding="utf-8")
+    logistics_descriptor_text = (
+        repo_root / "src/onetruth/application/services/logistics_workpage_descriptors.py"
+    ).read_text(encoding="utf-8")
+    logistics_action_text = (
+        repo_root
+        / "src/onetruth/application/services/logistics_workpage_action_registry.py"
+    ).read_text(encoding="utf-8")
+    workflow_runs_route_text = (
+        repo_root / "src/onetruth/api/routes/workflow_runs.py"
+    ).read_text(encoding="utf-8")
+    human_tasks_route_text = (
+        repo_root / "src/onetruth/api/routes/human_tasks.py"
+    ).read_text(encoding="utf-8")
+    workpages_route_text = (
+        repo_root / "src/onetruth/api/routes/workpages.py"
+    ).read_text(encoding="utf-8")
+    boundary_test_text = (
+        repo_root / "tests/contract/test_handler_import_boundaries.py"
+    ).read_text(encoding="utf-8")
+    descriptor_unit_test_text = (
+        repo_root / "tests/unit/test_workpage_descriptor_registry.py"
+    ).read_text(encoding="utf-8")
+    action_unit_test_text = (
+        repo_root / "tests/unit/test_workpage_domain_registry.py"
+    ).read_text(encoding="utf-8")
+    descriptor_default_forbidden_hits = [
+        marker
+        for marker in (
+            "LOGISTICS_WORKPAGE_DESCRIPTOR_PACK",
+            "logistics_workpage",
+            "schedule-v0",
+            "eod-v0",
+        )
+        if marker in descriptor_defaults_text
+    ]
+    action_default_forbidden_hits = [
+        marker
+        for marker in (
+            "LOGISTICS_WORKPAGE_ACTION_PACK",
+            "logistics_workpage",
+            "schedule-v0",
+            "eod-v0",
+        )
+        if marker in action_defaults_text
+    ]
+    required_markers = {
+        "descriptor_default_neutral": "DEFAULT_WORKPAGE_DESCRIPTOR_REGISTRY"
+        in descriptor_defaults_text
+        and "WorkpageDescriptorRegistry()" in descriptor_defaults_text
+        and not descriptor_default_forbidden_hits,
+        "action_default_neutral": "DEFAULT_WORKPAGE_ACTION_REGISTRY"
+        in action_defaults_text
+        and "WorkpageActionRegistry()" in action_defaults_text
+        and not action_default_forbidden_hits,
+        "projection_accepts_explicit_registry": "registry: WorkpageActionRegistry | None = None"
+        in projection_text
+        and "active_registry = DEFAULT_WORKPAGE_ACTION_REGISTRY if registry is None else registry"
+        in projection_text,
+        "resolution_accepts_explicit_registries": "action_registry: WorkpageActionRegistry | None = None"
+        in action_resolution_text
+        and "descriptor_registry: WorkpageDescriptorRegistry | None = None"
+        in action_resolution_text
+        and "_active_action_registry(action_registry).supports_human_task_subject("
+        in action_resolution_text
+        and "_active_descriptor_registry(descriptor_registry).require_descriptor("
+        in action_resolution_text,
+        "logistics_descriptor_factory_exists": "LOGISTICS_WORKPAGE_DESCRIPTOR_PACK"
+        in logistics_descriptor_text
+        and "def logistics_workpage_descriptor_registry()" in logistics_descriptor_text,
+        "logistics_action_factory_exists": "LOGISTICS_WORKPAGE_ACTION_PACK"
+        in logistics_action_text
+        and "def logistics_workpage_action_registry()" in logistics_action_text
+        and "def logistics_workpage_action_registry_for_workflow(" in logistics_action_text,
+        "api_routes_activate_logistics_explicitly": "logistics_workpage_action_registry_for_workflow("
+        in workflow_runs_route_text
+        and "logistics_workpage_action_registry_for_workflow(" in human_tasks_route_text
+        and "logistics_workpage_descriptor_registry().descriptor_for_public_run("
+        in workpages_route_text,
+        "tests_invert_defaults": "test_default_descriptor_registry_is_platform_neutral"
+        in descriptor_unit_test_text
+        and "test_default_action_registry_is_platform_neutral" in action_unit_test_text
+        and "test_logistics_action_registry_is_explicitly_selected_by_workflow"
+        in action_unit_test_text
+        and "LOGISTICS_WORKPAGE_DESCRIPTOR_PACK\" not in descriptor_defaults_text"
+        in boundary_test_text
+        and "LOGISTICS_WORKPAGE_ACTION_PACK\" not in action_defaults_text"
+        in boundary_test_text,
+    }
+    missing = [key for key, present in required_markers.items() if not present]
+    return AuditEvaluation(
+        passed=not missing,
+        details={
+            "missing_markers": missing,
+            "descriptor_default_forbidden_hits": descriptor_default_forbidden_hits,
+            "action_default_forbidden_hits": action_default_forbidden_hits,
         },
     )
 

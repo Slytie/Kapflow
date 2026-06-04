@@ -57,6 +57,12 @@ from onetruth.application.services.logistics_workpages import (
     latest_route_demand_artifact,
     latest_schedule_draft_artifact,
 )
+from onetruth.application.services.logistics_workpage_action_registry import (
+    logistics_workpage_action_registry,
+)
+from onetruth.application.services.logistics_workpage_descriptors import (
+    logistics_workpage_descriptor_registry,
+)
 from onetruth.application.services.schedule_control.driver_preferences_workbook import (
     DRIVER_PREFERENCES_DATASET_KEY,
     build_initial_driver_preferences_workbook,
@@ -130,6 +136,8 @@ def create_workflow_run_driver_preferences_snapshot_command(
         artifact_version_id=None,
         raw_action_ref=payload.get("action_ref"),
         raw_subject_link=payload.get("subject_link"),
+        action_registry=logistics_workpage_action_registry(),
+        descriptor_registry=logistics_workpage_descriptor_registry(),
     )
 
     receipt = _prepare_command_receipt(
@@ -255,6 +263,8 @@ def submit_route_demand_artifact_workpage_command(
         artifact_version_id=artifact_version_id,
         raw_action_ref=payload.get("action_ref"),
         raw_subject_link=payload.get("subject_link"),
+        action_registry=logistics_workpage_action_registry(),
+        descriptor_registry=logistics_workpage_descriptor_registry(),
     )
 
     receipt = _prepare_command_receipt(
@@ -380,6 +390,8 @@ def create_workflow_run_route_demand_next_week_command(
         artifact_version_id=None,
         raw_action_ref=payload.get("action_ref"),
         raw_subject_link=payload.get("subject_link"),
+        action_registry=logistics_workpage_action_registry(),
+        descriptor_registry=logistics_workpage_descriptor_registry(),
     )
     receipt = _prepare_command_receipt(
         command_name="workpages.route-demand.next-week.create",
@@ -709,6 +721,8 @@ def save_and_run_route_demand_artifact_workpage_command(
         raw_action_ref=payload.get("action_ref"),
         raw_subject_link=payload.get("subject_link"),
         expected_action_id="workpage.route-demand-v0.save_and_run",
+        action_registry=logistics_workpage_action_registry(),
+        descriptor_registry=logistics_workpage_descriptor_registry(),
     )
     receipt = _prepare_command_receipt(
         command_name="workpages.route-demand.save-and-run",
@@ -1155,6 +1169,8 @@ def submit_driver_preferences_artifact_workpage_command(
         artifact_version_id=artifact_version_id,
         raw_action_ref=payload.get("action_ref"),
         raw_subject_link=payload.get("subject_link"),
+        action_registry=logistics_workpage_action_registry(),
+        descriptor_registry=logistics_workpage_descriptor_registry(),
     )
 
     receipt = _prepare_command_receipt(

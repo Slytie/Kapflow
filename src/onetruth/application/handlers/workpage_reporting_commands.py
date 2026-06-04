@@ -42,6 +42,12 @@ from onetruth.application.services.dispatch_reporting_workbook import (
     materialize_upd_draft_workbook,
     project_upd_draft_workbook,
 )
+from onetruth.application.services.logistics_workpage_action_registry import (
+    logistics_workpage_action_registry,
+)
+from onetruth.application.services.logistics_workpage_descriptors import (
+    logistics_workpage_descriptor_registry,
+)
 from onetruth.application.services.workpage_descriptors import EOD_WORKPAGE_KIND
 from onetruth.application.services.template_registry import TemplateRecord
 from onetruth.infrastructure.events.event_store import append_event, utc_now_iso
@@ -297,6 +303,8 @@ def create_workflow_run_eod_draft_command(
         artifact_version_id=None,
         raw_action_ref=payload.get("action_ref"),
         raw_subject_link=payload.get("subject_link"),
+        action_registry=logistics_workpage_action_registry(),
+        descriptor_registry=logistics_workpage_descriptor_registry(),
     )
 
     receipt = _prepare_command_receipt(
@@ -391,6 +399,8 @@ def submit_eod_artifact_workpage_command(
         artifact_version_id=artifact_version_id,
         raw_action_ref=payload.get("action_ref"),
         raw_subject_link=payload.get("subject_link"),
+        action_registry=logistics_workpage_action_registry(),
+        descriptor_registry=logistics_workpage_descriptor_registry(),
     )
 
     receipt = _prepare_command_receipt(

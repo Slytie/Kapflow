@@ -21,28 +21,28 @@ describe("CapexEpicProgressPage", () => {
     const page = screen.getByTestId("capex-epic-progress-page");
     expect(within(page).getByRole("heading", { name: "CAPEX Epic Progress" })).toBeInTheDocument();
     const summary = screen.getByRole("region", { name: "CAPEX progress summary" });
-    expect(within(summary).getByText("374")).toBeInTheDocument();
-    expect(within(summary).getByText("9.9%")).toBeInTheDocument();
-    expect(within(summary).getByText("337")).toBeInTheDocument();
+    expect(within(summary).getByText("376")).toBeInTheDocument();
+    expect(within(summary).getByText("10.6%")).toBeInTheDocument();
+    expect(within(summary).getByText("336")).toBeInTheDocument();
 
     const timeline = screen.getByTestId("capex-epic-timeline");
     expect(within(timeline).getByRole("button", { name: /EPIC-136/i })).toBeInTheDocument();
     expect(within(timeline).getByRole("button", { name: /EPIC-152/i })).toBeInTheDocument();
+    expect(within(timeline).queryAllByText("ETA needs completion timestamp history")).toHaveLength(0);
     expect(
-      within(timeline).getAllByText("ETA needs completion timestamp history")
-    ).toHaveLength(16);
-    expect(within(timeline).getByRole("button", { name: /EPIC-139.*Done/i })).toBeInTheDocument();
+      within(timeline).getByRole("button", { name: /EPIC-139.*Needs fresh check/i })
+    ).toBeInTheDocument();
   });
 
-  it("shows EPIC-139 as complete after the fresh task-progress update", () => {
+  it("shows EPIC-139 as reopened for neutral-default review", () => {
     renderCapexProgress("/demo/capex/epic-progress?epic=EPIC-139");
 
     expect(screen.getByRole("heading", { name: "CAPEX domain-boundary cleanup" })).toBeInTheDocument();
     const epicEstimate = screen.getByRole("region", { name: "EPIC-139 completion estimate" });
-    expect(epicEstimate).toHaveTextContent("Complete");
-    expect(epicEstimate).toHaveTextContent("100%");
-    expect(epicEstimate).toHaveTextContent("Remaining0");
-    expect(epicEstimate).toHaveTextContent("No remaining current-scope tasks.");
+    expect(epicEstimate).toHaveTextContent("ETA 2026-06-05");
+    expect(epicEstimate).toHaveTextContent("94.7%");
+    expect(epicEstimate).toHaveTextContent("Remaining1");
+    expect(epicEstimate).toHaveTextContent("1 blocked or needs-review task(s) remain.");
   });
 
   it("drills from an epic into task detail", async () => {
@@ -100,9 +100,9 @@ describe("CapexEpicProgressPage", () => {
 
     await user.click(screen.getByRole("button", { name: "Needs fresh check" }));
     const filteredTimeline = screen.getByTestId("capex-epic-timeline");
+    expect(within(filteredTimeline).getByRole("button", { name: /EPIC-139/i })).toBeInTheDocument();
     expect(within(filteredTimeline).getByRole("button", { name: /EPIC-141/i })).toBeInTheDocument();
     expect(within(filteredTimeline).getByRole("button", { name: /EPIC-144/i })).toBeInTheDocument();
-    expect(within(filteredTimeline).queryByRole("button", { name: /EPIC-139/i })).not.toBeInTheDocument();
     expect(within(filteredTimeline).queryByRole("button", { name: /EPIC-152/i })).not.toBeInTheDocument();
 
     await user.clear(screen.getByRole("searchbox"));

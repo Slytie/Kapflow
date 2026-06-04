@@ -18,6 +18,7 @@ LOGISTICS_WORKPAGE_ACTION_REGISTRY = SERVICES_DIR / "logistics_workpage_action_r
 WORKPAGE_DESCRIPTORS = SERVICES_DIR / "workpage_descriptors.py"
 LOGISTICS_WORKPAGE_DESCRIPTORS = SERVICES_DIR / "logistics_workpage_descriptors.py"
 WORKPAGE_DESCRIPTOR_REGISTRY_DEFAULTS = SERVICES_DIR / "workpage_descriptor_registry_defaults.py"
+WORKPAGE_ACTION_REGISTRY_DEFAULTS = SERVICES_DIR / "workpage_action_registry_defaults.py"
 WORKPAGE_ACTION_RESOLUTION = HANDLERS_DIR / "workpage_action_resolution.py"
 
 _BANNED_LEGACY_SURFACES = {
@@ -147,8 +148,10 @@ def test_approval_respond_side_effects_are_registered_domain_hooks() -> None:
     assert not violations, "generic approval handler has domain coupling: " + ", ".join(violations)
 
     assert "DEFAULT_APPROVAL_RESPONSE_HOOKS" in hook_registry_text
-    assert "LOGISTICS_APPROVAL_RESPONSE_HOOKS" in hook_registry_text
+    assert "LOGISTICS_APPROVAL_RESPONSE_HOOKS" not in hook_registry_text
+    assert "logistics_approval_response_hooks" not in hook_registry_text
     assert "LOGISTICS_APPROVAL_RESPONSE_HOOKS" in logistics_hook_text
+    assert "logistics_approval_response_hooks_for_workflow" in logistics_hook_text
     assert "weekly_publish_approval_hook" in logistics_hook_text
     assert "dispatch_reporting_finalize_approval_hook" in logistics_hook_text
 
@@ -187,6 +190,7 @@ def test_generic_workpage_descriptors_delegate_to_domain_descriptor_registry() -
     descriptor_text = WORKPAGE_DESCRIPTORS.read_text(encoding="utf-8")
     logistics_descriptor_text = LOGISTICS_WORKPAGE_DESCRIPTORS.read_text(encoding="utf-8")
     descriptor_defaults_text = WORKPAGE_DESCRIPTOR_REGISTRY_DEFAULTS.read_text(encoding="utf-8")
+    action_defaults_text = WORKPAGE_ACTION_REGISTRY_DEFAULTS.read_text(encoding="utf-8")
     action_resolution_text = WORKPAGE_ACTION_RESOLUTION.read_text(encoding="utf-8")
 
     assert "default_workpage_descriptor_registry()" in descriptor_text
@@ -199,7 +203,11 @@ def test_generic_workpage_descriptors_delegate_to_domain_descriptor_registry() -
     assert "WorkpageDescriptor(" in logistics_descriptor_text
 
     assert "DEFAULT_WORKPAGE_DESCRIPTOR_REGISTRY" in descriptor_defaults_text
-    assert "LOGISTICS_WORKPAGE_DESCRIPTOR_PACK" in descriptor_defaults_text
+    assert "LOGISTICS_WORKPAGE_DESCRIPTOR_PACK" not in descriptor_defaults_text
+    assert "logistics_workpage" not in descriptor_defaults_text
+    assert "DEFAULT_WORKPAGE_ACTION_REGISTRY" in action_defaults_text
+    assert "LOGISTICS_WORKPAGE_ACTION_PACK" not in action_defaults_text
+    assert "logistics_workpage" not in action_defaults_text
 
     forbidden_subject_matrices = (
         "SCHEDULE_WORKPAGE_SUPPORTED_TASK_SURFACES",
@@ -213,8 +221,9 @@ def test_generic_workpage_descriptors_delegate_to_domain_descriptor_registry() -
         if marker in action_resolution_text
     ]
     assert not violations, "workpage action resolution has local domain surface matrices: " + ", ".join(violations)
-    assert "DEFAULT_WORKPAGE_ACTION_REGISTRY.supports_human_task_subject(" in action_resolution_text
-    assert "DEFAULT_WORKPAGE_ACTION_REGISTRY.supports_approval_subject(" in action_resolution_text
+    assert "action_registry:" in action_resolution_text
+    assert "_active_action_registry(action_registry).supports_human_task_subject(" in action_resolution_text
+    assert "_active_action_registry(action_registry).supports_approval_subject(" in action_resolution_text
 
 
 def _package_parts_for_file(path: Path) -> tuple[str, ...]:

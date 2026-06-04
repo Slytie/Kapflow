@@ -10,6 +10,8 @@ from onetruth.application.services.capex_invariant_audit import (
     AuditEvaluation,
     CAPEX_INVARIANT_REGISTRY,
     CapexInvariant,
+    _check_approval_response_hook_source,
+    _check_workpage_default_registry_source,
     capex_invariant_audit_exit_code,
     run_capex_invariant_audit,
 )
@@ -22,7 +24,7 @@ def test_capex_invariant_registry_has_expected_gate_modes() -> None:
     modes = {entry.gate_mode for entry in CAPEX_INVARIANT_REGISTRY}
 
     assert modes == {"hard_gate", "known_gap"}
-    assert sum(1 for entry in CAPEX_INVARIANT_REGISTRY if entry.gate_mode == "hard_gate") == 11
+    assert sum(1 for entry in CAPEX_INVARIANT_REGISTRY if entry.gate_mode == "hard_gate") == 12
     assert sum(1 for entry in CAPEX_INVARIANT_REGISTRY if entry.gate_mode == "known_gap") == 3
     assert all(entry.task_refs for entry in CAPEX_INVARIANT_REGISTRY)
 
@@ -39,14 +41,15 @@ def test_capex_invariant_audit_report_records_known_gaps_without_failing(
     assert manifest["status"] == "passed"
     assert capex_invariant_audit_exit_code(manifest) == 0
     assert manifest["summary"] == {
-        "total": 14,
-        "hard_gate_passed": 11,
+        "total": 15,
+        "hard_gate_passed": 12,
         "hard_gate_failed": 0,
         "known_gaps": 3,
         "advisory": 0,
     }
     statuses = {check["invariant_id"]: check["status"] for check in manifest["checks"]}
     assert statuses["capex.clean001.approval_response_hooks_domain_neutral"] == "passed"
+    assert statuses["capex.clean002.workpage_defaults_domain_neutral"] == "passed"
     assert statuses["capex.pr002.artifact_storage_root_confined"] == "passed"
     assert statuses["capex.pr006.run_input_edge_helpers"] == "passed"
     assert statuses["capex.pr007.platform_foundation_v0"] == "passed"
@@ -73,6 +76,59 @@ def test_capex_invariant_audit_report_records_known_gaps_without_failing(
     assert "| capex.pr001.no_active_tracked_node_modules |" in markdown_report.read_text(
         encoding="utf-8"
     )
+
+
+def test_capex_audit_rejects_default_logistics_approval_hooks(tmp_path: Path) -> None:
+    repo_root = _minimal_audit_repo(tmp_path)
+    _write_repo_file(
+        repo_root,
+        "src/onetruth/application/services/approval_response_hooks.py",
+        """
+from onetruth.application.services.logistics_approval_response_hooks import LOGISTICS_APPROVAL_RESPONSE_HOOKS
+class ApprovalResponseHookContext: ...
+DEFAULT_APPROVAL_RESPONSE_HOOKS = LOGISTICS_APPROVAL_RESPONSE_HOOKS
+""",
+    )
+
+    evaluation = _check_approval_response_hook_source(repo_root)
+
+    assert not evaluation.passed
+    assert "generic_registry_neutral" in evaluation.details["missing_markers"]
+    assert "LOGISTICS_APPROVAL_RESPONSE_HOOKS" in evaluation.details[
+        "generic_registry_forbidden_hits"
+    ]
+
+
+def test_capex_audit_rejects_default_logistics_workpage_packs(tmp_path: Path) -> None:
+    repo_root = _minimal_audit_repo(tmp_path)
+    _write_repo_file(
+        repo_root,
+        "src/onetruth/application/services/workpage_descriptor_registry_defaults.py",
+        """
+from onetruth.application.services.logistics_workpage_descriptors import LOGISTICS_WORKPAGE_DESCRIPTOR_PACK
+DEFAULT_WORKPAGE_DESCRIPTOR_REGISTRY = WorkpageDescriptorRegistry(packs=(LOGISTICS_WORKPAGE_DESCRIPTOR_PACK,))
+""",
+    )
+    _write_repo_file(
+        repo_root,
+        "src/onetruth/application/services/workpage_action_registry_defaults.py",
+        """
+from onetruth.application.services.logistics_workpage_action_registry import LOGISTICS_WORKPAGE_ACTION_PACK
+DEFAULT_WORKPAGE_ACTION_REGISTRY = WorkpageActionRegistry((LOGISTICS_WORKPAGE_ACTION_PACK,))
+""",
+    )
+
+    evaluation = _check_workpage_default_registry_source(repo_root)
+
+    assert not evaluation.passed
+    assert "descriptor_default_neutral" in evaluation.details["missing_markers"]
+    assert "action_default_neutral" in evaluation.details["missing_markers"]
+    assert "LOGISTICS_WORKPAGE_DESCRIPTOR_PACK" in evaluation.details[
+        "descriptor_default_forbidden_hits"
+    ]
+    assert "LOGISTICS_WORKPAGE_ACTION_PACK" in evaluation.details[
+        "action_default_forbidden_hits"
+    ]
 
 
 def test_capex_invariant_audit_fails_only_for_hard_gate_failure(tmp_path: Path) -> None:
@@ -150,3 +206,102 @@ def test_capex_platform_foundation_v0_doc_records_branch_gate_and_blocked_scopes
     assert "CAPEX project child APIs, authorization projections" in text
     assert "Source occurrence and SourceRef runtime remain blocked" in text
     assert "external/operator-managed" in text
+
+
+def _minimal_audit_repo(tmp_path: Path) -> Path:
+    repo_root = tmp_path / "repo"
+    files = {
+        "src/onetruth/application/handlers/approvals.py": """
+def respond_approval_command(
+    connection,
+    payload,
+    *,
+    approval_response_hooks=None,
+):
+    run_registered_approval_response_hooks(
+        ApprovalResponseHookContext(),
+        hooks=approval_response_hooks,
+    )
+""",
+        "src/onetruth/api/routes/approvals.py": """
+updated = respond_approval_command(
+    connection,
+    payload,
+    approval_response_hooks=logistics_approval_response_hooks_for_workflow(workflow_id),
+)
+""",
+        "src/onetruth/application/services/approval_response_hooks.py": """
+class ApprovalResponseHook: ...
+class ApprovalResponseHookContext: ...
+DEFAULT_APPROVAL_RESPONSE_HOOKS: tuple[ApprovalResponseHook, ...] = ()
+""",
+        "src/onetruth/application/services/logistics_approval_response_hooks.py": """
+LOGISTICS_APPROVAL_RESPONSE_HOOKS = ()
+def weekly_publish_approval_hook(context): pass
+def dispatch_reporting_finalize_approval_hook(context): pass
+def logistics_approval_response_hooks_for_workflow(workflow_id): return ()
+""",
+        "tests/contract/test_handler_import_boundaries.py": """
+def test_approval_respond_side_effects_are_registered_domain_hooks(): pass
+assert "LOGISTICS_WORKPAGE_DESCRIPTOR_PACK" not in descriptor_defaults_text
+assert "LOGISTICS_WORKPAGE_ACTION_PACK" not in action_defaults_text
+""",
+        "tests/unit/test_approval_response_hooks.py": """
+def test_default_approval_response_hooks_are_platform_neutral(): pass
+def test_logistics_approval_response_hooks_are_explicitly_selected_by_workflow(): pass
+def test_logistics_approval_hooks_ignore_non_approved_responses_before_db_reads(): pass
+""",
+        "src/onetruth/application/services/workpage_descriptor_registry_defaults.py": """
+DEFAULT_WORKPAGE_DESCRIPTOR_REGISTRY = WorkpageDescriptorRegistry()
+""",
+        "src/onetruth/application/services/workpage_action_registry_defaults.py": """
+DEFAULT_WORKPAGE_ACTION_REGISTRY = WorkpageActionRegistry()
+""",
+        "src/onetruth/application/services/workpage_action_projection.py": """
+def project(registry: WorkpageActionRegistry | None = None):
+    active_registry = DEFAULT_WORKPAGE_ACTION_REGISTRY if registry is None else registry
+""",
+        "src/onetruth/application/handlers/workpage_action_resolution.py": """
+def f(
+    action_registry: WorkpageActionRegistry | None = None,
+    descriptor_registry: WorkpageDescriptorRegistry | None = None,
+):
+    _active_action_registry(action_registry).supports_human_task_subject()
+    _active_action_registry(action_registry).supports_approval_subject()
+    _active_descriptor_registry(descriptor_registry).require_descriptor()
+""",
+        "src/onetruth/application/services/logistics_workpage_descriptors.py": """
+LOGISTICS_WORKPAGE_DESCRIPTOR_PACK = ()
+def logistics_workpage_descriptor_registry(): pass
+""",
+        "src/onetruth/application/services/logistics_workpage_action_registry.py": """
+LOGISTICS_WORKPAGE_ACTION_PACK = ()
+def logistics_workpage_action_registry(): pass
+def logistics_workpage_action_registry_for_workflow(workflow_id): pass
+""",
+        "src/onetruth/api/routes/workflow_runs.py": """
+logistics_workpage_action_registry_for_workflow(workflow_id)
+""",
+        "src/onetruth/api/routes/human_tasks.py": """
+logistics_workpage_action_registry_for_workflow(workflow_id)
+""",
+        "src/onetruth/api/routes/workpages.py": """
+logistics_workpage_descriptor_registry().descriptor_for_public_run()
+""",
+        "tests/unit/test_workpage_descriptor_registry.py": """
+def test_default_descriptor_registry_is_platform_neutral(): pass
+""",
+        "tests/unit/test_workpage_domain_registry.py": """
+def test_default_action_registry_is_platform_neutral(): pass
+def test_logistics_action_registry_is_explicitly_selected_by_workflow(): pass
+""",
+    }
+    for relative_path, content in files.items():
+        _write_repo_file(repo_root, relative_path, content)
+    return repo_root
+
+
+def _write_repo_file(repo_root: Path, relative_path: str, content: str) -> None:
+    path = repo_root / relative_path
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(content.strip() + "\n", encoding="utf-8")

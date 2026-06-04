@@ -108,13 +108,14 @@ Out of scope:
 - Full DMS/sync-platform adoption for this feature.
 
 Additional dependencies:
-- EPIC-139 - artifact/blob custody and auth-before-read.
+- EPIC-139 - domain-boundary cleanup and approval/workpage neutrality.
 - EPIC-140 - CAPEX project identity, membership, and authorization.
 - EPIC-141 - corpus ingest, source occurrence, and SourceRef resolution.
 - EPIC-142 - evidence binding, extraction, search, and packet completeness.
 - EPIC-144 - CAPEX workpages and stale-command guards.
 - EPIC-145 - pointer promotion, waiver, closure, stale/reopen semantics.
 - EPIC-147 - no-false-closure, semantic, scale, and AI-agent Lab test harnesses.
+- Platform safety prerequisite - artifact/blob custody and auth-before-read must remain proven before desktop source-root evidence can be bound.
 
 Desktop source-root task stack:
 - `TASK-0607` - Freeze EPIC-150 stage model and MVP/non-MVP boundary.

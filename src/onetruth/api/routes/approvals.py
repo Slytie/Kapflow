@@ -8,6 +8,9 @@ from onetruth.application.handlers.approvals import (
     respond_approval_command,
     show_approval_command,
 )
+from onetruth.application.services.logistics_approval_response_hooks import (
+    logistics_approval_response_hooks_for_workflow,
+)
 from onetruth.infrastructure.events.event_store import DuplicateIdempotencyKeyError
 from onetruth.infrastructure.repositories.approvals import get_approval
 
@@ -75,7 +78,7 @@ def respond_approval_endpoint(
             message="approval not found",
             details={"approval_id": approval_id},
         )
-    scoped_workflow_run(connection, context, str(approval["workflow_run_id"]))
+    workflow_run = scoped_workflow_run(connection, context, str(approval["workflow_run_id"]))
     _assert_payload_approval_id(payload, approval_id)
 
     command_payload = {
@@ -88,7 +91,14 @@ def respond_approval_endpoint(
         "idempotency_key": payload.get("idempotency_key"),
     }
     try:
-        updated = respond_approval_command(connection, command_payload, include_receipt=True)
+        updated = respond_approval_command(
+            connection,
+            command_payload,
+            include_receipt=True,
+            approval_response_hooks=logistics_approval_response_hooks_for_workflow(
+                str(workflow_run.get("workflow_id") or "")
+            ),
+        )
     except CommandError as exc:
         raise api_error_from_command(exc) from exc
     except DuplicateIdempotencyKeyError as exc:

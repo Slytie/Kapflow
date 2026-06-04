@@ -605,9 +605,26 @@ LOGISTICS_APPROVAL_RESPONSE_HOOKS: tuple[ApprovalResponseHook, ...] = (
     ),
 )
 
+LOGISTICS_APPROVAL_RESPONSE_WORKFLOW_IDS = frozenset(
+    {
+        WEEKLY_WORKFLOW_ID,
+        DISPATCH_REPORTING_WORKFLOW_ID,
+    }
+)
+
+
+def logistics_approval_response_hooks_for_workflow(
+    workflow_id: str,
+) -> tuple[ApprovalResponseHook, ...]:
+    if workflow_id in LOGISTICS_APPROVAL_RESPONSE_WORKFLOW_IDS:
+        return LOGISTICS_APPROVAL_RESPONSE_HOOKS
+    return ()
+
 
 __all__ = [
     "LOGISTICS_APPROVAL_RESPONSE_HOOKS",
+    "LOGISTICS_APPROVAL_RESPONSE_WORKFLOW_IDS",
     "dispatch_reporting_finalize_approval_hook",
+    "logistics_approval_response_hooks_for_workflow",
     "weekly_publish_approval_hook",
 ]

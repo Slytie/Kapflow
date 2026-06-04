@@ -66,6 +66,12 @@ from onetruth.application.services.schedule_control.workpage_calculations import
     schedule_save_disabled_reason,
 )
 from onetruth.application.services.logistics_workpages import latest_driver_preferences_artifact
+from onetruth.application.services.logistics_workpage_action_registry import (
+    logistics_workpage_action_registry,
+)
+from onetruth.application.services.logistics_workpage_descriptors import (
+    logistics_workpage_descriptor_registry,
+)
 from onetruth.application.services.workpage_descriptors import SCHEDULE_WORKPAGE_KIND
 from onetruth.infrastructure.repositories.artifact_versions import (
     get_artifact_version,
@@ -264,6 +270,8 @@ def apply_schedule_route_demand_coverage_command(
         artifact_version_id=artifact_version_id,
         raw_action_ref=payload.get("action_ref"),
         raw_subject_link=payload.get("subject_link"),
+        action_registry=logistics_workpage_action_registry(),
+        descriptor_registry=logistics_workpage_descriptor_registry(),
     )
     receipt = _prepare_command_receipt(
         command_name="workpages.schedule.route_demand_coverage.apply",
@@ -845,6 +853,8 @@ def submit_schedule_artifact_workpage_command(
         artifact_version_id=artifact_version_id,
         raw_action_ref=payload.get("action_ref"),
         raw_subject_link=payload.get("subject_link"),
+        action_registry=logistics_workpage_action_registry(),
+        descriptor_registry=logistics_workpage_descriptor_registry(),
     )
 
     receipt = _prepare_command_receipt(

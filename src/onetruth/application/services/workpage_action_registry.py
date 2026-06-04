@@ -7,6 +7,9 @@ from onetruth.application.services.workpage_descriptors import (
     WorkpageDescriptor,
     require_workpage_descriptor,
 )
+from onetruth.application.services.workpage_descriptor_registry import (
+    WorkpageDescriptorRegistry,
+)
 
 
 ActionMode = Literal["open_latest_artifact", "open_or_create_artifact"]
@@ -47,13 +50,17 @@ class WorkpageActionPack:
 @dataclass(frozen=True)
 class WorkpageActionRegistry:
     packs: tuple[WorkpageActionPack, ...] = field(default_factory=tuple)
+    descriptor_registry: WorkpageDescriptorRegistry | None = None
 
     @property
     def pack_names(self) -> tuple[str, ...]:
         return tuple(pack.pack_name for pack in self.packs)
 
     def with_pack(self, pack: WorkpageActionPack) -> WorkpageActionRegistry:
-        return WorkpageActionRegistry((*self.packs, pack))
+        return WorkpageActionRegistry(
+            (*self.packs, pack),
+            descriptor_registry=self.descriptor_registry,
+        )
 
     def build_projection(
         self,
@@ -100,6 +107,7 @@ class WorkpageActionRegistry:
                     subject_id=subject_id,
                     latest_artifact=workpage_projection.get(rule.latest_artifact_projection_key),
                     unavailable_reason=rule.unavailable_reason,
+                    descriptor_registry=self.descriptor_registry,
                 )
             )
         return actions
@@ -128,6 +136,7 @@ class WorkpageActionRegistry:
                     subject_id=subject_id,
                     latest_artifact=workpage_projection.get(rule.latest_artifact_projection_key),
                     unavailable_reason=rule.unavailable_reason,
+                    descriptor_registry=self.descriptor_registry,
                 )
             )
         return actions
@@ -187,8 +196,13 @@ def _project_rule_action(
     subject_id: str,
     latest_artifact: Any,
     unavailable_reason: str,
+    descriptor_registry: WorkpageDescriptorRegistry | None,
 ) -> dict[str, Any]:
-    descriptor = require_workpage_descriptor(workpage_kind)
+    descriptor = (
+        descriptor_registry.require_descriptor(workpage_kind)
+        if descriptor_registry is not None
+        else require_workpage_descriptor(workpage_kind)
+    )
     if action_mode == "open_or_create_artifact":
         return _open_or_create_action(
             descriptor=descriptor,

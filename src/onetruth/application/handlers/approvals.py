@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 import sqlite3
-from typing import Any
+from typing import Any, Sequence
 from uuid import uuid4
 
 from onetruth.application.handlers._shared.command_boundary import (
@@ -21,6 +21,7 @@ from onetruth.application.handlers._shared.command_boundary import (
     _workflow_scope,
 )
 from onetruth.application.services.approval_response_hooks import (
+    ApprovalResponseHook,
     ApprovalResponseHookContext,
     run_registered_approval_response_hooks,
 )
@@ -252,6 +253,7 @@ def respond_approval_command(
     payload: dict[str, Any],
     *,
     include_receipt: bool = False,
+    approval_response_hooks: Sequence[ApprovalResponseHook] | None = None,
 ) -> dict[str, Any]:
     _require_fields(
         payload,
@@ -393,6 +395,7 @@ def respond_approval_command(
                     receipt.event_idempotency_base if receipt is not None else None
                 ),
             ),
+            hooks=approval_response_hooks,
         )
         approval = get_approval(connection, str(payload["approval_id"]))
         if approval is None:

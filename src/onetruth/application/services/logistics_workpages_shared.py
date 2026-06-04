@@ -86,7 +86,9 @@ from onetruth.application.services.workpage_descriptors import (
     canonical_schedule_artifact_preview_path,
     canonical_schedule_artifact_submit_path,
     canonical_workflow_run_workpage_route as descriptor_workflow_run_workpage_route,
-    get_workpage_descriptor,
+)
+from onetruth.application.services.logistics_workpage_descriptors import (
+    logistics_workpage_descriptor_registry,
 )
 from onetruth.domain.partition_codec import service_day_to_future_planning_week
 from onetruth.infrastructure.events.event_store import utc_now_iso
@@ -1429,7 +1431,9 @@ def _schedule_artifact_contract_actions(
 ) -> list[dict[str, Any]]:
     actions: list[dict[str, Any]] = []
     if editable and artifact_kind == SCHEDULE_DRAFT_DATASET_KEY:
-        descriptor = get_workpage_descriptor(SCHEDULE_WORKPAGE_KIND)
+        descriptor = logistics_workpage_descriptor_registry().get_descriptor(
+            SCHEDULE_WORKPAGE_KIND
+        )
         preview_disabled_reason = schedule_preview_disabled_reason(dependencies)
         save_disabled_reason = schedule_save_disabled_reason(dependencies)
         previous_week_reality_disabled_reason = _schedule_previous_week_reality_disabled_reason(
@@ -1934,7 +1938,7 @@ def _eod_draft_resolution(
     workflow_run_id: str,
     latest_draft: Mapping[str, Any] | None,
 ) -> dict[str, Any]:
-    descriptor = get_workpage_descriptor(EOD_WORKPAGE_KIND)
+    descriptor = logistics_workpage_descriptor_registry().get_descriptor(EOD_WORKPAGE_KIND)
     create_action_id = (
         str(descriptor.create_action_id)
         if descriptor is not None and descriptor.create_action_id is not None

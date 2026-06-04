@@ -10,6 +10,13 @@ from onetruth.application.services.workpage_action_registry import (
     ApprovalWorkpageActionRule,
     HumanTaskWorkpageActionRule,
     WorkpageActionPack,
+    WorkpageActionRegistry,
+)
+from onetruth.application.services.workpage_action_registry_defaults import (
+    DEFAULT_WORKPAGE_ACTION_REGISTRY,
+)
+from onetruth.application.services.logistics_workpage_descriptors import (
+    logistics_workpage_descriptor_registry,
 )
 from onetruth.application.services.workpage_descriptors import (
     EOD_WORKPAGE_KIND,
@@ -78,3 +85,23 @@ LOGISTICS_WORKPAGE_ACTION_PACK = WorkpageActionPack(
         ),
     ),
 )
+
+
+LOGISTICS_WORKPAGE_ACTION_WORKFLOW_IDS = frozenset(
+    {WEEKLY_SCHEDULE_WORKFLOW_ID, DISPATCH_REPORTING_WORKFLOW_ID}
+)
+
+
+def logistics_workpage_action_registry() -> WorkpageActionRegistry:
+    return WorkpageActionRegistry(
+        (LOGISTICS_WORKPAGE_ACTION_PACK,),
+        descriptor_registry=logistics_workpage_descriptor_registry(),
+    )
+
+
+def logistics_workpage_action_registry_for_workflow(
+    workflow_id: str,
+) -> WorkpageActionRegistry:
+    if workflow_id in LOGISTICS_WORKPAGE_ACTION_WORKFLOW_IDS:
+        return logistics_workpage_action_registry()
+    return DEFAULT_WORKPAGE_ACTION_REGISTRY

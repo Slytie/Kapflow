@@ -22,15 +22,7 @@ class ApprovalResponseHook:
     handler: Callable[[ApprovalResponseHookContext], None]
 
 
-def _load_default_hooks() -> tuple[ApprovalResponseHook, ...]:
-    from onetruth.application.services.logistics_approval_response_hooks import (
-        LOGISTICS_APPROVAL_RESPONSE_HOOKS,
-    )
-
-    return LOGISTICS_APPROVAL_RESPONSE_HOOKS
-
-
-DEFAULT_APPROVAL_RESPONSE_HOOKS: tuple[ApprovalResponseHook, ...] = _load_default_hooks()
+DEFAULT_APPROVAL_RESPONSE_HOOKS: tuple[ApprovalResponseHook, ...] = ()
 
 
 def run_registered_approval_response_hooks(

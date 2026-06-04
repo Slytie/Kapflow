@@ -11,6 +11,7 @@ from onetruth.application.services.approval_response_hooks import (
 from onetruth.application.services.logistics_approval_response_hooks import (
     LOGISTICS_APPROVAL_RESPONSE_HOOKS,
     dispatch_reporting_finalize_approval_hook,
+    logistics_approval_response_hooks_for_workflow,
     weekly_publish_approval_hook,
 )
 
@@ -50,12 +51,21 @@ def test_registered_approval_response_hook_runner_invokes_explicit_hooks() -> No
     assert calls == [("ap-test-001", "approve")]
 
 
-def test_default_approval_response_hooks_are_logistics_registry_entries() -> None:
-    assert DEFAULT_APPROVAL_RESPONSE_HOOKS == LOGISTICS_APPROVAL_RESPONSE_HOOKS
-    assert [hook.hook_id for hook in DEFAULT_APPROVAL_RESPONSE_HOOKS] == [
-        "logistics.weekly_publish_approval",
-        "logistics.dispatch_reporting_finalize_approval",
-    ]
+def test_default_approval_response_hooks_are_platform_neutral() -> None:
+    assert DEFAULT_APPROVAL_RESPONSE_HOOKS == ()
+
+
+def test_logistics_approval_response_hooks_are_explicitly_selected_by_workflow() -> None:
+    assert (
+        logistics_approval_response_hooks_for_workflow("weekly_schedule_planning.v1")
+        == LOGISTICS_APPROVAL_RESPONSE_HOOKS
+    )
+    assert (
+        logistics_approval_response_hooks_for_workflow("dispatch_reporting.v1")
+        == LOGISTICS_APPROVAL_RESPONSE_HOOKS
+    )
+    assert logistics_approval_response_hooks_for_workflow("capex.project_intake.v1") == ()
+    assert logistics_approval_response_hooks_for_workflow("unknown.workflow.v1") == ()
 
 
 def test_logistics_approval_hooks_ignore_non_approved_responses_before_db_reads() -> None:

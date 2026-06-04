@@ -27,6 +27,9 @@ from onetruth.application.services.weekly_stage04_openai_agent import (
 from onetruth.application.services.task_requirements import (
     build_human_task_requirement_index,
 )
+from onetruth.application.services.logistics_workpage_action_registry import (
+    logistics_workpage_action_registry_for_workflow,
+)
 from onetruth.application.services.workpage_action_projection import (
     build_workspace_workpage_projection,
     project_human_task_workpage_actions,
@@ -151,13 +154,18 @@ def get_human_task_endpoint(
         workflow_run_id = str(human_task.get("workflow_run_id") or "")
         workflow_run = scoped_workflow_run(connection, context, workflow_run_id)
         artifact_versions = list_artifacts_for_workflow_run_command(connection, workflow_run_id)
+        workpage_action_registry = logistics_workpage_action_registry_for_workflow(
+            str(workflow_run.get("workflow_id") or "")
+        )
         workpage_actions = project_human_task_workpage_actions(
             task=human_task,
             workflow_run=workflow_run,
             workpage_projection=build_workspace_workpage_projection(
                 workflow_run=workflow_run,
                 artifact_versions=artifact_versions,
+                registry=workpage_action_registry,
             ),
+            registry=workpage_action_registry,
         )
     except CommandError as exc:
         raise api_error_from_command(exc) from exc

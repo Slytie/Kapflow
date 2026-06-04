@@ -37,6 +37,9 @@ from onetruth.application.services.logistics_workpages import (
     build_schedule_artifact_workpage_contract,
     build_schedule_workflow_run_workpage_contract,
 )
+from onetruth.application.services.logistics_workpage_descriptors import (
+    logistics_workpage_descriptor_registry,
+)
 from onetruth.application.services.dispatch_reporting_workbook import (
     DATASET_KEY as EOD_DATASET_KEY,
     WORKFLOW_ID as EOD_WORKFLOW_ID,
@@ -60,8 +63,6 @@ from onetruth.application.services.workpage_descriptors import (
     ROUTE_DEMAND_WORKPAGE_KIND,
     SCHEDULE_WORKPAGE_KIND,
     WorkpageDescriptor,
-    descriptor_for_public_run,
-    get_workpage_descriptor,
 )
 from onetruth.infrastructure.artifacts.storage import (
     ArtifactStorageError,
@@ -83,7 +84,7 @@ def workflow_run_workpage_endpoint(
 ) -> dict[str, object]:
     workflow_run = scoped_workflow_run(connection, context, workflow_run_id)
     workflow_id = str(workflow_run.get("workflow_id") or "")
-    descriptor = descriptor_for_public_run(
+    descriptor = logistics_workpage_descriptor_registry().descriptor_for_public_run(
         workpage_kind=workpage_kind,
         workflow_id=workflow_id,
     )
@@ -979,7 +980,7 @@ def _resolve_public_artifact_descriptor(
     workpage_kind: str,
 ) -> WorkpageDescriptor:
     artifact_kind = str(artifact.get("artifact_kind") or artifact.get("dataset_key") or "")
-    descriptor = get_workpage_descriptor(workpage_kind)
+    descriptor = logistics_workpage_descriptor_registry().get_descriptor(workpage_kind)
     if descriptor is not None:
         if (
             not descriptor.artifact_enabled

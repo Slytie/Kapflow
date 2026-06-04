@@ -36,6 +36,10 @@ from onetruth.application.services.task_actionability import (
 from onetruth.application.services.task_requirements import (
     build_human_task_requirement_index,
 )
+from onetruth.application.services.logistics_workpage_action_registry import (
+    logistics_workpage_action_registry_for_workflow,
+)
+from onetruth.application.services.workpage_action_registry import WorkpageActionRegistry
 from onetruth.application.services.workpage_action_projection import (
     build_workspace_workpage_projection,
     project_approval_workpage_actions,
@@ -190,9 +194,13 @@ def get_workflow_run_workspace_endpoint(
         human_tasks=human_tasks,
         artifact_versions=artifact_versions,
     )
+    workpage_action_registry = logistics_workpage_action_registry_for_workflow(
+        str(workflow_run.get("workflow_id") or "")
+    )
     workpage_projection = _build_workspace_workpage_projection(
         workflow_run=workflow_run,
         artifact_versions=artifact_versions,
+        registry=workpage_action_registry,
     )
     graph = project_workspace_graph(
         workflow_id=str(workflow_run.get("workflow_id")),
@@ -221,6 +229,7 @@ def get_workflow_run_workspace_endpoint(
             requirement_state=requirement_index.get(str(task["human_task_id"])),
             workflow_run=workflow_run,
             workpage_projection=workpage_projection,
+            workpage_action_registry=workpage_action_registry,
         )
         if _is_user_relevant_task(task=task, context=context):
             user_work.append(item)
@@ -238,6 +247,7 @@ def get_workflow_run_workspace_endpoint(
             ),
             workflow_run=workflow_run,
             workpage_projection=workpage_projection,
+            workpage_action_registry=workpage_action_registry,
         )
         if _is_user_relevant_approval(approval=approval, context=context):
             user_work.append(item)
@@ -456,6 +466,7 @@ def _workspace_human_task_item(
     requirement_state: dict[str, Any] | None,
     workflow_run: dict[str, Any],
     workpage_projection: dict[str, Any],
+    workpage_action_registry: WorkpageActionRegistry,
 ) -> dict[str, Any]:
     actionability = compute_human_task_actionability(
         task=task,
@@ -475,6 +486,7 @@ def _workspace_human_task_item(
             task=task,
             workflow_run=workflow_run,
             workpage_projection=workpage_projection,
+            registry=workpage_action_registry,
         ),
         "metadata": {
             "workflow_run_id": str(task["workflow_run_id"]),
@@ -501,6 +513,7 @@ def _workspace_approval_item(
     linked_artifact_count: int,
     workflow_run: dict[str, Any],
     workpage_projection: dict[str, Any],
+    workpage_action_registry: WorkpageActionRegistry,
 ) -> dict[str, Any]:
     actionability = compute_approval_actionability(
         approval=approval,
@@ -517,6 +530,7 @@ def _workspace_approval_item(
             approval=approval,
             workflow_run=workflow_run,
             workpage_projection=workpage_projection,
+            registry=workpage_action_registry,
         ),
         "metadata": {
             "workflow_run_id": str(approval["workflow_run_id"]),
@@ -578,10 +592,12 @@ def _build_workspace_workpage_projection(
     *,
     workflow_run: dict[str, Any],
     artifact_versions: list[dict[str, Any]],
+    registry: WorkpageActionRegistry | None = None,
 ) -> dict[str, Any]:
     return build_workspace_workpage_projection(
         workflow_run=workflow_run,
         artifact_versions=artifact_versions,
+        registry=registry,
     )
 
 
@@ -596,14 +612,19 @@ def project_human_task_workpage_actions_for_detail(
         return []
     workflow_run = scoped_workflow_run(connection, context, workflow_run_id)
     artifact_versions = list_artifacts_for_workflow_run_command(connection, workflow_run_id)
+    registry = logistics_workpage_action_registry_for_workflow(
+        str(workflow_run.get("workflow_id") or "")
+    )
     workpage_projection = _build_workspace_workpage_projection(
         workflow_run=workflow_run,
         artifact_versions=artifact_versions,
+        registry=registry,
     )
     return project_human_task_workpage_actions(
         task=task,
         workflow_run=workflow_run,
         workpage_projection=workpage_projection,
+        registry=registry,
     )
 
 
@@ -612,11 +633,13 @@ def _project_human_task_workpage_actions(
     task: dict[str, Any],
     workflow_run: dict[str, Any],
     workpage_projection: dict[str, Any],
+    registry: WorkpageActionRegistry | None = None,
 ) -> list[dict[str, Any]]:
     return project_human_task_workpage_actions(
         task=task,
         workflow_run=workflow_run,
         workpage_projection=workpage_projection,
+        registry=registry,
     )
 
 
@@ -625,11 +648,13 @@ def _project_approval_workpage_actions(
     approval: dict[str, Any],
     workflow_run: dict[str, Any],
     workpage_projection: dict[str, Any],
+    registry: WorkpageActionRegistry | None = None,
 ) -> list[dict[str, Any]]:
     return project_approval_workpage_actions(
         approval=approval,
         workflow_run=workflow_run,
         workpage_projection=workpage_projection,
+        registry=registry,
     )
 
 

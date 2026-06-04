@@ -3,32 +3,32 @@
   "meta": {
     "title": "CAPEX Epic Progress",
     "subtitle": "Plain-language roadmap for the repo-native CAPEX planning backlog.",
-    "lastUpdated": "2026-06-03",
+    "lastUpdated": "2026-06-04",
     "localOnly": true,
     "sourceNote": "Generated from docs/planning/epics and codex/tasks with curated review-posture overrides.",
     "codexRule": "When a CAPEX task is completed, set status: DONE, add completed_at in ISO 8601 timezone form, add completion/closeout evidence, and regenerate this progress data in the same change."
   },
   "summary": {
     "epicCount": 17,
-    "taskCount": 374,
-    "done": 39,
+    "taskCount": 376,
+    "done": 40,
     "in_progress": 0,
     "not_started": 330,
     "blocked": 1,
-    "needs_review": 4,
-    "total": 374,
+    "needs_review": 5,
+    "total": 376,
     "estimate": {
-      "percentComplete": 10.4,
-      "completedTasks": 39,
-      "remainingTasks": 335,
-      "remainingBlockedOrReviewTasks": 5,
-      "completedWithTimestamps": 7,
-      "completionTimestampCoverage": 17.9,
-      "etaDate": "2026-07-22",
+      "percentComplete": 10.6,
+      "completedTasks": 40,
+      "remainingTasks": 336,
+      "remainingBlockedOrReviewTasks": 6,
+      "completedWithTimestamps": 8,
+      "completionTimestampCoverage": 20.0,
+      "etaDate": "2026-08-27",
       "etaConfidence": "medium",
       "etaSource": "epic_completed_at",
-      "label": "ETA 2026-07-22",
-      "caveat": "5 blocked or needs-review task(s) remain."
+      "label": "ETA 2026-08-27",
+      "caveat": "6 blocked or needs-review task(s) remain."
     }
   },
   "activationBlockers": [
@@ -668,10 +668,10 @@
         "remainingBlockedOrReviewTasks": 0,
         "completedWithTimestamps": 0,
         "completionTimestampCoverage": 0.0,
-        "etaDate": "2026-06-05",
+        "etaDate": "2026-06-06",
         "etaConfidence": "low",
         "etaSource": "global_completed_at",
-        "label": "ETA 2026-06-05",
+        "label": "ETA 2026-06-06",
         "caveat": "Estimate is based on remaining current-scope task count."
       }
     },
@@ -1987,10 +1987,10 @@
         "remainingBlockedOrReviewTasks": 1,
         "completedWithTimestamps": 0,
         "completionTimestampCoverage": 0.0,
-        "etaDate": "2026-06-05",
+        "etaDate": "2026-06-06",
         "etaConfidence": "low",
         "etaSource": "global_completed_at",
-        "label": "ETA 2026-06-05",
+        "label": "ETA 2026-06-06",
         "caveat": "1 blocked or needs-review task(s) remain."
       }
     },
@@ -1998,8 +1998,8 @@
       "id": "EPIC-139",
       "title": "CAPEX domain-boundary cleanup",
       "plainPurpose": "Separate logistics-specific behavior from shared platform semantics before CAPEX surfaces are introduced.",
-      "displayStatus": "done",
-      "reviewPosture": "Fresh check completed from task files, TASK_INDEX, CURRENT_FOCUS, and closeout decisions: all imported EPIC-139 domain-boundary cleanup tasks are accepted as done; TASK-0370 closed the descriptor registry extraction and TASK-0561 closed the remaining approval-response duplicate reconciliation.",
+      "displayStatus": "needs_review",
+      "reviewPosture": "RED/active after the 2026-06-04 EPIC-139 redo package classified this checkout as State B: hook/registry seams existed, but platform defaults still loaded logistics packs. Old task closeouts remain historical evidence; TASK-0643 tracks the neutral-default repair and review gate.",
       "dependencies": [
         "EPIC-137",
         "EPIC-139"
@@ -2020,14 +2020,14 @@
         "docs/planning/CAPEX_V6_GATE_RISK_DECISION_MAP.csv"
       ],
       "counts": {
-        "done": 17,
+        "done": 18,
         "in_progress": 0,
         "not_started": 0,
         "blocked": 0,
-        "needs_review": 0,
-        "total": 17
+        "needs_review": 1,
+        "total": 19
       },
-      "taskCount": 17,
+      "taskCount": 19,
       "epicPath": "docs/planning/epics/EPIC-139.md",
       "tasks": [
         {
@@ -3068,20 +3068,132 @@
           "completedAt": "2026-06-03T16:25:23+02:00",
           "completionTimestampStatus": "recorded",
           "completionTimestampSource": "task_frontmatter"
+        },
+        {
+          "id": "TASK-0643",
+          "epicId": "EPIC-139",
+          "title": "EPIC-139 redo neutral platform defaults",
+          "plainPurpose": "Make platform approval and workpage defaults neutral, preserve logistics behavior through explicit activation, and invert tests/audit checks so the old default-logistics pattern fails.",
+          "sourceStatus": "IN_PROGRESS",
+          "displayStatus": "needs_review",
+          "statusReason": "Active EPIC-139 redo gate: neutral platform defaults are implemented here, but architecture/QA acceptance is still required before EPIC-139 returns to green.",
+          "why": [
+            "The redo package found that EPIC-139 had a false-green State B posture: tests and audit passed even though platform defaults still loaded logistics hooks and workpage packs."
+          ],
+          "scope": [
+            "Make platform approval and workpage defaults neutral, preserve logistics behavior through explicit activation, and invert tests/audit checks so the old default-logistics pattern fails."
+          ],
+          "outOfScope": [],
+          "dependsOn": [
+            "TASK-0257",
+            "TASK-0258",
+            "TASK-0370",
+            "TASK-0561"
+          ],
+          "owners": [
+            "platform"
+          ],
+          "reviewers": [
+            "architect",
+            "qa"
+          ],
+          "risk": "high",
+          "verification": [
+            "python3.11 -m pytest -q tests/unit/test_approval_response_hooks.py tests/unit/test_workpage_descriptor_registry.py tests/unit/test_workpage_domain_registry.py tests/contract/test_handler_import_boundaries.py tests/contract/test_capex_invariant_audit.py",
+            "python3.11 -m pytest -q tests/runtime/api/test_weekly_publish_loop_api.py::test_weekly_publish_approval_auto_publishes_reviewed_latest_draft tests/runtime/api/test_dispatch_reporting_finalize_loop_api.py::test_dispatch_reporting_happy_path_builds_review_finalizes_and_handoffs",
+            "python3.11 scripts/run_capex_invariant_audit.py --output-root /private/tmp/kapflow-epic139-impl-audit --json",
+            "python3.11 scripts/validate_repo.py",
+            "python3.11 scripts/validate_capex_epic_progress_data.py frontend/src/data/capexEpicProgressData.json"
+          ],
+          "acceptanceCriteria": [
+            "DEFAULT_APPROVAL_RESPONSE_HOOKS == ().",
+            "Generic approval response has no logistics imports or inline logistics effects.",
+            "Logistics approval hooks are selected only through an explicit workflow-aware activation path.",
+            "Default workpage descriptor and action registries are empty.",
+            "Logistics workpage descriptor/action registries are exposed through explicit factories and used by logistics call sites.",
+            "CAPEX invariant audit fails if default modules import or load logistics hooks or workpage packs.",
+            "Unknown/CAPEX workflow IDs do not resolve logistics approval hooks, workpage descriptors, or workpage actions by default.",
+            "Logistics regressions still publish weekly schedules and finalize dispatch reporting through explicit activation."
+          ],
+          "sourceRow": {},
+          "evidence": [],
+          "taskPath": "codex/tasks/TASK-0643-epic-139-redo-neutral-platform-defaults.md",
+          "completedAt": null,
+          "completionTimestampStatus": "not_applicable",
+          "completionTimestampSource": "not_completed"
+        },
+        {
+          "id": "TASK-0644",
+          "epicId": "EPIC-139",
+          "title": "EPIC-139 redo downstream interlocks and EPIC-150 dependency correction",
+          "plainPurpose": "Add downstream progress interlocks for EPIC-143, EPIC-150, and EPIC-151 while EPIC-139 remains needs-review, and correct EPIC-150 dependency wording so EPIC-139 means domain-boundary cleanup and approval/workpage neutrality.",
+          "sourceStatus": "DONE",
+          "displayStatus": "done",
+          "statusReason": "Task file records DONE status and completion or closeout evidence.",
+          "why": [
+            "The EPIC-139 redo package found that downstream CAPEX epics could still look selectable while EPIC-139 was RED, and EPIC-150 mislabeled EPIC-139 as artifact/blob custody and auth-before-read."
+          ],
+          "scope": [
+            "Add downstream progress interlocks for EPIC-143, EPIC-150, and EPIC-151 while EPIC-139 remains needs-review, and correct EPIC-150 dependency wording so EPIC-139 means domain-boundary cleanup and approval/workpage neutrality."
+          ],
+          "outOfScope": [
+            "Runtime approval/workpage neutrality repairs already tracked by TASK-0643.",
+            "Final clean Python 3.11 / Node 20 supported-environment acceptance.",
+            "Rewriting old EPIC-139 task closeouts; they remain historical evidence."
+          ],
+          "dependsOn": [
+            "TASK-0643"
+          ],
+          "owners": [
+            "platform"
+          ],
+          "reviewers": [
+            "architect",
+            "qa"
+          ],
+          "risk": "high",
+          "verification": [
+            "python3.11 scripts/validate_capex_epic_progress_data.py frontend/src/data/capexEpicProgressData.json",
+            "python3.11 -m pytest -q tests/contract/test_capex_epic_progress_data.py",
+            "npm run test:run -- src/pages/capexEpicProgressPage.test.tsx",
+            "python3.11 scripts/run_capex_invariant_audit.py --output-root /private/tmp/kapflow-epic139-task0644-audit --json",
+            "python3.11 scripts/validate_repo.py"
+          ],
+          "acceptanceCriteria": [
+            "EPIC-139 remains not-done while the redo review gate is active.",
+            "TASK-0643 remains present as the active needs-review marker.",
+            "TASK-0576 remains represented as historical/reconciled EPIC-139 evidence.",
+            "EPIC-143, EPIC-150, and EPIC-151 display as blocked or needs-review while EPIC-139 is RED.",
+            "EPIC-150 no longer describes EPIC-139 as artifact/blob custody and auth-before-read."
+          ],
+          "sourceRow": {
+            "source_task_id": "E139-REDO-005; E139-REDO-006",
+            "source_priority": "P1",
+            "source_area": "control-plane/docs"
+          },
+          "evidence": [
+            "Added downstream EPIC progress interlocks for EPIC-143, EPIC-150, and EPIC-151.",
+            "Corrected EPIC-150 dependency and context wording to distinguish EPIC-139 domain-boundary neutrality from artifact/blob auth-before-read and EPIC-141 SourceRef work.",
+            "Added contract coverage for the EPIC-139 RED control-plane state and forbidden EPIC-150 dependency wording."
+          ],
+          "taskPath": "codex/tasks/TASK-0644-epic-139-redo-downstream-interlocks-and-epic-150-dependency-correction.md",
+          "completedAt": "2026-06-04T11:21:06Z",
+          "completionTimestampStatus": "recorded",
+          "completionTimestampSource": "task_frontmatter"
         }
       ],
       "estimate": {
-        "percentComplete": 100.0,
-        "completedTasks": 17,
-        "remainingTasks": 0,
-        "remainingBlockedOrReviewTasks": 0,
-        "completedWithTimestamps": 5,
-        "completionTimestampCoverage": 29.4,
-        "etaDate": null,
-        "etaConfidence": "complete",
-        "etaSource": "none",
-        "label": "Complete",
-        "caveat": "No remaining current-scope tasks."
+        "percentComplete": 94.7,
+        "completedTasks": 18,
+        "remainingTasks": 1,
+        "remainingBlockedOrReviewTasks": 1,
+        "completedWithTimestamps": 6,
+        "completionTimestampCoverage": 33.3,
+        "etaDate": "2026-06-05",
+        "etaConfidence": "medium",
+        "etaSource": "epic_completed_at",
+        "label": "ETA 2026-06-05",
+        "caveat": "1 blocked or needs-review task(s) remain."
       }
     },
     {
@@ -4091,10 +4203,10 @@
         "remainingBlockedOrReviewTasks": 0,
         "completedWithTimestamps": 2,
         "completionTimestampCoverage": 100.0,
-        "etaDate": "2026-06-06",
+        "etaDate": "2026-06-08",
         "etaConfidence": "low",
         "etaSource": "global_completed_at",
-        "label": "ETA 2026-06-06",
+        "label": "ETA 2026-06-08",
         "caveat": "Estimate is based on remaining current-scope task count."
       }
     },
@@ -7077,10 +7189,10 @@
         "remainingBlockedOrReviewTasks": 1,
         "completedWithTimestamps": 0,
         "completionTimestampCoverage": 0.0,
-        "etaDate": "2026-06-11",
+        "etaDate": "2026-06-17",
         "etaConfidence": "low",
         "etaSource": "global_completed_at",
-        "label": "ETA 2026-06-11",
+        "label": "ETA 2026-06-17",
         "caveat": "1 blocked or needs-review task(s) remain."
       }
     },
@@ -8927,10 +9039,10 @@
         "remainingBlockedOrReviewTasks": 1,
         "completedWithTimestamps": 0,
         "completionTimestampCoverage": 0.0,
-        "etaDate": "2026-06-08",
+        "etaDate": "2026-06-11",
         "etaConfidence": "low",
         "etaSource": "global_completed_at",
-        "label": "ETA 2026-06-08",
+        "label": "ETA 2026-06-11",
         "caveat": "1 blocked or needs-review task(s) remain."
       }
     },
@@ -8938,8 +9050,8 @@
       "id": "EPIC-143",
       "title": "CAPEX workflow catalog",
       "plainPurpose": "Define CAPEX workflow slices for intake, baseline, lifecycle, commitments, assumptions, interfaces, snapshots, and risk.",
-      "displayStatus": "in_progress",
-      "reviewPosture": "Review posture follows task evidence and curated blocker overrides.",
+      "displayStatus": "needs_review",
+      "reviewPosture": "Gated while EPIC-139 remains RED/needs-review: reporting, routing, and downstream CAPEX workflow selection must wait for neutral-default acceptance.",
       "dependencies": [
         "EPIC-140",
         "EPIC-142",
@@ -9607,10 +9719,10 @@
         "remainingBlockedOrReviewTasks": 0,
         "completedWithTimestamps": 0,
         "completionTimestampCoverage": 0.0,
-        "etaDate": "2026-06-05",
+        "etaDate": "2026-06-06",
         "etaConfidence": "low",
         "etaSource": "global_completed_at",
-        "label": "ETA 2026-06-05",
+        "label": "ETA 2026-06-06",
         "caveat": "Estimate is based on remaining current-scope task count."
       }
     },
@@ -11467,10 +11579,10 @@
         "remainingBlockedOrReviewTasks": 2,
         "completedWithTimestamps": 0,
         "completionTimestampCoverage": 0.0,
-        "etaDate": "2026-06-09",
+        "etaDate": "2026-06-12",
         "etaConfidence": "low",
         "etaSource": "global_completed_at",
-        "label": "ETA 2026-06-09",
+        "label": "ETA 2026-06-12",
         "caveat": "2 blocked or needs-review task(s) remain."
       }
     },
@@ -13575,10 +13687,10 @@
         "remainingBlockedOrReviewTasks": 0,
         "completedWithTimestamps": 0,
         "completionTimestampCoverage": 0.0,
-        "etaDate": "2026-06-09",
+        "etaDate": "2026-06-13",
         "etaConfidence": "low",
         "etaSource": "global_completed_at",
-        "label": "ETA 2026-06-09",
+        "label": "ETA 2026-06-13",
         "caveat": "Estimate is based on remaining current-scope task count."
       }
     },
@@ -18450,10 +18562,10 @@
         "remainingBlockedOrReviewTasks": 0,
         "completedWithTimestamps": 0,
         "completionTimestampCoverage": 0.0,
-        "etaDate": "2026-06-14",
+        "etaDate": "2026-06-22",
         "etaConfidence": "low",
         "etaSource": "global_completed_at",
-        "label": "ETA 2026-06-14",
+        "label": "ETA 2026-06-22",
         "caveat": "Estimate is based on remaining current-scope task count."
       }
     },
@@ -18461,8 +18573,8 @@
       "id": "EPIC-150",
       "title": "CAPEX release governance",
       "plainPurpose": "Add release, branch, review, migration, activation, and docs-authority governance for CAPEX work.",
-      "displayStatus": "not_started",
-      "reviewPosture": "Review posture follows task evidence and curated blocker overrides.",
+      "displayStatus": "needs_review",
+      "reviewPosture": "Gated while EPIC-139 remains RED/needs-review: release/source-root governance cannot be selected as safe follow-on work until approval/workpage neutrality is accepted.",
       "dependencies": [
         "EPIC-137",
         "EPIC-149",
@@ -20192,10 +20304,10 @@
         "remainingBlockedOrReviewTasks": 0,
         "completedWithTimestamps": 0,
         "completionTimestampCoverage": 0.0,
-        "etaDate": "2026-06-08",
+        "etaDate": "2026-06-12",
         "etaConfidence": "low",
         "etaSource": "global_completed_at",
-        "label": "ETA 2026-06-08",
+        "label": "ETA 2026-06-12",
         "caveat": "Estimate is based on remaining current-scope task count."
       }
     },
@@ -20203,8 +20315,8 @@
       "id": "EPIC-151",
       "title": "CAPEX transparency and snapshots",
       "plainPurpose": "Define executive snapshots, risk signals, external bindings, freshness, and audit export contracts.",
-      "displayStatus": "not_started",
-      "reviewPosture": "Review posture follows task evidence and curated blocker overrides.",
+      "displayStatus": "needs_review",
+      "reviewPosture": "Gated while EPIC-139 remains RED/needs-review: downstream implementation remains in review posture until neutral platform defaults are accepted.",
       "dependencies": [
         "EPIC-142",
         "EPIC-144",
@@ -21759,10 +21871,10 @@
         "remainingBlockedOrReviewTasks": 0,
         "completedWithTimestamps": 0,
         "completionTimestampCoverage": 0.0,
-        "etaDate": "2026-06-08",
+        "etaDate": "2026-06-11",
         "etaConfidence": "low",
         "etaSource": "global_completed_at",
-        "label": "ETA 2026-06-08",
+        "label": "ETA 2026-06-11",
         "caveat": "Estimate is based on remaining current-scope task count."
       }
     },
@@ -22357,10 +22469,10 @@
         "remainingBlockedOrReviewTasks": 0,
         "completedWithTimestamps": 0,
         "completionTimestampCoverage": 0.0,
-        "etaDate": "2026-06-05",
+        "etaDate": "2026-06-06",
         "etaConfidence": "low",
         "etaSource": "global_completed_at",
-        "label": "ETA 2026-06-05",
+        "label": "ETA 2026-06-06",
         "caveat": "Estimate is based on remaining current-scope task count."
       }
     }

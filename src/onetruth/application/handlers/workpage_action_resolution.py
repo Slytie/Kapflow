@@ -10,9 +10,15 @@ from onetruth.application.handlers._shared.command_boundary import CommandError
 from onetruth.application.services.workpage_action_registry_defaults import (
     DEFAULT_WORKPAGE_ACTION_REGISTRY,
 )
+from onetruth.application.services.workpage_action_registry import WorkpageActionRegistry
+from onetruth.application.services.workpage_descriptor_registry import (
+    WorkpageDescriptorRegistry,
+)
+from onetruth.application.services.workpage_descriptor_registry_defaults import (
+    DEFAULT_WORKPAGE_DESCRIPTOR_REGISTRY,
+)
 from onetruth.application.services.workpage_descriptors import (
     WorkpageDescriptor,
-    require_workpage_descriptor,
 )
 from onetruth.infrastructure.repositories.approvals import get_approval
 from onetruth.infrastructure.repositories.human_tasks import get_human_task
@@ -36,6 +42,8 @@ def _resolve_workpage_action_subject(
     raw_action_ref: Any,
     raw_subject_link: Any,
     expected_action_id: str | None = None,
+    action_registry: WorkpageActionRegistry | None = None,
+    descriptor_registry: WorkpageDescriptorRegistry | None = None,
 ) -> tuple[dict[str, str] | None, dict[str, Any] | None]:
     if raw_action_ref is not None and raw_subject_link is not None:
         raise CommandError(
@@ -53,6 +61,8 @@ def _resolve_workpage_action_subject(
             artifact_version_id=artifact_version_id,
             raw_action_ref=raw_action_ref,
             expected_action_id=expected_action_id,
+            action_registry=action_registry,
+            descriptor_registry=descriptor_registry,
         )
         subject = action_ref.get("subject")
         if isinstance(subject, Mapping):
@@ -68,6 +78,8 @@ def _resolve_workpage_action_subject(
         workpage_kind=workpage_kind,
         flow_kind=flow_kind,
         raw_subject_link=raw_subject_link,
+        action_registry=action_registry,
+        descriptor_registry=descriptor_registry,
     )
     return subject_link, None
 
@@ -81,6 +93,8 @@ def _resolve_workpage_action_ref(
     artifact_version_id: str | None,
     raw_action_ref: Any,
     expected_action_id: str | None = None,
+    action_registry: WorkpageActionRegistry | None = None,
+    descriptor_registry: WorkpageDescriptorRegistry | None = None,
 ) -> dict[str, Any]:
     if not isinstance(raw_action_ref, Mapping):
         raise _invalid_workpage_action_ref(
@@ -120,7 +134,9 @@ def _resolve_workpage_action_ref(
             flow_kind=flow_kind,
             action_workflow_run_id=action_workflow_run_id,
         )
-    descriptor = require_workpage_descriptor(workpage_kind)
+    descriptor = _active_descriptor_registry(descriptor_registry).require_descriptor(
+        workpage_kind
+    )
     if descriptor.workflow_id != workflow_id:
         raise _invalid_workpage_action_ref(
             message="action_ref is unsupported for this workflow/workpage pair",
@@ -167,6 +183,8 @@ def _resolve_workpage_action_ref(
         workpage_kind=workpage_kind,
         flow_kind=flow_kind,
         raw_subject=raw_action_ref.get("subject"),
+        action_registry=action_registry,
+        descriptor_registry=descriptor_registry,
     )
     return {
         "action_id": action_id,
@@ -210,6 +228,8 @@ def _normalize_action_ref_subject(
     workpage_kind: str,
     flow_kind: str,
     raw_subject: Any,
+    action_registry: WorkpageActionRegistry | None = None,
+    descriptor_registry: WorkpageDescriptorRegistry | None = None,
 ) -> dict[str, str] | None:
     if raw_subject is None:
         return None
@@ -243,6 +263,8 @@ def _normalize_action_ref_subject(
         workpage_kind=workpage_kind,
         flow_kind=flow_kind,
         subject_link=subject,
+        action_registry=action_registry,
+        descriptor_registry=descriptor_registry,
     )
     return subject
 
@@ -254,6 +276,8 @@ def _resolve_workpage_subject_link(
     workpage_kind: str,
     flow_kind: str,
     raw_subject_link: Any,
+    action_registry: WorkpageActionRegistry | None = None,
+    descriptor_registry: WorkpageDescriptorRegistry | None = None,
 ) -> dict[str, str] | None:
     if raw_subject_link is None:
         return None
@@ -287,6 +311,8 @@ def _resolve_workpage_subject_link(
         workpage_kind=workpage_kind,
         flow_kind=flow_kind,
         subject_link=subject_link,
+        action_registry=action_registry,
+        descriptor_registry=descriptor_registry,
     )
     return subject_link
 
@@ -298,6 +324,8 @@ def _validate_workpage_subject(
     workpage_kind: str,
     flow_kind: str,
     subject_link: Mapping[str, str],
+    action_registry: WorkpageActionRegistry | None = None,
+    descriptor_registry: WorkpageDescriptorRegistry | None = None,
 ) -> None:
     subject_kind = str(subject_link["subject_kind"])
     subject_id = str(subject_link["subject_id"])
@@ -307,7 +335,9 @@ def _validate_workpage_subject(
         subject_kind=subject_kind,
         subject_id=subject_id,
     )
-    descriptor = require_workpage_descriptor(workpage_kind)
+    descriptor = _active_descriptor_registry(descriptor_registry).require_descriptor(
+        workpage_kind
+    )
     if flow_kind == "create" and descriptor.create_action_id is None:
         raise _invalid_workpage_subject_link(
             message="subject_link is unsupported for this workpage flow",
@@ -333,6 +363,7 @@ def _validate_workpage_subject(
             workflow_id=workflow_id,
             workpage_kind=workpage_kind,
             subject_id=subject_id,
+            action_registry=action_registry,
         )
         return
     if subject_kind == "approval":
@@ -342,6 +373,7 @@ def _validate_workpage_subject(
             workflow_id=workflow_id,
             workpage_kind=workpage_kind,
             subject_id=subject_id,
+            action_registry=action_registry,
         )
         return
     raise _invalid_workpage_subject_link(
@@ -361,6 +393,7 @@ def _validate_human_task_workpage_subject_link(
     workflow_id: str,
     workpage_kind: str,
     subject_id: str,
+    action_registry: WorkpageActionRegistry | None = None,
 ) -> None:
     human_task = get_human_task(connection, subject_id)
     if human_task is None:
@@ -380,7 +413,7 @@ def _validate_human_task_workpage_subject_link(
         )
     stage_id = str(task_run.get("stage_id") or "")
     task_kind = str(human_task.get("task_kind") or "")
-    if DEFAULT_WORKPAGE_ACTION_REGISTRY.supports_human_task_subject(
+    if _active_action_registry(action_registry).supports_human_task_subject(
         workflow_id=workflow_id,
         workpage_kind=workpage_kind,
         stage_id=stage_id,
@@ -406,6 +439,7 @@ def _validate_approval_workpage_subject_link(
     workflow_id: str,
     workpage_kind: str,
     subject_id: str,
+    action_registry: WorkpageActionRegistry | None = None,
 ) -> None:
     approval = get_approval(connection, subject_id)
     if approval is None:
@@ -417,7 +451,7 @@ def _validate_approval_workpage_subject_link(
         )
     scope_kind = str(approval.get("scope_kind") or "")
     scope_ref = str(approval.get("scope_ref") or "")
-    if DEFAULT_WORKPAGE_ACTION_REGISTRY.supports_approval_subject(
+    if _active_action_registry(action_registry).supports_approval_subject(
         workflow_id=workflow_id,
         workpage_kind=workpage_kind,
         scope_kind=scope_kind,
@@ -434,6 +468,18 @@ def _validate_approval_workpage_subject_link(
         scope_kind=scope_kind,
         scope_ref=scope_ref,
     )
+
+
+def _active_action_registry(
+    registry: WorkpageActionRegistry | None,
+) -> WorkpageActionRegistry:
+    return DEFAULT_WORKPAGE_ACTION_REGISTRY if registry is None else registry
+
+
+def _active_descriptor_registry(
+    registry: WorkpageDescriptorRegistry | None,
+) -> WorkpageDescriptorRegistry:
+    return DEFAULT_WORKPAGE_DESCRIPTOR_REGISTRY if registry is None else registry
 
 def _invalid_workpage_subject_link(
     *,

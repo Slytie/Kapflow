@@ -91,10 +91,10 @@ Required negative tests:
 - stale projection command is rejected as a no-op
 
 P0 blockers before activation:
-- `approval.respond` domain neutrality is resolved
-- artifact/blob auth-before-read is resolved
+- EPIC-139 approval/workpage domain neutrality is accepted
+- platform artifact/blob auth-before-read is resolved
 - `capex_project` and `project_membership` exist
 - source occurrence runtime exists
-- SourceRefs are meaningful and resolved
+- EPIC-141 SourceRefs are meaningful and resolved
 - workpage stale-command guards exist
 - CAPEX semantic tests and CODEOWNERS gates exist

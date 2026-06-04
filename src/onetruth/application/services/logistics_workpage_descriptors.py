@@ -1,6 +1,9 @@
 from __future__ import annotations
 
-from onetruth.application.services.workpage_descriptor_registry import WorkpageDescriptorPack
+from onetruth.application.services.workpage_descriptor_registry import (
+    WorkpageDescriptorPack,
+    WorkpageDescriptorRegistry,
+)
 from onetruth.application.services.workpage_descriptors import (
     DISPATCH_REPORTING_WORKFLOW_ID,
     DRIVER_PREFERENCES_ARTIFACT_KIND,
@@ -185,4 +188,13 @@ _LOGISTICS_DESCRIPTORS: tuple[WorkpageDescriptor, ...] = (
 LOGISTICS_WORKPAGE_DESCRIPTOR_PACK = WorkpageDescriptorPack(
     pack_name="logistics",
     descriptors=_LOGISTICS_DESCRIPTORS,
+)
+
+
+def logistics_workpage_descriptor_registry() -> WorkpageDescriptorRegistry:
+    return WorkpageDescriptorRegistry(packs=(LOGISTICS_WORKPAGE_DESCRIPTOR_PACK,))
+
+
+LOGISTICS_WORKPAGE_WORKFLOW_IDS = frozenset(
+    {WEEKLY_SCHEDULE_WORKFLOW_ID, DISPATCH_REPORTING_WORKFLOW_ID}
 )
