@@ -12,6 +12,16 @@ Business execution instance pinned to:
 - temporal context (`logical_date`, interval start/end, timezone where applicable)
 - activation key for dedupe
 
+A workflow run may optionally belong to a CAPEX project through `project_id`, but it is never the project identity.
+
+### CapexProject
+Durable CAPEX project root scoped by tenant and domain.
+It owns stable `project_id`, project key, state, metadata, creator, and timestamps.
+
+### ProjectMembership
+Direct actor-to-project role grant.
+It records one active role per `(project_id, actor_type, actor_id)` and is separate from later authorization projections.
+
 ### TaskRun
 Bounded unit of work inside a workflow run.
 A task run may be human-executed, service-executed, or agent-assisted, but it is still part of the same workflow truth system.
@@ -79,6 +89,8 @@ This is authoritative for execution pinning, but still subordinate to the author
 ## 2) Canonical relationships
 - one workflow run has many task runs
 - one workflow run may have many flags linked to stages, tasks, and evidence
+- one CAPEX project may have many workflow runs
+- one CAPEX project may have many direct project memberships
 - one task run may spawn zero or more child task runs inside the same workflow-run context
 - one task run may have zero or one active execution session at a time
 - one execution session may have many tool executions
@@ -96,6 +108,8 @@ Examples that must be translated rather than copied verbatim:
 
 ## 4) Minimal state expectations
 - workflow runs and task runs need pinned source refs, temporal context, activation keys, and stale-detection hooks
+- CAPEX projects need durable project identity distinct from workflow-run identity
+- project memberships need direct role, actor identity, grant actor, state, and audit timestamps
 - human tasks need candidate roles, lease version, claimed-until, escalation-at, and linked evidence refs
 - approvals need evidence refs, actor, due-at, response verb, outcome, and link targets
 - execution sessions need budget class, tool policy context, and source/compiled spec linkage

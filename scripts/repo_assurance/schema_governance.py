@@ -106,6 +106,8 @@ def validate_runtime_schema_coverage(state: AssuranceState) -> None:
     collector = state.collector
     required = {
         "workflow_run": ROOT / "schemas/runtime/workflow_run.schema.json",
+        "capex_project": ROOT / "schemas/runtime/capex_project.schema.json",
+        "project_membership": ROOT / "schemas/runtime/project_membership.schema.json",
         "task_run": ROOT / "schemas/runtime/task_run.schema.json",
         "human_task": ROOT / "schemas/runtime/human_task.schema.json",
         "execution_session": ROOT / "schemas/runtime/execution_session.schema.json",

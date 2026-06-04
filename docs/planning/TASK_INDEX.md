@@ -221,8 +221,8 @@ Note: `TASK-0087` / `TASK-0088` / `TASK-0089` were formerly duplicated as `TASK-
 | TASK-0258 | EPIC-139 | DONE | high | Create domain workpage/action descriptor registry |
 | TASK-0259 | EPIC-139 | DONE | medium | Classify and restructure logistics docs |
 | TASK-0260 | EPIC-139 | DONE | high | Split platform tests from logistics regression tests |
-| TASK-0261 | EPIC-140 | TODO | high | Decide and implement CAPEX project anchor schema |
-| TASK-0262 | EPIC-140 | TODO | high | Implement project_membership and project roles |
+| TASK-0261 | EPIC-140 | DONE | high | Decide and implement CAPEX project anchor schema |
+| TASK-0262 | EPIC-140 | DONE | high | Implement project_membership and project roles |
 | TASK-0263 | EPIC-140 | TODO | high | Project-scoped artifact/task/flag/approval/pointer APIs |
 | TASK-0264 | EPIC-140 | TODO | medium | Project selector/dashboard for max-five active projects per user |
 | TASK-0265 | EPIC-140 | TODO | high | Project-scoped official pointer families |

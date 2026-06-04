@@ -20,11 +20,13 @@ def create_workflow_run(
     activation_key: str,
     state: str,
     created_at: str,
+    project_id: str | None = None,
 ) -> None:
     connection.execute(
         """
         INSERT INTO workflow_runs (
             workflow_run_id,
+            project_id,
             workflow_id,
             workflow_version,
             tenant_id,
@@ -36,10 +38,11 @@ def create_workflow_run(
             created_at,
             updated_at
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """,
         (
             workflow_run_id,
+            project_id,
             workflow_id,
             workflow_version,
             tenant_id,
@@ -58,6 +61,7 @@ def _select_workflow_runs_base() -> str:
     return """
         SELECT
             wr.workflow_run_id,
+            wr.project_id,
             wr.workflow_id,
             wr.workflow_version,
             wr.tenant_id,

@@ -203,6 +203,22 @@ def _public_command_scope_key(command_name: str, payload: dict[str, Any]) -> str
                 payload.get("activation_key"),
             )
         )
+    if command_name == "capex.projects.create":
+        return _command_scope_key(
+            (
+                payload.get("tenant_id"),
+                payload.get("domain_id"),
+                payload.get("project_key"),
+            )
+        )
+    if command_name == "capex.project_memberships.grant":
+        return _command_scope_key(
+            (
+                payload.get("project_id"),
+                payload.get("target_actor_type"),
+                payload.get("target_actor_id"),
+            )
+        )
     if command_name == "tasks.create":
         return _command_scope_key(
             (

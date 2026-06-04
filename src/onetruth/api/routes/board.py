@@ -49,6 +49,7 @@ def schedule_planning_board_endpoint(
         connection,
         context=context,
         workflow_id=workflow_id,
+        project_id=None,
         state=query.get("workflow_state"),
         page=source_page,
     )

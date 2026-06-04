@@ -57,6 +57,12 @@ from onetruth.application.services.task_requirements import (
     build_human_task_requirement_index,
     task_has_unsatisfied_requirements,
 )
+from onetruth.application.services.capex_project_access import (
+    PROJECT_CONTRIBUTOR,
+    PROJECT_VIEWER,
+    require_project_access,
+    require_project_membership_role,
+)
 from onetruth.infrastructure.repositories.flags import get_flag
 from onetruth.infrastructure.repositories.human_tasks import (
     claim_human_task as claim_human_task_row,
@@ -137,11 +143,34 @@ def create_workflow_run_command(
     requested_workflow_run_id = payload.get("workflow_run_id")
     workflow_run_id = str(requested_workflow_run_id or f"wr-{uuid4()}")
     state = str(payload.get("state", "OPEN"))
+    project_id = (
+        str(payload["project_id"])
+        if payload.get("project_id") is not None
+        else None
+    )
     if state not in WORKFLOW_RUN_STATES:
         raise CommandError(
             code="invalid_workflow_state",
             message=f"unsupported workflow run state: {state}",
             details={"allowed_states": sorted(WORKFLOW_RUN_STATES)},
+        )
+    if project_id is not None:
+        _require_fields(payload, ["actor_id", "actor_type"])
+        project = require_project_access(
+            connection,
+            project_id=project_id,
+            tenant_id=str(payload["tenant_id"]),
+            domain_id=str(payload["domain_id"]),
+            actor_type=str(payload["actor_type"]),
+            actor_id=str(payload["actor_id"]),
+            min_role=PROJECT_VIEWER,
+        )
+        require_project_membership_role(
+            connection,
+            project=project,
+            actor_type=str(payload["actor_type"]),
+            actor_id=str(payload["actor_id"]),
+            min_role=PROJECT_CONTRIBUTOR,
         )
     receipt = _prepare_command_receipt(
         command_name="runs.create",
@@ -156,6 +185,7 @@ def create_workflow_run_command(
             "workflow_version": str(payload["workflow_version"]),
             "tenant_id": str(payload["tenant_id"]),
             "domain_id": str(payload["domain_id"]),
+            "project_id": project_id,
             "partition_key": str(payload["partition_key"]),
             "logical_date": (
                 str(payload["logical_date"])
@@ -186,6 +216,7 @@ def create_workflow_run_command(
         create_workflow_run(
             connection,
             workflow_run_id=workflow_run_id,
+            project_id=project_id,
             workflow_id=str(payload["workflow_id"]),
             workflow_version=str(payload["workflow_version"]),
             tenant_id=str(payload["tenant_id"]),
@@ -200,6 +231,28 @@ def create_workflow_run_command(
             state=state,
             created_at=now,
         )
+        links = [
+            {"rel": "subject", "type": "workflow_run", "id": workflow_run_id},
+            {
+                "rel": "uses_definition",
+                "type": "workflow_contract_version",
+                "id": f"{payload['workflow_id']}@{payload['workflow_version']}",
+            },
+            {
+                "rel": "uses_decisions",
+                "type": "decision_catalog_version",
+                "id": f"{payload['workflow_id']}@{payload['workflow_version']}",
+            },
+            {
+                "rel": "uses_profile",
+                "type": "execution_profile_version",
+                "id": f"{payload['workflow_id']}@{payload['workflow_version']}",
+            },
+        ]
+        if project_id is not None:
+            links.append(
+                {"rel": "project", "type": "capex_project", "id": project_id}
+            )
         append_event(
             connection,
             _event_envelope(
@@ -208,25 +261,9 @@ def create_workflow_run_command(
                 domain_id=str(payload["domain_id"]),
                 actor_type=str(payload.get("actor_type", "system")),
                 actor_id=str(payload.get("actor_id", "system:runtime")),
-                links=[
-                    {"rel": "subject", "type": "workflow_run", "id": workflow_run_id},
-                    {
-                        "rel": "uses_definition",
-                        "type": "workflow_contract_version",
-                        "id": f"{payload['workflow_id']}@{payload['workflow_version']}",
-                    },
-                    {
-                        "rel": "uses_decisions",
-                        "type": "decision_catalog_version",
-                        "id": f"{payload['workflow_id']}@{payload['workflow_version']}",
-                    },
-                    {
-                        "rel": "uses_profile",
-                        "type": "execution_profile_version",
-                        "id": f"{payload['workflow_id']}@{payload['workflow_version']}",
-                    },
-                ],
+                links=links,
                 payload={
+                    "project_id": project_id,
                     "workflow_id": str(payload["workflow_id"]),
                     "partition_key": str(payload["partition_key"]),
                     "activation_key": str(payload["activation_key"]),

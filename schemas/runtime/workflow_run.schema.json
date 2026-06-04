@@ -27,6 +27,9 @@
     "domain_id": {
       "type": "string"
     },
+    "project_id": {
+      "type": "string"
+    },
     "partition": {
       "type": "object",
       "required": [

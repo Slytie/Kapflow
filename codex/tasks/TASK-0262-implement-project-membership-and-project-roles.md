@@ -2,7 +2,8 @@
 id: TASK-0262
 epic: EPIC-140
 title: "Implement project_membership and project roles"
-status: TODO
+status: DONE
+completed_at: "2026-06-04T10:53:09+02:00"
 owners: ["platform"]
 reviewers: ["architect", "qa"]
 depends_on: ["TASK-0261"]
@@ -60,3 +61,7 @@ Server-side user membership and role checks for project access.
 
 ## Notes / decisions
 - Raw project corpora remain off-repo; use only sanitized fixtures, manifests, hashes, and aggregate evidence approved by the relevant fixture/governance task.
+- Closed by adding direct `project_memberships` runtime state with roles `project_viewer`, `project_contributor`, and `project_admin`.
+- Project creation grants the creator `project_admin`; membership grants are admin-only and emit `capex.project_membership.granted`.
+- Shared read paths now hide project-bound workflow runs, HITL rows, artifacts, pointers, and timeline events from same-scope non-members while preserving no-project logistics/runtime visibility.
+- Evidence: `tests/unit/test_capex_project_access.py`, `tests/runtime/api/test_capex_project_access_api.py`, and existing cross-scope/read-path API regressions.

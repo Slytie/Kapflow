@@ -6,6 +6,7 @@ Current ADRs:
 - `ADR-003-stage4-runtime-architecture.md`
 - `ADR-004-first-user-production-lab-topology.md`
 - `ADR-005-approval-response-domain-hooks.md`
+- `ADR-006-capex-project-anchor-and-membership.md`
 
 Use ADRs when changing:
 - authority chain

@@ -2,6 +2,13 @@
 
 Record any decisions made since the last session so a fresh Codex run can rehydrate quickly.
 
+## 2026-06-04 (EPIC-140 project anchor and direct membership foundation)
+- Project-anchor decision: `TASK-0261` introduces durable `capex_projects.project_id` as the CAPEX project root; `workflow_run_id` remains an execution identity and is only optionally linked through nullable `workflow_runs.project_id`.
+- Event-scope decision: `timeline_events.project_id` is nullable and derived from explicit `capex_project` event links or linked project-bound workflow runs so broad timeline reads can enforce project visibility.
+- Membership decision: `TASK-0262` adds direct `project_memberships` with roles `project_viewer`, `project_contributor`, and `project_admin`; direct membership is separate from later authorization projections.
+- API decision: the minimal CAPEX project API surface supports project list/create/detail, admin-only membership list/grant, and project-bound workflow-run creation while preserving existing no-project logistics/runtime behavior.
+- Boundary decision: project-bound workflow runs and shared read-model rows are hidden from same-tenant non-members; later EPIC-140 tasks still own richer project-scoped child APIs, authorization projections, selector UX, official pointer families, and CAPEX activation.
+
 ## 2026-06-03 (CAPEX RF-002/NU-CB-P0-001 descriptor registry and approval duplicate closeout)
 - Descriptor-boundary decision: `TASK-0370` moves active logistics workpage descriptor registrations behind `WorkpageDescriptorRegistry`; the existing descriptor lookup helpers remain compatibility facades and public workpage routes/actions stay unchanged.
 - Subject-surface decision: workpage `subject_link` validation now uses the registered workpage action rules for supported human-task and approval surfaces instead of local schedule/EOD matrices in the action-resolution handler.

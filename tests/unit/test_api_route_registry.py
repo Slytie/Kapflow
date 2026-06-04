@@ -41,6 +41,12 @@ def test_route_registry_preserves_exact_global_route_order() -> None:
         "flags.artifacts.list",
         "flags.artifacts.upload",
         "flags.transition",
+        "capex.projects.list",
+        "capex.projects.create",
+        "capex.projects.memberships.list",
+        "capex.projects.memberships.grant",
+        "capex.projects.workflow_runs.create",
+        "capex.projects.detail",
         "workflow_runs.list",
         "workflow_runs.artifacts.list",
         "workflow_runs.artifacts.upload",
@@ -88,6 +94,19 @@ def test_route_registry_matches_representative_exact_and_parameterized_routes() 
     assert exact_match is not None
     assert exact_match.route.name == "workflow_runs.list"
     assert exact_match.params == {}
+
+    capex_project_match = match_route("GET", "/api/v1/capex/projects/cp-001")
+    assert capex_project_match is not None
+    assert capex_project_match.route.name == "capex.projects.detail"
+    assert capex_project_match.params == {"project_id": "cp-001"}
+
+    capex_membership_match = match_route(
+        "POST",
+        "/api/v1/capex/projects/cp-001/memberships",
+    )
+    assert capex_membership_match is not None
+    assert capex_membership_match.route.name == "capex.projects.memberships.grant"
+    assert capex_membership_match.params == {"project_id": "cp-001"}
 
     detail_match = match_route("GET", "/api/v1/artifacts/art-001")
     assert detail_match is not None

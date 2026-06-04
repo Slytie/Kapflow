@@ -4,6 +4,10 @@ import json
 import sqlite3
 from typing import Any
 
+from onetruth.application.services.capex_project_access import (
+    project_membership_filter_params,
+    project_membership_filter_sql,
+)
 from onetruth.api.dependencies import Page, RequestContext, scoped_workflow_run
 
 
@@ -22,6 +26,8 @@ def list_timeline_events_endpoint(
         connection,
         tenant_id=context.tenant_id,
         domain_id=context.domain_id,
+        actor_type=context.actor_type,
+        actor_id=context.actor_id,
         workflow_run_id=workflow_run_id,
         event_type=event_type,
         page=page,
@@ -38,41 +44,53 @@ def query_timeline_events(
     *,
     tenant_id: str,
     domain_id: str,
+    actor_type: str,
+    actor_id: str,
     workflow_run_id: str | None,
     event_type: str | None,
     page: Page,
 ) -> list[dict[str, Any]]:
     query = """
         SELECT
-            sequence_no,
-            event_id,
-            event_type,
-            schema_version,
-            occurred_at,
-            recorded_at,
-            tenant_id,
-            domain_id,
-            actor,
-            links,
-            payload,
-            correlation_id,
-            causation_id,
-            idempotency_key,
-            integrity
-        FROM timeline_events
-        WHERE tenant_id = ?
-            AND domain_id = ?
+            te.sequence_no,
+            te.event_id,
+            te.event_type,
+            te.schema_version,
+            te.occurred_at,
+            te.recorded_at,
+            te.tenant_id,
+            te.domain_id,
+            te.project_id,
+            te.actor,
+            te.links,
+            te.payload,
+            te.correlation_id,
+            te.causation_id,
+            te.idempotency_key,
+            te.integrity
+        FROM timeline_events te
+        LEFT JOIN workflow_runs wr
+            ON wr.workflow_run_id = te.workflow_run_id
+        WHERE te.tenant_id = ?
+            AND te.domain_id = ?
+            AND """ + project_membership_filter_sql(
+                project_column="COALESCE(te.project_id, wr.project_id)"
+            ) + """
     """
-    params: list[Any] = [tenant_id, domain_id]
+    params: list[Any] = [
+        tenant_id,
+        domain_id,
+        *project_membership_filter_params(actor_type=actor_type, actor_id=actor_id),
+    ]
 
     if workflow_run_id is not None:
-        query += " AND workflow_run_id = ?"
+        query += " AND te.workflow_run_id = ?"
         params.append(workflow_run_id)
     if event_type is not None:
-        query += " AND event_type = ?"
+        query += " AND te.event_type = ?"
         params.append(event_type)
 
-    query += " ORDER BY sequence_no DESC LIMIT ? OFFSET ?"
+    query += " ORDER BY te.sequence_no DESC LIMIT ? OFFSET ?"
     params.extend([page.limit, page.offset])
 
     rows = connection.execute(query, params).fetchall()
@@ -147,6 +165,7 @@ def query_workflow_run_timeline(
             recorded_at,
             tenant_id,
             domain_id,
+            project_id,
             actor,
             links,
             payload,
@@ -197,4 +216,6 @@ def _timeline_row_to_payload(row: sqlite3.Row) -> dict[str, Any]:
         item["idempotency_key"] = str(row["idempotency_key"])
     if row["integrity"] is not None:
         item["integrity"] = json.loads(row["integrity"])
+    if "project_id" in row.keys() and row["project_id"] is not None:
+        item["project_id"] = str(row["project_id"])
     return item

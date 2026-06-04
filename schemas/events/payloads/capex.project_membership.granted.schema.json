@@ -1,0 +1,62 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "capex.project_membership.granted",
+  "type": "object",
+  "required": [
+    "project_membership_id",
+    "project_id",
+    "actor_id",
+    "actor_type",
+    "role",
+    "state",
+    "granted_by_actor_id",
+    "granted_by_actor_type"
+  ],
+  "properties": {
+    "project_membership_id": {
+      "type": "string"
+    },
+    "project_id": {
+      "type": "string"
+    },
+    "actor_id": {
+      "type": "string"
+    },
+    "actor_type": {
+      "type": "string",
+      "enum": [
+        "human",
+        "agent",
+        "service",
+        "system"
+      ]
+    },
+    "role": {
+      "type": "string",
+      "enum": [
+        "project_viewer",
+        "project_contributor",
+        "project_admin"
+      ]
+    },
+    "state": {
+      "type": "string",
+      "enum": [
+        "active"
+      ]
+    },
+    "granted_by_actor_id": {
+      "type": "string"
+    },
+    "granted_by_actor_type": {
+      "type": "string",
+      "enum": [
+        "human",
+        "agent",
+        "service",
+        "system"
+      ]
+    }
+  },
+  "additionalProperties": false
+}

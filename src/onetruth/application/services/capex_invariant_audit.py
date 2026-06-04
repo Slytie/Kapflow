@@ -117,11 +117,11 @@ CAPEX_INVARIANT_REGISTRY: tuple[CapexInvariant, ...] = (
         evaluator=lambda repo_root: _check_approval_response_hook_source(repo_root),
     ),
     CapexInvariant(
-        invariant_id="capex.known_gap.project_membership_runtime",
-        title="CAPEX project membership runtime",
+        invariant_id="capex.known_gap.project_child_apis_authorization_projections",
+        title="CAPEX project child APIs and authorization projections",
         gate_mode="known_gap",
-        task_refs=("TASK-0261", "TASK-0262", "TASK-0263", "TASK-0385", "TASK-0386", "TASK-0563"),
-        description="Tracked in CAPEX intake; future project-scope runtime remains blocked.",
+        task_refs=("TASK-0263", "TASK-0385", "TASK-0386", "TASK-0563"),
+        description="The durable project anchor and direct memberships exist, but project-scoped child APIs, authorization projections, selector UX, and activation remain blocked.",
     ),
     CapexInvariant(
         invariant_id="capex.known_gap.source_occurrence_sourceref",
@@ -430,7 +430,7 @@ def _check_platform_foundation_v0_source(repo_root: Path) -> AuditEvaluation:
         "CAPEX production activation and pilot readiness claims remain blocked",
         "Raw K12, K3, and blind-validation corpus files",
         "Release/deploy work",
-        "CAPEX project membership runtime remains blocked",
+        "CAPEX project child APIs, authorization projections",
         "Source occurrence and SourceRef runtime remain blocked",
         "external/operator-managed",
     )

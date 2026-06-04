@@ -37,7 +37,7 @@
 
 ## TASK-0233 closeout evidence
 - Imported CAPEX v6 planning source row count: 374 tasks, 270 gates, 222 risks, 23 open decisions.
-- Current-code blocker mappings recorded for approval domain coupling, artifact auth-before-read, CAPEX project access, and source occurrence/evidence.
+- Current-code blocker mappings recorded for approval domain coupling, artifact auth-before-read, remaining CAPEX project child APIs/authorization projections, and source occurrence/evidence.
 - Verification basis: CAPEX conversion check, repo validation, schema validation, focused planning/import checks, and `git diff --check`.
 
 ## TASK-0234 closeout evidence
@@ -235,7 +235,7 @@
 | File-backed notify-only manifests and shared-env late-report guard | `TASK-0249` | `src/onetruth/application/handlers/logistics_handoff.py`, `tests/runtime/test_logistics_handoff_runtime.py` |
 | Logistics reconciler dry-run report | `TASK-0252` | `src/onetruth/application/services/logistics_reconciler.py`, `src/onetruth/cli/__main__.py`, `tests/runtime/test_logistics_handoff_runtime.py` |
 | Operator home failure-state surface | `TASK-0253` | `src/onetruth/api/routes/operator_home.py`, `frontend/src/pages/OperatorHomePage.tsx`, `frontend/src/app/AppShell.tsx` |
-| CAPEX project membership runtime | `TASK-0261`..`TASK-0263`, `TASK-0385`, `TASK-0386`, `TASK-0563` | future CAPEX project scope runtime |
+| CAPEX project child APIs and authorization projections | `TASK-0263`, `TASK-0385`, `TASK-0386`, `TASK-0563` | future CAPEX project-scoped child APIs, authorization projections, selector UX, and activation |
 | Source occurrence / SourceRef | `TASK-0268`, `TASK-0391`, `TASK-0407`, `TASK-0428`, `TASK-0564` | future source occurrence and evidence resolver |
 
 ## Verification commands

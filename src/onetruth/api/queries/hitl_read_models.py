@@ -6,6 +6,11 @@ from typing import Any
 
 from onetruth.application.handlers._shared.command_boundary import CommandError
 from onetruth.application.read_commands import list_workflow_runs_command
+from onetruth.application.services.capex_project_access import (
+    filter_project_authorized_rows,
+    project_membership_filter_params,
+    project_membership_filter_sql,
+)
 from onetruth.api.dependencies import Page, RequestContext, scoped_workflow_run
 from onetruth.api.errors import api_error_from_command
 
@@ -15,6 +20,7 @@ def query_workflow_runs(
     *,
     context: RequestContext,
     workflow_id: str | None,
+    project_id: str | None,
     state: str | None,
     page: Page,
 ) -> list[dict[str, Any]]:
@@ -28,6 +34,14 @@ def query_workflow_runs(
         )
     except CommandError as exc:
         raise api_error_from_command(exc) from exc
+    rows = filter_project_authorized_rows(
+        connection,
+        rows=rows,
+        actor_type=context.actor_type,
+        actor_id=context.actor_id,
+    )
+    if project_id is not None:
+        rows = [row for row in rows if row.get("project_id") == project_id]
     return rows[page.offset : page.offset + page.limit]
 
 
@@ -76,8 +90,16 @@ def query_human_tasks(
         JOIN task_runs tr ON tr.task_run_id = ht.task_run_id
         JOIN workflow_runs wr ON wr.workflow_run_id = ht.workflow_run_id
         WHERE wr.tenant_id = ? AND wr.domain_id = ?
+          AND """ + project_membership_filter_sql(project_column="wr.project_id") + """
     """
-    params: list[Any] = [context.tenant_id, context.domain_id]
+    params: list[Any] = [
+        context.tenant_id,
+        context.domain_id,
+        *project_membership_filter_params(
+            actor_type=context.actor_type,
+            actor_id=context.actor_id,
+        ),
+    ]
 
     if workflow_run_id is not None:
         query += " AND ht.workflow_run_id = ?"
@@ -158,8 +180,16 @@ def query_approvals(
         FROM approvals ap
         JOIN workflow_runs wr ON wr.workflow_run_id = ap.workflow_run_id
         WHERE wr.tenant_id = ? AND wr.domain_id = ?
+          AND """ + project_membership_filter_sql(project_column="wr.project_id") + """
     """
-    params: list[Any] = [context.tenant_id, context.domain_id]
+    params: list[Any] = [
+        context.tenant_id,
+        context.domain_id,
+        *project_membership_filter_params(
+            actor_type=context.actor_type,
+            actor_id=context.actor_id,
+        ),
+    ]
 
     if workflow_run_id is not None:
         query += " AND ap.workflow_run_id = ?"
@@ -230,8 +260,16 @@ def query_flags(
         FROM flags f
         JOIN workflow_runs wr ON wr.workflow_run_id = f.workflow_run_id
         WHERE wr.tenant_id = ? AND wr.domain_id = ?
+          AND """ + project_membership_filter_sql(project_column="wr.project_id") + """
     """
-    params: list[Any] = [context.tenant_id, context.domain_id]
+    params: list[Any] = [
+        context.tenant_id,
+        context.domain_id,
+        *project_membership_filter_params(
+            actor_type=context.actor_type,
+            actor_id=context.actor_id,
+        ),
+    ]
 
     if workflow_run_id is not None:
         query += " AND f.workflow_run_id = ?"
@@ -325,9 +363,19 @@ def query_pointers(
             ap.generation,
             ap.updated_at
         FROM artifact_pointers ap
+        LEFT JOIN workflow_runs wr
+          ON wr.workflow_run_id = ap.workflow_run_id
         WHERE ap.tenant_id = ? AND ap.domain_id = ?
+          AND """ + project_membership_filter_sql(project_column="wr.project_id") + """
     """
-    params: list[Any] = [context.tenant_id, context.domain_id]
+    params: list[Any] = [
+        context.tenant_id,
+        context.domain_id,
+        *project_membership_filter_params(
+            actor_type=context.actor_type,
+            actor_id=context.actor_id,
+        ),
+    ]
 
     if pointer_id is not None:
         query += " AND ap.pointer_id = ?"

@@ -1,0 +1,44 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "capex.project.created",
+  "type": "object",
+  "required": [
+    "project_id",
+    "project_key",
+    "name",
+    "state",
+    "created_by_actor_id",
+    "created_by_actor_type"
+  ],
+  "properties": {
+    "project_id": {
+      "type": "string"
+    },
+    "project_key": {
+      "type": "string"
+    },
+    "name": {
+      "type": "string"
+    },
+    "state": {
+      "type": "string",
+      "enum": [
+        "active",
+        "archived"
+      ]
+    },
+    "created_by_actor_id": {
+      "type": "string"
+    },
+    "created_by_actor_type": {
+      "type": "string",
+      "enum": [
+        "human",
+        "agent",
+        "service",
+        "system"
+      ]
+    }
+  },
+  "additionalProperties": false
+}

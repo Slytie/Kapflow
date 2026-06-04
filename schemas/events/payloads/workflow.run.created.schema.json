@@ -11,6 +11,9 @@
     "workflow_id": {
       "type": "string"
     },
+    "project_id": {
+      "type": "string"
+    },
     "partition_key": {
       "type": "string"
     },

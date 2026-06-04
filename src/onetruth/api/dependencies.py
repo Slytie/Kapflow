@@ -7,6 +7,10 @@ from typing import Any, Callable, Literal, Mapping, Sequence
 
 from onetruth.application.handlers._shared.command_boundary import CommandError
 from onetruth.application.read_commands import show_workflow_run_command
+from onetruth.application.services.capex_project_access import (
+    PROJECT_VIEWER,
+    has_project_role,
+)
 from onetruth.infrastructure.db.session import DEFAULT_DB_URL, open_sqlite_connection
 
 from .errors import ApiError, api_error_from_command
@@ -200,6 +204,20 @@ def scoped_workflow_run(
     if (
         str(workflow_run["tenant_id"]) != context.tenant_id
         or str(workflow_run["domain_id"]) != context.domain_id
+    ):
+        raise ApiError(
+            status_code=404,
+            code="workflow_run_not_found",
+            message="workflow run not found",
+            details={"workflow_run_id": workflow_run_id},
+        )
+    project_id = workflow_run.get("project_id")
+    if project_id is not None and not has_project_role(
+        connection,
+        project_id=str(project_id),
+        actor_type=context.actor_type,
+        actor_id=context.actor_id,
+        min_role=PROJECT_VIEWER,
     ):
         raise ApiError(
             status_code=404,

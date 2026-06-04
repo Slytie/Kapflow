@@ -19,6 +19,7 @@ class TimelineEvent(Base):
     __tablename__ = "timeline_events"
     __table_args__ = (
         UniqueConstraint("idempotency_key", name="uq_timeline_events_idempotency_key"),
+        Index("ix_timeline_events_project_id", "project_id"),
     )
 
     sequence_no: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
@@ -30,6 +31,7 @@ class TimelineEvent(Base):
     tenant_id: Mapped[str] = mapped_column(String(128), nullable=False)
     domain_id: Mapped[str] = mapped_column(String(128), nullable=False)
     workflow_run_id: Mapped[Optional[str]] = mapped_column(String(128), nullable=True, index=True)
+    project_id: Mapped[Optional[str]] = mapped_column(String(128), nullable=True)
     actor: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False)
     links: Mapped[list[dict[str, Any]]] = mapped_column(JSON, nullable=False)
     payload: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False)
@@ -93,6 +95,84 @@ class CommandReceipt(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=utcnow)
 
 
+class CapexProject(Base):
+    __tablename__ = "capex_projects"
+    __table_args__ = (
+        UniqueConstraint(
+            "tenant_id",
+            "domain_id",
+            "project_key",
+            name="uq_capex_projects_scope_key",
+        ),
+        Index(
+            "ix_capex_projects_scope_lookup",
+            "tenant_id",
+            "domain_id",
+            "state",
+            "project_key",
+        ),
+    )
+
+    project_id: Mapped[str] = mapped_column(String(128), primary_key=True)
+    tenant_id: Mapped[str] = mapped_column(String(128), nullable=False)
+    domain_id: Mapped[str] = mapped_column(String(128), nullable=False)
+    project_key: Mapped[str] = mapped_column(String(128), nullable=False)
+    name: Mapped[str] = mapped_column(String(255), nullable=False)
+    state: Mapped[str] = mapped_column(String(32), nullable=False)
+    metadata_json: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False)
+    created_by_actor_id: Mapped[str] = mapped_column(String(128), nullable=False)
+    created_by_actor_type: Mapped[str] = mapped_column(String(32), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=utcnow)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        default=utcnow,
+        onupdate=utcnow,
+    )
+
+
+class ProjectMembership(Base):
+    __tablename__ = "project_memberships"
+    __table_args__ = (
+        UniqueConstraint(
+            "project_id",
+            "actor_type",
+            "actor_id",
+            name="uq_project_memberships_actor",
+        ),
+        Index(
+            "ix_project_memberships_actor_lookup",
+            "tenant_id",
+            "domain_id",
+            "actor_type",
+            "actor_id",
+            "state",
+        ),
+    )
+
+    project_membership_id: Mapped[str] = mapped_column(String(128), primary_key=True)
+    project_id: Mapped[str] = mapped_column(
+        String(128),
+        ForeignKey("capex_projects.project_id"),
+        nullable=False,
+    )
+    tenant_id: Mapped[str] = mapped_column(String(128), nullable=False)
+    domain_id: Mapped[str] = mapped_column(String(128), nullable=False)
+    actor_type: Mapped[str] = mapped_column(String(32), nullable=False)
+    actor_id: Mapped[str] = mapped_column(String(128), nullable=False)
+    role: Mapped[str] = mapped_column(String(64), nullable=False)
+    state: Mapped[str] = mapped_column(String(32), nullable=False)
+    granted_by_actor_id: Mapped[str] = mapped_column(String(128), nullable=False)
+    granted_by_actor_type: Mapped[str] = mapped_column(String(32), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=utcnow)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        default=utcnow,
+        onupdate=utcnow,
+    )
+
+
 class WorkflowRun(Base):
     __tablename__ = "workflow_runs"
     __table_args__ = (
@@ -104,9 +184,20 @@ class WorkflowRun(Base):
             "activation_key",
             name="uq_workflow_runs_activation_scope",
         ),
+        Index(
+            "ix_workflow_runs_project_scope",
+            "tenant_id",
+            "domain_id",
+            "project_id",
+        ),
     )
 
     workflow_run_id: Mapped[str] = mapped_column(String(128), primary_key=True)
+    project_id: Mapped[Optional[str]] = mapped_column(
+        String(128),
+        ForeignKey("capex_projects.project_id"),
+        nullable=True,
+    )
     workflow_id: Mapped[str] = mapped_column(String(128), nullable=False)
     workflow_version: Mapped[str] = mapped_column(String(64), nullable=False)
     tenant_id: Mapped[str] = mapped_column(String(128), nullable=False)

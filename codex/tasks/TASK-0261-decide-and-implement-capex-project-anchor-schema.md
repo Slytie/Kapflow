@@ -2,7 +2,8 @@
 id: TASK-0261
 epic: EPIC-140
 title: "Decide and implement CAPEX project anchor schema"
-status: TODO
+status: DONE
+completed_at: "2026-06-04T10:53:09+02:00"
 owners: ["platform"]
 reviewers: ["architect", "qa"]
 depends_on: ["TASK-0240", "TASK-0257"]
@@ -60,3 +61,7 @@ Create stable project_id distinct from workflow_run_id; workflows execute within
 
 ## Notes / decisions
 - Raw project corpora remain off-repo; use only sanitized fixtures, manifests, hashes, and aggregate evidence approved by the relevant fixture/governance task.
+- Closed by adding durable `capex_projects` runtime state, nullable `project_id` on `workflow_runs` and `timeline_events`, repository helpers, SQLAlchemy models, SQLite bootstrap DDL, and Alembic migration `20260604_0011`.
+- ADR-006 records that `capex_projects.project_id` is the durable CAPEX root and `workflow_run_id` is only an execution identity.
+- Project creation emits `capex.project.created`, stores project scope, and remains inactive for broader CAPEX runtime/product activation.
+- Evidence: `tests/unit/test_capex_project_access.py`, `tests/runtime/api/test_capex_project_access_api.py`, and `tests/integration/test_capex_project_schema_parity.py`.

@@ -16,6 +16,10 @@ from onetruth.application.read_commands import (
     show_flag_command,
     show_human_task_command,
 )
+from onetruth.application.services.capex_project_access import (
+    project_membership_filter_params,
+    project_membership_filter_sql,
+)
 from onetruth.infrastructure.artifacts.storage import (
     ArtifactIngressDescriptor,
     default_storage_root_for_db_url,
@@ -491,8 +495,16 @@ def query_artifacts_in_scope(
         JOIN workflow_runs wr
             ON wr.workflow_run_id = av.workflow_run_id
         WHERE wr.tenant_id = ? AND wr.domain_id = ?
+            AND """ + project_membership_filter_sql(project_column="wr.project_id") + """
     """
-    params: list[Any] = [context.tenant_id, context.domain_id]
+    params: list[Any] = [
+        context.tenant_id,
+        context.domain_id,
+        *project_membership_filter_params(
+            actor_type=context.actor_type,
+            actor_id=context.actor_id,
+        ),
+    ]
     if artifact_kind is not None:
         query += " AND av.artifact_kind = ?"
         params.append(artifact_kind)

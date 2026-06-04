@@ -1,4 +1,17 @@
 event_types:
+- id: capex.project.created
+  class: project
+  authoritative: true
+  required_links:
+  - capex_project
+  payload_schema: schemas/events/payloads/capex.project.created.schema.json
+- id: capex.project_membership.granted
+  class: project
+  authoritative: true
+  required_links:
+  - capex_project
+  - project_membership
+  payload_schema: schemas/events/payloads/capex.project_membership.granted.schema.json
 - id: workflow.run.created
   class: run
   authoritative: true

@@ -147,6 +147,6 @@ def test_capex_platform_foundation_v0_doc_records_branch_gate_and_blocked_scopes
     assert "CAPEX production activation and pilot readiness claims remain blocked" in text
     assert "Raw K12, K3, and blind-validation corpus files" in text
     assert "Release/deploy work" in text
-    assert "CAPEX project membership runtime remains blocked" in text
+    assert "CAPEX project child APIs, authorization projections" in text
     assert "Source occurrence and SourceRef runtime remain blocked" in text
     assert "external/operator-managed" in text

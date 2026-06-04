@@ -41,6 +41,7 @@ def create_sqlite_substrate(connection: sqlite3.Connection) -> None:
             tenant_id TEXT NOT NULL,
             domain_id TEXT NOT NULL,
             workflow_run_id TEXT,
+            project_id TEXT,
             actor TEXT NOT NULL,
             links TEXT NOT NULL,
             payload TEXT NOT NULL,
@@ -53,6 +54,8 @@ def create_sqlite_substrate(connection: sqlite3.Connection) -> None:
 
         CREATE INDEX IF NOT EXISTS ix_timeline_events_workflow_run_id
             ON timeline_events (workflow_run_id);
+        CREATE INDEX IF NOT EXISTS ix_timeline_events_project_id
+            ON timeline_events (project_id);
 
         CREATE TABLE IF NOT EXISTS consumer_cursors (
             consumer_name TEXT NOT NULL,
@@ -83,8 +86,47 @@ def create_sqlite_substrate(connection: sqlite3.Connection) -> None:
         CREATE INDEX IF NOT EXISTS ix_command_receipts_scope_lookup
             ON command_receipts (tenant_id, domain_id, command_name, scope_key);
 
+        CREATE TABLE IF NOT EXISTS capex_projects (
+            project_id TEXT PRIMARY KEY,
+            tenant_id TEXT NOT NULL,
+            domain_id TEXT NOT NULL,
+            project_key TEXT NOT NULL,
+            name TEXT NOT NULL,
+            state TEXT NOT NULL,
+            metadata_json TEXT NOT NULL,
+            created_by_actor_id TEXT NOT NULL,
+            created_by_actor_type TEXT NOT NULL,
+            created_at TEXT NOT NULL DEFAULT (datetime('now')),
+            updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+            UNIQUE (tenant_id, domain_id, project_key)
+        );
+
+        CREATE INDEX IF NOT EXISTS ix_capex_projects_scope_lookup
+            ON capex_projects (tenant_id, domain_id, state, project_key);
+
+        CREATE TABLE IF NOT EXISTS project_memberships (
+            project_membership_id TEXT PRIMARY KEY,
+            project_id TEXT NOT NULL,
+            tenant_id TEXT NOT NULL,
+            domain_id TEXT NOT NULL,
+            actor_type TEXT NOT NULL,
+            actor_id TEXT NOT NULL,
+            role TEXT NOT NULL,
+            state TEXT NOT NULL,
+            granted_by_actor_id TEXT NOT NULL,
+            granted_by_actor_type TEXT NOT NULL,
+            created_at TEXT NOT NULL DEFAULT (datetime('now')),
+            updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+            FOREIGN KEY (project_id) REFERENCES capex_projects(project_id),
+            UNIQUE (project_id, actor_type, actor_id)
+        );
+
+        CREATE INDEX IF NOT EXISTS ix_project_memberships_actor_lookup
+            ON project_memberships (tenant_id, domain_id, actor_type, actor_id, state);
+
         CREATE TABLE IF NOT EXISTS workflow_runs (
             workflow_run_id TEXT PRIMARY KEY,
+            project_id TEXT,
             workflow_id TEXT NOT NULL,
             workflow_version TEXT NOT NULL,
             tenant_id TEXT NOT NULL,
@@ -95,11 +137,14 @@ def create_sqlite_substrate(connection: sqlite3.Connection) -> None:
             state TEXT NOT NULL,
             created_at TEXT NOT NULL DEFAULT (datetime('now')),
             updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+            FOREIGN KEY (project_id) REFERENCES capex_projects(project_id),
             UNIQUE (tenant_id, domain_id, workflow_id, partition_key, activation_key)
         );
 
         CREATE INDEX IF NOT EXISTS ix_workflow_runs_scope_lookup
             ON workflow_runs (tenant_id, domain_id, workflow_id, partition_key);
+        CREATE INDEX IF NOT EXISTS ix_workflow_runs_project_scope
+            ON workflow_runs (tenant_id, domain_id, project_id);
 
         CREATE TABLE IF NOT EXISTS flags (
             flag_id TEXT PRIMARY KEY,
@@ -505,6 +550,7 @@ def append_event(connection: sqlite3.Connection, envelope: dict[str, Any]) -> st
         "tenant_id": envelope["tenant_id"],
         "domain_id": envelope["domain_id"],
         "workflow_run_id": _extract_workflow_run_id(envelope["links"]),
+        "project_id": _extract_project_id(connection, envelope["links"]),
         "actor": json.dumps(envelope["actor"], separators=(",", ":")),
         "links": json.dumps(envelope["links"], separators=(",", ":")),
         "payload": json.dumps(envelope["payload"], separators=(",", ":")),
@@ -529,6 +575,7 @@ def append_event(connection: sqlite3.Connection, envelope: dict[str, Any]) -> st
             tenant_id,
             domain_id,
             workflow_run_id,
+            project_id,
             actor,
             links,
             payload,
@@ -546,6 +593,7 @@ def append_event(connection: sqlite3.Connection, envelope: dict[str, Any]) -> st
             :tenant_id,
             :domain_id,
             :workflow_run_id,
+            :project_id,
             :actor,
             :links,
             :payload,
@@ -577,6 +625,7 @@ def list_events(
             recorded_at,
             tenant_id,
             domain_id,
+            project_id,
             actor,
             links,
             payload,
@@ -739,6 +788,34 @@ def _extract_workflow_run_id(links: Any) -> str | None:
     return None
 
 
+def _extract_project_id(connection: sqlite3.Connection, links: Any) -> str | None:
+    if not isinstance(links, list):
+        return None
+    workflow_run_id: str | None = None
+    for link in links:
+        if not isinstance(link, dict):
+            continue
+        link_type = link.get("type")
+        link_id = link.get("id")
+        if link_type == "capex_project" and isinstance(link_id, str):
+            return link_id
+        if link_type == "workflow_run" and isinstance(link_id, str):
+            workflow_run_id = link_id
+    if workflow_run_id is None:
+        return None
+    row = connection.execute(
+        """
+        SELECT project_id
+        FROM workflow_runs
+        WHERE workflow_run_id = ?
+        """,
+        (workflow_run_id,),
+    ).fetchone()
+    if row is None or row["project_id"] is None:
+        return None
+    return str(row["project_id"])
+
+
 def _require_required_fields(envelope: dict[str, Any]) -> None:
     required_fields = [
         "event_id",
@@ -851,6 +928,8 @@ def _row_to_envelope(row: sqlite3.Row) -> dict[str, Any]:
         envelope["causation_id"] = row["causation_id"]
     if row["idempotency_key"] is not None:
         envelope["idempotency_key"] = row["idempotency_key"]
+    if "project_id" in row.keys() and row["project_id"] is not None:
+        envelope["project_id"] = row["project_id"]
     if row["integrity"] is not None:
         envelope["integrity"] = json.loads(row["integrity"])
     return envelope

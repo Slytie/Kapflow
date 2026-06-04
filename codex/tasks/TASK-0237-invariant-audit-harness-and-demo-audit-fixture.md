@@ -64,7 +64,7 @@ Add invariant registry with gate_mode states; add fresh demo audit; hard-gate on
 ## Closeout evidence
 - Added a CAPEX invariant audit registry with `hard_gate`, `known_gap`, and `advisory` gate modes.
 - Initial hard gates cover PR001/PR002/PR003 repo safety posture: no active tracked `node_modules`, secretless/non-deploy Cloud Build PR validation, artifact root confinement/auth-before-read, and savepoint transaction composition.
-- Known gaps are reported without failing CI for approval side-effect coupling, CAPEX project membership runtime, source occurrence/SourceRef, and broader generated-artifact migration.
+- Known gaps are reported without failing CI for approval side-effect coupling, CAPEX project child APIs and authorization projections, source occurrence/SourceRef, and broader generated-artifact migration.
 - Added `scripts/run_capex_invariant_audit.py`; direct run on 2026-06-02 passed with 4 hard gates green and 4 known gaps recorded.
 - Focused audit tests passed with `python3.11 -m pytest -q tests/contract/test_capex_invariant_audit.py tests/unit/test_generated_artifact_helper.py`.
 - This closes `MP-PR004` as a repo platform-readiness gate only; it does not activate CAPEX production.

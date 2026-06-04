@@ -341,6 +341,7 @@ def _resolve_linked_runs(
         connection,
         context=context,
         workflow_id=workflow_ids["weekly"],
+        project_id=None,
         state=None,
         page=_SOURCE_PAGE,
     )
@@ -348,6 +349,7 @@ def _resolve_linked_runs(
         connection,
         context=context,
         workflow_id=workflow_ids["live"],
+        project_id=None,
         state=None,
         page=_SOURCE_PAGE,
     )
@@ -355,6 +357,7 @@ def _resolve_linked_runs(
         connection,
         context=context,
         workflow_id=workflow_ids["reporting"],
+        project_id=None,
         state=None,
         page=_SOURCE_PAGE,
     )
