@@ -365,6 +365,39 @@ Pointer row shape:
 - `generation`
 - `updated_at`
 
+### 3.8.1 CAPEX project official pointers
+Endpoint family:
+- `GET /api/v1/capex/projects/{project_id}/official-pointers`
+- `GET /api/v1/capex/projects/{project_id}/official-pointers/{pointer_family}`
+- `POST /api/v1/capex/projects/{project_id}/official-pointers/{pointer_family}/promote`
+
+Promotion payload:
+- required: `workflow_run_id`, `artifact_version_id`, `artifact_kind`, `idempotency_key`
+- optional: `expected_generation`, `approved_by_approval_id`, `promoted_by_task_run_id`, `promotion_reason`
+- server-derived: `project_id`, `pointer_family`, pointer scope/stream fields, actor identity
+
+Response:
+- list: `{"status":"ok","command":"api.capex.projects.official_pointers.list","project_id":"...","official_pointers":[...],"snapshots":[...],"page":...}`
+- detail: `{"status":"ok","command":"api.capex.projects.official_pointers.detail","project_id":"...","pointer_family":"...","pointer":{...},"snapshot":{...}}`
+- promote: `{"status":"ok","command":"api.capex.projects.official_pointers.promote","project_id":"...","pointer_family":"...","pointer":{...},"snapshot":{...},"idempotent_replay":false,"receipt":{...}}`
+
+Project official pointer rows are canonical pointer rows plus derived `project_id` and `pointer_family`.
+
+Snapshot shape:
+- `project_id`
+- `pointer_family`
+- `pointer_id`
+- `artifact_version_id`
+- `artifact_kind`
+- `generation`
+- `updated_at`
+
+Semantics:
+- reads require project viewer membership,
+- promotion requires contributor/admin membership,
+- promoted workflow-run, artifact, optional approval evidence, and optional task evidence must belong to the path project,
+- approval responses, approved approvals, and latest artifact rows never move official pointers by themselves.
+
 ### 3.9 Schedule-planning board aggregate
 Endpoint:
 - `GET /api/v1/board/schedule-planning`

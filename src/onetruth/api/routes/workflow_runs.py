@@ -11,7 +11,6 @@ from onetruth.application.handlers.logistics_handoff import (
 from onetruth.application.handlers.approvals import (
     list_approvals_for_workflow_run_command,
 )
-from onetruth.application.handlers.capex_projects import show_capex_project_command
 from onetruth.application.read_commands import (
     list_artifacts_for_workflow_run_command,
     list_flags_for_workflow_run_command,
@@ -60,6 +59,7 @@ from onetruth.api.dependencies import (
 )
 from onetruth.api.queries import query_workflow_runs
 from onetruth.api.errors import api_error_from_command
+from onetruth.api.project_scope import require_project_viewer
 
 ACTIVE_FLAG_STATES = {"open", "triage", "blocked"}
 WORKSPACE_RELEVANT_FLAG_ROLES = {
@@ -98,17 +98,7 @@ def list_workflow_runs_endpoint(
         page=page,
     )
     if project_id is not None:
-        try:
-            show_capex_project_command(
-                connection,
-                project_id=project_id,
-                tenant_id=context.tenant_id,
-                domain_id=context.domain_id,
-                actor_type=context.actor_type,
-                actor_id=context.actor_id,
-            )
-        except CommandError as exc:
-            raise api_error_from_command(exc) from exc
+        require_project_viewer(connection, context=context, project_id=project_id)
     return {
         "command": "api.workflow_runs.list",
         "workflow_runs": rows,

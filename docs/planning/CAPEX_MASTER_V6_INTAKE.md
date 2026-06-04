@@ -37,7 +37,7 @@
 
 ## TASK-0233 closeout evidence
 - Imported CAPEX v6 planning source row count: 374 tasks, 270 gates, 222 risks, 23 open decisions.
-- Current-code blocker mappings recorded for approval domain coupling, artifact auth-before-read, CAPEX project child APIs/authorization projections, and source occurrence/evidence; the first project child API and selector/dashboard slice is now closed, while authorization projections and later governance remain blocked.
+- Current-code blocker mappings recorded for approval domain coupling, artifact auth-before-read, CAPEX project child APIs/authorization projections, and source occurrence/evidence; the first project child API, selector/dashboard, project-scope helper, and official pointer-family substrate slices are now closed, while authorization projections, pointer-promotion policy checks, and later governance remain blocked.
 - Verification basis: CAPEX conversion check, repo validation, schema validation, focused planning/import checks, and `git diff --check`.
 
 ## TASK-0234 closeout evidence
@@ -212,6 +212,19 @@
 - Focused approval-hook evidence passed again on 2026-06-03; no new approval handler behavior was added.
 - Closeout posture: `NU-CB-P0-001` is closed as imported duplicate reconciliation only; this is not new CAPEX approval semantics, product activation, or deployment approval.
 
+## TASK-0371 closeout evidence
+- Added `onetruth.api.project_scope` to centralize project viewer resolution, caller role lookup, not-found project denial, project query decoration, project row stamping, path child parsing, optional workflow-run query checks, and workflow-run-in-project assertions.
+- Refactored project child routes, broad workflow-run project filtering, artifact/timeline optional project checks, and dashboard counts to use the shared helper without changing project child API payloads or command names.
+- Evidence: project-scope helper unit tests, CAPEX project child/access API regressions, route-registry tests, and route-layer boundary contracts passed on 2026-06-04.
+- Closeout posture: `RF-003` is closed as source-of-truth hardening for project-scope APIs only; this is not CAPEX runtime activation, authorization projections, raw-corpus use, or richer workpage expansion.
+
+## TASK-0265 closeout evidence
+- Added CAPEX project official pointer family support on top of the existing canonical `artifact_pointers` promotion substrate, with no pointer ID format change and no migration.
+- `project_id + pointer_family` maps to `scope_kind=capex_project`, `scope_ref={project_id}`, `pointer_key=official:{pointer_family}`, and `stream_key=capex-project:{project_id}:pointer-family:{pointer_family}` while reusing existing generation/CAS semantics.
+- Officialness changes only through explicit promotion after project membership and project child-ownership checks; approval responses, approved approvals, and latest artifact rows do not move project official pointers by themselves.
+- Evidence: official pointer family unit tests, project official pointer API tests, generic pointer-list regression, route-registry tests, and route-layer boundary contracts passed on 2026-06-04.
+- Closeout posture: `PROJ-005` is closed as project official-pointer-family substrate only; pointer promotion request/policy checks, authorization projections, raw-corpus governance, richer CAPEX workpages, and activation remain later gated scope.
+
 ## Current-code blocker mappings
 | Blocker | CAPEX task refs | Current repo surface |
 |---|---|---|
@@ -235,7 +248,7 @@
 | File-backed notify-only manifests and shared-env late-report guard | `TASK-0249` | `src/onetruth/application/handlers/logistics_handoff.py`, `tests/runtime/test_logistics_handoff_runtime.py` |
 | Logistics reconciler dry-run report | `TASK-0252` | `src/onetruth/application/services/logistics_reconciler.py`, `src/onetruth/cli/__main__.py`, `tests/runtime/test_logistics_handoff_runtime.py` |
 | Operator home failure-state surface | `TASK-0253` | `src/onetruth/api/routes/operator_home.py`, `frontend/src/pages/OperatorHomePage.tsx`, `frontend/src/app/AppShell.tsx` |
-| CAPEX project child APIs and authorization projections | `TASK-0263`, `TASK-0385`, `TASK-0386`, `TASK-0563` | first project child APIs and selector/dashboard slice closed in `TASK-0263`/`TASK-0264`; future authorization projections, official pointer families, source governance, and activation remain blocked |
+| CAPEX project child APIs and authorization projections | `TASK-0263`, `TASK-0371`, `TASK-0265`, `TASK-0385`, `TASK-0386`, `TASK-0563` | first project child APIs, selector/dashboard, project-scope helper, and official pointer-family substrate closed in `TASK-0263`/`TASK-0264`/`TASK-0371`/`TASK-0265`; future authorization projections, pointer-promotion policy checks, source governance, and activation remain blocked |
 | Source occurrence / SourceRef | `TASK-0268`, `TASK-0391`, `TASK-0407`, `TASK-0428`, `TASK-0564` | future source occurrence and evidence resolver |
 
 ## Verification commands

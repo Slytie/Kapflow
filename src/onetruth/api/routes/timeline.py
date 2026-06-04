@@ -9,6 +9,8 @@ from onetruth.application.services.capex_project_access import (
     project_membership_filter_sql,
 )
 from onetruth.api.dependencies import Page, RequestContext, scoped_workflow_run
+from onetruth.api.errors import ApiError
+from onetruth.api.project_scope import assert_workflow_run_row_project
 
 
 def list_timeline_events_endpoint(
@@ -23,12 +25,22 @@ def list_timeline_events_endpoint(
     if workflow_run_id is not None:
         workflow_run = scoped_workflow_run(connection, context, workflow_run_id)
     project_id = query.get("project_id")
-    if workflow_run is not None and project_id is not None and workflow_run.get("project_id") != project_id:
-        return {
-            "command": "api.timeline_events.list",
-            "events": [],
-            "page": {"limit": page.limit, "offset": page.offset},
-        }
+    if workflow_run is not None and project_id is not None:
+        try:
+            assert_workflow_run_row_project(
+                workflow_run,
+                project_id=project_id,
+                not_found_code="workflow_run_not_found",
+                details={"workflow_run_id": workflow_run_id},
+            )
+        except ApiError as exc:
+            if exc.code != "workflow_run_not_found":
+                raise
+            return {
+                "command": "api.timeline_events.list",
+                "events": [],
+                "page": {"limit": page.limit, "offset": page.offset},
+            }
     event_type = query.get("event_type")
     rows = query_timeline_events(
         connection,

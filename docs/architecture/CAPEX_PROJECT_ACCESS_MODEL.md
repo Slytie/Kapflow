@@ -4,9 +4,9 @@
 Accepted foundation, inactive CAPEX runtime.
 
 ## Scope
-This document records the narrow EPIC-140 foundation implemented by `TASK-0261` through `TASK-0264`.
+This document records the narrow EPIC-140 foundation implemented by `TASK-0261` through `TASK-0265` plus `TASK-0371`.
 
-It does not activate CAPEX production-like runtime behavior, raw corpus use, authorization projections, official project pointer families, richer CAPEX workpages, or production dashboards.
+It does not activate CAPEX production-like runtime behavior, raw corpus use, authorization projections, richer CAPEX workpages, or production dashboards.
 
 ## Project Anchor
 `capex_projects.project_id` is the durable project identity.
@@ -84,6 +84,27 @@ Artifact, pointer, and timeline routes:
 
 Every project child read first requires project viewer membership, then verifies that the child row belongs to the path project before delegating to the existing handler. Missing projects, non-members, missing children, and project mismatches use not-found style denial to avoid existence leaks.
 
+## Project Official Pointer Families
+Project-scoped official pointer families live below `/api/v1/capex/projects/{project_id}`:
+- `GET /official-pointers`
+- `GET /official-pointers/{pointer_family}`
+- `POST /official-pointers/{pointer_family}/promote`
+
+These routes are project policy around the canonical `artifact_pointers` substrate. They do not add a new pointer table, change pointer ID format, or mutate immutable artifacts.
+
+Derived pointer fields:
+- `scope_kind=capex_project`
+- `scope_ref={project_id}`
+- `pointer_key=official:{pointer_family}`
+- `stream_key=capex-project:{project_id}:pointer-family:{pointer_family}`
+- existing pointer `generation` tracks compare-and-set promotion order
+
+Reads require project viewer membership. Promotion requires contributor/admin membership, explicit `workflow_run_id`, `artifact_version_id`, `artifact_kind`, and `idempotency_key`, and validates that workflow-run, artifact, optional approval evidence, and optional task evidence belong to the path project before delegating to canonical pointer promotion.
+
+Approval responses, approved approvals, and latest artifact versions do not move project official pointers by themselves. Officialness changes only through explicit pointer promotion.
+
+Route responses return the canonical pointer row plus derived `project_id` and `pointer_family`, and include a snapshot with `project_id`, `pointer_family`, `pointer_id`, `artifact_version_id`, `artifact_kind`, `generation`, and `updated_at`.
+
 ## Dashboard and Selector
 `GET /api/v1/capex/projects/{project_id}/dashboard` returns a derived, non-authoritative dashboard projection:
 - `project` and `caller_role`
@@ -112,6 +133,5 @@ This tranche adds no new database migration. Project child route filtering uses:
 ## Future Work
 Later EPIC-140 tasks own:
 - authorization projections and policy dependency expansion
-- project-scoped official pointer families
 - richer CAPEX workpages/projections and production dashboard posture
 - CAPEX runtime activation, raw-corpus governance, and production gates

@@ -50,7 +50,21 @@ Rules:
 - Stage07 official major replan promotion requires approved Stage07 approval evidence.
 - Operative live-day schedule is reconstructed from base + ordered official deltas.
 
-## 6) Lineage expectations for deltas
+## 6) CAPEX project official pointer families
+
+CAPEX project official pointer families are policy over the same canonical pointer substrate.
+
+For each project family:
+- project identity lives in `scope_kind=capex_project` and `scope_ref={project_id}`,
+- the family lives in `pointer_key=official:{pointer_family}`,
+- the ordered stream is `stream_key=capex-project:{project_id}:pointer-family:{pointer_family}`,
+- generation and compare-and-set semantics are the same as other pointer streams.
+
+Promotion requires explicit pointer movement through the CAPEX project official pointer service. Latest artifacts, approval responses, and approved approvals are evidence only; they do not move official project pointers by themselves.
+
+Project-family promotion validates project membership and verifies that workflow-run, artifact, optional approval evidence, and optional task evidence belong to the path project before delegating to canonical pointer promotion. Existing logistics and no-project pointer behavior remains unchanged.
+
+## 7) Lineage expectations for deltas
 
 Stage07 delta artifacts must carry explicit lineage:
 - `supersedes_artifact_version_id` for semantic replacement chain,
@@ -58,7 +72,7 @@ Stage07 delta artifacts must carry explicit lineage:
 
 Lineage and promotion events together must be sufficient to reconstruct order and investigate anomalies.
 
-## 7) Idempotency expectations
+## 8) Idempotency expectations
 
 Promotion commands require idempotency keys.
 
@@ -67,7 +81,7 @@ Required behavior:
 - same-target retries stay non-duplicating,
 - race losers fail closed and must retry against latest generation.
 
-## 8) Minimum promotion event payloads
+## 9) Minimum promotion event payloads
 
 Promotion-related events must carry enough data for reconstruction/audit:
 - canonical pointer ID (`PointerId`)

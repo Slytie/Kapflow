@@ -12,7 +12,7 @@ Record any decisions made since the last session so a fresh Codex run can rehydr
 - Event-scope decision: `timeline_events.project_id` is nullable and derived from explicit `capex_project` event links or linked project-bound workflow runs so broad timeline reads can enforce project visibility.
 - Membership decision: `TASK-0262` adds direct `project_memberships` with roles `project_viewer`, `project_contributor`, and `project_admin`; direct membership is separate from later authorization projections.
 - API decision: the minimal CAPEX project API surface supports project list/create/detail, admin-only membership list/grant, and project-bound workflow-run creation while preserving existing no-project logistics/runtime behavior.
-- Boundary decision: project-bound workflow runs and shared read-model rows are hidden from same-tenant non-members; subsequent EPIC-140 work closes the first child-route and selector/dashboard slice, while authorization projections, official pointer families, richer CAPEX workpages, and CAPEX activation remain separate.
+- Boundary decision: project-bound workflow runs and shared read-model rows are hidden from same-tenant non-members; subsequent EPIC-140 work closes the first child-route, selector/dashboard, project-scope helper, and official pointer-family slices, while authorization projections, richer CAPEX workpages, and CAPEX activation remain separate.
 
 ## 2026-06-04 (EPIC-140 project child APIs and selector/dashboard)
 - Child-route decision: `TASK-0263` adds project-scoped child routes under `/api/v1/capex/projects/{project_id}` that reuse existing global row shapes and command handlers while adding project-scoped command names and `project_id` to project-route rows.
@@ -20,6 +20,13 @@ Record any decisions made since the last session so a fresh Codex run can rehydr
 - Dashboard decision: `TASK-0264` adds `GET /api/v1/capex/projects/{project_id}/dashboard` as a derived, non-authoritative projection over canonical workflow/task/approval/flag/artifact/pointer/timeline state with `caller_role`, counts, and small excerpts.
 - UX decision: `/capex/projects` and `/capex/projects/:projectId` show up to five active assigned projects, display caller role, and link to existing run/work/task queues without root redirects, logistics route changes, raw-corpus use, or CAPEX runtime/product activation.
 - Index decision: this tranche does not add a migration; project-route filtering relies on the existing `workflow_runs.project_id`, `timeline_events.project_id`, and child `workflow_run_id` index coverage, with schema parity tests recording that evidence.
+
+## 2026-06-04 (EPIC-140 project helper and official pointer families)
+- Helper decision: `TASK-0371` centralizes project viewer resolution, caller role lookup, not-found project denial, project query decoration, project row stamping, and workflow-run-in-project assertions in `onetruth.api.project_scope`; project child routes and shared optional project checks use that helper without changing payloads or command names.
+- Pointer-family decision: `TASK-0265` adds CAPEX project official pointer families as policy around the existing `artifact_pointers` substrate: `project_id + pointer_family` maps to `scope_kind=capex_project`, `scope_ref={project_id}`, `pointer_key=official:{pointer_family}`, and `stream_key=capex-project:{project_id}:pointer-family:{pointer_family}`.
+- Generation decision: CAPEX project official pointers reuse existing pointer generation and compare-and-set behavior; first promotion creates generation `0`, repoints require `expected_generation`, and the canonical pointer ID format is unchanged.
+- Officialness decision: latest artifacts, approval responses, and approved approvals do not move project official pointers by themselves; officialness changes only through explicit promotion after project membership and child ownership checks pass.
+- Activation decision: these slices do not activate CAPEX runtime/product behavior, raw-corpus use, authorization projections, richer CAPEX workpages, release/deploy work, or production dashboards.
 
 ## 2026-06-03 (CAPEX RF-002/NU-CB-P0-001 descriptor registry and approval duplicate closeout)
 - Descriptor-boundary decision: `TASK-0370` moves active logistics workpage descriptor registrations behind `WorkpageDescriptorRegistry`; the existing descriptor lookup helpers remain compatibility facades and public workpage routes/actions stay unchanged.

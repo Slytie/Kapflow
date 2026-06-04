@@ -225,7 +225,7 @@ Note: `TASK-0087` / `TASK-0088` / `TASK-0089` were formerly duplicated as `TASK-
 | TASK-0262 | EPIC-140 | DONE | high | Implement project_membership and project roles |
 | TASK-0263 | EPIC-140 | DONE | high | Project-scoped artifact/task/flag/approval/pointer APIs |
 | TASK-0264 | EPIC-140 | DONE | medium | Project selector/dashboard for max-five active projects per user |
-| TASK-0265 | EPIC-140 | TODO | high | Project-scoped official pointer families |
+| TASK-0265 | EPIC-140 | DONE | high | Project-scoped official pointer families |
 | TASK-0266 | EPIC-141 | TODO | high | Design bulk/staged corpus ingest architecture |
 | TASK-0267 | EPIC-141 | TODO | high | Implement digest, dedupe and source inventory pipeline |
 | TASK-0268 | EPIC-141 | TODO | high | Implement source occurrence register |
@@ -331,7 +331,7 @@ Note: `TASK-0087` / `TASK-0088` / `TASK-0089` were formerly duplicated as `TASK-
 | TASK-0368 | EPIC-149 | TODO | medium | P12 phase closeout evidence |
 | TASK-0369 | EPIC-139 | DONE | high | Approval side-effect extraction |
 | TASK-0370 | EPIC-139 | DONE | medium | Domain workpage descriptor registry |
-| TASK-0371 | EPIC-140 | TODO | high | Project-scope query helper |
+| TASK-0371 | EPIC-140 | DONE | high | Project-scope query helper |
 | TASK-0372 | EPIC-141 | TODO | high | Artifact list pagination adapter |
 | TASK-0373 | EPIC-141 | TODO | high | Batch relation hydration |
 | TASK-0374 | EPIC-141 | TODO | high | Bulk ingest adapter seam |

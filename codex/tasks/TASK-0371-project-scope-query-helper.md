@@ -2,7 +2,8 @@
 id: TASK-0371
 epic: EPIC-140
 title: "Project-scope query helper"
-status: TODO
+status: DONE
+completed_at: "2026-06-04T15:18:22+02:00"
 owners: ["platform"]
 reviewers: ["architect", "qa"]
 depends_on: []
@@ -61,3 +62,7 @@ Create shared project membership resolver and project-scoped query helper.
 
 ## Notes / decisions
 - Raw project corpora remain off-repo; use only sanitized fixtures, manifests, hashes, and aggregate evidence approved by the relevant fixture/governance task.
+- Closed by adding `onetruth.api.project_scope` as the shared project-scope helper layer for API wrappers.
+- The helper centralizes project viewer resolution, caller role lookup, not-found style project denial, project query decoration, project row stamping, path child parsing, optional workflow-run query checks, and workflow-run-in-project assertions.
+- Refactored project child routes, broad workflow-run project filtering, artifact/timeline optional project checks, and dashboard counts to use the shared helper while preserving existing project child API payloads and command names.
+- Evidence: `tests/unit/test_capex_project_scope_query_helper.py`, `tests/runtime/api/test_capex_project_child_apis.py`, `tests/runtime/api/test_capex_project_access_api.py`, `tests/unit/test_api_route_registry.py`, and route-layer boundary contracts.

@@ -42,6 +42,11 @@ from onetruth.api.project_children import (
     upload_project_human_task_artifact_endpoint,
     upload_project_workflow_run_artifact_endpoint,
 )
+from onetruth.api.project_official_pointers import (
+    get_project_official_pointer_endpoint,
+    list_project_official_pointers_endpoint,
+    promote_project_official_pointer_endpoint,
+)
 from onetruth.api.route_specs._core import (
     JSON_COMMAND_BODY,
     JSON_ARTIFACT_BODY,
@@ -127,6 +132,59 @@ CAPEX_PROJECT_ROUTE_SPECS: tuple[RouteSpec, ...] = (
             context=execution.context,
             project_id=params["project_id"],
             payload=_require_payload(execution.payload),
+        ),
+    ),
+    RouteSpec(
+        name="capex.projects.official_pointers.list",
+        method="GET",
+        pattern=_param(
+            "/api/v1/capex/projects/",
+            param_name="project_id",
+            suffix="/official-pointers",
+        ),
+        body_policy=NO_BODY,
+        needs_page=True,
+        dispatch=lambda execution, params: list_project_official_pointers_endpoint(
+            execution.connection,
+            context=execution.context,
+            project_id=params["project_id"],
+            page=_require_page(execution.page),
+        ),
+    ),
+    RouteSpec(
+        name="capex.projects.official_pointers.promote",
+        method="POST",
+        pattern=_param(
+            "/api/v1/capex/projects/",
+            param_name="project_pointer_family",
+            suffix="/promote",
+            allow_slash=True,
+            required_substring="/official-pointers/",
+        ),
+        body_policy=JSON_COMMAND_BODY,
+        needs_page=False,
+        dispatch=lambda execution, params: promote_project_official_pointer_endpoint(
+            execution.connection,
+            context=execution.context,
+            project_pointer_family=params["project_pointer_family"],
+            payload=_require_payload(execution.payload),
+        ),
+    ),
+    RouteSpec(
+        name="capex.projects.official_pointers.detail",
+        method="GET",
+        pattern=_param(
+            "/api/v1/capex/projects/",
+            param_name="project_pointer_family",
+            allow_slash=True,
+            required_substring="/official-pointers/",
+        ),
+        body_policy=NO_BODY,
+        needs_page=False,
+        dispatch=lambda execution, params: get_project_official_pointer_endpoint(
+            execution.connection,
+            context=execution.context,
+            project_pointer_family=params["project_pointer_family"],
         ),
     ),
     RouteSpec(

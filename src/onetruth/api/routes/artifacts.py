@@ -31,6 +31,7 @@ from onetruth.infrastructure.repositories.artifact_links import list_artifact_li
 
 from onetruth.api.dependencies import BoundaryProfile, Page, RequestContext, scoped_workflow_run
 from onetruth.api.errors import ApiError, api_error_from_command, api_error_from_duplicate_idempotency
+from onetruth.api.project_scope import assert_workflow_run_row_project
 from onetruth.api.responses import BinaryResponse, sanitize_download_filename
 
 
@@ -56,7 +57,7 @@ def list_artifacts_endpoint(
                 )
             )
         workflow_run = scoped_workflow_run(connection, context, workflow_run_id)
-        _assert_optional_project_match(
+        assert_workflow_run_row_project(
             workflow_run,
             project_id=query.get("project_id"),
             not_found_code="workflow_run_not_found",
@@ -70,7 +71,7 @@ def list_artifacts_endpoint(
         )
     elif workflow_run_id is not None:
         workflow_run = scoped_workflow_run(connection, context, workflow_run_id)
-        _assert_optional_project_match(
+        assert_workflow_run_row_project(
             workflow_run,
             project_id=query.get("project_id"),
             not_found_code="workflow_run_not_found",
@@ -641,23 +642,4 @@ def _shared_http_request_bytes_descriptor(
 
     return ArtifactIngressDescriptor.request_bytes(
         content_base64=str(content_base64)
-    )
-
-
-def _assert_optional_project_match(
-    workflow_run: dict[str, Any],
-    *,
-    project_id: str | None,
-    not_found_code: str,
-    details: dict[str, Any],
-) -> None:
-    if project_id is None:
-        return
-    if workflow_run.get("project_id") == project_id:
-        return
-    raise ApiError(
-        status_code=404,
-        code=not_found_code,
-        message="resource not found",
-        details=details,
     )

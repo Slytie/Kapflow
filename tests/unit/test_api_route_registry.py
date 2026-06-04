@@ -46,6 +46,9 @@ def test_route_registry_preserves_exact_global_route_order() -> None:
         "capex.projects.memberships.list",
         "capex.projects.dashboard",
         "capex.projects.memberships.grant",
+        "capex.projects.official_pointers.list",
+        "capex.projects.official_pointers.promote",
+        "capex.projects.official_pointers.detail",
         "capex.projects.workflow_runs.list",
         "capex.projects.workflow_runs.create",
         "capex.projects.workflow_runs.artifacts.list",
@@ -144,6 +147,43 @@ def test_route_registry_matches_representative_exact_and_parameterized_routes() 
     assert capex_dashboard_match is not None
     assert capex_dashboard_match.route.name == "capex.projects.dashboard"
     assert capex_dashboard_match.params == {"project_id": "cp-001"}
+
+    capex_official_pointer_list_match = match_route(
+        "GET",
+        "/api/v1/capex/projects/cp-001/official-pointers",
+    )
+    assert capex_official_pointer_list_match is not None
+    assert (
+        capex_official_pointer_list_match.route.name
+        == "capex.projects.official_pointers.list"
+    )
+    assert capex_official_pointer_list_match.params == {"project_id": "cp-001"}
+
+    capex_official_pointer_promote_match = match_route(
+        "POST",
+        "/api/v1/capex/projects/cp-001/official-pointers/current-schedule/promote",
+    )
+    assert capex_official_pointer_promote_match is not None
+    assert (
+        capex_official_pointer_promote_match.route.name
+        == "capex.projects.official_pointers.promote"
+    )
+    assert capex_official_pointer_promote_match.params == {
+        "project_pointer_family": "cp-001/official-pointers/current-schedule"
+    }
+
+    capex_official_pointer_detail_match = match_route(
+        "GET",
+        "/api/v1/capex/projects/cp-001/official-pointers/current-schedule",
+    )
+    assert capex_official_pointer_detail_match is not None
+    assert (
+        capex_official_pointer_detail_match.route.name
+        == "capex.projects.official_pointers.detail"
+    )
+    assert capex_official_pointer_detail_match.params == {
+        "project_pointer_family": "cp-001/official-pointers/current-schedule"
+    }
 
     capex_task_match = match_route(
         "POST",

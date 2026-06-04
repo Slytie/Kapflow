@@ -47,7 +47,7 @@
     },
     "EPIC-140": {
       "displayStatus": "blocked",
-      "reviewPosture": "Project-scoped APIs now include the first project child-route and selector/dashboard slice; authorization projections, project-scoped official selections, raw-corpus governance dependencies, and CAPEX activation are still gating work."
+      "reviewPosture": "Project-scoped APIs now include the first project child-route, selector/dashboard, shared project-scope helper, and official pointer-family slices; authorization projections, pointer-promotion policy checks, raw-corpus governance dependencies, and CAPEX activation are still gating work."
     },
     "EPIC-144": {
       "displayStatus": "blocked",
@@ -70,7 +70,7 @@
     },
     "TASK-0280": {
       "displayStatus": "needs_review",
-      "statusReason": "Needs fresh check because project-scoped official selection behavior is still gated."
+      "statusReason": "Needs fresh check because project-scoped official pointer families are now present, while promotion request and policy checks remain later scope."
     },
     "TASK-0291": {
       "displayStatus": "needs_review",
