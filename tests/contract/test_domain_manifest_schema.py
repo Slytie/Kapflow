@@ -86,7 +86,7 @@ def test_capex_domain_manifest_validates_under_domain_manifest_schema() -> None:
     assert len(manifest.workpages) == 0
     assert len(manifest.side_effects) == 0
     assert len(manifest.readiness_prerequisites) == 6
-    assert len(manifest.disabled_capabilities) == 6
+    assert len(manifest.disabled_capabilities) == 5
 
 
 def test_logistics_domain_manifest_has_no_raw_corpus_paths_or_content() -> None:

@@ -4,7 +4,7 @@
 - Status: `DECLARED_FOR_REPO_PLATFORM_READINESS`
 - Declaration date: `2026-06-02`
 - Scope: CAPEX `PR000` through `PR007` platform-readiness gates are closed for repo engineering runtime work.
-- This declaration is not CAPEX production activation, pilot approval, release/deploy approval, raw-corpus approval, authorization-projection approval, pointer-promotion policy approval, or richer CAPEX workpage approval.
+- This declaration is not CAPEX production activation, pilot approval, release/deploy approval, raw-corpus approval, pointer-promotion policy approval, or richer CAPEX workpage approval.
 
 ## PR000-PR007 Evidence Matrix
 | Gate | Repo task | Status | Evidence |
@@ -30,7 +30,7 @@
 - CAPEX production activation and pilot readiness claims remain blocked.
 - Raw K12, K3, and blind-validation corpus files, extracted filenames, screenshots, embedded text, OCR, and search output remain off-repo and out of CI.
 - Release/deploy work, production secrets, production DB URLs, and production artifact-root mutation remain out of scope.
-- CAPEX project child APIs, authorization projections, storage custody gates, domain manifests, and Wave 1 closeout evidence: the first project child API, selector/dashboard, project-scope helper, official pointer-family substrate, neutral domain-runtime skeleton, ready logistics manifest inventory, CAPEX incubation manifest, approval-effect registry shadow parity, project authorization CED, `AuthorizedProjectsQuery` prototype, storage/blob custody CED, pilot storage gate checklist, W1 code pattern register, and W1 closeout review slices are closed, while physical authorization projection runtime state, pointer-promotion policy checks, real pilot storage evidence or waiver, richer CAPEX workpages/projections, raw-corpus governance dependencies, and runtime activation remain blocked until later project/access and governance tasks close.
+- CAPEX project child APIs, authorization projections, storage custody gates, domain manifests, and Wave 1 closeout evidence: the first project child API, selector/dashboard, project-scope helper, official pointer-family substrate, neutral domain-runtime skeleton, ready logistics manifest inventory, CAPEX incubation manifest, approval-effect registry shadow parity, project authorization CED, projection-backed `AuthorizedProjectsQuery`, rebuildable authorization projection runtime state, storage/blob custody CED, pilot storage gate checklist, W1 code pattern register, and W1 closeout review slices are closed. Pointer-promotion policy checks, real pilot storage evidence or waiver, richer CAPEX workpages/projections, raw-corpus governance dependencies, and runtime activation remain blocked until later governance tasks close.
 - Source occurrence and SourceRef runtime remain blocked until corpus/evidence resolver tasks close.
 - Hosted branch-protection settings remain external/operator-managed; this repo records expected posture but does not claim hosted settings are configured.
 

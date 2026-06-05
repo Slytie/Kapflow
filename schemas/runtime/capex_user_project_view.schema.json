@@ -1,0 +1,95 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "CapexUserProjectView",
+  "type": "object",
+  "required": [
+    "user_project_view_id",
+    "tenant_id",
+    "domain_id",
+    "actor_type",
+    "actor_id",
+    "project_id",
+    "project_key",
+    "name",
+    "project_state",
+    "metadata_json",
+    "created_by_actor_id",
+    "created_by_actor_type",
+    "project_created_at",
+    "project_updated_at",
+    "caller_role",
+    "authorization_state",
+    "source_authorization_id",
+    "created_at",
+    "updated_at"
+  ],
+  "properties": {
+    "user_project_view_id": {
+      "type": "string"
+    },
+    "tenant_id": {
+      "type": "string"
+    },
+    "domain_id": {
+      "type": "string"
+    },
+    "actor_type": {
+      "type": "string",
+      "enum": ["human", "agent", "service", "system"]
+    },
+    "actor_id": {
+      "type": "string"
+    },
+    "project_id": {
+      "type": "string"
+    },
+    "project_key": {
+      "type": "string"
+    },
+    "name": {
+      "type": "string"
+    },
+    "project_state": {
+      "type": "string",
+      "enum": ["active", "archived"]
+    },
+    "metadata_json": {
+      "type": "object"
+    },
+    "created_by_actor_id": {
+      "type": "string"
+    },
+    "created_by_actor_type": {
+      "type": "string",
+      "enum": ["human", "agent", "service", "system"]
+    },
+    "project_created_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "project_updated_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "caller_role": {
+      "type": "string",
+      "enum": ["project_viewer", "project_contributor", "project_admin"]
+    },
+    "authorization_state": {
+      "type": "string",
+      "enum": ["active"]
+    },
+    "source_authorization_id": {
+      "type": "string"
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "updated_at": {
+      "type": "string",
+      "format": "date-time"
+    }
+  },
+  "additionalProperties": false
+}

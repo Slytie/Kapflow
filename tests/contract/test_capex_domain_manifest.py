@@ -12,7 +12,6 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 CAPEX_MANIFEST_PATH = REPO_ROOT / "docs" / "domains" / "capex" / "domain.yaml"
 
 EXPECTED_DISABLED_CAPABILITIES = {
-    "capex.authorization_projections",
     "capex.production_pilot_activation",
     "capex.runtime_activation",
     "capex.source_data_governance",

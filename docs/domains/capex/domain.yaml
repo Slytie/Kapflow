@@ -20,8 +20,8 @@ workpages: []
 side_effects: []
 readiness_prerequisites:
   - prerequisite_id: capex.project_authorization_model
-    description: Project authorization CED and direct-membership query prototype exist; physical authorization projections remain future runtime state.
-    status: open
+    description: Project authorization CED, direct-membership source state, projection-backed query surface, and physical authorization projection runtime state exist; broader policy expansion remains future work.
+    status: satisfied
     task_refs:
       - TASK-0385
       - TASK-0386
@@ -118,13 +118,6 @@ disabled_capabilities:
       - TASK-0407
       - TASK-0428
       - TASK-0564
-  - capability_id: capex.authorization_projections
-    description: Project authorization projections are disabled.
-    disabled_reason: Direct membership plus AuthorizedProjectsQuery exists, but physical authorization projections remain future runtime state.
-    owner_task_refs:
-      - TASK-0385
-      - TASK-0386
-      - TASK-0563
   - capability_id: capex.workpages
     description: CAPEX-specific workpages and projection snapshots are disabled.
     disabled_reason: EPIC-144 projection/workpage tasks remain TODO.

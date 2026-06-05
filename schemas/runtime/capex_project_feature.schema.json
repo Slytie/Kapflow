@@ -1,0 +1,52 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "CapexProjectFeature",
+  "type": "object",
+  "required": [
+    "project_feature_id",
+    "project_id",
+    "tenant_id",
+    "domain_id",
+    "feature_key",
+    "state",
+    "metadata_json",
+    "created_at",
+    "updated_at"
+  ],
+  "properties": {
+    "project_feature_id": {
+      "type": "string"
+    },
+    "project_id": {
+      "type": "string"
+    },
+    "tenant_id": {
+      "type": "string"
+    },
+    "domain_id": {
+      "type": "string"
+    },
+    "feature_key": {
+      "type": "string"
+    },
+    "state": {
+      "type": "string",
+      "enum": ["disabled", "enabled"]
+    },
+    "blocked_reason": {
+      "type": "string"
+    },
+    "metadata_json": {
+      "type": "object"
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "updated_at": {
+      "type": "string",
+      "format": "date-time"
+    }
+  },
+  "additionalProperties": false
+}

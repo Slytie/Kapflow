@@ -58,6 +58,13 @@ Record any decisions made since the last session so a fresh Codex run can rehydr
 - Closeout decision: `TASK-0390` adds `docs/architecture/CAPEX_W1_CLOSEOUT_REVIEW.md`; gates `ARCH-W1-GATE-001` through `ARCH-W1-GATE-009` have repo evidence, while `ARCH-W1-GATE-010` remains `blocked_pending_evidence`.
 - Activation decision: this tranche adds no migrations, routes, frontend behavior, storage backend rollout, Postgres rollout, raw-corpus use, source ZIP mutation, pilot readiness, production readiness, or CAPEX runtime/product activation.
 
+## 2026-06-05 (EPIC-140 authorization projection runtime state)
+- Projection-state decision: `TASK-0563` adds physical `capex_project_authorization`, `capex_project_feature`, and `capex_user_project_view` read-model tables with SQLite bootstrap, Alembic migration, SQLAlchemy models, runtime schemas, repositories, and schema-parity/backfill tests.
+- Authority decision: direct `project_memberships` remain authoritative source state. Authorization and user-view projections are deterministic, rebuildable read models refreshed from active direct memberships by `refresh_project_authorization_projection` and `rebuild_project_authorization_projections`.
+- Access-query decision: `AuthorizedProjectsQuery` now reads projection-backed rows while preserving existing project list/detail payloads, caller-role semantics, not-found style project denial, and no-project logistics/runtime read visibility.
+- Feature-posture decision: `capex_project_feature` seeds `capex.runtime_activation` as `disabled` with a blocked reason, so closing EPIC-140 does not imply CAPEX runtime/product activation.
+- Closeout decision: all EPIC-140 task rows are now closed. CAPEX activation, raw-corpus/source governance, workflow/workpage authoring, real pilot storage evidence or waiver, release/capacity, and production-preflight gates remain later work.
+
 ## 2026-06-03 (CAPEX RF-002/NU-CB-P0-001 descriptor registry and approval duplicate closeout)
 - Descriptor-boundary decision: `TASK-0370` moves active logistics workpage descriptor registrations behind `WorkpageDescriptorRegistry`; the existing descriptor lookup helpers remain compatibility facades and public workpage routes/actions stay unchanged.
 - Subject-surface decision: workpage `subject_link` validation now uses the registered workpage action rules for supported human-task and approval surfaces instead of local schedule/EOD matrices in the action-resolution handler.

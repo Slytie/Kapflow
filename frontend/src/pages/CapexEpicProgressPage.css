@@ -30,6 +30,7 @@
 .capex-progress-page__header,
 .capex-controls,
 .capex-blockers,
+.capex-completion-trend,
 .capex-roadmap-progress,
 .capex-progress-page__footer {
   border: 1px solid rgba(128, 208, 80, 0.22);
@@ -90,23 +91,39 @@
 }
 
 .capex-summary {
+  align-items: stretch;
   display: grid;
   gap: 10px;
-  grid-template-columns: repeat(auto-fit, minmax(132px, 1fr));
+  grid-template-columns: minmax(360px, 0.95fr) minmax(420px, 1.25fr);
+}
+
+.capex-summary__metrics {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(auto-fit, minmax(118px, 1fr));
+  min-width: 0;
+}
+
+.capex-summary__stack {
+  display: grid;
+  gap: 10px;
+  grid-template-rows: repeat(2, minmax(0, 1fr));
 }
 
 .capex-summary article {
   background: rgba(13, 22, 13, 0.92);
   border: 1px solid rgba(128, 208, 80, 0.22);
-  padding: 14px;
+  min-width: 0;
+  padding: 12px;
 }
 
 .capex-summary strong {
   display: block;
   font-family: var(--font-display);
-  font-size: 2rem;
+  font-size: clamp(1.45rem, 2vw, 2rem);
   line-height: 1.1;
   margin-top: 6px;
+  overflow-wrap: anywhere;
 }
 
 .capex-roadmap-progress {
@@ -167,6 +184,118 @@
 .capex-roadmap-progress p {
   color: var(--capex-muted);
   margin: 0;
+}
+
+.capex-completion-trend {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+  padding: 12px;
+}
+
+.capex-completion-trend__header {
+  align-items: end;
+  display: flex;
+  gap: 10px;
+  justify-content: space-between;
+}
+
+.capex-completion-trend__header h2 {
+  color: var(--capex-text);
+  font-family: var(--font-display);
+  font-size: clamp(1.3rem, 3vw, 2rem);
+  letter-spacing: 0;
+  line-height: 1;
+  margin: 4px 0 0;
+}
+
+.capex-completion-trend__header span {
+  border: 1px solid rgba(127, 214, 255, 0.3);
+  color: var(--capex-progress);
+  font-size: 0.82rem;
+  font-weight: 800;
+  padding: 6px 8px;
+  text-align: right;
+}
+
+.capex-completion-trend__chart {
+  overflow-x: auto;
+}
+
+.capex-completion-trend__chart svg {
+  display: block;
+  min-width: 340px;
+  width: 100%;
+}
+
+.capex-completion-trend__axis {
+  stroke: rgba(128, 208, 80, 0.42);
+  stroke-width: 1.5;
+}
+
+.capex-completion-trend__grid {
+  stroke: rgba(128, 208, 80, 0.14);
+  stroke-dasharray: 5 7;
+  stroke-width: 1;
+}
+
+.capex-completion-trend__line {
+  fill: none;
+  stroke: var(--capex-progress);
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 3;
+}
+
+.capex-completion-trend__line--projected {
+  opacity: 0.88;
+  stroke: var(--capex-watch);
+  stroke-dasharray: 6 5;
+}
+
+.capex-completion-trend__point {
+  fill: var(--capex-watch);
+  stroke: var(--capex-bg);
+  stroke-width: 2;
+}
+
+.capex-completion-trend__point--baseline {
+  fill: var(--capex-muted);
+}
+
+.capex-completion-trend__point--projected {
+  fill: var(--capex-bg);
+  stroke: var(--capex-watch);
+}
+
+.capex-completion-trend__label,
+.capex-completion-trend__tick,
+.capex-completion-trend__value {
+  fill: var(--capex-muted);
+  font-size: 0.65rem;
+  font-weight: 800;
+}
+
+.capex-completion-trend__value {
+  fill: var(--capex-text);
+}
+
+.capex-completion-trend__facts {
+  color: var(--capex-muted);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  line-height: 1.25;
+}
+
+.capex-completion-trend__facts span {
+  font-size: 0.78rem;
+}
+
+.capex-completion-trend__facts span + span::before {
+  color: rgba(128, 208, 80, 0.5);
+  content: "/";
+  margin-right: 6px;
 }
 
 .capex-controls {
@@ -555,6 +684,7 @@
 }
 
 @media (max-width: 1180px) {
+  .capex-summary,
   .capex-roadmap {
     grid-template-columns: 1fr;
   }
@@ -586,6 +716,10 @@
   }
 
   .capex-summary {
+    grid-template-columns: 1fr;
+  }
+
+  .capex-summary__metrics {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 

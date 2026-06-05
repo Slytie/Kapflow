@@ -33,6 +33,9 @@ def test_capex_project_authorization_ced_records_w1_project_identity_gates() -> 
         "capex_project_authorization",
         "capex_project_feature",
         "capex_user_project_view",
+        "projection runtime state",
+        "projection-backed rows",
+        "direct memberships",
         "AuthorizedProjectsQuery",
         "not a frontend-only filter",
         "does not expose a global project list",
@@ -41,7 +44,6 @@ def test_capex_project_authorization_ced_records_w1_project_identity_gates() -> 
         "ARCH-W1-GATE-006",
         "leave runtime state inert",
         "does not add routes",
-        "migrations",
         "CAPEX runtime activation",
     )
 

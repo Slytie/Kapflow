@@ -3,7 +3,7 @@
   "meta": {
     "title": "CAPEX Epic Progress",
     "subtitle": "Plain-language roadmap for the repo-native CAPEX planning backlog.",
-    "lastUpdated": "2026-06-04",
+    "lastUpdated": "2026-06-05",
     "localOnly": true,
     "sourceNote": "Generated from docs/planning/epics and codex/tasks with curated review-posture overrides.",
     "codexRule": "When a CAPEX task is completed, set status: DONE, add completed_at in ISO 8601 timezone form, add completion/closeout evidence, and regenerate this progress data in the same change."
@@ -11,23 +11,23 @@
   "summary": {
     "epicCount": 17,
     "taskCount": 379,
-    "done": 58,
+    "done": 59,
     "in_progress": 0,
-    "not_started": 316,
+    "not_started": 315,
     "blocked": 1,
     "needs_review": 4,
     "total": 379,
     "estimate": {
-      "percentComplete": 15.3,
-      "completedTasks": 58,
-      "remainingTasks": 321,
+      "percentComplete": 15.6,
+      "completedTasks": 59,
+      "remainingTasks": 320,
       "remainingBlockedOrReviewTasks": 5,
-      "completedWithTimestamps": 26,
-      "completionTimestampCoverage": 44.8,
-      "etaDate": "2026-06-30",
+      "completedWithTimestamps": 27,
+      "completionTimestampCoverage": 45.8,
+      "etaDate": "2026-06-29",
       "etaConfidence": "medium",
       "etaSource": "epic_completed_at",
-      "label": "ETA 2026-06-30",
+      "label": "ETA 2026-06-29",
       "caveat": "5 blocked or needs-review task(s) remain."
     }
   },
@@ -3414,8 +3414,8 @@
       "id": "EPIC-140",
       "title": "CAPEX project access and membership",
       "plainPurpose": "Define project anchors, membership, roles, and project-scoped APIs without crossing tenant/domain boundaries.",
-      "displayStatus": "blocked",
-      "reviewPosture": "Project-scoped APIs now include the first project child-route, selector/dashboard, shared project-scope helper, and official pointer-family slices; authorization projections, pointer-promotion policy checks, raw-corpus governance dependencies, and CAPEX activation are still gating work.",
+      "displayStatus": "done",
+      "reviewPosture": "EPIC-140 project/access work is closed with project anchors, direct memberships, project child APIs, selector/dashboard, project-scope helper, official pointer families, domain manifests, W1 closeout evidence, and rebuildable authorization projections; CAPEX activation remains blocked by later source-governance, workflow/workpage, storage evidence or waiver, release/capacity, and production-preflight gates.",
       "dependencies": [
         "EPIC-137",
         "EPIC-139",
@@ -3437,9 +3437,9 @@
         "docs/planning/CAPEX_V6_GATE_RISK_DECISION_MAP.csv"
       ],
       "counts": {
-        "done": 16,
+        "done": 17,
         "in_progress": 0,
-        "not_started": 1,
+        "not_started": 0,
         "blocked": 0,
         "needs_review": 0,
         "total": 17
@@ -4356,9 +4356,9 @@
           "epicId": "EPIC-140",
           "title": "Add CAPEX project/membership/authorization runtime state",
           "plainPurpose": "Add capex_project, project_membership, authorization projection, project-scoped helpers.",
-          "sourceStatus": "TODO",
-          "displayStatus": "not_started",
-          "statusReason": "Task is still planned backlog work.",
+          "sourceStatus": "DONE",
+          "displayStatus": "done",
+          "statusReason": "Task frontmatter records DONE status.",
           "why": [
             "Imported from CAPEX v6 source task NU-CB-P0-003 so future work can be executed from repo-native backlog memory without loading the full master package."
           ],
@@ -4405,23 +4405,23 @@
           },
           "evidence": [],
           "taskPath": "codex/tasks/TASK-0563-add-capex-project-membership-authorization-runtime-state.md",
-          "completedAt": null,
-          "completionTimestampStatus": "not_applicable",
-          "completionTimestampSource": "not_completed"
+          "completedAt": "2026-06-05T10:42:12+02:00",
+          "completionTimestampStatus": "recorded",
+          "completionTimestampSource": "task_frontmatter"
         }
       ],
       "estimate": {
-        "percentComplete": 94.1,
-        "completedTasks": 16,
-        "remainingTasks": 1,
+        "percentComplete": 100.0,
+        "completedTasks": 17,
+        "remainingTasks": 0,
         "remainingBlockedOrReviewTasks": 0,
-        "completedWithTimestamps": 16,
+        "completedWithTimestamps": 17,
         "completionTimestampCoverage": 100.0,
-        "etaDate": "2026-06-06",
-        "etaConfidence": "medium",
-        "etaSource": "epic_completed_at",
-        "label": "ETA 2026-06-06",
-        "caveat": "Estimate is based on remaining current-scope task count."
+        "etaDate": null,
+        "etaConfidence": "complete",
+        "etaSource": "none",
+        "label": "Complete",
+        "caveat": "No remaining current-scope tasks."
       }
     },
     {

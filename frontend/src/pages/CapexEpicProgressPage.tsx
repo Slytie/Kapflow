@@ -81,7 +81,37 @@ type CapexProgressData = {
   epics: CapexEpic[];
 };
 
+type CompletionTrendPoint = {
+  key: string;
+  label: string;
+  completedOnPoint: number;
+  cumulativeCompleted: number;
+  percentComplete: number;
+  isUndatedBaseline: boolean;
+};
+
+type CompletionTrend = {
+  points: CompletionTrendPoint[];
+  recordedCompletionCount: number;
+  undatedDoneCount: number;
+};
+
 const progressData = rawProgressData as CapexProgressData;
+
+const MONTH_LABELS = [
+  "Jan",
+  "Feb",
+  "Mar",
+  "Apr",
+  "May",
+  "Jun",
+  "Jul",
+  "Aug",
+  "Sep",
+  "Oct",
+  "Nov",
+  "Dec"
+];
 
 const STATUS_LABELS: Record<ProgressStatus, string> = {
   done: "Done",
@@ -173,8 +203,92 @@ function formatPercent(value: number): string {
   return `${Number.isInteger(value) ? value.toFixed(0) : value.toFixed(1)}%`;
 }
 
+function formatTrendPercent(value: number): string {
+  return `${value.toFixed(1)}%`;
+}
+
 function progressWidth(value: number): string {
   return `${Math.min(Math.max(value, 0), 100)}%`;
+}
+
+function formatDateKey(dateKey: string): string {
+  const [year, month, day] = dateKey.split("-").map(Number);
+  if (!year || !month || !day) {
+    return dateKey;
+  }
+  return `${MONTH_LABELS[month - 1]} ${String(day).padStart(2, "0")}`;
+}
+
+function etaLabel(dateKey: string): string {
+  return `ETA ${formatDateKey(dateKey)}`;
+}
+
+function buildCompletionTrend(tasks: CapexTask[], totalTasks: number): CompletionTrend {
+  const timestampedDoneTasks = tasks.filter(
+    (task) => task.displayStatus === "done" && task.completedAt
+  );
+  const undatedDoneCount = tasks.filter(
+    (task) => task.displayStatus === "done" && !task.completedAt
+  ).length;
+  const completionsByDay = timestampedDoneTasks.reduce<Record<string, number>>(
+    (counts, task) => {
+      const day = task.completedAt?.slice(0, 10);
+      if (!day) {
+        return counts;
+      }
+      return {
+        ...counts,
+        [day]: (counts[day] ?? 0) + 1
+      };
+    },
+    {}
+  );
+  let cumulativeCompleted = 0;
+  const points: CompletionTrendPoint[] = [];
+
+  if (undatedDoneCount > 0) {
+    cumulativeCompleted += undatedDoneCount;
+    points.push({
+      key: "undated",
+      label: "Undated",
+      completedOnPoint: undatedDoneCount,
+      cumulativeCompleted,
+      percentComplete: totalTasks > 0 ? (cumulativeCompleted / totalTasks) * 100 : 0,
+      isUndatedBaseline: true
+    });
+  }
+
+  Object.keys(completionsByDay)
+    .sort()
+    .forEach((day) => {
+      const completedOnPoint = completionsByDay[day];
+      cumulativeCompleted += completedOnPoint;
+      points.push({
+        key: day,
+        label: formatDateKey(day),
+        completedOnPoint,
+        cumulativeCompleted,
+        percentComplete: totalTasks > 0 ? (cumulativeCompleted / totalTasks) * 100 : 0,
+        isUndatedBaseline: false
+      });
+    });
+
+  if (points.length === 0) {
+    points.push({
+      key: "no-history",
+      label: "No history",
+      completedOnPoint: 0,
+      cumulativeCompleted: 0,
+      percentComplete: 0,
+      isUndatedBaseline: false
+    });
+  }
+
+  return {
+    points,
+    recordedCompletionCount: timestampedDoneTasks.length,
+    undatedDoneCount
+  };
 }
 
 function completionTimestampLabel(task: CapexTask): string {
@@ -236,6 +350,15 @@ function EstimateStrip({ estimate }: { estimate: CapexEstimate }): JSX.Element {
   );
 }
 
+function SummaryMetric({ label, value }: { label: string; value: string | number }): JSX.Element {
+  return (
+    <article>
+      <span>{label}</span>
+      <strong>{value}</strong>
+    </article>
+  );
+}
+
 function RoadmapProgress({ estimate }: { estimate: CapexEstimate }): JSX.Element {
   return (
     <section className="capex-roadmap-progress" aria-label="CAPEX roadmap progress">
@@ -267,6 +390,184 @@ function RoadmapProgress({ estimate }: { estimate: CapexEstimate }): JSX.Element
   );
 }
 
+function CompletionTrendChart({
+  trend,
+  etaDate
+}: {
+  trend: CompletionTrend;
+  etaDate: string | null;
+}): JSX.Element {
+  const width = 380;
+  const height = 132;
+  const margin = {
+    top: 14,
+    right: 16,
+    bottom: 32,
+    left: 42
+  };
+  const innerWidth = width - margin.left - margin.right;
+  const innerHeight = height - margin.top - margin.bottom;
+  const projectedPoint = etaDate
+    ? {
+        key: `projected-${etaDate}`,
+        label: etaLabel(etaDate),
+        percentComplete: 100
+      }
+    : null;
+  const chartPointCount = trend.points.length + (projectedPoint ? 1 : 0);
+  const xForPoint = (index: number, pointCount = chartPointCount): number => {
+    if (pointCount === 1) {
+      return margin.left + innerWidth / 2;
+    }
+    return margin.left + (index / (pointCount - 1)) * innerWidth;
+  };
+  const yForPercent = (percent: number): number =>
+    margin.top + innerHeight - (Math.min(percent, 100) / 100) * innerHeight;
+  const linePath = trend.points
+    .map((point, index) => {
+      const command = index === 0 ? "M" : "L";
+      return `${command} ${xForPoint(index).toFixed(1)} ${yForPercent(point.percentComplete).toFixed(1)}`;
+    })
+    .join(" ");
+  const latestPoint = trend.points[trend.points.length - 1];
+  const projectedPath = projectedPoint
+    ? [
+        `M ${xForPoint(trend.points.length - 1).toFixed(1)} ${yForPercent(latestPoint.percentComplete).toFixed(1)}`,
+        `L ${xForPoint(trend.points.length).toFixed(1)} ${yForPercent(projectedPoint.percentComplete).toFixed(1)}`
+      ].join(" ")
+    : "";
+
+  return (
+    <section className="capex-completion-trend" aria-label="CAPEX completion over time">
+      <div className="capex-completion-trend__header">
+        <div>
+          <p className="capex-progress-page__eyebrow">Completion over time</p>
+          <h2>{formatTrendPercent(latestPoint.percentComplete)} current</h2>
+        </div>
+        <span>{trend.recordedCompletionCount} timestamped completions</span>
+      </div>
+      <div className="capex-completion-trend__chart">
+        <svg
+          role="img"
+          aria-label="CAPEX completion trend line"
+          data-testid="capex-completion-trend-line"
+          data-point-count={trend.points.length}
+          data-projection-date={etaDate ?? ""}
+          viewBox={`0 0 ${width} ${height}`}
+        >
+          <title>CAPEX completion trend line</title>
+          <desc>
+            Daily cumulative CAPEX completion percentage from recorded completed_at timestamps,
+            with undated accepted tasks shown as a baseline and a dashed ETA projection to 100%.
+          </desc>
+          <line
+            className="capex-completion-trend__axis"
+            x1={margin.left}
+            y1={margin.top}
+            x2={margin.left}
+            y2={margin.top + innerHeight}
+          />
+          <line
+            className="capex-completion-trend__axis"
+            x1={margin.left}
+            y1={margin.top + innerHeight}
+            x2={margin.left + innerWidth}
+            y2={margin.top + innerHeight}
+          />
+          <line
+            className="capex-completion-trend__grid"
+            x1={margin.left}
+            y1={yForPercent(100)}
+            x2={margin.left + innerWidth}
+            y2={yForPercent(100)}
+          />
+          <line
+            className="capex-completion-trend__grid"
+            x1={margin.left}
+            y1={yForPercent(50)}
+            x2={margin.left + innerWidth}
+            y2={yForPercent(50)}
+          />
+          <text className="capex-completion-trend__label" x={6} y={yForPercent(100) + 4}>
+            100%
+          </text>
+          <text className="capex-completion-trend__label" x={14} y={yForPercent(50) + 4}>
+            50%
+          </text>
+          <text className="capex-completion-trend__label" x={26} y={margin.top + innerHeight + 4}>
+            0%
+          </text>
+          <path className="capex-completion-trend__line" d={linePath} />
+          {projectedPath ? (
+            <path className="capex-completion-trend__line capex-completion-trend__line--projected" d={projectedPath} />
+          ) : null}
+          {trend.points.map((point, index) => {
+            const x = xForPoint(index);
+            const y = yForPercent(point.percentComplete);
+            return (
+              <g key={point.key}>
+                <circle
+                  className={
+                    point.isUndatedBaseline
+                      ? "capex-completion-trend__point capex-completion-trend__point--baseline"
+                      : "capex-completion-trend__point"
+                  }
+                  cx={x}
+                  cy={y}
+                  r={point.isUndatedBaseline ? 5 : 4}
+                />
+                <text
+                  className="capex-completion-trend__tick"
+                  x={x}
+                  y={margin.top + innerHeight + 24}
+                  textAnchor="middle"
+                >
+                  {point.label}
+                </text>
+                <text
+                  className="capex-completion-trend__value"
+                  x={x}
+                  y={Math.max(14, y - 10)}
+                  textAnchor="middle"
+                >
+                  {formatTrendPercent(point.percentComplete)}
+                </text>
+              </g>
+            );
+          })}
+          {projectedPoint ? (
+            <g key={projectedPoint.key}>
+              <circle
+                className="capex-completion-trend__point capex-completion-trend__point--projected"
+                cx={xForPoint(trend.points.length)}
+                cy={yForPercent(projectedPoint.percentComplete)}
+                r={4}
+              />
+              <text
+                className="capex-completion-trend__tick"
+                x={xForPoint(trend.points.length)}
+                y={margin.top + innerHeight + 24}
+                textAnchor="middle"
+              >
+                {projectedPoint.label}
+              </text>
+            </g>
+          ) : null}
+        </svg>
+      </div>
+      <div className="capex-completion-trend__facts">
+        <span>{trend.undatedDoneCount} undated baseline</span>
+        <span>{latestPoint.cumulativeCompleted} done</span>
+        {projectedPoint ? (
+          <span>
+            {latestPoint.label} to {projectedPoint.label} at 100%
+          </span>
+        ) : null}
+      </div>
+    </section>
+  );
+}
+
 export function CapexEpicProgressPage(): JSX.Element {
   const [searchParams, setSearchParams] = useSearchParams();
   const query = searchParams.get("q")?.trim().toLowerCase() ?? "";
@@ -290,6 +591,10 @@ export function CapexEpicProgressPage(): JSX.Element {
     taskMatches(task, query, statusFilter)
   );
   const epicStatusCounts = countByStatus(progressData.epics);
+  const completionTrend = useMemo(
+    () => buildCompletionTrend(allTasks, progressData.summary.taskCount),
+    [allTasks]
+  );
 
   const selectEpic = (epicId: string): void => {
     setSearchParams(setSearchParam(searchParams, { epic: epicId, task: null }));
@@ -318,42 +623,45 @@ export function CapexEpicProgressPage(): JSX.Element {
       </header>
 
       <section className="capex-summary" aria-label="CAPEX progress summary">
-        <article>
-          <span>Epics</span>
-          <strong>{progressData.summary.epicCount}</strong>
-        </article>
-        <article>
-          <span>Tasks</span>
-          <strong>{progressData.summary.taskCount}</strong>
-        </article>
-        <article>
-          <span>Done</span>
-          <strong>{progressData.summary.done}</strong>
-        </article>
-        <article>
-          <span>Needs fresh check</span>
-          <strong>{progressData.summary.needs_review}</strong>
-        </article>
-        <article>
-          <span>Blocked</span>
-          <strong>{progressData.summary.blocked}</strong>
-        </article>
-        <article>
-          <span>Not started</span>
-          <strong>{progressData.summary.not_started}</strong>
-        </article>
-        <article>
-          <span>Complete</span>
-          <strong>{formatPercent(progressData.summary.estimate.percentComplete)}</strong>
-        </article>
-        <article>
-          <span>Remaining</span>
-          <strong>{progressData.summary.estimate.remainingTasks}</strong>
-        </article>
-        <article>
-          <span>ETA</span>
-          <strong>{progressData.summary.estimate.etaDate ?? "TBD"}</strong>
-        </article>
+        <div
+          className="capex-summary__metrics"
+          role="group"
+          aria-label="CAPEX progress metrics"
+        >
+          <div className="capex-summary__stack">
+            <SummaryMetric label="Epics" value={progressData.summary.epicCount} />
+            <SummaryMetric label="Tasks" value={progressData.summary.taskCount} />
+          </div>
+          <div className="capex-summary__stack">
+            <SummaryMetric label="Done" value={progressData.summary.done} />
+            <SummaryMetric
+              label="Complete"
+              value={formatPercent(progressData.summary.estimate.percentComplete)}
+            />
+          </div>
+          <div className="capex-summary__stack">
+            <SummaryMetric
+              label="Remaining"
+              value={progressData.summary.estimate.remainingTasks}
+            />
+            <SummaryMetric label="ETA" value={progressData.summary.estimate.etaDate ?? "TBD"} />
+          </div>
+          <div className="capex-summary__stack">
+            <SummaryMetric label="Needs fresh check" value={progressData.summary.needs_review} />
+            <SummaryMetric label="Blocked" value={progressData.summary.blocked} />
+          </div>
+          <div className="capex-summary__stack">
+            <SummaryMetric label="Not started" value={progressData.summary.not_started} />
+            <SummaryMetric
+              label="Timestamped"
+              value={progressData.summary.estimate.completedWithTimestamps}
+            />
+          </div>
+        </div>
+        <CompletionTrendChart
+          trend={completionTrend}
+          etaDate={progressData.summary.estimate.etaDate}
+        />
       </section>
 
       <RoadmapProgress estimate={progressData.summary.estimate} />

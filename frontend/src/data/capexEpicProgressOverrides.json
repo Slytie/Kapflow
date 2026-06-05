@@ -2,7 +2,7 @@
   "meta": {
     "title": "CAPEX Epic Progress",
     "subtitle": "Plain-language roadmap for the repo-native CAPEX planning backlog.",
-    "lastUpdated": "2026-06-04",
+    "lastUpdated": "2026-06-05",
     "localOnly": true,
     "sourceNote": "Generated from docs/planning/epics and codex/tasks with curated review-posture overrides.",
     "codexRule": "When a CAPEX task is completed, set status: DONE, add completed_at in ISO 8601 timezone form, add completion/closeout evidence, and regenerate this progress data in the same change."
@@ -46,8 +46,8 @@
       "reviewPosture": "State C / repaired after final EPIC-139 redo acceptance: approval and workpage defaults are platform-neutral, logistics behavior activates explicitly, supported-environment evidence is recorded in TASK-0645, task-by-task reclose evidence is recorded in TASK-0646, and closure handoff evidence is recorded in TASK-0647."
     },
     "EPIC-140": {
-      "displayStatus": "blocked",
-      "reviewPosture": "Project-scoped APIs now include the first project child-route, selector/dashboard, shared project-scope helper, and official pointer-family slices; authorization projections, pointer-promotion policy checks, raw-corpus governance dependencies, and CAPEX activation are still gating work."
+      "displayStatus": "done",
+      "reviewPosture": "EPIC-140 project/access work is closed with project anchors, direct memberships, project child APIs, selector/dashboard, project-scope helper, official pointer families, domain manifests, W1 closeout evidence, and rebuildable authorization projections; CAPEX activation remains blocked by later source-governance, workflow/workpage, storage evidence or waiver, release/capacity, and production-preflight gates."
     },
     "EPIC-144": {
       "displayStatus": "blocked",

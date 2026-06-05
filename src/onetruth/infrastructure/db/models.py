@@ -173,6 +173,152 @@ class ProjectMembership(Base):
     )
 
 
+class CapexProjectAuthorization(Base):
+    __tablename__ = "capex_project_authorization"
+    __table_args__ = (
+        UniqueConstraint(
+            "project_id",
+            "actor_type",
+            "actor_id",
+            name="uq_capex_project_authorization_actor",
+        ),
+        Index(
+            "ix_capex_project_authorization_actor_lookup",
+            "tenant_id",
+            "domain_id",
+            "actor_type",
+            "actor_id",
+            "state",
+        ),
+        Index(
+            "ix_capex_project_authorization_project_state",
+            "project_id",
+            "state",
+        ),
+    )
+
+    project_authorization_id: Mapped[str] = mapped_column(String(255), primary_key=True)
+    project_id: Mapped[str] = mapped_column(
+        String(128),
+        ForeignKey("capex_projects.project_id"),
+        nullable=False,
+    )
+    tenant_id: Mapped[str] = mapped_column(String(128), nullable=False)
+    domain_id: Mapped[str] = mapped_column(String(128), nullable=False)
+    actor_type: Mapped[str] = mapped_column(String(32), nullable=False)
+    actor_id: Mapped[str] = mapped_column(String(128), nullable=False)
+    direct_role: Mapped[str] = mapped_column(String(64), nullable=False)
+    effective_role: Mapped[str] = mapped_column(String(64), nullable=False)
+    source_membership_id: Mapped[str] = mapped_column(
+        String(128),
+        ForeignKey("project_memberships.project_membership_id"),
+        nullable=False,
+    )
+    state: Mapped[str] = mapped_column(String(32), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=utcnow)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        default=utcnow,
+        onupdate=utcnow,
+    )
+
+
+class CapexProjectFeature(Base):
+    __tablename__ = "capex_project_feature"
+    __table_args__ = (
+        UniqueConstraint(
+            "project_id",
+            "feature_key",
+            name="uq_capex_project_feature_key",
+        ),
+        Index(
+            "ix_capex_project_feature_lookup",
+            "tenant_id",
+            "domain_id",
+            "feature_key",
+            "state",
+        ),
+    )
+
+    project_feature_id: Mapped[str] = mapped_column(String(255), primary_key=True)
+    project_id: Mapped[str] = mapped_column(
+        String(128),
+        ForeignKey("capex_projects.project_id"),
+        nullable=False,
+    )
+    tenant_id: Mapped[str] = mapped_column(String(128), nullable=False)
+    domain_id: Mapped[str] = mapped_column(String(128), nullable=False)
+    feature_key: Mapped[str] = mapped_column(String(128), nullable=False)
+    state: Mapped[str] = mapped_column(String(32), nullable=False)
+    blocked_reason: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    metadata_json: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=utcnow)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        default=utcnow,
+        onupdate=utcnow,
+    )
+
+
+class CapexUserProjectView(Base):
+    __tablename__ = "capex_user_project_view"
+    __table_args__ = (
+        UniqueConstraint(
+            "tenant_id",
+            "domain_id",
+            "actor_type",
+            "actor_id",
+            "project_id",
+            name="uq_capex_user_project_view_actor_project",
+        ),
+        Index(
+            "ix_capex_user_project_view_actor_lookup",
+            "tenant_id",
+            "domain_id",
+            "actor_type",
+            "actor_id",
+            "authorization_state",
+            "project_state",
+            "project_key",
+        ),
+    )
+
+    user_project_view_id: Mapped[str] = mapped_column(String(255), primary_key=True)
+    tenant_id: Mapped[str] = mapped_column(String(128), nullable=False)
+    domain_id: Mapped[str] = mapped_column(String(128), nullable=False)
+    actor_type: Mapped[str] = mapped_column(String(32), nullable=False)
+    actor_id: Mapped[str] = mapped_column(String(128), nullable=False)
+    project_id: Mapped[str] = mapped_column(
+        String(128),
+        ForeignKey("capex_projects.project_id"),
+        nullable=False,
+    )
+    project_key: Mapped[str] = mapped_column(String(128), nullable=False)
+    name: Mapped[str] = mapped_column(String(255), nullable=False)
+    project_state: Mapped[str] = mapped_column(String(32), nullable=False)
+    metadata_json: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False)
+    created_by_actor_id: Mapped[str] = mapped_column(String(128), nullable=False)
+    created_by_actor_type: Mapped[str] = mapped_column(String(32), nullable=False)
+    project_created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    project_updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    caller_role: Mapped[str] = mapped_column(String(64), nullable=False)
+    authorization_state: Mapped[str] = mapped_column(String(32), nullable=False)
+    source_authorization_id: Mapped[str] = mapped_column(
+        String(255),
+        ForeignKey("capex_project_authorization.project_authorization_id"),
+        nullable=False,
+    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=utcnow)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        default=utcnow,
+        onupdate=utcnow,
+    )
+
+
 class WorkflowRun(Base):
     __tablename__ = "workflow_runs"
     __table_args__ = (

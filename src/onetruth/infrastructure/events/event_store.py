@@ -124,6 +124,83 @@ def create_sqlite_substrate(connection: sqlite3.Connection) -> None:
         CREATE INDEX IF NOT EXISTS ix_project_memberships_actor_lookup
             ON project_memberships (tenant_id, domain_id, actor_type, actor_id, state);
 
+        CREATE TABLE IF NOT EXISTS capex_project_authorization (
+            project_authorization_id TEXT PRIMARY KEY,
+            project_id TEXT NOT NULL,
+            tenant_id TEXT NOT NULL,
+            domain_id TEXT NOT NULL,
+            actor_type TEXT NOT NULL,
+            actor_id TEXT NOT NULL,
+            direct_role TEXT NOT NULL,
+            effective_role TEXT NOT NULL,
+            source_membership_id TEXT NOT NULL,
+            state TEXT NOT NULL,
+            created_at TEXT NOT NULL DEFAULT (datetime('now')),
+            updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+            FOREIGN KEY (project_id) REFERENCES capex_projects(project_id),
+            FOREIGN KEY (source_membership_id) REFERENCES project_memberships(project_membership_id),
+            UNIQUE (project_id, actor_type, actor_id)
+        );
+
+        CREATE INDEX IF NOT EXISTS ix_capex_project_authorization_actor_lookup
+            ON capex_project_authorization (tenant_id, domain_id, actor_type, actor_id, state);
+        CREATE INDEX IF NOT EXISTS ix_capex_project_authorization_project_state
+            ON capex_project_authorization (project_id, state);
+
+        CREATE TABLE IF NOT EXISTS capex_project_feature (
+            project_feature_id TEXT PRIMARY KEY,
+            project_id TEXT NOT NULL,
+            tenant_id TEXT NOT NULL,
+            domain_id TEXT NOT NULL,
+            feature_key TEXT NOT NULL,
+            state TEXT NOT NULL,
+            blocked_reason TEXT,
+            metadata_json TEXT NOT NULL,
+            created_at TEXT NOT NULL DEFAULT (datetime('now')),
+            updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+            FOREIGN KEY (project_id) REFERENCES capex_projects(project_id),
+            UNIQUE (project_id, feature_key)
+        );
+
+        CREATE INDEX IF NOT EXISTS ix_capex_project_feature_lookup
+            ON capex_project_feature (tenant_id, domain_id, feature_key, state);
+
+        CREATE TABLE IF NOT EXISTS capex_user_project_view (
+            user_project_view_id TEXT PRIMARY KEY,
+            tenant_id TEXT NOT NULL,
+            domain_id TEXT NOT NULL,
+            actor_type TEXT NOT NULL,
+            actor_id TEXT NOT NULL,
+            project_id TEXT NOT NULL,
+            project_key TEXT NOT NULL,
+            name TEXT NOT NULL,
+            project_state TEXT NOT NULL,
+            metadata_json TEXT NOT NULL,
+            created_by_actor_id TEXT NOT NULL,
+            created_by_actor_type TEXT NOT NULL,
+            project_created_at TEXT NOT NULL,
+            project_updated_at TEXT NOT NULL,
+            caller_role TEXT NOT NULL,
+            authorization_state TEXT NOT NULL,
+            source_authorization_id TEXT NOT NULL,
+            created_at TEXT NOT NULL DEFAULT (datetime('now')),
+            updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+            FOREIGN KEY (project_id) REFERENCES capex_projects(project_id),
+            FOREIGN KEY (source_authorization_id) REFERENCES capex_project_authorization(project_authorization_id),
+            UNIQUE (tenant_id, domain_id, actor_type, actor_id, project_id)
+        );
+
+        CREATE INDEX IF NOT EXISTS ix_capex_user_project_view_actor_lookup
+            ON capex_user_project_view (
+                tenant_id,
+                domain_id,
+                actor_type,
+                actor_id,
+                authorization_state,
+                project_state,
+                project_key
+            );
+
         CREATE TABLE IF NOT EXISTS workflow_runs (
             workflow_run_id TEXT PRIMARY KEY,
             project_id TEXT,

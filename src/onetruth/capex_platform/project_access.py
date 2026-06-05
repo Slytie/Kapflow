@@ -61,7 +61,7 @@ class AuthorizedProjectsResult:
 
 
 class AuthorizedProjectsQuery:
-    """Direct-membership prototype for project visibility decisions."""
+    """Projection-backed query surface for project visibility decisions."""
 
     def __init__(self, connection: sqlite3.Connection) -> None:
         self._connection = connection
@@ -75,34 +75,30 @@ class AuthorizedProjectsQuery:
         actor_id: str,
         active_only: bool = True,
     ) -> AuthorizedProjectsResult:
-        state_clause = "AND cp.state = 'active'" if active_only else ""
+        state_clause = "AND upv.project_state = 'active'" if active_only else ""
         rows = self._connection.execute(
             f"""
             SELECT
-                cp.project_id,
-                cp.tenant_id,
-                cp.domain_id,
-                cp.project_key,
-                cp.name,
-                cp.state,
-                cp.metadata_json,
-                cp.created_by_actor_id,
-                cp.created_by_actor_type,
-                cp.created_at,
-                cp.updated_at,
-                pm.role AS caller_role
-            FROM capex_projects cp
-            JOIN project_memberships pm
-              ON pm.project_id = cp.project_id
-             AND pm.tenant_id = cp.tenant_id
-             AND pm.domain_id = cp.domain_id
-            WHERE cp.tenant_id = ?
-              AND cp.domain_id = ?
-              AND pm.actor_type = ?
-              AND pm.actor_id = ?
-              AND pm.state = 'active'
+                upv.project_id,
+                upv.tenant_id,
+                upv.domain_id,
+                upv.project_key,
+                upv.name,
+                upv.project_state AS state,
+                upv.metadata_json,
+                upv.created_by_actor_id,
+                upv.created_by_actor_type,
+                upv.project_created_at AS created_at,
+                upv.project_updated_at AS updated_at,
+                upv.caller_role
+            FROM capex_user_project_view upv
+            WHERE upv.tenant_id = ?
+              AND upv.domain_id = ?
+              AND upv.actor_type = ?
+              AND upv.actor_id = ?
+              AND upv.authorization_state = 'active'
               {state_clause}
-            ORDER BY cp.project_key ASC, cp.project_id ASC
+            ORDER BY upv.project_key ASC, upv.project_id ASC
             """,
             (tenant_id, domain_id, actor_type, actor_id),
         ).fetchall()
@@ -125,16 +121,16 @@ class AuthorizedProjectsQuery:
         state_clause = "AND cp.state = 'active'" if active_only else ""
         row = self._connection.execute(
             f"""
-            SELECT pm.role
-            FROM project_memberships pm
+            SELECT cpa.effective_role AS role
+            FROM capex_project_authorization cpa
             JOIN capex_projects cp
-              ON cp.project_id = pm.project_id
-             AND cp.tenant_id = pm.tenant_id
-             AND cp.domain_id = pm.domain_id
-            WHERE pm.project_id = ?
-              AND pm.actor_type = ?
-              AND pm.actor_id = ?
-              AND pm.state = 'active'
+              ON cp.project_id = cpa.project_id
+             AND cp.tenant_id = cpa.tenant_id
+             AND cp.domain_id = cpa.domain_id
+            WHERE cpa.project_id = ?
+              AND cpa.actor_type = ?
+              AND cpa.actor_id = ?
+              AND cpa.state = 'active'
               {state_clause}
             """,
             (project_id, actor_type, actor_id),
@@ -150,11 +146,11 @@ class AuthorizedProjectsQuery:
             {project_column} IS NULL
             OR EXISTS (
                 SELECT 1
-                FROM project_memberships pm_scope
-                WHERE pm_scope.project_id = {project_column}
-                  AND pm_scope.actor_type = ?
-                  AND pm_scope.actor_id = ?
-                  AND pm_scope.state = 'active'
+                FROM capex_project_authorization cpa_scope
+                WHERE cpa_scope.project_id = {project_column}
+                  AND cpa_scope.actor_type = ?
+                  AND cpa_scope.actor_id = ?
+                  AND cpa_scope.state = 'active'
             )
         )
     """

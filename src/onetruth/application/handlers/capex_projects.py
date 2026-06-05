@@ -22,6 +22,9 @@ from onetruth.application.services.capex_project_access import (
     require_project_membership_role,
     validate_project_role,
 )
+from onetruth.capex_platform.project_authorization import (
+    refresh_project_authorization_projection,
+)
 from onetruth.capex_platform.project_access import AuthorizedProjectsQuery
 from onetruth.infrastructure.events.event_store import append_event, utc_now_iso
 from onetruth.infrastructure.repositories.capex_projects import (
@@ -175,6 +178,11 @@ def create_capex_project_command(
                 },
                 idempotency_key=membership_event_idempotency,
             ),
+        )
+        refresh_project_authorization_projection(
+            connection,
+            project_id=project_id,
+            now_iso=now,
         )
         project = get_capex_project(connection, project_id)
         membership = get_project_membership(connection, admin_membership_id)
@@ -335,6 +343,11 @@ def grant_project_membership_command(
                 },
                 idempotency_key=event_idempotency,
             ),
+        )
+        refresh_project_authorization_projection(
+            connection,
+            project_id=project_id,
+            now_iso=now,
         )
         membership = get_project_membership(connection, project_membership_id)
         if membership is None:

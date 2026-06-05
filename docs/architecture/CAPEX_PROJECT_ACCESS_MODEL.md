@@ -4,9 +4,9 @@
 Accepted foundation, inactive CAPEX runtime.
 
 ## Scope
-This document records the narrow EPIC-140 foundation implemented by `TASK-0261` through `TASK-0265`, `TASK-0371`, and the Wave 1 project-authorization CED/prototype from `TASK-0385` and `TASK-0386`.
+This document records the narrow EPIC-140 foundation implemented by `TASK-0261` through `TASK-0265`, `TASK-0371`, the Wave 1 project-authorization CED/prototype from `TASK-0385` and `TASK-0386`, and the authorization projection runtime state from `TASK-0563`.
 
-It does not activate CAPEX production-like runtime behavior, raw corpus use, physical authorization projections, richer CAPEX workpages, or production dashboards.
+It does not activate CAPEX production-like runtime behavior, raw corpus use, richer CAPEX workpages, or production dashboards.
 
 ## Project Anchor
 `capex_projects.project_id` is the durable project identity.
@@ -125,20 +125,28 @@ No-project rows remain readable by the existing tenant/domain boundary.
 ## Project Authorization CED
 `docs/architecture/CAPEX_PROJECT_AUTHORIZATION_CED.md` records the Wave 1 project authorization boundary.
 
-`AuthorizedProjectsQuery` is the current internal prototype over direct membership state. It accepts tenant/domain scope and actor identity, returns deterministic authorized active project IDs with caller role metadata, and keeps project filtering server-side. It is not a global project list, not a frontend-only filter, and not an authoritative replacement for `project_memberships`.
+`project_memberships` remains authoritative source state for direct project grants.
 
-Future `capex_project_authorization`, `capex_project_feature`, and `capex_user_project_view` surfaces are derived read-model/projection concepts. They remain disabled until later runtime-state work closes.
+`TASK-0563` adds the physical projection/read-model runtime state:
+- `capex_project_authorization`: one projected authorization row per `(project_id, actor_type, actor_id)` derived from active direct membership, with `direct_role`, `effective_role`, `source_membership_id`, state, and timestamps.
+- `capex_project_feature`: per-project feature posture. `capex.runtime_activation` is seeded as `disabled` with a blocked reason.
+- `capex_user_project_view`: deterministic actor-scoped read model over authorized projects, including caller role and project display fields.
+
+`AuthorizedProjectsQuery` reads the projection-backed rows. It accepts tenant/domain scope and actor identity, returns deterministic authorized active project IDs with caller role metadata, and keeps project filtering server-side. It is not a global project list, not a frontend-only filter, and not an authoritative replacement for `project_memberships`.
+
+Projection rebuild helpers refresh the derived rows from source state. They are repair tools and read-model maintainers; they do not bypass tenant/domain/project checks and do not create a second authorization authority.
 
 ## Index Coverage
-This tranche adds no new database migration. Project child route filtering uses:
+The project child API tranche uses:
 - `workflow_runs.project_id` for project-bound run selection
 - `timeline_events.project_id`, falling back through linked `workflow_runs.project_id`, for project timeline reads
 - existing child `workflow_run_id` index coverage for human tasks, approvals, flags, artifact versions, artifact links, and artifact pointers
+- `capex_project_authorization` and `capex_user_project_view` indexes for projection-backed project visibility
 
-`tests/integration/test_capex_project_schema_parity.py` records the schema/index parity evidence.
+`tests/integration/test_capex_project_schema_parity.py` and `tests/integration/test_capex_project_authorization_schema_parity.py` record the schema/index parity evidence.
 
 ## Future Work
-Later EPIC-140 tasks own:
-- authorization projections and policy dependency expansion
+Later epics own:
+- policy dependency expansion beyond direct membership projection inputs
 - richer CAPEX workpages/projections and production dashboard posture
 - CAPEX runtime activation, raw-corpus governance, and production gates

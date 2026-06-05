@@ -28,8 +28,8 @@ PROJ-001, PROJ-002, PROJ-003, PROJ-004, PROJ-005, RF-003, ARCH-W1-T001, ARCH-W1-
 - Preserve logistics weekly/live current focus unless a CAPEX task explicitly changes shared semantics.
 
 ## Current status
-- `TASK-0261` through `TASK-0265`, `TASK-0371`, and `TASK-0381` through `TASK-0390` are closed: durable project anchor, direct membership roles, project-bound workflow-run creation, project-scoped child APIs, the first max-five assigned-project selector/dashboard slice, a shared project-scope helper, project-scoped official pointer-family substrate, neutral domain-runtime manifest skeleton, ready-state logistics manifest inventory, incubation-state CAPEX manifest inventory, approval-effect registry shadow parity, project authorization CED, `AuthorizedProjectsQuery` prototype, storage/blob custody CED, pilot storage gate checklist, W1 code pattern register, and W1 closeout review.
-- Remaining EPIC-140 gates include physical authorization projection runtime state, real pilot storage evidence or waiver, richer CAPEX workpage/projection posture, raw-corpus governance dependencies, and CAPEX runtime activation.
+- All EPIC-140 task rows are closed: durable project anchor, direct membership roles, project-bound workflow-run creation, project-scoped child APIs, the first max-five assigned-project selector/dashboard slice, a shared project-scope helper, project-scoped official pointer-family substrate, neutral domain-runtime manifest skeleton, ready-state logistics manifest inventory, incubation-state CAPEX manifest inventory, approval-effect registry shadow parity, project authorization CED, `AuthorizedProjectsQuery` prototype, storage/blob custody CED, pilot storage gate checklist, W1 code pattern register, W1 closeout review, and physical authorization projection runtime state.
+- CAPEX activation remains blocked outside EPIC-140 by real pilot storage evidence or waiver, raw-corpus/source governance dependencies, richer CAPEX workpage/projection posture, workflow catalog work, release/capacity gates, and production-preflight gates.
 
 ## Stop line
 - Do not import raw project corpus content.

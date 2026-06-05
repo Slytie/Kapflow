@@ -37,7 +37,7 @@
 
 ## TASK-0233 closeout evidence
 - Imported CAPEX v6 planning source row count: 374 tasks, 270 gates, 222 risks, 23 open decisions.
-- Current-code blocker mappings recorded for approval domain coupling, artifact auth-before-read, CAPEX project child APIs/authorization projections, domain-runtime manifests, storage custody gates, Wave 1 closeout evidence, and source occurrence/evidence; the first project child API, selector/dashboard, project-scope helper, official pointer-family substrate, neutral domain-runtime skeleton, ready logistics manifest inventory, CAPEX incubation manifest, approval-effect registry shadow parity, project authorization CED, `AuthorizedProjectsQuery` prototype, storage/blob custody CED, pilot storage gate checklist, W1 code pattern register, and W1 closeout review slices are now closed, while physical authorization projection runtime state, pointer-promotion policy checks, real pilot storage evidence or waiver, and later governance remain blocked.
+- Current-code blocker mappings recorded for approval domain coupling, artifact auth-before-read, CAPEX project child APIs/authorization projections, domain-runtime manifests, storage custody gates, Wave 1 closeout evidence, and source occurrence/evidence; the first project child API, selector/dashboard, project-scope helper, official pointer-family substrate, neutral domain-runtime skeleton, ready logistics manifest inventory, CAPEX incubation manifest, approval-effect registry shadow parity, project authorization CED, projection-backed `AuthorizedProjectsQuery`, physical authorization projection runtime state, storage/blob custody CED, pilot storage gate checklist, W1 code pattern register, and W1 closeout review slices are now closed, while pointer-promotion policy checks, real pilot storage evidence or waiver, and later governance remain blocked.
 - Verification basis: CAPEX conversion check, repo validation, schema validation, focused planning/import checks, and `git diff --check`.
 
 ## TASK-0234 closeout evidence
@@ -242,7 +242,7 @@
 ## TASK-0383 closeout evidence
 - Added `docs/domains/capex/domain.yaml` as the incubation-state CAPEX domain manifest.
 - The manifest intentionally inventories no workflows, workpages, or side effects because CAPEX workflow packs and workpage projections are not authored or accepted yet.
-- Disabled-capability and readiness-prerequisite rows record the remaining project authorization, storage custody, source governance, workflow catalog, workpage projection, and production-preflight gates.
+- Disabled-capability and readiness-prerequisite rows record project authorization evidence, plus remaining storage custody, source governance, workflow catalog, workpage projection, and production-preflight gates.
 - Evidence: CAPEX domain manifest contract tests and domain manifest schema validation passed on 2026-06-05.
 - Closeout posture: `ARCH-W1-T003` is closed as incubation inventory only; no CAPEX runtime activation, raw-corpus use, route, migration, or behavior registration is implied.
 
@@ -255,8 +255,8 @@
 
 ## TASK-0385 closeout evidence
 - Added `docs/architecture/CAPEX_PROJECT_AUTHORIZATION_CED.md` as the accepted Wave 1 project authorization CED.
-- The CED records `capex_projects.project_id` as the durable root, keeps `workflow_run_id` as an execution identity, and separates direct `project_memberships` from future authorization projection/read-model concepts.
-- Future `capex_project_authorization`, `capex_project_feature`, and `capex_user_project_view` remain derived projection concepts, not authoritative project truth.
+- The CED records `capex_projects.project_id` as the durable root, keeps `workflow_run_id` as an execution identity, and separates direct `project_memberships` from derived authorization projection/read-model concepts.
+- `capex_project_authorization`, `capex_project_feature`, and `capex_user_project_view` remain derived projection concepts, not authoritative project truth.
 - Evidence: project authorization CED contract tests passed on 2026-06-05.
 - Closeout posture: `ARCH-W1-T005` is closed as design/CED evidence only; no projection tables, migration, route, frontend behavior, raw-corpus use, or activation behavior was added.
 
@@ -265,7 +265,16 @@
 - Existing project access helpers now delegate role lookup and read-visibility SQL/params through the prototype; project list payloads still return the existing row shape and `caller_role`.
 - Non-members receive an empty authorized-project result, and project-bound broad reads continue hiding rows from same-tenant non-members while no-project rows remain readable.
 - Evidence: authorized-project query unit tests and existing project visibility regressions passed on 2026-06-05.
-- Closeout posture: `ARCH-W1-T006` is closed as query-prototype evidence only; physical authorization projection runtime state, policy expansion, raw-corpus use, and CAPEX runtime activation remain later gated scope.
+- Closeout posture: `ARCH-W1-T006` is closed as query-prototype evidence only; physical authorization projection runtime state was later reconciled by `TASK-0563`, while policy expansion, raw-corpus use, and CAPEX runtime activation remain later gated scope.
+
+## TASK-0563 closeout evidence
+- Added additive `capex_project_authorization`, `capex_project_feature`, and `capex_user_project_view` runtime projection tables with SQLite bootstrap, Alembic migration, SQLAlchemy models, repositories, and runtime schemas.
+- Migration backfills projection rows from existing `capex_projects` plus active `project_memberships`; direct membership remains authoritative source state.
+- Added `refresh_project_authorization_projection`, `rebuild_project_authorization_projections`, and `ensure_project_feature_defaults` to keep authorization/user-view projections deterministic and repairable.
+- Project create and membership grant commands refresh projections inside the same command transaction, and `AuthorizedProjectsQuery` now reads projection-backed rows while preserving project API payloads and no-project logistics/runtime visibility.
+- `capex.runtime_activation` is seeded as `disabled` by default, so closing EPIC-140 does not activate CAPEX runtime/product behavior.
+- Evidence: authorization projection unit tests, schema parity/backfill integration tests, existing project access regressions, CAPEX domain/invariant contracts, schema validation, and progress-data validation passed on 2026-06-05.
+- Closeout posture: `NU-CB-P0-003` closes the final EPIC-140 task row. CAPEX activation, raw-corpus/source governance, workflow/workpage authoring, real pilot storage evidence or waiver, release/capacity, and production-preflight gates remain later work.
 
 ## TASK-0387 closeout evidence
 - Added `docs/architecture/CAPEX_STORAGE_BLOB_CUSTODY_CED.md` as the accepted Wave 1 storage/blob custody schema-design boundary.
@@ -318,7 +327,7 @@
 | File-backed notify-only manifests and shared-env late-report guard | `TASK-0249` | `src/onetruth/application/handlers/logistics_handoff.py`, `tests/runtime/test_logistics_handoff_runtime.py` |
 | Logistics reconciler dry-run report | `TASK-0252` | `src/onetruth/application/services/logistics_reconciler.py`, `src/onetruth/cli/__main__.py`, `tests/runtime/test_logistics_handoff_runtime.py` |
 | Operator home failure-state surface | `TASK-0253` | `src/onetruth/api/routes/operator_home.py`, `frontend/src/pages/OperatorHomePage.tsx`, `frontend/src/app/AppShell.tsx` |
-| CAPEX project child APIs and authorization projections | `TASK-0263`, `TASK-0371`, `TASK-0265`, `TASK-0385`, `TASK-0386`, `TASK-0563` | first project child APIs, selector/dashboard, project-scope helper, official pointer-family substrate, project authorization CED, and `AuthorizedProjectsQuery` prototype are closed; physical authorization projection runtime state, pointer-promotion policy checks, source governance, and activation remain blocked |
+| CAPEX project child APIs and authorization projections | `TASK-0263`, `TASK-0371`, `TASK-0265`, `TASK-0385`, `TASK-0386`, `TASK-0563` | first project child APIs, selector/dashboard, project-scope helper, official pointer-family substrate, project authorization CED, projection-backed `AuthorizedProjectsQuery`, and physical authorization projection runtime state are closed; pointer-promotion policy checks, source governance, and activation remain blocked |
 | CAPEX storage/blob custody and pilot storage gate | `TASK-0387`, `TASK-0388`, `TASK-0390` | storage/blob custody CED and pilot storage gate checklist are closed; real pilot storage evidence or explicit waiver, Postgres/blob backend rollout, and activation remain blocked |
 | CAPEX Wave 1 pattern and closeout evidence | `TASK-0389`, `TASK-0390` | W1 code pattern register and closeout review are closed as non-production traceability; no runtime activation, source ZIP mutation, or pilot go decision is implied |
 | Source occurrence / SourceRef | `TASK-0268`, `TASK-0391`, `TASK-0407`, `TASK-0428`, `TASK-0564` | future source occurrence and evidence resolver |

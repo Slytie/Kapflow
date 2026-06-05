@@ -48,8 +48,9 @@ def test_epic139_redo_closure_handoff_progress_stays_done() -> None:
     for task_id in ("TASK-0643", "TASK-0644", "TASK-0645", "TASK-0646", "TASK-0647"):
         assert task_statuses[task_id] == "done"
 
-    assert epics["EPIC-140"]["displayStatus"] == "blocked"
-    assert "Project-scoped APIs" in epics["EPIC-140"]["reviewPosture"]
+    assert epics["EPIC-140"]["displayStatus"] == "done"
+    assert "EPIC-140 project/access work is closed" in epics["EPIC-140"]["reviewPosture"]
+    assert "CAPEX activation remains blocked" in epics["EPIC-140"]["reviewPosture"]
 
 
 def test_epic139_red_interlocks_remain_lifted_after_closure_handoff() -> None:

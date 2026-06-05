@@ -2,7 +2,8 @@
 id: TASK-0563
 epic: EPIC-140
 title: "Add CAPEX project/membership/authorization runtime state"
-status: TODO
+status: DONE
+completed_at: "2026-06-05T10:42:12+02:00"
 owners: ["platform"]
 reviewers: ["architect", "qa"]
 depends_on: ["TASK-0240"]
@@ -61,3 +62,8 @@ Add capex_project, project_membership, authorization projection, project-scoped 
 
 ## Notes / decisions
 - Raw project corpora remain off-repo; use only sanitized fixtures, manifests, hashes, and aggregate evidence approved by the relevant fixture/governance task.
+- Completed on `2026-06-05T10:42:12+02:00`.
+- Added additive `capex_project_authorization`, `capex_project_feature`, and `capex_user_project_view` runtime projection tables through Alembic and SQLite bootstrap parity.
+- Added projection refresh/rebuild helpers under the CAPEX platform project-access layer; direct `project_memberships` remain authoritative and projections are deterministic read models.
+- Project create and membership grant commands refresh projections inside the command transaction, while `AuthorizedProjectsQuery` now reads projection-backed rows without changing public CAPEX project API shapes.
+- `capex.runtime_activation` is seeded as disabled by default, so closing EPIC-140 does not activate CAPEX runtime/product behavior.

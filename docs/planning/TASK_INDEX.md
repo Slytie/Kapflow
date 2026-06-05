@@ -523,7 +523,7 @@ Note: `TASK-0087` / `TASK-0088` / `TASK-0089` were formerly duplicated as `TASK-
 | TASK-0560 | EPIC-151 | TODO | high | Run Waves 1-8 formalism regression |
 | TASK-0561 | EPIC-139 | DONE | high | Extract logistics side effects from approval.respond |
 | TASK-0562 | EPIC-137 | TODO | high | Fix artifact download auth-before-read |
-| TASK-0563 | EPIC-140 | TODO | high | Add CAPEX project/membership/authorization runtime state |
+| TASK-0563 | EPIC-140 | DONE | high | Add CAPEX project/membership/authorization runtime state |
 | TASK-0564 | EPIC-141 | TODO | high | Add physical source_occurrence and sourceRef resolver |
 | TASK-0565 | EPIC-142 | TODO | high | Add ClosureGateEvaluation, ClosureSnapshot, Waiver, lifecycle recurrence stale rules |
 | TASK-0566 | EPIC-143 | TODO | high | Implement workflow handoff manifest contract |

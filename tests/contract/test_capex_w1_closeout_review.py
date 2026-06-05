@@ -60,7 +60,7 @@ def test_capex_w1_closeout_review_records_overkill_and_master_patch_posture() ->
 
     required_markers = (
         "typed registries, architecture docs, contract tests, and direct-membership prototypes only",
-        "Defer physical authorization projections",
+        "Physical authorization projections were deferred by Wave 1 and later closed by `TASK-0563`",
         "custody migrations",
         "storage backend rollout",
         "richer CAPEX workpages",

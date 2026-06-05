@@ -20,7 +20,11 @@ It owns stable `project_id`, project key, state, metadata, creator, and timestam
 
 ### ProjectMembership
 Direct actor-to-project role grant.
-It records one active role per `(project_id, actor_type, actor_id)` and is separate from later authorization projections.
+It records one active role per `(project_id, actor_type, actor_id)` and remains source state for rebuildable authorization projections.
+
+### CapexProjectAuthorization
+Derived project authorization read model.
+It is rebuilt from active direct membership today, may later incorporate additional policy inputs, and is not authoritative project truth.
 
 ### TaskRun
 Bounded unit of work inside a workflow run.

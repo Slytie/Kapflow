@@ -14,7 +14,7 @@ This review closes `TASK-0390` as decision-docket and traceability evidence. It 
 | `ARCH-W1-GATE-002` | Domain manifests validate under the domain manifest schema. | `tests/contract/test_domain_manifest_schema.py`; `docs/domains/logistics/domain.yaml`; `docs/domains/capex/domain.yaml` | repo evidence recorded |
 | `ARCH-W1-GATE-003` | Generic approval response emits canonical approval transition/event only; domain effects live behind hooks. | `docs/adr/ADR-005-approval-response-domain-hooks.md`; `tests/contract/test_handler_import_boundaries.py`; `tests/unit/test_approval_effect_registry.py` | repo evidence recorded |
 | `ARCH-W1-GATE-004` | `capex_projects.project_id` is the durable root; workflow runs are execution identity only. | `docs/architecture/CAPEX_PROJECT_AUTHORIZATION_CED.md`; project access API and schema parity tests | repo evidence recorded |
-| `ARCH-W1-GATE-005` | Direct `project_memberships` and future authorization projections are separate. | `docs/architecture/CAPEX_PROJECT_AUTHORIZATION_CED.md`; `tests/unit/test_capex_authorized_projects_query.py` | repo evidence recorded |
+| `ARCH-W1-GATE-005` | Direct `project_memberships` and derived authorization projections are separate. | `docs/architecture/CAPEX_PROJECT_AUTHORIZATION_CED.md`; `tests/unit/test_capex_authorized_projects_query.py` | repo evidence recorded |
 | `ARCH-W1-GATE-006` | Project-scoped runtime rows use direct project IDs where the foundation has accepted them. | CAPEX project schema parity and child API tests | repo evidence recorded |
 | `ARCH-W1-GATE-007` | Auth-before-download is mediated by platform service. | `docs/architecture/CAPEX_STORAGE_BLOB_CUSTODY_CED.md`; focused artifact download API regressions | repo evidence recorded |
 | `ARCH-W1-GATE-008` | Future `BlobRef` and `BlobReplica` are separate from `ArtifactVersion`. | `docs/architecture/CAPEX_STORAGE_BLOB_CUSTODY_CED.md`; CED contract tests | repo evidence recorded |
@@ -26,11 +26,11 @@ Gates `ARCH-W1-GATE-001` through `ARCH-W1-GATE-009` have repo evidence. `ARCH-W1
 ## Overkill Assessment
 Wave 1 remains intentionally narrow: typed registries, architecture docs, contract tests, and direct-membership prototypes only.
 
-Defer physical authorization projections, custody migrations, storage backend rollout, Postgres rollout, richer CAPEX workpages, raw corpus ingestion, production-like dashboards, and CAPEX activation. Adopt heavier tooling only after a later task proves a concrete need and records the activation or waiver decision.
+Physical authorization projections were deferred by Wave 1 and later closed by `TASK-0563` as rebuildable read models. Continue to defer custody migrations, storage backend rollout, Postgres rollout, richer CAPEX workpages, raw corpus ingestion, production-like dashboards, and CAPEX activation. Adopt heavier tooling only after a later task proves a concrete need and records the activation or waiver decision.
 
 ## Old-Decision Updates
 - Prior wording that treated Wave 1 storage custody as pure unknown is now refined: the CED and checklist exist, while real pilot storage evidence or waiver remains open.
-- Prior wording that implied project authorization projection state exists is corrected: direct membership and `AuthorizedProjectsQuery` exist; physical authorization projection runtime state remains future work.
+- Prior wording that implied project authorization projection state was a Wave 1 deliverable is reconciled: direct membership and `AuthorizedProjectsQuery` landed in Wave 1, and physical authorization projection runtime state is closed by `TASK-0563` as a later rebuildable read-model task.
 - No old decision is updated to permit CAPEX activation, raw corpus handling, production-like execution, or direct blob authority.
 
 ## Master Patch Instructions
