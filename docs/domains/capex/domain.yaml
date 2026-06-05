@@ -1,0 +1,140 @@
+schema_version: domain_manifest.v1
+domain_id: capex
+display_name: CAPEX
+readiness: incubation
+source_refs:
+  - kind: epic
+    path: docs/planning/epics/EPIC-140.md
+  - kind: intake
+    path: docs/planning/CAPEX_MASTER_V6_INTAKE.md
+  - kind: architecture
+    path: docs/architecture/CAPEX_DOMAIN_RUNTIME_MANIFESTS.md
+  - kind: architecture
+    path: docs/architecture/CAPEX_PROJECT_ACCESS_MODEL.md
+workflows: []
+workpages: []
+side_effects: []
+readiness_prerequisites:
+  - prerequisite_id: capex.project_authorization_model
+    description: Project authorization projections and membership refresh semantics are not implemented.
+    status: open
+    task_refs:
+      - TASK-0385
+      - TASK-0386
+      - TASK-0563
+    source_refs:
+      - docs/planning/epics/EPIC-140.md
+      - docs/architecture/CAPEX_PROJECT_ACCESS_MODEL.md
+  - prerequisite_id: capex.storage_custody_gate
+    description: Storage/blob custody design and pilot checklist remain future Wave 1 gates.
+    status: open
+    task_refs:
+      - TASK-0387
+      - TASK-0388
+    source_refs:
+      - docs/planning/epics/EPIC-140.md
+      - docs/planning/CAPEX_MASTER_V6_INTAKE.md
+  - prerequisite_id: capex.source_occurrence_governance
+    description: Source occurrence, evidence resolver, and source-data governance dependencies remain future work.
+    status: open
+    task_refs:
+      - TASK-0391
+      - TASK-0407
+      - TASK-0428
+      - TASK-0564
+    source_refs:
+      - docs/planning/epics/EPIC-141.md
+      - docs/planning/CAPEX_MASTER_V6_INTAKE.md
+  - prerequisite_id: capex.workflow_catalog
+    description: CAPEX workflow packs are not authored or accepted yet.
+    status: open
+    task_refs:
+      - TASK-0283
+      - TASK-0284
+      - TASK-0285
+      - TASK-0286
+      - TASK-0287
+      - TASK-0288
+      - TASK-0289
+    source_refs:
+      - docs/planning/epics/EPIC-143.md
+      - docs/planning/CAPEX_V6_CONVERSION_MAP.csv
+  - prerequisite_id: capex.workpage_projection_family
+    description: CAPEX workpage projections and command envelopes remain future EPIC-144 work.
+    status: open
+    task_refs:
+      - TASK-0291
+      - TASK-0292
+      - TASK-0293
+      - TASK-0294
+      - TASK-0295
+      - TASK-0296
+      - TASK-0297
+      - TASK-0298
+      - TASK-0299
+      - TASK-0567
+    source_refs:
+      - docs/planning/epics/EPIC-144.md
+      - docs/planning/CAPEX_V6_CONVERSION_MAP.csv
+  - prerequisite_id: capex.production_preflight
+    description: Release, capacity, restore, pilot, and production-preflight evidence remain blocked or future scope.
+    status: open
+    task_refs:
+      - TASK-0244
+      - TASK-0390
+    source_refs:
+      - docs/status/CURRENT_FOCUS.md
+      - docs/planning/CAPEX_PLATFORM_FOUNDATION_V0.md
+disabled_capabilities:
+  - capability_id: capex.runtime_activation
+    description: CAPEX runtime/product activation is disabled.
+    disabled_reason: Required project, governance, capacity, release, and production-preflight gates are not closed.
+    owner_task_refs:
+      - TASK-0390
+      - TASK-0563
+  - capability_id: capex.workflow_catalog
+    description: CAPEX workflow packs are not registered as runnable domain workflows.
+    disabled_reason: EPIC-143 workflow catalog tasks remain TODO.
+    owner_task_refs:
+      - TASK-0283
+      - TASK-0284
+      - TASK-0285
+      - TASK-0286
+      - TASK-0287
+      - TASK-0288
+      - TASK-0289
+  - capability_id: capex.source_data_governance
+    description: Source-data governance, source occurrence, and evidence binding are disabled.
+    disabled_reason: EPIC-141 source occurrence and governance tasks remain TODO.
+    owner_task_refs:
+      - TASK-0391
+      - TASK-0407
+      - TASK-0428
+      - TASK-0564
+  - capability_id: capex.authorization_projections
+    description: Project authorization projections are disabled.
+    disabled_reason: Direct membership exists, but authorization projection design and prototype are not closed.
+    owner_task_refs:
+      - TASK-0385
+      - TASK-0386
+      - TASK-0563
+  - capability_id: capex.workpages
+    description: CAPEX-specific workpages and projection snapshots are disabled.
+    disabled_reason: EPIC-144 projection/workpage tasks remain TODO.
+    owner_task_refs:
+      - TASK-0291
+      - TASK-0292
+      - TASK-0293
+      - TASK-0294
+      - TASK-0295
+      - TASK-0296
+      - TASK-0297
+      - TASK-0298
+      - TASK-0299
+      - TASK-0567
+  - capability_id: capex.production_pilot_activation
+    description: Production, pilot, and production-like CAPEX activation are disabled.
+    disabled_reason: Lab deploy live evidence, restore/capacity, release, and production-preflight gates remain open.
+    owner_task_refs:
+      - TASK-0244
+      - TASK-0390

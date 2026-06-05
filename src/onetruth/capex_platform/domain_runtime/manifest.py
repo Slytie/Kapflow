@@ -170,6 +170,65 @@ class DomainSideEffectRef:
 
 
 @dataclass(frozen=True)
+class DomainReadinessPrerequisite:
+    prerequisite_id: str
+    description: str
+    status: str
+    task_refs: tuple[str, ...] = field(default_factory=tuple)
+    source_refs: tuple[str, ...] = field(default_factory=tuple)
+
+    @classmethod
+    def from_mapping(
+        cls, row: dict[str, Any]
+    ) -> DomainReadinessPrerequisite:
+        return cls(
+            prerequisite_id=str(row["prerequisite_id"]),
+            description=str(row["description"]),
+            status=str(row["status"]),
+            task_refs=tuple(str(value) for value in row.get("task_refs", ())),
+            source_refs=tuple(str(value) for value in row.get("source_refs", ())),
+        )
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "prerequisite_id": self.prerequisite_id,
+            "description": self.description,
+            "status": self.status,
+            "task_refs": list(self.task_refs),
+            "source_refs": list(self.source_refs),
+        }
+
+
+@dataclass(frozen=True)
+class DomainDisabledCapability:
+    capability_id: str
+    description: str
+    disabled_reason: str
+    owner_task_refs: tuple[str, ...] = field(default_factory=tuple)
+
+    @classmethod
+    def from_mapping(
+        cls, row: dict[str, Any]
+    ) -> DomainDisabledCapability:
+        return cls(
+            capability_id=str(row["capability_id"]),
+            description=str(row["description"]),
+            disabled_reason=str(row["disabled_reason"]),
+            owner_task_refs=tuple(
+                str(value) for value in row.get("owner_task_refs", ())
+            ),
+        )
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "capability_id": self.capability_id,
+            "description": self.description,
+            "disabled_reason": self.disabled_reason,
+            "owner_task_refs": list(self.owner_task_refs),
+        }
+
+
+@dataclass(frozen=True)
 class DomainManifest:
     schema_version: str
     domain_id: str
@@ -179,6 +238,12 @@ class DomainManifest:
     workflows: tuple[DomainWorkflowRef, ...] = field(default_factory=tuple)
     workpages: tuple[DomainWorkpageRef, ...] = field(default_factory=tuple)
     side_effects: tuple[DomainSideEffectRef, ...] = field(default_factory=tuple)
+    readiness_prerequisites: tuple[DomainReadinessPrerequisite, ...] = field(
+        default_factory=tuple
+    )
+    disabled_capabilities: tuple[DomainDisabledCapability, ...] = field(
+        default_factory=tuple
+    )
 
     @classmethod
     def from_mapping(cls, mapping: dict[str, Any]) -> DomainManifest:
@@ -203,6 +268,14 @@ class DomainManifest:
                 DomainSideEffectRef.from_mapping(row)
                 for row in mapping.get("side_effects", ())
             ),
+            readiness_prerequisites=tuple(
+                DomainReadinessPrerequisite.from_mapping(row)
+                for row in mapping.get("readiness_prerequisites", ())
+            ),
+            disabled_capabilities=tuple(
+                DomainDisabledCapability.from_mapping(row)
+                for row in mapping.get("disabled_capabilities", ())
+            ),
         )
 
     def to_dict(self) -> dict[str, Any]:
@@ -215,6 +288,13 @@ class DomainManifest:
             "workflows": [workflow.to_dict() for workflow in self.workflows],
             "workpages": [workpage.to_dict() for workpage in self.workpages],
             "side_effects": [side_effect.to_dict() for side_effect in self.side_effects],
+            "readiness_prerequisites": [
+                prerequisite.to_dict()
+                for prerequisite in self.readiness_prerequisites
+            ],
+            "disabled_capabilities": [
+                capability.to_dict() for capability in self.disabled_capabilities
+            ],
         }
 
 
@@ -237,4 +317,3 @@ def _optional_str(value: Any) -> str | None:
     if value is None:
         return None
     return str(value)
-

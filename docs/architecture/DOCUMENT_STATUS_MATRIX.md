@@ -49,6 +49,8 @@ This file prevents stale guidance by classifying major documents and directories
 | `docs/planning/MERGER_BACKLOG.md` | BACKLOG / DEFERRED | preserves deferred CompanyOS ideas and caveats |
 | `docs/planning/epics/*.md` | AUTHORITATIVE SOURCE | active epic definitions |
 | `docs/planning/WORKPAGE_DEVELOPMENT_GUIDE.md` | AUTHORITATIVE SOURCE | workpage registry and extension-point guidance |
+| `docs/domains/capex/DOC_INVENTORY.yaml` | AUTHORITATIVE SOURCE | CAPEX document classification and routing inventory |
+| `docs/domains/capex/domain.yaml` | AUTHORITATIVE SOURCE | CAPEX incubation domain-runtime manifest; disabled-capability inventory, not activation truth |
 | `docs/domains/logistics/DOC_INVENTORY.yaml` | AUTHORITATIVE SOURCE | logistics document classification and routing inventory |
 | `docs/domains/logistics/domain.yaml` | AUTHORITATIVE SOURCE | logistics domain-runtime inventory manifest; descriptive, not activation truth |
 | `docs/domains/logistics/current-state/*.md` | AUTHORITATIVE SOURCE | logistics current-state docs; subordinate to workflow packs and schemas if conflicts arise |

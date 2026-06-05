@@ -14,7 +14,12 @@ CAPEX domain runtime manifests are a Wave 1 inventory surface for composing doma
 
 ## Current Manifests
 - `docs/domains/logistics/domain.yaml` inventories the existing logistics workflow family, active workpage descriptors/actions, approval-response hooks, and handoff edges in ready state.
-- The future CAPEX domain manifest is still owned by later EPIC-140 work and remains incubation/not-ready until its governance gates close.
+- `docs/domains/capex/domain.yaml` inventories CAPEX in incubation state with no runnable workflows, workpages, or side effects. Its disabled capabilities and readiness prerequisites point to later project authorization, storage custody, source governance, workflow catalog, workpage projection, and production-preflight tasks.
+
+## Approval Side Effects
+- Approval-response side effects are selected through the neutral approval-effect registry in shadow mode.
+- Logistics keeps its compatibility selector, but that selector delegates to the logistics approval-effect pack.
+- The registry is parity evidence only in the current slice; it does not add CAPEX approval side effects or activation behavior.
 
 ## Source Of Truth
 - Workflow semantics remain in `docs/workflows/*/v1/`.

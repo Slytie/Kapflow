@@ -1,0 +1,13 @@
+domain: capex
+inventory_version: 1
+classification_values:
+  - normative
+  - descriptive
+  - historical
+entries:
+  - path: docs/domains/capex/domain.yaml
+    classification: normative
+    location: domain_manifest
+  - path: docs/domains/capex/README.md
+    classification: descriptive
+    location: domain_root

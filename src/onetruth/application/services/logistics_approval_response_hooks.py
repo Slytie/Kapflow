@@ -15,6 +15,9 @@ from onetruth.application.handlers._shared.command_boundary import (
 from onetruth.application.handlers.logistics_handoff import notify_only_handoff_command
 from onetruth.application.handlers.pointers import _promote_pointer_effects
 from onetruth.application.services.approval_response_hooks import (
+    ApprovalEffectPack,
+    ApprovalEffectRegistration,
+    ApprovalEffectRegistry,
     ApprovalResponseHook,
     ApprovalResponseHookContext,
 )
@@ -612,17 +615,32 @@ LOGISTICS_APPROVAL_RESPONSE_WORKFLOW_IDS = frozenset(
     }
 )
 
+LOGISTICS_APPROVAL_RESPONSE_EFFECT_PACK = ApprovalEffectPack(
+    pack_name="logistics",
+    effects=tuple(
+        ApprovalEffectRegistration(
+            hook=hook,
+            workflow_ids=tuple(sorted(LOGISTICS_APPROVAL_RESPONSE_WORKFLOW_IDS)),
+        )
+        for hook in LOGISTICS_APPROVAL_RESPONSE_HOOKS
+    ),
+)
+
+LOGISTICS_APPROVAL_RESPONSE_EFFECT_REGISTRY = ApprovalEffectRegistry(
+    packs=(LOGISTICS_APPROVAL_RESPONSE_EFFECT_PACK,)
+)
+
 
 def logistics_approval_response_hooks_for_workflow(
     workflow_id: str,
 ) -> tuple[ApprovalResponseHook, ...]:
-    if workflow_id in LOGISTICS_APPROVAL_RESPONSE_WORKFLOW_IDS:
-        return LOGISTICS_APPROVAL_RESPONSE_HOOKS
-    return ()
+    return LOGISTICS_APPROVAL_RESPONSE_EFFECT_REGISTRY.hooks_for_workflow(workflow_id)
 
 
 __all__ = [
     "LOGISTICS_APPROVAL_RESPONSE_HOOKS",
+    "LOGISTICS_APPROVAL_RESPONSE_EFFECT_PACK",
+    "LOGISTICS_APPROVAL_RESPONSE_EFFECT_REGISTRY",
     "LOGISTICS_APPROVAL_RESPONSE_WORKFLOW_IDS",
     "dispatch_reporting_finalize_approval_hook",
     "logistics_approval_response_hooks_for_workflow",

@@ -2,7 +2,8 @@
 id: TASK-0383
 epic: EPIC-140
 title: "Create CAPEX domain manifest in not-ready/incubation state"
-status: TODO
+status: DONE
+completed_at: "2026-06-05T09:32:46+02:00"
 owners: ["platform"]
 reviewers: ["architect", "qa"]
 depends_on: []
@@ -61,3 +62,7 @@ domains/capex/domain.yaml with disabled capabilities and readiness prerequisites
 
 ## Notes / decisions
 - Raw project corpora remain off-repo; use only sanitized fixtures, manifests, hashes, and aggregate evidence approved by the relevant fixture/governance task.
+- Closed by adding `docs/domains/capex/domain.yaml` as an incubation-state domain manifest with empty workflow, workpage, and side-effect inventories.
+- The CAPEX manifest records readiness prerequisites and disabled capabilities for authorization projections, workflow catalog, source-data governance, storage custody, richer workpages, and production/pilot activation.
+- Added `docs/domains/capex/README.md` and `DOC_INVENTORY.yaml`; CAPEX runtime activation remains blocked.
+- Evidence: `tests/contract/test_capex_domain_manifest.py` and `tests/contract/test_domain_manifest_schema.py`.

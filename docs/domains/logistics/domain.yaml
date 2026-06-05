@@ -122,6 +122,8 @@ side_effects:
       approval_scope_kind: stage
       approval_scope_ref: Stage06
       requested_action: publish_weekly_base_schedule
+      registry_pack_ref: onetruth.application.services.logistics_approval_response_hooks.LOGISTICS_APPROVAL_RESPONSE_EFFECT_PACK
+      registry_ref: onetruth.application.services.logistics_approval_response_hooks.LOGISTICS_APPROVAL_RESPONSE_EFFECT_REGISTRY
       event_effects:
         - artifact.version.created
         - artifact.pointer.promoted
@@ -134,6 +136,8 @@ side_effects:
       approval_scope_kind: stage
       approval_scope_ref: Stage04
       requested_action: confirm_dispatch_reporting_packet
+      registry_pack_ref: onetruth.application.services.logistics_approval_response_hooks.LOGISTICS_APPROVAL_RESPONSE_EFFECT_PACK
+      registry_ref: onetruth.application.services.logistics_approval_response_hooks.LOGISTICS_APPROVAL_RESPONSE_EFFECT_REGISTRY
       event_effects:
         - artifact.version.created
         - artifact.pointer.promoted

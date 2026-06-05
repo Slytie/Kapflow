@@ -35,6 +35,9 @@
 - `docs/planning/MERGER_BACKLOG.md`
 
 ## Domains
+- `docs/domains/capex/README.md`
+- `docs/domains/capex/DOC_INVENTORY.yaml`
+- `docs/domains/capex/domain.yaml`
 - `docs/domains/logistics/README.md`
 - `docs/domains/logistics/DOC_INVENTORY.yaml`
 - `docs/domains/logistics/domain.yaml`

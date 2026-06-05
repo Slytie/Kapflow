@@ -50,6 +50,18 @@
       "items": {
         "$ref": "#/$defs/sideEffectRef"
       }
+    },
+    "readiness_prerequisites": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/readinessPrerequisite"
+      }
+    },
+    "disabled_capabilities": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/disabledCapability"
+      }
     }
   },
   "$defs": {
@@ -245,6 +257,74 @@
               "object"
             ]
           }
+        }
+      }
+    },
+    "readinessPrerequisite": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "prerequisite_id",
+        "description",
+        "status",
+        "task_refs",
+        "source_refs"
+      ],
+      "properties": {
+        "prerequisite_id": {
+          "$ref": "#/$defs/id"
+        },
+        "description": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "status": {
+          "enum": [
+            "open",
+            "blocked",
+            "satisfied"
+          ]
+        },
+        "task_refs": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/nonEmptyString"
+          },
+          "uniqueItems": true
+        },
+        "source_refs": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/nonEmptyString"
+          },
+          "uniqueItems": true
+        }
+      }
+    },
+    "disabledCapability": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "capability_id",
+        "description",
+        "disabled_reason",
+        "owner_task_refs"
+      ],
+      "properties": {
+        "capability_id": {
+          "$ref": "#/$defs/id"
+        },
+        "description": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "disabled_reason": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "owner_task_refs": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/nonEmptyString"
+          },
+          "uniqueItems": true
         }
       }
     }

@@ -11,23 +11,23 @@
   "summary": {
     "epicCount": 17,
     "taskCount": 379,
-    "done": 50,
+    "done": 52,
     "in_progress": 0,
-    "not_started": 324,
+    "not_started": 322,
     "blocked": 1,
     "needs_review": 4,
     "total": 379,
     "estimate": {
-      "percentComplete": 13.2,
-      "completedTasks": 50,
-      "remainingTasks": 329,
+      "percentComplete": 13.7,
+      "completedTasks": 52,
+      "remainingTasks": 327,
       "remainingBlockedOrReviewTasks": 5,
-      "completedWithTimestamps": 18,
-      "completionTimestampCoverage": 36.0,
-      "etaDate": "2026-07-11",
+      "completedWithTimestamps": 20,
+      "completionTimestampCoverage": 38.5,
+      "etaDate": "2026-07-08",
       "etaConfidence": "medium",
       "etaSource": "epic_completed_at",
-      "label": "ETA 2026-07-11",
+      "label": "ETA 2026-07-08",
       "caveat": "5 blocked or needs-review task(s) remain."
     }
   },
@@ -668,10 +668,10 @@
         "remainingBlockedOrReviewTasks": 0,
         "completedWithTimestamps": 0,
         "completionTimestampCoverage": 0.0,
-        "etaDate": "2026-06-05",
+        "etaDate": "2026-06-06",
         "etaConfidence": "low",
         "etaSource": "global_completed_at",
-        "label": "ETA 2026-06-05",
+        "label": "ETA 2026-06-06",
         "caveat": "Estimate is based on remaining current-scope task count."
       }
     },
@@ -1284,10 +1284,10 @@
         "remainingBlockedOrReviewTasks": 0,
         "completedWithTimestamps": 0,
         "completionTimestampCoverage": 0.0,
-        "etaDate": "2026-06-05",
+        "etaDate": "2026-06-06",
         "etaConfidence": "low",
         "etaSource": "global_completed_at",
-        "label": "ETA 2026-06-05",
+        "label": "ETA 2026-06-06",
         "caveat": "Estimate is based on remaining current-scope task count."
       }
     },
@@ -1987,10 +1987,10 @@
         "remainingBlockedOrReviewTasks": 1,
         "completedWithTimestamps": 0,
         "completionTimestampCoverage": 0.0,
-        "etaDate": "2026-06-05",
+        "etaDate": "2026-06-06",
         "etaConfidence": "low",
         "etaSource": "global_completed_at",
-        "label": "ETA 2026-06-05",
+        "label": "ETA 2026-06-06",
         "caveat": "1 blocked or needs-review task(s) remain."
       }
     },
@@ -3437,9 +3437,9 @@
         "docs/planning/CAPEX_V6_GATE_RISK_DECISION_MAP.csv"
       ],
       "counts": {
-        "done": 8,
+        "done": 10,
         "in_progress": 0,
-        "not_started": 9,
+        "not_started": 7,
         "blocked": 0,
         "needs_review": 0,
         "total": 17
@@ -3908,9 +3908,9 @@
           "epicId": "EPIC-140",
           "title": "Create CAPEX domain manifest in not-ready/incubation state",
           "plainPurpose": "domains/capex/domain.yaml with disabled capabilities and readiness prerequisites",
-          "sourceStatus": "TODO",
-          "displayStatus": "not_started",
-          "statusReason": "Task is still planned backlog work.",
+          "sourceStatus": "DONE",
+          "displayStatus": "done",
+          "statusReason": "Task frontmatter records DONE status.",
           "why": [
             "Imported from CAPEX v6 source task ARCH-W1-T003 so future work can be executed from repo-native backlog memory without loading the full master package."
           ],
@@ -3955,18 +3955,18 @@
           },
           "evidence": [],
           "taskPath": "codex/tasks/TASK-0383-create-capex-domain-manifest-in-not-ready-incubation-state.md",
-          "completedAt": null,
-          "completionTimestampStatus": "not_applicable",
-          "completionTimestampSource": "not_completed"
+          "completedAt": "2026-06-05T09:32:46+02:00",
+          "completionTimestampStatus": "recorded",
+          "completionTimestampSource": "task_frontmatter"
         },
         {
           "id": "TASK-0384",
           "epicId": "EPIC-140",
           "title": "Extract generic approval side effects behind registry in shadow mode",
           "plainPurpose": "ApprovalEffectRegistry/SideEffectHandlerRegistry and logistics parity handlers",
-          "sourceStatus": "TODO",
-          "displayStatus": "not_started",
-          "statusReason": "Task is still planned backlog work.",
+          "sourceStatus": "DONE",
+          "displayStatus": "done",
+          "statusReason": "Task frontmatter records DONE status.",
           "why": [
             "Imported from CAPEX v6 source task ARCH-W1-T004 so future work can be executed from repo-native backlog memory without loading the full master package."
           ],
@@ -4011,9 +4011,9 @@
           },
           "evidence": [],
           "taskPath": "codex/tasks/TASK-0384-extract-generic-approval-side-effects-behind-registry-in-shadow-mode.md",
-          "completedAt": null,
-          "completionTimestampStatus": "not_applicable",
-          "completionTimestampSource": "not_completed"
+          "completedAt": "2026-06-05T09:32:46+02:00",
+          "completionTimestampStatus": "recorded",
+          "completionTimestampSource": "task_frontmatter"
         },
         {
           "id": "TASK-0385",
@@ -4411,16 +4411,16 @@
         }
       ],
       "estimate": {
-        "percentComplete": 47.1,
-        "completedTasks": 8,
-        "remainingTasks": 9,
+        "percentComplete": 58.8,
+        "completedTasks": 10,
+        "remainingTasks": 7,
         "remainingBlockedOrReviewTasks": 0,
-        "completedWithTimestamps": 8,
+        "completedWithTimestamps": 10,
         "completionTimestampCoverage": 100.0,
-        "etaDate": "2026-06-05",
+        "etaDate": "2026-06-06",
         "etaConfidence": "medium",
         "etaSource": "epic_completed_at",
-        "label": "ETA 2026-06-05",
+        "label": "ETA 2026-06-06",
         "caveat": "Estimate is based on remaining current-scope task count."
       }
     },
@@ -9253,10 +9253,10 @@
         "remainingBlockedOrReviewTasks": 1,
         "completedWithTimestamps": 0,
         "completionTimestampCoverage": 0.0,
-        "etaDate": "2026-06-07",
+        "etaDate": "2026-06-08",
         "etaConfidence": "low",
         "etaSource": "global_completed_at",
-        "label": "ETA 2026-06-07",
+        "label": "ETA 2026-06-08",
         "caveat": "1 blocked or needs-review task(s) remain."
       }
     },
@@ -9933,10 +9933,10 @@
         "remainingBlockedOrReviewTasks": 0,
         "completedWithTimestamps": 0,
         "completionTimestampCoverage": 0.0,
-        "etaDate": "2026-06-05",
+        "etaDate": "2026-06-06",
         "etaConfidence": "low",
         "etaSource": "global_completed_at",
-        "label": "ETA 2026-06-05",
+        "label": "ETA 2026-06-06",
         "caveat": "Estimate is based on remaining current-scope task count."
       }
     },
@@ -13901,10 +13901,10 @@
         "remainingBlockedOrReviewTasks": 0,
         "completedWithTimestamps": 0,
         "completionTimestampCoverage": 0.0,
-        "etaDate": "2026-06-08",
+        "etaDate": "2026-06-09",
         "etaConfidence": "low",
         "etaSource": "global_completed_at",
-        "label": "ETA 2026-06-08",
+        "label": "ETA 2026-06-09",
         "caveat": "Estimate is based on remaining current-scope task count."
       }
     },
@@ -14179,10 +14179,10 @@
         "remainingBlockedOrReviewTasks": 0,
         "completedWithTimestamps": 0,
         "completionTimestampCoverage": 0.0,
-        "etaDate": "2026-06-05",
+        "etaDate": "2026-06-06",
         "etaConfidence": "low",
         "etaSource": "global_completed_at",
-        "label": "ETA 2026-06-05",
+        "label": "ETA 2026-06-06",
         "caveat": "Estimate is based on remaining current-scope task count."
       }
     },
@@ -14516,10 +14516,10 @@
         "remainingBlockedOrReviewTasks": 0,
         "completedWithTimestamps": 0,
         "completionTimestampCoverage": 0.0,
-        "etaDate": "2026-06-05",
+        "etaDate": "2026-06-06",
         "etaConfidence": "low",
         "etaSource": "global_completed_at",
-        "label": "ETA 2026-06-05",
+        "label": "ETA 2026-06-06",
         "caveat": "Estimate is based on remaining current-scope task count."
       }
     },
@@ -14798,10 +14798,10 @@
         "remainingBlockedOrReviewTasks": 0,
         "completedWithTimestamps": 0,
         "completionTimestampCoverage": 0.0,
-        "etaDate": "2026-06-05",
+        "etaDate": "2026-06-06",
         "etaConfidence": "low",
         "etaSource": "global_completed_at",
-        "label": "ETA 2026-06-05",
+        "label": "ETA 2026-06-06",
         "caveat": "Estimate is based on remaining current-scope task count."
       }
     },
@@ -20518,10 +20518,10 @@
         "remainingBlockedOrReviewTasks": 0,
         "completedWithTimestamps": 0,
         "completionTimestampCoverage": 0.0,
-        "etaDate": "2026-06-07",
+        "etaDate": "2026-06-08",
         "etaConfidence": "low",
         "etaSource": "global_completed_at",
-        "label": "ETA 2026-06-07",
+        "label": "ETA 2026-06-08",
         "caveat": "Estimate is based on remaining current-scope task count."
       }
     },
@@ -22085,10 +22085,10 @@
         "remainingBlockedOrReviewTasks": 0,
         "completedWithTimestamps": 0,
         "completionTimestampCoverage": 0.0,
-        "etaDate": "2026-06-07",
+        "etaDate": "2026-06-08",
         "etaConfidence": "low",
         "etaSource": "global_completed_at",
-        "label": "ETA 2026-06-07",
+        "label": "ETA 2026-06-08",
         "caveat": "Estimate is based on remaining current-scope task count."
       }
     },
@@ -22683,10 +22683,10 @@
         "remainingBlockedOrReviewTasks": 0,
         "completedWithTimestamps": 0,
         "completionTimestampCoverage": 0.0,
-        "etaDate": "2026-06-05",
+        "etaDate": "2026-06-06",
         "etaConfidence": "low",
         "etaSource": "global_completed_at",
-        "label": "ETA 2026-06-05",
+        "label": "ETA 2026-06-06",
         "caveat": "Estimate is based on remaining current-scope task count."
       }
     }

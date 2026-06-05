@@ -2,7 +2,9 @@
 
 from onetruth.capex_platform.domain_runtime.manifest import (
     DomainActionSubject,
+    DomainDisabledCapability,
     DomainManifest,
+    DomainReadinessPrerequisite,
     DomainSideEffectRef,
     DomainSourceRef,
     DomainWorkflowRef,
@@ -17,7 +19,9 @@ from onetruth.capex_platform.domain_runtime.registry import (
 __all__ = [
     "DomainActionSubject",
     "DomainCompositionReport",
+    "DomainDisabledCapability",
     "DomainManifest",
+    "DomainReadinessPrerequisite",
     "DomainRuntimeRegistry",
     "DomainSideEffectRef",
     "DomainSourceRef",
@@ -25,4 +29,3 @@ __all__ = [
     "DomainWorkpageRef",
     "load_domain_manifest",
 ]
-

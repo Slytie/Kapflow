@@ -2,7 +2,8 @@
 id: TASK-0384
 epic: EPIC-140
 title: "Extract generic approval side effects behind registry in shadow mode"
-status: TODO
+status: DONE
+completed_at: "2026-06-05T09:32:46+02:00"
 owners: ["platform"]
 reviewers: ["architect", "qa"]
 depends_on: []
@@ -61,3 +62,7 @@ ApprovalEffectRegistry/SideEffectHandlerRegistry and logistics parity handlers
 
 ## Notes / decisions
 - Raw project corpora remain off-repo; use only sanitized fixtures, manifests, hashes, and aggregate evidence approved by the relevant fixture/governance task.
+- Closed by adding `ApprovalEffectRegistry` and `ApprovalEffectPack` behind the existing approval-response hook substrate.
+- The default approval-effect registry remains empty and platform-neutral. The logistics compatibility selector now delegates to `LOGISTICS_APPROVAL_RESPONSE_EFFECT_REGISTRY` while preserving existing hook parity for weekly planning and dispatch reporting.
+- No approval command payloads, command receipts, API response shapes, routes, migrations, CAPEX approval behavior, or logistics side-effect behavior changed.
+- Evidence: `tests/unit/test_approval_effect_registry.py`, `tests/unit/test_approval_response_hooks.py`, `tests/contract/test_handler_import_boundaries.py`, and focused weekly/dispatch approval behavior regressions.

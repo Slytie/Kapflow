@@ -34,6 +34,12 @@ Record any decisions made since the last session so a fresh Codex run can rehydr
 - Activation decision: domain manifests are inventory and composition evidence only. They do not register hooks, execute side effects, activate CAPEX runtime/product behavior, add routes, add migrations, or replace workflow packs/workpage packs as source truth.
 - Data-boundary decision: raw corpus paths/content remain rejected by manifest contract coverage; the future CAPEX manifest remains separate `TASK-0383` work and should start in incubation/not-ready state.
 
+## 2026-06-05 (EPIC-140 CAPEX manifest and approval-effect registry shadow mode)
+- CAPEX manifest decision: `TASK-0383` adds `docs/domains/capex/domain.yaml` in incubation state with empty workflow, workpage, and side-effect inventories plus disabled-capability/readiness-prerequisite rows for later project authorization, storage custody, source governance, workflow catalog, workpage projection, and production-preflight tasks.
+- Approval registry decision: `TASK-0384` adds `ApprovalEffectRegistry` and `ApprovalEffectPack` behind the existing approval-response hook substrate; the default registry is empty and platform-neutral.
+- Logistics parity decision: the logistics approval-response selector remains the compatibility facade but now delegates to `LOGISTICS_APPROVAL_RESPONSE_EFFECT_REGISTRY`; weekly publish and dispatch-reporting finalize hook selection remains byte-for-byte equivalent for current workflows.
+- Activation decision: this tranche adds no CAPEX approval behavior, no hook registration from manifests, no new routes, no migrations, no raw-corpus use, and no CAPEX runtime/product activation.
+
 ## 2026-06-03 (CAPEX RF-002/NU-CB-P0-001 descriptor registry and approval duplicate closeout)
 - Descriptor-boundary decision: `TASK-0370` moves active logistics workpage descriptor registrations behind `WorkpageDescriptorRegistry`; the existing descriptor lookup helpers remain compatibility facades and public workpage routes/actions stay unchanged.
 - Subject-surface decision: workpage `subject_link` validation now uses the registered workpage action rules for supported human-task and approval surfaces instead of local schedule/EOD matrices in the action-resolution handler.

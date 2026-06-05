@@ -8,6 +8,8 @@ The generic `approval.respond` command owns only the canonical approval transiti
 
 Domain-specific consequences of an approval response must be implemented as explicit approval-response hooks registered through `src/onetruth/application/services/approval_response_hooks.py`.
 
+The hook service also exposes `ApprovalEffectRegistry` / `ApprovalEffectPack` so domain hook selection can be registry-backed without changing the generic approval command. During the Wave 1 shadow-mode refactor, the logistics selector remains the public compatibility facade and delegates to the logistics approval-effect pack.
+
 The current registered logistics hooks are:
 - `logistics.weekly_publish_approval`
 - `logistics.dispatch_reporting_finalize_approval`
@@ -25,4 +27,5 @@ The approval model already says approvals authorize recorded actions; they do no
 - Hook effects must use canonical command/effect helpers, event idempotency keys derived from the approval-response receipt, and tenant/domain scoped workflow truth.
 - A hook failure rolls back the approval response and its domain effects together.
 - Future domains add hooks through the registry rather than editing the generic approval handler.
+- Registry-backed selection must preserve existing hook parity before any later cutover or capability allowlist work.
 - Runtime activation, production deployment, and CAPEX-specific behavior remain separately gated.

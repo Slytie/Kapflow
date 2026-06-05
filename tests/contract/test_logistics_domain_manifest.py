@@ -36,6 +36,8 @@ ACTION_PACK_REF = (
 HOOKS_REF_PREFIX = (
     "onetruth.application.services.logistics_approval_response_hooks."
 )
+HOOKS_REGISTRY_PACK_REF = f"{HOOKS_REF_PREFIX}LOGISTICS_APPROVAL_RESPONSE_EFFECT_PACK"
+HOOKS_REGISTRY_REF = f"{HOOKS_REF_PREFIX}LOGISTICS_APPROVAL_RESPONSE_EFFECT_REGISTRY"
 
 
 def _manifest() -> dict[str, Any]:
@@ -161,6 +163,8 @@ def test_logistics_domain_approval_hook_side_effects_match_registered_hooks() ->
         "approval_scope_kind": "stage",
         "approval_scope_ref": hooks.WEEKLY_STAGE06_SCOPE_REF,
         "requested_action": hooks.WEEKLY_PUBLISH_ACTION,
+        "registry_pack_ref": HOOKS_REGISTRY_PACK_REF,
+        "registry_ref": HOOKS_REGISTRY_REF,
         "event_effects": [
             "artifact.version.created",
             "artifact.pointer.promoted",
@@ -175,6 +179,8 @@ def test_logistics_domain_approval_hook_side_effects_match_registered_hooks() ->
         "approval_scope_kind": "stage",
         "approval_scope_ref": hooks.DISPATCH_REVIEW_APPROVAL_SCOPE_REF,
         "requested_action": hooks.DISPATCH_REVIEW_APPROVAL_ACTION,
+        "registry_pack_ref": HOOKS_REGISTRY_PACK_REF,
+        "registry_ref": HOOKS_REGISTRY_REF,
         "event_effects": [
             "artifact.version.created",
             "artifact.pointer.promoted",
