@@ -349,8 +349,8 @@ Note: `TASK-0087` / `TASK-0088` / `TASK-0089` were formerly duplicated as `TASK-
 | TASK-0386 | EPIC-140 | DONE | high | Implement AuthorizedProjectsQuery prototype and tests |
 | TASK-0387 | EPIC-140 | DONE | high | Design storage/blob custody schema CED |
 | TASK-0388 | EPIC-140 | DONE | high | Create pilot storage gate checklist |
-| TASK-0389 | EPIC-140 | TODO | high | Add architecture snippets and code pattern register |
-| TASK-0390 | EPIC-140 | TODO | high | W1 closeout review and old-decision update |
+| TASK-0389 | EPIC-140 | DONE | high | Add architecture snippets and code pattern register |
+| TASK-0390 | EPIC-140 | DONE | high | W1 closeout review and old-decision update |
 | TASK-0391 | EPIC-141 | TODO | high | Create content_identity and capex_source_occurrence runtime schema |
 | TASK-0392 | EPIC-141 | TODO | high | Add source_occurrence_relation with duplicate/archive/derivative/redaction relation types |
 | TASK-0393 | EPIC-141 | TODO | high | Add ingest_batch, ingest_job, ingest_attempt, ingest_job_log state model |

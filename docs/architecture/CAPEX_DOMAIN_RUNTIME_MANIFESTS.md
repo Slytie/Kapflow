@@ -25,6 +25,11 @@ CAPEX domain runtime manifests are a Wave 1 inventory surface for composing doma
 - `docs/planning/checklists/CAPEX_PILOT_STORAGE_GATE.md` records the pilot storage gate checklist with default result `blocked_pending_evidence`.
 - These records do not add migrations, routes, storage backend rollout, Postgres rollout, raw-corpus approval, pilot readiness, or CAPEX activation.
 
+## Wave 1 Pattern And Closeout
+- `docs/architecture/CAPEX_W1_CODE_PATTERN_REGISTER.md` records illustrative, non-production pattern snippets for domain runtime, project visibility, and storage custody seams.
+- `docs/architecture/CAPEX_W1_CLOSEOUT_REVIEW.md` records the Wave 1 decision docket and keeps the real pilot storage gate at `blocked_pending_evidence`.
+- These records are closeout evidence only; they do not make manifests, authorization projections, storage custody, or CAPEX workflows runnable.
+
 ## Approval Side Effects
 - Approval-response side effects are selected through the neutral approval-effect registry in shadow mode.
 - Logistics keeps its compatibility selector, but that selector delegates to the logistics approval-effect pack.

@@ -52,6 +52,12 @@ Record any decisions made since the last session so a fresh Codex run can rehydr
 - Pilot-gate decision: `TASK-0388` adds `docs/planning/checklists/CAPEX_PILOT_STORAGE_GATE.md` with default result `blocked_pending_evidence`; this task does not pass, waive, or execute the gate.
 - Activation decision: this tranche adds no migrations, routes, frontend behavior, storage backend rollout, Postgres rollout, raw-corpus use, pilot readiness, or CAPEX runtime/product activation.
 
+## 2026-06-05 (EPIC-140 W1 pattern register and closeout review)
+- Pattern-register decision: `TASK-0389` adds `docs/architecture/CAPEX_W1_CODE_PATTERN_REGISTER.md` with illustrative, non-production patterns for domain-runtime manifests, direct-membership project visibility, and auth-before-download storage custody.
+- Overbuild decision: W1 explicitly rejects dynamic domain package loading, frontend-only auth filtering, global project list exposure, blob truth bypassing `ArtifactVersion`, pointer targets to blobs, and storage reads before scope authorization.
+- Closeout decision: `TASK-0390` adds `docs/architecture/CAPEX_W1_CLOSEOUT_REVIEW.md`; gates `ARCH-W1-GATE-001` through `ARCH-W1-GATE-009` have repo evidence, while `ARCH-W1-GATE-010` remains `blocked_pending_evidence`.
+- Activation decision: this tranche adds no migrations, routes, frontend behavior, storage backend rollout, Postgres rollout, raw-corpus use, source ZIP mutation, pilot readiness, production readiness, or CAPEX runtime/product activation.
+
 ## 2026-06-03 (CAPEX RF-002/NU-CB-P0-001 descriptor registry and approval duplicate closeout)
 - Descriptor-boundary decision: `TASK-0370` moves active logistics workpage descriptor registrations behind `WorkpageDescriptorRegistry`; the existing descriptor lookup helpers remain compatibility facades and public workpage routes/actions stay unchanged.
 - Subject-surface decision: workpage `subject_link` validation now uses the registered workpage action rules for supported human-task and approval surfaces instead of local schedule/EOD matrices in the action-resolution handler.

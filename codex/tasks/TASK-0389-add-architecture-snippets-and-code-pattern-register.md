@@ -2,7 +2,8 @@
 id: TASK-0389
 epic: EPIC-140
 title: "Add architecture snippets and code pattern register"
-status: TODO
+status: DONE
+completed_at: "2026-06-05T10:12:03+02:00"
 owners: ["platform"]
 reviewers: ["architect", "qa"]
 depends_on: []
@@ -61,3 +62,6 @@ non-production code patterns for domain runtime, auth query, blob custody
 
 ## Notes / decisions
 - Raw project corpora remain off-repo; use only sanitized fixtures, manifests, hashes, and aggregate evidence approved by the relevant fixture/governance task.
+- Completed on `2026-06-05T10:12:03+02:00`.
+- Added `docs/architecture/CAPEX_W1_CODE_PATTERN_REGISTER.md` with illustrative, non-production patterns for domain runtime, project visibility, and storage custody seams.
+- Closeout posture: snippets are not runnable source files and do not add migrations, routes, frontend behavior, storage backend rollout, raw-corpus use, pilot readiness, or CAPEX activation.

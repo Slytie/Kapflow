@@ -2,7 +2,8 @@
 id: TASK-0390
 epic: EPIC-140
 title: "W1 closeout review and old-decision update"
-status: TODO
+status: DONE
+completed_at: "2026-06-05T10:12:03+02:00"
 owners: ["platform"]
 reviewers: ["architect", "qa"]
 depends_on: []
@@ -61,3 +62,6 @@ decision docket, overkill assessment, old-decision register, master patch instru
 
 ## Notes / decisions
 - Raw project corpora remain off-repo; use only sanitized fixtures, manifests, hashes, and aggregate evidence approved by the relevant fixture/governance task.
+- Completed on `2026-06-05T10:12:03+02:00`.
+- Added `docs/architecture/CAPEX_W1_CLOSEOUT_REVIEW.md` with the Wave 1 decision docket, overkill assessment, old-decision updates, and master patch posture.
+- Closeout posture: gates `ARCH-W1-GATE-001` through `ARCH-W1-GATE-009` have repo evidence, while `ARCH-W1-GATE-010` remains `blocked_pending_evidence`; this does not grant pilot readiness or CAPEX activation.

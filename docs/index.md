@@ -47,6 +47,8 @@
 - `docs/architecture/AUTHORITY_MODEL.md`
 - `docs/architecture/CAPEX_PROJECT_AUTHORIZATION_CED.md`
 - `docs/architecture/CAPEX_STORAGE_BLOB_CUSTODY_CED.md`
+- `docs/architecture/CAPEX_W1_CODE_PATTERN_REGISTER.md`
+- `docs/architecture/CAPEX_W1_CLOSEOUT_REVIEW.md`
 - `docs/architecture/CAPEX_DOMAIN_RUNTIME_MANIFESTS.md`
 - `docs/architecture/EXECUTION_OVERLAY_MODEL.md`
 - `docs/architecture/DERIVATION_AND_GENERATION_POLICY.md`

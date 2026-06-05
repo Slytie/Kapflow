@@ -22,20 +22,20 @@ describe("CapexEpicProgressPage", () => {
     expect(within(page).getByRole("heading", { name: "CAPEX Epic Progress" })).toBeInTheDocument();
     const summary = screen.getByRole("region", { name: "CAPEX progress summary" });
     expect(within(summary).getByText("379")).toBeInTheDocument();
-    expect(within(summary).getByText("14.8%")).toBeInTheDocument();
-    expect(within(summary).getByText("323")).toBeInTheDocument();
+    expect(within(summary).getByText("15.3%")).toBeInTheDocument();
+    expect(within(summary).getByText("321")).toBeInTheDocument();
 
     const roadmapProgress = screen.getByRole("region", { name: "CAPEX roadmap progress" });
     const roadmapProgressBar = within(roadmapProgress).getByRole("progressbar", {
       name: "CAPEX roadmap completion"
     });
-    expect(roadmapProgressBar).toHaveAttribute("aria-valuenow", "14.8");
+    expect(roadmapProgressBar).toHaveAttribute("aria-valuenow", "15.3");
     expect(roadmapProgressBar).toHaveAttribute(
       "aria-valuetext",
-      "14.8% complete, 323 remaining"
+      "15.3% complete, 321 remaining"
     );
-    expect(within(roadmapProgress).getByText("56 completed")).toBeInTheDocument();
-    expect(within(roadmapProgress).getByText("323 remaining")).toBeInTheDocument();
+    expect(within(roadmapProgress).getByText("58 completed")).toBeInTheDocument();
+    expect(within(roadmapProgress).getByText("321 remaining")).toBeInTheDocument();
 
     const timeline = screen.getByTestId("capex-epic-timeline");
     expect(within(timeline).getByRole("button", { name: /EPIC-136/i })).toBeInTheDocument();

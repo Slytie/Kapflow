@@ -37,7 +37,7 @@
 
 ## TASK-0233 closeout evidence
 - Imported CAPEX v6 planning source row count: 374 tasks, 270 gates, 222 risks, 23 open decisions.
-- Current-code blocker mappings recorded for approval domain coupling, artifact auth-before-read, CAPEX project child APIs/authorization projections, domain-runtime manifests, storage custody gates, and source occurrence/evidence; the first project child API, selector/dashboard, project-scope helper, official pointer-family substrate, neutral domain-runtime skeleton, ready logistics manifest inventory, CAPEX incubation manifest, approval-effect registry shadow parity, project authorization CED, `AuthorizedProjectsQuery` prototype, storage/blob custody CED, and pilot storage gate checklist slices are now closed, while physical authorization projection runtime state, pointer-promotion policy checks, real pilot storage evidence or waiver, and later governance remain blocked.
+- Current-code blocker mappings recorded for approval domain coupling, artifact auth-before-read, CAPEX project child APIs/authorization projections, domain-runtime manifests, storage custody gates, Wave 1 closeout evidence, and source occurrence/evidence; the first project child API, selector/dashboard, project-scope helper, official pointer-family substrate, neutral domain-runtime skeleton, ready logistics manifest inventory, CAPEX incubation manifest, approval-effect registry shadow parity, project authorization CED, `AuthorizedProjectsQuery` prototype, storage/blob custody CED, pilot storage gate checklist, W1 code pattern register, and W1 closeout review slices are now closed, while physical authorization projection runtime state, pointer-promotion policy checks, real pilot storage evidence or waiver, and later governance remain blocked.
 - Verification basis: CAPEX conversion check, repo validation, schema validation, focused planning/import checks, and `git diff --check`.
 
 ## TASK-0234 closeout evidence
@@ -280,6 +280,20 @@
 - Evidence: pilot storage gate checklist contract tests passed on 2026-06-05.
 - Closeout posture: `ARCH-W1-T008` is closed as checklist evidence only; the pilot storage gate is not passed, waived, or executed by this task, and CAPEX remains disabled.
 
+## TASK-0389 closeout evidence
+- Added `docs/architecture/CAPEX_W1_CODE_PATTERN_REGISTER.md` as the Wave 1 non-production code pattern register.
+- The register covers exactly the current domain-runtime manifest registry, direct-membership project visibility, and storage/blob custody auth-before-download pattern families.
+- It records forbidden overbuilds including dynamic domain package loading, frontend-only auth filtering, global project list exposure, blob truth bypassing `ArtifactVersion`, pointer targets to blobs, and storage reads before scope authorization.
+- Evidence: W1 code pattern register contract tests passed on 2026-06-05.
+- Closeout posture: `ARCH-W1-T009` is closed as illustrative architecture evidence only; snippets are not runnable source files and do not add migrations, routes, storage rollout, raw-corpus use, pilot readiness, or CAPEX runtime activation.
+
+## TASK-0390 closeout evidence
+- Added `docs/architecture/CAPEX_W1_CLOSEOUT_REVIEW.md` as the Wave 1 decision docket and closeout review.
+- Gates `ARCH-W1-GATE-001` through `ARCH-W1-GATE-009` have repo evidence; `ARCH-W1-GATE-010` remains `blocked_pending_evidence` until real pilot storage evidence or an explicit waiver lands.
+- The review records the overkill assessment, old-decision updates, and master patch posture as repo-native traceability text only.
+- Evidence: W1 closeout review contract tests passed on 2026-06-05.
+- Closeout posture: `ARCH-W1-T010` is closed as review evidence only; it does not grant pilot readiness, mutate the source ZIP, import raw project material, or activate CAPEX.
+
 ## Current-code blocker mappings
 | Blocker | CAPEX task refs | Current repo surface |
 |---|---|---|
@@ -306,6 +320,7 @@
 | Operator home failure-state surface | `TASK-0253` | `src/onetruth/api/routes/operator_home.py`, `frontend/src/pages/OperatorHomePage.tsx`, `frontend/src/app/AppShell.tsx` |
 | CAPEX project child APIs and authorization projections | `TASK-0263`, `TASK-0371`, `TASK-0265`, `TASK-0385`, `TASK-0386`, `TASK-0563` | first project child APIs, selector/dashboard, project-scope helper, official pointer-family substrate, project authorization CED, and `AuthorizedProjectsQuery` prototype are closed; physical authorization projection runtime state, pointer-promotion policy checks, source governance, and activation remain blocked |
 | CAPEX storage/blob custody and pilot storage gate | `TASK-0387`, `TASK-0388`, `TASK-0390` | storage/blob custody CED and pilot storage gate checklist are closed; real pilot storage evidence or explicit waiver, Postgres/blob backend rollout, and activation remain blocked |
+| CAPEX Wave 1 pattern and closeout evidence | `TASK-0389`, `TASK-0390` | W1 code pattern register and closeout review are closed as non-production traceability; no runtime activation, source ZIP mutation, or pilot go decision is implied |
 | Source occurrence / SourceRef | `TASK-0268`, `TASK-0391`, `TASK-0407`, `TASK-0428`, `TASK-0564` | future source occurrence and evidence resolver |
 
 ## Verification commands

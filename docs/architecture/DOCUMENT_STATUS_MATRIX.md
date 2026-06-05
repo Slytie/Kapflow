@@ -35,6 +35,8 @@ This file prevents stale guidance by classifying major documents and directories
 | `docs/architecture/CAPEX_DOMAIN_RUNTIME_MANIFESTS.md` | AUTHORITATIVE SOURCE | CAPEX domain manifest registry boundary and non-activation posture |
 | `docs/architecture/CAPEX_PROJECT_AUTHORIZATION_CED.md` | AUTHORITATIVE SOURCE | CAPEX project authorization CED and AuthorizedProjectsQuery prototype boundary |
 | `docs/architecture/CAPEX_STORAGE_BLOB_CUSTODY_CED.md` | AUTHORITATIVE SOURCE | CAPEX storage/blob custody CED and future schema boundary |
+| `docs/architecture/CAPEX_W1_CODE_PATTERN_REGISTER.md` | AUTHORITATIVE SOURCE | CAPEX Wave 1 non-production code pattern register |
+| `docs/architecture/CAPEX_W1_CLOSEOUT_REVIEW.md` | AUTHORITATIVE SOURCE | CAPEX Wave 1 closeout review, decision docket, and master patch posture |
 | `docs/architecture/DOCUMENT_STATUS_MATRIX.md` | AUTHORITATIVE SOURCE | this classification table |
 | `docs/architecture/AGENTIC_LAYER_AND_MERGE_REVIEW.md` | HISTORICAL RATIONALE | narrative precursor to the stronger authority model |
 | `docs/architecture/MERGER_CHANGESET.md` | HISTORICAL RATIONALE | exact repo-level changes applied during merger |
