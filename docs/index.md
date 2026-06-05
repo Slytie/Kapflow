@@ -44,6 +44,7 @@
 
 ## Architecture
 - `docs/architecture/AUTHORITY_MODEL.md`
+- `docs/architecture/CAPEX_PROJECT_AUTHORIZATION_CED.md`
 - `docs/architecture/CAPEX_DOMAIN_RUNTIME_MANIFESTS.md`
 - `docs/architecture/EXECUTION_OVERLAY_MODEL.md`
 - `docs/architecture/DERIVATION_AND_GENERATION_POLICY.md`

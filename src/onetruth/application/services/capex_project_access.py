@@ -4,9 +4,9 @@ import sqlite3
 from typing import Any, Iterable
 
 from onetruth.application.handlers._shared.command_boundary import CommandError
+from onetruth.capex_platform.project_access import AuthorizedProjectsQuery
 from onetruth.infrastructure.repositories.capex_projects import (
     get_capex_project,
-    get_project_membership_for_actor,
 )
 
 PROJECT_VIEWER = "project_viewer"
@@ -45,15 +45,12 @@ def has_project_role(
     actor_id: str,
     min_role: str,
 ) -> bool:
-    membership = get_project_membership_for_actor(
-        connection,
+    role = AuthorizedProjectsQuery(connection).role_for_project(
         project_id=project_id,
         actor_type=actor_type,
         actor_id=actor_id,
     )
-    if membership is None:
-        return False
-    return project_role_rank(str(membership["role"])) >= project_role_rank(min_role)
+    return project_role_rank(role) >= project_role_rank(min_role)
 
 
 def require_project_access(
@@ -123,19 +120,7 @@ def require_project_membership_role(
 
 
 def project_membership_filter_sql(*, project_column: str) -> str:
-    return f"""
-        (
-            {project_column} IS NULL
-            OR EXISTS (
-                SELECT 1
-                FROM project_memberships pm_scope
-                WHERE pm_scope.project_id = {project_column}
-                  AND pm_scope.actor_type = ?
-                  AND pm_scope.actor_id = ?
-                  AND pm_scope.state = 'active'
-            )
-        )
-    """
+    return AuthorizedProjectsQuery.visibility_sql(project_column=project_column)
 
 
 def project_membership_filter_params(
@@ -143,7 +128,10 @@ def project_membership_filter_params(
     actor_type: str,
     actor_id: str,
 ) -> list[str]:
-    return [actor_type, actor_id]
+    return AuthorizedProjectsQuery.visibility_params(
+        actor_type=actor_type,
+        actor_id=actor_id,
+    )
 
 
 def filter_project_authorized_rows(

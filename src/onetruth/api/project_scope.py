@@ -9,9 +9,7 @@ from onetruth.application.services.capex_project_access import (
     PROJECT_VIEWER,
     require_project_access,
 )
-from onetruth.infrastructure.repositories.capex_projects import (
-    get_project_membership_for_actor,
-)
+from onetruth.capex_platform.project_access import AuthorizedProjectsQuery
 
 from onetruth.api.dependencies import RequestContext, scoped_workflow_run
 from onetruth.api.errors import ApiError, api_error_from_command
@@ -64,15 +62,11 @@ def caller_project_role(
     context: RequestContext,
     project_id: str,
 ) -> str | None:
-    membership = get_project_membership_for_actor(
-        connection,
+    return AuthorizedProjectsQuery(connection).role_for_project(
         project_id=project_id,
         actor_type=context.actor_type,
         actor_id=context.actor_id,
     )
-    if membership is None:
-        return None
-    return str(membership["role"])
 
 
 def with_project_query(query: dict[str, str], project_id: str) -> dict[str, str]:

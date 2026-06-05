@@ -6,7 +6,7 @@ Define project anchors, membership, roles, and project-scoped APIs without cross
 This epic was imported from CAPEX v6 on `2026-06-01` as planning backlog only. It does not activate CAPEX runtime behavior by itself.
 
 ## Status
-Active gated backlog. `TASK-0261` through `TASK-0265`, `TASK-0371`, and `TASK-0381` through `TASK-0384` are closed as the durable project-anchor/direct-membership foundation, first project-scoped child API and selector/dashboard slice, shared project-scope helper, project-scoped official pointer-family substrate, neutral domain-runtime manifest skeleton, ready-state logistics manifest inventory, incubation-state CAPEX manifest inventory, and approval-effect registry shadow parity; authorization projections, storage custody gates, raw-corpus governance, richer CAPEX workpages, and activation remain gated.
+Active gated backlog. `TASK-0261` through `TASK-0265`, `TASK-0371`, and `TASK-0381` through `TASK-0386` are closed as the durable project-anchor/direct-membership foundation, first project-scoped child API and selector/dashboard slice, shared project-scope helper, project-scoped official pointer-family substrate, neutral domain-runtime manifest skeleton, ready-state logistics manifest inventory, incubation-state CAPEX manifest inventory, approval-effect registry shadow parity, project authorization CED, and `AuthorizedProjectsQuery` prototype; physical authorization projection runtime state, storage custody gates, raw-corpus governance, richer CAPEX workpages, and activation remain gated.
 
 ## In scope
 - Source task families/counts: ARCH:10, NU:1, PROJ:5, RF:1.
@@ -40,8 +40,8 @@ Context pack:
 - `TASK-0382` (`ARCH-W1-T002`) - DONE - Inventory logistics domain manifest in ready state
 - `TASK-0383` (`ARCH-W1-T003`) - DONE - Create CAPEX domain manifest in not-ready/incubation state
 - `TASK-0384` (`ARCH-W1-T004`) - DONE - Extract generic approval side effects behind registry in shadow mode
-- `TASK-0385` (`ARCH-W1-T005`) - Design capex_project and membership schema CED
-- `TASK-0386` (`ARCH-W1-T006`) - Implement AuthorizedProjectsQuery prototype and tests
+- `TASK-0385` (`ARCH-W1-T005`) - DONE - Design capex_project and membership schema CED
+- `TASK-0386` (`ARCH-W1-T006`) - DONE - Implement AuthorizedProjectsQuery prototype and tests
 - `TASK-0387` (`ARCH-W1-T007`) - Design storage/blob custody schema CED
 - `TASK-0388` (`ARCH-W1-T008`) - Create pilot storage gate checklist
 - `TASK-0389` (`ARCH-W1-T009`) - Add architecture snippets and code pattern register

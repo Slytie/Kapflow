@@ -40,6 +40,12 @@ Record any decisions made since the last session so a fresh Codex run can rehydr
 - Logistics parity decision: the logistics approval-response selector remains the compatibility facade but now delegates to `LOGISTICS_APPROVAL_RESPONSE_EFFECT_REGISTRY`; weekly publish and dispatch-reporting finalize hook selection remains byte-for-byte equivalent for current workflows.
 - Activation decision: this tranche adds no CAPEX approval behavior, no hook registration from manifests, no new routes, no migrations, no raw-corpus use, and no CAPEX runtime/product activation.
 
+## 2026-06-05 (EPIC-140 project authorization CED and query prototype)
+- CED decision: `TASK-0385` adds `docs/architecture/CAPEX_PROJECT_AUTHORIZATION_CED.md`, recording that `capex_projects.project_id` remains the durable root and `workflow_run_id` remains only an execution identity.
+- Projection-boundary decision: direct `project_memberships` remain authoritative runtime grants, while future `capex_project_authorization`, `capex_project_feature`, and `capex_user_project_view` are derived projection/read-model concepts.
+- Query-prototype decision: `TASK-0386` adds `AuthorizedProjectsQuery` as a backend-only prototype over direct membership state, returning deterministic authorized active project IDs and caller roles without frontend-only filtering or a global project list.
+- Activation decision: this tranche adds no routes, migrations, frontend behavior, raw-corpus use, physical authorization projection runtime state, or CAPEX runtime/product activation.
+
 ## 2026-06-03 (CAPEX RF-002/NU-CB-P0-001 descriptor registry and approval duplicate closeout)
 - Descriptor-boundary decision: `TASK-0370` moves active logistics workpage descriptor registrations behind `WorkpageDescriptorRegistry`; the existing descriptor lookup helpers remain compatibility facades and public workpage routes/actions stay unchanged.
 - Subject-surface decision: workpage `subject_link` validation now uses the registered workpage action rules for supported human-task and approval surfaces instead of local schedule/EOD matrices in the action-resolution handler.

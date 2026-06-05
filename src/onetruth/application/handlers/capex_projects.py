@@ -22,13 +22,13 @@ from onetruth.application.services.capex_project_access import (
     require_project_membership_role,
     validate_project_role,
 )
+from onetruth.capex_platform.project_access import AuthorizedProjectsQuery
 from onetruth.infrastructure.events.event_store import append_event, utc_now_iso
 from onetruth.infrastructure.repositories.capex_projects import (
     create_capex_project,
     create_project_membership,
     get_capex_project,
     get_project_membership,
-    list_capex_projects_for_actor,
     list_project_memberships,
 )
 
@@ -384,13 +384,12 @@ def list_capex_projects_command(
     actor_type: str,
     actor_id: str,
 ) -> list[dict[str, Any]]:
-    return list_capex_projects_for_actor(
-        connection,
+    return AuthorizedProjectsQuery(connection).for_actor(
         tenant_id=tenant_id,
         domain_id=domain_id,
         actor_type=actor_type,
         actor_id=actor_id,
-    )
+    ).to_dicts()
 
 
 def show_capex_project_command(

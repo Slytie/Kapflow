@@ -4,9 +4,9 @@
 Accepted foundation, inactive CAPEX runtime.
 
 ## Scope
-This document records the narrow EPIC-140 foundation implemented by `TASK-0261` through `TASK-0265` plus `TASK-0371`.
+This document records the narrow EPIC-140 foundation implemented by `TASK-0261` through `TASK-0265`, `TASK-0371`, and the Wave 1 project-authorization CED/prototype from `TASK-0385` and `TASK-0386`.
 
-It does not activate CAPEX production-like runtime behavior, raw corpus use, authorization projections, richer CAPEX workpages, or production dashboards.
+It does not activate CAPEX production-like runtime behavior, raw corpus use, physical authorization projections, richer CAPEX workpages, or production dashboards.
 
 ## Project Anchor
 `capex_projects.project_id` is the durable project identity.
@@ -121,6 +121,13 @@ Same-tenant non-members must not see project-bound rows through broad list/detai
 - existing `scoped_workflow_run` facades
 
 No-project rows remain readable by the existing tenant/domain boundary.
+
+## Project Authorization CED
+`docs/architecture/CAPEX_PROJECT_AUTHORIZATION_CED.md` records the Wave 1 project authorization boundary.
+
+`AuthorizedProjectsQuery` is the current internal prototype over direct membership state. It accepts tenant/domain scope and actor identity, returns deterministic authorized active project IDs with caller role metadata, and keeps project filtering server-side. It is not a global project list, not a frontend-only filter, and not an authoritative replacement for `project_memberships`.
+
+Future `capex_project_authorization`, `capex_project_feature`, and `capex_user_project_view` surfaces are derived read-model/projection concepts. They remain disabled until later runtime-state work closes.
 
 ## Index Coverage
 This tranche adds no new database migration. Project child route filtering uses:

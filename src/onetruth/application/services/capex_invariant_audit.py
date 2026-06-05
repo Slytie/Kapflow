@@ -129,7 +129,7 @@ CAPEX_INVARIANT_REGISTRY: tuple[CapexInvariant, ...] = (
         title="CAPEX project child APIs and authorization projections",
         gate_mode="known_gap",
         task_refs=("TASK-0263", "TASK-0385", "TASK-0386", "TASK-0563"),
-        description="The durable project anchor, direct memberships, first project child APIs, selector/dashboard slice, project-scope helper, official pointer-family substrate, domain manifests, and approval-effect registry shadow parity exist, but authorization projections, pointer-promotion policy checks, storage custody gates, source governance dependencies, richer CAPEX workpages, and activation remain blocked.",
+        description="The durable project anchor, direct memberships, first project child APIs, selector/dashboard slice, project-scope helper, official pointer-family substrate, domain manifests, approval-effect registry shadow parity, project authorization CED, and AuthorizedProjectsQuery prototype exist, but physical authorization projection runtime state, pointer-promotion policy checks, storage custody gates, source governance dependencies, richer CAPEX workpages, and activation remain blocked.",
     ),
     CapexInvariant(
         invariant_id="capex.known_gap.source_occurrence_sourceref",

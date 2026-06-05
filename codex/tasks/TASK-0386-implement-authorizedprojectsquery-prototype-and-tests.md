@@ -2,7 +2,8 @@
 id: TASK-0386
 epic: EPIC-140
 title: "Implement AuthorizedProjectsQuery prototype and tests"
-status: TODO
+status: DONE
+completed_at: "2026-06-05T09:49:10+02:00"
 owners: ["platform"]
 reviewers: ["architect", "qa"]
 depends_on: []
@@ -61,3 +62,6 @@ central query service with no frontend-only filtering; no global project list pa
 
 ## Notes / decisions
 - Raw project corpora remain off-repo; use only sanitized fixtures, manifests, hashes, and aggregate evidence approved by the relevant fixture/governance task.
+- Completed on `2026-06-05T09:49:10+02:00`.
+- Added the internal `AuthorizedProjectsQuery` prototype over existing direct `project_memberships`, returning deterministic authorized active projects and caller role metadata.
+- Existing project access helpers now delegate role and visibility decisions through the prototype without adding routes, migrations, frontend behavior, raw-corpus use, or CAPEX activation.

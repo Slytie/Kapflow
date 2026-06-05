@@ -37,7 +37,7 @@
 
 ## TASK-0233 closeout evidence
 - Imported CAPEX v6 planning source row count: 374 tasks, 270 gates, 222 risks, 23 open decisions.
-- Current-code blocker mappings recorded for approval domain coupling, artifact auth-before-read, CAPEX project child APIs/authorization projections, domain-runtime manifests, and source occurrence/evidence; the first project child API, selector/dashboard, project-scope helper, official pointer-family substrate, neutral domain-runtime skeleton, ready logistics manifest inventory, CAPEX incubation manifest, and approval-effect registry shadow-parity slices are now closed, while authorization projections, pointer-promotion policy checks, storage custody gates, and later governance remain blocked.
+- Current-code blocker mappings recorded for approval domain coupling, artifact auth-before-read, CAPEX project child APIs/authorization projections, domain-runtime manifests, and source occurrence/evidence; the first project child API, selector/dashboard, project-scope helper, official pointer-family substrate, neutral domain-runtime skeleton, ready logistics manifest inventory, CAPEX incubation manifest, approval-effect registry shadow parity, project authorization CED, and `AuthorizedProjectsQuery` prototype slices are now closed, while physical authorization projection runtime state, pointer-promotion policy checks, storage custody gates, and later governance remain blocked.
 - Verification basis: CAPEX conversion check, repo validation, schema validation, focused planning/import checks, and `git diff --check`.
 
 ## TASK-0234 closeout evidence
@@ -253,6 +253,20 @@
 - Evidence: approval-effect registry unit tests, approval-response hook unit tests, handler import-boundary tests, logistics manifest characterization, and focused weekly/dispatch approval behavior regressions passed on 2026-06-05.
 - Closeout posture: `ARCH-W1-T004` is closed as shadow-mode registry parity only; no new approval semantics, CAPEX hooks, API shape changes, routes, migrations, or activation behavior were added.
 
+## TASK-0385 closeout evidence
+- Added `docs/architecture/CAPEX_PROJECT_AUTHORIZATION_CED.md` as the accepted Wave 1 project authorization CED.
+- The CED records `capex_projects.project_id` as the durable root, keeps `workflow_run_id` as an execution identity, and separates direct `project_memberships` from future authorization projection/read-model concepts.
+- Future `capex_project_authorization`, `capex_project_feature`, and `capex_user_project_view` remain derived projection concepts, not authoritative project truth.
+- Evidence: project authorization CED contract tests passed on 2026-06-05.
+- Closeout posture: `ARCH-W1-T005` is closed as design/CED evidence only; no projection tables, migration, route, frontend behavior, raw-corpus use, or activation behavior was added.
+
+## TASK-0386 closeout evidence
+- Added `AuthorizedProjectsQuery` as an internal backend-only prototype over existing direct project memberships.
+- Existing project access helpers now delegate role lookup and read-visibility SQL/params through the prototype; project list payloads still return the existing row shape and `caller_role`.
+- Non-members receive an empty authorized-project result, and project-bound broad reads continue hiding rows from same-tenant non-members while no-project rows remain readable.
+- Evidence: authorized-project query unit tests and existing project visibility regressions passed on 2026-06-05.
+- Closeout posture: `ARCH-W1-T006` is closed as query-prototype evidence only; physical authorization projection runtime state, policy expansion, raw-corpus use, and CAPEX runtime activation remain later gated scope.
+
 ## Current-code blocker mappings
 | Blocker | CAPEX task refs | Current repo surface |
 |---|---|---|
@@ -277,7 +291,7 @@
 | File-backed notify-only manifests and shared-env late-report guard | `TASK-0249` | `src/onetruth/application/handlers/logistics_handoff.py`, `tests/runtime/test_logistics_handoff_runtime.py` |
 | Logistics reconciler dry-run report | `TASK-0252` | `src/onetruth/application/services/logistics_reconciler.py`, `src/onetruth/cli/__main__.py`, `tests/runtime/test_logistics_handoff_runtime.py` |
 | Operator home failure-state surface | `TASK-0253` | `src/onetruth/api/routes/operator_home.py`, `frontend/src/pages/OperatorHomePage.tsx`, `frontend/src/app/AppShell.tsx` |
-| CAPEX project child APIs and authorization projections | `TASK-0263`, `TASK-0371`, `TASK-0265`, `TASK-0385`, `TASK-0386`, `TASK-0563` | first project child APIs, selector/dashboard, project-scope helper, and official pointer-family substrate closed in `TASK-0263`/`TASK-0264`/`TASK-0371`/`TASK-0265`; future authorization projections, pointer-promotion policy checks, source governance, and activation remain blocked |
+| CAPEX project child APIs and authorization projections | `TASK-0263`, `TASK-0371`, `TASK-0265`, `TASK-0385`, `TASK-0386`, `TASK-0563` | first project child APIs, selector/dashboard, project-scope helper, official pointer-family substrate, project authorization CED, and `AuthorizedProjectsQuery` prototype are closed; physical authorization projection runtime state, pointer-promotion policy checks, source governance, and activation remain blocked |
 | Source occurrence / SourceRef | `TASK-0268`, `TASK-0391`, `TASK-0407`, `TASK-0428`, `TASK-0564` | future source occurrence and evidence resolver |
 
 ## Verification commands

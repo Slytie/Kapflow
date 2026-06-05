@@ -11,12 +11,14 @@ source_refs:
     path: docs/architecture/CAPEX_DOMAIN_RUNTIME_MANIFESTS.md
   - kind: architecture
     path: docs/architecture/CAPEX_PROJECT_ACCESS_MODEL.md
+  - kind: architecture
+    path: docs/architecture/CAPEX_PROJECT_AUTHORIZATION_CED.md
 workflows: []
 workpages: []
 side_effects: []
 readiness_prerequisites:
   - prerequisite_id: capex.project_authorization_model
-    description: Project authorization projections and membership refresh semantics are not implemented.
+    description: Project authorization CED and direct-membership query prototype exist; physical authorization projections remain future runtime state.
     status: open
     task_refs:
       - TASK-0385
@@ -25,6 +27,7 @@ readiness_prerequisites:
     source_refs:
       - docs/planning/epics/EPIC-140.md
       - docs/architecture/CAPEX_PROJECT_ACCESS_MODEL.md
+      - docs/architecture/CAPEX_PROJECT_AUTHORIZATION_CED.md
   - prerequisite_id: capex.storage_custody_gate
     description: Storage/blob custody design and pilot checklist remain future Wave 1 gates.
     status: open
@@ -113,7 +116,7 @@ disabled_capabilities:
       - TASK-0564
   - capability_id: capex.authorization_projections
     description: Project authorization projections are disabled.
-    disabled_reason: Direct membership exists, but authorization projection design and prototype are not closed.
+    disabled_reason: Direct membership plus AuthorizedProjectsQuery exists, but physical authorization projections remain future runtime state.
     owner_task_refs:
       - TASK-0385
       - TASK-0386

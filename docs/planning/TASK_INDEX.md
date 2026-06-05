@@ -345,8 +345,8 @@ Note: `TASK-0087` / `TASK-0088` / `TASK-0089` were formerly duplicated as `TASK-
 | TASK-0382 | EPIC-140 | DONE | high | Inventory logistics domain manifest in ready state |
 | TASK-0383 | EPIC-140 | DONE | high | Create CAPEX domain manifest in not-ready/incubation state |
 | TASK-0384 | EPIC-140 | DONE | high | Extract generic approval side effects behind registry in shadow mode |
-| TASK-0385 | EPIC-140 | TODO | high | Design capex_project and membership schema CED |
-| TASK-0386 | EPIC-140 | TODO | high | Implement AuthorizedProjectsQuery prototype and tests |
+| TASK-0385 | EPIC-140 | DONE | high | Design capex_project and membership schema CED |
+| TASK-0386 | EPIC-140 | DONE | high | Implement AuthorizedProjectsQuery prototype and tests |
 | TASK-0387 | EPIC-140 | TODO | high | Design storage/blob custody schema CED |
 | TASK-0388 | EPIC-140 | TODO | high | Create pilot storage gate checklist |
 | TASK-0389 | EPIC-140 | TODO | high | Add architecture snippets and code pattern register |

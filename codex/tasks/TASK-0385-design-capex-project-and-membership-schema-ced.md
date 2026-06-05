@@ -2,7 +2,8 @@
 id: TASK-0385
 epic: EPIC-140
 title: "Design capex_project and membership schema CED"
-status: TODO
+status: DONE
+completed_at: "2026-06-05T09:49:10+02:00"
 owners: ["platform"]
 reviewers: ["architect", "qa"]
 depends_on: []
@@ -61,3 +62,6 @@ capex_project, project_membership, project_role/permission, capex_project_author
 
 ## Notes / decisions
 - Raw project corpora remain off-repo; use only sanitized fixtures, manifests, hashes, and aggregate evidence approved by the relevant fixture/governance task.
+- Completed on `2026-06-05T09:49:10+02:00`.
+- Added `docs/architecture/CAPEX_PROJECT_AUTHORIZATION_CED.md` as the accepted Wave 1 project authorization CED.
+- Closeout posture: this is design/CED closure only. Physical authorization projection tables, migrations, CAPEX runtime activation, raw-corpus use, and production behavior remain later gated work.

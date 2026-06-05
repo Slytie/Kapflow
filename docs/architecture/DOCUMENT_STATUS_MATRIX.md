@@ -33,6 +33,7 @@ This file prevents stale guidance by classifying major documents and directories
 | `docs/architecture/LOWERING_CONTRACT.md` | AUTHORITATIVE SOURCE | source-to-IR / source-to-runbook compilation contract |
 | `docs/architecture/RUNTIME_OBJECT_MODEL.md` | AUTHORITATIVE SOURCE | canonical runtime object vocabulary |
 | `docs/architecture/CAPEX_DOMAIN_RUNTIME_MANIFESTS.md` | AUTHORITATIVE SOURCE | CAPEX domain manifest registry boundary and non-activation posture |
+| `docs/architecture/CAPEX_PROJECT_AUTHORIZATION_CED.md` | AUTHORITATIVE SOURCE | CAPEX project authorization CED and AuthorizedProjectsQuery prototype boundary |
 | `docs/architecture/DOCUMENT_STATUS_MATRIX.md` | AUTHORITATIVE SOURCE | this classification table |
 | `docs/architecture/AGENTIC_LAYER_AND_MERGE_REVIEW.md` | HISTORICAL RATIONALE | narrative precursor to the stronger authority model |
 | `docs/architecture/MERGER_CHANGESET.md` | HISTORICAL RATIONALE | exact repo-level changes applied during merger |
