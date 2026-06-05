@@ -1,0 +1,2 @@
+"""CAPEX platform extension points."""
+

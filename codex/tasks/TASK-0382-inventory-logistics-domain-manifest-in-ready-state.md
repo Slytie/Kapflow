@@ -2,7 +2,8 @@
 id: TASK-0382
 epic: EPIC-140
 title: "Inventory logistics domain manifest in ready state"
-status: TODO
+status: DONE
+completed_at: "2026-06-04T15:39:28+02:00"
 owners: ["platform"]
 reviewers: ["architect", "qa"]
 depends_on: []
@@ -61,3 +62,7 @@ domains/logistics/domain.yaml lists current logistics workflows/workpages/side e
 
 ## Notes / decisions
 - Raw project corpora remain off-repo; use only sanitized fixtures, manifests, hashes, and aggregate evidence approved by the relevant fixture/governance task.
+- Closed by adding `docs/domains/logistics/domain.yaml` as a ready-state descriptive manifest over the existing logistics workflow family, workpage descriptor/action packs, approval-response hooks, and handoff edges.
+- The manifest is inventory only. It does not register or execute new logistics behavior, activate CAPEX runtime behavior, add HTTP/API routes, add migrations, or import raw corpus content.
+- `DOC_INVENTORY.yaml` remains the document-classification source; `domain.yaml` is the runtime/domain inventory surface.
+- Evidence: `tests/contract/test_logistics_domain_manifest.py` and `tests/contract/test_domain_manifest_schema.py`.

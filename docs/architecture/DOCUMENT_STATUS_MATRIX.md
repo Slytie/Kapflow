@@ -32,6 +32,7 @@ This file prevents stale guidance by classifying major documents and directories
 | `docs/architecture/DERIVATION_AND_GENERATION_POLICY.md` | AUTHORITATIVE SOURCE | lowering and generation rules |
 | `docs/architecture/LOWERING_CONTRACT.md` | AUTHORITATIVE SOURCE | source-to-IR / source-to-runbook compilation contract |
 | `docs/architecture/RUNTIME_OBJECT_MODEL.md` | AUTHORITATIVE SOURCE | canonical runtime object vocabulary |
+| `docs/architecture/CAPEX_DOMAIN_RUNTIME_MANIFESTS.md` | AUTHORITATIVE SOURCE | CAPEX domain manifest registry boundary and non-activation posture |
 | `docs/architecture/DOCUMENT_STATUS_MATRIX.md` | AUTHORITATIVE SOURCE | this classification table |
 | `docs/architecture/AGENTIC_LAYER_AND_MERGE_REVIEW.md` | HISTORICAL RATIONALE | narrative precursor to the stronger authority model |
 | `docs/architecture/MERGER_CHANGESET.md` | HISTORICAL RATIONALE | exact repo-level changes applied during merger |
@@ -49,6 +50,7 @@ This file prevents stale guidance by classifying major documents and directories
 | `docs/planning/epics/*.md` | AUTHORITATIVE SOURCE | active epic definitions |
 | `docs/planning/WORKPAGE_DEVELOPMENT_GUIDE.md` | AUTHORITATIVE SOURCE | workpage registry and extension-point guidance |
 | `docs/domains/logistics/DOC_INVENTORY.yaml` | AUTHORITATIVE SOURCE | logistics document classification and routing inventory |
+| `docs/domains/logistics/domain.yaml` | AUTHORITATIVE SOURCE | logistics domain-runtime inventory manifest; descriptive, not activation truth |
 | `docs/domains/logistics/current-state/*.md` | AUTHORITATIVE SOURCE | logistics current-state docs; subordinate to workflow packs and schemas if conflicts arise |
 | `docs/domains/logistics/archive/*.md` | HISTORICAL RATIONALE | preserved logistics plans, briefs, audits, and closeout notes |
 | `docs/workflows/*/v1/WORKFLOW_CONTRACT.yaml` | AUTHORITATIVE SOURCE | workflow semantics |

@@ -37,7 +37,7 @@
 
 ## TASK-0233 closeout evidence
 - Imported CAPEX v6 planning source row count: 374 tasks, 270 gates, 222 risks, 23 open decisions.
-- Current-code blocker mappings recorded for approval domain coupling, artifact auth-before-read, CAPEX project child APIs/authorization projections, and source occurrence/evidence; the first project child API, selector/dashboard, project-scope helper, and official pointer-family substrate slices are now closed, while authorization projections, pointer-promotion policy checks, and later governance remain blocked.
+- Current-code blocker mappings recorded for approval domain coupling, artifact auth-before-read, CAPEX project child APIs/authorization projections, domain-runtime manifests, and source occurrence/evidence; the first project child API, selector/dashboard, project-scope helper, official pointer-family substrate, neutral domain-runtime skeleton, and ready logistics manifest inventory slices are now closed, while the CAPEX incubation manifest, authorization projections, pointer-promotion policy checks, and later governance remain blocked.
 - Verification basis: CAPEX conversion check, repo validation, schema validation, focused planning/import checks, and `git diff --check`.
 
 ## TASK-0234 closeout evidence
@@ -225,11 +225,26 @@
 - Evidence: official pointer family unit tests, project official pointer API tests, generic pointer-list regression, route-registry tests, and route-layer boundary contracts passed on 2026-06-04.
 - Closeout posture: `PROJ-005` is closed as project official-pointer-family substrate only; pointer promotion request/policy checks, authorization projections, raw-corpus governance, richer CAPEX workpages, and activation remain later gated scope.
 
+## TASK-0381 closeout evidence
+- Added `onetruth.capex_platform.domain_runtime` with typed domain manifest dataclasses/loaders, duplicate-safe `DomainRuntimeRegistry`, ready/incubation/disabled grouping, and deterministic composition reports.
+- Composition reports keep `activation_allowed=false`; this skeleton is composition inventory only, not CAPEX runtime activation.
+- Added `schemas/domain_runtime/domain_manifest.schema.json` for Wave 1 domain manifests.
+- Evidence: `tests/unit/test_domain_runtime_registry.py` proves empty composition, duplicate-domain rejection, readiness grouping, deterministic counts, and CAPEX platform import-boundary isolation.
+- Closeout posture: `ARCH-W1-T001` is closed as neutral domain-runtime skeleton only; no domain behavior, route, schema migration, raw-corpus use, or CAPEX activation is implied.
+
+## TASK-0382 closeout evidence
+- Added `docs/domains/logistics/domain.yaml` as the ready-state logistics domain manifest inventory.
+- The manifest mirrors `docs/workflows/logistics_ops_family/v1/WORKFLOW_FAMILY.yaml`, the active logistics workpage descriptor/action packs, logistics approval-response hooks, and workflow-family handoff edges.
+- `DOC_INVENTORY.yaml` remains the logistics document-classification source; `domain.yaml` is runtime/domain inventory and does not register or execute behavior.
+- Evidence: `tests/contract/test_domain_manifest_schema.py` validates schema compliance and raw-corpus exclusion; `tests/contract/test_logistics_domain_manifest.py` characterizes manifest rows against current logistics truth.
+- Closeout posture: `ARCH-W1-T002` is closed as logistics inventory only; CAPEX incubation manifest, authorization projections, richer CAPEX workpages, raw-corpus governance, and activation remain later gated scope.
+
 ## Current-code blocker mappings
 | Blocker | CAPEX task refs | Current repo surface |
 |---|---|---|
 | Approval response domain-hook extraction | `TASK-0257`, `TASK-0369`, `TASK-0561` | `src/onetruth/application/services/approval_response_hooks.py`, `src/onetruth/application/services/logistics_approval_response_hooks.py`, `docs/adr/ADR-005-approval-response-domain-hooks.md` |
 | Workpage descriptor/action domain boundary | `TASK-0258`, `TASK-0370` | `src/onetruth/application/services/workpage_action_registry.py`, `src/onetruth/application/services/workpage_descriptor_registry.py`, `src/onetruth/application/services/logistics_workpage_descriptors.py` |
+| CAPEX domain-runtime manifest skeleton and logistics inventory | `TASK-0381`, `TASK-0382`, `TASK-0383` | `src/onetruth/capex_platform/domain_runtime/`, `schemas/domain_runtime/domain_manifest.schema.json`, `docs/domains/logistics/domain.yaml`; CAPEX incubation manifest remains future `TASK-0383` |
 | Platform/logistics test split | `TASK-0260` | `tests/helpers/suite_markers.py`, `tests/contract/test_platform_logistics_test_split.py`, `Makefile`, `.github/workflows/main.yml` |
 | Artifact auth-before-read and storage confinement | `TASK-0235`, `TASK-0562` | `src/onetruth/api/routes/artifacts.py`, `src/onetruth/application/handlers/artifacts.py`, `src/onetruth/infrastructure/artifacts/storage.py` |
 | Transaction composition safety | `TASK-0236` | `src/onetruth/application/handlers/schedule_control.py`, `src/onetruth/application/handlers/logistics_handoff.py` |

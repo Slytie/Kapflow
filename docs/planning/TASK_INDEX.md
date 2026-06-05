@@ -341,8 +341,8 @@ Note: `TASK-0087` / `TASK-0088` / `TASK-0089` were formerly duplicated as `TASK-
 | TASK-0378 | EPIC-145 | TODO | high | Fixture quarantine utility |
 | TASK-0379 | EPIC-150 | TODO | medium | Feature flag retirement register |
 | TASK-0380 | EPIC-150 | TODO | medium | Docs route/status cleanup |
-| TASK-0381 | EPIC-140 | TODO | high | Create capex_platform/domain_runtime skeleton |
-| TASK-0382 | EPIC-140 | TODO | high | Inventory logistics domain manifest in ready state |
+| TASK-0381 | EPIC-140 | DONE | high | Create capex_platform/domain_runtime skeleton |
+| TASK-0382 | EPIC-140 | DONE | high | Inventory logistics domain manifest in ready state |
 | TASK-0383 | EPIC-140 | TODO | high | Create CAPEX domain manifest in not-ready/incubation state |
 | TASK-0384 | EPIC-140 | TODO | high | Extract generic approval side effects behind registry in shadow mode |
 | TASK-0385 | EPIC-140 | TODO | high | Design capex_project and membership schema CED |

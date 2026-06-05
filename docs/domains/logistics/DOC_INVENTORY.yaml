@@ -5,6 +5,9 @@ classification_values:
   - descriptive
   - historical
 entries:
+  - path: docs/domains/logistics/domain.yaml
+    classification: normative
+    location: domain_manifest
   - path: docs/workflows/logistics_ops_family/v1/README.md
     classification: normative
     location: workflow_pack
@@ -107,4 +110,3 @@ entries:
   - path: docs/domains/logistics/archive/WORKPAGES_POST_EPIC131_STABILIZATION_AND_SETTLEMENT_PLAN.md
     classification: historical
     location: archive
-

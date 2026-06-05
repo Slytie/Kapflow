@@ -127,7 +127,7 @@ EPICS: tuple[EpicDefinition, ...] = (
         "EPIC-140",
         "CAPEX project access and membership",
         "Define project anchors, membership, roles, and project-scoped APIs without crossing tenant/domain boundaries.",
-        "project schema decisions, authorization helpers, project dashboard scope",
+        "project schema decisions, authorization helpers, project dashboard scope, domain manifests",
         "EPIC-137, EPIC-139",
     ),
     EpicDefinition(
@@ -769,7 +769,7 @@ def intake_doc(
 
 ## TASK-0233 closeout evidence
 - Imported CAPEX v6 planning source row count: {len(task_rows)} tasks, {len(gate_rows)} gates, {len(risk_rows)} risks, {len(decision_rows)} open decisions.
-- Current-code blocker mappings recorded for approval domain coupling, artifact auth-before-read, CAPEX project child APIs/authorization projections, and source occurrence/evidence; the first project child API, selector/dashboard, project-scope helper, and official pointer-family substrate slices are now closed, while authorization projections, pointer-promotion policy checks, and later governance remain blocked.
+- Current-code blocker mappings recorded for approval domain coupling, artifact auth-before-read, CAPEX project child APIs/authorization projections, domain-runtime manifests, and source occurrence/evidence; the first project child API, selector/dashboard, project-scope helper, official pointer-family substrate, neutral domain-runtime skeleton, and ready logistics manifest inventory slices are now closed, while CAPEX incubation manifest, authorization projections, pointer-promotion policy checks, and later governance remain blocked.
 - Verification basis: CAPEX conversion check, repo validation, schema validation, focused planning/import checks, and `git diff --check`.
 
 ## TASK-0234 closeout evidence
@@ -783,6 +783,7 @@ def intake_doc(
 | Approval response domain coupling | `TASK-0257`, `TASK-0561` | `src/onetruth/application/handlers/approvals.py` |
 | Artifact auth-before-read and storage confinement | `TASK-0235`, `TASK-0562` | `src/onetruth/api/routes/artifacts.py`, `src/onetruth/application/handlers/artifacts.py`, `src/onetruth/infrastructure/artifacts/storage.py` |
 | Transaction composition safety | `TASK-0236` | `src/onetruth/application/handlers/schedule_control.py`, `src/onetruth/application/handlers/logistics_handoff.py` |
+| CAPEX domain-runtime manifest skeleton and logistics inventory | `TASK-0381`, `TASK-0382`, `TASK-0383` | `src/onetruth/capex_platform/domain_runtime/`, `schemas/domain_runtime/domain_manifest.schema.json`, `docs/domains/logistics/domain.yaml`; CAPEX incubation manifest remains future `TASK-0383` |
 | CAPEX project child APIs and authorization projections | `TASK-0263`, `TASK-0371`, `TASK-0265`, `TASK-0385`, `TASK-0386`, `TASK-0563` | first project child APIs, selector/dashboard, project-scope helper, and official pointer-family substrate closed in `TASK-0263`/`TASK-0264`/`TASK-0371`/`TASK-0265`; future authorization projections, pointer-promotion policy checks, source governance, and activation remain blocked |
 | Source occurrence / SourceRef | `TASK-0268`, `TASK-0391`, `TASK-0407`, `TASK-0428`, `TASK-0564` | future source occurrence and evidence resolver |
 

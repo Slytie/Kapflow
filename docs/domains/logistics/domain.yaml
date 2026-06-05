@@ -1,0 +1,172 @@
+schema_version: domain_manifest.v1
+domain_id: logistics
+display_name: Logistics
+readiness: ready
+source_refs:
+  - kind: docs_inventory
+    path: docs/domains/logistics/DOC_INVENTORY.yaml
+  - kind: workflow_family
+    path: docs/workflows/logistics_ops_family/v1/WORKFLOW_FAMILY.yaml
+  - kind: method_packages
+    path: docs/workflows/logistics_ops_family/v1/METHOD_PACKAGES.yaml
+  - kind: descriptor_pack
+    path: src/onetruth/application/services/logistics_workpage_descriptors.py
+  - kind: action_pack
+    path: src/onetruth/application/services/logistics_workpage_action_registry.py
+  - kind: approval_hooks
+    path: src/onetruth/application/services/logistics_approval_response_hooks.py
+workflows:
+  - module_id: availability_request
+    workflow_id: availability_request.v1
+    pack_path: docs/workflows/availability_request/v1
+    partition_kind: AvailabilityRequestID
+    family_status: extension
+    readiness: incubation
+  - module_id: weekly_schedule_planning
+    workflow_id: weekly_schedule_planning.v1
+    pack_path: docs/workflows/weekly_schedule_planning/v1
+    partition_kind: PlanningWeekID
+    family_status: first_slice
+    readiness: ready
+  - module_id: live_dispatch
+    workflow_id: live_dispatch.v1
+    pack_path: docs/workflows/live_dispatch/v1
+    partition_kind: ServiceDateID
+    family_status: first_slice
+    readiness: ready
+  - module_id: dispatch_reporting
+    workflow_id: dispatch_reporting.v1
+    pack_path: docs/workflows/dispatch_reporting/v1
+    partition_kind: ServiceDateID
+    family_status: extension
+    readiness: ready
+  - module_id: timecard_audit
+    workflow_id: timecard_audit.v1
+    pack_path: docs/workflows/timecard_audit/v1
+    partition_kind: PayPeriodID
+    family_status: deferred
+    readiness: disabled
+workpages:
+  - kind: schedule-v0
+    workflow_id: weekly_schedule_planning.v1
+    descriptor_pack_ref: onetruth.application.services.logistics_workpage_descriptors.LOGISTICS_WORKPAGE_DESCRIPTOR_PACK
+    action_pack_ref: onetruth.application.services.logistics_workpage_action_registry.LOGISTICS_WORKPAGE_ACTION_PACK
+    run_enabled: true
+    artifact_enabled: true
+    submit_enabled: true
+    artifact_kinds:
+      - planning.draft_weekly_schedule.workbook
+      - planning.published_weekly_schedule.workbook
+    action_subjects:
+      - subject_kind: human_task
+        workflow_id: weekly_schedule_planning.v1
+        stage_id: Stage04
+        task_kind: work_item
+      - subject_kind: human_task
+        workflow_id: weekly_schedule_planning.v1
+        stage_id: Stage05
+        task_kind: information_request
+      - subject_kind: human_task
+        workflow_id: weekly_schedule_planning.v1
+        stage_id: Stage05
+        task_kind: final_review
+      - subject_kind: approval
+        workflow_id: weekly_schedule_planning.v1
+        scope_kind: stage
+        scope_ref: Stage06
+  - kind: eod-v0
+    workflow_id: dispatch_reporting.v1
+    descriptor_pack_ref: onetruth.application.services.logistics_workpage_descriptors.LOGISTICS_WORKPAGE_DESCRIPTOR_PACK
+    action_pack_ref: onetruth.application.services.logistics_workpage_action_registry.LOGISTICS_WORKPAGE_ACTION_PACK
+    run_enabled: true
+    artifact_enabled: true
+    submit_enabled: true
+    artifact_kinds:
+      - reporting.upd_draft.workbook
+    action_subjects:
+      - subject_kind: human_task
+        workflow_id: dispatch_reporting.v1
+        stage_id: Stage04
+        task_kind: final_packet_review
+      - subject_kind: approval
+        workflow_id: dispatch_reporting.v1
+        scope_kind: stage
+        scope_ref: Stage04
+  - kind: route-demand-v0
+    workflow_id: weekly_schedule_planning.v1
+    descriptor_pack_ref: onetruth.application.services.logistics_workpage_descriptors.LOGISTICS_WORKPAGE_DESCRIPTOR_PACK
+    action_pack_ref: null
+    run_enabled: true
+    artifact_enabled: true
+    submit_enabled: true
+    artifact_kinds:
+      - planning.route_slot_requirements.workbook
+    action_subjects: []
+  - kind: driver-preferences-v0
+    workflow_id: weekly_schedule_planning.v1
+    descriptor_pack_ref: onetruth.application.services.logistics_workpage_descriptors.LOGISTICS_WORKPAGE_DESCRIPTOR_PACK
+    action_pack_ref: null
+    run_enabled: true
+    artifact_enabled: true
+    submit_enabled: true
+    artifact_kinds:
+      - planning.driver_shift_preferences.workbook
+    action_subjects: []
+side_effects:
+  - kind: approval_response_hook
+    effect_id: logistics.weekly_publish_approval
+    source_ref: onetruth.application.services.logistics_approval_response_hooks.weekly_publish_approval_hook
+    workflow_id: weekly_schedule_planning.v1
+    status: ready
+    details:
+      approval_scope_kind: stage
+      approval_scope_ref: Stage06
+      requested_action: publish_weekly_base_schedule
+      event_effects:
+        - artifact.version.created
+        - artifact.pointer.promoted
+  - kind: approval_response_hook
+    effect_id: logistics.dispatch_reporting_finalize_approval
+    source_ref: onetruth.application.services.logistics_approval_response_hooks.dispatch_reporting_finalize_approval_hook
+    workflow_id: dispatch_reporting.v1
+    status: ready
+    details:
+      approval_scope_kind: stage
+      approval_scope_ref: Stage04
+      requested_action: confirm_dispatch_reporting_packet
+      event_effects:
+        - artifact.version.created
+        - artifact.pointer.promoted
+        - workflow_family_edge
+  - kind: workflow_family_edge
+    effect_id: availability_to_weekly_availability_update
+    source_ref: docs/workflows/logistics_ops_family/v1/WORKFLOW_FAMILY.yaml
+    status: extension
+    details:
+      source_module_id: availability_request
+      target_module_id: weekly_schedule_planning
+      handoff_mode: notify_only
+  - kind: workflow_family_edge
+    effect_id: weekly_seed_to_live_dispatch
+    source_ref: docs/workflows/logistics_ops_family/v1/WORKFLOW_FAMILY.yaml
+    status: first_slice
+    details:
+      source_module_id: weekly_schedule_planning
+      target_module_id: live_dispatch
+      handoff_mode: materialize_seed
+  - kind: workflow_family_edge
+    effect_id: reporting_actuals_to_future_planning
+    source_ref: docs/workflows/logistics_ops_family/v1/WORKFLOW_FAMILY.yaml
+    status: extension
+    details:
+      source_module_id: dispatch_reporting
+      target_module_id: weekly_schedule_planning
+      handoff_mode: notify_only
+  - kind: workflow_family_edge
+    effect_id: reporting_actuals_to_timecard_audit
+    source_ref: docs/workflows/logistics_ops_family/v1/WORKFLOW_FAMILY.yaml
+    status: deferred
+    details:
+      source_module_id: dispatch_reporting
+      target_module_id: timecard_audit
+      handoff_mode: notify_only

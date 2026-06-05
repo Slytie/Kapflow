@@ -37,9 +37,11 @@
 ## Domains
 - `docs/domains/logistics/README.md`
 - `docs/domains/logistics/DOC_INVENTORY.yaml`
+- `docs/domains/logistics/domain.yaml`
 
 ## Architecture
 - `docs/architecture/AUTHORITY_MODEL.md`
+- `docs/architecture/CAPEX_DOMAIN_RUNTIME_MANIFESTS.md`
 - `docs/architecture/EXECUTION_OVERLAY_MODEL.md`
 - `docs/architecture/DERIVATION_AND_GENERATION_POLICY.md`
 - `docs/architecture/LOWERING_CONTRACT.md`

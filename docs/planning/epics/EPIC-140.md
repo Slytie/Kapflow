@@ -6,7 +6,7 @@ Define project anchors, membership, roles, and project-scoped APIs without cross
 This epic was imported from CAPEX v6 on `2026-06-01` as planning backlog only. It does not activate CAPEX runtime behavior by itself.
 
 ## Status
-Active gated backlog. `TASK-0261` through `TASK-0265` plus `TASK-0371` are closed as the durable project-anchor/direct-membership foundation, first project-scoped child API and selector/dashboard slice, shared project-scope helper, and project-scoped official pointer-family substrate; authorization projections, raw-corpus governance, richer CAPEX workpages, and activation remain gated.
+Active gated backlog. `TASK-0261` through `TASK-0265`, `TASK-0371`, and `TASK-0381` through `TASK-0382` are closed as the durable project-anchor/direct-membership foundation, first project-scoped child API and selector/dashboard slice, shared project-scope helper, project-scoped official pointer-family substrate, neutral domain-runtime manifest skeleton, and ready-state logistics manifest inventory; authorization projections, CAPEX incubation manifest work, raw-corpus governance, richer CAPEX workpages, and activation remain gated.
 
 ## In scope
 - Source task families/counts: ARCH:10, NU:1, PROJ:5, RF:1.
@@ -36,8 +36,8 @@ Context pack:
 - `TASK-0264` (`PROJ-004`) - DONE - Project selector/dashboard for max-five active projects per user
 - `TASK-0265` (`PROJ-005`) - DONE - Project-scoped official pointer families
 - `TASK-0371` (`RF-003`) - DONE - Project-scope query helper
-- `TASK-0381` (`ARCH-W1-T001`) - Create capex_platform/domain_runtime skeleton
-- `TASK-0382` (`ARCH-W1-T002`) - Inventory logistics domain manifest in ready state
+- `TASK-0381` (`ARCH-W1-T001`) - DONE - Create capex_platform/domain_runtime skeleton
+- `TASK-0382` (`ARCH-W1-T002`) - DONE - Inventory logistics domain manifest in ready state
 - `TASK-0383` (`ARCH-W1-T003`) - Create CAPEX domain manifest in not-ready/incubation state
 - `TASK-0384` (`ARCH-W1-T004`) - Extract generic approval side effects behind registry in shadow mode
 - `TASK-0385` (`ARCH-W1-T005`) - Design capex_project and membership schema CED

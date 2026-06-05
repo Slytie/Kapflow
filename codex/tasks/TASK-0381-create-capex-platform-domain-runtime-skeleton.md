@@ -2,7 +2,8 @@
 id: TASK-0381
 epic: EPIC-140
 title: "Create capex_platform/domain_runtime skeleton"
-status: TODO
+status: DONE
+completed_at: "2026-06-04T15:39:28+02:00"
 owners: ["platform"]
 reviewers: ["architect", "qa"]
 depends_on: []
@@ -61,3 +62,7 @@ domain manifest schema, interfaces, typed registry stubs, composition report stu
 
 ## Notes / decisions
 - Raw project corpora remain off-repo; use only sanitized fixtures, manifests, hashes, and aggregate evidence approved by the relevant fixture/governance task.
+- Closed by adding the neutral `onetruth.capex_platform.domain_runtime` package with typed manifest dataclasses/loaders, duplicate-safe `DomainRuntimeRegistry`, and deterministic composition reports that keep `activation_allowed=false`.
+- Added `schemas/domain_runtime/domain_manifest.schema.json` as the Wave 1 manifest contract with explicit workflow, workpage, and side-effect inventory rows.
+- Added import-boundary evidence that the CAPEX platform package does not import logistics/domain modules or domain document trees.
+- Evidence: `tests/unit/test_domain_runtime_registry.py` and `tests/contract/test_domain_manifest_schema.py`.

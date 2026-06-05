@@ -1,0 +1,252 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kapflow.local/schemas/domain_runtime/domain_manifest.schema.json",
+  "title": "Domain Runtime Manifest",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "domain_id",
+    "display_name",
+    "readiness",
+    "source_refs",
+    "workflows",
+    "workpages",
+    "side_effects"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "domain_manifest.v1"
+    },
+    "domain_id": {
+      "$ref": "#/$defs/id"
+    },
+    "display_name": {
+      "$ref": "#/$defs/nonEmptyString"
+    },
+    "readiness": {
+      "$ref": "#/$defs/readiness"
+    },
+    "source_refs": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/sourceRef"
+      }
+    },
+    "workflows": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/workflowRef"
+      }
+    },
+    "workpages": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/workpageRef"
+      }
+    },
+    "side_effects": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/sideEffectRef"
+      }
+    }
+  },
+  "$defs": {
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_.:-]*$"
+    },
+    "nonEmptyString": {
+      "type": "string",
+      "minLength": 1
+    },
+    "readiness": {
+      "enum": [
+        "ready",
+        "incubation",
+        "disabled"
+      ]
+    },
+    "sourceRef": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "path"
+      ],
+      "properties": {
+        "kind": {
+          "$ref": "#/$defs/id"
+        },
+        "path": {
+          "$ref": "#/$defs/nonEmptyString"
+        }
+      }
+    },
+    "workflowRef": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "workflow_id",
+        "module_id",
+        "pack_path",
+        "partition_kind",
+        "family_status",
+        "readiness"
+      ],
+      "properties": {
+        "workflow_id": {
+          "$ref": "#/$defs/id"
+        },
+        "module_id": {
+          "$ref": "#/$defs/id"
+        },
+        "pack_path": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "partition_kind": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "family_status": {
+          "enum": [
+            "first_slice",
+            "extension",
+            "deferred"
+          ]
+        },
+        "readiness": {
+          "$ref": "#/$defs/readiness"
+        }
+      }
+    },
+    "actionSubject": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "subject_kind",
+        "workflow_id"
+      ],
+      "properties": {
+        "subject_kind": {
+          "enum": [
+            "human_task",
+            "approval"
+          ]
+        },
+        "workflow_id": {
+          "$ref": "#/$defs/id"
+        },
+        "stage_id": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "task_kind": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "scope_kind": {
+          "$ref": "#/$defs/id"
+        },
+        "scope_ref": {
+          "$ref": "#/$defs/nonEmptyString"
+        }
+      }
+    },
+    "workpageRef": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "workflow_id",
+        "descriptor_pack_ref",
+        "action_pack_ref",
+        "run_enabled",
+        "artifact_enabled",
+        "submit_enabled",
+        "artifact_kinds",
+        "action_subjects"
+      ],
+      "properties": {
+        "kind": {
+          "$ref": "#/$defs/id"
+        },
+        "workflow_id": {
+          "$ref": "#/$defs/id"
+        },
+        "descriptor_pack_ref": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "action_pack_ref": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "minLength": 1
+        },
+        "run_enabled": {
+          "type": "boolean"
+        },
+        "artifact_enabled": {
+          "type": "boolean"
+        },
+        "submit_enabled": {
+          "type": "boolean"
+        },
+        "artifact_kinds": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/id"
+          },
+          "uniqueItems": true
+        },
+        "action_subjects": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/actionSubject"
+          }
+        }
+      }
+    },
+    "sideEffectRef": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "effect_id",
+        "source_ref"
+      ],
+      "properties": {
+        "kind": {
+          "enum": [
+            "approval_response_hook",
+            "workflow_family_edge"
+          ]
+        },
+        "effect_id": {
+          "$ref": "#/$defs/id"
+        },
+        "source_ref": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "workflow_id": {
+          "$ref": "#/$defs/id"
+        },
+        "status": {
+          "$ref": "#/$defs/id"
+        },
+        "details": {
+          "type": "object",
+          "additionalProperties": {
+            "type": [
+              "string",
+              "number",
+              "boolean",
+              "null",
+              "array",
+              "object"
+            ]
+          }
+        }
+      }
+    }
+  }
+}

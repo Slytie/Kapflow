@@ -28,6 +28,12 @@ Record any decisions made since the last session so a fresh Codex run can rehydr
 - Officialness decision: latest artifacts, approval responses, and approved approvals do not move project official pointers by themselves; officialness changes only through explicit promotion after project membership and child ownership checks pass.
 - Activation decision: these slices do not activate CAPEX runtime/product behavior, raw-corpus use, authorization projections, richer CAPEX workpages, release/deploy work, or production dashboards.
 
+## 2026-06-04 (EPIC-140 domain runtime skeleton and logistics manifest)
+- Registry decision: `TASK-0381` adds `onetruth.capex_platform.domain_runtime` as a neutral manifest loader/registry/composition-report skeleton; the CAPEX platform package must not import logistics/domain modules or domain document trees.
+- Manifest decision: `TASK-0382` adds `docs/domains/logistics/domain.yaml` as a ready-state descriptive inventory over existing logistics workflow family modules, workpage descriptor/action packs, approval-response hooks, and workflow-family handoff edges.
+- Activation decision: domain manifests are inventory and composition evidence only. They do not register hooks, execute side effects, activate CAPEX runtime/product behavior, add routes, add migrations, or replace workflow packs/workpage packs as source truth.
+- Data-boundary decision: raw corpus paths/content remain rejected by manifest contract coverage; the future CAPEX manifest remains separate `TASK-0383` work and should start in incubation/not-ready state.
+
 ## 2026-06-03 (CAPEX RF-002/NU-CB-P0-001 descriptor registry and approval duplicate closeout)
 - Descriptor-boundary decision: `TASK-0370` moves active logistics workpage descriptor registrations behind `WorkpageDescriptorRegistry`; the existing descriptor lookup helpers remain compatibility facades and public workpage routes/actions stay unchanged.
 - Subject-surface decision: workpage `subject_link` validation now uses the registered workpage action rules for supported human-task and approval surfaces instead of local schedule/EOD matrices in the action-resolution handler.

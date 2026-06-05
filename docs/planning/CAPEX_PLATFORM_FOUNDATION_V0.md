@@ -30,7 +30,7 @@
 - CAPEX production activation and pilot readiness claims remain blocked.
 - Raw K12, K3, and blind-validation corpus files, extracted filenames, screenshots, embedded text, OCR, and search output remain off-repo and out of CI.
 - Release/deploy work, production secrets, production DB URLs, and production artifact-root mutation remain out of scope.
-- CAPEX project child APIs, authorization projections: the first project child API, selector/dashboard, project-scope helper, and official pointer-family substrate slices are closed, while authorization projections, pointer-promotion policy checks, richer CAPEX workpages/projections, raw-corpus governance dependencies, and runtime activation remain blocked until later project/access and governance tasks close.
+- CAPEX project child APIs, authorization projections, and domain manifests: the first project child API, selector/dashboard, project-scope helper, official pointer-family substrate, neutral domain-runtime skeleton, and ready logistics manifest inventory slices are closed, while the CAPEX incubation manifest, authorization projections, pointer-promotion policy checks, richer CAPEX workpages/projections, raw-corpus governance dependencies, and runtime activation remain blocked until later project/access and governance tasks close.
 - Source occurrence and SourceRef runtime remain blocked until corpus/evidence resolver tasks close.
 - Hosted branch-protection settings remain external/operator-managed; this repo records expected posture but does not claim hosted settings are configured.
 
