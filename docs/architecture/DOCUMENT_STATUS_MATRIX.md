@@ -34,6 +34,7 @@ This file prevents stale guidance by classifying major documents and directories
 | `docs/architecture/RUNTIME_OBJECT_MODEL.md` | AUTHORITATIVE SOURCE | canonical runtime object vocabulary |
 | `docs/architecture/CAPEX_DOMAIN_RUNTIME_MANIFESTS.md` | AUTHORITATIVE SOURCE | CAPEX domain manifest registry boundary and non-activation posture |
 | `docs/architecture/CAPEX_PROJECT_AUTHORIZATION_CED.md` | AUTHORITATIVE SOURCE | CAPEX project authorization CED and AuthorizedProjectsQuery prototype boundary |
+| `docs/architecture/CAPEX_STORAGE_BLOB_CUSTODY_CED.md` | AUTHORITATIVE SOURCE | CAPEX storage/blob custody CED and future schema boundary |
 | `docs/architecture/DOCUMENT_STATUS_MATRIX.md` | AUTHORITATIVE SOURCE | this classification table |
 | `docs/architecture/AGENTIC_LAYER_AND_MERGE_REVIEW.md` | HISTORICAL RATIONALE | narrative precursor to the stronger authority model |
 | `docs/architecture/MERGER_CHANGESET.md` | HISTORICAL RATIONALE | exact repo-level changes applied during merger |
@@ -48,6 +49,7 @@ This file prevents stale guidance by classifying major documents and directories
 | `docs/planning/TEST_MATRIX.md` | AUTHORITATIVE SOURCE | core invariant-to-test mapping |
 | `docs/planning/TDD_IMPLEMENTATION_PLAN.md` | AUTHORITATIVE SOURCE | implementation working mode and test-first rules |
 | `docs/planning/MERGER_BACKLOG.md` | BACKLOG / DEFERRED | preserves deferred CompanyOS ideas and caveats |
+| `docs/planning/checklists/CAPEX_PILOT_STORAGE_GATE.md` | AUTHORITATIVE SOURCE | CAPEX pilot storage gate checklist; blocked until evidence or waiver |
 | `docs/planning/epics/*.md` | AUTHORITATIVE SOURCE | active epic definitions |
 | `docs/planning/WORKPAGE_DEVELOPMENT_GUIDE.md` | AUTHORITATIVE SOURCE | workpage registry and extension-point guidance |
 | `docs/domains/capex/DOC_INVENTORY.yaml` | AUTHORITATIVE SOURCE | CAPEX document classification and routing inventory |

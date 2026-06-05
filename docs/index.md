@@ -33,6 +33,7 @@
 - `docs/planning/TEST_MATRIX.md`
 - `docs/planning/TDD_IMPLEMENTATION_PLAN.md`
 - `docs/planning/MERGER_BACKLOG.md`
+- `docs/planning/checklists/CAPEX_PILOT_STORAGE_GATE.md`
 
 ## Domains
 - `docs/domains/capex/README.md`
@@ -45,6 +46,7 @@
 ## Architecture
 - `docs/architecture/AUTHORITY_MODEL.md`
 - `docs/architecture/CAPEX_PROJECT_AUTHORIZATION_CED.md`
+- `docs/architecture/CAPEX_STORAGE_BLOB_CUSTODY_CED.md`
 - `docs/architecture/CAPEX_DOMAIN_RUNTIME_MANIFESTS.md`
 - `docs/architecture/EXECUTION_OVERLAY_MODEL.md`
 - `docs/architecture/DERIVATION_AND_GENERATION_POLICY.md`

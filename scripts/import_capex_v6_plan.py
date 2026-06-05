@@ -769,7 +769,7 @@ def intake_doc(
 
 ## TASK-0233 closeout evidence
 - Imported CAPEX v6 planning source row count: {len(task_rows)} tasks, {len(gate_rows)} gates, {len(risk_rows)} risks, {len(decision_rows)} open decisions.
-- Current-code blocker mappings recorded for approval domain coupling, artifact auth-before-read, CAPEX project child APIs/authorization projections, domain-runtime manifests, and source occurrence/evidence; the first project child API, selector/dashboard, project-scope helper, official pointer-family substrate, neutral domain-runtime skeleton, ready logistics manifest inventory, CAPEX incubation manifest, approval-effect registry shadow parity, project authorization CED, and `AuthorizedProjectsQuery` prototype slices are now closed, while physical authorization projection runtime state, pointer-promotion policy checks, storage custody gates, and later governance remain blocked.
+- Current-code blocker mappings recorded for approval domain coupling, artifact auth-before-read, CAPEX project child APIs/authorization projections, domain-runtime manifests, storage custody gates, and source occurrence/evidence; the first project child API, selector/dashboard, project-scope helper, official pointer-family substrate, neutral domain-runtime skeleton, ready logistics manifest inventory, CAPEX incubation manifest, approval-effect registry shadow parity, project authorization CED, `AuthorizedProjectsQuery` prototype, storage/blob custody CED, and pilot storage gate checklist slices are now closed, while physical authorization projection runtime state, pointer-promotion policy checks, real pilot storage evidence or waiver, and later governance remain blocked.
 - Verification basis: CAPEX conversion check, repo validation, schema validation, focused planning/import checks, and `git diff --check`.
 
 ## TASK-0234 closeout evidence
@@ -785,6 +785,7 @@ def intake_doc(
 | Transaction composition safety | `TASK-0236` | `src/onetruth/application/handlers/schedule_control.py`, `src/onetruth/application/handlers/logistics_handoff.py` |
 | CAPEX domain-runtime manifest skeleton and domain inventories | `TASK-0381`, `TASK-0382`, `TASK-0383` | `src/onetruth/capex_platform/domain_runtime/`, `schemas/domain_runtime/domain_manifest.schema.json`, `docs/domains/logistics/domain.yaml`, `docs/domains/capex/domain.yaml`; CAPEX remains incubation and disabled |
 | CAPEX project child APIs and authorization projections | `TASK-0263`, `TASK-0371`, `TASK-0265`, `TASK-0385`, `TASK-0386`, `TASK-0563` | first project child APIs, selector/dashboard, project-scope helper, official pointer-family substrate, project authorization CED, and `AuthorizedProjectsQuery` prototype are closed; physical authorization projection runtime state, pointer-promotion policy checks, source governance, and activation remain blocked |
+| CAPEX storage/blob custody and pilot storage gate | `TASK-0387`, `TASK-0388`, `TASK-0390` | storage/blob custody CED and pilot storage gate checklist are closed; real pilot storage evidence or explicit waiver, Postgres/blob backend rollout, and activation remain blocked |
 | Source occurrence / SourceRef | `TASK-0268`, `TASK-0391`, `TASK-0407`, `TASK-0428`, `TASK-0564` | future source occurrence and evidence resolver |
 
 ## Verification commands

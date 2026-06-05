@@ -347,8 +347,8 @@ Note: `TASK-0087` / `TASK-0088` / `TASK-0089` were formerly duplicated as `TASK-
 | TASK-0384 | EPIC-140 | DONE | high | Extract generic approval side effects behind registry in shadow mode |
 | TASK-0385 | EPIC-140 | DONE | high | Design capex_project and membership schema CED |
 | TASK-0386 | EPIC-140 | DONE | high | Implement AuthorizedProjectsQuery prototype and tests |
-| TASK-0387 | EPIC-140 | TODO | high | Design storage/blob custody schema CED |
-| TASK-0388 | EPIC-140 | TODO | high | Create pilot storage gate checklist |
+| TASK-0387 | EPIC-140 | DONE | high | Design storage/blob custody schema CED |
+| TASK-0388 | EPIC-140 | DONE | high | Create pilot storage gate checklist |
 | TASK-0389 | EPIC-140 | TODO | high | Add architecture snippets and code pattern register |
 | TASK-0390 | EPIC-140 | TODO | high | W1 closeout review and old-decision update |
 | TASK-0391 | EPIC-141 | TODO | high | Create content_identity and capex_source_occurrence runtime schema |

@@ -13,6 +13,8 @@ source_refs:
     path: docs/architecture/CAPEX_PROJECT_ACCESS_MODEL.md
   - kind: architecture
     path: docs/architecture/CAPEX_PROJECT_AUTHORIZATION_CED.md
+  - kind: architecture
+    path: docs/architecture/CAPEX_STORAGE_BLOB_CUSTODY_CED.md
 workflows: []
 workpages: []
 side_effects: []
@@ -29,7 +31,7 @@ readiness_prerequisites:
       - docs/architecture/CAPEX_PROJECT_ACCESS_MODEL.md
       - docs/architecture/CAPEX_PROJECT_AUTHORIZATION_CED.md
   - prerequisite_id: capex.storage_custody_gate
-    description: Storage/blob custody design and pilot checklist remain future Wave 1 gates.
+    description: Storage/blob custody CED and pilot checklist exist; real pilot storage evidence or waiver remains future work.
     status: open
     task_refs:
       - TASK-0387
@@ -37,6 +39,8 @@ readiness_prerequisites:
     source_refs:
       - docs/planning/epics/EPIC-140.md
       - docs/planning/CAPEX_MASTER_V6_INTAKE.md
+      - docs/architecture/CAPEX_STORAGE_BLOB_CUSTODY_CED.md
+      - docs/planning/checklists/CAPEX_PILOT_STORAGE_GATE.md
   - prerequisite_id: capex.source_occurrence_governance
     description: Source occurrence, evidence resolver, and source-data governance dependencies remain future work.
     status: open

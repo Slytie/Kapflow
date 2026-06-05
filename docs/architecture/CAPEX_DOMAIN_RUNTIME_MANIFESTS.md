@@ -14,11 +14,16 @@ CAPEX domain runtime manifests are a Wave 1 inventory surface for composing doma
 
 ## Current Manifests
 - `docs/domains/logistics/domain.yaml` inventories the existing logistics workflow family, active workpage descriptors/actions, approval-response hooks, and handoff edges in ready state.
-- `docs/domains/capex/domain.yaml` inventories CAPEX in incubation state with no runnable workflows, workpages, or side effects. Its disabled capabilities and readiness prerequisites point to the accepted project authorization CED/prototype plus later physical authorization projection runtime state, storage custody, source governance, workflow catalog, workpage projection, and production-preflight tasks.
+- `docs/domains/capex/domain.yaml` inventories CAPEX in incubation state with no runnable workflows, workpages, or side effects. Its disabled capabilities and readiness prerequisites point to the accepted project authorization CED/prototype, accepted storage/blob custody CED and pilot checklist, plus later physical authorization projection runtime state, real pilot storage evidence or waiver, source governance, workflow catalog, workpage projection, and production-preflight tasks.
 
 ## Project Authorization
 - `docs/architecture/CAPEX_PROJECT_AUTHORIZATION_CED.md` records the Wave 1 project authorization boundary.
 - `AuthorizedProjectsQuery` is a backend-only prototype over direct `project_memberships`; it does not activate CAPEX workflows or replace future projection tables.
+
+## Storage Custody
+- `docs/architecture/CAPEX_STORAGE_BLOB_CUSTODY_CED.md` records the future storage/blob custody schema boundary.
+- `docs/planning/checklists/CAPEX_PILOT_STORAGE_GATE.md` records the pilot storage gate checklist with default result `blocked_pending_evidence`.
+- These records do not add migrations, routes, storage backend rollout, Postgres rollout, raw-corpus approval, pilot readiness, or CAPEX activation.
 
 ## Approval Side Effects
 - Approval-response side effects are selected through the neutral approval-effect registry in shadow mode.

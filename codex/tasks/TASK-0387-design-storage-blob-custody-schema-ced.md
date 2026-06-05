@@ -2,7 +2,8 @@
 id: TASK-0387
 epic: EPIC-140
 title: "Design storage/blob custody schema CED"
-status: TODO
+status: DONE
+completed_at: "2026-06-05T10:04:07+02:00"
 owners: ["platform"]
 reviewers: ["architect", "qa"]
 depends_on: []
@@ -61,3 +62,6 @@ BlobRef, BlobReplica, BlobIngestSession, ArtifactVersionBlob, DerivedArtifact, D
 
 ## Notes / decisions
 - Raw project corpora remain off-repo; use only sanitized fixtures, manifests, hashes, and aggregate evidence approved by the relevant fixture/governance task.
+- Completed on `2026-06-05T10:04:07+02:00`.
+- Added `docs/architecture/CAPEX_STORAGE_BLOB_CUSTODY_CED.md` as the accepted Wave 1 storage/blob custody schema-design boundary.
+- Closeout posture: this is CED/design closure only. Physical custody tables, Alembic/bootstrap DDL, route/API/frontend changes, storage backend rollout, raw-corpus use, pilot readiness, and CAPEX runtime activation remain later gated work.

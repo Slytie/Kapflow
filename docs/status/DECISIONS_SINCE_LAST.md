@@ -46,6 +46,12 @@ Record any decisions made since the last session so a fresh Codex run can rehydr
 - Query-prototype decision: `TASK-0386` adds `AuthorizedProjectsQuery` as a backend-only prototype over direct membership state, returning deterministic authorized active project IDs and caller roles without frontend-only filtering or a global project list.
 - Activation decision: this tranche adds no routes, migrations, frontend behavior, raw-corpus use, physical authorization projection runtime state, or CAPEX runtime/product activation.
 
+## 2026-06-05 (EPIC-140 storage/blob custody CED and pilot gate checklist)
+- Custody-boundary decision: `TASK-0387` adds `docs/architecture/CAPEX_STORAGE_BLOB_CUSTODY_CED.md`, defining future `BlobRef`, `BlobReplica`, `BlobIngestSession`, `ArtifactVersionBlob`, `DerivedArtifact`, and `DownloadEvent` concepts while keeping `ArtifactVersion` as canonical metadata and `ArtifactPointer` targeted only at `ArtifactVersion`.
+- Auth-before-download decision: artifact/workflow/project authorization must happen before blob custody resolution or byte reads; `artifact_versions.storage_uri` remains compatibility state until a later physical custody migration.
+- Pilot-gate decision: `TASK-0388` adds `docs/planning/checklists/CAPEX_PILOT_STORAGE_GATE.md` with default result `blocked_pending_evidence`; this task does not pass, waive, or execute the gate.
+- Activation decision: this tranche adds no migrations, routes, frontend behavior, storage backend rollout, Postgres rollout, raw-corpus use, pilot readiness, or CAPEX runtime/product activation.
+
 ## 2026-06-03 (CAPEX RF-002/NU-CB-P0-001 descriptor registry and approval duplicate closeout)
 - Descriptor-boundary decision: `TASK-0370` moves active logistics workpage descriptor registrations behind `WorkpageDescriptorRegistry`; the existing descriptor lookup helpers remain compatibility facades and public workpage routes/actions stay unchanged.
 - Subject-surface decision: workpage `subject_link` validation now uses the registered workpage action rules for supported human-task and approval surfaces instead of local schedule/EOD matrices in the action-resolution handler.

@@ -2,7 +2,8 @@
 id: TASK-0388
 epic: EPIC-140
 title: "Create pilot storage gate checklist"
-status: TODO
+status: DONE
+completed_at: "2026-06-05T10:04:07+02:00"
 owners: ["platform"]
 reviewers: ["architect", "qa"]
 depends_on: []
@@ -61,3 +62,6 @@ Postgres/blob custody/backup/index rebuild gate or waiver
 
 ## Notes / decisions
 - Raw project corpora remain off-repo; use only sanitized fixtures, manifests, hashes, and aggregate evidence approved by the relevant fixture/governance task.
+- Completed on `2026-06-05T10:04:07+02:00`.
+- Added `docs/planning/checklists/CAPEX_PILOT_STORAGE_GATE.md` with default gate result `blocked_pending_evidence`.
+- Closeout posture: this checklist does not pass, waive, or execute the pilot storage gate. Real pilot storage evidence or explicit waiver, Postgres/blob backend rollout, raw-corpus approval, and CAPEX runtime activation remain later gated work.

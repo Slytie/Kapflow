@@ -37,7 +37,7 @@
 
 ## TASK-0233 closeout evidence
 - Imported CAPEX v6 planning source row count: 374 tasks, 270 gates, 222 risks, 23 open decisions.
-- Current-code blocker mappings recorded for approval domain coupling, artifact auth-before-read, CAPEX project child APIs/authorization projections, domain-runtime manifests, and source occurrence/evidence; the first project child API, selector/dashboard, project-scope helper, official pointer-family substrate, neutral domain-runtime skeleton, ready logistics manifest inventory, CAPEX incubation manifest, approval-effect registry shadow parity, project authorization CED, and `AuthorizedProjectsQuery` prototype slices are now closed, while physical authorization projection runtime state, pointer-promotion policy checks, storage custody gates, and later governance remain blocked.
+- Current-code blocker mappings recorded for approval domain coupling, artifact auth-before-read, CAPEX project child APIs/authorization projections, domain-runtime manifests, storage custody gates, and source occurrence/evidence; the first project child API, selector/dashboard, project-scope helper, official pointer-family substrate, neutral domain-runtime skeleton, ready logistics manifest inventory, CAPEX incubation manifest, approval-effect registry shadow parity, project authorization CED, `AuthorizedProjectsQuery` prototype, storage/blob custody CED, and pilot storage gate checklist slices are now closed, while physical authorization projection runtime state, pointer-promotion policy checks, real pilot storage evidence or waiver, and later governance remain blocked.
 - Verification basis: CAPEX conversion check, repo validation, schema validation, focused planning/import checks, and `git diff --check`.
 
 ## TASK-0234 closeout evidence
@@ -267,6 +267,19 @@
 - Evidence: authorized-project query unit tests and existing project visibility regressions passed on 2026-06-05.
 - Closeout posture: `ARCH-W1-T006` is closed as query-prototype evidence only; physical authorization projection runtime state, policy expansion, raw-corpus use, and CAPEX runtime activation remain later gated scope.
 
+## TASK-0387 closeout evidence
+- Added `docs/architecture/CAPEX_STORAGE_BLOB_CUSTODY_CED.md` as the accepted Wave 1 storage/blob custody schema-design boundary.
+- The CED defines future concepts for `BlobRef`, `BlobReplica`, `BlobIngestSession`, `ArtifactVersionBlob`, `DerivedArtifact`, and `DownloadEvent`.
+- The CED preserves one-truth artifact rules: `ArtifactVersion` remains canonical metadata, object/blob bytes are not authoritative alone, and `ArtifactPointer` targets `ArtifactVersion` only.
+- Evidence: storage/blob custody CED contract tests passed on 2026-06-05.
+- Closeout posture: `ARCH-W1-T007` is closed as design/CED evidence only; physical custody tables, migrations, routes, storage backend rollout, raw-corpus use, pilot readiness, and CAPEX runtime activation remain later gated scope.
+
+## TASK-0388 closeout evidence
+- Added `docs/planning/checklists/CAPEX_PILOT_STORAGE_GATE.md` with default gate result `blocked_pending_evidence`.
+- The checklist covers Postgres decision or waiver, blob custody backend, backup/restore proof, digest verification, auth-before-read after restore, index rebuild proof, capacity/quota evidence, secret/config references, and reviewer signoffs.
+- Evidence: pilot storage gate checklist contract tests passed on 2026-06-05.
+- Closeout posture: `ARCH-W1-T008` is closed as checklist evidence only; the pilot storage gate is not passed, waived, or executed by this task, and CAPEX remains disabled.
+
 ## Current-code blocker mappings
 | Blocker | CAPEX task refs | Current repo surface |
 |---|---|---|
@@ -292,6 +305,7 @@
 | Logistics reconciler dry-run report | `TASK-0252` | `src/onetruth/application/services/logistics_reconciler.py`, `src/onetruth/cli/__main__.py`, `tests/runtime/test_logistics_handoff_runtime.py` |
 | Operator home failure-state surface | `TASK-0253` | `src/onetruth/api/routes/operator_home.py`, `frontend/src/pages/OperatorHomePage.tsx`, `frontend/src/app/AppShell.tsx` |
 | CAPEX project child APIs and authorization projections | `TASK-0263`, `TASK-0371`, `TASK-0265`, `TASK-0385`, `TASK-0386`, `TASK-0563` | first project child APIs, selector/dashboard, project-scope helper, official pointer-family substrate, project authorization CED, and `AuthorizedProjectsQuery` prototype are closed; physical authorization projection runtime state, pointer-promotion policy checks, source governance, and activation remain blocked |
+| CAPEX storage/blob custody and pilot storage gate | `TASK-0387`, `TASK-0388`, `TASK-0390` | storage/blob custody CED and pilot storage gate checklist are closed; real pilot storage evidence or explicit waiver, Postgres/blob backend rollout, and activation remain blocked |
 | Source occurrence / SourceRef | `TASK-0268`, `TASK-0391`, `TASK-0407`, `TASK-0428`, `TASK-0564` | future source occurrence and evidence resolver |
 
 ## Verification commands
