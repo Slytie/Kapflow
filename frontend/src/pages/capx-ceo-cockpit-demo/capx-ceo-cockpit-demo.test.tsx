@@ -43,9 +43,14 @@ describe("CAPX CEO Cockpit demo", () => {
     expect(screen.getByRole("heading", { name: "CEO Actions" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Portfolio Risk" })).toBeInTheDocument();
     expect(screen.getByRole("columnheader", { name: "Project" })).toBeInTheDocument();
+    expect(screen.getByRole("columnheader", { name: "PM status" })).toBeInTheDocument();
+    expect(screen.getByRole("columnheader", { name: "AI status" })).toBeInTheDocument();
+    expect(screen.queryByRole("columnheader", { name: "Status" })).not.toBeInTheDocument();
     expect(screen.getByRole("columnheader", { name: "Opportunity cost per week" })).toBeInTheDocument();
     expect(screen.getByRole("columnheader", { name: "Evidence freshness" })).toBeInTheDocument();
     expect(screen.getByRole("columnheader", { name: "Board impact" })).toBeInTheDocument();
+    expect(screen.getAllByLabelText(/PM status:/i).length).toBeGreaterThan(0);
+    expect(screen.getAllByLabelText(/AI status:/i).length).toBeGreaterThan(0);
   });
 
   it("links overview project rows to the project drill-down route", async () => {

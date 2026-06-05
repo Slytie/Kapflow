@@ -33,6 +33,7 @@ export interface CapxProjectOverview {
   projectManager: string;
   stage: string;
   status: CapxStatus;
+  aiStatus: CapxStatus;
   riskMode: string;
   exposureAtRiskMillions: number;
   opportunityCostPerWeekThousands: number;

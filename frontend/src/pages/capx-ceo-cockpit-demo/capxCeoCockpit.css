@@ -402,7 +402,7 @@
 .capx-milestone-table,
 .capx-flags-panel table {
   border-collapse: collapse;
-  min-width: 1120px;
+  min-width: 1180px;
   width: 100%;
 }
 
@@ -477,6 +477,28 @@
 
 .capx-status-chip.capx-status--neutral {
   background: var(--capx-neutral);
+}
+
+.capx-status-pair {
+  align-items: center;
+  display: inline-flex;
+  gap: 8px;
+}
+
+.capx-status-pair > span {
+  align-items: center;
+  display: inline-flex;
+  gap: 4px;
+}
+
+.capx-status-pair small {
+  color: var(--capx-text-dim);
+  font-size: 0.64rem;
+  line-height: 1;
+}
+
+.capx-status-pair .capx-status-chip {
+  min-width: 30px;
 }
 
 .capx-sparkline {

@@ -1,0 +1,106 @@
+{
+  "meta": {
+    "title": "CAPEX Epic Progress",
+    "subtitle": "Plain-language roadmap for the repo-native CAPEX planning backlog.",
+    "lastUpdated": "2026-06-05",
+    "localOnly": true,
+    "sourceNote": "Generated from docs/planning/epics and codex/tasks with curated review-posture overrides.",
+    "codexRule": "When a CAPEX task is completed, set status: DONE, add completed_at in ISO 8601 timezone form, add completion/closeout evidence, and regenerate this progress data in the same change."
+  },
+  "historicalCompletionTimestampExceptions": [
+    "TASK-0233",
+    "TASK-0234",
+    "TASK-0235",
+    "TASK-0236",
+    "TASK-0237",
+    "TASK-0238",
+    "TASK-0239",
+    "TASK-0240",
+    "TASK-0241",
+    "TASK-0242",
+    "TASK-0243",
+    "TASK-0245",
+    "TASK-0246",
+    "TASK-0247",
+    "TASK-0248",
+    "TASK-0249",
+    "TASK-0250",
+    "TASK-0251",
+    "TASK-0252",
+    "TASK-0253",
+    "TASK-0257",
+    "TASK-0258",
+    "TASK-0259",
+    "TASK-0572",
+    "TASK-0573",
+    "TASK-0574",
+    "TASK-0575",
+    "TASK-0577",
+    "TASK-0578",
+    "TASK-0579",
+    "TASK-0580",
+    "TASK-0581"
+  ],
+  "epicOverrides": {
+    "EPIC-139": {
+      "reviewPosture": "State C / repaired after final EPIC-139 redo acceptance: approval and workpage defaults are platform-neutral, logistics behavior activates explicitly, supported-environment evidence is recorded in TASK-0645, task-by-task reclose evidence is recorded in TASK-0646, and closure handoff evidence is recorded in TASK-0647."
+    },
+    "EPIC-140": {
+      "displayStatus": "done",
+      "reviewPosture": "EPIC-140 project/access work is closed with project anchors, direct memberships, project child APIs, selector/dashboard, project-scope helper, official pointer families, domain manifests, W1 closeout evidence, and rebuildable authorization projections; CAPEX activation remains blocked by later source-governance, workflow/workpage, storage evidence or waiver, release/capacity, and production-preflight gates."
+    },
+    "EPIC-144": {
+      "displayStatus": "blocked",
+      "reviewPosture": "CAPEX review screens remain blocked until project-scoped foundations and risk/CEO workflow dependencies are ready."
+    },
+    "EPIC-152": {
+      "displayStatus": "blocked",
+      "reviewPosture": "Production preflight cannot pass until P0 blockers, three-project evidence, raw-data quarantine, restore, release, and review gates are proven."
+    }
+  },
+  "epicTaskRules": [],
+  "taskOverrides": {
+    "TASK-0244": {
+      "displayStatus": "blocked",
+      "statusReason": "The deploy lane exists, but live lab VM execute-and-smoke evidence is still missing."
+    },
+    "TASK-0273": {
+      "displayStatus": "needs_review",
+      "statusReason": "Needs fresh check because the first project-scoped API foundation is closed and this task can now be reassessed against batch artifact provenance scope."
+    },
+    "TASK-0280": {
+      "displayStatus": "needs_review",
+      "statusReason": "Needs fresh check because project-scoped official pointer families are now present, while promotion request and policy checks remain later scope."
+    },
+    "TASK-0291": {
+      "displayStatus": "needs_review",
+      "statusReason": "Needs fresh check because the selector/dashboard slice is closed, while richer CAPEX workpages and route-tree shell scope remain later EPIC-144 work."
+    },
+    "TASK-0299": {
+      "displayStatus": "needs_review",
+      "statusReason": "Needs fresh check because the risk/CEO view must not look product-ready before the risk workflow closes."
+    }
+  },
+  "activationBlockers": [
+    {
+      "id": "P2-001",
+      "plain": "Repeated button presses can accidentally do the same work twice.",
+      "action": "Check whether the action was already recorded before doing the work again."
+    },
+    {
+      "id": "P2-002",
+      "plain": "A document history link can point to the wrong project.",
+      "action": "Confirm the document and project belong together before saving the link."
+    },
+    {
+      "id": "P2-003",
+      "plain": "An official-selection history entry can point to a document from another project.",
+      "action": "Confirm the selected document and the project match before recording the selection."
+    },
+    {
+      "id": "P3-001",
+      "plain": "The risk/CEO view can look finished before the risk workflow is ready.",
+      "action": "Show it as blocked until the risk workflow closes."
+    }
+  ]
+}

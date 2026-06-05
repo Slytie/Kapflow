@@ -1,0 +1,735 @@
+.capex-progress-page {
+  --capex-bg: #020402;
+  --capex-panel: #071009;
+  --capex-panel-2: #0d160d;
+  --capex-text: #d8ffd0;
+  --capex-muted: #98c596;
+  --capex-grid: #1f4d20;
+  --capex-done: #80d050;
+  --capex-progress: #7fd6ff;
+  --capex-watch: #ffb020;
+  --capex-critical: #ff5f3d;
+  --capex-neutral: #6da86d;
+  background:
+    linear-gradient(rgba(31, 77, 32, 0.16) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(31, 77, 32, 0.16) 1px, transparent 1px),
+    var(--capex-bg);
+  background-size: 34px 34px;
+  color: var(--capex-text);
+  display: grid;
+  gap: 22px;
+  min-height: 100vh;
+  padding: 24px;
+}
+
+.capex-progress-page button,
+.capex-progress-page input {
+  font: inherit;
+}
+
+.capex-progress-page__header,
+.capex-controls,
+.capex-blockers,
+.capex-completion-trend,
+.capex-roadmap-progress,
+.capex-progress-page__footer {
+  border: 1px solid rgba(128, 208, 80, 0.22);
+  background: rgba(7, 16, 9, 0.88);
+  box-shadow: 0 0 0 1px rgba(31, 77, 32, 0.22);
+}
+
+.capex-progress-page__header {
+  align-items: end;
+  display: flex;
+  gap: 18px;
+  justify-content: space-between;
+  padding: 22px;
+}
+
+.capex-progress-page__header h1,
+.capex-roadmap__section-heading h2,
+.capex-task-detail__header h2 {
+  color: var(--capex-text);
+  font-family: var(--font-display);
+  letter-spacing: 0;
+  line-height: 1.1;
+  margin: 0;
+}
+
+.capex-progress-page__header h1 {
+  font-size: clamp(2rem, 5vw, 4.2rem);
+}
+
+.capex-progress-page__header p,
+.capex-progress-page__footer p,
+.capex-epic-purpose,
+.capex-review-posture,
+.capex-task-detail__purpose {
+  color: var(--capex-muted);
+  margin: 8px 0 0;
+}
+
+.capex-progress-page__eyebrow,
+.capex-summary span,
+.capex-progress-page__meta span,
+.capex-task-detail__facts dt,
+.capex-task-detail__source-row dt {
+  color: var(--capex-muted);
+  font-size: 0.74rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  margin: 0;
+  text-transform: uppercase;
+}
+
+.capex-progress-page__meta {
+  border: 1px solid rgba(255, 176, 32, 0.34);
+  display: grid;
+  gap: 4px;
+  padding: 12px 14px;
+  text-align: right;
+}
+
+.capex-summary {
+  align-items: stretch;
+  display: grid;
+  gap: 10px;
+  grid-template-columns: minmax(360px, 0.95fr) minmax(420px, 1.25fr);
+}
+
+.capex-summary__metrics {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(auto-fit, minmax(118px, 1fr));
+  min-width: 0;
+}
+
+.capex-summary__stack {
+  display: grid;
+  gap: 10px;
+  grid-template-rows: repeat(2, minmax(0, 1fr));
+}
+
+.capex-summary article {
+  background: rgba(13, 22, 13, 0.92);
+  border: 1px solid rgba(128, 208, 80, 0.22);
+  min-width: 0;
+  padding: 12px;
+}
+
+.capex-summary strong {
+  display: block;
+  font-family: var(--font-display);
+  font-size: clamp(1.45rem, 2vw, 2rem);
+  line-height: 1.1;
+  margin-top: 6px;
+  overflow-wrap: anywhere;
+}
+
+.capex-roadmap-progress {
+  display: grid;
+  gap: 12px;
+  padding: 16px;
+}
+
+.capex-roadmap-progress__header {
+  align-items: end;
+  display: flex;
+  gap: 14px;
+  justify-content: space-between;
+}
+
+.capex-roadmap-progress__header h2 {
+  color: var(--capex-text);
+  font-family: var(--font-display);
+  font-size: clamp(2rem, 5vw, 3.5rem);
+  letter-spacing: 0;
+  line-height: 1;
+  margin: 4px 0 0;
+}
+
+.capex-roadmap-progress__header span {
+  border: 1px solid rgba(255, 176, 32, 0.32);
+  color: var(--capex-watch);
+  font-weight: 800;
+  padding: 8px 10px;
+  text-align: right;
+}
+
+.capex-roadmap-progress__bar {
+  background: rgba(109, 168, 109, 0.18);
+  border: 1px solid rgba(128, 208, 80, 0.22);
+  height: 18px;
+  overflow: hidden;
+}
+
+.capex-roadmap-progress__bar span {
+  background: linear-gradient(90deg, var(--capex-done), var(--capex-watch));
+  display: block;
+  height: 100%;
+}
+
+.capex-roadmap-progress__facts {
+  color: var(--capex-muted);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.capex-roadmap-progress__facts span {
+  border: 1px solid rgba(128, 208, 80, 0.18);
+  padding: 6px 8px;
+}
+
+.capex-roadmap-progress p {
+  color: var(--capex-muted);
+  margin: 0;
+}
+
+.capex-completion-trend {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+  padding: 12px;
+}
+
+.capex-completion-trend__header {
+  align-items: end;
+  display: flex;
+  gap: 10px;
+  justify-content: space-between;
+}
+
+.capex-completion-trend__header h2 {
+  color: var(--capex-text);
+  font-family: var(--font-display);
+  font-size: clamp(1.3rem, 3vw, 2rem);
+  letter-spacing: 0;
+  line-height: 1;
+  margin: 4px 0 0;
+}
+
+.capex-completion-trend__header span {
+  border: 1px solid rgba(127, 214, 255, 0.3);
+  color: var(--capex-progress);
+  font-size: 0.82rem;
+  font-weight: 800;
+  padding: 6px 8px;
+  text-align: right;
+}
+
+.capex-completion-trend__chart {
+  overflow-x: auto;
+}
+
+.capex-completion-trend__chart svg {
+  display: block;
+  min-width: 340px;
+  width: 100%;
+}
+
+.capex-completion-trend__axis {
+  stroke: rgba(128, 208, 80, 0.42);
+  stroke-width: 1.5;
+}
+
+.capex-completion-trend__grid {
+  stroke: rgba(128, 208, 80, 0.14);
+  stroke-dasharray: 5 7;
+  stroke-width: 1;
+}
+
+.capex-completion-trend__line {
+  fill: none;
+  stroke: var(--capex-progress);
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 3;
+}
+
+.capex-completion-trend__line--projected {
+  opacity: 0.88;
+  stroke: var(--capex-watch);
+  stroke-dasharray: 6 5;
+}
+
+.capex-completion-trend__point {
+  fill: var(--capex-watch);
+  stroke: var(--capex-bg);
+  stroke-width: 2;
+}
+
+.capex-completion-trend__point--baseline {
+  fill: var(--capex-muted);
+}
+
+.capex-completion-trend__point--projected {
+  fill: var(--capex-bg);
+  stroke: var(--capex-watch);
+}
+
+.capex-completion-trend__label,
+.capex-completion-trend__tick,
+.capex-completion-trend__value {
+  fill: var(--capex-muted);
+  font-size: 0.65rem;
+  font-weight: 800;
+}
+
+.capex-completion-trend__value {
+  fill: var(--capex-text);
+}
+
+.capex-completion-trend__facts {
+  color: var(--capex-muted);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  line-height: 1.25;
+}
+
+.capex-completion-trend__facts span {
+  font-size: 0.78rem;
+}
+
+.capex-completion-trend__facts span + span::before {
+  color: rgba(128, 208, 80, 0.5);
+  content: "/";
+  margin-right: 6px;
+}
+
+.capex-controls {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  justify-content: space-between;
+  padding: 14px;
+}
+
+.capex-controls label {
+  align-items: center;
+  display: flex;
+  gap: 10px;
+}
+
+.capex-controls input {
+  background: #000;
+  border: 1px solid rgba(128, 208, 80, 0.36);
+  color: var(--capex-text);
+  min-width: min(420px, 70vw);
+  padding: 10px 12px;
+}
+
+.capex-filter-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.capex-filter-buttons button,
+.capex-epic-card,
+.capex-task-row {
+  border: 1px solid rgba(128, 208, 80, 0.24);
+  color: var(--capex-text);
+}
+
+.capex-filter-buttons button {
+  background: rgba(13, 22, 13, 0.92);
+  padding: 9px 11px;
+}
+
+.capex-filter-buttons button.is-active {
+  border-color: var(--capex-watch);
+  color: var(--capex-watch);
+}
+
+.capex-roadmap {
+  display: grid;
+  gap: 18px;
+  grid-template-columns: minmax(300px, 0.9fr) minmax(420px, 1.25fr) minmax(320px, 1fr);
+}
+
+.capex-roadmap__timeline,
+.capex-roadmap__tasks,
+.capex-task-detail {
+  background: rgba(7, 16, 9, 0.9);
+  border: 1px solid rgba(128, 208, 80, 0.22);
+  min-height: 620px;
+  padding: 16px;
+}
+
+.capex-roadmap__section-heading {
+  align-items: center;
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+
+.capex-roadmap__section-heading span {
+  color: var(--capex-muted);
+  font-size: 0.86rem;
+}
+
+.capex-timeline-rail,
+.capex-task-list {
+  display: grid;
+  gap: 10px;
+}
+
+.capex-timeline-rail {
+  max-height: 640px;
+  overflow: auto;
+  padding-left: 12px;
+  position: relative;
+}
+
+.capex-timeline-rail::before {
+  background: var(--capex-grid);
+  content: "";
+  inset: 0 auto 0 0;
+  position: absolute;
+  width: 2px;
+}
+
+.capex-epic-card,
+.capex-task-row {
+  background: rgba(13, 22, 13, 0.86);
+  cursor: pointer;
+  display: grid;
+  gap: 7px;
+  padding: 12px;
+  text-align: left;
+}
+
+.capex-epic-card {
+  position: relative;
+}
+
+.capex-epic-card::before {
+  background: var(--capex-grid);
+  border: 2px solid var(--capex-bg);
+  content: "";
+  height: 10px;
+  left: -18px;
+  position: absolute;
+  top: 18px;
+  width: 10px;
+}
+
+.capex-epic-card.is-selected,
+.capex-task-row.is-selected {
+  border-color: var(--capex-watch);
+  box-shadow: inset 3px 0 0 var(--capex-watch);
+}
+
+.capex-epic-card:hover,
+.capex-task-row:hover,
+.capex-filter-buttons button:hover {
+  border-color: rgba(255, 176, 32, 0.66);
+}
+
+.capex-epic-card__id,
+.capex-task-row span:first-child {
+  color: var(--capex-watch);
+  font-weight: 800;
+}
+
+.capex-epic-card strong,
+.capex-task-row strong {
+  font-family: var(--font-display);
+}
+
+.capex-epic-card span,
+.capex-task-row small {
+  color: var(--capex-muted);
+  line-height: 1.35;
+}
+
+.capex-estimate-strip {
+  color: var(--capex-muted);
+  display: grid;
+  gap: 6px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.capex-estimate-strip span {
+  border: 1px solid rgba(128, 208, 80, 0.16);
+  font-size: 0.78rem;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  padding: 5px 6px;
+}
+
+.capex-status {
+  border: 1px solid currentColor;
+  display: inline-flex;
+  font-size: 0.78rem;
+  font-weight: 800;
+  justify-self: start;
+  padding: 4px 8px;
+  text-transform: uppercase;
+}
+
+.capex-status--done {
+  background: rgba(128, 208, 80, 0.16);
+  color: var(--capex-done);
+}
+
+.capex-status--in-progress {
+  background: rgba(127, 214, 255, 0.14);
+  color: var(--capex-progress);
+}
+
+.capex-status--not-started {
+  background: rgba(109, 168, 109, 0.12);
+  color: var(--capex-neutral);
+}
+
+.capex-status--blocked {
+  background: rgba(255, 95, 61, 0.16);
+  color: var(--capex-critical);
+}
+
+.capex-status--needs-review {
+  background: rgba(255, 176, 32, 0.16);
+  color: var(--capex-watch);
+}
+
+.capex-epic-status-summary,
+.capex-task-counts {
+  color: var(--capex-muted);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.capex-epic-status-summary span,
+.capex-task-counts span {
+  border: 1px solid rgba(128, 208, 80, 0.2);
+  padding: 6px 8px;
+}
+
+.capex-review-posture {
+  border-left: 3px solid var(--capex-watch);
+  padding-left: 10px;
+}
+
+.capex-estimate-panel {
+  background: rgba(0, 0, 0, 0.22);
+  border: 1px solid rgba(128, 208, 80, 0.2);
+  margin-top: 14px;
+  padding: 12px;
+}
+
+.capex-estimate-panel__header {
+  align-items: end;
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+}
+
+.capex-estimate-panel__header h3 {
+  color: var(--capex-text);
+  font-family: var(--font-display);
+  font-size: 1.1rem;
+  letter-spacing: 0;
+  margin: 4px 0 0;
+}
+
+.capex-estimate-panel__header strong {
+  color: var(--capex-watch);
+  font-family: var(--font-display);
+  font-size: 1.6rem;
+}
+
+.capex-estimate-bar {
+  background: rgba(109, 168, 109, 0.18);
+  height: 8px;
+  margin: 12px 0;
+  overflow: hidden;
+}
+
+.capex-estimate-bar span {
+  background: var(--capex-watch);
+  display: block;
+  height: 100%;
+}
+
+.capex-estimate-facts {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(auto-fit, minmax(124px, 1fr));
+  margin: 0;
+}
+
+.capex-estimate-facts div {
+  border-top: 1px solid rgba(128, 208, 80, 0.16);
+  padding-top: 7px;
+}
+
+.capex-estimate-facts dt {
+  color: var(--capex-muted);
+  font-size: 0.72rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.capex-estimate-facts dd {
+  margin: 4px 0 0;
+  overflow-wrap: anywhere;
+}
+
+.capex-estimate-panel p {
+  color: var(--capex-muted);
+  margin: 10px 0 0;
+}
+
+.capex-task-list {
+  margin-top: 16px;
+  max-height: 560px;
+  overflow: auto;
+}
+
+.capex-task-row {
+  grid-template-columns: minmax(86px, 0.3fr) minmax(130px, 0.8fr) minmax(160px, 1fr) auto;
+}
+
+.capex-task-detail {
+  max-height: 760px;
+  overflow: auto;
+}
+
+.capex-task-detail__header {
+  display: grid;
+  gap: 8px;
+}
+
+.capex-task-detail__facts,
+.capex-task-detail__source-row {
+  display: grid;
+  gap: 10px;
+  margin: 16px 0;
+}
+
+.capex-task-detail__facts div,
+.capex-task-detail__source-row div {
+  border-top: 1px solid rgba(128, 208, 80, 0.16);
+  padding-top: 8px;
+}
+
+.capex-task-detail__facts dd,
+.capex-task-detail__source-row dd {
+  margin: 4px 0 0;
+  overflow-wrap: anywhere;
+}
+
+.capex-task-detail__section {
+  border-top: 1px solid rgba(128, 208, 80, 0.18);
+  margin-top: 16px;
+  padding-top: 14px;
+}
+
+.capex-task-detail__section h4 {
+  color: var(--capex-watch);
+  font-family: var(--font-display);
+  margin: 0 0 8px;
+}
+
+.capex-task-detail__section ul {
+  color: var(--capex-muted);
+  margin: 0;
+  padding-left: 20px;
+}
+
+.capex-task-detail__section li + li {
+  margin-top: 6px;
+}
+
+.capex-empty,
+.capex-task-detail__empty p {
+  color: var(--capex-muted);
+}
+
+.capex-blockers {
+  padding: 16px;
+}
+
+.capex-blockers__grid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
+.capex-blockers article {
+  background: rgba(255, 95, 61, 0.08);
+  border: 1px solid rgba(255, 95, 61, 0.26);
+  padding: 14px;
+}
+
+.capex-blockers p {
+  color: var(--capex-text);
+  margin: 8px 0;
+}
+
+.capex-blockers small {
+  color: var(--capex-muted);
+}
+
+.capex-progress-page__footer {
+  color: var(--capex-muted);
+  padding: 14px 16px;
+}
+
+@media (max-width: 1180px) {
+  .capex-summary,
+  .capex-roadmap {
+    grid-template-columns: 1fr;
+  }
+
+  .capex-roadmap__timeline,
+  .capex-roadmap__tasks,
+  .capex-task-detail {
+    min-height: auto;
+  }
+
+  .capex-task-row {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 760px) {
+  .capex-progress-page {
+    padding: 12px;
+  }
+
+  .capex-progress-page__header,
+  .capex-controls {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .capex-progress-page__meta {
+    text-align: left;
+  }
+
+  .capex-summary {
+    grid-template-columns: 1fr;
+  }
+
+  .capex-summary__metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .capex-controls label {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .capex-controls input {
+    min-width: 0;
+    width: 100%;
+  }
+}

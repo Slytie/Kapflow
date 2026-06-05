@@ -7,6 +7,7 @@ import { BoardPage } from "@/pages/BoardPage";
 import { CapxCeoCockpitAccessGate } from "@/pages/capx-ceo-cockpit-demo/CapxCeoCockpitAccessGate";
 import { CapxCeoCockpitOverviewPage } from "@/pages/capx-ceo-cockpit-demo/CapxCeoCockpitOverviewPage";
 import { CapxCeoCockpitProjectPage } from "@/pages/capx-ceo-cockpit-demo/CapxCeoCockpitProjectPage";
+import { CapexEpicProgressPage } from "@/pages/CapexEpicProgressPage";
 import { CapxPmProjectAccessGate } from "@/pages/capx-pm-project-demo/CapxPmProjectAccessGate";
 import { CapxPmProjectIndexPage } from "@/pages/capx-pm-project-demo/CapxPmProjectIndexPage";
 import { CapxPmProjectWorkspacePage } from "@/pages/capx-pm-project-demo/CapxPmProjectWorkspacePage";
@@ -60,6 +61,7 @@ export function App(): JSX.Element {
         <DrawerProvider>
           <Routes>
             <Route path="/" element={<Navigate to="/demo/logistics" replace />} />
+            <Route path="/demo/capex/epic-progress" element={<CapexEpicProgressPage />} />
             <Route
               path="/demo/capx/ceo-cockpit"
               element={

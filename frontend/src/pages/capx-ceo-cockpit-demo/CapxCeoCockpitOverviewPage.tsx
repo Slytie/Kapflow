@@ -12,8 +12,9 @@ import {
 import type { CapxProjectOverview, CapxStatus } from "./capxCeoCockpitTypes";
 import { CapxCeoCockpitShell } from "./CapxCeoCockpitShell";
 
-function StatusChip({ status }: { status: CapxStatus }): JSX.Element {
-  const label = getCapxStatusLabel(status);
+function StatusChip({ status, context }: { status: CapxStatus; context?: string }): JSX.Element {
+  const statusLabel = getCapxStatusLabel(status);
+  const label = context ? `${context}: ${statusLabel}` : statusLabel;
   return (
     <span
       className={`capx-status-chip ${getCapxStatusClass(status)}`}
@@ -35,16 +36,27 @@ function TrendSparkline({ points, status }: { points: number[]; status: CapxStat
 }
 
 function ProjectMobileCard({ project }: { project: CapxProjectOverview }): JSX.Element {
+  const hasCriticalStatus = project.status === "critical" || project.aiStatus === "critical";
+
   return (
     <Link
-      className={`capx-mobile-project-card ${project.status === "critical" ? "capx-risk-outline" : ""}`}
+      className={`capx-mobile-project-card ${hasCriticalStatus ? "capx-risk-outline" : ""}`}
       to={`/demo/capx/ceo-cockpit/projects/${project.id}`}
     >
       <div>
         <strong>
           {project.code} {project.name}
         </strong>
-        <StatusChip status={project.status} />
+        <span className="capx-status-pair" aria-label="Project status summary">
+          <span>
+            <small>PM</small>
+            <StatusChip status={project.status} context="PM status" />
+          </span>
+          <span>
+            <small>AI</small>
+            <StatusChip status={project.aiStatus} context="AI status" />
+          </span>
+        </span>
       </div>
       <dl>
         <div>
@@ -140,7 +152,8 @@ export function CapxCeoCockpitOverviewPage(): JSX.Element {
                 <tr>
                   <th>Project</th>
                   <th>Stage</th>
-                  <th>Status</th>
+                  <th>PM status</th>
+                  <th>AI status</th>
                   <th>Risk mode</th>
                   <th>Exposure at risk</th>
                   <th>Opportunity cost per week</th>
@@ -155,7 +168,12 @@ export function CapxCeoCockpitOverviewPage(): JSX.Element {
               </thead>
               <tbody>
                 {viewModel.projects.map((project) => (
-                  <tr key={project.id} className={project.status === "critical" ? "capx-project-row--critical" : ""}>
+                  <tr
+                    key={project.id}
+                    className={
+                      project.status === "critical" || project.aiStatus === "critical" ? "capx-project-row--critical" : ""
+                    }
+                  >
                     <td>
                       <Link to={`/demo/capx/ceo-cockpit/projects/${project.id}`}>
                         <strong>{project.code}</strong> {project.name}
@@ -163,7 +181,10 @@ export function CapxCeoCockpitOverviewPage(): JSX.Element {
                     </td>
                     <td>{project.stage}</td>
                     <td>
-                      <StatusChip status={project.status} />
+                      <StatusChip status={project.status} context="PM status" />
+                    </td>
+                    <td>
+                      <StatusChip status={project.aiStatus} context="AI status" />
                     </td>
                     <td>{project.riskMode}</td>
                     <td>{formatMoneyMillions(project.exposureAtRiskMillions)}</td>
