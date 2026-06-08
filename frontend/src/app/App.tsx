@@ -8,9 +8,9 @@ import { CapxCeoCockpitAccessGate } from "@/pages/capx-ceo-cockpit-demo/CapxCeoC
 import { CapxCeoCockpitOverviewPage } from "@/pages/capx-ceo-cockpit-demo/CapxCeoCockpitOverviewPage";
 import { CapxCeoCockpitProjectPage } from "@/pages/capx-ceo-cockpit-demo/CapxCeoCockpitProjectPage";
 import { CapexEpicProgressPage } from "@/pages/CapexEpicProgressPage";
-import { CapxPmProjectAccessGate } from "@/pages/capx-pm-project-demo/CapxPmProjectAccessGate";
-import { CapxPmProjectIndexPage } from "@/pages/capx-pm-project-demo/CapxPmProjectIndexPage";
-import { CapxPmProjectWorkspacePage } from "@/pages/capx-pm-project-demo/CapxPmProjectWorkspacePage";
+import { CapxPmPracticalAccessGate } from "@/pages/capx-pm-practical-demo/CapxPmPracticalAccessGate";
+import { CapxPmProjectListPage } from "@/pages/capx-pm-practical-demo/CapxPmProjectListPage";
+import { CapxPmProjectWorkspacePage } from "@/pages/capx-pm-practical-demo/CapxPmProjectWorkspacePage";
 import { ApprovalsPage } from "@/pages/ApprovalsPage";
 import {
   DispatchReportArtifactWorkpagePage,
@@ -81,25 +81,25 @@ export function App(): JSX.Element {
             <Route
               path="/demo/capx/pm/projects"
               element={
-                <CapxPmProjectAccessGate>
-                  <CapxPmProjectIndexPage />
-                </CapxPmProjectAccessGate>
+                <CapxPmPracticalAccessGate>
+                  <CapxPmProjectListPage />
+                </CapxPmPracticalAccessGate>
               }
             />
             <Route
               path="/demo/capx/pm/projects/:projectId"
               element={
-                <CapxPmProjectAccessGate>
+                <CapxPmPracticalAccessGate>
                   <CapxPmProjectWorkspacePage />
-                </CapxPmProjectAccessGate>
+                </CapxPmPracticalAccessGate>
               }
             />
             <Route
               path="/demo/capx/pm/projects/:projectId/steps/:stepId"
               element={
-                <CapxPmProjectAccessGate>
+                <CapxPmPracticalAccessGate>
                   <CapxPmProjectWorkspacePage />
-                </CapxPmProjectAccessGate>
+                </CapxPmPracticalAccessGate>
               }
             />
             <Route element={<AppShell />}>
