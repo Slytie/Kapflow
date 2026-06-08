@@ -1,0 +1,45 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "CapexWaiver",
+  "type": "object",
+  "required": [
+    "waiver_id",
+    "tenant_id",
+    "domain_id",
+    "scope_kind",
+    "scope_ref",
+    "state",
+    "reason",
+    "policy_version",
+    "metadata_json",
+    "created_by_actor_id",
+    "created_by_actor_type",
+    "created_at",
+    "updated_at"
+  ],
+  "properties": {
+    "waiver_id": { "type": "string" },
+    "tenant_id": { "type": "string" },
+    "domain_id": { "type": "string" },
+    "project_id": { "type": ["string", "null"] },
+    "scope_kind": { "type": "string" },
+    "scope_ref": { "type": "string" },
+    "state": {
+      "type": "string",
+      "enum": ["active", "revoked", "expired"]
+    },
+    "reason": { "type": "string", "minLength": 1 },
+    "policy_version": { "type": "string" },
+    "metadata_json": { "type": "object" },
+    "created_by_actor_id": { "type": "string" },
+    "created_by_actor_type": {
+      "type": "string",
+      "enum": ["human", "agent", "service", "system"]
+    },
+    "expires_at": { "type": ["string", "null"], "format": "date-time" },
+    "revoked_at": { "type": ["string", "null"], "format": "date-time" },
+    "created_at": { "type": "string", "format": "date-time" },
+    "updated_at": { "type": "string", "format": "date-time" }
+  },
+  "additionalProperties": false
+}

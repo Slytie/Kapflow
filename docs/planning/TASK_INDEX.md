@@ -524,8 +524,8 @@ Note: `TASK-0087` / `TASK-0088` / `TASK-0089` were formerly duplicated as `TASK-
 | TASK-0561 | EPIC-139 | DONE | high | Extract logistics side effects from approval.respond |
 | TASK-0562 | EPIC-137 | TODO | high | Fix artifact download auth-before-read |
 | TASK-0563 | EPIC-140 | DONE | high | Add CAPEX project/membership/authorization runtime state |
-| TASK-0564 | EPIC-141 | TODO | high | Add physical source_occurrence and sourceRef resolver |
-| TASK-0565 | EPIC-142 | TODO | high | Add ClosureGateEvaluation, ClosureSnapshot, Waiver, lifecycle recurrence stale rules |
+| TASK-0564 | EPIC-141 | DONE | high | Add physical source_occurrence and sourceRef resolver |
+| TASK-0565 | EPIC-142 | DONE | high | Add ClosureGateEvaluation, ClosureSnapshot, Waiver, lifecycle recurrence stale rules |
 | TASK-0566 | EPIC-143 | TODO | high | Implement workflow handoff manifest contract |
 | TASK-0567 | EPIC-144 | TODO | high | Add CAPEX projection snapshot and stale-command test harness |
 | TASK-0568 | EPIC-149 | TODO | high | Add CAPEX semantic test suite and CODEOWNERS gates |

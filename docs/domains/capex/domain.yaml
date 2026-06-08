@@ -15,6 +15,8 @@ source_refs:
     path: docs/architecture/CAPEX_PROJECT_AUTHORIZATION_CED.md
   - kind: architecture
     path: docs/architecture/CAPEX_STORAGE_BLOB_CUSTODY_CED.md
+  - kind: architecture
+    path: docs/architecture/CAPEX_SOURCE_REF_AND_CLOSURE_GUARDRAILS.md
 workflows: []
 workpages: []
 side_effects: []
@@ -42,7 +44,7 @@ readiness_prerequisites:
       - docs/architecture/CAPEX_STORAGE_BLOB_CUSTODY_CED.md
       - docs/planning/checklists/CAPEX_PILOT_STORAGE_GATE.md
   - prerequisite_id: capex.source_occurrence_governance
-    description: Source occurrence, evidence resolver, and source-data governance dependencies remain future work.
+    description: Physical source occurrence truth and the first SourceRef resolver exist through TASK-0564; broader corpus ingest, source occurrence relations, locator unions, extraction, evidence binding, and source-data governance dependencies remain future work.
     status: open
     task_refs:
       - TASK-0391
@@ -111,13 +113,12 @@ disabled_capabilities:
       - TASK-0288
       - TASK-0289
   - capability_id: capex.source_data_governance
-    description: Source-data governance, source occurrence, and evidence binding are disabled.
-    disabled_reason: EPIC-141 source occurrence and governance tasks remain TODO.
+    description: Broader source-data governance, corpus ingest, extraction, and evidence binding are disabled.
+    disabled_reason: TASK-0564 provides physical occurrence truth and SourceRef resolution, but EPIC-141 source governance and evidence-binding tasks remain TODO.
     owner_task_refs:
       - TASK-0391
       - TASK-0407
       - TASK-0428
-      - TASK-0564
   - capability_id: capex.workpages
     description: CAPEX-specific workpages and projection snapshots are disabled.
     disabled_reason: EPIC-144 projection/workpage tasks remain TODO.

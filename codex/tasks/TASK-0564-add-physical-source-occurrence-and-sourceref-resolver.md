@@ -2,7 +2,8 @@
 id: TASK-0564
 epic: EPIC-141
 title: "Add physical source_occurrence and sourceRef resolver"
-status: TODO
+status: DONE
+completed_at: 2026-06-08T00:00:00Z
 owners: ["platform"]
 reviewers: ["architect", "qa"]
 depends_on: ["TASK-0563"]
@@ -61,3 +62,9 @@ Implement source occurrence runtime state and resolver; generated registers beco
 
 ## Notes / decisions
 - Raw project corpora remain off-repo; use only sanitized fixtures, manifests, hashes, and aggregate evidence approved by the relevant fixture/governance task.
+
+## Closeout evidence
+- Added ordered migration `20260608_0013_capex_source_occurrence_resolver.py`, SQLAlchemy models, SQLite bootstrap DDL, runtime schemas, and repositories for `capex_content_identities` and `capex_source_occurrences`.
+- Added the CAPEX SourceRef resolver at `onetruth.capex_platform.source_refs` with canonical `source_occurrence:{source_occurrence_id}` parsing, scope checks, non-resolvable status denial, and meaningful-source-ref rejection for empty, malformed, unresolved, cross-scope, or non-resolvable refs.
+- Source occurrences are sanitized runtime truth; generated registers remain exports/attestations only, and no raw K12/K3/blind corpus material was introduced.
+- Evidence: `PYTHONPATH=src python3.11 -m pytest -q tests/unit/test_capex_source_occurrence_resolver.py` and `PYTHONPATH=src python3.11 -m pytest -q tests/integration/test_capex_source_occurrence_schema_parity.py` passed on 2026-06-08.

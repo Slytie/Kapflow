@@ -1,0 +1,27 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "CapexContentIdentity",
+  "type": "object",
+  "required": [
+    "content_identity_id",
+    "tenant_id",
+    "domain_id",
+    "digest_algorithm",
+    "content_digest",
+    "metadata_json",
+    "created_at"
+  ],
+  "properties": {
+    "content_identity_id": { "type": "string" },
+    "tenant_id": { "type": "string" },
+    "domain_id": { "type": "string" },
+    "digest_algorithm": { "type": "string" },
+    "content_digest": { "type": "string" },
+    "byte_size": { "type": ["integer", "null"], "minimum": 0 },
+    "media_type": { "type": ["string", "null"] },
+    "canonicalization_profile": { "type": ["string", "null"] },
+    "metadata_json": { "type": "object" },
+    "created_at": { "type": "string", "format": "date-time" }
+  },
+  "additionalProperties": false
+}

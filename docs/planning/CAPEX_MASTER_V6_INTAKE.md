@@ -303,6 +303,18 @@
 - Evidence: W1 closeout review contract tests passed on 2026-06-05.
 - Closeout posture: `ARCH-W1-T010` is closed as review evidence only; it does not grant pilot readiness, mutate the source ZIP, import raw project material, or activate CAPEX.
 
+## TASK-0564 closeout evidence
+- Added additive runtime state for `capex_content_identities` and `capex_source_occurrences`, including Alembic migration, SQLite bootstrap DDL, SQLAlchemy models, runtime schemas, repositories, and schema-parity coverage.
+- Added `onetruth.capex_platform.source_refs` for canonical `source_occurrence:{source_occurrence_id}` resolution with tenant/domain/project scope checks, status checks, and meaningful-source-ref rejection for empty or presence-only evidence.
+- Evidence: source occurrence resolver unit tests, schema-parity integration tests, schema validation, CAPEX domain/invariant contracts, and progress-data validation passed on 2026-06-08.
+- Closeout posture: `NU-CB-P0-004` closes physical occurrence truth and resolver foundation only; corpus ingest, raw material handling, source occurrence relations, locator unions, extraction, and evidence binding remain later gated work.
+
+## TASK-0565 closeout evidence
+- Added additive runtime state for `capex_waivers`, `capex_closure_gate_evaluations`, and `capex_closure_snapshots`, including Alembic migration, SQLite bootstrap DDL, SQLAlchemy models, runtime schemas, repositories, and schema-parity coverage.
+- Added `onetruth.capex_platform.closure_governance` with closure vector evaluation, explicit `satisfied_by_waiver` recording, failed-evaluation snapshot rejection, and a small recurrence rule registry that marks snapshots stale when basis refs change.
+- Evidence: closure governance unit tests, schema-parity integration tests, schema validation, CAPEX domain/invariant contracts, and progress-data validation passed on 2026-06-08.
+- Closeout posture: `NU-CB-P0-005` closes internal runtime primitives only; closure/promotion UI, public APIs, CAPEX runtime activation, generated artifact validators, and richer workpage command surfaces remain later gated work.
+
 ## Current-code blocker mappings
 | Blocker | CAPEX task refs | Current repo surface |
 |---|---|---|
@@ -330,7 +342,8 @@
 | CAPEX project child APIs and authorization projections | `TASK-0263`, `TASK-0371`, `TASK-0265`, `TASK-0385`, `TASK-0386`, `TASK-0563` | first project child APIs, selector/dashboard, project-scope helper, official pointer-family substrate, project authorization CED, projection-backed `AuthorizedProjectsQuery`, and physical authorization projection runtime state are closed; pointer-promotion policy checks, source governance, and activation remain blocked |
 | CAPEX storage/blob custody and pilot storage gate | `TASK-0387`, `TASK-0388`, `TASK-0390` | storage/blob custody CED and pilot storage gate checklist are closed; real pilot storage evidence or explicit waiver, Postgres/blob backend rollout, and activation remain blocked |
 | CAPEX Wave 1 pattern and closeout evidence | `TASK-0389`, `TASK-0390` | W1 code pattern register and closeout review are closed as non-production traceability; no runtime activation, source ZIP mutation, or pilot go decision is implied |
-| Source occurrence / SourceRef | `TASK-0268`, `TASK-0391`, `TASK-0407`, `TASK-0428`, `TASK-0564` | future source occurrence and evidence resolver |
+| Source occurrence / SourceRef | `TASK-0268`, `TASK-0391`, `TASK-0407`, `TASK-0428`, `TASK-0564` | `TASK-0564` adds physical occurrence truth and the first SourceRef resolver; broader corpus ingest, source occurrence relations, locator unions, and evidence binding remain future work |
+| Closure and waiver runtime primitives | `TASK-0432`, `TASK-0436`, `TASK-0438`, `TASK-0443`, `TASK-0444`, `TASK-0565` | `TASK-0565` adds waiver/evaluation/snapshot state plus stale recurrence helpers; generated artifact validators, public closure commands, workpage surfaces, and activation remain future work |
 
 ## Verification commands
 - `python3 scripts/import_capex_v6_plan.py check --master-zip <CAPEX_v6_master_zip>`

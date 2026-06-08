@@ -6,7 +6,7 @@ Constrain generated artifacts, pointer promotion, closure, stale reopen, and wai
 This epic was imported from CAPEX v6 on `2026-06-01` as planning backlog only. It does not activate CAPEX runtime behavior by itself.
 
 ## Status
-Imported as TODO backlog unless an individual task records completed repo evidence.
+Imported as TODO backlog unless an individual task records completed repo evidence. `TASK-0565` is closed as of 2026-06-08 with internal closure/waiver/stale runtime primitive evidence; generated artifact envelopes, policy validators, pointer-promotion policy checks, and richer closure command/UI surfaces remain open.
 
 ## In scope
 - Source task families/counts: ARCH:20, ART:5, NU:2, RF:2, V5:3.
@@ -57,7 +57,7 @@ Context pack:
 - `TASK-0446` (`ARCH-W4-S18`) - Add no-false-closure acceptance matrix.
 - `TASK-0447` (`ARCH-W4-S19`) - Patch architecture docs and code review checklist with W4 governance checks.
 - `TASK-0448` (`ARCH-W4-S20`) - Remove/retire any generic approval handler domain side effects after hook registry migration.
-- `TASK-0565` (`NU-CB-P0-005`) - Add ClosureGateEvaluation, ClosureSnapshot, Waiver, lifecycle recurrence stale rules
+- `TASK-0565` (`NU-CB-P0-005`) - Add ClosureGateEvaluation, ClosureSnapshot, Waiver, lifecycle recurrence stale rules - DONE 2026-06-08
 - `TASK-0570` (`NU-CB-P1-010`) - Add non-commutative artifact sequence tests
 
 ## Historical/reconciled aliases

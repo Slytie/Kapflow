@@ -1,0 +1,49 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "CapexClosureGateEvaluation",
+  "type": "object",
+  "required": [
+    "closure_gate_evaluation_id",
+    "tenant_id",
+    "domain_id",
+    "closure_target_kind",
+    "closure_target_ref",
+    "policy_version",
+    "required_dimensions_json",
+    "satisfied_dimensions_json",
+    "missing_dimensions_json",
+    "waiver_refs_json",
+    "basis_version_vector_json",
+    "result",
+    "metadata_json",
+    "created_by_actor_id",
+    "created_by_actor_type",
+    "created_at"
+  ],
+  "properties": {
+    "closure_gate_evaluation_id": { "type": "string" },
+    "tenant_id": { "type": "string" },
+    "domain_id": { "type": "string" },
+    "project_id": { "type": ["string", "null"] },
+    "closure_target_kind": { "type": "string" },
+    "closure_target_ref": { "type": "string" },
+    "policy_version": { "type": "string" },
+    "required_dimensions_json": { "type": "array", "items": { "type": "object" } },
+    "satisfied_dimensions_json": { "type": "array", "items": { "type": "object" } },
+    "missing_dimensions_json": { "type": "array", "items": { "type": "object" } },
+    "waiver_refs_json": { "type": "array", "items": { "type": "object" } },
+    "basis_version_vector_json": { "type": "object" },
+    "result": {
+      "type": "string",
+      "enum": ["pass", "fail", "satisfied_by_waiver"]
+    },
+    "metadata_json": { "type": "object" },
+    "created_by_actor_id": { "type": "string" },
+    "created_by_actor_type": {
+      "type": "string",
+      "enum": ["human", "agent", "service", "system"]
+    },
+    "created_at": { "type": "string", "format": "date-time" }
+  },
+  "additionalProperties": false
+}

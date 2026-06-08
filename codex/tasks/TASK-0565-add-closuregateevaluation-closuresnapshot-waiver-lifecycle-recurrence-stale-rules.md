@@ -2,7 +2,8 @@
 id: TASK-0565
 epic: EPIC-142
 title: "Add ClosureGateEvaluation, ClosureSnapshot, Waiver, lifecycle recurrence stale rules"
-status: TODO
+status: DONE
+completed_at: 2026-06-08T00:00:00Z
 owners: ["platform", "security"]
 reviewers: ["architect", "qa"]
 depends_on: ["TASK-0564"]
@@ -61,3 +62,9 @@ Implement closure/waiver runtime primitives and recurrence-trigger stale/reopen 
 
 ## Notes / decisions
 - Raw project corpora remain off-repo; use only sanitized fixtures, manifests, hashes, and aggregate evidence approved by the relevant fixture/governance task.
+
+## Closeout evidence
+- Added ordered migration `20260608_0014_capex_closure_governance_runtime.py`, SQLAlchemy models, SQLite bootstrap DDL, runtime schemas, and repositories for `capex_waivers`, `capex_closure_gate_evaluations`, and `capex_closure_snapshots`.
+- Added `onetruth.capex_platform.closure_governance` with explicit closure vectors, waiver-aware but non-pass evaluation results, failed-evaluation snapshot rejection, and a small duplicate-safe recurrence registry that marks current closure snapshots stale when basis refs change.
+- Closure now depends on resolved source/evidence truth from the SourceRef resolver; absence of evidence remains a failed vector, and waiver satisfaction is recorded as `satisfied_by_waiver` rather than `pass`.
+- Evidence: `PYTHONPATH=src python3.11 -m pytest -q tests/unit/test_capex_closure_governance.py` and `PYTHONPATH=src python3.11 -m pytest -q tests/integration/test_capex_closure_governance_schema_parity.py` passed on 2026-06-08.

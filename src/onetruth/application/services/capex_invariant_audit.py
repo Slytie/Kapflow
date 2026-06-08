@@ -133,10 +133,10 @@ CAPEX_INVARIANT_REGISTRY: tuple[CapexInvariant, ...] = (
     ),
     CapexInvariant(
         invariant_id="capex.known_gap.source_occurrence_sourceref",
-        title="Source occurrence and SourceRef runtime",
+        title="Broader source governance and evidence binding",
         gate_mode="known_gap",
         task_refs=("TASK-0268", "TASK-0391", "TASK-0407", "TASK-0428", "TASK-0564", "TASK-0578"),
-        description="Tracked in CAPEX intake; source evidence resolver work remains future scope.",
+        description="TASK-0564 adds physical source occurrence truth and the first SourceRef resolver; broader corpus ingest, source occurrence relation/locator work, extraction, and evidence binding remain future scope.",
     ),
     CapexInvariant(
         invariant_id="capex.known_gap.generated_artifact_migration",
@@ -439,7 +439,7 @@ def _check_platform_foundation_v0_source(repo_root: Path) -> AuditEvaluation:
         "Raw K12, K3, and blind-validation corpus files",
         "Release/deploy work",
         "CAPEX project child APIs, authorization projections",
-        "Source occurrence and SourceRef runtime remain blocked",
+        "Source occurrence and SourceRef runtime foundation is present",
         "external/operator-managed",
     )
     missing = [item for item in required if item not in text]

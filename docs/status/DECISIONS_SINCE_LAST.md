@@ -65,6 +65,13 @@ Record any decisions made since the last session so a fresh Codex run can rehydr
 - Feature-posture decision: `capex_project_feature` seeds `capex.runtime_activation` as `disabled` with a blocked reason, so closing EPIC-140 does not imply CAPEX runtime/product activation.
 - Closeout decision: all EPIC-140 task rows are now closed. CAPEX activation, raw-corpus/source governance, workflow/workpage authoring, real pilot storage evidence or waiver, release/capacity, and production-preflight gates remain later work.
 
+## 2026-06-08 (EPIC-141/142 source occurrence and closure primitive foundation)
+- SourceRef decision: `TASK-0564` adds physical `capex_content_identities` and `capex_source_occurrences` runtime state plus `onetruth.capex_platform.source_refs`, using canonical `source_occurrence:{source_occurrence_id}` refs with tenant/domain/project scope checks and non-resolvable status denial.
+- Evidence-boundary decision: meaningful SourceRefs require real resolver success. Empty arrays, malformed refs, unresolved refs, cross-scope refs, and quarantined/redacted/superseded/deleted occurrences cannot support closure or official claims.
+- Closure-vector decision: `TASK-0565` adds `capex_waivers`, `capex_closure_gate_evaluations`, and `capex_closure_snapshots` plus `onetruth.capex_platform.closure_governance`; absence of evidence fails closure, and waivers are recorded as `satisfied_by_waiver`, not `pass`.
+- Stale-recurrence decision: current closure snapshots can be marked stale when source/waiver basis refs change through a deterministic recurrence rule registry; this does not expose public closure commands or UI.
+- Activation decision: this tranche adds internal runtime foundation only. No CAPEX runtime/product activation, raw corpus import, HTTP routes, frontend routes, generated artifact validators, public closure/promotion UI, or production/pilot readiness is implied.
+
 ## 2026-06-03 (CAPEX RF-002/NU-CB-P0-001 descriptor registry and approval duplicate closeout)
 - Descriptor-boundary decision: `TASK-0370` moves active logistics workpage descriptor registrations behind `WorkpageDescriptorRegistry`; the existing descriptor lookup helpers remain compatibility facades and public workpage routes/actions stay unchanged.
 - Subject-surface decision: workpage `subject_link` validation now uses the registered workpage action rules for supported human-task and approval surfaces instead of local schedule/EOD matrices in the action-resolution handler.

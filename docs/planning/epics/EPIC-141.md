@@ -6,7 +6,7 @@ Build the content identity, source occurrence, extraction, and evidence-binding 
 This epic was imported from CAPEX v6 on `2026-06-01` as planning backlog only. It does not activate CAPEX runtime behavior by itself.
 
 ## Status
-Imported as TODO backlog unless an individual task records completed repo evidence.
+Imported as TODO backlog unless an individual task records completed repo evidence. `TASK-0564` is closed as of 2026-06-08 with physical source occurrence/runtime resolver evidence; broader corpus ingest, extraction, evidence binding, and source occurrence relation work remains open.
 
 ## In scope
 - Source task families/counts: ARCH:38, INGEST:9, NU:1, RF:3, V5:1.
@@ -80,7 +80,7 @@ Context pack:
 - `TASK-0426` (`ARCH-W3-S016`) - Sanitized fixture evidence-lineage enforcement
 - `TASK-0427` (`ARCH-W3-S017`) - Extraction QA report artifact
 - `TASK-0428` (`ARCH-W3-S018`) - SourceRef resolution validation vector
-- `TASK-0564` (`NU-CB-P0-004`) - Add physical source_occurrence and sourceRef resolver
+- `TASK-0564` (`NU-CB-P0-004`) - Add physical source_occurrence and sourceRef resolver - DONE 2026-06-08
 
 ## Historical/reconciled aliases
 - `TASK-0578` (`V5-TASK-007`) -> `TASK-0564`, `TASK-0428` - Add SourceRef resolution contract/tests

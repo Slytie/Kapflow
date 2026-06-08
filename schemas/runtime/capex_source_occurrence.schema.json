@@ -1,0 +1,46 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "CapexSourceOccurrence",
+  "type": "object",
+  "required": [
+    "source_occurrence_id",
+    "tenant_id",
+    "domain_id",
+    "content_identity_id",
+    "occurrence_kind",
+    "status",
+    "source_ref",
+    "locator_json",
+    "metadata_json",
+    "registered_by_actor_id",
+    "registered_by_actor_type",
+    "created_at",
+    "updated_at"
+  ],
+  "properties": {
+    "source_occurrence_id": { "type": "string" },
+    "tenant_id": { "type": "string" },
+    "domain_id": { "type": "string" },
+    "project_id": { "type": ["string", "null"] },
+    "content_identity_id": { "type": "string" },
+    "occurrence_kind": { "type": "string" },
+    "status": {
+      "type": "string",
+      "enum": ["available", "quarantined", "redacted", "superseded", "deleted"]
+    },
+    "source_ref": {
+      "type": "string",
+      "pattern": "^source_occurrence:[^\\s]+$"
+    },
+    "locator_json": { "type": "object" },
+    "metadata_json": { "type": "object" },
+    "registered_by_actor_id": { "type": "string" },
+    "registered_by_actor_type": {
+      "type": "string",
+      "enum": ["human", "agent", "service", "system"]
+    },
+    "created_at": { "type": "string", "format": "date-time" },
+    "updated_at": { "type": "string", "format": "date-time" }
+  },
+  "additionalProperties": false
+}

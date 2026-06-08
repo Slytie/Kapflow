@@ -1,0 +1,47 @@
+# CAPEX SourceRef And Closure Guardrails
+
+## Status
+- Status: `AUTHORITATIVE_SOURCE`
+- Owner tasks: `TASK-0564`, `TASK-0565`
+- Scope: internal CAPEX runtime foundation only.
+
+This note records the repo-native guardrails for the first physical source-occurrence and closure-governance primitives. It does not activate CAPEX runtime/product behavior, import raw corpus material, add public APIs, add frontend routes, or approve production/pilot readiness.
+
+## SourceRef Runtime
+`capex_content_identities` records digest-based content identity within tenant/domain scope. It is content identity metadata, not a raw document store.
+
+`capex_source_occurrences` records sanitized source occurrences within tenant/domain and optional project scope. A source occurrence may point at sanitized fixture manifests or approved aggregate evidence, but it must not contain raw corpus paths, extracted filenames, screenshots, OCR text, or embedded document content.
+
+The canonical SourceRef format introduced by `TASK-0564` is:
+
+```text
+source_occurrence:{source_occurrence_id}
+```
+
+The resolver must return an unresolved result for malformed refs, missing occurrences, tenant/domain/project mismatches, and occurrence statuses that are not resolvable. The first resolvable status is `available`; quarantined, redacted, superseded, and deleted occurrences cannot support official claims.
+
+Empty `source_refs` arrays and presence-only evidence are not meaningful evidence.
+
+## Closure Runtime
+`capex_waivers` records scoped waiver state. Direct source/evidence state remains authoritative; a waiver is never a pass.
+
+`capex_closure_gate_evaluations` records vector evaluation. Each required dimension must be satisfied by resolved SourceRefs or explicitly recorded as `satisfied_by_waiver`. Missing evidence leaves the vector failed.
+
+`capex_closure_snapshots` records closure snapshots with a basis version vector. A snapshot can become stale when any basis ref changes or a recurrence rule fires. Stale snapshots must not be treated as fresh closure truth.
+
+The closure result vocabulary is intentionally small:
+- `pass`: all required dimensions are satisfied by resolved SourceRefs.
+- `satisfied_by_waiver`: every required dimension is satisfied, but at least one dimension used a waiver.
+- `fail`: at least one required dimension is missing or unresolved.
+
+## Rollback Posture
+If SourceRef resolution or closure evaluation fails, disable evidence binding and closure gates for the affected CAPEX workflow surface. Do not destroy governed project, source occurrence, waiver, evaluation, or snapshot state as a rollback mechanism.
+
+## Remaining Blockers
+The following remain later scope:
+- bulk corpus ingest and source inventory pipelines
+- source occurrence relations and locator unions
+- extraction/search/evidence-binding runtime
+- generated artifact envelope and pointer-promotion validators
+- public closure/promotion commands, workpages, and frontend UI
+- CAPEX runtime/product activation

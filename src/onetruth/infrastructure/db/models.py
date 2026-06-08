@@ -319,6 +319,218 @@ class CapexUserProjectView(Base):
     )
 
 
+class CapexContentIdentity(Base):
+    __tablename__ = "capex_content_identities"
+    __table_args__ = (
+        UniqueConstraint(
+            "tenant_id",
+            "domain_id",
+            "digest_algorithm",
+            "content_digest",
+            name="uq_capex_content_identities_digest",
+        ),
+        Index(
+            "ix_capex_content_identities_digest_lookup",
+            "tenant_id",
+            "domain_id",
+            "digest_algorithm",
+            "content_digest",
+        ),
+    )
+
+    content_identity_id: Mapped[str] = mapped_column(String(255), primary_key=True)
+    tenant_id: Mapped[str] = mapped_column(String(128), nullable=False)
+    domain_id: Mapped[str] = mapped_column(String(128), nullable=False)
+    digest_algorithm: Mapped[str] = mapped_column(String(32), nullable=False)
+    content_digest: Mapped[str] = mapped_column(String(255), nullable=False)
+    byte_size: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    media_type: Mapped[Optional[str]] = mapped_column(String(128), nullable=True)
+    canonicalization_profile: Mapped[Optional[str]] = mapped_column(String(128), nullable=True)
+    metadata_json: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=utcnow)
+
+
+class CapexSourceOccurrence(Base):
+    __tablename__ = "capex_source_occurrences"
+    __table_args__ = (
+        UniqueConstraint(
+            "tenant_id",
+            "domain_id",
+            "source_ref",
+            name="uq_capex_source_occurrences_source_ref",
+        ),
+        Index(
+            "ix_capex_source_occurrences_scope_status",
+            "tenant_id",
+            "domain_id",
+            "project_id",
+            "status",
+        ),
+        Index(
+            "ix_capex_source_occurrences_content_identity",
+            "content_identity_id",
+        ),
+    )
+
+    source_occurrence_id: Mapped[str] = mapped_column(String(255), primary_key=True)
+    tenant_id: Mapped[str] = mapped_column(String(128), nullable=False)
+    domain_id: Mapped[str] = mapped_column(String(128), nullable=False)
+    project_id: Mapped[Optional[str]] = mapped_column(
+        String(128),
+        ForeignKey("capex_projects.project_id"),
+        nullable=True,
+    )
+    content_identity_id: Mapped[str] = mapped_column(
+        String(255),
+        ForeignKey("capex_content_identities.content_identity_id"),
+        nullable=False,
+    )
+    occurrence_kind: Mapped[str] = mapped_column(String(64), nullable=False)
+    status: Mapped[str] = mapped_column(String(32), nullable=False)
+    source_ref: Mapped[str] = mapped_column(String(512), nullable=False)
+    locator_json: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False)
+    metadata_json: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False)
+    registered_by_actor_id: Mapped[str] = mapped_column(String(128), nullable=False)
+    registered_by_actor_type: Mapped[str] = mapped_column(String(32), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=utcnow)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        default=utcnow,
+        onupdate=utcnow,
+    )
+
+
+class CapexWaiver(Base):
+    __tablename__ = "capex_waivers"
+    __table_args__ = (
+        Index(
+            "ix_capex_waivers_scope_state",
+            "tenant_id",
+            "domain_id",
+            "project_id",
+            "scope_kind",
+            "scope_ref",
+            "state",
+        ),
+    )
+
+    waiver_id: Mapped[str] = mapped_column(String(255), primary_key=True)
+    tenant_id: Mapped[str] = mapped_column(String(128), nullable=False)
+    domain_id: Mapped[str] = mapped_column(String(128), nullable=False)
+    project_id: Mapped[Optional[str]] = mapped_column(
+        String(128),
+        ForeignKey("capex_projects.project_id"),
+        nullable=True,
+    )
+    scope_kind: Mapped[str] = mapped_column(String(64), nullable=False)
+    scope_ref: Mapped[str] = mapped_column(String(255), nullable=False)
+    state: Mapped[str] = mapped_column(String(32), nullable=False)
+    reason: Mapped[str] = mapped_column(Text, nullable=False)
+    policy_version: Mapped[str] = mapped_column(String(64), nullable=False)
+    metadata_json: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False)
+    created_by_actor_id: Mapped[str] = mapped_column(String(128), nullable=False)
+    created_by_actor_type: Mapped[str] = mapped_column(String(32), nullable=False)
+    expires_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    revoked_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=utcnow)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        default=utcnow,
+        onupdate=utcnow,
+    )
+
+
+class CapexClosureGateEvaluation(Base):
+    __tablename__ = "capex_closure_gate_evaluations"
+    __table_args__ = (
+        Index(
+            "ix_capex_closure_gate_evaluations_target",
+            "tenant_id",
+            "domain_id",
+            "project_id",
+            "closure_target_kind",
+            "closure_target_ref",
+            "result",
+        ),
+    )
+
+    closure_gate_evaluation_id: Mapped[str] = mapped_column(String(255), primary_key=True)
+    tenant_id: Mapped[str] = mapped_column(String(128), nullable=False)
+    domain_id: Mapped[str] = mapped_column(String(128), nullable=False)
+    project_id: Mapped[Optional[str]] = mapped_column(
+        String(128),
+        ForeignKey("capex_projects.project_id"),
+        nullable=True,
+    )
+    closure_target_kind: Mapped[str] = mapped_column(String(64), nullable=False)
+    closure_target_ref: Mapped[str] = mapped_column(String(255), nullable=False)
+    policy_version: Mapped[str] = mapped_column(String(64), nullable=False)
+    required_dimensions_json: Mapped[list[dict[str, Any]]] = mapped_column(JSON, nullable=False)
+    satisfied_dimensions_json: Mapped[list[dict[str, Any]]] = mapped_column(JSON, nullable=False)
+    missing_dimensions_json: Mapped[list[dict[str, Any]]] = mapped_column(JSON, nullable=False)
+    waiver_refs_json: Mapped[list[dict[str, Any]]] = mapped_column(JSON, nullable=False)
+    basis_version_vector_json: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False)
+    result: Mapped[str] = mapped_column(String(32), nullable=False)
+    metadata_json: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False)
+    created_by_actor_id: Mapped[str] = mapped_column(String(128), nullable=False)
+    created_by_actor_type: Mapped[str] = mapped_column(String(32), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=utcnow)
+
+
+class CapexClosureSnapshot(Base):
+    __tablename__ = "capex_closure_snapshots"
+    __table_args__ = (
+        Index(
+            "ix_capex_closure_snapshots_target_state",
+            "tenant_id",
+            "domain_id",
+            "project_id",
+            "closure_target_kind",
+            "closure_target_ref",
+            "state",
+        ),
+        Index(
+            "ix_capex_closure_snapshots_evaluation",
+            "closure_gate_evaluation_id",
+        ),
+    )
+
+    closure_snapshot_id: Mapped[str] = mapped_column(String(255), primary_key=True)
+    closure_gate_evaluation_id: Mapped[str] = mapped_column(
+        String(255),
+        ForeignKey("capex_closure_gate_evaluations.closure_gate_evaluation_id"),
+        nullable=False,
+    )
+    tenant_id: Mapped[str] = mapped_column(String(128), nullable=False)
+    domain_id: Mapped[str] = mapped_column(String(128), nullable=False)
+    project_id: Mapped[Optional[str]] = mapped_column(
+        String(128),
+        ForeignKey("capex_projects.project_id"),
+        nullable=True,
+    )
+    closure_target_kind: Mapped[str] = mapped_column(String(64), nullable=False)
+    closure_target_ref: Mapped[str] = mapped_column(String(255), nullable=False)
+    policy_version: Mapped[str] = mapped_column(String(64), nullable=False)
+    state: Mapped[str] = mapped_column(String(32), nullable=False)
+    result: Mapped[str] = mapped_column(String(32), nullable=False)
+    basis_version_vector_json: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False)
+    metadata_json: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False)
+    created_by_actor_id: Mapped[str] = mapped_column(String(128), nullable=False)
+    created_by_actor_type: Mapped[str] = mapped_column(String(32), nullable=False)
+    stale_reason: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    stale_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    reopened_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=utcnow)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        default=utcnow,
+        onupdate=utcnow,
+    )
+
+
 class WorkflowRun(Base):
     __tablename__ = "workflow_runs"
     __table_args__ = (

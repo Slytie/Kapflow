@@ -2,7 +2,7 @@
   "meta": {
     "title": "CAPEX Epic Progress",
     "subtitle": "Plain-language roadmap for the repo-native CAPEX planning backlog.",
-    "lastUpdated": "2026-06-05",
+    "lastUpdated": "2026-06-08",
     "localOnly": true,
     "sourceNote": "Generated from docs/planning/epics and codex/tasks with curated review-posture overrides.",
     "codexRule": "When a CAPEX task is completed, set status: DONE, add completed_at in ISO 8601 timezone form, add completion/closeout evidence, and regenerate this progress data in the same change."

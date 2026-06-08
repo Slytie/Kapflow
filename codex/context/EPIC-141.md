@@ -10,6 +10,10 @@ INGEST-001, INGEST-002, INGEST-003, INGEST-004, INGEST-005, INGEST-006, INGEST-0
 ## Historical/reconciled aliases
 - `V5-TASK-007` is a reconciled v5 historical alias for `TASK-0564`, `TASK-0428`.
 
+## Closed foundation slice
+- `TASK-0564` is closed as of 2026-06-08: runtime state now includes `capex_content_identities` and `capex_source_occurrences`, and `onetruth.capex_platform.source_refs` resolves canonical `source_occurrence:{source_occurrence_id}` refs with meaningful-source-ref checks.
+- This does not close broader corpus ingest, extraction, source occurrence relations, source locator unions, or evidence binding tasks.
+
 ## Load first
 - `docs/planning/epics/EPIC-141.md`
 - `docs/planning/CAPEX_MASTER_V6_INTAKE.md`

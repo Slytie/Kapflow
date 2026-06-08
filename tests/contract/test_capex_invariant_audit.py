@@ -204,7 +204,7 @@ def test_capex_platform_foundation_v0_doc_records_branch_gate_and_blocked_scopes
     assert "Raw K12, K3, and blind-validation corpus files" in text
     assert "Release/deploy work" in text
     assert "CAPEX project child APIs, authorization projections" in text
-    assert "Source occurrence and SourceRef runtime remain blocked" in text
+    assert "Source occurrence and SourceRef runtime foundation is present" in text
     assert "external/operator-managed" in text
 
 

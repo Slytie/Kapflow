@@ -12,6 +12,11 @@ ART-001, ART-003, ART-004, ART-005, ART-006, RF-007, RF-008, ARCH-W4-S01, ... (3
 - `V5-TASK-002` is a reconciled v5 historical alias for `TASK-0392`, `TASK-0373`.
 - `V5-TASK-004` is a reconciled v5 historical alias for `TASK-0305`, `TASK-0565`.
 
+## Closed foundation slice
+- `TASK-0565` is closed as of 2026-06-08: runtime state now includes `capex_waivers`, `capex_closure_gate_evaluations`, and `capex_closure_snapshots`, with closure vector evaluation and stale recurrence helpers under `onetruth.capex_platform.closure_governance`.
+- Waivers are recorded as `satisfied_by_waiver`, not as `pass`, and absence of evidence still fails closure.
+- This does not expose closure/promotion UI, public APIs, generated artifact policy validators, or CAPEX runtime activation.
+
 ## Load first
 - `docs/planning/epics/EPIC-142.md`
 - `docs/planning/CAPEX_MASTER_V6_INTAKE.md`

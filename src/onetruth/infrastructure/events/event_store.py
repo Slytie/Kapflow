@@ -201,6 +201,150 @@ def create_sqlite_substrate(connection: sqlite3.Connection) -> None:
                 project_key
             );
 
+        CREATE TABLE IF NOT EXISTS capex_content_identities (
+            content_identity_id TEXT PRIMARY KEY,
+            tenant_id TEXT NOT NULL,
+            domain_id TEXT NOT NULL,
+            digest_algorithm TEXT NOT NULL,
+            content_digest TEXT NOT NULL,
+            byte_size INTEGER,
+            media_type TEXT,
+            canonicalization_profile TEXT,
+            metadata_json TEXT NOT NULL,
+            created_at TEXT NOT NULL DEFAULT (datetime('now')),
+            UNIQUE (tenant_id, domain_id, digest_algorithm, content_digest)
+        );
+
+        CREATE INDEX IF NOT EXISTS ix_capex_content_identities_digest_lookup
+            ON capex_content_identities (
+                tenant_id,
+                domain_id,
+                digest_algorithm,
+                content_digest
+            );
+
+        CREATE TABLE IF NOT EXISTS capex_source_occurrences (
+            source_occurrence_id TEXT PRIMARY KEY,
+            tenant_id TEXT NOT NULL,
+            domain_id TEXT NOT NULL,
+            project_id TEXT,
+            content_identity_id TEXT NOT NULL,
+            occurrence_kind TEXT NOT NULL,
+            status TEXT NOT NULL,
+            source_ref TEXT NOT NULL,
+            locator_json TEXT NOT NULL,
+            metadata_json TEXT NOT NULL,
+            registered_by_actor_id TEXT NOT NULL,
+            registered_by_actor_type TEXT NOT NULL,
+            created_at TEXT NOT NULL DEFAULT (datetime('now')),
+            updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+            FOREIGN KEY (project_id) REFERENCES capex_projects(project_id),
+            FOREIGN KEY (content_identity_id) REFERENCES capex_content_identities(content_identity_id),
+            UNIQUE (tenant_id, domain_id, source_ref)
+        );
+
+        CREATE INDEX IF NOT EXISTS ix_capex_source_occurrences_scope_status
+            ON capex_source_occurrences (tenant_id, domain_id, project_id, status);
+        CREATE INDEX IF NOT EXISTS ix_capex_source_occurrences_content_identity
+            ON capex_source_occurrences (content_identity_id);
+
+        CREATE TABLE IF NOT EXISTS capex_waivers (
+            waiver_id TEXT PRIMARY KEY,
+            tenant_id TEXT NOT NULL,
+            domain_id TEXT NOT NULL,
+            project_id TEXT,
+            scope_kind TEXT NOT NULL,
+            scope_ref TEXT NOT NULL,
+            state TEXT NOT NULL,
+            reason TEXT NOT NULL,
+            policy_version TEXT NOT NULL,
+            metadata_json TEXT NOT NULL,
+            created_by_actor_id TEXT NOT NULL,
+            created_by_actor_type TEXT NOT NULL,
+            expires_at TEXT,
+            revoked_at TEXT,
+            created_at TEXT NOT NULL DEFAULT (datetime('now')),
+            updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+            FOREIGN KEY (project_id) REFERENCES capex_projects(project_id)
+        );
+
+        CREATE INDEX IF NOT EXISTS ix_capex_waivers_scope_state
+            ON capex_waivers (
+                tenant_id,
+                domain_id,
+                project_id,
+                scope_kind,
+                scope_ref,
+                state
+            );
+
+        CREATE TABLE IF NOT EXISTS capex_closure_gate_evaluations (
+            closure_gate_evaluation_id TEXT PRIMARY KEY,
+            tenant_id TEXT NOT NULL,
+            domain_id TEXT NOT NULL,
+            project_id TEXT,
+            closure_target_kind TEXT NOT NULL,
+            closure_target_ref TEXT NOT NULL,
+            policy_version TEXT NOT NULL,
+            required_dimensions_json TEXT NOT NULL,
+            satisfied_dimensions_json TEXT NOT NULL,
+            missing_dimensions_json TEXT NOT NULL,
+            waiver_refs_json TEXT NOT NULL,
+            basis_version_vector_json TEXT NOT NULL,
+            result TEXT NOT NULL,
+            metadata_json TEXT NOT NULL,
+            created_by_actor_id TEXT NOT NULL,
+            created_by_actor_type TEXT NOT NULL,
+            created_at TEXT NOT NULL DEFAULT (datetime('now')),
+            FOREIGN KEY (project_id) REFERENCES capex_projects(project_id)
+        );
+
+        CREATE INDEX IF NOT EXISTS ix_capex_closure_gate_evaluations_target
+            ON capex_closure_gate_evaluations (
+                tenant_id,
+                domain_id,
+                project_id,
+                closure_target_kind,
+                closure_target_ref,
+                result
+            );
+
+        CREATE TABLE IF NOT EXISTS capex_closure_snapshots (
+            closure_snapshot_id TEXT PRIMARY KEY,
+            closure_gate_evaluation_id TEXT NOT NULL,
+            tenant_id TEXT NOT NULL,
+            domain_id TEXT NOT NULL,
+            project_id TEXT,
+            closure_target_kind TEXT NOT NULL,
+            closure_target_ref TEXT NOT NULL,
+            policy_version TEXT NOT NULL,
+            state TEXT NOT NULL,
+            result TEXT NOT NULL,
+            basis_version_vector_json TEXT NOT NULL,
+            metadata_json TEXT NOT NULL,
+            created_by_actor_id TEXT NOT NULL,
+            created_by_actor_type TEXT NOT NULL,
+            stale_reason TEXT,
+            stale_at TEXT,
+            reopened_at TEXT,
+            created_at TEXT NOT NULL DEFAULT (datetime('now')),
+            updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+            FOREIGN KEY (project_id) REFERENCES capex_projects(project_id),
+            FOREIGN KEY (closure_gate_evaluation_id) REFERENCES capex_closure_gate_evaluations(closure_gate_evaluation_id)
+        );
+
+        CREATE INDEX IF NOT EXISTS ix_capex_closure_snapshots_target_state
+            ON capex_closure_snapshots (
+                tenant_id,
+                domain_id,
+                project_id,
+                closure_target_kind,
+                closure_target_ref,
+                state
+            );
+        CREATE INDEX IF NOT EXISTS ix_capex_closure_snapshots_evaluation
+            ON capex_closure_snapshots (closure_gate_evaluation_id);
+
         CREATE TABLE IF NOT EXISTS workflow_runs (
             workflow_run_id TEXT PRIMARY KEY,
             project_id TEXT,
