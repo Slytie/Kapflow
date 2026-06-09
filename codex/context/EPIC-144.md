@@ -7,6 +7,10 @@ Purpose:
 ## Imported source rows
 ART-007, WP-001, WP-002, WP-003, WP-004, WP-005, WP-006, WP-007, ... (32 tasks total)
 
+## Closed foundation rows
+- `TASK-0567` is closed as of 2026-06-08: internal `capex_workpage_projection_snapshots` / `capex_workpage_projection_rows`, signed projection cursors, typed command envelopes, and stale-command guards exist for future CAPEX workpage mutation safety.
+- This does not add public CAPEX workpage APIs, frontend routes, or CAPEX workpage activation.
+
 ## Load first
 - `docs/planning/epics/EPIC-144.md`
 - `docs/planning/CAPEX_MASTER_V6_INTAKE.md`

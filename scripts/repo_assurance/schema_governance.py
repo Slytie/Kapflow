@@ -116,6 +116,12 @@ def validate_runtime_schema_coverage(state: AssuranceState) -> None:
         "capex_waiver": ROOT / "schemas/runtime/capex_waiver.schema.json",
         "capex_closure_gate_evaluation": ROOT / "schemas/runtime/capex_closure_gate_evaluation.schema.json",
         "capex_closure_snapshot": ROOT / "schemas/runtime/capex_closure_snapshot.schema.json",
+        "capex_workflow_handoff_manifest": ROOT
+        / "schemas/runtime/capex_workflow_handoff_manifest.schema.json",
+        "capex_workpage_projection_snapshot": ROOT
+        / "schemas/runtime/capex_workpage_projection_snapshot.schema.json",
+        "capex_workpage_projection_row": ROOT
+        / "schemas/runtime/capex_workpage_projection_row.schema.json",
         "task_run": ROOT / "schemas/runtime/task_run.schema.json",
         "human_task": ROOT / "schemas/runtime/human_task.schema.json",
         "execution_session": ROOT / "schemas/runtime/execution_session.schema.json",

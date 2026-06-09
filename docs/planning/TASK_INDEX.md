@@ -526,8 +526,8 @@ Note: `TASK-0087` / `TASK-0088` / `TASK-0089` were formerly duplicated as `TASK-
 | TASK-0563 | EPIC-140 | DONE | high | Add CAPEX project/membership/authorization runtime state |
 | TASK-0564 | EPIC-141 | DONE | high | Add physical source_occurrence and sourceRef resolver |
 | TASK-0565 | EPIC-142 | DONE | high | Add ClosureGateEvaluation, ClosureSnapshot, Waiver, lifecycle recurrence stale rules |
-| TASK-0566 | EPIC-143 | TODO | high | Implement workflow handoff manifest contract |
-| TASK-0567 | EPIC-144 | TODO | high | Add CAPEX projection snapshot and stale-command test harness |
+| TASK-0566 | EPIC-143 | DONE | high | Implement workflow handoff manifest contract |
+| TASK-0567 | EPIC-144 | DONE | high | Add CAPEX projection snapshot and stale-command test harness |
 | TASK-0568 | EPIC-149 | TODO | high | Add CAPEX semantic test suite and CODEOWNERS gates |
 | TASK-0569 | EPIC-151 | TODO | medium | Add interface-burden conservation policy and tests |
 | TASK-0570 | EPIC-142 | TODO | medium | Add non-commutative artifact sequence tests |

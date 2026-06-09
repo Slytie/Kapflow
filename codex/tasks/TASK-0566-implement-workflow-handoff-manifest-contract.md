@@ -2,7 +2,8 @@
 id: TASK-0566
 epic: EPIC-143
 title: "Implement workflow handoff manifest contract"
-status: TODO
+status: DONE
+completed_at: 2026-06-08T00:00:00Z
 owners: ["platform"]
 reviewers: ["architect", "qa"]
 depends_on: []
@@ -61,3 +62,10 @@ Define handoff manifest with artifact versions, pointer generations, validation 
 
 ## Notes / decisions
 - Raw project corpora remain off-repo; use only sanitized fixtures, manifests, hashes, and aggregate evidence approved by the relevant fixture/governance task.
+
+## Closeout evidence
+- Added `schemas/runtime/capex_workflow_handoff_manifest.schema.json` and internal service `onetruth.capex_platform.workflow_handoffs` with `HandoffManifest`, validation results, and fail-closed `require_valid_handoff_manifest(...)`.
+- Handoff validation now requires exact source workflow scope, artifact version basis, pointer generation basis, meaningful `source_occurrence:*` refs, validation summaries, closure evaluation refs, current closure snapshot refs, and task/workpage handoff bindings.
+- Missing manifests, pointer generation drift, unresolved SourceRefs, stale closure snapshots, failed closure basis, missing validation summaries, and scope mismatches are rejected before downstream handoff trust.
+- No CAPEX workflow runtime activation, HTTP routes, frontend routes, physical handoff table, or raw K12/K3/blind corpus material was introduced.
+- Evidence: `PYTHONPATH=src python3.11 -m pytest -q tests/unit/test_capex_workflow_handoff_manifest.py tests/contract/test_capex_workflow_handoff_manifest_schema.py` passed on 2026-06-08.

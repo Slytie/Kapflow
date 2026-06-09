@@ -2,6 +2,11 @@
 
 Record any decisions made since the last session so a fresh Codex run can rehydrate quickly.
 
+## 2026-06-08 (EPIC-143/144 handoff and projection foundation)
+- Handoff decision: `TASK-0566` adds `capex.workflow_handoff_manifest.v1` and `onetruth.capex_platform.workflow_handoffs` as an internal handoff contract requiring exact artifact versions, pointer generations, meaningful SourceRefs, validation summaries, current closure snapshots, and task/workpage bindings before downstream workflow handoff can be trusted.
+- Projection decision: `TASK-0567` adds `capex_workpage_projection_snapshots` and `capex_workpage_projection_rows` as project-scoped read models with deterministic basis hashes, plus signed projection cursors and typed command-envelope guards that reject stale or mismatched commands before mutation.
+- Boundary decision: these foundations do not activate CAPEX workflows or workpages, add public routes, add frontend routes, import raw corpus material, or replace canonical artifact/pointer/event truth.
+
 ## 2026-06-04 (EPIC-139 redo closure handoff)
 - Closure decision: `TASK-0647` records EPIC-139 as State C / repaired after the redo package, with `TASK-0643` through `TASK-0646` as the package repair/reclose chain and `TASK-0647` as post-package handoff evidence only.
 - Matrix-boundary decision: `docs/planning/EPIC139_REDO_RECLOSE_MATRIX.md` remains bounded to original EPIC-139 package/source rows, the `TASK-0576` historical alias, and redo package tasks `TASK-0643` through `TASK-0646`; future follow-ups must not be added to that matrix merely because they occur later.

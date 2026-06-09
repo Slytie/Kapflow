@@ -11,6 +11,10 @@ WFLOW-001, WFLOW-002, WFLOW-003, WFLOW-004, WFLOW-005, WFLOW-006, WFLOW-007, NU-
 - `V5-TASK-003` is a reconciled v5 historical alias for `TASK-0565`.
 - `V5-TASK-010` is a reconciled v5 historical alias for `TASK-0566`.
 
+## Closed foundation rows
+- `TASK-0566` is closed as of 2026-06-08: `capex.workflow_handoff_manifest.v1` and `onetruth.capex_platform.workflow_handoffs` provide an internal handoff manifest contract and validation guard over exact artifact, pointer, SourceRef, validation, closure, task, and workpage basis.
+- This does not author or activate CAPEX workflow packs.
+
 ## Load first
 - `docs/planning/epics/EPIC-143.md`
 - `docs/planning/CAPEX_MASTER_V6_INTAKE.md`

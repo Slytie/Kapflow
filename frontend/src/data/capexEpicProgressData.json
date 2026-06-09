@@ -11,23 +11,23 @@
   "summary": {
     "epicCount": 17,
     "taskCount": 379,
-    "done": 61,
+    "done": 63,
     "in_progress": 0,
-    "not_started": 313,
+    "not_started": 311,
     "blocked": 1,
     "needs_review": 4,
     "total": 379,
     "estimate": {
-      "percentComplete": 16.1,
-      "completedTasks": 61,
-      "remainingTasks": 318,
+      "percentComplete": 16.6,
+      "completedTasks": 63,
+      "remainingTasks": 316,
       "remainingBlockedOrReviewTasks": 5,
-      "completedWithTimestamps": 29,
-      "completionTimestampCoverage": 47.5,
-      "etaDate": "2026-08-02",
+      "completedWithTimestamps": 31,
+      "completionTimestampCoverage": 49.2,
+      "etaDate": "2026-07-29",
       "etaConfidence": "medium",
       "etaSource": "epic_completed_at",
-      "label": "ETA 2026-08-02",
+      "label": "ETA 2026-07-29",
       "caveat": "5 blocked or needs-review task(s) remain."
     }
   },
@@ -7408,10 +7408,10 @@
         "remainingBlockedOrReviewTasks": 1,
         "completedWithTimestamps": 1,
         "completionTimestampCoverage": 50.0,
-        "etaDate": "2026-06-17",
+        "etaDate": "2026-06-16",
         "etaConfidence": "low",
         "etaSource": "global_completed_at",
-        "label": "ETA 2026-06-17",
+        "label": "ETA 2026-06-16",
         "caveat": "1 blocked or needs-review task(s) remain."
       }
     },
@@ -9297,9 +9297,9 @@
         "docs/planning/CAPEX_V6_GATE_RISK_DECISION_MAP.csv"
       ],
       "counts": {
-        "done": 2,
+        "done": 3,
         "in_progress": 0,
-        "not_started": 9,
+        "not_started": 8,
         "blocked": 0,
         "needs_review": 0,
         "total": 11
@@ -9718,9 +9718,9 @@
           "epicId": "EPIC-143",
           "title": "Implement workflow handoff manifest contract",
           "plainPurpose": "Define handoff manifest with artifact versions, pointer generations, validation summaries, basis freshness.",
-          "sourceStatus": "TODO",
-          "displayStatus": "not_started",
-          "statusReason": "Task is still planned backlog work.",
+          "sourceStatus": "DONE",
+          "displayStatus": "done",
+          "statusReason": "Task file records DONE status and completion or closeout evidence.",
           "why": [
             "Imported from CAPEX v6 source task NU-CB-P0-006 so future work can be executed from repo-native backlog memory without loading the full master package."
           ],
@@ -9763,11 +9763,17 @@
             "source_only_dependency_notes": "W2/W4/W5; sourceRef resolver",
             "recommended_source_branch": "capex/handoff-manifest"
           },
-          "evidence": [],
+          "evidence": [
+            "Added schemas/runtime/capex_workflow_handoff_manifest.schema.json and internal service onetruth.capex_platform.workflow_handoffs with HandoffManifest, validation results, and fail-closed require_valid_handoff_manifest(...).",
+            "Handoff validation now requires exact source workflow scope, artifact version basis, pointer generation basis, meaningful source_occurrence:* refs, validation summaries, closure evaluation refs, current closure snapshot refs, and task/workpage handoff bindings.",
+            "Missing manifests, pointer generation drift, unresolved SourceRefs, stale closure snapshots, failed closure basis, missing validation summaries, and scope mismatches are rejected before downstream handoff trust.",
+            "No CAPEX workflow runtime activation, HTTP routes, frontend routes, physical handoff table, or raw K12/K3/blind corpus material was introduced.",
+            "Evidence: PYTHONPATH=src python3.11 -m pytest -q tests/unit/test_capex_workflow_handoff_manifest.py tests/contract/test_capex_workflow_handoff_manifest_schema.py passed on 2026-06-08."
+          ],
           "taskPath": "codex/tasks/TASK-0566-implement-workflow-handoff-manifest-contract.md",
-          "completedAt": null,
-          "completionTimestampStatus": "not_applicable",
-          "completionTimestampSource": "not_completed"
+          "completedAt": "2026-06-08T00:00:00Z",
+          "completionTimestampStatus": "recorded",
+          "completionTimestampSource": "task_frontmatter"
         },
         {
           "id": "TASK-0571",
@@ -9937,16 +9943,16 @@
         }
       ],
       "estimate": {
-        "percentComplete": 18.2,
-        "completedTasks": 2,
-        "remainingTasks": 9,
+        "percentComplete": 27.3,
+        "completedTasks": 3,
+        "remainingTasks": 8,
         "remainingBlockedOrReviewTasks": 0,
-        "completedWithTimestamps": 0,
-        "completionTimestampCoverage": 0.0,
-        "etaDate": "2026-06-10",
+        "completedWithTimestamps": 1,
+        "completionTimestampCoverage": 33.3,
+        "etaDate": "2026-06-09",
         "etaConfidence": "low",
         "etaSource": "global_completed_at",
-        "label": "ETA 2026-06-10",
+        "label": "ETA 2026-06-09",
         "caveat": "Estimate is based on remaining current-scope task count."
       }
     },
@@ -9977,9 +9983,9 @@
         "docs/planning/CAPEX_V6_GATE_RISK_DECISION_MAP.csv"
       ],
       "counts": {
-        "done": 0,
+        "done": 1,
         "in_progress": 0,
-        "not_started": 30,
+        "not_started": 29,
         "blocked": 0,
         "needs_review": 2,
         "total": 32
@@ -11741,9 +11747,9 @@
           "epicId": "EPIC-144",
           "title": "Add CAPEX projection snapshot and stale-command test harness",
           "plainPurpose": "Implement project-scoped projection snapshots, signed cursor, typed command envelope, stale command rejection.",
-          "sourceStatus": "TODO",
-          "displayStatus": "not_started",
-          "statusReason": "Task is still planned backlog work.",
+          "sourceStatus": "DONE",
+          "displayStatus": "done",
+          "statusReason": "Task file records DONE status and completion or closeout evidence.",
           "why": [
             "Imported from CAPEX v6 source task NU-CB-P0-007 so future work can be executed from repo-native backlog memory without loading the full master package."
           ],
@@ -11789,24 +11795,31 @@
             "source_only_dependency_notes": "W5",
             "recommended_source_branch": "capex/workpage-projection-foundation"
           },
-          "evidence": [],
+          "evidence": [
+            "Added migration 20260608_0015_capex_workpage_projection_snapshots.py, SQLite bootstrap DDL, SQLAlchemy models, runtime schemas, and repositories for capex_workpage_projection_snapshots and capex_workpage_projection_rows.",
+            "Projection snapshots are project-scoped read models with deterministic basis_hash, basis version vector, renderer version, state, payload metadata, and ordered projection rows.",
+            "Added internal signed projection cursor and typed workpage command-envelope guards in onetruth.capex_platform.workpage_projection_commands; invalid signatures, expired cursors, project/scope mismatch, stale/superseded snapshots, and basis mismatch reject before mutation callbacks run.",
+            "Existing command receipt scope handling now recognizes CAPEX workpage command-envelope command names so future callers can reuse the shared idempotency/audit path.",
+            "No public CAPEX workpage API, frontend route, logistics workpage change, runtime activation, or raw K12/K3/blind corpus material was introduced.",
+            "Evidence: PYTHONPATH=src python3.11 -m pytest -q tests/unit/test_capex_workpage_projection_snapshots.py tests/unit/test_capex_workpage_command_envelope.py tests/integration/test_capex_workpage_projection_schema_parity.py tests/unit/test_command_receipts.py passed on 2026-06-08."
+          ],
           "taskPath": "codex/tasks/TASK-0567-add-capex-projection-snapshot-and-stale-command-test-harness.md",
-          "completedAt": null,
-          "completionTimestampStatus": "not_applicable",
-          "completionTimestampSource": "not_completed"
+          "completedAt": "2026-06-08T00:00:00Z",
+          "completionTimestampStatus": "recorded",
+          "completionTimestampSource": "task_frontmatter"
         }
       ],
       "estimate": {
-        "percentComplete": 0.0,
-        "completedTasks": 0,
-        "remainingTasks": 32,
+        "percentComplete": 3.1,
+        "completedTasks": 1,
+        "remainingTasks": 31,
         "remainingBlockedOrReviewTasks": 2,
-        "completedWithTimestamps": 0,
-        "completionTimestampCoverage": 0.0,
-        "etaDate": "2026-06-14",
+        "completedWithTimestamps": 1,
+        "completionTimestampCoverage": 100.0,
+        "etaDate": "2026-06-13",
         "etaConfidence": "low",
         "etaSource": "global_completed_at",
-        "label": "ETA 2026-06-14",
+        "label": "ETA 2026-06-13",
         "caveat": "2 blocked or needs-review task(s) remain."
       }
     },
@@ -18786,10 +18799,10 @@
         "remainingBlockedOrReviewTasks": 0,
         "completedWithTimestamps": 0,
         "completionTimestampCoverage": 0.0,
-        "etaDate": "2026-06-20",
+        "etaDate": "2026-06-19",
         "etaConfidence": "low",
         "etaSource": "global_completed_at",
-        "label": "ETA 2026-06-20",
+        "label": "ETA 2026-06-19",
         "caveat": "Estimate is based on remaining current-scope task count."
       }
     },
@@ -22095,10 +22108,10 @@
         "remainingBlockedOrReviewTasks": 0,
         "completedWithTimestamps": 0,
         "completionTimestampCoverage": 0.0,
-        "etaDate": "2026-06-13",
+        "etaDate": "2026-06-12",
         "etaConfidence": "low",
         "etaSource": "global_completed_at",
-        "label": "ETA 2026-06-13",
+        "label": "ETA 2026-06-12",
         "caveat": "Estimate is based on remaining current-scope task count."
       }
     },

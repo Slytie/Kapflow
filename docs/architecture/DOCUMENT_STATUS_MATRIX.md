@@ -36,6 +36,7 @@ This file prevents stale guidance by classifying major documents and directories
 | `docs/architecture/CAPEX_PROJECT_AUTHORIZATION_CED.md` | AUTHORITATIVE SOURCE | CAPEX project authorization CED and AuthorizedProjectsQuery prototype boundary |
 | `docs/architecture/CAPEX_STORAGE_BLOB_CUSTODY_CED.md` | AUTHORITATIVE SOURCE | CAPEX storage/blob custody CED and future schema boundary |
 | `docs/architecture/CAPEX_SOURCE_REF_AND_CLOSURE_GUARDRAILS.md` | AUTHORITATIVE SOURCE | CAPEX SourceRef resolution and closure/waiver/stale primitive guardrails |
+| `docs/architecture/CAPEX_HANDOFF_AND_PROJECTION_FOUNDATION.md` | AUTHORITATIVE SOURCE | CAPEX handoff manifest, projection snapshot, signed cursor, and stale-command foundation |
 | `docs/architecture/CAPEX_W1_CODE_PATTERN_REGISTER.md` | AUTHORITATIVE SOURCE | CAPEX Wave 1 non-production code pattern register |
 | `docs/architecture/CAPEX_W1_CLOSEOUT_REVIEW.md` | AUTHORITATIVE SOURCE | CAPEX Wave 1 closeout review, decision docket, and master patch posture |
 | `docs/architecture/DOCUMENT_STATUS_MATRIX.md` | AUTHORITATIVE SOURCE | this classification table |

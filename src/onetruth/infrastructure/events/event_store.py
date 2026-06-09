@@ -345,6 +345,64 @@ def create_sqlite_substrate(connection: sqlite3.Connection) -> None:
         CREATE INDEX IF NOT EXISTS ix_capex_closure_snapshots_evaluation
             ON capex_closure_snapshots (closure_gate_evaluation_id);
 
+        CREATE TABLE IF NOT EXISTS capex_workpage_projection_snapshots (
+            projection_snapshot_id TEXT PRIMARY KEY,
+            tenant_id TEXT NOT NULL,
+            domain_id TEXT NOT NULL,
+            project_id TEXT NOT NULL,
+            workpage_kind TEXT NOT NULL,
+            projection_kind TEXT NOT NULL,
+            renderer_version TEXT NOT NULL,
+            basis_version_vector_json TEXT NOT NULL,
+            basis_hash TEXT NOT NULL,
+            state TEXT NOT NULL,
+            payload_metadata_json TEXT NOT NULL,
+            created_by_actor_id TEXT NOT NULL,
+            created_by_actor_type TEXT NOT NULL,
+            stale_reason TEXT,
+            stale_at TEXT,
+            superseded_at TEXT,
+            created_at TEXT NOT NULL DEFAULT (datetime('now')),
+            updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+            FOREIGN KEY (project_id) REFERENCES capex_projects(project_id)
+        );
+
+        CREATE INDEX IF NOT EXISTS ix_capex_workpage_projection_snapshots_scope_state
+            ON capex_workpage_projection_snapshots (
+                tenant_id,
+                domain_id,
+                project_id,
+                workpage_kind,
+                state
+            );
+        CREATE INDEX IF NOT EXISTS ix_capex_workpage_projection_snapshots_basis
+            ON capex_workpage_projection_snapshots (
+                tenant_id,
+                domain_id,
+                project_id,
+                basis_hash
+            );
+
+        CREATE TABLE IF NOT EXISTS capex_workpage_projection_rows (
+            projection_row_id TEXT PRIMARY KEY,
+            projection_snapshot_id TEXT NOT NULL,
+            row_key TEXT NOT NULL,
+            row_order INTEGER NOT NULL,
+            subject_kind TEXT NOT NULL,
+            subject_ref TEXT NOT NULL,
+            row_payload_json TEXT NOT NULL,
+            created_at TEXT NOT NULL DEFAULT (datetime('now')),
+            FOREIGN KEY (projection_snapshot_id) REFERENCES capex_workpage_projection_snapshots(projection_snapshot_id),
+            UNIQUE (projection_snapshot_id, row_key)
+        );
+
+        CREATE INDEX IF NOT EXISTS ix_capex_workpage_projection_rows_snapshot_order
+            ON capex_workpage_projection_rows (
+                projection_snapshot_id,
+                row_order,
+                row_key
+            );
+
         CREATE TABLE IF NOT EXISTS workflow_runs (
             workflow_run_id TEXT PRIMARY KEY,
             project_id TEXT,

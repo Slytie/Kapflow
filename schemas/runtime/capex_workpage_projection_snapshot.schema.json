@@ -1,0 +1,52 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "CapexWorkpageProjectionSnapshot",
+  "type": "object",
+  "required": [
+    "projection_snapshot_id",
+    "tenant_id",
+    "domain_id",
+    "project_id",
+    "workpage_kind",
+    "projection_kind",
+    "renderer_version",
+    "basis_version_vector_json",
+    "basis_hash",
+    "state",
+    "payload_metadata_json",
+    "created_by_actor_id",
+    "created_by_actor_type",
+    "created_at",
+    "updated_at"
+  ],
+  "properties": {
+    "projection_snapshot_id": { "type": "string" },
+    "tenant_id": { "type": "string" },
+    "domain_id": { "type": "string" },
+    "project_id": { "type": "string" },
+    "workpage_kind": { "type": "string" },
+    "projection_kind": { "type": "string" },
+    "renderer_version": { "type": "string" },
+    "basis_version_vector_json": { "type": "object" },
+    "basis_hash": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "state": {
+      "type": "string",
+      "enum": ["current", "stale", "superseded"]
+    },
+    "payload_metadata_json": { "type": "object" },
+    "created_by_actor_id": { "type": "string" },
+    "created_by_actor_type": {
+      "type": "string",
+      "enum": ["human", "agent", "service", "system"]
+    },
+    "stale_reason": { "type": ["string", "null"] },
+    "stale_at": { "type": ["string", "null"], "format": "date-time" },
+    "superseded_at": { "type": ["string", "null"], "format": "date-time" },
+    "created_at": { "type": "string", "format": "date-time" },
+    "updated_at": { "type": "string", "format": "date-time" }
+  },
+  "additionalProperties": false
+}

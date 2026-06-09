@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "CapexWorkpageProjectionRow",
+  "type": "object",
+  "required": [
+    "projection_row_id",
+    "projection_snapshot_id",
+    "row_key",
+    "row_order",
+    "subject_kind",
+    "subject_ref",
+    "row_payload_json",
+    "created_at"
+  ],
+  "properties": {
+    "projection_row_id": { "type": "string" },
+    "projection_snapshot_id": { "type": "string" },
+    "row_key": { "type": "string" },
+    "row_order": { "type": "integer", "minimum": 0 },
+    "subject_kind": { "type": "string" },
+    "subject_ref": { "type": "string" },
+    "row_payload_json": { "type": "object" },
+    "created_at": { "type": "string", "format": "date-time" }
+  },
+  "additionalProperties": false
+}

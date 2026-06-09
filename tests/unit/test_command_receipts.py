@@ -47,6 +47,16 @@ def _connection() -> sqlite3.Connection:
             _scope(("tenant-a", "domain-x", "schedule_planning.v1", "SD-2026-03-13", "weekly-run")),
         ),
         (
+            "capex.workpages.command-envelope.execute",
+            {
+                "project_id": "cp-002",
+                "workpage_kind": "capex-source-review-v0",
+                "command_type": "promote_review_basis",
+                "projection_snapshot_id": "wps-001",
+            },
+            _scope(("cp-002", "capex-source-review-v0", "promote_review_basis", "wps-001")),
+        ),
+        (
             "tasks.create",
             {
                 "workflow_run_id": "wr-001",

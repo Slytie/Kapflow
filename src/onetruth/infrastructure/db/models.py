@@ -531,6 +531,85 @@ class CapexClosureSnapshot(Base):
     )
 
 
+class CapexWorkpageProjectionSnapshot(Base):
+    __tablename__ = "capex_workpage_projection_snapshots"
+    __table_args__ = (
+        Index(
+            "ix_capex_workpage_projection_snapshots_scope_state",
+            "tenant_id",
+            "domain_id",
+            "project_id",
+            "workpage_kind",
+            "state",
+        ),
+        Index(
+            "ix_capex_workpage_projection_snapshots_basis",
+            "tenant_id",
+            "domain_id",
+            "project_id",
+            "basis_hash",
+        ),
+    )
+
+    projection_snapshot_id: Mapped[str] = mapped_column(String(255), primary_key=True)
+    tenant_id: Mapped[str] = mapped_column(String(128), nullable=False)
+    domain_id: Mapped[str] = mapped_column(String(128), nullable=False)
+    project_id: Mapped[str] = mapped_column(
+        String(128),
+        ForeignKey("capex_projects.project_id"),
+        nullable=False,
+    )
+    workpage_kind: Mapped[str] = mapped_column(String(128), nullable=False)
+    projection_kind: Mapped[str] = mapped_column(String(128), nullable=False)
+    renderer_version: Mapped[str] = mapped_column(String(64), nullable=False)
+    basis_version_vector_json: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False)
+    basis_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    state: Mapped[str] = mapped_column(String(32), nullable=False)
+    payload_metadata_json: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False)
+    created_by_actor_id: Mapped[str] = mapped_column(String(128), nullable=False)
+    created_by_actor_type: Mapped[str] = mapped_column(String(32), nullable=False)
+    stale_reason: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    stale_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    superseded_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=utcnow)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        default=utcnow,
+        onupdate=utcnow,
+    )
+
+
+class CapexWorkpageProjectionRow(Base):
+    __tablename__ = "capex_workpage_projection_rows"
+    __table_args__ = (
+        UniqueConstraint(
+            "projection_snapshot_id",
+            "row_key",
+            name="uq_capex_workpage_projection_rows_snapshot_key",
+        ),
+        Index(
+            "ix_capex_workpage_projection_rows_snapshot_order",
+            "projection_snapshot_id",
+            "row_order",
+            "row_key",
+        ),
+    )
+
+    projection_row_id: Mapped[str] = mapped_column(String(255), primary_key=True)
+    projection_snapshot_id: Mapped[str] = mapped_column(
+        String(255),
+        ForeignKey("capex_workpage_projection_snapshots.projection_snapshot_id"),
+        nullable=False,
+    )
+    row_key: Mapped[str] = mapped_column(String(255), nullable=False)
+    row_order: Mapped[int] = mapped_column(Integer, nullable=False)
+    subject_kind: Mapped[str] = mapped_column(String(128), nullable=False)
+    subject_ref: Mapped[str] = mapped_column(String(255), nullable=False)
+    row_payload_json: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=utcnow)
+
+
 class WorkflowRun(Base):
     __tablename__ = "workflow_runs"
     __table_args__ = (

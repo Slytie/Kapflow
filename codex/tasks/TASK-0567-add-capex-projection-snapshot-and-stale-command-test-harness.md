@@ -2,7 +2,8 @@
 id: TASK-0567
 epic: EPIC-144
 title: "Add CAPEX projection snapshot and stale-command test harness"
-status: TODO
+status: DONE
+completed_at: 2026-06-08T00:00:00Z
 owners: ["frontend"]
 reviewers: ["platform", "qa"]
 depends_on: ["TASK-0564", "TASK-0565"]
@@ -61,3 +62,11 @@ Implement project-scoped projection snapshots, signed cursor, typed command enve
 
 ## Notes / decisions
 - Raw project corpora remain off-repo; use only sanitized fixtures, manifests, hashes, and aggregate evidence approved by the relevant fixture/governance task.
+
+## Closeout evidence
+- Added migration `20260608_0015_capex_workpage_projection_snapshots.py`, SQLite bootstrap DDL, SQLAlchemy models, runtime schemas, and repositories for `capex_workpage_projection_snapshots` and `capex_workpage_projection_rows`.
+- Projection snapshots are project-scoped read models with deterministic `basis_hash`, basis version vector, renderer version, state, payload metadata, and ordered projection rows.
+- Added internal signed projection cursor and typed workpage command-envelope guards in `onetruth.capex_platform.workpage_projection_commands`; invalid signatures, expired cursors, project/scope mismatch, stale/superseded snapshots, and basis mismatch reject before mutation callbacks run.
+- Existing command receipt scope handling now recognizes CAPEX workpage command-envelope command names so future callers can reuse the shared idempotency/audit path.
+- No public CAPEX workpage API, frontend route, logistics workpage change, runtime activation, or raw K12/K3/blind corpus material was introduced.
+- Evidence: `PYTHONPATH=src python3.11 -m pytest -q tests/unit/test_capex_workpage_projection_snapshots.py tests/unit/test_capex_workpage_command_envelope.py tests/integration/test_capex_workpage_projection_schema_parity.py tests/unit/test_command_receipts.py` passed on 2026-06-08.

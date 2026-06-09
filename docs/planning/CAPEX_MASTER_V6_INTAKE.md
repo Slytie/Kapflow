@@ -315,6 +315,18 @@
 - Evidence: closure governance unit tests, schema-parity integration tests, schema validation, CAPEX domain/invariant contracts, and progress-data validation passed on 2026-06-08.
 - Closeout posture: `NU-CB-P0-005` closes internal runtime primitives only; closure/promotion UI, public APIs, CAPEX runtime activation, generated artifact validators, and richer workpage command surfaces remain later gated work.
 
+## TASK-0566 closeout evidence
+- Added `capex.workflow_handoff_manifest.v1` and `onetruth.capex_platform.workflow_handoffs` as an internal handoff contract and validation guard.
+- Handoff validation requires exact artifact version basis, pointer generation basis, meaningful SourceRefs, validation summaries, closure evaluation refs, current closure snapshot refs, and task/workpage handoff bindings.
+- Evidence: handoff manifest unit and schema contract tests passed on 2026-06-08.
+- Closeout posture: `NU-CB-P0-006` closes handoff manifest foundation only; authored CAPEX workflow packs, public workflow activation, and runtime/product activation remain later gated work.
+
+## TASK-0567 closeout evidence
+- Added `capex_workpage_projection_snapshots` and `capex_workpage_projection_rows`, including Alembic migration, SQLite bootstrap DDL, SQLAlchemy models, runtime schemas, repositories, and schema-parity coverage.
+- Added signed projection cursor and typed command-envelope guards that reject invalid signatures, expired cursors, scope mismatch, stale/superseded snapshots, and basis mismatch before any mutation callback runs.
+- Evidence: projection snapshot, command-envelope, schema-parity, and command receipt tests passed on 2026-06-08.
+- Closeout posture: `NU-CB-P0-007` closes internal workpage projection/stale-command foundation only; public CAPEX workpage APIs, frontend workpage routes, hydration families, performance batteries, and activation remain later gated work.
+
 ## Current-code blocker mappings
 | Blocker | CAPEX task refs | Current repo surface |
 |---|---|---|
@@ -344,6 +356,8 @@
 | CAPEX Wave 1 pattern and closeout evidence | `TASK-0389`, `TASK-0390` | W1 code pattern register and closeout review are closed as non-production traceability; no runtime activation, source ZIP mutation, or pilot go decision is implied |
 | Source occurrence / SourceRef | `TASK-0268`, `TASK-0391`, `TASK-0407`, `TASK-0428`, `TASK-0564` | `TASK-0564` adds physical occurrence truth and the first SourceRef resolver; broader corpus ingest, source occurrence relations, locator unions, and evidence binding remain future work |
 | Closure and waiver runtime primitives | `TASK-0432`, `TASK-0436`, `TASK-0438`, `TASK-0443`, `TASK-0444`, `TASK-0565` | `TASK-0565` adds waiver/evaluation/snapshot state plus stale recurrence helpers; generated artifact validators, public closure commands, workpage surfaces, and activation remain future work |
+| Workflow handoff manifest foundation | `TASK-0566`, `TASK-0581` | `TASK-0566` adds internal handoff manifest schema and validation guard; authored CAPEX workflow packs and activation remain future work |
+| Workpage projection snapshot and stale-command foundation | `TASK-0451`, `TASK-0453`, `TASK-0460`, `TASK-0462`, `TASK-0567` | `TASK-0567` adds internal project-scoped projection snapshots, signed cursors, command envelopes, and stale-command guards; public APIs, frontend routes, hydration families, and activation remain future work |
 
 ## Verification commands
 - `python3 scripts/import_capex_v6_plan.py check --master-zip <CAPEX_v6_master_zip>`

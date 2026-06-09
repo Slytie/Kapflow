@@ -6,7 +6,7 @@ Plan CAPEX workpage projections, command envelopes, read APIs, and stale-command
 This epic was imported from CAPEX v6 on `2026-06-01` as planning backlog only. It does not activate CAPEX runtime behavior by itself.
 
 ## Status
-Imported as TODO backlog unless an individual task records completed repo evidence.
+Imported as TODO backlog unless an individual task records completed repo evidence. `TASK-0567` is closed as of 2026-06-08 with internal projection snapshot runtime state, signed cursor helpers, and stale-command guards; public CAPEX workpages, read APIs, and frontend routes remain open.
 
 ## In scope
 - Source task families/counts: ARCH:20, ART:1, NU:1, RF:1, WP:9.
@@ -61,7 +61,7 @@ Context pack:
 - `TASK-0466` (`ARCH-W5-S18`) - Workpage family registry
 - `TASK-0467` (`ARCH-W5-S19`) - Projection observability/admin view design
 - `TASK-0468` (`ARCH-W5-S20`) - Wave 5 refactor/closeout pass
-- `TASK-0567` (`NU-CB-P0-007`) - Add CAPEX projection snapshot and stale-command test harness
+- `TASK-0567` (`NU-CB-P0-007`) - Add CAPEX projection snapshot and stale-command test harness - DONE 2026-06-08
 
 ## Acceptance criteria
 - Every listed task preserves its v6 source row, acceptance gate, dependency notes, and raw-data boundary.

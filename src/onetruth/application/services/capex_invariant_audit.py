@@ -128,8 +128,8 @@ CAPEX_INVARIANT_REGISTRY: tuple[CapexInvariant, ...] = (
         invariant_id="capex.known_gap.capex_activation_downstream_governance",
         title="CAPEX activation and downstream governance gates",
         gate_mode="known_gap",
-        task_refs=("TASK-0263", "TASK-0385", "TASK-0386", "TASK-0387", "TASK-0388", "TASK-0389", "TASK-0390", "TASK-0563"),
-        description="The durable project anchor, direct memberships, first project child APIs, selector/dashboard slice, project-scope helper, official pointer-family substrate, domain manifests, approval-effect registry shadow parity, project authorization CED, projection-backed AuthorizedProjectsQuery, physical authorization projection runtime state, storage/blob custody CED, pilot storage gate checklist, W1 code pattern register, and W1 closeout review exist, but pointer-promotion policy checks, real pilot storage evidence or waiver, source governance dependencies, richer CAPEX workpages, and activation remain blocked.",
+        task_refs=("TASK-0263", "TASK-0385", "TASK-0386", "TASK-0387", "TASK-0388", "TASK-0389", "TASK-0390", "TASK-0563", "TASK-0566", "TASK-0567"),
+        description="The durable project anchor, direct memberships, first project child APIs, selector/dashboard slice, project-scope helper, official pointer-family substrate, domain manifests, approval-effect registry shadow parity, project authorization CED, projection-backed AuthorizedProjectsQuery, physical authorization projection runtime state, storage/blob custody CED, pilot storage gate checklist, W1 code pattern register, W1 closeout review, handoff manifest foundation, and projection stale-command foundation exist, but pointer-promotion policy checks, real pilot storage evidence or waiver, source governance dependencies, authored CAPEX workflow packs, public CAPEX workpages, and activation remain blocked.",
     ),
     CapexInvariant(
         invariant_id="capex.known_gap.source_occurrence_sourceref",
