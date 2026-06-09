@@ -10,6 +10,12 @@ conditions, but these definitions are intended for CAPEX real-project modules.
 - `docs/architecture/CAPEX_EVIDENCE_STATUS_TRANSITION_CONTRACT.md` records the
   accepted planning contract for evidence-link status vocabulary and transition
   rules under `SME-RP-G004`.
+- `docs/architecture/CAPEX_SOURCE_OCCURRENCE_CONTEXT_AND_TRUST_CONTRACT.md`
+  records the accepted planning contract for source occurrence context and
+  trust taxonomy under `SME-RP-G004`.
+- `docs/architecture/CAPEX_WORKPAGE_TO_TASK_GENERATION_CONTRACT.md` records the
+  accepted planning contract for workpage-to-task generation rules under
+  `SME-RP-G005`.
 
 ## Evidence / evidence-link statuses
 

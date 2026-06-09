@@ -2,7 +2,8 @@
 id: TASK-0653
 epic: EPIC-144
 title: "Define workpage-to-task generation rules"
-status: TODO
+status: DONE
+completed_at: "2026-06-09T09:48:40Z"
 owners: ["frontend", "capex-architecture"]
 reviewers: ["backend", "qa", "capex-sme"]
 depends_on: ["TASK-0567"]
@@ -44,6 +45,13 @@ Define workpage-to-task generation rules for real-project blocker cases.
 - Workpage commands create canonical work where needed.
 - Workpage projections cannot set closure, evidence sufficiency, commercial status, or official project status.
 - Stale command guards remain required before any mutation.
+
+## Closeout evidence
+
+- Added `docs/architecture/CAPEX_WORKPAGE_TO_TASK_GENERATION_CONTRACT.md` as the accepted planning contract for `SME-RP-G005`.
+- Added machine-readable `workpage_task_generation_rules` entries to `SME_RP_ACCEPTANCE_REGISTER.yaml`, including blocker types, canonical outputs, required guards, workpage authority limits, and stale-command rejection conditions.
+- Extended CAPEX real-project acceptance contract tests to pin the workpage-to-task generation contract and official-status guardrails.
+- Non-activation boundary preserved: no public CAPEX workpage API, frontend route, runtime command implementation, migration, raw corpus import, or CAPEX product activation was added.
 
 ## Source row mapping
 

@@ -12,7 +12,7 @@ ART-007, WP-001, WP-002, WP-003, WP-004, WP-005, WP-006, WP-007, ... plus SME-RP
 - This does not add public CAPEX workpage APIs, frontend routes, or CAPEX workpage activation.
 
 ## SME-RP addendum rows
-- `TASK-0653` defines workpage-to-task generation rules under `SME-RP-G005`.
+- `TASK-0653` is closed with the planning-only workpage-to-task generation contract for `SME-RP-G005`.
 - Workpages may propose tasks, flags, approvals, artifact deltas, events, or pointer requests; they never set official project status by projection update or generic status command.
 
 ## Load first

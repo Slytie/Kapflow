@@ -11,23 +11,23 @@
   "summary": {
     "epicCount": 17,
     "taskCount": 396,
-    "done": 69,
+    "done": 71,
     "in_progress": 0,
-    "not_started": 322,
+    "not_started": 320,
     "blocked": 1,
     "needs_review": 4,
     "total": 396,
     "estimate": {
-      "percentComplete": 17.4,
-      "completedTasks": 69,
-      "remainingTasks": 327,
+      "percentComplete": 17.9,
+      "completedTasks": 71,
+      "remainingTasks": 325,
       "remainingBlockedOrReviewTasks": 5,
-      "completedWithTimestamps": 37,
-      "completionTimestampCoverage": 53.6,
-      "etaDate": "2026-08-01",
+      "completedWithTimestamps": 39,
+      "completionTimestampCoverage": 54.9,
+      "etaDate": "2026-07-29",
       "etaConfidence": "medium",
       "etaSource": "epic_completed_at",
-      "label": "ETA 2026-08-01",
+      "label": "ETA 2026-07-29",
       "caveat": "5 blocked or needs-review task(s) remain."
     }
   },
@@ -4693,7 +4693,7 @@
       "title": "CAPEX source occurrence and evidence",
       "plainPurpose": "Build the content identity, source occurrence, extraction, and evidence-binding foundations.",
       "displayStatus": "needs_review",
-      "reviewPosture": "Review posture follows task evidence and curated blocker overrides.",
+      "reviewPosture": "EPIC-141 source occurrence resolver plus TASK-0652 source-context/trust planning contract are closed; broader corpus ingest, extraction, evidence binding, source occurrence relations, raw-data governance, and review/backlog items remain open.",
       "dependencies": [
         "EPIC-140",
         "EPIC-141"
@@ -4716,9 +4716,9 @@
         "docs/planning/capex_real_project_acceptance/SME_RP_ACCEPTANCE_REGISTER.yaml"
       ],
       "counts": {
-        "done": 2,
+        "done": 3,
         "in_progress": 0,
-        "not_started": 50,
+        "not_started": 49,
         "blocked": 0,
         "needs_review": 1,
         "total": 53
@@ -7671,9 +7671,9 @@
           "epicId": "EPIC-141",
           "title": "Add occurrence context profile and source trust taxonomy",
           "plainPurpose": "Add a document occurrence context profile and source/data-source trust taxonomy for planning and later implementation.",
-          "sourceStatus": "TODO",
-          "displayStatus": "not_started",
-          "statusReason": "Task is still planned backlog work.",
+          "sourceStatus": "DONE",
+          "displayStatus": "done",
+          "statusReason": "Task file records DONE status and completion or closeout evidence.",
           "why": [
             "SourceRefs need context about where evidence came from and what trust mode applies. This is a general source governance condition for CAPEX real-project work."
           ],
@@ -7720,20 +7720,25 @@
             "gate_refs": "SME-RP-G004",
             "source_conditions": "6-A2;6-A3;13-A3;14-D9"
           },
-          "evidence": [],
+          "evidence": [
+            "Added docs/architecture/CAPEX_SOURCE_OCCURRENCE_CONTEXT_AND_TRUST_CONTRACT.md as the accepted planning contract for SME-RP-G004.",
+            "Added machine-readable source_occurrence_context_profile entries to SME_RP_ACCEPTANCE_REGISTER.yaml, including required context fields, source origin modes, trust modes, separation rules, and overwrite guardrails.",
+            "Extended CAPEX real-project acceptance contract tests to pin the source occurrence context and trust taxonomy.",
+            "Non-activation boundary preserved: no ingestion runtime, external connector activation, public route, migration, raw corpus import, or CAPEX product activation was added."
+          ],
           "taskPath": "codex/tasks/TASK-0652-add-occurrence-context-profile-and-source-trust-taxonomy.md",
-          "completedAt": null,
-          "completionTimestampStatus": "not_applicable",
-          "completionTimestampSource": "not_completed"
+          "completedAt": "2026-06-09T09:48:40Z",
+          "completionTimestampStatus": "recorded",
+          "completionTimestampSource": "task_frontmatter"
         }
       ],
       "estimate": {
-        "percentComplete": 3.8,
-        "completedTasks": 2,
-        "remainingTasks": 51,
+        "percentComplete": 5.7,
+        "completedTasks": 3,
+        "remainingTasks": 50,
         "remainingBlockedOrReviewTasks": 1,
-        "completedWithTimestamps": 1,
-        "completionTimestampCoverage": 50.0,
+        "completedWithTimestamps": 2,
+        "completionTimestampCoverage": 66.7,
         "etaDate": "2026-06-17",
         "etaConfidence": "low",
         "etaSource": "global_completed_at",
@@ -10726,7 +10731,7 @@
       "title": "CAPEX workpages and projections",
       "plainPurpose": "Plan CAPEX workpage projections, command envelopes, read APIs, and stale-command protections.",
       "displayStatus": "blocked",
-      "reviewPosture": "CAPEX review screens remain blocked until project-scoped foundations and risk/CEO workflow dependencies are ready.",
+      "reviewPosture": "CAPEX review screens remain blocked even though TASK-0653 workpage-to-task generation planning truth is closed; public CAPEX workpages, read APIs, frontend routes, richer projection families, and risk/CEO workflow dependencies remain blocked/open.",
       "dependencies": [
         "EPIC-142",
         "EPIC-143",
@@ -10750,9 +10755,9 @@
         "docs/planning/capex_real_project_acceptance/SME_RP_ACCEPTANCE_REGISTER.yaml"
       ],
       "counts": {
-        "done": 1,
+        "done": 2,
         "in_progress": 0,
-        "not_started": 30,
+        "not_started": 29,
         "blocked": 0,
         "needs_review": 2,
         "total": 33
@@ -12580,9 +12585,9 @@
           "epicId": "EPIC-144",
           "title": "Define workpage-to-task generation rules",
           "plainPurpose": "Define workpage-to-task generation rules for real-project blocker cases.",
-          "sourceStatus": "TODO",
-          "displayStatus": "not_started",
-          "statusReason": "Task is still planned backlog work.",
+          "sourceStatus": "DONE",
+          "displayStatus": "done",
+          "statusReason": "Task file records DONE status and completion or closeout evidence.",
           "why": [
             "CAPEX workpages may expose blockers and command surfaces, but they cannot become official state stores. Missing evidence, responsibility, revision, cost, safety, and contradiction cases need canonical task routing."
           ],
@@ -12629,19 +12634,24 @@
             "gate_refs": "SME-RP-G005",
             "source_conditions": "7-A2;7-A3"
           },
-          "evidence": [],
+          "evidence": [
+            "Added docs/architecture/CAPEX_WORKPAGE_TO_TASK_GENERATION_CONTRACT.md as the accepted planning contract for SME-RP-G005.",
+            "Added machine-readable workpage_task_generation_rules entries to SME_RP_ACCEPTANCE_REGISTER.yaml, including blocker types, canonical outputs, required guards, workpage authority limits, and stale-command rejection conditions.",
+            "Extended CAPEX real-project acceptance contract tests to pin the workpage-to-task generation contract and official-status guardrails.",
+            "Non-activation boundary preserved: no public CAPEX workpage API, frontend route, runtime command implementation, migration, raw corpus import, or CAPEX product activation was added."
+          ],
           "taskPath": "codex/tasks/TASK-0653-define-workpage-to-task-generation-rules.md",
-          "completedAt": null,
-          "completionTimestampStatus": "not_applicable",
-          "completionTimestampSource": "not_completed"
+          "completedAt": "2026-06-09T09:48:40Z",
+          "completionTimestampStatus": "recorded",
+          "completionTimestampSource": "task_frontmatter"
         }
       ],
       "estimate": {
-        "percentComplete": 3.0,
-        "completedTasks": 1,
-        "remainingTasks": 32,
+        "percentComplete": 6.1,
+        "completedTasks": 2,
+        "remainingTasks": 31,
         "remainingBlockedOrReviewTasks": 2,
-        "completedWithTimestamps": 1,
+        "completedWithTimestamps": 2,
         "completionTimestampCoverage": 100.0,
         "etaDate": "2026-06-14",
         "etaConfidence": "low",
@@ -23208,10 +23218,10 @@
         "remainingBlockedOrReviewTasks": 0,
         "completedWithTimestamps": 1,
         "completionTimestampCoverage": 100.0,
-        "etaDate": "2026-06-14",
+        "etaDate": "2026-06-13",
         "etaConfidence": "low",
         "etaSource": "global_completed_at",
-        "label": "ETA 2026-06-14",
+        "label": "ETA 2026-06-13",
         "caveat": "Estimate is based on remaining current-scope task count."
       }
     },

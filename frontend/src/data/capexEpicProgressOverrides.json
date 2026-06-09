@@ -49,9 +49,12 @@
       "displayStatus": "done",
       "reviewPosture": "EPIC-140 project/access foundation plus SME-RP scope/RACI addenda are closed with project anchors, direct memberships, project child APIs, selector/dashboard, project-scope helper, official pointer families, domain manifests, W1 closeout evidence, rebuildable authorization projections, TASK-0649 capex_scope planning truth, and TASK-0650 RACI role-permission planning truth; CAPEX activation remains blocked by later source-governance, workflow/workpage, storage evidence or waiver, release/capacity, and production-preflight gates."
     },
+    "EPIC-141": {
+      "reviewPosture": "EPIC-141 source occurrence resolver plus TASK-0652 source-context/trust planning contract are closed; broader corpus ingest, extraction, evidence binding, source occurrence relations, raw-data governance, and review/backlog items remain open."
+    },
     "EPIC-144": {
       "displayStatus": "blocked",
-      "reviewPosture": "CAPEX review screens remain blocked until project-scoped foundations and risk/CEO workflow dependencies are ready."
+      "reviewPosture": "CAPEX review screens remain blocked even though TASK-0653 workpage-to-task generation planning truth is closed; public CAPEX workpages, read APIs, frontend routes, richer projection families, and risk/CEO workflow dependencies remain blocked/open."
     },
     "EPIC-152": {
       "displayStatus": "blocked",

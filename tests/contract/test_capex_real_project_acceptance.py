@@ -15,6 +15,12 @@ RACI_CONTRACT_PATH = ROOT / "docs/architecture/CAPEX_RACI_ROLE_PERMISSION_MATRIX
 EVIDENCE_CONTRACT_PATH = (
     ROOT / "docs/architecture/CAPEX_EVIDENCE_STATUS_TRANSITION_CONTRACT.md"
 )
+SOURCE_CONTEXT_CONTRACT_PATH = (
+    ROOT / "docs/architecture/CAPEX_SOURCE_OCCURRENCE_CONTEXT_AND_TRUST_CONTRACT.md"
+)
+WORKPAGE_GENERATION_CONTRACT_PATH = (
+    ROOT / "docs/architecture/CAPEX_WORKPAGE_TO_TASK_GENERATION_CONTRACT.md"
+)
 TASK_DIR = ROOT / "codex/tasks"
 FRONTMATTER_RE = re.compile(r"\A---\n(?P<body>.*?)\n---\n", re.DOTALL)
 
@@ -51,6 +57,42 @@ EXPECTED_EVIDENCE_STATUSES = [
     "invalid",
     "insufficient",
     "accepted_with_residual_risk",
+]
+EXPECTED_SOURCE_ORIGIN_MODES = [
+    "primary",
+    "derivative",
+    "generated",
+    "external",
+    "imported",
+]
+EXPECTED_SOURCE_TRUST_MODES = [
+    "observed",
+    "referenced",
+    "imported",
+    "reviewed",
+    "officially_adopted",
+]
+EXPECTED_WORKPAGE_BLOCKER_TYPES = [
+    "missing_evidence",
+    "missing_responsibility",
+    "revision_required",
+    "commercial_cost_gap",
+    "safety_readiness_gap",
+    "contradictory_evidence",
+]
+EXPECTED_WORKPAGE_CANONICAL_OUTPUTS = [
+    "task",
+    "flag",
+    "approval",
+    "artifact_delta",
+    "event",
+    "pointer_request",
+]
+EXPECTED_WORKPAGE_REQUIRED_GUARDS = [
+    "stale_basis_check",
+    "source_binding",
+    "actor_authority",
+    "audit_evidence",
 ]
 
 
@@ -100,6 +142,8 @@ def test_sme_rp_register_uses_generalized_gate_namespace() -> None:
         SCOPE_CONTRACT_PATH,
         RACI_CONTRACT_PATH,
         EVIDENCE_CONTRACT_PATH,
+        SOURCE_CONTEXT_CONTRACT_PATH,
+        WORKPAGE_GENERATION_CONTRACT_PATH,
         ROOT / "docs/status/CURRENT_FOCUS.md",
         ROOT / "docs/status/DECISIONS_SINCE_LAST.md",
     ]
@@ -365,5 +409,113 @@ def test_evidence_status_vocabulary_and_transitions_are_pinned() -> None:
         "`valid` may satisfy closure.",
         "`accepted_with_residual_risk` may satisfy closure only with explicit residual-risk acceptance or waiver.",
         "`proposed`, `under_review`, `partly_valid`, `contradictory`, `obsolete`, `invalid`, and `insufficient` cannot satisfy closure by themselves.",
+    ):
+        assert required in normalized
+
+
+def test_source_occurrence_context_profile_and_trust_taxonomy_are_pinned() -> None:
+    register = _load_register()
+    profile = register["source_occurrence_context_profile"]
+    text = SOURCE_CONTEXT_CONTRACT_PATH.read_text(encoding="utf-8")
+    normalized = re.sub(r"\s+", " ", text)
+
+    assert profile["gate_id"] == "SME-RP-G004"
+    assert profile["contract_ref"] == (
+        "docs/architecture/CAPEX_SOURCE_OCCURRENCE_CONTEXT_AND_TRUST_CONTRACT.md"
+    )
+    assert (
+        profile["source_truth_boundary"]
+        == "observed_source_truth_not_reviewed_project_truth"
+    )
+    assert profile["source_origin_modes"] == EXPECTED_SOURCE_ORIGIN_MODES
+    assert profile["evidence_source_trust_modes"] == EXPECTED_SOURCE_TRUST_MODES
+    assert set(profile["required_context_fields"]) >= {
+        "source_occurrence_id",
+        "tenant_id",
+        "domain",
+        "project_id",
+        "capex_scope_ref",
+        "source_ref",
+        "original_source_role",
+        "package_workstream_ref",
+        "source_state_hint",
+        "extraction_state",
+        "redaction_state",
+        "source_origin_mode",
+        "evidence_source_trust_mode",
+    }
+    assert profile["separation_rules"] == [
+        "source_occurrence_is_observed_source_truth",
+        "source_ref_points_to_meaningful_source_occurrence",
+        "evidence_binding_links_claim_to_reviewed_source_context",
+        "review_records_evidence_status",
+        "approval_records_governed_decision",
+        "official_adoption_requires_canonical_artifact_event_pointer_evidence",
+    ]
+    assert set(profile["cannot_overwrite_capex_state"]) >= {
+        "raw_file",
+        "external_status",
+        "imported_status",
+        "generated_artifact",
+        "ai_output",
+        "workpage_state",
+    }
+    assert profile["later_scope_gate_refs"] == ["SME-RP-G011"]
+
+    for mode in EXPECTED_SOURCE_ORIGIN_MODES + EXPECTED_SOURCE_TRUST_MODES:
+        assert f"`{mode}`" in text
+    for required in (
+        "Source occurrence context is observed source truth, not reviewed project truth.",
+        "Source occurrence, SourceRef, evidence binding, review, approval, and official adoption remain separate.",
+        "No source occurrence field, imported metadata value, external status, generated artifact, AI output, workpage state, raw file, or local folder state can overwrite CAPEX state directly.",
+        "`officially_adopted` is permitted only after the source-backed claim has been reviewed and adopted through the canonical one-truth substrate.",
+    ):
+        assert required in normalized
+
+
+def test_workpage_to_task_generation_rules_preserve_canonical_truth() -> None:
+    register = _load_register()
+    rules = register["workpage_task_generation_rules"]
+    text = WORKPAGE_GENERATION_CONTRACT_PATH.read_text(encoding="utf-8")
+    normalized = re.sub(r"\s+", " ", text)
+
+    assert rules["gate_id"] == "SME-RP-G005"
+    assert rules["contract_ref"] == (
+        "docs/architecture/CAPEX_WORKPAGE_TO_TASK_GENERATION_CONTRACT.md"
+    )
+    assert rules["authority_boundary"] == "workpages_never_set_official_project_status"
+    assert rules["blocker_types"] == EXPECTED_WORKPAGE_BLOCKER_TYPES
+    assert rules["allowed_canonical_outputs"] == EXPECTED_WORKPAGE_CANONICAL_OUTPUTS
+    assert rules["required_guards"] == EXPECTED_WORKPAGE_REQUIRED_GUARDS
+    assert set(rules["cannot_set_by_workpage_projection"]) == {
+        "official_project_status",
+        "closure",
+        "evidence_sufficiency",
+        "commercial_status",
+        "safety_readiness",
+    }
+    assert rules["disallowed_command_families"] == ["generic_status_command"]
+    assert set(rules["required_rejection_conditions"]) >= {
+        "invalid_signature",
+        "expired_cursor",
+        "stale_projection_snapshot",
+        "superseded_projection_snapshot",
+        "basis_hash_mismatch",
+        "unresolved_source_ref",
+        "missing_actor_authority",
+        "missing_audit_evidence",
+    }
+
+    for value in (
+        EXPECTED_WORKPAGE_BLOCKER_TYPES
+        + EXPECTED_WORKPAGE_CANONICAL_OUTPUTS
+        + EXPECTED_WORKPAGE_REQUIRED_GUARDS
+    ):
+        assert f"`{value}`" in text
+    for required in (
+        "They never set official project status by projection update, row state, local UI state, or generic status command.",
+        "A workpage-originated blocker must become one or more canonical outputs before it can affect official readiness or closure:",
+        "Workpage projections cannot set closure, evidence sufficiency, commercial status, safety readiness, or official project status.",
+        "Generic status commands are not allowed.",
     ):
         assert required in normalized

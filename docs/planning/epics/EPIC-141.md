@@ -6,7 +6,7 @@ Build the content identity, source occurrence, extraction, and evidence-binding 
 This epic was imported from CAPEX v6 on `2026-06-01` as planning backlog only. It does not activate CAPEX runtime behavior by itself.
 
 ## Status
-Imported as TODO backlog unless an individual task records completed repo evidence. `TASK-0564` is closed as of 2026-06-08 with physical source occurrence/runtime resolver evidence; broader corpus ingest, extraction, evidence binding, source occurrence relation work, and the SME-RP source-context/trust addendum remain open.
+Imported as TODO backlog unless an individual task records completed repo evidence. `TASK-0564` is closed as of 2026-06-08 with physical source occurrence/runtime resolver evidence, and `TASK-0652` is closed with the SME-RP source occurrence context and trust contract. Broader corpus ingest, extraction, evidence binding, and source occurrence relation work remain open.
 
 ## In scope
 - Source task families/counts: ARCH:38, INGEST:9, NU:1, RF:3, SME-RP:1, V5:1.
@@ -83,14 +83,14 @@ Context pack:
 - `TASK-0427` (`ARCH-W3-S017`) - Extraction QA report artifact
 - `TASK-0428` (`ARCH-W3-S018`) - SourceRef resolution validation vector
 - `TASK-0564` (`NU-CB-P0-004`) - Add physical source_occurrence and sourceRef resolver - DONE 2026-06-08
-- `TASK-0652` (`SME-RP:TASK-0629`) - Add occurrence context profile and source trust taxonomy
+- `TASK-0652` (`SME-RP:TASK-0629`) - DONE - Add occurrence context profile and source trust taxonomy
 
 ## Historical/reconciled aliases
 - `TASK-0578` (`V5-TASK-007`) -> `TASK-0564`, `TASK-0428` - Add SourceRef resolution contract/tests
 
 ## SME-RP real-project acceptance addendum
 - Source occurrence context and trust taxonomy are general evidence-source rules, not K12-specific row logic.
-- Source claims must retain occurrence context such as original source role, package/workstream, source-state hint, extraction state, redaction state, and whether the observed source is primary, derivative, generated, external, or imported.
+- `TASK-0652` records source occurrence context as observed source truth, not reviewed project truth, with exact origin and trust modes for later implementation.
 - `SME-RP-G004` binds evidence trust to officialness checks: raw files, external statuses, AI drafts, and generated artifacts cannot become official claims without canonical artifact, event, pointer, and review evidence.
 
 ## Acceptance criteria

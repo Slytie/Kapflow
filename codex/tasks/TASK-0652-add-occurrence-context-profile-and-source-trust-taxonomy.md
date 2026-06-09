@@ -2,7 +2,8 @@
 id: TASK-0652
 epic: EPIC-141
 title: "Add occurrence context profile and source trust taxonomy"
-status: TODO
+status: DONE
+completed_at: "2026-06-09T09:48:40Z"
 owners: ["capex-platform", "data-governance"]
 reviewers: ["backend", "security", "capex-sme"]
 depends_on: ["TASK-0564"]
@@ -44,6 +45,13 @@ Add a document occurrence context profile and source/data-source trust taxonomy 
 - Source trust modes are general CAPEX evidence-source rules.
 - Source occurrence, evidence binding, review, approval, and official adoption remain separate.
 - External or imported status cannot overwrite CAPEX state directly.
+
+## Closeout evidence
+
+- Added `docs/architecture/CAPEX_SOURCE_OCCURRENCE_CONTEXT_AND_TRUST_CONTRACT.md` as the accepted planning contract for `SME-RP-G004`.
+- Added machine-readable `source_occurrence_context_profile` entries to `SME_RP_ACCEPTANCE_REGISTER.yaml`, including required context fields, source origin modes, trust modes, separation rules, and overwrite guardrails.
+- Extended CAPEX real-project acceptance contract tests to pin the source occurrence context and trust taxonomy.
+- Non-activation boundary preserved: no ingestion runtime, external connector activation, public route, migration, raw corpus import, or CAPEX product activation was added.
 
 ## Source row mapping
 

@@ -28,6 +28,11 @@ with existing repo-native task IDs.
 - `SME_RP_APPROVAL_WITH_CONDITIONS_SIGN_OFF.md` - conditional,
   module-specific, non-activation sign-off wording for `SME-RP-G001`.
 - `ANNEX_A_STATUS_MODEL_AND_RACI_DRAFT.md` - status and role-permission draft.
+- `docs/architecture/CAPEX_SOURCE_OCCURRENCE_CONTEXT_AND_TRUST_CONTRACT.md` -
+  accepted source occurrence context and trust taxonomy contract for
+  `SME-RP-G004`.
+- `docs/architecture/CAPEX_WORKPAGE_TO_TASK_GENERATION_CONTRACT.md` - accepted
+  workpage-to-task generation contract for `SME-RP-G005`.
 - `ANNEX_B_MANDATORY_FIELDS_AND_ESCALATION_THRESHOLDS_DRAFT.md` - commercial
   fields and escalation threshold families.
 - `ANNEX_C_REAL_PROJECT_BINDING_ACCEPTANCE_CATALOGUE.md` - K12 fixture cases as

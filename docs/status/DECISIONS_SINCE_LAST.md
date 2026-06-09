@@ -2,6 +2,13 @@
 
 Record any decisions made since the last session so a fresh Codex run can rehydrate quickly.
 
+## 2026-06-09 (SME-RP source context and workpage generation closeout)
+- Source-context decision: `TASK-0652` adds `docs/architecture/CAPEX_SOURCE_OCCURRENCE_CONTEXT_AND_TRUST_CONTRACT.md`; source occurrence context is observed source truth, not reviewed project truth.
+- Trust-taxonomy decision: source origin modes are `primary`, `derivative`, `generated`, `external`, and `imported`; evidence-source trust modes are `observed`, `referenced`, `imported`, `reviewed`, and `officially_adopted`.
+- Workpage-generation decision: `TASK-0653` adds `docs/architecture/CAPEX_WORKPAGE_TO_TASK_GENERATION_CONTRACT.md`; workpage-originated blockers must route through canonical tasks, flags, approvals, artifact deltas, events, or pointer requests before affecting readiness or closure.
+- Workpage authority decision: workpages never set official project status, closure, evidence sufficiency, commercial status, or safety readiness by projection state or generic status command.
+- Activation decision: these closeouts add no ingestion runtime, external connector activation, public CAPEX workpage API, frontend route, migration, raw corpus import, or CAPEX product activation.
+
 ## 2026-06-09 (SME-RP RACI and evidence-status closeout)
 - RACI decision: `TASK-0650` adds `docs/architecture/CAPEX_RACI_ROLE_PERMISSION_MATRIX.md`; RACI is business responsibility only, not runtime authorization authority.
 - Permission-source decision: runtime permission authority remains `project_memberships`, `capex_project_authorization`, canonical approvals, audited events, immutable artifacts, and promotion pointers.

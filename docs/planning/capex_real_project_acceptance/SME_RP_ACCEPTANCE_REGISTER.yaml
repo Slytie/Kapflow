@@ -123,6 +123,98 @@ evidence_status_vocabulary:
     - handover_note
     - supplier_statement
     - generated_artifact
+source_occurrence_context_profile:
+  gate_id: SME-RP-G004
+  contract_ref: docs/architecture/CAPEX_SOURCE_OCCURRENCE_CONTEXT_AND_TRUST_CONTRACT.md
+  source_truth_boundary: observed_source_truth_not_reviewed_project_truth
+  required_context_fields:
+    - source_occurrence_id
+    - tenant_id
+    - domain
+    - project_id
+    - capex_scope_ref
+    - source_ref
+    - original_source_role
+    - package_workstream_ref
+    - source_state_hint
+    - extraction_state
+    - redaction_state
+    - source_origin_mode
+    - evidence_source_trust_mode
+    - observed_at
+    - custody_ref
+  source_origin_modes:
+    - primary
+    - derivative
+    - generated
+    - external
+    - imported
+  evidence_source_trust_modes:
+    - observed
+    - referenced
+    - imported
+    - reviewed
+    - officially_adopted
+  separation_rules:
+    - source_occurrence_is_observed_source_truth
+    - source_ref_points_to_meaningful_source_occurrence
+    - evidence_binding_links_claim_to_reviewed_source_context
+    - review_records_evidence_status
+    - approval_records_governed_decision
+    - official_adoption_requires_canonical_artifact_event_pointer_evidence
+  cannot_overwrite_capex_state:
+    - raw_file
+    - external_status
+    - imported_status
+    - generated_artifact
+    - ai_output
+    - workpage_state
+    - local_folder_state
+    - pr_po_invoice_state
+    - supplier_statement
+    - handover_note
+  later_scope_gate_refs:
+    - SME-RP-G011
+workpage_task_generation_rules:
+  gate_id: SME-RP-G005
+  contract_ref: docs/architecture/CAPEX_WORKPAGE_TO_TASK_GENERATION_CONTRACT.md
+  authority_boundary: workpages_never_set_official_project_status
+  blocker_types:
+    - missing_evidence
+    - missing_responsibility
+    - revision_required
+    - commercial_cost_gap
+    - safety_readiness_gap
+    - contradictory_evidence
+  allowed_canonical_outputs:
+    - task
+    - flag
+    - approval
+    - artifact_delta
+    - event
+    - pointer_request
+  required_guards:
+    - stale_basis_check
+    - source_binding
+    - actor_authority
+    - audit_evidence
+  cannot_set_by_workpage_projection:
+    - official_project_status
+    - closure
+    - evidence_sufficiency
+    - commercial_status
+    - safety_readiness
+  disallowed_command_families:
+    - generic_status_command
+  required_rejection_conditions:
+    - invalid_signature
+    - expired_cursor
+    - stale_projection_snapshot
+    - superseded_projection_snapshot
+    - basis_hash_mismatch
+    - unresolved_source_ref
+    - missing_actor_authority
+    - missing_audit_evidence
 acceptance_gates:
   - gate_id: SME-RP-G001
     gate_name: Approval-with-conditions and signature limitation recorded

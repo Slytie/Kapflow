@@ -15,7 +15,7 @@ INGEST-001, INGEST-002, INGEST-003, INGEST-004, INGEST-005, INGEST-006, INGEST-0
 - This does not close broader corpus ingest, extraction, source occurrence relations, source locator unions, or evidence binding tasks.
 
 ## SME-RP addendum rows
-- `TASK-0652` generalizes source occurrence context and trust taxonomy for real-project evidence-source rules under `SME-RP-G004`.
+- `TASK-0652` is closed with the planning-only source occurrence context and trust taxonomy contract for `SME-RP-G004`.
 - Preserve source occurrence context and evidence trust distinctions without converting imported K12 fixture rows into product namespaces.
 
 ## Load first
