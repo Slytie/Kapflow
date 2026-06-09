@@ -88,6 +88,7 @@ type CompletionTrendPoint = {
   cumulativeCompleted: number;
   percentComplete: number;
   isUndatedBaseline: boolean;
+  isAsOfMarker: boolean;
 };
 
 type CompletionTrend = {
@@ -223,7 +224,11 @@ function etaLabel(dateKey: string): string {
   return `ETA ${formatDateKey(dateKey)}`;
 }
 
-function buildCompletionTrend(tasks: CapexTask[], totalTasks: number): CompletionTrend {
+function buildCompletionTrend(
+  tasks: CapexTask[],
+  totalTasks: number,
+  asOfDate: string
+): CompletionTrend {
   const timestampedDoneTasks = tasks.filter(
     (task) => task.displayStatus === "done" && task.completedAt
   );
@@ -254,24 +259,39 @@ function buildCompletionTrend(tasks: CapexTask[], totalTasks: number): Completio
       completedOnPoint: undatedDoneCount,
       cumulativeCompleted,
       percentComplete: totalTasks > 0 ? (cumulativeCompleted / totalTasks) * 100 : 0,
-      isUndatedBaseline: true
+      isUndatedBaseline: true,
+      isAsOfMarker: false
     });
   }
 
-  Object.keys(completionsByDay)
-    .sort()
-    .forEach((day) => {
-      const completedOnPoint = completionsByDay[day];
-      cumulativeCompleted += completedOnPoint;
-      points.push({
-        key: day,
-        label: formatDateKey(day),
-        completedOnPoint,
-        cumulativeCompleted,
-        percentComplete: totalTasks > 0 ? (cumulativeCompleted / totalTasks) * 100 : 0,
-        isUndatedBaseline: false
-      });
+  const completionDays = Object.keys(completionsByDay).sort();
+  completionDays.forEach((day) => {
+    const completedOnPoint = completionsByDay[day];
+    cumulativeCompleted += completedOnPoint;
+    points.push({
+      key: day,
+      label: formatDateKey(day),
+      completedOnPoint,
+      cumulativeCompleted,
+      percentComplete: totalTasks > 0 ? (cumulativeCompleted / totalTasks) * 100 : 0,
+      isUndatedBaseline: false,
+      isAsOfMarker: false
     });
+  });
+
+  const lastCompletionDay = completionDays[completionDays.length - 1];
+  const normalizedAsOfDate = /^\d{4}-\d{2}-\d{2}$/.test(asOfDate) ? asOfDate : "";
+  if (normalizedAsOfDate && (!lastCompletionDay || normalizedAsOfDate > lastCompletionDay)) {
+    points.push({
+      key: `as-of-${normalizedAsOfDate}`,
+      label: formatDateKey(normalizedAsOfDate),
+      completedOnPoint: 0,
+      cumulativeCompleted,
+      percentComplete: totalTasks > 0 ? (cumulativeCompleted / totalTasks) * 100 : 0,
+      isUndatedBaseline: false,
+      isAsOfMarker: true
+    });
+  }
 
   if (points.length === 0) {
     points.push({
@@ -280,7 +300,8 @@ function buildCompletionTrend(tasks: CapexTask[], totalTasks: number): Completio
       completedOnPoint: 0,
       cumulativeCompleted: 0,
       percentComplete: 0,
-      isUndatedBaseline: false
+      isUndatedBaseline: false,
+      isAsOfMarker: false
     });
   }
 
@@ -510,6 +531,8 @@ function CompletionTrendChart({
                   className={
                     point.isUndatedBaseline
                       ? "capex-completion-trend__point capex-completion-trend__point--baseline"
+                      : point.isAsOfMarker
+                        ? "capex-completion-trend__point capex-completion-trend__point--as-of"
                       : "capex-completion-trend__point"
                   }
                   cx={x}
@@ -592,7 +615,7 @@ export function CapexEpicProgressPage(): JSX.Element {
   );
   const epicStatusCounts = countByStatus(progressData.epics);
   const completionTrend = useMemo(
-    () => buildCompletionTrend(allTasks, progressData.summary.taskCount),
+    () => buildCompletionTrend(allTasks, progressData.summary.taskCount, progressData.meta.lastUpdated),
     [allTasks]
   );
 

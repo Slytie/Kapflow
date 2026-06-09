@@ -32,6 +32,7 @@
 - `docs/planning/TEST_STRATEGY.md`
 - `docs/planning/TEST_MATRIX.md`
 - `docs/planning/TDD_IMPLEMENTATION_PLAN.md`
+- `docs/planning/CAPEX_CB2_SEMANTIC_TEST_BACKLOG.yaml`
 - `docs/planning/MERGER_BACKLOG.md`
 - `docs/planning/checklists/CAPEX_PILOT_STORAGE_GATE.md`
 
@@ -49,6 +50,7 @@
 - `docs/architecture/CAPEX_STORAGE_BLOB_CUSTODY_CED.md`
 - `docs/architecture/CAPEX_SOURCE_REF_AND_CLOSURE_GUARDRAILS.md`
 - `docs/architecture/CAPEX_HANDOFF_AND_PROJECTION_FOUNDATION.md`
+- `docs/architecture/CAPEX_INTERFACE_BURDEN_POLICY.md`
 - `docs/architecture/CAPEX_W1_CODE_PATTERN_REGISTER.md`
 - `docs/architecture/CAPEX_W1_CLOSEOUT_REVIEW.md`
 - `docs/architecture/CAPEX_DOMAIN_RUNTIME_MANIFESTS.md`

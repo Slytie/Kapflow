@@ -58,7 +58,7 @@ def test_epic139_red_interlocks_remain_lifted_after_closure_handoff() -> None:
 
     assert epics["EPIC-143"]["displayStatus"] == "in_progress"
     assert epics["EPIC-150"]["displayStatus"] == "not_started"
-    assert epics["EPIC-151"]["displayStatus"] == "not_started"
+    assert epics["EPIC-151"]["displayStatus"] == "in_progress"
     for epic_id in ("EPIC-143", "EPIC-150", "EPIC-151"):
         assert "Gated while EPIC-139 remains RED" not in epics[epic_id]["reviewPosture"]
 

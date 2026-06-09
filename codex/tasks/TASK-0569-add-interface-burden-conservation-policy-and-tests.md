@@ -2,7 +2,8 @@
 id: TASK-0569
 epic: EPIC-151
 title: "Add interface-burden conservation policy and tests"
-status: TODO
+status: DONE
+completed_at: 2026-06-09T00:00:00Z
 owners: ["platform"]
 reviewers: ["architect", "qa"]
 depends_on: []
@@ -61,3 +62,11 @@ Ensure interface responsibility is owned, transferred, waived, accepted residual
 
 ## Notes / decisions
 - Raw project corpora remain off-repo; use only sanitized fixtures, manifests, hashes, and aggregate evidence approved by the relevant fixture/governance task.
+
+## Closeout evidence
+- Added `onetruth.capex_platform.interface_burden` as an internal policy helper for states `owned`, `transferred`, `waived`, `accepted_residual`, and `open`.
+- The helper fails closed when responsibility lacks an owner, transfer target, waiver, residual-risk acceptance, or open follow-up owner, and requires traceable basis refs for non-open states.
+- Open and transferred obligations return deterministic follow-up task specs as data only; this slice does not create runtime tasks or expose public workpage/API surfaces.
+- Added `docs/architecture/CAPEX_INTERFACE_BURDEN_POLICY.md` and contract coverage proving the policy, registration, and non-activation boundary.
+- No CAPEX runtime/product activation, migrations, HTTP routes, frontend routes, raw corpus material, or second task system was introduced.
+- Evidence: `PYTHONPATH=src python3.11 -m pytest -q tests/unit/test_capex_interface_burden_policy.py tests/contract/test_capex_interface_burden_policy_doc.py` passed on 2026-06-09.

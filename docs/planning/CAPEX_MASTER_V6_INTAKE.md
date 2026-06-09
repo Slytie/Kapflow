@@ -327,6 +327,20 @@
 - Evidence: projection snapshot, command-envelope, schema-parity, and command receipt tests passed on 2026-06-08.
 - Closeout posture: `NU-CB-P0-007` closes internal workpage projection/stale-command foundation only; public CAPEX workpage APIs, frontend workpage routes, hydration families, performance batteries, and activation remain later gated work.
 
+## TASK-0568 closeout evidence
+- Added `capex_semantic` as a repo-native pytest marker with auto-classification from `tests/helpers/suite_markers.py`.
+- Added `docs/planning/CAPEX_CB2_SEMANTIC_TEST_BACKLOG.yaml` tracking `CB2-T001` through `CB2-T014` with current repo evidence or explicit future-phase disposition.
+- Added `make capex-semantic-tests`, a visible `.github/workflows/main.yml` CAPEX semantic lane, and real-owner `.github/CODEOWNERS` entries.
+- Evidence: CAPEX semantic manifest and CODEOWNERS gate contract tests passed on 2026-06-09.
+- Closeout posture: `NU-CB-P0-008` closes quality-gate evidence only; hosted branch-protection settings, richer review-tier automation, public CAPEX routes, raw corpus use, and CAPEX runtime activation remain later or operator-managed scope.
+
+## TASK-0569 closeout evidence
+- Added `onetruth.capex_platform.interface_burden` with accepted states `owned`, `transferred`, `waived`, `accepted_residual`, and `open`.
+- The helper fails closed when responsibility lacks an owner, transfer target, waiver, residual acceptance, traceable basis, or open follow-up owner, and returns deterministic follow-up task specs without creating runtime tasks.
+- Added `docs/architecture/CAPEX_INTERFACE_BURDEN_POLICY.md` as the authoritative policy record.
+- Evidence: interface-burden unit and document contract tests passed on 2026-06-09.
+- Closeout posture: `NU-CB-P1-009` closes internal policy/prototype evidence only; public interface queues, workflow/workpage task routing, raw corpus use, and CAPEX runtime activation remain later gated work.
+
 ## Current-code blocker mappings
 | Blocker | CAPEX task refs | Current repo surface |
 |---|---|---|
@@ -358,6 +372,8 @@
 | Closure and waiver runtime primitives | `TASK-0432`, `TASK-0436`, `TASK-0438`, `TASK-0443`, `TASK-0444`, `TASK-0565` | `TASK-0565` adds waiver/evaluation/snapshot state plus stale recurrence helpers; generated artifact validators, public closure commands, workpage surfaces, and activation remain future work |
 | Workflow handoff manifest foundation | `TASK-0566`, `TASK-0581` | `TASK-0566` adds internal handoff manifest schema and validation guard; authored CAPEX workflow packs and activation remain future work |
 | Workpage projection snapshot and stale-command foundation | `TASK-0451`, `TASK-0453`, `TASK-0460`, `TASK-0462`, `TASK-0567` | `TASK-0567` adds internal project-scoped projection snapshots, signed cursors, command envelopes, and stale-command guards; public APIs, frontend routes, hydration families, and activation remain future work |
+| CAPEX semantic test and CODEOWNERS gate | `TASK-0568` | `capex_semantic` marker, CB2 backlog manifest, focused Make/GitHub lane, and real-owner CODEOWNERS entries are present; hosted branch protection and richer review automation remain external or later scope |
+| Interface burden conservation | `TASK-0569` | `onetruth.capex_platform.interface_burden` and `docs/architecture/CAPEX_INTERFACE_BURDEN_POLICY.md` require responsibility to be owned, transferred, waived, accepted residual, or open with follow-up; public routing remains future work |
 
 ## Verification commands
 - `python3 scripts/import_capex_v6_plan.py check --master-zip <CAPEX_v6_master_zip>`

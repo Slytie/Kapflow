@@ -90,6 +90,23 @@ readiness_prerequisites:
       - docs/planning/epics/EPIC-144.md
       - docs/planning/CAPEX_V6_CONVERSION_MAP.csv
       - docs/architecture/CAPEX_HANDOFF_AND_PROJECTION_FOUNDATION.md
+  - prerequisite_id: capex.semantic_quality_gate
+    description: CAPEX semantic marker, CB2 backlog manifest, focused Make/GitHub lane, and real-owner CODEOWNERS evidence exist through TASK-0568; hosted branch-protection and richer review-tier automation remain future/operator scope.
+    status: satisfied
+    task_refs:
+      - TASK-0568
+    source_refs:
+      - docs/planning/epics/EPIC-149.md
+      - docs/planning/CAPEX_CB2_SEMANTIC_TEST_BACKLOG.yaml
+      - .github/CODEOWNERS
+  - prerequisite_id: capex.interface_burden_policy
+    description: Internal interface-burden conservation helper and architecture policy exist through TASK-0569; public interface queues and workflow/workpage routing remain future work.
+    status: satisfied
+    task_refs:
+      - TASK-0569
+    source_refs:
+      - docs/planning/epics/EPIC-151.md
+      - docs/architecture/CAPEX_INTERFACE_BURDEN_POLICY.md
   - prerequisite_id: capex.production_preflight
     description: Release, capacity, restore, pilot, and production-preflight evidence remain blocked or future scope.
     status: open

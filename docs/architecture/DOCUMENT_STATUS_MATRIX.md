@@ -37,6 +37,7 @@ This file prevents stale guidance by classifying major documents and directories
 | `docs/architecture/CAPEX_STORAGE_BLOB_CUSTODY_CED.md` | AUTHORITATIVE SOURCE | CAPEX storage/blob custody CED and future schema boundary |
 | `docs/architecture/CAPEX_SOURCE_REF_AND_CLOSURE_GUARDRAILS.md` | AUTHORITATIVE SOURCE | CAPEX SourceRef resolution and closure/waiver/stale primitive guardrails |
 | `docs/architecture/CAPEX_HANDOFF_AND_PROJECTION_FOUNDATION.md` | AUTHORITATIVE SOURCE | CAPEX handoff manifest, projection snapshot, signed cursor, and stale-command foundation |
+| `docs/architecture/CAPEX_INTERFACE_BURDEN_POLICY.md` | AUTHORITATIVE SOURCE | CAPEX interface-burden conservation policy and follow-up task-spec boundary |
 | `docs/architecture/CAPEX_W1_CODE_PATTERN_REGISTER.md` | AUTHORITATIVE SOURCE | CAPEX Wave 1 non-production code pattern register |
 | `docs/architecture/CAPEX_W1_CLOSEOUT_REVIEW.md` | AUTHORITATIVE SOURCE | CAPEX Wave 1 closeout review, decision docket, and master patch posture |
 | `docs/architecture/DOCUMENT_STATUS_MATRIX.md` | AUTHORITATIVE SOURCE | this classification table |
@@ -52,6 +53,7 @@ This file prevents stale guidance by classifying major documents and directories
 | `docs/planning/TEST_STRATEGY.md` | AUTHORITATIVE SOURCE | test portfolio and CI rules |
 | `docs/planning/TEST_MATRIX.md` | AUTHORITATIVE SOURCE | core invariant-to-test mapping |
 | `docs/planning/TDD_IMPLEMENTATION_PLAN.md` | AUTHORITATIVE SOURCE | implementation working mode and test-first rules |
+| `docs/planning/CAPEX_CB2_SEMANTIC_TEST_BACKLOG.yaml` | AUTHORITATIVE SOURCE | CAPEX CB2 semantic test backlog and evidence tracking manifest |
 | `docs/planning/MERGER_BACKLOG.md` | BACKLOG / DEFERRED | preserves deferred CompanyOS ideas and caveats |
 | `docs/planning/checklists/CAPEX_PILOT_STORAGE_GATE.md` | AUTHORITATIVE SOURCE | CAPEX pilot storage gate checklist; blocked until evidence or waiver |
 | `docs/planning/epics/*.md` | AUTHORITATIVE SOURCE | active epic definitions |

@@ -24,7 +24,7 @@ def test_capex_invariant_registry_has_expected_gate_modes() -> None:
     modes = {entry.gate_mode for entry in CAPEX_INVARIANT_REGISTRY}
 
     assert modes == {"hard_gate", "known_gap"}
-    assert sum(1 for entry in CAPEX_INVARIANT_REGISTRY if entry.gate_mode == "hard_gate") == 12
+    assert sum(1 for entry in CAPEX_INVARIANT_REGISTRY if entry.gate_mode == "hard_gate") == 14
     assert sum(1 for entry in CAPEX_INVARIANT_REGISTRY if entry.gate_mode == "known_gap") == 3
     assert all(entry.task_refs for entry in CAPEX_INVARIANT_REGISTRY)
 
@@ -41,8 +41,8 @@ def test_capex_invariant_audit_report_records_known_gaps_without_failing(
     assert manifest["status"] == "passed"
     assert capex_invariant_audit_exit_code(manifest) == 0
     assert manifest["summary"] == {
-        "total": 15,
-        "hard_gate_passed": 12,
+        "total": 17,
+        "hard_gate_passed": 14,
         "hard_gate_failed": 0,
         "known_gaps": 3,
         "advisory": 0,
@@ -57,6 +57,8 @@ def test_capex_invariant_audit_report_records_known_gaps_without_failing(
     assert statuses["capex.pr009.backup_manifest_skeleton"] == "passed"
     assert statuses["capex.pr010.lab_auth_smoke"] == "passed"
     assert statuses["capex.pr011.lab_vm_deploy_pipeline"] == "passed"
+    assert statuses["capex.nu008.semantic_tests_codeowners"] == "passed"
+    assert statuses["capex.nu009.interface_burden_conserved"] == "passed"
     details = {
         check["invariant_id"]: check["details"] for check in manifest["checks"]
     }

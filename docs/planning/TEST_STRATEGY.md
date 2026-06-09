@@ -107,6 +107,7 @@ The repo now includes an initial executable TDD harness:
 - `tests/acceptance/` - acceptance evidence checks
 - `tests/security/` - cross-scope and policy-gate negatives
 - `tests/helpers/suite_markers.py` - repo-native logistics regression marker manifest used by `platform-substrate-tests` and `logistics-regression-tests`
+- `docs/planning/CAPEX_CB2_SEMANTIC_TEST_BACKLOG.yaml` - CAPEX CB2 semantic test backlog and evidence manifest used by the `capex_semantic` marker and `capex-semantic-tests` lane
 
 Use `docs/planning/TDD_IMPLEMENTATION_PLAN.md` for the repo-native working order and commands.
 
@@ -118,6 +119,7 @@ Use `docs/planning/TDD_IMPLEMENTATION_PLAN.md` for the repo-native working order
 - Contract tests (where applicable)
 - "Replay smoke": small set of golden histories for changed workflow logic
 - Domain-boundary grouping: platform substrate tests must be runnable separately from logistics regression tests.
+- CAPEX semantic grouping: source-of-truth CAPEX changes must keep the CB2 semantic backlog tracked and run the visible `capex-semantic-tests` lane.
 
 ### Post-merge (slower)
 - Integration tests with real deps

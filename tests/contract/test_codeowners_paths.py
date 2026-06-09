@@ -9,12 +9,19 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 CODEOWNERS_PATH = REPO_ROOT / ".github/CODEOWNERS"
 EXPECTED_PATTERNS = {
     "/.github/",
+    "/docs/architecture/CAPEX_INTERFACE_BURDEN_POLICY.md",
+    "/docs/planning/CAPEX_CB2_SEMANTIC_TEST_BACKLOG.yaml",
     "/schemas/",
     "/docs/architecture/",
     "/docs/workflows/",
     "/src/",
+    "/src/onetruth/capex_platform/",
     "/scripts/",
     "/tests/",
+    "/tests/contract/test_capex_interface_burden_policy_doc.py",
+    "/tests/contract/test_capex_semantic_codeowners_gates.py",
+    "/tests/contract/test_capex_semantic_test_suite.py",
+    "/tests/unit/test_capex_interface_burden_policy.py",
     "/frontend/",
     "*",
 }

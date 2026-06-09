@@ -2,7 +2,8 @@
 id: TASK-0568
 epic: EPIC-149
 title: "Add CAPEX semantic test suite and CODEOWNERS gates"
-status: TODO
+status: DONE
+completed_at: 2026-06-09T00:00:00Z
 owners: ["qa"]
 reviewers: ["platform", "architect"]
 depends_on: []
@@ -61,3 +62,11 @@ Add semantic test markers, required CAPEX review owners, and missing CAPEX tests
 
 ## Notes / decisions
 - Raw project corpora remain off-repo; use only sanitized fixtures, manifests, hashes, and aggregate evidence approved by the relevant fixture/governance task.
+
+## Closeout evidence
+- Added repo-native `capex_semantic` pytest marker classification through `tests/helpers/suite_markers.py` and `tests/conftest.py`.
+- Added `docs/planning/CAPEX_CB2_SEMANTIC_TEST_BACKLOG.yaml` tracking `CB2-T001` through `CB2-T014` with repo evidence or explicit future-phase disposition.
+- Added `make capex-semantic-tests` and `.github/workflows/main.yml` CAPEX semantic CI grouping without weakening existing broad gates.
+- Added real-owner CAPEX semantic CODEOWNERS entries using `@tylerclark` and contract coverage proving the paths and lane remain exposed.
+- No CAPEX runtime/product activation, public routes, frontend routes, hosted branch-protection claim, or raw corpus material was introduced.
+- Evidence: `PYTHONPATH=src python3.11 -m pytest -q tests/contract/test_capex_semantic_test_suite.py tests/contract/test_capex_semantic_codeowners_gates.py` passed on 2026-06-09.

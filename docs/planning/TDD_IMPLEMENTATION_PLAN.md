@@ -71,6 +71,7 @@ Do **not** let `tests/helpers/`, `scripts/`, or generated derivative folders bec
 - `tests/security/` - cross-scope and policy-gate negatives
 - `tests/property/` - cross-trace invariants
 - `tests/integration/` - machine-usable repo/trace checks
+- `make capex-semantic-tests` - focused CAPEX semantic safety and review-gate lane backed by `docs/planning/CAPEX_CB2_SEMANTIC_TEST_BACKLOG.yaml`
 
 ## Stable acceptance mapping
 Each Schedule Planning acceptance scenario now has a dedicated oracle trace:

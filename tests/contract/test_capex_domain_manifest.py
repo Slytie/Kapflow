@@ -19,8 +19,10 @@ EXPECTED_DISABLED_CAPABILITIES = {
     "capex.workpages",
 }
 EXPECTED_PREREQUISITES = {
+    "capex.interface_burden_policy",
     "capex.production_preflight",
     "capex.project_authorization_model",
+    "capex.semantic_quality_gate",
     "capex.source_occurrence_governance",
     "capex.storage_custody_gate",
     "capex.workflow_catalog",
@@ -104,6 +106,8 @@ def test_capex_domain_manifest_prerequisites_link_future_tasks() -> None:
         "TASK-0388",
         "TASK-0391",
         "TASK-0563",
+        "TASK-0568",
+        "TASK-0569",
         "TASK-0283",
         "TASK-0289",
     } <= prerequisite_task_refs

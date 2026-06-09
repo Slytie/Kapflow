@@ -85,7 +85,7 @@ def test_capex_domain_manifest_validates_under_domain_manifest_schema() -> None:
     assert len(manifest.workflows) == 0
     assert len(manifest.workpages) == 0
     assert len(manifest.side_effects) == 0
-    assert len(manifest.readiness_prerequisites) == 6
+    assert len(manifest.readiness_prerequisites) == 8
     assert len(manifest.disabled_capabilities) == 5
 
 

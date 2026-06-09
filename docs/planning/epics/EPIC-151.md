@@ -7,6 +7,7 @@ This epic was imported from CAPEX v6 on `2026-06-01` as planning backlog only. I
 
 ## Status
 Imported as TODO backlog unless an individual task records completed repo evidence.
+`TASK-0569` is closed as of 2026-06-09 with the internal CAPEX interface-burden conservation policy helper, architecture doc, and tests.
 
 ## In scope
 - Source task families/counts: ARCH:24, ART:1, NU:1, WFLOW:1.

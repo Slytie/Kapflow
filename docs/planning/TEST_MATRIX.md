@@ -26,6 +26,7 @@ It is intentionally written so a fresh-session Codex run can:
 | I5 One truth system (authority chain) | "shadow truth" stores, summaries outrank evidence, drift in generated artifacts | schema + contract + policy tests | `tests/contract/*schema*`, CI check in `docs/ops/ci_required_checks.md` |
 | I6 Fully-agentive debug slice preserves canonical authority | agent-only state, approval bypass, invisible stage work | replay + acceptance + security | `tests/replay/*schedule_agentive*`, `tests/acceptance/*schedule_agentive*`, `tests/security/agent/*approval_bypass*` |
 | I7 Conditional task spawning stays explicit and bounded | hidden branching, duplicate child tasks on retry, runaway loops | unit + integration + runtime scenarios | `tests/unit/*spawn*`, `tests/integration/*idempotency*`, `tests/runtime/scenarios/*spawn*` |
+| CAPEX interface burden conservation | interface responsibility disappears during transfer, waiver, residual acceptance, or open follow-up routing | unit + contract | `tests/unit/test_capex_interface_burden_policy.py`, `tests/contract/test_capex_interface_burden_policy_doc.py` |
 
 > **Rule:** If a change touches an invariant, add or update the tests listed for that invariant.
 
@@ -139,6 +140,12 @@ Current domain-boundary split coverage:
 - `make platform-substrate-tests` runs `-m "not logistics_regression"` over explicit platform substrate files.
 - `make logistics-regression-tests` runs `-m logistics_regression` over the stable logistics contract/golden handoff subset; broader marked logistics tests remain runnable by file path or marker during focused domain work.
 - This is a minimal EPIC-139 split and does not replace the future broader marker taxonomy planned under `TASK-0492`.
+
+Current CAPEX semantic gate coverage:
+- `docs/planning/CAPEX_CB2_SEMANTIC_TEST_BACKLOG.yaml` tracks `CB2-T001` through `CB2-T014` with repo evidence or future-phase disposition.
+- `pytest.ini` registers `capex_semantic`, and `tests/helpers/suite_markers.py` auto-applies it from a central manifest.
+- `make capex-semantic-tests` runs the focused semantic lane used by `.github/workflows/main.yml`.
+- `docs/architecture/CAPEX_INTERFACE_BURDEN_POLICY.md` records that interface obligations must be owned, transferred, waived, accepted residual, or open with a follow-up.
 
 Current runtime tests assert:
 - canonical row creation for `workflow_runs`, `task_runs`, `human_tasks`

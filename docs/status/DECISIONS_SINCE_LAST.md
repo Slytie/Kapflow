@@ -2,6 +2,12 @@
 
 Record any decisions made since the last session so a fresh Codex run can rehydrate quickly.
 
+## 2026-06-09 (EPIC-149/151 semantic gate and interface burden foundation)
+- Semantic-gate decision: `TASK-0568` adds `capex_semantic`, `docs/planning/CAPEX_CB2_SEMANTIC_TEST_BACKLOG.yaml`, `make capex-semantic-tests`, a visible GitHub Actions lane, and real-owner CODEOWNERS entries as repo-native quality gate evidence.
+- CB2 backlog decision: CB2 rows with current repo evidence are marked `repo_evidence_green`; later fixture/workflow rows remain `tracked_future_phase` rather than being invented or silently closed.
+- Interface-burden decision: `TASK-0569` adds `onetruth.capex_platform.interface_burden` and `docs/architecture/CAPEX_INTERFACE_BURDEN_POLICY.md`; interface obligations are conserved only when owned, transferred, waived, accepted residual, or open with a traceable follow-up.
+- Activation decision: this tranche adds no migrations, public routes, frontend routes, hosted branch-protection claim, raw corpus material, or CAPEX runtime/product activation.
+
 ## 2026-06-08 (EPIC-143/144 handoff and projection foundation)
 - Handoff decision: `TASK-0566` adds `capex.workflow_handoff_manifest.v1` and `onetruth.capex_platform.workflow_handoffs` as an internal handoff contract requiring exact artifact versions, pointer generations, meaningful SourceRefs, validation summaries, current closure snapshots, and task/workpage bindings before downstream workflow handoff can be trusted.
 - Projection decision: `TASK-0567` adds `capex_workpage_projection_snapshots` and `capex_workpage_projection_rows` as project-scoped read models with deterministic basis hashes, plus signed projection cursors and typed command-envelope guards that reject stale or mismatched commands before mutation.

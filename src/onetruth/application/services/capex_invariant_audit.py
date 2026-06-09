@@ -125,6 +125,22 @@ CAPEX_INVARIANT_REGISTRY: tuple[CapexInvariant, ...] = (
         evaluator=lambda repo_root: _check_workpage_default_registry_source(repo_root),
     ),
     CapexInvariant(
+        invariant_id="capex.nu008.semantic_tests_codeowners",
+        title="CAPEX semantic test suite and CODEOWNERS gate are active",
+        gate_mode="hard_gate",
+        task_refs=("TASK-0568",),
+        description="CAPEX semantic tests must have a marker, focused Make/CI lane, CB2 backlog manifest, and real-owner CODEOWNERS entries.",
+        evaluator=lambda repo_root: _check_capex_semantic_gate_source(repo_root),
+    ),
+    CapexInvariant(
+        invariant_id="capex.nu009.interface_burden_conserved",
+        title="Interface burden conservation policy is present",
+        gate_mode="hard_gate",
+        task_refs=("TASK-0569",),
+        description="Interface obligations must be owned, transferred, waived, accepted residual, or open with a traceable follow-up.",
+        evaluator=lambda repo_root: _check_capex_interface_burden_source(repo_root),
+    ),
+    CapexInvariant(
         invariant_id="capex.known_gap.capex_activation_downstream_governance",
         title="CAPEX activation and downstream governance gates",
         gate_mode="known_gap",
@@ -812,6 +828,100 @@ def _check_lab_vm_deploy_pipeline_source(repo_root: Path) -> AuditEvaluation:
             "live_deploy_evidence_recorded": False,
             "task_closeout_status": "BLOCKED_PENDING_LIVE_GCP_EVIDENCE",
         },
+    )
+
+
+def _check_capex_semantic_gate_source(repo_root: Path) -> AuditEvaluation:
+    pytest_text = (repo_root / "pytest.ini").read_text(encoding="utf-8")
+    makefile_text = (repo_root / "Makefile").read_text(encoding="utf-8")
+    workflow_text = (repo_root / ".github/workflows/main.yml").read_text(
+        encoding="utf-8"
+    )
+    codeowners_text = (repo_root / ".github/CODEOWNERS").read_text(encoding="utf-8")
+    marker_text = (repo_root / "tests/helpers/suite_markers.py").read_text(
+        encoding="utf-8"
+    )
+    conftest_text = (repo_root / "tests/conftest.py").read_text(encoding="utf-8")
+    manifest_text = (
+        repo_root / "docs/planning/CAPEX_CB2_SEMANTIC_TEST_BACKLOG.yaml"
+    ).read_text(encoding="utf-8")
+    semantic_test_text = (
+        repo_root / "tests/contract/test_capex_semantic_test_suite.py"
+    ).read_text(encoding="utf-8")
+    codeowners_test_text = (
+        repo_root / "tests/contract/test_capex_semantic_codeowners_gates.py"
+    ).read_text(encoding="utf-8")
+    required_markers = {
+        "pytest_marker": "capex_semantic:" in pytest_text,
+        "make_lane": "capex-semantic-tests:" in makefile_text
+        and "-m capex_semantic tests/contract tests/unit" in makefile_text,
+        "workflow_lane": "capex-semantic-tests" in workflow_text
+        and "make PYTHON=python capex-semantic-tests" in workflow_text,
+        "marker_manifest": "CAPEX_SEMANTIC_TEST_GLOBS" in marker_text
+        and "def is_capex_semantic_test_path(" in marker_text
+        and "pytest.mark.capex_semantic" in conftest_text,
+        "cb2_manifest": "CB2-T001" in manifest_text
+        and "CB2-T014" in manifest_text
+        and "tracking_only_no_capex_activation" in manifest_text
+        and "repo_evidence_green" in manifest_text
+        and "tracked_future_phase" in manifest_text,
+        "codeowners_paths": "/docs/planning/CAPEX_CB2_SEMANTIC_TEST_BACKLOG.yaml"
+        in codeowners_text
+        and "/tests/contract/test_capex_semantic_test_suite.py" in codeowners_text
+        and "@tylerclark" in codeowners_text,
+        "contract_tests": "test_capex_cb2_semantic_backlog_tracks_all_rows_in_order"
+        in semantic_test_text
+        and "test_main_workflow_exposes_capex_semantic_grouping"
+        in codeowners_test_text,
+    }
+    missing = [key for key, present in required_markers.items() if not present]
+    return AuditEvaluation(
+        passed=not missing,
+        details={"missing_markers": missing},
+    )
+
+
+def _check_capex_interface_burden_source(repo_root: Path) -> AuditEvaluation:
+    source_text = (
+        repo_root / "src/onetruth/capex_platform/interface_burden.py"
+    ).read_text(encoding="utf-8")
+    doc_text = (
+        repo_root / "docs/architecture/CAPEX_INTERFACE_BURDEN_POLICY.md"
+    ).read_text(encoding="utf-8")
+    unit_test_text = (
+        repo_root / "tests/unit/test_capex_interface_burden_policy.py"
+    ).read_text(encoding="utf-8")
+    contract_test_text = (
+        repo_root / "tests/contract/test_capex_interface_burden_policy_doc.py"
+    ).read_text(encoding="utf-8")
+    required_markers = {
+        "states": all(
+            marker in source_text
+            for marker in (
+                "owned",
+                "transferred",
+                "waived",
+                "accepted_residual",
+                "open",
+            )
+        ),
+        "validator": "def validate_interface_burden(" in source_text
+        and "missing_traceable_basis_refs" in source_text
+        and "def require_interface_burden_conserved(" in source_text,
+        "follow_up_specs": "InterfaceBurdenFollowUpTask" in source_text
+        and "capex.interface_transfer_acceptance" in source_text,
+        "doc_boundary": "Interface responsibility must not disappear" in doc_text
+        and "does not create a second task system" in doc_text
+        and "CAPEX runtime activation disabled" in doc_text,
+        "tests_exist": "test_transfer_creates_deterministic_acceptance_follow_up_without_mutating_runtime"
+        in unit_test_text
+        and "test_capex_interface_burden_policy_records_conservation_states"
+        in contract_test_text,
+    }
+    missing = [key for key, present in required_markers.items() if not present]
+    return AuditEvaluation(
+        passed=not missing,
+        details={"missing_markers": missing},
     )
 
 

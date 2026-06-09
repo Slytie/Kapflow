@@ -7,6 +7,9 @@ Purpose:
 ## Imported source rows
 TEST-001, TEST-002, TEST-004, QD-001, QD-002, QD-003, QD-004, QD-005, ... (70 tasks total)
 
+## Current closeout notes
+- `TASK-0568` is closed as of 2026-06-09: the repo now has a `capex_semantic` pytest marker, `docs/planning/CAPEX_CB2_SEMANTIC_TEST_BACKLOG.yaml`, `make capex-semantic-tests`, a visible GitHub Actions lane, and real-owner CODEOWNERS coverage. This is quality-gate evidence only, not CAPEX activation.
+
 ## Load first
 - `docs/planning/epics/EPIC-149.md`
 - `docs/planning/CAPEX_MASTER_V6_INTAKE.md`

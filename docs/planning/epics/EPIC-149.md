@@ -7,6 +7,7 @@ This epic was imported from CAPEX v6 on `2026-06-01` as planning backlog only. I
 
 ## Status
 Imported as TODO backlog unless an individual task records completed repo evidence.
+`TASK-0568` is closed as of 2026-06-09 with the `capex_semantic` marker, CB2 semantic backlog manifest, focused Make/GitHub lane, and real-owner CODEOWNERS evidence.
 
 ## In scope
 - Source task families/counts: ARCH:22, NU:1, QD:44, TEST:3.

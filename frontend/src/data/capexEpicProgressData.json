@@ -3,7 +3,7 @@
   "meta": {
     "title": "CAPEX Epic Progress",
     "subtitle": "Plain-language roadmap for the repo-native CAPEX planning backlog.",
-    "lastUpdated": "2026-06-08",
+    "lastUpdated": "2026-06-09",
     "localOnly": true,
     "sourceNote": "Generated from docs/planning/epics and codex/tasks with curated review-posture overrides.",
     "codexRule": "When a CAPEX task is completed, set status: DONE, add completed_at in ISO 8601 timezone form, add completion/closeout evidence, and regenerate this progress data in the same change."
@@ -11,23 +11,23 @@
   "summary": {
     "epicCount": 17,
     "taskCount": 379,
-    "done": 63,
+    "done": 65,
     "in_progress": 0,
-    "not_started": 311,
+    "not_started": 309,
     "blocked": 1,
     "needs_review": 4,
     "total": 379,
     "estimate": {
-      "percentComplete": 16.6,
-      "completedTasks": 63,
-      "remainingTasks": 316,
+      "percentComplete": 17.2,
+      "completedTasks": 65,
+      "remainingTasks": 314,
       "remainingBlockedOrReviewTasks": 5,
-      "completedWithTimestamps": 31,
-      "completionTimestampCoverage": 49.2,
-      "etaDate": "2026-07-29",
+      "completedWithTimestamps": 33,
+      "completionTimestampCoverage": 50.8,
+      "etaDate": "2026-08-05",
       "etaConfidence": "medium",
       "etaSource": "epic_completed_at",
-      "label": "ETA 2026-07-29",
+      "label": "ETA 2026-08-05",
       "caveat": "5 blocked or needs-review task(s) remain."
     }
   },
@@ -668,10 +668,10 @@
         "remainingBlockedOrReviewTasks": 0,
         "completedWithTimestamps": 0,
         "completionTimestampCoverage": 0.0,
-        "etaDate": "2026-06-09",
+        "etaDate": "2026-06-10",
         "etaConfidence": "low",
         "etaSource": "global_completed_at",
-        "label": "ETA 2026-06-09",
+        "label": "ETA 2026-06-10",
         "caveat": "Estimate is based on remaining current-scope task count."
       }
     },
@@ -1284,10 +1284,10 @@
         "remainingBlockedOrReviewTasks": 0,
         "completedWithTimestamps": 0,
         "completionTimestampCoverage": 0.0,
-        "etaDate": "2026-06-09",
+        "etaDate": "2026-06-10",
         "etaConfidence": "low",
         "etaSource": "global_completed_at",
-        "label": "ETA 2026-06-09",
+        "label": "ETA 2026-06-10",
         "caveat": "Estimate is based on remaining current-scope task count."
       }
     },
@@ -1987,10 +1987,10 @@
         "remainingBlockedOrReviewTasks": 1,
         "completedWithTimestamps": 0,
         "completionTimestampCoverage": 0.0,
-        "etaDate": "2026-06-09",
+        "etaDate": "2026-06-10",
         "etaConfidence": "low",
         "etaSource": "global_completed_at",
-        "label": "ETA 2026-06-09",
+        "label": "ETA 2026-06-10",
         "caveat": "1 blocked or needs-review task(s) remain."
       }
     },
@@ -7408,10 +7408,10 @@
         "remainingBlockedOrReviewTasks": 1,
         "completedWithTimestamps": 1,
         "completionTimestampCoverage": 50.0,
-        "etaDate": "2026-06-16",
+        "etaDate": "2026-06-18",
         "etaConfidence": "low",
         "etaSource": "global_completed_at",
-        "label": "ETA 2026-06-16",
+        "label": "ETA 2026-06-18",
         "caveat": "1 blocked or needs-review task(s) remain."
       }
     },
@@ -9263,10 +9263,10 @@
         "remainingBlockedOrReviewTasks": 1,
         "completedWithTimestamps": 1,
         "completionTimestampCoverage": 25.0,
-        "etaDate": "2026-06-13",
+        "etaDate": "2026-06-14",
         "etaConfidence": "low",
         "etaSource": "global_completed_at",
-        "label": "ETA 2026-06-13",
+        "label": "ETA 2026-06-14",
         "caveat": "1 blocked or needs-review task(s) remain."
       }
     },
@@ -9949,10 +9949,10 @@
         "remainingBlockedOrReviewTasks": 0,
         "completedWithTimestamps": 1,
         "completionTimestampCoverage": 33.3,
-        "etaDate": "2026-06-09",
+        "etaDate": "2026-06-10",
         "etaConfidence": "low",
         "etaSource": "global_completed_at",
-        "label": "ETA 2026-06-09",
+        "label": "ETA 2026-06-10",
         "caveat": "Estimate is based on remaining current-scope task count."
       }
     },
@@ -11816,10 +11816,10 @@
         "remainingBlockedOrReviewTasks": 2,
         "completedWithTimestamps": 1,
         "completionTimestampCoverage": 100.0,
-        "etaDate": "2026-06-13",
+        "etaDate": "2026-06-15",
         "etaConfidence": "low",
         "etaSource": "global_completed_at",
-        "label": "ETA 2026-06-13",
+        "label": "ETA 2026-06-15",
         "caveat": "2 blocked or needs-review task(s) remain."
       }
     },
@@ -13924,10 +13924,10 @@
         "remainingBlockedOrReviewTasks": 0,
         "completedWithTimestamps": 0,
         "completionTimestampCoverage": 0.0,
-        "etaDate": "2026-06-14",
+        "etaDate": "2026-06-16",
         "etaConfidence": "low",
         "etaSource": "global_completed_at",
-        "label": "ETA 2026-06-14",
+        "label": "ETA 2026-06-16",
         "caveat": "Estimate is based on remaining current-scope task count."
       }
     },
@@ -14202,10 +14202,10 @@
         "remainingBlockedOrReviewTasks": 0,
         "completedWithTimestamps": 0,
         "completionTimestampCoverage": 0.0,
-        "etaDate": "2026-06-09",
+        "etaDate": "2026-06-10",
         "etaConfidence": "low",
         "etaSource": "global_completed_at",
-        "label": "ETA 2026-06-09",
+        "label": "ETA 2026-06-10",
         "caveat": "Estimate is based on remaining current-scope task count."
       }
     },
@@ -14539,10 +14539,10 @@
         "remainingBlockedOrReviewTasks": 0,
         "completedWithTimestamps": 0,
         "completionTimestampCoverage": 0.0,
-        "etaDate": "2026-06-09",
+        "etaDate": "2026-06-10",
         "etaConfidence": "low",
         "etaSource": "global_completed_at",
-        "label": "ETA 2026-06-09",
+        "label": "ETA 2026-06-10",
         "caveat": "Estimate is based on remaining current-scope task count."
       }
     },
@@ -14821,10 +14821,10 @@
         "remainingBlockedOrReviewTasks": 0,
         "completedWithTimestamps": 0,
         "completionTimestampCoverage": 0.0,
-        "etaDate": "2026-06-09",
+        "etaDate": "2026-06-10",
         "etaConfidence": "low",
         "etaSource": "global_completed_at",
-        "label": "ETA 2026-06-09",
+        "label": "ETA 2026-06-10",
         "caveat": "Estimate is based on remaining current-scope task count."
       }
     },
@@ -14832,7 +14832,7 @@
       "id": "EPIC-149",
       "title": "CAPEX QA/TDD and semantic tests",
       "plainPurpose": "Define CAPEX invariant tests, fixture tests, eval harnesses, and CI markers.",
-      "displayStatus": "not_started",
+      "displayStatus": "in_progress",
       "reviewPosture": "Review posture follows task evidence and curated blocker overrides.",
       "dependencies": [
         "EPIC-141",
@@ -14857,9 +14857,9 @@
         "docs/planning/CAPEX_V6_GATE_RISK_DECISION_MAP.csv"
       ],
       "counts": {
-        "done": 0,
+        "done": 1,
         "in_progress": 0,
-        "not_started": 70,
+        "not_started": 69,
         "blocked": 0,
         "needs_review": 0,
         "total": 70
@@ -18740,9 +18740,9 @@
           "epicId": "EPIC-149",
           "title": "Add CAPEX semantic test suite and CODEOWNERS gates",
           "plainPurpose": "Add semantic test markers, required CAPEX review owners, and missing CAPEX tests from CB2 backlog.",
-          "sourceStatus": "TODO",
-          "displayStatus": "not_started",
-          "statusReason": "Task is still planned backlog work.",
+          "sourceStatus": "DONE",
+          "displayStatus": "done",
+          "statusReason": "Task file records DONE status and completion or closeout evidence.",
           "why": [
             "Imported from CAPEX v6 source task NU-CB-P0-008 so future work can be executed from repo-native backlog memory without loading the full master package."
           ],
@@ -18785,24 +18785,31 @@
             "source_only_dependency_notes": "TDD strategy; codebase pass 2",
             "recommended_source_branch": "foundation/capex-semantic-tests"
           },
-          "evidence": [],
+          "evidence": [
+            "Added repo-native capex_semantic pytest marker classification through tests/helpers/suite_markers.py and tests/conftest.py.",
+            "Added docs/planning/CAPEX_CB2_SEMANTIC_TEST_BACKLOG.yaml tracking CB2-T001 through CB2-T014 with repo evidence or explicit future-phase disposition.",
+            "Added make capex-semantic-tests and .github/workflows/main.yml CAPEX semantic CI grouping without weakening existing broad gates.",
+            "Added real-owner CAPEX semantic CODEOWNERS entries using @tylerclark and contract coverage proving the paths and lane remain exposed.",
+            "No CAPEX runtime/product activation, public routes, frontend routes, hosted branch-protection claim, or raw corpus material was introduced.",
+            "Evidence: PYTHONPATH=src python3.11 -m pytest -q tests/contract/test_capex_semantic_test_suite.py tests/contract/test_capex_semantic_codeowners_gates.py passed on 2026-06-09."
+          ],
           "taskPath": "codex/tasks/TASK-0568-add-capex-semantic-test-suite-and-codeowners-gates.md",
-          "completedAt": null,
-          "completionTimestampStatus": "not_applicable",
-          "completionTimestampSource": "not_completed"
+          "completedAt": "2026-06-09T00:00:00Z",
+          "completionTimestampStatus": "recorded",
+          "completionTimestampSource": "task_frontmatter"
         }
       ],
       "estimate": {
-        "percentComplete": 0.0,
-        "completedTasks": 0,
-        "remainingTasks": 70,
+        "percentComplete": 1.4,
+        "completedTasks": 1,
+        "remainingTasks": 69,
         "remainingBlockedOrReviewTasks": 0,
-        "completedWithTimestamps": 0,
-        "completionTimestampCoverage": 0.0,
-        "etaDate": "2026-06-19",
+        "completedWithTimestamps": 1,
+        "completionTimestampCoverage": 100.0,
+        "etaDate": "2026-06-22",
         "etaConfidence": "low",
         "etaSource": "global_completed_at",
-        "label": "ETA 2026-06-19",
+        "label": "ETA 2026-06-22",
         "caveat": "Estimate is based on remaining current-scope task count."
       }
     },
@@ -20541,10 +20548,10 @@
         "remainingBlockedOrReviewTasks": 0,
         "completedWithTimestamps": 0,
         "completionTimestampCoverage": 0.0,
-        "etaDate": "2026-06-13",
+        "etaDate": "2026-06-14",
         "etaConfidence": "low",
         "etaSource": "global_completed_at",
-        "label": "ETA 2026-06-13",
+        "label": "ETA 2026-06-14",
         "caveat": "Estimate is based on remaining current-scope task count."
       }
     },
@@ -20552,7 +20559,7 @@
       "id": "EPIC-151",
       "title": "CAPEX transparency and snapshots",
       "plainPurpose": "Define executive snapshots, risk signals, external bindings, freshness, and audit export contracts.",
-      "displayStatus": "not_started",
+      "displayStatus": "in_progress",
       "reviewPosture": "Review posture follows task evidence and curated blocker overrides.",
       "dependencies": [
         "EPIC-142",
@@ -20575,9 +20582,9 @@
         "docs/planning/CAPEX_V6_GATE_RISK_DECISION_MAP.csv"
       ],
       "counts": {
-        "done": 0,
+        "done": 1,
         "in_progress": 0,
-        "not_started": 27,
+        "not_started": 26,
         "blocked": 0,
         "needs_review": 0,
         "total": 27
@@ -22049,9 +22056,9 @@
           "epicId": "EPIC-151",
           "title": "Add interface-burden conservation policy and tests",
           "plainPurpose": "Ensure interface responsibility is owned, transferred, waived, accepted residual, or open.",
-          "sourceStatus": "TODO",
-          "displayStatus": "not_started",
-          "statusReason": "Task is still planned backlog work.",
+          "sourceStatus": "DONE",
+          "displayStatus": "done",
+          "statusReason": "Task file records DONE status and completion or closeout evidence.",
           "why": [
             "Imported from CAPEX v6 source task NU-CB-P1-009 so future work can be executed from repo-native backlog memory without loading the full master package."
           ],
@@ -22094,24 +22101,31 @@
             "source_only_dependency_notes": "source occurrence; evidence binding",
             "recommended_source_branch": "capex/interface-burden-policy"
           },
-          "evidence": [],
+          "evidence": [
+            "Added onetruth.capex_platform.interface_burden as an internal policy helper for states owned, transferred, waived, accepted_residual, and open.",
+            "The helper fails closed when responsibility lacks an owner, transfer target, waiver, residual-risk acceptance, or open follow-up owner, and requires traceable basis refs for non-open states.",
+            "Open and transferred obligations return deterministic follow-up task specs as data only; this slice does not create runtime tasks or expose public workpage/API surfaces.",
+            "Added docs/architecture/CAPEX_INTERFACE_BURDEN_POLICY.md and contract coverage proving the policy, registration, and non-activation boundary.",
+            "No CAPEX runtime/product activation, migrations, HTTP routes, frontend routes, raw corpus material, or second task system was introduced.",
+            "Evidence: PYTHONPATH=src python3.11 -m pytest -q tests/unit/test_capex_interface_burden_policy.py tests/contract/test_capex_interface_burden_policy_doc.py passed on 2026-06-09."
+          ],
           "taskPath": "codex/tasks/TASK-0569-add-interface-burden-conservation-policy-and-tests.md",
-          "completedAt": null,
-          "completionTimestampStatus": "not_applicable",
-          "completionTimestampSource": "not_completed"
+          "completedAt": "2026-06-09T00:00:00Z",
+          "completionTimestampStatus": "recorded",
+          "completionTimestampSource": "task_frontmatter"
         }
       ],
       "estimate": {
-        "percentComplete": 0.0,
-        "completedTasks": 0,
-        "remainingTasks": 27,
+        "percentComplete": 3.7,
+        "completedTasks": 1,
+        "remainingTasks": 26,
         "remainingBlockedOrReviewTasks": 0,
-        "completedWithTimestamps": 0,
-        "completionTimestampCoverage": 0.0,
-        "etaDate": "2026-06-12",
+        "completedWithTimestamps": 1,
+        "completionTimestampCoverage": 100.0,
+        "etaDate": "2026-06-14",
         "etaConfidence": "low",
         "etaSource": "global_completed_at",
-        "label": "ETA 2026-06-12",
+        "label": "ETA 2026-06-14",
         "caveat": "Estimate is based on remaining current-scope task count."
       }
     },
@@ -22706,10 +22720,10 @@
         "remainingBlockedOrReviewTasks": 0,
         "completedWithTimestamps": 0,
         "completionTimestampCoverage": 0.0,
-        "etaDate": "2026-06-09",
+        "etaDate": "2026-06-10",
         "etaConfidence": "low",
         "etaSource": "global_completed_at",
-        "label": "ETA 2026-06-09",
+        "label": "ETA 2026-06-10",
         "caveat": "Estimate is based on remaining current-scope task count."
       }
     }

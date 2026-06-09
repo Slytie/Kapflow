@@ -7,6 +7,9 @@ Purpose:
 ## Imported source rows
 ART-002, WFLOW-008, ARCH-W8-S01, ARCH-W8-S02, ARCH-W8-S03, ARCH-W8-S04, ARCH-W8-S05, ARCH-W8-S06, ... (27 tasks total)
 
+## Current closeout notes
+- `TASK-0569` is closed as of 2026-06-09: `onetruth.capex_platform.interface_burden` validates that interface obligations are owned, transferred, waived, accepted residual, or open with a traceable follow-up. This is an internal policy/helper only, not public routing or CAPEX activation.
+
 ## Load first
 - `docs/planning/epics/EPIC-151.md`
 - `docs/planning/CAPEX_MASTER_V6_INTAKE.md`

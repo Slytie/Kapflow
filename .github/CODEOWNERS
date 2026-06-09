@@ -9,5 +9,12 @@
 /scripts/             @tylerclark
 /tests/               @tylerclark
 /frontend/            @tylerclark
+/docs/planning/CAPEX_CB2_SEMANTIC_TEST_BACKLOG.yaml @tylerclark
+/docs/architecture/CAPEX_INTERFACE_BURDEN_POLICY.md @tylerclark
+/src/onetruth/capex_platform/ @tylerclark
+/tests/contract/test_capex_semantic_test_suite.py @tylerclark
+/tests/contract/test_capex_semantic_codeowners_gates.py @tylerclark
+/tests/contract/test_capex_interface_burden_policy_doc.py @tylerclark
+/tests/unit/test_capex_interface_burden_policy.py @tylerclark
 
 *                     @tylerclark

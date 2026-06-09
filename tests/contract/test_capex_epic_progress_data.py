@@ -46,9 +46,9 @@ def test_capex_epic_progress_data_uses_v2_estimates() -> None:
     data = _load_data()
 
     assert data["schemaVersion"] == "capex.epic_progress.v2"
-    assert data["summary"]["estimate"]["remainingTasks"] == 316
-    assert data["summary"]["estimate"]["etaDate"] == "2026-07-29"
-    assert data["summary"]["estimate"]["label"] == "ETA 2026-07-29"
+    assert data["summary"]["estimate"]["remainingTasks"] == 314
+    assert data["summary"]["estimate"]["etaDate"] == "2026-08-05"
+    assert data["summary"]["estimate"]["label"] == "ETA 2026-08-05"
     assert all("estimate" in epic for epic in data["epics"])
 
     epic139 = next(epic for epic in data["epics"] if epic["id"] == "EPIC-139")
@@ -75,7 +75,7 @@ def test_epic139_redo_final_acceptance_releases_red_interlocks() -> None:
 
     assert epics["EPIC-143"]["displayStatus"] == "in_progress"
     assert epics["EPIC-150"]["displayStatus"] == "not_started"
-    assert epics["EPIC-151"]["displayStatus"] == "not_started"
+    assert epics["EPIC-151"]["displayStatus"] == "in_progress"
     for epic_id in ("EPIC-143", "EPIC-150", "EPIC-151"):
         assert "Gated while EPIC-139 remains RED" not in epics[epic_id]["reviewPosture"]
 

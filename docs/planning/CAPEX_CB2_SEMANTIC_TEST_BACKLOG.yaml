@@ -1,0 +1,205 @@
+schema_version: capex.cb2_semantic_test_backlog.v1
+title: CAPEX CB2 semantic test backlog
+source_gate: NU-GATE-008
+owner: qa
+review_owner: platform
+activation_posture: tracking_only_no_capex_activation
+status_values:
+  - repo_evidence_green
+  - tracked_future_phase
+rows:
+  - cb2_id: CB2-T001
+    title: Artifact/blob download authorizes before read
+    phase: P1/P2 platform foundation
+    phase_status: repo_evidence_green
+    gate_refs:
+      - NU-GATE-002
+    task_refs:
+      - TASK-0235
+      - TASK-0577
+    evidence_paths:
+      - tests/unit/test_artifact_storage_safety.py
+      - tests/runtime/api/test_artifact_upload_profiles.py
+      - docs/planning/CAPEX_PLATFORM_FOUNDATION_V0.md
+    rationale: Unauthorized artifact reads are covered by auth-before-blob-read regressions and PF0 evidence.
+  - cb2_id: CB2-T002
+    title: Approval response is domain-neutral
+    phase: P1/P2 platform foundation
+    phase_status: repo_evidence_green
+    gate_refs:
+      - NU-GATE-001
+    task_refs:
+      - TASK-0561
+      - TASK-0576
+      - TASK-0643
+    evidence_paths:
+      - tests/contract/test_handler_import_boundaries.py
+      - tests/unit/test_approval_response_hooks.py
+      - docs/adr/ADR-005-approval-response-domain-hooks.md
+    rationale: Approval side effects live behind registered domain hooks and generic approval response remains neutral.
+  - cb2_id: CB2-T003
+    title: CAPEX project membership is enforced server-side
+    phase: P3 project access
+    phase_status: repo_evidence_green
+    gate_refs:
+      - NU-GATE-003
+    task_refs:
+      - TASK-0563
+    evidence_paths:
+      - tests/unit/test_capex_project_authorization_projection.py
+      - tests/unit/test_capex_project_access.py
+      - tests/runtime/api/test_capex_project_access_api.py
+      - docs/architecture/CAPEX_PROJECT_ACCESS_MODEL.md
+    rationale: Projection-backed project access hides project-bound rows from non-members without frontend-only filtering.
+  - cb2_id: CB2-T004
+    title: Project-scoped child reads preserve membership and ownership boundaries
+    phase: P3/P8 project child surfaces
+    phase_status: repo_evidence_green
+    gate_refs:
+      - NU-GATE-003
+    task_refs:
+      - TASK-0263
+      - TASK-0264
+    evidence_paths:
+      - tests/runtime/api/test_capex_project_child_apis.py
+      - tests/unit/test_capex_project_scope_query_helper.py
+      - docs/architecture/CAPEX_PROJECT_ACCESS_MODEL.md
+    rationale: Project child routes reuse canonical row shapes and deny non-member or mismatched project resources.
+  - cb2_id: CB2-T005
+    title: Source occurrence and meaningful SourceRef resolution are enforced
+    phase: P4/P5 source governance foundation
+    phase_status: repo_evidence_green
+    gate_refs:
+      - NU-GATE-004
+    task_refs:
+      - TASK-0564
+      - TASK-0578
+    evidence_paths:
+      - tests/unit/test_capex_source_occurrence_resolver.py
+      - tests/integration/test_capex_source_occurrence_schema_parity.py
+      - docs/architecture/CAPEX_SOURCE_REF_AND_CLOSURE_GUARDRAILS.md
+    rationale: Empty, malformed, unresolved, cross-scope, and non-resolvable SourceRefs fail closed.
+  - cb2_id: CB2-T006
+    title: Broader evidence binding and corpus-source governance
+    phase: P4/P5 evidence binding
+    phase_status: tracked_future_phase
+    gate_refs:
+      - NU-GATE-004
+    task_refs:
+      - TASK-0391
+      - TASK-0407
+      - TASK-0428
+    evidence_paths:
+      - docs/domains/capex/domain.yaml
+      - docs/planning/CAPEX_V6_CONVERSION_MAP.csv
+    rationale: Source occurrence truth exists, but broader evidence-binding and corpus-governance implementation remains later EPIC-141 work.
+  - cb2_id: CB2-T007
+    title: Project official pointer promotion is explicit
+    phase: P6/P7 artifact officialness
+    phase_status: repo_evidence_green
+    gate_refs:
+      - FINAL-FORM-G03
+    task_refs:
+      - TASK-0265
+    evidence_paths:
+      - tests/unit/test_capex_official_pointer_families.py
+      - tests/runtime/api/test_capex_project_official_pointer_api.py
+      - docs/architecture/CAPEX_PROJECT_ACCESS_MODEL.md
+    rationale: Latest artifacts, approvals, and approval responses do not move official pointers without explicit promotion.
+  - cb2_id: CB2-T008
+    title: Closure/waiver/recurrence semantics are enforced
+    phase: P7 governance closure
+    phase_status: repo_evidence_green
+    gate_refs:
+      - NU-GATE-005
+    task_refs:
+      - TASK-0565
+    evidence_paths:
+      - tests/unit/test_capex_closure_governance.py
+      - tests/integration/test_capex_closure_governance_schema_parity.py
+      - docs/architecture/CAPEX_SOURCE_REF_AND_CLOSURE_GUARDRAILS.md
+    rationale: Absence of evidence fails closure, waiver is not pass, and basis changes can stale snapshots.
+  - cb2_id: CB2-T009
+    title: CAPEX workpage commands reject stale projection basis
+    phase: P8 workpage safety
+    phase_status: repo_evidence_green
+    gate_refs:
+      - NU-GATE-007
+    task_refs:
+      - TASK-0567
+    evidence_paths:
+      - tests/unit/test_capex_workpage_command_envelope.py
+      - tests/unit/test_capex_workpage_projection_snapshots.py
+      - tests/integration/test_capex_workpage_projection_schema_parity.py
+      - docs/architecture/CAPEX_HANDOFF_AND_PROJECTION_FOUNDATION.md
+    rationale: Signed projection cursors and expected basis hashes reject stale, expired, or mismatched commands.
+  - cb2_id: CB2-T010
+    title: Workflow handoff manifest requires exact basis
+    phase: P6/P7 workflow substrate
+    phase_status: repo_evidence_green
+    gate_refs:
+      - NU-GATE-006
+    task_refs:
+      - TASK-0566
+    evidence_paths:
+      - tests/unit/test_capex_workflow_handoff_manifest.py
+      - tests/contract/test_capex_workflow_handoff_manifest_schema.py
+      - docs/architecture/CAPEX_HANDOFF_AND_PROJECTION_FOUNDATION.md
+    rationale: Handoffs require exact artifacts, pointer generations, SourceRefs, validation summaries, closure basis, and bindings.
+  - cb2_id: CB2-T011
+    title: Procurement and CEO escalation tasks are defined separately from workpages
+    phase: P8/P9 workflow product
+    phase_status: tracked_future_phase
+    gate_refs:
+      - NU-GATE-011
+    task_refs:
+      - TASK-0571
+    evidence_paths:
+      - docs/planning/CAPEX_V6_CONVERSION_MAP.csv
+      - docs/planning/epics/EPIC-143.md
+    rationale: This remains later workflow-catalog work and is tracked here so the burden does not disappear.
+  - cb2_id: CB2-T012
+    title: Raw-corpus and fixture leakage guardrails remain enforced
+    phase: P10 fixture and AI guardrails
+    phase_status: tracked_future_phase
+    gate_refs:
+      - FINAL-FORM-G06
+    task_refs:
+      - TASK-0470
+      - TASK-0474
+      - TASK-0475
+      - TASK-0486
+    evidence_paths:
+      - docs/planning/epics/EPIC-145.md
+      - docs/planning/CAPEX_MASTER_V6_INTAKE.md
+    rationale: The raw-data boundary is authoritative now; fixture compiler and leak-scan implementation remain later EPIC-145 work.
+  - cb2_id: CB2-T013
+    title: CAPEX semantic test suite and CODEOWNERS gate are active
+    phase: P0/P1 quality foundation
+    phase_status: repo_evidence_green
+    gate_refs:
+      - NU-GATE-008
+    task_refs:
+      - TASK-0568
+    evidence_paths:
+      - pytest.ini
+      - Makefile
+      - .github/workflows/main.yml
+      - .github/CODEOWNERS
+      - tests/contract/test_capex_semantic_test_suite.py
+      - tests/contract/test_capex_semantic_codeowners_gates.py
+    rationale: The semantic marker, focused Make/CI lane, backlog manifest, and real-owner CODEOWNERS entries are repo-visible.
+  - cb2_id: CB2-T014
+    title: Interface burden cannot disappear
+    phase: P7/P8 interface governance
+    phase_status: repo_evidence_green
+    gate_refs:
+      - NU-GATE-009
+    task_refs:
+      - TASK-0569
+    evidence_paths:
+      - src/onetruth/capex_platform/interface_burden.py
+      - tests/unit/test_capex_interface_burden_policy.py
+      - tests/contract/test_capex_interface_burden_policy_doc.py
+      - docs/architecture/CAPEX_INTERFACE_BURDEN_POLICY.md
+    rationale: Interface obligations must be owned, transferred, waived, accepted as residual risk, or open with a traceable follow-up.

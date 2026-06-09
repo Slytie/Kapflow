@@ -263,6 +263,10 @@
   fill: var(--capex-muted);
 }
 
+.capex-completion-trend__point--as-of {
+  fill: var(--capex-progress);
+}
+
 .capex-completion-trend__point--projected {
   fill: var(--capex-bg);
   stroke: var(--capex-watch);

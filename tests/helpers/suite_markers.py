@@ -36,6 +36,19 @@ LOGISTICS_REGRESSION_TEST_GLOBS: tuple[str, ...] = (
     "tests/unit/test_workpages_*.py",
 )
 
+CAPEX_SEMANTIC_TEST_GLOBS: tuple[str, ...] = (
+    "tests/contract/test_capex_invariant_audit.py",
+    "tests/contract/test_capex_interface_burden_policy_doc.py",
+    "tests/contract/test_capex_semantic_*.py",
+    "tests/contract/test_capex_source_ref_and_closure_guardrails.py",
+    "tests/unit/test_capex_closure_governance.py",
+    "tests/unit/test_capex_interface_burden_policy.py",
+    "tests/unit/test_capex_project_access.py",
+    "tests/unit/test_capex_source_occurrence_resolver.py",
+    "tests/unit/test_capex_workflow_handoff_manifest.py",
+    "tests/unit/test_capex_workpage_command_envelope.py",
+)
+
 LOGISTICS_FIXTURE_REFERENCE_MARKERS: tuple[str, ...] = (
     "fixtures/logistics/",
     "fixtures/scenarios/logistics/",
@@ -56,3 +69,8 @@ def is_logistics_regression_test_path(path: Path | str, *, repo_root: Path) -> b
         fnmatchcase(normalized, pattern)
         for pattern in LOGISTICS_REGRESSION_TEST_GLOBS
     )
+
+
+def is_capex_semantic_test_path(path: Path | str, *, repo_root: Path) -> bool:
+    normalized = normalize_repo_test_path(path, repo_root=repo_root)
+    return any(fnmatchcase(normalized, pattern) for pattern in CAPEX_SEMANTIC_TEST_GLOBS)
