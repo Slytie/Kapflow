@@ -1,0 +1,244 @@
+schema_version: capex.sme_rp_acceptance_register.v1
+namespace: SME-RP
+title: CAPEX subject-matter / real-project acceptance conditions
+activation_posture: planning_only_no_capex_activation
+source_provenance:
+  source_archive_basename: CAPEX_Codex_Planning_With_SME_K12_Conditions_Update_v1.zip
+  source_namespace: SME-K12
+  repo_namespace: SME-RP
+  source_task_range: TASK-0625..TASK-0641
+  repo_task_range: TASK-0648..TASK-0664
+  note: K12 remains the first binding fixture slice; SME-RP is the generalized repo namespace.
+acceptance_gates:
+  - gate_id: SME-RP-G001
+    gate_name: Approval-with-conditions and signature limitation recorded
+    target_epics: [EPIC-136]
+    source_conditions: [TOP-01, 1-A1, 1-A2, 15-A1, 15-A3]
+    blocking_reason: SME approval cannot be reused as unconditional implementation approval.
+  - gate_id: SME-RP-G002
+    gate_name: Status model and RACI annex approved before affected modules
+    target_epics: [EPIC-136, EPIC-140]
+    source_conditions: [2-A1, 5-A3, 14-D8, 15-A2]
+    blocking_reason: Role-sensitive workflow activation requires accepted RACI.
+  - gate_id: SME-RP-G003
+    gate_name: capex_scope and hierarchy contract approved
+    target_epics: [EPIC-140, EPIC-143]
+    source_conditions: [TOP-02, TOP-03, 5-A1, 5-A2, 8-A1]
+    blocking_reason: Scope-level fixture cases cannot pass without an explicit scope contract.
+  - gate_id: SME-RP-G004
+    gate_name: Evidence status vocabulary and occurrence context profile approved
+    target_epics: [EPIC-141, EPIC-142]
+    source_conditions: [6-A1, 6-A2, 6-A3]
+    blocking_reason: Evidence/status workpages require frozen vocabulary and source context rules.
+  - gate_id: SME-RP-G005
+    gate_name: Workpage task-generation rules approved
+    target_epics: [EPIC-144]
+    source_conditions: [7-A2, 7-A3]
+    blocking_reason: Workpages must create canonical tasks for blockers and must not set official status.
+  - gate_id: SME-RP-G006
+    gate_name: Budget and commercial workflow fields approved
+    target_epics: [EPIC-143, EPIC-151]
+    source_conditions: [TOP-04, 8-A2, 9-A2]
+    blocking_reason: Commercial-control workflow cannot activate until mandatory fields are defined.
+  - gate_id: SME-RP-G007
+    gate_name: Executive escalation thresholds approved
+    target_epics: [EPIC-151]
+    source_conditions: [TOP-11, 9-A3, 14-D3]
+    blocking_reason: Escalation tasks cannot activate until threshold families are signed off.
+  - gate_id: SME-RP-G008
+    gate_name: Partial handover and observation-phase statuses approved
+    target_epics: [EPIC-142]
+    source_conditions: [TOP-06, TOP-07, 10-A2, 10-A3, 10-A4, 14-D4, 14-D5]
+    blocking_reason: Closure, handover, and effectiveness workflows require frozen statuses.
+  - gate_id: SME-RP-G009
+    gate_name: AI trust status and source-binding rules approved
+    target_epics: [EPIC-142, EPIC-147]
+    source_conditions: [TOP-09, 11-A2, 11-A3, 11-A4]
+    blocking_reason: AI output cannot appear in executive/status views without explicit trust and source labels.
+  - gate_id: SME-RP-G010
+    gate_name: K12 fixture cases accepted as first binding real-project catalogue
+    target_epics: [EPIC-146, EPIC-147]
+    source_conditions: [TOP-12, 12-A1]
+    blocking_reason: MVP subject-matter acceptance requires the first binding real-project stress tests.
+  - gate_id: SME-RP-G011
+    gate_name: External data-source mode taxonomy approved
+    target_epics: [EPIC-151]
+    source_conditions: [13-A3, 14-D9]
+    blocking_reason: External observation work requires signed external-mode semantics.
+  - gate_id: SME-RP-G012
+    gate_name: Workflow extension MVP classification approved
+    target_epics: [EPIC-143]
+    source_conditions: [8-A1, 8-A2, 8-A3, 8-A4, 8-A5, 8-A6, 8-A7, 8-A8, 14-D1]
+    blocking_reason: Classification prevents silent MVP scope creep while preserving required workflow families.
+  - gate_id: SME-RP-G013
+    gate_name: Subject-matter boundary negative tests include first fixture additions
+    target_epics: [EPIC-149]
+    source_conditions: [4-A2, 4-A3, 13-A1, 14-D6]
+    blocking_reason: No false status from PR/PO, supplier done, work performed, scope closed, defect closed, controlling, minutes, or settlement.
+task_remap:
+  - repo_task_id: TASK-0648
+    source_task_id: TASK-0625
+    target_epic: EPIC-136
+    title: Create SME-RP approval-with-conditions annex pack and sign-off wording
+    gate_refs: [SME-RP-G001]
+  - repo_task_id: TASK-0649
+    source_task_id: TASK-0626
+    target_epic: EPIC-140
+    title: Define CAPEX scope hierarchy and minimum capex_scope contract
+    gate_refs: [SME-RP-G003]
+  - repo_task_id: TASK-0650
+    source_task_id: TASK-0627
+    target_epic: EPIC-140
+    title: Draft RACI and role-permission matrix
+    gate_refs: [SME-RP-G002]
+  - repo_task_id: TASK-0651
+    source_task_id: TASK-0628
+    target_epic: EPIC-142
+    title: Harden evidence status vocabulary and transition rules
+    gate_refs: [SME-RP-G004]
+  - repo_task_id: TASK-0652
+    source_task_id: TASK-0629
+    target_epic: EPIC-141
+    title: Add occurrence context profile and source trust taxonomy
+    gate_refs: [SME-RP-G004]
+  - repo_task_id: TASK-0653
+    source_task_id: TASK-0630
+    target_epic: EPIC-144
+    title: Define workpage-to-task generation rules
+    gate_refs: [SME-RP-G005]
+  - repo_task_id: TASK-0654
+    source_task_id: TASK-0631
+    target_epic: EPIC-143
+    title: Add Scope Management workflow specification
+    gate_refs: [SME-RP-G003, SME-RP-G012]
+  - repo_task_id: TASK-0655
+    source_task_id: TASK-0632
+    target_epic: EPIC-143
+    title: Add Budget and Commercial Control workflow
+    gate_refs: [SME-RP-G006, SME-RP-G012]
+  - repo_task_id: TASK-0656
+    source_task_id: TASK-0633
+    target_epic: EPIC-143
+    title: Add Safety and Work Permit Readiness workflow
+    gate_refs: [SME-RP-G012]
+  - repo_task_id: TASK-0657
+    source_task_id: TASK-0634
+    target_epic: EPIC-143
+    title: Classify workflow extensions as MVP-lite or post-MVP
+    gate_refs: [SME-RP-G012]
+  - repo_task_id: TASK-0658
+    source_task_id: TASK-0635
+    target_epic: EPIC-142
+    title: Extend closure model with partial handover and observation phase
+    gate_refs: [SME-RP-G008]
+  - repo_task_id: TASK-0659
+    source_task_id: TASK-0636
+    target_epic: EPIC-151
+    title: Define procurement fields and executive escalation thresholds
+    gate_refs: [SME-RP-G006, SME-RP-G007]
+  - repo_task_id: TASK-0660
+    source_task_id: TASK-0637
+    target_epic: EPIC-142
+    title: Align AI trust status and source-binding requirements
+    gate_refs: [SME-RP-G009]
+  - repo_task_id: TASK-0661
+    source_task_id: TASK-0638
+    target_epic: EPIC-146
+    title: Promote K12 fixture cases into binding real-project catalogue
+    gate_refs: [SME-RP-G010]
+  - repo_task_id: TASK-0662
+    source_task_id: TASK-0639
+    target_epic: EPIC-149
+    title: Add subject-matter boundary negative tests
+    gate_refs: [SME-RP-G013]
+  - repo_task_id: TASK-0663
+    source_task_id: TASK-0640
+    target_epic: EPIC-151
+    title: Define external system mode taxonomy
+    gate_refs: [SME-RP-G011]
+  - repo_task_id: TASK-0664
+    source_task_id: TASK-0641
+    target_epic: EPIC-136
+    title: Add module-specific SME readiness rule
+    gate_refs: [SME-RP-G002, SME-RP-G012]
+fixture_cases:
+  - fixture_case_id: K12-T1
+    situation: Scope 1 closed, Scope 2 closed, Scope 3 budget build-up
+    expected_behavior: Show scope statuses separately and prevent false overall closure.
+    target_epics: [EPIC-140, EPIC-143, EPIC-147]
+  - fixture_case_id: K12-T2
+    situation: Handover completed with residual items open
+    expected_behavior: Show handover while project closure remains open or restricted.
+    target_epics: [EPIC-142, EPIC-147]
+  - fixture_case_id: K12-T3
+    situation: Supplier says defect fixed; operation has not confirmed effectiveness
+    expected_behavior: Keep defect in observation phase or effectiveness-open state.
+    target_epics: [EPIC-142, EPIC-147]
+  - fixture_case_id: K12-T4
+    situation: PR/PO exists and invoice or controlling figure deviates
+    expected_behavior: Show commercial deviation and create clarification work.
+    target_epics: [EPIC-151, EPIC-144, EPIC-147]
+  - fixture_case_id: K12-T5
+    situation: Quotation contains assumptions or exclusions
+    expected_behavior: Extract assumptions but require SME review before project-state adoption.
+    target_epics: [EPIC-142, EPIC-147]
+  - fixture_case_id: K12-T6
+    situation: New revision makes old evaluation uncertain
+    expected_behavior: Mark affected evidence and decisions as requiring review.
+    target_epics: [EPIC-141, EPIC-142, EPIC-147]
+  - fixture_case_id: K12-T7
+    situation: Executive cockpit aggregates status with open assumptions
+    expected_behavior: Show blockers and residual risk, not only green status.
+    target_epics: [EPIC-151, EPIC-147]
+  - fixture_case_id: K12-T8
+    situation: Safety briefing for contractor missing before work
+    expected_behavior: Block work release or generate escalation work.
+    target_epics: [EPIC-143, EPIC-144, EPIC-147]
+  - fixture_case_id: K12-T9
+    situation: Fault recurs after handover
+    expected_behavior: Allow defect reopen and systematic-fault classification.
+    target_epics: [EPIC-142, EPIC-147]
+  - fixture_case_id: K12-T10
+    situation: Commercial settlement exists while technical effectiveness is open
+    expected_behavior: Separate commercially settled from technically closed.
+    target_epics: [EPIC-142, EPIC-151, EPIC-147]
+risks:
+  - risk_id: SME-RP-RISK-001
+    risk: Compressed sign-off makes architecture look unconstrained.
+    severity: high
+    mitigation: Maintain approval-with-conditions annexes and traceability.
+  - risk_id: SME-RP-RISK-002
+    risk: Conditions are interpreted as freezing all platform work.
+    severity: medium
+    mitigation: Apply module-specific readiness gates.
+  - risk_id: SME-RP-RISK-003
+    risk: Scope levels are omitted and create false closure.
+    severity: high
+    mitigation: Add capex_scope and fixture scope tests.
+  - risk_id: SME-RP-RISK-004
+    risk: Commercial workflow becomes an ERP clone.
+    severity: medium
+    mitigation: Constrain commercial status as observation and reconciliation.
+  - risk_id: SME-RP-RISK-005
+    risk: Safety readiness is treated as fixture-specific.
+    severity: high
+    mitigation: Add safety and work-permit readiness as a standard CAPEX workflow.
+workflow_classification:
+  - workflow: Scope Management
+    classification: MVP / early
+  - workflow: Budget and Commercial Control
+    classification: MVP / early
+  - workflow: Safety and Work Permit Readiness
+    classification: MVP / early
+  - workflow: Commissioning / Start-up
+    classification: MVP / early
+  - workflow: Production Release
+    classification: MVP / early
+  - workflow: Maintenance Handover
+    classification: MVP / early
+  - workflow: Shutdown / Schedule Planning
+    classification: MVP-lite / conditional
+  - workflow: Supplier Claim / Warranty
+    classification: Post-MVP reserved
+  - workflow: Lessons Learned / After-Handover Performance
+    classification: Post-MVP reserved

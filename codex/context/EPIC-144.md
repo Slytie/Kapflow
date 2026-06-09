@@ -5,16 +5,21 @@ Purpose:
 - Keep future work inside the existing one-truth runtime, approval, artifact, pointer, and event model.
 
 ## Imported source rows
-ART-007, WP-001, WP-002, WP-003, WP-004, WP-005, WP-006, WP-007, ... (32 tasks total)
+ART-007, WP-001, WP-002, WP-003, WP-004, WP-005, WP-006, WP-007, ... plus SME-RP source row `TASK-0630` remapped to repo `TASK-0653` (33 tasks total)
 
 ## Closed foundation rows
 - `TASK-0567` is closed as of 2026-06-08: internal `capex_workpage_projection_snapshots` / `capex_workpage_projection_rows`, signed projection cursors, typed command envelopes, and stale-command guards exist for future CAPEX workpage mutation safety.
 - This does not add public CAPEX workpage APIs, frontend routes, or CAPEX workpage activation.
 
+## SME-RP addendum rows
+- `TASK-0653` defines workpage-to-task generation rules under `SME-RP-G005`.
+- Workpages may propose tasks, flags, approvals, artifact deltas, events, or pointer requests; they never set official project status by projection update or generic status command.
+
 ## Load first
 - `docs/planning/epics/EPIC-144.md`
 - `docs/planning/CAPEX_MASTER_V6_INTAKE.md`
 - `docs/planning/CAPEX_V6_CONVERSION_MAP.csv`
+- `docs/planning/capex_real_project_acceptance/SME_RP_ACCEPTANCE_REGISTER.yaml`
 - `docs/architecture/invariants.md`
 - `docs/status/CURRENT_FOCUS.md`
 

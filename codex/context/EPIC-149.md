@@ -5,15 +5,20 @@ Purpose:
 - Keep future work inside the existing one-truth runtime, approval, artifact, pointer, and event model.
 
 ## Imported source rows
-TEST-001, TEST-002, TEST-004, QD-001, QD-002, QD-003, QD-004, QD-005, ... (70 tasks total)
+TEST-001, TEST-002, TEST-004, QD-001, QD-002, QD-003, QD-004, QD-005, ... plus SME-RP source row `TASK-0639` remapped to repo `TASK-0662` (71 tasks total)
 
 ## Current closeout notes
 - `TASK-0568` is closed as of 2026-06-09: the repo now has a `capex_semantic` pytest marker, `docs/planning/CAPEX_CB2_SEMANTIC_TEST_BACKLOG.yaml`, `make capex-semantic-tests`, a visible GitHub Actions lane, and real-owner CODEOWNERS coverage. This is quality-gate evidence only, not CAPEX activation.
+
+## SME-RP addendum rows
+- `TASK-0662` adds generalized subject-matter negative-test obligations under `SME-RP-G013`.
+- `K12-T1..T10` are the first binding cases for these tests, not a top-level acceptance namespace.
 
 ## Load first
 - `docs/planning/epics/EPIC-149.md`
 - `docs/planning/CAPEX_MASTER_V6_INTAKE.md`
 - `docs/planning/CAPEX_V6_CONVERSION_MAP.csv`
+- `docs/planning/capex_real_project_acceptance/SME_RP_ACCEPTANCE_REGISTER.yaml`
 - `docs/architecture/invariants.md`
 - `docs/status/CURRENT_FOCUS.md`
 

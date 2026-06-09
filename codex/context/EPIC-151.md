@@ -5,15 +5,21 @@ Purpose:
 - Keep future work inside the existing one-truth runtime, approval, artifact, pointer, and event model.
 
 ## Imported source rows
-ART-002, WFLOW-008, ARCH-W8-S01, ARCH-W8-S02, ARCH-W8-S03, ARCH-W8-S04, ARCH-W8-S05, ARCH-W8-S06, ... (27 tasks total)
+ART-002, WFLOW-008, ARCH-W8-S01, ARCH-W8-S02, ARCH-W8-S03, ARCH-W8-S04, ARCH-W8-S05, ARCH-W8-S06, ... plus SME-RP source rows `TASK-0636` and `TASK-0640` remapped to repo `TASK-0659` and `TASK-0663` (29 tasks total)
 
 ## Current closeout notes
 - `TASK-0569` is closed as of 2026-06-09: `onetruth.capex_platform.interface_burden` validates that interface obligations are owned, transferred, waived, accepted residual, or open with a traceable follow-up. This is an internal policy/helper only, not public routing or CAPEX activation.
+
+## SME-RP addendum rows
+- `TASK-0659` defines procurement fields and executive escalation thresholds under `SME-RP-G006` and `SME-RP-G007`.
+- `TASK-0663` defines external-system mode taxonomy under `SME-RP-G011`.
+- External status is observation/input only unless canonical internal state promotes a reviewed claim.
 
 ## Load first
 - `docs/planning/epics/EPIC-151.md`
 - `docs/planning/CAPEX_MASTER_V6_INTAKE.md`
 - `docs/planning/CAPEX_V6_CONVERSION_MAP.csv`
+- `docs/planning/capex_real_project_acceptance/SME_RP_ACCEPTANCE_REGISTER.yaml`
 - `docs/architecture/invariants.md`
 - `docs/status/CURRENT_FOCUS.md`
 

@@ -5,7 +5,7 @@ Purpose:
 - Keep future work inside the existing one-truth runtime, approval, artifact, pointer, and event model.
 
 ## Imported source rows
-ART-001, ART-003, ART-004, ART-005, ART-006, RF-007, RF-008, ARCH-W4-S01, ... (32 tasks total)
+ART-001, ART-003, ART-004, ART-005, ART-006, RF-007, RF-008, ARCH-W4-S01, ... plus SME-RP source rows `TASK-0628`, `TASK-0635`, and `TASK-0637` remapped to repo `TASK-0651`, `TASK-0658`, and `TASK-0660` (35 tasks total)
 
 ## Historical/reconciled aliases
 - `V5-TASK-001` is a reconciled v5 historical alias for `TASK-0447`, `TASK-0565`, `TASK-0305`.
@@ -17,10 +17,17 @@ ART-001, ART-003, ART-004, ART-005, ART-006, RF-007, RF-008, ARCH-W4-S01, ... (3
 - Waivers are recorded as `satisfied_by_waiver`, not as `pass`, and absence of evidence still fails closure.
 - This does not expose closure/promotion UI, public APIs, generated artifact policy validators, or CAPEX runtime activation.
 
+## SME-RP addendum rows
+- `TASK-0651` hardens evidence status vocabulary and transition rules.
+- `TASK-0658` adds partial handover and observation-phase closure dimensions.
+- `TASK-0660` aligns AI trust status and source-binding requirements.
+- These are general CAPEX governance rules under `SME-RP-G004`, `SME-RP-G008`, and `SME-RP-G009`.
+
 ## Load first
 - `docs/planning/epics/EPIC-142.md`
 - `docs/planning/CAPEX_MASTER_V6_INTAKE.md`
 - `docs/planning/CAPEX_V6_CONVERSION_MAP.csv`
+- `docs/planning/capex_real_project_acceptance/SME_RP_ACCEPTANCE_REGISTER.yaml`
 - `docs/architecture/invariants.md`
 - `docs/status/CURRENT_FOCUS.md`
 

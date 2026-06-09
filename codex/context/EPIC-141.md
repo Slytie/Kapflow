@@ -5,7 +5,7 @@ Purpose:
 - Keep future work inside the existing one-truth runtime, approval, artifact, pointer, and event model.
 
 ## Imported source rows
-INGEST-001, INGEST-002, INGEST-003, INGEST-004, INGEST-005, INGEST-006, INGEST-007, INGEST-008, ... (52 tasks total)
+INGEST-001, INGEST-002, INGEST-003, INGEST-004, INGEST-005, INGEST-006, INGEST-007, INGEST-008, ... plus SME-RP source row `TASK-0629` remapped to repo `TASK-0652` (53 tasks total)
 
 ## Historical/reconciled aliases
 - `V5-TASK-007` is a reconciled v5 historical alias for `TASK-0564`, `TASK-0428`.
@@ -14,10 +14,15 @@ INGEST-001, INGEST-002, INGEST-003, INGEST-004, INGEST-005, INGEST-006, INGEST-0
 - `TASK-0564` is closed as of 2026-06-08: runtime state now includes `capex_content_identities` and `capex_source_occurrences`, and `onetruth.capex_platform.source_refs` resolves canonical `source_occurrence:{source_occurrence_id}` refs with meaningful-source-ref checks.
 - This does not close broader corpus ingest, extraction, source occurrence relations, source locator unions, or evidence binding tasks.
 
+## SME-RP addendum rows
+- `TASK-0652` generalizes source occurrence context and trust taxonomy for real-project evidence-source rules under `SME-RP-G004`.
+- Preserve source occurrence context and evidence trust distinctions without converting imported K12 fixture rows into product namespaces.
+
 ## Load first
 - `docs/planning/epics/EPIC-141.md`
 - `docs/planning/CAPEX_MASTER_V6_INTAKE.md`
 - `docs/planning/CAPEX_V6_CONVERSION_MAP.csv`
+- `docs/planning/capex_real_project_acceptance/SME_RP_ACCEPTANCE_REGISTER.yaml`
 - `docs/architecture/invariants.md`
 - `docs/status/CURRENT_FOCUS.md`
 

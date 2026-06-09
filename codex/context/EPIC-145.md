@@ -1,7 +1,8 @@
-# EPIC-145 Context Pack - CAPEX K12/K3 fixture governance
+# EPIC-145 Context Pack - CAPEX real-project fixture governance
 
 Purpose:
 - Rehydrate the CAPEX v6 task tranche for `EPIC-145` without opening the full master package.
+- Keep K12, K3, and blind-validation names as fixture/source-row identifiers, not product namespaces.
 - Keep future work inside the existing one-truth runtime, approval, artifact, pointer, and event model.
 
 ## Imported source rows
@@ -11,8 +12,14 @@ K12-001, K12-002, K12-003, K12-004, SAFE-001, SPB2-T001, SPB2-T002, SPB2-T003, .
 - `docs/planning/epics/EPIC-145.md`
 - `docs/planning/CAPEX_MASTER_V6_INTAKE.md`
 - `docs/planning/CAPEX_V6_CONVERSION_MAP.csv`
+- `docs/planning/capex_real_project_acceptance/SME_RP_ACCEPTANCE_REGISTER.yaml`
 - `docs/architecture/invariants.md`
 - `docs/status/CURRENT_FOCUS.md`
+
+## SME-RP fixture-governance notes
+- New real-project acceptance gates use `SME-RP`.
+- Existing K12/K3/blind task titles and fixture tier names remain where they identify source rows, fixture roles, or raw-data safety boundaries.
+- Do not introduce source-specific SME-K12 gate IDs; use `SME-RP-G###` for new real-project acceptance gates.
 
 ## Non-negotiable invariants
 - One truth system: official claims come only from immutable objects, append-only events, and audited pointers.

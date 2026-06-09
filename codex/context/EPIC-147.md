@@ -11,8 +11,13 @@ TP-TASK-004, TP-TASK-005, TP-TASK-006, TP-TASK-008, TP-TASK-010
 - `docs/planning/epics/EPIC-147.md`
 - `docs/planning/CAPEX_MASTER_V6_INTAKE.md`
 - `docs/planning/CAPEX_V6_CONVERSION_MAP.csv`
+- `docs/planning/capex_real_project_acceptance/SME_RP_ACCEPTANCE_REGISTER.yaml`
 - `docs/architecture/invariants.md`
 - `docs/status/CURRENT_FOCUS.md`
+
+## SME-RP fixture-tier notes
+- K12, K3, and blind-validation remain fixture tiers for evaluation coverage, overfitting controls, and lab non-authority checks.
+- K12 is the first binding real-project fixture suite, but later validation tiers should map back to generalized SME-RP gates instead of creating K12-specific gates.
 
 ## Non-negotiable invariants
 - One truth system: official claims come only from immutable objects, append-only events, and audited pointers.

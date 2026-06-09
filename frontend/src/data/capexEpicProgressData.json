@@ -10,24 +10,24 @@
   },
   "summary": {
     "epicCount": 17,
-    "taskCount": 379,
+    "taskCount": 396,
     "done": 65,
     "in_progress": 0,
-    "not_started": 309,
+    "not_started": 326,
     "blocked": 1,
     "needs_review": 4,
-    "total": 379,
+    "total": 396,
     "estimate": {
-      "percentComplete": 17.2,
+      "percentComplete": 16.4,
       "completedTasks": 65,
-      "remainingTasks": 314,
+      "remainingTasks": 331,
       "remainingBlockedOrReviewTasks": 5,
       "completedWithTimestamps": 33,
       "completionTimestampCoverage": 50.8,
-      "etaDate": "2026-08-05",
+      "etaDate": "2026-08-08",
       "etaConfidence": "medium",
       "etaSource": "epic_completed_at",
-      "label": "ETA 2026-08-05",
+      "label": "ETA 2026-08-08",
       "caveat": "5 blocked or needs-review task(s) remain."
     }
   },
@@ -65,8 +65,9 @@
         "EPIC-136"
       ],
       "inScope": [
-        "Source task families/counts: MP:1, SD:7, V5:2.",
+        "Source task families/counts: MP:1, SD:7, SME-RP:2, V5:2.",
         "Preserve CAPEX v6 source-row intent while translating work into repo-native tasks and context packs.",
+        "Preserve the imported real-project acceptance-condition tranche under the generalized SME-RP namespace.",
         "Keep official claims inside the canonical workflow/task/approval/event/artifact/pointer substrate."
       ],
       "outOfScope": [
@@ -77,17 +78,18 @@
       "sourceReferences": [
         "docs/planning/CAPEX_MASTER_V6_INTAKE.md",
         "docs/planning/CAPEX_V6_CONVERSION_MAP.csv",
-        "docs/planning/CAPEX_V6_GATE_RISK_DECISION_MAP.csv"
+        "docs/planning/CAPEX_V6_GATE_RISK_DECISION_MAP.csv",
+        "docs/planning/capex_real_project_acceptance/SME_RP_ACCEPTANCE_REGISTER.yaml"
       ],
       "counts": {
         "done": 3,
         "in_progress": 0,
-        "not_started": 7,
+        "not_started": 9,
         "blocked": 0,
         "needs_review": 0,
-        "total": 10
+        "total": 12
       },
-      "taskCount": 10,
+      "taskCount": 12,
       "epicPath": "docs/planning/epics/EPIC-136.md",
       "tasks": [
         {
@@ -659,19 +661,137 @@
           "completedAt": null,
           "completionTimestampStatus": "not_applicable",
           "completionTimestampSource": "not_completed"
+        },
+        {
+          "id": "TASK-0648",
+          "epicId": "EPIC-136",
+          "title": "Create SME-RP approval-with-conditions annex pack and sign-off wording",
+          "plainPurpose": "Add SME-RP annex and sign-off planning truth that distinguishes subject-matter target approval from implementation or activation approval.",
+          "sourceStatus": "TODO",
+          "displayStatus": "not_started",
+          "statusReason": "Task is still planned backlog work.",
+          "why": [
+            "The source review recommends approval with conditions, not unconditional CAPEX implementation approval. The repo needs generalized SME-RP sign-off wording so the conditions apply across real-project modules, with K12 retained only as the first binding fixture slice."
+          ],
+          "scope": [
+            "Add SME-RP annex and sign-off planning truth that distinguishes subject-matter target approval from implementation or activation approval.",
+            "Anchor the annex pack under docs/planning/capex_real_project_acceptance/.",
+            "Preserve the source archive provenance: original namespace SME-K12, source task TASK-0625, repo task TASK-0648.",
+            "Make SME-RP-G001 the gate for approval-with-conditions wording."
+          ],
+          "outOfScope": [
+            "Runtime behavior changes.",
+            "CAPEX runtime/product activation.",
+            "Raw K12, K3, or blind-validation corpus import.",
+            "Treating generated planning artifacts as authoritative project truth."
+          ],
+          "dependsOn": [
+            "TASK-0233"
+          ],
+          "owners": [
+            "capex-product",
+            "capex-architecture"
+          ],
+          "reviewers": [
+            "engineering-pm",
+            "capex-sme"
+          ],
+          "risk": "high",
+          "verification": [
+            "Contract coverage proves SME-RP gates are present and source SME-K12 gate IDs are not introduced.",
+            "python3 scripts/validate_repo.py",
+            "CAPEX progress data validation after regeneration.",
+            "git diff --check"
+          ],
+          "acceptanceCriteria": [
+            "Annex A-D and the SME-RP register are discoverable from repo planning docs.",
+            "The approval wording says approval is conditional and module-specific.",
+            "No AI output, external status, workpage row, folder path, file presence, PR/PO/invoice, handover, or supplier statement becomes official CAPEX truth without review/approval/adoption."
+          ],
+          "sourceRow": {
+            "source_task_id": "TASK-0625",
+            "source_namespace": "SME-K12",
+            "repo_namespace": "SME-RP",
+            "gate_refs": "SME-RP-G001",
+            "source_conditions": "TOP-01;1-A1;1-A2;15-A1;15-A2;15-A3"
+          },
+          "evidence": [],
+          "taskPath": "codex/tasks/TASK-0648-create-sme-rp-approval-with-conditions-annex-pack-and-sign-off-wording.md",
+          "completedAt": null,
+          "completionTimestampStatus": "not_applicable",
+          "completionTimestampSource": "not_completed"
+        },
+        {
+          "id": "TASK-0664",
+          "epicId": "EPIC-136",
+          "title": "Add module-specific SME readiness rule",
+          "plainPurpose": "Add the module-specific SME readiness rule to CAPEX planning and gate language.",
+          "sourceStatus": "TODO",
+          "displayStatus": "not_started",
+          "statusReason": "Task is still planned backlog work.",
+          "why": [
+            "The SME-RP conditions should block the affected module, not all platform foundation work. This prevents both false activation and unnecessary platform freeze."
+          ],
+          "scope": [
+            "Add the module-specific SME readiness rule to CAPEX planning and gate language.",
+            "Business definitions block only modules that depend on those definitions.",
+            "Disabled safety-hardening and independent platform work may continue.",
+            "Bind the rule to SME-RP-G002 and SME-RP-G012."
+          ],
+          "outOfScope": [
+            "Runtime activation.",
+            "Waiving any specific SME-RP gate.",
+            "Changing platform invariants.",
+            "Raw corpus import."
+          ],
+          "dependsOn": [
+            "TASK-0648"
+          ],
+          "owners": [
+            "capex-product",
+            "capex-architecture"
+          ],
+          "reviewers": [
+            "engineering-pm",
+            "capex-sme"
+          ],
+          "risk": "high",
+          "verification": [
+            "Contract tests prove the SME-RP register records module-specific readiness.",
+            "CAPEX progress data validation after regeneration.",
+            "python3 scripts/validate_repo.py",
+            "git diff --check"
+          ],
+          "acceptanceCriteria": [
+            "The readiness rule is explicit in repo-native planning memory.",
+            "Affected business modules remain blocked until their required definitions are accepted or waived.",
+            "Independent platform hardening is not blocked merely by unresolved business thresholds."
+          ],
+          "sourceRow": {
+            "source_task_id": "TASK-0641",
+            "source_namespace": "SME-K12",
+            "repo_namespace": "SME-RP",
+            "gate_refs": "SME-RP-G002;SME-RP-G012",
+            "source_conditions": "2-A1;2-A2;14-D8;14-D9;14-D10"
+          },
+          "evidence": [],
+          "taskPath": "codex/tasks/TASK-0664-add-module-specific-sme-readiness-rule.md",
+          "completedAt": null,
+          "completionTimestampStatus": "not_applicable",
+          "completionTimestampSource": "not_completed"
         }
       ],
       "estimate": {
-        "percentComplete": 30.0,
+        "percentComplete": 25.0,
         "completedTasks": 3,
-        "remainingTasks": 7,
+        "remainingTasks": 9,
         "remainingBlockedOrReviewTasks": 0,
         "completedWithTimestamps": 0,
         "completionTimestampCoverage": 0.0,
-        "etaDate": "2026-06-10",
+        "etaDate": "2026-06-11",
         "etaConfidence": "low",
         "etaSource": "global_completed_at",
-        "label": "ETA 2026-06-10",
+        "label": "ETA 2026-06-11",
         "caveat": "Estimate is based on remaining current-scope task count."
       }
     },
@@ -3414,16 +3534,17 @@
       "id": "EPIC-140",
       "title": "CAPEX project access and membership",
       "plainPurpose": "Define project anchors, membership, roles, and project-scoped APIs without crossing tenant/domain boundaries.",
-      "displayStatus": "done",
-      "reviewPosture": "EPIC-140 project/access work is closed with project anchors, direct memberships, project child APIs, selector/dashboard, project-scope helper, official pointer families, domain manifests, W1 closeout evidence, and rebuildable authorization projections; CAPEX activation remains blocked by later source-governance, workflow/workpage, storage evidence or waiver, release/capacity, and production-preflight gates.",
+      "displayStatus": "in_progress",
+      "reviewPosture": "EPIC-140 project/access foundation is closed with project anchors, direct memberships, project child APIs, selector/dashboard, project-scope helper, official pointer families, domain manifests, W1 closeout evidence, and rebuildable authorization projections; SME-RP scope hierarchy and RACI addendum tasks TASK-0649 and TASK-0650 remain open planning-only work, and CAPEX activation remains blocked by later source-governance, workflow/workpage, storage evidence or waiver, release/capacity, and production-preflight gates.",
       "dependencies": [
         "EPIC-137",
         "EPIC-139",
         "EPIC-140"
       ],
       "inScope": [
-        "Source task families/counts: ARCH:10, NU:1, PROJ:5, RF:1.",
+        "Source task families/counts: ARCH:10, NU:1, PROJ:5, RF:1, SME-RP:2.",
         "Preserve CAPEX v6 source-row intent while translating work into repo-native tasks and context packs.",
+        "Define generalized real-project scope hierarchy and RACI rules without making K12 a product namespace.",
         "Keep official claims inside the canonical workflow/task/approval/event/artifact/pointer substrate."
       ],
       "outOfScope": [
@@ -3434,17 +3555,18 @@
       "sourceReferences": [
         "docs/planning/CAPEX_MASTER_V6_INTAKE.md",
         "docs/planning/CAPEX_V6_CONVERSION_MAP.csv",
-        "docs/planning/CAPEX_V6_GATE_RISK_DECISION_MAP.csv"
+        "docs/planning/CAPEX_V6_GATE_RISK_DECISION_MAP.csv",
+        "docs/planning/capex_real_project_acceptance/SME_RP_ACCEPTANCE_REGISTER.yaml"
       ],
       "counts": {
         "done": 17,
         "in_progress": 0,
-        "not_started": 0,
+        "not_started": 2,
         "blocked": 0,
         "needs_review": 0,
-        "total": 17
+        "total": 19
       },
-      "taskCount": 17,
+      "taskCount": 19,
       "epicPath": "docs/planning/epics/EPIC-140.md",
       "tasks": [
         {
@@ -4408,20 +4530,143 @@
           "completedAt": "2026-06-05T10:42:12+02:00",
           "completionTimestampStatus": "recorded",
           "completionTimestampSource": "task_frontmatter"
+        },
+        {
+          "id": "TASK-0649",
+          "epicId": "EPIC-140",
+          "title": "Define CAPEX scope hierarchy and minimum capex_scope contract",
+          "plainPurpose": "Define the minimum capex_scope hierarchy and project membership relationship needed before scope-sensitive workflows can activate.",
+          "sourceStatus": "TODO",
+          "displayStatus": "not_started",
+          "statusReason": "Task is still planned backlog work.",
+          "why": [
+            "Real-project acceptance requires project status to remain separable by scope. K12 motivates the false-closure case, but the contract must be general CAPEX scope truth."
+          ],
+          "scope": [
+            "Define the minimum capex_scope hierarchy and project membership relationship needed before scope-sensitive workflows can activate.",
+            "Specify scope identity, parent/child hierarchy, and project boundary expectations.",
+            "Describe how scope-level status prevents false overall closure.",
+            "Bind the scope contract to SME-RP-G003."
+          ],
+          "outOfScope": [
+            "New database migration or runtime API implementation.",
+            "K12-only scope semantics.",
+            "Project closure or pointer-promotion behavior changes.",
+            "CAPEX runtime/product activation."
+          ],
+          "dependsOn": [
+            "TASK-0261",
+            "TASK-0563"
+          ],
+          "owners": [
+            "capex-product",
+            "platform"
+          ],
+          "reviewers": [
+            "capex-architecture",
+            "backend",
+            "capex-sme"
+          ],
+          "risk": "high",
+          "verification": [
+            "Contract tests prove the SME-RP register maps this task to EPIC-140 and SME-RP-G003.",
+            "CAPEX progress data validation after regeneration.",
+            "python3 scripts/validate_repo.py",
+            "git diff --check"
+          ],
+          "acceptanceCriteria": [
+            "Scope hierarchy is described as a general CAPEX real-project contract.",
+            "K12 is referenced only as a motivating fixture case for false-closure coverage.",
+            "No workflow can claim overall closure merely because one scope dimension is closed."
+          ],
+          "sourceRow": {
+            "source_task_id": "TASK-0626",
+            "source_namespace": "SME-K12",
+            "repo_namespace": "SME-RP",
+            "gate_refs": "SME-RP-G003",
+            "fixture_refs": "K12-T1",
+            "source_conditions": "TOP-02;TOP-03;5-A1;5-A2"
+          },
+          "evidence": [],
+          "taskPath": "codex/tasks/TASK-0649-define-capex-scope-hierarchy-and-minimum-capex-scope-contract.md",
+          "completedAt": null,
+          "completionTimestampStatus": "not_applicable",
+          "completionTimestampSource": "not_completed"
+        },
+        {
+          "id": "TASK-0650",
+          "epicId": "EPIC-140",
+          "title": "Draft RACI and role-permission matrix",
+          "plainPurpose": "Draft the RACI and role-permission matrix for create, review, approve, adopt, close, reopen, waive, and escalate actions.",
+          "sourceStatus": "TODO",
+          "displayStatus": "not_started",
+          "statusReason": "Task is still planned backlog work.",
+          "why": [
+            "Role-sensitive CAPEX modules need explicit responsibility and permission boundaries before activation. The RACI applies to CAPEX real-project work generally, not only to one fixture."
+          ],
+          "scope": [
+            "Draft the RACI and role-permission matrix for create, review, approve, adopt, close, reopen, waive, and escalate actions.",
+            "Align roles with project membership and future authorization projections.",
+            "Mark SME-RP-G002 as the activation gate for role-sensitive modules.",
+            "Keep official state changes routed through the canonical object/event/pointer path."
+          ],
+          "outOfScope": [
+            "Runtime authorization implementation beyond existing EPIC-140 foundation.",
+            "Frontend-only permission filtering.",
+            "New official-state shortcuts.",
+            "CAPEX runtime/product activation."
+          ],
+          "dependsOn": [
+            "TASK-0262",
+            "TASK-0648"
+          ],
+          "owners": [
+            "capex-product",
+            "capex-architecture"
+          ],
+          "reviewers": [
+            "engineering-pm",
+            "backend",
+            "capex-sme"
+          ],
+          "risk": "high",
+          "verification": [
+            "Contract tests prove the SME-RP register maps this task to EPIC-140 and SME-RP-G002.",
+            "CAPEX progress data validation after regeneration.",
+            "python3 scripts/validate_repo.py",
+            "git diff --check"
+          ],
+          "acceptanceCriteria": [
+            "RACI draft covers create, review, approve, adopt, close, reopen, waive, and escalate.",
+            "Role-sensitive activation remains blocked until the matrix is accepted or explicitly waived.",
+            "No generated material or workpage state becomes a permission source."
+          ],
+          "sourceRow": {
+            "source_task_id": "TASK-0627",
+            "source_namespace": "SME-K12",
+            "repo_namespace": "SME-RP",
+            "gate_refs": "SME-RP-G002",
+            "source_conditions": "TOP-10;5-A3;14-D8"
+          },
+          "evidence": [],
+          "taskPath": "codex/tasks/TASK-0650-draft-raci-and-role-permission-matrix.md",
+          "completedAt": null,
+          "completionTimestampStatus": "not_applicable",
+          "completionTimestampSource": "not_completed"
         }
       ],
       "estimate": {
-        "percentComplete": 100.0,
+        "percentComplete": 89.5,
         "completedTasks": 17,
-        "remainingTasks": 0,
+        "remainingTasks": 2,
         "remainingBlockedOrReviewTasks": 0,
         "completedWithTimestamps": 17,
         "completionTimestampCoverage": 100.0,
-        "etaDate": null,
-        "etaConfidence": "complete",
-        "etaSource": "none",
-        "label": "Complete",
-        "caveat": "No remaining current-scope tasks."
+        "etaDate": "2026-06-10",
+        "etaConfidence": "medium",
+        "etaSource": "epic_completed_at",
+        "label": "ETA 2026-06-10",
+        "caveat": "Estimate is based on remaining current-scope task count."
       }
     },
     {
@@ -4435,8 +4680,9 @@
         "EPIC-141"
       ],
       "inScope": [
-        "Source task families/counts: ARCH:38, INGEST:9, NU:1, RF:3, V5:1.",
+        "Source task families/counts: ARCH:38, INGEST:9, NU:1, RF:3, SME-RP:1, V5:1.",
         "Preserve CAPEX v6 source-row intent while translating work into repo-native tasks and context packs.",
+        "Define generalized occurrence context and evidence-source trust taxonomy rules.",
         "Keep official claims inside the canonical workflow/task/approval/event/artifact/pointer substrate."
       ],
       "outOfScope": [
@@ -4447,17 +4693,18 @@
       "sourceReferences": [
         "docs/planning/CAPEX_MASTER_V6_INTAKE.md",
         "docs/planning/CAPEX_V6_CONVERSION_MAP.csv",
-        "docs/planning/CAPEX_V6_GATE_RISK_DECISION_MAP.csv"
+        "docs/planning/CAPEX_V6_GATE_RISK_DECISION_MAP.csv",
+        "docs/planning/capex_real_project_acceptance/SME_RP_ACCEPTANCE_REGISTER.yaml"
       ],
       "counts": {
         "done": 2,
         "in_progress": 0,
-        "not_started": 49,
+        "not_started": 50,
         "blocked": 0,
         "needs_review": 1,
-        "total": 52
+        "total": 53
       },
-      "taskCount": 52,
+      "taskCount": 53,
       "epicPath": "docs/planning/epics/EPIC-141.md",
       "tasks": [
         {
@@ -7399,12 +7646,72 @@
           "completedAt": null,
           "completionTimestampStatus": "missing_historical",
           "completionTimestampSource": "grandfathered_missing"
+        },
+        {
+          "id": "TASK-0652",
+          "epicId": "EPIC-141",
+          "title": "Add occurrence context profile and source trust taxonomy",
+          "plainPurpose": "Add a document occurrence context profile and source/data-source trust taxonomy for planning and later implementation.",
+          "sourceStatus": "TODO",
+          "displayStatus": "not_started",
+          "statusReason": "Task is still planned backlog work.",
+          "why": [
+            "SourceRefs need context about where evidence came from and what trust mode applies. This is a general source governance condition for CAPEX real-project work."
+          ],
+          "scope": [
+            "Add a document occurrence context profile and source/data-source trust taxonomy for planning and later implementation.",
+            "Distinguish observed, referenced, imported, reviewed, and officially adopted material.",
+            "Preserve SourceOccurrence as observed source truth, not reviewed project truth.",
+            "Bind the taxonomy to SME-RP-G004."
+          ],
+          "outOfScope": [
+            "New ingestion runtime implementation.",
+            "External connector activation.",
+            "Raw corpus import.",
+            "CAPEX runtime/product activation."
+          ],
+          "dependsOn": [
+            "TASK-0564"
+          ],
+          "owners": [
+            "capex-platform",
+            "data-governance"
+          ],
+          "reviewers": [
+            "backend",
+            "security",
+            "capex-sme"
+          ],
+          "risk": "high",
+          "verification": [
+            "Contract tests prove the SME-RP register maps this task to EPIC-141 and SME-RP-G004.",
+            "CAPEX progress data validation after regeneration.",
+            "python3 scripts/validate_repo.py",
+            "git diff --check"
+          ],
+          "acceptanceCriteria": [
+            "Source trust modes are general CAPEX evidence-source rules.",
+            "Source occurrence, evidence binding, review, approval, and official adoption remain separate.",
+            "External or imported status cannot overwrite CAPEX state directly."
+          ],
+          "sourceRow": {
+            "source_task_id": "TASK-0629",
+            "source_namespace": "SME-K12",
+            "repo_namespace": "SME-RP",
+            "gate_refs": "SME-RP-G004",
+            "source_conditions": "6-A2;6-A3;13-A3;14-D9"
+          },
+          "evidence": [],
+          "taskPath": "codex/tasks/TASK-0652-add-occurrence-context-profile-and-source-trust-taxonomy.md",
+          "completedAt": null,
+          "completionTimestampStatus": "not_applicable",
+          "completionTimestampSource": "not_completed"
         }
       ],
       "estimate": {
         "percentComplete": 3.8,
         "completedTasks": 2,
-        "remainingTasks": 50,
+        "remainingTasks": 51,
         "remainingBlockedOrReviewTasks": 1,
         "completedWithTimestamps": 1,
         "completionTimestampCoverage": 50.0,
@@ -7426,8 +7733,9 @@
         "EPIC-142"
       ],
       "inScope": [
-        "Source task families/counts: ARCH:20, ART:5, NU:2, RF:2, V5:3.",
+        "Source task families/counts: ARCH:20, ART:5, NU:2, RF:2, SME-RP:3, V5:3.",
         "Preserve CAPEX v6 source-row intent while translating work into repo-native tasks and context packs.",
+        "Define generalized evidence status, AI trust, partial handover, observation phase, and closure-dimension governance.",
         "Keep official claims inside the canonical workflow/task/approval/event/artifact/pointer substrate."
       ],
       "outOfScope": [
@@ -7438,17 +7746,18 @@
       "sourceReferences": [
         "docs/planning/CAPEX_MASTER_V6_INTAKE.md",
         "docs/planning/CAPEX_V6_CONVERSION_MAP.csv",
-        "docs/planning/CAPEX_V6_GATE_RISK_DECISION_MAP.csv"
+        "docs/planning/CAPEX_V6_GATE_RISK_DECISION_MAP.csv",
+        "docs/planning/capex_real_project_acceptance/SME_RP_ACCEPTANCE_REGISTER.yaml"
       ],
       "counts": {
         "done": 4,
         "in_progress": 0,
-        "not_started": 27,
+        "not_started": 30,
         "blocked": 0,
         "needs_review": 1,
-        "total": 32
+        "total": 35
       },
-      "taskCount": 32,
+      "taskCount": 35,
       "epicPath": "docs/planning/epics/EPIC-142.md",
       "tasks": [
         {
@@ -9254,19 +9563,202 @@
           "completedAt": null,
           "completionTimestampStatus": "missing_historical",
           "completionTimestampSource": "grandfathered_missing"
+        },
+        {
+          "id": "TASK-0651",
+          "epicId": "EPIC-142",
+          "title": "Harden evidence status vocabulary and transition rules",
+          "plainPurpose": "Define evidence-link statuses and transition rules for real-project evidence binding.",
+          "sourceStatus": "TODO",
+          "displayStatus": "not_started",
+          "statusReason": "Task is still planned backlog work.",
+          "why": [
+            "Evidence presence is not evidence sufficiency. CAPEX needs general evidence-link status vocabulary before evidence-driven modules, workpages, or closure flows can activate."
+          ],
+          "scope": [
+            "Define evidence-link statuses and transition rules for real-project evidence binding.",
+            "Cover proposed, under review, valid, partly valid, contradictory, obsolete, invalid, insufficient, and accepted-with-residual-risk states.",
+            "Bind the vocabulary to source occurrence and closure semantics.",
+            "Mark SME-RP-G004 as the approval gate."
+          ],
+          "outOfScope": [
+            "Runtime evidence-binding implementation.",
+            "Search/retrieval index implementation.",
+            "Treating extracted text, AI output, or raw file presence as reviewed evidence.",
+            "CAPEX runtime/product activation."
+          ],
+          "dependsOn": [
+            "TASK-0565"
+          ],
+          "owners": [
+            "capex-architecture",
+            "qa"
+          ],
+          "reviewers": [
+            "backend",
+            "capex-sme",
+            "security"
+          ],
+          "risk": "high",
+          "verification": [
+            "Contract tests prove the SME-RP register maps this task to EPIC-142 and SME-RP-G004.",
+            "CAPEX progress data validation after regeneration.",
+            "python3 scripts/validate_repo.py",
+            "git diff --check"
+          ],
+          "acceptanceCriteria": [
+            "Evidence statuses are general CAPEX vocabulary, not fixture-specific labels.",
+            "Contradictory, obsolete, invalid, and insufficient evidence cannot satisfy closure.",
+            "Residual-risk acceptance remains explicit and reviewable."
+          ],
+          "sourceRow": {
+            "source_task_id": "TASK-0628",
+            "source_namespace": "SME-K12",
+            "repo_namespace": "SME-RP",
+            "gate_refs": "SME-RP-G004",
+            "source_conditions": "TOP-08;6-A1"
+          },
+          "evidence": [],
+          "taskPath": "codex/tasks/TASK-0651-harden-evidence-status-vocabulary-and-transition-rules.md",
+          "completedAt": null,
+          "completionTimestampStatus": "not_applicable",
+          "completionTimestampSource": "not_completed"
+        },
+        {
+          "id": "TASK-0658",
+          "epicId": "EPIC-142",
+          "title": "Extend closure model with partial handover and observation phase",
+          "plainPurpose": "Extend closure planning with partial handover, observation phase, commissioning, production release, maintenance, documentation, commercial, and effectiveness dimensions.",
+          "sourceStatus": "TODO",
+          "displayStatus": "not_started",
+          "statusReason": "Task is still planned backlog work.",
+          "why": [
+            "Handover, production release, commercial settlement, and technical effectiveness are distinct. Real-project acceptance requires closure dimensions that cannot be collapsed by supplier statements or partial handover."
+          ],
+          "scope": [
+            "Extend closure planning with partial handover, observation phase, commissioning, production release, maintenance, documentation, commercial, and effectiveness dimensions.",
+            "Bind the extension to SME-RP-G008.",
+            "Preserve existing closure/waiver/recurrence foundation from TASK-0565.",
+            "Treat fixture cases as examples of general closure safety."
+          ],
+          "outOfScope": [
+            "Runtime closure-command implementation.",
+            "Public closure UI or CAPEX workpage route implementation.",
+            "Treating handover as project closure.",
+            "CAPEX runtime/product activation."
+          ],
+          "dependsOn": [
+            "TASK-0565"
+          ],
+          "owners": [
+            "capex-architecture",
+            "capex-product"
+          ],
+          "reviewers": [
+            "backend",
+            "maintenance",
+            "production",
+            "capex-sme"
+          ],
+          "risk": "high",
+          "verification": [
+            "Contract tests prove the SME-RP register maps this task to EPIC-142 and SME-RP-G008.",
+            "CAPEX progress data validation after regeneration.",
+            "python3 scripts/validate_repo.py",
+            "git diff --check"
+          ],
+          "acceptanceCriteria": [
+            "Partial handover can be represented without closing all project dimensions.",
+            "Defect effectiveness can remain open or enter observation phase after supplier repair.",
+            "Commercial settlement remains separate from technical effectiveness and project closure."
+          ],
+          "sourceRow": {
+            "source_task_id": "TASK-0635",
+            "source_namespace": "SME-K12",
+            "repo_namespace": "SME-RP",
+            "gate_refs": "SME-RP-G008",
+            "fixture_refs": "K12-T2;K12-T3;K12-T9;K12-T10",
+            "source_conditions": "TOP-06;TOP-07;8-A5;8-A6;10-A2;10-A3;10-A4;14-D4;14-D5"
+          },
+          "evidence": [],
+          "taskPath": "codex/tasks/TASK-0658-extend-closure-model-with-partial-handover-and-observation-phase.md",
+          "completedAt": null,
+          "completionTimestampStatus": "not_applicable",
+          "completionTimestampSource": "not_completed"
+        },
+        {
+          "id": "TASK-0660",
+          "epicId": "EPIC-142",
+          "title": "Align AI trust status and source-binding requirements",
+          "plainPurpose": "Align AI trust status and SourceRef requirements with evidence binding, closure, and executive reporting guardrails.",
+          "sourceStatus": "TODO",
+          "displayStatus": "not_started",
+          "statusReason": "Task is still planned backlog work.",
+          "why": [
+            "AI output must remain a draft or reviewed artifact until promoted through canonical governance. Executive/status views need explicit trust and source-binding labels."
+          ],
+          "scope": [
+            "Align AI trust status and SourceRef requirements with evidence binding, closure, and executive reporting guardrails.",
+            "Define AI statuses from suggestion through official pointer adoption.",
+            "Require meaningful SourceRefs before AI-assisted evidence can support reviewed state.",
+            "Bind the work to SME-RP-G009."
+          ],
+          "outOfScope": [
+            "LLM prompt or model implementation.",
+            "AI-generated official state.",
+            "CEO/status view implementation.",
+            "CAPEX runtime/product activation."
+          ],
+          "dependsOn": [
+            "TASK-0564",
+            "TASK-0651"
+          ],
+          "owners": [
+            "capex-architecture",
+            "qa"
+          ],
+          "reviewers": [
+            "backend",
+            "security",
+            "capex-sme"
+          ],
+          "risk": "high",
+          "verification": [
+            "Contract tests prove the SME-RP register maps this task to EPIC-142 and SME-RP-G009.",
+            "CAPEX progress data validation after regeneration.",
+            "python3 scripts/validate_repo.py",
+            "git diff --check"
+          ],
+          "acceptanceCriteria": [
+            "AI statuses distinguish suggestion, human reviewed, corrected, rejected, adopted reviewed state, and official pointer adoption.",
+            "AI output cannot satisfy evidence or executive reporting without explicit trust/source labels.",
+            "Source binding depends on resolver-backed meaningful SourceRefs."
+          ],
+          "sourceRow": {
+            "source_task_id": "TASK-0637",
+            "source_namespace": "SME-K12",
+            "repo_namespace": "SME-RP",
+            "gate_refs": "SME-RP-G009",
+            "source_conditions": "TOP-09;11-A2;11-A3;11-A4"
+          },
+          "evidence": [],
+          "taskPath": "codex/tasks/TASK-0660-align-ai-trust-status-and-source-binding-requirements.md",
+          "completedAt": null,
+          "completionTimestampStatus": "not_applicable",
+          "completionTimestampSource": "not_completed"
         }
       ],
       "estimate": {
-        "percentComplete": 12.5,
+        "percentComplete": 11.4,
         "completedTasks": 4,
-        "remainingTasks": 28,
+        "remainingTasks": 31,
         "remainingBlockedOrReviewTasks": 1,
         "completedWithTimestamps": 1,
         "completionTimestampCoverage": 25.0,
-        "etaDate": "2026-06-14",
+        "etaDate": "2026-06-15",
         "etaConfidence": "low",
         "etaSource": "global_completed_at",
-        "label": "ETA 2026-06-14",
+        "label": "ETA 2026-06-15",
         "caveat": "1 blocked or needs-review task(s) remain."
       }
     },
@@ -9282,8 +9774,9 @@
         "EPIC-143"
       ],
       "inScope": [
-        "Source task families/counts: NU:2, V5:2, WFLOW:7.",
+        "Source task families/counts: NU:2, SME-RP:4, V5:2, WFLOW:7.",
         "Preserve CAPEX v6 source-row intent while translating work into repo-native tasks and context packs.",
+        "Classify real-project workflow requirements before any authored workflow pack claims readiness.",
         "Keep official claims inside the canonical workflow/task/approval/event/artifact/pointer substrate."
       ],
       "outOfScope": [
@@ -9294,17 +9787,18 @@
       "sourceReferences": [
         "docs/planning/CAPEX_MASTER_V6_INTAKE.md",
         "docs/planning/CAPEX_V6_CONVERSION_MAP.csv",
-        "docs/planning/CAPEX_V6_GATE_RISK_DECISION_MAP.csv"
+        "docs/planning/CAPEX_V6_GATE_RISK_DECISION_MAP.csv",
+        "docs/planning/capex_real_project_acceptance/SME_RP_ACCEPTANCE_REGISTER.yaml"
       ],
       "counts": {
         "done": 3,
         "in_progress": 0,
-        "not_started": 8,
+        "not_started": 12,
         "blocked": 0,
         "needs_review": 0,
-        "total": 11
+        "total": 15
       },
-      "taskCount": 11,
+      "taskCount": 15,
       "epicPath": "docs/planning/epics/EPIC-143.md",
       "tasks": [
         {
@@ -9940,19 +10434,264 @@
           "completedAt": null,
           "completionTimestampStatus": "missing_historical",
           "completionTimestampSource": "grandfathered_missing"
+        },
+        {
+          "id": "TASK-0654",
+          "epicId": "EPIC-143",
+          "title": "Add Scope Management workflow specification",
+          "plainPurpose": "Specify Scope Management as an MVP / early workflow and define its minimum task/workpage routing expectations.",
+          "sourceStatus": "TODO",
+          "displayStatus": "not_started",
+          "statusReason": "Task is still planned backlog work.",
+          "why": [
+            "Real-project closure can be false if scope dimensions collapse into one status. Scope Management must be a general CAPEX workflow requirement, with K12 only as the first fixture that stresses it."
+          ],
+          "scope": [
+            "Specify Scope Management as an MVP / early workflow and define its minimum task/workpage routing expectations.",
+            "Bind scope workflow readiness to capex_scope.",
+            "Preserve downstream handoff manifest and stale-basis rules.",
+            "Map the workflow to SME-RP-G003 and SME-RP-G012."
+          ],
+          "outOfScope": [
+            "Runtime workflow activation.",
+            "Frontend implementation.",
+            "K12-only workflow semantics.",
+            "CAPEX runtime/product activation."
+          ],
+          "dependsOn": [
+            "TASK-0566",
+            "TASK-0649"
+          ],
+          "owners": [
+            "capex-product",
+            "capex-architecture"
+          ],
+          "reviewers": [
+            "backend",
+            "qa",
+            "capex-sme"
+          ],
+          "risk": "high",
+          "verification": [
+            "Contract tests prove the SME-RP register maps this task to EPIC-143.",
+            "CAPEX progress data validation after regeneration.",
+            "python3 scripts/validate_repo.py",
+            "git diff --check"
+          ],
+          "acceptanceCriteria": [
+            "Scope Management is represented as a real-project workflow requirement.",
+            "Scope-specific status can prevent overall closure.",
+            "Downstream workflows cannot consume scope state without canonical handoff basis."
+          ],
+          "sourceRow": {
+            "source_task_id": "TASK-0631",
+            "source_namespace": "SME-K12",
+            "repo_namespace": "SME-RP",
+            "gate_refs": "SME-RP-G003;SME-RP-G012",
+            "fixture_refs": "K12-T1",
+            "source_conditions": "8-A1;14-D1"
+          },
+          "evidence": [],
+          "taskPath": "codex/tasks/TASK-0654-add-scope-management-workflow-specification.md",
+          "completedAt": null,
+          "completionTimestampStatus": "not_applicable",
+          "completionTimestampSource": "not_completed"
+        },
+        {
+          "id": "TASK-0655",
+          "epicId": "EPIC-143",
+          "title": "Add Budget and Commercial Control workflow",
+          "plainPurpose": "Specify Budget and Commercial Control as an MVP / early workflow.",
+          "sourceStatus": "TODO",
+          "displayStatus": "not_started",
+          "statusReason": "Task is still planned backlog work.",
+          "why": [
+            "Commercial evidence must be visible and reconcilable without becoming ERP truth or technical closure. CAPEX needs a general workflow for budget and commercial observation."
+          ],
+          "scope": [
+            "Specify Budget and Commercial Control as an MVP / early workflow.",
+            "Model commercial control as observation and reconciliation.",
+            "Preserve separation between commercial settlement and technical effectiveness.",
+            "Bind the workflow to SME-RP-G006 and SME-RP-G012."
+          ],
+          "outOfScope": [
+            "ERP/accounting ledger replacement.",
+            "Runtime connector implementation.",
+            "Numeric threshold invention.",
+            "CAPEX runtime/product activation."
+          ],
+          "dependsOn": [
+            "TASK-0566"
+          ],
+          "owners": [
+            "capex-product",
+            "capex-architecture"
+          ],
+          "reviewers": [
+            "backend",
+            "procurement",
+            "controlling",
+            "capex-sme"
+          ],
+          "risk": "high",
+          "verification": [
+            "Contract tests prove the SME-RP register maps this task to EPIC-143.",
+            "CAPEX progress data validation after regeneration.",
+            "python3 scripts/validate_repo.py",
+            "git diff --check"
+          ],
+          "acceptanceCriteria": [
+            "PR, PO, invoice, forecast, and controlling data are treated as observed/reconciled evidence.",
+            "Commercial settlement cannot close technical, effectiveness, handover, or assumption dimensions.",
+            "Missing or deviating commercial fields can route canonical clarification work."
+          ],
+          "sourceRow": {
+            "source_task_id": "TASK-0632",
+            "source_namespace": "SME-K12",
+            "repo_namespace": "SME-RP",
+            "gate_refs": "SME-RP-G006;SME-RP-G012",
+            "fixture_refs": "K12-T4;K12-T10",
+            "source_conditions": "TOP-04;8-A2;9-A2"
+          },
+          "evidence": [],
+          "taskPath": "codex/tasks/TASK-0655-add-budget-and-commercial-control-workflow.md",
+          "completedAt": null,
+          "completionTimestampStatus": "not_applicable",
+          "completionTimestampSource": "not_completed"
+        },
+        {
+          "id": "TASK-0656",
+          "epicId": "EPIC-143",
+          "title": "Add Safety and Work Permit Readiness workflow",
+          "plainPurpose": "Specify Safety and Work Permit Readiness as an MVP / early real-project workflow.",
+          "sourceStatus": "TODO",
+          "displayStatus": "not_started",
+          "statusReason": "Task is still planned backlog work.",
+          "why": [
+            "Safety readiness is a standard CAPEX work-release concern, not a fixture-only concern. Missing safety evidence must block or route work through canonical tasks."
+          ],
+          "scope": [
+            "Specify Safety and Work Permit Readiness as an MVP / early real-project workflow.",
+            "Cover contractor readiness, safety briefing, work release, and escalation basics.",
+            "Keep safety readiness distinct from technical closure and commercial status.",
+            "Bind the workflow to SME-RP-G012."
+          ],
+          "outOfScope": [
+            "Full EHS system replacement.",
+            "Runtime connector implementation.",
+            "Public frontend route implementation.",
+            "CAPEX runtime/product activation."
+          ],
+          "dependsOn": [
+            "TASK-0566"
+          ],
+          "owners": [
+            "capex-product",
+            "capex-architecture"
+          ],
+          "reviewers": [
+            "ehs",
+            "backend",
+            "qa",
+            "capex-sme"
+          ],
+          "risk": "high",
+          "verification": [
+            "Contract tests prove the SME-RP register maps this task to EPIC-143.",
+            "CAPEX progress data validation after regeneration.",
+            "python3 scripts/validate_repo.py",
+            "git diff --check"
+          ],
+          "acceptanceCriteria": [
+            "Missing safety briefing or permit evidence blocks work release or creates escalation work.",
+            "Safety readiness is not treated as K3-only.",
+            "Safety state remains canonical task/evidence/approval truth, not workpage-only state."
+          ],
+          "sourceRow": {
+            "source_task_id": "TASK-0633",
+            "source_namespace": "SME-K12",
+            "repo_namespace": "SME-RP",
+            "gate_refs": "SME-RP-G012",
+            "fixture_refs": "K12-T8",
+            "source_conditions": "TOP-05;8-A3;12-A2"
+          },
+          "evidence": [],
+          "taskPath": "codex/tasks/TASK-0656-add-safety-and-work-permit-readiness-workflow.md",
+          "completedAt": null,
+          "completionTimestampStatus": "not_applicable",
+          "completionTimestampSource": "not_completed"
+        },
+        {
+          "id": "TASK-0657",
+          "epicId": "EPIC-143",
+          "title": "Classify workflow extensions as MVP-lite or post-MVP",
+          "plainPurpose": "Classify shutdown/schedule, supplier claim/warranty, lessons learned, and related workflow extensions as MVP-lite, conditional, or post-MVP reserved.",
+          "sourceStatus": "TODO",
+          "displayStatus": "not_started",
+          "statusReason": "Task is still planned backlog work.",
+          "why": [
+            "Real-project SME feedback adds important workflow families, but not every family belongs in MVP. The repo needs an explicit classification to avoid silent scope creep."
+          ],
+          "scope": [
+            "Classify shutdown/schedule, supplier claim/warranty, lessons learned, and related workflow extensions as MVP-lite, conditional, or post-MVP reserved.",
+            "Preserve hooks for later without activating reserved modules.",
+            "Bind classification to SME-RP-G012.",
+            "Keep MVP scope focused on accepted early workflow families."
+          ],
+          "outOfScope": [
+            "Runtime implementation of reserved workflows.",
+            "Full supplier claim/warranty management.",
+            "Lessons learned / after-handover performance library.",
+            "CAPEX runtime/product activation."
+          ],
+          "dependsOn": [
+            "TASK-0566"
+          ],
+          "owners": [
+            "capex-product",
+            "capex-architecture"
+          ],
+          "reviewers": [
+            "engineering-pm",
+            "capex-sme"
+          ],
+          "risk": "medium",
+          "verification": [
+            "Contract tests prove the SME-RP register maps this task to EPIC-143 and SME-RP-G012.",
+            "CAPEX progress data validation after regeneration.",
+            "python3 scripts/validate_repo.py",
+            "git diff --check"
+          ],
+          "acceptanceCriteria": [
+            "Workflow extension classification is explicit and reviewable.",
+            "MVP-lite and post-MVP modules do not become activation blockers for unrelated platform work.",
+            "The classification keeps commercial, technical, handover, and effectiveness state separate."
+          ],
+          "sourceRow": {
+            "source_task_id": "TASK-0634",
+            "source_namespace": "SME-K12",
+            "repo_namespace": "SME-RP",
+            "gate_refs": "SME-RP-G012",
+            "source_conditions": "8-A4;8-A7;8-A8;14-D1"
+          },
+          "evidence": [],
+          "taskPath": "codex/tasks/TASK-0657-classify-workflow-extensions-as-mvp-lite-or-post-mvp.md",
+          "completedAt": null,
+          "completionTimestampStatus": "not_applicable",
+          "completionTimestampSource": "not_completed"
         }
       ],
       "estimate": {
-        "percentComplete": 27.3,
+        "percentComplete": 20.0,
         "completedTasks": 3,
-        "remainingTasks": 8,
+        "remainingTasks": 12,
         "remainingBlockedOrReviewTasks": 0,
         "completedWithTimestamps": 1,
         "completionTimestampCoverage": 33.3,
-        "etaDate": "2026-06-10",
+        "etaDate": "2026-06-11",
         "etaConfidence": "low",
         "etaSource": "global_completed_at",
-        "label": "ETA 2026-06-10",
+        "label": "ETA 2026-06-11",
         "caveat": "Estimate is based on remaining current-scope task count."
       }
     },
@@ -9968,8 +10707,9 @@
         "EPIC-144"
       ],
       "inScope": [
-        "Source task families/counts: ARCH:20, ART:1, NU:1, RF:1, WP:9.",
+        "Source task families/counts: ARCH:20, ART:1, NU:1, RF:1, SME-RP:1, WP:9.",
         "Preserve CAPEX v6 source-row intent while translating work into repo-native tasks and context packs.",
+        "Define workpage-to-task generation boundaries without giving projections status authority.",
         "Keep official claims inside the canonical workflow/task/approval/event/artifact/pointer substrate."
       ],
       "outOfScope": [
@@ -9980,17 +10720,18 @@
       "sourceReferences": [
         "docs/planning/CAPEX_MASTER_V6_INTAKE.md",
         "docs/planning/CAPEX_V6_CONVERSION_MAP.csv",
-        "docs/planning/CAPEX_V6_GATE_RISK_DECISION_MAP.csv"
+        "docs/planning/CAPEX_V6_GATE_RISK_DECISION_MAP.csv",
+        "docs/planning/capex_real_project_acceptance/SME_RP_ACCEPTANCE_REGISTER.yaml"
       ],
       "counts": {
         "done": 1,
         "in_progress": 0,
-        "not_started": 29,
+        "not_started": 30,
         "blocked": 0,
         "needs_review": 2,
-        "total": 32
+        "total": 33
       },
-      "taskCount": 32,
+      "taskCount": 33,
       "epicPath": "docs/planning/epics/EPIC-144.md",
       "tasks": [
         {
@@ -11807,12 +12548,72 @@
           "completedAt": "2026-06-08T00:00:00Z",
           "completionTimestampStatus": "recorded",
           "completionTimestampSource": "task_frontmatter"
+        },
+        {
+          "id": "TASK-0653",
+          "epicId": "EPIC-144",
+          "title": "Define workpage-to-task generation rules",
+          "plainPurpose": "Define workpage-to-task generation rules for real-project blocker cases.",
+          "sourceStatus": "TODO",
+          "displayStatus": "not_started",
+          "statusReason": "Task is still planned backlog work.",
+          "why": [
+            "CAPEX workpages may expose blockers and command surfaces, but they cannot become official state stores. Missing evidence, responsibility, revision, cost, safety, and contradiction cases need canonical task routing."
+          ],
+          "scope": [
+            "Define workpage-to-task generation rules for real-project blocker cases.",
+            "Route blocker handling through canonical tasks, flags, approvals, artifacts, and events.",
+            "State explicitly that workpages never set official project status.",
+            "Bind activation to SME-RP-G005."
+          ],
+          "outOfScope": [
+            "Public CAPEX workpage API implementation.",
+            "Frontend route implementation.",
+            "Generic status commands.",
+            "CAPEX runtime/product activation."
+          ],
+          "dependsOn": [
+            "TASK-0567"
+          ],
+          "owners": [
+            "frontend",
+            "capex-architecture"
+          ],
+          "reviewers": [
+            "backend",
+            "qa",
+            "capex-sme"
+          ],
+          "risk": "high",
+          "verification": [
+            "Contract tests prove the SME-RP register maps this task to EPIC-144 and SME-RP-G005.",
+            "CAPEX progress data validation after regeneration.",
+            "python3 scripts/validate_repo.py",
+            "git diff --check"
+          ],
+          "acceptanceCriteria": [
+            "Workpage commands create canonical work where needed.",
+            "Workpage projections cannot set closure, evidence sufficiency, commercial status, or official project status.",
+            "Stale command guards remain required before any mutation."
+          ],
+          "sourceRow": {
+            "source_task_id": "TASK-0630",
+            "source_namespace": "SME-K12",
+            "repo_namespace": "SME-RP",
+            "gate_refs": "SME-RP-G005",
+            "source_conditions": "7-A2;7-A3"
+          },
+          "evidence": [],
+          "taskPath": "codex/tasks/TASK-0653-define-workpage-to-task-generation-rules.md",
+          "completedAt": null,
+          "completionTimestampStatus": "not_applicable",
+          "completionTimestampSource": "not_completed"
         }
       ],
       "estimate": {
-        "percentComplete": 3.1,
+        "percentComplete": 3.0,
         "completedTasks": 1,
-        "remainingTasks": 31,
+        "remainingTasks": 32,
         "remainingBlockedOrReviewTasks": 2,
         "completedWithTimestamps": 1,
         "completionTimestampCoverage": 100.0,
@@ -11825,8 +12626,8 @@
     },
     {
       "id": "EPIC-145",
-      "title": "CAPEX K12/K3 fixture governance",
-      "plainPurpose": "Govern K12/K3 fixture roles, quarantine, redaction, expected outputs, and release checks without raw corpus commits.",
+      "title": "CAPEX real-project fixture governance",
+      "plainPurpose": "Govern real-project fixture roles, quarantine, redaction, expected outputs, and release checks without raw corpus commits. K12, K3, and blind-validation labels remain valid where they identify fixture tiers, imported source rows, or raw-data safety boundaries.",
       "displayStatus": "not_started",
       "reviewPosture": "Review posture follows task evidence and curated blocker overrides.",
       "dependencies": [
@@ -11836,6 +12637,7 @@
       "inScope": [
         "Source task families/counts: ARCH:22, K12:4, RF:1, SAFE:2, SPB2:7.",
         "Preserve CAPEX v6 source-row intent while translating work into repo-native tasks and context packs.",
+        "Preserve K12/K3/blind labels where they identify fixture source rows, fixture roles, or raw-data boundaries, while using SME-RP for new real-project acceptance gates.",
         "Keep official claims inside the canonical workflow/task/approval/event/artifact/pointer substrate."
       ],
       "outOfScope": [
@@ -11846,7 +12648,8 @@
       "sourceReferences": [
         "docs/planning/CAPEX_MASTER_V6_INTAKE.md",
         "docs/planning/CAPEX_V6_CONVERSION_MAP.csv",
-        "docs/planning/CAPEX_V6_GATE_RISK_DECISION_MAP.csv"
+        "docs/planning/CAPEX_V6_GATE_RISK_DECISION_MAP.csv",
+        "docs/planning/capex_real_project_acceptance/SME_RP_ACCEPTANCE_REGISTER.yaml"
       ],
       "counts": {
         "done": 0,
@@ -13942,8 +14745,9 @@
         "EPIC-146"
       ],
       "inScope": [
-        "Source task families/counts: TP:4.",
+        "Source task families/counts: SME-RP:1, TP:4.",
         "Preserve CAPEX v6 source-row intent while translating work into repo-native tasks and context packs.",
+        "Treat K12, K3, and blind validation as fixture tiers under generalized real-project validation.",
         "Keep official claims inside the canonical workflow/task/approval/event/artifact/pointer substrate."
       ],
       "outOfScope": [
@@ -13954,17 +14758,18 @@
       "sourceReferences": [
         "docs/planning/CAPEX_MASTER_V6_INTAKE.md",
         "docs/planning/CAPEX_V6_CONVERSION_MAP.csv",
-        "docs/planning/CAPEX_V6_GATE_RISK_DECISION_MAP.csv"
+        "docs/planning/CAPEX_V6_GATE_RISK_DECISION_MAP.csv",
+        "docs/planning/capex_real_project_acceptance/SME_RP_ACCEPTANCE_REGISTER.yaml"
       ],
       "counts": {
         "done": 0,
         "in_progress": 0,
-        "not_started": 4,
+        "not_started": 5,
         "blocked": 0,
         "needs_review": 0,
-        "total": 4
+        "total": 5
       },
-      "taskCount": 4,
+      "taskCount": 5,
       "epicPath": "docs/planning/epics/EPIC-146.md",
       "tasks": [
         {
@@ -14193,12 +14998,74 @@
           "completedAt": null,
           "completionTimestampStatus": "not_applicable",
           "completionTimestampSource": "not_completed"
+        },
+        {
+          "id": "TASK-0661",
+          "epicId": "EPIC-146",
+          "title": "Promote K12 fixture cases into binding real-project catalogue",
+          "plainPurpose": "Promote K12-T1 through K12-T10 into the real-project binding acceptance catalogue and oracle mapping plan.",
+          "sourceStatus": "TODO",
+          "displayStatus": "not_started",
+          "statusReason": "Task is still planned backlog work.",
+          "why": [
+            "K12 is the first binding real-project fixture slice. The cases must become acceptance obligations without making K12 the product model."
+          ],
+          "scope": [
+            "Promote K12-T1 through K12-T10 into the real-project binding acceptance catalogue and oracle mapping plan.",
+            "Keep the top-level acceptance namespace as SME-RP.",
+            "Treat K12 IDs as fixture-case IDs only.",
+            "Bind the work to SME-RP-G010."
+          ],
+          "outOfScope": [
+            "Raw K12 corpus import.",
+            "Fixture file generation or leak-scan implementation.",
+            "K12-only product semantics.",
+            "CAPEX runtime/product activation."
+          ],
+          "dependsOn": [
+            "TASK-0597",
+            "TASK-0648"
+          ],
+          "owners": [
+            "capex-fixtures",
+            "qa"
+          ],
+          "reviewers": [
+            "qa",
+            "data-governance",
+            "capex-sme"
+          ],
+          "risk": "high",
+          "verification": [
+            "Contract tests prove K12-T1 through K12-T10 are fixture cases and not gate IDs.",
+            "CAPEX progress data validation after regeneration.",
+            "python3 scripts/validate_repo.py",
+            "git diff --check"
+          ],
+          "acceptanceCriteria": [
+            "K12 fixture cases are represented as binding real-project acceptance cases.",
+            "The repo does not introduce a K12-specific gate namespace.",
+            "No fixture case can produce false official project status."
+          ],
+          "sourceRow": {
+            "source_task_id": "TASK-0638",
+            "source_namespace": "SME-K12",
+            "repo_namespace": "SME-RP",
+            "gate_refs": "SME-RP-G010",
+            "fixture_refs": "K12-T1;K12-T2;K12-T3;K12-T4;K12-T5;K12-T6;K12-T7;K12-T8;K12-T9;K12-T10",
+            "source_conditions": "TOP-12;12-A1;12-A3"
+          },
+          "evidence": [],
+          "taskPath": "codex/tasks/TASK-0661-promote-k12-fixture-cases-into-binding-real-project-catalogue.md",
+          "completedAt": null,
+          "completionTimestampStatus": "not_applicable",
+          "completionTimestampSource": "not_completed"
         }
       ],
       "estimate": {
         "percentComplete": 0.0,
         "completedTasks": 0,
-        "remainingTasks": 4,
+        "remainingTasks": 5,
         "remainingBlockedOrReviewTasks": 0,
         "completedWithTimestamps": 0,
         "completionTimestampCoverage": 0.0,
@@ -14223,6 +15090,7 @@
       "inScope": [
         "Source task families/counts: TP:5.",
         "Preserve CAPEX v6 source-row intent while translating work into repo-native tasks and context packs.",
+        "Treat K12, K3, and blind validation as fixture tiers under generalized real-project validation.",
         "Keep official claims inside the canonical workflow/task/approval/event/artifact/pointer substrate."
       ],
       "outOfScope": [
@@ -14233,7 +15101,8 @@
       "sourceReferences": [
         "docs/planning/CAPEX_MASTER_V6_INTAKE.md",
         "docs/planning/CAPEX_V6_CONVERSION_MAP.csv",
-        "docs/planning/CAPEX_V6_GATE_RISK_DECISION_MAP.csv"
+        "docs/planning/CAPEX_V6_GATE_RISK_DECISION_MAP.csv",
+        "docs/planning/capex_real_project_acceptance/SME_RP_ACCEPTANCE_REGISTER.yaml"
       ],
       "counts": {
         "done": 0,
@@ -14842,8 +15711,9 @@
         "EPIC-149"
       ],
       "inScope": [
-        "Source task families/counts: ARCH:22, NU:1, QD:44, TEST:3.",
+        "Source task families/counts: ARCH:22, NU:1, QD:44, SME-RP:1, TEST:3.",
         "Preserve CAPEX v6 source-row intent while translating work into repo-native tasks and context packs.",
+        "Define subject-matter boundary negative tests using SME-RP gates, with K12 cases as the first binding suite.",
         "Keep official claims inside the canonical workflow/task/approval/event/artifact/pointer substrate."
       ],
       "outOfScope": [
@@ -14854,17 +15724,18 @@
       "sourceReferences": [
         "docs/planning/CAPEX_MASTER_V6_INTAKE.md",
         "docs/planning/CAPEX_V6_CONVERSION_MAP.csv",
-        "docs/planning/CAPEX_V6_GATE_RISK_DECISION_MAP.csv"
+        "docs/planning/CAPEX_V6_GATE_RISK_DECISION_MAP.csv",
+        "docs/planning/capex_real_project_acceptance/SME_RP_ACCEPTANCE_REGISTER.yaml"
       ],
       "counts": {
         "done": 1,
         "in_progress": 0,
-        "not_started": 69,
+        "not_started": 70,
         "blocked": 0,
         "needs_review": 0,
-        "total": 70
+        "total": 71
       },
-      "taskCount": 70,
+      "taskCount": 71,
       "epicPath": "docs/planning/epics/EPIC-149.md",
       "tasks": [
         {
@@ -18797,12 +19668,74 @@
           "completedAt": "2026-06-09T00:00:00Z",
           "completionTimestampStatus": "recorded",
           "completionTimestampSource": "task_frontmatter"
+        },
+        {
+          "id": "TASK-0662",
+          "epicId": "EPIC-149",
+          "title": "Add subject-matter boundary negative tests",
+          "plainPurpose": "Add a subject-matter negative-test planning row for the generalized SME-RP acceptance suite.",
+          "sourceStatus": "TODO",
+          "displayStatus": "not_started",
+          "statusReason": "Task is still planned backlog work.",
+          "why": [
+            "Real-project acceptance requires negative tests proving no false project status from PR/PO, supplier statements, work performed, scope closure, defect closure, controlling values, minutes, or settlement."
+          ],
+          "scope": [
+            "Add a subject-matter negative-test planning row for the generalized SME-RP acceptance suite.",
+            "Use the K12 fixture cases as the first binding suite.",
+            "Preserve SME-RP-G013 as the gate for boundary negative tests.",
+            "Keep test planning inside the existing CAPEX semantic test posture."
+          ],
+          "outOfScope": [
+            "Implementing all runtime fixture tests in this planning task.",
+            "Raw fixture corpus import.",
+            "Making the semantic test suite authoritative project truth.",
+            "CAPEX runtime/product activation."
+          ],
+          "dependsOn": [
+            "TASK-0568",
+            "TASK-0661"
+          ],
+          "owners": [
+            "qa",
+            "capex-architecture"
+          ],
+          "reviewers": [
+            "qa",
+            "backend",
+            "capex-sme"
+          ],
+          "risk": "high",
+          "verification": [
+            "Contract tests prove the SME-RP register maps this task to EPIC-149 and SME-RP-G013.",
+            "CAPEX progress data validation after regeneration.",
+            "python3 scripts/validate_repo.py",
+            "git diff --check"
+          ],
+          "acceptanceCriteria": [
+            "Boundary negative tests are general subject-matter obligations.",
+            "K12 fixture cases are the first test suite, not the only accepted future suite.",
+            "False status from commercial, supplier, work-complete, scope, defect, controlling, minutes, or settlement evidence remains blocked."
+          ],
+          "sourceRow": {
+            "source_task_id": "TASK-0639",
+            "source_namespace": "SME-K12",
+            "repo_namespace": "SME-RP",
+            "gate_refs": "SME-RP-G013",
+            "fixture_refs": "K12-T1;K12-T2;K12-T3;K12-T4;K12-T7;K12-T8;K12-T9;K12-T10",
+            "source_conditions": "4-A2;4-A3;13-A1;14-D6"
+          },
+          "evidence": [],
+          "taskPath": "codex/tasks/TASK-0662-add-subject-matter-boundary-negative-tests.md",
+          "completedAt": null,
+          "completionTimestampStatus": "not_applicable",
+          "completionTimestampSource": "not_completed"
         }
       ],
       "estimate": {
         "percentComplete": 1.4,
         "completedTasks": 1,
-        "remainingTasks": 69,
+        "remainingTasks": 70,
         "remainingBlockedOrReviewTasks": 0,
         "completedWithTimestamps": 1,
         "completionTimestampCoverage": 100.0,
@@ -20567,8 +21500,9 @@
         "EPIC-151"
       ],
       "inScope": [
-        "Source task families/counts: ARCH:24, ART:1, NU:1, WFLOW:1.",
+        "Source task families/counts: ARCH:24, ART:1, NU:1, SME-RP:2, WFLOW:1.",
         "Preserve CAPEX v6 source-row intent while translating work into repo-native tasks and context packs.",
+        "Define procurement, escalation, and external-system observation rules for executive transparency.",
         "Keep official claims inside the canonical workflow/task/approval/event/artifact/pointer substrate."
       ],
       "outOfScope": [
@@ -20579,17 +21513,18 @@
       "sourceReferences": [
         "docs/planning/CAPEX_MASTER_V6_INTAKE.md",
         "docs/planning/CAPEX_V6_CONVERSION_MAP.csv",
-        "docs/planning/CAPEX_V6_GATE_RISK_DECISION_MAP.csv"
+        "docs/planning/CAPEX_V6_GATE_RISK_DECISION_MAP.csv",
+        "docs/planning/capex_real_project_acceptance/SME_RP_ACCEPTANCE_REGISTER.yaml"
       ],
       "counts": {
         "done": 1,
         "in_progress": 0,
-        "not_started": 26,
+        "not_started": 28,
         "blocked": 0,
         "needs_review": 0,
-        "total": 27
+        "total": 29
       },
-      "taskCount": 27,
+      "taskCount": 29,
       "epicPath": "docs/planning/epics/EPIC-151.md",
       "tasks": [
         {
@@ -22113,12 +23048,137 @@
           "completedAt": "2026-06-09T00:00:00Z",
           "completionTimestampStatus": "recorded",
           "completionTimestampSource": "task_frontmatter"
+        },
+        {
+          "id": "TASK-0659",
+          "epicId": "EPIC-151",
+          "title": "Define procurement fields and executive escalation thresholds",
+          "plainPurpose": "Define procurement mandatory fields and executive escalation threshold families for CAPEX transparency.",
+          "sourceStatus": "TODO",
+          "displayStatus": "not_started",
+          "statusReason": "Task is still planned backlog work.",
+          "why": [
+            "Executive transparency and commercial-control workflows need mandatory fields and threshold families, but the architecture must not invent numeric business thresholds."
+          ],
+          "scope": [
+            "Define procurement mandatory fields and executive escalation threshold families for CAPEX transparency.",
+            "Route procurement and commercial data as observed/reconciled evidence.",
+            "Require SME / PM / Controlling sign-off before thresholds activate.",
+            "Bind the work to SME-RP-G006 and SME-RP-G007."
+          ],
+          "outOfScope": [
+            "Numeric threshold selection.",
+            "ERP replacement or accounting ledger behavior.",
+            "CEO cockpit runtime implementation.",
+            "CAPEX runtime/product activation."
+          ],
+          "dependsOn": [
+            "TASK-0277",
+            "TASK-0290",
+            "TASK-0571"
+          ],
+          "owners": [
+            "capex-product",
+            "controlling"
+          ],
+          "reviewers": [
+            "procurement",
+            "plant-management",
+            "capex-sme",
+            "capex-architecture"
+          ],
+          "risk": "high",
+          "verification": [
+            "Contract tests prove the SME-RP register maps this task to EPIC-151.",
+            "CAPEX progress data validation after regeneration.",
+            "python3 scripts/validate_repo.py",
+            "git diff --check"
+          ],
+          "acceptanceCriteria": [
+            "Procurement fields are listed as mandatory planning contract inputs.",
+            "Threshold families are configurable after business sign-off; no numeric thresholds are invented by the platform.",
+            "Commercial evidence cannot directly close technical, effectiveness, handover, or assumption dimensions."
+          ],
+          "sourceRow": {
+            "source_task_id": "TASK-0636",
+            "source_namespace": "SME-K12",
+            "repo_namespace": "SME-RP",
+            "gate_refs": "SME-RP-G006;SME-RP-G007",
+            "fixture_refs": "K12-T4;K12-T7;K12-T10",
+            "source_conditions": "TOP-11;9-A2;9-A3;9-A4;14-D3;14-D10"
+          },
+          "evidence": [],
+          "taskPath": "codex/tasks/TASK-0659-define-procurement-fields-and-executive-escalation-thresholds.md",
+          "completedAt": null,
+          "completionTimestampStatus": "not_applicable",
+          "completionTimestampSource": "not_completed"
+        },
+        {
+          "id": "TASK-0663",
+          "epicId": "EPIC-151",
+          "title": "Define external system mode taxonomy",
+          "plainPurpose": "Define external system modes: observed, referenced, imported, human-reviewed, and officially adopted.",
+          "sourceStatus": "TODO",
+          "displayStatus": "not_started",
+          "statusReason": "Task is still planned backlog work.",
+          "why": [
+            "External systems may be observed or referenced, but they must not silently overwrite CAPEX official state. The taxonomy belongs to executive transparency and external observation requirements."
+          ],
+          "scope": [
+            "Define external system modes: observed, referenced, imported, human-reviewed, and officially adopted.",
+            "Bind external observation to SourceRef, evidence, review, and pointer semantics.",
+            "Prevent external values from directly becoming CAPEX official state.",
+            "Bind the work to SME-RP-G011."
+          ],
+          "outOfScope": [
+            "External connector implementation.",
+            "ERP/DMS replacement.",
+            "Automatic external-to-official synchronization.",
+            "CAPEX runtime/product activation."
+          ],
+          "dependsOn": [
+            "TASK-0547",
+            "TASK-0550"
+          ],
+          "owners": [
+            "capex-architecture",
+            "data-governance"
+          ],
+          "reviewers": [
+            "backend",
+            "security",
+            "capex-sme"
+          ],
+          "risk": "high",
+          "verification": [
+            "Contract tests prove the SME-RP register maps this task to EPIC-151 and SME-RP-G011.",
+            "CAPEX progress data validation after regeneration.",
+            "python3 scripts/validate_repo.py",
+            "git diff --check"
+          ],
+          "acceptanceCriteria": [
+            "External data modes are explicit and signed off before connector work activates.",
+            "Observed, referenced, imported, reviewed, and officially adopted states remain distinct.",
+            "External data cannot mutate official pointers or closure state without canonical review/adoption."
+          ],
+          "sourceRow": {
+            "source_task_id": "TASK-0640",
+            "source_namespace": "SME-K12",
+            "repo_namespace": "SME-RP",
+            "gate_refs": "SME-RP-G011",
+            "source_conditions": "13-A3;14-D9"
+          },
+          "evidence": [],
+          "taskPath": "codex/tasks/TASK-0663-define-external-system-mode-taxonomy.md",
+          "completedAt": null,
+          "completionTimestampStatus": "not_applicable",
+          "completionTimestampSource": "not_completed"
         }
       ],
       "estimate": {
-        "percentComplete": 3.7,
+        "percentComplete": 3.4,
         "completedTasks": 1,
-        "remainingTasks": 26,
+        "remainingTasks": 28,
         "remainingBlockedOrReviewTasks": 0,
         "completedWithTimestamps": 1,
         "completionTimestampCoverage": 100.0,

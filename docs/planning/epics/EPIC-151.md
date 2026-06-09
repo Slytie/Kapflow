@@ -8,10 +8,12 @@ This epic was imported from CAPEX v6 on `2026-06-01` as planning backlog only. I
 ## Status
 Imported as TODO backlog unless an individual task records completed repo evidence.
 `TASK-0569` is closed as of 2026-06-09 with the internal CAPEX interface-burden conservation policy helper, architecture doc, and tests.
+`TASK-0659` and `TASK-0663` add SME-RP procurement/escalation and external-system taxonomy obligations for executive transparency and observation boundaries.
 
 ## In scope
-- Source task families/counts: ARCH:24, ART:1, NU:1, WFLOW:1.
+- Source task families/counts: ARCH:24, ART:1, NU:1, SME-RP:2, WFLOW:1.
 - Preserve CAPEX v6 source-row intent while translating work into repo-native tasks and context packs.
+- Define procurement, escalation, and external-system observation rules for executive transparency.
 - Keep official claims inside the canonical workflow/task/approval/event/artifact/pointer substrate.
 
 ## Out of scope
@@ -29,6 +31,7 @@ Context pack:
 - `docs/planning/CAPEX_MASTER_V6_INTAKE.md`
 - `docs/planning/CAPEX_V6_CONVERSION_MAP.csv`
 - `docs/planning/CAPEX_V6_GATE_RISK_DECISION_MAP.csv`
+- `docs/planning/capex_real_project_acceptance/SME_RP_ACCEPTANCE_REGISTER.yaml`
 
 ## Task stack
 - `TASK-0277` (`ART-002`) - Add ceo_transparency_snapshot schema and decision
@@ -58,6 +61,13 @@ Context pack:
 - `TASK-0559` (`ARCH-W8-S23`) - Add W8 feature gate/migration lane entries
 - `TASK-0560` (`ARCH-W8-S24`) - Run Waves 1-8 formalism regression
 - `TASK-0569` (`NU-CB-P1-009`) - Add interface-burden conservation policy and tests
+- `TASK-0659` (`SME-RP:TASK-0636`) - Define procurement fields and executive escalation thresholds
+- `TASK-0663` (`SME-RP:TASK-0640`) - Define external system mode taxonomy
+
+## SME-RP real-project acceptance addendum
+- Procurement fields, executive escalation thresholds, and external-system mode taxonomy are executive transparency and external observation requirements.
+- `SME-RP-G006` and `SME-RP-G007` require procurement delay, commitment, and escalation signals to appear as reviewed internal state before they affect executive snapshots.
+- `SME-RP-G011` requires external systems to be classified as source mirror, observed system, integration target, external authority, or advisory feed; external status alone never sets official CAPEX status.
 
 ## Acceptance criteria
 - Every listed task preserves its v6 source row, acceptance gate, dependency notes, and raw-data boundary.

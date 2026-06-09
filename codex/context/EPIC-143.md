@@ -5,7 +5,7 @@ Purpose:
 - Keep future work inside the existing one-truth runtime, approval, artifact, pointer, and event model.
 
 ## Imported source rows
-WFLOW-001, WFLOW-002, WFLOW-003, WFLOW-004, WFLOW-005, WFLOW-006, WFLOW-007, NU-CB-P0-006, ... (11 tasks total)
+WFLOW-001, WFLOW-002, WFLOW-003, WFLOW-004, WFLOW-005, WFLOW-006, WFLOW-007, NU-CB-P0-006, ... plus SME-RP source rows `TASK-0631` through `TASK-0634` remapped to repo `TASK-0654` through `TASK-0657` (15 tasks total)
 
 ## Historical/reconciled aliases
 - `V5-TASK-003` is a reconciled v5 historical alias for `TASK-0565`.
@@ -15,10 +15,17 @@ WFLOW-001, WFLOW-002, WFLOW-003, WFLOW-004, WFLOW-005, WFLOW-006, WFLOW-007, NU-
 - `TASK-0566` is closed as of 2026-06-08: `capex.workflow_handoff_manifest.v1` and `onetruth.capex_platform.workflow_handoffs` provide an internal handoff manifest contract and validation guard over exact artifact, pointer, SourceRef, validation, closure, task, and workpage basis.
 - This does not author or activate CAPEX workflow packs.
 
+## SME-RP addendum rows
+- `TASK-0654` adds Scope Management workflow requirements.
+- `TASK-0655` adds Budget and Commercial Control workflow requirements.
+- `TASK-0656` adds Safety and Work Permit Readiness workflow requirements.
+- `TASK-0657` classifies workflow extensions as MVP, MVP-lite, or post-MVP before activation claims.
+
 ## Load first
 - `docs/planning/epics/EPIC-143.md`
 - `docs/planning/CAPEX_MASTER_V6_INTAKE.md`
 - `docs/planning/CAPEX_V6_CONVERSION_MAP.csv`
+- `docs/planning/capex_real_project_acceptance/SME_RP_ACCEPTANCE_REGISTER.yaml`
 - `docs/architecture/invariants.md`
 - `docs/status/CURRENT_FOCUS.md`
 

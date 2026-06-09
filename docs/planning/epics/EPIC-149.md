@@ -8,10 +8,12 @@ This epic was imported from CAPEX v6 on `2026-06-01` as planning backlog only. I
 ## Status
 Imported as TODO backlog unless an individual task records completed repo evidence.
 `TASK-0568` is closed as of 2026-06-09 with the `capex_semantic` marker, CB2 semantic backlog manifest, focused Make/GitHub lane, and real-owner CODEOWNERS evidence.
+`TASK-0662` adds generalized subject-matter negative-test obligations for the SME-RP real-project tranche.
 
 ## In scope
-- Source task families/counts: ARCH:22, NU:1, QD:44, TEST:3.
+- Source task families/counts: ARCH:22, NU:1, QD:44, SME-RP:1, TEST:3.
 - Preserve CAPEX v6 source-row intent while translating work into repo-native tasks and context packs.
+- Define subject-matter boundary negative tests using SME-RP gates, with K12 cases as the first binding suite.
 - Keep official claims inside the canonical workflow/task/approval/event/artifact/pointer substrate.
 
 ## Out of scope
@@ -29,6 +31,7 @@ Context pack:
 - `docs/planning/CAPEX_MASTER_V6_INTAKE.md`
 - `docs/planning/CAPEX_V6_CONVERSION_MAP.csv`
 - `docs/planning/CAPEX_V6_GATE_RISK_DECISION_MAP.csv`
+- `docs/planning/capex_real_project_acceptance/SME_RP_ACCEPTANCE_REGISTER.yaml`
 
 ## Task stack
 - `TASK-0304` (`TEST-001`) - Consolidated acceptance matrix implementation mapping
@@ -101,6 +104,12 @@ Context pack:
 - `TASK-0511` (`ARCH-W75-SLICE-21`) - Add reviewer test-first checklist
 - `TASK-0512` (`ARCH-W75-SLICE-22`) - Add flake quarantine policy
 - `TASK-0568` (`NU-CB-P0-008`) - Add CAPEX semantic test suite and CODEOWNERS gates
+- `TASK-0662` (`SME-RP:TASK-0639`) - Add subject-matter boundary negative tests
+
+## SME-RP real-project acceptance addendum
+- Subject-matter negative tests must prove the system rejects false closure, untrusted evidence, workpage-only status changes, scope ambiguity, role ambiguity, AI trust inflation, external status promotion, and raw-corpus leakage.
+- `K12-T1..T10` are the first binding negative-test fixture cases; they bind through `SME-RP-G013`, not a K12-specific gate namespace.
+- Later K3 and blind-validation cases must extend the same generalized real-project obligations.
 
 ## Acceptance criteria
 - Every listed task preserves its v6 source row, acceptance gate, dependency notes, and raw-data boundary.

@@ -5,14 +5,19 @@ Purpose:
 - Keep future work inside the existing one-truth runtime, approval, artifact, pointer, and event model.
 
 ## Imported source rows
-TP-TASK-001, TP-TASK-002, TP-TASK-003, TP-TASK-009
+TP-TASK-001, TP-TASK-002, TP-TASK-003, TP-TASK-009 plus SME-RP source row `TASK-0638` remapped to repo `TASK-0661`
 
 ## Load first
 - `docs/planning/epics/EPIC-146.md`
 - `docs/planning/CAPEX_MASTER_V6_INTAKE.md`
 - `docs/planning/CAPEX_V6_CONVERSION_MAP.csv`
+- `docs/planning/capex_real_project_acceptance/SME_RP_ACCEPTANCE_REGISTER.yaml`
 - `docs/architecture/invariants.md`
 - `docs/status/CURRENT_FOCUS.md`
+
+## SME-RP fixture-case notes
+- `TASK-0661` promotes `K12-T1..T10` as the first binding real-project fixture-case IDs under `SME-RP-G010`.
+- K12, K3, and blind-validation are fixture tiers under generalized real-project validation, not acceptance-gate namespaces.
 
 ## Non-negotiable invariants
 - One truth system: official claims come only from immutable objects, append-only events, and audited pointers.

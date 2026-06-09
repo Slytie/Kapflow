@@ -5,7 +5,13 @@ Purpose:
 - Keep future work inside the existing one-truth runtime, approval, artifact, pointer, and event model.
 
 ## Imported source rows
-MP-PR000, V5-TASK-008, V5-TASK-009, SD-TASK-001, SD-TASK-002, SD-TASK-003, SD-TASK-004, SD-TASK-005, ... (10 tasks total)
+MP-PR000, V5-TASK-008, V5-TASK-009, SD-TASK-001, SD-TASK-002, SD-TASK-003, SD-TASK-004, SD-TASK-005, ... plus SME-RP source rows `TASK-0625` and `TASK-0641` remapped to repo `TASK-0648` and `TASK-0664` (12 tasks total)
+
+## SME-RP addendum rows
+- Source archive used `SME-K12` labels and proposed `TASK-0625..TASK-0641`; repo-native planning uses `SME-RP` labels and remaps the tranche to `TASK-0648..TASK-0664`.
+- `TASK-0648` defines approval-with-conditions wording and annex scope.
+- `TASK-0664` defines module-specific SME readiness rules.
+- K12 remains a fixture-case family only; do not use K12 as an acceptance-gate namespace.
 
 ## Historical/reconciled aliases
 - `V5-TASK-008` is a reconciled v5 historical alias for `TASK-0582`.
@@ -15,6 +21,7 @@ MP-PR000, V5-TASK-008, V5-TASK-009, SD-TASK-001, SD-TASK-002, SD-TASK-003, SD-TA
 - `docs/planning/epics/EPIC-136.md`
 - `docs/planning/CAPEX_MASTER_V6_INTAKE.md`
 - `docs/planning/CAPEX_V6_CONVERSION_MAP.csv`
+- `docs/planning/capex_real_project_acceptance/SME_RP_ACCEPTANCE_REGISTER.yaml`
 - `docs/architecture/invariants.md`
 - `docs/status/CURRENT_FOCUS.md`
 

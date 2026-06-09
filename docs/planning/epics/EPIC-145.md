@@ -1,7 +1,7 @@
-# EPIC-145 - CAPEX K12/K3 fixture governance
+# EPIC-145 - CAPEX real-project fixture governance
 
 ## Summary
-Govern K12/K3 fixture roles, quarantine, redaction, expected outputs, and release checks without raw corpus commits.
+Govern real-project fixture roles, quarantine, redaction, expected outputs, and release checks without raw corpus commits. K12, K3, and blind-validation labels remain valid where they identify fixture tiers, imported source rows, or raw-data safety boundaries.
 
 This epic was imported from CAPEX v6 on `2026-06-01` as planning backlog only. It does not activate CAPEX runtime behavior by itself.
 
@@ -11,6 +11,7 @@ Imported as TODO backlog unless an individual task records completed repo eviden
 ## In scope
 - Source task families/counts: ARCH:22, K12:4, RF:1, SAFE:2, SPB2:7.
 - Preserve CAPEX v6 source-row intent while translating work into repo-native tasks and context packs.
+- Preserve K12/K3/blind labels where they identify fixture source rows, fixture roles, or raw-data boundaries, while using SME-RP for new real-project acceptance gates.
 - Keep official claims inside the canonical workflow/task/approval/event/artifact/pointer substrate.
 
 ## Out of scope
@@ -28,6 +29,7 @@ Context pack:
 - `docs/planning/CAPEX_MASTER_V6_INTAKE.md`
 - `docs/planning/CAPEX_V6_CONVERSION_MAP.csv`
 - `docs/planning/CAPEX_V6_GATE_RISK_DECISION_MAP.csv`
+- `docs/planning/capex_real_project_acceptance/SME_RP_ACCEPTANCE_REGISTER.yaml`
 
 ## Task stack
 - `TASK-0300` (`K12-001`) - Raw K12 quarantine and sensitivity manifest
@@ -66,6 +68,11 @@ Context pack:
 - `TASK-0488` (`ARCH-W6-SLICE-020`) - Add expected-output no-raw-excerpt test pattern
 - `TASK-0489` (`ARCH-W6-SLICE-021`) - Update workpage family catalog for fixture release and AI draft review
 - `TASK-0490` (`ARCH-W6-SLICE-022`) - Prepare Wave 6 master patch instructions
+
+## SME-RP real-project acceptance addendum
+- EPIC-145 is the fixture-governance home for real-project validation material. Existing K12/K3 task rows remain intact because they are source-row and fixture-tier identifiers.
+- New acceptance gates for real-project subject-matter validation must use `SME-RP`, not a K12-specific namespace.
+- Raw K12, K3, and blind-validation corpora remain out of repo unless a later source-freeze and redaction release path explicitly authorizes sanitized derivatives.
 
 ## Acceptance criteria
 - Every listed task preserves its v6 source row, acceptance gate, dependency notes, and raw-data boundary.

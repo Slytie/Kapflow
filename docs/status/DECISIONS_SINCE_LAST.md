@@ -2,6 +2,14 @@
 
 Record any decisions made since the last session so a fresh Codex run can rehydrate quickly.
 
+## 2026-06-09 (SME-RP real-project acceptance condition import)
+- Namespace decision: the source archive used `SME-K12` labels, but repo-native planning uses `SME-RP` for Subject-Matter / Real-Project acceptance conditions.
+- Fixture decision: `K12-T1..T10` remain concrete fixture-case IDs for the first binding real-project acceptance slice; K12 is not the top-level acceptance namespace.
+- Task-numbering decision: the source archive proposed `TASK-0625..TASK-0641`, which collides with existing repo task IDs, so the tranche is remapped to `TASK-0648..TASK-0664`.
+- Gate decision: acceptance gates are `SME-RP-G001..SME-RP-G013`; source-specific SME-K12 gate IDs are invalid.
+- Posture decision: this import is planning-only and adds no runtime activation, public routes, migrations, raw corpus import, or source archive mutation.
+- EPIC-140 posture decision: the project/access foundation remains closed evidence, but SME-RP scope hierarchy and RACI addendum tasks are open; historical closeouts should not be rewritten.
+
 ## 2026-06-09 (EPIC-149/151 semantic gate and interface burden foundation)
 - Semantic-gate decision: `TASK-0568` adds `capex_semantic`, `docs/planning/CAPEX_CB2_SEMANTIC_TEST_BACKLOG.yaml`, `make capex-semantic-tests`, a visible GitHub Actions lane, and real-owner CODEOWNERS entries as repo-native quality gate evidence.
 - CB2 backlog decision: CB2 rows with current repo evidence are marked `repo_evidence_green`; later fixture/workflow rows remain `tracked_future_phase` rather than being invented or silently closed.

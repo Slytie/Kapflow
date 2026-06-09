@@ -6,11 +6,12 @@ Plan CAPEX workpage projections, command envelopes, read APIs, and stale-command
 This epic was imported from CAPEX v6 on `2026-06-01` as planning backlog only. It does not activate CAPEX runtime behavior by itself.
 
 ## Status
-Imported as TODO backlog unless an individual task records completed repo evidence. `TASK-0567` is closed as of 2026-06-08 with internal projection snapshot runtime state, signed cursor helpers, and stale-command guards; public CAPEX workpages, read APIs, and frontend routes remain open.
+Imported as TODO backlog unless an individual task records completed repo evidence. `TASK-0567` is closed as of 2026-06-08 with internal projection snapshot runtime state, signed cursor helpers, and stale-command guards; public CAPEX workpages, read APIs, frontend routes, and SME-RP workpage-to-task rules remain open.
 
 ## In scope
-- Source task families/counts: ARCH:20, ART:1, NU:1, RF:1, WP:9.
+- Source task families/counts: ARCH:20, ART:1, NU:1, RF:1, SME-RP:1, WP:9.
 - Preserve CAPEX v6 source-row intent while translating work into repo-native tasks and context packs.
+- Define workpage-to-task generation boundaries without giving projections status authority.
 - Keep official claims inside the canonical workflow/task/approval/event/artifact/pointer substrate.
 
 ## Out of scope
@@ -28,6 +29,7 @@ Context pack:
 - `docs/planning/CAPEX_MASTER_V6_INTAKE.md`
 - `docs/planning/CAPEX_V6_CONVERSION_MAP.csv`
 - `docs/planning/CAPEX_V6_GATE_RISK_DECISION_MAP.csv`
+- `docs/planning/capex_real_project_acceptance/SME_RP_ACCEPTANCE_REGISTER.yaml`
 
 ## Task stack
 - `TASK-0282` (`ART-007`) - Implement projection consistency test manifest
@@ -62,6 +64,12 @@ Context pack:
 - `TASK-0467` (`ARCH-W5-S19`) - Projection observability/admin view design
 - `TASK-0468` (`ARCH-W5-S20`) - Wave 5 refactor/closeout pass
 - `TASK-0567` (`NU-CB-P0-007`) - Add CAPEX projection snapshot and stale-command test harness - DONE 2026-06-08
+- `TASK-0653` (`SME-RP:TASK-0630`) - Define workpage-to-task generation rules
+
+## SME-RP real-project acceptance addendum
+- Workpages may surface gaps, draft commands, task proposals, approval prompts, flags, and evidence requests; they never set official project status by projection update or generic status command.
+- A workpage-originated blocker must become a canonical task, flag, approval, artifact delta, event, or pointer request before it can affect official readiness or closure.
+- `SME-RP-G005` requires stale-basis checks, source binding, actor authority, and audit evidence for workpage-to-task generation.
 
 ## Acceptance criteria
 - Every listed task preserves its v6 source row, acceptance gate, dependency notes, and raw-data boundary.

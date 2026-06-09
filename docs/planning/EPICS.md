@@ -45,7 +45,7 @@ Status note (2026-04-25): EPIC-131, EPIC-132, EPIC-133, and EPIC-134 are complet
 | EPIC-142 | CAPEX artifact promotion and governance | artifact envelopes, promotion validators, closure and waiver models | EPIC-141 |
 | EPIC-143 | CAPEX workflow catalog | workflow contracts, operating models, acceptance matrices | EPIC-140, EPIC-142 |
 | EPIC-144 | CAPEX workpages and projections | workpage contracts, projections, projection consistency tests | EPIC-142, EPIC-143 |
-| EPIC-145 | CAPEX K12/K3 fixture governance | fixture manifests, redaction policy, K12/K3 expected outputs | EPIC-141 |
+| EPIC-145 | CAPEX real-project fixture governance | fixture manifests, redaction policy, real-project expected outputs | EPIC-141 |
 | EPIC-146 | CAPEX three-project validation | three-project governance, validation protocol, fixture tiering | EPIC-145 |
 | EPIC-147 | CAPEX blind/lab evaluation | blind baseline protocol, eval matrix, no-overfitting checkpoint | EPIC-146, EPIC-110 |
 | EPIC-148 | CAPEX off-repo full-corpus runs | off-repo runbook, capacity and restore evidence, quarantine rules | EPIC-145, EPIC-138 |
