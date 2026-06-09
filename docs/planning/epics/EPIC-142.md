@@ -6,7 +6,7 @@ Constrain generated artifacts, pointer promotion, closure, stale reopen, and wai
 This epic was imported from CAPEX v6 on `2026-06-01` as planning backlog only. It does not activate CAPEX runtime behavior by itself.
 
 ## Status
-Imported as TODO backlog unless an individual task records completed repo evidence. `TASK-0565` is closed as of 2026-06-08 with internal closure/waiver/stale runtime primitive evidence; generated artifact envelopes, policy validators, pointer-promotion policy checks, richer closure command/UI surfaces, and SME-RP evidence/AI trust/partial-handover addenda remain open.
+Imported as TODO backlog unless an individual task records completed repo evidence. `TASK-0565` is closed as of 2026-06-08 with internal closure/waiver/stale runtime primitive evidence, and `TASK-0651` is closed with the SME-RP evidence status transition contract. Generated artifact envelopes, policy validators, pointer-promotion policy checks, richer closure command/UI surfaces, AI trust, and partial-handover addenda remain open.
 
 ## In scope
 - Source task families/counts: ARCH:20, ART:5, NU:2, RF:2, SME-RP:3, V5:3.
@@ -61,7 +61,7 @@ Context pack:
 - `TASK-0448` (`ARCH-W4-S20`) - Remove/retire any generic approval handler domain side effects after hook registry migration.
 - `TASK-0565` (`NU-CB-P0-005`) - Add ClosureGateEvaluation, ClosureSnapshot, Waiver, lifecycle recurrence stale rules - DONE 2026-06-08
 - `TASK-0570` (`NU-CB-P1-010`) - Add non-commutative artifact sequence tests
-- `TASK-0651` (`SME-RP:TASK-0628`) - Harden evidence status vocabulary and transition rules
+- `TASK-0651` (`SME-RP:TASK-0628`) - DONE - Harden evidence status vocabulary and transition rules
 - `TASK-0658` (`SME-RP:TASK-0635`) - Extend closure model with partial handover and observation phase
 - `TASK-0660` (`SME-RP:TASK-0637`) - Align AI trust status and source binding requirements
 
@@ -72,7 +72,7 @@ Context pack:
 
 ## SME-RP real-project acceptance addendum
 - Evidence status vocabulary, AI trust states, partial handover, observation phase, and closure dimensions are CAPEX governance primitives, not K12-specific exceptions.
-- Evidence may be pending, source-bound, reviewer-verified, rejected, superseded, waived, or observation-only, but officialness remains controlled by promotion pointers and audited events.
+- `TASK-0651` records the evidence-link vocabulary as proposed, under review, valid, partly valid, contradictory, obsolete, invalid, insufficient, and accepted with residual risk, with closure eligibility controlled by explicit review state.
 - AI outputs must remain draft, assistant-suggested, or reviewer-adopted until a human or approved policy path binds them to source evidence under `SME-RP-G004` and `SME-RP-G009`.
 - Partial handover and observation-phase closure must preserve residuals, scope exclusions, owner accountability, reopening triggers, and executive visibility under `SME-RP-G008`.
 

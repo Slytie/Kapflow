@@ -18,7 +18,7 @@ ART-001, ART-003, ART-004, ART-005, ART-006, RF-007, RF-008, ARCH-W4-S01, ... pl
 - This does not expose closure/promotion UI, public APIs, generated artifact policy validators, or CAPEX runtime activation.
 
 ## SME-RP addendum rows
-- `TASK-0651` hardens evidence status vocabulary and transition rules.
+- `TASK-0651` is closed with the planning-only evidence status vocabulary and transition contract for `SME-RP-G004`.
 - `TASK-0658` adds partial handover and observation-phase closure dimensions.
 - `TASK-0660` aligns AI trust status and source-binding requirements.
 - These are general CAPEX governance rules under `SME-RP-G004`, `SME-RP-G008`, and `SME-RP-G009`.

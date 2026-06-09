@@ -6,7 +6,7 @@ Define project anchors, membership, roles, and project-scoped APIs without cross
 This epic was imported from CAPEX v6 on `2026-06-01` as planning backlog only. It does not activate CAPEX runtime behavior by itself.
 
 ## Status
-Foundation closed; SME-RP RACI addendum open. `TASK-0261` through `TASK-0265`, `TASK-0371`, `TASK-0381` through `TASK-0390`, and `TASK-0563` are closed as the durable project-anchor/direct-membership foundation, first project-scoped child API and selector/dashboard slice, shared project-scope helper, project-scoped official pointer-family substrate, neutral domain-runtime manifest skeleton, ready-state logistics manifest inventory, incubation-state CAPEX manifest inventory, approval-effect registry shadow parity, project authorization CED, `AuthorizedProjectsQuery` prototype, storage/blob custody CED, pilot storage gate checklist, W1 code pattern register, W1 closeout review, and physical authorization projection runtime state. `TASK-0649` is closed with the planning-only CAPEX scope hierarchy contract; `TASK-0650` remains open for RACI/role-permission mapping. CAPEX runtime activation, raw-corpus governance, real pilot storage evidence or waiver, richer CAPEX workpages, and later production/pilot gates remain blocked by later epics and gates.
+Closed gated backlog. `TASK-0261` through `TASK-0265`, `TASK-0371`, `TASK-0381` through `TASK-0390`, and `TASK-0563` are closed as the durable project-anchor/direct-membership foundation, first project-scoped child API and selector/dashboard slice, shared project-scope helper, project-scoped official pointer-family substrate, neutral domain-runtime manifest skeleton, ready-state logistics manifest inventory, incubation-state CAPEX manifest inventory, approval-effect registry shadow parity, project authorization CED, `AuthorizedProjectsQuery` prototype, storage/blob custody CED, pilot storage gate checklist, W1 code pattern register, W1 closeout review, and physical authorization projection runtime state. `TASK-0649` is closed with the planning-only CAPEX scope hierarchy contract, and `TASK-0650` is closed with the planning-only RACI role-permission matrix. CAPEX runtime activation, raw-corpus governance, real pilot storage evidence or waiver, richer CAPEX workpages, and later production/pilot gates remain blocked by later epics and gates.
 
 ## In scope
 - Source task families/counts: ARCH:10, NU:1, PROJ:5, RF:1, SME-RP:2.
@@ -50,7 +50,7 @@ Context pack:
 - `TASK-0390` (`ARCH-W1-T010`) - DONE - W1 closeout review and old-decision update
 - `TASK-0563` (`NU-CB-P0-003`) - DONE - Add CAPEX project/membership/authorization runtime state
 - `TASK-0649` (`SME-RP:TASK-0626`) - DONE - Define CAPEX scope hierarchy and minimum CAPEX scope contract
-- `TASK-0650` (`SME-RP:TASK-0627`) - Draft RACI and role-permission matrix
+- `TASK-0650` (`SME-RP:TASK-0627`) - DONE - Draft RACI and role-permission matrix
 
 ## Acceptance criteria
 - Every listed task preserves its v6 source row, acceptance gate, dependency notes, and raw-data boundary.
@@ -60,4 +60,4 @@ Context pack:
 ## SME-RP real-project acceptance addendum
 - Scope hierarchy and RACI are generalized real-project contracts. `K12-T1..T10` may motivate false-closure and role ambiguity examples, but K12 is not the top-level acceptance namespace.
 - `TASK-0649` records the minimum `capex_scope` hierarchy as project, module/workstream, package, discipline, source occurrence, artifact, task, approval, flag, and external binding scopes before closure or readiness claims.
-- RACI notes must bind accountability to repo-native principals, permissions, approval kinds, and escalation routes under `SME-RP-G002` and `SME-RP-G003`.
+- `TASK-0650` records RACI as a business-responsibility overlay, not a runtime authorization source, and binds accountability to repo-native principals, permissions, approval kinds, and escalation routes under `SME-RP-G002`.

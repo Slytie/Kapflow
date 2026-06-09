@@ -25,6 +25,104 @@ approval_posture:
     - public_route_activation
     - migration_approval
     - raw_corpus_import
+raci_role_permission_matrix:
+  gate_id: SME-RP-G002
+  contract_ref: docs/architecture/CAPEX_RACI_ROLE_PERMISSION_MATRIX.md
+  authority_boundary: business_responsibility_overlay_not_authorization_source
+  roles:
+    - Project Manager
+    - Engineering SME
+    - Maintenance
+    - Production / Operator
+    - EHS
+    - Procurement
+    - Controlling
+    - Plant Management
+    - Technical Director
+    - CEO / Sponsor
+    - Supplier
+  governed_actions:
+    - create_source_occurrence
+    - review_evidence_link
+    - approve_decision_package
+    - adopt_project_state
+    - close_closure_dimension
+    - reopen_closure_dimension
+    - waive_evidence_or_residual_risk
+    - escalate_to_ceo_sponsor
+  minimum_project_role_posture:
+    create_source_occurrence: project_contributor
+    review_evidence_link: project_contributor_plus_review_assignment
+    approve_decision_package: project_admin_or_canonical_approval_responder
+    adopt_project_state: project_admin_plus_canonical_approval_evidence
+    close_closure_dimension: project_admin_plus_closure_evidence
+    reopen_closure_dimension: project_contributor_plus_stale_reopen_basis
+    waive_evidence_or_residual_risk: project_admin_plus_waiver_evidence
+    escalate_to_ceo_sponsor: project_contributor_plus_escalation_basis
+  permission_sources:
+    - project_memberships
+    - capex_project_authorization
+    - canonical_approvals
+    - audited_events
+    - immutable_artifacts
+    - promotion_pointers
+  never_permission_sources:
+    - generated_material
+    - workpage_state
+    - ai_output
+    - external_status
+    - local_folder_state
+    - file_presence
+    - pr_po_invoice_state
+    - supplier_statement
+    - handover_note
+evidence_status_vocabulary:
+  gate_id: SME-RP-G004
+  contract_ref: docs/architecture/CAPEX_EVIDENCE_STATUS_TRANSITION_CONTRACT.md
+  principle: presence_is_not_sufficiency
+  statuses:
+    - proposed
+    - under_review
+    - valid
+    - partly_valid
+    - contradictory
+    - obsolete
+    - invalid
+    - insufficient
+    - accepted_with_residual_risk
+  closure_eligibility:
+    valid: may_satisfy_closure
+    accepted_with_residual_risk: requires_explicit_residual_risk_acceptance_or_waiver
+    proposed: cannot_satisfy_closure
+    under_review: cannot_satisfy_closure
+    partly_valid: cannot_satisfy_closure
+    contradictory: cannot_satisfy_closure
+    obsolete: cannot_satisfy_closure
+    invalid: cannot_satisfy_closure
+    insufficient: cannot_satisfy_closure
+  transitions:
+    proposed: [under_review, invalid, obsolete]
+    under_review: [valid, partly_valid, contradictory, obsolete, invalid, insufficient]
+    valid: [under_review, contradictory, obsolete]
+    partly_valid: [under_review, accepted_with_residual_risk, contradictory, obsolete, invalid, insufficient]
+    accepted_with_residual_risk: [under_review, contradictory, obsolete]
+    contradictory: [under_review, obsolete]
+    invalid: [under_review, obsolete]
+    insufficient: [under_review, invalid, obsolete]
+    obsolete: [under_review]
+  transition_notes:
+    obsolete_to_under_review: requires_new_source_occurrence_or_revision_reopen
+  never_sufficient_alone:
+    - raw_file_presence
+    - extracted_text
+    - ai_output
+    - workpage_state
+    - external_status
+    - local_folder_state
+    - pr_po_invoice_state
+    - handover_note
+    - supplier_statement
+    - generated_artifact
 acceptance_gates:
   - gate_id: SME-RP-G001
     gate_name: Approval-with-conditions and signature limitation recorded

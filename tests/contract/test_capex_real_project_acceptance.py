@@ -11,8 +11,47 @@ REGISTER_DIR = ROOT / "docs/planning/capex_real_project_acceptance"
 REGISTER_PATH = REGISTER_DIR / "SME_RP_ACCEPTANCE_REGISTER.yaml"
 SIGN_OFF_PATH = REGISTER_DIR / "SME_RP_APPROVAL_WITH_CONDITIONS_SIGN_OFF.md"
 SCOPE_CONTRACT_PATH = ROOT / "docs/architecture/CAPEX_SCOPE_HIERARCHY_CONTRACT.md"
+RACI_CONTRACT_PATH = ROOT / "docs/architecture/CAPEX_RACI_ROLE_PERMISSION_MATRIX.md"
+EVIDENCE_CONTRACT_PATH = (
+    ROOT / "docs/architecture/CAPEX_EVIDENCE_STATUS_TRANSITION_CONTRACT.md"
+)
 TASK_DIR = ROOT / "codex/tasks"
 FRONTMATTER_RE = re.compile(r"\A---\n(?P<body>.*?)\n---\n", re.DOTALL)
+
+EXPECTED_RACI_ROLES = [
+    "Project Manager",
+    "Engineering SME",
+    "Maintenance",
+    "Production / Operator",
+    "EHS",
+    "Procurement",
+    "Controlling",
+    "Plant Management",
+    "Technical Director",
+    "CEO / Sponsor",
+    "Supplier",
+]
+EXPECTED_RACI_ACTIONS = [
+    "create_source_occurrence",
+    "review_evidence_link",
+    "approve_decision_package",
+    "adopt_project_state",
+    "close_closure_dimension",
+    "reopen_closure_dimension",
+    "waive_evidence_or_residual_risk",
+    "escalate_to_ceo_sponsor",
+]
+EXPECTED_EVIDENCE_STATUSES = [
+    "proposed",
+    "under_review",
+    "valid",
+    "partly_valid",
+    "contradictory",
+    "obsolete",
+    "invalid",
+    "insufficient",
+    "accepted_with_residual_risk",
+]
 
 
 def _load_register() -> dict:
@@ -59,6 +98,8 @@ def test_sme_rp_register_uses_generalized_gate_namespace() -> None:
         *(ROOT / "docs/planning/epics").glob("EPIC-1*.md"),
         *(ROOT / "codex/context").glob("EPIC-1*.md"),
         SCOPE_CONTRACT_PATH,
+        RACI_CONTRACT_PATH,
+        EVIDENCE_CONTRACT_PATH,
         ROOT / "docs/status/CURRENT_FOCUS.md",
         ROOT / "docs/status/DECISIONS_SINCE_LAST.md",
     ]
@@ -205,3 +246,124 @@ def test_capex_scope_hierarchy_contract_preserves_boundaries() -> None:
     assert "`K12-T1` is the motivating fixture case" in normalized
     assert "`K12-T1` is a fixture-case ID only" in normalized
     assert "not a product namespace, gate namespace, or runtime scope kind" in normalized
+
+
+def test_raci_role_permission_matrix_is_business_overlay_only() -> None:
+    register = _load_register()
+    matrix = register["raci_role_permission_matrix"]
+    text = RACI_CONTRACT_PATH.read_text(encoding="utf-8")
+    normalized = re.sub(r"\s+", " ", text)
+
+    assert matrix["gate_id"] == "SME-RP-G002"
+    assert matrix["contract_ref"] == "docs/architecture/CAPEX_RACI_ROLE_PERMISSION_MATRIX.md"
+    assert matrix["authority_boundary"] == (
+        "business_responsibility_overlay_not_authorization_source"
+    )
+    assert matrix["roles"] == EXPECTED_RACI_ROLES
+    assert matrix["governed_actions"] == EXPECTED_RACI_ACTIONS
+    assert set(matrix["permission_sources"]) == {
+        "project_memberships",
+        "capex_project_authorization",
+        "canonical_approvals",
+        "audited_events",
+        "immutable_artifacts",
+        "promotion_pointers",
+    }
+    assert set(matrix["never_permission_sources"]) >= {
+        "generated_material",
+        "workpage_state",
+        "ai_output",
+        "external_status",
+    }
+    assert set(matrix["minimum_project_role_posture"]) == set(EXPECTED_RACI_ACTIONS)
+
+    for role in EXPECTED_RACI_ROLES:
+        assert role in text
+    for action in EXPECTED_RACI_ACTIONS:
+        assert f"`{action}`" in text
+    for required in (
+        "RACI is a business-responsibility overlay, not a runtime authorization source.",
+        "Generated material, workpage state, AI output, external status",
+        "These postures are acceptance constraints for later implementation. They do not grant permission by themselves.",
+    ):
+        assert required in normalized
+
+
+def test_evidence_status_vocabulary_and_transitions_are_pinned() -> None:
+    register = _load_register()
+    vocabulary = register["evidence_status_vocabulary"]
+    text = EVIDENCE_CONTRACT_PATH.read_text(encoding="utf-8")
+    normalized = re.sub(r"\s+", " ", text)
+
+    assert vocabulary["gate_id"] == "SME-RP-G004"
+    assert vocabulary["contract_ref"] == (
+        "docs/architecture/CAPEX_EVIDENCE_STATUS_TRANSITION_CONTRACT.md"
+    )
+    assert vocabulary["principle"] == "presence_is_not_sufficiency"
+    assert vocabulary["statuses"] == EXPECTED_EVIDENCE_STATUSES
+    assert vocabulary["closure_eligibility"]["valid"] == "may_satisfy_closure"
+    assert (
+        vocabulary["closure_eligibility"]["accepted_with_residual_risk"]
+        == "requires_explicit_residual_risk_acceptance_or_waiver"
+    )
+    for status in (
+        "proposed",
+        "under_review",
+        "partly_valid",
+        "contradictory",
+        "obsolete",
+        "invalid",
+        "insufficient",
+    ):
+        assert vocabulary["closure_eligibility"][status] == "cannot_satisfy_closure"
+
+    assert vocabulary["transitions"] == {
+        "proposed": ["under_review", "invalid", "obsolete"],
+        "under_review": [
+            "valid",
+            "partly_valid",
+            "contradictory",
+            "obsolete",
+            "invalid",
+            "insufficient",
+        ],
+        "valid": ["under_review", "contradictory", "obsolete"],
+        "partly_valid": [
+            "under_review",
+            "accepted_with_residual_risk",
+            "contradictory",
+            "obsolete",
+            "invalid",
+            "insufficient",
+        ],
+        "accepted_with_residual_risk": [
+            "under_review",
+            "contradictory",
+            "obsolete",
+        ],
+        "contradictory": ["under_review", "obsolete"],
+        "invalid": ["under_review", "obsolete"],
+        "insufficient": ["under_review", "invalid", "obsolete"],
+        "obsolete": ["under_review"],
+    }
+    assert vocabulary["transition_notes"]["obsolete_to_under_review"] == (
+        "requires_new_source_occurrence_or_revision_reopen"
+    )
+    assert set(vocabulary["never_sufficient_alone"]) >= {
+        "raw_file_presence",
+        "extracted_text",
+        "ai_output",
+        "workpage_state",
+        "external_status",
+        "generated_artifact",
+    }
+
+    for status in EXPECTED_EVIDENCE_STATUSES:
+        assert f"`{status}`" in text
+    for required in (
+        "Evidence presence is not evidence sufficiency.",
+        "`valid` may satisfy closure.",
+        "`accepted_with_residual_risk` may satisfy closure only with explicit residual-risk acceptance or waiver.",
+        "`proposed`, `under_review`, `partly_valid`, `contradictory`, `obsolete`, `invalid`, and `insufficient` cannot satisfy closure by themselves.",
+    ):
+        assert required in normalized

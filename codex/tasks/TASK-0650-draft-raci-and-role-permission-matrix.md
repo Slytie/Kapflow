@@ -2,7 +2,8 @@
 id: TASK-0650
 epic: EPIC-140
 title: "Draft RACI and role-permission matrix"
-status: TODO
+status: DONE
+completed_at: "2026-06-09T09:31:48Z"
 owners: ["capex-product", "capex-architecture"]
 reviewers: ["engineering-pm", "backend", "capex-sme"]
 depends_on: ["TASK-0262", "TASK-0648"]
@@ -52,3 +53,12 @@ Draft the RACI and role-permission matrix for create, review, approve, adopt, cl
 - Repo namespace: `SME-RP`
 - Gate refs: `SME-RP-G002`
 - Source conditions: `TOP-10;5-A3;14-D8`
+
+## Closeout evidence
+
+- Added `docs/architecture/CAPEX_RACI_ROLE_PERMISSION_MATRIX.md` as the accepted planning contract for `SME-RP-G002`.
+- Defined the exact RACI role set and governed action set for role-sensitive CAPEX modules.
+- Added machine-readable `raci_role_permission_matrix` entries to `SME_RP_ACCEPTANCE_REGISTER.yaml`, including minimum project-role posture and permission-source guardrails.
+- Updated Annex A to reference the authoritative RACI contract.
+- Added contract coverage proving RACI is a business-responsibility overlay and cannot be derived from generated material, workpage state, AI output, or external status.
+- No runtime authorization implementation, migration, route, frontend behavior, raw corpus import, or CAPEX product activation was introduced.

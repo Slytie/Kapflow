@@ -2,6 +2,13 @@
 
 Record any decisions made since the last session so a fresh Codex run can rehydrate quickly.
 
+## 2026-06-09 (SME-RP RACI and evidence-status closeout)
+- RACI decision: `TASK-0650` adds `docs/architecture/CAPEX_RACI_ROLE_PERMISSION_MATRIX.md`; RACI is business responsibility only, not runtime authorization authority.
+- Permission-source decision: runtime permission authority remains `project_memberships`, `capex_project_authorization`, canonical approvals, audited events, immutable artifacts, and promotion pointers.
+- Evidence-status decision: `TASK-0651` adds `docs/architecture/CAPEX_EVIDENCE_STATUS_TRANSITION_CONTRACT.md`; evidence presence is not evidence sufficiency.
+- Closure-eligibility decision: `valid` may satisfy closure, `accepted_with_residual_risk` requires explicit residual-risk acceptance or waiver, and every other evidence-link status cannot satisfy closure by itself.
+- Activation decision: these closeouts add no runtime authorization logic, evidence-binding runtime, migrations, routes, frontend behavior, raw corpus import, or CAPEX product activation.
+
 ## 2026-06-09 (SME-RP sign-off and scope contract closeout)
 - Approval-with-conditions decision: `TASK-0648` records `SME-RP-G001` as conditional, module-specific, non-activation, and affected-module-only approval wording.
 - Scope-contract decision: `TASK-0649` adds `docs/architecture/CAPEX_SCOPE_HIERARCHY_CONTRACT.md` with the minimum `capex_scope` hierarchy: project, module/workstream, package, discipline, source occurrence, artifact, task, approval, flag, and external binding.

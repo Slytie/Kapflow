@@ -11,23 +11,23 @@
   "summary": {
     "epicCount": 17,
     "taskCount": 396,
-    "done": 67,
+    "done": 69,
     "in_progress": 0,
-    "not_started": 324,
+    "not_started": 322,
     "blocked": 1,
     "needs_review": 4,
     "total": 396,
     "estimate": {
-      "percentComplete": 16.9,
-      "completedTasks": 67,
-      "remainingTasks": 329,
+      "percentComplete": 17.4,
+      "completedTasks": 69,
+      "remainingTasks": 327,
       "remainingBlockedOrReviewTasks": 5,
-      "completedWithTimestamps": 35,
-      "completionTimestampCoverage": 52.2,
-      "etaDate": "2026-08-04",
+      "completedWithTimestamps": 37,
+      "completionTimestampCoverage": 53.6,
+      "etaDate": "2026-08-01",
       "etaConfidence": "medium",
       "etaSource": "epic_completed_at",
-      "label": "ETA 2026-08-04",
+      "label": "ETA 2026-08-01",
       "caveat": "5 blocked or needs-review task(s) remain."
     }
   },
@@ -3540,8 +3540,8 @@
       "id": "EPIC-140",
       "title": "CAPEX project access and membership",
       "plainPurpose": "Define project anchors, membership, roles, and project-scoped APIs without crossing tenant/domain boundaries.",
-      "displayStatus": "in_progress",
-      "reviewPosture": "EPIC-140 project/access foundation and SME-RP scope hierarchy contract are closed with project anchors, direct memberships, project child APIs, selector/dashboard, project-scope helper, official pointer families, domain manifests, W1 closeout evidence, rebuildable authorization projections, and TASK-0649 capex_scope planning truth; TASK-0650 RACI/role-permission mapping remains open planning-only work, and CAPEX activation remains blocked by later source-governance, workflow/workpage, storage evidence or waiver, release/capacity, and production-preflight gates.",
+      "displayStatus": "done",
+      "reviewPosture": "EPIC-140 project/access foundation plus SME-RP scope/RACI addenda are closed with project anchors, direct memberships, project child APIs, selector/dashboard, project-scope helper, official pointer families, domain manifests, W1 closeout evidence, rebuildable authorization projections, TASK-0649 capex_scope planning truth, and TASK-0650 RACI role-permission planning truth; CAPEX activation remains blocked by later source-governance, workflow/workpage, storage evidence or waiver, release/capacity, and production-preflight gates.",
       "dependencies": [
         "EPIC-137",
         "EPIC-139",
@@ -3565,9 +3565,9 @@
         "docs/planning/capex_real_project_acceptance/SME_RP_ACCEPTANCE_REGISTER.yaml"
       ],
       "counts": {
-        "done": 18,
+        "done": 19,
         "in_progress": 0,
-        "not_started": 1,
+        "not_started": 0,
         "blocked": 0,
         "needs_review": 0,
         "total": 19
@@ -4610,9 +4610,9 @@
           "epicId": "EPIC-140",
           "title": "Draft RACI and role-permission matrix",
           "plainPurpose": "Draft the RACI and role-permission matrix for create, review, approve, adopt, close, reopen, waive, and escalate actions.",
-          "sourceStatus": "TODO",
-          "displayStatus": "not_started",
-          "statusReason": "Task is still planned backlog work.",
+          "sourceStatus": "DONE",
+          "displayStatus": "done",
+          "statusReason": "Task file records DONE status and completion or closeout evidence.",
           "why": [
             "Role-sensitive CAPEX modules need explicit responsibility and permission boundaries before activation. The RACI applies to CAPEX real-project work generally, not only to one fixture."
           ],
@@ -4660,25 +4660,32 @@
             "gate_refs": "SME-RP-G002",
             "source_conditions": "TOP-10;5-A3;14-D8"
           },
-          "evidence": [],
+          "evidence": [
+            "Added docs/architecture/CAPEX_RACI_ROLE_PERMISSION_MATRIX.md as the accepted planning contract for SME-RP-G002.",
+            "Defined the exact RACI role set and governed action set for role-sensitive CAPEX modules.",
+            "Added machine-readable raci_role_permission_matrix entries to SME_RP_ACCEPTANCE_REGISTER.yaml, including minimum project-role posture and permission-source guardrails.",
+            "Updated Annex A to reference the authoritative RACI contract.",
+            "Added contract coverage proving RACI is a business-responsibility overlay and cannot be derived from generated material, workpage state, AI output, or external status.",
+            "No runtime authorization implementation, migration, route, frontend behavior, raw corpus import, or CAPEX product activation was introduced."
+          ],
           "taskPath": "codex/tasks/TASK-0650-draft-raci-and-role-permission-matrix.md",
-          "completedAt": null,
-          "completionTimestampStatus": "not_applicable",
-          "completionTimestampSource": "not_completed"
+          "completedAt": "2026-06-09T09:31:48Z",
+          "completionTimestampStatus": "recorded",
+          "completionTimestampSource": "task_frontmatter"
         }
       ],
       "estimate": {
-        "percentComplete": 94.7,
-        "completedTasks": 18,
-        "remainingTasks": 1,
+        "percentComplete": 100.0,
+        "completedTasks": 19,
+        "remainingTasks": 0,
         "remainingBlockedOrReviewTasks": 0,
-        "completedWithTimestamps": 18,
+        "completedWithTimestamps": 19,
         "completionTimestampCoverage": 100.0,
-        "etaDate": "2026-06-10",
-        "etaConfidence": "medium",
-        "etaSource": "epic_completed_at",
-        "label": "ETA 2026-06-10",
-        "caveat": "Estimate is based on remaining current-scope task count."
+        "etaDate": null,
+        "etaConfidence": "complete",
+        "etaSource": "none",
+        "label": "Complete",
+        "caveat": "No remaining current-scope tasks."
       }
     },
     {
@@ -7727,10 +7734,10 @@
         "remainingBlockedOrReviewTasks": 1,
         "completedWithTimestamps": 1,
         "completionTimestampCoverage": 50.0,
-        "etaDate": "2026-06-18",
+        "etaDate": "2026-06-17",
         "etaConfidence": "low",
         "etaSource": "global_completed_at",
-        "label": "ETA 2026-06-18",
+        "label": "ETA 2026-06-17",
         "caveat": "1 blocked or needs-review task(s) remain."
       }
     },
@@ -7762,9 +7769,9 @@
         "docs/planning/capex_real_project_acceptance/SME_RP_ACCEPTANCE_REGISTER.yaml"
       ],
       "counts": {
-        "done": 4,
+        "done": 5,
         "in_progress": 0,
-        "not_started": 30,
+        "not_started": 29,
         "blocked": 0,
         "needs_review": 1,
         "total": 35
@@ -9581,9 +9588,9 @@
           "epicId": "EPIC-142",
           "title": "Harden evidence status vocabulary and transition rules",
           "plainPurpose": "Define evidence-link statuses and transition rules for real-project evidence binding.",
-          "sourceStatus": "TODO",
-          "displayStatus": "not_started",
-          "statusReason": "Task is still planned backlog work.",
+          "sourceStatus": "DONE",
+          "displayStatus": "done",
+          "statusReason": "Task file records DONE status and completion or closeout evidence.",
           "why": [
             "Evidence presence is not evidence sufficiency. CAPEX needs general evidence-link status vocabulary before evidence-driven modules, workpages, or closure flows can activate."
           ],
@@ -9630,11 +9637,18 @@
             "gate_refs": "SME-RP-G004",
             "source_conditions": "TOP-08;6-A1"
           },
-          "evidence": [],
+          "evidence": [
+            "Added docs/architecture/CAPEX_EVIDENCE_STATUS_TRANSITION_CONTRACT.md as the accepted planning contract for SME-RP-G004.",
+            "Defined the exact evidence-link status vocabulary, closure eligibility rules, and allowed transition rules.",
+            "Added machine-readable evidence_status_vocabulary entries to SME_RP_ACCEPTANCE_REGISTER.yaml, including transition rules and presence-is-not-sufficiency guardrails.",
+            "Updated Annex A to reference the authoritative evidence status transition contract.",
+            "Added contract coverage proving contradictory, obsolete, invalid, insufficient, proposed, under-review, and partly-valid evidence cannot satisfy closure by themselves, and residual-risk acceptance requires explicit acceptance or waiver.",
+            "No evidence-binding runtime, search/retrieval index, migration, route, frontend behavior, raw corpus import, or CAPEX product activation was introduced."
+          ],
           "taskPath": "codex/tasks/TASK-0651-harden-evidence-status-vocabulary-and-transition-rules.md",
-          "completedAt": null,
-          "completionTimestampStatus": "not_applicable",
-          "completionTimestampSource": "not_completed"
+          "completedAt": "2026-06-09T09:31:48Z",
+          "completionTimestampStatus": "recorded",
+          "completionTimestampSource": "task_frontmatter"
         },
         {
           "id": "TASK-0658",
@@ -9761,12 +9775,12 @@
         }
       ],
       "estimate": {
-        "percentComplete": 11.4,
-        "completedTasks": 4,
-        "remainingTasks": 31,
+        "percentComplete": 14.3,
+        "completedTasks": 5,
+        "remainingTasks": 30,
         "remainingBlockedOrReviewTasks": 1,
-        "completedWithTimestamps": 1,
-        "completionTimestampCoverage": 25.0,
+        "completedWithTimestamps": 2,
+        "completionTimestampCoverage": 40.0,
         "etaDate": "2026-06-14",
         "etaConfidence": "low",
         "etaSource": "global_completed_at",
@@ -19751,10 +19765,10 @@
         "remainingBlockedOrReviewTasks": 0,
         "completedWithTimestamps": 1,
         "completionTimestampCoverage": 100.0,
-        "etaDate": "2026-06-21",
+        "etaDate": "2026-06-20",
         "etaConfidence": "low",
         "etaSource": "global_completed_at",
-        "label": "ETA 2026-06-21",
+        "label": "ETA 2026-06-20",
         "caveat": "Estimate is based on remaining current-scope task count."
       }
     },

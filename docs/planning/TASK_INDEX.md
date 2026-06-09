@@ -610,8 +610,8 @@ Note: `TASK-0087` / `TASK-0088` / `TASK-0089` were formerly duplicated as `TASK-
 | TASK-0647 | EPIC-139 | DONE | medium | EPIC-139 redo closure handoff and next-tranche guard |
 | TASK-0648 | EPIC-136 | DONE | high | Create SME-RP approval-with-conditions annex pack and sign-off wording |
 | TASK-0649 | EPIC-140 | DONE | high | Define CAPEX scope hierarchy and minimum capex_scope contract |
-| TASK-0650 | EPIC-140 | TODO | high | Draft RACI and role-permission matrix |
-| TASK-0651 | EPIC-142 | TODO | high | Harden evidence status vocabulary and transition rules |
+| TASK-0650 | EPIC-140 | DONE | high | Draft RACI and role-permission matrix |
+| TASK-0651 | EPIC-142 | DONE | high | Harden evidence status vocabulary and transition rules |
 | TASK-0652 | EPIC-141 | TODO | high | Add occurrence context profile and source trust taxonomy |
 | TASK-0653 | EPIC-144 | TODO | high | Define workpage-to-task generation rules |
 | TASK-0654 | EPIC-143 | TODO | high | Add Scope Management workflow specification |

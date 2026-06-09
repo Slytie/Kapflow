@@ -2,7 +2,8 @@
 id: TASK-0651
 epic: EPIC-142
 title: "Harden evidence status vocabulary and transition rules"
-status: TODO
+status: DONE
+completed_at: "2026-06-09T09:31:48Z"
 owners: ["capex-architecture", "qa"]
 reviewers: ["backend", "capex-sme", "security"]
 depends_on: ["TASK-0565"]
@@ -52,3 +53,12 @@ Define evidence-link statuses and transition rules for real-project evidence bin
 - Repo namespace: `SME-RP`
 - Gate refs: `SME-RP-G004`
 - Source conditions: `TOP-08;6-A1`
+
+## Closeout evidence
+
+- Added `docs/architecture/CAPEX_EVIDENCE_STATUS_TRANSITION_CONTRACT.md` as the accepted planning contract for `SME-RP-G004`.
+- Defined the exact evidence-link status vocabulary, closure eligibility rules, and allowed transition rules.
+- Added machine-readable `evidence_status_vocabulary` entries to `SME_RP_ACCEPTANCE_REGISTER.yaml`, including transition rules and presence-is-not-sufficiency guardrails.
+- Updated Annex A to reference the authoritative evidence status transition contract.
+- Added contract coverage proving contradictory, obsolete, invalid, insufficient, proposed, under-review, and partly-valid evidence cannot satisfy closure by themselves, and residual-risk acceptance requires explicit acceptance or waiver.
+- No evidence-binding runtime, search/retrieval index, migration, route, frontend behavior, raw corpus import, or CAPEX product activation was introduced.

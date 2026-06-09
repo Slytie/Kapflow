@@ -3,6 +3,14 @@
 This annex is generalized under the `SME-RP` namespace. K12 motivated several
 conditions, but these definitions are intended for CAPEX real-project modules.
 
+## Authoritative contract refs
+
+- `docs/architecture/CAPEX_RACI_ROLE_PERMISSION_MATRIX.md` records the accepted
+  planning contract for RACI and role-permission posture under `SME-RP-G002`.
+- `docs/architecture/CAPEX_EVIDENCE_STATUS_TRANSITION_CONTRACT.md` records the
+  accepted planning contract for evidence-link status vocabulary and transition
+  rules under `SME-RP-G004`.
+
 ## Evidence / evidence-link statuses
 
 - `proposed`
