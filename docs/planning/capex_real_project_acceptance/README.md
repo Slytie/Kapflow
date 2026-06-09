@@ -25,6 +25,8 @@ with existing repo-native task IDs.
 
 - `SME_RP_ACCEPTANCE_REGISTER.yaml` - machine-readable gates, task remap,
   fixture cases, risks, and workflow classification.
+- `SME_RP_APPROVAL_WITH_CONDITIONS_SIGN_OFF.md` - conditional,
+  module-specific, non-activation sign-off wording for `SME-RP-G001`.
 - `ANNEX_A_STATUS_MODEL_AND_RACI_DRAFT.md` - status and role-permission draft.
 - `ANNEX_B_MANDATORY_FIELDS_AND_ESCALATION_THRESHOLDS_DRAFT.md` - commercial
   fields and escalation threshold families.

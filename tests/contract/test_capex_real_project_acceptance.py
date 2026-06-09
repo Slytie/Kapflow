@@ -9,6 +9,8 @@ import yaml
 ROOT = Path(__file__).resolve().parents[2]
 REGISTER_DIR = ROOT / "docs/planning/capex_real_project_acceptance"
 REGISTER_PATH = REGISTER_DIR / "SME_RP_ACCEPTANCE_REGISTER.yaml"
+SIGN_OFF_PATH = REGISTER_DIR / "SME_RP_APPROVAL_WITH_CONDITIONS_SIGN_OFF.md"
+SCOPE_CONTRACT_PATH = ROOT / "docs/architecture/CAPEX_SCOPE_HIERARCHY_CONTRACT.md"
 TASK_DIR = ROOT / "codex/tasks"
 FRONTMATTER_RE = re.compile(r"\A---\n(?P<body>.*?)\n---\n", re.DOTALL)
 
@@ -56,6 +58,7 @@ def test_sme_rp_register_uses_generalized_gate_namespace() -> None:
         *TASK_DIR.glob("TASK-06*.md"),
         *(ROOT / "docs/planning/epics").glob("EPIC-1*.md"),
         *(ROOT / "codex/context").glob("EPIC-1*.md"),
+        SCOPE_CONTRACT_PATH,
         ROOT / "docs/status/CURRENT_FOCUS.md",
         ROOT / "docs/status/DECISIONS_SINCE_LAST.md",
     ]
@@ -133,3 +136,72 @@ def test_target_epic_notes_reference_sme_rp_addendum_tasks() -> None:
         assert "SME-RP" in text
         for snippet in required_snippets:
             assert snippet in text
+
+
+def test_approval_with_conditions_posture_is_closeout_grade() -> None:
+    register = _load_register()
+    posture = register["approval_posture"]
+    sign_off_text = SIGN_OFF_PATH.read_text(encoding="utf-8")
+    readme_text = (REGISTER_DIR / "README.md").read_text(encoding="utf-8")
+
+    assert posture["gate_id"] == "SME-RP-G001"
+    assert posture["approval_kind"] == "approval_with_conditions"
+    assert posture["conditional"] is True
+    assert posture["module_specific"] is True
+    assert posture["non_activation"] is True
+    assert posture["blocking_scope"] == "affected_module_only"
+    assert posture["affected_module_only"] is True
+    assert posture["wording_ref"] == (
+        "docs/planning/capex_real_project_acceptance/"
+        "SME_RP_APPROVAL_WITH_CONDITIONS_SIGN_OFF.md"
+    )
+    assert set(posture["cannot_be_used_for"]) >= {
+        "implementation_approval",
+        "capex_runtime_activation",
+        "product_activation",
+        "public_route_activation",
+        "migration_approval",
+        "raw_corpus_import",
+    }
+
+    normalized = re.sub(r"\s+", " ", sign_off_text)
+    normalized_lower = normalized.lower()
+    for required in (
+        "SME-RP acceptance is conditional and module-specific",
+        "not implementation approval",
+        "not CAPEX runtime activation",
+        "affected module only",
+    ):
+        assert required in normalized
+    assert "non-activation" in normalized_lower
+    assert "SME_RP_APPROVAL_WITH_CONDITIONS_SIGN_OFF.md" in readme_text
+
+
+def test_capex_scope_hierarchy_contract_preserves_boundaries() -> None:
+    text = SCOPE_CONTRACT_PATH.read_text(encoding="utf-8")
+    normalized = re.sub(r"\s+", " ", text)
+    hierarchy = re.findall(r"^\d+\. `([^`]+)`$", text, flags=re.MULTILINE)
+
+    assert hierarchy == [
+        "project",
+        "module_workstream",
+        "package",
+        "discipline",
+        "source_occurrence",
+        "artifact",
+        "task",
+        "approval",
+        "flag",
+        "external_binding",
+    ]
+    for required in (
+        "Scope rows never cross tenant, domain, or project boundaries.",
+        "Parent and child scope refs must stay inside the same `project_id`.",
+        "`capex_projects.project_id` remains the durable project root.",
+        "`workflow_run_id` is execution identity only; it is not project identity and is not scope identity.",
+        "One closed scope cannot imply overall closure.",
+    ):
+        assert required in normalized
+    assert "`K12-T1` is the motivating fixture case" in normalized
+    assert "`K12-T1` is a fixture-case ID only" in normalized
+    assert "not a product namespace, gate namespace, or runtime scope kind" in normalized

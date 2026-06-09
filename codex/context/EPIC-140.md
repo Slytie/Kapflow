@@ -30,7 +30,9 @@ PROJ-001, PROJ-002, PROJ-003, PROJ-004, PROJ-005, RF-003, ARCH-W1-T001, ARCH-W1-
 
 ## Current status
 - Foundation rows are closed: durable project anchor, direct membership roles, project-bound workflow-run creation, project-scoped child APIs, the first max-five assigned-project selector/dashboard slice, a shared project-scope helper, project-scoped official pointer-family substrate, neutral domain-runtime manifest skeleton, ready-state logistics manifest inventory, incubation-state CAPEX manifest inventory, approval-effect registry shadow parity, project authorization CED, `AuthorizedProjectsQuery` prototype, storage/blob custody CED, pilot storage gate checklist, W1 code pattern register, W1 closeout review, and physical authorization projection runtime state.
-- SME-RP addendum rows remain open: `TASK-0649` for CAPEX scope hierarchy and `TASK-0650` for RACI/role-permission mapping. K12 may motivate scope false-closure tests, but scope/RACI rules are generalized real-project contracts.
+- SME-RP scope hierarchy is closed: `TASK-0649` records the planning-only CAPEX scope hierarchy contract for `SME-RP-G003`.
+- SME-RP RACI remains open: `TASK-0650` still needs role-permission mapping under `SME-RP-G002`.
+- K12 may motivate scope false-closure tests, but scope/RACI rules are generalized real-project contracts.
 - CAPEX activation remains blocked outside EPIC-140 by real pilot storage evidence or waiver, raw-corpus/source governance dependencies, richer CAPEX workpage/projection posture, workflow catalog work, release/capacity gates, and production-preflight gates.
 
 ## Stop line

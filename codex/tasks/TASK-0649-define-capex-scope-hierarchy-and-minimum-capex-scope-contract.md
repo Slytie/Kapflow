@@ -2,7 +2,8 @@
 id: TASK-0649
 epic: EPIC-140
 title: "Define CAPEX scope hierarchy and minimum capex_scope contract"
-status: TODO
+status: DONE
+completed_at: "2026-06-09T08:50:27Z"
 owners: ["capex-product", "platform"]
 reviewers: ["capex-architecture", "backend", "capex-sme"]
 depends_on: ["TASK-0261", "TASK-0563"]
@@ -53,3 +54,11 @@ Define the minimum `capex_scope` hierarchy and project membership relationship n
 - Gate refs: `SME-RP-G003`
 - Fixture refs: `K12-T1`
 - Source conditions: `TOP-02;TOP-03;5-A1;5-A2`
+
+## Closeout evidence
+
+- Added `docs/architecture/CAPEX_SCOPE_HIERARCHY_CONTRACT.md` as the planning contract for minimum `capex_scope` semantics.
+- Defined the exact logical scope hierarchy: `project`, `module_workstream`, `package`, `discipline`, `source_occurrence`, `artifact`, `task`, `approval`, `flag`, and `external_binding`.
+- Recorded boundary rules that scope rows never cross tenant/domain/project, parent/child scope refs stay inside one project, `capex_projects.project_id` remains the project root, and `workflow_run_id` is execution identity only.
+- Added contract coverage proving one closed scope cannot imply overall closure and `K12-T1` remains only a motivating fixture case.
+- No runtime activation, database migration, API, route, frontend behavior, raw corpus import, or pointer-promotion behavior change was introduced.

@@ -9,6 +9,22 @@ source_provenance:
   source_task_range: TASK-0625..TASK-0641
   repo_task_range: TASK-0648..TASK-0664
   note: K12 remains the first binding fixture slice; SME-RP is the generalized repo namespace.
+approval_posture:
+  gate_id: SME-RP-G001
+  approval_kind: approval_with_conditions
+  wording_ref: docs/planning/capex_real_project_acceptance/SME_RP_APPROVAL_WITH_CONDITIONS_SIGN_OFF.md
+  conditional: true
+  module_specific: true
+  non_activation: true
+  blocking_scope: affected_module_only
+  affected_module_only: true
+  cannot_be_used_for:
+    - implementation_approval
+    - capex_runtime_activation
+    - product_activation
+    - public_route_activation
+    - migration_approval
+    - raw_corpus_import
 acceptance_gates:
   - gate_id: SME-RP-G001
     gate_name: Approval-with-conditions and signature limitation recorded

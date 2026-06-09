@@ -47,7 +47,7 @@
     },
     "EPIC-140": {
       "displayStatus": "in_progress",
-      "reviewPosture": "EPIC-140 project/access foundation is closed with project anchors, direct memberships, project child APIs, selector/dashboard, project-scope helper, official pointer families, domain manifests, W1 closeout evidence, and rebuildable authorization projections; SME-RP scope hierarchy and RACI addendum tasks TASK-0649 and TASK-0650 remain open planning-only work, and CAPEX activation remains blocked by later source-governance, workflow/workpage, storage evidence or waiver, release/capacity, and production-preflight gates."
+      "reviewPosture": "EPIC-140 project/access foundation and SME-RP scope hierarchy contract are closed with project anchors, direct memberships, project child APIs, selector/dashboard, project-scope helper, official pointer families, domain manifests, W1 closeout evidence, rebuildable authorization projections, and TASK-0649 capex_scope planning truth; TASK-0650 RACI/role-permission mapping remains open planning-only work, and CAPEX activation remains blocked by later source-governance, workflow/workpage, storage evidence or waiver, release/capacity, and production-preflight gates."
     },
     "EPIC-144": {
       "displayStatus": "blocked",

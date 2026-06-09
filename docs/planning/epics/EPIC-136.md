@@ -6,7 +6,7 @@ Own the v6 intake record, source-package provenance, task conversion, and source
 This epic was imported from CAPEX v6 on `2026-06-01` as planning backlog only. It does not activate CAPEX runtime behavior by itself.
 
 ## Status
-Imported as TODO backlog unless an individual task records completed repo evidence. `TASK-0648` and `TASK-0664` add the SME-RP approval-with-conditions and module-specific readiness notes for the real-project acceptance-condition tranche.
+Imported as TODO backlog unless an individual task records completed repo evidence. `TASK-0648` is closed with SME-RP approval-with-conditions sign-off wording; `TASK-0664` remains open for module-specific readiness rules.
 
 ## In scope
 - Source task families/counts: MP:1, SD:7, SME-RP:2, V5:2.
@@ -40,7 +40,7 @@ Context pack:
 - `TASK-0586` (`SD-TASK-005`) - Define delivery operating cadence
 - `TASK-0587` (`SD-TASK-006`) - Add first-90-days execution overlay
 - `TASK-0588` (`SD-TASK-007`) - Add Definition of Ready / Done for CAPEX task classes
-- `TASK-0648` (`SME-RP:TASK-0625`) - Create SME-RP approval-with-conditions annex pack and sign-off wording
+- `TASK-0648` (`SME-RP:TASK-0625`) - DONE - Create SME-RP approval-with-conditions annex pack and sign-off wording
 - `TASK-0664` (`SME-RP:TASK-0641`) - Add module-specific SME readiness rule
 
 ## Historical/reconciled aliases
@@ -50,7 +50,7 @@ Context pack:
 ## SME-RP real-project acceptance addendum
 - The source archive used `SME-K12` labels and proposed source rows `TASK-0625` through `TASK-0641`; this repo generalizes the tranche as `SME-RP` and remaps it to `TASK-0648` through `TASK-0664`.
 - `SME-RP` means Subject-Matter / Real-Project acceptance conditions. K12 is the first binding fixture slice, not the CAPEX product model.
-- Approval-with-conditions blocks only the affected module or workflow surface. Independent platform hardening may continue when it does not claim readiness for the blocked module.
+- `TASK-0648` records approval-with-conditions as conditional, module-specific, non-activation, and affected-module-only sign-off wording.
 - Module-specific readiness must be recorded per workflow, workpage family, projection family, snapshot/export surface, and external-observation surface before any CAPEX module can claim readiness.
 
 ## Acceptance criteria

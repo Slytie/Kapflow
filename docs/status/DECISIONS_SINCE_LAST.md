@@ -2,6 +2,13 @@
 
 Record any decisions made since the last session so a fresh Codex run can rehydrate quickly.
 
+## 2026-06-09 (SME-RP sign-off and scope contract closeout)
+- Approval-with-conditions decision: `TASK-0648` records `SME-RP-G001` as conditional, module-specific, non-activation, and affected-module-only approval wording.
+- Scope-contract decision: `TASK-0649` adds `docs/architecture/CAPEX_SCOPE_HIERARCHY_CONTRACT.md` with the minimum `capex_scope` hierarchy: project, module/workstream, package, discipline, source occurrence, artifact, task, approval, flag, and external binding.
+- Identity decision: `capex_projects.project_id` remains the project root; `workflow_run_id` remains execution identity only and is not project or scope identity.
+- False-closure decision: one closed scope cannot imply overall closure; `K12-T1` is fixture motivation only.
+- Activation decision: these closeouts add no runtime state, migration, route, frontend behavior, raw corpus import, or CAPEX product activation.
+
 ## 2026-06-09 (SME-RP real-project acceptance condition import)
 - Namespace decision: the source archive used `SME-K12` labels, but repo-native planning uses `SME-RP` for Subject-Matter / Real-Project acceptance conditions.
 - Fixture decision: `K12-T1..T10` remain concrete fixture-case IDs for the first binding real-project acceptance slice; K12 is not the top-level acceptance namespace.

@@ -2,7 +2,8 @@
 id: TASK-0648
 epic: EPIC-136
 title: "Create SME-RP approval-with-conditions annex pack and sign-off wording"
-status: TODO
+status: DONE
+completed_at: "2026-06-09T08:50:27Z"
 owners: ["capex-product", "capex-architecture"]
 reviewers: ["engineering-pm", "capex-sme"]
 depends_on: ["TASK-0233"]
@@ -52,3 +53,11 @@ Add SME-RP annex and sign-off planning truth that distinguishes subject-matter t
 - Repo namespace: `SME-RP`
 - Gate refs: `SME-RP-G001`
 - Source conditions: `TOP-01;1-A1;1-A2;15-A1;15-A2;15-A3`
+
+## Closeout evidence
+
+- Added `docs/planning/capex_real_project_acceptance/SME_RP_APPROVAL_WITH_CONDITIONS_SIGN_OFF.md` as the closeout-grade conditional sign-off wording for `SME-RP-G001`.
+- Added machine-readable approval posture fields to `SME_RP_ACCEPTANCE_REGISTER.yaml`: `conditional`, `module_specific`, `non_activation`, and `affected_module_only`.
+- Updated the acceptance pack README so the sign-off wording is discoverable with the annex files.
+- Added contract coverage proving the approval wording and register posture remain present.
+- No runtime activation, migrations, public routes, frontend behavior, raw corpus import, or CAPEX product activation was introduced.
