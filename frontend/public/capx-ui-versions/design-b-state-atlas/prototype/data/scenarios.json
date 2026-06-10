@@ -1,0 +1,82 @@
+[
+  {
+    "id": "S01",
+    "name": "Mid-project import",
+    "persona": "Project manager",
+    "situation": "A project is imported halfway through with messy folders, duplicates, supplier quotes, site evidence, and incomplete handover material.",
+    "task": "Find what is unresolved, stale, or blocked and identify the next PM action.",
+    "design_a_route": "Project Overview → Corpus Baseline → Commitment Chain → Assumption Closure → Risk/Stale Cockpit",
+    "design_b_route": "Project State Map → stale/unsupported lens → Evidence Case File → Decision Room",
+    "success": "Participant identifies unresolved assumptions, missing site evidence, and that imported documents are not automatically official."
+  },
+  {
+    "id": "S02",
+    "name": "Concept selection",
+    "persona": "Project manager / engineering lead",
+    "situation": "Three solution variants exist with different cost, supplier, risk, and interface implications.",
+    "task": "Choose which concept can be recommended and explain what remains unresolved before it can become official baseline.",
+    "design_a_route": "Concept Engineering → Decision Matrix → Basic Engineering handoff → Approval task",
+    "design_b_route": "Concept branch cluster → option comparison Decision Room → selected concept node → promotion pending",
+    "success": "Participant distinguishes recommended option, approved selection, and official planning baseline."
+  },
+  {
+    "id": "S03",
+    "name": "Supplier order revision",
+    "persona": "Procurement / PM",
+    "situation": "A new supplier order revision changes scope and responsibility after prior assumption/interface reviews.",
+    "task": "Identify what changed and which prior project-state elements became stale.",
+    "design_a_route": "Commitment Chain → revision comparison drawer → affected assumptions/interfaces → stale tasks",
+    "design_b_route": "Timeline Replay → order revision event → affected-node overlay → re-review Decision Room",
+    "success": "Participant identifies responsibility shift, affected assumptions/interfaces, and required re-review."
+  },
+  {
+    "id": "S04",
+    "name": "Risk re-evaluation",
+    "persona": "Project manager / risk owner",
+    "situation": "New site evidence contradicts an earlier risk assumption.",
+    "task": "Explain how risk state changes and what intervention is required.",
+    "design_a_route": "Risk/Stale Cockpit → Assumption Closure → Interface Resolution → task approval",
+    "design_b_route": "Risk Branch Lab → changed-evidence branch → mitigation Decision Room → Timeline event",
+    "success": "Participant avoids false precision and flags not-forecastable/needs re-evaluation when evidence is insufficient."
+  },
+  {
+    "id": "S05",
+    "name": "Handover with open points",
+    "persona": "PM / operations",
+    "situation": "A handover document exists but contains open points and lacks effectiveness proof.",
+    "task": "Determine whether the project can be closed and which closure dimensions remain open.",
+    "design_a_route": "Handover & Closure Readiness → closure vector → open-point register → approval drawer",
+    "design_b_route": "Closure Vector environment → handover node → open-point nodes → Decision Room",
+    "success": "Participant distinguishes production handover from technical, effectiveness, formal, and commercial closure."
+  },
+  {
+    "id": "S06",
+    "name": "Executive escalation",
+    "persona": "Executive / plant manager",
+    "situation": "A project has changed from green to not forecastable because critical evidence is stale.",
+    "task": "Understand why the project is no longer forecastable and what decision is needed.",
+    "design_a_route": "CEO Transparency → Project Overview → Risk/Stale Cockpit drilldown",
+    "design_b_route": "Executive Briefing Room → stale cluster → affected commitments/risks → decision request",
+    "success": "Participant can explain blocker reason, freshness/basis, exposure, and decision required."
+  },
+  {
+    "id": "S07",
+    "name": "Procurement commitment delta",
+    "persona": "Procurement",
+    "situation": "Quote, order, confirmation, and settlement documents contain divergent scope and responsibility language.",
+    "task": "Find the current commitment baseline and whether settlement closes technical root cause.",
+    "design_a_route": "Commitment Chain → side-by-side revision drawer → settlement guardrail → flags",
+    "design_b_route": "Commitment timeline cluster → settlement node → technical-proof missing edge → Decision Room",
+    "success": "Participant does not treat commercial settlement as technical proof."
+  },
+  {
+    "id": "S08",
+    "name": "Mobile residual-risk approval",
+    "persona": "Approver / executive",
+    "situation": "A residual-risk decision is assigned on mobile while the basis artifact has become stale.",
+    "task": "Decide whether to approve, reject, or request revalidation.",
+    "design_a_route": "Mobile Approval Inbox → task detail → policy blocker",
+    "design_b_route": "Mobile Decision Room → stale target banner → revalidation action",
+    "success": "Participant cannot approve stale target and understands why."
+  }
+]

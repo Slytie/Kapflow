@@ -1,0 +1,29 @@
+[
+  {
+    "id": "A",
+    "name": "Governed CAPEX Workbench",
+    "metaphor": "Workflow pages, dense registers, right-side evidence drawers, work queue",
+    "primary_question": "Which workflow page or register do I open to review the evidence and act?",
+    "strengths": "Expert throughput, dense review, implementation clarity, accessibility, bulk operations",
+    "risks": "Can feel conventional; causality can be hidden behind tables; novice users may not know where to start",
+    "best_for": "budget/forecast tables, commitment chains, assumption matrices, interface registers, audit-heavy reviews"
+  },
+  {
+    "id": "B",
+    "name": "CAPEX State Atlas",
+    "metaphor": "Project state map, node graph, timeline replay, risk branches, decision rooms",
+    "primary_question": "Which part of project truth is unsupported, stale, risky, blocked, or decision-ready?",
+    "strengths": "Causality, stale/reopen explanation, executive reasoning, dependency visibility",
+    "risks": "Graph overload, implementation complexity, accessibility risk, slower bulk review without register backing",
+    "best_for": "orientation, why/what-changed explanation, executive briefings, cross-dependency reasoning"
+  },
+  {
+    "id": "C",
+    "name": "CAPEX Playbook OS",
+    "metaphor": "Adaptive governance protocols, readiness gates, handoffs, evidence packets, guided decision packets",
+    "primary_question": "Which protocol is active, what blocks it, and what must happen next?",
+    "strengths": "Next-action clarity, onboarding, standardization, mobile decision completion, handoff discipline",
+    "risks": "Can become checklist theater or rigid wizard if not adaptive; may slow expert exploratory review",
+    "best_for": "intake, readiness gates, procurement readiness, risk re-evaluation, handoffs, mobile approvals"
+  }
+]

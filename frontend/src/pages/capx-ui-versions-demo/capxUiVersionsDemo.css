@@ -1,0 +1,438 @@
+.capx-ui-versions {
+  min-height: 100vh;
+  background: #f4f6f8;
+  color: #172026;
+  font-family:
+    Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+.capx-ui-versions *,
+.capx-ui-versions *::before,
+.capx-ui-versions *::after {
+  box-sizing: border-box;
+}
+
+.capx-ui-versions a {
+  color: inherit;
+}
+
+.capx-ui-versions__header {
+  display: flex;
+  gap: 24px;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: 22px 28px;
+  background: #18212b;
+  color: #ffffff;
+}
+
+.capx-ui-versions__header h1,
+.capx-ui-versions__header p {
+  margin: 0;
+}
+
+.capx-ui-versions__header h1 {
+  margin-top: 4px;
+  font-size: 32px;
+  line-height: 1.1;
+  font-weight: 750;
+}
+
+.capx-ui-versions__header p:last-child {
+  margin-top: 8px;
+  max-width: 720px;
+  color: #d5dde7;
+  font-size: 15px;
+  line-height: 1.45;
+}
+
+.capx-ui-versions__eyebrow {
+  color: #5c6f7a;
+  font-size: 12px;
+  font-weight: 750;
+  letter-spacing: 0;
+  margin: 0;
+  text-transform: uppercase;
+}
+
+.capx-ui-versions__header .capx-ui-versions__eyebrow {
+  color: #8fd3c7;
+}
+
+.capx-ui-versions__demo-links,
+.capx-ui-version__actions,
+.capx-ui-version__source-links,
+.capx-ui-versions__scenario-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.capx-ui-versions__demo-links {
+  justify-content: flex-end;
+  min-width: 360px;
+}
+
+.capx-ui-versions__demo-links a,
+.capx-ui-version__actions a,
+.capx-ui-version__source-links a,
+.capx-ui-versions__source-bar a,
+.capx-ui-versions__scenario-list a {
+  border: 1px solid #c7d0da;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #172026;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1;
+  padding: 9px 11px;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.capx-ui-versions__demo-links a {
+  border-color: rgba(255, 255, 255, 0.24);
+  background: rgba(255, 255, 255, 0.1);
+  color: #ffffff;
+}
+
+.capx-ui-versions__demo-links a:focus-visible,
+.capx-ui-version__actions a:focus-visible,
+.capx-ui-version__source-links a:focus-visible,
+.capx-ui-versions__source-bar a:focus-visible,
+.capx-ui-versions__scenario-list a:focus-visible {
+  outline: 3px solid #0f766e;
+  outline-offset: 2px;
+}
+
+.capx-ui-versions__source-bar {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  padding: 14px 28px;
+  border-bottom: 1px solid #d6dde6;
+  background: #ffffff;
+}
+
+.capx-ui-versions__source-bar div {
+  display: flex;
+  gap: 8px;
+  align-items: baseline;
+  min-width: 136px;
+}
+
+.capx-ui-versions__source-bar strong {
+  color: #134e4a;
+  font-size: 22px;
+}
+
+.capx-ui-versions__source-bar span {
+  color: #51606c;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.capx-ui-versions__source-bar a {
+  margin-left: auto;
+  border-color: #99f6e4;
+  background: #f0fdfa;
+  color: #134e4a;
+}
+
+.capx-ui-versions__grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(300px, 1fr));
+  gap: 14px;
+  padding: 18px 20px 20px;
+}
+
+.capx-ui-version {
+  min-width: 0;
+  border: 1px solid #d6dde6;
+  border-top: 4px solid #0f766e;
+  border-radius: 8px;
+  background: #ffffff;
+  box-shadow: 0 10px 28px rgba(23, 32, 38, 0.08);
+  overflow: hidden;
+}
+
+.capx-ui-version--design-b {
+  border-top-color: #1d4ed8;
+}
+
+.capx-ui-version--design-c {
+  border-top-color: #7c2d12;
+}
+
+.capx-ui-version__header {
+  display: flex;
+  gap: 12px;
+  min-height: 120px;
+  padding: 16px;
+  border-bottom: 1px solid #e3e8ef;
+  background: #fbfcfd;
+}
+
+.capx-ui-version__letter {
+  display: grid;
+  flex: 0 0 36px;
+  width: 36px;
+  height: 36px;
+  place-items: center;
+  border-radius: 8px;
+  background: #134e4a;
+  color: #ffffff;
+  font-size: 18px;
+  font-weight: 800;
+}
+
+.capx-ui-version--design-b .capx-ui-version__letter {
+  background: #1d4ed8;
+}
+
+.capx-ui-version--design-c .capx-ui-version__letter {
+  background: #7c2d12;
+}
+
+.capx-ui-version__header h2,
+.capx-ui-version__header p {
+  margin: 0;
+}
+
+.capx-ui-version__header h2 {
+  font-size: 20px;
+  line-height: 1.2;
+}
+
+.capx-ui-version__header p {
+  margin-top: 6px;
+  color: #51606c;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.capx-ui-version__frame-shell {
+  height: 66vh;
+  min-height: 520px;
+  border-bottom: 1px solid #e3e8ef;
+  background: #f8fafc;
+}
+
+.capx-ui-version__frame-shell iframe {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border: 0;
+  background: #ffffff;
+}
+
+.capx-ui-version__actions,
+.capx-ui-version__source-links,
+.capx-ui-version__meta {
+  padding: 12px 14px;
+}
+
+.capx-ui-version__actions {
+  border-bottom: 1px solid #e3e8ef;
+}
+
+.capx-ui-version__actions a:first-child {
+  border-color: #99f6e4;
+  background: #f0fdfa;
+  color: #134e4a;
+}
+
+.capx-ui-version__actions a.capx-ui-version__built-link {
+  border-color: #67e8f9;
+  background: #ecfeff;
+  color: #155e75;
+}
+
+.capx-ui-version__build-status {
+  margin: 0;
+  padding: 0 14px 12px;
+  border-bottom: 1px solid #e3e8ef;
+  color: #155e75;
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1.35;
+}
+
+.capx-ui-version__meta {
+  margin: 0;
+  border-bottom: 1px solid #e3e8ef;
+}
+
+.capx-ui-version__meta div {
+  display: grid;
+  gap: 4px;
+}
+
+.capx-ui-version__meta dt {
+  color: #51606c;
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.capx-ui-version__meta dd {
+  margin: 0;
+  color: #172026;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.35;
+}
+
+.capx-ui-version__source-links a {
+  background: #f8fafc;
+  color: #374151;
+}
+
+.capx-ui-versions__scenarios {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  justify-content: space-between;
+  margin: 0 20px 24px;
+  padding: 16px;
+  border: 1px solid #d6dde6;
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.capx-ui-versions__scenarios h2 {
+  margin: 4px 0 0;
+  font-size: 20px;
+}
+
+.capx-ui-versions__scenario-list {
+  justify-content: flex-end;
+}
+
+.capx-ui-versions__scenario-list a {
+  min-width: 48px;
+  text-align: center;
+}
+
+.capx-k12-cockpit {
+  display: grid;
+  grid-template-rows: auto auto minmax(620px, 1fr);
+}
+
+.capx-k12-cockpit__header {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.capx-k12-cockpit__notice {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1px;
+  border-bottom: 1px solid #d6dde6;
+  background: #d6dde6;
+}
+
+.capx-k12-cockpit__notice div {
+  min-width: 0;
+  padding: 13px 18px;
+  background: #ffffff;
+}
+
+.capx-k12-cockpit__notice strong,
+.capx-k12-cockpit__notice span {
+  display: block;
+}
+
+.capx-k12-cockpit__notice strong {
+  color: #134e4a;
+  font-size: 13px;
+}
+
+.capx-k12-cockpit__notice span {
+  margin-top: 4px;
+  color: #51606c;
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.capx-k12-cockpit__frame-shell {
+  min-height: 620px;
+  padding: 14px;
+  background: #eef2f5;
+}
+
+.capx-k12-cockpit__frame-shell iframe {
+  display: block;
+  width: 100%;
+  height: calc(100vh - 226px);
+  min-height: 620px;
+  border: 1px solid #c8d2dc;
+  border-radius: 8px;
+  background: #0f172a;
+}
+
+@media (max-width: 1260px) {
+  .capx-ui-versions__grid {
+    grid-template-columns: 1fr;
+  }
+
+  .capx-ui-version__frame-shell {
+    height: 560px;
+  }
+}
+
+@media (max-width: 820px) {
+  .capx-ui-versions__header,
+  .capx-ui-versions__source-bar,
+  .capx-ui-versions__scenarios {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .capx-ui-versions__header {
+    padding: 20px;
+  }
+
+  .capx-ui-versions__demo-links {
+    justify-content: flex-start;
+    min-width: 0;
+  }
+
+  .capx-ui-versions__source-bar {
+    padding: 14px 20px;
+  }
+
+  .capx-ui-versions__source-bar a {
+    margin-left: 0;
+    width: fit-content;
+  }
+
+  .capx-ui-version__frame-shell {
+    height: 520px;
+    min-height: 420px;
+  }
+
+  .capx-ui-versions__scenarios {
+    margin-inline: 20px;
+  }
+
+  .capx-ui-versions__scenario-list {
+    justify-content: flex-start;
+  }
+
+  .capx-k12-cockpit {
+    grid-template-rows: auto auto minmax(520px, 1fr);
+  }
+
+  .capx-k12-cockpit__notice {
+    grid-template-columns: 1fr;
+  }
+
+  .capx-k12-cockpit__frame-shell {
+    padding: 10px;
+  }
+
+  .capx-k12-cockpit__frame-shell iframe {
+    height: 70vh;
+    min-height: 520px;
+  }
+}

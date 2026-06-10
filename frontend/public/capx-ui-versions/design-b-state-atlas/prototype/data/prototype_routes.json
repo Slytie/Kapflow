@@ -1,0 +1,62 @@
+[
+  {
+    "screen_id": "P-001",
+    "name": "Comparison Home",
+    "route": "prototype/pass3_comparison_prototype_index.html",
+    "purpose": "Entry point to all prototype routes"
+  },
+  {
+    "screen_id": "P-002",
+    "name": "Design A Baseline Overview",
+    "route": "prototype/screens/design_a_overview.html",
+    "purpose": "Baseline current workbench for comparison"
+  },
+  {
+    "screen_id": "P-003",
+    "name": "Design B State Map",
+    "route": "prototype/screens/design_b_state_map.html",
+    "purpose": "Atlas orientation and stale/blocked cluster view"
+  },
+  {
+    "screen_id": "P-004",
+    "name": "Decision Room",
+    "route": "prototype/screens/decision_room.html",
+    "purpose": "Governed decision flow"
+  },
+  {
+    "screen_id": "P-005",
+    "name": "Timeline Replay",
+    "route": "prototype/screens/timeline_replay.html",
+    "purpose": "State change chronology"
+  },
+  {
+    "screen_id": "P-006",
+    "name": "Risk Branch Lab",
+    "route": "prototype/screens/risk_branch_lab.html",
+    "purpose": "Branching risk and not-forecastable state"
+  },
+  {
+    "screen_id": "P-007",
+    "name": "Evidence Case File",
+    "route": "prototype/screens/evidence_case_file.html",
+    "purpose": "Evidence organized by claims and decisions"
+  },
+  {
+    "screen_id": "P-008",
+    "name": "Executive Briefing Room",
+    "route": "prototype/screens/executive_briefing_room.html",
+    "purpose": "Governed management narrative"
+  },
+  {
+    "screen_id": "P-009",
+    "name": "Hybrid Candidate",
+    "route": "prototype/screens/hybrid_candidate.html",
+    "purpose": "Atlas + registers + decision rooms model"
+  },
+  {
+    "screen_id": "P-010",
+    "name": "Mobile Decision Inbox",
+    "route": "prototype/screens/mobile_decision_inbox.html",
+    "purpose": "Bounded mobile approval/revalidation task"
+  }
+]

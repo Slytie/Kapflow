@@ -1,0 +1,315 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>CAPEX Final Design Blueprint Prototype Index</title>
+<style>
+body { font-family: system-ui, -apple-system, Segoe UI, sans-serif; margin: 0; background:#f6f7f9; color:#1f2937; }
+header { background:#111827; color:white; padding:24px 32px; }
+main { display:grid; grid-template-columns: 280px 1fr; gap:24px; padding:24px 32px; }
+nav { position:sticky; top:16px; align-self:start; background:white; border:1px solid #e5e7eb; border-radius:12px; padding:16px; max-height:88vh; overflow:auto; }
+nav a { display:block; padding:6px 4px; color:#1f2937; text-decoration:none; border-radius:6px; }
+nav a:hover { background:#eef2ff; }
+.page-card { background:white; border:1px solid #e5e7eb; border-radius:14px; padding:18px; margin-bottom:16px; box-shadow:0 1px 2px rgba(0,0,0,.04); }
+.badge { display:inline-block; padding:3px 8px; border-radius:999px; background:#e5e7eb; margin-right:6px; font-size:12px; }
+a { color:#1d4ed8; }
+@media(max-width: 800px) { main { grid-template-columns:1fr; } nav { position:relative; max-height:none; } }
+</style>
+</head>
+<body>
+<header>
+  <h1>CAPEX Final Design Blueprint</h1>
+  <p>Low-fidelity clickable index for page contracts and wireframes.</p>
+  <span class="badge">Evidence-first</span><span class="badge">Task-first decisions</span><span class="badge">Approval ≠ Promotion</span><span class="badge">Dashboards ≠ Truth</span>
+</header>
+<main>
+<nav>
+  <h2>Pages</h2>
+  <a href="#P01">P01 Role Home / Dashboard</a><a href="#P02">P02 Portfolio Cockpit</a><a href="#P03">P03 Work Queue / Inbox</a><a href="#P04">P04 Global Search</a><a href="#P05">P05 Reports</a><a href="#P06">P06 Admin / Settings</a><a href="#P07">P07 Project Overview / State Snapshot</a><a href="#P08">P08 Project Intake</a><a href="#P09">P09 Corpus Baseline</a><a href="#P10">P10 Lifecycle Stage Map</a><a href="#P11">P11 Feasibility & Business Case</a><a href="#P12">P12 Concept Engineering / Options</a><a href="#P13">P13 Decision Matrix</a><a href="#P14">P14 Basic Engineering / Requirements</a><a href="#P15">P15 Budget / Forecast Workpage</a><a href="#P16">P16 Governance / Commitment Chain</a><a href="#P17">P17 Assumption Closure</a><a href="#P18">P18 Interface Resolution</a><a href="#P19">P19 Risk / Stale Cockpit</a><a href="#P20">P20 Tasks and Approvals</a><a href="#P21">P21 CEO / Management Transparency</a><a href="#P22">P22 Handover & Closure Readiness</a><a href="#P23">P23 Design / Drawing / Connection Review</a><a href="#P24">P24 Asset & Configuration Mapping</a><a href="#P25">P25 Issue / Hypothesis Evidence Review</a><a href="#P26">P26 Lessons / Pattern Library</a><a href="#P27">P27 Supplier / Counterparty Profile</a><a href="#P28">P28 Integration / ERP Sync Status</a><a href="#P29">P29 Audit / History</a><a href="#P30">P30 Evidence Library</a><a href="#P31">P31 Notifications / Activity Center</a>
+</nav>
+<section>
+  
+      <article class="page-card" id="P01">
+        <h3>P01 — Role Home / Dashboard</h3>
+        <p><strong>Question:</strong> What needs my attention today?</p>
+        <p><strong>Role:</strong> All role clusters · <strong>Band:</strong> MVP</p>
+        <p><strong>Commands:</strong> open_project, open_task, filter, save_view, dismiss_low_priority_notification</p>
+        <p><strong>Blocked:</strong> mark_project_green_from_home, resolve_blocker_without_bound_task, publish_dashboard_status_as_truth</p>
+        <p><a href="../workflow_pages/P01_role_home_dashboard.md">Open contract</a> · <a href="../wireframes/P01_role_home_dashboard.svg">Open wireframe</a></p>
+      </article>
+    
+      <article class="page-card" id="P02">
+        <h3>P02 — Portfolio Cockpit</h3>
+        <p><strong>Question:</strong> Which projects have exposure, stale state, or decision needs?</p>
+        <p><strong>Role:</strong> Finance manager, executive, PM lead · <strong>Band:</strong> Near-MVP</p>
+        <p><strong>Commands:</strong> drill_to_project, open_escalation_task, filter_portfolio, generate_portfolio_report</p>
+        <p><strong>Blocked:</strong> edit_project_truth_from_portfolio, hide_unknown_state, rank_projects_without_basis</p>
+        <p><a href="../workflow_pages/P02_portfolio_cockpit.md">Open contract</a> · <a href="../wireframes/P02_portfolio_cockpit.svg">Open wireframe</a></p>
+      </article>
+    
+      <article class="page-card" id="P03">
+        <h3>P03 — Work Queue / Inbox</h3>
+        <p><strong>Question:</strong> Which bounded decisions or evidence tasks are assigned to me?</p>
+        <p><strong>Role:</strong> All role clusters · <strong>Band:</strong> MVP</p>
+        <p><strong>Commands:</strong> approve, reject_or_request_changes, request_evidence, comment, promote_pointer_when_task_bound</p>
+        <p><strong>Blocked:</strong> bulk_approve_without_evidence, approve_stale_generation, approve_and_promote_hidden</p>
+        <p><a href="../workflow_pages/P03_work_queue_inbox.md">Open contract</a> · <a href="../wireframes/P03_work_queue_inbox.svg">Open wireframe</a></p>
+      </article>
+    
+      <article class="page-card" id="P04">
+        <h3>P04 — Global Search</h3>
+        <p><strong>Question:</strong> Where is this project, supplier, artifact, task, or claim?</p>
+        <p><strong>Role:</strong> PM, procurement, finance · <strong>Band:</strong> Near-MVP</p>
+        <p><strong>Commands:</strong> search, filter, open_entity, save_search</p>
+        <p><strong>Blocked:</strong> treat_search_result_as_evidence, open_unpermitted_entity, promote_from_search</p>
+        <p><a href="../workflow_pages/P04_global_search.md">Open contract</a> · <a href="../wireframes/P04_global_search.svg">Open wireframe</a></p>
+      </article>
+    
+      <article class="page-card" id="P05">
+        <h3>P05 — Reports</h3>
+        <p><strong>Question:</strong> What governed report can be produced from current snapshots?</p>
+        <p><strong>Role:</strong> Finance, executive, PM lead · <strong>Band:</strong> Near-MVP</p>
+        <p><strong>Commands:</strong> generate_report, export_snapshot_report, schedule_report, open_basis</p>
+        <p><strong>Blocked:</strong> export_raw_ai_summary, omit_basis_from_report, remove_unresolved_source_warning</p>
+        <p><a href="../workflow_pages/P05_reports.md">Open contract</a> · <a href="../wireframes/P05_reports.svg">Open wireframe</a></p>
+      </article>
+    
+      <article class="page-card" id="P06">
+        <h3>P06 — Admin / Settings</h3>
+        <p><strong>Question:</strong> How are roles, routes, policies, integrations, and terminology configured?</p>
+        <p><strong>Role:</strong> Admin, system owner · <strong>Band:</strong> Post-MVP foundation</p>
+        <p><strong>Commands:</strong> manage_roles, configure_routes, set_terms, submit_policy_change</p>
+        <p><strong>Blocked:</strong> self_approve_permission, disable_audit, bypass_separation_of_duties</p>
+        <p><a href="../workflow_pages/P06_admin_settings.md">Open contract</a> · <a href="../wireframes/P06_admin_settings.svg">Open wireframe</a></p>
+      </article>
+    
+      <article class="page-card" id="P07">
+        <h3>P07 — Project Overview / State Snapshot</h3>
+        <p><strong>Question:</strong> What is the current governed state and what requires action?</p>
+        <p><strong>Role:</strong> Project manager · <strong>Band:</strong> MVP</p>
+        <p><strong>Commands:</strong> open_workpage, open_task, request_update, create_summary_draft, open_evidence</p>
+        <p><strong>Blocked:</strong> mark_green_directly, mark_project_closed_directly, hide_not_forecastable</p>
+        <p><a href="../workflow_pages/P07_project_overview_state_snapshot.md">Open contract</a> · <a href="../wireframes/P07_project_overview_state_snapshot.svg">Open wireframe</a></p>
+      </article>
+    
+      <article class="page-card" id="P08">
+        <h3>P08 — Project Intake</h3>
+        <p><strong>Question:</strong> What is being requested and is it ready for feasibility?</p>
+        <p><strong>Role:</strong> PM, requester · <strong>Band:</strong> MVP</p>
+        <p><strong>Commands:</strong> save_draft, submit_for_feasibility, request_clarification, attach_evidence</p>
+        <p><strong>Blocked:</strong> submit_without_required_basis, confuse_request_with_solution, skip_upload_scan</p>
+        <p><a href="../workflow_pages/P08_project_intake.md">Open contract</a> · <a href="../wireframes/P08_project_intake.svg">Open wireframe</a></p>
+      </article>
+    
+      <article class="page-card" id="P09">
+        <h3>P09 — Corpus Baseline</h3>
+        <p><strong>Question:</strong> What evidence exists, what role does it play, and what is unresolved?</p>
+        <p><strong>Role:</strong> PM, evidence reviewer · <strong>Band:</strong> MVP</p>
+        <p><strong>Commands:</strong> confirm_role, merge_packet, split_packet, quarantine, request_extraction, mark_irrelevant</p>
+        <p><strong>Blocked:</strong> treat_file_as_truth, ignore_duplicate_context, extract_from_quarantined_file</p>
+        <p><a href="../workflow_pages/P09_corpus_baseline.md">Open contract</a> · <a href="../wireframes/P09_corpus_baseline.svg">Open wireframe</a></p>
+      </article>
+    
+      <article class="page-card" id="P10">
+        <h3>P10 — Lifecycle Stage Map</h3>
+        <p><strong>Question:</strong> Where are we in the CAPEX lifecycle without forcing waterfall semantics?</p>
+        <p><strong>Role:</strong> PM, executive · <strong>Band:</strong> MVP</p>
+        <p><strong>Commands:</strong> open_stage_workpage, explain_blocker, request_re_review, create_stage_task</p>
+        <p><strong>Blocked:</strong> manual_done_toggle, force_waterfall_lock, close_stage_without_evidence</p>
+        <p><a href="../workflow_pages/P10_lifecycle_stage_map.md">Open contract</a> · <a href="../wireframes/P10_lifecycle_stage_map.svg">Open wireframe</a></p>
+      </article>
+    
+      <article class="page-card" id="P11">
+        <h3>P11 — Feasibility & Business Case</h3>
+        <p><strong>Question:</strong> Is there a technically plausible and justified reason to continue?</p>
+        <p><strong>Role:</strong> PM, finance, technical reviewer · <strong>Band:</strong> MVP/Near-MVP</p>
+        <p><strong>Commands:</strong> save_feasibility_draft, request_review, submit_decision_proposal, request_external_quote, mark_not_forecastable</p>
+        <p><strong>Blocked:</strong> treat_feasibility_as_final_scope, approve_business_case_without_basis, hide_strategic_justification_gap</p>
+        <p><a href="../workflow_pages/P11_feasibility_and_business_case.md">Open contract</a> · <a href="../wireframes/P11_feasibility_and_business_case.svg">Open wireframe</a></p>
+      </article>
+    
+      <article class="page-card" id="P12">
+        <h3>P12 — Concept Engineering / Options</h3>
+        <p><strong>Question:</strong> What solution paths exist and what does each imply?</p>
+        <p><strong>Role:</strong> PM, engineering · <strong>Band:</strong> Near-MVP</p>
+        <p><strong>Commands:</strong> create_option, attach_quote, compare_options, send_to_decision_matrix, request_option_review</p>
+        <p><strong>Blocked:</strong> select_option_without_review, hide_option_risk, treat_budgetary_quote_as_order</p>
+        <p><a href="../workflow_pages/P12_concept_engineering_options.md">Open contract</a> · <a href="../wireframes/P12_concept_engineering_options.svg">Open wireframe</a></p>
+      </article>
+    
+      <article class="page-card" id="P13">
+        <h3>P13 — Decision Matrix</h3>
+        <p><strong>Question:</strong> Which option should become the selected planning baseline and why?</p>
+        <p><strong>Role:</strong> PM, steering group · <strong>Band:</strong> Near-MVP</p>
+        <p><strong>Commands:</strong> score_option, request_review, approve_selection, promote_selected_concept, freeze_matrix_version</p>
+        <p><strong>Blocked:</strong> recommendation_equals_official, hide_weights, promote_selected_concept_without_approval</p>
+        <p><a href="../workflow_pages/P13_decision_matrix.md">Open contract</a> · <a href="../wireframes/P13_decision_matrix.svg">Open wireframe</a></p>
+      </article>
+    
+      <article class="page-card" id="P14">
+        <h3>P14 — Basic Engineering / Requirements</h3>
+        <p><strong>Question:</strong> What exactly must the selected concept satisfy before procurement/execution?</p>
+        <p><strong>Role:</strong> PM, engineering · <strong>Band:</strong> Near-MVP</p>
+        <p><strong>Commands:</strong> create_requirement, mark_reviewed, request_evidence, link_interface, promote_requirement_baseline</p>
+        <p><strong>Blocked:</strong> procurement_ready_with_open_critical_requirement, convert_concept_assumption_to_requirement_without_review</p>
+        <p><a href="../workflow_pages/P14_basic_engineering_requirements.md">Open contract</a> · <a href="../wireframes/P14_basic_engineering_requirements.svg">Open wireframe</a></p>
+      </article>
+    
+      <article class="page-card" id="P15">
+        <h3>P15 — Budget / Forecast Workpage</h3>
+        <p><strong>Question:</strong> What is approved, committed, actual, remaining, and forecasted?</p>
+        <p><strong>Role:</strong> Finance, PM · <strong>Band:</strong> Near-MVP</p>
+        <p><strong>Commands:</strong> edit_budget_draft, submit_budget_review, approve_budget_change, request_variance_explanation, retry_sync</p>
+        <p><strong>Blocked:</strong> post_unapproved_budget, hide_variance_basis, sync_before_official_capex_state</p>
+        <p><a href="../workflow_pages/P15_budget_forecast_workpage.md">Open contract</a> · <a href="../wireframes/P15_budget_forecast_workpage.svg">Open wireframe</a></p>
+      </article>
+    
+      <article class="page-card" id="P16">
+        <h3>P16 — Governance / Commitment Chain</h3>
+        <p><strong>Question:</strong> What was decided, quoted, ordered, revised, caveated, or settled?</p>
+        <p><strong>Role:</strong> Procurement, PM · <strong>Band:</strong> MVP</p>
+        <p><strong>Commands:</strong> mark_reviewed, promote_commitment_chain, request_supplier_clarification, create_revision_re_review_task</p>
+        <p><strong>Blocked:</strong> latest_order_equals_official, ignore_order_revision_delta, settlement_equals_technical_proof</p>
+        <p><a href="../workflow_pages/P16_governance_commitment_chain.md">Open contract</a> · <a href="../wireframes/P16_governance_commitment_chain.svg">Open wireframe</a></p>
+      </article>
+    
+      <article class="page-card" id="P17">
+        <h3>P17 — Assumption Closure</h3>
+        <p><strong>Question:</strong> Which assumptions are open, closed, contradicted, waived, or stale?</p>
+        <p><strong>Role:</strong> PM, engineering, procurement · <strong>Band:</strong> MVP</p>
+        <p><strong>Commands:</strong> close_assumption_with_evidence, request_evidence, waive_assumption, accept_residual_risk, create_re_review_task</p>
+        <p><strong>Blocked:</strong> close_because_no_contradiction_found, close_without_evidence, close_stale_assumption</p>
+        <p><a href="../workflow_pages/P17_assumption_closure.md">Open contract</a> · <a href="../wireframes/P17_assumption_closure.svg">Open wireframe</a></p>
+      </article>
+    
+      <article class="page-card" id="P18">
+        <h3>P18 — Interface Resolution</h3>
+        <p><strong>Question:</strong> Do required and actual conditions match across owner/supplier/site/process boundaries?</p>
+        <p><strong>Role:</strong> PM, engineering, site owner · <strong>Band:</strong> MVP</p>
+        <p><strong>Commands:</strong> assign_owner, request_site_measurement, close_interface, escalate_mismatch, request_supplier_clarification</p>
+        <p><strong>Blocked:</strong> supplier_requirement_as_owner_capability, close_interface_with_unresolved_mismatch, procurement_ready_with_critical_interface_open</p>
+        <p><a href="../workflow_pages/P18_interface_resolution.md">Open contract</a> · <a href="../wireframes/P18_interface_resolution.svg">Open wireframe</a></p>
+      </article>
+    
+      <article class="page-card" id="P19">
+        <h3>P19 — Risk / Stale Cockpit</h3>
+        <p><strong>Question:</strong> What changed, what became stale, and what must be re-reviewed?</p>
+        <p><strong>Role:</strong> PM, PMO, executive · <strong>Band:</strong> MVP</p>
+        <p><strong>Commands:</strong> assign_mitigation, request_re_review, escalate, mark_not_forecastable_reason_reviewed, accept_residual_risk</p>
+        <p><strong>Blocked:</strong> invent_precision, suppress_not_forecastable, close_risk_without_re_review_after_trigger</p>
+        <p><a href="../workflow_pages/P19_risk_stale_cockpit.md">Open contract</a> · <a href="../wireframes/P19_risk_stale_cockpit.svg">Open wireframe</a></p>
+      </article>
+    
+      <article class="page-card" id="P20">
+        <h3>P20 — Tasks and Approvals</h3>
+        <p><strong>Question:</strong> What decisions are pending for this project and what evidence supports them?</p>
+        <p><strong>Role:</strong> All role clusters · <strong>Band:</strong> MVP</p>
+        <p><strong>Commands:</strong> approve, reject_or_request_changes, request_changes, promote_pointer, comment, delegate_if_policy_allows</p>
+        <p><strong>Blocked:</strong> approve_and_promote_in_one_hidden_step, approve_stale_artifact, skip_policy_explanation</p>
+        <p><a href="../workflow_pages/P20_tasks_and_approvals.md">Open contract</a> · <a href="../wireframes/P20_tasks_and_approvals.svg">Open wireframe</a></p>
+      </article>
+    
+      <article class="page-card" id="P21">
+        <h3>P21 — CEO / Management Transparency</h3>
+        <p><strong>Question:</strong> What needs management attention and what can be safely reported?</p>
+        <p><strong>Role:</strong> Executive, PM lead · <strong>Band:</strong> Near-MVP</p>
+        <p><strong>Commands:</strong> publish_governed_summary, request_decision, drilldown, create_escalation_task</p>
+        <p><strong>Blocked:</strong> publish_raw_ai_summary, hide_stale_state, turn_unknown_into_green</p>
+        <p><a href="../workflow_pages/P21_ceo_management_transparency.md">Open contract</a> · <a href="../wireframes/P21_ceo_management_transparency.svg">Open wireframe</a></p>
+      </article>
+    
+      <article class="page-card" id="P22">
+        <h3>P22 — Handover & Closure Readiness</h3>
+        <p><strong>Question:</strong> Which kind of closure is achieved, blocked, or only partial?</p>
+        <p><strong>Role:</strong> PM, operations, quality · <strong>Band:</strong> Near-MVP/Post-MVP partial</p>
+        <p><strong>Commands:</strong> accept_handover_with_open_points, close_defect, request_effectiveness_evidence, accept_residual_risk, promote_closure_snapshot</p>
+        <p><strong>Blocked:</strong> handover_equals_closure, settlement_equals_technical_proof, local_defect_equals_system_effectiveness</p>
+        <p><a href="../workflow_pages/P22_handover_and_closure_readiness.md">Open contract</a> · <a href="../wireframes/P22_handover_and_closure_readiness.svg">Open wireframe</a></p>
+      </article>
+    
+      <article class="page-card" id="P23">
+        <h3>P23 — Design / Drawing / Connection Review</h3>
+        <p><strong>Question:</strong> Do drawings/connections match requirements and interfaces?</p>
+        <p><strong>Role:</strong> Engineering, PM · <strong>Band:</strong> Post-MVP</p>
+        <p><strong>Commands:</strong> review_drawing, flag_connection_mismatch, link_requirement, request_supplier_revision</p>
+        <p><strong>Blocked:</strong> claim_drawing_sufficiency_without_review, use_unapproved_drawing_as_baseline</p>
+        <p><a href="../workflow_pages/P23_design_drawing_connection_review.md">Open contract</a> · <a href="../wireframes/P23_design_drawing_connection_review.svg">Open wireframe</a></p>
+      </article>
+    
+      <article class="page-card" id="P24">
+        <h3>P24 — Asset & Configuration Mapping</h3>
+        <p><strong>Question:</strong> What asset/configuration state is planned, installed, and accepted?</p>
+        <p><strong>Role:</strong> Engineering, maintenance · <strong>Band:</strong> Post-MVP</p>
+        <p><strong>Commands:</strong> link_asset, compare_as_built, promote_config_baseline, request_asset_evidence</p>
+        <p><strong>Blocked:</strong> installed_equals_documented, promote_config_without_as_built_evidence</p>
+        <p><a href="../workflow_pages/P24_asset_and_configuration_mapping.md">Open contract</a> · <a href="../wireframes/P24_asset_and_configuration_mapping.svg">Open wireframe</a></p>
+      </article>
+    
+      <article class="page-card" id="P25">
+        <h3>P25 — Issue / Hypothesis Evidence Review</h3>
+        <p><strong>Question:</strong> What issue occurred, what hypotheses explain it, and what evidence closes it?</p>
+        <p><strong>Role:</strong> PM, engineering, quality · <strong>Band:</strong> Post-MVP</p>
+        <p><strong>Commands:</strong> create_hypothesis, link_evidence, close_local_defect, verify_effectiveness, reopen_issue</p>
+        <p><strong>Blocked:</strong> local_fix_equals_effectiveness, close_issue_without_root_cause_or_waiver</p>
+        <p><a href="../workflow_pages/P25_issue_hypothesis_evidence_review.md">Open contract</a> · <a href="../wireframes/P25_issue_hypothesis_evidence_review.svg">Open wireframe</a></p>
+      </article>
+    
+      <article class="page-card" id="P26">
+        <h3>P26 — Lessons / Pattern Library</h3>
+        <p><strong>Question:</strong> What should future projects learn from this project?</p>
+        <p><strong>Role:</strong> PMO, engineering · <strong>Band:</strong> Post-MVP</p>
+        <p><strong>Commands:</strong> promote_lesson, reject_lesson, link_fixture, create_future_checklist_item</p>
+        <p><strong>Blocked:</strong> auto_promote_ai_lesson, generalize_without_evidence</p>
+        <p><a href="../workflow_pages/P26_lessons_pattern_library.md">Open contract</a> · <a href="../wireframes/P26_lessons_pattern_library.svg">Open wireframe</a></p>
+      </article>
+    
+      <article class="page-card" id="P27">
+        <h3>P27 — Supplier / Counterparty Profile</h3>
+        <p><strong>Question:</strong> What has this supplier/counterparty committed to or failed to evidence across projects?</p>
+        <p><strong>Role:</strong> Procurement, PM · <strong>Band:</strong> Post-MVP</p>
+        <p><strong>Commands:</strong> open_supplier_record, compare_project_patterns, request_counterparty_clarification</p>
+        <p><strong>Blocked:</strong> blackbox_score_without_evidence, hide_negative_evidence</p>
+        <p><a href="../workflow_pages/P27_supplier_counterparty_profile.md">Open contract</a> · <a href="../wireframes/P27_supplier_counterparty_profile.svg">Open wireframe</a></p>
+      </article>
+    
+      <article class="page-card" id="P28">
+        <h3>P28 — Integration / ERP Sync Status</h3>
+        <p><strong>Question:</strong> What is official in CAPEX versus posted in downstream systems?</p>
+        <p><strong>Role:</strong> Finance, admin, PM · <strong>Band:</strong> Near-MVP/Post-MVP</p>
+        <p><strong>Commands:</strong> retry_sync, open_exception, reconcile, export_handoff_manifest</p>
+        <p><strong>Blocked:</strong> official_equals_synced, retry_without_current_manifest, hide_failed_sync</p>
+        <p><a href="../workflow_pages/P28_integration_erp_sync_status.md">Open contract</a> · <a href="../wireframes/P28_integration_erp_sync_status.svg">Open wireframe</a></p>
+      </article>
+    
+      <article class="page-card" id="P29">
+        <h3>P29 — Audit / History</h3>
+        <p><strong>Question:</strong> Who did what, when, on which version, with what outcome?</p>
+        <p><strong>Role:</strong> Auditor, PM, approver · <strong>Band:</strong> MVP foundation</p>
+        <p><strong>Commands:</strong> filter, export_audit, open_related_entity, save_audit_view</p>
+        <p><strong>Blocked:</strong> edit_audit_event, delete_audit_event, export_without_scope</p>
+        <p><a href="../workflow_pages/P29_audit_history.md">Open contract</a> · <a href="../wireframes/P29_audit_history.svg">Open wireframe</a></p>
+      </article>
+    
+      <article class="page-card" id="P30">
+        <h3>P30 — Evidence Library</h3>
+        <p><strong>Question:</strong> Where are the source artifacts, occurrences, extracted claims, and packets?</p>
+        <p><strong>Role:</strong> PM, evidence reviewer · <strong>Band:</strong> MVP foundation</p>
+        <p><strong>Commands:</strong> preview, compare_versions, open_occurrence, open_packet, request_extraction</p>
+        <p><strong>Blocked:</strong> treat_artifact_library_as_truth, use_unresolved_source_as_basis</p>
+        <p><a href="../workflow_pages/P30_evidence_library.md">Open contract</a> · <a href="../wireframes/P30_evidence_library.svg">Open wireframe</a></p>
+      </article>
+    
+      <article class="page-card" id="P31">
+        <h3>P31 — Notifications / Activity Center</h3>
+        <p><strong>Question:</strong> What changed that I should notice but may not need to decide?</p>
+        <p><strong>Role:</strong> All role clusters · <strong>Band:</strong> Near-MVP</p>
+        <p><strong>Commands:</strong> open_notification, mute_low_priority, convert_to_task, open_bound_object</p>
+        <p><strong>Blocked:</strong> notification_only_approval, dismiss_critical_task_without_action, hide_stale_alert</p>
+        <p><a href="../workflow_pages/P31_notifications_activity_center.md">Open contract</a> · <a href="../wireframes/P31_notifications_activity_center.svg">Open wireframe</a></p>
+      </article>
+    
+</section>
+</main>
+</body>
+</html>

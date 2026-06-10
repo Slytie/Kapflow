@@ -8,9 +8,12 @@ import { CapxCeoCockpitAccessGate } from "@/pages/capx-ceo-cockpit-demo/CapxCeoC
 import { CapxCeoCockpitOverviewPage } from "@/pages/capx-ceo-cockpit-demo/CapxCeoCockpitOverviewPage";
 import { CapxCeoCockpitProjectPage } from "@/pages/capx-ceo-cockpit-demo/CapxCeoCockpitProjectPage";
 import { CapexEpicProgressPage } from "@/pages/CapexEpicProgressPage";
-import { CapxPmPracticalAccessGate } from "@/pages/capx-pm-practical-demo/CapxPmPracticalAccessGate";
-import { CapxPmProjectListPage } from "@/pages/capx-pm-practical-demo/CapxPmProjectListPage";
-import { CapxPmProjectWorkspacePage } from "@/pages/capx-pm-practical-demo/CapxPmProjectWorkspacePage";
+import { CapxPmFeDemoRoot } from "@/pages/capx-pm-fe-demo";
+import { CapxPmFeDemoV2Root } from "@/pages/capx-pm-fe-demo-v2";
+import { CapxUiOneWorkbenchPage } from "@/pages/capx-ui-one-demo/CapxUiOneWorkbenchPage";
+import { CapxDesignAWorkbenchPage } from "@/pages/capx-ui-versions-demo/CapxDesignAWorkbenchPage";
+import { CapxK12PmCockpitPage } from "@/pages/capx-ui-versions-demo/CapxK12PmCockpitPage";
+import { CapxUiVersionsDemoPage } from "@/pages/capx-ui-versions-demo/CapxUiVersionsDemoPage";
 import { ApprovalsPage } from "@/pages/ApprovalsPage";
 import {
   DispatchReportArtifactWorkpagePage,
@@ -78,30 +81,13 @@ export function App(): JSX.Element {
                 </CapxCeoCockpitAccessGate>
               }
             />
-            <Route
-              path="/demo/capx/pm/projects"
-              element={
-                <CapxPmPracticalAccessGate>
-                  <CapxPmProjectListPage />
-                </CapxPmPracticalAccessGate>
-              }
-            />
-            <Route
-              path="/demo/capx/pm/projects/:projectId"
-              element={
-                <CapxPmPracticalAccessGate>
-                  <CapxPmProjectWorkspacePage />
-                </CapxPmPracticalAccessGate>
-              }
-            />
-            <Route
-              path="/demo/capx/pm/projects/:projectId/steps/:stepId"
-              element={
-                <CapxPmPracticalAccessGate>
-                  <CapxPmProjectWorkspacePage />
-                </CapxPmPracticalAccessGate>
-              }
-            />
+            <Route path="/demo/capx/pm/*" element={<CapxPmFeDemoRoot />} />
+            <Route path="/demo/capx/pm-v2/*" element={<CapxPmFeDemoV2Root />} />
+            <Route path="/demo/capx/ui-one/*" element={<CapxUiOneWorkbenchPage />} />
+            <Route path="/demo/capx/ui-versions" element={<CapxUiVersionsDemoPage />} />
+            <Route path="/demo/capx/ui-versions/design-a" element={<CapxDesignAWorkbenchPage />} />
+            <Route path="/demo/capx/ui-versions/design-a/:pageId" element={<CapxDesignAWorkbenchPage />} />
+            <Route path="/demo/capx/ui-versions/k12-pm-cockpit" element={<CapxK12PmCockpitPage />} />
             <Route element={<AppShell />}>
               <Route path="/demo/logistics" element={<LogisticsDemoPage />} />
               <Route

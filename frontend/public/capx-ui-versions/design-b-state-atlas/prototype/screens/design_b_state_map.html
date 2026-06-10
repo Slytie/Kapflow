@@ -1,0 +1,28 @@
+<!doctype html><html><head><meta charset='utf-8'><title>Design B — CAPEX State Atlas</title>
+<style>
+:root{--bg:#f6f7f9;--panel:#fff;--ink:#1f2937;--muted:#64748b;--line:#d9dee7;--accent:#1f4f7a;--warn:#a16207;--bad:#991b1b;--good:#166534;--stale:#7c2d12}
+*{box-sizing:border-box}body{margin:0;font-family:Inter,Arial,sans-serif;background:var(--bg);color:var(--ink)}
+.header{background:#132238;color:#fff;padding:18px 28px}.header h1{margin:0;font-size:22px}.header p{margin:6px 0 0;color:#cbd5e1}
+.nav{display:flex;gap:10px;flex-wrap:wrap;padding:14px 24px;background:#e9eef5;border-bottom:1px solid var(--line)}.nav a{background:#fff;border:1px solid var(--line);padding:8px 10px;border-radius:8px;color:#17324d;text-decoration:none;font-size:13px}
+.container{padding:22px;display:grid;gap:18px}.grid2{display:grid;grid-template-columns:1fr 1fr;gap:18px}.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:18px}.panel{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px;box-shadow:0 1px 2px rgba(0,0,0,.04)}
+.panel h2,.panel h3{margin-top:0}.badge{display:inline-block;border:1px solid var(--line);border-radius:999px;padding:3px 8px;font-size:12px;background:#f8fafc;margin:2px}.badge.bad{border-color:#fecaca;color:var(--bad);background:#fef2f2}.badge.warn{border-color:#fed7aa;color:var(--warn);background:#fff7ed}.badge.good{border-color:#bbf7d0;color:var(--good);background:#f0fdf4}.badge.stale{border-color:#fdba74;color:var(--stale);background:#fff7ed}.badge.official{background:#eef6ff;border-color:#bfdbfe;color:#1d4ed8}
+.map{height:420px;border:1px dashed #aab6c5;border-radius:14px;background:linear-gradient(135deg,#fff,#eef4fa);position:relative;overflow:hidden}.node{position:absolute;border:2px solid #94a3b8;background:white;border-radius:14px;padding:10px 12px;width:148px;box-shadow:0 3px 8px rgba(0,0,0,.08);font-size:13px}.node small{display:block;color:var(--muted);margin-top:4px}.n1{left:30px;top:40px}.n2{left:235px;top:75px}.n3{left:450px;top:35px}.n4{left:430px;top:210px}.n5{left:220px;top:250px}.n6{left:35px;top:225px}.edge{position:absolute;height:2px;background:#94a3b8;transform-origin:left center}.e1{left:174px;top:88px;width:65px;transform:rotate(10deg)}.e2{left:382px;top:95px;width:75px;transform:rotate(-18deg)}.e3{left:520px;top:135px;width:90px;transform:rotate(90deg)}.e4{left:360px;top:260px;width:80px;transform:rotate(-15deg)}
+table{width:100%;border-collapse:collapse;background:#fff}th,td{border-bottom:1px solid var(--line);padding:8px;text-align:left;font-size:13px}th{background:#f1f5f9;color:#334155}.right{float:right}.muted{color:var(--muted)}.callout{border-left:4px solid var(--accent);padding:10px 12px;background:#eef6ff;border-radius:8px;margin:10px 0}.danger{border-left-color:#b91c1c;background:#fef2f2}.warning{border-left-color:#d97706;background:#fffbeb}.success{border-left-color:#15803d;background:#f0fdf4}.phone{max-width:360px;border:10px solid #111827;border-radius:28px;background:#fff;margin:auto;min-height:560px;overflow:hidden}.phone .top{background:#111827;color:#fff;padding:12px;text-align:center}.task{border:1px solid var(--line);border-radius:10px;padding:12px;margin:10px;background:#f8fafc}
+@media(max-width:900px){.grid2,.grid3{grid-template-columns:1fr}.map{height:520px}.node{position:relative;left:auto!important;top:auto!important;margin:10px}.edge{display:none}}
+</style>
+</head><body>
+    <div class='header'><h1>Design B — CAPEX State Atlas</h1><p>CAPEX Radical Design Pass 3 — low-fidelity comparison prototype</p></div>
+    <div class='nav'><a href='../pass3_comparison_prototype_index.html'>Index</a><a href='design_a_overview.html'>Design A</a><a href='design_b_state_map.html'>Design B</a><a href='decision_room.html'>Decision Room</a><a href='timeline_replay.html'>Timeline</a><a href='risk_branch_lab.html'>Risk Branch</a><a href='evidence_case_file.html'>Evidence</a><a href='executive_briefing_room.html'>Executive</a><a href='hybrid_candidate.html'>Hybrid</a><a href='mobile_decision_inbox.html'>Mobile</a></div>
+    <div class='container'>
+<div class='panel'><h2>Project State Map</h2><span class='badge official'>Official baseline visible</span><span class='badge stale'>Stale overlay on</span><span class='badge warn'>Unsupported claims lens</span><p class='muted'>The map is a projection. It is not the source of truth.</p></div>
+<div class='grid2'><div class='panel'><div class='map'>
+<div class='edge e1'></div><div class='edge e2'></div><div class='edge e3'></div><div class='edge e4'></div>
+<div class='node n1'><b>Business Goal</b><small>reviewed</small></div>
+<div class='node n2'><b>Selected Concept</b><small>approved, not promoted</small></div>
+<div class='node n3'><b>Order Rev AB-02</b><small class='stale'>stales commitments</small></div>
+<div class='node n4'><b>Air Interface</b><small>missing site evidence</small></div>
+<div class='node n5'><b>Risk Branch</b><small>not forecastable</small></div>
+<div class='node n6'><b>Handover</b><small>open points</small></div>
+</div></div><div class='panel'><h3>Node detail</h3><p><b>Selected:</b> Air Interface</p><span class='badge bad'>Blocked</span><span class='badge'>Owner: Utilities</span><span class='badge'>Evidence: missing</span><div class='callout danger'>Cannot close interface. Supplier requires 6 bar; site capability not evidenced.</div><p><a href='decision_room.html'>Open Decision Room</a></p><p><a href='evidence_case_file.html'>Open Evidence Case File</a></p></div></div>
+<div class='panel'><h3>Design B test question</h3><p>Can the participant understand causal dependencies and stale/reopen propagation faster from the map?</p></div>
+</div></body></html>

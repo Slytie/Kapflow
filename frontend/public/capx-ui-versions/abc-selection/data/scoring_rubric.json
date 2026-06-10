@@ -1,0 +1,62 @@
+[
+  {
+    "criterion": "Governance correctness",
+    "weight": 25,
+    "definition": "Prevents false truth mutation; preserves evidence, review, approval, promotion, stale/reopen and closure distinctions.",
+    "hard_gate": "yes"
+  },
+  {
+    "criterion": "Project state comprehension",
+    "weight": 15,
+    "definition": "Helps users understand current project state, dependencies, blockers, and uncertainty.",
+    "hard_gate": "no"
+  },
+  {
+    "criterion": "Next-action clarity",
+    "weight": 12,
+    "definition": "Makes the next required human action, owner, and reason obvious.",
+    "hard_gate": "no"
+  },
+  {
+    "criterion": "Evidence traceability",
+    "weight": 10,
+    "definition": "Allows users to trace a claim, decision, status, or KPI to exact evidence and audit history.",
+    "hard_gate": "yes"
+  },
+  {
+    "criterion": "Stale/reopen clarity",
+    "weight": 10,
+    "definition": "Explains what changed, what became stale, and why re-review is required.",
+    "hard_gate": "yes"
+  },
+  {
+    "criterion": "Expert review throughput",
+    "weight": 8,
+    "definition": "Supports fast, dense, multi-row review for PM, finance, procurement, and engineering users.",
+    "hard_gate": "no"
+  },
+  {
+    "criterion": "Novice learnability",
+    "weight": 7,
+    "definition": "Helps occasional users understand what to do without training in the entire CAPEX model.",
+    "hard_gate": "no"
+  },
+  {
+    "criterion": "Mobile and field suitability",
+    "weight": 5,
+    "definition": "Supports task triage, approval, evidence summary, and read-only drilldown on mobile/tablet.",
+    "hard_gate": "no"
+  },
+  {
+    "criterion": "Accessibility and scale viability",
+    "weight": 5,
+    "definition": "Can be implemented with WCAG-oriented keyboard, screen-reader, reflow, performance, and large-data handling.",
+    "hard_gate": "yes"
+  },
+  {
+    "criterion": "Implementation feasibility",
+    "weight": 3,
+    "definition": "Can be built safely as an MVP with understandable APIs, test fixtures, and migration path.",
+    "hard_gate": "no"
+  }
+]

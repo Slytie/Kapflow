@@ -1,0 +1,102 @@
+[
+  {
+    "route_id": "home",
+    "title": "A/B/C Comparison Home",
+    "path": "pass3_abc_comparison_index.html",
+    "design": "all",
+    "scenario_ids": [
+      "S01",
+      "S02",
+      "S03",
+      "S04",
+      "S05",
+      "S06",
+      "S07",
+      "S08",
+      "S09",
+      "S10",
+      "S11",
+      "S12"
+    ]
+  },
+  {
+    "route_id": "a",
+    "title": "Design A Workbench Scenario View",
+    "path": "screens/design_a_workbench.html",
+    "design": "A",
+    "scenario_ids": [
+      "S01",
+      "S02",
+      "S03",
+      "S04",
+      "S05",
+      "S06",
+      "S07",
+      "S08",
+      "S09",
+      "S10",
+      "S11",
+      "S12"
+    ]
+  },
+  {
+    "route_id": "b",
+    "title": "Design B State Atlas Scenario View",
+    "path": "screens/design_b_state_atlas.html",
+    "design": "B",
+    "scenario_ids": [
+      "S01",
+      "S02",
+      "S03",
+      "S04",
+      "S05",
+      "S06",
+      "S07",
+      "S08",
+      "S09",
+      "S10",
+      "S11",
+      "S12"
+    ]
+  },
+  {
+    "route_id": "c",
+    "title": "Design C Playbook OS Scenario View",
+    "path": "screens/design_c_playbook_os.html",
+    "design": "C",
+    "scenario_ids": [
+      "S01",
+      "S02",
+      "S03",
+      "S04",
+      "S05",
+      "S06",
+      "S07",
+      "S08",
+      "S09",
+      "S10",
+      "S11",
+      "S12"
+    ]
+  },
+  {
+    "route_id": "h",
+    "title": "Hybrid Candidate",
+    "path": "screens/hybrid_candidate.html",
+    "design": "Hybrid",
+    "scenario_ids": [
+      "S01",
+      "S02",
+      "S03",
+      "S04",
+      "S05",
+      "S06",
+      "S07",
+      "S08",
+      "S09",
+      "S10",
+      "S11",
+      "S12"
+    ]
+  }
+]

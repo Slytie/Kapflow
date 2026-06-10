@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="760" viewBox="0 0 1200 760">
+  <style>text{font-family:Arial, sans-serif;font-size:18px;fill:#111} .small{font-size:14px} .label{font-size:16px;font-weight:bold} rect{fill:#fff;stroke:#222;stroke-width:2} .muted{fill:#f5f5f5}</style>
+  <rect x="20" y="20" width="1160" height="720" rx="12"/>
+  <text x="45" y="55" class="label">P07 — Project Overview / State Snapshot</text>
+  <rect x="40" y="80" width="1120" height="70" class="muted"/>
+  <text x="60" y="118">Context / basis / freshness / forecastability / stale indicators</text>
+  <rect x="40" y="170" width="210" height="530" class="muted"/>
+  <text x="60" y="205" class="label">Navigation</text>
+  <text x="60" y="235" class="small">Home</text><text x="60" y="260" class="small">Projects</text><text x="60" y="285" class="small">Workpages</text><text x="60" y="310" class="small">Evidence</text><text x="60" y="335" class="small">Audit</text>
+  <rect x="270" y="170" width="580" height="90"/>
+  <text x="295" y="205" class="label">Filters / saved views / status chips</text>
+  <text x="295" y="235" class="small">Basis/version banner; Exception summary cards; Lifecycle and closure summary</text>
+  <rect x="270" y="280" width="580" height="420"/>
+  <text x="295" y="320" class="label">Dense workpage table</text>
+  <text x="295" y="355" class="small">Key columns: state_item, dimension, current_state, basis, freshness</text>
+  <line x1="290" y1="385" x2="830" y2="385" stroke="#222"/><line x1="290" y1="425" x2="830" y2="425" stroke="#222"/><line x1="290" y1="465" x2="830" y2="465" stroke="#222"/><line x1="290" y1="505" x2="830" y2="505" stroke="#222"/>
+  <rect x="870" y="170" width="290" height="530" class="muted"/>
+  <text x="895" y="205" class="label">Right drawer</text>
+  <text x="895" y="235" class="small">State explanation</text>
+  <text x="895" y="265" class="small">Basis vector</text>
+  <text x="895" y="295" class="small">Evidence / policy</text>
+  <text x="895" y="325" class="small">Commands</text>
+  <text x="895" y="355" class="small">Audit</text>
+  <rect x="895" y="600" width="230" height="55"/>
+  <text x="915" y="633" class="small">Command receipt area</text>
+</svg>

@@ -1,0 +1,74 @@
+[
+  {
+    "criterion": "Governance correctness",
+    "weight_percent": 25,
+    "score_1": "Repeatedly permits or encourages false state mutation",
+    "score_3": "Shows some distinctions but user still makes errors",
+    "score_5": "Prevents shortcuts and users explain distinctions correctly",
+    "measurement": "governance error count, blocked-command comprehension"
+  },
+  {
+    "criterion": "State comprehension",
+    "weight_percent": 18,
+    "score_1": "User cannot explain current state",
+    "score_3": "User explains state after prompts",
+    "score_5": "User explains current, open, blocked, stale, and decision-ready state unprompted",
+    "measurement": "accuracy of state explanation"
+  },
+  {
+    "criterion": "Evidence traceability",
+    "weight_percent": 14,
+    "score_1": "Evidence basis is hidden or hard to find",
+    "score_3": "Evidence found after searching",
+    "score_5": "Evidence found quickly with basis/version and audit trail",
+    "measurement": "time to evidence basis"
+  },
+  {
+    "criterion": "Stale/reopen clarity",
+    "weight_percent": 12,
+    "score_1": "User misses stale/reopen cause",
+    "score_3": "User finds stale state but not affected downstream items",
+    "score_5": "User explains cause, affected items, and re-review required",
+    "measurement": "stale explanation accuracy"
+  },
+  {
+    "criterion": "Decision confidence",
+    "weight_percent": 10,
+    "score_1": "User cannot decide or makes unsafe decision",
+    "score_3": "User decides with uncertainty",
+    "score_5": "User makes safe decision and explains policy/evidence consequences",
+    "measurement": "decision quality and confidence rating"
+  },
+  {
+    "criterion": "Workflow speed",
+    "weight_percent": 8,
+    "score_1": "Slow with many wrong turns",
+    "score_3": "Acceptable time with moderate friction",
+    "score_5": "Fast without governance loss",
+    "measurement": "time on task, wrong turns"
+  },
+  {
+    "criterion": "Learnability",
+    "weight_percent": 5,
+    "score_1": "Mental model unclear",
+    "score_3": "Understood after instruction",
+    "score_5": "Understood with minimal explanation",
+    "measurement": "self-reported learnability and facilitator notes"
+  },
+  {
+    "criterion": "Accessibility risk",
+    "weight_percent": 5,
+    "score_1": "Pointer/visual-only interaction required",
+    "score_3": "Some alternatives but incomplete",
+    "score_5": "Equivalent keyboard/list/register paths exist",
+    "measurement": "accessibility checklist"
+  },
+  {
+    "criterion": "Implementation feasibility",
+    "weight_percent": 3,
+    "score_1": "Requires major uncertain architecture",
+    "score_3": "Buildable with significant extension",
+    "score_5": "Buildable incrementally on existing architecture",
+    "measurement": "engineering review"
+  }
+]
