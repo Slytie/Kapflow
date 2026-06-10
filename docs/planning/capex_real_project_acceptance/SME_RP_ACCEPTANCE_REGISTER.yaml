@@ -76,6 +76,35 @@ raci_role_permission_matrix:
     - pr_po_invoice_state
     - supplier_statement
     - handover_note
+module_specific_readiness_rule:
+  rule_id: SME-RP-MODULE-READINESS-RULE.v1
+  gate_refs: [SME-RP-G002, SME-RP-G012]
+  blocking_scope: affected_module_only
+  unresolved_business_definitions_block: dependent_modules_and_surfaces_only
+  affected_surface_types:
+    - workflow
+    - workpage_family
+    - projection_family
+    - snapshot_export_surface
+    - external_observation_surface
+  independent_work_may_continue:
+    - platform_hardening
+    - schema_parity
+    - security_fixes
+    - neutral_foundation_work
+    - disabled_capex_scaffolding
+  readiness_requires:
+    - required_business_definitions_accepted_or_explicitly_waived
+    - raci_role_permission_posture_resolved_for_governed_actions
+    - workflow_extension_classification_resolved
+    - activation_gate_evidence_recorded_for_affected_module
+  cannot_be_used_for:
+    - implementation_approval
+    - capex_runtime_activation
+    - product_activation
+    - public_route_activation
+    - migration_approval
+    - raw_corpus_import
 evidence_status_vocabulary:
   gate_id: SME-RP-G004
   contract_ref: docs/architecture/CAPEX_EVIDENCE_STATUS_TRANSITION_CONTRACT.md

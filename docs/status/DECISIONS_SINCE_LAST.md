@@ -2,6 +2,12 @@
 
 Record any decisions made since the last session so a fresh Codex run can rehydrate quickly.
 
+## 2026-06-10 (EPIC-140 review tasks 3-4 repair)
+- Module-specific readiness decision: `TASK-0664` adds `SME-RP-MODULE-READINESS-RULE.v1` to `docs/planning/capex_real_project_acceptance/SME_RP_ACCEPTANCE_REGISTER.yaml`; unresolved business definitions, RACI posture, or workflow-extension classification block only dependent CAPEX modules and surfaces.
+- Continuation decision: independent platform hardening, schema parity, security fixes, neutral foundation work, and disabled CAPEX scaffolding may continue while affected modules remain blocked.
+- Deployment-parity decision: current CAPEX runtime state uses Alembic migrations plus SQLite bootstrap parity evidence; this repair does not add SQLAlchemy ORM models or authorize CAPEX runtime/product activation.
+- Activation decision: this repair adds no public routes, frontend routes, workpage command activation, artifact/provenance/pointer isolation repair, migration approval, raw corpus import, or CAPEX product activation.
+
 ## 2026-06-09 (SME-RP source context and workpage generation closeout)
 - Source-context decision: `TASK-0652` adds `docs/architecture/CAPEX_SOURCE_OCCURRENCE_CONTEXT_AND_TRUST_CONTRACT.md`; source occurrence context is observed source truth, not reviewed project truth.
 - Trust-taxonomy decision: source origin modes are `primary`, `derivative`, `generated`, `external`, and `imported`; evidence-source trust modes are `observed`, `referenced`, `imported`, `reviewed`, and `officially_adopted`.

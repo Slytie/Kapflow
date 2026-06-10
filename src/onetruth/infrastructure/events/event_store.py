@@ -25,10 +25,293 @@ class DuplicateIdempotencyKeyError(ValueError):
         self.existing_event_id = existing_event_id
 
 
+class SQLiteSchemaRepairError(RuntimeError):
+    """Raised when bootstrap finds existing runtime state it cannot repair safely."""
+
+
 _REQUIRED_LINK_TYPES_BY_EVENT: dict[str, set[str]] | None = None
+
+_PROJECT_SCOPE_COLUMN_REPAIRS = {
+    "timeline_events": "project_id",
+    "workflow_runs": "project_id",
+}
+
+_CAPEX_REQUIRED_COLUMNS_BY_TABLE: dict[str, set[str]] = {
+    "capex_projects": {
+        "project_id",
+        "tenant_id",
+        "domain_id",
+        "project_key",
+        "name",
+        "state",
+        "metadata_json",
+        "created_by_actor_id",
+        "created_by_actor_type",
+        "created_at",
+        "updated_at",
+    },
+    "project_memberships": {
+        "project_membership_id",
+        "project_id",
+        "tenant_id",
+        "domain_id",
+        "actor_type",
+        "actor_id",
+        "role",
+        "state",
+        "granted_by_actor_id",
+        "granted_by_actor_type",
+        "created_at",
+        "updated_at",
+    },
+    "capex_project_authorization": {
+        "project_authorization_id",
+        "project_id",
+        "tenant_id",
+        "domain_id",
+        "actor_type",
+        "actor_id",
+        "direct_role",
+        "effective_role",
+        "source_membership_id",
+        "state",
+        "created_at",
+        "updated_at",
+    },
+    "capex_project_feature": {
+        "project_feature_id",
+        "project_id",
+        "tenant_id",
+        "domain_id",
+        "feature_key",
+        "state",
+        "blocked_reason",
+        "metadata_json",
+        "created_at",
+        "updated_at",
+    },
+    "capex_user_project_view": {
+        "user_project_view_id",
+        "tenant_id",
+        "domain_id",
+        "actor_type",
+        "actor_id",
+        "project_id",
+        "project_key",
+        "name",
+        "project_state",
+        "metadata_json",
+        "created_by_actor_id",
+        "created_by_actor_type",
+        "project_created_at",
+        "project_updated_at",
+        "caller_role",
+        "authorization_state",
+        "source_authorization_id",
+        "created_at",
+        "updated_at",
+    },
+    "capex_content_identities": {
+        "content_identity_id",
+        "tenant_id",
+        "domain_id",
+        "digest_algorithm",
+        "content_digest",
+        "byte_size",
+        "media_type",
+        "canonicalization_profile",
+        "metadata_json",
+        "created_at",
+    },
+    "capex_source_occurrences": {
+        "source_occurrence_id",
+        "tenant_id",
+        "domain_id",
+        "project_id",
+        "content_identity_id",
+        "occurrence_kind",
+        "status",
+        "source_ref",
+        "locator_json",
+        "metadata_json",
+        "registered_by_actor_id",
+        "registered_by_actor_type",
+        "created_at",
+        "updated_at",
+    },
+    "capex_waivers": {
+        "waiver_id",
+        "tenant_id",
+        "domain_id",
+        "project_id",
+        "scope_kind",
+        "scope_ref",
+        "state",
+        "reason",
+        "policy_version",
+        "metadata_json",
+        "created_by_actor_id",
+        "created_by_actor_type",
+        "expires_at",
+        "revoked_at",
+        "created_at",
+        "updated_at",
+    },
+    "capex_closure_gate_evaluations": {
+        "closure_gate_evaluation_id",
+        "tenant_id",
+        "domain_id",
+        "project_id",
+        "closure_target_kind",
+        "closure_target_ref",
+        "policy_version",
+        "required_dimensions_json",
+        "satisfied_dimensions_json",
+        "missing_dimensions_json",
+        "waiver_refs_json",
+        "basis_version_vector_json",
+        "result",
+        "metadata_json",
+        "created_by_actor_id",
+        "created_by_actor_type",
+        "created_at",
+    },
+    "capex_closure_snapshots": {
+        "closure_snapshot_id",
+        "closure_gate_evaluation_id",
+        "tenant_id",
+        "domain_id",
+        "project_id",
+        "closure_target_kind",
+        "closure_target_ref",
+        "policy_version",
+        "state",
+        "result",
+        "basis_version_vector_json",
+        "metadata_json",
+        "created_by_actor_id",
+        "created_by_actor_type",
+        "stale_reason",
+        "stale_at",
+        "reopened_at",
+        "created_at",
+        "updated_at",
+    },
+    "capex_workpage_projection_snapshots": {
+        "projection_snapshot_id",
+        "tenant_id",
+        "domain_id",
+        "project_id",
+        "workpage_kind",
+        "projection_kind",
+        "renderer_version",
+        "basis_version_vector_json",
+        "basis_hash",
+        "state",
+        "payload_metadata_json",
+        "created_by_actor_id",
+        "created_by_actor_type",
+        "stale_reason",
+        "stale_at",
+        "superseded_at",
+        "created_at",
+        "updated_at",
+    },
+    "capex_workpage_projection_rows": {
+        "projection_row_id",
+        "projection_snapshot_id",
+        "row_key",
+        "row_order",
+        "subject_kind",
+        "subject_ref",
+        "row_payload_json",
+        "created_at",
+    },
+}
+
+_CAPEX_EMPTY_SHELL_DROP_ORDER = (
+    "capex_workpage_projection_rows",
+    "capex_workpage_projection_snapshots",
+    "capex_closure_snapshots",
+    "capex_closure_gate_evaluations",
+    "capex_waivers",
+    "capex_source_occurrences",
+    "capex_content_identities",
+    "capex_user_project_view",
+    "capex_project_feature",
+    "capex_project_authorization",
+    "project_memberships",
+    "capex_projects",
+)
+
+
+def _repair_partial_sqlite_bootstrap_schema(connection: sqlite3.Connection) -> None:
+    for table_name, column_name in _PROJECT_SCOPE_COLUMN_REPAIRS.items():
+        _ensure_nullable_text_column(connection, table_name, column_name)
+
+    malformed_empty_tables: set[str] = set()
+    for table_name, required_columns in _CAPEX_REQUIRED_COLUMNS_BY_TABLE.items():
+        if not _sqlite_table_exists(connection, table_name):
+            continue
+        missing_columns = sorted(
+            required_columns - _sqlite_column_names(connection, table_name)
+        )
+        if not missing_columns:
+            continue
+        if _sqlite_table_row_count(connection, table_name) > 0:
+            raise SQLiteSchemaRepairError(
+                "cannot repair non-empty malformed CAPEX table "
+                f"{table_name}; missing columns: {', '.join(missing_columns)}"
+            )
+        malformed_empty_tables.add(table_name)
+
+    for table_name in _CAPEX_EMPTY_SHELL_DROP_ORDER:
+        if table_name not in malformed_empty_tables:
+            continue
+        try:
+            connection.execute(f'DROP TABLE "{table_name}"')
+        except sqlite3.Error as exc:
+            raise SQLiteSchemaRepairError(
+                f"cannot reset empty malformed CAPEX table {table_name}: {exc}"
+            ) from exc
+
+
+def _sqlite_table_exists(connection: sqlite3.Connection, table_name: str) -> bool:
+    row = connection.execute(
+        """
+        SELECT 1
+        FROM sqlite_master
+        WHERE type = 'table' AND name = ?
+        """,
+        (table_name,),
+    ).fetchone()
+    return row is not None
+
+
+def _sqlite_column_names(connection: sqlite3.Connection, table_name: str) -> set[str]:
+    rows = connection.execute(f'PRAGMA table_info("{table_name}")').fetchall()
+    return {str(row[1]) for row in rows}
+
+
+def _sqlite_table_row_count(connection: sqlite3.Connection, table_name: str) -> int:
+    row = connection.execute(f'SELECT COUNT(*) FROM "{table_name}"').fetchone()
+    return int(row[0])
+
+
+def _ensure_nullable_text_column(
+    connection: sqlite3.Connection,
+    table_name: str,
+    column_name: str,
+) -> None:
+    if not _sqlite_table_exists(connection, table_name):
+        return
+    if column_name in _sqlite_column_names(connection, table_name):
+        return
+    connection.execute(f'ALTER TABLE "{table_name}" ADD COLUMN "{column_name}" TEXT')
 
 
 def create_sqlite_substrate(connection: sqlite3.Connection) -> None:
+    _repair_partial_sqlite_bootstrap_schema(connection)
     connection.executescript(
         """
         CREATE TABLE IF NOT EXISTS timeline_events (

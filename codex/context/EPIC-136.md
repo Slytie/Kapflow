@@ -10,7 +10,7 @@ MP-PR000, V5-TASK-008, V5-TASK-009, SD-TASK-001, SD-TASK-002, SD-TASK-003, SD-TA
 ## SME-RP addendum rows
 - Source archive used `SME-K12` labels and proposed `TASK-0625..TASK-0641`; repo-native planning uses `SME-RP` labels and remaps the tranche to `TASK-0648..TASK-0664`.
 - `TASK-0648` is closed with conditional, module-specific, non-activation, affected-module-only approval-with-conditions wording.
-- `TASK-0664` defines module-specific SME readiness rules.
+- `TASK-0664` is closed with `SME-RP-MODULE-READINESS-RULE.v1`: unresolved business definitions, RACI posture, or workflow-extension classification block only dependent CAPEX modules/surfaces, while independent platform hardening and disabled scaffolding may continue.
 - K12 remains a fixture-case family only; do not use K12 as an acceptance-gate namespace.
 
 ## Historical/reconciled aliases

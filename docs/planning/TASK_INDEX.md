@@ -624,4 +624,4 @@ Note: `TASK-0087` / `TASK-0088` / `TASK-0089` were formerly duplicated as `TASK-
 | TASK-0661 | EPIC-146 | TODO | high | Promote K12 fixture cases into binding real-project catalogue |
 | TASK-0662 | EPIC-149 | TODO | high | Add subject-matter boundary negative tests |
 | TASK-0663 | EPIC-151 | TODO | high | Define external system mode taxonomy |
-| TASK-0664 | EPIC-136 | TODO | high | Add module-specific SME readiness rule |
+| TASK-0664 | EPIC-136 | DONE | high | Add module-specific SME readiness rule |

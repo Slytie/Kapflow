@@ -333,6 +333,58 @@ def test_raci_role_permission_matrix_is_business_overlay_only() -> None:
         assert required in normalized
 
 
+def test_module_specific_readiness_rule_is_affected_module_only() -> None:
+    register = _load_register()
+    rule = register["module_specific_readiness_rule"]
+    task = _task_file("TASK-0664")
+    frontmatter = _task_frontmatter(task)
+    task_text = task.read_text(encoding="utf-8")
+    epic_text = (ROOT / "docs/planning/epics/EPIC-136.md").read_text(
+        encoding="utf-8"
+    )
+
+    assert rule["rule_id"] == "SME-RP-MODULE-READINESS-RULE.v1"
+    assert rule["gate_refs"] == ["SME-RP-G002", "SME-RP-G012"]
+    assert rule["blocking_scope"] == "affected_module_only"
+    assert (
+        rule["unresolved_business_definitions_block"]
+        == "dependent_modules_and_surfaces_only"
+    )
+    assert set(rule["affected_surface_types"]) == {
+        "workflow",
+        "workpage_family",
+        "projection_family",
+        "snapshot_export_surface",
+        "external_observation_surface",
+    }
+    assert set(rule["independent_work_may_continue"]) >= {
+        "platform_hardening",
+        "schema_parity",
+        "security_fixes",
+        "neutral_foundation_work",
+        "disabled_capex_scaffolding",
+    }
+    assert set(rule["readiness_requires"]) == {
+        "required_business_definitions_accepted_or_explicitly_waived",
+        "raci_role_permission_posture_resolved_for_governed_actions",
+        "workflow_extension_classification_resolved",
+        "activation_gate_evidence_recorded_for_affected_module",
+    }
+    assert set(rule["cannot_be_used_for"]) >= {
+        "implementation_approval",
+        "capex_runtime_activation",
+        "product_activation",
+        "public_route_activation",
+        "migration_approval",
+        "raw_corpus_import",
+    }
+    assert frontmatter["status"] == "DONE"
+    assert "planning_only_no_capex_activation" in task_text
+    assert "affected module only" in task_text
+    assert "SME-RP-MODULE-READINESS-RULE.v1" in task_text
+    assert "module-specific readiness rule is recorded" in epic_text
+
+
 def test_evidence_status_vocabulary_and_transitions_are_pinned() -> None:
     register = _load_register()
     vocabulary = register["evidence_status_vocabulary"]
