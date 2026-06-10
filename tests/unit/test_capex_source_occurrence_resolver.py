@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import sqlite3
+from pathlib import Path
 
 import pytest
 
@@ -21,7 +22,9 @@ from onetruth.infrastructure.repositories.capex_source_occurrences import (
 TENANT_ID = "tenant-a"
 DOMAIN_ID = "domain-x"
 PROJECT_ID = "cp-alpha"
+OTHER_PROJECT_ID = "cp-beta"
 NOW = "2026-06-08T00:00:00Z"
+REPO_ROOT = Path(__file__).resolve().parents[2]
 
 
 def _connection() -> sqlite3.Connection:
@@ -45,19 +48,36 @@ def _connection() -> sqlite3.Connection:
     return connection
 
 
+def _create_project(connection: sqlite3.Connection, project_id: str) -> None:
+    create_capex_project(
+        connection,
+        project_id=project_id,
+        tenant_id=TENANT_ID,
+        domain_id=DOMAIN_ID,
+        project_key=project_id.upper(),
+        name=project_id,
+        state="active",
+        metadata_json={},
+        created_by_actor_id="human:admin",
+        created_by_actor_type="human",
+        created_at=NOW,
+    )
+
+
 def _source_occurrence(
     connection: sqlite3.Connection,
     *,
     source_occurrence_id: str = "so-alpha",
     project_id: str | None = PROJECT_ID,
     status: str = "available",
+    content_digest: str | None = None,
 ) -> str:
     content_identity_id = upsert_content_identity(
         connection,
         tenant_id=TENANT_ID,
         domain_id=DOMAIN_ID,
         digest_algorithm="sha256",
-        content_digest=f"digest-{source_occurrence_id}",
+        content_digest=content_digest or f"digest-{source_occurrence_id}",
         byte_size=128,
         media_type="application/pdf",
         canonicalization_profile="sanitized-fixture-manifest-v1",
@@ -170,3 +190,65 @@ def test_meaningful_source_refs_reject_unresolved_cross_scope_and_non_resolvable
             assert exc_info.value.resolutions[0].denial_reason == expected_reason
     finally:
         connection.close()
+
+
+def test_same_digest_in_two_projects_creates_distinct_project_scoped_occurrences() -> None:
+    connection = _connection()
+    try:
+        _create_project(connection, OTHER_PROJECT_ID)
+        first_ref = _source_occurrence(
+            connection,
+            source_occurrence_id="so-shared-digest-a",
+            project_id=PROJECT_ID,
+            content_digest="digest-shared",
+        )
+        second_ref = _source_occurrence(
+            connection,
+            source_occurrence_id="so-shared-digest-b",
+            project_id=OTHER_PROJECT_ID,
+            content_digest="digest-shared",
+        )
+
+        first = resolve_source_ref(
+            connection,
+            first_ref,
+            tenant_id=TENANT_ID,
+            domain_id=DOMAIN_ID,
+            project_id=PROJECT_ID,
+        )
+        second = resolve_source_ref(
+            connection,
+            second_ref,
+            tenant_id=TENANT_ID,
+            domain_id=DOMAIN_ID,
+            project_id=OTHER_PROJECT_ID,
+        )
+        cross_scope = resolve_source_ref(
+            connection,
+            second_ref,
+            tenant_id=TENANT_ID,
+            domain_id=DOMAIN_ID,
+            project_id=PROJECT_ID,
+        )
+
+        assert first.resolved is True
+        assert first.source_occurrence_id == "so-shared-digest-a"
+        assert second.resolved is True
+        assert second.source_occurrence_id == "so-shared-digest-b"
+        assert first.content_digest == second.content_digest == "digest-shared"
+        assert cross_scope.resolved is False
+        assert cross_scope.denial_reason == "source_occurrence_scope_mismatch"
+    finally:
+        connection.close()
+
+
+def test_source_occurrence_relations_remain_inactive_until_same_project_policy_exists() -> None:
+    guardrails = (
+        REPO_ROOT
+        / "docs"
+        / "architecture"
+        / "CAPEX_SOURCE_REF_AND_CLOSURE_GUARDRAILS.md"
+    ).read_text(encoding="utf-8")
+
+    assert "Source occurrence relations remain inactive" in guardrails
+    assert "same tenant/domain/project" in guardrails

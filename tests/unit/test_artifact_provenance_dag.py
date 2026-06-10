@@ -7,6 +7,7 @@ import pytest
 from onetruth.infrastructure.events.event_store import create_sqlite_substrate
 from onetruth.infrastructure.repositories.artifact_provenance import (
     ProvenanceCycleError,
+    ProvenanceProjectScopeError,
     create_artifact_provenance_edge,
     list_artifact_provenance_edges_for_output,
     project_legacy_lineage_fields,
@@ -21,11 +22,51 @@ def _connection() -> sqlite3.Connection:
     return connection
 
 
-def _seed_workflow(connection: sqlite3.Connection, workflow_run_id: str = "wr-001") -> str:
+def _seed_project(connection: sqlite3.Connection, project_id: str) -> None:
+    connection.execute(
+        """
+        INSERT INTO capex_projects (
+            project_id,
+            tenant_id,
+            domain_id,
+            project_key,
+            name,
+            state,
+            metadata_json,
+            created_by_actor_id,
+            created_by_actor_type,
+            created_at,
+            updated_at
+        )
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """,
+        (
+            project_id,
+            "tenant-a",
+            "domain-ops",
+            project_id.upper(),
+            project_id,
+            "active",
+            "{}",
+            "human:admin",
+            "human",
+            "2026-03-07T10:00:00Z",
+            "2026-03-07T10:00:00Z",
+        ),
+    )
+
+
+def _seed_workflow(
+    connection: sqlite3.Connection,
+    workflow_run_id: str = "wr-001",
+    *,
+    project_id: str | None = None,
+) -> str:
     connection.execute(
         """
         INSERT INTO workflow_runs (
             workflow_run_id,
+            project_id,
             workflow_id,
             workflow_version,
             tenant_id,
@@ -37,17 +78,18 @@ def _seed_workflow(connection: sqlite3.Connection, workflow_run_id: str = "wr-00
             created_at,
             updated_at
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """,
         (
             workflow_run_id,
+            project_id,
             "schedule_planning.v1",
             "v1",
             "tenant-a",
             "domain-ops",
             "SD-2026-03-04",
             "2026-03-04",
-            "activation-seed",
+            f"activation-{workflow_run_id}",
             "ACTIVE",
             "2026-03-07T10:00:00Z",
             "2026-03-07T10:00:00Z",
@@ -61,12 +103,14 @@ def _seed_artifact(
     *,
     artifact_version_id: str,
     workflow_run_id: str = "wr-001",
+    project_id: str | None = None,
 ) -> None:
     connection.execute(
         """
         INSERT INTO artifact_versions (
             artifact_version_id,
             workflow_run_id,
+            project_id,
             task_run_id,
             artifact_kind,
             artifact_role,
@@ -80,11 +124,12 @@ def _seed_artifact(
             lineage_note,
             created_at
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """,
         (
             artifact_version_id,
             workflow_run_id,
+            project_id,
             None,
             "schedule.published_schedule.workbook",
             "official_output",
@@ -133,6 +178,80 @@ def test_provenance_edges_persist_edge_typing() -> None:
             ("derives_from", "av-input"),
             ("reviewed_against", "av-reviewed"),
         ]
+        assert [row["project_id"] for row in rows] == [None, None]
+    finally:
+        connection.close()
+
+
+def test_provenance_edges_persist_same_project_identity() -> None:
+    connection = _connection()
+    try:
+        _seed_project(connection, "cp-a")
+        _seed_workflow(connection, project_id="cp-a")
+        _seed_artifact(
+            connection,
+            artifact_version_id="av-output",
+            project_id="cp-a",
+        )
+        _seed_artifact(connection, artifact_version_id="av-input", project_id="cp-a")
+
+        create_artifact_provenance_edge(
+            connection,
+            output_artifact_version_id="av-output",
+            input_artifact_version_id="av-input",
+            edge_type="derives_from",
+            workflow_run_id="wr-001",
+            edge_order=1,
+            created_at="2026-03-07T10:05:00Z",
+        )
+
+        rows = list_artifact_provenance_edges_for_output(connection, "av-output")
+        assert rows[0]["project_id"] == "cp-a"
+    finally:
+        connection.close()
+
+
+def test_provenance_edges_reject_cross_project_and_project_to_null_edges() -> None:
+    connection = _connection()
+    try:
+        _seed_project(connection, "cp-a")
+        _seed_project(connection, "cp-b")
+        _seed_workflow(connection, project_id="cp-a")
+        _seed_workflow(connection, workflow_run_id="wr-b", project_id="cp-b")
+        _seed_artifact(
+            connection,
+            artifact_version_id="av-output",
+            project_id="cp-a",
+        )
+        _seed_artifact(
+            connection,
+            artifact_version_id="av-other-project",
+            workflow_run_id="wr-b",
+            project_id="cp-b",
+        )
+        _seed_artifact(connection, artifact_version_id="av-null-project")
+
+        with pytest.raises(ProvenanceProjectScopeError):
+            create_artifact_provenance_edge(
+                connection,
+                output_artifact_version_id="av-output",
+                input_artifact_version_id="av-other-project",
+                edge_type="derives_from",
+                workflow_run_id="wr-001",
+                edge_order=1,
+                created_at="2026-03-07T10:05:00Z",
+            )
+
+        with pytest.raises(ProvenanceProjectScopeError):
+            create_artifact_provenance_edge(
+                connection,
+                output_artifact_version_id="av-output",
+                input_artifact_version_id="av-null-project",
+                edge_type="derives_from",
+                workflow_run_id="wr-001",
+                edge_order=1,
+                created_at="2026-03-07T10:06:00Z",
+            )
     finally:
         connection.close()
 
@@ -212,4 +331,3 @@ def test_provenance_compatibility_projection_derives_legacy_fields() -> None:
         }
     finally:
         connection.close()
-

@@ -22,6 +22,8 @@ The resolver must return an unresolved result for malformed refs, missing occurr
 
 Empty `source_refs` arrays and presence-only evidence are not meaningful evidence.
 
+Source occurrence relations remain inactive in this foundation. Any later relation or locator-union command must enforce same tenant/domain/project on both referenced occurrences, unless a reviewed sharing policy explicitly defines a narrower exception. This inactive relation posture cannot authorize CAPEX runtime activation, raw corpus import, evidence binding, public routes, workpage activation, or product activation.
+
 ## Closure Runtime
 `capex_waivers` records scoped waiver state. Direct source/evidence state remains authoritative; a waiver is never a pass.
 
@@ -40,7 +42,7 @@ If SourceRef resolution or closure evaluation fails, disable evidence binding an
 ## Remaining Blockers
 The following remain later scope:
 - bulk corpus ingest and source inventory pipelines
-- source occurrence relations and locator unions
+- source occurrence relations and locator unions with same tenant/domain/project policy
 - extraction/search/evidence-binding runtime
 - generated artifact envelope and pointer-promotion validators
 - public closure/promotion commands, workpages, and frontend UI

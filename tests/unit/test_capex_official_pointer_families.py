@@ -13,7 +13,10 @@ from onetruth.application.handlers.capex_projects import (
     create_capex_project_command,
     grant_project_membership_command,
 )
-from onetruth.application.handlers.workflow_task_lifecycle import create_workflow_run_command
+from onetruth.application.handlers.workflow_task_lifecycle import (
+    create_task_run_command,
+    create_workflow_run_command,
+)
 from onetruth.application.services.capex_official_pointers import (
     get_project_official_pointer,
     list_project_official_pointers,
@@ -22,12 +25,18 @@ from onetruth.application.services.capex_official_pointers import (
 )
 from onetruth.infrastructure.artifacts.storage import default_storage_root_for_db_url
 from onetruth.infrastructure.events.event_store import create_sqlite_substrate
+from onetruth.infrastructure.repositories.artifact_versions import (
+    create_artifact_version,
+    get_artifact_version,
+)
 from onetruth.infrastructure.repositories.capex_projects import get_capex_project
 
 TENANT_ID = "tenant-a"
 DOMAIN_ID = "domain-x"
 PROJECT_ID = "cp-pointer-001"
+OTHER_PROJECT_ID = "cp-pointer-002"
 WORKFLOW_RUN_ID = "wr-pointer-001"
+OTHER_WORKFLOW_RUN_ID = "wr-pointer-002"
 ARTIFACT_KIND = "schedule.published_schedule.workbook"
 
 
@@ -140,6 +149,38 @@ def _promote_payload(*, artifact_version_id: str, actor_id: str, key: str) -> di
     }
 
 
+def _seed_other_project_workflow(connection: sqlite3.Connection) -> None:
+    create_capex_project_command(
+        connection,
+        {
+            "project_id": OTHER_PROJECT_ID,
+            "tenant_id": TENANT_ID,
+            "domain_id": DOMAIN_ID,
+            "project_key": "CAPEX-POINTER-002",
+            "name": "Other pointer project",
+            "actor_id": "human:admin",
+            "actor_type": "human",
+            "idempotency_key": "unit:capex-pointer:other:create",
+        },
+    )
+    create_workflow_run_command(
+        connection,
+        {
+            "workflow_run_id": OTHER_WORKFLOW_RUN_ID,
+            "project_id": OTHER_PROJECT_ID,
+            "workflow_id": "capex.intake.v1",
+            "workflow_version": "v1",
+            "tenant_id": TENANT_ID,
+            "domain_id": DOMAIN_ID,
+            "partition_key": "SD-2026-06-05",
+            "logical_date": "2026-06-05",
+            "activation_key": "capex-pointer-run-other",
+            "actor_id": "human:admin",
+            "actor_type": "human",
+        },
+    )
+
+
 def test_project_official_pointer_requires_explicit_promotion_and_tracks_generation(tmp_path: Path) -> None:
     db_url = _init_db(tmp_path / "capex-pointer-unit.db")
     connection = _open(db_url)
@@ -188,6 +229,7 @@ def test_project_official_pointer_requires_explicit_promotion_and_tracks_generat
             include_receipt=True,
         )
         pointer = promoted["pointer"]
+        assert first["project_id"] == PROJECT_ID
         assert pointer["project_id"] == PROJECT_ID
         assert pointer["pointer_family"] == "current-schedule"
         assert pointer["pointer_key"] == "official:current-schedule"
@@ -227,6 +269,178 @@ def test_project_official_pointer_requires_explicit_promotion_and_tracks_generat
         )
         assert fetched is not None
         assert fetched["artifact_version_id"] == second["artifact_version_id"]
+    finally:
+        connection.close()
+
+
+def test_artifact_versions_capture_project_identity_and_reject_mismatch(tmp_path: Path) -> None:
+    db_url = _init_db(tmp_path / "capex-pointer-artifact-identity.db")
+    connection = _open(db_url)
+    try:
+        first, _second = _seed(connection, db_url)
+        artifact = get_artifact_version(connection, str(first["artifact_version_id"]))
+        assert artifact is not None
+        assert artifact["project_id"] == PROJECT_ID
+
+        with pytest.raises(ValueError, match="project_id"):
+            create_artifact_version(
+                connection,
+                artifact_version_id="av-pointer-mismatch",
+                workflow_run_id=WORKFLOW_RUN_ID,
+                tenant_id=TENANT_ID,
+                domain_id=DOMAIN_ID,
+                project_id=OTHER_PROJECT_ID,
+                dataset_key="schedule.published_schedule",
+                partition_kind="ScheduleDateID",
+                partition_key="SD-2026-06-04",
+                task_run_id=None,
+                artifact_kind=ARTIFACT_KIND,
+                artifact_role="official_output",
+                media_type="application/json",
+                storage_uri="inmem://av-pointer-mismatch",
+                content_digest="sha256:mismatch",
+                byte_size=1,
+                metadata_json={},
+                parent_artifact_version_id=None,
+                supersedes_artifact_version_id=None,
+                lineage_note=None,
+                created_at="2026-06-04T00:00:00Z",
+            )
+
+        create_workflow_run_command(
+            connection,
+            {
+                "workflow_run_id": "wr-pointer-non-project",
+                "workflow_id": "capex.intake.v1",
+                "workflow_version": "v1",
+                "tenant_id": TENANT_ID,
+                "domain_id": DOMAIN_ID,
+                "partition_key": "SD-2026-06-06",
+                "logical_date": "2026-06-06",
+                "activation_key": "capex-pointer-run-non-project",
+            },
+        )
+        create_artifact_version(
+            connection,
+            artifact_version_id="av-pointer-non-project",
+            workflow_run_id="wr-pointer-non-project",
+            tenant_id=TENANT_ID,
+            domain_id=DOMAIN_ID,
+            dataset_key="schedule.published_schedule",
+            partition_kind="ScheduleDateID",
+            partition_key="SD-2026-06-06",
+            task_run_id=None,
+            artifact_kind=ARTIFACT_KIND,
+            artifact_role="official_output",
+            media_type="application/json",
+            storage_uri="inmem://av-pointer-non-project",
+            content_digest="sha256:non-project",
+            byte_size=1,
+            metadata_json={},
+            parent_artifact_version_id=None,
+            supersedes_artifact_version_id=None,
+            lineage_note=None,
+            created_at="2026-06-06T00:00:00Z",
+        )
+        non_project = get_artifact_version(connection, "av-pointer-non-project")
+        assert non_project is not None
+        assert non_project["project_id"] is None
+    finally:
+        connection.close()
+
+
+def test_project_official_pointer_fails_closed_on_artifact_project_identity_mismatch(
+    tmp_path: Path,
+) -> None:
+    db_url = _init_db(tmp_path / "capex-pointer-artifact-mismatch.db")
+    connection = _open(db_url)
+    try:
+        first, second = _seed(connection, db_url)
+        for artifact_id, project_id in [
+            (str(first["artifact_version_id"]), None),
+            (str(second["artifact_version_id"]), OTHER_PROJECT_ID),
+        ]:
+            connection.execute(
+                "UPDATE artifact_versions SET project_id = ? WHERE artifact_version_id = ?",
+                (project_id, artifact_id),
+            )
+            with pytest.raises(CommandError) as denied:
+                promote_project_official_pointer_command(
+                    connection,
+                    _promote_payload(
+                        artifact_version_id=artifact_id,
+                        actor_id="human:contributor",
+                        key=f"unit:capex-pointer:identity-denied:{artifact_id}",
+                    ),
+                )
+            assert denied.value.code == "artifact_version_not_found"
+    finally:
+        connection.close()
+
+
+def test_project_official_pointer_fails_closed_on_cross_project_approval_and_task(
+    tmp_path: Path,
+) -> None:
+    db_url = _init_db(tmp_path / "capex-pointer-cross-project-children.db")
+    connection = _open(db_url)
+    try:
+        first, _second = _seed(connection, db_url)
+        _seed_other_project_workflow(connection)
+        approval = request_approval_command(
+            connection,
+            {
+                "approval_id": "ap-pointer-other-project",
+                "workflow_run_id": OTHER_WORKFLOW_RUN_ID,
+                "approval_kind": "project_official_pointer",
+                "scope_kind": "workflow_run",
+                "scope_ref": OTHER_WORKFLOW_RUN_ID,
+                "candidate_roles": ["capex_user"],
+                "required_role": "capex_user",
+                "allowed_responses": ["approve", "reject"],
+                "idempotency_key": "unit:capex-pointer:other-approval",
+                "actor_id": "human:admin",
+                "actor_type": "human",
+            },
+        )
+        with pytest.raises(CommandError) as approval_denied:
+            promote_project_official_pointer_command(
+                connection,
+                {
+                    **_promote_payload(
+                        artifact_version_id=str(first["artifact_version_id"]),
+                        actor_id="human:contributor",
+                        key="unit:capex-pointer:approval-project-denied",
+                    ),
+                    "approved_by_approval_id": approval["approval_id"],
+                },
+            )
+        assert approval_denied.value.code == "approval_not_found"
+
+        task = create_task_run_command(
+            connection,
+            {
+                "task_run_id": "tr-pointer-other-project",
+                "workflow_run_id": OTHER_WORKFLOW_RUN_ID,
+                "stage_id": "Stage01",
+                "task_kind": "review",
+                "activation_key": "other-project-task",
+                "actor_id": "human:admin",
+                "actor_type": "human",
+            },
+        )
+        with pytest.raises(CommandError) as task_denied:
+            promote_project_official_pointer_command(
+                connection,
+                {
+                    **_promote_payload(
+                        artifact_version_id=str(first["artifact_version_id"]),
+                        actor_id="human:contributor",
+                        key="unit:capex-pointer:task-project-denied",
+                    ),
+                    "promoted_by_task_run_id": task["task_run"]["task_run_id"],
+                },
+            )
+        assert task_denied.value.code == "task_run_not_found"
     finally:
         connection.close()
 

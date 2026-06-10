@@ -22,9 +22,14 @@ REQUIRED_POINTER_COLUMNS = {
 REQUIRED_VERSION_COLUMNS = {
     "tenant_id",
     "domain_id",
+    "project_id",
     "dataset_key",
     "partition_kind",
     "partition_key",
+}
+
+REQUIRED_PROVENANCE_COLUMNS = {
+    "project_id",
 }
 
 REQUIRED_NEW_TABLES = {
@@ -36,6 +41,7 @@ REQUIRED_NEW_TABLES = {
 REQUIRED_INDEXES_BY_TABLE = {
     "artifact_versions": {
         "ix_artifact_versions_canonical_address",
+        "ix_artifact_versions_project_scope",
     },
     "artifact_pointers": {
         "ix_artifact_pointers_pointer_id",
@@ -45,6 +51,7 @@ REQUIRED_INDEXES_BY_TABLE = {
     "artifact_provenance_edges": {
         "ix_artifact_provenance_edges_output",
         "ix_artifact_provenance_edges_input",
+        "ix_artifact_provenance_edges_project",
     },
     "workflow_run_inputs": {
         "ix_workflow_run_inputs_workflow_run_id",
@@ -132,6 +139,7 @@ def test_models_include_strategy_a_expand_schema_surfaces() -> None:
 
     assert REQUIRED_POINTER_COLUMNS <= _model_columns("artifact_pointers")
     assert REQUIRED_VERSION_COLUMNS <= _model_columns("artifact_versions")
+    assert REQUIRED_PROVENANCE_COLUMNS <= _model_columns("artifact_provenance_edges")
     assert _model_primary_key_columns("artifact_pointers") == EXPECTED_POINTER_PK_COLUMNS
 
     for table_name, expected_indexes in REQUIRED_INDEXES_BY_TABLE.items():
@@ -144,6 +152,10 @@ def test_bootstrap_schema_matches_strategy_a_expand_schema_surfaces() -> None:
         assert REQUIRED_NEW_TABLES <= _sqlite_table_names(connection)
         assert REQUIRED_POINTER_COLUMNS <= _sqlite_columns(connection, "artifact_pointers")
         assert REQUIRED_VERSION_COLUMNS <= _sqlite_columns(connection, "artifact_versions")
+        assert REQUIRED_PROVENANCE_COLUMNS <= _sqlite_columns(
+            connection,
+            "artifact_provenance_edges",
+        )
         assert _sqlite_primary_key_columns(connection, "artifact_pointers") == EXPECTED_POINTER_PK_COLUMNS
         for table_name, expected_indexes in REQUIRED_INDEXES_BY_TABLE.items():
             assert expected_indexes <= _sqlite_indexes(connection, table_name)

@@ -14,7 +14,10 @@ from onetruth.application.services.capex_project_access import (
 )
 from onetruth.infrastructure.repositories.approvals import get_approval
 from onetruth.infrastructure.repositories.artifact_pointers import list_pointers_by_canonical_scope
-from onetruth.infrastructure.repositories.artifact_versions import get_artifact_version
+from onetruth.infrastructure.repositories.artifact_versions import (
+    ArtifactProjectIdentityError,
+    require_artifact_project_identity,
+)
 
 CAPEX_PROJECT_POINTER_SCOPE_KIND = "capex_project"
 CAPEX_PROJECT_POINTER_REGISTRY_KIND = "ordered_stream"
@@ -164,8 +167,21 @@ def promote_project_official_pointer_command(
         details={"workflow_run_id": workflow_run_id},
     )
     artifact_version_id = str(payload["artifact_version_id"])
-    artifact = get_artifact_version(connection, artifact_version_id)
-    if artifact is None or str(artifact["artifact_kind"]) != str(payload["artifact_kind"]):
+    try:
+        artifact = require_artifact_project_identity(
+            connection,
+            artifact_version_id=artifact_version_id,
+            tenant_id=str(project["tenant_id"]),
+            domain_id=str(project["domain_id"]),
+            project_id=project_id,
+        )
+    except ArtifactProjectIdentityError as exc:
+        raise CommandError(
+            code="artifact_version_not_found",
+            message="artifact version not found",
+            details={"artifact_version_id": artifact_version_id},
+        ) from exc
+    if str(artifact["artifact_kind"]) != str(payload["artifact_kind"]):
         raise CommandError(
             code="artifact_version_not_found",
             message="artifact version not found",

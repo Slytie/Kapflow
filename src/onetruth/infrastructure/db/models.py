@@ -796,6 +796,14 @@ class ArtifactVersion(Base):
             "partition_kind",
             "partition_key",
         ),
+        Index(
+            "ix_artifact_versions_project_scope",
+            "tenant_id",
+            "domain_id",
+            "project_id",
+            "artifact_kind",
+            "created_at",
+        ),
     )
 
     artifact_version_id: Mapped[str] = mapped_column(String(128), primary_key=True)
@@ -807,6 +815,11 @@ class ArtifactVersion(Base):
     )
     tenant_id: Mapped[Optional[str]] = mapped_column(String(128), nullable=True)
     domain_id: Mapped[Optional[str]] = mapped_column(String(128), nullable=True)
+    project_id: Mapped[Optional[str]] = mapped_column(
+        String(128),
+        ForeignKey("capex_projects.project_id"),
+        nullable=True,
+    )
     dataset_key: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
     partition_kind: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)
     partition_key: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
@@ -934,12 +947,23 @@ class ArtifactProvenanceEdge(Base):
             "input_artifact_version_id",
             "edge_type",
         ),
+        Index(
+            "ix_artifact_provenance_edges_project",
+            "project_id",
+            "output_artifact_version_id",
+            "edge_type",
+        ),
     )
 
     edge_id: Mapped[str] = mapped_column(String(128), primary_key=True)
     workflow_run_id: Mapped[Optional[str]] = mapped_column(
         String(128),
         ForeignKey("workflow_runs.workflow_run_id"),
+        nullable=True,
+    )
+    project_id: Mapped[Optional[str]] = mapped_column(
+        String(128),
+        ForeignKey("capex_projects.project_id"),
         nullable=True,
     )
     output_artifact_version_id: Mapped[str] = mapped_column(

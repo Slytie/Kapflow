@@ -62,7 +62,7 @@ For each project family:
 
 Promotion requires explicit pointer movement through the CAPEX project official pointer service. Latest artifacts, approval responses, and approved approvals are evidence only; they do not move official project pointers by themselves.
 
-Project-family promotion validates project membership and verifies that workflow-run, artifact, optional approval evidence, and optional task evidence belong to the path project before delegating to canonical pointer promotion. Existing logistics and no-project pointer behavior remains unchanged.
+Project-family promotion validates project membership and verifies that workflow-run, artifact, optional approval evidence, and optional task evidence belong to the path project before delegating to canonical pointer promotion. The artifact check uses persisted `artifact_versions.project_id`; missing or mismatched project identity fails closed rather than inferring authorization from a stale workflow relationship at promotion time. Existing logistics and no-project pointer behavior remains unchanged.
 
 ## 7) Lineage expectations for deltas
 

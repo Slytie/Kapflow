@@ -5,6 +5,25 @@ import sqlite3
 from typing import Any
 
 
+class ArtifactProjectIdentityError(ValueError):
+    def __init__(
+        self,
+        artifact_version_id: str,
+        *,
+        tenant_id: str,
+        domain_id: str,
+        project_id: str,
+    ) -> None:
+        super().__init__(
+            "artifact version does not belong to the required project scope "
+            f"(artifact_version_id={artifact_version_id}, project_id={project_id})"
+        )
+        self.artifact_version_id = artifact_version_id
+        self.tenant_id = tenant_id
+        self.domain_id = domain_id
+        self.project_id = project_id
+
+
 def create_artifact_version(
     connection: sqlite3.Connection,
     *,
@@ -27,7 +46,15 @@ def create_artifact_version(
     dataset_key: str | None = None,
     partition_kind: str | None = None,
     partition_key: str | None = None,
+    project_id: str | None = None,
 ) -> None:
+    resolved_project_id = _resolve_project_id_for_workflow(
+        connection,
+        workflow_run_id=workflow_run_id,
+        tenant_id=tenant_id,
+        domain_id=domain_id,
+        project_id=project_id,
+    )
     connection.execute(
         """
         INSERT INTO artifact_versions (
@@ -35,6 +62,7 @@ def create_artifact_version(
             workflow_run_id,
             tenant_id,
             domain_id,
+            project_id,
             dataset_key,
             partition_kind,
             partition_key,
@@ -51,13 +79,14 @@ def create_artifact_version(
             lineage_note,
             created_at
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """,
         (
             artifact_version_id,
             workflow_run_id,
             tenant_id,
             domain_id,
+            resolved_project_id,
             dataset_key,
             partition_kind,
             partition_key,
@@ -88,6 +117,7 @@ def get_artifact_version(
             workflow_run_id,
             tenant_id,
             domain_id,
+            project_id,
             dataset_key,
             partition_kind,
             partition_key,
@@ -126,6 +156,7 @@ def get_superseding_artifact_version(
             workflow_run_id,
             tenant_id,
             domain_id,
+            project_id,
             dataset_key,
             partition_kind,
             partition_key,
@@ -191,6 +222,7 @@ def list_artifact_versions_for_workflow_run(
             workflow_run_id,
             tenant_id,
             domain_id,
+            project_id,
             dataset_key,
             partition_kind,
             partition_key,
@@ -234,6 +266,7 @@ def list_artifact_versions_for_scope_and_kind(
             av.workflow_run_id,
             av.tenant_id,
             av.domain_id,
+            av.project_id,
             av.dataset_key,
             av.partition_kind,
             av.partition_key,
@@ -277,3 +310,57 @@ def list_artifact_versions_for_scope_and_kind(
         item["metadata_json"] = json.loads(item["metadata_json"])
         items.append(item)
     return items
+
+
+def require_artifact_project_identity(
+    connection: sqlite3.Connection,
+    *,
+    artifact_version_id: str,
+    tenant_id: str,
+    domain_id: str,
+    project_id: str,
+) -> dict[str, Any]:
+    artifact = get_artifact_version(connection, artifact_version_id)
+    if (
+        artifact is None
+        or artifact.get("tenant_id") != tenant_id
+        or artifact.get("domain_id") != domain_id
+        or artifact.get("project_id") != project_id
+    ):
+        raise ArtifactProjectIdentityError(
+            artifact_version_id,
+            tenant_id=tenant_id,
+            domain_id=domain_id,
+            project_id=project_id,
+        )
+    return artifact
+
+
+def _resolve_project_id_for_workflow(
+    connection: sqlite3.Connection,
+    *,
+    workflow_run_id: str,
+    tenant_id: str | None,
+    domain_id: str | None,
+    project_id: str | None,
+) -> str | None:
+    row = connection.execute(
+        """
+        SELECT tenant_id, domain_id, project_id
+        FROM workflow_runs
+        WHERE workflow_run_id = ?
+        """,
+        (workflow_run_id,),
+    ).fetchone()
+    if row is None:
+        return project_id
+    if tenant_id is not None and row["tenant_id"] != tenant_id:
+        raise ValueError("artifact tenant_id must match workflow_runs.tenant_id")
+    if domain_id is not None and row["domain_id"] != domain_id:
+        raise ValueError("artifact domain_id must match workflow_runs.domain_id")
+    workflow_project_id = (
+        str(row["project_id"]) if row["project_id"] is not None else None
+    )
+    if project_id is not None and workflow_project_id != project_id:
+        raise ValueError("artifact project_id must match workflow_runs.project_id")
+    return project_id if project_id is not None else workflow_project_id

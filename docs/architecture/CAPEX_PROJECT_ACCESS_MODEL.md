@@ -102,6 +102,8 @@ Derived pointer fields:
 
 Reads require project viewer membership. Promotion requires contributor/admin membership, explicit `workflow_run_id`, `artifact_version_id`, `artifact_kind`, and `idempotency_key`, and validates that workflow-run, artifact, optional approval evidence, and optional task evidence belong to the path project before delegating to canonical pointer promotion.
 
+Project official pointer promotion requires direct artifact project identity. The target `artifact_versions.project_id`, pointer `scope_ref`, project-bound `workflow_runs.project_id`, approval workflow project, task workflow project, and emitted pointer event project context must all resolve to the same CAPEX project. Missing or mismatched artifact project identity is treated as not found for project-scoped promotion.
+
 Approval responses, approved approvals, and latest artifact versions do not move project official pointers by themselves. Officialness changes only through explicit pointer promotion.
 
 Route responses return the canonical pointer row plus derived `project_id` and `pointer_family`, and include a snapshot with `project_id`, `pointer_family`, `pointer_id`, `artifact_version_id`, `artifact_kind`, `generation`, and `updated_at`.
@@ -123,6 +125,8 @@ Same-tenant non-members must not see project-bound rows through broad list/detai
 
 No-project rows remain readable by the existing tenant/domain boundary.
 
+Project-scoped artifact and provenance reads must use persisted artifact project identity, not workflow-run inference at authorization time. Inference from `workflow_runs.project_id` is allowed only when initially stamping or backfilling immutable artifact metadata.
+
 ## Project Authorization CED
 `docs/architecture/CAPEX_PROJECT_AUTHORIZATION_CED.md` records the Wave 1 project authorization boundary.
 
@@ -142,6 +146,7 @@ The project child API tranche uses:
 - `workflow_runs.project_id` for project-bound run selection
 - `timeline_events.project_id`, falling back through linked `workflow_runs.project_id`, for project timeline reads
 - existing child `workflow_run_id` index coverage for human tasks, approvals, flags, artifact versions, artifact links, and artifact pointers
+- `artifact_versions.project_id` and `artifact_provenance_edges.project_id` for project-scoped artifact officialness and lineage guards
 - `capex_project_authorization` and `capex_user_project_view` indexes for projection-backed project visibility
 
 `tests/integration/test_capex_project_schema_parity.py` and `tests/integration/test_capex_project_authorization_schema_parity.py` record the schema/index parity evidence.

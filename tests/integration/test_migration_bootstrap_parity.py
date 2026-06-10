@@ -153,6 +153,8 @@ def test_capex_alembic_upgrade_from_pre_capex_revision_is_idempotent(
             assert _primary_key_columns(connection, table_name), table_name
         assert "project_id" in _column_names(connection, "workflow_runs")
         assert "project_id" in _column_names(connection, "timeline_events")
+        assert "project_id" in _column_names(connection, "artifact_versions")
+        assert "project_id" in _column_names(connection, "artifact_provenance_edges")
         assert "ix_workflow_runs_project_scope" in _index_names(
             connection,
             "workflow_runs",
@@ -160,6 +162,14 @@ def test_capex_alembic_upgrade_from_pre_capex_revision_is_idempotent(
         assert "ix_timeline_events_project_id" in _index_names(
             connection,
             "timeline_events",
+        )
+        assert "ix_artifact_versions_project_scope" in _index_names(
+            connection,
+            "artifact_versions",
+        )
+        assert "ix_artifact_provenance_edges_project" in _index_names(
+            connection,
+            "artifact_provenance_edges",
         )
     finally:
         connection.close()
@@ -213,6 +223,39 @@ def test_sqlite_bootstrap_repairs_missing_project_scope_columns(
                     activation_key
                 )
             );
+
+            CREATE TABLE artifact_versions (
+                artifact_version_id TEXT PRIMARY KEY,
+                workflow_run_id TEXT NOT NULL,
+                tenant_id TEXT,
+                domain_id TEXT,
+                dataset_key TEXT,
+                partition_kind TEXT,
+                partition_key TEXT,
+                task_run_id TEXT,
+                artifact_kind TEXT NOT NULL,
+                artifact_role TEXT,
+                media_type TEXT NOT NULL,
+                storage_uri TEXT NOT NULL,
+                content_digest TEXT NOT NULL,
+                byte_size INTEGER,
+                metadata_json TEXT NOT NULL,
+                parent_artifact_version_id TEXT,
+                supersedes_artifact_version_id TEXT,
+                lineage_note TEXT,
+                created_at TEXT NOT NULL DEFAULT (datetime('now'))
+            );
+
+            CREATE TABLE artifact_provenance_edges (
+                edge_id TEXT PRIMARY KEY,
+                workflow_run_id TEXT,
+                output_artifact_version_id TEXT NOT NULL,
+                input_artifact_version_id TEXT NOT NULL,
+                edge_type TEXT NOT NULL,
+                edge_order INTEGER,
+                metadata_json TEXT,
+                created_at TEXT NOT NULL DEFAULT (datetime('now'))
+            );
             """
         )
 
@@ -220,6 +263,8 @@ def test_sqlite_bootstrap_repairs_missing_project_scope_columns(
 
         assert "project_id" in _column_names(connection, "timeline_events")
         assert "project_id" in _column_names(connection, "workflow_runs")
+        assert "project_id" in _column_names(connection, "artifact_versions")
+        assert "project_id" in _column_names(connection, "artifact_provenance_edges")
         assert "ix_timeline_events_project_id" in _index_names(
             connection,
             "timeline_events",
@@ -227,6 +272,14 @@ def test_sqlite_bootstrap_repairs_missing_project_scope_columns(
         assert "ix_workflow_runs_project_scope" in _index_names(
             connection,
             "workflow_runs",
+        )
+        assert "ix_artifact_versions_project_scope" in _index_names(
+            connection,
+            "artifact_versions",
+        )
+        assert "ix_artifact_provenance_edges_project" in _index_names(
+            connection,
+            "artifact_provenance_edges",
         )
     finally:
         connection.close()

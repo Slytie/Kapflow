@@ -17,6 +17,25 @@ class ProvenanceCycleError(ValueError):
         self.input_artifact_version_id = input_artifact_version_id
 
 
+class ProvenanceProjectScopeError(ValueError):
+    def __init__(
+        self,
+        *,
+        output_artifact_version_id: str,
+        input_artifact_version_id: str,
+        workflow_run_id: str | None,
+    ) -> None:
+        super().__init__(
+            "artifact provenance edge crosses project scope "
+            f"(output_artifact_version_id={output_artifact_version_id}, "
+            f"input_artifact_version_id={input_artifact_version_id}, "
+            f"workflow_run_id={workflow_run_id})"
+        )
+        self.output_artifact_version_id = output_artifact_version_id
+        self.input_artifact_version_id = input_artifact_version_id
+        self.workflow_run_id = workflow_run_id
+
+
 def create_artifact_provenance_edge(
     connection: sqlite3.Connection,
     *,
@@ -39,12 +58,19 @@ def create_artifact_provenance_edge(
     ):
         raise ProvenanceCycleError(output_artifact_version_id, input_artifact_version_id)
 
+    project_id = _resolve_edge_project_id(
+        connection,
+        output_artifact_version_id=output_artifact_version_id,
+        input_artifact_version_id=input_artifact_version_id,
+        workflow_run_id=workflow_run_id,
+    )
     resolved_edge_id = edge_id or f"ape-{uuid4()}"
     connection.execute(
         """
         INSERT INTO artifact_provenance_edges (
             edge_id,
             workflow_run_id,
+            project_id,
             output_artifact_version_id,
             input_artifact_version_id,
             edge_type,
@@ -52,11 +78,12 @@ def create_artifact_provenance_edge(
             metadata_json,
             created_at
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
         """,
         (
             resolved_edge_id,
             workflow_run_id,
+            project_id,
             output_artifact_version_id,
             input_artifact_version_id,
             _normalize_edge_type(edge_type),
@@ -81,6 +108,7 @@ def list_artifact_provenance_edges_for_output(
         SELECT
             edge_id,
             workflow_run_id,
+            project_id,
             output_artifact_version_id,
             input_artifact_version_id,
             edge_type,
@@ -160,6 +188,77 @@ def _normalize_edge_type(edge_type: str) -> str:
     return normalized
 
 
+def _resolve_edge_project_id(
+    connection: sqlite3.Connection,
+    *,
+    output_artifact_version_id: str,
+    input_artifact_version_id: str,
+    workflow_run_id: str | None,
+) -> str | None:
+    output_scope = _artifact_scope(connection, output_artifact_version_id)
+    input_scope = _artifact_scope(connection, input_artifact_version_id)
+    output_project_id = output_scope.get("project_id")
+    input_project_id = input_scope.get("project_id")
+    if output_project_id != input_project_id:
+        raise ProvenanceProjectScopeError(
+            output_artifact_version_id=output_artifact_version_id,
+            input_artifact_version_id=input_artifact_version_id,
+            workflow_run_id=workflow_run_id,
+        )
+    if workflow_run_id is not None:
+        workflow_scope = _workflow_scope(connection, workflow_run_id)
+        workflow_project_id = workflow_scope.get("project_id")
+        if workflow_project_id != output_project_id:
+            raise ProvenanceProjectScopeError(
+                output_artifact_version_id=output_artifact_version_id,
+                input_artifact_version_id=input_artifact_version_id,
+                workflow_run_id=workflow_run_id,
+            )
+    return output_project_id
+
+
+def _artifact_scope(
+    connection: sqlite3.Connection,
+    artifact_version_id: str,
+) -> dict[str, str | None]:
+    row = connection.execute(
+        """
+        SELECT project_id
+        FROM artifact_versions
+        WHERE artifact_version_id = ?
+        """,
+        (artifact_version_id,),
+    ).fetchone()
+    if row is None:
+        return {"project_id": None}
+    return {
+        "project_id": (
+            str(row["project_id"]) if row["project_id"] is not None else None
+        )
+    }
+
+
+def _workflow_scope(
+    connection: sqlite3.Connection,
+    workflow_run_id: str,
+) -> dict[str, str | None]:
+    row = connection.execute(
+        """
+        SELECT project_id
+        FROM workflow_runs
+        WHERE workflow_run_id = ?
+        """,
+        (workflow_run_id,),
+    ).fetchone()
+    if row is None:
+        return {"project_id": None}
+    return {
+        "project_id": (
+            str(row["project_id"]) if row["project_id"] is not None else None
+        )
+    }
+
+
 def _creates_cycle(
     connection: sqlite3.Connection,
     *,
@@ -183,4 +282,3 @@ def _creates_cycle(
         (input_artifact_version_id, output_artifact_version_id),
     ).fetchone()
     return row is not None
-

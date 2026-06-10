@@ -2,6 +2,12 @@
 
 Record any decisions made since the last session so a fresh Codex run can rehydrate quickly.
 
+## 2026-06-10 (EPIC-140+ review tasks 5-6 repair)
+- Artifact-identity decision: project-scoped artifact officialness uses persisted `artifact_versions.project_id`; workflow-run project inference is allowed only for initial stamping/backfill, not for authorization at promotion time.
+- Provenance-isolation decision: project-scoped provenance edges persist `artifact_provenance_edges.project_id` and fail closed unless input/output artifacts and any workflow context share the same project.
+- SourceRef-isolation decision: current SourceRef resolution remains the active guard for source occurrences; source occurrence relation/locator surfaces remain inactive until a later task implements same tenant/domain/project policy.
+- Activation decision: this repair adds migrations and internal guards only; it adds no public routes, frontend routes, raw corpus import, relation surface activation, workpage command activation, or CAPEX product activation.
+
 ## 2026-06-10 (EPIC-140 review tasks 3-4 repair)
 - Module-specific readiness decision: `TASK-0664` adds `SME-RP-MODULE-READINESS-RULE.v1` to `docs/planning/capex_real_project_acceptance/SME_RP_ACCEPTANCE_REGISTER.yaml`; unresolved business definitions, RACI posture, or workflow-extension classification block only dependent CAPEX modules and surfaces.
 - Continuation decision: independent platform hardening, schema parity, security fixes, neutral foundation work, and disabled CAPEX scaffolding may continue while affected modules remain blocked.

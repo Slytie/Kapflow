@@ -34,6 +34,8 @@ _REQUIRED_LINK_TYPES_BY_EVENT: dict[str, set[str]] | None = None
 _PROJECT_SCOPE_COLUMN_REPAIRS = {
     "timeline_events": "project_id",
     "workflow_runs": "project_id",
+    "artifact_versions": "project_id",
+    "artifact_provenance_edges": "project_id",
 }
 
 _CAPEX_REQUIRED_COLUMNS_BY_TABLE: dict[str, set[str]] = {
@@ -249,6 +251,8 @@ def _repair_partial_sqlite_bootstrap_schema(connection: sqlite3.Connection) -> N
     for table_name, column_name in _PROJECT_SCOPE_COLUMN_REPAIRS.items():
         _ensure_nullable_text_column(connection, table_name, column_name)
 
+    _backfill_artifact_project_scope(connection)
+
     malformed_empty_tables: set[str] = set()
     for table_name, required_columns in _CAPEX_REQUIRED_COLUMNS_BY_TABLE.items():
         if not _sqlite_table_exists(connection, table_name):
@@ -308,6 +312,44 @@ def _ensure_nullable_text_column(
     if column_name in _sqlite_column_names(connection, table_name):
         return
     connection.execute(f'ALTER TABLE "{table_name}" ADD COLUMN "{column_name}" TEXT')
+
+
+def _backfill_artifact_project_scope(connection: sqlite3.Connection) -> None:
+    if (
+        _sqlite_table_exists(connection, "artifact_versions")
+        and _sqlite_table_exists(connection, "workflow_runs")
+        and "project_id" in _sqlite_column_names(connection, "artifact_versions")
+        and "project_id" in _sqlite_column_names(connection, "workflow_runs")
+    ):
+        connection.execute(
+            """
+            UPDATE artifact_versions
+            SET project_id = (
+                SELECT workflow_runs.project_id
+                FROM workflow_runs
+                WHERE workflow_runs.workflow_run_id = artifact_versions.workflow_run_id
+            )
+            WHERE project_id IS NULL
+            """
+        )
+    if (
+        _sqlite_table_exists(connection, "artifact_provenance_edges")
+        and _sqlite_table_exists(connection, "artifact_versions")
+        and "project_id" in _sqlite_column_names(connection, "artifact_provenance_edges")
+        and "project_id" in _sqlite_column_names(connection, "artifact_versions")
+    ):
+        connection.execute(
+            """
+            UPDATE artifact_provenance_edges
+            SET project_id = (
+                SELECT artifact_versions.project_id
+                FROM artifact_versions
+                WHERE artifact_versions.artifact_version_id =
+                    artifact_provenance_edges.output_artifact_version_id
+            )
+            WHERE project_id IS NULL
+            """
+        )
 
 
 def create_sqlite_substrate(connection: sqlite3.Connection) -> None:
@@ -829,6 +871,7 @@ def create_sqlite_substrate(connection: sqlite3.Connection) -> None:
             workflow_run_id TEXT NOT NULL,
             tenant_id TEXT,
             domain_id TEXT,
+            project_id TEXT,
             dataset_key TEXT,
             partition_kind TEXT,
             partition_key TEXT,
@@ -845,6 +888,7 @@ def create_sqlite_substrate(connection: sqlite3.Connection) -> None:
             lineage_note TEXT,
             created_at TEXT NOT NULL DEFAULT (datetime('now')),
             FOREIGN KEY (workflow_run_id) REFERENCES workflow_runs(workflow_run_id),
+            FOREIGN KEY (project_id) REFERENCES capex_projects(project_id),
             FOREIGN KEY (task_run_id) REFERENCES task_runs(task_run_id),
             FOREIGN KEY (parent_artifact_version_id) REFERENCES artifact_versions(artifact_version_id),
             FOREIGN KEY (supersedes_artifact_version_id) REFERENCES artifact_versions(artifact_version_id)
@@ -854,6 +898,8 @@ def create_sqlite_substrate(connection: sqlite3.Connection) -> None:
             ON artifact_versions (workflow_run_id, artifact_kind, created_at);
         CREATE INDEX IF NOT EXISTS ix_artifact_versions_canonical_address
             ON artifact_versions (tenant_id, domain_id, dataset_key, partition_kind, partition_key);
+        CREATE INDEX IF NOT EXISTS ix_artifact_versions_project_scope
+            ON artifact_versions (tenant_id, domain_id, project_id, artifact_kind, created_at);
 
         CREATE TABLE IF NOT EXISTS artifact_links (
             artifact_version_id TEXT NOT NULL,
@@ -918,6 +964,7 @@ def create_sqlite_substrate(connection: sqlite3.Connection) -> None:
         CREATE TABLE IF NOT EXISTS artifact_provenance_edges (
             edge_id TEXT PRIMARY KEY,
             workflow_run_id TEXT,
+            project_id TEXT,
             output_artifact_version_id TEXT NOT NULL,
             input_artifact_version_id TEXT NOT NULL,
             edge_type TEXT NOT NULL,
@@ -925,6 +972,7 @@ def create_sqlite_substrate(connection: sqlite3.Connection) -> None:
             metadata_json TEXT,
             created_at TEXT NOT NULL DEFAULT (datetime('now')),
             FOREIGN KEY (workflow_run_id) REFERENCES workflow_runs(workflow_run_id),
+            FOREIGN KEY (project_id) REFERENCES capex_projects(project_id),
             FOREIGN KEY (output_artifact_version_id) REFERENCES artifact_versions(artifact_version_id),
             FOREIGN KEY (input_artifact_version_id) REFERENCES artifact_versions(artifact_version_id),
             UNIQUE (output_artifact_version_id, input_artifact_version_id, edge_type, edge_order)
@@ -934,6 +982,8 @@ def create_sqlite_substrate(connection: sqlite3.Connection) -> None:
             ON artifact_provenance_edges (output_artifact_version_id, edge_type, edge_order);
         CREATE INDEX IF NOT EXISTS ix_artifact_provenance_edges_input
             ON artifact_provenance_edges (input_artifact_version_id, edge_type);
+        CREATE INDEX IF NOT EXISTS ix_artifact_provenance_edges_project
+            ON artifact_provenance_edges (project_id, output_artifact_version_id, edge_type);
 
         CREATE TABLE IF NOT EXISTS workflow_run_inputs (
             workflow_run_input_id TEXT PRIMARY KEY,

@@ -184,6 +184,14 @@ def test_capex_project_official_pointer_routes_promote_and_scope_snapshots(tmp_p
     assert promoted.payload["pointer"]["pointer_key"] == "official:current-schedule"
     assert promoted.payload["snapshot"]["generation"] == 0
 
+    replay = contributor.post(
+        f"/api/v1/capex/projects/{PROJECT_ID}/official-pointers/current-schedule/promote",
+        payload=_promote_payload(first_artifact_id, "api:official-pointer:promote-first"),
+    )
+    assert replay.status_code == 200
+    assert replay.payload["idempotent_replay"] is True
+    assert replay.payload["snapshot"] == promoted.payload["snapshot"]
+
     listed = viewer.get(f"/api/v1/capex/projects/{PROJECT_ID}/official-pointers")
     assert listed.status_code == 200
     assert [row["pointer_family"] for row in listed.payload["official_pointers"]] == [
@@ -224,3 +232,35 @@ def test_capex_project_official_pointer_routes_promote_and_scope_snapshots(tmp_p
     hidden = outsider.get(f"/api/v1/capex/projects/{PROJECT_ID}/official-pointers")
     assert hidden.status_code == 404
     assert hidden.payload["error"]["code"] == "capex_project_not_found"
+
+
+def test_capex_project_official_pointer_route_fails_closed_on_artifact_project_mismatch(
+    tmp_path: Path,
+) -> None:
+    db_url = _init_db(tmp_path / "capex-official-pointer-api-artifact-scope.db")
+    first_artifact_id, second_artifact_id = _seed(db_url)
+    connection = _open(db_url)
+    try:
+        connection.execute(
+            "UPDATE artifact_versions SET project_id = NULL WHERE artifact_version_id = ?",
+            (first_artifact_id,),
+        )
+        connection.execute(
+            "UPDATE artifact_versions SET project_id = ? WHERE artifact_version_id = ?",
+            (OTHER_PROJECT_ID, second_artifact_id),
+        )
+        connection.commit()
+    finally:
+        connection.close()
+
+    contributor = _client(db_url, "human:contributor")
+    for artifact_id in [first_artifact_id, second_artifact_id]:
+        denied = contributor.post(
+            f"/api/v1/capex/projects/{PROJECT_ID}/official-pointers/current-schedule/promote",
+            payload=_promote_payload(
+                artifact_id,
+                f"api:official-pointer:artifact-scope-denied:{artifact_id}",
+            ),
+        )
+        assert denied.status_code == 404
+        assert denied.payload["error"]["code"] == "artifact_version_not_found"
