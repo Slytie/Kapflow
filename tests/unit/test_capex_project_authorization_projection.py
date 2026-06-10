@@ -313,7 +313,7 @@ def test_visibility_sql_uses_authorization_projection_and_preserves_no_project_r
         )
 
         assert "capex_project_authorization" in visibility_sql
-        assert "project_memberships" not in visibility_sql
+        assert "project_memberships" in visibility_sql
         rows = connection.execute(
             """
             SELECT wr.workflow_run_id
@@ -339,4 +339,3 @@ def test_visibility_sql_uses_authorization_projection_and_preserves_no_project_r
         ]
     finally:
         connection.close()
-

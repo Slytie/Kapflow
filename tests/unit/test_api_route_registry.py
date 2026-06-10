@@ -46,6 +46,7 @@ def test_route_registry_preserves_exact_global_route_order() -> None:
         "capex.projects.memberships.list",
         "capex.projects.dashboard",
         "capex.projects.memberships.grant",
+        "capex.projects.memberships.revoke",
         "capex.projects.official_pointers.list",
         "capex.projects.official_pointers.promote",
         "capex.projects.official_pointers.detail",
@@ -142,6 +143,19 @@ def test_route_registry_matches_representative_exact_and_parameterized_routes() 
     assert capex_membership_match is not None
     assert capex_membership_match.route.name == "capex.projects.memberships.grant"
     assert capex_membership_match.params == {"project_id": "cp-001"}
+
+    capex_membership_revoke_match = match_route(
+        "POST",
+        "/api/v1/capex/projects/cp-001/memberships/pm-001/revoke",
+    )
+    assert capex_membership_revoke_match is not None
+    assert (
+        capex_membership_revoke_match.route.name
+        == "capex.projects.memberships.revoke"
+    )
+    assert capex_membership_revoke_match.params == {
+        "project_membership_ref": "cp-001/memberships/pm-001"
+    }
 
     capex_dashboard_match = match_route("GET", "/api/v1/capex/projects/cp-001/dashboard")
     assert capex_dashboard_match is not None

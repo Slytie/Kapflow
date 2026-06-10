@@ -206,6 +206,54 @@ def create_project_membership(
     )
 
 
+def update_project_membership_grant(
+    connection: sqlite3.Connection,
+    *,
+    project_membership_id: str,
+    role: str,
+    state: str,
+    granted_by_actor_id: str,
+    granted_by_actor_type: str,
+    updated_at: str,
+) -> None:
+    connection.execute(
+        """
+        UPDATE project_memberships
+        SET role = ?,
+            state = ?,
+            granted_by_actor_id = ?,
+            granted_by_actor_type = ?,
+            updated_at = ?
+        WHERE project_membership_id = ?
+        """,
+        (
+            role,
+            state,
+            granted_by_actor_id,
+            granted_by_actor_type,
+            updated_at,
+            project_membership_id,
+        ),
+    )
+
+
+def revoke_project_membership(
+    connection: sqlite3.Connection,
+    *,
+    project_membership_id: str,
+    updated_at: str,
+) -> None:
+    connection.execute(
+        """
+        UPDATE project_memberships
+        SET state = 'revoked',
+            updated_at = ?
+        WHERE project_membership_id = ?
+        """,
+        (updated_at, project_membership_id),
+    )
+
+
 def get_project_membership(
     connection: sqlite3.Connection,
     project_membership_id: str,
@@ -217,6 +265,26 @@ def get_project_membership(
         WHERE project_membership_id = ?
         """,
         (project_membership_id,),
+    ).fetchone()
+    return _membership_row(row)
+
+
+def get_any_project_membership_for_actor(
+    connection: sqlite3.Connection,
+    *,
+    project_id: str,
+    actor_type: str,
+    actor_id: str,
+) -> dict[str, Any] | None:
+    row = connection.execute(
+        f"""
+        SELECT {MEMBERSHIP_COLUMNS}
+        FROM project_memberships
+        WHERE project_id = ?
+          AND actor_type = ?
+          AND actor_id = ?
+        """,
+        (project_id, actor_type, actor_id),
     ).fetchone()
     return _membership_row(row)
 

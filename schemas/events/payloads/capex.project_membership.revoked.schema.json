@@ -1,20 +1,16 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "title": "ProjectMembership",
+  "title": "capex.project_membership.revoked",
   "type": "object",
   "required": [
     "project_membership_id",
     "project_id",
-    "tenant_id",
-    "domain_id",
-    "actor_type",
     "actor_id",
-    "role",
+    "actor_type",
+    "previous_role",
     "state",
-    "granted_by_actor_id",
-    "granted_by_actor_type",
-    "created_at",
-    "updated_at"
+    "revoked_by_actor_id",
+    "revoked_by_actor_type"
   ],
   "properties": {
     "project_membership_id": {
@@ -23,10 +19,7 @@
     "project_id": {
       "type": "string"
     },
-    "tenant_id": {
-      "type": "string"
-    },
-    "domain_id": {
+    "actor_id": {
       "type": "string"
     },
     "actor_type": {
@@ -38,10 +31,7 @@
         "system"
       ]
     },
-    "actor_id": {
-      "type": "string"
-    },
-    "role": {
+    "previous_role": {
       "type": "string",
       "enum": [
         "project_viewer",
@@ -52,14 +42,13 @@
     "state": {
       "type": "string",
       "enum": [
-        "active",
         "revoked"
       ]
     },
-    "granted_by_actor_id": {
+    "revoked_by_actor_id": {
       "type": "string"
     },
-    "granted_by_actor_type": {
+    "revoked_by_actor_type": {
       "type": "string",
       "enum": [
         "human",
@@ -67,14 +56,6 @@
         "service",
         "system"
       ]
-    },
-    "created_at": {
-      "type": "string",
-      "format": "date-time"
-    },
-    "updated_at": {
-      "type": "string",
-      "format": "date-time"
     }
   },
   "additionalProperties": false

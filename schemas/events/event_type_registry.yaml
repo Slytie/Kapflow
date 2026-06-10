@@ -12,6 +12,13 @@ event_types:
   - capex_project
   - project_membership
   payload_schema: schemas/events/payloads/capex.project_membership.granted.schema.json
+- id: capex.project_membership.revoked
+  class: project
+  authoritative: true
+  required_links:
+  - capex_project
+  - project_membership
+  payload_schema: schemas/events/payloads/capex.project_membership.revoked.schema.json
 - id: workflow.run.created
   class: run
   authoritative: true

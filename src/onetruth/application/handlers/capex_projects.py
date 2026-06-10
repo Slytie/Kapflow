@@ -31,12 +31,15 @@ from onetruth.infrastructure.repositories.capex_projects import (
     create_capex_project,
     create_project_membership,
     get_capex_project,
+    get_any_project_membership_for_actor,
     get_project_membership,
     list_project_memberships,
+    revoke_project_membership,
+    update_project_membership_grant,
 )
 
 PROJECT_STATES = {"active", "archived"}
-MEMBERSHIP_STATES = {"active"}
+MEMBERSHIP_STATES = {"active", "revoked"}
 
 
 def create_capex_project_command(
@@ -270,7 +273,34 @@ def grant_project_membership_command(
     )
 
     requested_membership_id = payload.get("project_membership_id")
-    project_membership_id = str(requested_membership_id or f"pm-{uuid4()}")
+    existing_membership = get_any_project_membership_for_actor(
+        connection,
+        project_id=project_id,
+        actor_type=target_actor_type,
+        actor_id=target_actor_id,
+    )
+    project_membership_id = str(
+        requested_membership_id
+        or (
+            existing_membership["project_membership_id"]
+            if existing_membership is not None
+            else f"pm-{uuid4()}"
+        )
+    )
+    if (
+        requested_membership_id is not None
+        and existing_membership is not None
+        and str(existing_membership["project_membership_id"]) != project_membership_id
+    ):
+        raise CommandError(
+            code="duplicate_project_membership",
+            message="actor already has a project membership",
+            details={
+                "project_id": project_id,
+                "actor_type": target_actor_type,
+                "actor_id": target_actor_id,
+            },
+        )
     receipt = _prepare_command_receipt(
         command_name="capex.project_memberships.grant",
         payload=payload,
@@ -301,20 +331,51 @@ def grant_project_membership_command(
 
     def _operation() -> dict[str, Any]:
         now = utc_now_iso()
-        create_project_membership(
+        resolved_project_membership_id = project_membership_id
+        current_membership = get_any_project_membership_for_actor(
             connection,
-            project_membership_id=project_membership_id,
             project_id=project_id,
-            tenant_id=str(project["tenant_id"]),
-            domain_id=str(project["domain_id"]),
             actor_type=target_actor_type,
             actor_id=target_actor_id,
-            role=role,
-            state="active",
-            granted_by_actor_id=actor_id,
-            granted_by_actor_type=actor_type,
-            created_at=now,
         )
+        if current_membership is None:
+            create_project_membership(
+                connection,
+                project_membership_id=project_membership_id,
+                project_id=project_id,
+                tenant_id=str(project["tenant_id"]),
+                domain_id=str(project["domain_id"]),
+                actor_type=target_actor_type,
+                actor_id=target_actor_id,
+                role=role,
+                state="active",
+                granted_by_actor_id=actor_id,
+                granted_by_actor_type=actor_type,
+                created_at=now,
+            )
+        elif str(current_membership["state"]) == "revoked":
+            resolved_project_membership_id = str(
+                current_membership["project_membership_id"]
+            )
+            update_project_membership_grant(
+                connection,
+                project_membership_id=resolved_project_membership_id,
+                role=role,
+                state="active",
+                granted_by_actor_id=actor_id,
+                granted_by_actor_type=actor_type,
+                updated_at=now,
+            )
+        else:
+            raise CommandError(
+                code="duplicate_project_membership",
+                message="actor already has an active project membership",
+                details={
+                    "project_id": project_id,
+                    "actor_type": target_actor_type,
+                    "actor_id": target_actor_id,
+                },
+            )
         append_event(
             connection,
             _event_envelope(
@@ -328,11 +389,11 @@ def grant_project_membership_command(
                     {
                         "rel": "subject",
                         "type": "project_membership",
-                        "id": project_membership_id,
+                        "id": resolved_project_membership_id,
                     },
                 ],
                 payload={
-                    "project_membership_id": project_membership_id,
+                    "project_membership_id": resolved_project_membership_id,
                     "project_id": project_id,
                     "actor_id": target_actor_id,
                     "actor_type": target_actor_type,
@@ -349,12 +410,12 @@ def grant_project_membership_command(
             project_id=project_id,
             now_iso=now,
         )
-        membership = get_project_membership(connection, project_membership_id)
+        membership = get_project_membership(connection, resolved_project_membership_id)
         if membership is None:
             raise CommandError(
                 code="project_membership_not_found",
                 message="project membership was not found after grant",
-                details={"project_membership_id": project_membership_id},
+                details={"project_membership_id": resolved_project_membership_id},
             )
         return {"project": project, "membership": membership}
 
@@ -381,6 +442,151 @@ def grant_project_membership_command(
             },
         ) from exc
 
+    return _command_receipt_payload(
+        result,
+        receipt=receipt,
+        replay=replay,
+        include_receipt=include_receipt,
+    )
+
+
+def revoke_project_membership_command(
+    connection: sqlite3.Connection,
+    payload: dict[str, Any],
+    *,
+    include_receipt: bool = False,
+) -> dict[str, Any]:
+    _require_fields(
+        payload,
+        [
+            "project_id",
+            "project_membership_id",
+            "tenant_id",
+            "domain_id",
+            "actor_id",
+            "actor_type",
+            "idempotency_key",
+        ],
+    )
+    project_id = str(payload["project_id"])
+    project_membership_id = str(payload["project_membership_id"])
+    actor_id = str(payload["actor_id"])
+    actor_type = _validate_actor_type(str(payload["actor_type"]))
+    project = require_project_access(
+        connection,
+        project_id=project_id,
+        tenant_id=str(payload["tenant_id"]),
+        domain_id=str(payload["domain_id"]),
+        actor_type=actor_type,
+        actor_id=actor_id,
+        min_role=PROJECT_VIEWER,
+    )
+    require_project_membership_role(
+        connection,
+        project=project,
+        actor_type=actor_type,
+        actor_id=actor_id,
+        min_role=PROJECT_ADMIN,
+    )
+
+    receipt = _prepare_command_receipt(
+        command_name="capex.project_memberships.revoke",
+        payload=payload,
+        fingerprint_payload={
+            "project_id": project_id,
+            "project_membership_id": project_membership_id,
+            "tenant_id": str(payload["tenant_id"]),
+            "domain_id": str(payload["domain_id"]),
+            "actor_id": actor_id,
+            "actor_type": actor_type,
+        },
+        tenant_id=str(payload["tenant_id"]),
+        domain_id=str(payload["domain_id"]),
+        workflow_run_id=None,
+        idempotency_required=True,
+    )
+    event_idempotency = _receipt_event_idempotency_key(
+        receipt,
+        "capex.project_memberships.revoke.capex.project_membership.revoked",
+    )
+
+    def _operation() -> dict[str, Any]:
+        membership = get_project_membership(connection, project_membership_id)
+        if (
+            membership is None
+            or str(membership["project_id"]) != project_id
+            or str(membership["tenant_id"]) != str(project["tenant_id"])
+            or str(membership["domain_id"]) != str(project["domain_id"])
+        ):
+            raise CommandError(
+                code="project_membership_not_found",
+                message="project membership not found",
+                details={"project_membership_id": project_membership_id},
+            )
+        if str(membership["state"]) != "active":
+            raise CommandError(
+                code="project_membership_conflict",
+                message="project membership is not active",
+                details={
+                    "project_membership_id": project_membership_id,
+                    "state": str(membership["state"]),
+                },
+            )
+
+        now = utc_now_iso()
+        revoke_project_membership(
+            connection,
+            project_membership_id=project_membership_id,
+            updated_at=now,
+        )
+        append_event(
+            connection,
+            _event_envelope(
+                event_type="capex.project_membership.revoked",
+                tenant_id=str(project["tenant_id"]),
+                domain_id=str(project["domain_id"]),
+                actor_type=actor_type,
+                actor_id=actor_id,
+                links=[
+                    {"rel": "project", "type": "capex_project", "id": project_id},
+                    {
+                        "rel": "subject",
+                        "type": "project_membership",
+                        "id": project_membership_id,
+                    },
+                ],
+                payload={
+                    "project_membership_id": project_membership_id,
+                    "project_id": project_id,
+                    "actor_id": str(membership["actor_id"]),
+                    "actor_type": str(membership["actor_type"]),
+                    "previous_role": str(membership["role"]),
+                    "state": "revoked",
+                    "revoked_by_actor_id": actor_id,
+                    "revoked_by_actor_type": actor_type,
+                },
+                idempotency_key=event_idempotency,
+            ),
+        )
+        refresh_project_authorization_projection(
+            connection,
+            project_id=project_id,
+            now_iso=now,
+        )
+        revoked_membership = get_project_membership(connection, project_membership_id)
+        if revoked_membership is None:
+            raise CommandError(
+                code="project_membership_not_found",
+                message="project membership was not found after revoke",
+                details={"project_membership_id": project_membership_id},
+            )
+        return {"project": project, "membership": revoked_membership}
+
+    result, replay = _execute_with_command_receipt(
+        connection,
+        receipt=receipt,
+        operation=_operation,
+    )
     return _command_receipt_payload(
         result,
         receipt=receipt,
@@ -504,5 +710,6 @@ __all__ = [
     "grant_project_membership_command",
     "list_capex_projects_command",
     "list_project_memberships_command",
+    "revoke_project_membership_command",
     "show_capex_project_command",
 ]

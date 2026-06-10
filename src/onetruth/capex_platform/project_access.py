@@ -90,13 +90,29 @@ class AuthorizedProjectsQuery:
                 upv.created_by_actor_type,
                 upv.project_created_at AS created_at,
                 upv.project_updated_at AS updated_at,
-                upv.caller_role
+                pm.role AS caller_role
             FROM capex_user_project_view upv
+            JOIN capex_project_authorization cpa
+              ON cpa.project_authorization_id = upv.source_authorization_id
+             AND cpa.project_id = upv.project_id
+             AND cpa.tenant_id = upv.tenant_id
+             AND cpa.domain_id = upv.domain_id
+             AND cpa.actor_type = upv.actor_type
+             AND cpa.actor_id = upv.actor_id
+            JOIN project_memberships pm
+              ON pm.project_membership_id = cpa.source_membership_id
+             AND pm.project_id = cpa.project_id
+             AND pm.tenant_id = cpa.tenant_id
+             AND pm.domain_id = cpa.domain_id
+             AND pm.actor_type = cpa.actor_type
+             AND pm.actor_id = cpa.actor_id
             WHERE upv.tenant_id = ?
               AND upv.domain_id = ?
               AND upv.actor_type = ?
               AND upv.actor_id = ?
               AND upv.authorization_state = 'active'
+              AND cpa.state = 'active'
+              AND pm.state = 'active'
               {state_clause}
             ORDER BY upv.project_key ASC, upv.project_id ASC
             """,
@@ -121,16 +137,24 @@ class AuthorizedProjectsQuery:
         state_clause = "AND cp.state = 'active'" if active_only else ""
         row = self._connection.execute(
             f"""
-            SELECT cpa.effective_role AS role
+            SELECT pm.role AS role
             FROM capex_project_authorization cpa
             JOIN capex_projects cp
               ON cp.project_id = cpa.project_id
              AND cp.tenant_id = cpa.tenant_id
              AND cp.domain_id = cpa.domain_id
+            JOIN project_memberships pm
+              ON pm.project_membership_id = cpa.source_membership_id
+             AND pm.project_id = cpa.project_id
+             AND pm.tenant_id = cpa.tenant_id
+             AND pm.domain_id = cpa.domain_id
+             AND pm.actor_type = cpa.actor_type
+             AND pm.actor_id = cpa.actor_id
             WHERE cpa.project_id = ?
               AND cpa.actor_type = ?
               AND cpa.actor_id = ?
               AND cpa.state = 'active'
+              AND pm.state = 'active'
               {state_clause}
             """,
             (project_id, actor_type, actor_id),
@@ -147,10 +171,18 @@ class AuthorizedProjectsQuery:
             OR EXISTS (
                 SELECT 1
                 FROM capex_project_authorization cpa_scope
+                JOIN project_memberships pm_scope
+                  ON pm_scope.project_membership_id = cpa_scope.source_membership_id
+                 AND pm_scope.project_id = cpa_scope.project_id
+                 AND pm_scope.tenant_id = cpa_scope.tenant_id
+                 AND pm_scope.domain_id = cpa_scope.domain_id
+                 AND pm_scope.actor_type = cpa_scope.actor_type
+                 AND pm_scope.actor_id = cpa_scope.actor_id
                 WHERE cpa_scope.project_id = {project_column}
                   AND cpa_scope.actor_type = ?
                   AND cpa_scope.actor_id = ?
                   AND cpa_scope.state = 'active'
+                  AND pm_scope.state = 'active'
             )
         )
     """

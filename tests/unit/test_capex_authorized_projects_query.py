@@ -5,6 +5,7 @@ import sqlite3
 from onetruth.application.handlers.capex_projects import (
     create_capex_project_command,
     grant_project_membership_command,
+    revoke_project_membership_command,
 )
 from onetruth.application.handlers.workflow_task_lifecycle import create_workflow_run_command
 from onetruth.application.services.capex_project_access import (
@@ -189,6 +190,110 @@ def test_authorized_projects_query_role_lookup_and_non_members_fail_closed() -> 
         connection.close()
 
 
+def test_authorized_projects_query_fails_closed_when_projection_is_stale_after_revocation() -> None:
+    connection = _connection()
+    try:
+        _create_project(connection, project_id="cp-visible", project_key="CAPEX-V")
+        _grant(
+            connection,
+            project_id="cp-visible",
+            target_actor_id="human:viewer",
+            role="project_viewer",
+        )
+        query = AuthorizedProjectsQuery(connection)
+        assert query.for_actor(
+            tenant_id=TENANT_ID,
+            domain_id=DOMAIN_ID,
+            actor_type="human",
+            actor_id="human:viewer",
+        ).project_ids == ("cp-visible",)
+
+        connection.execute(
+            """
+            UPDATE project_memberships
+            SET state = 'revoked'
+            WHERE project_id = ? AND actor_type = ? AND actor_id = ?
+            """,
+            ("cp-visible", "human", "human:viewer"),
+        )
+
+        assert connection.execute(
+            """
+            SELECT COUNT(*) AS count
+            FROM capex_project_authorization
+            WHERE project_id = ? AND actor_type = ? AND actor_id = ? AND state = 'active'
+            """,
+            ("cp-visible", "human", "human:viewer"),
+        ).fetchone()["count"] == 1
+        assert query.for_actor(
+            tenant_id=TENANT_ID,
+            domain_id=DOMAIN_ID,
+            actor_type="human",
+            actor_id="human:viewer",
+        ).project_ids == ()
+        assert query.role_for_project(
+            project_id="cp-visible",
+            actor_type="human",
+            actor_id="human:viewer",
+        ) is None
+    finally:
+        connection.close()
+
+
+def test_revoke_then_regrant_uses_live_direct_membership_role() -> None:
+    connection = _connection()
+    try:
+        _create_project(connection, project_id="cp-visible", project_key="CAPEX-V")
+        grant = grant_project_membership_command(
+            connection,
+            {
+                "project_id": "cp-visible",
+                "tenant_id": TENANT_ID,
+                "domain_id": DOMAIN_ID,
+                "actor_id": "human:admin",
+                "actor_type": "human",
+                "target_actor_id": "human:viewer",
+                "target_actor_type": "human",
+                "role": "project_viewer",
+                "idempotency_key": "authorized-projects:regrant:grant-viewer",
+            },
+        )
+        revoke_project_membership_command(
+            connection,
+            {
+                "project_id": "cp-visible",
+                "project_membership_id": grant["membership"]["project_membership_id"],
+                "tenant_id": TENANT_ID,
+                "domain_id": DOMAIN_ID,
+                "actor_id": "human:admin",
+                "actor_type": "human",
+                "idempotency_key": "authorized-projects:regrant:revoke-viewer",
+            },
+        )
+        grant_project_membership_command(
+            connection,
+            {
+                "project_id": "cp-visible",
+                "tenant_id": TENANT_ID,
+                "domain_id": DOMAIN_ID,
+                "actor_id": "human:admin",
+                "actor_type": "human",
+                "target_actor_id": "human:viewer",
+                "target_actor_type": "human",
+                "role": "project_contributor",
+                "idempotency_key": "authorized-projects:regrant:grant-contributor",
+            },
+        )
+
+        assert AuthorizedProjectsQuery(connection).role_for_project(
+            project_id="cp-visible",
+            actor_type="human",
+            actor_id="human:viewer",
+        ) == "project_contributor"
+    finally:
+        connection.close()
+
+
 def test_authorized_projects_visibility_sql_preserves_no_project_rows() -> None:
     connection = _connection()
     try:
@@ -281,6 +386,38 @@ def test_authorized_projects_visibility_sql_preserves_no_project_rows() -> None:
         assert [row["workflow_run_id"] for row in rows] == [
             "wr-no-project",
             "wr-visible",
+        ]
+
+        connection.execute(
+            """
+            UPDATE project_memberships
+            SET state = 'revoked'
+            WHERE project_id = ? AND actor_type = ? AND actor_id = ?
+            """,
+            ("cp-visible", "human", "human:viewer"),
+        )
+        stale_projection_rows = connection.execute(
+            """
+            SELECT wr.workflow_run_id
+            FROM workflow_runs wr
+            WHERE wr.tenant_id = ?
+              AND wr.domain_id = ?
+              AND """ + AuthorizedProjectsQuery.visibility_sql(
+                project_column="wr.project_id"
+            ) + """
+            ORDER BY wr.workflow_run_id ASC
+            """,
+            (
+                TENANT_ID,
+                DOMAIN_ID,
+                *AuthorizedProjectsQuery.visibility_params(
+                    actor_type="human",
+                    actor_id="human:viewer",
+                ),
+            ),
+        ).fetchall()
+        assert [row["workflow_run_id"] for row in stale_projection_rows] == [
+            "wr-no-project"
         ]
     finally:
         connection.close()

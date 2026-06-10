@@ -7,6 +7,7 @@ from onetruth.api.routes.capex_projects import (
     grant_project_membership_endpoint,
     list_capex_projects_endpoint,
     list_project_memberships_endpoint,
+    revoke_project_membership_endpoint,
 )
 from onetruth.api.project_children import (
     claim_project_human_task_endpoint,
@@ -131,6 +132,25 @@ CAPEX_PROJECT_ROUTE_SPECS: tuple[RouteSpec, ...] = (
             execution.connection,
             context=execution.context,
             project_id=params["project_id"],
+            payload=_require_payload(execution.payload),
+        ),
+    ),
+    RouteSpec(
+        name="capex.projects.memberships.revoke",
+        method="POST",
+        pattern=_param(
+            "/api/v1/capex/projects/",
+            param_name="project_membership_ref",
+            suffix="/revoke",
+            allow_slash=True,
+            required_substring="/memberships/",
+        ),
+        body_policy=JSON_COMMAND_BODY,
+        needs_page=False,
+        dispatch=lambda execution, params: revoke_project_membership_endpoint(
+            execution.connection,
+            context=execution.context,
+            project_membership_ref=params["project_membership_ref"],
             payload=_require_payload(execution.payload),
         ),
     ),

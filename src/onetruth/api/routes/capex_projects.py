@@ -9,6 +9,7 @@ from onetruth.application.handlers.capex_projects import (
     grant_project_membership_command,
     list_capex_projects_command,
     list_project_memberships_command,
+    revoke_project_membership_command,
     show_capex_project_command,
 )
 from onetruth.application.handlers.workflow_task_lifecycle import (
@@ -19,6 +20,7 @@ from onetruth.infrastructure.repositories.capex_projects import get_project_memb
 
 from onetruth.api.dependencies import Page, RequestContext
 from onetruth.api.errors import api_error_from_command, api_error_from_duplicate_idempotency
+from onetruth.api.project_scope import parse_project_child_ref
 
 
 def list_capex_projects_endpoint(
@@ -162,6 +164,46 @@ def grant_project_membership_endpoint(
 
     return {
         "command": "api.capex.projects.memberships.grant",
+        "project": result["result"]["project"],
+        "membership": result["result"]["membership"],
+        "idempotent_replay": result["idempotent_replay"],
+        "receipt": result["receipt"],
+    }
+
+
+def revoke_project_membership_endpoint(
+    connection: sqlite3.Connection,
+    *,
+    context: RequestContext,
+    project_membership_ref: str,
+    payload: dict[str, Any],
+) -> dict[str, Any]:
+    project_id, project_membership_id = parse_project_child_ref(
+        project_membership_ref,
+        "memberships",
+    )
+    command_payload = {
+        **payload,
+        "project_id": project_id,
+        "project_membership_id": project_membership_id,
+        "tenant_id": context.tenant_id,
+        "domain_id": context.domain_id,
+        "actor_id": context.actor_id,
+        "actor_type": context.actor_type,
+    }
+    try:
+        result = revoke_project_membership_command(
+            connection,
+            command_payload,
+            include_receipt=True,
+        )
+    except CommandError as exc:
+        raise api_error_from_command(exc) from exc
+    except DuplicateIdempotencyKeyError as exc:
+        raise api_error_from_duplicate_idempotency(exc) from exc
+
+    return {
+        "command": "api.capex.projects.memberships.revoke",
         "project": result["result"]["project"],
         "membership": result["result"]["membership"],
         "idempotent_replay": result["idempotent_replay"],

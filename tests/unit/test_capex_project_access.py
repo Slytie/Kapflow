@@ -14,6 +14,7 @@ from onetruth.application.handlers.capex_projects import (
     create_capex_project_command,
     grant_project_membership_command,
     list_project_memberships_command,
+    revoke_project_membership_command,
     show_capex_project_command,
 )
 from onetruth.application.handlers.workflow_task_lifecycle import (
@@ -147,6 +148,60 @@ def test_project_creation_grants_creator_admin_and_emits_project_events() -> Non
         "capex.project_membership.granted",
     ]
     assert all(event["project_id"] == "cp-unit-001" for event in project_events)
+
+
+def test_project_membership_revoke_is_audited_and_idempotent() -> None:
+    connection = _connection()
+    _create_project(connection)
+    grant = _grant(
+        connection,
+        target_actor_id="human:viewer",
+        role=PROJECT_VIEWER,
+        key="unit:capex-project:grant-revoke-viewer",
+    )
+    membership_id = str(grant["membership"]["project_membership_id"])
+
+    revoked = revoke_project_membership_command(
+        connection,
+        {
+            "project_id": "cp-unit-001",
+            "project_membership_id": membership_id,
+            "tenant_id": TENANT_ID,
+            "domain_id": DOMAIN_ID,
+            "actor_id": "human:admin",
+            "actor_type": "human",
+            "idempotency_key": "unit:capex-project:revoke-viewer",
+        },
+        include_receipt=True,
+    )
+    replay = revoke_project_membership_command(
+        connection,
+        {
+            "project_id": "cp-unit-001",
+            "project_membership_id": membership_id,
+            "tenant_id": TENANT_ID,
+            "domain_id": DOMAIN_ID,
+            "actor_id": "human:admin",
+            "actor_type": "human",
+            "idempotency_key": "unit:capex-project:revoke-viewer",
+        },
+        include_receipt=True,
+    )
+
+    assert revoked["idempotent_replay"] is False
+    assert replay["idempotent_replay"] is True
+    assert revoked["result"]["membership"]["state"] == "revoked"
+    assert replay["result"]["membership"] == revoked["result"]["membership"]
+
+    events = list_events(connection, limit=20)
+    revoke_events = [
+        event
+        for event in events
+        if event["event_type"] == "capex.project_membership.revoked"
+    ]
+    assert len(revoke_events) == 1
+    assert revoke_events[0]["payload"]["previous_role"] == PROJECT_VIEWER
+    assert revoke_events[0]["project_id"] == "cp-unit-001"
 
 
 def test_project_roles_gate_project_bound_workflow_run_creation() -> None:

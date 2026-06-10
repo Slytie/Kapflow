@@ -57,6 +57,14 @@ def _connection() -> sqlite3.Connection:
             _scope(("cp-002", "capex-source-review-v0", "promote_review_basis", "wps-001")),
         ),
         (
+            "capex.project_memberships.revoke",
+            {
+                "project_id": "cp-002",
+                "project_membership_id": "pm-002",
+            },
+            _scope(("cp-002", "pm-002")),
+        ),
+        (
             "tasks.create",
             {
                 "workflow_run_id": "wr-001",

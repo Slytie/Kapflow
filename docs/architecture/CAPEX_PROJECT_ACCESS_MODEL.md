@@ -16,7 +16,7 @@ It does not activate CAPEX production-like runtime behavior, raw corpus use, ric
 Timeline events may carry nullable `timeline_events.project_id` so broad timeline reads can enforce project visibility without reconstructing every event link at read time.
 
 ## Direct Membership Roles
-`project_memberships` records one active direct role per `(project_id, actor_type, actor_id)`.
+`project_memberships` records one direct membership row per `(project_id, actor_type, actor_id)`. An active row grants exactly one direct role; a revoked row is retained as governed history and grants no access.
 
 Roles are ordered:
 - `project_viewer`: read project and project-bound rows
@@ -32,9 +32,10 @@ The current project API surface includes the durable anchor, direct membership, 
 - `GET /api/v1/capex/projects/{project_id}`
 - `GET /api/v1/capex/projects/{project_id}/memberships`
 - `POST /api/v1/capex/projects/{project_id}/memberships`
+- `POST /api/v1/capex/projects/{project_id}/memberships/{project_membership_id}/revoke`
 - `POST /api/v1/capex/projects/{project_id}/workflow-runs`
 
-Project creation creates the project and grants the creator `project_admin`. Membership grants are admin-only.
+Project creation creates the project and grants the creator `project_admin`. Membership grants and revocations are admin-only. Revocation updates the direct membership row in place to `revoked`, emits `capex.project_membership.revoked`, and refreshes authorization projections in the same command transaction. Regranting a revoked actor reactivates the same direct membership row with the newly requested role and emits a normal grant event.
 
 Project list/detail payloads expose `caller_role` from the caller's active direct membership.
 
@@ -132,7 +133,7 @@ No-project rows remain readable by the existing tenant/domain boundary.
 - `capex_project_feature`: per-project feature posture. `capex.runtime_activation` is seeded as `disabled` with a blocked reason.
 - `capex_user_project_view`: deterministic actor-scoped read model over authorized projects, including caller role and project display fields.
 
-`AuthorizedProjectsQuery` reads the projection-backed rows. It accepts tenant/domain scope and actor identity, returns deterministic authorized active project IDs with caller role metadata, and keeps project filtering server-side. It is not a global project list, not a frontend-only filter, and not an authoritative replacement for `project_memberships`.
+`AuthorizedProjectsQuery` reads projection-backed rows, but every authorization decision also joins back to live active `project_memberships`. It accepts tenant/domain scope and actor identity, returns deterministic authorized active project IDs with caller role metadata from the direct membership row, and keeps project filtering server-side. It is not a global project list, not a frontend-only filter, and not an authoritative replacement for `project_memberships`. Stale projection rows must fail closed if the source membership is revoked.
 
 Projection rebuild helpers refresh the derived rows from source state. They are repair tools and read-model maintainers; they do not bypass tenant/domain/project checks and do not create a second authorization authority.
 

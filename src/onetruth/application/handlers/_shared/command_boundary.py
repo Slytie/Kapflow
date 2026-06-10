@@ -219,6 +219,13 @@ def _public_command_scope_key(command_name: str, payload: dict[str, Any]) -> str
                 payload.get("target_actor_id"),
             )
         )
+    if command_name == "capex.project_memberships.revoke":
+        return _command_scope_key(
+            (
+                payload.get("project_id"),
+                payload.get("project_membership_id"),
+            )
+        )
     if command_name in {
         "capex.workpages.command",
         "capex.workpages.command-envelope.execute",
